@@ -17,8 +17,11 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 
 #include "core/CGame.h"
+#include "core/CController.h"
 #include "core/CLoader.h"
 #include "core/CTypes.h"
+#include "object/CCreature.h"
+#include "object/CEffect.h"
 #include "object/CMapObject.h"
 #include "test_harness.h"
 #include "veventloop.h"
@@ -34,6 +37,23 @@ namespace {
 
 constexpr int MAP_LOAD_OBJECT_COUNT = 32;
 constexpr int MAP_LOAD_PROPERTY_COUNT = 8;
+constexpr int EFFECT_GRAPH_ACTOR_COUNT = 8;
+constexpr std::size_t EFFECT_GRAPH_BYTES_PER_ACTOR = 8192;
+
+class EffectSerializationProbe : public CCreature {
+    V_META(EffectSerializationProbe, CCreature,
+           V_PROPERTY(EffectSerializationProbe, int, serializationVisit, getSerializationVisit, setSerializationVisit))
+
+  public:
+    int getSerializationVisit() {
+        ++serializationVisits;
+        return 1;
+    }
+
+    void setSerializationVisit(int) {}
+
+    static inline std::size_t serializationVisits = 0;
+};
 
 class MapLoadNotificationProbe : public CMapObject {
     V_META(MapLoadNotificationProbe, CMapObject,
@@ -148,6 +168,122 @@ void test_map_load_property_notifications_are_bounded_per_object() {
                 "bulk map object property load should preserve every changed property name in batches");
 }
 
+std::size_t countSerializedCreatures(const json &value) {
+    std::size_t count = 0;
+    if (value.is_object() && value.value("class", std::string()) == "EffectSerializationProbe" &&
+        value.contains("properties")) {
+        ++count;
+    }
+    if (value.is_object()) {
+        for (const auto &[key, child] : value.items()) {
+            count += countSerializedCreatures(child);
+        }
+    } else if (value.is_array()) {
+        for (const auto &child : value) {
+            count += countSerializedCreatures(child);
+        }
+    }
+    return count;
+}
+
+void testMutualEffectGraphSerializationHasBoundedActorDefinitions() {
+    CTypes::register_type<CGameObject>();
+    CTypes::register_type<CMapObject, CGameObject>();
+    CTypes::register_type<CMap, CGameObject>();
+    CTypes::register_type<CCreature, CMapObject, CGameObject>();
+    CTypes::register_type<EffectSerializationProbe, CCreature, CMapObject, CGameObject>();
+    CTypes::register_type<CEffect, CGameObject>();
+    CTypes::register_type<CStats, CGameObject>();
+    CTypes::register_type<CController, CGameObject>();
+    auto game = std::make_shared<CGame>();
+    for (const auto &[name, builder] : *CTypes::builders()) {
+        game->getObjectHandler()->registerType(name, builder);
+    }
+    auto map = std::make_shared<CMap>();
+    map->setGame(game);
+    game->setMap(map);
+    std::vector<std::shared_ptr<CCreature>> actors;
+    for (int index = 0; index <= EFFECT_GRAPH_ACTOR_COUNT; ++index) {
+        auto actor = std::make_shared<EffectSerializationProbe>();
+        actor->setGame(game);
+        actor->setName("effectActor" + std::to_string(index));
+        actor->setLevel(1);
+        actor->setHp(10);
+        actors.push_back(actor);
+    }
+    std::set<std::shared_ptr<CMapObject>> map_actors(actors.begin(), actors.end() - 1);
+    map->setObjects(map_actors);
+    for (int index = 0; index < EFFECT_GRAPH_ACTOR_COUNT; ++index) {
+        for (int kind = 0; kind < 2; ++kind) {
+            auto effect = std::make_shared<CEffect>();
+            effect->setGame(game);
+            effect->setName(kind == 0 ? "mutualWard" : "detachedWard");
+            effect->setDuration(6);
+            effect->getBonus()->setArmor(3);
+            effect->setCaster(kind == 0 ? actors[(index + 1) % EFFECT_GRAPH_ACTOR_COUNT] : actors.back());
+            effect->setVictim(actors[index]);
+            effect->apply(actors[index]);
+            actors[index]->addEffect(effect);
+        }
+    }
+
+    using ObjectJson = CSerializerFunction<std::shared_ptr<json>, std::shared_ptr<CGameObject>>;
+    EffectSerializationProbe::serializationVisits = 0;
+    auto serialized = ObjectJson::serialize(map);
+    const auto definitions = countSerializedCreatures(*serialized);
+    const auto visits = EffectSerializationProbe::serializationVisits;
+    const auto bytes = serialized->dump().size();
+    const auto max_bytes = EFFECT_GRAPH_BYTES_PER_ACTOR * actors.size();
+    std::cout << "effect graph: actors=" << actors.size() << " definitions=" << definitions << " visits=" << visits
+              << " bytes=" << bytes << " byteBudget=" << max_bytes << "\n";
+    expect_true(definitions == actors.size(),
+                "cyclic effects and repeated caster references must serialize exactly one definition per actor");
+    expect_true(bytes <= max_bytes, "the fixed mutual-effect workload must remain within its serialized size budget");
+    expect_true(visits == actors.size(),
+                "each referenced actor's properties must be visited exactly once per snapshot");
+
+    CSerialization::StrictScope strict;
+    auto restored = std::dynamic_pointer_cast<CMap>(ObjectJson::deserialize(game, serialized));
+    expect_true(restored && restored->getObjects().size() == EFFECT_GRAPH_ACTOR_COUNT,
+                "loading the effect graph must not add the detached caster to the map");
+    std::shared_ptr<CCreature> detached;
+    if (restored) {
+        for (int index = 0; index < EFFECT_GRAPH_ACTOR_COUNT; ++index) {
+            auto actor = std::dynamic_pointer_cast<CCreature>(restored->getObjectByName(actors[index]->getName()));
+            auto next = restored->getObjectByName(actors[(index + 1) % EFFECT_GRAPH_ACTOR_COUNT]->getName());
+            expect_true(actor && actor->getEffects().size() == 2, "every actor must retain both effects after loading");
+            if (!actor) {
+                continue;
+            }
+            for (const auto &effect : actor->getEffects()) {
+                expect_true(effect->getVictim() == actor, "each restored effect must resolve its actual owning victim");
+                expect_true(effect->getTimeLeft() == 5 && effect->getBonus()->getArmor() == 3,
+                            "bounded serialization must retain active effect state");
+                if (effect->getName() == "mutualWard") {
+                    expect_true(effect->getCaster() == next, "mutual actor references must resolve without duplicates");
+                } else {
+                    if (!detached) {
+                        detached = effect->getCaster();
+                    }
+                    expect_true(detached && effect->getCaster() == detached,
+                                "all external effects must share the one restored detached caster");
+                }
+            }
+        }
+        for (const auto &object : restored->getObjects()) {
+            if (auto actor = std::dynamic_pointer_cast<CCreature>(object)) {
+                actor->setEffects({});
+            }
+        }
+    }
+    for (const auto &actor : actors) {
+        actor->setEffects({});
+    }
+}
+
 } // namespace
 
-void run_serialization_performance_tests() { test_map_load_property_notifications_are_bounded_per_object(); }
+void run_serialization_performance_tests() {
+    test_map_load_property_notifications_are_bounded_per_object();
+    testMutualEffectGraphSerializationHasBoundedActorDefinitions();
+}

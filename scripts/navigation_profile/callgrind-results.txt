@@ -1,0 +1,52 @@
+Captured 2026-10-01 in WSL Ubuntu with GCC 13.3.0, -O2 -g, Valgrind 3.22.0.
+Baseline: 762157313795cbdc5a1ec3d63848e03565c5d57c.
+After: navigation-redesign working sources identified by SHA256 below.
+
+Scope: three fixed callback-API searches; no initialized game, map snapshot, flow field, GUI,
+Python callback, authored resources or repeated elapsed-time measurement. Equal-cost route ties
+may differ. Both executables completed and satisfied their route/sentinel assertions.
+
+Exact profiling commands, run inside the isolated source build directory:
+  SDL_VIDEODRIVER=dummy SDL_AUDIODRIVER=dummy SDL_RENDER_DRIVER=software LIBGL_ALWAYS_SOFTWARE=1 \
+    valgrind --tool=callgrind --instr-atstart=no --callgrind-out-file=before.callgrind ./before
+  SDL_VIDEODRIVER=dummy SDL_AUDIODRIVER=dummy SDL_RENDER_DRIVER=software LIBGL_ALWAYS_SOFTWARE=1 \
+    valgrind --tool=callgrind --instr-atstart=no --callgrind-out-file=after.callgrind ./after
+  callgrind_annotate --auto=no --inclusive=no --threshold=75 before.callgrind.1
+  callgrind_annotate --auto=no --inclusive=no --threshold=75 after.callgrind.1
+  SDL_VIDEODRIVER=dummy SDL_AUDIODRIVER=dummy SDL_RENDER_DRIVER=software LIBGL_ALWAYS_SOFTWARE=1 \
+    valgrind --tool=memcheck --leak-check=full --show-leak-kinds=all \
+    --errors-for-leak-kinds=definite,indirect --error-exitcode=97 ./after
+Compilation flags and baseline/current translation-unit selection are retained in run-callgrind.sh.
+
+workload         version length expansions passability edgeCost heuristic
+open128          before  254    16383      16894       65022    16384
+open128          after   254    16130      16639       64265    20828
+weighted128      before  254     4656       5169       18332     4877
+weighted128      after   254     4492       5004       17804     6040
+unreachable64    before    1     2048       2241        8000     2048
+unreachable64    after     1     2048       2241        8000     2630
+
+Total instruction references: 79,755,620 before -> 73,197,340 after (-8.22%).
+Self instruction references in _int_malloc: 9,682,525 -> 3,260,684.
+Self instruction references in _int_free:   6,571,644 -> 3,021,124.
+The largest individual after-profile source attribution is indexed heap sink: 8,307,203.
+The profile supports reduced allocator overhead on this workload. It does not establish the
+speedup of the closed-map A*, pursuit field, movement preview, rendering or complete game.
+
+After-workload Memcheck completed with exit 0: 0 errors from 0 contexts (0 suppressed),
+46,686 allocations and 46,686 frees, 7,248,089 allocated bytes total, and 0 bytes/blocks at exit.
+
+Packaged wrapper completed end-to-end with exit 0 on the final hop-count/cancellation source:
+  bash scripts/navigation_profile/run-callgrind.sh 762157313795cbdc5a1ec3d63848e03565c5d57c cmake-build-release/navigation-callgrind-packaged
+The output retains toolchain, raw profiles, annotated reports and Memcheck output.
+
+Source snapshot SHA256 (exact compiled bytes):
+17351d346a31734a72dd5d7f98bc0b55f852e1ed9521d239b083e93ebddabe30  profile.cpp
+cf82ec34df55f671226b157b5b3c92c9310e5e3a102e0300295e591b8e05d514  baseline/src/core/CPathFinder.cpp
+d61bee54d802e8e244f8ddfd80893ce816e9b51d16845fe9bf3275674883ed80  baseline/src/core/CFuture.cpp
+8bf82e93a9127b4821fa4ce44f28ace43406167a8b098edbe664c6241ba5d030  current/src/core/CPathFinder.h
+e9149a7df1e5fb6d9f6bd524bafd79e27d3280ad2ae46a1f815005a0ccfaa88f  current/src/core/CPathFinder.cpp
+e3fb812f5a349df996b0444b6ed7a7b16e4230b2f65a71616e8f848c9fd133e0  current/src/core/CNavigationSearch.h
+a60846a5b0d12147aadb79862b5fb0e5a574aacea7e442a9fd9eaf632a5b9239  current/src/core/CNavigationSearch.cpp
+0c66c7a57c11090f139f7921e8781143b21c6bfa2ac4f5304840a5ea43050c2e  current/src/core/CNavigation.h
+83ad9d1e36171ab26058e145e979b1e7b73e59354ce4646ded716dd018d3688d  current/src/core/CNavigation.cpp

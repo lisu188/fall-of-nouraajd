@@ -1,0 +1,335 @@
+# Monster role balance contract
+
+The comparison uses the real `_game` bindings, configured Python interactions,
+post-RNG-fix combat streams, five ordinary level-three player templates, seven
+level-two monster templates, and paired seeds 100 through 110. There are 35
+class/monster pairs and 770 fights. Both random streams reset after sample setup;
+there is no production RNG seeding API.
+
+Every pair retains absolute median health, mana and inventory expenditure limits
+of 10 percent, including a zero baseline. Every seed that wins without signatures
+must also win with them. Each player class must have at least one representative
+Gooby, Pritz or OctoBogz pair that both wins and causes positive median incoming
+damage. Requiring every pair to win or to cause damage would reject existing
+baseline behavior: the measured Linux Sorcerer/CultLeader baseline wins zero seeds and Assasin/Pritz receives
+zero median damage. All those pairs still retain their metric and victory gates.
+
+Resource observation forwards the configured controllers unchanged and records
+positive HP/mana decreases and removed inventory identities at control/lifecycle
+boundaries. Recovery and later loot do not erase earlier costs. Opposing changes
+within one callback can coalesce; this limitation also applies to both baselines.
+
+## Revised signature trial
+
+The ordinary controller ranks its existing interactions first. A signature can
+decorate a selected `Attack` only; existing item, healing, defensive and offensive
+spell turns retain their priority. The signature invokes that configured Attack
+once, retaining its damage roll, zero-damage guard and configured weapon proc.
+All signatures cost zero mana and persist once-per-actor flags.
+
+The current one-turn effects are:
+
+| Class | Condition | Change |
+| --- | --- | --- |
+| Brute | At or below half health | Physical resistance +1, frost resistance -1 |
+| Mage | First selected ordinary Attack | Convert one damage point to frost, Physical resistance -1 |
+| Thief | Guarded opponent or at/below half health | Opponent block -1 |
+| Cultist | At or below exact quarter health, at least5 mana remaining | On a resolved hit of at least10 damage, convert one point to shadow when the target's physical and shadow wards differ; opponent shadow resistance -1; no mana spent |
+
+Each action owns its effect from configuration; the mage and cultist also own
+damage packets. The packet hook accepts only frost or shadow. The cultist packet
+provides a real channel-specific attack; its post-hit resistance debuff helps only
+a later shadow attack while the one-turn effect remains active. Both are decoded before combat instead of created or cloned in the
+signature. Before applying, the signature clears its owned effect slot, then links the effect
+to its caster and victim. The active creature effect set uses the ordinary effect
+lifecycle and save serialization without retaining a signature-to-effect-to-actor
+ownership cycle. A real-bound paired regression observes configured Attack
+and Staff callbacks, both random streams, actual stat changes and one-turn
+expiration. The temporary mage packet hook clears before the weapon proc, on a
+miss, and in a `finally` block after rejected execution. Its default path preserves
+ordinary Attack behavior. Matching setup is present with roles disabled too.
+
+These revisions respond to failed measurements; they are not acceptance claims. The unchanged matrix and
+strict budgets must pass on Linux and Windows before the trial is complete.
+
+The conditional ward trial reads the target's composed physical/shadow resistance
+before Attack or its post-hit effect. Equal wards execute the original configured
+Attack without arming a packet, preserving its blocking, armor rounding, roll and
+weapon proc. Unequal wards retain the one-point shadow conversion. The one-turn
+shadow debuff remains bounded and benefits only a later shadow consumer. The
+controlled95/0 resistance fixture still proves real damage and both initiative
+windows; an additional paired equal-ward contract includes positive armor and
+blocking and requires exactly the same damage, random streams and weapon callbacks.
+
+The plugin calls the published `getEffectiveInteractions` API. Eager effects use
+narrow bindings for the existing native `setCaster`, `setVictim`, and `addEffect`
+methods so normal active-effect tracking remains intact. Strict mock surfaces and
+a plugin method audit prevent invented Python aliases; the embedded fixture also
+checks the actual bound methods before combat. The source API regression fails on
+head `c8a69091` and passes after this correction. Its
+[Linux job 110337375235](https://github.com/lisu188/fall-of-nouraajd/actions/runs/36852298559/job/110337375235)
+failed 82 native assertions, including Attack/proc counts, random-stream equality,
+effect ownership and actual stat application. Those medians are invalid evidence
+for the revised signatures because the prior helper called an unbound method.
+
+After that binding correction, head `415cfc0c` still failed the native callback
+proof: the resource-plugin builtin allowlist excludes `next`. The Attack lookup
+now uses a plain bounded loop, preserving that sandbox. Focused plugin tests
+execute with the loader's actual builtin allowlist and reproduce `NameError` on
+the preceding helper before passing with the loop. That failed run is not
+signature balance evidence. Its coverage job also hit the unchanged 60-second
+monster/map native timeouts; no timer or coverage threshold has been relaxed.
+
+## Corrected harness evidence, before signature revision
+
+[Linux job 110303082419](https://github.com/lisu188/fall-of-nouraajd/actions/runs/36841791157/job/110303082419)
+ran the Release native fixture at role head `5881f0d7`, using the actual `_game`
+module identity. The inherited-native-method regression passed. The full matrix
+completed in **16.14 seconds**, with 638.315 ms of sample setup, 15,292.136 ms of
+combat and 1.384 ms of cleanup. The prior aliased-module timeout and partial
+measurements are invalid balance evidence: that module identity caused native
+methods to be dispatched recursively as Python overrides.
+
+The command supplied by CI was:
+
+```sh
+ctest --test-dir cmake-build-release --output-on-failure -R for_unit_tests
+```
+
+All 35 comparisons completed. The initial signatures failed 19 health medians,
+one mana median and three winning-seed preservation checks. Two additional
+failures were the overly broad witness assumptions corrected above. No budget,
+seed, loadout, class count or monster count changes are authorized by that witness
+correction. The native suite stopped before its separate performance and Python
+phases, so those phases have no passing evidence from this run.
+
+Lost baseline victories:
+
+- Sorcerer/Gooby, seed 101: HP/mana/items 69/120/0 to 84/105/0.
+- Sorcerer/PritzMage, seed 109: 77/135/0 to 84/120/0.
+- Wayfarer/Gooby, seed 105: 69/80/0 to 81/80/0.
+
+All item medians were zero. The following records retain the failing measurements
+before any mechanic revision; they are not passing acceptance evidence.
+
+| Class | Monster | HP before | HP after | Mana before | Mana after | Baseline wins |
+| --- | --- | ---: | ---: | ---: | ---: | ---: |
+| Warrior | Gooby | 40 | 35 | 17 | 17 | 11/11 |
+| Warrior | Pritz | 5 | 2 | 17 | 17 | 11/11 |
+| Warrior | OctoBogz | 69 | 69 | 34 | 34 | 9/11 |
+| Warrior | PritzMage | 40 | 41 | 17 | 17 | 11/11 |
+| Warrior | GoblinThief | 5 | 4 | 17 | 17 | 11/11 |
+| Warrior | Cultist | 5 | 2 | 17 | 17 | 11/11 |
+| Warrior | CultLeader | 52 | 44 | 34 | 34 | 10/11 |
+| Sorcerer | Gooby | 80 | 70 | 105 | 105 | 6/11 |
+| Sorcerer | Pritz | 10 | 7 | 60 | 60 | 11/11 |
+| Sorcerer | OctoBogz | 83 | 83 | 105 | 105 | 1/11 |
+| Sorcerer | PritzMage | 80 | 84 | 105 | 105 | 6/11 |
+| Sorcerer | GoblinThief | 10 | 9 | 60 | 60 | 11/11 |
+| Sorcerer | Cultist | 10 | 7 | 60 | 60 | 11/11 |
+| Sorcerer | CultLeader | 84 | 84 | 90 | 105 | 0/11 |
+| Assasin | Gooby | 14 | 0 | 40 | 40 | 11/11 |
+| Assasin | Pritz | 0 | 0 | 20 | 20 | 11/11 |
+| Assasin | OctoBogz | 18 | 18 | 60 | 60 | 11/11 |
+| Assasin | PritzMage | 14 | 14 | 40 | 40 | 11/11 |
+| Assasin | GoblinThief | 0 | 0 | 20 | 20 | 11/11 |
+| Assasin | Cultist | 0 | 0 | 20 | 20 | 11/11 |
+| Assasin | CultLeader | 26 | 13 | 60 | 60 | 11/11 |
+| Inquisitor | Gooby | 34 | 25 | 62 | 62 | 11/11 |
+| Inquisitor | Pritz | 6 | 6 | 42 | 42 | 11/11 |
+| Inquisitor | OctoBogz | 41 | 41 | 82 | 82 | 11/11 |
+| Inquisitor | PritzMage | 34 | 34 | 62 | 62 | 11/11 |
+| Inquisitor | GoblinThief | 6 | 5 | 42 | 42 | 11/11 |
+| Inquisitor | Cultist | 6 | 2 | 42 | 42 | 11/11 |
+| Inquisitor | CultLeader | 41 | 34 | 82 | 82 | 11/11 |
+| Wayfarer | Gooby | 57 | 44 | 80 | 80 | 11/11 |
+| Wayfarer | Pritz | 6 | 3 | 40 | 40 | 11/11 |
+| Wayfarer | OctoBogz | 56 | 56 | 120 | 120 | 8/11 |
+| Wayfarer | PritzMage | 57 | 57 | 80 | 80 | 11/11 |
+| Wayfarer | GoblinThief | 6 | 5 | 40 | 40 | 11/11 |
+| Wayfarer | Cultist | 6 | 4 | 40 | 40 | 11/11 |
+| Wayfarer | CultLeader | 71 | 55 | 100 | 100 | 10/11 |
+
+
+The individual win witness remains required for every pair except the measured
+Sorcerer/CultLeader baseline (0/11 wins). The individual positive median-health
+witness retains its original Pritz/OctoBogz scope, except Assasin/Pritz (median
+zero). Assasin/GoblinThief and Assasin/Cultist also have legitimate zero baseline
+health costs and were never part of that original health witness scope. The first
+revision accidentally broadened the health predicate; this restores its original
+scope. All 35 strict resource medians and every seeded baseline victory remain
+required, alongside the same-pair representative witness for each player class.
+No workload or difficulty value changes.
+
+
+## First valid packet trial and substantive Cultist follow-up
+
+At head `a4144587`, Linux build run `36856244235` completed and passed all
+35 paired role comparisons and the actual configured Attack, weapon-proc,
+random-stream and effect assertions. The command remained the CTest command above.
+The subsequent Python phase failed an unbound `hasProperty` call in the new
+runtime test and child-fixture indentation; both are corrected in the follow-up.
+The separate coverage job timed out the monster-balance and handler fixtures
+at their unchanged 60-second budgets, so this run supplies no coverage acceptance.
+Windows also passed the role native and performance suites before the known
+Python fixture failures.
+
+That trial's Cultist debuff had no solo shadow-damage consumer. The follow-up
+converts exactly one point of the already selected ordinary Attack from normal
+to shadow, using its eager packet and existing weapon proc. It requires fresh
+full-matrix evidence; the earlier passing matrix does not establish balance for
+this revision. A separate controlled native fight uses unequal normal/shadow
+resistance to prove that the point changes actual health damage, and observes
+the debuff and expiry in both initiative orders. Controlled stats belong only
+to that mechanism proof; all ordinary comparison templates, levels, seeds,
+loadouts, resource limits and winning-seed assertions remain unchanged.
+
+The native callback contract now records and reports the exact exception from
+configured Attack, weapon or signature callbacks before asserting success.
+Runtime child source checks also verify that their native calls use published
+bindings. No production override handling, sandbox allowlist, RNG API or global
+combat statistics change.
+
+
+## Wounded Cultist timing and instrumented workload
+
+Head `82870c53`, run `36860223503`, completed all35 Linux comparisons and the
+configured callback/random-stream, real shadow damage and both-initiative
+expiry proofs.34 rows had identical HP/mana/item medians; every baseline-winning
+seed was preserved. The sole strict failure was Wayfarer/Cultist health6 to5:
+a16.7-percent decrease still violates the absolute10-percent contract. That
+failure is preserved; no metric threshold or workload is changed.
+
+The next trial keeps the one-point shadow packet and one-turn debuff, but permits
+Cultist's signature only at or below half health. This avoids changing its first
+full-health attack in a short encounter and retains its shadow identity when
+wounded in a longer fight. The paired callback and controlled mechanism fixtures
+use the same wounded condition in both modes; the ordinary35×11 matrix remains
+unchanged. Source contract tests now run through fast/full/coverage-safe discovery.
+
+Windows828 native/performance suites passed; its Python suite failed the separate
+`ConsoleUiInteractionTest.testHistoryNavigationInputBoundsAndCancellationPreserveState`
+child with0xC0000005 and no captured child output (job110363712420).
+Coverage job110362889839 reached12 of35 comparisons before the unchanged60-second
+monster-fixture timeout. Instrumented Warrior fight rows cost2.20–5.62seconds,
+Sorcerer/Octo8.82seconds and Sorcerer/Mage7.16seconds; setup was151–166ms perpair.
+Release corresponding rows cost0.20–0.81seconds with14–17ms setup. The coverage
+CTest failure output contained no debug log lines. This is measured instrumented
+combat work; no canonical coverage acceptance was reached.
+
+The wounded trial `afd35336` completed all35 Linux rows with identical resource
+medians, including Wayfarer/Cultist6 to6. It nevertheless lost the original
+Wayfarer/CultLeader seed104 victory (baseline HP/mana/items80/100/0;
+roles81/80/0), so the unchanged per-seed victory gate failed. Coverage again hit
+the existing60-second limit. These results remain failed evidence.
+
+Windows `afd35336` failed two strict health medians: Warrior/Cultist4 to3
+(-25 percent) and Wayfarer/Cultist3 to4 (+33.3 percent). The minimum-mana trial
+`25ee2867`, run `36867514443`, retained those same Windows failures and the
+Linux Wayfarer/CultLeader seed104 loss (80/100/0 versus81/80/0). Its Linux
+release comparison completed all35 rows in about9.25 seconds and Windows in
+10.40 seconds. Those complete matrices still fail the balance contract.
+
+Coverage job110387935927 completed only22 of35 rows before the shared55-second
+deadline. Only the Assasin partition reported completion; the other four were
+incomplete. The handler entry also timed out at60.01 seconds, while map tests
+completed in54.75 seconds. No canonical coverage percentage was reached.
+
+The separate controller fixture now registers `CStats` with its per-game object
+factory as well as effects and interactions. Its ordinary Barrier priority test
+requires a nonnull cloned stats bonus before a second controller selection;
+that second selection must retain the existing buff and select the eligible
+ordinary Attack signature safely. This fixes the fixture's incomplete clone
+setup without changing production combat or its priority assertions.
+
+The second-control identity assertion exposed another fixture omission: the
+prototype had only a name, while its factory clone received a native type id.
+The fixture now assigns a stable configured `ordinaryBarrier` type id and
+requires the clone to retain it and the active effect count to stay at one.
+Production duplicate-effect identity rules are unchanged. Native CI must verify
+this fixture correction.
+
+The native forwarding observer also records the ritual actor's health, mana,
+role-use flag and target channel resistances immediately before and after the
+unchanged configured controller. It reports the first actual signature use and
+all actor turns for a lost baseline-winning seed. These reads and diagnostic
+output do not change actions, damage, random streams, loadouts or eligibility;
+the evidence is needed before selecting another generic timing condition.
+
+Head74719597's actual Linux first-use trace showed why reserve mana did not fix
+Wayfarer/CultLeader seed104: the signature used at42/105HP and105mana on enemy
+control4, against a target with equal0/0 wards. The ordinary Attack caused zero
+HP damage there; the split packet caused one. Later the baseline retained1HP
+while the role encounter reached0HP. Both modes retained the same random draw
+counts; per-channel blocking/mitigation changed the result. Windows again failed
+Warrior/Cultist4 to3 and Wayfarer/Cultist3 to4. The unchanged release matrix
+completed all35 rows; coverage reached the shared55-second deadline with
+incomplete partitions. These remain failed evidence. Target armor/block are
+now included in the read-only trace.
+
+The stable Barrier clone identity assertion passed, but the priority fixture's
+opponent was still at its default zero HP. The role guard correctly excluded
+that dead target. The fixture now initializes it to its own unchanged maximum
+HP and asserts both actors are alive before exercising ordinary cast priority.
+It retains the stable clone identity, one active effect, and both controller
+callback assertions; no production duplicate or eligibility rule changes.
+
+The next ritual trial requires5 mana remaining without spending it. An exhausted
+CultLeader keeps its ordinary Attack; a wounded Cultist with reserve mana can
+still use the substantive shadow packet. Both controlled mechanism modes receive
+the same5 mana and retain the real damage, callbacks, random streams, initiative
+and expiry assertions. The35×11 ordinary balance matrix is unchanged.
+
+The conditional ward head429eb1a6 passed Linux's22 native tests and five
+performance guards, including its complete35-row matrix in6.12seconds. Actual
+Windows job110413581789 still rejected Warrior/Cultist HP median4 to3 (-25%).
+Its other shown medians passed; neither a lower cost nor Linux passage bypasses
+the absolute10-percent gate. The current generic critical-health trial retains
+conditional wards and the five-mana unspent reserve, but permits the cultist
+signature only at or below exact25% HP. The closed `critical` trigger checks
+positive maximum HP with64-bit `4*hp <= hpMax`, avoiding truncated percentage
+rounding:9/35 HP rejects while8/35 accepts. It does not branch by class or seed.
+Controlled enabled and disabled mechanism fixtures both use that same quarter
+health and five mana, retaining substantive shadow damage, ordinary callbacks,
+both RNG streams and both initiative/expiry proofs. The35×11 ordinary
+player/monster matrix and all winning-seed/resource gates remain unchanged.
+Fresh Windows/Linux/coverage acceptance is still required.
+
+The exact-quarter head18b70600 still failed Windows job110428850960:
+Warrior/Cultist HP median4 to3, while the other shown ritual medians passed.
+The next generic trial caps the shadow component at10% of an already resolved
+raw hit: only hits of at least10 can convert one point. Smaller hits retain the
+complete ordinary physical packet, armor/block path and weapon proc. This adds
+no roll and leaves the once-only debuff, critical-health/reserve eligibility and
+unequal-ward rule intact. Controlled native9/10 boundary cases retain both RNG
+streams and a real Staff proc; the21-point real-fight initiative/expiry proof
+still demonstrates substantive shadow damage. All35 seeded resource/victory
+rows remain unchanged. The failed4-to3 evidence is retained, and this revision
+requires fresh actual Linux, Windows and coverage results.
+
+The same head's coverage job110412610004 failed with an incomplete matrix at
+the shared55.13-second deadline and map at60.05seconds; handler passed54.17seconds.
+No eligible-line coverage result was reached. The required workload/timeouts
+remain unchanged while the separately reviewed profile-guided stats fold supplies
+the needed shared-core speedup.
+
+## Aggregate execution budget
+
+`ctest --test-dir cmake-build-release --output-on-failure -R for_unit_tests`
+previously ran the770 fights sequentially in one native process. Release rows
+completed, while `./scripts/run_coverage.sh` timed out that instrumented entry
+at60 seconds before completing all35 rows. The commands and outer60-second
+CTest entry remain unchanged. The entry now runs common native contracts once,
+then up to four independent class processes from the same compiled executable.
+Each process must complete all seven rows and77 paired seeds (154 fights);
+the coordinator rejects missing, duplicate, incomplete or failed partitions.
+Total required work remains five classes,35 rows,385 paired seeds and770 fights.
+Its55-second aggregate internal deadline leaves cleanup margin inside CTest60;
+there are no separate per-class60-second gates. Direct executable invocation
+still runs the full contracts and matrix. The separate hunt command is unchanged.
+
+Focused source/runner tests prove complete counts, common contracts once, native
+failure propagation, concurrent stderr draining and child deadline cleanup.
+They do not establish native speedup or coverage. Fresh Linux/Windows complete
+metrics, native performance guards and canonical coverage must supply that
+evidence before delivery; no budget or coverage threshold was changed.

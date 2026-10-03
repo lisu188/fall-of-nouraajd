@@ -20,29 +20,35 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #include <vector>
 
 #include "CGamePanel.h"
+#include "gui/CDetailViewport.h"
 #include "gui/panel/CListView.h"
 #include "object/CPlayer.h"
 
 class CGameFightPanel : public CGamePanel {
-    V_META(CGameFightPanel, CGamePanel,
-           V_METHOD(CGameFightPanel, interactionsCollection, CListView::collection_pointer, std::shared_ptr<CGui>),
-           V_METHOD(CGameFightPanel, interactionsCallback, void, std::shared_ptr<CGui>, int,
-                    std::shared_ptr<CGameObject>),
-           V_METHOD(CGameFightPanel, interactionsSelect, bool, std::shared_ptr<CGui>, int,
-                    std::shared_ptr<CGameObject>),
-           V_METHOD(CGameFightPanel, itemsCollection, CListView::collection_pointer, std::shared_ptr<CGui>),
-           V_METHOD(CGameFightPanel, itemsCallback, void, std::shared_ptr<CGui>, int, std::shared_ptr<CGameObject>),
-           V_METHOD(CGameFightPanel, itemsRightClickCallback, bool, std::shared_ptr<CGui>, int,
-                    std::shared_ptr<CGameObject>),
-           V_METHOD(CGameFightPanel, itemsSelect, bool, std::shared_ptr<CGui>, int, std::shared_ptr<CGameObject>),
-           V_METHOD(CGameFightPanel, enemiesCollection, CListView::collection_pointer, std::shared_ptr<CGui>),
-           V_METHOD(CGameFightPanel, enemiesCallback, void, std::shared_ptr<CGui>, int, std::shared_ptr<CGameObject>),
-           V_METHOD(CGameFightPanel, enemiesSelect, bool, std::shared_ptr<CGui>, int, std::shared_ptr<CGameObject>),
-           V_METHOD(CGameFightPanel, renderCombatStatus, void, std::shared_ptr<CGui>, std::shared_ptr<SDL_Rect>, int),
-           V_METHOD(CGameFightPanel, getEnemy, std::shared_ptr<CCreature>))
+    V_META(
+        CGameFightPanel, CGamePanel,
+        V_METHOD(CGameFightPanel, interactionsCollection, CListView::collection_pointer, std::shared_ptr<CGui>),
+        V_METHOD(CGameFightPanel, interactionsCallback, void, std::shared_ptr<CGui>, int, std::shared_ptr<CGameObject>),
+        V_METHOD(CGameFightPanel, interactionsSelect, bool, std::shared_ptr<CGui>, int, std::shared_ptr<CGameObject>),
+        V_METHOD(CGameFightPanel, itemsCollection, CListView::collection_pointer, std::shared_ptr<CGui>),
+        V_METHOD(CGameFightPanel, itemsCallback, void, std::shared_ptr<CGui>, int, std::shared_ptr<CGameObject>),
+        V_METHOD(CGameFightPanel, itemsRightClickCallback, bool, std::shared_ptr<CGui>, int,
+                 std::shared_ptr<CGameObject>),
+        V_METHOD(CGameFightPanel, itemsSelect, bool, std::shared_ptr<CGui>, int, std::shared_ptr<CGameObject>),
+        V_METHOD(CGameFightPanel, enemiesCollection, CListView::collection_pointer, std::shared_ptr<CGui>),
+        V_METHOD(CGameFightPanel, enemiesCallback, void, std::shared_ptr<CGui>, int, std::shared_ptr<CGameObject>),
+        V_METHOD(CGameFightPanel, enemiesSelect, bool, std::shared_ptr<CGui>, int, std::shared_ptr<CGameObject>),
+        V_METHOD(CGameFightPanel, renderCombatStatus, void, std::shared_ptr<CGui>, std::shared_ptr<SDL_Rect>, int),
+        V_METHOD(CGameFightPanel, showCombatLog, void, std::shared_ptr<CGui>),
+        V_METHOD(CGameFightPanel, renderSelectionDetails, void, std::shared_ptr<CGui>, std::shared_ptr<SDL_Rect>, int),
+        V_METHOD(CGameFightPanel, executeSelectedAction, void, std::shared_ptr<CGui>),
+        V_METHOD(CGameFightPanel, useSelectedItem, void, std::shared_ptr<CGui>),
+        V_METHOD(CGameFightPanel, getEnemy, std::shared_ptr<CCreature>))
 
   public:
     CGameFightPanel();
+
+    void renderObject(std::shared_ptr<CGui> gui, std::shared_ptr<SDL_Rect> rect, int frameTime) override;
 
     std::shared_ptr<CInteraction> selectInteraction();
 
@@ -61,16 +67,37 @@ class CGameFightPanel : public CGamePanel {
     void setEnemies(const std::vector<std::shared_ptr<CCreature>> &value);
 
     std::string getCombatStatus(std::shared_ptr<CGui> gui);
+    std::string getCombatLog(std::shared_ptr<CGui> gui);
+    void showCombatLog(std::shared_ptr<CGui> gui);
 
     void renderCombatStatus(std::shared_ptr<CGui> gui, std::shared_ptr<SDL_Rect> rect, int frameTime);
 
+    std::string getSelectionDetails(std::shared_ptr<CGui> gui);
+
+    void renderSelectionDetails(std::shared_ptr<CGui> gui, std::shared_ptr<SDL_Rect> rect, int frameTime);
+
+    void executeSelectedAction(std::shared_ptr<CGui> gui);
+
+    void useSelectedItem(std::shared_ptr<CGui> gui);
+
+    bool mouseWheelEvent(std::shared_ptr<CGui> gui, SDL_EventType type, int x, int y, int wheelX, int wheelY) override;
+
+    bool keyboardEvent(std::shared_ptr<CGui> gui, SDL_EventType type, SDL_Keycode key) override;
+
   private:
+    void updateActionAvailability(const std::shared_ptr<CGui> &gui);
+    DetailViewport::Layout detailLayout;
+    int detailsOffset = 0;
+    int detailsMaximum = 0;
+    SDL_Rect detailsViewport{};
     std::vector<std::shared_ptr<CCreature>> enemies;
     std::weak_ptr<CCreature> enemy;
     std::weak_ptr<CInteraction> selected;
     std::weak_ptr<CItem> selectedItem;
     std::weak_ptr<CInteraction> finalSelected;
     bool cancelled = false;
+    std::string actionMessage;
+    std::weak_ptr<CGamePanel> combatLogReader;
     bool mouseEvent(std::shared_ptr<CGui> sharedPtr, SDL_EventType type, int button, int x, int y) override;
 
     void refreshEncounterViews();

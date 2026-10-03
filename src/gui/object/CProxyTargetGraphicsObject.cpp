@@ -1,6 +1,6 @@
 /*
 fall-of-nouraajd c++ dark fantasy game
-Copyright (C) 2025  Andrzej Lis
+Copyright (C) 2025-2026  Andrzej Lis
 
 This program is free software: you can redistribute it and/or modify
         it under the terms of the GNU General Public License as published by
@@ -25,7 +25,9 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 void CProxyTargetGraphicsObject::refresh() {
     vstd::with<void>(getGui(), [this](auto gui) {
-        constexpr int maxProxyCells = 4096;
+        // Must cover the largest resizable-window map grid: CGui clamps to 7680x4320,
+        // which at the minimum practical 50px tile size yields 155x87 = 13485 cells.
+        constexpr int maxProxyCells = 16384;
         int prevX = 0, prevY = 0;
         for (const auto &x_pair : proxyObjects) {
             prevX = std::max(prevX, x_pair.first + 1);

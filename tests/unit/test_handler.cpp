@@ -18,6 +18,7 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 #include "handler/CGuiHandler.h"
 #include "handler/CFightHandler.h"
+#include "handler/CObjectHandler.h"
 #include "handler/CQuestHandler.h"
 #include "handler/CRngHandler.h"
 #include "handler/CScriptHandler.h"
@@ -29,6 +30,8 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #include "core/CMap.h"
 #include "core/CPlaytestTrace.h"
 #include "core/CStats.h"
+#include "core/CTypes.h"
+#include "core/CWrapper.h"
 #include "gui/CGui.h"
 #include "gui/panel/CGameFightPanel.h"
 #include "object/CCreature.h"
@@ -41,23 +44,71 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #include "object/CQuest.h"
 #include "object/CTrigger.h"
 #include "test_harness.h"
+#include "native_test_profile.h"
 
 #include <SDL.h>
 #include <pybind11/embed.h>
 #include <algorithm>
+#include <chrono>
 #include <cstdlib>
 #include <filesystem>
 #include <fstream>
+#include <functional>
 #include <iostream>
+#include <map>
 #include <memory>
 #include <optional>
 #include <set>
+#include <stdexcept>
 #include <string>
 #include <unordered_map>
 #include <utility>
 #include <vector>
 
 namespace {
+
+CNativeTestProfile &nativeTestProfile() {
+    static CNativeTestProfile profile("handler");
+    return profile;
+}
+
+void testGameplayMetadataIsAvailableBeforePluginLoading() {
+    const auto expectMetadata = []<typename T>(const char *message) {
+        using Pointer = std::shared_ptr<T>;
+        using Set = std::set<Pointer>;
+        using Map = std::map<std::string, Pointer>;
+        const auto hasSerializer = [](auto key) {
+            auto found = CTypes::serializers()->find(key);
+            return found != CTypes::serializers()->end() && found->second;
+        };
+        expect_true(CTypes::is_pointer_type<Pointer>() && CTypes::is_array_type<Set>() && CTypes::is_map_type<Map>() &&
+                        hasSerializer(vstd::type_pair<std::shared_ptr<json>, Pointer>()) &&
+                        hasSerializer(vstd::type_pair<std::shared_ptr<json>, Set>()) &&
+                        hasSerializer(vstd::type_pair<std::shared_ptr<json>, Map>()),
+                    message);
+        expect_true(!CTypes::builders()->contains(T::static_meta()->name()),
+                    "gameplay builders must remain unavailable until the native plugin registers them");
+    };
+    expectMetadata.operator()<CFightController>("fight controller metadata must exist before plugin loading");
+    expectMetadata.operator()<CMonsterFightController>(
+        "derived fight controller metadata must exist before plugin loading");
+    expectMetadata.operator()<CCreatureRace>("race metadata must exist before plugin loading");
+    expectMetadata.operator()<CCreatureClass>("class metadata must exist before plugin loading");
+    expectMetadata.operator()<CInteraction>("interaction metadata must exist before plugin loading");
+    expectMetadata.operator()<CWrapper<CInteraction>>("wrapped interaction metadata must exist before plugin loading");
+
+    auto controller = std::make_shared<CMonsterFightController>();
+    auto interaction = std::make_shared<CWrapper<CInteraction>>();
+    try {
+        expect_true(vstd::any_cast<std::shared_ptr<CFightController>>(std::any(controller)) == controller &&
+                        vstd::any_cast<std::shared_ptr<CGameObject>>(std::any(controller)) == controller &&
+                        vstd::any_cast<std::shared_ptr<CInteraction>>(std::any(interaction)) == interaction &&
+                        vstd::any_cast<std::shared_ptr<CGameObject>>(std::any(interaction)) == interaction,
+                    "gameplay metadata must register the complete controller and wrapper base chains");
+    } catch (const std::bad_any_cast &) {
+        expect_true(false, "gameplay metadata must register the complete controller and wrapper base chains");
+    }
+}
 
 class NoProgressFightController : public CFightController {
   public:
@@ -163,10 +214,54 @@ class CompletedQuest : public CQuest {
     void onComplete() override { complete_count++; }
 };
 
+class QuestLifecycleProbe : public CQuest {
+  public:
+    int check_count = 0;
+    int complete_count = 0;
+    std::vector<bool> captures;
+    std::function<void()> check_callback;
+    std::function<void()> complete_callback;
+    std::function<void()> capture_callback;
+
+    bool isCompleted() override {
+        check_count++;
+        if (check_callback) {
+            check_callback();
+        }
+        return true;
+    }
+
+    void onComplete() override {
+        complete_count++;
+        if (complete_callback) {
+            complete_callback();
+        }
+    }
+
+    void captureJournal(bool completed) override {
+        captures.push_back(completed);
+        if (capture_callback) {
+            capture_callback();
+        }
+    }
+};
+
 std::shared_ptr<CGame> load_empty_game() {
-    auto game = CGameLoader::loadGame();
-    CGameLoader::startGame(game, "empty");
+    auto game = nativeTestProfile().run("CGameLoader::loadGame", [] { return CGameLoader::loadGame(); });
+    nativeTestProfile().run("CGameLoader::startGame(empty)", [&] { CGameLoader::startGame(game, "empty"); });
     return game;
+}
+
+void attachFightPanelGuiFixture(const std::shared_ptr<CGame> &game) {
+    auto gui = std::make_shared<CGui>();
+    gui->setGame(game);
+    game->setGui(gui);
+
+    // Authored GUI visibility scripts require Python bindings for native GUI types.
+    // These cancellation tests exercise the real panel without unrelated scripted child views.
+    auto fight_panel_config = std::make_shared<json>();
+    (*fight_panel_config)["class"] = "CGameFightPanel";
+    game->getObjectHandler()->registerConfig("fightPanel", fight_panel_config);
 }
 
 void initialize_test_creature_stats(const std::shared_ptr<CCreature> &creature) {
@@ -317,6 +412,12 @@ void test_handler_constructors_are_covered_by_native_tests() {
     expect_true(gui_handler.meta()->inherits("CGameObject"), "GUI handler metadata should preserve its object base");
     gui_handler.showMessage("native handler constructor coverage");
     gui_handler.showInfo("native handler info coverage");
+    // Headless campaign screens log the title/body/action content and return
+    // immediately instead of blocking on input.
+    gui_handler.showCampaignScreen("Chapter I - Hearthfall", "Ten years of exile end here.", "BEGIN");
+    // The headless campaign browser resolves to the empty stable id immediately.
+    expect_true(gui_handler.showCampaignSelection(nullptr, nullptr, nullptr).empty(),
+                "headless campaign selection should resolve to the empty stable id");
     expect_true(!gui_handler.showQuestion("native handler question coverage"),
                 "headless GUI handler questions should return false");
     expect_true(rng_handler.getRandomLoot(0).empty(), "default RNG handler should return no loot without a game");
@@ -451,7 +552,16 @@ void test_fight_handler_reports_explicit_outcomes_and_final_status() {
     expect_true(cancelled_result.outcome == CFightOutcome::Cancelled && cancelled_result.rounds == 3,
                 "fight results should construct with explicit cancelled outcome data");
 
+    CFightHandler::recordCombatStatus(victory_game->getMap(), "Previous encounter event");
     const auto victory = CFightHandler::fightManyResult(victor, {defeated});
+    const auto combat_history = CFightHandler::getCombatHistory(victory_game->getMap());
+    expect_true(
+        combat_history.size() >= 3 && combat_history.front().starts_with("Combat round 1 begins.") &&
+            combat_history.back() == victory_game->getMap()->getStringProperty("combatStatus") &&
+            std::find(combat_history.begin(), combat_history.end(), "Previous encounter event") == combat_history.end(),
+        "real encounters must reset old history and record authoritative round/action/outcome messages in order");
+    expect_true(victory_game->getMap()->getNumericProperty("combatRound") == victory.rounds,
+                "the combat display round must come from the resolved encounter loop");
 
     expect_true(victory.outcome == CFightOutcome::AttackerVictory,
                 "direct attacker victory should be reported explicitly");
@@ -688,7 +798,7 @@ void test_fight_handler_reports_cancelled_closed_fight_panel() {
     SDL_SetHint(SDL_HINT_RENDER_DRIVER, "software");
 
     auto game = load_empty_game();
-    CGameLoader::loadGui(game);
+    attachFightPanelGuiFixture(game);
     auto player = add_test_player(game);
 
     player->setHp(10);
@@ -734,7 +844,7 @@ void test_player_fight_controller_returns_cancelled_when_attached_fight_panel_ca
     SDL_SetHint(SDL_HINT_RENDER_DRIVER, "software");
 
     auto game = load_empty_game();
-    CGameLoader::loadGui(game);
+    attachFightPanelGuiFixture(game);
     auto player = add_test_player(game);
 
     player->setHp(10);
@@ -772,7 +882,7 @@ void test_fight_handler_returns_cancelled_when_player_control_cancels() {
     SDL_SetHint(SDL_HINT_RENDER_DRIVER, "software");
 
     auto game = load_empty_game();
-    CGameLoader::loadGui(game);
+    attachFightPanelGuiFixture(game);
     auto player = add_test_player(game);
     player->setHp(10);
 
@@ -793,15 +903,34 @@ void test_fight_handler_returns_cancelled_when_player_control_cancels() {
     auto panel_was_cancelled = std::make_shared<bool>(false);
     vstd::event_loop<>::instance()->invoke([game, cancellation_callback_ran, panel_was_cancelled]() {
         *cancellation_callback_ran = true;
-        auto panel = game && game->getGui() ? vstd::cast<CGameFightPanel>(game->getGui()->findChild("CGameFightPanel"))
-                                            : nullptr;
+        auto gui = game ? game->getGui() : nullptr;
+        std::size_t fight_panel_count = 0;
+        std::shared_ptr<CGameFightPanel> attached_panel;
+        if (gui) {
+            for (const auto &child : gui->getChildren()) {
+                if (auto candidate = vstd::cast<CGameFightPanel>(child)) {
+                    ++fight_panel_count;
+                    attached_panel = candidate;
+                }
+            }
+        }
+        auto panel = gui ? vstd::cast<CGameFightPanel>(gui->findChild("CGameFightPanel")) : nullptr;
+        expect_true(fight_panel_count == 1, "queued cancellation should find exactly one attached fight panel");
+        expect_true(panel && panel == attached_panel && gui->findChild(panel) == panel,
+                    "queued cancellation should target the same fight panel found by the GUI");
         if (panel) {
             panel->cancel();
             *panel_was_cancelled = panel->isCancelled();
         }
+        std::cout << "[handler-test] cancellation callback ran=" << *cancellation_callback_ran
+                  << " panelFound=" << (panel != nullptr) << " panelCount=" << fight_panel_count
+                  << " isCancelled=" << *panel_was_cancelled << std::endl;
     });
 
+    std::cout << "[handler-test] BEFORE fightManyResult for queued player cancellation" << std::endl;
     const auto result = CFightHandler::fightManyResult(player, {defender});
+    std::cout << "[handler-test] AFTER fightManyResult for queued player cancellation outcome="
+              << static_cast<int>(result.outcome) << " rounds=" << result.rounds << std::endl;
 
     expect_true(*cancellation_callback_ran, "fight panel cancellation should run while player control is waiting");
     expect_true(*panel_was_cancelled, "queued cancellation should cancel the active fight panel");
@@ -866,6 +995,248 @@ void test_fight_panel_resets_status_between_sequential_encounters() {
                 "second fight status should not include the previous encounter");
 }
 
+class AllocationOrderTickEffect : public CEffect {
+  public:
+    int ticks = 0;
+
+    void prepare(bool restoresHealth, const std::shared_ptr<CCreature> &victim,
+                 const std::shared_ptr<CCreature> &caster) {
+        healTick = restoresHealth;
+        tickDamage = 3;
+        ticks = 0;
+        setTypeId(healTick ? "unitAllocationHealTick" : "unitAllocationDamageTick");
+        setName(getTypeId());
+        if (healTick) {
+            addTag(CTag::Buff);
+        } else {
+            removeTag(CTag::Buff);
+        }
+        setGame(victim->getGame());
+        setDuration(1);
+        setVictim(victim);
+        setCaster(caster);
+    }
+
+    void onEffect() override {
+        ++ticks;
+        if (healTick) {
+            getVictim()->heal(2);
+        } else {
+            // A fixed native tick isolates ordering from attack, block and critical RNG.
+            getVictim()->setHp(getVictim()->getHp() - tickDamage);
+        }
+    }
+
+    void setTickDamage(int amount) { tickDamage = amount; }
+
+  private:
+    bool healTick = false;
+    int tickDamage = 3;
+};
+
+using AllocationOrderEffectPair =
+    std::pair<std::shared_ptr<AllocationOrderTickEffect>, std::shared_ptr<AllocationOrderTickEffect>>;
+
+AllocationOrderEffectPair makePointerRankedEffectPair() {
+    auto first = std::make_shared<AllocationOrderTickEffect>();
+    auto second = std::make_shared<AllocationOrderTickEffect>();
+    const std::less<std::shared_ptr<CEffect>> pointerOrder;
+    if (pointerOrder(second, first)) {
+        std::swap(first, second);
+    }
+    expect_true(pointerOrder(first, second), "the two probe effects must have distinct pointer ranks");
+    return {first, second};
+}
+
+AllocationOrderEffectPair attachAllocationOrderEffects(const AllocationOrderEffectPair &pointerRanked,
+                                                       bool healAtLowerPointer,
+                                                       const std::shared_ptr<CCreature> &victim,
+                                                       const std::shared_ptr<CCreature> &damageCaster) {
+    auto heal = healAtLowerPointer ? pointerRanked.first : pointerRanked.second;
+    auto damage = healAtLowerPointer ? pointerRanked.second : pointerRanked.first;
+    heal->prepare(true, victim, victim);
+    damage->prepare(false, victim, damageCaster);
+    // Identical semantic insertion order in both cases; only address-to-role assignment changes.
+    victim->addEffect(heal);
+    victim->addEffect(damage);
+    expect_true(victim->getEffects().size() == 2, "both distinct configured probe effects must be attached");
+    return {heal, damage};
+}
+
+void releaseAllocationOrderEndpoints(const AllocationOrderEffectPair &effects) {
+    for (const auto &effect : {effects.first, effects.second}) {
+        effect->setCaster(nullptr);
+        effect->setVictim(nullptr);
+    }
+}
+
+struct AllocationOrderTickSample {
+    int hp;
+    int healTicks;
+    int damageTicks;
+    int healTimeLeft;
+    int damageTimeLeft;
+
+    bool operator==(const AllocationOrderTickSample &) const = default;
+};
+
+AllocationOrderTickSample allocationOrderTickSample(const std::shared_ptr<CCreature> &victim,
+                                                    const AllocationOrderEffectPair &semanticEffects) {
+    return {victim->getHp(), semanticEffects.first->ticks, semanticEffects.second->ticks,
+            semanticEffects.first->getTimeLeft(), semanticEffects.second->getTimeLeft()};
+}
+
+void testEffectTickCappingAndExpiryIgnoreAllocationOrder() {
+    auto game = load_empty_game();
+    const auto pointerRanked = makePointerRankedEffectPair();
+    std::optional<AllocationOrderTickSample> reference;
+    for (bool healAtLowerPointer : {true, false}) {
+        auto victim = add_test_creature(game, "unitAllocationCappingVictim");
+        const int hpMax = victim->getHpMax();
+        victim->setHp(hpMax);
+        const auto semanticEffects = attachAllocationOrderEffects(pointerRanked, healAtLowerPointer, victim, victim);
+
+        CFightHandler::applyEffects(victim);
+        const auto sample = allocationOrderTickSample(victim, semanticEffects);
+        expect_true(sample.hp == hpMax - 1,
+                    "at full health the damage tick must create room before the Buff recovery tick");
+        expect_true(sample.healTicks == 1 && sample.damageTicks == 1 && sample.healTimeLeft == 0 &&
+                        sample.damageTimeLeft == 0,
+                    "both one-turn effects must tick exactly once and reach zero duration");
+        expect_true(victim->getEffects().size() == 2,
+                    "a just-ticked zero-duration effect remains attached until the next expiry pass");
+
+        CFightHandler::applyEffects(victim);
+        expect_true(victim->getEffects().empty() && allocationOrderTickSample(victim, semanticEffects) == sample,
+                    "the next expiry pass must remove both effects without repeating a tick");
+
+        if (reference) {
+            expect_true(sample == *reference, "healing saturation must not depend on effect pointer layout");
+        } else {
+            reference = sample;
+        }
+        game->getMap()->removeObject(victim);
+        releaseAllocationOrderEndpoints(pointerRanked);
+    }
+
+    auto victim = add_test_creature(game, "unitFrozenHealthTierVictim");
+    const int hpMax = victim->getHpMax();
+    expect_true(hpMax > 2, "the tier crossover probe needs positive room above the lethal boundary");
+    victim->setHp(hpMax);
+    auto firstDamage = std::make_shared<AllocationOrderTickEffect>();
+    auto lastDamage = std::make_shared<AllocationOrderTickEffect>();
+    auto recovery = std::make_shared<AllocationOrderTickEffect>();
+    firstDamage->prepare(false, victim, victim);
+    firstDamage->setTypeId("unitAllocationADamageTick");
+    firstDamage->setTickDamage(hpMax - 2);
+    lastDamage->prepare(false, victim, victim);
+    lastDamage->setTypeId("unitAllocationBDamageTick");
+    recovery->prepare(true, victim, victim);
+    victim->addEffect(recovery);
+    victim->addEffect(lastDamage);
+    victim->addEffect(firstDamage);
+    CFightHandler::applyEffects(victim);
+    expect_true(victim->getHp() == -1 && firstDamage->ticks == 1 && lastDamage->ticks == 1 && recovery->ticks == 0 &&
+                    firstDamage->getTimeLeft() == 0 && lastDamage->getTimeLeft() == 0 && recovery->getTimeLeft() == 1,
+                "becoming hurt during a full-health phase must not reorder recovery ahead of the next lethal tick");
+    game->getMap()->removeObject(victim);
+    for (const auto &effect : {firstDamage, lastDamage, recovery}) {
+        effect->setCaster(nullptr);
+        effect->setVictim(nullptr);
+    }
+}
+
+class AllocationOrderCancellationProbe : public CancellingFightController {
+  public:
+    int controls = 0;
+
+    bool control(std::shared_ptr<CCreature>, std::shared_ptr<CCreature>) override {
+        ++controls;
+        return false;
+    }
+};
+
+struct AllocationOrderFightSample {
+    AllocationOrderTickSample ticks;
+    CFightOutcome outcome;
+    int rounds;
+    int controllerCalls;
+    int damageCasterLoot;
+    int selectedOpponentLoot;
+    bool victimRegistered;
+
+    bool operator==(const AllocationOrderFightSample &) const = default;
+};
+
+void testEffectTickLethalityTimingAndCasterIgnoreAllocationOrder() {
+    auto game = load_empty_game();
+    auto map = game->getMap();
+    const auto pointerRanked = makePointerRankedEffectPair();
+
+    // Buff-first recovery still permits lethal damage at HP 1, with the actual caster credited.
+    // At HP 2 it leaves the victim alive for its action, independent of pointer layout.
+    for (int initialHp : {1, 2}) {
+        std::optional<AllocationOrderFightSample> reference;
+        for (bool healAtLowerPointer : {true, false}) {
+            auto victim = add_test_creature(game, "unitAllocationFightVictim");
+            auto selected = add_test_creature(game, "unitAAllocationSelectedOpponent", 1, 0);
+            auto damageCaster = add_test_creature(game, "unitZAllocationActualCaster", 1, 0);
+            victim->getBaseStats()->setAgility(20);
+            victim->setHp(initialHp);
+            auto controller = std::make_shared<AllocationOrderCancellationProbe>();
+            victim->setFightController(controller);
+            add_unit_loot(game, victim, "unitAllocationCasterLoot");
+            const auto semanticEffects =
+                attachAllocationOrderEffects(pointerRanked, healAtLowerPointer, victim, damageCaster);
+
+            const auto result = CFightHandler::fightManyResult(victim, {selected, damageCaster});
+            const AllocationOrderFightSample sample{allocationOrderTickSample(victim, semanticEffects),
+                                                    result.outcome,
+                                                    result.rounds,
+                                                    controller->controls,
+                                                    damageCaster->countItems("unitAllocationCasterLoot"),
+                                                    selected->countItems("unitAllocationCasterLoot"),
+                                                    map->getObjectByName(victim->getName()) == victim};
+            expect_true(sample.rounds == 1 && sample.ticks.damageTicks == 1 && sample.ticks.damageTimeLeft == 0,
+                        "the controlled first actor turn must execute exactly one damage tick");
+            expect_true(sample.selectedOpponentLoot == 0,
+                        "the selected opponent must never receive another caster's lethal-effect loot");
+            expect_true(victim->isAlive() == (initialHp == 2) && sample.ticks.healTicks == 1 &&
+                            sample.ticks.healTimeLeft == 0,
+                        "the Buff recovery must tick before damage while retaining the real lethal boundary");
+
+            if (victim->isAlive()) {
+                expect_true(initialHp == 2 && sample.ticks.hp == 1 && sample.outcome == CFightOutcome::Cancelled &&
+                                sample.controllerCalls == 1 && sample.ticks.healTicks == 1 &&
+                                sample.ticks.healTimeLeft == 0 && sample.damageCasterLoot == 0 &&
+                                sample.victimRegistered && result.survivor == victim && result.opponent == selected,
+                            "a surviving effect phase must reach the cancelling action without granting defeat loot");
+            } else {
+                expect_true(sample.outcome == CFightOutcome::AttackerDefeat && sample.controllerCalls == 0 &&
+                                sample.damageCasterLoot == 1 && !sample.victimRegistered &&
+                                result.survivor == damageCaster && result.opponent == victim,
+                            "a lethal tick must skip the action, remove the victim and credit its actual caster");
+                expect_true((sample.ticks.healTicks == 0 && sample.ticks.healTimeLeft == 1) ||
+                                (sample.ticks.healTicks == 1 && sample.ticks.healTimeLeft == 0),
+                            "healing duration may decrement only if that effect actually executes before death");
+            }
+
+            if (reference) {
+                expect_true(sample == *reference,
+                            "lethality, action eligibility and effect timing must not depend on pointer layout");
+            } else {
+                reference = sample;
+            }
+            if (map->getObjectByName(victim->getName()) == victim) {
+                map->removeObject(victim);
+            }
+            map->removeObject(selected);
+            map->removeObject(damageCaster);
+            releaseAllocationOrderEndpoints(pointerRanked);
+        }
+    }
+}
+
 void test_fight_handler_counts_effect_duration_as_progress() {
     auto game = load_empty_game();
     auto attacker = add_test_creature(game, "unitTimedEffectAttacker");
@@ -885,6 +1256,159 @@ void test_fight_handler_counts_effect_duration_as_progress() {
     expect_true(game->getMap()->getObjectByName(attacker->getName()) == attacker &&
                     game->getMap()->getObjectByName(defender->getName()) == defender,
                 "timed-effect stale handling should not remove living participants");
+}
+
+void test_player_quest_completion_ignores_reentry_and_captures_final_callback_state() {
+    auto player = std::make_shared<CPlayer>();
+    auto quest = std::make_shared<QuestLifecycleProbe>();
+    quest->setTypeId("reentrantQuest");
+    player->setQuests({quest});
+    std::string journal_state = "active";
+    quest->complete_callback = [&]() {
+        expect_true(player->getQuests().contains(quest) && player->getCompletedQuests().empty(),
+                    "completion callbacks should retain the existing active-quest timing");
+        player->checkQuests();
+        journal_state = "completed";
+    };
+    quest->capture_callback = [&]() {
+        expect_true(journal_state == "completed" && player->getCompletedQuests().empty(),
+                    "completion capture should observe callback changes before completed insertion");
+    };
+
+    CPlaytestTrace::configure(true, "", 100);
+    player->checkQuests();
+    player->checkQuests();
+    int completion_records = 0;
+    for (const auto &line : CPlaytestTrace::drain()) {
+        const auto record = json::parse(line);
+        if (record.value("event", std::string()) == "quest_completed") {
+            completion_records++;
+        }
+    }
+    CPlaytestTrace::configure(false, "", 100);
+
+    expect_true(quest->check_count == 1 && quest->complete_count == 1 && completion_records == 1,
+                "nested and repeated completion checks should run and trace one completion");
+    expect_true(quest->captures == std::vector<bool>{true}, "completed quest journals should capture exactly once");
+    expect_true(player->getQuests().empty() && player->getCompletedQuests().contains(quest),
+                "reentrant completion should move the quest into the completed journal");
+}
+
+void test_player_quest_completion_accepts_cleared_active_set() {
+    auto player = std::make_shared<CPlayer>();
+    auto quest = std::make_shared<QuestLifecycleProbe>();
+    player->setQuests({quest});
+    quest->complete_callback = [&]() { player->setQuests({}); };
+
+    player->checkQuests();
+    player->checkQuests();
+
+    expect_true(quest->complete_count == 1 && quest->captures == std::vector<bool>{true},
+                "a callback clearing active quests should complete and capture safely once");
+    expect_true(player->getQuests().empty() && player->getCompletedQuests().contains(quest),
+                "clearing active quests during completion should preserve the current completed quest");
+}
+
+void test_player_quest_completion_skips_removed_snapshot_entries() {
+    auto player = std::make_shared<CPlayer>();
+    auto first = std::make_shared<QuestLifecycleProbe>();
+    auto second = std::make_shared<QuestLifecycleProbe>();
+    auto replacement = std::make_shared<QuestLifecycleProbe>();
+    player->setQuests({first, second});
+    if (*player->getQuests().begin() != first) {
+        std::swap(first, second);
+    }
+    first->complete_callback = [&]() { player->setQuests({replacement}); };
+
+    player->checkQuests();
+
+    expect_true(first->complete_count == 1 && second->check_count == 0 && second->complete_count == 0,
+                "quests removed by an earlier callback should be skipped in the original snapshot");
+    expect_true(replacement->check_count == 0 && player->getQuests() == std::set<std::shared_ptr<CQuest>>{replacement},
+                "replacement quests should wait for the next completion pass");
+    player->checkQuests();
+    expect_true(replacement->complete_count == 1 && player->getCompletedQuests().size() == 2,
+                "the next pass should complete the replacement without restoring removed quests");
+
+    auto removed_during_check = std::make_shared<QuestLifecycleProbe>();
+    removed_during_check->check_callback = [&]() { player->setQuests({}); };
+    player->setQuests({removed_during_check});
+    player->checkQuests();
+    expect_true(removed_during_check->complete_count == 0 && removed_during_check->captures.empty(),
+                "a quest removed by its completion predicate should not receive completion callbacks");
+}
+
+void test_player_quest_completion_defers_new_quests_until_next_pass() {
+    auto player = std::make_shared<CPlayer>();
+    auto quest = std::make_shared<QuestLifecycleProbe>();
+    auto next_quest = std::make_shared<QuestLifecycleProbe>();
+    player->setQuests({quest});
+    quest->complete_callback = [&]() {
+        auto active = player->getQuests();
+        active.insert(next_quest);
+        player->setQuests(active);
+        player->checkQuests();
+    };
+
+    player->checkQuests();
+    expect_true(quest->complete_count == 1 && next_quest->check_count == 0,
+                "quests added by a completion callback should wait even when the callback reenters checks");
+    expect_true(player->getQuests() == std::set<std::shared_ptr<CQuest>>{next_quest},
+                "new quest membership should survive completion of the original quest");
+    player->checkQuests();
+    player->checkQuests();
+    expect_true(quest->complete_count == 1 && next_quest->complete_count == 1 && player->getQuests().empty(),
+                "each original and newly added quest should complete exactly once across later passes");
+}
+
+void test_player_quest_completion_restores_guard_after_native_exceptions() {
+    for (bool throw_in_predicate : {true, false}) {
+        auto player = std::make_shared<CPlayer>();
+        auto quest = std::make_shared<QuestLifecycleProbe>();
+        player->setQuests({quest});
+        bool first_attempt = true;
+        auto fail_once = [&]() {
+            if (std::exchange(first_attempt, false)) {
+                throw std::runtime_error("quest lifecycle failure");
+            }
+        };
+        if (throw_in_predicate) {
+            quest->check_callback = fail_once;
+        } else {
+            quest->complete_callback = fail_once;
+        }
+        bool threw = false;
+        try {
+            player->checkQuests();
+        } catch (const std::runtime_error &) {
+            threw = true;
+        }
+        expect_true(threw && player->getQuests().contains(quest) && player->getCompletedQuests().empty(),
+                    "failed native callbacks should retain the existing incomplete membership");
+
+        player->checkQuests();
+        player->checkQuests();
+        expect_true(player->getQuests().empty() && player->getCompletedQuests().contains(quest),
+                    "the RAII guard should permit retry after predicate and completion exceptions");
+        expect_true(quest->complete_count == (throw_in_predicate ? 1 : 2) && quest->captures == std::vector<bool>{true},
+                    "only the successful completion attempt should capture the completed journal");
+    }
+}
+
+void test_player_capture_quest_journal_passes_membership_without_completing() {
+    auto player = std::make_shared<CPlayer>();
+    auto active = std::make_shared<QuestLifecycleProbe>();
+    auto completed = std::make_shared<QuestLifecycleProbe>();
+    player->setQuests({active});
+    player->setCompletedQuests({completed});
+
+    player->captureQuestJournal();
+
+    expect_true(active->captures == std::vector<bool>{false} && completed->captures == std::vector<bool>{true},
+                "journal capture should pass active and completed set membership to each quest");
+    expect_true(active->check_count == 0 && completed->check_count == 0 && active->complete_count == 0 &&
+                    completed->complete_count == 0,
+                "saving or leaving a map should capture journals without driving completion predicates or rewards");
 }
 
 void test_playtest_trace_records_native_limits_and_quest_completion() {
@@ -1083,10 +1607,107 @@ void test_creature_scale_preserves_level_plus_sw_invariant() {
 }
 
 std::shared_ptr<json> make_unit_creature_config(int sw) {
-    auto config = CJsonUtil::from_string("{\"class\":\"CCreature\",\"properties\":{\"sw\":" + std::to_string(sw) + "}}",
+    auto config = CJsonUtil::from_string("{\"class\":\"CCreature\",\"properties\":{\"sw\":" + std::to_string(sw) +
+                                             ",\"fightController\":{\"class\":\"CMonsterFightController\"},"
+                                             "\"baseStats\":{\"class\":\"CStats\",\"properties\":{\"stamina\":10,"
+                                             "\"strength\":5,\"mainStat\":\"strength\"}},"
+                                             "\"levelStats\":{\"class\":\"CStats\",\"properties\":{\"stamina\":2}}}}",
                                          "unitCreatureSwConfig");
     expect_true(config != nullptr, "unit creature sw config json should parse for the RNG encounter regression test");
     return config;
+}
+
+void primeEncounterFixtureLevels(const std::shared_ptr<CGame> &game, int budget, int samples,
+                                 const std::string &fixture) {
+    nativeTestProfile().run("primeEncounterFixtureLevels", [&] {
+        // These samples assert candidate membership, not XP progression. Prime copied configs after
+        // checking their authored prototypes so every sample avoids replaying unrelated level unlocks.
+        // The fresh-template XP regression and raw baseline remain separate and unmodified.
+        auto handler = game->getObjectHandler();
+        std::size_t primed = 0;
+        for (const auto &type : handler->getAllSubTypes("CCreature")) {
+            auto resolvedClass = handler->getType(handler->getClass(type));
+            if (resolvedClass && resolvedClass->meta()->inherits("CPlayer")) {
+                continue;
+            }
+            auto config = CJsonUtil::clone(handler->getConfig(type));
+            (*config)["properties"]["exp"] = 0;
+            (*config)["properties"]["level"] = budget;
+            handler->registerConfig(type, config);
+            ++primed;
+        }
+        std::cout << "[encounter-fixture] " << fixture << " templates=" << primed << " level=" << budget
+                  << " samples=" << samples << " maxSamplingLevelUps=0\n";
+    });
+}
+
+void test_rng_handler_scales_fresh_creatures_before_map_insertion() {
+    auto game = load_empty_game();
+    auto handler = game->getObjectHandler();
+    for (const auto &type : handler->getAllSubTypes("CCreature")) {
+        handler->unregisterConfig(type);
+    }
+    handler->registerConfig("unitScaledEncounter", make_unit_creature_config(1));
+    auto prototype = game->createObject<CCreature>("unitScaledEncounter");
+    expect_true(prototype && prototype->getHp() == 0 && prototype->getLevel() == 0,
+                "the scaling regression must exercise an uninitialized creature template");
+
+    CRngHandler rng(game);
+    const auto previousRng = vstd::rng();
+    vstd::rng().seed(7);
+    const auto encounterRng = vstd::rng();
+    std::multiset<int> expectedLevels;
+    int expectedExperience = 0;
+    for (int component : vstd::random_components(40, std::views::iota(1, 41))) {
+        const int level = std::max(1, component - 1);
+        expectedLevels.insert(level);
+        expectedExperience += prototype->getExpForLevel(level);
+    }
+    expect_true(!expectedLevels.empty() && *expectedLevels.rbegin() > 1,
+                "the fixed encounter seed must include a component that needs level scaling");
+    vstd::rng() = encounterRng;
+    std::multiset<int> actualLevels;
+    int actualExperience = 0;
+    for (const auto &creature : rng.getRandomEncounter(40)) {
+        actualLevels.insert(creature->getLevel());
+        actualExperience += creature->getExp();
+        expect_true(creature->isAlive() && creature->getHp() == creature->getHpMax(),
+                    "generated encounters must start alive at their scaled maximum hit points");
+        const auto level = creature->getLevel();
+        game->getMap()->addObject(creature);
+        expect_true(creature->getLevel() == level,
+                    "adding an initialized encounter to the map must preserve its scaled level");
+    }
+    vstd::rng() = previousRng;
+    expect_true(actualLevels == expectedLevels, "encounter levels must match the allocated component powers");
+    expect_true(actualExperience == expectedExperience, "encounter scaling must retain the allocated experience");
+}
+
+void test_rng_handler_excludes_noncombatants_from_encounters() {
+    auto game = load_empty_game();
+    auto handler = game->getObjectHandler();
+    for (const auto &type : handler->getAllSubTypes("CCreature")) {
+        handler->unregisterConfig(type);
+    }
+    const std::vector<std::shared_ptr<json>> noncombatants = {
+        CJsonUtil::from_string("{\"class\":\"CCreature\"}", "neutralEncounter"),
+        CJsonUtil::from_string("{\"class\":\"CCreature\",\"properties\":{\"sw\":1}}", "uncontrolledEncounter"),
+        make_unit_creature_config(0),
+        make_unit_creature_config(1),
+    };
+    (*noncombatants.back())["properties"]["npc"] = true;
+    for (const auto &config : noncombatants) {
+        handler->registerConfig("unitNoncombatant", config);
+        CRngHandler rng(game);
+        expect_true(rng.getRandomEncounter(1).empty(),
+                    "neutral, uncontrolled, zero-power and NPC templates must not become hostile encounters");
+    }
+    handler->unregisterConfig("unitNoncombatant");
+    handler->registerConfig("unitCombatant", make_unit_creature_config(1));
+    CRngHandler rng(game);
+    const auto encounter = rng.getRandomEncounter(1);
+    expect_true(encounter.size() == 1 && (*encounter.begin())->getTypeId() == "unitCombatant",
+                "a controlled positive-power monster must remain eligible for encounters");
 }
 
 void test_rng_handler_builds_encounters_from_concrete_creature_sw() {
@@ -1134,6 +1755,7 @@ void test_rng_handler_builds_encounters_from_concrete_creature_sw() {
 
     // Building the handler against the live game ingests every registered subtype's concrete getSw()
     // into the creature power table used to assemble encounters.
+    primeEncounterFixtureLevels(game, 40, 64, "concrete-sw");
     CRngHandler rng_handler(game);
 
     for (int attempt = 0; attempt < 64; attempt++) {
@@ -1143,6 +1765,7 @@ void test_rng_handler_builds_encounters_from_concrete_creature_sw() {
             if (!creature) {
                 continue;
             }
+            expect_true(creature->getLevel() == 40, "concrete-sw sampling must not replay fixture level-ups");
             // Encounter power compatibility: the post-scaling sum stays getScale() == level + sw.
             expect_true(creature->getScale() == creature->getLevel() + creature->getSw(),
                         "scaled encounter creatures should keep getScale() == level + sw");
@@ -1226,6 +1849,7 @@ void test_rng_handler_excludes_archetype_definitions_from_encounters() {
 
     // Build the live handler: it seeds creaturePowerTable from the enumeration above, so
     // no definition can have entered it. Assembled encounters must be only real creatures.
+    primeEncounterFixtureLevels(game, 40, 64, "archetype-exclusion");
     CRngHandler rng_handler(game);
     bool producedEncounter = false;
     for (int attempt = 0; attempt < 64; attempt++) {
@@ -1235,6 +1859,7 @@ void test_rng_handler_excludes_archetype_definitions_from_encounters() {
             if (!creature) {
                 continue;
             }
+            expect_true(creature->getLevel() == 40, "archetype-exclusion sampling must not replay fixture level-ups");
             producedEncounter = true;
             expect_true(creature->meta()->inherits("CCreature"),
                         "every assembled encounter creature must be a concrete CCreature");
@@ -1305,6 +1930,8 @@ void test_rng_handler_captures_encounter_power_and_scale_baseline() {
         entry.sw = creature->getSw();
         entry.level = creature->getLevel();
         entry.scale = creature->getScale();
+        entry.inPowerTable = !creature->meta()->inherits("CPlayer") && !creature->isNpc() &&
+                             creature->getFightController() && entry.sw > 0;
 
         // Every concrete monster must preserve a defined sw/level pair, and getScale()
         // stays level + sw (src/object/CCreature.cpp:366), which the encounter power
@@ -1315,18 +1942,19 @@ void test_rng_handler_captures_encounter_power_and_scale_baseline() {
         baseline.push_back(entry);
     }
 
-    // Rebuild the creature power table the way CRngHandler's constructor does
-    // (src/handler/CRngHandler.cpp:63-69): one entry per concrete subtype keyed on
-    // getSw(). Mark which templates participate so the artifact records membership.
+    // Keep the baseline's encounter membership consistent with the eligible monster registry.
     std::unordered_multimap<int, std::string> creaturePowerTable;
-    for (auto &entry : baseline) {
-        creaturePowerTable.insert(std::make_pair(entry.sw, entry.type));
-        entry.inPowerTable = true;
+    for (const auto &entry : baseline) {
+        if (entry.inPowerTable) {
+            creaturePowerTable.insert(std::make_pair(entry.sw, entry.type));
+        }
     }
     expect_true(!creaturePowerTable.empty(),
                 "the creature power table should be produced non-empty from concrete templates");
-    expect_true(creaturePowerTable.size() == baseline.size(),
-                "every concrete template should contribute exactly one power-table entry");
+    expect_true(creaturePowerTable.size() ==
+                    static_cast<std::size_t>(std::count_if(baseline.begin(), baseline.end(),
+                                                           [](const auto &entry) { return entry.inPowerTable; })),
+                "only eligible monster templates should contribute power-table entries");
 
     // Emit the deterministic, ordered baseline artifact for review.
     std::cout << "[SS04] encounter power/scale baseline (type sw level scale inPowerTable)\n";
@@ -1341,7 +1969,9 @@ void test_rng_handler_captures_encounter_power_and_scale_baseline() {
     CRngHandler rng_handler(game);
     std::set<int> baselineSw;
     for (const auto &entry : baseline) {
-        baselineSw.insert(entry.sw);
+        if (entry.inPowerTable) {
+            baselineSw.insert(entry.sw);
+        }
     }
     bool producedEncounter = false;
     for (int attempt = 0; attempt < 64 && !producedEncounter; attempt++) {
@@ -1418,29 +2048,33 @@ void test_rng_handler_encounter_candidates_stay_in_stable_power_buckets() {
     expect_true(eligibleSwBuckets.contains(kHighSw),
                 "the high archetype's sw must register as an eligible encounter power bucket");
 
-    CRngHandler rng_handler(game);
-
     // (1) Candidate-set equivalence at a full power budget: across many samples every
     // assembled creature's sw must be a member of the eligible bucket set -- the
     // generator must never invent an sw key outside the registered candidate set, and
     // the post-scaling scale invariant must hold. Sampling order is irrelevant: this is a
     // set-membership comparison, not a sequence comparison.
     const int kFullBudget = 60;
+    primeEncounterFixtureLevels(game, kFullBudget, 256, "full-power-buckets");
+    auto rng_handler = nativeTestProfile().run("CRngHandler::CRngHandler", [&] { return CRngHandler(game); });
     bool producedFullEncounter = false;
-    for (int attempt = 0; attempt < 256; attempt++) {
-        for (const auto &creature : rng_handler.getRandomEncounter(kFullBudget)) {
-            if (!creature) {
-                continue;
+    nativeTestProfile().run("encounter samples(full-budget)", [&] {
+        for (int attempt = 0; attempt < 256; attempt++) {
+            for (const auto &creature : rng_handler.getRandomEncounter(kFullBudget)) {
+                if (!creature) {
+                    continue;
+                }
+                expect_true(creature->getLevel() == kFullBudget,
+                            "full-budget sampling must not replay fixture level-ups");
+                producedFullEncounter = true;
+                expect_true(eligibleSwBuckets.contains(creature->getSw()),
+                            "every encounter creature's sw must be drawn from a registered eligible power bucket");
+                expect_true(creature->getSw() <= kFullBudget,
+                            "every encounter creature's sw must respect the requested power budget");
+                expect_true(creature->getScale() == creature->getLevel() + creature->getSw(),
+                            "scaled encounter creatures must keep getScale() == level + sw");
             }
-            producedFullEncounter = true;
-            expect_true(eligibleSwBuckets.contains(creature->getSw()),
-                        "every encounter creature's sw must be drawn from a registered eligible power bucket");
-            expect_true(creature->getSw() <= kFullBudget,
-                        "every encounter creature's sw must respect the requested power budget");
-            expect_true(creature->getScale() == creature->getLevel() + creature->getSw(),
-                        "scaled encounter creatures must keep getScale() == level + sw");
         }
-    }
+    });
     expect_true(producedFullEncounter,
                 "a full power budget should assemble at least one encounter from the eligible buckets");
 
@@ -1450,19 +2084,24 @@ void test_rng_handler_encounter_candidates_stay_in_stable_power_buckets() {
     // and every assembled creature's sw must be <= the tight budget. This is deterministic
     // regardless of which low bucket the RNG happens to sample.
     const int kTightBudget = kHighSw - 1; // 8: below the high bucket, so it is never eligible
-    for (int attempt = 0; attempt < 256; attempt++) {
-        for (const auto &creature : rng_handler.getRandomEncounter(kTightBudget)) {
-            if (!creature) {
-                continue;
+    primeEncounterFixtureLevels(game, kTightBudget, 256, "tight-power-buckets");
+    nativeTestProfile().run("encounter samples(tight-budget)", [&] {
+        for (int attempt = 0; attempt < 256; attempt++) {
+            for (const auto &creature : rng_handler.getRandomEncounter(kTightBudget)) {
+                if (!creature) {
+                    continue;
+                }
+                expect_true(creature->getLevel() == kTightBudget,
+                            "tight-budget sampling must not replay fixture level-ups");
+                expect_true(creature->getSw() <= kTightBudget,
+                            "a tight power budget must exclude every bucket whose sw exceeds the budget");
+                expect_true(creature->getSw() != kHighSw,
+                            "the high power bucket must never be sampled when the budget is below its sw");
+                expect_true(creature->getType() != highId,
+                            "the high archetype must never be assembled under a sub-threshold power budget");
             }
-            expect_true(creature->getSw() <= kTightBudget,
-                        "a tight power budget must exclude every bucket whose sw exceeds the budget");
-            expect_true(creature->getSw() != kHighSw,
-                        "the high power bucket must never be sampled when the budget is below its sw");
-            expect_true(creature->getType() != highId,
-                        "the high archetype must never be assembled under a sub-threshold power budget");
         }
-    }
+    });
 
     // (3) Empty-encounter equivalence: a clamped-to-zero (or non-positive) budget leaves
     // random_components with nothing to decompose, so no candidate is ever drawn. This
@@ -1474,6 +2113,119 @@ void test_rng_handler_encounter_candidates_stay_in_stable_power_buckets() {
 
     objectHandler->unregisterConfig(lowId);
     objectHandler->unregisterConfig(highId);
+}
+
+// [EPIC_08][STORY_05][SUBSTORY_01] Associated-class metadata: future-gated encounter
+// scale hook. CCreatureRace.associatedClasses models D&D-inspired associated classes
+// (a class that reinforces the race's natural role), and CRngHandler's
+// classifyClassAssociation/scaleEncounterPower hook lets the encounter power table
+// DISTINGUISH associated from non-associated pairings. Balance is design-gated: the
+// multipliers behind scaleEncounterPower are pinned to the neutral value 1, so the
+// hook must be the identity for every classification and the encounter scale output
+// must stay bit-identical to the pre-hook math for all existing content (empty
+// metadata => zero effect). This test proves both halves of that acceptance.
+void test_rng_handler_distinguishes_associated_classes_with_neutral_scale() {
+    using ClassAssociation = CRngHandler::ClassAssociation;
+
+    // --- Capability (metadata): a race configured with associatedClasses reports the
+    // distinction for class ids and for class objects (configured-identity semantics).
+    auto race = std::make_shared<CCreatureRace>();
+    race->setAssociatedClasses({"mageClass"});
+
+    expect_true(race->isAssociatedClass("mageClass"), "a race should report a listed class id as associated");
+    expect_true(!race->isAssociatedClass("bruteClass"), "a race should report an unlisted class id as non-associated");
+    expect_true(!race->isAssociatedClass(std::string()), "an empty class id should never be associated");
+
+    auto mageClass = std::make_shared<CCreatureClass>();
+    mageClass->setTypeId("mageClass");
+    auto bruteClass = std::make_shared<CCreatureClass>();
+    bruteClass->setTypeId("bruteClass");
+    expect_true(race->isAssociatedClass(mageClass), "a class object should match by its configured typeId");
+    expect_true(!race->isAssociatedClass(bruteClass), "an off-role class object should not match");
+    auto namedOnlyClass = std::make_shared<CCreatureClass>();
+    namedOnlyClass->setName("mageClass");
+    expect_true(race->isAssociatedClass(namedOnlyClass),
+                "a class with no typeId should fall back to its name, matching configured-identity semantics");
+    expect_true(!race->isAssociatedClass(std::shared_ptr<CCreatureClass>()), "a null class is never associated");
+
+    // --- Capability (hook input): the encounter hook derives the right distinction
+    // from a creature's race/class pairing.
+    expect_true(CRngHandler::classifyClassAssociation(nullptr) == ClassAssociation::NoArchetype,
+                "a null creature carries no association to weigh");
+    auto creature = std::make_shared<CCreature>();
+    expect_true(CRngHandler::classifyClassAssociation(creature) == ClassAssociation::NoArchetype,
+                "a legacy creature (no race, no class) carries no association to weigh");
+    creature->setRace(race);
+    expect_true(CRngHandler::classifyClassAssociation(creature) == ClassAssociation::NoArchetype,
+                "a race-only creature has no race/class pairing to classify");
+    creature->setCreatureClass(mageClass);
+    expect_true(CRngHandler::classifyClassAssociation(creature) == ClassAssociation::Associated,
+                "a class listed in the race's associatedClasses should classify as Associated");
+    creature->setCreatureClass(bruteClass);
+    expect_true(CRngHandler::classifyClassAssociation(creature) == ClassAssociation::NonAssociated,
+                "a class missing from the race's associatedClasses should classify as NonAssociated");
+    auto emptyMetadataRace = std::make_shared<CCreatureRace>();
+    creature->setRace(emptyMetadataRace);
+    creature->setCreatureClass(mageClass);
+    expect_true(CRngHandler::classifyClassAssociation(creature) == ClassAssociation::NonAssociated,
+                "a race with default-empty associatedClasses should treat every class as non-associated");
+
+    // --- Neutrality (design-gated): the hook is the identity for EVERY classification
+    // and power, so the constructor's power-table key provably equals the raw getSw()
+    // no matter how a creature classifies (initial migration balance unchanged).
+    for (int power : {0, 1, 2, 4, 9, 40, 1000}) {
+        expect_true(CRngHandler::scaleEncounterPower(power, ClassAssociation::NoArchetype) == power,
+                    "legacy creatures must keep their raw power as the encounter power key");
+        expect_true(CRngHandler::scaleEncounterPower(power, ClassAssociation::Associated) == power,
+                    "the associated-class multiplier must stay neutral until the balance design is approved");
+        expect_true(CRngHandler::scaleEncounterPower(power, ClassAssociation::NonAssociated) == power,
+                    "the non-associated-class multiplier must stay neutral until the balance design is approved");
+    }
+
+    // --- Neutrality (existing content): for every encounter candidate the configured
+    // game registers, the hooked key the constructor computes equals the raw getSw(),
+    // so the creature power table is identical to the pre-hook build. Reconstructs the
+    // candidate set exactly as the constructor does (src/handler/CRngHandler.cpp),
+    // including the CPlayer exclusion.
+    auto game = load_empty_game();
+    auto objectHandler = game->getObjectHandler();
+
+    std::set<int> rawSwKeys;
+    for (const std::string &type : objectHandler->getAllSubTypes("CCreature")) {
+        auto resolvedClass = objectHandler->getType(objectHandler->getClass(type));
+        if (resolvedClass && resolvedClass->meta()->inherits("CPlayer")) {
+            continue;
+        }
+        auto prototype = game->createObject<CCreature>(type);
+        if (!prototype) {
+            continue;
+        }
+        const int hookedKey =
+            CRngHandler::scaleEncounterPower(prototype->getSw(), CRngHandler::classifyClassAssociation(prototype));
+        expect_true(hookedKey == prototype->getSw(),
+                    "every existing encounter candidate's hooked power key must equal its raw getSw()");
+        rawSwKeys.insert(prototype->getSw());
+    }
+
+    // The live handler (built with the hook in place) must still assemble encounters
+    // exclusively from the raw concrete sw buckets, exactly as before the hook.
+    primeEncounterFixtureLevels(game, 40, 64, "neutral-associated-class-hook");
+    CRngHandler rng_handler(game);
+    bool producedEncounter = false;
+    for (int attempt = 0; attempt < 64; attempt++) {
+        for (const auto &sampled : rng_handler.getRandomEncounter(40)) {
+            if (!sampled) {
+                continue;
+            }
+            expect_true(sampled->getLevel() == 40, "neutral-hook sampling must not replay fixture level-ups");
+            producedEncounter = true;
+            expect_true(rawSwKeys.contains(sampled->getSw()),
+                        "encounter creatures must still be drawn from the raw concrete sw power buckets");
+            expect_true(sampled->getScale() == sampled->getLevel() + sampled->getSw(),
+                        "the neutral hook must preserve getScale() == level + sw for encounter creatures");
+        }
+    }
+    expect_true(producedEncounter, "the hooked power table should still assemble non-empty encounters");
 }
 
 std::shared_ptr<json> make_unit_player_config(int sw) {
@@ -1575,43 +2327,47 @@ void test_rng_handler_excludes_player_templates_from_encounters() {
     expect_true(highBucketIsExclusive,
                 "no other monster template may share the high monster's sw bucket for the determinism proof");
 
-    CRngHandler rng_handler(game);
+    primeEncounterFixtureLevels(game, 60, 256, "player-exclusion");
+    auto rng_handler = nativeTestProfile().run("CRngHandler::CRngHandler", [&] { return CRngHandler(game); });
 
     bool sawRegisteredMonster = false;
     bool producedEncounter = false;
-    for (int attempt = 0; attempt < 256; attempt++) {
-        for (const auto &creature : rng_handler.getRandomEncounter(60)) {
-            if (!creature) {
-                continue;
-            }
-            producedEncounter = true;
+    nativeTestProfile().run("encounter samples(player-exclusion)", [&] {
+        for (int attempt = 0; attempt < 256; attempt++) {
+            for (const auto &creature : rng_handler.getRandomEncounter(60)) {
+                if (!creature) {
+                    continue;
+                }
+                expect_true(creature->getLevel() == 60, "player-exclusion sampling must not replay fixture level-ups");
+                producedEncounter = true;
 
-            // (1) A player template must NEVER be assembled into a random encounter. The
-            // load-bearing guard is the meta-inheritance check: a filtered CPlayer template can
-            // never construct as a CPlayer-derived instance. getType() carries the resolved class
-            // name (src/core/CSerialization.cpp:391), so it must never be CPlayer either.
-            expect_true(creature->getType() != "CPlayer",
-                        "random encounters must never select a CPlayer-classed template");
-            expect_true(!creature->meta()->inherits("CPlayer"),
-                        "no assembled encounter creature may be a CPlayer-derived player template");
+                // (1) A player template must NEVER be assembled into a random encounter. The
+                // load-bearing guard is the meta-inheritance check: a filtered CPlayer template can
+                // never construct as a CPlayer-derived instance. getType() carries the resolved class
+                // name (src/core/CSerialization.cpp:391), so it must never be CPlayer either.
+                expect_true(creature->getType() != "CPlayer",
+                            "random encounters must never select a CPlayer-classed template");
+                expect_true(!creature->meta()->inherits("CPlayer"),
+                            "no assembled encounter creature may be a CPlayer-derived player template");
 
-            // (3) Every assembled creature's sw must remain one of the unchanged monster power
-            // buckets -- the player filter must not perturb monster sw selection.
-            expect_true(monsterSwBuckets.contains(creature->getSw()),
-                        "encounter creatures must keep an unchanged registered monster sw power bucket");
-            expect_true(creature->getScale() == creature->getLevel() + creature->getSw(),
-                        "scaled encounter creatures must keep getScale() == level + sw");
+                // (3) Every assembled creature's sw must remain one of the unchanged monster power
+                // buckets -- the player filter must not perturb monster sw selection.
+                expect_true(monsterSwBuckets.contains(creature->getSw()),
+                            "encounter creatures must keep an unchanged registered monster sw power bucket");
+                expect_true(creature->getScale() == creature->getLevel() + creature->getSw(),
+                            "scaled encounter creatures must keep getScale() == level + sw");
 
-            // (2) Genuine monster candidates are still selected. Any creature drawn from the
-            // exclusive high-sw bucket is provably the registered high monster; confirm its config
-            // id via getTypeId() (getType() is the class name "CCreature", not the config key).
-            if (creature->getSw() == kMonsterHighSw) {
-                expect_true(creature->getTypeId() == monsterHighId,
-                            "the exclusive high-sw bucket must only ever yield the registered high monster");
-                sawRegisteredMonster = true;
+                // (2) Genuine monster candidates are still selected. Any creature drawn from the
+                // exclusive high-sw bucket is provably the registered high monster; confirm its config
+                // id via getTypeId() (getType() is the class name "CCreature", not the config key).
+                if (creature->getSw() == kMonsterHighSw) {
+                    expect_true(creature->getTypeId() == monsterHighId,
+                                "the exclusive high-sw bucket must only ever yield the registered high monster");
+                    sawRegisteredMonster = true;
+                }
             }
         }
-    }
+    });
 
     // (2) Genuine monster candidates are still selected after the player exclusion.
     expect_true(producedEncounter,
@@ -1772,33 +2528,97 @@ void test_tooltip_handler_exposes_present_archetypes_without_duplicate_descripti
 
 int main() {
     pybind11::scoped_interpreter guard{};
+    const auto runTimedGuiCancellationTest = [](const char *name, void (*test)()) {
+        const auto started = std::chrono::steady_clock::now();
+        std::cout << "[handler-test] ENTER " << name << std::endl;
+        test();
+        const auto elapsed =
+            std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::steady_clock::now() - started).count();
+        std::cout << "[handler-test] EXIT " << name << " elapsedMs=" << elapsed << std::endl;
+    };
+    nativeTestProfile().run("testGameplayMetadataIsAvailableBeforePluginLoading",
+                            testGameplayMetadataIsAvailableBeforePluginLoading);
 
-    test_script_handler_executes_commands_and_wraps_functions();
-    test_handler_constructors_are_covered_by_native_tests();
-    test_creature_scale_preserves_level_plus_sw_invariant();
-    test_tooltip_handler_exposes_present_archetypes_without_duplicate_descriptions();
-    test_rng_handler_builds_encounters_from_concrete_creature_sw();
-    test_rng_handler_excludes_archetype_definitions_from_encounters();
-    test_rng_handler_excludes_player_templates_from_encounters();
-    test_rng_handler_captures_encounter_power_and_scale_baseline();
-    test_rng_handler_encounter_candidates_stay_in_stable_power_buckets();
-    test_creature_subtype_inventory_is_enumerable_on_loaded_game();
-    test_event_handler_trigger_registration_uses_named_comparison_helpers();
-    test_fight_handler_rejects_stale_and_cross_map_participants();
-    test_fight_handler_attributes_lethal_effects_to_valid_casters();
-    test_fight_handler_reports_explicit_outcomes_and_final_status();
-    test_fight_handler_reports_invalid_result_metadata();
-    test_fight_handler_reports_cancelled_quit_event();
-    test_fight_handler_ends_original_started_controllers();
-    test_fight_handler_reports_cancelled_closed_fight_panel();
-    test_player_fight_controller_returns_cancelled_when_attached_fight_panel_cancels();
-    test_fight_handler_returns_cancelled_when_player_control_cancels();
-    test_fight_panel_resets_status_between_sequential_encounters();
-    test_fight_handler_counts_effect_duration_as_progress();
-    test_playtest_trace_records_native_limits_and_quest_completion();
-    test_playtest_trace_environment_targets_and_fallback_ids();
-    test_fight_handler_records_outcome_trace_metadata();
-    test_player_respawn_normalizes_wrapped_entry_coords();
+    nativeTestProfile().run("test_script_handler_executes_commands_and_wraps_functions",
+                            test_script_handler_executes_commands_and_wraps_functions);
+    nativeTestProfile().run("test_handler_constructors_are_covered_by_native_tests",
+                            test_handler_constructors_are_covered_by_native_tests);
+    nativeTestProfile().run("test_creature_scale_preserves_level_plus_sw_invariant",
+                            test_creature_scale_preserves_level_plus_sw_invariant);
+    nativeTestProfile().run("test_tooltip_handler_exposes_present_archetypes_without_duplicate_descriptions",
+                            test_tooltip_handler_exposes_present_archetypes_without_duplicate_descriptions);
+    nativeTestProfile().run("test_rng_handler_builds_encounters_from_concrete_creature_sw",
+                            test_rng_handler_builds_encounters_from_concrete_creature_sw);
+    nativeTestProfile().run("test_rng_handler_scales_fresh_creatures_before_map_insertion",
+                            test_rng_handler_scales_fresh_creatures_before_map_insertion);
+    nativeTestProfile().run("test_rng_handler_excludes_noncombatants_from_encounters",
+                            test_rng_handler_excludes_noncombatants_from_encounters);
+    nativeTestProfile().run("test_rng_handler_excludes_archetype_definitions_from_encounters",
+                            test_rng_handler_excludes_archetype_definitions_from_encounters);
+    nativeTestProfile().run("test_rng_handler_excludes_player_templates_from_encounters",
+                            test_rng_handler_excludes_player_templates_from_encounters);
+    nativeTestProfile().run("test_rng_handler_captures_encounter_power_and_scale_baseline",
+                            test_rng_handler_captures_encounter_power_and_scale_baseline);
+    nativeTestProfile().run("test_rng_handler_encounter_candidates_stay_in_stable_power_buckets",
+                            test_rng_handler_encounter_candidates_stay_in_stable_power_buckets);
+    nativeTestProfile().run("test_rng_handler_distinguishes_associated_classes_with_neutral_scale",
+                            test_rng_handler_distinguishes_associated_classes_with_neutral_scale);
+    nativeTestProfile().run("test_creature_subtype_inventory_is_enumerable_on_loaded_game",
+                            test_creature_subtype_inventory_is_enumerable_on_loaded_game);
+    nativeTestProfile().run("test_event_handler_trigger_registration_uses_named_comparison_helpers",
+                            test_event_handler_trigger_registration_uses_named_comparison_helpers);
+    nativeTestProfile().run("test_fight_handler_rejects_stale_and_cross_map_participants",
+                            test_fight_handler_rejects_stale_and_cross_map_participants);
+    nativeTestProfile().run("test_fight_handler_attributes_lethal_effects_to_valid_casters",
+                            test_fight_handler_attributes_lethal_effects_to_valid_casters);
+    nativeTestProfile().run("test_fight_handler_reports_explicit_outcomes_and_final_status",
+                            test_fight_handler_reports_explicit_outcomes_and_final_status);
+    nativeTestProfile().run("test_fight_handler_reports_invalid_result_metadata",
+                            test_fight_handler_reports_invalid_result_metadata);
+    nativeTestProfile().run("test_fight_handler_reports_cancelled_quit_event",
+                            test_fight_handler_reports_cancelled_quit_event);
+    nativeTestProfile().run("test_fight_handler_ends_original_started_controllers",
+                            test_fight_handler_ends_original_started_controllers);
+    nativeTestProfile().run("test_fight_handler_reports_cancelled_closed_fight_panel", [&] {
+        runTimedGuiCancellationTest("test_fight_handler_reports_cancelled_closed_fight_panel",
+                                    test_fight_handler_reports_cancelled_closed_fight_panel);
+    });
+    nativeTestProfile().run("test_player_fight_controller_returns_cancelled_when_attached_fight_panel_cancels", [&] {
+        runTimedGuiCancellationTest("test_player_fight_controller_returns_cancelled_when_attached_fight_panel_cancels",
+                                    test_player_fight_controller_returns_cancelled_when_attached_fight_panel_cancels);
+    });
+    nativeTestProfile().run("test_fight_handler_returns_cancelled_when_player_control_cancels", [&] {
+        runTimedGuiCancellationTest("test_fight_handler_returns_cancelled_when_player_control_cancels",
+                                    test_fight_handler_returns_cancelled_when_player_control_cancels);
+    });
+    nativeTestProfile().run("test_fight_panel_resets_status_between_sequential_encounters",
+                            test_fight_panel_resets_status_between_sequential_encounters);
+    nativeTestProfile().run("testEffectTickCappingAndExpiryIgnoreAllocationOrder",
+                            testEffectTickCappingAndExpiryIgnoreAllocationOrder);
+    nativeTestProfile().run("testEffectTickLethalityTimingAndCasterIgnoreAllocationOrder",
+                            testEffectTickLethalityTimingAndCasterIgnoreAllocationOrder);
+    nativeTestProfile().run("test_fight_handler_counts_effect_duration_as_progress",
+                            test_fight_handler_counts_effect_duration_as_progress);
+    nativeTestProfile().run("test_player_quest_completion_ignores_reentry_and_captures_final_callback_state",
+                            test_player_quest_completion_ignores_reentry_and_captures_final_callback_state);
+    nativeTestProfile().run("test_player_quest_completion_accepts_cleared_active_set",
+                            test_player_quest_completion_accepts_cleared_active_set);
+    nativeTestProfile().run("test_player_quest_completion_skips_removed_snapshot_entries",
+                            test_player_quest_completion_skips_removed_snapshot_entries);
+    nativeTestProfile().run("test_player_quest_completion_defers_new_quests_until_next_pass",
+                            test_player_quest_completion_defers_new_quests_until_next_pass);
+    nativeTestProfile().run("test_player_quest_completion_restores_guard_after_native_exceptions",
+                            test_player_quest_completion_restores_guard_after_native_exceptions);
+    nativeTestProfile().run("test_player_capture_quest_journal_passes_membership_without_completing",
+                            test_player_capture_quest_journal_passes_membership_without_completing);
+    nativeTestProfile().run("test_playtest_trace_records_native_limits_and_quest_completion",
+                            test_playtest_trace_records_native_limits_and_quest_completion);
+    nativeTestProfile().run("test_playtest_trace_environment_targets_and_fallback_ids",
+                            test_playtest_trace_environment_targets_and_fallback_ids);
+    nativeTestProfile().run("test_fight_handler_records_outcome_trace_metadata",
+                            test_fight_handler_records_outcome_trace_metadata);
+    nativeTestProfile().run("test_player_respawn_normalizes_wrapped_entry_coords",
+                            test_player_respawn_normalizes_wrapped_entry_coords);
 
     return finish_tests();
 }

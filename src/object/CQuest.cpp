@@ -35,6 +35,13 @@ void CQuest::onComplete() {
     }
 }
 
+void CQuest::captureJournal(bool completed) {
+    pybind11::gil_scoped_acquire gil;
+    if (auto override = CPythonOverrides::find_override(this, "captureJournal"); !override.is_none()) {
+        PY_SAFE(override(completed); return;)
+    }
+}
+
 std::string CQuest::getObjective() {
     pybind11::gil_scoped_acquire gil;
     if (auto override = CPythonOverrides::find_override(this, "getObjective"); !override.is_none()) {

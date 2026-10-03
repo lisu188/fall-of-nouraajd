@@ -1,7 +1,9 @@
 def load(self, context):
+    from game import showReader, rewardSnapshot, showRewardReceipt
     from game import CDialog
     from game import CEvent
     from game import CQuest
+    from game import mapQuest
     from game import CTrigger
     from game import claim_once
     from game import register
@@ -38,14 +40,15 @@ def load(self, context):
             if game_map.getBoolProperty("hearthfall_intro"):
                 return
             game_map.setBoolProperty("hearthfall_intro", True)
-            game_map.getGame().getGuiHandler().showMessage(self.getStringProperty("text"))
+            showReader(game_map.getGame(), "Hearthfall", self.getStringProperty("text"))
             game_map.removeAll(lambda ob: ob.getName() == self.getName())
             ensure_quest(event.getCause(), "hearthfallQuest")
 
     @register(context)
+    @mapQuest("hearthfall")
     class HearthfallQuest(CQuest):
         def isCompleted(self):
-            return self.getGame().getMap().getBoolProperty("captain_defeated")
+            return self.getGame().getMap().getBoolProperty("victory_reported")
 
         def getObjective(self):
             game_map = self.getGame().getMap()
@@ -54,6 +57,7 @@ def load(self, context):
             if not game_map.getBoolProperty("victory_reported"):
                 return "Bring word of the captain's fall to Elder Maren."
             return "Hearthfall is free. The road leads north into the Gravemoor."
+
         def getReward(self):
             return f"{VICTORY_GOLD_REWARD} gold from the village's hidden purse, and the road north."
 
@@ -80,15 +84,19 @@ def load(self, context):
             if not self.captain_down():
                 return
             game_map.setBoolProperty("victory_reported", True)
+            player = game_map.getPlayer()
             if claim_once(game_map, "victory_reward_claimed"):
-                player = game_map.getPlayer()
+                reward_before = rewardSnapshot(player)
                 player.addGold(VICTORY_GOLD_REWARD)
-                player.checkQuests()
-                self.getGame().getGuiHandler().showMessage(
+                showRewardReceipt(
+                    self.getGame(),
+                    "Hearthfall liberated",
+                    reward_before,
                     "Maren presses the village's hidden purse into your hands. 'The Gravemoor holds our people. "
-                    "Bring them home, Warden.'"
+                    "Bring them home, Warden.'",
                 )
-            campaign.complete_scenario(self.getGame(), "completed")
+            player.checkQuests()
+            campaign.complete_scenario(self.getGame(), "completed", fallback_map="gravemoor")
 
     @trigger(context, "onEnter", "elderMaren")
     class ElderTrigger(CTrigger):
@@ -103,7 +111,7 @@ def load(self, context):
             if game_map.getBoolProperty("captain_defeated"):
                 return
             game_map.setBoolProperty("captain_defeated", True)
-            object.getGame().getGuiHandler().showMessage(
+            object.getGame().getGuiHandler().notify(
                 "Osric drops with the occupation banner still in his fist. The square is yours - "
                 "bring Elder Maren the news."
             )
@@ -111,6 +119,4 @@ def load(self, context):
     @trigger(context, "onDestroy", "occupierGate")
     class GateSentryTrigger(CTrigger):
         def trigger(self, object, event):
-            object.getGame().getGuiHandler().showMessage(
-                "The gate sentry falls. The road into Hearthfall stands open."
-            )
+            object.getGame().getGuiHandler().notify("The gate sentry falls. The road into Hearthfall stands open.")

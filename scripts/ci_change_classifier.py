@@ -22,6 +22,7 @@ COVERAGE_PATH_PATTERNS = (
     "src/gui/*",
     "src/handler/*",
     "src/object/*",
+    "src/plugin/*",
 )
 
 NATIVE_PATH_PATTERNS = (
@@ -41,47 +42,29 @@ NATIVE_PATH_PATTERNS = (
     "vstd/*",
 )
 
-# Paths whose content can change how required validation is routed, polled, or
-# scored: the build workflow definition, the poller, and this classifier itself.
+# Paths whose content can change how required validation or auto-merge is
+# routed, polled, scored, or authorized.
 # A pull request that edits these files must not be allowed to classify its own
 # change as lightweight and thereby skip native/coverage validation. Touching any
 # of these forces strict native + coverage validation and human review, so the
 # authority for "what is required" never comes solely from PR-controlled logic.
 CI_AUTHORITY_PATH_PATTERNS = (
+    ".github/workflows/auto-merge.yml",
     ".github/workflows/build.yml",
+    "scripts/auto_merge_policy.py",
     "scripts/ci_change_classifier.py",
-    "scripts/poll_pr_checks.py",
 )
 
 LIGHTWEIGHT_PATH_PATTERNS = (
-    ".github/multi-workbook-inspection.txt",
-    ".github/multi-workbook-payload/*",
     ".github/workflows/*",
     "AGENTS.md",
     "docs/*",
-    "planning/*.xlsx",
-    "planning/workflow_observations/records/*.json",
-    "planning/workflow_observations/resolutions/*.json",
-    "prompts/*",
     "scripts/ci_change_classifier.py",
-    "scripts/controller_resource_audit.py",
-    "scripts/issue_queue.py",
-    "scripts/poll_pr_checks.py",
-    "scripts/pr_review_audit.py",
     "scripts/validate_content.py",
-    "scripts/workbook_queue.py",
-    "scripts/workflow_observations.py",
     "tests/security/test_configure_supply_chain.py",
     "tests/test_ci_change_classifier.py",
     "tests/test_content_validator.py",
-    "tests/test_controller_resource_audit.py",
     "tests/test_coverage_report.py",
-    "tests/test_issue_queue.py",
-    "tests/test_poll_pr_checks.py",
-    "tests/test_pr_review_audit.py",
-    "tests/test_prompt_inventory.py",
-    "tests/test_workbook_queue.py",
-    "tests/test_workflow_observations.py",
 )
 
 
@@ -115,18 +98,12 @@ WORKFLOW_PYTHON_KIND_PATTERNS = (
     "tests/test_*.py",
     "tests/security/*.py",
 )
-QUEUE_STATE_KIND_PATTERNS = (
-    "planning/*.xlsx",
-    "planning/workflow_observations/records/*.json",
-    "planning/workflow_observations/resolutions/*.json",
-)
 PROMPTS_DOCS_KIND_PATTERNS = (
     "AGENTS.md",
     "CLAUDE.md",
     "README.md",
     "*.md",
     "docs/*",
-    "prompts/*",
 )
 
 
@@ -140,8 +117,6 @@ def _path_kind(path: str) -> str:
         return "content-json-python"
     if matchesAny(path, WORKFLOW_PYTHON_KIND_PATTERNS):
         return "workflow-python"
-    if matchesAny(path, QUEUE_STATE_KIND_PATTERNS):
-        return "queue-state"
     if matchesAny(path, PROMPTS_DOCS_KIND_PATTERNS):
         return "prompts-docs"
     return "unclassified"
@@ -164,12 +139,11 @@ class ChangeClassification:
     contentJsonPython: bool = False
     workflowPython: bool = False
     promptsDocs: bool = False
-    queueStateOnly: bool = False
 
     @property
     def humanReviewRequired(self) -> bool:
-        # Changes to the validation-authority files (workflow/poller/classifier)
-        # cannot be merged on PR-controlled logic alone; they require human review.
+        # Changes to validation or merge authority cannot be trusted solely from
+        # PR-controlled logic.
         return self.authorityChange
 
 
@@ -230,7 +204,6 @@ def classifyPaths(paths: Sequence[str], *, forceNative: bool = False) -> ChangeC
         contentJsonPython="content-json-python" in kinds,
         workflowPython="workflow-python" in kinds,
         promptsDocs="prompts-docs" in kinds,
-        queueStateOnly=bool(kinds) and all(kind == "queue-state" for kind in kinds),
     )
 
 
@@ -289,7 +262,6 @@ def writeGithubOutput(path: Path, classification: ChangeClassification) -> None:
         handle.write(line("content-json-python", classification.contentJsonPython))
         handle.write(line("workflow-python", classification.workflowPython))
         handle.write(line("prompts-docs", classification.promptsDocs))
-        handle.write(line("queue-state-only", classification.queueStateOnly))
 
 
 def parseArgs(argv: Sequence[str]) -> argparse.Namespace:
@@ -346,7 +318,6 @@ def main(argv: Sequence[str] | None = None) -> int:
                 "nativeReasons": list(classification.nativeReasons),
                 "paths": list(classification.paths),
                 "promptsDocs": classification.promptsDocs,
-                "queueStateOnly": classification.queueStateOnly,
                 "workflowPython": classification.workflowPython,
             },
             indent=2,

@@ -18,15 +18,18 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #include "core/CGameContext.h"
 #include "core/CController.h"
 #include "core/CGame.h"
+#include "core/CNavigation.h"
 #include "core/CMap.h"
 #include "core/CProvider.h"
 #include "core/CSceneManager.h"
 #include "core/CSlotConfig.h"
 #include "gui/CGui.h"
 #include "handler/CGuiHandler.h"
+#include "handler/CLuaHandler.h"
 #include "handler/CObjectHandler.h"
 #include "handler/CRngHandler.h"
 #include "handler/CScriptHandler.h"
+#include "object/CCreature.h"
 
 #include <atomic>
 #include <stdexcept>
@@ -60,6 +63,14 @@ std::shared_ptr<CScriptHandler> CGameContext::getScriptHandler() {
         scriptHandler = std::make_shared<CScriptHandler>();
     }
     return scriptHandler;
+}
+
+std::shared_ptr<CLuaHandler> CGameContext::getLuaHandler() {
+    requireActiveService("CLuaHandler");
+    if (!luaHandler) {
+        luaHandler = std::make_shared<CLuaHandler>();
+    }
+    return luaHandler;
 }
 
 std::shared_ptr<CRngHandler> CGameContext::getRngHandler() {
@@ -109,6 +120,21 @@ std::shared_ptr<CMapSessionStore> CGameContext::getMapSessionStore() {
     return mapSessionStore;
 }
 
+void CGameContext::addEventLoopConnection(vstd::event_loop<>::connection connection) {
+    requireActiveService("event loop");
+    eventLoopConnections.push_back(std::move(connection));
+}
+
+void CGameContext::trackEffectOwner(const std::shared_ptr<CCreature> &creature) {
+    if (isActive() && creature) {
+        effectOwners[creature.get()] = creature;
+    }
+}
+
+void CGameContext::untrackEffectOwner(const CCreature *creature) { effectOwners.erase(creature); }
+
+std::size_t CGameContext::getEffectOwnerCount() const { return effectOwners.size(); }
+
 std::string CMapSessionStore::makeKey(const std::string &mapName, const std::string &instanceId) {
     // Length-prefix the map name so distinct (mapName, instanceId) pairs never collide.
     return std::to_string(mapName.size()) + ":" + mapName + ":" + instanceId;
@@ -119,7 +145,9 @@ void CMapSessionStore::put(const std::string &mapName, const std::string &instan
     if (!map) {
         return;
     }
-    sessions[makeKey(mapName, instanceId)] = map;
+    const auto key = makeKey(mapName, instanceId);
+    sessions[key] = map;
+    returnCoordinates.erase(key);
 }
 
 void CMapSessionStore::put(const std::shared_ptr<CMap> &map, const std::string &instanceId) {
@@ -134,15 +162,33 @@ std::shared_ptr<CMap> CMapSessionStore::get(const std::string &mapName, const st
     return it != sessions.end() ? it->second : nullptr;
 }
 
+void CMapSessionStore::setReturnCoords(const std::string &mapName, const std::string &instanceId, Coords coords) {
+    const auto key = makeKey(mapName, instanceId);
+    if (sessions.contains(key)) {
+        returnCoordinates[key] = coords;
+    }
+}
+
+std::optional<Coords> CMapSessionStore::getReturnCoords(const std::string &mapName,
+                                                        const std::string &instanceId) const {
+    auto it = returnCoordinates.find(makeKey(mapName, instanceId));
+    return it != returnCoordinates.end() ? std::optional<Coords>(it->second) : std::nullopt;
+}
+
 bool CMapSessionStore::contains(const std::string &mapName, const std::string &instanceId) const {
     return sessions.find(makeKey(mapName, instanceId)) != sessions.end();
 }
 
 bool CMapSessionStore::evict(const std::string &mapName, const std::string &instanceId) {
-    return sessions.erase(makeKey(mapName, instanceId)) > 0;
+    const auto key = makeKey(mapName, instanceId);
+    returnCoordinates.erase(key);
+    return sessions.erase(key) > 0;
 }
 
-void CMapSessionStore::clear() { sessions.clear(); }
+void CMapSessionStore::clear() {
+    sessions.clear();
+    returnCoordinates.clear();
+}
 
 std::size_t CMapSessionStore::size() const { return sessions.size(); }
 
@@ -159,6 +205,7 @@ void CGameContext::shutdown(CGame *owner) {
     }
 
     advanceTransitionGeneration();
+    eventLoopConnections.clear();
     if (owner) {
         if (owner->sceneManager) {
             owner->sceneManager->resetTransition();
@@ -167,9 +214,25 @@ void CGameContext::shutdown(CGame *owner) {
             owner->_gui->shutdown();
             owner->_gui.reset();
         }
+    }
+    // Effects retain their actors for save/reload continuity. Break their cycles before releasing
+    // maps and plugin runtimes, including actors kept alive only by detached effect graphs.
+    auto pendingEffectOwners = std::move(effectOwners);
+    effectOwners.clear();
+    for (const auto &[identity, reference] : pendingEffectOwners) {
+        if (auto creature = reference.lock()) {
+            creature->releaseEffectReferences();
+        }
+    }
+    if (owner) {
         owner->map.reset();
     }
-    performance_guard::clearTargetFlowCache();
+    // Close the Lua state before the Python script handler releases: Lua-registered factories
+    // and hook tables die with the state, and retained objects fall back to base behavior
+    // through the expired weak_ptr guard in CLuaOverrides.
+    if (luaHandler) {
+        luaHandler->releaseState();
+    }
     if (scriptHandler) {
         scriptHandler->releaseState();
     }
@@ -180,10 +243,17 @@ void CGameContext::shutdown(CGame *owner) {
     mapSessionStore.reset();
     configurationProvider.reset();
     resourcesProvider.reset();
+    luaHandler.reset();
     scriptHandler.reset();
     guiHandler.reset();
     rngHandler.reset();
     objectHandler.reset();
+    if (owner) {
+        std::lock_guard lock(owner->navigationServiceMutex);
+        if (owner->navigationService)
+            owner->navigationService->clearSessionCaches();
+        owner->navigationService.reset();
+    }
 }
 
 CGameContext::TransitionGeneration CGameContext::getTransitionGeneration() const {

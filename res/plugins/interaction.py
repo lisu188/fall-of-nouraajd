@@ -1,5 +1,5 @@
 # fall-of-nouraajd c++ dark fantasy game
-# Copyright (C) 2025  Andrzej Lis
+# Copyright (C) 2025-2026  Andrzej Lis
 #
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
@@ -31,12 +31,36 @@ def load(self, context):
         affiliation = creature.getStringProperty("affiliation")
         return affiliation in {"cult", "marumi"} or "Cult" in creature.getType()
 
+    def committedManaRefund(caster, class_id, counter):
+        if not caster or not caster.isPlayer():
+            return 0
+        game = caster.getGame()
+        game_map = game.getMap() if game else None
+        if not game_map or game_map.getPlayer() != caster or caster.getMap() != game_map:
+            return 0
+        return 3 if caster.getPlayerClassId() == class_id and caster.getNumericProperty(counter) > 0 else 0
+
     @register(context)
     class Attack(CInteraction):
         def performAction(self, first, second):
+            arcane = first.getBoolProperty("enemyRoleArcaneAttack")
+            channel = first.getStringProperty("enemyRoleDamageChannel") if arcane else ""
+            minimum = first.getNumericProperty("enemyRoleDamageMinimum") if arcane else 0
+            if arcane:
+                first.setBoolProperty("enemyRoleArcaneAttack", False)
+                first.setStringProperty("enemyRoleDamageChannel", "")
+                first.setNumericProperty("enemyRoleDamageMinimum", 0)
             dmg = first.getDmg()
+            if arcane:
+                first.setNumericProperty("enemyRoleAttackBudget", dmg)
             if dmg:
-                second.hurt(dmg)
+                if arcane and channel in ("frost", "shadow") and dmg >= minimum:
+                    damage = first.getObjectProperty("enemyRoleDamagePacket")
+                    damage.setNumericProperty("normal", dmg - 1)
+                    damage.setNumericProperty(channel, 1)
+                    second.hurt(damage)
+                else:
+                    second.hurt(dmg)
                 weapon = first.getWeapon()
                 if weapon:
                     inter = weapon.getInteraction()
@@ -60,6 +84,9 @@ def load(self, context):
 
     @register(context)
     class SneakAttack(Attack):
+        def getCommittedManaRefund(self, caster):
+            return committedManaRefund(caster, "Assasin", "assasin_trails")
+
         def performAction(self, first, second):
             super(SneakAttack, self).performAction(first, second)
             if randint(1, 100) > (100 - second.getHpRatio()) and second.isAlive():
@@ -84,16 +111,21 @@ def load(self, context):
     @register(context)
     class Devour(CInteraction):
         def performAction(self, first, second):
-            crit = first.getStats().getNumericProperty("crit")
-            first.getStats().setNumericProperty("crit", 0)
-            dmg = first.getDmg()
+            # Devour never crits: ask getDmg to skip the crit roll. The old code tried to
+            # suppress crit by mutating first.getStats(), but getStats() returns a freshly
+            # composed copy on every call, so the mutation did nothing and Devour still crit.
+            dmg = first.getDmg(False)
             if dmg:
                 second.hurt(dmg)
-                first.healProc((dmg * 75) // max(first.getHpMax(), 1))
-            first.getStats().setNumericProperty("crit", crit)
+                # Heal 75% of the damage dealt directly: routing it through an integer percent
+                # of hpMax floors to healProc(0) (= full heal) when dmg*75 < hpMax.
+                first.heal(max(1, dmg * 75 // 100))
 
     @register(context)
     class FrostBolt(CInteraction):
+        def getCommittedManaRefund(self, caster):
+            return committedManaRefund(caster, "Sorcerer", "sorcerer_sigils")
+
         def performAction(self, first, second):
             Attack().onAction(first, second)
             damage = spell_damage(first)
@@ -164,7 +196,17 @@ def load(self, context):
 
     @register(context)
     class Barrier(CInteraction):
-        pass
+        def getCommittedManaRefund(self, caster):
+            return committedManaRefund(caster, "Warrior", "warrior_barricades")
+
+        def configureEffect(self, effect):
+            caster = effect.getCaster()
+            if not caster:
+                return False
+            stats = bonus_stats(caster)
+            stats.setNumericProperty("normalResist", 10)
+            effect.setBonus(stats)
+            return True
 
     @register(context)
     class Chloroform(CInteraction):

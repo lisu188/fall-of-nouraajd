@@ -1,8 +1,10 @@
 def load(self, context):
+    from game import showReader, rewardSnapshot, showRewardReceipt, requirementMessage
     from game import CTag
     from game import CCreature
     from game import CEvent
     from game import CQuest
+    from game import mapQuest
     from game import CTrigger
     from game import register
     from game import trigger
@@ -12,7 +14,7 @@ def load(self, context):
 
     # The plugin sandbox only allows importing the game and json modules;
     # game re-exports the campaign driver (res/campaign.py) as an attribute.
-    from game import campaign
+    from game import campaign, narrative
 
     # Scenario outcomes this map reports through campaign.complete_scenario;
     # campaign manifests route them (see docs/design/multilevel_campaign.md).
@@ -48,12 +50,16 @@ def load(self, context):
             player = game_map.getPlayer()
             ensure_siege_quest(player)
             player.addItem("magicWand")
-            game_map.getGame().getGuiHandler().showMessage(
+            summary = narrative.siegeSummary(game_map.getGame())
+            showReader(
+                game_map.getGame(),
+                "The siege",
                 "The road ends at a besieged gatehouse. Seal each breach with mage-wands before the attackers "
-                "overrun it."
+                "overrun it." + ("\n\n" + summary if summary else ""),
             )
 
     @register(context)
+    @mapQuest("siege")
     class DefendSiegeQuest(CQuest):
         def isCompleted(self):
             return destroyed_gate_count(self.getGame().getMap()) == len(SPAWN_POINTS)
@@ -63,7 +69,7 @@ def load(self, context):
             return f"Seal every siege gate with charged wands ({sealed}/{len(SPAWN_POINTS)} sealed)."
 
         def getReward(self):
-            return "500 gold and final campaign completion."
+            return f"{narrative.siegeRewardGold(self.getGame())} gold and final campaign completion."
 
         def getHint(self):
             return "Pritz mages carry extra wands; defeat them if you run out."
@@ -72,12 +78,18 @@ def load(self, context):
             game_map = self.getGame().getMap()
             player = game_map.getPlayer()
             # Claim-first: claim the campaign reward before granting gold or marking completion so a
-            # repeated completion cannot pay the 500 gold twice.
+            # repeated completion cannot pay the bounty twice.
             if not claim_once(game_map, "siege_reward_claimed"):
                 return
-            player.addGold(500)
+            reward_before = rewardSnapshot(player)
+            player.addGold(narrative.siegeRewardGold(self.getGame()))
             game_map.setBoolProperty("campaign_completed", True)
-            self.getGame().getGuiHandler().showMessage("The last breach is sealed. Nouraajd survives the night.")
+            showRewardReceipt(
+                self.getGame(),
+                "The last breach",
+                reward_before,
+                "The last breach is sealed. Nouraajd survives the night.\n\n" + narrative.siegeSummary(self.getGame()),
+            )
             campaign.complete_scenario(self.getGame(), "completed")
 
     @register(context)
@@ -106,6 +118,31 @@ def load(self, context):
             self.setBoolProperty("canStep", False)
             self.setBoolProperty("pendingSeal", False)
 
+        def sealBreach(self):
+            game_map = self.getMap()
+            player = game_map.getPlayer()
+            if (
+                not player
+                or game_map.getGame().getMap() != game_map
+                or not self.getBoolProperty("enabled")
+                or self.getBoolProperty("destroyed")
+                or self.getBoolProperty("pendingSeal")
+            ):
+                return False
+            here, destination = player.getCoords(), self.getCoords()
+            if (here.x, here.y, here.z) != (destination.x, destination.y, destination.z):
+                return False
+            if not player.hasItem(lambda item: item.hasTag(CTag.WAND)):
+                return False
+            player.removeQuestItem(lambda item: item.hasTag(CTag.WAND))
+            self.setBoolProperty("enabled", False)
+            self.setBoolProperty("destroyed", True)
+            self.setBoolProperty("pendingSeal", True)
+            self.setStringProperty("animation", "images/misc/closed_door")
+            self.completePendingSeal()
+            player.checkQuests()
+            return True
+
         def onTurn(self, event):
             if self.getBoolProperty("destroyed") and self.getBoolProperty("pendingSeal"):
                 self.completePendingSeal()
@@ -129,15 +166,22 @@ def load(self, context):
             ):
                 return
             if self.getMap().getPlayer().hasItem(lambda it: it.hasTag(CTag.WAND)):
-                if self.getMap().getGame().getGuiHandler().showQuestion("Do You want to seal the gate?"):
-                    self.getMap().getPlayer().removeQuestItem(lambda it: it.hasTag(CTag.WAND))
-                    self.setBoolProperty("enabled", False)
-                    self.setBoolProperty("destroyed", True)
-                    self.setBoolProperty("pendingSeal", True)
-                    self.setStringProperty("animation", "images/misc/closed_door")
-                    self.completePendingSeal()
+                handler = self.getMap().getGame().getGuiHandler()
+                question = "Seal this breach? Uses 1 mage-wand from your inventory."
+                confirm = getattr(handler, "showConfirm", None)
+                accepted = (
+                    confirm("Seal the breach", question, "Seal breach", "Keep exploring")
+                    if callable(confirm)
+                    else handler.showQuestion(question)
+                )
+                if accepted:
+                    self.sealBreach()
             else:
-                self.getMap().getGame().getGuiHandler().showInfo("You need a wand to seal the gate!")
+                requirementMessage(
+                    self.getMap().getGame(),
+                    self,
+                    "A mage-wand is needed to seal this breach. Find one before returning.",
+                )
 
     @trigger(context, "onTurn", "triggerAnchor")
     class TurnTrigger(CTrigger):

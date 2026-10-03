@@ -16,12 +16,27 @@ You should have received a copy of the GNU General Public License
 along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 #include "core/CGame.h"
+#include "core/CNavigation.h"
 #include "core/CGameContext.h"
 #include "core/CLoader.h"
 #include "core/CSceneManager.h"
+#include "core/CMap.h"
+#include "core/CProvider.h"
+#include "plugin/CPluginRegistrar.h"
 #include "gui/CGui.h"
+#include "gui/panel/CGamePanel.h"
+#include "gui/CTooltip.h"
 
 CGame::CGame() {}
+
+std::shared_ptr<CNavigationService> CGame::getNavigationService() {
+    std::lock_guard lock(navigationServiceMutex);
+    if (context && !context->isActive())
+        throw std::runtime_error("Cannot access CNavigationService after CGameContext shutdown.");
+    if (!navigationService)
+        navigationService = std::make_shared<CNavigationService>();
+    return navigationService;
+}
 
 CGame::~CGame() {
     if (context) {
@@ -37,7 +52,34 @@ bool CGame::requestMapTransition(CMapTransitionRequest request) {
 
 std::shared_ptr<CMap> CGame::getMap() const { return map; }
 
-void CGame::setMap(std::shared_ptr<CMap> map) { this->map = map; }
+void CGame::setMap(std::shared_ptr<CMap> map) {
+    if (context && !context->isActive() && map) {
+        throw std::runtime_error("Cannot set an active map after the game session has closed");
+    }
+    if (this->map != map && _gui) {
+        auto children = _gui->getChildren();
+        for (const auto &child : children) {
+            if (auto panel = vstd::cast<CGamePanel>(child))
+                panel->close();
+            else if (vstd::cast<CTooltip>(child))
+                _gui->removeChild(child);
+        }
+        _gui->clearDragSession();
+        _gui->releasePointerCapture();
+    }
+    this->map = map;
+    if (context && context->isActive()) {
+        context->getResourcesProvider()->setActiveScope(map ? map->getMapName() : std::string());
+    }
+}
+
+void CGame::setMapForResourceLoad(std::shared_ptr<CMap> map) {
+    if (context && !context->isActive()) {
+        this->map.reset();
+        return;
+    }
+    this->map = std::move(map);
+}
 
 std::shared_ptr<CGameContext> CGame::getContext() {
     if (!context) {
@@ -50,6 +92,8 @@ std::shared_ptr<CGuiHandler> CGame::getGuiHandler() { return getContext()->getGu
 
 std::shared_ptr<CScriptHandler> CGame::getScriptHandler() { return getContext()->getScriptHandler(); }
 
+std::shared_ptr<CLuaHandler> CGame::getLuaHandler() { return getContext()->getLuaHandler(); }
+
 std::shared_ptr<CObjectHandler> CGame::getObjectHandler() { return getContext()->getObjectHandler(); }
 
 std::shared_ptr<CSceneManager> CGame::getSceneManager() {
@@ -59,7 +103,10 @@ std::shared_ptr<CSceneManager> CGame::getSceneManager() {
     return sceneManager;
 }
 
-void CGame::loadPlugin(std::function<std::shared_ptr<CPlugin>()> plugin) { plugin()->load(this->ptr<CGame>()); }
+void CGame::loadPlugin(std::function<std::shared_ptr<CPlugin>()> plugin) {
+    CPluginRegistrar registrar(this->ptr<CGame>());
+    plugin()->load(registrar);
+}
 
 std::shared_ptr<CGui> CGame::getGui() const { return _gui; }
 

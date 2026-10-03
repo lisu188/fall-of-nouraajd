@@ -42,6 +42,11 @@
       },
       "inventory": {}
     },
+    "NeutralHumanNpc": {
+      "class": "CCreature",
+      "equipped": {},
+      "inventory": {}
+    },
     "OctoBogz": {
       "class": "CCreature",
       "equipped": {},

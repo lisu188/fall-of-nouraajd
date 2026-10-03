@@ -65,6 +65,30 @@ end-to-end `validate_repo()` run, including
 which pins that the quest validator runs inside the standard
 `ContentValidator.validate()` path rather than only via a direct helper call.
 
+### Quest journal integrity
+
+Map-local quest classes use `@mapQuest("mapId")` from `game`. A shared class may instead provide a source-map
+resolver, as the Castle mission class does with its existing scenario id. The decorator keeps live source-map
+gameplay authoritative and stores journal text on the quest object that travels with the player. Completed
+history is fixed; active off-map quests use their last captured text and cannot complete from destination flags.
+
+`CQuest.captureJournal(completed)` records text without granting rewards. `CPlayer.captureQuestJournal()` passes
+active/completed collection membership to each callback. The engine captures after completion, before loading a
+destination, and before serialization. The additive `questJournal*` properties use version 1 without changing
+the save envelope. Older saves retain completion status and use neutral unavailable-detail text when the source
+outcome cannot be recovered; existing Victor and Castle player outcome properties remain usable.
+
+The no-extension regression matrix covers all 27 configured quests and checks empty captured text, source reloads,
+failed captures, destination-state isolation, and property round trips:
+
+```bash
+python3 -m unittest tests.test_quest_journal tests.test_nouraajd_quest_journal
+```
+
+Native completion regressions and the bounded journal-capture guard run in the normal native/coverage workflow.
+The gameplay suite includes real save/load and movement-based stdio MCP journal checks, and the UI suite checks
+the `j` shortcut and rendered active/completed journal history under Xvfb.
+
 For Windows Visual Studio Release builds, use the same target and CTest label with the active configuration:
 
 ```bat
@@ -104,6 +128,13 @@ python3 test.py --suite full
 Use `--jobs <n>` with any suite to enable the existing sharded runner, for example
 `python3 test.py --suite gameplay --jobs "$(nproc)"`.
 
+The console and expanded-map interaction checks run once in `gameplay`, `full`, and `coverage-safe`. To run only
+these checks, use `python3 test.py ConsoleUiInteractionTest UiMinimapInteractionTest`. Their children use guarded
+Xvfb on Linux and SDL dummy/software rendering on Windows, with separate preferences and silent audio. They verify
+console editing, history bounds, cancellation and focus restoration, plus landmark inspection, explicit travel,
+empty lists and stale scene transitions. Missing `_game` or Linux display tooling is reported as a skip; other
+import errors and child failures remain failures.
+
 ## Campaign scenario gates
 Campaign, quest, dialog, trigger, and content-routing changes should report which scenario subset ran. A skipped
 scenario is not a pass; include the skip reason in the issue or PR final report.
@@ -141,16 +172,19 @@ checks campaign transition into the later maps:
 python3 test.py \
   GameTest.test_map_walkthrough_nouraajd \
   McpServerTest.test_stdio_map_walkthrough_nouraajd \
-  GameTest.test_campaign_transitions_preserve_player_and_start_siege
+  GameTest.test_campaign_transitions_preserve_player_and_start_siege \
+  GameTest.test_campaign_driver_routes_full_campaign_with_carryover
 ```
 
 Normal pull request CI runs content validation plus the fast Nouraajd smoke and targeted quest/reward gates whenever
 native validation is required. The existing `gameplay` and `ui` suites still run after those gates; the campaign gates
 are early, named checks, not a replacement for required gameplay validation.
 
-Full-route campaign scenarios run in the Linux job on the weekly schedule, when manually dispatched with
-`run-campaign-scenarios=true`, or when a pull request has the `campaign-scenarios` label. If the full-route subset is
-not selected, CI prints the skip reason and does not treat the skipped route as passed.
+The dedicated full-route campaign gate runs in the Linux job on the weekly schedule, when manually dispatched with
+`run-campaign-scenarios=true`, or when a pull request has the `campaign-scenarios` label. These four tests also belong
+to the normal `gameplay` suite. A skip message for the dedicated gate does not mean they were excluded from that
+suite; inspect the individual test results before reporting whether a route ran. A skipped gate itself is never
+counted as passed.
 
 For any quest, campaign, dialog-trigger, or content-routing issue final report, include:
 - which of the fast content validation, fast smoke, targeted quest/reward, and full-route subsets ran;
@@ -213,17 +247,16 @@ Recommended required status checks:
 
 These jobs cover the current PR build, native C++ tests, native performance guards, Python regression suite, dependency
 cache validation, and packaging on Linux and Windows when `scripts/ci_change_classifier.py` marks native validation
-necessary. Workflow-only docs/prompts/tooling PRs still produce terminal `linux` check evidence, but native-heavy Linux
+necessary. Workflow-only docs/tooling PRs still produce terminal `linux` check evidence, but native-heavy Linux
 steps and Windows jobs are skipped after focused workflow validation. The workflow also has a conditional
 `linux-coverage` job that runs `./scripts/run_coverage.sh` when changed paths match the coverage rule; because it is
 path-gated, do not configure it as an always-present branch-protection check.
 
 Alongside the `native-needed` / `coverage-needed` gate outputs, `scripts/ci_change_classifier.py` also emits an
-additive change-**kind** taxonomy consumed by the workflow and poller: `coverage-relevant`, `native-gui`,
-`native-engine`, `content-json-python`, `workflow-python`, `prompts-docs`, and `queue-state-only`. Each changed path is
+additive change-**kind** taxonomy: `coverage-relevant`, `native-gui`,
+`native-engine`, `content-json-python`, `workflow-python`, and `prompts-docs`. Each changed path is
 assigned exactly one primary kind (GUI C++ before generic engine code, `res/` content before tooling), and **every
-`src/gui/**` descendant is coverage-relevant** so GUI C++ never skips coverage. `queue-state-only` is true only when the
-entire diff is workbook/observation state. These booleans do not change native/coverage need (still taken from the
+`src/gui/**` descendant is coverage-relevant** so GUI C++ never skips coverage. These booleans do not change native/coverage need (still taken from the
 `NATIVE`/`COVERAGE` pattern sets); they let the workflow route jobs by kind and are covered by a path-matrix test in
 `tests/test_ci_change_classifier.py`.
 
@@ -231,41 +264,18 @@ The campaign-specific PR gates run inside `linux` when native validation is requ
 scheduled, manual, or label-selected gates inside the same job, so they do not add a separate always-present branch
 protection check.
 
-## CI-Polled Validation
-For local agents, prefer the PR build workflow as the default delivery path for heavy validation. Run focused local
-checks first, open the pull request, and poll the path-selected required checks to a successful conclusion instead of
-duplicating local compilation, native tests, full Python tests, or coverage:
-
-```bash
-python3 scripts/poll_pr_checks.py <PR_NUMBER>
-```
-
-When no `--check` is supplied, the poller inspects PR paths with `scripts/ci_change_classifier.py`: lightweight
-workflow/docs/tooling PRs, including workflow-observation record/receipt JSON-only PRs, require `linux`, while
-native/source/content PRs require `linux`, `windows-deps`, and `windows`. Use explicit `--check` values only to
-intentionally override the path-selected set for a documented reason:
-
-```bash
-python3 scripts/poll_pr_checks.py <PR_NUMBER> --check linux --check windows-deps --check windows
-```
-
-For coverage-relevant changes, the poller auto-requires the conditional coverage step when changed paths match the
-workflow coverage rule. Passing `--require-step coverage` explicitly is still valid when the caller wants to force that
-check:
-
-```bash
-python3 scripts/poll_pr_checks.py <PR_NUMBER> --require-step coverage
-```
+## CI Validation Delivery
+Prefer the PR build workflow as the default delivery path for heavy validation. Run focused local checks first, open
+the pull request, and wait for the path-selected required checks to reach a successful conclusion instead of
+duplicating local compilation, native tests, full Python tests, or coverage. `scripts/ci_change_classifier.py`
+selects the validation class from PR paths: lightweight workflow/docs/tooling PRs require `linux`, while
+native/source/content PRs require `linux`, `windows-deps`, and `windows`. For coverage-relevant changes the
+conditional `coverage` step runs inside the path-gated `linux-coverage` job.
 
 Run heavy local validation only when CI cannot cover the required evidence, a focused local reproduction is
-necessary before opening the PR, or GitHub Actions polling is unavailable or blocked. Passing the path-selected checks
-is sufficient PR delivery evidence for the classifier-selected validation class: native/source/content changes require
-Linux and Windows build jobs, while workflow-only changes keep a terminal Linux check and skip unrelated native-heavy
-steps. It proves coverage only when the workflow's changed-path rule runs the `coverage` step somewhere in the selected
-build workflow run, currently in `linux-coverage`; the poller auto-adds that step for coverage-relevant PR paths. Record
-the polled job names, conclusions, and URLs separately from local commands. Do not report skipped local commands as
-passed, and do not enable auto-merge until the selected CI-polled validation has passed when it is the only
-full-validation evidence.
+necessary before opening the PR, or GitHub Actions is unavailable or blocked. Record the observed job names,
+conclusions, and URLs separately from local commands. Do not report skipped local commands as passed, and do not
+enable auto-merge until the selected CI validation has passed when it is the only full-validation evidence.
 
 Manual repository settings for `main`:
 - require a pull request before merging
@@ -273,11 +283,6 @@ Manual repository settings for `main`:
 - require branches to be up to date before merging
 - select the `linux`, `windows-deps`, and `windows` checks from the `build` workflow
 
-Audit the live repository settings before merge-policy or cleanup decisions with:
-
-```bash
-python3 scripts/controller_resource_audit.py --json --skip-run-tree-sizes --github-repo lisu188/fall-of-nouraajd
-```
 
 Do not use `Release / build` as a required PR check; `.github/workflows/release.yml` runs only for version tags.
 If future work splits fast, gameplay, UI/Xvfb, or coverage runs into separate PR jobs, add those jobs to branch

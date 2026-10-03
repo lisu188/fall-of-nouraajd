@@ -28,7 +28,17 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #include <typeindex>
 #include <utility>
 
+std::unordered_map<const CGameObject *, pybind11::object> &CPythonOverrides::instances() {
+    // One exported registry serves both the engine and hidden-visibility Python
+    // extension. Keep it alive past Python finalization without destroying objects.
+    static auto *registry = new std::unordered_map<const CGameObject *, pybind11::object>();
+    return *registry;
+}
+
 namespace {
+
+thread_local bool numericIncrementProbeEnabled = false;
+thread_local std::size_t numericIncrementProbeCounter = 0;
 
 using ObjectPair = std::pair<const CGameObject *, const CGameObject *>;
 
@@ -261,8 +271,22 @@ int CGameObject::getNumericProperty(std::string name) {
 }
 
 void CGameObject::incProperty(std::string name, int value) {
+    if (numericIncrementProbeEnabled) {
+        ++numericIncrementProbeCounter;
+    }
     this->setNumericProperty(name, this->getNumericProperty(name) + value);
 }
+
+namespace performance_guard {
+void resetNumericIncrementProbe() {
+    numericIncrementProbeCounter = 0;
+    numericIncrementProbeEnabled = true;
+}
+
+std::size_t numericIncrementProbeCount() { return numericIncrementProbeCounter; }
+
+void disableNumericIncrementProbe() { numericIncrementProbeEnabled = false; }
+} // namespace performance_guard
 
 std::string CGameObject::to_string() { return vstd::join({getType(), getName()}, ":"); }
 

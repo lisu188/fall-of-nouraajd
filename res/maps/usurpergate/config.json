@@ -36,6 +36,7 @@
   "housecarlWest": {
     "ref": "Pritz",
     "properties": {
+      "animation": "images/monsters/housecarlWest",
       "affiliation": "usurper",
       "controller": {
         "class": "CTargetController",
@@ -48,6 +49,7 @@
   "housecarlEast": {
     "ref": "Pritz",
     "properties": {
+      "animation": "images/monsters/housecarlEast",
       "affiliation": "usurper",
       "controller": {
         "class": "CTargetController",
@@ -60,6 +62,7 @@
   "theUsurper": {
     "ref": "CultLeader",
     "properties": {
+      "animation": "images/monsters/theUsurper",
       "label": "The Usurper of the Marches",
       "affiliation": "usurper",
       "controller": {
@@ -80,7 +83,7 @@
   "banneretHild": {
     "ref": "Cultist",
     "properties": {
-      "animation": "images/npc/questGiver",
+      "animation": "images/npc/banneretHild",
       "controller": {
         "class": "CNpcRandomController"
       },

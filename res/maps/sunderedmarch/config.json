@@ -190,7 +190,7 @@
           "ref": "Attack"
         }
       ],
-      "animation": "images/monsters/octobogz",
+      "animation": "images/monsters/fenGhoul",
       "fightController": {
         "class": "CMonsterFightController"
       },
@@ -235,7 +235,7 @@
           "ref": "Attack"
         }
       ],
-      "animation": "images/monsters/cultist",
+      "animation": "images/monsters/plagueCultist",
       "fightController": {
         "class": "CMonsterFightController"
       },
@@ -280,7 +280,7 @@
           "ref": "Attack"
         }
       ],
-      "animation": "images/monsters/cult_leader",
+      "animation": "images/monsters/barrowKnight",
       "fightController": {
         "class": "CMonsterFightController"
       },
@@ -331,7 +331,7 @@
           "ref": "Attack"
         }
       ],
-      "animation": "images/monsters/gooby",
+      "animation": "images/monsters/theBarrowWarlord",
       "fightController": {
         "class": "CMonsterFightController"
       },
@@ -501,7 +501,7 @@
     "class": "CItem",
     "properties": {
       "name": "ironKey",
-      "animation": "images/item",
+      "animation": "images/items/quest/ironKey",
       "label": "Keeper's Iron Key",
       "description": "A cold iron key as long as a forearm, taken from the March Keeper's cache. It fits one gate: the barred pass to the barrow.",
       "tags": [
@@ -513,7 +513,7 @@
     "class": "CItem",
     "properties": {
       "name": "warBanner",
-      "animation": "images/item",
+      "animation": "images/items/quest/warBanner",
       "label": "War-Banner of the March",
       "description": "The rotted standard of the old March host, pulled from a fen-barrow. The Seer of the Pyre-Waste will pay dearly to read the names sewn along its hem.",
       "tags": [

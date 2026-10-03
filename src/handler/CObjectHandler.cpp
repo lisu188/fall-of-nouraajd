@@ -35,13 +35,46 @@ void CObjectHandler::registerConfig(const std::string &path) {
         }
         objectConfig[key] = CJsonUtil::alias(config, value);
     }
+    navigationConfigRevision.fetch_add(1, std::memory_order_release);
 }
 
 void CObjectHandler::registerConfig(const std::string &name, std::shared_ptr<json> value) {
     objectConfig[name] = value;
+    navigationConfigRevision.fetch_add(1, std::memory_order_release);
 }
 
-void CObjectHandler::unregisterConfig(const std::string &name) { objectConfig.erase(name); }
+void CObjectHandler::unregisterConfig(const std::string &name) {
+    if (objectConfig.erase(name))
+        navigationConfigRevision.fetch_add(1, std::memory_order_release);
+}
+
+std::uint64_t CObjectHandler::getNavigationConfigRevision() const {
+    return navigationConfigRevision.load(std::memory_order_acquire);
+}
+
+std::optional<std::pair<bool, int>> CObjectHandler::getStaticTileNavigation(const std::string &type) {
+    auto config = getConfig(type);
+    if (!config && !constructors.contains(type))
+        return std::pair(false, 1);
+    if (!nativeTileFactory)
+        return std::nullopt;
+    if (!config || !config->is_object() || !config->contains("class") || !(*config)["class"].is_string() ||
+        (*config)["class"].get<std::string>() != "CTile" || config->contains("ref") ||
+        config->contains("effectReferences"))
+        return std::nullopt;
+    if (!config->contains("properties"))
+        return std::pair(false, 1);
+    const auto &properties = (*config)["properties"];
+    if (!properties.is_object())
+        return std::nullopt;
+    const bool hasStep = properties.contains("canStep");
+    const bool hasCost = properties.contains("movementCost");
+    if ((hasStep && !properties["canStep"].is_boolean()) ||
+        (hasCost && !properties["movementCost"].is_number_integer()))
+        return std::nullopt;
+    return std::pair(hasStep && properties["canStep"].get<bool>(),
+                     hasCost ? std::max(1, properties["movementCost"].get<int>()) : 1);
+}
 
 std::shared_ptr<json> CObjectHandler::getConfig(const std::string &type) {
     if (vstd::ctn(objectConfig, type)) {
@@ -84,13 +117,24 @@ void CObjectHandler::registerType(std::string name, std::function<std::shared_pt
         if (alreadyPersistent) {
             return;
         }
+        if (name == "CTile")
+            nativeTileFactory = false;
         constructors.insert_or_assign(name, std::move(constructor));
+        navigationConfigRevision.fetch_add(1, std::memory_order_release);
         mapScopedTypes.insert(std::move(name));
         return;
     }
     // Persistent registration path: keep first-registration-wins so core types (registered first at
     // game init) and explicit test/manual overrides cannot be clobbered by later registrations.
-    constructors.insert(std::make_pair(std::move(name), std::move(constructor)));
+    if (constructors.insert(std::make_pair(std::move(name), std::move(constructor))).second)
+        navigationConfigRevision.fetch_add(1, std::memory_order_release);
+}
+
+void CObjectHandler::registerNativeType(std::string name, std::function<std::shared_ptr<CGameObject>()> constructor) {
+    const bool trustedTile = name == "CTile" && !constructors.contains(name);
+    registerType(std::move(name), std::move(constructor));
+    if (trustedTile)
+        nativeTileFactory = true;
 }
 
 void CObjectHandler::beginMapScriptScope() { mapScriptScopeActive = true; }
@@ -115,9 +159,10 @@ std::shared_ptr<CGameObject> CObjectHandler::_createObject(std::shared_ptr<CGame
 }
 
 std::shared_ptr<CGameObject> CObjectHandler::_clone(const std::shared_ptr<CGameObject> &object) {
-    auto _object = CSerialization::serialize<std::shared_ptr<json>, std::shared_ptr<CGameObject>>(object);
-    std::shared_ptr<CGameObject> shared_ptr =
-        CSerialization::deserialize<std::shared_ptr<json>, std::shared_ptr<CGameObject>>(object->getGame(), _object);
+    auto shared_ptr = CSerialization::cloneObject(object);
+    if (!shared_ptr) {
+        return nullptr;
+    }
     shared_ptr->setName(CSerialization::generateName(shared_ptr));
     return shared_ptr;
 }

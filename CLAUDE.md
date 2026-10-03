@@ -83,18 +83,35 @@ C++ formatting uses `.clang-format` (LLVM base, 4-space indent, 120 col, no incl
   `CScriptHandler`, `CRngHandler`, `CTooltipHandler`.
 - **`src/gui/`** — SDL rendering, layout, animation, texture/text caching, and
   panel/widget objects under `src/gui/object/`.
-- **`src/plugin/`** — the native-plugin ABI (`CPluginAbi.h`, `NativePlugin`) used
-  to load `native_plugins/*` MODULE libs at runtime.
+- **`src/plugin/`** — the unified plugin model: the native entry ABI
+  (`CPluginAbi.h`, `CPluginHostV2`/`game_plugin_load_v2`), the host surface every
+  plugin kind registers through (`CPluginRegistrar`), the per-kind loading
+  backends (`CPluginRuntime.h`, `CNativePluginRuntime.cpp`), and the gameplay
+  type table (`CGameplayTypeTable.h`) expanded by `NativePlugin.cpp`.
 
 ### Reflection & type registration
 The engine uses a reflection macro from the **`vstd`** submodule: `V_META(Class,
 Base, ...properties)` with `V_PROPERTY(...)` declarations (see any header in
 `src/object/` or `src/gui/object/`). This drives JSON (de)serialization —
 objects are constructed by type name from JSON and their properties round-trip
-through the meta system. Each source area registers its types via
-`register*Types()` (declared in `src/core/CTypeRegistration.h`, implemented in the
-`C*TypeRegistration.cpp` files). When adding a new engine object type, wire it
-into the matching registration file or it won't be constructible from content.
+through the meta system. Registration is split across two mechanisms:
+- **Core/GUI framework types** register via `register*Types()` (declared in
+  `src/core/CTypeRegistration.h`, implemented in the `C*TypeRegistration.cpp`
+  files).
+- **Gameplay object types** (`src/object/`: creatures, items, effects,
+  interactions, tiles, dialogs, quests, controllers, …) are listed once in the
+  X-macro table `src/plugin/CGameplayTypeTable.h` — the single source of truth
+  consumed by `native_plugin::register_gameplay_types`
+  (`src/plugin/NativePlugin.cpp`, invoked through the `native_gameplay` plugin's
+  `game_plugin_load_v2` entry), by the pybind metadata/downcast registration in
+  `src/core/CModule.cpp`, and by `scripts/validate_content.py`.
+  `registerObjectTypes()` registers only the `CGameObject` base.
+
+When adding a new gameplay object type, add one `FN_TYPE` row (or `FN_WRAPPED`,
+if Python scripting needs a `CWrapper<T>` trampoline) to
+`src/plugin/CGameplayTypeTable.h`; core/GUI types go into the matching
+`C*TypeRegistration.cpp` file. Either way, an unregistered type won't be
+constructible from content.
 
 ### Content pipeline (`res/`)
 - **`res/config/*.json`** — global definitions (items, weapons, armors, monsters,
@@ -105,19 +122,32 @@ into the matching registration file or it won't be constructible from content.
   `set_state`/`state_in`/`get_state`). Maps: `nouraajd`, `ritual`, `siege`,
   `multilevel`, `ninemarches`, `hearthfall`, `gravemoor`, `usurpergate`,
   `sunderedmarch`, `kadath`, `vhulmarn`, `test`.
-- **`res/plugins/*.py`** — Python gameplay plugins (crafting, interactions,
-  effects, potions, tiles, objects). Every `.py` in the directory is
-  auto-discovered by `CPluginLoader`; `res/plugins/manifest.json` declares
-  native/dynamic plugin entries and optional per-map plugin lists.
+- **`res/plugins/*.py` / `*.lua`** — Python and Lua gameplay plugins (crafting,
+  interactions, effects, potions, tiles, objects). Every `.py` and `.lua` in the
+  directory is auto-discovered by `CPluginLoader`; `res/plugins/manifest.json`
+  (version 2: a `plugins` array of `{id, kind, source…}` entries, kinds
+  `native`/`cpp`/`python`/`lua`, optional `scope: {"map": …}`) declares the
+  native/cpp entries and any explicitly ordered or map-scoped plugins.
 - **`res/game.py`** — the Python-side facade over `_game`; wraps native trace
   helpers and quest-state integration (`quest_state.py`).
 - Content schemas are documented in `docs/content.md`; the authoritative checker
   is `scripts/validate_content.py`.
 
-### Native vs. Python plugins
-Gameplay behavior exists in two forms: C++ in `native_plugins/` (registered
-through the `NativePluginHostV1` ABI, `*_load_v1` entry points) and Python in
-`res/plugins/`. Both extend the same object/interaction/effect surface.
+### Plugin runtimes
+Gameplay behavior exists in three forms, all funneled through one host surface
+(`CPluginRegistrar`: type factories + config JSON + logging) by per-kind
+runtimes (`IPluginRuntime` registry in `src/plugin/CPluginRuntime.cpp`):
+- **native** — C++ in `native_plugins/` (MODULE libs, `extern "C"
+  game_plugin_load_v2(const CPluginHostV2*)` handshake, load-only by design);
+- **python** — `res/plugins/*.py` (sandboxed `load(self, context)`, engine→Python
+  dispatch via `CWrapper<T>` + `CPythonOverrides`);
+- **lua** — `res/plugins/*.lua` (sandboxed per-game `lua_State` in
+  `src/handler/CLuaHandler.cpp`, `load(context)` with
+  `context.registerType(name, {base = "CTile", onStep = …})`, engine→Lua
+  dispatch via `CLuaWrapper<T>` + `CLuaOverrides`; scriptable bases: CTile,
+  CEffect, CPotion, CScroll, CInteraction, CTrigger, CBuilding, CEvent).
+The vendored Lua 5.4 interpreter lives in `third_party/lua` (static
+`lua_vendor` lib).
 
 ## Entry points & tooling
 
@@ -140,13 +170,11 @@ through the `NativePluginHostV1` ABI, `*_load_v1` entry points) and Python in
 
 ## Repository conventions
 
-- **`AGENTS.md` is the authoritative process doc** for pull-request, merge, and the
-  Codex "queue controller" workflow (workbook at
-  `planning/fall_of_nouraajd_issue_proposals.xlsx`, scripts under `scripts/` like
-  `issue_queue.py`, `poll_pr_checks.py`, `pr_review_audit.py`,
-  `controller_resource_audit.py`, `workflow_observations.py`). The default branch is
-  `main`; never push directly to it; squash-merge only. Consult AGENTS.md before any
-  PR/merge/queue action.
+- **`AGENTS.md` is the authoritative process doc** for pull-request and merge
+  conventions and validation expectations. The default branch is `main`; never
+  push directly to it; squash-merge only. Consult AGENTS.md before any PR/merge
+  action. (The historical Codex "queue controller" workbook workflow has been
+  retired and removed from the repository.)
 - Keep changes narrow: do not modify unrelated files, build output, dependency
   locks, or submodule SHAs (`vstd`, `random-dungeon-generator`) unless the task
   requires it — and if it does, say so and rerun the full validation workflow.

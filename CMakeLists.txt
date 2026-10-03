@@ -43,6 +43,12 @@ set(CMAKE_MODULE_PATH "${CMAKE_MODULE_PATH};${CMAKE_SOURCE_DIR}/cmake")
 
 file(GLOB_RECURSE GAME_SRC ${CMAKE_SOURCE_DIR}/src/**.cpp ${CMAKE_SOURCE_DIR}/src/**.h)
 list(APPEND GAME_SRC
+    ${CMAKE_SOURCE_DIR}/src/core/CNavigation.cpp
+    ${CMAKE_SOURCE_DIR}/src/core/CNavigation.h
+    ${CMAKE_SOURCE_DIR}/src/core/CNavigationSearch.cpp
+    ${CMAKE_SOURCE_DIR}/src/core/CNavigationSearch.h
+    ${CMAKE_SOURCE_DIR}/src/core/CNavigationFlow.cpp
+    ${CMAKE_SOURCE_DIR}/src/core/CNavigationFlow.h
     ${CMAKE_SOURCE_DIR}/src/core/CRuntimeBridge.cpp
     ${CMAKE_SOURCE_DIR}/src/core/CRuntimeBridge.h
     ${CMAKE_SOURCE_DIR}/src/core/CSceneManager.cpp
@@ -69,6 +75,17 @@ add_library(simdjson_vendor STATIC ${CMAKE_SOURCE_DIR}/third_party/simdjson/simd
 target_compile_features(simdjson_vendor PUBLIC cxx_std_23)
 target_include_directories(simdjson_vendor SYSTEM PUBLIC ${CMAKE_SOURCE_DIR}/third_party/simdjson)
 set_target_properties(simdjson_vendor PROPERTIES POSITION_INDEPENDENT_CODE ON)
+
+# Vendored Lua 5.4 (third_party/lua, MIT): the interpreter library only — the standalone
+# REPL (lua.c) and bytecode compiler (luac.c) are excluded on purpose.
+file(GLOB LUA_VENDOR_SRC ${CMAKE_SOURCE_DIR}/third_party/lua/*.c)
+list(FILTER LUA_VENDOR_SRC EXCLUDE REGEX ".*/(lua|luac)\\.c$")
+add_library(lua_vendor STATIC ${LUA_VENDOR_SRC})
+target_include_directories(lua_vendor SYSTEM PUBLIC ${CMAKE_SOURCE_DIR}/third_party/lua)
+set_target_properties(lua_vendor PROPERTIES POSITION_INDEPENDENT_CODE ON)
+if (UNIX)
+    target_compile_definitions(lua_vendor PRIVATE LUA_USE_POSIX)
+endif ()
 
 function(configure_cpp_target target_name)
     target_compile_features(${target_name} PRIVATE cxx_std_23)
@@ -150,6 +167,7 @@ set(GAME_CORE_LINK_LIBS
     ${SDL2_IMAGE_LIBS}
     ${SDL2_TTF_LIBS}
     simdjson_vendor
+    lua_vendor
     ${CMAKE_DL_LIBS}
 )
 
@@ -157,6 +175,10 @@ set(GAME_CORE_OBJECT_SRC ${GAME_CORE_SRC})
 if (WIN32)
     list(FILTER GAME_CORE_OBJECT_SRC EXCLUDE REGEX ".*/src/core/CModule\\.cpp$")
 endif ()
+
+# Confine the Lua C headers to their own translation unit so they never join a unity batch.
+set_source_files_properties(${CMAKE_SOURCE_DIR}/src/handler/CLuaHandler.cpp
+    PROPERTIES SKIP_UNITY_BUILD_INCLUSION ON)
 
 add_library(game_core_objects OBJECT ${GAME_CORE_OBJECT_SRC})
 configure_cpp_target(game_core_objects)
@@ -251,7 +273,9 @@ function(add_native_plugin target_name source_file)
     if (CMAKE_CXX_COMPILER_ID MATCHES "GNU|Clang|AppleClang")
         target_compile_options(${target_name} PRIVATE -fvisibility=hidden -fvisibility-inlines-hidden)
     endif ()
-    target_link_libraries(${target_name} PRIVATE game_core)
+    # Plugins consume the CPluginRegistrar host surface, whose headers reach engine headers
+    # (pybind11 included); they still link only against game_core for symbols.
+    target_link_libraries(${target_name} PRIVATE game_core pybind11::headers Python3::Python)
     set(NATIVE_PLUGIN_TARGETS ${NATIVE_PLUGIN_TARGETS} ${target_name} PARENT_SCOPE)
 endfunction()
 
@@ -265,6 +289,8 @@ configure_file(res/config/classes.json config/classes.json)
 configure_file(res/config/races.json config/races.json)
 configure_file(res/config/creature_races.json config/creature_races.json)
 configure_file(res/config/creature_classes.json config/creature_classes.json)
+configure_file(res/config/creature_types.json config/creature_types.json)
+configure_file(res/config/creature_templates.json config/creature_templates.json)
 configure_file(res/config/panels.json config/panels.json)
 configure_file(res/config/buildings.json config/buildings.json)
 configure_file(res/config/crafting.json config/crafting.json)
@@ -434,11 +460,14 @@ endforeach ()
 
 configure_file(res/plugins/effect.py plugins/effect.py)
 configure_file(res/plugins/interaction.py plugins/interaction.py)
+configure_file(res/plugins/enemy_roles.py plugins/enemy_roles.py)
 configure_file(res/plugins/object.py plugins/object.py)
 configure_file(res/plugins/crafting.py plugins/crafting.py)
 configure_file(res/plugins/artifact_sets.py plugins/artifact_sets.py)
 configure_file(res/plugins/potion.py plugins/potion.py)
 configure_file(res/plugins/tile.py plugins/tile.py)
+configure_file(res/plugins/tile.lua plugins/tile.lua)
+configure_file(res/plugins/castle_campaign.py plugins/castle_campaign.py)
 configure_file(res/plugins/manifest.json plugins/manifest.json)
 
 configure_file(res/images/interactions/backstab.png images/interactions/backstab.png COPYONLY)
@@ -481,6 +510,37 @@ configure_file(res/images/monsters/gooby.png images/monsters/gooby.png COPYONLY)
 configure_file(res/images/monsters/cult_leader.png images/monsters/cult_leader.png COPYONLY)
 configure_file(res/images/monsters/cultist.png images/monsters/cultist.png COPYONLY)
 configure_file(res/images/monsters/goblin_thief.png images/monsters/goblin_thief.png COPYONLY)
+configure_file(res/images/monsters/barrowKnight.png images/monsters/barrowKnight.png COPYONLY)
+configure_file(res/images/monsters/citadelPriest.png images/monsters/citadelPriest.png COPYONLY)
+configure_file(res/images/monsters/cryptWardenEast.png images/monsters/cryptWardenEast.png COPYONLY)
+configure_file(res/images/monsters/cryptWardenNorth.png images/monsters/cryptWardenNorth.png COPYONLY)
+configure_file(res/images/monsters/cryptWardenWest.png images/monsters/cryptWardenWest.png COPYONLY)
+configure_file(res/images/monsters/deepSpawn.png images/monsters/deepSpawn.png COPYONLY)
+configure_file(res/images/monsters/drownedHybrid.png images/monsters/drownedHybrid.png COPYONLY)
+configure_file(res/images/monsters/elderThing.png images/monsters/elderThing.png COPYONLY)
+configure_file(res/images/monsters/fenGhoul.png images/monsters/fenGhoul.png COPYONLY)
+configure_file(res/images/monsters/fieldRaider.png images/monsters/fieldRaider.png COPYONLY)
+configure_file(res/images/monsters/highPriestOfLeng.png images/monsters/highPriestOfLeng.png COPYONLY)
+configure_file(res/images/monsters/housecarlEast.png images/monsters/housecarlEast.png COPYONLY)
+configure_file(res/images/monsters/housecarlWest.png images/monsters/housecarlWest.png COPYONLY)
+configure_file(res/images/monsters/lengMan.png images/monsters/lengMan.png COPYONLY)
+configure_file(res/images/monsters/lengSpider.png images/monsters/lengSpider.png COPYONLY)
+configure_file(res/images/monsters/nightGaunt.png images/monsters/nightGaunt.png COPYONLY)
+configure_file(res/images/monsters/occupierEast.png images/monsters/occupierEast.png COPYONLY)
+configure_file(res/images/monsters/occupierGate.png images/monsters/occupierGate.png COPYONLY)
+configure_file(res/images/monsters/occupierWest.png images/monsters/occupierWest.png COPYONLY)
+configure_file(res/images/monsters/plagueCultist.png images/monsters/plagueCultist.png COPYONLY)
+configure_file(res/images/monsters/ritualCultist.png images/monsters/ritualCultist.png COPYONLY)
+configure_file(res/images/monsters/ritualLeaderTemplate.png images/monsters/ritualLeaderTemplate.png COPYONLY)
+configure_file(res/images/monsters/ritualMage.png images/monsters/ritualMage.png COPYONLY)
+configure_file(res/images/monsters/ritualPritz.png images/monsters/ritualPritz.png COPYONLY)
+configure_file(res/images/monsters/theBarrowWarlord.png images/monsters/theBarrowWarlord.png COPYONLY)
+configure_file(res/images/monsters/theCrawlingChaos.png images/monsters/theCrawlingChaos.png COPYONLY)
+configure_file(res/images/monsters/theNameless.png images/monsters/theNameless.png COPYONLY)
+configure_file(res/images/monsters/theNinefoldKing.png images/monsters/theNinefoldKing.png COPYONLY)
+configure_file(res/images/monsters/theUsurper.png images/monsters/theUsurper.png COPYONLY)
+configure_file(res/images/monsters/tideHierophant.png images/monsters/tideHierophant.png COPYONLY)
+configure_file(res/images/monsters/watchCaptain.png images/monsters/watchCaptain.png COPYONLY)
 
 configure_file(res/images/monsters/octobogz/time.json images/monsters/octobogz/time.json COPYONLY)
 configure_file(res/images/monsters/octobogz/0.png images/monsters/octobogz/0.png COPYONLY)
@@ -500,6 +560,15 @@ configure_file(res/images/items/potions/life.png images/items/potions/life.png C
 configure_file(res/images/items/potions/mana.png images/items/potions/mana.png COPYONLY)
 configure_file(res/images/items/potions/spiced_beer.png images/items/potions/spiced_beer.png COPYONLY)
 configure_file(res/images/items/scroll.png images/items/scroll.png COPYONLY)
+configure_file(res/images/items/quest/ashRelic.png images/items/quest/ashRelic.png COPYONLY)
+configure_file(res/images/items/quest/boneKey.png images/items/quest/boneKey.png COPYONLY)
+configure_file(res/images/items/quest/brassKey.png images/items/quest/brassKey.png COPYONLY)
+configure_file(res/images/items/quest/fenRelic.png images/items/quest/fenRelic.png COPYONLY)
+configure_file(res/images/items/quest/holyRelic.png images/items/quest/holyRelic.png COPYONLY)
+configure_file(res/images/items/quest/ironKey.png images/items/quest/ironKey.png COPYONLY)
+configure_file(res/images/items/quest/preciousAmulet.png images/items/quest/preciousAmulet.png COPYONLY)
+configure_file(res/images/items/quest/skullOfRolf.png images/items/quest/skullOfRolf.png COPYONLY)
+configure_file(res/images/items/quest/warBanner.png images/items/quest/warBanner.png COPYONLY)
 
 configure_file(res/images/items/armors/leatherarmor.png images/items/armors/leatherarmor.png COPYONLY)
 configure_file(res/images/items/armors/robe.png images/items/armors/robe.png COPYONLY)
@@ -551,6 +620,16 @@ configure_file(res/images/players/wayfarer.png images/players/wayfarer.png COPYO
 configure_file(res/images/players/warrior.png images/players/warrior.png COPYONLY)
 configure_file(res/images/npc/oldWoman.png images/npc/oldWoman.png COPYONLY)
 configure_file(res/images/npc/questGiver.png images/npc/questGiver.png COPYONLY)
+configure_file(res/images/npc/banneretHild.png images/npc/banneretHild.png COPYONLY)
+configure_file(res/images/npc/dreamerGuide.png images/npc/dreamerGuide.png COPYONLY)
+configure_file(res/images/npc/elderMaren.png images/npc/elderMaren.png COPYONLY)
+configure_file(res/images/npc/lengMerchant.png images/npc/lengMerchant.png COPYONLY)
+configure_file(res/images/npc/lengPriest.png images/npc/lengPriest.png COPYONLY)
+configure_file(res/images/npc/markedWidow.png images/npc/markedWidow.png COPYONLY)
+configure_file(res/images/npc/oldTollman.png images/npc/oldTollman.png COPYONLY)
+configure_file(res/images/npc/quartermasterVoss.png images/npc/quartermasterVoss.png COPYONLY)
+configure_file(res/images/npc/ritualCaptive.png images/npc/ritualCaptive.png COPYONLY)
+configure_file(res/images/npc/ritualWitness.png images/npc/ritualWitness.png COPYONLY)
 
 configure_file(res/images/tiles/lava.png images/tiles/lava.png COPYONLY)
 configure_file(res/images/tiles/beach.png images/tiles/beach.png COPYONLY)
@@ -589,13 +668,54 @@ configure_file(res/images/ambient/campfire_cauldron.png images/ambient/campfire_
 configure_file(res/images/ambient/gravestone_cluster.png images/ambient/gravestone_cluster.png COPYONLY)
 configure_file(res/images/ambient/rubble_and_skulls.png images/ambient/rubble_and_skulls.png COPYONLY)
 
+configure_file(res/images/castle/catherine.png images/castle/catherine.png COPYONLY)
+configure_file(res/images/castle/christian.png images/castle/christian.png COPYONLY)
+configure_file(res/images/castle/pikeman.png images/castle/pikeman.png COPYONLY)
+configure_file(res/images/castle/marksman.png images/castle/marksman.png COPYONLY)
+configure_file(res/images/castle/griffin.png images/castle/griffin.png COPYONLY)
+configure_file(res/images/castle/swordsman.png images/castle/swordsman.png COPYONLY)
+configure_file(res/images/castle/monk.png images/castle/monk.png COPYONLY)
+configure_file(res/images/castle/cavalier.png images/castle/cavalier.png COPYONLY)
+configure_file(res/images/castle/angel.png images/castle/angel.png COPYONLY)
+configure_file(res/images/castle/castleTown.png images/castle/castleTown.png COPYONLY)
+configure_file(res/images/castle/griffinTower.png images/castle/griffinTower.png COPYONLY)
+configure_file(res/images/castle/occupiedBanner.png images/castle/occupiedBanner.png COPYONLY)
+configure_file(res/images/castle/liberatedBanner.png images/castle/liberatedBanner.png COPYONLY)
+configure_file(res/images/castle/troglodyte.png images/castle/troglodyte.png COPYONLY)
+configure_file(res/images/castle/minotaur.png images/castle/minotaur.png COPYONLY)
+configure_file(res/images/castle/demon.png images/castle/demon.png COPYONLY)
+configure_file(res/images/castle/devil.png images/castle/devil.png COPYONLY)
+
 configure_file(res/fonts/ampersand.ttf fonts/ampersand.ttf COPYONLY)
+configure_file(res/fonts/SourceSans3-Regular.ttf fonts/SourceSans3-Regular.ttf COPYONLY)
+configure_file(res/fonts/SourceSerif4-Semibold.ttf fonts/SourceSerif4-Semibold.ttf COPYONLY)
+configure_file(res/fonts/SourceSans-LICENSE.md fonts/SourceSans-LICENSE.md COPYONLY)
+configure_file(res/fonts/SourceSerif-LICENSE.md fonts/SourceSerif-LICENSE.md COPYONLY)
 
 configure_file(res/game.py game.py)
+configure_file(res/ui.py ui.py)
 configure_file(res/campaign.py campaign.py)
+configure_file(res/narrative.py narrative.py)
 
 configure_file(res/campaigns/fallOfNouraajd/campaign.json campaigns/fallOfNouraajd/campaign.json)
 configure_file(res/campaigns/wardensRoad/campaign.json campaigns/wardensRoad/campaign.json)
+
+configure_file(res/campaigns/longLiveTheQueen/campaign.json campaigns/longLiveTheQueen/campaign.json)
+configure_file(res/maps/castleHomecoming/config.json maps/castleHomecoming/config.json)
+configure_file(res/maps/castleHomecoming/dialog.json maps/castleHomecoming/dialog.json)
+configure_file(res/maps/castleHomecoming/map.json maps/castleHomecoming/map.json)
+configure_file(res/maps/castleHomecoming/script.py maps/castleHomecoming/script.py)
+configure_file(res/campaigns/longLiveTheQueen/sources/castleHomecoming.json campaigns/longLiveTheQueen/sources/castleHomecoming.json)
+configure_file(res/maps/castleGuardianAngels/config.json maps/castleGuardianAngels/config.json)
+configure_file(res/maps/castleGuardianAngels/dialog.json maps/castleGuardianAngels/dialog.json)
+configure_file(res/maps/castleGuardianAngels/map.json maps/castleGuardianAngels/map.json)
+configure_file(res/maps/castleGuardianAngels/script.py maps/castleGuardianAngels/script.py)
+configure_file(res/campaigns/longLiveTheQueen/sources/castleGuardianAngels.json campaigns/longLiveTheQueen/sources/castleGuardianAngels.json)
+configure_file(res/maps/castleGriffinCliff/config.json maps/castleGriffinCliff/config.json)
+configure_file(res/maps/castleGriffinCliff/dialog.json maps/castleGriffinCliff/dialog.json)
+configure_file(res/maps/castleGriffinCliff/map.json maps/castleGriffinCliff/map.json)
+configure_file(res/maps/castleGriffinCliff/script.py maps/castleGriffinCliff/script.py)
+configure_file(res/campaigns/longLiveTheQueen/sources/castleGriffinCliff.json campaigns/longLiveTheQueen/sources/castleGriffinCliff.json)
 
 configure_file(test.py test.py)
 configure_file(play.py play.py)
@@ -616,7 +736,7 @@ install(DIRECTORY res/images DESTINATION fall-of-nouraajd)
 install(DIRECTORY res/maps DESTINATION fall-of-nouraajd)
 install(DIRECTORY res/plugins DESTINATION fall-of-nouraajd)
 
-install(FILES res/game.py res/campaign.py play.py mcp.py test.py game_simulation.py quest_state.py DESTINATION fall-of-nouraajd)
+install(FILES res/game.py res/ui.py res/campaign.py res/narrative.py play.py mcp.py test.py game_simulation.py quest_state.py DESTINATION fall-of-nouraajd)
 
 if (WIN32)
     install(FILES play.bat DESTINATION fall-of-nouraajd)
@@ -692,7 +812,13 @@ function(add_game_unit_test target_name)
     endif ()
 
     set(test_name "for_unit_tests.${target_name}")
-    add_test(NAME "${test_name}" COMMAND ${target_name})
+    if (target_name STREQUAL "monster_balance_unit_tests")
+        add_test(NAME "${test_name}"
+            COMMAND ${Python3_EXECUTABLE} "${CMAKE_CURRENT_SOURCE_DIR}/scripts/run_monster_balance.py"
+                $<TARGET_FILE:${target_name}>)
+    else ()
+        add_test(NAME "${test_name}" COMMAND ${target_name})
+    endif ()
     set_tests_properties("${test_name}" PROPERTIES
         LABELS "for_unit_tests;unit;${target_name}"
         TIMEOUT 60
@@ -727,20 +853,56 @@ endfunction()
 
 add_game_unit_test(core_unit_tests tests/unit/test_core.cpp)
 add_game_unit_test(controller_unit_tests tests/unit/test_controller.cpp)
+add_game_unit_test(monster_balance_unit_tests tests/unit/test_monster_balance.cpp src/core/CModule.cpp)
+if (WIN32)
+    target_sources(monster_balance_unit_tests PRIVATE src/core/CModuleEntry.cpp)
+endif ()
+target_compile_definitions(monster_balance_unit_tests PRIVATE
+    GAME_MONSTER_BALANCE_TEST_RESOURCE_ROOT="${CMAKE_CURRENT_BINARY_DIR}"
+)
+add_game_unit_test(navigation_search_unit_tests tests/unit/test_navigation_search.cpp)
+add_game_unit_test(navigation_flow_unit_tests tests/unit/test_navigation_flow.cpp)
+add_game_unit_test(navigation_preview_unit_tests tests/unit/test_navigation_preview.cpp)
+add_game_unit_test(navigation_snapshot_unit_tests tests/unit/test_navigation_snapshot.cpp)
+set_tests_properties(for_unit_tests.navigation_search_unit_tests
+    for_unit_tests.navigation_flow_unit_tests for_unit_tests.navigation_preview_unit_tests
+    for_unit_tests.navigation_snapshot_unit_tests PROPERTIES LABELS "for_unit_tests;unit;navigation;performance")
 add_game_unit_test(gui_unit_tests tests/unit/test_gui.cpp)
+add_game_unit_test(ui_management_unit_tests tests/unit/test_ui_management.cpp)
+add_game_unit_test(ui_navigation_unit_tests tests/unit/test_ui_navigation.cpp)
+add_game_unit_test(ui_frontend_unit_tests tests/unit/test_ui_frontend.cpp)
+add_game_unit_test(ui_dialogue_unit_tests tests/unit/test_ui_dialogue.cpp)
+add_game_unit_test(ui_foundations_unit_tests tests/unit/test_ui_foundations.cpp)
 add_game_unit_test(gui_drag_proxy_unit_tests tests/unit/test_gui_drag_proxy.cpp)
 set(GAME_HANDLER_UNIT_TEST_SRC tests/unit/test_handler.cpp)
 if (NOT WIN32)
     list(APPEND GAME_HANDLER_UNIT_TEST_SRC src/handler/CScriptHandler.cpp)
 endif ()
 add_game_unit_test(handler_unit_tests ${GAME_HANDLER_UNIT_TEST_SRC})
+target_compile_definitions(handler_unit_tests PRIVATE
+    GAME_NATIVE_TEST_PROFILE_DIR="${CMAKE_CURRENT_SOURCE_DIR}/coverage/native-test-profiles")
 add_game_unit_test(object_unit_tests tests/unit/test_object.cpp)
+add_game_unit_test(plugin_registrar_unit_tests tests/unit/test_plugin_registrar.cpp)
+add_game_unit_test(lua_unit_tests tests/unit/test_lua.cpp)
+
+add_executable(native_test_profile_fixture tests/unit/native_test_profile_fixture.cpp)
+configure_cpp_target(native_test_profile_fixture)
+list(APPEND GAME_UNIT_TEST_TARGETS native_test_profile_fixture)
+add_test(NAME "for_unit_tests.native_test_profile_contracts"
+    COMMAND ${Python3_EXECUTABLE} "${CMAKE_CURRENT_SOURCE_DIR}/tests/test_native_test_profile.py"
+        NativeTestProfileRuntimeTest -v)
+set_tests_properties("for_unit_tests.native_test_profile_contracts" PROPERTIES
+    LABELS "for_unit_tests;unit;native_test_profile_contracts"
+    TIMEOUT 60
+    ENVIRONMENT "GAME_NATIVE_TEST_PROFILE_FIXTURE=$<TARGET_FILE:native_test_profile_fixture>"
+)
 
 add_executable(performance_guard_tests
     tests/unit/test_performance.cpp
     tests/unit/test_pathfinder_performance.cpp
     tests/unit/test_engine_hotspot_performance.cpp
     tests/unit/test_serialization_performance.cpp
+    tests/unit/test_render_context_performance.cpp
 )
 if (WIN32)
     target_sources(performance_guard_tests PRIVATE $<TARGET_OBJECTS:game_core_objects>)
@@ -786,6 +948,8 @@ add_game_unit_test(vstd_unit_tests tests/unit/test_vstd.cpp)
 add_game_unit_test(random_dungeon_unit_tests tests/unit/test_random_dungeon.cpp)
 if (CMAKE_SYSTEM_NAME STREQUAL "Linux")
     add_game_unit_test(map_unit_tests tests/unit/test_map.cpp)
+    target_compile_definitions(map_unit_tests PRIVATE
+        GAME_NATIVE_TEST_PROFILE_DIR="${CMAKE_CURRENT_SOURCE_DIR}/coverage/native-test-profiles")
     add_game_unit_test(resource_unit_tests tests/unit/test_resource.cpp)
 endif ()
 

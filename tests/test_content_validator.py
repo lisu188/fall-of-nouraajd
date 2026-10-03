@@ -690,6 +690,215 @@ class ContentValidatorTest(unittest.TestCase):
             'unknown quest id "missingQuest"',
         )
 
+    def test_quest_grants_require_cquest_inheritance_instead_of_a_name_suffix(self):
+        root = self.make_fixture()
+        script_path = root / "res/maps/broken/script.py"
+        script_path.write_text(script_path.read_text().replace("class GoodQuest(CQuest):", "class GoodQuest(CEvent):"))
+
+        self.assertIssueContains(validate_repo(root), '"goodQuest" does not resolve to a quest')
+
+    def test_quest_grants_accept_indirect_cquest_inheritance_without_a_name_suffix(self):
+        root = self.make_fixture()
+        script_path = root / "res/maps/broken/script.py"
+        script_path.write_text(
+            script_path.read_text().replace(
+                "    @register(context)\n    class GoodQuest(CQuest):",
+                "    class MissionBase(CQuest):\n        pass\n\n"
+                "    @register(context)\n    class JournalMission(MissionBase):",
+            )
+        )
+        config_path = root / "res/maps/broken/config.json"
+        config = read_json(config_path)
+        config["goodQuest"]["class"] = "JournalMission"
+        write_json(config_path, config)
+
+        self.assertEqual([], [str(issue) for issue in validate_repo(root)])
+
+    def test_quests_require_nonempty_effective_descriptions(self):
+        for description in (None, "", "   ", 12):
+            with self.subTest(description=description):
+                root = self.make_fixture()
+                config_path = root / "res/maps/broken/config.json"
+                config = read_json(config_path)
+                config["goodQuest"]["properties"] = {} if description is None else {"description": description}
+                write_json(config_path, config)
+
+                self.assertIssueContains(
+                    validate_repo(root), "goodQuest.properties.description", "expected non-empty quest description"
+                )
+
+    def test_quest_descriptions_follow_refs_and_inline_overrides(self):
+        root = self.make_fixture()
+        config_path = root / "res/maps/broken/config.json"
+        config = read_json(config_path)
+        config["questTemplate"] = config["goodQuest"]
+        config["goodQuest"] = {"ref": "questTemplate"}
+        write_json(config_path, config)
+        self.assertEqual([], [str(issue) for issue in validate_repo(root)])
+
+        config["goodQuest"]["properties"] = {"description": " "}
+        write_json(config_path, config)
+        self.assertIssueContains(
+            validate_repo(root), "goodQuest.properties.description", "expected non-empty quest description"
+        )
+
+    def test_private_ensure_quest_helper_validates_literal_quest_ids(self):
+        root = self.make_fixture()
+        script_path = root / "res/maps/broken/script.py"
+        script_path.write_text(script_path.read_text() + '\n    _ensure_quest(None, "missingQuest")\n')
+
+        self.assertIssueContains(
+            validate_repo(root), '_ensure_quest("missingQuest")', 'unknown quest id "missingQuest"'
+        )
+
+    def _appendCompanionQuestGrant(self, root, classes):
+        script_path = root / "res/maps/broken/script.py"
+        script_path.write_text(
+            script_path.read_text()
+            + textwrap.indent(
+                textwrap.dedent("""
+                    class CompanionDialog(CDialog):
+                        QUEST = None
+
+                        def start(self):
+                            ensure_quest(self.getGame().getMap().getPlayer(), self.QUEST)
+                    """) + textwrap.dedent(classes),
+                "    ",
+            )
+        )
+
+    def test_inherited_companion_grants_validate_concrete_quest_constants(self):
+        for quest_id, message in (
+            ("missingQuest", 'unknown quest id "missingQuest"'),
+            ("validMarket", '"validMarket" does not resolve to a quest'),
+        ):
+            with self.subTest(quest_id=quest_id):
+                root = self.make_fixture()
+                self._appendCompanionQuestGrant(
+                    root,
+                    f"""
+                    class KnightBase(CompanionDialog):
+                        QUEST = "{quest_id}"
+
+                    @register(context)
+                    class KnightDialog(KnightBase):
+                        pass
+                    """,
+                )
+                self.assertIssueContains(
+                    validate_repo(root), "res/maps/broken/script.py", "KnightDialog.QUEST", message
+                )
+
+    def test_inherited_companion_grants_accept_valid_overrides_and_unused_abstract_constants(self):
+        root = self.make_fixture()
+        self._appendCompanionQuestGrant(
+            root,
+            """
+            class KnightBase(CompanionDialog):
+                QUEST = "missingQuest"
+
+            @register(context)
+            class KnightDialog(KnightBase):
+                QUEST = "goodQuest"
+
+            @register(context)
+            class RetiredDialog(CompanionDialog):
+                def start(self):
+                    pass
+            """,
+        )
+
+        self.assertEqual([], [str(issue) for issue in validate_repo(root)])
+
+    def test_concrete_companion_grants_require_a_literal_nonempty_quest_constant(self):
+        for value in ("None", '""', '"   "', "12"):
+            with self.subTest(value=value):
+                root = self.make_fixture()
+                self._appendCompanionQuestGrant(
+                    root,
+                    f"""
+                    @register(context)
+                    class KnightDialog(CompanionDialog):
+                        QUEST = {value}
+                    """,
+                )
+                self.assertIssueContains(validate_repo(root), "KnightDialog.QUEST", "expected non-empty quest id")
+
+    def _placeCastleMission(self, root, mission):
+        map_path = root / "res/maps/broken/map.json"
+        map_data = read_json(map_path)
+        map_data["layers"][1]["objects"].append(
+            {
+                "id": 2,
+                "name": "castleMission",
+                "type": "StartEvent",
+                "x": 1,
+                "y": 1,
+                "width": 1,
+                "height": 1,
+                "properties": {"campaign_mission": mission},
+            }
+        )
+        write_json(map_path, map_data)
+        config_path = root / "res/maps/broken/config.json"
+        config = read_json(config_path)
+        config["goodQuest"]["properties"]["campaign_scenarioId"] = "homecoming"
+        write_json(config_path, config)
+        return map_path
+
+    def test_castle_mission_validates_payload_shape_and_quest_target(self):
+        cases = (
+            (None, "expected non-empty castle mission JSON string"),
+            ("castleMission:{", "invalid castle mission JSON"),
+            ("[]", "expected castle mission JSON object"),
+            ({"scenarioId": "homecoming"}, "expected non-empty questId"),
+            ({"scenarioId": "homecoming", "questId": "   "}, "expected non-empty questId"),
+            ({"scenarioId": "homecoming", "questId": 12}, "expected non-empty questId"),
+            ({"scenarioId": "homecoming", "questId": "missingQuest"}, 'unknown quest id "missingQuest"'),
+            ({"scenarioId": "homecoming", "questId": "validMarket"}, '"validMarket" does not resolve to a quest'),
+            ({"scenarioId": "other", "questId": "goodQuest"}, "does not match quest campaign_scenarioId"),
+            ({"questId": "goodQuest"}, "expected non-empty scenarioId"),
+        )
+        for mission, message in cases:
+            with self.subTest(mission=mission):
+                root = self.make_fixture()
+                encoded = "castleMission:" + json.dumps(mission) if isinstance(mission, dict) else mission
+                self._placeCastleMission(root, encoded)
+                self.assertIssueContains(
+                    validate_repo(root),
+                    "res/maps/broken/map.json",
+                    "layers[1].objects[1].properties.campaign_mission",
+                    message,
+                )
+
+    def test_castle_mission_resolves_quest_refs_and_inherited_scenario_metadata(self):
+        root = self.make_fixture()
+        map_path = self._placeCastleMission(root, 'castleMission:{"scenarioId":"homecoming","questId":"goodQuest"}')
+        config_path = root / "res/maps/broken/config.json"
+        config = read_json(config_path)
+        config["questTemplate"] = config["goodQuest"]
+        config["goodQuest"] = {"ref": "questTemplate"}
+        write_json(config_path, config)
+        self.assertEqual([], [str(issue) for issue in validate_repo(root)])
+
+        config["goodQuest"]["properties"] = {"campaign_scenarioId": "other"}
+        write_json(config_path, config)
+        self.assertIssueContains(
+            validate_repo(root), "campaign_mission.scenarioId", "does not match quest campaign_scenarioId"
+        )
+
+        config["goodQuest"]["properties"] = {}
+        config["questTemplate"]["properties"].pop("campaign_scenarioId")
+        write_json(config_path, config)
+        self.assertIssueContains(
+            validate_repo(root), "campaign_mission.scenarioId", "does not match quest campaign_scenarioId"
+        )
+
+        map_data = read_json(map_path)
+        map_data["layers"][1]["objects"][1]["name"] = "unrelatedMarker"
+        write_json(map_path, map_data)
+        self.assertEqual([], [str(issue) for issue in validate_repo(root)])
+
     def test_script_analyzer_collects_quest_state_and_property_usage(self):
         root = self.make_fixture()
         script_path = root / "res/maps/broken/script.py"
@@ -1372,13 +1581,25 @@ class ContentValidatorTest(unittest.TestCase):
 
     def test_creature_archetype_naming_policy_accepts_conforming_ids(self):
         root = self.make_fixture()
+        # Register the archetype classes statically (without V_META) so the object
+        # nodes are constructible: entries must carry "class"/"ref" to be registered
+        # by the runtime config loader at all, like the real archetype content.
+        type_registration = root / "src/object/CObjectTypeRegistration.cpp"
+        type_registration.parent.mkdir(parents=True, exist_ok=True)
+        type_registration.write_text(
+            "void registerObjectTypes() {\n"
+            "    CTypes::register_type<CCreatureRace, CGameObject>();\n"
+            "    CTypes::register_type<CCreatureClass, CGameObject>();\n"
+            "}\n",
+            encoding="utf-8",
+        )
         write_json(
             root / "res/config/creature_races.json",
-            {"humanRace": {"properties": {"creatureClass": {"ref": "warriorClass"}}}},
+            {"humanRace": {"class": "CCreatureRace", "properties": {"creatureClass": {"ref": "warriorClass"}}}},
         )
         write_json(
             root / "res/config/creature_classes.json",
-            {"warriorClass": {"properties": {"label": "Warrior"}}},
+            {"warriorClass": {"class": "CCreatureClass", "properties": {"label": "Warrior"}}},
         )
 
         issues = validate_repo(root)
@@ -1757,6 +1978,66 @@ class ContentValidatorTest(unittest.TestCase):
             "cannot be used as a concrete spawn target",
         )
 
+    def test_creature_template_id_as_spawn_target_is_rejected(self):
+        # CCreatureTemplate overlays (EPIC_08) are referenced definitions carried via
+        # CCreature.templates; runtime createObject<CMapObject> on one returns null and
+        # silently skips the spawn, so the validator must reject them as spawn targets
+        # exactly like race/class definitions.
+        root = self.make_fixture()
+        write_json(
+            root / "res/config/creature_templates.json",
+            {"eliteTemplate": {"class": "CCreatureTemplate", "properties": {"label": "Elite"}}},
+        )
+        map_path = root / "res/maps/broken/map.json"
+        map_data = read_json(map_path)
+        map_data["layers"][1]["objects"][0]["type"] = "eliteTemplate"
+        write_json(map_path, map_data)
+
+        issues = validate_repo(root)
+
+        self.assertIssueContains(
+            issues,
+            "res/maps/broken/map.json",
+            "layers[1].objects[0].type",
+            'object type "eliteTemplate" is a creature archetype definition',
+            "cannot be used as a concrete spawn target",
+        )
+
+    def test_class_track_id_as_create_object_target_is_rejected(self):
+        # CCreatureClassTrack multiclass records (EPIC_08) are referenced definitions
+        # carried via CCreature.classTracks; they are constructible metadata, never
+        # spawnable actors, so a script spawn ref naming one must be rejected. Track
+        # records have no dedicated config file, so the guard must catch them purely by
+        # effective engine class.
+        root = self.make_fixture()
+        write_json(
+            root / "res/config/monsters.json",
+            {
+                "warriorTrack": {
+                    "class": "CCreatureClassTrack",
+                    "properties": {"label": "Warrior track", "level": 2},
+                }
+            },
+        )
+        script_path = root / "res/maps/broken/script.py"
+        script_path.write_text(
+            script_path.read_text(encoding="utf-8").replace(
+                'self.getGame().createObject("validMarket")',
+                'self.getGame().createObject("warriorTrack")',
+            ),
+            encoding="utf-8",
+        )
+
+        issues = validate_repo(root)
+
+        self.assertIssueContains(
+            issues,
+            "res/maps/broken/script.py",
+            'createObject("warriorTrack")',
+            'object ref or class "warriorTrack" is a creature archetype definition',
+            "cannot be used as a concrete spawn target",
+        )
+
     def test_concrete_creature_spawn_alongside_archetype_definitions_passes(self):
         root = self.make_fixture()
         write_json(
@@ -2013,6 +2294,73 @@ class ContentValidatorTest(unittest.TestCase):
             "schemaUnknown.properties.bogus",
             'unknown property "bogus" for class "CPropertyDerived"',
         )
+
+    def test_reviewed_presentation_properties_accept_typed_values_on_their_lineage(self):
+        root = self.make_fixture()
+        self.write_ui_presentation_schema_fixture(root)
+        config_path = root / "res/maps/broken/config.json"
+        config = read_json(config_path)
+        config.update(
+            {
+                "uiControl": {
+                    "class": "CButton",
+                    "properties": {
+                        "uiGroup": "Details",
+                        "uiHeading": False,
+                        "uiFooter": True,
+                        "uiTab": False,
+                        "uiFooterGroup": "actions",
+                        "uiOrder": 2,
+                    },
+                },
+                "conversation": {"class": "CDialog", "properties": {"speaker": "Rolf", "questIds": "mainQuest"}},
+                "speakerOverride": {"class": "CDialogState", "properties": {"speaker": "Narrator"}},
+                "response": {
+                    "class": "CDialogOption",
+                    "properties": {
+                        "actionLabel": "Return amulet",
+                        "afterCondition": "hasReturnedAmulet",
+                        "afterStateId": "THANKS",
+                        "consequential": True,
+                    },
+                },
+            }
+        )
+        write_json(config_path, config)
+        self.assertEqual([], [str(issue) for issue in validate_repo(root)])
+
+    def test_reviewed_presentation_properties_reject_wrong_types_and_unrelated_objects(self):
+        root = self.make_fixture()
+        self.write_ui_presentation_schema_fixture(root)
+        config_path = root / "res/maps/broken/config.json"
+        config = read_json(config_path)
+        invalid = {
+            "uiControl": (
+                "CButton",
+                {"uiGroup": True, "uiHeading": "yes", "uiFooter": 1, "uiTab": [], "uiFooterGroup": 2, "uiOrder": True},
+            ),
+            "conversation": ("CDialog", {"speaker": 1, "questIds": ["mainQuest"]}),
+            "speakerOverride": ("CDialogState", {"speaker": False}),
+            "response": (
+                "CDialogOption",
+                {"actionLabel": [], "afterCondition": False, "afterStateId": 2, "consequential": "yes"},
+            ),
+        }
+        for key, (class_name, properties) in invalid.items():
+            config[key] = {"class": class_name, "properties": properties}
+        config["ordinaryItem"] = {"class": "CItem", "properties": {"uiGroup": "Details", "speaker": "Rolf"}}
+        config["misspelledControl"] = {"class": "CButton", "properties": {"uiGrop": "Details"}}
+        write_json(config_path, config)
+        issues = validate_repo(root)
+        for key, (class_name, properties) in invalid.items():
+            for property_name in properties:
+                self.assertIssueContains(
+                    issues, f"{key}.properties.{property_name}", f'for class "{class_name}" expected'
+                )
+        self.assertIssueContains(issues, "uiControl.properties.uiOrder", "expected int; got bool")
+        self.assertIssueContains(issues, "ordinaryItem.properties.uiGroup", 'unknown property "uiGroup"')
+        self.assertIssueContains(issues, "ordinaryItem.properties.speaker", 'unknown property "speaker"')
+        self.assertIssueContains(issues, "misspelledControl.properties.uiGrop", 'unknown property "uiGrop"')
 
     def test_creature_class_main_stat_numeric_stat_passes(self):
         root = self.make_fixture()
@@ -2434,15 +2782,15 @@ class ContentValidatorTest(unittest.TestCase):
         write_json(
             root / "res/plugins/manifest.json",
             {
-                "global": [
+                "version": 2,
+                "plugins": [
                     {
-                        "kind": "dynamic",
+                        "kind": "native",
                         "id": "nativeOptional",
                         "library": "plugins/native/native_optional",
-                        "entry": "native_optional_load_v1",
+                        "entry": "native_optional_load_v2",
                     }
                 ],
-                "maps": {},
             },
         )
         config_path = root / "res/maps/broken/config.json"
@@ -2457,7 +2805,7 @@ class ContentValidatorTest(unittest.TestCase):
     def test_unloaded_native_plugin_registration_reports_manifest_diagnostic(self):
         root = self.make_fixture()
         self.write_native_registration_fixture(root, "CUnloadedNative")
-        write_json(root / "res/plugins/manifest.json", {"global": [], "maps": {}})
+        write_json(root / "res/plugins/manifest.json", {"version": 2, "plugins": []})
         config_path = root / "res/maps/broken/config.json"
         config = read_json(config_path)
         config["unloadedNative"] = {"class": "CUnloadedNative"}
@@ -2470,7 +2818,57 @@ class ContentValidatorTest(unittest.TestCase):
             "res/maps/broken/config.json",
             "unloadedNative.class",
             'class "CUnloadedNative" is registered by native plugin code',
-            "native_optional:native_optional_load_v1",
+            "native_optional:native_optional_load_v2",
+        )
+
+    def test_plugin_manifest_schema_diagnostics(self):
+        root = self.make_fixture()
+        write_json(
+            root / "res/plugins/manifest.json",
+            {
+                "plugins": [
+                    {"kind": "mystery", "id": "unknownKind"},
+                    {"kind": "cpp", "id": "missingType"},
+                    {"kind": "native", "id": "escapee", "library": "plugins/escapee"},
+                    {"kind": "python", "id": "missingPath", "path": "plugins/absent.py"},
+                    {"kind": "lua", "id": "wrongSuffix", "path": "plugins/wrong.py"},
+                    {"kind": "cpp", "id": "missingType", "type": "CPlugin"},
+                    {"kind": "cpp", "id": "badScope", "type": "CPlugin", "scope": {"map": "missingmap"}},
+                ]
+            },
+        )
+
+        issues = validate_repo(root)
+
+        self.assertIssueContains(issues, "res/plugins/manifest.json", "version", "must declare version 2")
+        self.assertIssueContains(issues, "res/plugins/manifest.json", "plugins[0]", 'unknown plugin kind "mystery"')
+        self.assertIssueContains(issues, "res/plugins/manifest.json", "plugins[1]", 'non-empty "type" field')
+        self.assertIssueContains(issues, "res/plugins/manifest.json", "plugins[2]", "must live under plugins/native/")
+        self.assertIssueContains(issues, "res/plugins/manifest.json", "plugins[3]", "does not exist under res/")
+        self.assertIssueContains(issues, "res/plugins/manifest.json", "plugins[4]", "must end with .lua")
+        self.assertIssueContains(issues, "res/plugins/manifest.json", "plugins[5]", 'duplicate plugin id "missingType"')
+        self.assertIssueContains(
+            issues, "res/plugins/manifest.json", "plugins[6]", 'references unknown map "missingmap"'
+        )
+
+    def test_gameplay_type_table_diagnoses_unparseable_rows(self):
+        root = self.make_fixture()
+        table = root / "src/plugin/CGameplayTypeTable.h"
+        table.parent.mkdir(parents=True, exist_ok=True)
+        table.write_text(
+            "#define FN_GAMEPLAY_TYPES(FN_TYPE, FN_WRAPPED)                \\\n"
+            "    FN_TYPE(CFixtureThing, CGameObject)                       \\\n"
+            "    FN_WRAPPED(lowercase_name, CGameObject)\n",
+            encoding="utf-8",
+        )
+
+        issues = validate_repo(root)
+
+        self.assertIssueContains(
+            issues,
+            "src/plugin/CGameplayTypeTable.h",
+            "line 3",
+            "unparseable gameplay type table row",
         )
 
     def write_declared_cpp_class(self, root, class_name):
@@ -2487,17 +2885,12 @@ class ContentValidatorTest(unittest.TestCase):
 
     def write_native_registration_fixture(self, root, class_name):
         self.write_declared_cpp_class(root, class_name)
-        native_plugin = root / "src/plugin/NativePlugin.cpp"
-        native_plugin.parent.mkdir(parents=True, exist_ok=True)
-        native_plugin.write_text(
+        type_table = root / "src/plugin/CGameplayTypeTable.h"
+        type_table.parent.mkdir(parents=True, exist_ok=True)
+        type_table.write_text(
             textwrap.dedent(f"""
-                namespace native_plugin {{
-                bool register_optional(const NativePluginHostV1 *host) {{
-                    bool registered = true;
-                    registered = register_type<{class_name}, CGameObject>(host) && registered;
-                    return registered;
-                }}
-                }}
+                #define FN_GAMEPLAY_TYPES(FN_TYPE, FN_WRAPPED)                 \\
+                    FN_TYPE({class_name}, CGameObject)
             """).lstrip(),
             encoding="utf-8",
         )
@@ -2505,8 +2898,9 @@ class ContentValidatorTest(unittest.TestCase):
         native_entry.parent.mkdir(parents=True, exist_ok=True)
         native_entry.write_text(
             textwrap.dedent("""
-                extern "C" NATIVE_PLUGIN_EXPORT bool native_optional_load_v1(const NativePluginHostV1 *host) {
-                    return native_plugin::register_optional(host);
+                extern "C" NATIVE_PLUGIN_EXPORT bool native_optional_load_v2(const CPluginHostV2 *host) {
+                    auto *registrar = game_plugin_registrar(host);
+                    return registrar != nullptr && native_plugin::register_gameplay_types(*registrar);
                 }
             """).lstrip(),
             encoding="utf-8",
@@ -2614,6 +3008,33 @@ class ContentValidatorTest(unittest.TestCase):
                 void registerObjectTypes() {
                     CTypes::register_type<CPropertyBase, CGameObject>();
                     CTypes::register_type<CPropertyDerived, CPropertyBase, CGameObject>();
+                }
+            """).lstrip(),
+            encoding="utf-8",
+        )
+
+    def write_ui_presentation_schema_fixture(self, root):
+        self.write_property_schema_fixture(root)
+        (root / "src/object/CUiPresentationFixture.h").write_text(
+            textwrap.dedent("""
+                class CGameGraphicsObject {
+                    V_META(CGameGraphicsObject, CGameObject, vstd::meta::empty())
+                };
+                class CWidget {
+                    V_META(CWidget, CGameGraphicsObject, vstd::meta::empty())
+                };
+                class CButton {
+                    V_META(CButton, CWidget, vstd::meta::empty())
+                };
+            """).lstrip(),
+            encoding="utf-8",
+        )
+        (root / "src/object/CUiPresentationTypeRegistration.cpp").write_text(
+            textwrap.dedent("""
+                void registerUiTypes() {
+                    CTypes::register_type<CGameGraphicsObject, CGameObject>();
+                    CTypes::register_type<CWidget, CGameGraphicsObject, CGameObject>();
+                    CTypes::register_type<CButton, CWidget, CGameGraphicsObject, CGameObject>();
                 }
             """).lstrip(),
             encoding="utf-8",
@@ -2841,9 +3262,16 @@ class ContentValidatorTest(unittest.TestCase):
             {"humanRace": {"class": "CCreatureRace", "properties": properties}},
         )
 
+    def _write_creature_type_catalog(self, root, types):
+        write_json(
+            root / "res/config/creature_types.json",
+            {"creatureTypeCatalog": {"catalogKind": "creatureType", "types": types}},
+        )
+
     def test_creature_race_valid_base_stats_actions_and_types_pass(self):
         root = self.make_fixture()
         self.write_creature_race_stats_fixture(root)
+        self._write_creature_type_catalog(root, {"humanoid": {"description": "Human-shaped folk."}})
         self._write_creature_race(
             root,
             {
@@ -2934,6 +3362,238 @@ class ContentValidatorTest(unittest.TestCase):
             "humanRace.properties.subtypes[1]",
             "expected a non-empty string; got string",
         )
+
+    # --- Creature type catalog (EPIC_08/STORY_01/SUBSTORY_01) -------------------------
+    # creatureType strings are validated against res/config/creature_types.json.
+    # Validation-only: no runtime mechanic reads the catalog.
+
+    def test_creature_race_unknown_creature_type_is_reported(self):
+        root = self.make_fixture()
+        self.write_creature_race_stats_fixture(root)
+        self._write_creature_type_catalog(root, {"humanoid": {"description": "Human-shaped folk."}})
+        self._write_creature_race(root, {"creatureType": "demon"})
+
+        issues = validate_repo(root)
+
+        self.assertIssueContains(
+            issues,
+            "res/config/creature_races.json",
+            "humanRace.properties.creatureType",
+            'unknown creatureType "demon"; expected one of humanoid',
+            "add the new type to res/config/creature_types.json or fix the value",
+        )
+
+    def test_creature_type_without_catalog_file_fails_closed(self):
+        root = self.make_fixture()
+        self.write_creature_race_stats_fixture(root)
+        self._write_creature_race(root, {"creatureType": "humanoid"})
+
+        issues = validate_repo(root)
+
+        self.assertIssueContains(
+            issues,
+            "res/config/creature_races.json",
+            "humanRace.properties.creatureType",
+            'creatureType "humanoid" cannot be validated: the creature type catalog '
+            "res/config/creature_types.json is missing or malformed",
+        )
+
+    def test_creature_race_without_creature_type_needs_no_catalog(self):
+        # Absent creatureType keeps the current content rules: nothing to check against
+        # the catalog, so a fixture repo without creature_types.json stays valid.
+        root = self.make_fixture()
+        self.write_creature_race_stats_fixture(root)
+        self._write_creature_race(root, {"subtypes": ["human"]})
+
+        self.assertEqual([], [str(issue) for issue in validate_repo(root)])
+
+    def test_creature_type_catalog_missing_entry_fails_closed(self):
+        root = self.make_fixture()
+        self.write_creature_race_stats_fixture(root)
+        # Types authored as top-level keys instead of under the "creatureTypeCatalog"
+        # entry would collide with the global config id namespace; reject the shape.
+        write_json(root / "res/config/creature_types.json", {"humanoid": {"description": "Human-shaped folk."}})
+        self._write_creature_race(root, {"creatureType": "humanoid"})
+
+        issues = validate_repo(root)
+
+        self.assertIssueContains(
+            issues,
+            "res/config/creature_types.json",
+            'creature type catalog must declare only the "creatureTypeCatalog" entry; unexpected entries: humanoid',
+            'creature type catalog is missing the "creatureTypeCatalog" entry',
+        )
+        self.assertIssueContains(
+            issues,
+            "humanRace.properties.creatureType",
+            'creatureType "humanoid" cannot be validated',
+        )
+
+    def test_creature_type_catalog_malformed_types_fails_closed(self):
+        root = self.make_fixture()
+        self.write_creature_race_stats_fixture(root)
+        write_json(
+            root / "res/config/creature_types.json",
+            {"creatureTypeCatalog": {"catalogKind": "creatureType", "types": ["humanoid"]}},
+        )
+        self._write_creature_race(root, {"creatureType": "humanoid"})
+
+        issues = validate_repo(root)
+
+        self.assertIssueContains(
+            issues,
+            "res/config/creature_types.json",
+            "creatureTypeCatalog.types",
+            "expected object mapping creature type ids to definitions; got array",
+        )
+        self.assertIssueContains(
+            issues,
+            "humanRace.properties.creatureType",
+            'creatureType "humanoid" cannot be validated',
+        )
+
+    def test_creature_type_catalog_empty_types_fails_closed(self):
+        root = self.make_fixture()
+        self.write_creature_race_stats_fixture(root)
+        self._write_creature_type_catalog(root, {})
+        self._write_creature_race(root, {"creatureType": "humanoid"})
+
+        issues = validate_repo(root)
+
+        self.assertIssueContains(
+            issues,
+            "res/config/creature_types.json",
+            "creatureTypeCatalog.types",
+            "creature type catalog must declare at least one type",
+        )
+        self.assertIssueContains(
+            issues,
+            "humanRace.properties.creatureType",
+            'creatureType "humanoid" cannot be validated',
+        )
+
+    def test_creature_type_catalog_wrong_kind_is_reported(self):
+        root = self.make_fixture()
+        self.write_creature_race_stats_fixture(root)
+        write_json(
+            root / "res/config/creature_types.json",
+            {
+                "creatureTypeCatalog": {
+                    "catalogKind": "monsterType",
+                    "types": {"humanoid": {"description": "Human-shaped folk."}},
+                }
+            },
+        )
+        self._write_creature_race(root, {"creatureType": "humanoid"})
+
+        issues = validate_repo(root)
+
+        # The kind mismatch is reported, but the parsed type set stays usable so the
+        # valid usage is not double-flagged as unverifiable.
+        self.assertIssueContains(
+            issues,
+            "res/config/creature_types.json",
+            "creatureTypeCatalog.catalogKind",
+            'expected "creatureType"',
+        )
+        issue_text = "\n".join(str(issue) for issue in issues)
+        self.assertNotIn("cannot be validated", issue_text)
+        self.assertNotIn("unknown creatureType", issue_text)
+
+    def test_creature_type_catalog_bad_description_is_reported(self):
+        root = self.make_fixture()
+        self.write_creature_race_stats_fixture(root)
+        self._write_creature_type_catalog(root, {"humanoid": {"description": ""}})
+        self._write_creature_race(root, {"creatureType": "humanoid"})
+
+        issues = validate_repo(root)
+
+        self.assertIssueContains(
+            issues,
+            "res/config/creature_types.json",
+            "creatureTypeCatalog.types.humanoid.description",
+            "expected non-empty string; got string",
+        )
+        issue_text = "\n".join(str(issue) for issue in issues)
+        self.assertNotIn("cannot be validated", issue_text)
+
+    def test_script_spawn_of_data_only_config_is_reported(self):
+        # The runtime config loader (CObjectHandler::registerConfig) skips data-only
+        # entries such as the creature type catalog, so a createObject against one
+        # can never resolve at runtime and must be rejected here.
+        root = self.make_fixture()
+        self._write_creature_type_catalog(root, {"humanoid": {"description": "Human-shaped folk."}})
+        script_path = root / "res/maps/broken/script.py"
+        script_path.write_text(
+            script_path.read_text(encoding="utf-8").replace(
+                'self.getGame().createObject("validMarket")',
+                'self.getGame().createObject("creatureTypeCatalog")',
+            ),
+            encoding="utf-8",
+        )
+
+        issues = validate_repo(root)
+
+        self.assertIssueContains(
+            issues,
+            "res/maps/broken/script.py",
+            'createObject("creatureTypeCatalog")',
+            'object ref or class "creatureTypeCatalog" names a data-only config entry',
+            "the runtime config loader never registers such entries",
+        )
+
+    def test_item_grant_of_data_only_config_is_reported(self):
+        root = self.make_fixture()
+        self._write_creature_type_catalog(root, {"humanoid": {"description": "Human-shaped folk."}})
+        script_path = root / "res/maps/broken/script.py"
+        script_path.write_text(
+            script_path.read_text(encoding="utf-8").replace(
+                'event.getCause().addItem("LifePotion")',
+                'event.getCause().addItem("creatureTypeCatalog")',
+            ),
+            encoding="utf-8",
+        )
+
+        issues = validate_repo(root)
+
+        self.assertIssueContains(
+            issues,
+            "res/maps/broken/script.py",
+            'addItem("creatureTypeCatalog")',
+            'item ref "creatureTypeCatalog" names a data-only config entry',
+            "the runtime config loader never registers such entries",
+        )
+
+    def test_object_node_ref_to_data_only_config_is_reported(self):
+        root = self.make_fixture()
+        self._write_creature_type_catalog(root, {"humanoid": {"description": "Human-shaped folk."}})
+        config_path = root / "res/maps/broken/config.json"
+        config = read_json(config_path)
+        config["catalogCave"] = {"class": "CBuilding", "properties": {"monster": {"ref": "creatureTypeCatalog"}}}
+        write_json(config_path, config)
+
+        issues = validate_repo(root)
+
+        self.assertIssueContains(
+            issues,
+            "res/maps/broken/config.json",
+            "catalogCave.properties.monster.ref",
+            'ref "creatureTypeCatalog" names a data-only config entry',
+            "the runtime config loader never registers such entries",
+        )
+
+    def test_creature_type_catalog_matches_observed_content_types(self):
+        # The catalog is the observed creatureType set by construction: every type
+        # declared by real content is catalogued, and the catalog carries no extras.
+        catalog = read_json(REPO_ROOT / "res/config/creature_types.json")
+        catalogued = set(catalog["creatureTypeCatalog"]["types"])
+        races = read_json(REPO_ROOT / "res/config/creature_races.json")
+        observed = {
+            race["properties"]["creatureType"]
+            for race in races.values()
+            if isinstance(race, dict) and "creatureType" in race.get("properties", {})
+        }
+        self.assertEqual(observed, catalogued)
 
     def test_amulet_quest_carrier_and_runtime_actor_pass_validation(self):
         root = self.make_amulet_fixture()
@@ -3059,6 +3719,49 @@ class ContentValidatorTest(unittest.TestCase):
         issues = validate_repo(root)
 
         self.assertEqual([], [str(issue) for issue in issues])
+
+    def testCampaignArtworkAcceptsExistingManifestAndScenarioResources(self):
+        manifest = valid_campaign_manifest()
+        manifest["artwork"] = "images/campaign.png"
+        manifest["scenarios"]["one"]["artwork"] = "images/chapter.png"
+        root = self.make_campaign_fixture(manifest=manifest)
+        image_root = root / "res/images"
+        image_root.mkdir(parents=True, exist_ok=True)
+        image_bytes = (REPO_ROOT / "res/images/tooltip.png").read_bytes()
+        for name in ("campaign.png", "chapter.png"):
+            (image_root / name).write_bytes(image_bytes)
+
+        self.assertEqual([], [str(issue) for issue in validate_repo(root)])
+
+    def testCampaignArtworkRejectsMissingResourcesAtBothLevels(self):
+        manifest = valid_campaign_manifest()
+        manifest["artwork"] = "images/missing.png"
+        manifest["scenarios"]["one"]["artwork"] = "images/missingChapter.png"
+        issues = validate_repo(self.make_campaign_fixture(manifest=manifest))
+
+        self.assertIssueContains(issues, "$.artwork", "must reference an existing PNG resource")
+        self.assertIssueContains(issues, "$.scenarios.one.artwork", "must reference an existing PNG resource")
+
+    def testCampaignArtworkRejectsInvalidTypesAndUnsafePaths(self):
+        for value, expected in (
+            (None, "must be a non-empty string"),
+            (42, "must be a non-empty string"),
+            ("", "must be a non-empty string"),
+            ("../images/campaign.png", "without traversal or absolute paths"),
+            ("images/../campaign.png", "without traversal or absolute paths"),
+            ("images\\campaign.png", "without traversal or absolute paths"),
+            ("C:/images/campaign.png", "without traversal or absolute paths"),
+            ("/images/campaign.png", "without traversal or absolute paths"),
+            ("images/campaign:stream.png", "without traversal or absolute paths"),
+            ("images/campaign.jpg", "without traversal or absolute paths"),
+        ):
+            with self.subTest(value=value):
+                manifest = valid_campaign_manifest()
+                manifest["artwork"] = value
+                manifest["scenarios"]["one"]["artwork"] = value
+                issues = validate_repo(self.make_campaign_fixture(manifest=manifest))
+                self.assertIssueContains(issues, "$.artwork", expected)
+                self.assertIssueContains(issues, "$.scenarios.one.artwork", expected)
 
     def test_campaign_directory_without_manifest_is_flagged(self):
         root = self.make_campaign_fixture()
@@ -3351,7 +4054,10 @@ class ContentValidatorTest(unittest.TestCase):
             "properties": {
                 "configuration": {
                     "0": {"class": "CSlot", "properties": {"slotName": "RightHand", "types": ["CWeapon"]}},
-                    "1": {"class": "CSlot", "properties": {"slotName": "LeftHand", "types": ["CSmallWeapon", "CShield"]}},
+                    "1": {
+                        "class": "CSlot",
+                        "properties": {"slotName": "LeftHand", "types": ["CSmallWeapon", "CShield"]},
+                    },
                     "2": {"class": "CSlot", "properties": {"slotName": "Head", "types": ["CHelmet"]}},
                     "3": {"class": "CSlot", "properties": {"slotName": "Chest", "types": ["CArmor"]}},
                     "5": {"class": "CSlot", "properties": {"slotName": "Feet", "types": ["CBoots"]}},
@@ -3502,7 +4208,7 @@ class ContentValidatorTest(unittest.TestCase):
         write_json(
             root / "res/maps/broken/config.json",
             {
-                "goodQuest": {"class": "GoodQuest"},
+                "goodQuest": {"class": "GoodQuest", "properties": {"description": "Complete the trial."}},
                 "validMarket": {"class": "CMarket", "properties": {"items": [{"ref": "LifePotion"}]}},
             },
         )

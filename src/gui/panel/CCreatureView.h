@@ -46,6 +46,12 @@ class CCreatureView : public CProxyTargetGraphicsObject {
 
     std::shared_ptr<CCreature> getCreature();
 
+    void renderObject(std::shared_ptr<CGui> gui, std::shared_ptr<SDL_Rect> rect, int frameTime) override;
+
+    static std::string getStatusText(const std::shared_ptr<CCreature> &creature);
+    static void layoutCombatantCard(const std::shared_ptr<CGui> &gui, const std::shared_ptr<CGameGraphicsObject> &card,
+                                    const std::shared_ptr<CCreature> &creature);
+
   private:
     std::shared_ptr<CScript> creatureScript;
 };

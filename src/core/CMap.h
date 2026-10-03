@@ -18,6 +18,8 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #pragma once
 
 #include <cstddef>
+#include <atomic>
+#include <mutex>
 
 #include "core/CGlobal.h"
 
@@ -43,6 +45,9 @@ class CMapObject;
 class CTrigger;
 
 class CGame;
+class CNavigationService;
+class CNavigationSnapshot;
+struct CNavigationCell;
 
 struct CNavigationEdge {
     Coords source;
@@ -63,14 +68,18 @@ class CMap : public CGameObject {
     friend class CMapLoader;
 
     friend class CRandomMapGenerator;
+    friend class CNavigationSnapshot;
 
     V_META(CMap, CGameObject, V_PROPERTY(CMap, int, turn, getTurn, setTurn),
            V_PROPERTY(CMap, std::string, mapName, getMapName, setMapName),
+           V_PROPERTY(CMap, std::string, combatHistory, getCombatHistory, setCombatHistory),
            V_PROPERTY(CMap, std::set<std::shared_ptr<CMapObject>>, objects, getObjects, setObjects),
            V_PROPERTY(CMap, std::set<std::shared_ptr<CTile>>, tiles, getTiles, setTiles),
            V_PROPERTY(CMap, std::set<std::shared_ptr<CTrigger>>, triggers, getTriggers, setTriggers))
   public:
     CMap() = default;
+
+    ~CMap() override;
 
     bool addTile(std::shared_ptr<CTile> tile, int x, int y, int z);
 
@@ -166,6 +175,8 @@ class CMap : public CGameObject {
 
     int lookupMovementCost(Coords coords);
 
+    std::int64_t lookupNavigationStepCost(Coords from, Coords to);
+
     Coords normalizeCoords(Coords coords) const;
 
     // Returns true when the coordinate falls inside the configured map extents for its level.
@@ -206,6 +217,12 @@ class CMap : public CGameObject {
 
     std::uint64_t getNavigationRevision() const;
 
+    std::uint64_t getRoutingEpoch() const;
+    std::recursive_mutex &getNavigationMutex() const;
+    std::shared_ptr<CNavigationService> getNavigationService();
+    void navigationCellChanged(Coords coords);
+    bool hasRegisteredTile(const CTile *tile) const;
+
     const std::vector<CNavigationEdge> &getNavigationEdges() const;
 
     std::vector<Coords> getNavigationNeighbors(Coords coords, bool includeSelf = false) const;
@@ -241,6 +258,10 @@ class CMap : public CGameObject {
 
     std::string getMapName();
 
+    std::string getCombatHistory();
+
+    void setCombatHistory(std::string history);
+
     void objectMoved(const std::shared_ptr<CMapObject> &object, Coords _old, Coords _new);
 
   private:
@@ -267,9 +288,26 @@ class CMap : public CGameObject {
     bool moving = false;
     bool playerTriggersRegistered = false;
     std::string mapName;
+    std::string combatHistory;
     std::uint64_t navigationRevision = 0;
+    mutable std::recursive_mutex navigationMutex;
+    mutable std::uint64_t routingEpoch = 1;
+    mutable std::uint64_t routingConfigRevision = 0;
+    std::shared_ptr<CNavigationService> navigationService;
+    bool navigationDomainCanonical = true;
+    struct NavigationTileExtent {
+        int level = 0;
+        std::array<int, 4> extent{};
+    };
+    std::array<NavigationTileExtent, 64> navigationTileExtents{};
+    std::size_t navigationTileExtentCount = 0;
+    bool navigationTileExtentOverflow = false;
+    void includeNavigationTile(Coords coords);
 
-    std::shared_ptr<vstd::future<void, void>> _moveHelper = vstd::later([]() {});
+    void updateCoordinateNormalization(IntMap &setting, IntMap values);
+
+    void routingChanged(std::optional<Coords> coords = std::nullopt);
+    CNavigationCell lookupNavigationCell(Coords coords, std::optional<CNavigationCell> fallback);
 
     bool hasBounds(int z) const;
 

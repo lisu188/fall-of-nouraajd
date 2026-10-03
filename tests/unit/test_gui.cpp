@@ -31,19 +31,30 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #include "gui/CRenderContext.h"
 #include "gui/CSdlResources.h"
 #include "gui/CTextureCache.h"
+#include "gui/CTextManager.h"
+#include "gui/CTooltip.h"
 #include "gui/object/CGameGraphicsObject.h"
 #include "gui/object/CMinimapGraphicsObject.h"
 #include "gui/object/CWidget.h"
+#include "gui/panel/CGameCampaignBrowserPanel.h"
+#include "gui/panel/CGameCampaignPanel.h"
 #include "gui/panel/CGameCharacterPanel.h"
 #include "gui/panel/CGameFightPanel.h"
 #include "gui/panel/CGameInventoryPanel.h"
 #include "gui/panel/CGamePanel.h"
+#include "gui/panel/CGameQuestPanel.h"
+#define GAME_UNIT_TESTS
+#include "gui/panel/CGameDialogPanel.h"
+#undef GAME_UNIT_TESTS
 #include "gui/panel/CListView.h"
 #include "handler/CObjectHandler.h"
 #include "object/CCreature.h"
+#include "object/CDialog.h"
+#include "object/CEffect.h"
 #include "object/CInteraction.h"
 #include "object/CItem.h"
 #include "object/CPlayer.h"
+#include "object/CQuest.h"
 #include "object/CTile.h"
 #include "test_harness.h"
 
@@ -51,6 +62,7 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 #include <chrono>
 #include <limits>
+#include <vector>
 #include <utility>
 
 namespace {
@@ -161,6 +173,47 @@ class RefreshCountingListView : public CListView {
 
   private:
     std::shared_ptr<CGameObject> resolvedRefreshTarget;
+};
+
+// Counts quest-journal text rebuilds so the tests can assert the quest panel only
+// rebuilds when its underlying quest data actually changed (reactive refresh), never
+// per read/frame. Mirrors RefreshCountingListView: the quest source is injected so no
+// full map boot is needed.
+class QuestTextCountingPanel : public CGameQuestPanel {
+    V_META(QuestTextCountingPanel, CGameQuestPanel, vstd::meta::empty())
+
+  public:
+    void setResolvedQuestSource(std::shared_ptr<CPlayer> player) { resolvedQuestSource = std::move(player); }
+
+    void setResolvedQuestStateSource(std::shared_ptr<CGameObject> questState) {
+        resolvedQuestStateSource = std::move(questState);
+    }
+
+    int build_count = 0;
+    int paragraph_measure_count = 0;
+
+  protected:
+    std::shared_ptr<CPlayer> resolveQuestSource(const std::shared_ptr<CGui> &) override { return resolvedQuestSource; }
+
+    std::shared_ptr<CGameObject> resolveQuestStateSource(const std::shared_ptr<CGui> &) override {
+        return resolvedQuestStateSource;
+    }
+
+    std::string buildText(const std::shared_ptr<CPlayer> &player) override {
+        ++build_count;
+        return CGameQuestPanel::buildText(player);
+    }
+
+    int measureParagraphHeight(const std::shared_ptr<CTextManager> &textManager, const std::string &text,
+                               int width) override {
+        ++paragraph_measure_count;
+        return CGameQuestPanel::measureParagraphHeight(textManager, text, width);
+    }
+
+  private:
+    std::shared_ptr<CPlayer> resolvedQuestSource;
+
+    std::shared_ptr<CGameObject> resolvedQuestStateSource;
 };
 
 class DragCallbackPanel : public CGamePanel {
@@ -312,6 +365,8 @@ std::shared_ptr<CGame> create_gui_game(const std::shared_ptr<CGui> &gui) {
     type_registration::registerGuiPanelTypes();
     CTypes::register_type_metadata<RefreshCountingListView, CListView, CProxyTargetGraphicsObject, CGameGraphicsObject,
                                    CGameObject>();
+    CTypes::register_type_metadata<QuestTextCountingPanel, CGameQuestPanel, CGamePanel, CGameGraphicsObject,
+                                   CGameObject>();
     CTypes::register_type_metadata<DragCallbackPanel, CGamePanel, CGameGraphicsObject, CGameObject>();
     CTypes::register_type_metadata<WidgetCallbackPanel, CGamePanel, CGameGraphicsObject, CGameObject>();
 
@@ -400,6 +455,94 @@ void test_layout_runtime_overrides_preserve_serialized_percentage_layouts() {
     parentLayout->clearRuntimeRect();
     expect_rect(childLayout->getRect(child), 30, 40, 100, 25,
                 "clearing parent runtime overrides should restore the serialized parent rectangle");
+}
+
+void test_layout_fractional_percentages_resolve_exact_design_pixels() {
+    auto parent = std::make_shared<CGameGraphicsObject>();
+    auto parentLayout = std::make_shared<CLayout>();
+    parentLayout->setRect(0, 0, 1920, 1080);
+    parent->setLayout(parentLayout);
+
+    auto child = std::make_shared<CGameGraphicsObject>();
+    auto childLayout = std::make_shared<CCenteredLayout>();
+    childLayout->setW("41.67%");
+    childLayout->setH("55.56%");
+    child->setLayout(childLayout);
+    parent->addChild(child);
+
+    expect_rect(childLayout->getRect(child), 560, 240, 800, 600,
+                "fractional percentages should reproduce the 800x600 design rect at 1920x1080");
+
+    parentLayout->setRuntimeRect(0, 0, 2560, 1440);
+    expect_rect(childLayout->getRect(child), 747, 320, 1066, 800,
+                "fractional percentages should scale panels with a larger root rectangle");
+
+    childLayout->setW("12.5");
+    expect_true(childLayout->getRect(child)->w == 0, "fractional plain pixel values should stay invalid");
+    childLayout->setW("nan%");
+    expect_true(childLayout->getRect(child)->w == 0, "non-finite percentages should stay invalid");
+}
+
+void test_layout_minimum_size_floors_percentage_panels() {
+    auto parent = std::make_shared<CGameGraphicsObject>();
+    auto parentLayout = std::make_shared<CLayout>();
+    parentLayout->setRect(0, 0, 1280, 720);
+    parent->setLayout(parentLayout);
+
+    auto child = std::make_shared<CGameGraphicsObject>();
+    auto childLayout = std::make_shared<CCenteredLayout>();
+    childLayout->setW("41.67%");
+    childLayout->setH("55.56%");
+    childLayout->setMinW(800);
+    childLayout->setMinH(600);
+    child->setLayout(childLayout);
+    parent->addChild(child);
+
+    expect_rect(childLayout->getRect(child), 240, 60, 800, 600,
+                "panels below the minimum size should be floored and stay centered");
+
+    parentLayout->setRuntimeRect(0, 0, 1920, 1080);
+    expect_rect(childLayout->getRect(child), 560, 240, 800, 600,
+                "the minimum floor should hand off exactly at the design resolution");
+
+    childLayout->setRuntimeW(320);
+    childLayout->setRuntimeH(200);
+    expect_rect(childLayout->getRect(child), 800, 440, 320, 200,
+                "runtime size overrides should bypass the minimum floor");
+
+    childLayout->clearRuntimeRect();
+    parentLayout->setRuntimeRect(0, 0, 1280, 720);
+    childLayout->setMinW(-50);
+    childLayout->setMinH(-50);
+    expect_rect(childLayout->getRect(child), 374, 160, 533, 400, "negative minimum sizes should be ignored");
+}
+
+void test_repeated_gui_creation_preserves_live_window_and_renderer() {
+    SDL_SetHint(SDL_HINT_VIDEODRIVER, "dummy");
+    SDL_SetHint(SDL_HINT_RENDER_DRIVER, "software");
+
+    auto survivor = std::make_shared<CGui>();
+    auto window = SDL_RenderGetWindow(survivor->getRenderer());
+    expect_true(window != nullptr, "surviving GUI should own a window");
+    if (!window) {
+        return;
+    }
+    const auto windowId = SDL_GetWindowID(window);
+    // Cross SDL 2's eight-bit subsystem reference-count boundary while retaining
+    // a window whose renderer must remain usable after later GUI construction.
+    for (int index = 0; index < 270; ++index) {
+        auto transient = std::make_shared<CGui>();
+        expect_true(SDL_GetWindowFromID(windowId) == window, "later GUI construction must preserve live windows");
+    }
+    expect_true(SDL_SetRenderDrawColor(survivor->getRenderer(), 17, 34, 51, 255) == 0,
+                "the surviving renderer should still accept draw commands");
+    expect_true(SDL_RenderClear(survivor->getRenderer()) == 0, "the surviving renderer should clear its surface");
+    Uint32 pixel = 0;
+    SDL_Rect sample{0, 0, 1, 1};
+    expect_true(
+        SDL_RenderReadPixels(survivor->getRenderer(), &sample, SDL_PIXELFORMAT_ARGB8888, &pixel, sizeof(pixel)) == 0,
+        "the surviving renderer should support pixel readback");
+    expect_true((pixel & 0x00ffffffu) == 0x00112233u, "the surviving surface should contain the rendered color");
 }
 
 void test_gui_window_is_resizable_and_guard_paths_fail_closed() {
@@ -722,11 +865,543 @@ void test_list_view_refresh_property_collision_fails_closed() {
                 "a non-colliding configured refreshProperty must still refresh the list");
 }
 
+void test_quest_panel_rebuilds_text_only_when_quest_data_changes() {
+    SDL_SetHint(SDL_HINT_VIDEODRIVER, "dummy");
+    SDL_SetHint(SDL_HINT_RENDER_DRIVER, "software");
+
+    auto gui = std::make_shared<CGui>();
+    auto game = create_gui_game(gui);
+    auto player = std::make_shared<CPlayer>();
+    auto panel = std::make_shared<QuestTextCountingPanel>();
+    panel->setLayout(fixed_layout(0, 0, 200, 100));
+    panel->setResolvedQuestSource(player);
+    gui->pushChild(panel);
+
+    auto active = std::make_shared<CQuest>();
+    active->setName("reactiveQuest");
+    active->setDescription("Recover the sunken sigil");
+    player->setQuests({active});
+    drain_event_loop();
+
+    const auto initial = panel->getText(gui);
+    expect_true(initial.find("[Active] Recover the sunken sigil") != std::string::npos,
+                "quest panel should render the active quest description");
+    expect_true(panel->build_count == 1, "the first quest journal read should build the text exactly once");
+
+    expect_true(panel->getText(gui) == initial, "repeated reads should serve the cached quest text");
+    drain_event_loop();
+    expect_true(panel->getText(gui) == initial, "cached quest text should survive idle event-loop turns");
+    expect_true(panel->build_count == 1, "quest text must not be rebuilt while the quest log is unchanged");
+
+    player->setNumericProperty("threat", 7);
+    drain_event_loop();
+    panel->getText(gui);
+    expect_true(panel->build_count == 1, "unrelated player property changes must not rebuild the quest text");
+
+    auto completed = std::make_shared<CQuest>();
+    completed->setName("finishedQuest");
+    completed->setDescription("Silence the bell tower");
+    player->setCompletedQuests({completed});
+    drain_event_loop();
+    const auto updated = panel->getText(gui);
+    expect_true(updated.find("[Completed] Silence the bell tower") == std::string::npos,
+                "the active tab should keep completed quests in their separate tab");
+    expect_true(updated.find("[Active] Recover the sunken sigil") != std::string::npos,
+                "quest panel should keep rendering still-active quests after a rebuild");
+    expect_true(panel->build_count == 2, "a quest-log change should trigger exactly one coalesced rebuild");
+    panel->showCompleted(gui);
+    expect_true(panel->getText(gui).find("[Completed] Silence the bell tower") != std::string::npos,
+                "the completed tab should expose newly completed quests");
+}
+
+void test_quest_journal_navigation_reaches_history_beyond_texture_limit() {
+    SDL_SetHint(SDL_HINT_VIDEODRIVER, "dummy");
+    SDL_SetHint(SDL_HINT_RENDER_DRIVER, "software");
+    auto gui = std::make_shared<CGui>();
+    auto game = create_gui_game(gui);
+    auto player = std::make_shared<CPlayer>();
+    auto panel = std::make_shared<QuestTextCountingPanel>();
+    panel->setLayout(fixed_layout(0, 0, 800, 600));
+    panel->setResolvedQuestSource(player);
+    gui->pushChild(panel);
+
+    std::set<std::shared_ptr<CQuest>> completed;
+    for (int i = 0; i < 60; ++i) {
+        auto quest = std::make_shared<CQuest>();
+        quest->setDescription("Completed campaign chapter " + std::to_string(i) + ": recover the town's lost relic.");
+        completed.insert(quest);
+    }
+    auto active = std::make_shared<CQuest>();
+    active->setDescription("FINAL ACTIVE OBJECTIVE");
+    (*completed.rbegin())->setDescription("FINAL COMPLETED OBJECTIVE");
+    player->setCompletedQuests(completed);
+    player->setQuests({active});
+    panel->showCompleted(gui);
+    expect_true(panel->getText(gui).size() > 4096, "journal fixture should exceed the whole-text texture limit");
+    const auto firstPage = panel->getViewportText(gui);
+    const int firstMeasures = panel->paragraph_measure_count;
+    expect_true(firstMeasures > 0, "journal should measure its paragraphs on the first layout");
+    for (int frame = 0; frame < 20; ++frame) {
+        gui->render(frame);
+    }
+    expect_true(panel->paragraph_measure_count == firstMeasures && panel->build_count == 1,
+                "idle journal rendering must not rebuild text or remeasure paragraphs");
+    expect_true(firstPage.find("[Completed]") != std::string::npos &&
+                    firstPage.find("FINAL COMPLETED OBJECTIVE") == std::string::npos,
+                "the initial viewport should show history before the distant completed objective");
+
+    SDL_Event key{};
+    key.type = SDL_KEYDOWN;
+    key.key.keysym.sym = SDLK_END;
+    gui->event(&key);
+    expect_true(panel->getScrollOffset() > 0 && panel->getScrollOffset() == panel->getScrollMaximum(),
+                "End should reach the bottom of a long journal through normal GUI input");
+    expect_true(panel->getViewportText(gui).find("FINAL COMPLETED OBJECTIVE") != std::string::npos,
+                "the final completed objective must remain reachable beyond 4096 bytes of history");
+    const int bottom = panel->getScrollOffset();
+    key.key.keysym.sym = SDLK_PAGEUP;
+    gui->event(&key);
+    expect_true(panel->getScrollOffset() < bottom && panel->getScrollOffset() > 0,
+                "Page Up should move through intermediate journal history");
+    key.key.keysym.sym = SDLK_PAGEDOWN;
+    gui->event(&key);
+    expect_true(panel->getScrollOffset() == bottom, "Page Down should return to the final page");
+    key.key.keysym.sym = SDLK_HOME;
+    gui->event(&key);
+    expect_true(panel->getViewportText(gui) == firstPage && panel->getScrollOffset() == 0,
+                "Home should restore the initial viewport exactly");
+
+    SDL_Event wheel{};
+    wheel.type = SDL_MOUSEWHEEL;
+    wheel.wheel.y = -1;
+    gui->event(&wheel);
+    expect_true(panel->getScrollOffset() > 0, "mouse-wheel scrolling should navigate the journal");
+    key.key.keysym.sym = SDLK_HOME;
+    gui->event(&key);
+    key.key.keysym.sym = SDLK_DOWN;
+    gui->event(&key);
+    expect_true(panel->getScrollOffset() > 0, "Down should move by a line");
+    key.key.keysym.sym = SDLK_UP;
+    gui->event(&key);
+    expect_true(panel->getScrollOffset() == 0, "Up should restore the previous line");
+    key.key.keysym.sym = SDLK_END;
+    gui->event(&key);
+    expect_true(panel->paragraph_measure_count == firstMeasures, "scrolling must reuse all measured paragraph heights");
+    panel->getLayout()->setRuntimeW(400);
+    expect_true(panel->getViewportText(gui).size() > 0, "a resized journal should rebuild wrapping and retain content");
+    expect_true(panel->build_count == 1, "scrolling and resizing must reuse the cached quest text");
+    expect_true(panel->paragraph_measure_count == 2 * firstMeasures,
+                "a width change should remeasure every paragraph exactly once");
+
+    std::string unicodeDescription;
+    for (int i = 0; i < 1800; ++i) {
+        unicodeDescription += "\xe2\x98\x85";
+    }
+    unicodeDescription += " UNICODE JOURNAL END";
+    active->setDescription(unicodeDescription);
+    player->setCompletedQuests({});
+    panel->showActive(gui);
+    panel->refreshFromQuestsChanged();
+    key.key.keysym.sym = SDLK_HOME;
+    gui->event(&key);
+    auto containsCompleteStars = [](const std::string &text) {
+        for (std::size_t i = 0; i < text.size(); ++i) {
+            if (static_cast<unsigned char>(text[i]) >= 0x80) {
+                if (text.compare(i, 3, "\xe2\x98\x85") != 0) {
+                    return false;
+                }
+                i += 2;
+            }
+        }
+        return true;
+    };
+    key.key.keysym.sym = SDLK_PAGEDOWN;
+    for (int page = 0; page < 100; ++page) {
+        expect_true(containsCompleteStars(panel->getViewportText(gui)),
+                    "journal texture chunks must never split UTF-8 codepoints");
+        if (panel->getScrollOffset() == panel->getScrollMaximum()) {
+            break;
+        }
+        gui->event(&key);
+    }
+    key.key.keysym.sym = SDLK_END;
+    gui->event(&key);
+    expect_true(panel->getViewportText(gui).find("UNICODE JOURNAL END") != std::string::npos,
+                "a single long Unicode paragraph must remain readable to its end");
+
+    player->setCompletedQuests({});
+    player->setQuests({});
+    drain_event_loop();
+    expect_true(panel->getViewportText(gui).find("No active quests.") != std::string::npos,
+                "a shortened journal should clamp the viewport back to its remaining text");
+    expect_true(panel->getScrollMaximum() == 0 && panel->getScrollOffset() == 0,
+                "clearing quests must not leave an empty scrolled viewport");
+}
+
+void test_populated_list_releases_owning_view_and_ignores_expired_callbacks() {
+    auto harness = create_drag_list_harness();
+    type_registration::registerGuiAnimationTypes();
+    for (const auto &[name, builder] : *CTypes::builders()) {
+        harness.game->getObjectHandler()->registerType(name, builder);
+    }
+    harness.panel->sourceItem->setAnimation("images/item");
+    harness.source->refresh();
+    expect_true(!harness.source->getChildren().empty(), "lifetime fixture should populate actual list proxy children");
+    std::shared_ptr<CAnimation> retainedAnimation;
+    for (auto graphic : harness.source->getProxiedObjects(harness.gui, 0, 0)) {
+        auto animation = vstd::cast<CAnimation>(graphic);
+        if (animation && animation->getObject() == harness.panel->sourceItem) {
+            retainedAnimation = animation;
+        }
+    }
+    expect_true(retainedAnimation != nullptr, "lifetime fixture should retain an actual item callback");
+    std::weak_ptr<CListView> weakList = harness.source;
+    harness.panel->close();
+    harness.source.reset();
+    harness.target.reset();
+    harness.panel.reset();
+    expect_true(weakList.expired(), "item callbacks must not retain a closed populated list view");
+    if (retainedAnimation) {
+        expect_true(retainedAnimation->mouseEvent(harness.gui, SDL_MOUSEBUTTONDOWN, SDL_BUTTON_LEFT, 0, 0),
+                    "a retained item callback should safely consume input after its owner expires");
+    }
+    expect_true(!harness.gui->hasDragSession(), "an expired item callback must not start a drag");
+}
+
+void test_quest_panel_resubscribes_when_quest_source_changes() {
+    SDL_SetHint(SDL_HINT_VIDEODRIVER, "dummy");
+    SDL_SetHint(SDL_HINT_RENDER_DRIVER, "software");
+
+    auto gui = std::make_shared<CGui>();
+    auto game = create_gui_game(gui);
+    auto first_player = std::make_shared<CPlayer>();
+    auto second_player = std::make_shared<CPlayer>();
+    auto panel = std::make_shared<QuestTextCountingPanel>();
+    panel->setLayout(fixed_layout(0, 0, 200, 100));
+    panel->setResolvedQuestSource(first_player);
+    gui->pushChild(panel);
+
+    auto first_quest = std::make_shared<CQuest>();
+    first_quest->setName("firstQuest");
+    first_quest->setDescription("Chart the first road");
+    first_player->setQuests({first_quest});
+
+    expect_true(panel->getText(gui).find("Chart the first road") != std::string::npos,
+                "quest panel should render the first player's quest log");
+    expect_true(panel->build_count == 1, "the first player's journal should build once");
+
+    auto second_quest = std::make_shared<CQuest>();
+    second_quest->setName("secondQuest");
+    second_quest->setDescription("Chart the second road");
+    second_player->setQuests({second_quest});
+    panel->setResolvedQuestSource(second_player);
+
+    const auto swapped = panel->getText(gui);
+    expect_true(swapped.find("Chart the second road") != std::string::npos &&
+                    swapped.find("Chart the first road") == std::string::npos,
+                "quest panel should rebuild from the new player after the quest source changes");
+    expect_true(panel->build_count == 2, "swapping the quest source should rebuild the journal once");
+
+    first_quest->setDescription("Chart the forgotten road");
+    first_player->setQuests({first_quest});
+    drain_event_loop();
+    panel->getText(gui);
+    expect_true(panel->build_count == 2,
+                "quest changes on the disconnected previous player must not rebuild the journal");
+
+    auto second_completed = std::make_shared<CQuest>();
+    second_completed->setName("secondCompletedQuest");
+    second_completed->setDescription("Seal the second gate");
+    second_player->setCompletedQuests({second_completed});
+    drain_event_loop();
+    panel->showCompleted(gui);
+    expect_true(panel->getText(gui).find("[Completed] Seal the second gate") != std::string::npos,
+                "quest panel should follow completed-quest changes on the new player");
+    expect_true(panel->build_count == 3, "the new player's quest changes should drive rebuilds");
+}
+
+void test_quest_panel_rebuilds_when_quest_state_properties_change() {
+    // Quest objective/reward/hint text is derived by map scripts from quest-state
+    // properties (QuestStateStore.set_state writes "quest_state_*" on the map) and
+    // from map object/turn state — the quest set membership never changes in those
+    // transitions. The journal cache must invalidate through the map's propertyChanged
+    // / turnPassed / objectChanged channels, not only through quest membership.
+    SDL_SetHint(SDL_HINT_VIDEODRIVER, "dummy");
+    SDL_SetHint(SDL_HINT_RENDER_DRIVER, "software");
+
+    auto gui = std::make_shared<CGui>();
+    auto game = create_gui_game(gui);
+    auto player = std::make_shared<CPlayer>();
+    auto quest_state = std::make_shared<CGameObject>();
+    auto panel = std::make_shared<QuestTextCountingPanel>();
+    panel->setLayout(fixed_layout(0, 0, 200, 100));
+    panel->setResolvedQuestSource(player);
+    panel->setResolvedQuestStateSource(quest_state);
+    gui->pushChild(panel);
+
+    auto quest = std::make_shared<CQuest>();
+    quest->setName("victorQuest");
+    quest->setDescription("Find Victor's missing daughter.");
+    quest->setObjective("Find Victor's missing daughter.");
+    player->setQuests({quest});
+    drain_event_loop();
+
+    const auto initial = panel->getText(gui);
+    expect_true(initial.find("Objective: Find Victor's missing daughter.") != std::string::npos,
+                "quest panel should render the initial state-derived objective");
+    expect_true(panel->build_count == 1, "the first read should build the journal once");
+
+    panel->getText(gui);
+    drain_event_loop();
+    panel->getText(gui);
+    expect_true(panel->build_count == 1, "the journal must stay cached while quest state is unchanged");
+
+    // Quest-state transition: the same quest object stays active (no membership
+    // change), only a state property on the quest-state source flips and the script
+    // would now derive different objective text.
+    quest->setObjective("Defeat the cultists in the courtyard.");
+    quest_state->setStringProperty("quest_state_victor", "encounter_active");
+    drain_event_loop();
+    const auto transitioned = panel->getText(gui);
+    expect_true(transitioned.find("Objective: Defeat the cultists in the courtyard.") != std::string::npos &&
+                    transitioned.find("Objective: Find Victor's missing daughter.") == std::string::npos,
+                "a quest-state property change must refresh state-derived journal text");
+    expect_true(panel->build_count == 2, "a quest-state property change should trigger exactly one rebuild");
+
+    // Turn-driven quest text (typed no-argument map signal).
+    quest->setHint("The cultists began their rite; hurry.");
+    quest_state->signal("turnPassed");
+    drain_event_loop();
+    expect_true(panel->getText(gui).find("Hint: The cultists began their rite; hurry.") != std::string::npos,
+                "a passed turn must refresh turn-derived journal text");
+    expect_true(panel->build_count == 3, "turnPassed should trigger exactly one rebuild");
+
+    // Object-driven quest text (typed map signal carrying coordinates).
+    quest->setObjective("Seal every siege gate (1/4 sealed).");
+    quest_state->signal("objectChanged", Coords(1, 2, 0));
+    drain_event_loop();
+    expect_true(panel->getText(gui).find("Objective: Seal every siege gate (1/4 sealed).") != std::string::npos,
+                "a map object change must refresh object-derived journal text");
+    expect_true(panel->build_count == 4, "objectChanged should trigger exactly one rebuild");
+}
+
 std::shared_ptr<CStats> player_stats() {
     auto stats = std::make_shared<CStats>();
     stats->setMainStat("stamina");
     stats->setStamina(10);
     return stats;
+}
+
+// Refresh-count coverage for every list view migrated to the reactive mechanism:
+// inventory, equipped, and effects lists subscribe exactly as res/config/panels.json
+// wires them (refreshEvent inventoryChanged/equippedChanged/effectsChanged with the
+// refreshObject script resolving to the player creature, injected directly here like
+// the other subscription tests) and real model mutations must drive exactly one
+// coalesced rebuild per affected view — never a rebuild of an unaffected view, never
+// a rebuild from an idle rendered frame.
+void test_reactive_list_views_refresh_counts_match_model_changes_exactly() {
+    SDL_SetHint(SDL_HINT_VIDEODRIVER, "dummy");
+    SDL_SetHint(SDL_HINT_RENDER_DRIVER, "software");
+
+    auto gui = std::make_shared<CGui>();
+    auto game = create_gui_game(gui);
+    for (const auto &[name, builder] : *CTypes::builders()) {
+        game->getObjectHandler()->registerType(name, builder);
+    }
+    // equipItem validates slots through the game's slot configuration, so register the
+    // same single-weapon-slot setup the drag-drop harness uses.
+    game->getObjectHandler()->registerConfig("slotConfiguration", CJsonUtil::from_string(R"({
+            "class": "CSlotConfig",
+            "properties": {
+                "configuration": {
+                    "0": {"class": "CSlot", "properties": {"slotName": "RightHand", "types": ["CWeapon"]}}
+                }
+            }
+        })",
+                                                                                         "slotConfiguration"));
+
+    auto player = std::make_shared<CPlayer>();
+    player->setGame(game);
+    player->setBaseStats(player_stats());
+    player->setHp(player->getHpMax());
+    game->getMap()->setPlayer(player);
+
+    auto inventory_list = std::make_shared<RefreshCountingListView>();
+    auto equipped_list = std::make_shared<RefreshCountingListView>();
+    auto effects_list = std::make_shared<RefreshCountingListView>();
+    auto attach_counting_list = [&gui, &player](const std::shared_ptr<RefreshCountingListView> &list,
+                                                const std::string &refreshEvent) {
+        gui->pushChild(list);
+        list->setResolvedRefreshTarget(player);
+        list->setRefreshEvent(refreshEvent);
+        list->refresh();
+    };
+    attach_counting_list(inventory_list, "inventoryChanged");
+    attach_counting_list(equipped_list, "equippedChanged");
+    attach_counting_list(effects_list, "effectsChanged");
+
+    auto make_weapon = [&game](const std::string &name) {
+        auto weapon = std::make_shared<CWeapon>();
+        weapon->setGame(game);
+        weapon->setName(name);
+        weapon->setTypeId(name + "Type");
+        // Stat composition folds equipped item bonuses without a null guard, so every
+        // equippable test item carries an (empty) bonus block like configured items do.
+        weapon->setBonus(std::make_shared<CStats>());
+        return weapon;
+    };
+
+    const int inventory_base = inventory_list->refresh_count;
+    const int equipped_base = equipped_list->refresh_count;
+    const int effects_base = effects_list->refresh_count;
+
+    // One model change rebuilds only the affected view, exactly once, and only after
+    // the queued refresh work is flushed by the event loop.
+    auto sword = make_weapon("refreshCountSword");
+    player->addItem(sword);
+    expect_true(inventory_list->refresh_count == inventory_base,
+                "an inventory change must queue the list rebuild instead of rebuilding synchronously");
+    drain_event_loop();
+    expect_true(inventory_list->refresh_count == inventory_base + 1,
+                "one inventory change should rebuild the inventory list exactly once");
+    expect_true(equipped_list->refresh_count == equipped_base && effects_list->refresh_count == effects_base,
+                "an inventory change must not rebuild the equipped or effects lists");
+
+    // Equipping moves the item between the two lists: each affected view rebuilds
+    // exactly once (equippedChanged plus the removeItem-driven inventoryChanged).
+    player->equipItem("0", sword);
+    drain_event_loop();
+    expect_true(equipped_list->refresh_count == equipped_base + 1,
+                "equipping an item should rebuild the equipped list exactly once");
+    expect_true(inventory_list->refresh_count == inventory_base + 2,
+                "equipping an item leaves the inventory, rebuilding the inventory list exactly once");
+    expect_true(effects_list->refresh_count == effects_base, "equipment changes must not rebuild the effects list");
+
+    auto effect = std::make_shared<CEffect>();
+    effect->setGame(game);
+    effect->setName("refreshCountEffect");
+    effect->setTypeId("refreshCountEffectType");
+    player->addEffect(effect);
+    drain_event_loop();
+    expect_true(effects_list->refresh_count == effects_base + 1,
+                "adding an effect should rebuild the effects list exactly once");
+    expect_true(inventory_list->refresh_count == inventory_base + 2 &&
+                    equipped_list->refresh_count == equipped_base + 1,
+                "effect changes must not rebuild the inventory or equipped lists");
+
+    // N rapid model changes in one event-loop turn coalesce into exactly one rebuild.
+    auto axe = make_weapon("refreshCountAxe");
+    auto dagger = make_weapon("refreshCountDagger");
+    player->addItem(axe);
+    player->addItem(dagger);
+    player->removeItem(dagger);
+    drain_event_loop();
+    expect_true(inventory_list->refresh_count == inventory_base + 3,
+                "three inventory changes in one event-loop turn must coalesce into exactly one rebuild");
+
+    // Unrelated model changes rebuild nothing (no over-refresh). The names must be
+    // dynamic-only properties: a name owned by a typed V_META property (e.g. "gold" on
+    // CCreature) would route setProperty through the typed reflective setter, which
+    // needs object-type any-cast registrations this GUI suite does not perform.
+    player->setNumericProperty("threat", 42);
+    player->setStringProperty("warCry", "warden");
+    drain_event_loop();
+    expect_true(inventory_list->refresh_count == inventory_base + 3 &&
+                    equipped_list->refresh_count == equipped_base + 1 &&
+                    effects_list->refresh_count == effects_base + 1,
+                "unrelated player property changes must not rebuild any reactive list view");
+
+    // Idle frames render from the cached proxy children: zero rebuilds per frame.
+    for (int frame = 0; frame < 3; ++frame) {
+        gui->render(0);
+    }
+    drain_event_loop();
+    expect_true(inventory_list->refresh_count == inventory_base + 3 &&
+                    equipped_list->refresh_count == equipped_base + 1 &&
+                    effects_list->refresh_count == effects_base + 1,
+                "rendering idle frames must not rebuild any reactive list view");
+}
+
+// Refresh-count coverage for the migrated quest panel: rapid invalidations across
+// every subscribed channel (quest membership on the player plus the map's quest-state
+// property / turnPassed / objectChanged channels) coalesce into exactly one rebuild,
+// each map-channel invalidation on its own counts exactly one rebuild, and reads
+// without a pending invalidation always serve the cache (the render path is a read).
+void test_quest_panel_refresh_count_coalesces_rapid_invalidations() {
+    SDL_SetHint(SDL_HINT_VIDEODRIVER, "dummy");
+    SDL_SetHint(SDL_HINT_RENDER_DRIVER, "software");
+
+    auto gui = std::make_shared<CGui>();
+    auto game = create_gui_game(gui);
+    auto player = std::make_shared<CPlayer>();
+    auto quest_state = std::make_shared<CGameObject>();
+    auto panel = std::make_shared<QuestTextCountingPanel>();
+    panel->setLayout(fixed_layout(0, 0, 200, 100));
+    panel->setResolvedQuestSource(player);
+    panel->setResolvedQuestStateSource(quest_state);
+    gui->pushChild(panel);
+
+    auto quest = std::make_shared<CQuest>();
+    quest->setName("countedQuest");
+    quest->setDescription("Recover the ledger of debts");
+    quest->setObjective("Search the counting house.");
+    player->setQuests({quest});
+    drain_event_loop();
+
+    expect_true(panel->getText(gui).find("[Active] Recover the ledger of debts") != std::string::npos,
+                "quest panel should render the active quest before counting rebuilds");
+    expect_true(panel->build_count == 1, "the first quest journal read should count exactly one rebuild");
+
+    // Rapid invalidations across every subscribed channel in one event-loop turn.
+    auto completed = std::make_shared<CQuest>();
+    completed->setName("countedCompletedQuest");
+    completed->setDescription("Bar the western gate");
+    quest->setObjective("Confront the ledger keeper.");
+    player->setQuests({quest});
+    player->setCompletedQuests({completed});
+    quest_state->setStringProperty("quest_state_ledger", "keeper_revealed");
+    quest_state->signal("turnPassed");
+    quest_state->signal("objectChanged", Coords(3, 4, 0));
+    expect_true(panel->build_count == 1, "invalidations must mark the cache stale without rebuilding synchronously");
+    drain_event_loop();
+    expect_true(panel->build_count == 1, "invalidations alone must not rebuild the journal before the next read");
+
+    const auto rebuilt = panel->getText(gui);
+    expect_true(rebuilt.find("[Completed] Bar the western gate") == std::string::npos &&
+                    rebuilt.find("Objective: Confront the ledger keeper.") != std::string::npos,
+                "the coalesced rebuild should reflect the active tab's changes from the rapid turn");
+    expect_true(panel->build_count == 2,
+                "five invalidation signals in one event-loop turn must coalesce into exactly one rebuild");
+
+    panel->getText(gui);
+    drain_event_loop();
+    panel->getText(gui);
+    expect_true(panel->build_count == 2, "reads after the coalesced rebuild must serve the cache with zero rebuilds");
+
+    // Each map-channel invalidation counts exactly one rebuild across repeated reads.
+    quest_state->setStringProperty("quest_state_ledger", "keeper_defeated");
+    drain_event_loop();
+    panel->getText(gui);
+    panel->getText(gui);
+    expect_true(panel->build_count == 3, "a quest-state property change must count exactly one rebuild");
+
+    quest_state->signal("turnPassed");
+    drain_event_loop();
+    panel->getText(gui);
+    panel->getText(gui);
+    expect_true(panel->build_count == 4, "turnPassed must count exactly one rebuild");
+
+    quest_state->signal("objectChanged", Coords(5, 6, 0));
+    drain_event_loop();
+    panel->getText(gui);
+    panel->getText(gui);
+    expect_true(panel->build_count == 5, "objectChanged must count exactly one rebuild");
+
+    // Unrelated changes on the unsubscribed channels count zero rebuilds.
+    player->setNumericProperty("threat", 3);
+    drain_event_loop();
+    panel->getText(gui);
+    expect_true(panel->build_count == 5, "unrelated player property changes must not count a quest journal rebuild");
 }
 
 struct MinimapHarness {
@@ -839,6 +1514,97 @@ void test_minimap_bounds_normal_map_renders() {
 
     const double elapsed = render_minimap_once(harness);
     expect_true(elapsed < MINIMAP_RENDER_BUDGET_MS, "minimap should render a normal bounded map (regression)");
+}
+
+void testRetainedMinimapTextureDoesNotOutliveItsRenderer() {
+    auto harness = make_minimap_harness();
+    harness.map->setXBounds({{0, 3}});
+    harness.map->setYBounds({{0, 3}});
+    auto minimap = std::make_shared<CMinimapGraphicsObject>();
+    harness.gui->addChild(minimap);
+    minimap->renderObject(harness.gui, CUtil::rect(0, 0, 128, 128), 0);
+    expect_true(harness.gui->getRenderContext().getStats().successfulCopies == 1,
+                "retained minimap regression must populate a real renderer texture");
+
+    harness.gui->removeChild(minimap);
+    const std::weak_ptr<CGui> owner = harness.gui;
+    harness.game->getContext()->shutdown();
+    harness.gui.reset();
+    expect_true(owner.expired(), "retaining the minimap must not retain its GUI or renderer");
+
+    // SDL destroys renderer-owned textures here; a later widget release must not destroy them again.
+    SDL_ClearError();
+    minimap.reset();
+    expect_true(std::string(SDL_GetError()).empty(),
+                "releasing a detached minimap after its renderer must not touch an invalid SDL texture");
+}
+
+void testMinimapTextureReparentsAcrossLiveAndExpiredGuiOwners() {
+    for (const bool expire_first : {false, true}) {
+        auto first = make_minimap_harness();
+        auto second = make_minimap_harness();
+        first.map->setXBounds({{0, 3}});
+        first.map->setYBounds({{0, 3}});
+        second.map->setXBounds({{0, 3}});
+        second.map->setYBounds({{0, 3}});
+        auto minimap = std::make_shared<CMinimapGraphicsObject>();
+        first.gui->addChild(minimap);
+        const auto rect = CUtil::rect(0, 0, 128, 128);
+        minimap->renderObject(first.gui, rect, 0);
+        expect_true(first.gui->getRenderContext().getStats().successfulCopies == 1,
+                    "reparent regression must populate the original renderer texture");
+        first.gui->removeChild(minimap);
+        const std::weak_ptr<CGui> original_owner = first.gui;
+        if (expire_first) {
+            first.game->getContext()->shutdown();
+            first.gui.reset();
+            expect_true(original_owner.expired(), "the original GUI must expire before its retained texture");
+        }
+
+        second.gui->addChild(minimap);
+        SDL_ClearError();
+        minimap->renderObject(second.gui, rect, 0);
+        minimap->renderObject(second.gui, rect, 0);
+        expect_true(minimap->getTerrainTextureBuildCount() == 2,
+                    "changing GUI owners must rebuild once even when terrain and dimensions match");
+        expect_true(second.gui->getRenderContext().getStats().successfulCopies == 2,
+                    "a reparented minimap must render and reuse its new owner's texture");
+        expect_true(std::string(SDL_GetError()).empty(),
+                    "replacing a texture from a live or expired owner must not produce SDL errors");
+        second.gui->removeChild(minimap);
+        minimap.reset();
+        expect_true(std::string(SDL_GetError()).empty(),
+                    "releasing the texture while its new GUI is alive must remain valid");
+    }
+}
+
+void testRetainedPopulatedTextureCachesFailClosedAfterGuiExpiry() {
+    SDL_SetHint(SDL_HINT_VIDEODRIVER, "dummy");
+    SDL_SetHint(SDL_HINT_RENDER_DRIVER, "software");
+    auto gui = std::make_shared<CGui>();
+    auto cache = std::make_shared<CTextureCache>(gui);
+    auto manager = std::make_shared<CTextManager>(gui);
+    auto retained_manager = std::make_shared<CTextManager>(gui);
+    expect_true(cache->getTexture("images/panel") != nullptr,
+                "retained image-cache regression must populate a real texture");
+    expect_true(manager->getTextureSize("cached before GUI expiry").first > 0,
+                "retained text-cache regression must populate a real texture");
+    expect_true(retained_manager->getTextureSize("destroyed after GUI expiry").first > 0,
+                "retained manager destruction regression must populate a real texture");
+    const std::weak_ptr<CGui> owner = gui;
+    gui.reset();
+    expect_true(owner.expired(), "retaining populated caches must not retain their GUI or renderer");
+
+    SDL_ClearError();
+    expect_true(cache->getTexture("images/panel") == nullptr,
+                "an expired image cache must not return a previously cached renderer texture");
+    expect_true(manager->getTextureSize("cached before GUI expiry") == std::make_pair(0, 0),
+                "an expired text cache must not query a previously cached renderer texture");
+    cache.reset();
+    manager.reset();
+    retained_manager.reset();
+    expect_true(std::string(SDL_GetError()).empty(),
+                "clearing or destroying retained populated caches must not touch freed SDL textures");
 }
 
 // Builds a GUI where a map-layer recorder and an overlapping minimap overlay share the same parent. The
@@ -980,7 +1746,18 @@ void test_minimap_consumes_inside_pointer_events_and_preserves_outside_and_wheel
     }
 }
 
-void test_inventory_double_select_uses_selected_item_and_clears_selection() {
+void register_inventory_slots(const std::shared_ptr<CGame> &game) {
+    for (const auto &[name, builder] : *CTypes::builders()) {
+        game->getObjectHandler()->registerType(name, builder);
+    }
+    game->getObjectHandler()->registerConfig("slotConfiguration", CJsonUtil::from_string(R"({
+        "class": "CSlotConfig", "properties": {"configuration": {
+            "0": {"class": "CSlot", "properties": {"slotName": "RightHand", "types": ["CWeapon"]}}
+        }}})",
+                                                                                         "slotConfiguration"));
+}
+
+void test_inventory_repeated_select_inspects_without_using_item() {
     SDL_SetHint(SDL_HINT_VIDEODRIVER, "dummy");
     SDL_SetHint(SDL_HINT_RENDER_DRIVER, "software");
 
@@ -992,6 +1769,7 @@ void test_inventory_double_select_uses_selected_item_and_clears_selection() {
     auto same_type_potion = std::make_shared<CPotion>();
     auto panel = std::make_shared<CGameInventoryPanel>();
 
+    register_inventory_slots(game);
     game->setMap(map);
     game->setGui(gui);
     map->setGame(game);
@@ -1016,9 +1794,11 @@ void test_inventory_double_select_uses_selected_item_and_clears_selection() {
                 "inventory selection should not select a different item instance with the same configured id");
 
     panel->inventoryCallback(gui, 0, potion);
-    expect_true(player->getItems().size() == inventory_size,
-                "full-health potion double-select should call useItem without consuming the item");
-    expect_true(!panel->inventorySelect(gui, 0, potion), "second inventory click should clear the used selection");
+    expect_true(player->getItems().size() == inventory_size, "repeated item selection must not consume the item");
+    expect_true(panel->inventorySelect(gui, 0, potion), "repeated inspection should retain the selected item");
+    panel->useSelected(gui);
+    expect_true(player->getItems().size() == inventory_size, "explicit use must preserve the full-health potion guard");
+    game->getContext()->shutdown();
 }
 
 struct InventoryRightClickHarness {
@@ -1027,6 +1807,14 @@ struct InventoryRightClickHarness {
     std::shared_ptr<CGui> gui;
     std::shared_ptr<CPlayer> player;
     std::shared_ptr<CGameInventoryPanel> panel;
+
+    InventoryRightClickHarness() = default;
+    InventoryRightClickHarness(InventoryRightClickHarness &&) = default;
+    ~InventoryRightClickHarness() {
+        if (game) {
+            game->getContext()->shutdown();
+        }
+    }
 };
 
 InventoryRightClickHarness make_inventory_right_click_harness() {
@@ -1040,6 +1828,7 @@ InventoryRightClickHarness make_inventory_right_click_harness() {
     harness.player = std::make_shared<CPlayer>();
     harness.panel = std::make_shared<CGameInventoryPanel>();
 
+    register_inventory_slots(harness.game);
     harness.game->setMap(harness.map);
     harness.game->setGui(harness.gui);
     harness.map->setGame(harness.game);
@@ -1052,7 +1841,7 @@ InventoryRightClickHarness make_inventory_right_click_harness() {
     return harness;
 }
 
-void test_inventory_right_click_uses_usable_item_once_and_consumes_it() {
+void test_inventory_right_click_inspects_then_explicit_use_consumes_once() {
     auto harness = make_inventory_right_click_harness();
     auto potion = std::make_shared<CPotion>();
     potion->setGame(harness.game);
@@ -1067,9 +1856,12 @@ void test_inventory_right_click_uses_usable_item_once_and_consumes_it() {
     const auto inventory_size = harness.player->getItems().size();
 
     const bool consumed = harness.panel->inventoryRightClickCallback(harness.gui, 0, potion);
-    expect_true(consumed, "right-clicking a usable item should return true so parents stop processing the click");
+    expect_true(!consumed, "right-clicking a usable item should leave the tooltip inspection path available");
+    expect_true(harness.player->getItems().size() == inventory_size,
+                "right-clicking a usable item must not consume it");
+    harness.panel->useSelected(harness.gui);
     expect_true(harness.player->getItems().size() == inventory_size - 1,
-                "right-clicking a usable disposable potion should use and consume it exactly once");
+                "explicit use should consume the selected disposable potion exactly once");
     expect_true(!harness.player->hasInInventory(potion),
                 "the used disposable potion should no longer belong to the player");
 }
@@ -1088,7 +1880,8 @@ void test_inventory_right_click_full_resource_item_not_consumed() {
     const auto inventory_size = harness.player->getItems().size();
 
     const bool consumed = harness.panel->inventoryRightClickCallback(harness.gui, 0, potion);
-    expect_true(consumed, "right-clicking a full-resource item still handles the click (delegates to useItem)");
+    expect_true(!consumed, "right-clicking a full-resource item should inspect it");
+    harness.panel->useSelected(harness.gui);
     expect_true(harness.player->getItems().size() == inventory_size,
                 "a full-health potion must not be consumed when the engine reports no use");
     expect_true(harness.player->hasInInventory(potion),
@@ -1110,6 +1903,7 @@ void test_inventory_right_click_quest_item_is_protected() {
 
     const bool consumed = harness.panel->inventoryRightClickCallback(harness.gui, 0, quest_item);
     expect_true(!consumed, "right-clicking a quest item must not be handled as a use");
+    harness.panel->useSelected(harness.gui);
     expect_true(harness.player->getItems().size() == inventory_size,
                 "quest items must never be consumed by a right-click use");
     expect_true(harness.player->hasInInventory(quest_item),
@@ -1164,7 +1958,7 @@ void test_inventory_left_click_drag_still_starts_for_owned_item() {
                 "left-click drag must never start for a quest item");
 }
 
-void test_fight_panel_right_click_item_use_still_works() {
+void test_fight_panel_right_click_inspects_then_explicit_use_works() {
     auto harness = make_inventory_right_click_harness();
     auto fight_panel = std::make_shared<CGameFightPanel>();
     auto potion = std::make_shared<CPotion>();
@@ -1178,9 +1972,12 @@ void test_fight_panel_right_click_item_use_still_works() {
     const auto inventory_size = harness.player->getItems().size();
 
     const bool consumed = fight_panel->itemsRightClickCallback(harness.gui, 0, potion);
-    expect_true(consumed, "fight-panel right-click item use should remain unchanged and consume the click");
+    expect_true(!consumed, "fight-panel right-click must leave the tooltip inspection path available");
+    expect_true(harness.player->getItems().size() == inventory_size,
+                "combat inspection must not consume the selected item");
+    fight_panel->useSelectedItem(harness.gui);
     expect_true(harness.player->getItems().size() == inventory_size - 1,
-                "fight-panel right-click should still use and consume a usable disposable potion");
+                "the explicit combat Use action must consume the selected usable potion");
 }
 
 void test_fight_panel_enemy_selection_uses_exact_instance() {
@@ -1255,6 +2052,32 @@ void test_list_view_drag_callbacks_cancel_and_preserve_unmoved_clicks() {
                 "drag-cancel should receive the source object");
 }
 
+void test_list_view_captured_release_just_outside_source_cancels_instead_of_dropping() {
+    auto harness = create_drag_list_harness();
+    harness.source->setDragStart("sourceDragStart");
+    harness.source->setDragCancel("sourceDragCancel");
+    harness.source->setDragValidate("targetDragValidate");
+    harness.source->setDrop("targetDrop");
+
+    harness.source->mouseEvent(harness.gui, SDL_MOUSEBUTTONDOWN, SDL_BUTTON_LEFT, 25, 25);
+    expect_true(harness.gui->hasPointerCapture(), "source drag should capture the pointer");
+    harness.gui->updateDragSession(-1, 25);
+
+    SDL_Event release{};
+    release.type = SDL_MOUSEBUTTONUP;
+    release.button.button = SDL_BUTTON_LEFT;
+    release.button.x = -1;
+    release.button.y = 25;
+    harness.gui->event(&release);
+
+    expect_true(harness.panel->drag_validations == 0,
+                "a release just left of the source must not validate slot zero as a drop target");
+    expect_true(harness.panel->drops == 0, "a release just left of the source must not drop the item into slot zero");
+    expect_true(harness.panel->drag_cancels == 1, "a captured release outside the source must cancel the drag once");
+    expect_true(!harness.gui->hasDragSession(), "an outside release must clear the drag session");
+    expect_true(!harness.gui->hasPointerCapture(), "an outside release must clear pointer capture");
+}
+
 void test_list_view_legacy_click_callback_still_fires_without_drag_callbacks() {
     auto harness = create_drag_list_harness();
 
@@ -1293,7 +2116,7 @@ void test_list_view_non_draggable_does_click_only_press_motion_release() {
     expect_true(!harness.gui->hasPointerCapture(), "non-draggable list must leave no pointer capture after release");
 }
 
-void test_list_view_non_draggable_repeated_click_preserves_first_select_second_confirm() {
+void test_fight_repeated_action_selection_requires_explicit_execution() {
     SDL_SetHint(SDL_HINT_VIDEODRIVER, "dummy");
     SDL_SetHint(SDL_HINT_RENDER_DRIVER, "software");
 
@@ -1325,11 +2148,10 @@ void test_list_view_non_draggable_repeated_click_preserves_first_select_second_c
     expect_true(panel->interactionsSelect(gui, 0, interaction),
                 "first combat interaction click should select the interaction");
 
-    // Second click on the same interaction confirms it; selection is preserved until the
-    // blocking select loop consumes finalSelected, so the highlight remains.
+    // Repeated inspection retains the action; only the explicit action button commits it.
     panel->interactionsCallback(gui, 0, interaction);
     expect_true(panel->interactionsSelect(gui, 0, interaction),
-                "second combat interaction click should confirm without losing the selection");
+                "repeated combat inspection should retain its selection without execution");
 }
 
 void test_list_view_draggable_default_still_drags_after_non_draggable_change() {
@@ -2129,6 +2951,173 @@ void test_render_context_rejects_null_texture_and_copies_valid_texture() {
     expect_true(stats.failedCopies == 0, "render context should not count failed copies for valid smoke path");
 }
 
+void test_render_context_copy_ex_rotates_and_tracks_stats() {
+    SDL_SetHint(SDL_HINT_VIDEODRIVER, "dummy");
+    SDL_SetHint(SDL_HINT_RENDER_DRIVER, "software");
+
+    auto gui = std::make_shared<CGui>();
+    auto &renderContext = gui->getRenderContext();
+    renderContext.resetStats();
+
+    // copyEx must fail closed on missing texture, exactly like copy().
+    SDL_Rect target = {2, 3, 4, 5};
+    expect_true(!renderContext.copyEx(nullptr, nullptr, &target, 90.0, nullptr, SDL_FLIP_NONE),
+                "render context copyEx should reject null textures");
+
+    auto surface = fn::sdl::SurfacePtr(SDL_SAFE(SDL_CreateRGBSurfaceWithFormat(0, 2, 2, 32, SDL_PIXELFORMAT_RGBA32)));
+    expect_true(surface != nullptr, "render context copyEx smoke test should create an SDL surface");
+    if (!surface) {
+        return;
+    }
+    SDL_SAFE(SDL_FillRect(surface.get(), nullptr, SDL_MapRGBA(surface->format, 0, 255, 0, 255)));
+    auto texture = fn::sdl::TexturePtr(SDL_SAFE(SDL_CreateTextureFromSurface(gui->getRenderer(), surface.get())));
+    expect_true(texture != nullptr, "render context copyEx smoke test should create an SDL texture");
+    if (!texture) {
+        return;
+    }
+
+    // Negative extents must be normalized before reaching SDL, mirroring copy().
+    SDL_Rect flippedTarget = {10, 12, -4, -5};
+    SDL_Rect clip = {0, 0, 8, 8};
+    expect_true(renderContext.copyEx(texture.get(), nullptr, &flippedTarget, 45.0, nullptr, SDL_FLIP_HORIZONTAL, &clip),
+                "render context copyEx should rotate and copy valid textures");
+
+    const auto &stats = renderContext.getStats();
+    expect_true(stats.attemptedCopies == 2, "render context copyEx should count attempted copies");
+    expect_true(stats.successfulCopies == 1, "render context copyEx should count successful copies");
+    expect_true(stats.skippedCopies == 1, "render context copyEx should count skipped copies for null texture");
+    expect_true(stats.failedCopies == 0, "render context copyEx should not count failed copies for valid smoke path");
+}
+
+void testTextMetricsCacheAndExpiredGuiFallbacks() {
+    auto gui = std::make_shared<CGui>();
+    auto manager = std::make_shared<CTextManager>(gui);
+    const auto shortSize = manager->getTextureSize("Short");
+    const auto longSize = manager->getTextureSize("A longer second line");
+    const auto multilineSize = manager->getTextureSize("Short\nA longer second line");
+    expect_true(shortSize.first > 0 && shortSize.second > 0, "the font must produce nonempty text metrics");
+    expect_true(multilineSize.first == longSize.first && multilineSize.second == shortSize.second + longSize.second,
+                "multiline metrics must use the widest line and sum line heights");
+    const std::string bounded(4096, 'W');
+    expect_true(manager->getWrappedTextureSize(bounded + "discarded suffix", 10000) ==
+                    manager->getWrappedTextureSize(bounded, 8192),
+                "oversized render requests must share the documented byte and wrap-width bounds");
+    for (int index = 0; index < 513; ++index) {
+        manager->getTextureSize("cache entry " + std::to_string(index));
+    }
+    expect_true(manager->getTextureSize("Short") == shortSize, "cache eviction must preserve recomputed metrics");
+
+    auto viewport = std::make_shared<SDL_Rect>(SDL_Rect{0, 0, 80, 40});
+    manager->drawTextScrolled("ignored", nullptr, 0);
+    manager.reset();
+    manager = std::make_shared<CTextManager>(gui);
+    gui.reset();
+    expect_true(manager->getTextureSize("uncached after shutdown") == std::make_pair(0, 0),
+                "an expired GUI must not produce new text textures");
+    expect_true(manager->countLines("no renderer", 80) == 1,
+                "line counting without a renderer must retain the safe one-line fallback");
+    manager->drawText("no renderer", 0, 0, 80);
+    manager->drawTextCentered("no renderer", viewport);
+    manager->drawTextScrolled("no renderer", viewport, -10);
+}
+
+void testRenderContextRestoresClipAndRejectsInvalidCopies() {
+    auto gui = std::make_shared<CGui>();
+    auto otherGui = std::make_shared<CGui>();
+    auto &context = gui->getRenderContext();
+    CRenderContext detached;
+    SDL_Rect target{0, 0, 4, 4};
+    expect_true(!detached.copy(nullptr, nullptr, target) && detached.getStats().skippedCopies == 1,
+                "a detached render context must skip copies before calling SDL");
+    auto surface = fn::sdl::SurfacePtr(SDL_CreateRGBSurfaceWithFormat(0, 2, 2, 32, SDL_PIXELFORMAT_RGBA32));
+    expect_true(surface != nullptr, "copy validation needs a real source surface");
+    if (!surface) {
+        return;
+    }
+    auto texture = fn::sdl::TexturePtr(SDL_CreateTextureFromSurface(gui->getRenderer(), surface.get()));
+    auto foreignTexture = fn::sdl::TexturePtr(SDL_CreateTextureFromSurface(otherGui->getRenderer(), surface.get()));
+    expect_true(texture && foreignTexture, "copy validation needs textures from both renderers");
+    if (!texture || !foreignTexture) {
+        return;
+    }
+    const SDL_Rect previousClip{3, 4, 10, 11};
+    const SDL_Rect temporaryClip{1, 2, 5, 6};
+    SDL_RenderSetClipRect(gui->getRenderer(), &previousClip);
+    expect_true(context.copyEx(texture.get(), nullptr, target, 0, nullptr, SDL_FLIP_NONE, &temporaryClip),
+                "a clipped copyEx must accept its renderer's texture");
+    SDL_Rect restored{};
+    SDL_RenderGetClipRect(gui->getRenderer(), &restored);
+    expect_true(SDL_RenderIsClipEnabled(gui->getRenderer()) && restored.x == previousClip.x &&
+                    restored.y == previousClip.y && restored.w == previousClip.w && restored.h == previousClip.h,
+                "a temporary copy clip must restore the caller's enabled clip rectangle");
+    expect_true(!context.copy(texture.get(), nullptr, static_cast<const SDL_Rect *>(nullptr)),
+                "missing copy destinations must be rejected");
+    expect_true(!context.copy(texture.get(), nullptr, SDL_Rect{0, 0, 0, 4}),
+                "zero-width copy destinations must be rejected");
+    expect_true(!context.copy(foreignTexture.get(), nullptr, target),
+                "a texture from another renderer must report an SDL copy failure");
+    const auto stats = context.getStats();
+    expect_true(stats.attemptedCopies == 4 && stats.successfulCopies == 1 && stats.skippedCopies == 2 &&
+                    stats.failedCopies == 1,
+                "copy statistics must distinguish invalid arguments from SDL failures");
+    SDL_RenderSetClipRect(gui->getRenderer(), nullptr);
+}
+
+void testTextureMaskPreservesPixelsAcrossSurfaceFormats() {
+    auto gui = std::make_shared<CGui>();
+    expect_true(!CTextureUtil::calculateAlpha(gui->getRenderer(), nullptr), "missing alpha surfaces must be rejected");
+    for (Uint32 format :
+         {SDL_PIXELFORMAT_INDEX8, SDL_PIXELFORMAT_RGB565, SDL_PIXELFORMAT_RGB24, SDL_PIXELFORMAT_RGBA32}) {
+        auto surface = fn::sdl::SurfacePtr(SDL_CreateRGBSurfaceWithFormat(0, 3, 3, SDL_BITSPERPIXEL(format), format));
+        expect_true(surface != nullptr, "each supported byte depth must create a real surface");
+        if (!surface) {
+            continue;
+        }
+        if (surface->format->palette) {
+            const SDL_Color colors[] = {{0, 0, 0, 255}, {255, 255, 255, 255}, {255, 0, 0, 255}};
+            SDL_SetPaletteColors(surface->format->palette, colors, 0, 3);
+        }
+        SDL_FillRect(surface.get(), nullptr, SDL_MapRGB(surface->format, 255, 255, 255));
+        CTextureUtil::setPixelColor(surface.get(), 1, 1, {255, 0, 0, 255});
+        auto texture = CTextureUtil::calculateAlpha(gui->getRenderer(), std::move(surface));
+        expect_true(texture != nullptr, "mask conversion must preserve every supported surface format");
+        if (!texture) {
+            continue;
+        }
+        SDL_SetTextureBlendMode(texture.get(), SDL_BLENDMODE_BLEND);
+        SDL_SetRenderDrawColor(gui->getRenderer(), 0, 0, 255, 255);
+        SDL_RenderClear(gui->getRenderer());
+        SDL_Rect target{0, 0, 3, 3};
+        expect_true(gui->getRenderContext().copy(texture.get(), nullptr, target), "masked texture must render");
+        Uint32 pixels[9]{};
+        expect_true(SDL_RenderReadPixels(gui->getRenderer(), &target, SDL_PIXELFORMAT_ARGB8888, pixels,
+                                         3 * sizeof(Uint32)) == 0,
+                    "masked texture must support pixel readback");
+        expect_true((pixels[0] & 0x00ffffff) == 0x0000ff && (pixels[4] & 0x00ffffff) == 0xff0000,
+                    "the connected corner mask must be transparent while the red center remains visible");
+    }
+}
+
+void testPinnedTooltipConsumesInputAndDismissesExplicitly() {
+    auto parent = std::make_shared<CGameGraphicsObject>();
+    auto tooltip = std::make_shared<CTooltip>();
+    tooltip->setText("inspect item");
+    parent->addChild(tooltip);
+    expect_true(tooltip->getText() == "inspect item", "tooltip content must remain available to the renderer");
+    expect_true(tooltip->keyboardEvent(nullptr, SDL_KEYDOWN, SDLK_a), "tooltips must consume keyboard input");
+    tooltip->renderObject(nullptr, nullptr, 0);
+    tooltip->mouseEvent(nullptr, SDL_MOUSEBUTTONUP, SDL_BUTTON_RIGHT, 0, 0);
+    tooltip->mouseEvent(nullptr, SDL_MOUSEBUTTONUP, SDL_BUTTON_LEFT, 0, 0);
+    expect_true(tooltip->getParent() == parent, "the opening gesture release must leave inspection pinned");
+    expect_true(tooltip->mouseEvent(nullptr, SDL_MOUSEBUTTONDOWN, SDL_BUTTON_LEFT, 0, 0),
+                "an explicit dismissal click must be consumed");
+    expect_true(!tooltip->getParent(), "an explicit click must dismiss pinned inspection");
+    tooltip->mouseEvent(nullptr, SDL_MOUSEBUTTONUP, SDL_BUTTON_RIGHT, 0, 0);
+    parent->addChild(tooltip);
+    expect_true(tooltip->keyboardEvent(nullptr, SDL_KEYDOWN, SDLK_ESCAPE), "Escape dismissal must consume its input");
+    expect_true(!tooltip->getParent(), "Escape must dismiss pinned inspection without an item action");
+}
+
 void test_widget_reflective_callbacks_fail_closed_on_bad_config() {
     SDL_SetHint(SDL_HINT_VIDEODRIVER, "dummy");
     SDL_SetHint(SDL_HINT_RENDER_DRIVER, "software");
@@ -2272,36 +3261,559 @@ void test_character_panel_sheet_lines_render_race_and_class_labels() {
     expect_true(!hasIdentityRow, "character sheet builder should skip empty race / class labels fail-closed");
 }
 
+void test_dialog_panel_current_options_preserve_numeric_display_order() {
+    auto make_option = [](int number, const std::string &text) {
+        auto option = std::make_shared<CDialogOption>();
+        option->setNumber(number);
+        option->setText(text);
+        return option;
+    };
+
+    auto state = std::make_shared<CDialogState>();
+    state->setStateId("ENTRY");
+    state->setOptions({
+        make_option(2, "third"),
+        make_option(0, "first"),
+        make_option(1, "second"),
+    });
+
+    auto dialog = std::make_shared<CDialog>();
+    dialog->setStates({state});
+
+    auto panel = std::make_shared<CGameDialogPanel>();
+    panel->setDialog(dialog);
+
+    std::vector<std::string> displayedOptions;
+    for (const auto &[index, option] : panel->getCurrentOptionsForTest()) {
+        displayedOptions.push_back(std::to_string(index + 1) + ": " + option->getText());
+    }
+
+    expect_true(displayedOptions == std::vector<std::string>({"1: first", "2: second", "3: third"}),
+                "dialog panel should display options from lowest dialog number to highest");
+}
+
+void test_dialog_option_callback_closes_and_releases_its_panel() {
+    SDL_SetHint(SDL_HINT_VIDEODRIVER, "dummy");
+    SDL_SetHint(SDL_HINT_RENDER_DRIVER, "software");
+    auto gui = std::make_shared<CGui>();
+    auto game = create_gui_game(gui);
+    for (const auto &[name, builder] : *CTypes::builders()) {
+        game->getObjectHandler()->registerType(name, builder);
+    }
+    auto option = std::make_shared<CDialogOption>();
+    option->setNumber(0);
+    option->setText("Leave");
+    option->setNextStateId("EXIT");
+    auto state = std::make_shared<CDialogState>();
+    state->setStateId("ENTRY");
+    state->setText("Welcome, traveler.");
+    state->setOptions({option});
+    auto dialog = std::make_shared<CDialog>();
+    dialog->setStates({state});
+    auto panel = std::make_shared<CGameDialogPanel>();
+    panel->setGame(game);
+    panel->setLayout(fixed_layout(0, 0, 800, 600));
+    panel->setDialog(dialog);
+    gui->pushChild(panel);
+    panel->reload();
+    std::string click;
+    for (const auto &child : panel->getChildren()) {
+        if (auto widget = vstd::cast<CWidget>(child); widget && !widget->getClick().empty()) {
+            click = widget->getClick();
+        }
+    }
+    expect_true(!click.empty(), "dialog reload should install a clickable option");
+    if (!click.empty()) {
+        panel->meta()->invoke_method<void, CGameGraphicsObject, std::shared_ptr<CGui>>(click, panel, gui);
+    }
+    expect_true(!panel->getGui(), "the installed option callback should still close its dialog");
+    std::weak_ptr<CGameDialogPanel> weakPanel = panel;
+    panel.reset();
+    expect_true(weakPanel.expired(), "a closed dialog must expire even after installing dynamic option callbacks");
+}
+
+// Exercises the opt-in resize handle purely through geometry/state: no renderer, no real SDL input.
+// A default panel must ignore the handle entirely; an opted-in panel must resize from a bottom-right
+// handle drag and clamp within [min, parent] bounds without rewriting its serialized layout.
+void test_panel_opt_in_resize_handle_drag_resizes_within_bounds() {
+    auto parent = std::make_shared<CGameGraphicsObject>();
+    parent->setLayout(fixed_layout(0, 0, 800, 600));
+
+    auto panel = std::make_shared<CGamePanel>();
+    auto layout = fixed_layout(0, 0, 200, 150);
+    panel->setLayout(layout);
+    parent->addChild(panel);
+
+    // Default (not opted in): the corner is not a handle and a click there must not start a resize.
+    expect_true(!panel->isResizable(), "panels should not be resizable by default (opt-in only)");
+    expect_true(!panel->isInResizeHandle(195, 145),
+                "a non-resizable panel must not treat its bottom-right corner as a handle");
+    expect_true(!panel->beginResize(195, 145), "a non-resizable panel must not start a resize drag");
+    expect_true(!panel->isResizing(), "a non-resizable panel must never enter the resizing state");
+    // A left press on the corner is still consumed (modal) but changes no size.
+    expect_true(panel->mouseEvent(nullptr, SDL_MOUSEBUTTONDOWN, SDL_BUTTON_LEFT, 195, 145),
+                "a modal panel still consumes clicks even when resizing is disabled");
+    expect_rect(layout->getRect(panel), 0, 0, 200, 150,
+                "a non-resizable panel must keep its size after a corner click");
+
+    // Opt in and drive a handle drag directly (pointer coordinates are panel-local; top-left is fixed).
+    panel->setResizable(true);
+    expect_true(panel->isInResizeHandle(195, 145),
+                "an opted-in panel's bottom-right corner should hit-test as the resize handle");
+    expect_true(!panel->isInResizeHandle(10, 10), "the panel interior is not part of the resize handle");
+    expect_true(panel->beginResize(195, 145), "an opted-in panel should start a resize from the handle");
+    expect_true(panel->isResizing(), "beginResize should latch the resizing state");
+
+    // Grab offset was (200-195, 150-145) = (5, 5); dragging to (255, 195) => 260x200.
+    panel->updateResize(255, 195);
+    expect_rect(layout->getRect(panel), 0, 0, 260, 200, "dragging the handle should grow the panel jump-free");
+    expect_true(layout->getW() == "200" && layout->getH() == "150",
+                "runtime resize must not rewrite the serialized layout width/height");
+
+    // Shrinking past the minimum clamps to the floor (RESIZE_MIN_SIZE = 32).
+    panel->updateResize(0, 0);
+    expect_rect(layout->getRect(panel), 0, 0, 32, 32, "shrinking past the minimum should clamp to the size floor");
+
+    // Growing past the parent clamps to the room inside the parent rectangle (800x600 from origin).
+    panel->updateResize(5000, 5000);
+    expect_rect(layout->getRect(panel), 0, 0, 800, 600, "growing past the parent should clamp to the parent bounds");
+
+    panel->endResize();
+    expect_true(!panel->isResizing(), "endResize should clear the resizing state");
+    // After the drag ends, further motion must not keep resizing.
+    panel->updateResize(100, 100);
+    expect_rect(layout->getRect(panel), 0, 0, 800, 600, "motion after endResize must not change the size");
+
+    // A configured layout minimum raises the size floor above RESIZE_MIN_SIZE.
+    layout->setMinW(120);
+    layout->setMinH(90);
+    panel->beginResize(int(layout->getRect(panel)->w) - 1, int(layout->getRect(panel)->h) - 1);
+    panel->updateResize(0, 0);
+    expect_rect(layout->getRect(panel), 0, 0, 120, 90, "the layout minimum should raise the resize floor");
+    panel->endResize();
+}
+
+// Drives the resize handle through real CGui event dispatch with a child covering the whole panel
+// (list views consume left button-downs even on empty cells, so before the panel-level interception
+// a covering child would swallow the grab). Also proves the resize state cannot go stale: a release
+// over the child still ends the resize, and a resize whose pointer capture ends externally is
+// dropped by the next motion instead of resizing with no button held.
+void test_panel_resize_handle_press_beats_covering_child_and_release_ends_capture() {
+    SDL_SetHint(SDL_HINT_VIDEODRIVER, "dummy");
+    SDL_SetHint(SDL_HINT_RENDER_DRIVER, "software");
+
+    auto gui = std::make_shared<CGui>();
+    gui->setLayout(fixed_layout(0, 0, 800, 600));
+
+    auto panel = std::make_shared<CGamePanel>();
+    auto layout = fixed_layout(0, 0, 200, 150);
+    panel->setLayout(layout);
+    panel->setResizable(true);
+    gui->pushChild(panel);
+
+    auto child = std::make_shared<MouseEventRecorder>();
+    child->setLayout(fixed_layout(0, 0, 200, 150)); // covers the panel, including the handle corner
+    panel->pushChild(child);
+
+    // Press on the handle must start the resize instead of being consumed by the covering child.
+    SDL_Event down{};
+    down.type = SDL_MOUSEBUTTONDOWN;
+    down.button.button = SDL_BUTTON_LEFT;
+    down.button.x = 195;
+    down.button.y = 145;
+    expect_true(gui->event(&down), "a handle press should be handled by the panel");
+    expect_true(panel->isResizing(), "a handle press must start the resize even under a covering child");
+    expect_true(child->button_count == 0, "a handle press must not reach the covering child");
+    expect_true(gui->isPointerCapturedBy(panel), "a handle press should capture the pointer for the panel");
+
+    // Captured motion resizes the panel (grab offset was 5,5 so (255,195) => 260x200).
+    SDL_Event motion{};
+    motion.type = SDL_MOUSEMOTION;
+    motion.motion.x = 255;
+    motion.motion.y = 195;
+    gui->event(&motion);
+    expect_rect(layout->getRect(panel), 0, 0, 260, 200, "captured motion should resize the panel");
+    expect_true(child->motion_count == 0, "captured resize motion must not reach the covering child");
+
+    // Releasing inside the panel over the covering child must still end the resize and the capture.
+    SDL_Event up{};
+    up.type = SDL_MOUSEBUTTONUP;
+    up.button.button = SDL_BUTTON_LEFT;
+    up.button.x = 100;
+    up.button.y = 100;
+    gui->event(&up);
+    expect_true(!panel->isResizing(), "a release over a covering child must still end the resize");
+    expect_true(!gui->hasPointerCapture(), "a release over a covering child must still release the capture");
+    expect_rect(layout->getRect(panel), 0, 0, 260, 200, "the release must keep the resized rectangle");
+
+    // If the capture ends without the panel seeing the release, the next motion drops the stale
+    // resize instead of applying it.
+    down.button.x = 255;
+    down.button.y = 195;
+    gui->event(&down);
+    expect_true(panel->isResizing(), "a second handle press should start another resize");
+    gui->releasePointerCapture();
+    motion.motion.x = 230; // inside the panel, outside the covering child
+    motion.motion.y = 180;
+    gui->event(&motion);
+    expect_true(!panel->isResizing(), "losing the pointer capture must clear the resize state");
+    expect_rect(layout->getRect(panel), 0, 0, 260, 200, "a stale resize must not change the panel size");
+}
+
+// Subclass panels (inventory/fight/trade) override mouseEvent for right-click selection resets
+// WITHOUT delegating to CGamePanel, so the resize interception in CGamePanel::event must reach the
+// panel-level resize state machine non-virtually: a virtual call would let the override consume the
+// claimed handle press doing nothing, leaving an opted-in subclass panel impossible to resize by
+// real input (caught end-to-end by the xvfb panel resize suite).
+void test_panel_resize_handle_press_resizes_subclass_panel_with_mouse_override() {
+    SDL_SetHint(SDL_HINT_VIDEODRIVER, "dummy");
+    SDL_SetHint(SDL_HINT_RENDER_DRIVER, "software");
+
+    auto gui = std::make_shared<CGui>();
+    gui->setLayout(fixed_layout(0, 0, 800, 600));
+
+    auto panel = std::make_shared<CGameInventoryPanel>();
+    auto layout = fixed_layout(0, 0, 200, 150);
+    panel->setLayout(layout);
+    panel->setResizable(true);
+    gui->pushChild(panel);
+
+    SDL_Event down{};
+    down.type = SDL_MOUSEBUTTONDOWN;
+    down.button.button = SDL_BUTTON_LEFT;
+    down.button.x = 195;
+    down.button.y = 145;
+    expect_true(gui->event(&down), "a handle press on a subclass panel should be handled");
+    expect_true(panel->isResizing(), "a handle press must start the resize despite the subclass mouseEvent override");
+    expect_true(gui->isPointerCapturedBy(panel), "a handle press should capture the pointer for the subclass panel");
+
+    SDL_Event motion{};
+    motion.type = SDL_MOUSEMOTION;
+    motion.motion.x = 255;
+    motion.motion.y = 195;
+    gui->event(&motion);
+    expect_rect(layout->getRect(panel), 0, 0, 260, 200, "captured motion should resize the subclass panel");
+
+    SDL_Event up{};
+    up.type = SDL_MOUSEBUTTONUP;
+    up.button.button = SDL_BUTTON_LEFT;
+    up.button.x = 100;
+    up.button.y = 100;
+    gui->event(&up);
+    expect_true(!panel->isResizing(), "the release must end the subclass panel resize");
+    expect_true(!gui->hasPointerCapture(), "the release must free the pointer capture");
+    expect_rect(layout->getRect(panel), 0, 0, 260, 200, "the release must keep the resized rectangle");
+}
+
+// A centered layout recomputes x/y from the current size, so runtime W/H alone would move the
+// panel's origin (and its panel-local pointer space) on every drag update. The resize must pin the
+// top-left corner for the whole drag and keep it pinned after the drag ends.
+void test_panel_resize_centered_layout_keeps_origin_pinned() {
+    auto parent = std::make_shared<CGameGraphicsObject>();
+    parent->setLayout(fixed_layout(0, 0, 800, 600));
+
+    auto panel = std::make_shared<CGamePanel>();
+    auto layout = std::make_shared<CCenteredLayout>();
+    layout->setW("200");
+    layout->setH("150");
+    panel->setLayout(layout);
+    panel->setResizable(true);
+    parent->addChild(panel);
+
+    expect_rect(layout->getRect(panel), 300, 225, 200, 150, "the centered panel should start centered");
+
+    expect_true(panel->beginResize(195, 145), "the centered panel should start a resize from its handle");
+    panel->updateResize(255, 195);
+    expect_rect(layout->getRect(panel), 300, 225, 260, 200,
+                "growing a centered panel must keep its top-left corner pinned");
+    panel->updateResize(155, 120);
+    expect_rect(layout->getRect(panel), 300, 225, 160, 125,
+                "shrinking a centered panel must keep its top-left corner pinned");
+    panel->endResize();
+    expect_rect(layout->getRect(panel), 300, 225, 160, 125,
+                "the origin must stay pinned after the drag ends instead of re-centering");
+    expect_true(layout->getW() == "200" && layout->getH() == "150",
+                "pinning the origin must not rewrite the serialized centered layout");
+}
+
+// Session-only geometry persistence: finishing a resize records the panel's runtime geometry in the
+// CGui session store (keyed by the panel's stable typeId), and a NEW panel instance with the same
+// identity gets it re-applied when it joins the GUI. Serialized layout values stay untouched, other
+// identities are unaffected, non-resizable panels never apply, and identity-less panels never record.
+void test_panel_session_geometry_restores_reopened_panel_same_identity_only() {
+    SDL_SetHint(SDL_HINT_VIDEODRIVER, "dummy");
+    SDL_SetHint(SDL_HINT_RENDER_DRIVER, "software");
+
+    auto gui = std::make_shared<CGui>();
+    gui->setLayout(fixed_layout(0, 0, 800, 600));
+
+    auto panel = std::make_shared<CGamePanel>();
+    panel->setTypeId("questPanel");
+    panel->setResizable(true);
+    auto layout = fixed_layout(0, 0, 200, 150);
+    panel->setLayout(layout);
+    gui->pushChild(panel);
+    expect_rect(layout->getRect(panel), 0, 0, 200, 150, "attaching with an empty store must change nothing");
+
+    // Resize to 260x200 (grab offset 5,5) and finish the drag: endResize records the geometry.
+    panel->beginResize(195, 145);
+    panel->updateResize(255, 195);
+    panel->endResize();
+    expect_rect(layout->getRect(panel), 0, 0, 260, 200, "the drag should resize the live panel");
+
+    // Close the panel and reopen a brand-new instance with the same identity: geometry is restored.
+    panel->close();
+    expect_true(gui->findChild(panel) == nullptr, "close should detach the panel from the gui");
+    auto reopened = std::make_shared<CGamePanel>();
+    reopened->setTypeId("questPanel");
+    reopened->setResizable(true);
+    auto reopenedLayout = fixed_layout(0, 0, 200, 150);
+    reopened->setLayout(reopenedLayout);
+    gui->pushChild(reopened);
+    expect_rect(reopenedLayout->getRect(reopened), 0, 0, 260, 200,
+                "a reopened panel with the same identity should restore its session geometry");
+    expect_true(reopenedLayout->getX() == "0" && reopenedLayout->getY() == "0" && reopenedLayout->getW() == "200" &&
+                    reopenedLayout->getH() == "150",
+                "restoring session geometry must not rewrite any serialized layout value");
+    reopened->close();
+
+    // A different identity must not inherit the recorded geometry.
+    auto other = std::make_shared<CGamePanel>();
+    other->setTypeId("inventoryPanel");
+    other->setResizable(true);
+    auto otherLayout = fixed_layout(0, 0, 200, 150);
+    other->setLayout(otherLayout);
+    gui->pushChild(other);
+    expect_rect(otherLayout->getRect(other), 0, 0, 200, 150,
+                "a different panel identity must not receive another panel's geometry");
+    other->close();
+
+    // A panel without the resize opt-in must never have geometry applied, even for a known identity.
+    auto locked = std::make_shared<CGamePanel>();
+    locked->setTypeId("questPanel");
+    auto lockedLayout = fixed_layout(0, 0, 200, 150);
+    locked->setLayout(lockedLayout);
+    gui->pushChild(locked);
+    expect_rect(lockedLayout->getRect(locked), 0, 0, 200, 150,
+                "a non-resizable panel must not have session geometry applied");
+    locked->close();
+
+    // A panel with no stable identity records nothing when resized.
+    auto anonymous = std::make_shared<CGamePanel>();
+    anonymous->setResizable(true);
+    anonymous->setLayout(fixed_layout(0, 0, 200, 150));
+    gui->pushChild(anonymous);
+    anonymous->beginResize(195, 145);
+    anonymous->updateResize(255, 195);
+    anonymous->endResize();
+    anonymous->close();
+    expect_true(!gui->getSessionPanelGeometry(""), "a panel without a typeId must not record session geometry");
+}
+
+// Re-applied session geometry must clamp against the CURRENT parent bounds: if the window shrank
+// (window scaling rewrites the gui layout's runtime size) between the resize and the reopen, the
+// restored panel must land fully inside the new bounds instead of keeping an out-of-range rectangle.
+void test_panel_session_geometry_reapply_clamps_to_new_parent_bounds() {
+    SDL_SetHint(SDL_HINT_VIDEODRIVER, "dummy");
+    SDL_SetHint(SDL_HINT_RENDER_DRIVER, "software");
+
+    auto gui = std::make_shared<CGui>();
+    gui->setLayout(fixed_layout(0, 0, 800, 600));
+
+    // A centered panel resized once records its pinned origin (300, 225) with the new 260x200 size.
+    auto panel = std::make_shared<CGamePanel>();
+    panel->setTypeId("questPanel");
+    panel->setResizable(true);
+    auto layout = std::make_shared<CCenteredLayout>();
+    layout->setW("200");
+    layout->setH("150");
+    panel->setLayout(layout);
+    gui->pushChild(panel);
+    panel->beginResize(195, 145);
+    panel->updateResize(255, 195);
+    panel->endResize();
+    expect_rect(layout->getRect(panel), 300, 225, 260, 200, "the resized centered panel keeps its pinned origin");
+    panel->close();
+
+    // Shrink the gui (the same runtime-override mechanism window scaling uses) and reopen the panel:
+    // the origin (300, 225) still fits, but the size clamps to the room left inside 400x300.
+    gui->setWidth(400);
+    gui->setHeight(300);
+    auto reopened = std::make_shared<CGamePanel>();
+    reopened->setTypeId("questPanel");
+    reopened->setResizable(true);
+    auto reopenedLayout = std::make_shared<CCenteredLayout>();
+    reopenedLayout->setW("200");
+    reopenedLayout->setH("150");
+    reopened->setLayout(reopenedLayout);
+    gui->pushChild(reopened);
+    expect_rect(reopenedLayout->getRect(reopened), 300, 225, 100, 75,
+                "restored geometry must clamp its size to the room left in the smaller parent");
+    reopened->close();
+
+    // Shrink further so even the recorded origin no longer fits: it clamps to leave the minimum
+    // 32x32 of room, and the size clamps to that remaining room.
+    gui->setWidth(320);
+    gui->setHeight(240);
+    auto cramped = std::make_shared<CGamePanel>();
+    cramped->setTypeId("questPanel");
+    cramped->setResizable(true);
+    auto crampedLayout = std::make_shared<CCenteredLayout>();
+    crampedLayout->setW("200");
+    crampedLayout->setH("150");
+    cramped->setLayout(crampedLayout);
+    gui->pushChild(cramped);
+    expect_rect(crampedLayout->getRect(cramped), 288, 208, 32, 32,
+                "a restored origin outside the new parent must clamp back inside with minimum room");
+    expect_true(crampedLayout->getW() == "200" && crampedLayout->getH() == "150",
+                "clamped re-apply must not rewrite the serialized centered layout");
+}
+
+// The geometry store is session-only: it lives on the CGui instance (one per game session) and is
+// cleared by CGui::shutdown(), the session boundary CGameContext drives when a game session ends.
+// A fresh CGui starts empty, so user-adjusted geometry can never leak across sessions (and, being a
+// plain non-reflective member, it can never be serialized to disk at all).
+void test_panel_session_geometry_clears_at_session_shutdown() {
+    SDL_SetHint(SDL_HINT_VIDEODRIVER, "dummy");
+    SDL_SetHint(SDL_HINT_RENDER_DRIVER, "software");
+
+    auto gui = std::make_shared<CGui>();
+    gui->setLayout(fixed_layout(0, 0, 800, 600));
+
+    auto panel = std::make_shared<CGamePanel>();
+    panel->setTypeId("questPanel");
+    panel->setResizable(true);
+    panel->setLayout(fixed_layout(0, 0, 200, 150));
+    gui->pushChild(panel);
+    panel->beginResize(195, 145);
+    panel->updateResize(255, 195);
+    panel->endResize();
+
+    auto stored = gui->getSessionPanelGeometry("questPanel");
+    expect_true(stored.has_value(), "finishing a resize should record geometry in the session store");
+    expect_true(stored && stored->x == 0 && stored->y == 0 && stored->w == 260 && stored->h == 200,
+                "the recorded geometry should match the resized rectangle");
+
+    gui->shutdown();
+    expect_true(!gui->getSessionPanelGeometry("questPanel"),
+                "shutdown (the session boundary) must clear the session geometry store");
+
+    auto nextSession = std::make_shared<CGui>();
+    expect_true(!nextSession->getSessionPanelGeometry("questPanel"),
+                "a new session's GUI must not inherit geometry from a previous session");
+}
+
 } // namespace
+
+void test_campaign_panel_dismisses_via_action_and_keys_but_never_escape() {
+    // [EPIC_10][STORY_04][SUBSTORY_01] The campaign presentation screen dismisses via
+    // its action (button/Enter/Space) and must NOT be cancellable: Escape and other
+    // keys leave it up, so campaign progression cannot be aborted from the screen.
+    auto panel = std::make_shared<CGameCampaignPanel>();
+    panel->setTitle("Chapter I - Hearthfall");
+    panel->setBody("Ten years of exile end at the village where your name was outlawed.");
+    panel->setActionLabel("BEGIN");
+    expect_true(panel->getTitle() == "Chapter I - Hearthfall", "campaign panel keeps its title");
+    expect_true(panel->getActionLabel() == "BEGIN", "campaign panel keeps its action label");
+    expect_true(!panel->isDismissed(), "campaign panel starts undismissed");
+
+    panel->keyboardEvent(nullptr, SDL_KEYDOWN, SDLK_ESCAPE);
+    expect_true(!panel->isDismissed(), "escape must not dismiss the campaign screen");
+    panel->keyboardEvent(nullptr, SDL_KEYDOWN, SDLK_a);
+    expect_true(!panel->isDismissed(), "unrelated keys must not dismiss the campaign screen");
+    panel->keyboardEvent(nullptr, SDL_KEYUP, SDLK_SPACE);
+    expect_true(!panel->isDismissed(), "key releases must not dismiss the campaign screen");
+
+    panel->keyboardEvent(nullptr, SDL_KEYDOWN, SDLK_SPACE);
+    expect_true(panel->isDismissed(), "space dismisses the campaign screen");
+    expect_true(panel->awaitDismissal(), "awaitDismissal reports the action dismissal without blocking");
+
+    auto enterPanel = std::make_shared<CGameCampaignPanel>();
+    enterPanel->keyboardEvent(nullptr, SDL_KEYDOWN, SDLK_RETURN);
+    expect_true(enterPanel->isDismissed(), "enter dismisses the campaign screen");
+
+    auto clickPanel = std::make_shared<CGameCampaignPanel>();
+    clickPanel->clickAction(nullptr);
+    expect_true(clickPanel->isDismissed(), "the action button dismisses the campaign screen");
+}
+
+void test_campaign_browser_selects_by_stable_id_and_cancels_via_escape() {
+    // [EPIC_10][STORY_05][SUBSTORY_01] SELECT is inert until a campaign is highlighted,
+    // confirms the highlighted STABLE id once one is, and CANCEL/Escape resolve the
+    // browser to the empty id.
+    auto browser = std::make_shared<CGameCampaignBrowserPanel>();
+    expect_true(!browser->hasChoice(), "browser starts with no resolved choice");
+    browser->clickSelect(nullptr);
+    expect_true(!browser->hasChoice(), "SELECT must be inert until a campaign is highlighted");
+
+    browser->setSelectedId("wardensRoad");
+    browser->setDetailText("An exile's homecoming.\n\nChapters: 4");
+    browser->clickSelect(nullptr);
+    expect_true(browser->hasChoice(), "SELECT confirms the highlighted campaign");
+    expect_true(browser->awaitChoice() == "wardensRoad", "the confirmed choice is the stable campaign id");
+
+    auto cancelled = std::make_shared<CGameCampaignBrowserPanel>();
+    cancelled->setSelectedId("wardensRoad");
+    cancelled->clickCancel(nullptr);
+    expect_true(cancelled->awaitChoice().empty(), "CANCEL resolves to the empty id even when highlighted");
+
+    auto escaped = std::make_shared<CGameCampaignBrowserPanel>();
+    escaped->keyboardEvent(nullptr, SDL_KEYDOWN, SDLK_a);
+    expect_true(!escaped->hasChoice(), "unrelated keys leave the browser open");
+    escaped->keyboardEvent(nullptr, SDL_KEYDOWN, SDLK_ESCAPE);
+    expect_true(escaped->hasChoice() && escaped->awaitChoice().empty(), "escape cancels the browser with the empty id");
+}
 
 int main() {
     pybind11::scoped_interpreter guard{};
 
+    test_campaign_browser_selects_by_stable_id_and_cancels_via_escape();
+    test_campaign_panel_dismisses_via_action_and_keys_but_never_escape();
     test_layout_runtime_overrides_preserve_serialized_percentage_layouts();
+    test_layout_fractional_percentages_resolve_exact_design_pixels();
+    test_layout_minimum_size_floors_percentage_panels();
     test_widget_ignores_unarmed_non_left_clicks();
     test_widget_reflective_callbacks_fail_closed_on_bad_config();
     test_character_panel_sheet_lines_build_without_rendering_and_fail_closed();
     test_character_panel_sheet_lines_render_race_and_class_labels();
+    test_dialog_panel_current_options_preserve_numeric_display_order();
+    test_dialog_option_callback_closes_and_releases_its_panel();
+    test_populated_list_releases_owning_view_and_ignores_expired_callbacks();
+    test_panel_opt_in_resize_handle_drag_resizes_within_bounds();
+    test_panel_resize_handle_press_beats_covering_child_and_release_ends_capture();
+    test_panel_resize_handle_press_resizes_subclass_panel_with_mouse_override();
+    test_panel_resize_centered_layout_keeps_origin_pinned();
+    test_panel_session_geometry_restores_reopened_panel_same_identity_only();
+    test_panel_session_geometry_reapply_clamps_to_new_parent_bounds();
+    test_panel_session_geometry_clears_at_session_shutdown();
     test_list_view_refreshes_from_generic_property_notifications();
     test_list_view_coalesces_property_refreshes_per_event_loop_tick();
     test_list_view_skips_queued_property_refresh_after_detach();
     test_list_view_refresh_event_compatibility();
     test_list_view_property_subscriptions_follow_resolved_target_and_null();
     test_list_view_refresh_property_collision_fails_closed();
-    test_inventory_double_select_uses_selected_item_and_clears_selection();
-    test_inventory_right_click_uses_usable_item_once_and_consumes_it();
+    test_quest_panel_rebuilds_text_only_when_quest_data_changes();
+    test_quest_journal_navigation_reaches_history_beyond_texture_limit();
+    test_quest_panel_resubscribes_when_quest_source_changes();
+    test_quest_panel_rebuilds_when_quest_state_properties_change();
+    test_reactive_list_views_refresh_counts_match_model_changes_exactly();
+    test_quest_panel_refresh_count_coalesces_rapid_invalidations();
+    test_inventory_repeated_select_inspects_without_using_item();
+    test_inventory_right_click_inspects_then_explicit_use_consumes_once();
     test_inventory_right_click_full_resource_item_not_consumed();
     test_inventory_right_click_quest_item_is_protected();
     test_inventory_right_click_invalid_and_empty_are_safe();
     test_inventory_left_click_drag_still_starts_for_owned_item();
-    test_fight_panel_right_click_item_use_still_works();
+    test_fight_panel_right_click_inspects_then_explicit_use_works();
     test_fight_panel_enemy_selection_uses_exact_instance();
     test_gui_window_is_resizable_and_guard_paths_fail_closed();
+    test_repeated_gui_creation_preserves_live_window_and_renderer();
     test_list_view_drag_callbacks_validate_and_drop_without_click_fallback();
     test_list_view_drag_callbacks_cancel_and_preserve_unmoved_clicks();
+    test_list_view_captured_release_just_outside_source_cancels_instead_of_dropping();
     test_list_view_legacy_click_callback_still_fires_without_drag_callbacks();
     test_list_view_non_draggable_does_click_only_press_motion_release();
-    test_list_view_non_draggable_repeated_click_preserves_first_select_second_confirm();
+    test_fight_repeated_action_selection_requires_explicit_execution();
     test_list_view_draggable_default_still_drags_after_non_draggable_change();
     test_list_view_non_draggable_panel_removal_during_input_leaves_no_session_or_capture();
     test_list_view_below_threshold_motion_stays_a_click_no_proxy_no_drop();
@@ -2328,11 +3840,19 @@ int main() {
     test_render_traversal_stops_after_detach();
     test_texture_cache_without_gui_fails_closed();
     test_render_context_rejects_null_texture_and_copies_valid_texture();
+    test_render_context_copy_ex_rotates_and_tracks_stats();
+    testTextMetricsCacheAndExpiredGuiFallbacks();
+    testRenderContextRestoresClipAndRejectsInvalidCopies();
+    testTextureMaskPreservesPixelsAcrossSurfaceFormats();
+    testPinnedTooltipConsumesInputAndDismissesExplicitly();
     test_minimap_bounds_extreme_metadata_fails_closed();
     test_minimap_bounds_overflow_prone_extents_fail_closed();
     test_minimap_bounds_sparse_coordinates_fail_closed();
     test_minimap_bounds_negative_sparse_coordinates_render();
     test_minimap_bounds_normal_map_renders();
+    testRetainedMinimapTextureDoesNotOutliveItsRenderer();
+    testMinimapTextureReparentsAcrossLiveAndExpiredGuiOwners();
+    testRetainedPopulatedTextureCachesFailClosedAfterGuiExpiry();
     test_minimap_consumes_inside_pointer_events_and_preserves_outside_and_wheel();
 
     return finish_tests();

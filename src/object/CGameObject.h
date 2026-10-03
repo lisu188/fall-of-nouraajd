@@ -36,6 +36,7 @@ class CAnimation;
 
 class CGameObject : public vstd::stringable, public std::enable_shared_from_this<CGameObject> {
     friend class CMap;
+    friend class CSceneManager;
 
     V_META(CGameObject, vstd::meta::empty, V_PROPERTY(CGameObject, std::string, name, getName, setName),
            V_PROPERTY(CGameObject, std::string, type, getType, setType),
@@ -132,7 +133,7 @@ class CGameObject : public vstd::stringable, public std::enable_shared_from_this
 
     template <fn::GameObjectDerived T = CGameObject>
     void setObjectProperty(std::string name, std::shared_ptr<T> object) {
-        setProperty(name, std::any(object));
+        setProperty(name, object);
     }
 
     template <fn::GameObjectDerived T = CGameObject> std::shared_ptr<T> getObjectProperty(std::string name) {
@@ -219,9 +220,9 @@ class CGameObject : public vstd::stringable, public std::enable_shared_from_this
                         }
                     };
                     if constexpr (now) {
-                        vstd::now(task);
+                        vstd::call_now(task);
                     } else {
-                        vstd::later(task);
+                        vstd::call_later(task);
                     }
                 }
                 ++it;

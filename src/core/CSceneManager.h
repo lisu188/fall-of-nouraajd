@@ -18,6 +18,8 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #pragma once
 
 #include <memory>
+#include <cstdint>
+#include <functional>
 #include <optional>
 #include <string>
 
@@ -34,12 +36,14 @@ class CGameContext;
 struct CMapTransitionRequest {
     // Destination map name (a map directory under res/maps).
     std::string targetMap;
-    // Player placement on the destination map; std::nullopt places the player at the map entry.
+    // Explicit player placement on the destination map. When unset, a reused retained session
+    // restores the coordinate where that session was left; otherwise the destination map entry is used.
     std::optional<Coords> targetCoords;
     // Reuse an already-loaded destination session from CMapSessionStore instead of reloading it
     // from content. Falls back to a fresh load when no matching session is stored.
     bool reuseLoadedMap = false;
-    // Retain the source map in CMapSessionStore when leaving it, so it can be revisited later.
+    // Retain the source map in CMapSessionStore when leaving it, including the player's departure
+    // coordinate so a later reuse does not replay entry-only initialization.
     bool retainSourceMap = false;
     // Optional session anchor: a retained source session is stored under this instance id, and a
     // reuseLoadedMap lookup prefers this instance id before falling back to the default session.
@@ -47,6 +51,10 @@ struct CMapTransitionRequest {
     // Copy the source map turn onto the destination (legacy behavior). Persistent sessions can keep
     // their own turn counter by disabling this.
     bool carryTurn = true;
+    // Transaction hooks for callers that must prepare the carried player before destination
+    // entry events. Loading/rejection never calls preparation; completion reports every exit.
+    std::function<void()> beforePlayerEntry;
+    std::function<void(bool)> onFinished;
 };
 
 class CSceneManager : public std::enable_shared_from_this<CSceneManager> {
@@ -76,4 +84,5 @@ class CSceneManager : public std::enable_shared_from_this<CSceneManager> {
 
     TransitionState transitionState = TransitionState::Idle;
     std::string pendingMapName;
+    std::uint64_t pendingGeneration = 0;
 };

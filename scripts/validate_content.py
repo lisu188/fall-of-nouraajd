@@ -45,7 +45,7 @@ PLAYER_RACE_PROFILE_KEYS = {"profileKind", "label", "baseStatContribution", "tra
 STARTING_EQUIPMENT_POLICIES = {"fixed", "none"}
 SCRIPT_REF_CALLS = {"createObject", "addObjectByName"}
 SCRIPT_ITEM_CALLS = {"addItem"}
-SCRIPT_QUEST_CALLS = {"addQuest", "ensure_quest", "_grant_quest", "grant_quest"}
+SCRIPT_QUEST_CALLS = {"addQuest", "ensure_quest", "_ensure_quest", "_grant_quest", "grant_quest"}
 SCRIPT_MAP_CALLS = {"changeMap"}
 # Campaign scenario completion reporting (res/campaign.py). Map scripts declare
 # the outcomes they can report in a literal CAMPAIGN_OUTCOMES tuple/list and
@@ -59,9 +59,9 @@ CAMPAIGN_MANIFEST_NAME = "campaign.json"
 CAMPAIGN_FORMAT = "fall-of-nouraajd-campaign"
 CAMPAIGN_SCHEMA_VERSION = 1
 CAMPAIGN_MANIFEST_REQUIRED_KEYS = {"format", "schemaVersion", "campaignId", "title", "start", "scenarios"}
-CAMPAIGN_MANIFEST_KEYS = CAMPAIGN_MANIFEST_REQUIRED_KEYS | {"description", "completionText"}
+CAMPAIGN_MANIFEST_KEYS = CAMPAIGN_MANIFEST_REQUIRED_KEYS | {"description", "completionText", "artwork"}
 CAMPAIGN_SCENARIO_REQUIRED_KEYS = {"map", "title", "briefing", "next"}
-CAMPAIGN_SCENARIO_KEYS = CAMPAIGN_SCENARIO_REQUIRED_KEYS | {"epilogue", "carryover"}
+CAMPAIGN_SCENARIO_KEYS = CAMPAIGN_SCENARIO_REQUIRED_KEYS | {"epilogue", "carryover", "artwork"}
 CAMPAIGN_CARRYOVER_GOLD_MAX = "gold_max"
 CAMPAIGN_CARRYOVER_ITEM_KEYS = ("items_allow", "items_deny")
 CAMPAIGN_CARRYOVER_KEYS = {CAMPAIGN_CARRYOVER_GOLD_MAX, *CAMPAIGN_CARRYOVER_ITEM_KEYS}
@@ -134,6 +134,27 @@ REVIEWED_DYNAMIC_PROPERTIES = {
     "CCreature": {"class", "race"},
     "CDialogState": {"condition"},
     "CScroll": {"singleUse"},
+}
+REVIEWED_DYNAMIC_PROPERTY_TYPES = {
+    # These properties are read through CGameObject's typed dynamic accessors by
+    # the common panel layout and dialogue renderer. Keep their scope and types
+    # explicit; unrelated objects and misspelled names must still be rejected.
+    "CGameGraphicsObject": {
+        "uiGroup": "std::string",
+        "uiHeading": "bool",
+        "uiFooter": "bool",
+        "uiTab": "bool",
+        "uiFooterGroup": "std::string",
+        "uiOrder": "int",
+    },
+    "CDialog": {"speaker": "std::string", "questIds": "std::string"},
+    "CDialogState": {"speaker": "std::string"},
+    "CDialogOption": {
+        "actionLabel": "std::string",
+        "afterCondition": "std::string",
+        "afterStateId": "std::string",
+        "consequential": "bool",
+    },
 }
 REVIEWED_DYNAMIC_PROPERTY_PREFIXES = {
     "CGameObject": ("campaign_", "plugin_", "quest_state_"),
@@ -208,13 +229,13 @@ BUFF_EFFECT_TAG = "buff"
 # metadata property (a typo such as "strenght" would be silently dropped at load
 # time), "actions" is a list of object nodes that must each resolve to a CInteraction
 # (the same resolution the class actions validator enforces), and "creatureType" /
-# "subtypes" tag the race for type-driven lookups.  For now the type fields are
-# DATA-ONLY -- the only rule is that "creatureType" is a non-empty string and every
-# "subtypes" entry is a non-empty string; no mechanical type semantics are invented.
-# The allowed baseStats keys are derived from the live CStats metadata schema so they
-# stay in lockstep with src/core/CStats.h, and CInteraction resolution reuses the
-# class-action helper.  CCreatureRace configs do not exist on current content, so this
-# check is vacuously satisfied (forward-guarding) until such archetypes are authored.
+# "subtypes" tag the race for type-driven lookups.  The type fields stay
+# mechanically DATA-ONLY: "creatureType" must be a non-empty string that names a
+# catalogued creature type (see the creature type catalog below) and every
+# "subtypes" entry must be a non-empty string; no mechanical type semantics are
+# invented.  The allowed baseStats keys are derived from the live CStats metadata
+# schema so they stay in lockstep with src/core/CStats.h, and CInteraction
+# resolution reuses the class-action helper.
 CREATURE_RACE_CONSTRUCTOR_CLASS = "CCreatureRace"
 CREATURE_RACE_BASE_STATS_PROPERTY = "baseStats"
 CREATURE_RACE_ACTIONS_PROPERTY = "actions"
@@ -222,18 +243,53 @@ CREATURE_RACE_TYPE_PROPERTY = "creatureType"
 CREATURE_RACE_SUBTYPES_PROPERTY = "subtypes"
 CREATURE_RACE_STATS_SCHEMA_CLASS = "CStats"
 
+# Creature type catalog (EPIC_08/STORY_01/SUBSTORY_01).
+# "creatureType" strings were previously free-form data tags; they are now validated
+# against a canonical catalog, res/config/creature_types.json, whose single
+# "creatureTypeCatalog" entry maps every known type id to a short description.  This
+# is a VALIDATION-ONLY promotion: no runtime mechanic (immunities, targeting, ...)
+# reads the catalog and current combat behavior is unchanged -- the catalog is
+# exactly the set of creatureType strings observed in current content, so validation
+# passes by construction.  The membership check fails closed: a creatureType that
+# cannot be checked because the catalog file is missing or malformed is reported
+# rather than silently accepted.  Content that declares no creatureType does not
+# require the catalog file (synthetic fixture repos stay valid), and the catalog
+# file itself is schema-checked whenever it exists.  The catalog is data-only (no
+# "class"/"ref"), so the engine's config loader skips it the same way it skips the
+# player class/race profile files.
+CREATURE_TYPES_CONFIG = "creature_types.json"
+CREATURE_TYPE_CATALOG_ENTRY = "creatureTypeCatalog"
+CREATURE_TYPE_CATALOG_KIND_KEY = "catalogKind"
+CREATURE_TYPE_CATALOG_KIND = "creatureType"
+CREATURE_TYPE_CATALOG_TYPES_KEY = "types"
+CREATURE_TYPE_CATALOG_ENTRY_KEYS = {CREATURE_TYPE_CATALOG_KIND_KEY, CREATURE_TYPE_CATALOG_TYPES_KEY}
+CREATURE_TYPE_DESCRIPTION_KEY = "description"
+
 # Archetype-definition base classes (EPIC_06/STORY_04/SUBSTORY_02).
 # CCreatureRace and CCreatureClass configs are *referenced definitions* (a race or
 # class template carried by a creature via the "creatureClass"/race reference
 # property), never actors that can be instantiated onto a map or spawned at
-# runtime.  Any config whose effective engine class is one of these -- or which is
-# declared in the dedicated archetype config files -- must therefore be rejected
-# when used as a concrete spawn target: map object types, map tile types, and
-# createObject/addObjectByName script calls.
+# runtime.  The future-mechanics metadata layers (EPIC_08) are referenced
+# definitions in exactly the same sense: CCreatureTemplate overlays (carried via
+# the "templates" set) and CCreatureClassTrack multiclass records (carried via the
+# "classTracks" set) are registered as constructible CGameObjects but are never
+# spawnable actors -- runtime createObject<CMapObject> on one returns null and the
+# spawn is silently skipped.  Any config whose effective engine class is one of
+# these -- or which is declared in the dedicated archetype config files -- must
+# therefore be rejected when used as a concrete spawn target: map object types,
+# map tile types, and createObject/addObjectByName script calls.
 CREATURE_RACE_BASE_CLASS = "CCreatureRace"
 CREATURE_CLASS_BASE_CLASS = "CCreatureClass"
-CREATURE_ARCHETYPE_BASE_CLASSES = (CREATURE_RACE_BASE_CLASS, CREATURE_CLASS_BASE_CLASS)
-CREATURE_ARCHETYPE_DEFINITION_CONFIGS = (CREATURE_RACES_CONFIG, CREATURE_CLASSES_CONFIG)
+CREATURE_TEMPLATE_BASE_CLASS = "CCreatureTemplate"
+CREATURE_CLASS_TRACK_BASE_CLASS = "CCreatureClassTrack"
+CREATURE_TEMPLATES_CONFIG = "creature_templates.json"
+CREATURE_ARCHETYPE_BASE_CLASSES = (
+    CREATURE_RACE_BASE_CLASS,
+    CREATURE_CLASS_BASE_CLASS,
+    CREATURE_TEMPLATE_BASE_CLASS,
+    CREATURE_CLASS_TRACK_BASE_CLASS,
+)
+CREATURE_ARCHETYPE_DEFINITION_CONFIGS = (CREATURE_RACES_CONFIG, CREATURE_CLASSES_CONFIG, CREATURE_TEMPLATES_CONFIG)
 
 # CCreature.creatureClass reference resolution policy (EPIC_06/STORY_01/SUBSTORY_02).
 # A CCreature config carries its class template through the JSON *property*
@@ -704,8 +760,10 @@ class ScriptInfo:
     path: Path
     classes: set[str] = field(default_factory=set)
     registered_classes: set[str] = field(default_factory=set)
-    class_bases: dict[str, set[str]] = field(default_factory=dict)
+    class_bases: dict[str, tuple[str, ...]] = field(default_factory=dict)
     methods_by_class: dict[str, set[str]] = field(default_factory=dict)
+    class_quest_constants: dict[str, ast.AST] = field(default_factory=dict)
+    class_quest_grant_methods: dict[str, set[str]] = field(default_factory=dict)
     calls: list[ScriptCall] = field(default_factory=list)
     quest_grants: list[ScriptCall] = field(default_factory=list)
     quest_states: dict[str, ScriptQuestStateUsage] = field(default_factory=dict)
@@ -759,14 +817,17 @@ class ScriptAnalyzer(ast.NodeVisitor):
 
     def visit_ClassDef(self, node: ast.ClassDef) -> Any:
         self.info.classes.add(node.name)
-        base_names = {base_name for base in node.bases if (base_name := python_base_class_name(base))}
+        base_names = tuple(base_name for base in node.bases if (base_name := python_base_class_name(base)))
         if base_names:
-            self.info.class_bases.setdefault(node.name, set()).update(base_names)
+            self.info.class_bases[node.name] = base_names
         if any(is_python_registration_decorator(decorator) for decorator in node.decorator_list):
             self.info.registered_classes.add(node.name)
         self.info.methods_by_class.setdefault(node.name, set())
         self._class_stack.append(node.name)
         for child in node.body:
+            if isinstance(child, (ast.Assign, ast.AnnAssign)) and child.value is not None:
+                if any(isinstance(target, ast.Name) and target.id == "QUEST" for target in assignment_targets(child)):
+                    self.info.class_quest_constants[node.name] = child.value
             self.visit(child)
         self._class_stack.pop()
 
@@ -806,6 +867,7 @@ class ScriptAnalyzer(ast.NodeVisitor):
         name = call_name(node.func)
         if name:
             self._record_script_call(name, node)
+            self._recordClassQuestGrant(name, node)
             self._record_named_object(name, node)
             self._record_anonymous_spawn(name, node)
             self._record_runtime_spawn_name(name, node)
@@ -837,6 +899,18 @@ class ScriptAnalyzer(ast.NodeVisitor):
             self.info.calls.append(call)
             if name in SCRIPT_QUEST_CALLS:
                 self.info.quest_grants.append(call)
+
+    def _recordClassQuestGrant(self, name: str, node: ast.Call) -> None:
+        if name not in SCRIPT_QUEST_CALLS or not self._class_stack or not self._function_stack:
+            return
+        if any(
+            isinstance(arg, ast.Attribute)
+            and isinstance(arg.value, ast.Name)
+            and arg.value.id == "self"
+            and arg.attr == "QUEST"
+            for arg in node.args
+        ):
+            self.info.class_quest_grant_methods.setdefault(self._class_stack[-1], set()).add(self._function_stack[-1])
 
     def _record_named_object(self, name: str, node: ast.Call) -> None:
         if name == "setStringProperty" and len(node.args) >= 2:
@@ -1346,6 +1420,21 @@ class TriggerAnalyzer(ast.NodeVisitor):
             )
 
 
+def is_runtime_registered_config(data: Any) -> bool:
+    """Whether the runtime config loader registers this top-level config entry.
+
+    Mirrors CObjectHandler::registerConfig (src/handler/CObjectHandler.cpp): a
+    top-level entry that is a JSON object with neither "class" nor "ref" is a
+    DATA-ONLY definition (player class/race profiles, crafting recipes, artifact
+    sets, the creature type catalog) that the runtime skips at registration, so
+    it can never be resolved by createObject/addObjectByName/addItem calls or by
+    an object-node ref.  The validator's visibility maps must exclude such
+    entries, otherwise a script or config referencing a data-only id would
+    validate here yet silently fail to resolve at runtime.
+    """
+    return not (isinstance(data, dict) and "class" not in data and "ref" not in data)
+
+
 def is_safe_map_relative_path(path: str) -> bool:
     """Return True when ``path`` is a safe POSIX-style relative path under a map directory.
 
@@ -1371,6 +1460,13 @@ class ContentValidator:
         self.issues: list[ValidationIssue] = []
         self.global_entries: dict[str, ConfigEntry] = {}
         self.global_files: dict[Path, Any] = {}
+        # Parsed creature type catalog (the set of canonical creatureType ids), or None
+        # while unparsed / when res/config/creature_types.json is missing or malformed.
+        # Populated by _validate_creature_type_catalog before config entries are checked.
+        self.creature_type_catalog: set[str] | None = None
+        # Top-level config ids the runtime loader never registers (data-only entries,
+        # see is_runtime_registered_config); used to explain unresolvable references.
+        self.data_only_config_ids: set[str] = set()
         self.map_contexts: list[MapContext] = []
         self.campaign_contexts: list[CampaignContext] = []
         self.plugin_info: list[ScriptInfo] = []
@@ -1403,6 +1499,7 @@ class ContentValidator:
         self._collect_plugin_classes()
         self._load_type_registration_exclusions()
         self._validate_type_registration_coverage()
+        self._validate_plugin_manifest()
         self._load_global_configs()
         self._load_maps()
         self._load_campaigns()
@@ -1411,6 +1508,69 @@ class ContentValidator:
             self._validate_map_context(context)
         self._validate_campaigns()
         return sorted(self.issues, key=lambda issue: (issue.path, issue.location, issue.message))
+
+    def _validate_plugin_manifest(self) -> None:
+        """Schema-check the version 2 plugin manifest (res/plugins/manifest.json): a
+        top-level ``version: 2`` plus a ``plugins`` array of uniform entries
+        ``{id, kind, <source>, entry?, scope?}``. Kind-specific source fields are
+        ``library`` (native, under plugins/native/), ``type`` (cpp), and ``path``
+        (python/lua, an existing res/ resource). Unknown kinds and duplicate ids are
+        diagnosed here so a typo fails validation instead of silently skipping the
+        plugin at runtime (the loader only warns)."""
+        path = self.repo_root / "res" / "plugins" / "manifest.json"
+        if not path.exists():
+            return
+        data = self._load_json(path)
+        if data is None:
+            return
+        if not isinstance(data, dict):
+            self._issue(path, "$", "expected top-level JSON object")
+            return
+        if data.get("version") != 2:
+            self._issue(path, "version", "plugin manifest must declare version 2")
+        entries = data.get("plugins")
+        if not isinstance(entries, list):
+            self._issue(path, "plugins", "plugin manifest must contain a plugins array")
+            return
+        source_fields = {"native": "library", "cpp": "type", "python": "path", "lua": "path"}
+        seen_ids: set[str] = set()
+        for index, entry in enumerate(entries):
+            location = f"plugins[{index}]"
+            if not isinstance(entry, dict):
+                self._issue(path, location, "expected plugin entry object")
+                continue
+            entry_id = entry.get("id")
+            if not isinstance(entry_id, str) or not entry_id:
+                self._issue(path, location, "plugin entry requires a non-empty string id")
+            elif entry_id in seen_ids:
+                self._issue(path, location, f'duplicate plugin id "{entry_id}"')
+            else:
+                seen_ids.add(entry_id)
+            kind = entry.get("kind")
+            if kind not in source_fields:
+                known = ", ".join(sorted(source_fields))
+                self._issue(path, location, f'unknown plugin kind "{kind}"; expected one of: {known}')
+                continue
+            source_field = source_fields[kind]
+            source = entry.get(source_field)
+            if not isinstance(source, str) or not source:
+                self._issue(path, location, f'{kind} plugin entry requires a non-empty "{source_field}" field')
+                continue
+            if kind == "native" and not source.startswith("plugins/native/"):
+                self._issue(path, location, f'native plugin library "{source}" must live under plugins/native/')
+            if kind in ("python", "lua"):
+                expected_suffix = ".py" if kind == "python" else ".lua"
+                if not source.endswith(expected_suffix):
+                    self._issue(path, location, f'{kind} plugin path "{source}" must end with {expected_suffix}')
+                elif not (self.repo_root / "res" / source).exists():
+                    self._issue(path, location, f'{kind} plugin path "{source}" does not exist under res/')
+            scope = entry.get("scope")
+            if scope is not None:
+                map_name = scope.get("map") if isinstance(scope, dict) else None
+                if not isinstance(map_name, str) or not map_name:
+                    self._issue(path, location, 'plugin scope must be an object with a non-empty "map" name')
+                elif not (self.repo_root / "res" / "maps" / map_name).is_dir():
+                    self._issue(path, location, f'plugin scope references unknown map "{map_name}"')
 
     def inventory_creature_overrides(self) -> list[CreatureOverride]:
         """Enumerate every map-local creature reference that overrides template behavior.
@@ -1628,22 +1788,39 @@ class ContentValidator:
                 self.native_plugin_registered_classes.add(class_name)
 
     def _native_plugin_helper_classes(self) -> dict[str, set[str]]:
-        path = self.repo_root / "src" / "plugin" / "NativePlugin.cpp"
+        """Parse the single-source-of-truth gameplay type table consumed by
+        ``native_plugin::register_gameplay_types`` (src/plugin/NativePlugin.cpp expands
+        src/plugin/CGameplayTypeTable.h). Rows are one-per-line by contract; a row that
+        contains an FN_TYPE/FN_WRAPPED call this parser cannot read is diagnosed instead
+        of silently dropped."""
+        path = self.repo_root / "src" / "plugin" / "CGameplayTypeTable.h"
         if not path.exists():
             return {}
-        text = read_text_lossy(path)
-        helper_classes: dict[str, set[str]] = {}
-        for name, body in iter_cpp_function_bodies(text):
-            if not name.startswith("register_"):
+        text = strip_cpp_comments(read_text_lossy(path))
+        row_pattern = re.compile(r"\bFN_(?:TYPE|WRAPPED)\(\s*([A-Za-z_]\w*)")
+        classes: set[str] = set()
+        for line_number, line in enumerate(text.splitlines(), start=1):
+            calls = re.findall(r"\bFN_(?:TYPE|WRAPPED)\(", line)
+            if not calls:
                 continue
-            classes = iter_cpp_template_type_names(body, "register_type")
-            if classes:
-                helper_classes[name] = classes
-                for class_name in classes:
-                    self.native_plugin_declared_class_sources.setdefault(class_name, set()).add(
-                        f"native_plugin::{name}"
-                    )
-        return helper_classes
+            matches = row_pattern.findall(line)
+            row_classes = {name for name in matches if is_concrete_cpp_class_name(name)}
+            if len(calls) != len(row_classes):
+                self._issue(
+                    path,
+                    f"line {line_number}",
+                    "unparseable gameplay type table row; rows must be one per line as "
+                    "FN_TYPE(Class, Bases...) or FN_WRAPPED(Class, Bases...)",
+                )
+                continue
+            classes.update(row_classes)
+        if not classes:
+            return {}
+        for class_name in classes:
+            self.native_plugin_declared_class_sources.setdefault(class_name, set()).add(
+                "native_plugin::register_gameplay_types"
+            )
+        return {"register_gameplay_types": classes}
 
     def _native_plugin_entry_helpers(self, helper_classes: dict[str, set[str]]) -> dict[tuple[str, str], set[str]]:
         native_dir = self.repo_root / "native_plugins"
@@ -1676,12 +1853,12 @@ class ContentValidator:
         if not isinstance(data, dict):
             return loaded_entries
         for entry in iter_manifest_plugin_entries(data):
-            if entry.get("kind") != "dynamic":
+            if entry.get("kind") != "native":
                 continue
             library = entry.get("library")
             if not isinstance(library, str) or not library:
                 continue
-            function_name = entry.get("entry", "game_plugin_load_v1")
+            function_name = entry.get("entry", "game_plugin_load_v2")
             if isinstance(function_name, str) and function_name:
                 loaded_entries.add((Path(library).name, function_name))
         return loaded_entries
@@ -1705,6 +1882,8 @@ class ContentValidator:
             if isinstance(data, dict):
                 for key, value in data.items():
                     self.global_entries[key] = ConfigEntry(key=key, data=value, path=path)
+                    if not is_runtime_registered_config(value):
+                        self.data_only_config_ids.add(key)
             else:
                 self._issue(path, "$", "expected top-level JSON object")
 
@@ -1727,6 +1906,8 @@ class ContentValidator:
                 if isinstance(data, dict):
                     for key, value in data.items():
                         config_entries[key] = ConfigEntry(key=key, data=value, path=path)
+                        if not is_runtime_registered_config(value):
+                            self.data_only_config_ids.add(key)
                 else:
                     self._issue(path, "$", "expected top-level JSON object")
             script_info = self._parse_script(directory / "script.py")
@@ -1939,7 +2120,10 @@ class ContentValidator:
         return analyzer.info
 
     def _validate_global_configs(self) -> None:
-        visible = dict(self.global_entries)
+        # Parse the creature type catalog first so every subsequent config entry check
+        # (global and map-local) sees the resolved canonical type set.
+        self._validate_creature_type_catalog()
+        visible = self._registered_entries(self.global_entries)
         known_classes = self._constructible_classes()
         for entry in self.global_entries.values():
             self._validate_config_entry(entry, visible, known_classes)
@@ -1962,6 +2146,7 @@ class ContentValidator:
         self._validate_map_assets(context)
         self._validate_dialogs(context, visible)
         self._validate_script_refs(context, visible, known_classes, archetype_ids)
+        self._validateClassQuestGrants(context, visible)
         self._validate_gooby_runtime_names(context)
         self._validate_class_id_references(context, visible)
         self._validate_script_property_hygiene(context)
@@ -2038,6 +2223,8 @@ class ContentValidator:
         for key in ("title", "description", "completionText"):
             if key in data and not (isinstance(data[key], str) and data[key]):
                 self._issue(path, f"$.{key}", "must be a non-empty string")
+        if "artwork" in data:
+            self._validate_campaign_artwork(path, "$.artwork", data["artwork"])
         scenarios = data.get("scenarios")
         if "scenarios" in data and not (isinstance(scenarios, dict) and scenarios):
             self._issue(path, "$.scenarios", "expected a non-empty object of scenarios")
@@ -2072,6 +2259,8 @@ class ContentValidator:
         for key in ("map", "title", "briefing", "epilogue"):
             if key in scenario and not (isinstance(scenario[key], str) and scenario[key]):
                 self._issue(path, f"{location}.{key}", "must be a non-empty string")
+        if "artwork" in scenario:
+            self._validate_campaign_artwork(path, f"{location}.artwork", scenario["artwork"])
         map_name = scenario.get("map")
         map_context = map_contexts_by_name.get(map_name) if isinstance(map_name, str) else None
         if isinstance(map_name, str) and map_name and map_context is None:
@@ -2086,6 +2275,22 @@ class ContentValidator:
                     self._issue(path, f"{location}.next.{outcome}", "must name a scenario in this campaign")
             self._validate_campaign_scenario_outcomes(path, location, map_name, map_context, routes)
         self._validate_campaign_carryover(path, location, scenario.get("carryover"))
+
+    def _validate_campaign_artwork(self, path: Path, location: str, artwork: Any) -> None:
+        if not isinstance(artwork, str) or not artwork:
+            self._issue(path, location, "must be a non-empty string")
+            return
+        if (
+            not artwork.startswith("images/")
+            or not artwork.endswith(".png")
+            or any(part in artwork for part in ("..", "\\", ":"))
+        ):
+            self._issue(path, location, "must be an images/...png resource without traversal or absolute paths")
+            return
+        resource_root = (self.repo_root / "res").resolve()
+        resource_path = (resource_root / artwork).resolve()
+        if not resource_path.is_relative_to(resource_root) or not resource_path.is_file():
+            self._issue(path, location, "must reference an existing PNG resource under res/")
 
     def _validate_campaign_scenario_outcomes(
         self, path: Path, location: str, map_name: Any, map_context: MapContext | None, routes: dict[str, Any]
@@ -2215,7 +2420,35 @@ class ContentValidator:
     def _visible_entries(self, context: MapContext) -> dict[str, ConfigEntry]:
         visible = dict(self.global_entries)
         visible.update(context.config_entries)
-        return visible
+        return self._registered_entries(visible)
+
+    def _registered_entries(self, entries: dict[str, ConfigEntry]) -> dict[str, ConfigEntry]:
+        """The subset of config entries the runtime loader actually registers.
+
+        Mirrors CObjectHandler::registerConfig via is_runtime_registered_config:
+        data-only entries (an object without "class"/"ref") are dropped from the
+        visibility map so that script spawn/item calls and object-node refs which
+        name them are rejected here instead of silently failing at runtime.  The
+        entries themselves still live in global_entries/config_entries, so their
+        dedicated file-level validators (profiles, crafting, artifact sets, the
+        creature type catalog) keep running.
+        """
+        return {key: entry for key, entry in entries.items() if is_runtime_registered_config(entry.data)}
+
+    def _unresolvable_config_message(self, label: str, name: str) -> str:
+        """Message for a config reference the runtime cannot resolve.
+
+        Distinguishes a reference to a DATA-ONLY entry -- one the runtime config
+        loader skips at registration (CObjectHandler::registerConfig), so it can
+        never be instantiated, granted, or resolved -- from a plain unknown id.
+        """
+        if name in self.data_only_config_ids:
+            return (
+                f'{label} "{name}" names a data-only config entry (an object without "class"/"ref"); '
+                f"the runtime config loader never registers such entries, so the reference cannot "
+                f"resolve at runtime"
+            )
+        return f'unknown {label} "{name}"'
 
     def _known_classes(self, context: MapContext) -> set[str]:
         return self._constructible_classes(context.script_info.registered_classes if context.script_info else set())
@@ -2241,6 +2474,10 @@ class ContentValidator:
         self._validate_creature_class_property(entry.path, entry.key, entry.data, visible)
         self._validate_creature_race_definition(entry.path, entry.key, entry.data, visible)
         self._validate_interaction_self_target(entry.path, entry.key, entry.data, visible)
+        if self._entry_is_quest(entry, visible):
+            description = self._effective_property_value(entry.data, "description", visible)
+            if not isinstance(description, str) or not description.strip():
+                self._issue(entry.path, f"{entry.key}.properties.description", "expected non-empty quest description")
 
     def _validate_object_shape(self, path: Path, location: str, value: Any) -> None:
         if isinstance(value, dict):
@@ -2292,7 +2529,7 @@ class ContentValidator:
                 if not isinstance(ref, str):
                     self._issue(path, ref_location, "expected string ref")
                 elif ref not in visible:
-                    self._issue(path, ref_location, f'unknown ref "{ref}"')
+                    self._issue(path, ref_location, self._unresolvable_config_message("ref", ref))
             for key, child in value.items():
                 self._validate_refs(path, append_field(location, key), child, visible)
         elif isinstance(value, list):
@@ -2530,6 +2767,8 @@ class ContentValidator:
             base_properties = self._metadata_property_schema(base_class, seen)
             if base_properties:
                 properties.update(base_properties)
+        for property_name, type_token in REVIEWED_DYNAMIC_PROPERTY_TYPES.get(class_name, {}).items():
+            properties[property_name] = CppMetadataProperty(class_name, property_name, type_token)
         properties.update(self.metadata_properties.get(class_name, {}))
         if seen_classes is None:
             self._metadata_property_schema_cache[class_name] = properties
@@ -3145,6 +3384,43 @@ class ContentValidator:
                 numeric_value = obj.get(numeric_key)
                 if numeric_value is not None and not isinstance(numeric_value, (int, float)):
                     self._issue(context.map_path, f"{object_location}.{numeric_key}", "expected number")
+            if name == "castleMission":
+                self._validateCastleMission(context, obj, object_location, visible)
+
+    def _validateCastleMission(
+        self, context: MapContext, obj: dict[str, Any], location: str, visible: dict[str, ConfigEntry]
+    ) -> None:
+        marker = {"ref": obj.get("type"), "properties": obj.get("properties", {})}
+        text = self._effective_property_value(marker, "campaign_mission", visible)
+        mission_location = f"{location}.properties.campaign_mission"
+        if not isinstance(text, str) or not text.strip():
+            self._issue(context.map_path, mission_location, "expected non-empty castle mission JSON string")
+            return
+        try:
+            mission = json.loads(text.removeprefix("castleMission:"))
+        except json.JSONDecodeError as exc:
+            self._issue(context.map_path, mission_location, f"invalid castle mission JSON: {exc.msg}")
+            return
+        if not isinstance(mission, dict):
+            self._issue(context.map_path, mission_location, "expected castle mission JSON object")
+            return
+        quest_id = mission.get("questId")
+        if not isinstance(quest_id, str) or not quest_id.strip():
+            self._issue(context.map_path, f"{mission_location}.questId", "expected non-empty questId")
+            return
+        if not self._validateQuestTarget(context.map_path, f"{mission_location}.questId", quest_id, visible):
+            return
+        scenario_id = mission.get("scenarioId")
+        if not isinstance(scenario_id, str) or not scenario_id.strip():
+            self._issue(context.map_path, f"{mission_location}.scenarioId", "expected non-empty scenarioId")
+            return
+        quest_scenario = self._effective_property_value(visible[quest_id].data, "campaign_scenarioId", visible)
+        if scenario_id != quest_scenario:
+            self._issue(
+                context.map_path,
+                f"{mission_location}.scenarioId",
+                f'"{scenario_id}" does not match quest campaign_scenarioId {quest_scenario!r} for "{quest_id}"',
+            )
 
     def _validate_dialogs(self, context: MapContext, visible: dict[str, ConfigEntry]) -> None:
         if not context.script_info:
@@ -3351,12 +3627,13 @@ class ContentValidator:
                     )
             elif call.name in SCRIPT_ITEM_CALLS:
                 if call.value not in visible:
-                    self._issue(context.script_info.path, call.location, f'unknown item ref "{call.value}"')
+                    self._issue(
+                        context.script_info.path,
+                        call.location,
+                        self._unresolvable_config_message("item ref", call.value),
+                    )
             elif call.name in SCRIPT_QUEST_CALLS:
-                if call.value not in visible:
-                    self._issue(context.script_info.path, call.location, f'unknown quest id "{call.value}"')
-                elif not self._entry_is_quest(visible[call.value], visible):
-                    self._issue(context.script_info.path, call.location, f'"{call.value}" does not resolve to a quest')
+                self._validateQuestTarget(context.script_info.path, call.location, call.value, visible)
             elif call.name in SCRIPT_MAP_CALLS:
                 if call.value not in map_names:
                     expected = f"res/maps/{call.value}/map.json"
@@ -3718,12 +3995,74 @@ class ContentValidator:
                 return allowance.reason
         return None
 
-    def _entry_is_quest(self, entry: ConfigEntry, visible: dict[str, ConfigEntry]) -> bool:
-        resolved = self._resolve_entry(entry, visible)
-        if not isinstance(resolved.data, dict):
+    def _validateClassQuestGrants(self, context: MapContext, visible: dict[str, ConfigEntry]) -> None:
+        infos = [*self.plugin_info, *([context.script_info] if context.script_info else [])]
+        sources = {class_name: info for info in infos for class_name in info.classes}
+        concrete_classes = set(context.script_info.registered_classes if context.script_info else ())
+        for entry in visible.values():
+            if isinstance(entry.data, dict):
+                class_name = self._effective_object_class(entry.data, visible)
+                if class_name in self.python_registered_classes:
+                    concrete_classes.add(class_name)
+
+        def lineage(class_name: str, seen: set[str] | None = None) -> list[tuple[str, ScriptInfo]]:
+            visited = set(seen or ())
+            if class_name in visited or class_name not in sources:
+                return []
+            visited.add(class_name)
+            info = sources[class_name]
+            classes = [(class_name, info)]
+            for base in info.class_bases.get(class_name, ()):
+                classes.extend(lineage(base, visited))
+            return classes
+
+        for class_name in sorted(concrete_classes):
+            classes = lineage(class_name)
+            resolved_methods: set[str] = set()
+            uses_constant = False
+            for ancestor, info in classes:
+                methods = info.methods_by_class.get(ancestor, set()) - resolved_methods
+                if methods & info.class_quest_grant_methods.get(ancestor, set()):
+                    uses_constant = True
+                resolved_methods.update(methods)
+            if not uses_constant:
+                continue
+            constant_source = next(
+                (
+                    (info, info.class_quest_constants[ancestor])
+                    for ancestor, info in classes
+                    if ancestor in info.class_quest_constants
+                ),
+                None,
+            )
+            location = f"{class_name}.QUEST"
+            if constant_source is None:
+                self._issue(
+                    sources[class_name].path, location, "expected non-empty quest id for inherited self.QUEST grant"
+                )
+                continue
+            info, value = constant_source
+            location += f":{value.lineno}"
+            quest_id = string_literal(value)
+            if quest_id is None or not quest_id.strip():
+                self._issue(info.path, location, "expected non-empty quest id for inherited self.QUEST grant")
+                continue
+            self._validateQuestTarget(info.path, location, quest_id, visible)
+
+    def _validateQuestTarget(self, path: Path, location: str, quest_id: str, visible: dict[str, ConfigEntry]) -> bool:
+        if quest_id not in visible:
+            self._issue(path, location, f'unknown quest id "{quest_id}"')
             return False
-        class_name = resolved.data.get("class")
-        return isinstance(class_name, str) and (class_name == "CQuest" or class_name.endswith("Quest"))
+        if not self._entry_is_quest(visible[quest_id], visible):
+            self._issue(path, location, f'"{quest_id}" does not resolve to a quest')
+            return False
+        return True
+
+    def _entry_is_quest(self, entry: ConfigEntry, visible: dict[str, ConfigEntry]) -> bool:
+        if not isinstance(entry.data, dict):
+            return False
+        class_name = self._effective_object_class(entry.data, visible)
+        return isinstance(class_name, str) and self._class_inherits_from(class_name, "CQuest")
 
     def _resolve_entry(self, entry: ConfigEntry, visible: dict[str, ConfigEntry]) -> ConfigEntry:
         current = entry
@@ -3964,7 +4303,9 @@ class ContentValidator:
                     f'combined item "{combined}" occupies slot {primary_slot}, which no set piece uses',
                 )
 
-            combined_props = self._entry_properties(self.global_entries[combined].data) if combined in self.global_entries else {}
+            combined_props = (
+                self._entry_properties(self.global_entries[combined].data) if combined in self.global_entries else {}
+            )
             covered = combined_props.get("coveredSlots", [])
             covered_set = {str(slot) for slot in covered} if isinstance(covered, list) else set()
             expected_covered = set(piece_slots.values()) - ({primary_slot} if primary_slot else set())
@@ -4391,9 +4732,10 @@ class ContentValidator:
         chain or another object is still checked.  For every node whose effective class
         is ``CCreatureRace`` it verifies that each ``baseStats`` key names a ``CStats``
         metadata property, that each ``actions`` entry resolves to a ``CInteraction``,
-        and that ``creatureType`` / every ``subtypes`` entry is a non-empty string. The
-        type fields stay DATA-ONLY (non-empty-string checks only); no mechanical type
-        semantics are inferred.
+        that ``creatureType`` is a non-empty string naming a catalogued creature type
+        (res/config/creature_types.json), and that every ``subtypes`` entry is a
+        non-empty string.  The type fields stay mechanically DATA-ONLY; the catalog is
+        validation-only metadata and no mechanical type semantics are inferred.
         """
         if isinstance(value, dict):
             if self._effective_object_class(value, visible) == CREATURE_RACE_CONSTRUCTOR_CLASS:
@@ -4510,6 +4852,131 @@ class ContentValidator:
                 location,
                 f'"{CREATURE_RACE_TYPE_PROPERTY}" expected a non-empty string; got {json_value_kind(creature_type)}',
             )
+            return
+        # Catalog membership (EPIC_08/STORY_01/SUBSTORY_01): every creatureType string
+        # must name a canonical type from res/config/creature_types.json.  The check
+        # fails closed -- a type that cannot be verified because the catalog is missing
+        # or malformed is reported instead of silently accepted.
+        if self.creature_type_catalog is None:
+            self._issue(
+                path,
+                location,
+                f'{CREATURE_RACE_TYPE_PROPERTY} "{creature_type}" cannot be validated: the creature type '
+                f"catalog res/config/{CREATURE_TYPES_CONFIG} is missing or malformed; declare a "
+                f'"{CREATURE_TYPE_CATALOG_ENTRY}" entry listing every canonical creature type',
+            )
+            return
+        if creature_type not in self.creature_type_catalog:
+            self._issue(
+                path,
+                location,
+                f'unknown {CREATURE_RACE_TYPE_PROPERTY} "{creature_type}"; expected one of '
+                f"{', '.join(sorted(self.creature_type_catalog))} "
+                f"(add the new type to res/config/{CREATURE_TYPES_CONFIG} or fix the value)",
+            )
+
+    def _validate_creature_type_catalog(self) -> None:
+        """Parse and schema-check the creature type catalog config.
+
+        The catalog file res/config/creature_types.json declares a single data-only
+        entry, ``creatureTypeCatalog``, whose ``types`` object maps every canonical
+        ``creatureType`` id to a definition carrying a short human-readable
+        ``description``.  On success ``self.creature_type_catalog`` becomes the set of
+        canonical type ids used by _validate_creature_race_type; when the file is
+        absent, unreadable, or its ``types`` map is unusable, the catalog stays None
+        and every creatureType usage in content is reported as unverifiable (fail
+        closed).  A missing catalog file alone is NOT an issue -- content that never
+        declares a creatureType (e.g. synthetic fixture repos) does not need one --
+        but a catalog file that exists is always schema-checked.  Validation-only:
+        nothing at runtime reads the catalog.
+        """
+        catalog_path = None
+        data = None
+        for path, file_data in self.global_files.items():
+            if path.name == CREATURE_TYPES_CONFIG:
+                catalog_path = path
+                data = file_data
+                break
+        if catalog_path is None or not isinstance(data, dict):
+            # Absent file, unreadable JSON, or a non-object document; the latter two are
+            # already reported by the loader, and creatureType usages fail closed.
+            return
+        unexpected_entries = sorted(set(data) - {CREATURE_TYPE_CATALOG_ENTRY})
+        if unexpected_entries:
+            self._issue(
+                catalog_path,
+                "$",
+                f'creature type catalog must declare only the "{CREATURE_TYPE_CATALOG_ENTRY}" entry; '
+                f"unexpected entries: {', '.join(unexpected_entries)}",
+            )
+        entry = data.get(CREATURE_TYPE_CATALOG_ENTRY)
+        if entry is None:
+            self._issue(
+                catalog_path,
+                "$",
+                f'creature type catalog is missing the "{CREATURE_TYPE_CATALOG_ENTRY}" entry',
+            )
+            return
+        if not isinstance(entry, dict):
+            self._issue(
+                catalog_path,
+                CREATURE_TYPE_CATALOG_ENTRY,
+                f"expected object; got {json_value_kind(entry)}",
+            )
+            return
+        if entry.get(CREATURE_TYPE_CATALOG_KIND_KEY) != CREATURE_TYPE_CATALOG_KIND:
+            self._issue(
+                catalog_path,
+                append_field(CREATURE_TYPE_CATALOG_ENTRY, CREATURE_TYPE_CATALOG_KIND_KEY),
+                f'expected "{CREATURE_TYPE_CATALOG_KIND}"',
+            )
+        unexpected_keys = sorted(set(entry) - CREATURE_TYPE_CATALOG_ENTRY_KEYS)
+        if unexpected_keys:
+            self._issue(
+                catalog_path,
+                CREATURE_TYPE_CATALOG_ENTRY,
+                f"unsupported catalog keys: {', '.join(unexpected_keys)}",
+            )
+        types = entry.get(CREATURE_TYPE_CATALOG_TYPES_KEY)
+        types_location = append_field(CREATURE_TYPE_CATALOG_ENTRY, CREATURE_TYPE_CATALOG_TYPES_KEY)
+        if not isinstance(types, dict):
+            self._issue(
+                catalog_path,
+                types_location,
+                f"expected object mapping creature type ids to definitions; got {json_value_kind(types)}",
+            )
+            return
+        if not types:
+            self._issue(catalog_path, types_location, "creature type catalog must declare at least one type")
+            return
+        for type_id, definition in types.items():
+            self._validate_creature_type_definition(
+                catalog_path, append_field(types_location, type_id), type_id, definition
+            )
+        self.creature_type_catalog = {type_id for type_id in types if type_id}
+
+    def _validate_creature_type_definition(self, path: Path, location: str, type_id: str, definition: Any) -> None:
+        """Check one catalog type entry: non-empty id plus a described definition object.
+
+        A malformed definition is reported but does not invalidate the whole catalog --
+        the sibling type ids stay usable for membership checks, and the validation run
+        already fails through the definition issue itself.
+        """
+        if not type_id:
+            self._issue(path, location, "creature type ids must be non-empty strings")
+        if not isinstance(definition, dict):
+            self._issue(path, location, f"expected object; got {json_value_kind(definition)}")
+            return
+        unexpected = sorted(set(definition) - {CREATURE_TYPE_DESCRIPTION_KEY})
+        if unexpected:
+            self._issue(path, location, f"unsupported creature type keys: {', '.join(unexpected)}")
+        description = definition.get(CREATURE_TYPE_DESCRIPTION_KEY)
+        if not isinstance(description, str) or not description:
+            self._issue(
+                path,
+                append_field(location, CREATURE_TYPE_DESCRIPTION_KEY),
+                f"expected non-empty string; got {json_value_kind(description)}",
+            )
 
     def _validate_creature_race_subtypes(self, path: Path, location: str, subtypes: Any) -> None:
         if not isinstance(subtypes, list):
@@ -4543,14 +5010,16 @@ class ContentValidator:
         return has_ref or (has_class and ("properties" in value or set(value) <= OBJECT_SCHEMA_KEYS))
 
     def _archetype_definition_ids(self, visible: dict[str, ConfigEntry]) -> set[str]:
-        """Resolve config ids that name a CCreatureRace/CCreatureClass *definition*.
+        """Resolve config ids that name an archetype/metadata *definition*.
 
         An id is an archetype definition when its effective engine class (following
-        ``ref`` chains) is one of CREATURE_ARCHETYPE_BASE_CLASSES or inherits from
+        ``ref`` chains) is one of CREATURE_ARCHETYPE_BASE_CLASSES (CCreatureRace,
+        CCreatureClass, CCreatureTemplate, CCreatureClassTrack) or inherits from
         one, or when it is a top-level entry declared in the dedicated archetype
-        config files (creature_races.json / creature_classes.json).  Such ids are
-        referenced definitions, not actors, so using them as a concrete spawn target
-        is rejected.  Resolution is purely structural -- never from id name strings.
+        config files (creature_races.json / creature_classes.json /
+        creature_templates.json).  Such ids are referenced definitions, not actors,
+        so using them as a concrete spawn target is rejected.  Resolution is purely
+        structural -- never from id name strings.
         """
         archetype_ids: set[str] = set()
         for key, entry in visible.items():
@@ -4589,7 +5058,7 @@ class ContentValidator:
             path,
             location,
             f'{label} "{name}" is a creature archetype definition '
-            f"(CCreatureRace/CCreatureClass) and cannot be used as a concrete spawn target",
+            f"({'/'.join(CREATURE_ARCHETYPE_BASE_CLASSES)}) and cannot be used as a concrete spawn target",
         )
         return True
 
@@ -4605,7 +5074,7 @@ class ContentValidator:
             return f'{label} "{class_name}" is registered by native plugin code but no manifest entry loads {owners}'
         if class_name in self.metadata_declared_classes:
             return f'{label} "{class_name}" is declared in metadata but is not registered as constructible content'
-        return f'unknown {label} "{class_name}"'
+        return self._unresolvable_config_message(label, class_name)
 
     def _excluded_use_is_allowed(self, path: Path, location: str, class_name: str) -> bool:
         exclusion = self.registration_exclusions.get(class_name)
@@ -4962,19 +5431,14 @@ def python_base_class_name(base: ast.expr) -> str | None:
 
 def iter_manifest_plugin_entries(data: dict[str, Any]) -> list[dict[str, Any]]:
     entries: list[dict[str, Any]] = []
-    global_entries = data.get("global")
-    if isinstance(global_entries, list):
-        entries.extend(entry for entry in global_entries if isinstance(entry, dict))
-    map_entries = data.get("maps")
-    if isinstance(map_entries, dict):
-        for map_plugins in map_entries.values():
-            if isinstance(map_plugins, list):
-                entries.extend(entry for entry in map_plugins if isinstance(entry, dict))
+    plugin_entries = data.get("plugins")
+    if isinstance(plugin_entries, list):
+        entries.extend(entry for entry in plugin_entries if isinstance(entry, dict))
     return entries
 
 
 def is_concrete_cpp_class_name(name: str) -> bool:
-    return name != "CWrapper" and re.match(r"^C[A-Za-z_]\w*$", name) is not None
+    return name not in ("CWrapper", "CLuaWrapper") and re.match(r"^C[A-Za-z_]\w*$", name) is not None
 
 
 def append_field(location: str, key: Any) -> str:

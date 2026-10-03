@@ -16,8 +16,10 @@ You should have received a copy of the GNU General Public License
 along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 
+#include "core/CController.h"
 #include "core/CGame.h"
 #include "core/CJsonUtil.h"
+#include "core/CLoader.h"
 #include "core/CStats.h"
 #include "core/CMap.h"
 #include "core/CTypeRegistration.h"
@@ -26,7 +28,9 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #include "handler/CTooltipHandler.h"
 #include "object/CCreature.h"
 #include "object/CCreatureClass.h"
+#include "object/CCreatureClassTrack.h"
 #include "object/CCreatureRace.h"
+#include "object/CCreatureTemplate.h"
 #include "object/CDialog.h"
 #include "object/CEffect.h"
 #include "object/CGameObject.h"
@@ -38,6 +42,7 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #include "object/CQuest.h"
 #include "object/CTile.h"
 #include "test_harness.h"
+#include "stat_composition_fixture.h"
 #include "vutil.h"
 
 #include <pybind11/embed.h>
@@ -48,6 +53,7 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #include <map>
 #include <memory>
 #include <set>
+#include <stdexcept>
 #include <string>
 #include <typeindex>
 #include <utility>
@@ -80,6 +86,15 @@ class PropertyChangeEmitter : public CGameObject {
 
   public:
     void recordChangedProperty(const std::string &property_name) { recordDirectPropertyChanged(property_name); }
+};
+
+class ObjectSlotChangeProbe : public CGameObject {
+    V_META(ObjectSlotChangeProbe, CGameObject, V_METHOD(ObjectSlotChangeProbe, onPropertyChanged, void, std::string))
+
+  public:
+    void onPropertyChanged(std::string property_name) { changedProperties.push_back(std::move(property_name)); }
+
+    std::vector<std::string> changedProperties;
 };
 
 size_t count_substring(const std::string &haystack, const std::string &needle) {
@@ -128,10 +143,10 @@ void test_tooltip_handler_builds_labels_descriptions_and_item_bonuses() {
 
     auto item_tooltip = CTooltipHandler::buildTooltip(item);
     expect_true(item_tooltip.find("Mossblade") != std::string::npos, "item tooltip should include the item label");
-    expect_true(item_tooltip.find(": 5") != std::string::npos,
-                "item tooltip should list positive integer bonuses with their value");
-    expect_true(item_tooltip.find("-3") == std::string::npos,
-                "item tooltip should hide non-positive bonuses such as negative crit");
+    expect_true(item_tooltip.find("Strength: +5") != std::string::npos,
+                "item tooltip should name positive modifiers and show their explicit plus sign");
+    expect_true(item_tooltip.find("Critical chance: -3") != std::string::npos,
+                "item tooltip should name negative modifiers and preserve their minus sign");
     expect_true(count_substring(item_tooltip, "A blade wrapped in moss.") == 1,
                 "item tooltips should include the description exactly once after deduplication");
 }
@@ -452,6 +467,64 @@ void test_game_object_equivalent_value_covers_supported_property_types() {
                 "equivalentValue should reject unsupported property types");
 }
 
+void testDynamicObjectPropertiesPreserveIdentityAndNotifications() {
+    CTypes::register_type_metadata<ObjectSlotChangeProbe, CGameObject>();
+    CTypes::register_type_metadata<CItem, CGameObject>();
+    auto owner = std::make_shared<CGameObject>();
+    auto other_owner = std::make_shared<CGameObject>();
+    auto original = std::make_shared<CGameObject>();
+    auto replacement = std::make_shared<CGameObject>();
+    auto probe = std::make_shared<ObjectSlotChangeProbe>();
+    owner->connect("propertyChanged", probe, "onPropertyChanged");
+
+    try {
+        owner->setObjectProperty("companion", original);
+        expect_true(owner->hasProperty("companion") && owner->getObjectProperty<CGameObject>("companion") == original,
+                    "creating a dynamic object slot must retain the original object identity");
+        drain_event_loop();
+        expect_true(probe->changedProperties == std::vector<std::string>{"companion"},
+                    "creating a dynamic object slot must emit exactly one property change");
+
+        other_owner->setObjectProperty("companion", original);
+        owner->setObjectProperty("companion", replacement);
+        expect_true(owner->getObjectProperty<CGameObject>("companion") == replacement &&
+                        other_owner->getObjectProperty<CGameObject>("companion") == original,
+                    "replacing an object slot must not change the same slot on another owner");
+        drain_event_loop();
+        expect_true(probe->changedProperties == std::vector<std::string>({"companion", "companion"}),
+                    "replacing a dynamic object slot must emit exactly one additional change");
+
+        owner->setObjectProperty("companion", std::shared_ptr<CGameObject>());
+        expect_true(owner->hasProperty("companion") && !owner->getObjectProperty<CGameObject>("companion"),
+                    "clearing an object slot must retain a readable null-valued property");
+        drain_event_loop();
+        expect_true(probe->changedProperties == std::vector<std::string>({"companion", "companion", "companion"}),
+                    "clearing a dynamic object slot must emit exactly one additional change");
+
+        auto item = std::make_shared<CItem>();
+        auto bonus = std::make_shared<CStats>();
+        item->connect("propertyChanged", probe, "onPropertyChanged");
+        item->setObjectProperty("bonus", bonus);
+        expect_true(item->getBonus() == bonus && item->getObjectProperty<CStats>("bonus") == bonus,
+                    "object-property assignment must still invoke declared typed setters");
+        drain_event_loop();
+        expect_true(probe->changedProperties ==
+                        std::vector<std::string>({"companion", "companion", "companion", "bonus"}),
+                    "a declared object setter must also emit one property change");
+
+        item->setObjectProperty("bonus", std::shared_ptr<CStats>());
+        expect_true(!item->getBonus() && !item->getObjectProperty<CStats>("bonus"),
+                    "declared typed object slots must still support null clearing");
+        owner->setProperty("declaredSlot", original);
+        owner->setObjectProperty("declaredSlot", replacement);
+        expect_true(owner->getObjectProperty<CGameObject>("declaredSlot") == replacement,
+                    "existing dynamically declared pointer slots must accept replacement through the helper");
+        drain_event_loop();
+    } catch (const std::exception &error) {
+        expect_true(false, (std::string("object-property assignment must not throw: ") + error.what()).c_str());
+    }
+}
+
 void test_game_object_property_helpers_and_owned_tile_movement() {
     auto object = std::make_shared<CGameObject>();
     expect_true(object->getStringProperty("missing").empty(), "missing string properties should default empty");
@@ -515,6 +588,59 @@ void test_game_object_property_helpers_and_owned_tile_movement() {
     standalone_tile->setPosz(7);
     expect_true(standalone_tile->getCoords() == Coords(5, 6, 7),
                 "public tile coordinate setters should update all tile coordinates");
+}
+
+void test_owned_tile_move_refuses_occupied_destination_atomically() {
+    auto map = std::make_shared<CMap>();
+    auto moving_tile = std::make_shared<CTile>();
+    auto destination_tile = std::make_shared<CTile>();
+
+    expect_true(map->addTile(moving_tile, 1, 1, 0), "moving tile fixture should be added at its origin");
+    expect_true(map->addTile(destination_tile, 2, 1, 0),
+                "destination tile fixture should be added at the contested coordinate");
+
+    const auto revision_before_move = map->getNavigationRevision();
+    moving_tile->moveTo(2, 1, 0);
+
+    expect_true(moving_tile->getCoords() == Coords(1, 1, 0),
+                "a refused tile move should preserve the moving tile coordinates");
+    const bool origin_preserved = map->contains(1, 1, 0);
+    expect_true(origin_preserved, "a refused tile move should preserve the moving tile origin");
+    if (origin_preserved) {
+        expect_true(map->getTile(1, 1, 0) == moving_tile,
+                    "a refused tile move should preserve the moving tile at its origin");
+    }
+    expect_true(map->getTile(2, 1, 0) == destination_tile, "a refused tile move should preserve the destination tile");
+    expect_true(map->getTiles().size() == 2, "a refused tile move should preserve both tiles");
+    expect_true(map->getNavigationRevision() == revision_before_move,
+                "a refused tile move should not report a navigation change");
+}
+
+void test_owned_tile_move_synchronizes_wrapped_equivalent_coordinates_without_navigation_change() {
+    auto map = std::make_shared<CMap>();
+    map->setXBounds({{0, 4}});
+    map->setYBounds({{0, 4}});
+    map->setWrapX({{0, 1}});
+
+    auto tile = std::make_shared<CTile>();
+    tile->setPosx(-1);
+    tile->setPosy(1);
+    tile->setPosz(0);
+    map->setTiles({tile});
+
+    expect_true(map->getTile(4, 1, 0) == tile, "setTiles should index a wrapped tile under its normalized coordinates");
+    expect_true(tile->getCoords() == Coords(-1, 1, 0),
+                "the fixture should retain non-normalized coordinates before movement");
+    const auto revision_before_move = map->getNavigationRevision();
+
+    tile->moveTo(4, 1, 0);
+
+    expect_true(tile->getCoords() == Coords(4, 1, 0),
+                "moveTo should synchronize a tile to wrapped-equivalent target coordinates");
+    expect_true(tile->getMap() == map, "normalization-only movement should preserve the owning map");
+    expect_true(map->getTile(4, 1, 0) == tile, "normalization-only movement should preserve the tile coordinate index");
+    expect_true(map->getNavigationRevision() == revision_before_move,
+                "normalization-only movement should not report a navigation change");
 }
 
 void test_animation_property_events_invalidate_cached_graphics_object() {
@@ -603,7 +729,7 @@ void test_creature_inventory_equipment_and_ratio_helpers() {
     creature->hurt(-4.0f);
     expect_true(creature->getHp() == 999, "negative floating damage should clamp to zero damage");
     creature->hurt(5);
-    expect_true(creature->getHp() == 999, "over-armor damage should clamp to zero damage");
+    expect_true(creature->getHp() == 998, "over-armor positive damage must retain one point after rounding");
 
     creature->setMana(999);
     creature->addMana(1);
@@ -620,6 +746,72 @@ void test_creature_inventory_equipment_and_ratio_helpers() {
     creature->setGold(25);
     creature->takeGold(5);
     expect_true(creature->getGold() == 20, "takeGold should subtract from creature gold");
+}
+
+void test_creature_armor_caps_mitigation_for_loot_stacks_and_effects() {
+    auto game = CGameLoader::loadGame();
+    auto creature = std::make_shared<CCreature>();
+    creature->setGame(game);
+    bool testedHighArmor = false;
+    for (const auto &type : game->getObjectHandler()->getAllSubTypes("CItem")) {
+        auto item = game->createObject<CItem>(type);
+        if (!item || !item->getBonus() || item->getBonus()->getArmor() <= 0) {
+            continue;
+        }
+        auto base = stats_with_main(10, 10);
+        base->setBlock(-item->getBonus()->getBlock());
+        base->setNormalResist(-item->getBonus()->getNormalResist());
+        creature->setBaseStats(base);
+        creature->setEquipped({{"0", item}});
+        creature->setHp(1000);
+        const auto armor = creature->getStats()->getArmor();
+        const int expectedDamage = std::max(1, static_cast<int>(100 * ((100 - std::min(95, armor)) / 100.0)));
+        creature->hurt(100);
+        expect_true(creature->getHp() == 1000 - expectedDamage,
+                    "every configured armor bonus must use capped percentage mitigation without immunity");
+        testedHighArmor = testedHighArmor || armor >= 100;
+    }
+    expect_true(testedHighArmor, "the armor regression must exercise the shipped high-armor artifacts");
+
+    auto base = stats_with_main(10, 10);
+    auto first = std::make_shared<CItem>();
+    first->getBonus()->setArmor(70);
+    auto second = std::make_shared<CItem>();
+    second->getBonus()->setArmor(60);
+    creature->setBaseStats(base);
+    creature->setEquipped({{"2", first}, {"5", second}});
+    auto effect = std::make_shared<CEffect>();
+    effect->setTypeId("unitArmorScalingEffect");
+    effect->getBonus()->setArmor(creature->getStats()->getArmor() * 75 / 100);
+    creature->addEffect(effect);
+    expect_true(creature->getStats()->getArmor() == 227,
+                "the mitigation cap must preserve raw equipment and self-scaling effect bonuses");
+    expect_true(creature->getStats()->getText(1).find("Armor: 95%") != std::string::npos,
+                "aggregate stat text must show effective capped armor mitigation");
+    creature->setHp(1000);
+    creature->hurt(100);
+    expect_true(creature->getHp() == 995, "stacked equipment and armor buffs must retain incoming damage");
+
+    auto damage = std::make_shared<CDamage>();
+    damage->setNormal(1);
+    damage->setFire(1);
+    damage->setFrost(1);
+    damage->setThunder(1);
+    damage->setShadow(1);
+    creature->setHp(1000);
+    creature->hurt(damage);
+    expect_true(creature->getHp() == 995, "every positive damage channel must retain one point through armor");
+    creature->hurt(0);
+    creature->hurt(-1);
+    expect_true(creature->getHp() == 995, "zero and negative damage must not become minimum damage");
+    base->setNormalResist(100);
+    creature->hurt(100);
+    expect_true(creature->getHp() == 995, "full resistance must still negate its damage channel");
+    base->setNormalResist(0);
+    base->setBlock(100);
+    creature->hurt(100);
+    expect_true(creature->getHp() == 995, "successful blocking must still negate damage after capped armor");
+    creature->removeEffect(effect);
 }
 
 void test_equip_item_same_instance_is_noop_and_keeps_cursed_lock() {
@@ -676,6 +868,63 @@ void test_equip_item_same_instance_is_noop_and_keeps_cursed_lock() {
     creature->equipItem("3", nullptr);
     expect_true(creature->getItemAtSlot("3") == nullptr, "lifting the curse must unlock the slot again");
     expect_true(creature->hasInInventory(cursed_armor), "an unlocked unequip must return the item to the inventory");
+}
+
+void test_stat_composition_matches_reflective_reference_and_reads_current_inputs() {
+    using namespace stat_composition_fixture;
+    for (int mode = 0; mode < 7; ++mode) {
+        auto fixture = make(mode);
+        std::vector<StatsModifier> original;
+        for (const auto &source : fixture.sources) {
+            original.push_back(source->modifier());
+        }
+        for (int level : {-1, 0, 1, 4}) {
+            fixture.creature->setLevel(level);
+            fixture.creature->setRacialLevel(level);
+            std::size_t contributions = 0;
+            auto expected = reflectiveReference(fixture.creature, contributions);
+            auto actual = fixture.creature->getStats();
+            expect_true(actual->modifier() == expected->modifier(),
+                        "private stat fold must preserve all 17 old reflective sums at negative/zero/positive levels");
+            expect_true(actual->getMainStat() == expected->getMainStat(),
+                        "private stat fold must preserve legacy, single-class and first-track main-stat precedence");
+            for (const auto &field : fieldNames) {
+                expect_true(actual->getNumericProperty(field) == expected->getNumericProperty(field),
+                            "materialized stat reflection must agree with the independent old reference");
+            }
+            expect_true(actual != fixture.creature->getStats(), "each stat read must return a fresh aggregate");
+        }
+        for (std::size_t i = 0; i < fixture.sources.size(); ++i) {
+            expect_true(fixture.sources[i]->modifier() == original[i], "stat reads must never mutate a source");
+            expect_true(fixture.sources[i]->getMainStat() == "stamina", "stat reads must preserve source main stats");
+        }
+        expect_true(fixture.sources.front()->getNumericProperty("strength") == 900,
+                    "source dynamic shadows must remain untouched and must not replace typed modifier input");
+
+        auto old_result = fixture.creature->getStats();
+        const auto old_values = old_result->modifier();
+        for (const auto &source : fixture.sources) {
+            source->setDamage(source->getDamage() + 3);
+        }
+        fixture.creature->setLevel(2);
+        fixture.creature->setRacialLevel(1);
+        fixture.creature->getBaseStats()->setMainStat("agility");
+        if (auto klass = fixture.creature->getCreatureClass()) {
+            klass->setMainStat("");
+        }
+        for (const auto &track : fixture.creature->getClassTracks()) {
+            track->setOrder(-track->getOrder());
+            track->setLevel(1);
+        }
+        fixture.creature->setEquipped({});
+        fixture.creature->setEffects({});
+        std::size_t contributions = 0;
+        auto expected = reflectiveReference(fixture.creature, contributions);
+        auto actual = fixture.creature->getStats();
+        expect_true(actual->modifier() == expected->modifier() && actual->getMainStat() == expected->getMainStat(),
+                    "later reads must observe changed source stats, levels, track order and removed items/effects");
+        expect_true(old_result->modifier() == old_values, "later input mutations must not change an earlier aggregate");
+    }
 }
 
 void test_no_archetype_creature_stats_keep_legacy_composition() {
@@ -842,6 +1091,241 @@ void test_creature_stat_precedence_orders_sources_and_main_stat() {
                 "removing the effects source should remove exactly its contribution from the composed stat");
 }
 
+void test_racial_progression_defaults_keep_composition_neutral() {
+    // [EPIC_08][STORY_04][SUBSTORY_01] Model racial advancement separately from class
+    // level -- NEUTRALITY. Racial advancement (CCreatureRace::racialLevelStats applied
+    // once per CCreature::racialLevel) is future-gated scaffolding: with the neutral
+    // defaults (racialLevel == 0 and/or an empty race progression) it contributes
+    // exactly zero, so every existing creature -- legacy or composed -- keeps a
+    // bit-identical stat block and the class level semantics are untouched. There is
+    // deliberately NO XP wiring for racialLevel, so nothing can raise it implicitly.
+    //
+    // The per-property comparison below reflects over CStats via getProperty<int>,
+    // which needs the CStats any-cast converter registered (see the registration
+    // note in test_racial_level_round_trips_through_meta_property_binding).
+    // Register it here explicitly so this test does not depend on test order.
+    CTypes::register_type<CGameObject>();
+    CTypes::register_type<CStats, CGameObject>();
+
+    auto same_int_properties = [](const std::shared_ptr<CStats> &before, const std::shared_ptr<CStats> &after) {
+        bool same = before->getMainStat() == after->getMainStat();
+        before->meta()->for_all_properties(before, [&](auto property) {
+            if (property->value_type() != std::type_index(typeid(int))) {
+                return;
+            }
+            same = same && before->getProperty<int>(property->name()) == after->getProperty<int>(property->name());
+        });
+        return same;
+    };
+
+    // Shared legacy shape reused from the existing composition tests: base 10 int,
+    // +2 int per class level, level 3.
+    auto make_creature = []() {
+        auto creature = std::make_shared<CCreature>();
+        auto base = std::make_shared<CStats>();
+        base->setMainStat("intelligence");
+        base->setIntelligence(10);
+        base->setStamina(6);
+        creature->setBaseStats(base);
+        auto level_stats = std::make_shared<CStats>();
+        level_stats->setIntelligence(2);
+        creature->setLevelStats(level_stats);
+        creature->setLevel(3);
+        return creature;
+    };
+
+    // (a) Legacy creature (no race, no creatureClass): racialLevel alone must not
+    // contribute -- racial progression is race-carried, and the legacy path stays exact.
+    auto legacy = make_creature();
+    auto legacy_before = legacy->getStats();
+    expect_true(legacy->getRacialLevel() == 0, "racialLevel should default to 0 (zero contribution)");
+    expect_true(legacy_before->getIntelligence() == 10 + 3 * 2,
+                "the legacy creature should keep the exact legacy composition (base + level*levelStats)");
+    legacy->setRacialLevel(5);
+    expect_true(same_int_properties(legacy_before, legacy->getStats()),
+                "a racialLevel on a legacy creature (no race) must not change the composed stats");
+    expect_true(legacy->getLevel() == 3, "racialLevel must not disturb the class-driven level");
+
+    // (b) Composed creature whose race has NO authored racial progression: a nonzero
+    // racialLevel composes bit-identically (default-empty progression => zero growth).
+    auto composed = make_creature();
+    auto race = std::make_shared<CCreatureRace>();
+    composed->setRace(race);
+    auto composed_before = composed->getStats();
+    composed->setRacialLevel(4);
+    expect_true(same_int_properties(composed_before, composed->getStats()),
+                "racial levels over an empty race progression must contribute exactly zero");
+
+    // (c) Composed creature whose race HAS racial progression but racialLevel stays at
+    // the default 0: attaching the progression must not change anything.
+    auto gated = make_creature();
+    auto progressive_race = std::make_shared<CCreatureRace>();
+    gated->setRace(progressive_race);
+    auto gated_before = gated->getStats();
+    auto racial_growth = std::make_shared<CStats>();
+    racial_growth->setStamina(3);
+    racial_growth->setStrength(2);
+    progressive_race->setRacialLevelStats(racial_growth);
+    expect_true(same_int_properties(gated_before, gated->getStats()),
+                "race progression with the default racialLevel of 0 must contribute exactly zero");
+}
+
+void test_racial_level_composes_race_progression_independently_of_class_level() {
+    // [EPIC_08][STORY_04][SUBSTORY_01] Model racial advancement separately from class
+    // level -- CAPABILITY. A race configured with racialLevelStats plus a creature
+    // racialLevel of N composes exactly N * racialLevelStats, folded at the documented
+    // position (after all base sources, opening the per-level growth block ahead of
+    // creatureClass.levelStats and creature.levelStats). The racial contribution is
+    // independent of -- and coexists with -- the class level growth: changing the class
+    // level does not alter the racial contribution and vice versa.
+    //
+    // The expected-vs-actual sweep below reflects over CStats via getProperty<int>,
+    // so register the CStats any-cast converter explicitly (idempotent; see the
+    // registration note in test_racial_level_round_trips_through_meta_property_binding).
+    CTypes::register_type<CGameObject>();
+    CTypes::register_type<CStats, CGameObject>();
+
+    auto creature = std::make_shared<CCreature>();
+
+    auto base = std::make_shared<CStats>();
+    base->setMainStat("intelligence");
+    base->setIntelligence(10);
+    base->setStamina(6);
+    base->setStrength(4);
+    creature->setBaseStats(base);
+
+    auto creature_growth = std::make_shared<CStats>();
+    creature_growth->setIntelligence(1);
+    creature->setLevelStats(creature_growth);
+
+    auto race_base = std::make_shared<CStats>();
+    race_base->setStamina(2);
+    auto racial_growth = std::make_shared<CStats>();
+    racial_growth->setStamina(3);
+    racial_growth->setStrength(2);
+    auto race = std::make_shared<CCreatureRace>();
+    race->setBaseStats(race_base);
+    race->setRacialLevelStats(racial_growth);
+    creature->setRace(race);
+
+    auto class_growth = std::make_shared<CStats>();
+    class_growth->setIntelligence(2);
+    class_growth->setStamina(1);
+    auto klass = std::make_shared<CCreatureClass>();
+    klass->setLevelStats(class_growth);
+    creature->setCreatureClass(klass);
+
+    const int class_level = 3;
+    const int racial_level = 2;
+    creature->setLevel(class_level);
+    creature->setRacialLevel(racial_level);
+
+    // Independently recompute the documented composition:
+    //   race.baseStats -> creature.baseStats -> racialLevel * race.racialLevelStats ->
+    //   class_level * (class levelStats + creature levelStats).
+    auto expected = std::make_shared<CStats>();
+    expected->setMainStat(base->getMainStat());
+    expected->addBonus(race_base);
+    expected->addBonus(base);
+    for (int i = 0; i < racial_level; ++i) {
+        expected->addBonus(racial_growth);
+    }
+    for (int i = 0; i < class_level; ++i) {
+        expected->addBonus(class_growth);
+    }
+    for (int i = 0; i < class_level; ++i) {
+        expected->addBonus(creature_growth);
+    }
+
+    auto actual = creature->getStats();
+    actual->meta()->for_all_properties(actual, [&](auto property) {
+        if (property->value_type() != std::type_index(typeid(int))) {
+            return;
+        }
+        int actual_value = actual->getProperty<int>(property->name());
+        int expected_value = expected->getProperty<int>(property->name());
+        if (actual_value != expected_value) {
+            std::cerr << "RACIAL STAT DIFF [" << property->name() << "] expected " << expected_value << " but got "
+                      << actual_value << "\n";
+        }
+        expect_true(actual_value == expected_value,
+                    "composed stats should fold racialLevel * race.racialLevelStats alongside (not instead of) "
+                    "the class level growth");
+    });
+    expect_true(actual->getMainStat() == "intelligence",
+                "racial progression is numeric-only and must not disturb the selected main stat");
+
+    // Independence, direction 1: raising the CLASS level adds exactly the class +
+    // creature growth -- the racial contribution stays constant.
+    creature->setLevel(class_level + 2);
+    auto after_class_levels = creature->getStats();
+    expect_true(after_class_levels->getIntelligence() == actual->getIntelligence() + 2 * (2 + 1),
+                "raising the class level should add exactly the class+creature growth per level");
+    expect_true(after_class_levels->getStamina() == actual->getStamina() + 2 * 1,
+                "raising the class level should not change the racial stamina contribution");
+    expect_true(after_class_levels->getStrength() == actual->getStrength(),
+                "raising the class level should leave the racial-only strength contribution untouched");
+
+    // Independence, direction 2: raising the RACIAL level adds exactly the racial
+    // growth -- the class-level contribution stays constant.
+    creature->setRacialLevel(racial_level + 3);
+    auto after_racial_levels = creature->getStats();
+    expect_true(after_racial_levels->getStamina() == after_class_levels->getStamina() + 3 * 3,
+                "raising the racial level should add exactly the racial stamina growth per racial level");
+    expect_true(after_racial_levels->getStrength() == after_class_levels->getStrength() + 3 * 2,
+                "raising the racial level should add exactly the racial strength growth per racial level");
+    expect_true(after_racial_levels->getIntelligence() == after_class_levels->getIntelligence(),
+                "raising the racial level should not alter the class-level intelligence contribution");
+    expect_true(creature->getLevel() == class_level + 2 && creature->getRacialLevel() == racial_level + 3,
+                "class level and racial level are distinct, independently stored fields");
+}
+
+void test_racial_level_round_trips_through_meta_property_binding() {
+    // [EPIC_08][STORY_04][SUBSTORY_01] Serialization: racialLevel (creature) and
+    // racialLevelStats (race) are declared V_META properties, so they round-trip
+    // through the same meta property binding save/clone serialization uses for
+    // every other creature property. Pin the binding both ways (setter -> property
+    // read, property write -> getter).
+    //
+    // Reflective V_META access routes through vstd::any_cast converters that only
+    // exist for types registered via CTypes::register_type: property_impl::
+    // object_from_any (vstd/vmeta.h) casts the shared_ptr<CGameObject> handle from
+    // CGameObject::ptr() to the property's DECLARING type, and without the
+    // registered converter that cast falls through to std::any_cast and dies with
+    // bad_any_cast. This per-domain test binary does not run the full module type
+    // registration, so register the exact chain this test reflects over (CCreature,
+    // CCreatureRace, and the shared_ptr<CStats> property payload), the same way the
+    // equip and tooltip tests in this file register theirs. Registration is global
+    // and idempotent, so repeating it here is safe regardless of test order.
+    CTypes::register_type<CGameObject>();
+    CTypes::register_type<CMapObject, CGameObject>();
+    CTypes::register_type<CCreature, CMapObject, CGameObject>();
+    CTypes::register_type<CCreatureRace, CGameObject>();
+    CTypes::register_type<CStats, CGameObject>();
+
+    auto creature = std::make_shared<CCreature>();
+    expect_true(creature->getProperty<int>("racialLevel") == 0,
+                "the racialLevel meta property should expose the neutral default of 0");
+    creature->setProperty("racialLevel", 4);
+    expect_true(creature->getRacialLevel() == 4,
+                "writing the racialLevel meta property should reach the racial level field");
+    creature->setRacialLevel(7);
+    expect_true(creature->getProperty<int>("racialLevel") == 7,
+                "the racialLevel setter should be visible through the meta property binding");
+
+    auto race = std::make_shared<CCreatureRace>();
+    auto growth = std::make_shared<CStats>();
+    growth->setStamina(3);
+    race->setProperty("racialLevelStats", growth);
+    expect_true(race->getRacialLevelStats()->getStamina() == 3,
+                "writing the racialLevelStats meta property should reach the race progression field");
+    expect_true(race->getProperty<std::shared_ptr<CStats>>("racialLevelStats")->getStamina() == 3,
+                "the racialLevelStats meta property should read back the authored progression");
+    race->setRacialLevelStats(nullptr);
+    expect_true(race->getRacialLevelStats() != nullptr && race->getRacialLevelStats()->getStamina() == 0,
+                "a null racial progression should normalize to an empty (zero-contribution) CStats");
+}
+
 void test_creature_class_main_stat_is_authoritative_over_race() {
     // [EPIC_02][STORY_04][SUBSTORY_03] Make creatureClass authoritative for mainStat.
     // When a creature has a composed creatureClass declaring a main stat, that class main stat
@@ -887,6 +1371,997 @@ void test_creature_class_main_stat_is_authoritative_over_race() {
     creature->setCreatureClass(nullptr);
     expect_true(creature->getStats()->getMainStat() == "strength",
                 "clearing the creatureClass restores the legacy no-archetype main stat selection");
+}
+
+void test_player_composed_stats_reflect_race_and_class_archetype() {
+    // [EPIC_06][STORY_02][SUBSTORY_04] Implement composed player stats.
+    // A CPlayer's effective stats are COMPOSED from its own base stats PLUS the
+    // contributions of its archetype (race + creatureClass), not a single flat stat
+    // block. CPlayer inherits the shared composition primitive CCreature::getStats
+    // (docs/design/creature_archetypes.md, "Creature stat precedence contract"), so a
+    // player that carries a race and/or a creatureClass folds them in at the documented
+    // positions:
+    //   race.baseStats -> creatureClass.baseStats -> player.baseStats ->
+    //   creatureClass.levelStats (per level) -> player.levelStats (per level).
+    // The composed mainStat is class-authoritative (falls back to the player's base
+    // mainStat only when the class declares none). This pins that contract for the
+    // player type exactly as the creature-stat tests pin it for creatures.
+    auto player = std::make_shared<CPlayer>();
+
+    // Player's own base: declares a mainStat that CONFLICTS with the class main stat so
+    // the class-authoritative selection is observable, and contributes intelligence.
+    auto playerBase = std::make_shared<CStats>();
+    playerBase->setMainStat("strength");
+    playerBase->setStrength(4);
+    playerBase->setIntelligence(6);
+    playerBase->setStamina(5);
+    player->setBaseStats(playerBase);
+
+    // Race archetype contribution (flat baseline every member of the race has).
+    auto raceBase = std::make_shared<CStats>();
+    raceBase->setStrength(2);
+    raceBase->setStamina(3);
+    auto race = std::make_shared<CCreatureRace>();
+    race->setBaseStats(raceBase);
+    player->setRace(race);
+    player->setRaceId("humanRace");
+
+    // Class archetype contribution (base + per-level growth) and the authoritative main
+    // stat for the composed block.
+    auto classBase = std::make_shared<CStats>();
+    classBase->setIntelligence(7);
+    classBase->setStrength(1);
+    auto classLevel = std::make_shared<CStats>();
+    classLevel->setIntelligence(2);
+    classLevel->setStamina(1);
+    auto klass = std::make_shared<CCreatureClass>();
+    klass->setMainStat("intelligence");
+    klass->setBaseStats(classBase);
+    klass->setLevelStats(classLevel);
+    player->setCreatureClass(klass);
+    player->setPlayerClassId("mageClass");
+
+    // Player's own per-level growth, layered after the class growth.
+    auto playerLevel = std::make_shared<CStats>();
+    playerLevel->setStrength(1);
+    player->setLevelStats(playerLevel);
+
+    const int level = 2;
+    player->setLevel(level);
+
+    expect_true(player->usesArchetypeComposition(),
+                "a player carrying a race and/or creatureClass should use the composed stat path");
+
+    // Independently recompute the expected composition in the documented order (no
+    // equipment/effects here so the archetype contribution is isolated).
+    auto expected = std::make_shared<CStats>();
+    expected->setMainStat(klass->getMainStat()); // class is authoritative for mainStat
+    expected->addBonus(raceBase);
+    expected->addBonus(classBase);
+    expected->addBonus(playerBase);
+    for (int i = 0; i < level; ++i) {
+        expected->addBonus(classLevel);
+    }
+    for (int i = 0; i < level; ++i) {
+        expected->addBonus(playerLevel);
+    }
+
+    auto actual = player->getStats();
+
+    expect_true(actual->getMainStat() == "intelligence",
+                "composed player mainStat should be the class-authoritative main stat over the base main stat");
+
+    actual->meta()->for_all_properties(actual, [&](auto property) {
+        if (property->value_type() != std::type_index(typeid(int))) {
+            return;
+        }
+        int actual_value = actual->getProperty<int>(property->name());
+        int expected_value = expected->getProperty<int>(property->name());
+        if (actual_value != expected_value) {
+            std::cerr << "PLAYER STAT DIFF [" << property->name() << "] expected " << expected_value << " but got "
+                      << actual_value << "\n";
+        }
+        expect_true(actual_value == expected_value,
+                    "composed player getStats should equal race + class base + player base + "
+                    "level*(class + player) level growth");
+    });
+
+    // Sanity: the class contribution is really part of the composition -- clearing the
+    // creatureClass drops exactly the class base + class per-level growth from the total.
+    player->setCreatureClass(nullptr);
+    const int classIntContribution = 7 /*classBase*/ + level * 2 /*classLevel*/;
+    expect_true(player->getStats()->getIntelligence() == actual->getIntelligence() - classIntContribution,
+                "removing the creatureClass should remove exactly the class intelligence contribution");
+}
+
+void test_player_without_archetype_falls_back_to_base_stats() {
+    // [EPIC_06][STORY_02][SUBSTORY_04] Legacy fallback for players.
+    // A player with NO race and NO creatureClass archetype object must fall back to its
+    // own base stats unchanged (docs/design/creature_archetypes.md, "Legacy fallback
+    // compatibility contract"). The string identity fields (raceId / playerClassId) are
+    // metadata only: on their own -- with no backing archetype object -- they must NOT
+    // inject any stat contribution, so the composed block is bit-for-bit the base block.
+    auto player = std::make_shared<CPlayer>();
+
+    auto base = std::make_shared<CStats>();
+    base->setMainStat("agility");
+    base->setStrength(8);
+    base->setAgility(9);
+    base->setStamina(7);
+    base->setIntelligence(3);
+    base->setArmor(2);
+    player->setBaseStats(base);
+
+    // Identity strings without backing archetype objects: these describe the player's
+    // archetype but must not contribute stats by themselves.
+    player->setRaceId("humanRace");
+    player->setPlayerClassId("WarriorClass");
+
+    expect_true(!player->usesArchetypeComposition(),
+                "a player with only identity strings (no race/class object) must stay on the legacy stat path");
+
+    auto stats = player->getStats();
+
+    expect_true(stats->getMainStat() == base->getMainStat(),
+                "no-archetype player getStats should keep the base mainStat unchanged");
+
+    stats->meta()->for_all_properties(stats, [&](auto property) {
+        if (property->value_type() != std::type_index(typeid(int))) {
+            return;
+        }
+        int actual_value = stats->getProperty<int>(property->name());
+        int expected_value = base->getProperty<int>(property->name());
+        expect_true(actual_value == expected_value,
+                    "no-archetype player getStats should equal the base stats unchanged (no archetype bonus)");
+    });
+}
+
+void test_no_template_creature_composes_bit_identically_to_baseline() {
+    // [EPIC_08][STORY_02][SUBSTORY_01] Introduce CCreatureTemplate definition object.
+    // Neutrality invariant: the template layer is OPTIONAL, and a creature with NO
+    // templates (every creature on current content) composes bit-identically to the
+    // pre-template contracts -- both on the legacy path (no race/class) and on the
+    // composed race/class path. Explicitly assigning an empty template set must be
+    // exactly as neutral as never touching the property.
+
+    // Legacy creature: same source values as the pinned legacy composition tests.
+    auto legacy = std::make_shared<CCreature>();
+    auto legacyBase = std::make_shared<CStats>();
+    legacyBase->setMainStat("intelligence");
+    legacyBase->setIntelligence(10);
+    legacyBase->setStrength(4);
+    legacyBase->setStamina(6);
+    legacy->setBaseStats(legacyBase);
+    auto legacyLevelStats = std::make_shared<CStats>();
+    legacyLevelStats->setIntelligence(2);
+    legacyLevelStats->setStrength(1);
+    legacy->setLevelStats(legacyLevelStats);
+    const int legacyLevel = 3;
+    legacy->setLevel(legacyLevel);
+
+    legacy->setTemplates({}); // explicit empty set == never configured
+    expect_true(legacy->getTemplates().empty(), "an explicitly empty template set stays empty");
+    expect_true(!legacy->usesArchetypeComposition(),
+                "a creature with no race/class and no templates must stay on the legacy stat path");
+    expect_true(legacy->getScale() == legacyLevel, "getScale of a no-template creature stays level + sw exactly");
+
+    auto legacyExpected = std::make_shared<CStats>();
+    legacyExpected->setMainStat(legacyBase->getMainStat());
+    legacyExpected->addBonus(legacyBase);
+    for (int i = 0; i < legacyLevel; ++i) {
+        legacyExpected->addBonus(legacyLevelStats);
+    }
+    auto legacyActual = legacy->getStats();
+    expect_true(legacyActual->getMainStat() == legacyExpected->getMainStat(),
+                "no-template legacy creature getStats should keep the baseStats mainStat");
+    legacyActual->meta()->for_all_properties(legacyActual, [&](auto property) {
+        if (property->value_type() != std::type_index(typeid(int))) {
+            return;
+        }
+        expect_true(legacyActual->getProperty<int>(property->name()) ==
+                        legacyExpected->getProperty<int>(property->name()),
+                    "no-template legacy creature getStats should match the legacy composition bit-identically");
+    });
+
+    // Composed creature (race + class): the template stage contributes nothing.
+    auto composed = std::make_shared<CCreature>();
+    auto composedBase = std::make_shared<CStats>();
+    composedBase->setMainStat("strength");
+    composedBase->setStrength(4);
+    composedBase->setIntelligence(6);
+    composed->setBaseStats(composedBase);
+    auto raceBase = std::make_shared<CStats>();
+    raceBase->setStrength(2);
+    raceBase->setStamina(3);
+    auto race = std::make_shared<CCreatureRace>();
+    race->setBaseStats(raceBase);
+    composed->setRace(race);
+    auto classBase = std::make_shared<CStats>();
+    classBase->setIntelligence(7);
+    auto classLevel = std::make_shared<CStats>();
+    classLevel->setIntelligence(2);
+    auto klass = std::make_shared<CCreatureClass>();
+    klass->setMainStat("intelligence");
+    klass->setBaseStats(classBase);
+    klass->setLevelStats(classLevel);
+    composed->setCreatureClass(klass);
+    const int composedLevel = 2;
+    composed->setLevel(composedLevel);
+
+    composed->setTemplates({}); // explicit empty set == never configured
+
+    auto composedExpected = std::make_shared<CStats>();
+    composedExpected->setMainStat(klass->getMainStat());
+    composedExpected->addBonus(raceBase);
+    composedExpected->addBonus(classBase);
+    composedExpected->addBonus(composedBase);
+    for (int i = 0; i < composedLevel; ++i) {
+        composedExpected->addBonus(classLevel);
+    }
+    auto composedActual = composed->getStats();
+    expect_true(composedActual->getMainStat() == "intelligence",
+                "no-template composed creature keeps the class-authoritative mainStat");
+    composedActual->meta()->for_all_properties(composedActual, [&](auto property) {
+        if (property->value_type() != std::type_index(typeid(int))) {
+            return;
+        }
+        expect_true(composedActual->getProperty<int>(property->name()) ==
+                        composedExpected->getProperty<int>(property->name()),
+                    "no-template composed creature getStats should match the race/class composition bit-identically");
+    });
+    expect_true(composed->getScale() == composedLevel,
+                "getScale of a no-template composed creature stays level + sw exactly");
+    expect_true(composed->getEffectiveInteractions().empty(),
+                "an empty template set adds no actions to the effective interaction set");
+}
+
+void test_creature_templates_compose_after_race_and_class_in_order() {
+    // [EPIC_08][STORY_02][SUBSTORY_01] Capability: templates are an ORDERED,
+    // optional overlay applied AFTER race/class composition. Stat adjustments fold
+    // in after the race/class/creature stack; template actions merge after class
+    // sources (so they override class duplicates) but before the creature's own
+    // concrete actions (which stay most specific); multiple templates apply in
+    // ascending `order`; scale adjustments accumulate.
+    auto interaction = [](const std::string &typeId, const std::string &name) {
+        auto action = std::make_shared<CInteraction>();
+        action->setType("CInteraction");
+        action->setTypeId(typeId);
+        action->setName(name);
+        return action;
+    };
+
+    auto creature = std::make_shared<CCreature>();
+    auto base = std::make_shared<CStats>();
+    base->setMainStat("intelligence");
+    base->setIntelligence(10);
+    creature->setBaseStats(base);
+    auto levelStats = std::make_shared<CStats>();
+    levelStats->setIntelligence(2);
+    creature->setLevelStats(levelStats);
+    const int level = 2;
+    creature->setLevel(level);
+
+    auto raceBase = std::make_shared<CStats>();
+    raceBase->setIntelligence(3);
+    auto race = std::make_shared<CCreatureRace>();
+    race->setBaseStats(raceBase);
+    creature->setRace(race);
+
+    auto classBase = std::make_shared<CStats>();
+    classBase->setIntelligence(4);
+    auto classAttack = interaction("Attack", "classAttack");
+    auto klass = std::make_shared<CCreatureClass>();
+    klass->setBaseStats(classBase);
+    klass->setActions({classAttack});
+    creature->setCreatureClass(klass);
+
+    // Two template overlays with distinct ordering keys; inserted out of order to
+    // prove getOrderedTemplates sorts by the `order` key, not insertion order.
+    auto first = std::make_shared<CCreatureTemplate>();
+    first->setTypeId("eliteTemplate");
+    first->setOrder(10);
+    first->setScaleAdjustment(1);
+    auto firstStats = std::make_shared<CStats>();
+    firstStats->setIntelligence(5);
+    first->setStatAdjustments(firstStats);
+    auto firstEmpower = interaction("Empower", "firstEmpower");
+    auto templateAttack = interaction("Attack", "templateAttack");
+    first->setActions({firstEmpower, templateAttack});
+
+    auto second = std::make_shared<CCreatureTemplate>();
+    second->setTypeId("diseasedTemplate");
+    second->setOrder(20);
+    second->setScaleAdjustment(2);
+    auto secondStats = std::make_shared<CStats>();
+    secondStats->setIntelligence(7);
+    second->setStatAdjustments(secondStats);
+    auto secondEmpower = interaction("Empower", "secondEmpower");
+    second->setActions({secondEmpower});
+
+    creature->setTemplates({second, first});
+
+    auto orderedTemplates = creature->getOrderedTemplates();
+    expect_true(orderedTemplates.size() == 2 && orderedTemplates[0] == first && orderedTemplates[1] == second,
+                "getOrderedTemplates should sort templates by ascending order key, not insertion order");
+
+    // Stats: race + class + creature base + level growth + both templates.
+    const int expected_intelligence = 3 /*race*/ + 4 /*class*/ + 10 /*base*/ + level * 2 /*levelStats*/ +
+                                      5 /*first template*/ + 7 /*second template*/;
+    auto stats = creature->getStats();
+    expect_true(stats->getIntelligence() == expected_intelligence,
+                "template stat adjustments should layer on top of the race/class/creature composition");
+    expect_true(stats->getMainStat() == "intelligence", "templates must not disturb the composed mainStat selection");
+
+    // Scale: level + sw + the accumulated template scale adjustments.
+    expect_true(creature->getScale() == level + 1 + 2,
+                "template scale adjustments should accumulate on top of level + sw");
+
+    auto effectiveContains = [&creature](const std::shared_ptr<CInteraction> &action) {
+        auto effective = creature->getEffectiveInteractions();
+        return effective.find(action) != effective.end();
+    };
+
+    // Template actions apply AFTER class sources: the first template's Attack
+    // overrides the class Attack; the later-ordered template wins the Empower
+    // duplicate between the two templates.
+    expect_true(effectiveContains(templateAttack) && !effectiveContains(classAttack),
+                "a template action should override a duplicate class action (templates apply after race/class)");
+    expect_true(effectiveContains(secondEmpower) && !effectiveContains(firstEmpower),
+                "the later-ordered template should win duplicate action keys between templates");
+
+    // The ordering key drives the fold-in: raising the first template's order past
+    // the second flips the Empower winner.
+    first->setOrder(30);
+    expect_true(effectiveContains(firstEmpower) && !effectiveContains(secondEmpower),
+                "changing the order key must change the template application order");
+    first->setOrder(10);
+
+    // The creature's own concrete actions stay most specific over template additions.
+    auto concreteAttack = interaction("Attack", "concreteAttack");
+    creature->addAction(concreteAttack);
+    expect_true(effectiveContains(concreteAttack) && !effectiveContains(templateAttack),
+                "concrete creature actions should stay most specific over template action additions");
+
+    // A template-only creature (no race/class) also composes through the template
+    // layer instead of silently dropping it.
+    auto templateOnly = std::make_shared<CCreature>();
+    auto templateOnlyBase = std::make_shared<CStats>();
+    templateOnlyBase->setMainStat("intelligence");
+    templateOnlyBase->setIntelligence(6);
+    templateOnly->setBaseStats(templateOnlyBase);
+    auto boost = std::make_shared<CCreatureTemplate>();
+    auto boostStats = std::make_shared<CStats>();
+    boostStats->setIntelligence(4);
+    boost->setStatAdjustments(boostStats);
+    templateOnly->setTemplates({boost});
+    expect_true(templateOnly->usesArchetypeComposition(),
+                "a creature carrying only a template overlay uses the composed stat path");
+    expect_true(templateOnly->getStats()->getIntelligence() == 6 + 4,
+                "a template-only creature folds the template adjustments over its own base stats");
+    expect_true(templateOnly->getStats()->getMainStat() == "intelligence",
+                "a template-only creature keeps its legacy mainStat fallback");
+}
+
+void test_creature_templates_do_not_replace_race_or_class() {
+    // [EPIC_08][STORY_02][SUBSTORY_01] "Does not replace race/class": attaching a
+    // template keeps the race/creatureClass references and their contributions
+    // fully intact, and clearing the templates returns the composed stat block
+    // bit-identically to the race/class baseline.
+    auto interaction = [](const std::string &typeId, const std::string &name) {
+        auto action = std::make_shared<CInteraction>();
+        action->setType("CInteraction");
+        action->setTypeId(typeId);
+        action->setName(name);
+        return action;
+    };
+
+    auto creature = std::make_shared<CCreature>();
+    auto base = std::make_shared<CStats>();
+    base->setMainStat("strength");
+    base->setIntelligence(10);
+    creature->setBaseStats(base);
+
+    auto raceBase = std::make_shared<CStats>();
+    raceBase->setIntelligence(3);
+    auto race = std::make_shared<CCreatureRace>();
+    race->setBaseStats(raceBase);
+    auto raceClaw = interaction("Claw", "raceClaw");
+    race->setActions({raceClaw});
+    creature->setRace(race);
+
+    auto classBase = std::make_shared<CStats>();
+    classBase->setIntelligence(4);
+    auto klass = std::make_shared<CCreatureClass>();
+    klass->setMainStat("intelligence");
+    klass->setBaseStats(classBase);
+    creature->setCreatureClass(klass);
+
+    // Race/class baseline snapshot before any template is attached.
+    auto baseline = creature->getStats();
+
+    auto overlay = std::make_shared<CCreatureTemplate>();
+    auto overlayStats = std::make_shared<CStats>();
+    overlayStats->setIntelligence(5);
+    overlay->setStatAdjustments(overlayStats);
+    auto empower = interaction("Empower", "templateEmpower");
+    overlay->setActions({empower});
+    creature->setTemplates({overlay});
+
+    // Identity: the archetype references are untouched by the template layer.
+    expect_true(CGameObject::sameInstance(creature->getRace(), race),
+                "attaching a template must not replace the race reference");
+    expect_true(CGameObject::sameInstance(creature->getCreatureClass(), klass),
+                "attaching a template must not replace the creatureClass reference");
+
+    // Contributions: race/class stats and actions remain part of the composition,
+    // and the class-authoritative mainStat selection is untouched.
+    auto withTemplate = creature->getStats();
+    expect_true(withTemplate->getMainStat() == "intelligence",
+                "the class mainStat stays authoritative when a template is attached");
+    expect_true(withTemplate->getIntelligence() == baseline->getIntelligence() + 5,
+                "the template adds exactly its adjustment on top of the intact race/class composition");
+    auto effective = creature->getEffectiveInteractions();
+    expect_true(effective.find(raceClaw) != effective.end(), "race actions remain exposed when a template is attached");
+    expect_true(effective.find(empower) != effective.end(),
+                "template actions are added alongside (not instead of) race/class actions");
+
+    // Clearing the templates restores the race/class baseline bit-identically.
+    creature->setTemplates({});
+    auto restored = creature->getStats();
+    expect_true(restored->getMainStat() == baseline->getMainStat(),
+                "clearing templates restores the baseline mainStat selection");
+    restored->meta()->for_all_properties(restored, [&](auto property) {
+        if (property->value_type() != std::type_index(typeid(int))) {
+            return;
+        }
+        expect_true(restored->getProperty<int>(property->name()) == baseline->getProperty<int>(property->name()),
+                    "clearing templates should restore the race/class composed stats bit-identically");
+    });
+}
+
+void test_creature_template_metadata_round_trip() {
+    // [EPIC_08][STORY_02][SUBSTORY_01] CCreatureTemplate is a CGameObject-derived
+    // metadata definition that serializes like CCreatureRace/CCreatureClass: all of
+    // its metadata (stat adjustments, action additions, subtypes, scale adjustment,
+    // order, plus inherited label) survives a CSerialization round-trip, it
+    // deserializes back into a CCreatureTemplate, its setters are null-safe, and it
+    // is never enumerated as a CCreature subtype.
+    CTypes::register_type_metadata<CCreatureTemplate, CGameObject>();
+    CTypes::register_type_metadata<CStats, CGameObject>();
+    CTypes::register_type_metadata<CInteraction, CGameObject>();
+
+    auto game = std::make_shared<CGame>();
+    game->getObjectHandler()->registerType(CCreatureTemplate::static_meta()->name(),
+                                           []() { return std::make_shared<CCreatureTemplate>(); });
+    game->getObjectHandler()->registerType(CStats::static_meta()->name(), []() { return std::make_shared<CStats>(); });
+    game->getObjectHandler()->registerType(CInteraction::static_meta()->name(),
+                                           []() { return std::make_shared<CInteraction>(); });
+
+    // Neutral defaults: a bare template is a no-op overlay.
+    auto fresh = std::make_shared<CCreatureTemplate>();
+    expect_true(fresh->getOrder() == 0 && fresh->getScaleAdjustment() == 0,
+                "order and scaleAdjustment should default to the neutral 0");
+    expect_true(fresh->getStatAdjustments() != nullptr && fresh->getActions().empty() && fresh->getSubtypes().empty(),
+                "a fresh template defaults to empty stat adjustments, actions and subtypes");
+
+    auto adjustments = std::make_shared<CStats>();
+    adjustments->setStrength(2);
+    adjustments->setHit(5);
+    auto action = std::make_shared<CInteraction>();
+    action->setTypeId("templateEmpower");
+
+    auto overlay = std::make_shared<CCreatureTemplate>();
+    overlay->setGame(game);
+    overlay->setStatAdjustments(adjustments);
+    overlay->setActions({action});
+    overlay->setSubtypes({"elite"});
+    overlay->setScaleAdjustment(1);
+    overlay->setOrder(10);
+    overlay->setLabel("Elite");
+
+    auto serialized = CSerializerFunction<std::shared_ptr<json>, std::shared_ptr<CGameObject>>::serialize(overlay);
+    expect_true((*serialized)["class"].get<std::string>() == CCreatureTemplate::static_meta()->name(),
+                "a serialized CCreatureTemplate should keep its metadata class identity");
+
+    auto round_trip = std::dynamic_pointer_cast<CCreatureTemplate>(
+        CSerializerFunction<std::shared_ptr<json>, std::shared_ptr<CGameObject>>::deserialize(game, serialized));
+    expect_true(round_trip != nullptr,
+                "a CCreatureTemplate should deserialize back into a CCreatureTemplate, not a creature or map object");
+    expect_true(round_trip->getStatAdjustments() && round_trip->getStatAdjustments()->getStrength() == 2 &&
+                    round_trip->getStatAdjustments()->getHit() == 5,
+                "stat adjustments should survive the round-trip");
+    expect_true(round_trip->getActions().size() == 1, "action additions should survive the round-trip");
+    expect_true(round_trip->getSubtypes() == std::set<std::string>({"elite"}),
+                "subtypes should survive the round-trip");
+    expect_true(round_trip->getScaleAdjustment() == 1, "scaleAdjustment should survive the round-trip");
+    expect_true(round_trip->getOrder() == 10, "the ordering key should survive the round-trip");
+    expect_true(round_trip->getLabel() == "Elite", "inherited label should survive the round-trip");
+
+    // Null-safety: null stats normalize to a neutral block and null actions drop.
+    auto bare = std::make_shared<CCreatureTemplate>();
+    bare->setStatAdjustments(nullptr);
+    expect_true(bare->getStatAdjustments() != nullptr, "null statAdjustments should normalize to an empty CStats");
+    bare->setActions({nullptr});
+    expect_true(bare->getActions().empty(), "null actions should be filtered out");
+
+    // A template definition is not a creature subtype, so it must never appear in
+    // the CCreature subtype enumeration (random encounters / spawn tables).
+    auto creatureSubtypes = game->getObjectHandler()->getAllSubTypes("CCreature");
+    expect_true(std::find(creatureSubtypes.begin(), creatureSubtypes.end(), CCreatureTemplate::static_meta()->name()) ==
+                    creatureSubtypes.end(),
+                "CCreatureTemplate must not be enumerated as a CCreature subtype");
+}
+
+void test_no_class_track_creature_composes_bit_identically_to_baseline() {
+    // [EPIC_08][STORY_03][SUBSTORY_01] Multiclass class-track records. Neutrality
+    // invariant: the track layer is FUTURE-ONLY, and a creature with NO class
+    // tracks (every creature on current content) composes bit-identically to the
+    // pre-track contracts -- both on the legacy path (no race/class) and on the
+    // composed single-class path. Explicitly assigning an empty track set must be
+    // exactly as neutral as never touching the property.
+
+    // Legacy creature: same source values as the pinned legacy composition tests.
+    auto legacy = std::make_shared<CCreature>();
+    auto legacyBase = std::make_shared<CStats>();
+    legacyBase->setMainStat("intelligence");
+    legacyBase->setIntelligence(10);
+    legacyBase->setStrength(4);
+    legacyBase->setStamina(6);
+    legacy->setBaseStats(legacyBase);
+    auto legacyLevelStats = std::make_shared<CStats>();
+    legacyLevelStats->setIntelligence(2);
+    legacyLevelStats->setStrength(1);
+    legacy->setLevelStats(legacyLevelStats);
+    const int legacyLevel = 3;
+    legacy->setLevel(legacyLevel);
+
+    legacy->setClassTracks({}); // explicit empty set == never configured
+    expect_true(legacy->getClassTracks().empty(), "an explicitly empty class-track set stays empty");
+    expect_true(!legacy->usesArchetypeComposition(),
+                "a creature with no race/class/templates and no class tracks must stay on the legacy stat path");
+
+    auto legacyExpected = std::make_shared<CStats>();
+    legacyExpected->setMainStat(legacyBase->getMainStat());
+    legacyExpected->addBonus(legacyBase);
+    for (int i = 0; i < legacyLevel; ++i) {
+        legacyExpected->addBonus(legacyLevelStats);
+    }
+    auto legacyActual = legacy->getStats();
+    expect_true(legacyActual->getMainStat() == legacyExpected->getMainStat(),
+                "no-track legacy creature getStats should keep the baseStats mainStat");
+    legacyActual->meta()->for_all_properties(legacyActual, [&](auto property) {
+        if (property->value_type() != std::type_index(typeid(int))) {
+            return;
+        }
+        expect_true(legacyActual->getProperty<int>(property->name()) ==
+                        legacyExpected->getProperty<int>(property->name()),
+                    "no-track legacy creature getStats should match the legacy composition bit-identically");
+    });
+
+    // Composed creature (race + single class): the single-class path is untouched
+    // by the (empty) track layer.
+    auto composed = std::make_shared<CCreature>();
+    auto composedBase = std::make_shared<CStats>();
+    composedBase->setMainStat("strength");
+    composedBase->setStrength(4);
+    composedBase->setIntelligence(6);
+    composed->setBaseStats(composedBase);
+    auto raceBase = std::make_shared<CStats>();
+    raceBase->setStrength(2);
+    raceBase->setStamina(3);
+    auto race = std::make_shared<CCreatureRace>();
+    race->setBaseStats(raceBase);
+    composed->setRace(race);
+    auto classBase = std::make_shared<CStats>();
+    classBase->setIntelligence(7);
+    auto classLevel = std::make_shared<CStats>();
+    classLevel->setIntelligence(2);
+    auto klass = std::make_shared<CCreatureClass>();
+    klass->setMainStat("intelligence");
+    klass->setBaseStats(classBase);
+    klass->setLevelStats(classLevel);
+    composed->setCreatureClass(klass);
+    const int composedLevel = 2;
+    composed->setLevel(composedLevel);
+
+    composed->setClassTracks({}); // explicit empty set == never configured
+
+    auto composedExpected = std::make_shared<CStats>();
+    composedExpected->setMainStat(klass->getMainStat());
+    composedExpected->addBonus(raceBase);
+    composedExpected->addBonus(classBase);
+    composedExpected->addBonus(composedBase);
+    for (int i = 0; i < composedLevel; ++i) {
+        composedExpected->addBonus(classLevel);
+    }
+    auto composedActual = composed->getStats();
+    expect_true(composedActual->getMainStat() == "intelligence",
+                "no-track composed creature keeps the class-authoritative mainStat");
+    composedActual->meta()->for_all_properties(composedActual, [&](auto property) {
+        if (property->value_type() != std::type_index(typeid(int))) {
+            return;
+        }
+        expect_true(composedActual->getProperty<int>(property->name()) ==
+                        composedExpected->getProperty<int>(property->name()),
+                    "no-track composed creature getStats should match the single-class composition bit-identically");
+    });
+    expect_true(composed->getEffectiveInteractions().empty(),
+                "an empty class-track set adds no actions to the effective interaction set");
+}
+
+void test_creature_class_tracks_fold_deterministically_in_order() {
+    // [EPIC_08][STORY_03][SUBSTORY_01] Capability: class tracks are an ORDERED
+    // multiclass progression. Stat growth folds each track's class.baseStats and
+    // class.levelStats x the TRACK's own level in ascending `order`; track actions
+    // merge in the same order (later tracks win duplicate keys, concrete creature
+    // actions stay most specific); the first track's class mainStat is
+    // authoritative; and the layer coexists with race/racialLevel/templates.
+    auto interaction = [](const std::string &typeId, const std::string &name) {
+        auto action = std::make_shared<CInteraction>();
+        action->setType("CInteraction");
+        action->setTypeId(typeId);
+        action->setName(name);
+        return action;
+    };
+
+    auto creature = std::make_shared<CCreature>();
+    auto base = std::make_shared<CStats>();
+    base->setMainStat("stamina");
+    base->setStamina(6);
+    base->setStrength(1);
+    base->setIntelligence(1);
+    creature->setBaseStats(base);
+    auto levelStats = std::make_shared<CStats>();
+    levelStats->setStamina(1);
+    creature->setLevelStats(levelStats);
+    const int level = 1;
+    creature->setLevel(level);
+
+    // Coexisting layers: race with racial advancement, plus a template overlay.
+    auto race = std::make_shared<CCreatureRace>();
+    auto raceBase = std::make_shared<CStats>();
+    raceBase->setStamina(2);
+    race->setBaseStats(raceBase);
+    auto racialGrowth = std::make_shared<CStats>();
+    racialGrowth->setStamina(3);
+    race->setRacialLevelStats(racialGrowth);
+    creature->setRace(race);
+    const int racialLevel = 2;
+    creature->setRacialLevel(racialLevel);
+
+    auto overlay = std::make_shared<CCreatureTemplate>();
+    auto overlayStats = std::make_shared<CStats>();
+    overlayStats->setStamina(4);
+    overlay->setStatAdjustments(overlayStats);
+    creature->setTemplates({overlay});
+
+    // Two class tracks with distinct ordering keys; inserted out of order to prove
+    // getOrderedClassTracks sorts by the `order` key, not insertion order.
+    auto warriorAttack = interaction("Attack", "warriorAttack");
+    auto warriorEmpower = interaction("Empower", "warriorEmpower");
+    auto warriorCleave = interaction("Cleave", "warriorCleave");
+    auto warrior = std::make_shared<CCreatureClass>();
+    warrior->setMainStat("strength");
+    auto warriorBase = std::make_shared<CStats>();
+    warriorBase->setStrength(2);
+    warrior->setBaseStats(warriorBase);
+    auto warriorGrowth = std::make_shared<CStats>();
+    warriorGrowth->setStrength(1);
+    warrior->setLevelStats(warriorGrowth);
+    warrior->setActions({warriorAttack, warriorEmpower});
+    warrior->setLevelling({{"2", warriorCleave}});
+
+    auto mageEmpower = interaction("Empower", "mageEmpower");
+    auto mage = std::make_shared<CCreatureClass>();
+    mage->setMainStat("intelligence");
+    auto mageBase = std::make_shared<CStats>();
+    mageBase->setIntelligence(4);
+    mage->setBaseStats(mageBase);
+    auto mageGrowth = std::make_shared<CStats>();
+    mageGrowth->setIntelligence(2);
+    mage->setLevelStats(mageGrowth);
+    mage->setActions({mageEmpower});
+
+    auto warriorTrack = std::make_shared<CCreatureClassTrack>();
+    warriorTrack->setTypeId("warriorTrack");
+    warriorTrack->setOrder(10);
+    warriorTrack->setCreatureClass(warrior);
+    warriorTrack->setLevel(3);
+
+    auto mageTrack = std::make_shared<CCreatureClassTrack>();
+    mageTrack->setTypeId("mageTrack");
+    mageTrack->setOrder(20);
+    mageTrack->setCreatureClass(mage);
+    mageTrack->setLevel(2);
+
+    creature->setClassTracks({mageTrack, warriorTrack});
+    expect_true(creature->usesArchetypeComposition(), "a creature carrying class tracks uses the composed stat path");
+
+    auto orderedTracks = creature->getOrderedClassTracks();
+    expect_true(orderedTracks.size() == 2 && orderedTracks[0] == warriorTrack && orderedTracks[1] == mageTrack,
+                "getOrderedClassTracks should sort tracks by ascending order key, not insertion order");
+
+    // Stats: each track folds its class.baseStats plus class.levelStats x its OWN
+    // track level; race base, racial advancement, the creature's own base/level
+    // growth and the template overlay all keep their documented positions.
+    auto stats = creature->getStats();
+    expect_true(stats->getStamina() ==
+                    2 /*race*/ + 6 /*base*/ + racialLevel * 3 /*racial*/ + level * 1 /*own growth*/ + 4 /*template*/,
+                "class tracks must not disturb race/racial/own-growth/template stat sources");
+    expect_true(stats->getStrength() == 1 /*base*/ + 2 /*warrior base*/ + 3 * 1 /*warrior growth x track level*/,
+                "the first track folds its class base stats and level growth by the track's own level");
+    expect_true(stats->getIntelligence() == 1 /*base*/ + 4 /*mage base*/ + 2 * 2 /*mage growth x track level*/,
+                "the second track folds its class base stats and level growth by the track's own level");
+    expect_true(stats->getMainStat() == "strength",
+                "the first track's class mainStat is authoritative over the creature's baseStats mainStat");
+
+    auto effectiveContains = [&creature](const std::shared_ptr<CInteraction> &action) {
+        auto effective = creature->getEffectiveInteractions();
+        return effective.find(action) != effective.end();
+    };
+
+    // Track level unlocks gate on the TRACK's level, not the creature level: the
+    // warrior unlock opens at class level 2 while the creature level is only 1.
+    expect_true(effectiveContains(warriorCleave),
+                "a track's class levelling unlocks gate on the track's own level, not the creature level");
+    // Later tracks win duplicate action keys over earlier tracks.
+    expect_true(effectiveContains(mageEmpower) && !effectiveContains(warriorEmpower),
+                "the later-ordered track should win duplicate action keys between tracks");
+
+    // The ordering key drives the fold-in: pushing the warrior track past the mage
+    // track flips both the duplicate-action winner and the authoritative mainStat.
+    warriorTrack->setOrder(30);
+    expect_true(effectiveContains(warriorEmpower) && !effectiveContains(mageEmpower),
+                "changing the order key must change the track application order");
+    expect_true(creature->getStats()->getMainStat() == "intelligence",
+                "changing the order key must move the mainStat authority to the new first track");
+    warriorTrack->setOrder(10);
+
+    // Concrete creature actions stay most specific over track class actions.
+    auto concreteAttack = interaction("Attack", "concreteAttack");
+    creature->addAction(concreteAttack);
+    expect_true(effectiveContains(concreteAttack) && !effectiveContains(warriorAttack),
+                "concrete creature actions should stay most specific over track class actions");
+}
+
+void test_single_class_track_matches_single_creature_class() {
+    // [EPIC_08][STORY_03][SUBSTORY_01] Single-class compatibility: one track
+    // referencing class K at level L composes exactly like the legacy single
+    // creatureClass = K at creature level L -- stats, mainStat and effective
+    // actions. And when tracks and the single creatureClass are BOTH set, the
+    // tracks subsume the single class's contributions without replacing the
+    // reference.
+    auto interaction = [](const std::string &typeId, const std::string &name) {
+        auto action = std::make_shared<CInteraction>();
+        action->setType("CInteraction");
+        action->setTypeId(typeId);
+        action->setName(name);
+        return action;
+    };
+
+    auto classAttack = interaction("Attack", "classAttack");
+    auto classUnlock = interaction("Cleave", "classUnlock");
+    auto klass = std::make_shared<CCreatureClass>();
+    klass->setMainStat("intelligence");
+    auto classBase = std::make_shared<CStats>();
+    classBase->setIntelligence(4);
+    classBase->setStamina(1);
+    klass->setBaseStats(classBase);
+    auto classGrowth = std::make_shared<CStats>();
+    classGrowth->setIntelligence(2);
+    klass->setLevelStats(classGrowth);
+    klass->setActions({classAttack});
+    klass->setLevelling({{"2", classUnlock}});
+
+    const int level = 2;
+    auto makeCreature = [&level]() {
+        auto creature = std::make_shared<CCreature>();
+        auto base = std::make_shared<CStats>();
+        base->setMainStat("strength");
+        base->setStrength(5);
+        base->setIntelligence(10);
+        creature->setBaseStats(base);
+        auto growth = std::make_shared<CStats>();
+        growth->setIntelligence(1);
+        creature->setLevelStats(growth);
+        creature->setLevel(level);
+        return creature;
+    };
+
+    // Baseline: legacy single creatureClass at creature level 2.
+    auto single = makeCreature();
+    single->setCreatureClass(klass);
+
+    // Equivalent: one class track (same class, track level == creature level).
+    auto track = std::make_shared<CCreatureClassTrack>();
+    track->setCreatureClass(klass);
+    track->setLevel(level);
+    auto tracked = makeCreature();
+    tracked->setClassTracks({track});
+
+    auto singleStats = single->getStats();
+    auto trackedStats = tracked->getStats();
+    expect_true(trackedStats->getMainStat() == singleStats->getMainStat(),
+                "a single class track selects the same authoritative mainStat as the single creatureClass");
+    trackedStats->meta()->for_all_properties(trackedStats, [&](auto property) {
+        if (property->value_type() != std::type_index(typeid(int))) {
+            return;
+        }
+        expect_true(trackedStats->getProperty<int>(property->name()) == singleStats->getProperty<int>(property->name()),
+                    "a single class track composes stats identically to the same single creatureClass");
+    });
+
+    auto actionKeys = [](const std::shared_ptr<CCreature> &creature) {
+        std::set<std::string> keys;
+        for (const auto &action : creature->getEffectiveInteractions()) {
+            keys.insert(action->getTypeId());
+        }
+        return keys;
+    };
+    expect_true(actionKeys(tracked) == actionKeys(single),
+                "a single class track exposes the same effective actions (starting + level unlocks) as the single "
+                "creatureClass");
+    expect_true(actionKeys(tracked).count("Cleave") == 1,
+                "the class level unlock is exposed in both the single-class and single-track compositions");
+
+    // Precedence when both are set: non-empty tracks subsume the single class's
+    // contributions -- setting an additional single creatureClass changes nothing
+    // -- while the reference itself is preserved, not replaced.
+    auto other = std::make_shared<CCreatureClass>();
+    other->setMainStat("stamina");
+    auto otherBase = std::make_shared<CStats>();
+    otherBase->setStamina(50);
+    other->setBaseStats(otherBase);
+    tracked->setCreatureClass(other);
+
+    auto subsumedStats = tracked->getStats();
+    expect_true(subsumedStats->getMainStat() == singleStats->getMainStat(),
+                "non-empty tracks keep mainStat authority over an additionally set single creatureClass");
+    subsumedStats->meta()->for_all_properties(subsumedStats, [&](auto property) {
+        if (property->value_type() != std::type_index(typeid(int))) {
+            return;
+        }
+        expect_true(subsumedStats->getProperty<int>(property->name()) ==
+                        singleStats->getProperty<int>(property->name()),
+                    "non-empty tracks subsume the single creatureClass stat contributions entirely");
+    });
+    expect_true(CGameObject::sameInstance(tracked->getCreatureClass(), other),
+                "the single creatureClass reference is preserved (not replaced) when tracks are present");
+}
+
+void test_same_order_class_tracks_tie_break_deterministically() {
+    // [EPIC_08][STORY_03][SUBSTORY_01] Determinism for equal `order` keys: the
+    // tie-break chain exhausts every stable configured field before touching names
+    // -- track typeId, then referenced-class typeId, then per-track level -- so
+    // same-order tracks never fall to the backing set's pointer order. Each case
+    // asserts the fold order for BOTH insertion orders of the same two records.
+    auto orderedFor = [](const std::shared_ptr<CCreatureClassTrack> &a, const std::shared_ptr<CCreatureClassTrack> &b) {
+        auto creature = std::make_shared<CCreature>();
+        creature->setClassTracks({a, b});
+        auto forward = creature->getOrderedClassTracks();
+        creature->setClassTracks({b, a});
+        auto reversed = creature->getOrderedClassTracks();
+        expect_true(forward.size() == 2 && reversed.size() == 2 && forward[0] == reversed[0] &&
+                        forward[1] == reversed[1],
+                    "same-order tracks must sort identically regardless of insertion order");
+        return forward;
+    };
+
+    // Case 1: equal order, distinct track typeIds -- the track typeId decides.
+    auto klass = std::make_shared<CCreatureClass>();
+    klass->setTypeId("warriorClass");
+    auto trackA = std::make_shared<CCreatureClassTrack>();
+    trackA->setTypeId("aTrack");
+    trackA->setCreatureClass(klass);
+    auto trackB = std::make_shared<CCreatureClassTrack>();
+    trackB->setTypeId("bTrack");
+    trackB->setCreatureClass(klass);
+    auto byTypeId = orderedFor(trackA, trackB);
+    expect_true(byTypeId.size() == 2 && byTypeId[0] == trackA && byTypeId[1] == trackB,
+                "equal-order tracks tie-break on the track typeId first");
+
+    // Case 2: equal order, anonymous tracks, distinct class typeIds -- the
+    // referenced class's typeId decides.
+    auto mage = std::make_shared<CCreatureClass>();
+    mage->setTypeId("mageClass");
+    mage->setMainStat("intelligence");
+    auto warrior = std::make_shared<CCreatureClass>();
+    warrior->setTypeId("warriorClass");
+    warrior->setMainStat("strength");
+    auto mageTrack = std::make_shared<CCreatureClassTrack>();
+    mageTrack->setCreatureClass(mage);
+    auto warriorTrack = std::make_shared<CCreatureClassTrack>();
+    warriorTrack->setCreatureClass(warrior);
+    auto byClass = orderedFor(mageTrack, warriorTrack);
+    expect_true(byClass.size() == 2 && byClass[0] == mageTrack && byClass[1] == warriorTrack,
+                "anonymous equal-order tracks tie-break on the referenced class typeId");
+    // The stable tie-break drives observable composition: the first track's class
+    // mainStat is authoritative for both insertion orders.
+    auto creature = std::make_shared<CCreature>();
+    auto base = std::make_shared<CStats>();
+    base->setMainStat("stamina");
+    creature->setBaseStats(base);
+    creature->setClassTracks({warriorTrack, mageTrack});
+    expect_true(creature->getStats()->getMainStat() == "intelligence",
+                "mainStat authority follows the deterministic tie-break, not insertion or pointer order");
+
+    // Case 3: equal order, anonymous tracks of the SAME class -- the per-track
+    // level decides (ascending), keeping the fold reproducible; and because the
+    // class is the same, either relative order composes identical stats anyway.
+    auto low = std::make_shared<CCreatureClassTrack>();
+    low->setCreatureClass(warrior);
+    low->setLevel(1);
+    auto high = std::make_shared<CCreatureClassTrack>();
+    high->setCreatureClass(warrior);
+    high->setLevel(3);
+    auto byLevel = orderedFor(low, high);
+    expect_true(byLevel.size() == 2 && byLevel[0] == low && byLevel[1] == high,
+                "same-class equal-order tracks tie-break on the per-track level");
+}
+
+void test_creature_class_track_metadata_round_trip() {
+    // [EPIC_08][STORY_03][SUBSTORY_01] CCreatureClassTrack is a CGameObject-derived
+    // record that serializes like the other archetype definitions: its class
+    // reference, per-track level and ordering key (plus inherited label) survive a
+    // CSerialization round-trip, it deserializes back into a CCreatureClassTrack,
+    // and it is never enumerated as a CCreature subtype.
+    CTypes::register_type_metadata<CCreatureClassTrack, CGameObject>();
+    CTypes::register_type_metadata<CCreatureClass, CGameObject>();
+    CTypes::register_type_metadata<CStats, CGameObject>();
+    CTypes::register_type_metadata<CInteraction, CGameObject>();
+
+    auto game = std::make_shared<CGame>();
+    game->getObjectHandler()->registerType(CCreatureClassTrack::static_meta()->name(),
+                                           []() { return std::make_shared<CCreatureClassTrack>(); });
+    game->getObjectHandler()->registerType(CCreatureClass::static_meta()->name(),
+                                           []() { return std::make_shared<CCreatureClass>(); });
+    game->getObjectHandler()->registerType(CStats::static_meta()->name(), []() { return std::make_shared<CStats>(); });
+    game->getObjectHandler()->registerType(CInteraction::static_meta()->name(),
+                                           []() { return std::make_shared<CInteraction>(); });
+
+    // Neutral defaults: a bare track is a no-op record.
+    auto fresh = std::make_shared<CCreatureClassTrack>();
+    expect_true(fresh->getLevel() == 0 && fresh->getOrder() == 0, "level and order should default to the neutral 0");
+    expect_true(fresh->getCreatureClass() == nullptr,
+                "a fresh track carries no class reference (a null class contributes nothing)");
+
+    auto klass = std::make_shared<CCreatureClass>();
+    klass->setMainStat("strength");
+    auto classBase = std::make_shared<CStats>();
+    classBase->setStrength(3);
+    klass->setBaseStats(classBase);
+
+    auto track = std::make_shared<CCreatureClassTrack>();
+    track->setGame(game);
+    track->setCreatureClass(klass);
+    track->setLevel(3);
+    track->setOrder(10);
+    track->setLabel("Warrior track");
+
+    auto serialized = CSerializerFunction<std::shared_ptr<json>, std::shared_ptr<CGameObject>>::serialize(track);
+    expect_true((*serialized)["class"].get<std::string>() == CCreatureClassTrack::static_meta()->name(),
+                "a serialized CCreatureClassTrack should keep its record class identity");
+
+    auto round_trip = std::dynamic_pointer_cast<CCreatureClassTrack>(
+        CSerializerFunction<std::shared_ptr<json>, std::shared_ptr<CGameObject>>::deserialize(game, serialized));
+    expect_true(round_trip != nullptr,
+                "a CCreatureClassTrack should deserialize back into a CCreatureClassTrack, not a creature");
+    expect_true(round_trip->getCreatureClass() != nullptr &&
+                    round_trip->getCreatureClass()->getMainStat() == "strength",
+                "the class reference (and its mainStat identity) should survive the round-trip");
+    expect_true(round_trip->getCreatureClass()->getBaseStats() &&
+                    round_trip->getCreatureClass()->getBaseStats()->getStrength() == 3,
+                "the referenced class's base stats should survive the round-trip");
+    expect_true(round_trip->getLevel() == 3, "the per-track level should survive the round-trip");
+    expect_true(round_trip->getOrder() == 10, "the ordering key should survive the round-trip");
+    expect_true(round_trip->getLabel() == "Warrior track", "inherited label should survive the round-trip");
+
+    // A track record is not a creature subtype, so it must never appear in the
+    // CCreature subtype enumeration (random encounters / spawn tables).
+    auto creatureSubtypes = game->getObjectHandler()->getAllSubTypes("CCreature");
+    expect_true(std::find(creatureSubtypes.begin(), creatureSubtypes.end(),
+                          CCreatureClassTrack::static_meta()->name()) == creatureSubtypes.end(),
+                "CCreatureClassTrack must not be enumerated as a CCreature subtype");
 }
 
 void test_creature_archetype_identity_accessors_use_fallbacks() {
@@ -1668,11 +3143,96 @@ void test_creature_get_dmg_hit_chance_is_not_inverted() {
     expect_true(highConnects == iterations, "attack=100 fully offsets a 0-99 dice roll, so every swing connects");
 }
 
+// getDmg(allowCrit) gates whether a rolled critical is applied. Interactions that must
+// never crit (e.g. Devour) pass allowCrit=false; the crit die is still consumed so the RNG
+// stream is identical either way. With hit=100 and crit=100 every swing connects and would
+// crit, so the flag deterministically decides between the doubled and un-doubled damage.
+void test_creature_get_dmg_allow_crit_flag_gates_the_crit_double() {
+    srand(20260701u);
+    auto stats = std::make_shared<CStats>();
+    stats->setMainStat("intelligence");
+    stats->setHit(100);  // always connects
+    stats->setCrit(100); // would always crit when crit is allowed
+    stats->setDmgMin(5);
+    stats->setDmgMax(5); // fixed base damage of exactly 5
+    stats->setDamage(0);
+    auto creature = std::make_shared<CCreature>();
+    creature->setBaseStats(stats);
+    creature->setLevelStats(std::make_shared<CStats>());
+    creature->setLevel(0); // getStats() == baseStats: no level/equipment/effect bonuses
+
+    for (int i = 0; i < 50; ++i) {
+        expect_true(creature->getDmg(true) == 10, "with crit allowed a guaranteed crit doubles 5 to 10");
+        expect_true(creature->getDmg(false) == 5, "with crit disallowed the same guaranteed-hit swing stays at 5");
+    }
+}
+
 // CInteraction routes its effect to the caster or the opponent via effectRoutesToCaster
 // (EPIC_06/STORY_01/SUBSTORY_02): an explicit selfTarget always routes to the caster, a
 // legacy Buff-tagged effect without selfTarget stays a self-buff, and every other effect
 // routes to the opponent -- so routing no longer depends solely on effect tags while old
 // buff configs still work.
+class PaidActionProbe : public CInteraction {
+  public:
+    int performed = 0;
+    int queried = 0;
+    int refund = 3;
+
+    void performAction(std::shared_ptr<CCreature>, std::shared_ptr<CCreature>) override { ++performed; }
+    int getCommittedManaRefund(std::shared_ptr<CCreature>) override {
+        ++queried;
+        return refund;
+    }
+};
+
+void test_paid_actions_reject_unaffordable_casts_and_bound_refunds() {
+    auto actor = std::make_shared<CCreature>();
+    actor->getBaseStats()->setStrength(20);
+    actor->getBaseStats()->setMainStat("strength");
+    auto victim = std::make_shared<CCreature>();
+    auto action = std::make_shared<PaidActionProbe>();
+    action->setTypeId("paidActionProbe");
+    action->setManaCost(17);
+    actor->addAction(action);
+    auto armor = std::make_shared<CArmor>();
+    auto response = std::make_shared<PaidActionProbe>();
+    response->setTypeId("armorResponseProbe");
+    response->setManaCost(0);
+    armor->setInteraction(response);
+    victim->setEquipped({{"3", armor}});
+
+    actor->setMana(16);
+    actor->useAction(action, victim);
+    action->onAction(actor, victim);
+    expect_true(actor->getMana() == 16 && action->performed == 0 && action->queried == 0 && response->performed == 0,
+                "unaffordable calls must not debit, execute, query a refund, or trigger armor");
+    actor->setMana(40);
+    actor->useAction(action, victim);
+    actor->useAction(action, victim);
+    expect_true(actor->getMana() == 12 && action->performed == 2 && action->queried == 2 && response->performed == 2,
+                "every accepted cast should debit full cost then apply exactly one bounded refund");
+    actor->setMana(17);
+    action->refund = 100;
+    action->onAction(actor, victim);
+    expect_true(actor->getMana() == 17, "refund cannot exceed the paid base cost");
+    action->refund = -5;
+    action->onAction(actor, victim);
+    expect_true(actor->getMana() == 0, "negative refund must not restore mana through the zero sentinel");
+    action->setManaCost(0);
+    action->refund = 100;
+    const auto queries = action->queried;
+    action->onAction(actor, victim);
+    expect_true(actor->getMana() == 0 && action->queried == queries, "free actions cannot receive mana refunds");
+    action->setManaCost(-1);
+    const auto actions = action->performed;
+    action->onAction(actor, victim);
+    actor->useAction(action, victim);
+    expect_true(action->performed == actions && actor->getMana() == 0, "negative-cost actions must fail closed");
+    action->onAction(nullptr, victim);
+    CInteraction ordinary;
+    expect_true(ordinary.getCommittedManaRefund(actor) == 0, "ordinary actions keep the zero-refund default");
+}
+
 void test_interaction_effect_routes_to_caster_via_self_target() {
     auto interaction = std::make_shared<CInteraction>();
 
@@ -1695,6 +3255,361 @@ void test_interaction_effect_routes_to_caster_via_self_target() {
     expect_true(interaction->effectRoutesToCaster(buff), "selfTarget keeps a buff on the caster");
 }
 
+// Saved effect persistence regressions.
+using EffectObjectJson = CSerializerFunction<std::shared_ptr<json>, std::shared_ptr<CGameObject>>;
+
+std::shared_ptr<CGame> makeEffectSnapshotGame() {
+    CTypes::register_type<CGameObject>();
+    CTypes::register_type<CMapObject, CGameObject>();
+    CTypes::register_type<CMap, CGameObject>();
+    CTypes::register_type<CCreature, CMapObject, CGameObject>();
+    CTypes::register_type<CEffect, CGameObject>();
+    CTypes::register_type<CStats, CGameObject>();
+    CTypes::register_type<CController, CGameObject>();
+    auto game = std::make_shared<CGame>();
+    for (const auto &[name, builder] : *CTypes::builders()) {
+        game->getObjectHandler()->registerType(name, builder);
+    }
+    return game;
+}
+
+std::shared_ptr<CCreature> makeEffectActor(const std::shared_ptr<CGame> &game, const std::string &name) {
+    auto actor = std::make_shared<CCreature>();
+    actor->setGame(game);
+    actor->setName(name);
+    actor->setLevel(1);
+    actor->getBaseStats()->setStamina(10);
+    actor->setHp(50);
+    return actor;
+}
+
+std::shared_ptr<CEffect> attachSavedEffect(const std::shared_ptr<CCreature> &victim,
+                                           const std::shared_ptr<CCreature> &caster, const std::string &name) {
+    auto effect = std::make_shared<CEffect>();
+    effect->setGame(victim->getGame());
+    effect->setName(name);
+    effect->setDuration(5);
+    effect->setCumulative(true);
+    effect->getBonus()->setArmor(7);
+    effect->setCaster(caster);
+    effect->setVictim(victim);
+    effect->apply(victim);
+    effect->apply(victim);
+    victim->addEffect(effect);
+    return effect;
+}
+
+std::shared_ptr<CEffect> findSavedEffect(const std::shared_ptr<CCreature> &actor, const std::string &name) {
+    if (actor) {
+        for (const auto &effect : actor->getEffects()) {
+            if (effect && effect->getName() == name) {
+                return effect;
+            }
+        }
+    }
+    expect_true(false, "a saved creature must retain its named active effect");
+    return nullptr;
+}
+
+void assertSavedEffectState(const std::shared_ptr<CEffect> &effect) {
+    if (!effect) {
+        return;
+    }
+    expect_true(effect->getDuration() == 5 && effect->getTimeTotal() == 5 && effect->getTimeLeft() == 3,
+                "saving or cloning must preserve the original duration and partially elapsed timer");
+    expect_true(effect->getBonus() && effect->getBonus()->getArmor() == 7,
+                "saving or cloning must preserve the configured defense bonus");
+    expect_true(effect->getCumulative(), "saving or cloning must preserve the cumulative flag");
+}
+
+void testSavedSelfEffectPreservesStateAndRemainingApplications() {
+    auto game = makeEffectSnapshotGame();
+    auto actor = makeEffectActor(game, "wardedActor");
+    auto effect = attachSavedEffect(actor, actor, "selfWard");
+    auto serialized = EffectObjectJson::serialize(actor);
+    CSerialization::StrictScope strict;
+    auto restored = std::dynamic_pointer_cast<CCreature>(EffectObjectJson::deserialize(game, serialized));
+    auto restored_effect = findSavedEffect(restored, "selfWard");
+    assertSavedEffectState(restored_effect);
+    if (restored_effect) {
+        expect_true(restored_effect->getCaster() == restored && restored_effect->getVictim() == restored,
+                    "self-targeted effect references must resolve to the restored creature");
+        expect_true(restored->getStats()->getArmor() == actor->getStats()->getArmor(),
+                    "the restored creature must receive the same active defense bonus");
+        expect_true(restored_effect->getBonus() != effect->getBonus(), "snapshot stats must be independent objects");
+        for (int remaining = 2; remaining >= 0; --remaining) {
+            restored_effect->apply(restored);
+            expect_true(restored_effect->getTimeLeft() == remaining,
+                        "restored effects must expire after remaining turns");
+        }
+        restored_effect->apply(restored);
+        expect_true(restored_effect->getTimeLeft() == 0, "an expired restored effect must not restart or underflow");
+    }
+    actor->setEffects({});
+    if (restored) {
+        restored->setEffects({});
+    }
+}
+
+void testSavedMapEffectResolvesForwardAndDetachedActorReferences() {
+    auto game = makeEffectSnapshotGame();
+    auto map = std::make_shared<CMap>();
+    map->setGame(game);
+    game->setMap(map);
+    auto victim = makeEffectActor(game, "aVictim");
+    auto caster = makeEffectActor(game, "zCaster");
+    auto detached = makeEffectActor(game, "zCaster");
+    detached->setHp(0);
+    attachSavedEffect(victim, caster, "externalWard");
+    attachSavedEffect(victim, detached, "departedCasterWard");
+    map->setObjects({victim, caster});
+
+    auto serialized = EffectObjectJson::serialize(map);
+    auto &actors = (*serialized)["properties"]["objects"];
+    std::sort(actors.begin(), actors.end(), [](const json &first, const json &second) {
+        return first["properties"]["name"].get<std::string>() < second["properties"]["name"].get<std::string>();
+    });
+    expect_true(actors[0]["properties"]["name"].get<std::string>() == "aVictim",
+                "the test must deserialize the victim before its caster");
+    CSerialization::StrictScope strict;
+    auto restored = std::dynamic_pointer_cast<CMap>(EffectObjectJson::deserialize(game, serialized));
+    expect_true(restored && restored->getObjects().size() == 2, "snapshot loading must preserve map actor membership");
+    if (!restored) {
+        victim->setEffects({});
+        return;
+    }
+    auto restored_victim = std::dynamic_pointer_cast<CCreature>(restored->getObjectByName("aVictim"));
+    auto restored_caster = std::dynamic_pointer_cast<CCreature>(restored->getObjectByName("zCaster"));
+    auto external = findSavedEffect(restored_victim, "externalWard");
+    auto departed = findSavedEffect(restored_victim, "departedCasterWard");
+    assertSavedEffectState(external);
+    assertSavedEffectState(departed);
+    if (external) {
+        expect_true(external->getCaster() == restored_caster && external->getVictim() == restored_victim,
+                    "forward actor references must resolve to the actual restored map instances");
+        expect_true(external->getCaster() != caster, "save restoration must not retain actors from the source map");
+    }
+    if (departed) {
+        auto restored_detached = departed->getCaster();
+        expect_true(restored_detached && restored_detached != restored_caster && restored_detached != detached,
+                    "a detached caster sharing a live actor name must retain its distinct snapshot identity");
+        expect_true(restored_detached && restored_detached->getHp() == 0,
+                    "a dead caster retained by an effect must remain dead after loading");
+        expect_true(departed->getVictim() == restored_victim,
+                    "effects from detached casters must still target the restored victim");
+    }
+    map->setProperty("trackedActor", std::static_pointer_cast<CGameObject>(victim));
+    auto aliased_map =
+        std::dynamic_pointer_cast<CMap>(EffectObjectJson::deserialize(game, EffectObjectJson::serialize(map)));
+    auto aliased_victim =
+        aliased_map ? std::dynamic_pointer_cast<CCreature>(aliased_map->getObjectByName("aVictim")) : nullptr;
+    expect_true(aliased_victim && aliased_map->getObjectProperty<CGameObject>("trackedActor") == aliased_victim,
+                "a creature referenced by map properties and actor membership must deserialize only once");
+    auto cloned_map = map->clone<CMap>();
+    auto cloned_victim =
+        cloned_map ? std::dynamic_pointer_cast<CCreature>(cloned_map->getObjectByName("aVictim")) : nullptr;
+    auto cloned_caster =
+        cloned_map ? std::dynamic_pointer_cast<CCreature>(cloned_map->getObjectByName("zCaster")) : nullptr;
+    auto cloned_external = findSavedEffect(cloned_victim, "externalWard");
+    auto cloned_departed = findSavedEffect(cloned_victim, "departedCasterWard");
+    if (cloned_external && cloned_departed) {
+        expect_true(cloned_external->getCaster() == cloned_caster && cloned_external->getVictim() == cloned_victim,
+                    "map cloning must remap effect references between actors included in the clone");
+        expect_true(cloned_departed->getCaster() == detached && cloned_departed->getVictim() == cloned_victim,
+                    "map cloning must retain the live detached caster outside the cloned actor set");
+        expect_true(cloned_map->getObjectProperty<CGameObject>("trackedActor") == cloned_victim,
+                    "map cloning must preserve repeated aliases to the same cloned actor");
+    }
+    victim->setEffects({});
+    if (restored_victim) {
+        restored_victim->setEffects({});
+    }
+    if (cloned_victim) {
+        cloned_victim->setEffects({});
+    }
+    if (aliased_victim) {
+        aliased_victim->setEffects({});
+    }
+}
+
+void testEffectCloningRemapsOwnedActorsAndRetainsExternalActors() {
+    auto game = makeEffectSnapshotGame();
+    auto victim = makeEffectActor(game, "cloneVictim");
+    auto caster = makeEffectActor(game, "cloneCaster");
+    auto self = attachSavedEffect(victim, victim, "selfWard");
+    auto external = attachSavedEffect(victim, caster, "externalWard");
+    auto cloned = victim->clone<CCreature>();
+    expect_true(cloned && cloned != victim, "creature cloning must construct a new instance");
+    auto cloned_self = findSavedEffect(cloned, "selfWard");
+    auto cloned_external = findSavedEffect(cloned, "externalWard");
+    assertSavedEffectState(cloned_self);
+    assertSavedEffectState(cloned_external);
+    if (cloned_self && cloned_external) {
+        expect_true(cloned_self != self && cloned_external != external,
+                    "cloning must create independent active effects");
+        expect_true(cloned_self->getCaster() == cloned && cloned_self->getVictim() == cloned,
+                    "a creature clone must remap both self-targeted effect references to the clone");
+        expect_true(cloned_external->getCaster() == caster && cloned_external->getVictim() == cloned,
+                    "a creature clone must retain the live external caster and remap its victim");
+        expect_true(cloned->getStats()->getArmor() == victim->getStats()->getArmor(),
+                    "cloned active effects must preserve composed defense");
+    }
+    auto cloned_effect = external->clone<CEffect>();
+    assertSavedEffectState(cloned_effect);
+    expect_true(cloned_effect && cloned_effect != external && cloned_effect->getCaster() == caster &&
+                    cloned_effect->getVictim() == victim,
+                "cloning an effect alone must retain both live actor identities");
+    victim->setEffects({});
+    if (cloned) {
+        cloned->setEffects({});
+    }
+}
+
+void testSavedMapForwardActorAliasPreservesNameAndSpatialIndexes() {
+    auto game = makeEffectSnapshotGame();
+    auto actor = makeEffectActor(game, "forwardActor");
+    actor->setPosX(7);
+    actor->setPosY(11);
+    actor->setPosZ(2);
+    attachSavedEffect(actor, actor, "selfWard");
+    auto map = std::make_shared<CMap>();
+    map->setGame(game);
+    map->setObjects({actor});
+    auto serialized = EffectObjectJson::serialize(map);
+    json definition = (*serialized)["properties"]["objects"][0];
+    expect_true(definition.contains("effectActorId"), "a referenced actor must have a stable snapshot identity");
+    if (!definition.contains("effectActorId")) {
+        actor->setEffects({});
+        return;
+    }
+    (*serialized)["properties"]["objects"][0] = {{"class", "CCreature"},
+                                                 {"effectActorReference", definition["effectActorId"]}};
+    (*serialized)["properties"]["trackedActor"] = definition;
+    CSerialization::StrictScope strict;
+    auto restored = std::dynamic_pointer_cast<CMap>(EffectObjectJson::deserialize(game, serialized));
+    auto restored_actor = restored ? restored->getObjectProperty<CCreature>("trackedActor") : nullptr;
+    expect_true(restored_actor && restored->getObjectByName("forwardActor") == restored_actor,
+                "an actor alias preceding its definition must populate the map's final name index");
+    expect_true(restored_actor && restored->getObjectsAtCoords(Coords(7, 11, 2)).contains(restored_actor),
+                "an actor alias preceding its definition must populate the final spatial index");
+    expect_true(restored && restored->getObjectsAtCoords(Coords(0, 0, 0)).empty(),
+                "forward actors must not leave placeholder coordinates in the map cache");
+    actor->setEffects({});
+    if (restored_actor) {
+        restored_actor->setEffects({});
+    }
+}
+
+void testSavedEffectsRejectOrdinaryActorPropertyCycles() {
+    auto game = makeEffectSnapshotGame();
+    auto actor = makeEffectActor(game, "cyclicActor");
+    auto map = std::make_shared<CMap>();
+    map->setGame(game);
+    map->setObjects({actor});
+    actor->setProperty("anchorMap", std::static_pointer_cast<CGameObject>(map));
+    bool write_rejected = false;
+    try {
+        EffectObjectJson::serialize(actor);
+    } catch (const std::exception &) {
+        write_rejected = true;
+    }
+    expect_true(write_rejected,
+                "ordinary property cycles must be rejected instead of emitting partially initialized aliases");
+    actor->setProperty("anchorMap", std::shared_ptr<CGameObject>());
+    map->setObjects({});
+
+    json alias = {{"class", "CCreature"}, {"effectActorReference", 1}};
+    json nested_map = {{"class", "CMap"}, {"properties", {{"objects", json::array({alias})}}}};
+    json config = {
+        {"class", "CCreature"},
+        {"effectActorId", 1},
+        {"effectGraph", {{"version", 1}, {"actors", json::array()}}},
+        {"properties", {{"anchorMap", nested_map}, {"name", "cyclicActor"}, {"posx", 7}, {"posy", 11}, {"posz", 2}}}};
+    bool read_rejected = false;
+    try {
+        CSerialization::StrictScope strict;
+        EffectObjectJson::deserialize(game, std::make_shared<json>(std::move(config)));
+    } catch (const std::exception &) {
+        read_rejected = true;
+    }
+    expect_true(read_rejected, "strict loading must reject map membership aliases to an actor still being populated");
+    auto valid = EffectObjectJson::serialize(actor);
+    expect_true(EffectObjectJson::deserialize(game, valid) != nullptr,
+                "rejected property cycles must not poison the next serialization operation");
+}
+
+void testSavedEffectRejectsMalformedActorReferences() {
+    auto game = makeEffectSnapshotGame();
+    auto actor = makeEffectActor(game, "referenceVictim");
+    attachSavedEffect(actor, actor, "selfWard");
+    auto serialized = EffectObjectJson::serialize(actor);
+    expect_true(serialized->contains("effectActorId") &&
+                    (*serialized)["properties"]["effects"][0].contains("effectReferences"),
+                "saved effect graphs must declare actor identities and references");
+    if (!serialized->contains("effectActorId") ||
+        !(*serialized)["properties"]["effects"][0].contains("effectReferences")) {
+        actor->setEffects({});
+        return;
+    }
+    auto rejects = [&game](json config, const char *message) {
+        bool rejected = false;
+        try {
+            CSerialization::StrictScope strict;
+            EffectObjectJson::deserialize(game, std::make_shared<json>(std::move(config)));
+        } catch (const std::exception &) {
+            rejected = true;
+        }
+        expect_true(rejected, message);
+    };
+    for (const auto &invalid : {json(0), json(-1), json(1.5), json("1"), json(999999)}) {
+        json config = *serialized;
+        config["properties"]["effects"][0]["effectReferences"]["caster"] = invalid;
+        rejects(std::move(config), "strict loading must reject invalid or dangling effect actor references");
+    }
+    json duplicate = *serialized;
+    duplicate["effectGraph"] = {{"version", 1}, {"actors", json::array({*serialized})}};
+    duplicate["effectGraph"]["actors"][0].erase("effectGraph");
+    rejects(std::move(duplicate), "strict loading must reject duplicate actor definitions");
+
+    json noncreature = *serialized;
+    noncreature["effectGraph"] = {
+        {"version", 1},
+        {"actors", json::array({{{"class", "CStats"}, {"effectActorId", 999999}, {"properties", json::object()}}})}};
+    noncreature["properties"]["effects"][0]["effectReferences"]["caster"] = 999999;
+    rejects(std::move(noncreature), "strict loading must reject actor identities assigned to a non-creature");
+    actor->setEffects({});
+}
+// End saved effect persistence regressions.
+
+// healProc/addManaProc convert a percentage into an absolute restore amount, while
+// heal(0)/addMana(0) are the documented "restore to full" sentinels. A positive
+// percentage whose truncated amount is 0 (small percent and/or a low maximum) must
+// restore exactly 1 point instead of collapsing into the sentinel; an explicit 0
+// percentage keeps the full-restore call relied upon by existing callers.
+void test_proc_restores_clamp_positive_percentages_away_from_full_restore_sentinel() {
+    auto creature = std::make_shared<CCreature>();
+    creature->setBaseStats(stats_with_main(1, 1)); // hpMax = manaMax = 7
+
+    creature->setHp(3);
+    creature->healProc(2); // 2% of 7 truncates to 0
+    expect_true(creature->getHp() == 4, "a positive heal percentage must restore at least 1 hp, never heal to full");
+
+    creature->healProc(0);
+    expect_true(creature->getHp() == 7, "healProc(0) must keep the restore-to-full sentinel behavior");
+
+    creature->setHp(3);
+    creature->healProc(100);
+    expect_true(creature->getHp() == 7, "healProc(100) must still restore to full hp");
+
+    creature->setMana(2);
+    creature->addManaProc(4); // 4% of 7 truncates to 0
+    expect_true(creature->getMana() == 3,
+                "a positive mana percentage must restore at least 1 mana, never restore to full");
+
+    creature->addManaProc(0);
+    expect_true(creature->getMana() == 7, "addManaProc(0) must keep the restore-to-full sentinel behavior");
+}
+
 } // namespace
 
 int main() {
@@ -1703,8 +3618,17 @@ int main() {
     test_dynamic_property_cannot_spoof_typed_engine_signal();
     test_typed_engine_signal_still_fires_directly();
     test_effect_applies_for_exactly_its_duration_without_underflow();
+    testSavedSelfEffectPreservesStateAndRemainingApplications();
+    testSavedMapEffectResolvesForwardAndDetachedActorReferences();
+    testEffectCloningRemapsOwnedActorsAndRetainsExternalActors();
+    testSavedMapForwardActorAliasPreservesNameAndSpatialIndexes();
+    testSavedEffectsRejectOrdinaryActorPropertyCycles();
+    testSavedEffectRejectsMalformedActorReferences();
+    test_proc_restores_clamp_positive_percentages_away_from_full_restore_sentinel();
+    test_creature_get_dmg_allow_crit_flag_gates_the_crit_double();
     test_creature_get_dmg_hit_chance_is_not_inverted();
     test_interaction_effect_routes_to_caster_via_self_target();
+    test_paid_actions_reject_unaffordable_casts_and_bound_refunds();
     test_tooltip_handler_builds_labels_descriptions_and_item_bonuses();
     test_market_guard_paths_and_item_transfers();
     test_market_prices_are_bounded_and_non_exploitable();
@@ -1715,12 +3639,30 @@ int main() {
     test_game_object_get_map_prefers_owner_and_falls_back_to_active_map();
     test_game_object_equivalent_value_covers_supported_property_types();
     test_game_object_property_helpers_and_owned_tile_movement();
+    test_owned_tile_move_refuses_occupied_destination_atomically();
+    test_owned_tile_move_synchronizes_wrapped_equivalent_coordinates_without_navigation_change();
     test_animation_property_events_invalidate_cached_graphics_object();
     test_creature_inventory_equipment_and_ratio_helpers();
+    test_creature_armor_caps_mitigation_for_loot_stacks_and_effects();
     test_equip_item_same_instance_is_noop_and_keeps_cursed_lock();
+    test_stat_composition_matches_reflective_reference_and_reads_current_inputs();
     test_no_archetype_creature_stats_keep_legacy_composition();
     test_creature_stat_precedence_orders_sources_and_main_stat();
+    test_racial_progression_defaults_keep_composition_neutral();
+    test_racial_level_composes_race_progression_independently_of_class_level();
+    test_racial_level_round_trips_through_meta_property_binding();
     test_creature_class_main_stat_is_authoritative_over_race();
+    test_player_composed_stats_reflect_race_and_class_archetype();
+    test_player_without_archetype_falls_back_to_base_stats();
+    test_no_template_creature_composes_bit_identically_to_baseline();
+    test_creature_templates_compose_after_race_and_class_in_order();
+    test_creature_templates_do_not_replace_race_or_class();
+    test_creature_template_metadata_round_trip();
+    test_no_class_track_creature_composes_bit_identically_to_baseline();
+    test_creature_class_tracks_fold_deterministically_in_order();
+    test_single_class_track_matches_single_creature_class();
+    test_same_order_class_tracks_tie_break_deterministically();
+    test_creature_class_track_metadata_round_trip();
     test_creature_archetype_identity_accessors_use_fallbacks();
     test_creature_effective_interactions_compose_and_dedupe_sources();
     test_creature_effective_interactions_compose_archetype_sources();
@@ -1729,6 +3671,8 @@ int main() {
     test_no_archetype_creature_level_up_mutates_actions_via_levelling();
     test_game_object_comparator_and_identity_sets_document_current_semantics();
     test_game_object_named_comparison_helpers_cover_explicit_semantics();
+
+    testDynamicObjectPropertiesPreserveIdentityAndNotifications();
 
     return finish_tests();
 }

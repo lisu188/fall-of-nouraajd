@@ -262,6 +262,16 @@ std::list<std::string> buildResourceSearchPath() {
         auto canonicalModuleRoot = std::filesystem::weakly_canonical(moduleRoot, errorCode);
         if (!errorCode) {
             paths.push_back(canonicalModuleRoot.string());
+            // CMake multi-config builds put DLLs in Release/Debug and configure resources in the build root.
+            // Only admit that verified build parent, never an arbitrary working directory.
+            const auto configuration = canonicalModuleRoot.filename().string();
+            const auto buildRoot = canonicalModuleRoot.parent_path();
+            if ((configuration == "Release" || configuration == "Debug" || configuration == "RelWithDebInfo" ||
+                 configuration == "MinSizeRel") &&
+                std::filesystem::is_regular_file(buildRoot / "CMakeCache.txt", errorCode) &&
+                std::filesystem::is_directory(buildRoot / "config", errorCode)) {
+                paths.push_back(buildRoot.string());
+            }
         }
     }
     return paths;
@@ -308,6 +318,7 @@ std::filesystem::path resolveWritableResourcePath(const std::list<std::string> &
 const std::string CResType::CONFIG = "CONFIG";
 const std::string CResType::MAP = "MAP";
 const std::string CResType::PLUGIN = "PLUGIN";
+const std::string CResType::PLUGIN_LUA = "PLUGIN_LUA";
 const std::string CResType::SAVE = "SAVE";
 
 CConfigurationProvider::CConfigurationProvider(std::shared_ptr<CResourcesProvider> resourcesProvider)
@@ -522,6 +533,9 @@ std::vector<std::string> CResourcesProvider::getFiles(const std::string &type) {
     } else if (type == CResType::PLUGIN) {
         folderName = "plugins";
         suffix = "py";
+    } else if (type == CResType::PLUGIN_LUA) {
+        folderName = "plugins";
+        suffix = "lua";
     } else if (type == CResType::MAP) {
         folderName = "maps";
     } else if (type == CResType::SAVE) {
@@ -599,7 +613,7 @@ bool CResourcesProvider::save(std::string file, std::shared_ptr<json> data) {
 }
 
 std::shared_ptr<CAnimation> CAnimationProvider::getAnimation(const std::shared_ptr<CGame> &game,
-                                                             const std::shared_ptr<CGameObject> &object, bool custom) {
+                                                             const std::shared_ptr<CGameObject> &object) {
     if (!game || !object) {
         return nullptr;
     }
@@ -609,8 +623,7 @@ std::shared_ptr<CAnimation> CAnimationProvider::getAnimation(const std::shared_p
     if (!resolvedAnimationPath.empty() && std::filesystem::is_directory(resolvedAnimationPath)) {
         animation = game->createObject<CDynamicAnimation>("CDynamicAnimation");
     } else if (std::filesystem::is_regular_file(game->getResourcesProvider()->getPath(animationPath + ".png"))) {
-        animation = custom ? game->createObject<CAnimation>("CCustomAnimation")
-                           : game->createObject<CStaticAnimation>("CStaticAnimation");
+        animation = game->createObject<CStaticAnimation>("CStaticAnimation");
     } else {
         // TODO: if the path wasnt empty load text instead, requires changes in text
         // manager
@@ -624,15 +637,14 @@ std::shared_ptr<CAnimation> CAnimationProvider::getAnimation(const std::shared_p
     return animation;
 }
 
-std::shared_ptr<CAnimation> CAnimationProvider::getAnimation(const std::shared_ptr<CGame> &game, std::string path,
-                                                             bool custom) {
+std::shared_ptr<CAnimation> CAnimationProvider::getAnimation(const std::shared_ptr<CGame> &game, std::string path) {
     std::shared_ptr<CGameObject> object = game->createObject<CGameObject>();
     if (!object) {
         vstd::logger::warning("Skipping animation path with unregistered CGameObject type:", path);
         return nullptr;
     }
     object->setAnimation(std::move(path));
-    auto animation = getAnimation(game, object, custom);
+    auto animation = getAnimation(game, object);
     if (animation) {
         animation->setOwnedObject(object);
     }

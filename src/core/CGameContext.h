@@ -21,14 +21,18 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #include <cstddef>
 #include <cstdint>
 #include <memory>
+#include <optional>
 #include <string>
 #include <unordered_map>
 
 #include "core/CGlobal.h"
+#include "core/CUtil.h"
 
 class CGame;
+class CCreature;
 class CGuiHandler;
 class CConfigurationProvider;
+class CLuaHandler;
 class CMap;
 class CObjectHandler;
 class CResourcesProvider;
@@ -38,7 +42,8 @@ class CSlotConfig;
 
 // Context-owned cache of loaded maps that should outlive a single transition. Sessions are keyed by
 // map name plus an optional instance id so multiple live copies of the same map can be retained. The
-// store only retains and hands back maps; it does not change transition semantics on its own.
+// store also remembers the coordinate from which a retained session was left so reuse can return the
+// player to that session without replaying destination entry initialization.
 class CMapSessionStore {
   public:
     static std::string makeKey(const std::string &mapName, const std::string &instanceId = "");
@@ -48,6 +53,10 @@ class CMapSessionStore {
     void put(const std::shared_ptr<CMap> &map, const std::string &instanceId = "");
 
     std::shared_ptr<CMap> get(const std::string &mapName, const std::string &instanceId = "") const;
+
+    void setReturnCoords(const std::string &mapName, const std::string &instanceId, Coords coords);
+
+    std::optional<Coords> getReturnCoords(const std::string &mapName, const std::string &instanceId = "") const;
 
     bool contains(const std::string &mapName, const std::string &instanceId = "") const;
 
@@ -59,6 +68,7 @@ class CMapSessionStore {
 
   private:
     std::unordered_map<std::string, std::shared_ptr<CMap>> sessions;
+    std::unordered_map<std::string, Coords> returnCoordinates;
 };
 
 class CGameContext {
@@ -75,6 +85,8 @@ class CGameContext {
 
     std::shared_ptr<CScriptHandler> getScriptHandler();
 
+    std::shared_ptr<CLuaHandler> getLuaHandler();
+
     std::shared_ptr<CRngHandler> getRngHandler();
 
     std::shared_ptr<CSlotConfig> getSlotConfiguration();
@@ -84,6 +96,14 @@ class CGameContext {
     std::shared_ptr<CConfigurationProvider> getConfigurationProvider();
 
     std::shared_ptr<CMapSessionStore> getMapSessionStore();
+
+    void addEventLoopConnection(vstd::event_loop<>::connection connection);
+
+    void trackEffectOwner(const std::shared_ptr<CCreature> &creature);
+
+    void untrackEffectOwner(const CCreature *creature);
+
+    std::size_t getEffectOwnerCount() const;
 
     bool isActive() const;
 
@@ -106,10 +126,13 @@ class CGameContext {
     std::shared_ptr<CGuiHandler> guiHandler;
     std::shared_ptr<CObjectHandler> objectHandler;
     std::shared_ptr<CScriptHandler> scriptHandler;
+    std::shared_ptr<CLuaHandler> luaHandler;
     std::shared_ptr<CRngHandler> rngHandler;
     std::shared_ptr<CResourcesProvider> resourcesProvider;
     std::shared_ptr<CConfigurationProvider> configurationProvider;
     std::shared_ptr<CMapSessionStore> mapSessionStore;
+    std::vector<vstd::event_loop<>::connection> eventLoopConnections;
+    std::unordered_map<const CCreature *, std::weak_ptr<CCreature>> effectOwners;
     vstd::lazy<CSlotConfig> slotConfiguration;
     std::atomic<bool> active = true;
     std::atomic<TransitionGeneration> transitionGeneration = 0;

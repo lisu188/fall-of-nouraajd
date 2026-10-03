@@ -19,8 +19,10 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #include "CLayout.h"
 #include "core/CUtil.h"
 #include "gui/object/CProxyGraphicsObject.h"
+#include "gui/panel/CListView.h"
 
 #include <algorithm>
+#include <cmath>
 #include <optional>
 
 namespace {
@@ -32,6 +34,21 @@ std::optional<int> parseLayoutInt(const std::string &value) {
         size_t parsed = 0;
         int result = std::stoi(value, &parsed);
         if (parsed == value.size()) {
+            return result;
+        }
+    } catch (...) {
+    }
+    return std::nullopt;
+}
+
+std::optional<double> parseLayoutDouble(const std::string &value) {
+    if (value.empty()) {
+        return std::nullopt;
+    }
+    try {
+        size_t parsed = 0;
+        double result = std::stod(value, &parsed);
+        if (parsed == value.size() && std::isfinite(result)) {
             return result;
         }
     } catch (...) {
@@ -111,6 +128,14 @@ void CLayout::clearRuntimeRect() {
     clearRuntimeH();
 }
 
+int CLayout::getMinW() { return minW; }
+
+void CLayout::setMinW(int _minW) { minW = std::max(_minW, 0); }
+
+int CLayout::getMinH() { return minH; }
+
+void CLayout::setMinH(int _minH) { minH = std::max(_minH, 0); }
+
 void CLayout::setHorizontal(std::string horizontal) { CLayout::horizontal = horizontal; }
 
 std::string CLayout::getHorizontal() { return horizontal; }
@@ -119,9 +144,9 @@ void CLayout::setVertical(std::string vertical) { CLayout::vertical = vertical; 
 
 std::string CLayout::getVertical() { return vertical; }
 
-std::pair<CLayout::TYPE, int> CLayout::parseValue(std::string value) {
+std::pair<CLayout::TYPE, double> CLayout::parseValue(std::string value) {
     if (vstd::ends_with(value, "%")) {
-        auto parsed = parseLayoutInt(value.substr(0, value.length() - 1));
+        auto parsed = parseLayoutDouble(value.substr(0, value.length() - 1));
         if (parsed) {
             return std::make_pair(PERCENT, *parsed);
         }
@@ -132,7 +157,7 @@ std::pair<CLayout::TYPE, int> CLayout::parseValue(std::string value) {
     return std::make_pair(SIMPLE, 0);
 }
 
-int CLayout::parseValue(std::pair<TYPE, int> value, int parentValue) {
+int CLayout::parseValue(std::pair<TYPE, double> value, int parentValue) {
     switch (value.first) {
     case SIMPLE:
         return value.second;
@@ -154,12 +179,14 @@ std::shared_ptr<SDL_Rect> CLayout::getRect(std::shared_ptr<CGameGraphicsObject> 
         w = *runtimeW;
     } else {
         w = horizontal == "PARENT" ? parent->w : parseValue(getW(), parent->w);
+        w = std::max(w, minW);
     }
     int h = 0;
     if (runtimeH) {
         h = *runtimeH;
     } else {
         h = vertical == "PARENT" ? parent->h : parseValue(getH(), parent->h);
+        h = std::max(h, minH);
     }
 
     if (horizontal == "LEFT" || horizontal == "PARENT") {
@@ -205,6 +232,13 @@ int CProxyGraphicsLayout::getTileSize() { return tileSize; }
 std::shared_ptr<SDL_Rect> CProxyGraphicsLayout::getRect(std::shared_ptr<CGameGraphicsObject> object) {
     auto pRect = getParentRect(object);
     auto proxy = vstd::cast<CProxyGraphicsObject>(object);
+    if (object) {
+        auto list = vstd::cast<CListView>(object->getParent());
+        if (list && list->getRows() && proxy) {
+            const int height = list->getCellSize(list->getGui());
+            return CUtil::rect(pRect->x, pRect->y + proxy->getY() * height, pRect->w, height);
+        }
+    }
     const int safeTileSize = std::clamp(tileSize, 1, 512);
     if (!proxy) {
         return CUtil::rect(pRect->x, pRect->y, safeTileSize, safeTileSize);

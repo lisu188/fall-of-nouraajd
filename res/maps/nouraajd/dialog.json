@@ -2,6 +2,7 @@
   "doorDialog": {
     "class": "DoorDialog",
     "properties": {
+      "questIds": "rolfQuest",
       "states": [
         {
           "class": "CDialogState",
@@ -15,7 +16,8 @@
                   "number": 0,
                   "action": "open_door",
                   "nextStateId": "WELCOME",
-                  "text": "Present Rolf's letter and swear your aid."
+                  "text": "Present Rolf's letter and swear your aid.",
+                  "actionLabel": "Enter town"
                 }
               },
               {
@@ -25,13 +27,15 @@
                   "condition": "can_brace_gate",
                   "action": "brace_gate",
                   "nextStateId": "WARRIOR_GATE",
-                  "text": "Brace the gate before the town swallows itself."
+                  "text": "Brace the gate before the town swallows itself.",
+                  "actionLabel": "Warrior"
                 }
               },
               {
                 "class": "CDialogOption",
                 "properties": {
                   "number": 2,
+                  "action": "threatenGate",
                   "nextStateId": "NOT_WELCOME",
                   "text": "Open up, or these gates become splinters beneath my boot."
                 }
@@ -110,7 +114,7 @@
           "class": "CDialogState",
           "properties": {
             "stateId": "NOT_WELCOME",
-            "text": "Bold words. May the rats enjoy them.",
+            "text": "Bold words. The watch will remember them. The inn charges troublemakers five percent more for beer, and the gatehouse keeps 25 gold of their final bounty for repairs. Present Rolf's letter when you are ready to help.",
             "options": [
               {
                 "ref": "exitOption",
@@ -121,7 +125,8 @@
             ]
           }
         }
-      ]
+      ],
+      "speaker": "Nouraajd Gatekeeper"
     }
   },
   "askAboutGirl": {
@@ -143,7 +148,8 @@
     "ref": "exitOption",
     "properties": {
       "text": "Enough talk. Bring me a tankard of something strong.",
-      "action": "sell_beer"
+      "action": "sell_beer",
+      "actionLabel": "Browse drinks"
     }
   },
   "shouldGo": {
@@ -228,7 +234,8 @@
                   "condition": "can_shadow_robed_men",
                   "action": "shadow_robed_men",
                   "nextStateId": "ASSASIN_TRAIL",
-                  "text": "Shadow the robed men before their trail goes cold."
+                  "text": "Shadow the robed men before their trail goes cold.",
+                  "actionLabel": "Assasin"
                 }
               },
               {
@@ -327,7 +334,8 @@
             ]
           }
         }
-      ]
+      ],
+      "speaker": "Nouraajd Innkeeper"
     }
   }
 }

@@ -23,6 +23,8 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #include <set>
 #include <string>
 
+class CCreatureClass;
+
 class CInteraction;
 
 // CCreatureRace is a CGameObject-derived *metadata definition*, not a CCreature
@@ -32,6 +34,12 @@ class CInteraction;
 // character creation. It is deliberately NOT a CMapObject/CCreature, so it can
 // never be spawned onto a map or appear in getAllSubTypes("CCreature") / random
 // encounter tables; it only carries data that the composition layer reads.
+//
+// creatureType strings are validated against the canonical catalog in
+// res/config/creature_types.json by scripts/validate_content.py
+// (EPIC_08/STORY_01/SUBSTORY_01). The catalog is validation-only metadata: no
+// runtime mechanic (immunities, targeting, ...) reads it, and this class treats
+// creatureType as an opaque string exactly as before.
 class CCreatureRace : public CGameObject {
 
     V_META(CCreatureRace, CGameObject,
@@ -39,7 +47,11 @@ class CCreatureRace : public CGameObject {
            V_PROPERTY(CCreatureRace, std::set<std::shared_ptr<CInteraction>>, actions, getActions, setActions),
            V_PROPERTY(CCreatureRace, std::string, creatureType, getCreatureType, setCreatureType),
            V_PROPERTY(CCreatureRace, std::set<std::string>, subtypes, getSubtypes, setSubtypes),
-           V_PROPERTY(CCreatureRace, bool, playerSelectable, isPlayerSelectable, setPlayerSelectable))
+           V_PROPERTY(CCreatureRace, bool, playerSelectable, isPlayerSelectable, setPlayerSelectable),
+           V_PROPERTY(CCreatureRace, std::set<std::string>, associatedClasses, getAssociatedClasses,
+                      setAssociatedClasses),
+           V_PROPERTY(CCreatureRace, std::shared_ptr<CStats>, racialLevelStats, getRacialLevelStats,
+                      setRacialLevelStats))
 
   public:
     CCreatureRace();
@@ -66,10 +78,37 @@ class CCreatureRace : public CGameObject {
 
     void setPlayerSelectable(bool value);
 
+    // [EPIC_08][STORY_05] D&D-inspired associated classes: the class ids (configured
+    // identity, e.g. "mageClass") that reinforce this race's natural role. Metadata
+    // only for now -- encounter scale treats associated and non-associated pairings
+    // identically until the balance design is approved. Defaults empty, so existing
+    // races and configs are unaffected.
+    std::set<std::string> getAssociatedClasses();
+
+    void setAssociatedClasses(std::set<std::string> value);
+
+    bool isAssociatedClass(const std::string &classId);
+
+    bool isAssociatedClass(const std::shared_ptr<CCreatureClass> &creatureClass);
+
+    std::shared_ptr<CStats> getRacialLevelStats();
+
+    void setRacialLevelStats(std::shared_ptr<CStats> value);
+
   private:
     std::shared_ptr<CStats> baseStats = std::make_shared<CStats>();
     std::set<std::shared_ptr<CInteraction>> actions;
     std::string creatureType;
     std::set<std::string> subtypes;
     bool playerSelectable = false;
+    std::set<std::string> associatedClasses;
+    // Hit-dice-style racial progression: the flat stat growth ONE racial level
+    // contributes, applied once per CCreature::racialLevel by the composed-stat
+    // fold. Racial advancement is modeled separately from the class-driven
+    // CCreature::level (EPIC_08/STORY_04/SUBSTORY_01) and is future-gated
+    // scaffolding: the default is an empty CStats, so a race without authored
+    // progression contributes exactly zero and every existing creature composes
+    // bit-identically to today. No XP or level-up flow raises racialLevel yet --
+    // that requires explicit XP/scale design and is deliberately deferred.
+    std::shared_ptr<CStats> racialLevelStats = std::make_shared<CStats>();
 };

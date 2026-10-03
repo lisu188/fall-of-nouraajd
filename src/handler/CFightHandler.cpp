@@ -22,11 +22,14 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 #include "core/CController.h"
 #include "core/CGame.h"
+#include "core/CGameContext.h"
 #include "core/CMap.h"
 #include "core/CPlaytestTrace.h"
 #include "core/CTags.h"
 #include "object/CCreature.h"
 #include "object/CEffect.h"
+#include "object/CPlayer.h"
+#include "gui/CGui.h"
 
 namespace {
 using encounter_type = std::vector<std::shared_ptr<CCreature>>;
@@ -211,14 +214,10 @@ void update_combat_status(const std::shared_ptr<CMap> &encounterMap, const std::
         }
         status += format_turn_order(turnOrder);
     }
-    encounterMap->setStringProperty("combatStatus", status);
+    CFightHandler::recordCombatStatus(encounterMap, status);
 }
 
-void clear_combat_status(const std::shared_ptr<CMap> &encounterMap) {
-    if (encounterMap) {
-        encounterMap->setStringProperty("combatStatus", "");
-    }
-}
+void clear_combat_status(const std::shared_ptr<CMap> &encounterMap) { CFightHandler::resetCombatHistory(encounterMap); }
 
 void cancel_fight(CFightResult &result, const std::shared_ptr<CCreature> &survivor,
                   const std::shared_ptr<CCreature> &opponent) {
@@ -342,11 +341,25 @@ effect_application_result apply_effects_with_result(const std::shared_ptr<CCreat
     }
 
     effects = cr->getEffects();
+    const bool buffsFirst = effects.size() > 1 && cr->getHp() < cr->getHpMax();
+    using tick_key_type = std::tuple<bool, std::string, std::string, std::string>;
+    std::vector<std::pair<tick_key_type, std::shared_ptr<CEffect>>> orderedEffects;
+    orderedEffects.reserve(effects.size());
     for (const auto &effect : effects) {
         if (!effect) {
             vstd::logger::warning("Skipping null effect while applying effects for", cr->to_string());
             continue;
         }
+        // Recover first while hurt; at full health, let other ticks create room for recovery.
+        auto key = effects.size() > 1 ? tick_key_type{effect->hasTag(CTag::Buff) != buffsFirst, effect->getTypeId(),
+                                                      effect->getType(), effect->getName()}
+                                      : tick_key_type{};
+        orderedEffects.emplace_back(std::move(key), effect);
+    }
+    std::sort(orderedEffects.begin(), orderedEffects.end(),
+              [](const auto &left, const auto &right) { return left.first < right.first; });
+    for (const auto &entry : orderedEffects) {
+        const auto &effect = entry.second;
         const bool was_alive = cr->isAlive();
         vstd::logger::debug(cr->to_string(), "suffers from", effect->to_string());
         effect->apply(cr);
@@ -384,6 +397,7 @@ CFightResult resolve_fight_many(std::shared_ptr<CCreature> attacker, const encou
         return result;
     }
     auto encounterMap = attacker->getMap();
+    CFightHandler::resetCombatHistory(encounterMap);
     const auto attackerName = combat_name(attacker);
     if (!is_active_participant(encounterMap, attacker)) {
         clear_combat_status(encounterMap);
@@ -454,6 +468,7 @@ CFightResult resolve_fight_many(std::shared_ptr<CCreature> attacker, const encou
             break;
         }
         result.rounds = turn + 1;
+        encounterMap->setNumericProperty("combatRound", result.rounds);
         update_combat_status(encounterMap, attacker, opponents, "Combat round " + vstd::str(turn + 1) + " begins.");
         auto before = encounter_state(attacker, opponents);
         const auto turnOrder = build_turn_order(encounterMap, attacker, opponents);
@@ -589,6 +604,49 @@ CFightResult resolve_fight_many(std::shared_ptr<CCreature> attacker, const encou
 
 } // namespace
 
+std::vector<std::string> CFightHandler::getCombatHistory(const std::shared_ptr<CMap> &map) {
+    if (!map)
+        return {};
+    std::vector<std::string> history;
+    try {
+        const auto stored = json::parse(map->getStringProperty("combatHistory"));
+        if (stored.is_array()) {
+            const auto first = stored.size() > CombatHistoryLimit ? stored.size() - CombatHistoryLimit : 0;
+            for (auto index = first; index < stored.size(); ++index) {
+                if (stored[index].is_string())
+                    history.push_back(stored[index].get<std::string>());
+            }
+        }
+    } catch (const std::exception &) {
+        return {};
+    }
+    return history;
+}
+
+void CFightHandler::recordCombatStatus(const std::shared_ptr<CMap> &map, const std::string &status) {
+    if (!map)
+        return;
+    map->setStringProperty("combatStatus", status);
+    if (status.empty())
+        return;
+    auto history = getCombatHistory(map);
+    history.push_back(status);
+    if (history.size() > CombatHistoryLimit)
+        history.erase(history.begin(), history.begin() + (history.size() - CombatHistoryLimit));
+    auto stored = json::array();
+    for (const auto &entry : history)
+        stored[stored.size()] = entry;
+    map->setStringProperty("combatHistory", stored.dump());
+}
+
+void CFightHandler::resetCombatHistory(const std::shared_ptr<CMap> &map) {
+    if (!map)
+        return;
+    map->setStringProperty("combatStatus", "");
+    map->setStringProperty("combatHistory", "");
+    map->setNumericProperty("combatRound", 0);
+}
+
 bool CFightResult::resolved() const {
     return outcome == CFightOutcome::AttackerVictory || outcome == CFightOutcome::AttackerDefeat;
 }
@@ -622,10 +680,18 @@ void CFightHandler::defeatedCreature(const std::shared_ptr<CCreature> &a, const 
     a->addExpScaled(b->getScale());
     // TODO: loot handler
     std::set<std::shared_ptr<CItem>> items = b->getGame()->getRngHandler()->getRandomLoot(b->getScale());
+    std::map<std::string, std::pair<std::string, int>> lostItems;
+    const auto game = b->getGame();
+    const bool showDefeat = b->isPlayer() && game->getGui() && game->getGui()->findChild("CGameFightPanel");
     for (const std::shared_ptr<CItem> &item : b->getInInventory()) {
         if (!b->isPlayer() || !item->hasTag(CTag::Quest)) {
             b->removeItem(item);
             items.insert(item);
+            if (b->isPlayer() && !b->hasInInventory(item)) {
+                auto &entry = lostItems[item->getTypeId().empty() ? item->getName() : item->getTypeId()];
+                entry.first = item->getLabel();
+                ++entry.second;
+            }
         }
     }
     if (CPlaytestTrace::enabled()) {
@@ -641,6 +707,42 @@ void CFightHandler::defeatedCreature(const std::shared_ptr<CCreature> &a, const 
     }
     a->getGame()->getRngHandler()->addRandomLoot(a, items);
     encounterMap->removeObject(b);
+    if (b->isPlayer()) {
+        json receipt = {
+            {"map", encounterMap->getLabel().empty() ? encounterMap->getMapName() : encounterMap->getLabel()},
+            {"hp", b->getHp()},
+            {"x", b->getPosX()},
+            {"y", b->getPosY()},
+            {"z", b->getPosZ()},
+            {"lostItems", json::array()},
+            {"lostItemCount", 0}};
+        int count = 0;
+        for (const auto &[id, entry] : lostItems) {
+            receipt["lostItems"][receipt["lostItems"].size()] = {
+                {"id", id}, {"label", entry.first}, {"count", entry.second}};
+            count += entry.second;
+        }
+        receipt["lostItemCount"] = count;
+        b->setStringProperty("uiDefeatReceipt", receipt.dump());
+        if (showDefeat) {
+            std::weak_ptr<CGame> weakGame = game;
+            std::weak_ptr<CMap> weakMap = encounterMap;
+            std::weak_ptr<CCreature> weakPlayer = b;
+            auto context = game->getContext();
+            const auto generation = context->captureTransitionGeneration();
+            vstd::call_later([weakGame, weakMap, weakPlayer, generation]() {
+                auto game = weakGame.lock();
+                auto map = weakMap.lock();
+                auto player = weakPlayer.lock();
+                if (!game || !map || !player || game->getMap() != map || map->getPlayer() != player ||
+                    !game->getGui() || !game->getContext()->isTransitionGenerationCurrent(generation)) {
+                    return;
+                }
+                pybind11::gil_scoped_acquire gil;
+                game->getScriptHandler()->call_created_function("import ui\nui.showDefeat(game)", {"game"}, game);
+            });
+        }
+    }
 }
 
 void CFightHandler::applyEffects(const std::shared_ptr<CCreature> &cr) { apply_effects_with_result(cr); }

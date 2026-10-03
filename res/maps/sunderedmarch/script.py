@@ -1,7 +1,9 @@
 def load(self, context):
+    from game import showReader, rewardSnapshot, showRewardReceipt, requirementMessage
     from game import CDialog
     from game import CEvent
     from game import CQuest
+    from game import mapQuest
     from game import CTrigger
     from game import register
     from game import trigger
@@ -19,7 +21,15 @@ def load(self, context):
         return player.hasItem(lambda it: it.getName() == item_name)
 
     def quest_flags_default(game_map):
-        for flag in ("gate_open", "crown_taken", "boss_woken", "shrine_used", "seer_started", "seer_done"):
+        for flag in (
+            "gate_open",
+            "crown_taken",
+            "boss_woken",
+            "boss_defeated",
+            "shrine_used",
+            "seer_started",
+            "seer_done",
+        ):
             if not hasattr(game_map, flag):
                 game_map.setBoolProperty(flag, False)
         if not hasattr(game_map, "sigils_found"):
@@ -34,7 +44,7 @@ def load(self, context):
             game = game_map.getGame()
             player = game_map.getPlayer()
             quest_flags_default(game_map)
-            game.getGuiHandler().showMessage(self.getStringProperty("text"))
+            showReader(game, "The Sundered March", self.getStringProperty("text"))
             game_map.removeAll(lambda ob: ob.getName() == self.getName())
             ensure_quest(player, "sunderedMarchQuest")
 
@@ -46,7 +56,7 @@ def load(self, context):
             game_map = self.getMap()
             game = game_map.getGame()
             if game_map.getBoolProperty("shrine_used"):
-                game.getGuiHandler().showMessage(
+                game.getGuiHandler().notify(
                     "The learning stone has taught you all it will. Its lesson does not repeat."
                 )
                 return
@@ -54,7 +64,7 @@ def load(self, context):
             player.addGold(100)
             player.healProc(60)
             game_map.setBoolProperty("shrine_used", True)
-            game.getGuiHandler().showMessage(
+            game.getGuiHandler().notify(
                 "You study the learning stone's campaign-marks until the old drills settle into your hands. "
                 "You feel steadier, and a forgotten pay-chit of 100 gold falls from its hollow base."
             )
@@ -71,10 +81,8 @@ def load(self, context):
             game_map.incProperty("sigils_found", 1)
             found = game_map.getNumericProperty("sigils_found")
             game = game_map.getGame()
-            game.getGuiHandler().showInfo(self.getStringProperty("text"), True)
-            game.getGuiHandler().showMessage(
-                f"A barrow-sigil burns itself into your memory. ({found}/3 obelisks read.)"
-            )
+            showReader(game, "Barrow obelisk", self.getStringProperty("text"))
+            game.getGuiHandler().notify(f"A barrow-sigil burns itself into your memory. ({found}/3 obelisks read.)")
 
     @register(context)
     class KeymasterCache(CEvent):
@@ -86,7 +94,7 @@ def load(self, context):
             self.setBoolProperty("looted", True)
             player = self.getMap().getPlayer()
             player.addItem("ironKey")
-            self.getGame().getGuiHandler().showMessage(
+            self.getGame().getGuiHandler().notify(
                 "You prise the March Keeper's iron key from his cache. Somewhere north, a barred gate is now only waiting."
             )
 
@@ -102,12 +110,14 @@ def load(self, context):
             if has_item(game_map.getPlayer(), "ironKey"):
                 game_map.removeObjectByName("borderGate")
                 game_map.setBoolProperty("gate_open", True)
-                game.getGuiHandler().showMessage(
+                game.getGuiHandler().notify(
                     "The Keeper's iron key turns, and the barred gate grinds open onto the barrow road."
                 )
             else:
-                game.getGuiHandler().showMessage(
-                    "A barred iron gate blocks the pass. It will open only to the March Keeper's key - find his cache in the vale."
+                requirementMessage(
+                    game,
+                    self,
+                    "A barred iron gate blocks the pass. It will open only to the March Keeper's key - find his cache in the vale.",
                 )
 
     @register(context)
@@ -119,7 +129,7 @@ def load(self, context):
                 return
             self.setBoolProperty("looted", True)
             self.getMap().getPlayer().addItem("warBanner")
-            self.getGame().getGuiHandler().showMessage(
+            self.getGame().getGuiHandler().notify(
                 "You wrench the rotted War-Banner from the drowned colonel's grip. The fen sighs as the names on its hem come up into the light."
             )
 
@@ -132,7 +142,7 @@ def load(self, context):
                 return
             self.setBoolProperty("looted", True)
             self.getMap().getPlayer().addItem("reaverBlade")
-            self.getGame().getGuiHandler().showMessage(
+            self.getGame().getGuiHandler().notify(
                 "The ash-buried artifact cache yields the Reaver of the March - a century of killing edge, and no curse to pay for it."
             )
 
@@ -148,16 +158,22 @@ def load(self, context):
                 return
             if game_map.getNumericProperty("sigils_found") < 3:
                 found = game_map.getNumericProperty("sigils_found")
-                game.getGuiHandler().showMessage(
-                    f"The barrow ground stays hard as iron. Read all three obelisks before you dig. ({found}/3 read.)"
+                requirementMessage(
+                    game,
+                    self,
+                    f"The barrow ground stays hard as iron. Read all three obelisks before you dig. ({found}/3 read.)",
                 )
                 return
+            reward_before = rewardSnapshot(player)
             player.addItem("barrowCrown")
             game_map.setBoolProperty("crown_taken", True)
-            game.getGuiHandler().showMessage(
+            showRewardReceipt(
+                game,
+                "Barrow-Warlord's Crown",
+                reward_before,
                 "The three sigils sing and the barrow gives up its dead king. You lift the Crown of the Barrow-Warlord "
                 "from the grave - and the grave lifts its owner after it. The cult has its crowned king at last, and it "
-                "is wearing your face."
+                "is wearing your face.",
             )
             if not game_map.getBoolProperty("boss_woken"):
                 boss = game.createObject("theBarrowWarlord")
@@ -168,16 +184,23 @@ def load(self, context):
                 game_map.addObject(boss)
                 boss.moveTo(*BOSS_SPAWN)
                 game_map.setBoolProperty("boss_woken", True)
+            # Refresh objectives/completion so pickup-first ordering converges with a
+            # later boss defeat. The quest still needs the Barrow-Warlord put down.
+            player.checkQuests()
 
     @register(context)
+    @mapQuest("sunderedmarch")
     class SunderedMarchQuest(CQuest):
         def isCompleted(self):
-            return self.getGame().getMap().getBoolProperty("crown_taken")
+            game_map = self.getGame().getMap()
+            return game_map.getBoolProperty("crown_taken") and game_map.getBoolProperty("boss_defeated")
 
         def getObjective(self):
             game_map = self.getGame().getMap()
+            if game_map.getBoolProperty("crown_taken") and game_map.getBoolProperty("boss_defeated"):
+                return "The Crown of the Barrow-Warlord is yours and its king is down. The Sundered March is only quiet now."
             if game_map.getBoolProperty("crown_taken"):
-                return "You wear the Crown of the Barrow-Warlord. The March has its king; end what the cult began."
+                return "You wear the Crown of the Barrow-Warlord. The March has its king; end what the cult began - put down the Barrow-Warlord."
             found = game_map.getNumericProperty("sigils_found")
             if game_map.getBoolProperty("gate_open"):
                 return f"Read the three barrow-obelisks, then dig beneath the central barrow. ({found}/3 sigils read.)"
@@ -190,11 +213,15 @@ def load(self, context):
             return "Key first, then the gate. The three obelisks stand in the vale, the fen, and the pyre. Monoliths shorten the road."
 
         def onComplete(self):
-            self.getGame().getGuiHandler().showMessage(
-                "The crown is dug up and the March is 'saved' the only way the cult ever meant it to be - with a new dead king on the throne."
+            showReader(
+                self.getGame(),
+                "The March remembers",
+                "The crown is dug up and the March is 'saved' the only way the cult ever meant it to be - "
+                "with a new dead king on the throne.",
             )
 
     @register(context)
+    @mapQuest("sunderedmarch")
     class SeerHuntQuest(CQuest):
         def isCompleted(self):
             return self.getGame().getMap().getBoolProperty("seer_done")
@@ -229,6 +256,14 @@ def load(self, context):
         def not_yet_started(self):
             return not self.getGame().getMap().getBoolProperty("seer_started")
 
+        def questInProgress(self):
+            game_map = self.getGame().getMap()
+            return (
+                game_map.getBoolProperty("seer_started")
+                and not game_map.getBoolProperty("seer_done")
+                and not self.can_return_banner()
+            )
+
         def start_seer_hunt(self):
             game_map = self.getGame().getMap()
             game_map.setBoolProperty("seer_started", True)
@@ -239,12 +274,16 @@ def load(self, context):
             if not self.can_return_banner():
                 return
             player = game_map.getPlayer()
+            reward_before = rewardSnapshot(player)
             player.addGold(SEER_REWARD_GOLD)
             player.addItem("GreaterLifePotion")
             game_map.setBoolProperty("seer_done", True)
-            self.getGame().getGuiHandler().showMessage(
+            showRewardReceipt(
+                self.getGame(),
+                "The Seer remembers",
+                reward_before,
                 "The Seer reads the drowned names off the banner's hem, pays you 300 gold and a Greater Life Potion, "
-                "and tells you the thing you did not want to know: the crown is meant for your head."
+                "and tells you the thing you did not want to know: the crown is meant for your head.",
             )
 
     @trigger(context, "onEnter", "seerHut")
@@ -256,27 +295,34 @@ def load(self, context):
     @trigger(context, "onDestroy", "valeGuard")
     class ValeGuardTrigger(CTrigger):
         def trigger(self, obj, event):
-            obj.getGame().getGuiHandler().showMessage(obj.getStringProperty("message"))
+            obj.getGame().getGuiHandler().notify(obj.getStringProperty("message"))
 
     @trigger(context, "onDestroy", "fenGuard")
     class FenGuardTrigger(CTrigger):
         def trigger(self, obj, event):
-            obj.getGame().getGuiHandler().showMessage(obj.getStringProperty("message"))
+            obj.getGame().getGuiHandler().notify(obj.getStringProperty("message"))
 
     @trigger(context, "onDestroy", "pyreGuard")
     class PyreGuardTrigger(CTrigger):
         def trigger(self, obj, event):
-            obj.getGame().getGuiHandler().showMessage(obj.getStringProperty("message"))
+            obj.getGame().getGuiHandler().notify(obj.getStringProperty("message"))
 
     @trigger(context, "onDestroy", "barrowGuard")
     class BarrowGuardTrigger(CTrigger):
         def trigger(self, obj, event):
-            obj.getGame().getGuiHandler().showMessage(obj.getStringProperty("message"))
+            obj.getGame().getGuiHandler().notify(obj.getStringProperty("message"))
 
     @trigger(context, "onDestroy", "theBarrowWarlordBoss")
     class BarrowWarlordTrigger(CTrigger):
         def trigger(self, obj, event):
-            obj.getGame().getGuiHandler().showMessage(
+            game_map = obj.getGame().getMap()
+            game_map.setBoolProperty("boss_defeated", True)
+            showReader(
+                obj.getGame(),
+                "The warlord falls",
                 "The Crowned Barrow-Warlord falls a second and final time. The plague-crown cracks on the stones, "
-                "and for the first time in a hundred years the Sundered March is only quiet - not waiting."
+                "and for the first time in a hundred years the Sundered March is only quiet - not waiting.",
             )
+            # Boss-defeat transition: converge with the crown pickup so the finale
+            # completes once both requirements are met, in either order.
+            game_map.getPlayer().checkQuests()

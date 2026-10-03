@@ -2,13 +2,25 @@
   "bruteClass": {
     "class": "CCreatureClass",
     "properties": {
-      "mainStat": "strength"
+      "mainStat": "strength",
+      "combatRole": "brute",
+      "actions": [
+        {
+          "ref": "enemyBrace"
+        }
+      ]
     }
   },
   "mageClass": {
     "class": "CCreatureClass",
     "properties": {
-      "mainStat": "intelligence"
+      "mainStat": "intelligence",
+      "combatRole": "mage",
+      "actions": [
+        {
+          "ref": "enemyArcaneBolt"
+        }
+      ]
     }
   },
   "WarriorClass": {
@@ -108,13 +120,25 @@
   "thiefClass": {
     "class": "CCreatureClass",
     "properties": {
-      "mainStat": "agility"
+      "mainStat": "agility",
+      "combatRole": "thief",
+      "actions": [
+        {
+          "ref": "enemyOpeningStrike"
+        }
+      ]
     }
   },
   "cultistClass": {
     "class": "CCreatureClass",
     "properties": {
-      "mainStat": "strength"
+      "mainStat": "strength",
+      "combatRole": "cultist",
+      "actions": [
+        {
+          "ref": "enemyRitualHex"
+        }
+      ]
     }
   },
   "AssasinClass": {

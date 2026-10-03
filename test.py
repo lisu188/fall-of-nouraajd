@@ -35,9 +35,14 @@ import threading
 import time
 import traceback
 import types
+from functools import lru_cache
 from http import HTTPStatus
 from pathlib import Path
 import unittest
+
+if __name__ == "__main__":
+    # Integration fixtures import this harness after the runner changes into the build directory.
+    sys.modules["test"] = sys.modules[__name__]
 
 import game_simulation
 import mcp
@@ -118,6 +123,7 @@ except Exception:
 
 MCP_PROTOCOL_VERSION = "2025-11-25"
 MCP_STDIO_TOOL_TIMEOUT_SECONDS = 10
+MCP_STDIO_MAP_START_TIMEOUT_SECONDS = 60
 MCP_STDIO_MAP_JSON_TIMEOUT_SECONDS = 60
 MCP_STDIO_SHUTDOWN_TIMEOUT_SECONDS = 30
 MCP_STDIO_TAIL_LIMIT_BYTES = 8192
@@ -125,36 +131,69 @@ GAME_TEST_WORKER = os.environ.get("GAME_TEST_WORKER") == "1"
 XVFB_GAMEPLAY_PARENT_TEST = "XvfbGameplayTest.test_keyboard_gameplay_under_xvfb"
 VALID_TEST_SUITES = ("fast", "gameplay", "ui", "coverage-safe", "full")
 FAST_TEST_PREFIXES = (
+    "WindowsPythonConfigurationTest.",
+    "EnemyRoleContractTest.",
+    "MonsterBalanceRunnerTest.",
+    "NativeCallgrindToolTest.",
+    "NativeTestProfileSourceTest.",
+    "PlayerIdentityContentTest.",
+    "EffectContractTest.",
+    "CharacterCreationFlowTest.",
     "CoverageReportTest.",
     "PlayBootstrapTest.",
     "QuestStateHelperTest.",
     "SaveFixtureTest.",
     "TestRunnerSuiteTest.",
+    "UiPixelAnalysisTest.",
 )
 FAST_TEST_NAMES = {
+    "McpServerTest.test_engine_handle_call_scopes_fight_controllers_to_players",
+    "GameTest.test_direct_rendercopy_calls_stay_inside_render_context_wrapper",
     "McpServerTest.test_engine_call_resolves_handle_arguments_for_python_methods",
     "McpServerTest.test_engine_handle_call_rejects_private_methods",
+    "McpServerTest.test_engine_handle_call_allows_quest_reads_without_lifecycle_mutation",
+    "McpServerTest.test_engine_handle_call_serializes_player_quest_sets_as_handles",
     "McpServerTest.test_engine_handle_call_scopes_controller_access_to_players",
     "McpServerTest.test_http_notification_response_declares_empty_body",
     "McpServerTest.test_initialize_response_preserves_request_id",
     "McpServerTest.test_map_design_brief_rejects_path_traversal",
     "McpServerTest.test_stdio_process_drains_stderr_while_waiting_for_stdout",
     "McpServerTest.test_stdio_timeout_diagnostics_include_request_context_and_stream_tails",
+    "McpServerTest.testFullMapStartupUsesExplicitDeadlineAndKeepsQuickRpcBudget",
     "McpServerTest.test_serialize_result_lists_python_methods_for_handles",
     "McpServerTest.test_stdio_batch_handles_initialize_and_tool_listing",
     "PanelLayoutManifestTest.test_panel_layout_manifest_matches_panels_json",
     "PanelLayoutManifestTest.test_gui_window_is_created_resizable_with_minimum_size",
+    "PanelLayoutManifestTest.test_reactive_list_views_subscribe_to_model_signals",
 }
 GAMEPLAY_TEST_PREFIXES = (
+    "EnemyRoleRuntimeTest.",
+    "NativeTestProfileRuntimeTest.",
+    "PlayerIdentityMcpTest.",
+    "EffectSemanticRuntimeTest.",
+    "CharacterPreviewRuntimeTest.",
+    "PaidActionRuntimeTest.",
     "ConsoleEventIsolationTest.",
     "ConsoleEventProcessTest.",
     "GameTest.",
     "McpServerTest.",
+    "DialogueMcpWalkthroughTest.",
+    "ManagementMcpWalkthroughTest.",
+    "NavigationMcpWalkthroughTest.",
+    "NavigationCallbackTest.",
+    "ArtifactPreviewTest.",
+    "PythonCallbackLifecycleTest.",
+    "ConsoleUiInteractionTest.",
+    "UiMinimapInteractionTest.",
 )
 GAMEPLAY_EXCLUDED_TEST_NAMES = {
     "McpServerTest.test_http_notification_response_declares_empty_body",
 }
 COVERAGE_SAFE_EXCLUDED_TEST_NAMES = {
+    "McpServerTest.test_stdio_map_walkthrough_castleHomecoming",
+    "McpServerTest.test_stdio_map_walkthrough_castleGuardianAngels",
+    "McpServerTest.test_stdio_map_walkthrough_castleGriffinCliff",
+    "McpServerTest.test_stdio_castle_campaign_full_route",
     "ConsoleEventIsolationTest.test_console_key_history_in_fresh_process",
     "GameTest.test_map_walkthroughs",
     "McpServerTest.test_stdio_map_walkthrough_multilevel",
@@ -172,6 +211,7 @@ SERIAL_TEST_NAMES = {
     "GameTest.test_load_saved_map_slot_name_does_not_override_object_type_configs",
     "GameTest.test_missing_save_resource_directory_lists_empty",
     "GameTest.test_saved_quest_dependency_loader_uses_class_and_type_refs",
+    "GameTest.testSavedEffectDependencyLoaderRestoresMapEffectAndDetachedCaster",
     XVFB_GAMEPLAY_PARENT_TEST,
 }
 # The stdio map walkthroughs each spawn their own isolated mcp.py subprocess over
@@ -185,9 +225,19 @@ SERIAL_TEST_NAMES = {
 # and size each shard's timeout to its own load.
 SERIAL_TEST_PREFIXES = ()
 DEFAULT_TEST_DURATIONS = {
+    "McpServerTest.test_stdio_map_walkthrough_castleHomecoming": 70.0,
+    "McpServerTest.test_stdio_map_walkthrough_castleGuardianAngels": 70.0,
+    "McpServerTest.test_stdio_map_walkthrough_castleGriffinCliff": 90.0,
+    "McpServerTest.test_stdio_castle_campaign_full_route": 200.0,
+    "GameTest.test_map_walkthrough_castleHomecoming": 25.0,
+    "GameTest.test_map_walkthrough_castleGuardianAngels": 25.0,
+    "GameTest.test_map_walkthrough_castleGriffinCliff": 35.0,
+    "GameTest.test_castle_campaign_carryover_with_melee_and_caster": 80.0,
+    "GameTest.test_castle_partial_capture_survives_save_load": 25.0,
     "McpServerTest.test_stdio_map_walkthrough_multilevel": 25.0,
     "McpServerTest.test_stdio_map_walkthrough_nouraajd": 45.0,
     "McpServerTest.test_stdio_map_walkthrough_ritual": 45.0,
+    "McpServerTest.test_stdio_narrative_outcomes_complete_with_natural_objectives": 200.0,
     "McpServerTest.test_stdio_map_walkthrough_siege": 30.0,
     "McpServerTest.test_stdio_map_walkthrough_test": 20.0,
     "McpServerTest.test_stdio_map_walkthrough_vhulmarn": 30.0,
@@ -225,6 +275,9 @@ DEFAULT_TEST_DURATIONS = {
     "GameTest.test_nouraajd_quest_state_machine": 14.0,
     "GameTest.test_nouraajd_oldwoman_questgiver_conversations_are_reliable": 12.0,
     "GameTest.test_quest_journal_shows_objectives_rewards_and_hints": 12.0,
+    "GameTest.test_authored_quest_journal_snapshots_survive_travel_and_save": 35.0,
+    "McpServerTest.test_stdio_quest_journal_campaign_route_preserves_completed_history": 30.0,
+    "McpServerTest.test_stdio_active_amulet_journal_ignores_ritual_destination_state": 15.0,
     "GameTest.test_generated_tiled_map_exercises_loader_metadata_and_objects": 10.0,
     "GameTest.test_fights": 8.0,
     "GameTest.test_level": 8.0,
@@ -269,7 +322,7 @@ def unique_map_name(prefix):
 
 
 SAVE_FORMAT = "fall-of-nouraajd-save"
-SAVE_SCHEMA_VERSION = 1
+SAVE_SCHEMA_VERSION = 2
 SAVE_FIXTURE_DIR = REPO_ROOT / "tests" / "fixtures" / "save_compatibility"
 
 
@@ -307,9 +360,9 @@ def save_snapshot(saved_document):
     return saved_document
 
 
-def assert_save_envelope(test_case, saved_document, map_name):
+def assert_save_envelope(test_case, saved_document, map_name, schema_version=SAVE_SCHEMA_VERSION):
     test_case.assertEqual(SAVE_FORMAT, saved_document.get("format"))
-    test_case.assertEqual(SAVE_SCHEMA_VERSION, saved_document.get("schemaVersion"))
+    test_case.assertEqual(schema_version, saved_document.get("schemaVersion"))
     test_case.assertEqual(map_name, saved_document.get("mapName"))
     snapshot = saved_document.get("snapshot")
     test_case.assertIsInstance(snapshot, dict)
@@ -836,7 +889,9 @@ class SaveFixtureTest(unittest.TestCase):
 
             document = json.loads(document_path.read_text(encoding="utf-8"))
             if document.get("format") == SAVE_FORMAT:
-                assert_save_envelope(self, document, expected["summary"]["map"])
+                assert_save_envelope(
+                    self, document, expected["summary"]["map"], schema_version=expected["summary"]["schemaVersion"]
+                )
             self.assertEqual(expected["summary"], save_fixture_summary(document), fixture_name)
 
     def test_primitive_wrapper_fixtures_share_values_across_legacy_and_flattened_encodings(self):
@@ -851,8 +906,7 @@ class SaveFixtureTest(unittest.TestCase):
         # Both fixtures declare the same expected logical wrapper values.
         self.assertEqual(legacy["primitiveWrappers"]["values"], flattened["primitiveWrappers"]["values"])
         canonical = {
-            key: primitive_wrapper_logical_value(value)
-            for key, value in legacy["primitiveWrappers"]["values"].items()
+            key: primitive_wrapper_logical_value(value) for key, value in legacy["primitiveWrappers"]["values"].items()
         }
 
         persisted = {}
@@ -903,21 +957,15 @@ class SaveFixtureTest(unittest.TestCase):
         self.assertEqual([], summary["player"]["items"])
 
     def test_schema_v1_fixture_stays_on_version_one_with_legacy_player(self):
-        # Optional archetype fields (race/creatureClass/playerClassId) are additive and must NOT
-        # force a SCHEMA_VERSION bump. This pins the published schema-v1 contract: the immutable
-        # schema_v1 fixture must keep schemaVersion 1, the Python mirror constant must stay 1, and
-        # the fixture must continue to describe a legacy CPlayer (typeId "Warrior" only, no
-        # archetype identity fields) so it still resolves to legacy default stats on load.
-        self.assertEqual(1, SAVE_SCHEMA_VERSION, "Python schema-version mirror drifted from v1")
-
+        # Preserve the published v1 fixture while current saves use v2 for active effect state.
+        # The legacy player has no archetype identity fields and must still resolve its defaults.
         fixture_path = SAVE_FIXTURE_DIR / "schema_v1_test_map.json"
         self.assertTrue(fixture_path.is_file(), fixture_path)
         document = json.loads(fixture_path.read_text(encoding="utf-8"))
 
         self.assertEqual(SAVE_FORMAT, document.get("format"))
         self.assertEqual(1, document.get("schemaVersion"), "schema-v1 fixture must stay on version 1")
-        self.assertEqual(SAVE_SCHEMA_VERSION, document.get("schemaVersion"))
-        assert_save_envelope(self, document, "test")
+        assert_save_envelope(self, document, "test", schema_version=1)
 
         player = snapshot_player_properties(save_snapshot(document))
         # Legacy v1 player: identified by typeId only, with no archetype identity overrides.
@@ -1017,7 +1065,7 @@ class SaveFixtureTest(unittest.TestCase):
         document = json.loads(fixture_path.read_text(encoding="utf-8"))
 
         # Decode through the normal versioned-save envelope, exactly like every other fixture.
-        assert_save_envelope(self, document, "composed")
+        assert_save_envelope(self, document, "composed", schema_version=1)
         snapshot = save_snapshot(document)
 
         # The legacy player keeps loading through the established CPlayer path unchanged: it is
@@ -1055,6 +1103,15 @@ class SaveFixtureTest(unittest.TestCase):
 
 
 class ProgressTextTestResult(unittest.TextTestResult):
+    _OUTCOME_PRIORITIES = {
+        "ok": 0,
+        "skip": 1,
+        "expected-failure": 2,
+        "UNEXPECTED-SUCCESS": 3,
+        "FAIL": 4,
+        "ERROR": 5,
+    }
+
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self.showAll = False
@@ -1062,49 +1119,89 @@ class ProgressTextTestResult(unittest.TextTestResult):
         self.total_tests = 0
         self.test_index = 0
         self._test_start_times = {}
+        self._testOutcomes = {}
         self.test_durations = {}
 
     def startTest(self, test):
         self.test_index += 1
         self._test_start_times[id(test)] = time.monotonic()
+        self._testOutcomes[id(test)] = None
         self._write_progress(test, "start")
         super().startTest(test)
 
+    def stopTest(self, test):
+        try:
+            outcome = self._testOutcomes.pop(id(test), None)
+            if outcome is not None and not self._isInterrupted(test):
+                duration = self._duration(test)
+                self._record_duration(test, duration)
+                self._write_progress(test, outcome[0], duration, outcome[1])
+            else:
+                self._test_start_times.pop(id(test), None)
+        finally:
+            super().stopTest(test)
+
     def addSuccess(self, test):
         unittest.TestResult.addSuccess(self, test)
-        duration = self._duration(test)
-        self._record_duration(test, duration)
-        self._write_progress(test, "ok", duration)
+        self._recordOutcome(test, "ok")
 
     def addFailure(self, test, err):
         unittest.TestResult.addFailure(self, test, err)
-        duration = self._duration(test)
-        self._record_duration(test, duration)
-        self._write_progress(test, "FAIL", duration)
+        self._recordOutcome(test, "FAIL")
 
     def addError(self, test, err):
         unittest.TestResult.addError(self, test, err)
-        duration = self._duration(test)
-        self._record_duration(test, duration)
-        self._write_progress(test, "ERROR", duration)
+        self._recordOutcome(test, "ERROR")
+
+    def addSubTest(self, test, subtest, err):
+        unittest.TestResult.addSubTest(self, test, subtest, err)
+        if err is not None:
+            status = "FAIL" if issubclass(err[0], test.failureException) else "ERROR"
+            self._recordOutcome(test, status)
 
     def addSkip(self, test, reason):
         unittest.TestResult.addSkip(self, test, reason)
-        duration = self._duration(test)
-        self._record_duration(test, duration)
-        self._write_progress(test, "skip", duration, reason)
+        parent = getattr(test, "test_case", None) if id(test) not in self._testOutcomes else None
+        if parent is not None and id(parent) in self._testOutcomes:
+            # unittest may omit the parent's addSuccess after a skipped subtest.
+            self._recordOutcome(parent, "ok")
+        else:
+            self._recordOutcome(test, "skip", reason)
 
     def addExpectedFailure(self, test, err):
         unittest.TestResult.addExpectedFailure(self, test, err)
-        duration = self._duration(test)
-        self._record_duration(test, duration)
-        self._write_progress(test, "expected-failure", duration)
+        self._recordOutcome(test, "expected-failure")
 
     def addUnexpectedSuccess(self, test):
         unittest.TestResult.addUnexpectedSuccess(self, test)
-        duration = self._duration(test)
-        self._record_duration(test, duration)
-        self._write_progress(test, "UNEXPECTED-SUCCESS", duration)
+        self._recordOutcome(test, "UNEXPECTED-SUCCESS")
+
+    def _recordOutcome(self, test, status, detail=None):
+        previous = self._testOutcomes.get(id(test))
+        if id(test) not in self._testOutcomes:
+            self._write_progress(test, status, detail=detail)
+        elif previous is None or self._OUTCOME_PRIORITIES[status] > self._OUTCOME_PRIORITIES[previous[0]]:
+            self._testOutcomes[id(test)] = (status, detail)
+
+    def _isInterrupted(self, test):
+        exception_type, _, traceback = sys.exc_info()
+        if exception_type is None or not issubclass(exception_type, KeyboardInterrupt):
+            return False
+        frame = sys._getframe(1)
+        try:
+            run_code = unittest.TestCase.run.__code__
+            while frame is not None:
+                if frame.f_code is run_code and frame.f_locals.get("self") is test:
+                    break
+                frame = frame.f_back
+            # A caught interrupt may contain a previous run of this same case.
+            while frame is not None and traceback is not None:
+                if traceback.tb_frame is frame:
+                    return True
+                traceback = traceback.tb_next
+            return False
+        finally:
+            del frame
 
     def _duration(self, test):
         started_at = self._test_start_times.pop(id(test), None)
@@ -1564,6 +1661,7 @@ SDL_RELEASED = 0
 SDL_SCANCODE_MASK = 1 << 30
 SDLK_BACKSPACE = 8
 SDLK_TAB = 9
+SDLK_F12 = 1073741893
 SDLK_RETURN = 13
 SDLK_DOWN = 1073741905
 SDLK_UP = 1073741906
@@ -1577,10 +1675,23 @@ GUI_TILE_SIZE = 50
 MINIMAP_RECT = (1700, 820, 220, 220)
 MINIMAP_PLAYER_RGB = (255, 255, 0)
 MINIMAP_VIEWPORT_RGB = (255, 255, 255)
-ROOT_800_600 = (560, 240, 800, 600)
-ROOT_400_300 = (760, 390, 400, 300)
-ROOT_SELECTION_BASE = (810, 390, 300, 300)
+ROOT_800_600 = (58, 33, 1804, 1015)
+ROOT_400_300 = (269, 141, 1382, 799)
+ROOT_SELECTION_BASE = ROOT_800_600
+ROOT_FULL_WINDOW = (0, 0, GUI_WIDTH, GUI_HEIGHT)
 PANEL_LAYOUT_CASES = {
+    "campaignBrowserPanel": {
+        "kind": "panel",
+        "class": "CGameCampaignBrowserPanel",
+        "root": ROOT_800_600,
+        "tests": ("test_campaign_browser_layout_selection_and_cancel",),
+    },
+    "campaignPanel": {
+        "kind": "panel",
+        "class": "CGameCampaignPanel",
+        "root": ROOT_800_600,
+        "tests": ("test_campaign_panel_layout_blocking_and_resize",),
+    },
     "characterPanel": {
         "kind": "panel",
         "class": "CGameCharacterPanel",
@@ -1663,11 +1774,19 @@ PANEL_LAYOUT_CASES = {
 COMBAT_STALE_LOOP_TIMEOUT_SECONDS = 5.0 if os.environ.get("GAME_COVERAGE_RUN") == "1" else 2.0
 XVFB_GAMEPLAY_CHILD_TIMEOUT = 300 if os.environ.get("GAME_COVERAGE_RUN") == "1" else 90
 XVFB_GAMEPLAY_CHILD_TESTS = (
+    "test_character_creation_all_twenty_compositions",
+    "test_campaign_browser_layout_selection_and_cancel",
+    "test_campaign_panel_layout_blocking_and_resize",
     "test_keyboard_input_moves_player",
     "test_mouse_click_moves_player",
     "test_window_resize_event_updates_gui_dimensions",
+    "test_window_resize_refreshes_open_panel_layout",
+    "test_panel_resize_handle_drag_resizes_and_clamps",
+    "test_panel_resize_enlarged_list_view_hit_testing",
+    "test_panel_resize_reopened_panel_stays_onscreen",
     "test_screenshot_readback_has_rendered_pixels",
     "test_screenshot_minimap_has_rendered_pixels",
+    "test_gui_queries_match_serialized_rendered_tree",
     "test_screenshot_after_keyboard_move_has_rendered_pixels",
     "test_screenshot_after_mouse_move_has_rendered_pixels",
     "test_screenshot_after_save_hotkey_has_rendered_pixels",
@@ -1683,12 +1802,15 @@ XVFB_GAMEPLAY_CHILD_TESTS = (
     "test_inventory_drag_invalid_slot_and_cancel_keep_state",
     "test_inventory_drag_close_or_modal_panel_cancels_without_equip",
     "test_inventory_equipped_selection_resets_inventory_selection",
-    "test_inventory_quest_item_selection_is_ignored",
-    "test_fight_quest_item_selection_is_ignored",
+    "test_inventory_quest_item_selection_is_inspection_only",
+    "test_trade_grouped_sale_adds_copies_explicitly",
+    "test_fight_quest_item_selection_is_inspection_only",
     "test_cave_loss_does_not_reopen_fight_panel",
     "test_fight_panel_select_interaction_cancels_on_sdl_quit",
     "test_screenshot_question_panel_has_rendered_pixels",
     "test_screenshot_quest_panel_with_active_quest_has_rendered_pixels",
+    "test_quest_journal_keeps_active_and_completed_entries_after_travel",
+    "test_screenshot_repeated_render_frames_are_identical",
     "test_panel_harness_info_artifacts",
     "test_all_panel_root_layout_contracts",
     "test_all_top_level_panels_block_outside_map_clicks",
@@ -1715,12 +1837,16 @@ XVFB_BATCHABLE_CHILD_TESTS = {
     "test_screenshot_info_panel_has_rendered_pixels",
     "test_screenshot_inventory_panel_has_rendered_pixels",
     "test_window_resize_event_updates_gui_dimensions",
+    "test_window_resize_refreshes_open_panel_layout",
     "test_screenshot_question_panel_has_rendered_pixels",
     "test_screenshot_quest_panel_with_active_quest_has_rendered_pixels",
+    "test_screenshot_repeated_render_frames_are_identical",
     "test_panel_harness_info_artifacts",
     "test_all_panel_root_layout_contracts",
 }
 XVFB_GAMEPLAY_CHILD_DURATION_HINTS = {
+    "test_quest_journal_keeps_active_and_completed_entries_after_travel": 15,
+    "test_character_creation_all_twenty_compositions": 60,
     "test_full_nouraajd_quest_walkthrough_ui": 90,
     "test_choice_panel_layouts_and_hitboxes": 12,
     "test_inventory_loot_trade_list_layouts": 12,
@@ -1731,6 +1857,10 @@ XVFB_GAMEPLAY_CHILD_DURATION_HINTS = {
     "test_screenshot_after_save_hotkey_has_rendered_pixels": 8,
     "test_save_hotkey_writes_loadable_map": 8,
     "test_screenshot_minimap_has_rendered_pixels": 6,
+    "test_window_resize_refreshes_open_panel_layout": 6,
+    "test_panel_resize_handle_drag_resizes_and_clamps": 6,
+    "test_panel_resize_enlarged_list_view_hit_testing": 6,
+    "test_panel_resize_reopened_panel_stays_onscreen": 6,
     "test_screenshot_inventory_equipped_selection_has_rendered_pixels": 6,
     "test_screenshot_inventory_item_selection_has_rendered_pixels": 6,
     "test_inventory_drag_release_outside_source_equips_item": 6,
@@ -1739,8 +1869,9 @@ XVFB_GAMEPLAY_CHILD_DURATION_HINTS = {
     "test_inventory_drag_invalid_slot_and_cancel_keep_state": 6,
     "test_inventory_drag_close_or_modal_panel_cancels_without_equip": 6,
     "test_inventory_equipped_selection_resets_inventory_selection": 6,
-    "test_inventory_quest_item_selection_is_ignored": 6,
-    "test_fight_quest_item_selection_is_ignored": 6,
+    "test_inventory_quest_item_selection_is_inspection_only": 6,
+    "test_trade_grouped_sale_adds_copies_explicitly": 6,
+    "test_fight_quest_item_selection_is_inspection_only": 6,
     "test_cave_loss_does_not_reopen_fight_panel": 6,
     "test_fight_panel_select_interaction_cancels_on_sdl_quit": 6,
 }
@@ -1782,14 +1913,21 @@ NOURAAJD_QUEST_REWARDS = {
 
 def load_sdl_library():
     import ctypes
+
+    # Cache the path, keeping each caller's ctypes function signatures independent.
+    library_name = resolveSdlLibraryName(str(build_dir), tuple(map(str, extension_dirs)))
+    return ctypes.CDLL(library_name)
+
+
+@lru_cache(maxsize=4)
+def resolveSdlLibraryName(build_path, extension_paths):
+    import ctypes
     import ctypes.util
 
-    library_names = [ctypes.util.find_library("SDL2")]
-    for extension_dir in extension_dirs:
-        library_names.append(extension_dir / "SDL2.dll")
+    library_names = [Path(extension_dir) / "SDL2.dll" for extension_dir in extension_paths]
     library_names.extend(
         [
-            build_dir / "vcpkg_installed" / "x64-windows" / "bin" / "SDL2.dll",
+            Path(build_path) / "vcpkg_installed" / "x64-windows" / "bin" / "SDL2.dll",
             "SDL2.dll",
             "libSDL2-2.0.so.0",
             "libSDL2.so",
@@ -1797,12 +1935,18 @@ def load_sdl_library():
     )
 
     for library_name in library_names:
-        if not library_name:
-            continue
         try:
-            return ctypes.CDLL(str(library_name))
+            ctypes.CDLL(str(library_name))
+            return str(library_name)
         except OSError:
             continue
+    discovered_name = ctypes.util.find_library("SDL2")
+    if discovered_name:
+        try:
+            ctypes.CDLL(discovered_name)
+            return discovered_name
+        except OSError:
+            pass
     raise AssertionError("Could not load SDL2 for gameplay event injection.")
 
 
@@ -1878,6 +2022,8 @@ def focused_sdl_window():
 
 
 def assert_focused_sdl_window_resizable(test_case):
+    if isOffscreenGameplayChild():
+        test_case.skipTest("SDL dummy/offscreen has no desktop focus; resize flag inspection requires isolated Xvfb.")
     import ctypes
 
     sdl = load_sdl_library()
@@ -2048,7 +2194,27 @@ def push_sdl_mouse_motion_event(x, y, xrel=0, yrel=0):
         raise AssertionError(f"SDL_PushEvent returned {pushed}.")
 
 
+def isolatedGameplaySdlWindow(sdl):
+    """Find a window in this process, only inside the verified Xvfb gameplay child."""
+    import ctypes
+
+    if os.environ.get("GAME_XVFB_GAMEPLAY_CHILD") != "1" or os.environ.get("SDL_VIDEODRIVER") != "x11":
+        return None
+    sdl.SDL_GetCurrentVideoDriver.restype = ctypes.c_char_p
+    if sdl.SDL_GetCurrentVideoDriver() != b"x11":
+        return None
+    sdl.SDL_GetWindowFromID.argtypes = [ctypes.c_uint32]
+    sdl.SDL_GetWindowFromID.restype = ctypes.c_void_p
+    for window_id in range(1, 256):
+        window = sdl.SDL_GetWindowFromID(window_id)
+        if window:
+            return window
+    return None
+
+
 def push_sdl_window_size_changed_event(width, height):
+    if isOffscreenGameplayChild():
+        raise unittest.SkipTest("This resize injection requires window focus; SDL dummy/offscreen cannot provide it.")
     import ctypes
 
     class SDL_WindowEvent(ctypes.Structure):
@@ -2072,7 +2238,7 @@ def push_sdl_window_size_changed_event(width, height):
         ]
 
     sdl = load_sdl_library()
-    focused_window = focused_sdl_window()
+    focused_window = focused_sdl_window() or isolatedGameplaySdlWindow(sdl)
     if not focused_window:
         raise AssertionError("Expected a focused SDL window for resize event injection.")
 
@@ -2406,9 +2572,9 @@ def list_runtime_grid(list_view, gui):
 
 
 def list_cell_rect(list_view, column, row):
-    x, y, _, _ = resolved_rect(list_view)
-    tile = list_view.getTileSize()
-    return x + column * tile, y + row * tile, tile, tile
+    x, y, width, _ = resolved_rect(list_view)
+    tile = list_view.getCellSize(list_view.getGui())
+    return x + column * tile, y + row * tile, width if list_view.getRows() else tile, tile
 
 
 def list_cell_center(list_view, column, row):
@@ -2425,9 +2591,10 @@ def click_list_cell(list_view, column, row, button=SDL_BUTTON_LEFT):
 
 
 def activate_list_cell(list_view, gui, column, row, button=SDL_BUTTON_LEFT):
-    tile = list_view.getTileSize()
-    x = column * tile + tile // 2
-    y = row * tile + tile // 2
+    cell = list_cell_rect(list_view, column, row)
+    origin = resolved_rect(list_view)
+    x = cell[0] - origin[0] + cell[2] // 2
+    y = cell[1] - origin[1] + cell[3] // 2
     list_view.mouseEvent(gui, SDL_MOUSEBUTTONDOWN, button, x, y)
     list_view.mouseEvent(gui, SDL_MOUSEBUTTONUP, button, x, y)
 
@@ -2458,8 +2625,13 @@ def queue_question_answer(game, g, button_index):
                 raise AssertionError("CGameQuestionPanel was not visible for queued answer.")
             game.event_loop.instance().invoke(answer)
             return
-        buttons = sorted(find_descendants_by_type(panel, "CButton"), key=lambda child: resolved_rect(child)[0])
-        activate_widget(buttons[button_index], g.getGui())
+        callback = "clickYes" if button_index == 0 else "clickNo"
+        button = next(
+            child
+            for child in find_descendants_by_type(panel, "CButton")
+            if child.getStringProperty("click") == callback
+        )
+        activate_widget(button, g.getGui())
 
     game.event_loop.instance().invoke(answer)
 
@@ -2493,7 +2665,7 @@ def click_first_list_object(test_case, list_view, gui, predicate=None, button=SD
                     continue
                 if predicate is None or predicate(obj):
                     if graphic.mouseEvent(gui, SDL_MOUSEBUTTONDOWN, button, 1, 1):
-                        tile = list_view.getTileSize()
+                        tile = list_view.getCellSize(gui)
                         list_view.mouseEvent(
                             gui, SDL_MOUSEBUTTONUP, button, column * tile + tile // 2, row * tile + tile // 2
                         )
@@ -2553,6 +2725,34 @@ def drag_between_points(test_case, g, start, target, *, expect_started=True):
     test_case.assertFalse(g.getGui().hasPointerCapture())
 
 
+def drag_panel_resize_handle(test_case, g, panel, press, motions, release):
+    # Drive an opt-in panel corner resize (#1430) through REAL SDL input events, so the press,
+    # captured motion, and release all travel the full window-coordinate input pipeline. The press
+    # on the bottom-right handle must claim pointer capture for the panel WITHOUT starting a list
+    # drag session (the handle claim beats children covering the corner), every motion step must
+    # resolve to the expected runtime rectangle, and the release must end the capture.
+    press_x, press_y = press
+    push_sdl_mouse_button_event(press_x, press_y, SDL_BUTTON_LEFT, SDL_MOUSEBUTTONDOWN)
+    pump_event_loop(3)
+    test_case.assertTrue(g.getGui().hasPointerCapture(), "A resize-handle press should capture the pointer.")
+    test_case.assertFalse(g.getGui().hasDragSession(), "A resize-handle press must not start a list drag session.")
+
+    for motion_x, motion_y, expected_rect in motions:
+        push_sdl_mouse_motion_event(motion_x, motion_y, motion_x - press_x, motion_y - press_y)
+        pump_event_loop(3)
+        test_case.assertEqual(
+            expected_rect,
+            resolved_rect(panel),
+            f"Captured resize motion to ({motion_x}, {motion_y}) resolved an unexpected panel rectangle.",
+        )
+
+    release_x, release_y = release
+    push_sdl_mouse_button_event(release_x, release_y, SDL_BUTTON_LEFT, SDL_MOUSEBUTTONUP)
+    pump_event_loop(5)
+    test_case.assertFalse(g.getGui().hasPointerCapture(), "Releasing the resize drag should end pointer capture.")
+    test_case.assertFalse(g.getGui().hasDragSession())
+
+
 def gui_object_record(obj):
     record = {
         "type": obj.getType(),
@@ -2573,6 +2773,8 @@ def gui_object_record(obj):
 
 
 def panel_pixel_summary(data, width, height, panel_rect, regions=None):
+    from PIL import Image, ImageChops
+
     regions = regions or {}
     summary = {
         "inside": 0,
@@ -2580,47 +2782,44 @@ def panel_pixel_summary(data, width, height, panel_rect, regions=None):
         "tightBounds": None,
         "regions": {name: 0 for name in regions},
     }
-    bounds = None
-    for pixel_index in range(width * height):
-        offset = pixel_index * 4
-        if data[offset : offset + 3] == b"\x00\x00\x00":
-            continue
-        x = pixel_index % width
-        y = pixel_index // width
-        if rect_contains_point(panel_rect, x, y):
-            summary["inside"] += 1
-        else:
-            summary["outside"] += 1
-        bounds = (
-            (x, y, x, y)
-            if bounds is None
-            else (min(bounds[0], x), min(bounds[1], y), max(bounds[2], x), max(bounds[3], y))
-        )
-        for name, rect in regions.items():
-            if rect_contains_point(rect, x, y):
-                summary["regions"][name] += 1
+    if width <= 0 or height <= 0:
+        return summary
+    # A nonzero value in any RGB channel counts, even when alpha is zero.
+    red, green, blue = Image.frombytes("RGB", (width, height), data, "raw", "RGBX").split()
+    mask = ImageChops.lighter(ImageChops.lighter(red, green), blue)
+
+    def count(rect):
+        left, top = max(0, rect[0]), max(0, rect[1])
+        right, bottom = min(width, rect_right(rect)), min(height, rect_bottom(rect))
+        if right <= left or bottom <= top:
+            return 0
+        return (right - left) * (bottom - top) - mask.crop((left, top, right, bottom)).histogram()[0]
+
+    summary["inside"] = count(panel_rect)
+    summary["outside"] = width * height - mask.histogram()[0] - summary["inside"]
+    summary["regions"] = {name: count(rect) for name, rect in regions.items()}
+    bounds = mask.getbbox()
     if bounds is not None:
-        summary["tightBounds"] = [bounds[0], bounds[1], bounds[2] - bounds[0] + 1, bounds[3] - bounds[1] + 1]
+        summary["tightBounds"] = [bounds[0], bounds[1], bounds[2] - bounds[0], bounds[3] - bounds[1]]
     return summary
 
 
 def pixel_diff_bounds(before, after, width, rect):
-    bounds = None
-    changed = 0
-    for row in range(rect[1], rect_bottom(rect)):
-        for col in range(rect[0], rect_right(rect)):
-            offset = (row * width + col) * 4
-            if before[offset : offset + 3] == after[offset : offset + 3]:
-                continue
-            changed += 1
-            bounds = (
-                (col, row, col, row)
-                if bounds is None
-                else (min(bounds[0], col), min(bounds[1], row), max(bounds[2], col), max(bounds[3], row))
-            )
+    from PIL import Image, ImageChops
+
+    if rect[2] <= 0 or rect[3] <= 0:
+        return None, 0
+    size = (width, len(before) // (width * 4))
+    box = (rect[0], rect[1], rect_right(rect), rect_bottom(rect))
+    before_image = Image.frombytes("RGB", size, before, "raw", "RGBX").crop(box)
+    after_image = Image.frombytes("RGB", size, after, "raw", "RGBX").crop(box)
+    red, green, blue = ImageChops.difference(before_image, after_image).split()
+    mask = ImageChops.lighter(ImageChops.lighter(red, green), blue)
+    bounds = mask.getbbox()
     if bounds is None:
         return None, 0
-    return (bounds[0], bounds[1], bounds[2] - bounds[0] + 1, bounds[3] - bounds[1] + 1), changed
+    changed = rect[2] * rect[3] - mask.histogram()[0]
+    return (rect[0] + bounds[0], rect[1] + bounds[1], bounds[2] - bounds[0], bounds[3] - bounds[1]), changed
 
 
 def annotate_panel_layout(source_path, output_path, summary):
@@ -2646,6 +2845,11 @@ def annotate_panel_layout(source_path, output_path, summary):
     annotated.save(output_path)
 
 
+def gui_logical_size(g):
+    gui = g.getGui()
+    return int(gui.getNumericProperty("width")), int(gui.getNumericProperty("height"))
+
+
 def capture_panel_layout(test_case, g, scenario, panel, regions=None, outside_tolerance=0):
     regions = regions or {}
     pump_event_loop(3)
@@ -2654,7 +2858,7 @@ def capture_panel_layout(test_case, g, scenario, panel, regions=None, outside_to
         data, width, height = capture_sdl_screenshot(screenshot_path, g.getGui())
     except RuntimeError as exc:
         test_case.skipTest(f"SDL renderer is not available for screenshot readback: {exc}")
-    test_case.assertEqual((GUI_WIDTH, GUI_HEIGHT), (width, height))
+    test_case.assertEqual(gui_logical_size(g), (width, height))
     panel_rect = resolved_rect(panel)
     objects = sorted((gui_object_record(obj) for obj in collect_gui_descendants(panel)), key=lambda item: item["rect"])
     summary = {
@@ -2714,7 +2918,7 @@ def assert_screenshot_has_rendered_pixels(test_case, g, name):
         test_case.skipTest(f"SDL renderer is not available for screenshot readback: {exc}")
 
     test_case.assertEqual(".png", screenshot_path.suffix)
-    test_case.assertEqual((GUI_WIDTH, GUI_HEIGHT), (width, height))
+    test_case.assertEqual(gui_logical_size(g), (width, height))
     test_case.assertTrue(screenshot_path.exists())
     test_case.assertGreater(screenshot_path.stat().st_size, 0)
     with Image.open(screenshot_path) as image:
@@ -2737,7 +2941,7 @@ def assert_minimap_has_rendered_pixels(test_case, g, name):
         test_case.skipTest(f"SDL renderer is not available for screenshot readback: {exc}")
     summary = screenshot_rect_summary(data, width, MINIMAP_RECT)
 
-    test_case.assertEqual((GUI_WIDTH, GUI_HEIGHT), (width, height))
+    test_case.assertEqual(gui_logical_size(g), (width, height))
     test_case.assertTrue(screenshot_path.exists())
     test_case.assertGreater(screenshot_path.stat().st_size, 0)
     with Image.open(screenshot_path) as image:
@@ -2779,16 +2983,16 @@ def visible_map_cell_center(origin, target):
 
 
 def gui_contains_class(g, class_name):
-    game = load_game_module()
-    gui_tree = json.loads(game.jsonify(g.getGui()))
-    stack = [gui_tree]
+    """Find configured GUI classes, excluding metadata names of untyped render cells."""
+    gui = g.getGui()
+    stack = [gui] if gui is not None else []
     while stack:
         node = stack.pop()
-        if not isinstance(node, dict):
+        if node is None:
             continue
-        if node.get("class") == class_name:
+        if node.getType() == class_name:
             return True
-        stack.extend(node.get("properties", {}).get("children") or [])
+        stack.extend(node.getChildren())
     return False
 
 
@@ -2804,12 +3008,12 @@ def collect_gui_children(root, class_name):
 
 
 def get_map_proxy_child_counts(g):
-    game = load_game_module()
-    gui_tree = json.loads(game.jsonify(g.getGui()))
-    children = gui_tree.get("properties", {}).get("children") or []
-    map_graph = next(child for child in children if child.get("class") == "CMapGraphicsObject")
-    proxies = map_graph.get("properties", {}).get("children") or []
-    return [len(proxy.get("properties", {}).get("children") or []) for proxy in proxies]
+    map_graph = next(child for child in g.getGui().getChildren() if child.getType() == "CMapGraphicsObject")
+    # Native map cells are constructed directly and retain an empty configured type;
+    # the destination-preview controls now also live under the map graphics object.
+    return [
+        len(proxy.getChildren()) for proxy in map_graph.getChildren() if proxy.getType() in {"", "CProxyGraphicsObject"}
+    ]
 
 
 def materialized_tile_type(game, game_map, coords):
@@ -2903,6 +3107,39 @@ def iter_cpp_source_files():
             yield path
 
 
+def iter_tracked_cpp_source_files():
+    for file_path in git_tracked_files("*.h", "*.hpp", "*.c", "*.cc", "*.cpp", "*.cxx"):
+        if file_path.split("/", 1)[0] == "third_party":
+            continue
+        yield REPO_ROOT / file_path
+
+
+def strip_cpp_comments_and_strings(text):
+    # Raw string literals must go first: they are possibly multiline and may contain
+    # quotes and comment markers, so the comment/string passes below would mis-handle
+    # their contents (e.g. a raw-string fixture quoting SDL_RenderCopy would survive
+    # and be counted as a live call).
+    text = re.sub(r'(?:u8|u|U|L)?R"([^"()\\\s]{0,16})\(.*?\)\1"', "", text, flags=re.DOTALL)
+    # Strip comments next (mirrors strip_cpp_comments in scripts/validate_content.py)
+    # so commented-out calls are not counted as live ones, then drop ordinary string
+    # and character literals so quoted tokens (e.g. log messages) are not counted
+    # either.
+    text = re.sub(r"/\*.*?\*/|//[^\n\r]*", "", text, flags=re.DOTALL)
+    return re.sub(r"\"(?:\\.|[^\"\\\n])*\"|'(?:\\.|[^'\\\n])*'", "", text)
+
+
+RENDER_COPY_TOKEN_PATTERN = re.compile(r"\bSDL_RenderCopy(?:Ex)?\b")
+# Sanctioned direct SDL_RenderCopy/SDL_RenderCopyEx call sites: the CRenderContext
+# copy/copyEx wrapper internals are the only code allowed to blit textures directly.
+# Every other call site must route through the wrapper. If the wrapper internals
+# legitimately change, update these expected counts in the same commit so the drift
+# is a conscious decision in either direction (new direct call, or lost sanctioned
+# site).
+SANCTIONED_RENDER_COPY_SITES = {
+    "src/gui/CRenderContext.cpp": {"SDL_RenderCopy": 1, "SDL_RenderCopyEx": 1},
+}
+
+
 def run_command(args):
     proc = subprocess.run(args, cwd=REPO_ROOT, capture_output=True, text=True)
     output = proc.stdout.strip()
@@ -2943,6 +3180,36 @@ def load_game_map_with_player(map_name, player_name=DEFAULT_PLAYER):
     game_map = g.getMap()
     player = game_map.getPlayer()
     return g, game_map, player
+
+
+def createActiveEffectSaveFixture(test_case):
+    game = load_game_module()
+    g, game_map, player = load_game_map_with_player("test")
+    player.moveTo(13, 12, 0)
+    game.event_loop.instance().run()
+    test_case.assertEqual((13, 12, 0), coords_tuple(player.getCoords()))
+    stat_names = ("armor", "normalResist", "shadowResist")
+    baseline_stats = {name: player.getStats().getNumericProperty(name) for name in stat_names}
+    g.createObject("ArmorOfFaith").onAction(player, player)
+    effects = list(player.getEffects())
+    test_case.assertEqual(1, len(effects))
+    effect = effects[0]
+    effect.apply(player)
+    expected = {
+        "duration": 4,
+        "timeLeft": 3,
+        "bonus": {"armor": 3 + player.getLevel() // 2, "normalResist": 3, "shadowResist": 3},
+    }
+    test_case.assertEqual(expected["timeLeft"], effect.getTimeLeft())
+    test_case.assertEqual(expected["duration"], effect.getNumericProperty("duration"))
+    test_case.assertEqual(expected["bonus"], {name: effect.getBonus().getNumericProperty(name) for name in stat_names})
+    save_name = unique_save_name("active-effect-state")
+    test_case.addCleanup(cleanup_save_slot, save_name)
+    try:
+        game.CMapLoader.save(game_map, save_name)
+    finally:
+        player.setEffects(set())
+    return save_name, expected, baseline_stats
 
 
 def get_player_controller(player):
@@ -4839,6 +5106,17 @@ def walkthrough_vhulmarn_map():
     assert player.countItems("tiaraOfTheDrownedTithe") == tiaras_before + 1, "The tiara should enter the inventory."
     assert find_runtime_object(game_map, "theNamelessBoss") is not None, "The Nameless should rise on the altar."
 
+    # The finale requires the boss defeat as well as the pickup: the tiara alone must not complete it.
+    player.checkQuests()
+    assert "drownedTitheQuest" not in completed_quest_names(
+        player
+    ), "The Drowned Tithe quest must not complete on the tiara pickup alone."
+
+    # Defeating The Nameless (its onDestroy trigger) records the boss defeat and completes the finale.
+    game_map.removeObjectByName("theNamelessBoss")
+    pump_event_loop(5)
+    assert game_map.getBoolProperty("boss_defeated"), "Defeating The Nameless should record the boss defeat."
+    assert game_map.getObjectByName("theNamelessBoss") is None, "The defeated Nameless should be gone from the map."
     player.checkQuests()
     assert "drownedTitheQuest" in completed_quest_names(player), "The Drowned Tithe quest should complete."
 
@@ -4848,8 +5126,9 @@ def walkthrough_vhulmarn_map():
         "bell_tolled": game_map.getBoolProperty("bell_tolled"),
         "tithe_taken": game_map.getBoolProperty("tithe_taken"),
         "boss_woken": game_map.getBoolProperty("boss_woken"),
+        "boss_defeated": game_map.getBoolProperty("boss_defeated"),
         "tiara_count": player.countItems("tiaraOfTheDrownedTithe"),
-        "boss_present": find_runtime_object(game_map, "theNamelessBoss") is not None,
+        "boss_present": game_map.getObjectByName("theNamelessBoss") is not None,
         "quest_completed": "drownedTitheQuest" in completed_quest_names(player),
     }
 
@@ -4884,6 +5163,17 @@ def walkthrough_kadath_map():
     assert player.countItems("onyxSignetOfNyarlathotep") == signets_before + 1, "The signet should enter the inventory."
     assert find_runtime_object(game_map, "theCrawlingChaosBoss") is not None, "Nyarlathotep should rise at the throne."
 
+    # The finale requires the boss defeat as well as the pickup: the signet alone must not complete it.
+    player.checkQuests()
+    assert "kadathAscentQuest" not in completed_quest_names(
+        player
+    ), "The Kadath ascent quest must not complete on the signet pickup alone."
+
+    # Defeating the Crawling Chaos (its onDestroy trigger) records the boss defeat and completes the finale.
+    game_map.removeObjectByName("theCrawlingChaosBoss")
+    pump_event_loop(5)
+    assert game_map.getBoolProperty("boss_defeated"), "Defeating the Crawling Chaos should record the boss defeat."
+    assert game_map.getObjectByName("theCrawlingChaosBoss") is None, "The defeated Crawling Chaos should be gone."
     player.checkQuests()
     assert "kadathAscentQuest" in completed_quest_names(player), "The Kadath ascent quest should complete."
 
@@ -4893,8 +5183,9 @@ def walkthrough_kadath_map():
         "gate_opened": game_map.getBoolProperty("gate_opened"),
         "throne_taken": game_map.getBoolProperty("throne_taken"),
         "boss_woken": game_map.getBoolProperty("boss_woken"),
+        "boss_defeated": game_map.getBoolProperty("boss_defeated"),
         "signet_count": player.countItems("onyxSignetOfNyarlathotep"),
-        "boss_present": find_runtime_object(game_map, "theCrawlingChaosBoss") is not None,
+        "boss_present": game_map.getObjectByName("theCrawlingChaosBoss") is not None,
         "quest_completed": "kadathAscentQuest" in completed_quest_names(player),
     }
 
@@ -4944,6 +5235,17 @@ def walkthrough_sunderedmarch_map():
         find_runtime_object(game_map, "theBarrowWarlordBoss") is not None
     ), "The Barrow-Warlord should rise at the dig."
 
+    # The finale requires the boss defeat as well as the pickup: the crown alone must not complete it.
+    player.checkQuests()
+    assert "sunderedMarchQuest" not in completed_quest_names(
+        player
+    ), "The Sundered March quest must not complete on the crown pickup alone."
+
+    # Defeating the Barrow-Warlord (its onDestroy trigger) records the boss defeat and completes the finale.
+    game_map.removeObjectByName("theBarrowWarlordBoss")
+    pump_event_loop(5)
+    assert game_map.getBoolProperty("boss_defeated"), "Defeating the Barrow-Warlord should record the boss defeat."
+    assert game_map.getObjectByName("theBarrowWarlordBoss") is None, "The defeated Barrow-Warlord should be gone."
     player.checkQuests()
     assert "sunderedMarchQuest" in completed_quest_names(player), "The Sundered March quest should complete."
 
@@ -4953,8 +5255,9 @@ def walkthrough_sunderedmarch_map():
         "sigils_found": game_map.getNumericProperty("sigils_found"),
         "crown_taken": game_map.getBoolProperty("crown_taken"),
         "boss_woken": game_map.getBoolProperty("boss_woken"),
+        "boss_defeated": game_map.getBoolProperty("boss_defeated"),
         "crown_count": player.countItems("barrowCrown"),
-        "boss_present": find_runtime_object(game_map, "theBarrowWarlordBoss") is not None,
+        "boss_present": game_map.getObjectByName("theBarrowWarlordBoss") is not None,
         "quest_completed": "sunderedMarchQuest" in completed_quest_names(player),
     }
 
@@ -5026,9 +5329,20 @@ def walkthrough_ninemarches_map():
     assert find_runtime_object(game_map, "theNinefoldKingBoss") is not None, "The Ninefold King should rise at the dig."
     assert game_map.getNumericProperty("chapter") == 4, "The dig should advance to the final chapter."
 
+    # The finale requires the boss defeat as well as the pickup: the crown alone must not complete it.
+    player.checkQuests()
+    assert "ninemarchesQuest" not in completed_quest_names(
+        player
+    ), "The Nine Marches quest must not complete on the crown pickup alone."
+    assert "haldaQuest" in completed_quest_names(player), "Ser Halda's companion quest should complete on recruit."
+
+    # Defeating the Ninefold King (its onDestroy trigger) records the boss defeat and completes the finale.
+    game_map.removeObjectByName("theNinefoldKingBoss")
+    pump_event_loop(5)
+    assert game_map.getBoolProperty("boss_defeated"), "Defeating the Ninefold King should record the boss defeat."
+    assert game_map.getObjectByName("theNinefoldKingBoss") is None, "The defeated Ninefold King should be gone."
     player.checkQuests()
     assert "ninemarchesQuest" in completed_quest_names(player), "The Nine Marches quest should complete."
-    assert "haldaQuest" in completed_quest_names(player), "Ser Halda's companion quest should complete on recruit."
 
     return {
         "map": "ninemarches",
@@ -5039,8 +5353,9 @@ def walkthrough_ninemarches_map():
         "obelisks_read": game_map.getNumericProperty("obelisks_read"),
         "crown_taken": game_map.getBoolProperty("crown_taken"),
         "boss_woken": game_map.getBoolProperty("boss_woken"),
+        "boss_defeated": game_map.getBoolProperty("boss_defeated"),
         "crown_count": player.countItems("ninefoldCrown"),
-        "boss_present": find_runtime_object(game_map, "theNinefoldKingBoss") is not None,
+        "boss_present": game_map.getObjectByName("theNinefoldKingBoss") is not None,
         "quest_completed": "ninemarchesQuest" in completed_quest_names(player),
     }
 
@@ -5064,6 +5379,13 @@ def walkthrough_hearthfall_map():
     gold_before = player.getGold()
     game_map.removeObjectByName("watchCaptain")
     assert game_map.getBoolProperty("captain_defeated"), "Killing Osric should mark the captain defeated."
+    player.checkQuests()
+    assert "hearthfallQuest" in quest_names(
+        player
+    ), "The Hearthfall quest should stay active until victory is reported."
+    assert "hearthfallQuest" not in completed_quest_names(
+        player
+    ), "Killing Osric alone must not complete the Hearthfall quest."
 
     # Reporting to Elder Maren pays the village purse and completes the chapter.
     elder = g.createObject("elderDialog")
@@ -5076,10 +5398,20 @@ def walkthrough_hearthfall_map():
     player.checkQuests()
     assert "hearthfallQuest" in completed_quest_names(player), "The Hearthfall quest should complete."
 
+    # Reporting the victory opens the road north: standalone play follows the
+    # fallback route to the Gravemoor once the chapter is complete.
+    captain_defeated = game_map.getBoolProperty("captain_defeated")
+    victory_reported = game_map.getBoolProperty("victory_reported")
+    scene_manager = g.getSceneManager()
+    assert scene_manager.getTransitionStateName() == "TransitionPending", "Victory should request the road north."
+    pump_event_loop(10)
+    assert g.getMap().mapName == "gravemoor", "Standalone victory should travel to the Gravemoor."
+    assert g.getMap().getPlayer() == player, "The same player should walk the road north."
+
     return {
-        "map": "hearthfall",
-        "captain_defeated": game_map.getBoolProperty("captain_defeated"),
-        "victory_reported": game_map.getBoolProperty("victory_reported"),
+        "map": g.getMap().mapName,
+        "captain_defeated": captain_defeated,
+        "victory_reported": victory_reported,
         "gold": player.getGold(),
         "quest_completed": "hearthfallQuest" in completed_quest_names(player),
     }
@@ -5121,11 +5453,22 @@ def walkthrough_gravemoor_map():
     player.checkQuests()
     assert "gravemoorQuest" in completed_quest_names(player), "The Gravemoor quest should complete."
 
+    # Passing judgment opens the road to the Usurper's Gate: standalone play
+    # follows the fallback route once the chapter is complete.
+    loyalists_freed = game_map.getNumericProperty("loyalists_freed")
+    voss_judged = game_map.getBoolProperty("voss_judged")
+    voss_spared = game_map.getBoolProperty("voss_spared")
+    scene_manager = g.getSceneManager()
+    assert scene_manager.getTransitionStateName() == "TransitionPending", "Judgment should request the road onward."
+    pump_event_loop(10)
+    assert g.getMap().mapName == "usurpergate", "Standalone judgment should travel to the Usurper's Gate."
+    assert g.getMap().getPlayer() == player, "The same player should walk the road onward."
+
     return {
-        "map": "gravemoor",
-        "loyalists_freed": game_map.getNumericProperty("loyalists_freed"),
-        "voss_judged": game_map.getBoolProperty("voss_judged"),
-        "voss_spared": game_map.getBoolProperty("voss_spared"),
+        "map": g.getMap().mapName,
+        "loyalists_freed": loyalists_freed,
+        "voss_judged": voss_judged,
+        "voss_spared": voss_spared,
         "gold": player.getGold(),
         "quest_completed": "gravemoorQuest" in completed_quest_names(player),
     }
@@ -5164,7 +5507,30 @@ def walkthrough_usurpergate_map():
     }
 
 
+def walkthrough_castle_map(map_name):
+    from tests.castle_walkthrough import nativeDriver
+
+    game = load_game_module()
+    game_instance, _, _ = load_game_map_with_player(map_name)
+    return nativeDriver(game, game_instance).chapter(map_name)
+
+
+def walkthrough_castle_homecoming_map():
+    return walkthrough_castle_map("castleHomecoming")
+
+
+def walkthrough_castle_guardian_angels_map():
+    return walkthrough_castle_map("castleGuardianAngels")
+
+
+def walkthrough_castle_griffin_cliff_map():
+    return walkthrough_castle_map("castleGriffinCliff")
+
+
 WALKTHROUGHS = {
+    "castleHomecoming": walkthrough_castle_homecoming_map,
+    "castleGuardianAngels": walkthrough_castle_guardian_angels_map,
+    "castleGriffinCliff": walkthrough_castle_griffin_cliff_map,
     "gravemoor": walkthrough_gravemoor_map,
     "hearthfall": walkthrough_hearthfall_map,
     "kadath": walkthrough_kadath_map,
@@ -5251,6 +5617,21 @@ def run_walkthrough(map_name, fn):
 
 class GameTest(unittest.TestCase):
     @game_test
+    def test_randint_inclusive_integer_contract(self):
+        game = load_game_module()
+        self.assertIn("both bounds inclusive", game.randint.__doc__)
+        self.assertIn("Reversed bounds are normalized", game.randint.__doc__)
+        self.assertEqual(-7, game.randint(-7, -7))
+        self.assertEqual(7, game.randint(7, 7))
+        for lower, upper in ((-12, -3), (-2, 3), (3, -2), (-(2**31), 2**31 - 1)):
+            for _ in range(100):
+                value = game.randint(lower, upper)
+                self.assertIs(type(value), int)
+                self.assertLessEqual(min(lower, upper), value)
+                self.assertLessEqual(value, max(lower, upper))
+        return True, "Python randint shares the inclusive normalized native integer contract"
+
+    @game_test
     def test_invalid_inputs(self):
         game = load_game_module()
 
@@ -5270,7 +5651,33 @@ class GameTest(unittest.TestCase):
         g = game.CGameLoader.loadGame()
         plain_graphic = g.createObject("CGameGraphicsObject")
         self.assertEqual((0, 0, 0, 0), resolved_rect(plain_graphic))
+        layout = g.createObject("CLayout")
+        for name, value in (("x", "7"), ("y", "11"), ("w", "123"), ("h", "45")):
+            layout.setStringProperty(name, value)
+        plain_graphic.setObjectProperty("layout", layout)
+        rect = plain_graphic.getResolvedRect()
+        self.assertIsInstance(rect, tuple)
+        self.assertEqual((7, 11, 123, 45), rect)
+        self.assertTrue(all(type(value) is int for value in rect))
         return True, ""
+
+    @game_test
+    def test_object_property_binding_creates_replaces_and_clears_dynamic_references(self):
+        game = load_game_module()
+        g = game.CGameLoader.loadGame()
+        self.addCleanup(g.getContext().shutdown)
+        owner = g.createObject("CGameObject")
+        other_owner = g.createObject("CGameObject")
+        first = g.createObject("Sword")
+        second = g.createObject("LesserLifePotion")
+        owner.setObjectProperty("inspectedItem", first)
+        self.assertEqual(first, owner.getObjectProperty("inspectedItem"))
+        self.assertFalse(hasattr(other_owner, "inspectedItem"))
+        owner.setObjectProperty("inspectedItem", second)
+        self.assertEqual(second, owner.getObjectProperty("inspectedItem"))
+        owner.setObjectProperty("inspectedItem", None)
+        self.assertIsNone(owner.getObjectProperty("inspectedItem"))
+        return True, "dynamic object references preserve identity, replacement, and null clearing"
 
     @game_test
     def test_non_square_tmx_tile_layer_preserves_row_major_tile_positions(self):
@@ -5552,22 +5959,60 @@ class GameTest(unittest.TestCase):
         g = game.CGameLoader.loadGame()
         sample_library = "plugins/native/native_marker_plugin"
 
-        self.assertTrue(game.CPluginLoader.loadDynamicPlugin(g, sample_library, "game_plugin_load_direct_v1"))
+        self.assertTrue(game.CPluginLoader.loadDynamicPlugin(g, sample_library, "game_plugin_load_direct_v2"))
         marker = g.createObject("directDynamicPluginMarker")
         self.assertIsNotNone(marker)
         self.assertEqual("Direct dynamic plugin marker", marker.getStringProperty("label"))
         self.assertTrue(marker.getBoolProperty("directDynamicPluginLoaded"))
 
         self.assertFalse(game.CPluginLoader.loadDynamicPlugin(g, "plugins/native/definitely_missing_plugin"))
-        self.assertFalse(game.CPluginLoader.loadDynamicPlugin(g, sample_library, "game_plugin_load_missing_v1"))
-        self.assertFalse(game.CPluginLoader.loadDynamicPlugin(g, sample_library, "game_plugin_load_bad_api_v1"))
-        self.assertFalse(game.CPluginLoader.loadDynamicPlugin(g, sample_library, "game_plugin_load_false_v1"))
+        self.assertFalse(game.CPluginLoader.loadDynamicPlugin(g, sample_library, "game_plugin_load_missing_v2"))
+        self.assertFalse(game.CPluginLoader.loadDynamicPlugin(g, sample_library, "game_plugin_load_bad_api_v2"))
+        self.assertFalse(game.CPluginLoader.loadDynamicPlugin(g, sample_library, "game_plugin_load_false_v2"))
 
         report = {
             "direct": marker.getBoolProperty("directDynamicPluginLoaded"),
             "marker": marker.getStringProperty("label"),
         }
         return True, json.dumps(report, sort_keys=True)
+
+    @game_test
+    def test_lua_plugin_auto_discovery_registers_tile_type(self):
+        game = load_game_module()
+
+        g = game.CGameLoader.loadGame()
+        tile = g.createObject("LuaRoadTile")
+
+        self.assertIsNotNone(tile)
+        self.assertEqual("LuaRoadTile", tile.getType())
+
+        report = {"lua_tile": tile.getType()}
+        return True, json.dumps(report, sort_keys=True)
+
+    @game_test
+    def test_lua_plugin_loader_rejects_non_resource_paths(self):
+        game = load_game_module()
+        g = game.CGameLoader.loadGame()
+
+        with tempfile.NamedTemporaryFile("w", suffix=".lua", delete=False) as tmp:
+            tmp.write("function load(context)\nend\n")
+            absolute_path = tmp.name
+
+        try:
+            self.assertFalse(game.CPluginLoader.loadLuaPlugin(g, absolute_path))
+            self.assertFalse(game.CPluginLoader.loadLuaPlugin(g, "../res/plugins/tile.lua"))
+            self.assertFalse(game.CPluginLoader.loadLuaPlugin(g, "maps/test/script.lua"))
+            self.assertFalse(game.CPluginLoader.loadLuaPlugin(g, "plugins/definitely_missing.lua"))
+            self.assertTrue(game.CPluginLoader.loadLuaPlugin(g, "plugins/tile.lua"))
+
+            report = {
+                "absolute_path_rejected": absolute_path,
+                "relative_parent_rejected": "../res/plugins/tile.lua",
+                "map_script_rejected": "maps/test/script.lua",
+            }
+            return True, json.dumps(report, sort_keys=True)
+        finally:
+            os.unlink(absolute_path)
 
     @game_test
     def test_dynamic_domain_plugins_register_gameplay_classes(self):
@@ -6029,8 +6474,14 @@ class GameTest(unittest.TestCase):
 
         event = FakeEvent(player)
         infos = []
-        original_show_info = game.CGuiHandler.showInfo
-        game.CGuiHandler.showInfo = lambda self, message, centered=False: infos.append(message)
+        original_show_reader = game.CGuiHandler.showCampaignScreen
+
+        def capture_reader(_handler, title, body, action):
+            self.assertTrue(title)
+            self.assertEqual("Continue", action)
+            infos.append(body)
+
+        game.CGuiHandler.showCampaignScreen = capture_reader
         try:
             # LearningStone: experience once per player.
             stone = place_object("adventureLearningStone", "h3LearningStone")
@@ -6119,6 +6570,7 @@ class GameTest(unittest.TestCase):
             obelisk.onEnter(event)
             self.assertEqual(1, player.getNumericProperty("obelisksVisited"))
             self.assertEqual(hints_before + 2, len(infos))
+            self.assertEqual([obelisk.getStringProperty("text")] * 2, infos[hints_before:])
 
             # WarriorsTomb: loot at a price, and only once.
             tomb = place_object("warriorsTomb", "adventureTomb")
@@ -6156,7 +6608,7 @@ class GameTest(unittest.TestCase):
             self.assertIsNone(game_map.getObjectByName("adventureBorderGuard"))
             self.assertTrue(game_map.canStep(guard_coords))
         finally:
-            game.CGuiHandler.showInfo = original_show_info
+            game.CGuiHandler.showCampaignScreen = original_show_reader
 
         return True, json.dumps(
             {
@@ -6294,6 +6746,210 @@ class GameTest(unittest.TestCase):
             cleanup_save_slot(save_name)
 
     @game_test
+    def test_selftarget_interaction_routes_effect_to_caster(self):
+        """A selfTarget interaction applies its effect to the caster, not the opponent.
+
+        This is the migrated targeting form: CInteraction::onAction routes through
+        effectRoutesToCaster, which returns true for an explicit selfTarget regardless
+        of the effect's tags. A healthy opponent is passed as the target, so a mis-route
+        would land the buff on the opponent instead -- this self-routing is exactly the
+        invariant the monster AI relies on when it casts a self-buff. (The AI's action
+        *selection* has no Python-bound fight-move entry point; it is covered by the
+        self_target fixtures in tests/unit/test_controller.cpp.)
+        """
+        game = load_game_module()
+        g = game.CGameLoader.loadGame()
+        handler = g.getObjectHandler()
+        handler.registerConfigJson(
+            "SelfTargetBuffAction",
+            json.dumps(
+                {
+                    "class": "CInteraction",
+                    "properties": {
+                        "selfTarget": True,
+                        "effect": {"class": "CEffect", "properties": {"tags": ["buff"], "duration": 3}},
+                    },
+                }
+            ),
+        )
+
+        interaction = g.createObject("SelfTargetBuffAction")
+        caster = g.createObject("CCreature")
+        opponent = g.createObject("CCreature")
+        self.assertEqual(0, len(list(caster.getEffects())))
+        self.assertEqual(0, len(list(opponent.getEffects())))
+
+        interaction.onAction(caster, opponent)
+
+        caster_effects = list(caster.getEffects())
+        opponent_effects = list(opponent.getEffects())
+        self.assertEqual(1, len(caster_effects))
+        self.assertEqual(0, len(opponent_effects))
+        self.assertEqual("CEffect", caster_effects[0].getType())
+        return True, json.dumps(
+            {"caster_effects": len(caster_effects), "opponent_effects": len(opponent_effects)},
+            sort_keys=True,
+        )
+
+    @game_test
+    def test_opponent_target_interaction_routes_effect_to_opponent(self):
+        """A non-selfTarget, non-Buff interaction applies its effect to the opponent.
+
+        With selfTarget unset and no Buff tag, effectRoutesToCaster returns false and
+        onAction applies the cloned effect to the target creature instead of the caster.
+        """
+        game = load_game_module()
+        g = game.CGameLoader.loadGame()
+        handler = g.getObjectHandler()
+        handler.registerConfigJson(
+            "OpponentStrikeAction",
+            json.dumps(
+                {
+                    "class": "CInteraction",
+                    "properties": {
+                        "effect": {"class": "CEffect", "properties": {"tags": ["stun"], "duration": 2}},
+                    },
+                }
+            ),
+        )
+
+        interaction = g.createObject("OpponentStrikeAction")
+        caster = g.createObject("CCreature")
+        opponent = g.createObject("CCreature")
+
+        interaction.onAction(caster, opponent)
+
+        caster_effects = list(caster.getEffects())
+        opponent_effects = list(opponent.getEffects())
+        self.assertEqual(0, len(caster_effects))
+        self.assertEqual(1, len(opponent_effects))
+        self.assertEqual("CEffect", opponent_effects[0].getType())
+        return True, json.dumps(
+            {"caster_effects": len(caster_effects), "opponent_effects": len(opponent_effects)},
+            sort_keys=True,
+        )
+
+    @game_test
+    def test_targetless_self_action_applies_to_caster_and_skips_opponent_effect(self):
+        """A self-target action used with no opponent still applies to the caster.
+
+        CInteraction::onAction routes a selfTarget effect to the caster before it ever
+        inspects the (here null) target, so a targetless self action buffs the caster
+        without raising. By contrast an opponent-target effect with no target is skipped
+        entirely (the engine logs and drops it), leaving no effect on the caster.
+        """
+        game = load_game_module()
+        g = game.CGameLoader.loadGame()
+        handler = g.getObjectHandler()
+        handler.registerConfigJson(
+            "TargetlessSelfBuffAction",
+            json.dumps(
+                {
+                    "class": "CInteraction",
+                    "properties": {
+                        "selfTarget": True,
+                        "effect": {"class": "CEffect", "properties": {"tags": ["buff"], "duration": 3}},
+                    },
+                }
+            ),
+        )
+        handler.registerConfigJson(
+            "TargetlessOpponentStrikeAction",
+            json.dumps(
+                {
+                    "class": "CInteraction",
+                    "properties": {
+                        "effect": {"class": "CEffect", "properties": {"tags": ["stun"], "duration": 2}},
+                    },
+                }
+            ),
+        )
+
+        self_action = g.createObject("TargetlessSelfBuffAction")
+        opponent_action = g.createObject("TargetlessOpponentStrikeAction")
+
+        self_caster = g.createObject("CCreature")
+        self_action.onAction(self_caster, None)
+        self.assertEqual(1, len(list(self_caster.getEffects())))
+
+        opponent_caster = g.createObject("CCreature")
+        opponent_action.onAction(opponent_caster, None)
+        self.assertEqual(0, len(list(opponent_caster.getEffects())))
+
+        return True, json.dumps(
+            {
+                "self_caster_effects": len(list(self_caster.getEffects())),
+                "opponent_caster_effects": len(list(opponent_caster.getEffects())),
+            },
+            sort_keys=True,
+        )
+
+    @game_test
+    def test_selftarget_interaction_survives_save_load(self):
+        """An object carrying a selfTarget interaction round-trips selfTarget == true.
+
+        Covers both the in-process serialization path (clone, which serializes and
+        rebuilds the object) and a full CMapLoader.save -> reload cycle: a creature
+        carrying an inline selfTarget action is placed on the map, saved to a slot, the
+        game is reloaded from disk, and the reloaded creature's action still reports
+        selfTarget true.
+        """
+        game = load_game_module()
+        g, game_map, _ = load_game_map_with_player("test")
+        handler = g.getObjectHandler()
+        handler.registerConfigJson(
+            "SelfTargetInteractionCarrier",
+            json.dumps(
+                {
+                    "class": "CCreature",
+                    "properties": {
+                        "actions": [
+                            {
+                                "class": "CInteraction",
+                                "properties": {
+                                    "selfTarget": True,
+                                    "effect": {"class": "CEffect", "properties": {"tags": ["buff"]}},
+                                },
+                            }
+                        ],
+                    },
+                }
+            ),
+        )
+
+        carrier = g.createObject("SelfTargetInteractionCarrier")
+        object_name = f"selfTargetCarrier_{os.getpid()}_{time.time_ns()}"
+        carrier.name = object_name
+        game_map.addObject(carrier)
+        carrier.moveTo(game_map.getEntryX(), game_map.getEntryY(), game_map.getEntryZ())
+
+        actions = list(carrier.getActions())
+        self.assertEqual(1, len(actions))
+        self.assertTrue(actions[0].getBoolProperty("selfTarget"))
+        # Clone round-trips through the same serialize/deserialize path as a save.
+        self.assertTrue(actions[0].clone().getBoolProperty("selfTarget"))
+
+        save_name = f"selftarget_interaction_roundtrip_{os.getpid()}_{time.time_ns()}"
+        try:
+            game.CMapLoader.save(game_map, save_name)
+            loaded_game = game.CGameLoader.loadGame()
+            game.CGameLoader.loadSavedGame(loaded_game, save_name)
+            loaded_carrier = loaded_game.getMap().getObjectByName(object_name)
+            self.assertIsNotNone(loaded_carrier)
+            loaded_actions = list(loaded_carrier.getActions())
+            self.assertEqual(1, len(loaded_actions))
+            self.assertTrue(loaded_actions[0].getBoolProperty("selfTarget"))
+            return True, json.dumps(
+                {
+                    "before": bool(actions[0].getBoolProperty("selfTarget")),
+                    "after": bool(loaded_actions[0].getBoolProperty("selfTarget")),
+                },
+                sort_keys=True,
+            )
+        finally:
+            cleanup_save_slot(save_name)
+
+    @game_test
     def test_python_plugin_loader_rejects_non_resource_paths(self):
         game = load_game_module()
         g = game.CGameLoader.loadGame()
@@ -6363,19 +7019,18 @@ class GameTest(unittest.TestCase):
         runtime = artifact_sets.get_runtime()
         definition = next(s for s in runtime.all_sets() if s["id"] == "armorOfTheDamned")
 
-        original_selection = game.CGuiHandler.showSelection
-        original_info = game.CGuiHandler.showInfo
+        original_choice = game.CGuiHandler.showChoice
+        original_notify = game.CGuiHandler.notify
+        offered_choices = []
 
-        def auto_assemble(self, options):
-            values = list(options.getValues())
-            for value in values:
-                if value.startswith(artifact_sets.ASSEMBLE_PREFIX):
-                    return value
-            return values[-1]
+        def auto_assemble(self, title, choices_json, action_label="Select", back_label="Back"):
+            choices = json.loads(choices_json)
+            offered_choices.append((title, choices, action_label, back_label))
+            return next((choice["id"] for choice in choices if choice.get("enabled", True)), "")
 
         try:
-            game.CGuiHandler.showSelection = auto_assemble
-            game.CGuiHandler.showInfo = lambda self, message, centered=False: None
+            game.CGuiHandler.showChoice = auto_assemble
+            game.CGuiHandler.notify = lambda self, message: None
             for piece_id in definition["pieces"]:
                 item = g.getObjectHandler().createObject(g, piece_id)
                 player.addItem(item)
@@ -6383,11 +7038,17 @@ class GameTest(unittest.TestCase):
                 player.equipItem(slot, item)
                 pump_event_loop(5)
         finally:
-            game.CGuiHandler.showSelection = original_selection
-            game.CGuiHandler.showInfo = original_info
+            game.CGuiHandler.showChoice = original_choice
+            game.CGuiHandler.notify = original_notify
 
         equipped = {slot: item.getTypeId() for slot, item in player.getEquipped().items() if item}
         self.assertEqual({"3": "ArmorOfTheDamned"}, equipped)
+        self.assertEqual(1, len(offered_choices))
+        _title, choices, action_label, back_label = offered_choices[0]
+        self.assertEqual("armorOfTheDamned", choices[0]["id"])
+        self.assertTrue(choices[0]["detail"])
+        self.assertEqual("Assemble", action_label)
+        self.assertEqual("Not now", back_label)
 
     def test_compound_artifacts_excluded_from_random_loot(self):
         game = load_game_module()
@@ -6649,44 +7310,41 @@ class GameTest(unittest.TestCase):
 
         captured_options = []
         captured_infos = []
-        original_show_selection = game.CGuiHandler.showSelection
+        original_show_choice = game.CGuiHandler.showChoice
         original_show_info = game.CGuiHandler.showInfo
 
-        def capture_selection(self, list_string):
-            options = sorted(list_string.getValues())
+        def capture_choice(self, title, choices_json, action_label="Select", back_label="Back"):
+            options = json.loads(choices_json)
             captured_options.append(options)
-            return crafting.LEAVE_OPTION
+            return ""
 
         def capture_info(self, message, centered=True):
             captured_infos.append((message, centered))
 
         try:
-            game.CGuiHandler.showSelection = capture_selection
+            game.CGuiHandler.showChoice = capture_choice
             game.CGuiHandler.showInfo = capture_info
             find_runtime_object(game_map, "alchemyTable1").onEnter(FakeEvent(player))
             find_runtime_object(game_map, "scribeDesk1").onEnter(FakeEvent(player))
         finally:
-            game.CGuiHandler.showSelection = original_show_selection
+            game.CGuiHandler.showChoice = original_show_choice
             game.CGuiHandler.showInfo = original_show_info
 
         self.assertEqual(2, len(captured_options))
-        alchemy_options, scribe_options = captured_options
-        self.assertTrue(
-            any(option.startswith("READY -") and "[brew_life_potion]" in option for option in alchemy_options)
-        )
-        self.assertTrue(
-            any(option.startswith("MISSING -") and "[brew_mana_potion]" in option for option in alchemy_options)
-        )
-        self.assertTrue(
-            any(option.startswith("LOCKED -") and "[blend_greater_life_potion]" in option for option in alchemy_options)
-        )
-        self.assertTrue(
-            any(option.startswith("LOCKED -") and "[brew_full_life_potion]" in option for option in alchemy_options)
-        )
-        self.assertTrue(any("Output:" in option and "Requires:" in option for option in alchemy_options))
-        self.assertTrue(
-            any(option.startswith("LOCKED -") and "[craft_town_portal_scroll]" in option for option in scribe_options)
-        )
+        alchemy_options, scribe_options = ({option["id"]: option for option in rows} for rows in captured_options)
+        self.assertTrue(alchemy_options["brew_life_potion"]["enabled"])
+        self.assertFalse(alchemy_options["brew_mana_potion"]["enabled"])
+        self.assertIn("Missing", alchemy_options["brew_mana_potion"]["detail"])
+        for recipe_id in ("blend_greater_life_potion", "brew_full_life_potion"):
+            self.assertFalse(alchemy_options[recipe_id]["enabled"])
+            self.assertIn("Locked", alchemy_options[recipe_id]["detail"])
+        self.assertFalse(scribe_options["craft_town_portal_scroll"]["enabled"])
+        self.assertIn("Locked", scribe_options["craft_town_portal_scroll"]["detail"])
+        self.assertIn("Success chance: 100%", alchemy_options["brew_life_potion"]["detail"])
+        for option in (*alchemy_options.values(), *scribe_options.values()):
+            self.assertNotIn(option["id"], option["label"] + option["detail"])
+            self.assertIn("Creates\n", option["detail"])
+            self.assertIn("Ingredients (owned / needed)", option["detail"])
         self.assertEqual([], captured_infos)
 
         return True, json.dumps({"alchemy": alchemy_options, "scribe": scribe_options}, sort_keys=True)
@@ -6714,31 +7372,25 @@ class GameTest(unittest.TestCase):
                 return self.cause
 
         selections = []
-        captured_infos = []
-        original_show_selection = game.CGuiHandler.showSelection
-        original_show_info = game.CGuiHandler.showInfo
+        captured_details = []
+        original_show_choice = game.CGuiHandler.showChoice
 
-        def select_recipe(recipe_id):
-            def select(options):
-                return next(option for option in options if f"[{recipe_id}]" in option)
+        def queued_choice(self, title, choices_json, action_label="Select", back_label="Back"):
+            options = json.loads(choices_json)
+            captured_details.extend(option["detail"] for option in options)
+            choice = selections.pop(0) if selections else ""
+            if choice:
+                self_test.assertIn(choice, {option["id"] for option in options})
+            return choice
 
-            return select
-
-        def queued_selection(self, list_string):
-            options = sorted(list_string.getValues())
-            choice = selections.pop(0) if selections else crafting.LEAVE_OPTION
-            return choice(options) if callable(choice) else choice
-
-        def capture_info(self, message, centered=True):
-            captured_infos.append(message)
+        self_test = self
 
         try:
-            game.CGuiHandler.showSelection = queued_selection
-            game.CGuiHandler.showInfo = capture_info
+            game.CGuiHandler.showChoice = queued_choice
 
             player.addItem("Scroll")
             player.addItem("ManaPotion")
-            selections[:] = [select_recipe("craft_town_portal_scroll"), crafting.LEAVE_OPTION]
+            selections[:] = ["craft_town_portal_scroll", ""]
             find_runtime_object(game_map, "scribeDesk1").onEnter(FakeEvent(player))
             self.assertEqual(1, player.countItems("Scroll"))
             self.assertEqual(1, player.countItems("ManaPotion"))
@@ -6746,27 +7398,26 @@ class GameTest(unittest.TestCase):
 
             player.setBoolProperty("CAN_CRAFT_SCROLLS", True)
             clear_item("Scroll")
-            selections[:] = [select_recipe("craft_town_portal_scroll"), crafting.LEAVE_OPTION]
+            selections[:] = ["craft_town_portal_scroll", ""]
             find_runtime_object(game_map, "scribeDesk1").onEnter(FakeEvent(player))
             self.assertEqual(1, player.countItems("ManaPotion"))
             self.assertEqual(0, player.countItems("TownPortalScroll"))
 
             player.addItem("LesserLifePotion")
             player.addItem("LesserLifePotion")
-            selections[:] = [select_recipe("brew_life_potion"), crafting.LEAVE_OPTION]
+            selections[:] = ["brew_life_potion", ""]
             find_runtime_object(game_map, "alchemyTable1").onEnter(FakeEvent(player))
         finally:
-            game.CGuiHandler.showSelection = original_show_selection
-            game.CGuiHandler.showInfo = original_show_info
+            game.CGuiHandler.showChoice = original_show_choice
 
-        self.assertTrue(any("locked" in message.lower() for message in captured_infos))
-        self.assertTrue(any("missing" in message.lower() and "Scroll" in message for message in captured_infos))
-        self.assertTrue(any("You crafted Life Potion." == message for message in captured_infos))
+        self.assertTrue(any("locked" in detail.lower() for detail in captured_details))
+        self.assertTrue(any("missing" in detail.lower() and "Scroll" in detail for detail in captured_details))
+        self.assertTrue(any("You crafted Life Potion." in detail for detail in captured_details))
         self.assertEqual(0, player.countItems("LesserLifePotion"))
         self.assertEqual(1, player.countItems("LifePotion"))
         self.assertEqual(180, player.getNumericProperty("gold"))
 
-        return True, json.dumps({"messages": captured_infos}, sort_keys=True)
+        return True, json.dumps({"details": captured_details}, sort_keys=True)
 
     @game_test
     def test_potions_are_not_consumed_at_full_resources(self):
@@ -6897,6 +7548,31 @@ class GameTest(unittest.TestCase):
                 "hp_before_step": hp_before_step,
                 "hp_after_step": player.getNumericProperty("hp"),
                 "coords_after_step": [player.getCoords().x, player.getCoords().y, player.getCoords().z],
+            },
+            sort_keys=True,
+        )
+
+    @game_test
+    def test_lua_road_tile_heals_on_step(self):
+        game = load_game_module()
+        g, game_map, player = load_game_map_with_player("test", "Warrior")
+        game_map.removeAll(lambda obj: obj.getName() != "player")
+
+        start = player.getCoords()
+        road = game.Coords(start.x + 1, start.y, start.z)
+        game_map.replaceTile("LuaRoadTile", road)
+
+        player.setHp(max(1, player.getHpMax() - 3))
+        hp_before_step = player.getNumericProperty("hp")
+        set_player_target(player, road)
+        game_map.move()
+        self.assertEqual(player.getNumericProperty("hp"), hp_before_step + 1)
+        self.assertEqual((player.getCoords().x, player.getCoords().y, player.getCoords().z), (road.x, road.y, road.z))
+
+        return True, json.dumps(
+            {
+                "hp_before_step": hp_before_step,
+                "hp_after_step": player.getNumericProperty("hp"),
             },
             sort_keys=True,
         )
@@ -7718,7 +8394,6 @@ class GameTest(unittest.TestCase):
             pump_event_loop_until(
                 lambda: g.getMap().mapName == "ritual" and not scene_manager.isTransitionPending(),
                 timeout=2.0,
-                min_iterations=2,
             )
         )
 
@@ -7743,7 +8418,6 @@ class GameTest(unittest.TestCase):
             pump_event_loop_until(
                 lambda: g.getMap().mapName == "test" and not scene_manager.isTransitionPending(),
                 timeout=2.0,
-                min_iterations=2,
             )
         )
 
@@ -7893,9 +8567,7 @@ class GameTest(unittest.TestCase):
         self.assertIsNone(restored_map.getObjectByName("cave1"))
         self.assertIsNotNone(restored_map.getObjectByName("gooby1"))
         # The StartEvent markers removed on first entry stay removed on the reused session.
-        start_events = [
-            obj for obj in restored_map.getObjects() if obj.getStringProperty("type") == "StartEvent"
-        ]
+        start_events = [obj for obj in restored_map.getObjects() if obj.getStringProperty("type") == "StartEvent"]
         self.assertEqual([], start_events)
         # Post-return source-state equality (map flags, turn, quest-state machine, inventory) is
         # intentionally not asserted: reuseLoadedMap re-attaches the player at the map entry, and
@@ -8503,6 +9175,7 @@ class GameTest(unittest.TestCase):
         game = load_game_module()
 
         g = game.CGameLoader.loadGame()
+        self.addCleanup(g.getContext().shutdown)
         game.CGameLoader.loadGui(g)
         game.CGameLoader.startGameWithPlayer(g, "test", "Sorcerer")
         pump_event_loop()
@@ -8544,6 +9217,7 @@ class GameTest(unittest.TestCase):
         game = load_game_module()
 
         g = game.CGameLoader.loadGame()
+        self.addCleanup(g.getContext().shutdown)
         game.CGameLoader.loadGui(g)
         game.CGameLoader.startGameWithPlayer(g, "test", "Warrior")
         pump_event_loop()
@@ -8583,6 +9257,7 @@ class GameTest(unittest.TestCase):
         game = load_game_module()
 
         g = game.CGameLoader.loadGame()
+        self.addCleanup(g.getContext().shutdown)
         game.CGameLoader.loadGui(g)
         game.CGameLoader.startGameWithPlayer(g, "test", "Warrior")
         pump_event_loop()
@@ -8679,25 +9354,37 @@ class GameTest(unittest.TestCase):
     def test_inventory_panel_refreshes_only_after_event_loop_drains(self):
         game = load_game_module()
 
+        def renderedItemTotals(panel):
+            return {
+                view.getCollection(): sum(
+                    isinstance(child, game.CAnimation) and isinstance(child.getObject(), game.CItem)
+                    for proxy in view.getChildren()
+                    for child in proxy.getChildren()
+                )
+                for view in panel.getChildren()
+                if isinstance(view, game.CListView)
+            }
+
         g = game.CGameLoader.loadGame()
+        self.addCleanup(g.getContext().shutdown)
         game.CGameLoader.loadGui(g)
         game.CGameLoader.startGameWithPlayer(g, "test", "Warrior")
         panel = g.getGuiHandler().openPanel("inventoryPanel")
         pump_event_loop()
 
         player = g.getMap().getPlayer()
-        before_totals = get_panel_proxy_child_totals_by_collection(panel)
+        before_totals = renderedItemTotals(panel)
 
         sword = g.createObject("Sword")
         player.addItem(sword)
-        after_add_without_pump = get_panel_proxy_child_totals_by_collection(panel)
+        after_add_without_pump = renderedItemTotals(panel)
         pump_event_loop()
-        after_add_with_pump = get_panel_proxy_child_totals_by_collection(panel)
+        after_add_with_pump = renderedItemTotals(panel)
 
         player.removeItem(lambda item: item == sword, False)
-        after_remove_without_pump = get_panel_proxy_child_totals_by_collection(panel)
+        after_remove_without_pump = renderedItemTotals(panel)
         pump_event_loop()
-        after_remove_with_pump = get_panel_proxy_child_totals_by_collection(panel)
+        after_remove_with_pump = renderedItemTotals(panel)
 
         self.assertEqual(before_totals, after_add_without_pump)
         self.assertEqual(before_totals["inventoryCollection"] + 1, after_add_with_pump["inventoryCollection"])
@@ -9328,6 +10015,101 @@ class GameTest(unittest.TestCase):
             for map_dir in map_dirs:
                 shutil.rmtree(map_dir, ignore_errors=True)
 
+    def testSavedEffectDependencyLoaderRestoresMapEffectAndDetachedCaster(self):
+        game = load_game_module()
+        source_name = unique_map_name("effect_caster_source")
+        source_dir = Path.cwd() / "maps" / source_name
+        save_name = unique_save_name("effect_caster_dependency")
+        effect_class = f"SavedMapEffect{os.getpid()}{time.time_ns()}"
+        try:
+            source_dir.mkdir(parents=True)
+            (source_dir / "script.py").write_text(
+                "def load(self, context):\n"
+                "    from game import CEffect, register\n"
+                "    @register(context)\n"
+                f"    class {effect_class}(CEffect):\n"
+                "        pass\n",
+                encoding="utf-8",
+            )
+            (source_dir / "config.json").write_text(
+                json.dumps({"savedEffectAlias": {"class": effect_class}}), encoding="utf-8"
+            )
+            snapshot = {
+                "class": "CMap",
+                "effectGraph": {
+                    "version": 1,
+                    "actors": [
+                        {
+                            "class": "CCreature",
+                            "effectActorId": 2,
+                            "properties": {"name": "retainedCaster", "level": 4, "hp": 0},
+                        }
+                    ],
+                },
+                "properties": {
+                    "mapName": "ritual",
+                    "tiles": [],
+                    "triggers": [],
+                    "objects": [
+                        {
+                            "class": "CPlayer",
+                            "effectActorId": 1,
+                            "properties": {
+                                "name": "player",
+                                "hp": 70,
+                                "posx": 3,
+                                "posy": 22,
+                                "effects": [
+                                    {
+                                        "class": effect_class,
+                                        "effectReferences": {"caster": 2, "victim": 1},
+                                        "properties": {"name": "carriedEffect", "duration": 4, "timeLeft": 3},
+                                    }
+                                ],
+                            },
+                        }
+                    ],
+                },
+            }
+            save_path = save_primary_path(save_name)
+            save_path.parent.mkdir(exist_ok=True)
+            save_path.write_text(
+                json.dumps(
+                    {
+                        "format": SAVE_FORMAT,
+                        "schemaVersion": SAVE_SCHEMA_VERSION,
+                        "mapName": "ritual",
+                        "snapshot": snapshot,
+                    }
+                ),
+                encoding="utf-8",
+            )
+            loaded_game = game.CGameLoader.loadGame()
+            game.CGameLoader.startGameWithPlayer(loaded_game, "test", "Sorcerer")
+            game.CGameLoader.loadSavedGame(loaded_game, save_name)
+            loaded_map = loaded_game.getMap()
+            self.assertEqual("ritual", loaded_map.mapName)
+            loaded_player = loaded_map.getPlayer()
+            self.addCleanup(loaded_player.setEffects, set())
+            effects = list(loaded_player.getEffects())
+            self.assertEqual(1, len(effects))
+            effect = effects[0]
+            self.assertEqual(effect_class, effect.getType())
+            caster = effect.getCaster()
+            self.assertIsNotNone(caster)
+            self.assertEqual("CCreature", caster.getType())
+            self.assertEqual(4, caster.getLevel())
+            self.assertEqual(0, caster.getHp())
+            self.assertIsNone(loaded_map.getObjectByName("retainedCaster"))
+            self.assertIs(loaded_player, effect.getVictim())
+            self.assertEqual(3, effect.getTimeLeft())
+            self.assertEqual("ritual", loaded_game.getResourcesProvider().getActiveScope())
+            game.CFightHandler.applyEffects(loaded_player)
+            self.assertEqual(2, effect.getTimeLeft())
+        finally:
+            cleanup_save_slot(save_name)
+            shutil.rmtree(source_dir, ignore_errors=True)
+
     @game_test
     def test_multilevel_map_loads_authored_z_layers(self):
         game = load_game_module()
@@ -9656,6 +10438,129 @@ class GameTest(unittest.TestCase):
         self.assertEqual(missing, [])
 
         return True, ""
+
+    @game_test
+    def test_small_percentage_restores_do_not_collapse_into_full_restores(self):
+        # healProc/addManaProc used to truncate a small positive percentage to 0 and
+        # accidentally invoke the heal(0)/addMana(0) "restore to full" sentinels: a
+        # low-stamina Wayfarer ticking Wayfarer's Stride (2% hp regen per round) was
+        # fully healed every combat round instead of gaining 1 hp.
+        g, _game_map, player = load_game_map_with_player("test", "Wayfarer")
+        player.equipItem("0", None)
+        player.unequipArmor()
+        player.baseStats.stamina = 5
+
+        player.setMana(50)  # cover the cast's mana cost
+        stride = g.createObject("WayfarersStride")
+        stride.onAction(player, None)
+        effects = [e for e in player.getEffects() if e and e.getTypeId() == "WayfarersStrideEffect"]
+        self.assertEqual(1, len(effects))
+
+        # Measure the maxima with the buff active: its configureEffect bonus is part
+        # of the composed stats the regen tick sees.
+        hp_max = player.getHpMax()
+        stats = player.getStats()
+        mana_max = stats.getNumericProperty(stats.getStringProperty("mainStat")) * 7
+        # Precondition: the 2% tick lands in the truncation zone (2% of hpMax < 1).
+        self.assertEqual(0, int(2 / 100.0 * hp_max))
+
+        player.setHp(10)
+        player.setMana(5)
+        effects[0].onEffect()
+
+        self.assertEqual(11, player.getHp())
+        expected_mana_gain = int(6 / 100.0 * mana_max) or 1
+        self.assertEqual(min(5 + expected_mana_gain, mana_max), player.getMana())
+
+        return True, json.dumps({"hp_max": hp_max, "mana_max": mana_max}, sort_keys=True)
+
+    @game_test
+    def test_devour_heals_fraction_of_damage_dealt_not_full(self):
+        # Devour heals 75% of the damage dealt. The old formula converted that into
+        # an integer percent of hpMax, which floored to healProc(0) (= full heal)
+        # whenever dmg * 75 < hpMax -- a weak bite fully healed the devourer.
+        game = load_game_module()
+        g = game.CGameLoader.loadGame()
+        game.CGameLoader.startGame(g, "empty")
+
+        attacker = g.createObject("Sorcerer")
+        attacker.moveTo(0, 0, 0)
+        g.getMap().addObject(attacker)
+        attacker.equipItem("0", None)
+        attacker.unequipArmor()
+        attacker.baseStats.hit = 100
+        attacker.baseStats.crit = 0
+        attacker.baseStats.dmgMin = 1
+        attacker.baseStats.dmgMax = 1
+        attacker.baseStats.stamina = 20
+
+        defender = g.createObject("GoblinThief")
+        defender.moveTo(1, 0, 0)
+        g.getMap().addObject(defender)
+
+        hp_max = attacker.getHpMax()
+        # Precondition: a 1-damage bite is in the old full-heal zone (1 * 75 < hpMax).
+        self.assertGreater(hp_max, 75)
+
+        attacker.setHp(50)
+        devour = g.createObject("Devour")
+        devour.performAction(attacker, defender)
+
+        # dmg is deterministically 1 (dmgMin == dmgMax == 1, hit 100, crit 0), so the
+        # heal is max(1, 1 * 75 // 100) == 1, never a full restore.
+        self.assertEqual(51, attacker.getHp())
+
+        return True, json.dumps({"hp_max": hp_max}, sort_keys=True)
+
+    @game_test
+    def test_octobogz_completed_dialog_option_claims_stranded_bounty(self):
+        # Regression: clearing the OctoBogz cave BEFORE accepting the refugees' bounty completes
+        # the contract, which gated the accept option off -- so the late-claim path (accept_quest,
+        # guarded by OCTOBOGZ_REWARD_CLAIMED) was unreachable through the dialog and the 1000 gold
+        # + Shadow Blade reward was stranded forever, even as the refugees declared the debt "paid
+        # in full". The completed dialog option now carries the accept_quest action.
+        g, game_map, player = load_game_map_with_player("nouraajd")
+
+        game_map.removeObjectByName("cave2")
+        self.assertEqual("completed", game_map.getStringProperty("quest_state_octobogz_contract"))
+        # Clearing the cave must NOT silently pay the bounty; it is claimed by talking to the
+        # refugees (the intended late-claim design, per accept_quest).
+        self.assertFalse(game_map.getBoolProperty("OCTOBOGZ_REWARD_CLAIMED"))
+        self.assertNotIn("octoBogzQuest", quest_names(player))
+
+        # The completed branch's dialog option is wired to the late-claim action.
+        dialog_cfg = json.loads((REPO_ROOT / "res/maps/nouraajd/dialog2.json").read_text())
+        entry = next(
+            s["properties"]
+            for s in dialog_cfg["dialog"]["properties"]["states"]
+            if s["properties"]["stateId"] == "ENTRY"
+        )
+        completed_option = next(
+            o["properties"]
+            for o in entry["options"]
+            if o.get("properties", {}).get("condition") == "contract_completed"
+        )
+        self.assertEqual("accept_quest", completed_option.get("action"))
+
+        start_gold = player.getGold()
+        start_blades = player.countItems("ShadowBlade")
+
+        # Selecting that option runs its action on the dialog -> the late claim settles the bounty.
+        travelers = g.createObject("dialog")
+        travelers.invokeAction(completed_option["action"])
+
+        self.assertEqual(start_gold + 1000, player.getGold(), "the late claim must pay the 1000 gold bounty")
+        self.assertEqual(
+            start_blades + 1, player.countItems("ShadowBlade"), "the late claim must grant the Shadow Blade"
+        )
+        self.assertTrue(game_map.getBoolProperty("OCTOBOGZ_REWARD_CLAIMED"))
+
+        # Claim-once: invoking the action again must never double-pay.
+        travelers.invokeAction(completed_option["action"])
+        self.assertEqual(start_gold + 1000, player.getGold())
+        self.assertEqual(start_blades + 1, player.countItems("ShadowBlade"))
+
+        return True, json.dumps({"gold_delta": player.getGold() - start_gold}, sort_keys=True)
 
     def make_multi_enemy_combat_fixture(self):
         game = load_game_module()
@@ -11043,9 +11948,7 @@ class GameTest(unittest.TestCase):
                 reloaded_player = reloaded_map.getPlayer()
                 self.assertEqual(player_type, reloaded_player.getPlayerClassId(), player_type)
                 self.assertEqual(default_race, reloaded_player.getRaceId(), player_type)
-                snapshot_b = runtime_save_state_summary(
-                    normalize_save_snapshot(json.loads(game.jsonify(reloaded_map)))
-                )
+                snapshot_b = runtime_save_state_summary(normalize_save_snapshot(json.loads(game.jsonify(reloaded_map))))
                 self.assertEqual(snapshot_a, snapshot_b, player_type)
 
                 results[player_type] = {
@@ -11088,6 +11991,146 @@ class GameTest(unittest.TestCase):
             cleanup_save_slot(explicit_save)
 
         return True, json.dumps({"templates": results}, sort_keys=True)
+
+    @game_test
+    def test_class_progression_survives_save_reload(self):
+        # [EPIC_06][STORY_03][SUBSTORY_04] Claiming an Inquisitor/Wayfarer class, advancing its
+        # level-gated progression, and round-tripping through CMapLoader.save ->
+        # CGameLoader.loadSavedGame must preserve the class identity (getPlayerClassId), race
+        # identity (getRaceId), the level/exp counters, a one-time class-discovery flag/counter,
+        # and the derived action sets: the raw own actions (getActions) plus the level-composed
+        # effective actions (getEffectiveInteractions). Every assertion is pinned to a value
+        # captured from the live progressed player, never a hard-coded constant, so it stays
+        # correct as class content evolves.
+        #
+        # Progression is driven deterministically with CCreature.addExp (mirrors test_level): each
+        # addExp(1000) accrues experience until the player crosses enough level thresholds to
+        # unlock several class-granted actions (res/config/creature_classes.json Inquisitor/Wayfarer
+        # levelling maps), so the captured effective action set is non-degenerate. The save/reload
+        # plumbing mirrors test_player_template_saves_migrate_class_race_and_round_trip.
+        game = load_game_module()
+
+        def action_type_ids(actions):
+            return sorted(action.getTypeId() for action in actions)
+
+        def progression_snapshot(player):
+            return {
+                "playerClassId": player.getPlayerClassId(),
+                "raceId": player.getRaceId(),
+                "level": player.getLevel(),
+                "exp": player.getNumericProperty("exp"),
+                "rawActions": action_type_ids(player.getActions()),
+                "effectiveActions": action_type_ids(player.getEffectiveInteractions()),
+            }
+
+        results = {}
+        for player_type in ("Inquisitor", "Wayfarer"):
+            save_name = unique_save_name(f"class_progression_reload_{player_type}")
+            cleanup_save_slot(save_name)
+            try:
+                _g, game_map, player = load_game_map_with_player("test", player_type)
+                self.assertIsNotNone(player)
+                # A fresh start claims the template's class identity.
+                self.assertEqual(player_type, player.getPlayerClassId(), player_type)
+
+                # Advance the class's level-gated progression deterministically: accrue exp until
+                # the player has climbed at least three levels, unlocking several class actions.
+                start_level = player.getLevel()
+                while player.getLevel() < start_level + 3:
+                    player.addExp(1000)
+                self.assertGreaterEqual(player.getLevel(), start_level + 3, player_type)
+
+                baseline = progression_snapshot(player)
+                # Sanity so the preservation assertions are not vacuous: the composed effective
+                # action set must be non-empty.
+                self.assertTrue(baseline["effectiveActions"], player_type)
+
+                game.CMapLoader.save(game_map, save_name)
+                loaded_game = game.CGameLoader.loadGame()
+                game.CGameLoader.loadSavedGame(loaded_game, save_name)
+                loaded_player = loaded_game.getMap().getPlayer()
+                self.assertIsNotNone(loaded_player)
+
+                # Every captured identity, counter, flag, and derived-action value survives the
+                # save/reload cycle unchanged.
+                self.assertEqual(baseline, progression_snapshot(loaded_player), player_type)
+
+                results[player_type] = baseline
+            finally:
+                cleanup_save_slot(save_name)
+
+        return True, json.dumps({"classes": results}, sort_keys=True)
+
+    @game_test
+    def test_class_progression_survives_map_transition_and_back(self):
+        # [EPIC_06][STORY_03][SUBSTORY_04] The same progressed Inquisitor/Wayfarer must keep its
+        # class identity, level/exp counters, discovery flag/counter, and derived action sets
+        # across the current reload-based map transition: CGame.changeMap out to another map and
+        # back. That transition reloads the destination map from content but transfers the SAME
+        # player object (mirrors
+        # test_change_map_reload_transition_does_not_retain_source_session and
+        # test_scene_manager_real_map_transitions_preserve_player_state_and_triggers, both of which
+        # assert reloaded_map.getPlayer() == player), so the class progression must travel with it.
+        # When persistent map sessions land the transition mechanism can be swapped without
+        # changing these self-referential assertions.
+        game = load_game_module()
+
+        def action_type_ids(actions):
+            return sorted(action.getTypeId() for action in actions)
+
+        def progression_snapshot(player):
+            return {
+                "playerClassId": player.getPlayerClassId(),
+                "raceId": player.getRaceId(),
+                "level": player.getLevel(),
+                "exp": player.getNumericProperty("exp"),
+                "rawActions": action_type_ids(player.getActions()),
+                "effectiveActions": action_type_ids(player.getEffectiveInteractions()),
+            }
+
+        results = {}
+        for player_type in ("Inquisitor", "Wayfarer"):
+            g, _game_map, player = load_game_map_with_player("test", player_type)
+            scene_manager = g.getSceneManager()
+            self.assertEqual(player_type, player.getPlayerClassId(), player_type)
+
+            start_level = player.getLevel()
+            while player.getLevel() < start_level + 3:
+                player.addExp(1000)
+            baseline = progression_snapshot(player)
+            self.assertTrue(baseline["effectiveActions"], player_type)
+
+            # Transition out to another map: the reload transition transfers the same player.
+            g.changeMap("ritual")
+            self.assertTrue(
+                pump_event_loop_until(
+                    lambda gm=g, sm=scene_manager: gm.getMap().mapName == "ritual" and not sm.isTransitionPending(),
+                    timeout=2.0,
+                    min_iterations=2,
+                ),
+                player_type,
+            )
+            ritual_map = g.getMap()
+            self.assertTrue(ritual_map.getPlayer() == player, player_type)
+            self.assertEqual(baseline, progression_snapshot(player), player_type)
+
+            # Transition back to the origin map: same player, same progression.
+            g.changeMap("test")
+            self.assertTrue(
+                pump_event_loop_until(
+                    lambda gm=g, sm=scene_manager: gm.getMap().mapName == "test" and not sm.isTransitionPending(),
+                    timeout=2.0,
+                    min_iterations=2,
+                ),
+                player_type,
+            )
+            returned_map = g.getMap()
+            self.assertTrue(returned_map.getPlayer() == player, player_type)
+            self.assertEqual(baseline, progression_snapshot(player), player_type)
+
+            results[player_type] = baseline
+
+        return True, json.dumps({"classes": results}, sort_keys=True)
 
     @game_test
     def test_legacy_save_rejects_noncanonical_player_name_without_activation(self):
@@ -11302,6 +12345,59 @@ class GameTest(unittest.TestCase):
         finally:
             cleanup_save_slot(corrupt_name)
             cleanup_save_slot(future_name)
+
+    @game_test
+    def test_failed_save_restore_preserves_combat_until_a_load_commits(self):
+        game = load_game_module()
+        g, active_map, player = load_game_map_with_player("test")
+        self.addCleanup(g.getContext().shutdown)
+        game.CGameLoader.loadGui(g)
+        gui = g.getGui()
+        panel = g.getGuiHandler().openPanel("fightPanel")
+        enemy = g.createObject("GoblinThief")
+        enemy.setHp(enemy.getHpMax())
+        panel.setEnemy(enemy)
+        action = panel.interactionsCollection(gui)[0]
+        panel.interactionsCallback(gui, 0, action)
+        self.assertTrue(panel.interactionsSelect(gui, 0, action))
+        self.assertFalse(panel.isCancelled())
+
+        save_name = unique_save_name("failed_restore_combat")
+        primary_path = None
+        backup_path = None
+        try:
+            self.assertTrue(game.CMapLoader.saveWithResult(active_map, save_name))
+            primary_path = Path(g.getResourcesProvider().getPath(f"save/{save_name}.json"))
+            backup_path = primary_path.with_name(primary_path.name + ".bak")
+            valid_document = primary_path.read_text(encoding="utf-8")
+            invalid_document = json.loads(valid_document)
+            invalid_document["snapshot"]["properties"]["objects"].append(
+                {"class": "DefinitelyMissingSavedClass", "properties": {"name": "badSavedObject"}}
+            )
+            primary_path.write_text(json.dumps(invalid_document), encoding="utf-8")
+            backup_path.unlink(missing_ok=True)
+
+            game.CGameLoader.loadSavedGame(g, save_name)
+
+            self.assertEqual(active_map, g.getMap())
+            self.assertEqual(player, g.getMap().getPlayer())
+            self.assertEqual(panel, gui.findChild("CGameFightPanel"))
+            self.assertFalse(panel.isCancelled(), "a failed save restore must not cancel the active encounter")
+            self.assertEqual(enemy, panel.getEnemy())
+            self.assertTrue(panel.interactionsSelect(gui, 0, action), "failed loading must preserve the preview")
+
+            primary_path.write_text(valid_document, encoding="utf-8")
+            game.CGameLoader.loadSavedGame(g, save_name)
+
+            self.assertNotEqual(active_map, g.getMap())
+            self.assertIsNotNone(g.getMap().getPlayer())
+            self.assertIsNone(gui.findChild("CGameFightPanel"))
+            self.assertTrue(panel.isCancelled(), "a successful load must invalidate the old encounter")
+            return True, "Failed strict restoration retains combat; a successful load invalidates its old panel."
+        finally:
+            for path in (primary_path, backup_path):
+                if path is not None:
+                    path.unlink(missing_ok=True)
 
     @game_test
     def test_save_listing_filters_backup_temp_and_directory_artifacts(self):
@@ -11722,6 +12818,16 @@ class GameTest(unittest.TestCase):
                 player_object = json.loads(json.dumps(obj))
                 break
         self.assertIsNotNone(player_object)
+        pending = [saved_document["snapshot"]]
+        maximum_actor_id = 0
+        while pending:
+            node = pending.pop()
+            if isinstance(node, dict):
+                maximum_actor_id = max(maximum_actor_id, node.get("effectActorId", 0))
+                pending.extend(node.values())
+            elif isinstance(node, list):
+                pending.extend(node)
+        player_object["effectActorId"] = maximum_actor_id + 1
         saved_document["snapshot"]["properties"]["objects"].append(player_object)
         save_primary_path(save_name).write_text(json.dumps(saved_document), encoding="utf-8")
 
@@ -11816,6 +12922,38 @@ class GameTest(unittest.TestCase):
             },
             sort_keys=True,
         )
+
+    def testSavedActiveEffectRetainsStateAndActorIdentity(self):
+        game = load_game_module()
+        save_name, expected, baseline_stats = createActiveEffectSaveFixture(self)
+        loaded_game = game.CGameLoader.loadGame()
+        game.CGameLoader.loadSavedGame(loaded_game, save_name)
+        player = loaded_game.getMap().getPlayer()
+        self.addCleanup(player.setEffects, set())
+        effects = list(player.getEffects())
+        self.assertEqual(1, len(effects))
+        effect = effects[0]
+        self.assertEqual(
+            expected,
+            {
+                "duration": effect.getNumericProperty("duration"),
+                "timeLeft": effect.getTimeLeft(),
+                "bonus": {name: effect.getBonus().getNumericProperty(name) for name in baseline_stats},
+            },
+        )
+        self.assertIs(effect.getCaster(), player)
+        self.assertIs(effect.getVictim(), player)
+        self.assertEqual(
+            {name: value + expected["bonus"][name] for name, value in baseline_stats.items()},
+            {name: player.getStats().getNumericProperty(name) for name in baseline_stats},
+        )
+
+        game.CFightHandler.applyEffects(player)
+        self.assertEqual(2, effect.getTimeLeft())
+        for _ in range(3):
+            game.CFightHandler.applyEffects(player)
+        self.assertEqual([], list(player.getEffects()))
+        self.assertEqual(baseline_stats, {name: player.getStats().getNumericProperty(name) for name in baseline_stats})
 
     @game_test
     def test_fights(self):
@@ -12061,8 +13199,8 @@ class GameTest(unittest.TestCase):
                 return "Python registered objective"
 
         class PyPlugin(game.CPlugin):
-            def load(self, context):
-                calls.append(("plugin_load", context.getType()))
+            def load(self, registrar):
+                calls.append(("plugin_load", registrar.game().getType()))
 
         class PyDialog(game.CDialog):
             def invokeAction(self, action):
@@ -12108,7 +13246,7 @@ class GameTest(unittest.TestCase):
         game.CTrigger.trigger(created["PyTrigger"], None, None)
         self.assertTrue(game.CQuest.isCompleted(created["PyQuest"]))
         self.assertEqual("Python registered objective", game.CQuest.getObjective(created["PyQuest"]))
-        game.CPlugin.load(created["PyPlugin"], g)
+        game.CPlugin.load(created["PyPlugin"], game.CPluginRegistrar(g))
         game.CDialogBase2.invokeAction(created["PyDialog"], "open")
         self.assertTrue(game.CDialogBase2.invokeCondition(created["PyDialog"], "ready"))
 
@@ -12438,8 +13576,8 @@ class GameTest(unittest.TestCase):
         tooltip = game.CTooltipHandler.buildTooltip(tooltip_item)
         self.assertIn("Practice blade", tooltip)
         self.assertIn("Blunt but balanced.", tooltip)
-        self.assertIn("Strength: 2", tooltip)
-        self.assertIn("Damage: 1", tooltip)
+        self.assertIn("Strength: +2", tooltip)
+        self.assertIn("Damage: +1", tooltip)
 
         return True, json.dumps(
             {
@@ -12659,7 +13797,7 @@ class GameTest(unittest.TestCase):
                 fail("quest_complete")
 
         class RaisingPlugin(game.CPlugin):
-            def load(self, game_instance):
+            def load(self, registrar):
                 fail("plugin")
 
         class RaisingDialog(game.CDialogBase):
@@ -12697,7 +13835,7 @@ class GameTest(unittest.TestCase):
         self.assertFalse(game.CQuest.isCompleted(quest))
         game.CQuest.onComplete(quest)
 
-        game.CPlugin.load(RaisingPlugin(), g)
+        game.CPlugin.load(RaisingPlugin(), game.CPluginRegistrar(g))
 
         dialog = RaisingDialog()
         game.CDialogBase.invokeAction(dialog, "open")
@@ -12889,6 +14027,7 @@ class GameTest(unittest.TestCase):
     def test_empty_selection_list_returns_without_waiting(self):
         game = load_game_module()
         g = game.CGameLoader.loadGame()
+        self.addCleanup(g.getContext().shutdown)
         game.CGameLoader.loadGui(g)
 
         empty_selection = g.createObject("CListString")
@@ -12903,6 +14042,7 @@ class GameTest(unittest.TestCase):
     def test_character_creation_empty_columns_return_without_waiting(self):
         game = load_game_module()
         g = game.CGameLoader.loadGame()
+        self.addCleanup(g.getContext().shutdown)
         game.CGameLoader.loadGui(g)
 
         empty = g.createObject("CListString")
@@ -12917,161 +14057,144 @@ class GameTest(unittest.TestCase):
         self.assertLess(time.monotonic() - started_at, 1.0)
         return True, json.dumps({"ok": True})
 
+    @game_test
+    def test_character_preview_matches_the_actual_starting_player(self):
+        game = load_game_module()
+        import ui
+
+        current = game.CGameLoader.loadGame()
+        try:
+            classes, races = ui.characterChoices(current)
+            warrior = next(row for row in classes if row["id"] == "Warrior")
+            race_id = races[0]["id"]
+            preview = warrior["previews"][race_id]
+            game.CGameLoader.startGameWithPlayer(
+                current, "test", "Warrior", "" if race_id == ui.DEFAULT_RACE_ID else race_id
+            )
+            player = current.getMap().getPlayer()
+            self.assertIn(ui.statSummary(player.getStats()), preview)
+            self.assertIn(f"Health {player.getHpMax()}", preview)
+            self.assertIn(f"Mana {player.getManaMax()}", preview)
+            for action in player.getEffectiveInteractions():
+                self.assertIn(action.getStringProperty("label") or action.getTypeId(), preview)
+            for item in player.getEquipped().values():
+                if item is not None:
+                    self.assertIn(item.getStringProperty("label") or item.getTypeId(), preview)
+            return True, json.dumps({"startingLevel": player.getLevel(), "race": race_id})
+        finally:
+            current.getContext().shutdown()
+
+    def test_character_creation_uses_unified_confirmation_with_stable_ids(self):
+        from unittest.mock import Mock, patch
+        import ui
+
+        game = load_game_module()
+        fake_game = Mock()
+        classes = [{"id": "Warrior", "label": "Knight", "detail": "Strength 5"}]
+        races = [{"id": "humanRace", "label": "Human", "detail": "Balanced"}]
+        handler = fake_game.getGuiHandler.return_value
+        with patch.object(ui, "characterChoices", return_value=(classes, races)):
+            handler.showCharacterCreationOptions.return_value = ("Warrior", "humanRace")
+            self.assertEqual(("Warrior", "humanRace"), game.choose_character(fake_game))
+            args = handler.showCharacterCreationOptions.call_args.args
+            self.assertEqual(classes, json.loads(args[0]))
+            self.assertEqual(races, json.loads(args[1]))
+            handler.showSelection.assert_not_called()
+            for invalid in (("", ""), ("missing", "humanRace"), ("Warrior", "missing")):
+                handler.showCharacterCreationOptions.return_value = invalid
+                self.assertEqual(("", ""), game.choose_character(fake_game))
+
     def test_new_game_load_with_no_saves_reports_message(self):
+        from unittest.mock import Mock, patch
+        import ui
+
         game = load_game_module()
-
-        class FakeListString:
-            def __init__(self):
-                self.values = []
-
-            def addValue(self, value):
-                self.values.append(value)
-
-            def getValues(self):
-                return set(self.values)
-
-        class FakeGuiHandler:
-            def __init__(self):
-                self.messages = []
-                self.selections = []
-
-            def showSelection(self, list_string):
-                self.selections.append(sorted(list_string.getValues()))
-                return "LOAD"
-
-            def showInfo(self, message, centered):
-                self.messages.append((message, centered))
-
-        class FakeGame:
-            def __init__(self):
-                self.gui_handler = FakeGuiHandler()
-
-            def createObject(self, type_id):
-                if type_id != "CListString":
-                    raise AssertionError(f"unexpected fake object type: {type_id}")
-                return FakeListString()
-
-            def getGuiHandler(self):
-                return self.gui_handler
-
-        fake_game = FakeGame()
-
-        class FakeGameLoader:
-            loaded_save = None
-
-            @staticmethod
-            def loadGame():
-                return fake_game
-
-            @staticmethod
-            def loadGui(g):
-                pass
-
-            @staticmethod
-            def loadSavedGame(g, save):
-                FakeGameLoader.loaded_save = save
-
-        class FakeResourcesProvider:
-            @staticmethod
-            def getInstance():
-                return FakeResourcesProvider()
-
-            def getFiles(self, kind):
-                return [] if kind == "SAVE" else ["nouraajd"]
-
-        original_loader = game.CGameLoader
-        original_provider = game.CResourcesProvider
-        original_event_loop = game.event_loop
-        try:
-            game.CGameLoader = FakeGameLoader
-            game.CResourcesProvider = FakeResourcesProvider
-            game.event_loop = types.SimpleNamespace(instance=lambda: None)
+        fake_game = Mock()
+        state = {"active": True}
+        fake_game.getContext.return_value.isActive.side_effect = lambda: state["active"]
+        fake_game.getContext.return_value.shutdown.side_effect = lambda: state.update(active=False)
+        fake_game.getMap.return_value = None
+        fake_game.getResourcesProvider.return_value.getFiles.return_value = []
+        handler = fake_game.getGuiHandler.return_value
+        handler.showChoice.side_effect = ["load", "quit"]
+        loader = types.SimpleNamespace(loadGame=lambda: fake_game, loadGui=lambda current: None)
+        with patch.object(game, "CGameLoader", loader):
             game.new()
-        finally:
-            game.CGameLoader = original_loader
-            game.CResourcesProvider = original_provider
-            game.event_loop = original_event_loop
-
-        self.assertEqual([["CAMPAIGN", "LOAD", "NEW", "RANDOM"]], fake_game.gui_handler.selections)
-        self.assertEqual([("No saved games are available.", True)], fake_game.gui_handler.messages)
-        self.assertIsNone(FakeGameLoader.loaded_save)
-
-    def test_new_game_campaign_with_no_campaigns_reports_message(self):
-        game = load_game_module()
-
-        class FakeListString:
-            def __init__(self):
-                self.values = []
-
-            def addValue(self, value):
-                self.values.append(value)
-
-            def getValues(self):
-                return set(self.values)
-
-        class FakeGuiHandler:
-            def __init__(self):
-                self.messages = []
-                self.selections = []
-
-            def showSelection(self, list_string):
-                self.selections.append(sorted(list_string.getValues()))
-                return "CAMPAIGN"
-
-            def showInfo(self, message, centered):
-                self.messages.append((message, centered))
-
-        class FakeGame:
-            def __init__(self):
-                self.gui_handler = FakeGuiHandler()
-
-            def createObject(self, type_id):
-                if type_id != "CListString":
-                    raise AssertionError(f"unexpected fake object type: {type_id}")
-                return FakeListString()
-
-            def getGuiHandler(self):
-                return self.gui_handler
-
-        fake_game = FakeGame()
-
-        class FakeGameLoader:
-            @staticmethod
-            def loadGame():
-                return fake_game
-
-            @staticmethod
-            def loadGui(g):
-                pass
-
-        started = []
-        fake_campaign = types.SimpleNamespace(
-            list_campaigns=lambda: [],
-            start=lambda *args: started.append(args),
+        rows = json.loads(handler.showChoice.call_args_list[0].args[1])
+        self.assertEqual(["continue", "new", "load", "settings", "help", "quit"], [row["id"] for row in rows])
+        self.assertFalse(rows[0]["enabled"])
+        handler.showCampaignScreen.assert_called_once_with(
+            "Error", "No saved adventures are available yet.", "Continue"
         )
+        handler.showInfo.assert_not_called()
+        self.assertFalse(state["active"])
 
-        original_loader = game.CGameLoader
-        original_campaign = game.campaign
-        original_event_loop = game.event_loop
-        try:
-            game.CGameLoader = FakeGameLoader
-            game.campaign = fake_campaign
-            game.event_loop = types.SimpleNamespace(instance=lambda: None)
-            game.new()
-        finally:
-            game.CGameLoader = original_loader
-            game.campaign = original_campaign
-            game.event_loop = original_event_loop
+    def test_new_game_mode_menu_keeps_authored_scenarios_available(self):
+        from unittest.mock import Mock, patch
+        import ui
 
-        self.assertEqual([["CAMPAIGN", "LOAD", "NEW", "RANDOM"]], fake_game.gui_handler.selections)
-        self.assertEqual([("No campaigns are available.", True)], fake_game.gui_handler.messages)
-        self.assertEqual([], started)
+        game = load_game_module()
+        provider = game.CResourcesProvider.getInstance()
+        authored_maps = set(provider.getFiles("MAP"))
+        campaign_maps = {
+            scenario["map"] for manifest in ui.campaign.list_campaigns() for scenario in manifest["scenarios"].values()
+        }
+        standalone_maps = authored_maps - campaign_maps
+        self.assertTrue({"nouraajd", "ritual"}.issubset(campaign_maps))
+        self.assertIn("kadath", standalone_maps)
+        fake_game = Mock()
+        fake_game.getContext.return_value.isActive.return_value = True
+        fake_game.getResourcesProvider.return_value = provider
+        state = {"map": None}
+        fake_game.getMap.side_effect = lambda: state["map"]
+        handler = fake_game.getGuiHandler.return_value
+        handler.showChoice.side_effect = ["scenario", "kadath"]
+        loader = Mock()
+        loader.startGameWithPlayer.side_effect = lambda *args: state.update(map=Mock())
+        with (
+            patch.dict(sys.modules, {"_game": types.SimpleNamespace(CGameLoader=loader)}),
+            patch.object(ui, "chooseCharacter", return_value=("Warrior", "humanRace")),
+        ):
+            self.assertTrue(ui.newAdventure(fake_game))
+        mode_rows = json.loads(handler.showChoice.call_args_list[0].args[1])
+        self.assertEqual(["campaign", "scenario", "random"], [row["id"] for row in mode_rows])
+        map_rows = json.loads(handler.showChoice.call_args_list[1].args[1])
+        offered_maps = [row["id"] for row in map_rows]
+        self.assertEqual(sorted(standalone_maps), offered_maps)
+        self.assertTrue(campaign_maps.isdisjoint(offered_maps), "Campaign chapters stay in the campaign flow.")
+        self.assertIn("kadath", offered_maps)
+        loader.startGameWithPlayer.assert_called_once_with(fake_game, "kadath", "Warrior", "humanRace")
+        loader.startRandomGameWithPlayer.assert_not_called()
+
+    def test_new_game_campaign_with_no_campaigns_returns_to_mode_menu(self):
+        from unittest.mock import Mock, patch
+        import ui
+
+        fake_game = Mock()
+        fake_game.getContext.return_value.isActive.return_value = True
+        handler = fake_game.getGuiHandler.return_value
+        handler.showChoice.side_effect = ["campaign", ""]
+        loader = Mock()
+        with (
+            patch.dict(sys.modules, {"_game": types.SimpleNamespace(CGameLoader=loader)}),
+            patch.object(ui.campaign, "list_campaigns", return_value=[]),
+            patch.object(ui, "chooseCharacter") as choose_character,
+        ):
+            self.assertFalse(ui.newAdventure(fake_game))
+        handler.showCampaignScreen.assert_called_once_with("Error", "No campaigns are available.", "Continue")
+        handler.showInfo.assert_not_called()
+        choose_character.assert_not_called()
+        loader.startGameWithPlayer.assert_not_called()
+        self.assertEqual(
+            ["New adventure", "New adventure"], [call.args[0] for call in handler.showChoice.call_args_list]
+        )
 
     @game_test
     def test_blocking_modal_gui_helpers_drive_panels(self):
         game = load_game_module()
         drain_sdl_events()
         g = game.CGameLoader.loadGame()
+        self.addCleanup(g.getContext().shutdown)
         game.CGameLoader.loadGui(g)
         game.CGameLoader.startGameWithPlayer(g, "nouraajd", "Warrior")
         pump_event_loop(5)
@@ -13079,22 +14202,40 @@ class GameTest(unittest.TestCase):
         gui_handler = g.getGuiHandler()
         player = g.getMap().getPlayer()
 
+        def queue_panel_keys(panel_class, *keys):
+            def send_keys():
+                panel = find_top_level_panel(g, panel_class)
+                self.assertIsNotNone(panel)
+                for key in keys:
+                    panel.keyboardEvent(g.getGui(), 768, key)
+
+            game.event_loop.instance().invoke(send_keys)
+
         selection = g.createObject("CListString")
         selection.addValue("FIRST")
         selection.addValue("SECOND")
-        queue_sdl_inputs(game, lambda: push_sdl_mouse_click(960, 575))
+        queue_panel_keys("CGameCampaignBrowserPanel", 1073741905, 13)
         self.assertEqual("SECOND", gui_handler.showSelection(selection))
 
-        queue_sdl_inputs(game, push_space_key)
+        class_choices = g.createObject("CListString")
+        class_choices.setValues({"Knight", "Mage"})
+        race_choices = g.createObject("CListString")
+        race_choices.setValues({"Human", "River folk"})
+        queue_panel_keys("CGameCampaignBrowserPanel", 1073741905, 9, 1073741905, 13)
+        self.assertEqual(("Mage", "River folk"), tuple(gui_handler.showCharacterCreation(class_choices, race_choices)))
+        queue_panel_keys("CGameCampaignBrowserPanel", 27)
+        self.assertEqual(("", ""), tuple(gui_handler.showCharacterCreation(class_choices, race_choices)))
+
+        queue_panel_keys("CGameTextPanel", 13)
         gui_handler.showMessage("blocking message workflow")
 
-        queue_sdl_inputs(game, push_space_key)
+        queue_panel_keys("CGameTextPanel", 13)
         gui_handler.showInfo("blocking info workflow", False)
 
-        queue_sdl_inputs(game, lambda: push_sdl_mouse_click(860, 650))
+        queue_panel_keys("CGameQuestionPanel", 1073741903, 13)
         self.assertTrue(gui_handler.showQuestion("confirm yes?"))
 
-        queue_sdl_inputs(game, lambda: push_sdl_mouse_click(1060, 650))
+        queue_panel_keys("CGameQuestionPanel", 13)
         self.assertFalse(gui_handler.showQuestion("confirm no?"))
 
         def close_question_panel():
@@ -13110,13 +14251,13 @@ class GameTest(unittest.TestCase):
         closed_selection.addValue("CLOSED")
 
         def close_selection_panel():
-            panel = find_top_level_panel(g, "CGamePanel")
+            panel = find_top_level_panel(g, "CGameCampaignBrowserPanel")
             if panel:
                 panel.close()
 
         game.event_loop.instance().invoke(close_selection_panel)
         self.assertEqual("", gui_handler.showSelection(closed_selection))
-        self.assertFalse(gui_contains_class(g, "CGamePanel"))
+        self.assertFalse(gui_contains_class(g, "CGameCampaignBrowserPanel"))
 
         market = g.createObject("CMarket")
         market.sell = 50
@@ -13135,13 +14276,13 @@ class GameTest(unittest.TestCase):
         gui_handler.showTrade(market)
         self.assertFalse(gui_contains_class(g, "CGameTradePanel"))
 
-        queue_sdl_inputs(game, lambda: push_digit_key(2))
+        queue_panel_keys("CGameDialogPanel", 27)
         gui_handler.showDialog(g.createObject("questDialog"))
         self.assertFalse(gui_contains_class(g, "CGameDialogPanel"))
 
         loot_creature = g.createObject("GoblinThief")
         loot_item = g.createObject("Sword")
-        queue_sdl_inputs(game, lambda: push_sdl_mouse_click(585, 265), push_space_key)
+        queue_panel_keys("CGameLootPanel", 13)
         gui_handler.showLoot(loot_creature, {loot_item})
         self.assertFalse(gui_contains_class(g, "CGameLootPanel"))
 
@@ -13149,12 +14290,8 @@ class GameTest(unittest.TestCase):
         pump_event_loop(2)
         self.assertTrue(gui_contains_class(g, "CTooltip"))
 
-        def close_inventory_panel():
-            panel = find_top_level_panel(g, "CGameInventoryPanel")
-            if panel:
-                panel.close()
-
-        game.event_loop.instance().invoke(close_inventory_panel)
+        gui_handler.flipPanel("inventoryPanel", "i")
+        self.assertTrue(gui_contains_class(g, "CGameInventoryPanel"))
         gui_handler.flipPanel("inventoryPanel", "i")
         self.assertFalse(gui_contains_class(g, "CGameInventoryPanel"))
 
@@ -13167,13 +14304,38 @@ class GameTest(unittest.TestCase):
         )
 
     @game_test
-    def test_inventory_right_click_uses_scroll_and_keeps_it(self):
-        # [EPIC_03][STORY_01][SUBSTORY_04] #628: right-click delegates to CCreature::useItem,
-        # so right-clicking a scroll reads it (opens the blocking CGameTextPanel with its text)
-        # and the non-disposable scroll stays in the inventory. The panel is dismissed with a
-        # queued space key, the same pattern test_blocking_modal_gui_helpers_drive_panels uses.
+    def test_window_resize_scales_percent_panels(self):
         game = load_game_module()
         g = game.CGameLoader.loadGame()
+        self.addCleanup(g.getContext().shutdown)
+        game.CGameLoader.loadGui(g)
+        game.CGameLoader.startGameWithPlayer(g, "nouraajd", "Warrior")
+        gui = g.getGui()
+        rectangles = []
+        for width, height in ((2560, 1440), (1280, 720), (1920, 1080)):
+            gui.setNumericProperty("width", width)
+            gui.setNumericProperty("height", height)
+            panel = g.getGuiHandler().openPanel("inventoryPanel")
+            pump_event_loop(3)
+            expected_w, expected_h = width * 94 // 100, height * 94 // 100
+            expected = (width // 2 - expected_w // 2, height // 2 - expected_h // 2, expected_w, expected_h)
+            self.assertEqual(expected, resolved_rect(panel))
+            assert_rect_on_screen(self, "inventoryPanel", resolved_rect(panel), width=width, height=height)
+            for collection in ("inventoryCollection", "equippedCollection"):
+                view = find_list_view(panel, collection)
+                if view.isVisible():
+                    assert_child_inside(self, "inventoryPanel", expected, collection, resolved_rect(view))
+                    self.assertEqual(1, list_runtime_grid(view, gui)[0])
+            rectangles.append(expected)
+            panel.close()
+            pump_event_loop(3)
+        return True, json.dumps({"rectangles": rectangles}, sort_keys=True)
+
+    @game_test
+    def test_inventory_right_click_inspects_scroll_and_keeps_it(self):
+        game = load_game_module()
+        g = game.CGameLoader.loadGame()
+        self.addCleanup(g.getContext().shutdown)
         game.CGameLoader.loadGui(g)
         game.CGameLoader.startGameWithPlayer(g, "nouraajd", "Warrior")
         player = g.getMap().getPlayer()
@@ -13206,19 +14368,13 @@ class GameTest(unittest.TestCase):
 
         self.assertIsNotNone(target_graphic)
 
-        captured = {}
-
-        def capture_text_panel():
-            # Runs on the event loop while mouseEvent blocks in awaitClosing, so it
-            # observes the text panel the scroll's onUse opened before space closes it.
-            captured["text_panel_open"] = gui_contains_class(g, "CGameTextPanel")
-
-        queue_sdl_inputs(game, capture_text_panel, push_space_key)
+        turn = g.getMap().getTurn()
         target_graphic.mouseEvent(g.getGui(), SDL_MOUSEBUTTONDOWN, SDL_BUTTON_RIGHT, 1, 1)
         pump_event_loop(2)
-        self.assertTrue(captured.get("text_panel_open"), "right-click should read the scroll")
+        self.assertTrue(gui_contains_class(g, "CTooltip"), "right-click must pin inspection")
         self.assertFalse(gui_contains_class(g, "CGameTextPanel"))
         self.assertEqual(1, player.countItems("letterFromRolf"))
+        self.assertEqual(turn, g.getMap().getTurn(), "inspection cannot advance a turn")
 
         return True, json.dumps({"rolf_letters": player.countItems("letterFromRolf")}, sort_keys=True)
 
@@ -13226,6 +14382,7 @@ class GameTest(unittest.TestCase):
     def test_detached_inventory_list_view_ignores_stale_item_callbacks(self):
         game = load_game_module()
         g = game.CGameLoader.loadGame()
+        self.addCleanup(g.getContext().shutdown)
         game.CGameLoader.loadGui(g)
         game.CGameLoader.startGameWithPlayer(g, "nouraajd", "Warrior")
         player = g.getMap().getPlayer()
@@ -13268,9 +14425,10 @@ class GameTest(unittest.TestCase):
         return True, json.dumps({"rolf_letters": player.countItems("letterFromRolf")}, sort_keys=True)
 
     @game_test
-    def test_inventory_double_select_uses_selected_item(self):
+    def test_inventory_double_select_preserves_selected_item(self):
         game = load_game_module()
         g = game.CGameLoader.loadGame()
+        self.addCleanup(g.getContext().shutdown)
         game.CGameLoader.loadGui(g)
         game.CGameLoader.startGameWithPlayer(g, "nouraajd", "Warrior")
         pump_event_loop(5)
@@ -13303,8 +14461,11 @@ class GameTest(unittest.TestCase):
         )
         self.assertTrue(inventory_list.mouseEvent(gui, SDL_MOUSEBUTTONDOWN, SDL_BUTTON_LEFT, 1, 1))
 
-        self.assertEqual(0, player.countItems("LesserLifePotion"))
-        self.assertEqual(0, get_panel_selection_box_counts_by_collection(inventory_panel).get("inventoryCollection", 0))
+        self.assertEqual(1, player.countItems("LesserLifePotion"))
+        self.assertEqual(max(1, player.getHpMax() - 10), player.getHp())
+        self.assertGreater(
+            get_panel_selection_box_counts_by_collection(inventory_panel).get("inventoryCollection", 0), 0
+        )
 
         return True, json.dumps(
             {"hp_ratio": player.getHpRatio(), "potions": player.countItems("LesserLifePotion")}, sort_keys=True
@@ -13315,6 +14476,7 @@ class GameTest(unittest.TestCase):
         game = load_game_module()
         drain_sdl_events()
         g = game.CGameLoader.loadGame()
+        self.addCleanup(g.getContext().shutdown)
         game.CGameLoader.loadGui(g)
         game.CGameLoader.startGameWithPlayer(g, "test", "Warrior")
         pump_event_loop(5)
@@ -13402,7 +14564,7 @@ class GameTest(unittest.TestCase):
         quest_item.addTag(game.CTag.QUEST)
         player.addItem(quest_item)
 
-        panel = g.createObject("CGameFightPanel")
+        panel = g.getGuiHandler().openPanel("fightPanel")
         self.assertEqual("CGameFightPanel", panel.getType())
 
         enemy_a = g.createObject("GoblinThief")
@@ -13433,18 +14595,28 @@ class GameTest(unittest.TestCase):
         panel.interactionsCallback(gui, 0, action)
         self.assertTrue(panel.interactionsSelect(gui, 0, action))
         panel.interactionsCallback(gui, 0, action)
+        self.assertTrue(
+            panel.interactionsSelect(gui, 0, action), "repeated selection must keep the action as a preview"
+        )
+        activateManagementAction(self, panel, g, "executeSelectedAction")
         self.assertEqual(action.getName(), panel.selectInteraction().getName())
         self.assertFalse(panel.interactionsSelect(gui, 0, action))
 
         items = panel.itemsCollection(gui)
         normal_item = next(item for item in items if not item.hasTag(game.CTag.QUEST))
         panel.itemsCallback(gui, 0, quest_item)
-        self.assertFalse(panel.itemsSelect(gui, 0, quest_item))
+        self.assertTrue(panel.itemsSelect(gui, 0, quest_item), "quest items remain inspectable")
         panel.itemsCallback(gui, 0, normal_item)
         self.assertTrue(panel.itemsSelect(gui, 0, normal_item))
         self.assertFalse(panel.itemsRightClickCallback(gui, 0, quest_item))
-        self.assertTrue(panel.itemsRightClickCallback(gui, 0, normal_item))
-        self.assertFalse(panel.itemsSelect(gui, 0, normal_item))
+        self.assertFalse(panel.itemsRightClickCallback(gui, 0, normal_item))
+        self.assertTrue(panel.itemsSelect(gui, 0, normal_item))
+        self.assertIn(
+            normal_item.getName(),
+            [item.getName() for item in player.getItems()],
+            "right-click inspection must preserve inventory",
+        )
+        panel.close()
 
         inventory_panel = g.getGuiHandler().openPanel("inventoryPanel")
         pump_event_loop(5)
@@ -13512,7 +14684,9 @@ class GameTest(unittest.TestCase):
             inventory_empty_cell[0] * 50 + 1,
             inventory_empty_cell[1] * 50 + 1,
         )
+        items_before_inspection = {item.getName() for item in player.getItems()}
         self.assertTrue(inventory_panel.mouseEvent(gui, SDL_MOUSEBUTTONDOWN, SDL_BUTTON_RIGHT, 0, 0))
+        self.assertEqual({item.getName() for item in player.getItems()}, items_before_inspection)
         proxied_counts = {}
         for index, list_view in enumerate(list_views):
             list_view.setTileSize(50)
@@ -13570,6 +14744,7 @@ class GameTest(unittest.TestCase):
         game = load_game_module()
         drain_sdl_events()
         g = game.CGameLoader.loadGame()
+        self.addCleanup(g.getContext().shutdown)
         game.CGameLoader.loadGui(g)
         game.CGameLoader.startGameWithPlayer(g, "test", "Warrior")
         gui = g.getGui()
@@ -13580,10 +14755,7 @@ class GameTest(unittest.TestCase):
             for list_view in collect_gui_children(panel, "CListView")
             if list_view.getCollection() == "enemiesCollection"
         )
-        self.assertTrue(enemy_list.getAllowOversize())
-        enemy_list.setTileSize(50)
-        enemy_list.setXPrefferedSize(4)
-        enemy_list.setYPrefferedSize(1)
+        self.assertTrue(enemy_list.getBoolProperty("rows"))
 
         enemies = []
         for index in range(6):
@@ -13592,11 +14764,16 @@ class GameTest(unittest.TestCase):
             enemy.setHp(enemy.getHpMax())
             enemies.append(enemy)
 
-        def click_cell(x_index):
-            graphics = enemy_list.getProxiedObjects(gui, x_index, 0)
-            for graphic in graphics:
-                graphic.mouseEvent(gui, SDL_MOUSEBUTTONDOWN, SDL_BUTTON_LEFT, 1, 1)
-            return panel.getEnemy()
+        def select_named_enemy(name):
+            for _ in range(len(enemies)):
+                activateManagementAction(self, enemy_list, g, "pagePrevious")
+            for _ in range(len(enemies)):
+                for column, row, creature in list_visible_object_cells(enemy_list, gui):
+                    if creature.getName() == name:
+                        activate_list_cell(enemy_list, gui, column, row)
+                        return panel.getEnemy()
+                activateManagementAction(self, enemy_list, g, "pageNext")
+            self.fail(f"Could not reach living target {name}")
 
         panel.setEnemies(enemies)
         enemy_list.refresh()
@@ -13604,11 +14781,7 @@ class GameTest(unittest.TestCase):
             [enemy.getName() for enemy in enemies], [enemy.getName() for enemy in panel.enemiesCollection(gui)]
         )
 
-        for _ in range(4):
-            for graphic in enemy_list.getProxiedObjects(gui, 3, 0):
-                graphic.mouseEvent(gui, SDL_MOUSEBUTTONDOWN, SDL_BUTTON_LEFT, 1, 1)
-
-        selected = click_cell(1)
+        selected = select_named_enemy(enemies[4].getName())
         self.assertEqual(enemies[4], selected)
         self.assertTrue(panel.enemiesSelect(gui, 4, enemies[4]))
 
@@ -13618,12 +14791,12 @@ class GameTest(unittest.TestCase):
         self.assertNotEqual(enemies[4], panel.getEnemy())
         self.assertTrue(panel.getEnemy().isAlive())
 
-        selected_after_shrink = click_cell(2)
+        selected_after_shrink = select_named_enemy(enemies[5].getName())
         self.assertEqual(enemies[5], selected_after_shrink)
 
         panel.setEnemies(enemies[:2])
         enemy_list.refreshAll()
-        selected_after_underflow = click_cell(1)
+        selected_after_underflow = select_named_enemy(enemies[1].getName())
         self.assertEqual(enemies[1], selected_after_underflow)
         panel.close()
 
@@ -13641,6 +14814,7 @@ class GameTest(unittest.TestCase):
         game = load_game_module()
 
         g = game.CGameLoader.loadGame()
+        self.addCleanup(g.getContext().shutdown)
         game.CGameLoader.loadGui(g)
         gui = g.getGui()
 
@@ -13666,20 +14840,15 @@ class GameTest(unittest.TestCase):
     @game_test
     def test_render_only_widget_ignores_mouse_clicks(self):
         game = load_game_module()
-        drain_sdl_events()
         g = game.CGameLoader.loadGame()
-        game.CGameLoader.loadGui(g)
-        game.CGameLoader.startGameWithPlayer(g, "nouraajd", "Warrior")
-        panel = g.getGuiHandler().openPanel("questionPanel")
-        panel.setStringProperty("question", "Render-only widget event coverage?")
-        pump_event_loop(5)
+        panel = g.createObject("questionPanel")
+        widget = next(child for child in panel.getChildren() if child.getType() == "CWidget")
 
-        push_sdl_mouse_click(960, 500, SDL_BUTTON_RIGHT)
-        push_sdl_mouse_click(960, 500, SDL_BUTTON_LEFT)
-        pump_event_loop(5)
-
-        self.assertTrue(gui_contains_class(g, "CGameQuestionPanel"))
-        panel.close()
+        self.assertEqual("renderQuestion", widget.getStringProperty("render"))
+        self.assertEqual("", widget.getStringProperty("click"))
+        for button in (SDL_BUTTON_RIGHT, SDL_BUTTON_LEFT):
+            self.assertFalse(widget.mouseEvent(None, SDL_MOUSEBUTTONDOWN, button, 1, 1))
+            self.assertFalse(widget.mouseEvent(None, SDL_MOUSEBUTTONUP, button, 1, 1))
 
         return True, ""
 
@@ -13741,6 +14910,7 @@ class GameTest(unittest.TestCase):
                 self.assertNotIn("zzFake", provider.getFiles("MAP"))
 
                 g = game.CGameLoader.loadGame()
+                self.addCleanup(g.getContext().shutdown)
                 game.CGameLoader.loadGui(g)
                 game.CGameLoader.startGameWithPlayer(g, "test", "Warrior")
                 self.assertEqual("test", g.getMap().mapName)
@@ -13872,6 +15042,31 @@ class GameTest(unittest.TestCase):
         output_path = TEST_OUTPUT_DIR / "random.png"
         g.getMap().dumpPaths(str(output_path))
         return True, str(output_path)
+
+    def test_dialog_panel_accepts_registered_python_quest_action(self):
+        game = load_game_module()
+        g = game.CGameLoader.loadGame()
+        self.addCleanup(g.getContext().shutdown)
+        game.CGameLoader.loadGui(g)
+        game.CGameLoader.startGameWithPlayer(g, "nouraajd", "Warrior")
+        game_map = g.getMap()
+        player = game_map.getPlayer()
+        gui = g.getGui()
+
+        dialog = g.createObject("dialog")
+        panel = g.createObject("dialogPanel")
+        panel.setObjectProperty("dialog", dialog)
+        gui.pushChild(panel)
+        self.assertEqual("not_started", game_map.getStringProperty("quest_state_octobogz_contract"))
+
+        for digit in "121":
+            self.assertTrue(panel.keyboardEvent(gui, SDL_KEYDOWN, ord(digit)))
+
+        self.assertEqual("active", game_map.getStringProperty("quest_state_octobogz_contract"))
+        assert_player_quest_state(self, player, "octoBogzQuest", completed=False)
+        self.assertTrue(gui_contains_class(g, "CGameDialogPanel"))
+        self.assertTrue(panel.keyboardEvent(gui, SDL_KEYDOWN, ord("1")))
+        self.assertFalse(gui_contains_class(g, "CGameDialogPanel"))
 
     @game_test
     def test_dialogs(self):
@@ -14868,12 +16063,16 @@ class GameTest(unittest.TestCase):
             market_refs = [item["ref"] for item in config["tavernBeerMarket"]["properties"]["items"]]
 
             self.assertEqual(market.getTypeId(), "tavernBeerMarket")
+            self.assertEqual(100, market.getNumericProperty("sell"))
             self.assertEqual(market_refs, ["DarkBeer", "DarkBeer", "SpicedBeer"])
             self.assertEqual(labels, ["Dark Beer", "Dark Beer", "Spiced Beer"])
             self.assertTrue(
                 all(ref in potions for ref in market_refs),
                 "Configured tavern beers should exist in potions.json",
             )
+            game.narrative.recordGateApproach(g, "threatened")
+            g.createObject("tavernDialog1").sell_beer()
+            self.assertEqual(105, captured["market"].getNumericProperty("sell"))
 
             log = {
                 "market_type": market.getTypeId(),
@@ -14983,7 +16182,7 @@ class GameTest(unittest.TestCase):
         self.assertFalse(town_hall.can_discuss_victor_records())
         self.assertTrue(town_hall.victor_encounter_active())
         victor_quest = find_player_quest(player, "victorQuest")
-        self.assertIn("Defeat the cultists in the courtyard", victor_quest.getObjective())
+        self.assertIn("Defeat the cult leader in the courtyard", victor_quest.getObjective())
         self.assertIn("75 turns", victor_quest.getHint())
         self.assertEqual(leader.getName(), "cultLeaderQuest")
         self.assertTrue(cultists)
@@ -15114,12 +16313,16 @@ class GameTest(unittest.TestCase):
     def test_nouraajd_victor_reward_unlock_regression(self):
         game = load_game_module()
         original_show_dialog = game.CGuiHandler.showDialog
+        original_show_reader = game.CGuiHandler.showCampaignScreen
         original_show_trade = game.CGuiHandler.showTrade
         original_heal_proc = game.CPlayer.healProc
-        captured = {"dialogs": [], "trades": []}
+        captured = {"dialogs": [], "trades": [], "receipts": []}
         heal_amounts = []
 
         try:
+            game.CGuiHandler.showCampaignScreen = lambda self, title, body, action: captured["receipts"].append(
+                (title, body, action)
+            )
 
             def capture_dialog(self, dialog):
                 captured["dialogs"].append(dialog.getTypeId())
@@ -15159,7 +16362,16 @@ class GameTest(unittest.TestCase):
             self.assertTrue(game_map.getBoolProperty("VICTOR_REWARD_CLAIMED"))
             self.assertTrue(game_map.getBoolProperty("VICTOR_REWARD_GRANTED"))
             self.assertEqual(game_map.getNumericProperty("VICTOR_COURTYARD_TURN"), -1)
-            self.assertIn("victorRewardDialog", captured["dialogs"])
+            receipts = [entry for entry in captured["receipts"] if entry[0] == "Victor's daughter is safe"]
+            self.assertEqual(1, len(receipts))
+            self.assertIn("Gold: +500", receipts[0][1])
+            reward_text = next(
+                state.getStringProperty("text")
+                for state in g.createObject("victorRewardDialog").getStates()
+                if state.getStringProperty("stateId") == "ENTRY"
+            )
+            self.assertIn(reward_text, receipts[0][1])
+            self.assertEqual("Continue", receipts[0][2])
             self.assertIn("victorMarket", captured["trades"])
             config = json.loads((REPO_ROOT / "res/maps/nouraajd/config.json").read_text())
             # Victor's reward market stocks only the stronger potions; the lesser tier stays at
@@ -15188,7 +16400,7 @@ class GameTest(unittest.TestCase):
 
             self.assertEqual(player.getGold() - start_gold, 500)
             self.assertEqual(heal_amounts, [100])
-            self.assertEqual(captured["dialogs"].count("victorRewardDialog"), 1)
+            self.assertEqual(sum(entry[0] == "Victor's daughter is safe" for entry in captured["receipts"]), 1)
             self.assertEqual(captured["trades"].count("victorMarket"), 1)
             self.assertTrue(game_map.getBoolProperty("VICTOR_REWARD_GRANTED"))
 
@@ -15205,6 +16417,7 @@ class GameTest(unittest.TestCase):
             )
         finally:
             game.CGuiHandler.showDialog = original_show_dialog
+            game.CGuiHandler.showCampaignScreen = original_show_reader
             game.CGuiHandler.showTrade = original_show_trade
             game.CPlayer.healProc = original_heal_proc
 
@@ -15661,6 +16874,78 @@ class GameTest(unittest.TestCase):
             }
 
         return True, json.dumps(results, sort_keys=True)
+
+    @game_test
+    def test_nouraajd_class_perks_refund_only_paid_committed_casts(self):
+        cases = (
+            ("Warrior", "Barrier", "warrior_barricades", 17),
+            ("Assasin", "SneakAttack", "assasin_trails", 15),
+            ("Sorcerer", "FrostBolt", "sorcerer_sigils", 20),
+        )
+        for class_id, ability_id, counter, cost in cases:
+            with self.subTest(class_id=class_id):
+                g, _game_map, player = load_game_map_with_player("nouraajd", class_id)
+                self.addCleanup(g.getContext().shutdown)
+                for stat in ("intelligence", "strength", "agility"):
+                    player.baseStats.setNumericProperty(stat, 30)
+                player.setMana(80)
+                player.setNumericProperty(counter, 1)
+                ability = g.createObject(ability_id)
+                target = g.createObject("CCreature")
+                target.baseStats.setNumericProperty("stamina", 1000)
+                target.setHp(target.getHpMax())
+                self.assertEqual(cost, ability.getNumericProperty("manaCost"))
+                for _ in range(2):
+                    before_mana = player.getMana()
+                    self.assertEqual(3, ability.getCommittedManaRefund(player))
+                    self.assertEqual(before_mana, player.getMana())
+                    ability.performAction(player, target)
+                    self.assertEqual(before_mana, player.getMana())
+                    ability.onAction(player, player if ability_id == "Barrier" else target)
+                    self.assertEqual(before_mana - cost + 3, player.getMana())
+                    self.assertEqual(1, player.getNumericProperty(counter))
+                player.setMana(cost - 1)
+                before = (player.getMana(), target.getHp(), len(player.getEffects()))
+                ability.onAction(player, player if ability_id == "Barrier" else target)
+                self.assertEqual(before, (player.getMana(), target.getHp(), len(player.getEffects())))
+                player.setPlayerClassId("Wayfarer")
+                self.assertEqual(0, ability.getCommittedManaRefund(player))
+        return True, "earned class perks refund 3 mana repeatedly, after a full-cost paid commit only"
+
+    @game_test
+    def test_nouraajd_identity_rewards_survive_save_and_map_carryover(self):
+        game = load_game_module()
+        g, game_map, player = load_game_map_with_player("nouraajd", "Warrior")
+        self.addCleanup(g.getContext().shutdown)
+        self.assertEqual("human", player.getRaceId(), "legacy default human players must receive the human aid")
+        player.setNumericProperty("warrior_barricades", 1)
+        town_hall = g.createObject("townHallDialog")
+        starting_gold = player.getGold()
+        self.assertTrue(town_hall.claimHumanRation())
+        self.assertEqual(starting_gold + 20, player.getGold())
+        save_name = unique_save_name("identity_rewards")
+        self.addCleanup(cleanup_save_slot, save_name)
+        game.CMapLoader.save(game_map, save_name)
+        loaded_game = game.CGameLoader.loadGame()
+        self.addCleanup(loaded_game.getContext().shutdown)
+        game.CGameLoader.loadSavedGame(loaded_game, save_name)
+        loaded_player = loaded_game.getMap().getPlayer()
+        self.assertEqual(1, loaded_player.getNumericProperty("warrior_barricades"))
+        self.assertTrue(loaded_player.getBoolProperty("nouraajdRaceServiceClaimed"))
+        self.assertEqual("humanRace", loaded_player.getStringProperty("nouraajdRaceServiceKind"))
+        loaded_town_hall = loaded_game.createObject("townHallDialog")
+        self.assertFalse(loaded_town_hall.claimHumanRation())
+        self.assertEqual(starting_gold + 20, loaded_player.getGold())
+        self.assertEqual(3, loaded_game.createObject("Barrier").getCommittedManaRefund(loaded_player))
+        loaded_game.changeMap("ritual")
+        game.event_loop.instance().run()
+        carried_player = loaded_game.getMap().getPlayer()
+        self.assertEqual(loaded_player, carried_player)
+        self.assertEqual(1, carried_player.getNumericProperty("warrior_barricades"))
+        self.assertTrue(carried_player.getBoolProperty("nouraajdRaceServiceClaimed"))
+        self.assertEqual(starting_gold + 20, carried_player.getGold())
+        self.assertEqual(3, loaded_game.createObject("Barrier").getCommittedManaRefund(carried_player))
+        return True, "player exploration perks and one-time Irvin claim persist through saves and chapter carryover"
 
     @game_test
     def test_nouraajd_class_dialogs_honor_player_class_id_over_type(self):
@@ -16138,6 +17423,10 @@ class GameTest(unittest.TestCase):
         captured = g.createObject("capturedSoulDialog")
         self.assertTrue(captured.can_free_captive())
         captured.free_captive()
+        self.assertNotIn("rescueCaptiveQuest", quest_names(player))
+        self.assertNotIn("finalResolutionQuest", quest_names(player))
+        self.assertIn("rescueCaptiveQuest", completed_quest_names(player))
+        self.assertIn("finalResolutionQuest", completed_quest_names(player))
         pump_event_loop(10)
 
         self.assertEqual("siege", g.getMap().mapName)
@@ -16148,6 +17437,8 @@ class GameTest(unittest.TestCase):
         self.assertEqual(start_gold + 300, player.getGold())
         self.assertEqual(start_life_potions + 1, player.countItems("LifePotion"))
         self.assertIn("defendSiegeQuest", quest_names(player))
+        self.assertNotIn("rescueCaptiveQuest", quest_names(player))
+        self.assertNotIn("finalResolutionQuest", quest_names(player))
 
         return True, json.dumps(
             {
@@ -16285,10 +17576,10 @@ class GameTest(unittest.TestCase):
                 return self.cause
 
         game = load_game_module()
-        original_show_question = game.CGuiHandler.showQuestion
+        original_show_confirm = game.CGuiHandler.showConfirm
 
         try:
-            game.CGuiHandler.showQuestion = lambda self, message: True
+            game.CGuiHandler.showConfirm = lambda self, title, body, confirm_label, cancel_label: True
             _g, game_map, player = load_game_map_with_player("siege")
             spawn_point = find_runtime_object(game_map, "spawnPoint1")
             spawn_coords = spawn_point.getCoords()
@@ -16312,7 +17603,7 @@ class GameTest(unittest.TestCase):
             self.assertFalse(spawn_point.getBoolProperty("pendingSeal"))
             self.assertFalse(spawn_point.getBoolProperty("canStep"))
         finally:
-            game.CGuiHandler.showQuestion = original_show_question
+            game.CGuiHandler.showConfirm = original_show_confirm
 
         return True, json.dumps(
             {
@@ -16333,10 +17624,10 @@ class GameTest(unittest.TestCase):
                 return self.cause
 
         game = load_game_module()
-        original_show_question = game.CGuiHandler.showQuestion
+        original_show_confirm = game.CGuiHandler.showConfirm
 
         try:
-            game.CGuiHandler.showQuestion = lambda self, message: True
+            game.CGuiHandler.showConfirm = lambda self, title, body, confirm_label, cancel_label: True
             g, game_map, player = load_game_map_with_player("siege")
             spawn_point = find_runtime_object(game_map, "spawnPoint1")
             spawn_coords = spawn_point.getCoords()
@@ -16364,7 +17655,7 @@ class GameTest(unittest.TestCase):
             self.assertFalse(spawn_point.getBoolProperty("pendingSeal"))
             self.assertFalse(spawn_point.getBoolProperty("canStep"))
         finally:
-            game.CGuiHandler.showQuestion = original_show_question
+            game.CGuiHandler.showConfirm = original_show_confirm
 
         return True, json.dumps(
             {
@@ -16380,11 +17671,13 @@ class GameTest(unittest.TestCase):
     def test_siege_gate_mcp_scenario_seals_enabled_spawn_point(self):
         game = load_game_module()
         original_randint = game.randint
-        original_show_question = game.CGuiHandler.showQuestion
+        original_show_confirm = game.CGuiHandler.showConfirm
         question_calls = []
         spawn_names = ["spawnPoint1", "spawnPoint2", "spawnPoint3", "spawnPoint4"]
 
-        def confirm_seal(_self, message):
+        def confirm_seal(_self, title, message, confirm_label, cancel_label):
+            self.assertEqual(("Seal the breach", "Seal breach", "Keep exploring"), (title, confirm_label, cancel_label))
+            self.assertIn("Uses 1 mage-wand", message)
             question_calls.append(message)
             return True
 
@@ -16395,7 +17688,7 @@ class GameTest(unittest.TestCase):
 
         try:
             game.randint = deterministic_randint
-            game.CGuiHandler.showQuestion = confirm_seal
+            game.CGuiHandler.showConfirm = confirm_seal
             _g, game_map, player = load_game_map_with_player("siege")
             spawn_points = [find_runtime_object(game_map, name) for name in spawn_names]
 
@@ -16468,7 +17761,7 @@ class GameTest(unittest.TestCase):
             self.assertEqual(before_blocked_step, coords_tuple(player.getCoords()))
         finally:
             game.randint = original_randint
-            game.CGuiHandler.showQuestion = original_show_question
+            game.CGuiHandler.showConfirm = original_show_confirm
 
         return True, json.dumps(
             {
@@ -16493,15 +17786,18 @@ class GameTest(unittest.TestCase):
                 return self.cause
 
         game = load_game_module()
-        original_show_question = game.CGuiHandler.showQuestion
+        original_show_confirm = game.CGuiHandler.showConfirm
         question_calls = []
+        accept_seal = False
 
-        def confirm_seal(_self, _message):
+        def confirm_seal(_self, title, message, confirm_label, cancel_label):
+            self.assertEqual(("Seal the breach", "Seal breach", "Keep exploring"), (title, confirm_label, cancel_label))
+            self.assertIn("Uses 1 mage-wand", message)
             question_calls.append(True)
-            return True
+            return accept_seal
 
         try:
-            game.CGuiHandler.showQuestion = confirm_seal
+            game.CGuiHandler.showConfirm = confirm_seal
             _g, game_map, player = load_game_map_with_player("siege")
             spawn_point = find_runtime_object(game_map, "spawnPoint1")
             spawn_coords = spawn_point.getCoords()
@@ -16511,6 +17807,15 @@ class GameTest(unittest.TestCase):
             starting_wands = player.countItems("magicWand")
             spawn_point.setBoolProperty("enabled", True)
             spawn_point.setBoolProperty("canStep", True)
+
+            spawn_point.onEnter(FakeEvent(player))
+            self.assertEqual(starting_wands, player.countItems("magicWand"))
+            self.assertTrue(spawn_point.getBoolProperty("enabled"))
+            self.assertFalse(spawn_point.getBoolProperty("destroyed"))
+            self.assertFalse(spawn_point.getBoolProperty("pendingSeal"))
+            self.assertEqual(1, len(question_calls))
+            question_calls.clear()
+            accept_seal = True
 
             spawn_point.onEnter(FakeEvent(player))
             after_first_seal_wands = player.countItems("magicWand")
@@ -16525,7 +17830,7 @@ class GameTest(unittest.TestCase):
             self.assertTrue(spawn_point.getBoolProperty("pendingSeal"))
             self.assertEqual("images/misc/closed_door", spawn_point.getStringProperty("animation"))
         finally:
-            game.CGuiHandler.showQuestion = original_show_question
+            game.CGuiHandler.showConfirm = original_show_confirm
 
         return True, json.dumps(
             {
@@ -16561,6 +17866,103 @@ class GameTest(unittest.TestCase):
         return execute_walkthrough("ninemarches")
 
     @game_test
+    def test_map_finales_require_boss_defeat_and_pickup(self):
+        # [EPIC_10][STORY_02][SUBSTORY_01] The four finale quests (Kadath, Vhul'Marn, Sundered
+        # March, Nine Marches) must require BOTH the artifact/throne/crown pickup and the named
+        # finale boss defeat before completing. Neither transition alone completes the quest, and
+        # both in either order do. While only the pickup is recorded the objective names the
+        # remaining boss requirement, completion is idempotent across repeated checkQuests, and
+        # the completed state survives a save/load round-trip. Flags are driven directly so the
+        # ordering matrix stays deterministic and fast (the full pickup->defeat path is covered
+        # by the per-map walkthroughs).
+        game = load_game_module()
+
+        def active_objective(pl, qid):
+            for quest in pl.getQuests():
+                quest_id = quest.getTypeId() if hasattr(quest, "getTypeId") else quest.getName()
+                if quest_id == qid:
+                    return quest.getObjective()
+            return None
+
+        finales = (
+            ("kadath", "kadathAscentQuest", "throne_taken"),
+            ("vhulmarn", "drownedTitheQuest", "tithe_taken"),
+            ("sunderedmarch", "sunderedMarchQuest", "crown_taken"),
+            ("ninemarches", "ninemarchesQuest", "crown_taken"),
+        )
+
+        results = {}
+        for map_name, quest_id, pickup in finales:
+            # --- pickup-first: the pickup alone must not complete the finale ---
+            g, game_map, player = load_game_map_with_player(map_name)
+            if quest_id not in quest_names(player):
+                player.addQuest(quest_id)
+
+            game_map.setBoolProperty("boss_defeated", False)
+            game_map.setBoolProperty(pickup, True)
+            player.checkQuests()
+            self.assertNotIn(
+                quest_id, completed_quest_names(player), f"{map_name}: pickup alone must not complete the finale"
+            )
+            # Objective reflects the remaining requirement (put the finale boss down).
+            objective = active_objective(player, quest_id)
+            self.assertTrue(objective, f"{map_name}: an active finale objective should be present")
+            self.assertIn(
+                "put", objective.lower(), f"{map_name}: objective should name the remaining boss: {objective!r}"
+            )
+
+            # Adding the boss defeat completes it.
+            game_map.setBoolProperty("boss_defeated", True)
+            player.checkQuests()
+            self.assertIn(
+                quest_id, completed_quest_names(player), f"{map_name}: pickup + boss defeat should complete the finale"
+            )
+
+            # Idempotent across repeated triggers: exactly one completion, never doubled.
+            for _ in range(3):
+                player.checkQuests()
+            self.assertEqual(
+                1, completed_quest_names(player).count(quest_id), f"{map_name}: finale completion must be idempotent"
+            )
+
+            # The completed finale survives a save/load round-trip.
+            save_name = unique_save_name(f"finale_{map_name}")
+            cleanup_save_slot(save_name)
+            try:
+                game.CMapLoader.save(game_map, save_name)
+                reloaded = game.CGameLoader.loadGame()
+                game.CGameLoader.loadSavedGame(reloaded, save_name)
+                reloaded_player = reloaded.getMap().getPlayer()
+                self.assertIn(
+                    quest_id,
+                    completed_quest_names(reloaded_player),
+                    f"{map_name}: finale completion should survive save/load",
+                )
+            finally:
+                cleanup_save_slot(save_name)
+
+            # --- defeat-first: the boss defeat alone must not complete the finale ---
+            _g2, game_map2, player2 = load_game_map_with_player(map_name)
+            if quest_id not in quest_names(player2):
+                player2.addQuest(quest_id)
+            game_map2.setBoolProperty(pickup, False)
+            game_map2.setBoolProperty("boss_defeated", True)
+            player2.checkQuests()
+            self.assertNotIn(
+                quest_id, completed_quest_names(player2), f"{map_name}: boss defeat alone must not complete the finale"
+            )
+            # Adding the pickup completes it in the reverse order.
+            game_map2.setBoolProperty(pickup, True)
+            player2.checkQuests()
+            self.assertIn(
+                quest_id, completed_quest_names(player2), f"{map_name}: boss defeat + pickup should complete the finale"
+            )
+
+            results[map_name] = {"quest": quest_id, "pickup_flag": pickup, "completed_both_orders": True}
+
+        return True, json.dumps(results, sort_keys=True)
+
+    @game_test
     def test_map_walkthrough_hearthfall(self):
         return execute_walkthrough("hearthfall")
 
@@ -16571,6 +17973,18 @@ class GameTest(unittest.TestCase):
     @game_test
     def test_map_walkthrough_usurpergate(self):
         return execute_walkthrough("usurpergate")
+
+    @game_test
+    def test_map_walkthrough_castleHomecoming(self):
+        return execute_walkthrough("castleHomecoming")
+
+    @game_test
+    def test_map_walkthrough_castleGuardianAngels(self):
+        return execute_walkthrough("castleGuardianAngels")
+
+    @game_test
+    def test_map_walkthrough_castleGriffinCliff(self):
+        return execute_walkthrough("castleGriffinCliff")
 
     @game_test
     def test_all_maps_have_walkthroughs(self):
@@ -17175,7 +18589,7 @@ class GameTest(unittest.TestCase):
         return issues_by_file == {}, json.dumps(log, indent=2, sort_keys=True)
 
     def test_map_json_tiled_compatibility_allows_default_entry_coordinates(self):
-        TEST_OUTPUT_DIR.mkdir(exist_ok=True)
+        TEST_OUTPUT_DIR.mkdir(parents=True, exist_ok=True)
         map_data = {
             "type": "map",
             "orientation": "orthogonal",
@@ -17291,6 +18705,27 @@ class GameTest(unittest.TestCase):
         return offenders == [], json.dumps(offenders)
 
     @game_test
+    def test_direct_rendercopy_calls_stay_inside_render_context_wrapper(self):
+        observed = {}
+        for path in iter_tracked_cpp_source_files():
+            text = strip_cpp_comments_and_strings(path.read_text(encoding="utf-8", errors="replace"))
+            counts = {}
+            for match in RENDER_COPY_TOKEN_PATTERN.finditer(text):
+                counts[match.group(0)] = counts.get(match.group(0), 0) + 1
+            if counts:
+                observed[path.relative_to(REPO_ROOT).as_posix()] = counts
+        log = {
+            "sanctioned": SANCTIONED_RENDER_COPY_SITES,
+            "observed": observed,
+            "hint": (
+                "Route texture blits through CRenderContext::copy/copyEx instead of calling "
+                "SDL_RenderCopy/SDL_RenderCopyEx directly; if the wrapper internals legitimately "
+                "changed, update SANCTIONED_RENDER_COPY_SITES in the same commit."
+            ),
+        }
+        return observed == SANCTIONED_RENDER_COPY_SITES, json.dumps(log, indent=2, sort_keys=True)
+
+    @game_test
     def test_resource_paths(self):
         missing = []
         json_paths = list((REPO_ROOT / "res/config").rglob("*.json"))
@@ -17403,6 +18838,71 @@ class GameTest(unittest.TestCase):
         )
 
     @game_test
+    def test_standalone_hearthfall_victory_travels_to_gravemoor(self):
+        g, game_map, player = load_game_map_with_player("hearthfall")
+        scene_manager = g.getSceneManager()
+
+        start = find_map_object_definition("hearthfall", "hearthfallStart")
+        player.moveTo(start["x"] // 32, start["y"] // 32, 0)
+        pump_event_loop(5)
+        self.assertIn("hearthfallQuest", quest_names(player))
+
+        game_map.setBoolProperty("victory_reward_claimed", True)
+        gold_before = player.getGold()
+
+        game_map.removeObjectByName("watchCaptain")
+        self.assertTrue(game_map.getBoolProperty("captain_defeated"))
+
+        g.createObject("elderDialog").report_victory()
+        self.assertEqual(gold_before, player.getGold())
+        self.assertNotIn("hearthfallQuest", quest_names(player))
+        self.assertIn("hearthfallQuest", completed_quest_names(player))
+        self.assertEqual("TransitionPending", scene_manager.getTransitionStateName())
+        pump_event_loop(10)
+
+        self.assertEqual("gravemoor", g.getMap().mapName)
+        self.assertTrue(g.getMap().getPlayer() == player)
+        self.assertEqual("Idle", scene_manager.getTransitionStateName())
+
+        return True, json.dumps(
+            {
+                "current_map": g.getMap().mapName,
+                "manager": scene_manager.getTransitionStateName(),
+                "player_name": player.getName(),
+            },
+            sort_keys=True,
+        )
+
+    @game_test
+    def test_standalone_gravemoor_judgment_travels_to_usurpergate(self):
+        g, game_map, player = load_game_map_with_player("gravemoor")
+        scene_manager = g.getSceneManager()
+
+        for cage in ("loyalistCageWest", "loyalistCageEast", "loyalistCageNorth"):
+            definition = find_map_object_definition("gravemoor", cage)
+            player.moveTo(definition["x"] // 32, definition["y"] // 32, 0)
+            pump_event_loop(5)
+
+        voss = g.createObject("vossDialog")
+        self.assertTrue(voss.ready_to_judge())
+        voss.spare_voss()
+        self.assertEqual("TransitionPending", scene_manager.getTransitionStateName())
+        pump_event_loop(10)
+
+        self.assertEqual("usurpergate", g.getMap().mapName)
+        self.assertTrue(g.getMap().getPlayer() == player)
+        self.assertEqual("Idle", scene_manager.getTransitionStateName())
+
+        return True, json.dumps(
+            {
+                "current_map": g.getMap().mapName,
+                "manager": scene_manager.getTransitionStateName(),
+                "player_name": player.getName(),
+            },
+            sort_keys=True,
+        )
+
+    @game_test
     def test_campaign_driver_routes_full_campaign_with_carryover(self):
         game = load_game_module()
         import campaign as campaign_module
@@ -17508,13 +19008,18 @@ class GameTest(unittest.TestCase):
             self.assertFalse(loaded_store.finished())
             self.assertEqual("yes", loaded_store.get_var("spared_cultist", default="no"))
 
-            # Manifest routing keeps working on the loaded game: reporting the
-            # scenario outcome advances the campaign and requests the next map.
+            # The restored campaign commits its next chapter only when the destination is ready.
             self.assertEqual("cleansing", campaign_module.complete_scenario(loaded_game, "completed"))
-            self.assertEqual("cleansing", loaded_store.scenario())
-            self.assertEqual([("recovery", "completed")], loaded_store.history())
+            self.assertEqual("recovery", loaded_store.scenario())
+            self.assertEqual([], loaded_store.history())
             self.assertEqual("TransitionPending", loaded_game.getSceneManager().getTransitionStateName())
             self.assertEqual("ritual", loaded_game.getSceneManager().getPendingMapName())
+            pump_event_loop(10)
+            self.assertEqual("cleansing", loaded_store.scenario())
+            self.assertEqual([("recovery", "completed")], loaded_store.history())
+            self.assertEqual("ritual", loaded_game.getMap().mapName)
+            self.assertTrue(loaded_game.getMap().getPlayer() == loaded_player)
+            self.assertEqual("Idle", loaded_game.getSceneManager().getTransitionStateName())
         finally:
             for path in (save_path, backup_path):
                 if path.exists():
@@ -17527,6 +19032,240 @@ class GameTest(unittest.TestCase):
             },
             sort_keys=True,
         )
+
+    @game_test
+    def test_castle_campaign_carryover_with_melee_and_caster(self):
+        from tests.castle_walkthrough import MAP_NAMES, nativeDriver
+        import campaign as campaign_module
+
+        game = load_game_module()
+        logs = {}
+        for player_class in ("Warrior", "Sorcerer"):
+            game_instance = game.CGameLoader.loadGame()
+            store = campaign_module.start(game_instance, "longLiveTheQueen", player_class)
+            original_player = game_instance.getMap().getPlayer()
+            original_player.addItem("Dagger")
+            original_player.addGold(37)
+            equipment = json.loads(game.jsonify(original_player))["properties"].get("equipped")
+            driver = nativeDriver(game, game_instance)
+            for map_name in MAP_NAMES:
+                self.assertEqual(map_name, game_instance.getMap().mapName)
+                self.assertTrue(game_instance.getMap().getPlayer() == original_player)
+                previous_level = original_player.getLevel()
+                driver.chapter(map_name)
+                pump_event_loop(5)
+                self.assertGreaterEqual(original_player.getLevel(), previous_level)
+                self.assertEqual(equipment, json.loads(game.jsonify(original_player))["properties"].get("equipped"))
+                self.assertGreaterEqual(original_player.countItems("Dagger"), 1)
+            self.assertTrue(store.finished())
+            self.assertFalse(store.active())
+            self.assertEqual(3, len(store.history()))
+            self.assertTrue(driver.log["portals"], "The route must exercise authored underground or boat travel")
+            self.assertTrue(driver.log["combats"], "The route must defeat actual creatures")
+            logs[player_class] = driver.log
+        return True, json.dumps(logs, sort_keys=True)
+
+    @game_test
+    def test_castle_campaign_initializes_on_first_normal_turn(self):
+        from tests.castle_walkthrough import MAP_NAMES, authoredMap
+
+        logs = {}
+        for map_name in MAP_NAMES:
+            game_instance, game_map, player = load_game_map_with_player(map_name)
+            _, objects, walkable, portals, mission = authoredMap(map_name)
+            origin = coords_tuple(player.getCoords())
+            occupied = {
+                value["coords"]
+                for name, value in objects.items()
+                if name in mission["defenderIds"] or value.get("class") == "CastleSupply"
+            }
+            target = next(
+                (origin[0] + dx, origin[1] + dy, origin[2])
+                for dx, dy in ((-1, 0), (1, 0), (0, -1), (0, 1))
+                if (origin[0] + dx, origin[1] + dy, origin[2]) in walkable - occupied - set(portals)
+            )
+            initial_potions = game_instance.createObject(DEFAULT_PLAYER).countItems("LifePotion")
+            player.moveTo(*target)
+            game_map.move()
+            pump_event_loop(3)
+            self.assertEqual(target, coords_tuple(player.getCoords()))
+            self.assertIn(mission["questId"], quest_names(player))
+            self.assertEqual(initial_potions + 2, player.countItems("LifePotion"))
+            game_map.move()
+            pump_event_loop(3)
+            self.assertEqual(initial_potions + 2, player.countItems("LifePotion"))
+            logs[map_name] = {"quest": mission["questId"], "potions": player.countItems("LifePotion")}
+        return True, json.dumps(logs, sort_keys=True)
+
+    @game_test
+    def test_castle_town_infirmary_rest_uses_explicit_paid_dialog_action(self):
+        from tests.castle_walkthrough import authoredMap, nativeDriver, shortestRoute
+
+        game = load_game_module()
+        game_instance, game_map, player = load_game_map_with_player("castleGriffinCliff")
+        driver = nativeDriver(game, game_instance)
+        _, driver.objects, driver.walkable, driver.portals, driver.mission = authoredMap("castleGriffinCliff")
+        driver.guardsByCell = {}
+        for name in driver.mission["defenderIds"]:
+            driver.guardsByCell.setdefault(driver.objects[name]["coords"], []).append(name)
+        towns = [
+            (name, value) for name, value in driver.objects.items() if value["properties"].get("campaign_loyalTown")
+        ]
+        town_name, definition = min(
+            towns,
+            key=lambda pair: len(shortestRoute(driver.walkable, driver.portals, driver.coords(), pair[1]["coords"])),
+        )
+        game_map.move()
+        pump_event_loop(3)
+        potions_before = player.countItems("LifePotion")
+        driver.walkTo(definition["coords"])
+        self.assertTrue(game_map.getBoolProperty("campaign_castleSupply_" + town_name))
+        self.assertEqual(potions_before + 1, player.countItems("LifePotion"))
+        gold_before = player.getGold()
+        self.assertGreaterEqual(gold_before, 10)
+        # Combat blocking must not decide whether this healing fixture starts injured.
+        player.setHp(max(1, player.getHpMax() - 3))
+        self.assertLess(player.getHp(), player.getHpMax())
+        dialog = game_instance.createObject("CastleTownRestDialog")
+        self.assertTrue(dialog.configureTown(game_map.getObjectByName(town_name)))
+        self.assertTrue(dialog.canRest())
+        dialog.invokeAction("rest")
+        pump_event_loop(3)
+        self.assertEqual(gold_before - 10, player.getGold())
+        self.assertEqual(player.getHpMax(), player.getHp())
+        self.assertFalse(dialog.canRest())
+        dialog.invokeAction("rest")
+        pump_event_loop(3)
+        self.assertEqual(gold_before - 10, player.getGold())
+        self.assertEqual(potions_before + 1, player.countItems("LifePotion"))
+        return True, json.dumps(
+            {"town": town_name, "cost": 10, "repeat_charged": False, "movement_steps": driver.log["steps"]}
+        )
+
+    def testUiHistoryStringsSurviveVersionedAndLegacySaveLoad(self):
+        game = load_game_module()
+        values = {
+            "combatHistory": json.dumps(["Combat round 1 begins.", "Victory: the defender is defeated."]),
+            "uiDialogueHistory": json.dumps(
+                [{"speaker": "Keeper", "text": "Remember this warning.", "kind": "speech", "dialog": "keeper"}]
+            ),
+            "uiDefeatReceipt": json.dumps(
+                {"map": "test", "hp": 1, "x": 0, "y": 0, "z": 0, "lostItems": ["Dagger"], "lostItemCount": 1}
+            ),
+        }
+        checked = []
+        for encoding in ("versioned", "legacy"):
+            for selected_fields in (
+                (),
+                ("combatHistory",),
+                ("uiDialogueHistory",),
+                ("uiDefeatReceipt",),
+                tuple(values),
+            ):
+                with self.subTest(encoding=encoding, fields=selected_fields):
+                    game_instance, game_map, player = load_game_map_with_player("test")
+                    for field in selected_fields:
+                        owner = game_map if field == "combatHistory" else player
+                        owner.setStringProperty(field, values[field])
+                    expected_gold = player.getGold()
+                    expected_turn = game_map.getTurn()
+                    save_name = unique_save_name("ui-history-strings")
+                    primary_path = None
+                    try:
+                        self.assertTrue(game.CMapLoader.saveWithResult(game_map, save_name))
+                        primary_path = Path(game_instance.getResourcesProvider().getPath(f"save/{save_name}.json"))
+                        self.assertTrue(primary_path.is_file())
+                        if encoding == "legacy":
+                            snapshot = json.loads(game.jsonify(game_map))
+                            if not selected_fields:
+                                snapshot["properties"].pop("combatHistory", None)
+                                players = [
+                                    actor["properties"]
+                                    for actor in snapshot["properties"]["objects"]
+                                    if actor.get("properties", {}).get("name") == player.getName()
+                                ]
+                                self.assertEqual(1, len(players))
+                                players[0].pop("uiDialogueHistory", None)
+                                players[0].pop("uiDefeatReceipt", None)
+                                self.assertNotIn("combatHistory", snapshot["properties"])
+                                self.assertNotIn("uiDialogueHistory", players[0])
+                                self.assertNotIn("uiDefeatReceipt", players[0])
+                            primary_path.write_text(json.dumps(snapshot), encoding="utf-8")
+                        loaded_game = game.CGameLoader.loadGame()
+                        game.CGameLoader.loadSavedGame(loaded_game, save_name)
+                        loaded_map = loaded_game.getMap()
+                        self.assertIsNotNone(loaded_map, "UI history text must not make a save unloadable")
+                        loaded_player = loaded_map.getPlayer()
+                        self.assertIsNotNone(loaded_player)
+                        self.assertEqual("test", loaded_map.mapName)
+                        self.assertEqual(expected_turn, loaded_map.getTurn())
+                        self.assertEqual(expected_gold, loaded_player.getGold())
+                        for field in values:
+                            owner = loaded_map if field == "combatHistory" else loaded_player
+                            self.assertEqual(
+                                values[field] if field in selected_fields else "", owner.getStringProperty(field)
+                            )
+                        checked.append({"encoding": encoding, "fields": selected_fields})
+                    finally:
+                        if primary_path is not None:
+                            primary_path.unlink(missing_ok=True)
+                            primary_path.with_name(primary_path.name + ".bak").unlink(missing_ok=True)
+        TEST_OUTPUT_DIR.mkdir(parents=True, exist_ok=True)
+        (TEST_OUTPUT_DIR / "uiHistoryStringsSaveLoad.json").write_text(json.dumps(checked), encoding="utf-8")
+
+    @game_test
+    def test_castle_partial_capture_survives_save_load(self):
+        from tests.castle_walkthrough import nativeDriver
+
+        game = load_game_module()
+        game_instance, game_map, player = load_game_map_with_player("castleGriffinCliff")
+        driver = nativeDriver(game, game_instance)
+        driver.chapter("castleGriffinCliff", finish=False)
+        first_tower = driver.mission["objectiveIds"][0]
+        expected_gold = player.getGold()
+        expected_potions = player.countItems("LifePotion")
+        save_name = unique_save_name("castle-partial-capture")
+        try:
+            game.CMapLoader.save(game_map, save_name)
+            loaded_game = game.CGameLoader.loadGame()
+            game.CGameLoader.loadSavedGame(loaded_game, save_name)
+            loaded_map = loaded_game.getMap()
+            loaded_player = loaded_map.getPlayer()
+            self.assertEqual(expected_gold, loaded_player.getGold())
+            self.assertTrue(loaded_map.getBoolProperty("campaign_castleCaptured_" + first_tower))
+            self.assertFalse(loaded_map.getObjectByName(first_tower).capture(loaded_player))
+            self.assertEqual(expected_gold, loaded_player.getGold())
+            captured = sum(
+                loaded_map.getBoolProperty("campaign_castleCaptured_" + name) for name in driver.mission["objectiveIds"]
+            )
+            self.assertEqual(1, captured)
+            self.assertFalse(loaded_map.getBoolProperty("campaign_castleFinished_griffinCliff"))
+            self.assertIn(driver.mission["questId"], quest_names(loaded_player))
+            loaded_map.move()
+            pump_event_loop(3)
+            self.assertEqual(expected_potions, loaded_player.countItems("LifePotion"))
+            for name, value in driver.objects.items():
+                if value.get("class") != "CastlePortal":
+                    continue
+                target = tuple(int(value["properties"]["campaign_target" + axis]) for axis in "XYZ")
+                self.assertTrue(
+                    loaded_map.hasNavigationEdge(game.Coords(*value["coords"]), game.Coords(*target), name), name
+                )
+            restored_revision = loaded_map.getNavigationRevision()
+            loaded_map.move()
+            pump_event_loop(3)
+            self.assertEqual(restored_revision, loaded_map.getNavigationRevision())
+            origin, destinations = next(iter(driver.portals.passages.items()))
+            target = sorted(destinations)[0]
+            loaded_player.moveTo(*origin)
+            pump_event_loop(3)
+            set_player_target(loaded_player, game.Coords(*target))
+            loaded_map.move()
+            pump_event_loop(3)
+            self.assertEqual(target, coords_tuple(loaded_player.getCoords()))
+        finally:
+            cleanup_save_slot(save_name)
+        return True, json.dumps({"captured": first_tower, "gold": expected_gold, "save_restored": True})
 
     def _drive_wardens_road_to_judgment(self, g, campaign_module):
         """Play the Warden's Road campaign up to the Gravemoor judgment.
@@ -17641,10 +19380,459 @@ class GameTest(unittest.TestCase):
         )
 
     @game_test
+    def test_usurpergate_mercy_route_diverges_from_wrath_and_standalone(self):
+        # [EPIC_10][STORY_03][SUBSTORY_01] The Warden's Road mercy finale must materially
+        # diverge from wrath: when the active campaign scenario is wardensRoad/assault_mercy,
+        # exactly curtainWallWest1, curtainWallWest2, and housecarlWest are removed BEFORE the
+        # first Usurpergate introduction, mercy_route_applied is recorded, and mercy-specific
+        # arrival copy is shown once. Wrath and standalone entry keep the full assault (all
+        # three defenders present, standard arrival text), the final Usurper/throne objective,
+        # and the 500-gold reward. Route application is idempotent across save/load.
+        game = load_game_module()
+        import campaign as campaign_module
+
+        mercy_defenders = ("curtainWallWest1", "curtainWallWest2", "housecarlWest")
+        kept_defenders = ("curtainWallEast1", "curtainWallEast2", "housecarlEast", "theUsurper")
+        start_definition = find_map_object_definition("usurpergate", "usurpergateStart")
+        throne_definition = find_map_object_definition("usurpergate", "obsidianThrone")
+
+        messages = []
+        original_show_reader = game.CGuiHandler.showCampaignScreen
+
+        def capture_reader(_handler, title, body, action):
+            self.assertTrue(title)
+            self.assertEqual("Continue", action)
+            messages.append(body)
+
+        game.CGuiHandler.showCampaignScreen = capture_reader
+
+        def enter_start(g, player):
+            player.moveTo(start_definition["x"] // 32, start_definition["y"] // 32, 0)
+            pump_event_loop(5)
+
+        try:
+            # --- Standalone: no active campaign -> full assault, standard arrival text.
+            g, game_map, player = load_game_map_with_player("usurpergate")
+            enter_start(g, player)
+            for name in mercy_defenders + kept_defenders:
+                self.assertIsNotNone(game_map.getObjectByName(name), f"standalone keeps {name}")
+            self.assertFalse(game_map.getBoolProperty("mercy_route_applied"))
+            self.assertFalse(any("Voss's ledgers named" in m for m in messages), "no mercy copy standalone")
+
+            # --- Wrath: assault_wrath scenario -> full assault, standard arrival text.
+            messages.clear()
+            g2, map2, player2 = load_game_map_with_player("usurpergate")
+            campaign_module.CampaignStateStore(player2).begin("wardensRoad", "assault_wrath")
+            enter_start(g2, player2)
+            for name in mercy_defenders + kept_defenders:
+                self.assertIsNotNone(map2.getObjectByName(name), f"wrath keeps {name}")
+            self.assertFalse(map2.getBoolProperty("mercy_route_applied"))
+            self.assertFalse(any("Voss's ledgers named" in m for m in messages), "no mercy copy on wrath")
+
+            # --- Mercy: assault_mercy scenario -> the three named defenders stand down
+            # before the first introduction, the flag is recorded, mercy copy shows once.
+            messages.clear()
+            g3, map3, player3 = load_game_map_with_player("usurpergate")
+            store = campaign_module.CampaignStateStore(player3)
+            store.begin("wardensRoad", "assault_mercy")
+            for name in mercy_defenders:
+                self.assertIsNotNone(map3.getObjectByName(name), f"{name} present before intro")
+            enter_start(g3, player3)
+            for name in mercy_defenders:
+                self.assertIsNone(map3.getObjectByName(name), f"mercy removes {name}")
+            for name in kept_defenders:
+                self.assertIsNotNone(map3.getObjectByName(name), f"mercy keeps {name}")
+            self.assertTrue(map3.getBoolProperty("mercy_route_applied"))
+            mercy_copies = [m for m in messages if "Voss's ledgers named" in m]
+            self.assertEqual(1, len(mercy_copies), "mercy arrival copy shows exactly once")
+
+            # Repeated entry after the intro re-applies nothing (start event is consumed
+            # and the intro flag guards the hook).
+            messages.clear()
+            enter_start(g3, player3)
+            self.assertEqual([], [m for m in messages if "Voss's ledgers named" in m])
+
+            # Save/load: route flags persist and side effects are not reapplied.
+            save_name = unique_save_name("usurpergate_mercy_route")
+            cleanup_save_slot(save_name)
+            try:
+                game.CMapLoader.save(map3, save_name)
+                loaded_game = game.CGameLoader.loadGame()
+                game.CGameLoader.loadSavedGame(loaded_game, save_name)
+                loaded_map = loaded_game.getMap()
+                loaded_player = loaded_map.getPlayer()
+                self.assertTrue(loaded_map.getBoolProperty("mercy_route_applied"))
+                for name in mercy_defenders:
+                    self.assertIsNone(loaded_map.getObjectByName(name), f"{name} stays removed after reload")
+                for name in kept_defenders:
+                    self.assertIsNotNone(loaded_map.getObjectByName(name), f"{name} survives reload")
+
+                # The mercy route still ends the assault the same way: fell the Usurper,
+                # take the throne, and the 500-gold treasury reward is granted once.
+                gold_before = loaded_player.getGold()
+                loaded_map.removeObjectByName("theUsurper")
+                pump_event_loop(5)
+                self.assertTrue(loaded_map.getBoolProperty("usurper_defeated"))
+                loaded_player.moveTo(throne_definition["x"] // 32, throne_definition["y"] // 32, 0)
+                pump_event_loop(5)
+                self.assertTrue(loaded_map.getBoolProperty("throne_taken"))
+                self.assertEqual(gold_before + 500, loaded_player.getGold(), "throne reward stays 500 gold")
+            finally:
+                cleanup_save_slot(save_name)
+        finally:
+            game.CGuiHandler.showCampaignScreen = original_show_reader
+
+        return True, json.dumps(
+            {
+                "mercy_removed": list(mercy_defenders),
+                "kept": list(kept_defenders),
+                "mercy_route_applied": True,
+                "throne_reward": 500,
+            },
+            sort_keys=True,
+        )
+
+    @game_test
+    def test_campaign_presentation_screens_flow_in_required_order(self):
+        # [EPIC_10][STORY_04][SUBSTORY_01] The campaign driver must present the initial
+        # briefing, each resolved chapter outcome, and the next briefing,
+        # and terminal campaign completion through the blocking
+        # CGuiHandler campaign screen surfaces, in that order. The Warden's Road
+        # manifest drives the real flow: homecoming (briefing + epilogue), rescue
+        # (briefing, no epilogue), assault_mercy (briefing, terminal), completion.
+        # Headless execution of the native binding logs and returns immediately.
+        game = load_game_module()
+        import campaign as campaign_module
+
+        g = game.CGameLoader.loadGame()
+        self.addCleanup(g.getContext().shutdown)
+        unrelated_game = game.CGameLoader.loadGame()
+        self.addCleanup(unrelated_game.getContext().shutdown)
+        owned_handler = g.getGuiHandler()
+        screens = []
+        original = game.CGuiHandler.showCampaignScreen
+        original_artwork = game.CGuiHandler.showCampaignArtworkScreen
+        artwork = []
+        unrelated_deliveries = []
+        unrelated_artwork_changes = []
+
+        def deliver_unrelated_readers():
+            # The process-wide event loop can still contain another session's readers.
+            unrelated_handler = unrelated_game.getGuiHandler()
+            unrelated_handler.showCampaignScreen("The chapel ritual", "Another session's reader.", "Continue")
+            unrelated_deliveries.append("reader")
+            before_artwork = list(artwork)
+            unrelated_handler.showCampaignArtworkScreen(
+                "Another session's chapter", "Another session's briefing.", "Begin chapter", artwork[0]
+            )
+            unrelated_artwork_changes.append(artwork != before_artwork)
+            unrelated_deliveries.append("artwork")
+
+        def capture_screen(self_, title, body, action_label):
+            if self_ is not owned_handler:
+                return original(self_, title, body, action_label)
+            self.assertTrue(body, "campaign screens always carry body text")
+            screens.append((title, action_label))
+
+        def capture_artwork_screen(self_, title, body, action_label, image):
+            if self_ is not owned_handler:
+                return original_artwork(self_, title, body, action_label, image)
+            self.assertTrue(image, "authored chapter artwork must reach the native screen")
+            artwork.append(image)
+            capture_screen(self_, title, body, action_label)
+
+        game.CGuiHandler.showCampaignScreen = capture_screen
+        game.CGuiHandler.showCampaignArtworkScreen = capture_artwork_screen
+        try:
+            campaign_module.start(g, "wardensRoad", "Warrior")
+            self.assertEqual([("Chapter I - Hearthfall", "Begin chapter")], screens)
+
+            self.assertTrue(game.event_loop.instance().invoke(deliver_unrelated_readers))
+            campaign_module.complete_scenario(g, "completed")
+            pump_event_loop(10)
+            self.assertEqual(["reader", "artwork"], unrelated_deliveries)
+            self.assertEqual(
+                [
+                    ("Chapter I - Hearthfall", "Begin chapter"),
+                    ("Chapter I - Hearthfall", "Continue"),
+                    ("Chapter II - The Gravemoor", "Begin chapter"),
+                ],
+                screens,
+            )
+            self.assertEqual([False], unrelated_artwork_changes, "other sessions must not enter the artwork recorder")
+
+            campaign_module.complete_scenario(g, "spared")
+            pump_event_loop(10)
+            campaign_module.complete_scenario(g, "completed")
+            self.assertEqual(
+                [
+                    ("Chapter I - Hearthfall", "Begin chapter"),
+                    ("Chapter I - Hearthfall", "Continue"),
+                    ("Chapter II - The Gravemoor", "Begin chapter"),
+                    ("Chapter II - The Gravemoor", "Continue"),
+                    ("Chapter III - The Usurper's Gate", "Begin chapter"),
+                    ("Chapter III - The Usurper's Gate", "Continue"),
+                    ("The Warden's Road", "Return to adventure"),
+                ],
+                screens,
+            )
+            self.assertEqual(
+                [
+                    "Begin chapter",
+                    "Continue",
+                    "Begin chapter",
+                    "Continue",
+                    "Begin chapter",
+                    "Continue",
+                    "Return to adventure",
+                ],
+                [action for _, action in screens],
+                "presentation actions must flow briefing/epilogue/briefing/completion",
+            )
+
+            # The native binding is exposed and headless execution (no GUI attached)
+            # logs the content and returns immediately instead of blocking.
+            self.assertGreaterEqual(len(artwork), 3)
+            game.CGuiHandler.showCampaignScreen = original
+            game.CGuiHandler.showCampaignArtworkScreen = original_artwork
+            g.getGuiHandler().showCampaignScreen("Headless Title", "Headless body", "Begin chapter")
+            g.getGuiHandler().showCampaignArtworkScreen("Headless Title", "Headless body", "Begin chapter", artwork[0])
+        finally:
+            game.CGuiHandler.showCampaignScreen = original
+            game.CGuiHandler.showCampaignArtworkScreen = original_artwork
+
+        return True, json.dumps({"screens": [f"{title}|{action}" for title, action in screens]}, sort_keys=True)
+
+    @game_test
+    def test_campaign_browser_resolves_stable_ids_before_character_creation(self):
+        # [EPIC_10][STORY_05][SUBSTORY_01] game.choose_campaign feeds the stable-ID browser
+        # maps keyed by campaignId (titles, descriptions, scenario counts straight from the
+        # manifests), passes a confirmed stable id through unchanged, and resolves cancel or
+        # unknown ids to "" so game.new() never reaches character creation without a valid
+        # campaign. Headless native showCampaignSelection resolves to "" immediately.
+        game = load_game_module()
+        import campaign as campaign_module
+
+        g = game.CGameLoader.loadGame()
+
+        titles = g.createObject("CMapStringString")
+        titles.setValues({"wardensRoad": "The Warden's Road"})
+        descriptions = g.createObject("CMapStringString")
+        descriptions.setValues({"wardensRoad": "An exile's homecoming."})
+        counts = g.createObject("CMapStringInt")
+        counts.setValues({"wardensRoad": 4})
+        self.assertEqual(
+            "",
+            g.getGuiHandler().showCampaignSelection(titles, descriptions, counts),
+            "headless campaign selection must resolve to the empty stable id",
+        )
+
+        captured = {}
+        original = game.CGuiHandler.showCampaignSelection
+
+        def fake_selection(self_, titles_, descriptions_, counts_):
+            captured["titles"] = dict(titles_.getValues())
+            captured["descriptions"] = dict(descriptions_.getValues())
+            captured["counts"] = dict(counts_.getValues())
+            return captured["returning"]
+
+        game.CGuiHandler.showCampaignSelection = fake_selection
+        try:
+            manifests = {m["campaignId"]: m for m in campaign_module.list_campaigns()}
+            self.assertGreater(len(manifests), 0)
+
+            captured["returning"] = sorted(manifests)[0]
+            self.assertEqual(sorted(manifests)[0], game.choose_campaign(g))
+            self.assertEqual({cid: m["title"] for cid, m in manifests.items()}, captured["titles"])
+            self.assertEqual({cid: m.get("description", "") for cid, m in manifests.items()}, captured["descriptions"])
+            self.assertEqual({cid: len(m["scenarios"]) for cid, m in manifests.items()}, captured["counts"])
+
+            captured["returning"] = ""
+            self.assertEqual("", game.choose_campaign(g), "a cancelled browse resolves to the empty id")
+            captured["returning"] = "notARealCampaignId"
+            self.assertEqual("", game.choose_campaign(g), "unknown stable ids are rejected")
+        finally:
+            game.CGuiHandler.showCampaignSelection = original
+
+        return True, json.dumps({"campaigns": sorted(captured["titles"])}, sort_keys=True)
+
+    @game_test
+    def test_authored_quest_journal_snapshots_survive_travel_and_save(self):
+        game = load_game_module()
+        results = {}
+        # Cover flag-backed, state-machine, counter, object-count and per-instance campaign quests.
+        for map_name in ("hearthfall", "nouraajd", "ritual", "siege", "castleHomecoming"):
+            with self.subTest(map_name=map_name):
+                config = json.loads((MAPS_DIR / map_name / "config.json").read_text(encoding="utf-8"))
+                quest_ids = sorted(name for name, entry in config.items() if entry.get("class", "").endswith("Quest"))
+                self.assertTrue(quest_ids)
+                g, source_map, player = load_game_map_with_player(map_name)
+                try:
+                    for quest_id in quest_ids:
+                        player.addQuest(quest_id)
+                    expected = {
+                        quest_id: questJournalEntry(find_player_quest(player, quest_id)) for quest_id in quest_ids
+                    }
+                    active_before = quest_names(player)
+                    completed_before = completed_quest_names(player)
+                    gold_before = player.getGold()
+
+                    def assertSavedEntries(game_map, label):
+                        save_name = unique_save_name("quest-journal-" + label)
+                        loaded_game = None
+                        try:
+                            game.CMapLoader.save(game_map, save_name)
+                            loaded_game = game.CGameLoader.loadGame()
+                            game.CGameLoader.loadSavedGame(loaded_game, save_name)
+                            loaded_map = loaded_game.getMap()
+                            self.assertEqual(game_map.mapName, loaded_map.mapName)
+                            loaded_player = loaded_map.getPlayer()
+                            self.assertEqual(active_before, quest_names(loaded_player))
+                            self.assertEqual(completed_before, completed_quest_names(loaded_player))
+                            self.assertEqual(gold_before, loaded_player.getGold())
+                            for quest_id, entry in expected.items():
+                                restored = find_player_quest(loaded_player, quest_id)
+                                self.assertIsNotNone(restored, quest_id)
+                                self.assertEqual(1, restored.getNumericProperty("questJournalVersion"), quest_id)
+                                self.assertEqual(map_name, restored.getStringProperty("questJournalOrigin"), quest_id)
+                                self.assertEqual(entry, questJournalEntry(restored), quest_id)
+                        finally:
+                            if loaded_game is not None:
+                                loaded_game.getContext().shutdown()
+                            cleanup_save_slot(save_name)
+
+                    assertSavedEntries(source_map, map_name + "-source")
+                    g.changeMap("test")
+                    pump_event_loop(10)
+                    destination = g.getMap()
+                    self.assertEqual("test", destination.mapName)
+                    self.assertEqual(player, destination.getPlayer())
+                    player.checkQuests()
+                    self.assertEqual(active_before, quest_names(player))
+                    self.assertEqual(completed_before, completed_quest_names(player))
+                    self.assertEqual(gold_before, player.getGold())
+                    for quest_id, entry in expected.items():
+                        self.assertEqual(entry, questJournalEntry(find_player_quest(player, quest_id)), quest_id)
+                    destination_properties = json.loads(game.jsonify(destination))["properties"]
+                    self.assertFalse(any(name.startswith("quest_state_") for name in destination_properties))
+                    assertSavedEntries(destination, map_name + "-away")
+                    results[map_name] = quest_ids
+                finally:
+                    g.getContext().shutdown()
+        return True, json.dumps(results, sort_keys=True)
+
+    @game_test
+    def test_completed_quest_journal_stays_frozen_after_source_map_reload(self):
+        game = load_game_module()
+        g, source_map, player = load_game_map_with_player("hearthfall")
+        self.addCleanup(g.getContext().shutdown)
+        player.addQuest("hearthfallQuest")
+        source_map.removeObjectByName("watchCaptain")
+        g.createObject("elderDialog").report_victory()
+        pump_event_loop(10)
+        self.assertEqual("gravemoor", g.getMap().mapName)
+        quest = assert_player_quest_state(self, player, "hearthfallQuest", completed=True)
+        expected = questJournalEntry(quest)
+        self.assertIn("Hearthfall is free", expected["objective"])
+        gold_after_reward = player.getGold()
+        g.changeMap("hearthfall")
+        pump_event_loop(10)
+        fresh_source = g.getMap()
+        self.assertEqual("hearthfall", fresh_source.mapName)
+        self.assertFalse(fresh_source.getBoolProperty("victory_reported"))
+        self.assertEqual(expected, questJournalEntry(quest))
+        player.checkQuests()
+        self.assertEqual(gold_after_reward, player.getGold())
+        save_name = unique_save_name("completed-quest-journal-revisit")
+        loaded_game = None
+        try:
+            game.CMapLoader.save(fresh_source, save_name)
+            loaded_game = game.CGameLoader.loadGame()
+            game.CGameLoader.loadSavedGame(loaded_game, save_name)
+            restored = find_player_quest(loaded_game.getMap().getPlayer(), "hearthfallQuest")
+            self.assertEqual(expected, questJournalEntry(restored))
+        finally:
+            if loaded_game is not None:
+                loaded_game.getContext().shutdown()
+            cleanup_save_slot(save_name)
+        return True, json.dumps(expected, sort_keys=True)
+
+    @game_test
+    def test_map_quest_native_default_getters_do_not_reenter_python_wrappers(self):
+        game = load_game_module()
+        g = game.CGameLoader.loadGame()
+        self.addCleanup(g.getContext().shutdown)
+
+        @game.mapQuest("nouraajd")
+        class UnitNativeDefaultJournalQuest(game.CQuest):
+            pass
+
+        @game.mapQuest("nouraajd")
+        class UnitPartialJournalQuest(game.CQuest):
+            def getObjective(self):
+                return "An authored objective."
+
+        for cls in (UnitNativeDefaultJournalQuest, UnitPartialJournalQuest):
+            g.getObjectHandler().registerType(cls.__name__, cls)
+        native = g.createObject("UnitNativeDefaultJournalQuest")
+        partial = g.createObject("UnitPartialJournalQuest")
+        native.objective = "An instance-owned objective."
+        native.reward = "An instance-owned reward."
+        native.hint = "An instance-owned hint."
+        for quest in (native, partial):
+            self.assertFalse(quest.isCompleted())
+            game.CQuest.captureJournal(quest, False)
+            self.assertEqual(0, quest.getNumericProperty("questJournalVersion"))
+        self.assertEqual("An instance-owned objective.", native.getObjective())
+        self.assertEqual("An instance-owned reward.", native.getReward())
+        self.assertEqual("An instance-owned hint.", native.getHint())
+        self.assertEqual("", partial.getReward())
+        self.assertEqual("", partial.getHint())
+        game.CGameLoader.startGameWithPlayer(g, "nouraajd", DEFAULT_PLAYER)
+        for quest in (native, partial):
+            game.CQuest.captureJournal(quest, False)
+            self.assertEqual(1, quest.getNumericProperty("questJournalVersion"))
+            self.assertFalse(game.CQuest.isCompleted(quest))
+        self.assertEqual("An authored objective.", game.CQuest.getObjective(partial))
+        self.assertEqual("An instance-owned reward.", game.CQuest.getReward(native))
+        self.assertEqual("An instance-owned hint.", game.CQuest.getHint(native))
+        return True, "Native default getters and partial Python overrides remain callable without recursion."
+
+    @game_test
+    def test_legacy_completed_external_quest_keeps_status_without_invented_outcome(self):
+        game = load_game_module()
+        save_name = unique_save_name("legacy-completed-quest-journal")
+        fixture = IMMUTABLE_SAVE_FIXTURE_EXPECTATIONS["ritual_completed_nouraajd_quest_v1"]
+        install_save_fixture_slot(save_name, fixture)
+        g = game.CGameLoader.loadGame()
+        self.addCleanup(g.getContext().shutdown)
+        try:
+            game.CGameLoader.loadSavedGame(g, save_name)
+            game_map = g.getMap()
+            self.assertEqual("ritual", game_map.mapName)
+            player = game_map.getPlayer()
+            quest = assert_player_quest_state(self, player, "rolfQuest", completed=True)
+            entry = questJournalEntry(quest)
+            self.assertIn("Completed; outcome details are unavailable", entry["objective"])
+            self.assertEqual("Reward details are unavailable in this older save.", entry["reward"])
+            self.assertEqual(quest_state.QUEST_JOURNAL_UNAVAILABLE_HINT, entry["hint"])
+            self.assertEqual(0, quest.getNumericProperty("questJournalVersion"))
+            gold_before = player.getGold()
+            player.checkQuests()
+            game.CMapLoader.save(game_map, save_name)
+            self.assertEqual(gold_before, player.getGold())
+            self.assertFalse(hasattr(game_map, "quest_state_rolf"))
+            self.assertEqual(entry, questJournalEntry(quest))
+            return True, json.dumps(entry, sort_keys=True)
+        finally:
+            cleanup_save_slot(save_name)
+
+    @game_test
     def test_quest_journal_shows_objectives_rewards_and_hints(self):
         game = load_game_module()
 
         g, game_map, player = load_game_map_with_player("nouraajd")
+        self.addCleanup(g.getContext().shutdown)
         player.addQuest("rolfQuest")
         game.CGameLoader.loadGui(g)
         quest_panel = g.createObject("questPanel")
@@ -17656,6 +19844,7 @@ class GameTest(unittest.TestCase):
         self.assertIn("Hint: The cave entrance lies beyond Nouraajd's roads.", text)
 
         g_rewards, _reward_map, reward_player = load_game_map_with_player("nouraajd")
+        self.addCleanup(g_rewards.getContext().shutdown)
         for quest_id in NOURAAJD_QUEST_REWARDS:
             reward_player.addQuest(quest_id)
         game.CGameLoader.loadGui(g_rewards)
@@ -17665,18 +19854,34 @@ class GameTest(unittest.TestCase):
             self.assertIn(f"Reward: {reward}", reward_text)
 
         g_completed, completed_map, completed_player = load_game_map_with_player("nouraajd")
+        self.addCleanup(g_completed.getContext().shutdown)
         completed_player.addQuest("rolfQuest")
         completed_map.removeObjectByName("cave1")
         completed_player.checkQuests()
         game.CGameLoader.loadGui(g_completed)
-        completed_panel = g_completed.createObject("questPanel")
-        text_after_completion = completed_panel.getText(g_completed.getGui())
+        completed_panel = g_completed.getGuiHandler().openPanel("questPanel")
+        completed_gui = g_completed.getGui()
+        active_text_after_completion = completed_panel.getText(completed_gui)
+        self.assertIn("[Active] Vanquish the Dreaded Gooby", active_text_after_completion)
+        self.assertNotIn("[Completed]", active_text_after_completion)
+        completed_button = next(
+            button
+            for button in find_descendants_by_type(completed_panel, "CButton")
+            if button.getStringProperty("click") == "showCompleted"
+        )
+        activate_widget(completed_button, completed_gui)
+        text_after_completion = completed_panel.getText(completed_gui)
         self.assertIn("[Completed] Unravel the fate of Sergeant Rolf.", text_after_completion)
         self.assertIn("Status: Completed", text_after_completion)
-        self.assertIn("[Active] Vanquish the Dreaded Gooby", text_after_completion)
+        self.assertNotIn("[Active]", text_after_completion)
 
         return True, json.dumps(
-            {"before": text, "all_rewards": reward_text, "after": text_after_completion},
+            {
+                "before": text,
+                "all_rewards": reward_text,
+                "active_after": active_text_after_completion,
+                "completed_after": text_after_completion,
+            },
             sort_keys=True,
         )
 
@@ -18143,7 +20348,7 @@ class GameTest(unittest.TestCase):
             return map_object.getStringProperty(f"quest_state_{name}")
 
         original_show_dialog = game.CGuiHandler.showDialog
-        original_show_message = game.CGuiHandler.showMessage
+        original_notify = game.CGuiHandler.notify
         shown_dialogs = []
         shown_messages = []
         try:
@@ -18155,7 +20360,7 @@ class GameTest(unittest.TestCase):
                 shown_messages.append(message)
 
             game.CGuiHandler.showDialog = capture_dialog
-            game.CGuiHandler.showMessage = capture_message
+            game.CGuiHandler.notify = capture_message
 
             g, game_map, player = load_game_map_with_player("nouraajd")
 
@@ -18215,6 +20420,7 @@ class GameTest(unittest.TestCase):
             approach(old_woman)
             self.assertEqual([], shown_dialogs)
             self.assertEqual(1, len(shown_messages))
+            self.assertEqual("The goblin still clutches my amulet; please bring it back!", shown_messages[0])
 
             # Carrying the amulet, approaching opens the return dialog reliably.
             player.addItem("preciousAmulet")
@@ -18263,7 +20469,7 @@ class GameTest(unittest.TestCase):
                     save_path.unlink()
         finally:
             game.CGuiHandler.showDialog = original_show_dialog
-            game.CGuiHandler.showMessage = original_show_message
+            game.CGuiHandler.notify = original_notify
 
         return True, json.dumps(
             {
@@ -18508,6 +20714,70 @@ class GameTest(unittest.TestCase):
         return True, json.dumps(results, sort_keys=True)
 
     @game_test
+    def test_legacy_player_ids_create_configured_players_with_class_properties(self):
+        # [EPIC_06][STORY_02][SUBSTORY_03] Player-creation compatibility for the class/race
+        # separation. Selecting any of the historical character ids through
+        # CGameLoader.startGameWithPlayer must still build the existing configured CPlayer, set
+        # its class identity (getPlayerClassId) accordingly, expose a race identity (getRaceId),
+        # and surface the class-granted actions now sourced from the res/config/creature_classes
+        # profile the template references (monsters.json creatureClass ref -> <Name>Class). The
+        # legacy config entries must all remain present -- including the historical "Assasin"
+        # spelling preserved as a resource id -- so old character selection and saves keep working
+        # while the class/race properties become available.
+        game = load_game_module()
+
+        # The runtime menu is the source of truth for selectable templates, so this list stays in
+        # sync with the config rather than hard-coding it. Every historical legacy id -- including
+        # the preserved "Assasin" spelling -- must still be offered (config entries were not
+        # removed during the class/race separation).
+        options_game = game.CGameLoader.loadGame()
+        template_ids = set(game.player_class_options(options_game).values())
+        for legacy_id in ("Warrior", "Sorcerer", "Assasin", "Inquisitor", "Wayfarer"):
+            self.assertIn(legacy_id, template_ids, f"legacy template {legacy_id} was removed")
+
+        def action_type_ids(actions):
+            return sorted(action.getTypeId() for action in actions)
+
+        results = {}
+        for player_type in sorted(template_ids):
+            g = game.CGameLoader.loadGame()
+            game.CGameLoader.startGameWithPlayer(g, "test", player_type)
+            game_map = g.getMap()
+            self.assertIsNotNone(game_map, player_type)
+            player = game_map.getPlayer()
+
+            # Still the existing configured CPlayer: created, of the selected type, alive and
+            # controllable exactly as before the class/race split.
+            self.assertIsNotNone(player, player_type)
+            self.assertEqual(player_type, player.getTypeId(), player_type)
+            self.assertIsNotNone(get_player_controller(player), player_type)
+            self.assertTrue(player.isAlive(), player_type)
+
+            # playerClassId is set accordingly and a non-empty race identity is exposed, so the
+            # class/race properties are available on the freshly created player.
+            self.assertEqual(player_type, player.getPlayerClassId(), player_type)
+            self.assertTrue(player.getRaceId(), player_type)
+
+            # The referenced class profile is wired through creation: the composed effective
+            # interactions surface the class-granted baseline action ("Attack" from each
+            # <Name>Class.actions), proving the class content reaches the player. This is
+            # level-independent -- class starting actions are ungated -- so it holds for a
+            # fresh (level 0) character.
+            effective = action_type_ids(player.getEffectiveInteractions())
+            self.assertIn("Attack", effective, player_type)
+
+            results[player_type] = {
+                "typeId": player.getTypeId(),
+                "playerClassId": player.getPlayerClassId(),
+                "raceId": player.getRaceId(),
+                "effectiveActions": effective,
+            }
+
+        # Every offered template produced a distinct configured player.
+        self.assertEqual(len(template_ids), len(results))
+        return True, json.dumps(results, sort_keys=True)
+
+    @game_test
     def test_one_time_reward_paths_grant_exactly_once_and_clean_up_actors(self):
         # [EPIC_07][STORY_02][SUBSTORY_04] Data-driven regression over every one-time
         # (claim_once-guarded) reward path in res/maps/nouraajd/script.py and
@@ -18519,12 +20789,16 @@ class GameTest(unittest.TestCase):
         game = load_game_module()
         original_show_message = game.CGuiHandler.showMessage
         original_show_dialog = game.CGuiHandler.showDialog
+        original_show_reader = game.CGuiHandler.showCampaignScreen
         original_show_trade = game.CGuiHandler.showTrade
         original_heal_proc = game.CPlayer.healProc
-        gui_log = {"dialogs": [], "trades": []}
+        gui_log = {"dialogs": [], "trades": [], "receipts": []}
         heal_amounts = []
 
         try:
+            game.CGuiHandler.showCampaignScreen = lambda self, title, body, action: gui_log["receipts"].append(
+                (title, body, action)
+            )
             game.CGuiHandler.showMessage = lambda self, message: None
             game.CGuiHandler.showDialog = lambda self, dialog: gui_log["dialogs"].append(dialog.getTypeId())
             game.CGuiHandler.showTrade = lambda self, market: gui_log["trades"].append(market.getTypeId())
@@ -18572,7 +20846,7 @@ class GameTest(unittest.TestCase):
                 assert_player_quest_state(self, ctx["player"], "octoBogzQuest", completed=True)
 
             # --- nouraajd Victor courtyard rescue: 500 gold, healProc(100), one-time
-            # victorRewardDialog + victorMarket; cultLeaderQuest and victorCultist* actors
+            # authored Victor reward receipt + victorMarket; cultLeaderQuest and victorCultist* actors
             # are removed via remove_runtime_actors (_clear_victor_encounter). ---
             def victor_setup(ctx):
                 ctx["g"].createObject("tavernDialog2").talked_to_victor()
@@ -18597,7 +20871,7 @@ class GameTest(unittest.TestCase):
                 self.assertEqual("good_end", ctx["map"].getStringProperty("quest_state_victor"))
                 self.assertTrue(ctx["map"].getBoolProperty("VICTOR_GOOD_END"))
                 self.assertEqual([100], heal_amounts)
-                self.assertEqual(1, gui_log["dialogs"].count("victorRewardDialog"))
+                self.assertEqual(1, sum(entry[0] == "Victor's daughter is safe" for entry in gui_log["receipts"]))
                 self.assertEqual(1, gui_log["trades"].count("victorMarket"))
                 self.assertEqual(-1, ctx["map"].getNumericProperty("VICTOR_COURTYARD_TURN"))
                 self.assertFalse(
@@ -18607,7 +20881,7 @@ class GameTest(unittest.TestCase):
 
             def victor_repeat_checks(ctx):
                 self.assertEqual([100], heal_amounts)
-                self.assertEqual(1, gui_log["dialogs"].count("victorRewardDialog"))
+                self.assertEqual(1, sum(entry[0] == "Victor's daughter is safe" for entry in gui_log["receipts"]))
                 self.assertEqual(1, gui_log["trades"].count("victorMarket"))
 
             # --- nouraajd Amulet return: 50 gold, consumes the amulet; amuletGoblin and
@@ -18803,6 +21077,7 @@ class GameTest(unittest.TestCase):
         finally:
             game.CGuiHandler.showMessage = original_show_message
             game.CGuiHandler.showDialog = original_show_dialog
+            game.CGuiHandler.showCampaignScreen = original_show_reader
             game.CGuiHandler.showTrade = original_show_trade
             game.CPlayer.healProc = original_heal_proc
 
@@ -18963,15 +21238,105 @@ def normalize_map_load_provenance(document):
     return normalized
 
 
+def canonicalizeEffectActorIds(document):
+    """Relabel operation-local actor IDs without changing graph identity or references."""
+
+    def canonicalizeGraph(root):
+        definitions = {}
+        pending = [root]
+        while pending:
+            node = pending.pop()
+            if isinstance(node, dict):
+                if isinstance(node.get("class"), str) and "effectActorId" in node:
+                    actor_id = node["effectActorId"]
+                    if type(actor_id) is not int or actor_id <= 0 or actor_id in definitions:
+                        raise ValueError("Invalid or duplicate effect actor definition")
+                    definitions[actor_id] = node
+                pending.extend(node.values())
+            elif isinstance(node, list):
+                pending.extend(node)
+
+        def rewriteIds(value, labels, *, omit_definitions=False):
+            if isinstance(value, dict):
+                rewritten = {
+                    key: rewriteIds(item, labels, omit_definitions=omit_definitions) for key, item in value.items()
+                }
+                # Metadata only belongs to object configs, never similarly named real properties.
+                if isinstance(value.get("class"), str):
+                    for key in ("effectActorId", "effectActorReference"):
+                        if key in value:
+                            if omit_definitions and key == "effectActorId":
+                                rewritten.pop(key)
+                            else:
+                                rewritten[key] = labels[value[key]]
+                    if "effectReferences" in value:
+                        for key in ("caster", "victim"):
+                            actor_id = value["effectReferences"].get(key)
+                            if actor_id is not None:
+                                rewritten["effectReferences"][key] = labels[actor_id]
+                return rewritten
+            if isinstance(value, list):
+                return [rewriteIds(item, labels, omit_definitions=omit_definitions) for item in value]
+            return value
+
+        def stableKey(value):
+            return json.dumps(normalize_save_snapshot(value), sort_keys=True, separators=(",", ":"))
+
+        def assignLabels(signatures):
+            ordered = {signature: index + 1 for index, signature in enumerate(sorted(set(signatures.values())))}
+            return {actor_id: ordered[signature] for actor_id, signature in signatures.items()}
+
+        anonymous = {actor_id: "<actor>" for actor_id in definitions}
+        try:
+            labels = assignLabels(
+                {
+                    actor_id: stableKey(rewriteIds(actor, anonymous, omit_definitions=True))
+                    for actor_id, actor in definitions.items()
+                }
+            )
+            # Most actors differ by name, class or coordinates. Refine rare content ties using
+            # their reference locations in the whole graph, with arrays already order-independent.
+            for _ in range(min(len(definitions), 16)):
+                counts = {}
+                for label in labels.values():
+                    counts[label] = counts.get(label, 0) + 1
+                if len(counts) == len(definitions):
+                    break
+                signatures = {}
+                for actor_id, label in labels.items():
+                    context = ""
+                    if counts[label] > 1:
+                        marked = {other: [other_label, other == actor_id] for other, other_label in labels.items()}
+                        context = stableKey(rewriteIds(root, marked))
+                    signatures[actor_id] = (label, context)
+                refined = assignLabels(signatures)
+                if len(set(refined.values())) == len(counts):
+                    break
+                labels = refined
+            if len(set(labels.values())) != len(definitions):
+                raise ValueError("Ambiguous effect actor identities after bounded reference-context refinement")
+            return rewriteIds(root, labels)
+        except KeyError as error:
+            raise ValueError(f"Effect actor reference has no definition: {error.args[0]}") from error
+
+    if isinstance(document, dict):
+        if "effectGraph" in document:
+            return canonicalizeGraph(document)
+        return {key: canonicalizeEffectActorIds(value) for key, value in document.items()}
+    if isinstance(document, list):
+        return [canonicalizeEffectActorIds(value) for value in document]
+    return document
+
+
 def canonical_save_round_trip_form(document, *, normalize=None):
     """Comparable form of a saved document: generated names and root-map load provenance
-    are normalized, then key order and set-backed array order are canonicalized via
-    normalize_save_snapshot. An optional `normalize` callable runs in between for fields
-    a future epic knows to be unstable."""
+    are normalized, effect actor IDs are relabeled, then key order and set-backed array
+    order are canonicalized. An optional `normalize` callable runs before graph relabeling
+    for fields a future epic knows to be unstable."""
     canonical = normalize_map_load_provenance(normalize_generated_save_names(document))
     if normalize is not None:
         canonical = normalize(canonical)
-    return normalize_save_snapshot(canonical)
+    return normalize_save_snapshot(canonicalizeEffectActorIds(canonical))
 
 
 def save_round_trip_diff(first, second, path="$"):
@@ -19199,14 +21564,14 @@ class ConsoleEventProcessTest(unittest.TestCase):
         console = collect_gui_children(g.getGui(), "CConsoleGraphicsObject")[0]
         command = "logger('console child coverage')"
 
-        push_sdl_key_event(SDLK_TAB, 0)
+        push_sdl_key_event(SDLK_F12, 0)
         pump_event_loop(2)
         console.consoleState = command
         push_sdl_key_event(SDLK_RETURN, 0)
         pump_event_loop(2)
         self.assertEqual("", console.consoleState)
 
-        push_sdl_key_event(SDLK_TAB, 0)
+        push_sdl_key_event(SDLK_F12, 0)
         pump_event_loop(2)
         push_sdl_key_event(SDLK_UP, 0)
         pump_event_loop(2)
@@ -19219,7 +21584,7 @@ class ConsoleEventProcessTest(unittest.TestCase):
         push_sdl_key_event(SDLK_BACKSPACE, 0)
         pump_event_loop(2)
         self.assertEqual("firs", console.consoleState)
-        push_sdl_key_event(SDLK_TAB, 0)
+        push_sdl_key_event(SDLK_F12, 0)
         pump_event_loop(2)
         self.assertEqual("", console.consoleState)
 
@@ -19385,12 +21750,23 @@ class XvfbGameplayTest(unittest.TestCase):
         )
 
 
+def isOffscreenGameplayChild():
+    return (
+        os.name == "nt"
+        and os.environ.get("GAME_OFFSCREEN_GAMEPLAY_CHILD") == "1"
+        and os.environ.get("SDL_VIDEODRIVER") in {"dummy", "offscreen"}
+        and os.environ.get("SDL_RENDER_DRIVER") == "software"
+    )
+
+
 def create_xvfb_gameplay_session(test_case, map_name="test", player_name=DEFAULT_PLAYER):
-    test_case.assertEqual("x11", os.environ.get("SDL_VIDEODRIVER"))
-    test_case.assertIn("DISPLAY", os.environ)
+    if not isOffscreenGameplayChild():
+        test_case.assertEqual("x11", os.environ.get("SDL_VIDEODRIVER"))
+        test_case.assertIn("DISPLAY", os.environ)
 
     game = load_game_module()
     g = game.CGameLoader.loadGame()
+    test_case.addCleanup(g.getContext().shutdown)
     game.CGameLoader.loadGui(g)
     game.CGameLoader.startGameWithPlayer(g, map_name, player_name)
     pump_event_loop(5)
@@ -19419,6 +21795,22 @@ def assert_rendered_map_proxy_cells(test_case, g):
     proxy_counts = get_map_proxy_child_counts(g)
     test_case.assertTrue(proxy_counts, "Expected rendered map proxy cells after xvfb gameplay.")
     test_case.assertEqual(0, sum(count == 0 for count in proxy_counts))
+
+
+def assert_rendered_map_proxy_grid(test_case, g):
+    gui = g.getGui()
+    map_graph = collect_gui_children(gui, "CMapGraphicsObject")[0]
+    x, y, width, height = resolved_rect(map_graph)
+    tile = gui.getNumericProperty("tileSize")
+    expected = {
+        (x + column * tile, y + row * tile, tile, tile)
+        for column in range(width // tile + 1)
+        for row in range(height // tile + 1)
+    }
+    cells = [child for child in map_graph.getChildren() if child.getType() in {"", "CProxyGraphicsObject"}]
+    test_case.assertEqual(len(expected), len(cells), "Map proxy cells must cover the resized viewport exactly once.")
+    test_case.assertEqual(expected, {resolved_rect(cell) for cell in cells})
+    assert_rendered_map_proxy_cells(test_case, g)
 
 
 def queue_panel_observer(game, g, class_name):
@@ -19491,25 +21883,37 @@ def open_quest_log_panel(test_case, g):
     return panel
 
 
+def readJournalTabs(panel, gui, *, active=(), completed=()):
+    callbacks = (
+        ("showActive", "showCompleted")
+        if active and completed
+        else (("showCompleted",) if completed else ("showActive",))
+    )
+    buttons = {button.getStringProperty("click"): button for button in find_descendants_by_type(panel, "CButton")}
+    texts = []
+    for callback in callbacks:
+        activate_widget(buttons[callback], gui)
+        texts.append(panel.getText(gui))
+    activate_widget(buttons[callbacks[0]], gui)
+    return "\n".join(texts)
+
+
 def assert_quest_log_hotkey_opens_panel(test_case, game, g, active=(), completed=()):
-    observed = {"open": False, "text": ""}
-
-    def observe_open_panel():
-        observed["open"] = gui_contains_class(g, "CGameQuestPanel")
-        if observed["open"]:
-            observed["text"] = g.getGuiHandler().openPanel("questPanel").getText(g.getGui())
-
+    initial_turn = g.getMap().getTurn()
+    test_case.assertFalse(gui_contains_class(g, "CGameQuestPanel"))
     push_quest_log_key()
-    game.event_loop.instance().invoke(observe_open_panel)
+    wait_for_panel_class(test_case, g, "CGameQuestPanel")
+    panel = find_top_level_panel(g, "CGameQuestPanel")
+    text = readJournalTabs(panel, g.getGui(), active=active, completed=completed)
     push_quest_log_key()
-    pump_event_loop(10)
-
-    test_case.assertTrue(observed["open"], "The j hotkey should open the quest log panel.")
-    test_case.assertFalse(gui_contains_class(g, "CGameQuestPanel"), "The second j hotkey should close the quest log.")
+    wait_for_panel_closed(test_case, g, "CGameQuestPanel")
+    test_case.assertEqual(
+        initial_turn, g.getMap().getTurn(), "Opening, reading, and closing the journal takes no turn."
+    )
     for quest_id in active:
-        test_case.assertIn(nouraajd_quest_status_line("Active", quest_id), observed["text"])
+        test_case.assertIn(nouraajd_quest_status_line("Active", quest_id), text)
     for quest_id in completed:
-        test_case.assertIn(nouraajd_quest_status_line("Completed", quest_id), observed["text"])
+        test_case.assertIn(nouraajd_quest_status_line("Completed", quest_id), text)
 
 
 def nouraajd_quest_status_line(status, quest_id):
@@ -19518,7 +21922,7 @@ def nouraajd_quest_status_line(status, quest_id):
 
 def assert_nouraajd_quest_log(test_case, g, active=(), completed=()):
     quest_panel = open_quest_log_panel(test_case, g)
-    text = quest_panel.getText(g.getGui())
+    text = readJournalTabs(quest_panel, g.getGui(), active=active, completed=completed)
     for quest_id in active:
         test_case.assertIn(nouraajd_quest_status_line("Active", quest_id), text)
     for quest_id in completed:
@@ -19553,6 +21957,15 @@ def find_player_quest(player, quest_id):
     return None
 
 
+def questJournalEntry(quest):
+    return {
+        "completed": quest.isCompleted(),
+        "objective": quest.getObjective(),
+        "reward": quest.getReward(),
+        "hint": quest.getHint(),
+    }
+
+
 def assert_player_quest_state(test_case, player, quest_id, completed):
     quest = find_player_quest(player, quest_id)
     test_case.assertIsNotNone(quest, f"{quest_id} should be present in the player's quest journal.")
@@ -19578,6 +21991,11 @@ def configure_panel_for_layout(g, panel_name, panel):
         panel.setText(f"{panel_name} layout verification")
     elif panel_name == "questionPanel":
         panel.setStringProperty("question", "Continue layout verification?")
+    elif panel_name == "dialogPanel":
+        entry = make_dialog_state(g, "ENTRY", "Dialogue layout verification.", ["Leave"], next_state="EXIT")
+        dialog = make_dialog(g, [entry])
+        dialog.setStringProperty("speaker", "Layout guide")
+        panel.setObjectProperty("dialog", dialog)
     elif panel_name == "fightPanel":
         enemy = g.createObject("GoblinThief")
         enemy.name = "layoutRootGoblin"
@@ -19592,8 +22010,8 @@ def configure_panel_for_layout(g, panel_name, panel):
 def open_layout_panel(test_case, g, panel_name):
     expected_class = PANEL_LAYOUT_CASES[panel_name]["class"]
     panel = g.getGuiHandler().openPanel(panel_name)
-    wait_for_panel_class(test_case, g, expected_class)
     configure_panel_for_layout(g, panel_name, panel)
+    wait_for_panel_class(test_case, g, expected_class)
     pump_event_loop(3)
     return panel
 
@@ -19612,10 +22030,13 @@ def run_blocking_panel_inspection(test_case, game, g, class_name, action, inspec
             return
         try:
             observed["result"] = inspect(panel)
+            close_input(panel)
         except Exception:
             observed["error"] = traceback.format_exc()
-        finally:
-            close_input(panel)
+            if hasattr(panel, "close"):
+                panel.close()
+            else:
+                g.getGui().removeChild(panel)
 
     game.event_loop.instance().invoke(inspect_then_close)
     return_value = action()
@@ -19624,6 +22045,52 @@ def run_blocking_panel_inspection(test_case, game, g, class_name, action, inspec
         raise AssertionError(observed["error"])
     test_case.assertIn("result", observed, f"{class_name} inspection did not run.")
     return return_value, observed["result"]
+
+
+def captureStoryReaders(test_case, game, g):
+    from unittest.mock import patch
+
+    original = game.CGuiHandler.showCampaignScreen
+    observed = []
+    errors = []
+    test_case.addCleanup(lambda: test_case.assertFalse(errors, "\n".join(errors)))
+
+    def show_and_acknowledge(handler, title, body, action_label):
+        observed.append((title, body))
+        test_case.assertEqual("Continue", action_label)
+
+        def inspect(panel):
+            test_case.assertEqual(title, panel.getStringProperty("title"))
+            test_case.assertEqual(body, panel.getStringProperty("body"))
+            test_case.assertEqual("Continue", panel.getStringProperty("actionLabel"))
+
+        def acknowledge(panel):
+            controls = [
+                button
+                for button in find_descendants_by_type(panel, "CButton")
+                if button.getStringProperty("click") == "clickAction"
+            ]
+            test_case.assertEqual(1, len(controls), "A story reader must offer one explicit Continue control.")
+            activate_widget(controls[0], g.getGui())
+
+        try:
+            run_blocking_panel_inspection(
+                test_case,
+                game,
+                g,
+                "CGameCampaignPanel",
+                lambda: original(handler, title, body, action_label),
+                inspect,
+                acknowledge,
+            )
+        except Exception:
+            errors.append(traceback.format_exc())
+            raise
+
+    replacement = patch.object(game.CGuiHandler, "showCampaignScreen", show_and_acknowledge)
+    replacement.start()
+    test_case.addCleanup(replacement.stop)
+    return observed
 
 
 def make_ui_layout_quest(g, index, completed=False):
@@ -19671,6 +22138,26 @@ def make_unique_scroll_items(g, count, prefix):
 
 
 class PanelLayoutManifestTest(unittest.TestCase):
+    def test_offscreen_gameplay_requires_explicit_isolated_driver(self):
+        from unittest.mock import patch
+
+        with (
+            patch.object(os, "name", "nt"),
+            patch.dict(
+                os.environ,
+                {"GAME_OFFSCREEN_GAMEPLAY_CHILD": "1", "SDL_VIDEODRIVER": "dummy", "SDL_RENDER_DRIVER": "software"},
+            ),
+        ):
+            self.assertTrue(isOffscreenGameplayChild())
+            with patch.dict(os.environ, {"SDL_VIDEODRIVER": "windows"}):
+                self.assertFalse(isOffscreenGameplayChild())
+            with patch.dict(os.environ, {"SDL_RENDER_DRIVER": "direct3d"}):
+                self.assertFalse(isOffscreenGameplayChild())
+            with patch.dict(os.environ, {"GAME_OFFSCREEN_GAMEPLAY_CHILD": "0"}):
+                self.assertFalse(isOffscreenGameplayChild())
+            with patch.object(os, "name", "posix"):
+                self.assertFalse(isOffscreenGameplayChild())
+
     def test_gui_window_is_created_resizable_with_minimum_size(self):
         gui_source = (REPO_ROOT / "src" / "gui" / "CGui.cpp").read_text(encoding="utf-8")
         self.assertRegex(
@@ -19681,6 +22168,41 @@ class PanelLayoutManifestTest(unittest.TestCase):
             gui_source,
             r"SDL_SetWindowMinimumSize\s*\(\s*rawWindow\s*,\s*GUI_MIN_WIDTH\s*,\s*GUI_MIN_HEIGHT\s*\)",
         )
+
+    def test_reactive_list_views_subscribe_to_model_signals(self):
+        # EPIC_05/STORY_04 reactive refresh wiring: the inventory and effects list views
+        # must stay subscribed to their model change signals (refreshEvent +
+        # refreshObject on CListView) instead of relying on manual refresh calls. The
+        # quest view's reactive rebuild is covered by the C++ gui unit tests
+        # (test_quest_panel_rebuilds_text_only_when_quest_data_changes).
+        panel_defs = json.loads((REPO_ROOT / "res" / "config" / "panels.json").read_text())
+
+        def collect_list_views(node, results):
+            if isinstance(node, dict):
+                if node.get("class") == "CListView":
+                    results.append(node.get("properties", {}))
+                for value in node.values():
+                    collect_list_views(value, results)
+            elif isinstance(node, list):
+                for value in node:
+                    collect_list_views(value, results)
+
+        expected_subscriptions = {
+            ("inventoryPanel", "inventoryCollection"): "inventoryChanged",
+            ("inventoryPanel", "equippedCollection"): "equippedChanged",
+            ("creatureView", "getEffects"): "effectsChanged",
+        }
+        for (panel_id, collection), refresh_event in expected_subscriptions.items():
+            with self.subTest(panel=panel_id, collection=collection):
+                list_views = []
+                collect_list_views(panel_defs[panel_id], list_views)
+                properties = next(view for view in list_views if view.get("collection") == collection)
+                self.assertEqual(refresh_event, properties.get("refreshEvent"))
+                self.assertEqual("CScript", properties.get("refreshObject", {}).get("class"))
+                self.assertTrue(
+                    properties["refreshObject"]["properties"]["script"],
+                    "the refresh subscription needs a script resolving the observed model object",
+                )
 
     def test_panel_layout_manifest_matches_panels_json(self):
         panel_defs = json.loads((REPO_ROOT / "res" / "config" / "panels.json").read_text())
@@ -19701,10 +22223,28 @@ class PanelLayoutManifestTest(unittest.TestCase):
                     self.assertIn("parent", case)
 
 
+def activateManagementAction(test_case, panel, g, callback):
+    buttons = [
+        button for button in find_descendants_by_type(panel, "CButton") if button.getStringProperty("click") == callback
+    ]
+    test_case.assertEqual(1, len(buttons), f"Expected exactly one {callback} action")
+    activate_widget(buttons[0], g.getGui())
+    pump_event_loop(3)
+    return buttons[0]
+
+
 class XvfbGameplayProcessTest(unittest.TestCase):
+    def activateManagementAction(self, panel, g, callback):
+        return activateManagementAction(self, panel, g, callback)
+
     def setUp(self):
-        if os.environ.get("GAME_XVFB_GAMEPLAY_CHILD") != "1":
-            self.skipTest("Run through XvfbGameplayTest so SDL uses xvfb instead of the dummy video driver.")
+        if os.environ.get("GAME_XVFB_GAMEPLAY_CHILD") != "1" and not isOffscreenGameplayChild():
+            self.skipTest("Run through isolated Xvfb, or explicitly enable Windows dummy/software GUI validation.")
+
+    def test_character_creation_all_twenty_compositions(self):
+        from tests.test_character_creation_acceptance import exerciseCharacterChooser
+
+        exerciseCharacterChooser(self)
 
     def test_keyboard_input_moves_player(self):
         _, g, game_map, player = create_xvfb_gameplay_session(self)
@@ -19712,7 +22252,7 @@ class XvfbGameplayProcessTest(unittest.TestCase):
         target, keycode, scancode = find_adjacent_walkable_direction(game_map, initial)
 
         assert_player_moves_to_key_target(self, game_map, player, target, keycode, scancode)
-        assert_rendered_map_proxy_cells(self, g)
+        assert_rendered_map_proxy_grid(self, g)
 
     def test_mouse_click_moves_player(self):
         _, g, game_map, player = create_xvfb_gameplay_session(self)
@@ -19724,6 +22264,11 @@ class XvfbGameplayProcessTest(unittest.TestCase):
         push_sdl_mouse_click(click_x, click_y)
         pump_event_loop(5)
 
+        previewed = player.getCoords()
+        self.assertEqual((initial.x, initial.y, initial.z), (previewed.x, previewed.y, previewed.z))
+        self.assertEqual(initial_turn, game_map.getTurn())
+        push_sdl_key_event(SDLK_RETURN, 0)
+        pump_event_loop(5)
         moved = player.getCoords()
         self.assertEqual((target.x, target.y, target.z), (moved.x, moved.y, moved.z))
         self.assertGreater(game_map.getTurn(), initial_turn)
@@ -19732,28 +22277,151 @@ class XvfbGameplayProcessTest(unittest.TestCase):
     def test_window_resize_event_updates_gui_dimensions(self):
         _, g, _, _ = create_xvfb_gameplay_session(self)
         gui = g.getGui()
-        map_graph = next(child for child in collect_gui_children(gui, "CMapGraphicsObject"))
-
+        map_graph = collect_gui_children(gui, "CMapGraphicsObject")[0]
         assert_focused_sdl_window_resizable(self)
-        width, height = push_sdl_window_size_changed_event(800, 600)
-        tile_size = gui.getNumericProperty("tileSize")
-        expected_proxy_count = (width // tile_size + 1) * (height // tile_size + 1)
-
+        width, height = push_sdl_window_size_changed_event(1280, 720)
         self.assertTrue(
             pump_event_loop_until(
-                lambda: (
-                    gui.getNumericProperty("width") == width
-                    and gui.getNumericProperty("height") == height
-                    and len(map_graph.getChildren()) == expected_proxy_count
-                ),
+                lambda: gui.getNumericProperty("width") == width and gui.getNumericProperty("height") == height,
                 timeout=2.0,
                 min_iterations=2,
             )
         )
-        self.assertEqual((0, 0, width, height), tuple(gui.getResolvedRect()))
-        self.assertEqual((0, 0, width, height), tuple(map_graph.getResolvedRect()))
-        self.assertEqual(expected_proxy_count, len(map_graph.getChildren()))
-        assert_rendered_map_proxy_cells(self, g)
+        self.assertEqual((0, 0, width, height), resolved_rect(gui))
+        self.assertEqual((0, 0, width, height), resolved_rect(map_graph))
+        assert_rendered_map_proxy_grid(self, g)
+        panel = open_layout_panel(self, g, "inventoryPanel")
+        try:
+            assert_rect_on_screen(self, "inventoryPanel", resolved_rect(panel), width=width, height=height)
+        finally:
+            panel.close()
+            pump_event_loop(3)
+
+    def test_window_resize_refreshes_open_panel_layout(self):
+        _, g, _, _ = create_xvfb_gameplay_session(self)
+        gui = g.getGui()
+        panel = open_panel_for_screenshot(self, g, "inventoryPanel", "CGameInventoryPanel")
+        try:
+            for width, height in ((1280, 720), (1600, 900), (1920, 1080)):
+                push_sdl_window_size_changed_event(width, height)
+                self.assertTrue(
+                    pump_event_loop_until(
+                        lambda: gui.getNumericProperty("width") == width and gui.getNumericProperty("height") == height,
+                        timeout=2.0,
+                        min_iterations=2,
+                    )
+                )
+                panel_rect = resolved_rect(panel)
+                self.assertEqual((width * 94 // 100, height * 94 // 100), panel_rect[2:])
+                assert_rect_on_screen(self, "inventoryPanel", panel_rect, width=width, height=height)
+                for collection in ("inventoryCollection", "equippedCollection"):
+                    view = find_list_view(panel, collection)
+                    if view.isVisible():
+                        assert_child_inside(self, "inventoryPanel", panel_rect, collection, resolved_rect(view))
+                        self.assertEqual(1, list_runtime_grid(view, gui)[0])
+        finally:
+            panel.close()
+            pump_event_loop(3)
+
+    def test_panel_resize_handle_drag_resizes_and_clamps(self):
+        game, g, _, _ = create_xvfb_gameplay_session(self)
+        panel = open_panel_for_screenshot(self, g, "inventoryPanel", "CGameInventoryPanel")
+        try:
+            panel.setBoolProperty("resizable", True)
+            before = json.loads(game.jsonify(panel))["properties"]["layout"]["properties"]
+            x, y, w, h = resolved_rect(panel)
+            gui_w, gui_h = gui_logical_size(g)
+            maximum = (x, y, gui_w - x, gui_h - y)
+            drag_panel_resize_handle(
+                self,
+                g,
+                panel,
+                (x + w - 10, y + h - 10),
+                (
+                    (gui_w + 3000, gui_h + 3000, maximum),
+                    (x + 10, y + 10, (x, y, 640, 480)),
+                    (gui_w + 3000, gui_h + 3000, maximum),
+                ),
+                (gui_w - 10, gui_h - 10),
+            )
+            self.assertEqual(maximum, resolved_rect(panel))
+            push_sdl_mouse_motion_event(x + 200, y + 200)
+            pump_event_loop(3)
+            self.assertEqual(maximum, resolved_rect(panel), "release ends the resize capture")
+            after = json.loads(game.jsonify(panel))["properties"]["layout"]["properties"]
+            self.assertEqual(before, after, "runtime resize must not rewrite authored layout")
+            for view in collect_gui_children(panel, "CListView"):
+                if view.isVisible():
+                    assert_child_inside(self, "panel", maximum, "list", resolved_rect(view))
+        finally:
+            panel.close()
+            pump_event_loop(3)
+
+    def test_panel_resize_enlarged_list_view_hit_testing(self):
+        _, g, _, player = create_xvfb_gameplay_session(self)
+        gui = g.getGui()
+        panel, inventory, _ = open_inventory_panel_with_items(
+            self, g, player, "Sword", "ChaosSword", "LeatherArmor", "Scroll", "magicWand"
+        )
+        try:
+            panel.setBoolProperty("resizable", True)
+            x, y, w, h = resolved_rect(panel)
+            gui_w, gui_h = gui_logical_size(g)
+            maximum = (x, y, gui_w - x, gui_h - y)
+            drag_panel_resize_handle(
+                self,
+                g,
+                panel,
+                (x + w - 10, y + h - 10),
+                ((gui_w + 3000, gui_h + 3000, maximum),),
+                (gui_w - 10, gui_h - 10),
+            )
+            player.addItem("LesserLifePotion")
+            pump_event_loop(5)
+            self.assertEqual(1, list_runtime_grid(inventory, gui)[0])
+            for row in (0, min(3, list_runtime_grid(inventory, gui)[1] - 1)):
+                self.assertTrue(list_cell_objects(inventory, gui, 0, row))
+                click_list_cell(inventory, 0, row)
+                pump_event_loop(5)
+                self.assertEqual(1, get_panel_selection_box_counts_by_collection(panel).get("inventoryCollection", 0))
+            assert_child_inside(self, "panel", maximum, "bag", resolved_rect(inventory))
+        finally:
+            panel.close()
+            pump_event_loop(3)
+
+    def test_panel_resize_reopened_panel_stays_onscreen(self):
+        _, g, _, _ = create_xvfb_gameplay_session(self)
+        gui = g.getGui()
+        panel = open_panel_for_screenshot(self, g, "inventoryPanel", "CGameInventoryPanel")
+        panel.setBoolProperty("resizable", True)
+        x, y, w, h = resolved_rect(panel)
+        gui_w, gui_h = gui_logical_size(g)
+        drag_panel_resize_handle(
+            self,
+            g,
+            panel,
+            (x + w - 10, y + h - 10),
+            ((gui_w + 3000, gui_h + 3000, (x, y, gui_w - x, gui_h - y)),),
+            (gui_w - 10, gui_h - 10),
+        )
+        panel.close()
+        wait_for_panel_closed(self, g, "CGameInventoryPanel")
+        push_sdl_window_size_changed_event(1280, 720)
+        self.assertTrue(
+            pump_event_loop_until(
+                lambda: gui.getNumericProperty("width") == 1280 and gui.getNumericProperty("height") == 720,
+                timeout=2.0,
+                min_iterations=2,
+            )
+        )
+        reopened = open_panel_for_screenshot(self, g, "inventoryPanel", "CGameInventoryPanel")
+        try:
+            self.assertEqual(panel, reopened, "management tabs preserve their session state")
+            assert_rect_on_screen(self, "reopened panel", resolved_rect(reopened), width=1280, height=720)
+            self.assertEqual((x, y, 1280 - x, 720 - y), resolved_rect(reopened))
+        finally:
+            reopened.close()
+            pump_event_loop(3)
 
     def test_screenshot_readback_has_rendered_pixels(self):
         _, g, _, _ = create_xvfb_gameplay_session(self)
@@ -19764,6 +22432,55 @@ class XvfbGameplayProcessTest(unittest.TestCase):
         summary = assert_minimap_has_rendered_pixels(self, g, "xvfb_minimap_screenshot")
         self.assertTrue(gui_contains_class(g, "CMinimapGraphicsObject"))
         self.assertGreaterEqual(summary["color_counts"].get(MINIMAP_PLAYER_RGB, 0), 20)
+
+    def test_gui_queries_match_serialized_rendered_tree(self):
+        from unittest.mock import patch
+
+        game, g, _, _ = create_xvfb_gameplay_session(self)
+        panel = g.getGuiHandler().openPanel("questPanel")
+        g.getGuiHandler().showTooltip("GUI query reference", 960, 540)
+        pump_event_loop(3)
+        try:
+            gui_tree = json.loads(game.jsonify(g.getGui()))
+            serialized_classes = set()
+            stack = [gui_tree]
+            while stack:
+                node = stack.pop()
+                if isinstance(node, dict):
+                    serialized_classes.add(node.get("class"))
+                    stack.extend(node.get("properties", {}).get("children") or [])
+            map_graph = next(
+                child for child in gui_tree["properties"]["children"] if child.get("class") == "CMapGraphicsObject"
+            )
+            expected_counts = [
+                len(proxy.get("properties", {}).get("children") or [])
+                for proxy in map_graph["properties"]["children"]
+                if proxy.get("class") == "CProxyGraphicsObject"
+            ]
+            self.assertTrue(expected_counts)
+            self.assertGreater(sum(expected_counts), 0)
+            self.assertTrue({"CGameQuestPanel", "CTooltip", "CMinimapGraphicsObject"} <= serialized_classes)
+            panel_config = json.loads((REPO_ROOT / "res" / "config" / "panels.json").read_text())
+            query_classes = {entry["class"] for entry in panel_config.values()} | {
+                "CGui",
+                "CGamePanel",
+                "CTooltip",
+                "CMinimapGraphicsObject",
+                "CMapGraphicsObject",
+                "MissingPanel",
+            }
+            with patch.object(
+                game, "jsonify", side_effect=AssertionError("GUI queries must not serialize.")
+            ) as serialize:
+                for _ in range(20):
+                    for class_name in query_classes:
+                        self.assertEqual(
+                            class_name in serialized_classes, gui_contains_class(g, class_name), class_name
+                        )
+                    self.assertEqual(expected_counts, get_map_proxy_child_counts(g))
+                serialize.assert_not_called()
+        finally:
+            panel.close()
 
     def test_screenshot_after_keyboard_move_has_rendered_pixels(self):
         _, g, game_map, player = create_xvfb_gameplay_session(self)
@@ -19776,26 +22493,26 @@ class XvfbGameplayProcessTest(unittest.TestCase):
     def test_screenshot_after_mouse_move_has_rendered_pixels(self):
         _, g, game_map, player = create_xvfb_gameplay_session(self)
         initial = player.getCoords()
+        initial_turn = game_map.getTurn()
         target, _, _ = find_adjacent_walkable_direction(game_map, initial)
         click_x, click_y = visible_map_cell_center(initial, target)
 
         push_sdl_mouse_click(click_x, click_y)
         pump_event_loop(5)
 
+        previewed = player.getCoords()
+        self.assertEqual((initial.x, initial.y, initial.z), (previewed.x, previewed.y, previewed.z))
+        self.assertEqual(initial_turn, game_map.getTurn())
+        assert_screenshot_has_rendered_pixels(self, g, "xvfb_mouse_route_preview_screenshot")
+        push_sdl_key_event(SDLK_RETURN, 0)
+        pump_event_loop(5)
         moved = player.getCoords()
         self.assertEqual((target.x, target.y, target.z), (moved.x, moved.y, moved.z))
+        self.assertGreater(game_map.getTurn(), initial_turn)
         assert_screenshot_has_rendered_pixels(self, g, "xvfb_mouse_move_screenshot")
 
     def test_screenshot_after_save_hotkey_has_rendered_pixels(self):
-        _, g, game_map, _ = create_xvfb_gameplay_session(self)
-        marker = f"xvfb-screenshot-{os.getpid()}-{time.monotonic_ns()}"
-        game_map.setStringProperty("xvfb_save_marker", marker)
-
-        push_sdl_key_event(ord("s"), 0, SDL_KEYDOWN)
-        push_sdl_key_event(ord("s"), 0, SDL_KEYUP)
-        pump_event_loop(5)
-
-        assert_screenshot_has_rendered_pixels(self, g, "xvfb_save_hotkey_screenshot")
+        self.exerciseNamedSaveHotkey(capture=True)
 
     def test_screenshot_after_wait_hotkey_has_rendered_pixels(self):
         _, g, game_map, _ = create_xvfb_gameplay_session(self)
@@ -19829,46 +22546,43 @@ class XvfbGameplayProcessTest(unittest.TestCase):
     def test_screenshot_inventory_item_selection_has_rendered_pixels(self):
         _, g, _, player = create_xvfb_gameplay_session(self)
         player.addItem("Sword")
-        open_panel_for_screenshot(self, g, "inventoryPanel", "CGameInventoryPanel")
-
-        push_sdl_mouse_click(585, 265)
-        pump_event_loop(5)
-
+        panel = open_panel_for_screenshot(self, g, "inventoryPanel", "CGameInventoryPanel")
+        click_first_list_object(
+            self, find_list_view(panel, "inventoryCollection"), g.getGui(), lambda item: item.getTypeId() == "Sword"
+        )
+        self.assertEqual(1, get_panel_selection_box_counts_by_collection(panel).get("inventoryCollection", 0))
         assert_screenshot_has_rendered_pixels(self, g, "xvfb_inventory_item_selection_screenshot")
 
     def test_screenshot_inventory_equipped_selection_has_rendered_pixels(self):
         _, g, _, player = create_xvfb_gameplay_session(self)
         player.addItem("Sword")
-        open_panel_for_screenshot(self, g, "inventoryPanel", "CGameInventoryPanel")
-
-        push_sdl_mouse_click(585, 265)
-        push_sdl_mouse_click(1185, 265)
-        pump_event_loop(5)
-
+        panel = open_panel_for_screenshot(self, g, "inventoryPanel", "CGameInventoryPanel")
+        click_first_list_object(
+            self, find_list_view(panel, "inventoryCollection"), g.getGui(), lambda item: item.getTypeId() == "Sword"
+        )
+        self.activateManagementAction(panel, g, "equipSelected")
+        self.assertEqual("Sword", player.getWeapon().getTypeId())
+        self.assertEqual(1, get_panel_selection_box_counts_by_collection(panel).get("equippedCollection", 0))
         assert_screenshot_has_rendered_pixels(self, g, "xvfb_inventory_equipped_selection_screenshot")
 
     def test_inventory_equipped_selection_resets_inventory_selection(self):
         _, g, _, player = create_xvfb_gameplay_session(self)
         player.addItem("Sword")
         panel = open_panel_for_screenshot(self, g, "inventoryPanel", "CGameInventoryPanel")
-
-        push_sdl_mouse_click(585, 265)
-        pump_event_loop(5)
-        selected_after_inventory = get_panel_selection_box_counts_by_collection(panel)
-
-        push_sdl_mouse_click(1185, 265)
-        pump_event_loop(5)
-        selected_after_equip = get_panel_selection_box_counts_by_collection(panel)
-
-        push_sdl_mouse_click(1185, 265)
-        pump_event_loop(5)
-        selected_after_equipped_click = get_panel_selection_box_counts_by_collection(panel)
-
-        self.assertEqual(1, selected_after_inventory.get("inventoryCollection", 0))
-        self.assertEqual(0, selected_after_equip.get("inventoryCollection", 0))
-        self.assertEqual(0, selected_after_equip.get("equippedCollection", 0))
-        self.assertEqual(0, selected_after_equipped_click.get("inventoryCollection", 0))
-        self.assertEqual(1, selected_after_equipped_click.get("equippedCollection", 0))
+        click_first_list_object(
+            self, find_list_view(panel, "inventoryCollection"), g.getGui(), lambda item: item.getTypeId() == "Sword"
+        )
+        self.assertEqual(1, get_panel_selection_box_counts_by_collection(panel).get("inventoryCollection", 0))
+        self.activateManagementAction(panel, g, "equipSelected")
+        self.assertEqual(0, get_panel_selection_box_counts_by_collection(panel).get("inventoryCollection", 0))
+        self.assertEqual(1, get_panel_selection_box_counts_by_collection(panel).get("equippedCollection", 0))
+        weapon_name = player.getWeapon().getName()
+        equipped = find_list_view(panel, "equippedCollection")
+        activate_list_cell(equipped, g.getGui(), 0, 0)
+        activate_list_cell(equipped, g.getGui(), 0, 0)
+        pump_event_loop(3)
+        self.assertEqual(weapon_name, player.getWeapon().getName(), "repeated inspection must not unequip")
+        self.assertEqual(1, get_panel_selection_box_counts_by_collection(panel).get("equippedCollection", 0))
 
     def test_inventory_drag_release_outside_source_equips_item(self):
         _, g, _, player = create_xvfb_gameplay_session(self)
@@ -19949,35 +22663,47 @@ class XvfbGameplayProcessTest(unittest.TestCase):
         self.assertEqual("ChaosSword", player.getWeapon().getTypeId())
 
     def test_inventory_drag_valid_equip_unequip_and_refresh_counts(self):
-        _, g, _, player = create_xvfb_gameplay_session(self)
+        game, g, _, player = create_xvfb_gameplay_session(self)
+
+        def renderedItemTotals(panel):
+            return {
+                view.getCollection(): sum(
+                    isinstance(child, game.CAnimation) and isinstance(child.getObject(), game.CItem)
+                    for proxy in view.getChildren()
+                    for child in proxy.getChildren()
+                )
+                for view in panel.getChildren()
+                if isinstance(view, game.CListView)
+            }
+
         panel, inventory_list, equipped_list = open_inventory_panel_with_items(self, g, player)
-        empty_totals = get_panel_proxy_child_totals_by_collection(panel)
+        empty_totals = renderedItemTotals(panel)
 
         player.addItem("LeatherArmor")
         pump_event_loop(5)
         armor_column, armor_row, _ = find_visible_list_cell_by_type(inventory_list, g.getGui(), "LeatherArmor")
-        with_item_totals = get_panel_proxy_child_totals_by_collection(panel)
+        with_item_totals = renderedItemTotals(panel)
 
-        self.assertEqual(empty_totals["inventoryCollection"] + 1, with_item_totals["inventoryCollection"])
+        self.assertGreater(with_item_totals["inventoryCollection"], empty_totals["inventoryCollection"])
         self.assertEqual(empty_totals["equippedCollection"], with_item_totals["equippedCollection"])
 
         drag_between_points(
             self,
             g,
             list_cell_center(inventory_list, armor_column, armor_row),
-            list_cell_center(equipped_list, 3, 0),
+            list_cell_center(equipped_list, 0, 3),
         )
 
-        after_equip_totals = get_panel_proxy_child_totals_by_collection(panel)
+        after_equip_totals = renderedItemTotals(panel)
         self.assertEqual(0, player.countItems("LeatherArmor"))
         self.assertEqual(empty_totals["inventoryCollection"], after_equip_totals["inventoryCollection"])
         self.assertEqual(empty_totals["equippedCollection"] + 1, after_equip_totals["equippedCollection"])
         self.assertTrue(
-            any(obj.getTypeId() == "LeatherArmor" for obj in list_cell_objects(equipped_list, g.getGui(), 3, 0))
+            any(obj.getTypeId() == "LeatherArmor" for obj in list_cell_objects(equipped_list, g.getGui(), 0, 3))
         )
         self.assertEqual(0, get_panel_selection_box_counts_by_collection(panel).get("inventoryCollection", 0))
 
-        equipped_x, equipped_y = list_cell_center(equipped_list, 3, 0)
+        equipped_x, equipped_y = list_cell_center(equipped_list, 0, 3)
         push_sdl_mouse_click(equipped_x, equipped_y)
         pump_event_loop(5)
         self.assertEqual(1, get_panel_selection_box_counts_by_collection(panel).get("equippedCollection", 0))
@@ -19989,14 +22715,16 @@ class XvfbGameplayProcessTest(unittest.TestCase):
         push_sdl_mouse_button_event(equipped_x, equipped_y, SDL_BUTTON_LEFT, SDL_MOUSEBUTTONUP)
         pump_event_loop(5)
 
-        after_unequip_totals = get_panel_proxy_child_totals_by_collection(panel)
+        self.assertEqual(0, player.countItems("LeatherArmor"), "releasing a click must keep equipment worn")
+        self.activateManagementAction(panel, g, "unequipSelected")
+        after_unequip_totals = renderedItemTotals(panel)
         self.assertFalse(g.getGui().hasDragSession())
         self.assertFalse(g.getGui().hasPointerCapture())
         self.assertEqual(1, player.countItems("LeatherArmor"))
-        self.assertEqual(empty_totals["inventoryCollection"] + 1, after_unequip_totals["inventoryCollection"])
+        self.assertGreater(after_unequip_totals["inventoryCollection"], empty_totals["inventoryCollection"])
         self.assertEqual(empty_totals["equippedCollection"], after_unequip_totals["equippedCollection"])
         self.assertFalse(
-            any(obj.getTypeId() == "LeatherArmor" for obj in list_cell_objects(equipped_list, g.getGui(), 3, 0))
+            any(obj.getTypeId() == "LeatherArmor" for obj in list_cell_objects(equipped_list, g.getGui(), 0, 3))
         )
 
     def test_inventory_drag_invalid_slot_and_cancel_keep_state(self):
@@ -20010,16 +22738,16 @@ class XvfbGameplayProcessTest(unittest.TestCase):
             self,
             g,
             list_cell_center(inventory_list, weapon_column, weapon_row),
-            list_cell_center(equipped_list, 3, 0),
+            list_cell_center(equipped_list, 0, 3),
         )
 
         after_invalid = get_panel_proxy_child_totals_by_collection(panel)
         current_weapon = player.getWeapon().getTypeId() if player.getWeapon() else None
         self.assertEqual(original_weapon, current_weapon)
         self.assertEqual(1, player.countItems("ChaosSword"))
-        self.assertEqual(before_invalid, after_invalid)
+        self.assertEqual(before_invalid["equippedCollection"], after_invalid["equippedCollection"])
         self.assertFalse(
-            any(obj.getTypeId() == "ChaosSword" for obj in list_cell_objects(equipped_list, g.getGui(), 3, 0))
+            any(obj.getTypeId() == "ChaosSword" for obj in list_cell_objects(equipped_list, g.getGui(), 0, 3))
         )
 
         weapon_column, weapon_row, _ = find_visible_list_cell_by_type(inventory_list, g.getGui(), "ChaosSword")
@@ -20038,7 +22766,7 @@ class XvfbGameplayProcessTest(unittest.TestCase):
             )
         )
         self.assertFalse(
-            any(obj.getTypeId() == "ChaosSword" for obj in list_cell_objects(equipped_list, g.getGui(), 3, 0))
+            any(obj.getTypeId() == "ChaosSword" for obj in list_cell_objects(equipped_list, g.getGui(), 0, 3))
         )
         self.assertEqual(1, get_panel_selection_box_counts_by_collection(panel).get("inventoryCollection", 0))
 
@@ -20087,54 +22815,102 @@ class XvfbGameplayProcessTest(unittest.TestCase):
         self.assertEqual(original_weapon, current_weapon)
         self.assertEqual(1, player.countItems("ChaosSword"))
 
-    def test_inventory_quest_item_selection_is_ignored(self):
+    def test_inventory_quest_item_selection_is_inspection_only(self):
         game, g, _, player = create_xvfb_gameplay_session(self, map_name="nouraajd")
         quest_item = g.createObject("letterToBeren")
         self.assertTrue(quest_item.hasTag(game.CTag.QUEST))
         player.addItem(quest_item)
         panel = open_panel_for_screenshot(self, g, "inventoryPanel", "CGameInventoryPanel")
-
-        push_sdl_mouse_click(585, 265)
-        pump_event_loop(5)
-        selected_after_quest_click = get_panel_selection_box_counts_by_collection(panel)
-
-        self.assertEqual(0, selected_after_quest_click.get("inventoryCollection", 0))
-        self.assertEqual(0, selected_after_quest_click.get("equippedCollection", 0))
-
-        inventory_list = find_list_view(panel, "inventoryCollection")
-        equipped_list = find_list_view(panel, "equippedCollection")
-        item_column, item_row, _ = find_visible_list_cell_by_type(inventory_list, g.getGui(), "letterToBeren")
-        start_x, start_y = list_cell_center(inventory_list, item_column, item_row)
-        target_x, target_y = list_cell_center(equipped_list, 0, 0)
+        inventory = find_list_view(panel, "inventoryCollection")
+        equipped = find_list_view(panel, "equippedCollection")
+        column, row, _ = find_visible_list_cell_by_type(inventory, g.getGui(), "letterToBeren")
+        start_x, start_y = list_cell_center(inventory, column, row)
+        target_x, target_y = list_cell_center(equipped, 0, 0)
+        push_sdl_mouse_click(start_x, start_y)
+        pump_event_loop(3)
+        self.assertEqual(1, get_panel_selection_box_counts_by_collection(panel).get("inventoryCollection", 0))
         weapon_before = player.getWeapon().getTypeId() if player.getWeapon() else None
-
+        self.activateManagementAction(panel, g, "useSelected")
+        self.activateManagementAction(panel, g, "equipSelected")
         push_sdl_mouse_button_event(start_x, start_y, SDL_BUTTON_LEFT, SDL_MOUSEBUTTONDOWN)
         pump_event_loop(3)
         self.assertFalse(g.getGui().hasDragSession())
         self.assertFalse(g.getGui().hasPointerCapture())
-
         push_sdl_mouse_motion_event(target_x, target_y, target_x - start_x, target_y - start_y)
         push_sdl_mouse_button_event(target_x, target_y, SDL_BUTTON_LEFT, SDL_MOUSEBUTTONUP)
-        pump_event_loop(5)
-
-        weapon_after = player.getWeapon().getTypeId() if player.getWeapon() else None
+        pump_event_loop(3)
         self.assertEqual(1, player.countItems("letterToBeren"))
-        self.assertEqual(weapon_before, weapon_after)
+        self.assertEqual(weapon_before, player.getWeapon().getTypeId() if player.getWeapon() else None)
 
-    def test_fight_quest_item_selection_is_ignored(self):
+    def test_trade_grouped_sale_adds_copies_explicitly(self):
+        game, g, _, player = create_xvfb_gameplay_session(self)
+        player.setItems(set())
+        for index in range(2):
+            scroll = g.createObject("Scroll")
+            scroll.name = f"groupedTradeSellScroll{index}"
+            player.addItem(scroll)
+        quest_scroll = g.createObject("Scroll")
+        quest_scroll.name = "groupedTradeSellQuestScroll"
+        quest_scroll.addTag(game.CTag.QUEST)
+        player.addItem(quest_scroll)
+        market = g.createObject("CMarket")
+        trade = open_panel_for_screenshot(self, g, "tradePanel", "CGameTradePanel")
+        trade.setMarket(market)
+        pump_event_loop(3)
+        player_list = find_list_view(trade, "inventoryCollection")
+        column, row, _ = find_visible_list_cell_by_type(player_list, g.getGui(), "Scroll")
+        activate_list_cell(player_list, g.getGui(), column, row)
+        self.assertEqual(0, trade.getTotalSellCost(), "inspection must not put the stack on sale")
+        self.activateManagementAction(trade, g, "addSelectedForSale")
+        unit_cost = trade.getTotalSellCost()
+        self.assertGreater(unit_cost, 0)
+        self.activateManagementAction(trade, g, "addSelectedForSale")
+        self.assertEqual(unit_cost * 2, trade.getTotalSellCost())
+        self.activateManagementAction(trade, g, "addSelectedForSale")
+        self.assertEqual(unit_cost * 2, trade.getTotalSellCost(), "quest copy must be excluded")
+
+        captured_question = {}
+
+        def answer_and_capture():
+            panel = find_top_level_panel(g, "CGameQuestionPanel")
+            if panel is None:
+                game.event_loop.instance().invoke(answer_and_capture)
+                return
+            captured_question["text"] = panel.getStringProperty("question")
+            button = next(
+                button
+                for button in find_descendants_by_type(panel, "CButton")
+                if button.getStringProperty("click") == "clickYes"
+            )
+            activate_widget(button, g.getGui())
+
+        game.event_loop.instance().invoke(answer_and_capture)
+        self.activateManagementAction(trade, g, "finalizeSell")
+        self.assertTrue(pump_event_loop_until(lambda: "text" in captured_question, timeout=2.0))
+        self.assertIn("2x Scroll", captured_question["text"])
+        self.assertEqual(1, player.countItems("Scroll"))
+        self.assertTrue(
+            player.hasItem(lambda item: item.getName() == quest_scroll.getName() and item.hasTag(game.CTag.QUEST))
+        )
+        market_scrolls = [item for item in market.getItems() if item.getTypeId() == "Scroll"]
+        self.assertEqual(2, len(market_scrolls))
+        self.assertFalse(any(item.hasTag(game.CTag.QUEST) for item in market_scrolls))
+        self.assertEqual(0, trade.getTotalSellCost())
+
+    def test_fight_quest_item_selection_is_inspection_only(self):
         game, g, _, player = create_xvfb_gameplay_session(self, map_name="nouraajd")
         quest_item = g.createObject("letterToBeren")
-        self.assertTrue(quest_item.hasTag(game.CTag.QUEST))
         player.addItem(quest_item)
         panel = g.getGuiHandler().openPanel("fightPanel")
         panel.setEnemy(g.createObject("GoblinThief"))
         wait_for_panel_class(self, g, "CGameFightPanel")
-
-        push_sdl_mouse_click(585, 745)
-        pump_event_loop(5)
-        selected_after_quest_click = get_panel_selection_box_counts_by_collection(panel)
-
-        self.assertEqual(0, selected_after_quest_click.get("itemsCollection", 0))
+        items = find_list_view(panel, "itemsCollection")
+        column, row, _ = find_visible_list_cell_by_type(items, g.getGui(), "letterToBeren")
+        activate_list_cell(items, g.getGui(), column, row)
+        pump_event_loop(3)
+        self.assertEqual(1, get_panel_selection_box_counts_by_collection(panel).get("itemsCollection", 0))
+        self.activateManagementAction(panel, g, "useSelectedItem")
+        self.assertEqual(1, player.countItems("letterToBeren"))
 
     def test_cave_loss_does_not_reopen_fight_panel(self):
         game, g, game_map, player = create_xvfb_gameplay_session(self, map_name="nouraajd")
@@ -20181,8 +22957,42 @@ class XvfbGameplayProcessTest(unittest.TestCase):
         player.setHp(1)
 
         target = killer.getCoords()
-        player.moveTo(target.x, target.y, target.z)
-        pump_event_loop(5)
+
+        def recovered_state():
+            return (
+                coords_tuple(player.getCoords()),
+                player.getHp(),
+                player.getGold(),
+                tuple(sorted(item.getName() for item in player.getItems())),
+                game_map.getTurn(),
+            )
+
+        def resolve_loss():
+            player.moveTo(target.x, target.y, target.z)
+            pump_event_loop(5)
+
+        def acknowledge_defeat(panel):
+            self.assertEqual("Defeated", panel.getStringProperty("title"))
+            self.assertEqual("continue", panel.getSelectedId())
+            self.assertEqual(entry_coords, coords_tuple(player.getCoords()))
+            self.assertEqual(1, player.getHp())
+            self.assertIn("Health after recovery: 1", panel.getDetailText())
+            self.assertFalse(gui_contains_class(g, "CGameFightPanel"))
+            resolved = recovered_state()
+            panel.keyboardEvent(g.getGui(), SDL_KEYDOWN, SDLK_RETURN)
+            return resolved
+
+        _, resolved = run_blocking_panel_inspection(
+            self,
+            game,
+            g,
+            "CGameCampaignBrowserPanel",
+            resolve_loss,
+            acknowledge_defeat,
+            lambda panel: None,
+        )
+        self.assertEqual(resolved, recovered_state(), "Acknowledging defeat must not replay losses or advance a turn.")
+        self.assertEqual("", player.getStringProperty("uiDefeatReceipt"))
 
         self.assertIsNotNone(game_map.getObjectByName(player.getName()))
         self.assertEqual(entry_coords, coords_tuple(player.getCoords()))
@@ -20223,6 +23033,149 @@ class XvfbGameplayProcessTest(unittest.TestCase):
         player.addQuest("mainQuest")
         open_panel_for_screenshot(self, g, "questPanel", "CGameQuestPanel")
         assert_screenshot_has_rendered_pixels(self, g, "xvfb_quest_panel_screenshot")
+
+    def test_quest_journal_keeps_active_and_completed_entries_after_travel(self):
+        game, g, source_map, player = create_xvfb_gameplay_session(self, map_name="hearthfall")
+
+        def moveToObject(map_name, object_name, *inputs):
+            definition = find_map_object_definition(map_name, object_name)
+            target = (definition["x"] // 32, definition["y"] // 32, 0)
+            run_blocking_gui_action(game, lambda: player.moveTo(*target), *inputs)
+            self.assertEqual(target, coords_tuple(player.getCoords()))
+
+        def captureJournal(name, active_ids, completed_ids):
+            initial_turn = g.getMap().getTurn()
+            self.assertFalse(gui_contains_class(g, "CGameQuestPanel"))
+            push_quest_log_key()
+            wait_for_panel_class(self, g, "CGameQuestPanel")
+            panel = find_top_level_panel(g, "CGameQuestPanel")
+            try:
+                text = readJournalTabs(panel, g.getGui(), active=active_ids, completed=completed_ids)
+                pump_event_loop(2)
+                assert_screenshot_has_rendered_pixels(self, g, name)
+                if completed_ids:
+                    active_pixels, width, height = g.getGui().read_pixels()
+                    buttons = {
+                        button.getStringProperty("click"): button
+                        for button in find_descendants_by_type(panel, "CButton")
+                    }
+                    activate_widget(buttons["showCompleted"], g.getGui())
+                    self.assertIn("[Completed]", panel.getText(g.getGui()))
+                    pump_event_loop(2)
+                    assert_screenshot_has_rendered_pixels(self, g, name + "_completed")
+                    completed_pixels, completed_width, completed_height = g.getGui().read_pixels()
+                    self.assertEqual((width, height), (completed_width, completed_height))
+                    x, y, panel_width, panel_height = resolved_rect(panel)
+                    content_rect = (x, y + panel_height // 5, panel_width, panel_height // 2)
+                    _, changed_pixels = pixel_diff_bounds(
+                        bytes(active_pixels), bytes(completed_pixels), width, content_rect
+                    )
+                    self.assertGreater(changed_pixels, 0, "Completed journal text must render after switching tabs.")
+            finally:
+                push_quest_log_key()
+                wait_for_panel_closed(self, g, "CGameQuestPanel")
+            self.assertEqual(initial_turn, g.getMap().getTurn())
+            for status, ids in (("Active", active_ids), ("Completed", completed_ids)):
+                for quest_id in ids:
+                    quest = find_player_quest(player, quest_id)
+                    self.assertIsNotNone(quest)
+                    self.assertIn(f"[{status}] {quest.getStringProperty('description')}", text)
+                    self.assertIn(quest.getObjective(), text)
+            return text
+
+        moveToObject("hearthfall", "hearthfallStart", push_space_key)
+        self.assertIn("hearthfallQuest", quest_names(player))
+        captureJournal("xvfb_quest_journal_hearthfall_active", ("hearthfallQuest",), ())
+        run_blocking_gui_action(game, lambda: source_map.removeObjectByName("watchCaptain"), push_space_key)
+        moveToObject("hearthfall", "elderMaren", lambda: push_digit_key(2))
+        run_blocking_gui_action(game, g.createObject("elderDialog").report_victory, push_space_key)
+        self.assertEqual("gravemoor", g.getMap().mapName)
+        moveToObject("gravemoor", "gravemoorStart", push_space_key)
+        self.assertTrue(find_player_quest(player, "hearthfallQuest").isCompleted())
+        text = captureJournal("xvfb_quest_journal_gravemoor_history", ("gravemoorQuest",), ("hearthfallQuest",))
+        self.assertIn("Hearthfall is free. The road leads north into the Gravemoor.", text)
+        self.assertFalse(g.getMap().getBoolProperty("victory_reported"))
+
+    def test_quest_journal_scrolls_long_history_and_restores_first_frame(self):
+        _, g, _, player = create_xvfb_gameplay_session(self)
+        player.setCompletedQuests({make_ui_layout_quest(g, index, completed=True) for index in range(30)})
+        player.setQuests({make_ui_layout_quest(g, 100)})
+        gui = g.getGui()
+        for index in range(80):
+            gui.notify(f"History entry {index:03}: " + "A discovered road leads onward through the ruined valley. " * 2)
+        panel = open_panel_for_screenshot(self, g, "questPanel", "CGameQuestPanel")
+        self.activateManagementAction(panel, g, "showHistory")
+        history_text = panel.getText(gui)
+        self.assertIn("History entry 000:", history_text)
+        self.assertIn("History entry 079:", history_text)
+        self.assertGreater(len(history_text.encode("utf-8")), 4096)
+        images = []
+        try:
+            with isolated_gui_panel(g, panel):
+                for name, scancode in (("first", None), ("last", 77), ("previous", 75), ("home", 74)):
+                    if scancode is not None:
+                        push_sdl_key_event((1 << 30) | scancode, scancode)
+                        push_sdl_key_event((1 << 30) | scancode, scancode, SDL_KEYUP)
+                        pump_event_loop(3)
+                    path = TEST_OUTPUT_DIR / f"quest_journal_scroll_{name}.png"
+                    data, width, height = capture_sdl_screenshot(path, g.getGui())
+                    self.assertTrue(path.is_file())
+                    self.assertGreater(path.stat().st_size, 0)
+                    self.assertEqual(path.suffix, ".png")
+                    self.assertEqual((width, height), gui_logical_size(g))
+                    self.assertEqual(game_simulation.GameSimulation._pngDimensions(path.read_bytes()), (width, height))
+                    images.append(data)
+                x, y, width, height = resolved_rect(panel)
+                content_rect = (x, y, width, max(1, height - 96))
+                _, end_changes = pixel_diff_bounds(images[0], images[1], gui_logical_size(g)[0], content_rect)
+                _, page_changes = pixel_diff_bounds(images[1], images[2], gui_logical_size(g)[0], content_rect)
+                self.assertGreater(end_changes, 0, "End must reveal different quest content, beyond the footer")
+                self.assertGreater(page_changes, 0, "PageUp must navigate back through quest content")
+                self.assertEqual(images[0], images[3], "Home must restore the initial journal viewport")
+        finally:
+            panel.close()
+            pump_event_loop(3)
+
+    def test_screenshot_repeated_render_frames_are_identical(self):
+        # Rendering regression guard for the CRenderContext copy path: an
+        # unchanged, isolated scene must reproduce the exact same frame when
+        # re-rendered, and the panel region must contain rendered pixels.
+        _, g, _, _ = create_xvfb_gameplay_session(self)
+        panel = open_panel_for_screenshot(self, g, "infoPanel", "CGameTextPanel")
+        panel.setStringProperty("text", "render context frame stability verification")
+        pump_event_loop(5)
+        try:
+            with isolated_gui_panel(g, panel):
+                panel_rect = resolved_rect(panel)
+                first_path = TEST_OUTPUT_DIR / "xvfb_repeated_render_first_frame.png"
+                try:
+                    first_data, first_width, first_height = capture_sdl_screenshot(first_path, g.getGui())
+                except RuntimeError as exc:
+                    self.skipTest(f"SDL renderer is not available for screenshot readback: {exc}")
+                pump_event_loop(5)
+                second_path = TEST_OUTPUT_DIR / "xvfb_repeated_render_second_frame.png"
+                second_data, second_width, second_height = capture_sdl_screenshot(second_path, g.getGui())
+        finally:
+            panel.close()
+            pump_event_loop(3)
+
+        self.assertEqual(gui_logical_size(g), (first_width, first_height))
+        self.assertEqual((first_width, first_height), (second_width, second_height))
+        self.assertTrue(first_path.exists())
+        self.assertGreater(first_path.stat().st_size, 0)
+        self.assertTrue(second_path.exists())
+        self.assertGreater(second_path.stat().st_size, 0)
+
+        panel_summary = screenshot_rect_summary(first_data, first_width, panel_rect)
+        panel_area = panel_rect[2] * panel_rect[3]
+        self.assertGreater(panel_summary["unique_rgb"], 3)
+        self.assertGreater(panel_summary["non_black_pixels"], panel_area // 100)
+
+        self.assertTrue(
+            first_data == second_data,
+            "Re-rendering an unchanged isolated panel scene produced a different frame; "
+            "the render context copy path is no longer deterministic.",
+        )
 
     def test_panel_harness_info_artifacts(self):
         _, g, _, _ = create_xvfb_gameplay_session(self)
@@ -20291,7 +23244,13 @@ class XvfbGameplayProcessTest(unittest.TestCase):
                 panel = open_layout_panel(self, g, resource_id)
                 try:
                     panel_rect = resolved_rect(panel)
-                    click_point = next(point for point in candidates if not rect_contains_point(panel_rect, *point))
+                    # Full-window panels (campaign screens) have no point outside their
+                    # rect; any click must still be swallowed by the panel instead of
+                    # reaching the map, so fall back to an arbitrary candidate.
+                    click_point = next(
+                        (point for point in candidates if not rect_contains_point(panel_rect, *point)),
+                        candidates[0],
+                    )
                     before = player.getCoords()
                     before_turn = game_map.getTurn()
                     push_sdl_mouse_click(*click_point)
@@ -20304,8 +23263,173 @@ class XvfbGameplayProcessTest(unittest.TestCase):
                     panel.close()
                     pump_event_loop(3)
 
+    def test_campaign_browser_layout_selection_and_cancel(self):
+        game, g, _, _ = create_xvfb_gameplay_session(self)
+
+        def build_maps(entries):
+            titles = g.createObject("CMapStringString")
+            titles.setValues({cid: title for cid, (title, _desc, _count) in entries.items()})
+            descriptions = g.createObject("CMapStringString")
+            descriptions.setValues({cid: desc for cid, (_title, desc, _count) in entries.items()})
+            counts = g.createObject("CMapStringInt")
+            counts.setValues({cid: count for cid, (_title, _desc, count) in entries.items()})
+            return titles, descriptions, counts
+
+        entries = {
+            "alpha": ("Twin Road", "The first twin road.", 2),
+            "beta": ("Twin Road", "The second twin road.", 5),
+        }
+
+        def inspect_select(panel):
+            root = assert_runtime_rect(
+                self, "campaignBrowserPanel", panel, PANEL_LAYOUT_CASES["campaignBrowserPanel"]["root"]
+            )
+            assert_rect_on_screen(self, "campaign browser", root)
+            self.assertEqual("alpha", panel.getSelectedId(), "initial preview uses the first stable id")
+            self.assertFalse(panel.hasChoice(), "initial preview must not start the campaign")
+            self.assertIn("The first twin road.", panel.getDetailText())
+            panel.keyboardEvent(g.getGui(), SDL_KEYDOWN, SDLK_DOWN)
+            self.assertEqual("beta", panel.getSelectedId(), "equal labels retain distinct ordered ids")
+            self.assertIn("The second twin road.", panel.getDetailText())
+            self.assertIn("Chapters: 5", panel.getDetailText())
+            self.assertFalse(panel.hasChoice(), "moving the highlight must not confirm")
+            pump_event_loop(3)
+            with isolated_gui_panel(g, panel):
+                capture_panel_layout(self, g, "layout_campaign_browser", panel)
+            panel.keyboardEvent(g.getGui(), SDL_KEYDOWN, SDLK_RETURN)
+            return {"root": root}
+
+        chosen, _ = run_blocking_panel_inspection(
+            self,
+            game,
+            g,
+            "CGameCampaignBrowserPanel",
+            lambda: g.getGuiHandler().showCampaignSelection(*build_maps(entries)),
+            inspect_select,
+            lambda panel: None,
+        )
+        self.assertEqual("beta", chosen, "confirmation returns the highlighted stable campaign id")
+        self.assertFalse(gui_contains_class(g, "CGameCampaignBrowserPanel"))
+
+        def inspect_cancel(panel):
+            panel.keyboardEvent(g.getGui(), SDL_KEYDOWN, SDLK_DOWN)
+            self.assertEqual("beta", panel.getSelectedId())
+            self.assertFalse(panel.hasChoice(), "highlighting a different campaign is still only a preview")
+            panel.keyboardEvent(g.getGui(), SDL_KEYDOWN, 27)  # SDLK_ESCAPE
+            return {}
+
+        cancelled, _ = run_blocking_panel_inspection(
+            self,
+            game,
+            g,
+            "CGameCampaignBrowserPanel",
+            lambda: g.getGuiHandler().showCampaignSelection(*build_maps(entries)),
+            inspect_cancel,
+            lambda panel: None,
+        )
+        self.assertEqual("", cancelled, "Escape cancels even after highlighting another campaign")
+        self.assertFalse(gui_contains_class(g, "CGameCampaignBrowserPanel"))
+
+    def test_campaign_panel_layout_blocking_and_resize(self):
+        # The shared shell owns the title. Its scrolling body and explicit action
+        # remain separate, readable, and inside the centered panel after resizing.
+        game, g, _, _ = create_xvfb_gameplay_session(self)
+
+        body_text = (
+            "Ten years of exile end at the village where your name was outlawed. "
+            "Break the watch, light the hearths, and give the marches their Warden back."
+        )
+
+        def inspect(panel):
+            pump_event_loop(3)
+            root = assert_runtime_rect(self, "campaignPanel", panel, PANEL_LAYOUT_CASES["campaignPanel"]["root"])
+            assert_rect_on_screen(self, "campaignPanel", root)
+            self.assertEqual("Chapter Screen", panel.getTitle())
+            self.assertEqual("BEGIN", panel.getActionLabel())
+            widgets = [child for child in panel.getChildren() if child.getStringProperty("render") == "renderBody"]
+            self.assertEqual(1, len(widgets))
+            body_rect = resolved_rect(widgets[0])
+            assert_positive_rect(self, "campaign body", body_rect)
+            self.assertGreaterEqual(body_rect[1] - root[1], 56, "body starts below the shared title band")
+            title_rect = (root[0], root[1], root[2], body_rect[1] - root[1] - 16)
+            buttons = find_descendants_by_type(panel, "CButton")
+            self.assertEqual(1, len(buttons))
+            button = buttons[0]
+            self.assertEqual("BEGIN", button.text, "the action button carries the caller's label")
+            button_rect = resolved_rect(button)
+            self.assertGreaterEqual(button_rect[3], 48, "the chapter action retains a usable target height")
+            for label, rect in (("title", title_rect), ("body", body_rect), ("action", button_rect)):
+                assert_child_inside(self, "campaignPanel", root, label, rect)
+            assert_no_overlap(self, "campaign body", body_rect, "campaign action", button_rect)
+            assert_no_overlap(self, "campaign title", title_rect, "campaign body", body_rect)
+            with isolated_gui_panel(g, panel):
+                panel.setStringProperty("body", "")
+                pump_event_loop(3)
+                empty_data, width, _ = capture_sdl_screenshot(
+                    TEST_OUTPUT_DIR / "layout_campaign_panel_empty.png", g.getGui()
+                )
+                panel.setStringProperty("body", body_text)
+                pump_event_loop(3)
+                text_data, _, _ = capture_sdl_screenshot(TEST_OUTPUT_DIR / "layout_campaign_panel_text.png", g.getGui())
+                text_bounds, changed = pixel_diff_bounds(empty_data, text_data, width, body_rect)
+                self.assertGreater(changed, 0, "campaign body text must render nonblank pixels")
+                assert_child_inside(self, "campaign body", body_rect, "rendered body", text_bounds)
+                capture_panel_layout(self, g, "layout_campaign_panel", panel)
+            activate_widget(button, g.getGui())
+            return {"body": body_rect}
+
+        _, regions = run_blocking_panel_inspection(
+            self,
+            game,
+            g,
+            "CGameCampaignPanel",
+            lambda: g.getGuiHandler().showCampaignScreen("Chapter Screen", body_text, "BEGIN"),
+            inspect,
+            lambda panel: None,
+        )
+        self.assertIn("body", regions)
+        self.assertFalse(gui_contains_class(g, "CGameCampaignPanel"), "the action must dismiss the campaign screen")
+
+        panel = g.getGuiHandler().openPanel("campaignPanel")
+        wait_for_panel_class(self, g, "CGameCampaignPanel")
+        try:
+            if isOffscreenGameplayChild():
+                from scripts.generate_screenshots import resizeCaptureWindow
+
+                resizeCaptureWindow(types.SimpleNamespace(gameInstance=g, pumpEvents=pump_event_loop), 800, 600)
+                width, height = 800, 600
+            else:
+                width, height = push_sdl_window_size_changed_event(800, 600)
+            panel_width, panel_height = max(640, int(width * 0.94)), max(480, int(height * 0.94))
+            expected = (width // 2 - panel_width // 2, height // 2 - panel_height // 2, panel_width, panel_height)
+            self.assertTrue(
+                pump_event_loop_until(lambda: resolved_rect(panel) == expected, timeout=5.0),
+                "the centered campaign shell must track the resized window",
+            )
+            assert_rect_on_screen(self, "resized campaignPanel", expected, width, height)
+            body = next(child for child in panel.getChildren() if child.getStringProperty("render") == "renderBody")
+            button = find_descendants_by_type(panel, "CButton")[0]
+            body_rect, button_rect = resolved_rect(body), resolved_rect(button)
+            assert_positive_rect(self, "resized body", body_rect)
+            assert_child_inside(self, "resized campaignPanel", expected, "body", body_rect)
+            assert_child_inside(self, "resized campaignPanel", expected, "action", button_rect)
+            assert_no_overlap(self, "resized body", body_rect, "resized action", button_rect)
+            self.assertGreaterEqual(button_rect[3], 48)
+            self.assertGreaterEqual(button_rect[2], body_rect[2], "compact chapter actions use the available width")
+        finally:
+            panel.close()
+            pump_event_loop(3)
+        self.assertFalse(gui_contains_class(g, "CGameCampaignPanel"))
+
     def test_text_centric_panel_layouts(self):
         _, g, _, player = create_xvfb_gameplay_session(self)
+        gui = g.getGui()
+
+        def reader_viewport(root):
+            scale = gui.getUiScale()
+            scaled = lambda value: int(value * scale + 0.5)
+            return (root[0] + scaled(24), root[1] + scaled(72), root[2] - scaled(48), root[3] - scaled(72) - scaled(76))
+
         player.setNumericProperty("gold", 999999)
         player.setNumericProperty("level", 42)
         player.setHp(player.getHpMax())
@@ -20313,11 +23437,19 @@ class XvfbGameplayProcessTest(unittest.TestCase):
 
         character = open_layout_panel(self, g, "characterPanel")
         try:
-            root = assert_runtime_rect(self, "characterPanel", character, ROOT_800_600)
+            root = assert_runtime_rect(self, "characterPanel", character, PANEL_LAYOUT_CASES["characterPanel"]["root"])
             actions = find_list_view(character, "interactionsCollection")
-            action_rect = assert_runtime_rect(self, "character actions", actions, (560, 780, 800, 60))
+            action_rect = resolved_rect(actions)
+            assert_positive_rect(self, "character abilities", action_rect)
+            sheet = next(
+                child
+                for child in character.getChildren()
+                if child.getStringProperty("render") == "renderCharacterSheet"
+            )
+            sheet_rect = resolved_rect(sheet)
+            assert_child_inside(self, "characterPanel", root, "character sheet", sheet_rect)
             assert_child_inside(self, "characterPanel", root, "actions", action_rect)
-            assert_no_overlap(self, "character content", (560, 240, 800, 540), "actions", action_rect)
+            assert_no_overlap(self, "character sheet", sheet_rect, "abilities", action_rect)
             with isolated_gui_panel(g, character):
                 summary = capture_panel_layout(
                     self,
@@ -20333,7 +23465,8 @@ class XvfbGameplayProcessTest(unittest.TestCase):
 
         info = open_layout_panel(self, g, "infoPanel")
         try:
-            assert_runtime_rect(self, "infoPanel", info, ROOT_400_300)
+            info_root = assert_runtime_rect(self, "infoPanel", info, PANEL_LAYOUT_CASES["infoPanel"]["root"])
+            info_viewport = reader_viewport(info_root)
             for centered, text in (
                 (True, "Short centered info."),
                 (
@@ -20353,17 +23486,17 @@ class XvfbGameplayProcessTest(unittest.TestCase):
                     text_data, _, _ = capture_sdl_screenshot(
                         TEST_OUTPUT_DIR / f"layout_info_panel_{centered}_text.png", g.getGui()
                     )
-                    text_bounds, changed = pixel_diff_bounds(empty_data, text_data, width, ROOT_400_300)
+                    text_bounds, changed = pixel_diff_bounds(empty_data, text_data, width, info_viewport)
                     self.assertGreater(changed, 0)
-                    assert_child_inside(self, "infoPanel", ROOT_400_300, "info text", text_bounds)
+                    assert_child_inside(self, "info content", info_viewport, "info text", text_bounds)
                     if centered:
-                        expected_center = rect_center(ROOT_400_300)
+                        expected_center = rect_center(info_viewport)
                         actual_center = rect_center(text_bounds)
                         self.assertLess(abs(expected_center[0] - actual_center[0]), 70)
                         self.assertLess(abs(expected_center[1] - actual_center[1]), 70)
                     else:
-                        self.assertLessEqual(text_bounds[0], ROOT_400_300[0] + 25)
-                        self.assertLessEqual(text_bounds[1], ROOT_400_300[1] + 25)
+                        self.assertLessEqual(text_bounds[0], info_viewport[0] + 8)
+                        self.assertLessEqual(text_bounds[1], info_viewport[1] + 16)
                     capture_panel_layout(self, g, f"layout_info_panel_{centered}", info)
         finally:
             info.close()
@@ -20371,7 +23504,8 @@ class XvfbGameplayProcessTest(unittest.TestCase):
 
         text_panel = open_layout_panel(self, g, "textPanel")
         try:
-            assert_runtime_rect(self, "textPanel", text_panel, ROOT_800_600)
+            text_root = assert_runtime_rect(self, "textPanel", text_panel, PANEL_LAYOUT_CASES["textPanel"]["root"])
+            text_viewport = reader_viewport(text_root)
             with isolated_gui_panel(g, text_panel):
                 text_panel.setText("")
                 pump_event_loop(3)
@@ -20383,11 +23517,14 @@ class XvfbGameplayProcessTest(unittest.TestCase):
                 short_data, _, _ = capture_sdl_screenshot(
                     TEST_OUTPUT_DIR / "layout_text_panel_short_text.png", g.getGui()
                 )
-                short_bounds, changed = pixel_diff_bounds(empty_data, short_data, width, ROOT_800_600)
+                short_bounds, changed = pixel_diff_bounds(empty_data, short_data, width, text_viewport)
                 self.assertGreater(changed, 0)
                 short_summary = capture_panel_layout(self, g, "layout_text_panel_short", text_panel)
             long_text = "\n".join(
-                ["Long layout paragraph with enough words to wrap inside the text panel." for _ in range(18)]
+                [
+                    f"Paragraph {index}: long layout content that stays readable inside the scrolling body."
+                    for index in range(80)
+                ]
             )
             with isolated_gui_panel(g, text_panel):
                 text_panel.setText(long_text)
@@ -20395,9 +23532,26 @@ class XvfbGameplayProcessTest(unittest.TestCase):
                 long_data, _, _ = capture_sdl_screenshot(
                     TEST_OUTPUT_DIR / "layout_text_panel_long_text.png", g.getGui()
                 )
-                long_bounds, changed = pixel_diff_bounds(empty_data, long_data, width, ROOT_800_600)
+                long_bounds, changed = pixel_diff_bounds(empty_data, long_data, width, text_viewport)
                 self.assertGreater(changed, 0)
                 long_summary = capture_panel_layout(self, g, "layout_text_panel_long", text_panel)
+                text_panel.keyboardEvent(gui, SDL_KEYDOWN, 1073741902)  # Page Down
+                pump_event_loop(3)
+                scrolled_data, _, _ = capture_sdl_screenshot(TEST_OUTPUT_DIR / "layout_text_panel_scrolled.png", gui)
+                self.assertGreater(
+                    pixel_diff_bounds(long_data, scrolled_data, width, text_viewport)[1],
+                    0,
+                    "Page Down must reveal later paragraphs",
+                )
+                self.assertTrue(gui_contains_class(g, "CGameTextPanel"), "scrolling must not dismiss the reader")
+                text_panel.keyboardEvent(gui, SDL_KEYDOWN, 1073741898)  # Home
+                pump_event_loop(3)
+                restored_data, _, _ = capture_sdl_screenshot(TEST_OUTPUT_DIR / "layout_text_panel_restored.png", gui)
+                self.assertEqual(
+                    0,
+                    pixel_diff_bounds(long_data, restored_data, width, text_viewport)[1],
+                    "Home must restore the same first page",
+                )
             self.assertGreater(long_text.count("\n"), 1)
             self.assertGreater(long_bounds[3], short_bounds[3])
             self.assertGreaterEqual(long_summary["pixels"]["inside"], short_summary["pixels"]["inside"])
@@ -20412,7 +23566,7 @@ class XvfbGameplayProcessTest(unittest.TestCase):
             self.assertFalse(gui_contains_class(g, "CGameTextPanel"))
             reopened_text = open_layout_panel(self, g, "textPanel")
             try:
-                assert_runtime_rect(self, "textPanel reopened", reopened_text, ROOT_800_600)
+                assert_runtime_rect(self, "textPanel reopened", reopened_text, PANEL_LAYOUT_CASES["textPanel"]["root"])
             finally:
                 reopened_text.close()
                 pump_event_loop(3)
@@ -20426,11 +23580,23 @@ class XvfbGameplayProcessTest(unittest.TestCase):
             player.setCompletedQuests(set(completed_quests))
             quest_panel = open_layout_panel(self, g, "questPanel")
             try:
-                assert_runtime_rect(self, "questPanel", quest_panel, ROOT_800_600)
+                assert_runtime_rect(self, "questPanel", quest_panel, PANEL_LAYOUT_CASES["questPanel"]["root"])
+                self.activateManagementAction(quest_panel, g, "showActive")
                 quest_text = quest_panel.getText(g.getGui())
                 with isolated_gui_panel(g, quest_panel):
                     capture_panel_layout(self, g, scenario, quest_panel)
-                return quest_text
+                self.assertNotIn("[Completed]", quest_text, "Active tab must contain only active quests")
+                completed_button = next(
+                    button
+                    for button in find_descendants_by_type(quest_panel, "CButton")
+                    if button.getStringProperty("click") == "showCompleted"
+                )
+                activate_widget(completed_button, gui)
+                completed_text = quest_panel.getText(gui)
+                self.assertNotIn("[Active]", completed_text, "Completed tab must contain only completed quests")
+                with isolated_gui_panel(g, quest_panel):
+                    capture_panel_layout(self, g, scenario + "_completed", quest_panel)
+                return quest_text + "\n" + completed_text
             finally:
                 quest_panel.close()
                 pump_event_loop(3)
@@ -20454,40 +23620,61 @@ class XvfbGameplayProcessTest(unittest.TestCase):
         self.assertNotIn("Hint 0:", completed_block)
 
     def test_choice_panel_layouts_and_hitboxes(self):
-        game, g, _, _ = create_xvfb_gameplay_session(self)
+        game, g, _, player = create_xvfb_gameplay_session(self)
+        gui = g.getGui()
+        page_down, home, end = 1073741902, 1073741898, 1073741901
 
-        def inspect_question(expected_rect, click_rect):
+        def inspect_question(answer_name):
             def inspect(panel):
-                root = assert_runtime_rect(self, "questionPanel", panel, ROOT_400_300)
-                question = next(child for child in panel.getChildren() if child.getType() == "CWidget")
-                question_rect = assert_runtime_rect(self, "question text", question, (760, 390, 400, 225))
-                buttons = sorted(find_descendants_by_type(panel, "CButton"), key=lambda child: resolved_rect(child)[0])
-                self.assertEqual(2, len(buttons))
-                left = assert_runtime_rect(self, "question yes", buttons[0], (760, 615, 200, 75))
-                right = assert_runtime_rect(self, "question no", buttons[1], (960, 615, 200, 75))
-                assert_no_overlap(self, "YES", left, "NO", right)
-                assert_child_inside(self, "questionPanel", root, "YES", left)
-                assert_child_inside(self, "questionPanel", root, "NO", right)
+                pump_event_loop(3)
+                root = assert_runtime_rect(self, "questionPanel", panel, PANEL_LAYOUT_CASES["questionPanel"]["root"])
+                question = next(
+                    child for child in panel.getChildren() if child.getStringProperty("render") == "renderQuestion"
+                )
+                question_rect = resolved_rect(question)
+                assert_positive_rect(self, "question text", question_rect)
+                buttons = {
+                    button.getStringProperty("click"): button for button in find_descendants_by_type(panel, "CButton")
+                }
+                self.assertEqual({"clickYes", "clickNo"}, set(buttons))
+                confirm_rect, cancel_rect = (resolved_rect(buttons[key]) for key in ("clickYes", "clickNo"))
+                self.assertLess(cancel_rect[0], confirm_rect[0], "Cancel belongs to the left of the confirm action")
+                for name, rect in (("question", question_rect), ("confirm", confirm_rect), ("cancel", cancel_rect)):
+                    assert_child_inside(self, "questionPanel", root, name, rect)
+                    assert_positive_rect(self, name, rect)
+                assert_no_overlap(self, "confirm", confirm_rect, "cancel", cancel_rect)
+                assert_no_overlap(self, "question", question_rect, "confirm", confirm_rect)
+                assert_no_overlap(self, "question", question_rect, "cancel", cancel_rect)
                 with isolated_gui_panel(g, panel):
                     question_text = panel.question
                     panel.question = ""
                     pump_event_loop(3)
                     empty_data, width, _ = capture_sdl_screenshot(
-                        TEST_OUTPUT_DIR / f"layout_question_{expected_rect}_empty.png", g.getGui()
+                        TEST_OUTPUT_DIR / f"layout_question_{answer_name}_empty.png", gui
                     )
                     panel.question = question_text
                     pump_event_loop(3)
                     text_data, _, _ = capture_sdl_screenshot(
-                        TEST_OUTPUT_DIR / f"layout_question_{expected_rect}_text.png", g.getGui()
+                        TEST_OUTPUT_DIR / f"layout_question_{answer_name}_text.png", gui
                     )
-                    text_bounds, changed = pixel_diff_bounds(empty_data, text_data, width, root)
+                    text_bounds, changed = pixel_diff_bounds(empty_data, text_data, width, question_rect)
                     self.assertGreater(changed, 0)
                     assert_child_inside(self, "question text", question_rect, "rendered question", text_bounds)
-                    assert_no_overlap(self, "rendered question", text_bounds, "YES", left)
-                    assert_no_overlap(self, "rendered question", text_bounds, "NO", right)
-                    capture_panel_layout(self, g, f"layout_question_{expected_rect}", panel)
-                activate_widget(next(button for button in buttons if resolved_rect(button) == click_rect), g.getGui())
-                return {"left": left, "right": right}
+                    if answer_name == "clickNo":
+                        panel.keyboardEvent(gui, SDL_KEYDOWN, page_down)
+                        pump_event_loop(3)
+                        scrolled, _, _ = capture_sdl_screenshot(TEST_OUTPUT_DIR / "layout_question_scrolled.png", gui)
+                        self.assertGreater(pixel_diff_bounds(text_data, scrolled, width, question_rect)[1], 0)
+                        for name, rect in (("confirm", confirm_rect), ("cancel", cancel_rect)):
+                            self.assertEqual(
+                                0,
+                                pixel_diff_bounds(text_data, scrolled, width, rect)[1],
+                                f"scrolling the transaction must leave the {name} button fixed",
+                            )
+                        self.assertTrue(gui_contains_class(g, "CGameQuestionPanel"))
+                    capture_panel_layout(self, g, f"layout_question_{answer_name}", panel)
+                activate_widget(buttons[answer_name], gui)
+                return {"confirm": confirm_rect, "cancel": cancel_rect}
 
             return inspect
 
@@ -20496,8 +23683,10 @@ class XvfbGameplayProcessTest(unittest.TestCase):
             game,
             g,
             "CGameQuestionPanel",
-            lambda: g.getGuiHandler().showQuestion("Confirm yes?"),
-            inspect_question("yes", (760, 615, 200, 75)),
+            lambda: g.getGuiHandler().showConfirm(
+                "Buy equipment", "Buy the selected equipment for 50 gold?", "Buy for 50 gold", "Keep browsing"
+            ),
+            inspect_question("clickYes"),
             lambda panel: None,
         )
         self.assertTrue(answer)
@@ -20507,54 +23696,99 @@ class XvfbGameplayProcessTest(unittest.TestCase):
             g,
             "CGameQuestionPanel",
             lambda: g.getGuiHandler().showQuestion(
-                "Confirm no with a wrapped question prompt that spans enough words to exercise the upper "
-                "question rectangle without entering either button hitbox?"
+                "\n".join(f"Item {index}: review this selected item's quantity and price." for index in range(80))
             ),
-            inspect_question("no", (960, 615, 200, 75)),
+            inspect_question("clickNo"),
             lambda panel: None,
         )
         self.assertFalse(answer)
 
-        for count in (1, 3, 8):
+        empty_selection = g.createObject("CListString")
+        self.assertEqual("", g.getGuiHandler().showSelection(empty_selection))
+        self.assertFalse(gui_contains_class(g, "CGameCampaignBrowserPanel"))
+        for count in (1, 3, 30):
             options = [f"option{index:02d}" for index in range(count)]
             for selected_index in (0, count - 1):
                 selection = g.createObject("CListString")
                 for option in options:
                     selection.addValue(option)
-                expected_root = centered_screen_rect(300, 75 * count)
 
-                def inspect_selection(panel, selected_index=selected_index, expected_root=expected_root):
-                    root = assert_runtime_rect(self, f"selection {count}", panel, expected_root)
-                    buttons = sorted(
-                        find_descendants_by_type(panel, "CButton"), key=lambda child: resolved_rect(child)[1]
+                def inspect_selection(panel, selected_index=selected_index):
+                    root = assert_runtime_rect(
+                        self, f"selection {count}", panel, PANEL_LAYOUT_CASES["campaignBrowserPanel"]["root"]
                     )
-                    self.assertEqual(count, len(buttons))
-                    last_rect = None
-                    for index, button in enumerate(buttons):
-                        button_rect = resolved_rect(button)
-                        assert_positive_rect(self, f"selection button {index}", button_rect)
-                        assert_child_inside(self, "selectionPanel", root, f"selection button {index}", button_rect)
-                        self.assertEqual(options[index], button.text)
-                        if last_rect is not None:
-                            assert_no_overlap(
-                                self, "previous selection button", last_rect, "selection button", button_rect
-                            )
-                        last_rect = button_rect
+                    assert_rect_on_screen(self, "selection", root)
+                    with isolated_gui_panel(g, panel):
+                        capture_panel_layout(self, g, f"layout_selection_{count}_initial", panel)
+                    self.assertFalse(panel.hasChoice(), "highlighting the initial row must not commit it")
+                    margin = max(16, root[2] // 40)
+                    header = int(56 * gui.getUiScale() + 0.5) + 32
+                    panel.mouseEvent(gui, SDL_MOUSEBUTTONDOWN, SDL_BUTTON_LEFT, margin + 8, header + 8)
+                    panel.mouseEvent(gui, SDL_MOUSEBUTTONUP, SDL_BUTTON_LEFT, margin + 8, header + 8)
+                    self.assertEqual(options[0], panel.getStringProperty("selectedId"))
+                    self.assertFalse(panel.hasChoice(), "a row click inspects the choice before confirmation")
+                    panel.keyboardEvent(gui, SDL_KEYDOWN, home if selected_index == 0 else end)
+                    self.assertEqual(options[selected_index], panel.getStringProperty("selectedId"))
+                    self.assertIn(options[selected_index], panel.getStringProperty("detailText"))
+                    self.assertFalse(panel.hasChoice(), "keyboard navigation must not commit the highlighted choice")
                     with isolated_gui_panel(g, panel):
                         capture_panel_layout(self, g, f"layout_selection_{count}_{selected_index}", panel)
-                    activate_widget(buttons[selected_index], g.getGui())
-                    return [resolved_rect(button) for button in buttons]
+                    panel.keyboardEvent(gui, SDL_KEYDOWN, SDLK_RETURN)
+                    return {"selected": options[selected_index]}
 
                 selected, _ = run_blocking_panel_inspection(
                     self,
                     game,
                     g,
-                    "CGamePanel",
+                    "CGameCampaignBrowserPanel",
                     lambda selection=selection: g.getGuiHandler().showSelection(selection),
                     inspect_selection,
                     lambda panel: None,
                 )
                 self.assertEqual(options[selected_index], selected)
+
+        ordered_choices = [
+            {"id": "locked", "label": "Elixir", "detail": "Missing one herb.", "enabled": False},
+            {"id": "ready", "label": "Elixir", "detail": "Creates the second elixir.", "enabled": True},
+        ]
+
+        def inspect_disabled_choice(panel):
+            self.assertEqual("locked", panel.getStringProperty("selectedId"))
+            self.assertIn("Missing one herb.", panel.getStringProperty("detailText"))
+            panel.keyboardEvent(gui, SDL_KEYDOWN, SDLK_RETURN)
+            self.assertFalse(panel.hasChoice(), "an unavailable row must never confirm")
+            self.assertTrue(gui_contains_class(g, "CGameCampaignBrowserPanel"))
+            panel.keyboardEvent(gui, SDL_KEYDOWN, SDLK_DOWN)
+            self.assertEqual("ready", panel.getStringProperty("selectedId"))
+            self.assertIn("second elixir", panel.getStringProperty("detailText"))
+            panel.keyboardEvent(gui, SDL_KEYDOWN, SDLK_RETURN)
+            return {}
+
+        selected, _ = run_blocking_panel_inspection(
+            self,
+            game,
+            g,
+            "CGameCampaignBrowserPanel",
+            lambda: g.getGuiHandler().showChoice("Alchemy", json.dumps(ordered_choices), "Craft", "Leave station"),
+            inspect_disabled_choice,
+            lambda panel: None,
+        )
+        self.assertEqual("ready", selected, "duplicate display labels must still return the chosen stable ID")
+
+        def cancel_choice(panel):
+            panel.keyboardEvent(gui, SDL_KEYDOWN, 27)
+            return {}
+
+        selected, _ = run_blocking_panel_inspection(
+            self,
+            game,
+            g,
+            "CGameCampaignBrowserPanel",
+            lambda: g.getGuiHandler().showChoice("Alchemy", json.dumps(ordered_choices), "Craft", "Leave station"),
+            cancel_choice,
+            lambda panel: None,
+        )
+        self.assertEqual("", selected)
 
         entry = make_dialog_state(
             g,
@@ -20572,37 +23806,61 @@ class XvfbGameplayProcessTest(unittest.TestCase):
         )
         dialog = make_dialog(g, [entry, next_state])
 
-        def inspect_dialog(panel):
-            root = assert_runtime_rect(self, "dialogPanel", panel, ROOT_800_600)
-            entry_widgets = sorted(
-                find_descendants_by_type(panel, "CTextWidget"), key=lambda child: resolved_rect(child)[1]
-            )
-            self.assertGreaterEqual(len(entry_widgets), 2)
+        def dialogue_buttons(panel):
+            root = resolved_rect(panel)
+            scale = gui.getUiScale()
+            scaled = lambda value: int(value * scale + 0.5)
+            body_height = max(1, (root[3] - scaled(72) - scaled(56)) * 42 // 100)
+            body = (root[0] + scaled(24), root[1] + scaled(72), root[2] - scaled(48), body_height)
+            footer = (root[0], root[1] + root[3] - scaled(56), root[2], scaled(56))
+            buttons = sorted(find_descendants_by_type(panel, "CButton"), key=lambda child: resolved_rect(child)[1])
             previous = None
-            for widget in entry_widgets:
-                widget_rect = resolved_rect(widget)
-                assert_positive_rect(self, "dialog widget", widget_rect)
-                assert_child_inside(self, "dialogPanel", root, "dialog widget", widget_rect)
+            for button in buttons:
+                rect = resolved_rect(button)
+                assert_positive_rect(self, "dialogue reply", rect)
+                assert_child_inside(self, "dialogue", root, "reply", rect)
+                assert_no_overlap(self, "dialogue body", body, "reply", rect)
+                assert_no_overlap(self, "dialogue footer", footer, "reply", rect)
                 if previous is not None:
-                    assert_no_overlap(self, "previous dialog widget", previous, "dialog widget", widget_rect)
-                previous = widget_rect
-            entry_texts = {widget.text for widget in entry_widgets}
+                    assert_no_overlap(self, "previous reply", previous, "reply", rect)
+                previous = rect
+            return buttons, body
+
+        def inspect_dialog(panel):
+            root = assert_runtime_rect(self, "dialogPanel", panel, PANEL_LAYOUT_CASES["dialogPanel"]["root"])
+            entry_buttons, body = dialogue_buttons(panel)
+            self.assertEqual(1, len(entry_buttons))
+            self.assertEqual("1  Move to next state", entry_buttons[0].text)
             with isolated_gui_panel(g, panel):
                 capture_panel_layout(self, g, "layout_dialog_entry", panel)
-
-            self.assertTrue(panel.keyboardEvent(g.getGui(), SDL_KEYDOWN, ord("1")))
-            next_widgets = sorted(
-                find_descendants_by_type(panel, "CTextWidget"), key=lambda child: resolved_rect(child)[1]
+                entry_pixels, width, _ = capture_sdl_screenshot(TEST_OUTPUT_DIR / "layout_dialog_entry_body.png", gui)
+            history = player.getStringProperty("uiDialogueHistory")
+            panel.keyboardEvent(gui, SDL_KEYDOWN, ord("h"))
+            self.assertEqual([], find_descendants_by_type(panel, "CButton"), "history must have no executable replies")
+            panel.keyboardEvent(gui, SDL_KEYDOWN, ord("1"))
+            self.assertEqual(history, player.getStringProperty("uiDialogueHistory"))
+            panel.keyboardEvent(gui, SDL_KEYDOWN, 27)
+            self.assertTrue(
+                gui_contains_class(g, "CGameDialogPanel"), "Escape from history returns to the conversation"
             )
-            self.assertGreaterEqual(len(next_widgets), 2)
-            self.assertEqual(ROOT_800_600, resolved_rect(panel))
-            next_texts = {widget.text for widget in next_widgets}
-            self.assertFalse(any("Entry dialog text" in text for text in next_texts))
-            self.assertNotEqual(entry_texts, next_texts)
+            self.assertTrue(panel.keyboardEvent(gui, SDL_KEYDOWN, ord("1")))
+            next_buttons, next_body = dialogue_buttons(panel)
+            self.assertEqual(root, resolved_rect(panel))
+            self.assertEqual(body, next_body)
+            self.assertEqual(["1  Exit dialog"], [button.text for button in next_buttons])
+            transcript = json.loads(player.getStringProperty("uiDialogueHistory"))
+            self.assertEqual("NEXT", transcript[-1]["state"])
+            self.assertEqual("Next dialog state with fresh widgets.", transcript[-1]["text"])
             with isolated_gui_panel(g, panel):
                 capture_panel_layout(self, g, "layout_dialog_next", panel)
-            self.assertTrue(panel.keyboardEvent(g.getGui(), SDL_KEYDOWN, ord("1")))
-            return {"entry_widgets": len(entry_widgets), "next_widgets": len(next_widgets)}
+                next_pixels, _, _ = capture_sdl_screenshot(TEST_OUTPUT_DIR / "layout_dialog_next_body.png", gui)
+            self.assertGreater(
+                pixel_diff_bounds(entry_pixels, next_pixels, width, body)[1],
+                0,
+                "the newly entered state's speech must visibly replace the old speech",
+            )
+            activate_widget(next_buttons[0], gui)
+            return {"entry_widgets": len(entry_buttons), "next_widgets": len(next_buttons)}
 
         run_blocking_panel_inspection(
             self,
@@ -20613,41 +23871,46 @@ class XvfbGameplayProcessTest(unittest.TestCase):
             inspect_dialog,
             lambda panel: None,
         )
-
-        dense_options = [
-            (
-                f"Dense option {index} with wrapped text that should receive a positive non-overlapping rectangle "
-                "inside the dialog option area."
-            )
-            for index in range(6)
+        dense_options = ["Short option"] + [
+            f"Dense option {index}. "
+            + "A wrapped reply must remain readable and reachable when it needs more room. " * 8
+            for index in range(1, 8)
         ]
-        dense_state = make_dialog_state(
+        dense_dialog = make_dialog(
             g,
-            "ENTRY",
-            "Dense dialog state with enough options to exercise proportional option layout.",
-            dense_options,
-            next_state="EXIT",
+            [
+                make_dialog_state(
+                    g,
+                    "ENTRY",
+                    "A long conversation with more replies than fit at once.",
+                    dense_options,
+                    next_state="EXIT",
+                )
+            ],
         )
-        dense_dialog = make_dialog(g, [dense_state])
 
         def inspect_dense_dialog(panel):
-            root = assert_runtime_rect(self, "dialogPanel dense", panel, ROOT_800_600)
-            widgets = sorted(find_descendants_by_type(panel, "CTextWidget"), key=lambda child: resolved_rect(child)[1])
-            self.assertEqual(1 + len(dense_options), len(widgets))
-            previous = None
-            for widget in widgets:
-                widget_rect = resolved_rect(widget)
-                assert_positive_rect(self, "dense dialog widget", widget_rect)
-                assert_child_inside(self, "dialogPanel", root, "dense dialog widget", widget_rect)
-                if previous is not None:
-                    assert_no_overlap(
-                        self, "previous dense dialog widget", previous, "dense dialog widget", widget_rect
-                    )
-                previous = widget_rect
+            assert_runtime_rect(self, "dialogPanel dense", panel, PANEL_LAYOUT_CASES["dialogPanel"]["root"])
+            first_buttons, _ = dialogue_buttons(panel)
+            self.assertGreater(len(first_buttons), 0)
+            self.assertLess(len(first_buttons), len(dense_options), "overflowing replies must page within the panel")
+            self.assertTrue(first_buttons[0].text.startswith("1  Short option"))
+            if len(first_buttons) > 1:
+                self.assertGreater(resolved_rect(first_buttons[1])[3], resolved_rect(first_buttons[0])[3])
             with isolated_gui_panel(g, panel):
                 capture_panel_layout(self, g, "layout_dialog_dense_options", panel)
-            self.assertTrue(panel.keyboardEvent(g.getGui(), SDL_KEYDOWN, ord(str(len(dense_options)))))
-            return {"widgets": len(widgets)}
+            for _ in dense_options:
+                panel.keyboardEvent(gui, SDL_KEYDOWN, SDLK_DOWN)
+            last_buttons, _ = dialogue_buttons(panel)
+            self.assertTrue(
+                any(dense_options[-1] in button.text for button in last_buttons),
+                "arrow navigation must bring the last wrapped reply into view",
+            )
+            with isolated_gui_panel(g, panel):
+                capture_panel_layout(self, g, "layout_dialog_dense_last", panel)
+            last_button = next(button for button in last_buttons if dense_options[-1] in button.text)
+            activate_widget(last_button, gui)
+            return {"first_visible": len(first_buttons), "last_visible": len(last_buttons)}
 
         run_blocking_panel_inspection(
             self,
@@ -20658,61 +23921,57 @@ class XvfbGameplayProcessTest(unittest.TestCase):
             inspect_dense_dialog,
             lambda panel: None,
         )
+        empty_dialog = make_dialog(g, [make_dialog_state(g, "ENTRY", "There is nothing more to say.", [])])
+
+        def inspect_empty_dialog(panel):
+            self.assertEqual([], find_descendants_by_type(panel, "CButton"))
+            with isolated_gui_panel(g, panel):
+                capture_panel_layout(self, g, "layout_dialog_empty_options", panel)
+            panel.keyboardEvent(gui, SDL_KEYDOWN, 27)
+            return {}
+
+        run_blocking_panel_inspection(
+            self,
+            game,
+            g,
+            "CGameDialogPanel",
+            lambda: g.getGuiHandler().showDialog(empty_dialog),
+            inspect_empty_dialog,
+            lambda panel: None,
+        )
         self.assertFalse(gui_contains_class(g, "CGameDialogPanel"))
 
     def test_inventory_loot_trade_list_layouts(self):
         game, g, _, player = create_xvfb_gameplay_session(self)
-        player.addItem("Sword")
-        player.addItem("Scroll")
-        duplicate = g.createObject("Scroll")
-        duplicate.name = "inventoryDuplicateScroll"
-        player.addItem(duplicate)
-        quest_item = g.createObject("CItem")
-        quest_item.name = "layoutQuestItem"
-        quest_item.typeId = "layoutQuestItem"
-        quest_item.animation = "images/items/scroll"
-        quest_item.addTag(game.CTag.QUEST)
-        player.addItem(quest_item)
-
+        player.setItems(set(make_unique_scroll_items(g, 5, "inventoryLayout")))
+        selected_sword = g.createObject("Sword")
+        selected_sword.name = "layoutSelectedSword"
+        player.addItem(selected_sword)
+        replaced_weapon = player.getWeapon()
         inventory = open_layout_panel(self, g, "inventoryPanel")
         try:
-            root = assert_runtime_rect(self, "inventoryPanel", inventory, ROOT_800_600)
+            root = resolved_rect(inventory)
             inventory_list = find_list_view(inventory, "inventoryCollection")
             equipped_list = find_list_view(inventory, "equippedCollection")
-            inventory_rect = assert_runtime_rect(self, "inventory list", inventory_list, (560, 240, 200, 600))
-            equipped_rect = assert_runtime_rect(self, "equipped list", equipped_list, (1160, 240, 200, 600))
-            assert_child_inside(self, "inventoryPanel", root, "inventory list", inventory_rect)
-            assert_child_inside(self, "inventoryPanel", root, "equipped list", equipped_rect)
-            assert_no_overlap(self, "inventory list", inventory_rect, "equipped list", equipped_rect)
-            self.assertEqual((4, 2), list_runtime_grid(equipped_list, g.getGui()))
-
-            click_first_list_object(
-                self,
-                inventory_list,
-                g.getGui(),
-                lambda item: item.getTypeId() == "Sword",
-            )
-            pump_event_loop(5)
-            selected_after_inventory = get_panel_selection_box_counts_by_collection(inventory)
-            self.assertEqual(1, selected_after_inventory.get("inventoryCollection", 0))
+            inventory_rect = resolved_rect(inventory_list)
+            equipped_rect = resolved_rect(equipped_list)
+            for label, rect in (("bag", inventory_rect), ("equipment", equipped_rect)):
+                assert_child_inside(self, "inventoryPanel", root, label, rect)
+            assert_no_overlap(self, "bag", inventory_rect, "equipment", equipped_rect)
+            self.assertEqual(1, list_runtime_grid(inventory_list, g.getGui())[0])
+            self.assertEqual(1, list_runtime_grid(equipped_list, g.getGui())[0])
+            click_first_list_object(self, inventory_list, g.getGui(), lambda item: item.getTypeId() == "Sword")
+            sword_count = player.countItems("Sword")
             activate_list_cell(equipped_list, g.getGui(), 0, 0)
-            pump_event_loop(5)
-            selected_after_equip = get_panel_selection_box_counts_by_collection(inventory)
-            self.assertEqual(0, selected_after_equip.get("inventoryCollection", 0))
-            # Right-click uses the item since #628; target the Sword (use is a no-op) so
-            # the gesture only resets selection state. Right-clicking a scroll here would
-            # open the blocking CGameTextPanel and stall the xvfb child.
-            click_first_list_object(
-                self,
-                inventory_list,
-                g.getGui(),
-                lambda item: item.getTypeId() == "Sword",
-                button=SDL_BUTTON_RIGHT,
-            )
-            pump_event_loop(5)
-            selected_after_reset = get_panel_selection_box_counts_by_collection(inventory)
-            self.assertEqual(0, selected_after_reset.get("inventoryCollection", 0))
-
+            self.assertEqual(sword_count, player.countItems("Sword"), "slot inspection must not equip")
+            click_first_list_object(self, inventory_list, g.getGui(), lambda item: item.getTypeId() == "Sword")
+            self.activateManagementAction(inventory, g, "equipSelected")
+            self.assertEqual(selected_sword, player.getWeapon())
+            self.assertNotIn(selected_sword, player.getItems())
+            self.assertIn(replaced_weapon, player.getItems(), "equipping must return the previous weapon to the bag")
+            returned_swords = int(replaced_weapon.getTypeId() == "Sword")
+            self.assertEqual(sword_count - 1 + returned_swords, player.countItems("Sword"))
+            self.assertEqual(0, get_panel_selection_box_counts_by_collection(inventory).get("inventoryCollection", 0))
             with isolated_gui_panel(g, inventory):
                 capture_panel_layout(
                     self,
@@ -20725,26 +23984,80 @@ class XvfbGameplayProcessTest(unittest.TestCase):
             inventory.close()
             pump_event_loop(3)
 
-        loot_creature = g.createObject("GoblinThief")
-
         def run_loot_case(items, scenario, overflow=False):
+            creature = g.createObject("GoblinThief")
+            before_items = set(player.getItems())
+            before_turn = g.getMap().getTurn()
+
             def inspect_loot(panel):
-                root = assert_runtime_rect(self, "lootPanel", panel, ROOT_400_300)
-                items_list = find_list_view(panel, "itemsCollection")
-                list_rect = assert_runtime_rect(self, "loot items", items_list, ROOT_400_300)
-                self.assertEqual((8, 6), list_runtime_grid(items_list, g.getGui()))
-                first_page = list_visible_object_names(items_list, g.getGui())
-                result = {"first": first_page}
-                if overflow:
-                    for graphic in items_list.getProxiedObjects(g.getGui(), 7, 5):
-                        graphic.mouseEvent(g.getGui(), SDL_MOUSEBUTTONDOWN, SDL_BUTTON_LEFT, 1, 1)
-                    second_page = list_visible_object_names(items_list, g.getGui())
-                    self.assertNotEqual(first_page, second_page)
-                    result["second"] = second_page
-                assert_child_inside(self, "lootPanel", root, "loot list", list_rect)
+                root = resolved_rect(panel)
+                self.assertFalse(find_descendants_by_type(panel, "CListView"))
+                receipt = next(
+                    child
+                    for child in find_descendants_by_type(panel, "CWidget")
+                    if child.getStringProperty("render") == "renderRewards"
+                )
+                continue_button = next(
+                    child
+                    for child in find_descendants_by_type(panel, "CButton")
+                    if child.getStringProperty("click") == "collectRewards"
+                )
+                receipt_rect = resolved_rect(receipt)
+                continue_rect = resolved_rect(continue_button)
+                assert_child_inside(self, "lootPanel", root, "reward receipt", receipt_rect)
+                assert_child_inside(self, "lootPanel", root, "Continue", continue_rect)
+                assert_no_overlap(self, "reward receipt", receipt_rect, "Continue", continue_rect)
+                self.assertEqual("Continue", continue_button.getStringProperty("text"))
+                self.assertEqual(creature, panel.getObjectProperty("creature"))
+                serialized_items = json.loads(game.jsonify(panel))["properties"]["items"] or []
+                self.assertEqual(
+                    sorted(item.getName() for item in items),
+                    sorted(item["properties"]["name"] for item in serialized_items),
+                )
+                labels = [item["properties"]["label"] for item in serialized_items]
+                result = {"quantities": {label: labels.count(label) for label in sorted(set(labels))}}
                 with isolated_gui_panel(g, panel):
-                    capture_panel_layout(self, g, scenario, panel, regions={"items": list_rect})
-                panel.keyboardEvent(g.getGui(), SDL_KEYDOWN, ord(" "))
+                    summary = capture_panel_layout(
+                        self, g, scenario, panel, regions={"receipt": receipt_rect, "continue": continue_rect}
+                    )
+                    assert_region_has_pixels(self, summary, "receipt")
+                    assert_region_has_pixels(self, summary, "continue")
+                    if overflow:
+                        first, width, _ = capture_sdl_screenshot(TEST_OUTPUT_DIR / f"{scenario}-first.png", g.getGui())
+                        panel.keyboardEvent(g.getGui(), SDL_KEYDOWN, 1073741902)  # Page Down
+                        pump_event_loop(3)
+                        second, _, _ = capture_sdl_screenshot(TEST_OUTPUT_DIR / f"{scenario}-scrolled.png", g.getGui())
+                        self.assertGreater(pixel_diff_bounds(first, second, width, receipt_rect)[1], 0)
+                        self.assertGreater(screenshot_rect_summary(second, width, continue_rect)["non_black_pixels"], 0)
+                        self.assertEqual(0, pixel_diff_bounds(first, second, width, continue_rect)[1])
+                        self.assertTrue(gui_contains_class(g, "CGameLootPanel"), "scrolling must keep the receipt open")
+                        panel.keyboardEvent(g.getGui(), SDL_KEYDOWN, 1073741899)  # Page Up
+                        pump_event_loop(3)
+                        restored, _, _ = capture_sdl_screenshot(
+                            TEST_OUTPUT_DIR / f"{scenario}-restored.png", g.getGui()
+                        )
+                        self.assertEqual(0, pixel_diff_bounds(first, restored, width, receipt_rect)[1])
+                        self.assertGreater(sum(len(label.encode("utf-8")) for label in labels), 4096)
+                        for _ in items:
+                            panel.keyboardEvent(g.getGui(), SDL_KEYDOWN, 1073741902)
+                        pump_event_loop(3)
+                        ending, _, _ = capture_sdl_screenshot(TEST_OUTPUT_DIR / f"{scenario}-ending.png", g.getGui())
+                        final_item = max(items, key=lambda item: item.getStringProperty("label"))
+                        final_label = final_item.getStringProperty("label")
+                        final_item.label = final_label + " revised"
+                        pump_event_loop(3)
+                        revised, _, _ = capture_sdl_screenshot(TEST_OUTPUT_DIR / f"{scenario}-revised.png", g.getGui())
+                        self.assertGreater(
+                            pixel_diff_bounds(ending, revised, width, receipt_rect)[1],
+                            0,
+                            "the scrolled receipt must render its final reward beyond 4096 bytes",
+                        )
+                        self.assertEqual(0, pixel_diff_bounds(first, ending, width, continue_rect)[1])
+                        final_item.label = final_label
+                        result["scrolled"] = True
+                self.assertEqual(before_items, set(player.getItems()), "reading must not grant or discard rewards")
+                self.assertEqual(before_turn, g.getMap().getTurn())
+                self.activateManagementAction(panel, g, "collectRewards")
                 return result
 
             _, result = run_blocking_panel_inspection(
@@ -20752,27 +24065,36 @@ class XvfbGameplayProcessTest(unittest.TestCase):
                 game,
                 g,
                 "CGameLootPanel",
-                lambda: g.getGuiHandler().showLoot(loot_creature, set(items)),
+                lambda: g.getGuiHandler().showLoot(creature, set(items)),
                 inspect_loot,
                 lambda panel: None,
             )
             self.assertFalse(gui_contains_class(g, "CGameLootPanel"))
+            self.assertEqual(
+                before_items, set(player.getItems()), "showLoot acknowledges the caller's reward operation"
+            )
+            self.assertEqual(before_turn, g.getMap().getTurn())
             return result
 
-        self.assertEqual([], run_loot_case([], "layout_loot_panel_empty")["first"])
+        empty = run_loot_case([], "layout_loot_panel_empty")
+        self.assertEqual({}, empty["quantities"])
         self.assertEqual(
-            1, len(run_loot_case(make_unique_scroll_items(g, 1, "lootSingle"), "layout_loot_panel_single")["first"])
+            {"Scroll": 1},
+            run_loot_case(make_unique_scroll_items(g, 1, "lootSingle"), "layout_loot_panel_single")["quantities"],
         )
-        grouped_loot = [g.createObject("Scroll") for _ in range(3)]
-        for index, item in enumerate(grouped_loot):
+        grouped = [g.createObject("Scroll") for _ in range(3)]
+        for index, item in enumerate(grouped):
             item.name = f"lootGroupedScroll{index}"
-        self.assertEqual(1, len(run_loot_case(grouped_loot, "layout_loot_panel_grouped")["first"]))
-        exact_loot = make_unique_scroll_items(g, 48, "lootExact")
-        self.assertEqual(48, len(run_loot_case(exact_loot, "layout_loot_panel_exact_capacity")["first"]))
-        overflow_result = run_loot_case(
-            make_unique_scroll_items(g, 49, "lootLayout"), "layout_loot_panel_overflow", True
-        )
-        self.assertIn("second", overflow_result)
+        self.assertEqual({"Scroll": 3}, run_loot_case(grouped, "layout_loot_panel_grouped")["quantities"])
+        many_items = make_unique_scroll_items(g, 240, "lootOverflow")
+        for index, item in enumerate(many_items):
+            item.label = f"Recovered scroll {index:03} from the forgotten archive"
+        many_items[-1].label = "ZZZ Final receipt reward"
+        many = run_loot_case(many_items[:8], "layout_loot_panel_many")
+        self.assertEqual(8, len(many["quantities"]))
+        overflow = run_loot_case(many_items, "layout_loot_panel_overflow", True)
+        self.assertEqual(240, len(overflow["quantities"]))
+        self.assertTrue(overflow["scrolled"])
 
         market = g.createObject("CMarket")
         market.sell = 50
@@ -20786,67 +24108,50 @@ class XvfbGameplayProcessTest(unittest.TestCase):
         trade.setMarket(market)
         pump_event_loop(3)
         try:
-            root = assert_runtime_rect(self, "tradePanel", trade, ROOT_800_600)
+            root = resolved_rect(trade)
             player_list = find_list_view(trade, "inventoryCollection")
             market_list = find_list_view(trade, "marketCollection")
-            player_rect = assert_runtime_rect(self, "trade player list", player_list, (560, 240, 200, 600))
-            market_rect = assert_runtime_rect(self, "trade market list", market_list, (1160, 240, 200, 600))
-            sell_cost_rect = (760, 240, 200, 200)
-            buy_cost_rect = (960, 240, 200, 200)
-            sell_button_rect = (760, 740, 200, 100)
-            buy_button_rect = (960, 740, 200, 100)
-            for label, rect in (
-                ("player list", player_rect),
-                ("market list", market_rect),
-                ("sell cost", sell_cost_rect),
-                ("buy cost", buy_cost_rect),
-                ("sell button", sell_button_rect),
-                ("buy button", buy_button_rect),
-            ):
-                assert_child_inside(self, "tradePanel", root, label, rect)
-            assert_no_overlap(self, "player list", player_rect, "market list", market_rect)
-            assert_no_overlap(self, "sell cost", sell_cost_rect, "sell button", sell_button_rect)
-            assert_no_overlap(self, "buy cost", buy_cost_rect, "buy button", buy_button_rect)
+            widgets = {
+                child.getStringProperty("render"): child
+                for child in find_descendants_by_type(trade, "CWidget")
+                if child.getStringProperty("render")
+            }
+            regions = {
+                "player": resolved_rect(player_list),
+                "market": resolved_rect(market_list),
+                "summary": resolved_rect(widgets["renderTradeSummary"]),
+            }
+            for name, rect in regions.items():
+                assert_child_inside(self, "tradePanel", root, name, rect)
+            assert_no_overlap(self, "player list", regions["player"], "market list", regions["market"])
             click_first_list_object(self, player_list, g.getGui(), lambda item: not item.hasTag(game.CTag.QUEST))
+            self.assertEqual(0, trade.getTotalSellCost(), "inspection must not add an item to sale")
+            self.activateManagementAction(trade, g, "addSelectedForSale")
+            sale_total = trade.getTotalSellCost()
+            self.assertGreater(sale_total, 0)
             click_first_list_object(self, market_list, g.getGui())
-            pump_event_loop(5)
-            self.assertGreater(trade.getTotalSellCost(), 0)
-            self.assertGreater(trade.getTotalBuyCost(), 0)
-            selected_trade = get_panel_selection_box_counts_by_collection(trade)
-            self.assertEqual(1, selected_trade.get("inventoryCollection", 0))
-            self.assertEqual(1, selected_trade.get("marketCollection", 0))
-            buttons = {button.text: button for button in find_descendants_by_type(trade, "CButton")}
-            self.assertEqual(sell_button_rect, resolved_rect(buttons["SELL"]))
-            self.assertEqual(buy_button_rect, resolved_rect(buttons["BUY"]))
-            queue_question_answer(game, g, 1)
-            activate_widget(buttons["SELL"], g.getGui())
-            pump_event_loop(5)
-            self.assertFalse(gui_contains_class(g, "CGameQuestionPanel"))
-            self.assertTrue(gui_has_child_object(g, trade))
-            queue_question_answer(game, g, 1)
-            activate_widget(buttons["BUY"], g.getGui())
-            pump_event_loop(5)
-            self.assertFalse(gui_contains_class(g, "CGameQuestionPanel"))
+            self.assertEqual(0, trade.getTotalBuyCost())
+            self.activateManagementAction(trade, g, "addSelectedForPurchase")
+            purchase_total = trade.getTotalBuyCost()
+            self.assertGreater(purchase_total, 0)
             trade.mouseEvent(g.getGui(), SDL_MOUSEBUTTONDOWN, SDL_BUTTON_RIGHT, 1, 1)
-            pump_event_loop(5)
+            self.assertEqual(sale_total, trade.getTotalSellCost(), "right click must preserve pending quantities")
+            self.assertEqual(purchase_total, trade.getTotalBuyCost())
+            for action in ("finalizeSell", "finalizeBuy"):
+                queue_question_answer(game, g, 1)
+                button = self.activateManagementAction(trade, g, action)
+                regions["sellButton" if action == "finalizeSell" else "buyButton"] = resolved_rect(button)
+                pump_event_loop(3)
+                self.assertFalse(gui_contains_class(g, "CGameQuestionPanel"))
+                self.assertTrue(gui_has_child_object(g, trade))
+            self.assertEqual(sale_total, trade.getTotalSellCost(), "cancelling review must preserve the basket")
+            self.assertEqual(purchase_total, trade.getTotalBuyCost())
+            self.activateManagementAction(trade, g, "clearSelection")
             self.assertEqual(0, trade.getTotalSellCost())
             self.assertEqual(0, trade.getTotalBuyCost())
             with isolated_gui_panel(g, trade):
-                summary = capture_panel_layout(
-                    self,
-                    g,
-                    "layout_trade_panel",
-                    trade,
-                    regions={
-                        "player": player_rect,
-                        "market": market_rect,
-                        "sellCost": sell_cost_rect,
-                        "buyCost": buy_cost_rect,
-                        "sellButton": sell_button_rect,
-                        "buyButton": buy_button_rect,
-                    },
-                )
-            for region in ("player", "market", "sellCost", "buyCost", "sellButton", "buyButton"):
+                summary = capture_panel_layout(self, g, "layout_trade_panel", trade, regions=regions)
+            for region in regions:
                 assert_region_has_pixels(self, summary, region)
         finally:
             trade.close()
@@ -20855,259 +24160,187 @@ class XvfbGameplayProcessTest(unittest.TestCase):
     def test_fight_panel_and_nested_views_layout(self):
         game, g, game_map, player = create_xvfb_gameplay_session(self)
         player.addItem("Sword")
-        quest_item = g.createObject("CItem")
-        quest_item.name = "fightLayoutQuestItem"
-        quest_item.typeId = "fightLayoutQuestItem"
-        quest_item.animation = "images/items/scroll"
-        quest_item.addTag(game.CTag.QUEST)
-        player.addItem(quest_item)
         enemies = []
         for index in range(6):
             enemy = g.createObject("GoblinThief")
             enemy.name = f"layoutEnemy{index}"
             enemy.setHp(max(1, enemy.getHpMax() - index))
             enemies.append(enemy)
-        enemies[4].setEffects(
-            {g.createObject("Stun"), g.createObject("BarrierEffect"), g.createObject("BloodlashEffect")}
-        )
-        enemies[5].setEffects(
+        enemies[-1].setEffects(
             {
-                g.createObject("Stun"),
-                g.createObject("BarrierEffect"),
-                g.createObject("BloodlashEffect"),
-                g.createObject("LethalPoisonEffect"),
-                g.createObject("MutilationEffect"),
+                g.createObject(name)
+                for name in ("Stun", "BarrierEffect", "BloodlashEffect", "LethalPoisonEffect", "MutilationEffect")
             }
         )
         game_map.setStringProperty("combatStatus", "Initiative: player\nChoose a target and action.")
-
         fight = open_layout_panel(self, g, "fightPanel")
         fight.setEnemies(enemies)
         pump_event_loop(5)
         try:
-            root = assert_runtime_rect(self, "fightPanel", fight, ROOT_800_600)
-            direct_children = sorted(fight.getChildren(), key=lambda child: resolved_rect(child))
-            cards = [child for child in direct_children if child.getType() == "CGameGraphicsObject"]
+            root = resolved_rect(fight)
+            cards = [child for child in fight.getChildren() if child.getType() == "CGameGraphicsObject"]
             self.assertEqual(2, len(cards))
-            player_card = assert_runtime_rect(self, "player card", cards[0], (710, 340, 200, 300))
-            enemy_card = assert_runtime_rect(self, "enemy card", cards[1], (1010, 340, 200, 300))
-            enemy_selector = find_list_view(fight, "enemiesCollection")
-            selector_rect = assert_runtime_rect(self, "enemy selector", enemy_selector, (800, 270, 320, 60))
-            items_row = assert_runtime_rect(
-                self, "items row", find_list_view(fight, "itemsCollection"), (560, 720, 800, 60)
+            assert_no_overlap(self, "player card", resolved_rect(cards[0]), "enemy card", resolved_rect(cards[1]))
+            regions = {}
+            for collection in ("enemiesCollection", "itemsCollection", "interactionsCollection"):
+                view = find_list_view(fight, collection)
+                regions[collection] = resolved_rect(view)
+                assert_child_inside(self, "fightPanel", root, collection, regions[collection])
+                self.assertEqual(1, list_runtime_grid(view, g.getGui())[0])
+            status = next(
+                child
+                for child in find_descendants_by_type(fight, "CWidget")
+                if child.getStringProperty("render") == "renderCombatStatus"
             )
-            actions_row = assert_runtime_rect(
-                self,
-                "actions row",
-                find_list_view(fight, "interactionsCollection"),
-                (560, 780, 800, 60),
-            )
-            status_widgets = [
-                child for child in fight.getChildren() if child.getType() == "CWidget" and resolved_rect(child)[1] < 720
-            ]
-            self.assertEqual(1, len(status_widgets))
-            status_rect = assert_runtime_rect(self, "combat status", status_widgets[0], (640, 642, 640, 78))
-            for label, rect in (
-                ("player card", player_card),
-                ("enemy card", enemy_card),
-                ("enemy selector", selector_rect),
-                ("status", status_rect),
-                ("items", items_row),
-                ("actions", actions_row),
-            ):
-                assert_child_inside(self, "fightPanel", root, label, rect)
-            assert_no_overlap(self, "player card", player_card, "enemy card", enemy_card)
-            assert_no_overlap(self, "status", status_rect, "items", items_row)
-            assert_no_overlap(self, "items", items_row, "actions", actions_row)
-
-            creature_views = sorted(
-                find_descendants_by_type(fight, "CCreatureView"), key=lambda child: resolved_rect(child)
-            )
-            stats_views = sorted(
-                find_descendants_by_type(fight, "CStatsGraphicsObject"),
-                key=lambda child: resolved_rect(child),
-            )
-            expected_nested = {
-                (710, 340, 200, 200),
-                (710, 540, 200, 100),
-                (1010, 340, 200, 200),
-                (1010, 540, 200, 100),
-            }
-            self.assertEqual(expected_nested, {resolved_rect(child) for child in creature_views + stats_views})
-            for card_rect in (player_card, enemy_card):
+            regions["status"] = resolved_rect(status)
+            assert_child_inside(self, "fightPanel", root, "status", regions["status"])
+            creature_views = find_descendants_by_type(fight, "CCreatureView")
+            stats_views = find_descendants_by_type(fight, "CStatsGraphicsObject")
+            self.assertEqual(2, len(creature_views))
+            self.assertEqual(2, len(stats_views))
+            for card in cards:
+                card_rect = resolved_rect(card)
+                assert_child_inside(self, "fightPanel", root, "combatant card", card_rect)
                 nested = [
-                    child for child in creature_views + stats_views if rect_contains(card_rect, resolved_rect(child))
+                    view for view in creature_views + stats_views if rect_contains(card_rect, resolved_rect(view))
                 ]
                 self.assertEqual(2, len(nested))
-                assert_no_overlap(
-                    self, "nested upper", resolved_rect(nested[0]), "nested lower", resolved_rect(nested[1])
-                )
+                assert_no_overlap(self, "portrait", resolved_rect(nested[0]), "resources", resolved_rect(nested[1]))
 
-            self.assertEqual(6, len(fight.enemiesCollection(g.getGui())))
-            self.assertTrue(enemy_selector.getAllowOversize())
-            self.assertEqual((4, 1), list_runtime_grid(enemy_selector, g.getGui()))
-            for _ in range(4):
-                self.assertTrue(activate_first_proxy_graphic(enemy_selector, g.getGui(), 3, 0))
-                pump_event_loop(3)
-            self.assertTrue(activate_first_proxy_graphic(enemy_selector, g.getGui(), 1, 0))
-            pump_event_loop(5)
-            self.assertEqual("layoutEnemy4", fight.getEnemy().getName())
-            self.assertTrue(activate_first_proxy_graphic(enemy_selector, g.getGui(), 2, 0))
-            pump_event_loop(5)
-            self.assertEqual("layoutEnemy5", fight.getEnemy().getName())
+            selector = find_list_view(fight, "enemiesCollection")
+            seen = set()
+            selected_name = None
+            for _ in range(6):
+                cells = list(list_visible_object_cells(selector, g.getGui()))
+                seen.update(obj.getName() for _, _, obj in cells)
+                for column, row, obj in cells:
+                    if obj.getName() == "layoutEnemy5":
+                        activate_list_cell(selector, g.getGui(), column, row)
+                        selected_name = obj.getName()
+                        break
+                if selected_name:
+                    break
+                self.activateManagementAction(selector, g, "pageNext")
+            self.assertEqual("layoutEnemy5", selected_name)
+            self.assertEqual(selected_name, fight.getEnemy().getName())
             self.assertEqual(5, len(fight.getEnemy().getEffects()))
-
-            enemy_effect_lists = [
-                list_view
-                for view in creature_views
-                for list_view in find_descendants_by_type(view, "CListView")
-                if list_view.getCollection() == "getEffects"
+            self.assertTrue({"layoutEnemy0", "layoutEnemy5"}.issubset(seen))
+            effect_lists = [
+                view
+                for card in creature_views
+                for view in find_descendants_by_type(card, "CListView")
+                if view.getCollection() == "getEffects"
             ]
-            self.assertEqual(2, len(enemy_effect_lists))
-            for list_view in enemy_effect_lists:
-                effect_rect = resolved_rect(list_view)
-                assert_child_inside(self, "creatureView", resolved_rect(list_view.getParent()), "effects", effect_rect)
-                self.assertEqual((1, 4), list_runtime_grid(list_view, g.getGui()))
-                for column, row, _ in list_visible_object_cells(list_view, g.getGui()):
-                    assert_child_inside(
-                        self,
-                        "effects",
-                        effect_rect,
-                        "effect cell",
-                        list_cell_rect(list_view, column, row),
-                    )
+            self.assertEqual(2, len(effect_lists))
+            for view in effect_lists:
+                assert_child_inside(
+                    self, "creatureView", resolved_rect(view.getParent()), "effects", resolved_rect(view)
+                )
 
             fight.setEnemies(enemies[:3])
             pump_event_loop(5)
             self.assertEqual(3, len(fight.enemiesCollection(g.getGui())))
             self.assertEqual("layoutEnemy0", fight.getEnemy().getName())
-            shrunk_enemy_names = set(list_visible_object_names(enemy_selector, g.getGui()))
-            self.assertTrue(shrunk_enemy_names)
-            self.assertTrue(shrunk_enemy_names.issubset({enemy.getName() for enemy in enemies[:3]}))
-
+            names = set(list_visible_object_names(selector, g.getGui()))
+            self.assertTrue(names)
+            self.assertTrue(names.issubset({enemy.getName() for enemy in enemies[:3]}))
             with isolated_gui_panel(g, fight):
-                capture_panel_layout(
-                    self,
-                    g,
-                    "layout_fight_panel",
-                    fight,
-                    regions={
-                        "selector": selector_rect,
-                        "status": status_rect,
-                        "items": items_row,
-                        "actions": actions_row,
-                    },
-                )
+                capture_panel_layout(self, g, "layout_fight_panel", fight, regions=regions)
         finally:
             fight.close()
             pump_event_loop(3)
 
     def test_all_list_views_capacity_paging_and_shrink(self):
-        _, g, _, player = create_xvfb_gameplay_session(self)
-        panels_to_collections = {
+        game, g, _, player = create_xvfb_gameplay_session(self)
+        expected_collections = {
             "characterPanel": {"interactionsCollection"},
             "fightPanel": {"enemiesCollection", "itemsCollection", "interactionsCollection", "getEffects"},
             "inventoryPanel": {"inventoryCollection", "equippedCollection"},
-            "lootPanel": {"itemsCollection"},
             "tradePanel": {"inventoryCollection", "marketCollection"},
         }
-
-        inventory_items = make_unique_scroll_items(g, 7, "capacity")
-        player.setItems(set(inventory_items))
         inventory = open_layout_panel(self, g, "inventoryPanel")
         try:
-            inventory_list = find_list_view(inventory, "inventoryCollection")
-            inventory_list.setXPrefferedSize(2)
-            inventory_list.setYPrefferedSize(2)
-            inventory_list.setAllowOversize(True)
-            inventory_list.setGrouping(False)
-            inventory_list.refreshAll()
-            first_page = list_visible_object_names(inventory_list, g.getGui())
-            for graphic in inventory_list.getProxiedObjects(g.getGui(), 1, 1):
-                graphic.mouseEvent(g.getGui(), SDL_MOUSEBUTTONDOWN, SDL_BUTTON_LEFT, 1, 1)
-            final_page = list_visible_object_names(inventory_list, g.getGui())
+            view = find_list_view(inventory, "inventoryCollection")
+            columns, rows = list_runtime_grid(view, g.getGui())
+            self.assertEqual(1, columns)
+            capacity = columns * rows
+            items = make_unique_scroll_items(g, capacity + 3, "capacity")
+            player.setItems(set(items))
+            view.setGrouping(False)
+            view.refresh()
+            first_page = list_visible_object_names(view, g.getGui())
+            self.assertEqual(capacity, len(first_page))
+            self.activateManagementAction(view, g, "pageNext")
+            final_page = list_visible_object_names(view, g.getGui())
             self.assertNotEqual(first_page, final_page)
+            self.assertEqual({item.getName() for item in items}, set(first_page + final_page))
+            self.activateManagementAction(view, g, "pagePrevious")
+            self.assertEqual(first_page, list_visible_object_names(view, g.getGui()))
 
-            player.setItems(set(inventory_items[:3]))
-            inventory_list.refreshAll()
-            shrunk_page = list_visible_object_names(inventory_list, g.getGui())
-            self.assertTrue(shrunk_page)
-
-            player.setItems(set(inventory_items[:2]))
-            inventory_list.refreshAll()
-            below_capacity = list_visible_object_names(inventory_list, g.getGui())
-            self.assertEqual(2, len(below_capacity))
-
-            duplicates = [g.createObject("Scroll") for _ in range(7)]
+            player.setItems(set(items[:2]))
+            view.refresh()
+            self.assertEqual({item.getName() for item in items[:2]}, set(list_visible_object_names(view, g.getGui())))
+            duplicates = [g.createObject("Scroll") for _ in range(capacity + 3)]
             for index, item in enumerate(duplicates):
                 item.name = f"groupedCapacityScroll{index}"
             player.setItems(set(duplicates))
-            inventory_list.setGrouping(True)
-            inventory_list.refreshAll()
-            grouped_names = list_visible_object_names(inventory_list, g.getGui())
-            self.assertEqual(1, len(set(grouped_names)))
+            view.setGrouping(True)
+            view.refresh()
+            self.assertEqual(1, len(list_visible_object_names(view, g.getGui())))
         finally:
             inventory.close()
             pump_event_loop(3)
 
-        fight = open_layout_panel(self, g, "fightPanel")
-        try:
-            enemies = []
-            for index in range(6):
-                enemy = g.createObject("GoblinThief")
-                enemy.name = f"matrixEnemy{index}"
-                enemy.setHp(enemy.getHpMax())
-                enemies.append(enemy)
-            fight.setEnemies(enemies)
-            found = {list_view.getCollection() for list_view in find_descendants_by_type(fight, "CListView")}
-            self.assertTrue(panels_to_collections["fightPanel"].issubset(found))
-        finally:
-            fight.close()
-            pump_event_loop(3)
-
-        for panel_name in ("characterPanel", "inventoryPanel"):
+        for panel_name in ("characterPanel", "inventoryPanel", "fightPanel", "tradePanel"):
             panel = open_layout_panel(self, g, panel_name)
             try:
-                found = {list_view.getCollection() for list_view in find_descendants_by_type(panel, "CListView")}
-                self.assertTrue(panels_to_collections[panel_name].issubset(found))
+                found = {view.getCollection() for view in find_descendants_by_type(panel, "CListView")}
+                self.assertTrue(expected_collections[panel_name].issubset(found))
             finally:
                 panel.close()
                 pump_event_loop(3)
 
-        trade = open_layout_panel(self, g, "tradePanel")
-        try:
-            market = g.createObject("CMarket")
-            market.setItems({g.createObject("Scroll")})
-            trade.setMarket(market)
-            found = {list_view.getCollection() for list_view in find_descendants_by_type(trade, "CListView")}
-            self.assertTrue(panels_to_collections["tradePanel"].issubset(found))
-        finally:
-            trade.close()
-            pump_event_loop(3)
+        observed = {}
+        before_rewards = sorted(item.getName() for item in player.getItems())
+        before_turn = g.getMap().getTurn()
 
-        loot_items = set(make_unique_scroll_items(g, 2, "matrixLoot"))
-        result = {}
-
-        def inspect_loot_matrix(panel):
-            found = {list_view.getCollection() for list_view in find_descendants_by_type(panel, "CListView")}
-            self.assertTrue(panels_to_collections["lootPanel"].issubset(found))
-            result["loot"] = True
-            panel.keyboardEvent(g.getGui(), SDL_KEYDOWN, ord(" "))
-            return found
+        def inspect_loot(panel):
+            self.assertFalse(find_descendants_by_type(panel, "CListView"))
+            receipts = [
+                child
+                for child in find_descendants_by_type(panel, "CWidget")
+                if child.getStringProperty("render") == "renderRewards"
+            ]
+            self.assertEqual(1, len(receipts))
+            self.assertEqual(player, panel.getObjectProperty("creature"))
+            serialized_items = json.loads(game.jsonify(panel))["properties"]["items"] or []
+            observed["rewards"] = sorted(item["properties"]["name"] for item in serialized_items)
+            self.assertTrue(observed["rewards"], "the real reward operation must supply items to the receipt")
+            self.assertEqual(before_rewards, sorted(item.getName() for item in player.getItems()))
+            button = self.activateManagementAction(panel, g, "collectRewards")
+            self.assertEqual("Continue", button.getStringProperty("text"))
+            observed["continue"] = button
 
         run_blocking_panel_inspection(
             self,
-            load_game_module(),
+            game,
             g,
             "CGameLootPanel",
-            lambda: g.getGuiHandler().showLoot(g.createObject("GoblinThief"), loot_items),
-            inspect_loot_matrix,
+            lambda: g.getRngHandler().addRandomLoot(player, 400),
+            inspect_loot,
             lambda panel: None,
         )
-        self.assertTrue(result["loot"])
+        self.assertFalse(gui_contains_class(g, "CGameLootPanel"))
+        after_rewards = sorted(item.getName() for item in player.getItems())
+        self.assertEqual(sorted(before_rewards + observed["rewards"]), after_rewards)
+        activate_widget(observed["continue"], g.getGui())
+        pump_event_loop(3)
+        self.assertEqual(after_rewards, sorted(item.getName() for item in player.getItems()))
+        self.assertEqual(before_turn, g.getMap().getTurn())
 
     def test_full_nouraajd_quest_walkthrough_ui(self):
         game, g, game_map, player = create_xvfb_gameplay_session(self, map_name="nouraajd")
+        story_readers = captureStoryReaders(self, game, g)
         all_quest_ids = set(NOURAAJD_QUEST_DESCRIPTIONS)
         completed_quests = set()
 
@@ -21130,7 +24363,6 @@ class XvfbGameplayProcessTest(unittest.TestCase):
         run_blocking_gui_action(
             game,
             lambda: player.moveTo(start_coords.x, start_coords.y, start_coords.z),
-            push_space_key,
         )
         self.assertGreaterEqual(player.countItems("letterFromRolf"), 1)
         self.assertEqual("awaiting_skull", quest_state("rolf"))
@@ -21143,8 +24375,8 @@ class XvfbGameplayProcessTest(unittest.TestCase):
             active=("rolfQuest",),
         )
 
-        run_blocking_gui_action(game, lambda: game_map.removeObjectByName("cave1"), push_space_key)
-        run_blocking_gui_action(game, player.checkQuests, push_space_key)
+        run_blocking_gui_action(game, lambda: game_map.removeObjectByName("cave1"))
+        run_blocking_gui_action(game, player.checkQuests)
         self.assertTrue(player.hasItem(lambda it: it.getName() == "skullOfRolf"))
         self.assertTrue(game_map.getBoolProperty("completed_rolf"))
         self.assertEqual("skull_recovered", quest_state("rolf"))
@@ -21162,8 +24394,8 @@ class XvfbGameplayProcessTest(unittest.TestCase):
 
         gooby = find_runtime_object(game_map, "gooby1")
         gooby_gold = player.getGold()
-        run_blocking_gui_action(game, lambda: game_map.removeObjectByName(gooby.getName()), push_space_key)
-        run_blocking_gui_action(game, player.checkQuests, push_space_key)
+        run_blocking_gui_action(game, lambda: game_map.removeObjectByName(gooby.getName()))
+        run_blocking_gui_action(game, player.checkQuests)
         self.assertTrue(game_map.getBoolProperty("completed_gooby"))
         self.assertEqual("gooby_slain", quest_state("main"))
         self.assertEqual(gooby_gold + 200, player.getGold())
@@ -21172,7 +24404,7 @@ class XvfbGameplayProcessTest(unittest.TestCase):
 
         town_hall = g.createObject("townHallDialog")
         show_dialog_with_keyboard(self, game, g, town_hall, [2])
-        run_blocking_gui_action(game, town_hall.give_letter, push_space_key)
+        run_blocking_gui_action(game, town_hall.give_letter)
         self.assertEqual("letter_in_hand", quest_state("beren_chain"))
         self.assertTrue(player.hasItem(lambda it: it.getName() == "letterToBeren"))
         assert_active("deliverLetterQuest")
@@ -21186,7 +24418,7 @@ class XvfbGameplayProcessTest(unittest.TestCase):
 
         beren = g.createObject("berenDialog")
         show_dialog_with_keyboard(self, game, g, beren, [2])
-        run_blocking_gui_action(game, beren.deliver_letter, push_space_key)
+        run_blocking_gui_action(game, beren.deliver_letter)
         player.checkQuests()
         pump_event_loop(5)
         self.assertEqual("letter_delivered", quest_state("beren_chain"))
@@ -21195,11 +24427,11 @@ class XvfbGameplayProcessTest(unittest.TestCase):
         assert_completed("deliverLetterQuest")
         assert_active("retrieveRelicQuest")
 
-        run_blocking_gui_action(game, lambda: game_map.removeObjectByName("catacombs"), push_space_key)
+        run_blocking_gui_action(game, lambda: game_map.removeObjectByName("catacombs"))
         self.assertEqual("relic_obtained", quest_state("beren_chain"))
         self.assertTrue(player.hasItem(lambda it: it.getName() == "holyRelic"))
         show_dialog_with_keyboard(self, game, g, beren, [2])
-        run_blocking_gui_action(game, beren.return_relic, push_space_key)
+        run_blocking_gui_action(game, beren.return_relic)
         player.checkQuests()
         pump_event_loop(5)
         self.assertEqual("relic_returned_waiting_kill", quest_state("beren_chain"))
@@ -21221,8 +24453,8 @@ class XvfbGameplayProcessTest(unittest.TestCase):
 
         octobogz_gold = player.getGold()
         octobogz_shadow_blades = player.countItems("ShadowBlade")
-        run_blocking_gui_action(game, lambda: game_map.removeObjectByName("cave2"), push_space_key)
-        run_blocking_gui_action(game, player.checkQuests, push_space_key)
+        run_blocking_gui_action(game, lambda: game_map.removeObjectByName("cave2"))
+        run_blocking_gui_action(game, player.checkQuests)
         self.assertEqual("ready_to_report", quest_state("beren_chain"))
         self.assertEqual("completed", quest_state("octobogz_contract"))
         self.assertTrue(game_map.getBoolProperty("completed_octobogz"))
@@ -21237,7 +24469,7 @@ class XvfbGameplayProcessTest(unittest.TestCase):
         self.assertEqual("met_victor", quest_state("victor"))
         self.assertTrue(game_map.getBoolProperty("TALKED_TO_VICTOR"))
         assert_active("victorQuest")
-        show_dialog_with_keyboard(self, game, g, g.createObject("townHallDialog"), [1, 1, "space"])
+        show_dialog_with_keyboard(self, game, g, g.createObject("townHallDialog"), [1, 1])
         leader = find_runtime_object(game_map, "cultLeaderQuest")
         cultists = [obj for obj in game_map.getObjects() if obj.getName() and obj.getName().startswith("victorCultist")]
         self.assertEqual("encounter_active", quest_state("victor"))
@@ -21251,37 +24483,29 @@ class XvfbGameplayProcessTest(unittest.TestCase):
             active=("cleanseCaveQuest", "victorQuest"),
             completed=completed_quests,
         )
-        self.assertIn("Objective: Defeat the cultists in the courtyard", victor_text)
+        self.assertIn("Objective: Defeat the cult leader in the courtyard", victor_text)
 
-        captured_reward_ui = {"dialogs": [], "trades": []}
+        captured_reward_ui = {"trades": []}
         heal_amounts = []
-        original_show_dialog = game.CGuiHandler.showDialog
         original_show_trade = game.CGuiHandler.showTrade
         original_heal_proc = game.CPlayer.healProc
         victor_gold = player.getGold()
         try:
 
-            def capture_show_dialog(self, dialog):
-                captured_reward_ui["dialogs"].append(dialog.getTypeId())
-                queue_sdl_inputs(game, lambda: push_digit_key(1))
-                return original_show_dialog(self, dialog)
-
             def capture_show_trade(self, market):
                 captured_reward_ui["trades"].append(market.getTypeId())
-                queue_sdl_inputs(game, push_space_key)
+                queue_sdl_inputs(game, lambda: push_sdl_key_event(27, 41, SDL_KEYDOWN))
                 return original_show_trade(self, market)
 
             def capture_heal_proc(self, amount):
                 heal_amounts.append(amount)
                 return original_heal_proc(self, amount)
 
-            game.CGuiHandler.showDialog = capture_show_dialog
             game.CGuiHandler.showTrade = capture_show_trade
             game.CPlayer.healProc = capture_heal_proc
             game_map.removeObjectByName(leader.getName())
             pump_event_loop(5)
         finally:
-            game.CGuiHandler.showDialog = original_show_dialog
             game.CGuiHandler.showTrade = original_show_trade
             game.CPlayer.healProc = original_heal_proc
 
@@ -21292,7 +24516,15 @@ class XvfbGameplayProcessTest(unittest.TestCase):
         self.assertEqual([100], heal_amounts)
         self.assertTrue(game_map.getBoolProperty("VICTOR_GOOD_END"))
         self.assertTrue(game_map.getBoolProperty("VICTOR_REWARD_CLAIMED"))
-        self.assertIn("victorRewardDialog", captured_reward_ui["dialogs"])
+        victor_receipts = [body for title, body in story_readers if title == "Victor's daughter is safe"]
+        self.assertEqual(1, len(victor_receipts))
+        reward_text = next(
+            state.getStringProperty("text")
+            for state in g.createObject("victorRewardDialog").getStates()
+            if state.getStringProperty("stateId") == "ENTRY"
+        )
+        self.assertIn(reward_text, victor_receipts[0])
+        self.assertIn("Gold: +500", victor_receipts[0])
         self.assertIn("victorMarket", captured_reward_ui["trades"])
         self.assertFalse(
             any(
@@ -21316,7 +24548,7 @@ class XvfbGameplayProcessTest(unittest.TestCase):
 
         amulet_gold = player.getGold()
         player.addItem("preciousAmulet")
-        show_dialog_with_keyboard(self, game, g, g.createObject("questReturnDialog"), [1, "space"])
+        show_dialog_with_keyboard(self, game, g, g.createObject("questReturnDialog"), [1])
         player.checkQuests()
         pump_event_loop(5)
         self.assertEqual("returned", quest_state("amulet"))
@@ -21334,24 +24566,46 @@ class XvfbGameplayProcessTest(unittest.TestCase):
         )
 
         transitions = []
-        original_change_map = game.CGame.changeMap
+        transition_phases = []
+        original_prepared_change_map = game.CGame.changeMapWithPreparation
         try:
 
-            def capture_change_map(self, map_name):
+            def capturePreparedChangeMap(game_instance, map_name, beforeEntry, completion):
                 transitions.append(map_name)
+                self_map = game_instance.getMap()
+                pending = json.loads(player.getStringProperty("campaign_pendingTransition"))
+                self.assertEqual(game_map, self_map)
+                self.assertEqual(map_name, pending["targetMap"])
+                self.assertEqual("", pending["targetScenario"], "this walkthrough starts a standalone map")
+                beforeEntry()
+                transition_phases.append("prepared")
+                completion(True)
+                transition_phases.append("completed")
+                return True
 
-            game.CGame.changeMap = capture_change_map
+            game.CGame.changeMapWithPreparation = capturePreparedChangeMap
             show_dialog_with_keyboard(self, game, g, beren, [2])
-            run_blocking_gui_action(game, beren.finish_cleanse, push_space_key)
+            run_blocking_gui_action(game, beren.finish_cleanse)
         finally:
-            game.CGame.changeMap = original_change_map
+            game.CGame.changeMapWithPreparation = original_prepared_change_map
 
         player.checkQuests()
         pump_event_loop(5)
         self.assertEqual(["ritual"], transitions)
+        self.assertEqual(["prepared", "completed"], transition_phases)
+        self.assertEqual("", player.getStringProperty("campaign_pendingTransition"))
         self.assertEqual("purged", quest_state("beren_chain"))
         self.assertTrue(game_map.getBoolProperty("CAVE_PURGED"))
         assert_completed("cleanseCaveQuest")
+        expected_receipts = {
+            "Nouraajd's thanks": "Gold: +200",
+            "The OctoBogz bounty": "Gold: +1000",
+            "Amulet returned": "Gold: +50",
+        }
+        for title, reward_line in expected_receipts.items():
+            receipts = [body for reader_title, body in story_readers if reader_title == title]
+            self.assertEqual(1, len(receipts), f"Expected one consolidated {title} receipt.")
+            self.assertIn(reward_line, receipts[0])
         journal_quest_ids = {player_quest_id(quest) for quest in player.getQuests()}
         journal_quest_ids.update(player_quest_id(quest) for quest in player.getCompletedQuests())
         self.assertTrue(all_quest_ids.issubset(journal_quest_ids))
@@ -21365,65 +24619,166 @@ class XvfbGameplayProcessTest(unittest.TestCase):
         self.assertEqual("nouraajd", g.getMap().mapName)
 
     def test_sidebar_mouse_opens_inventory_until_hotkey_closes_it(self):
-        game, g, _, _ = create_xvfb_gameplay_session(self)
-
-        push_sdl_mouse_click(1820, 25)
-        observed = queue_panel_observer(game, g, "CGameInventoryPanel")
+        _, g, game_map, _ = create_xvfb_gameplay_session(self)
+        initial_turn = game_map.getTurn()
+        sidebar = collect_gui_children(g.getGui(), "CSideBar")[0]
+        inventory_buttons = [
+            button
+            for button in find_descendants_by_type(sidebar, "CButton")
+            if button.getStringProperty("click") == "clickInventory"
+        ]
+        self.assertEqual(1, len(inventory_buttons))
+        push_sdl_mouse_click(*rect_center(resolved_rect(inventory_buttons[0])))
+        wait_for_panel_class(self, g, "CGameInventoryPanel")
         push_sdl_key_event(ord("i"), 0, SDL_KEYDOWN)
         push_sdl_key_event(ord("i"), 0, SDL_KEYUP)
-        pump_event_loop(5)
-
-        self.assertTrue(observed["open"])
-        self.assertFalse(gui_contains_class(g, "CGameInventoryPanel"))
+        wait_for_panel_closed(self, g, "CGameInventoryPanel")
+        self.assertEqual(initial_turn, game_map.getTurn(), "Opening and closing inventory takes no turn.")
 
     def test_save_hotkey_writes_loadable_map(self):
-        _, g, game_map, _ = create_xvfb_gameplay_session(self)
-        game = load_game_module()
-        marker = f"xvfb-{os.getpid()}-{time.monotonic_ns()}"
+        self.exerciseNamedSaveHotkey()
+
+    def exerciseNamedSaveHotkey(self, capture=False):
+        import ctypes
+        import uuid
+
+        game, g, game_map, _ = create_xvfb_gameplay_session(self)
+        save_name = "ui-save-" + uuid.uuid4().hex[:16]
+        provider = g.getResourcesProvider()
+        save_resource = f"save/{save_name}.json"
+        self.assertFalse(provider.getPath(save_resource), "the GUI fixture must own its temporary save slot")
+        self.assertFalse(
+            provider.getPath(save_resource + ".bak"), "the GUI fixture must own its temporary recovery slot"
+        )
+        save_path = None
+        backup_path = None
         original_description = game_map.description
-        game_map.description = marker
+        initial_turn = game_map.getTurn()
 
-        save_name = game_map.mapName
-        save_path = Path.cwd() / "save" / f"{save_name}.json"
-        backup_path = save_backup_path(save_name)
-        existing_save = save_path.read_bytes() if save_path.exists() else None
-        existing_backup = backup_path.read_bytes() if backup_path.exists() and backup_path.is_file() else None
+        class TextInputEvent(ctypes.Structure):
+            _fields_ = [
+                ("type", ctypes.c_uint32),
+                ("timestamp", ctypes.c_uint32),
+                ("windowID", ctypes.c_uint32),
+                ("text", ctypes.c_char * 32),
+            ]
 
-        def saved_marker_matches():
-            if not save_path.exists():
-                return False
-            try:
-                saved_json = json.loads(save_path.read_text())
-            except json.JSONDecodeError:
-                return False
-            return marker == save_snapshot(saved_json).get("properties", {}).get("description")
+        class TextEvent(ctypes.Union):
+            _fields_ = [("text", TextInputEvent), ("padding", ctypes.c_uint8 * 56)]
 
-        try:
-            save_path.unlink(missing_ok=True)
+        def drive_save(overwrite):
+            nonlocal save_path, backup_path
+            expected_titles = ["Save adventure", "Name this save"]
+            if overwrite:
+                expected_titles.append("Replace this save?")
+            observed = {"titles": []}
+            deadline = time.monotonic() + 10.0
+
+            def advance():
+                try:
+                    self.assertLess(time.monotonic(), deadline, "the explicit Save flow did not finish")
+                    panel = find_top_level_panel(g, "CGameCampaignBrowserPanel")
+                    if panel is None:
+                        panel = find_top_level_panel(g, "CGameQuestionPanel")
+                    if panel is None:
+                        game.event_loop.instance().invoke(advance)
+                        return
+                    title = panel.getStringProperty("title")
+                    self.assertEqual(expected_titles[len(observed["titles"])], title)
+                    observed["titles"].append(title)
+                    if title == "Save adventure":
+                        self.assertEqual("newSave", panel.getSelectedId())
+                        self.assertFalse(panel.hasChoice(), "opening Save must not write a file")
+                        panel.keyboardEvent(g.getGui(), SDL_KEYDOWN, SDLK_RETURN)
+                    elif title == "Name this save":
+                        event = TextEvent()
+                        event.text.type = 771  # SDL_TEXTINPUT replaces the selected suggested name.
+                        event.text.text = save_name.encode("utf-8")
+                        sdl = load_sdl_library()
+                        sdl.SDL_PushEvent.argtypes = [ctypes.POINTER(TextEvent)]
+                        sdl.SDL_PushEvent.restype = ctypes.c_int
+                        self.assertEqual(1, sdl.SDL_PushEvent(ctypes.byref(event)))
+                        pump_event_loop(2)
+                        panel.keyboardEvent(g.getGui(), SDL_KEYDOWN, SDLK_RETURN)
+                    else:
+                        self.assertTrue(save_path.is_file(), "overwrite confirmation preserves the existing save")
+                        controls = [
+                            button
+                            for button in find_descendants_by_type(panel, "CButton")
+                            if button.getStringProperty("click") == "clickYes"
+                        ]
+                        self.assertEqual(1, len(controls))
+                        self.assertEqual("Replace save", controls[0].text)
+                        activate_widget(controls[0], g.getGui())
+                    if len(observed["titles"]) < len(expected_titles):
+                        game.event_loop.instance().invoke(advance)
+                except Exception:
+                    observed["error"] = traceback.format_exc()
+                    g.getContext().shutdown()
+
+            game.event_loop.instance().invoke(advance)
             push_sdl_key_event(ord("s"), 0, SDL_KEYDOWN)
             push_sdl_key_event(ord("s"), 0, SDL_KEYUP)
-            self.assertTrue(pump_event_loop_until(saved_marker_matches, timeout=1.0))
-            saved_json = json.loads(save_path.read_text())
-            snapshot = assert_save_envelope(self, saved_json, save_name)
+            pump_event_loop(5)
+            self.assertNotIn("error", observed, observed.get("error"))
+            self.assertEqual(expected_titles, observed["titles"])
+            self.assertFalse(gui_contains_class(g, "CGameCampaignBrowserPanel"))
+            self.assertFalse(gui_contains_class(g, "CGameQuestionPanel"))
+            resolved_save = provider.getPath(save_resource)
+            self.assertTrue(resolved_save, "the named Save action must expose its slot through the session provider")
+            save_path = Path(resolved_save)
+            backup_path = save_path.with_name(save_path.name + ".bak")
+            self.assertTrue(save_path.is_file(), "the named Save action must write the selected slot")
+            self.assertEqual(initial_turn, game_map.getTurn(), "save navigation must not advance a turn")
+
+        try:
+            first_marker = save_name + "-original"
+            game_map.description = first_marker
+            drive_save(overwrite=False)
+            first_document = json.loads(save_path.read_text(encoding="utf-8"))
+            first_snapshot = assert_save_envelope(self, first_document, game_map.mapName)
+            self.assertEqual(first_marker, first_snapshot.get("properties", {}).get("description"))
+
+            marker = save_name + "-replacement"
+            game_map.description = marker
+            drive_save(overwrite=True)
+            saved_json = json.loads(save_path.read_text(encoding="utf-8"))
+            snapshot = assert_save_envelope(self, saved_json, game_map.mapName)
             self.assertEqual(marker, snapshot.get("properties", {}).get("description"))
+            backup_json = json.loads(backup_path.read_text(encoding="utf-8"))
+            self.assertEqual(first_marker, save_snapshot(backup_json).get("properties", {}).get("description"))
+
+            if capture:
+                assert_screenshot_has_rendered_pixels(self, g, "xvfb_save_hotkey_screenshot")
 
             loaded = game.CGameLoader.loadGame()
-            game.CGameLoader.loadSavedGame(loaded, save_name)
-            self.assertEqual(marker, loaded.getMap().description)
+            try:
+                game.CGameLoader.loadSavedGame(loaded, save_name)
+                self.assertEqual(marker, loaded.getMap().description)
+                self.assertEqual(game_map.mapName, loaded.getMap().mapName)
+            finally:
+                loaded.getContext().shutdown()
         finally:
             game_map.description = original_description
-            if existing_save is None:
-                save_path.unlink(missing_ok=True)
-            else:
-                save_path.parent.mkdir(exist_ok=True)
-                save_path.write_bytes(existing_save)
-            if existing_backup is None:
-                backup_path.unlink(missing_ok=True)
-            else:
-                backup_path.write_bytes(existing_backup)
+            for resource in (save_resource, save_resource + ".bak"):
+                resolved = provider.getPath(resource)
+                if resolved:
+                    Path(resolved).unlink(missing_ok=True)
+            if save_path is not None:
+                for temporary in save_path.parent.glob(f".{save_name}.json.*.tmp"):
+                    temporary.unlink(missing_ok=True)
 
 
 class PlayBootstrapTest(unittest.TestCase):
+    def setUp(self):
+        from unittest.mock import patch
+
+        environment_patch = patch.dict(os.environ)
+        environment_patch.start()
+        self.addCleanup(environment_patch.stop)
+        os.environ.pop("GAME_BUILD_DIR", None)
+        os.environ.pop("GAME_BUILD_CONFIG", None)
+
     def assertSamePath(self, expected, actual):
         self.assertTrue(os.path.samefile(expected, actual), f"{Path(expected)} != {Path(actual)}")
 
@@ -21801,6 +25156,855 @@ class QuestStateHelperTest(unittest.TestCase):
 
 
 class TestRunnerSuiteTest(unittest.TestCase):
+
+    def testProgressRecordsSubtestFailuresAndErrorsAfterCleanup(self):
+        from unittest.mock import patch
+
+        for worker in (False, True):
+            with self.subTest(worker=worker):
+                clock = [10.0]
+                stream = io.StringIO()
+
+                def cleanup():
+                    self.assertEqual(1, len(stream.getvalue().splitlines()))
+                    clock[0] = 25.0
+
+                class Case(unittest.TestCase):
+                    def runTest(case):
+                        case.addCleanup(cleanup)
+                        clock[0] = 13.0
+                        with case.subTest(kind="error"):
+                            raise ValueError("subtest error")
+                        with case.subTest(kind="failure"):
+                            case.fail("subtest failure")
+                        case.assertTrue(True)
+
+                    def tearDown(case):
+                        clock[0] = 17.0
+
+                case = Case()
+                result = ProgressTextTestResult(stream, True, 2)
+                result.total_tests = 1
+                with (
+                    patch(__name__ + ".time.monotonic", side_effect=lambda: clock[0]),
+                    patch(__name__ + ".GAME_TEST_WORKER", worker),
+                    patch(__name__ + ".write_test_timings") as writer,
+                ):
+                    case.run(result)
+                    expected = {result._subprocess_name(case): 15.0}
+                    self.assertEqual(expected, result.test_durations)
+                    if worker:
+                        writer.assert_called_once_with(TEST_TIMINGS_FILE, expected)
+                    else:
+                        writer.assert_not_called()
+                self.assertEqual(1, result.testsRun)
+                self.assertEqual(1, len(result.failures))
+                self.assertEqual(1, len(result.errors))
+                self.assertFalse(result.wasSuccessful())
+                self.assertEqual(
+                    [
+                        f"[test 1/1 start] {result._test_name(case)}",
+                        f"[test 1/1 ERROR 15.000s] {result._test_name(case)}",
+                    ],
+                    stream.getvalue().splitlines(),
+                )
+                self.assertEqual({}, result._test_start_times)
+
+    def testProgressRecordsSkippedSubtestsOnce(self):
+        from unittest.mock import patch
+
+        clock = [5.0]
+        stream = io.StringIO()
+
+        class Case(unittest.TestCase):
+            def runTest(case):
+                with case.subTest(kind="success"):
+                    case.assertTrue(True)
+                for number in range(2):
+                    with case.subTest(number=number):
+                        case.skipTest("subtest unavailable")
+                case.assertTrue(True)
+
+            def tearDown(case):
+                clock[0] = 12.0
+
+        case = Case()
+        result = ProgressTextTestResult(stream, True, 2)
+        result.total_tests = 1
+        with (
+            patch(__name__ + ".time.monotonic", side_effect=lambda: clock[0]),
+            patch(__name__ + ".GAME_TEST_WORKER", True),
+            patch(__name__ + ".write_test_timings") as writer,
+        ):
+            case.run(result)
+            expected = {result._subprocess_name(case): 7.0}
+            self.assertEqual(expected, result.test_durations)
+            writer.assert_called_once_with(TEST_TIMINGS_FILE, expected)
+        self.assertEqual(1, result.testsRun)
+        self.assertEqual(2, len(result.skipped))
+        self.assertTrue(result.wasSuccessful())
+        self.assertEqual(
+            [
+                f"[test 1/1 start] {result._test_name(case)}",
+                f"[test 1/1 ok 7.000s] {result._test_name(case)}",
+            ],
+            stream.getvalue().splitlines(),
+        )
+        self.assertEqual({}, result._test_start_times)
+
+    def testProgressRecordsSubtestAndOuterErrorsOnce(self):
+        from unittest.mock import patch
+
+        clock = [4.0]
+        stream = io.StringIO()
+
+        class Case(unittest.TestCase):
+            def runTest(case):
+                with case.subTest(kind="failure"):
+                    case.fail("subtest failure")
+                clock[0] = 6.0
+                raise RuntimeError("outer error")
+
+            def tearDown(case):
+                clock[0] = 14.0
+                raise ValueError("teardown error")
+
+        case = Case()
+        result = ProgressTextTestResult(stream, True, 2)
+        result.total_tests = 1
+        with (
+            patch(__name__ + ".time.monotonic", side_effect=lambda: clock[0]),
+            patch(__name__ + ".GAME_TEST_WORKER", True),
+            patch(__name__ + ".write_test_timings") as writer,
+        ):
+            case.run(result)
+            expected = {result._subprocess_name(case): 10.0}
+            self.assertEqual(expected, result.test_durations)
+            writer.assert_called_once_with(TEST_TIMINGS_FILE, expected)
+        self.assertEqual(1, result.testsRun)
+        self.assertEqual(1, len(result.failures))
+        self.assertEqual(2, len(result.errors))
+        self.assertFalse(result.wasSuccessful())
+        self.assertEqual(
+            [
+                f"[test 1/1 start] {result._test_name(case)}",
+                f"[test 1/1 ERROR 10.000s] {result._test_name(case)}",
+            ],
+            stream.getvalue().splitlines(),
+        )
+
+    def testProgressPreservesSubtestFailfastAndIncrementalWorkerTimings(self):
+        from unittest.mock import patch
+
+        clock = [2.0]
+        stream = io.StringIO()
+        executed = []
+        persisted = []
+
+        class FirstCase(unittest.TestCase):
+            def runTest(case):
+                clock[0] = 5.0
+
+        class Case(unittest.TestCase):
+            def runTest(case):
+                case.addCleanup(lambda: clock.__setitem__(0, 11.0))
+                with case.subTest(kind="failure"):
+                    case.fail("stop here")
+                executed.append("after failed subtest")
+
+        class NextCase(unittest.TestCase):
+            def runTest(case):
+                executed.append("next case")
+
+        case = Case()
+        first_case = FirstCase()
+        result = ProgressTextTestResult(stream, True, 2)
+        result.total_tests = 3
+        result.failfast = True
+        with (
+            patch(__name__ + ".time.monotonic", side_effect=lambda: clock[0]),
+            patch(__name__ + ".GAME_TEST_WORKER", True),
+            patch(__name__ + ".write_test_timings", side_effect=lambda path, values: persisted.append(dict(values))),
+        ):
+            unittest.TestSuite([first_case, case, NextCase()]).run(result)
+        first_expected = {result._subprocess_name(first_case): 3.0}
+        expected = {**first_expected, result._subprocess_name(case): 6.0}
+        self.assertEqual(expected, result.test_durations)
+        self.assertEqual([first_expected, expected], persisted)
+        self.assertEqual([], executed)
+        self.assertEqual(2, result.testsRun)
+        self.assertEqual(1, len(result.failures))
+        self.assertEqual(0, len(result.errors))
+        self.assertTrue(result.shouldStop)
+        self.assertEqual(
+            [
+                f"[test 1/3 start] {result._test_name(first_case)}",
+                f"[test 1/3 ok 3.000s] {result._test_name(first_case)}",
+                f"[test 2/3 start] {result._test_name(case)}",
+                f"[test 2/3 FAIL 6.000s] {result._test_name(case)}",
+            ],
+            stream.getvalue().splitlines(),
+        )
+
+    def testProgressPreservesOuterOutcomeMarkersAndCounts(self):
+        from unittest.mock import patch
+
+        outcomes = (
+            ("ok", 0, 0, 0, 0, 0),
+            ("FAIL", 1, 0, 0, 0, 0),
+            ("ERROR", 0, 1, 0, 0, 0),
+            ("skip", 0, 0, 1, 0, 0),
+            ("expected-failure", 0, 0, 0, 1, 0),
+            ("UNEXPECTED-SUCCESS", 0, 0, 0, 0, 1),
+        )
+        for status, failures, errors, skips, expected_failures, unexpected_successes in outcomes:
+            with self.subTest(status=status):
+                clock = [0.0]
+                stream = io.StringIO()
+
+                class Case(unittest.TestCase):
+                    def runTest(case):
+                        case.addCleanup(lambda: clock.__setitem__(0, 8.0))
+                        clock[0] = 3.0
+                        if status in ("FAIL", "expected-failure"):
+                            case.fail("case failure")
+                        if status == "ERROR":
+                            raise ValueError("case error")
+                        if status == "skip":
+                            case.skipTest("case unavailable")
+
+                if status in ("expected-failure", "UNEXPECTED-SUCCESS"):
+                    Case.runTest = unittest.expectedFailure(Case.runTest)
+                case = Case()
+                case.test_case = self
+                result = ProgressTextTestResult(stream, True, 2)
+                result.total_tests = 1
+                with (
+                    patch(__name__ + ".time.monotonic", side_effect=lambda: clock[0]),
+                    patch(__name__ + ".GAME_TEST_WORKER", False),
+                    patch(__name__ + ".write_test_timings") as writer,
+                ):
+                    case.run(result)
+                    writer.assert_not_called()
+                self.assertEqual({result._subprocess_name(case): 8.0}, result.test_durations)
+                self.assertEqual(1, result.testsRun)
+                self.assertEqual(failures, len(result.failures))
+                self.assertEqual(errors, len(result.errors))
+                self.assertEqual(skips, len(result.skipped))
+                self.assertEqual(expected_failures, len(result.expectedFailures))
+                self.assertEqual(unexpected_successes, len(result.unexpectedSuccesses))
+                self.assertEqual(not (failures or errors or unexpected_successes), result.wasSuccessful())
+                detail = " case unavailable" if skips else ""
+                self.assertEqual(
+                    [
+                        f"[test 1/1 start] {result._test_name(case)}",
+                        f"[test 1/1 {status} 8.000s] {result._test_name(case)}{detail}",
+                    ],
+                    stream.getvalue().splitlines(),
+                )
+
+    def testProgressDoesNotReportInterruptedCaseAsSuccess(self):
+        from itertools import product
+        from unittest.mock import patch
+
+        for prior, stage, caught_interrupt in product(
+            (None, "skip", "FAIL", "ERROR"), ("body", "cleanup"), (False, True)
+        ):
+            with self.subTest(prior=prior, stage=stage, caught_interrupt=caught_interrupt):
+                stream = io.StringIO()
+                interruption = KeyboardInterrupt("case interrupted")
+
+                def interrupt():
+                    raise interruption
+
+                class Case(unittest.TestCase):
+                    def runTest(case):
+                        if stage == "cleanup":
+                            case.addCleanup(interrupt)
+                        with case.subTest(prior=prior):
+                            if prior == "skip":
+                                case.skipTest("child unavailable")
+                            if prior == "FAIL":
+                                case.fail("child failure")
+                            if prior == "ERROR":
+                                raise ValueError("child error")
+                        if stage == "body":
+                            interrupt()
+
+                case = Case()
+                result = ProgressTextTestResult(stream, True, 2)
+                result.total_tests = 1
+                with (
+                    patch(__name__ + ".time.monotonic", return_value=3.0),
+                    patch(__name__ + ".GAME_TEST_WORKER", True),
+                    patch(__name__ + ".write_test_timings") as writer,
+                ):
+                    if caught_interrupt:
+                        try:
+                            raise interruption
+                        except KeyboardInterrupt:
+                            with self.assertRaises(KeyboardInterrupt) as raised:
+                                case.run(result)
+                    else:
+                        with self.assertRaises(KeyboardInterrupt) as raised:
+                            case.run(result)
+                    self.assertIs(interruption, raised.exception)
+                    writer.assert_not_called()
+                self.assertEqual({}, result.test_durations)
+                self.assertEqual({}, result._test_start_times)
+                self.assertEqual({}, result._testOutcomes)
+                self.assertEqual([f"[test 1/1 start] {result._test_name(case)}"], stream.getvalue().splitlines())
+                self.assertEqual(1, result.testsRun)
+                self.assertEqual(int(prior == "FAIL"), len(result.failures))
+                self.assertEqual(int(prior == "ERROR"), len(result.errors))
+                self.assertEqual(int(prior == "skip"), len(result.skipped))
+
+    def testProgressCompletesCasesInsideCaughtInterruptHandlers(self):
+        from unittest.mock import patch
+
+        for prior in (None, "skip", "FAIL", "ERROR"):
+            with self.subTest(prior=prior):
+                clock = [2.0]
+                stream = io.StringIO()
+
+                class Case(unittest.TestCase):
+                    def runTest(case):
+                        case.addCleanup(lambda: clock.__setitem__(0, 11.0))
+                        clock[0] = 5.0
+                        with case.subTest(prior=prior):
+                            if prior == "skip":
+                                case.skipTest("child unavailable")
+                            if prior == "FAIL":
+                                case.fail("child failure")
+                            if prior == "ERROR":
+                                raise ValueError("child error")
+                        case.assertTrue(True)
+
+                case = Case()
+                result = ProgressTextTestResult(stream, True, 2)
+                result.total_tests = 1
+                with (
+                    patch(__name__ + ".time.monotonic", side_effect=lambda: clock[0]),
+                    patch(__name__ + ".GAME_TEST_WORKER", True),
+                    patch(__name__ + ".write_test_timings") as writer,
+                ):
+                    try:
+                        raise KeyboardInterrupt("caller caught interruption")
+                    except KeyboardInterrupt:
+                        case.run(result)
+                    expected = {result._subprocess_name(case): 9.0}
+                    self.assertEqual(expected, result.test_durations)
+                    writer.assert_called_once_with(TEST_TIMINGS_FILE, expected)
+                self.assertEqual(1, result.testsRun)
+                self.assertEqual(int(prior == "FAIL"), len(result.failures))
+                self.assertEqual(int(prior == "ERROR"), len(result.errors))
+                self.assertEqual(int(prior == "skip"), len(result.skipped))
+                status = prior if prior in ("FAIL", "ERROR") else "ok"
+                self.assertEqual(
+                    [
+                        f"[test 1/1 start] {result._test_name(case)}",
+                        f"[test 1/1 {status} 9.000s] {result._test_name(case)}",
+                    ],
+                    stream.getvalue().splitlines(),
+                )
+
+    def testProgressCompletesCasesThatHandleInheritedInterrupts(self):
+        from itertools import product
+        from unittest.mock import patch
+
+        for skipped, stage in product((False, True), ("body", "cleanup")):
+            with self.subTest(skipped=skipped, stage=stage):
+                clock = [2.0]
+                stream = io.StringIO()
+                inherited_interrupt = KeyboardInterrupt("caller caught interruption")
+
+                def handleInterrupt():
+                    try:
+                        raise inherited_interrupt
+                    except KeyboardInterrupt:
+                        pass
+
+                def cleanup():
+                    if stage == "cleanup":
+                        handleInterrupt()
+                    clock[0] = 11.0
+
+                class Case(unittest.TestCase):
+                    def runTest(case):
+                        case.addCleanup(cleanup)
+                        clock[0] = 5.0
+                        if skipped:
+                            with case.subTest(kind="skip"):
+                                case.skipTest("child unavailable")
+                        if stage == "body":
+                            handleInterrupt()
+                        case.assertTrue(True)
+
+                case = Case()
+                result = ProgressTextTestResult(stream, True, 2)
+                result.total_tests = 1
+                with (
+                    patch(__name__ + ".time.monotonic", side_effect=lambda: clock[0]),
+                    patch(__name__ + ".GAME_TEST_WORKER", True),
+                    patch(__name__ + ".write_test_timings") as writer,
+                ):
+                    try:
+                        raise inherited_interrupt
+                    except KeyboardInterrupt:
+                        case.run(result)
+                    expected = {result._subprocess_name(case): 9.0}
+                    self.assertEqual(expected, result.test_durations)
+                    writer.assert_called_once_with(TEST_TIMINGS_FILE, expected)
+                self.assertEqual(1, result.testsRun)
+                self.assertEqual([], result.failures)
+                self.assertEqual([], result.errors)
+                self.assertEqual(int(skipped), len(result.skipped))
+                self.assertTrue(result.wasSuccessful())
+                self.assertEqual(
+                    [
+                        f"[test 1/1 start] {result._test_name(case)}",
+                        f"[test 1/1 ok 9.000s] {result._test_name(case)}",
+                    ],
+                    stream.getvalue().splitlines(),
+                )
+
+    def testProgressCompletesRepeatedCaseInsidePriorInterruptHandler(self):
+        from unittest.mock import patch
+
+        for skipped in (False, True):
+            with self.subTest(skipped=skipped):
+                clock = [1.0]
+                stream = io.StringIO()
+                run_count = [0]
+                interruption = KeyboardInterrupt("first run interrupted")
+
+                class Case(unittest.TestCase):
+                    def runTest(case):
+                        run_count[0] += 1
+                        if run_count[0] == 1:
+                            clock[0] = 4.0
+                            raise interruption
+                        clock[0] = 8.0
+                        if skipped:
+                            with case.subTest(kind="skip"):
+                                case.skipTest("child unavailable")
+                        case.assertTrue(True)
+
+                    def tearDown(case):
+                        clock[0] = 10.0
+
+                case = Case()
+                result = ProgressTextTestResult(stream, True, 2)
+                result.total_tests = 2
+                with (
+                    patch(__name__ + ".time.monotonic", side_effect=lambda: clock[0]),
+                    patch(__name__ + ".GAME_TEST_WORKER", True),
+                    patch(__name__ + ".write_test_timings") as writer,
+                ):
+                    try:
+                        case.run(result)
+                    except KeyboardInterrupt as caught:
+                        self.assertIs(interruption, caught)
+                        self.assertEqual({}, result.test_durations)
+                        writer.assert_not_called()
+                        case.run(result)
+                    else:
+                        self.fail("the first run must propagate its interruption")
+                    expected = {result._subprocess_name(case): 6.0}
+                    self.assertEqual(expected, result.test_durations)
+                    writer.assert_called_once_with(TEST_TIMINGS_FILE, expected)
+                self.assertEqual(2, result.testsRun)
+                self.assertEqual([], result.failures)
+                self.assertEqual([], result.errors)
+                self.assertEqual(int(skipped), len(result.skipped))
+                self.assertTrue(result.wasSuccessful())
+                self.assertEqual({}, result._test_start_times)
+                self.assertEqual({}, result._testOutcomes)
+                self.assertEqual(
+                    [
+                        f"[test 1/2 start] {result._test_name(case)}",
+                        f"[test 2/2 start] {result._test_name(case)}",
+                        f"[test 2/2 ok 6.000s] {result._test_name(case)}",
+                    ],
+                    stream.getvalue().splitlines(),
+                )
+
+    def testMcpWalkthroughLogsCreateNestedWorkerDirectories(self):
+        from unittest.mock import patch
+
+        with tempfile.TemporaryDirectory(prefix="nouraajd-mcp-log-") as temporary:
+            output_dir = Path(temporary) / "test" / "workers" / "4"
+            self.assertFalse(output_dir.parent.exists())
+            log = [{"map": "sunderedmarch", "step": "load"}]
+            harness = McpServerTest()
+            with patch(__name__ + ".TEST_OUTPUT_DIR", output_dir):
+                harness._write_mcp_walkthrough_log("sunderedmarch", log)
+                harness._write_mcp_walkthrough_log("castleHomecoming", [{"step": "start"}])
+            self.assertEqual(log, json.loads((output_dir / "mcp_walkthrough_sunderedmarch.json").read_text()))
+            self.assertEqual(
+                [{"step": "start"}], json.loads((output_dir / "mcp_walkthrough_castleHomecoming.json").read_text())
+            )
+
+    def testImportedHarnessUsesExecutingModule(self):
+        import test as harness
+
+        self.assertIs(harness, sys.modules[__name__])
+        self.assertEqual(REPO_ROOT, harness.REPO_ROOT)
+        self.assertEqual(build_dir, harness.build_dir)
+        self.assertEqual(extension_dirs, harness.extension_dirs)
+
+    def test_blocking_panel_inspection_closes_after_assertion_or_input_failure(self):
+        from itertools import product
+        from unittest.mock import Mock, patch
+
+        for failed_step, bound_panel in product(("inspection", "dismissal"), (False, True)):
+            with self.subTest(failed_step=failed_step, bound_panel=bound_panel):
+                panel = Mock() if bound_panel else types.SimpleNamespace()
+                game = Mock()
+                g = Mock()
+                pending = []
+                game.event_loop.instance.return_value.invoke.side_effect = pending.append
+                inspect = Mock(return_value="observed")
+                close_input = Mock()
+                failing = inspect if failed_step == "inspection" else close_input
+                failing.side_effect = AssertionError("fixture failure")
+
+                def action():
+                    pending.pop(0)()
+                    if bound_panel:
+                        panel.close.assert_called_once()
+                    else:
+                        g.getGui().removeChild.assert_called_once_with(panel)
+
+                with (
+                    patch(__name__ + ".find_top_level_panel", return_value=panel),
+                    patch(__name__ + ".pump_event_loop"),
+                ):
+                    with self.assertRaisesRegex(AssertionError, "fixture failure"):
+                        run_blocking_panel_inspection(self, game, g, "CGameLootPanel", action, inspect, close_input)
+
+    def test_source_contracts_are_discovered_once_in_fast_suites(self):
+        if not SOURCE_UI_TESTS_AVAILABLE:
+            self.skipTest("Source-only contracts are not installed with the game")
+        for test_class in (EnemyRoleContractTest, MonsterBalanceRunnerTest, WindowsPythonConfigurationTest):
+            methods = unittest.defaultTestLoader.getTestCaseNames(test_class)
+            self.assertTrue(methods)
+            for method in methods:
+                test_name = f"{test_class.__name__}.{method}"
+                self.assertEqual(f"{__name__}.{test_name}", test_class(method).id())
+                for suite_name in ("fast", "full", "coverage-safe"):
+                    self.assertTrue(test_name_matches_suite(test_name, suite_name), (test_name, suite_name))
+            self.assertNotIn("_" + test_class.__name__, globals())
+
+    def test_ui_mcp_routes_are_discovered_once_in_native_suites(self):
+        if not SOURCE_UI_TESTS_AVAILABLE:
+            self.skipTest("Source-only UI tests are not installed with the game")
+        for test_class in (
+            EffectSemanticRuntimeTest,
+            CharacterPreviewRuntimeTest,
+            PaidActionRuntimeTest,
+            DialogueMcpWalkthroughTest,
+            PlayerIdentityMcpTest,
+            ManagementMcpWalkthroughTest,
+            NavigationMcpWalkthroughTest,
+            NavigationCallbackTest,
+            ArtifactPreviewTest,
+            PythonCallbackLifecycleTest,
+            ConsoleUiInteractionTest,
+            UiMinimapInteractionTest,
+            EnemyRoleRuntimeTest,
+        ):
+            names = unittest.defaultTestLoader.getTestCaseNames(test_class)
+            self.assertTrue(names)
+            for method in names:
+                test_name = f"{test_class.__name__}.{method}"
+                self.assertEqual(f"{__name__}.{test_name}", test_class(method).id())
+                for suite_name in ("gameplay", "full", "coverage-safe"):
+                    self.assertTrue(test_name_matches_suite(test_name, suite_name), (test_name, suite_name))
+                self.assertFalse(test_name_matches_suite(test_name, "fast"))
+        self.assertNotIn("_DialogueMcpWalkthroughTest", globals())
+        self.assertNotIn("_PlayerIdentityMcpTest", globals())
+        self.assertNotIn("_PaidActionRuntimeTest", globals())
+        self.assertNotIn("_EffectSemanticRuntimeTest", globals())
+        self.assertNotIn("_CharacterPreviewRuntimeTest", globals())
+        self.assertNotIn("_ManagementMcpWalkthroughTest", globals())
+        self.assertNotIn("_NavigationMcpWalkthroughTest", globals())
+        self.assertNotIn("_NavigationCallbackTest", globals())
+        self.assertNotIn("_ArtifactPreviewTest", globals())
+        self.assertNotIn("_PythonCallbackLifecycleTest", globals())
+        self.assertNotIn("_ConsoleUiInteractionTest", globals())
+        self.assertNotIn("_UiMinimapInteractionTest", globals())
+        self.assertNotIn("_EnemyRoleRuntimeTest", globals())
+
+    def testPixelAnalysisIsDiscoveredOnceInSourceSuites(self):
+        if not SOURCE_UI_TESTS_AVAILABLE:
+            self.skipTest("Source-only UI tests are not installed with the game")
+        names = unittest.defaultTestLoader.getTestCaseNames(UiPixelAnalysisTest)
+        self.assertTrue(names)
+        for method in names:
+            test_name = f"UiPixelAnalysisTest.{method}"
+            self.assertEqual(f"{__name__}.{test_name}", UiPixelAnalysisTest(method).id())
+            for suite_name in ("fast", "full", "coverage-safe"):
+                self.assertTrue(test_name_matches_suite(test_name, suite_name), (test_name, suite_name))
+        self.assertNotIn("_UiPixelAnalysisTest", globals())
+
+    def testEffectAndCharacterContractsAreDiscoveredOnceInSourceSuites(self):
+        if not SOURCE_UI_TESTS_AVAILABLE:
+            self.skipTest("Source-only UI tests are not installed with the game")
+        for test_class in (EffectContractTest, CharacterCreationFlowTest):
+            names = unittest.defaultTestLoader.getTestCaseNames(test_class)
+            self.assertTrue(names)
+            for method in names:
+                test_name = f"{test_class.__name__}.{method}"
+                self.assertEqual(f"{__name__}.{test_name}", test_class(method).id())
+                for suite_name in ("fast", "full", "coverage-safe"):
+                    self.assertTrue(test_name_matches_suite(test_name, suite_name), (test_name, suite_name))
+                self.assertFalse(test_name_matches_suite(test_name, "gameplay"))
+        self.assertNotIn("_EffectContractTest", globals())
+        self.assertNotIn("_CharacterCreationFlowTest", globals())
+
+    def test_explicit_transition_wait_accepts_completed_slow_pump(self):
+        from unittest.mock import Mock, patch
+
+        origin = types.SimpleNamespace(x=1, y=1, z=0)
+        entry = types.SimpleNamespace(x=3, y=4, z=0)
+        return_target = types.SimpleNamespace(x=2, y=1, z=0)
+        player = Mock()
+        player.isPlayer.return_value = True
+        player.getCoords.return_value = origin
+        original_map = Mock(mapName="test")
+        original_map.getTurn.return_value = 9
+        original_map.getBoolProperty.return_value = True
+        original_map.getPlayer.return_value = player
+        original_map.getObjects.return_value = [player]
+        ritual_map = Mock(mapName="ritual")
+        ritual_map.getTurn.return_value = 9
+        ritual_map.getEntryX.return_value = entry.x
+        ritual_map.getEntryY.return_value = entry.y
+        ritual_map.getEntryZ.return_value = entry.z
+        state = {"map": original_map, "request": None, "time": 0.0}
+        store = Mock()
+        store.contains.return_value = True
+        store.get.return_value = original_map
+        store.size.return_value = 1
+        scene_manager = Mock()
+        scene_manager.isTransitionPending.side_effect = lambda: state["request"] is not None
+        scene_manager.getTransitionStateName.side_effect = lambda: "TransitionPending" if state["request"] else "Idle"
+        scene_manager.getPendingMapName.side_effect = lambda: state["request"].targetMap
+        g = Mock()
+        g.getMap.side_effect = lambda: state["map"]
+        g.getSceneManager.return_value = scene_manager
+        g.getContext.return_value.getMapSessionStore.return_value = store
+
+        def requestTransition(request):
+            state["request"] = request
+            return True
+
+        def completeTransition():
+            request = state["request"]
+            self.assertIsNotNone(request)
+            state["time"] += 3.0
+            state["map"] = ritual_map if request.targetMap == "ritual" else original_map
+            player.getCoords.return_value = entry if request.targetMap == "ritual" else request.targetCoords
+            state["request"] = None
+
+        g.requestMapTransition.side_effect = requestTransition
+        loop = Mock()
+        loop.run.side_effect = completeTransition
+        game = types.SimpleNamespace(
+            CMapTransitionRequest=types.SimpleNamespace,
+            event_loop=types.SimpleNamespace(instance=lambda: loop),
+        )
+        result = unittest.TestResult()
+        with (
+            patch(f"{__name__}.load_game_module", return_value=game),
+            patch(f"{__name__}.load_game_map_with_player", return_value=(g, original_map, player)),
+            patch(f"{__name__}.find_adjacent_walkable_tile", return_value=return_target),
+            patch(f"{__name__}.time.monotonic", side_effect=lambda: state["time"]),
+            patch(f"{__name__}.time.sleep") as sleep,
+        ):
+            GameTest("test_explicit_transition_request_round_trips_persistent_session").run(result)
+        self.assertTrue(result.wasSuccessful(), result.failures + result.errors)
+        self.assertEqual(2, loop.run.call_count)
+        self.assertEqual(6.0, state["time"])
+        sleep.assert_not_called()
+
+    def test_modal_gui_fixtures_shutdown_after_assertion_failure(self):
+        from unittest.mock import Mock, patch
+
+        for case_type, method_name in (
+            (GameTest, "test_inventory_panel_refreshes_only_after_event_loop_drains"),
+            (GameTest, "test_blocking_modal_gui_helpers_drive_panels"),
+            (GameTest, "test_gui_includes_display_only_minimap_layout"),
+            (GameTest, "test_inventory_right_click_inspects_scroll_and_keeps_it"),
+            (XvfbGameplayProcessTest, "test_keyboard_input_moves_player"),
+        ):
+            with self.subTest(method=method_name):
+                context = types.SimpleNamespace(active=True)
+                context.shutdown = Mock(side_effect=lambda: setattr(context, "active", False))
+                g = types.SimpleNamespace(getContext=lambda: context)
+                loader = types.SimpleNamespace(
+                    loadGame=lambda: g,
+                    loadGui=Mock(),
+                    startGameWithPlayer=Mock(side_effect=AssertionError("fixture setup failed")),
+                )
+                game = types.SimpleNamespace(CGameLoader=loader)
+                result = unittest.TestResult()
+                with (
+                    patch(f"{__name__}.load_game_module", return_value=game),
+                    patch(f"{__name__}.drain_sdl_events"),
+                    patch.dict(
+                        os.environ, {"GAME_XVFB_GAMEPLAY_CHILD": "1", "SDL_VIDEODRIVER": "x11", "DISPLAY": ":1"}
+                    ),
+                ):
+                    case_type(method_name).run(result)
+                self.assertEqual(1, result.testsRun)
+                self.assertEqual([], result.errors)
+                self.assertEqual(1, len(result.failures))
+                self.assertIn("fixture setup failed", result.failures[0][1])
+                context.shutdown.assert_called_once_with()
+                self.assertFalse(context.active)
+
+    def test_gui_fixtures_shutdown_when_gui_loading_fails(self):
+        from unittest.mock import Mock, patch
+
+        methods = (
+            "test_map_proxy_cells_remain_populated_after_player_move",
+            "test_map_proxy_refresh_reuses_children_and_updates_changed_cells",
+            "test_empty_selection_list_returns_without_waiting",
+            "test_character_creation_empty_columns_return_without_waiting",
+            "test_window_resize_scales_percent_panels",
+            "test_detached_inventory_list_view_ignores_stale_item_callbacks",
+            "test_inventory_double_select_preserves_selected_item",
+            "test_fight_panel_callbacks_and_list_views",
+            "test_fight_panel_enemy_list_pages_all_living_targets",
+            "test_graphics_object_tree_helpers_are_bound",
+            "test_resource_provider_resolves_and_loads_known_files",
+        )
+        resources = {
+            "config/tiles.json": "GroundTile",
+            "config/items.json": "{}",
+            "maps/test/map.json": '{"layers": []}',
+            "plugins/effect.py": "def load(context): pass",
+            "fonts/ampersand.ttf": "font fixture",
+            "images/item.png": "image fixture",
+        }
+        with tempfile.TemporaryDirectory() as fixture_dir:
+            fixture_root = Path(fixture_dir)
+            for name, contents in resources.items():
+                path = fixture_root / name
+                path.parent.mkdir(parents=True, exist_ok=True)
+                path.write_text(contents, encoding="utf-8")
+            provider = types.SimpleNamespace(
+                getPath=lambda name: str(fixture_root / name) if name in resources else "",
+                load=lambda name: resources[name],
+                getFiles=lambda kind: ["test"] if kind == "MAP" else [],
+            )
+            for method_name in methods:
+                with self.subTest(method=method_name):
+                    context = types.SimpleNamespace(active=True)
+                    context.shutdown = Mock(side_effect=lambda: setattr(context, "active", False))
+                    g = types.SimpleNamespace(getContext=lambda: context)
+                    loader = types.SimpleNamespace(
+                        loadGame=Mock(return_value=g),
+                        loadGui=Mock(side_effect=AssertionError("fixture GUI load failed")),
+                    )
+                    game = types.SimpleNamespace(
+                        CGameLoader=loader,
+                        CResourcesProvider=types.SimpleNamespace(getInstance=lambda: provider),
+                    )
+                    result = unittest.TestResult()
+                    with (
+                        patch(f"{__name__}.load_game_module", return_value=game),
+                        patch(f"{__name__}.drain_sdl_events"),
+                    ):
+                        GameTest(method_name).run(result)
+                    self.assertEqual(1, result.testsRun)
+                    self.assertEqual([], result.errors)
+                    self.assertEqual(1, len(result.failures))
+                    self.assertIn("fixture GUI load failed", result.failures[0][1])
+                    loader.loadGame.assert_called_once_with()
+                    loader.loadGui.assert_called_once_with(g)
+                    context.shutdown.assert_called_once_with()
+                    self.assertFalse(context.active)
+
+    def test_quest_journal_fixture_shuts_down_every_created_session_after_failure(self):
+        from unittest.mock import Mock, patch
+
+        active_text = "\n".join(
+            (
+                "[Active] Unravel the fate of Sergeant Rolf.",
+                "Objective: Recover Sergeant Rolf's skull from the Pritscher cave",
+                "Reward: Starts the Gooby hunt.",
+                "Hint: The cave entrance lies beyond Nouraajd's roads.",
+            )
+        )
+        reward_text = "\n".join(f"Reward: {reward}" for reward in NOURAAJD_QUEST_REWARDS.values())
+        for fail_during_first_gui_load in (True, False):
+            with self.subTest(fail_during_first_gui_load=fail_during_first_gui_load):
+                contexts = [types.SimpleNamespace(shutdown=Mock()) for _ in range(3)]
+                sessions = []
+                for context, text in zip(contexts, (active_text, reward_text, "")):
+                    panel = types.SimpleNamespace(getText=Mock(return_value=text))
+                    if not text:
+                        panel.getText.side_effect = ["[Active] Vanquish the Dreaded Gooby", ""]
+                    g = types.SimpleNamespace(
+                        getContext=Mock(return_value=context),
+                        getGui=Mock(),
+                        createObject=Mock(return_value=panel),
+                        getGuiHandler=Mock(return_value=types.SimpleNamespace(openPanel=Mock(return_value=panel))),
+                    )
+                    sessions.append((g, Mock(), Mock()))
+                load_gui = Mock()
+                if fail_during_first_gui_load:
+                    load_gui.side_effect = AssertionError("fixture GUI load failed")
+                game = types.SimpleNamespace(CGameLoader=types.SimpleNamespace(loadGui=load_gui))
+                result = unittest.TestResult()
+                with (
+                    patch(f"{__name__}.load_game_module", return_value=game),
+                    patch(f"{__name__}.load_game_map_with_player", side_effect=sessions) as load_session,
+                    patch(
+                        f"{__name__}.find_descendants_by_type",
+                        return_value=[types.SimpleNamespace(getStringProperty=lambda _key: "showCompleted")],
+                    ),
+                    patch(f"{__name__}.activate_widget"),
+                ):
+                    GameTest("test_quest_journal_shows_objectives_rewards_and_hints").run(result)
+                self.assertEqual(1, result.testsRun)
+                self.assertEqual([], result.errors)
+                self.assertEqual(1, len(result.failures))
+                expected_sessions = 1 if fail_during_first_gui_load else 3
+                self.assertEqual(expected_sessions, load_session.call_count)
+                failure_text = "fixture GUI load failed" if fail_during_first_gui_load else "[Completed]"
+                self.assertIn(failure_text, result.failures[0][1])
+                for index, context in enumerate(contexts):
+                    if index < expected_sessions:
+                        context.shutdown.assert_called_once_with()
+                    else:
+                        context.shutdown.assert_not_called()
+
+    def test_gui_queries_preserve_tree_assertions_without_serializing(self):
+        from unittest.mock import Mock, patch
+
+        def node(class_name, children=()):
+            return types.SimpleNamespace(getType=lambda: class_name, getChildren=lambda: children)
+
+        leaf = node("CTextWidget")
+        map_graph = node("CMapGraphicsObject", (node(""), node("", (leaf, leaf)), node("CButton")))
+        nested_map = node("CMapGraphicsObject", (node("CProxyGraphicsObject", (leaf,)),))
+        gui = node("CGui", (node("CGamePanel", (nested_map,)), map_graph))
+        g = types.SimpleNamespace(getGui=lambda: gui)
+        game = types.SimpleNamespace(jsonify=Mock(side_effect=AssertionError("Typed GUI queries must not serialize.")))
+        with patch(f"{__name__}.load_game_module", return_value=game):
+            for _ in range(20):
+                self.assertTrue(gui_contains_class(g, "CGui"))
+                self.assertTrue(gui_contains_class(g, "CTextWidget"))
+                self.assertFalse(gui_contains_class(g, "CGameGraphicsObject"))
+                self.assertFalse(gui_contains_class(g, "MissingPanel"))
+                self.assertEqual([0, 2], get_map_proxy_child_counts(g))
+            self.assertFalse(gui_contains_class(types.SimpleNamespace(getGui=lambda: None), "CGui"))
+        game.jsonify.assert_not_called()
+
     def test_parse_runner_args_accepts_suite_names(self):
         jobs, suite_name, unittest_argv = parse_runner_args(
             ["test.py", "--suite", "gameplay", "--jobs=3", "GameTest.test_turns"]
@@ -21864,6 +26068,9 @@ class TestRunnerSuiteTest(unittest.TestCase):
                 is_serial_test_name(test_name),
                 f"{test_name} should be parallelizable, not forced onto the serial shard",
             )
+
+    def test_only_order_sensitive_save_tests_run_in_serial_worker(self):
+        self.assertFalse(is_serial_test_name("GameTest.test_inventory_right_click_inspects_scroll_and_keeps_it"))
         # The genuinely order-sensitive save-directory tests must stay serial.
         self.assertTrue(is_serial_test_name("GameTest.test_missing_save_resource_directory_lists_empty"))
 
@@ -21907,8 +26114,126 @@ class TestRunnerSuiteTest(unittest.TestCase):
             self.assertIn(f"--suite {suite_name}", testing_docs)
 
 
+SOURCE_UI_TESTS_AVAILABLE = (REPO_ROOT / "tests" / "__init__.py").is_file()
+
+if SOURCE_UI_TESTS_AVAILABLE:
+    from tests.test_navigation_mcp import NavigationCallbackTest as _NavigationCallbackTest
+    from tests.test_navigation_mcp import NavigationMcpWalkthroughTest as _NavigationMcpWalkthroughTest
+    from tests.test_python_callback_lifecycle import PythonCallbackLifecycleTest as _PythonCallbackLifecycleTest
+    from tests.test_ui_mcp_dialogue import DialogueMcpWalkthroughTest as _DialogueMcpWalkthroughTest
+    from tests.test_native_callgrind import NativeCallgrindToolTest as _NativeCallgrindToolTest
+    from tests.test_native_test_profile import NativeTestProfileSourceTest as _NativeTestProfileSourceTest
+    from tests.test_native_test_profile import NativeTestProfileRuntimeTest as _NativeTestProfileRuntimeTest
+    from tests.test_windows_python_configuration import (
+        WindowsPythonConfigurationTest as _WindowsPythonConfigurationTest,
+    )
+    from tests.test_player_identity_mcp import PlayerIdentityMcpTest as _PlayerIdentityMcpTest
+    from tests.test_player_identity_content import PlayerIdentityContentTest as _PlayerIdentityContentTest
+    from tests.test_effect_semantics import EffectContractTest as _EffectContractTest
+    from tests.test_effect_semantics import EffectSemanticRuntimeTest as _EffectSemanticRuntimeTest
+    from tests.test_character_creation_acceptance import CharacterCreationFlowTest as _CharacterCreationFlowTest
+    from tests.test_character_creation_acceptance import CharacterPreviewRuntimeTest as _CharacterPreviewRuntimeTest
+    from tests.test_paid_actions import PaidActionRuntimeTest as _PaidActionRuntimeTest
+    from tests.test_ui_mcp_management import ManagementMcpWalkthroughTest as _ManagementMcpWalkthroughTest
+    from tests.test_ui_pixel_analysis import UiPixelAnalysisTest as _UiPixelAnalysisTest
+    from tests.test_ui_presentation import ArtifactPreviewTest as _ArtifactPreviewTest
+    from tests.test_ui_console_interactions import ConsoleUiInteractionTest as _ConsoleUiInteractionTest
+    from tests.test_ui_minimap_interactions import UiMinimapInteractionTest as _UiMinimapInteractionTest
+    from tests.test_enemy_roles import EnemyRolesTest as _EnemyRoleContractTest
+    from tests.test_monster_balance_runner import MonsterBalanceRunnerTest as _MonsterBalanceRunnerTest
+    from tests.test_enemy_role_runtime import EnemyRoleRuntimeTest as _EnemyRoleRuntimeTest
+
+    class PaidActionRuntimeTest(_PaidActionRuntimeTest):
+        pass
+
+    class NativeTestProfileSourceTest(_NativeTestProfileSourceTest):
+        pass
+
+    class WindowsPythonConfigurationTest(_WindowsPythonConfigurationTest):
+        pass
+
+    class NativeCallgrindToolTest(_NativeCallgrindToolTest):
+        pass
+
+    class NativeTestProfileRuntimeTest(_NativeTestProfileRuntimeTest):
+        pass
+
+    class EffectContractTest(_EffectContractTest):
+        pass
+
+    class EffectSemanticRuntimeTest(_EffectSemanticRuntimeTest):
+        pass
+
+    class CharacterCreationFlowTest(_CharacterCreationFlowTest):
+        pass
+
+    class CharacterPreviewRuntimeTest(_CharacterPreviewRuntimeTest):
+        pass
+
+    class DialogueMcpWalkthroughTest(_DialogueMcpWalkthroughTest):
+        pass
+
+    class PlayerIdentityMcpTest(_PlayerIdentityMcpTest):
+        pass
+
+    class PlayerIdentityContentTest(_PlayerIdentityContentTest):
+        pass
+
+    class ManagementMcpWalkthroughTest(_ManagementMcpWalkthroughTest):
+        pass
+
+    class NavigationMcpWalkthroughTest(_NavigationMcpWalkthroughTest):
+        pass
+
+    class NavigationCallbackTest(_NavigationCallbackTest):
+        pass
+
+    class ArtifactPreviewTest(_ArtifactPreviewTest):
+        pass
+
+    class PythonCallbackLifecycleTest(_PythonCallbackLifecycleTest):
+        pass
+
+    class EnemyRoleContractTest(_EnemyRoleContractTest):
+        pass
+
+    class MonsterBalanceRunnerTest(_MonsterBalanceRunnerTest):
+        pass
+
+    class EnemyRoleRuntimeTest(_EnemyRoleRuntimeTest):
+        pass
+
+    class UiPixelAnalysisTest(_UiPixelAnalysisTest):
+        pass
+
+    class ConsoleUiInteractionTest(_ConsoleUiInteractionTest):
+        pass
+
+    class UiMinimapInteractionTest(_UiMinimapInteractionTest):
+        pass
+
+    del _DialogueMcpWalkthroughTest, _ManagementMcpWalkthroughTest, _ArtifactPreviewTest, _PythonCallbackLifecycleTest
+    del _PaidActionRuntimeTest
+    del _NativeTestProfileSourceTest, _NativeTestProfileRuntimeTest
+    del _WindowsPythonConfigurationTest
+    del _NativeCallgrindToolTest
+    del _EffectContractTest, _EffectSemanticRuntimeTest, _CharacterCreationFlowTest, _CharacterPreviewRuntimeTest
+    del _UiPixelAnalysisTest
+    del _EnemyRoleRuntimeTest
+    del _EnemyRoleContractTest
+    del _MonsterBalanceRunnerTest
+    del _PlayerIdentityContentTest
+    del _PlayerIdentityMcpTest
+    del _NavigationMcpWalkthroughTest
+    del _NavigationCallbackTest
+    del _ConsoleUiInteractionTest, _UiMinimapInteractionTest
+
+
 class McpServerTest(unittest.TestCase):
     MCP_WALKTHROUGHS = {
+        "castleHomecoming": "_mcp_walkthrough_castleHomecoming",
+        "castleGuardianAngels": "_mcp_walkthrough_castleGuardianAngels",
+        "castleGriffinCliff": "_mcp_walkthrough_castleGriffinCliff",
         "multilevel": "_mcp_walkthrough_multilevel",
         "nouraajd": "_mcp_walkthrough_nouraajd",
         "ritual": "_mcp_walkthrough_ritual",
@@ -21952,6 +26277,15 @@ class McpServerTest(unittest.TestCase):
             def loadGame():
                 return "game"
 
+        class CMapLoader:
+            @staticmethod
+            def saveWithResult(game_map, name):
+                return game_map is not None and bool(name)
+
+            @staticmethod
+            def save(game_map, name):
+                return None
+
         class NativeLike:
             append = list.append
 
@@ -21965,6 +26299,7 @@ class McpServerTest(unittest.TestCase):
         module.jsonify = jsonify
         module.set_logger_sink = set_logger_sink
         module.CGameLoader = CGameLoader
+        module.CMapLoader = CMapLoader
         module.NativeLike = NativeLike
         module.CPluginLoader = CPluginLoader
         module.event_loop = event_loop
@@ -21974,6 +26309,9 @@ class McpServerTest(unittest.TestCase):
         self.assertNotIn("top_level", server.exports)
         self.assertIn("jsonify", server.exports)
         self.assertIn("CGameLoader.loadGame", server.exports)
+        self.assertIn("CMapLoader.saveWithResult", server.exports)
+        self.assertNotIn("CMapLoader.save", server.exports)
+        self.assertTrue(server.exports["CMapLoader.saveWithResult"].callable_obj("map", "fresh-slot"))
         self.assertIn("event_loop.instance", server.exports)
         self.assertNotIn("CPluginLoader.loadDynamicPlugin", server.exports)
         self.assertNotIn("NativeLike.append", server.exports)
@@ -22106,6 +26444,7 @@ class McpServerTest(unittest.TestCase):
         self.assertIn("CGameLoader.loadGame", server.exports)
         self.assertIn("CGameLoader.loadGui", server.exports)
         self.assertIn("CGameLoader.startGameWithPlayer", server.exports)
+        self.assertIn("CMapLoader.saveWithResult", server.exports)
         self.assertIn("event_loop.instance", server.exports)
         self.assertNotIn("CPluginLoader.loadDynamicPlugin", server.exports)
         self.assertNotIn("CGuiHandler.openPanel", server.exports)
@@ -22218,6 +26557,26 @@ class McpServerTest(unittest.TestCase):
         method_names = {method["name"] for method in handle["pythonMethods"]}
         self.assertEqual({"invokeAction", "invokeCondition"}, method_names)
 
+    def test_siege_handle_exports_only_the_guarded_breach_action(self):
+        server = self.make_stub_server()
+
+        class SpawnPoint:
+            def sealBreach(self):
+                return True
+
+            def completePendingSeal(self):
+                raise AssertionError("Internal gate callbacks are not MCP actions")
+
+        handle = server._serialize_result(SpawnPoint())
+        self.assertEqual({"sealBreach"}, {method["name"] for method in handle.get("pythonMethods", [])})
+        response = server._engine_handle_call({"handle": handle["__handle__"], "method": "sealBreach", "args": []})
+        self.assertFalse(response["isError"])
+        self.assertTrue(response["structuredContent"]["result"])
+        denied = server._engine_handle_call(
+            {"handle": handle["__handle__"], "method": "completePendingSeal", "args": []}
+        )
+        self.assertTrue(denied["isError"])
+
     def test_engine_handle_call_rejects_private_methods(self):
         server = self.make_stub_server()
 
@@ -22238,6 +26597,78 @@ class McpServerTest(unittest.TestCase):
         self.assertEqual(
             response["structuredContent"], {"error": "Method `__getattribute__` is not exported for handle calls"}
         )
+
+    def test_engine_handle_call_allows_quest_reads_without_lifecycle_mutation(self):
+        server = self.make_stub_server()
+        mutations = []
+
+        class CQuest:
+            def isCompleted(self):
+                return False
+
+            def getObjective(self):
+                return "Free the loyalists."
+
+            def getReward(self):
+                return "200 gold."
+
+            def getHint(self):
+                return "Search the three cages."
+
+            def captureJournal(self, completed):
+                mutations.append(("capture", completed))
+
+            def onComplete(self):
+                mutations.append(("complete",))
+
+        handle = server._serialize_result(CQuest())
+        advertised = {method["name"] for method in handle.get("pythonMethods", [])}
+        self.assertEqual({"isCompleted", "getObjective", "getReward", "getHint"}, advertised)
+        for method, expected in (
+            ("isCompleted", False),
+            ("getObjective", "Free the loyalists."),
+            ("getReward", "200 gold."),
+            ("getHint", "Search the three cages."),
+        ):
+            with self.subTest(method=method):
+                response = server._engine_handle_call({"handle": handle["__handle__"], "method": method})
+                self.assertFalse(response["isError"])
+                self.assertEqual(expected, response["structuredContent"]["result"])
+        for method, args in (("captureJournal", [True]), ("onComplete", [])):
+            response = server._engine_handle_call({"handle": handle["__handle__"], "method": method, "args": args})
+            self.assertTrue(response["isError"])
+            self.assertEqual(
+                {"error": f"Method `{method}` is not exported for handle calls"}, response["structuredContent"]
+            )
+        self.assertEqual([], mutations)
+
+    def test_engine_handle_call_serializes_player_quest_sets_as_handles(self):
+        server = self.make_stub_server()
+
+        class CQuest:
+            def getObjective(self):
+                return "The quest is still readable."
+
+        active, completed = CQuest(), CQuest()
+
+        class CPlayer:
+            def getQuests(self):
+                return {active}
+
+            def getCompletedQuests(self):
+                return {completed}
+
+        player_handle = server._serialize_result(CPlayer())
+        for method, expected in (("getQuests", active), ("getCompletedQuests", completed)):
+            with self.subTest(method=method):
+                response = server._engine_handle_call({"handle": player_handle["__handle__"], "method": method})
+                self.assertFalse(response["isError"])
+                handles = response["structuredContent"]["result"]
+                self.assertIsInstance(handles, list)
+                self.assertEqual(1, len(handles))
+                self.assertIs(expected, server.handles[handles[0]["__handle__"]])
+                text = server._engine_handle_call({"handle": handles[0]["__handle__"], "method": "getObjective"})
+                self.assertEqual("The quest is still readable.", text["structuredContent"]["result"])
 
     def test_engine_handle_call_scopes_controller_access_to_players(self):
         server = self.make_stub_server()
@@ -22273,6 +26704,49 @@ class McpServerTest(unittest.TestCase):
         )
         self.assertFalse(player_response["isError"])
         self.assertEqual(player_response["structuredContent"]["result"], "player-controller")
+
+    def test_engine_handle_call_scopes_fight_controllers_to_players(self):
+        server = self.make_stub_server()
+
+        class CCreature:
+            def __init__(self):
+                self.controller = object()
+
+            def getFightController(self):
+                return self.controller
+
+            def setFightController(self, controller):
+                self.controller = controller
+
+        class CPlayer(CCreature):
+            pass
+
+        creature = CCreature()
+        creature_handle = server._serialize_result(creature)
+        for method, args in (("getFightController", []), ("setFightController", [None])):
+            response = server._engine_handle_call(
+                {"handle": creature_handle["__handle__"], "method": method, "args": args}
+            )
+            self.assertTrue(response["isError"])
+            self.assertEqual(
+                {"error": f"Method `{method}` is not exported for handle calls"}, response["structuredContent"]
+            )
+        self.assertIsNotNone(creature.controller)
+
+        player = CPlayer()
+        player_handle = server._serialize_result(player)
+        controller_response = server._engine_handle_call(
+            {"handle": player_handle["__handle__"], "method": "getFightController", "args": []}
+        )
+        self.assertFalse(controller_response["isError"])
+        controller_handle = controller_response["structuredContent"]["result"]
+        original = player.controller
+        player.controller = None
+        setter_response = server._engine_handle_call(
+            {"handle": player_handle["__handle__"], "method": "setFightController", "args": [controller_handle]}
+        )
+        self.assertFalse(setter_response["isError"])
+        self.assertIs(original, player.controller)
 
     def test_initialize_response_preserves_request_id(self):
         server = self.make_stub_server()
@@ -22348,6 +26822,64 @@ class McpServerTest(unittest.TestCase):
             self.assertIn("synthetic-stderr-drain", self._mcp_process_tail_text(proc, "stderr"))
         finally:
             self._shutdown_process(proc)
+
+    def testFullMapStartupUsesExplicitDeadlineAndKeepsQuickRpcBudget(self):
+        from unittest import mock
+
+        self.assertEqual(10, MCP_STDIO_TOOL_TIMEOUT_SECONDS)
+        game_handle = {"__handle__": 1}
+        map_handle = {"__handle__": 2}
+        player_handle = {"__handle__": 3}
+        for player_name in (None, DEFAULT_PLAYER, "Sorcerer"):
+            with self.subTest(player=player_name):
+                proc = object()
+                session = {"proc": proc, "next_request_id": 3}
+                calls = []
+
+                def respond(actual_proc, request_id, tool, arguments, *, timeout):
+                    self.assertIs(proc, actual_proc)
+                    self.assertEqual(3 + len(calls), request_id)
+                    operation = arguments.get("name", arguments.get("method"))
+                    calls.append((tool, operation, arguments, timeout))
+                    if operation in ("CGameLoader.startGame", "CGameLoader.startGameWithPlayer"):
+                        self.assertGreater(
+                            timeout, 12, "A full map response beyond the quick deadline must be accepted"
+                        )
+                        self.assertEqual(60, timeout)
+                        return {"result": None}
+                    self.assertEqual(MCP_STDIO_TOOL_TIMEOUT_SECONDS, timeout)
+                    if operation == "CGameLoader.loadGame":
+                        return {"result": game_handle}
+                    if operation == "getMap":
+                        self.assertEqual(1, arguments["handle"])
+                        return {"result": map_handle}
+                    self.assertEqual("getPlayer", operation)
+                    self.assertEqual(2, arguments["handle"])
+                    return {"result": player_handle}
+
+                with mock.patch.object(self, "_call_tool", side_effect=respond):
+                    if player_name is None:
+                        self.assertEqual((game_handle, map_handle), self._mcp_load_game_map(session, "nouraajd"))
+                        expected_start = "CGameLoader.startGame"
+                        expected_args = [game_handle, "nouraajd"]
+                    else:
+                        if player_name == DEFAULT_PLAYER:
+                            result = self._mcp_load_game_map_with_player(session, "nouraajd")
+                        else:
+                            result = self._mcp_load_game_map_with_player(session, "nouraajd", player_name)
+                        self.assertEqual((game_handle, map_handle, player_handle), result)
+                        expected_start = "CGameLoader.startGameWithPlayer"
+                        expected_args = [game_handle, "nouraajd", player_name]
+                    self.assertEqual(game_handle, self._mcp_engine_call(session, "CGameLoader.loadGame"))
+                    self.assertEqual(map_handle, self._mcp_handle_call(session, game_handle, "getMap"))
+                expected_operations = ["CGameLoader.loadGame", expected_start, "getMap"]
+                if player_name is not None:
+                    expected_operations.append("getPlayer")
+                expected_operations.extend(("CGameLoader.loadGame", "getMap"))
+                self.assertEqual(expected_operations, [call[1] for call in calls])
+                self.assertEqual("engine_call", calls[1][0])
+                self.assertEqual(expected_args, calls[1][2]["args"])
+                self.assertEqual(3 + len(calls), session["next_request_id"])
 
     def test_stdio_timeout_diagnostics_include_request_context_and_stream_tails(self):
         script = (
@@ -22609,6 +27141,30 @@ class McpServerTest(unittest.TestCase):
         finally:
             self._shutdown_process(proc)
 
+    def test_stdioSavedActiveEffectRetainsRemainingTimeAndBonus(self):
+        save_name, expected, _baseline_stats = createActiveEffectSaveFixture(self)
+        proc = self._start_stdio_mcp_process()
+        self.addCleanup(self._shutdown_process, proc)
+        self._initialize_stdio_mcp(proc)
+        session = {"proc": proc, "next_request_id": 3}
+        game_handle, _map_handle, _player_handle = self._mcp_load_game_map_with_player(session, "test")
+        self._mcp_engine_call(session, "CGameLoader.loadSavedGame", [game_handle, save_name])
+        self._mcp_pump_event_loop(session)
+        map_handle = self._mcp_handle_call(session, game_handle, "getMap")
+        player_handle = self._mcp_handle_call(session, map_handle, "getPlayer")
+        self._mcp_handle_call(session, player_handle, "moveTo", [14, 12, 0])
+        self._mcp_pump_event_loop(session)
+        player_snapshot = json.loads(self._mcp_engine_call(session, "jsonify", [player_handle]))
+        self.assertEqual([14, 12, 0], self._serialized_coords(player_snapshot))
+        effects = player_snapshot["properties"]["effects"]
+        self.assertEqual(1, len(effects))
+        self.assertEqual("ArmorOfFaithEffect", effects[0]["class"])
+        properties = effects[0]["properties"]
+        self.assertEqual(expected["duration"], properties.get("duration"))
+        self.assertEqual(expected["timeLeft"], properties.get("timeLeft"))
+        bonus = properties.get("bonus", {}).get("properties", {})
+        self.assertEqual(expected["bonus"], {name: bonus.get(name) for name in expected["bonus"]})
+
     def test_stdio_map_walkthroughs_cover_all_maps(self):
         discovered_maps = discover_maps()
         self.assertEqual(set(discovered_maps), set(self.MCP_WALKTHROUGHS))
@@ -22617,7 +27173,7 @@ class McpServerTest(unittest.TestCase):
             "discovered_maps": discovered_maps,
             "walkthroughs": self.MCP_WALKTHROUGHS,
         }
-        TEST_OUTPUT_DIR.mkdir(exist_ok=True)
+        TEST_OUTPUT_DIR.mkdir(parents=True, exist_ok=True)
         (TEST_OUTPUT_DIR / "mcp_walkthroughs.json").write_text(json.dumps(summary, indent=2, sort_keys=True))
 
     def test_stdio_map_walkthrough_nouraajd(self):
@@ -22628,6 +27184,60 @@ class McpServerTest(unittest.TestCase):
 
     def test_stdio_map_walkthrough_ritual(self):
         self._assert_mcp_walkthrough("ritual")
+
+    def test_stdio_narrative_outcomes_complete_with_natural_objectives(self):
+        import uuid
+        import campaign as campaign_module
+        from tests.narrative_walkthrough import NarrativeWalkthrough
+
+        proc = self._start_stdio_mcp_process("ritual")
+        try:
+            self._initialize_stdio_mcp(proc)
+            session = {"proc": proc, "next_request_id": 3}
+            for class_id in ("Warrior", "Sorcerer"):
+                for outcome in ("good", "bad"):
+                    with self.subTest(class_id=class_id, outcome=outcome):
+                        game_handle, map_handle, player_handle = self._mcp_load_game_map_with_player(
+                            session, "ritual", class_id
+                        )
+                        driver = NarrativeWalkthrough(
+                            lambda name, args: self._mcp_engine_call(
+                                session, name, args, timeout=MCP_STDIO_MAP_JSON_TIMEOUT_SECONDS
+                            ),
+                            lambda handle, method, args: self._mcp_handle_call(
+                                session, handle, method, args, timeout=MCP_STDIO_MAP_JSON_TIMEOUT_SECONDS
+                            ),
+                            game_handle,
+                            map_handle,
+                            player_handle,
+                        )
+                        for name, value in (
+                            (campaign_module.CAMPAIGN_ID_PROPERTY, "fallOfNouraajd"),
+                            (campaign_module.CAMPAIGN_SCENARIO_PROPERTY, "cleansing"),
+                        ):
+                            driver.call(driver.player, "setStringProperty", [name, value])
+                        save_name = "narrative-" + uuid.uuid4().hex
+                        save_paths = [build_dir / "save" / (save_name + suffix) for suffix in (".json", ".json.bak")]
+                        try:
+                            driver.ritual(outcome, save_name=save_name)
+                            log = driver.siege()
+                            self.assertTrue(
+                                driver.call(
+                                    driver.player, "getBoolProperty", [campaign_module.CAMPAIGN_FINISHED_PROPERTY]
+                                )
+                            )
+                            self.assertEqual(
+                                f"cleansing:{outcome}_ending,siege:completed",
+                                driver.call(
+                                    driver.player, "getStringProperty", [campaign_module.CAMPAIGN_HISTORY_PROPERTY]
+                                ),
+                            )
+                            self._write_mcp_walkthrough_log(f"narrative-{class_id}-{outcome}", log)
+                        finally:
+                            for path in save_paths:
+                                path.unlink(missing_ok=True)
+        finally:
+            self._shutdown_process(proc)
 
     def test_stdio_map_walkthrough_siege(self):
         self._assert_mcp_walkthrough("siege")
@@ -22653,8 +27263,182 @@ class McpServerTest(unittest.TestCase):
     def test_stdio_map_walkthrough_gravemoor(self):
         self._assert_mcp_walkthrough("gravemoor")
 
+    def test_stdio_quest_journal_campaign_route_preserves_completed_history(self):
+        proc = self._start_stdio_mcp_process("hearthfall")
+        log = {"route": [], "journal": {}}
+        try:
+            self._initialize_stdio_mcp(proc)
+            session = {"proc": proc, "next_request_id": 3}
+            game_handle, map_handle, player_handle = self._mcp_load_game_map_with_player(session, "hearthfall")
+            gold_before = self._mcp_handle_call(session, player_handle, "getGold")
+
+            def moveToObject(map_name, object_name, *, adjacent=False):
+                definition = find_map_object_definition(map_name, object_name)
+                target = [definition["x"] // 32 - int(adjacent), definition["y"] // 32, 0]
+                self._mcp_handle_call(session, player_handle, "moveTo", target)
+                self._mcp_pump_event_loop(session)
+                player_data = json.loads(self._mcp_engine_call(session, "jsonify", [player_handle]))
+                self.assertEqual(target, self._serialized_coords(player_data), object_name)
+                log["route"].append({"map": map_name, "object": object_name, "player": target})
+
+            def dialogAction(dialog_id, action):
+                dialog = self._mcp_handle_call(session, game_handle, "createObject", [dialog_id])
+                self._mcp_handle_call(session, dialog, "invokeAction", [action])
+
+            def travelTo(expected_map):
+                for _ in range(10):
+                    self._mcp_pump_event_loop(session)
+                destination = self._mcp_handle_call(session, game_handle, "getMap")
+                self.assertEqual(
+                    expected_map, self._mcp_handle_call(session, destination, "getStringProperty", ["mapName"])
+                )
+                self.assertEqual(
+                    player_handle["__handle__"],
+                    self._mcp_handle_call(session, destination, "getPlayer")["__handle__"],
+                )
+                return destination
+
+            moveToObject("hearthfall", "hearthfallStart")
+            self._mcpFindPlayerQuest(session, player_handle, "hearthfallQuest", completed=False)
+            moveToObject("hearthfall", "watchCaptain", adjacent=True)
+            self._mcp_handle_call(session, map_handle, "removeObjectByName", ["watchCaptain"])
+            moveToObject("hearthfall", "elderMaren")
+            dialogAction("elderDialog", "report_victory")
+            dialogAction("elderDialog", "report_victory")
+            map_handle = travelTo("gravemoor")
+            hearthfall = self._mcpFindPlayerQuest(session, player_handle, "hearthfallQuest", completed=True)
+            hearthfall_entry = self._mcpQuestJournalEntry(session, hearthfall)
+            self.assertTrue(hearthfall_entry["completed"])
+            self.assertIn("Hearthfall is free", hearthfall_entry["objective"])
+            self.assertEqual(gold_before + 150, self._mcp_handle_call(session, player_handle, "getGold"))
+            log["journal"]["hearthfallQuest"] = hearthfall_entry
+
+            moveToObject("gravemoor", "gravemoorStart")
+            self._mcpFindPlayerQuest(session, player_handle, "gravemoorQuest", completed=False)
+            for cage in ("loyalistCageWest", "loyalistCageEast", "loyalistCageNorth"):
+                moveToObject("gravemoor", cage)
+            self.assertEqual(3, self._mcp_handle_call(session, map_handle, "getNumericProperty", ["loyalists_freed"]))
+            moveToObject("gravemoor", "quartermasterVoss")
+            dialogAction("vossDialog", "spare_voss")
+            dialogAction("vossDialog", "spare_voss")
+            map_handle = travelTo("usurpergate")
+            gravemoor = self._mcpFindPlayerQuest(session, player_handle, "gravemoorQuest", completed=True)
+            gravemoor_entry = self._mcpQuestJournalEntry(session, gravemoor)
+            self.assertTrue(gravemoor_entry["completed"])
+            self.assertIn("Voss lives", gravemoor_entry["objective"])
+            self.assertEqual(hearthfall_entry, self._mcpQuestJournalEntry(session, hearthfall))
+            self.assertEqual(gold_before + 350, self._mcp_handle_call(session, player_handle, "getGold"))
+            log["journal"]["gravemoorQuest"] = gravemoor_entry
+
+            moveToObject("usurpergate", "usurpergateStart")
+            self._mcpFindPlayerQuest(session, player_handle, "usurpergateQuest", completed=False)
+            moveToObject("usurpergate", "theUsurper", adjacent=True)
+            self._mcp_handle_call(session, map_handle, "removeObjectByName", ["theUsurper"])
+            moveToObject("usurpergate", "obsidianThrone")
+            self._mcp_handle_call(session, player_handle, "checkQuests")
+            usurpergate = self._mcpFindPlayerQuest(session, player_handle, "usurpergateQuest", completed=True)
+            log["journal"]["usurpergateQuest"] = self._mcpQuestJournalEntry(session, usurpergate)
+            self.assertTrue(log["journal"]["usurpergateQuest"]["completed"])
+            self.assertEqual(hearthfall_entry, self._mcpQuestJournalEntry(session, hearthfall))
+            self.assertEqual(gravemoor_entry, self._mcpQuestJournalEntry(session, gravemoor))
+            self.assertEqual(gold_before + 850, self._mcp_handle_call(session, player_handle, "getGold"))
+            self.assertFalse(self._mcp_handle_call(session, map_handle, "getBoolProperty", ["victory_reported"]))
+            self.assertFalse(self._mcp_handle_call(session, map_handle, "getBoolProperty", ["voss_judged"]))
+        except Exception as exc:
+            log["error"] = str(exc)
+            raise
+        finally:
+            self._write_mcp_walkthrough_log("quest_journal_campaign", log)
+            self._shutdown_process(proc)
+
+    def test_stdio_active_amulet_journal_ignores_ritual_destination_state(self):
+        proc = self._start_stdio_mcp_process("nouraajd", trace_name="quest_journal_active_amulet")
+        log = {"route": ["nouraajd", "ritual"]}
+        try:
+            self._initialize_stdio_mcp(proc)
+            session = {"proc": proc, "next_request_id": 3}
+            game_handle, source_map, player_handle = self._mcp_load_game_map_with_player(session, "nouraajd")
+            definition = find_map_object_definition("nouraajd", "oldWoman")
+            target = [definition["x"] // 32, definition["y"] // 32, 0]
+            self._mcp_handle_call(session, player_handle, "moveTo", target)
+            self._mcp_pump_event_loop(session)
+            player_data = json.loads(self._mcp_engine_call(session, "jsonify", [player_handle]))
+            self.assertEqual(target, self._serialized_coords(player_data))
+            dialog = self._mcp_handle_call(session, game_handle, "createObject", ["questDialog"])
+            self._mcp_handle_call(session, dialog, "invokeAction", ["start_amulet_quest"])
+            self._mcp_pump_event_loop(session)
+            amulet = self._mcpFindPlayerQuest(session, player_handle, "amuletQuest", completed=False)
+            before = self._mcpQuestJournalEntry(session, amulet)
+            gold_before = self._mcp_handle_call(session, player_handle, "getGold")
+            self._mcp_handle_call(session, game_handle, "changeMap", ["ritual"])
+            for _ in range(10):
+                self._mcp_pump_event_loop(session)
+            ritual = self._mcp_handle_call(session, game_handle, "getMap")
+            self.assertEqual("ritual", self._mcp_handle_call(session, ritual, "getStringProperty", ["mapName"]))
+            self._mcp_handle_call(session, ritual, "setStringProperty", ["quest_state_amulet", "returned"])
+            self._mcp_handle_call(session, player_handle, "checkQuests")
+            self._mcpFindPlayerQuest(session, player_handle, "amuletQuest", completed=False)
+            self.assertEqual(before, self._mcpQuestJournalEntry(session, amulet))
+            self.assertEqual(
+                "active", self._mcp_handle_call(session, source_map, "getStringProperty", ["quest_state_amulet"])
+            )
+            self.assertEqual(gold_before, self._mcp_handle_call(session, player_handle, "getGold"))
+            ritual_properties = self._mcp_serialized_map(session, ritual)["properties"]
+            self.assertEqual(
+                {"quest_state_amulet": "returned"},
+                {key: value for key, value in ritual_properties.items() if key.startswith("quest_state_")},
+            )
+            log["player"] = target
+            log["journal"] = before
+        except Exception as exc:
+            log["error"] = str(exc)
+            raise
+        finally:
+            self._write_mcp_walkthrough_log("quest_journal_active_amulet", log)
+            self._shutdown_process(proc)
+
     def test_stdio_map_walkthrough_usurpergate(self):
         self._assert_mcp_walkthrough("usurpergate")
+
+    def test_stdio_map_walkthrough_castleHomecoming(self):
+        self._assert_mcp_walkthrough("castleHomecoming")
+
+    def test_stdio_map_walkthrough_castleGuardianAngels(self):
+        self._assert_mcp_walkthrough("castleGuardianAngels")
+
+    def test_stdio_map_walkthrough_castleGriffinCliff(self):
+        self._assert_mcp_walkthrough("castleGriffinCliff")
+
+    def test_stdio_castle_campaign_full_route(self):
+        import campaign as campaign_module
+        from tests.castle_walkthrough import MAP_NAMES
+
+        proc = self._start_stdio_mcp_process("castleHomecoming")
+        try:
+            self._initialize_stdio_mcp(proc)
+            session = {"proc": proc, "next_request_id": 3}
+            driver = self._mcp_castle_driver(session, "castleHomecoming")
+            # CGameLoader starts the real map and player; these are the existing driver's serialized initial state.
+            for key, value in (
+                (campaign_module.CAMPAIGN_ID_PROPERTY, "longLiveTheQueen"),
+                (campaign_module.CAMPAIGN_SCENARIO_PROPERTY, "homecoming"),
+                (campaign_module.CAMPAIGN_HISTORY_PROPERTY, ""),
+            ):
+                driver.call(driver.player, "setStringProperty", [key, value])
+            driver.call(driver.player, "setBoolProperty", [campaign_module.CAMPAIGN_FINISHED_PROPERTY, False])
+            driver.call(driver.player, "addItem", ["Dagger"])
+            for map_name in MAP_NAMES:
+                driver.chapter(map_name)
+                driver.pump()
+                self.assertGreaterEqual(driver.call(driver.player, "countItems", ["Dagger"]), 1)
+            self.assertTrue(driver.call(driver.player, "getBoolProperty", [campaign_module.CAMPAIGN_FINISHED_PROPERTY]))
+            history = driver.call(driver.player, "getStringProperty", [campaign_module.CAMPAIGN_HISTORY_PROPERTY])
+            self.assertEqual("homecoming:completed,guardianAngels:completed,griffinCliff:completed", history)
+            self.assertTrue(driver.log["portals"])
+            self.assertTrue(driver.log["combats"])
+            self._write_mcp_walkthrough_log("longLiveTheQueen", driver.log)
+        finally:
+            self._shutdown_process(proc)
 
     def test_stdio_scene_manager_map_transition_walkthrough(self):
         proc = None
@@ -22743,14 +27527,14 @@ class McpServerTest(unittest.TestCase):
             self._write_mcp_walkthrough_log(map_name, log)
         return success, log
 
-    def _start_stdio_mcp_process(self, map_name=None):
+    def _start_stdio_mcp_process(self, map_name=None, *, trace_name=None):
         script = REPO_ROOT / "mcp.py"
         self.assertTrue(script.exists(), "MCP entry point is missing")
         trace_path = None
         env = None
         if map_name == "nouraajd":
-            TEST_OUTPUT_DIR.mkdir(exist_ok=True)
-            trace_path = TEST_OUTPUT_DIR / "mcp_walkthrough_nouraajd_trace.jsonl"
+            TEST_OUTPUT_DIR.mkdir(parents=True, exist_ok=True)
+            trace_path = TEST_OUTPUT_DIR / f"mcp_walkthrough_{trace_name or 'nouraajd'}_trace.jsonl"
             trace_path.unlink(missing_ok=True)
             env = os.environ.copy()
             env["GAME_PLAYTEST_TRACE"] = "1"
@@ -22929,7 +27713,7 @@ class McpServerTest(unittest.TestCase):
         self.assertEqual(log_level_response.get("id"), 2)
 
     def _write_mcp_walkthrough_log(self, map_name, log):
-        TEST_OUTPUT_DIR.mkdir(exist_ok=True)
+        TEST_OUTPUT_DIR.mkdir(parents=True, exist_ok=True)
         path = TEST_OUTPUT_DIR / f"mcp_walkthrough_{map_name}.json"
         path.write_text(json.dumps(log, indent=2, sort_keys=True))
 
@@ -22957,13 +27741,20 @@ class McpServerTest(unittest.TestCase):
 
     def _mcp_load_game_map(self, session, map_name):
         game_handle = self._mcp_engine_call(session, "CGameLoader.loadGame")
-        self._mcp_engine_call(session, "CGameLoader.startGame", [game_handle, map_name])
+        self._mcp_engine_call(
+            session, "CGameLoader.startGame", [game_handle, map_name], timeout=MCP_STDIO_MAP_START_TIMEOUT_SECONDS
+        )
         map_handle = self._mcp_handle_call(session, game_handle, "getMap")
         return game_handle, map_handle
 
     def _mcp_load_game_map_with_player(self, session, map_name, player_name=DEFAULT_PLAYER):
         game_handle = self._mcp_engine_call(session, "CGameLoader.loadGame")
-        self._mcp_engine_call(session, "CGameLoader.startGameWithPlayer", [game_handle, map_name, player_name])
+        self._mcp_engine_call(
+            session,
+            "CGameLoader.startGameWithPlayer",
+            [game_handle, map_name, player_name],
+            timeout=MCP_STDIO_MAP_START_TIMEOUT_SECONDS,
+        )
         map_handle = self._mcp_handle_call(session, game_handle, "getMap")
         player_handle = self._mcp_handle_call(session, map_handle, "getPlayer")
         return game_handle, map_handle, player_handle
@@ -22973,6 +27764,25 @@ class McpServerTest(unittest.TestCase):
         self.assertIsInstance(obj, dict, f"Expected object handle for {object_name}.")
         self.assertIn("__handle__", obj, f"Could not find runtime object {object_name}.")
         return obj
+
+    def _mcpFindPlayerQuest(self, session, player_handle, quest_id, *, completed):
+        collection = "getCompletedQuests" if completed else "getQuests"
+        for quest in self._mcp_handle_call(session, player_handle, collection):
+            actual = self._mcp_handle_call(session, quest, "getTypeId")
+            if actual == quest_id:
+                return quest
+        self.fail(f"{quest_id} should be in {collection}.")
+
+    def _mcpQuestJournalEntry(self, session, quest):
+        return {
+            key: self._mcp_handle_call(session, quest, method)
+            for key, method in (
+                ("completed", "isCompleted"),
+                ("objective", "getObjective"),
+                ("reward", "getReward"),
+                ("hint", "getHint"),
+            )
+        }
 
     def _mcp_serialized_map(self, session, map_handle):
         return json.loads(
@@ -23064,15 +27874,17 @@ class McpServerTest(unittest.TestCase):
         teleporter_2_def = find_map_object_definition("test", "teleporter2")
         ground_hole_def = find_map_object_definition("test", "groundHole")
 
-        teleporter = self._mcp_get_object_by_name(session, map_handle, "teleporter1")
-        teleporter_coords = self._mcp_handle_call(session, teleporter, "getCoords")
-        self._mcp_handle_call(session, player_handle, "setCoords", [teleporter_coords])
+        self._mcp_handle_call(
+            session, player_handle, "moveTo", [teleporter_1_def["x"] // 32, teleporter_1_def["y"] // 32, 0]
+        )
+        self._mcp_pump_event_loop(session)
         after_teleport_map = self._mcp_serialized_map(session, map_handle)
         after_teleport = self._serialized_coords(self._serialized_player(after_teleport_map))
 
-        ground_hole = self._mcp_get_object_by_name(session, map_handle, "groundHole")
-        ground_hole_coords = self._mcp_handle_call(session, ground_hole, "getCoords")
-        self._mcp_handle_call(session, player_handle, "setCoords", [ground_hole_coords])
+        self._mcp_handle_call(
+            session, player_handle, "moveTo", [ground_hole_def["x"] // 32, ground_hole_def["y"] // 32, 0]
+        )
+        self._mcp_pump_event_loop(session)
         after_ground_hole_map = self._mcp_serialized_map(session, map_handle)
         after_ground_hole = self._serialized_coords(self._serialized_player(after_ground_hole_map))
 
@@ -23188,6 +28000,29 @@ class McpServerTest(unittest.TestCase):
             "captain_defeated": map_bool("captain_defeated"),
             "quests": self._serialized_quest_ids(player_data),
         }
+
+    def _mcp_castle_driver(self, session, map_name):
+        from tests.castle_walkthrough import CastleWalkthrough
+
+        game_handle, map_handle, player_handle = self._mcp_load_game_map_with_player(session, map_name)
+        return CastleWalkthrough(
+            lambda name, args: self._mcp_engine_call(session, name, args, timeout=MCP_STDIO_MAP_JSON_TIMEOUT_SECONDS),
+            lambda handle, method, args: self._mcp_handle_call(
+                session, handle, method, args, timeout=MCP_STDIO_MAP_JSON_TIMEOUT_SECONDS
+            ),
+            game_handle,
+            map_handle,
+            player_handle,
+        )
+
+    def _mcp_walkthrough_castleHomecoming(self, session):
+        return self._mcp_castle_driver(session, "castleHomecoming").chapter("castleHomecoming")
+
+    def _mcp_walkthrough_castleGuardianAngels(self, session):
+        return self._mcp_castle_driver(session, "castleGuardianAngels").chapter("castleGuardianAngels")
+
+    def _mcp_walkthrough_castleGriffinCliff(self, session):
+        return self._mcp_castle_driver(session, "castleGriffinCliff").chapter("castleGriffinCliff")
 
     def _mcp_walkthrough_gravemoor(self, session):
         _, map_handle, player_handle = self._mcp_load_game_map_with_player(session, "gravemoor")

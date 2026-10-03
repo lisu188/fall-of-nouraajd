@@ -14,7 +14,7 @@
             { "item": "LesserManaPotion", "count": 2 }
         ],
         "output": { "item": "ManaPotion", "count": 1 },
-        "gold": 20,
+        "gold": 640,
         "successChance": 95
     },
     "craft_town_portal_scroll": {
@@ -65,7 +65,7 @@
     "brew_full_life_potion": {
         "station": "alchemyTable",
         "inputs": [
-            { "item": "GreaterLifePotion", "count": 2 }
+            { "item": "MaxLifePotion", "count": 2 }
         ],
         "output": { "item": "FullLifePotion", "count": 1 },
         "gold": 90,
@@ -76,7 +76,7 @@
     "brew_full_mana_potion": {
         "station": "alchemyTable",
         "inputs": [
-            { "item": "GreaterManaPotion", "count": 2 }
+            { "item": "MaxManaPotion", "count": 2 }
         ],
         "output": { "item": "FullManaPotion", "count": 1 },
         "gold": 90,

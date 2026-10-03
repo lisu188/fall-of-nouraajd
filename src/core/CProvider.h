@@ -24,6 +24,7 @@ struct CResType {
     const static std::string CONFIG;
     const static std::string MAP;
     const static std::string PLUGIN;
+    const static std::string PLUGIN_LUA;
     const static std::string SAVE;
 };
 
@@ -107,6 +108,16 @@ class CResourcesProvider {
     // Compatibility-only process-wide provider for callers without a game context (Python scripts,
     // plugin code, detached resources). Game-attached code must use CGame::getResourcesProvider().
     static std::shared_ptr<CResourcesProvider> getInstance();
+
+    // Configure process-wide resource roots for packaged/mobile hosts before the first game is loaded.
+    // The writable root is searched first so saves written there resolve immediately; the packaged
+    // content root is searched next; the native-module-derived desktop roots remain as fallbacks.
+    // Both roots must be directories (the writable root is created when missing). Desktop behavior
+    // is unchanged unless this method is called explicitly.
+    static bool configurePlatformRoots(const std::string &packagedRoot, const std::string &writableRoot);
+
+    // Restore the module-derived desktop search roots. Intended for host teardown and focused tests.
+    static void clearPlatformRoots();
 
     std::string load(std::string path);
 
@@ -192,8 +203,7 @@ class CConfigurationProvider {
 class CAnimationProvider {
   public:
     static std::shared_ptr<CAnimation> getAnimation(const std::shared_ptr<CGame> &game,
-                                                    const std::shared_ptr<CGameObject> &object, bool custom = false);
+                                                    const std::shared_ptr<CGameObject> &object);
 
-    static std::shared_ptr<CAnimation> getAnimation(const std::shared_ptr<CGame> &game, std::string path,
-                                                    bool custom = false);
+    static std::shared_ptr<CAnimation> getAnimation(const std::shared_ptr<CGame> &game, std::string path);
 };

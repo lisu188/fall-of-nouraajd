@@ -1,7 +1,9 @@
 def load(self, context):
+    from game import showReader, rewardSnapshot, showRewardReceipt
     from game import CDialog
     from game import CEvent
     from game import CQuest
+    from game import mapQuest
     from game import CTrigger
     from game import Coords
     from game import register
@@ -17,7 +19,7 @@ def load(self, context):
         player.addQuest(quest_name)
 
     def quest_flags_default(game_map):
-        for flag in ("ascent_heard", "gate_opened", "throne_taken", "boss_woken"):
+        for flag in ("ascent_heard", "gate_opened", "throne_taken", "boss_woken", "boss_defeated"):
             if not hasattr(game_map, flag):
                 game_map.setBoolProperty(flag, False)
 
@@ -36,7 +38,7 @@ def load(self, context):
             game = game_map.getGame()
             player = game_map.getPlayer()
             quest_flags_default(game_map)
-            game.getGuiHandler().showMessage(self.getStringProperty("text"))
+            showReader(game, "Kadath", self.getStringProperty("text"))
             game_map.removeAll(lambda ob: ob.getName() == self.getName())
             ensure_quest(player, "kadathAscentQuest")
 
@@ -48,11 +50,11 @@ def load(self, context):
             game_map = self.getMap()
             game = game_map.getGame()
             if game_map.getBoolProperty("gate_opened"):
-                game.getGuiHandler().showMessage(
+                game.getGuiHandler().notify(
                     "The standing stones are quiet now; the gate you opened does not open twice."
                 )
                 return
-            game.getGuiHandler().showMessage(
+            game.getGuiHandler().notify(
                 "You pass through the ring of stones and the dream deepens. Out of the drifting snow the "
                 "Night-Gaunts descend on silent wings to test the dreamer who dares the climb."
             )
@@ -69,12 +71,16 @@ def load(self, context):
             player = game_map.getPlayer()
             if game_map.getBoolProperty("throne_taken"):
                 return
+            reward_before = rewardSnapshot(player)
             player.addItem("onyxSignetOfNyarlathotep")
             game_map.setBoolProperty("throne_taken", True)
-            game.getGuiHandler().showMessage(
+            showRewardReceipt(
+                game,
+                "Gift of the Crawling Chaos",
+                reward_before,
                 "The onyx throne is not empty. A tall, dark figure with a pleasant, ancient face rises smiling "
                 "and sets the Onyx Signet upon your brow - a gift, he says, from the Crawling Chaos. Then the "
-                "smile comes apart, and Nyarlathotep is only the last shape before the blind piping of the void."
+                "smile comes apart, and Nyarlathotep is only the last shape before the blind piping of the void.",
             )
             if not game_map.getBoolProperty("boss_woken"):
                 boss = game.createObject("theCrawlingChaos")
@@ -85,16 +91,23 @@ def load(self, context):
                 game_map.addObject(boss)
                 boss.moveTo(*BOSS_SPAWN)
                 game_map.setBoolProperty("boss_woken", True)
+            # Refresh objectives/completion so pickup-first ordering converges with a
+            # later boss defeat. The quest still needs the Crawling Chaos put down.
+            player.checkQuests()
 
     @register(context)
+    @mapQuest("kadath")
     class KadathAscentQuest(CQuest):
         def isCompleted(self):
-            return self.getGame().getMap().getBoolProperty("throne_taken")
+            game_map = self.getGame().getMap()
+            return game_map.getBoolProperty("throne_taken") and game_map.getBoolProperty("boss_defeated")
 
         def getObjective(self):
             game_map = self.getGame().getMap()
-            if game_map.getBoolProperty("throne_taken"):
+            if game_map.getBoolProperty("throne_taken") and game_map.getBoolProperty("boss_defeated"):
                 return "You wear the Onyx Signet of the Crawling Chaos. The dream will not release you unmarked."
+            if game_map.getBoolProperty("throne_taken"):
+                return "The Crawling Chaos walks the summit in your shape. Put the Messenger down to end the dream."
             if game_map.getBoolProperty("ascent_heard"):
                 return "Climb the basalt road to the onyx castle on the summit of Kadath."
             if game_map.getBoolProperty("gate_opened"):
@@ -108,9 +121,11 @@ def load(self, context):
             return "The frozen dreamer's guide in the camp knows the road. The warmth on the basalt is bait."
 
         def onComplete(self):
-            self.getGame().getGuiHandler().showMessage(
+            showReader(
+                self.getGame(),
+                "Kadath's throne",
                 "You reached the throne of Kadath, and the throne was waiting for you. The Great Ones were never "
-                "the danger. Their messenger was."
+                "the danger. Their messenger was.",
             )
 
     @register(context)
@@ -142,22 +157,29 @@ def load(self, context):
     @trigger(context, "onDestroy", "roostNightGaunt")
     class RoostNightGauntTrigger(CTrigger):
         def trigger(self, obj, event):
-            obj.getGame().getGuiHandler().showMessage(obj.getStringProperty("message"))
+            obj.getGame().getGuiHandler().notify(obj.getStringProperty("message"))
 
     @trigger(context, "onDestroy", "warrenLeng")
     class WarrenLengTrigger(CTrigger):
         def trigger(self, obj, event):
-            obj.getGame().getGuiHandler().showMessage(obj.getStringProperty("message"))
+            obj.getGame().getGuiHandler().notify(obj.getStringProperty("message"))
 
     @trigger(context, "onDestroy", "vaultElder")
     class VaultElderTrigger(CTrigger):
         def trigger(self, obj, event):
-            obj.getGame().getGuiHandler().showMessage(obj.getStringProperty("message"))
+            obj.getGame().getGuiHandler().notify(obj.getStringProperty("message"))
 
     @trigger(context, "onDestroy", "theCrawlingChaosBoss")
     class CrawlingChaosTrigger(CTrigger):
         def trigger(self, obj, event):
-            obj.getGame().getGuiHandler().showMessage(
+            game_map = obj.getGame().getMap()
+            game_map.setBoolProperty("boss_defeated", True)
+            showReader(
+                obj.getGame(),
+                "Between dreams",
                 "The last shape sloughs away and the Crawling Chaos withdraws into the dark between dreams. You "
-                "are still wearing his signet. Somewhere, in the ultimate void, an idiot flute keeps your time."
+                "are still wearing his signet. Somewhere, in the ultimate void, an idiot flute keeps your time.",
             )
+            # Boss-defeat transition: converge with the throne pickup so the finale
+            # completes once both requirements are met, in either order.
+            game_map.getPlayer().checkQuests()

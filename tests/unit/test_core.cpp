@@ -35,12 +35,15 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #include "gui/CSdlResources.h"
 #include "object/CCreature.h"
 #include "object/CCreatureClass.h"
+#include "object/CCreatureClassTrack.h"
 #include "object/CCreatureRace.h"
+#include "object/CCreatureTemplate.h"
 #include "object/CEffect.h"
 #include "object/CGameObject.h"
 #include "object/CInteraction.h"
 #include "object/CItem.h"
 #include "test_harness.h"
+#include "stat_composition_fixture.h"
 #include "vutil.h"
 
 #include <pybind11/embed.h>
@@ -164,6 +167,82 @@ void drain_event_loop() {
     for (int i = 0; i < 5; ++i) {
         loop->run();
     }
+}
+
+class StatsNotificationProbe : public CGameObject {
+    V_META(StatsNotificationProbe, CGameObject, V_METHOD(StatsNotificationProbe, onPropertyChanged, void, std::string),
+           V_METHOD(StatsNotificationProbe, onStrengthChanged), V_METHOD(StatsNotificationProbe, onDamageChanged))
+
+  public:
+    void onPropertyChanged(std::string name) {
+        notifications.push_back("generic:" + name);
+        if (insert_shadow && name == "strength") {
+            observed_partial_write =
+                stats->getStrength() == 10 && stats->getAgility() == 11 && stats->getStamina() == 13;
+            stats->meta()->set_dynamic_property("stamina", stats, 100);
+        }
+    }
+    void onStrengthChanged() { notifications.push_back("specific:strength"); }
+    void onDamageChanged() { notifications.push_back("specific:damage"); }
+
+    std::shared_ptr<CStats> stats;
+    std::vector<std::string> notifications;
+    bool insert_shadow = false;
+    bool observed_partial_write = false;
+};
+
+// Delivery is normally queued. This test-only reflective getter drains the already
+// queued strength notification between apply's first and second field operations.
+class StatsPartialRead : public CStats {
+    V_META(StatsPartialRead, CStats, V_PROPERTY(StatsPartialRead, int, agility, getAgilityAfterDelivery, setAgility))
+
+  public:
+    int getAgilityAfterDelivery() {
+        drain_event_loop();
+        return getAgility();
+    }
+};
+
+void test_public_stats_apply_preserves_zero_notifications_and_midpoint_dynamic_shadows() {
+    CTypes::register_type_metadata<StatsNotificationProbe, CGameObject>();
+    CTypes::register_type_metadata<StatsPartialRead, CStats>();
+    auto stats = std::make_shared<CStats>();
+    auto probe = std::make_shared<StatsNotificationProbe>();
+    stats->connect("propertyChanged", probe, "onPropertyChanged");
+    stats->connect("strengthChanged", probe, "onStrengthChanged");
+    stats->connect("damageChanged", probe, "onDamageChanged");
+    stats->apply(StatsModifier{});
+    drain_event_loop();
+    std::vector<std::string> expected;
+    for (const auto &field : stat_composition_fixture::fieldNames) {
+        expected.push_back("generic:" + field);
+        if (field == "strength" || field == "damage") {
+            expected.push_back("specific:" + field);
+        }
+    }
+    expect_true(probe->notifications == expected,
+                "public apply must write all 17 zero fields and retain generic/specific notification order");
+
+    auto partial = std::make_shared<StatsPartialRead>();
+    partial->setStrength(7);
+    partial->setAgility(11);
+    partial->setStamina(13);
+    auto observer = std::make_shared<StatsNotificationProbe>();
+    observer->stats = partial;
+    observer->insert_shadow = true;
+    partial->connect("propertyChanged", observer, "onPropertyChanged");
+    StatsModifier delta;
+    delta.strength = 3;
+    delta.agility = 2;
+    delta.stamina = 5;
+    partial->apply(delta);
+    drain_event_loop();
+    expect_true(observer->observed_partial_write,
+                "public apply subscribers delivered mid-write must see only the completed strength increment");
+    expect_true(partial->getStrength() == 10 && partial->getAgility() == 13 && partial->getStamina() == 13 &&
+                    partial->getNumericProperty("stamina") == 105,
+                "public apply must reflect a dynamic shadow inserted by an earlier field's notification");
+    expect_true(observer->notifications.size() == 17, "midpoint delivery must preserve all 17 public writes");
 }
 
 static_assert(fn::PathPassability<ConceptCanStep>);
@@ -301,6 +380,30 @@ void test_pathfinder_find_path_without_obstacles() {
 
     auto next_step = CPathFinder::findNextStep(Coords(0, 0, 0), Coords(2, 0, 0), can_step, no_waypoint);
     expect_true(next_step->get() == Coords(1, 0, 0), "findNextStep should return the first optimal neighbor");
+}
+
+void test_pathfinder_rejects_overflowing_routes() {
+    const Coords start(0, 0, 0), expensive(1, 0, 0), cheap(0, 1, 0), goal(2, 0, 0);
+    auto can_step = [](const Coords &) { return true; };
+    auto waypoint = [](const Coords &) -> std::optional<Coords> { return std::nullopt; };
+    auto neighbors = [=](const Coords &coords) {
+        if (coords == start)
+            return std::vector<Coords>{expensive, cheap};
+        if (coords == expensive || coords == cheap)
+            return std::vector<Coords>{goal};
+        return std::vector<Coords>{};
+    };
+    auto distance = [](const Coords &, const Coords &) { return 0.0; };
+    auto cost = [=](const Coords &from, const Coords &to) -> std::int64_t {
+        return to == expensive     ? static_cast<std::int64_t>(std::numeric_limits<int>::max()) + 9
+               : from == expensive ? 10
+                                   : 1;
+    };
+    auto path = CPathFinder::findPath(start, goal, can_step, waypoint, neighbors, distance, cost);
+    expect_true(path == std::vector<Coords>{cheap, goal},
+                "a 64-bit callback cost must not narrow into a cheap negative route");
+    auto step = CPathFinder::findNextStep(start, goal, can_step, waypoint, neighbors, distance, cost);
+    expect_true(step->get() == cheap, "async next-step search should also preserve 64-bit callback costs");
 }
 
 void test_pathfinder_waypoint_and_blocked_goal() {
@@ -1226,6 +1329,10 @@ void test_game_context_shutdown_is_idempotent_and_preserves_other_game_services(
     expect_true(closing_context->getTransitionGeneration() == shutdown_generation + 1,
                 "idempotent shutdown should advance transition generation only once");
     expect_true(closing_game->getMap() == nullptr, "shutdown should detach the closed game's active map");
+    closing_game->setMap(nullptr);
+    expect_runtime_error([&]() { closing_game->setMap(closing_map); },
+                         "closed game should reject a new map before changing its state");
+    expect_true(closing_game->getMap() == nullptr, "rejected closed-game map assignment must preserve shutdown state");
     expect_runtime_error([&]() { closing_game->getObjectHandler(); },
                          "closed game should reject object handler access");
     expect_runtime_error([&]() { closing_game->getGuiHandler(); }, "closed game should reject GUI handler access");
@@ -1248,6 +1355,113 @@ void test_game_context_shutdown_is_idempotent_and_preserves_other_game_services(
                 "surviving game should retain its configuration provider after another game shuts down");
     expect_true(survivor_configuration->getConfiguration("items.json") == survivor_items,
                 "surviving configuration provider cache should remain valid after another game shuts down");
+}
+
+void test_effect_cycles_release_with_map_and_context_teardown() {
+    auto game = std::make_shared<CGame>();
+    auto context = game->getContext();
+    auto destination = std::make_shared<CMap>();
+    destination->setGame(game);
+    game->setMap(destination);
+    std::weak_ptr<CCreature> discardedActor;
+    std::weak_ptr<CEffect> discardedEffect;
+    std::weak_ptr<CCreature> carriedActor;
+    std::weak_ptr<CEffect> carriedEffect;
+    {
+        auto source = std::make_shared<CMap>();
+        source->setGame(game);
+        auto addBuffedActor = [&](const std::string &name) {
+            auto actor = std::make_shared<CCreature>();
+            actor->setGame(game);
+            actor->setName(name);
+            actor->setLevel(1);
+            actor->setHp(100);
+            source->addObject(actor);
+            auto effect = std::make_shared<CEffect>();
+            effect->setGame(game);
+            effect->setCaster(actor);
+            effect->setVictim(actor);
+            effect->setDuration(10);
+            actor->addEffect(effect);
+            return std::make_pair(actor, effect);
+        };
+        auto discarded = addBuffedActor("discardedActor");
+        discardedActor = discarded.first;
+        discardedEffect = discarded.second;
+        auto carried = addBuffedActor("carriedActor");
+        carriedActor = carried.first;
+        carriedEffect = carried.second;
+        destination->addObject(carried.first);
+    }
+    expect_true(discardedActor.expired() && discardedEffect.expired(),
+                "discarding a map must release its actor/effect cycles");
+    expect_true(!carriedActor.expired() && !carriedEffect.expired(),
+                "discarding a source map must preserve a carried actor's effects");
+
+    std::weak_ptr<CCreature> retainedActor;
+    {
+        auto retained = std::make_shared<CMap>();
+        retained->setGame(game);
+        retained->setMapName("retainedEffects");
+        auto actor = std::make_shared<CCreature>();
+        actor->setGame(game);
+        actor->setName("retainedActor");
+        retained->addObject(actor);
+        auto effect = std::make_shared<CEffect>();
+        effect->setCaster(actor);
+        effect->setVictim(actor);
+        actor->addEffect(effect);
+        context->getMapSessionStore()->put(retained);
+        retainedActor = actor;
+    }
+
+    std::weak_ptr<CCreature> detachedFirst;
+    std::weak_ptr<CCreature> detachedSecond;
+    std::weak_ptr<CEffect> detachedEffect;
+    {
+        auto first = std::make_shared<CCreature>();
+        auto second = std::make_shared<CCreature>();
+        first->setGame(game);
+        second->setGame(game);
+        auto firstEffect = std::make_shared<CEffect>();
+        firstEffect->setCaster(second);
+        firstEffect->setVictim(first);
+        first->addEffect(firstEffect);
+        auto secondEffect = std::make_shared<CEffect>();
+        secondEffect->setCaster(first);
+        secondEffect->setVictim(second);
+        second->addEffect(secondEffect);
+        detachedFirst = first;
+        detachedSecond = second;
+        detachedEffect = firstEffect;
+    }
+    expect_true(!detachedFirst.expired() && !detachedSecond.expired(),
+                "active detached effects must retain their actors until teardown");
+    destination.reset();
+    context->shutdown();
+    expect_true(carriedActor.expired() && carriedEffect.expired(),
+                "shutdown must release active-map actor/effect cycles");
+    expect_true(detachedFirst.expired() && detachedSecond.expired() && detachedEffect.expired(),
+                "shutdown must also release detached and mutually linked effect actors");
+    expect_true(retainedActor.expired(), "shutdown must release retained-map actor/effect cycles");
+}
+
+void test_effect_owner_registry_releases_finished_and_destroyed_owners() {
+    auto game = std::make_shared<CGame>();
+    auto context = game->getContext();
+    for (int i = 0; i < 128; ++i) {
+        auto actor = std::make_shared<CCreature>();
+        actor->setGame(game);
+        auto effect = std::make_shared<CEffect>();
+        actor->addEffect(effect);
+        expect_true(context->getEffectOwnerCount() == 1, "effect registry should track each owner once");
+        actor->removeEffect(effect);
+        expect_true(context->getEffectOwnerCount() == 0, "last effect removal must unregister its owner");
+        actor->addEffect(effect);
+        actor.reset();
+        expect_true(context->getEffectOwnerCount() == 0,
+                    "destroyed effect owners must not leave expired weak allocations in the registry");
+    }
 }
 
 void test_playtest_trace_records_and_helper_payloads() {
@@ -1368,16 +1582,24 @@ void test_save_format_codec_validation() {
                 "save envelope should use the canonical format marker");
     expect_true((*envelope)->at("schemaVersion").get<int>() == CSaveFormat::SCHEMA_VERSION,
                 "save envelope should use the canonical schema version");
-    // Optional archetype fields (race/creatureClass/playerClassId) are additive and must not bump
-    // the published schema version. Pin it so a future change that breaks schema-v1 compatibility
-    // fails here instead of silently invalidating existing v1 saves.
-    expect_true(CSaveFormat::SCHEMA_VERSION == 1, "schema version must stay 1 for optional archetype fields");
+    expect_true(CSaveFormat::SCHEMA_VERSION == 2,
+                "effect actor references require a schema version that older readers reject");
 
     auto decoded = CSaveFormat::decodeDocument(*envelope);
     expect_true(
         decoded.has_value() && decoded->mapName == "test" && decoded->encoding == CSaveFormat::Encoding::Versioned &&
             decoded->snapshot.get() == &(*envelope)->at("snapshot") && save_snapshot_has_map(decoded->snapshot, "test"),
         "save migration registry should no-op current schema envelopes");
+
+    auto schema_one = std::make_shared<json>(**envelope);
+    (*schema_one)["schemaVersion"] = 1;
+    const auto schema_one_before = schema_one->dump();
+    auto schema_one_decoded = CSaveFormat::decodeDocument(schema_one);
+    expect_true(schema_one_decoded.has_value() && schema_one_decoded->mapName == "test" &&
+                    schema_one_decoded->encoding == CSaveFormat::Encoding::Versioned &&
+                    schema_one_decoded->snapshot->dump() == schema_one->at("snapshot").dump() &&
+                    schema_one->dump() == schema_one_before,
+                "schema-v1 saves must retain their snapshot without inventing missing effect state");
 
     const auto legacy_before = snapshot->dump();
     auto legacy = CSaveFormat::decodeDocument(snapshot);
@@ -2048,6 +2270,7 @@ void test_creature_race_metadata_round_trip() {
     race->setCreatureType("humanoid");
     race->setSubtypes({"human", "northerner"});
     race->setPlayerSelectable(true);
+    race->setAssociatedClasses({"mageClass", "cultistClass"});
     race->setLabel("Human");
     race->setDescription("The common folk of Nouraajd.");
 
@@ -2070,6 +2293,12 @@ void test_creature_race_metadata_round_trip() {
     expect_true(round_trip->getBaseStats() && round_trip->getBaseStats()->getStrength() == 7,
                 "base stats should survive the round-trip");
     expect_true(round_trip->getActions().size() == 1, "innate actions should survive the round-trip");
+    expect_true(round_trip->getAssociatedClasses() == std::set<std::string>({"mageClass", "cultistClass"}),
+                "associatedClasses metadata should survive the round-trip");
+    expect_true(round_trip->isAssociatedClass("mageClass"),
+                "a round-tripped race should still report a listed class as associated");
+    expect_true(!round_trip->isAssociatedClass("bruteClass"),
+                "a round-tripped race should still report an unlisted class as non-associated");
 
     // Null-safety: empty/null stats and null actions must not crash aggregation.
     auto bare = std::make_shared<CCreatureRace>();
@@ -2077,6 +2306,10 @@ void test_creature_race_metadata_round_trip() {
     expect_true(bare->getBaseStats() != nullptr, "null baseStats should normalize to an empty CStats");
     bare->setActions({nullptr});
     expect_true(bare->getActions().empty(), "null actions should be filtered out");
+    expect_true(bare->getAssociatedClasses().empty(),
+                "associatedClasses should default empty so existing races carry no association metadata");
+    bare->setAssociatedClasses({""});
+    expect_true(bare->getAssociatedClasses().empty(), "empty associated class ids should be filtered out");
 
     // A race definition is not a creature subtype, so it must never appear in the
     // CCreature subtype enumeration.
@@ -2442,6 +2675,11 @@ void test_creature_clone_preserves_composed_archetypes() {
     auto race = game->createObject<CCreatureRace>("CCreatureRace");
     expect_true(race != nullptr, "CCreatureRace is registered and constructs in the loaded game");
     race->setCreatureType("humanoid");
+    // Racial advancement scaffolding (EPIC_08/STORY_04/SUBSTORY_01): author a racial
+    // progression on the race so the clone round-trip covers racialLevelStats too.
+    auto racialGrowth = std::make_shared<CStats>();
+    racialGrowth->setStamina(3);
+    race->setRacialLevelStats(racialGrowth);
 
     auto classUnlock = game->createObject<CInteraction>("CInteraction");
     expect_true(classUnlock != nullptr, "CInteraction is registered and constructs in the loaded game");
@@ -2451,10 +2689,34 @@ void test_creature_clone_preserves_composed_archetypes() {
     klass->setMainStat("strength");
     klass->setLevelling({{"1", classUnlock}});
 
+    // A template overlay reference (EPIC_08 template layer): attached inline like
+    // the race/class definitions so the clone round-trip must carry it through the
+    // same serialize -> deserialize path.
+    //
+    // Register the template type in THIS test binary's CTypes registry first. On
+    // Windows the native plugin is a DLL with its own copy of the CTypes static
+    // registries, so the serializers the plugin registers for CCreatureTemplate are
+    // invisible to the executable's serialize path (unlike Linux, where the loaded
+    // plugin binds to the executable's registry). The race/class serializers this
+    // test relies on are already registered executable-side by the metadata
+    // round-trip tests that run earlier in main(); mirror that for the template
+    // type, otherwise the `templates` property is silently dropped ("No serializer
+    // for: templates") during the clone's serialize step on Windows.
+    CTypes::register_type_metadata<CCreatureTemplate, CGameObject>();
+    auto overlay = game->createObject<CCreatureTemplate>("CCreatureTemplate");
+    expect_true(overlay != nullptr, "CCreatureTemplate is registered and constructs in the loaded game");
+    overlay->setOrder(10);
+    overlay->setScaleAdjustment(1);
+    auto overlayStats = std::make_shared<CStats>();
+    overlayStats->setStrength(2);
+    overlay->setStatAdjustments(overlayStats);
+
     source->setName("composedSource");
     source->setRace(race);
     source->setCreatureClass(klass);
+    source->setTemplates({overlay});
     source->setLevel(3);
+    source->setRacialLevel(2);
     source->setHp(11);
     source->setGold(5);
     // The unlock lives on the archetype, not on the creature's own actions.
@@ -2477,6 +2739,31 @@ void test_creature_clone_preserves_composed_archetypes() {
                 "the clone's race archetype keeps the same definition (creatureType)");
     expect_true(clone->getCreatureClass()->getMainStat() == "strength",
                 "the clone's creatureClass archetype keeps the same definition (mainStat)");
+
+    // Template overlay preserved: the reference round-trips through the clone's
+    // serialize -> deserialize cycle with its ordering key, scale adjustment and
+    // stat adjustments intact. Guard the dereference so a dropped reference reports
+    // a FAIL instead of dereferencing an empty set.
+    expect_true(clone->getTemplates().size() == 1, "the clone retains the template overlay reference");
+    if (clone->getTemplates().size() == 1) {
+        auto clonedOverlay = *clone->getTemplates().begin();
+        expect_true(clonedOverlay->getOrder() == 10 && clonedOverlay->getScaleAdjustment() == 1,
+                    "the clone's template keeps its ordering key and scale adjustment");
+        expect_true(clonedOverlay->getStatAdjustments() && clonedOverlay->getStatAdjustments()->getStrength() == 2,
+                    "the clone's template keeps its stat adjustments");
+        clonedOverlay->setOrder(99);
+        expect_true(overlay->getOrder() == 10,
+                    "mutating the clone's template overlay does not write back to the source's template");
+    }
+
+    // Racial advancement round-trips through the serialize -> deserialize clone path
+    // like every other creature property: the racial level (distinct from the class
+    // level) and the race's racial progression survive the round trip.
+    expect_true(clone->getRacialLevel() == 2,
+                "the clone keeps the source's racialLevel through the serialize/deserialize round trip");
+    expect_true(clone->getRace()->getRacialLevelStats() != nullptr &&
+                    clone->getRace()->getRacialLevelStats()->getStamina() == 3,
+                "the clone's race keeps the authored racialLevelStats progression through the round trip");
 
     // Generated unique name distinct from the source.
     expect_true(!clone->getName().empty(), "the clone receives a generated name");
@@ -2503,6 +2790,88 @@ void test_creature_clone_preserves_composed_archetypes() {
     clone->setGold(42);
     expect_true(source->getLevel() == 3 && source->getHp() == 11 && source->getGold() == 5,
                 "mutating the clone's scalar state leaves the source unchanged");
+}
+
+// [EPIC_08][STORY_03][SUBSTORY_01] Multiclass class-track records round-trip
+// through the clone's serialize -> deserialize cycle like the race/class/template
+// references: the track set survives with each record's class reference, per-track
+// level and ordering key intact, and the clone owns independent track instances.
+// Uses the same loaded-game harness as the composed-archetype clone test above so
+// every property type the creature serializes through has a registered serializer.
+void test_creature_clone_preserves_class_tracks() {
+    auto game = CGameLoader::loadGame();
+    CGameLoader::startGame(game, "empty");
+
+    auto subtypes = game->getObjectHandler()->getAllSubTypes("CCreature");
+    expect_true(!subtypes.empty(), "a normally loaded game registers concrete CCreature subtypes to clone");
+    std::sort(subtypes.begin(), subtypes.end());
+    std::shared_ptr<CCreature> source;
+    for (const auto &type : subtypes) {
+        source = game->createObject<CCreature>(type);
+        if (source) {
+            break;
+        }
+    }
+    expect_true(source != nullptr, "a registered CCreature subtype constructs a concrete creature to clone");
+
+    // Register the track type in THIS test binary's CTypes registry first: on
+    // Windows the native plugin is a DLL with its own copy of the CTypes static
+    // registries, so the serializers the plugin registers for CCreatureClassTrack
+    // are invisible to the executable's serialize path (see the CCreatureTemplate
+    // note in the composed-archetype clone test above). Register the class type
+    // too so the nested creatureClass reference serializes regardless of which
+    // tests ran earlier in main().
+    CTypes::register_type_metadata<CCreatureClassTrack, CGameObject>();
+    CTypes::register_type_metadata<CCreatureClass, CGameObject>();
+
+    auto klass = game->createObject<CCreatureClass>("CCreatureClass");
+    expect_true(klass != nullptr, "CCreatureClass is registered and constructs in the loaded game");
+    klass->setMainStat("strength");
+    auto classGrowth = std::make_shared<CStats>();
+    classGrowth->setStrength(2);
+    klass->setLevelStats(classGrowth);
+
+    auto track = game->createObject<CCreatureClassTrack>("CCreatureClassTrack");
+    expect_true(track != nullptr, "CCreatureClassTrack is registered and constructs in the loaded game");
+    track->setCreatureClass(klass);
+    track->setLevel(2);
+    track->setOrder(10);
+
+    source->setName("classTrackSource");
+    source->setClassTracks({track});
+    source->setLevel(1);
+    expect_true(source->usesArchetypeComposition(), "a creature carrying a class track is composed");
+
+    auto clone = source->clone<CCreature>();
+    drain_event_loop();
+
+    expect_true(clone != nullptr, "cloning a class-tracked creature yields a CCreature instance");
+    expect_true(clone->usesArchetypeComposition(), "the clone remains composed after cloning");
+
+    // Track preserved: the record round-trips with its class reference, per-track
+    // level and ordering key. Guard the dereference so a dropped record reports a
+    // FAIL instead of dereferencing an empty set.
+    expect_true(clone->getClassTracks().size() == 1, "the clone retains the class-track record");
+    if (clone->getClassTracks().size() == 1) {
+        auto clonedTrack = *clone->getClassTracks().begin();
+        expect_true(clonedTrack->getLevel() == 2 && clonedTrack->getOrder() == 10,
+                    "the clone's track keeps its per-track level and ordering key");
+        expect_true(clonedTrack->getCreatureClass() != nullptr &&
+                        clonedTrack->getCreatureClass()->getMainStat() == "strength",
+                    "the clone's track keeps its class reference (mainStat identity)");
+        expect_true(clonedTrack->getCreatureClass() && clonedTrack->getCreatureClass()->getLevelStats() &&
+                        clonedTrack->getCreatureClass()->getLevelStats()->getStrength() == 2,
+                    "the clone's track keeps the referenced class's level growth");
+        // The clone owns an independent track instance: mutating it must not write
+        // back through to the source's record.
+        clonedTrack->setLevel(99);
+        expect_true(track->getLevel() == 2, "mutating the clone's track does not write back to the source's track");
+        if (clonedTrack->getCreatureClass()) {
+            clonedTrack->getCreatureClass()->setMainStat("intelligence");
+            expect_true(klass->getMainStat() == "strength",
+                        "mutating the clone's track class does not write back to the source's class");
+        }
+    }
 }
 
 // Build a CStats with the four primary attributes set (the others stay zero).
@@ -2572,6 +2941,44 @@ void test_creature_composed_main_stat_selection() {
                 "an empty creatureClass main stat falls back to creature.baseStats");
 }
 
+// CSerialization::generateName must never hand out a name its uniqueness
+// predicate rejects: name-keyed registries treat a colliding name as a
+// duplicate and silently drop the newcomer (CMap::addObject "Ignoring
+// duplicate map object"), so the generator has to re-roll instead. Pins:
+//   * a rejected candidate is never returned (the collision-retry loop);
+//   * candidates offered to the predicate are all distinct (the sequence
+//     counter keeps hash inputs unique even under allocator address reuse
+//     and RNG repeats);
+//   * a predicate that rejects every candidate fails loudly with
+//     std::runtime_error instead of returning a known-colliding name;
+//   * repeated default-overload calls on the same object stay distinct.
+void test_generate_name_collision_retry() {
+    auto object = std::make_shared<CGameObject>();
+
+    std::set<std::string> rejected;
+    auto reject_first_three = [&rejected](const std::string &candidate) {
+        if (rejected.size() < 3) {
+            rejected.insert(candidate);
+            return true;
+        }
+        return false;
+    };
+    auto name = CSerialization::generateName(object, reject_first_three);
+    expect_true(!name.empty(), "generateName returns a non-empty name once the predicate accepts");
+    expect_true(rejected.count(name) == 0, "generateName never returns a candidate its predicate rejected");
+    expect_true(rejected.size() == 3, "generateName offers distinct fresh candidates until one is accepted");
+
+    std::set<std::string> names;
+    for (int i = 0; i < 64; i++) {
+        names.insert(CSerialization::generateName(object));
+    }
+    expect_true(names.size() == 64, "repeated generateName calls on the same object yield distinct names");
+
+    expect_runtime_error(
+        [&object]() { CSerialization::generateName(object, [](const std::string &) { return true; }); },
+        "generateName throws instead of returning a name when every candidate collides");
+}
+
 } // namespace
 
 int main() {
@@ -2586,6 +2993,7 @@ int main() {
     test_near_coords_helpers();
     test_pathfinder_find_path_without_obstacles();
     test_pathfinder_waypoint_and_blocked_goal();
+    test_pathfinder_rejects_overflowing_routes();
     test_pathfinder_returns_start_when_passable_goal_has_no_route();
     test_pathfinder_caches_passability_checks();
     test_pathfinder_waypoint_override();
@@ -2600,6 +3008,7 @@ int main() {
     test_tag_round_trip_and_ordering();
     test_unknown_tag_rejection();
     test_tag_mutation_iteration_and_range_helpers();
+    test_public_stats_apply_preserves_zero_notifications_and_midpoint_dynamic_shadows();
     test_property_setters_emit_change_signals();
     test_inventory_mutation_notifies_property_subscribers_once();
     test_map_domain_signals_emit_for_tile_and_object_changes();
@@ -2614,12 +3023,15 @@ int main() {
     test_game_context_rejects_services_without_owner_game();
     test_game_context_transition_generation_helpers_and_shutdown();
     test_game_context_shutdown_is_idempotent_and_preserves_other_game_services();
+    test_effect_cycles_release_with_map_and_context_teardown();
+    test_effect_owner_registry_releases_finished_and_destroyed_owners();
     test_playtest_trace_records_and_helper_payloads();
     test_delayed_future_handlers_run_through_event_loop();
     test_script_rejects_executable_expressions();
     test_save_format_codec_validation();
     test_save_format_bounds_crafted_documents();
     test_serialization_collection_and_error_helpers();
+    test_generate_name_collision_retry();
     test_creature_effective_stats_baseline_capture();
     test_creature_effective_actions_baseline_capture();
     test_interaction_self_target_property_round_trip();
@@ -2630,6 +3042,7 @@ int main() {
     test_levelup_legacy_path_serializes_unlock_into_actions();
     test_levelup_composed_path_unlocks_via_effective_interactions_without_serializing();
     test_creature_clone_preserves_composed_archetypes();
+    test_creature_clone_preserves_class_tracks();
     test_creature_composed_stat_order();
     test_creature_composed_main_stat_selection();
 

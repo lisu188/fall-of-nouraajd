@@ -18,11 +18,14 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #pragma once
 
 #include <optional>
+#include <vector>
 
 #include "core/CStats.h"
 #include "object/CMapObject.h"
 
 class CInteraction;
+
+class CGameContext;
 
 class CEffect;
 
@@ -46,13 +49,20 @@ class CCreatureRace;
 
 class CCreatureClass;
 
+class CCreatureClassTrack;
+
+class CCreatureTemplate;
+
 typedef std::map<std::string, std::shared_ptr<CInteraction>> CInteractionMap;
 typedef std::map<std::string, std::shared_ptr<CItem>> CItemMap;
 
 class CCreature : public CMapObject, public CMoveable, public CVisitable {
+    friend class CGameContext;
+    friend class CMap;
 
     V_META(CCreature, CMapObject, V_PROPERTY(CCreature, int, exp, getExp, setExp),
            V_PROPERTY(CCreature, int, gold, getGold, setGold), V_PROPERTY(CCreature, int, level, getLevel, setLevel),
+           V_PROPERTY(CCreature, int, racialLevel, getRacialLevel, setRacialLevel),
            V_PROPERTY(CCreature, int, mana, getMana, setMana), V_PROPERTY(CCreature, int, hp, getHp, setHp),
            V_PROPERTY(CCreature, int, sw, getSw, setSw),
            V_PROPERTY(CCreature, CInteractionMap, levelling, getLevelling, setLevelling),
@@ -67,9 +77,11 @@ class CCreature : public CMapObject, public CMoveable, public CVisitable {
                       setFightController),
            V_PROPERTY(CCreature, std::shared_ptr<CCreatureRace>, race, getRace, setRace),
            V_PROPERTY(CCreature, std::shared_ptr<CCreatureClass>, creatureClass, getCreatureClass, setCreatureClass),
+           V_PROPERTY(CCreature, std::set<std::shared_ptr<CCreatureClassTrack>>, classTracks, getClassTracks,
+                      setClassTracks),
+           V_PROPERTY(CCreature, std::set<std::shared_ptr<CCreatureTemplate>>, templates, getTemplates, setTemplates),
            V_PROPERTY(CCreature, bool, npc, isNpc, setNpc), V_METHOD(CCreature, getManaMax, int),
-           V_METHOD(CCreature, getHpMax, int), V_METHOD(CCreature, getManaRegRate, int),
-           V_METHOD(CCreature, getEffects, std::set<std::shared_ptr<CEffect>>))
+           V_METHOD(CCreature, getHpMax, int), V_METHOD(CCreature, getManaRegRate, int))
 
   public:
     CCreature();
@@ -114,7 +126,7 @@ class CCreature : public CMapObject, public CMoveable, public CVisitable {
 
     void hurt(float i);
 
-    int getDmg();
+    int getDmg(bool allowCrit = true);
 
     int getScale();
 
@@ -155,6 +167,15 @@ class CCreature : public CMapObject, public CMoveable, public CVisitable {
     int getLevel();
 
     void setLevel(int level);
+
+    // Racial advancement, modeled separately from the class-driven `level`
+    // (EPIC_08/STORY_04/SUBSTORY_01). Counts hit-dice-style racial levels that
+    // apply race->racialLevelStats once each in the composed-stat fold. Defaults
+    // to 0 (zero contribution) and has NO XP or level-up wiring yet; the class
+    // level semantics, XP curve, and levelUp flow are untouched.
+    int getRacialLevel();
+
+    void setRacialLevel(int value);
 
     void addExpScaled(int scale);
 
@@ -280,15 +301,47 @@ class CCreature : public CMapObject, public CMoveable, public CVisitable {
 
     void setCreatureClass(std::shared_ptr<CCreatureClass> value);
 
-    // True when this creature carries either archetype definition. Composed
-    // stat/action/level behavior branches on this so partial migrations are
-    // explicit and creatures without archetypes keep the legacy paths exactly.
+    // Ordered multiclass class-track records (future mechanics, EPIC_08; empty on
+    // every current creature). Each CCreatureClassTrack pairs a CCreatureClass
+    // reference with a per-track level plus an `order` key. When the set is empty
+    // the single creatureClass path above is used untouched; when one or more
+    // tracks are present they SUBSUME the single creatureClass for class-derived
+    // contributions (stats, actions, mainStat) without replacing the reference.
+    std::set<std::shared_ptr<CCreatureClassTrack>> getClassTracks();
+
+    void setClassTracks(std::set<std::shared_ptr<CCreatureClassTrack>> value);
+
+    // The creature's class tracks in their defined application order: ascending
+    // `order` key, ties broken by configured identity so the multiclass fold is
+    // deterministic (mirrors getOrderedTemplates).
+    std::vector<std::shared_ptr<CCreatureClassTrack>> getOrderedClassTracks();
+
+    // Optional template overlays (empty on every current creature). Templates are
+    // CCreatureTemplate metadata definitions layered AFTER race/class composition;
+    // they never replace the race or the creatureClass reference.
+    std::set<std::shared_ptr<CCreatureTemplate>> getTemplates();
+
+    void setTemplates(std::set<std::shared_ptr<CCreatureTemplate>> value);
+
+    // The creature's templates in their defined application order: ascending
+    // `order` key, ties broken by configured identity (typeId, then name) so the
+    // fold-in is deterministic.
+    std::vector<std::shared_ptr<CCreatureTemplate>> getOrderedTemplates();
+
+    // True when this creature carries an archetype definition (race/creatureClass),
+    // a class-track record, or a template overlay. Composed stat/action/level
+    // behavior branches on this so partial migrations are explicit and creatures
+    // without archetypes, tracks or templates keep the legacy paths exactly.
     bool usesArchetypeComposition();
 
   protected:
     virtual void levelUp();
 
   private:
+    void releaseEffectReferences();
+
+    std::weak_ptr<CGameContext> effectOwnerContext;
+
     std::set<std::shared_ptr<CItem>> items;
     std::set<std::shared_ptr<CInteraction>> actions;
     std::set<std::shared_ptr<CEffect>> effects;
@@ -304,11 +357,18 @@ class CCreature : public CMapObject, public CMoveable, public CVisitable {
 
     std::shared_ptr<CCreatureClass> creatureClass;
 
+    std::set<std::shared_ptr<CCreatureClassTrack>> classTracks;
+
+    std::set<std::shared_ptr<CCreatureTemplate>> templates;
+
     std::optional<Coords> pendingMoveOrigin;
 
     int gold = 0;
     int exp = 0;
     int level = 0;
+    // Racial (hit-dice-style) level, distinct from the class-driven `level`.
+    // 0 by default so existing creatures compose bit-identically to today.
+    int racialLevel = 0;
     int sw = 0;
     int mana = 0;
     int hp = 0;

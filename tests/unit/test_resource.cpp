@@ -35,6 +35,8 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #include <memory>
 #include <string>
 
+std::set<std::string> getPluginAutoDiscoveryExclusions(const json &manifest);
+
 namespace {
 
 class ScopedCurrentPath {
@@ -65,6 +67,50 @@ bool write_text_file(const std::filesystem::path &path, const std::string &text)
     }
     stream << text;
     return static_cast<bool>(stream);
+}
+
+void test_manifest_scopes_control_plugin_auto_discovery() {
+    const json manifest = json::parse(R"json({"plugins": [
+        {"id": "global", "kind": "python", "path": "plugins/global.py"},
+        {"id": "mapPython", "kind": "python", "path": "./plugins/map.py", "scope": {"map": "siege"}},
+        {"id": "mapLua", "kind": "lua", "path": "plugins/map.lua", "scope": {"map": "siege"}},
+        {"id": "otherMap", "kind": "lua", "path": "plugins/other.lua", "scope": {"map": "test"}},
+        {"id": "wrongKind", "kind": "lua", "path": "plugins/undispatched.py"},
+        {"kind": "python", "path": "plugins/missingId.py"}
+    ]})json");
+    const auto exclusions = getPluginAutoDiscoveryExclusions(manifest);
+    expect_true(exclusions == std::set<std::string>{"plugins/global.py", "plugins/map.py", "plugins/map.lua",
+                                                    "plugins/other.lua"},
+                "global discovery must defer all valid manifest paths, including every inactive map scope");
+    expect_true(!exclusions.contains("plugins/unlisted.py") && !exclusions.contains("plugins/unlisted.lua"),
+                "unlisted Python and Lua plugins must remain eligible for auto-discovery");
+    expect_true(!exclusions.contains("plugins/undispatched.py") && !exclusions.contains("plugins/missingId.py"),
+                "invalid manifest declarations must not suppress valid auto-discovered files");
+    expect_true(getPluginAutoDiscoveryExclusions(json::object()).empty(),
+                "a manifest without declarations must preserve normal auto-discovery");
+}
+
+void test_manifest_exclusions_require_trusted_script_paths() {
+    const json manifest = json::parse(R"json({"plugins": [
+        null, "plugins/plain.py", 7,
+        {"id": "missingSource", "kind": "python"},
+        {"id": "escape", "kind": "python", "path": "../plugins/escape.py"},
+        {"id": "absolute", "kind": "lua", "path": "/plugins/absolute.lua"},
+        {"id": "wrongRoot", "kind": "lua", "path": "maps/test/helper.lua"},
+        {"id": "wrongMapFile", "kind": "python", "path": "maps/test/helper.py"},
+        {"id": "nestedMap", "kind": "python", "path": "maps/test/nested/script.py"},
+        {"id": "cpp", "kind": "cpp", "type": "NativeMarkerPlugin"},
+        {"id": "native", "kind": "native", "library": "plugins/native_marker_plugin"},
+        {"id": "unknown", "kind": "unregistered", "path": "plugins/unknown.py"},
+        {"id": "mapScript", "kind": "python", "path": "maps/test/script.py", "scope": {"map": "test"}},
+        {"id": "normalized", "kind": "lua", "path": "plugins/nested/../shared.lua"},
+        {"id": "duplicate", "kind": "lua", "path": "./plugins/shared.lua"}
+    ]})json");
+    expect_true(getPluginAutoDiscoveryExclusions(manifest) ==
+                    std::set<std::string>{"maps/test/script.py", "plugins/shared.lua"},
+                "only trusted Python/Lua paths may suppress discovery, with normalized duplicates coalesced");
+    expect_true(getPluginAutoDiscoveryExclusions(json::parse(R"({"plugins":{}})")).empty(),
+                "malformed manifest sections must leave fallback discovery available");
 }
 
 void test_resource_provider_paths_and_config_loader() {
@@ -217,6 +263,74 @@ void test_load_game_creates_context_owned_providers() {
     expect_true(first_items == first_configuration->getConfiguration("items.json"),
                 "context-owned configuration providers should cache configs per provider instance");
     expect_true(first_items != second_items, "separate game contexts should not share configuration provider caches");
+}
+
+void test_game_contexts_isolate_same_logical_config_id() {
+    auto singletonResources = CResourcesProvider::getInstance();
+    const auto itemsPath = std::filesystem::path(singletonResources->getPath("config/items.json"));
+    expect_true(!itemsPath.empty(), "items config should resolve before context-owned config isolation test");
+    if (itemsPath.empty()) {
+        return;
+    }
+    const auto configRoot = itemsPath.parent_path();
+
+    const auto nonce = std::chrono::steady_clock::now().time_since_epoch().count();
+    const std::string logicalConfigId = "unit_ctx_isolation_" + std::to_string(nonce) + ".json";
+    const auto configPath = configRoot / logicalConfigId;
+    std::filesystem::remove(configPath);
+
+    // Publish the same logical id with the "alpha" value and let the first game context cache it.
+    expect_true(write_text_file(configPath, R"({"marker":"alpha"})"),
+                "context isolation fixture should be written with the initial value");
+    if (!std::filesystem::exists(configPath)) {
+        return;
+    }
+
+    auto firstGame = CGameLoader::loadGame();
+    auto secondGame = CGameLoader::loadGame();
+    expect_true(firstGame->getConfigurationProvider() != secondGame->getConfigurationProvider(),
+                "distinct game contexts must own distinct configuration providers");
+
+    auto firstAlpha = firstGame->getConfigurationProvider()->getConfiguration(logicalConfigId);
+    expect_true(json_string_value(firstAlpha, "marker") == "alpha",
+                "the first game context should load the initial config value under the shared logical id");
+
+    // Re-publish the same logical id with a different value; only a per-context cache keeps the two
+    // games serving different objects for one id.
+    expect_true(write_text_file(configPath, R"({"marker":"beta"})"),
+                "context isolation fixture should be rewritable with a second value");
+
+    auto secondBeta = secondGame->getConfigurationProvider()->getConfiguration(logicalConfigId);
+    expect_true(json_string_value(secondBeta, "marker") == "beta",
+                "a separate game context should read the current config value for the same logical id");
+
+    // The second context's load must not be visible in, or mutate, the first context's cache.
+    auto firstAlphaAgain = firstGame->getConfigurationProvider()->getConfiguration(logicalConfigId);
+    expect_true(firstAlphaAgain == firstAlpha,
+                "a game context should keep serving its own cached object for a given logical id");
+    expect_true(json_string_value(firstAlphaAgain, "marker") == "alpha",
+                "another context's load of the same id must not leak into or overwrite a context's cache");
+    expect_true(firstAlpha != secondBeta,
+                "two game contexts must resolve the same logical id to their own isolated objects");
+
+    // Static compatibility behavior stays separate: neither context load primes the process-wide cache.
+    auto legacyConfig = CConfigurationProvider::getConfig(logicalConfigId);
+    expect_true(json_string_value(legacyConfig, "marker") == "beta",
+                "context-owned loads must not populate the process-wide configuration provider cache");
+    expect_true(legacyConfig != firstAlpha && legacyConfig != secondBeta,
+                "the process-wide compatibility cache must stay distinct from context-owned caches");
+
+    // Unsafe-path rejection is unchanged for context-owned resource providers.
+    auto firstResources = firstGame->getResourcesProvider();
+    auto secondResources = secondGame->getResourcesProvider();
+    expect_true(firstResources->getPath("../config/items.json").empty(),
+                "context-owned providers must keep rejecting parent-traversal resource paths");
+    expect_true(secondResources->getPath("/etc/passwd").empty(),
+                "context-owned providers must keep rejecting absolute resource paths");
+    expect_true(!firstResources->getPath("config/items.json").empty(),
+                "context-owned providers must keep resolving safe in-root resource paths");
+
+    std::filesystem::remove(configPath);
 }
 
 void test_map_load_resolves_through_context_owned_providers() {
@@ -513,26 +627,36 @@ void test_scoped_search_roots_resolve_active_map_assets() {
     std::filesystem::remove_all(tempRootB, errorCode);
 }
 
-
 void test_base_search_path_resolution_bypasses_active_map_scope() {
     const auto nonce = std::to_string(std::chrono::steady_clock::now().time_since_epoch().count());
     const auto tempRoot = std::filesystem::temp_directory_path() / ("scoped-native-plugin-root-" + nonce);
-    const auto scopedPlugin = tempRoot / "plugins" / "native" / "payload.so";
+    const auto logicalPlugin = "plugins/native/scoped_payload_" + nonce + ".so";
+    const auto scopedPlugin = tempRoot / logicalPlugin;
     std::error_code errorCode;
     std::filesystem::create_directories(scopedPlugin.parent_path(), errorCode);
     expect_true(write_text_file(scopedPlugin, "map-local native plugin"),
                 "map-local native plugin fixture should be written");
+    std::filesystem::create_directories(tempRoot / "config", errorCode);
+    expect_true(write_text_file(tempRoot / "config" / "items.json", "map-local config"),
+                "scoped config shadow fixture should be written");
 
     auto provider = std::make_shared<CResourcesProvider>();
     provider->addScopedRoot("map", tempRoot.string());
     provider->setActiveScope("map");
 
-    expect_true(!provider->getPath("plugins/native/payload.so").empty(),
+    expect_true(!provider->getPath(logicalPlugin).empty(),
                 "ordinary scoped lookup should still resolve map-local plugin-shaped assets");
-    expect_true(provider->getPathFromBaseSearchPath("plugins/native/payload.so").empty(),
+    expect_true(provider->getPathFromBaseSearchPath(logicalPlugin).empty(),
                 "trusted native plugin lookup must bypass active map scopes");
-    expect_true(provider->getPathFromBaseSearchPath("../plugins/native/payload.so").empty(),
+    expect_true(provider->getPathFromBaseSearchPath("../" + logicalPlugin).empty(),
                 "trusted native plugin lookup must still reject traversal paths");
+    expect_true(provider->getPathFromBaseSearchPath(scopedPlugin.string()).empty(),
+                "trusted native plugin lookup must still reject absolute paths");
+
+    const auto packagedResource = provider->getPathFromBaseSearchPath("config/items.json");
+    expect_true(!packagedResource.empty(), "trusted lookup must still resolve packaged resources");
+    expect_true(packagedResource == provider->getPath("config/items.json"),
+                "ordinary lookup must retain base-first precedence with an active scope");
 
     std::filesystem::remove_all(tempRoot, errorCode);
 }
@@ -594,21 +718,70 @@ void test_map_load_activates_scope_for_map_local_assets() {
     std::filesystem::remove_all(mapDir);
 }
 
+void test_failed_save_restore_preserves_resource_scope() {
+    auto game = CGameLoader::loadGame();
+    auto provider = game->getResourcesProvider();
+    const auto configPath = std::filesystem::path(provider->getPath("config/items.json"));
+    expect_true(!configPath.empty(), "resource root must exist for failed-save scope regression");
+    if (configPath.empty()) {
+        return;
+    }
+    const auto resourceRoot = configPath.parent_path().parent_path();
+    const auto nonce = std::to_string(std::chrono::steady_clock::now().time_since_epoch().count());
+    const std::string mapA = "unit_active_scope_" + nonce;
+    const std::string mapB = "unit_rejected_scope_" + nonce;
+    const auto directoryA = resourceRoot / "maps" / mapA;
+    const auto directoryB = resourceRoot / "maps" / mapB;
+    const std::string asset = "scope_asset_" + nonce + ".txt";
+    std::filesystem::create_directories(directoryA);
+    std::filesystem::create_directories(directoryB);
+    const auto mapConfig = R"({"properties":{"x":0,"y":0,"z":0},"layers":[]})";
+    expect_true(write_text_file(directoryA / "map.json", mapConfig) &&
+                    write_text_file(directoryB / "map.json", mapConfig) &&
+                    write_text_file(directoryA / asset, "active") && write_text_file(directoryB / asset, "rejected"),
+                "failed-save scope fixtures must be written");
+    auto activeMap = CMapLoader::loadNewMap(game, mapA);
+    game->setMap(activeMap);
+    const std::string slot = "scope-failure-" + nonce;
+    auto snapshot = std::make_shared<json>(
+        json{{"class", "CMap"},
+             {"properties", {{"mapName", mapB}, {"objects", json::array({json{{"class", "MissingScopeActor"}}})}}}});
+    auto envelope = CSaveFormat::buildEnvelope(snapshot, mapB);
+    expect_true(envelope.has_value(), "failing save must pass envelope validation before deserialization");
+    if (envelope) {
+        expect_true(provider->save(CSaveFormat::primaryPath(slot), *envelope), "failed-save fixture must be saved");
+        CGameLoader::loadSavedGame(game, slot);
+        expect_true(game->getMap() == activeMap, "rejected save must preserve the active map");
+        expect_true(provider->getActiveScope() == mapA, "rejected save must preserve the active asset scope");
+        expect_true(provider->load(asset) == "active", "rejected save must still resolve active-map local assets");
+        const auto savePath = provider->getPath(CSaveFormat::primaryPath(slot));
+        if (!savePath.empty()) {
+            std::filesystem::remove(savePath);
+        }
+    }
+    std::filesystem::remove_all(directoryA);
+    std::filesystem::remove_all(directoryB);
+}
+
 } // namespace
 
 int main() {
     pybind11::scoped_interpreter guard{};
 
+    test_manifest_scopes_control_plugin_auto_discovery();
+    test_manifest_exclusions_require_trusted_script_paths();
     test_resource_provider_paths_and_config_loader();
     test_resource_provider_save_uses_provider_root_when_cwd_changes();
     test_configuration_provider_instances_do_not_share_config_cache();
     test_load_game_creates_context_owned_providers();
+    test_game_contexts_isolate_same_logical_config_id();
     test_map_load_resolves_through_context_owned_providers();
     test_two_game_contexts_isolate_provider_cache_and_object_config();
     test_resource_plugin_trust_boundary_rejects_escapes();
     test_scoped_search_roots_resolve_active_map_assets();
     test_base_search_path_resolution_bypasses_active_map_scope();
     test_map_load_activates_scope_for_map_local_assets();
+    test_failed_save_restore_preserves_resource_scope();
 
     return finish_tests();
 }

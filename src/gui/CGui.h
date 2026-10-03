@@ -25,7 +25,10 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #include "object/CGameObject.h"
 
 #include <atomic>
+#include <map>
 #include <optional>
+#include <string>
+#include <deque>
 
 class CTextureCache;
 
@@ -81,6 +84,29 @@ class CGui : public CGameGraphicsObject {
     // to decide drag-vs-click, so the rule lives in exactly one place.
     static bool isDragActive(const DragSession &session);
 
+    // Session-only geometry remembered for user-resized panels, keyed by the panel's stable typeId
+    // (the config name CObjectHandler stamps on every created object). x/y are parent-relative (the
+    // same space as CLayout's runtime X/Y overrides); w/h are pixels. Deliberately NOT a reflective
+    // property: it can never be serialized into layout configs or save files, and it dies with this
+    // CGui (one CGui per game session), so user-adjusted geometry persists for the session only.
+    struct PanelGeometry {
+        int x = 0;
+        int y = 0;
+        int w = 0;
+        int h = 0;
+    };
+
+    void setSessionPanelGeometry(const std::string &panelType, const PanelGeometry &geometry);
+
+    std::optional<PanelGeometry> getSessionPanelGeometry(const std::string &panelType) const;
+
+    void clearSessionPanelGeometry();
+
+    // Re-applies session-recorded geometry the moment a panel joins the GUI, so a panel closed and
+    // reopened (or rebuilt) within the same session keeps its user-adjusted geometry.
+    void addChild(const std::shared_ptr<CGameGraphicsObject> &child) override;
+
+    using CGameGraphicsObject::event;
     using CGameGraphicsObject::render;
 
     SDL_Renderer *getRenderer() const;
@@ -104,6 +130,22 @@ class CGui : public CGameGraphicsObject {
     int getTileCountX();
 
     int getTileCountY();
+
+    double getUiScale() const;
+    double getTextScale() const;
+    bool isHighContrast() const { return uiPreferences.value("highContrast", false); }
+    std::string getUiPreferences() const;
+    bool applyUiPreferences(const std::string &preferences);
+    void notify(const std::string &message);
+    void notifyAt(const std::shared_ptr<CMapObject> &target, const std::string &message);
+    std::string getActionFeedback() const;
+    std::string getUiHistory() const;
+    std::string getRecentNotification() const;
+    void previewObject(const std::shared_ptr<CGameGraphicsObject> &source, const std::shared_ptr<CGameObject> &object,
+                       int x, int y);
+    void focusWidget(const std::shared_ptr<CGameGraphicsObject> &widget);
+    bool isFocused(const CGameGraphicsObject *widget) const;
+    void releaseFocusFor(const std::shared_ptr<CGameGraphicsObject> &root);
 
   private:
     int height = 1080;
@@ -174,7 +216,30 @@ class CGui : public CGameGraphicsObject {
 
     std::optional<DragSession> dragSession;
 
+    std::map<std::string, PanelGeometry> sessionPanelGeometry;
+
     std::weak_ptr<CGameGraphicsObject> pointerCapture;
+    std::weak_ptr<CGameGraphicsObject> focusedWidget;
+    std::set<SDL_Keycode> heldKeys;
+    std::set<SDL_Keycode> suppressedKeys;
+    std::vector<std::pair<std::weak_ptr<CGameGraphicsObject>, std::weak_ptr<CGameGraphicsObject>>> focusHistory;
+    json uiPreferences;
+    std::deque<std::string> activityHistory;
+    Uint32 notificationTime = 0;
+    std::weak_ptr<CMapObject> feedbackTarget;
+    std::weak_ptr<CMap> feedbackMap;
+    std::string actionFeedback;
+    std::weak_ptr<CMap> uiMap;
+    std::weak_ptr<CGameGraphicsObject> hoverSource;
+    std::weak_ptr<CGameObject> hoverObject;
+    SDL_Point hoverPosition{};
+    Uint32 hoverStarted = 0;
+    bool hoverSeen = false;
+    void renderHoverPreview();
+    void renderActionFeedback();
+    bool handleFocusKey(SDL_Event *event);
+    void loadUiPreferences();
+    SDL_Keycode remapKey(SDL_Keycode key) const;
 
     std::atomic<bool> active = true;
 };

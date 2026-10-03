@@ -1,11 +1,95 @@
 from _game import *
 import json
 
+
+def craftRecipe(game_instance, station, recipe_id):
+    """Execute an existing recipe only at the active player's authored crafting station."""
+    from plugins import crafting
+
+    game_map = game_instance.getMap() if game_instance is not None else None
+    player = game_map.getPlayer() if game_map is not None else None
+    if player is None:
+        return {"ok": False, "reason": "missing:player"}
+    if (
+        station is None
+        or not isinstance(station, CBuilding)
+        or station.getType() != "CraftingStation"
+        or game_map.getObjectByName(station.getName()) is not station
+    ):
+        return {"ok": False, "reason": "invalid:station"}
+    here, destination = player.getCoords(), station.getCoords()
+    if (here.x, here.y, here.z) != (destination.x, destination.y, destination.z):
+        return {"ok": False, "reason": "distant:station"}
+    if not station.getBoolProperty("enabled"):
+        return {"ok": False, "reason": "disabled:station"}
+    recipe = crafting.get_runtime().get_recipe(recipe_id)
+    if recipe is None:
+        return {"ok": False, "reason": "missing:recipe"}
+    if recipe["station"] != crafting._get_station_identifier(station):
+        return {"ok": False, "reason": "invalid:recipeStation"}
+    return crafting.craft_recipe(game_instance, player, recipe_id)
+
+
+def showReader(game_instance, title, body):
+    """Present a synchronous titled reader and retain its text in exploration History."""
+    handler = game_instance.getGuiHandler()
+    gui = game_instance.getGui()
+    if gui is not None:
+        gui.notify(title + "\n" + body)
+    reader = getattr(handler, "showCampaignScreen", None)
+    if callable(reader):
+        reader(title, body, "Continue")
+    else:
+        handler.showInfo(body, False)
+
+
+def rewardSnapshot(player):
+    items = {}
+    owned = set(player.getItems())
+    owned.update(item for item in player.getEquipped().values() if item is not None)
+    for item in owned:
+        identity = item.getTypeId()
+        if identity not in items:
+            label = item.getStringProperty("label") or item.getStringProperty("description") or "Unnamed item"
+            items[identity] = {"label": label, "count": 0}
+        items[identity]["count"] += 1
+    return {"gold": player.getGold(), "experience": player.getNumericProperty("exp"), "items": items}
+
+
+def showRewardReceipt(game_instance, title, before, message=""):
+    """Acknowledge only observed inventory/gold gains; reward grants remain owned by the caller."""
+    after = rewardSnapshot(game_instance.getMap().getPlayer())
+    rows = []
+    gold = after["gold"] - before["gold"]
+    if gold > 0:
+        rows.append(f"Gold: +{gold}")
+    experience = after["experience"] - before["experience"]
+    if experience > 0:
+        rows.append(f"Experience: +{experience}")
+    for identity, entry in sorted(after["items"].items()):
+        count = entry["count"] - before["items"].get(identity, {}).get("count", 0)
+        if count > 0:
+            rows.append(f"{entry['label']}: +{count}")
+    receipt = "Rewards received\n" + "\n".join(rows) if rows else "No new rewards."
+    showReader(game_instance, title, (message + "\n\n" if message else "") + receipt)
+
+
+def requirementMessage(game_instance, target, message):
+    gui = game_instance.getGui()
+    anchored = getattr(gui, "notifyAt", None) if gui is not None else None
+    if target is not None and callable(anchored):
+        anchored(target, message)
+    else:
+        game_instance.getGuiHandler().notify(message)
+
+
 import campaign
+import narrative
 from quest_state import LegacyBoolFlag
 from quest_state import PlayerQuestRegistry
 from quest_state import QuestStateStore
 from quest_state import ensure_quest
+from quest_state import mapQuest
 from quest_state import player_has_quest
 from quest_state import quest_id
 
@@ -132,8 +216,7 @@ def player_race_options(g):
         label = race.getStringProperty("label") or race_type
         if label in options:
             raise ValueError(
-                f"duplicate player-selectable race label {label!r}: "
-                f"{options[label]!r} and {race_type!r}"
+                f"duplicate player-selectable race label {label!r}: " f"{options[label]!r} and {race_type!r}"
             )
         options[label] = race_type
     return options
@@ -183,71 +266,41 @@ def choose_player_race(g):
 
 
 def choose_character(g):
-    # Combined class + race character-creation screen: one panel with two columns
-    # of buttons (classes on the left, stat-previewed races on the right), closing
-    # once both are picked. Returns (class_type, race_id); an empty class_type means
-    # the choice was cancelled. Falls back to the sequential menus when either side
-    # has no options (e.g. no player-selectable races), preserving old behaviour.
-    class_options = player_class_options(g)  # {label: player_type}
-    race_options = player_race_options(g)  # {label: race_type}
-    race_display = {}
-    for label, race_type in race_options.items():
-        preview = race_stat_preview(g.createObject(race_type))
-        race_display[f"{label} - {preview}"] = race_type
-    if not class_options or not race_display:
-        return choose_player_class(g), choose_player_race(g)
-    class_label, race_label = g.getGuiHandler().showCharacterCreation(
-        list_string(g, list(class_options.keys())),
-        list_string(g, list(race_display.keys())),
-    )
-    if not class_label:
-        return "", ""
-    return class_options.get(class_label, class_label), race_display.get(race_label, "")
+    import ui
+
+    return ui.chooseCharacter(g)
+
+
+def choose_campaign(g):
+    # Stable-ID campaign browser: the GUI lists campaigns by display title while
+    # every map stays keyed by the stable campaignId, so duplicate titles cannot
+    # collide and the returned value is always a validated stable id. Returns ""
+    # when no campaign exists, the browser is cancelled (CANCEL/Escape/close),
+    # or an unknown id comes back.
+    manifests = campaign.list_campaigns()
+    if not manifests:
+        g.getGuiHandler().showInfo("No campaigns are available.", True)
+        return ""
+    titles = g.createObject("CMapStringString")
+    titles.setValues({manifest["campaignId"]: manifest["title"] for manifest in manifests})
+    descriptions = g.createObject("CMapStringString")
+    descriptions.setValues({manifest["campaignId"]: manifest.get("description", "") for manifest in manifests})
+    scenario_counts = g.createObject("CMapStringInt")
+    scenario_counts.setValues({manifest["campaignId"]: len(manifest["scenarios"]) for manifest in manifests})
+    campaign_id = g.getGuiHandler().showCampaignSelection(titles, descriptions, scenario_counts)
+    if campaign_id not in {manifest["campaignId"] for manifest in manifests}:
+        return ""
+    return campaign_id
 
 
 def new():
+    import ui
+
     g = CGameLoader.loadGame()
     CGameLoader.loadGui(g)
-    selection = g.getGuiHandler().showSelection(list_string(g, ["NEW", "CAMPAIGN", "LOAD", "RANDOM"]))
-    if selection == "NEW":
-        maps = CResourcesProvider.getInstance().getFiles("MAP")
-        if not maps:
-            g.getGuiHandler().showInfo("No maps are available.", True)
-            return
-        map = g.getGuiHandler().showSelection(list_string(g, maps))
-        if not map:
-            return
-        player, race = choose_character(g)
-        if not player:
-            return
-        CGameLoader.startGameWithPlayer(g, map, player, race)
-    elif selection == "CAMPAIGN":
-        campaigns = {manifest["title"]: manifest["campaignId"] for manifest in campaign.list_campaigns()}
-        if not campaigns:
-            g.getGuiHandler().showInfo("No campaigns are available.", True)
-            return
-        title = g.getGuiHandler().showSelection(list_string(g, list(campaigns.keys())))
-        if title not in campaigns:
-            return
-        player, race = choose_character(g)
-        if not player:
-            return
-        campaign.start(g, campaigns[title], player, race)
-    elif selection == "LOAD":
-        saves = CResourcesProvider.getInstance().getFiles("SAVE")
-        if not saves:
-            g.getGuiHandler().showInfo("No saved games are available.", True)
-            return
-        save = g.getGuiHandler().showSelection(list_string(g, saves))
-        if not save:
-            return
-        CGameLoader.loadSavedGame(g, save)
-    elif selection == "RANDOM":
-        player, race = choose_character(g)
-        if not player:
-            return
-        CGameLoader.startRandomGameWithPlayer(g, player, race)
-    while event_loop.instance().run():
+    if not ui.mainMenu(g):
+        return
+    while g.getContext().isActive() and event_loop.instance().run():
         pass
 
 
@@ -273,10 +326,11 @@ class CDialog(CDialogBase2):
                 reason="unknown_action",
             )
             logger(f"Rejected unknown dialog action: {action}")
-            return
+            return False
         try:
             record_playtest_trace("dialog_action", action=action, dialog=playtest_object_ref(self))
             callback()
+            return True
         except Exception as exc:
             record_playtest_trace(
                 "dialog_action_failed",
@@ -285,6 +339,7 @@ class CDialog(CDialogBase2):
                 error=type(exc).__name__,
             )
             logger(f"Dialog action failed closed: {action}: {exc}")
+            return False
 
     def invokeCondition(self, condition):
         callback = self._get_public_callback(condition)

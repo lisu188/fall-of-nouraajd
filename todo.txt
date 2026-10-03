@@ -1,26 +1,35 @@
-Engine TODO index. The committed queue workbook
-(planning/fall_of_nouraajd_issue_proposals.xlsx, via scripts/issue_queue.py) is
-the implementation backlog; docs/codebase-cleanup-plan.md sequences the cleanup
-work. Historical fix-by-fix notes live in docs/todo-worklog.md.
+Engine TODO index
 
-Already queued — work the existing workbook items, do not re-propose:
-//TODO: resizing panels                                          [queued: EPIC_05_STORY_02]
-//TODO: migrate remaining global/static providers and UI/session services into CGameContext where safe [queued: EPIC_02_STORY_01]
-//TODO: encapsulate SDL_RenderCopy                               [queued: EPIC_05_STORY_03]
-//TODO: what if we return to oldMap after switch?                [queued: EPIC_02_STORY_03]
-//TODO: load assets from map                                     [queued: EPIC_04_STORY_03]
-//TODO: replace buff with selfTarget                             [queued: EPIC_06_STORY_01]
-//TODO: separate class from race                                 [queued: EPIC_06_STORY_02/03]
-//TODO: mark primitve CGameObjects like CList and CMapString, CScript as primitive and unfold values field directly to properties [queued: EPIC_03_STORY_04]
-    generally items with one property, would require not counting props from CGameObject and getting field type from meta class
-    because its not accesible in CSerialization
-//TODO: make function to compare objects                         [see docs/object-comparison-semantics.md + tests/test_object_comparison_audit.py; verify remaining scope before proposing]
+GitHub issues are the active feature backlog:
+https://github.com/lisu188/fall-of-nouraajd/issues
+Historical fix and validation records are in docs/todo-worklog.md.
+The workbook queue and scripts/issue_queue.py were retired in PR #1491;
+do not restore their workflows or treat removed EPIC rows as an active queue.
 
-Open — candidates for new queue proposals (see docs/codebase-cleanup-plan.md for EPIC_08+ suggestions):
-//TODO: weird fight bug after fight, player didnt return to position [possibly fixed by EPIC_01_STORY_02; verify before proposing]
-//TODO: when lost fight in cave, panel pops out after return to position [possibly fixed by EPIC_01; verify before proposing]
-//TODO: drag & drop
-//TODO: extend pathfinder beyond authored waypoint connectors to generalized multilevel maps [partially done, see docs/todo-worklog.md]
-//TODO: implement property change listeners to enable AOP
-//TODO: siege
-    //TODO: when changing canStep of gate creatures can get in but cant get out
+Current gameplay delivery is tracked by issues #1506-#1515:
+unified character creation, class and race payoffs, persistent narrative choices,
+enemy combat roles, the OctoBogz hunt, campaign outcomes, RNG and effect auditing.
+Implementation and validation status belong on those issues and their pull requests.
+
+Completed reminders verified against current source and regression coverage:
+- Race and class are separate creature archetypes; see docs/design/creature_archetypes.md.
+- Interactions use selfTarget; the old buff migration reminder is obsolete.
+- Inventory drag/drop is implemented, including invalid drops and modal cancellation.
+- Property change notifications and reactive views exist; broad AOP was never required
+  to enable the current notifications.
+- Siege gates defer blocking until living occupants have left, and ignore dead occupants.
+- Cave-loss and post-combat position handling have dedicated gameplay/GUI regressions.
+- Object comparison semantics are documented and audited in
+  docs/object-comparison-semantics.md and tests/test_object_comparison_audit.py.
+
+Deferred broader work (requires its own measured scope and acceptance criteria):
+- Migrate remaining global/static providers and UI/session services into CGameContext.
+- Encapsulate the remaining SDL rendering calls.
+- Generalize revisiting cached maps after a scene switch.
+- Add map-owned asset loading.
+- Rework primitive object serialization (CList, CMapString and CScript).
+- Extend authored navigation connectors to generalized multilevel navigation.
+- Rework text/layout internals beyond the existing preference-aware behavior.
+
+These deferred items are design/refactor work, not unresolved acceptance requirements
+for the focused gameplay fixes above.
