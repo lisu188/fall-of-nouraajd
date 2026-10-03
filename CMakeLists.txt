@@ -461,6 +461,7 @@ endforeach ()
 configure_file(res/plugins/effect.py plugins/effect.py)
 configure_file(res/plugins/interaction.py plugins/interaction.py)
 configure_file(res/plugins/enemy_roles.py plugins/enemy_roles.py)
+configure_file(res/plugins/octobogz_hunt.py plugins/octobogz_hunt.py)
 configure_file(res/plugins/object.py plugins/object.py)
 configure_file(res/plugins/crafting.py plugins/crafting.py)
 configure_file(res/plugins/artifact_sets.py plugins/artifact_sets.py)
@@ -815,7 +816,8 @@ function(add_game_unit_test target_name)
     if (target_name STREQUAL "monster_balance_unit_tests")
         add_test(NAME "${test_name}"
             COMMAND ${Python3_EXECUTABLE} "${CMAKE_CURRENT_SOURCE_DIR}/scripts/run_monster_balance.py"
-                $<TARGET_FILE:${target_name}>)
+                $<TARGET_FILE:${target_name}>
+                --diagnostic-output-dir "${CMAKE_CURRENT_SOURCE_DIR}/coverage/test-output/native-role-diagnostics")
     else ()
         add_test(NAME "${test_name}" COMMAND ${target_name})
     endif ()
@@ -860,6 +862,22 @@ endif ()
 target_compile_definitions(monster_balance_unit_tests PRIVATE
     GAME_MONSTER_BALANCE_TEST_RESOURCE_ROOT="${CMAKE_CURRENT_BINARY_DIR}"
 )
+add_test(NAME for_unit_tests.octobogz_hunt_balance COMMAND monster_balance_unit_tests --hunt-route)
+set_tests_properties(for_unit_tests.octobogz_hunt_balance PROPERTIES
+    LABELS "for_unit_tests;unit;monster_balance_unit_tests"
+    TIMEOUT 60
+)
+if (WIN32)
+    get_test_property(for_unit_tests.monster_balance_unit_tests ENVIRONMENT HUNT_TEST_ENVIRONMENT)
+    if (HUNT_TEST_ENVIRONMENT)
+        set_tests_properties(for_unit_tests.octobogz_hunt_balance PROPERTIES ENVIRONMENT "${HUNT_TEST_ENVIRONMENT}")
+    endif ()
+    get_test_property(for_unit_tests.monster_balance_unit_tests ENVIRONMENT_MODIFICATION HUNT_TEST_ENVIRONMENT_MODIFICATION)
+    if (HUNT_TEST_ENVIRONMENT_MODIFICATION)
+        set_tests_properties(for_unit_tests.octobogz_hunt_balance PROPERTIES
+            ENVIRONMENT_MODIFICATION "${HUNT_TEST_ENVIRONMENT_MODIFICATION}")
+    endif ()
+endif ()
 add_game_unit_test(navigation_search_unit_tests tests/unit/test_navigation_search.cpp)
 add_game_unit_test(navigation_flow_unit_tests tests/unit/test_navigation_flow.cpp)
 add_game_unit_test(navigation_preview_unit_tests tests/unit/test_navigation_preview.cpp)

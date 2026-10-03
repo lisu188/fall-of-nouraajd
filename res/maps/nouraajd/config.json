@@ -232,7 +232,7 @@
     "properties": {
       "animation": "images/ambient/hay_bales",
       "canStep": true,
-      "text": "A torn net is threaded with black slime and bright feathers that twitch without wind."
+      "text": "A torn net is threaded with black slime. Three kinds of tracks lead east: a scout, a shadow brood, and a great Alpha that gathers darkness when wounded."
     }
   },
   "ambientMireLantern": {
@@ -391,7 +391,7 @@
           "controller": {
             "class": "CGroundController",
             "properties": {
-              "tileType": "ground"
+              "tileType": "grass"
             }
           }
         }
@@ -400,24 +400,9 @@
     }
   },
   "cave2": {
-    "ref": "Cave",
+    "ref": "octobogzLair",
     "properties": {
-      "message": "With the relic blazing, the OctoBogz lair groans and collapses around you.",
-      "chance": "10",
-      "monster": {
-        "ref": "OctoBogz",
-        "properties": {
-          "affiliation": "bogz",
-          "controller": {
-            "class": "CRangeController",
-            "properties": {
-              "target": "cave2",
-              "distance": 10
-            }
-          }
-        }
-      },
-      "monsters": "3"
+      "message": "With the relic blazing, the OctoBogz lair groans and collapses around you."
     }
   },
   "market1": {

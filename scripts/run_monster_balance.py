@@ -7,11 +7,13 @@
 import argparse
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from dataclasses import dataclass
+from pathlib import Path
 import re
 import signal
 import subprocess
 import threading
 import time
+import uuid
 
 CLASS_IDS = ("Warrior", "Sorcerer", "Assasin", "Inquisitor", "Wayfarer")
 MONSTER_IDS = ("Gooby", "Pritz", "OctoBogz", "PritzMage", "GoblinThief", "Cultist", "CultLeader")
@@ -31,13 +33,43 @@ def emitLine(line):
     print(line, flush=True)
 
 
-def runWorker(command, name, deadline, emit, output_lock, cancelled):
+def openDiagnosticStreams(directory, name):
+    directory = Path(directory)
+    directory.mkdir(parents=True, exist_ok=True)
+    token = uuid.uuid4().hex
+    streams = []
+    try:
+        for kind in ("stdout", "stderr"):
+            streams.append((directory / f"{name}-{token}.{kind}.log").open("x", encoding="utf-8"))
+    except BaseException:
+        for stream in streams:
+            try:
+                stream.close()
+            except Exception:
+                pass
+        raise
+    return streams
+
+
+def runWorker(command, name, deadline, emit, output_lock, cancelled, diagnostic_output_dir=None):
     stdout = []
     if cancelled.is_set() or time.monotonic() >= deadline:
         return WorkerResult(name, -1, stdout, False)
-    process = subprocess.Popen(
-        command, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True, encoding="utf-8", errors="replace"
+    diagnostic_streams = (
+        openDiagnosticStreams(diagnostic_output_dir, name) if diagnostic_output_dir is not None else [None, None]
     )
+    try:
+        process = subprocess.Popen(
+            command, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True, encoding="utf-8", errors="replace"
+        )
+    except BaseException:
+        for stream in diagnostic_streams:
+            if stream is not None:
+                try:
+                    stream.close()
+                except Exception:
+                    pass
+        raise
     stream_eof = [False, False]
     reader_errors = []
 
@@ -48,8 +80,15 @@ def runWorker(command, name, deadline, emit, output_lock, cancelled):
             emit(f"[{name}] FAILED: cannot drain native output: {message}")
 
     def drain(stream, captured, index):
+        diagnostic_stream = diagnostic_streams[index]
         try:
             for line in stream:
+                if diagnostic_stream is not None:
+                    try:
+                        diagnostic_stream.write(line)
+                    except Exception as error:
+                        readerError(index, error)
+                        diagnostic_stream = None
                 if captured is not None:
                     captured.append(line.rstrip("\r\n"))
                 with output_lock:
@@ -62,6 +101,11 @@ def runWorker(command, name, deadline, emit, output_lock, cancelled):
                 stream.close()
             except Exception as error:
                 readerError(index, error)
+            if diagnostic_streams[index] is not None:
+                try:
+                    diagnostic_streams[index].close()
+                except Exception as error:
+                    readerError(index, error)
 
     readers = [
         threading.Thread(target=drain, args=(process.stdout, stdout, 0), daemon=True),
@@ -106,13 +150,21 @@ def validateWorker(result):
     ]
 
 
-def runMatrix(command_prefix, timeout=TOTAL_SECONDS, workers=MAX_WORKERS, emit=emitLine):
+def runMatrix(command_prefix, timeout=TOTAL_SECONDS, workers=MAX_WORKERS, emit=emitLine, diagnostic_output_dir=None):
     if not 1 <= workers <= MAX_WORKERS:
         raise ValueError("role matrix requires one to four workers")
     deadline = time.monotonic() + timeout
     output_lock = threading.Lock()
     cancelled = threading.Event()
-    contracts = runWorker([*command_prefix, "--contracts-only"], "contracts", deadline, emit, output_lock, cancelled)
+    contracts = runWorker(
+        [*command_prefix, "--contracts-only"],
+        "contracts",
+        deadline,
+        emit,
+        output_lock,
+        cancelled,
+        diagnostic_output_dir,
+    )
     if (
         contracts.return_code != 0
         or not contracts.complete_streams
@@ -125,7 +177,14 @@ def runMatrix(command_prefix, timeout=TOTAL_SECONDS, workers=MAX_WORKERS, emit=e
     try:
         pending = {
             pool.submit(
-                runWorker, [*command_prefix, "--role-class", class_id], class_id, deadline, emit, output_lock, cancelled
+                runWorker,
+                [*command_prefix, "--role-class", class_id],
+                class_id,
+                deadline,
+                emit,
+                output_lock,
+                cancelled,
+                diagnostic_output_dir,
             )
             for class_id in CLASS_IDS
         }
@@ -145,13 +204,14 @@ def runMatrix(command_prefix, timeout=TOTAL_SECONDS, workers=MAX_WORKERS, emit=e
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("executable", help="The configured native monster_balance_unit_tests executable")
+    parser.add_argument("--diagnostic-output-dir", type=Path, help="Retain each native worker's stdout and stderr")
     args = parser.parse_args()
 
     def terminate(signum, frame):
         raise SystemExit(128 + signum)
 
     signal.signal(signal.SIGTERM, terminate)
-    return runMatrix([args.executable])
+    return runMatrix([args.executable], diagnostic_output_dir=args.diagnostic_output_dir)
 
 
 if __name__ == "__main__":

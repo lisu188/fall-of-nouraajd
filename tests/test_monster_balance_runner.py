@@ -17,7 +17,7 @@ ROOT = pathlib.Path(__file__).resolve().parents[1]
 
 
 class MonsterBalanceRunnerTest(unittest.TestCase):
-    def runFixture(self, mode, timeout=10):
+    def runFixture(self, mode, timeout=10, diagnostic_output_dir=None):
         lines = []
         with tempfile.TemporaryDirectory(prefix="nouraajd-role-runner-") as directory:
             fixture = pathlib.Path(directory) / "native_fixture.py"
@@ -33,6 +33,7 @@ class MonsterBalanceRunnerTest(unittest.TestCase):
                 "print('partition started '+name,flush=True)\n"
                 "if mode=='timeout': time.sleep(30)\n"
                 "if mode=='stderr-flood': print('x'*200000,file=sys.stderr,flush=True)\n"
+                "if mode=='stderr-success': print('retained native diagnostic '+name,file=sys.stderr,flush=True)\n"
                 f"monsters={runner.MONSTER_IDS!r}\n"
                 "for monster in monsters:\n"
                 " if mode=='missing-row' and name=='Warrior' and monster=='Pritz': continue\n"
@@ -46,7 +47,12 @@ class MonsterBalanceRunnerTest(unittest.TestCase):
                 " raise SystemExit(1)\n",
                 encoding="utf-8",
             )
-            result = runner.runMatrix([sys.executable, str(fixture), mode], timeout=timeout, emit=lines.append)
+            result = runner.runMatrix(
+                [sys.executable, str(fixture), mode],
+                timeout=timeout,
+                emit=lines.append,
+                diagnostic_output_dir=diagnostic_output_dir,
+            )
         return result, lines
 
     def testEveryClassAndAll770FightsCompleteWithCommonContractsOnce(self):
@@ -76,6 +82,73 @@ class MonsterBalanceRunnerTest(unittest.TestCase):
         result, lines = self.runFixture("stderr-flood")
         self.assertEqual(0, result)
         self.assertEqual(5, sum(len(line) > 200000 for line in lines))
+
+    def testSuccessfulWorkersRetainSeparateStdoutAndStderrWithoutReplacingFiles(self):
+        with tempfile.TemporaryDirectory(prefix="nouraajd-role-diagnostics-") as directory:
+            output = pathlib.Path(directory) / "nested" / "native-role-diagnostics"
+            for attempt in range(2):
+                result, lines = self.runFixture("stderr-success", diagnostic_output_dir=output)
+                self.assertEqual(0, result)
+                self.assertIn(
+                    "role matrix complete classes=5 rows=35 pairedSeeds=385 fights=770 commonContracts=1", lines
+                )
+                self.assertEqual(12 * (attempt + 1), len(list(output.glob("*.log"))))
+                for class_id in runner.CLASS_IDS:
+                    stdout = list(output.glob(f"{class_id}-*.stdout.log"))
+                    stderr = list(output.glob(f"{class_id}-*.stderr.log"))
+                    self.assertEqual(attempt + 1, len(stdout))
+                    self.assertEqual(attempt + 1, len(stderr))
+                    for path in stdout:
+                        content = path.read_text(encoding="utf-8")
+                        self.assertIn(f"role class complete {class_id} rows=7 pairedSeeds=77 fights=154", content)
+                        self.assertEqual(7, content.count("role balance "))
+                    for path in stderr:
+                        self.assertEqual(f"retained native diagnostic {class_id}\n", path.read_text(encoding="utf-8"))
+
+    def testRetainedDiagnosticsPreserveNativeAssertionFailureAndConcurrentFloodDrain(self):
+        with tempfile.TemporaryDirectory(prefix="nouraajd-role-diagnostics-") as directory:
+            output = pathlib.Path(directory)
+            self.assertEqual(1, self.runFixture("assertion-fail", diagnostic_output_dir=output)[0])
+            stderr = list(output.glob("Warrior-*.stderr.log"))
+            self.assertEqual(1, len(stderr))
+            self.assertIn("strict seeded victory regression", stderr[0].read_text(encoding="utf-8"))
+            self.assertEqual(0, self.runFixture("stderr-flood", diagnostic_output_dir=output)[0])
+            floods = [path for path in output.glob("*.stderr.log") if path.stat().st_size > 200000]
+            self.assertEqual(5, len(floods))
+
+    def testDefaultRunnerDoesNotOpenDiagnosticFiles(self):
+        with patch.object(runner, "openDiagnosticStreams", side_effect=AssertionError("unexpected file logging")):
+            self.assertEqual(0, self.runFixture("success")[0])
+
+    def testDiagnosticWriteFailureStillDrainsPipesAndCannotPassTheGate(self):
+        writer = Mock()
+        writer.write.side_effect = OSError("diagnostic disk unavailable")
+        process = Mock()
+        process.stdout = io.StringIO("first\nsecond\n")
+        process.stderr = io.StringIO("native error\n")
+        process.wait.return_value = 0
+        process.poll.return_value = 0
+        lines = []
+        with (
+            patch.object(runner, "openDiagnosticStreams", return_value=[writer, None]),
+            patch.object(runner.subprocess, "Popen", return_value=process),
+        ):
+            result = runner.runWorker(
+                ["fixture"],
+                "Warrior",
+                time.monotonic() + 10,
+                lines.append,
+                threading.Lock(),
+                threading.Event(),
+                "diagnostic-output",
+            )
+        self.assertEqual(["first", "second"], result.stdout)
+        self.assertEqual(0, result.return_code)
+        self.assertFalse(result.complete_streams)
+        self.assertFalse(runner.validateWorker(result))
+        self.assertTrue(any("native error" in line for line in lines))
+        writer.write.assert_called_once()
+        writer.close.assert_called_once()
 
     def testReaderFailureCannotMasqueradeAsSuccessfulEndOfStream(self):
         class BrokenStream:
@@ -129,6 +202,9 @@ class MonsterBalanceRunnerTest(unittest.TestCase):
         helper = cmake.split("function(add_game_unit_test target_name)", 1)[1].split("endfunction()", 1)[0]
         self.assertEqual(1, helper.count("TIMEOUT 60"))
         self.assertIn("scripts/run_monster_balance.py", helper)
+        self.assertIn(
+            '--diagnostic-output-dir "${CMAKE_CURRENT_SOURCE_DIR}/coverage/test-output/native-role-diagnostics"', helper
+        )
         self.assertEqual(4, runner.MAX_WORKERS)
         self.assertEqual(55, runner.TOTAL_SECONDS)
         source = (ROOT / "tests/unit/test_monster_balance.cpp").read_text(encoding="utf-8")
