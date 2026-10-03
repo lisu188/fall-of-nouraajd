@@ -65,6 +65,9 @@ class PythonPluginSandboxTest(unittest.TestCase):
         self.assertIn("is_allowed_dynamic_library_path", self.loader_source)
         self.assertIn('"plugins/native/"', self.loader_source)
         self.assertIn("Rejected dynamic C++ plugin outside packaged native plugin paths", self.loader_source)
+        self.assertIn("getPathFromBaseSearchPath(candidate)", self.loader_source)
+        self.assertNotIn("resourcesProvider->getPath(candidate)", self.loader_source)
+        self.assertIn("Trusted resources such as native plugin libraries", self.provider_source)
         self.assertNotIn("std::filesystem::exists(candidate)", self.loader_source)
 
     def test_resource_provider_rejects_absolute_and_parent_traversal_paths(self):

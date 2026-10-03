@@ -513,6 +513,30 @@ void test_scoped_search_roots_resolve_active_map_assets() {
     std::filesystem::remove_all(tempRootB, errorCode);
 }
 
+
+void test_base_search_path_resolution_bypasses_active_map_scope() {
+    const auto nonce = std::to_string(std::chrono::steady_clock::now().time_since_epoch().count());
+    const auto tempRoot = std::filesystem::temp_directory_path() / ("scoped-native-plugin-root-" + nonce);
+    const auto scopedPlugin = tempRoot / "plugins" / "native" / "payload.so";
+    std::error_code errorCode;
+    std::filesystem::create_directories(scopedPlugin.parent_path(), errorCode);
+    expect_true(write_text_file(scopedPlugin, "map-local native plugin"),
+                "map-local native plugin fixture should be written");
+
+    auto provider = std::make_shared<CResourcesProvider>();
+    provider->addScopedRoot("map", tempRoot.string());
+    provider->setActiveScope("map");
+
+    expect_true(!provider->getPath("plugins/native/payload.so").empty(),
+                "ordinary scoped lookup should still resolve map-local plugin-shaped assets");
+    expect_true(provider->getPathFromBaseSearchPath("plugins/native/payload.so").empty(),
+                "trusted native plugin lookup must bypass active map scopes");
+    expect_true(provider->getPathFromBaseSearchPath("../plugins/native/payload.so").empty(),
+                "trusted native plugin lookup must still reject traversal paths");
+
+    std::filesystem::remove_all(tempRoot, errorCode);
+}
+
 void test_map_load_activates_scope_for_map_local_assets() {
     // Loading a map must register and activate that map's directory as a scoped search root, so a
     // map-local asset (e.g. an animation frame declared by a bare name) resolves through the active
@@ -583,6 +607,7 @@ int main() {
     test_two_game_contexts_isolate_provider_cache_and_object_config();
     test_resource_plugin_trust_boundary_rejects_escapes();
     test_scoped_search_roots_resolve_active_map_assets();
+    test_base_search_path_resolution_bypasses_active_map_scope();
     test_map_load_activates_scope_for_map_local_assets();
 
     return finish_tests();

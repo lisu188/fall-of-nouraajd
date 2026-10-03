@@ -400,11 +400,8 @@ std::shared_ptr<json> CResourcesProvider::loadJson(std::string path) {
     return *parsed;
 }
 
-std::string CResourcesProvider::getPath(std::string path) {
-    // Resolution precedence: the process-wide base search path is always consulted first, so global
-    // assets keep their meaning; only if nothing matches there does the active map scope (if any)
-    // get a chance to resolve a map-local asset of the same relative name. The safe-relative-path
-    // guard below rejects absolute and traversal paths before any root — base or scoped — is tried.
+// Trusted resources such as native plugin libraries must resolve only through packaged/base roots.
+std::string CResourcesProvider::getPathFromBaseSearchPath(std::string path) {
     if (!isSafeRelativeResourcePath(path)) {
         vstd::logger::warning("Rejected unsafe resource path:", path);
         return {};
@@ -435,6 +432,23 @@ std::string CResourcesProvider::getPath(std::string path) {
             return candidate.string();
         }
     }
+    return {};
+}
+
+std::string CResourcesProvider::getPath(std::string path) {
+    // Resolution precedence: the process-wide base search path is always consulted first, so global
+    // assets keep their meaning; only if nothing matches there does the active map scope (if any)
+    // get a chance to resolve a map-local asset of the same relative name. The safe-relative-path
+    // guard below rejects absolute and traversal paths before any root — base or scoped — is tried.
+    auto basePath = getPathFromBaseSearchPath(path);
+    if (!basePath.empty()) {
+        return basePath;
+    }
+    if (!isSafeRelativeResourcePath(path)) {
+        return {};
+    }
+
+    const auto requestedPath = std::filesystem::path(path).lexically_normal();
 
     if (!activeScope.empty()) {
         const auto scope = scopedRoots.find(activeScope);
