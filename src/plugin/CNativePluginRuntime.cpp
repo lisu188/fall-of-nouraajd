@@ -179,7 +179,7 @@ std::string resolve_dynamic_library_path(const std::shared_ptr<CResourcesProvide
         if (!is_allowed_dynamic_library_path(candidate)) {
             continue;
         }
-        auto resolved = resourcesProvider->getPath(candidate);
+        auto resolved = resourcesProvider->getPathFromBaseSearchPath(candidate);
         if (!resolved.empty()) {
             return std::filesystem::absolute(resolved).lexically_normal().string();
         }

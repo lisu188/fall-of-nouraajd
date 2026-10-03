@@ -93,8 +93,10 @@ not by sandboxing trusted in-root content:
    executing it.
 
 4. **Native library allow-list.** `is_allowed_dynamic_library_path` restricts
-   `dlopen` to `plugins/native/**`, resolved through the resource provider so the
-   containment check above also applies. Native plugins are load-only by design:
+   `dlopen` to `plugins/native/**`, resolved through
+   `CResourcesProvider::getPathFromBaseSearchPath` so the containment check above
+   applies only to base resource roots. Active map scopes may resolve ordinary
+   assets but cannot supply native libraries. Native plugins are load-only by design:
    registration donates factories and serializers whose code lives in the plugin
    module, so libraries stay pinned until process exit and no unload entry point
    exists.
