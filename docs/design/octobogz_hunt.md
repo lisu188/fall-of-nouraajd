@@ -770,3 +770,48 @@ gold and the reason for a skipped purchase. This repairs a demonstrated unused
 stock gap; it does not promise that one extra Life Potion ensures survival.
 Fresh complete native routes and canonical coverage remain required. Enemy
 stats, ordinary AI, encounters, fixed comparisons and deadlines are unchanged.
+
+## Owned recovery before the road departure
+
+The `4a88713e` Linux job `110720338624` remained failed. After Alpha's actual
+defeat, the Sorcerer was at `(165,20,0)`, turn 1132, with 62/91 HP, 143 MP,
+960 gold and 6250 XP. The actual inventory contained one Fountain of Youth
+Tonic, a Spiced Beer, four Magic Well Draughts and the retained quest/Scroll
+items. Its defeat receipt was empty. The receipt first changed at turn 1134
+while travelling toward the authored road at `(118,21,0)`. The route has 48
+adjacent steps; this does not establish which native actor, damage channel or
+individual queued action caused the loss.
+
+Hunt road recovery now checks survival before using any inventory. Below the
+existing 75% recovery threshold it may use only a currently owned, configured,
+single-use LifePotion with a positive power, a heal tag and no mana or quest
+tag. Supplies are considered weakest first and each captured pointer at most
+once. Native `useItem` applies the item immediately without a map turn. The
+observed power-two Fountain can restore 36 HP capped at 91; the helper checks
+that exact formula, the one consumed identity and every remaining item. Player
+composition, controllers, gold, mana and maxima, coordinates, turn, quests and
+hunt registry must remain unchanged. A recorded defeat cannot be healed away.
+
+Recovery travel can itself encounter the living Brood near the lair. After
+returning to the road, the walkthrough rechecks that objective. It omits
+precombat market preparation only after the retained actual actor is dead,
+its name is absent from the map, and the registry marks that same slot dead.
+If Brood remains living, the existing finite preparation and stronger-stock
+assertion still apply. Consuming the last Fountain does not create replacement
+stock or waive that gate. Final proof of all three deaths and the original
+once-only reward remains mandatory.
+
+A failure during this recovery now retains the existing bounded native tail
+and read-only combat snapshot before rethrowing the original exception. The
+pure regressions demonstrate owned-healing order, capped recovery, state and
+identity checks, and the any-order objective boundary with simulated movement.
+Their synthetic departure hazard is not a reproduction of the unknown lethal
+mechanism. Fresh native automatic routes, the separate earned-save decision
+replay and complete selected CI are still required to prove survival.
+
+The preceding `c36a8122` preparation failure was a different funding gap: an
+owned mana-only supply could fund a real original ingredient and brewing fee.
+That correction reads the native quote, sells only enough actual owned
+supplies, and preserves the finite original-name and purchased-name guards.
+Neither recovery correction changes enemy stats, combat AI, recipes, seeded
+comparisons or their deadlines.

@@ -483,9 +483,112 @@ class OctobogzMcpWalkthroughTest(unittest.TestCase):
                 route = []
         self.fail(("Bounded adjacent hunt route did not reach its target", target, self.snapshot("route blocked")))
 
+    def roadDepartureState(self):
+        properties = json.loads(self.engine("jsonify", self.player))["properties"]
+        controller = self.call(self.player, "getFightController")
+        movement_controller = self.call(self.player, "getController")
+        return {
+            "player": {key: value for key, value in properties.items() if key not in ("hp", "items")},
+            "hpMax": self.call(self.player, "getHpMax"),
+            "mana": self.call(self.player, "getMana"),
+            "manaMax": self.call(self.player, "getManaMax"),
+            "controller": controller["__handle__"] if controller else None,
+            "movementController": movement_controller["__handle__"] if movement_controller else None,
+            "coords": self.coords(),
+            "turn": self.call(self.game_map, "getTurn"),
+            "registry": self.call(self.game_map, "getStringProperty", "octobogzHuntRegistry"),
+            "quests": self.questNames(),
+            "completed": self.questNames("getCompletedQuests"),
+        }
+
+    def recoverBeforeRoadDeparture(self):
+        self.assertTrue(self.call(self.player, "isAlive"), "Road recovery cannot revive a defeated player")
+        self.assertEqual("", self.call(self.player, "getStringProperty", "uiDefeatReceipt"))
+        hp_max = self.call(self.player, "getHpMax")
+        self.assertGreater(hp_max, 0)
+        hp = self.call(self.player, "getHp")
+        self.assertGreater(hp, 0)
+        if hp * 4 >= hp_max * 3:
+            return
+        configured = json.loads(
+            (Path(__file__).resolve().parents[1] / "res/config/potions.json").read_text(encoding="utf-8")
+        )
+        life_ids = {
+            type_id
+            for type_id, definition in configured.items()
+            if definition.get("class") == "LifePotion" and definition.get("properties", {}).get("singleUse") is True
+        }
+        candidates = []
+        for item in self.call(self.player, "getItems"):
+            type_id = self.call(item, "getTypeId")
+            if type_id not in life_ids or self.call(item, "getType") != "LifePotion":
+                continue
+            if not self.call(item, "getBoolProperty", "singleUse"):
+                continue
+            if (
+                not self.call(item, "hasTag", "heal")
+                or self.call(item, "hasTag", "mana")
+                or self.call(item, "hasTag", "quest")
+            ):
+                continue
+            power = self.call(item, "getNumericProperty", "power")
+            if power > 0:
+                candidates.append((power, type_id, self.call(item, "getName"), item))
+        self.assertLessEqual(len(candidates), 128)
+        for power, type_id, name, item in sorted(candidates, key=lambda candidate: candidate[:3]):
+            self.assertTrue(self.call(self.player, "isAlive"))
+            self.assertEqual("", self.call(self.player, "getStringProperty", "uiDefeatReceipt"))
+            hp_before = self.call(self.player, "getHp")
+            self.assertGreater(hp_before, 0)
+            if hp_before * 4 >= hp_max * 3:
+                break
+            owned = self.call(self.player, "getItems")
+            identities = {candidate["__handle__"] for candidate in owned}
+            identity = item["__handle__"]
+            self.assertIn(identity, identities)
+            before = self.roadDepartureState()
+            self.call(self.player, "useItem", item)
+            self.assertTrue(self.call(self.player, "isAlive"))
+            self.assertEqual("", self.call(self.player, "getStringProperty", "uiDefeatReceipt"))
+            hp_after = self.call(self.player, "getHp")
+            self.assertEqual(min(hp_max, hp_before + max(1, int(power * 20 / 100.0 * hp_max))), hp_after)
+            self.assertGreater(hp_after, hp_before)
+            after_items = self.call(self.player, "getItems")
+            self.assertEqual(identities - {identity}, {candidate["__handle__"] for candidate in after_items})
+            self.assertEqual(len(owned) - 1, len(after_items))
+            self.assertEqual(before, self.roadDepartureState())
+            print(
+                "MCP hunt owned departure recovery",
+                {"typeId": type_id, "name": name, "hpBefore": hp_before, "hpAfter": hp_after},
+                flush=True,
+            )
+
     def recoverOnAuthoredRoad(self):
-        actors = self.livingActors()
-        self.recoverOnRoadPair((118, 21, 0), (118, 20, 0), "hunt road recovery", actors)
+        actors = getattr(self, "hunt_actors", {})
+        try:
+            actors = self.livingActors()
+            self.recoverBeforeRoadDeparture()
+            self.recoverOnRoadPair((118, 21, 0), (118, 20, 0), "hunt road recovery", actors)
+        except Exception:
+            try:
+                self.reportCombatFailure("hunt road recovery", getattr(self, "hunt_actors", actors))
+            except Exception:
+                pass
+            raise
+
+    def recoverBeforeRemainingBrood(self, player_class):
+        if self.state()["slots"]["brood"]["status"] == "dead":
+            self.assertSlotDefeated("brood")
+            return
+        self.assertIsNotNone(self.call(self.game_map, "getObjectByName", "cave2"))
+        self.assertFalse(self.call(self.game_map, "getBoolProperty", "OCTOBOGZ_SLAIN"))
+        self.recoverOnAuthoredRoad()
+        if self.state()["slots"]["brood"]["status"] == "dead":
+            self.assertSlotDefeated("brood")
+            return
+        if player_class == "Sorcerer":
+            self.prepareHealingStockAtAuthoredMarket(initial=False)
+            self.recoverOnAuthoredRoad()
 
     def collectAuthoredRetreatScroll(self):
         before = self.call(self.player, "countItems", "TownPortalScroll")
@@ -1314,13 +1417,7 @@ class OctobogzMcpWalkthroughTest(unittest.TestCase):
                         self.prepareHealingStockAtAuthoredMarket(initial=False)
                     self.recoverOnAuthoredRoad()
                     self.defeat("alpha")
-                    if self.state()["slots"]["brood"]["status"] != "dead":
-                        self.assertIsNotNone(self.call(self.game_map, "getObjectByName", "cave2"))
-                        self.assertFalse(self.call(self.game_map, "getBoolProperty", "OCTOBOGZ_SLAIN"))
-                        self.recoverOnAuthoredRoad()
-                        if player_class == "Sorcerer":
-                            self.prepareHealingStockAtAuthoredMarket(initial=False)
-                            self.recoverOnAuthoredRoad()
+                    self.recoverBeforeRemainingBrood(player_class)
                     self.defeat("brood")
                     self.assertEqual({"scout", "brood", "alpha"}, self.confirmed_dead)
                     self.assertEqual("cleared", self.state()["stage"])
@@ -1690,6 +1787,61 @@ class OctobogzDiagnosticTest(unittest.TestCase):
         OctobogzMcpWalkthroughTest.prepareHealingStockAtAuthoredMarket(fixture, initial=False)
         fixture.reportCombatFailure.assert_not_called()
         self.assertEqual(7, len(actions))
+
+    def testRoadRecoveryFailureRetainsNativeTailAndPreservesItsOriginalTravelException(self):
+        import contextlib
+        import io
+        from types import SimpleNamespace
+        from unittest.mock import Mock
+
+        for diagnostic_failure in (None, "rpc", "read", "print"):
+            with self.subTest(diagnostic_failure=diagnostic_failure), tempfile.TemporaryDirectory() as directory:
+                path = Path(directory) / "actual-road-native.log"
+                path.write_text("actual native road combat sentinel\n", encoding="utf-8")
+                failure = RuntimeError("original actual road travel failure")
+                diagnostics = []
+
+                def handle(*args, **kwargs):
+                    if diagnostic_failure == "rpc":
+                        raise OSError("diagnostic RPC failed")
+                    return 7
+
+                fixture = SimpleNamespace(
+                    livingActors=lambda: {"brood": "actualBrood"},
+                    recoverBeforeRoadDeparture=lambda: None,
+                    recoverOnRoadPair=Mock(side_effect=failure),
+                    process=SimpleNamespace(poll=lambda: None),
+                    harness=SimpleNamespace(
+                        _mcp_handle_call=handle,
+                        _mcp_engine_call=lambda *args, **kwargs: json.dumps({"properties": {"hp": 91}}),
+                    ),
+                    session={},
+                    game_map="map",
+                    player="player",
+                    native_log_path=path,
+                    mcp_profile_class="Sorcerer",
+                    hunt_actors={"alpha": "actualAlpha", "brood": "actualBrood"},
+                )
+
+                def diagnostic(stage, actors):
+                    diagnostics.append((stage, actors))
+                    OctobogzMcpWalkthroughTest.reportCombatFailure(fixture, stage, actors)
+
+                fixture.reportCombatFailure = diagnostic
+                output = io.StringIO()
+                with contextlib.ExitStack() as stack:
+                    stack.enter_context(contextlib.redirect_stdout(output))
+                    if diagnostic_failure == "read":
+                        stack.enter_context(patch(__name__ + ".readNativeLogTail", side_effect=OSError("read failed")))
+                    if diagnostic_failure == "print":
+                        stack.enter_context(patch("builtins.print", side_effect=OSError("report failed")))
+                    with self.assertRaises(RuntimeError) as raised:
+                        OctobogzMcpWalkthroughTest.recoverOnAuthoredRoad(fixture)
+                self.assertIs(failure, raised.exception)
+                self.assertEqual([("hunt road recovery", fixture.hunt_actors)], diagnostics)
+                if diagnostic_failure in (None, "rpc"):
+                    self.assertIn("actual native road combat sentinel", output.getvalue())
+                self.assertEqual("actual native road combat sentinel\n", path.read_text(encoding="utf-8"))
 
 
 if __name__ == "__main__":

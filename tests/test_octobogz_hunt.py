@@ -2482,6 +2482,337 @@ class OctobogzHuntTest(unittest.TestCase):
                 self.assertIn(original_stock[-1], stock)
                 self.assertEqual([], walker.basicLesserIngredients(inventory))
 
+    def roadDepartureFixture(self, corruption=None):
+        walker, handles, inventory, stock, uses, gold = self.authoredMarketFixture()
+        metadata, properties = walker.fixture_metadata, walker.fixture_properties
+        metadata["strong"].update(name="actualFountain", typeId="FountainOfYouthTonic")
+        inventory[:] = [handles["strong"], handles["mana"]]
+        for index in range(4):
+            identity = "actualMagicWell" + str(index)
+            metadata[identity] = {
+                "name": identity,
+                "typeId": "MagicWellDraught",
+                "power": 2,
+                "mana": True,
+                "singleUse": True,
+            }
+            handles[identity] = {"__handle__": identity}
+            inventory.append(handles[identity])
+        for type_id in ("letterFromRolf", "Scroll", "skullOfRolf", "holyRelic"):
+            metadata[type_id] = {"name": type_id, "typeId": type_id, "power": 0, "quest": True, "singleUse": False}
+            handles[type_id] = {"__handle__": type_id}
+            inventory.append(handles[type_id])
+        original_names = tuple("originalShopLesser" + str(index) for index in range(3))
+        metadata[original_names[-1]] = {
+            "name": original_names[-1],
+            "typeId": "LesserLifePotion",
+            "power": 1,
+            "heal": True,
+            "singleUse": True,
+        }
+        stock.append({"__handle__": original_names[-1]})
+        walker.original_lesser_shop_names = original_names
+        walker.purchased_lesser_shop_names = set(original_names[:2])
+        walker.retained_lesser_shop_name = original_names[-1]
+        properties.update(hp=62, mana=143, exp=6250, level=4)
+        gold[0] = 960
+        current, turn, departures = [(165, 20, 0)], [1132], []
+        hp_max, mana_max, controller, movement_controller, registry, quests = (
+            [91],
+            [175],
+            ["ordinaryCombat"],
+            ["ordinaryMovement"],
+            ["unchanged-hunt-registry"],
+            ["octoBogzQuest"],
+        )
+        original_call = walker.call
+        failure = AssertionError("Synthetic first-walk guard: departure was below the recovery threshold")
+
+        def call(handle, method, *args):
+            if handle == "player":
+                if method == "isAlive":
+                    return properties["hp"] > 0
+                if method == "getStringProperty":
+                    return properties["uiDefeatReceipt"]
+                if method == "getHp":
+                    return properties["hp"]
+                if method == "getHpMax":
+                    return hp_max[0]
+                if method == "getManaMax":
+                    return mana_max[0]
+                if method == "getFightController":
+                    return {"__handle__": controller[0]}
+                if method == "getController":
+                    return {"__handle__": movement_controller[0]}
+                if method == "useItem":
+                    item = args[0]
+                    self.assertIn(item, inventory)
+                    uses.append(item)
+                    power = metadata[item["__handle__"]]["power"]
+                    properties["hp"] = min(91, properties["hp"] + max(1, int(power * 20 / 100.0 * 91)))
+                    if corruption == "heal":
+                        properties["hp"] -= 1
+                    if corruption != "retained":
+                        inventory.remove(item)
+                    if corruption == "extraItem":
+                        inventory.remove(handles["mana"])
+                    if corruption == "mana":
+                        properties["mana"] -= 1
+                    if corruption == "gold":
+                        gold[0] += 1
+                    if corruption == "receipt":
+                        properties["uiDefeatReceipt"] = "new native defeat"
+                    if corruption == "equipment":
+                        properties["equipped"]["body"] = "changedRobe"
+                    if corruption == "controller":
+                        controller[0] = "changedCombat"
+                    if corruption == "movementController":
+                        movement_controller[0] = "changedMovement"
+                    if corruption == "hpMax":
+                        hp_max[0] += 1
+                    if corruption == "manaMax":
+                        mana_max[0] += 1
+                    if corruption == "registry":
+                        registry[0] = "changed-hunt-registry"
+                    if corruption == "turn":
+                        turn[0] += 1
+                    if corruption == "coords":
+                        current[0] = (164, 20, 0)
+                    if corruption == "quests":
+                        quests.append("changedQuest")
+                    return
+            if handle == "map":
+                if method == "getTurn":
+                    return turn[0]
+                if method == "getStringProperty":
+                    return registry[0]
+                if method == "getTile":
+                    return "road"
+            if handle == "road" and method == "getTypeId":
+                return "RoadTile"
+            if isinstance(handle, dict) and method == "getType":
+                return "LifePotion" if metadata[handle["__handle__"]]["typeId"] == "FountainOfYouthTonic" else "CItem"
+            return original_call(handle, method, *args)
+
+        def walk(coords):
+            departures.append((properties["hp"], properties["mana"], turn[0]))
+            if properties["hp"] * 4 < 91 * 3:
+                raise failure
+            current[0] = coords
+
+        def road_step(destination):
+            current[0] = destination
+            turn[0] += 1
+            properties["hp"], properties["mana"] = 91, 175
+            return destination
+
+        walker.call, walker.coords, walker.walkCoords, walker.step = (
+            call,
+            lambda handle=None: current[0],
+            walk,
+            road_step,
+        )
+        walker.walkTo = lambda name, **kwargs: current.__setitem__(
+            0, (106, 111, 0) if name == "market1" else (105, 110, 0)
+        )
+        walker.questNames = lambda completed=None: list(quests) if completed is None else ["mainQuest"]
+        walker.livingActors = Mock(return_value={})
+        walker.snapshot, walker.observeActors, walker.reportCombatFailure = Mock(), Mock(), Mock()
+        return walker, handles, inventory, uses, properties, gold, turn, departures, failure
+
+    def testHuntRoadRecoveryUsesOwnedFountainBeforeItsFirstWalkAndPreservesUnrelatedState(self):
+        walker, handles, inventory, uses, properties, gold, turn, departures, _ = self.roadDepartureFixture()
+        before_items = list(inventory)
+        with patch("builtins.print"):
+            walker.recoverOnAuthoredRoad()
+        self.assertEqual([handles["strong"]], uses)
+        self.assertEqual([item for item in before_items if item != handles["strong"]], inventory)
+        self.assertEqual([(91, 143, 1132)], departures)
+        self.assertEqual(960, gold[0])
+        self.assertEqual(6250, properties["exp"])
+        self.assertEqual("", properties["uiDefeatReceipt"])
+        self.assertEqual(1133, turn[0])
+        walker.reportCombatFailure.assert_not_called()
+        configured = json.loads((ROOT / "res/config/potions.json").read_text(encoding="utf-8"))["FountainOfYouthTonic"]
+        self.assertEqual("LifePotion", configured["class"])
+        self.assertEqual(2, configured["properties"]["power"])
+        self.assertTrue(configured["properties"]["singleUse"])
+
+    def testHuntRoadDepartureRejectsDefeatAndIneligibleItemsWithoutManufacturingHealth(self):
+        for case in ("dead", "receipt", "dual", "reusable", "quest", "unknown", "noHeal", "zeroPower"):
+            with self.subTest(case=case):
+                walker, _, inventory, uses, properties, _, _, departures, original = self.roadDepartureFixture()
+                data = walker.fixture_metadata["strong"]
+                if case == "dead":
+                    properties["hp"] = 0
+                elif case == "receipt":
+                    properties["uiDefeatReceipt"] = "native loss before departure"
+                elif case == "dual":
+                    data["mana"] = True
+                elif case == "reusable":
+                    data["singleUse"] = False
+                elif case == "quest":
+                    data["quest"] = True
+                elif case == "unknown":
+                    data["typeId"] = "unknownHealingItem"
+                elif case == "noHeal":
+                    data["heal"] = False
+                else:
+                    data["power"] = 0
+                before = list(inventory)
+                with self.assertRaises(AssertionError) as error:
+                    walker.recoverOnAuthoredRoad()
+                if case in ("dead", "receipt"):
+                    self.assertEqual([], departures)
+                else:
+                    self.assertIs(original, error.exception)
+                self.assertEqual([], uses)
+                self.assertEqual(before, inventory)
+
+    def testHuntRoadDepartureChecksCappedHealingOwnershipAndResourcesAndSkipsSufficientHealth(self):
+        for corruption in (
+            "heal",
+            "retained",
+            "extraItem",
+            "mana",
+            "gold",
+            "receipt",
+            "equipment",
+            "controller",
+            "movementController",
+            "hpMax",
+            "manaMax",
+            "registry",
+            "turn",
+            "coords",
+            "quests",
+        ):
+            with self.subTest(corruption=corruption):
+                walker, _, _, _, _, _, _, departures, _ = self.roadDepartureFixture(corruption)
+                with patch("builtins.print"), self.assertRaises(AssertionError):
+                    walker.recoverOnAuthoredRoad()
+                self.assertEqual([], departures)
+        walker, _, _, uses, properties, _, _, departures, _ = self.roadDepartureFixture()
+        properties["hp"] = 69  # First integer HP at or above 75% of the actual 91 maximum.
+        with patch("builtins.print"):
+            walker.recoverOnAuthoredRoad()
+        self.assertEqual([], uses)
+        self.assertEqual([(69, 143, 1132)], departures)
+
+    def testHuntRoadRecoveryFailureDiagnosticsRethrowTheOriginalTravelError(self):
+        for diagnostic_failure in (False, True):
+            with self.subTest(diagnostic_failure=diagnostic_failure):
+                walker, _, _, _, properties, _, _, _, _ = self.roadDepartureFixture()
+                properties["hp"] = 91
+                original = RuntimeError("Actual walk RPC failure")
+                walker.walkCoords = Mock(side_effect=original)
+                if diagnostic_failure:
+                    walker.reportCombatFailure.side_effect = OSError("diagnostic read or report failed")
+                with self.assertRaises(RuntimeError) as error:
+                    walker.recoverOnAuthoredRoad()
+                self.assertIs(original, error.exception)
+                walker.reportCombatFailure.assert_called_once_with("hunt road recovery", {})
+
+    def remainingBroodDepartureFixture(self, *, dies_on_road, proof="actual"):
+        fixture = self.roadDepartureFixture()
+        walker, _, _, _, _, _, _, _, _ = fixture
+        brood = {"__handle__": "retainedActualBrood"}
+        record = {"name": "actualBrood", "status": "living"}
+        actor_alive, actor_present = [True], [True]
+        walker.hunt_actors, walker.confirmed_dead = {"brood": brood}, set()
+        walker.state = lambda: {"slots": {"brood": dict(record)}}
+        old_call, old_step = walker.call, walker.step
+        market_actor = walker.object("market1")
+        station = {"__handle__": "actualAuthoredAlchemy"}
+        walker.object = lambda name: station if name == "alchemyTable1" else market_actor
+
+        def call(handle, method, *args):
+            if handle == station:
+                return {
+                    "getType": "CraftingStation",
+                    "getTypeId": "alchemyTable1",
+                    "getStringProperty": "alchemyTable",
+                    "getBoolProperty": True,
+                }[method]
+            if handle == brood:
+                return "actualBrood" if method == "getName" else actor_alive[0]
+            if handle == "map" and method == "getObjectByName":
+                return {"__handle__": "cave2"} if args[0] == "cave2" else brood if actor_present[0] else None
+            if handle == "map" and method == "getBoolProperty":
+                return False
+            return old_call(handle, method, *args)
+
+        def step(destination):
+            result = old_step(destination)
+            if dies_on_road:
+                record["status"] = "pending" if proof == "pending" else "dead"
+                actor_alive[0] = proof == "alive"
+                actor_present[0] = proof == "stillNamed"
+            return result
+
+        walker.call, walker.step = call, step
+        return fixture
+
+    def testRemainingBroodRecoverySkipsPrecombatStockOnlyAfterActualRetainedDeathProof(self):
+        walker, _, inventory, _, _, _, _, _, _ = self.remainingBroodDepartureFixture(dies_on_road=True)
+        self.assertEqual(1, len([item for item in inventory if walker.call(item, "hasTag", "heal")]))
+        self.assertEqual([], walker.basicLesserIngredients(inventory))
+        self.assertEqual(
+            1, len(walker.call(walker.call(walker.object("market1"), "getObjectProperty", "market"), "getItems"))
+        )
+        walker.prepareHealingStockAtAuthoredMarket = Mock(
+            side_effect=AssertionError("Precombat stock cannot be invented")
+        )
+        with patch("builtins.print"):
+            walker.recoverBeforeRemainingBrood("Sorcerer")
+        self.assertEqual({"brood"}, walker.confirmed_dead)
+        walker.prepareHealingStockAtAuthoredMarket.assert_not_called()
+        self.assertFalse(any(walker.call(item, "hasTag", "heal") for item in inventory))
+
+    def testRemainingBroodWithNoStrongStockStillRequiresActualFinitePreparationAndRejectsFalseDeaths(self):
+        walker, _, inventory, _, _, _, _, _, _ = self.remainingBroodDepartureFixture(dies_on_road=False)
+        with patch("builtins.print"), self.assertRaisesRegex(AssertionError, "genuinely earned stronger healing stock"):
+            walker.recoverBeforeRemainingBrood("Sorcerer")
+        self.assertEqual(set(), walker.confirmed_dead)
+        self.assertEqual([], walker.basicLesserIngredients(inventory))
+        self.assertFalse(any(walker.call(item, "hasTag", "heal") for item in inventory))
+        for proof in ("alive", "stillNamed", "pending", "missingHandle"):
+            with self.subTest(proof=proof):
+                walker, *_ = self.remainingBroodDepartureFixture(dies_on_road=True, proof=proof)
+                if proof == "missingHandle":
+                    walker.hunt_actors.pop("brood")
+                with patch("builtins.print"), self.assertRaises(AssertionError):
+                    walker.recoverBeforeRemainingBrood("Sorcerer")
+                self.assertEqual(set(), walker.confirmed_dead)
+        walker, *_ = self.remainingBroodDepartureFixture(dies_on_road=False)
+        walker.prepareHealingStockAtAuthoredMarket = Mock()
+        with patch("builtins.print"):
+            walker.recoverBeforeRemainingBrood("Warrior")
+        walker.prepareHealingStockAtAuthoredMarket.assert_not_called()
+
+    def testAlreadyDeadBroodStillRequiresRetainedNativeDeathProofWithoutRoadOrMarketActions(self):
+        walker, *_ = self.remainingBroodDepartureFixture(dies_on_road=True)
+        brood = walker.hunt_actors["brood"]
+        walker.state = lambda: {"slots": {"brood": {"name": "actualBrood", "status": "dead"}}}
+        old_call = walker.call
+
+        def call(handle, method, *args):
+            if handle == brood and method == "isAlive":
+                return False
+            if handle == "map" and method == "getObjectByName" and args[0] == "actualBrood":
+                return None
+            return old_call(handle, method, *args)
+
+        walker.call = call
+        walker.recoverOnAuthoredRoad = Mock(side_effect=AssertionError("Already dead Brood needs no recovery"))
+        walker.prepareHealingStockAtAuthoredMarket = Mock(
+            side_effect=AssertionError("Already dead Brood needs no stock")
+        )
+        walker.recoverBeforeRemainingBrood("Sorcerer")
+        self.assertEqual({"brood"}, walker.confirmed_dead)
+        walker.recoverOnAuthoredRoad.assert_not_called()
+        walker.prepareHealingStockAtAuthoredMarket.assert_not_called()
+
     def depletedHealingFundingFixture(self, corruption=None, *, lessers=1):
         fixture = self.authoredBrewingFixture(lessers, 0, 0, corruption)
         walker, metadata, inventory, stock, sales, buys, crafts, gold, original_stock, add_item = fixture
@@ -2724,7 +3055,10 @@ class OctobogzHuntTest(unittest.TestCase):
         after_portal = route[route.index("self.retreatWithOwnedAuthoredScroll()") :]
         self.assertLess(after_portal.index("initial=False"), after_portal.index('self.defeat("alpha")'))
         after_alpha = after_portal[after_portal.index('self.defeat("alpha")') :]
-        self.assertLess(after_alpha.index("initial=False"), after_alpha.index('self.defeat("brood")'))
+        self.assertLess(
+            after_alpha.index("self.recoverBeforeRemainingBrood(player_class)"),
+            after_alpha.index('self.defeat("brood")'),
+        )
         self.assertEqual(1, route.count("self.retreatWithOwnedAuthoredScroll()"))
         self.assertNotIn("randint", ast.get_source_segment(source, methods["brewOwnedBasicLifePotions"]))
 
