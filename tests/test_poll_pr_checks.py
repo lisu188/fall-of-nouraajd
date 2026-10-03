@@ -54,6 +54,43 @@ class PollPrChecksTest(unittest.TestCase):
         self.assertEqual("success", evaluation.state)
         self.assertEqual("linux", evaluation.jobs[0].name)
 
+    def test_default_required_steps_include_linux_validation_steps(self) -> None:
+        steps = poll_pr_checks.defaultRequiredSteps(["linux"])
+
+        self.assertIn("build test targets", steps)
+        self.assertIn("test (c++)", steps)
+        self.assertIn("performance guard (native)", steps)
+        self.assertIn("test (python gameplay)", steps)
+        self.assertIn("test (python ui)", steps)
+        self.assertIn("package", steps)
+
+    def test_validation_sensitive_files_include_workflow_and_poller_changes(self) -> None:
+        files = poll_pr_checks.validationSensitiveFiles(
+            [
+                {"path": ".github/workflows/build.yml"},
+                {"path": "scripts/poll_pr_checks.py"},
+                {"path": "src/core/example.cpp"},
+            ]
+        )
+
+        self.assertEqual((".github/workflows/build.yml", "scripts/poll_pr_checks.py"), files)
+
+    def test_poll_checks_rejects_ci_polling_when_validation_files_changed(self) -> None:
+        original_pr_view = poll_pr_checks.runGhPrView
+        original_run_list = poll_pr_checks.runGhRunList
+        try:
+            poll_pr_checks.runGhPrView = lambda pr, repo: {
+                "headRefOid": "abc123",
+                "files": [{"path": ".github/workflows/build.yml"}],
+            }
+            poll_pr_checks.runGhRunList = lambda head_sha, workflow, repo: self.fail("run list should not be called")
+
+            with self.assertRaisesRegex(poll_pr_checks.PollError, "validation-sensitive files"):
+                poll_pr_checks.pollChecks("1", None, "build.yml", ["linux"], [], 1, 1)
+        finally:
+            poll_pr_checks.runGhPrView = original_pr_view
+            poll_pr_checks.runGhRunList = original_run_list
+
     def test_evaluate_run_treats_missing_run_as_pending(self) -> None:
         evaluation = poll_pr_checks.evaluateRun(None, ["linux"], [])
 

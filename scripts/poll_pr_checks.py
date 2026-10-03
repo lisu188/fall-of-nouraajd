@@ -13,6 +13,25 @@ from typing import Any, Sequence
 
 DEFAULT_JOBS = ("linux",)
 DEFAULT_WORKFLOW = "build.yml"
+DEFAULT_REQUIRED_STEPS_BY_JOB = {
+    "linux": (
+        "configure",
+        "build test targets",
+        "Smoke test game imports",
+        "test (c++)",
+        "performance guard (native)",
+        "test (python gameplay)",
+        "test (python ui)",
+        "package",
+    ),
+}
+VALIDATION_SENSITIVE_PATHS = (
+    ".github/workflows/",
+    "AGENTS.md",
+    "docs/testing.md",
+    "prompts/",
+    "scripts/poll_pr_checks.py",
+)
 DEFAULT_INTERVAL_SECONDS = 30
 DEFAULT_TIMEOUT_SECONDS = 7200
 SUCCESS_CONCLUSION = "SUCCESS"
@@ -53,6 +72,28 @@ class CheckEvaluation:
 
 class PollError(RuntimeError):
     pass
+
+
+def defaultRequiredSteps(requiredJobs: Sequence[str]) -> tuple[str, ...]:
+    steps: list[str] = []
+    for job in requiredJobs:
+        for step in DEFAULT_REQUIRED_STEPS_BY_JOB.get(job, ()):
+            if step not in steps:
+                steps.append(step)
+    return tuple(steps)
+
+
+def isValidationSensitivePath(path: str) -> bool:
+    return any(path == sensitive or path.startswith(sensitive) for sensitive in VALIDATION_SENSITIVE_PATHS)
+
+
+def validationSensitiveFiles(files: Sequence[dict[str, Any]]) -> tuple[str, ...]:
+    paths = []
+    for item in files:
+        path = str(item.get("path") or "")
+        if path and isValidationSensitivePath(path):
+            paths.append(path)
+    return tuple(paths)
 
 
 def normalizeStatus(value: object) -> str:
@@ -213,7 +254,7 @@ def ghCommandWithRepo(command: list[str], repo: str | None) -> list[str]:
 
 def runGhPrView(pr: str, repo: str | None) -> dict[str, Any]:
     command = ghCommandWithRepo(
-        ["gh", "pr", "view", pr, "--json", "headRefOid,headRefName,number,url"],
+        ["gh", "pr", "view", pr, "--json", "files,headRefOid,headRefName,number,url"],
         repo,
     )
     payload = runGhJson(command)
@@ -310,6 +351,13 @@ def pollChecks(
 ) -> CheckEvaluation:
     started = time.monotonic()
     pr_payload = runGhPrView(pr, repo)
+    changed_validation_files = validationSensitiveFiles(pr_payload.get("files") or [])
+    if changed_validation_files:
+        changed = ", ".join(changed_validation_files)
+        raise PollError(
+            "CI-polled validation cannot replace local validation when the PR changes "
+            f"validation-sensitive files: {changed}"
+        )
     head_sha = str(pr_payload["headRefOid"])
 
     while True:
@@ -378,7 +426,7 @@ def parseArgs(argv: Sequence[str]) -> argparse.Namespace:
 def main(argv: Sequence[str] | None = None) -> int:
     args = parseArgs(sys.argv[1:] if argv is None else argv)
     jobs = tuple(args.jobs or DEFAULT_JOBS)
-    steps = tuple(args.steps or ())
+    steps = tuple(dict.fromkeys((*defaultRequiredSteps(jobs), *(args.steps or ()))))
     try:
         evaluation = pollChecks(
             pr=args.pr,
