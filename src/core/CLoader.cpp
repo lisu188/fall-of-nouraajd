@@ -152,12 +152,43 @@ bool is_safe_proxy_attr(const std::string &name) {
 
 pybind11::dict build_restricted_plugin_builtins();
 
-PyObject *safe_json_call(PyObject *, PyObject *args, PyObject *kwargs, const char *functionName) {
+pybind11::module_ initialized_proxy_module(const char *name) {
+    auto moduleName = pybind11::str(name);
+    auto module = PyImport_GetModule(moduleName.ptr());
+    if (module == nullptr) {
+        PyErr_Format(PyExc_ImportError, "Allowed Python resource plugin module is not initialized: %s", name);
+        throw pybind11::error_already_set();
+    }
+    return pybind11::reinterpret_steal<pybind11::module_>(module);
+}
+
+void clear_proxy_exception_frames(pybind11::handle exception) {
+    PyException_SetTraceback(exception.ptr(), Py_None);
+    PyException_SetCause(exception.ptr(), nullptr);
+    PyException_SetContext(exception.ptr(), nullptr);
+}
+
+PyObject *safe_json_call(PyObject *safeDecodeError, PyObject *args, PyObject *kwargs, const char *functionName) {
     try {
-        pybind11::object function = pybind11::module_::import("json").attr(functionName);
-        return PyObject_Call(function.ptr(), args, kwargs);
+        auto jsonModule = initialized_proxy_module("json");
+        PyObject *result = PyObject_Call(jsonModule.attr(functionName).ptr(), args, kwargs);
+        if (result != nullptr) {
+            return result;
+        }
+        pybind11::error_already_set error;
+        if (error.matches(jsonModule.attr("JSONDecodeError"))) {
+            auto value = error.value();
+            auto safeError = pybind11::reinterpret_borrow<pybind11::object>(safeDecodeError)(
+                value.attr("msg"), value.attr("doc"), value.attr("pos"));
+            PyErr_SetObject(safeDecodeError, safeError.ptr());
+        } else {
+            clear_proxy_exception_frames(error.value());
+            PyErr_SetObject(error.type().ptr(), error.value().ptr());
+        }
+        return nullptr;
     } catch (pybind11::error_already_set &error) {
-        error.restore();
+        clear_proxy_exception_frames(error.value());
+        PyErr_SetObject(error.type().ptr(), error.value().ptr());
         return nullptr;
     }
 }
@@ -175,33 +206,96 @@ PyObject *build_safe_json_proxy_module() {
     proxy.attr("__name__") = "json";
     proxy.attr("__package__") = pybind11::none();
     proxy.attr("__builtins__") = build_restricted_plugin_builtins();
+    auto jsonModule = initialized_proxy_module("json");
+    constexpr auto exceptionCache = "_nouraajd_resource_decode_error";
+    const bool cachedError = pybind11::hasattr(jsonModule, exceptionCache);
+    auto decodeError = cachedError ? jsonModule.attr(exceptionCache).cast<pybind11::object>()
+                                   : pybind11::reinterpret_steal<pybind11::object>(
+                                         PyErr_NewException("json.JSONDecodeError", PyExc_ValueError, nullptr));
+    if (!cachedError) {
+        decodeError.attr("__init__") = pybind11::cpp_function(
+            [](pybind11::object self, pybind11::str msg, pybind11::str doc, pybind11::ssize_t pos) {
+                const auto line = doc.attr("count")("\n", 0, pos).cast<pybind11::ssize_t>() + 1;
+                const auto column = pos - doc.attr("rfind")("\n", 0, pos).cast<pybind11::ssize_t>();
+                const auto message = msg.cast<std::string>() + ": line " + std::to_string(line) + " column " +
+                                     std::to_string(column) + " (char " + std::to_string(pos) + ")";
+                pybind11::reinterpret_borrow<pybind11::object>(PyExc_ValueError).attr("__init__")(self, message);
+                self.attr("msg") = msg;
+                self.attr("doc") = doc;
+                self.attr("pos") = pos;
+                self.attr("lineno") = line;
+                self.attr("colno") = column;
+            },
+            pybind11::is_method(decodeError), pybind11::arg("msg"), pybind11::arg("doc"), pybind11::arg("pos"));
+        jsonModule.attr(exceptionCache) = decodeError;
+    }
     static PyMethodDef loadsMethod = {"loads", reinterpret_cast<PyCFunction>(safe_json_loads),
                                       METH_VARARGS | METH_KEYWORDS, nullptr};
     static PyMethodDef dumpsMethod = {"dumps", reinterpret_cast<PyCFunction>(safe_json_dumps),
                                       METH_VARARGS | METH_KEYWORDS, nullptr};
-    proxy.attr("loads") = pybind11::reinterpret_steal<pybind11::object>(PyCFunction_New(&loadsMethod, nullptr));
-    proxy.attr("dumps") = pybind11::reinterpret_steal<pybind11::object>(PyCFunction_New(&dumpsMethod, nullptr));
-    proxy.attr("JSONDecodeError") = pybind11::module_::import("json").attr("JSONDecodeError");
+    proxy.attr("loads") =
+        pybind11::reinterpret_steal<pybind11::object>(PyCFunction_New(&loadsMethod, decodeError.ptr()));
+    proxy.attr("dumps") =
+        pybind11::reinterpret_steal<pybind11::object>(PyCFunction_New(&dumpsMethod, decodeError.ptr()));
+    proxy.attr("JSONDecodeError") = decodeError;
     return proxy.release().ptr();
 }
 
+pybind11::object wrap_helper_function(pybind11::object function, pybind11::object owner = pybind11::none());
+
+bool is_plain_proxy_value(pybind11::handle value) {
+    if (value.is_none() || PyUnicode_Check(value.ptr()) || PyLong_Check(value.ptr()) || PyFloat_Check(value.ptr()) ||
+        PyBytes_Check(value.ptr())) {
+        return true;
+    }
+    if (PyTuple_Check(value.ptr())) {
+        for (const auto &item : pybind11::reinterpret_borrow<pybind11::tuple>(value)) {
+            if (!is_plain_proxy_value(item)) {
+                return false;
+            }
+        }
+        return true;
+    }
+    return false;
+}
+
 pybind11::object clone_python_function(pybind11::handle function, pybind11::dict globals) {
-    PyObject *cloned = PyFunction_NewWithQualName(PyFunction_GET_CODE(function.ptr()), globals.ptr(),
-                                                  PyFunction_GET_QUALNAME(function.ptr()));
+    auto defaults = PyFunction_GET_DEFAULTS(function.ptr());
+    auto keywordDefaults = PyFunction_GET_KW_DEFAULTS(function.ptr());
+    auto annotations = PyFunction_GET_ANNOTATIONS(function.ptr());
+    bool carriesObjects = defaults != nullptr && !is_plain_proxy_value(pybind11::handle(defaults));
+    for (auto mapping : {keywordDefaults, annotations}) {
+        if (mapping != nullptr && PyDict_Check(mapping)) {
+            for (const auto &item : pybind11::reinterpret_borrow<pybind11::dict>(mapping)) {
+                carriesObjects |= !is_plain_proxy_value(item.second);
+            }
+        }
+    }
+    if (PyFunction_GET_CLOSURE(function.ptr()) != nullptr || carriesObjects) {
+        return wrap_helper_function(pybind11::reinterpret_borrow<pybind11::object>(function));
+    }
+    auto qualName = pybind11::reinterpret_borrow<pybind11::object>(function).attr("__qualname__");
+    PyObject *cloned = PyFunction_NewWithQualName(PyFunction_GET_CODE(function.ptr()), globals.ptr(), qualName.ptr());
     if (cloned == nullptr) {
         throw pybind11::error_already_set();
     }
     pybind11::object clonedFunction = pybind11::reinterpret_steal<pybind11::object>(cloned);
-    PyFunction_SetDefaults(clonedFunction.ptr(), PyFunction_GET_DEFAULTS(function.ptr()));
-    PyFunction_SetKwDefaults(clonedFunction.ptr(), PyFunction_GET_KW_DEFAULTS(function.ptr()));
-    PyFunction_SetClosure(clonedFunction.ptr(), PyFunction_GET_CLOSURE(function.ptr()));
-    PyFunction_SetAnnotations(clonedFunction.ptr(), PyFunction_GET_ANNOTATIONS(function.ptr()));
+    auto optionalValue = [](PyObject *value) { return value != nullptr ? value : Py_None; };
+    if (PyFunction_SetDefaults(clonedFunction.ptr(), optionalValue(PyFunction_GET_DEFAULTS(function.ptr()))) < 0 ||
+        PyFunction_SetKwDefaults(clonedFunction.ptr(), optionalValue(PyFunction_GET_KW_DEFAULTS(function.ptr()))) < 0 ||
+        PyFunction_SetClosure(clonedFunction.ptr(), optionalValue(PyFunction_GET_CLOSURE(function.ptr()))) < 0 ||
+        PyFunction_SetAnnotations(clonedFunction.ptr(), optionalValue(PyFunction_GET_ANNOTATIONS(function.ptr()))) <
+            0) {
+        throw pybind11::error_already_set();
+    }
     return clonedFunction;
 }
 
 pybind11::object clone_python_class(pybind11::handle type, pybind11::dict globals) {
     pybind11::dict classDict;
-    pybind11::dict originalDict = pybind11::reinterpret_borrow<pybind11::object>(type).attr("__dict__");
+    auto mapping = pybind11::reinterpret_borrow<pybind11::object>(type).attr("__dict__");
+    auto originalDict = pybind11::reinterpret_steal<pybind11::dict>(
+        PyObject_CallFunctionObjArgs(reinterpret_cast<PyObject *>(&PyDict_Type), mapping.ptr(), nullptr));
     for (const auto &item : originalDict) {
         const auto attrName = pybind11::str(item.first).cast<std::string>();
         if (attrName == "__dict__" || attrName == "__weakref__") {
@@ -218,6 +312,114 @@ pybind11::object clone_python_class(pybind11::handle type, pybind11::dict global
     pybind11::object bases = pybind11::reinterpret_borrow<pybind11::object>(type).attr("__bases__");
     return pybind11::reinterpret_steal<pybind11::object>(PyObject_CallFunctionObjArgs(
         reinterpret_cast<PyObject *>(&PyType_Type), name.ptr(), bases.ptr(), classDict.ptr(), nullptr));
+}
+
+bool is_trusted_helper_type(pybind11::handle value) {
+    if (!PyType_Check(value.ptr())) {
+        return false;
+    }
+    const auto module =
+        pybind11::str(pybind11::reinterpret_borrow<pybind11::object>(value).attr("__module__")).cast<std::string>();
+    return module == "campaign" || module == "narrative" || module == "quest_state";
+}
+
+void protect_helper_class(pybind11::handle type);
+pybind11::object protect_helper_result(pybind11::object result);
+
+pybind11::object wrap_helper_function(pybind11::object function, pybind11::object owner) {
+    const auto moduleName = pybind11::str(function.attr("__module__")).cast<std::string>();
+    const auto functionName = pybind11::str(function.attr("__name__")).cast<std::string>();
+    const bool craftingCall = moduleName == "game" && functionName == "craftRecipe";
+    const bool needsNativeGame = owner.is_none() && (moduleName == "campaign" || craftingCall);
+    auto invoke = [function, needsNativeGame, craftingCall](pybind11::args args, pybind11::kwargs kwargs) {
+        try {
+            if (needsNativeGame) {
+                auto gameArg = args.size() ? pybind11::reinterpret_borrow<pybind11::object>(args[0])
+                                           : pybind11::reinterpret_borrow<pybind11::object>(
+                                                 kwargs[craftingCall ? "game_instance" : "game"]);
+                auto gameType = initialized_proxy_module("_game").attr("CGame");
+                if (reinterpret_cast<PyObject *>(Py_TYPE(gameArg.ptr())) != gameType.ptr()) {
+                    throw pybind11::type_error("Resource helpers require the native game instance");
+                }
+            }
+            auto result =
+                pybind11::reinterpret_steal<pybind11::object>(PyObject_Call(function.ptr(), args.ptr(), kwargs.ptr()));
+            if (!result) {
+                throw pybind11::error_already_set();
+            }
+            // Helpers such as install_on also install callbacks on a caller's class.
+            for (const auto &arg : args) {
+                if (PyType_Check(arg.ptr())) {
+                    protect_helper_class(arg);
+                }
+            }
+            for (const auto &item : kwargs) {
+                if (PyType_Check(item.second.ptr())) {
+                    protect_helper_class(item.second);
+                }
+            }
+            return protect_helper_result(std::move(result));
+        } catch (pybind11::error_already_set &error) {
+            clear_proxy_exception_frames(error.value());
+            PyErr_SetObject(error.type().ptr(), error.value().ptr());
+            throw pybind11::error_already_set();
+        }
+    };
+    return owner.is_none() ? pybind11::cpp_function(invoke)
+                           : pybind11::cpp_function(invoke, pybind11::is_method(owner));
+}
+
+bool has_trusted_function_builtins(pybind11::handle function) {
+    if (!PyFunction_Check(function.ptr())) {
+        return false;
+    }
+    auto builtins = pybind11::reinterpret_borrow<pybind11::object>(function).attr("__builtins__");
+    return PyDict_Check(builtins.ptr()) && PyDict_GetItemString(builtins.ptr(), "open") != nullptr;
+}
+
+void protect_helper_class(pybind11::handle type) {
+    auto klass = pybind11::reinterpret_borrow<pybind11::object>(type);
+    auto mapping = klass.attr("__dict__");
+    auto attributes = pybind11::reinterpret_steal<pybind11::dict>(
+        PyObject_CallFunctionObjArgs(reinterpret_cast<PyObject *>(&PyDict_Type), mapping.ptr(), nullptr));
+    for (const auto &item : attributes) {
+        const auto name = pybind11::str(item.first).cast<std::string>();
+        if (name == "__dataclass_fields__" || name == "__dataclass_params__" || name == "__wrapped__") {
+            PyObject_DelAttrString(klass.ptr(), name.c_str());
+        } else if (has_trusted_function_builtins(item.second)) {
+            klass.attr(name.c_str()) =
+                wrap_helper_function(pybind11::reinterpret_borrow<pybind11::object>(item.second), klass);
+        } else if (PyObject_IsInstance(item.second.ptr(), reinterpret_cast<PyObject *>(&PyStaticMethod_Type)) == 1 ||
+                   PyObject_IsInstance(item.second.ptr(), reinterpret_cast<PyObject *>(&PyClassMethod_Type)) == 1) {
+            auto descriptor = pybind11::reinterpret_borrow<pybind11::object>(item.second);
+            auto function = descriptor.attr("__func__");
+            if (has_trusted_function_builtins(function)) {
+                auto descriptorType = pybind11::handle(reinterpret_cast<PyObject *>(Py_TYPE(item.second.ptr())));
+                klass.attr(name.c_str()) =
+                    pybind11::reinterpret_borrow<pybind11::object>(descriptorType)(wrap_helper_function(function));
+            }
+        } else if (PyObject_IsInstance(item.second.ptr(), reinterpret_cast<PyObject *>(&PyProperty_Type)) == 1) {
+            auto property = pybind11::reinterpret_borrow<pybind11::object>(item.second);
+            auto protectAccessor = [](pybind11::object accessor) {
+                return has_trusted_function_builtins(accessor) ? wrap_helper_function(accessor) : accessor;
+            };
+            klass.attr(name.c_str()) = pybind11::reinterpret_borrow<pybind11::object>(reinterpret_cast<PyObject *>(
+                &PyProperty_Type))(protectAccessor(property.attr("fget")), protectAccessor(property.attr("fset")),
+                                   protectAccessor(property.attr("fdel")), property.attr("__doc__"));
+        }
+    }
+}
+
+pybind11::object protect_helper_result(pybind11::object result) {
+    if (PyFunction_Check(result.ptr()) || PyMethod_Check(result.ptr())) {
+        return wrap_helper_function(std::move(result));
+    }
+    if (PyType_Check(result.ptr())) {
+        protect_helper_class(result);
+    } else if (is_trusted_helper_type(pybind11::handle(reinterpret_cast<PyObject *>(Py_TYPE(result.ptr()))))) {
+        protect_helper_class(pybind11::handle(reinterpret_cast<PyObject *>(Py_TYPE(result.ptr()))));
+    }
+    return result;
 }
 
 bool should_clone_game_type(pybind11::handle value) {
@@ -257,11 +459,40 @@ PyObject *build_safe_proxy_module(const std::string &name) {
     pybind11::module_ proxy = pybind11::reinterpret_steal<pybind11::module_>(PyModule_New(name.c_str()));
     pybind11::dict realDict = realModule.attr("__dict__");
 
+    if (name == "game") {
+        // These classes are also returned or stored by the public quest helpers.
+        auto questModule = initialized_proxy_module("quest_state");
+        pybind11::dict questDict = questModule.attr("__dict__");
+        for (const auto &item : questDict) {
+            if (is_trusted_helper_type(item.second)) {
+                protect_helper_class(item.second);
+            }
+        }
+    }
+
+    const std::set<std::string> campaignExports = {"state", "active", "complete_scenario", "retryPending",
+                                                   "hasPendingTransition"};
+    auto allowedAttribute = [&](const std::string &attrName) {
+        return is_safe_proxy_attr(attrName) &&
+               (name == "game" || (name == "campaign" && campaignExports.contains(attrName)) ||
+                (name == "narrative" && !attrName.starts_with("_")));
+    };
+
     for (const auto &item : realDict) {
         const auto attrName = pybind11::str(item.first).cast<std::string>();
-        if (is_safe_proxy_attr(attrName) && !is_unsafe_proxy_value(name, item.second) &&
+        if (allowedAttribute(attrName) && !is_unsafe_proxy_value(name, item.second) &&
             !PyFunction_Check(item.second.ptr()) && !should_clone_game_type(item.second)) {
+            if (is_trusted_helper_type(item.second)) {
+                protect_helper_class(item.second);
+            }
             proxy.attr(attrName.c_str()) = pybind11::reinterpret_borrow<pybind11::object>(item.second);
+        } else if (name == "game" && PyModule_Check(item.second.ptr()) &&
+                   (attrName == "json" || attrName == "campaign" || attrName == "narrative")) {
+            auto moduleProxy = build_safe_proxy_module(attrName);
+            if (moduleProxy == nullptr) {
+                throw pybind11::error_already_set();
+            }
+            proxy.attr(attrName.c_str()) = pybind11::reinterpret_steal<pybind11::object>(moduleProxy);
         }
     }
     proxy.attr("__name__") = name;
@@ -270,11 +501,20 @@ PyObject *build_safe_proxy_module(const std::string &name) {
     pybind11::dict proxyDict = proxy.attr("__dict__");
     for (const auto &item : realDict) {
         const auto attrName = pybind11::str(item.first).cast<std::string>();
-        if (!is_safe_proxy_attr(attrName)) {
+        if (!allowedAttribute(attrName)) {
             continue;
         }
         if (PyFunction_Check(item.second.ptr())) {
-            proxy.attr(attrName.c_str()) = clone_python_function(item.second, proxyDict);
+            auto function = pybind11::reinterpret_borrow<pybind11::object>(item.second);
+            const auto functionModule = pybind11::str(function.attr("__module__")).cast<std::string>();
+            // Module-owned helpers keep their imports and closures behind a native
+            // callable. Local game helpers use restricted globals, including
+            // callbacks they create.
+            const bool needsTrustedImports = attrName == "craftRecipe" || attrName == "choose_character" ||
+                                             attrName == "choose_campaign" || attrName == "new";
+            proxy.attr(attrName.c_str()) = functionModule == "game" && !needsTrustedImports
+                                               ? clone_python_function(item.second, proxyDict)
+                                               : wrap_helper_function(std::move(function));
         } else if (should_clone_game_type(item.second)) {
             proxy.attr(attrName.c_str()) = clone_python_class(item.second, proxyDict);
         }
@@ -301,7 +541,15 @@ PyObject *restricted_plugin_import(PyObject *, PyObject *args, PyObject *kwargs)
     }
 
     if (std::string(name) == "game" || std::string(name) == "json") {
-        return build_safe_proxy_module(name);
+        try {
+            return build_safe_proxy_module(name);
+        } catch (pybind11::error_already_set &error) {
+            clear_proxy_exception_frames(error.value());
+            PyErr_SetObject(error.type().ptr(), error.value().ptr());
+        } catch (const std::exception &error) {
+            PyErr_SetString(PyExc_RuntimeError, error.what());
+        }
+        return nullptr;
     }
 
     PyErr_SetString(PyExc_ImportError, "Python resource plugins may only import the game and json modules");
@@ -316,39 +564,14 @@ pybind11::dict build_restricted_plugin_builtins() {
         return safeBuiltins;
     }
 
-    const std::vector<std::string> allowedNames = {"__build_class__",
-                                                   "abs",
-                                                   "all",
-                                                   "any",
-                                                   "bool",
-                                                   "callable",
-                                                   "classmethod",
-                                                   "dict",
-                                                   "enumerate",
-                                                   "Exception",
-                                                   "float",
-                                                   "getattr",
-                                                   "hasattr",
-                                                   "int",
-                                                   "isinstance",
-                                                   "len",
-                                                   "list",
-                                                   "max",
-                                                   "min",
-                                                   "print",
-                                                   "property",
-                                                   "range",
-                                                   "RuntimeError",
-                                                   "set",
-                                                   "setattr",
-                                                   "staticmethod",
-                                                   "sorted",
-                                                   "str",
-                                                   "sum",
-                                                   "super",
-                                                   "tuple",
-                                                   "TypeError",
-                                                   "ValueError"};
+    const std::vector<std::string> allowedNames = {
+        "__build_class__", "abs",          "all",     "any",          "bool",
+        "callable",        "classmethod",  "dict",    "enumerate",    "Exception",
+        "float",           "frozenset",    "getattr", "hasattr",      "int",
+        "isinstance",      "len",          "list",    "max",          "min",
+        "print",           "property",     "range",   "RuntimeError", "set",
+        "setattr",         "staticmethod", "sorted",  "str",          "sum",
+        "super",           "tuple",        "type",    "TypeError",    "ValueError"};
 
     for (const auto &name : allowedNames) {
         PyObject *value = PyDict_GetItemString(builtins, name.c_str());

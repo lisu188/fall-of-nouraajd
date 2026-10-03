@@ -54,10 +54,21 @@ class PythonPluginSandboxTest(unittest.TestCase):
         self.assertIn("PyModule_Check(value.ptr())", self.loader_source)
         self.assertIn("clone_python_function", self.loader_source)
         self.assertIn("PyFunction_NewWithQualName", self.loader_source)
+        self.assertNotIn("PyFunction_GET_QUALNAME", self.loader_source)
+        self.assertIn("wrap_helper_function", self.loader_source)
+        self.assertIn("clear_proxy_exception_frames", self.loader_source)
+        self.assertRegex(
+            self.loader_source,
+            r'PyErr_NewException\(\s*"json.JSONDecodeError",\s*PyExc_ValueError,\s*nullptr\)',
+        )
         self.assertIn('proxy.attr("__builtins__") = build_restricted_plugin_builtins();', self.loader_source)
         self.assertIn("import json", self.game_source)
-        self.assertIn('proxy.attr("loads") = pybind11::reinterpret_steal<pybind11::object>', self.loader_source)
+        self.assertRegex(
+            self.loader_source,
+            r'proxy\.attr\("loads"\)\s*=\s*pybind11::reinterpret_steal<pybind11::object>',
+        )
         self.assertNotIn('proxy.attr("JSONDecoder")', self.loader_source)
+        self.assertNotIn('proxy.attr("JSONDecodeError") = pybind11::module_', self.loader_source)
         self.assertNotIn("PyImport_ImportModuleLevelObject", self.loader_source)
 
     def test_plugin_and_map_paths_are_validated_before_loading(self):

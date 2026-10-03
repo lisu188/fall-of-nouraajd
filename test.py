@@ -6973,6 +6973,50 @@ class GameTest(unittest.TestCase):
         finally:
             os.unlink(absolute_path)
 
+    @game_test
+    def test_python_plugin_safe_proxy_runtime(self):
+        game = load_game_module()
+        g, game_map, player = load_game_map_with_player("test")
+        resources = g.getResourcesProvider()
+        resource_root = Path(resources.getPath("config/items.json")).parent.parent
+        logical_path = f"maps/proxy_runtime_{os.getpid()}_{time.time_ns()}/script.py"
+        plugin_path = resource_root / logical_path
+        probe_source = (REPO_ROOT / "tests" / "fixtures" / "python_proxy_probe.py").read_text(encoding="utf-8")
+
+        def callback():
+            return 42
+
+        def defaultProbe(callback=callback):
+            return callback
+
+        def closureProbeFactory():
+            original_callback = callback
+
+            def closureProbe():
+                return original_callback()
+
+            return closureProbe
+
+        closure_probe = closureProbeFactory()
+        defaultProbe.__module__ = "game"
+        closure_probe.__module__ = "game"
+        game.proxyDefaultProbe = defaultProbe
+        game.proxyClosureProbe = closure_probe
+        created_directory = False
+        try:
+            plugin_path.parent.mkdir()
+            created_directory = True
+            plugin_path.write_text(probe_source, encoding="utf-8")
+            self.assertTrue(game.CPluginLoader.loadPlugin(g, logical_path), "runtime proxy regression plugin must load")
+            self.assertTrue(g.getBoolProperty("proxyRuntimeProbePassed"))
+            return True, json.dumps({"json": True, "helpers": True, "dialogs": True, "callbacks": True}, sort_keys=True)
+        finally:
+            if created_directory:
+                plugin_path.unlink(missing_ok=True)
+                plugin_path.parent.rmdir()
+            del game.proxyDefaultProbe
+            del game.proxyClosureProbe
+
     def test_compound_artifact_assembly_and_disassembly(self):
         import artifact_sets
 
