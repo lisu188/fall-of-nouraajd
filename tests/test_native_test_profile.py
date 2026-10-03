@@ -23,6 +23,7 @@ ADDITIONAL_CASES = {
         "testEffectTickCappingAndExpiryIgnoreAllocationOrder",
         "testEffectTickLethalityTimingAndCasterIgnoreAllocationOrder",
     ),
+    "map": ("testMapMoveRejectsPlayerPlanCapturedBeforeSynchronousRespawn",),
 }
 
 
