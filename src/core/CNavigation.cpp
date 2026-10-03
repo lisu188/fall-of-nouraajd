@@ -309,9 +309,12 @@ CNavigationCell CNavigationSnapshot::cell(Coords coords) const {
 bool CNavigationSnapshot::canStep(Coords coords) const { return cell(coords).walkable; }
 int CNavigationSnapshot::movementCost(Coords coords) const { return cell(coords).cost; }
 std::int64_t CNavigationSnapshot::stepCost(Coords from, Coords to) const {
+    return stepCost(from, to, movementCost(to));
+}
+std::int64_t CNavigationSnapshot::stepCost(Coords from, Coords to, int terrainCost) const {
     from = normalize(from);
     to = normalize(to);
-    const int terrainCost = movementCost(to);
+    terrainCost = std::max(1, terrainCost);
     const auto source = data->connectorCosts.find(from);
     if (source == data->connectorCosts.end())
         return terrainCost;
