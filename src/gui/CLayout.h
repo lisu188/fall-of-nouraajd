@@ -1,6 +1,6 @@
 /*
 fall-of-nouraajd c++ dark fantasy game
-Copyright (C) 2025  Andrzej Lis
+Copyright (C) 2025-2026  Andrzej Lis
 
 This program is free software: you can redistribute it and/or modify
         it under the terms of the GNU General Public License as published by
@@ -20,21 +20,24 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #include "gui/object/CGameGraphicsObject.h"
 #include "object/CGameObject.h"
 
+#include <optional>
+
 class CLayout : public CGameObject {
     V_META(CLayout, CGameObject, V_PROPERTY(CLayout, std::string, w, getW, setW),
            V_PROPERTY(CLayout, std::string, h, getH, setH), V_PROPERTY(CLayout, std::string, x, getX, setX),
            V_PROPERTY(CLayout, std::string, y, getY, setY),
            V_PROPERTY(CLayout, std::string, vertical, getVertical, setVertical),
-           V_PROPERTY(CLayout, std::string, horizontal, getHorizontal, setHorizontal))
+           V_PROPERTY(CLayout, std::string, horizontal, getHorizontal, setHorizontal),
+           V_PROPERTY(CLayout, int, minW, getMinW, setMinW), V_PROPERTY(CLayout, int, minH, getMinH, setMinH))
   public:
     virtual std::shared_ptr<SDL_Rect> getRect(std::shared_ptr<CGameGraphicsObject> object);
 
   private:
     enum TYPE { SIMPLE, PERCENT };
 
-    std::pair<TYPE, int> parseValue(std::string value);
+    std::pair<TYPE, double> parseValue(std::string value);
 
-    int parseValue(std::pair<TYPE, int> value, int parentValue);
+    int parseValue(std::pair<TYPE, double> value, int parentValue);
 
     int parseValue(std::string value, int parentValue);
 
@@ -62,6 +65,36 @@ class CLayout : public CGameObject {
 
     void setRect(const std::shared_ptr<SDL_Rect> &rect);
 
+    void setRuntimeX(int x);
+
+    void setRuntimeY(int y);
+
+    void setRuntimeW(int w);
+
+    void setRuntimeH(int h);
+
+    void setRuntimeRect(int x, int y, int w, int h);
+
+    void setRuntimeRect(const std::shared_ptr<SDL_Rect> &rect);
+
+    void clearRuntimeX();
+
+    void clearRuntimeY();
+
+    void clearRuntimeW();
+
+    void clearRuntimeH();
+
+    void clearRuntimeRect();
+
+    int getMinW();
+
+    void setMinW(int _minW);
+
+    int getMinH();
+
+    void setMinH(int _minH);
+
     std::string getVertical();
 
     void setVertical(std::string vertical);
@@ -77,6 +110,12 @@ class CLayout : public CGameObject {
     std::string y = "0";
     std::string vertical;
     std::string horizontal;
+    int minW = 0;
+    int minH = 0;
+    std::optional<int> runtimeX;
+    std::optional<int> runtimeY;
+    std::optional<int> runtimeW;
+    std::optional<int> runtimeH;
 };
 
 class CCenteredLayout : public CLayout {

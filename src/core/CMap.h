@@ -1,6 +1,6 @@
 /*
 fall-of-nouraajd c++ dark fantasy game
-Copyright (C) 2025  Andrzej Lis
+Copyright (C) 2025-2026  Andrzej Lis
 
 This program is free software: you can redistribute it and/or modify
         it under the terms of the GNU General Public License as published by
@@ -16,6 +16,10 @@ You should have received a copy of the GNU General Public License
 along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 #pragma once
+
+#include <cstddef>
+#include <atomic>
+#include <mutex>
 
 #include "core/CGlobal.h"
 
@@ -41,6 +45,20 @@ class CMapObject;
 class CTrigger;
 
 class CGame;
+class CNavigationService;
+class CNavigationSnapshot;
+struct CNavigationCell;
+
+struct CNavigationEdge {
+    Coords source;
+    Coords target;
+    bool enabled = true;
+    bool bidirectional = false;
+    int movementCost = 1;
+    std::optional<std::string> sourceObjectName;
+
+    bool operator==(const CNavigationEdge &other) const = default;
+};
 
 class CMap : public CGameObject {
     using StringMap = std::map<int, std::string>;
@@ -50,14 +68,18 @@ class CMap : public CGameObject {
     friend class CMapLoader;
 
     friend class CRandomMapGenerator;
+    friend class CNavigationSnapshot;
 
     V_META(CMap, CGameObject, V_PROPERTY(CMap, int, turn, getTurn, setTurn),
            V_PROPERTY(CMap, std::string, mapName, getMapName, setMapName),
+           V_PROPERTY(CMap, std::string, combatHistory, getCombatHistory, setCombatHistory),
            V_PROPERTY(CMap, std::set<std::shared_ptr<CMapObject>>, objects, getObjects, setObjects),
            V_PROPERTY(CMap, std::set<std::shared_ptr<CTile>>, tiles, getTiles, setTiles),
            V_PROPERTY(CMap, std::set<std::shared_ptr<CTrigger>>, triggers, getTriggers, setTriggers))
   public:
     CMap() = default;
+
+    ~CMap() override;
 
     bool addTile(std::shared_ptr<CTile> tile, int x, int y, int z);
 
@@ -129,6 +151,14 @@ class CMap : public CGameObject {
 
     void setPlayer(std::shared_ptr<CPlayer> player);
 
+    std::shared_ptr<CPlayer> detachPlayer();
+
+    void attachPlayer(std::shared_ptr<CPlayer> player);
+
+    void attachPlayer(std::shared_ptr<CPlayer> player, Coords coords);
+
+    bool restorePlayerAfterLoad(std::string &error);
+
     void moveTile(std::shared_ptr<CTile> tile, int x, int y, int z);
 
     std::shared_ptr<CEventHandler> getEventHandler();
@@ -141,7 +171,17 @@ class CMap : public CGameObject {
 
     int getMovementCost(Coords coords);
 
+    int lookupMovementCost(int x, int y, int z);
+
+    int lookupMovementCost(Coords coords);
+
+    std::int64_t lookupNavigationStepCost(Coords from, Coords to);
+
     Coords normalizeCoords(Coords coords) const;
+
+    // Returns true when the coordinate falls inside the configured map extents for its level.
+    // Levels without explicit bounds are treated as in-bounds (unbounded sandbox maps).
+    bool isWithinBounds(Coords coords) const;
 
     std::vector<Coords> getAdjacentCoords(Coords coords, bool includeSelf = false) const;
 
@@ -156,8 +196,6 @@ class CMap : public CGameObject {
     std::shared_ptr<CMapObject> getObjectByName(const std::string &name);
 
     bool isMoving();
-
-    //    void applyEffects();
 
     void forObjects(
         std::function<void(std::shared_ptr<CMapObject>)> func,
@@ -178,6 +216,26 @@ class CMap : public CGameObject {
     void setTurn(int turn);
 
     std::uint64_t getNavigationRevision() const;
+
+    std::uint64_t getRoutingEpoch() const;
+    std::recursive_mutex &getNavigationMutex() const;
+    std::shared_ptr<CNavigationService> getNavigationService();
+    void navigationCellChanged(Coords coords);
+    bool hasRegisteredTile(const CTile *tile) const;
+
+    const std::vector<CNavigationEdge> &getNavigationEdges() const;
+
+    std::vector<Coords> getNavigationNeighbors(Coords coords, bool includeSelf = false) const;
+
+    void registerNavigationEdge(CNavigationEdge edge);
+
+    void addNavigationEdge(CNavigationEdge edge);
+
+    bool removeNavigationEdge(Coords source, Coords target, std::optional<std::string> sourceObjectName = std::nullopt);
+
+    std::size_t unregisterNavigationEdgesForObject(const std::string &sourceObjectName);
+
+    std::size_t getObjectCacheEntryCountForTesting() const;
 
     // TODO: accept predicate, can be used in siege map
     std::set<std::shared_ptr<CMapObject>> getObjects();
@@ -200,6 +258,10 @@ class CMap : public CGameObject {
 
     std::string getMapName();
 
+    std::string getCombatHistory();
+
+    void setCombatHistory(std::string history);
+
     void objectMoved(const std::shared_ptr<CMapObject> &object, Coords _old, Coords _new);
 
   private:
@@ -208,6 +270,7 @@ class CMap : public CGameObject {
     std::unordered_multimap<Coords, std::string> mapObjectsCache;
 
     std::unordered_map<Coords, std::shared_ptr<CTile>> tiles;
+    std::vector<CNavigationEdge> navigationEdges;
 
     std::shared_ptr<CPlayer> player;
     StringMap defaultTiles;
@@ -225,11 +288,36 @@ class CMap : public CGameObject {
     bool moving = false;
     bool playerTriggersRegistered = false;
     std::string mapName;
+    std::string combatHistory;
     std::uint64_t navigationRevision = 0;
+    mutable std::recursive_mutex navigationMutex;
+    mutable std::uint64_t routingEpoch = 1;
+    mutable std::uint64_t routingConfigRevision = 0;
+    std::shared_ptr<CNavigationService> navigationService;
+    bool navigationDomainCanonical = true;
+    struct NavigationTileExtent {
+        int level = 0;
+        std::array<int, 4> extent{};
+    };
+    std::array<NavigationTileExtent, 64> navigationTileExtents{};
+    std::size_t navigationTileExtentCount = 0;
+    bool navigationTileExtentOverflow = false;
+    void includeNavigationTile(Coords coords);
 
-    std::shared_ptr<vstd::future<void, void>> _moveHelper = vstd::later([]() {});
+    void updateCoordinateNormalization(IntMap &setting, IntMap values);
+
+    void routingChanged(std::optional<Coords> coords = std::nullopt);
+    CNavigationCell lookupNavigationCell(Coords coords, std::optional<CNavigationCell> fallback);
 
     bool hasBounds(int z) const;
+
+    bool isOutOfBounds(Coords coords) const;
+
+    std::string fallbackTileType(Coords coords) const;
+
+    std::shared_ptr<CTile> resolveTileForLookup(Coords coords);
+
+    bool removeObjectWithoutEvents(const std::shared_ptr<CMapObject> &mapObject);
 
     int normalizeAxis(int value, int z, bool wrapAxis, const IntMap &bounds) const;
 
@@ -237,3 +325,9 @@ class CMap : public CGameObject {
 
     void registerPlayerTriggers();
 };
+
+namespace performance_guard {
+void resetMapCoordinateLookupProbe();
+std::size_t mapCoordinateLookupProbeCount();
+void disableMapCoordinateLookupProbe();
+} // namespace performance_guard

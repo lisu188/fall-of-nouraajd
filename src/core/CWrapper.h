@@ -22,11 +22,12 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #include "core/CPlugin.h"
 #include "object/CDialog.h"
 #include "object/CObject.h"
+#include "plugin/CPluginRegistrar.h"
 
 namespace py = pybind11;
 
 template <fn::PythonWrapperBase T> class CWrapper : public T {
-    V_META(CWrapper<T>, T, vstd::meta::empty())
+    V_META_NAMED(CWrapper<T>, T, std::string("CWrapper<") + T::static_meta()->name() + ">", vstd::meta::empty())
 
   public:
     using T::T;
@@ -82,6 +83,16 @@ template <> class CWrapper<CInteraction> : public CInteraction {
 
   public:
     using CInteraction::CInteraction;
+
+    int getCommittedManaRefund(std::shared_ptr<CCreature> caster) override final {
+        try {
+            PYBIND11_OVERRIDE(int, CInteraction, getCommittedManaRefund, caster);
+        } catch (const py::error_already_set &) {
+            PYTHON_LOG;
+            PyErr_Clear();
+            return 0;
+        }
+    }
 
     void performAction(std::shared_ptr<CCreature> first, std::shared_ptr<CCreature> second) override final {
         try {
@@ -218,6 +229,15 @@ template <> class CWrapper<CQuest> : public CQuest {
         }
     }
 
+    void captureJournal(bool completed) override final {
+        try {
+            PYBIND11_OVERRIDE(void, CQuest, captureJournal, completed);
+        } catch (const py::error_already_set &) {
+            PYTHON_LOG;
+            PyErr_Clear();
+        }
+    }
+
     std::string getObjective() override final {
         try {
             PYBIND11_OVERRIDE(std::string, CQuest, getObjective);
@@ -255,9 +275,9 @@ template <> class CWrapper<CPlugin> : public CPlugin {
   public:
     using CPlugin::CPlugin;
 
-    void load(std::shared_ptr<CGame> game) override final {
+    void load(CPluginRegistrar &registrar) override final {
         try {
-            PYBIND11_OVERRIDE(void, CPlugin, load, game);
+            PYBIND11_OVERRIDE(void, CPlugin, load, registrar);
         } catch (const py::error_already_set &) {
             PYTHON_LOG;
             PyErr_Clear();
@@ -290,3 +310,49 @@ template <> class CWrapper<CDialog> : public CDialog {
         }
     }
 };
+
+// Equipment items (CItem subclasses) need onEquip/onUnequip/onUse to dispatch to Python
+// overrides -- the generic CWrapper<T> only trampolines the map-object lifecycle events, so
+// without these specializations a Python-subclassed piece/artifact (res/plugins/artifact_sets.py)
+// would never see its equip/use handler called. Mirrors the CScroll/CPotion onUse pattern.
+#define CWRAPPER_EQUIPMENT_TRAMPOLINE(ITEM)                                                                            \
+    template <> class CWrapper<ITEM> : public ITEM {                                                                   \
+        V_META(CWrapper<ITEM>, ITEM, vstd::meta::empty())                                                              \
+      public:                                                                                                          \
+        using ITEM::ITEM;                                                                                              \
+        void onEquip(std::shared_ptr<CGameEvent> event) override final {                                               \
+            try {                                                                                                      \
+                PYBIND11_OVERRIDE(void, ITEM, onEquip, event);                                                         \
+            } catch (const py::error_already_set &) {                                                                  \
+                PYTHON_LOG;                                                                                            \
+                PyErr_Clear();                                                                                         \
+            }                                                                                                          \
+        }                                                                                                              \
+        void onUnequip(std::shared_ptr<CGameEvent> event) override final {                                             \
+            try {                                                                                                      \
+                PYBIND11_OVERRIDE(void, ITEM, onUnequip, event);                                                       \
+            } catch (const py::error_already_set &) {                                                                  \
+                PYTHON_LOG;                                                                                            \
+                PyErr_Clear();                                                                                         \
+            }                                                                                                          \
+        }                                                                                                              \
+        void onUse(std::shared_ptr<CGameEvent> event) override final {                                                 \
+            try {                                                                                                      \
+                PYBIND11_OVERRIDE(void, ITEM, onUse, event);                                                           \
+            } catch (const py::error_already_set &) {                                                                  \
+                PYTHON_LOG;                                                                                            \
+                PyErr_Clear();                                                                                         \
+            }                                                                                                          \
+        }                                                                                                              \
+    };
+
+CWRAPPER_EQUIPMENT_TRAMPOLINE(CArmor)
+CWRAPPER_EQUIPMENT_TRAMPOLINE(CHelmet)
+CWRAPPER_EQUIPMENT_TRAMPOLINE(CBoots)
+CWRAPPER_EQUIPMENT_TRAMPOLINE(CGloves)
+CWRAPPER_EQUIPMENT_TRAMPOLINE(CBelt)
+CWRAPPER_EQUIPMENT_TRAMPOLINE(CShield)
+CWRAPPER_EQUIPMENT_TRAMPOLINE(CPants)
+CWRAPPER_EQUIPMENT_TRAMPOLINE(CWeapon)
+CWRAPPER_EQUIPMENT_TRAMPOLINE(CSmallWeapon)
+#undef CWRAPPER_EQUIPMENT_TRAMPOLINE

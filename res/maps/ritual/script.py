@@ -1,10 +1,21 @@
 def load(self, context):
+    from game import showReader, rewardSnapshot, showRewardReceipt
     from game import CDialog
     from game import CEvent
     from game import CQuest
+    from game import mapQuest
     from game import CTrigger
     from game import register
     from game import trigger
+
+    # The plugin sandbox only allows importing the game and json modules;
+    # game re-exports the campaign driver (res/campaign.py) as an attribute.
+    from game import campaign, narrative
+
+    # Scenario outcomes this map reports through campaign.complete_scenario;
+    # campaign manifests route them (see docs/design/multilevel_campaign.md).
+    # Both outcomes require the anchors, leader, and an authored captive resolution.
+    CAMPAIGN_OUTCOMES = ("good_ending", "bad_ending")
 
     def ensure_quest(player, quest_name):
         for quest in player.getQuests():
@@ -19,7 +30,7 @@ def load(self, context):
         game_map.setBoolProperty("ritual_started", True)
         game_map.setNumericProperty("ritual_last_wave_turn", game_map.getTurn())
         game_map.setNumericProperty("ritual_last_tick_turn", game_map.getTurn())
-        game_map.getGame().getGuiHandler().showMessage("The sanctum erupts. The soul-binding ritual has begun.")
+        game_map.getGame().getGuiHandler().notify("The sanctum erupts. The soul-binding ritual has begun.")
 
     def spawn_wave(game_map):
         spawn_points = ["waveSpawnNorth", "waveSpawnWest", "waveSpawnEast"]
@@ -48,22 +59,27 @@ def load(self, context):
             game_map.addObject(leader)
             leader.moveTo(spawn_marker.getCoords().x, spawn_marker.getCoords().y, spawn_marker.getCoords().z)
             game_map.setBoolProperty("leader_spawned", True)
-            game_map.getGame().getGuiHandler().showMessage("The Ritual Leader descends into the sanctum!")
+            game_map.getGame().getGuiHandler().notify("The Ritual Leader descends into the sanctum!")
 
-    def set_bad_outcome(game_map, message):
+    def set_bad_outcome(game_map, message, reward_before=None):
         if game_map.getBoolProperty("good_ending") or game_map.getBoolProperty("bad_ending"):
+            if reward_before is not None:
+                showRewardReceipt(game_map.getGame(), "The broken ritual", reward_before, message)
             return
         game_map.setBoolProperty("bad_ending", True)
         game_map.setBoolProperty("ritual_active", False)
         game_map.setBoolProperty("ritual_finished", True)
-        game_map.getGame().getGuiHandler().showMessage(message)
+        if reward_before is not None:
+            showRewardReceipt(game_map.getGame(), "The ritual is lost", reward_before, message)
+        else:
+            showReader(game_map.getGame(), "The ritual is lost", message)
 
     def update_anchor_progress(game_map):
         if game_map.getNumericProperty("anchors_destroyed_count") >= 3 and not game_map.getBoolProperty(
             "anchors_destroyed"
         ):
             game_map.setBoolProperty("anchors_destroyed", True)
-            game_map.getGame().getGuiHandler().showMessage("All anchors are down. The leader is exposed.")
+            game_map.getGame().getGuiHandler().notify("All anchors are down. The leader is exposed.")
             try_spawn_leader(game_map)
 
     @register(context)
@@ -75,7 +91,7 @@ def load(self, context):
             if game_map.getBoolProperty("ritual_initialized"):
                 return
 
-            game_map.getGame().getGuiHandler().showMessage(self.getStringProperty("text"))
+            showReader(game_map.getGame(), "The chapel ritual", self.getStringProperty("text"))
             game_map.removeAll(lambda ob: ob.getName() == self.getName())
 
             game_map.setBoolProperty("ritual_initialized", True)
@@ -93,6 +109,7 @@ def load(self, context):
             game_map.setBoolProperty("good_ending", False)
             game_map.setBoolProperty("bad_ending", False)
             game_map.setBoolProperty("reward_claimed", False)
+            game_map.setBoolProperty("ritual_resolution_chosen", False)
             game_map.setNumericProperty("anchors_destroyed_count", 0)
             game_map.setNumericProperty("ritual_countdown", 14)
             game_map.setNumericProperty("ritual_last_wave_turn", 0)
@@ -105,10 +122,11 @@ def load(self, context):
             ensure_quest(player, "finalResolutionQuest")
 
     @register(context)
+    @mapQuest("ritual")
     class RitualQuest(CQuest):
         def isCompleted(self):
             game_map = self.getGame().getMap()
-            return game_map.getBoolProperty("leader_defeated") and not game_map.getBoolProperty("captive_lost")
+            return game_map.getBoolProperty("anchors_destroyed") and game_map.getBoolProperty("leader_defeated")
 
         def getObjective(self):
             game_map = self.getGame().getMap()
@@ -119,7 +137,7 @@ def load(self, context):
             return "Reach the captive and decide the chapel's fate."
 
         def getReward(self):
-            return "Opens the road to the siege map if the captive survives."
+            return "Opens the road to the siege after you resolve the captive's fate."
 
         def getHint(self):
             return "The witness and chapel records describe where the anchors stand."
@@ -128,6 +146,7 @@ def load(self, context):
             pass
 
     @register(context)
+    @mapQuest("ritual")
     class DestroyAnchorsQuest(CQuest):
         def isCompleted(self):
             return self.getGame().getMap().getBoolProperty("anchors_destroyed")
@@ -146,6 +165,7 @@ def load(self, context):
             pass
 
     @register(context)
+    @mapQuest("ritual")
     class RescueCaptiveQuest(CQuest):
         def isCompleted(self):
             game_map = self.getGame().getMap()
@@ -157,6 +177,8 @@ def load(self, context):
             return "Free the captive after the leader falls."
 
         def getReward(self):
+            if self.getGame().getMap().getBoolProperty("captive_lost"):
+                return "100 gold when you bring the broken ritual's warning to the gatehouse."
             return "300 gold and a Life Potion if the captive survives."
 
         def getHint(self):
@@ -166,16 +188,21 @@ def load(self, context):
             pass
 
     @register(context)
+    @mapQuest("ritual")
     class FinalResolutionQuest(CQuest):
         def isCompleted(self):
             game_map = self.getGame().getMap()
-            return game_map.getBoolProperty("good_ending") or game_map.getBoolProperty("bad_ending")
+            return (
+                game_map.getBoolProperty("anchors_destroyed")
+                and game_map.getBoolProperty("leader_defeated")
+                and (game_map.getBoolProperty("good_ending") or game_map.getBoolProperty("ritual_resolution_chosen"))
+            )
 
         def getObjective(self):
             return "Resolve whether the chapel becomes a rescue or a warning."
 
         def getReward(self):
-            return "Continues the campaign to the siege if you save the captive."
+            return "Continues to the siege with a rescued captive or a warning about their loss."
 
         def getHint(self):
             return "Return to the captive once the sanctum is quiet."
@@ -193,6 +220,45 @@ def load(self, context):
 
     @register(context)
     class CapturedSoulDialog(CDialog):
+        def canContinueAfterLoss(self):
+            game_map = self.getGame().getMap()
+            if not (
+                game_map.getBoolProperty("captive_lost")
+                and game_map.getBoolProperty("anchors_destroyed")
+                and game_map.getBoolProperty("leader_defeated")
+            ):
+                return False
+            if game_map.getBoolProperty("ritual_resolution_chosen") and not campaign.hasPendingTransition(
+                self.getGame()
+            ):
+                return False
+            captive = game_map.getObjectByName("ritualCaptive")
+            player = game_map.getPlayer()
+            if not captive or not player:
+                return False
+            here, destination = player.getCoords(), captive.getCoords()
+            return (here.x, here.y, here.z) == (destination.x, destination.y, destination.z)
+
+        def continueAfterLoss(self):
+            if not self.canContinueAfterLoss():
+                return
+            game_map = self.getGame().getMap()
+            player = game_map.getPlayer()
+            if game_map.getBoolProperty("ritual_resolution_chosen"):
+                campaign.retryPending(self.getGame())
+                return
+            game_map.setBoolProperty("ritual_resolution_chosen", True)
+            narrative.recordRitualOutcome(self.getGame(), "bad")
+            reward_before = rewardSnapshot(player)
+            if not game_map.getBoolProperty("reward_claimed"):
+                game_map.setBoolProperty("reward_claimed", True)
+                player.addGold(100)
+            showRewardReceipt(
+                self.getGame(), "The chapel's warning", reward_before, narrative.ritualSummary(self.getGame())
+            )
+            player.checkQuests()
+            campaign.complete_scenario(self.getGame(), "bad_ending", fallback_map="siege")
+
         def can_free_captive(self):
             game_map = self.getGame().getMap()
             return (
@@ -221,19 +287,26 @@ def load(self, context):
             if not self.can_free_captive():
                 return
 
+            player = game_map.getPlayer()
             game_map.setBoolProperty("captive_freed", True)
             game_map.setBoolProperty("good_ending", True)
             game_map.setBoolProperty("ritual_finished", True)
+            game_map.setBoolProperty("ritual_resolution_chosen", True)
+            narrative.recordRitualOutcome(self.getGame(), "good")
 
             if not game_map.getBoolProperty("reward_claimed"):
-                player = game_map.getPlayer()
+                reward_before = rewardSnapshot(player)
+                game_map.setBoolProperty("reward_claimed", True)
                 player.addGold(300)
                 player.addItem("LifePotion")
-                game_map.setBoolProperty("reward_claimed", True)
-                self.getGame().getGuiHandler().showMessage(
-                    "You earn 300 gold and a Life Potion. The rescued captive points toward a siege beyond the marsh."
+                showRewardReceipt(
+                    self.getGame(),
+                    "The captive is free",
+                    reward_before,
+                    "You earn 300 gold and a Life Potion. The rescued captive points toward a siege beyond the marsh.",
                 )
-            self.getGame().changeMap("siege")
+            player.checkQuests()
+            campaign.complete_scenario(self.getGame(), "good_ending", fallback_map="siege")
 
     @trigger(context, "onTurn", "ritualTurnAnchor")
     class RitualTurnTrigger(CTrigger):
@@ -250,9 +323,9 @@ def load(self, context):
                 game_map.setNumericProperty("ritual_last_tick_turn", current_turn)
 
                 if countdown == 8:
-                    game_map.getGame().getGuiHandler().showMessage("The chant quickens. The stained glass darkens.")
+                    game_map.getGame().getGuiHandler().notify("The chant quickens. The stained glass darkens.")
                 if countdown == 4:
-                    game_map.getGame().getGuiHandler().showMessage("The chapel trembles. The captive is almost lost.")
+                    game_map.getGame().getGuiHandler().notify("The chapel trembles. The captive is almost lost.")
                 if countdown <= 0:
                     game_map.setBoolProperty("captive_lost", True)
                     set_bad_outcome(game_map, "The final verse completes. The captive soul is bound forever.")
@@ -269,7 +342,10 @@ def load(self, context):
     class WitnessTrigger(CTrigger):
         def trigger(self, object, event):
             if event.getCause().isPlayer():
-                object.getGame().getGuiHandler().showDialog(object.getGame().createObject("chapelWarningDialog"))
+                game = object.getGame()
+                dialog = game.createObject("chapelWarningDialog")
+                narrative.appendDialogContext(dialog, "ENTRY", narrative.townRecap(game))
+                game.getGuiHandler().showDialog(dialog)
 
     @trigger(context, "onEnter", "chapelRecords")
     class RecordsTrigger(CTrigger):
@@ -292,7 +368,7 @@ def load(self, context):
             game_map.setBoolProperty("anchor_north_destroyed", True)
             game_map.incProperty("anchors_destroyed_count", 1)
             start_ritual(game_map)
-            game_map.getGame().getGuiHandler().showMessage(object.getStringProperty("message"))
+            game_map.getGame().getGuiHandler().notify(object.getStringProperty("message"))
             spawn_wave(game_map)
             update_anchor_progress(game_map)
 
@@ -305,7 +381,7 @@ def load(self, context):
             game_map.setBoolProperty("anchor_crypt_destroyed", True)
             game_map.incProperty("anchors_destroyed_count", 1)
             start_ritual(game_map)
-            game_map.getGame().getGuiHandler().showMessage(object.getStringProperty("message"))
+            game_map.getGame().getGuiHandler().notify(object.getStringProperty("message"))
             spawn_wave(game_map)
             update_anchor_progress(game_map)
 
@@ -318,7 +394,8 @@ def load(self, context):
             game_map.setBoolProperty("anchor_sanctum_destroyed", True)
             game_map.incProperty("anchors_destroyed_count", 1)
             start_ritual(game_map)
-            game_map.getGame().getGuiHandler().showMessage(object.getStringProperty("message"))
+            game_map.getGame().getGuiHandler().notify(object.getStringProperty("message"))
+            spawn_wave(game_map)
             update_anchor_progress(game_map)
 
     @trigger(context, "onDestroy", "ritualLeader")
@@ -330,12 +407,12 @@ def load(self, context):
 
             if game_map.getBoolProperty("captive_lost"):
                 set_bad_outcome(game_map, "The leader falls, but the soul-binding is already complete.")
-                if not game_map.getBoolProperty("reward_claimed"):
-                    game_map.getPlayer().addGold(100)
-                    game_map.setBoolProperty("reward_claimed", True)
+                game_map.getGame().getGuiHandler().notify(
+                    "The rite is broken. Return to the stained glass prison and carry its warning to the gatehouse."
+                )
                 return
 
-            game_map.getGame().getGuiHandler().showMessage(
+            game_map.getGame().getGuiHandler().notify(
                 "The leader is dead. Reach the stained glass prison and free the captive."
             )
 
@@ -349,7 +426,7 @@ def load(self, context):
     class HazardNorthTrigger(CTrigger):
         def trigger(self, object, event):
             if event.getCause().isPlayer() and object.getMap().getBoolProperty("ritual_active"):
-                object.getGame().getGuiHandler().showMessage("Soulfire erupts from the floor. Move quickly.")
+                object.getGame().getGuiHandler().notify("Soulfire erupts from the floor. Move quickly.")
                 object.getMap().addObjectByName(
                     "ritualCultist", object.getMap().getObjectByName("waveSpawnNorth").getCoords()
                 )
@@ -358,13 +435,13 @@ def load(self, context):
     class HazardCenterTrigger(CTrigger):
         def trigger(self, object, event):
             if event.getCause().isPlayer() and object.getMap().getBoolProperty("ritual_active"):
-                object.getGame().getGuiHandler().showMessage("The glass hums and drains your strength.")
+                object.getGame().getGuiHandler().notify("The glass hums and drains your strength.")
 
     @trigger(context, "onEnter", "hazardSouth")
     class HazardSouthTrigger(CTrigger):
         def trigger(self, object, event):
             if event.getCause().isPlayer() and object.getMap().getBoolProperty("ritual_active"):
-                object.getGame().getGuiHandler().showMessage("Crypt vents exhale poison. More defenders gather.")
+                object.getGame().getGuiHandler().notify("Crypt vents exhale poison. More defenders gather.")
                 object.getMap().addObjectByName(
                     "ritualPritz", object.getMap().getObjectByName("waveSpawnWest").getCoords()
                 )
@@ -374,7 +451,7 @@ def load(self, context):
         def trigger(self, object, event):
             if event.getCause().isPlayer() and not object.getMap().getBoolProperty("seen_entry_courtyard"):
                 object.getMap().setBoolProperty("seen_entry_courtyard", True)
-                object.getGame().getGuiHandler().showMessage(
+                object.getGame().getGuiHandler().notify(
                     "You step into the chapel courtyard, where rain masks whispered chants."
                 )
 
@@ -383,20 +460,18 @@ def load(self, context):
         def trigger(self, object, event):
             if event.getCause().isPlayer() and not object.getMap().getBoolProperty("seen_outer_chapel"):
                 object.getMap().setBoolProperty("seen_outer_chapel", True)
-                object.getGame().getGuiHandler().showMessage("The outer chapel reeks of incense and blood.")
+                object.getGame().getGuiHandler().notify("The outer chapel reeks of incense and blood.")
 
     @trigger(context, "onEnter", "sideCrypt")
     class SideCryptTrigger(CTrigger):
         def trigger(self, object, event):
             if event.getCause().isPlayer() and not object.getMap().getBoolProperty("seen_side_crypt"):
                 object.getMap().setBoolProperty("seen_side_crypt", True)
-                object.getGame().getGuiHandler().showMessage("The side crypt is lined with fresh ritual carvings.")
+                object.getGame().getGuiHandler().notify("The side crypt is lined with fresh ritual carvings.")
 
     @trigger(context, "onEnter", "ritualSanctum")
     class SanctumAreaTrigger(CTrigger):
         def trigger(self, object, event):
             if event.getCause().isPlayer() and not object.getMap().getBoolProperty("seen_ritual_sanctum"):
                 object.getMap().setBoolProperty("seen_ritual_sanctum", True)
-                object.getGame().getGuiHandler().showMessage(
-                    "The ritual sanctum burns with violet fire around the prison."
-                )
+                object.getGame().getGuiHandler().notify("The ritual sanctum burns with violet fire around the prison.")

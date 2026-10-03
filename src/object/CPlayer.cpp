@@ -19,9 +19,22 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 #include "core/CGame.h"
 #include "core/CMap.h"
+#include "core/CPlaytestTrace.h"
 #include <utility>
 
 namespace {
+constexpr const char *DEFAULT_PLAYER_RACE_ID = "human";
+
+class QuestCheckGuard {
+  public:
+    explicit QuestCheckGuard(bool &checking) : checking(checking) { checking = true; }
+
+    ~QuestCheckGuard() { checking = false; }
+
+  private:
+    bool &checking;
+};
+
 std::string questId(const std::shared_ptr<CQuest> &quest) {
     if (!quest) {
         return "";
@@ -31,17 +44,58 @@ std::string questId(const std::shared_ptr<CQuest> &quest) {
 }
 } // namespace
 
+std::string CPlayer::getUiDialogueHistory() { return uiDialogueHistory; }
+
+void CPlayer::setUiDialogueHistory(std::string history) { uiDialogueHistory = std::move(history); }
+
+std::string CPlayer::getUiDefeatReceipt() { return uiDefeatReceipt; }
+
+void CPlayer::setUiDefeatReceipt(std::string receipt) { uiDefeatReceipt = std::move(receipt); }
+
 void CPlayer::checkQuests() {
+    if (checkingQuests) {
+        return;
+    }
+    QuestCheckGuard checkGuard(checkingQuests);
     auto set = quests;
     for (const auto &quest : set) {
         if (!quest) {
             quests.erase(quest);
             continue;
         }
-        if (quest->isCompleted()) {
+        if (!quests.contains(quest)) {
+            continue;
+        }
+        if (quest->isCompleted() && quests.contains(quest)) {
+            if (CPlaytestTrace::enabled()) {
+                json fields = {
+                    {"player", CPlaytestTrace::objectRef(this->ptr<CPlayer>())},
+                    {"quest", questId(quest)},
+                };
+                CPlaytestTrace::addMapContext(fields, getMap());
+                CPlaytestTrace::record("quest_completed", fields);
+            }
             quest->onComplete();
-            quests.erase(quests.find(quest));
+            quest->captureJournal(true);
+            quests.erase(quest);
             completedQuests.insert(quest);
+            recordDirectPropertyChanged("quests");
+            recordDirectPropertyChanged("completedQuests");
+        }
+    }
+}
+
+void CPlayer::captureQuestJournal() {
+    const auto active = quests;
+    const auto completed = completedQuests;
+    for (const auto &quest : active) {
+        if (quest && quests.contains(quest)) {
+            quest->captureJournal(false);
+        }
+    }
+    for (const auto &quest : completed) {
+        if (quest && completedQuests.contains(quest)) {
+            quest->captureJournal(true);
         }
     }
 }
@@ -60,6 +114,15 @@ void CPlayer::addQuest(std::string questName) {
     std::shared_ptr<CQuest> quest = getGame()->createObject<CQuest>(questName);
     if (quest) {
         quests.insert(quest);
+        if (CPlaytestTrace::enabled()) {
+            json fields = {
+                {"player", CPlaytestTrace::objectRef(this->ptr<CPlayer>())},
+                {"quest", questName},
+            };
+            CPlaytestTrace::addMapContext(fields, getMap());
+            CPlaytestTrace::record("quest_added", fields);
+        }
+        recordDirectPropertyChanged("quests");
     }
 }
 
@@ -68,6 +131,7 @@ std::set<std::shared_ptr<CQuest>> CPlayer::getQuests() { return quests; }
 void CPlayer::setQuests(std::set<std::shared_ptr<CQuest>> _quests) {
     std::erase_if(_quests, [](const auto &quest) { return quest == nullptr; });
     this->quests = std::move(_quests);
+    recordDirectPropertyChanged("quests");
 }
 
 std::set<std::shared_ptr<CQuest>> CPlayer::getCompletedQuests() { return completedQuests; }
@@ -75,6 +139,31 @@ std::set<std::shared_ptr<CQuest>> CPlayer::getCompletedQuests() { return complet
 void CPlayer::setCompletedQuests(std::set<std::shared_ptr<CQuest>> _completedQuests) {
     std::erase_if(_completedQuests, [](const auto &quest) { return quest == nullptr; });
     completedQuests = std::move(_completedQuests);
+    recordDirectPropertyChanged("completedQuests");
+}
+
+std::string CPlayer::getPlayerClassId() {
+    if (!playerClassId.empty()) {
+        return playerClassId;
+    }
+    return getTypeId();
+}
+
+void CPlayer::setPlayerClassId(std::string _playerClassId) {
+    playerClassId = std::move(_playerClassId);
+    recordDirectPropertyChanged("playerClassId");
+}
+
+std::string CPlayer::getRaceId() {
+    if (!raceId.empty()) {
+        return raceId;
+    }
+    return DEFAULT_PLAYER_RACE_ID;
+}
+
+void CPlayer::setRaceId(std::string _raceId) {
+    raceId = std::move(_raceId);
+    recordDirectPropertyChanged("raceId");
 }
 
 void CPlayer::incTurn() { turn++; }

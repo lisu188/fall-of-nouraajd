@@ -1,6 +1,6 @@
 /*
 fall-of-nouraajd c++ dark fantasy game
-Copyright (C) 2025  Andrzej Lis
+Copyright (C) 2025-2026  Andrzej Lis
 
 This program is free software: you can redistribute it and/or modify
         it under the terms of the GNU General Public License as published by
@@ -23,28 +23,55 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #include "gui/object/CProxyGraphicsObject.h"
 #include "gui/panel/CGamePanel.h"
 
+#include <utility>
+
+namespace {
+std::pair<int, int> getMouseWheelPosition(const SDL_MouseWheelEvent &wheel) {
+#if SDL_VERSION_ATLEAST(2, 26, 0)
+    return {wheel.mouseX, wheel.mouseY};
+#else
+    int x = 0;
+    int y = 0;
+    SDL_GetMouseState(&x, &y);
+    return {x, y};
+#endif
+}
+} // namespace
+
 void CGameGraphicsObject::renderObject(std::shared_ptr<CGui> reneder, std::shared_ptr<SDL_Rect> rect, int frameTime) {}
 
-void CGameGraphicsObject::render(std::shared_ptr<CGui> reneder, int frameTime) {
-    if (isVisible()) {
-        renderBackground(reneder, getRect(), frameTime);
-        renderObject(reneder, getRect(), frameTime);
+void CGameGraphicsObject::render(std::shared_ptr<CGui> renderer, int frameTime) {
+    if (hasRenderableGui(renderer) && isVisible()) {
+        renderBackground(renderer, getRect(), frameTime);
+        if (auto panel = vstd::cast<CGamePanel>(this->ptr<CGameGraphicsObject>())) {
+            panel->renderShell(renderer, getRect());
+        }
+        renderObject(renderer, getRect(), frameTime);
+        if (!isAttachedToGui(renderer)) {
+            return;
+        }
         auto snapshot = children;
         for (const auto &child : snapshot) {
             if (child && children.contains(child)) {
-                child->render(reneder, frameTime);
+                child->render(renderer, frameTime);
+                if (!isAttachedToGui(renderer)) {
+                    return;
+                }
             }
         }
     }
 }
 
 bool CGameGraphicsObject::event(std::shared_ptr<CGui> gui, SDL_Event *event) {
-    if (isVisible()) {
+    if (isAttachedToGui(gui) && isVisible()) {
         auto snapshot = children;
         for (auto it = snapshot.rbegin(); it != snapshot.rend(); ++it) {
             const auto &child = *it;
             if (child && children.contains(child) && child->event(gui, event)) {
                 return true;
+            }
+            if (!isAttachedToGui(gui)) {
+                return false;
             }
         }
         auto callbacks = eventCallbackList;
@@ -52,6 +79,9 @@ bool CGameGraphicsObject::event(std::shared_ptr<CGui> gui, SDL_Event *event) {
             if (callback.first(gui, this->ptr<CGameGraphicsObject>(), event) &&
                 callback.second(gui, this->ptr<CGameGraphicsObject>(), event)) {
                 return true;
+            }
+            if (!isAttachedToGui(gui)) {
+                return false;
             }
         }
         if (event->type == SDL_KEYDOWN || event->type == SDL_KEYUP) {
@@ -62,6 +92,21 @@ bool CGameGraphicsObject::event(std::shared_ptr<CGui> gui, SDL_Event *event) {
                 return this->mouseEvent(gui, (SDL_EventType)event->type, event->button.button,
                                         event->button.x - transPos->x, event->button.y - transPos->y);
             }
+        } else if (event->type == SDL_MOUSEMOTION) {
+            std::shared_ptr<SDL_Rect> transPos = getRect();
+            if (CUtil::isIn(transPos, event->motion.x, event->motion.y) || modal) {
+                return this->mouseMotionEvent(gui, (SDL_EventType)event->type, event->motion.x - transPos->x,
+                                              event->motion.y - transPos->y, event->motion.xrel, event->motion.yrel);
+            }
+        } else if (event->type == SDL_MOUSEWHEEL) {
+            auto [x, y] = getMouseWheelPosition(event->wheel);
+            std::shared_ptr<SDL_Rect> transPos = getRect();
+            if (CUtil::isIn(transPos, x, y) || modal) {
+                return this->mouseWheelEvent(gui, (SDL_EventType)event->type, x - transPos->x, y - transPos->y,
+                                             event->wheel.x, event->wheel.y);
+            }
+        } else if (event->type == SDL_WINDOWEVENT && event->window.event == SDL_WINDOWEVENT_LEAVE) {
+            return this->mouseCancelEvent(gui, (SDL_EventType)event->type);
         }
         // TODO: check if we are not consuming too many events
         return modal;
@@ -76,6 +121,18 @@ bool CGameGraphicsObject::keyboardEvent(std::shared_ptr<CGui> sharedPtr, SDL_Eve
 bool CGameGraphicsObject::mouseEvent(std::shared_ptr<CGui> sharedPtr, SDL_EventType type, int button, int x, int y) {
     return false;
 }
+
+bool CGameGraphicsObject::mouseMotionEvent(std::shared_ptr<CGui> sharedPtr, SDL_EventType type, int x, int y, int xrel,
+                                           int yrel) {
+    return false;
+}
+
+bool CGameGraphicsObject::mouseWheelEvent(std::shared_ptr<CGui> sharedPtr, SDL_EventType type, int x, int y, int wheelX,
+                                          int wheelY) {
+    return false;
+}
+
+bool CGameGraphicsObject::mouseCancelEvent(std::shared_ptr<CGui> sharedPtr, SDL_EventType type) { return false; }
 
 void CGameGraphicsObject::registerEventCallback(
     std::function<bool(std::shared_ptr<CGui>, std::shared_ptr<CGameGraphicsObject>, SDL_Event *)> pred,
@@ -114,8 +171,14 @@ void CGameGraphicsObject::addChild(const std::shared_ptr<CGameGraphicsObject> &c
 }
 
 void CGameGraphicsObject::removeChild(const std::shared_ptr<CGameGraphicsObject> &child) {
+    auto gui = getGui();
     if (children.erase(child)) {
         child->removeParent();
+        if (gui) {
+            gui->releasePointerCaptureFor(child);
+            gui->releaseFocusFor(child);
+            gui->cancelDragSessionFor(child);
+        }
     }
 }
 
@@ -153,11 +216,15 @@ int CGameGraphicsObject::getPriority() { return priority; }
 void CGameGraphicsObject::setPriority(int _priority) { this->priority = _priority; }
 
 int CGameGraphicsObject::getTopPriority() {
-    auto iterator = std::max_element(children.begin(), children.end());
-    if (iterator != children.end()) {
-        return (*iterator)->getPriority();
+    // children is ordered by priority_comparator (priority ascending, pointer tie-break), so the
+    // last element carries the highest priority. std::max_element without a comparator would instead
+    // compare the shared_ptrs by address and return an arbitrary child's priority, which made
+    // pushChild assign non-strictly-increasing priorities and produced platform-dependent z-order
+    // (equal-priority ties resolved by heap address).
+    if (children.empty()) {
+        return -1;
     }
-    return -1;
+    return (*children.rbegin())->getPriority();
 }
 
 void CGameGraphicsObject::pushChild(const std::shared_ptr<CGameGraphicsObject> &child) {
@@ -166,6 +233,12 @@ void CGameGraphicsObject::pushChild(const std::shared_ptr<CGameGraphicsObject> &
 }
 
 std::shared_ptr<CGui> CGameGraphicsObject::getGui() { return vstd::cast<CGui>(getTopParent()); }
+
+bool CGameGraphicsObject::isAttachedToGui(const std::shared_ptr<CGui> &gui) { return gui && getTopParent() == gui; }
+
+bool CGameGraphicsObject::hasRenderableGui(const std::shared_ptr<CGui> &gui) {
+    return isAttachedToGui(gui) && gui->getRenderer();
+}
 
 bool CGameGraphicsObject::getModal() { return modal; }
 
@@ -207,17 +280,17 @@ std::shared_ptr<CScript> CGameGraphicsObject::getVisible() { return visible; }
 void CGameGraphicsObject::setVisible(std::shared_ptr<CScript> _visible) { CGameGraphicsObject::visible = _visible; }
 
 bool CGameGraphicsObject::isVisible() {
-    return !visible || visible->invoke<CGameObject>(getGame(), this->ptr<CGameObject>()) != nullptr;
+    return !runtimeHidden && (!visible || visible->invoke<CGameObject>(getGame(), this->ptr<CGameObject>()) != nullptr);
 }
 
 void CGameGraphicsObject::renderBackground(std::shared_ptr<CGui> gui, std::shared_ptr<SDL_Rect> rect, int time) {
-    if (!background.empty()) {
+    if (hasRenderableGui(gui) && !background.empty()) {
         auto texture = gui->getTextureCache()->getTexture(background);
         if (!texture) {
             vstd::logger::error("CGameGraphicsObject: missing background", background);
             return;
         }
-        SDL_SAFE(SDL_RenderCopy(gui->getRenderer(), texture, nullptr, rect.get()));
+        gui->getRenderContext().copy(texture, nullptr, rect.get());
     }
 }
 

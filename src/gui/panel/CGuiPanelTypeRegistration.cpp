@@ -18,6 +18,8 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #include "core/CTypeRegistration.h"
 #include "core/CTypes.h"
 #include "gui/panel/CCreatureView.h"
+#include "gui/panel/CGameCampaignBrowserPanel.h"
+#include "gui/panel/CGameCampaignPanel.h"
 #include "gui/panel/CGameCharacterPanel.h"
 #include "gui/panel/CGameDialogPanel.h"
 #include "gui/panel/CGameFightPanel.h"
@@ -42,6 +44,8 @@ void registerGuiPanelTypes() {
     CTypes::register_type<CGameQuestPanel, CGamePanel, CGameGraphicsObject, CGameObject>();
     CTypes::register_type<CGameCharacterPanel, CGamePanel, CGameGraphicsObject, CGameObject>();
     CTypes::register_type<CGameQuestionPanel, CGamePanel, CGameGraphicsObject, CGameObject>();
+    CTypes::register_type<CGameCampaignPanel, CGamePanel, CGameGraphicsObject, CGameObject>();
+    CTypes::register_type<CGameCampaignBrowserPanel, CGamePanel, CGameGraphicsObject, CGameObject>();
     CTypes::register_type<CGameDialogPanel, CGamePanel, CGameGraphicsObject, CGameObject>();
     CTypes::register_type<CGameLootPanel, CGamePanel, CGameGraphicsObject, CGameObject>();
 

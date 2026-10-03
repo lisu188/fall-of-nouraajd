@@ -17,7 +17,6 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 #pragma once
 
-#include "CSlotConfig.h"
 #include "core/CConcepts.h"
 #include "core/CGlobal.h"
 #include "core/CPlugin.h"
@@ -36,20 +35,42 @@ class CGameContext;
 
 class CGui;
 
+class CConfigurationProvider;
+
+class CSceneManager;
+
+class CResourcesProvider;
+
 class CRngHandler;
 
 class CGuiHandler;
 
 class CScriptHandler;
 
+class CLuaHandler;
+
+class CSlotConfig;
+class CNavigationService;
+
+struct CMapTransitionRequest;
+
 class CGame : public CGameObject {
     V_META(CGame, CGameObject, vstd::meta::empty())
+    friend class CGameContext;
+    friend class CScopedGameMap;
+    friend class CSceneManager;
+
   public:
     CGame();
 
     ~CGame();
 
     void changeMap(std::string file);
+
+    // Opt-in explicit transition API: unlike changeMap (which always reloads the destination from
+    // content), the request can reuse and retain persistent map sessions. Returns whether the
+    // request was accepted by the scene manager.
+    bool requestMapTransition(CMapTransitionRequest request);
 
     std::shared_ptr<CMap> getMap() const;
 
@@ -61,7 +82,12 @@ class CGame : public CGameObject {
 
     std::shared_ptr<CScriptHandler> getScriptHandler();
 
+    std::shared_ptr<CLuaHandler> getLuaHandler();
+
     std::shared_ptr<CObjectHandler> getObjectHandler();
+
+    std::shared_ptr<CSceneManager> getSceneManager();
+    std::shared_ptr<CNavigationService> getNavigationService();
 
     void loadPlugin(std::function<std::shared_ptr<CPlugin>()> plugin);
 
@@ -77,13 +103,19 @@ class CGame : public CGameObject {
 
     std::shared_ptr<CSlotConfig> getSlotConfiguration();
 
+    std::shared_ptr<CResourcesProvider> getResourcesProvider();
+
+    std::shared_ptr<CConfigurationProvider> getConfigurationProvider();
+
   private:
-    vstd::lazy<CGuiHandler> guiHandler;
-    vstd::lazy<CSlotConfig> slotConfiguration;
+    void setMapForResourceLoad(std::shared_ptr<CMap> map);
 
     std::shared_ptr<CGameContext> context;
+    std::shared_ptr<CSceneManager> sceneManager;
     std::shared_ptr<CMap> map;
     std::shared_ptr<CGui> _gui;
+    std::shared_ptr<CNavigationService> navigationService;
+    std::mutex navigationServiceMutex;
 
   public:
     std::shared_ptr<CGui> getGui() const;

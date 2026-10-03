@@ -2,6 +2,7 @@
   "doorDialog": {
     "class": "DoorDialog",
     "properties": {
+      "questIds": "rolfQuest",
       "states": [
         {
           "class": "CDialogState",
@@ -15,13 +16,26 @@
                   "number": 0,
                   "action": "open_door",
                   "nextStateId": "WELCOME",
-                  "text": "Present Rolf's letter and swear your aid."
+                  "text": "Present Rolf's letter and swear your aid.",
+                  "actionLabel": "Enter town"
                 }
               },
               {
                 "class": "CDialogOption",
                 "properties": {
                   "number": 1,
+                  "condition": "can_brace_gate",
+                  "action": "brace_gate",
+                  "nextStateId": "WARRIOR_GATE",
+                  "text": "Brace the gate before the town swallows itself.",
+                  "actionLabel": "Warrior"
+                }
+              },
+              {
+                "class": "CDialogOption",
+                "properties": {
+                  "number": 2,
+                  "action": "threatenGate",
                   "nextStateId": "NOT_WELCOME",
                   "text": "Open up, or these gates become splinters beneath my boot."
                 }
@@ -29,7 +43,30 @@
               {
                 "ref": "exitOption",
                 "properties": {
-                  "number": 2
+                  "number": 3
+                }
+              }
+            ]
+          }
+        },
+        {
+          "class": "CDialogState",
+          "properties": {
+            "stateId": "WARRIOR_GATE",
+            "text": "The old braces hold after your shoulder drives them home. A chalk mark beside the hinge names Rolf's patrol road.",
+            "options": [
+              {
+                "class": "CDialogOption",
+                "properties": {
+                  "number": 0,
+                  "nextStateId": "ABOUT_ROLF",
+                  "text": "Follow the chalk mark toward Rolf's trail."
+                }
+              },
+              {
+                "ref": "exitOption",
+                "properties": {
+                  "number": 1
                 }
               }
             ]
@@ -77,7 +114,7 @@
           "class": "CDialogState",
           "properties": {
             "stateId": "NOT_WELCOME",
-            "text": "Bold words. May the rats enjoy them.",
+            "text": "Bold words. The watch will remember them. The inn charges troublemakers five percent more for beer, and the gatehouse keeps 25 gold of their final bounty for repairs. Present Rolf's letter when you are ready to help.",
             "options": [
               {
                 "ref": "exitOption",
@@ -88,7 +125,8 @@
             ]
           }
         }
-      ]
+      ],
+      "speaker": "Nouraajd Gatekeeper"
     }
   },
   "askAboutGirl": {
@@ -110,7 +148,8 @@
     "ref": "exitOption",
     "properties": {
       "text": "Enough talk. Bring me a tankard of something strong.",
-      "action": "sell_beer"
+      "action": "sell_beer",
+      "actionLabel": "Browse drinks"
     }
   },
   "shouldGo": {
@@ -189,15 +228,53 @@
                 }
               },
               {
+                "class": "CDialogOption",
+                "properties": {
+                  "number": 2,
+                  "condition": "can_shadow_robed_men",
+                  "action": "shadow_robed_men",
+                  "nextStateId": "ASSASIN_TRAIL",
+                  "text": "Shadow the robed men before their trail goes cold.",
+                  "actionLabel": "Assasin"
+                }
+              },
+              {
                 "ref": "askForBeer",
                 "properties": {
-                  "number": 2
+                  "number": 3
                 }
               },
               {
                 "ref": "shouldGo",
                 "properties": {
-                  "number": 3
+                  "number": 4
+                }
+              }
+            ]
+          }
+        },
+        {
+          "class": "CDialogState",
+          "properties": {
+            "stateId": "ASSASIN_TRAIL",
+            "text": "You trail the robes through smoke and alley shadow. Their old-court turn is deliberate, and one carries a ribbon cut from a child's sleeve.",
+            "options": [
+              {
+                "ref": "askAboutMarumi",
+                "properties": {
+                  "number": 0
+                }
+              },
+              {
+                "ref": "askForBeer",
+                "properties": {
+                  "number": 1
+                }
+              },
+              {
+                "ref": "shouldGo",
+                "properties": {
+                  "number": 2
                 }
               }
             ]
@@ -234,7 +311,7 @@
           "class": "CDialogState",
           "properties": {
             "stateId": "INKEEPER_ABOUT_GIRL",
-            "text": "They prowled after a young lass. I cursed them out and sent them hunting elsewhere. Does this accursed inn look fit for a child to you?",
+            "text": "They prowled after a young lass, then drifted toward the old civic court. I cursed them out and sent them hunting elsewhere. If Victor's girl is their quarry, the town hall ledgers may know the door they seek.",
             "options": [
               {
                 "ref": "askAboutMarumi",
@@ -257,7 +334,8 @@
             ]
           }
         }
-      ]
+      ],
+      "speaker": "Nouraajd Innkeeper"
     }
   }
 }

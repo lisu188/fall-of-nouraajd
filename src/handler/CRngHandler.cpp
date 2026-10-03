@@ -1,6 +1,6 @@
 /*
 fall-of-nouraajd c++ dark fantasy game
-Copyright (C) 2025  Andrzej Lis
+Copyright (C) 2025-2026  Andrzej Lis
 
 This program is free software: you can redistribute it and/or modify
         it under the terms of the GNU General Public License as published by
@@ -20,6 +20,7 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #include "core/CGame.h"
 #include "core/CMap.h"
 #include "core/CUtil.h"
+#include "object/CCreatureRace.h"
 #include "object/CObject.h"
 
 #include <algorithm>
@@ -28,7 +29,43 @@ namespace {
 constexpr int MAX_RANDOM_VALUE = 1000;
 
 int clampRandomValue(int value) { return std::clamp(value, 0, MAX_RANDOM_VALUE); }
+
+// [EPIC_08][STORY_05] Design-gated associated-class encounter weights
+// (docs/design/creature_archetypes.md): a race/class pairing that reinforces the
+// race's natural role could weigh more heavily in encounter CR than an off-role
+// pairing. Both multipliers are pinned to the neutral value 1 until that balance
+// design is approved, so scaleEncounterPower is the identity for every
+// classification and the encounter power table stays bit-identical to the
+// pre-hook math for all existing content.
+constexpr int ASSOCIATED_CLASS_POWER_MULTIPLIER = 1;
+constexpr int NON_ASSOCIATED_CLASS_POWER_MULTIPLIER = 1;
 } // namespace
+
+CRngHandler::ClassAssociation CRngHandler::classifyClassAssociation(const std::shared_ptr<CCreature> &creature) {
+    if (!creature) {
+        return ClassAssociation::NoArchetype;
+    }
+    auto race = creature->getRace();
+    auto creatureClass = creature->getCreatureClass();
+    // Association is only defined for a full race/class pairing; legacy creatures
+    // (and race-only / class-only creatures) carry no archetype pairing to weigh.
+    if (!race || !creatureClass) {
+        return ClassAssociation::NoArchetype;
+    }
+    return race->isAssociatedClass(creatureClass) ? ClassAssociation::Associated : ClassAssociation::NonAssociated;
+}
+
+int CRngHandler::scaleEncounterPower(int power, ClassAssociation association) {
+    switch (association) {
+    case ClassAssociation::Associated:
+        return power * ASSOCIATED_CLASS_POWER_MULTIPLIER;
+    case ClassAssociation::NonAssociated:
+        return power * NON_ASSOCIATED_CLASS_POWER_MULTIPLIER;
+    case ClassAssociation::NoArchetype:
+    default:
+        return power;
+    }
+}
 
 std::set<std::shared_ptr<CItem>> CRngHandler::getRandomLoot(int value) const { return calculateRandomLoot(value); }
 
@@ -54,17 +91,35 @@ CRngHandler::CRngHandler(const std::shared_ptr<CGame> &game) : game(game) {
         std::shared_ptr<CItem> item = game->createObject<CItem>(type);
         if (item) {
             int power = item->getPower();
-            if (power > 0 && !item->hasTag(CTag::Quest)) {
+            // Compound artifacts are assembled from set pieces, never dropped or sold
+            // directly (docs/design/compound_artifacts.md); exclude them from random loot
+            // the same way quest items are excluded.
+            if (power > 0 && !item->hasTag(CTag::Quest) && !item->hasTag(CTag::Compound)) {
                 itemPowerTable.insert(std::make_pair(power, type));
             }
         }
     }
 
     for (const std::string &type : game->getObjectHandler()->getAllSubTypes("CCreature")) {
+        // getAllSubTypes("CCreature") also returns player templates because CPlayer inherits
+        // CCreature (src/object/CPlayer.h:24, registered via NativePlugin.cpp). Random encounters
+        // must never spawn a player template, so skip any candidate whose resolved class inherits
+        // CPlayer -- the same meta()->inherits(...) test getAllSubTypes itself applies for the
+        // CCreature gate (src/handler/CObjectHandler.cpp:115). Genuine monster candidates and their
+        // sw power buckets are untouched.
+        auto candidateClass = game->getObjectHandler()->getType(game->getObjectHandler()->getClass(type));
+        if (candidateClass && candidateClass->meta()->inherits("CPlayer")) {
+            continue;
+        }
         std::shared_ptr<CCreature> creature = game->createObject<CCreature>(type);
-        if (creature) {
-            int power = creature->getSw();
-            creaturePowerTable.insert(std::make_pair(power, type));
+        if (creature && !creature->isNpc() && creature->getFightController()) {
+            // The associated-class hook is neutral today (multipliers pinned to 1), so
+            // this key equals the raw getSw() for every candidate; it only becomes a
+            // real CR weight once the associated-class balance design is approved.
+            int power = scaleEncounterPower(creature->getSw(), classifyClassAssociation(creature));
+            if (power > 0) {
+                creaturePowerTable.insert(std::make_pair(power, type));
+            }
         }
     }
 }
@@ -132,7 +187,9 @@ std::set<std::shared_ptr<CCreature>> CRngHandler::calculateRandomEncounter(int v
             if (!creature) {
                 continue;
             }
-            creature->addExp(creature->getExpForLevel(pow - sw));
+            // Fresh templates have zero hp, so their experience path is inactive until initialized.
+            creature->heal(0);
+            creature->addExp(creature->getExpForLevel(std::max(1, pow - sw)));
             encounter.insert(creature);
         }
         value -= pow;

@@ -1,0 +1,811 @@
+/*
+fall-of-nouraajd c++ dark fantasy game
+Copyright (C) 2026  Andrzej Lis
+
+This program is free software: you can redistribute it and/or modify
+        it under the terms of the GNU General Public License as published by
+the Free Software Foundation, either version 3 of the License, or
+(at your option) any later version.
+
+This program is distributed in the hope that it will be useful,
+        but WITHOUT ANY WARRANTY; without even the implied warranty of
+MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+GNU General Public License for more details.
+
+You should have received a copy of the GNU General Public License
+along with this program.  If not, see <https://www.gnu.org/licenses/>.
+ */
+
+#include "core/CController.h"
+#include "core/CGame.h"
+#include "core/CMap.h"
+#include "core/CStats.h"
+#include "core/CTypes.h"
+#include "core/CTags.h"
+#include "core/CUtil.h"
+#include "handler/CFightHandler.h"
+#include "gui/CGui.h"
+#include "gui/object/CMinimapGraphicsObject.h"
+#include "object/CCreature.h"
+#include "object/CCreatureClass.h"
+#include "object/CEffect.h"
+#include "object/CInteraction.h"
+#include "object/CItem.h"
+#include "object/CMapObject.h"
+#include "object/CPlayer.h"
+#include "object/CTile.h"
+#include "test_harness.h"
+#include "stat_composition_fixture.h"
+#include "veventloop.h"
+
+#include <pybind11/embed.h>
+
+#include <algorithm>
+#include <cmath>
+#include <map>
+#include <memory>
+#include <optional>
+#include <string>
+#include <set>
+#include <utility>
+#include <vector>
+
+namespace {
+
+constexpr int SHARED_TARGET_WIDTH = 17;
+constexpr int SHARED_TARGET_HEIGHT = 17;
+constexpr int SHARED_TARGET_ACTORS = 40;
+constexpr int SPATIAL_MARKERS = 80;
+constexpr int SPATIAL_HOTSPOT_MARKERS = 6;
+constexpr int MODERATE_MOVE_ACTORS = 24;
+constexpr int BULK_INVENTORY_ITEM_COUNT = 96;
+
+struct MapFixture {
+    std::shared_ptr<CGame> game;
+    std::shared_ptr<CMap> map;
+    int width = 0;
+    int height = 0;
+};
+
+class NotificationCountProbe : public CGameObject {
+    V_META(NotificationCountProbe, CGameObject, V_METHOD(NotificationCountProbe, onPropertyChanged, void, std::string),
+           V_METHOD(NotificationCountProbe, onPropertiesChanged, void, std::set<std::string>),
+           V_METHOD(NotificationCountProbe, onInventoryChanged))
+
+  public:
+    void onPropertyChanged(std::string property_name) {
+        ++property_changed_calls;
+        observed_property_names.insert(std::move(property_name));
+    }
+
+    void onPropertiesChanged(std::set<std::string> property_names) {
+        ++properties_changed_calls;
+        observed_property_names.insert(property_names.begin(), property_names.end());
+    }
+
+    void onInventoryChanged() { ++inventory_changed_calls; }
+
+    int property_changed_calls = 0;
+    int properties_changed_calls = 0;
+    int inventory_changed_calls = 0;
+    std::set<std::string> observed_property_names;
+};
+
+void drain_event_loop() {
+    auto loop = vstd::event_loop<>::instance();
+    for (int i = 0; i < 5; ++i) {
+        loop->run();
+    }
+}
+
+std::shared_ptr<CTile> make_tile(const std::shared_ptr<CGame> &game, bool can_step, const std::string &tile_type) {
+    auto tile = std::make_shared<CTile>();
+    tile->setGame(game);
+    tile->setCanStep(can_step);
+    tile->setTileType(tile_type);
+    return tile;
+}
+
+MapFixture make_open_map(int width, int height) {
+    auto game = std::make_shared<CGame>();
+    auto map = std::make_shared<CMap>();
+    game->setMap(map);
+    map->setGame(game);
+    map->setXBounds({{0, width - 1}});
+    map->setYBounds({{0, height - 1}});
+
+    for (int y = 0; y < height; ++y) {
+        for (int x = 0; x < width; ++x) {
+            map->addTile(make_tile(game, true, "floor"), x, y, 0);
+        }
+    }
+
+    return {game, map, width, height};
+}
+
+std::shared_ptr<CMapObject> make_object(const MapFixture &fixture, const std::string &name, Coords coords,
+                                        bool can_step = true) {
+    auto object = std::make_shared<CMapObject>();
+    object->setGame(fixture.game);
+    object->setName(name);
+    object->setCanStep(can_step);
+    object->setCoords(coords);
+    return object;
+}
+
+std::shared_ptr<CStats> make_actor_stats() {
+    auto stats = std::make_shared<CStats>();
+    stats->setMainStat("stamina");
+    stats->setStamina(10);
+    stats->setAgility(10);
+    return stats;
+}
+
+std::shared_ptr<CCreature> make_actor(const MapFixture &fixture, const std::string &name, Coords coords,
+                                      const std::string &target_name) {
+    auto actor = std::make_shared<CCreature>();
+    actor->setGame(fixture.game);
+    actor->setName(name);
+    actor->setBaseStats(make_actor_stats());
+    actor->setLevel(1);
+    actor->setHp(100);
+    actor->setNpc(true);
+    actor->setCoords(coords);
+
+    auto controller = std::make_shared<CTargetController>();
+    controller->setTarget(target_name);
+    actor->setController(controller);
+    return actor;
+}
+
+void add_object(const MapFixture &fixture, const std::shared_ptr<CMapObject> &object) {
+    fixture.map->addObject(object);
+}
+
+Coords resolve_step(const std::shared_ptr<CCreature> &actor) {
+    auto future = actor->getController()->control(actor);
+    vstd::event_loop<>::instance()->run();
+    return future->get();
+}
+
+bool is_cardinal_step(const std::shared_ptr<CMap> &map, Coords from, Coords to) {
+    auto delta = map->getShortestDelta(from, to);
+    return delta.z == 0 && std::abs(delta.x) + std::abs(delta.y) == 1;
+}
+
+bool moves_closer(const std::shared_ptr<CMap> &map, Coords from, Coords to, Coords goal) {
+    return map->getDistance(to, goal) < map->getDistance(from, goal);
+}
+
+void replace_tile(const MapFixture &fixture, Coords coords, bool can_step, const std::string &tile_type) {
+    fixture.map->removeTile(coords.x, coords.y, coords.z);
+    fixture.map->addTile(make_tile(fixture.game, can_step, tile_type), coords.x, coords.y, coords.z);
+}
+
+void add_navigation_edge(const MapFixture &fixture, Coords source, Coords target,
+                         std::optional<std::string> source_object_name = std::nullopt) {
+    CNavigationEdge edge;
+    edge.source = source;
+    edge.target = target;
+    edge.enabled = true;
+    edge.sourceObjectName = std::move(source_object_name);
+    fixture.map->registerNavigationEdge(std::move(edge));
+}
+
+void test_many_target_controllers_share_one_goal_without_mutating_navigation() {
+    auto fixture = make_open_map(SHARED_TARGET_WIDTH, SHARED_TARGET_HEIGHT);
+    const Coords goal_coords(SHARED_TARGET_WIDTH - 1, SHARED_TARGET_HEIGHT / 2, 0);
+    add_object(fixture, make_object(fixture, "sharedGoal", goal_coords));
+
+    std::vector<std::shared_ptr<CCreature>> actors;
+    actors.reserve(SHARED_TARGET_ACTORS);
+    for (int i = 0; i < SHARED_TARGET_ACTORS; ++i) {
+        const Coords coords(i % 4, i / 4, 0);
+        auto actor = make_actor(fixture, "sharedTargetActor" + std::to_string(i), coords, "sharedGoal");
+        add_object(fixture, actor);
+        actors.push_back(actor);
+    }
+
+    const auto revision_before = fixture.map->getNavigationRevision();
+    const auto tile_count_before = fixture.map->getTiles().size();
+    const auto object_count_before = fixture.map->getObjects().size();
+    int progressing_steps = 0;
+
+    performance_guard::clearTargetFlowCache();
+    expect_true(performance_guard::targetFlowCacheSize() == 0, "shared-goal flow cache should start empty");
+    performance_guard::resetMapCoordinateLookupProbe();
+    std::vector<std::shared_ptr<vstd::future<Coords, void>>> pending;
+    for (const auto &actor : actors) {
+        pending.push_back(actor->getController()->control(actor));
+    }
+    std::vector<Coords> steps;
+    for (const auto &future : pending) {
+        steps.push_back(future->get());
+    }
+    const auto cold_probes = performance_guard::mapCoordinateLookupProbeCount();
+    performance_guard::disableMapCoordinateLookupProbe();
+    for (std::size_t i = 0; i < actors.size(); ++i) {
+        const auto &actor = actors[i];
+        const auto start = fixture.map->normalizeCoords(actor->getCoords());
+        const auto step = fixture.map->normalizeCoords(steps[i]);
+        if (step != start && is_cardinal_step(fixture.map, start, step) &&
+            moves_closer(fixture.map, start, step, goal_coords) && fixture.map->canStep(step)) {
+            progressing_steps++;
+        }
+    }
+
+    expect_true(progressing_steps == SHARED_TARGET_ACTORS,
+                "all shared-goal actors should receive one valid progress step");
+    expect_true(performance_guard::targetFlowCacheSize() == 1, "shared-goal actors should reuse one target flow field");
+    expect_true(fixture.map->getNavigationRevision() == revision_before,
+                "shared-goal controller reads should not mutate the navigation revision");
+    expect_true(fixture.map->getTiles().size() == tile_count_before,
+                "shared-goal controller reads should not materialize or remove tiles");
+    expect_true(fixture.map->getObjects().size() == object_count_before,
+                "shared-goal controller reads should not add or remove objects");
+
+    pending.clear();
+    performance_guard::resetMapCoordinateLookupProbe();
+    for (const auto &actor : actors) {
+        pending.push_back(actor->getController()->control(actor));
+    }
+    for (const auto &future : pending) {
+        future->get();
+    }
+    const auto warm_probes = performance_guard::mapCoordinateLookupProbeCount();
+    performance_guard::disableMapCoordinateLookupProbe();
+    expect_true(performance_guard::targetFlowCacheSize() == 1,
+                "repeated shared-goal reads should keep reusing the cached target flow field");
+    // Unique actor cells are inspected at most once per adjacent flood cell, plus
+    // goal/step validation. Warm requests need only the goal and step checks.
+    expect_true(cold_probes <= SHARED_TARGET_ACTORS * 8,
+                "concurrent cold requests must keep coordinate lookup work bounded by one shared flood");
+    expect_true(warm_probes <= SHARED_TARGET_ACTORS * 2,
+                "concurrent warm requests must reuse the settled flood without expanding it again");
+    std::cout << "Shared target flow coordinate probes: cold=" << cold_probes << "/" << SHARED_TARGET_ACTORS * 8
+              << " warm=" << warm_probes << "/" << SHARED_TARGET_ACTORS * 2 << "\n";
+}
+
+void test_relevant_object_move_invalidates_target_navigation() {
+    auto fixture = make_open_map(7, 5);
+    const Coords goal_coords(6, 2, 0);
+    auto goal = make_object(fixture, "objectInvalidationGoal", goal_coords);
+    auto blocker = make_object(fixture, "movingBlocker", Coords(3, 4, 0), false);
+    auto actor = make_actor(fixture, "objectInvalidationActor", Coords(0, 2, 0), "objectInvalidationGoal");
+    add_object(fixture, goal);
+    add_object(fixture, blocker);
+    add_object(fixture, actor);
+
+    const auto revision_before_warm = fixture.map->getNavigationRevision();
+    performance_guard::clearTargetFlowCache();
+    const auto open_step = fixture.map->normalizeCoords(resolve_step(actor));
+    expect_true(open_step == Coords(1, 2, 0), "open object-invalidation path should initially move east");
+    expect_true(fixture.map->getNavigationRevision() == revision_before_warm,
+                "warming target navigation should not bump the navigation revision");
+    expect_true(performance_guard::targetFlowCacheSize() == 1,
+                "object-invalidation warm path should build one target flow field");
+
+    blocker->moveTo(open_step);
+    expect_true(fixture.map->getNavigationRevision() == revision_before_warm + 1,
+                "moving a blocking object into the path should bump the navigation revision exactly once");
+    expect_true(!fixture.map->canStep(open_step), "moved blocking object should make the old next step impassable");
+
+    const auto rerouted_step = fixture.map->normalizeCoords(resolve_step(actor));
+    expect_true(rerouted_step != open_step, "target navigation should reroute after a relevant object move");
+    expect_true(rerouted_step != actor->getCoords() && is_cardinal_step(fixture.map, actor->getCoords(), rerouted_step),
+                "rerouted object-invalidation step should still be one legal movement");
+    expect_true(fixture.map->canStep(rerouted_step), "rerouted object-invalidation step should be passable");
+    expect_true(performance_guard::targetFlowCacheSize() == 1,
+                "object navigation changes should repair the existing target field");
+}
+
+void test_relevant_tile_change_invalidates_target_navigation() {
+    auto fixture = make_open_map(7, 5);
+    const Coords goal_coords(6, 2, 0);
+    auto goal = make_object(fixture, "tileInvalidationGoal", goal_coords);
+    auto actor = make_actor(fixture, "tileInvalidationActor", Coords(0, 2, 0), "tileInvalidationGoal");
+    add_object(fixture, goal);
+    add_object(fixture, actor);
+
+    const auto revision_before_warm = fixture.map->getNavigationRevision();
+    performance_guard::clearTargetFlowCache();
+    const auto open_step = fixture.map->normalizeCoords(resolve_step(actor));
+    expect_true(open_step == Coords(1, 2, 0), "open tile-invalidation path should initially move east");
+    expect_true(fixture.map->getNavigationRevision() == revision_before_warm,
+                "warming tile-invalidation navigation should not bump the navigation revision");
+    expect_true(performance_guard::targetFlowCacheSize() == 1,
+                "tile-invalidation warm path should build one target flow field");
+
+    replace_tile(fixture, open_step, false, "wall");
+    expect_true(fixture.map->getNavigationRevision() == revision_before_warm + 2,
+                "replacing one tile should bump navigation once for removal and once for insertion");
+    expect_true(!fixture.map->canStep(open_step), "replacement wall tile should make the old next step impassable");
+
+    const auto rerouted_step = fixture.map->normalizeCoords(resolve_step(actor));
+    expect_true(rerouted_step != open_step, "target navigation should reroute after a relevant tile change");
+    expect_true(rerouted_step != actor->getCoords() && is_cardinal_step(fixture.map, actor->getCoords(), rerouted_step),
+                "rerouted tile-invalidation step should still be one legal movement");
+    expect_true(fixture.map->canStep(rerouted_step), "rerouted tile-invalidation step should be passable");
+    expect_true(performance_guard::targetFlowCacheSize() == 1,
+                "tile navigation changes should repair the existing target field");
+}
+
+void test_navigation_edge_removal_invalidates_target_navigation() {
+    auto fixture = make_open_map(5, 3);
+    const Coords start_coords(0, 1, 0);
+    const Coords goal_coords(4, 1, 0);
+    auto goal = make_object(fixture, "edgeInvalidationGoal", goal_coords);
+    auto actor = make_actor(fixture, "edgeInvalidationActor", start_coords, "edgeInvalidationGoal");
+
+    for (int x = 1; x < 4; ++x) {
+        for (int y = 0; y < fixture.height; ++y) {
+            replace_tile(fixture, Coords(x, y, 0), false, "edgeInvalidationWall");
+        }
+    }
+
+    add_object(fixture, goal);
+    add_object(fixture, actor);
+    add_navigation_edge(fixture, start_coords, goal_coords, "edgeShortcut");
+
+    const auto revision_with_edge = fixture.map->getNavigationRevision();
+    performance_guard::clearTargetFlowCache();
+    const auto shortcut_step = fixture.map->normalizeCoords(resolve_step(actor));
+    expect_true(shortcut_step == goal_coords, "edge-invalidation path should initially use the authored edge");
+    expect_true(performance_guard::targetFlowCacheSize() == 1,
+                "edge-invalidation warm path should build one target flow field");
+
+    const auto repeated_shortcut_step = fixture.map->normalizeCoords(resolve_step(actor));
+    expect_true(repeated_shortcut_step == goal_coords, "unchanged edge topology should reuse the authored edge");
+    expect_true(performance_guard::targetFlowCacheSize() == 1,
+                "unchanged edge topology should keep reusing the cached target flow field");
+
+    expect_true(
+        fixture.map->removeNavigationEdge(start_coords, goal_coords, std::optional<std::string>("edgeShortcut")),
+        "removing the authored edge should report success");
+    expect_true(fixture.map->getNavigationRevision() == revision_with_edge + 1,
+                "removing the authored edge should bump navigation revision exactly once");
+
+    const auto blocked_step = fixture.map->normalizeCoords(resolve_step(actor));
+    expect_true(blocked_step == start_coords, "target navigation should stop after the only edge route is removed");
+    expect_true(performance_guard::targetFlowCacheSize() == 1,
+                "edge topology rebuild should replace the contents of the existing target field");
+}
+
+void test_irrelevant_metadata_activity_does_not_invalidate_navigation() {
+    auto fixture = make_open_map(9, 5);
+    const Coords goal_coords(8, 2, 0);
+    auto goal = make_object(fixture, "metadataGoal", goal_coords);
+    auto actor = make_actor(fixture, "metadataActor", Coords(0, 2, 0), "metadataGoal");
+    auto marker = make_object(fixture, "metadataMarker", Coords(8, 4, 0));
+    add_object(fixture, goal);
+    add_object(fixture, actor);
+    add_object(fixture, marker);
+
+    performance_guard::clearTargetFlowCache();
+    const auto first_step = fixture.map->normalizeCoords(resolve_step(actor));
+    const auto revision_before_metadata = fixture.map->getNavigationRevision();
+    expect_true(performance_guard::targetFlowCacheSize() == 1,
+                "metadata activity fixture should build one target flow field");
+    marker->setLabel("changed without movement");
+    marker->setDescription("non-navigation metadata");
+    const auto second_step = fixture.map->normalizeCoords(resolve_step(actor));
+
+    expect_true(fixture.map->getNavigationRevision() == revision_before_metadata,
+                "irrelevant object metadata changes should not invalidate navigation");
+    expect_true(second_step == first_step, "irrelevant object metadata changes should keep the same target step");
+    expect_true(performance_guard::targetFlowCacheSize() == 1,
+                "irrelevant metadata activity should not rebuild target flow fields");
+    expect_true(fixture.map->getObjectsAtCoords(marker->getCoords()).contains(marker),
+                "irrelevant object metadata changes should keep the spatial cache entry intact");
+}
+
+void test_coordinate_cache_lookup_cardinality_and_move_updates() {
+    auto fixture = make_open_map(12, 12);
+    const Coords hotspot(4, 4, 0);
+    const Coords destination(5, 4, 0);
+    std::vector<std::shared_ptr<CMapObject>> markers;
+    markers.reserve(SPATIAL_MARKERS);
+
+    for (int i = 0; i < SPATIAL_MARKERS; ++i) {
+        Coords coords((i * 5) % fixture.width, (i * 7) % fixture.height, 0);
+        if (i < SPATIAL_HOTSPOT_MARKERS) {
+            coords = hotspot;
+        } else if (coords == hotspot || coords == destination) {
+            coords = Coords((coords.x + 2) % fixture.width, (coords.y + 3) % fixture.height, 0);
+        }
+        auto marker = make_object(fixture, "spatialMarker" + std::to_string(i), coords);
+        add_object(fixture, marker);
+        markers.push_back(marker);
+    }
+
+    expect_true(fixture.map->getObjects().size() == SPATIAL_MARKERS,
+                "spatial map should contain the expected marker count");
+    expect_true(fixture.map->getObjectCacheEntryCountForTesting() == SPATIAL_MARKERS,
+                "spatial cache should contain one coordinate entry per object");
+    performance_guard::resetMapCoordinateLookupProbe();
+    expect_true(fixture.map->getObjectsAtCoords(hotspot).size() == SPATIAL_HOTSPOT_MARKERS,
+                "hotspot lookup should return only collocated marker objects");
+    expect_true(performance_guard::mapCoordinateLookupProbeCount() == SPATIAL_HOTSPOT_MARKERS,
+                "hotspot lookup should inspect only the matching coordinate bucket");
+    performance_guard::resetMapCoordinateLookupProbe();
+    expect_true(fixture.map->getObjectsAtCoords(destination).empty(),
+                "destination lookup should start empty before a cache move");
+    expect_true(performance_guard::mapCoordinateLookupProbeCount() == 0,
+                "empty coordinate lookup should inspect no cached object entries");
+
+    int hotspot_visit_count = 0;
+    performance_guard::resetMapCoordinateLookupProbe();
+    fixture.map->forObjectsAtCoords(hotspot,
+                                    [&hotspot_visit_count](std::shared_ptr<CMapObject>) { hotspot_visit_count++; });
+    expect_true(hotspot_visit_count == SPATIAL_HOTSPOT_MARKERS,
+                "forObjectsAtCoords should visit exactly the hotspot cardinality");
+    expect_true(performance_guard::mapCoordinateLookupProbeCount() == SPATIAL_HOTSPOT_MARKERS,
+                "forObjectsAtCoords should probe only the matching coordinate bucket");
+
+    const auto revision_before_move = fixture.map->getNavigationRevision();
+    markers.front()->moveTo(destination);
+    expect_true(fixture.map->getNavigationRevision() == revision_before_move + 1,
+                "moving one cached marker should bump navigation exactly once");
+    expect_true(fixture.map->getObjectsAtCoords(hotspot).size() == SPATIAL_HOTSPOT_MARKERS - 1,
+                "moving one cached marker should remove it from the old coordinate bucket");
+    expect_true(fixture.map->getObjectsAtCoords(destination).size() == 1,
+                "moving one cached marker should add it to the new coordinate bucket");
+    expect_true(fixture.map->getObjects().size() == SPATIAL_MARKERS,
+                "moving one cached marker should not change total object count");
+    expect_true(fixture.map->getObjectCacheEntryCountForTesting() == SPATIAL_MARKERS,
+                "moving one cached marker should keep one coordinate entry per object");
+    performance_guard::disableMapCoordinateLookupProbe();
+}
+
+void test_moderate_actor_map_move_turn_state_and_revision_bounds() {
+    auto fixture = make_open_map(16, 10);
+    const Coords goal_coords(15, 5, 0);
+    add_object(fixture, make_object(fixture, "turnMoveGoal", goal_coords));
+
+    std::vector<std::shared_ptr<CCreature>> actors;
+    std::map<std::string, Coords> starting_positions;
+    actors.reserve(MODERATE_MOVE_ACTORS);
+    for (int i = 0; i < MODERATE_MOVE_ACTORS; ++i) {
+        const Coords coords(i % 4, i / 4, 0);
+        auto actor = make_actor(fixture, "turnMoveActor" + std::to_string(i), coords, "turnMoveGoal");
+        add_object(fixture, actor);
+        starting_positions[actor->getName()] = fixture.map->normalizeCoords(coords);
+        actors.push_back(actor);
+    }
+
+    const auto revision_before_move = fixture.map->getNavigationRevision();
+    const auto object_count_before_move = fixture.map->getObjects().size();
+    const auto turn_before_move = fixture.map->getTurn();
+    fixture.map->move();
+
+    int moved_actors = 0;
+    for (const auto &actor : actors) {
+        const auto start = starting_positions.at(actor->getName());
+        const auto current = fixture.map->normalizeCoords(actor->getCoords());
+        if (current != start && is_cardinal_step(fixture.map, start, current) &&
+            moves_closer(fixture.map, start, current, goal_coords)) {
+            moved_actors++;
+        }
+        expect_true(fixture.map->getObjectByName(actor->getName()) == actor,
+                    "turn-moved actor should remain registered by name");
+    }
+
+    expect_true(moved_actors == MODERATE_MOVE_ACTORS, "moderate actor turn should move every target-controlled actor");
+    expect_true(fixture.map->getNavigationRevision() == revision_before_move + MODERATE_MOVE_ACTORS,
+                "moderate actor turn should bump navigation once per committed actor move");
+    expect_true(fixture.map->getTurn() == turn_before_move + 1, "moderate actor turn should advance map turn once");
+    expect_true(!fixture.map->isMoving(), "moderate actor turn should clear the moving flag after completion");
+    expect_true(fixture.map->getObjects().size() == object_count_before_move,
+                "moderate actor turn should not add or remove map objects");
+}
+
+void test_bulk_inventory_property_notifications_are_count_bounded() {
+    CTypes::register_type_metadata<NotificationCountProbe, CGameObject>();
+
+    auto creature = std::make_shared<CCreature>();
+    auto probe = std::make_shared<NotificationCountProbe>();
+    creature->connect("propertyChanged", probe, "onPropertyChanged");
+    creature->connect("propertiesChanged", probe, "onPropertiesChanged");
+    creature->connect("inventoryChanged", probe, "onInventoryChanged");
+
+    std::set<std::shared_ptr<CItem>> items;
+    for (int i = 0; i < BULK_INVENTORY_ITEM_COUNT; ++i) {
+        auto item = std::make_shared<CItem>();
+        item->setName("bulkInventoryItem" + std::to_string(i));
+        items.insert(item);
+    }
+
+    creature->setItems(items);
+    drain_event_loop();
+
+    expect_true(probe->property_changed_calls == 0,
+                "bulk inventory replacement should not emit per-item propertyChanged signals");
+    expect_true(probe->properties_changed_calls == 1,
+                "bulk inventory replacement should emit one batched propertiesChanged signal");
+    expect_true(probe->observed_property_names == std::set<std::string>{"items"},
+                "bulk inventory property notification should report only the items property");
+    expect_true(probe->inventory_changed_calls == BULK_INVENTORY_ITEM_COUNT,
+                "legacy inventoryChanged remains item-level until GUI refresh migrates to property notifications");
+}
+
+void test_stat_composition_eliminates_repeated_reflective_increments() {
+    using namespace stat_composition_fixture;
+    constexpr std::size_t reads_per_fixture = 32;
+    constexpr std::array<std::size_t, 7> contribution_counts{7, 10, 11, 9, 15, 20, 16};
+    std::vector<Fixture> fixtures;
+    std::vector<std::shared_ptr<CStats>> expected;
+    for (int mode = 0; mode < 7; ++mode) {
+        fixtures.push_back(make(mode));
+    }
+    std::size_t reflective_work = 0;
+    {
+        IncrementProbe probe;
+        for (std::size_t i = 0; i < fixtures.size(); ++i) {
+            for (std::size_t read = 0; read < reads_per_fixture; ++read) {
+                std::size_t contributions = 0;
+                auto result = reflectiveReference(fixtures[i].creature, contributions);
+                expect_true(contributions == contribution_counts[i], "reference contribution workload stays fixed");
+                if (read == 0) {
+                    expected.push_back(result);
+                }
+            }
+        }
+        reflective_work = probe.count();
+    }
+    expect_true(reflective_work == 47872,
+                "old public apply performs exactly 17 increments per contribution, even zeros");
+    std::size_t private_work = 0;
+    {
+        IncrementProbe probe;
+        expect_true(probe.count() == 0, "reset must start a new stat work sample at zero");
+        for (std::size_t i = 0; i < fixtures.size(); ++i) {
+            for (std::size_t read = 0; read < reads_per_fixture; ++read) {
+                auto result = fixtures[i].creature->getStats();
+                expect_true(result->modifier() == expected[i]->modifier() &&
+                                result->getMainStat() == expected[i]->getMainStat(),
+                            "fixed representative composed and legacy stat reads must retain the reference values");
+            }
+        }
+        private_work = probe.count();
+    }
+    expect_true(private_work == 0, "private stat composition must perform zero reflective numeric increments");
+    expected.front()->incProperty("strength", 0);
+    expect_true(performance_guard::numericIncrementProbeCount() == private_work,
+                "probe scope must disable observation without changing ordinary property writes");
+    std::cout << "stat composition work: 224 reads, reflective increments " << reflective_work << " -> " << private_work
+              << '\n';
+}
+
+void test_weighted_target_flow_field_is_single_build_and_materialization_bounded() {
+    auto fixture = make_open_map(6, 3);
+    // Make the row-0 band between the chasers and the goal expensive so the weighted flow field has
+    // to route around it; this exercises movement-cost lookups during flow-field construction.
+    for (int x = 1; x <= 4; ++x) {
+        if (auto tile = fixture.map->getTile(Coords(x, 0, 0))) {
+            tile->setMovementCost(30);
+        }
+    }
+
+    const Coords goal_coords(5, 0, 0);
+    add_object(fixture, make_object(fixture, "weightedGoal", goal_coords));
+
+    std::vector<std::shared_ptr<CCreature>> chasers;
+    for (int y = 0; y < 3; ++y) {
+        auto chaser = make_actor(fixture, "weightedChaser" + std::to_string(y), Coords(0, y, 0), "weightedGoal");
+        add_object(fixture, chaser);
+        chasers.push_back(chaser);
+    }
+
+    const auto revision_before = fixture.map->getNavigationRevision();
+    const auto tiles_before = fixture.map->getTiles().size();
+    const auto objects_before = fixture.map->getObjects().size();
+
+    performance_guard::clearTargetFlowCache();
+    expect_true(performance_guard::targetFlowCacheSize() == 0, "weighted flow cache should start empty");
+    for (const auto &chaser : chasers) {
+        resolve_step(chaser);
+    }
+
+    expect_true(performance_guard::targetFlowCacheSize() == 1,
+                "weighted chasers sharing one goal should reuse a single target flow field");
+    expect_true(fixture.map->getNavigationRevision() == revision_before,
+                "weighted flow-field reads should not mutate the navigation revision");
+    expect_true(fixture.map->getTiles().size() == tiles_before,
+                "weighted flow-field reads should not materialize extra tiles");
+    expect_true(fixture.map->getObjects().size() == objects_before,
+                "weighted flow-field reads should not add or remove objects");
+
+    for (const auto &chaser : chasers) {
+        resolve_step(chaser);
+    }
+    expect_true(performance_guard::targetFlowCacheSize() == 1,
+                "repeated weighted reads should keep reusing the cached target flow field");
+}
+
+class CombatActionCountProbe : public CInteraction {
+  public:
+    int calls = 0;
+    void performAction(std::shared_ptr<CCreature>, std::shared_ptr<CCreature>) override { ++calls; }
+};
+
+void testMonsterRoleCallbackAndStateGrowthAreBounded() {
+    auto fixture = make_open_map(2, 1);
+    auto actor = make_actor(fixture, "roleActor", Coords(0, 0, 0), "opponent");
+    auto opponent = make_actor(fixture, "opponent", Coords(1, 0, 0), "roleActor");
+    actor->setNpc(false);
+    opponent->setNpc(false);
+    auto role = std::make_shared<CCreatureClass>();
+    role->setStringProperty("combatRole", "boundedRole");
+    actor->setCreatureClass(role);
+    auto signature = std::make_shared<CombatActionCountProbe>();
+    signature->setGame(fixture.game);
+    signature->setName("signature");
+    signature->setBoolProperty("enemySignature", true);
+    signature->setStringProperty("enemyRole", "boundedRole");
+    signature->setStringProperty("enemyRoleTrigger", "opening");
+    actor->addAction(signature);
+    auto attack = std::make_shared<CombatActionCountProbe>();
+    attack->setGame(fixture.game);
+    attack->setName("attack");
+    attack->setTypeId("Attack");
+    actor->addAction(attack);
+    for (int i = 0; i < 64; ++i) {
+        auto excluded = std::make_shared<CombatActionCountProbe>();
+        excluded->setName("excluded" + std::to_string(i));
+        excluded->setBoolProperty("enemySignature", true);
+        excluded->setStringProperty("enemyRole", "otherRole");
+        actor->addAction(excluded);
+    }
+    const auto actionCount = actor->getInteractions().size();
+    CMonsterFightController controller;
+    constexpr int turns = 200;
+    for (int i = 0; i < turns; ++i) {
+        expect_true(controller.control(actor, opponent),
+                    "bounded role fixture should take exactly one action per turn");
+    }
+    expect_true(signature->calls == 1 && attack->calls == turns - 1,
+                "200 role turns must produce one signature callback and 199 ordinary callbacks");
+    expect_true(actor->getInteractions().size() == actionCount && actor->getEffects().empty(),
+                "role selection must not accumulate actions or effects across turns");
+    expect_true(fixture.map->getObjects().empty(), "combat role selection must not spawn map objects");
+}
+
+class EffectTickBudgetProbe : public CEffect {
+  public:
+    EffectTickBudgetProbe(int index, std::vector<int> &order) : index(index), order(order) {}
+
+    void onEffect() override {
+        ++callbacks;
+        order.push_back(index);
+    }
+
+    int callbacks = 0;
+
+  private:
+    int index;
+    std::vector<int> &order;
+};
+
+void testEffectTickCallbacksAndExpiryAreBounded() {
+    constexpr int EFFECTS = 8;
+    constexpr int TICKS = 4;
+    auto fixture = make_open_map(1, 1);
+    auto actor = make_actor(fixture, "unitEffectTickActor", Coords(0, 0, 0), "");
+    const auto turn = fixture.map->getTurn();
+    std::vector<int> order;
+    order.reserve(EFFECTS * TICKS);
+    std::vector<std::shared_ptr<EffectTickBudgetProbe>> probes;
+    for (int index = EFFECTS - 1; index >= 0; --index) {
+        auto effect = std::make_shared<EffectTickBudgetProbe>(index, order);
+        effect->setGame(fixture.game);
+        effect->setTypeId("unitEffectTick" + std::to_string(index));
+        effect->setName("unitEffectTick" + std::to_string(index));
+        effect->setDuration(TICKS);
+        effect->setCaster(actor);
+        effect->setVictim(actor);
+        if (index % 2 == 0) {
+            effect->addTag(CTag::Buff);
+        }
+        actor->addEffect(effect);
+        probes.push_back(effect);
+    }
+    const std::vector<int> hurtOrder{0, 2, 4, 6, 1, 3, 5, 7};
+    const std::vector<int> fullOrder{1, 3, 5, 7, 0, 2, 4, 6};
+    for (int pass = 0; pass < TICKS; ++pass) {
+        actor->setHp(actor->getHpMax() - (pass < 2 ? 0 : 1));
+        const auto hpBefore = actor->getHp();
+        const auto &expectedPass = pass < 2 ? fullOrder : hurtOrder;
+        CFightHandler::applyEffects(actor);
+        expect_true(order.size() == static_cast<std::size_t>((pass + 1) * EFFECTS),
+                    "each effect pass must invoke each live effect exactly once");
+        expect_true(order.size() == static_cast<std::size_t>((pass + 1) * EFFECTS) &&
+                        std::equal(expectedPass.begin(), expectedPass.end(), order.begin() + pass * EFFECTS),
+                    "each effect pass must follow its initial-health tier and canonical identity order");
+        expect_true(actor->getHp() == hpBefore, "nonlethal order probes must not change actor health");
+    }
+    CFightHandler::applyEffects(actor);
+    CFightHandler::applyEffects(actor);
+    expect_true(actor->getEffects().empty() && order.size() == EFFECTS * TICKS,
+                "expiry and a subsequent empty pass must not add callbacks or retain effects");
+    for (const auto &effect : probes) {
+        expect_true(effect->callbacks == TICKS && effect->getTimeLeft() == 0,
+                    "each fixed-duration effect must receive exactly its four scheduled callbacks");
+        effect->setCaster(nullptr);
+        effect->setVictim(nullptr);
+    }
+    expect_true(fixture.map->getTurn() == turn && fixture.map->getObjects().empty(),
+                "effect tick ordering must not advance map turns or accumulate map objects");
+    std::cout << "effect tick guard: effects=" << EFFECTS << " ticks=" << TICKS << " callbacks=" << order.size()
+              << " callbackBudget=" << EFFECTS * TICKS << "\n";
+}
+
+void testMinimapTerrainCacheBuildsOnlyOnRelevantChanges() {
+    constexpr int CACHED_FRAMES = 32;
+    SDL_SetHint(SDL_HINT_VIDEODRIVER, "dummy");
+    SDL_SetHint(SDL_HINT_RENDER_DRIVER, "software");
+    auto fixture = make_open_map(8, 8);
+    auto gui = std::make_shared<CGui>();
+    gui->setGame(fixture.game);
+    fixture.game->setGui(gui);
+    auto player = std::make_shared<CPlayer>();
+    player->setGame(fixture.game);
+    player->setBaseStats(make_actor_stats());
+    fixture.map->setPlayer(player);
+    auto minimap = std::make_shared<CMinimapGraphicsObject>();
+    gui->addChild(minimap);
+    const auto rect = CUtil::rect(0, 0, 128, 128);
+
+    for (int frame = 0; frame < CACHED_FRAMES; ++frame) {
+        minimap->renderObject(gui, rect, 0);
+    }
+    expect_true(minimap->getTerrainTextureBuildCount() == 1, "unchanged minimap frames must build one terrain texture");
+    expect_true(gui->getRenderContext().getStats().successfulCopies == CACHED_FRAMES,
+                "each cached minimap frame must copy its valid terrain texture");
+
+    player->moveTo(3, 4, 0);
+    minimap->renderObject(gui, rect, 0);
+    expect_true(minimap->getTerrainTextureBuildCount() == 1, "moving a player marker must reuse the terrain texture");
+    fixture.map->getTile(Coords(4, 4, 0))->setTileType("grass");
+    minimap->renderObject(gui, rect, 0);
+    expect_true(minimap->getTerrainTextureBuildCount() == 2, "changing terrain must rebuild the minimap texture once");
+    const auto resized = CUtil::rect(0, 0, 129, 128);
+    minimap->renderObject(gui, resized, 0);
+    expect_true(minimap->getTerrainTextureBuildCount() == 3,
+                "changing minimap dimensions must rebuild its texture once");
+    expect_true(gui->getRenderContext().getStats().successfulCopies == CACHED_FRAMES + 3,
+                "marker, terrain, and size changes must retain valid rendering");
+
+    auto replacement = std::make_shared<CGui>();
+    replacement->setGame(fixture.game);
+    gui->removeChild(minimap);
+    replacement->addChild(minimap);
+    minimap->renderObject(replacement, resized, 0);
+    expect_true(minimap->getTerrainTextureBuildCount() == 4, "changing a live GUI owner must rebuild the texture once");
+    expect_true(replacement->getRenderContext().getStats().successfulCopies == 1,
+                "the replacement GUI must receive its own valid terrain texture");
+    std::cout << "minimap terrain cache guard: cells=64 frames=" << CACHED_FRAMES + 4
+              << " builds=" << minimap->getTerrainTextureBuildCount() << " budget=4\n";
+}
+
+} // namespace
+
+void run_engine_hotspot_performance_tests() {
+    std::optional<pybind11::scoped_interpreter> interpreter;
+    if (!Py_IsInitialized()) {
+        interpreter.emplace();
+    }
+
+    test_stat_composition_eliminates_repeated_reflective_increments();
+    test_many_target_controllers_share_one_goal_without_mutating_navigation();
+    test_weighted_target_flow_field_is_single_build_and_materialization_bounded();
+    test_relevant_object_move_invalidates_target_navigation();
+    test_relevant_tile_change_invalidates_target_navigation();
+    test_navigation_edge_removal_invalidates_target_navigation();
+    test_irrelevant_metadata_activity_does_not_invalidate_navigation();
+    test_coordinate_cache_lookup_cardinality_and_move_updates();
+    test_moderate_actor_map_move_turn_state_and_revision_bounds();
+    test_bulk_inventory_property_notifications_are_count_bounded();
+    testMonsterRoleCallbackAndStateGrowthAreBounded();
+    testEffectTickCallbacksAndExpiryAreBounded();
+    testMinimapTerrainCacheBuildsOnlyOnRelevantChanges();
+}

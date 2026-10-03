@@ -1,6 +1,6 @@
 /*
 fall-of-nouraajd c++ dark fantasy game
-Copyright (C) 2025  Andrzej Lis
+Copyright (C) 2025-2026  Andrzej Lis
 
 This program is free software: you can redistribute it and/or modify
         it under the terms of the GNU General Public License as published by
@@ -24,17 +24,117 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 class CWidget;
 
 class CGamePanel : public CGameGraphicsObject {
-    V_META(CGamePanel, CGameGraphicsObject, vstd::meta::empty())
+    V_META(CGamePanel, CGameGraphicsObject, V_PROPERTY(CGamePanel, bool, resizable, isResizable, setResizable),
+           V_PROPERTY(CGamePanel, int, resizeHandleSize, getResizeHandleSize, setResizeHandleSize),
+           V_PROPERTY(CGamePanel, std::string, title, getTitle, setTitle),
+           V_PROPERTY(CGamePanel, bool, closeable, getCloseable, setCloseable))
   public:
     CGamePanel();
+    std::string getTitle() const { return title; }
+    void setTitle(std::string value) { title = std::move(value); }
+    bool getCloseable() const { return closeable; }
+    void setCloseable(bool value) { closeable = value; }
+    void renderShell(std::shared_ptr<CGui> gui, std::shared_ptr<SDL_Rect> rect);
+    int getShellHeaderHeight(const std::shared_ptr<CGui> &gui);
+    int getShellCloseWidth(const std::shared_ptr<CGui> &gui);
 
     bool keyboardEvent(std::shared_ptr<CGui> sharedPtr, SDL_EventType type, SDL_Keycode i) override;
 
     bool mouseEvent(std::shared_ptr<CGui> sharedPtr, SDL_EventType type, int button, int x, int y) override;
 
+    bool mouseMotionEvent(std::shared_ptr<CGui> sharedPtr, SDL_EventType type, int x, int y, int xrel,
+                          int yrel) override;
+
+    void renderObject(std::shared_ptr<CGui> reneder, std::shared_ptr<SDL_Rect> rect, int frameTime) override;
+
     void refreshViews();
 
     void awaitClosing();
 
-    void close();
+    virtual void close();
+
+    // Opt-in user resize handle. Off by default so existing panels are unchanged: only a panel that
+    // explicitly opts in exposes a bottom-right drag handle that resizes it via runtime layout overrides.
+    bool isResizable();
+
+    void setResizable(bool _resizable);
+
+    int getResizeHandleSize();
+
+    void setResizeHandleSize(int _resizeHandleSize);
+
+    // True when panel-local (x, y) falls inside the bottom-right resize handle of the current rect.
+    // Always false while the panel is not resizable, so a non-opted-in panel never treats the corner
+    // specially.
+    bool isInResizeHandle(int x, int y);
+
+    // Pure resize-drag state machine driven in panel-local coordinates (pointer position relative to
+    // the panel's fixed top-left corner). beginResize latches the grab offset and returns whether a
+    // resize started; updateResize writes clamped runtime width/height onto the layout; endResize
+    // clears the state. These carry the geometry so they can be exercised without SDL rendering.
+    bool beginResize(int x, int y);
+
+    void updateResize(int x, int y);
+
+    void endResize();
+
+    bool isResizing();
+
+    // Re-applies geometry recorded for this panel's typeId in the CGui session store, clamped like a
+    // live resize against the CURRENT parent bounds. Called by CGui when the panel is attached, so a
+    // reopened/rebuilt panel keeps its user-adjusted geometry for the session; a no-op for
+    // non-resizable panels, unknown identities, or an empty store.
+    void applySessionGeometry(const std::shared_ptr<CGui> &gui);
+
+  protected:
+    // Claims resize-handle presses (and the matching release while a resize is active) before child
+    // dispatch, so a child covering the bottom-right corner cannot swallow the resize interaction.
+    bool event(std::shared_ptr<CGui> gui, SDL_Event *event) override;
+
+  private:
+    // Minimum edge length a resizable panel is ever clamped to, independent of the layout's own minW/minH.
+    // Keeps the panel at least as large as its handle so the handle stays grabbable.
+    static constexpr int RESIZE_MIN_SIZE = 32;
+    // Fallback maximum edge used when the panel has no parent rectangle to bound it (matches the GUI's
+    // logical maximum so a detached panel still cannot grow without limit).
+    static constexpr int RESIZE_MAX_FALLBACK = 7680;
+    static constexpr int DEFAULT_HANDLE_SIZE = 24;
+
+    struct ResizeBounds {
+        int minW;
+        int minH;
+        int maxW;
+        int maxH;
+    };
+
+    ResizeBounds getResizeBounds();
+
+    // Bounds for a panel whose top-left corner sits at the given parent-relative origin. Shared by
+    // the live resize (current origin) and session-geometry re-apply (stored origin), so both clamp
+    // identically.
+    ResizeBounds getResizeBounds(int originX, int originY);
+
+    // Base CGameGraphicsObject::getRect() is private; resolve this panel's own rectangle through its layout.
+    std::shared_ptr<SDL_Rect> getSelfRect();
+
+    // The parent's rectangle, or an empty rect when the panel has no parent (or no parent layout).
+    std::shared_ptr<SDL_Rect> getParentRect();
+
+    // Records the panel's current runtime geometry into the GUI session store when a resize ends.
+    void recordSessionGeometry();
+
+    bool resizable = false;
+    std::string title;
+    bool closeable = true;
+    bool closePressed = false;
+    int responsivePage = 0;
+    int responsivePageCount = 0;
+    bool responsiveNarrow = false;
+    int responsiveHeaderPressed = 0;
+    SDL_Rect responsiveHeaderRect{};
+    void layoutResponsiveChildren(const std::shared_ptr<CGui> &gui, const std::shared_ptr<SDL_Rect> &rect);
+    int resizeHandleSize = DEFAULT_HANDLE_SIZE;
+    bool resizing = false;
+    int resizeGrabOffsetW = 0;
+    int resizeGrabOffsetH = 0;
 };

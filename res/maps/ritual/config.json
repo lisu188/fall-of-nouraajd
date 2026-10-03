@@ -32,7 +32,7 @@
   "ritualWitness": {
     "ref": "Cultist",
     "properties": {
-      "animation": "images/npc/oldWoman",
+      "animation": "images/npc/ritualWitness",
       "controller": {
         "class": "CNpcRandomController"
       },
@@ -42,7 +42,7 @@
   "ritualCaptive": {
     "ref": "Cultist",
     "properties": {
-      "animation": "images/npc/questGiver",
+      "animation": "images/npc/ritualCaptive",
       "npc": true
     }
   },
@@ -106,6 +106,7 @@
   "ritualCultist": {
     "ref": "Cultist",
     "properties": {
+      "animation": "images/monsters/ritualCultist",
       "affiliation": "ritual",
       "controller": {
         "class": "CTargetController",
@@ -118,6 +119,7 @@
   "ritualPritz": {
     "ref": "Pritz",
     "properties": {
+      "animation": "images/monsters/ritualPritz",
       "affiliation": "ritual",
       "controller": {
         "class": "CTargetController",
@@ -130,6 +132,7 @@
   "ritualMage": {
     "ref": "PritzMage",
     "properties": {
+      "animation": "images/monsters/ritualMage",
       "affiliation": "ritual",
       "controller": {
         "class": "CTargetController",
@@ -142,6 +145,7 @@
   "ritualLeaderTemplate": {
     "ref": "CultLeader",
     "properties": {
+      "animation": "images/monsters/ritualLeaderTemplate",
       "affiliation": "ritual",
       "controller": {
         "class": "CTargetController",
@@ -154,6 +158,7 @@
   "chapelWarningDialog": {
     "class": "ChapelWarningDialog",
     "properties": {
+      "questIds": "ritualQuest,destroyAnchorsQuest",
       "states": [
         {
           "class": "CDialogState",
@@ -194,12 +199,14 @@
             ]
           }
         }
-      ]
+      ],
+      "speaker": "The Chapel Witness"
     }
   },
   "capturedSoulDialog": {
     "class": "CapturedSoulDialog",
     "properties": {
+      "questIds": "rescueCaptiveQuest",
       "states": [
         {
           "class": "CDialogState",
@@ -214,7 +221,8 @@
                   "condition": "can_free_captive",
                   "action": "free_captive",
                   "nextStateId": "GOOD_END",
-                  "text": "Break the glass and pull the captive free."
+                  "text": "Break the glass and pull the captive free.",
+                  "actionLabel": "Free captive"
                 }
               },
               {
@@ -272,12 +280,22 @@
           "class": "CDialogState",
           "properties": {
             "stateId": "BAD_END",
-            "text": "Only an empty husk remains. The rite finished before you could intervene.",
+            "text": "Only an empty husk remains. The rite finished before you could intervene. Destroy every anchor and defeat the leader; then carry this loss to the gatehouse as a warning.",
             "options": [
+              {
+                "class": "CDialogOption",
+                "properties": {
+                  "number": 0,
+                  "condition": "canContinueAfterLoss",
+                  "action": "continueAfterLoss",
+                  "nextStateId": "EXIT",
+                  "text": "Carry this warning to the gatehouse."
+                }
+              },
               {
                 "ref": "exitOption",
                 "properties": {
-                  "number": 0
+                  "number": 1
                 }
               }
             ]
@@ -298,18 +316,20 @@
             ]
           }
         }
-      ]
+      ],
+      "speaker": "The Captive"
     }
   },
   "recordsDialog": {
     "class": "RecordsDialog",
     "properties": {
+      "questIds": "ritualQuest",
       "states": [
         {
           "class": "CDialogState",
           "properties": {
             "stateId": "ENTRY",
-            "text": "Ritual records mention that every fifth chant draws new defenders from the crypt halls.",
+            "text": "Ritual records describe a measured rhythm: new defenders arrive every four turns while the anchors stand. Every five turns, the chant draws the captive closer to the binding.",
             "options": [
               {
                 "ref": "exitOption",
@@ -320,7 +340,8 @@
             ]
           }
         }
-      ]
+      ],
+      "speaker": "Ritual Records"
     }
   }
 }

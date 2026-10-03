@@ -1,6 +1,6 @@
 /*
 fall-of-nouraajd c++ dark fantasy game
-Copyright (C) 2025  Andrzej Lis
+Copyright (C) 2025-2026  Andrzej Lis
 
 This program is free software: you can redistribute it and/or modify
         it under the terms of the GNU General Public License as published by
@@ -19,6 +19,8 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #include "core/CGame.h"
 #include "core/CJsonUtil.h"
 
+#include <algorithm>
+
 CObjectHandler::CObjectHandler() {}
 
 void CObjectHandler::registerConfig(const std::string &path) {
@@ -33,10 +35,45 @@ void CObjectHandler::registerConfig(const std::string &path) {
         }
         objectConfig[key] = CJsonUtil::alias(config, value);
     }
+    navigationConfigRevision.fetch_add(1, std::memory_order_release);
 }
 
 void CObjectHandler::registerConfig(const std::string &name, std::shared_ptr<json> value) {
     objectConfig[name] = value;
+    navigationConfigRevision.fetch_add(1, std::memory_order_release);
+}
+
+void CObjectHandler::unregisterConfig(const std::string &name) {
+    if (objectConfig.erase(name))
+        navigationConfigRevision.fetch_add(1, std::memory_order_release);
+}
+
+std::uint64_t CObjectHandler::getNavigationConfigRevision() const {
+    return navigationConfigRevision.load(std::memory_order_acquire);
+}
+
+std::optional<std::pair<bool, int>> CObjectHandler::getStaticTileNavigation(const std::string &type) {
+    auto config = getConfig(type);
+    if (!config && !constructors.contains(type))
+        return std::pair(false, 1);
+    if (!nativeTileFactory)
+        return std::nullopt;
+    if (!config || !config->is_object() || !config->contains("class") || !(*config)["class"].is_string() ||
+        (*config)["class"].get<std::string>() != "CTile" || config->contains("ref") ||
+        config->contains("effectReferences"))
+        return std::nullopt;
+    if (!config->contains("properties"))
+        return std::pair(false, 1);
+    const auto &properties = (*config)["properties"];
+    if (!properties.is_object())
+        return std::nullopt;
+    const bool hasStep = properties.contains("canStep");
+    const bool hasCost = properties.contains("movementCost");
+    if ((hasStep && !properties["canStep"].is_boolean()) ||
+        (hasCost && !properties["movementCost"].is_number_integer()))
+        return std::nullopt;
+    return std::pair(hasStep && properties["canStep"].get<bool>(),
+                     hasCost ? std::max(1, properties["movementCost"].get<int>()) : 1);
 }
 
 std::shared_ptr<json> CObjectHandler::getConfig(const std::string &type) {
@@ -48,9 +85,15 @@ std::shared_ptr<json> CObjectHandler::getConfig(const std::string &type) {
 
 std::vector<std::string> CObjectHandler::getAllTypes() {
     std::vector<std::string> types;
+    for (auto val : constructors | std::views::keys) {
+        types.push_back(val);
+    }
     for (auto val : objectConfig | std::views::keys) {
         types.push_back(val);
     }
+    std::ranges::sort(types);
+    auto duplicates = std::ranges::unique(types);
+    types.erase(duplicates.begin(), duplicates.end());
     return types;
 }
 
@@ -62,8 +105,41 @@ std::shared_ptr<CGameObject> CObjectHandler::getType(const std::string &name) {
 }
 
 void CObjectHandler::registerType(std::string name, std::function<std::shared_ptr<CGameObject>()> constructor) {
-    constructors.insert(std::make_pair(name, constructor));
+    if (mapScriptScopeActive) {
+        // A map script is registering this class. Several maps legitimately define the same class
+        // name (e.g. StartEvent), and a map may be loaded while another map is still active during a
+        // transition. Override an existing registration only when it too was owned by a map script,
+        // so the destination map runs its own class instead of the previously loaded map's -- e.g.
+        // entering the ritual map after Nouraajd must build ritualStart from the ritual StartEvent,
+        // not Nouraajd's. Persistent registrations (core types, native/global plugins, or explicit
+        // manual registerType overrides made outside a map scope) are left untouched.
+        const bool alreadyPersistent = constructors.contains(name) && !mapScopedTypes.contains(name);
+        if (alreadyPersistent) {
+            return;
+        }
+        if (name == "CTile")
+            nativeTileFactory = false;
+        constructors.insert_or_assign(name, std::move(constructor));
+        navigationConfigRevision.fetch_add(1, std::memory_order_release);
+        mapScopedTypes.insert(std::move(name));
+        return;
+    }
+    // Persistent registration path: keep first-registration-wins so core types (registered first at
+    // game init) and explicit test/manual overrides cannot be clobbered by later registrations.
+    if (constructors.insert(std::make_pair(std::move(name), std::move(constructor))).second)
+        navigationConfigRevision.fetch_add(1, std::memory_order_release);
 }
+
+void CObjectHandler::registerNativeType(std::string name, std::function<std::shared_ptr<CGameObject>()> constructor) {
+    const bool trustedTile = name == "CTile" && !constructors.contains(name);
+    registerType(std::move(name), std::move(constructor));
+    if (trustedTile)
+        nativeTileFactory = true;
+}
+
+void CObjectHandler::beginMapScriptScope() { mapScriptScopeActive = true; }
+
+void CObjectHandler::endMapScriptScope() { mapScriptScopeActive = false; }
 
 // TODO: add option to provide custom configuration from string
 std::shared_ptr<CGameObject> CObjectHandler::_createObject(std::shared_ptr<CGame> game, const std::string &type) {
@@ -83,10 +159,10 @@ std::shared_ptr<CGameObject> CObjectHandler::_createObject(std::shared_ptr<CGame
 }
 
 std::shared_ptr<CGameObject> CObjectHandler::_clone(const std::shared_ptr<CGameObject> &object) {
-    auto _object = CSerialization::serialize<std::shared_ptr<json>, std::shared_ptr<CGameObject>>(object);
-    // vstd::logger::debug("Cloning:", CJsonUtil::to_string(_object));
-    std::shared_ptr<CGameObject> shared_ptr =
-        CSerialization::deserialize<std::shared_ptr<json>, std::shared_ptr<CGameObject>>(object->getGame(), _object);
+    auto shared_ptr = CSerialization::cloneObject(object);
+    if (!shared_ptr) {
+        return nullptr;
+    }
     shared_ptr->setName(CSerialization::generateName(shared_ptr));
     return shared_ptr;
 }

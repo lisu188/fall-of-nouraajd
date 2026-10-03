@@ -51,6 +51,8 @@ class CScriptHandler {
 
     ~CScriptHandler();
 
+    void releaseState();
+
     void execute_script(std::string script, pybind11::object name_space = pybind11::none());
 
     void execute_command(std::initializer_list<std::string> list);

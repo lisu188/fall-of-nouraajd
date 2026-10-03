@@ -1,6 +1,6 @@
 /*
 fall-of-nouraajd c++ dark fantasy game
-Copyright (C) 2025  Andrzej Lis
+Copyright (C) 2025-2026  Andrzej Lis
 
 This program is free software: you can redistribute it and/or modify
         it under the terms of the GNU General Public License as published by
@@ -29,7 +29,8 @@ class CEffect;
 class CInteraction : public CGameObject {
 
     V_META(CInteraction, CGameObject, V_PROPERTY(CInteraction, std::shared_ptr<CEffect>, effect, getEffect, setEffect),
-           V_PROPERTY(CInteraction, int, manaCost, getManaCost, setManaCost))
+           V_PROPERTY(CInteraction, int, manaCost, getManaCost, setManaCost),
+           V_PROPERTY(CInteraction, bool, selfTarget, getSelfTarget, setSelfTarget))
 
   public:
     CInteraction();
@@ -42,6 +43,8 @@ class CInteraction : public CGameObject {
 
     virtual bool configureEffect(std::shared_ptr<CEffect>);
 
+    virtual int getCommittedManaRefund(std::shared_ptr<CCreature> caster);
+
     std::shared_ptr<CEffect> getEffect() const;
 
     void setEffect(const std::shared_ptr<CEffect> value);
@@ -50,7 +53,20 @@ class CInteraction : public CGameObject {
 
     void setManaCost(int value);
 
+    bool getSelfTarget() const;
+
+    void setSelfTarget(bool value);
+
+    // Effect target routing (EPIC_06/STORY_01/SUBSTORY_02): true when this
+    // interaction's effect applies to the caster rather than the opponent. An
+    // explicit selfTarget routes to the caster; otherwise a legacy Buff-tagged effect
+    // keeps its historical caster-target behavior (compatibility fallback), and every
+    // other effect routes to the opponent. Routing therefore no longer depends solely
+    // on effect tags, while old buff configs keep working.
+    bool effectRoutesToCaster(const std::shared_ptr<CEffect> &effect) const;
+
   private:
     int manaCost = 0;
+    bool selfTarget = false;
     std::shared_ptr<CEffect> effect;
 };

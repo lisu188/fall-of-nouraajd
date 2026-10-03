@@ -26,6 +26,7 @@ class ResourceAndGuiHardeningTest(unittest.TestCase):
 
     def test_loader_rejects_sparse_tiles_and_bad_tmx_objects(self):
         loader = self.read("src/core/CLoader.cpp")
+        save_format = self.read("src/core/CSaveFormat.cpp")
 
         self.assertIn("MAX_TILESET_ID", loader)
         self.assertIn("MAX_TMX_LAYER_CELLS", loader)
@@ -33,7 +34,7 @@ class ResourceAndGuiHardeningTest(unittest.TestCase):
         self.assertIn("Skipping sparse tile id above limit", loader)
         self.assertIn("Skipping tile layer with invalid dimensions", loader)
         self.assertIn("Skipping malformed map object", loader)
-        self.assertIn("Rejected save without a valid mapName", loader)
+        self.assertIn("save envelope contains invalid mapName", save_format)
 
     def test_dialogs_fail_closed(self):
         dialog_cpp = self.read("src/object/CDialog.cpp")
@@ -63,13 +64,14 @@ class ResourceAndGuiHardeningTest(unittest.TestCase):
 
     def test_pathfinding_rng_and_minimap_are_bounded(self):
         pathfinder = self.read("src/core/CPathFinder.cpp")
-        controller = self.read("src/core/CController.cpp")
+        navigation_flow = self.read("src/core/CNavigationFlow.cpp")
         rng = self.read("src/handler/CRngHandler.cpp")
         minimap = self.read("src/gui/object/CMinimapGraphicsObject.cpp")
 
         self.assertIn("MAX_PATHFINDER_VISITED", pathfinder)
         self.assertIn("MAX_PATH_DUMP_PIXELS", pathfinder)
-        self.assertIn("MAX_FLOW_FIELD_CELLS", controller)
+        self.assertIn("constexpr std::size_t MAX_CELLS = 1'000'000;", navigation_flow)
+        self.assertIn("if (nodes.size() >= MAX_CELLS)", navigation_flow)
         self.assertIn("MAX_RANDOM_VALUE", rng)
         self.assertIn("MAX_MINIMAP_DEFAULT_CELLS", minimap)
 

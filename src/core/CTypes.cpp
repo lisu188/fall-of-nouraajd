@@ -17,6 +17,7 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 #include "core/CTypes.h"
 #include "core/CTypeRegistration.h"
+#include "plugin/NativePlugin.h"
 
 std::unordered_map<std::string, std::function<std::shared_ptr<CGameObject>()>> *CTypes::builders() {
     static std::unordered_map<std::string, std::function<std::shared_ptr<CGameObject>()>> reg;
@@ -30,10 +31,17 @@ CTypes::setters() {
     return &reg;
 }
 
-std::unordered_map<std::pair<std::type_index, std::type_index>, std::shared_ptr<CSerializerBase>> *
+std::unordered_map<std::pair<std::type_index, std::type_index>, std::shared_ptr<CSerializerBase>, vstd::pair_hash> *
 CTypes::serializers() {
-    static std::unordered_map<std::pair<std::type_index, std::type_index>, std::shared_ptr<CSerializerBase>> reg;
+    static std::unordered_map<std::pair<std::type_index, std::type_index>, std::shared_ptr<CSerializerBase>,
+                              vstd::pair_hash>
+        reg;
     return &reg;
+}
+
+std::unordered_map<std::type_index, std::type_index> *CTypes::primitiveTypes() {
+    static std::unordered_map<std::type_index, std::type_index> _primitive_types;
+    return &_primitive_types;
 }
 
 bool CTypes::is_map_type(std::type_index index) { return vstd::ctn(*map_types(), index); }
@@ -41,6 +49,16 @@ bool CTypes::is_map_type(std::type_index index) { return vstd::ctn(*map_types(),
 bool CTypes::is_pointer_type(std::type_index index) { return vstd::ctn(*pointer_types(), index); }
 
 bool CTypes::is_array_type(std::type_index index) { return vstd::ctn(*array_types(), index); }
+
+bool CTypes::isPrimitiveType(std::type_index index) { return vstd::ctn(*primitiveTypes(), index); }
+
+std::optional<std::type_index> CTypes::primitiveValueType(std::type_index index) {
+    auto found = primitiveTypes()->find(index);
+    if (found == primitiveTypes()->end()) {
+        return std::nullopt;
+    }
+    return found->second;
+}
 
 std::unordered_set<std::type_index> *CTypes::map_types() {
     static std::unordered_set<std::type_index> _map_types;
@@ -62,6 +80,7 @@ struct register_all_types {
     register_all_types() {
         type_registration::registerObjectTypes();
         type_registration::registerCoreTypes();
+        native_plugin::registerGameplayTypeMetadata();
         type_registration::registerHandlerTypes();
         type_registration::registerGuiTypes();
         type_registration::registerGuiPanelTypes();

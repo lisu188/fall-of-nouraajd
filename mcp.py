@@ -21,6 +21,8 @@ from pathlib import Path
 from typing import Any
 from urllib.parse import urlparse
 
+import game_simulation
+
 JSONRPC_VERSION = "2.0"
 SERVER_NAME = "fall-of-nouraajd-engine-mcp"
 SERVER_TITLE = "Fall of Nouraajd Engine MCP"
@@ -46,7 +48,15 @@ LOG_LEVELS = {
 MAX_MCP_MESSAGE_BYTES = 1024 * 1024
 MAX_HTTP_SESSIONS = 32
 MAX_HTTP_STREAMS_PER_SESSION = 4
+MAX_MCP_HANDLES_PER_SESSION = 10_000
 MAX_TRACE_STRING_BYTES = 512
+# Handle methods that trigger engine pathfinding from arbitrary, client-supplied coordinates.
+# These are validated against the loaded map extents before invocation so an MCP client cannot
+# steer the pathfinder over sparse or effectively unbounded coordinate space.
+MCP_PATHFINDING_METHODS = frozenset({"setTarget"})
+# Hard ceiling on any single target coordinate magnitude accepted from MCP, applied even when a map
+# advertises no explicit bounds. Keeps the pathfinder envelope finite for sandbox/unbounded maps.
+MCP_MAX_TARGET_MAGNITUDE = 1_000_000
 MCP_EXCLUDED_EXPORTS = {
     "load",
     "register",
@@ -54,12 +64,14 @@ MCP_EXCLUDED_EXPORTS = {
     "trigger",
 }
 MCP_ALLOWED_EXPORTS = {
+    "craftRecipe",
     "CGameLoader.loadGame",
     "CGameLoader.loadGui",
     "CGameLoader.startGame",
     "CGameLoader.startGameWithPlayer",
     "CGameLoader.startRandomGameWithPlayer",
     "CGameLoader.loadSavedGame",
+    "CMapLoader.saveWithResult",
     "event_loop.instance",
     "jsonify",
     "logger",
@@ -73,6 +85,7 @@ MCP_ALLOWED_HANDLE_METHODS = {
         "getLabel",
         "getName",
         "getNumericProperty",
+        "getObjectProperty",
         "getStringProperty",
         "getType",
         "getTypeId",
@@ -94,6 +107,13 @@ MCP_ALLOWED_HANDLE_METHODS = {
         "getMap",
         "getObjectHandler",
         "getRngHandler",
+        "getSceneManager",
+    },
+    "CSceneManager": {
+        "getPendingMapName",
+        "getTransitionStateName",
+        "isTransitionPending",
+        "requestMapChange",
     },
     "CMap": {
         "addObjectByName",
@@ -108,6 +128,7 @@ MCP_ALLOWED_HANDLE_METHODS = {
         "getPlayer",
         "getTile",
         "getTurn",
+        "lookupNavigationStepCost",
         "move",
         "removeObjectByName",
         "replaceTile",
@@ -125,11 +146,20 @@ MCP_ALLOWED_HANDLE_METHODS = {
         "addItems",
         "countItems",
         "getActions",
+        "getEffectiveInteractions",
+        "getArchetypeClassId",
+        "getArchetypeClassLabel",
+        "getArchetypeRaceId",
+        "getArchetypeRaceLabel",
+        "getEffects",
         "getGold",
+        "getHp",
+        "getHpMax",
         "getHpRatio",
         "getItems",
         "getLevel",
         "getMana",
+        "getManaMax",
         "heal",
         "healProc",
         "isAlive",
@@ -144,7 +174,24 @@ MCP_ALLOWED_HANDLE_METHODS = {
         "addQuest",
         "checkQuests",
         "getCompletedQuests",
+        "getController",
+        "getFightController",
         "getQuests",
+        "setFightController",
+    },
+    "CQuest": {
+        "getHint",
+        "getObjective",
+        "getReward",
+        "isCompleted",
+    },
+    "CPlayerController": {
+        "isCompleted",
+        "setTarget",
+    },
+    "CInteraction": {
+        "getCommittedManaRefund",
+        "onAction",
     },
     "CObjectHandler": {
         "createObject",
@@ -192,6 +239,9 @@ MCP_ALLOWED_HANDLE_METHODS = {
         "remove",
         "sellItem",
     },
+    "SpawnPoint": {
+        "sealBreach",
+    },
     "event_loop": {
         "run",
     },
@@ -217,6 +267,13 @@ class ClientStream:
 
 
 @dataclass
+class HandleRegistry:
+    handles: dict[str, Any] = field(default_factory=dict)
+    object_handles: dict[int, str] = field(default_factory=dict)
+    closed: bool = False
+
+
+@dataclass
 class ConnectionState:
     transport: str
     protocol_version: str
@@ -225,6 +282,7 @@ class ConnectionState:
     client_capabilities: dict[str, Any] = field(default_factory=dict)
     client_info: dict[str, Any] = field(default_factory=dict)
     streams: dict[str, ClientStream] = field(default_factory=dict)
+    handle_registry: HandleRegistry = field(default_factory=HandleRegistry)
 
 
 @dataclass
@@ -263,7 +321,8 @@ class EngineMcpServer:
         self.trace_messages = trace_messages
         self.native_log_sink = native_log_sink
         self.native_log_path = native_log_path
-        self.handles: dict[str, Any] = {}
+        self._stdio_handles = HandleRegistry()
+        self.handles = self._stdio_handles.handles
         self.next_handle = 1
         self.exports: dict[str, ExportedCallable] = {}
         self.game_module: Any | None = None
@@ -288,11 +347,12 @@ class EngineMcpServer:
 
     def import_modules(self) -> None:
         os.chdir(self.build_dir)
-        sys.path.insert(0, str(self.repo_root / "res"))
-        sys.path.insert(0, str(self.build_dir))
+        self._insert_import_path(self.repo_root / "res")
+        self._insert_import_path(self.repo_root)
+        self._insert_import_path(self.build_dir)
         for extension_dir in reversed(self._extension_search_dirs()):
             if extension_dir.exists():
-                sys.path.insert(0, str(extension_dir))
+                self._insert_import_path(extension_dir)
         try:
             self._game_module = importlib.import_module("_game")
         except ModuleNotFoundError as exc:
@@ -308,6 +368,24 @@ class EngineMcpServer:
         if self.build_config:
             return [self.build_dir / self.build_config]
         return [self.build_dir / config for config in ("Release", "Debug", "RelWithDebInfo", "MinSizeRel")]
+
+    @staticmethod
+    def _insert_import_path(path: Path) -> None:
+        if not path.exists():
+            return
+        path_text = str(path)
+        if path_text not in sys.path:
+            sys.path.insert(0, path_text)
+
+    @staticmethod
+    def _is_resource_root(path: Path) -> bool:
+        return (path / "config").is_dir() and (path / "maps").is_dir() and (path / "plugins").is_dir()
+
+    def _resource_root(self) -> Path | None:
+        for candidate in (self.build_dir, self.repo_root, self.repo_root / "res"):
+            if self._is_resource_root(candidate):
+                return candidate
+        return None
 
     def inspect_and_export(self) -> None:
         if self._game_module is None or self.game_module is None:
@@ -411,6 +489,12 @@ class EngineMcpServer:
         return None
 
     def serve_stdio(self) -> None:
+        try:
+            self._serveStdioMessages()
+        finally:
+            self._closeHandleRegistry(self._stdio_handles)
+
+    def _serveStdioMessages(self) -> None:
         logger.info("starting stdio MCP server")
         while True:
             try:
@@ -728,6 +812,11 @@ class EngineMcpServer:
 
         new_session_id: str | None = None
         if transport == "stdio":
+            if self.stdio_state is not None:
+                self._closeHandleRegistry(self._stdio_handles)
+                self._stdio_handles = HandleRegistry()
+                self.handles = self._stdio_handles.handles
+            state.handle_registry = self._stdio_handles
             self.stdio_state = state
         else:
             with self._lock:
@@ -822,6 +911,8 @@ class EngineMcpServer:
     def terminate_session(self, session_id: str) -> bool:
         with self._lock:
             state = self.http_sessions.pop(session_id, None)
+            if state is not None:
+                self._closeHandleRegistry(state.handle_registry)
         if state is None:
             return False
         for stream in list(state.streams.values()):
@@ -932,6 +1023,80 @@ class EngineMcpServer:
                 },
             },
             {
+                "name": "engine_release_handles",
+                "title": "Release engine handles",
+                "description": "Release handles no longer needed by this session. Released handles become invalid.",
+                "inputSchema": {
+                    "type": "object",
+                    "properties": {
+                        "handles": {
+                            "type": "array",
+                            "items": {"type": "string"},
+                            "maxItems": MAX_MCP_HANDLES_PER_SESSION,
+                        }
+                    },
+                    "required": ["handles"],
+                    "additionalProperties": False,
+                },
+                "outputSchema": {
+                    "type": "object",
+                    "properties": {"released": {"type": "integer"}},
+                    "required": ["released"],
+                    "additionalProperties": False,
+                },
+            },
+            {
+                "name": "simulation_run",
+                "title": "Run deterministic game simulation",
+                "description": (
+                    "Start a game and execute bounded high-level simulation steps for Codex/MCP walkthroughs."
+                ),
+                "inputSchema": {
+                    "type": "object",
+                    "properties": {
+                        "map": {"type": "string"},
+                        "player_class": {"type": "string", "default": "Warrior"},
+                        "load_gui": {"type": "boolean", "default": False},
+                        "steps": {
+                            "type": "array",
+                            "default": [],
+                            "items": {"type": "object"},
+                            "maxItems": 100,
+                        },
+                    },
+                    "required": ["map"],
+                    "additionalProperties": False,
+                },
+                "outputSchema": {
+                    "oneOf": [
+                        {
+                            "type": "object",
+                            "properties": {
+                                "map": {"type": "string"},
+                                "playerClass": {"type": "string"},
+                                "steps": {"type": "array"},
+                                "state": {"type": "object"},
+                                "questLog": {"type": "object"},
+                                "inventory": {"type": "array"},
+                            },
+                            "required": ["map", "playerClass", "steps", "state", "questLog", "inventory"],
+                            "additionalProperties": False,
+                        },
+                        {
+                            "type": "object",
+                            "properties": {
+                                "step": {"type": "string"},
+                                "error": {"type": "string"},
+                                "state": {"type": "object"},
+                                "traceback": {"type": "string"},
+                            },
+                            "required": ["step", "error"],
+                            "additionalProperties": False,
+                        },
+                    ],
+                },
+            },
+            {
                 "name": "map_design_brief",
                 "title": "Build map design brief",
                 "description": (
@@ -1038,7 +1203,7 @@ class EngineMcpServer:
             return result
 
         if tool_name == "engine_call":
-            result = self._engine_call(arguments)
+            result = self._engine_call(arguments, self._handleRegistry(transport, session_id))
             self._emit_log(
                 transport=transport,
                 session_id=session_id,
@@ -1049,13 +1214,42 @@ class EngineMcpServer:
             return result
 
         if tool_name == "engine_handle_call":
-            result = self._engine_handle_call(arguments)
+            result = self._engine_handle_call(arguments, self._handleRegistry(transport, session_id))
             self._emit_log(
                 transport=transport,
                 session_id=session_id,
                 level="info",
                 logger_name="tools",
                 data={"message": "tool call completed", "tool": tool_name},
+            )
+            return result
+
+        if tool_name == "engine_release_handles":
+            handles = arguments.get("handles")
+            if (
+                not isinstance(handles, list)
+                or len(handles) > MAX_MCP_HANDLES_PER_SESSION
+                or any(not isinstance(handle, str) or not handle for handle in handles)
+            ):
+                raise ProtocolError(-32602, "engine_release_handles requires a bounded array of handle strings")
+            registry = self._handleRegistry(transport, session_id)
+            with self._lock:
+                released = sum(self._releaseHandle(registry, handle) for handle in dict.fromkeys(handles))
+            structured = {"released": released}
+            return {
+                "content": [{"type": "text", "text": json.dumps(structured)}],
+                "structuredContent": structured,
+                "isError": False,
+            }
+
+        if tool_name == "simulation_run":
+            result = self._simulation_run(arguments)
+            self._emit_log(
+                transport=transport,
+                session_id=session_id,
+                level="info",
+                logger_name="tools",
+                data={"message": "tool call completed", "tool": tool_name, "isError": result.get("isError", False)},
             )
             return result
 
@@ -1072,7 +1266,7 @@ class EngineMcpServer:
 
         raise ProtocolError(-32602, f"Unknown tool: {tool_name}")
 
-    def _engine_call(self, arguments: dict[str, Any]) -> dict[str, Any]:
+    def _engine_call(self, arguments: dict[str, Any], registry: HandleRegistry | None = None) -> dict[str, Any]:
         name = arguments.get("name")
         call_args = arguments.get("args", [])
         call_kwargs = arguments.get("kwargs", {})
@@ -1089,10 +1283,10 @@ class EngineMcpServer:
             raise ProtocolError(-32602, f"Callable not exported: {name}")
 
         try:
-            resolved_args = self._resolve_handle_references(call_args)
-            resolved_kwargs = self._resolve_handle_references(call_kwargs)
+            resolved_args = self._resolve_handle_references(call_args, registry)
+            resolved_kwargs = self._resolve_handle_references(call_kwargs, registry)
             result = exported.callable_obj(*resolved_args, **resolved_kwargs)
-            serialized = self._serialize_result(result)
+            serialized = self._serialize_result(result, registry)
             structured = {
                 "name": name,
                 "source": exported.source,
@@ -1126,7 +1320,8 @@ class EngineMcpServer:
                 "isError": True,
             }
 
-    def _engine_handle_call(self, arguments: dict[str, Any]) -> dict[str, Any]:
+    def _engine_handle_call(self, arguments: dict[str, Any], registry: HandleRegistry | None = None) -> dict[str, Any]:
+        registry = registry if registry is not None else self._stdio_handles
         handle = arguments.get("handle")
         method = arguments.get("method")
         call_args = arguments.get("args", [])
@@ -1147,7 +1342,9 @@ class EngineMcpServer:
                 "structuredContent": result,
                 "isError": True,
             }
-        if handle not in self.handles:
+        with self._lock:
+            target = registry.handles.get(handle)
+        if target is None:
             result = {"error": f"Unknown handle: {handle}"}
             return {
                 "content": [{"type": "text", "text": json.dumps(result, ensure_ascii=False)}],
@@ -1155,7 +1352,19 @@ class EngineMcpServer:
                 "isError": True,
             }
 
-        target = self.handles[handle]
+        # Authorize against the allowlist BEFORE dereferencing the client-supplied
+        # method name. Doing getattr(target, method) first would fire the getter of
+        # any non-allowlisted property/descriptor, and the ordering also leaked a
+        # method-existence oracle (missing -> "Unknown method", present-but-denied
+        # -> "not exported"). Fail closed: anything not allowlisted is uniformly
+        # rejected as not exported before the object is touched.
+        if method not in self._allowed_handle_methods_for(target):
+            result = {"error": f"Method `{method}` is not exported for handle calls"}
+            return {
+                "content": [{"type": "text", "text": json.dumps(result, ensure_ascii=False)}],
+                "structuredContent": result,
+                "isError": True,
+            }
         try:
             method_callable = getattr(target, method)
         except AttributeError:
@@ -1173,19 +1382,31 @@ class EngineMcpServer:
                 "structuredContent": result,
                 "isError": True,
             }
-        if method not in self._allowed_handle_methods_for(target):
-            result = {"error": f"Method `{method}` is not exported for handle calls"}
+
+        try:
+            resolved_args = self._resolve_handle_references(call_args, registry)
+            resolved_kwargs = self._resolve_handle_references(call_kwargs, registry)
+        except Exception as exc:
+            error_payload = {"error": str(exc)}
             return {
-                "content": [{"type": "text", "text": json.dumps(result, ensure_ascii=False)}],
-                "structuredContent": result,
+                "content": [{"type": "text", "text": json.dumps(error_payload, ensure_ascii=False)}],
+                "structuredContent": error_payload,
+                "isError": True,
+            }
+
+        guard_error = self._validate_pathfinding_call(target, method, resolved_args, resolved_kwargs)
+        if guard_error is not None:
+            return {
+                "content": [{"type": "text", "text": json.dumps(guard_error, ensure_ascii=False)}],
+                "structuredContent": guard_error,
                 "isError": True,
             }
 
         try:
-            resolved_args = self._resolve_handle_references(call_args)
-            resolved_kwargs = self._resolve_handle_references(call_kwargs)
             result = method_callable(*resolved_args, **resolved_kwargs)
-            serialized = self._serialize_result(result)
+            if method in {"getQuests", "getCompletedQuests"} and isinstance(result, (set, frozenset)):
+                result = list(result)
+            serialized = self._serialize_result(result, registry)
             structured = {"result": serialized}
             return {
                 "content": [
@@ -1213,6 +1434,77 @@ class EngineMcpServer:
                 "isError": True,
             }
 
+    def _simulation_run(self, arguments: dict[str, Any]) -> dict[str, Any]:
+        map_name = arguments.get("map")
+        player_class = arguments.get("player_class", "Warrior")
+        load_gui = arguments.get("load_gui", False)
+        steps = arguments.get("steps", [])
+
+        if self.game_module is None:
+            raise ProtocolError(-32603, "simulation_run requires imported game modules")
+        if not isinstance(map_name, str) or not map_name:
+            raise ProtocolError(-32602, "simulation_run requires non-empty string `map`")
+        if not isinstance(player_class, str) or not player_class:
+            raise ProtocolError(-32602, "simulation_run `player_class` must be a non-empty string")
+        if not isinstance(load_gui, bool):
+            raise ProtocolError(-32602, "simulation_run `load_gui` must be a boolean")
+        if not isinstance(steps, list):
+            raise ProtocolError(-32602, "simulation_run `steps` must be an array")
+        if len(steps) > 100:
+            raise ProtocolError(-32602, "simulation_run accepts at most 100 steps")
+        for step in steps:
+            if isinstance(step, dict) and step.get("action") == "capture_gui_screenshot" and step.get("path"):
+                raise ProtocolError(
+                    -32602,
+                    "simulation_run capture_gui_screenshot returns screenshot data inline; file paths are not allowed",
+                )
+
+        # Reject extreme per-action iteration counts before starting the game or
+        # executing any loop. runSimulation/runSteps re-validate as a safety net,
+        # but enforcing it here surfaces a structured error and guarantees no
+        # engine work happens for an over-budget payload.
+        try:
+            game_simulation.validateSteps(steps)
+        except game_simulation.SimulationError as exc:
+            error_payload = exc.asDict()
+            return {
+                "content": [{"type": "text", "text": json.dumps(error_payload, ensure_ascii=False)}],
+                "structuredContent": error_payload,
+                "isError": True,
+            }
+
+        try:
+            structured = game_simulation.runSimulation(
+                self.game_module,
+                map_name,
+                player_class=player_class,
+                load_gui=load_gui,
+                steps=steps,
+            )
+            return {
+                "content": [{"type": "text", "text": json.dumps(structured, ensure_ascii=False)}],
+                "structuredContent": structured,
+                "isError": False,
+            }
+        except game_simulation.SimulationError as exc:
+            error_payload = exc.asDict()
+            return {
+                "content": [{"type": "text", "text": json.dumps(error_payload, ensure_ascii=False)}],
+                "structuredContent": error_payload,
+                "isError": True,
+            }
+        except Exception as exc:
+            error_payload = {
+                "step": "simulation_run",
+                "error": str(exc),
+                "traceback": traceback.format_exc(limit=10),
+            }
+            return {
+                "content": [{"type": "text", "text": json.dumps(error_payload, ensure_ascii=False)}],
+                "structuredContent": error_payload,
+                "isError": True,
+            }
+
     def _map_design_brief(self, arguments: dict[str, Any]) -> dict[str, Any]:
         map_name = arguments.get("map_name")
         include_objects = self._optional_bool(arguments, "include_objects", True)
@@ -1230,7 +1522,8 @@ class EngineMcpServer:
         if map_name is not None and (not isinstance(map_name, str) or not map_name):
             raise ProtocolError(-32602, "map_design_brief `map_name` must be a non-empty string")
 
-        maps_root = (self.repo_root / "res" / "maps").resolve()
+        resource_root = self._resource_root()
+        maps_root = (resource_root / "maps").resolve() if resource_root else (self.repo_root / "res" / "maps").resolve()
         if not maps_root.is_dir():
             raise ProtocolError(-32603, f"Maps directory not found: {self._relative_path(maps_root)}")
 
@@ -1272,12 +1565,12 @@ class EngineMcpServer:
 
     def _resolve_map_dir(self, maps_root: Path, map_name: str) -> Path:
         if "/" in map_name or "\\" in map_name or map_name in {".", ".."}:
-            raise ProtocolError(-32602, "map_design_brief `map_name` must name a direct child of res/maps")
+            raise ProtocolError(-32602, "map_design_brief `map_name` must name a direct child of maps")
         map_dir = (maps_root / map_name).resolve()
         try:
             map_dir.relative_to(maps_root)
         except ValueError as exc:
-            raise ProtocolError(-32602, "map_design_brief `map_name` must stay under res/maps") from exc
+            raise ProtocolError(-32602, "map_design_brief `map_name` must stay under maps") from exc
         if not map_dir.is_dir():
             raise ProtocolError(-32602, f"Unknown map: {map_name}")
         return map_dir
@@ -1354,7 +1647,8 @@ class EngineMcpServer:
         }
 
     def _resource_catalog(self, max_ids_per_catalog: int) -> tuple[dict[str, list[str]], list[dict[str, Any]]]:
-        config_root = self.repo_root / "res" / "config"
+        resource_root = self._resource_root()
+        config_root = (resource_root / "config") if resource_root else self.repo_root / "res" / "config"
         resource_index: dict[str, list[str]] = {}
         catalog: list[dict[str, Any]] = []
         if not config_root.is_dir():
@@ -1803,18 +2097,135 @@ class EngineMcpServer:
         except ValueError:
             return str(path)
 
-    def _resolve_handle_references(self, value: Any) -> Any:
+    @staticmethod
+    def _coord_components(coords: Any) -> tuple[int, int, int] | None:
+        try:
+            return int(coords.x), int(coords.y), int(coords.z)
+        except (AttributeError, TypeError, ValueError):
+            return None
+
+    @staticmethod
+    def _bounds_for_level(bounds: Any, z: int) -> int | None:
+        if bounds is None:
+            return None
+        try:
+            items = bounds.items()
+        except AttributeError:
+            try:
+                items = dict(bounds).items()
+            except (TypeError, ValueError):
+                return None
+        for level, bound in items:
+            try:
+                if int(level) == z:
+                    return int(bound)
+            except (TypeError, ValueError):
+                continue
+        return None
+
+    def _validate_pathfinding_call(
+        self, target: Any, method: str, resolved_args: list[Any], resolved_kwargs: dict[str, Any]
+    ) -> dict[str, Any] | None:
+        """Reject MCP-triggered pathfinding over out-of-bounds or impassable coordinates.
+
+        Returns an error payload (to be surfaced as an isError tool result) when the call would
+        steer the engine pathfinder toward an invalid target, or None when the call is allowed.
+        Validation is intentionally conservative: when engine objects do not expose the expected
+        accessors it defers to normal handling rather than blocking legitimate calls.
+        """
+        if method not in MCP_PATHFINDING_METHODS:
+            return None
+
+        # CPlayerController.setTarget(player, coords)
+        player = resolved_args[0] if len(resolved_args) > 0 else resolved_kwargs.get("player")
+        coords = resolved_args[1] if len(resolved_args) > 1 else resolved_kwargs.get("target")
+        if coords is None:
+            return None
+
+        components = self._coord_components(coords)
+        if components is None:
+            return None
+        x, y, z = components
+
+        if abs(x) > MCP_MAX_TARGET_MAGNITUDE or abs(y) > MCP_MAX_TARGET_MAGNITUDE:
+            return {
+                "error": (
+                    f"setTarget rejected: coordinate ({x}, {y}, {z}) exceeds the maximum allowed "
+                    f"magnitude {MCP_MAX_TARGET_MAGNITUDE}"
+                )
+            }
+
+        game_map = None
+        get_map = getattr(player, "getMap", None)
+        if callable(get_map):
+            try:
+                game_map = get_map()
+            except Exception:
+                game_map = None
+        if game_map is None:
+            return None
+
+        x_bounds = self._bounds_for_level(self._safe_engine_call(game_map, "getXBounds"), z)
+        y_bounds = self._bounds_for_level(self._safe_engine_call(game_map, "getYBounds"), z)
+        if x_bounds is not None and (x < 0 or x > x_bounds):
+            return {"error": (f"setTarget rejected: x={x} is outside map extents [0, {x_bounds}] for level z={z}")}
+        if y_bounds is not None and (y < 0 or y > y_bounds):
+            return {"error": (f"setTarget rejected: y={y} is outside map extents [0, {y_bounds}] for level z={z}")}
+
+        can_step = getattr(game_map, "canStep", None)
+        if callable(can_step):
+            try:
+                passable = can_step(coords)
+            except Exception:
+                passable = None
+            if passable is False:
+                return {"error": (f"setTarget rejected: target ({x}, {y}, {z}) is not a passable tile")}
+
+        return None
+
+    @staticmethod
+    def _safe_engine_call(obj: Any, method: str) -> Any:
+        accessor = getattr(obj, method, None)
+        if not callable(accessor):
+            return None
+        try:
+            return accessor()
+        except Exception:
+            return None
+
+    def _handleRegistry(self, transport: str, session_id: str | None) -> HandleRegistry:
+        if transport == "http":
+            return self._require_connection_state(transport, session_id).handle_registry
+        return self._stdio_handles
+
+    @staticmethod
+    def _releaseHandle(registry: HandleRegistry, handle: str) -> int:
+        value = registry.handles.pop(handle, None)
+        if value is None:
+            return 0
+        registry.object_handles.pop(id(value), None)
+        return 1
+
+    def _closeHandleRegistry(self, registry: HandleRegistry) -> None:
+        with self._lock:
+            registry.closed = True
+            registry.handles.clear()
+            registry.object_handles.clear()
+
+    def _resolve_handle_references(self, value: Any, registry: HandleRegistry | None = None) -> Any:
+        registry = registry if registry is not None else self._stdio_handles
         if isinstance(value, list):
-            return [self._resolve_handle_references(item) for item in value]
+            return [self._resolve_handle_references(item, registry) for item in value]
         if isinstance(value, tuple):
-            return tuple(self._resolve_handle_references(item) for item in value)
+            return tuple(self._resolve_handle_references(item, registry) for item in value)
         if isinstance(value, dict):
             handle = value.get("__handle__")
             if isinstance(handle, str):
-                if handle not in self.handles:
-                    raise ProtocolError(-32602, f"Unknown handle: {handle}")
-                return self.handles[handle]
-            return {str(key): self._resolve_handle_references(item) for key, item in value.items()}
+                with self._lock:
+                    if handle not in registry.handles:
+                        raise ProtocolError(-32602, f"Unknown handle: {handle}")
+                    return registry.handles[handle]
+            return {str(key): self._resolve_handle_references(item, registry) for key, item in value.items()}
         return value
 
     def _python_methods_for(self, value: Any) -> list[dict[str, str]]:
@@ -1839,16 +2250,37 @@ class EngineMcpServer:
             methods.update(MCP_ALLOWED_HANDLE_METHODS.get(class_name, set()))
         return methods
 
-    def _serialize_result(self, value: Any) -> Any:
+    def _serialize_result(self, value: Any, registry: HandleRegistry | None = None) -> Any:
+        registry = registry if registry is not None else self._stdio_handles
+        added = []
+        with self._lock:
+            if registry.closed:
+                raise ProtocolError(-32001, "Session has been terminated")
+            try:
+                return self._serializeValue(value, registry, added)
+            except Exception:
+                for handle in added:
+                    self._releaseHandle(registry, handle)
+                raise
+
+    def _serializeValue(self, value: Any, registry: HandleRegistry, added: list[str]) -> Any:
         if value is None or isinstance(value, (str, int, float, bool)):
             return value
-        if isinstance(value, (list, tuple)):
-            return [self._serialize_result(item) for item in value]
+        if isinstance(value, (list, tuple, set, frozenset)):
+            return [self._serializeValue(item, registry, added) for item in value]
         if isinstance(value, dict):
-            return {str(key): self._serialize_result(item) for key, item in value.items()}
-        handle = f"h_{self.next_handle}"
-        self.next_handle += 1
-        self.handles[handle] = value
+            return {str(key): self._serializeValue(item, registry, added) for key, item in value.items()}
+        handle = registry.object_handles.get(id(value))
+        if handle is None or registry.handles.get(handle) is not value:
+            if len(registry.handles) >= MAX_MCP_HANDLES_PER_SESSION:
+                raise ProtocolError(
+                    -32003, "Session handle limit reached; release unused handles with engine_release_handles"
+                )
+            handle = f"h_{self.next_handle}"
+            self.next_handle += 1
+            registry.handles[handle] = value
+            registry.object_handles[id(value)] = handle
+            added.append(handle)
         result = {"__handle__": handle, "__type__": value.__class__.__name__, "repr": repr(value)}
         python_methods = self._python_methods_for(value)
         if python_methods:
@@ -1971,14 +2403,18 @@ class EngineMcpServer:
                 while raw and not raw.endswith(b"\n"):
                     raw = sys.stdin.buffer.readline(8192)
                 raise ProtocolError(-32600, "MCP stdio message exceeds 1 MiB limit")
-            line = raw.decode("utf-8").strip()
+            try:
+                line = raw.decode("utf-8").strip()
+            except UnicodeDecodeError as exc:
+                raise ProtocolError(-32700, "Parse error: invalid UTF-8") from exc
             if not line:
                 continue
             return json.loads(line)
 
     @staticmethod
     def _write_stdio_message(payload: Any) -> None:
-        body = json.dumps(payload, ensure_ascii=False, separators=(",", ":"))
+        # ASCII JSON remains valid UTF-8 even when redirected Windows stdout uses a legacy code page.
+        body = json.dumps(payload, ensure_ascii=True, separators=(",", ":"))
         sys.stdout.write(body)
         sys.stdout.write("\n")
         sys.stdout.flush()
@@ -2214,7 +2650,7 @@ class EngineHttpRequestHandler(BaseHTTPRequestHandler):
         try:
             raw_body = self.rfile.read(length)
             payload = json.loads(raw_body.decode("utf-8"))
-        except json.JSONDecodeError:
+        except (json.JSONDecodeError, UnicodeDecodeError):
             self._write_mcp_error(HTTPStatus.BAD_REQUEST, None, -32700, "Parse error")
             return
 
@@ -2418,6 +2854,10 @@ def configure_logging(level_name: str, log_sink: str = "stderr", trace_messages:
     )
 
 
+def is_resource_root(path: Path) -> bool:
+    return (path / "config").is_dir() and (path / "maps").is_dir() and (path / "plugins").is_dir()
+
+
 def main() -> int:
     args = parse_args()
     python_log_sink = "stderr" if args.stdio else "stdout"
@@ -2425,6 +2865,8 @@ def main() -> int:
     repo_root = Path(args.repo_root).resolve() if args.repo_root else Path(__file__).resolve().parent
     build_dir_arg = Path(args.build_dir)
     build_dir = build_dir_arg.resolve() if build_dir_arg.is_absolute() else (repo_root / build_dir_arg).resolve()
+    if not build_dir.exists() and is_resource_root(repo_root):
+        build_dir = repo_root
     native_log_sink = args.native_log_sink or ("file" if args.stdio else "stdout")
     native_log_path: Path | None = None
     if native_log_sink == "file":

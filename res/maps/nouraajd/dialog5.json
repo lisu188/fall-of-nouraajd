@@ -2,6 +2,7 @@
   "berenDialog": {
     "class": "BerenDialog",
     "properties": {
+      "questIds": "deliverLetterQuest,retrieveRelicQuest,cleanseCaveQuest",
       "states": [
         {
           "class": "CDialogState",
@@ -16,7 +17,8 @@
                   "action": "deliver_letter",
                   "nextStateId": "LETTER_DELIVERED",
                   "text": "I carry a letter for you.",
-                  "condition": "can_deliver_letter"
+                  "condition": "can_deliver_letter",
+                  "actionLabel": "Deliver letter"
                 }
               },
               {
@@ -26,7 +28,8 @@
                   "action": "return_relic",
                   "nextStateId": "RELIC_RETURNED",
                   "text": "I recovered the relic.",
-                  "condition": "can_return_relic"
+                  "condition": "can_return_relic",
+                  "actionLabel": "Return relic"
                 }
               },
               {
@@ -36,7 +39,8 @@
                   "action": "finish_cleanse",
                   "nextStateId": "CAVE_PURGED",
                   "text": "The cave has been cleansed.",
-                  "condition": "can_finish_cleanse"
+                  "condition": "can_finish_cleanse",
+                  "actionLabel": "Complete quest"
                 }
               },
               {
@@ -46,13 +50,25 @@
                   "action": "inspect_stained_glass",
                   "nextStateId": "STAINED_GLASS",
                   "text": "Let me inspect the chapel's stained glass.",
-                  "condition": "can_inspect_stained_glass"
+                  "condition": "can_inspect_stained_glass",
+                  "actionLabel": "Inquisitor"
+                }
+              },
+              {
+                "class": "CDialogOption",
+                "properties": {
+                  "number": 4,
+                  "action": "decode_stained_glass_ward",
+                  "nextStateId": "SORCERER_WARD",
+                  "text": "Decode the warding sigils in the stained glass.",
+                  "condition": "can_decode_stained_glass_ward",
+                  "actionLabel": "Sorcerer"
                 }
               },
               {
                 "ref": "exitOption",
                 "properties": {
-                  "number": 4
+                  "number": 5
                 }
               }
             ]
@@ -63,6 +79,21 @@
           "properties": {
             "stateId": "LETTER_DELIVERED",
             "text": "Thank you for bearing the mayor's plea. Now descend into the catacombs and retrieve the holy relic our town clings to.",
+            "options": [
+              {
+                "ref": "exitOption",
+                "properties": {
+                  "number": 0
+                }
+              }
+            ]
+          }
+        },
+        {
+          "class": "CDialogState",
+          "properties": {
+            "stateId": "SORCERER_WARD",
+            "text": "The glass hides a cold ward written in patient circles. You copy one safe arc before the rest bites back.",
             "options": [
               {
                 "ref": "exitOption",
@@ -118,7 +149,8 @@
             ]
           }
         }
-      ]
+      ],
+      "speaker": "Father Beren"
     }
   }
 }

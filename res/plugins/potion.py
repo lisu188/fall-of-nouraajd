@@ -28,3 +28,10 @@ def load(self, context):
         def onUse(self, event):
             power = self.getNumericProperty("power")
             event.getCause().addManaProc(power * 20)
+
+    @register(context)
+    class RejuvenationPotion(CPotion):
+        def onUse(self, event):
+            power = self.getNumericProperty("power")
+            event.getCause().healProc(power * 20)
+            event.getCause().addManaProc(power * 20)

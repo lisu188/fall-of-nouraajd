@@ -2,6 +2,7 @@
   "dialog": {
     "class": "OctoBogzDialog",
     "properties": {
+      "questIds": "octoBogzQuest",
       "states": [
         {
           "class": "CDialogState",
@@ -13,6 +14,7 @@
                 "class": "CDialogOption",
                 "properties": {
                   "number": 0,
+                  "condition": "contract_not_started",
                   "nextStateId": "ASK_WHY",
                   "text": "Aye. Why the warning?"
                 }
@@ -21,8 +23,35 @@
                 "class": "CDialogOption",
                 "properties": {
                   "number": 1,
+                  "condition": "contract_not_started",
                   "nextStateId": "ASK_WHY",
                   "text": "I'm unsure. What troubles you?"
+                }
+              },
+              {
+                "class": "CDialogOption",
+                "properties": {
+                  "number": 2,
+                  "condition": "contract_active",
+                  "nextStateId": "ACTIVE_REMINDER",
+                  "text": "I'm still hunting the OctoBogz. Anything more I should know?"
+                }
+              },
+              {
+                "class": "CDialogOption",
+                "properties": {
+                  "number": 3,
+                  "condition": "contract_completed",
+                  "nextStateId": "COMPLETED_THANKS",
+                  "action": "accept_quest",
+                  "text": "The cave is quiet now. The OctoBogz are dead.",
+                  "actionLabel": "Claim reward"
+                }
+              },
+              {
+                "ref": "exitOption",
+                "properties": {
+                  "number": 4
                 }
               }
             ]
@@ -32,7 +61,7 @@
           "class": "CDialogState",
           "properties": {
             "stateId": "ASK_WHY",
-            "text": "Be careful. A cave out there seethes with OctoBogz—twisted things part octopus, part hare, all shadowcraft. They lash caravans with Abyssal Shadows and leave bones in the sand.",
+            "text": "Be careful. A cave out there seethes with OctoBogz—twisted things part octopus, part hare, all shadowcraft. They lash caravans with Abyssal Shadows and leave bones in the mire.",
             "options": [
               {
                 "class": "CDialogOption",
@@ -57,7 +86,7 @@
           "class": "CDialogState",
           "properties": {
             "stateId": "ASK_ABOUT_OCTOBOGZ",
-            "text": "They're clever and quick, ambushing from stone and sand alike. Their tentacles strike far, and the Abyssal Shadows they fling strip the warmth from flesh.",
+            "text": "They're clever and quick, ambushing from reed and mud alike. Their tentacles strike far, and the Abyssal Shadows they fling strip the warmth from flesh.",
             "options": [
               {
                 "class": "CDialogOption",
@@ -80,9 +109,11 @@
                 "class": "CDialogOption",
                 "properties": {
                   "number": 0,
+                  "condition": "contract_not_started",
                   "nextStateId": "ACCEPT_QUEST",
                   "action": "accept_quest",
-                  "text": "I'll see the cave purged of OctoBogz."
+                  "text": "I'll see the cave purged of OctoBogz.",
+                  "actionLabel": "Accept contract"
                 }
               },
               {
@@ -100,7 +131,7 @@
           "class": "CDialogState",
           "properties": {
             "stateId": "ACCEPT_QUEST",
-            "text": "Head east across the river. The cave is half-buried under boulders and sand; follow the guttural echoes and you'll find it.",
+            "text": "Head east across the river. The cave is half-sunk under boulders and silt; follow the guttural echoes and you'll find it.",
             "options": [
               {
                 "ref": "exitOption",
@@ -125,8 +156,39 @@
               }
             ]
           }
+        },
+        {
+          "class": "CDialogState",
+          "properties": {
+            "stateId": "ACTIVE_REMINDER",
+            "text": "You've already given us your word, and we've not forgotten it. The cave lies east across the river, half-sunk under boulders and silt—follow the guttural echoes. Come back when the OctoBogz are ash.",
+            "options": [
+              {
+                "ref": "exitOption",
+                "properties": {
+                  "number": 0
+                }
+              }
+            ]
+          }
+        },
+        {
+          "class": "CDialogState",
+          "properties": {
+            "stateId": "COMPLETED_THANKS",
+            "text": "Then it's true—the eastern road is safe again. You've done what none of us dared. The refugees will speak your name for years. Go in peace; our debt to you is paid in full.",
+            "options": [
+              {
+                "ref": "exitOption",
+                "properties": {
+                  "number": 0
+                }
+              }
+            ]
+          }
         }
-      ]
+      ],
+      "speaker": "The Refugees"
     }
   }
 }

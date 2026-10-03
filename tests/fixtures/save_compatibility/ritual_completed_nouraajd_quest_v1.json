@@ -1,0 +1,38 @@
+{
+  "format": "fall-of-nouraajd-save",
+  "mapName": "ritual",
+  "schemaVersion": 1,
+  "snapshot": {
+    "class": "CMap",
+    "properties": {
+      "description": "immutable completed external quest fixture",
+      "mapName": "ritual",
+      "objects": [
+        {
+          "class": "CPlayer",
+          "properties": {
+            "completedQuests": [
+              {
+                "class": "RolfQuest",
+                "properties": {
+                  "name": "rolfQuest",
+                  "typeId": "rolfQuest"
+                }
+              }
+            ],
+            "items": [],
+            "name": "player",
+            "posx": 3,
+            "posy": 22,
+            "posz": 0,
+            "quests": [],
+            "typeId": "Warrior"
+          }
+        }
+      ],
+      "tiles": [],
+      "triggers": [],
+      "turn": 58
+    }
+  }
+}

@@ -175,11 +175,17 @@ void registerCoreTypes() {
     registerCustomValueTypes();
 
     CTypes::register_type<CListInt, CGameObject>();
+    CTypes::registerPrimitiveType<CListInt, std::set<int>>();
     CTypes::register_type<CListString, CGameObject>();
+    CTypes::registerPrimitiveType<CListString, std::set<std::string>>();
     CTypes::register_type<CMapStringString, CGameObject>();
+    CTypes::registerPrimitiveType<CMapStringString, std::map<std::string, std::string>>();
     CTypes::register_type<CMapStringInt, CGameObject>();
+    CTypes::registerPrimitiveType<CMapStringInt, std::map<std::string, int>>();
     CTypes::register_type<CMapIntString, CGameObject>();
+    CTypes::registerPrimitiveType<CMapIntString, std::map<int, std::string>>();
     CTypes::register_type<CMapIntInt, CGameObject>();
+    CTypes::registerPrimitiveType<CMapIntInt, std::map<int, int>>();
 
     CTypes::register_type<CSlotConfig, CGameObject>();
     CTypes::register_type<CSlot, CGameObject>();

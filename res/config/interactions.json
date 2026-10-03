@@ -7,7 +7,8 @@
         "ref": "AbyssalShadowsEffect"
       },
       "label": "Abyssal Shadows",
-      "manaCost": 15
+      "manaCost": 15,
+      "description": "Deal shadow damage over 4 turns. Each pulse uses an attack roll, with a higher damage multiplier on the final turn."
     }
   },
   "ArmorOfEndlessWinter": {
@@ -18,14 +19,17 @@
         "ref": "ArmorOfEndlessWinterEffect"
       },
       "label": "Armor of Endless Winter",
-      "manaCost": 60
+      "manaCost": 60,
+      "selfTarget": true,
+      "description": "Increase your armor and restore 20% of maximum health each turn for 3 turns."
     }
   },
   "Attack": {
     "class": "Attack",
     "properties": {
       "animation": "images/interactions/attack",
-      "label": "Standard Attack"
+      "label": "Standard Attack",
+      "description": "Attack one enemy. A successful attack roll also activates your equipped weapon effect, even if the enemy blocks or resists the damage."
     }
   },
   "Backstab": {
@@ -36,7 +40,8 @@
         "ref": "Stun"
       },
       "label": "Stun",
-      "manaCost": 40
+      "manaCost": 40,
+      "description": "Strike for increased attack damage and potentially stun the enemy for 2 turns."
     }
   },
   "Barrier": {
@@ -47,7 +52,9 @@
         "ref": "BarrierEffect"
       },
       "label": "Barrier",
-      "manaCost": 17
+      "manaCost": 17,
+      "selfTarget": true,
+      "description": "Increase your Physical resistance by 10 percentage points for 3 turns. After bracing Nouraajd's gate, Warriors recover 3 mana after each cast; the full 17 mana is still required."
     }
   },
   "BloodThirst": {
@@ -58,7 +65,8 @@
       "manaCost": 35,
       "tags": [
         "heal"
-      ]
+      ],
+      "description": "Deal a small amount of Physical damage based on your attack damage and restore health by the same base amount."
     }
   },
   "Bloodlash": {
@@ -69,7 +77,8 @@
         "ref": "BloodlashEffect"
       },
       "label": "Bloodlash",
-      "manaCost": 30
+      "manaCost": 30,
+      "description": "Strike for increased attack damage and inflict further Physical damage over 3 turns."
     }
   },
   "ChaosBlast": {
@@ -77,7 +86,8 @@
     "properties": {
       "animation": "images/interactions/chaosblast",
       "label": "Chaos Blast",
-      "manaCost": 150
+      "manaCost": 150,
+      "description": "Deal fire and lightning damage based on the mana remaining after paying the spell's cost."
     }
   },
   "Chloroform": {
@@ -88,7 +98,8 @@
         "ref": "ChloroformEffect"
       },
       "label": "Chloroform",
-      "manaCost": 25
+      "manaCost": 25,
+      "description": "For 4 turns, stun the enemy on turns when their health is at or below 25%."
     }
   },
   "DeathStrike": {
@@ -96,7 +107,8 @@
     "properties": {
       "animation": "images/interactions/deathstrike",
       "label": "Death Strike",
-      "manaCost": 45
+      "manaCost": 45,
+      "description": "Strike for double attack damage, then strike again if the enemy is below 20% health."
     }
   },
   "Devour": {
@@ -104,7 +116,8 @@
     "properties": {
       "animation": "images/interactions/devour",
       "label": "Devour",
-      "manaCost": 75
+      "manaCost": 75,
+      "description": "Make an attack that cannot critically hit. On a hit, restore at least 1 health, based on 75% of the damage roll before enemy defenses."
     }
   },
   "DoubleAttack": {
@@ -112,12 +125,16 @@
     "properties": {
       "animation": "images/interactions/doubleattack",
       "label": "Double Attack",
-      "manaCost": 50
+      "manaCost": 50,
+      "description": "Make two standard attacks against one enemy."
     }
   },
   "ElemStaff": {
     "class": "ElemStaff",
-    "properties": {}
+    "properties": {
+      "description": "Deal 1 fire, 1 frost, and 1 lightning damage to one enemy before defenses.",
+      "label": "Elemental staff effect"
+    }
   },
   "EndlessPain": {
     "class": "EndlessPain",
@@ -127,7 +144,8 @@
         "ref": "EndlessPainEffect"
       },
       "label": "Endless Pain",
-      "manaCost": 25
+      "manaCost": 25,
+      "description": "Stun the enemy and inflict Physical damage over 2 turns. Damage scales with your attack damage."
     }
   },
   "FrostBolt": {
@@ -135,7 +153,8 @@
     "properties": {
       "animation": "images/interactions/frostbolt",
       "label": "Frost Bolt",
-      "manaCost": 20
+      "manaCost": 20,
+      "description": "Make a standard attack, then deal additional frost damage based on your Intelligence. After decoding Nouraajd's stained glass, Sorcerers recover 3 mana after each cast; the full 20 mana is still required."
     }
   },
   "LethalPoison": {
@@ -146,7 +165,8 @@
         "ref": "LethalPoisonEffect"
       },
       "label": "Lethal Poison",
-      "manaCost": 20
+      "manaCost": 20,
+      "description": "Make a standard attack and poison the enemy for 6 turns. Poison damage scales with your attack damage."
     }
   },
   "MagicMissile": {
@@ -154,7 +174,8 @@
     "properties": {
       "animation": "images/interactions/magicmissile",
       "label": "Magic Missile",
-      "manaCost": 5
+      "manaCost": 5,
+      "description": "Deal Physical damage to one enemy with a number of damage rolls that increases with your level."
     }
   },
   "Mutilation": {
@@ -165,7 +186,8 @@
         "ref": "MutilationEffect"
       },
       "label": "Mutilation",
-      "manaCost": 15
+      "manaCost": 15,
+      "description": "Strike for increased attack damage, then inflict Physical damage based on your Agility over 3 turns."
     }
   },
   "ShadowBolt": {
@@ -176,7 +198,8 @@
         "ref": "AbyssalShadowsEffect"
       },
       "label": "Shadow Bolt",
-      "manaCost": 45
+      "manaCost": 45,
+      "description": "Deal amplified attack damage as shadow damage, with a 50% chance to inflict Abyssal Shadows for 4 turns."
     }
   },
   "SneakAttack": {
@@ -184,7 +207,8 @@
     "properties": {
       "animation": "images/interactions/sneakattack",
       "label": "Sneak Attack",
-      "manaCost": 15
+      "manaCost": 15,
+      "description": "Make a standard attack, with a chance to attack again that increases with the enemy's remaining health. After following Nouraajd's robed men, Assasins recover 3 mana after each cast; the full 15 mana is still required."
     }
   },
   "Strike": {
@@ -192,7 +216,8 @@
     "properties": {
       "animation": "images/interactions/strike",
       "label": "Strike",
-      "manaCost": 25
+      "manaCost": 25,
+      "description": "Make an attack with additional damage from your damage bonus. Requires an equipped weapon."
     }
   },
   "Stunner": {
@@ -203,7 +228,8 @@
         "ref": "Stun"
       },
       "label": "Stunner",
-      "manaCost": 40
+      "manaCost": 40,
+      "description": "Stun one enemy for 2 turns."
     }
   },
   "ExposeCorruption": {
@@ -214,7 +240,8 @@
         "ref": "ExposeCorruptionEffect"
       },
       "label": "Expose Corruption",
-      "manaCost": 20
+      "manaCost": 20,
+      "description": "Attack and deal fire damage, then burn the enemy and reduce their armor and block chance for 3 turns. Clues strengthen the effect; cultists take extra fire damage."
     }
   },
   "SanctifiedWard": {
@@ -225,7 +252,9 @@
         "ref": "SanctifiedWardEffect"
       },
       "label": "Sanctified Ward",
-      "manaCost": 22
+      "manaCost": 22,
+      "selfTarget": true,
+      "description": "Heal yourself, then improve armor, Physical resistance, and hit chance while restoring health and mana for 3 turns. Clues strengthen the ward."
     }
   },
   "WayfarersStride": {
@@ -236,7 +265,9 @@
         "ref": "WayfarersStrideEffect"
       },
       "label": "Wayfarer's Stride",
-      "manaCost": 18
+      "manaCost": 18,
+      "selfTarget": true,
+      "description": "Restore mana, then improve Agility, block chance, and hit chance while restoring health and mana for 3 turns. Discovered routes strengthen the effect."
     }
   },
   "SmugglersMark": {
@@ -247,7 +278,356 @@
         "ref": "SmugglersMarkEffect"
       },
       "label": "Smuggler's Mark",
-      "manaCost": 20
+      "manaCost": 20,
+      "description": "Deal Physical damage and mark one enemy for 3 turns, reducing their block and hit chances while dealing more damage. Discovered routes strengthen the mark."
+    }
+  },
+  "AgannazarsScorcher": {
+    "class": "AgannazarsScorcher",
+    "properties": {
+      "animation": "images/interactions/chaosblast",
+      "label": "Agannazar's Scorcher",
+      "manaCost": 14,
+      "description": "Deal fire damage to one enemy, increasing with your Intelligence."
+    }
+  },
+  "ArmorOfFaith": {
+    "class": "ArmorOfFaith",
+    "properties": {
+      "animation": "images/interactions/armorofendlesswinter",
+      "effect": {
+        "ref": "ArmorOfFaithEffect"
+      },
+      "label": "Armor of Faith",
+      "manaCost": 12,
+      "selfTarget": true,
+      "description": "Improve your armor and your resistance to Physical and shadow damage for 4 turns."
+    }
+  },
+  "Bless": {
+    "class": "Bless",
+    "properties": {
+      "animation": "images/interactions/barrier",
+      "effect": {
+        "ref": "BlessEffect"
+      },
+      "label": "Bless",
+      "manaCost": 10,
+      "selfTarget": true,
+      "description": "Improve your hit chance for 4 turns, with a larger bonus at higher levels."
+    }
+  },
+  "BurningHands": {
+    "class": "BurningHands",
+    "properties": {
+      "animation": "images/interactions/chaosblast",
+      "label": "Burning Hands",
+      "manaCost": 8,
+      "description": "Deal fire damage to one enemy, increasing with your level."
+    }
+  },
+  "ChillTouch": {
+    "class": "ChillTouch",
+    "properties": {
+      "animation": "images/interactions/frostbolt",
+      "effect": {
+        "ref": "ChillTouchEffect"
+      },
+      "label": "Chill Touch",
+      "manaCost": 10,
+      "description": "Deal frost damage and reduce the enemy's hit chance for 3 turns."
+    }
+  },
+  "ChromaticOrb": {
+    "class": "ChromaticOrb",
+    "properties": {
+      "animation": "images/interactions/magicmissile",
+      "label": "Chromatic Orb",
+      "manaCost": 15,
+      "description": "Deal a randomly chosen damage type to one enemy. Damage increases with your level and Intelligence."
+    }
+  },
+  "Cloudkill": {
+    "class": "Cloudkill",
+    "properties": {
+      "animation": "images/interactions/lethalpoison",
+      "effect": {
+        "ref": "CloudkillEffect"
+      },
+      "label": "Cloudkill",
+      "manaCost": 40,
+      "description": "Inflict shadow damage on one enemy over 4 turns, increasing with your level."
+    }
+  },
+  "ConeOfCold": {
+    "class": "ConeOfCold",
+    "properties": {
+      "animation": "images/interactions/frostbolt",
+      "label": "Cone of Cold",
+      "manaCost": 35,
+      "description": "Deal frost damage to one enemy, increasing with your level and Intelligence."
+    }
+  },
+  "Doom": {
+    "class": "Doom",
+    "properties": {
+      "animation": "images/interactions/endlesspain",
+      "effect": {
+        "ref": "DoomEffect"
+      },
+      "label": "Doom",
+      "manaCost": 12,
+      "description": "Reduce one enemy's armor, block chance, and hit chance for 4 turns."
+    }
+  },
+  "DrawUponHolyMight": {
+    "class": "DrawUponHolyMight",
+    "properties": {
+      "animation": "images/interactions/bloodthirst",
+      "effect": {
+        "ref": "DrawUponHolyMightEffect"
+      },
+      "label": "Draw Upon Holy Might",
+      "manaCost": 25,
+      "selfTarget": true,
+      "description": "Increase your Strength, Agility, and Stamina for 3 turns. The bonus increases with your level."
+    }
+  },
+  "FingerOfDeath": {
+    "class": "FingerOfDeath",
+    "properties": {
+      "animation": "images/interactions/shadowbolt",
+      "label": "Finger of Death",
+      "manaCost": 50,
+      "description": "Deal shadow damage based on your attack damage, then make an extra Physical-damage strike if the surviving enemy is below 20% health."
+    }
+  },
+  "Fireball": {
+    "class": "Fireball",
+    "properties": {
+      "animation": "images/interactions/chaosblast",
+      "label": "Fireball",
+      "manaCost": 30,
+      "description": "Deal fire damage to one enemy, rolling more damage dice at higher levels."
+    }
+  },
+  "FlameStrike": {
+    "class": "FlameStrike",
+    "properties": {
+      "animation": "images/interactions/chaosblast",
+      "label": "Flame Strike",
+      "manaCost": 30,
+      "description": "Deal fire damage to one enemy, increasing with your level."
+    }
+  },
+  "Haste": {
+    "class": "Haste",
+    "properties": {
+      "animation": "images/interactions/doubleattack",
+      "effect": {
+        "ref": "HasteEffect"
+      },
+      "label": "Haste",
+      "manaCost": 30,
+      "selfTarget": true,
+      "description": "Improve your Agility, hit chance, and critical chance for 3 turns."
+    }
+  },
+  "HoldPerson": {
+    "class": "HoldPerson",
+    "properties": {
+      "animation": "images/interactions/stun",
+      "effect": {
+        "ref": "HoldPersonEffect"
+      },
+      "label": "Hold Person",
+      "manaCost": 35,
+      "description": "May stun one enemy for 2 turns."
+    }
+  },
+  "LarlochsMinorDrain": {
+    "class": "LarlochsMinorDrain",
+    "properties": {
+      "animation": "images/interactions/bloodthirst",
+      "label": "Larloch's Minor Drain",
+      "manaCost": 4,
+      "tags": [
+        "heal"
+      ],
+      "description": "Deal shadow damage and restore your health by the same base amount. Both increase with your level."
+    }
+  },
+  "LightningBolt": {
+    "class": "LightningBolt",
+    "properties": {
+      "animation": "images/interactions/magicmissile",
+      "label": "Lightning Bolt",
+      "manaCost": 25,
+      "description": "Deal lightning damage to one enemy, rolling more damage dice at higher levels."
+    }
+  },
+  "MelfsAcidArrow": {
+    "class": "MelfsAcidArrow",
+    "properties": {
+      "animation": "images/interactions/lethalpoison",
+      "effect": {
+        "ref": "MelfsAcidArrowEffect"
+      },
+      "label": "Melf's Acid Arrow",
+      "manaCost": 12,
+      "description": "Deal Physical damage immediately and over the next 3 turns. Damage increases with your level."
+    }
+  },
+  "MirrorImage": {
+    "class": "MirrorImage",
+    "properties": {
+      "animation": "images/interactions/barrier",
+      "effect": {
+        "ref": "MirrorImageEffect"
+      },
+      "label": "Mirror Image",
+      "manaCost": 20,
+      "selfTarget": true,
+      "description": "Increase your block chance for 3 turns, with a larger bonus at higher levels."
+    }
+  },
+  "SkullTrap": {
+    "class": "SkullTrap",
+    "properties": {
+      "animation": "images/interactions/shadowbolt",
+      "label": "Skull Trap",
+      "manaCost": 20,
+      "description": "Deal shadow damage to one enemy immediately, rolling more damage dice at higher levels."
+    }
+  },
+  "Slow": {
+    "class": "Slow",
+    "properties": {
+      "animation": "images/interactions/chloroform",
+      "effect": {
+        "ref": "SlowEffect"
+      },
+      "label": "Slow",
+      "manaCost": 25,
+      "description": "Reduce one enemy's Agility, hit chance, and block chance for 3 turns."
+    }
+  },
+  "SpiritualHammer": {
+    "class": "SpiritualHammer",
+    "properties": {
+      "animation": "images/interactions/strike",
+      "label": "Spiritual Hammer",
+      "manaCost": 12,
+      "description": "Deal Physical damage to one enemy, increasing with your level and Strength."
+    }
+  },
+  "Stoneskin": {
+    "class": "Stoneskin",
+    "properties": {
+      "animation": "images/interactions/armorofendlesswinter",
+      "effect": {
+        "ref": "StoneskinEffect"
+      },
+      "label": "Stoneskin",
+      "manaCost": 45,
+      "selfTarget": true,
+      "description": "Improve your armor and Physical resistance for 4 turns."
+    }
+  },
+  "VampiricTouch": {
+    "class": "VampiricTouch",
+    "properties": {
+      "animation": "images/interactions/bloodthirst",
+      "label": "Vampiric Touch",
+      "manaCost": 18,
+      "tags": [
+        "heal"
+      ],
+      "description": "Deal shadow damage and heal yourself for half its base amount. Both increase with your level."
+    }
+  },
+  "Web": {
+    "class": "Web",
+    "properties": {
+      "animation": "images/interactions/chloroform",
+      "effect": {
+        "ref": "WebEffect"
+      },
+      "label": "Web",
+      "manaCost": 15,
+      "description": "For 3 turns, the enemy may be unable to act each turn. Higher Agility helps them resist."
+    }
+  },
+  "enemyBrace": {
+    "class": "EnemyBrace",
+    "properties": {
+      "label": "Brace",
+      "animation": "images/interactions/barrier",
+      "manaCost": 0,
+      "enemySignature": true,
+      "enemyRole": "brute",
+      "enemyRoleTrigger": "wounded",
+      "selfTarget": true,
+      "description": "Once per enemy, decorate an ordinary attack below half health: gain 1 point of Physical resistance and lose 1 point of frost resistance for 1 turn.",
+      "roleEffect": {
+        "ref": "enemyBraceEffect"
+      }
+    }
+  },
+  "enemyArcaneBolt": {
+    "class": "EnemyArcaneBolt",
+    "properties": {
+      "label": "Arcane Bolt",
+      "animation": "images/interactions/frostbolt",
+      "manaCost": 0,
+      "enemySignature": true,
+      "enemyRole": "mage",
+      "enemyRoleTrigger": "opening",
+      "selfTarget": true,
+      "description": "Once per enemy, convert 1 point of an ordinary attack to frost without changing its damage budget, then lose 1 point of Physical resistance for 1 turn.",
+      "roleEffect": {
+        "ref": "enemyArcaneBoltEffect"
+      },
+      "roleDamage": {
+        "class": "CDamage"
+      }
+    }
+  },
+  "enemyOpeningStrike": {
+    "class": "EnemyOpeningStrike",
+    "properties": {
+      "label": "Opening Strike",
+      "animation": "images/interactions/backstab",
+      "manaCost": 0,
+      "enemySignature": true,
+      "enemyRole": "thief",
+      "enemyRoleTrigger": "guarded",
+      "selfTarget": false,
+      "description": "Once per enemy, decorate an ordinary attack against a guarded opponent or while wounded: reduce enemy block by 1 point for 1 turn.",
+      "roleEffect": {
+        "ref": "enemyOpeningStrikeEffect"
+      }
+    }
+  },
+  "enemyRitualHex": {
+    "class": "EnemyRitualHex",
+    "properties": {
+      "label": "Ritual Hex",
+      "animation": "images/interactions/endlesspain",
+      "manaCost": 0,
+      "enemySignature": true,
+      "enemyRole": "cultist",
+      "enemyRoleTrigger": "critical",
+      "minimumMana": 5,
+      "minimumPacketHit": 10,
+      "selfTarget": false,
+      "description": "Once per enemy at quarter health with at least 5 mana remaining, make an ordinary attack. When its resolved hit is at least 10 damage and the target's physical and shadow resistance differ, convert 1 damage point to shadow. Reduce shadow resistance by 1 for 1 turn. No mana is spent.",
+      "roleEffect": {
+        "ref": "enemyRitualHexEffect"
+      },
+      "roleDamage": {
+        "class": "CDamage"
+      }
     }
   }
 }

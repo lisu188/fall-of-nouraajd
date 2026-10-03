@@ -5,10 +5,7 @@
   "defendSiegeQuest": {
     "class": "DefendSiegeQuest",
     "properties": {
-      "description": "Defend the gatehouse from the Pritscher siege.",
-      "objective": "Seal every siege gate with charged wands.",
-      "reward": "500 gold and campaign completion.",
-      "hint": "Pritz mages carry extra wands."
+      "description": "Defend the gatehouse from the Pritscher siege."
     }
   },
   "siegePritz": {

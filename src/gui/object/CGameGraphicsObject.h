@@ -1,6 +1,6 @@
 /*
 fall-of-nouraajd c++ dark fantasy game
-Copyright (C) 2025  Andrzej Lis
+Copyright (C) 2025-2026  Andrzej Lis
 
 This program is free software: you can redistribute it and/or modify
         it under the terms of the GNU General Public License as published by
@@ -74,6 +74,14 @@ class CGameGraphicsObject : public CGameObject {
 
     virtual bool mouseEvent(std::shared_ptr<CGui> sharedPtr, SDL_EventType type, int button, int x, int y);
 
+    virtual bool mouseMotionEvent(std::shared_ptr<CGui> sharedPtr, SDL_EventType type, int x, int y, int xrel,
+                                  int yrel);
+
+    virtual bool mouseWheelEvent(std::shared_ptr<CGui> sharedPtr, SDL_EventType type, int x, int y, int wheelX,
+                                 int wheelY);
+
+    virtual bool mouseCancelEvent(std::shared_ptr<CGui> sharedPtr, SDL_EventType type);
+
     virtual void renderObject(std::shared_ptr<CGui> reneder, std::shared_ptr<SDL_Rect> rect, int frameTime);
 
     void registerEventCallback(
@@ -91,7 +99,10 @@ class CGameGraphicsObject : public CGameObject {
 
     void setLayout(std::shared_ptr<CLayout> layout);
 
-    void addChild(const std::shared_ptr<CGameGraphicsObject> &child);
+    // Virtual so a container can observe children joining it (CGui re-applies session-recorded
+    // panel geometry on attach). Every attach path funnels through here (pushChild, setParent,
+    // setChildren), so an override sees each child exactly when it becomes reachable.
+    virtual void addChild(const std::shared_ptr<CGameGraphicsObject> &child);
 
     void pushChild(const std::shared_ptr<CGameGraphicsObject> &child);
 
@@ -106,6 +117,10 @@ class CGameGraphicsObject : public CGameObject {
 
     std::shared_ptr<CGui> getGui();
 
+    bool isAttachedToGui(const std::shared_ptr<CGui> &gui);
+
+    bool hasRenderableGui(const std::shared_ptr<CGui> &gui);
+
     bool getModal();
 
     void setModal(bool _modal);
@@ -115,6 +130,7 @@ class CGameGraphicsObject : public CGameObject {
     void setVisible(std::shared_ptr<CScript> hidden);
 
     bool isVisible();
+    void setRuntimeHidden(bool value) { runtimeHidden = value; }
 
     std::string getBackground();
 
@@ -122,10 +138,14 @@ class CGameGraphicsObject : public CGameObject {
 
     int getTileSize(const std::shared_ptr<CGameGraphicsObject> &object);
 
+  protected:
+    // Called by the parent before this object's own mouse/keyboard hooks; the default forwards to the
+    // children (highest priority first) and only then to this object. Overridable so a subclass can
+    // claim an event ahead of its children (e.g. a panel's resize handle under a covering child).
+    virtual bool event(std::shared_ptr<CGui> gui, SDL_Event *event);
+
   private:
     virtual void render(std::shared_ptr<CGui> renderer, int frameTime);
-
-    bool event(std::shared_ptr<CGui> gui, SDL_Event *event);
 
     int getTopPriority();
 
@@ -138,4 +158,5 @@ class CGameGraphicsObject : public CGameObject {
     std::string background;
 
     bool modal = false;
+    bool runtimeHidden = false;
 };

@@ -1,6 +1,6 @@
 /*
 fall-of-nouraajd c++ dark fantasy game
-Copyright (C) 2025  Andrzej Lis
+Copyright (C) 2025-2026  Andrzej Lis
 
 This program is free software: you can redistribute it and/or modify
         it under the terms of the GNU General Public License as published by
@@ -20,15 +20,17 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #include "core/CGame.h"
 #include "core/CMap.h"
 #include "core/CPythonOverrides.h"
+
+#include <algorithm>
+
 CTile::CTile() {}
 
 CTile::~CTile() {}
 
 void CTile::move(int x, int y, int z) {
-    if (getMap()) {
-        Coords target = getMap()->normalizeCoords(Coords(posx + x, posy + y, posz + z));
-        getMap()->moveTile(this->ptr<CTile>(), target.x, target.y, target.z);
-        setXYZ(target.x, target.y, target.z);
+    if (auto map = getMap()) {
+        Coords target = map->normalizeCoords(Coords(posx + x, posy + y, posz + z));
+        map->moveTile(this->ptr<CTile>(), target.x, target.y, target.z);
     }
 }
 
@@ -45,19 +47,65 @@ void CTile::onStep(std::shared_ptr<CCreature> creature) {
 
 bool CTile::canStep() const { return step; }
 
-void CTile::setCanStep(bool canStep) { this->step = canStep; }
+void CTile::setCanStep(bool canStep) {
+    auto map = getMap();
+    std::unique_lock<std::recursive_mutex> lock;
+    if (map)
+        lock = std::unique_lock(map->getNavigationMutex());
+    if (step == canStep)
+        return;
+    step = canStep;
+    if (map && map->hasRegisteredTile(this))
+        map->navigationCellChanged(getCoords());
+}
 
 int CTile::getPosx() const { return posx; }
 
-void CTile::setPosx(int value) { posx = value; }
+void CTile::setPosx(int value) {
+    auto map = getMap();
+    if (map && map->hasRegisteredTile(this)) {
+        map->moveTile(ptr<CTile>(), value, posy, posz);
+        return;
+    }
+    posx = value;
+}
 
 int CTile::getPosy() const { return posy; }
 
-void CTile::setPosy(int value) { posy = value; }
+void CTile::setPosy(int value) {
+    auto map = getMap();
+    if (map && map->hasRegisteredTile(this)) {
+        map->moveTile(ptr<CTile>(), posx, value, posz);
+        return;
+    }
+    posy = value;
+}
 
 int CTile::getPosz() const { return posz; }
 
-void CTile::setPosz(int value) { posz = value; }
+void CTile::setPosz(int value) {
+    auto map = getMap();
+    if (map && map->hasRegisteredTile(this)) {
+        map->moveTile(ptr<CTile>(), posx, posy, value);
+        return;
+    }
+    posz = value;
+}
+
+int CTile::getMovementCost() const { return std::max(1, movementCost); }
+
+void CTile::setMovementCost(int value) {
+    auto map = getMap();
+    std::unique_lock<std::recursive_mutex> lock;
+    if (map)
+        lock = std::unique_lock(map->getNavigationMutex());
+    value = std::max(1, value);
+    if (movementCost == value)
+        return;
+    movementCost = value;
+    if (map && map->hasRegisteredTile(this))
+        map->navigationCellChanged(getCoords());
+}
 
 void CTile::setXYZ(int x, int y, int z) {
     posx = x;

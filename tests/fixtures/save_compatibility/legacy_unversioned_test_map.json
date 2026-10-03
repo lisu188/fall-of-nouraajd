@@ -1,0 +1,25 @@
+{
+  "class": "CMap",
+  "properties": {
+    "description": "immutable legacy unversioned fixture",
+    "mapName": "test",
+    "objects": [
+      {
+        "class": "CPlayer",
+        "properties": {
+          "completedQuests": [],
+          "items": [],
+          "name": "player",
+          "posx": 1,
+          "posy": 2,
+          "posz": 0,
+          "quests": [],
+          "typeId": "Warrior"
+        }
+      }
+    ],
+    "tiles": [],
+    "triggers": [],
+    "turn": 11
+  }
+}

@@ -16,6 +16,7 @@ You should have received a copy of the GNU General Public License
 along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 #include "CTextureCache.h"
+#include "core/CProvider.h"
 #include "core/CUtil.h"
 
 #include <algorithm>
@@ -87,10 +88,16 @@ void putpixel(SDL_Surface *surface, int x, int y, Uint32 pixel) {
 }
 
 SDL_Texture *CTextureCache::getTexture(std::string path) {
+    if (_gui.expired()) {
+        _textures.clear();
+        return nullptr;
+    }
     if (vstd::ends_with(path, ".png")) {
         auto anim = _textures.find(path);
         if (anim == _textures.end()) {
-            auto [inserted, _] = _textures.emplace(path, this->loadTexture(path));
+            auto texture = loadTexture(path);
+            auto [inserted, _] =
+                _textures.emplace(path, fn::sdl::GuiTexturePtr(texture.release(), fn::sdl::GuiTextureDeleter{_gui}));
             return inserted->second.get();
         }
         return anim->second.get();
@@ -99,12 +106,21 @@ SDL_Texture *CTextureCache::getTexture(std::string path) {
 }
 
 fn::sdl::TexturePtr CTextureCache::loadTexture(std::string path) {
-    auto surface = fn::sdl::SurfacePtr(IMG_Load(path.c_str()));
-    if (!surface) {
-        vstd::logger::error("CTextureCache::loadTexture: cannot load", path);
+    auto gui = _gui.lock();
+    // Resolve through the owning game's per-session resources provider; fall back to the process
+    // singleton only when the cache is detached from a live GUI/game (compatibility path).
+    auto game = gui ? gui->getGame() : nullptr;
+    auto resourcesProvider = game ? game->getResourcesProvider() : CResourcesProvider::getInstance();
+    const auto resolvedPath = resourcesProvider->getPath(path);
+    if (resolvedPath.empty()) {
+        vstd::logger::error("CTextureCache::loadTexture: cannot resolve", path, "resolved:", resolvedPath);
         return nullptr;
     }
-    auto gui = _gui.lock();
+    auto surface = fn::sdl::SurfacePtr(IMG_Load(resolvedPath.c_str()));
+    if (!surface) {
+        vstd::logger::error("CTextureCache::loadTexture: cannot load", path, "resolved:", resolvedPath);
+        return nullptr;
+    }
     return gui ? CTextureUtil::calculateAlpha(gui->getRenderer(), std::move(surface)) : nullptr;
 }
 
@@ -159,8 +175,8 @@ fn::sdl::TexturePtr CTextureUtil::calculateAlpha(SDL_Renderer *renderer, fn::sdl
                          getPixelColor(surface.get(), w - 1, 0), getPixelColor(surface.get(), w - 1, h - 1)) &&
         std::get<3>(maskPixel) == 255;
 
-    std::unordered_set<std::pair<int, int>> mask =
-        shouldAddMask ? calculateMask(surface.get()) : std::unordered_set<std::pair<int, int>>();
+    std::unordered_set<std::pair<int, int>, vstd::pair_hash> mask =
+        shouldAddMask ? calculateMask(surface.get()) : std::unordered_set<std::pair<int, int>, vstd::pair_hash>();
 
     for (auto verticalIndex = 0; verticalIndex < h; verticalIndex++) {
         for (auto horizontalIndex = 0; horizontalIndex < w; horizontalIndex++) {
@@ -178,10 +194,10 @@ fn::sdl::TexturePtr CTextureUtil::calculateAlpha(SDL_Renderer *renderer, fn::sdl
     return fn::sdl::TexturePtr(SDL_SAFE(SDL_CreateTextureFromSurface(renderer, secondSurface.get())));
 }
 
-std::unordered_set<std::pair<int, int>> CTextureUtil::calculateMask(SDL_Surface *pSurface) {
-    std::unordered_set<std::pair<int, int>> checked;
-    std::unordered_set<std::pair<int, int>> remaining;
-    std::unordered_set<std::pair<int, int>> result;
+std::unordered_set<std::pair<int, int>, vstd::pair_hash> CTextureUtil::calculateMask(SDL_Surface *pSurface) {
+    std::unordered_set<std::pair<int, int>, vstd::pair_hash> checked;
+    std::unordered_set<std::pair<int, int>, vstd::pair_hash> remaining;
+    std::unordered_set<std::pair<int, int>, vstd::pair_hash> result;
 
     if (!pSurface || pSurface->w <= 0 || pSurface->h <= 0 ||
         pSurface->w > MAX_ALPHA_MASK_PIXELS / std::max(1, pSurface->h)) {

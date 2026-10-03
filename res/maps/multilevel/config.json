@@ -1,0 +1,51 @@
+{
+  "level0Blocker": {
+    "ref": "brickWall"
+  },
+  "level1Blocker": {
+    "ref": "brickWall"
+  },
+  "multilevelLowerGoal": {
+    "class": "MultilevelGoal",
+    "properties": {
+      "animation": "images/misc/signpost",
+      "canStep": true
+    }
+  },
+  "multilevelStart": {
+    "class": "MultilevelStart",
+    "properties": {
+      "animation": "images/misc/signpost",
+      "canStep": true
+    }
+  },
+  "multilevelUpperGoal": {
+    "class": "MultilevelGoal",
+    "properties": {
+      "animation": "images/buildings/catacombs",
+      "canStep": true
+    }
+  },
+  "stairsDown": {
+    "class": "LevelStairs",
+    "properties": {
+      "animation": "images/buildings/stairs_down",
+      "canStep": true,
+      "label": "Stairs Down",
+      "targetX": 4,
+      "targetY": 1,
+      "targetZ": 0
+    }
+  },
+  "stairsUp": {
+    "class": "LevelStairs",
+    "properties": {
+      "animation": "images/buildings/stairs_up",
+      "canStep": true,
+      "label": "Stairs Up",
+      "targetX": 4,
+      "targetY": 1,
+      "targetZ": 1
+    }
+  }
+}

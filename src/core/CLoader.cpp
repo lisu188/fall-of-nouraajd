@@ -17,14 +17,20 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 #include "core/CLoader.h"
 #include "core/CController.h"
+#include "core/CGameContext.h"
 #include "core/CJsonUtil.h"
+#include "core/CSaveFormat.h"
+#include "core/CSceneManager.h"
 #include "core/CTypes.h"
 #include "gui/CGui.h"
 #include "gui/object/CMapGraphicsObject.h"
+#include "handler/CLuaHandler.h"
 #include "handler/CRngHandler.h"
 #include "object/CCreature.h"
+#include "object/CCreatureRace.h"
 #include "object/CPlayer.h"
-#include "plugin/CPluginAbi.h"
+#include "plugin/CPluginRegistrar.h"
+#include "plugin/CPluginRuntime.h"
 #include <pybind11/eval.h>
 #include <rdg.h>
 
@@ -33,84 +39,70 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #include <optional>
 #include <utility>
 
-#if defined(_WIN32)
-#ifndef WIN32_LEAN_AND_MEAN
-#define WIN32_LEAN_AND_MEAN
-#endif
-#ifndef NOMINMAX
-#define NOMINMAX
-#endif
-#include <windows.h>
-#else
-#include <dlfcn.h>
-#endif
+std::set<std::string> getConfigPaths(const std::shared_ptr<CResourcesProvider> &resourcesProvider,
+                                     const std::string &mapName);
+
+std::string getMapPath(std::string mapName);
+
+std::set<std::string> get_saved_map_dependencies(const std::shared_ptr<CGame> &game, const json &save,
+                                                 const std::string &mapName);
+
+void load_map_resources(const std::shared_ptr<CGame> &game, const std::string &mapName);
+
+void activate_map_scope(const std::shared_ptr<CGame> &game, const std::string &mapName);
+
+class CScopedGameMap {
+  public:
+    explicit CScopedGameMap(std::shared_ptr<CGame> game, std::shared_ptr<CMap> replacement = nullptr)
+        : game(std::move(game)), previous(this->game ? this->game->getMap() : nullptr) {
+        if (this->game) {
+            // Resource registration needs a detached map context, but it does not commit a scene change.
+            this->game->setMapForResourceLoad(std::move(replacement));
+        }
+    }
+
+    ~CScopedGameMap() {
+        if (game) {
+            game->setMapForResourceLoad(previous);
+        }
+    }
+
+    CScopedGameMap(const CScopedGameMap &) = delete;
+    CScopedGameMap &operator=(const CScopedGameMap &) = delete;
+
+  private:
+    std::shared_ptr<CGame> game;
+    std::shared_ptr<CMap> previous;
+};
 
 namespace {
+class ScopedResourceScope {
+  public:
+    explicit ScopedResourceScope(std::shared_ptr<CResourcesProvider> provider)
+        : provider(std::move(provider)), previous(this->provider->getActiveScope()) {}
+
+    ~ScopedResourceScope() {
+        if (!committed) {
+            provider->setActiveScope(previous);
+        }
+    }
+
+    void commit() { committed = true; }
+
+  private:
+    std::shared_ptr<CResourcesProvider> provider;
+    std::string previous;
+    bool committed = false;
+};
+
 constexpr const char *PLUGIN_MANIFEST_PATH = "plugins/manifest.json";
-constexpr const char *DYNAMIC_PLUGIN_DEFAULT_ENTRY = "game_plugin_load_v1";
 constexpr std::size_t MAX_TILESET_ID = 16384;
 constexpr int MAX_TMX_LAYER_CELLS = 1'000'000;
 
-class CDynamicLibrary {
-  public:
-    explicit CDynamicLibrary(std::string path) : path(std::move(path)) {
-#if defined(_WIN32)
-        handle = LoadLibraryW(std::filesystem::path(this->path).wstring().c_str());
-#else
-        handle = dlopen(this->path.c_str(), RTLD_NOW | RTLD_LOCAL);
-#endif
-    }
-
-    ~CDynamicLibrary() {
-        if (!handle) {
-            return;
-        }
-#if defined(_WIN32)
-        FreeLibrary(handle);
-#else
-        dlclose(handle);
-#endif
-    }
-
-    CDynamicLibrary(const CDynamicLibrary &) = delete;
-    CDynamicLibrary &operator=(const CDynamicLibrary &) = delete;
-
-    bool isLoaded() const { return handle != nullptr; }
-
-    CPluginLoadV1 loadSymbol(const std::string &symbolName) const {
-        if (!handle) {
-            return nullptr;
-        }
-
-#if defined(_WIN32)
-        auto symbol = GetProcAddress(handle, symbolName.c_str());
-        if (!symbol) {
-            vstd::logger::warning("Failed to find dynamic plugin symbol:", symbolName, "in:", path,
-                                  "error code:", static_cast<int>(GetLastError()));
-            return nullptr;
-        }
-        return reinterpret_cast<CPluginLoadV1>(symbol);
-#else
-        dlerror();
-        auto symbol = dlsym(handle, symbolName.c_str());
-        const char *error = dlerror();
-        if (error != nullptr) {
-            vstd::logger::warning("Failed to find dynamic plugin symbol:", symbolName, "in:", path, "error:", error);
-            return nullptr;
-        }
-        return reinterpret_cast<CPluginLoadV1>(symbol);
-#endif
-    }
-
-    const std::string &getPath() const { return path; }
-
-  private:
-    std::string path;
-#if defined(_WIN32)
-    HMODULE handle = nullptr;
-#else
-    void *handle = nullptr;
-#endif
+struct SaveLoadResult {
+    std::shared_ptr<CMap> map;
+    std::string sourcePath;
+    bool recoveredFromBackup = false;
 };
 
 std::optional<std::string> normalize_relative_resource_path(const std::string &path) {
@@ -127,17 +119,9 @@ std::optional<std::string> normalize_relative_resource_path(const std::string &p
     return normalized;
 }
 
-bool is_valid_map_name(const std::string &mapName) {
-    if (mapName.empty()) {
-        return true;
-    }
-
-    return std::all_of(mapName.begin(), mapName.end(), [](unsigned char ch) {
-        if (std::isalnum(ch)) {
-            return true;
-        }
-        return ch == '_' || ch == '-';
-    });
+bool is_allowed_lua_plugin_path(const std::string &path) {
+    const auto normalized = normalize_relative_resource_path(path);
+    return normalized && vstd::ends_with(*normalized, ".lua") && normalized->rfind("plugins/", 0) == 0;
 }
 
 bool is_allowed_python_plugin_path(const std::string &path) {
@@ -158,7 +142,7 @@ bool is_allowed_python_plugin_path(const std::string &path) {
     if (parent.parent_path() != "maps") {
         return false;
     }
-    return is_valid_map_name(parent.filename().string());
+    return CSaveFormat::isValidMapName(parent.filename().string());
 }
 
 bool is_safe_proxy_attr(const std::string &name) {
@@ -379,98 +363,6 @@ pybind11::dict build_restricted_plugin_builtins() {
     return safeBuiltins;
 }
 
-std::string dynamic_library_suffix() {
-#if defined(_WIN32)
-    return ".dll";
-#elif defined(__APPLE__)
-    return ".dylib";
-#else
-    return ".so";
-#endif
-}
-
-std::vector<std::string> dynamic_library_candidates(const std::string &library) {
-    std::vector<std::string> candidates{library};
-    if (std::filesystem::path(library).extension().empty()) {
-        candidates.push_back(library + dynamic_library_suffix());
-    }
-    return candidates;
-}
-
-bool is_allowed_dynamic_library_path(const std::string &library) {
-    const auto normalized = normalize_relative_resource_path(library);
-    return normalized && normalized->rfind("plugins/native/", 0) == 0;
-}
-
-std::string resolve_dynamic_library_path(const std::string &library) {
-    if (!is_allowed_dynamic_library_path(library)) {
-        vstd::logger::warning("Rejected dynamic C++ plugin outside packaged native plugin paths:", library);
-        return {};
-    }
-
-    auto provider = CResourcesProvider::getInstance();
-    for (const auto &candidate : dynamic_library_candidates(library)) {
-        if (!is_allowed_dynamic_library_path(candidate)) {
-            continue;
-        }
-        auto resolved = provider->getPath(candidate);
-        if (!resolved.empty()) {
-            return std::filesystem::absolute(resolved).lexically_normal().string();
-        }
-    }
-    return {};
-}
-
-CDynamicLibrary *load_dynamic_library(const std::string &path) {
-    static std::map<std::string, std::unique_ptr<CDynamicLibrary>> libraries;
-
-    auto existing = libraries.find(path);
-    if (existing != libraries.end()) {
-        return existing->second.get();
-    }
-
-    auto library = std::make_unique<CDynamicLibrary>(path);
-    if (!library->isLoaded()) {
-#if defined(_WIN32)
-        vstd::logger::warning("Failed to load dynamic plugin library:", path,
-                              "error code:", static_cast<int>(GetLastError()));
-#else
-        const char *error = dlerror();
-        vstd::logger::warning("Failed to load dynamic plugin library:", path,
-                              "error:", error == nullptr ? "<unknown>" : error);
-#endif
-        return nullptr;
-    }
-
-    auto inserted = libraries.emplace(path, std::move(library));
-    return inserted.first->second.get();
-}
-
-void dynamic_plugin_log(void *, const char *message) {
-    vstd::logger::info("Dynamic plugin:", message == nullptr ? "<null>" : message);
-}
-
-bool dynamic_plugin_register_config_json(void *opaqueGame, const char *id, const char *jsonText) {
-    if (opaqueGame == nullptr || id == nullptr || id[0] == '\0' || jsonText == nullptr) {
-        vstd::logger::warning("Dynamic plugin attempted to register config without a game, id, or json text");
-        return false;
-    }
-
-    auto *game = static_cast<CGame *>(opaqueGame);
-    auto parsed = CJsonUtil::parse_expected(jsonText, std::string("dynamic plugin config ") + id);
-    if (!parsed) {
-        CJsonUtil::log_parse_error(parsed.error());
-        return false;
-    }
-    if (!(*parsed)->is_object()) {
-        vstd::logger::warning("Dynamic plugin config is not an object:", id);
-        return false;
-    }
-
-    game->getObjectHandler()->registerConfig(id, *parsed);
-    return true;
-}
-
 bool read_bool_property(const json &properties, const std::string &key) {
     if (!properties.count(key)) {
         return false;
@@ -565,8 +457,12 @@ void apply_tile_layer_metadata(const std::shared_ptr<CMap> &map, const json &lay
     if (layerProperties.count("outOfBounds")) {
         out_of_bounds_tiles[level] = read_string_property(layerProperties, "outOfBounds", "MountainTile");
     }
-    x_bounds[level] = std::max(0, read_int_property(layerProperties, "xBound", 0));
-    y_bounds[level] = std::max(0, read_int_property(layerProperties, "yBound", 0));
+    // Map xBound/yBound metadata is attacker-authorable; clamp the per-axis extent so downstream
+    // consumers (notably minimap rendering) cannot be driven to iterate/allocate over enormous or
+    // overflow-prone level dimensions. The cap mirrors the per-layer MAX_TMX_LAYER_CELLS guard.
+    constexpr int MAX_LEVEL_BOUND = MAX_TMX_LAYER_CELLS - 1;
+    x_bounds[level] = std::clamp(read_int_property(layerProperties, "xBound", 0), 0, MAX_LEVEL_BOUND);
+    y_bounds[level] = std::clamp(read_int_property(layerProperties, "yBound", 0), 0, MAX_LEVEL_BOUND);
     wrap_x[level] = read_bool_property(layerProperties, "wrapX") ? 1 : 0;
     wrap_y[level] = read_bool_property(layerProperties, "wrapY") ? 1 : 0;
 
@@ -603,78 +499,274 @@ std::vector<std::string> build_tile_types(const json &tileset) {
     return tileTypes;
 }
 
-bool is_valid_slot_name(const std::string &name) {
-    if (name.empty() || name.find("..") != std::string::npos) {
+std::expected<std::shared_ptr<json>, std::string> build_save_envelope(const std::shared_ptr<CMap> &map) {
+    if (!map) {
+        return std::unexpected("map is null");
+    }
+
+    if (auto player = map->getPlayer()) {
+        player->captureQuestJournal();
+    }
+    auto snapshot = CSerialization::serialize<std::shared_ptr<json>>(map);
+    return CSaveFormat::buildEnvelope(snapshot, map->getMapName());
+}
+
+void apply_authored_map_metadata(const std::shared_ptr<CGame> &game, const std::shared_ptr<CMap> &map,
+                                 const std::string &mapName) {
+    if (!game || !map) {
+        return;
+    }
+    if (std::shared_ptr<json> mapc = game->getConfigurationProvider()->getConfiguration(getMapPath(mapName))) {
+        map->setDefaultTiles({});
+        map->setOutOfBoundsTiles({});
+        map->setXBounds({});
+        map->setYBounds({});
+        map->setWrapX({});
+        map->setWrapY({});
+        const json emptyObject = json::object();
+        const json emptyArray = json::array();
+        const json &mapProperties =
+            mapc->contains("properties") && (*mapc)["properties"].is_object() ? (*mapc)["properties"] : emptyObject;
+        map->setEntryX(read_int_property(mapProperties, "x", 0));
+        map->setEntryY(read_int_property(mapProperties, "y", 0));
+        map->setEntryZ(read_int_property(mapProperties, "z", 0));
+        const json &layers = mapc->contains("layers") && (*mapc)["layers"].is_array() ? (*mapc)["layers"] : emptyArray;
+        for (const auto &layer : layers) {
+            if (layer.is_object() && layer.contains("type") && layer["type"].is_string() &&
+                vstd::string_equals(layer["type"].get<std::string>(), "tilelayer")) {
+                apply_tile_layer_metadata(map, layer);
+            }
+        }
+    }
+}
+
+class CScopedObjectConfig {
+  public:
+    CScopedObjectConfig(std::shared_ptr<CObjectHandler> handler, std::string name, std::shared_ptr<json> value)
+        : handler(std::move(handler)), name(std::move(name)) {
+        if (this->handler) {
+            previous = this->handler->getConfig(this->name);
+            this->handler->registerConfig(this->name, std::move(value));
+        }
+    }
+
+    ~CScopedObjectConfig() {
+        if (!handler) {
+            return;
+        }
+        if (previous) {
+            handler->registerConfig(name, previous);
+        } else {
+            handler->unregisterConfig(name);
+        }
+    }
+
+    CScopedObjectConfig(const CScopedObjectConfig &) = delete;
+    CScopedObjectConfig &operator=(const CScopedObjectConfig &) = delete;
+
+  private:
+    std::shared_ptr<CObjectHandler> handler;
+    std::string name;
+    std::shared_ptr<json> previous;
+};
+
+bool rehydrate_loaded_map(const std::shared_ptr<CGame> &game, const std::shared_ptr<CMap> &map,
+                          const std::string &mapName, std::string &error) {
+    if (!game || !map) {
+        error = "deserialized map is null";
+        return false;
+    }
+    if (map->getMapName() != mapName) {
+        error = "deserialized mapName does not match save envelope";
         return false;
     }
 
-    return std::all_of(name.begin(), name.end(), [](unsigned char ch) {
-        if (std::isalnum(ch)) {
-            return true;
-        }
-        return ch == '.' || ch == '_' || ch == '-';
-    });
+    apply_authored_map_metadata(game, map, mapName);
+
+    return map->restorePlayerAfterLoad(error);
 }
 
-std::string build_saved_map_config_key(const std::string &slotName) { return "__save_slot__/" + slotName; }
+std::expected<std::shared_ptr<CMap>, std::string>
+restore_save_document(const std::shared_ptr<CGame> &game, const CSaveFormat::DecodedDocument &saveDocument,
+                      const std::string &slotName) {
+    if (!game) {
+        return std::unexpected("cannot restore save without a game");
+    }
 
-std::shared_ptr<json> load_plugin_manifest() {
-    auto provider = CResourcesProvider::getInstance();
-    if (provider->getPath(PLUGIN_MANIFEST_PATH).empty()) {
+    ScopedResourceScope resourceScope(game->getResourcesProvider());
+
+    {
+        CScopedGameMap scopedMap(game);
+        load_map_resources(game, saveDocument.mapName);
+        for (const auto &requiredMap : get_saved_map_dependencies(game, *saveDocument.snapshot, saveDocument.mapName)) {
+            if (requiredMap != saveDocument.mapName) {
+                load_map_resources(game, requiredMap);
+            }
+        }
+        // Activate the primary saved map's scope last so dependency maps loaded above for their
+        // config/quest data do not leave their scope active.
+        activate_map_scope(game, saveDocument.mapName);
+    }
+
+    const auto saveConfigKey = CSaveFormat::savedMapConfigKey(slotName);
+    CScopedObjectConfig scopedSaveConfig(game->getObjectHandler(), saveConfigKey, saveDocument.snapshot);
+
+    std::shared_ptr<CMap> map;
+    try {
+        CSerialization::StrictScope strict;
+        map = game->getObjectHandler()->createObject<CMap>(game, saveConfigKey);
+    } catch (const std::exception &exception) {
+        return std::unexpected(std::string("failed to deserialize saved map: ") + exception.what());
+    }
+
+    std::string rehydrateError;
+    if (!rehydrate_loaded_map(game, map, saveDocument.mapName, rehydrateError)) {
+        return std::unexpected(rehydrateError);
+    }
+
+    resourceScope.commit();
+    return map;
+}
+
+std::expected<std::shared_ptr<CMap>, std::string>
+load_save_candidate(const std::shared_ptr<CGame> &game, const std::string &slotName, const std::string &path) {
+    auto raw = game->getResourcesProvider()->loadJson(path);
+    if (!raw) {
+        return std::unexpected("save file could not be read or parsed");
+    }
+    auto decoded = CSaveFormat::decodeDocument(raw);
+    if (!decoded) {
+        return std::unexpected(decoded.error());
+    }
+    if (decoded->encoding == CSaveFormat::Encoding::Legacy) {
+        vstd::logger::info("Migrating legacy save in memory:", slotName, path);
+    }
+    return restore_save_document(game, *decoded, slotName);
+}
+
+std::optional<SaveLoadResult> try_load_saved_map(const std::shared_ptr<CGame> &game, const std::string &name) {
+    if (!CSaveFormat::isValidSlotName(name)) {
+        vstd::logger::warning("Rejected invalid save slot name during load:", name);
+        return std::nullopt;
+    }
+
+    const auto primaryPath = CSaveFormat::primaryPath(name);
+    auto primary = load_save_candidate(game, name, primaryPath);
+    if (primary) {
+        return SaveLoadResult{*primary, primaryPath, false};
+    }
+
+    vstd::logger::warning("Rejected primary save:", primaryPath, "reason:", primary.error());
+
+    const auto backupPath = CSaveFormat::backupPath(name);
+    auto backup = load_save_candidate(game, name, backupPath);
+    if (backup) {
+        vstd::logger::warning("Recovered save slot from backup:", name, backupPath);
+        return SaveLoadResult{*backup, backupPath, true};
+    }
+
+    vstd::logger::warning("Rejected backup save:", backupPath, "reason:", backup.error());
+    return std::nullopt;
+}
+
+void repair_recovered_backup(const std::shared_ptr<CGame> &game, const SaveLoadResult &loaded,
+                             const std::string &slotName) {
+    if (!loaded.recoveredFromBackup) {
+        return;
+    }
+    auto resourcesProvider = game->getResourcesProvider();
+    const auto backupBytes = resourcesProvider->load(loaded.sourcePath);
+    if (backupBytes.empty()) {
+        vstd::logger::warning("Recovered backup could not be read for primary repair:", slotName, loaded.sourcePath);
+        return;
+    }
+    const auto primaryPath = CSaveFormat::primaryPath(slotName);
+    std::error_code errorCode;
+    const auto resolvedPrimaryPath = resourcesProvider->getPath(primaryPath);
+    if (!resolvedPrimaryPath.empty()) {
+        std::filesystem::remove(resolvedPrimaryPath, errorCode);
+    }
+    if (!resolvedPrimaryPath.empty() && errorCode) {
+        vstd::logger::warning("Recovered backup primary repair could not remove rejected primary:", slotName,
+                              primaryPath, "resolved:", resolvedPrimaryPath, "reason:", errorCode.message());
+        return;
+    }
+    if (resourcesProvider->save(primaryPath, backupBytes)) {
+        vstd::logger::warning("Repaired save primary from recovered backup:", slotName, primaryPath);
+    } else {
+        vstd::logger::warning("Failed to repair save primary from recovered backup:", slotName, primaryPath);
+    }
+}
+
+std::shared_ptr<json> load_plugin_manifest(const std::shared_ptr<CResourcesProvider> &resourcesProvider) {
+    if (resourcesProvider->getPath(PLUGIN_MANIFEST_PATH).empty()) {
         return nullptr;
     }
-    return provider->loadJson(PLUGIN_MANIFEST_PATH);
+    return resourcesProvider->loadJson(PLUGIN_MANIFEST_PATH);
 }
 
-bool load_plugin_entry(const std::shared_ptr<CGame> &game, const json &entry,
-                       std::set<std::string> &loadedPythonPlugins, std::set<std::string> &loadedDynamicPlugins) {
+// Kinds whose source is a resource path; their paths join the loadedPluginPaths dedupe set that
+// the auto-discovery loops in loadGlobalPlugins/loadMapPlugins consult.
+bool is_path_sourced_plugin_kind(const std::string &kind) { return kind == "python" || kind == "lua"; }
+
+std::optional<CPluginDescriptor> parse_plugin_descriptor(const json &entry) {
     if (!entry.is_object()) {
         vstd::logger::warning("Ignoring non-object plugin manifest entry");
-        return false;
+        return std::nullopt;
     }
 
-    std::string kind = entry.value("kind", std::string());
-    if (kind.empty()) {
-        kind = entry.value("type", std::string());
+    CPluginDescriptor descriptor;
+    descriptor.id = entry.value("id", std::string());
+    descriptor.kind = entry.value("kind", std::string());
+    if (descriptor.kind == "native") {
+        descriptor.source = entry.value("library", std::string());
+    } else if (descriptor.kind == "cpp") {
+        descriptor.source = entry.value("type", std::string());
+    } else {
+        descriptor.source = entry.value("path", std::string());
+    }
+    descriptor.entry = entry.value("entry", std::string());
+    if (entry.contains("scope") && entry["scope"].is_object() && entry["scope"].contains("map") &&
+        entry["scope"]["map"].is_string()) {
+        descriptor.mapScope = entry["scope"]["map"].get<std::string>();
     }
 
-    if (kind == "cpp") {
-        const auto id = entry.value("id", std::string());
-        return CPluginLoader::loadCppPlugin(game, id);
+    if (descriptor.kind.empty() || descriptor.id.empty() || descriptor.source.empty()) {
+        vstd::logger::warning("Ignoring plugin manifest entry without kind, id, or source:", descriptor.kind,
+                              descriptor.id);
+        return std::nullopt;
     }
-
-    if (kind == "dynamic") {
-        const auto id = entry.value("id", std::string());
-        const auto library = entry.value("library", std::string());
-        const auto symbol = entry.value("entry", std::string(DYNAMIC_PLUGIN_DEFAULT_ENTRY));
-        if (id.empty() || library.empty()) {
-            vstd::logger::warning("Ignoring dynamic plugin manifest entry without id or library");
-            return false;
-        }
-        if (!loadedDynamicPlugins.insert(id).second) {
-            return true;
-        }
-        return CPluginLoader::loadDynamicPlugin(game, library, symbol);
-    }
-
-    if (kind == "python") {
-        const auto path = entry.value("path", std::string());
-        if (path.empty()) {
-            vstd::logger::warning("Ignoring Python plugin manifest entry without path");
-            return false;
-        }
-        if (!loadedPythonPlugins.insert(path).second) {
-            return true;
-        }
-        return CPluginLoader::loadPlugin(game, path);
-    }
-
-    vstd::logger::warning("Ignoring plugin manifest entry with unknown kind:", kind);
-    return false;
+    return descriptor;
 }
 
-bool load_plugin_entries(const std::shared_ptr<CGame> &game, const json &entries,
-                         std::set<std::string> &loadedPythonPlugins, std::set<std::string> &loadedDynamicPlugins) {
+bool load_plugin_descriptor(const std::shared_ptr<CGame> &game, const CPluginDescriptor &descriptor,
+                            std::set<std::string> &loadedPluginIds, std::set<std::string> &loadedPluginPaths) {
+    plugin_runtime::registerBuiltinRuntimes();
+    auto *runtime = plugin_runtime::find(descriptor.kind);
+    if (runtime == nullptr) {
+        vstd::logger::warning("Ignoring plugin manifest entry with unknown kind:", descriptor.kind);
+        return false;
+    }
+    if (!loadedPluginIds.insert(descriptor.id).second) {
+        return true;
+    }
+    if (is_path_sourced_plugin_kind(descriptor.kind) && !loadedPluginPaths.insert(descriptor.source).second) {
+        return true;
+    }
+    return runtime->load(game, descriptor);
+}
+
+bool load_plugin_entries(const std::shared_ptr<CGame> &game, const json &manifest,
+                         const std::optional<std::string> &mapScope, std::set<std::string> &loadedPluginIds,
+                         std::set<std::string> &loadedPluginPaths) {
+    if (!manifest.contains("plugins")) {
+        if (manifest.contains("global") || manifest.contains("maps")) {
+            vstd::logger::warning("Ignoring unsupported v1 plugin manifest layout; expected a version 2 plugins array");
+            return false;
+        }
+        return true;
+    }
+    const auto &entries = manifest["plugins"];
     if (!entries.is_array()) {
         vstd::logger::warning("Ignoring non-array plugin manifest section");
         return false;
@@ -682,11 +774,43 @@ bool load_plugin_entries(const std::shared_ptr<CGame> &game, const json &entries
 
     bool loadedAll = true;
     for (const auto &entry : entries) {
-        loadedAll = load_plugin_entry(game, entry, loadedPythonPlugins, loadedDynamicPlugins) && loadedAll;
+        const auto descriptor = parse_plugin_descriptor(entry);
+        if (!descriptor) {
+            loadedAll = false;
+            continue;
+        }
+        if (descriptor->mapScope != mapScope) {
+            continue;
+        }
+        loadedAll = load_plugin_descriptor(game, *descriptor, loadedPluginIds, loadedPluginPaths) && loadedAll;
     }
     return loadedAll;
 }
+
+bool isLiveGuiSession(const std::shared_ptr<CGame> &game, const std::shared_ptr<CGameContext> &context,
+                      const std::shared_ptr<CGui> &gui) {
+    return game && context && context->isActive() && gui && gui->isActive() && game->getGui() == gui;
+}
 } // namespace
+
+std::set<std::string> getPluginAutoDiscoveryExclusions(const json &manifest) {
+    std::set<std::string> paths;
+    if (!manifest.contains("plugins") || !manifest["plugins"].is_array()) {
+        return paths;
+    }
+    for (const auto &entry : manifest["plugins"]) {
+        const auto descriptor = parse_plugin_descriptor(entry);
+        if (!descriptor) {
+            continue;
+        }
+        const bool trustedPath = (descriptor->kind == "python" && is_allowed_python_plugin_path(descriptor->source)) ||
+                                 (descriptor->kind == "lua" && is_allowed_lua_plugin_path(descriptor->source));
+        if (trustedPath) {
+            paths.insert(*normalize_relative_resource_path(descriptor->source));
+        }
+    }
+    return paths;
+}
 
 void CMapLoader::loadFromTmx(const std::shared_ptr<CMap> &map, const std::shared_ptr<json> &mapc) {
     if (mapc && mapc->is_object()) {
@@ -727,19 +851,36 @@ void CMapLoader::loadFromTmx(const std::shared_ptr<CMap> &map, const std::shared
     }
 }
 
-std::set<std::string> getConfigPaths(const std::string &mapName) {
-    if (!is_valid_map_name(mapName)) {
+std::set<std::string> getConfigPaths(const std::shared_ptr<CResourcesProvider> &resourcesProvider,
+                                     const std::string &mapName) {
+    if (!CSaveFormat::isValidMapName(mapName)) {
         vstd::logger::warning("Rejected invalid map name while loading config:", mapName);
         return {};
     }
 
-    return CUtil::findFiles("maps/" + mapName, [](auto path) {
-        return vstd::ends_with(path, ".json") && !vstd::ends_with(path, "map.json");
-    });
+    const auto logicalMapPath = "maps/" + mapName;
+    const auto resolvedMapPath = resourcesProvider->getPath(logicalMapPath);
+    std::error_code errorCode;
+    if (resolvedMapPath.empty() || !std::filesystem::is_directory(resolvedMapPath, errorCode)) {
+        vstd::logger::warning("Map config directory is missing:", logicalMapPath, "resolved:", resolvedMapPath);
+        return {};
+    }
+
+    std::set<std::string> configPaths;
+    for (const auto &entry : std::filesystem::directory_iterator(resolvedMapPath)) {
+        if (!entry.is_regular_file(errorCode)) {
+            continue;
+        }
+        const auto filename = entry.path().filename().generic_string();
+        if (vstd::ends_with(filename, ".json") && filename != "map.json") {
+            configPaths.insert(vstd::join({logicalMapPath, "/", filename}, ""));
+        }
+    }
+    return configPaths;
 }
 
 std::string getScriptPath(std::string mapName) {
-    if (!is_valid_map_name(mapName)) {
+    if (!CSaveFormat::isValidMapName(mapName)) {
         vstd::logger::warning("Rejected invalid map name while resolving script:", mapName);
         return {};
     }
@@ -749,7 +890,7 @@ std::string getScriptPath(std::string mapName) {
 }
 
 std::string getMapPath(std::string mapName) {
-    if (!is_valid_map_name(mapName)) {
+    if (!CSaveFormat::isValidMapName(mapName)) {
         vstd::logger::warning("Rejected invalid map name while resolving map:", mapName);
         return {};
     }
@@ -758,12 +899,174 @@ std::string getMapPath(std::string mapName) {
     return vstd::join({path, "/map.json"}, "");
 }
 
+struct CSavedQuestRefs {
+    std::set<std::string> classes;
+    std::set<std::string> typeIds;
+};
+
+void collect_saved_quest(const json &quest, CSavedQuestRefs &refs) {
+    if (!quest.is_object()) {
+        return;
+    }
+
+    if (quest.contains("class") && quest["class"].is_string()) {
+        refs.classes.insert(quest["class"].get<std::string>());
+    }
+    if (!quest.contains("properties") || !quest["properties"].is_object()) {
+        return;
+    }
+
+    const json &properties = quest["properties"];
+    for (const char *key : {"typeId", "name"}) {
+        if (properties.contains(key) && properties[key].is_string()) {
+            refs.typeIds.insert(properties[key].get<std::string>());
+        }
+    }
+}
+
+void collect_saved_quest_refs(const json &root, CSavedQuestRefs &refs, const std::shared_ptr<CGame> &game) {
+    // Iterative traversal with an explicit work stack instead of recursion. The save document has
+    // already been structurally bounded by CSaveFormat::validateDocumentStructure (depth, node
+    // count, container fan-out) before this runs, but keeping the walk non-recursive removes the
+    // stack-exhaustion vector entirely and is defended again here by the same node-count ceiling.
+    std::vector<const json *> pending;
+    pending.push_back(&root);
+    std::size_t visited = 0;
+    const auto registeredClasses = game->getObjectHandler()->getAllTypes();
+    const std::set<std::string> knownClasses(registeredClasses.begin(), registeredClasses.end());
+
+    while (!pending.empty()) {
+        const json *node = pending.back();
+        pending.pop_back();
+
+        if (++visited > CSaveFormat::MAX_DOCUMENT_NODES) {
+            vstd::logger::warning("Aborting saved quest reference traversal: node count exceeded");
+            return;
+        }
+
+        if (node->is_object()) {
+            // Detached effect actors can originate in another map's script. Discover their missing classes
+            // through the same authored config index used for carried quest classes, without activating that map.
+            if ((node->contains("effectActorId") || node->contains("effectReferences")) && node->contains("class") &&
+                (*node)["class"].is_string()) {
+                const auto type = (*node)["class"].get<std::string>();
+                if (!knownClasses.contains(type)) {
+                    refs.classes.insert(type);
+                }
+            }
+            if (node->contains("properties") && (*node)["properties"].is_object()) {
+                const json &properties = (*node)["properties"];
+                for (const char *journalProperty : {"quests", "completedQuests"}) {
+                    if (!properties.contains(journalProperty) || !properties[journalProperty].is_array()) {
+                        continue;
+                    }
+                    for (const auto &quest : properties[journalProperty]) {
+                        collect_saved_quest(quest, refs);
+                    }
+                }
+            }
+            for (const auto &[key, value] : node->items()) {
+                (void)key;
+                pending.push_back(&value);
+            }
+            continue;
+        }
+
+        if (node->is_array()) {
+            for (const auto &value : *node) {
+                pending.push_back(&value);
+            }
+        }
+    }
+}
+
+bool config_matches_saved_quest_refs(const json &entry, const CSavedQuestRefs &refs) {
+    if (!entry.is_object()) {
+        return false;
+    }
+    if (entry.contains("class") && entry["class"].is_string() &&
+        refs.classes.contains(entry["class"].get<std::string>())) {
+        return true;
+    }
+    if (entry.contains("properties") && entry["properties"].is_object()) {
+        const json &properties = entry["properties"];
+        for (const char *key : {"typeId", "name"}) {
+            if (properties.contains(key) && properties[key].is_string() &&
+                refs.typeIds.contains(properties[key].get<std::string>())) {
+                return true;
+            }
+        }
+    }
+    return false;
+}
+
+bool map_defines_saved_quest_refs(const std::shared_ptr<CGame> &game, const std::string &mapName,
+                                  const CSavedQuestRefs &refs) {
+    for (const auto &configPath : getConfigPaths(game->getResourcesProvider(), mapName)) {
+        auto config = game->getConfigurationProvider()->getConfiguration(configPath);
+        if (!config || !config->is_object()) {
+            continue;
+        }
+        for (const auto &[key, entry] : config->items()) {
+            if (refs.typeIds.contains(key) || config_matches_saved_quest_refs(entry, refs)) {
+                return true;
+            }
+        }
+    }
+    return false;
+}
+
+std::set<std::string> get_saved_map_dependencies(const std::shared_ptr<CGame> &game, const json &save,
+                                                 const std::string &mapName) {
+    std::set<std::string> maps = {mapName};
+    CSavedQuestRefs questRefs;
+    collect_saved_quest_refs(save, questRefs, game);
+    if (questRefs.classes.empty() && questRefs.typeIds.empty()) {
+        return maps;
+    }
+
+    for (const auto &candidate : game->getResourcesProvider()->getFiles(CResType::MAP)) {
+        if (!CSaveFormat::isValidMapName(candidate)) {
+            continue;
+        }
+        if (map_defines_saved_quest_refs(game, candidate, questRefs)) {
+            maps.insert(candidate);
+        }
+    }
+    return maps;
+}
+
+void load_map_resources(const std::shared_ptr<CGame> &game, const std::string &mapName) {
+    game->getObjectHandler()->registerConfig(getConfigPaths(game->getResourcesProvider(), mapName));
+    CPluginLoader::loadMapPlugins(game, mapName);
+    game->getObjectHandler()->registerConfig(getConfigPaths(game->getResourcesProvider(), mapName));
+}
+
+// Register the map's directory as a scoped search root and make it the active scope so that
+// map-local assets (animations/textures declared by a bare name) resolve through it. Global
+// assets keep their precedence: the base search path is always consulted first, and the scope
+// only adds map-local names that are not found globally. Absolute/traversal paths remain rejected
+// by the provider's existing safe-path guard. Called for the map that becomes active after a load;
+// dependency maps loaded only for config/quest data do not steal the active scope.
+void activate_map_scope(const std::shared_ptr<CGame> &game, const std::string &mapName) {
+    const auto provider = game->getResourcesProvider();
+    if (!provider) {
+        return;
+    }
+    const auto mapRoot = provider->getPath("maps/" + mapName);
+    if (mapRoot.empty()) {
+        return;
+    }
+    provider->addScopedRoot(mapName, mapRoot);
+    provider->setActiveScope(mapName);
+}
+
 std::shared_ptr<CMap> CMapLoader::loadNewMap(const std::shared_ptr<CGame> &game, const std::string &mapName) {
-    if (std::shared_ptr<json> mapc = CConfigurationProvider::getConfig(getMapPath(mapName))) {
+    if (std::shared_ptr<json> mapc = game->getConfigurationProvider()->getConfiguration(getMapPath(mapName))) {
         std::shared_ptr<CMap> map = game->getObjectHandler()->createObject<CMap>(game);
         game->setMap(map);
-        game->getObjectHandler()->registerConfig(getConfigPaths(mapName));
-        CPluginLoader::loadMapPlugins(game, mapName);
+        load_map_resources(game, mapName);
+        activate_map_scope(game, mapName);
         loadFromTmx(map, mapc);
         map->setMapName(mapName);
         return map;
@@ -772,103 +1075,98 @@ std::shared_ptr<CMap> CMapLoader::loadNewMap(const std::shared_ptr<CGame> &game,
 }
 
 std::shared_ptr<CMap> CMapLoader::loadSavedMap(const std::shared_ptr<CGame> &game, const std::string &name) {
-    if (!is_valid_slot_name(name)) {
-        vstd::logger::warning("Rejected invalid save slot name during load:", name);
-        return game->getObjectHandler()->createObject<CMap>(game);
-    }
-
-    const std::string path = "save/" + name + ".json";
-    const std::string saveConfigKey = build_saved_map_config_key(name);
-
-    if (std::shared_ptr<json> save = CConfigurationProvider::getConfig(path)) {
-        if (!save->is_object() || !save->contains("properties") || !(*save)["properties"].is_object() ||
-            !(*save)["properties"].contains("mapName") || !(*save)["properties"]["mapName"].is_string()) {
-            vstd::logger::warning("Rejected save without a valid mapName:", name);
-            return game->getObjectHandler()->createObject<CMap>(game);
-        }
-        const auto mapName = (*save)["properties"]["mapName"].get<std::string>();
-        if (!is_valid_map_name(mapName)) {
-            vstd::logger::warning("Rejected save with invalid mapName:", mapName);
-            return game->getObjectHandler()->createObject<CMap>(game);
-        }
-
-        game->getObjectHandler()->registerConfig(getConfigPaths(mapName));
-        CPluginLoader::loadMapPlugins(game, mapName);
-        game->getObjectHandler()->registerConfig(getConfigPaths(mapName)); // TODO: duplicate?
-
-        game->getObjectHandler()->registerConfig(saveConfigKey, save);
-
-        auto map = game->getObjectHandler()->createObject<CMap>(game, saveConfigKey);
-        if (!map) {
-            vstd::logger::warning("Failed to deserialize saved map:", name);
-            return game->getObjectHandler()->createObject<CMap>(game);
-        }
-        if (std::shared_ptr<json> mapc = CConfigurationProvider::getConfig(getMapPath(mapName))) {
-            map->setDefaultTiles({});
-            map->setOutOfBoundsTiles({});
-            map->setXBounds({});
-            map->setYBounds({});
-            map->setWrapX({});
-            map->setWrapY({});
-            const json emptyObject = json::object();
-            const json emptyArray = json::array();
-            const json &mapProperties =
-                mapc->contains("properties") && (*mapc)["properties"].is_object() ? (*mapc)["properties"] : emptyObject;
-            map->setEntryX(read_int_property(mapProperties, "x", 0));
-            map->setEntryY(read_int_property(mapProperties, "y", 0));
-            map->setEntryZ(read_int_property(mapProperties, "z", 0));
-            const json &layers =
-                mapc->contains("layers") && (*mapc)["layers"].is_array() ? (*mapc)["layers"] : emptyArray;
-            for (const auto &layer : layers) {
-                if (layer.is_object() && layer.contains("type") && layer["type"].is_string() &&
-                    vstd::string_equals(layer["type"].get<std::string>(), "tilelayer")) {
-                    apply_tile_layer_metadata(map, layer);
-                }
-            }
-        }
-        for (const auto &object : map->getObjects()) {
-            if (auto player = std::dynamic_pointer_cast<CPlayer>(object)) {
-                if (player) {
-                    map->player = player;
-                    map->registerPlayerTriggers();
-                    break;
-                }
-            }
-        }
-        return map;
+    if (auto loaded = try_load_saved_map(game, name)) {
+        return loaded->map;
     }
     return game->getObjectHandler()->createObject<CMap>(game);
 }
 
 std::shared_ptr<CMap> CMapLoader::loadNewMapWithPlayer(const std::shared_ptr<CGame> &game, const std::string &name,
                                                        std::string player) {
+    return loadNewMapWithPlayer(game, name, std::move(player), std::string());
+}
+
+std::shared_ptr<CMap> CMapLoader::loadNewMapWithPlayer(const std::shared_ptr<CGame> &game, const std::string &name,
+                                                       std::string player, const std::string &raceId) {
+    // Validate the player template and (for a non-empty raceId) the race BEFORE loadNewMap replaces
+    // the active map. If the race id cannot be resolved, keep the current map untouched and return it
+    // so the caller's setMap re-set is a no-op instead of attaching a partial player onto a new map.
+    std::shared_ptr<CPlayer> ptr = createPlayer(game, player, raceId);
+    if (!ptr) {
+        vstd::logger::warning("Keeping the active map unchanged; player could not be created for:", name);
+        return game->getMap();
+    }
+
     std::shared_ptr<CMap> map = loadNewMap(game, name);
-    std::shared_ptr<CPlayer> ptr = createPlayer(game, player);
     map->setPlayer(ptr);
 
     return map;
 }
 
 // TODO: move to map, set player as well as triggers
-std::shared_ptr<CPlayer> CMapLoader::createPlayer(const std::shared_ptr<CGame> &game, std::string &player) {
+std::shared_ptr<CPlayer> CMapLoader::createPlayer(const std::shared_ptr<CGame> &game, std::string &player,
+                                                  const std::string &raceId) {
+    // Resolve and type-check the requested race BEFORE the caller replaces the active map. An empty
+    // raceId means "no override": preserve the template's default race so the existing three-argument
+    // loaders behave exactly as before. A non-empty raceId must resolve to a CCreatureRace; if it
+    // does not (unknown id or an id that maps to a non-race object), we log the exact id and return
+    // null so the caller can abort without switching maps or attaching a partial player.
+    std::shared_ptr<CCreatureRace> race;
+    if (!raceId.empty()) {
+        race = game->createObject<CCreatureRace>(raceId);
+        if (!race) {
+            vstd::logger::warning("Rejected player creation for unresolved race id:", raceId);
+            return nullptr;
+        }
+    }
+
     auto ptr = game->createObject<CPlayer>(std::move(player));
+    if (ptr && race) {
+        ptr->setRaceId(raceId);
+        ptr->setRace(std::move(race));
+    }
+
     return ptr;
 }
 
 std::shared_ptr<CMap> CMapLoader::loadRandomMapWithPlayer(const std::shared_ptr<CGame> &game, std::string player) {
+    return loadRandomMapWithPlayer(game, std::move(player), std::string());
+}
+
+std::shared_ptr<CMap> CMapLoader::loadRandomMapWithPlayer(const std::shared_ptr<CGame> &game, std::string player,
+                                                          const std::string &raceId) {
+    // Validate the player template and (for a non-empty raceId) the race before generating and
+    // installing the random map. On an unresolved race id, keep the current map untouched.
+    std::shared_ptr<CPlayer> ptr = createPlayer(game, player, raceId);
+    if (!ptr) {
+        vstd::logger::warning("Keeping the active map unchanged; player could not be created for random map");
+        return game->getMap();
+    }
+
     std::shared_ptr<CMap> map = CRandomMapGenerator::loadRandomMap(game);
-    std::shared_ptr<CPlayer> ptr = createPlayer(game, player);
     map->setPlayer(ptr);
     return map;
 }
 
-void CMapLoader::save(const std::shared_ptr<CMap> &map, const std::string &name) {
-    if (!is_valid_slot_name(name)) {
+void CMapLoader::save(const std::shared_ptr<CMap> &map, const std::string &name) { saveWithResult(map, name); }
+
+bool CMapLoader::saveWithResult(const std::shared_ptr<CMap> &map, const std::string &name) {
+    if (!CSaveFormat::isValidSlotName(name)) {
         vstd::logger::warning("Rejected invalid save slot name during save:", name);
-        return;
+        return false;
     }
 
-    CResourcesProvider::getInstance()->save(vstd::join({"save/", name, ".json"}, ""), JSONIFY_STYLED(map));
+    auto envelope = build_save_envelope(map);
+    if (!envelope) {
+        vstd::logger::warning("Rejected invalid save snapshot:", name, "reason:", envelope.error());
+        return false;
+    }
+
+    // Persist through the saved map's per-session resources provider; fall back to the process
+    // singleton only when the map has already been detached from its game (compatibility path).
+    auto game = map->getGame();
+    auto resources = game ? game->getResourcesProvider() : CResourcesProvider::getInstance();
+    return resources->save(CSaveFormat::primaryPath(name), CJsonUtil::to_string(*envelope, -1));
 }
 
 void CMapLoader::handleTileLayer(const std::shared_ptr<CMap> &map, const std::vector<std::string> &tileTypes,
@@ -945,6 +1243,7 @@ void CMapLoader::handleObjectLayer(const std::shared_ptr<CMap> &map, const json 
         }
         if (object.contains("properties") && object["properties"].is_object()) {
             const json &objectProperties = object["properties"];
+            CGameObject::PropertyNotificationBatch notificationBatch(*mapObject);
             for (auto &[key, value] : objectProperties.items()) {
                 try {
                     CSerialization::setProperty(mapObject, key, CJsonUtil::clone(value));
@@ -993,7 +1292,7 @@ std::shared_ptr<CMap> CRandomMapGenerator::loadRandomMap(const std::shared_ptr<C
 void CRandomMapGenerator::generateEncounters(const std::shared_ptr<CGame> &game, std::shared_ptr<CMap> &map,
                                              const std::vector<rdg::Room> &rooms) {
     for (const auto &room : rooms) {
-        auto roomCoords = Coords(room.row + room.width / 2, room.col + room.height / 2, 0);
+        auto roomCoords = Coords(room.row + room.height / 2, room.col + room.width / 2, 0);
         if (roomCoords.getDist(map->getEntry()) > 5) {
             for (const auto &creature : game->getRngHandler()->getRandomEncounter(5)) {
                 map->addObject(creature, roomCoords);
@@ -1016,22 +1315,39 @@ void CRandomMapGenerator::generateTiles(std::shared_ptr<CMap> &map, const rdg::D
 
 std::shared_ptr<CGame> CGameLoader::loadGame() {
     std::shared_ptr<CGame> game = std::make_shared<CGame>();
+    game->getResourcesProvider();
+    game->getConfigurationProvider();
     initObjectHandler(game->getObjectHandler());
-    initConfigurations(game->getObjectHandler());
+    initConfigurations(game);
     initScriptHandler(game->getScriptHandler(), game);
     return game;
 }
 
 void CGameLoader::startGameWithPlayer(const std::shared_ptr<CGame> &game, const std::string &file, std::string player) {
-    game->setMap(CMapLoader::loadNewMapWithPlayer(game, file, std::move(player)));
+    startGameWithPlayer(game, file, std::move(player), std::string());
+}
+
+void CGameLoader::startGameWithPlayer(const std::shared_ptr<CGame> &game, const std::string &file, std::string player,
+                                      const std::string &raceId) {
+    game->setMap(CMapLoader::loadNewMapWithPlayer(game, file, std::move(player), raceId));
 }
 
 void CGameLoader::startRandomGameWithPlayer(const std::shared_ptr<CGame> &game, std::string player) {
-    game->setMap(CMapLoader::loadRandomMapWithPlayer(game, std::move(player)));
+    startRandomGameWithPlayer(game, std::move(player), std::string());
+}
+
+void CGameLoader::startRandomGameWithPlayer(const std::shared_ptr<CGame> &game, std::string player,
+                                            const std::string &raceId) {
+    game->setMap(CMapLoader::loadRandomMapWithPlayer(game, std::move(player), raceId));
 }
 
 void CGameLoader::loadSavedGame(const std::shared_ptr<CGame> &game, const std::string &save) {
-    game->setMap(CMapLoader::loadSavedMap(game, save));
+    if (auto loaded = try_load_saved_map(game, save)) {
+        game->setMap(loaded->map);
+        repair_recovered_backup(game, *loaded, save);
+        return;
+    }
+    vstd::logger::warning("Saved game was not loaded; keeping the active map unchanged:", save);
 }
 
 void CGameLoader::startGame(const std::shared_ptr<CGame> &game, const std::string &file) {
@@ -1039,33 +1355,22 @@ void CGameLoader::startGame(const std::shared_ptr<CGame> &game, const std::strin
 }
 
 void CGameLoader::changeMap(const std::shared_ptr<CGame> &game, const std::string &name) {
-    vstd::call_later([game, name]() {
-        // TODO: implement stop processing events here
-        vstd::call_when([game]() { return !game->getMap() || !game->getMap()->isMoving(); },
-                        [game, name]() {
-                            std::shared_ptr<CMap> oldMap = game->getMap();
-                            std::shared_ptr<CMap> map = CMapLoader::loadNewMap(game, name);
-                            game->setMap(map);
-                            if (oldMap && game->getMap()) {
-                                std::shared_ptr<CPlayer> player = oldMap->getPlayer();
-                                if (player) {
-                                    game->getMap()->setPlayer(player);
-                                }
-                                game->getMap()->setTurn(oldMap->getTurn());
-                            }
-                        });
-    });
+    if (!game) {
+        vstd::logger::warning("Rejected map transition without a game:", name);
+        return;
+    }
+    game->getSceneManager()->requestMapChange(game, name);
 }
 
-void CGameLoader::initConfigurations(const std::shared_ptr<CObjectHandler> &handler) {
-    for (const std::string &path : CResourcesProvider::getInstance()->getFiles(CResType::CONFIG)) {
-        handler->registerConfig(path);
+void CGameLoader::initConfigurations(const std::shared_ptr<CGame> &game) {
+    for (const std::string &path : game->getResourcesProvider()->getFiles(CResType::CONFIG)) {
+        game->getObjectHandler()->registerConfig(path);
     }
 }
 
 void CGameLoader::initObjectHandler(const std::shared_ptr<CObjectHandler> &handler) {
     for (const auto &it : *CTypes::builders()) {
-        handler->registerType(it.first, it.second);
+        handler->registerNativeType(it.first, it.second);
     }
 }
 
@@ -1074,6 +1379,16 @@ void CGameLoader::initScriptHandler(const std::shared_ptr<CScriptHandler> &, con
 }
 
 void CGameLoader::loadGui(const std::shared_ptr<CGame> &game) {
+    if (!game) {
+        vstd::logger::warning("Failed to load GUI without a game");
+        return;
+    }
+    auto context = game->getContext();
+    if (!context->isActive()) {
+        vstd::logger::warning("Failed to load GUI after game context shutdown");
+        return;
+    }
+
     std::shared_ptr<CGui> gui = game->createObject<CGui>("gui");
     if (!gui) {
         vstd::logger::warning("Failed to create GUI");
@@ -1083,25 +1398,51 @@ void CGameLoader::loadGui(const std::shared_ptr<CGame> &game) {
     game->setGui(gui);
 
     std::weak_ptr<CGame> weakGame = game;
-    vstd::event_loop<>::instance()->registerFrameCallback([weakGame](int time) {
+    std::weak_ptr<CGameContext> weakContext = context;
+    std::weak_ptr<CGui> weakGui = gui;
+    vstd::event_loop<>::instance()->registerFrameCallback([weakGame, weakContext, weakGui](int time) {
         auto game = weakGame.lock();
-        if (game && game->getGui()) {
-            game->getGui()->render(time);
+        auto context = weakContext.lock();
+        auto gui = weakGui.lock();
+        if (isLiveGuiSession(game, context, gui)) {
+            gui->render(time);
         }
     });
-    vstd::event_loop<>::instance()->registerEventCallback([weakGame](SDL_Event *event) {
+    vstd::event_loop<>::instance()->registerEventCallback([weakGame, weakContext, weakGui](SDL_Event *event) {
         auto game = weakGame.lock();
-        return game && game->getGui() && game->getGui()->event(event);
+        auto context = weakContext.lock();
+        auto gui = weakGui.lock();
+        return isLiveGuiSession(game, context, gui) && gui->event(event);
     });
 }
 
+bool CPluginLoader::isTrustedPluginPath(const std::string &path) { return is_allowed_python_plugin_path(path); }
+
+bool CPluginLoader::isTrustedLuaPluginPath(const std::string &path) { return is_allowed_lua_plugin_path(path); }
+
+bool CPluginLoader::loadLuaPlugin(const std::shared_ptr<CGame> &game, const std::string &path) {
+    if (!isTrustedLuaPluginPath(path)) {
+        vstd::logger::warning("Rejected Lua plugin outside trusted resource plugin paths:", path);
+        return false;
+    }
+    try {
+        std::string code = game->getResourcesProvider()->load(path);
+        return game->getLuaHandler()->loadPlugin(game, path, code);
+    } catch (const std::exception &exception) {
+        vstd::logger::warning("Failed to load Lua plugin:", path, exception.what());
+    } catch (...) {
+        vstd::logger::warning("Failed to load Lua plugin:", path);
+    }
+    return false;
+}
+
 bool CPluginLoader::loadPlugin(const std::shared_ptr<CGame> &game, const std::string &path) {
-    if (!is_allowed_python_plugin_path(path)) {
+    if (!isTrustedPluginPath(path)) {
         vstd::logger::warning("Rejected Python plugin outside trusted resource plugin paths:", path);
         return false;
     }
     try {
-        std::string code = CResourcesProvider::getInstance()->load(path);
+        std::string code = game->getResourcesProvider()->load(path);
         pybind11::dict plugin_namespace;
         plugin_namespace["__builtins__"] = build_restricted_plugin_builtins();
         plugin_namespace["__file__"] = path;
@@ -1133,7 +1474,8 @@ bool CPluginLoader::loadCppPlugin(const std::shared_ptr<CGame> &game, const std:
     }
 
     try {
-        plugin->load(game);
+        CPluginRegistrar registrar(game);
+        plugin->load(registrar);
         return true;
     } catch (const std::exception &exception) {
         vstd::logger::warning("Failed to load C++ plugin:", type, exception.what());
@@ -1145,58 +1487,30 @@ bool CPluginLoader::loadCppPlugin(const std::shared_ptr<CGame> &game, const std:
 
 bool CPluginLoader::loadDynamicPlugin(const std::shared_ptr<CGame> &game, const std::string &library,
                                       const std::string &entry) {
-    if (!game || library.empty()) {
-        vstd::logger::warning("Cannot load dynamic C++ plugin without a game and library path");
-        return false;
-    }
-
-    const auto symbolName = entry.empty() ? std::string(DYNAMIC_PLUGIN_DEFAULT_ENTRY) : entry;
-    const auto resolvedPath = resolve_dynamic_library_path(library);
-    if (resolvedPath.empty()) {
-        vstd::logger::warning("Failed to resolve dynamic C++ plugin library:", library);
-        return false;
-    }
-
-    auto *dynamicLibrary = load_dynamic_library(resolvedPath);
-    if (!dynamicLibrary) {
-        return false;
-    }
-
-    auto entrypoint = dynamicLibrary->loadSymbol(symbolName);
-    if (!entrypoint) {
-        return false;
-    }
-
-    CPluginHostV1 host{GAME_PLUGIN_API_VERSION, game.get(), dynamic_plugin_log, dynamic_plugin_register_config_json};
-    try {
-        if (!entrypoint(&host)) {
-            vstd::logger::warning("Dynamic C++ plugin entrypoint returned false:", library, symbolName);
-            return false;
-        }
-        return true;
-    } catch (const std::exception &exception) {
-        vstd::logger::warning("Failed to load dynamic C++ plugin:", library, symbolName, exception.what());
-    } catch (...) {
-        vstd::logger::warning("Failed to load dynamic C++ plugin:", library, symbolName);
-    }
-    return false;
+    return plugin_runtime::loadNativePlugin(game, library, entry);
 }
 
 bool CPluginLoader::loadGlobalPlugins(const std::shared_ptr<CGame> &game) {
     bool loadedAll = true;
-    std::set<std::string> loadedPythonPlugins;
-    std::set<std::string> loadedDynamicPlugins;
+    std::set<std::string> loadedPluginIds;
+    std::set<std::string> loadedPluginPaths;
+    std::set<std::string> manifestPluginPaths;
 
-    if (auto manifest = load_plugin_manifest()) {
-        if (manifest->contains("global")) {
-            loadedAll = load_plugin_entries(game, (*manifest)["global"], loadedPythonPlugins, loadedDynamicPlugins) &&
-                        loadedAll;
+    if (auto manifest = load_plugin_manifest(game->getResourcesProvider())) {
+        // Explicit manifest entries own discovery even while their map scope is inactive.
+        manifestPluginPaths = getPluginAutoDiscoveryExclusions(*manifest);
+        loadedAll = load_plugin_entries(game, *manifest, std::nullopt, loadedPluginIds, loadedPluginPaths) && loadedAll;
+    }
+
+    for (const std::string &script : game->getResourcesProvider()->getFiles(CResType::PLUGIN)) {
+        if (!manifestPluginPaths.contains(script)) {
+            loadedAll = loadPlugin(game, script) && loadedAll;
         }
     }
 
-    for (const std::string &script : CResourcesProvider::getInstance()->getFiles(CResType::PLUGIN)) {
-        if (!loadedPythonPlugins.contains(script)) {
-            loadedAll = loadPlugin(game, script) && loadedAll;
+    for (const std::string &script : game->getResourcesProvider()->getFiles(CResType::PLUGIN_LUA)) {
+        if (!manifestPluginPaths.contains(script)) {
+            loadedAll = loadLuaPlugin(game, script) && loadedAll;
         }
     }
 
@@ -1204,30 +1518,41 @@ bool CPluginLoader::loadGlobalPlugins(const std::shared_ptr<CGame> &game) {
 }
 
 bool CPluginLoader::loadMapPlugins(const std::shared_ptr<CGame> &game, const std::string &mapName) {
-    if (!is_valid_map_name(mapName)) {
+    if (!CSaveFormat::isValidMapName(mapName)) {
         vstd::logger::warning("Rejected invalid map name while loading plugins:", mapName);
         return false;
     }
 
-    bool loadedAll = true;
-    std::set<std::string> loadedPythonPlugins;
-    std::set<std::string> loadedDynamicPlugins;
-
-    if (auto manifest = load_plugin_manifest()) {
-        if (manifest->contains("maps")) {
-            const auto &mapEntries = (*manifest)["maps"];
-            if (mapEntries.is_object() && mapEntries.contains(mapName)) {
-                loadedAll = load_plugin_entries(game, mapEntries[mapName], loadedPythonPlugins, loadedDynamicPlugins) &&
-                            loadedAll;
-            } else if (!mapEntries.is_object()) {
-                vstd::logger::warning("Ignoring non-object map plugin manifest section");
-                loadedAll = false;
+    // Mark every class registration performed while this map's script/plugins load as map-scoped, so
+    // a transition destination's classes override an earlier map's identically named classes without
+    // clobbering core types or explicit overrides. The guard restores the flag even if a plugin
+    // throws mid-load.
+    struct MapScriptScopeGuard {
+        std::shared_ptr<CObjectHandler> handler;
+        explicit MapScriptScopeGuard(std::shared_ptr<CObjectHandler> handler) : handler(std::move(handler)) {
+            if (this->handler) {
+                this->handler->beginMapScriptScope();
             }
         }
+        ~MapScriptScopeGuard() {
+            if (handler) {
+                handler->endMapScriptScope();
+            }
+        }
+    } mapScriptScopeGuard(game->getObjectHandler());
+
+    bool loadedAll = true;
+    std::set<std::string> loadedPluginIds;
+    std::set<std::string> loadedPluginPaths;
+
+    if (auto manifest = load_plugin_manifest(game->getResourcesProvider())) {
+        loadedAll = load_plugin_entries(game, *manifest, std::optional<std::string>(mapName), loadedPluginIds,
+                                        loadedPluginPaths) &&
+                    loadedAll;
     }
 
     const auto scriptPath = getScriptPath(mapName);
-    if (!loadedPythonPlugins.contains(scriptPath)) {
+    if (!loadedPluginPaths.contains(scriptPath)) {
         loadedAll = loadPlugin(game, scriptPath) && loadedAll;
     }
     return loadedAll;

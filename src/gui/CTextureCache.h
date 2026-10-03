@@ -26,7 +26,7 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 class CTextureCache : public CGameObject {
     V_META(CTextureCache, CGameObject, vstd::meta::empty())
-    std::unordered_map<std::string, fn::sdl::TexturePtr> _textures;
+    std::unordered_map<std::string, fn::sdl::GuiTexturePtr> _textures;
 
   public:
     CTextureCache(std::shared_ptr<CGui> _gui);
@@ -53,5 +53,5 @@ class CTextureUtil {
 
     static void setPixelColor(SDL_Surface *surface, int x, int y, std::tuple<Uint8, Uint8, Uint8, Uint8> color);
 
-    static std::unordered_set<std::pair<int, int>> calculateMask(SDL_Surface *pSurface);
+    static std::unordered_set<std::pair<int, int>, vstd::pair_hash> calculateMask(SDL_Surface *pSurface);
 };

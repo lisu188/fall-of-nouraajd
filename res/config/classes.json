@@ -1,0 +1,32 @@
+{
+  "warrior": {
+    "profileKind": "playerClass",
+    "label": "Warrior",
+    "actions": ["Attack"],
+    "levelling": {
+      "1": "Strike",
+      "2": "Barrier",
+      "3": "BloodThirst",
+      "4": "Bloodlash",
+      "5": "DeathStrike",
+      "6": "DoubleAttack"
+    },
+    "statContribution": {
+      "strength": 3,
+      "stamina": 2,
+      "agility": 2,
+      "intelligence": 1,
+      "hit": 3,
+      "crit": 1,
+      "dmgMin": 2,
+      "dmgMax": 3
+    },
+    "startingEquipment": {
+      "policy": "fixed",
+      "slots": {
+        "0": "Sword",
+        "3": "PlateArmor"
+      }
+    }
+  }
+}

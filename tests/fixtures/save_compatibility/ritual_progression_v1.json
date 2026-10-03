@@ -1,0 +1,75 @@
+{
+  "format": "fall-of-nouraajd-save",
+  "mapName": "ritual",
+  "schemaVersion": 1,
+  "snapshot": {
+    "class": "CMap",
+    "properties": {
+      "anchors_destroyed": true,
+      "anchors_destroyed_count": 3,
+      "description": "immutable ritual progression fixture",
+      "leader_spawned": true,
+      "mapName": "ritual",
+      "objects": [
+        {
+          "class": "CPlayer",
+          "properties": {
+            "completedQuests": [],
+            "items": [],
+            "name": "player",
+            "posx": 3,
+            "posy": 22,
+            "posz": 0,
+            "quests": [
+              {
+                "class": "DestroyAnchorsQuest",
+                "properties": {
+                  "name": "destroyAnchorsQuest",
+                  "typeId": "destroyAnchorsQuest"
+                }
+              },
+              {
+                "class": "FinalResolutionQuest",
+                "properties": {
+                  "name": "finalResolutionQuest",
+                  "typeId": "finalResolutionQuest"
+                }
+              },
+              {
+                "class": "RescueCaptiveQuest",
+                "properties": {
+                  "name": "rescueCaptiveQuest",
+                  "typeId": "rescueCaptiveQuest"
+                }
+              },
+              {
+                "class": "RitualQuest",
+                "properties": {
+                  "name": "ritualQuest",
+                  "typeId": "ritualQuest"
+                }
+              }
+            ],
+            "typeId": "Warrior"
+          }
+        },
+        {
+          "class": "CCreature",
+          "properties": {
+            "name": "ritualLeader",
+            "posx": 13,
+            "posy": 7,
+            "posz": 0,
+            "typeId": "ritualLeaderTemplate"
+          }
+        }
+      ],
+      "ritual_countdown": 62,
+      "ritual_initialized": true,
+      "ritual_started": true,
+      "tiles": [],
+      "triggers": [],
+      "turn": 39
+    }
+  }
+}

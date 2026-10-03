@@ -1,6 +1,6 @@
 /*
 fall-of-nouraajd c++ dark fantasy game
-Copyright (C) 2025  Andrzej Lis
+Copyright (C) 2025-2026  Andrzej Lis
 
 This program is free software: you can redistribute it and/or modify
         it under the terms of the GNU General Public License as published by
@@ -22,13 +22,49 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #include "core/CGlobal.h"
 
 class CCreature;
+class CMap;
+
+enum class CFightOutcome {
+    Invalid = 0,
+    AttackerVictory = 1,
+    AttackerDefeat = 2,
+    Stalled = 3,
+    Cancelled = 4,
+
+    invalid = Invalid,
+    attackerVictory = AttackerVictory,
+    attackerDefeat = AttackerDefeat,
+    stalemate = Stalled,
+    interrupted = Cancelled,
+};
+
+struct CFightResult {
+    CFightOutcome outcome = CFightOutcome::Invalid;
+    int rounds = 0;
+    std::shared_ptr<CCreature> survivor;
+    std::shared_ptr<CCreature> opponent;
+
+    bool resolved() const;
+    bool attackerSucceeded() const;
+};
 
 class CFightHandler {
   public:
+    static constexpr std::size_t CombatHistoryLimit = 64;
+    static void recordCombatStatus(const std::shared_ptr<CMap> &map, const std::string &status);
+    static std::vector<std::string> getCombatHistory(const std::shared_ptr<CMap> &map);
+    static void resetCombatHistory(const std::shared_ptr<CMap> &map);
+
     static bool fight(std::shared_ptr<CCreature> a, std::shared_ptr<CCreature> b);
 
     static bool fightMany(std::shared_ptr<CCreature> attacker,
                           const std::vector<std::shared_ptr<CCreature>> &opponents);
+
+    static CFightResult fightManyResult(std::shared_ptr<CCreature> attacker,
+                                        const std::vector<std::shared_ptr<CCreature>> &opponents);
+
+    static CFightOutcome fightManyOutcome(std::shared_ptr<CCreature> attacker,
+                                          const std::vector<std::shared_ptr<CCreature>> &opponents);
 
     static void defeatedCreature(const std::shared_ptr<CCreature> &a, const std::shared_ptr<CCreature> &b);
 

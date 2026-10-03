@@ -1,0 +1,30 @@
+{
+  "format": "fall-of-nouraajd-save",
+  "mapName": "test",
+  "schemaVersion": 1,
+  "snapshot": {
+    "class": "CMap",
+    "properties": {
+      "description": "immutable schema v1 fixture",
+      "mapName": "test",
+      "objects": [
+        {
+          "class": "CPlayer",
+          "properties": {
+            "completedQuests": [],
+            "items": [],
+            "name": "player",
+            "posx": 2,
+            "posy": 3,
+            "posz": 0,
+            "quests": [],
+            "typeId": "Warrior"
+          }
+        }
+      ],
+      "tiles": [],
+      "triggers": [],
+      "turn": 12
+    }
+  }
+}

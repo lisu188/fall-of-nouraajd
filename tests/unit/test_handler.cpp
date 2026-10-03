@@ -1,0 +1,2624 @@
+/*
+fall-of-nouraajd c++ dark fantasy game
+Copyright (C) 2025-2026  Andrzej Lis
+
+This program is free software: you can redistribute it and/or modify
+        it under the terms of the GNU General Public License as published by
+the Free Software Foundation, either version 3 of the License, or
+(at your option) any later version.
+
+This program is distributed in the hope that it will be useful,
+        but WITHOUT ANY WARRANTY; without even the implied warranty of
+MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+GNU General Public License for more details.
+
+You should have received a copy of the GNU General Public License
+along with this program.  If not, see <https://www.gnu.org/licenses/>.
+ */
+
+#include "handler/CGuiHandler.h"
+#include "handler/CFightHandler.h"
+#include "handler/CObjectHandler.h"
+#include "handler/CQuestHandler.h"
+#include "handler/CRngHandler.h"
+#include "handler/CScriptHandler.h"
+#include "handler/CTooltipHandler.h"
+#include "core/CController.h"
+#include "core/CGame.h"
+#include "core/CJsonUtil.h"
+#include "core/CLoader.h"
+#include "core/CMap.h"
+#include "core/CPlaytestTrace.h"
+#include "core/CStats.h"
+#include "core/CTypes.h"
+#include "core/CWrapper.h"
+#include "gui/CGui.h"
+#include "gui/panel/CGameFightPanel.h"
+#include "object/CCreature.h"
+#include "object/CCreatureClass.h"
+#include "object/CCreatureRace.h"
+#include "object/CInteraction.h"
+#include "object/CEffect.h"
+#include "object/CItem.h"
+#include "object/CPlayer.h"
+#include "object/CQuest.h"
+#include "object/CTrigger.h"
+#include "test_harness.h"
+#include "native_test_profile.h"
+
+#include <SDL.h>
+#include <pybind11/embed.h>
+#include <algorithm>
+#include <chrono>
+#include <cstdlib>
+#include <filesystem>
+#include <fstream>
+#include <functional>
+#include <iostream>
+#include <map>
+#include <memory>
+#include <optional>
+#include <set>
+#include <stdexcept>
+#include <string>
+#include <unordered_map>
+#include <utility>
+#include <vector>
+
+namespace {
+
+CNativeTestProfile &nativeTestProfile() {
+    static CNativeTestProfile profile("handler");
+    return profile;
+}
+
+void testGameplayMetadataIsAvailableBeforePluginLoading() {
+    const auto expectMetadata = []<typename T>(const char *message) {
+        using Pointer = std::shared_ptr<T>;
+        using Set = std::set<Pointer>;
+        using Map = std::map<std::string, Pointer>;
+        const auto hasSerializer = [](auto key) {
+            auto found = CTypes::serializers()->find(key);
+            return found != CTypes::serializers()->end() && found->second;
+        };
+        expect_true(CTypes::is_pointer_type<Pointer>() && CTypes::is_array_type<Set>() && CTypes::is_map_type<Map>() &&
+                        hasSerializer(vstd::type_pair<std::shared_ptr<json>, Pointer>()) &&
+                        hasSerializer(vstd::type_pair<std::shared_ptr<json>, Set>()) &&
+                        hasSerializer(vstd::type_pair<std::shared_ptr<json>, Map>()),
+                    message);
+        expect_true(!CTypes::builders()->contains(T::static_meta()->name()),
+                    "gameplay builders must remain unavailable until the native plugin registers them");
+    };
+    expectMetadata.operator()<CFightController>("fight controller metadata must exist before plugin loading");
+    expectMetadata.operator()<CMonsterFightController>(
+        "derived fight controller metadata must exist before plugin loading");
+    expectMetadata.operator()<CCreatureRace>("race metadata must exist before plugin loading");
+    expectMetadata.operator()<CCreatureClass>("class metadata must exist before plugin loading");
+    expectMetadata.operator()<CInteraction>("interaction metadata must exist before plugin loading");
+    expectMetadata.operator()<CWrapper<CInteraction>>("wrapped interaction metadata must exist before plugin loading");
+
+    auto controller = std::make_shared<CMonsterFightController>();
+    auto interaction = std::make_shared<CWrapper<CInteraction>>();
+    try {
+        expect_true(vstd::any_cast<std::shared_ptr<CFightController>>(std::any(controller)) == controller &&
+                        vstd::any_cast<std::shared_ptr<CGameObject>>(std::any(controller)) == controller &&
+                        vstd::any_cast<std::shared_ptr<CInteraction>>(std::any(interaction)) == interaction &&
+                        vstd::any_cast<std::shared_ptr<CGameObject>>(std::any(interaction)) == interaction,
+                    "gameplay metadata must register the complete controller and wrapper base chains");
+    } catch (const std::bad_any_cast &) {
+        expect_true(false, "gameplay metadata must register the complete controller and wrapper base chains");
+    }
+}
+
+class NoProgressFightController : public CFightController {
+  public:
+    int start_count = 0;
+    int end_count = 0;
+
+    bool control(std::shared_ptr<CCreature>, std::shared_ptr<CCreature>) override { return true; }
+
+    void start(std::shared_ptr<CCreature>, std::shared_ptr<CCreature>) override { start_count++; }
+
+    void end(std::shared_ptr<CCreature>, std::shared_ptr<CCreature>) override { end_count++; }
+};
+
+class KillingFightController : public NoProgressFightController {
+  public:
+    bool control(std::shared_ptr<CCreature>, std::shared_ptr<CCreature> opponent) override {
+        if (opponent) {
+            opponent->setHp(0);
+        }
+        return true;
+    }
+};
+
+class SelfDefeatFightController : public NoProgressFightController {
+  public:
+    bool control(std::shared_ptr<CCreature> actor, std::shared_ptr<CCreature>) override {
+        if (actor) {
+            actor->setHp(0);
+        }
+        return true;
+    }
+};
+
+class CancellingFightController : public NoProgressFightController {
+  public:
+    bool control(std::shared_ptr<CCreature>, std::shared_ptr<CCreature>) override { return false; }
+
+    bool isCancelled(std::shared_ptr<CCreature>, std::shared_ptr<CCreature>) override { return true; }
+};
+
+class ReplacingOnStartFightController : public NoProgressFightController {
+  public:
+    std::shared_ptr<NoProgressFightController> replacement = std::make_shared<NoProgressFightController>();
+
+    void start(std::shared_ptr<CCreature> me, std::shared_ptr<CCreature> opponent) override {
+        NoProgressFightController::start(me, opponent);
+        if (me) {
+            me->setFightController(replacement);
+        }
+    }
+};
+
+void set_environment_variable(const std::string &name, const std::optional<std::string> &value) {
+#ifdef _WIN32
+    _putenv_s(name.c_str(), value ? value->c_str() : "");
+#else
+    if (value) {
+        setenv(name.c_str(), value->c_str(), 1);
+    } else {
+        unsetenv(name.c_str());
+    }
+#endif
+}
+
+class ScopedEnvironmentVariable {
+  public:
+    ScopedEnvironmentVariable(std::string name, std::optional<std::string> value) : name(std::move(name)) {
+        if (const char *existing = std::getenv(this->name.c_str())) {
+            previous = std::string(existing);
+        }
+        set_environment_variable(this->name, value);
+    }
+
+    ~ScopedEnvironmentVariable() { set_environment_variable(name, previous); }
+
+  private:
+    std::string name;
+    std::optional<std::string> previous;
+};
+
+class LethalEffect : public CEffect {
+  public:
+    void onEffect() override {
+        if (auto victim = getVictim()) {
+            victim->setHp(0);
+        }
+    }
+};
+
+class CountingEffect : public CEffect {
+  public:
+    int ticks = 0;
+
+    void onEffect() override { ticks++; }
+};
+
+class CompletedQuest : public CQuest {
+  public:
+    int complete_count = 0;
+
+    bool isCompleted() override { return true; }
+
+    void onComplete() override { complete_count++; }
+};
+
+class QuestLifecycleProbe : public CQuest {
+  public:
+    int check_count = 0;
+    int complete_count = 0;
+    std::vector<bool> captures;
+    std::function<void()> check_callback;
+    std::function<void()> complete_callback;
+    std::function<void()> capture_callback;
+
+    bool isCompleted() override {
+        check_count++;
+        if (check_callback) {
+            check_callback();
+        }
+        return true;
+    }
+
+    void onComplete() override {
+        complete_count++;
+        if (complete_callback) {
+            complete_callback();
+        }
+    }
+
+    void captureJournal(bool completed) override {
+        captures.push_back(completed);
+        if (capture_callback) {
+            capture_callback();
+        }
+    }
+};
+
+std::shared_ptr<CGame> load_empty_game() {
+    auto game = nativeTestProfile().run("CGameLoader::loadGame", [] { return CGameLoader::loadGame(); });
+    nativeTestProfile().run("CGameLoader::startGame(empty)", [&] { CGameLoader::startGame(game, "empty"); });
+    return game;
+}
+
+void attachFightPanelGuiFixture(const std::shared_ptr<CGame> &game) {
+    auto gui = std::make_shared<CGui>();
+    gui->setGame(game);
+    game->setGui(gui);
+
+    // Authored GUI visibility scripts require Python bindings for native GUI types.
+    // These cancellation tests exercise the real panel without unrelated scripted child views.
+    auto fight_panel_config = std::make_shared<json>();
+    (*fight_panel_config)["class"] = "CGameFightPanel";
+    game->getObjectHandler()->registerConfig("fightPanel", fight_panel_config);
+}
+
+void initialize_test_creature_stats(const std::shared_ptr<CCreature> &creature) {
+    creature->setBaseStats(std::make_shared<CStats>());
+    creature->setLevelStats(std::make_shared<CStats>());
+    creature->getBaseStats()->setMainStat("strength");
+    creature->getBaseStats()->setStamina(10);
+    creature->getBaseStats()->setStrength(10);
+    creature->getBaseStats()->setAgility(10);
+    creature->getBaseStats()->setHit(100);
+    creature->getBaseStats()->setCrit(0);
+    creature->getBaseStats()->setDmgMin(0);
+    creature->getBaseStats()->setDmgMax(0);
+}
+
+std::shared_ptr<CPlayer> add_test_player(const std::shared_ptr<CGame> &game) {
+    auto player = std::make_shared<CPlayer>();
+    player->setGame(game);
+    initialize_test_creature_stats(player);
+    player->setHp(10);
+    game->getMap()->setPlayer(player);
+    player->setController(std::make_shared<CPlayerController>());
+    player->setFightController(std::make_shared<CPlayerFightController>());
+    player->setHp(10);
+    return player;
+}
+
+std::shared_ptr<CCreature> add_test_creature(const std::shared_ptr<CGame> &game, const std::string &name, int x = 0,
+                                             int y = 0) {
+    auto creature = std::make_shared<CCreature>();
+    creature->setGame(game);
+    creature->setName(name);
+    initialize_test_creature_stats(creature);
+    creature->setHp(10);
+    creature->setFightController(std::make_shared<NoProgressFightController>());
+    creature->setPosX(x);
+    creature->setPosY(y);
+    creature->setPosZ(0);
+    game->getMap()->addObject(creature);
+    creature->setHp(10);
+    return creature;
+}
+
+std::shared_ptr<CItem> add_unit_loot(const std::shared_ptr<CGame> &game, const std::shared_ptr<CCreature> &creature,
+                                     const std::string &name) {
+    auto item = std::make_shared<CItem>();
+    item->setGame(game);
+    item->setName(name);
+    item->setTypeId(name);
+    creature->addItem(item);
+    return item;
+}
+
+std::shared_ptr<LethalEffect> attach_lethal_effect(const std::shared_ptr<CCreature> &victim,
+                                                   const std::shared_ptr<CCreature> &caster) {
+    auto effect = std::make_shared<LethalEffect>();
+    effect->setDuration(1);
+    effect->setName("unitLethalEffect");
+    effect->setTypeId("unitLethalEffect");
+    effect->setCaster(caster);
+    effect->setVictim(victim);
+    victim->addEffect(effect);
+    return effect;
+}
+
+void expect_controller_lifecycle(const std::shared_ptr<NoProgressFightController> &controller, int starts, int ends,
+                                 const char *message) {
+    expect_true(controller && controller->start_count == starts && controller->end_count == ends, message);
+}
+
+void test_script_handler_executes_commands_and_wraps_functions() {
+    CScriptHandler handler;
+
+    handler.execute_script("value = 4");
+    expect_true(handler.get_object<int>("value") == 4, "execute_script should write into the main namespace");
+
+    pybind11::dict custom_namespace;
+    custom_namespace["seed"] = 7;
+    handler.execute_script("result = seed + 5", custom_namespace);
+    expect_true(custom_namespace["result"].cast<int>() == 12, "execute_script should honor a provided namespace");
+
+    const auto built = handler.build_command({"capture", "alpha", "beta"});
+    expect_true(built == "capture(\"alpha\",\"beta\")", "build_command should quote string arguments");
+
+    handler.execute_script("captured = ''\n"
+                           "def capture(first, second):\n"
+                           "\tglobal captured\n"
+                           "\tcaptured = first + ':' + second");
+    handler.execute_command({"capture", "alpha", "beta"});
+    expect_true(handler.get_object<std::string>("captured") == "alpha:beta",
+                "execute_command should execute the built Python call");
+
+    handler.import("math");
+    handler.execute_script("root_value = math.isqrt(81)");
+    expect_true(handler.get_object<int>("root_value") == 9, "import should load Python modules into the namespace");
+
+    handler.add_function("triple_value", "return value * 3", {"value"});
+    expect_true(handler.call_function<int, int>("triple_value", 7) == 21,
+                "add_function should compile callable Python code");
+
+    auto multiply = handler.create_function<int, int, int>("multiply_values", "return left * right", {"left", "right"});
+    expect_true(multiply(6, 7) == 42, "create_function should return a typed callable wrapper");
+    expect_true(handler.call_function<int, int, int>("multiply_values", 3, 5) == 15,
+                "call_function should invoke previously created Python callables");
+
+    handler.execute_script("observed = 0");
+    auto store_value =
+        handler.create_function<void, int>("store_value", "global observed\nobserved = value", {"value"});
+    store_value(123);
+    expect_true(handler.get_object<int>("observed") == 123,
+                "void wrappers should execute Python callables without returning values");
+
+    handler.execute_script("def returns_text():\n"
+                           "\treturn 'oops'");
+    auto invalid_cast = handler.get_function<int>("returns_text");
+    expect_true(invalid_cast() == 0, "typed wrappers should return a default value after Python cast failures");
+
+    handler.add_function("broken_function", "return )", {});
+    handler.call_function<void>("broken_function");
+
+    handler.add_class("NamedScriptClass", "def value(self):\n\treturn 9", {});
+    handler.execute_script("named_instance = NamedScriptClass()");
+    auto named_instance = handler.get_object<pybind11::object>("named_instance");
+    expect_true(named_instance.attr("value")().cast<int>() == 9, "add_class should compile named Python classes");
+
+    const auto generated_class = handler.add_class("def value(self):\n\treturn 11", {});
+    handler.execute_script("generated_instance = " + generated_class + "()");
+    auto generated_instance = handler.get_object<pybind11::object>("generated_instance");
+    expect_true(generated_instance.attr("value")().cast<int>() == 11,
+                "add_class overload should return a usable generated class name");
+
+    expect_true(handler.call_created_function<int, int>("return value * 2", {"value"}, 8) == 16,
+                "call_created_function should compile, call and delete temporary Python functions");
+
+    handler.execute_script("created_void_value = 0");
+    handler.call_created_function("global created_void_value\ncreated_void_value = value + 1", {"value"}, 4);
+    expect_true(handler.get_object<int>("created_void_value") == 5,
+                "void call_created_function should update Python state and clean up its temporary function");
+}
+
+void test_handler_constructors_are_covered_by_native_tests() {
+    CQuestHandler quest_handler;
+    CRngHandler rng_handler;
+    CGuiHandler gui_handler;
+
+    expect_true(CGuiHandler::static_meta()->name() == "CGuiHandler",
+                "GUI handler metadata should expose its type name");
+    expect_true(gui_handler.meta()->inherits("CGameObject"), "GUI handler metadata should preserve its object base");
+    gui_handler.showMessage("native handler constructor coverage");
+    gui_handler.showInfo("native handler info coverage");
+    // Headless campaign screens log the title/body/action content and return
+    // immediately instead of blocking on input.
+    gui_handler.showCampaignScreen("Chapter I - Hearthfall", "Ten years of exile end here.", "BEGIN");
+    // The headless campaign browser resolves to the empty stable id immediately.
+    expect_true(gui_handler.showCampaignSelection(nullptr, nullptr, nullptr).empty(),
+                "headless campaign selection should resolve to the empty stable id");
+    expect_true(!gui_handler.showQuestion("native handler question coverage"),
+                "headless GUI handler questions should return false");
+    expect_true(rng_handler.getRandomLoot(0).empty(), "default RNG handler should return no loot without a game");
+    expect_true(rng_handler.getRandomEncounter(0).empty(),
+                "default RNG handler should return no encounters without a game");
+    (void)quest_handler;
+}
+
+std::shared_ptr<CTrigger> make_unit_trigger(const std::string &name, const std::string &typeId) {
+    auto trigger = std::make_shared<CTrigger>();
+    trigger->setType("CTrigger");
+    trigger->setName(name);
+    trigger->setTypeId(typeId);
+    trigger->setObject("unitObject");
+    trigger->setEvent(CGameEvent::CType::onEnter);
+    return trigger;
+}
+
+void test_event_handler_trigger_registration_uses_named_comparison_helpers() {
+    CEventHandler handler;
+    auto first = make_unit_trigger("unitDuplicateTrigger", "unitDuplicateTriggerType");
+    auto duplicate = make_unit_trigger("unitDuplicateTrigger", "unitDuplicateTriggerType");
+    auto same_type_different_name = make_unit_trigger("unitDistinctTrigger", "unitDuplicateTriggerType");
+
+    handler.registerTrigger(first);
+    handler.registerTrigger(duplicate);
+    expect_true(handler.getTriggers().size() == 1,
+                "trigger registration should de-duplicate matching configured trigger registrations");
+
+    handler.registerTrigger(first);
+    expect_true(handler.getTriggers().size() == 1,
+                "trigger registration should de-duplicate the exact same trigger instance");
+
+    handler.registerTrigger(same_type_different_name);
+    expect_true(handler.getTriggers().size() == 2,
+                "trigger registration should preserve distinct trigger names with the same configured type id");
+}
+
+void test_fight_handler_rejects_stale_and_cross_map_participants() {
+    auto game = load_empty_game();
+    auto map = game->getMap();
+    auto attacker = add_test_creature(game, "unitIdentityAttacker");
+    auto stale = add_test_creature(game, "unitReplaceableOpponent", 1, 0);
+    map->removeObject(stale);
+
+    auto replacement = add_test_creature(game, "unitReplaceableOpponent", 1, 0);
+    map->removeObject(stale);
+    expect_true(map->getObjectByName("unitReplaceableOpponent") == replacement,
+                "removeObject should not erase a same-name replacement through a stale reference");
+
+    expect_true(CFightHandler::fightManyOutcome(attacker, {stale}) == CFightOutcome::Invalid,
+                "stale same-name opponents should be rejected before combat starts");
+    expect_true(map->getObjectByName("unitReplaceableOpponent") == replacement,
+                "combat with a stale opponent should not mutate the replacement");
+
+    map->removeObjectByName("unitReplaceableOpponent");
+    expect_true(map->getObjectByName("unitReplaceableOpponent") == nullptr,
+                "removeObjectByName should remain the explicit name-based removal API");
+
+    auto second_game = load_empty_game();
+    auto cross_map = add_test_creature(second_game, "unitCrossMapOpponent", 1, 0);
+    expect_true(CFightHandler::fightManyOutcome(attacker, {cross_map}) == CFightOutcome::Invalid,
+                "cross-map opponents should fail closed");
+    expect_true(map->getObjectByName(attacker->getName()) == attacker,
+                "cross-map rejection should leave the attacker map unchanged");
+    expect_true(second_game->getMap()->getObjectByName(cross_map->getName()) == cross_map,
+                "cross-map rejection should leave the opponent map unchanged");
+}
+
+void test_fight_handler_attributes_lethal_effects_to_valid_casters() {
+    auto game = load_empty_game();
+    auto attacker = add_test_creature(game, "unitEffectVictim");
+    auto selected = add_test_creature(game, "unitASelectedOpponent", 1, 0);
+    auto caster = add_test_creature(game, "unitZActualCaster", 1, 0);
+    add_unit_loot(game, attacker, "unitCasterOwnedLoot");
+    attach_lethal_effect(attacker, caster);
+
+    const auto outcome = CFightHandler::fightManyOutcome(attacker, {selected, caster});
+
+    expect_true(outcome == CFightOutcome::AttackerDefeat, "attacker death from an effect should be AttackerDefeat");
+    expect_true(caster->countItems("unitCasterOwnedLoot") == 1,
+                "the effect caster should receive transferable loot from the defeated attacker");
+    expect_true(selected->countItems("unitCasterOwnedLoot") == 0,
+                "the selected UI target should not receive an effect kill it did not cause");
+
+    auto second_game = load_empty_game();
+    auto effect_attacker = add_test_creature(second_game, "unitEffectAttacker");
+    auto effect_victim = add_test_creature(second_game, "unitEffectOpponent", 1, 0);
+    add_unit_loot(second_game, effect_victim, "unitDelayedOpponentLoot");
+    attach_lethal_effect(effect_victim, effect_attacker);
+
+    const auto victory = CFightHandler::fightManyOutcome(effect_attacker, {effect_victim});
+
+    expect_true(victory == CFightOutcome::AttackerVictory, "opponent effect death should resolve as attacker victory");
+    expect_true(effect_attacker->countItems("unitDelayedOpponentLoot") == 1,
+                "attacker-owned delayed effects should grant opponent loot once");
+    expect_true(second_game->getMap()->getObjectByName(effect_victim->getName()) == nullptr,
+                "effect-killed opponents should be removed once");
+
+    auto invalid_game = load_empty_game();
+    auto invalid_victim = add_test_creature(invalid_game, "unitInvalidCasterVictim");
+    auto unrelated = add_test_creature(invalid_game, "unitUnrelatedOpponent", 1, 0);
+    auto stale_caster = add_test_creature(invalid_game, "unitStaleCaster", 2, 0);
+    add_unit_loot(invalid_game, invalid_victim, "unitInvalidCasterLoot");
+    attach_lethal_effect(invalid_victim, stale_caster);
+    invalid_game->getMap()->removeObject(stale_caster);
+
+    const auto invalid_outcome = CFightHandler::fightManyOutcome(invalid_victim, {unrelated});
+
+    expect_true(invalid_outcome == CFightOutcome::AttackerDefeat,
+                "invalid-caster lethal effects should still resolve the loser");
+    expect_true(unrelated->countItems("unitInvalidCasterLoot") == 0,
+                "invalid effect casters should not cause unrelated opponents to receive loot");
+    expect_true(invalid_game->getMap()->getObjectByName(invalid_victim->getName()) == nullptr,
+                "losers killed by invalid-caster effects should still be cleaned up");
+}
+
+void test_fight_handler_reports_explicit_outcomes_and_final_status() {
+    const CFightResult default_result;
+    expect_true(default_result.outcome == CFightOutcome::Invalid && default_result.rounds == 0,
+                "default fight results should construct as invalid with no rounds");
+    expect_true(!default_result.resolved() && !default_result.attackerSucceeded(),
+                "default fight results should not collapse invalid combat into a resolved bool");
+
+    auto victory_game = load_empty_game();
+    auto victor = add_test_creature(victory_game, "unitOutcomeVictor");
+    victor->setFightController(std::make_shared<KillingFightController>());
+    auto defeated = add_test_creature(victory_game, "unitOutcomeDefeated", 1, 0);
+    auto victory_controller = std::dynamic_pointer_cast<KillingFightController>(victor->getFightController());
+    auto defeated_controller = std::dynamic_pointer_cast<NoProgressFightController>(defeated->getFightController());
+    const CFightResult cancelled_result{CFightOutcome::Cancelled, 3, victor, defeated};
+    expect_true(cancelled_result.outcome == CFightOutcome::Cancelled && cancelled_result.rounds == 3,
+                "fight results should construct with explicit cancelled outcome data");
+
+    CFightHandler::recordCombatStatus(victory_game->getMap(), "Previous encounter event");
+    const auto victory = CFightHandler::fightManyResult(victor, {defeated});
+    const auto combat_history = CFightHandler::getCombatHistory(victory_game->getMap());
+    expect_true(
+        combat_history.size() >= 3 && combat_history.front().starts_with("Combat round 1 begins.") &&
+            combat_history.back() == victory_game->getMap()->getStringProperty("combatStatus") &&
+            std::find(combat_history.begin(), combat_history.end(), "Previous encounter event") == combat_history.end(),
+        "real encounters must reset old history and record authoritative round/action/outcome messages in order");
+    expect_true(victory_game->getMap()->getNumericProperty("combatRound") == victory.rounds,
+                "the combat display round must come from the resolved encounter loop");
+
+    expect_true(victory.outcome == CFightOutcome::AttackerVictory,
+                "direct attacker victory should be reported explicitly");
+    expect_true(victory.rounds == 1, "direct attacker victory should report the completed round count");
+    expect_true(victory.survivor == victor && victory.opponent == defeated,
+                "direct attacker victory should report survivor and opponent metadata");
+    expect_true(victory.resolved() && victory.attackerSucceeded(),
+                "result helpers should identify successful resolved combat");
+    expect_controller_lifecycle(victory_controller, 1, 1,
+                                "attacker controller should start and end exactly once on victory");
+    expect_controller_lifecycle(defeated_controller, 1, 1,
+                                "opponent controller should start and end exactly once on victory");
+    expect_true(victory_game->getMap()->getStringProperty("combatStatus").find("survives the encounter") !=
+                    std::string::npos,
+                "attacker victory should preserve the survivor status text");
+    expect_true(CFightHandler::fightManyOutcome(victor, {defeated}) == CFightOutcome::Invalid,
+                "enum compatibility wrapper should still be constructible for invalid post-victory input");
+
+    auto stalemate_game = load_empty_game();
+    auto stalled_attacker = add_test_creature(stalemate_game, "unitStalledAttacker");
+    auto stalled_defender = add_test_creature(stalemate_game, "unitStalledDefender", 1, 0);
+    const auto stalemate_controller =
+        std::dynamic_pointer_cast<NoProgressFightController>(stalled_attacker->getFightController());
+    const auto stalemate_defender_controller =
+        std::dynamic_pointer_cast<NoProgressFightController>(stalled_defender->getFightController());
+
+    const auto stalemate = CFightHandler::fightManyResult(stalled_attacker, {stalled_defender});
+
+    expect_true(stalemate.outcome == CFightOutcome::Stalled, "no-progress combat should report stalled outcome");
+    expect_true(stalemate.rounds == 20, "stalled combat should report the stale round budget consumed");
+    expect_true(stalemate.survivor == stalled_attacker && stalemate.opponent == stalled_defender,
+                "stalled combat should keep participant metadata instead of only returning false");
+    expect_true(!stalemate.resolved() && !stalemate.attackerSucceeded(),
+                "result helpers should keep stalled combat separate from resolved combat");
+    expect_true(!CFightHandler::fightMany(stalled_attacker, {stalled_defender}),
+                "legacy fightMany should still return false for unresolved combat");
+    expect_controller_lifecycle(stalemate_controller, 2, 2,
+                                "attacker cleanup should also run for the legacy stalemate call");
+    expect_controller_lifecycle(stalemate_defender_controller, 2, 2,
+                                "opponent cleanup should also run for the legacy stalemate call");
+    expect_true(stalemate_game->getMap()->getStringProperty("combatStatus").find("stalled after 20 rounds") !=
+                    std::string::npos,
+                "stale-loop termination should publish a diagnostic stalled status");
+
+    auto legacy_victory_game = load_empty_game();
+    auto legacy_victor = add_test_creature(legacy_victory_game, "unitLegacyOutcomeVictor");
+    legacy_victor->setFightController(std::make_shared<KillingFightController>());
+    auto legacy_defeated = add_test_creature(legacy_victory_game, "unitLegacyOutcomeDefeated", 1, 0);
+    expect_true(CFightHandler::fight(legacy_victor, legacy_defeated),
+                "legacy two-creature bool wrapper should still return true for resolved victory");
+
+    auto player_game = load_empty_game();
+    auto player_map = player_game->getMap();
+    auto player = add_test_player(player_game);
+    player->setHp(1);
+    player->setFightController(std::make_shared<NoProgressFightController>());
+    const auto player_controller = std::dynamic_pointer_cast<NoProgressFightController>(player->getFightController());
+    auto killer = add_test_creature(player_game, "unitPlayerDefeatKiller", 1, 0);
+    killer->setFightController(std::make_shared<KillingFightController>());
+    const auto killer_controller = std::dynamic_pointer_cast<KillingFightController>(killer->getFightController());
+
+    const auto defeat = CFightHandler::fightManyOutcome(player, {killer});
+    const auto status = player_map->getStringProperty("combatStatus");
+
+    expect_true(defeat == CFightOutcome::AttackerDefeat, "player defeat should remain visible after respawn");
+    expect_controller_lifecycle(player_controller, 1, 1,
+                                "attacker controller should start and end exactly once on defeat");
+    expect_controller_lifecycle(killer_controller, 1, 1,
+                                "opponent controller should start and end exactly once on defeat");
+    expect_true(player_map->getObjectByName("player") == player && player->isAlive() && player->getHp() == 1,
+                "player defeat should keep the existing respawn behavior");
+    expect_true(status.find("survives the encounter") == std::string::npos,
+                "defeated respawned players must not be reported as surviving");
+    expect_true(status.find("defeated") != std::string::npos, "final defeat status should be explicit");
+
+    auto self_defeat_game = load_empty_game();
+    auto self_defeating_attacker = add_test_creature(self_defeat_game, "unitSelfDefeatingAttacker");
+    self_defeating_attacker->setFightController(std::make_shared<SelfDefeatFightController>());
+    add_unit_loot(self_defeat_game, self_defeating_attacker, "unitSelfDefeatLoot");
+    auto surviving_defender = add_test_creature(self_defeat_game, "unitSelfDefeatDefender", 1, 0);
+    const auto self_defeat_controller =
+        std::dynamic_pointer_cast<SelfDefeatFightController>(self_defeating_attacker->getFightController());
+    const auto surviving_defender_controller =
+        std::dynamic_pointer_cast<NoProgressFightController>(surviving_defender->getFightController());
+
+    const auto self_defeat = CFightHandler::fightManyResult(self_defeating_attacker, {surviving_defender});
+
+    expect_true(self_defeat.outcome == CFightOutcome::AttackerDefeat,
+                "attackers defeated during their own action should report AttackerDefeat");
+    expect_true(self_defeat.survivor == surviving_defender && self_defeat.opponent == self_defeating_attacker,
+                "self-defeat should attribute the surviving opponent in result metadata");
+    expect_controller_lifecycle(self_defeat_controller, 1, 1,
+                                "self-defeat should still end the attacker controller exactly once");
+    expect_controller_lifecycle(surviving_defender_controller, 1, 1,
+                                "self-defeat should still end the defender controller exactly once");
+    expect_true(surviving_defender->countItems("unitSelfDefeatLoot") == 1,
+                "self-defeat should grant transferable loot to the surviving opponent");
+    expect_true(self_defeat_game->getMap()->getObjectByName(self_defeating_attacker->getName()) == nullptr,
+                "self-defeat should remove the defeated attacker from the map");
+}
+
+void test_fight_handler_reports_invalid_result_metadata() {
+    const auto null_result = CFightHandler::fightManyResult(std::shared_ptr<CCreature>(), {});
+    expect_true(null_result.outcome == CFightOutcome::Invalid && null_result.rounds == 0,
+                "null attackers should return an invalid empty result");
+    expect_true(!null_result.survivor && !null_result.opponent,
+                "null attackers should not report stale survivor metadata");
+
+    auto detached = std::make_shared<CCreature>();
+    detached->setName("unitDetachedAttacker");
+    detached->setFightController(std::make_shared<NoProgressFightController>());
+    const auto detached_controller =
+        std::dynamic_pointer_cast<NoProgressFightController>(detached->getFightController());
+    const auto detached_result = CFightHandler::fightManyResult(detached, {});
+    expect_true(detached_result.outcome == CFightOutcome::Invalid,
+                "attackers without an active map registration should return invalid");
+    expect_controller_lifecycle(detached_controller, 0, 0,
+                                "invalid detached combat should not start or end controllers");
+
+    auto game = load_empty_game();
+    auto attacker = add_test_creature(game, "unitInvalidMetadataAttacker");
+    const auto attacker_controller =
+        std::dynamic_pointer_cast<NoProgressFightController>(attacker->getFightController());
+    game->getMap()->setStringProperty("combatStatus", "previous encounter status");
+    const auto empty_opponents = CFightHandler::fightManyResult(attacker, {});
+    expect_true(empty_opponents.outcome == CFightOutcome::Invalid,
+                "combat without active opponents should return invalid");
+    expect_controller_lifecycle(attacker_controller, 0, 0,
+                                "invalid empty-opponent combat should not start or end controllers");
+    expect_true(game->getMap()->getStringProperty("combatStatus").empty(),
+                "invalid combat without active opponents should clear previous combat status");
+
+    auto controllerless = add_test_creature(game, "unitControllerlessAttacker", 2, 0);
+    auto defender = add_test_creature(game, "unitControllerlessDefender", 3, 0);
+    controllerless->setFightController(nullptr);
+    game->getMap()->setStringProperty("combatStatus", "previous encounter status");
+    const auto controllerless_result = CFightHandler::fightManyResult(controllerless, {defender});
+    expect_true(controllerless_result.outcome == CFightOutcome::Invalid,
+                "attackers without fight controllers should return invalid");
+    expect_true(game->getMap()->getStringProperty("combatStatus").empty(),
+                "invalid combat without a fight controller should clear previous combat status");
+    expect_true(game->getMap()->getObjectByName(defender->getName()) == defender,
+                "invalid controller checks should not mutate active opponents");
+}
+
+void test_fight_handler_reports_cancelled_quit_event() {
+    expect_true(SDL_InitSubSystem(SDL_INIT_EVENTS) == 0, "SDL event subsystem should initialize for quit events");
+    SDL_FlushEvent(SDL_QUIT);
+
+    auto game = load_empty_game();
+    auto attacker = add_test_creature(game, "unitCancelledAttacker");
+    auto defender = add_test_creature(game, "unitCancelledDefender", 1, 0);
+    const auto attacker_controller =
+        std::dynamic_pointer_cast<NoProgressFightController>(attacker->getFightController());
+    const auto defender_controller =
+        std::dynamic_pointer_cast<NoProgressFightController>(defender->getFightController());
+
+    SDL_Event quit_event{};
+    quit_event.type = SDL_QUIT;
+    expect_true(SDL_PushEvent(&quit_event) == 1, "SDL_QUIT event should be queued for cancellation coverage");
+
+    const auto result = CFightHandler::fightManyResult(attacker, {defender});
+    SDL_FlushEvent(SDL_QUIT);
+
+    expect_true(result.outcome == CFightOutcome::Cancelled, "queued SDL_QUIT should report cancelled combat");
+    expect_true(result.rounds == 0, "cancelled combat before a turn should report no completed rounds");
+    expect_true(result.survivor == attacker && result.opponent == defender,
+                "cancelled combat should keep participant metadata");
+    expect_true(!result.resolved() && !result.attackerSucceeded(),
+                "cancelled combat should stay distinct from resolved bool outcomes");
+    expect_controller_lifecycle(attacker_controller, 1, 1, "attacker cleanup should run when combat is cancelled");
+    expect_controller_lifecycle(defender_controller, 1, 1, "opponent cleanup should run when combat is cancelled");
+    expect_true(game->getMap()->getStringProperty("combatStatus").find("cancelled") != std::string::npos,
+                "cancelled combat should publish the cancelled status text");
+}
+
+void test_fight_handler_ends_original_started_controllers() {
+    auto victory_game = load_empty_game();
+    auto victor = add_test_creature(victory_game, "unitOriginalEndVictor");
+    victor->setFightController(std::make_shared<KillingFightController>());
+    auto defeated = add_test_creature(victory_game, "unitOriginalEndDefeated", 1, 0);
+    auto defeated_controller = std::make_shared<ReplacingOnStartFightController>();
+    defeated->setFightController(defeated_controller);
+
+    const auto victory = CFightHandler::fightManyResult(victor, {defeated});
+
+    expect_true(victory.outcome == CFightOutcome::AttackerVictory,
+                "controller replacement victory fixture should resolve");
+    expect_controller_lifecycle(defeated_controller, 1, 1,
+                                "victory cleanup should end the controller object that was started");
+    expect_controller_lifecycle(defeated_controller->replacement, 0, 0,
+                                "victory cleanup should not end a replacement controller that was never started");
+
+    expect_true(SDL_InitSubSystem(SDL_INIT_EVENTS) == 0, "SDL event subsystem should initialize for quit events");
+    SDL_FlushEvent(SDL_QUIT);
+    auto cancel_game = load_empty_game();
+    auto cancel_attacker = add_test_creature(cancel_game, "unitOriginalEndCancelAttacker");
+    auto cancel_defender = add_test_creature(cancel_game, "unitOriginalEndCancelDefender", 1, 0);
+    auto cancel_defender_controller = std::make_shared<ReplacingOnStartFightController>();
+    cancel_defender->setFightController(cancel_defender_controller);
+
+    SDL_Event quit_event{};
+    quit_event.type = SDL_QUIT;
+    expect_true(SDL_PushEvent(&quit_event) == 1, "SDL_QUIT event should be queued for replacement cleanup coverage");
+
+    const auto cancelled = CFightHandler::fightManyResult(cancel_attacker, {cancel_defender});
+    SDL_FlushEvent(SDL_QUIT);
+
+    expect_true(cancelled.outcome == CFightOutcome::Cancelled,
+                "controller replacement cancellation fixture should report cancellation");
+    expect_controller_lifecycle(cancel_defender_controller, 1, 1,
+                                "cancelled cleanup should end the controller object that was started");
+    expect_controller_lifecycle(cancel_defender_controller->replacement, 0, 0,
+                                "cancelled cleanup should not end a replacement controller that was never started");
+
+    auto stalled_game = load_empty_game();
+    auto stalled_attacker = add_test_creature(stalled_game, "unitOriginalEndStalledAttacker");
+    auto stalled_defender = add_test_creature(stalled_game, "unitOriginalEndStalledDefender", 1, 0);
+    auto stalled_defender_controller = std::make_shared<ReplacingOnStartFightController>();
+    stalled_defender->setFightController(stalled_defender_controller);
+
+    const auto stalled = CFightHandler::fightManyResult(stalled_attacker, {stalled_defender});
+
+    expect_true(stalled.outcome == CFightOutcome::Stalled,
+                "controller replacement stalled fixture should report a stall");
+    expect_controller_lifecycle(stalled_defender_controller, 1, 1,
+                                "stalled cleanup should end the controller object that was started");
+    expect_controller_lifecycle(stalled_defender_controller->replacement, 0, 0,
+                                "stalled cleanup should not end a replacement controller that was never started");
+}
+
+void test_fight_handler_reports_cancelled_closed_fight_panel() {
+    SDL_SetHint(SDL_HINT_VIDEODRIVER, "dummy");
+    SDL_SetHint(SDL_HINT_RENDER_DRIVER, "software");
+
+    auto game = load_empty_game();
+    attachFightPanelGuiFixture(game);
+    auto player = add_test_player(game);
+
+    player->setHp(10);
+    auto action = std::make_shared<CInteraction>();
+    action->setGame(game);
+    action->setName("unitPanelCancelledAction");
+    action->setManaCost(0);
+    player->addAction(action);
+
+    auto defender = add_test_creature(game, "unitPanelCancelledDefender", 1, 0);
+    auto gui = game->getGui();
+    auto controller = std::dynamic_pointer_cast<CPlayerFightController>(player->getFightController());
+    expect_true(controller != nullptr, "player should use a player fight controller");
+    controller->start(player, defender);
+    const auto defender_controller =
+        std::dynamic_pointer_cast<NoProgressFightController>(defender->getFightController());
+
+    auto panel = vstd::cast<CGameFightPanel>(gui->findChild("CGameFightPanel"));
+    expect_true(panel != nullptr, "fight panel should exist after player fight controller starts");
+    if (panel) {
+        panel->close();
+        expect_true(panel->isCancelled(), "closing a fight panel should mark pending action selection cancelled");
+    }
+    expect_true(!controller->control(player, defender), "closed fight panel should not select an action");
+    expect_true(controller->isCancelled(player, defender), "closed fight panel should cancel player control");
+    controller->end(player, defender);
+
+    player->setFightController(std::make_shared<CancellingFightController>());
+    const auto handler_controller = std::dynamic_pointer_cast<CancellingFightController>(player->getFightController());
+    const auto result = CFightHandler::fightManyResult(player, {defender});
+    expect_true(result.outcome == CFightOutcome::Cancelled, "closed fight panel should cancel combat immediately");
+    expect_true(result.rounds == 1, "panel cancellation during the first action should report the active round");
+    expect_true(result.survivor == player && result.opponent == defender,
+                "panel cancellation should keep participant metadata");
+    expect_controller_lifecycle(handler_controller, 1, 1, "attacker cleanup should run when combat is cancelled");
+    expect_controller_lifecycle(defender_controller, 1, 1, "opponent cleanup should run when combat is cancelled");
+    expect_true(game->getMap()->getStringProperty("combatStatus").find("cancelled") != std::string::npos,
+                "panel cancellation should publish the cancelled status text");
+}
+
+void test_player_fight_controller_returns_cancelled_when_attached_fight_panel_cancels() {
+    SDL_SetHint(SDL_HINT_VIDEODRIVER, "dummy");
+    SDL_SetHint(SDL_HINT_RENDER_DRIVER, "software");
+
+    auto game = load_empty_game();
+    attachFightPanelGuiFixture(game);
+    auto player = add_test_player(game);
+
+    player->setHp(10);
+    auto action = std::make_shared<CInteraction>();
+    action->setGame(game);
+    action->setName("unitAttachedPanelCancelAction");
+    action->setManaCost(0);
+    player->addAction(action);
+
+    auto defender = add_test_creature(game, "unitAttachedPanelCancelDefender", 1, 0);
+    auto controller = std::dynamic_pointer_cast<CPlayerFightController>(player->getFightController());
+    expect_true(controller != nullptr, "player should use a player fight controller for attached panel cancellation");
+    if (!controller) {
+        return;
+    }
+    controller->start(player, defender);
+
+    auto gui = game->getGui();
+    auto panel = vstd::cast<CGameFightPanel>(gui->findChild("CGameFightPanel"));
+    expect_true(panel != nullptr, "fight panel should exist before attached panel cancellation");
+    if (!panel) {
+        return;
+    }
+
+    panel->cancel();
+
+    expect_true(!controller->control(player, defender),
+                "attached fight panel cancellation should not report selected action progress");
+    expect_true(controller->isCancelled(player, defender), "attached fight panel cancellation should cancel control");
+    controller->end(player, defender);
+}
+
+void test_fight_handler_returns_cancelled_when_player_control_cancels() {
+    SDL_SetHint(SDL_HINT_VIDEODRIVER, "dummy");
+    SDL_SetHint(SDL_HINT_RENDER_DRIVER, "software");
+
+    auto game = load_empty_game();
+    attachFightPanelGuiFixture(game);
+    auto player = add_test_player(game);
+    player->setHp(10);
+
+    auto action = std::make_shared<CInteraction>();
+    action->setGame(game);
+    action->setName("unitLoopPanelCancelAction");
+    action->setManaCost(0);
+    player->addAction(action);
+
+    auto defender = add_test_creature(game, "unitLoopPanelCancelDefender", 1, 0);
+    auto defender_controller = std::dynamic_pointer_cast<NoProgressFightController>(defender->getFightController());
+    auto gui = game->getGui();
+    expect_true(gui != nullptr, "handler-level panel cancellation regression requires a loaded GUI");
+    expect_true(std::dynamic_pointer_cast<CPlayerFightController>(player->getFightController()) != nullptr,
+                "handler-level panel cancellation should use the real player fight controller");
+
+    auto cancellation_callback_ran = std::make_shared<bool>(false);
+    auto panel_was_cancelled = std::make_shared<bool>(false);
+    vstd::event_loop<>::instance()->invoke([game, cancellation_callback_ran, panel_was_cancelled]() {
+        *cancellation_callback_ran = true;
+        auto gui = game ? game->getGui() : nullptr;
+        std::size_t fight_panel_count = 0;
+        std::shared_ptr<CGameFightPanel> attached_panel;
+        if (gui) {
+            for (const auto &child : gui->getChildren()) {
+                if (auto candidate = vstd::cast<CGameFightPanel>(child)) {
+                    ++fight_panel_count;
+                    attached_panel = candidate;
+                }
+            }
+        }
+        auto panel = gui ? vstd::cast<CGameFightPanel>(gui->findChild("CGameFightPanel")) : nullptr;
+        expect_true(fight_panel_count == 1, "queued cancellation should find exactly one attached fight panel");
+        expect_true(panel && panel == attached_panel && gui->findChild(panel) == panel,
+                    "queued cancellation should target the same fight panel found by the GUI");
+        if (panel) {
+            panel->cancel();
+            *panel_was_cancelled = panel->isCancelled();
+        }
+        std::cout << "[handler-test] cancellation callback ran=" << *cancellation_callback_ran
+                  << " panelFound=" << (panel != nullptr) << " panelCount=" << fight_panel_count
+                  << " isCancelled=" << *panel_was_cancelled << std::endl;
+    });
+
+    std::cout << "[handler-test] BEFORE fightManyResult for queued player cancellation" << std::endl;
+    const auto result = CFightHandler::fightManyResult(player, {defender});
+    std::cout << "[handler-test] AFTER fightManyResult for queued player cancellation outcome="
+              << static_cast<int>(result.outcome) << " rounds=" << result.rounds << std::endl;
+
+    expect_true(*cancellation_callback_ran, "fight panel cancellation should run while player control is waiting");
+    expect_true(*panel_was_cancelled, "queued cancellation should cancel the active fight panel");
+    expect_true(result.outcome == CFightOutcome::Cancelled,
+                "player fight controller cancellation should return cancelled instead of falling through to stalled");
+    expect_true(result.rounds == 1, "player fight controller cancellation should report the active combat round");
+    expect_true(result.survivor == player && result.opponent == defender,
+                "player fight controller cancellation should keep participant metadata");
+    expect_true(gui && gui->findChild("CGameFightPanel") == nullptr,
+                "player fight controller cleanup should close the cancelled fight panel");
+    expect_controller_lifecycle(defender_controller, 1, 1,
+                                "opponent cleanup should still run after player control cancellation");
+    expect_true(game->getMap()->getStringProperty("combatStatus").find("cancelled") != std::string::npos,
+                "player control cancellation should publish the cancelled status text");
+}
+
+void test_fight_panel_resets_status_between_sequential_encounters() {
+    auto game = load_empty_game();
+    auto encounterMap = game->getMap();
+
+    auto first_victor = add_test_creature(game, "unitFirstStatusVictor");
+    first_victor->setLabel("First status victor");
+    first_victor->setFightController(std::make_shared<KillingFightController>());
+    auto first_defeated = add_test_creature(game, "unitFirstStatusDefeated", 1, 0);
+
+    const auto first = CFightHandler::fightManyResult(first_victor, {first_defeated});
+    const auto first_status = encounterMap->getStringProperty("combatStatus");
+    expect_true(first.outcome == CFightOutcome::AttackerVictory, "first status-isolation fight should resolve");
+    expect_true(first_status.find("First status victor survives the encounter") != std::string::npos,
+                "first fight should publish an intentional final status");
+
+    auto second_victor = add_test_creature(game, "unitSecondStatusVictor", 2, 0);
+    second_victor->setLabel("Second status victor");
+    second_victor->setFightController(std::make_shared<KillingFightController>());
+    auto second_defeated = add_test_creature(game, "unitSecondStatusDefeated", 3, 0);
+    auto reopened_panel = game->createObject<CGameFightPanel>("CGameFightPanel");
+    expect_true(reopened_panel != nullptr, "headless fight panel should be constructible for status isolation");
+    if (!reopened_panel) {
+        return;
+    }
+
+    reopened_panel->setEnemies({second_defeated});
+    expect_true(encounterMap->getStringProperty("combatStatus").empty(),
+                "opening a fight panel for a later encounter should not display previous final status");
+
+    encounterMap->setStringProperty("combatStatus", "Previous victor survives the encounter.");
+    reopened_panel->setEnemy(second_defeated);
+    expect_true(encounterMap->getStringProperty("combatStatus").empty(),
+                "setting a fight panel enemy directly should also clear previous combat status");
+
+    encounterMap->setStringProperty("combatStatus", "Combat round 99 begins.");
+    reopened_panel->close();
+    expect_true(encounterMap->getStringProperty("combatStatus").empty(),
+                "closing a fight panel should clear previous round status");
+
+    const auto second = CFightHandler::fightManyResult(second_victor, {second_defeated});
+    const auto second_status = encounterMap->getStringProperty("combatStatus");
+    expect_true(second.outcome == CFightOutcome::AttackerVictory, "second status-isolation fight should resolve");
+    expect_true(second_status.find("Second status victor survives the encounter") != std::string::npos,
+                "second fight should publish its own final status");
+    expect_true(second_status.find("First status victor") == std::string::npos,
+                "second fight status should not include the previous encounter");
+}
+
+class AllocationOrderTickEffect : public CEffect {
+  public:
+    int ticks = 0;
+
+    void prepare(bool restoresHealth, const std::shared_ptr<CCreature> &victim,
+                 const std::shared_ptr<CCreature> &caster) {
+        healTick = restoresHealth;
+        tickDamage = 3;
+        ticks = 0;
+        setTypeId(healTick ? "unitAllocationHealTick" : "unitAllocationDamageTick");
+        setName(getTypeId());
+        if (healTick) {
+            addTag(CTag::Buff);
+        } else {
+            removeTag(CTag::Buff);
+        }
+        setGame(victim->getGame());
+        setDuration(1);
+        setVictim(victim);
+        setCaster(caster);
+    }
+
+    void onEffect() override {
+        ++ticks;
+        if (healTick) {
+            getVictim()->heal(2);
+        } else {
+            // A fixed native tick isolates ordering from attack, block and critical RNG.
+            getVictim()->setHp(getVictim()->getHp() - tickDamage);
+        }
+    }
+
+    void setTickDamage(int amount) { tickDamage = amount; }
+
+  private:
+    bool healTick = false;
+    int tickDamage = 3;
+};
+
+using AllocationOrderEffectPair =
+    std::pair<std::shared_ptr<AllocationOrderTickEffect>, std::shared_ptr<AllocationOrderTickEffect>>;
+
+AllocationOrderEffectPair makePointerRankedEffectPair() {
+    auto first = std::make_shared<AllocationOrderTickEffect>();
+    auto second = std::make_shared<AllocationOrderTickEffect>();
+    const std::less<std::shared_ptr<CEffect>> pointerOrder;
+    if (pointerOrder(second, first)) {
+        std::swap(first, second);
+    }
+    expect_true(pointerOrder(first, second), "the two probe effects must have distinct pointer ranks");
+    return {first, second};
+}
+
+AllocationOrderEffectPair attachAllocationOrderEffects(const AllocationOrderEffectPair &pointerRanked,
+                                                       bool healAtLowerPointer,
+                                                       const std::shared_ptr<CCreature> &victim,
+                                                       const std::shared_ptr<CCreature> &damageCaster) {
+    auto heal = healAtLowerPointer ? pointerRanked.first : pointerRanked.second;
+    auto damage = healAtLowerPointer ? pointerRanked.second : pointerRanked.first;
+    heal->prepare(true, victim, victim);
+    damage->prepare(false, victim, damageCaster);
+    // Identical semantic insertion order in both cases; only address-to-role assignment changes.
+    victim->addEffect(heal);
+    victim->addEffect(damage);
+    expect_true(victim->getEffects().size() == 2, "both distinct configured probe effects must be attached");
+    return {heal, damage};
+}
+
+void releaseAllocationOrderEndpoints(const AllocationOrderEffectPair &effects) {
+    for (const auto &effect : {effects.first, effects.second}) {
+        effect->setCaster(nullptr);
+        effect->setVictim(nullptr);
+    }
+}
+
+struct AllocationOrderTickSample {
+    int hp;
+    int healTicks;
+    int damageTicks;
+    int healTimeLeft;
+    int damageTimeLeft;
+
+    bool operator==(const AllocationOrderTickSample &) const = default;
+};
+
+AllocationOrderTickSample allocationOrderTickSample(const std::shared_ptr<CCreature> &victim,
+                                                    const AllocationOrderEffectPair &semanticEffects) {
+    return {victim->getHp(), semanticEffects.first->ticks, semanticEffects.second->ticks,
+            semanticEffects.first->getTimeLeft(), semanticEffects.second->getTimeLeft()};
+}
+
+void testEffectTickCappingAndExpiryIgnoreAllocationOrder() {
+    auto game = load_empty_game();
+    const auto pointerRanked = makePointerRankedEffectPair();
+    std::optional<AllocationOrderTickSample> reference;
+    for (bool healAtLowerPointer : {true, false}) {
+        auto victim = add_test_creature(game, "unitAllocationCappingVictim");
+        const int hpMax = victim->getHpMax();
+        victim->setHp(hpMax);
+        const auto semanticEffects = attachAllocationOrderEffects(pointerRanked, healAtLowerPointer, victim, victim);
+
+        CFightHandler::applyEffects(victim);
+        const auto sample = allocationOrderTickSample(victim, semanticEffects);
+        expect_true(sample.hp == hpMax - 1,
+                    "at full health the damage tick must create room before the Buff recovery tick");
+        expect_true(sample.healTicks == 1 && sample.damageTicks == 1 && sample.healTimeLeft == 0 &&
+                        sample.damageTimeLeft == 0,
+                    "both one-turn effects must tick exactly once and reach zero duration");
+        expect_true(victim->getEffects().size() == 2,
+                    "a just-ticked zero-duration effect remains attached until the next expiry pass");
+
+        CFightHandler::applyEffects(victim);
+        expect_true(victim->getEffects().empty() && allocationOrderTickSample(victim, semanticEffects) == sample,
+                    "the next expiry pass must remove both effects without repeating a tick");
+
+        if (reference) {
+            expect_true(sample == *reference, "healing saturation must not depend on effect pointer layout");
+        } else {
+            reference = sample;
+        }
+        game->getMap()->removeObject(victim);
+        releaseAllocationOrderEndpoints(pointerRanked);
+    }
+
+    auto victim = add_test_creature(game, "unitFrozenHealthTierVictim");
+    const int hpMax = victim->getHpMax();
+    expect_true(hpMax > 2, "the tier crossover probe needs positive room above the lethal boundary");
+    victim->setHp(hpMax);
+    auto firstDamage = std::make_shared<AllocationOrderTickEffect>();
+    auto lastDamage = std::make_shared<AllocationOrderTickEffect>();
+    auto recovery = std::make_shared<AllocationOrderTickEffect>();
+    firstDamage->prepare(false, victim, victim);
+    firstDamage->setTypeId("unitAllocationADamageTick");
+    firstDamage->setTickDamage(hpMax - 2);
+    lastDamage->prepare(false, victim, victim);
+    lastDamage->setTypeId("unitAllocationBDamageTick");
+    recovery->prepare(true, victim, victim);
+    victim->addEffect(recovery);
+    victim->addEffect(lastDamage);
+    victim->addEffect(firstDamage);
+    CFightHandler::applyEffects(victim);
+    expect_true(victim->getHp() == -1 && firstDamage->ticks == 1 && lastDamage->ticks == 1 && recovery->ticks == 0 &&
+                    firstDamage->getTimeLeft() == 0 && lastDamage->getTimeLeft() == 0 && recovery->getTimeLeft() == 1,
+                "becoming hurt during a full-health phase must not reorder recovery ahead of the next lethal tick");
+    game->getMap()->removeObject(victim);
+    for (const auto &effect : {firstDamage, lastDamage, recovery}) {
+        effect->setCaster(nullptr);
+        effect->setVictim(nullptr);
+    }
+}
+
+class AllocationOrderCancellationProbe : public CancellingFightController {
+  public:
+    int controls = 0;
+
+    bool control(std::shared_ptr<CCreature>, std::shared_ptr<CCreature>) override {
+        ++controls;
+        return false;
+    }
+};
+
+struct AllocationOrderFightSample {
+    AllocationOrderTickSample ticks;
+    CFightOutcome outcome;
+    int rounds;
+    int controllerCalls;
+    int damageCasterLoot;
+    int selectedOpponentLoot;
+    bool victimRegistered;
+
+    bool operator==(const AllocationOrderFightSample &) const = default;
+};
+
+void testEffectTickLethalityTimingAndCasterIgnoreAllocationOrder() {
+    auto game = load_empty_game();
+    auto map = game->getMap();
+    const auto pointerRanked = makePointerRankedEffectPair();
+
+    // Buff-first recovery still permits lethal damage at HP 1, with the actual caster credited.
+    // At HP 2 it leaves the victim alive for its action, independent of pointer layout.
+    for (int initialHp : {1, 2}) {
+        std::optional<AllocationOrderFightSample> reference;
+        for (bool healAtLowerPointer : {true, false}) {
+            auto victim = add_test_creature(game, "unitAllocationFightVictim");
+            auto selected = add_test_creature(game, "unitAAllocationSelectedOpponent", 1, 0);
+            auto damageCaster = add_test_creature(game, "unitZAllocationActualCaster", 1, 0);
+            victim->getBaseStats()->setAgility(20);
+            victim->setHp(initialHp);
+            auto controller = std::make_shared<AllocationOrderCancellationProbe>();
+            victim->setFightController(controller);
+            add_unit_loot(game, victim, "unitAllocationCasterLoot");
+            const auto semanticEffects =
+                attachAllocationOrderEffects(pointerRanked, healAtLowerPointer, victim, damageCaster);
+
+            const auto result = CFightHandler::fightManyResult(victim, {selected, damageCaster});
+            const AllocationOrderFightSample sample{allocationOrderTickSample(victim, semanticEffects),
+                                                    result.outcome,
+                                                    result.rounds,
+                                                    controller->controls,
+                                                    damageCaster->countItems("unitAllocationCasterLoot"),
+                                                    selected->countItems("unitAllocationCasterLoot"),
+                                                    map->getObjectByName(victim->getName()) == victim};
+            expect_true(sample.rounds == 1 && sample.ticks.damageTicks == 1 && sample.ticks.damageTimeLeft == 0,
+                        "the controlled first actor turn must execute exactly one damage tick");
+            expect_true(sample.selectedOpponentLoot == 0,
+                        "the selected opponent must never receive another caster's lethal-effect loot");
+            expect_true(victim->isAlive() == (initialHp == 2) && sample.ticks.healTicks == 1 &&
+                            sample.ticks.healTimeLeft == 0,
+                        "the Buff recovery must tick before damage while retaining the real lethal boundary");
+
+            if (victim->isAlive()) {
+                expect_true(initialHp == 2 && sample.ticks.hp == 1 && sample.outcome == CFightOutcome::Cancelled &&
+                                sample.controllerCalls == 1 && sample.ticks.healTicks == 1 &&
+                                sample.ticks.healTimeLeft == 0 && sample.damageCasterLoot == 0 &&
+                                sample.victimRegistered && result.survivor == victim && result.opponent == selected,
+                            "a surviving effect phase must reach the cancelling action without granting defeat loot");
+            } else {
+                expect_true(sample.outcome == CFightOutcome::AttackerDefeat && sample.controllerCalls == 0 &&
+                                sample.damageCasterLoot == 1 && !sample.victimRegistered &&
+                                result.survivor == damageCaster && result.opponent == victim,
+                            "a lethal tick must skip the action, remove the victim and credit its actual caster");
+                expect_true((sample.ticks.healTicks == 0 && sample.ticks.healTimeLeft == 1) ||
+                                (sample.ticks.healTicks == 1 && sample.ticks.healTimeLeft == 0),
+                            "healing duration may decrement only if that effect actually executes before death");
+            }
+
+            if (reference) {
+                expect_true(sample == *reference,
+                            "lethality, action eligibility and effect timing must not depend on pointer layout");
+            } else {
+                reference = sample;
+            }
+            if (map->getObjectByName(victim->getName()) == victim) {
+                map->removeObject(victim);
+            }
+            map->removeObject(selected);
+            map->removeObject(damageCaster);
+            releaseAllocationOrderEndpoints(pointerRanked);
+        }
+    }
+}
+
+void test_fight_handler_counts_effect_duration_as_progress() {
+    auto game = load_empty_game();
+    auto attacker = add_test_creature(game, "unitTimedEffectAttacker");
+    auto defender = add_test_creature(game, "unitTimedEffectDefender", 1, 0);
+    auto effect = std::make_shared<CountingEffect>();
+    effect->setDuration(25);
+    effect->setName("unitLongCountingEffect");
+    effect->setTypeId("unitLongCountingEffect");
+    effect->setVictim(attacker);
+    attacker->addEffect(effect);
+
+    const auto outcome = CFightHandler::fightManyOutcome(attacker, {defender});
+
+    expect_true(outcome == CFightOutcome::Stalled, "timed no-damage effects should still end in stalled outcome");
+    expect_true(effect->ticks == 25, "duration changes should prevent stale termination before effect expiration");
+    expect_true(attacker->getEffects().empty(), "expired effects should be removed before stale termination resumes");
+    expect_true(game->getMap()->getObjectByName(attacker->getName()) == attacker &&
+                    game->getMap()->getObjectByName(defender->getName()) == defender,
+                "timed-effect stale handling should not remove living participants");
+}
+
+void test_player_quest_completion_ignores_reentry_and_captures_final_callback_state() {
+    auto player = std::make_shared<CPlayer>();
+    auto quest = std::make_shared<QuestLifecycleProbe>();
+    quest->setTypeId("reentrantQuest");
+    player->setQuests({quest});
+    std::string journal_state = "active";
+    quest->complete_callback = [&]() {
+        expect_true(player->getQuests().contains(quest) && player->getCompletedQuests().empty(),
+                    "completion callbacks should retain the existing active-quest timing");
+        player->checkQuests();
+        journal_state = "completed";
+    };
+    quest->capture_callback = [&]() {
+        expect_true(journal_state == "completed" && player->getCompletedQuests().empty(),
+                    "completion capture should observe callback changes before completed insertion");
+    };
+
+    CPlaytestTrace::configure(true, "", 100);
+    player->checkQuests();
+    player->checkQuests();
+    int completion_records = 0;
+    for (const auto &line : CPlaytestTrace::drain()) {
+        const auto record = json::parse(line);
+        if (record.value("event", std::string()) == "quest_completed") {
+            completion_records++;
+        }
+    }
+    CPlaytestTrace::configure(false, "", 100);
+
+    expect_true(quest->check_count == 1 && quest->complete_count == 1 && completion_records == 1,
+                "nested and repeated completion checks should run and trace one completion");
+    expect_true(quest->captures == std::vector<bool>{true}, "completed quest journals should capture exactly once");
+    expect_true(player->getQuests().empty() && player->getCompletedQuests().contains(quest),
+                "reentrant completion should move the quest into the completed journal");
+}
+
+void test_player_quest_completion_accepts_cleared_active_set() {
+    auto player = std::make_shared<CPlayer>();
+    auto quest = std::make_shared<QuestLifecycleProbe>();
+    player->setQuests({quest});
+    quest->complete_callback = [&]() { player->setQuests({}); };
+
+    player->checkQuests();
+    player->checkQuests();
+
+    expect_true(quest->complete_count == 1 && quest->captures == std::vector<bool>{true},
+                "a callback clearing active quests should complete and capture safely once");
+    expect_true(player->getQuests().empty() && player->getCompletedQuests().contains(quest),
+                "clearing active quests during completion should preserve the current completed quest");
+}
+
+void test_player_quest_completion_skips_removed_snapshot_entries() {
+    auto player = std::make_shared<CPlayer>();
+    auto first = std::make_shared<QuestLifecycleProbe>();
+    auto second = std::make_shared<QuestLifecycleProbe>();
+    auto replacement = std::make_shared<QuestLifecycleProbe>();
+    player->setQuests({first, second});
+    if (*player->getQuests().begin() != first) {
+        std::swap(first, second);
+    }
+    first->complete_callback = [&]() { player->setQuests({replacement}); };
+
+    player->checkQuests();
+
+    expect_true(first->complete_count == 1 && second->check_count == 0 && second->complete_count == 0,
+                "quests removed by an earlier callback should be skipped in the original snapshot");
+    expect_true(replacement->check_count == 0 && player->getQuests() == std::set<std::shared_ptr<CQuest>>{replacement},
+                "replacement quests should wait for the next completion pass");
+    player->checkQuests();
+    expect_true(replacement->complete_count == 1 && player->getCompletedQuests().size() == 2,
+                "the next pass should complete the replacement without restoring removed quests");
+
+    auto removed_during_check = std::make_shared<QuestLifecycleProbe>();
+    removed_during_check->check_callback = [&]() { player->setQuests({}); };
+    player->setQuests({removed_during_check});
+    player->checkQuests();
+    expect_true(removed_during_check->complete_count == 0 && removed_during_check->captures.empty(),
+                "a quest removed by its completion predicate should not receive completion callbacks");
+}
+
+void test_player_quest_completion_defers_new_quests_until_next_pass() {
+    auto player = std::make_shared<CPlayer>();
+    auto quest = std::make_shared<QuestLifecycleProbe>();
+    auto next_quest = std::make_shared<QuestLifecycleProbe>();
+    player->setQuests({quest});
+    quest->complete_callback = [&]() {
+        auto active = player->getQuests();
+        active.insert(next_quest);
+        player->setQuests(active);
+        player->checkQuests();
+    };
+
+    player->checkQuests();
+    expect_true(quest->complete_count == 1 && next_quest->check_count == 0,
+                "quests added by a completion callback should wait even when the callback reenters checks");
+    expect_true(player->getQuests() == std::set<std::shared_ptr<CQuest>>{next_quest},
+                "new quest membership should survive completion of the original quest");
+    player->checkQuests();
+    player->checkQuests();
+    expect_true(quest->complete_count == 1 && next_quest->complete_count == 1 && player->getQuests().empty(),
+                "each original and newly added quest should complete exactly once across later passes");
+}
+
+void test_player_quest_completion_restores_guard_after_native_exceptions() {
+    for (bool throw_in_predicate : {true, false}) {
+        auto player = std::make_shared<CPlayer>();
+        auto quest = std::make_shared<QuestLifecycleProbe>();
+        player->setQuests({quest});
+        bool first_attempt = true;
+        auto fail_once = [&]() {
+            if (std::exchange(first_attempt, false)) {
+                throw std::runtime_error("quest lifecycle failure");
+            }
+        };
+        if (throw_in_predicate) {
+            quest->check_callback = fail_once;
+        } else {
+            quest->complete_callback = fail_once;
+        }
+        bool threw = false;
+        try {
+            player->checkQuests();
+        } catch (const std::runtime_error &) {
+            threw = true;
+        }
+        expect_true(threw && player->getQuests().contains(quest) && player->getCompletedQuests().empty(),
+                    "failed native callbacks should retain the existing incomplete membership");
+
+        player->checkQuests();
+        player->checkQuests();
+        expect_true(player->getQuests().empty() && player->getCompletedQuests().contains(quest),
+                    "the RAII guard should permit retry after predicate and completion exceptions");
+        expect_true(quest->complete_count == (throw_in_predicate ? 1 : 2) && quest->captures == std::vector<bool>{true},
+                    "only the successful completion attempt should capture the completed journal");
+    }
+}
+
+void test_player_capture_quest_journal_passes_membership_without_completing() {
+    auto player = std::make_shared<CPlayer>();
+    auto active = std::make_shared<QuestLifecycleProbe>();
+    auto completed = std::make_shared<QuestLifecycleProbe>();
+    player->setQuests({active});
+    player->setCompletedQuests({completed});
+
+    player->captureQuestJournal();
+
+    expect_true(active->captures == std::vector<bool>{false} && completed->captures == std::vector<bool>{true},
+                "journal capture should pass active and completed set membership to each quest");
+    expect_true(active->check_count == 0 && completed->check_count == 0 && active->complete_count == 0 &&
+                    completed->complete_count == 0,
+                "saving or leaving a map should capture journals without driving completion predicates or rewards");
+}
+
+void test_playtest_trace_records_native_limits_and_quest_completion() {
+    CPlaytestTrace::configure(true, "", 2);
+    CPlaytestTrace::recordJson("native_empty_fields", "");
+    CPlaytestTrace::recordJson("native_array_fields", "[1]");
+    CPlaytestTrace::record("native_over_limit");
+    CPlaytestTrace::record("native_after_truncation");
+
+    const auto limited_records = CPlaytestTrace::records();
+    bool saw_truncation = false;
+    for (const auto &line : limited_records) {
+        const auto record = json::parse(line);
+        saw_truncation = saw_truncation || record.value("event", std::string()) == "trace_truncated";
+    }
+    expect_true(limited_records.size() == 3 && saw_truncation,
+                "playtest trace should append one truncation record after the configured limit");
+
+    const auto drained = CPlaytestTrace::drain();
+    expect_true(drained.size() == limited_records.size() && CPlaytestTrace::records().empty(),
+                "drain should return and clear buffered trace records");
+
+    CPlaytestTrace::configure(true, "", 100);
+    expect_true(CPlaytestTrace::objectRef(nullptr).is_null(), "null object refs should serialize as JSON null");
+    expect_true(CPlaytestTrace::objectRefs({}).empty(), "empty object ref collections should serialize as arrays");
+    expect_true(CPlaytestTrace::itemRefs({}).empty(), "empty item ref collections should serialize as arrays");
+
+    json mapless_fields = {{"coords", CPlaytestTrace::coords(Coords(1, 2, 3))}};
+    CPlaytestTrace::addMapContext(mapless_fields, nullptr);
+    expect_true(!mapless_fields.contains("map"), "map context should not be added for null maps");
+
+    auto game = load_empty_game();
+    auto player = add_test_player(game);
+    auto quest = std::make_shared<CompletedQuest>();
+    quest->setName("unitCompletedQuest");
+    quest->setTypeId("unitCompletedQuest");
+    player->setQuests({quest});
+
+    player->checkQuests();
+
+    expect_true(quest->complete_count == 1, "completed quest callbacks should run exactly once");
+    expect_true(player->getQuests().empty(), "completed quests should leave the active quest set");
+    expect_true(player->getCompletedQuests().count(quest) == 1, "completed quests should move to the completed set");
+
+    bool saw_completion = false;
+    for (const auto &line : CPlaytestTrace::drain()) {
+        const auto record = json::parse(line);
+        saw_completion =
+            saw_completion || (record.value("event", std::string()) == "quest_completed" &&
+                               record.value("quest", std::string()) == "unitCompletedQuest" && record.contains("map"));
+    }
+    expect_true(saw_completion, "quest completion should be recorded with map context when tracing is enabled");
+    CPlaytestTrace::configure(false);
+}
+
+void test_playtest_trace_environment_targets_and_fallback_ids() {
+#ifdef _WIN32
+    return;
+#else
+    {
+        ScopedEnvironmentVariable traceEnabled("GAME_PLAYTEST_TRACE", "OFF");
+        ScopedEnvironmentVariable traceFile("GAME_PLAYTEST_TRACE_FILE", std::nullopt);
+        CPlaytestTrace::configureFromEnvironment();
+        expect_true(!CPlaytestTrace::enabled(), "disabled trace environment values should disable tracing");
+        CPlaytestTrace::record("disabled_trace_should_not_record");
+        expect_true(CPlaytestTrace::records().empty(), "disabled tracing should ignore records");
+    }
+
+    {
+        ScopedEnvironmentVariable traceEnabled("GAME_PLAYTEST_TRACE", "stdout");
+        ScopedEnvironmentVariable traceFile("GAME_PLAYTEST_TRACE_FILE", std::nullopt);
+        CPlaytestTrace::configureFromEnvironment();
+        CPlaytestTrace::record("stdout_target");
+        expect_true(!CPlaytestTrace::drain().empty(), "stdout trace environment target should enable tracing");
+    }
+
+    CPlaytestTrace::configure(true, "stderr");
+    CPlaytestTrace::record("stderr_target");
+    expect_true(!CPlaytestTrace::drain().empty(), "stderr trace target should still keep buffered records");
+
+    const auto tracePath =
+        std::filesystem::temp_directory_path() / ("playtest-trace-unit-" + std::to_string(SDL_GetTicks64()) + ".jsonl");
+    CPlaytestTrace::configure(true, tracePath.generic_string());
+    CPlaytestTrace::record("file_target");
+    std::ifstream stream(tracePath);
+    std::string line;
+    std::getline(stream, line);
+    expect_true(line.find("file_target") != std::string::npos, "file trace target should append JSON lines");
+    std::filesystem::remove(tracePath);
+
+    auto namedObject = std::make_shared<CGameObject>();
+    const auto longName = std::string(200, 'n');
+    namedObject->setName(longName);
+    const auto namedRef = CPlaytestTrace::objectRef(namedObject);
+    expect_true(namedRef.value("id", std::string()).size() == 160,
+                "trace object refs should truncate long fallback names");
+    expect_true(namedRef.value("name", std::string()).size() == 160,
+                "trace object refs should truncate long object names");
+
+    auto typedObject = std::make_shared<CGameObject>();
+    typedObject->setName("");
+    typedObject->setType("UnitTraceType");
+    const auto typedRef = CPlaytestTrace::objectRef(typedObject);
+    expect_true(typedRef.value("id", std::string()) == "UnitTraceType",
+                "trace object refs should fall back to object type when id and name are empty");
+    expect_true(typedRef.value("type", std::string()) == "UnitTraceType",
+                "trace object refs should include the runtime object type");
+
+    CPlaytestTrace::configure(false);
+#endif
+}
+
+void test_fight_handler_records_outcome_trace_metadata() {
+    CPlaytestTrace::configure(true);
+    try {
+        auto game = load_empty_game();
+        auto victor = add_test_creature(game, "unitTraceOutcomeVictor");
+        victor->setFightController(std::make_shared<KillingFightController>());
+        auto defeated = add_test_creature(game, "unitTraceOutcomeDefeated", 1, 0);
+        add_unit_loot(game, defeated, "unitTraceOutcomeLoot");
+
+        const auto result = CFightHandler::fightManyResult(victor, {defeated});
+        const auto records = CPlaytestTrace::drain();
+
+        bool found_finished = false;
+        for (const auto &record : records) {
+            const auto parsed = json::parse(record);
+            if (parsed.value("event", std::string()) != "combat_finished") {
+                continue;
+            }
+            found_finished = true;
+            expect_true(parsed.value("outcome", 0) == static_cast<int>(CFightOutcome::AttackerVictory),
+                        "combat_finished traces should include the explicit fight outcome");
+            expect_true(parsed.value("rounds", 0) == result.rounds,
+                        "combat_finished traces should include the resolved round count");
+            expect_true(parsed.contains("survivor") &&
+                            parsed["survivor"].value("name", std::string()) == victor->getName(),
+                        "combat_finished traces should include the survivor reference");
+        }
+        expect_true(found_finished, "combat should emit a combat_finished trace while tracing is enabled");
+    } catch (...) {
+        CPlaytestTrace::configure(false);
+        throw;
+    }
+    CPlaytestTrace::configure(false);
+}
+
+void test_player_respawn_normalizes_wrapped_entry_coords() {
+    auto game = load_empty_game();
+    auto map = game->getMap();
+    auto player = add_test_player(game);
+
+    map->setXBounds({{0, 1}});
+    map->setYBounds({{0, 1}});
+    map->setWrapX({{0, 1}});
+    map->setEntryX(2);
+    map->setEntryY(0);
+    map->setEntryZ(0);
+
+    map->removeObject(player);
+
+    expect_true(map->getObjectByName("player") == player, "player destroy trigger should re-add the same player");
+    expect_true(player->getCoords() == Coords(0, 0, 0),
+                "player respawn should normalize wrapped entry coords before direct coordinate writes");
+    expect_true(map->getObjectsAtCoords(Coords(0, 0, 0)).contains(player),
+                "player respawn should keep the normalized coordinate cache in sync");
+}
+
+void test_creature_scale_preserves_level_plus_sw_invariant() {
+    // EPIC_03/STORY_01/SUBSTORY_03 regression guard: getScale() must stay equal to
+    // getLevel() + getSw() so encounter power math survives the archetype migration.
+    auto creature = std::make_shared<CCreature>();
+
+    creature->setLevel(0);
+    creature->setSw(0);
+    expect_true(creature->getScale() == creature->getLevel() + creature->getSw(),
+                "getScale() should equal level + sw for a zeroed creature");
+
+    creature->setLevel(3);
+    creature->setSw(2);
+    expect_true(creature->getScale() == 5, "getScale() should report level + sw for explicit values");
+    expect_true(creature->getScale() == creature->getLevel() + creature->getSw(),
+                "getScale() should track concrete level and sw after both are set");
+
+    creature->setSw(7);
+    expect_true(creature->getScale() == creature->getLevel() + creature->getSw(),
+                "mutating sw alone should still leave getScale() == level + sw");
+
+    creature->setLevel(10);
+    expect_true(creature->getScale() == creature->getLevel() + creature->getSw(),
+                "mutating level alone should still leave getScale() == level + sw");
+
+    creature->setSw(-4);
+    expect_true(creature->getScale() == creature->getLevel() + creature->getSw(),
+                "getScale() should preserve the sum even when sw is negative");
+}
+
+std::shared_ptr<json> make_unit_creature_config(int sw) {
+    auto config = CJsonUtil::from_string("{\"class\":\"CCreature\",\"properties\":{\"sw\":" + std::to_string(sw) +
+                                             ",\"fightController\":{\"class\":\"CMonsterFightController\"},"
+                                             "\"baseStats\":{\"class\":\"CStats\",\"properties\":{\"stamina\":10,"
+                                             "\"strength\":5,\"mainStat\":\"strength\"}},"
+                                             "\"levelStats\":{\"class\":\"CStats\",\"properties\":{\"stamina\":2}}}}",
+                                         "unitCreatureSwConfig");
+    expect_true(config != nullptr, "unit creature sw config json should parse for the RNG encounter regression test");
+    return config;
+}
+
+void primeEncounterFixtureLevels(const std::shared_ptr<CGame> &game, int budget, int samples,
+                                 const std::string &fixture) {
+    nativeTestProfile().run("primeEncounterFixtureLevels", [&] {
+        // These samples assert candidate membership, not XP progression. Prime copied configs after
+        // checking their authored prototypes so every sample avoids replaying unrelated level unlocks.
+        // The fresh-template XP regression and raw baseline remain separate and unmodified.
+        auto handler = game->getObjectHandler();
+        std::size_t primed = 0;
+        for (const auto &type : handler->getAllSubTypes("CCreature")) {
+            auto resolvedClass = handler->getType(handler->getClass(type));
+            if (resolvedClass && resolvedClass->meta()->inherits("CPlayer")) {
+                continue;
+            }
+            auto config = CJsonUtil::clone(handler->getConfig(type));
+            (*config)["properties"]["exp"] = 0;
+            (*config)["properties"]["level"] = budget;
+            handler->registerConfig(type, config);
+            ++primed;
+        }
+        std::cout << "[encounter-fixture] " << fixture << " templates=" << primed << " level=" << budget
+                  << " samples=" << samples << " maxSamplingLevelUps=0\n";
+    });
+}
+
+void test_rng_handler_scales_fresh_creatures_before_map_insertion() {
+    auto game = load_empty_game();
+    auto handler = game->getObjectHandler();
+    for (const auto &type : handler->getAllSubTypes("CCreature")) {
+        handler->unregisterConfig(type);
+    }
+    handler->registerConfig("unitScaledEncounter", make_unit_creature_config(1));
+    auto prototype = game->createObject<CCreature>("unitScaledEncounter");
+    expect_true(prototype && prototype->getHp() == 0 && prototype->getLevel() == 0,
+                "the scaling regression must exercise an uninitialized creature template");
+
+    CRngHandler rng(game);
+    const auto previousRng = vstd::rng();
+    vstd::rng().seed(7);
+    const auto encounterRng = vstd::rng();
+    std::multiset<int> expectedLevels;
+    int expectedExperience = 0;
+    for (int component : vstd::random_components(40, std::views::iota(1, 41))) {
+        const int level = std::max(1, component - 1);
+        expectedLevels.insert(level);
+        expectedExperience += prototype->getExpForLevel(level);
+    }
+    expect_true(!expectedLevels.empty() && *expectedLevels.rbegin() > 1,
+                "the fixed encounter seed must include a component that needs level scaling");
+    vstd::rng() = encounterRng;
+    std::multiset<int> actualLevels;
+    int actualExperience = 0;
+    for (const auto &creature : rng.getRandomEncounter(40)) {
+        actualLevels.insert(creature->getLevel());
+        actualExperience += creature->getExp();
+        expect_true(creature->isAlive() && creature->getHp() == creature->getHpMax(),
+                    "generated encounters must start alive at their scaled maximum hit points");
+        const auto level = creature->getLevel();
+        game->getMap()->addObject(creature);
+        expect_true(creature->getLevel() == level,
+                    "adding an initialized encounter to the map must preserve its scaled level");
+    }
+    vstd::rng() = previousRng;
+    expect_true(actualLevels == expectedLevels, "encounter levels must match the allocated component powers");
+    expect_true(actualExperience == expectedExperience, "encounter scaling must retain the allocated experience");
+}
+
+void test_rng_handler_excludes_noncombatants_from_encounters() {
+    auto game = load_empty_game();
+    auto handler = game->getObjectHandler();
+    for (const auto &type : handler->getAllSubTypes("CCreature")) {
+        handler->unregisterConfig(type);
+    }
+    const std::vector<std::shared_ptr<json>> noncombatants = {
+        CJsonUtil::from_string("{\"class\":\"CCreature\"}", "neutralEncounter"),
+        CJsonUtil::from_string("{\"class\":\"CCreature\",\"properties\":{\"sw\":1}}", "uncontrolledEncounter"),
+        make_unit_creature_config(0),
+        make_unit_creature_config(1),
+    };
+    (*noncombatants.back())["properties"]["npc"] = true;
+    for (const auto &config : noncombatants) {
+        handler->registerConfig("unitNoncombatant", config);
+        CRngHandler rng(game);
+        expect_true(rng.getRandomEncounter(1).empty(),
+                    "neutral, uncontrolled, zero-power and NPC templates must not become hostile encounters");
+    }
+    handler->unregisterConfig("unitNoncombatant");
+    handler->registerConfig("unitCombatant", make_unit_creature_config(1));
+    CRngHandler rng(game);
+    const auto encounter = rng.getRandomEncounter(1);
+    expect_true(encounter.size() == 1 && (*encounter.begin())->getTypeId() == "unitCombatant",
+                "a controlled positive-power monster must remain eligible for encounters");
+}
+
+void test_rng_handler_builds_encounters_from_concrete_creature_sw() {
+    auto game = load_empty_game();
+    auto objectHandler = game->getObjectHandler();
+
+    // Register two creature archetypes carrying explicit, well-separated sw values. The empty game
+    // already registers other CCreature subtypes, so these are added to (not isolated from) the
+    // registry CRngHandler scans.
+    struct Archetype {
+        std::string type;
+        int sw;
+    };
+    const std::vector<Archetype> archetypes = {
+        {"unitRngSwLow", 1},
+        {"unitRngSwHigh", 4},
+    };
+
+    for (const auto &archetype : archetypes) {
+        objectHandler->registerConfig(archetype.type, make_unit_creature_config(archetype.sw));
+        auto prototype = game->createObject<CCreature>(archetype.type);
+        expect_true(prototype != nullptr, "registered unit creature archetype should construct");
+        if (prototype) {
+            expect_true(prototype->getSw() == archetype.sw,
+                        "concrete creature should report the sw configured for its archetype");
+        }
+    }
+
+    // Reconstruct the ground-truth power-table keys exactly the way CRngHandler's constructor does
+    // (src/handler/CRngHandler.cpp:63-68): one key per registered CCreature subtype, taken from the
+    // concrete creature's getSw(). Any encounter sw must be one of these real concrete keys.
+    std::set<int> registeredCreatureSw;
+    for (const std::string &type : objectHandler->getAllSubTypes("CCreature")) {
+        auto prototype = game->createObject<CCreature>(type);
+        if (prototype) {
+            registeredCreatureSw.insert(prototype->getSw());
+        }
+    }
+
+    // Deterministic ingestion proof: our two archetypes' concrete sw values are reachable keys.
+    expect_true(registeredCreatureSw.contains(1),
+                "CRngHandler power table should ingest the concrete sw of the low archetype");
+    expect_true(registeredCreatureSw.contains(4),
+                "CRngHandler power table should ingest the concrete sw of the high archetype");
+
+    // Building the handler against the live game ingests every registered subtype's concrete getSw()
+    // into the creature power table used to assemble encounters.
+    primeEncounterFixtureLevels(game, 40, 64, "concrete-sw");
+    CRngHandler rng_handler(game);
+
+    for (int attempt = 0; attempt < 64; attempt++) {
+        auto encounter = rng_handler.getRandomEncounter(40);
+        for (const auto &creature : encounter) {
+            expect_true(creature != nullptr, "encounter creatures should be non-null");
+            if (!creature) {
+                continue;
+            }
+            expect_true(creature->getLevel() == 40, "concrete-sw sampling must not replay fixture level-ups");
+            // Encounter power compatibility: the post-scaling sum stays getScale() == level + sw.
+            expect_true(creature->getScale() == creature->getLevel() + creature->getSw(),
+                        "scaled encounter creatures should keep getScale() == level + sw");
+            // CRngHandler selects the creature from creaturePowerTable.equal_range(sw) where sw is a
+            // table key (src/handler/CRngHandler.cpp:124-131); addExp scaling never mutates sw, so an
+            // encounter creature's getSw() must be one of the registered concrete subtype keys.
+            expect_true(registeredCreatureSw.contains(creature->getSw()),
+                        "encounter creatures should retain a concrete registered-subtype sw used as the power key");
+        }
+    }
+
+    for (const auto &archetype : archetypes) {
+        objectHandler->unregisterConfig(archetype.type);
+    }
+}
+
+// [EPIC_05][STORY_07][SUBSTORY_01] Random encounter candidates must contain only
+// concrete spawnable creatures: race/class *archetype definitions* must never enter
+// the CRngHandler creature power table. CCreatureRace/CCreatureClass are registered as
+// CGameObject-derived definitions (src/plugin/NativePlugin.cpp:162-165), so
+// getAllSubTypes("CCreature") -- which only returns a type whose resolved class
+// meta()->inherits("CCreature") (src/handler/CObjectHandler.cpp:114-117) -- must exclude
+// them. The CRngHandler constructor seeds creaturePowerTable solely from that
+// enumeration (src/handler/CRngHandler.cpp:63-69), so a definition absent from the
+// enumeration provably cannot become an encounter candidate. This regression registers
+// definition configs alongside a real concrete creature and pins both: the definitions
+// are excluded from the enumeration, while the concrete creature is included and the
+// handler still assembles encounters made only of concrete creatures.
+void test_rng_handler_excludes_archetype_definitions_from_encounters() {
+    auto game = load_empty_game();
+    auto objectHandler = game->getObjectHandler();
+
+    // Configured archetype-definition entries: their declared class is the
+    // CGameObject-derived definition type, NOT CCreature.
+    const std::string raceDefId = "unitArchetypeRaceDefinition";
+    const std::string classDefId = "unitArchetypeClassDefinition";
+    const std::string concreteCreatureId = "unitArchetypeConcreteCreature";
+
+    objectHandler->registerConfig(raceDefId, CJsonUtil::from_string("{\"class\":\"CCreatureRace\"}", raceDefId));
+    objectHandler->registerConfig(classDefId, CJsonUtil::from_string("{\"class\":\"CCreatureClass\"}", classDefId));
+    // A genuine concrete creature so the enumeration / power table is provably non-empty
+    // and we can show definitions are excluded while real creatures are included.
+    objectHandler->registerConfig(concreteCreatureId, make_unit_creature_config(2));
+
+    // Sanity: the definition configs resolve to their CGameObject-derived definition
+    // classes, which do NOT inherit CCreature -- the exact gate getAllSubTypes applies.
+    expect_true(objectHandler->getClass(raceDefId) == "CCreatureRace",
+                "race definition config should resolve to the CCreatureRace definition class");
+    expect_true(objectHandler->getClass(classDefId) == "CCreatureClass",
+                "class definition config should resolve to the CCreatureClass definition class");
+    if (auto raceProto = objectHandler->getType("CCreatureRace")) {
+        expect_true(!raceProto->meta()->inherits("CCreature"),
+                    "CCreatureRace definition must not inherit CCreature so it stays out of encounters");
+    }
+    if (auto classProto = objectHandler->getType("CCreatureClass")) {
+        expect_true(!classProto->meta()->inherits("CCreature"),
+                    "CCreatureClass definition must not inherit CCreature so it stays out of encounters");
+    }
+
+    // The encounter enumeration (and therefore creaturePowerTable, which is seeded only
+    // from it) must exclude the definitions and include the concrete creature.
+    const std::vector<std::string> creatureSubTypes = objectHandler->getAllSubTypes("CCreature");
+    std::set<std::string> creatureSubTypeSet(creatureSubTypes.begin(), creatureSubTypes.end());
+
+    expect_true(!creatureSubTypeSet.contains(raceDefId),
+                "getAllSubTypes(\"CCreature\") must exclude race archetype-definition entries");
+    expect_true(!creatureSubTypeSet.contains(classDefId),
+                "getAllSubTypes(\"CCreature\") must exclude class archetype-definition entries");
+    expect_true(creatureSubTypeSet.contains(concreteCreatureId),
+                "getAllSubTypes(\"CCreature\") must include the concrete spawnable creature");
+
+    // Every enumerated candidate must construct as a real CCreature -- definitions cannot.
+    for (const std::string &type : creatureSubTypes) {
+        auto candidate = game->createObject<CCreature>(type);
+        expect_true(candidate != nullptr, "every encounter candidate must construct as a concrete CCreature");
+        if (candidate) {
+            expect_true(candidate->meta()->inherits("CCreature"),
+                        "every encounter candidate must inherit CCreature (no archetype definitions)");
+        }
+    }
+
+    // Build the live handler: it seeds creaturePowerTable from the enumeration above, so
+    // no definition can have entered it. Assembled encounters must be only real creatures.
+    primeEncounterFixtureLevels(game, 40, 64, "archetype-exclusion");
+    CRngHandler rng_handler(game);
+    bool producedEncounter = false;
+    for (int attempt = 0; attempt < 64; attempt++) {
+        auto encounter = rng_handler.getRandomEncounter(40);
+        for (const auto &creature : encounter) {
+            expect_true(creature != nullptr, "encounter creatures should be non-null");
+            if (!creature) {
+                continue;
+            }
+            expect_true(creature->getLevel() == 40, "archetype-exclusion sampling must not replay fixture level-ups");
+            producedEncounter = true;
+            expect_true(creature->meta()->inherits("CCreature"),
+                        "every assembled encounter creature must be a concrete CCreature");
+            expect_true(creature->getType() != "CCreatureRace" && creature->getType() != "CCreatureClass",
+                        "archetype definition types must never be assembled into an encounter");
+        }
+    }
+    expect_true(producedEncounter,
+                "the handler should assemble a non-empty encounter from the concrete creature population");
+
+    objectHandler->unregisterConfig(raceDefId);
+    objectHandler->unregisterConfig(classDefId);
+    objectHandler->unregisterConfig(concreteCreatureId);
+}
+
+void test_rng_handler_captures_encounter_power_and_scale_baseline() {
+    // EPIC_01/STORY_02/SUBSTORY_04 pre-migration baseline.
+    //
+    // The random-encounter machinery enumerates creature templates with
+    // CObjectHandler::getAllSubTypes("CCreature") and keys its power table on the
+    // concrete creature's getSw() (src/handler/CRngHandler.cpp:63-69, :124-131).
+    // A later archetype migration must NOT let race/class *definition* types (which
+    // do not exist yet) leak into that enumeration, and it must keep a defined sw on
+    // every concrete monster template. This test records sw/level/getScale() and the
+    // power-table participation for every concrete template as a reviewable artifact
+    // and asserts only structural invariants the source guarantees today.
+    auto game = load_empty_game();
+    auto objectHandler = game->getObjectHandler();
+
+    // Reconstruct the exact enumeration the RNG handler scans
+    // (src/handler/CRngHandler.cpp:63). getAllSubTypes only returns a type when its
+    // resolved config "class" constructs and meta()->inherits("CCreature") holds
+    // (src/handler/CObjectHandler.cpp:104-119), which is the precise gate a migration
+    // must not loosen for definition-only race/class types.
+    const std::vector<std::string> creatureSubTypes = objectHandler->getAllSubTypes("CCreature");
+    expect_true(!creatureSubTypes.empty(),
+                "the normally-configured game should register at least one concrete CCreature template");
+
+    struct CreatureBaseline {
+        std::string type;
+        int sw = 0;
+        int level = 0;
+        int scale = 0;
+        bool inPowerTable = false;
+    };
+
+    // Deterministic ordering: getAllSubTypes already returns a sorted, de-duplicated
+    // list (src/handler/CObjectHandler.cpp:61-63), so iterate it directly so the
+    // emitted baseline table is stable across runs.
+    std::vector<CreatureBaseline> baseline;
+    for (const std::string &type : creatureSubTypes) {
+        auto creature = game->createObject<CCreature>(type);
+        // getAllSubTypes only yields constructible CCreature-inheriting templates, so
+        // every concrete monster template must materialize.
+        expect_true(creature != nullptr, "every concrete CCreature template should construct from the registry");
+        if (!creature) {
+            continue;
+        }
+
+        // Reject race/class-definition leakage structurally: anything the encounter
+        // enumeration returns must still be a real creature, mirroring the
+        // getAllSubTypes inherits gate (src/handler/CObjectHandler.cpp:115).
+        expect_true(creature->meta()->inherits("CCreature"),
+                    "encounter templates must inherit CCreature so race/class definitions cannot leak in");
+
+        CreatureBaseline entry;
+        entry.type = type;
+        entry.sw = creature->getSw();
+        entry.level = creature->getLevel();
+        entry.scale = creature->getScale();
+        entry.inPowerTable = !creature->meta()->inherits("CPlayer") && !creature->isNpc() &&
+                             creature->getFightController() && entry.sw > 0;
+
+        // Every concrete monster must preserve a defined sw/level pair, and getScale()
+        // stays level + sw (src/object/CCreature.cpp:366), which the encounter power
+        // math relies on across the migration.
+        expect_true(entry.scale == entry.level + entry.sw,
+                    "concrete template getScale() should equal getLevel() + getSw()");
+
+        baseline.push_back(entry);
+    }
+
+    // Keep the baseline's encounter membership consistent with the eligible monster registry.
+    std::unordered_multimap<int, std::string> creaturePowerTable;
+    for (const auto &entry : baseline) {
+        if (entry.inPowerTable) {
+            creaturePowerTable.insert(std::make_pair(entry.sw, entry.type));
+        }
+    }
+    expect_true(!creaturePowerTable.empty(),
+                "the creature power table should be produced non-empty from concrete templates");
+    expect_true(creaturePowerTable.size() ==
+                    static_cast<std::size_t>(std::count_if(baseline.begin(), baseline.end(),
+                                                           [](const auto &entry) { return entry.inPowerTable; })),
+                "only eligible monster templates should contribute power-table entries");
+
+    // Emit the deterministic, ordered baseline artifact for review.
+    std::cout << "[SS04] encounter power/scale baseline (type sw level scale inPowerTable)\n";
+    for (const auto &entry : baseline) {
+        std::cout << "[SS04] " << entry.type << " sw=" << entry.sw << " level=" << entry.level
+                  << " scale=" << entry.scale << " inPowerTable=" << (entry.inPowerTable ? "true" : "false") << "\n";
+    }
+    std::cout.flush();
+
+    // Building the live handler must ingest the same enumeration without crashing and
+    // must produce a usable, non-empty encounter source.
+    CRngHandler rng_handler(game);
+    std::set<int> baselineSw;
+    for (const auto &entry : baseline) {
+        if (entry.inPowerTable) {
+            baselineSw.insert(entry.sw);
+        }
+    }
+    bool producedEncounter = false;
+    for (int attempt = 0; attempt < 64 && !producedEncounter; attempt++) {
+        auto encounter = rng_handler.getRandomEncounter(40);
+        for (const auto &creature : encounter) {
+            if (!creature) {
+                continue;
+            }
+            producedEncounter = true;
+            // addExp scaling never mutates sw (src/handler/CRngHandler.cpp:135), so an
+            // encounter creature's getSw() must remain a recorded baseline power key.
+            expect_true(baselineSw.contains(creature->getSw()),
+                        "encounter creatures should retain a concrete baseline-template sw used as the power key");
+        }
+    }
+    expect_true(producedEncounter,
+                "the baseline power table should be able to assemble a non-empty encounter without crashing");
+}
+
+// [EPIC_05][STORY_07][SUBSTORY_03] Compare deterministic encounter outputs.
+//
+// Acceptance: "Encounter generation remains equivalent under stable candidate/power
+// constraints." The encounter RNG (vstd::rand -> a single time-seeded static
+// std::mt19937_64) exposes NO seeding hook, so an exact sampled SEQUENCE cannot be
+// pinned. Instead this guard pins the two things that ARE invariant of sampling order:
+// the candidate SET (which sw power-buckets an encounter creature may be drawn from)
+// and the power-budget constraint (the `it <= pow` filter in
+// src/handler/CRngHandler.cpp:118 / :124). These follow directly from the source and
+// must survive any future encounter-table refactor that keeps the same candidates and
+// power semantics.
+//
+// Source contract being pinned:
+//   * The constructor seeds creaturePowerTable with one entry per registered CCreature
+//     subtype, keyed on the concrete creature's getSw() (CRngHandler.cpp:63-69).
+//   * calculateRandomEncounter decomposes value via random_components and, for each
+//     component `pow`, only considers power-table keys with `sw <= pow`, where
+//     `pow <= value` (CRngHandler.cpp:116-124). So every assembled creature's sw key
+//     is <= clamp(value, 0, 1000).
+//   * Selection scales the creature with addExp(getExpForLevel(pow - sw)); addExp only
+//     mutates exp/level, never sw (src/object/CCreature.cpp:80-88), so the assembled
+//     creature's getSw() stays exactly the table key it was drawn from, and
+//     getScale() stays getLevel() + getSw() (CCreature.cpp:369).
+void test_rng_handler_encounter_candidates_stay_in_stable_power_buckets() {
+    auto game = load_empty_game();
+    auto objectHandler = game->getObjectHandler();
+
+    // Two well-separated, deterministic power buckets added to the live registry. They
+    // are added to (not isolated from) whatever the configured game already registers.
+    const int kLowSw = 1;
+    const int kHighSw = 9;
+    const std::string lowId = "unitEncounterEquivLow";
+    const std::string highId = "unitEncounterEquivHigh";
+    objectHandler->registerConfig(lowId, make_unit_creature_config(kLowSw));
+    objectHandler->registerConfig(highId, make_unit_creature_config(kHighSw));
+
+    // Reconstruct the ground-truth creature power table EXACTLY as the constructor does
+    // (CRngHandler.cpp:63-78): one sw bucket per registered concrete subtype, EXCLUDING
+    // CPlayer-derived player templates. [EPIC_05][STORY_07][SUBSTORY_02] made the constructor skip
+    // any candidate whose resolved class meta()->inherits("CPlayer") (res/config/monsters.json
+    // registers real CPlayer templates such as Warrior/Sorcerer/Assasin), so the reconstructed
+    // candidate set must apply the same exclusion to stay consistent with the live table.
+    std::set<int> eligibleSwBuckets;
+    for (const std::string &type : objectHandler->getAllSubTypes("CCreature")) {
+        auto resolvedClass = objectHandler->getType(objectHandler->getClass(type));
+        if (resolvedClass && resolvedClass->meta()->inherits("CPlayer")) {
+            continue;
+        }
+        if (auto prototype = game->createObject<CCreature>(type)) {
+            eligibleSwBuckets.insert(prototype->getSw());
+        }
+    }
+    expect_true(eligibleSwBuckets.contains(kLowSw),
+                "the low archetype's sw must register as an eligible encounter power bucket");
+    expect_true(eligibleSwBuckets.contains(kHighSw),
+                "the high archetype's sw must register as an eligible encounter power bucket");
+
+    // (1) Candidate-set equivalence at a full power budget: across many samples every
+    // assembled creature's sw must be a member of the eligible bucket set -- the
+    // generator must never invent an sw key outside the registered candidate set, and
+    // the post-scaling scale invariant must hold. Sampling order is irrelevant: this is a
+    // set-membership comparison, not a sequence comparison.
+    const int kFullBudget = 60;
+    primeEncounterFixtureLevels(game, kFullBudget, 256, "full-power-buckets");
+    auto rng_handler = nativeTestProfile().run("CRngHandler::CRngHandler", [&] { return CRngHandler(game); });
+    bool producedFullEncounter = false;
+    nativeTestProfile().run("encounter samples(full-budget)", [&] {
+        for (int attempt = 0; attempt < 256; attempt++) {
+            for (const auto &creature : rng_handler.getRandomEncounter(kFullBudget)) {
+                if (!creature) {
+                    continue;
+                }
+                expect_true(creature->getLevel() == kFullBudget,
+                            "full-budget sampling must not replay fixture level-ups");
+                producedFullEncounter = true;
+                expect_true(eligibleSwBuckets.contains(creature->getSw()),
+                            "every encounter creature's sw must be drawn from a registered eligible power bucket");
+                expect_true(creature->getSw() <= kFullBudget,
+                            "every encounter creature's sw must respect the requested power budget");
+                expect_true(creature->getScale() == creature->getLevel() + creature->getSw(),
+                            "scaled encounter creatures must keep getScale() == level + sw");
+            }
+        }
+    });
+    expect_true(producedFullEncounter,
+                "a full power budget should assemble at least one encounter from the eligible buckets");
+
+    // (2) Power-constraint equivalence under a TIGHT budget: with a budget strictly below
+    // the high bucket's sw, the `it <= pow` power filter provably excludes the high bucket
+    // for every component (pow <= value < kHighSw). So the high archetype must NEVER appear
+    // and every assembled creature's sw must be <= the tight budget. This is deterministic
+    // regardless of which low bucket the RNG happens to sample.
+    const int kTightBudget = kHighSw - 1; // 8: below the high bucket, so it is never eligible
+    primeEncounterFixtureLevels(game, kTightBudget, 256, "tight-power-buckets");
+    nativeTestProfile().run("encounter samples(tight-budget)", [&] {
+        for (int attempt = 0; attempt < 256; attempt++) {
+            for (const auto &creature : rng_handler.getRandomEncounter(kTightBudget)) {
+                if (!creature) {
+                    continue;
+                }
+                expect_true(creature->getLevel() == kTightBudget,
+                            "tight-budget sampling must not replay fixture level-ups");
+                expect_true(creature->getSw() <= kTightBudget,
+                            "a tight power budget must exclude every bucket whose sw exceeds the budget");
+                expect_true(creature->getSw() != kHighSw,
+                            "the high power bucket must never be sampled when the budget is below its sw");
+                expect_true(creature->getType() != highId,
+                            "the high archetype must never be assembled under a sub-threshold power budget");
+            }
+        }
+    });
+
+    // (3) Empty-encounter equivalence: a clamped-to-zero (or non-positive) budget leaves
+    // random_components with nothing to decompose, so no candidate is ever drawn. This
+    // boundary is fully deterministic and order-independent.
+    expect_true(rng_handler.getRandomEncounter(0).empty(),
+                "a zero power budget must produce an empty encounter regardless of the candidate set");
+    expect_true(rng_handler.getRandomEncounter(-25).empty(),
+                "a non-positive power budget clamps to zero and must produce an empty encounter");
+
+    objectHandler->unregisterConfig(lowId);
+    objectHandler->unregisterConfig(highId);
+}
+
+// [EPIC_08][STORY_05][SUBSTORY_01] Associated-class metadata: future-gated encounter
+// scale hook. CCreatureRace.associatedClasses models D&D-inspired associated classes
+// (a class that reinforces the race's natural role), and CRngHandler's
+// classifyClassAssociation/scaleEncounterPower hook lets the encounter power table
+// DISTINGUISH associated from non-associated pairings. Balance is design-gated: the
+// multipliers behind scaleEncounterPower are pinned to the neutral value 1, so the
+// hook must be the identity for every classification and the encounter scale output
+// must stay bit-identical to the pre-hook math for all existing content (empty
+// metadata => zero effect). This test proves both halves of that acceptance.
+void test_rng_handler_distinguishes_associated_classes_with_neutral_scale() {
+    using ClassAssociation = CRngHandler::ClassAssociation;
+
+    // --- Capability (metadata): a race configured with associatedClasses reports the
+    // distinction for class ids and for class objects (configured-identity semantics).
+    auto race = std::make_shared<CCreatureRace>();
+    race->setAssociatedClasses({"mageClass"});
+
+    expect_true(race->isAssociatedClass("mageClass"), "a race should report a listed class id as associated");
+    expect_true(!race->isAssociatedClass("bruteClass"), "a race should report an unlisted class id as non-associated");
+    expect_true(!race->isAssociatedClass(std::string()), "an empty class id should never be associated");
+
+    auto mageClass = std::make_shared<CCreatureClass>();
+    mageClass->setTypeId("mageClass");
+    auto bruteClass = std::make_shared<CCreatureClass>();
+    bruteClass->setTypeId("bruteClass");
+    expect_true(race->isAssociatedClass(mageClass), "a class object should match by its configured typeId");
+    expect_true(!race->isAssociatedClass(bruteClass), "an off-role class object should not match");
+    auto namedOnlyClass = std::make_shared<CCreatureClass>();
+    namedOnlyClass->setName("mageClass");
+    expect_true(race->isAssociatedClass(namedOnlyClass),
+                "a class with no typeId should fall back to its name, matching configured-identity semantics");
+    expect_true(!race->isAssociatedClass(std::shared_ptr<CCreatureClass>()), "a null class is never associated");
+
+    // --- Capability (hook input): the encounter hook derives the right distinction
+    // from a creature's race/class pairing.
+    expect_true(CRngHandler::classifyClassAssociation(nullptr) == ClassAssociation::NoArchetype,
+                "a null creature carries no association to weigh");
+    auto creature = std::make_shared<CCreature>();
+    expect_true(CRngHandler::classifyClassAssociation(creature) == ClassAssociation::NoArchetype,
+                "a legacy creature (no race, no class) carries no association to weigh");
+    creature->setRace(race);
+    expect_true(CRngHandler::classifyClassAssociation(creature) == ClassAssociation::NoArchetype,
+                "a race-only creature has no race/class pairing to classify");
+    creature->setCreatureClass(mageClass);
+    expect_true(CRngHandler::classifyClassAssociation(creature) == ClassAssociation::Associated,
+                "a class listed in the race's associatedClasses should classify as Associated");
+    creature->setCreatureClass(bruteClass);
+    expect_true(CRngHandler::classifyClassAssociation(creature) == ClassAssociation::NonAssociated,
+                "a class missing from the race's associatedClasses should classify as NonAssociated");
+    auto emptyMetadataRace = std::make_shared<CCreatureRace>();
+    creature->setRace(emptyMetadataRace);
+    creature->setCreatureClass(mageClass);
+    expect_true(CRngHandler::classifyClassAssociation(creature) == ClassAssociation::NonAssociated,
+                "a race with default-empty associatedClasses should treat every class as non-associated");
+
+    // --- Neutrality (design-gated): the hook is the identity for EVERY classification
+    // and power, so the constructor's power-table key provably equals the raw getSw()
+    // no matter how a creature classifies (initial migration balance unchanged).
+    for (int power : {0, 1, 2, 4, 9, 40, 1000}) {
+        expect_true(CRngHandler::scaleEncounterPower(power, ClassAssociation::NoArchetype) == power,
+                    "legacy creatures must keep their raw power as the encounter power key");
+        expect_true(CRngHandler::scaleEncounterPower(power, ClassAssociation::Associated) == power,
+                    "the associated-class multiplier must stay neutral until the balance design is approved");
+        expect_true(CRngHandler::scaleEncounterPower(power, ClassAssociation::NonAssociated) == power,
+                    "the non-associated-class multiplier must stay neutral until the balance design is approved");
+    }
+
+    // --- Neutrality (existing content): for every encounter candidate the configured
+    // game registers, the hooked key the constructor computes equals the raw getSw(),
+    // so the creature power table is identical to the pre-hook build. Reconstructs the
+    // candidate set exactly as the constructor does (src/handler/CRngHandler.cpp),
+    // including the CPlayer exclusion.
+    auto game = load_empty_game();
+    auto objectHandler = game->getObjectHandler();
+
+    std::set<int> rawSwKeys;
+    for (const std::string &type : objectHandler->getAllSubTypes("CCreature")) {
+        auto resolvedClass = objectHandler->getType(objectHandler->getClass(type));
+        if (resolvedClass && resolvedClass->meta()->inherits("CPlayer")) {
+            continue;
+        }
+        auto prototype = game->createObject<CCreature>(type);
+        if (!prototype) {
+            continue;
+        }
+        const int hookedKey =
+            CRngHandler::scaleEncounterPower(prototype->getSw(), CRngHandler::classifyClassAssociation(prototype));
+        expect_true(hookedKey == prototype->getSw(),
+                    "every existing encounter candidate's hooked power key must equal its raw getSw()");
+        rawSwKeys.insert(prototype->getSw());
+    }
+
+    // The live handler (built with the hook in place) must still assemble encounters
+    // exclusively from the raw concrete sw buckets, exactly as before the hook.
+    primeEncounterFixtureLevels(game, 40, 64, "neutral-associated-class-hook");
+    CRngHandler rng_handler(game);
+    bool producedEncounter = false;
+    for (int attempt = 0; attempt < 64; attempt++) {
+        for (const auto &sampled : rng_handler.getRandomEncounter(40)) {
+            if (!sampled) {
+                continue;
+            }
+            expect_true(sampled->getLevel() == 40, "neutral-hook sampling must not replay fixture level-ups");
+            producedEncounter = true;
+            expect_true(rawSwKeys.contains(sampled->getSw()),
+                        "encounter creatures must still be drawn from the raw concrete sw power buckets");
+            expect_true(sampled->getScale() == sampled->getLevel() + sampled->getSw(),
+                        "the neutral hook must preserve getScale() == level + sw for encounter creatures");
+        }
+    }
+    expect_true(producedEncounter, "the hooked power table should still assemble non-empty encounters");
+}
+
+std::shared_ptr<json> make_unit_player_config(int sw) {
+    auto config = CJsonUtil::from_string("{\"class\":\"CPlayer\",\"properties\":{\"sw\":" + std::to_string(sw) + "}}",
+                                         "unitPlayerSwConfig");
+    expect_true(config != nullptr, "unit player sw config json should parse for the RNG player-exclusion test");
+    return config;
+}
+
+// [EPIC_05][STORY_07][SUBSTORY_02] Exclude player templates from random monster candidates.
+//
+// getAllSubTypes("CCreature") legitimately includes CPlayer templates because CPlayer inherits
+// CCreature (src/object/CPlayer.h:24, registered via register_type<CPlayer, CCreature, ...> in
+// src/plugin/NativePlugin.cpp). The CRngHandler constructor seeds creaturePowerTable from that
+// enumeration (src/handler/CRngHandler.cpp:63-78), so without a filter a player template could be
+// assembled into a random encounter. The fix skips any candidate whose resolved class
+// meta()->inherits("CPlayer") -- the same inheritance test getAllSubTypes applies for its CCreature
+// gate (src/handler/CObjectHandler.cpp:115) -- while leaving genuine monster candidates and their sw
+// power buckets unchanged. This regression registers a CPlayer template alongside two concrete
+// monster templates and asserts: (1) the player template is NEVER assembled across many samples,
+// (2) the monster templates still appear, and (3) the monster sw power buckets are unchanged.
+void test_rng_handler_excludes_player_templates_from_encounters() {
+    auto game = load_empty_game();
+    auto objectHandler = game->getObjectHandler();
+
+    const std::string playerTemplateId = "unitPlayerTemplate";
+    const int kMonsterLowSw = 2;
+    const int kMonsterHighSw = 5;
+    const std::string monsterLowId = "unitPlayerExclusionMonsterLow";
+    const std::string monsterHighId = "unitPlayerExclusionMonsterHigh";
+
+    objectHandler->registerConfig(playerTemplateId, make_unit_player_config(3));
+    objectHandler->registerConfig(monsterLowId, make_unit_creature_config(kMonsterLowSw));
+    objectHandler->registerConfig(monsterHighId, make_unit_creature_config(kMonsterHighSw));
+
+    // Sanity: the player template config resolves to CPlayer and CPlayer inherits CCreature, so it
+    // is genuinely part of getAllSubTypes("CCreature") -- the exact reason it must be filtered out of
+    // the encounter candidate population rather than relying on it being absent.
+    expect_true(objectHandler->getClass(playerTemplateId) == "CPlayer",
+                "player template config should resolve to the CPlayer class");
+    if (auto playerProto = objectHandler->getType("CPlayer")) {
+        expect_true(playerProto->meta()->inherits("CCreature"),
+                    "CPlayer must inherit CCreature so the player template legitimately enters getAllSubTypes");
+        expect_true(playerProto->meta()->inherits("CPlayer"),
+                    "the CPlayer prototype must report inheriting CPlayer for the exclusion gate");
+    }
+
+    const std::vector<std::string> creatureSubTypes = objectHandler->getAllSubTypes("CCreature");
+    std::set<std::string> creatureSubTypeSet(creatureSubTypes.begin(), creatureSubTypes.end());
+    expect_true(creatureSubTypeSet.contains(playerTemplateId),
+                "getAllSubTypes(\"CCreature\") should still include the player template (CPlayer inherits CCreature)");
+    expect_true(creatureSubTypeSet.contains(monsterLowId),
+                "getAllSubTypes(\"CCreature\") should include the low monster template");
+    expect_true(creatureSubTypeSet.contains(monsterHighId),
+                "getAllSubTypes(\"CCreature\") should include the high monster template");
+
+    // Ground-truth monster power buckets: the sw of every NON-player concrete candidate, built the
+    // way the (fixed) constructor seeds creaturePowerTable -- i.e. excluding CPlayer-derived configs.
+    // The two registered monsters must contribute their sw buckets, and no player-only bucket may
+    // exist that is not also a monster bucket.
+    std::set<int> monsterSwBuckets;
+    for (const std::string &type : creatureSubTypes) {
+        auto resolvedClass = objectHandler->getType(objectHandler->getClass(type));
+        if (resolvedClass && resolvedClass->meta()->inherits("CPlayer")) {
+            continue;
+        }
+        if (auto prototype = game->createObject<CCreature>(type)) {
+            monsterSwBuckets.insert(prototype->getSw());
+        }
+    }
+    expect_true(monsterSwBuckets.contains(kMonsterLowSw),
+                "the low monster's sw must remain an eligible encounter power bucket");
+    expect_true(monsterSwBuckets.contains(kMonsterHighSw),
+                "the high monster's sw must remain an eligible encounter power bucket");
+
+    // The exclusive high-sw bucket guarantees a deterministic "monsters are still selected" proof:
+    // sw == kMonsterHighSw (5) is occupied ONLY by monsterHighId -- no real monsters.json template
+    // reaches that bucket (their sw is 1 or 2). So any encounter creature whose sw is kMonsterHighSw
+    // is provably the registered high monster, identified by its config key via getTypeId()
+    // (set in CObjectHandler::_createObject -- the class name lives in getType(), the config id in
+    // getTypeId(), src/handler/CObjectHandler.cpp:91).
+    expect_true(monsterSwBuckets.count(kMonsterHighSw) > 0,
+                "the exclusive high-sw bucket must belong solely to the registered high monster");
+    bool highBucketIsExclusive = true;
+    for (const std::string &type : creatureSubTypes) {
+        if (type == monsterHighId) {
+            continue;
+        }
+        auto resolvedClass = objectHandler->getType(objectHandler->getClass(type));
+        if (resolvedClass && resolvedClass->meta()->inherits("CPlayer")) {
+            continue;
+        }
+        if (auto prototype = game->createObject<CCreature>(type)) {
+            if (prototype->getSw() == kMonsterHighSw) {
+                highBucketIsExclusive = false;
+            }
+        }
+    }
+    expect_true(highBucketIsExclusive,
+                "no other monster template may share the high monster's sw bucket for the determinism proof");
+
+    primeEncounterFixtureLevels(game, 60, 256, "player-exclusion");
+    auto rng_handler = nativeTestProfile().run("CRngHandler::CRngHandler", [&] { return CRngHandler(game); });
+
+    bool sawRegisteredMonster = false;
+    bool producedEncounter = false;
+    nativeTestProfile().run("encounter samples(player-exclusion)", [&] {
+        for (int attempt = 0; attempt < 256; attempt++) {
+            for (const auto &creature : rng_handler.getRandomEncounter(60)) {
+                if (!creature) {
+                    continue;
+                }
+                expect_true(creature->getLevel() == 60, "player-exclusion sampling must not replay fixture level-ups");
+                producedEncounter = true;
+
+                // (1) A player template must NEVER be assembled into a random encounter. The
+                // load-bearing guard is the meta-inheritance check: a filtered CPlayer template can
+                // never construct as a CPlayer-derived instance. getType() carries the resolved class
+                // name (src/core/CSerialization.cpp:391), so it must never be CPlayer either.
+                expect_true(creature->getType() != "CPlayer",
+                            "random encounters must never select a CPlayer-classed template");
+                expect_true(!creature->meta()->inherits("CPlayer"),
+                            "no assembled encounter creature may be a CPlayer-derived player template");
+
+                // (3) Every assembled creature's sw must remain one of the unchanged monster power
+                // buckets -- the player filter must not perturb monster sw selection.
+                expect_true(monsterSwBuckets.contains(creature->getSw()),
+                            "encounter creatures must keep an unchanged registered monster sw power bucket");
+                expect_true(creature->getScale() == creature->getLevel() + creature->getSw(),
+                            "scaled encounter creatures must keep getScale() == level + sw");
+
+                // (2) Genuine monster candidates are still selected. Any creature drawn from the
+                // exclusive high-sw bucket is provably the registered high monster; confirm its config
+                // id via getTypeId() (getType() is the class name "CCreature", not the config key).
+                if (creature->getSw() == kMonsterHighSw) {
+                    expect_true(creature->getTypeId() == monsterHighId,
+                                "the exclusive high-sw bucket must only ever yield the registered high monster");
+                    sawRegisteredMonster = true;
+                }
+            }
+        }
+    });
+
+    // (2) Genuine monster candidates are still selected after the player exclusion.
+    expect_true(producedEncounter,
+                "the handler should still assemble non-empty encounters after excluding player templates");
+    expect_true(sawRegisteredMonster,
+                "a registered monster template must still be selectable as an encounter candidate");
+
+    objectHandler->unregisterConfig(playerTemplateId);
+    objectHandler->unregisterConfig(monsterLowId);
+    objectHandler->unregisterConfig(monsterHighId);
+}
+
+// READ-ONLY source-of-truth inventory for later CCreature/CPlayer migration tickets
+// ([EPIC_01][STORY_01][SUBSTORY_01]). Loads a normally-configured game (CGameLoader::loadGame
+// registers every res/config CONFIG file -- including res/config/monsters.json -- via
+// initConfigurations, and loads global plugins via initScriptHandler; see
+// src/core/CLoader.cpp:1191-1199,1230-1244) and enumerates the concrete CCreature subtypes exactly
+// as the engine sees them. For each concrete id it records the resolved class name from
+// CObjectHandler::getClass (src/handler/CObjectHandler.cpp:122-131) and whether that class resolves
+// to CPlayer or plain CCreature using the same meta()->inherits(...) test that
+// CObjectHandler::getAllSubTypes itself applies (src/handler/CObjectHandler.cpp:104-120). The
+// inventory is emitted to stdout (the captured source-of-truth artifact) and asserted to be
+// produced on a loaded game without crashing. This test excludes no ids and mutates no config.
+void test_creature_subtype_inventory_is_enumerable_on_loaded_game() {
+    auto game = load_empty_game();
+    auto objectHandler = game->getObjectHandler();
+
+    // getAllSubTypes("CCreature") returns every registered subtype whose configured class inherits
+    // CCreature; because CPlayer inherits CCreature (src/object/CPlayer.h:24), player templates are
+    // legitimately part of this set and must be classified, not excluded.
+    std::vector<std::string> subTypes = objectHandler->getAllSubTypes("CCreature");
+
+    // Deterministic, ordered inventory: sort the concrete ids so the captured list is stable across
+    // runs / unordered-registry iteration. We intentionally do not de-duplicate or filter.
+    std::sort(subTypes.begin(), subTypes.end());
+
+    expect_true(!subTypes.empty(),
+                "loaded game should expose at least one concrete CCreature subtype for the inventory");
+
+    struct InventoryEntry {
+        std::string id;
+        std::string resolvedClass;
+        bool resolvesToPlayer = false;
+        bool resolvesToCreature = false;
+    };
+    std::vector<InventoryEntry> inventory;
+    inventory.reserve(subTypes.size());
+
+    std::cout << "[creature-subtype-inventory] CCreature subtypes on loaded game: " << subTypes.size() << "\n";
+
+    for (const std::string &type : subTypes) {
+        InventoryEntry entry;
+        entry.id = type;
+        entry.resolvedClass = objectHandler->getClass(type);
+
+        // Classify via the type prototype's meta inheritance, mirroring getAllSubTypes' own check.
+        // A type already present in this list inherits CCreature by construction; whether it ALSO
+        // inherits CPlayer distinguishes player templates from plain creatures. Fall back to the
+        // resolved class name when no prototype is registered for the class so the row is still
+        // emitted (no id is silently dropped).
+        if (auto prototype = objectHandler->getType(entry.resolvedClass)) {
+            entry.resolvesToPlayer = prototype->meta()->inherits("CPlayer");
+            entry.resolvesToCreature = prototype->meta()->inherits("CCreature");
+        } else {
+            entry.resolvesToPlayer = (entry.resolvedClass == "CPlayer");
+            entry.resolvesToCreature = true;
+        }
+
+        expect_true(!entry.resolvedClass.empty(),
+                    "every enumerated CCreature subtype should resolve to a non-empty class name");
+        expect_true(entry.resolvesToCreature, "every enumerated CCreature subtype should classify as a CCreature");
+
+        const char *classification = entry.resolvesToPlayer ? "CPlayer" : "CCreature";
+        std::cout << "[creature-subtype-inventory]   id=" << entry.id << " class=" << entry.resolvedClass
+                  << " resolvesTo=" << classification << "\n";
+
+        inventory.push_back(std::move(entry));
+    }
+
+    expect_true(inventory.size() == subTypes.size(),
+                "inventory should record exactly one row per enumerated CCreature subtype id");
+}
+
+void test_tooltip_handler_exposes_present_archetypes_without_duplicate_descriptions() {
+    // EPIC_07/STORY_02/SUBSTORY_01: creature tooltips should surface the race and
+    // class archetypes only when they are present, and never repeat a description
+    // that is already shown.
+    auto legacy = std::make_shared<CCreature>();
+    legacy->setLabel("Wandering Rat");
+    legacy->setDescription("A small, mangy rat.");
+
+    const auto legacyTooltip = CTooltipHandler::buildTooltip(legacy);
+    expect_true(legacyTooltip.find("Wandering Rat") != std::string::npos,
+                "legacy creature tooltips should still show the creature label");
+    expect_true(legacyTooltip.find("A small, mangy rat.") != std::string::npos,
+                "legacy creature tooltips should still show the creature description");
+
+    auto race = std::make_shared<CCreatureRace>();
+    race->setLabel("Orc");
+    race->setDescription("Brutish and strong.");
+    auto creatureClass = std::make_shared<CCreatureClass>();
+    creatureClass->setLabel("Warrior");
+    creatureClass->setDescription("Master of arms.");
+
+    auto archetyped = std::make_shared<CCreature>();
+    archetyped->setLabel("Grommash");
+    archetyped->setDescription("A scarred veteran.");
+    archetyped->setRace(race);
+    archetyped->setCreatureClass(creatureClass);
+
+    const auto archetypeTooltip = CTooltipHandler::buildTooltip(archetyped);
+    const auto count_occurrences = [](const std::string &haystack, const std::string &needle) {
+        int count = 0;
+        for (std::size_t pos = haystack.find(needle); pos != std::string::npos;
+             pos = haystack.find(needle, pos + needle.size())) {
+            count++;
+        }
+        return count;
+    };
+
+    expect_true(count_occurrences(archetypeTooltip, "Orc") == 1,
+                "present race archetypes should appear exactly once in the tooltip");
+    expect_true(count_occurrences(archetypeTooltip, "Brutish and strong.") == 1,
+                "present race descriptions should appear exactly once in the tooltip");
+    expect_true(count_occurrences(archetypeTooltip, "Warrior") == 1,
+                "present class archetypes should appear exactly once in the tooltip");
+    expect_true(count_occurrences(archetypeTooltip, "Master of arms.") == 1,
+                "present class descriptions should appear exactly once in the tooltip");
+    expect_true(count_occurrences(archetypeTooltip, "A scarred veteran.") == 1,
+                "the creature description should never be duplicated by archetype lines");
+
+    // A shared description across the creature and its archetypes must not be echoed
+    // multiple times.
+    auto sharedDescRace = std::make_shared<CCreatureRace>();
+    sharedDescRace->setLabel("Human");
+    sharedDescRace->setDescription("A scarred veteran.");
+    auto shared = std::make_shared<CCreature>();
+    shared->setLabel("Reginald");
+    shared->setDescription("A scarred veteran.");
+    shared->setRace(sharedDescRace);
+
+    const auto sharedTooltip = CTooltipHandler::buildTooltip(shared);
+    expect_true(count_occurrences(sharedTooltip, "A scarred veteran.") == 1,
+                "an archetype sharing the creature description must not duplicate that line");
+    expect_true(count_occurrences(sharedTooltip, "Human") == 1,
+                "the race label should still appear when only its description is a duplicate");
+
+    // Creatures without archetypes must not emit any archetype lines.
+    auto noArchetype = std::make_shared<CCreature>();
+    noArchetype->setLabel("Plain Creature");
+    noArchetype->setDescription("Nothing special.");
+    const auto plainTooltip = CTooltipHandler::buildTooltip(noArchetype);
+    expect_true(plainTooltip == "Plain Creature\nNothing special.",
+                "creatures without archetypes should not gain any archetype lines");
+}
+
+} // namespace
+
+int main() {
+    pybind11::scoped_interpreter guard{};
+    const auto runTimedGuiCancellationTest = [](const char *name, void (*test)()) {
+        const auto started = std::chrono::steady_clock::now();
+        std::cout << "[handler-test] ENTER " << name << std::endl;
+        test();
+        const auto elapsed =
+            std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::steady_clock::now() - started).count();
+        std::cout << "[handler-test] EXIT " << name << " elapsedMs=" << elapsed << std::endl;
+    };
+    nativeTestProfile().run("testGameplayMetadataIsAvailableBeforePluginLoading",
+                            testGameplayMetadataIsAvailableBeforePluginLoading);
+
+    nativeTestProfile().run("test_script_handler_executes_commands_and_wraps_functions",
+                            test_script_handler_executes_commands_and_wraps_functions);
+    nativeTestProfile().run("test_handler_constructors_are_covered_by_native_tests",
+                            test_handler_constructors_are_covered_by_native_tests);
+    nativeTestProfile().run("test_creature_scale_preserves_level_plus_sw_invariant",
+                            test_creature_scale_preserves_level_plus_sw_invariant);
+    nativeTestProfile().run("test_tooltip_handler_exposes_present_archetypes_without_duplicate_descriptions",
+                            test_tooltip_handler_exposes_present_archetypes_without_duplicate_descriptions);
+    nativeTestProfile().run("test_rng_handler_builds_encounters_from_concrete_creature_sw",
+                            test_rng_handler_builds_encounters_from_concrete_creature_sw);
+    nativeTestProfile().run("test_rng_handler_scales_fresh_creatures_before_map_insertion",
+                            test_rng_handler_scales_fresh_creatures_before_map_insertion);
+    nativeTestProfile().run("test_rng_handler_excludes_noncombatants_from_encounters",
+                            test_rng_handler_excludes_noncombatants_from_encounters);
+    nativeTestProfile().run("test_rng_handler_excludes_archetype_definitions_from_encounters",
+                            test_rng_handler_excludes_archetype_definitions_from_encounters);
+    nativeTestProfile().run("test_rng_handler_excludes_player_templates_from_encounters",
+                            test_rng_handler_excludes_player_templates_from_encounters);
+    nativeTestProfile().run("test_rng_handler_captures_encounter_power_and_scale_baseline",
+                            test_rng_handler_captures_encounter_power_and_scale_baseline);
+    nativeTestProfile().run("test_rng_handler_encounter_candidates_stay_in_stable_power_buckets",
+                            test_rng_handler_encounter_candidates_stay_in_stable_power_buckets);
+    nativeTestProfile().run("test_rng_handler_distinguishes_associated_classes_with_neutral_scale",
+                            test_rng_handler_distinguishes_associated_classes_with_neutral_scale);
+    nativeTestProfile().run("test_creature_subtype_inventory_is_enumerable_on_loaded_game",
+                            test_creature_subtype_inventory_is_enumerable_on_loaded_game);
+    nativeTestProfile().run("test_event_handler_trigger_registration_uses_named_comparison_helpers",
+                            test_event_handler_trigger_registration_uses_named_comparison_helpers);
+    nativeTestProfile().run("test_fight_handler_rejects_stale_and_cross_map_participants",
+                            test_fight_handler_rejects_stale_and_cross_map_participants);
+    nativeTestProfile().run("test_fight_handler_attributes_lethal_effects_to_valid_casters",
+                            test_fight_handler_attributes_lethal_effects_to_valid_casters);
+    nativeTestProfile().run("test_fight_handler_reports_explicit_outcomes_and_final_status",
+                            test_fight_handler_reports_explicit_outcomes_and_final_status);
+    nativeTestProfile().run("test_fight_handler_reports_invalid_result_metadata",
+                            test_fight_handler_reports_invalid_result_metadata);
+    nativeTestProfile().run("test_fight_handler_reports_cancelled_quit_event",
+                            test_fight_handler_reports_cancelled_quit_event);
+    nativeTestProfile().run("test_fight_handler_ends_original_started_controllers",
+                            test_fight_handler_ends_original_started_controllers);
+    nativeTestProfile().run("test_fight_handler_reports_cancelled_closed_fight_panel", [&] {
+        runTimedGuiCancellationTest("test_fight_handler_reports_cancelled_closed_fight_panel",
+                                    test_fight_handler_reports_cancelled_closed_fight_panel);
+    });
+    nativeTestProfile().run("test_player_fight_controller_returns_cancelled_when_attached_fight_panel_cancels", [&] {
+        runTimedGuiCancellationTest("test_player_fight_controller_returns_cancelled_when_attached_fight_panel_cancels",
+                                    test_player_fight_controller_returns_cancelled_when_attached_fight_panel_cancels);
+    });
+    nativeTestProfile().run("test_fight_handler_returns_cancelled_when_player_control_cancels", [&] {
+        runTimedGuiCancellationTest("test_fight_handler_returns_cancelled_when_player_control_cancels",
+                                    test_fight_handler_returns_cancelled_when_player_control_cancels);
+    });
+    nativeTestProfile().run("test_fight_panel_resets_status_between_sequential_encounters",
+                            test_fight_panel_resets_status_between_sequential_encounters);
+    nativeTestProfile().run("testEffectTickCappingAndExpiryIgnoreAllocationOrder",
+                            testEffectTickCappingAndExpiryIgnoreAllocationOrder);
+    nativeTestProfile().run("testEffectTickLethalityTimingAndCasterIgnoreAllocationOrder",
+                            testEffectTickLethalityTimingAndCasterIgnoreAllocationOrder);
+    nativeTestProfile().run("test_fight_handler_counts_effect_duration_as_progress",
+                            test_fight_handler_counts_effect_duration_as_progress);
+    nativeTestProfile().run("test_player_quest_completion_ignores_reentry_and_captures_final_callback_state",
+                            test_player_quest_completion_ignores_reentry_and_captures_final_callback_state);
+    nativeTestProfile().run("test_player_quest_completion_accepts_cleared_active_set",
+                            test_player_quest_completion_accepts_cleared_active_set);
+    nativeTestProfile().run("test_player_quest_completion_skips_removed_snapshot_entries",
+                            test_player_quest_completion_skips_removed_snapshot_entries);
+    nativeTestProfile().run("test_player_quest_completion_defers_new_quests_until_next_pass",
+                            test_player_quest_completion_defers_new_quests_until_next_pass);
+    nativeTestProfile().run("test_player_quest_completion_restores_guard_after_native_exceptions",
+                            test_player_quest_completion_restores_guard_after_native_exceptions);
+    nativeTestProfile().run("test_player_capture_quest_journal_passes_membership_without_completing",
+                            test_player_capture_quest_journal_passes_membership_without_completing);
+    nativeTestProfile().run("test_playtest_trace_records_native_limits_and_quest_completion",
+                            test_playtest_trace_records_native_limits_and_quest_completion);
+    nativeTestProfile().run("test_playtest_trace_environment_targets_and_fallback_ids",
+                            test_playtest_trace_environment_targets_and_fallback_ids);
+    nativeTestProfile().run("test_fight_handler_records_outcome_trace_metadata",
+                            test_fight_handler_records_outcome_trace_metadata);
+    nativeTestProfile().run("test_player_respawn_normalizes_wrapped_entry_coords",
+                            test_player_respawn_normalizes_wrapped_entry_coords);
+
+    return finish_tests();
+}

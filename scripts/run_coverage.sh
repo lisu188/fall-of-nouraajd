@@ -5,8 +5,11 @@ ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 BUILD_DIR="${BUILD_DIR:-cmake-build-coverage}"
 MIN_COVERAGE="${MIN_COVERAGE:-90}"
 REPORT_DIR="${ROOT_DIR}/coverage"
+COVERAGE_INCLUDE_PREFIXES="${COVERAGE_INCLUDE_PREFIXES:-src native_plugins}"
 COVERAGE_JOBS="${COVERAGE_JOBS:-$(nproc)}"
 COVERAGE_REPORTER="${COVERAGE_REPORTER:-python}"
+COVERAGE_PYTHON_TIMEOUT_SECONDS="${COVERAGE_PYTHON_TIMEOUT_SECONDS:-1800}"
+COVERAGE_GCOV_TIMEOUT_SECONDS="${COVERAGE_GCOV_TIMEOUT_SECONDS:-120}"
 GAME_TEST_JOBS="${GAME_TEST_JOBS:-${COVERAGE_JOBS}}"
 GAME_XVFB_JOBS="${GAME_XVFB_JOBS:-4}"
 GAME_TEST_OUTPUT_DIR="${GAME_TEST_OUTPUT_DIR:-${REPORT_DIR}/test-output}"
@@ -24,6 +27,22 @@ if [[ ! "${GAME_TEST_JOBS}" =~ ^[1-9][0-9]*$ ]]; then
 fi
 if [[ ! "${GAME_XVFB_JOBS}" =~ ^[1-9][0-9]*$ ]]; then
     echo "GAME_XVFB_JOBS must be a positive integer, got: ${GAME_XVFB_JOBS}" >&2
+    exit 2
+fi
+if [[ ! "${COVERAGE_PYTHON_TIMEOUT_SECONDS}" =~ ^[1-9][0-9]*$ ]]; then
+    echo "COVERAGE_PYTHON_TIMEOUT_SECONDS must be a positive integer, got: ${COVERAGE_PYTHON_TIMEOUT_SECONDS}" >&2
+    exit 2
+fi
+if [[ ! "${COVERAGE_GCOV_TIMEOUT_SECONDS}" =~ ^[1-9][0-9]*$ ]]; then
+    echo "COVERAGE_GCOV_TIMEOUT_SECONDS must be a positive integer, got: ${COVERAGE_GCOV_TIMEOUT_SECONDS}" >&2
+    exit 2
+fi
+if [[ -v COVERAGE_LINE_EXCLUSIONS && -n "${COVERAGE_LINE_EXCLUSIONS}" ]]; then
+    echo "COVERAGE_LINE_EXCLUSIONS is no longer supported; line coverage exclusions are disallowed." >&2
+    exit 2
+fi
+if [[ -v COVERAGE_AUDIT_EXCLUSIONS && "${COVERAGE_AUDIT_EXCLUSIONS}" != "0" ]]; then
+    echo "COVERAGE_AUDIT_EXCLUSIONS is no longer supported; line coverage exclusions are disallowed." >&2
     exit 2
 fi
 
@@ -55,6 +74,32 @@ run_phase() {
         log_phase "FAIL ${name} ($(format_duration "${elapsed}"), exit ${status})"
     fi
     return "${status}"
+}
+
+run_with_timeout() {
+    local timeout_seconds="$1"
+    shift
+
+    if ! command -v timeout >/dev/null 2>&1; then
+        echo "warning: timeout command not found; running without outer timeout" >&2
+        "$@"
+        return
+    fi
+
+    timeout --kill-after=30s "${timeout_seconds}s" "$@"
+}
+
+list_recent_test_artifacts() {
+    if [[ ! -d "${GAME_TEST_OUTPUT_DIR}" ]]; then
+        echo "No test output directory was created at ${GAME_TEST_OUTPUT_DIR}" >&2
+        return
+    fi
+
+    echo "Recent test output files under ${GAME_TEST_OUTPUT_DIR}:" >&2
+    find "${GAME_TEST_OUTPUT_DIR}" -maxdepth 4 -type f -printf '%T@ %p\n' 2>/dev/null \
+        | sort -n \
+        | tail -n 40 \
+        | cut -d' ' -f2- >&2 || true
 }
 
 cmake_launcher_args=()
@@ -113,29 +158,52 @@ generate_report() {
             --html "${REPORT_DIR}/coverage.html" \
             --fail-under-line "${MIN_COVERAGE}" || return
     elif [[ "${COVERAGE_REPORTER}" == "python" ]]; then
+        coverage_report_args=(
+            --root "${ROOT_DIR}"
+            --build-dir "${BUILD_DIR}"
+            --report-dir "${REPORT_DIR}"
+            --min-line "${MIN_COVERAGE}"
+            --jobs "${COVERAGE_JOBS}"
+            --gcov-timeout "${COVERAGE_GCOV_TIMEOUT_SECONDS}"
+        )
+        if [[ -n "${COVERAGE_INCLUDE_PREFIXES}" ]]; then
+            read -r -a coverage_include_prefixes <<<"${COVERAGE_INCLUDE_PREFIXES}"
+            for include_prefix in "${coverage_include_prefixes[@]}"; do
+                coverage_report_args+=(--include-prefix "${include_prefix}")
+            done
+        fi
         python3 "${ROOT_DIR}/scripts/coverage_report.py" \
-            --root "${ROOT_DIR}" \
-            --build-dir "${BUILD_DIR}" \
-            --report-dir "${REPORT_DIR}" \
-            --min-line "${MIN_COVERAGE}" \
-            --jobs "${COVERAGE_JOBS}" || return
+            "${coverage_report_args[@]}" || return
     else
         echo "Unknown COVERAGE_REPORTER '${COVERAGE_REPORTER}'. Expected 'python' or 'gcovr'." >&2
         return 2
     fi
 }
 
+run_python_coverage_tests() {
+    mkdir -p "${GAME_TEST_OUTPUT_DIR}"
+    run_with_timeout "${COVERAGE_PYTHON_TIMEOUT_SECONDS}" env \
+        GAME_BUILD_DIR="${BUILD_DIR}" \
+        GAME_COVERAGE_RUN=1 \
+        GAME_TEST_JOBS="${GAME_TEST_JOBS}" \
+        GAME_XVFB_JOBS="${GAME_XVFB_JOBS}" \
+        GAME_TEST_OUTPUT_DIR="${GAME_TEST_OUTPUT_DIR}" \
+        python3 test.py --suite coverage-safe --jobs "${GAME_TEST_JOBS}"
+    local status=$?
+    if [[ "${status}" -eq 124 || "${status}" -eq 137 ]]; then
+        echo "Coverage Python test phase timed out or was killed after ${COVERAGE_PYTHON_TIMEOUT_SECONDS}s." >&2
+        echo "The bounded command was: python3 test.py --suite coverage-safe --jobs ${GAME_TEST_JOBS}" >&2
+        list_recent_test_artifacts
+    fi
+    return "${status}"
+}
+
 run_phase "configure" cmake "${cmake_args[@]}"
-run_phase "build _game and for_unit_tests" cmake --build "${BUILD_DIR}" --target _game for_unit_tests -j"${COVERAGE_JOBS}"
+run_phase "build _game, for_unit_tests, and performance_guard_tests" \
+    cmake --build "${BUILD_DIR}" --target _game for_unit_tests performance_guard_tests -j"${COVERAGE_JOBS}"
 run_phase "coverage data cleanup" find "${BUILD_DIR}" -name '*.gcda' -delete
 run_phase "ctest" ctest --test-dir "${BUILD_DIR}" --output-on-failure
-run_phase "python test suite" env \
-    GAME_BUILD_DIR="${BUILD_DIR}" \
-    GAME_COVERAGE_RUN=1 \
-    GAME_TEST_JOBS="${GAME_TEST_JOBS}" \
-    GAME_XVFB_JOBS="${GAME_XVFB_JOBS}" \
-    GAME_TEST_OUTPUT_DIR="${GAME_TEST_OUTPUT_DIR}" \
-    python3 test.py --jobs "${GAME_TEST_JOBS}"
+run_phase "python test suite" run_python_coverage_tests
 run_phase "report generation" generate_report
 
 total_elapsed=$((SECONDS - SCRIPT_START))

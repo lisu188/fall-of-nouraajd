@@ -1,0 +1,131 @@
+{
+  "castleRoadTile": {
+    "class": "CTile",
+    "properties": {
+      "animation": "images/tiles/road",
+      "canStep": true,
+      "tileType": "road",
+      "label": "Road"
+    }
+  },
+  "castleRiverTile": {
+    "class": "CTile",
+    "properties": {
+      "animation": "images/tiles/water",
+      "canStep": true,
+      "tileType": "water",
+      "label": "Shallow river"
+    }
+  },
+  "castleBridgeTile": {
+    "class": "CTile",
+    "properties": {
+      "animation": "images/tiles/road",
+      "canStep": true,
+      "tileType": "road",
+      "label": "Bridge"
+    }
+  },
+  "castleMission": {
+    "class": "CastleMissionStart",
+    "properties": {
+      "canStep": true
+    }
+  },
+  "castleObjective": {
+    "class": "CastleObjective",
+    "properties": {
+      "canStep": true,
+      "animation": "images/castle/occupiedBanner"
+    }
+  },
+  "castleGarrison": {
+    "class": "CCreature",
+    "properties": {
+      "canStep": true,
+      "affiliation": "castleInvaders",
+      "controller": {
+        "class": "CController"
+      },
+      "fightController": {
+        "class": "CMonsterFightController"
+      },
+      "actions": [
+        {
+          "ref": "Attack"
+        }
+      ],
+      "baseStats": {
+        "class": "CStats",
+        "properties": {
+          "mainStat": "strength",
+          "stamina": 4,
+          "strength": 3,
+          "agility": 3,
+          "intelligence": 2,
+          "hit": 70,
+          "crit": 0,
+          "dmgMin": 3,
+          "dmgMax": 5
+        }
+      },
+      "gold": 10
+    }
+  },
+  "castleOfficer": {
+    "class": "CCreature",
+    "properties": {
+      "npc": true,
+      "canStep": true,
+      "affiliation": "erathia",
+      "controller": {
+        "class": "CController"
+      },
+      "baseStats": {
+        "class": "CStats",
+        "properties": {
+          "mainStat": "strength",
+          "stamina": 20,
+          "strength": 10,
+          "agility": 10,
+          "intelligence": 10,
+          "hit": 75,
+          "dmgMin": 4,
+          "dmgMax": 6
+        }
+      }
+    }
+  },
+  "castlePortal": {
+    "class": "CastlePortal",
+    "properties": {
+      "canStep": true,
+      "animation": "images/buildings/stairs_down"
+    }
+  },
+  "castleSupply": {
+    "class": "CastleSupply",
+    "properties": {
+      "canStep": true,
+      "animation": "images/castle/castleTown",
+      "campaign_rewardGold": 25
+    }
+  },
+  "castleLandmark": {
+    "class": "CBuilding",
+    "properties": {
+      "canStep": true,
+      "animation": "images/castle/castleTown"
+    }
+  },
+  "castleHomecomingQuest": {
+    "class": "CastleMissionQuest",
+    "properties": {
+      "description": "Capture the defended town of Terraneus.",
+      "campaign_scenarioId": "homecoming",
+      "campaign_questText": "Capture the defended town of Terraneus.",
+      "campaign_hint": "Follow the invasion roads and underground gates to Terraneus.",
+      "campaign_rewardText": "200 gold and the next chapter."
+    }
+  }
+}

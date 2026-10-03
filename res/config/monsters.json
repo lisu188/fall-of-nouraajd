@@ -2,11 +2,9 @@
   "Assasin": {
     "class": "CPlayer",
     "properties": {
-      "actions": [
-        {
-          "ref": "Attack"
-        }
-      ],
+      "creatureClass": {
+        "ref": "AssasinClass"
+      },
       "animation": "images/players/assasin",
       "equipped": {
         "0": {
@@ -21,39 +19,6 @@
       },
       "items": [],
       "label": "Assasin",
-      "levelStats": {
-        "class": "CStats",
-        "properties": {
-          "agility": 3,
-          "crit": 2,
-          "dmgMax": 2,
-          "dmgMin": 1,
-          "hit": 3,
-          "intelligence": 2,
-          "stamina": 1,
-          "strength": 1
-        }
-      },
-      "levelling": {
-        "1": {
-          "ref": "SneakAttack"
-        },
-        "2": {
-          "ref": "Mutilation"
-        },
-        "3": {
-          "ref": "LethalPoison"
-        },
-        "4": {
-          "ref": "Chloroform"
-        },
-        "5": {
-          "ref": "Stunner"
-        },
-        "6": {
-          "ref": "Backstab"
-        }
-      },
       "baseStats": {
         "class": "CStats",
         "properties": {
@@ -116,6 +81,12 @@
           "strength": 5
         }
       },
+      "race": {
+        "ref": "goobyRace"
+      },
+      "creatureClass": {
+        "ref": "bruteClass"
+      },
       "sw": 1
     }
   },
@@ -156,14 +127,20 @@
         "properties": {
           "agility": 10,
           "crit": 20,
-          "dmgMax": 21,
-          "dmgMin": 17,
+          "dmgMax": 16,
+          "dmgMin": 12,
           "hit": 80,
           "intelligence": 10,
           "mainStat": "strength",
-          "stamina": 10,
+          "stamina": 7,
           "strength": 10
         }
+      },
+      "race": {
+        "ref": "octoBogzRace"
+      },
+      "creatureClass": {
+        "ref": "bruteClass"
       },
       "sw": 2
     }
@@ -213,6 +190,12 @@
           "stamina": 3,
           "strength": 5
         }
+      },
+      "race": {
+        "ref": "pritzRace"
+      },
+      "creatureClass": {
+        "ref": "bruteClass"
       },
       "sw": 1
     }
@@ -267,17 +250,21 @@
           "strength": 5
         }
       },
+      "race": {
+        "ref": "pritzRace"
+      },
+      "creatureClass": {
+        "ref": "mageClass"
+      },
       "sw": 2
     }
   },
   "Sorcerer": {
     "class": "CPlayer",
     "properties": {
-      "actions": [
-        {
-          "ref": "Attack"
-        }
-      ],
+      "creatureClass": {
+        "ref": "SorcererClass"
+      },
       "animation": "images/players/sorcerer",
       "equipped": {
         "0": {
@@ -292,45 +279,6 @@
       },
       "items": [],
       "label": "Sorcerer",
-      "levelStats": {
-        "class": "CStats",
-        "properties": {
-          "agility": 2,
-          "crit": 1,
-          "dmgMax": 1,
-          "dmgMin": 1,
-          "hit": 1,
-          "intelligence": 3,
-          "stamina": 1,
-          "strength": 1
-        }
-      },
-      "levelling": {
-        "1": {
-          "ref": "MagicMissile"
-        },
-        "10": {
-          "ref": "ChaosBlast"
-        },
-        "2": {
-          "ref": "AbyssalShadows"
-        },
-        "3": {
-          "ref": "FrostBolt"
-        },
-        "4": {
-          "ref": "EndlessPain"
-        },
-        "5": {
-          "ref": "ArmorOfEndlessWinter"
-        },
-        "7": {
-          "ref": "ShadowBolt"
-        },
-        "8": {
-          "ref": "Devour"
-        }
-      },
       "baseStats": {
         "class": "CStats",
         "properties": {
@@ -350,11 +298,9 @@
   "Warrior": {
     "class": "CPlayer",
     "properties": {
-      "actions": [
-        {
-          "ref": "Attack"
-        }
-      ],
+      "creatureClass": {
+        "ref": "WarriorClass"
+      },
       "animation": "images/players/warrior",
       "equipped": {
         "0": {
@@ -369,39 +315,6 @@
       },
       "items": [],
       "label": "Warrior",
-      "levelStats": {
-        "class": "CStats",
-        "properties": {
-          "agility": 2,
-          "crit": 1,
-          "dmgMax": 3,
-          "dmgMin": 2,
-          "hit": 3,
-          "intelligence": 1,
-          "stamina": 2,
-          "strength": 3
-        }
-      },
-      "levelling": {
-        "1": {
-          "ref": "Strike"
-        },
-        "2": {
-          "ref": "Barrier"
-        },
-        "3": {
-          "ref": "BloodThirst"
-        },
-        "4": {
-          "ref": "Bloodlash"
-        },
-        "5": {
-          "ref": "DeathStrike"
-        },
-        "6": {
-          "ref": "DoubleAttack"
-        }
-      },
       "baseStats": {
         "class": "CStats",
         "properties": {
@@ -458,7 +371,50 @@
           "strength": 5
         }
       },
+      "race": {
+        "ref": "humanRace"
+      },
+      "creatureClass": {
+        "ref": "cultistClass"
+      },
       "sw": 1
+    }
+  },
+  "NeutralHumanNpc": {
+    "class": "CCreature",
+    "properties": {
+      "animation": "images/npc/questGiver",
+      "label": "Human",
+      "levelStats": {
+        "class": "CStats",
+        "properties": {
+          "agility": 2,
+          "crit": 1,
+          "dmgMax": 1,
+          "dmgMin": 1,
+          "hit": 3,
+          "intelligence": 1,
+          "stamina": 1,
+          "strength": 2
+        }
+      },
+      "baseStats": {
+        "class": "CStats",
+        "properties": {
+          "agility": 5,
+          "crit": 10,
+          "dmgMax": 3,
+          "dmgMin": 2,
+          "hit": 75,
+          "intelligence": 5,
+          "mainStat": "strength",
+          "stamina": 3,
+          "strength": 5
+        }
+      },
+      "race": {
+        "ref": "humanRace"
+      }
     }
   },
   "CultLeader": {
@@ -500,6 +456,12 @@
           "stamina": 7,
           "strength": 7
         }
+      },
+      "race": {
+        "ref": "humanRace"
+      },
+      "creatureClass": {
+        "ref": "cultistClass"
       },
       "sw": 2
     }
@@ -550,17 +512,21 @@
           "strength": 5
         }
       },
+      "race": {
+        "ref": "goblinRace"
+      },
+      "creatureClass": {
+        "ref": "thiefClass"
+      },
       "sw": 1
     }
   },
   "Inquisitor": {
     "class": "CPlayer",
     "properties": {
-      "actions": [
-        {
-          "ref": "Attack"
-        }
-      ],
+      "creatureClass": {
+        "ref": "InquisitorClass"
+      },
       "animation": "images/players/inquisitor",
       "equipped": {
         "0": {
@@ -575,39 +541,6 @@
       },
       "items": [],
       "label": "Inquisitor",
-      "levelStats": {
-        "class": "CStats",
-        "properties": {
-          "agility": 1,
-          "crit": 1,
-          "dmgMax": 2,
-          "dmgMin": 1,
-          "hit": 2,
-          "intelligence": 2,
-          "stamina": 2,
-          "strength": 2
-        }
-      },
-      "levelling": {
-        "1": {
-          "ref": "ExposeCorruption"
-        },
-        "2": {
-          "ref": "Strike"
-        },
-        "3": {
-          "ref": "SanctifiedWard"
-        },
-        "4": {
-          "ref": "FrostBolt"
-        },
-        "5": {
-          "ref": "Barrier"
-        },
-        "6": {
-          "ref": "EndlessPain"
-        }
-      },
       "baseStats": {
         "class": "CStats",
         "properties": {
@@ -627,11 +560,9 @@
   "Wayfarer": {
     "class": "CPlayer",
     "properties": {
-      "actions": [
-        {
-          "ref": "Attack"
-        }
-      ],
+      "creatureClass": {
+        "ref": "WayfarerClass"
+      },
       "animation": "images/players/wayfarer",
       "equipped": {
         "0": {
@@ -646,39 +577,6 @@
       },
       "items": [],
       "label": "Wayfarer",
-      "levelStats": {
-        "class": "CStats",
-        "properties": {
-          "agility": 3,
-          "crit": 1,
-          "dmgMax": 2,
-          "dmgMin": 1,
-          "hit": 3,
-          "intelligence": 1,
-          "stamina": 1,
-          "strength": 2
-        }
-      },
-      "levelling": {
-        "1": {
-          "ref": "WayfarersStride"
-        },
-        "2": {
-          "ref": "SneakAttack"
-        },
-        "3": {
-          "ref": "SmugglersMark"
-        },
-        "4": {
-          "ref": "DoubleAttack"
-        },
-        "5": {
-          "ref": "Backstab"
-        },
-        "6": {
-          "ref": "BloodThirst"
-        }
-      },
       "baseStats": {
         "class": "CStats",
         "properties": {

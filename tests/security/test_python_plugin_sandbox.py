@@ -25,6 +25,8 @@ class PythonPluginSandboxTest(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
         cls.loader_source = (REPO_ROOT / "src" / "core" / "CLoader.cpp").read_text()
+        cls.native_runtime_source = (REPO_ROOT / "src" / "plugin" / "CNativePluginRuntime.cpp").read_text()
+        cls.save_format_source = (REPO_ROOT / "src" / "core" / "CSaveFormat.cpp").read_text()
         cls.provider_source = (REPO_ROOT / "src" / "core" / "CProvider.cpp").read_text()
         cls.game_source = (REPO_ROOT / "res" / "game.py").read_text()
 
@@ -61,22 +63,31 @@ class PythonPluginSandboxTest(unittest.TestCase):
     def test_plugin_and_map_paths_are_validated_before_loading(self):
         self.assertIn("is_allowed_python_plugin_path", self.loader_source)
         self.assertIn("Rejected Python plugin outside trusted resource plugin paths", self.loader_source)
-        self.assertIn("is_valid_map_name", self.loader_source)
+        self.assertIn("isValidMapName", self.save_format_source)
+        self.assertIn("CSaveFormat::isValidMapName", self.loader_source)
         self.assertIn("Rejected invalid map name while loading plugins", self.loader_source)
         self.assertIn("Rejected invalid map name while resolving map", self.loader_source)
 
     def test_dynamic_plugins_are_limited_to_packaged_native_resources(self):
-        self.assertIn("is_allowed_dynamic_library_path", self.loader_source)
-        self.assertIn('"plugins/native/"', self.loader_source)
-        self.assertIn("Rejected dynamic C++ plugin outside packaged native plugin paths", self.loader_source)
-        self.assertNotIn("std::filesystem::exists(candidate)", self.loader_source)
+        self.assertIn("is_allowed_dynamic_library_path", self.native_runtime_source)
+        self.assertIn('"plugins/native/"', self.native_runtime_source)
+        self.assertIn("Rejected dynamic C++ plugin outside packaged native plugin paths", self.native_runtime_source)
+        self.assertNotIn("std::filesystem::exists(candidate)", self.native_runtime_source)
 
     def test_resource_provider_rejects_absolute_and_parent_traversal_paths(self):
         self.assertIn("isSafeRelativeResourcePath", self.provider_source)
         self.assertIn("resourcePath.is_absolute()", self.provider_source)
-        self.assertIn('normalized.rfind("../", 0) != 0', self.provider_source)
-        self.assertIn('normalized.find("/../") == std::string::npos', self.provider_source)
+        self.assertIn('normalized.rfind("../", 0) == 0', self.provider_source)
+        self.assertIn('normalized.find("/../") != std::string::npos', self.provider_source)
         self.assertIn("Rejected unsafe resource path", self.provider_source)
+
+    def test_trust_boundary_model_is_documented(self):
+        doc = REPO_ROOT / "docs" / "design" / "plugin_trust_boundary.md"
+        self.assertTrue(doc.exists(), "trust boundary design doc must exist")
+        text = doc.read_text()
+        self.assertIn("authored repository content", text.lower())
+        self.assertIn("isWithinResourceRoot", text)
+        self.assertIn("is_allowed_python_plugin_path", text)
 
     def test_crafting_plugin_uses_resource_provider_instead_of_filesystem_paths(self):
         crafting_source = (REPO_ROOT / "res" / "plugins" / "crafting.py").read_text()

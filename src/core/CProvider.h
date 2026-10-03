@@ -24,6 +24,7 @@ struct CResType {
     const static std::string CONFIG;
     const static std::string MAP;
     const static std::string PLUGIN;
+    const static std::string PLUGIN_LUA;
     const static std::string SAVE;
 };
 
@@ -104,7 +105,19 @@ class CGameObject;
 
 class CResourcesProvider {
   public:
+    // Compatibility-only process-wide provider for callers without a game context (Python scripts,
+    // plugin code, detached resources). Game-attached code must use CGame::getResourcesProvider().
     static std::shared_ptr<CResourcesProvider> getInstance();
+
+    // Configure process-wide resource roots for packaged/mobile hosts before the first game is loaded.
+    // The writable root is searched first so saves written there resolve immediately; the packaged
+    // content root is searched next; the native-module-derived desktop roots remain as fallbacks.
+    // Both roots must be directories (the writable root is created when missing). Desktop behavior
+    // is unchanged unless this method is called explicitly.
+    static bool configurePlatformRoots(const std::string &packagedRoot, const std::string &writableRoot);
+
+    // Restore the module-derived desktop search roots. Intended for host teardown and focused tests.
+    static void clearPlatformRoots();
 
     std::string load(std::string path);
 
@@ -114,9 +127,26 @@ class CResourcesProvider {
 
     std::vector<std::string> getFiles(const std::string &type);
 
-    void save(std::string file, const std::string &data);
+    bool save(std::string file, const std::string &data);
 
-    void save(std::string file, std::shared_ptr<json> data);
+    bool save(std::string file, std::shared_ptr<json> data);
+
+    // Register (or ref-count up) a map-scoped search root. `root` must be an existing directory that
+    // canonicalizes successfully; empty/nonexistent roots are ignored with a warning. Adding the same
+    // scope again increments its reference count so a retained map keeps its root alive.
+    void addScopedRoot(const std::string &scope, const std::string &root);
+
+    // Ref-count down a scope; the root is dropped only when the count reaches zero (i.e. no retained
+    // map still owns objects from that scope).
+    void releaseScopedRoot(const std::string &scope);
+
+    // Select which registered scope resolution should consult. Empty string = no active scope.
+    void setActiveScope(const std::string &scope);
+
+    std::string getActiveScope() const;
+
+    // Inspection helper for tests: canonical roots of all currently-registered scopes, sorted.
+    std::vector<std::string> getScopedRoots() const;
 
     CResourcesProvider() = default;
 
@@ -128,33 +158,48 @@ class CResourcesProvider {
         std::source_location location;
     };
 
+    struct ScopedRoot {
+        std::string canonicalRoot;
+        int refCount;
+    };
+
     std::expected<std::string, LoadFailure>
     loadExpected(std::string path, std::source_location location = std::source_location::current());
 
     static void logLoadFailure(const LoadFailure &failure);
 
     static std::list<std::string> searchPath;
+
+    std::map<std::string, ScopedRoot> scopedRoots;
+    std::string activeScope;
 };
 
-class CConfigurationProvider : private std::map<std::string, std::shared_ptr<json>> {
+class CConfigurationProvider {
   public:
-    static std::shared_ptr<json> getConfig(const std::string &path);
-
-  private:
-    CConfigurationProvider() = default;
+    // The singleton default keeps provider-less construction working; pass the owning game's
+    // provider (CGame::getResourcesProvider()) to keep configs isolated per game session.
+    explicit CConfigurationProvider(
+        std::shared_ptr<CResourcesProvider> resourcesProvider = CResourcesProvider::getInstance());
 
     ~CConfigurationProvider();
 
+    // Compatibility-only process-wide config cache for callers without a game context.
+    // Game-attached code must use CGame::getConfigurationProvider()->getConfiguration().
+    static std::shared_ptr<json> getConfig(const std::string &path);
+
     std::shared_ptr<json> getConfiguration(const std::string &path);
 
+  private:
     void loadConfig(const std::string &path);
+
+    std::shared_ptr<CResourcesProvider> resourcesProvider;
+    std::map<std::string, std::shared_ptr<json>> configurations;
 };
 
 class CAnimationProvider {
   public:
     static std::shared_ptr<CAnimation> getAnimation(const std::shared_ptr<CGame> &game,
-                                                    const std::shared_ptr<CGameObject> &object, bool custom = false);
+                                                    const std::shared_ptr<CGameObject> &object);
 
-    static std::shared_ptr<CAnimation> getAnimation(const std::shared_ptr<CGame> &game, std::string path,
-                                                    bool custom = false);
+    static std::shared_ptr<CAnimation> getAnimation(const std::shared_ptr<CGame> &game, std::string path);
 };

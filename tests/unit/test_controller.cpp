@@ -1,0 +1,1636 @@
+/*
+fall-of-nouraajd c++ dark fantasy game
+Copyright (C) 2026  Andrzej Lis
+
+This program is free software: you can redistribute it and/or modify
+        it under the terms of the GNU General Public License as published by
+the Free Software Foundation, either version 3 of the License, or
+(at your option) any later version.
+
+This program is distributed in the hope that it will be useful,
+        but WITHOUT ANY WARRANTY; without even the implied warranty of
+MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+GNU General Public License for more details.
+
+You should have received a copy of the GNU General Public License
+along with this program.  If not, see <https://www.gnu.org/licenses/>.
+ */
+
+#include "core/CController.h"
+#include "core/CGame.h"
+#include "core/CGameContext.h"
+#include "core/CJson.h"
+#include "core/CLoader.h"
+#include "core/CMap.h"
+#include "core/CStats.h"
+#include "core/CTypeRegistration.h"
+#include "core/CTypes.h"
+#include "gui/CGui.h"
+#include "gui/object/CGameGraphicsObject.h"
+#include "gui/panel/CGameFightPanel.h"
+#include "handler/CObjectHandler.h"
+#include "handler/CFightHandler.h"
+#include "object/CCreature.h"
+#include "object/CCreatureClass.h"
+#include "object/CEffect.h"
+#include "object/CInteraction.h"
+#include "object/CItem.h"
+#include "object/CMapObject.h"
+#include "object/CPlayer.h"
+#include "object/CTile.h"
+#include "test_harness.h"
+#include "veventloop.h"
+
+#include <pybind11/embed.h>
+
+#include <map>
+#include <algorithm>
+#include <memory>
+#include <vector>
+
+namespace {
+
+std::shared_ptr<CCreature> creature_at(int x, int y, int z) {
+    auto creature = std::make_shared<CCreature>();
+    auto stats = std::make_shared<CStats>();
+    stats->setMainStat("intelligence");
+    creature->setBaseStats(stats);
+    creature->setPosX(x);
+    creature->setPosY(y);
+    creature->setPosZ(z);
+    return creature;
+}
+
+std::shared_ptr<CTile> walkable_tile() {
+    auto tile = std::make_shared<CTile>();
+    tile->setTileType("floor");
+    tile->setCanStep(true);
+    return tile;
+}
+
+Coords resolve_coords(const std::shared_ptr<vstd::future<Coords, void>> &future) { return future->get(); }
+
+std::shared_ptr<CTile> tile(bool can_step) {
+    auto result = std::make_shared<CTile>();
+    result->setCanStep(can_step);
+    return result;
+}
+
+std::shared_ptr<CMap> open_tile_map(const std::shared_ptr<CGame> &game, int width, int height, int levels = 1) {
+    auto map = std::make_shared<CMap>();
+    game->setMap(map);
+    map->setGame(game);
+    std::map<int, int> x_bounds;
+    std::map<int, int> y_bounds;
+    for (int z = 0; z < levels; ++z) {
+        x_bounds[z] = width - 1;
+        y_bounds[z] = height - 1;
+    }
+    map->setXBounds(x_bounds);
+    map->setYBounds(y_bounds);
+    for (int z = 0; z < levels; ++z) {
+        for (int y = 0; y < height; ++y) {
+            for (int x = 0; x < width; ++x) {
+                map->addTile(tile(true), x, y, z);
+            }
+        }
+    }
+    return map;
+}
+
+void set_tile_movement_cost(const std::shared_ptr<CMap> &map, Coords coords, int movement_cost) {
+    auto tile = map->getTile(coords);
+    expect_true(tile != nullptr, "weighted path fixture tile should exist");
+    if (tile) {
+        tile->setMovementCost(movement_cost);
+    }
+}
+
+std::shared_ptr<CMap> weighted_detour_map(const std::shared_ptr<CGame> &game) {
+    auto map = open_tile_map(game, 5, 2);
+    for (int x = 1; x <= 3; ++x) {
+        set_tile_movement_cost(map, Coords(x, 0, 0), 30);
+    }
+    return map;
+}
+
+std::vector<Coords> expected_weighted_detour_path() {
+    return {
+        Coords(0, 1, 0), Coords(1, 1, 0), Coords(2, 1, 0), Coords(3, 1, 0), Coords(4, 1, 0), Coords(4, 0, 0),
+    };
+}
+
+std::shared_ptr<CPlayer> player_at(const std::shared_ptr<CGame> &game, Coords coords) {
+    auto player = std::make_shared<CPlayer>();
+    player->setGame(game);
+    player->setName("player");
+    player->setCoords(coords);
+    return player;
+}
+
+void add_navigation_edge(const std::shared_ptr<CMap> &map, Coords source, Coords target, bool bidirectional = false,
+                         bool enabled = true) {
+    CNavigationEdge edge;
+    edge.source = source;
+    edge.target = target;
+    edge.enabled = enabled;
+    edge.bidirectional = bidirectional;
+    map->registerNavigationEdge(edge);
+}
+
+void test_movement_controller_null_and_no_map_paths() {
+    auto creature = creature_at(2, 3, 4);
+
+    auto base_controller = std::make_shared<CController>();
+    expect_true(resolve_coords(base_controller->control(nullptr)) == ZERO,
+                "base controller should return ZERO for null creatures");
+    expect_true(resolve_coords(base_controller->control(creature)) == Coords(2, 3, 4),
+                "base controller should return creature coordinates");
+    base_controller->onStepCommitted(creature, creature->getCoords());
+    base_controller->interrupt(creature);
+    base_controller->onTurnEnded(creature);
+
+    auto target_controller = std::make_shared<CTargetController>();
+    target_controller->setTarget("missing");
+    expect_true(target_controller->getTarget() == "missing", "target controller should expose its target id");
+    expect_true(resolve_coords(target_controller->control(nullptr)) == ZERO,
+                "target controller should return ZERO for null creatures");
+    expect_true(resolve_coords(target_controller->control(creature)) == ZERO,
+                "target controller should return ZERO before a creature has a map");
+
+    auto random_controller = std::make_shared<CRandomController>();
+    expect_true(resolve_coords(random_controller->control(nullptr)) == ZERO,
+                "random controller should return ZERO for null creatures");
+
+    auto npc_controller = std::make_shared<CNpcRandomController>();
+    expect_true(resolve_coords(npc_controller->control(nullptr)) == ZERO,
+                "NPC random controller should return ZERO for null creatures");
+    expect_true(resolve_coords(npc_controller->control(creature)) == creature->getCoords(),
+                "NPC random controller should stay put before a creature has a map");
+    npc_controller->onStepCommitted(creature, creature->getCoords());
+    npc_controller->interrupt(creature);
+
+    auto ground_controller = std::make_shared<CGroundController>();
+    ground_controller->setTileType("floor");
+    expect_true(ground_controller->getTileType() == "floor", "ground controller should expose its tile type");
+    expect_true(resolve_coords(ground_controller->control(nullptr)) == ZERO,
+                "ground controller should return ZERO for null creatures");
+    expect_true(resolve_coords(ground_controller->control(creature)) == creature->getCoords(),
+                "ground controller should stay put before a creature has a map");
+
+    auto range_controller = std::make_shared<CRangeController>();
+    range_controller->setTarget("player");
+    range_controller->setDistance(3);
+    expect_true(range_controller->getTarget() == "player" && range_controller->getDistance() == 3,
+                "range controller should expose target and distance settings");
+    expect_true(resolve_coords(range_controller->control(nullptr)) == ZERO,
+                "range controller should return ZERO for null creatures");
+    expect_true(resolve_coords(range_controller->control(creature)) == creature->getCoords(),
+                "range controller should stay put before a creature has a map");
+
+    auto player_controller = std::make_shared<CPlayerController>();
+    expect_true(resolve_coords(player_controller->control(nullptr)) == ZERO,
+                "player controller should return ZERO for null creatures");
+    player_controller->interrupt(nullptr);
+    player_controller->onTurnEnded(nullptr);
+}
+
+void test_npc_random_controller_clears_current_tile_path() {
+    auto game = std::make_shared<CGame>();
+    auto map = std::make_shared<CMap>();
+    game->setMap(map);
+    map->setGame(game);
+    map->setXBounds({{0, 0}});
+    map->setYBounds({{0, 0}});
+    map->setWrapX({{0, 1}});
+    map->setWrapY({{0, 1}});
+    map->addTile(walkable_tile(), 0, 0, 0);
+
+    auto creature = creature_at(0, 0, 0);
+    creature->setName("unitNpcRandomWalker");
+    creature->setGame(game);
+    creature->setHp(1);
+
+    auto controller = std::make_shared<CNpcRandomController>();
+    controller->setGame(game);
+    creature->setController(controller);
+
+    auto selected = resolve_coords(controller->control(creature));
+    expect_true(selected == Coords(0, 0, 0),
+                "NPC random controller should stay put when every random target normalizes to the current tile");
+}
+
+void test_npc_random_controller_clears_stale_blocked_path() {
+    vstd::rng().seed(12345);
+    auto game = std::make_shared<CGame>();
+    auto map = open_tile_map(game, 11, 11);
+    auto creature = creature_at(5, 5, 0);
+    creature->setGame(game);
+
+    auto controller = std::make_shared<CNpcRandomController>();
+    Coords original = creature->getCoords();
+    Coords planned = original;
+    for (int attempt = 0; attempt < 20 && planned == original; ++attempt) {
+        controller->interrupt(creature);
+        planned = resolve_coords(controller->control(creature));
+    }
+
+    expect_true(planned != original, "NPC random controller fixture should find a real next step");
+    expect_true(map->getDistance(original, planned) == 1.0, "NPC random controller should plan an adjacent step");
+    expect_true(map->canStep(planned), "planned NPC random step should be initially passable");
+
+    map->removeTile(planned.x, planned.y, planned.z);
+    expect_true(map->addTile(tile(false), planned.x, planned.y, planned.z), "fixture should block the planned step");
+    expect_true(!map->canStep(planned), "fixture should make the planned step impassable");
+
+    auto replanned = resolve_coords(controller->control(creature));
+    expect_true(replanned != planned, "NPC random controller should not keep a newly blocked stale next step");
+    expect_true(replanned == original || map->canStep(replanned),
+                "NPC random controller should either stay put or replan to a passable step");
+}
+
+void testGroundControllerReturnsReadyStepBeforeTransition() {
+    auto game = std::make_shared<CGame>();
+    auto map = open_tile_map(game, 3, 3);
+    map->getTile(1, 1, 0)->setTileType("stone");
+    map->getTile(2, 1, 0)->setTileType("floor");
+    map->getTile(0, 1, 0)->setTileType("floor");
+    map->getTile(0, 1, 0)->setCanStep(false);
+
+    auto creature = creature_at(1, 1, 0);
+    creature->setGame(game);
+    creature->setName("unitReadyGroundWalker");
+    creature->setHp(1);
+    auto controller = std::make_shared<CGroundController>();
+    controller->setTileType("floor");
+    creature->setController(controller);
+    map->addObject(creature);
+
+    auto result = controller->control(creature);
+    expect_true(result->isReady(), "ground controller should resolve its step without deferred work");
+    game->getContext()->advanceTransitionGeneration();
+
+    expect_true(resolve_coords(result) == Coords(2, 1, 0),
+                "ground controller should retain its already-resolved passable matching step after a later transition");
+    expect_true(creature->getCoords() == Coords(1, 1, 0), "controller planning should not commit a movement step");
+}
+
+void test_player_controller_prefers_longer_lower_cost_route() {
+    auto game = std::make_shared<CGame>();
+    weighted_detour_map(game);
+    auto player = player_at(game, Coords(0, 0, 0));
+    auto controller = std::make_shared<CPlayerController>();
+    player->setController(controller);
+    controller->setTarget(player, Coords(4, 0, 0));
+
+    for (const auto &expected_step : expected_weighted_detour_path()) {
+        auto actual_step = resolve_coords(controller->control(player));
+        expect_true(actual_step == expected_step, "player controller should follow the cheaper weighted detour");
+        player->moveTo(actual_step);
+        controller->onStepCommitted(player, actual_step);
+    }
+
+    expect_true(player->getCoords() == Coords(4, 0, 0), "player weighted detour should reach the target");
+    expect_true(controller->isCompleted(player), "player weighted detour should complete after the target step");
+}
+
+// An obstacle appearing on the player's pending auto-path must STOP the walk, not
+// pause it: the controller abandons the stored route when its next step becomes
+// impassable, so the route cannot silently resume after the obstacle moves away.
+// CMap::move() already interrupts a controller that yields no movement, but the
+// controller is also polled directly (GUI footprint rendering via isOnPath,
+// script-driven control), where a merely-paused path would linger and resume.
+void test_player_controller_stops_and_clears_path_when_obstacle_appears() {
+    auto game = std::make_shared<CGame>();
+    auto map = open_tile_map(game, 5, 1);
+    auto player = player_at(game, Coords(0, 0, 0));
+    auto controller = std::make_shared<CPlayerController>();
+    player->setController(controller);
+
+    // Mid-route obstacle: path [1,2,3], block (2,0,0) while the destination itself
+    // stays steppable, so the stop comes from the blocked NEXT step.
+    controller->setTarget(player, Coords(3, 0, 0));
+    auto first_step = resolve_coords(controller->control(player));
+    expect_true(first_step == Coords(1, 0, 0), "player auto-path should start with the adjacent corridor step");
+    player->moveTo(first_step);
+    controller->onStepCommitted(player, first_step);
+    expect_true(controller->isOnPath(player, Coords(2, 0, 0)).first,
+                "the remaining route should render as path while it is still passable");
+
+    map->removeTile(2, 0, 0);
+    expect_true(map->addTile(tile(false), 2, 0, 0), "fixture should block the mid-route step");
+    expect_true(!map->canStep(Coords(2, 0, 0)), "fixture should make the mid-route step impassable");
+    expect_true(map->canStep(Coords(3, 0, 0)), "the destination itself should stay steppable");
+
+    auto blocked_step = resolve_coords(controller->control(player));
+    expect_true(blocked_step == Coords(1, 0, 0), "a blocked auto-path must not steer into the obstacle");
+    expect_true(controller->isCompleted(player), "a blocked auto-path counts as completed (stopped)");
+    expect_true(!controller->isOnPath(player, Coords(3, 0, 0)).first,
+                "a stopped auto-path must not keep rendering stale footprints");
+
+    map->removeTile(2, 0, 0);
+    expect_true(map->addTile(tile(true), 2, 0, 0), "fixture should clear the mid-route obstacle again");
+    auto after_unblock = resolve_coords(controller->control(player));
+    expect_true(after_unblock == Coords(1, 0, 0),
+                "an auto-path stopped by a mid-route obstacle must not resume after the obstacle clears");
+    expect_true(controller->isCompleted(player),
+                "the abandoned route stays abandoned until the player picks a new target");
+
+    // Blocked destination: fresh route [2,3] from (1,0,0), block the TARGET while
+    // the next step stays steppable, so the stop comes from the impassable goal.
+    controller->setTarget(player, Coords(3, 0, 0));
+    expect_true(!controller->isCompleted(player), "a fresh target should restore a pending route");
+    map->removeTile(3, 0, 0);
+    expect_true(map->addTile(tile(false), 3, 0, 0), "fixture should block the destination");
+    expect_true(map->canStep(Coords(2, 0, 0)), "the next step should stay steppable");
+
+    auto blocked_target_step = resolve_coords(controller->control(player));
+    expect_true(blocked_target_step == Coords(1, 0, 0), "a blocked destination must stop the walk immediately");
+    map->removeTile(3, 0, 0);
+    expect_true(map->addTile(tile(true), 3, 0, 0), "fixture should clear the destination again");
+    auto after_target_unblock = resolve_coords(controller->control(player));
+    expect_true(after_target_unblock == Coords(1, 0, 0),
+                "an auto-path stopped by a blocked destination must not resume after it clears");
+    expect_true(controller->isCompleted(player),
+                "the abandoned route stays abandoned after a blocked-destination stop as well");
+}
+
+void test_npc_random_controller_prefers_longer_lower_cost_route() {
+    const auto saved_rng = vstd::rng();
+    auto game = std::make_shared<CGame>();
+    auto map = weighted_detour_map(game);
+    auto creature = creature_at(0, 0, 0);
+    creature->setGame(game);
+
+    auto controller = std::make_shared<CNpcRandomController>();
+    bool target_seed_found = false;
+    for (unsigned seed = 0; seed < 1024; ++seed) {
+        vstd::rng().seed(seed);
+        const auto candidate_rng = vstd::rng();
+        const int dx = vstd::rand(-5, 5);
+        const int dy = vstd::rand(-5, 5);
+        if (map->normalizeCoords(Coords(dx, dy, 0)) == Coords(4, 0, 0)) {
+            vstd::rng() = candidate_rng;
+            target_seed_found = true;
+            break;
+        }
+    }
+    expect_true(target_seed_found, "the NPC fixture must choose its authored target without assuming an RNG sequence");
+    if (target_seed_found) {
+        for (const auto &expected_step : expected_weighted_detour_path()) {
+            const auto actual_step = resolve_coords(controller->control(creature));
+            expect_true(actual_step == expected_step,
+                        "NPC random controller should follow the cheaper weighted detour");
+            creature->moveTo(actual_step);
+            controller->onStepCommitted(creature, actual_step);
+        }
+        expect_true(creature->getCoords() == Coords(4, 0, 0), "NPC weighted detour should reach the authored target");
+    }
+    vstd::rng() = saved_rng;
+}
+
+void test_target_controller_flow_field_prefers_longer_lower_cost_route() {
+    auto game = std::make_shared<CGame>();
+    auto map = weighted_detour_map(game);
+
+    auto target = std::make_shared<CMapObject>();
+    target->setGame(game);
+    target->setName("weightedTarget");
+    target->setCanStep(true);
+    target->setCoords(Coords(4, 0, 0));
+    map->addObject(target);
+
+    auto chaser = creature_at(0, 0, 0);
+    chaser->setGame(game);
+    chaser->setName("weightedChaser");
+    chaser->setHp(1);
+    auto controller = std::make_shared<CTargetController>();
+    controller->setTarget("weightedTarget");
+    chaser->setController(controller);
+    map->addObject(chaser);
+
+    performance_guard::clearTargetFlowCache();
+    for (const auto &expected_step : expected_weighted_detour_path()) {
+        auto actual_step = resolve_coords(controller->control(chaser));
+        expect_true(actual_step == expected_step, "target flow field should follow the cheaper weighted detour");
+        chaser->moveTo(actual_step);
+    }
+
+    expect_true(chaser->getCoords() == target->getCoords(), "target weighted detour should reach the target");
+}
+
+void test_controller_connector_costs_agree_and_invalidate_flow() {
+    auto game = std::make_shared<CGame>();
+    auto map = open_tile_map(game, 6, 1);
+    const Coords start(0, 0, 0), goal(5, 0, 0);
+    auto target = std::make_shared<CMapObject>();
+    target->setGame(game);
+    target->setName("costTarget");
+    target->setCanStep(true);
+    target->setCoords(goal);
+    map->addObject(target);
+    auto chaser = creature_at(0, 0, 0);
+    chaser->setGame(game);
+    chaser->setName("costChaser");
+    chaser->setHp(1);
+    map->addObject(chaser);
+    auto npc_controller = std::make_shared<CTargetController>();
+    npc_controller->setTarget(target->getName());
+    auto player = player_at(game, start);
+    auto player_controller = std::make_shared<CPlayerController>();
+    map->registerNavigationEdge({start, goal, true, false, 20, "costPortal"});
+    performance_guard::clearTargetFlowCache();
+    player_controller->setTarget(player, goal);
+    expect_true(resolve_coords(player_controller->control(player)) == Coords(1, 0, 0),
+                "player should reject an expensive connector in favor of five ordinary steps");
+    expect_true(resolve_coords(npc_controller->control(chaser)) == Coords(1, 0, 0),
+                "reverse flow field should price the forward connector and agree with player A*");
+    map->unregisterNavigationEdgesForObject("costPortal");
+    map->registerNavigationEdge({start, goal, true, false, 1, "costPortal"});
+    player_controller->interrupt(player);
+    player_controller->setTarget(player, goal);
+    expect_true(resolve_coords(player_controller->control(player)) == goal,
+                "player should use the now-cheap connector");
+    expect_true(resolve_coords(npc_controller->control(chaser)) == goal,
+                "changed edge cost should invalidate cached flow");
+    map->getTile(goal)->setMovementCost(std::numeric_limits<int>::max());
+    map->unregisterNavigationEdgesForObject("costPortal");
+    map->registerNavigationEdge({start, goal, true, false, std::numeric_limits<int>::max(), "costPortal"});
+    player_controller->interrupt(player);
+    player_controller->setTarget(player, goal);
+    expect_true(resolve_coords(player_controller->control(player)) == Coords(1, 0, 0),
+                "a connector price above 32 bits must remain more expensive than walking");
+    expect_true(resolve_coords(npc_controller->control(chaser)) == Coords(1, 0, 0),
+                "reverse pursuit must not narrow a large destination-plus-connector price");
+}
+
+void test_target_controller_concurrent_requests_extend_and_reuse_shared_flow() {
+    auto game = std::make_shared<CGame>();
+    auto map = open_tile_map(game, 257, 1);
+    auto target = std::make_shared<CMapObject>();
+    target->setGame(game);
+    target->setName("concurrentTarget");
+    target->setCanStep(true);
+    map->addObject(target);
+
+    std::vector<std::shared_ptr<CCreature>> chasers;
+    for (int x = 8; x <= 256; x += 8) {
+        auto chaser = creature_at(x, 0, 0);
+        chaser->setGame(game);
+        chaser->setName("concurrentChaser" + std::to_string(x));
+        chaser->setLevel(1);
+        chaser->setHp(1);
+        auto controller = std::make_shared<CTargetController>();
+        controller->setTarget(target->getName());
+        chaser->setController(controller);
+        map->addObject(chaser);
+        chasers.push_back(chaser);
+    }
+
+    auto verify_batch = [&](bool blocked) {
+        std::vector<std::shared_ptr<vstd::future<Coords, void>>> pending;
+        // Match map-turn scheduling: start every worker before awaiting any result.
+        // Increasing distances let later workers extend a field an earlier worker reads.
+        for (const auto &chaser : chasers) {
+            pending.push_back(chaser->getController()->control(chaser));
+        }
+        for (std::size_t i = 0; i < chasers.size(); ++i) {
+            const auto start = chasers[i]->getCoords();
+            const auto expected = blocked && start.x > 129 ? start : Coords(start.x - 1, 0, 0);
+            expect_true(pending[i]->get() == expected,
+                        "concurrent flow requests must return the correct corridor step or stay put when blocked");
+        }
+    };
+
+    performance_guard::clearTargetFlowCache();
+    const auto revision = map->getNavigationRevision();
+    verify_batch(false);
+    verify_batch(false);
+    expect_true(performance_guard::targetFlowCacheSize() == 1,
+                "concurrent cold and warm requests must share one flow field");
+    expect_true(map->getNavigationRevision() == revision, "concurrent flow requests must not mutate navigation");
+
+    map->removeTile(129, 0, 0);
+    map->addTile(tile(false), 129, 0, 0);
+    verify_batch(true);
+    expect_true(performance_guard::targetFlowCacheSize() == 1,
+                "concurrent requests after a topology change must repair one retained field");
+    performance_guard::clearTargetFlowCache();
+}
+
+void test_player_controller_prefers_cheap_navigation_edge_over_expensive_band() {
+    auto game = std::make_shared<CGame>();
+    auto map = weighted_detour_map(game);
+    // A bidirectional waypoint edge spans the expensive row-0 band. Its step cost is the destination
+    // tile cost (1), not the 30-cost band, so weighted pathing must cross the edge instead of taking
+    // the expensive direct row or the longer cheap detour.
+    add_navigation_edge(map, Coords(0, 0, 0), Coords(4, 0, 0), true);
+
+    const auto tiles_before = map->getTiles().size();
+
+    auto player = player_at(game, Coords(0, 0, 0));
+    auto controller = std::make_shared<CPlayerController>();
+    player->setController(controller);
+    controller->setTarget(player, Coords(4, 0, 0));
+
+    auto first_step = resolve_coords(controller->control(player));
+    expect_true(first_step == Coords(4, 0, 0),
+                "weighted pathing should cross the cheap waypoint edge rather than the expensive band or detour");
+    player->moveTo(first_step);
+    controller->onStepCommitted(player, first_step);
+
+    expect_true(player->getCoords() == Coords(4, 0, 0), "the weighted edge crossing should reach the target");
+    expect_true(controller->isCompleted(player), "reaching the target through the edge should complete the controller");
+    expect_true(map->getTiles().size() == tiles_before, "weighted edge pathing should not materialize extra tiles");
+}
+
+void test_player_controller_approaches_portal_away_from_goal_for_shortest_route() {
+    auto game = std::make_shared<CGame>();
+    auto map = open_tile_map(game, 11, 2);
+    add_navigation_edge(map, Coords(0, 1, 0), Coords(9, 0, 0));
+    auto player = player_at(game, Coords(0, 0, 0));
+    auto controller = std::make_shared<CPlayerController>();
+    player->setController(controller);
+    controller->setTarget(player, Coords(10, 0, 0));
+
+    for (const auto &expected : {Coords(0, 1, 0), Coords(9, 0, 0), Coords(10, 0, 0)}) {
+        const auto actual = resolve_coords(controller->control(player));
+        expect_true(actual == expected, "player should use the three-step portal route instead of ten direct steps");
+        player->moveTo(actual);
+        controller->onStepCommitted(player, actual);
+    }
+    expect_true(controller->isCompleted(player), "the shortest portal route should complete at the target");
+}
+
+void test_player_controller_uses_navigation_neighbors_for_cross_level_route() {
+    auto game = std::make_shared<CGame>();
+    auto map = open_tile_map(game, 3, 1, 2);
+    auto player = player_at(game, Coords(0, 0, 0));
+    auto controller = std::make_shared<CPlayerController>();
+    player->setController(controller);
+
+    add_navigation_edge(map, Coords(1, 0, 0), Coords(1, 0, 1));
+    controller->setTarget(player, Coords(2, 0, 1));
+
+    auto first = resolve_coords(controller->control(player));
+    expect_true(first == Coords(1, 0, 0), "player navigation route should first approach the authored edge");
+    player->moveTo(first);
+    controller->onStepCommitted(player, first);
+
+    auto second = resolve_coords(controller->control(player));
+    expect_true(second == Coords(1, 0, 1), "player navigation route should cross the authored z-level edge");
+    player->moveTo(second);
+    controller->onStepCommitted(player, second);
+
+    auto third = resolve_coords(controller->control(player));
+    expect_true(third == Coords(2, 0, 1), "player navigation route should finish on the target level");
+}
+
+void test_target_controller_flow_field_uses_navigation_neighbors_for_cross_level_pursuit() {
+    auto game = std::make_shared<CGame>();
+    auto map = open_tile_map(game, 3, 1, 2);
+    add_navigation_edge(map, Coords(1, 0, 0), Coords(1, 0, 1));
+
+    auto target = std::make_shared<CMapObject>();
+    target->setGame(game);
+    target->setName("unitTargetAcrossLevels");
+    target->setCoords(Coords(2, 0, 1));
+    map->addObject(target);
+
+    auto chaser = creature_at(0, 0, 0);
+    chaser->setGame(game);
+    chaser->setName("unitChaserAcrossLevels");
+    chaser->setHp(1);
+    auto controller = std::make_shared<CTargetController>();
+    controller->setTarget("unitTargetAcrossLevels");
+    chaser->setController(controller);
+    map->addObject(chaser);
+
+    performance_guard::clearTargetFlowCache();
+    auto first = resolve_coords(controller->control(chaser));
+    expect_true(first == Coords(1, 0, 0), "target flow field should approach an authored z-level edge");
+    chaser->moveTo(first);
+
+    auto second = resolve_coords(controller->control(chaser));
+    expect_true(second == Coords(1, 0, 1), "target flow field should cross the authored z-level edge");
+}
+
+void test_player_controller_respects_disabled_and_one_way_cross_level_edges() {
+    auto game = std::make_shared<CGame>();
+    auto map = open_tile_map(game, 3, 1, 2);
+    add_navigation_edge(map, Coords(1, 0, 0), Coords(1, 0, 1), false, false);
+
+    auto player = player_at(game, Coords(1, 0, 0));
+    auto controller = std::make_shared<CPlayerController>();
+    player->setController(controller);
+
+    controller->setTarget(player, Coords(1, 0, 1));
+    expect_true(resolve_coords(controller->control(player)) == Coords(1, 0, 0),
+                "disabled cross-level edges should not produce a player route");
+
+    map = open_tile_map(game, 3, 1, 2);
+    add_navigation_edge(map, Coords(1, 0, 1), Coords(1, 0, 0));
+
+    auto lower_player = player_at(game, Coords(1, 0, 0));
+    auto lower_controller = std::make_shared<CPlayerController>();
+    lower_player->setController(lower_controller);
+    lower_controller->setTarget(lower_player, Coords(1, 0, 1));
+    expect_true(resolve_coords(lower_controller->control(lower_player)) == Coords(1, 0, 0),
+                "one-way drops should not be usable in reverse");
+
+    auto upper_player = player_at(game, Coords(1, 0, 1));
+    auto upper_controller = std::make_shared<CPlayerController>();
+    upper_player->setController(upper_controller);
+    upper_controller->setTarget(upper_player, Coords(1, 0, 0));
+    expect_true(resolve_coords(upper_controller->control(upper_player)) == Coords(1, 0, 0),
+                "one-way drops should route from the upper level to the lower level");
+}
+
+void test_player_controller_uses_bidirectional_cross_level_edge_both_ways() {
+    auto game = std::make_shared<CGame>();
+    auto map = open_tile_map(game, 3, 1, 2);
+    add_navigation_edge(map, Coords(1, 0, 0), Coords(1, 0, 1), true);
+
+    auto lower_player = player_at(game, Coords(0, 0, 0));
+    auto lower_controller = std::make_shared<CPlayerController>();
+    lower_player->setController(lower_controller);
+    lower_controller->setTarget(lower_player, Coords(2, 0, 1));
+
+    auto lower_first = resolve_coords(lower_controller->control(lower_player));
+    expect_true(lower_first == Coords(1, 0, 0), "bidirectional stairs should be reachable from the lower level");
+    lower_player->moveTo(lower_first);
+    lower_controller->onStepCommitted(lower_player, lower_first);
+
+    auto lower_second = resolve_coords(lower_controller->control(lower_player));
+    expect_true(lower_second == Coords(1, 0, 1), "bidirectional stairs should cross upward");
+
+    auto upper_player = player_at(game, Coords(2, 0, 1));
+    auto upper_controller = std::make_shared<CPlayerController>();
+    upper_player->setController(upper_controller);
+    upper_controller->setTarget(upper_player, Coords(0, 0, 0));
+
+    auto upper_first = resolve_coords(upper_controller->control(upper_player));
+    expect_true(upper_first == Coords(1, 0, 1), "bidirectional stairs should be reachable from the upper level");
+    upper_player->moveTo(upper_first);
+    upper_controller->onStepCommitted(upper_player, upper_first);
+
+    auto upper_second = resolve_coords(upper_controller->control(upper_player));
+    expect_true(upper_second == Coords(1, 0, 0), "bidirectional stairs should cross downward");
+}
+
+void test_target_controller_flow_field_invalidates_when_cross_level_edge_is_added() {
+    auto game = std::make_shared<CGame>();
+    auto map = open_tile_map(game, 3, 1, 2);
+
+    auto target = std::make_shared<CMapObject>();
+    target->setGame(game);
+    target->setName("unitTargetAfterEdgeChange");
+    target->setCoords(Coords(1, 0, 1));
+    map->addObject(target);
+
+    auto chaser = creature_at(1, 0, 0);
+    chaser->setGame(game);
+    chaser->setName("unitChaserAfterEdgeChange");
+    chaser->setHp(1);
+    auto controller = std::make_shared<CTargetController>();
+    controller->setTarget("unitTargetAfterEdgeChange");
+    chaser->setController(controller);
+    map->addObject(chaser);
+
+    performance_guard::clearTargetFlowCache();
+    expect_true(resolve_coords(controller->control(chaser)) == Coords(1, 0, 0),
+                "target flow field should stay put before the cross-level edge exists");
+
+    add_navigation_edge(map, Coords(1, 0, 0), Coords(1, 0, 1));
+    expect_true(resolve_coords(controller->control(chaser)) == Coords(1, 0, 1),
+                "target flow field should use a newly added cross-level edge");
+}
+
+void test_fight_controller_guard_paths_and_fallbacks() {
+    auto attacker = creature_at(0, 0, 0);
+    auto opponent = creature_at(1, 0, 0);
+    auto extra = creature_at(2, 0, 0);
+
+    auto fight_controller = std::make_shared<CFightController>();
+    expect_true(!fight_controller->control(nullptr, opponent), "base fight controller should reject null attackers");
+    expect_true(!fight_controller->control(attacker, nullptr), "base fight controller should reject null opponents");
+    expect_true(fight_controller->control(attacker, opponent), "base fight controller should accept two creatures");
+    fight_controller->start(attacker, opponent);
+    fight_controller->end(attacker, opponent);
+    fight_controller->setOpponents(attacker, {opponent, extra});
+    expect_true(fight_controller->selectOpponent(attacker, {opponent, extra}, extra) == extra,
+                "base fight controller should keep a current valid opponent");
+    expect_true(fight_controller->selectOpponent(attacker, {opponent, extra}, nullptr) == opponent,
+                "base fight controller should fall back to the first opponent");
+    expect_true(fight_controller->selectOpponent(attacker, {}, nullptr) == nullptr,
+                "base fight controller should return null for empty opponent lists");
+
+    auto monster_controller = std::make_shared<CMonsterFightController>();
+    expect_true(!monster_controller->control(nullptr, opponent),
+                "monster fight controller should reject null attackers");
+    expect_true(!monster_controller->control(attacker, nullptr),
+                "monster fight controller should reject null opponents");
+    expect_true(!monster_controller->control(attacker, opponent),
+                "monster fight controller should do nothing without items or interactions");
+
+    auto player_controller = std::make_shared<CPlayerFightController>();
+    expect_true(!player_controller->control(nullptr, opponent), "player fight controller should reject null attackers");
+    expect_true(!player_controller->control(attacker, nullptr), "player fight controller should reject null opponents");
+    expect_true(!player_controller->control(attacker, opponent),
+                "player fight controller should fail closed before a creature has a map");
+    player_controller->start(nullptr, opponent);
+    player_controller->start(attacker, opponent);
+    player_controller->end(nullptr, opponent);
+    player_controller->end(attacker, opponent);
+    player_controller->setOpponents(attacker, {opponent});
+    expect_true(player_controller->selectOpponent(attacker, {opponent}, nullptr) == opponent,
+                "player fight controller should fall back to base opponent selection without a panel");
+}
+
+std::shared_ptr<CGame> fight_panel_game(const std::shared_ptr<CGui> &gui) {
+    type_registration::registerGuiTypes();
+    type_registration::registerGuiPanelTypes();
+    auto game = std::make_shared<CGame>();
+    auto map = std::make_shared<CMap>();
+    game->setMap(map);
+    game->setGui(gui);
+    map->setGame(game);
+    gui->setGame(game);
+    // CPlayerFightController::start() builds the panel via createObject<CGameFightPanel>("fightPanel").
+    // The real game resolves that name through res/config/panels.json; without it, the object handler
+    // falls back to class-name construction of "fightPanel" (not a registered class) and returns null,
+    // crashing start(). Register a minimal class-only config so a real, child-less panel is created
+    // (no JSON child views => no texture/renderer work during setEnemies()/refreshEncounterViews()).
+    for (const auto &[name, builder] : *CTypes::builders()) {
+        game->getObjectHandler()->registerType(name, builder);
+    }
+    auto fightPanelConfig = std::make_shared<json>();
+    (*fightPanelConfig)["class"] = "CGameFightPanel";
+    game->getObjectHandler()->registerConfig("fightPanel", fightPanelConfig);
+    return game;
+}
+
+std::size_t count_fight_panels(const std::shared_ptr<CGui> &gui) {
+    std::size_t count = 0;
+    for (const auto &child : gui->getChildren()) {
+        if (vstd::cast<CGameFightPanel>(child)) {
+            ++count;
+        }
+    }
+    return count;
+}
+
+std::shared_ptr<CCreature> map_creature(const std::shared_ptr<CGame> &game, const std::string &name, Coords coords) {
+    auto creature = creature_at(coords.x, coords.y, coords.z);
+    creature->setGame(game);
+    creature->setName(name);
+    creature->setHp(creature->getHpMax());
+    game->getMap()->addObject(creature);
+    return creature;
+}
+
+void test_player_fight_controller_start_is_idempotent_and_guards_invalid_encounters() {
+    auto gui = std::make_shared<CGui>();
+    auto game = fight_panel_game(gui);
+    auto map = game->getMap();
+
+    auto attacker = map_creature(game, "unitFightAttacker", Coords(0, 0, 0));
+    auto opponent = map_creature(game, "unitFightOpponent", Coords(1, 0, 0));
+
+    auto controller = std::make_shared<CPlayerFightController>();
+    attacker->setFightController(controller);
+
+    controller->start(attacker, opponent);
+    expect_true(count_fight_panels(gui) == 1, "starting a fight should add exactly one fight panel to the GUI");
+
+    // Starting a second fight must discard the first panel instead of leaking or duplicating it.
+    controller->start(attacker, opponent);
+    expect_true(count_fight_panels(gui) == 1,
+                "starting a second fight should not leak or duplicate the fight panel under the GUI");
+
+    controller->end(attacker, opponent);
+    expect_true(count_fight_panels(gui) == 0, "ending a fight should remove the fight panel from the GUI");
+
+    // Refuse to start with a missing opponent.
+    controller->start(attacker, nullptr);
+    expect_true(count_fight_panels(gui) == 0, "fight controller should not create a panel for a null opponent");
+    expect_true(controller->isCancelled(attacker, opponent),
+                "fight controller should fail closed when refusing to start");
+
+    // Refuse to start when the opponent is not present in the active map.
+    auto detached = creature_at(2, 0, 0);
+    detached->setGame(game);
+    detached->setName("unitDetachedOpponent");
+    detached->setHp(detached->getHpMax());
+    controller->start(attacker, detached);
+    expect_true(count_fight_panels(gui) == 0,
+                "fight controller should not bind a panel to an opponent absent from the active map");
+
+    // Accept an engine-initiated fight that resolves on the encounter map even while the
+    // active game map has advanced (e.g. a scene transition pending after the strike).
+    // The guard must use the encounter map (me->getMap()), not game->getMap().
+    auto pendingMap = std::make_shared<CMap>();
+    pendingMap->setGame(game);
+    game->setMap(pendingMap);
+    controller->start(attacker, opponent);
+    expect_true(count_fight_panels(gui) == 1,
+                "fight controller should still start when the active game map has advanced past the encounter map");
+    controller->end(attacker, opponent);
+    expect_true(count_fight_panels(gui) == 0, "ending the transitional fight should remove the panel");
+    game->setMap(map);
+
+    // Refuse to start when the GUI is missing.
+    auto guiless = std::make_shared<CGame>();
+    auto guiless_map = std::make_shared<CMap>();
+    guiless->setMap(guiless_map);
+    guiless_map->setGame(guiless);
+    auto guiless_attacker = map_creature(guiless, "unitNoGuiAttacker", Coords(0, 0, 0));
+    auto guiless_opponent = map_creature(guiless, "unitNoGuiOpponent", Coords(1, 0, 0));
+    auto guiless_controller = std::make_shared<CPlayerFightController>();
+    guiless_controller->start(guiless_attacker, guiless_opponent);
+    expect_true(guiless_controller->isCancelled(guiless_attacker, guiless_opponent),
+                "fight controller should refuse to start without a GUI");
+}
+
+void test_player_fight_controller_end_is_idempotent_and_guards_invalid_encounters() {
+    auto gui = std::make_shared<CGui>();
+    auto game = fight_panel_game(gui);
+    auto map = game->getMap();
+
+    auto attacker = map_creature(game, "unitEndAttacker", Coords(0, 0, 0));
+    auto opponent = map_creature(game, "unitEndOpponent", Coords(1, 0, 0));
+
+    auto controller = std::make_shared<CPlayerFightController>();
+    attacker->setFightController(controller);
+
+    controller->start(attacker, opponent);
+    expect_true(count_fight_panels(gui) == 1, "starting a fight should add exactly one fight panel to the GUI");
+
+    controller->end(attacker, opponent);
+    expect_true(count_fight_panels(gui) == 0, "ending a fight should remove the fight panel from the GUI");
+
+    // A second end() must be a clean no-op: no panel remains and nothing crashes.
+    controller->end(attacker, opponent);
+    expect_true(count_fight_panels(gui) == 0, "ending a fight twice should leave no panel under the GUI");
+
+    // end() before any start() (no panel) is a no-op.
+    auto freshController = std::make_shared<CPlayerFightController>();
+    freshController->end(attacker, opponent);
+    expect_true(count_fight_panels(gui) == 0, "ending without a started fight should be a no-op");
+
+    // end() must clear the panel even when the player is missing.
+    controller->start(attacker, opponent);
+    expect_true(count_fight_panels(gui) == 1, "restarting a fight should re-add the panel");
+    controller->end(nullptr, opponent);
+    expect_true(count_fight_panels(gui) == 0,
+                "ending with a missing player should still remove the panel from the GUI");
+    controller->end(nullptr, opponent);
+    expect_true(count_fight_panels(gui) == 0, "ending twice with a missing player should leave no panel");
+
+    // end() must clear the panel even after the player's map object was removed.
+    controller->start(attacker, opponent);
+    expect_true(count_fight_panels(gui) == 1, "restarting a fight should re-add the panel");
+    map->removeObject(attacker);
+    controller->end(attacker, opponent);
+    expect_true(count_fight_panels(gui) == 0,
+                "ending after the player object was removed from the map should still remove the panel");
+    map->addObject(attacker);
+
+    // end() must clear the panel even when the active game map has advanced past the encounter.
+    controller->start(attacker, opponent);
+    expect_true(count_fight_panels(gui) == 1, "restarting a fight should re-add the panel");
+    auto pendingMap = std::make_shared<CMap>();
+    pendingMap->setGame(game);
+    game->setMap(pendingMap);
+    controller->end(attacker, opponent);
+    expect_true(count_fight_panels(gui) == 0,
+                "ending after the active map advanced past the encounter should still remove the panel");
+    game->setMap(map);
+
+    // end() must not crash when the GUI/game backing the controller is gone.
+    auto guiless = std::make_shared<CGame>();
+    auto guiless_map = std::make_shared<CMap>();
+    guiless->setMap(guiless_map);
+    guiless_map->setGame(guiless);
+    auto guiless_attacker = map_creature(guiless, "unitEndNoGuiAttacker", Coords(0, 0, 0));
+    auto guiless_opponent = map_creature(guiless, "unitEndNoGuiOpponent", Coords(1, 0, 0));
+    auto guiless_controller = std::make_shared<CPlayerFightController>();
+    guiless_controller->start(guiless_attacker, guiless_opponent);
+    guiless_controller->end(guiless_attacker, guiless_opponent);
+    guiless_controller->end(guiless_attacker, guiless_opponent);
+}
+
+void test_monster_fight_controller_uses_mana_item_when_mana_is_low() {
+    auto game = std::make_shared<CGame>();
+    auto map = std::make_shared<CMap>();
+    game->setMap(map);
+    map->setGame(game);
+
+    auto monster = creature_at(0, 0, 0);
+    monster->setGame(game);
+    monster->getBaseStats()->setIntelligence(10);
+    monster->setHp(monster->getHpMax());
+    monster->setMana(0);
+
+    auto opponent = creature_at(1, 0, 0);
+    opponent->setGame(game);
+
+    auto mana_potion = std::make_shared<CPotion>();
+    mana_potion->setGame(game);
+    mana_potion->setPower(5);
+    mana_potion->addTag(CTag::Mana);
+    monster->addItem(mana_potion);
+
+    auto controller = std::make_shared<CMonsterFightController>();
+    expect_true(controller->control(monster, opponent),
+                "monster fight controller should use a mana item when mana is low");
+    expect_true(monster->getItems().empty(), "used disposable mana item should be removed from inventory");
+}
+
+std::shared_ptr<CGame> fight_fixture_game() {
+    auto game = std::make_shared<CGame>();
+    auto map = std::make_shared<CMap>();
+    game->setMap(map);
+    map->setGame(game);
+    return game;
+}
+
+std::shared_ptr<CCreature> fight_fixture_monster(const std::shared_ptr<CGame> &game, int stamina, int hp) {
+    auto monster = creature_at(0, 0, 0);
+    monster->setGame(game);
+    monster->getBaseStats()->setStamina(stamina);
+    monster->setHp(hp);
+    return monster;
+}
+
+std::shared_ptr<CCreature> fight_fixture_hitter(const std::shared_ptr<CGame> &game, int dmg) {
+    auto opponent = creature_at(1, 0, 0);
+    opponent->setGame(game);
+    opponent->getBaseStats()->setDmgMin(dmg);
+    opponent->getBaseStats()->setDmgMax(dmg);
+    return opponent;
+}
+
+std::shared_ptr<CPotion> heal_potion(const std::shared_ptr<CGame> &game, int power) {
+    auto potion = std::make_shared<CPotion>();
+    potion->setGame(game);
+    potion->setPower(power);
+    potion->addTag(CTag::Heal);
+    return potion;
+}
+
+void test_monster_fight_controller_attacks_hard_hitter_instead_of_wasting_heal() {
+    auto game = fight_fixture_game();
+    // hpMax 70, hp 35 (50%): the old fixed 75% threshold healed reflexively here.
+    auto monster = fight_fixture_monster(game, 10, 35);
+    // One expected landed hit removes 20 hp; the best heal restores ~14 (power 1 -> 20% of 70).
+    auto opponent = fight_fixture_hitter(game, 20);
+    monster->addItem(heal_potion(game, 1));
+    monster->addAction(std::make_shared<CInteraction>());
+
+    auto controller = std::make_shared<CMonsterFightController>();
+    expect_true(controller->control(monster, opponent),
+                "monster fight controller should attack a hard hitter instead of wasting the turn");
+    expect_true(monster->getItems().size() == 1,
+                "monster should not spend a heal that is outpaced by one expected enemy hit");
+}
+
+void test_monster_fight_controller_heals_when_heal_outpaces_incoming_damage() {
+    auto game = fight_fixture_game();
+    // hpMax 70, hp 20 (28%): hurt, but the expected 2 hp hit is not lethal.
+    auto monster = fight_fixture_monster(game, 10, 20);
+    auto opponent = fight_fixture_hitter(game, 2);
+    // The strongest heal (power 5, capped by missing hp to 50) clearly outpaces the hit.
+    auto weak = heal_potion(game, 1);
+    auto strong = heal_potion(game, 5);
+    monster->addItem(weak);
+    monster->addItem(strong);
+    monster->addAction(std::make_shared<CInteraction>());
+
+    auto controller = std::make_shared<CMonsterFightController>();
+    expect_true(controller->control(monster, opponent),
+                "monster fight controller should heal when the heal is a net gain at low hp");
+    expect_true(monster->getItems().size() == 1, "monster fight controller should use only one heal item per turn");
+    expect_true(monster->hasItem(strong) && !monster->hasItem(weak),
+                "monster fight controller should spend the least powerful heal item first");
+}
+
+void test_monster_fight_controller_gates_heal_on_the_potion_it_will_actually_drink() {
+    auto game = fight_fixture_game();
+    // hpMax 70, hp 35 (50%, so healing is on the table). The AI spends the WEAKEST heal
+    // first, so the gate must weigh that potion, not the strongest. A power-1 heal restores
+    // ~14; a power-5 heal restores ~35 (capped by missing hp). Against an expected 16 hp hit,
+    // the power-1 potion it would actually drink is a net loss, so the monster must attack
+    // instead -- the old strongest-potion gate green-lit that net-loss drink.
+    auto monster = fight_fixture_monster(game, 10, 35);
+    auto opponent = fight_fixture_hitter(game, 16);
+    auto weak = heal_potion(game, 1);
+    auto strong = heal_potion(game, 5);
+    monster->addItem(weak);
+    monster->addItem(strong);
+    monster->addAction(std::make_shared<CInteraction>());
+
+    auto controller = std::make_shared<CMonsterFightController>();
+    expect_true(controller->control(monster, opponent),
+                "monster should still take a turn (attack) when the drinkable heal cannot keep pace");
+    expect_true(monster->getItems().size() == 2 && monster->hasItem(weak) && monster->hasItem(strong),
+                "monster must not spend the weak heal the gate would drink when it is outpaced by the hit");
+}
+
+void test_monster_fight_controller_heals_when_next_hit_would_kill() {
+    auto game = fight_fixture_game();
+    // hpMax 70, hp 10: the expected 25 hp hit is lethal, so healing is the only play
+    // even though the best heal (~14) restores less than the hit removes.
+    auto monster = fight_fixture_monster(game, 10, 10);
+    auto opponent = fight_fixture_hitter(game, 25);
+    monster->addItem(heal_potion(game, 1));
+    monster->addAction(std::make_shared<CInteraction>());
+
+    auto controller = std::make_shared<CMonsterFightController>();
+    expect_true(controller->control(monster, opponent),
+                "monster fight controller should act when the next hit would kill");
+    expect_true(monster->getItems().empty(),
+                "monster fight controller should heal when it would otherwise die to the next hit");
+}
+
+std::shared_ptr<CInteraction> caster_interaction(const std::shared_ptr<CGame> &game, int manaCost,
+                                                 std::shared_ptr<CEffect> effect) {
+    auto interaction = std::make_shared<CInteraction>();
+    interaction->setGame(game);
+    interaction->setManaCost(manaCost);
+    if (effect) {
+        interaction->setEffect(effect);
+    }
+    return interaction;
+}
+
+std::shared_ptr<CEffect> opponent_debuff(const std::shared_ptr<CGame> &game, int duration) {
+    auto effect = std::make_shared<CEffect>();
+    effect->setGame(game);
+    effect->setDuration(duration);
+    return effect;
+}
+
+// A named, tagged effect used to drive the monster AI's self-target logic. The name
+// doubles as the identity used by caster_already_has_effect (typeId stays empty on
+// these bare fixtures), so distinct names keep separate effects apart.
+std::shared_ptr<CEffect> named_self_effect(const std::shared_ptr<CGame> &game, const std::string &name, CTag tag) {
+    auto effect = std::make_shared<CEffect>();
+    effect->setGame(game);
+    effect->setName(name);
+    effect->addTag(tag);
+    return effect;
+}
+
+// Effect cloning also reconstructs its nested CStats bonus. Bare fixtures need all three
+// per-game factories even when serializer metadata is already registered globally.
+void register_effect_and_interaction(const std::shared_ptr<CGame> &game) {
+    CTypes::register_type_metadata<CStats, CGameObject>();
+    CTypes::register_type<CEffect, CGameObject>();
+    CTypes::register_type<CInteraction, CGameObject>();
+    game->getObjectHandler()->registerType("CStats", []() { return std::make_shared<CStats>(); });
+    game->getObjectHandler()->registerType("CEffect", []() { return std::make_shared<CEffect>(); });
+    game->getObjectHandler()->registerType("CInteraction", []() { return std::make_shared<CInteraction>(); });
+}
+
+void test_monster_fight_controller_ranks_interactions_by_weakening() {
+    auto game = fight_fixture_game();
+    register_effect_and_interaction(game);
+    auto monster = creature_at(0, 0, 0);
+    monster->setGame(game);
+    // A single landed hit lands 10 damage; the opponent has no armor/resist.
+    monster->getBaseStats()->setStamina(10);
+    monster->getBaseStats()->setDmgMax(10);
+    monster->setHp(monster->getHpMax());
+    // Enough mana for the strong (10) and weak (50) spells, but not the debuff bomb (100).
+    monster->getBaseStats()->setIntelligence(100);
+    monster->setMana(60);
+
+    auto opponent = creature_at(1, 0, 0);
+    opponent->setGame(game);
+    opponent->getBaseStats()->setStamina(10);
+
+    // Distinct names keep the three apart in the effective interaction set, which
+    // dedupes by typeId then name: bare interactions share the empty-name key and
+    // would collapse to one (real config-backed interactions carry distinct typeIds).
+    // Weak but expensive: no lingering effect, so its weakening value is just the hit.
+    auto weakPricey = caster_interaction(game, 50, nullptr);
+    weakPricey->setName("weakPricey");
+    // Strong but cheap: a 3-turn opponent debuff makes it the most weakening cast.
+    auto strongCheap = caster_interaction(game, 10, opponent_debuff(game, 3));
+    strongCheap->setName("strongCheap");
+    // Strongest on paper (5-turn debuff) but unaffordable, so it must be skipped.
+    auto strongestUnaffordable = caster_interaction(game, 100, opponent_debuff(game, 5));
+    strongestUnaffordable->setName("strongestUnaffordable");
+    monster->addAction(weakPricey);
+    monster->addAction(strongCheap);
+    monster->addAction(strongestUnaffordable);
+
+    auto controller = std::make_shared<CMonsterFightController>();
+    expect_true(controller->control(monster, opponent), "monster fight controller should cast a weakening interaction");
+    // Casting spends the chosen spell's mana: 60 - 10 uniquely identifies the cheap,
+    // strongly-weakening spell over the pricey weak one (would leave 10) and proves the
+    // unaffordable debuff bomb (needs 100) was filtered out by mana affordability.
+    expect_true(monster->getMana() == 50,
+                "monster fight controller should pick the most weakening affordable interaction, not the priciest");
+}
+
+// Builds a full-health monster with plenty of mana and wires the type system so its
+// interactions can be cast. Returns the monster; the caller supplies its actions.
+std::shared_ptr<CCreature> self_target_fixture_monster(const std::shared_ptr<CGame> &game, bool hurt) {
+    register_effect_and_interaction(game);
+    auto monster = creature_at(0, 0, 0);
+    monster->setGame(game);
+    monster->getBaseStats()->setStamina(10);
+    monster->getBaseStats()->setDmgMax(10);
+    monster->getBaseStats()->setIntelligence(100);
+    // Set HP relative to the creature's own getHpMax() so the hurt/healthy split does not depend on
+    // the exact hpMax formula: a hurt caster sits at 1 HP (ratio well under 75), a healthy one at full.
+    monster->setHp(hurt ? 1 : monster->getHpMax());
+    monster->setMana(60);
+    return monster;
+}
+
+std::shared_ptr<CCreature> self_target_fixture_opponent(const std::shared_ptr<CGame> &game) {
+    auto opponent = creature_at(1, 0, 0);
+    opponent->setGame(game);
+    opponent->getBaseStats()->setStamina(10);
+    return opponent;
+}
+
+void testEffectCloneFixturePreservesStatsAcrossControllerTurns() {
+    auto game = fight_fixture_game();
+    auto monster = self_target_fixture_monster(game, false);
+    auto opponent = self_target_fixture_opponent(game);
+    auto effect = named_self_effect(game, "unitCloneShield", CTag::Buff);
+    effect->setTypeId("unitCloneShield");
+    effect->setDuration(3);
+    effect->getBonus()->setStamina(2);
+    effect->getBonus()->setIntelligence(4);
+    effect->getBonus()->setArmor(13);
+
+    auto clone = effect->clone<CEffect>();
+    expect_true(clone != nullptr, "the controller fixture should construct a cloned effect");
+    if (!clone) {
+        return;
+    }
+    auto clonedBonus = clone->getBonus();
+    expect_true(clonedBonus != nullptr, "the controller fixture should reconstruct the cloned CStats bonus");
+    if (!clonedBonus) {
+        return;
+    }
+    expect_true(clone != effect && clonedBonus != effect->getBonus(),
+                "effect cloning should construct independent effect and bonus instances");
+    expect_true(clonedBonus->getStamina() == 2 && clonedBonus->getIntelligence() == 4 && clonedBonus->getArmor() == 13,
+                "effect cloning should preserve nonzero bonus values");
+    effect->getBonus()->setStamina(9);
+    clonedBonus->setArmor(17);
+    expect_true(clonedBonus->getStamina() == 2 && effect->getBonus()->getArmor() == 13,
+                "mutating either bonus should leave the other bonus unchanged");
+
+    auto selfBuff = caster_interaction(game, 10, clone);
+    selfBuff->setName("unitCloneSelfBuff");
+    auto offensive = caster_interaction(game, 5, nullptr);
+    offensive->setName("unitCloneOffensive");
+    monster->addAction(selfBuff);
+    monster->addAction(offensive);
+    auto controller = std::make_shared<CMonsterFightController>();
+    expect_true(controller->control(monster, opponent), "the controller should cast the cloned self-buff");
+    expect_true(monster->getMana() == 50, "casting the cloned self-buff should spend its ten mana");
+
+    auto effects = monster->getEffects();
+    expect_true(effects.size() == 1, "casting the cloned self-buff should install exactly one effect");
+    if (effects.size() != 1) {
+        return;
+    }
+    auto installedEffect = *effects.begin();
+    auto installedBonus = installedEffect ? installedEffect->getBonus() : nullptr;
+    expect_true(installedBonus != nullptr, "casting should reconstruct a non-null bonus for the installed effect");
+    if (!installedBonus) {
+        return;
+    }
+    expect_true(installedEffect != clone && installedBonus != clonedBonus,
+                "casting should clone the effect template and its bonus independently");
+    expect_true(installedBonus->getStamina() == 2 && installedBonus->getIntelligence() == 4 &&
+                    installedBonus->getArmor() == 17,
+                "casting should retain the cloned effect template's bonus values");
+    auto stats = monster->getStats();
+    expect_true(stats->getStamina() == 12 && stats->getIntelligence() == 104 && stats->getArmor() == 17,
+                "a real creature stat read should include the installed cloned bonus");
+    expect_true(controller->control(monster, opponent), "the controller should act again after installing the effect");
+    expect_true(monster->getMana() == 45 && monster->getEffects().size() == 1,
+                "the following turn should skip the duplicate self-buff and cast the five-mana offensive action");
+    game->getContext()->shutdown();
+}
+
+void test_monster_fight_controller_applies_missing_self_buff() {
+    auto game = fight_fixture_game();
+    auto monster = self_target_fixture_monster(game, false); // full health: no heal/mana detours
+    auto opponent = self_target_fixture_opponent(game);
+
+    // Affordable self-target buff (Buff-tagged effect routes to the caster) and an
+    // affordable offensive spell. The buff costs less, so if the AI ignored self-target
+    // usefulness and only picked by weakening it would spend the pricier offensive spell.
+    auto selfBuff = caster_interaction(game, 10, named_self_effect(game, "shield", CTag::Buff));
+    selfBuff->setName("selfBuff");
+    auto offensive = caster_interaction(game, 50, nullptr);
+    offensive->setName("offensive");
+    monster->addAction(selfBuff);
+    monster->addAction(offensive);
+
+    auto controller = std::make_shared<CMonsterFightController>();
+    expect_true(controller->control(monster, opponent),
+                "monster fight controller should act when a useful self-buff is available");
+    // Casting the buff spends 10 mana (60 -> 50) and applies the buff to the caster.
+    // Casting the cheap self-buff (cost 10) leaves 50 mana; the pricier offensive spell would have
+    // left 10, so this uniquely proves the AI chose the self-target buff.
+    expect_true(monster->getMana() == 50,
+                "monster fight controller should cast the affordable self-target buff, not the offensive spell");
+}
+
+void test_monster_fight_controller_skips_duplicate_self_buff() {
+    auto game = fight_fixture_game();
+    auto monster = self_target_fixture_monster(game, false);
+    auto opponent = self_target_fixture_opponent(game);
+
+    // The caster already carries an equivalent buff (same name/identity), so recasting it
+    // would only spam a duplicate; the AI should fall back to the offensive spell.
+    monster->addEffect(named_self_effect(game, "shield", CTag::Buff));
+    auto selfBuff = caster_interaction(game, 10, named_self_effect(game, "shield", CTag::Buff));
+    selfBuff->setName("selfBuff");
+    auto offensive = caster_interaction(game, 50, nullptr);
+    offensive->setName("offensive");
+    monster->addAction(selfBuff);
+    monster->addAction(offensive);
+
+    auto controller = std::make_shared<CMonsterFightController>();
+    expect_true(controller->control(monster, opponent),
+                "monster fight controller should still act when the only self-buff is a duplicate");
+    // The offensive spell costs 50 (60 -> 10); the cheaper buff would have left 50, so this
+    // uniquely proves the duplicate buff was skipped in favor of offense.
+    expect_true(monster->getMana() == 10,
+                "monster fight controller should skip a duplicate self-buff and cast the offensive spell");
+}
+
+void test_monster_fight_controller_heals_self_only_when_hurt() {
+    // Hurt caster (hp 30 of 70 -> ratio ~42 < 75): the self-target heal is worth the turn.
+    {
+        auto game = fight_fixture_game();
+        auto monster = self_target_fixture_monster(game, true);
+        auto opponent = self_target_fixture_opponent(game);
+
+        // Heal effect is not Buff-tagged, so selfTarget must be set for it to route to the caster.
+        auto selfHeal = caster_interaction(game, 10, named_self_effect(game, "mend", CTag::Heal));
+        selfHeal->setSelfTarget(true);
+        selfHeal->setName("selfHeal");
+        auto offensive = caster_interaction(game, 50, nullptr);
+        offensive->setName("offensive");
+        monster->addAction(selfHeal);
+        monster->addAction(offensive);
+
+        auto controller = std::make_shared<CMonsterFightController>();
+        expect_true(controller->control(monster, opponent), "monster fight controller should act while hurt");
+        // Casting the heal (cost 10) leaves 50 mana; the offensive spell would have left 10, so this
+        // proves the hurt caster chose the self-target heal.
+        expect_true(monster->getMana() == 50, "monster fight controller should cast the self-target heal while hurt");
+    }
+    // Healthy caster (full hp -> ratio 100): the heal is not useful, so offense is chosen.
+    {
+        auto game = fight_fixture_game();
+        auto monster = self_target_fixture_monster(game, false);
+        auto opponent = self_target_fixture_opponent(game);
+
+        auto selfHeal = caster_interaction(game, 10, named_self_effect(game, "mend", CTag::Heal));
+        selfHeal->setSelfTarget(true);
+        selfHeal->setName("selfHeal");
+        auto offensive = caster_interaction(game, 50, nullptr);
+        offensive->setName("offensive");
+        monster->addAction(selfHeal);
+        monster->addAction(offensive);
+
+        auto controller = std::make_shared<CMonsterFightController>();
+        expect_true(controller->control(monster, opponent), "monster fight controller should act while healthy");
+        // The offensive spell costs 50 (60 -> 10); a chosen heal would have left 50.
+        expect_true(monster->getMana() == 10,
+                    "monster fight controller should not cast a self-target heal at full health");
+    }
+}
+
+class RoleActionProbe : public CInteraction {
+  public:
+    int calls = 0;
+    void performAction(std::shared_ptr<CCreature>, std::shared_ptr<CCreature>) override { ++calls; }
+};
+
+void testMonsterRolesUseEligibleSignatureOnceAndKeepFallback() {
+    for (const auto &trigger : {"opening", "wounded", "critical", "guarded"}) {
+        auto game = fight_fixture_game();
+        auto monster = self_target_fixture_monster(game, false);
+        auto opponent = self_target_fixture_opponent(game);
+        opponent->setHp(opponent->getHpMax());
+        auto creatureClass = std::make_shared<CCreatureClass>();
+        creatureClass->setStringProperty("combatRole", "testRole");
+        monster->setCreatureClass(creatureClass);
+        monster->setMana(0);
+        auto signature = std::make_shared<RoleActionProbe>();
+        signature->setGame(game);
+        signature->setName("roleSignature");
+        signature->setBoolProperty("enemySignature", true);
+        signature->setStringProperty("enemyRole", "testRole");
+        signature->setStringProperty("enemyRoleTrigger", trigger);
+        monster->addAction(signature);
+        auto attack = std::make_shared<RoleActionProbe>();
+        attack->setGame(game);
+        attack->setName("attack");
+        attack->setTypeId("Attack");
+        monster->addAction(attack);
+        CMonsterFightController controller;
+        if (std::string(trigger) != "opening") {
+            expect_true(controller.control(monster, opponent), "healthy monster should retain its ordinary attack");
+            expect_true(signature->calls == 0 && attack->calls == 1, "signature condition must gate the action");
+            if (std::string(trigger) == "wounded") {
+                monster->setHp(monster->getHpMax() / 2);
+            } else if (std::string(trigger) == "critical") {
+                monster->setHp(std::max(1, monster->getHpMax() / 4));
+            } else {
+                opponent->getBaseStats()->setBlock(10);
+            }
+        }
+        expect_true(controller.control(monster, opponent), "eligible zero-mana signature should use one turn");
+        expect_true(signature->calls == 1 && monster->getBoolProperty("enemyRoleUsed"),
+                    "signature must persist its once-per-actor flag");
+        expect_true(controller.control(monster, opponent), "spent signature should fall back to the ordinary attack");
+        expect_true(signature->calls == 1, "offensive fallback must never select the spent signature");
+        expect_true(monster->getMana() == 0, "class signatures must remain affordable at zero mana");
+    }
+}
+
+void testMonsterRitualMinimumManaGatesEligibilityWithoutSpending() {
+    auto game = fight_fixture_game();
+    auto monster = self_target_fixture_monster(game, true);
+    auto opponent = self_target_fixture_opponent(game);
+    opponent->setHp(opponent->getHpMax());
+    auto creatureClass = std::make_shared<CCreatureClass>();
+    creatureClass->setCombatRole("cultist");
+    monster->setCreatureClass(creatureClass);
+    auto signature = std::make_shared<RoleActionProbe>();
+    signature->setGame(game);
+    signature->setBoolProperty("enemySignature", true);
+    signature->setStringProperty("enemyRole", "cultist");
+    signature->setStringProperty("enemyRoleTrigger", "critical");
+    signature->setNumericProperty("minimumMana", 5);
+    monster->addAction(signature);
+    auto attack = std::make_shared<RoleActionProbe>();
+    attack->setGame(game);
+    attack->setTypeId("Attack");
+    monster->addAction(attack);
+    CMonsterFightController controller;
+    monster->setHp(std::max(1, monster->getHpMax() / 2));
+    monster->setMana(5);
+    expect_true(controller.control(monster, opponent), "a ritual must wait until critical health");
+    expect_true(attack->calls == 1 && signature->calls == 0 && monster->getMana() == 5 &&
+                    !monster->getBoolProperty("enemyRoleUsed"),
+                "a half-health cultist must retain ordinary Attack despite its eligible mana reserve");
+    monster->setHp(std::max(1, monster->getHpMax() / 4));
+    monster->setMana(4);
+    expect_true(controller.control(monster, opponent), "an exhausted cultist must retain ordinary Attack");
+    expect_true(attack->calls == 2 && signature->calls == 0 && monster->getMana() == 4 &&
+                    !monster->getBoolProperty("enemyRoleUsed"),
+                "ritual reserve eligibility must not consume the action or mana below five points");
+    monster->setMana(5);
+    expect_true(controller.control(monster, opponent), "a critical cultist with five mana may use its ritual");
+    expect_true(attack->calls == 2 && signature->calls == 1 && monster->getMana() == 5,
+                "the ritual threshold must gate eligibility without charging mana");
+}
+
+void testCriticalHealthUsesExactQuarterInsteadOfTruncatedPercentage() {
+    for (int stamina : {5, 20}) {
+        auto game = fight_fixture_game();
+        auto monster = self_target_fixture_monster(game, false);
+        auto opponent = self_target_fixture_opponent(game);
+        opponent->setHp(opponent->getHpMax());
+        monster->getBaseStats()->setStamina(stamina);
+        monster->setMana(0);
+        auto creatureClass = std::make_shared<CCreatureClass>();
+        creatureClass->setCombatRole("boundaryRole");
+        monster->setCreatureClass(creatureClass);
+        auto signature = std::make_shared<RoleActionProbe>();
+        signature->setGame(game);
+        signature->setBoolProperty("enemySignature", true);
+        signature->setStringProperty("enemyRole", "boundaryRole");
+        signature->setStringProperty("enemyRoleTrigger", "critical");
+        monster->addAction(signature);
+        auto attack = std::make_shared<RoleActionProbe>();
+        attack->setGame(game);
+        attack->setTypeId("Attack");
+        monster->addAction(attack);
+        const int maximumHp = monster->getHpMax();
+        expect_true(maximumHp == (stamina == 5 ? 35 : 140), "the actual boundary fixture must retain its authored HP");
+        monster->setHp(maximumHp / 4 + 1);
+        expect_true(monster->getHpRatio() == 25, "the rejected boundary must expose percentage truncation");
+        CMonsterFightController controller;
+        expect_true(controller.control(monster, opponent), "above exact quarter health must retain ordinary Attack");
+        expect_true(attack->calls == 1 && signature->calls == 0 && !monster->getBoolProperty("enemyRoleUsed"),
+                    "9/35 and36/140 HP must not prematurely consume the critical signature");
+        monster->setHp(maximumHp / 4);
+        expect_true(controller.control(monster, opponent), "at or below exact quarter health may use the signature");
+        expect_true(attack->calls == 1 && signature->calls == 1 && monster->getBoolProperty("enemyRoleUsed"),
+                    "8/35 and35/140 HP must admit the critical signature once");
+    }
+}
+
+void testMonsterRoleExclusionsAndMalformedActions() {
+    for (const auto &mode : {"npc", "dead", "ally", "missingClass", "missingRole", "wrongRole", "unknownTrigger",
+                             "expensive", "used", "duplicate", "guardedWounded"}) {
+        auto game = fight_fixture_game();
+        auto monster = self_target_fixture_monster(game, false);
+        auto opponent = self_target_fixture_opponent(game);
+        opponent->setHp(opponent->getHpMax());
+        auto creatureClass = std::make_shared<CCreatureClass>();
+        creatureClass->setStringProperty("combatRole", "testRole");
+        monster->setCreatureClass(creatureClass);
+        auto signature = std::make_shared<RoleActionProbe>();
+        signature->setGame(game);
+        signature->setName("roleSignature");
+        signature->setBoolProperty("enemySignature", true);
+        signature->setStringProperty("enemyRole", "testRole");
+        signature->setStringProperty("enemyRoleTrigger", "opening");
+        if (std::string(mode) == "npc") {
+            monster->setNpc(true);
+        }
+        if (std::string(mode) == "dead") {
+            opponent->setHp(0);
+        }
+        if (std::string(mode) == "ally") {
+            monster->setAffiliation("allied");
+            opponent->setAffiliation("allied");
+        }
+        if (std::string(mode) == "missingClass") {
+            monster->setCreatureClass(nullptr);
+        }
+        if (std::string(mode) == "missingRole") {
+            creatureClass->setStringProperty("combatRole", "");
+        }
+        if (std::string(mode) == "wrongRole") {
+            signature->setStringProperty("enemyRole", "otherRole");
+        }
+        if (std::string(mode) == "unknownTrigger") {
+            signature->setStringProperty("enemyRoleTrigger", "unknown");
+        }
+        if (std::string(mode) == "expensive") {
+            signature->setManaCost(61);
+        }
+        if (std::string(mode) == "used") {
+            monster->setBoolProperty("enemyRoleUsed", true);
+        }
+        if (std::string(mode) == "duplicate") {
+            auto effect = named_self_effect(game, "roleEffect", CTag::Buff);
+            signature->setEffect(effect);
+            signature->setSelfTarget(true);
+            monster->addEffect(effect);
+        }
+        if (std::string(mode) == "guardedWounded") {
+            signature->setStringProperty("enemyRoleTrigger", "guarded");
+            monster->setHp(1);
+            auto attack = std::make_shared<RoleActionProbe>();
+            attack->setGame(game);
+            attack->setName("attack");
+            attack->setTypeId("Attack");
+            monster->addAction(attack);
+        }
+        monster->addAction(signature);
+        CMonsterFightController controller;
+        const bool expected = std::string(mode) == "guardedWounded";
+        const bool acted = controller.control(monster, opponent);
+        if (acted != expected || signature->calls != (expected ? 1 : 0)) {
+            std::cerr << "role exclusion fixture: " << mode << '\n';
+        }
+        expect_true(acted == expected, "role eligibility must honor actor and action gates");
+        expect_true(signature->calls == (expected ? 1 : 0),
+                    "excluded signatures must never leak into baseline selection");
+    }
+}
+
+void testOpponentRoleEffectDuplicateRetainsUnusedSignatureAndOrdinaryAttack() {
+    auto game = fight_fixture_game();
+    auto monster = self_target_fixture_monster(game, false);
+    auto opponent = self_target_fixture_opponent(game);
+    opponent->setHp(opponent->getHpMax());
+    auto creatureClass = std::make_shared<CCreatureClass>();
+    creatureClass->setCombatRole("testRole");
+    monster->setCreatureClass(creatureClass);
+    auto effect = named_self_effect(game, "existingOpponentRoleEffect", CTag::Buff);
+    auto signature = std::make_shared<RoleActionProbe>();
+    signature->setGame(game);
+    signature->setBoolProperty("enemySignature", true);
+    signature->setStringProperty("enemyRole", "testRole");
+    signature->setStringProperty("enemyRoleTrigger", "opening");
+    signature->setSelfTarget(false);
+    signature->setObjectProperty<CGameObject>("roleEffect", effect);
+    monster->addAction(signature);
+    auto attack = std::make_shared<RoleActionProbe>();
+    attack->setGame(game);
+    attack->setTypeId("Attack");
+    monster->addAction(attack);
+    opponent->addEffect(effect);
+    CMonsterFightController controller;
+    expect_true(controller.control(monster, opponent), "duplicate opponent effect must retain ordinary Attack");
+    expect_true(attack->calls == 1 && signature->calls == 0 && !monster->getBoolProperty("enemyRoleUsed"),
+                "a recipient duplicate must not consume the role flag");
+    expect_true(signature->getObjectProperty<CGameObject>("roleEffect") == effect,
+                "a recipient duplicate must not consume its eager owned effect");
+    opponent->setEffects({});
+    expect_true(controller.control(monster, opponent) && signature->calls == 1,
+                "the signature must become eligible after the recipient effect expires");
+}
+
+void testMonsterSignatureNeverReplacesAnOrdinaryDefensiveCast() {
+    auto game = fight_fixture_game();
+    auto monster = self_target_fixture_monster(game, false);
+    auto opponent = self_target_fixture_opponent(game);
+    opponent->setHp(opponent->getHpMax());
+    expect_true(monster->isAlive() && opponent->isAlive(), "both ordinary priority fixture actors must be alive");
+    auto creatureClass = std::make_shared<CCreatureClass>();
+    creatureClass->setStringProperty("combatRole", "testRole");
+    monster->setCreatureClass(creatureClass);
+    auto signature = std::make_shared<RoleActionProbe>();
+    signature->setGame(game);
+    signature->setBoolProperty("enemySignature", true);
+    signature->setStringProperty("enemyRole", "testRole");
+    signature->setStringProperty("enemyRoleTrigger", "opening");
+    monster->addAction(signature);
+    auto attack = std::make_shared<RoleActionProbe>();
+    attack->setGame(game);
+    attack->setName("attack");
+    attack->setTypeId("Attack");
+    monster->addAction(attack);
+    auto spell = std::make_shared<RoleActionProbe>();
+    spell->setGame(game);
+    spell->setTypeId("Barrier");
+    spell->setSelfTarget(true);
+    auto ordinaryBarrier = named_self_effect(game, "ordinaryBarrier", CTag::Buff);
+    ordinaryBarrier->setTypeId("ordinaryBarrier");
+    spell->setEffect(ordinaryBarrier);
+    monster->addAction(spell);
+    CMonsterFightController controller;
+    expect_true(controller.control(monster, opponent), "ordinary defensive cast must retain its AI priority");
+    expect_true(spell->calls == 1 && signature->calls == 0 && !monster->getBoolProperty("enemyRoleUsed"),
+                "class signature must not delay an ordinary selected spell");
+    const auto effects = monster->getEffects();
+    const auto clonedBonus = effects.empty() ? nullptr : (*effects.begin())->getBonus();
+    expect_true(clonedBonus != nullptr, "the cloned ordinary Barrier must retain its per-game stats factory");
+    if (clonedBonus) {
+        expect_true((*effects.begin())->getTypeId() == ordinaryBarrier->getTypeId(),
+                    "the ordinary Barrier clone must retain the configured effect identity");
+        expect_true(controller.control(monster, opponent), "a second control must safely inspect the cloned Barrier");
+        expect_true(spell->calls == 1 && signature->calls == 1 && monster->getBoolProperty("enemyRoleUsed"),
+                    "an active ordinary Barrier must be skipped before the eligible attack signature");
+        expect_true(monster->getEffects().size() == 1,
+                    "a second controller selection must not duplicate the ordinary configured Barrier");
+    }
+}
+
+} // namespace
+
+int main() {
+    pybind11::scoped_interpreter guard{};
+
+    test_movement_controller_null_and_no_map_paths();
+    test_npc_random_controller_clears_current_tile_path();
+    test_npc_random_controller_clears_stale_blocked_path();
+    testGroundControllerReturnsReadyStepBeforeTransition();
+    test_player_controller_prefers_longer_lower_cost_route();
+    test_player_controller_stops_and_clears_path_when_obstacle_appears();
+    test_npc_random_controller_prefers_longer_lower_cost_route();
+    test_target_controller_flow_field_prefers_longer_lower_cost_route();
+    test_target_controller_concurrent_requests_extend_and_reuse_shared_flow();
+    test_controller_connector_costs_agree_and_invalidate_flow();
+    test_player_controller_prefers_cheap_navigation_edge_over_expensive_band();
+    test_player_controller_approaches_portal_away_from_goal_for_shortest_route();
+    test_player_controller_uses_navigation_neighbors_for_cross_level_route();
+    test_target_controller_flow_field_uses_navigation_neighbors_for_cross_level_pursuit();
+    test_player_controller_respects_disabled_and_one_way_cross_level_edges();
+    test_player_controller_uses_bidirectional_cross_level_edge_both_ways();
+    test_target_controller_flow_field_invalidates_when_cross_level_edge_is_added();
+    test_fight_controller_guard_paths_and_fallbacks();
+    test_player_fight_controller_start_is_idempotent_and_guards_invalid_encounters();
+    test_player_fight_controller_end_is_idempotent_and_guards_invalid_encounters();
+    test_monster_fight_controller_uses_mana_item_when_mana_is_low();
+    test_monster_fight_controller_attacks_hard_hitter_instead_of_wasting_heal();
+    test_monster_fight_controller_heals_when_heal_outpaces_incoming_damage();
+    test_monster_fight_controller_gates_heal_on_the_potion_it_will_actually_drink();
+    test_monster_fight_controller_heals_when_next_hit_would_kill();
+    testEffectCloneFixturePreservesStatsAcrossControllerTurns();
+    test_monster_fight_controller_ranks_interactions_by_weakening();
+    test_monster_fight_controller_applies_missing_self_buff();
+    test_monster_fight_controller_skips_duplicate_self_buff();
+    test_monster_fight_controller_heals_self_only_when_hurt();
+    testMonsterRolesUseEligibleSignatureOnceAndKeepFallback();
+    testMonsterRitualMinimumManaGatesEligibilityWithoutSpending();
+    testCriticalHealthUsesExactQuarterInsteadOfTruncatedPercentage();
+    testMonsterRoleExclusionsAndMalformedActions();
+    testMonsterSignatureNeverReplacesAnOrdinaryDefensiveCast();
+    testOpponentRoleEffectDuplicateRetainsUnusedSignatureAndOrdinaryAttack();
+
+    return finish_tests();
+}

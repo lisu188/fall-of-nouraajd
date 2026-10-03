@@ -1,0 +1,97 @@
+{
+  "goobyRace": {
+    "class": "CCreatureRace",
+    "properties": {
+      "creatureType": "gooby",
+      "subtypes": [],
+      "playerSelectable": false
+    }
+  },
+  "octoBogzRace": {
+    "class": "CCreatureRace",
+    "properties": {
+      "creatureType": "octoBogz",
+      "subtypes": [],
+      "playerSelectable": false
+    }
+  },
+  "pritzRace": {
+    "class": "CCreatureRace",
+    "properties": {
+      "creatureType": "pritz",
+      "subtypes": [],
+      "playerSelectable": false
+    }
+  },
+  "goblinRace": {
+    "class": "CCreatureRace",
+    "properties": {
+      "creatureType": "goblin",
+      "subtypes": [],
+      "playerSelectable": false
+    }
+  },
+  "humanRace": {
+    "class": "CCreatureRace",
+    "properties": {
+      "label": "Human",
+      "creatureType": "human",
+      "subtypes": [],
+      "playerSelectable": true
+    }
+  },
+  "outlanderRace": {
+    "class": "CCreatureRace",
+    "properties": {
+      "label": "Outlander",
+      "creatureType": "human",
+      "subtypes": ["outlander"],
+      "playerSelectable": true,
+      "baseStats": {
+        "class": "CStats",
+        "properties": {
+          "strength": 1,
+          "stamina": 2,
+          "agility": -1,
+          "intelligence": -2
+        }
+      }
+    }
+  },
+  "highlanderRace": {
+    "class": "CCreatureRace",
+    "properties": {
+      "label": "Highlander",
+      "creatureType": "human",
+      "subtypes": ["highlander"],
+      "playerSelectable": true,
+      "baseStats": {
+        "class": "CStats",
+        "properties": {
+          "strength": 2,
+          "stamina": 1,
+          "agility": -1,
+          "intelligence": -2
+        }
+      }
+    }
+  },
+  "wandererRace": {
+    "class": "CCreatureRace",
+    "properties": {
+      "label": "Wanderer",
+      "creatureType": "human",
+      "subtypes": ["wanderer"],
+      "playerSelectable": true,
+      "baseStats": {
+        "class": "CStats",
+        "properties": {
+          "agility": 2,
+          "intelligence": 1,
+          "strength": -1,
+          "stamina": -2
+        }
+      }
+    }
+  }
+}

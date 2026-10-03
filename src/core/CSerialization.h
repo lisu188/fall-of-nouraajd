@@ -185,6 +185,16 @@ class CSerialization {
     }
 
   public:
+    class StrictScope {
+      public:
+        StrictScope();
+
+        ~StrictScope();
+
+      private:
+        bool previous;
+    };
+
     template <typename Serialized, typename Deserialized> static Serialized serialize(Deserialized deserialized) {
         std::any variant = serializer<Serialized, Deserialized>()->serialize(std::any(deserialized));
         return vstd::any_cast<Serialized>(variant);
@@ -234,6 +244,16 @@ class CSerialization {
     }
 
     static std::string generateName(const std::shared_ptr<CGameObject> &object);
+
+    // Clone contained actors while retaining effect references to actors outside the cloned object.
+    static std::shared_ptr<CGameObject> cloneObject(const std::shared_ptr<CGameObject> &object);
+
+    static std::string generateName(const std::shared_ptr<CGameObject> &object,
+                                    const std::function<bool(const std::string &)> &isNameTaken);
+
+    static bool isStrict();
+
+    static bool setStrict(bool value);
 
   private:
     static std::type_index getProperty(const std::shared_ptr<CGameObject> &object, const std::string &name);

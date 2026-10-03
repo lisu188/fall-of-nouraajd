@@ -19,9 +19,7 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #include "core/CPythonOverrides.h"
 #include "handler/CEventHandler.h"
 
-CBuilding::CBuilding() {
-    //    this->setZValue ( 1 );
-}
+CBuilding::CBuilding() {}
 
 CBuilding::~CBuilding() {}
 

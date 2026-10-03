@@ -1,6 +1,6 @@
 /*
 fall-of-nouraajd c++ dark fantasy game
-Copyright (C) 2025  Andrzej Lis
+Copyright (C) 2025-2026  Andrzej Lis
 
 This program is free software: you can redistribute it and/or modify
         it under the terms of the GNU General Public License as published by
@@ -26,6 +26,8 @@ class CTooltip : public CGameGraphicsObject {
     V_META(CTooltip, CGameGraphicsObject, vstd::meta::empty())
 
     std::string text;
+    int scrollOffset = 0;
+    int scrollMaximum = 0;
 
   public:
     CTooltip();
@@ -35,6 +37,7 @@ class CTooltip : public CGameGraphicsObject {
     bool mouseEvent(std::shared_ptr<CGui> gui, SDL_EventType type, int button, int x, int y) override;
 
     bool keyboardEvent(std::shared_ptr<CGui> sharedPtr, SDL_EventType type, SDL_Keycode i) override;
+    bool mouseWheelEvent(std::shared_ptr<CGui> gui, SDL_EventType type, int x, int y, int wheelX, int wheelY) override;
 
     void setText(std::string _text);
 

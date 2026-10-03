@@ -20,6 +20,14 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #include "core/CUtil.h"
 #include "gui/CGui.h"
 #include "gui/CSdlResources.h"
+#include "gui/CLayout.h"
+#include "gui/CTextManager.h"
+#include "gui/CUiTheme.h"
+#include "gui/object/CWidget.h"
+#include "gui/panel/CGamePanel.h"
+#include "core/CController.h"
+#include "handler/CGuiHandler.h"
+#include "handler/CTooltipHandler.h"
 #include "object/CCreature.h"
 #include "object/CPlayer.h"
 #include "object/CTile.h"
@@ -53,6 +61,12 @@ constexpr SDL_Color MINIMAP_CREATURE{255, 0, 0, 255};
 constexpr SDL_Color MINIMAP_OBJECT{255, 170, 0, 255};
 constexpr SDL_Color MINIMAP_VIEWPORT{255, 255, 255, 255};
 constexpr long long MAX_MINIMAP_DEFAULT_CELLS = 100'000;
+// Maximum width/height (in map cells) the minimap will honour for a single level. Map metadata
+// (xBound/yBound) and sparse object/tile coordinates are attacker-controllable and may be extreme or
+// overflow-prone, so any level extent beyond this is rejected (fail closed -> bounded placeholder)
+// before it can drive iteration, scaling, or pixel/texture dimension math. Matches the established
+// MAX_TMX_LAYER_CELLS guard convention in CLoader.cpp.
+constexpr long long MAX_MINIMAP_LEVEL_EXTENT = 100'000;
 
 struct LevelBounds {
     int minX = 0;
@@ -132,11 +146,27 @@ void include_coords(LevelBounds &bounds, bool &hasBounds, Coords coords) {
     bounds.maxY = std::max(bounds.maxY, coords.y);
 }
 
+// Rejects level extents whose width/height overflow or exceed MAX_MINIMAP_LEVEL_EXTENT. All arithmetic
+// is performed in long long so attacker-extreme int bounds (e.g. INT_MAX maxX with a negative minX)
+// cannot trigger signed-overflow UB before the bound check runs.
+bool bounds_within_limits(const LevelBounds &bounds) {
+    if (bounds.maxX < bounds.minX || bounds.maxY < bounds.minY) {
+        return false;
+    }
+    const long long width = static_cast<long long>(bounds.maxX) - bounds.minX + 1;
+    const long long height = static_cast<long long>(bounds.maxY) - bounds.minY + 1;
+    return width > 0 && height > 0 && width <= MAX_MINIMAP_LEVEL_EXTENT && height <= MAX_MINIMAP_LEVEL_EXTENT;
+}
+
 std::optional<LevelBounds> get_level_bounds(const std::shared_ptr<CMap> &map, int z) {
     const auto xBounds = map->getXBounds();
     const auto yBounds = map->getYBounds();
     if (vstd::ctn(xBounds, z) && vstd::ctn(yBounds, z)) {
-        return LevelBounds{0, 0, xBounds.at(z), yBounds.at(z)};
+        const LevelBounds metadataBounds{0, 0, xBounds.at(z), yBounds.at(z)};
+        if (!bounds_within_limits(metadataBounds)) {
+            return std::nullopt;
+        }
+        return metadataBounds;
     }
 
     LevelBounds bounds;
@@ -157,12 +187,21 @@ std::optional<LevelBounds> get_level_bounds(const std::shared_ptr<CMap> &map, in
     if (!hasBounds) {
         return std::nullopt;
     }
+    // Sparse player/object/tile coordinates may span an enormous (or overflow-prone) range; fail closed
+    // rather than iterating/scaling over that empty space.
+    if (!bounds_within_limits(bounds)) {
+        return std::nullopt;
+    }
     return bounds;
 }
 
 MinimapScale make_scale(std::shared_ptr<SDL_Rect> rect, LevelBounds bounds) {
-    const int levelWidth = std::max(1, bounds.maxX - bounds.minX + 1);
-    const int levelHeight = std::max(1, bounds.maxY - bounds.minY + 1);
+    // Compute extents in long long to avoid signed-overflow UB, then clamp to MAX_MINIMAP_LEVEL_EXTENT.
+    // get_level_bounds already rejects out-of-range extents, so this is defence in depth for direct callers.
+    const long long rawWidth = static_cast<long long>(bounds.maxX) - bounds.minX + 1;
+    const long long rawHeight = static_cast<long long>(bounds.maxY) - bounds.minY + 1;
+    const int levelWidth = static_cast<int>(std::clamp<long long>(rawWidth, 1, MAX_MINIMAP_LEVEL_EXTENT));
+    const int levelHeight = static_cast<int>(std::clamp<long long>(rawHeight, 1, MAX_MINIMAP_LEVEL_EXTENT));
     const double scale =
         std::min(rect->w / static_cast<double>(levelWidth), rect->h / static_cast<double>(levelHeight));
     const int drawW = std::max(1, static_cast<int>(std::floor(levelWidth * scale)));
@@ -350,6 +389,14 @@ void CMinimapGraphicsObject::renderObject(std::shared_ptr<CGui> gui, std::shared
     }
 
     auto renderer = gui->getRenderer();
+    if (!expanded && getParent() == gui && getTypeId() == "minimapGraphics") {
+        const int size = static_cast<int>(220 * std::max(1.0, gui->getHeight() / 1080.0));
+        getLayout()->setRuntimeRect(gui->getWidth() - size, gui->getHeight() - size, size, size);
+        rect = getLayout()->getRect(ptr<CGameGraphicsObject>());
+    }
+    const auto outer = rect;
+    if (expanded)
+        rect = CUtil::rect(rect->x, rect->y, rect->w, std::max(1, rect->h - UiTheme::scaled(gui, 112)));
     const Coords playerCoords = player->getCoords();
     const auto maybeBounds = get_level_bounds(map, playerCoords.z);
     if (!maybeBounds) {
@@ -358,13 +405,14 @@ void CMinimapGraphicsObject::renderObject(std::shared_ptr<CGui> gui, std::shared
     }
     const auto scale = make_scale(rect, *maybeBounds);
     const auto signature = terrain_signature(map, playerCoords.z, *maybeBounds, rect->w, rect->h);
-    if (!terrainTexture || terrainRenderer != renderer || terrainSignature != signature) {
-        terrainTexture = build_terrain_texture(renderer, map, playerCoords.z, rect, *maybeBounds);
-        terrainRenderer = renderer;
+    if (!terrainTexture || terrainTexture.get_deleter().owner.lock() != gui || terrainSignature != signature) {
+        auto texture = build_terrain_texture(renderer, map, playerCoords.z, rect, *maybeBounds);
+        terrainTexture = fn::sdl::GuiTexturePtr(texture.release(), fn::sdl::GuiTextureDeleter{gui});
+        ++terrainTextureBuildCount;
         terrainSignature = signature;
     }
     if (terrainTexture) {
-        SDL_SAFE(SDL_RenderCopy(renderer, terrainTexture.get(), nullptr, rect.get()));
+        gui->getRenderContext().copy(terrainTexture.get(), nullptr, rect.get());
     } else {
         fill_rect(renderer, rect, MINIMAP_BACKGROUND);
         draw_terrain(renderer, map, playerCoords.z, scale);
@@ -377,12 +425,123 @@ void CMinimapGraphicsObject::renderObject(std::shared_ptr<CGui> gui, std::shared
         if (vstd::cast<CCreature>(object)) {
             draw_marker(renderer, scale, object->getCoords(), 3, MINIMAP_CREATURE);
         } else {
-            draw_marker(renderer, scale, object->getCoords(), 3, MINIMAP_OBJECT);
+            if (in_bounds(scale.bounds, object->getCoords()))
+                UiTheme::stroke(renderer, *marker_rect(scale, object->getCoords(), 5), MINIMAP_OBJECT);
         }
     }
 
-    draw_marker(renderer, scale, playerCoords, 5, MINIMAP_PLAYER);
+    if (in_bounds(scale.bounds, playerCoords)) {
+        const auto marker = marker_rect(scale, playerCoords, 11);
+        fill_rect(renderer, CUtil::rect(marker->x + marker->w / 2, marker->y, 1, marker->h), MINIMAP_PLAYER);
+        fill_rect(renderer, CUtil::rect(marker->x, marker->y + marker->h / 2, marker->w, 1), MINIMAP_PLAYER);
+    }
     draw_viewport(renderer, gui, scale, playerCoords);
+    UiTheme::stroke(renderer, *rect, UiTheme::Accent);
+    if (expanded) {
+        gui->getTextManager()->drawTextStyled(
+            "+ You   · Creatures   □ Objects   |   Elevation " + std::to_string(playerCoords.z),
+            CUtil::rect(outer->x, rect->y + rect->h + 4, outer->w, UiTheme::scaled(gui, 44)), "body", UiTheme::Text,
+            true);
+    }
 }
 
-bool CMinimapGraphicsObject::mouseEvent(std::shared_ptr<CGui>, SDL_EventType, int, int, int) { return false; }
+bool CMinimapGraphicsObject::mouseEvent(std::shared_ptr<CGui> gui, SDL_EventType type, int button, int, int) {
+    if (!expanded && button == SDL_BUTTON_LEFT) {
+        if (type == SDL_MOUSEBUTTONDOWN)
+            expandPressed = true;
+        else if (type == SDL_MOUSEBUTTONUP && expandPressed) {
+            expandPressed = false;
+            expandMap(gui);
+        }
+    }
+    // Consume in-bounds pointer button events. CGameGraphicsObject::event() only calls this hook for a
+    // visible minimap when the click is inside its rectangle (or it is modal), so returning true stops the
+    // event from falling through to lower-priority siblings such as the map layer. Left/right (and any other)
+    // button presses delivered inside the minimap are therefore swallowed and never move/interact with the
+    // world.
+    return true;
+}
+
+void CMinimapGraphicsObject::expandMap(std::shared_ptr<CGui> gui) {
+    if (!gui || !gui->getGame() || !gui->getGame()->getMap())
+        return;
+    auto panel = gui->getGame()->createObject<CGamePanel>();
+    panel->setTitle("Map & landmarks");
+    auto shell = std::make_shared<CCenteredLayout>();
+    shell->setW("94%");
+    shell->setH("94%");
+    panel->setLayout(shell);
+    auto mapView = gui->getGame()->createObject<CMinimapGraphicsObject>();
+    mapView->expanded = true;
+    auto layout = std::make_shared<CLayout>();
+    layout->setX("3%");
+    layout->setY("16%");
+    layout->setW("94%");
+    layout->setH("81%");
+    mapView->setLayout(layout);
+    auto button = gui->getGame()->createObject<CButton>();
+    button->setText("Browse landmarks");
+    button->setClick("browseLandmarks");
+    auto action = std::make_shared<CLayout>();
+    action->setX("55%");
+    action->setW("43%");
+    action->setH("56");
+    action->setVertical("DOWN");
+    button->setLayout(action);
+    mapView->addChild(button);
+    panel->addChild(mapView);
+    gui->pushChild(panel);
+}
+
+bool CMinimapGraphicsObject::keyboardEvent(std::shared_ptr<CGui> gui, SDL_EventType type, SDL_Keycode key) {
+    if (type == SDL_KEYDOWN && key == SDLK_m && !expanded) {
+        expandMap(gui);
+        return true;
+    }
+    return false;
+}
+
+void CMinimapGraphicsObject::browseLandmarks(std::shared_ptr<CGui> gui) {
+    auto map = gui->getGame()->getMap();
+    auto player = map ? map->getPlayer() : nullptr;
+    if (!player)
+        return;
+    auto entries = json::array();
+    std::vector<std::shared_ptr<CMapObject>> landmarks;
+    for (const auto &object : map->getObjects()) {
+        if (!object || object == player || object->getCoords().z != player->getCoords().z || object->getLabel().empty())
+            continue;
+        auto coords = object->getCoords();
+        auto id = std::to_string(landmarks.size());
+        entries[entries.size()] = {{"id", id},
+                                   {"label", object->getLabel()},
+                                   {"detail", CTooltipHandler::buildTooltip(object) + "\nDestination: " +
+                                                  std::to_string(coords.x) + ", " + std::to_string(coords.y)}};
+        landmarks.push_back(object);
+    }
+    auto selected =
+        gui->getGame()->getGuiHandler()->showChoice("Known landmarks", entries.dump(), "Travel to landmark", "Back");
+    if (selected.empty() || gui->getGame()->getMap() != map)
+        return;
+    auto index = std::stoul(selected);
+    if (index >= landmarks.size())
+        return;
+    auto controller = vstd::cast<CPlayerController>(player->getController());
+    if (!controller)
+        return;
+    if (auto panel = vstd::cast<CGamePanel>(getParent()))
+        panel->close();
+    controller->setTarget(player, landmarks[index]->getCoords());
+    const int maximum = std::max(1, gui->getTileCountX() * gui->getTileCountY() * 4);
+    for (int step = 0;
+         step < maximum && gui->getGame()->getMap() == map && !controller->isCompleted(player) && !map->isMoving();
+         ++step)
+        map->move();
+}
+
+bool CMinimapGraphicsObject::mouseMotionEvent(std::shared_ptr<CGui>, SDL_EventType, int, int, int, int) {
+    // Consume in-bounds motion the same way as button events so hovering/dragging over the minimap does not
+    // reach the map underneath. Wheel events are deliberately NOT overridden: the base no-op leaves them
+    // unconsumed so map zoom keeps working when the cursor is over the minimap.
+    return true;
+}

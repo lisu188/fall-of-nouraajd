@@ -56,5 +56,125 @@ class PlayerClassOptionsTest(unittest.TestCase):
                 self.assertNotIn(" - ", option)
 
 
+class _FakeObjectHandler:
+    def __init__(self, subtypes):
+        self._subtypes = list(subtypes)
+
+    def getAllSubTypes(self, base_type):
+        assert base_type == "CCreatureRace"
+        return list(self._subtypes)
+
+
+class _FakeRace:
+    def __init__(self, type_id, player_selectable, label=""):
+        self._type_id = type_id
+        self._player_selectable = player_selectable
+        self._label = label
+
+    def getBoolProperty(self, name):
+        assert name == "playerSelectable"
+        return self._player_selectable
+
+    def getStringProperty(self, name):
+        assert name == "label"
+        return self._label
+
+
+class _FakeGame:
+    def __init__(self, races):
+        self._races = races
+        self._handler = _FakeObjectHandler(races.keys())
+
+    def getObjectHandler(self):
+        return self._handler
+
+    def createObject(self, type_id):
+        return self._races[type_id]
+
+
+class PlayerRaceOptionsTest(unittest.TestCase):
+    def test_player_race_options_match_native_filter(self):
+        g = game.CGameLoader.loadGame()
+        options = game.player_race_options(g)
+
+        expected_options = {}
+        for race_type in sorted(g.getObjectHandler().getAllSubTypes("CCreatureRace")):
+            race = g.createObject(race_type)
+            if not race.getBoolProperty("playerSelectable"):
+                continue
+            label = race.getStringProperty("label") or race_type
+            expected_options[label] = race_type
+
+        self.assertEqual(expected_options, options)
+
+    def test_player_race_options_filters_and_labels(self):
+        g = _FakeGame(
+            {
+                "humanRace": _FakeRace("humanRace", True, "Human"),
+                "elfRace": _FakeRace("elfRace", True, "Elf"),
+                "goblinRace": _FakeRace("goblinRace", False, "Goblin"),
+                "wraithRace": _FakeRace("wraithRace", True),
+            }
+        )
+        self.assertEqual(
+            {"Human": "humanRace", "Elf": "elfRace", "wraithRace": "wraithRace"},
+            game.player_race_options(g),
+        )
+
+    def test_player_race_options_rejects_duplicate_labels(self):
+        g = _FakeGame(
+            {
+                "humanRace": _FakeRace("humanRace", True, "Human"),
+                "highHumanRace": _FakeRace("highHumanRace", True, "Human"),
+            }
+        )
+        with self.assertRaises(ValueError):
+            game.player_race_options(g)
+
+
+class _FakeStats:
+    def __init__(self, strength=0, agility=0, stamina=0, intelligence=0):
+        self._strength = strength
+        self._agility = agility
+        self._stamina = stamina
+        self._intelligence = intelligence
+
+    def getStrength(self):
+        return self._strength
+
+    def getAgility(self):
+        return self._agility
+
+    def getStamina(self):
+        return self._stamina
+
+    def getIntelligence(self):
+        return self._intelligence
+
+
+class _FakeRaceWithStats:
+    def __init__(self, base_stats):
+        self._base_stats = base_stats
+
+    def getBaseStats(self):
+        return self._base_stats
+
+
+class RaceStatPreviewTest(unittest.TestCase):
+    def test_neutral_race_reads_balanced(self):
+        self.assertEqual("Balanced", game.race_stat_preview(_FakeRaceWithStats(_FakeStats())))
+
+    def test_missing_base_stats_reads_balanced(self):
+        self.assertEqual("Balanced", game.race_stat_preview(_FakeRaceWithStats(None)))
+
+    def test_deltas_are_formatted_in_order_with_signs(self):
+        base = _FakeStats(strength=1, agility=-1, stamina=2, intelligence=-2)
+        self.assertEqual("STR+1 AGI-1 STA+2 INT-2", game.race_stat_preview(_FakeRaceWithStats(base)))
+
+    def test_only_nonzero_deltas_are_shown(self):
+        base = _FakeStats(agility=2, intelligence=1)
+        self.assertEqual("AGI+2 INT+1", game.race_stat_preview(_FakeRaceWithStats(base)))
+
+
 if __name__ == "__main__":
     unittest.main()

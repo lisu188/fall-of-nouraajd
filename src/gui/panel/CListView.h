@@ -22,6 +22,7 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 class CProxyGraphicsObject;
 
 class CScript;
+class CButton;
 
 class CListView : public CProxyTargetGraphicsObject {
     V_META(CListView, CProxyTargetGraphicsObject,
@@ -29,14 +30,29 @@ class CListView : public CProxyTargetGraphicsObject {
            V_PROPERTY(CListView, std::string, select, getSelect, setSelect),
            V_PROPERTY(CListView, std::string, callback, getCallback, setCallback),
            V_PROPERTY(CListView, std::string, rightClickCallback, getRightClickCallback, setRightClickCallback),
+           V_PROPERTY(CListView, std::string, dragStart, getDragStart, setDragStart),
+           V_PROPERTY(CListView, std::string, dragValidate, getDragValidate, setDragValidate),
+           V_PROPERTY(CListView, std::string, drop, getDrop, setDrop),
+           V_PROPERTY(CListView, std::string, dragCancel, getDragCancel, setDragCancel),
            V_PROPERTY(CListView, std::shared_ptr<CScript>, refreshObject, getRefreshObject, setRefreshObject),
            V_PROPERTY(CListView, std::string, refreshEvent, getRefreshEvent, setRefreshEvent),
+           V_PROPERTY(CListView, bool, refreshOnPropertyChanged, getRefreshOnPropertyChanged,
+                      setRefreshOnPropertyChanged),
+           V_PROPERTY(CListView, std::set<std::string>, refreshProperties, getRefreshProperties, setRefreshProperties),
            V_PROPERTY(CListView, int, xPrefferedSize, getXPrefferedSize, setXPrefferedSize),
            V_PROPERTY(CListView, int, yPrefferedSize, getYPrefferedSize, setYPrefferedSize),
            V_PROPERTY(CListView, int, tileSize, getTileSize, setTileSize),
            V_PROPERTY(CListView, bool, allowOversize, getAllowOversize, setAllowOversize),
+           V_PROPERTY(CListView, bool, dragEnabled, getDragEnabled, setDragEnabled),
            V_PROPERTY(CListView, bool, showEmpty, getShowEmpty, setShowEmpty),
-           V_PROPERTY(CListView, bool, grouping, getGrouping, setGrouping), V_METHOD(CListView, initialize))
+           V_PROPERTY(CListView, bool, grouping, getGrouping, setGrouping), V_METHOD(CListView, initialize),
+           V_PROPERTY(CListView, bool, searchable, getSearchable, setSearchable),
+           V_PROPERTY(CListView, bool, rows, getRows, setRows),
+           V_METHOD(CListView, pagePrevious, void, std::shared_ptr<CGui>),
+           V_METHOD(CListView, pageNext, void, std::shared_ptr<CGui>), V_METHOD(CListView, refreshFromRefreshEvent),
+           V_METHOD(CListView, refreshFromPropertyChanged, void, std::string),
+           V_METHOD(CListView, refreshFromPropertiesChanged, void, std::set<std::string>),
+           V_METHOD(CListView, refreshFromPropertySpecificChanged))
 
     std::string collection;
 
@@ -45,6 +61,14 @@ class CListView : public CProxyTargetGraphicsObject {
     std::string rightClickCallback;
 
     std::string select;
+
+    std::string dragStart;
+
+    std::string dragValidate;
+
+    std::string drop;
+
+    std::string dragCancel;
 
     std::shared_ptr<CScript> refreshObject;
 
@@ -63,12 +87,50 @@ class CListView : public CProxyTargetGraphicsObject {
 
     void setRefreshEvent(std::string refreshEvent);
 
+    bool getRefreshOnPropertyChanged();
+
+    void setRefreshOnPropertyChanged(bool refreshOnPropertyChanged);
+
+    std::set<std::string> getRefreshProperties();
+
+    void setRefreshProperties(std::set<std::string> refreshProperties);
+
     void initialize();
+
+    void refresh() override;
+
+    void refreshFromRefreshEvent();
+
+    void refreshFromPropertyChanged(std::string propertyName);
+
+    void refreshFromPropertiesChanged(std::set<std::string> propertyNames);
+
+    void refreshFromPropertySpecificChanged();
 
   private:
     std::string refreshEvent;
 
+    bool refreshOnPropertyChanged = false;
+
+    std::set<std::string> refreshProperties;
+
+    std::weak_ptr<CGameObject> refreshSubscriptionTarget;
+
+    std::string subscribedRefreshEvent;
+
+    bool subscribedRefreshOnPropertyChanged = false;
+
+    std::set<std::string> subscribedRefreshProperties;
+
+    bool refreshFromSubscriptionQueued = false;
+
     bool allowOversize = true;
+
+    // When false, this list is a pure command/interaction list: a populated item's
+    // mouse-down must never start a GUI drag session, capture the pointer for drag,
+    // defer the source click callback, or create a drag proxy. Defaults true so every
+    // existing list (inventory/equipment/etc.) keeps its current draggable behavior.
+    bool dragEnabled = true;
 
     bool showEmpty = true;
 
@@ -77,6 +139,13 @@ class CListView : public CProxyTargetGraphicsObject {
     int selectionThickness = 5;
 
     int shift = 0;
+    int focusedIndex = -1;
+    bool searchable = false;
+    bool rows = false;
+    bool searching = false;
+    std::string filterText;
+    std::shared_ptr<CButton> previousPageButton;
+    std::shared_ptr<CButton> nextPageButton;
 
     int xPrefferedSize = -1;
 
@@ -86,10 +155,33 @@ class CListView : public CProxyTargetGraphicsObject {
 
   public:
     CListView() = default;
+    struct ViewState {
+        int offset = 0;
+        int focusedIndex = -1;
+        std::string query;
+    };
+    ViewState getViewState() const { return {shift, focusedIndex, filterText}; }
+    void restoreViewState(const ViewState &state);
+    bool getSearchable() const { return searchable; }
+    void setSearchable(bool value) { searchable = value; }
+    bool getRows() const { return rows; }
+    void setRows(bool value) { rows = value; }
+    bool isSearching() const { return searching; }
+    void pagePrevious(std::shared_ptr<CGui> gui);
+    void pageNext(std::shared_ptr<CGui> gui);
+    int getCellSize(const std::shared_ptr<CGui> &gui) const;
+    bool keyboardEvent(std::shared_ptr<CGui> gui, SDL_EventType type, SDL_Keycode key) override;
+    bool textInput(std::shared_ptr<CGui> gui, const std::string &text);
+    bool mouseMotionEvent(std::shared_ptr<CGui> gui, SDL_EventType type, int x, int y, int xrel, int yrel) override;
+    bool mouseWheelEvent(std::shared_ptr<CGui> gui, SDL_EventType type, int x, int y, int wheelX, int wheelY) override;
 
     bool getAllowOversize();
 
     void setAllowOversize(bool _allowOversize);
+
+    bool getDragEnabled();
+
+    void setDragEnabled(bool _dragEnabled);
 
     bool getGrouping();
 
@@ -129,6 +221,22 @@ class CListView : public CProxyTargetGraphicsObject {
 
     void setSelect(std::string select);
 
+    std::string getDragStart();
+
+    void setDragStart(std::string dragStart);
+
+    std::string getDragValidate();
+
+    void setDragValidate(std::string dragValidate);
+
+    std::string getDrop();
+
+    void setDrop(std::string drop);
+
+    std::string getDragCancel();
+
+    void setDragCancel(std::string dragCancel);
+
     int getXPrefferedSize() const;
 
     void setXPrefferedSize(int xPrefferedSize);
@@ -138,6 +246,7 @@ class CListView : public CProxyTargetGraphicsObject {
     void setYPrefferedSize(int yPrefferedSize);
 
   private:
+    void updateRowPaging(const std::shared_ptr<CGui> &gui, int itemCount);
     CListView::collection_pointer invokeCollection(std::shared_ptr<CGui> gui);
 
     void invokeCallback(std::shared_ptr<CGui> gui, int i, std::shared_ptr<CGameObject> object);
@@ -146,9 +255,30 @@ class CListView : public CProxyTargetGraphicsObject {
 
     bool invokeSelect(std::shared_ptr<CGui> gui, int i, std::shared_ptr<CGameObject> object);
 
-    bool tryGetClickedObject(std::shared_ptr<CGui> gui, int x, int y, int &index, std::shared_ptr<CGameObject> &object);
+    bool invokeDragStart(std::shared_ptr<CGui> gui, int i, std::shared_ptr<CGameObject> object);
 
-    std::unordered_map<std::pair<int, int>, std::shared_ptr<CProxyGraphicsObject>> proxyObjects;
+    bool invokeDragValidate(std::shared_ptr<CGui> gui, int i, std::shared_ptr<CGameObject> object);
+
+    void invokeDrop(std::shared_ptr<CGui> gui, int i, std::shared_ptr<CGameObject> object);
+
+    void invokeDragCancel(std::shared_ptr<CGui> gui, int i, std::shared_ptr<CGameObject> object);
+
+    bool canInvokeParentCallback(const std::shared_ptr<CGui> &gui, const std::shared_ptr<CGameGraphicsObject> &parent);
+
+    bool tryGetClickedObject(std::shared_ptr<CGui> gui, int x, int y, int &index, std::shared_ptr<CGameObject> &object,
+                             bool allowEmptyCell = false);
+
+    bool hasSourceDragCallbacks() const;
+
+    bool hasTargetDragCallbacks() const;
+
+    bool runDropCallbacks(std::shared_ptr<CGui> gui, int i, std::shared_ptr<CGameObject> object,
+                          const std::shared_ptr<CListView> &sourceList, int sourceIndex,
+                          std::shared_ptr<CGameObject> sourceObject);
+
+    void notifySourceDragCancel(std::shared_ptr<CGui> gui, int sourceIndex, std::shared_ptr<CGameObject> sourceObject);
+
+    std::unordered_map<std::pair<int, int>, std::shared_ptr<CProxyGraphicsObject>, vstd::pair_hash> proxyObjects;
 
     void doShift(const std::shared_ptr<CGui> &gui, int val);
 
@@ -157,6 +287,16 @@ class CListView : public CProxyTargetGraphicsObject {
     int getRightArrowIndex(const std::shared_ptr<CGui> &gui);
 
     int getLeftArrowIndex(const std::shared_ptr<CGui> &gui);
+
+    int getCellCount(const std::shared_ptr<CGui> &gui);
+
+    int getVisibleItemSlots(const std::shared_ptr<CGui> &gui, int itemTypeCount);
+
+    int getMaxShift(const std::shared_ptr<CGui> &gui, int itemTypeCount);
+
+    bool isOversizedForCount(const std::shared_ptr<CGui> &gui, int itemTypeCount);
+
+    void clampShift(const std::shared_ptr<CGui> &gui, int itemTypeCount);
 
     // TODO: do not generate whole map, instead add callback arguement and stop
     // when met
@@ -184,4 +324,22 @@ class CListView : public CProxyTargetGraphicsObject {
                      std::list<std::shared_ptr<CGameGraphicsObject>> &return_val) const;
 
     int getItemTypesCount(const std::shared_ptr<CGui> &gui);
+
+  protected:
+    virtual std::shared_ptr<CGameObject> resolveRefreshTarget();
+
+  private:
+    void refreshSubscriptions();
+
+    void disconnectRefreshSubscriptions();
+
+    void connectRefreshSubscriptions(const std::shared_ptr<CGameObject> &refreshTarget);
+
+    void refreshFromSubscription();
+
+    bool shouldRefreshForProperty(const std::string &propertyName) const;
+
+    // True when a configured refreshProperty's derived "<name>Changed" channel collides
+    // with a reserved typed engine signal name (must be rejected fail-closed).
+    static bool isCollidingRefreshProperty(const std::string &propertyName);
 };
