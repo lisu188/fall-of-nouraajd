@@ -84,27 +84,11 @@ std::map<int, std::pair<int, int>> CMap::getBounds() {
 
 std::map<int, int> CMap::getXBounds() { return xBounds; }
 
-void CMap::setXBounds(std::map<int, int> bounds) {
-    std::lock_guard lock(navigationMutex);
-    if (xBounds == bounds)
-        return;
-    if (navigationService && (!tiles.empty() || !mapObjects.empty() || !navigationEdges.empty()))
-        navigationDomainCanonical = false;
-    xBounds = std::move(bounds);
-    routingChanged();
-}
+void CMap::setXBounds(std::map<int, int> bounds) { updateCoordinateNormalization(xBounds, std::move(bounds)); }
 
 std::map<int, int> CMap::getYBounds() { return yBounds; }
 
-void CMap::setYBounds(std::map<int, int> bounds) {
-    std::lock_guard lock(navigationMutex);
-    if (yBounds == bounds)
-        return;
-    if (navigationService && (!tiles.empty() || !mapObjects.empty() || !navigationEdges.empty()))
-        navigationDomainCanonical = false;
-    yBounds = std::move(bounds);
-    routingChanged();
-}
+void CMap::setYBounds(std::map<int, int> bounds) { updateCoordinateNormalization(yBounds, std::move(bounds)); }
 
 std::map<int, std::string> CMap::getDefaultTiles() { return defaultTiles; }
 
@@ -128,25 +112,31 @@ void CMap::setOutOfBoundsTiles(std::map<int, std::string> tiles) {
 
 std::map<int, int> CMap::getWrapX() { return wrapX; }
 
-void CMap::setWrapX(std::map<int, int> values) {
-    std::lock_guard lock(navigationMutex);
-    if (wrapX == values)
-        return;
-    if (navigationService && (!tiles.empty() || !mapObjects.empty() || !navigationEdges.empty()))
-        navigationDomainCanonical = false;
-    wrapX = std::move(values);
-    routingChanged();
-}
+void CMap::setWrapX(std::map<int, int> values) { updateCoordinateNormalization(wrapX, std::move(values)); }
 
 std::map<int, int> CMap::getWrapY() { return wrapY; }
 
-void CMap::setWrapY(std::map<int, int> values) {
+void CMap::setWrapY(std::map<int, int> values) { updateCoordinateNormalization(wrapY, std::move(values)); }
+
+void CMap::updateCoordinateNormalization(IntMap &setting, IntMap values) {
     std::lock_guard lock(navigationMutex);
-    if (wrapY == values)
+    if (setting == values)
         return;
+    setting.swap(values);
+    try {
+        std::unordered_multimap<Coords, std::string> normalizedObjects;
+        if (!mapObjects.empty())
+            normalizedObjects.reserve(mapObjects.size());
+        for (const auto &[name, object] : mapObjects)
+            if (object)
+                normalizedObjects.emplace(normalizeCoords(object->getCoords()), name);
+        mapObjectsCache.swap(normalizedObjects);
+    } catch (...) {
+        setting.swap(values);
+        throw;
+    }
     if (navigationService && (!tiles.empty() || !mapObjects.empty() || !navigationEdges.empty()))
         navigationDomainCanonical = false;
-    wrapY = std::move(values);
     routingChanged();
 }
 
@@ -831,11 +821,17 @@ void CMap::move() {
             return creature && vstd::castable<CMoveable>(object) && is_active_creature(creature);
         };
 
-        std::vector<std::shared_ptr<CCreature>> plannedCreatures;
+        struct PlannedCreature {
+            std::shared_ptr<CCreature> creature;
+            Coords origin;
+        };
+        std::vector<PlannedCreature> plannedCreatures;
         std::vector<std::shared_ptr<vstd::future<Coords, void>>> pending;
         for (auto object : map->mapObjects | std::views::values | std::views::filter(pred)) {
             auto creature = vstd::cast<CCreature>(object);
-            plannedCreatures.push_back(creature);
+            // A result is valid only from the cell observed before controller work, including
+            // when an earlier actor's combat synchronously respawns this same live instance.
+            plannedCreatures.push_back({creature, map->normalizeCoords(creature->getCoords())});
             pending.push_back(creature->getController()->control(creature));
         }
 
@@ -852,17 +848,18 @@ void CMap::move() {
             }
         }
         auto plannedCoordinates = plannedFuture->get();
-        std::list<std::pair<std::shared_ptr<CCreature>, Coords>> coordinates;
+        std::list<std::pair<PlannedCreature, Coords>> coordinates;
         if (canApplyDeferredMoveWork()) {
             for (std::size_t index = 0; index < plannedCoordinates.size(); ++index) {
                 coordinates.emplace_back(plannedCreatures[index], plannedCoordinates[index]);
             }
         }
 
-        for (auto [creature, coords] : coordinates) {
+        for (auto [planned, coords] : coordinates) {
             if (!canApplyDeferredMoveWork()) {
                 break;
             }
+            auto creature = planned.creature;
             auto controller_ptr = creature->getController();
             if (!is_active_creature(creature)) {
                 controller_ptr->interrupt(creature);
@@ -870,6 +867,10 @@ void CMap::move() {
             }
 
             auto current = map->normalizeCoords(creature->getCoords());
+            if (current != planned.origin) {
+                controller_ptr->interrupt(creature);
+                continue;
+            }
             auto target = map->normalizeCoords(coords);
             if (target == current) {
                 controller_ptr->interrupt(creature);

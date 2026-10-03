@@ -42,6 +42,7 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 #include <algorithm>
 #include <cmath>
+#include <functional>
 #include <map>
 #include <memory>
 #include <optional>
@@ -499,6 +500,108 @@ void test_moderate_actor_map_move_turn_state_and_revision_bounds() {
                 "moderate actor turn should not add or remove map objects");
 }
 
+class PlannedMoveWorkProbe : public CController {
+  public:
+    explicit PlannedMoveWorkProbe(std::vector<std::shared_ptr<CCreature>> &order) : order(order) {}
+
+    std::shared_ptr<vstd::future<Coords, void>> control(std::shared_ptr<CCreature> creature) override {
+        ++plans;
+        order.push_back(creature);
+        const auto current = creature->getCoords();
+        return vstd::now([current] { return Coords((current.x + 1) % 8, current.y, current.z); });
+    }
+
+    void onStepCommitted(std::shared_ptr<CCreature> creature, const Coords &) override {
+        ++commits;
+        if (afterCommit) {
+            afterCommit(creature);
+        }
+    }
+
+    void interrupt(std::shared_ptr<CCreature>) override { ++interrupts; }
+
+    void onTurnEnded(std::shared_ptr<CCreature>) override { ++endedTurns; }
+
+    std::function<void(std::shared_ptr<CCreature>)> afterCommit;
+    int plans = 0;
+    int commits = 0;
+    int interrupts = 0;
+    int endedTurns = 0;
+
+  private:
+    std::vector<std::shared_ptr<CCreature>> &order;
+};
+
+void testStalePlannedMapMoveWorkIsBounded() {
+    constexpr int TURNS = 4;
+    constexpr int ACTORS = MODERATE_MOVE_ACTORS;
+    auto fixture = make_open_map(8, ACTORS);
+    std::vector<std::shared_ptr<PlannedMoveWorkProbe>> probes;
+    std::vector<std::shared_ptr<CCreature>> actors;
+    std::vector<std::shared_ptr<CCreature>> planned_order;
+    planned_order.reserve(ACTORS);
+    std::shared_ptr<CCreature> stale_actor;
+    int relocations = 0;
+    for (int index = 0; index < ACTORS; ++index) {
+        auto actor = make_actor(fixture, "plannedMoveActor" + std::to_string(100 + index), Coords(0, index, 0), "");
+        auto probe = std::make_shared<PlannedMoveWorkProbe>(planned_order);
+        probe->afterCommit = [&](const std::shared_ptr<CCreature> &committer) {
+            if (committer != planned_order.front()) {
+                return;
+            }
+            stale_actor = planned_order.back();
+            const auto current = stale_actor->getCoords();
+            stale_actor->relocateWithoutMoveHooks(Coords((current.x + 2) % 8, current.y, current.z));
+            ++relocations;
+        };
+        actor->setController(probe);
+        add_object(fixture, actor);
+        actors.push_back(actor);
+        probes.push_back(probe);
+    }
+    const auto revision = fixture.map->getNavigationRevision();
+    const auto turn = fixture.map->getTurn();
+    const auto objects = fixture.map->getObjects().size();
+    for (int iteration = 0; iteration < TURNS; ++iteration) {
+        planned_order.clear();
+        fixture.map->move();
+        expect_true(planned_order.size() == ACTORS && stale_actor &&
+                        stale_actor->getPosX() == ((iteration + 1) * 2) % 8,
+                    "the last planned actor must retain its actual relocation without a stale commit");
+        expect_true(fixture.map->getTurn() == turn + iteration + 1 && !fixture.map->isMoving(),
+                    "discarding one stale plan must complete exactly one turn per fixed iteration");
+    }
+    int plans = 0;
+    int commits = 0;
+    int ended_turns = 0;
+    for (int index = 0; index < ACTORS; ++index) {
+        const auto &probe = probes[index];
+        plans += probe->plans;
+        commits += probe->commits;
+        ended_turns += probe->endedTurns;
+        expect_true(probe->plans == TURNS && probe->endedTurns == TURNS,
+                    "each registered actor must receive one plan and one end callback per turn");
+        expect_true(probe->commits == (actors[index] == stale_actor ? 0 : TURNS) &&
+                        probe->interrupts == (actors[index] == stale_actor ? TURNS : 0),
+                    "only the relocated actor's stale plan must be interrupted, without duplicate work");
+    }
+    expect_true(relocations == TURNS && plans == ACTORS * TURNS && ended_turns == ACTORS * TURNS &&
+                    commits == (ACTORS - 1) * TURNS,
+                "24 actors over four turns must perform 96 plans/end callbacks and 92 valid commits");
+    expect_true(fixture.map->getNavigationRevision() == revision + ACTORS * TURNS,
+                "each valid movement or explicit relocation must invalidate navigation exactly once");
+    expect_true(fixture.map->getObjects().size() == objects &&
+                    fixture.map->getObjectCacheEntryCountForTesting() == objects,
+                "stale-plan rejection must preserve object and coordinate-cache cardinality");
+    const auto stale_probe =
+        stale_actor ? std::dynamic_pointer_cast<PlannedMoveWorkProbe>(stale_actor->getController()) : nullptr;
+    expect_true(stale_probe != nullptr, "the work guard must retain the actual relocated actor's controller");
+    std::cout << "planned map move work guard: actors=" << ACTORS << " turns=" << TURNS << " plans=" << plans
+              << " ends=" << ended_turns << " commits=" << commits << " validCommitBudget=" << (ACTORS - 1) * TURNS
+              << " relocations=" << relocations << " staleCommits=" << (stale_probe ? stale_probe->commits : -1)
+              << " staleBudget=0\n";
+}
+
 void test_bulk_inventory_property_notifications_are_count_bounded() {
     CTypes::register_type_metadata<NotificationCountProbe, CGameObject>();
 
@@ -843,6 +946,7 @@ void run_engine_hotspot_performance_tests() {
     test_irrelevant_metadata_activity_does_not_invalidate_navigation();
     test_coordinate_cache_lookup_cardinality_and_move_updates();
     test_moderate_actor_map_move_turn_state_and_revision_bounds();
+    testStalePlannedMapMoveWorkIsBounded();
     test_bulk_inventory_property_notifications_are_count_bounded();
     testMonsterRoleCallbackAndStateGrowthAreBounded();
     testOctobogzPhaseCallbackAndStateGrowthAreBounded();
