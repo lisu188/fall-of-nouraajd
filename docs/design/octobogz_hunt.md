@@ -847,3 +847,40 @@ existing four serial tests took 0.813 seconds, indicating room for this intact
 fixture within the phase budget. Fresh selected CI must establish timely
 completion; moving the fixture removes overlapping test work without claiming
 a native speedup or guaranteeing its elapsed time.
+
+## Owned recovery at the Alpha victory boundary
+
+The `1a0b2ceb` normal Linux hunt remained failed. Its retained native tail shows
+Alpha's actual defeat at `(158,25,0)` before the next `Turn: 1139` marker. That
+map turn then entered combat with the still-living Brood at `(158,24,0)` and
+the player lost. The final receipt followed a second defeat and reported no
+lost items; it does not describe the stock lost at the first defeat. The tail
+does not include the player's HP or complete carried stock at Brood entry.
+Road recovery outside `defeat('alpha')` could not run before this encounter.
+
+The walkthrough now installs a recovery callback only during its Alpha
+approach. After adjacent `moveTo` and its queued-work pump, the existing alive
+and unchanged-receipt checks still run first. The callback reads the captured
+Alpha's native life state. Once that actor dies, it requires the same captured
+identity, named absence and registry death through the existing death proof.
+It then checks the registered, captured Brood is actually living before using
+supplies. The original map turn and pump follow the checkpoint unchanged.
+The callback disables itself after confirmation and restores the previous
+callback in `finally`, including when an assertion or item operation fails.
+
+This checkpoint requests ordinary full-HP preparation using only the existing
+eligible, finite, owned LifePotion pointers. The road helper's default remains
+75%. Both paths retain the capped heal formula, exact identity consumption,
+all other carried items, controllers, mana, maxima, gold, quests, coordinates,
+turn and hunt registry. Actual checkpoint resources are logged once; ordinary
+steps perform no new inventory or full-player reads. A confirmed Alpha death
+while Brood is dead does not spend supplies. Missing eligible stock neither
+creates health nor removes the later native survival gates.
+
+The four pure regressions execute the actual step and defeat methods. Their
+synthetic next-turn requirement proves recovery ordering, full/partial health
+handling, the original fatal guards, native identity proof, once-only use and
+callback restoration. It is not a reproduction of the lethal native damage
+sequence. The stale queued movement of a respawned player is a separate engine
+review and cannot excuse the first real loss. Fresh exact-head automatic
+victories, earned-save decision replay and complete CI remain required.

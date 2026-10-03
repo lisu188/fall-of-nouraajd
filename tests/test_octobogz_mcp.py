@@ -417,6 +417,9 @@ class OctobogzMcpWalkthroughTest(unittest.TestCase):
             self.fail(self.snapshot("defeated during movement"))
         if self.call(self.player, "getStringProperty", "uiDefeatReceipt") != defeat_before:
             self.fail(self.snapshot("lost authored combat and respawned"))
+        recover = getattr(self, "recover_before_map_turn", None)
+        if recover:
+            recover()
         turn = self.call(self.game_map, "getTurn")
         self.call(self.game_map, "move")
         self.pump()
@@ -501,14 +504,15 @@ class OctobogzMcpWalkthroughTest(unittest.TestCase):
             "completed": self.questNames("getCompletedQuests"),
         }
 
-    def recoverBeforeRoadDeparture(self):
+    def recoverBeforeRoadDeparture(self, *, target_percent=75):
+        self.assertIn(target_percent, (75, 100))
         self.assertTrue(self.call(self.player, "isAlive"), "Road recovery cannot revive a defeated player")
         self.assertEqual("", self.call(self.player, "getStringProperty", "uiDefeatReceipt"))
         hp_max = self.call(self.player, "getHpMax")
         self.assertGreater(hp_max, 0)
         hp = self.call(self.player, "getHp")
         self.assertGreater(hp, 0)
-        if hp * 4 >= hp_max * 3:
+        if hp * 100 >= hp_max * target_percent:
             return
         configured = json.loads(
             (Path(__file__).resolve().parents[1] / "res/config/potions.json").read_text(encoding="utf-8")
@@ -540,7 +544,7 @@ class OctobogzMcpWalkthroughTest(unittest.TestCase):
             self.assertEqual("", self.call(self.player, "getStringProperty", "uiDefeatReceipt"))
             hp_before = self.call(self.player, "getHp")
             self.assertGreater(hp_before, 0)
-            if hp_before * 4 >= hp_max * 3:
+            if hp_before * 100 >= hp_max * target_percent:
                 break
             owned = self.call(self.player, "getItems")
             identities = {candidate["__handle__"] for candidate in owned}
@@ -1115,6 +1119,28 @@ class OctobogzMcpWalkthroughTest(unittest.TestCase):
             except Exception as exc:
                 print("MCP hunt native failure tail unavailable", type(exc).__name__, str(exc), flush=True)
 
+    def recoverAfterAlphaVictoryBeforeMapTurn(self, alpha):
+        if self.call(alpha, "isAlive"):
+            return
+        self.assertEqual(alpha, self.hunt_actors.get("alpha"))
+        self.assertSlotDefeated("alpha")
+        self.recover_before_map_turn = None
+        record = self.state()["slots"]["brood"]
+        if record["status"] != "living":
+            return
+        brood = self.hunt_actors.get("brood")
+        self.assertIsNotNone(brood, "The living Brood must retain its captured native identity")
+        self.assertEqual(record["name"], self.call(brood, "getName"))
+        self.assertEqual(brood, self.call(self.game_map, "getObjectByName", record["name"]))
+        self.assertTrue(self.call(brood, "isAlive"))
+        before = self.snapshot("actual Alpha victory before the next native map turn")
+        self.recoverBeforeRoadDeparture(target_percent=100)
+        print(
+            "MCP hunt post-Alpha owned recovery",
+            {"before": before, "hpAfter": self.call(self.player, "getHp")},
+            flush=True,
+        )
+
     def defeat(self, slot):
         record = self.state()["slots"][slot]
         if record["status"] == "dead":
@@ -1124,6 +1150,12 @@ class OctobogzMcpWalkthroughTest(unittest.TestCase):
         self.trackLivingHuntActors()
         actors = self.livingActors()
         self.snapshot("before " + slot)
+        previous_recovery = getattr(self, "recover_before_map_turn", None)
+        if slot == "alpha":
+            alpha = self.hunt_actors.get("alpha")
+            self.assertIsNotNone(alpha)
+            self.assertTrue(self.call(alpha, "isAlive"))
+            self.recover_before_map_turn = lambda: self.recoverAfterAlphaVictoryBeforeMapTurn(alpha)
         try:
             self.walkTo(record["name"], allow_removed=True)
             self.snapshot("after " + slot)
@@ -1138,6 +1170,8 @@ class OctobogzMcpWalkthroughTest(unittest.TestCase):
             except Exception:
                 pass
             raise
+        finally:
+            self.recover_before_map_turn = previous_recovery
 
     @staticmethod
     def itemIdentity(item):

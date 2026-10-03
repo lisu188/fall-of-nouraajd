@@ -1392,6 +1392,182 @@ class OctobogzHuntTest(unittest.TestCase):
         walker.assertSlotDefeated("alpha")
         self.assertEqual({"alpha"}, walker.confirmed_dead)
 
+    def alphaVictoryStepFixture(self, case=None):
+        from tests.test_octobogz_mcp import OctobogzMcpWalkthroughTest
+
+        walker, handles, inventory, uses, properties, gold, turn, _, _ = self.roadDepartureFixture(
+            corruption="heal" if case == "failedHeal" else None
+        )
+        properties.update(hp=91, mana=175, exp=6125)
+        gold[0], turn[0] = 540, 1139
+        alpha, brood = Actor("alpha"), Actor("brood")
+        slots = {slot: {"name": slot, "status": "living"} for slot in ("alpha", "brood")}
+        walker.hunt_actors, walker.confirmed_dead = {"alpha": alpha, "brood": brood}, set()
+        walker.state = lambda: {"slots": slots}
+        walker.trackLivingHuntActors = Mock()
+        walker.capture_before_move = None
+        walker.recover_before_map_turn = None
+        walker.movement_steps = 0
+        walker.coords = lambda handle=None: (158, 24, 0)
+        walker.snapshot = Mock(return_value={"stage": "synthetic Alpha victory"})
+        original_call = walker.call
+        events, rpc_calls, moved = [], [], [False]
+        synthetic = AssertionError("Synthetic next-turn guard: owned recovery did not precede map movement")
+
+        def call(handle, method, *args):
+            rpc_calls.append((handle, method, args))
+            if handle == "player" and method == "getNumericProperty":
+                return properties[args[0]]
+            if handle == "player" and method == "moveTo":
+                events.append("moveTo")
+                if not moved[0]:
+                    moved[0] = True
+                    alpha.setHp(0)
+                    slots["alpha"]["status"] = "dead"
+                    properties.update(hp=62, exp=6250)
+                    if case == "movementDeath":
+                        properties["hp"] = 0
+                    elif case == "movementReceipt":
+                        properties.update(hp=1, uiDefeatReceipt="native movement defeat")
+                    elif case == "healthy":
+                        properties["hp"] = 91
+                    elif case == "partlyHealthy":
+                        properties["hp"] = 70
+                    elif case == "nearlyHealthy":
+                        properties["hp"] = 90
+                    elif case == "flagOnly":
+                        alpha.setHp(49)
+                    elif case == "wrongName":
+                        slots["alpha"]["name"] = "otherAlpha"
+                    elif case == "missingBrood":
+                        walker.hunt_actors.pop("brood")
+                    elif case == "missingAlpha":
+                        walker.hunt_actors.pop("alpha")
+                    elif case == "deadBrood":
+                        brood.setHp(0)
+                        slots["brood"]["status"] = "dead"
+                    elif case == "nativeDeadBrood":
+                        brood.setHp(0)
+                return
+            if handle == "player" and method == "useItem":
+                events.append("useItem")
+            if handle == "map":
+                if method == "getTile":
+                    return "tile"
+                if method == "getObjectByName":
+                    if args[0] == "alpha":
+                        return alpha if case == "stillNamed" else None
+                    if args[0] == "brood":
+                        return Actor("brood") if case == "differentBrood" else brood
+                    return None
+                if method == "move":
+                    events.append("map.move")
+                    if case != "deadBrood" and properties["hp"] < 91:
+                        raise synthetic
+                    turn[0] += 1
+                    return
+            if handle == "tile" and method == "getBoolProperty":
+                return True
+            if isinstance(handle, Actor):
+                return getattr(handle, method)(*args)
+            return original_call(handle, method, *args)
+
+        def pump():
+            events.append("pump")
+            if case == "pumpReceipt" and events.count("pump") == 1:
+                properties["uiDefeatReceipt"] = "native first-pump defeat"
+
+        walker.call, walker.pump = call, pump
+        walker.step = OctobogzMcpWalkthroughTest.step.__get__(walker)
+        walker.walkTo = lambda name, **kwargs: walker.step((158, 25, 0))
+        return walker, handles, inventory, uses, properties, gold, turn, events, rpc_calls, synthetic
+
+    def testMcpAlphaVictoryRecoversOwnedHealingBeforeItsMandatoryNextMapTurn(self):
+        walker, handles, inventory, uses, properties, gold, turn, events, _, _ = self.alphaVictoryStepFixture()
+        original_inventory = list(inventory)
+        previous = Mock()
+        walker.recover_before_map_turn = previous
+        with patch("builtins.print"):
+            walker.defeat("alpha")
+        self.assertEqual(["moveTo", "pump", "useItem", "map.move", "pump"], events)
+        self.assertEqual([handles["strong"]], uses)
+        self.assertEqual([item for item in original_inventory if item != handles["strong"]], inventory)
+        self.assertEqual(
+            (91, 175, 6250, 540, 1140), (properties["hp"], properties["mana"], properties["exp"], gold[0], turn[0])
+        )
+        self.assertEqual("", properties["uiDefeatReceipt"])
+        self.assertEqual({"alpha"}, walker.confirmed_dead)
+        self.assertEqual(1, walker.movement_steps)
+        self.assertIs(previous, walker.recover_before_map_turn)
+        previous.assert_not_called()
+        walker.reportCombatFailure.assert_not_called()
+
+    def testMcpAlphaVictoryRecoveryRejectsFirstMovementDefeatAndInvalidNativeProof(self):
+        cases = (
+            "movementDeath",
+            "movementReceipt",
+            "pumpReceipt",
+            "flagOnly",
+            "wrongName",
+            "stillNamed",
+            "missingAlpha",
+            "missingBrood",
+            "nativeDeadBrood",
+            "differentBrood",
+            "failedHeal",
+        )
+        for case in cases:
+            with self.subTest(case=case):
+                walker, _, _, uses, _, _, turn, events, _, _ = self.alphaVictoryStepFixture(case)
+                previous = Mock()
+                walker.recover_before_map_turn = previous
+                with self.assertRaises(AssertionError), patch("builtins.print"):
+                    walker.defeat("alpha")
+                self.assertEqual(1 if case == "failedHeal" else 0, len(uses))
+                self.assertEqual(1139, turn[0])
+                if case != "flagOnly":
+                    self.assertNotIn("map.move", events)
+                self.assertIs(previous, walker.recover_before_map_turn)
+                previous.assert_not_called()
+
+    def testMcpAlphaVictoryRecoveryRunsOnceAndLeavesHealthyOrUnrelatedStepsUnchanged(self):
+        for case in (None, "partlyHealthy", "nearlyHealthy", "healthy", "deadBrood"):
+            with self.subTest(case=case):
+                walker, _, _, uses, properties, _, turn, _, calls, _ = self.alphaVictoryStepFixture(case)
+
+                def walkTwice(name, **kwargs):
+                    walker.step((158, 25, 0))
+                    self.assertIsNone(walker.recover_before_map_turn)
+                    walker.step((158, 23, 0))
+
+                walker.walkTo = walkTwice
+                with patch("builtins.print"):
+                    walker.defeat("alpha")
+                self.assertEqual(1 if case in (None, "partlyHealthy", "nearlyHealthy") else 0, len(uses))
+                self.assertEqual(1141, turn[0])
+                self.assertEqual(2, walker.movement_steps)
+                if case in ("healthy", "deadBrood"):
+                    self.assertFalse(any(method == "getItems" for _, method, _ in calls))
+                self.assertEqual(62 if case == "deadBrood" else 91, properties["hp"])
+        walker, _, _, uses, properties, _, turn, _, calls, _ = self.alphaVictoryStepFixture("healthy")
+        with patch("builtins.print"):
+            walker.step((158, 25, 0))
+        self.assertEqual([], uses)
+        self.assertFalse(
+            any(method in ("getItems", "getHpMax", "getFightController", "getController") for _, method, _ in calls)
+        )
+
+    def testMcpAlphaVictoryRecoveryDoesNotManufactureHealthWithoutAnEligibleOwnedItem(self):
+        walker, handles, inventory, uses, properties, _, turn, events, _, synthetic = self.alphaVictoryStepFixture()
+        inventory.remove(handles["strong"])
+        with self.assertRaises(AssertionError) as raised, patch("builtins.print"):
+            walker.defeat("alpha")
+        self.assertIs(synthetic, raised.exception)
+        self.assertEqual([], uses)
+        self.assertEqual(62, properties["hp"])
+        self.assertEqual(1139, turn[0])
+        self.assertEqual(["moveTo", "pump", "map.move"], events)
+
     def testMcpPartialReloadRebindsLivingIdentityAndCannotConfirmAFlagOnlyDeath(self):
         from tests.test_octobogz_mcp import OctobogzMcpWalkthroughTest
 
