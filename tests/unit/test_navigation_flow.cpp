@@ -33,6 +33,7 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #include <atomic>
 #include <chrono>
 #include <cstdint>
+#include <functional>
 #include <future>
 #include <limits>
 #include <map>
@@ -72,6 +73,40 @@ struct Fixture {
         map->addTile(tile, coords.x, coords.y, coords.z);
         return tile;
     }
+};
+
+struct DynamicFixture : Fixture {
+    struct Terrain {
+        int cost = 1;
+        bool walkable = true;
+        std::atomic_size_t calls = 0;
+        std::function<void()> onRead;
+    };
+
+    std::shared_ptr<CGame> game = std::make_shared<CGame>();
+    std::shared_ptr<Terrain> terrain = std::make_shared<Terrain>();
+
+    DynamicFixture(int width, int height, Coords goal) : Fixture(width, height, goal) {
+        game->setMap(map);
+        map->setGame(game);
+        auto handler = game->getObjectHandler();
+        handler->registerType("mutableFlowFloor", [terrain = terrain]() {
+            ++terrain->calls;
+            auto on_read = terrain->onRead;
+            if (on_read)
+                on_read();
+            auto tile = std::make_shared<CTile>();
+            tile->setCanStep(terrain->walkable);
+            tile->setMovementCost(terrain->cost);
+            return tile;
+        });
+        handler->registerConfig("mutableFlowFloor", std::make_shared<json>(json{{"class", "mutableFlowFloor"}}));
+        map->setDefaultTiles({{0, "mutableFlowFloor"}});
+        service = map->getNavigationService();
+        flow = std::make_unique<CNavigationFlow>(service->budget());
+    }
+
+    ~DynamicFixture() { game->getContext()->shutdown(); }
 };
 
 class NavigationHookProbe : public CMapObject, public CMoveable {
@@ -749,7 +784,220 @@ void testDynamicFallbackFactoriesDoNotReusePersistentCosts() {
     expect_true(second.status == CNavigationFlowStatus::Complete && second.cost == 20,
                 "nonpersistent factory changes must not reuse an old field cost");
     expect_true(fixture.flow->statistics().fieldRebuilds == 2,
-                "each nonpersistent query must rebuild its field from current factory values");
+                "changed nonpersistent terrain must rebuild its field from current factory values");
+}
+
+void testDynamicDeferredPursuitResumesInRealMapTurns() {
+    DynamicFixture fixture(200, 200, Coords(199, 199, 0));
+    auto creature = std::make_shared<CCreature>();
+    creature->setName("mutableFlowChaser");
+    creature->setGame(fixture.game);
+    creature->setLevel(1);
+    creature->setHp(1);
+    auto controller = std::make_shared<CTargetController>();
+    controller->setTarget(fixture.target->getName());
+    creature->setController(controller);
+    fixture.map->addObject(creature);
+    fixture.map->move();
+    const auto first = fixture.service->flowStatistics();
+    expect_true(fixture.map->getTurn() == 1 && creature->getCoords() == ZERO && first.expandedNodes == 25'000,
+                "a real dynamic-terrain chaser inside its 256-cell leash must defer at 25k expansions");
+    fixture.map->move();
+    const auto completed = fixture.service->flowStatistics();
+    expect_true(fixture.map->getTurn() == 2 && creature->getCoords() != ZERO,
+                "the next real map turn must resume dynamic pursuit and commit a legal step");
+    expect_true(completed.fieldRebuilds == 1 && completed.expandedNodes == 40'000,
+                "stable dynamic pursuit must retain one field and settle the 200x200 route exactly once");
+    expect_true(completed.dynamicCellSamples <= 40'800 && completed.dynamicCellRevalidations <= 25'800,
+                "dynamic factories must be sampled once per cell and revalidated once before continuation");
+    // Turn planning and committed movement also perform a small number of live destination lookups.
+    expect_true(fixture.terrain->calls.load() <= completed.dynamicCellSamples + completed.dynamicCellRevalidations + 20,
+                "actual factory callbacks must not bypass terrain sampling and validation counts");
+    expect_true(fixture.service->budget()->peak() <= fixture.service->budget()->limit(),
+                "retained dynamic terrain and reverse-search state must share the 128 MiB cap");
+    std::cout << "Dynamic pursuit: expansions=" << completed.expandedNodes
+              << "/40000 samples=" << completed.dynamicCellSamples
+              << "/40800 revalidated=" << completed.dynamicCellRevalidations
+              << "/25800 factoryCalls=" << fixture.terrain->calls.load() << '\n';
+}
+
+void testDynamicDeferredFieldRepairsMovingGoals() {
+    DynamicFixture fixture(200, 200, Coords(199, 199, 0));
+    const auto first = fixture.step(ZERO, 0);
+    expect_true(first.status == CNavigationFlowStatus::Deferred, "moving-goal fixture must start with deferred work");
+    fixture.target->moveTo(Coords(199, 198, 0));
+    CNavigationFlowResult result;
+    for (int turn = 1; turn <= 4; ++turn) {
+        result = fixture.step(ZERO, turn);
+        if (result.status != CNavigationFlowStatus::Deferred)
+            break;
+    }
+    expect_true(result.status == CNavigationFlowStatus::Complete && result.cost == 397 && result.step != ZERO,
+                "revalidated dynamic fields must finish an exact route after their target moves");
+    expect_true(fixture.flow->statistics().fieldRebuilds == 1 && fixture.flow->statistics().incrementalRepairs >= 1,
+                "goal motion alone must repair the retained dynamic field rather than restart it");
+}
+
+void testDynamicNearerChaserCompletionPreservesDeferredField() {
+    DynamicFixture fixture(200, 200, Coords(199, 199, 0));
+    expect_true(fixture.step(ZERO, 0).status == CNavigationFlowStatus::Deferred,
+                "a far dynamic chaser must begin an unfinished shared field");
+    const auto near = fixture.step(Coords(198, 199, 0), 0);
+    expect_true(near.status == CNavigationFlowStatus::Complete && near.cost == 1 &&
+                    near.step == fixture.target->getCoords(),
+                "a nearer chaser may use a fully revalidated settled prefix of the shared field");
+    const auto old_epoch = fixture.service->snapshot(fixture.map)->epoch();
+    fixture.map->getTile(198, 198, 0);
+    expect_true(fixture.service->snapshot(fixture.map)->epoch() != old_epoch,
+                "materializing a dynamic floor must record an ordinary local routing change");
+    const auto far = fixture.step(ZERO, 1);
+    expect_true(far.status == CNavigationFlowStatus::Complete && far.cost == 398 && far.step != ZERO,
+                "a nearer completed query must not discard the farther chaser's deferred frontier");
+    expect_true(fixture.flow->statistics().fieldRebuilds == 1,
+                "a nearer query and same-scalar tile materialization must preserve the shared deferred generation");
+}
+
+void testDynamicDeferredCostChangesInvalidateWithoutEpoch() {
+    DynamicFixture fixture(200, 200, Coords(199, 199, 0));
+    expect_true(fixture.step(ZERO, 0).status == CNavigationFlowStatus::Deferred,
+                "mutable-cost fixture must retain an unfinished dynamic field");
+    const auto epoch = fixture.service->snapshot(fixture.map)->epoch();
+    fixture.terrain->cost = 3;
+    expect_true(fixture.service->snapshot(fixture.map)->epoch() == epoch,
+                "changing a factory closure must not supply an engine routing epoch");
+    expect_true(fixture.step(ZERO, 1).status == CNavigationFlowStatus::Deferred,
+                "changed sampled costs must restart under the original 25k expansion allowance");
+    const auto result = fixture.step(ZERO, 2);
+    expect_true(result.status == CNavigationFlowStatus::Complete && result.cost == 3 * 398,
+                "deferred continuation must use newly sampled costs rather than frozen factory values");
+    expect_true(fixture.flow->statistics().fieldRebuilds == 2,
+                "unversioned cost changes must invalidate the unfinished field exactly once");
+}
+
+void testDynamicCompletedFieldsRefreshCostsAndBlockedCells() {
+    DynamicFixture fixture(5, 2, Coords(4, 0, 0));
+    fixture.tile(Coords(2, 0, 0), 1, false);
+    auto first = fixture.step(ZERO, 0);
+    expect_true(first.status == CNavigationFlowStatus::Complete && first.cost == 6,
+                "initial dynamic route must detour around its blocking tile");
+    const auto epoch = fixture.service->snapshot(fixture.map)->epoch();
+    fixture.terrain->cost = 4;
+    auto increased = fixture.step(ZERO, 1);
+    fixture.terrain->cost = 1;
+    auto decreased = fixture.step(ZERO, 2);
+    expect_true(increased.status == CNavigationFlowStatus::Complete && increased.cost == 24 &&
+                    decreased.status == CNavigationFlowStatus::Complete && decreased.cost == 6 &&
+                    fixture.service->snapshot(fixture.map)->epoch() == epoch,
+                "completed fields must observe both unversioned cost increases and decreases");
+    fixture.terrain->walkable = false;
+    auto blocked = fixture.step(ZERO, 3);
+    fixture.terrain->walkable = true;
+    auto reopened = fixture.step(ZERO, 4);
+    expect_true(blocked.status == CNavigationFlowStatus::Unreachable && blocked.step == ZERO &&
+                    reopened.status == CNavigationFlowStatus::Complete && reopened.cost == 6,
+                "blocked dynamic samples must be revalidated when a factory reopens them without an epoch");
+    const auto warm = fixture.flow->statistics();
+    expect_true(fixture.step(ZERO, 5).cost == 6 && fixture.flow->statistics().fieldRebuilds == warm.fieldRebuilds,
+                "a completed field may be reused only after its retained samples are revalidated");
+}
+
+void testDynamicBlockedIntermediateSamplesRevealNewShortcut() {
+    DynamicFixture fixture(5, 1, Coords(4, 0, 0));
+    auto upper_open = std::make_shared<bool>(false);
+    auto handler = fixture.game->getObjectHandler();
+    handler->registerType("mutableUpperFlowFloor", [upper_open]() {
+        auto tile = std::make_shared<CTile>();
+        tile->setCanStep(*upper_open);
+        return tile;
+    });
+    handler->registerConfig("mutableUpperFlowFloor", std::make_shared<json>(json{{"class", "mutableUpperFlowFloor"}}));
+    fixture.map->setXBounds({{0, 4}, {1, 1}});
+    fixture.map->setYBounds({{0, 0}, {1, 0}});
+    fixture.map->setDefaultTiles({{0, "mutableFlowFloor"}, {1, "mutableUpperFlowFloor"}});
+    CNavigationEdge enter;
+    enter.source = ZERO;
+    enter.target = Coords(0, 0, 1);
+    fixture.map->addNavigationEdge(enter);
+    CNavigationEdge leave;
+    leave.source = Coords(1, 0, 1);
+    leave.target = fixture.target->getCoords();
+    fixture.map->addNavigationEdge(leave);
+    const auto closed = fixture.step(ZERO, 0);
+    expect_true(closed.status == CNavigationFlowStatus::Complete && closed.cost == 4,
+                "blocked intermediate dynamic cells must initially exclude the shorter connector route");
+    const auto epoch = fixture.service->snapshot(fixture.map)->epoch();
+    *upper_open = true;
+    const auto opened = fixture.step(ZERO, 1);
+    expect_true(fixture.service->snapshot(fixture.map)->epoch() == epoch &&
+                    opened.status == CNavigationFlowStatus::Complete && opened.cost == 3 &&
+                    opened.step == Coords(0, 0, 1),
+                "full scalar validation must discover a reopened intermediate shortcut without any epoch change");
+}
+
+void testDynamicRevalidationBudgetSurvivesSameTurnEviction() {
+    DynamicFixture fixture(4, 1, Coords(3, 0, 0));
+    fixture.flow = std::make_unique<CNavigationFlow>(fixture.service->budget(), 64);
+    expect_true(fixture.step(ZERO, 0).status == CNavigationFlowStatus::Complete,
+                "small validation-budget fixture must first populate an exact field");
+    CNavigationFlowResult result;
+    for (int attempt = 0; attempt < 65; ++attempt) {
+        result = fixture.step(ZERO, 0);
+        if (result.status == CNavigationFlowStatus::Deferred)
+            break;
+    }
+    const auto exhausted = fixture.flow->statistics();
+    expect_true(result.status == CNavigationFlowStatus::Deferred && result.step == ZERO &&
+                    exhausted.dynamicCellRevalidations <= 64,
+                "same-turn requests must stop when their full scalar validation no longer fits the allowance");
+    expect_true(fixture.step(ZERO, 0).status == CNavigationFlowStatus::Deferred &&
+                    fixture.flow->statistics().dynamicCellRevalidations == exhausted.dynamicCellRevalidations,
+                "a repeated deferred request must not begin a partial fresh validation scan");
+    expect_true(fixture.flow->evictUnused(), "the completed dynamic field must be available for eviction");
+    expect_true(fixture.step(ZERO, 0).status == CNavigationFlowStatus::Complete &&
+                    fixture.step(ZERO, 0).status == CNavigationFlowStatus::Deferred,
+                "eviction may sample a fresh field but must not replenish its spent same-turn scan allowance");
+    expect_true(fixture.flow->statistics().dynamicCellRevalidations == exhausted.dynamicCellRevalidations,
+                "validation accounting must survive destruction and replacement of the cached field");
+    expect_true(fixture.step(ZERO, 1).status == CNavigationFlowStatus::Complete,
+                "the next map turn must restore one bounded validation allowance");
+    fixture.flow = std::make_unique<CNavigationFlow>(fixture.service->budget(), 0);
+    expect_true(fixture.step(ZERO, 2).status == CNavigationFlowStatus::Complete &&
+                    fixture.step(ZERO, 3).status == CNavigationFlowStatus::Deferred,
+                "a zero validation allowance must fail closed rather than reuse unverified scalar terrain");
+}
+
+void testDynamicRevalidationCancelsAndReleasesMemoStorage() {
+    DynamicFixture fixture(4, 1, Coords(3, 0, 0));
+    fixture.service->snapshot(fixture.map);
+    const auto empty_bytes = fixture.service->budget()->used();
+    expect_true(fixture.step(ZERO, 0).status == CNavigationFlowStatus::Complete,
+                "cancellation fixture must retain a completed dynamic memo");
+    fixture.terrain->onRead = [map = fixture.map, terrain = fixture.terrain]() {
+        terrain->onRead = {};
+        map->setWrapX({{0, 1}});
+    };
+    const auto cancelled = fixture.step(ZERO, 1);
+    expect_true(cancelled.status == CNavigationFlowStatus::Cancelled && cancelled.step == ZERO,
+                "routing changes inside scalar revalidation must cancel without returning a stale step");
+    fixture.flow->shutdown();
+    expect_true(fixture.service->budget()->used() <= empty_bytes,
+                "terminal flow shutdown must release sampled terrain, field state and validation ledger storage");
+}
+
+void testDynamicMemoMemoryPressureIsRecoverable() {
+    DynamicFixture fixture(32, 32, Coords(31, 31, 0));
+    fixture.service->snapshot(fixture.map);
+    const auto budget = fixture.service->budget();
+    const auto reserved = budget->limit() - budget->used() - 16 * 1024;
+    expect_true(budget->tryReserve(reserved), "dynamic memory fixture must reserve its navigation headroom");
+    const auto denied = fixture.step(ZERO, 0);
+    expect_true(denied.status == CNavigationFlowStatus::ResourceLimit && denied.step == ZERO,
+                "denied terrain-memo allocations must not expose a partially repaired movement result");
+    budget->release(reserved);
+    const auto recovered = fixture.step(ZERO, 1);
+    expect_true(recovered.status == CNavigationFlowStatus::Complete && recovered.cost == 62 &&
+                    budget->peak() <= budget->limit(),
+                "dynamic pursuit must recover within the original memory cap after headroom is restored");
 }
 } // namespace
 
@@ -773,5 +1021,14 @@ int main() {
     testInFlightShutdownCancelsControllerAndDirectFlow();
     testStaleSnapshotCancellationAndWideCosts();
     testDynamicFallbackFactoriesDoNotReusePersistentCosts();
+    testDynamicDeferredPursuitResumesInRealMapTurns();
+    testDynamicDeferredFieldRepairsMovingGoals();
+    testDynamicNearerChaserCompletionPreservesDeferredField();
+    testDynamicDeferredCostChangesInvalidateWithoutEpoch();
+    testDynamicCompletedFieldsRefreshCostsAndBlockedCells();
+    testDynamicBlockedIntermediateSamplesRevealNewShortcut();
+    testDynamicRevalidationBudgetSurvivesSameTurnEviction();
+    testDynamicRevalidationCancelsAndReleasesMemoStorage();
+    testDynamicMemoMemoryPressureIsRecoverable();
     return finish_tests();
 }

@@ -43,11 +43,13 @@ struct CNavigationFlowStatistics {
     std::uint64_t cacheHits = 0;
     std::uint64_t deferredRequests = 0;
     std::uint64_t resourceLimits = 0;
+    std::uint64_t dynamicCellSamples = 0;
+    std::uint64_t dynamicCellRevalidations = 0;
 };
 
 class CNavigationFlow {
   public:
-    explicit CNavigationFlow(std::shared_ptr<CNavigationBudget> budget);
+    explicit CNavigationFlow(std::shared_ptr<CNavigationBudget> budget, std::size_t maxCellRevalidations = 1'000'000);
     ~CNavigationFlow();
 
     CNavigationFlowResult nextStep(const std::shared_ptr<CNavigationSnapshot> &snapshot,

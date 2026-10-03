@@ -171,6 +171,178 @@ void testDirtyChunkReuseAndJournalOverflow() {
                 "global default-terrain changes invalidate the complete chunk graph");
 }
 
+void testOccupancyReindexAfterWrappedBoundsChange() {
+    for (const bool xAxis : {true, false}) {
+        Fixture fixture;
+        auto coords = [&](int position, int row) {
+            return xAxis ? Coords(position, row, 0) : Coords(row, position, 0);
+        };
+        auto setBounds = [&](int maximum) {
+            if (xAxis)
+                fixture.map->setXBounds({{0, maximum}});
+            else
+                fixture.map->setYBounds({{0, maximum}});
+        };
+        if (xAxis)
+            fixture.map->setWrapX({{0, 1}});
+        else
+            fixture.map->setWrapY({{0, 1}});
+        auto blocker = std::make_shared<CMapObject>();
+        blocker->setName("navigationBoundsBlocker");
+        blocker->relocateWithoutMoveHooks(coords(9, 3));
+        blocker->setCanStep(false);
+        auto passable = std::make_shared<CMapObject>();
+        passable->setName("navigationBoundsPassable");
+        passable->relocateWithoutMoveHooks(coords(9, 4));
+        passable->setCanStep(true);
+        fixture.map->setObjects({blocker, passable});
+        auto original = fixture.snapshot();
+        const auto turn = fixture.map->getTurn();
+        setBounds(7);
+        expect_true(!original->isCurrent(), "wrapped bounds changes invalidate prior routing snapshots");
+        expect_true(fixture.map->getObjectsAtCoords(coords(1, 3)) == std::set{blocker} &&
+                        fixture.map->getObjectsAtCoords(coords(1, 4)) == std::set{passable},
+                    "shrinking a wrapped domain immediately reindexes both blocking and passable actors");
+        expect_true(!fixture.map->canStep(coords(1, 3)) && fixture.map->canStep(coords(1, 4)),
+                    "normalized occupancy remains authoritative before either actor moves");
+        expect_true(blocker->getCoords() == coords(9, 3) && passable->getCoords() == coords(9, 4) &&
+                        fixture.map->getTurn() == turn && fixture.map->getObjectCacheEntryCountForTesting() == 2,
+                    "reindexing changes neither actor coordinates, turn count nor membership cardinality");
+        blocker->relocateWithoutMoveHooks(coords(2, 3));
+        passable->relocateWithoutMoveHooks(coords(2, 4));
+        expect_true(fixture.map->getObjectsAtCoords(coords(1, 3)).empty() &&
+                        fixture.map->getObjectsAtCoords(coords(1, 4)).empty() && fixture.map->canStep(coords(1, 3)) &&
+                        fixture.map->getObjectCacheEntryCountForTesting() == 2,
+                    "relocation removes the old normalized membership without creating duplicate entries");
+        setBounds(95);
+        expect_true(fixture.map->getObjectsAtCoords(coords(9, 3)).empty() &&
+                        fixture.map->getObjectsAtCoords(coords(9, 4)).empty() && fixture.map->canStep(coords(9, 3)) &&
+                        fixture.map->getObjectsAtCoords(coords(2, 3)) == std::set{blocker} &&
+                        fixture.map->getObjectCacheEntryCountForTesting() == 2,
+                    "restoring the wrapped domain cannot resurrect phantom occupancy at the previous raw position");
+    }
+}
+
+void testOccupancyReindexAcrossWrappingChanges() {
+    for (const bool xAxis : {true, false}) {
+        Fixture fixture(7);
+        auto coords = [&](int position, int row) {
+            return xAxis ? Coords(position, row, 0) : Coords(row, position, 0);
+        };
+        auto setWrapped = [&](bool wrapped) {
+            if (xAxis)
+                fixture.map->setWrapX({{0, wrapped ? 1 : 0}});
+            else
+                fixture.map->setWrapY({{0, wrapped ? 1 : 0}});
+        };
+        auto blocker = std::make_shared<CMapObject>();
+        blocker->setName("navigationWrappingBlocker");
+        blocker->relocateWithoutMoveHooks(coords(9, 3));
+        blocker->setCanStep(false);
+        auto passable = std::make_shared<CMapObject>();
+        passable->setName("navigationWrappingPassable");
+        passable->relocateWithoutMoveHooks(coords(9, 4));
+        passable->setCanStep(true);
+        auto negative = std::make_shared<CMapObject>();
+        negative->setName("navigationWrappingNegative");
+        negative->relocateWithoutMoveHooks(coords(-1, 5));
+        negative->setCanStep(false);
+        fixture.map->setObjects({blocker, passable, negative});
+        const auto turn = fixture.map->getTurn();
+        setWrapped(true);
+        expect_true(fixture.map->getObjectsAtCoords(coords(1, 3)) == std::set{blocker} &&
+                        fixture.map->getObjectsAtCoords(coords(1, 4)) == std::set{passable} &&
+                        fixture.map->getObjectsAtCoords(coords(7, 5)) == std::set{negative} &&
+                        !fixture.map->canStep(coords(1, 3)) && fixture.map->canStep(coords(1, 4)) &&
+                        !fixture.map->canStep(coords(7, 5)),
+                    "enabling wrapping reindexes registered actors before any movement");
+        setWrapped(false);
+        expect_true(fixture.map->getObjectsAtCoords(coords(1, 3)).empty() &&
+                        fixture.map->getObjectsAtCoords(coords(1, 4)).empty() &&
+                        fixture.map->getObjectsAtCoords(coords(9, 3)) == std::set{blocker} &&
+                        fixture.map->getObjectsAtCoords(coords(9, 4)) == std::set{passable} &&
+                        fixture.map->getObjectsAtCoords(coords(-1, 5)) == std::set{negative} &&
+                        fixture.map->getObjectsAtCoords(coords(7, 5)).empty() && fixture.map->canStep(coords(1, 3)),
+                    "disabling wrapping removes aliases and restores raw-coordinate membership");
+        setWrapped(true);
+        blocker->relocateWithoutMoveHooks(coords(2, 3));
+        passable->relocateWithoutMoveHooks(coords(2, 4));
+        setWrapped(false);
+        setWrapped(true);
+        expect_true(blocker->getCoords() == coords(2, 3) && passable->getCoords() == coords(2, 4) &&
+                        negative->getCoords() == coords(-1, 5) && fixture.map->getTurn() == turn &&
+                        fixture.map->getObjectCacheEntryCountForTesting() == 3,
+                    "repeated wrapping changes preserve actor positions and exactly one membership per actor");
+        fixture.map->removeObject(blocker);
+        fixture.map->removeObject(passable);
+        fixture.map->removeObject(negative);
+        expect_true(fixture.map->getObjectCacheEntryCountForTesting() == 0 &&
+                        fixture.map->getObjectsAtCoords(coords(1, 3)).empty() &&
+                        fixture.map->getObjectsAtCoords(coords(2, 3)).empty() && fixture.map->canStep(coords(2, 3)),
+                    "removal after wrapping and relocation leaves no phantom blocking actor");
+    }
+}
+
+void testUnwrappedBoundsPreserveRawOccupancy() {
+    Fixture fixture;
+    auto actor = std::make_shared<CMapObject>();
+    actor->setName("navigationUnwrappedActor");
+    actor->relocateWithoutMoveHooks(Coords(9, 9, 0));
+    actor->setCanStep(false);
+    fixture.map->setObjects({actor});
+    const auto turn = fixture.map->getTurn();
+    fixture.map->setXBounds({{0, 7}});
+    fixture.map->setYBounds({{0, 7}});
+    expect_true(actor->getCoords() == Coords(9, 9, 0) &&
+                    fixture.map->getObjectsAtCoords(Coords(9, 9, 0)) == std::set{actor} &&
+                    fixture.map->getObjectsAtCoords(Coords(1, 1, 0)).empty() &&
+                    fixture.map->getObjectCacheEntryCountForTesting() == 1 && fixture.map->getTurn() == turn,
+                "unwrapped bounds edits retain raw occupancy and never introduce wrapped aliases");
+    actor->relocateWithoutMoveHooks(Coords(2, 2, 0));
+    fixture.map->setXBounds({{0, 95}});
+    fixture.map->setYBounds({{0, 95}});
+    expect_true(fixture.map->getObjectsAtCoords(Coords(9, 9, 0)).empty() &&
+                    fixture.map->getObjectsAtCoords(Coords(2, 2, 0)) == std::set{actor} &&
+                    fixture.map->canStep(Coords(9, 9, 0)) && !fixture.map->canStep(Coords(2, 2, 0)) &&
+                    fixture.map->getObjectCacheEntryCountForTesting() == 1,
+                "restoring unwrapped bounds preserves the actor's ordinary local relocation");
+}
+
+void testReindexedOccupancyLookupKeepsLocalProbeBudget() {
+    Fixture fixture(8191);
+    fixture.map->setWrapX({{0, 1}});
+    std::set<std::shared_ptr<CMapObject>> actors;
+    std::shared_ptr<CMapObject> first;
+    for (int i = 0; i < 4096; ++i) {
+        auto actor = std::make_shared<CMapObject>();
+        actor->setName("navigationIndexedActor" + std::to_string(i));
+        actor->relocateWithoutMoveHooks(Coords(1024 + i, 0, 0));
+        actor->setCanStep(true);
+        if (i == 0)
+            first = actor;
+        actors.insert(std::move(actor));
+    }
+    fixture.map->setObjects(std::move(actors));
+    fixture.map->setXBounds({{0, 511}});
+    performance_guard::resetMapCoordinateLookupProbe();
+    bool localOccupancy = true;
+    for (int x = 0; x < 256; ++x)
+        localOccupancy &= fixture.map->getObjectsAtCoords(Coords(x, 0, 0)).size() == 8;
+    expect_true(localOccupancy, "reindexed wrapped cells contain only their eight local actors");
+    expect_true(performance_guard::mapCoordinateLookupProbeCount() == 2048,
+                "256 coordinate lookups inspect exactly 2048 local entries rather than all 4096 actors");
+    first->relocateWithoutMoveHooks(Coords(0, 1, 0));
+    expect_true(fixture.map->getObjectsAtCoords(Coords(0, 0, 0)).size() == 7 &&
+                    fixture.map->getObjectsAtCoords(Coords(0, 1, 0)) == std::set{first} &&
+                    performance_guard::mapCoordinateLookupProbeCount() == 2056 &&
+                    fixture.map->getObjectCacheEntryCountForTesting() == 4096,
+                "ordinary relocation updates only local membership and preserves the indexed lookup budget");
+    std::cout << "normalized occupancy: actors=4096 lookups=258 probes="
+              << performance_guard::mapCoordinateLookupProbeCount()
+              << " entries=" << fixture.map->getObjectCacheEntryCountForTesting() << '\n';
+    performance_guard::disableMapCoordinateLookupProbe();
+}
+
 void testConfigAndFactoryInvalidation() {
     Fixture fixture;
     auto handler = fixture.game->getObjectHandler();
@@ -588,6 +760,10 @@ int main() {
     testFiniteAndPassableOutside();
     testDirectAndReflectedMutations();
     testDirtyChunkReuseAndJournalOverflow();
+    testOccupancyReindexAfterWrappedBoundsChange();
+    testOccupancyReindexAcrossWrappingChanges();
+    testUnwrappedBoundsPreserveRawOccupancy();
+    testReindexedOccupancyLookupKeepsLocalProbeBudget();
     testConfigAndFactoryInvalidation();
     testChunkClearDoesNotWaitForCellConstruction();
     testNeighborsAndConnectorLowerBounds();
