@@ -217,6 +217,7 @@ SERIAL_TEST_NAMES = {
     "GameTest.test_missing_save_resource_directory_lists_empty",
     "GameTest.test_saved_quest_dependency_loader_uses_class_and_type_refs",
     "GameTest.testSavedEffectDependencyLoaderRestoresMapEffectAndDetachedCaster",
+    "OctobogzRuntimeTest.testNativeActorDeathsPartialSaveAndLivingRecoveryPreserveIdentityAndRewardOnce",
     XVFB_GAMEPLAY_PARENT_TEST,
 }
 # The stdio map walkthroughs each spawn their own isolated mcp.py subprocess over
@@ -26121,8 +26122,77 @@ class TestRunnerSuiteTest(unittest.TestCase):
 
     def test_only_order_sensitive_save_tests_run_in_serial_worker(self):
         self.assertFalse(is_serial_test_name("GameTest.test_inventory_right_click_inspects_scroll_and_keeps_it"))
-        # The genuinely order-sensitive save-directory tests must stay serial.
+        # Order-sensitive saves and the bounded full-map round trip use the existing serial worker.
         self.assertTrue(is_serial_test_name("GameTest.test_missing_save_resource_directory_lists_empty"))
+
+    def testFullMapHuntSaveFixtureRunsOnceAfterAllConcurrentWorkersFinish(self):
+        from unittest.mock import patch
+
+        partial = "OctobogzRuntimeTest.testNativeActorDeathsPartialSaveAndLivingRecoveryPreserveIdentityAndRewardOnce"
+        parallel = [
+            "OctobogzRuntimeTest.testNativeLegacyAdoptionAddsActionsWithoutChangingHealthOrExtraActors",
+            "GameTest.test_game_simulation_nouraajd_quest_walkthrough",
+            "McpServerTest.test_stdio_map_walkthrough_test",
+        ]
+        ordered_save = "GameTest.test_missing_save_resource_directory_lists_empty"
+        names = [partial, *parallel, ordered_save, XVFB_GAMEPLAY_PARENT_TEST]
+        for suite_name in ("gameplay", "coverage-safe", "full"):
+            self.assertIn(partial, filter_test_names_by_suite(names, suite_name))
+        self.assertTrue(all(not is_serial_test_name(name) for name in parallel))
+        for coverage in ("0", "1"):
+            for serial_status in (0, 7):
+                with self.subTest(coverage=coverage, serial_status=serial_status):
+                    events = []
+
+                    def start(test_names, shard_name, extra_env=None):
+                        events.append(("start", shard_name, tuple(test_names)))
+                        return types.SimpleNamespace(shard=shard_name, names=tuple(test_names))
+
+                    def wait(process, shard_name, test_names, timeout_seconds):
+                        self.assertEqual((process.shard, process.names), (shard_name, tuple(test_names)))
+                        self.assertEqual(test_group_timeout_seconds(test_names, {}), timeout_seconds)
+                        events.append(("wait", shard_name, tuple(test_names)))
+                        return serial_status if shard_name == "serial" else 0
+
+                    with (
+                        tempfile.TemporaryDirectory(prefix="nouraajd-serial-hunt-") as temporary,
+                        patch.dict(os.environ, {"GAME_COVERAGE_RUN": coverage}),
+                        patch(__name__ + ".TEST_OUTPUT_DIR", Path(temporary)),
+                        patch(__name__ + ".load_test_timings", return_value={}),
+                        patch(__name__ + ".write_test_timings") as write_timings,
+                        patch(__name__ + ".run_test_subprocess", side_effect=start),
+                        patch(__name__ + ".wait_test_subprocess", side_effect=wait),
+                        patch("builtins.print") as report,
+                    ):
+                        self.assertEqual(int(serial_status != 0), run_sharded_tests(names, 4, allow_xvfb_sidecar=True))
+                        write_timings.assert_not_called()
+                        if serial_status:
+                            report.assert_called_once_with(
+                                f"[test shard serial] failed with exit code {serial_status}",
+                                file=sys.stderr,
+                                flush=True,
+                            )
+                        else:
+                            report.assert_not_called()
+
+                    starts = [event for event in events if event[0] == "start"]
+                    serial = [event for event in starts if event[1] == "serial"]
+                    self.assertEqual([("start", "serial", (partial, ordered_save))], serial)
+                    self.assertEqual(1, sum(event[2].count(partial) for event in starts))
+                    concurrent_starts = [event for event in starts if event[1] not in ("serial", "xvfb-long")]
+                    self.assertEqual({"xvfb", "1", "2", "3"}, {event[1] for event in concurrent_starts})
+                    self.assertCountEqual(
+                        parallel,
+                        [name for event in concurrent_starts if event[1] != "xvfb" for name in event[2]],
+                    )
+                    serial_start = events.index(serial[0])
+                    for event in concurrent_starts:
+                        self.assertLess(events.index(("wait", event[1], event[2])), serial_start)
+                    serial_wait = events.index(("wait", "serial", (partial, ordered_save)))
+                    self.assertLess(
+                        serial_wait,
+                        events.index(("start", "xvfb-long", (XVFB_GAMEPLAY_PARENT_TEST,))),
+                    )
 
     def test_shard_balancer_spreads_huge_map_walkthroughs(self):
         # With enough jobs the weight-aware packer must isolate the heavy maps onto

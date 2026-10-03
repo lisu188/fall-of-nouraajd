@@ -815,3 +815,35 @@ That correction reads the native quote, sells only enough actual owned
 supplies, and preserves the finite original-name and purchased-name guards.
 Neither recovery correction changes enemy stats, combat AI, recipes, seeded
 comparisons or their deadlines.
+
+## Scheduling the complete native save fixture
+
+The `306db6c1` normal Linux and Windows jobs passed, but its coverage job failed
+only because the complete native partial-save child exceeded its existing
+60-second instrumented watchdog. The last marker was `reload2 begin` at
+45.396 seconds; no returned marker appeared before the 60.052-second timeout.
+Completed stages included the standalone full-map JSON traversal at 11.794
+seconds, first save at 9.946 seconds, first reload at 9.539 seconds and second
+save at 9.742 seconds. These aggregate measurements do not isolate a native
+serialization hotspot or establish that concurrent work caused the timeout.
+The unchanged fixture had previously completed instrumented runs in 50.343
+and 53.427 seconds, compared with normal `306` runs at 2.003 and 5.766 seconds.
+
+Only this exact partial-save test now uses the runner's existing serial worker.
+That worker starts after every initial parallel and Xvfb sidecar process has
+finished. The later Xvfb phase still starts after the serial worker. Legacy
+adoption and other game/MCP tests remain parallel. A regression runs the actual
+scheduler with mocked processes in ordinary and coverage modes, requires one
+serial invocation of the fixture, checks every concurrent wait before launch,
+and preserves failure propagation and the existing derived worker allowances.
+
+The native child remains byte-for-byte unchanged: the full 40,000-tile map,
+standalone JSON inspection, both complete save/load cycles, all 48 assertions,
+actor/effect identity, resource recovery and once-only reward checks remain.
+Its ordinary 30-second and exact coverage-flag 60-second watchdogs, native
+performance guards and outer 1,800-second coverage phase are unchanged. The
+failed run's slowest parallel worker finished in 1,518.430 seconds and its
+existing four serial tests took 0.813 seconds, indicating room for this intact
+fixture within the phase budget. Fresh selected CI must establish timely
+completion; moving the fixture removes overlapping test work without claiming
+a native speedup or guaranteeing its elapsed time.
