@@ -47,9 +47,15 @@ class PythonPluginSandboxTest(unittest.TestCase):
 
     def test_allowlisted_imports_return_safe_proxy_modules(self):
         self.assertIn("build_safe_proxy_module", self.loader_source)
-        self.assertIn("PyImport_GetModule", self.loader_source)
+        self.assertIn("build_safe_json_proxy_module", self.loader_source)
+        self.assertIn("is_unsafe_proxy_value", self.loader_source)
+        self.assertIn("PyModule_Check(value.ptr())", self.loader_source)
+        self.assertIn("clone_python_function", self.loader_source)
+        self.assertIn("PyFunction_NewWithQualName", self.loader_source)
         self.assertIn('proxy.attr("__builtins__") = build_restricted_plugin_builtins();', self.loader_source)
         self.assertIn("import json", self.game_source)
+        self.assertIn('proxy.attr("loads") = pybind11::reinterpret_steal<pybind11::object>', self.loader_source)
+        self.assertNotIn('proxy.attr("JSONDecoder")', self.loader_source)
         self.assertNotIn("PyImport_ImportModuleLevelObject", self.loader_source)
 
     def test_plugin_and_map_paths_are_validated_before_loading(self):

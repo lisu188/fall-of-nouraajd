@@ -168,7 +168,100 @@ bool is_safe_proxy_attr(const std::string &name) {
 
 pybind11::dict build_restricted_plugin_builtins();
 
+PyObject *safe_json_call(PyObject *, PyObject *args, PyObject *kwargs, const char *functionName) {
+    try {
+        pybind11::object function = pybind11::module_::import("json").attr(functionName);
+        return PyObject_Call(function.ptr(), args, kwargs);
+    } catch (pybind11::error_already_set &error) {
+        error.restore();
+        return nullptr;
+    }
+}
+
+PyObject *safe_json_loads(PyObject *self, PyObject *args, PyObject *kwargs) {
+    return safe_json_call(self, args, kwargs, "loads");
+}
+
+PyObject *safe_json_dumps(PyObject *self, PyObject *args, PyObject *kwargs) {
+    return safe_json_call(self, args, kwargs, "dumps");
+}
+
+PyObject *build_safe_json_proxy_module() {
+    pybind11::module_ proxy = pybind11::reinterpret_steal<pybind11::module_>(PyModule_New("json"));
+    proxy.attr("__name__") = "json";
+    proxy.attr("__package__") = pybind11::none();
+    proxy.attr("__builtins__") = build_restricted_plugin_builtins();
+    static PyMethodDef loadsMethod = {"loads", reinterpret_cast<PyCFunction>(safe_json_loads),
+                                      METH_VARARGS | METH_KEYWORDS, nullptr};
+    static PyMethodDef dumpsMethod = {"dumps", reinterpret_cast<PyCFunction>(safe_json_dumps),
+                                      METH_VARARGS | METH_KEYWORDS, nullptr};
+    proxy.attr("loads") = pybind11::reinterpret_steal<pybind11::object>(PyCFunction_New(&loadsMethod, nullptr));
+    proxy.attr("dumps") = pybind11::reinterpret_steal<pybind11::object>(PyCFunction_New(&dumpsMethod, nullptr));
+    proxy.attr("JSONDecodeError") = pybind11::module_::import("json").attr("JSONDecodeError");
+    return proxy.release().ptr();
+}
+
+pybind11::object clone_python_function(pybind11::handle function, pybind11::dict globals) {
+    PyObject *cloned = PyFunction_NewWithQualName(PyFunction_GET_CODE(function.ptr()), globals.ptr(),
+                                                  PyFunction_GET_QUALNAME(function.ptr()));
+    if (cloned == nullptr) {
+        throw pybind11::error_already_set();
+    }
+    pybind11::object clonedFunction = pybind11::reinterpret_steal<pybind11::object>(cloned);
+    PyFunction_SetDefaults(clonedFunction.ptr(), PyFunction_GET_DEFAULTS(function.ptr()));
+    PyFunction_SetKwDefaults(clonedFunction.ptr(), PyFunction_GET_KW_DEFAULTS(function.ptr()));
+    PyFunction_SetClosure(clonedFunction.ptr(), PyFunction_GET_CLOSURE(function.ptr()));
+    PyFunction_SetAnnotations(clonedFunction.ptr(), PyFunction_GET_ANNOTATIONS(function.ptr()));
+    return clonedFunction;
+}
+
+pybind11::object clone_python_class(pybind11::handle type, pybind11::dict globals) {
+    pybind11::dict classDict;
+    pybind11::dict originalDict = pybind11::reinterpret_borrow<pybind11::object>(type).attr("__dict__");
+    for (const auto &item : originalDict) {
+        const auto attrName = pybind11::str(item.first).cast<std::string>();
+        if (attrName == "__dict__" || attrName == "__weakref__") {
+            continue;
+        }
+        if (PyFunction_Check(item.second.ptr())) {
+            classDict[item.first] = clone_python_function(item.second, globals);
+        } else if (!PyModule_Check(item.second.ptr())) {
+            classDict[item.first] = pybind11::reinterpret_borrow<pybind11::object>(item.second);
+        }
+    }
+
+    pybind11::object name = pybind11::reinterpret_borrow<pybind11::object>(type).attr("__name__");
+    pybind11::object bases = pybind11::reinterpret_borrow<pybind11::object>(type).attr("__bases__");
+    return pybind11::reinterpret_steal<pybind11::object>(PyObject_CallFunctionObjArgs(
+        reinterpret_cast<PyObject *>(&PyType_Type), name.ptr(), bases.ptr(), classDict.ptr(), nullptr));
+}
+
+bool should_clone_game_type(pybind11::handle value) {
+    if (!PyType_Check(value.ptr())) {
+        return false;
+    }
+    if (!PyObject_HasAttrString(value.ptr(), "__module__")) {
+        return false;
+    }
+    return pybind11::str(pybind11::reinterpret_borrow<pybind11::object>(value).attr("__module__"))
+               .cast<std::string>() == "game";
+}
+
+bool is_unsafe_proxy_value(const std::string &moduleName, const pybind11::handle &value) {
+    if (PyModule_Check(value.ptr())) {
+        return true;
+    }
+    if (moduleName == "json") {
+        return true;
+    }
+    return false;
+}
+
 PyObject *build_safe_proxy_module(const std::string &name) {
+    if (name == "json") {
+        return build_safe_json_proxy_module();
+    }
+
     pybind11::object moduleName = pybind11::str(name);
     PyObject *modulePtr = PyImport_GetModule(moduleName.ptr());
     if (modulePtr == nullptr) {
@@ -182,13 +275,26 @@ PyObject *build_safe_proxy_module(const std::string &name) {
 
     for (const auto &item : realDict) {
         const auto attrName = pybind11::str(item.first).cast<std::string>();
-        if (is_safe_proxy_attr(attrName)) {
+        if (is_safe_proxy_attr(attrName) && !is_unsafe_proxy_value(name, item.second) &&
+            !PyFunction_Check(item.second.ptr()) && !should_clone_game_type(item.second)) {
             proxy.attr(attrName.c_str()) = pybind11::reinterpret_borrow<pybind11::object>(item.second);
         }
     }
     proxy.attr("__name__") = name;
     proxy.attr("__package__") = pybind11::none();
     proxy.attr("__builtins__") = build_restricted_plugin_builtins();
+    pybind11::dict proxyDict = proxy.attr("__dict__");
+    for (const auto &item : realDict) {
+        const auto attrName = pybind11::str(item.first).cast<std::string>();
+        if (!is_safe_proxy_attr(attrName)) {
+            continue;
+        }
+        if (PyFunction_Check(item.second.ptr())) {
+            proxy.attr(attrName.c_str()) = clone_python_function(item.second, proxyDict);
+        } else if (should_clone_game_type(item.second)) {
+            proxy.attr(attrName.c_str()) = clone_python_class(item.second, proxyDict);
+        }
+    }
     return proxy.release().ptr();
 }
 
