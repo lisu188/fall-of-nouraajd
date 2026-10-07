@@ -91,8 +91,8 @@ class PythonPluginSandboxTest(unittest.TestCase):
     def test_resource_provider_rejects_absolute_and_parent_traversal_paths(self):
         self.assertIn("isSafeRelativeResourcePath", self.provider_source)
         self.assertIn("resourcePath.is_absolute()", self.provider_source)
-        self.assertIn('normalized.rfind("../", 0) == 0', self.provider_source)
-        self.assertIn('normalized.find("/../") != std::string::npos', self.provider_source)
+        self.assertIn('normalized.starts_with("../")', self.provider_source)
+        self.assertIn('normalized.contains("/../")', self.provider_source)
         self.assertIn("Rejected unsafe resource path", self.provider_source)
 
     def test_trust_boundary_model_is_documented(self):
