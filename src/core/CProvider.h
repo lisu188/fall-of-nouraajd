@@ -20,6 +20,8 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #include "core/CGlobal.h"
 #include "gui/CAnimation.h"
 
+#include <string_view>
+
 struct CResType {
     const static std::string CONFIG;
     const static std::string MAP;
@@ -89,9 +91,9 @@ class CConfigResourceLoader : public CResourceLoader {
             normalized.replace_extension();
         }
         auto normalizedString = normalized.generic_string();
-        constexpr auto prefix = "config/";
-        if (normalizedString.rfind(prefix, 0) == 0) {
-            normalizedString.erase(0, sizeof(prefix) - 1);
+        constexpr std::string_view prefix = "config/";
+        if (normalizedString.starts_with(prefix)) {
+            normalizedString.erase(0, prefix.size());
         }
         return normalizedString;
     }

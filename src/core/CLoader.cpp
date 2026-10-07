@@ -87,6 +87,11 @@ class ScopedResourceScope {
         }
     }
 
+    ScopedResourceScope(const ScopedResourceScope &) = delete;
+    ScopedResourceScope &operator=(const ScopedResourceScope &) = delete;
+    ScopedResourceScope(ScopedResourceScope &&) = delete;
+    ScopedResourceScope &operator=(ScopedResourceScope &&) = delete;
+
     void commit() { committed = true; }
 
   private:
@@ -112,8 +117,8 @@ std::optional<std::string> normalize_relative_resource_path(const std::string &p
     }
 
     const auto normalized = resourcePath.lexically_normal().generic_string();
-    if (normalized.empty() || normalized == "." || normalized == ".." || normalized.rfind("../", 0) == 0 ||
-        normalized.find("/../") != std::string::npos) {
+    if (normalized.empty() || normalized == "." || normalized == ".." || normalized.starts_with("../") ||
+        normalized.contains("/../")) {
         return std::nullopt;
     }
     return normalized;
@@ -121,17 +126,17 @@ std::optional<std::string> normalize_relative_resource_path(const std::string &p
 
 bool is_allowed_lua_plugin_path(const std::string &path) {
     const auto normalized = normalize_relative_resource_path(path);
-    return normalized && vstd::ends_with(*normalized, ".lua") && normalized->rfind("plugins/", 0) == 0;
+    return normalized && normalized->ends_with(".lua") && normalized->starts_with("plugins/");
 }
 
 bool is_allowed_python_plugin_path(const std::string &path) {
     const auto normalized = normalize_relative_resource_path(path);
-    if (!normalized || !vstd::ends_with(*normalized, ".py")) {
+    if (!normalized || !normalized->ends_with(".py")) {
         return false;
     }
 
     const std::filesystem::path pluginPath(*normalized);
-    if (normalized->rfind("plugins/", 0) == 0) {
+    if (normalized->starts_with("plugins/")) {
         return true;
     }
 
@@ -1095,7 +1100,7 @@ std::set<std::string> getConfigPaths(const std::shared_ptr<CResourcesProvider> &
             continue;
         }
         const auto filename = entry.path().filename().generic_string();
-        if (vstd::ends_with(filename, ".json") && filename != "map.json") {
+        if (filename.ends_with(".json") && filename != "map.json") {
             configPaths.insert(vstd::join({logicalMapPath, "/", filename}, ""));
         }
     }
@@ -1762,6 +1767,11 @@ bool CPluginLoader::loadMapPlugins(const std::shared_ptr<CGame> &game, const std
                 handler->endMapScriptScope();
             }
         }
+
+        MapScriptScopeGuard(const MapScriptScopeGuard &) = delete;
+        MapScriptScopeGuard &operator=(const MapScriptScopeGuard &) = delete;
+        MapScriptScopeGuard(MapScriptScopeGuard &&) = delete;
+        MapScriptScopeGuard &operator=(MapScriptScopeGuard &&) = delete;
     } mapScriptScopeGuard(game->getObjectHandler());
 
     bool loadedAll = true;

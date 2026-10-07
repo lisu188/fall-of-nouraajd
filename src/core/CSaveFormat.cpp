@@ -39,7 +39,7 @@ bool isValidMapName(const std::string &mapName) {
 }
 
 bool isValidSlotName(const std::string &slotName) {
-    if (slotName.empty() || slotName.front() == '.' || slotName.find("..") != std::string::npos) {
+    if (slotName.empty() || slotName.front() == '.' || slotName.contains("..")) {
         return false;
     }
 
