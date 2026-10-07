@@ -138,8 +138,8 @@ std::optional<std::string> normalize_relative_library_path(const std::string &pa
     }
 
     const auto normalized = resourcePath.lexically_normal().generic_string();
-    if (normalized.empty() || normalized == "." || normalized == ".." || normalized.rfind("../", 0) == 0 ||
-        normalized.find("/../") != std::string::npos) {
+    if (normalized.empty() || normalized == "." || normalized == ".." || normalized.starts_with("../") ||
+        normalized.contains("/../")) {
         return std::nullopt;
     }
     return normalized;
@@ -165,7 +165,7 @@ std::vector<std::string> dynamic_library_candidates(const std::string &library) 
 
 bool is_allowed_dynamic_library_path(const std::string &library) {
     const auto normalized = normalize_relative_library_path(library);
-    return normalized && normalized->rfind("plugins/native/", 0) == 0;
+    return normalized && normalized->starts_with("plugins/native/");
 }
 
 std::string resolve_dynamic_library_path(const std::shared_ptr<CResourcesProvider> &resourcesProvider,

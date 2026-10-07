@@ -33,6 +33,8 @@ class CSerializerBase {
     friend class CSerialization;
 
   public:
+    virtual ~CSerializerBase() = default;
+
     virtual std::any serialize(std::any object) = 0;
 
     virtual std::any deserialize(std::shared_ptr<CGame> map, std::any object) = 0;
@@ -190,6 +192,11 @@ class CSerialization {
         StrictScope();
 
         ~StrictScope();
+
+        StrictScope(const StrictScope &) = delete;
+        StrictScope &operator=(const StrictScope &) = delete;
+        StrictScope(StrictScope &&) = delete;
+        StrictScope &operator=(StrictScope &&) = delete;
 
       private:
         bool previous;

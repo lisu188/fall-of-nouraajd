@@ -19,6 +19,7 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #include <algorithm>
 #include <tuple>
 #include <unordered_set>
+#include <utility>
 
 #include "core/CController.h"
 #include "core/CGame.h"
@@ -447,7 +448,7 @@ CFightResult resolve_fight_many(std::shared_ptr<CCreature> attacker, const encou
             json fields = {
                 {"attacker", CPlaytestTrace::objectRef(attacker)},
                 {"opponents", CPlaytestTrace::objectRefs(allOpponents)},
-                {"outcome", static_cast<int>(result.outcome)},
+                {"outcome", std::to_underlying(result.outcome)},
                 {"outcomeName", final_status_message(result.outcome, attackerName, result.rounds)},
                 {"rounds", result.rounds},
                 {"survivor", CPlaytestTrace::objectRef(result.survivor)},

@@ -336,6 +336,11 @@ template <typename Context> class EffectContextScope {
     EffectContextScope(Context *&slot, Context &context) : slot(slot), previous(slot) { slot = &context; }
     ~EffectContextScope() { slot = previous; }
 
+    EffectContextScope(const EffectContextScope &) = delete;
+    EffectContextScope &operator=(const EffectContextScope &) = delete;
+    EffectContextScope(EffectContextScope &&) = delete;
+    EffectContextScope &operator=(EffectContextScope &&) = delete;
+
   private:
     Context *&slot;
     Context *previous;
@@ -349,13 +354,18 @@ class CScopedArrayDeserializeContext {
 
     ~CScopedArrayDeserializeContext() { array_deserialize_context = previous; }
 
+    CScopedArrayDeserializeContext(const CScopedArrayDeserializeContext &) = delete;
+    CScopedArrayDeserializeContext &operator=(const CScopedArrayDeserializeContext &) = delete;
+    CScopedArrayDeserializeContext(CScopedArrayDeserializeContext &&) = delete;
+    CScopedArrayDeserializeContext &operator=(CScopedArrayDeserializeContext &&) = delete;
+
   private:
     std::string previous;
 };
 
 bool shouldSkipInvalidArrayEntryInStrictMode() {
-    return array_deserialize_context.find("property 'quests'") != std::string::npos ||
-           array_deserialize_context.find("property 'completedQuests'") != std::string::npos;
+    return array_deserialize_context.contains("property 'quests'") ||
+           array_deserialize_context.contains("property 'completedQuests'");
 }
 
 std::shared_ptr<json> primitiveValuesConfig(const std::shared_ptr<CGameObject> &object) {

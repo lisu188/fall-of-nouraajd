@@ -147,6 +147,13 @@ void test_resource_provider_paths_and_config_loader() {
     auto normalized_resource = std::static_pointer_cast<CTextResource>(loader.load("items"));
     expect_true(std::filesystem::path(normalized_resource->getFilePath()).generic_string() == "config/items.json",
                 "config loader should append the json suffix for bare names");
+    auto prefixed_resource = loader.load("config/items");
+    expect_true(std::filesystem::path(prefixed_resource->getFilePath()).generic_string() == "config/items.json",
+                "config loader should strip the full prefix independently of pointer size");
+    auto similar_prefix_resource = loader.load("configuration.json");
+    expect_true(std::filesystem::path(similar_prefix_resource->getFilePath()).generic_string() ==
+                    "config/configuration.json",
+                "config loader should retain names that only share part of the prefix");
 
     auto cached_config = CConfigurationProvider::getConfig("items.json");
     expect_true(cached_config && cached_config->is_object(), "configuration provider should parse normalized configs");

@@ -66,6 +66,12 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 namespace {
 
+static_assert(std::has_virtual_destructor_v<CSerializerBase>);
+static_assert(!std::is_copy_constructible_v<CSerialization::StrictScope>);
+static_assert(!std::is_copy_assignable_v<CSerialization::StrictScope>);
+static_assert(!std::is_move_constructible_v<CSerialization::StrictScope>);
+static_assert(!std::is_move_assignable_v<CSerialization::StrictScope>);
+
 template <typename Func> void expect_runtime_error(Func func, const char *message) {
     bool threw = false;
     try {
@@ -1745,6 +1751,66 @@ void test_save_format_bounds_crafted_documents() {
                 "structural validation should accept many repeated quest references within bounds");
 }
 
+void testSerializationScopeRestoration() {
+    const bool previous = CSerialization::setStrict(false);
+    {
+        CSerialization::StrictScope outer_scope;
+        expect_true(CSerialization::isStrict(), "a strict scope enables strict deserialization");
+        {
+            CSerialization::StrictScope inner_scope;
+            expect_true(CSerialization::isStrict(), "a nested strict scope keeps strict deserialization enabled");
+        }
+        expect_true(CSerialization::isStrict(), "a nested scope restores its outer strict state");
+
+        expect_runtime_error(
+            []() {
+                CSerialization::StrictScope inner_scope;
+                throw std::runtime_error("scope restoration probe");
+            },
+            "the nested scope probe must unwind through its guard");
+        expect_true(CSerialization::isStrict(), "exception unwinding preserves the outer strict scope");
+    }
+    expect_true(!CSerialization::isStrict(), "the outer scope restores lenient deserialization");
+
+    expect_runtime_error(
+        []() {
+            CSerialization::StrictScope scope;
+            throw std::runtime_error("scope restoration probe");
+        },
+        "the outer scope probe must unwind through its guard");
+    expect_true(!CSerialization::isStrict(), "exception unwinding restores lenient deserialization");
+
+    CSerialization::setStrict(true);
+    {
+        CSerialization::StrictScope scope;
+    }
+    expect_true(CSerialization::isStrict(), "a scope preserves an already enabled strict setting");
+    CSerialization::setStrict(previous);
+}
+
+void testSerializerBaseDestruction() {
+    class SerializerLifetimeProbe final : public CSerializerBase {
+      public:
+        explicit SerializerLifetimeProbe(bool &destroyed) : destroyed(destroyed) {}
+
+        ~SerializerLifetimeProbe() override { destroyed = true; }
+
+        std::any serialize(std::any object) override { return object; }
+
+        std::any deserialize(std::shared_ptr<CGame>, std::any object) override { return object; }
+
+      private:
+        bool &destroyed;
+    };
+
+    bool destroyed = false;
+    {
+        std::unique_ptr<CSerializerBase> serializer = std::make_unique<SerializerLifetimeProbe>(destroyed);
+        expect_true(!destroyed, "the base owner keeps the derived serializer alive");
+    }
+    expect_true(destroyed, "destruction through the serializer base releases derived resources");
+}
+
 void test_serialization_collection_and_error_helpers() {
     auto game = std::make_shared<CGame>();
     auto object = std::make_shared<CGameObject>();
@@ -3030,6 +3096,8 @@ int main() {
     test_script_rejects_executable_expressions();
     test_save_format_codec_validation();
     test_save_format_bounds_crafted_documents();
+    testSerializationScopeRestoration();
+    testSerializerBaseDestruction();
     test_serialization_collection_and_error_helpers();
     test_generate_name_collision_retry();
     test_creature_effective_stats_baseline_capture();

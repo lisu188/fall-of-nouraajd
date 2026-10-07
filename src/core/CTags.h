@@ -79,7 +79,7 @@ class CTags {
         return false;
     }
 
-    bool operator==(const CTags &other) const;
+    bool operator==(const CTags &other) const = default;
 
   private:
     storage_type tags;

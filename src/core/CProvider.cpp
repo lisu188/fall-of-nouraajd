@@ -43,8 +43,8 @@ std::optional<std::filesystem::path> normalizeSafeRelativeResourcePath(const std
     }
 
     const auto normalized = resourcePath.lexically_normal().generic_string();
-    if (normalized.empty() || normalized == "." || normalized == ".." || normalized.rfind("../", 0) == 0 ||
-        normalized.find("/../") != std::string::npos) {
+    if (normalized.empty() || normalized == "." || normalized == ".." || normalized.starts_with("../") ||
+        normalized.contains("/../")) {
         return std::nullopt;
     }
     return std::filesystem::path(normalized);
@@ -579,7 +579,7 @@ std::vector<std::string> CResourcesProvider::getFiles(const std::string &type) {
             retValue.push_back(pt);
         } else {
             auto pt = std::filesystem::relative(dir->path(), resourceRoot).generic_string();
-            if (vstd::ends_with(pt, vstd::join({".", suffix}, ""))) {
+            if (pt.ends_with(vstd::join({".", suffix}, ""))) {
                 retValue.push_back(pt);
             }
         }

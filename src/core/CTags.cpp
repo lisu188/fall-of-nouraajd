@@ -26,7 +26,7 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 namespace {
 using TagDefinition = std::pair<CTag, std::string_view>;
 
-const std::array<TagDefinition, 9> TAG_DEFINITIONS = {{
+constexpr std::array<TagDefinition, 9> TAG_DEFINITIONS = {{
     {CTag::Buff, "buff"},
     {CTag::Compound, "compound"},
     {CTag::Curse, "curse"},
@@ -52,7 +52,7 @@ std::string supported_tags_message() {
 
 CTags::CTags(std::initializer_list<CTag> tags) : tags(tags) {}
 
-bool CTags::contains(CTag tag) const { return tags.find(tag) != tags.end(); }
+bool CTags::contains(CTag tag) const { return tags.contains(tag); }
 
 void CTags::insert(CTag tag) { tags.insert(tag); }
 
@@ -75,8 +75,6 @@ CTags::storage_type::const_iterator CTags::begin() const { return tags.begin(); 
 
 CTags::storage_type::const_iterator CTags::end() const { return tags.end(); }
 
-bool CTags::operator==(const CTags &other) const { return tags == other.tags; }
-
 const std::vector<CTag> &CTags::all() {
     static const std::vector<CTag> tags = []() {
         std::vector<CTag> values;
@@ -89,8 +87,7 @@ const std::vector<CTag> &CTags::all() {
 }
 
 CTag CTags::fromString(std::string_view tag) {
-    auto match = std::ranges::find_if(TAG_DEFINITIONS,
-                                      [tag](const TagDefinition &definition) { return definition.second == tag; });
+    auto match = std::ranges::find(TAG_DEFINITIONS, tag, &TagDefinition::second);
     if (match != TAG_DEFINITIONS.end()) {
         return match->first;
     }
@@ -98,8 +95,7 @@ CTag CTags::fromString(std::string_view tag) {
 }
 
 std::string_view CTags::toString(CTag tag) {
-    auto match = std::ranges::find_if(TAG_DEFINITIONS,
-                                      [tag](const TagDefinition &definition) { return definition.first == tag; });
+    auto match = std::ranges::find(TAG_DEFINITIONS, tag, &TagDefinition::first);
     if (match != TAG_DEFINITIONS.end()) {
         return match->second;
     }
