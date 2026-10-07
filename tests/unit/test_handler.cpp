@@ -353,6 +353,9 @@ void test_script_handler_executes_commands_and_wraps_functions() {
     handler.execute_command({"capture", "alpha", "beta"});
     expect_true(handler.get_object<std::string>("captured") == "alpha:beta",
                 "execute_command should execute the built Python call");
+    handler.execute_command({"capture", "say \"hello\"", "\"quoted\""});
+    expect_true(handler.get_object<std::string>("captured") == "say \"hello\":\"quoted\"",
+                "execute_command should escape embedded quotes once and preserve the Python arguments");
 
     handler.import("math");
     handler.execute_script("root_value = math.isqrt(81)");

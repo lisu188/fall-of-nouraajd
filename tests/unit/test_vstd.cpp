@@ -242,6 +242,35 @@ void test_vstd_string_helpers() {
     expect_true(vstd::camel("hello world") == "Hello World ", "camel should title-case space-separated words");
 }
 
+void testCpp23UtilityIntegration() {
+    expect_true(vstd::replace("say \"hello\"", "\"", "\\\"") == "say \\\"hello\\\"",
+                "script argument quotes should be escaped once without recursive replacement");
+    expect_true(vstd::replace("text", "", "prefix") == "text", "an empty replacement pattern should terminate");
+    expect_true(vstd::replace("aaaa", "aa", "a") == "aa", "replacement text should not be searched again");
+    expect_true(vstd::to_int("") == std::pair{0, false}, "empty property text should fail integer parsing");
+    expect_true(vstd::to_int("42x") == std::pair{42, false}, "partial property parsing should retain its value");
+
+    auto mutable_callback = [value = 2]() mutable { return ++value; };
+    expect_true(vstd::functional::call(mutable_callback) == 3, "call should accept mutable callbacks");
+    expect_true(mutable_callback() == 3, "call should preserve its existing callable-copy behavior");
+    const std::string label = "inventory";
+    expect_true(vstd::functional::call(&std::string::size, label) == label.size(),
+                "call should support standard member-function invocation");
+
+    bool destroyed = false;
+    struct StringValue final : vstd::stringable {
+        bool &destroyed;
+        explicit StringValue(bool &flag) : destroyed(flag) {}
+        ~StringValue() override { destroyed = true; }
+        std::string to_string() override { return "value"; }
+    };
+    {
+        std::unique_ptr<vstd::stringable> value = std::make_unique<StringValue>(destroyed);
+        expect_true(value->to_string() == "value", "stringable should dispatch string conversion");
+    }
+    expect_true(destroyed, "stringable should dispatch derived destruction through its base pointer");
+}
+
 void testInclusiveIntegerRandomSampling() {
     const auto saved_rng = vstd::rng();
     vstd::rng().seed(401);
@@ -342,6 +371,7 @@ int main() {
     test_vstd_allocation_random_and_value_helpers();
     testInclusiveIntegerRandomSampling();
     test_vstd_string_helpers();
+    testCpp23UtilityIntegration();
     test_vmeta_game_object_integration();
     test_vmeta_explicit_pair_hashers();
 
