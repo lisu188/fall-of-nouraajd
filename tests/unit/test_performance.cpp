@@ -17,6 +17,7 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 
 #include "core/CRuntimeBridge.h"
+#include "core/CPlaytestTrace.h"
 #include "object/CPlayer.h"
 #include "object/CQuest.h"
 #include "test_harness.h"
@@ -107,6 +108,32 @@ void run_quest_journal_performance_guard() {
               << " passes=" << CAPTURE_PASSES << " callbacks=" << totalCalls
               << " budget=" << (ACTIVE_QUESTS + COMPLETED_QUESTS) * CAPTURE_PASSES << "\n";
 }
+
+void run_recent_trace_performance_guard() {
+    constexpr int EVENTS = 10000;
+    constexpr std::size_t RETAINED_RECORDS = 32;
+    CPlaytestTrace::configure(true, "", RETAINED_RECORDS, true);
+    for (int index = 1; index <= EVENTS; ++index) {
+        CPlaytestTrace::record("bounded_diagnostic_event", {{"index", index}});
+    }
+    const auto records = CPlaytestTrace::records();
+    expect_true(records.size() == RETAINED_RECORDS, "recent trace storage must stay within its fixed record budget");
+    for (std::size_t index = 0; index < records.size(); ++index) {
+        const auto record = json::parse(records[index]);
+        const auto expected = EVENTS - RETAINED_RECORDS + index + 1;
+        expect_true(record["seq"].get<unsigned long long>() == expected &&
+                        record["index"].get<unsigned long long>() == expected,
+                    "bounded trace storage must preserve the latest sequence without dropping new events");
+    }
+    CPlaytestTrace::configure(false, "", RETAINED_RECORDS, true);
+    for (int index = 0; index < EVENTS; ++index) {
+        CPlaytestTrace::record("disabled_diagnostic_event");
+    }
+    expect_true(CPlaytestTrace::records().empty(), "disabled tracing must not retain diagnostic records");
+    std::cout << "recent trace guard: events=" << EVENTS << " retained=" << records.size()
+              << " budget=" << RETAINED_RECORDS << " first-seq=" << EVENTS - RETAINED_RECORDS + 1
+              << " last-seq=" << EVENTS << " disabled-events=" << EVENTS << "\n";
+}
 } // namespace
 
 int main() {
@@ -118,6 +145,7 @@ int main() {
     run_serialization_performance_tests();
     run_render_context_performance_tests();
     run_quest_journal_performance_guard();
+    run_recent_trace_performance_guard();
 
     return finish_tests();
 }

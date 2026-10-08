@@ -34,13 +34,14 @@ class CMap;
 class CPlaytestTrace {
   public:
     static void configureFromEnvironment();
-    static void configure(bool enabled, const std::string &outputTarget = "", std::size_t maxRecords = 1000);
+    static void configure(bool enabled, const std::string &outputTarget = "", std::size_t maxRecords = 1000,
+                          bool retainRecent = false);
     static bool enabled();
     static void clear();
     static std::vector<std::string> records();
     static std::vector<std::string> drain();
-    static void record(const std::string &event, json fields = json::object());
-    static void recordJson(const std::string &event, const std::string &fieldsJson);
+    static void record(const std::string &event, json fields = json::object()) noexcept;
+    static void recordJson(const std::string &event, const std::string &fieldsJson) noexcept;
 
     static json coords(Coords coords);
     static json objectRef(const std::shared_ptr<CGameObject> &object);

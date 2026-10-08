@@ -11,6 +11,8 @@
 # MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
 # GNU General Public License for more details.
 #
+import argparse
+import importlib
 import os
 from pathlib import Path
 import sys
@@ -70,8 +72,76 @@ def _bootstrap() -> None:
     _ensure_workdir(source_res_dir)
 
 
-_bootstrap()
-import game
+def parseArgs(argv=None):
+    parser = argparse.ArgumentParser(description="Start the game")
+    parser.add_argument("--debug", action="store_true", default=None, help="Write a per-run debugging bundle")
+    parser.add_argument("--debug-dir", default=None, help="Debug output directory (relative to the game root)")
+    return parser.parse_args(argv)
+
+
+def main(argv=None):
+    import game_diagnostics
+
+    args = parseArgs(argv)
+    script_dir = Path(__file__).resolve().parent
+    build_dir = _find_build_dir(script_dir)
+    if build_dir is None:
+        build_dir = script_dir if _is_resource_root(script_dir) else script_dir / "cmake-build-release"
+    session = game_diagnostics.startSession(
+        repo_root=script_dir,
+        build_dir=build_dir,
+        entrypoint="play",
+        debug=args.debug,
+        debug_dir=args.debug_dir,
+    )
+    try:
+        _bootstrap()
+        if session is not None:
+            native_module = importlib.import_module("_game")
+            session.applyNative(native_module)
+            session.configureTrace(native_module)
+        game_module = importlib.import_module("game")
+        if session is not None:
+            resource_root = next(
+                (
+                    candidate
+                    for candidate in (Path.cwd(), script_dir, script_dir / "res")
+                    if _is_resource_root(candidate)
+                ),
+                None,
+            )
+            build_config = os.environ.get("GAME_BUILD_CONFIG")
+            extension_dirs = (
+                [build_dir / build_config]
+                if build_config
+                else [build_dir / config for config in ("Release", "Debug", "RelWithDebInfo", "MinSizeRel")]
+            )
+            session.updateManifest(
+                gameModule=str(getattr(game_module, "__file__", "<unknown>")),
+                cwd=str(Path.cwd()),
+                resourceRoot=str(resource_root) if resource_root is not None else None,
+                buildConfig=build_config,
+                extensionDirs=[str(path) for path in extension_dirs if path.exists()],
+            )
+        game_module.new()
+        if session is not None:
+            session.finish()
+        return 0
+    except Exception as error:
+        if session is not None:
+            session.finish(status="failed", error=error)
+        raise
+    except BaseException:
+        if session is not None:
+            session.finish(status="interrupted")
+        raise
+    finally:
+        if session is not None:
+            session.close()
+
 
 if __name__ == "__main__":
-    game.new()
+    raise SystemExit(main())
+else:
+    _bootstrap()
+    import game

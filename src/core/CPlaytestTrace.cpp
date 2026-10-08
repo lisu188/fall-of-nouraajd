@@ -25,6 +25,8 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #include "object/CItem.h"
 
 #include <cstdlib>
+#include <deque>
+#include <filesystem>
 #include <fstream>
 #include <iostream>
 #include <mutex>
@@ -39,7 +41,11 @@ struct TraceState {
     std::size_t maxRecords = DEFAULT_MAX_RECORDS;
     std::size_t nextSeq = 1;
     bool truncated = false;
-    std::vector<std::string> records;
+    bool retainRecent = false;
+    bool outputFailed = false;
+    bool recordFailureReported = false;
+    std::size_t fileRecords = 0;
+    std::deque<std::string> records;
     std::mutex mutex;
 };
 
@@ -59,7 +65,11 @@ std::string truncateValue(std::string value) {
     if (value.size() <= MAX_FIELD_LENGTH) {
         return value;
     }
-    value.resize(MAX_FIELD_LENGTH);
+    std::size_t length = MAX_FIELD_LENGTH;
+    while (length > 0 && (static_cast<unsigned char>(value[length]) & 0xC0) == 0x80) {
+        --length;
+    }
+    value.resize(length);
     return value;
 }
 
@@ -97,21 +107,112 @@ std::string mapName(const std::shared_ptr<CMap> &map) {
     return stableObjectId(map);
 }
 
-void writeTarget(const std::string &target, const std::string &line) {
-    if (target.empty()) {
+void failOutput(TraceState &current, const char *reason) noexcept {
+    current.outputFailed = true;
+    try {
+        std::cerr << "Playtest trace output unavailable; retaining memory history: "
+                  << current.outputTarget.substr(0, 512) << " (" << reason << ")\n";
+    } catch (...) {
+    }
+}
+
+void failRecording() noexcept {
+    try {
+        std::lock_guard lock(state().mutex);
+        if (state().recordFailureReported) {
+            return;
+        }
+        state().recordFailureReported = true;
+        std::cerr << "Playtest trace record unavailable; gameplay continues with retained history\n";
+    } catch (...) {
+    }
+}
+
+void validateFreshTarget(TraceState &current) noexcept {
+    if (current.outputTarget.empty() || isStdStreamTarget(current.outputTarget)) {
         return;
     }
-    if (target == "stdout") {
-        std::cout << line << '\n';
+    try {
+        const std::filesystem::path target(current.outputTarget);
+        std::error_code error;
+        const auto status = std::filesystem::symlink_status(target, error);
+        if (status.type() != std::filesystem::file_type::not_found &&
+            (error || !std::filesystem::is_regular_file(status))) {
+            failOutput(current, "destination is not a regular file");
+            return;
+        }
+        if (std::filesystem::exists(status)) {
+            const auto size = std::filesystem::file_size(target, error);
+            if (error || size != 0) {
+                failOutput(current, "recent history requires a fresh destination");
+                return;
+            }
+        }
+        const auto backupStatus = std::filesystem::symlink_status(current.outputTarget + ".1", error);
+        if (backupStatus.type() != std::filesystem::file_type::not_found) {
+            failOutput(current, "recent history backup already exists or cannot be checked");
+        }
+    } catch (...) {
+        failOutput(current, "destination could not be checked");
+    }
+}
+
+void writeTarget(TraceState &current, const std::string &line) noexcept {
+    if (current.outputTarget.empty() || current.outputFailed) {
         return;
     }
-    if (target == "stderr") {
-        std::cerr << line << '\n';
-        return;
-    }
-    std::ofstream out(target, std::ios::app);
-    if (out) {
+    try {
+        if (current.outputTarget == "stdout") {
+            std::cout << line << '\n';
+            if (!std::cout) {
+                failOutput(current, "stdout write failed");
+            }
+            return;
+        }
+        if (current.outputTarget == "stderr") {
+            std::cerr << line << '\n';
+            if (!std::cerr) {
+                failOutput(current, "stderr write failed");
+            }
+            return;
+        }
+        const std::filesystem::path target(current.outputTarget);
+        if (current.retainRecent && current.fileRecords >= current.maxRecords) {
+            const std::filesystem::path backup(current.outputTarget + ".1");
+            std::error_code error;
+            const auto backupStatus = std::filesystem::symlink_status(backup, error);
+            if (backupStatus.type() != std::filesystem::file_type::not_found) {
+                if (error || !std::filesystem::is_regular_file(backupStatus)) {
+                    failOutput(current, "backup cannot be rotated");
+                    return;
+                }
+                std::filesystem::remove(backup, error);
+                if (error) {
+                    failOutput(current, "backup could not be removed");
+                    return;
+                }
+            }
+            std::filesystem::rename(target, backup, error);
+            if (error) {
+                failOutput(current, "destination could not be rotated");
+                return;
+            }
+            current.fileRecords = 0;
+        }
+        std::ofstream out(target, std::ios::app);
+        if (!out) {
+            failOutput(current, "file could not be opened");
+            return;
+        }
         out << line << '\n';
+        out.close();
+        if (!out) {
+            failOutput(current, "file write failed");
+            return;
+        }
+        ++current.fileRecords;
+    } catch (...) {
+        failOutput(current, "output operation failed");
     }
 }
 
@@ -146,10 +247,12 @@ void CPlaytestTrace::configureFromEnvironment() {
         outputTarget = "stderr";
     }
 
-    configure(true, outputTarget, DEFAULT_MAX_RECORDS);
+    const char *rawRetainRecent = std::getenv("GAME_PLAYTEST_TRACE_RETAIN_RECENT");
+    configure(true, outputTarget, DEFAULT_MAX_RECORDS, rawRetainRecent && !isDisabledValue(rawRetainRecent));
 }
 
-void CPlaytestTrace::configure(bool enabled, const std::string &outputTarget, std::size_t maxRecords) {
+void CPlaytestTrace::configure(bool enabled, const std::string &outputTarget, std::size_t maxRecords,
+                               bool retainRecent) {
     std::lock_guard lock(state().mutex);
     state().enabled = enabled;
     state().outputTarget = outputTarget;
@@ -157,6 +260,13 @@ void CPlaytestTrace::configure(bool enabled, const std::string &outputTarget, st
     state().records.clear();
     state().nextSeq = 1;
     state().truncated = false;
+    state().retainRecent = retainRecent;
+    state().outputFailed = false;
+    state().recordFailureReported = false;
+    state().fileRecords = 0;
+    if (enabled && retainRecent) {
+        validateFreshTarget(state());
+    }
 }
 
 bool CPlaytestTrace::enabled() {
@@ -173,57 +283,59 @@ void CPlaytestTrace::clear() {
 
 std::vector<std::string> CPlaytestTrace::records() {
     std::lock_guard lock(state().mutex);
-    return state().records;
+    return {state().records.begin(), state().records.end()};
 }
 
 std::vector<std::string> CPlaytestTrace::drain() {
     std::lock_guard lock(state().mutex);
-    auto result = state().records;
+    std::vector<std::string> result(state().records.begin(), state().records.end());
     state().records.clear();
     state().truncated = false;
     return result;
 }
 
-void CPlaytestTrace::record(const std::string &event, json fields) {
-    if (!enabled()) {
+void CPlaytestTrace::record(const std::string &event, json fields) noexcept try {
+    std::lock_guard lock(state().mutex);
+    if (!state().enabled) {
         return;
     }
 
     std::string line;
-    std::string target;
-    {
-        std::lock_guard lock(state().mutex);
-        if (!state().enabled) {
-            return;
+    fields["event"] = event;
+    fields["schema"] = "playtest_trace.v1";
+    fields["seq"] = static_cast<unsigned long long>(state().nextSeq++);
+    line = fields.dump();
+    if (state().retainRecent) {
+        if (state().records.size() == state().maxRecords) {
+            state().records.pop_front();
         }
-
-        fields["event"] = event;
-        fields["schema"] = "playtest_trace.v1";
-        fields["seq"] = static_cast<unsigned long long>(state().nextSeq++);
-        line = fields.dump();
-        target = state().outputTarget;
-
-        if (state().records.size() < state().maxRecords) {
-            state().records.push_back(line);
-        } else if (!state().truncated) {
-            const auto truncated = truncatedRecord(state().nextSeq++, state().maxRecords).dump();
-            state().records.push_back(truncated);
-            state().truncated = true;
-            line = truncated;
-        } else {
-            return;
-        }
+        state().records.push_back(line);
+    } else if (state().records.size() < state().maxRecords) {
+        state().records.push_back(line);
+    } else if (!state().truncated) {
+        const auto truncated = truncatedRecord(state().nextSeq++, state().maxRecords).dump();
+        state().records.push_back(truncated);
+        state().truncated = true;
+        line = truncated;
+    } else {
+        return;
     }
-
-    writeTarget(target, line);
+    writeTarget(state(), line);
+} catch (...) {
+    failRecording();
 }
 
-void CPlaytestTrace::recordJson(const std::string &event, const std::string &fieldsJson) {
+void CPlaytestTrace::recordJson(const std::string &event, const std::string &fieldsJson) noexcept try {
+    if (!enabled()) {
+        return;
+    }
     json fields = fieldsJson.empty() ? json::object() : json::parse(fieldsJson);
     if (!fields.is_object()) {
         fields = json::object();
     }
     record(event, fields);
+} catch (...) {
+    failRecording();
 }
 
 json CPlaytestTrace::coords(Coords coords) {

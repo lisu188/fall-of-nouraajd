@@ -18,7 +18,7 @@ class TestRunnerPackagingTest(unittest.TestCase):
         temporary = tempfile.TemporaryDirectory(prefix="nouraajd-test-runner-")
         self.addCleanup(temporary.cleanup)
         self.package = Path(temporary.name)
-        for name in ("test.py", "game_simulation.py", "mcp.py", "quest_state.py"):
+        for name in ("test.py", "game_simulation.py", "mcp.py", "play.py", "game_diagnostics.py", "quest_state.py"):
             shutil.copy2(ROOT / name, self.package / name)
 
     def runPackaged(self, *arguments, build_dir=None):
@@ -55,7 +55,13 @@ class TestRunnerPackagingTest(unittest.TestCase):
         source_tests = self.package / "tests"
         source_tests.mkdir()
         (source_tests / "__init__.py").write_text("", encoding="utf-8")
-        for name in ("test_navigation_mcp.py", "test_python_callback_lifecycle.py"):
+        for name in (
+            "test_navigation_mcp.py",
+            "test_python_callback_lifecycle.py",
+            "test_game_diagnostics.py",
+            "test_mcp_diagnostics.py",
+            "test_native_diagnostics.py",
+        ):
             shutil.copy2(ROOT / "tests" / name, source_tests / name)
         (source_tests / "test_ui_mcp_dialogue.py").write_text(
             'raise ImportError("deliberate source-test import failure")\n', encoding="utf-8"
@@ -63,6 +69,14 @@ class TestRunnerPackagingTest(unittest.TestCase):
         result = self.runPackaged("test.py", "--help")
         self.assertNotEqual(0, result.returncode)
         self.assertIn("deliberate source-test import failure", result.stderr)
+
+    def testInstalledLaunchersHelpWorksWithoutNativeBuild(self):
+        for launcher in ("play.py", "mcp.py"):
+            with self.subTest(launcher=launcher):
+                result = self.runPackaged(launcher, "--help")
+                self.assertEqual(0, result.returncode, result.stdout + result.stderr)
+                self.assertIn("usage:", result.stdout)
+                self.assertIn("--debug", result.stdout)
 
     def testCliHarnessImportKeepsTheSourceRunnerWhenBuildHasACopy(self):
         build_dir = self.package / "build"

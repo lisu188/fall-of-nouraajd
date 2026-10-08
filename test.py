@@ -131,6 +131,8 @@ GAME_TEST_WORKER = os.environ.get("GAME_TEST_WORKER") == "1"
 XVFB_GAMEPLAY_PARENT_TEST = "XvfbGameplayTest.test_keyboard_gameplay_under_xvfb"
 VALID_TEST_SUITES = ("fast", "gameplay", "ui", "coverage-safe", "full")
 FAST_TEST_PREFIXES = (
+    "GameDiagnosticsTest.",
+    "McpDiagnosticsTest.",
     "OctobogzDiagnosticTest.",
     "WindowsPythonConfigurationTest.",
     "EnemyRoleContractTest.",
@@ -170,6 +172,7 @@ FAST_TEST_NAMES = {
     "PanelLayoutManifestTest.test_reactive_list_views_subscribe_to_model_signals",
 }
 GAMEPLAY_TEST_PREFIXES = (
+    "NativeDiagnosticsRuntimeTest.",
     "EnemyRoleRuntimeTest.",
     "OctobogzMcpWalkthroughTest.",
     "OctobogzRuntimeTest.",
@@ -26311,6 +26314,9 @@ class TestRunnerSuiteTest(unittest.TestCase):
 SOURCE_UI_TESTS_AVAILABLE = (REPO_ROOT / "tests" / "__init__.py").is_file()
 
 if SOURCE_UI_TESTS_AVAILABLE:
+    from tests.test_game_diagnostics import GameDiagnosticsTest as _GameDiagnosticsTest
+    from tests.test_mcp_diagnostics import McpDiagnosticsTest as _McpDiagnosticsTest
+    from tests.test_native_diagnostics import NativeDiagnosticsRuntimeTest as _NativeDiagnosticsRuntimeTest
     from tests.test_navigation_mcp import NavigationCallbackTest as _NavigationCallbackTest
     from tests.test_navigation_mcp import NavigationMcpWalkthroughTest as _NavigationMcpWalkthroughTest
     from tests.test_python_callback_lifecycle import PythonCallbackLifecycleTest as _PythonCallbackLifecycleTest
@@ -26340,6 +26346,15 @@ if SOURCE_UI_TESTS_AVAILABLE:
     from tests.test_octobogz_mcp import OctobogzMcpWalkthroughTest as _OctobogzMcpWalkthroughTest
     from tests.test_octobogz_mcp import OctobogzDiagnosticTest as _OctobogzDiagnosticTest
     from tests.test_octobogz_runtime import OctobogzRuntimeTest as _OctobogzRuntimeTest
+
+    class GameDiagnosticsTest(_GameDiagnosticsTest):
+        pass
+
+    class McpDiagnosticsTest(_McpDiagnosticsTest):
+        pass
+
+    class NativeDiagnosticsRuntimeTest(_NativeDiagnosticsRuntimeTest):
+        pass
 
     class PaidActionRuntimeTest(_PaidActionRuntimeTest):
         pass
@@ -26424,6 +26439,7 @@ if SOURCE_UI_TESTS_AVAILABLE:
 
     del _DialogueMcpWalkthroughTest, _ManagementMcpWalkthroughTest, _ArtifactPreviewTest, _PythonCallbackLifecycleTest
     del _PaidActionRuntimeTest
+    del _GameDiagnosticsTest, _McpDiagnosticsTest, _NativeDiagnosticsRuntimeTest
     del _NativeTestProfileSourceTest, _NativeTestProfileRuntimeTest
     del _WindowsPythonConfigurationTest
     del _NativeCallgrindToolTest

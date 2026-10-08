@@ -67,5 +67,9 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #include <vstd.h>
 
 #include "core/CJson.h"
+#include "core/CPythonDiagnostics.h"
+
+#undef PYTHON_LOG
+#define PYTHON_LOG CPythonDiagnostics::logCurrentException()
 
 static_assert(vstd::meta_api_version >= 2);
