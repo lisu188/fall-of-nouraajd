@@ -11,6 +11,51 @@ import unittest
 
 
 class NativeDiagnosticsRuntimeTest(unittest.TestCase):
+    def testPreloadedNativeTraceMovesToEachDebugSession(self):
+        from tests.test_python_callback_lifecycle import PythonCallbackLifecycleTest
+
+        child = PythonCallbackLifecycleTest(methodName="runTest")
+        output = child.runChild("""
+            import game_diagnostics
+            import json
+            import os
+            from pathlib import Path
+            import tempfile
+            game.configure_playtest_trace(False)
+            for key in list(os.environ):
+                if key.startswith('GAME_PLAYTEST_TRACE'):
+                    os.environ.pop(key)
+            with tempfile.TemporaryDirectory(prefix='nouraajd-preloaded-trace-') as temporary:
+                root = Path(temporary)
+                previous_path = None
+                for index in range(2):
+                    session = game_diagnostics.startSession(
+                        repo_root=root, build_dir=root, entrypoint='preloaded-test', debug=True, debug_dir=root / 'logs')
+                    try:
+                        assert session.configureTrace(game)
+                        game.record_playtest_trace_json('preloaded_session', json.dumps({'index': index}))
+                        assert session.applyNative(game)
+                        assert session.configureTrace(game)
+                        game.record_playtest_trace_json('after_sink_restore', '{}')
+                        records = [json.loads(line) for line in game.get_playtest_trace_records()]
+                        assert [record['seq'] for record in records] == [1, 2], records
+                        assert records[0]['index'] == index, records
+                        current_path = session.paths['gameplay']
+                        disk = [json.loads(line) for line in current_path.read_text(encoding='utf-8').splitlines()]
+                        assert disk == records, (disk, records)
+                        if previous_path is not None:
+                            assert previous_path != current_path
+                            earlier = previous_path.read_text(encoding='utf-8')
+                            assert json.loads(earlier.splitlines()[0])['index'] == 0, earlier
+                        previous_path = current_path
+                    finally:
+                        session.close()
+                game.configure_playtest_trace(False)
+                game.set_logger_sink('disabled')
+                print('preloaded trace sessions preserve separate ordered evidence', flush=True)
+            """)
+        self.assertIn("preloaded trace sessions preserve separate ordered evidence", output)
+
     def testQuestCallbackTracebackPreservesFallback(self):
         from tests.test_python_callback_lifecycle import PythonCallbackLifecycleTest
 

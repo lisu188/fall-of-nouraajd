@@ -49,6 +49,9 @@ class GameDiagnosticsTest(unittest.TestCase):
         module = SimpleNamespace(
             __file__="/compiled/_game.so",
             configure_playtest_trace=configure,
+            configure_playtest_trace_from_env=mock.Mock(
+                side_effect=AssertionError("A fresh native import must keep its startup trace")
+            ),
             set_logger_sink=mock.Mock(),
             playtest_trace_enabled=lambda: True,
         )
@@ -159,6 +162,92 @@ class GameDiagnosticsTest(unittest.TestCase):
         self.assertNotIn("GAME_PLAYTEST_TRACE_RETAIN_RECENT", os.environ)
         self.assertEqual("environment", session.manifest["channels"]["gameplay"]["source"])
         self.assertEqual("disabled", session.manifest["channels"]["gameplay"]["status"])
+
+    def testPreloadedNativeModuleAppliesEnvironmentOnceAndKeepsLaterHistory(self):
+        native = self.nativeModule()
+        state = {"enabled": False, "events": []}
+
+        def configureFromEnvironment():
+            state["enabled"] = True
+            state["target"] = os.environ["GAME_PLAYTEST_TRACE_FILE"]
+            state["events"].clear()
+
+        native.playtest_trace_enabled = lambda: state["enabled"]
+        native.configure_playtest_trace_from_env = mock.Mock(side_effect=configureFromEnvironment)
+        with mock.patch.dict(sys.modules, {"_game": native}):
+            session = self.startSession(debug=True)
+            self.assertFalse(state["enabled"])
+            self.assertTrue(session.configureTrace(native))
+            self.assertEqual(str(session.paths["gameplay"]), state["target"])
+            state["events"].append("gameplay_after_configuration")
+            self.assertTrue(session.applyNative(native))
+            self.assertTrue(session.configureTrace(native))
+            self.assertTrue(session.applyNative(native))
+            self.assertTrue(session.configureTrace(native))
+            native.configure_playtest_trace_from_env.assert_called_once_with()
+            self.assertEqual(["gameplay_after_configuration"], state["events"])
+
+    def testFreshNativeImportPreservesStartupHistory(self):
+        native = self.nativeModule()
+        startup_events = ["native_import_event"]
+        native.configure_playtest_trace_from_env = mock.Mock(side_effect=startup_events.clear)
+        with mock.patch.dict(sys.modules):
+            sys.modules.pop("_game", None)
+            session = self.startSession(debug=True)
+            sys.modules["_game"] = native
+            self.assertTrue(session.configureTrace(native))
+            self.assertTrue(session.configureTrace(native))
+            native.configure_playtest_trace_from_env.assert_not_called()
+            self.assertEqual(["native_import_event"], startup_events)
+
+    def testNewSessionRedirectsTheSamePreloadedModuleToItsOwnTrace(self):
+        native = self.nativeModule()
+        configured_targets = []
+        native.configure_playtest_trace_from_env = mock.Mock(
+            side_effect=lambda: configured_targets.append(os.environ["GAME_PLAYTEST_TRACE_FILE"])
+        )
+        with mock.patch.dict(sys.modules, {"_game": native}):
+            first = self.startSession(debug=True)
+            self.assertTrue(first.configureTrace(native))
+            first.close()
+            second = self.startSession(debug=True)
+            self.assertTrue(second.configureTrace(native))
+            self.assertTrue(second.configureTrace(native))
+            self.assertNotEqual(first.runDir, second.runDir)
+            self.assertEqual([str(first.paths["gameplay"]), str(second.paths["gameplay"])], configured_targets)
+            self.assertEqual(2, native.configure_playtest_trace_from_env.call_count)
+
+    def testPreloadedModuleReceivesExplicitTraceEnvironmentUnchanged(self):
+        native = self.nativeModule()
+        expected = {
+            "GAME_PLAYTEST_TRACE": "0",
+            "GAME_PLAYTEST_TRACE_FILE": "authored-history.jsonl",
+            "GAME_PLAYTEST_TRACE_RETAIN_RECENT": "0",
+        }
+        os.environ.update(expected)
+        observed = []
+        native.configure_playtest_trace_from_env = mock.Mock(
+            side_effect=lambda: observed.append({key: os.environ[key] for key in expected})
+        )
+        native.playtest_trace_enabled = lambda: False
+        with mock.patch.dict(sys.modules, {"_game": native}):
+            session = self.startSession(debug=True)
+            self.assertFalse(session.configureTrace(native))
+            self.assertFalse(session.configureTrace(native))
+            native.configure_playtest_trace_from_env.assert_called_once_with()
+            self.assertEqual([expected], observed)
+            self.assertEqual("environment", session.manifest["channels"]["gameplay"]["source"])
+            self.assertEqual("disabled", session.manifest["channels"]["gameplay"]["status"])
+
+    def testFailedPreloadedTraceConfigurationDoesNotRetryOrClaimSuccess(self):
+        native = self.nativeModule()
+        native.configure_playtest_trace_from_env = mock.Mock(side_effect=RuntimeError("native configuration failed"))
+        with mock.patch.dict(sys.modules, {"_game": native}), redirect_stderr(io.StringIO()):
+            session = self.startSession(debug=True)
+            self.assertFalse(session.configureTrace(native))
+            self.assertFalse(session.configureTrace(native))
+            native.configure_playtest_trace_from_env.assert_called_once_with()
+            self.assertEqual("unavailable", session.manifest["channels"]["gameplay"]["status"])
 
     def testUnavailableDirectoryDoesNotPreventApplicationStartup(self):
         blocker = self.root / "file"

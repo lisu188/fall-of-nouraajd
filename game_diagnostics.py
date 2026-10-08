@@ -101,6 +101,9 @@ class DebugSession:
         self.nativeSink = "file"
         self.nativePath = self.paths["native"]
         self._explicitTrace = any(key.startswith("GAME_PLAYTEST_TRACE") for key in os.environ)
+        self._preloadedNativeModule = sys.modules.get("_game")
+        self._traceEnvironmentApplied = False
+        self._traceEnvironmentFailed = False
         self._prepared = False
         self._closed = False
         self._finished = False
@@ -363,6 +366,17 @@ class DebugSession:
         if self._closed:
             return False
         try:
+            if native_module is self._preloadedNativeModule:
+                if self._traceEnvironmentFailed:
+                    return False
+                if not self._traceEnvironmentApplied:
+                    self._traceEnvironmentApplied = True
+                    try:
+                        native_module.configure_playtest_trace_from_env()
+                    except Exception:
+                        self._traceEnvironmentFailed = True
+                        self._channelFailure("gameplay", "Unable to configure gameplay tracing in the preloaded module")
+                        return False
             enabled = bool(native_module.playtest_trace_enabled())
             channel = self.manifest["channels"]["gameplay"]
             if self._explicitTrace:
