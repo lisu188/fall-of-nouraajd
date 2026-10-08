@@ -25,6 +25,7 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #include "vutil.h"
 
 #include <array>
+#include <cstdint>
 #include <list>
 #include <memory>
 #include <queue>
@@ -361,6 +362,33 @@ void test_vmeta_explicit_pair_hashers() {
     expect_true(!CTypes::serializers()->empty(), "the serializer registry should initialize with the explicit hasher");
 }
 
+void testUtilityBugfixIntegration() {
+    expect_true(vstd::camel("").empty(), "empty tooltip labels should not throw");
+    expect_true(vstd::camel("two  words") == "Two  Words ", "empty title words should preserve spacing");
+    expect_true(vstd::set(1, 2, 1) == std::set<int>({1, 2}), "variadic set construction should compile");
+    expect_true(vstd::as_list(1, 2, 3) == std::list<int>({1, 2, 3}), "variadic lists should retain argument order");
+    int value = 7;
+    expect_true(vstd::to_hex(&value) == vstd::to_hex(reinterpret_cast<std::uintptr_t>(&value)),
+                "raw pointer formatting should use its integer address");
+    std::size_t expected_hash = 0;
+    for (int part = 1; part <= 8; ++part) {
+        expected_hash = expected_hash * 31 + std::hash<int>{}(part);
+    }
+    expect_true(vstd::hash_combine(1, 2, 3, 4, 5, 6, 7, 8) == expected_hash,
+                "wide hash combination should avoid signed constant overflow");
+
+    const std::vector<std::string> strings{std::string(256, 'a'), std::string(256, 'b')};
+    auto *array = vstd::as_array(strings);
+    expect_true(array[0] == strings[0] && array[1] == strings[1], "array copies should construct nontrivial values");
+    std::destroy_n(array, strings.size());
+    vstd::deallocate(array, strings.size());
+
+    auto first_character = [](std::string &text) -> const char & { return text.front(); };
+    static_assert(std::is_same_v<decltype(vstd::functional::call(first_character, strings[0])), char>);
+    const auto copied_character = vstd::functional::call(first_character, strings[0]);
+    expect_true(copied_character == 'a', "references into copied arguments should become owning results");
+}
+
 } // namespace
 
 int main() {
@@ -374,6 +402,7 @@ int main() {
     testCpp23UtilityIntegration();
     test_vmeta_game_object_integration();
     test_vmeta_explicit_pair_hashers();
+    testUtilityBugfixIntegration();
 
     return finish_tests();
 }

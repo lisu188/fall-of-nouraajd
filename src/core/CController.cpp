@@ -406,41 +406,37 @@ int expected_incoming_hit(const std::shared_ptr<CCreature> &me, const std::share
     return std::max(afterArmor, 0);
 }
 
-// Heal items restore getPower() * 20% of max hp (res/plugins/potion.py), capped
-// by the hp actually missing. Returns the estimate for the strongest heal item
-// carried, i.e. the best single-turn hp swing a heal turn could buy.
-// Estimates how much the heal potion the AI would actually drink restores. The
-// controller spends the LEAST powerful heal first (getLeastPowerfulItemWithTag), so the
-// gate must weigh that same potion: weighing the strongest would green-light a heal the
-// drunk potion cannot keep pace with, re-introducing net-loss chain-drinking.
-int consumed_heal_estimate(const std::shared_ptr<CCreature> &me) {
-    bool found = false;
-    int weakestPower = 0;
+thread_local std::optional<std::size_t> healingItemSelectionVisits;
+
+// Choose the least powerful heal that preserves the combatant. A nonviable weak
+// potion must not hide a stronger net-gain heal; emergency turns retain the
+// existing fallback of trying any available heal.
+std::shared_ptr<CItem> selectHealingItem(const std::shared_ptr<CCreature> &me,
+                                         const std::shared_ptr<CCreature> &opponent) {
+    const int incoming = expected_incoming_hit(me, opponent);
+    const int hpMax = me->getHpMax();
+    const int missingHp = hpMax - me->getHp();
+    const bool emergency = me->getHp() <= incoming;
+    std::shared_ptr<CItem> selected;
+    int selectedPower = 0;
     for (const auto &item : me->getItems()) {
-        if (item && item->hasTag(CTag::Heal)) {
-            const int power = item->getPower();
-            if (!found || power < weakestPower) {
-                weakestPower = power;
-                found = true;
-            }
+        if (healingItemSelectionVisits) {
+            ++*healingItemSelectionVisits;
+        }
+        if (!item || !item->hasTag(CTag::Heal)) {
+            continue;
+        }
+        const int power = item->getPower();
+        const auto restoration = std::min<std::int64_t>(static_cast<std::int64_t>(power) * hpMax / 5, missingHp);
+        if (!emergency && restoration <= incoming) {
+            continue;
+        }
+        if (!selected || power < selectedPower) {
+            selected = item;
+            selectedPower = power;
         }
     }
-    const int uncapped = weakestPower * me->getHpMax() / 5;
-    return std::min(uncapped, me->getHpMax() - me->getHp());
-}
-
-// A heal turn is only worth its tempo when it actually preserves the combatant:
-// either the creature would not survive the next landed hit anyway (a heal is
-// the only move with a chance to keep it alive), or the strongest heal carried
-// restores more hp than that hit removes (net gain). Healing reflexively at a
-// fixed hp threshold made monsters chain-drink potions against hard hitters
-// while losing more hp per turn than each potion restored.
-bool heal_preserves_combatant(const std::shared_ptr<CCreature> &me, const std::shared_ptr<CCreature> &opponent) {
-    const int incoming = expected_incoming_hit(me, opponent);
-    if (me->getHp() <= incoming) {
-        return true;
-    }
-    return consumed_heal_estimate(me) > incoming;
+    return selected;
 }
 
 // Deterministic estimate of how much a single cast weakens the opponent, used to
@@ -538,9 +534,8 @@ bool CMonsterFightController::control(std::shared_ptr<CCreature> me, std::shared
     const auto huntRole = me->getStringProperty("octobogzCombatRole");
     const bool huntActor = (huntRole == "alpha" || huntRole == "shadow") && !me->isPlayer() && !me->isNpc() &&
                            me->isAlive() && opponent->isAlive() && !me->isAffiliatedWith(opponent);
-    if (me->getHpRatio() < 75 && heal_preserves_combatant(me, opponent)) {
-        auto object = getLeastPowerfulItemWithTag(me, CTag::Heal);
-        if (object) {
+    if (me->getHpRatio() < 75) {
+        if (auto object = selectHealingItem(me, opponent)) {
             me->useItem(object);
             return true;
         }
@@ -1019,3 +1014,11 @@ bool CPlayerFightController::hasCancelledContext(std::shared_ptr<CCreature> me) 
     auto gui = game->getGui();
     return !gui || !fightPanel || fightPanel->isCancelled() || gui->findChild(fightPanel) == nullptr;
 }
+
+namespace performance_guard {
+void resetHealingItemSelectionProbe() { healingItemSelectionVisits = 0; }
+
+std::size_t healingItemSelectionProbeCount() { return healingItemSelectionVisits.value_or(0); }
+
+void disableHealingItemSelectionProbe() { healingItemSelectionVisits.reset(); }
+} // namespace performance_guard
