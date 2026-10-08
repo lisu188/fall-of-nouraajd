@@ -146,8 +146,10 @@ class NativeDiagnosticsRuntimeTest(unittest.TestCase):
                 finally:
                     game.set_logger_sink('disabled')
                 text = path.read_text(encoding='utf-8')
-                for expected in ('Traceback', 'script.py', 'brokenAction', 'brokenCondition',
-                                 'resource dialog action traceback', 'resource dialog condition traceback'):
+                for expected in (
+                    'Traceback', '<string>', 'brokenAction', 'brokenCondition',
+                    'resource dialog action traceback', 'resource dialog condition traceback',
+                ):
                     assert expected in text, text
                 assert 'NameError' not in text, text
                 print('resource proxy traceback and fallback results preserved', flush=True)
