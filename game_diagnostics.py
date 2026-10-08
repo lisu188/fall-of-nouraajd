@@ -110,6 +110,7 @@ class DebugSession:
         self._preloadedNativeModule = sys.modules.get("_game")
         self._traceEnvironmentApplied = False
         self._traceEnvironmentFailed = False
+        self._traceNativeModule = None
         self._prepared = False
         self._closed = False
         self._finished = False
@@ -368,6 +369,26 @@ class DebugSession:
                 pass
             return False
 
+    def _refreshTraceOutputStatus(self):
+        if self._traceNativeModule is None:
+            return
+        channel = self.manifest["channels"]["gameplay"]
+        if channel["status"] not in {"active", "memory_only", "unverified", "disabled"}:
+            return
+        try:
+            if not self._traceNativeModule.playtest_trace_enabled():
+                channel["status"] = "disabled"
+                return
+            output_available = getattr(self._traceNativeModule, "playtest_trace_output_available", None)
+            if output_available is not None:
+                channel["status"] = "active" if output_available() else "memory_only"
+            elif channel["status"] != "memory_only":
+                channel["status"] = "unverified"
+        except Exception:
+            if channel["status"] != "memory_only":
+                channel["status"] = "unverified"
+            self._warnOnce("gameplay", "Unable to inspect gameplay output status")
+
     def configureTrace(self, native_module):
         if self._closed:
             return False
@@ -384,6 +405,7 @@ class DebugSession:
                         self._channelFailure("gameplay", "Unable to configure gameplay tracing in the preloaded module")
                         return False
             enabled = bool(native_module.playtest_trace_enabled())
+            self._traceNativeModule = native_module
             channel = self.manifest["channels"]["gameplay"]
             if self._explicitTrace:
                 channel.update(status="active" if enabled else "disabled", source="environment")
@@ -424,6 +446,7 @@ class DebugSession:
                     self._warnOnce(
                         "gameplay", "Current native module does not provide recent gameplay history; rebuild it"
                     )
+            self._refreshTraceOutputStatus()
             self._writeManifest()
             return enabled
         except Exception:
@@ -434,6 +457,7 @@ class DebugSession:
         if self._finished or self._closed:
             return
         self._finished = True
+        self._refreshTraceOutputStatus()
         if error is not None:
             self.recordException("session_failed", error)
         self.record("session_finished", status=status)
@@ -451,6 +475,7 @@ class DebugSession:
         if not self._finished:
             self.finish()
         self._closed = True
+        self._traceNativeModule = None
         if sys.excepthook is self._sysHook:
             sys.excepthook = self._oldSysHook
         if threading.excepthook is self._threadHook:

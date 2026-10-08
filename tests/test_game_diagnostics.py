@@ -163,6 +163,69 @@ class GameDiagnosticsTest(unittest.TestCase):
         self.assertEqual("environment", session.manifest["channels"]["gameplay"]["source"])
         self.assertEqual("disabled", session.manifest["channels"]["gameplay"]["status"])
 
+    def testNativeTraceOutputFailureIsReportedAsMemoryOnly(self):
+        destination = self.root / "existing-directory"
+        destination.mkdir()
+        os.environ.update(
+            GAME_PLAYTEST_TRACE="1",
+            GAME_PLAYTEST_TRACE_FILE=str(destination),
+            GAME_PLAYTEST_TRACE_RETAIN_RECENT="1",
+        )
+        session = self.startSession(debug=True)
+        native = self.nativeModule()
+        native.playtest_trace_output_available = lambda: False
+        self.assertTrue(session.configureTrace(native))
+        session.finish()
+        manifest = json.loads(session.paths["manifest"].read_text(encoding="utf-8"))
+        self.assertEqual("memory_only", manifest["channels"]["gameplay"]["status"])
+        self.assertEqual(str(destination), manifest["channels"]["gameplay"]["path"])
+        self.assertEqual("completed", manifest["outcome"])
+
+    def testLateTraceOutputFailureRefreshesFinalManifestWithoutReset(self):
+        session = self.startSession(debug=True)
+        native = self.nativeModule()
+        native.playtest_trace_output_available = mock.Mock(return_value=True)
+        self.assertTrue(session.configureTrace(native))
+        self.assertEqual("active", session.manifest["channels"]["gameplay"]["status"])
+        native.playtest_trace_output_available.return_value = False
+        session.close()
+        manifest = json.loads(session.paths["manifest"].read_text(encoding="utf-8"))
+        self.assertEqual("memory_only", manifest["channels"]["gameplay"]["status"])
+        native.configure_playtest_trace_from_env.assert_not_called()
+
+    def testOlderNativeTraceOutputIsUnverified(self):
+        session = self.startSession(debug=True)
+        native = self.nativeModule()
+        if hasattr(native, "playtest_trace_output_available"):
+            del native.playtest_trace_output_available
+        self.assertTrue(session.configureTrace(native))
+        session.finish()
+        manifest = json.loads(session.paths["manifest"].read_text(encoding="utf-8"))
+        self.assertEqual("unverified", manifest["channels"]["gameplay"]["status"])
+
+    def testTraceOutputInspectionFailurePreservesOriginalSessionError(self):
+        session = self.startSession(debug=True)
+        native = self.nativeModule()
+        native.playtest_trace_output_available = mock.Mock(side_effect=OSError("inspection failed"))
+        warnings = io.StringIO()
+        with redirect_stderr(warnings):
+            self.assertTrue(session.configureTrace(native))
+            session.finish(status="failed", error=ValueError("original game failure"))
+        manifest = json.loads(session.paths["manifest"].read_text(encoding="utf-8"))
+        self.assertEqual("unverified", manifest["channels"]["gameplay"]["status"])
+        self.assertEqual("failed", manifest["outcome"])
+        self.assertEqual("ValueError", manifest["errorType"])
+        self.assertEqual(1, warnings.getvalue().count("Debug diagnostics (gameplay)"))
+
+    def testEmptyExplicitTraceDestinationIsMemoryOnly(self):
+        os.environ.update(GAME_PLAYTEST_TRACE="1", GAME_PLAYTEST_TRACE_FILE="")
+        session = self.startSession(debug=True)
+        native = self.nativeModule()
+        native.playtest_trace_output_available = lambda: False
+        self.assertTrue(session.configureTrace(native))
+        self.assertEqual("memory_only", session.manifest["channels"]["gameplay"]["status"])
+        self.assertIsNone(session.manifest["channels"]["gameplay"]["path"])
+
     def testPreloadedNativeModuleAppliesEnvironmentOnceAndKeepsLaterHistory(self):
         native = self.nativeModule()
         state = {"enabled": False, "events": []}

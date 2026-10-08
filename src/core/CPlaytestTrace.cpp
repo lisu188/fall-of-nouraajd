@@ -274,6 +274,11 @@ bool CPlaytestTrace::enabled() {
     return state().enabled;
 }
 
+bool CPlaytestTrace::outputAvailable() {
+    std::lock_guard lock(state().mutex);
+    return state().enabled && !state().outputTarget.empty() && !state().outputFailed;
+}
+
 void CPlaytestTrace::clear() {
     std::lock_guard lock(state().mutex);
     state().records.clear();
