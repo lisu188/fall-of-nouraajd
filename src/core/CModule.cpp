@@ -1591,6 +1591,9 @@ void init_game_module(py::module_ &m) {
           "Configure playtest tracing from GAME_PLAYTEST_TRACE.");
     m.def("playtest_trace_enabled", &CPlaytestTrace::enabled,
           "playtest_trace_enabled() -> bool: Return whether structured playtest tracing is enabled.");
+    m.def("playtest_trace_output_available", &CPlaytestTrace::outputAvailable,
+          "playtest_trace_output_available() -> bool: Return whether tracing has configured output with no detected "
+          "failure. This does not probe the filesystem or reset output failures.");
     m.def("clear_playtest_trace", &CPlaytestTrace::clear,
           "clear_playtest_trace() -> None: Clear collected playtest trace records.");
     m.def("get_playtest_trace_records", &CPlaytestTrace::records,

@@ -11,6 +11,55 @@ import unittest
 
 
 class NativeDiagnosticsRuntimeTest(unittest.TestCase):
+    def testFailedNativeTraceOutputRemainsMemoryOnlyInFinalManifest(self):
+        from tests.test_python_callback_lifecycle import PythonCallbackLifecycleTest
+
+        child = PythonCallbackLifecycleTest(methodName="runTest")
+        output = child.runChild("""
+            import game_diagnostics
+            import json
+            import os
+            from pathlib import Path
+            import tempfile
+            game.configure_playtest_trace(False)
+            for key in list(os.environ):
+                if key.startswith('GAME_PLAYTEST_TRACE'):
+                    os.environ.pop(key)
+            with tempfile.TemporaryDirectory(prefix='nouraajd-output-health-') as temporary:
+                root = Path(temporary).resolve()
+                for fail_at_startup in (True, False):
+                    target = root / ('blocked-directory' if fail_at_startup else 'missing-parent/events.jsonl')
+                    if fail_at_startup:
+                        target.mkdir()
+                    os.environ.update(
+                        GAME_PLAYTEST_TRACE='1', GAME_PLAYTEST_TRACE_FILE=str(target),
+                        GAME_PLAYTEST_TRACE_RETAIN_RECENT='1')
+                    session = game_diagnostics.startSession(
+                        repo_root=root, build_dir=root, entrypoint='output-health-test', debug=True,
+                        debug_dir=root / 'logs')
+                    try:
+                        assert session.configureTrace(game)
+                        initial_status = session.manifest['channels']['gameplay']['status']
+                        assert initial_status == ('memory_only' if fail_at_startup else 'active'), initial_status
+                        game.record_playtest_trace_json('retained_after_output_failure', '{}')
+                        assert game.playtest_trace_enabled()
+                        assert not game.playtest_trace_output_available()
+                        retained = game.get_playtest_trace_records()
+                        assert len(retained) == 1, retained
+                        assert json.loads(retained[0])['seq'] == 1, retained
+                        session.finish()
+                        manifest = json.loads(session.paths['manifest'].read_text(encoding='utf-8'))
+                        assert manifest['channels']['gameplay']['status'] == 'memory_only', manifest
+                        assert manifest['channels']['gameplay']['path'] == str(target), manifest
+                        assert manifest['outcome'] == 'completed', manifest
+                        assert game.get_playtest_trace_records() == retained
+                    finally:
+                        session.close()
+                game.configure_playtest_trace(False)
+                print('native output failures preserve memory-only manifest and history', flush=True)
+            """)
+        self.assertIn("native output failures preserve memory-only manifest and history", output)
+
     def testPreloadedNativeTraceMovesToEachDebugSession(self):
         from tests.test_python_callback_lifecycle import PythonCallbackLifecycleTest
 
