@@ -214,4 +214,7 @@ class CRangeController : public CController {
 namespace performance_guard {
 std::size_t targetFlowCacheSize();
 void clearTargetFlowCache();
+void resetHealingItemSelectionProbe();
+std::size_t healingItemSelectionProbeCount();
+void disableHealingItemSelectionProbe();
 } // namespace performance_guard

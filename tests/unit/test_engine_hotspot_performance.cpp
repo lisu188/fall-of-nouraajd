@@ -731,6 +731,107 @@ class CombatActionCountProbe : public CInteraction {
     void performAction(std::shared_ptr<CCreature>, std::shared_ptr<CCreature>) override { ++calls; }
 };
 
+class HealingSelectionPotionProbe : public CPotion {
+  public:
+    void onUse(std::shared_ptr<CGameEvent>) override { ++calls; }
+
+    bool isDisposable() override { return false; }
+
+    std::size_t calls = 0;
+};
+
+class HealingSelectionProbeScope {
+  public:
+    HealingSelectionProbeScope() { performance_guard::resetHealingItemSelectionProbe(); }
+
+    ~HealingSelectionProbeScope() { performance_guard::disableHealingItemSelectionProbe(); }
+
+    HealingSelectionProbeScope(const HealingSelectionProbeScope &) = delete;
+    HealingSelectionProbeScope &operator=(const HealingSelectionProbeScope &) = delete;
+};
+
+void testHealingItemSelectionWorkAndCallbacksAreBounded() {
+    constexpr std::size_t inventoryCount = 96;
+    constexpr std::size_t turns = 64;
+    auto fixture = make_open_map(2, 1);
+    auto actor = make_actor(fixture, "healingActor", Coords(0, 0, 0), "opponent");
+    auto opponent = make_actor(fixture, "opponent", Coords(1, 0, 0), "healingActor");
+    actor->setNpc(false);
+    opponent->setNpc(false);
+    auto actorStats = std::make_shared<CStats>();
+    actorStats->setMainStat("intelligence");
+    actorStats->setStamina(10);
+    actor->setBaseStats(actorStats);
+    actor->setHp(35);
+    auto opponentStats = std::make_shared<CStats>();
+    opponentStats->setMainStat("intelligence");
+    opponentStats->setStamina(10);
+    opponentStats->setDmgMin(16);
+    opponentStats->setDmgMax(16);
+    opponent->setBaseStats(opponentStats);
+    opponent->setHp(70);
+    auto attack = std::make_shared<CombatActionCountProbe>();
+    attack->setGame(fixture.game);
+    attack->setName("attack");
+    attack->setTypeId("Attack");
+    actor->addAction(attack);
+    std::vector<std::shared_ptr<HealingSelectionPotionProbe>> itemProbes;
+    std::shared_ptr<HealingSelectionPotionProbe> selected;
+    for (std::size_t index = 0; index < 64; ++index) {
+        auto potion = std::make_shared<HealingSelectionPotionProbe>();
+        potion->setGame(fixture.game);
+        potion->setName("heal" + std::to_string(index));
+        potion->setPower(index < 32 ? 1 : index == 32 ? 2 : 3);
+        potion->addTag(CTag::Heal);
+        actor->addItem(potion);
+        itemProbes.push_back(potion);
+        if (index == 32) {
+            selected = potion;
+        }
+    }
+    for (std::size_t index = 0; index < 32; ++index) {
+        auto item = std::make_shared<HealingSelectionPotionProbe>();
+        item->setGame(fixture.game);
+        item->setName("nonHealingItem" + std::to_string(index));
+        actor->addItem(item);
+        itemProbes.push_back(item);
+    }
+    const auto inventory = actor->getItems();
+    const auto actions = actor->getInteractions();
+    const auto effects = actor->getEffects();
+    const auto objects = fixture.map->getObjects();
+    const int mana = actor->getMana();
+    expect_true(inventory.size() == inventoryCount && actor->getHpMax() == 70,
+                "healing selection fixture must retain its fixed inventory and health scale");
+    CMonsterFightController controller;
+    HealingSelectionProbeScope probe;
+    for (std::size_t turn = 0; turn < turns; ++turn) {
+        const auto previousCalls = selected->calls;
+        expect_true(controller.control(actor, opponent), "healing selection must take one action per turn");
+        expect_true(selected->calls == previousCalls + 1,
+                    "each healing selection must invoke the exact least viable item once");
+    }
+    const auto visits = performance_guard::healingItemSelectionProbeCount();
+    std::size_t itemCalls = 0;
+    for (const auto &item : itemProbes) {
+        itemCalls += item->calls;
+        expect_true(item->calls == (item == selected ? turns : 0),
+                    "outpaced weak heals, stronger viable heals, and non-healing items must remain unused");
+    }
+    expect_true(visits == inventoryCount * turns,
+                "healing selection must inspect every fixed inventory entry exactly once per turn");
+    expect_true(itemCalls == turns && attack->calls == 0,
+                "healing turns must produce one item callback and no attack callbacks");
+    expect_true(actor->getItems() == inventory && actor->getInteractions() == actions &&
+                    actor->getEffects() == effects && fixture.map->getObjects() == objects,
+                "healing selection must not accumulate inventory, actions, effects, or map objects");
+    expect_true(actor->getHp() == 35 && actor->getMana() == mana && opponent->getHp() == 70,
+                "the counting-only item callback must keep the repeated workload fixed");
+    std::cout << "healing item selection guard: inventory=" << inventoryCount << " turns=" << turns
+              << " visits=" << visits << " visit budget=" << inventoryCount * turns << " item callbacks=" << itemCalls
+              << " callback budget=" << turns << " attack callbacks=" << attack->calls << "\n";
+}
+
 void testMonsterRoleCallbackAndStateGrowthAreBounded() {
     auto fixture = make_open_map(2, 1);
     auto actor = make_actor(fixture, "roleActor", Coords(0, 0, 0), "opponent");
@@ -948,6 +1049,7 @@ void run_engine_hotspot_performance_tests() {
     test_moderate_actor_map_move_turn_state_and_revision_bounds();
     testStalePlannedMapMoveWorkIsBounded();
     test_bulk_inventory_property_notifications_are_count_bounded();
+    testHealingItemSelectionWorkAndCallbacksAreBounded();
     testMonsterRoleCallbackAndStateGrowthAreBounded();
     testOctobogzPhaseCallbackAndStateGrowthAreBounded();
     testEffectTickCallbacksAndExpiryAreBounded();
