@@ -471,12 +471,17 @@ class GameDiagnosticsTest(unittest.TestCase):
         self.assertEqual("unverified", session.manifest["channels"]["native"]["status"])
 
     def testExplicitTracePathValueIsResolvedFromRuntimeWorkingDirectory(self):
-        os.environ["GAME_PLAYTEST_TRACE"] = "authored-history.jsonl"
-        session = self.startSession(debug=True)
-        session.configureTrace(self.nativeModule())
-        channel = session.manifest["channels"]["gameplay"]
-        self.assertEqual("authored-history.jsonl", channel["target"])
-        self.assertEqual(str(Path("authored-history.jsonl").resolve()), channel["path"])
+        for target in ("authored-history.jsonl", "True", "On", "Enabled"):
+            with self.subTest(target=target):
+                os.environ["GAME_PLAYTEST_TRACE"] = target
+                session = self.startSession(debug=True)
+                try:
+                    session.configureTrace(self.nativeModule())
+                    channel = session.manifest["channels"]["gameplay"]
+                    self.assertEqual(target, channel["target"])
+                    self.assertEqual(str(Path(target).resolve()), channel["path"])
+                finally:
+                    session.close()
 
 
 if __name__ == "__main__":

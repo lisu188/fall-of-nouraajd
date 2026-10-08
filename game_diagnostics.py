@@ -390,7 +390,7 @@ class DebugSession:
                 target = os.environ.get("GAME_PLAYTEST_TRACE_FILE")
                 trace_value = os.environ.get("GAME_PLAYTEST_TRACE", "")
                 if target is None:
-                    if trace_value.lower() in {"1", "true", "on", "enabled"}:
+                    if trace_value in {"1", "true", "TRUE", "on", "ON", "enabled", "ENABLED"}:
                         target = "stderr"
                     else:
                         target = trace_value
