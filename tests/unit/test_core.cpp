@@ -1474,10 +1474,20 @@ void test_effect_owner_registry_releases_finished_and_destroyed_owners() {
 
 void test_playtest_trace_records_and_helper_payloads() {
     CPlaytestTrace::configure(false);
+    expect_true(!CPlaytestTrace::enabled() && !CPlaytestTrace::outputAvailable(),
+                "disabled playtest tracing should not report available output");
     CPlaytestTrace::record("ignored");
     expect_true(CPlaytestTrace::records().empty(), "disabled playtest trace should ignore records");
 
+    CPlaytestTrace::configure(false, "stderr");
+    expect_true(!CPlaytestTrace::outputAvailable(),
+                "disabled tracing should not report a configured output as available");
+    CPlaytestTrace::configure(true, "stderr");
+    expect_true(CPlaytestTrace::outputAvailable(),
+                "enabled stream output should be available before any detected failure");
     CPlaytestTrace::configure(true, "", 1);
+    expect_true(CPlaytestTrace::enabled() && !CPlaytestTrace::outputAvailable(),
+                "memory-only tracing should be enabled without available output");
     CPlaytestTrace::recordJson("trace_payload", R"({"value": 7})");
     CPlaytestTrace::recordJson("trace_non_object_payload", R"([1, 2])");
     CPlaytestTrace::recordJson("trace_after_truncation", "");
@@ -1672,11 +1682,14 @@ void test_playtest_trace_recent_files_rotate_and_keep_disk_counters() {
     const auto path = directory.path / "recent.jsonl";
     const auto backup = directory.path / "recent.jsonl.1";
     CPlaytestTrace::configure(true, path.string(), 3, true);
+    expect_true(CPlaytestTrace::enabled() && CPlaytestTrace::outputAvailable(),
+                "fresh file configuration should report available output");
     for (int index = 1; index <= 10; ++index) {
         CPlaytestTrace::record("rotating_event");
     }
     const auto previous = readTraceTestFile(backup);
     const auto current = readTraceTestFile(path);
+    expect_true(CPlaytestTrace::outputAvailable(), "successful file writes and rotations should keep output available");
     expect_true(previous.size() == 3 && previous.front()["seq"].get<unsigned long long>() == 7 &&
                     previous.back()["seq"].get<unsigned long long>() == 9 && current.size() == 1 &&
                     current.front()["seq"].get<unsigned long long>() == 10,
@@ -1707,6 +1720,8 @@ void test_playtest_trace_output_failure_keeps_memory_and_warns_once() {
         output << "retained evidence\n";
     }
     CPlaytestTrace::configure(true, existing.string(), 2, true);
+    expect_true(CPlaytestTrace::enabled() && !CPlaytestTrace::outputAvailable(),
+                "a destination collision should disable output while keeping tracing enabled");
     CPlaytestTrace::record("first_memory_event");
     CPlaytestTrace::record("second_memory_event");
     CPlaytestTrace::record("third_memory_event");
@@ -1717,17 +1732,28 @@ void test_playtest_trace_output_failure_keeps_memory_and_warns_once() {
     expect_true(CPlaytestTrace::records().size() == 2 &&
                     json::parse(CPlaytestTrace::records().back())["event"].get<std::string>() == "third_memory_event",
                 "rejected output must still retain recent memory history");
+    CPlaytestTrace::drain();
+    expect_true(!CPlaytestTrace::outputAvailable(), "draining memory history must not reset failed output health");
+    CPlaytestTrace::clear();
+    expect_true(!CPlaytestTrace::outputAvailable(), "clearing memory history must not reset failed output health");
 
     const auto missingParent = directory.path / "missing";
     const auto missingFile = missingParent / "events.jsonl";
     CPlaytestTrace::configure(true, missingFile.string(), 2, true);
+    expect_true(CPlaytestTrace::outputAvailable() && !std::filesystem::exists(missingFile),
+                "output health should only report detected failures without creating or probing the destination");
     CPlaytestTrace::record("unwritable_event");
+    expect_true(CPlaytestTrace::enabled() && !CPlaytestTrace::outputAvailable(),
+                "an open failure should disable output while keeping tracing enabled");
     std::filesystem::create_directory(missingParent);
+    expect_true(!CPlaytestTrace::outputAvailable(), "output health reads must not retry a repaired destination");
     CPlaytestTrace::record("do_not_retry_output");
     expect_true(warnings.count() == 2 && !std::filesystem::exists(missingFile) && CPlaytestTrace::records().size() == 2,
                 "file output failures must warn once and stop retrying until reconfigured");
     CPlaytestTrace::configure(true, missingFile.string(), 2, true);
     CPlaytestTrace::record("reconfigured_output");
+    expect_true(CPlaytestTrace::enabled() && CPlaytestTrace::outputAvailable(),
+                "explicit reconfiguration should restore available output after recovery");
     expect_true(readTraceTestFile(missingFile).size() == 1 && warnings.count() == 2,
                 "reconfiguration must allow a fresh trace destination to recover");
 
@@ -1739,6 +1765,8 @@ void test_playtest_trace_output_failure_keeps_memory_and_warns_once() {
     std::filesystem::create_directory(blockedBackup);
     CPlaytestTrace::record("rotation_failed");
     CPlaytestTrace::record("memory_after_rotation_failure");
+    expect_true(CPlaytestTrace::enabled() && !CPlaytestTrace::outputAvailable(),
+                "a rotation failure should disable output while keeping tracing enabled");
     expect_true(warnings.count() == 3 && readTraceTestFile(rotating).size() == 2 &&
                     std::filesystem::is_directory(blockedBackup),
                 "failed rotation must preserve the old file and an obstructing backup destination");
@@ -1758,6 +1786,8 @@ void test_playtest_trace_output_failure_keeps_memory_and_warns_once() {
     }
     CPlaytestTrace::configure(true, reserved.string(), 2, true);
     CPlaytestTrace::record("existing_backup_rejected");
+    expect_true(CPlaytestTrace::enabled() && !CPlaytestTrace::outputAvailable(),
+                "a backup collision should disable output while keeping tracing enabled");
     expect_true(warnings.count() == 5 && !std::filesystem::exists(reserved),
                 "recent history must not overwrite an existing backup");
 }

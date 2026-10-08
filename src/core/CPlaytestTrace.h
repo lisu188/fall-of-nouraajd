@@ -37,6 +37,7 @@ class CPlaytestTrace {
     static void configure(bool enabled, const std::string &outputTarget = "", std::size_t maxRecords = 1000,
                           bool retainRecent = false);
     static bool enabled();
+    static bool outputAvailable();
     static void clear();
     static std::vector<std::string> records();
     static std::vector<std::string> drain();

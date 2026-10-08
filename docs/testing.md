@@ -248,6 +248,12 @@ replace the original error or change callback fallback values. These local files
 contain native messages and exception text; structured authentication/session fields
 are redacted, but the entire native text stream is not sanitized.
 
+Gameplay channel status is refreshed at startup and shutdown from native output health.
+It becomes `memory_only` when output is absent or has failed, while tracing continues to
+retain events in memory. Older native modules without the output-health query report
+`unverified` rather than claiming active file output. The health query reports detected
+failures without probing the filesystem or resetting the trace.
+
 Focused checks without a compiled extension:
 
 ```sh
