@@ -263,12 +263,12 @@ void set_logger_sink_py(const std::string &sink_name, py::object path = py::none
 }
 
 void configure_playtest_trace_py(bool enabled = true, py::object output_path = py::none(),
-                                 std::size_t max_records = 1000) {
+                                 std::size_t max_records = 1000, bool retain_recent = false) {
     std::string target;
     if (!output_path.is_none()) {
         target = output_path.cast<std::string>();
     }
-    CPlaytestTrace::configure(enabled, target, max_records);
+    CPlaytestTrace::configure(enabled, target, max_records, retain_recent);
 }
 
 py::list map_get_objects(const std::shared_ptr<CMap> &map) {
@@ -1583,9 +1583,10 @@ void init_game_module(py::module_ &m) {
     m.def("set_logger_sink", set_logger_sink_py, py::arg("sink_name"), py::arg("path") = py::none(),
           "set_logger_sink(sink, path=None) -> None: Configure the native logger output target.");
     m.def("configure_playtest_trace", configure_playtest_trace_py, py::arg("enabled") = true,
-          py::arg("output_path") = py::none(), py::arg("max_records") = 1000,
-          "configure_playtest_trace(enabled=True, output_path=None, max_records=1000) -> None: Configure structured "
-          "playtest trace collection.");
+          py::arg("output_path") = py::none(), py::arg("max_records") = 1000, py::arg("retain_recent") = false,
+          "configure_playtest_trace(enabled=True, output_path=None, max_records=1000, retain_recent=False) -> None: "
+          "Configure structured playtest tracing. Recent history keeps the latest records and rotates a fresh file "
+          "to one .1 backup; output failures retain memory history.");
     m.def("configure_playtest_trace_from_env", &CPlaytestTrace::configureFromEnvironment,
           "Configure playtest tracing from GAME_PLAYTEST_TRACE.");
     m.def("playtest_trace_enabled", &CPlaytestTrace::enabled,

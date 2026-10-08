@@ -22,6 +22,7 @@ from typing import Any
 from urllib.parse import urlparse
 
 import game_simulation
+import game_diagnostics
 
 JSONRPC_VERSION = "2.0"
 SERVER_NAME = "fall-of-nouraajd-engine-mcp"
@@ -50,6 +51,9 @@ MAX_HTTP_SESSIONS = 32
 MAX_HTTP_STREAMS_PER_SESSION = 4
 MAX_MCP_HANDLES_PER_SESSION = 10_000
 MAX_TRACE_STRING_BYTES = 512
+MAX_DIAGNOSTIC_BYTES = 4096
+MAX_DIAGNOSTIC_DEPTH = 5
+MAX_DIAGNOSTIC_ITEMS = 20
 # Handle methods that trigger engine pathfinding from arbitrary, client-supplied coordinates.
 # These are validated against the loaded map extents before invocation so an MCP client cannot
 # steer the pathfinder over sparse or effectively unbounded coordinate space.
@@ -279,6 +283,7 @@ class ConnectionState:
     protocol_version: str
     initialized: bool = False
     log_level: str = "info"
+    diagnostic_label: str = ""
     client_capabilities: dict[str, Any] = field(default_factory=dict)
     client_info: dict[str, Any] = field(default_factory=dict)
     streams: dict[str, ClientStream] = field(default_factory=dict)
@@ -313,10 +318,12 @@ class EngineMcpServer:
         native_log_sink: str = "stdout",
         native_log_path: Path | None = None,
         build_config: str | None = None,
+        diagnostics: Any = None,
     ) -> None:
         self.repo_root = repo_root
         self.build_dir = build_dir
         self.build_config = build_config
+        self.diagnostics = diagnostics
         self.allow_origins = allow_origins or []
         self.trace_messages = trace_messages
         self.native_log_sink = native_log_sink
@@ -331,8 +338,10 @@ class EngineMcpServer:
         self.stdio_state: ConnectionState | None = None
         self._lock = threading.RLock()
         self._next_stream_seq = 1
+        self._next_invocation = 1
+        self._next_session_label = 1
 
-    def build_extension(self) -> None:
+    def build_extension(self, stdio: bool = False) -> None:
         logger.info("building extension target _game in %s", self.build_dir)
         command = ["cmake", "--build", str(self.build_dir), "--target", "_game"]
         if self.build_config:
@@ -343,6 +352,7 @@ class EngineMcpServer:
             command,
             cwd=self.repo_root,
             check=True,
+            stdout=sys.stderr if stdio else None,
         )
 
     def import_modules(self) -> None:
@@ -361,9 +371,24 @@ class EngineMcpServer:
                 f"{self.build_dir} --target _game` or run mcp.py with `--build`."
             ) from exc
         self._configure_native_logging()
+        if self.diagnostics is not None:
+            self.diagnostics.configureTrace(self._game_module)
         self.game_module = importlib.import_module("game")
         # The game bootstrap sets its default sink; restore the caller's requested destination.
         self._configure_native_logging()
+        if self.diagnostics is not None:
+            try:
+                resource_root = self._resource_root()
+                self.diagnostics.updateManifest(
+                    gameModule=str(getattr(self.game_module, "__file__", "<unknown>")),
+                    nativeModule=str(getattr(self._game_module, "__file__", "<unknown>")),
+                    buildConfig=self.build_config,
+                    resourceRoot=str(resource_root) if resource_root is not None else None,
+                    workingDirectory=str(Path.cwd()),
+                    extensionSearchDirs=[str(path) for path in self._extension_search_dirs()],
+                )
+            except Exception:
+                pass
         logger.info("modules imported successfully")
 
     def _extension_search_dirs(self) -> list[Path]:
@@ -399,6 +424,9 @@ class EngineMcpServer:
     def _configure_native_logging(self) -> None:
         if self._game_module is None:
             return
+        if self.diagnostics is not None:
+            self.diagnostics.applyNative(self._game_module, sink=self.native_log_sink, path=self.native_log_path)
+            return
         setter = getattr(self._game_module, "set_logger_sink", None)
         if setter is None:
             logger.warning("native module does not expose set_logger_sink; cannot redirect native logs")
@@ -410,6 +438,10 @@ class EngineMcpServer:
             setter(*call_args)
         except Exception:
             logger.exception("failed to configure native logger sink")
+            try:
+                setter("stderr", None)
+            except Exception:
+                logger.exception("failed to configure fallback native stderr logging")
             return
         target_desc = sink
         if self.native_log_path:
@@ -703,7 +735,7 @@ class EngineMcpServer:
             if state.protocol_version != effective_protocol_version:
                 logger.debug(
                     "session %s protocol header override from %s to %s",
-                    session_id,
+                    state.diagnostic_label or transport,
                     state.protocol_version,
                     effective_protocol_version,
                 )
@@ -778,7 +810,7 @@ class EngineMcpServer:
         if method == "tools/call":
             if not isinstance(params, dict):
                 raise ProtocolError(-32602, "Invalid params")
-            result = self._call_tool(params, transport=transport, session_id=session_id)
+            result = self._call_tool(params, transport=transport, session_id=session_id, request_id=req_id)
             return HandleResult(
                 response=self._result_response(req_id, result),
                 session_id=session_id,
@@ -811,6 +843,9 @@ class EngineMcpServer:
             client_capabilities=client_capabilities,
             client_info=client_info,
         )
+        with self._lock:
+            state.diagnostic_label = f"{transport}-{self._next_session_label}"
+            self._next_session_label += 1
 
         new_session_id: str | None = None
         if transport == "stdio":
@@ -1157,7 +1192,93 @@ class EngineMcpServer:
             },
         ]
 
-    def _call_tool(self, params: dict[str, Any], transport: str, session_id: str | None) -> dict[str, Any]:
+    def _call_tool(
+        self, params: dict[str, Any], transport: str, session_id: str | None, request_id: Any = None
+    ) -> dict[str, Any]:
+        started = time.monotonic()
+        with self._lock:
+            invocation = self._next_invocation
+            self._next_invocation += 1
+            state = self.stdio_state if transport == "stdio" else self.http_sessions.get(session_id)
+            session_label = state.diagnostic_label if state and state.diagnostic_label else transport
+        arguments = params.get("arguments", {})
+        context = {
+            "invocation": invocation,
+            "requestId": self._redact_trace_value(request_id),
+            "session": session_label,
+            "transport": transport,
+            "tool": self._redact_trace_value(params.get("name")),
+        }
+        if type(arguments) is dict:
+            for key in ("name", "method", "handle", "map", "map_name"):
+                if key in arguments:
+                    context[key] = self._redact_trace_value(arguments[key])
+            call_args = arguments.get("args")
+            if (
+                type(arguments.get("name")) is str
+                and arguments["name"] in {"CGameLoader.startGame", "CGameLoader.startGameWithPlayer"}
+                and type(call_args) is list
+                and len(call_args) > 1
+            ):
+                context["map"] = self._redact_trace_value(call_args[1])
+        self._log_tool_diagnostic(
+            transport=transport,
+            session_id=session_id,
+            level="info",
+            logger_name="tools",
+            data={"message": "tool call started", **context},
+        )
+        self._log_tool_preview("tool arguments", {**context, "arguments": arguments})
+        result = None
+        error = None
+        try:
+            result = self._dispatch_tool(params, transport, session_id)
+            return result
+        except ProtocolError as exc:
+            error = {"code": exc.code, "message": self._redact_trace_value(exc.message)}
+            raise
+        except BaseException as exc:
+            error = {"type": type(exc).__name__}
+            raise
+        finally:
+            failed = error is not None or (type(result) is dict and bool(result.get("isError", False)))
+            completed = {
+                "message": "tool call failed" if failed else "tool call completed",
+                **context,
+                "elapsedMs": round((time.monotonic() - started) * 1000, 3),
+                "isError": failed,
+            }
+            if error is not None:
+                completed["error"] = error
+            elif failed and type(result.get("structuredContent")) is dict:
+                failure = result["structuredContent"]
+                completed["error"] = self._redact_trace_value(failure.get("error"))
+                if type(failure.get("traceback")) is str:
+                    completed["traceback"] = failure["traceback"]
+            self._log_tool_diagnostic(
+                transport=transport,
+                session_id=session_id,
+                level="error" if failed else "info",
+                logger_name="tools",
+                data=completed,
+            )
+            if result is not None:
+                self._log_tool_preview("tool result", {**context, "result": result})
+
+    def _log_tool_diagnostic(self, **fields: Any) -> None:
+        try:
+            self._emit_log(**fields)
+        except Exception:
+            pass
+
+    def _log_tool_preview(self, message: str, data: dict[str, Any]) -> None:
+        try:
+            if logger.isEnabledFor(logging.DEBUG):
+                logger.debug("%s %s", message, json.dumps(self._redact_trace_value(data)))
+        except Exception:
+            pass
+
+    def _dispatch_tool(self, params: dict[str, Any], transport: str, session_id: str | None) -> dict[str, Any]:
         tool_name = params.get("name")
         arguments = params.get("arguments", {})
 
@@ -1165,14 +1286,6 @@ class EngineMcpServer:
             raise ProtocolError(-32602, "Invalid params")
         if not isinstance(arguments, dict):
             raise ProtocolError(-32602, "Invalid params")
-
-        self._emit_log(
-            transport=transport,
-            session_id=session_id,
-            level="info",
-            logger_name="tools",
-            data={"message": "tool call started", "tool": tool_name},
-        )
 
         if tool_name == "engine_list":
             exports = [
@@ -1195,36 +1308,13 @@ class EngineMcpServer:
                 },
                 "isError": False,
             }
-            self._emit_log(
-                transport=transport,
-                session_id=session_id,
-                level="info",
-                logger_name="tools",
-                data={"message": "tool call completed", "tool": tool_name, "count": len(exports)},
-            )
             return result
 
         if tool_name == "engine_call":
-            result = self._engine_call(arguments, self._handleRegistry(transport, session_id))
-            self._emit_log(
-                transport=transport,
-                session_id=session_id,
-                level="info",
-                logger_name="tools",
-                data={"message": "tool call completed", "tool": tool_name},
-            )
-            return result
+            return self._engine_call(arguments, self._handleRegistry(transport, session_id))
 
         if tool_name == "engine_handle_call":
-            result = self._engine_handle_call(arguments, self._handleRegistry(transport, session_id))
-            self._emit_log(
-                transport=transport,
-                session_id=session_id,
-                level="info",
-                logger_name="tools",
-                data={"message": "tool call completed", "tool": tool_name},
-            )
-            return result
+            return self._engine_handle_call(arguments, self._handleRegistry(transport, session_id))
 
         if tool_name == "engine_release_handles":
             handles = arguments.get("handles")
@@ -1245,26 +1335,10 @@ class EngineMcpServer:
             }
 
         if tool_name == "simulation_run":
-            result = self._simulation_run(arguments)
-            self._emit_log(
-                transport=transport,
-                session_id=session_id,
-                level="info",
-                logger_name="tools",
-                data={"message": "tool call completed", "tool": tool_name, "isError": result.get("isError", False)},
-            )
-            return result
+            return self._simulation_run(arguments)
 
         if tool_name == "map_design_brief":
-            result = self._map_design_brief(arguments)
-            self._emit_log(
-                transport=transport,
-                session_id=session_id,
-                level="info",
-                logger_name="tools",
-                data={"message": "tool call completed", "tool": tool_name},
-            )
-            return result
+            return self._map_design_brief(arguments)
 
         raise ProtocolError(-32602, f"Unknown tool: {tool_name}")
 
@@ -2303,12 +2377,15 @@ class EngineMcpServer:
         record: dict[str, Any] = {
             "transport": transport,
             "direction": direction,
-            "sessionId": self._redact_trace_value(session_id),
-            "payload": self._redact_trace_value(payload),
+            "sessionId": "<redacted>" if session_id is not None else None,
+            "payload": payload,
         }
         if extra:
-            record["meta"] = self._redact_trace_value(extra)
-        logger.debug("trace %s", json.dumps(record, ensure_ascii=False))
+            record["meta"] = extra
+        try:
+            logger.debug("trace %s", json.dumps(self._redact_trace_value(record), ensure_ascii=False))
+        except Exception:
+            pass
 
     def _emit_log(
         self,
@@ -2318,17 +2395,18 @@ class EngineMcpServer:
         logger_name: str,
         data: Any,
     ) -> None:
+        safe_data = self._redact_trace_value(data)
         payload = {
             "jsonrpc": JSONRPC_VERSION,
             "method": "notifications/message",
             "params": {
                 "level": level,
                 "logger": logger_name,
-                "data": self._jsonable(data),
+                "data": safe_data,
             },
         }
 
-        message = f"[{logger_name}] {json.dumps(self._jsonable(data), ensure_ascii=False)}"
+        message = f"[{logger_name}] {json.dumps(safe_data, ensure_ascii=False)}"
         python_level = {
             "debug": logging.DEBUG,
             "info": logging.INFO,
@@ -2339,7 +2417,10 @@ class EngineMcpServer:
             "alert": logging.CRITICAL,
             "emergency": logging.CRITICAL,
         }.get(level, logging.INFO)
-        logger.log(python_level, message)
+        try:
+            logger.log(python_level, message)
+        except Exception:
+            pass
 
         if transport == "stdio":
             state = self.stdio_state
@@ -2423,36 +2504,71 @@ class EngineMcpServer:
 
     @staticmethod
     def _jsonable(value: Any) -> Any:
-        if value is None or isinstance(value, (str, int, float, bool)):
-            return value
-        if isinstance(value, (list, tuple)):
-            return [EngineMcpServer._jsonable(item) for item in value]
-        if isinstance(value, dict):
-            return {str(key): EngineMcpServer._jsonable(item) for key, item in value.items()}
-        return repr(value)
+        return EngineMcpServer._redact_trace_value(value)
 
     @staticmethod
     def _redact_trace_value(value: Any, key: str | None = None) -> Any:
-        if key and key.lower() in {"authorization", "mcp-session-id", "sessionid", "session_id", "token"}:
-            return "<redacted>"
-        if value is None or isinstance(value, (int, float, bool)):
-            return value
-        if isinstance(value, str):
-            if len(value) > MAX_TRACE_STRING_BYTES:
-                return f"{value[:MAX_TRACE_STRING_BYTES]}...<truncated>"
-            return value
-        if isinstance(value, (list, tuple)):
-            return [EngineMcpServer._redact_trace_value(item) for item in value[:50]]
-        if isinstance(value, dict):
-            redacted = {}
-            for index, (item_key, item_value) in enumerate(value.items()):
-                if index >= 50:
-                    redacted["..."] = f"{len(value) - index} more"
-                    break
-                string_key = str(item_key)
-                redacted[string_key] = EngineMcpServer._redact_trace_value(item_value, string_key)
-            return redacted
-        return repr(value)
+        remaining = [128]
+        secret_keys = {
+            "authorization",
+            "mcpsessionid",
+            "sessionid",
+            "token",
+            "accesstoken",
+            "refreshtoken",
+            "apikey",
+            "password",
+            "secret",
+            "cookie",
+            "setcookie",
+        }
+
+        def text_preview(text: str, traceback_tail: bool = False) -> str:
+            encoded = text.encode("utf-8", errors="replace")
+            limit = 2048 if traceback_tail else MAX_TRACE_STRING_BYTES
+            if len(encoded) <= limit:
+                return text
+            if traceback_tail:
+                return "<truncated>..." + encoded[-limit:].decode("utf-8", errors="ignore")
+            return encoded[:limit].decode("utf-8", errors="ignore") + "...<truncated>"
+
+        def preview(item: Any, item_key: str | None, depth: int) -> Any:
+            if item_key and "".join(character for character in item_key.lower() if character.isalnum()) in secret_keys:
+                return "<redacted>"
+            remaining[0] -= 1
+            if remaining[0] < 0 or depth > MAX_DIAGNOSTIC_DEPTH:
+                return "<truncated>"
+            kind = type(item)
+            if item is None or kind in (bool, float):
+                return item
+            if kind is int:
+                return item if item.bit_length() < 2048 else "<large integer>"
+            if kind is str:
+                return text_preview(item, item_key == "traceback")
+            if kind in (list, tuple):
+                result = [preview(child, None, depth + 1) for child in item[:MAX_DIAGNOSTIC_ITEMS]]
+                if len(item) > MAX_DIAGNOSTIC_ITEMS:
+                    result.append("<truncated>")
+                return result
+            if kind is dict:
+                result = {}
+                for index, (child_key, child) in enumerate(item.items()):
+                    if index >= MAX_DIAGNOSTIC_ITEMS:
+                        result["..."] = "<truncated>"
+                        break
+                    safe_key = text_preview(child_key) if type(child_key) is str else "<non-string key>"
+                    if type(child_key) is str and child_key == "content" and "structuredContent" in item:
+                        result[safe_key] = "<see structuredContent>"
+                        continue
+                    result[safe_key] = preview(child, child_key if type(child_key) is str else None, depth + 1)
+                return result
+            return "<object>"
+
+        result = preview(value, key, 0)
+        encoded = json.dumps(result, ensure_ascii=False).encode("utf-8", errors="replace")
+        if len(encoded) > MAX_DIAGNOSTIC_BYTES:
+            return {"preview": encoded[: MAX_DIAGNOSTIC_BYTES // 2].decode("utf-8", errors="ignore"), "truncated": True}
+        return result
 
 
 class EngineHttpServer(ThreadingHTTPServer):
@@ -2823,11 +2939,13 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--stdio", action="store_true", help="Run as a stdio MCP server instead of HTTP")
     parser.add_argument("--host", default="127.0.0.1", help="HTTP host to bind when running in HTTP mode")
     parser.add_argument("--port", type=int, default=8765, help="HTTP port to bind when running in HTTP mode")
-    parser.add_argument("--log-level", default="INFO", help="Python log level")
+    parser.add_argument("--log-level", default=None, help="Python log level (INFO, or DEBUG with --debug)")
+    parser.add_argument("--debug", action="store_true", default=None, help="Save verbose per-run diagnostics")
+    parser.add_argument("--debug-dir", default=None, help="Diagnostics parent directory (also GAME_DEBUG_DIR)")
     parser.add_argument(
         "--trace-messages",
         action="store_true",
-        help="Log full MCP request/response payloads for debugging",
+        help="Log bounded, redacted MCP request/response payload previews for debugging",
     )
     parser.add_argument("--allow-origin", action="append", default=[], help="Additional allowed Origin value")
     parser.add_argument(
@@ -2844,63 +2962,109 @@ def parse_args() -> argparse.Namespace:
     return parser.parse_args()
 
 
-def configure_logging(level_name: str, log_sink: str = "stderr", trace_messages: bool = False) -> None:
+def configure_logging(
+    level_name: str, log_sink: str = "stderr", trace_messages: bool = False, console_level_name: str | None = None
+) -> None:
     level = getattr(logging, level_name.upper(), logging.INFO)
     if trace_messages and level > logging.DEBUG:
         level = logging.DEBUG
     stream = sys.stdout if log_sink == "stdout" else sys.stderr
+    handler = logging.StreamHandler(stream)
+    console_level = getattr(logging, console_level_name.upper(), level) if console_level_name else level
+    handler.setLevel(console_level)
+    handler.setFormatter(logging.Formatter("%(asctime)s %(levelname)s %(name)s %(message)s"))
     logging.basicConfig(
         level=level,
-        stream=stream,
-        format="%(asctime)s %(levelname)s %(name)s %(message)s",
+        handlers=[handler],
     )
+    logger.setLevel(level)
 
 
 def is_resource_root(path: Path) -> bool:
     return (path / "config").is_dir() and (path / "maps").is_dir() and (path / "plugins").is_dir()
 
 
+def validate_stdio_diagnostics(native_log_sink: str) -> None:
+    if native_log_sink == "stdout":
+        raise ValueError("MCP stdio reserves stdout for JSON-RPC; use --native-log-sink stderr, file, or disabled")
+    enabled = os.environ.get("GAME_PLAYTEST_TRACE", "")
+    if enabled.lower() in {"", "0", "false", "off", "disabled"}:
+        return
+    target = os.environ.get("GAME_PLAYTEST_TRACE_FILE", enabled)
+    if target == "stdout":
+        raise ValueError("MCP stdio reserves stdout for JSON-RPC; set GAME_PLAYTEST_TRACE_FILE to stderr or a file")
+
+
 def main() -> int:
     args = parse_args()
-    python_log_sink = "stderr" if args.stdio else "stdout"
-    configure_logging(args.log_level, log_sink=python_log_sink, trace_messages=args.trace_messages)
     repo_root = Path(args.repo_root).resolve() if args.repo_root else Path(__file__).resolve().parent
     build_dir_arg = Path(args.build_dir)
     build_dir = build_dir_arg.resolve() if build_dir_arg.is_absolute() else (repo_root / build_dir_arg).resolve()
     if not build_dir.exists() and is_resource_root(repo_root):
         build_dir = repo_root
-    native_log_sink = args.native_log_sink or ("file" if args.stdio else "stdout")
-    native_log_path: Path | None = None
-    if native_log_sink == "file":
-        log_path = Path(args.native_log_file) if args.native_log_file else build_dir / "logs" / "mcp-stdio.log"
-        if not log_path.is_absolute():
-            log_path = repo_root / log_path
-        log_path.parent.mkdir(parents=True, exist_ok=True)
-        native_log_path = log_path
-    elif args.native_log_file:
-        logger.warning(
-            "Ignoring --native-log-file because native log sink %s does not use a file",
-            native_log_sink,
-        )
-
-    server = EngineMcpServer(
-        repo_root=repo_root,
-        build_dir=build_dir,
-        allow_origins=args.allow_origin,
-        trace_messages=args.trace_messages,
-        native_log_sink=native_log_sink,
-        native_log_path=native_log_path,
-        build_config=args.build_config,
+    diagnostics = game_diagnostics.startSession(
+        repo_root=repo_root, build_dir=build_dir, entrypoint="mcp", debug=args.debug, debug_dir=args.debug_dir
     )
-    if args.build:
-        server.build_extension()
-    server.import_modules()
-    server.inspect_and_export()
-    if args.stdio:
-        server.serve_stdio()
-    else:
-        server.serve_http(host=args.host, port=args.port)
-    return 0
+    try:
+        python_log_sink = "stderr" if args.stdio else "stdout"
+        log_level = args.log_level or ("DEBUG" if diagnostics is not None else "INFO")
+        if diagnostics is not None and args.log_level is None and not args.trace_messages:
+            configure_logging(log_level, log_sink=python_log_sink, console_level_name="WARNING")
+        else:
+            configure_logging(log_level, log_sink=python_log_sink, trace_messages=args.trace_messages)
+        native_log_sink = args.native_log_sink or ("file" if diagnostics is not None or args.stdio else "stdout")
+        if args.stdio:
+            validate_stdio_diagnostics(native_log_sink)
+        native_log_path: Path | None = None
+        if native_log_sink == "file":
+            default_path = diagnostics.nativePath if diagnostics is not None else build_dir / "logs" / "mcp-stdio.log"
+            log_path = Path(args.native_log_file) if args.native_log_file else default_path
+            if not log_path.is_absolute():
+                log_path = repo_root / log_path
+            try:
+                log_path.parent.mkdir(parents=True, exist_ok=True)
+                native_log_path = log_path
+            except OSError:
+                native_log_sink = "stderr"
+                logger.warning("Native log directory is unavailable; continuing with native logs on stderr")
+                if diagnostics is not None:
+                    diagnostics.updateManifest(nativeFileUnavailable=True, nativeFallback="stderr")
+        elif args.native_log_file:
+            logger.warning("Ignoring --native-log-file because native log sink %s does not use a file", native_log_sink)
+        if diagnostics is not None:
+            diagnostics.updateManifest(
+                transport="stdio" if args.stdio else "http",
+                pythonLogLevel=log_level.upper(),
+                traceMessages=args.trace_messages,
+            )
+        server = EngineMcpServer(
+            repo_root=repo_root,
+            build_dir=build_dir,
+            allow_origins=args.allow_origin,
+            trace_messages=args.trace_messages,
+            native_log_sink=native_log_sink,
+            native_log_path=native_log_path,
+            build_config=args.build_config,
+            diagnostics=diagnostics,
+        )
+        if args.build:
+            server.build_extension(stdio=args.stdio)
+        server.import_modules()
+        server.inspect_and_export()
+        if args.stdio:
+            server.serve_stdio()
+        else:
+            server.serve_http(host=args.host, port=args.port)
+        if diagnostics is not None:
+            diagnostics.finish(status="complete")
+        return 0
+    except BaseException as exc:
+        if diagnostics is not None:
+            diagnostics.finish(status="failed", error=exc)
+        raise
+    finally:
+        if diagnostics is not None:
+            diagnostics.close()
 
 
 if __name__ == "__main__":
