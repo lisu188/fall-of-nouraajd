@@ -1126,13 +1126,9 @@ void test_monster_fight_controller_heals_when_heal_outpaces_incoming_damage() {
                 "monster fight controller should spend the least powerful heal item first");
 }
 
-void test_monster_fight_controller_gates_heal_on_the_potion_it_will_actually_drink() {
+void testMonsterFightControllerSelectsStrongerViableHeal() {
     auto game = fight_fixture_game();
-    // hpMax 70, hp 35 (50%, so healing is on the table). The AI spends the WEAKEST heal
-    // first, so the gate must weigh that potion, not the strongest. A power-1 heal restores
-    // ~14; a power-5 heal restores ~35 (capped by missing hp). Against an expected 16 hp hit,
-    // the power-1 potion it would actually drink is a net loss, so the monster must attack
-    // instead -- the old strongest-potion gate green-lit that net-loss drink.
+    // Max hp 70, current hp 35: power 1 restores 14, while power 5 is capped at 35.
     auto monster = fight_fixture_monster(game, 10, 35);
     auto opponent = fight_fixture_hitter(game, 16);
     auto weak = heal_potion(game, 1);
@@ -1143,9 +1139,82 @@ void test_monster_fight_controller_gates_heal_on_the_potion_it_will_actually_dri
 
     auto controller = std::make_shared<CMonsterFightController>();
     expect_true(controller->control(monster, opponent),
-                "monster should still take a turn (attack) when the drinkable heal cannot keep pace");
+                "monster should take a turn when a stronger heal outpaces the expected hit");
+    expect_true(monster->getItems().size() == 1 && monster->hasItem(weak) && !monster->hasItem(strong),
+                "monster should consume the viable stronger heal and retain the outpaced weak heal");
+}
+
+void testMonsterFightControllerSkipsHealEqualToIncomingDamage() {
+    auto game = fight_fixture_game();
+    // The Sorcerer failure: max hp 91, hp 63, ordinary hit 21 mitigated by 10% armor to 18.
+    // Power 1 restores exactly 18; power 2 restores 36, capped by the 28 missing hp.
+    auto monster = fight_fixture_monster(game, 13, 63);
+    monster->getBaseStats()->setArmor(10);
+    auto opponent = fight_fixture_hitter(game, 21);
+    auto weak = heal_potion(game, 1);
+    auto strong = heal_potion(game, 2);
+    monster->addItem(weak);
+    monster->addItem(strong);
+    monster->addAction(std::make_shared<CInteraction>());
+
+    auto controller = std::make_shared<CMonsterFightController>();
+    expect_true(monster->getHpMax() == 91, "equality regression should retain the observed 91-hp maximum");
+    expect_true(controller->control(monster, opponent),
+                "monster should heal when a stronger item provides a net gain over the ordinary hit");
+    expect_true(monster->getItems().size() == 1 && monster->hasItem(weak) && !monster->hasItem(strong),
+                "an equal-strength weak heal must not prevent consumption of a viable stronger heal");
+}
+
+void testMonsterFightControllerChoosesLeastPowerfulViableHeal() {
+    auto game = fight_fixture_game();
+    auto monster = fight_fixture_monster(game, 10, 30);
+    auto opponent = fight_fixture_hitter(game, 16);
+    auto weak = heal_potion(game, 1);
+    auto medium = heal_potion(game, 2);
+    auto strong = heal_potion(game, 5);
+    monster->addItem(weak);
+    monster->addItem(medium);
+    monster->addItem(strong);
+    monster->addAction(std::make_shared<CInteraction>());
+
+    auto controller = std::make_shared<CMonsterFightController>();
+    expect_true(controller->control(monster, opponent), "monster should select one viable healing item");
+    expect_true(monster->getItems().size() == 2 && monster->hasItem(weak) && !monster->hasItem(medium) &&
+                    monster->hasItem(strong),
+                "monster should skip the outpaced weakest heal and conserve the strongest viable heal");
+}
+
+void testMonsterFightControllerCapsHealAtMissingHealth() {
+    auto game = fight_fixture_game();
+    // Hp is below 75%, but only 20 hp is missing: even a full heal cannot outpace a 25-hp hit.
+    auto monster = fight_fixture_monster(game, 10, 50);
+    auto opponent = fight_fixture_hitter(game, 25);
+    auto weak = heal_potion(game, 1);
+    auto strong = heal_potion(game, 5);
+    monster->addItem(weak);
+    monster->addItem(strong);
+    monster->addAction(std::make_shared<CInteraction>());
+
+    auto controller = std::make_shared<CMonsterFightController>();
+    expect_true(controller->control(monster, opponent),
+                "monster should keep an offensive turn when capped healing cannot provide a net gain");
     expect_true(monster->getItems().size() == 2 && monster->hasItem(weak) && monster->hasItem(strong),
-                "monster must not spend the weak heal the gate would drink when it is outpaced by the hit");
+                "missing-health capping must prevent wasting even a powerful healing item");
+}
+
+void testMonsterFightControllerRetainsHealEqualToIncomingDamage() {
+    auto game = fight_fixture_game();
+    auto monster = fight_fixture_monster(game, 10, 35);
+    auto opponent = fight_fixture_hitter(game, 14);
+    auto potion = heal_potion(game, 1);
+    monster->addItem(potion);
+    monster->addAction(std::make_shared<CInteraction>());
+
+    auto controller = std::make_shared<CMonsterFightController>();
+    expect_true(controller->control(monster, opponent),
+                "monster should retain an offensive turn when healing only breaks even");
+    expect_true(monster->getItems().size() == 1 && monster->hasItem(potion),
+                "equal restoration and incoming damage must not reintroduce net-zero chain drinking");
 }
 
 void test_monster_fight_controller_heals_when_next_hit_would_kill() {
@@ -1844,7 +1913,11 @@ int main() {
     test_monster_fight_controller_uses_mana_item_when_mana_is_low();
     test_monster_fight_controller_attacks_hard_hitter_instead_of_wasting_heal();
     test_monster_fight_controller_heals_when_heal_outpaces_incoming_damage();
-    test_monster_fight_controller_gates_heal_on_the_potion_it_will_actually_drink();
+    testMonsterFightControllerSelectsStrongerViableHeal();
+    testMonsterFightControllerSkipsHealEqualToIncomingDamage();
+    testMonsterFightControllerChoosesLeastPowerfulViableHeal();
+    testMonsterFightControllerCapsHealAtMissingHealth();
+    testMonsterFightControllerRetainsHealEqualToIncomingDamage();
     test_monster_fight_controller_heals_when_next_hit_would_kill();
     testEffectCloneFixturePreservesStatsAcrossControllerTurns();
     test_monster_fight_controller_ranks_interactions_by_weakening();
