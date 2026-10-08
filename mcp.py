@@ -2524,10 +2524,10 @@ class EngineMcpServer:
         }
 
         def text_preview(text: str, traceback_tail: bool = False) -> str:
-            encoded = text.encode("utf-8", errors="replace")
+            encoded = text.encode("utf-8", errors="backslashreplace")
             limit = 2048 if traceback_tail else MAX_TRACE_STRING_BYTES
             if len(encoded) <= limit:
-                return text
+                return encoded.decode("utf-8")
             if traceback_tail:
                 return "<truncated>..." + encoded[-limit:].decode("utf-8", errors="ignore")
             return encoded[:limit].decode("utf-8", errors="ignore") + "...<truncated>"

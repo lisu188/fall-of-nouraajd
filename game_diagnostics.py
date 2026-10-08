@@ -74,7 +74,13 @@ def _utcNow():
 class _RuntimeHandler(RotatingFileHandler):
     def __init__(self, session):
         self.session = session
-        super().__init__(session.paths["runtime"], maxBytes=4 * 1024 * 1024, backupCount=2, encoding="utf-8")
+        super().__init__(
+            session.paths["runtime"],
+            maxBytes=4 * 1024 * 1024,
+            backupCount=2,
+            encoding="utf-8",
+            errors="backslashreplace",
+        )
         self.setLevel(logging.DEBUG)
         self.setFormatter(logging.Formatter("%(asctime)s %(levelname)s %(name)s %(message)s"))
 

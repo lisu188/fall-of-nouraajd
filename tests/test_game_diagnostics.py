@@ -319,6 +319,30 @@ class GameDiagnosticsTest(unittest.TestCase):
         self.assertEqual("ValueError", session.manifest["errorType"])
         self.assertEqual("failed", session.manifest["outcome"])
 
+    def testMalformedPythonMessagesAndExceptionTracebacksKeepRuntimeLoggingActive(self):
+        for source in ("message", "exception"):
+            with self.subTest(source=source):
+                session = self.startSession(debug=True)
+                warnings = io.StringIO()
+                try:
+                    with redirect_stderr(warnings):
+                        if source == "message":
+                            logging.getLogger("game_diagnostics").warning("python-message-\ud800-\u0142\U0001f5fa")
+                        else:
+                            try:
+                                raise ValueError("python-exception-\ud800-\u0142\U0001f5fa")
+                            except ValueError as error:
+                                session.recordException("malformed_exception", error)
+                        session.record("after_malformed_" + source)
+                    self.assertEqual("active", session.manifest["channels"]["runtime"]["status"])
+                    text = session.paths["runtime"].read_text(encoding="utf-8")
+                    self.assertIn("after_malformed_" + source, text)
+                    self.assertIn(r"\ud800", text)
+                    self.assertIn("\u0142\U0001f5fa", text)
+                    self.assertEqual("", warnings.getvalue())
+                finally:
+                    session.close()
+
     def testPlayCapturesImportFailureBeforeGameBootstrap(self):
         tree = ast.parse((ROOT / "play.py").read_text(encoding="utf-8"))
         tree.body = tree.body[:-1]

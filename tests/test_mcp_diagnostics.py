@@ -185,6 +185,55 @@ class McpDiagnosticsTest(unittest.TestCase):
         self.assertNotIn("duplicate-secret", rendered)
         self.assertIn("structuredContent", rendered)
 
+    def testPreviewNormalizesMalformedUnicodeWithinByteBudget(self):
+        for text in ("short-\ud800-\udfff", "\ud800\u0142\U0001f5fa" * 1000):
+            with self.subTest(length=len(text)):
+                preview = self.server._redact_trace_value({text: text})
+                encoded = json.dumps(preview, ensure_ascii=False).encode("utf-8")
+                self.assertLessEqual(len(encoded), mcp.MAX_DIAGNOSTIC_BYTES)
+                self.assertIn(b"\\\\ud800", encoded)
+
+    def testMalformedToolSummaryAndErrorKeepRuntimeLoggingActive(self):
+        with tempfile.TemporaryDirectory(prefix="nouraajd-mcp-unicode-") as directory:
+            root = Path(directory)
+            stderr = io.StringIO()
+            with patch.dict(os.environ, {}, clear=True), patch.object(mcp.sys, "stderr", stderr):
+                session = mcp.game_diagnostics.startSession(
+                    repo_root=root, build_dir=root, entrypoint="test", debug=True
+                )
+                try:
+                    server = mcp.EngineMcpServer(root, root)
+                    callable_name = "malformed-\ud800"
+
+                    def fail():
+                        raise ValueError("engine-error-\udfff")
+
+                    server.exports[callable_name] = mcp.ExportedCallable(callable_name, "test", "fail", fail, "()")
+                    result = server._call_tool(
+                        {"name": "engine_call", "arguments": {"name": callable_name}},
+                        "stdio",
+                        None,
+                        request_id="request-\ud800",
+                    )
+                    self.assertTrue(result["isError"])
+                    self.assertEqual("engine-error-\udfff", result["structuredContent"]["error"])
+                    next_result = server._call_tool(
+                        {"name": "engine_list"}, "stdio", None, request_id="after-malformed-tool"
+                    )
+                    self.assertFalse(next_result["isError"])
+                    session.record("after_malformed_tool")
+                    self.assertEqual("active", session.manifest["channels"]["runtime"]["status"])
+                    text = session.paths["runtime"].read_text(encoding="utf-8")
+                    self.assertIn("tool call failed", text)
+                    self.assertIn("tool call completed", text)
+                    self.assertIn('"requestId": "after-malformed-tool"', text)
+                    self.assertIn("after_malformed_tool", text)
+                    self.assertIn(r"\ud800", text)
+                    self.assertIn(r"\udfff", text)
+                    self.assertNotIn("Debug diagnostics (runtime)", stderr.getvalue())
+                finally:
+                    session.close()
+
     def testRawTraceIsIndependentAndRedactsTopLevelSessionId(self):
         with self.assertNoLogs(mcp.logger, "DEBUG"):
             self.server._trace_message(transport="http", direction="recv", payload={"ok": True})
