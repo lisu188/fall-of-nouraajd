@@ -25,7 +25,7 @@ class GameDiagnosticsTest(unittest.TestCase):
     def setUp(self):
         self.temporary = tempfile.TemporaryDirectory(prefix="nouraajd-diagnostics-")
         self.addCleanup(self.temporary.cleanup)
-        self.root = Path(self.temporary.name)
+        self.root = Path(self.temporary.name).resolve()
         self.environment = mock.patch.dict(os.environ, {}, clear=True)
         self.environment.start()
         self.addCleanup(self.environment.stop)
