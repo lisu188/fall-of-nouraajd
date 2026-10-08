@@ -117,6 +117,25 @@ On Windows Visual Studio builds, use:
 python mcp.py --stdio --repo-root . --build-dir cmake-build-release --build-config Release
 </pre>
 
+For an opt-in debug bundle that Codex can inspect after a failure:
+<pre>
+python play.py --debug
+python mcp.py --stdio --repo-root . --build-dir cmake-build-release --debug
+</pre>
+On Windows Visual Studio builds, retain `--build-config Release` for MCP and set
+`GAME_BUILD_CONFIG=Release` for the game launcher. Both launchers also accept
+`GAME_DEBUG=1` and an optional `GAME_DEBUG_DIR`; `--debug-dir` overrides that directory.
+Directory settings alone do not enable debugging.
+
+Each run prints its absolute diagnostics folder to stderr. By default the folder is
+under the active build root's `logs/debug/` directory. It contains a startup/outcome
+manifest, Python runtime logs, native engine logs, and recent gameplay JSONL events.
+MCP summaries identify the actual callable/method, request and invocation, elapsed
+time, and success or failure. Existing explicit MCP logging flags and gameplay-trace
+environment settings override the debug preset. Raw MCP payload tracing still requires
+`--trace-messages`; its previews are bounded and session/authentication fields are redacted.
+See [debug diagnostics](docs/testing.md#debug-diagnostics) for retention and failure behavior.
+
 ### testing
 Running tests is **mandatory** after any code change.
 From a fresh checkout, prepare the repository first:

@@ -52,6 +52,8 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #include <atomic>
 #include <chrono>
 #include <cmath>
+#include <filesystem>
+#include <fstream>
 #include <limits>
 #include <map>
 #include <memory>
@@ -1527,6 +1529,266 @@ void test_playtest_trace_records_and_helper_payloads() {
                 "addMapContext should serialize map identity and turn");
 
     CPlaytestTrace::configure(false);
+}
+
+struct TraceTestDirectory {
+    std::filesystem::path path;
+
+    TraceTestDirectory() {
+        const auto stamp = std::chrono::steady_clock::now().time_since_epoch().count();
+        for (int attempt = 0; attempt < 32; ++attempt) {
+            const auto candidate = std::filesystem::temp_directory_path() /
+                                   ("nouraajd-trace-test-" + std::to_string(stamp) + "-" + std::to_string(attempt));
+            if (std::filesystem::create_directory(candidate)) {
+                path = candidate;
+                return;
+            }
+        }
+        throw std::runtime_error("Could not create an isolated trace test directory");
+    }
+
+    ~TraceTestDirectory() {
+        CPlaytestTrace::configure(false);
+        std::error_code error;
+        std::filesystem::remove_all(path, error);
+    }
+};
+
+struct TraceWarningCapture {
+    std::ostringstream output;
+    std::streambuf *previous = std::cerr.rdbuf(output.rdbuf());
+
+    ~TraceWarningCapture() { std::cerr.rdbuf(previous); }
+
+    int count() const {
+        const auto text = output.str();
+        const std::string marker = "Playtest trace output unavailable";
+        int result = 0;
+        for (std::size_t position = 0; (position = text.find(marker, position)) != std::string::npos;
+             position += marker.size()) {
+            ++result;
+        }
+        return result;
+    }
+};
+
+std::vector<json> readTraceTestFile(const std::filesystem::path &path) {
+    std::ifstream input(path);
+    std::vector<json> records;
+    for (std::string line; std::getline(input, line);) {
+        records.push_back(json::parse(line));
+    }
+    return records;
+}
+
+void test_playtest_trace_unicode_truncation_preserves_json() {
+    const std::vector<std::pair<std::string, std::string>> cases = {
+        {std::string(159, 'a') + "\xE2\x82\xAC" + "tail", std::string(159, 'a')},
+        {std::string(157, 'a') + "\xE2\x82\xAC" + "tail", std::string(157, 'a') + "\xE2\x82\xAC"},
+        {std::string(158, 'a') + "\xF0\x9F\x8C\x99" + "tail", std::string(158, 'a')},
+        {std::string(156, 'a') + "\xF0\x9F\x8C\x99" + "tail", std::string(156, 'a') + "\xF0\x9F\x8C\x99"},
+    };
+    CPlaytestTrace::configure(true, "", 8, true);
+    for (const auto &[name, expected] : cases) {
+        auto object = std::make_shared<CGameObject>();
+        object->setName(name);
+        object->setTypeId(name);
+        auto map = std::make_shared<CMap>();
+        map->setMapName(name);
+        json fields = {{"object", CPlaytestTrace::objectRef(object)}};
+        CPlaytestTrace::addMapContext(fields, map);
+        CPlaytestTrace::record("unicode_identity", fields);
+        bool parsed = false;
+        try {
+            const auto record = json::parse(CPlaytestTrace::records().back());
+            const auto &ref = record["object"];
+            parsed = ref["name"].get<std::string>() == expected && ref["id"].get<std::string>() == expected &&
+                     ref["typeId"].get<std::string>() == expected && record["map"].get<std::string>() == expected;
+        } catch (const std::exception &) {
+        }
+        expect_true(parsed, "trace identity truncation must preserve complete UTF-8 code points and parseable JSON");
+    }
+    CPlaytestTrace::configure(false);
+}
+
+void test_playtest_trace_bad_payload_does_not_escape_or_stop_history() {
+    TraceTestDirectory directory;
+    TraceWarningCapture warnings;
+    const auto path = directory.path / "payload-errors.jsonl";
+    CPlaytestTrace::configure(true, path.string(), 4, true);
+    CPlaytestTrace::record("before_bad_payload");
+    bool escaped = false;
+    try {
+        CPlaytestTrace::recordJson("bad_payload", "{broken");
+        CPlaytestTrace::recordJson("another_bad_payload", "{");
+    } catch (...) {
+        escaped = true;
+    }
+    CPlaytestTrace::record("after_bad_payload");
+    const auto retained = CPlaytestTrace::records();
+    const auto onDisk = readTraceTestFile(path);
+    expect_true(!escaped && retained.size() == 2 && onDisk.size() == 2 &&
+                    onDisk.back()["event"].get<std::string>() == "after_bad_payload" &&
+                    onDisk.back()["seq"].get<unsigned long long>() == 2,
+                "malformed trace payloads must not escape into gameplay or stop healthy history recording");
+    const auto text = warnings.output.str();
+    const std::string marker = "Playtest trace record unavailable";
+    const auto first = text.find(marker);
+    expect_true(first != std::string::npos && text.find(marker, first + marker.size()) == std::string::npos,
+                "trace payload failures must report one bounded diagnostic per configuration");
+    CPlaytestTrace::configure(false);
+    CPlaytestTrace::recordJson("disabled_bad_payload", "{broken");
+    expect_true(warnings.output.str() == text && CPlaytestTrace::records().empty(),
+                "disabled tracing must ignore malformed diagnostics without parsing or reporting them");
+}
+
+void test_playtest_trace_recent_history_keeps_latest_events() {
+    CPlaytestTrace::configure(true, "", 1000, true);
+    for (int index = 1; index <= 2501; ++index) {
+        CPlaytestTrace::record("recent_event", {{"index", index}});
+    }
+    const auto records = CPlaytestTrace::records();
+    expect_true(records.size() == 1000, "recent history must remain bounded after more than two thousand events");
+    for (std::size_t index = 0; index < records.size(); ++index) {
+        const auto record = json::parse(records[index]);
+        expect_true(record["seq"].get<unsigned long long>() == index + 1502 &&
+                        record["index"].get<unsigned long long>() == index + 1502 &&
+                        record["event"].get<std::string>() == "recent_event",
+                    "recent history must retain the latest events in sequence without a truncation marker");
+    }
+    CPlaytestTrace::drain();
+    CPlaytestTrace::record("after_drain");
+    expect_true(json::parse(CPlaytestTrace::records().front())["seq"].get<unsigned long long>() == 2502,
+                "draining recent history must preserve the sequence number");
+    CPlaytestTrace::clear();
+    CPlaytestTrace::record("after_clear");
+    expect_true(json::parse(CPlaytestTrace::records().front())["seq"].get<unsigned long long>() == 1,
+                "clearing recent history must preserve the legacy sequence reset");
+    CPlaytestTrace::configure(false);
+}
+
+void test_playtest_trace_recent_files_rotate_and_keep_disk_counters() {
+    TraceTestDirectory directory;
+    const auto path = directory.path / "recent.jsonl";
+    const auto backup = directory.path / "recent.jsonl.1";
+    CPlaytestTrace::configure(true, path.string(), 3, true);
+    for (int index = 1; index <= 10; ++index) {
+        CPlaytestTrace::record("rotating_event");
+    }
+    const auto previous = readTraceTestFile(backup);
+    const auto current = readTraceTestFile(path);
+    expect_true(previous.size() == 3 && previous.front()["seq"].get<unsigned long long>() == 7 &&
+                    previous.back()["seq"].get<unsigned long long>() == 9 && current.size() == 1 &&
+                    current.front()["seq"].get<unsigned long long>() == 10,
+                "recent trace files must keep one bounded previous chunk and the active chunk");
+    expect_true(CPlaytestTrace::records().size() == 3 &&
+                    json::parse(CPlaytestTrace::records().front())["seq"].get<unsigned long long>() == 8,
+                "disk chunk rotation must not change the memory tail");
+
+    CPlaytestTrace::drain();
+    CPlaytestTrace::record("after_drain");
+    CPlaytestTrace::record("before_clear");
+    CPlaytestTrace::clear();
+    CPlaytestTrace::record("after_clear");
+    const auto afterClearBackup = readTraceTestFile(backup);
+    const auto afterClearCurrent = readTraceTestFile(path);
+    expect_true(afterClearBackup.size() == 3 && afterClearBackup.front()["seq"].get<unsigned long long>() == 10 &&
+                    afterClearBackup.back()["seq"].get<unsigned long long>() == 12 && afterClearCurrent.size() == 1 &&
+                    afterClearCurrent.front()["seq"].get<unsigned long long>() == 1,
+                "drain and clear must preserve disk rotation counters while clear resets sequence numbering");
+}
+
+void test_playtest_trace_output_failure_keeps_memory_and_warns_once() {
+    TraceTestDirectory directory;
+    TraceWarningCapture warnings;
+    const auto existing = directory.path / "existing.jsonl";
+    {
+        std::ofstream output(existing);
+        output << "retained evidence\n";
+    }
+    CPlaytestTrace::configure(true, existing.string(), 2, true);
+    CPlaytestTrace::record("first_memory_event");
+    CPlaytestTrace::record("second_memory_event");
+    CPlaytestTrace::record("third_memory_event");
+    std::ifstream preserved(existing);
+    const std::string contents((std::istreambuf_iterator<char>(preserved)), std::istreambuf_iterator<char>());
+    expect_true(contents == "retained evidence\n" && warnings.count() == 1,
+                "recent trace must preserve a nonempty destination and warn once");
+    expect_true(CPlaytestTrace::records().size() == 2 &&
+                    json::parse(CPlaytestTrace::records().back())["event"].get<std::string>() == "third_memory_event",
+                "rejected output must still retain recent memory history");
+
+    const auto missingParent = directory.path / "missing";
+    const auto missingFile = missingParent / "events.jsonl";
+    CPlaytestTrace::configure(true, missingFile.string(), 2, true);
+    CPlaytestTrace::record("unwritable_event");
+    std::filesystem::create_directory(missingParent);
+    CPlaytestTrace::record("do_not_retry_output");
+    expect_true(warnings.count() == 2 && !std::filesystem::exists(missingFile) && CPlaytestTrace::records().size() == 2,
+                "file output failures must warn once and stop retrying until reconfigured");
+    CPlaytestTrace::configure(true, missingFile.string(), 2, true);
+    CPlaytestTrace::record("reconfigured_output");
+    expect_true(readTraceTestFile(missingFile).size() == 1 && warnings.count() == 2,
+                "reconfiguration must allow a fresh trace destination to recover");
+
+    const auto rotating = directory.path / "blocked-rotation.jsonl";
+    const auto blockedBackup = directory.path / "blocked-rotation.jsonl.1";
+    CPlaytestTrace::configure(true, rotating.string(), 2, true);
+    CPlaytestTrace::record("before_rotation_one");
+    CPlaytestTrace::record("before_rotation_two");
+    std::filesystem::create_directory(blockedBackup);
+    CPlaytestTrace::record("rotation_failed");
+    CPlaytestTrace::record("memory_after_rotation_failure");
+    expect_true(warnings.count() == 3 && readTraceTestFile(rotating).size() == 2 &&
+                    std::filesystem::is_directory(blockedBackup),
+                "failed rotation must preserve the old file and an obstructing backup destination");
+    expect_true(CPlaytestTrace::records().size() == 2 &&
+                    json::parse(CPlaytestTrace::records().back())["event"].get<std::string>() ==
+                        "memory_after_rotation_failure",
+                "rotation failure must not stop the memory tail");
+
+    CPlaytestTrace::configure(true, rotating.string(), 2, true);
+    CPlaytestTrace::record("nonempty_destination_rejected_again");
+    expect_true(warnings.count() == 4, "each explicit configuration may report one new output failure");
+
+    const auto reserved = directory.path / "reserved.jsonl";
+    {
+        std::ofstream backup(directory.path / "reserved.jsonl.1");
+        backup << "retained backup";
+    }
+    CPlaytestTrace::configure(true, reserved.string(), 2, true);
+    CPlaytestTrace::record("existing_backup_rejected");
+    expect_true(warnings.count() == 5 && !std::filesystem::exists(reserved),
+                "recent history must not overwrite an existing backup");
+}
+
+void test_playtest_trace_concurrent_file_records_follow_sequence_order() {
+    TraceTestDirectory directory;
+    const auto path = directory.path / "concurrent.jsonl";
+    CPlaytestTrace::configure(true, path.string(), 64, true);
+    std::vector<std::thread> writers;
+    for (int worker = 0; worker < 4; ++worker) {
+        writers.emplace_back([worker]() {
+            for (int index = 0; index < 83; ++index) {
+                CPlaytestTrace::record("concurrent_event", {{"worker", worker}, {"index", index}});
+            }
+        });
+    }
+    for (auto &writer : writers) {
+        writer.join();
+    }
+    auto diskRecords = readTraceTestFile(directory.path / "concurrent.jsonl.1");
+    const auto active = readTraceTestFile(path);
+    diskRecords.insert(diskRecords.end(), active.begin(), active.end());
+    expect_true(diskRecords.size() == 76, "concurrent output must retain bounded previous and active chunks");
+    for (std::size_t index = 0; index < diskRecords.size(); ++index) {
+        expect_true(diskRecords[index]["seq"].get<unsigned long long>() == index + 257,
+                    "concurrent trace records must reach disk in sequence order across rotation");
+    }
+    const auto memory = CPlaytestTrace::records();
+    expect_true(memory.size() == 64 && json::parse(memory.front())["seq"].get<unsigned long long>() == 269 &&
+                    json::parse(memory.back())["seq"].get<unsigned long long>() == 332,
+                "concurrent writers must retain the latest memory events");
 }
 
 void test_delayed_future_handlers_run_through_event_loop() {
@@ -3092,6 +3354,12 @@ int main() {
     test_effect_cycles_release_with_map_and_context_teardown();
     test_effect_owner_registry_releases_finished_and_destroyed_owners();
     test_playtest_trace_records_and_helper_payloads();
+    test_playtest_trace_unicode_truncation_preserves_json();
+    test_playtest_trace_bad_payload_does_not_escape_or_stop_history();
+    test_playtest_trace_recent_history_keeps_latest_events();
+    test_playtest_trace_recent_files_rotate_and_keep_disk_counters();
+    test_playtest_trace_output_failure_keeps_memory_and_warns_once();
+    test_playtest_trace_concurrent_file_records_follow_sequence_order();
     test_delayed_future_handlers_run_through_event_loop();
     test_script_rejects_executable_expressions();
     test_save_format_codec_validation();

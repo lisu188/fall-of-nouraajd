@@ -209,6 +209,57 @@ diagnostic output to block a long walkthrough if the pipe is not consumed. Keep 
 operations, and include request id, method, map name when known, elapsed time, plus bounded stdout/stderr tails in
 timeout failures.
 
+## Debug diagnostics
+
+Use `python play.py --debug` or `python mcp.py --stdio --debug` to retain diagnostics
+for one run without changing ordinary logging defaults. Add `--build-config Release`
+to MCP on Windows when using a Visual Studio Release build. `GAME_DEBUG=1` enables the
+same preset; `--debug-dir` overrides `GAME_DEBUG_DIR`. Relative debug directories resolve
+against the source/package root before the launcher changes its working directory.
+
+Each unique run folder contains `manifest.json`, `runtime.log`, `native.log`, and
+`gameplay.jsonl`, subject to explicit channel overrides or reported write failures.
+The manifest records build/resource/module paths, effective destinations and outcome;
+the launcher prints the absolute folder to stderr. Python startup/runtime exceptions
+and caught dialog/native Python callback failures retain their original traceback.
+MCP call summaries include request ID, a unique invocation sequence, a non-secret
+session label, actual callable/method, elapsed time and `isError`. Debug mode does not
+enable raw payload tracing. `--trace-messages` independently enables bounded previews.
+By default MCP keeps DEBUG summaries in the file and prints only warnings/errors
+alongside the folder path. Explicit `--log-level` controls both destinations, while
+`--trace-messages` also enables verbose terminal output.
+Diagnostic output must never use stdout while serving stdio MCP.
+
+Debug gameplay traces retain the latest 1,000 in-memory events. The active JSONL file
+and `gameplay.jsonl.1` each contain at most 1,000 events; inspect the backup before the
+active file to read retained history in sequence order. Existing trace callers keep
+their first-event limit and single truncation marker. The optional
+`game.configure_playtest_trace(..., retain_recent=True)` argument enables recent
+history explicitly, as does `GAME_PLAYTEST_TRACE_RETAIN_RECENT=1` with an enabled trace.
+Recent-history files require fresh destinations. Existing evidence is preserved on
+collision, with a warning and continued in-memory retention. Draining the memory buffer
+does not reset disk rotation counters. The native text sink remains append-only for
+each run; the rolling limits apply to gameplay history and bounded MCP previews.
+
+If a diagnostics channel cannot be created or written, a concise stderr warning
+identifies the failed channel while usable channels and gameplay continue. Gameplay
+file writes stop after a failure until tracing is reconfigured. Diagnostics must never
+replace the original error or change callback fallback values. These local files may
+contain native messages and exception text; structured authentication/session fields
+are redacted, but the entire native text stream is not sanitized.
+
+Focused checks without a compiled extension:
+
+```sh
+python -B -m unittest tests.test_game_diagnostics tests.test_mcp_diagnostics tests.test_mcp_stdio_encoding
+```
+
+`NativeDiagnosticsRuntimeTest` additionally validates native callback/dialog tracebacks
+and a real offscreen MCP player route. Run it against the current binary and copied
+resources, using `python test.py NativeDiagnosticsRuntimeTest`. Native retention and
+rotation regressions run in the core unit tests; the normal performance guard includes
+a fixed 10,000-event workload with a 32-event retention window.
+
 ## Native performance guards
 The deterministic native performance guard suite is built with the `performance_guard_tests` target and run through
 CTest label `performance`:

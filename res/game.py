@@ -1,5 +1,7 @@
 from _game import *
 import json
+import game_diagnostics as _game_diagnostics
+import traceback as _traceback
 
 
 def craftRecipe(game_instance, station, recipe_id):
@@ -93,7 +95,8 @@ from quest_state import mapQuest
 from quest_state import player_has_quest
 from quest_state import quest_id
 
-set_logger_sink("disabled", None)
+if _game_diagnostics.currentSession() is None:
+    set_logger_sink("disabled", None)
 
 _native_configure_playtest_trace = configure_playtest_trace
 _native_get_playtest_trace_records = get_playtest_trace_records
@@ -101,8 +104,11 @@ _native_drain_playtest_trace_records = drain_playtest_trace_records
 _native_record_playtest_trace_json = record_playtest_trace_json
 
 
-def configure_playtest_trace(enabled=True, output_path=None, max_records=1000):
-    _native_configure_playtest_trace(bool(enabled), output_path, max_records)
+def configure_playtest_trace(enabled=True, output_path=None, max_records=1000, retain_recent=False):
+    if retain_recent:
+        _native_configure_playtest_trace(bool(enabled), output_path, max_records, retain_recent=True)
+    else:
+        _native_configure_playtest_trace(bool(enabled), output_path, max_records)
 
 
 def _parse_playtest_trace(records):
@@ -120,6 +126,22 @@ def drain_playtest_trace():
 def record_playtest_trace(event, **fields):
     if playtest_trace_enabled():
         _native_record_playtest_trace_json(event, json.dumps(fields, sort_keys=True))
+
+
+def _reportDialogFailure(kind, callback, dialog, error, _diagnostics=_game_diagnostics, _traceback_module=_traceback):
+    # Module defaults keep this helper behind the resource loader's trusted native wrapper.
+    try:
+        session = _diagnostics.currentSession()
+        if session is not None:
+            session.recordException(
+                f"dialog_{kind}_failed", error, callback=callback, dialog=playtest_object_ref(dialog)
+            )
+        details = "".join(_traceback_module.format_exception(type(error), error, error.__traceback__, limit=20))[
+            -16384:
+        ]
+        logger(f"Dialog {kind} failed closed: {callback}: {error}\n{details}")
+    except Exception:
+        pass
 
 
 def claim_once(owner, property_name):
@@ -332,13 +354,13 @@ class CDialog(CDialogBase2):
             callback()
             return True
         except Exception as exc:
+            _reportDialogFailure("action", action, self, exc)
             record_playtest_trace(
                 "dialog_action_failed",
                 action=action,
                 dialog=playtest_object_ref(self),
                 error=type(exc).__name__,
             )
-            logger(f"Dialog action failed closed: {action}: {exc}")
             return False
 
     def invokeCondition(self, condition):
@@ -362,11 +384,11 @@ class CDialog(CDialogBase2):
             )
             return result
         except Exception as exc:
+            _reportDialogFailure("condition", condition, self, exc)
             record_playtest_trace(
                 "dialog_condition_failed",
                 condition=condition,
                 dialog=playtest_object_ref(self),
                 error=type(exc).__name__,
             )
-            logger(f"Dialog condition failed closed: {condition}: {exc}")
             return False
