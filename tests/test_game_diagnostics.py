@@ -172,7 +172,22 @@ class GameDiagnosticsTest(unittest.TestCase):
                 debug=True,
                 debug_dir=blocker,
             )
-            self.assertFalse(session.applyNative(self.nativeModule()))
+            native = self.nativeModule()
+            self.assertFalse(session.applyNative(native))
+            self.assertIs(session, game_diagnostics.currentSession())
+            game_tree = ast.parse((ROOT / "res/game.py").read_text(encoding="utf-8"))
+            bootstrap_guard = next(
+                node
+                for node in game_tree.body
+                if isinstance(node, ast.If)
+                and any(
+                    isinstance(child, ast.Attribute) and child.attr == "currentSession" for child in ast.walk(node.test)
+                )
+            )
+            bootstrap = compile(ast.Module(body=[bootstrap_guard], type_ignores=[]), str(ROOT / "res/game.py"), "exec")
+            namespace = {"_game_diagnostics": game_diagnostics, "set_logger_sink": native.set_logger_sink}
+            exec(bootstrap, namespace)
+            native.set_logger_sink.assert_called_once_with("stderr", None)
             self.assertEqual("1", os.environ["GAME_PLAYTEST_TRACE"])
             self.assertEqual("", os.environ["GAME_PLAYTEST_TRACE_FILE"])
             self.assertEqual("1", os.environ["GAME_PLAYTEST_TRACE_RETAIN_RECENT"])
@@ -180,6 +195,8 @@ class GameDiagnosticsTest(unittest.TestCase):
             self.assertEqual("memory_only", session.manifest["channels"]["gameplay"]["status"])
             session.record("ignored")
             session.close()
+            exec(bootstrap, namespace)
+            native.set_logger_sink.assert_called_with("disabled", None)
         self.assertEqual("retained", blocker.read_text(encoding="utf-8"))
         self.assertEqual(1, warnings.getvalue().count("Debug diagnostics (startup)"))
         self.assertNotIn("GAME_DEBUG", os.environ)

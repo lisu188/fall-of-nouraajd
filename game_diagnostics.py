@@ -33,7 +33,7 @@ _SECRET_KEYS = {"authorization", "mcp-session-id", "sessionid", "session_id", "t
 
 
 def currentSession():
-    return _ACTIVE_SESSION if _ACTIVE_SESSION is not None and _ACTIVE_SESSION._prepared else None
+    return _ACTIVE_SESSION if _ACTIVE_SESSION is not None and not _ACTIVE_SESSION._closed else None
 
 
 def debugEnabled(value=None):
