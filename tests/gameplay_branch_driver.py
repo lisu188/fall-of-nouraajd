@@ -774,24 +774,57 @@ class GameplayBranchDriver:
         budget = max(128, 4 * sum(abs(a - b) for a, b in zip(self.coords(), initial)) + 128)
         unchanged = 0
         committed = None
+        departure_origin = departure_target = None
         for _ in range(budget):
             target = self.object(name, required=False)
             if target is None:
                 return
+            if moving_npc and not adjacent and target["__handle__"] != entry_handle:
+                self.test.fail(("NPC identity changed during authored approach", name, self.snapshot()))
+            if departure_origin is not None and self.coords() != departure_origin:
+                departure_origin = departure_target = committed = None
             destination = self.coords(target)
             distance = sum(abs(a - b) for a, b in zip(self.coords(), destination))
             if distance <= int(adjacent):
                 if moving_npc and not adjacent:
-                    if entry_identity is not None and target["__handle__"] == entry_handle:
+                    if entry_identity is not None:
                         entry = self._playerEntryForTarget(entry_identity, after_seq=entry_seq)
                         if entry is not None:
                             self._rememberNpcContact(target, entry_identity, entry)
                             return
                         if self._continuedNpcContact(target, entry_identity):
                             return
-                    self.test.fail(("NPC overlap lacks a completed player entry", name, self.snapshot()))
-                return
-            if (
+                    else:
+                        self.test.fail(("NPC overlap lacks a completed player entry", name, self.snapshot()))
+                    if departure_origin is None:
+                        # NPC-caused overlap cannot fire the player's dialogue callback.
+                        # Leave through the native controller before attempting a new entry.
+                        departure_origin = self.coords()
+                        committed = None
+                else:
+                    return
+            if departure_origin is not None:
+                if departure_target is None or not self.canStep(departure_target):
+                    neighbors = self.call(
+                        self.game_map, "getNavigationNeighbors", self._coordinateHandle(departure_origin)
+                    )
+                    departure_target = next(
+                        (
+                            tuple(coords)
+                            for coords in neighbors
+                            if coords[2] == departure_origin[2]
+                            and sum(abs(a - b) for a, b in zip(departure_origin, coords)) == 1
+                            and self.canStep(tuple(coords))
+                        ),
+                        None,
+                    )
+                    if departure_target is None:
+                        self.test.fail(("No authored NPC re-entry departure", name, self.snapshot()))
+                if committed != departure_target or unchanged:
+                    controller = self.call(self.player, "getController")
+                    self.call(controller, "setTarget", self.player, self._coordinateHandle(departure_target))
+                    committed = departure_target
+            elif (
                 committed is None
                 or self.coords() == committed
                 or unchanged
@@ -810,8 +843,10 @@ class GameplayBranchDriver:
             if arrival != before:
                 self.steps += 1
             if self.map_name != world:
+                if departure_origin is not None:
+                    self.test.fail(("NPC re-entry departure changed map", name, self.snapshot()))
                 return
-            if arrival != before and self._traversedTarget(committed, arrival):
+            if arrival != before and not (moving_npc and not adjacent) and self._traversedTarget(committed, arrival):
                 return
             entry = (
                 self._playerEntryForTarget(entry_identity, after_seq=entry_seq) if entry_identity is not None else None

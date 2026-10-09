@@ -1313,8 +1313,9 @@ class GameplayBranchDriverTest(unittest.TestCase):
     def nativeNpcEntryDriver(self, directory, *, player_first=True, change=None):
         driver, state, actor = self.perimeterPursuitDriver(True)
         cycle = ((1, 0, 0), (2, 0, 0))
-        state.update(actorIndex=0, seq=0, visits=[])
+        state.update(actorIndex=0, seq=0, visits=[], blocked=set())
         driver.coords = lambda handle=None: cycle[state["actorIndex"]] if handle == actor else state["position"]
+        driver._coordinateHandle = lambda coords: {"__handle__": "unit-coordinate", "coords": tuple(coords)}
         driver.trace_path = Path(directory) / "native.trace.jsonl"
         driver.trace_path.write_text("", encoding="utf-8")
         original_call = driver._rawCall.side_effect
@@ -1329,6 +1330,12 @@ class GameplayBranchDriverTest(unittest.TestCase):
         }
 
         def rawCall(handle, method, *args):
+            if method == "getNavigationNeighbors":
+                x, y, z = args[-1]["coords"]
+                return [(x + dx, y + dy, z) for dx, dy in ((1, 0), (-1, 0), (0, 1), (0, -1))]
+            if method == "canStep":
+                coords = args[-1]["coords"]
+                return coords in {(x, y, 0) for x in range(4) for y in range(4)} and coords not in state["blocked"]
             if method in {"getName", "getTypeId", "getType"}:
                 return identities[handle["__handle__"]][
                     {"getName": "name", "getTypeId": "typeId", "getType": "type"}[method]
@@ -1336,6 +1343,7 @@ class GameplayBranchDriverTest(unittest.TestCase):
             return original_call(handle, method, *args)
 
         def advance():
+            before = state["position"]
             state["turns"] += 1
             if not player_first:
                 state["actorIndex"] = (state["actorIndex"] + 1) % len(cycle)
@@ -1343,7 +1351,7 @@ class GameplayBranchDriverTest(unittest.TestCase):
                 state["position"] = state["path"].pop(0)
             state["seq"] += 1
             record = {"seq": state["seq"], "event": "movement"}
-            if state["position"] == cycle[state["actorIndex"]]:
+            if state["position"] != before and state["position"] == cycle[state["actorIndex"]]:
                 state["visits"].append(state["turns"])
                 contact = dict(zip("xyz", state["position"]))
                 record.update(
@@ -1381,18 +1389,17 @@ class GameplayBranchDriverTest(unittest.TestCase):
             state["turns"] += 1
             state["position"] = state["path"].pop(0)
             contact = dict(zip("xyz", state["position"]))
-            self.assertEqual(driver.coords(actor), state["position"])
-            self.appendNpcRecords(
-                driver,
-                state,
-                [
-                    {
-                        "event": "movement",
-                        "map": driver.map_name,
-                        "object": {**identities["player"], "isPlayer": True},
-                        "from": dict(zip("xyz", before)),
-                        "to": contact,
-                    },
+            records = [
+                {
+                    "event": "movement",
+                    "map": driver.map_name,
+                    "object": {**identities["player"], "isPlayer": True},
+                    "from": dict(zip("xyz", before)),
+                    "to": contact,
+                }
+            ]
+            if state["position"] != before and driver.coords(actor) == state["position"]:
+                records.append(
                     {
                         "event": "object_entered",
                         "map": driver.map_name,
@@ -1400,56 +1407,249 @@ class GameplayBranchDriverTest(unittest.TestCase):
                         "cause": {**identities["player"], "isPlayer": True},
                         "targetCoords": contact,
                         "causeCoords": contact,
-                    },
-                ],
+                    }
+                )
+            self.appendNpcRecords(
+                driver,
+                state,
+                records,
             )
 
         driver.tick = Mock(side_effect=advance)
         return driver, state, actor, identities
 
-    def testNpcCausedOverlapCannotCountAsPlayerEntry(self):
+    def npcOverlapDriver(self, directory, *, initial=True):
+        driver, state, actor, identities = self.nativeNpcEntryDriver(directory)
+        state.update(position=(1 if initial else 0, 0, 0), npcPosition=(1 if initial else 2, 0, 0))
+        driver.coords = lambda handle=None: state["npcPosition"] if handle == actor else state["position"]
+        contact = {"x": 1, "y": 0, "z": 0}
+        npc_entry = {
+            "event": "object_entered",
+            "map": driver.map_name,
+            "target": {**identities["player"], "isPlayer": True},
+            "cause": {**identities["moving-actor"], "isPlayer": False},
+            "targetCoords": contact,
+            "causeCoords": contact,
+        }
+        if initial:
+            self.appendNpcRecords(driver, state, [npc_entry])
+
+        def advance():
+            state["turns"] += 1
+            if not initial and state["turns"] == 1:
+                before = state["position"]
+                state["position"] = state["path"].pop(0)
+                self.assertEqual((1, 0, 0), state["position"])
+                state["npcPosition"] = (1, 0, 0)
+                self.appendNpcRecords(
+                    driver,
+                    state,
+                    [
+                        {
+                            "event": "movement",
+                            "map": driver.map_name,
+                            "object": {**identities["player"], "isPlayer": True},
+                            "from": dict(zip("xyz", before)),
+                            "to": contact,
+                        },
+                        {
+                            "event": "movement",
+                            "map": driver.map_name,
+                            "object": {**identities["moving-actor"], "isPlayer": False},
+                            "from": {"x": 2, "y": 0, "z": 0},
+                            "to": contact,
+                        },
+                        npc_entry,
+                    ],
+                )
+                return
+            before = state["position"]
+            state["position"] = state["path"].pop(0)
+            records = [
+                {
+                    "event": "movement",
+                    "map": driver.map_name,
+                    "object": {**identities["player"], "isPlayer": True},
+                    "from": dict(zip("xyz", before)),
+                    "to": dict(zip("xyz", state["position"])),
+                }
+            ]
+            if state["position"] != before and state["position"] == state["npcPosition"]:
+                records.append(
+                    {
+                        "event": "object_entered",
+                        "map": driver.map_name,
+                        "target": {**identities["moving-actor"], "isPlayer": False},
+                        "cause": {**identities["player"], "isPlayer": True},
+                        "targetCoords": dict(zip("xyz", state["position"])),
+                        "causeCoords": dict(zip("xyz", state["position"])),
+                    }
+                )
+            self.appendNpcRecords(driver, state, records)
+
+        driver.tick = Mock(side_effect=advance)
+        return driver, state, actor, identities
+
+    def testNpcCausedOverlapRequiresRealNativeDepartureAndNewPlayerEntry(self):
         for initial in (True, False):
             with self.subTest(initial=initial), tempfile.TemporaryDirectory() as directory:
-                driver, state, actor, identities = self.nativeNpcEntryDriver(directory)
-                state.update(position=(1, 0, 0), actorIndex=0 if initial else 1)
-                contact = {"x": 1, "y": 0, "z": 0}
-                npc_entry = {
-                    "event": "object_entered",
-                    "map": driver.map_name,
-                    "target": {**identities["player"], "isPlayer": True},
-                    "cause": {**identities["moving-actor"], "isPlayer": False},
-                    "targetCoords": contact,
-                    "causeCoords": contact,
-                }
-                if initial:
-                    self.appendNpcRecords(driver, state, [npc_entry])
-                else:
+                driver, state, actor, _ = self.npcOverlapDriver(directory, initial=initial)
+                after_tick = Mock()
+                driver.navigateTo("ritualWitness", after_tick=after_tick)
+                self.assertEqual(2 + int(not initial), state["turns"])
+                self.assertEqual(2 + int(not initial), driver.steps)
+                self.assertEqual((1, 0, 0), driver.coords())
+                self.assertEqual(driver.coords(actor), driver.coords())
+                self.assertEqual([(2, 0, 0), (1, 0, 0)], [target for _turn, _origin, target in state["targets"][-2:]])
+                self.assertEqual(
+                    1, len(driver._player_entries), "NPC-caused overlap cannot become player-entry evidence"
+                )
+                self.assertTrue(driver._player_entries[0]["cause"]["isPlayer"])
+                self.assertEqual(1 + int(not initial), after_tick.call_count)
+                driver.step.assert_not_called()
 
-                    def advance():
-                        state["turns"] += 1
-                        state["actorIndex"] = 0
-                        self.appendNpcRecords(
-                            driver,
-                            state,
-                            [
-                                {
-                                    "event": "movement",
-                                    "map": driver.map_name,
-                                    "object": {**identities["moving-actor"], "isPlayer": False},
-                                    "from": {"x": 2, "y": 0, "z": 0},
-                                    "to": contact,
-                                },
-                                npc_entry,
-                            ],
-                        )
+    def testNpcDepartureReplansARealBlockedTargetWithoutCountingTheStationaryAttempt(self):
+        with tempfile.TemporaryDirectory() as directory:
+            driver, state, _actor, _ = self.npcOverlapDriver(directory)
+            advance = driver.tick.side_effect
 
-                    driver.tick = Mock(side_effect=advance)
-                with self.assertRaisesRegex(AssertionError, "NPC overlap lacks a completed player entry"):
+            def blockFirstTarget():
+                if not state["turns"]:
+                    state["turns"] += 1
+                    state["blocked"].add(state["path"][0])
+                    state["path"].clear()
+                    return
+                advance()
+
+            driver.tick.side_effect = blockFirstTarget
+            driver.navigateTo("ritualWitness")
+            self.assertEqual((3, 2), (state["turns"], driver.steps))
+            self.assertEqual([(2, 0, 0), (0, 0, 0), (1, 0, 0)], [target for _turn, _origin, target in state["targets"]])
+            self.assertEqual(1, len(driver._player_entries))
+            driver.step.assert_not_called()
+
+    def testNpcDepartureCannotPassWithBlockedNeighborsOrTwentyFourStationaryTurns(self):
+        for blocked in (True, False):
+            with self.subTest(blocked=blocked), tempfile.TemporaryDirectory() as directory:
+                driver, state, _actor, _ = self.npcOverlapDriver(directory)
+                if blocked:
+                    state["blocked"].update(((2, 0, 0), (0, 0, 0), (1, 1, 0)))
+                driver.tick.side_effect = lambda: state.__setitem__("turns", state["turns"] + 1)
+                message = "No authored NPC re-entry departure" if blocked else "Could not approach authored object"
+                with self.assertRaisesRegex(AssertionError, message):
                     driver.navigateTo("ritualWitness")
-                self.assertEqual(int(not initial), state["turns"])
+                self.assertEqual(0 if blocked else 24, state["turns"])
                 self.assertEqual(0, driver.steps)
                 self.assertEqual([], list(driver._player_entries))
                 driver.step.assert_not_called()
+
+    def testNpcFollowingPlayerOntoEveryDepartureCellNeverCountsAsPlayerEntry(self):
+        with tempfile.TemporaryDirectory() as directory:
+            driver, state, _actor, identities = self.npcOverlapDriver(directory)
+
+            def followPlayer():
+                before, npc_before = state["position"], state["npcPosition"]
+                state["turns"] += 1
+                state["position"] = state["path"].pop(0)
+                state["npcPosition"] = state["position"]
+                contact = dict(zip("xyz", state["position"]))
+                self.appendNpcRecords(
+                    driver,
+                    state,
+                    [
+                        {
+                            "event": "movement",
+                            "map": driver.map_name,
+                            "object": {**identities["player"], "isPlayer": True},
+                            "from": dict(zip("xyz", before)),
+                            "to": contact,
+                        },
+                        {
+                            "event": "movement",
+                            "map": driver.map_name,
+                            "object": {**identities["moving-actor"], "isPlayer": False},
+                            "from": dict(zip("xyz", npc_before)),
+                            "to": contact,
+                        },
+                        {
+                            "event": "object_entered",
+                            "map": driver.map_name,
+                            "target": {**identities["player"], "isPlayer": True},
+                            "cause": {**identities["moving-actor"], "isPlayer": False},
+                            "targetCoords": contact,
+                            "causeCoords": contact,
+                        },
+                    ],
+                )
+
+            driver.tick.side_effect = followPlayer
+            after_tick = Mock()
+            with self.assertRaisesRegex(AssertionError, "Authored route budget exhausted"):
+                driver.navigateTo("ritualWitness", after_tick=after_tick)
+            self.assertEqual((128, 128, 128), (state["turns"], driver.steps, after_tick.call_count))
+            self.assertEqual([], list(driver._player_entries))
+            driver.step.assert_not_called()
+
+    def testNpcDeparturePortalOrMapTransitionCannotSatisfyTheVisit(self):
+        for changed_map in (False, True):
+            with self.subTest(changed_map=changed_map), tempfile.TemporaryDirectory() as directory:
+                driver, state, _actor, _ = self.npcOverlapDriver(directory)
+                raw_call = driver._rawCall.side_effect
+
+                def rawCall(handle, method, *args):
+                    if method == "setTarget":
+                        state["targets"].append((state["turns"], state["position"], args[-1]["coords"]))
+                        return
+                    return raw_call(handle, method, *args)
+
+                def traversePortal():
+                    state["turns"] += 1
+                    if state["turns"] > 1:
+                        self.fail("A new player entry is still required after portal traversal")
+                    state["position"] = (10, 10, 0)
+                    if changed_map:
+                        driver.map_name = "another-map"
+
+                driver._rawCall.side_effect = rawCall
+                driver.tick.side_effect = traversePortal
+                driver._traversedTarget.return_value = True
+                message = "NPC re-entry departure changed map" if changed_map else "new player entry is still required"
+                with self.assertRaisesRegex(AssertionError, message):
+                    driver.navigateTo("ritualWitness")
+                self.assertEqual(1, driver.steps)
+                self.assertEqual([], list(driver._player_entries))
+
+    def testNpcDepartureCannotRecoverFromLostNativeTraceEvidence(self):
+        with tempfile.TemporaryDirectory() as directory:
+            driver, state, _actor, _ = self.npcOverlapDriver(directory)
+
+            def loseSequence():
+                state["turns"] += 1
+                state["seq"] += 1
+                self.appendNpcRecords(driver, state, [{"event": "movement"}])
+
+            driver.tick.side_effect = loseSequence
+            for _ in range(2):
+                with self.assertRaisesRegex(AssertionError, "Native combat evidence unavailable"):
+                    driver.navigateTo("ritualWitness")
+            self.assertIsNotNone(driver._combat_failure)
+            self.assertEqual((1, 0), (state["turns"], driver.steps))
+            self.assertEqual([], list(driver._player_entries))
+
+    def testNpcDepartureRejectsTheOriginalLiveTargetBeingReplacedDuringThisApproach(self):
+        with tempfile.TemporaryDirectory() as directory:
+            driver, state, _actor, _ = self.npcOverlapDriver(directory)
+            advance = driver.tick.side_effect
+
+            def replaceTargetAfterDeparture():
+                advance()
+                driver.object = Mock(return_value={"__handle__": "replacement-npc"})
+
+            driver.tick.side_effect = replaceTargetAfterDeparture
+            with self.assertRaisesRegex(AssertionError, "NPC identity changed during authored approach"):
+                driver.navigateTo("ritualWitness")
+            self.assertEqual((1, 1), (state["turns"], driver.steps))
+            self.assertEqual([], list(driver._player_entries))
 
     def testCompletedNpcContactCanContinueWithoutAnotherPlayerMovement(self):
         with tempfile.TemporaryDirectory() as directory:
@@ -1461,7 +1661,7 @@ class GameplayBranchDriverTest(unittest.TestCase):
             self.assertEqual((1, 1, 1), (state["turns"], driver.steps, driver.tick.call_count))
             self.assertEqual(3, driver._npc_contact["seq"])
 
-    def testNpcContactContinuationRejectsEitherParticipantLeavingAndReturning(self):
+    def testNpcContactContinuationRequiresNewPlayerEntryAfterEitherParticipantLeavesAndReturns(self):
         for participant in ("player", "moving-actor", "unrelated"):
             with self.subTest(participant=participant), tempfile.TemporaryDirectory() as directory:
                 driver, state, actor, identities = self.completedNpcContactDriver(directory)
@@ -1479,19 +1679,23 @@ class GameplayBranchDriverTest(unittest.TestCase):
                 self.assertEqual(driver.coords(actor), driver.coords(), "Returned coordinates cannot hide departure")
                 if participant == "unrelated":
                     driver.navigateTo("ritualWitness")
+                    self.assertEqual(1, driver.tick.call_count)
                 else:
-                    with self.assertRaisesRegex(AssertionError, "NPC overlap lacks a completed player entry"):
-                        driver.navigateTo("ritualWitness")
-                    self.assertIsNone(driver._npc_contact)
-                self.assertEqual(1, driver.tick.call_count)
+                    before_seq = driver._combat_trace_seq
+                    driver.navigateTo("ritualWitness")
+                    self.assertEqual((3, 3), (driver.tick.call_count, driver.steps))
+                    self.assertGreater(driver._npc_contact["seq"], before_seq)
+                    self.assertGreater(driver._player_entries[-1]["seq"], before_seq)
 
-    def testNpcContactRequiresValidatedLiveHandleContextAndTrace(self):
-        for changed in ("unvalidated", "target", "player", "mapHandle", "map", "trace"):
+    def testNpcContactRequiresFreshPlayerEntryWhenCachedHandleContextChanges(self):
+        for changed in ("unvalidated", "previous-npc", "target", "player", "mapHandle", "map", "trace"):
             with self.subTest(changed=changed), tempfile.TemporaryDirectory() as directory:
                 driver, state, actor, _ = self.completedNpcContactDriver(directory)
                 driver.navigateTo("ritualWitness")
                 if changed == "unvalidated":
                     driver._npc_contact = None
+                elif changed == "previous-npc":
+                    driver._npc_contact["target"] = "previous-npc"
                 elif changed == "trace":
                     driver.trace_path = None
                 elif changed in ("map", "mapHandle"):
@@ -1511,9 +1715,16 @@ class GameplayBranchDriverTest(unittest.TestCase):
                         driver.object = Mock(return_value=replacement)
                     else:
                         driver.player = replacement
-                with self.assertRaisesRegex(AssertionError, "NPC overlap lacks a completed player entry"):
+                if changed != "trace":
+                    before_seq = driver._combat_trace_seq
                     driver.navigateTo("ritualWitness")
-                self.assertEqual(1, driver.tick.call_count)
+                    self.assertEqual(3, driver.tick.call_count)
+                    self.assertGreater(driver._player_entries[-1]["seq"], before_seq)
+                    self.assertGreater(driver._npc_contact["seq"], before_seq)
+                else:
+                    with self.assertRaisesRegex(AssertionError, "NPC overlap lacks a completed player entry"):
+                        driver.navigateTo("ritualWitness")
+                    self.assertEqual(1, driver.tick.call_count)
 
     def testNpcContactCursorSurvivesRotationAndLatchesLostContinuityEvidence(self):
         with tempfile.TemporaryDirectory() as directory:
