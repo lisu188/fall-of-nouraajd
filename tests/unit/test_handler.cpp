@@ -489,14 +489,15 @@ void testObjectEntryTracePreservesActualCauseAndContactBeforeNpcDeparture() {
             record.at("cause").value("isPlayer", false) != true)
             continue;
         entries++;
-        expect_true(record.at("target") == CPlaytestTrace::objectRef(witness) &&
-                        record.at("cause") == CPlaytestTrace::objectRef(player),
+        expect_true(record.at("target").dump() == CPlaytestTrace::objectRef(witness).dump() &&
+                        record.at("cause").dump() == CPlaytestTrace::objectRef(player).dump(),
                     "entry evidence should preserve the exact native target and player identities");
-        expect_true(record.at("cause").at("isPlayer") == true &&
-                        record.at("targetCoords") == CPlaytestTrace::coords(Coords(1, 0, 0)) &&
-                        record.at("causeCoords") == record.at("targetCoords"),
+        expect_true(record.at("cause").at("isPlayer").get<bool>() == true &&
+                        record.at("targetCoords").dump() == CPlaytestTrace::coords(Coords(1, 0, 0)).dump() &&
+                        record.at("causeCoords").dump() == record.at("targetCoords").dump(),
                     "entry evidence should retain actual contact before the witness's later movement");
-        expect_true(record.at("map") == map->getMapName() && record.at("turn") == map->getTurn(),
+        expect_true(record.at("map").get<std::string>() == map->getMapName() &&
+                        record.at("turn").get<int>() == map->getTurn(),
                     "entry evidence should retain the active native map and turn");
     }
     CPlaytestTrace::configure(false);
@@ -549,7 +550,7 @@ void testObjectEntryTraceRequiresOptInAndCanonicalColocatedCause() {
         const auto record = json::parse(line);
         if (record.value("event", std::string()) == "object_entered") {
             npc_entries++;
-            expect_true(record.at("cause").at("isPlayer") == false,
+            expect_true(record.at("cause").at("isPlayer").get<bool>() == false,
                         "an NPC moving onto the player must retain its NPC cause");
         }
     }
@@ -1662,30 +1663,36 @@ void test_fight_handler_records_outcome_trace_metadata() {
                 expect_true(attacker_state.size() == 7 && opponent_states.at(0).size() == 7 &&
                                 opponent_states.at(1).size() == 7,
                             "combat-start snapshots should remain limited to identity, coordinates and resources");
-                expect_true(attacker_state.at("object") == parsed.at("attacker") &&
+                expect_true(attacker_state.at("object").dump() == parsed.at("attacker").dump() &&
                                 parsed.at("attacker").value("name", std::string()) == victor->getName(),
                             "combat snapshots should preserve the existing attacker identity reference");
-                expect_true(attacker_state.at("coords") == json{{"x", 0}, {"y", 0}, {"z", 0}} &&
-                                attacker_state.at("hp") == 23 && attacker_state.at("hpMax") == 77 &&
-                                attacker_state.at("mana") == 13 && attacker_state.at("manaMax") == 91 &&
-                                attacker_state.at("level") == 3,
-                            "combat_started should capture actual damaged attacker resources before the first round");
+                expect_true(
+                    attacker_state.at("coords").dump() == json{{"x", 0}, {"y", 0}, {"z", 0}}.dump() &&
+                        attacker_state.at("hp").get<int>() == 23 && attacker_state.at("hpMax").get<int>() == 77 &&
+                        attacker_state.at("mana").get<int>() == 13 && attacker_state.at("manaMax").get<int>() == 91 &&
+                        attacker_state.at("level").get<int>() == 3,
+                    "combat_started should capture actual damaged attacker resources before the first round");
                 expect_true(opponent_states.size() == 2 && parsed.at("opponents").size() == 2,
                             "combat snapshots should include each sanitized opponent exactly once");
-                expect_true(opponent_states.at(0).at("object") == parsed.at("opponents").at(0) &&
-                                opponent_states.at(1).at("object") == parsed.at("opponents").at(1) &&
+                expect_true(opponent_states.at(0).at("object").dump() == parsed.at("opponents").at(0).dump() &&
+                                opponent_states.at(1).at("object").dump() == parsed.at("opponents").at(1).dump() &&
                                 opponent_states.at(0).at("object").value("name", std::string()) ==
                                     defeated->getName() &&
                                 opponent_states.at(1).at("object").value("name", std::string()) == second->getName(),
                             "combat snapshots should retain existing sanitized opponent references and order");
-                expect_true(opponent_states.at(0).at("coords") == json{{"x", 1}, {"y", 0}, {"z", 0}} &&
-                                opponent_states.at(0).at("hp") == 6 && opponent_states.at(0).at("hpMax") == 63 &&
-                                opponent_states.at(0).at("mana") == 4 && opponent_states.at(0).at("manaMax") == 56 &&
-                                opponent_states.at(0).at("level") == 2 &&
-                                opponent_states.at(1).at("coords") == json{{"x", 0}, {"y", 1}, {"z", 0}} &&
-                                opponent_states.at(1).at("hp") == 9 && opponent_states.at(1).at("hpMax") == 84 &&
-                                opponent_states.at(1).at("mana") == 8 && opponent_states.at(1).at("manaMax") == 98 &&
-                                opponent_states.at(1).at("level") == 4,
+                expect_true(opponent_states.at(0).at("coords").dump() == json{{"x", 1}, {"y", 0}, {"z", 0}}.dump() &&
+                                opponent_states.at(0).at("hp").get<int>() == 6 &&
+                                opponent_states.at(0).at("hpMax").get<int>() == 63 &&
+                                opponent_states.at(0).at("mana").get<int>() == 4 &&
+                                opponent_states.at(0).at("manaMax").get<int>() == 56 &&
+                                opponent_states.at(0).at("level").get<int>() == 2 &&
+                                opponent_states.at(1).at("coords").dump() ==
+                                    json{{"x", 0}, {"y", 1}, {"z", 0}}.dump() &&
+                                opponent_states.at(1).at("hp").get<int>() == 9 &&
+                                opponent_states.at(1).at("hpMax").get<int>() == 84 &&
+                                opponent_states.at(1).at("mana").get<int>() == 8 &&
+                                opponent_states.at(1).at("manaMax").get<int>() == 98 &&
+                                opponent_states.at(1).at("level").get<int>() == 4,
                             "combat_started should retain pre-defeat resources for every actual opponent");
             }
             if (parsed.value("event", std::string()) != "combat_finished") {
