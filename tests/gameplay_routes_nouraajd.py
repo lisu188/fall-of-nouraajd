@@ -91,7 +91,11 @@ def start(d, *, gate="cooperative", deed=False):
         d.choose("doorDialog", "threatenGate")
         d.select("doorDialog", "NOT_WELCOME", 0)
     if deed and d.class_id == "Warrior":
+        exp_before = d.call(d.player, "getNumericProperty", "exp")
         d.choose("doorDialog", "brace_gate", condition="can_brace_gate")
+        d.test.assertEqual(exp_before + 750, d.call(d.player, "getNumericProperty", "exp"))
+        d.test.assertFalse(d.condition("doorDialog", "can_brace_gate"))
+        d.test.assertEqual(1, d.call(d.player, "getNumericProperty", "warrior_barricades"))
     else:
         d.choose("doorDialog", "open_door")
     d.select("doorDialog", "WARRIOR_GATE" if deed and d.class_id == "Warrior" else "WELCOME", 1)
@@ -104,8 +108,20 @@ def performDeed(d):
     landmark, dialog, action, condition, flag, counter = DEEDS[d.class_id]
     d.navigateTo(landmark)
     d.test.assertTrue(d.condition(dialog, condition))
+    if d.class_id == "Sorcerer":
+        owned_before = {item["__handle__"]: d.call(item, "getTypeId") for item in d.call(d.player, "getItems")}
+        equipped_before = d.call(d.player, "getEquipped")
     before = d.call(d.player, "getNumericProperty", "exp")
     d.choose(dialog, action, condition=condition)
+    if d.class_id == "Sorcerer":
+        owned_after = {item["__handle__"]: d.call(item, "getTypeId") for item in d.call(d.player, "getItems")}
+        d.test.assertEqual(
+            owned_before, {identity: owned_after[identity] for identity in owned_before if identity in owned_after}
+        )
+        d.test.assertEqual(
+            ["Scroll"], sorted(type_id for identity, type_id in owned_after.items() if identity not in owned_before)
+        )
+        d.test.assertEqual(equipped_before, d.call(d.player, "getEquipped"))
     state, option = {
         "Assasin": ("ASSASIN_TRAIL", 2),
         "Sorcerer": ("SORCERER_WARD", 0),
@@ -356,9 +372,15 @@ def deedRoute(d):
     if d.class_id != "Warrior":
         performDeed(d)
     _landmark, dialog, _action, condition, flag, counter = DEEDS[d.class_id]
-    for class_id, (_place, other_dialog, _hook, other_condition, _flag, _counter) in DEEDS.items():
+    for class_id, (place, other_dialog, hook, other_condition, _flag, _counter) in DEEDS.items():
         if class_id != d.class_id:
+            d.navigateTo(place)
+            d.test.assertEqual(d.coords(d.object(place)), d.coords())
             d.test.assertFalse(d.condition(other_dialog, other_condition))
+            before = deedSelectorState(d)
+            with d.test.assertRaisesRegex(AssertionError, "Authored option is unavailable"):
+                d.choose(other_dialog, hook, condition=other_condition)
+            d.test.assertEqual(before, deedSelectorState(d), "Rejected class deed changed native state")
     d.check("nouraajd.deed." + d.class_id, d.call(d.player, "getBoolProperty", flag))
     d.saveAndReload("class-deed-" + d.class_id)
     d.check(
@@ -368,6 +390,20 @@ def deedRoute(d):
     prepareRolf(d)
     d.hunt("finishOriginalMainQuest")
     d.check("nouraajd.deed." + d.class_id + ".ordinaryCombat", "mainQuest" in d.questNames(completed=True))
+
+
+def deedSelectorState(d):
+    return (
+        d.properties(d.player),
+        tuple(
+            (d.call(d.player, "getBoolProperty", flag), d.call(d.player, "getNumericProperty", counter))
+            for _place, _dialog, _hook, _condition, flag, counter in DEEDS.values()
+        ),
+        d.flag("ASKED_ABOUT_GIRL"),
+        d.call(d.game_map, "getTurn"),
+        d.coords(),
+        dict(d._dialog_positions),
+    )
 
 
 def letter(d):
