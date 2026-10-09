@@ -18,6 +18,221 @@ from tests.test_gameplay_route_dialogs import authoredFunction
 
 
 class NineMarchesRecoveryTest(unittest.TestCase):
+    def monolithBounceDriver(self, *, moving_npc=False):
+        document = json.loads(
+            (Path(__file__).resolve().parents[1] / "res/maps/ninemarches/map.json").read_text(encoding="utf-8")
+        )
+        names = ("monolithHub", "monolithCoast", "monolithAsh", "monolithCold")
+        positions = {
+            actor["name"]: (int(actor["x"] // 32), int(actor["y"] // 32), int(layer["properties"]["level"]))
+            for layer in document["layers"]
+            if layer["type"] == "objectgroup"
+            for actor in layer["objects"]
+            if actor["name"] in names
+        }
+        exits = dict(zip(names, (names[1], names[0], names[3], names[2])))
+        handles = {name: {"__handle__": name} for name in (*names, "companionKnight", "staticTarget")}
+        positions.update(companionKnight=(532, 592, 0), staticTarget=(532, 592, 0))
+        state = {
+            "position": positions["monolithCoast"],
+            "turn": 0,
+            "inTick": False,
+            "steps": [],
+            "movements": [],
+            "targets": [],
+            "blocked": set(),
+            "enabled": True,
+            "waypoint": True,
+            "typeId": None,
+            "stationaryTicks": 0,
+            "restoreSnapshots": [],
+        }
+        on_enter = authoredFunction(
+            "res/plugins/object.py", "onEnter", class_id="WayPoint", active_waypoint_causes=set()
+        )
+
+        class Traveller:
+            def setCoords(self, destination):
+                previous = state["position"]
+                state["position"] = (destination.x, destination.y, destination.z)
+                state["movements"].append((previous, state["position"]))
+                for name in names:
+                    if positions[name] == state["position"]:
+                        target = positions[exits[name]]
+                        point = SimpleNamespace(getExit=lambda: SimpleNamespace(x=target[0], y=target[1], z=target[2]))
+                        on_enter(point, SimpleNamespace(getCause=lambda: self))
+                        break
+
+        traveller = Traveller()
+        driver = SimpleNamespace(
+            test=self,
+            map_name="ninemarches",
+            player={"__handle__": "player"},
+            game_map={"__handle__": "map"},
+            record=Mock(),
+            object=lambda name, required=True: handles.get(name),
+            coords=lambda handle=None: positions[handle["__handle__"]] if handle else state["position"],
+            canStep=lambda coords: tuple(coords) not in state["blocked"],
+            _coordinateHandle=lambda coords: {"__handle__": "coordinates", "coords": tuple(coords)},
+        )
+
+        def call(handle, method, *args):
+            name = handle["__handle__"]
+            if method == "getName":
+                return name
+            if name in names:
+                if method == "getTypeId":
+                    return state["typeId"] or name
+                if method == "getBoolProperty":
+                    return state[args[0]]
+                if method == "getStringProperty" and args == ("exit",):
+                    return exits[name]
+            if name == "map" and method == "getTurn":
+                return state["turn"]
+            if name == "player" and method == "getController":
+                return {"__handle__": "controller"}
+            if name == "controller" and method == "setTarget":
+                state["target"] = args[1]["coords"]
+                state["targets"].append(state["target"])
+                return
+            self.fail((name, method, args))
+
+        def step(destination):
+            self.assertFalse(state["inTick"], "A departure cannot nest a native map turn")
+            self.assertEqual(1, sum(abs(a - b) for a, b in zip(state["position"], destination)))
+            self.assertTrue(driver.canStep(destination))
+            state["steps"].append(tuple(destination))
+            traveller.setCoords(SimpleNamespace(x=destination[0], y=destination[1], z=destination[2]))
+            state["turn"] += 1
+            state["target"] = state["position"]
+            if moving_npc:
+                positions["companionKnight"] = (532 + state["turn"] % 2, 592, 0)
+            state["restoreSnapshots"].append(positions["companionKnight" if moving_npc else "staticTarget"])
+            return state["position"]
+
+        def navigate(name, *, adjacent, after_tick):
+            self.assertFalse(adjacent)
+            state["target"] = positions[name]
+            for _ in range(128):
+                if moving_npc:
+                    state["target"] = positions[name]
+                before = state["position"]
+                if before == state["target"]:
+                    state["stationaryTicks"] += 1
+                    destination = before
+                elif before == positions["monolithCoast"]:
+                    destination = positions["monolithHub"]
+                elif sum(abs(a - b) for a, b in zip(before, positions["monolithCoast"])) == 1:
+                    destination = positions["monolithCoast"]
+                else:
+                    axis = 1 if before[1] != state["target"][1] else 0
+                    destination = list(before)
+                    destination[axis] += 1 if state["target"][axis] > before[axis] else -1
+                state["inTick"] = True
+                traveller.setCoords(SimpleNamespace(x=destination[0], y=destination[1], z=destination[2]))
+                state["turn"] += 1
+                contact = state["position"] == positions[name]
+                if moving_npc:
+                    positions[name] = (532 + state["turn"] % 2, 592, 0)
+                state["inTick"] = False
+                if contact:
+                    return
+                after_tick()
+            self.fail("Coast -> Hub -> Coast bounce prevented the actual target visit")
+
+        driver.call, driver.step, driver.navigateTo = call, step, navigate
+        return driver, state, positions
+
+    def testIncidentalMonolithDepartureBreaksTheAuthoredBounceForMovingAndStaticTargets(self):
+        for moving in (False, True):
+            with self.subTest(moving_npc=moving):
+                driver, state, positions = self.monolithBounceDriver(moving_npc=moving)
+                target = "companionKnight" if moving else "staticTarget"
+                with patch.object(marches, "afterCombat"):
+                    marches.walk(driver, target)
+                coast, hub = positions["monolithCoast"], positions["monolithHub"]
+                self.assertEqual([(coast, hub), (hub, coast)], state["movements"][:2])
+                self.assertEqual(2, len(state["steps"]))
+                self.assertEqual(0, state["stationaryTicks"], "Restore a static target before its next native tick")
+                self.assertEqual(2, len(state["targets"]))
+                self.assertEqual(state["restoreSnapshots"], state["targets"], "Read the live target after each step")
+                self.assertTrue(all(step not in (coast, hub) for step in state["steps"]))
+                self.assertFalse(getattr(driver, "_marches_departing_monolith", False))
+
+    def testMonolithDepartureDoesNotAlterNonportalInactiveOrExplicitPortalApproaches(self):
+        for scenario in ("ordinary", "otherMap", "disabled", "unpublished", "blockedExit", "missingTarget", "explicit"):
+            with self.subTest(scenario=scenario):
+                driver, state, positions = self.monolithBounceDriver()
+                target = "staticTarget"
+                if scenario == "ordinary":
+                    state["position"] = (520, 640, 0)
+                elif scenario == "otherMap":
+                    driver.map_name = "nouraajd"
+                elif scenario == "disabled":
+                    state["enabled"] = False
+                elif scenario == "unpublished":
+                    state["waypoint"] = False
+                elif scenario == "blockedExit":
+                    state["blocked"].add(positions["monolithHub"])
+                elif scenario == "missingTarget":
+                    target = "removedTarget"
+                else:
+                    target = "monolithHub"
+                before = (state["position"], state["turn"])
+                self.assertFalse(marches.leaveIncidentalMonolith(driver, target))
+                self.assertEqual(before, (state["position"], state["turn"]))
+                self.assertEqual([], state["steps"])
+                self.assertEqual([], state["targets"])
+
+    def testMonolithDepartureRejectsWrongIdentityBlockedNeighborsAndRecursiveMovement(self):
+        for scenario in ("identity", "blocked", "recursive", "replacedTarget", "unexpectedArrival"):
+            with self.subTest(scenario=scenario):
+                driver, state, _ = self.monolithBounceDriver()
+                if scenario == "identity":
+                    state["typeId"] = "replacementPortal"
+                elif scenario == "blocked":
+                    x, y, z = state["position"]
+                    state["blocked"].update((x + dx, y + dy, z) for dx, dy in ((0, -1), (-1, 0), (1, 0), (0, 1)))
+                else:
+                    original_step = driver.step
+
+                    def step(destination):
+                        if scenario == "recursive":
+                            marches.leaveIncidentalMonolith(driver, "staticTarget")
+                        original_step(destination)
+                        if scenario == "replacedTarget":
+                            original_object = driver.object
+                            driver.object = lambda name, required=True: (
+                                {"__handle__": "replacement"}
+                                if name == "staticTarget"
+                                else original_object(name, required)
+                            )
+                        elif scenario == "unexpectedArrival":
+                            state["position"] = (500, 662, 0)
+
+                    driver.step = step
+                with self.assertRaises(AssertionError):
+                    marches.leaveIncidentalMonolith(driver, "staticTarget")
+                self.assertEqual([], state["targets"])
+                self.assertFalse(getattr(driver, "_marches_departing_monolith", False))
+
+    def testMonolithDepartureDoesNotRetargetAnObjectRemovedDuringTheActualStep(self):
+        driver, state, _ = self.monolithBounceDriver()
+        original_step, original_object = driver.step, driver.object
+
+        def step(destination):
+            original_step(destination)
+            driver.object = lambda name, required=True: (
+                None if name == "staticTarget" else original_object(name, required)
+            )
+
+        driver.step = step
+        self.assertTrue(marches.leaveIncidentalMonolith(driver, "staticTarget"))
+        self.assertEqual(1, len(state["steps"]))
+        self.assertEqual(1, state["turn"])
+        self.assertEqual([], state["targets"])
+        self.assertFalse(getattr(driver, "_marches_departing_monolith", False))
+
     def setUp(self):
         temporary = TemporaryDirectory()
         self.addCleanup(temporary.cleanup)

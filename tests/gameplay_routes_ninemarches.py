@@ -35,6 +35,30 @@ GATES = (
     ("brass", "brassKeyCache", "brassGateThreshold", "brassGate", 3),
 )
 OBELISKS = ("obeliskFields", "obeliskFen", "obeliskBarrows", "obeliskAsh", "obeliskCoast", "obeliskCold")
+MONOLITH_EXITS = {
+    "monolithHub": "monolithCoast",
+    "monolithCoast": "monolithHub",
+    "monolithAsh": "monolithCold",
+    "monolithCold": "monolithAsh",
+}
+
+
+@lru_cache(maxsize=1)
+def authoredMonolithCoords():
+    document = json.loads(
+        (Path(__file__).resolve().parents[1] / "res/maps/ninemarches/map.json").read_text(encoding="utf-8")
+    )
+    return {
+        actor["name"]: (
+            int(actor["x"] // document["tilewidth"]),
+            int(actor["y"] // document["tileheight"]),
+            int(layer["properties"]["level"]),
+        )
+        for layer in document["layers"]
+        if layer["type"] == "objectgroup"
+        for actor in layer["objects"]
+        if actor["name"] in MONOLITH_EXITS
+    }
 
 
 @lru_cache(maxsize=1)
@@ -125,9 +149,83 @@ def afterCombat(d):
     d.record({"naturalRoadRecovery": turns, "nativeCombatSeq": d._marches_combat_seq})
 
 
+def leaveIncidentalMonolith(d, target_name):
+    """Leave a portal cell physically before another native path can execute its reverse edge."""
+    if target_name in MONOLITH_EXITS or d.map_name != "ninemarches":
+        return False
+    coordinates = authoredMonolithCoords()
+    origin = d.coords()
+    matches = [name for name, coords in coordinates.items() if coords == origin]
+    if not matches:
+        return False
+    d.test.assertEqual(1, len(matches))
+    d.test.assertFalse(getattr(d, "_marches_departing_monolith", False), "Monolith departure cannot recurse")
+    source_name = matches[0]
+    source = d.object(source_name, required=False)
+    if source is None:
+        return False
+    d.test.assertEqual(source_name, d.call(source, "getName"))
+    d.test.assertEqual(source_name, d.call(source, "getTypeId"))
+    d.test.assertEqual(origin, d.coords(source))
+    if (
+        d.call(source, "getBoolProperty", "enabled") is not True
+        or d.call(source, "getBoolProperty", "waypoint") is not True
+    ):
+        return False
+    exit_name = MONOLITH_EXITS[source_name]
+    d.test.assertEqual(exit_name, d.call(source, "getStringProperty", "exit"))
+    exit_object = d.object(exit_name)
+    d.test.assertEqual(exit_name, d.call(exit_object, "getName"))
+    d.test.assertEqual(exit_name, d.call(exit_object, "getTypeId"))
+    d.test.assertEqual(coordinates[exit_name], d.coords(exit_object))
+    if d.canStep(coordinates[exit_name]) is not True:
+        return False
+    target = d.object(target_name, required=False)
+    if target is None:
+        return False
+    target_coords = d.coords(target)
+    candidates = [
+        (origin[0] + dx, origin[1] + dy, origin[2])
+        for dx, dy in ((0, -1), (-1, 0), (1, 0), (0, 1))
+        if (origin[0] + dx, origin[1] + dy, origin[2]) not in coordinates.values()
+        and d.canStep((origin[0] + dx, origin[1] + dy, origin[2])) is True
+    ]
+    d.test.assertTrue(candidates, ("No live-passable cardinal monolith departure", source_name, origin))
+    destination = min(candidates, key=lambda coords: (sum(abs(a - b) for a, b in zip(coords, target_coords)), coords))
+    identity = (d.game_map["__handle__"], d.player["__handle__"])
+    turn = d.call(d.game_map, "getTurn")
+    d._marches_departing_monolith = True
+    try:
+        d.step(destination)
+        d.test.assertEqual(identity, (d.game_map["__handle__"], d.player["__handle__"]))
+        d.test.assertEqual(destination, d.coords(), "The monolith departure must be an actual cardinal entry")
+        d.test.assertGreater(d.call(d.game_map, "getTurn"), turn)
+        current_target = d.object(target_name, required=False)
+        if current_target is not None:
+            d.test.assertEqual(target["__handle__"], current_target["__handle__"], "The approach target was replaced")
+            controller = d.call(d.player, "getController")
+            d.call(controller, "setTarget", d.player, d._coordinateHandle(d.coords(current_target)))
+        d.record(
+            {
+                "naturalMonolithDeparture": source_name,
+                "origin": origin,
+                "destination": destination,
+                "target": target_name,
+            }
+        )
+        return True
+    finally:
+        d._marches_departing_monolith = False
+
+
 def walk(d, name, adjacent=False):
+    def afterApproachTick():
+        afterCombat(d)
+        if leaveIncidentalMonolith(d, name):
+            afterCombat(d)
+
     afterCombat(d)
-    d.navigateTo(name, adjacent=adjacent, after_tick=lambda: afterCombat(d))
+    d.navigateTo(name, adjacent=adjacent, after_tick=afterApproachTick)
     afterCombat(d)
 
 

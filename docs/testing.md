@@ -195,6 +195,10 @@ Earned hunt preparation also checks native object passability before committing 
 requires a recent validated actual-player victory against the leader, its original deadline, and the exact payout;
 cleanup of other cultists earns no invented combat experience. Nine Marches keeps the original collected retreat
 scroll through its first Halda approach and credits only its verified consumption and movement to the map entry.
+When an incidental monolith arrival interrupts another approach, the route verifies the actual enabled portal,
+its exit and live passability, then takes one cardinal controller step away before restoring the current target.
+Explicit portal routes retain their exact arrival assertions. Blocked departures, target replacement or unexpected
+movement fail; the correction changes neither authored portal callbacks nor route budgets.
 
 The missing-wand Siege refusal has its own fresh standalone case for every class. It consumes actual wands
 through successful seals, then requires an enabled, unsealed breach at the player's actual coordinates before
