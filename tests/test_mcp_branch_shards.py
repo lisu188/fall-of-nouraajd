@@ -9,6 +9,8 @@ import io
 import json
 from pathlib import Path
 import re
+import shutil
+import subprocess
 import tarfile
 import tempfile
 import unittest
@@ -140,6 +142,31 @@ class McpBranchShardsTest(unittest.TestCase):
         authored = {target for source, target in re.findall(r"configure_file\(\s*(res/[^/\s]+)\s+([^/\s)]+)", cmake)}
         self.assertEqual({"game.py", "ui.py", "campaign.py", "narrative.py"}, authored)
         self.assertEqual(authored | {"game_diagnostics.py", "quest_state.py"}, set(shards.ROOT_RESOURCE_FILES))
+
+    def testCmakeStaticMapCopiesPreserveBytesWithoutATrailingNewline(self):
+        cmake_executable = shutil.which("cmake")
+        if cmake_executable is None:
+            self.skipTest("CMake is unavailable for the resource-copy integration check")
+        cmake = (shards.ROOT / "CMakeLists.txt").read_text(encoding="utf-8")
+        for map_id in ("kadath", "ninemarches", "sunderedmarch", "vhulmarn"):
+            with self.subTest(map=map_id):
+                rules = re.findall(
+                    rf"configure_file\(\s*res/maps/{map_id}/map\.json\s+maps/{map_id}/map\.json(?:\s+[^)]*)?\)",
+                    cmake,
+                )
+                self.assertEqual(1, len(rules), "Exercise the single actual map-copy rule")
+                with tempfile.TemporaryDirectory(prefix="nouraajd-mcp-map-copy-", dir=shards.ROOT) as temporary:
+                    root = Path(temporary)
+                    source = root / f"res/maps/{map_id}/map.json"
+                    source.parent.mkdir(parents=True)
+                    source.write_bytes(b"{}")
+                    script = root / "copy.cmake"
+                    script.write_text(rules[0] + "\n", encoding="utf-8")
+                    copied = subprocess.run(
+                        [cmake_executable, "-P", str(script)], cwd=root, capture_output=True, text=True, timeout=30
+                    )
+                    self.assertEqual(0, copied.returncode, copied.stdout + copied.stderr)
+                    self.assertEqual(source.read_bytes(), (root / f"maps/{map_id}/map.json").read_bytes())
 
     def testRuntimeBundlePreservesRootModulesAndExcludesUnrelatedRootArtifacts(self):
         from tests.test_gameplay_branches_mcp import verifyCopiedSources
