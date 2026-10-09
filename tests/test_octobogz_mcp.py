@@ -306,6 +306,18 @@ class OctobogzMcpWalkthroughTest(unittest.TestCase):
         self.mcp_profile_started = perf_counter()
         self.mcp_method_profile = {}
 
+    def startFreshHuntGame(self, player_class):
+        from tests.gameplay_branch_driver import GameplayBranchDriver
+        from tests.gameplay_branch_rewards import resetMainQuestRewardSession
+
+        validator = self._native_combat_validator
+        GameplayBranchDriver.assertNativeCombatOutcomes(validator)
+        resetMainQuestRewardSession(validator)
+        self.game = self.engine("CGameLoader.loadGame")
+        self.engine("CGameLoader.startGameWithPlayer", self.game, "nouraajd", player_class)
+        self.refresh()
+        self.pump()
+
     def profiledMcpCall(self, key, callback, *args):
         started = perf_counter()
         failed = False
@@ -1878,10 +1890,7 @@ class OctobogzMcpWalkthroughTest(unittest.TestCase):
                 self.resetMcpProfile(player_class)
                 self.hunt_actors, self.confirmed_dead = {}, set()
                 self.capture_before_move = None
-                self.game = self.engine("CGameLoader.loadGame")
-                self.engine("CGameLoader.startGameWithPlayer", self.game, "nouraajd", player_class)
-                self.refresh()
-                self.pump()
+                self.startFreshHuntGame(player_class)
                 _, self.walkable = authoredRegion("nouraajd")
                 self.movement_steps = 0
                 self.assertIsNone(self.call(self.game, "getGui"), "The hunt must not create a desktop window")

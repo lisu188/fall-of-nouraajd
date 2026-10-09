@@ -10,7 +10,7 @@ import unittest
 from unittest.mock import Mock, patch
 
 from tests import gameplay_routes_nouraajd as routes
-from tests.gameplay_branch_rewards import observeMainQuestReward, requireMainQuestReward
+from tests.gameplay_branch_rewards import observeMainQuestReward, requireMainQuestReward, resetMainQuestRewardSession
 from tests.test_gameplay_route_dialogs import authoredFunction
 
 
@@ -435,8 +435,14 @@ class GameplayNouraajdHuntPreparationTest(unittest.TestCase):
                 self.assertEqual([], state["order"])
                 meet.assert_not_called()
 
-    def mainQuestRewardFixture(self, *, pay=True):
-        player_ref = {"id": "Warrior", "name": "actual-hero", "typeId": "Warrior", "type": "CPlayer", "isPlayer": True}
+    def mainQuestRewardFixture(self, *, pay=True, player_class="Warrior"):
+        player_ref = {
+            "id": player_class,
+            "name": "actual-hero",
+            "typeId": player_class,
+            "type": "CPlayer",
+            "isPlayer": True,
+        }
         state = {"gold": 100, "claimed": False, "records": []}
         player = SimpleNamespace(
             getItems=lambda: [],
@@ -517,6 +523,148 @@ class GameplayNouraajdHuntPreparationTest(unittest.TestCase):
         self.assertEqual(before, state, "The actual claim guard must prevent repeated grants and receipts")
         observeMainQuestReward(validator, [{"event": "map_moved"}])
         self.assertIs(receipt, requireMainQuestReward(validator, "actual-hero"))
+
+    def testFreshHuntGamesDrainAndIsolateRewardsForSameNameIncludingSameClass(self):
+        from tests.gameplay_branch_driver import GameplayBranchDriver
+        from tests.test_octobogz_mcp import OctobogzMcpWalkthroughTest
+
+        helper = OctobogzMcpWalkthroughTest(methodName="runTest")
+        positions = {"native.jsonl": {"offset": 123}}
+        validator = SimpleNamespace(
+            _combat_failure=None, _combat_trace_positions=positions, _combat_trace_seq=300, _player_victories={}
+        )
+        helper._native_combat_validator = validator
+        helper.refresh, helper.pump = Mock(), Mock()
+        pending, starts, drained = [], [], []
+
+        def drain(actual):
+            self.assertIs(validator, actual)
+            if pending:
+                observeMainQuestReward(actual, pending)
+                drained.append(requireMainQuestReward(actual, "actual-hero"))
+                actual._combat_trace_seq += len(pending)
+                pending.clear()
+
+        def engine(name, *args):
+            if name == "CGameLoader.loadGame":
+                with self.assertRaisesRegex(AssertionError, "actual 200-gold"):
+                    requireMainQuestReward(validator, "actual-hero")
+                return {"__handle__": "game-" + str(len(starts))}
+            self.assertEqual("CGameLoader.startGameWithPlayer", name)
+            self.assertEqual((helper.game, "nouraajd"), args[:2])
+            starts.append(args[2])
+
+        helper.engine = engine
+        with patch.object(GameplayBranchDriver, "assertNativeCombatOutcomes", side_effect=drain):
+            for player_class in ("Warrior", "Sorcerer", "Sorcerer"):
+                helper.startFreshHuntGame(player_class)
+                state, _repeat = self.mainQuestRewardFixture(player_class=player_class)
+                pending.extend(state["records"])
+            drain(validator)
+        self.assertEqual(["Warrior", "Sorcerer", "Sorcerer"], starts)
+        self.assertEqual(starts, [receipt["completion"]["player"]["typeId"] for receipt in drained])
+        self.assertEqual(3, helper.refresh.call_count)
+        self.assertEqual(3, helper.pump.call_count)
+        self.assertIs(positions, validator._combat_trace_positions)
+        self.assertEqual(309, validator._combat_trace_seq)
+        self.assertIsNone(validator._combat_failure)
+        with self.assertRaisesRegex(AssertionError, "twice"):
+            observeMainQuestReward(validator, state["records"])
+
+    def testFreshRewardSessionCannotEraseUnfinishedOrFailedNativeEvidence(self):
+        state, _repeat = self.mainQuestRewardFixture()
+        for size in (1, 2):
+            with self.subTest(received_records=size):
+                validator = SimpleNamespace(_combat_failure=None)
+                observeMainQuestReward(validator, state["records"][:size])
+                pending = validator._pending_main_quest_reward
+                receipts = validator._main_quest_rewards
+                with self.assertRaisesRegex(AssertionError, "unfinished"):
+                    resetMainQuestRewardSession(validator)
+                self.assertIs(pending, validator._pending_main_quest_reward)
+                self.assertIs(receipts, validator._main_quest_rewards)
+        validator = SimpleNamespace(_combat_failure=("Unresolved native player combat", {"outcome": 3}))
+        with self.assertRaisesRegex(AssertionError, "failed native evidence"):
+            resetMainQuestRewardSession(validator)
+        self.assertIsNotNone(validator._combat_failure)
+
+    def testMatrixAdapterSharesFreshGameResetButRetainsCheckpointReward(self):
+        from tests.gameplay_branch_driver import GameplayBranchDriver
+        from tests.gameplay_branch_types import RouteCase
+        from tests.test_octobogz_mcp import OctobogzMcpWalkthroughTest
+
+        case = RouteCase("reward_session", "unit", ("nouraajd",), (), lambda driver: None)
+        driver = GameplayBranchDriver(self, Mock(), {"proc": SimpleNamespace()}, case, "Warrior", ".")
+        state, _repeat = self.mainQuestRewardFixture()
+        phase, boundaries = ["checkpoint"], []
+
+        def refresh():
+            driver.game_map, driver.player = {"__handle__": "map"}, {"__handle__": "player"}
+            driver.map_name = "nouraajd"
+
+        def call(actor, method, *args):
+            return {
+                "getName": "actual-hero",
+                "getGui": None,
+                "getTurn": 7,
+                "getStringProperty": "",
+                "getBoolProperty": False,
+            }[method]
+
+        def engine(name, *args):
+            if name == "CGameLoader.loadGame":
+                if phase[0] != "checkpoint":
+                    self.assertEqual([phase[0]], boundaries)
+                    with self.assertRaisesRegex(AssertionError, "actual 200-gold"):
+                        requireMainQuestReward(driver, "actual-hero")
+                return {"__handle__": phase[0] + "-game"}
+            if name == "CMapLoader.saveWithResult":
+                return True
+            self.assertIn(name, ("CGameLoader.loadSavedGame", "CGameLoader.startGameWithPlayer"))
+
+        def drain():
+            if phase[0] != "checkpoint" and not boundaries:
+                self.assertIs(receipt, requireMainQuestReward(driver, "actual-hero"))
+                boundaries.append(phase[0])
+
+        refresh()
+        driver.game = {"__handle__": "original-game"}
+        driver.call, driver.engine, driver.refresh = call, engine, refresh
+        driver.assertNativeCombatOutcomes = Mock(side_effect=drain)
+        driver.assertSurvival, driver.pump = Mock(), Mock()
+        driver.properties, driver._slot, driver.record = Mock(return_value={}), Mock(return_value="checkpoint"), Mock()
+        with patch.object(OctobogzMcpWalkthroughTest, "trackLivingHuntActors"):
+            driver.hunt("trackLivingHuntActors")
+        adapter = driver._hunt_adapter
+        observeMainQuestReward(driver, state["records"])
+        receipt = adapter.requireOriginalMainQuestReward()
+        with patch("tests.gameplay_branch_driver.verifyJournals", return_value={}):
+            driver.saveAndReload("same-game")
+        self.assertIs(receipt, adapter.requireOriginalMainQuestReward())
+
+        for startup in ("map", "starting-save"):
+            phase[0] = startup
+            boundaries.clear()
+            with (
+                patch("tests.gameplay_branch_driver.captureWaypointCreation"),
+                patch("tests.gameplay_branch_driver.captureAmbientCave"),
+                patch(
+                    "tests.gameplay_branch_driver.subprocess.run",
+                    return_value=SimpleNamespace(returncode=0, stdout="{}", stderr=""),
+                ),
+                patch("pathlib.Path.is_file", return_value=True),
+            ):
+                if startup == "map":
+                    driver.startMap("nouraajd")
+                else:
+                    driver.loadStartingSave(campaign_id="fallOfNouraajd")
+            self.assertIs(adapter, driver._hunt_adapter)
+            with self.assertRaisesRegex(AssertionError, "actual 200-gold"):
+                adapter.requireOriginalMainQuestReward()
+            observeMainQuestReward(driver, state["records"])
+            receipt = adapter.requireOriginalMainQuestReward()
+        with self.assertRaisesRegex(AssertionError, "twice"):
+            observeMainQuestReward(driver, state["records"])
 
     def testActualAuthoredReceiptWithoutTheNativePaymentIsRejected(self):
         state, _repeat = self.mainQuestRewardFixture(pay=False)

@@ -7,7 +7,7 @@ from collections import OrderedDict, deque
 from functools import lru_cache
 
 from tests.gameplay_branch_journals import verifyJournals
-from tests.gameplay_branch_rewards import observeMainQuestReward, requireMainQuestReward
+from tests.gameplay_branch_rewards import observeMainQuestReward, requireMainQuestReward, resetMainQuestRewardSession
 from tests.gameplay_routes_waypoints import captureWaypointCreation
 from tests.gameplay_routes_potions import observePotionConsumptions
 from tests.gameplay_routes_caves import captureAmbientCave, beforeAmbientCaveTurn, afterAmbientCaveTurn
@@ -478,6 +478,8 @@ class GameplayBranchDriver:
             captureWaypointCreation(self)
             captureAmbientCave(self)
             return
+        self.assertNativeCombatOutcomes()
+        resetMainQuestRewardSession(self)
         self.game_map = self.player = None
         self.game = self.engine("CGameLoader.loadGame")
         self.engine("CGameLoader.startGameWithPlayer", self.game, map_id, self.class_id, self.race_id)
@@ -528,6 +530,8 @@ class GameplayBranchDriver:
         self.test.assertEqual(0, process.returncode, process.stdout[-4096:] + process.stderr[-4096:])
         self.test.assertTrue((self.build_dir / "save" / (slot + ".json")).is_file())
         self.record({"startingSave": json.loads(process.stdout.splitlines()[-1])}, replay=True)
+        self.assertNativeCombatOutcomes()
+        resetMainQuestRewardSession(self)
         self.game_map = self.player = None
         self.game = self.engine("CGameLoader.loadGame")
         self.engine("CGameLoader.loadSavedGame", self.game, slot)

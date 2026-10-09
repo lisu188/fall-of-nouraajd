@@ -10,6 +10,16 @@ REWARD_TITLE = "Nouraajd's thanks"
 GOLD_REWARD = 200
 
 
+def resetMainQuestRewardSession(validator):
+    """Reset only at a fresh-game boundary, after validating the previous game's unread trace."""
+    if getattr(validator, "_combat_failure", None) is not None:
+        raise AssertionError(("A fresh game cannot clear failed native evidence", validator._combat_failure))
+    if getattr(validator, "_pending_main_quest_reward", None) is not None:
+        raise AssertionError("A fresh game cannot discard an unfinished MainQuest reward")
+    validator._main_quest_rewards = OrderedDict()
+    validator._pending_main_quest_reward = None
+
+
 def observeMainQuestReward(validator, records):
     receipts = getattr(validator, "_main_quest_rewards", None)
     if receipts is None:
