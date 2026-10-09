@@ -65,6 +65,15 @@ class GameplayBranchDriverTest(unittest.TestCase):
         driver._rawCall = Mock()
         return driver
 
+    def testProgressAndResourceActionsAreIncludedInTheDurableActionSequence(self):
+        driver = self.driver()
+        driver.record = Mock()
+        for method in ("useAction", "sealBreach", "checkQuests"):
+            with self.subTest(method=method):
+                driver.call(driver.player, method)
+                self.assertTrue(driver.record.call_args.kwargs["replay"])
+                self.assertEqual(method, driver.record.call_args.args[0]["method"])
+
     def testFixtureMutationsAreRejectedBeforeDispatch(self):
         driver = self.driver()
         for method in sorted(FORBIDDEN_METHODS):

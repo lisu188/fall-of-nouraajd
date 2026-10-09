@@ -159,7 +159,9 @@ private hook is unavailable through MCP exports. Stable SHA-256 case/class seeds
 native trace history, failure diagnostics, elapsed time, and branch receipts are written under the selected
 `GAME_TEST_OUTPUT_DIR`. Reproduce a failure from process startup with the recorded seed and action sequence;
 save checkpoints preserve game state, and do not serialize RNG state. Random sequences are checked within each
-platform; Linux and Windows need not produce identical sequences.
+platform; Linux and Windows need not produce identical sequences. Generated object names include process-local
+identity, so the seed tests establish native random-source repeatability. The recorded case and action sequence
+are failure diagnostics; they do not establish identical whole-route execution across fresh processes.
 
 The native driver uses controller targets, adjacent movement, actual map turns, class combat controllers, owned
 consumables, finite stock, and real payments/ingredients. It rejects fixture mutations, unexpected defeat,
