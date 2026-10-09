@@ -164,7 +164,11 @@ def verifyJournals(d):
             d.test.assertNotIn(quest_id, records, "Quest must occur exactly once across active and completed journals")
             record = {"id": quest_id, "name": name, "type": type_id, "completed": completed, **specs[quest_id]}
             for field in ("description", "objective", "reward", "hint"):
-                value = d.call(quest, "get" + field.capitalize())
+                value = (
+                    d.call(quest, "getStringProperty", "description")
+                    if field == "description"
+                    else d.call(quest, "get" + field.capitalize())
+                )
                 d.test.assertTrue(isinstance(value, str) and value.strip(), (quest_id, "empty journal " + field))
                 d.test.assertNotIn("unavailable", value.casefold(), (quest_id, "unexpected legacy neutral text", value))
                 if field == "description":

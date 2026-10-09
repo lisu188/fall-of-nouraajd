@@ -3,7 +3,10 @@
 # SPDX-License-Identifier: GPL-3.0-or-later
 """Journal verifier failures are tested with doubles; natural witnesses run over MCP."""
 
+from pathlib import Path
 import unittest
+
+import mcp
 
 from tests.gameplay_branch_journals import assertOutcomeText, questSpecs, rememberJournalContext, verifyJournals
 
@@ -43,7 +46,15 @@ class JournalDriver:
             return handle.get(
                 args[0], {"getNumericProperty": 0, "getStringProperty": "", "getBoolProperty": False}[method]
             )
-        return handle[{"getName": "name", "getTypeId": "type"}.get(method, method.removeprefix("get").lower())]
+        return handle[
+            {
+                "getName": "name",
+                "getTypeId": "type",
+                "getObjective": "objective",
+                "getReward": "reward",
+                "getHint": "hint",
+            }[method]
+        ]
 
     def flag(self, name):
         return False
@@ -56,6 +67,56 @@ class JournalDriver:
 
 
 class GameplayBranchJournalsTest(unittest.TestCase):
+    def testJournalUsesTheBoundMcpDescriptionPropertyAndQuestTextGetters(self):
+        driver = JournalDriver(self)
+
+        class CGameObject:
+            def getName(self):
+                return driver.quest["name"]
+
+            def getTypeId(self):
+                return driver.quest["type"]
+
+            def getStringProperty(self, name):
+                return driver.quest.get(name, "")
+
+            def getNumericProperty(self, name):
+                return driver.quest.get(name, 0)
+
+            def getBoolProperty(self, name):
+                return driver.quest.get(name, False)
+
+        class CQuest(CGameObject):
+            def getObjective(self):
+                return driver.quest["objective"]
+
+            def getReward(self):
+                return driver.quest["reward"]
+
+            def getHint(self):
+                return driver.quest["hint"]
+
+        server = mcp.EngineMcpServer(Path("."), Path("."))
+        server.handles["quest"] = CQuest()
+        original_call = driver.call
+        calls = []
+
+        def call(handle, method, *args):
+            if handle is not driver.quest:
+                return original_call(handle, method, *args)
+            calls.append((method, args))
+            response = server._engine_handle_call({"handle": "quest", "method": method, "args": list(args)})
+            self.assertFalse(response["isError"], response)
+            return response["structuredContent"]["result"]
+
+        driver.call = call
+        records = verifyJournals(driver)
+        self.assertEqual(driver.quest["description"], records["mainQuest"]["description"])
+        self.assertIn(("getStringProperty", ("description",)), calls)
+        self.assertNotIn("getDescription", {method for method, _args in calls})
+        for method in ("getObjective", "getReward", "getHint"):
+            self.assertIn((method, ()), calls)
+
     def testOffMapCompletedJournalRetainsSourceDescriptionAndCapturedText(self):
         driver = JournalDriver(self)
         result = verifyJournals(driver)
