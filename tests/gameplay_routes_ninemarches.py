@@ -46,9 +46,11 @@ def recruit(d, companion, *, item_first=False):
     d.select(dialog, "OFFER", 1)
     d.test.assertFalse(d.flag(companion + "_started"))
     d.choose(dialog, "start")
+    d.select(dialog, "ACCEPTED", 0)
     if not item_first:
         d.test.assertTrue(d.condition(dialog, "questInProgress"))
         d.select(dialog, "ENTRY", 4)
+        d.select(dialog, "REMINDER", 0)
         d.navigateTo(cache)
         d.test.assertEqual(1, d.count(item))
         d.revisit(cache)
@@ -58,6 +60,7 @@ def recruit(d, companion, *, item_first=False):
     before_rep = d.call(d.player, "getNumericProperty", "reputation")
     before_gift = d.count(gift)
     d.choose(dialog, "recruit", condition="can_recruit")
+    d.select(dialog, "JOINED", 0)
     d.test.assertEqual(before_rep + 2, d.call(d.player, "getNumericProperty", "reputation"))
     d.test.assertEqual(before_gift + 1, d.count(gift))
     d.test.assertIn(companion + "Quest", d.questNames(completed=True))
@@ -70,6 +73,7 @@ def companionRoute(d, companion, item_first):
     start(d)
     actor, dialog, gift = recruit(d, companion, item_first=item_first)
     d.choose(dialog, "banter", condition="is_joined")
+    d.select(dialog, "LOYAL", 0)
     d.check(f"ninemarches.companion.{companion}.loyal", d.condition(dialog, "is_joined"))
     d.check(f"ninemarches.companion.{companion}.{'itemFirst' if item_first else 'questFirst'}", d.count(gift) == 1)
     d.saveAndReload(f"{companion}-joined")
@@ -83,6 +87,7 @@ def negativeReputationRoute(d, companion, leaves):
     reputation = d.call(d.player, "getNumericProperty", "reputation")
     d.test.assertEqual(-5 if leaves else -4, reputation)
     d.choose(dialog, "banter", condition="is_joined")
+    d.select(dialog, "GONE" if leaves else "LOYAL", 0)
     d.check(
         f"ninemarches.companion.{companion}.{'leftAtMinusFive' if leaves else 'loyalAtMinusFour'}",
         d.condition(dialog, "has_left") == leaves and d.condition(dialog, "is_joined") != leaves,
@@ -95,6 +100,7 @@ def negativeReputationRoute(d, companion, leaves):
     d.test.assertEqual(1, d.count(gift))
     if leaves:
         d.select(dialog, "ENTRY", 3)
+        d.select(dialog, "GONE", 0)
 
 
 def corvynDeparture(d):
@@ -104,15 +110,18 @@ def corvynDeparture(d):
     d.navigateTo(actor)
     d.test.assertEqual(4, d.call(d.player, "getNumericProperty", "reputation"))
     d.choose(dialog, "banter", condition="is_joined")
+    d.select(dialog, "LOYAL", 0)
     d.check("ninemarches.companion.corvyn.loyalAtFour", d.condition(dialog, "is_joined"))
     d.navigateTo("witchHut")
     d.test.assertEqual(5, d.call(d.player, "getNumericProperty", "reputation"))
     d.navigateTo(actor)
     d.choose(dialog, "banter", condition="is_joined")
+    d.select(dialog, "GONE", 0)
     d.check("ninemarches.companion.corvyn.leftAtFive", d.condition(dialog, "has_left"))
     d.test.assertFalse(d.condition(dialog, "is_joined"))
     d.test.assertFalse(d.condition(dialog, "can_recruit"))
     d.select(dialog, "ENTRY", 3)
+    d.select(dialog, "GONE", 0)
     d.saveAndReload("corvyn-departed")
     d.navigateTo(actor)
     d.check("ninemarches.companion.corvyn.departurePersisted", d.condition(dialog, "has_left") and d.count(gift) == 1)
@@ -151,15 +160,21 @@ def gateRoute(d):
 def sites(d):
     start(d)
     for name, flag, amount in (("learningStone", "shrine_used", 120), ("goldMine", "mine_claimed", 500)):
+        target = d.object(name)
         if name == "goldMine":
             # The configured mine amount is authoritative; do not copy a balance constant.
-            amount = d.call(d.object(name), "getNumericProperty", "value")
+            amount = d.call(target, "getNumericProperty", "value")
+        d.navigateTo(name, adjacent=True)
+        d.test.assertFalse(d.flag(flag), "The first-claim witness must precede actual entry")
+        origin = d.coords()
         gold = d.gold()
-        d.navigateTo(name)
+        destination = d.coords(target)
+        d.step(destination)
         d.test.assertTrue(d.flag(flag))
-        d.test.assertGreaterEqual(d.gold(), gold + amount)
+        d.test.assertEqual(gold + amount, d.gold())
         claimed_gold = d.gold()
-        d.revisit(name)
+        d.step(origin)
+        d.step(destination)
         d.test.assertEqual(claimed_gold, d.gold())
         d.check(f"ninemarches.site.{name}.once", d.flag(flag))
     d.test.assertTrue(d.flag("CAN_CRAFT_SCROLLS"))
@@ -197,20 +212,26 @@ def reputationDialog(d, low=False):
     if low:
         d.test.assertTrue(d.condition("mayorDialog", "low_reputation"))
         d.select("mayorDialog", "ENTRY", 1)
+        d.select("mayorDialog", "LOW", 0)
         d.check("ninemarches.mayor.low", not d.condition("mayorDialog", "high_reputation"))
         return
     d.test.assertTrue(d.condition("mayorDialog", "steady_reputation"))
     d.select("mayorDialog", "ENTRY", 2)
+    d.select("mayorDialog", "STEADY", 0)
     d.check("ninemarches.mayor.steady", not d.condition("mayorDialog", "low_reputation"))
     d.select("mayorDialog", "ENTRY", 3)
+    d.select("mayorDialog", "LORE", 0)
     d.navigateTo("gravewatchTavern")
     d.select("tavernDialog", "ENTRY", 0)
+    d.select("tavernDialog", "RUMORS", 0)
     d.select("tavernDialog", "ENTRY", 1)
+    d.select("tavernDialog", "HIRING", 0)
     recruit(d, "halda")
     d.navigateTo("witchHut")
     d.navigateTo("mayorHall")
     d.test.assertEqual(3, d.call(d.player, "getNumericProperty", "reputation"))
     d.select("mayorDialog", "ENTRY", 0)
+    d.select("mayorDialog", "HIGH", 0)
     d.check("ninemarches.mayor.high", d.condition("mayorDialog", "high_reputation"))
 
 

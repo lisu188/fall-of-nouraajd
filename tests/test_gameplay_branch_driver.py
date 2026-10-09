@@ -6,6 +6,8 @@
 from copy import deepcopy
 from pathlib import Path
 from types import SimpleNamespace
+import json
+import tempfile
 import unittest
 from unittest.mock import Mock, patch
 
@@ -73,6 +75,62 @@ class GameplayBranchDriverTest(unittest.TestCase):
                 driver.call(driver.player, method)
                 self.assertTrue(driver.record.call_args.kwargs["replay"])
                 self.assertEqual(method, driver.record.call_args.args[0]["method"])
+
+    def testDurableNavigationTargetRetainsCoordinatesAfterHandleReleaseWithoutExtraReads(self):
+        driver = self.driver()
+        point, coordinates, controller = ({"__handle__": name} for name in ("point", "coords", "controller"))
+        driver._rawCall.side_effect = lambda handle, method, *args: {
+            "createObject": point,
+            "setNumericProperty": None,
+            "getCoords": coordinates,
+            "setTarget": None,
+        }[method]
+        with tempfile.TemporaryDirectory() as directory:
+            driver.action_path = Path(directory) / "actions.jsonl"
+            driver.call(controller, "setTarget", driver.player, driver._coordinateHandle((12, 7, 1)))
+            actions = [json.loads(line) for line in driver.action_path.read_text(encoding="utf-8").splitlines()]
+        self.assertEqual(1, len(actions))
+        self.assertEqual("setTarget", actions[0]["method"])
+        self.assertEqual([12, 7, 1], actions[0]["targetCoordinates"])
+        self.assertEqual(6, driver._rawCall.call_count)
+        self.assertFalse(driver._ephemeral_handles)
+        self.assertFalse(driver._coordinate_values)
+        driver.harness._mcp_tool.assert_called_once_with(None, "engine_release_handles", {"handles": ["coords"]})
+
+    def testCastleDefenderSelectionUsesCurrentAuthoredDistanceAndRetainsUnreachableObligations(self):
+        from tests.castle_walkthrough import TransitRoutes
+        from tests.gameplay_routes_campaigns import castleNearestDefender
+
+        objects = {
+            "west": {"coords": (0, 0, 0)},
+            "east": {"coords": (4, 0, 0)},
+            "disconnected": {"coords": (9, 9, 0)},
+        }
+        remaining = set(objects)
+        walkable = {(x, 0, 0) for x in range(5)} | {(9, 9, 0)}
+        portals = TransitRoutes()
+        reserved = (20, 20, 0)
+        self.assertEqual("west", castleNearestDefender(remaining, objects, walkable, portals, (1, 0, 0), reserved))
+        self.assertEqual("east", castleNearestDefender(remaining, objects, walkable, portals, (3, 0, 0), reserved))
+        visited = []
+        origin = (1, 0, 0)
+        while selected := castleNearestDefender(remaining, objects, walkable, portals, origin, reserved):
+            visited.append(selected)
+            remaining.remove(selected)
+            origin = objects[selected]["coords"]
+        self.assertEqual(["west", "east"], visited)
+        self.assertEqual({"disconnected"}, remaining)
+
+    def testCastleDefenderSelectionUsesWalkableConnectorsAndReservedObjective(self):
+        from tests.castle_walkthrough import TransitRoutes
+        from tests.gameplay_routes_campaigns import castleNearestDefender
+
+        objects = {"near": {"coords": (2, 0, 0)}, "portal": {"coords": (9, 0, 1)}}
+        walkable = {(0, 0, 0), (1, 0, 0), (2, 0, 0), (9, 0, 1)}
+        portals = TransitRoutes()
+        portals.passages[(0, 0, 0)] = {(9, 0, 1)}
+        self.assertEqual("portal", castleNearestDefender(objects, objects, walkable, portals, (0, 0, 0), (20, 0, 0)))
+        self.assertEqual("near", castleNearestDefender(objects, objects, walkable, portals, (0, 0, 0), (9, 0, 1)))
 
     def testFixtureMutationsAreRejectedBeforeDispatch(self):
         driver = self.driver()
@@ -316,6 +374,9 @@ class GameplayBranchDriverTest(unittest.TestCase):
         self.assertEqual((9, 0, 1), driver.coords())
         driver.tick.assert_called_once()
         driver.snapshot.assert_not_called()
+        targets = [action for action in driver.actions if action.get("method") == "setTarget"]
+        self.assertEqual([(1, 0, 0)], [action["targetCoordinates"] for action in targets])
+        self.assertFalse(driver._coordinate_values)
 
     def testStepClearsStaleTargetAtActualPortalArrivalBeforeTurn(self):
         for arrival in ((1, 0, 0), (9, 0, 1)):
@@ -439,6 +500,7 @@ class GameplayBranchDriverTest(unittest.TestCase):
             else:
                 driver.call(driver.game_map, "canStep", coordinates)
             self.assertFalse(driver._ephemeral_handles)
+            self.assertFalse(driver._coordinate_values)
         self.assertEqual(1, state["created"])
         self.assertEqual(10002, state["released"])
         self.assertEqual(1, state["maximumLive"])

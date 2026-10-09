@@ -3,6 +3,7 @@
 # SPDX-License-Identifier: GPL-3.0-or-later
 """Complete Warden/Castle campaigns and the two natural ritual resolutions."""
 
+from collections import deque
 from functools import partial
 
 from tests.castle_walkthrough import MAP_NAMES, authoredMap, shortestRoute
@@ -363,6 +364,26 @@ def castleNavigate(d, coords, walkable, portals, reserved):
         d.test.assertEqual(tuple(arrival), d.coords())
 
 
+def castleNearestDefender(remaining, objects, walkable, portals, origin, reserved):
+    distances = {tuple(origin): 0}
+    queue = deque([tuple(origin)])
+    available = walkable - {reserved}
+    while queue:
+        point = queue.popleft()
+        steps = [(point[0] + dx, point[1] + dy, point[2]) for dx, dy in ((-1, 0), (1, 0), (0, -1), (0, 1))]
+        steps.extend(sorted(portals.passages.get(point, ())))
+        for step in steps:
+            if step not in available:
+                continue
+            arrival = portals.get(step, step)
+            if arrival not in available or arrival in distances:
+                continue
+            distances[arrival] = distances[point] + 1
+            queue.append(arrival)
+    reachable = [name for name in remaining if objects[name]["coords"] in distances]
+    return min(reachable, key=lambda name: (distances[objects[name]["coords"]], name), default=None)
+
+
 def castleTownRest(d, objects, walkable, portals, reserved, mission):
     towns = [
         name
@@ -379,34 +400,69 @@ def castleTownRest(d, objects, walkable, portals, reserved, mission):
     )
     castleNavigate(d, objects[town]["coords"], walkable, portals, reserved)
     d.test.assertTrue(d.flag("campaign_castleSupply_" + town))
-    defenders = sorted(
-        mission["defenderIds"],
-        key=lambda name: (sum(abs(a - b) for a, b in zip(objects[name]["coords"], objects[town]["coords"])), name),
-    )
-    for name in defenders:
-        if objects[name]["coords"] == reserved or d.object(name, required=False) is None:
+    income = {
+        name: value
+        for name, value in objects.items()
+        if value.get("class") in ("CastleSupply", "CastleObjective")
+        and not d.flag(
+            ("campaign_castleSupply_" if value["class"] == "CastleSupply" else "campaign_castleCaptured_") + name
+        )
+    }
+    blocked = {reserved, *(value["coords"] for value in income.values())}
+    # Claim only supplies needed to leave the town. Other income stays reserved
+    # while actual paid rests reduce the player's observed gold below ten.
+    for _ in range(len(income) + 1):
+        rest_walkable = walkable - blocked
+        defenders = []
+        for name in mission["defenderIds"]:
+            try:
+                route = shortestRoute(rest_walkable, portals, d.coords(), objects[name]["coords"])
+                defenders.append((len(route), name))
+            except AssertionError:
+                # Every defender retains its separate mandatory obligation below.
+                continue
+        if defenders:
+            break
+        exits = []
+        for name, value in income.items():
+            if value["class"] != "CastleSupply":
+                continue
+            try:
+                route = shortestRoute(walkable - (blocked - {value["coords"]}), portals, d.coords(), value["coords"])
+                exits.append((len(route), name))
+            except AssertionError:
+                continue
+        d.test.assertTrue(exits, "No authored supply permits leaving the loyal town without capturing a new position")
+        name = min(exits)[1]
+        value = income.pop(name)
+        blocked.discard(value["coords"])
+        castleNavigate(d, value["coords"], walkable - blocked, portals, reserved)
+        d.test.assertTrue(d.flag("campaign_castleSupply_" + name))
+    paid_rest_seen = False
+    for _distance, name in sorted(defenders):
+        if d.object(name, required=False) is None:
             continue
-        try:
-            shortestRoute(walkable - {reserved}, portals, d.coords(), objects[name]["coords"])
-        except AssertionError:
-            # This is only a search for natural injury. Every defender still has
-            # its separate mandatory route obligation below.
-            continue
-        castleNavigate(d, objects[name]["coords"], walkable, portals, reserved)
-        if d.call(d.player, "getHp") == d.call(d.player, "getHpMax") or d.gold() < 10:
+        castleNavigate(d, objects[name]["coords"], rest_walkable, portals, reserved)
+        if d.call(d.player, "getHp") == d.call(d.player, "getHpMax"):
             continue
         recovery = d.recoveryEnabled
         d.recoveryEnabled = False
         try:
-            castleNavigate(d, objects[town]["coords"], walkable, portals, reserved)
+            castleNavigate(d, objects[town]["coords"], rest_walkable, portals, reserved)
             if d.call(d.player, "getHp") == d.call(d.player, "getHpMax"):
                 continue
+            if d.gold() < 10:
+                d.test.assertTrue(paid_rest_seen, "The route must spend gold through ordinary town rests")
+                d.check(
+                    "castle.town.insufficientGold", not d.restAtTown(town), gold=d.gold(), hp=d.call(d.player, "getHp")
+                )
+                return
             d.check("castle.town.rest", d.restAtTown(town))
             d.check("castle.town.fullHealth", not d.restAtTown(town))
-            return
+            paid_rest_seen = True
         finally:
             d.recoveryEnabled = recovery
-    d.test.fail("The reachable authored encounters produced no payable natural injury for town rest")
+    d.test.fail(("Authored encounters did not produce enough natural injuries to exhaust paid town rest", d.gold()))
 
 
 def castleChapter(d, map_name, rest=False):
@@ -447,6 +503,15 @@ def castleChapter(d, map_name, rest=False):
         and d.gold() == gold_before,
     )
     if rest:
+        d.test.assertTrue(objects[guarded_name]["properties"].get("campaign_isTown"))
+        gold_before, hp_before = d.gold(), d.call(d.player, "getHp")
+        rest_dialog = d.call(d.game, "createObject", "CastleTownRestDialog")
+        d.check(
+            "castle.town.locked",
+            not d.call(rest_dialog, "configureTown", guarded_marker)
+            and d.gold() == gold_before
+            and d.call(d.player, "getHp") == hp_before,
+        )
         castleTownRest(d, objects, walkable, portals, reserved, mission)
     for name in ("castleCatherine", "castleChristian"):
         castleNavigate(d, objects[name]["coords"], walkable, portals, reserved)
@@ -514,13 +579,21 @@ def castleChapter(d, map_name, rest=False):
         all(d.flag("campaign_castleCaptured_" + name) for name in mission["captureIds"] if name != final_name),
     )
     final_guards = set(filter(None, objects[final_name]["properties"].get("campaign_guards", "").split(",")))
-    for name in mission["defenderIds"]:
-        if name in final_guards:
-            continue
+    remaining = set(mission["defenderIds"]) - final_guards
+    while remaining:
+        name = castleNearestDefender(remaining, objects, walkable, portals, d.coords(), reserved)
+        if name is None:
+            for absent in sorted(remaining):
+                if d.object(absent, required=False) is None:
+                    d.check(prefix + ".defender." + absent, d.flag("campaign_castleDefeated_" + absent))
+                    remaining.remove(absent)
+            d.test.assertFalse(remaining, (map_name, "No authored route to remaining defenders", sorted(remaining)))
+            break
         actor = d.object(name, required=False)
         if actor:
             castleNavigate(d, objects[name]["coords"], walkable, portals, reserved)
         d.check(prefix + ".defender." + name, d.flag("campaign_castleDefeated_" + name))
+        remaining.remove(name)
     d.saveAndReload(map_name + "-before-final-capture")
     for name in final_guards:
         if d.object(name, required=False):
@@ -625,7 +698,14 @@ RITUAL_BAD_BRANCHES = RITUAL_COMMON + (
 
 
 def castleBranches():
-    result = ["castle.town.rest", "castle.town.fullHealth", "castle.campaign.complete", "castle.campaign.persisted"]
+    result = [
+        "castle.town.rest",
+        "castle.town.fullHealth",
+        "castle.town.insufficientGold",
+        "castle.town.locked",
+        "castle.campaign.complete",
+        "castle.campaign.persisted",
+    ]
     for map_name in MAP_NAMES:
         _document, objects, _walkable, _portals, mission = authoredMap(map_name)
         prefix = "castle." + map_name
@@ -742,7 +822,6 @@ DEFENSIVE_BRANCHES = {
     "wardens.elder.afterTransition": "Reporting immediately leaves Hearthfall; old-map dialog reentry is a retained-handle contract.",
     "wardens.voss.afterTransition": "Judgment immediately leaves Gravemoor; repeated old-map actions are contract tests.",
     "castle.portal.blockedTarget": "Shipped connector targets are walkable; exercising a blocked target needs a changed fixture.",
-    "castle.town.insufficientGold": "Requires a player economy boundary fixture; no route edits gold or health to create it.",
     "ritual.retryFailedTransition": "Requires a map-load failure fixture; successful authored content cannot induce it naturally.",
 }
 
@@ -875,6 +954,22 @@ SOURCE_BRANCHES = {
     ),
     "res/plugins/castle_campaign.py:CastleObjective.onEnter": tuple(
         branch for branch in castleBranches() if ".capture." in branch
+    ),
+    "res/plugins/castle_campaign.py:CastleTownRestDialog.configureTown": (
+        "castle.town.rest",
+        "castle.town.fullHealth",
+        "castle.town.insufficientGold",
+        "castle.town.locked",
+    ),
+    "res/plugins/castle_campaign.py:CastleTownRestDialog.canRest": (
+        "castle.town.rest",
+        "castle.town.fullHealth",
+        "castle.town.insufficientGold",
+    ),
+    "res/plugins/castle_campaign.py:CastleTownRestDialog.rest": (
+        "castle.town.rest",
+        "castle.town.fullHealth",
+        "castle.town.insufficientGold",
     ),
     "res/plugins/castle_campaign.py:CastleDefeatTrigger.trigger": tuple(
         branch for branch in castleBranches() if ".defender." in branch

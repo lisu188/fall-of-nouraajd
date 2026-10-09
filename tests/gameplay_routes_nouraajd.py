@@ -80,10 +80,12 @@ def start(d, *, gate="cooperative", deed=False):
     d.navigateTo("nouraajdDoor")
     if gate == "threatened":
         d.choose("doorDialog", "threatenGate")
+        d.select("doorDialog", "NOT_WELCOME", 0)
     if deed and d.class_id == "Warrior":
         d.choose("doorDialog", "brace_gate", condition="can_brace_gate")
     else:
         d.choose("doorDialog", "open_door")
+    d.select("doorDialog", "WARRIOR_GATE" if deed and d.class_id == "Warrior" else "WELCOME", 1)
     d.test.assertTrue(d.call(d.object("nouraajdDoor"), "getBoolProperty", "opened"))
     if deed and d.class_id != "Warrior":
         performDeed(d)
@@ -95,6 +97,13 @@ def performDeed(d):
     d.test.assertTrue(d.condition(dialog, condition))
     before = d.call(d.player, "getNumericProperty", "exp")
     d.choose(dialog, action, condition=condition)
+    state, option = {
+        "Assasin": ("ASSASIN_TRAIL", 2),
+        "Sorcerer": ("SORCERER_WARD", 0),
+        "Inquisitor": ("STAINED_GLASS", 0),
+        "Wayfarer": ("WAYFARER_ROUTE", 0),
+    }[d.class_id]
+    d.select(dialog, state, option)
     d.test.assertEqual(before + 750, d.call(d.player, "getNumericProperty", "exp"))
     d.test.assertTrue(d.call(d.player, "getBoolProperty", flag))
     d.test.assertEqual(1, d.call(d.player, "getNumericProperty", counter))
@@ -174,12 +183,15 @@ def letter(d):
     d.navigateTo("nouraajdTownHall")
     if not d.count("letterToBeren"):
         d.choose("townHallDialog", "give_letter")
+        d.select("townHallDialog", "THANKS", 0)
     d.test.assertEqual(1, d.count("letterToBeren"))
     d.test.assertTrue(d.condition("townHallDialog", "has_letter_quest"))
     d.test.assertFalse(d.condition("townHallDialog", "can_offer_letter_work"))
     d.select("townHallDialog", "ENTRY", 4)
+    d.select("townHallDialog", "ASK_HELP_REPEAT", 0)
     d.navigateTo("nouraajdChapel")
     d.choose("berenDialog", "deliver_letter", condition="can_deliver_letter")
+    d.select("berenDialog", "LETTER_DELIVERED", 0)
     d.test.assertEqual(0, d.count("letterToBeren"))
     d.test.assertTrue(d.call(d.player, "getBoolProperty", "CAN_CRAFT_SCROLLS"))
     d.test.assertIn("deliverLetterQuest", d.questNames(completed=True))
@@ -195,6 +207,7 @@ def relic(d):
 def handInRelic(d):
     d.navigateTo("nouraajdChapel")
     d.choose("berenDialog", "return_relic", condition="can_return_relic")
+    d.select("berenDialog", "RELIC_RETURNED", 0)
     d.test.assertEqual(0, d.count("holyRelic"))
     d.test.assertTrue(d.call(d.player, "getBoolProperty", "CAN_BREW_GREATER_POTIONS"))
     d.test.assertIn("retrieveRelicQuest", d.questNames(completed=True))
@@ -259,16 +272,20 @@ def contractRoute(d, early):
     d.select("dialog", "ENTRY", 0)
     d.select("dialog", "ASK_WHY", 1)
     d.select("dialog", "OFFER_HELP", 1)
+    d.select("dialog", "DECLINE_QUEST", 0)
     d.test.assertNotIn("octoBogzQuest", d.questNames())
     if early:
         d.choose("dialog", "accept_quest", condition="contract_not_started")
+        d.select("dialog", "ACCEPT_QUEST", 0)
         d.test.assertTrue(d.condition("dialog", "contract_active"))
         d.select("dialog", "ENTRY", 2)
+        d.select("dialog", "ACTIVE_REMINDER", 0)
     before_blades = d.count("ShadowBlade")
     clearHunt(d, reload_partial=True, retreat=True)
     d.navigateTo("questGiver")
     before_claim = d.gold()
     d.choose("dialog", "accept_quest", condition="contract_completed")
+    d.select("dialog", "COMPLETED_THANKS", 0)
     d.check(
         "nouraajd.contract." + ("early" if early else "late"),
         d.gold() == before_claim + (0 if early else 1000)
@@ -277,6 +294,7 @@ def contractRoute(d, early):
     )
     paid = d.gold()
     d.choose("dialog", "accept_quest", condition="contract_completed")
+    d.select("dialog", "COMPLETED_THANKS", 0)
     d.check("nouraajd.contract.rewardOnce", d.gold() == paid and d.count("ShadowBlade") == before_blades + 1)
     d.check("nouraajd.hunt.partialReloadAndRetreat", d.flag("octobogzHuntCleared"))
     blade = next(item for item in d.call(d.player, "getItems") if d.call(item, "getTypeId") == "ShadowBlade")
@@ -300,8 +318,10 @@ def amuletRoute(d):
     d.navigateTo("oldWoman")
     d.select("questDialog", "ENTRY", 0)
     d.select("questDialog", "OLD_WOMAN_HELLO", 1)
+    d.select("questDialog", "DECLINE_QUEST", 0)
     d.check("nouraajd.amulet.declined", d.string("quest_state_amulet") == "not_started")
     d.choose("questDialog", "start_amulet_quest")
+    d.select("questDialog", "ACCEPT_QUEST", 0)
     d.check("nouraajd.amulet.accepted", d.string("quest_state_amulet") == "active")
     d.revisit("oldWoman")
     d.test.assertEqual(0, d.count("preciousAmulet"))
@@ -325,6 +345,7 @@ def meetVictor(d, approach, direct, *, ask_girl=True, start_encounter=True):
     d.navigateTo("nouraajdTavern")
     if ask_girl:
         d.choose("tavernDialog1", "asked_about_girl")
+        d.select("tavernDialog1", "INKEEPER_ABOUT_GIRL", 2)
     d.revisit("nouraajdTavern")
     tavern = d.object("nouraajdTavern")
     opened = d.call(tavern, "getNumericProperty", "time_visited")
@@ -337,9 +358,15 @@ def meetVictor(d, approach, direct, *, ask_girl=True, start_encounter=True):
     d.test.assertTrue(d.flag("TALKED_TO_VICTOR"))
     d.test.assertEqual(ask_girl, d.condition("tavernDialog2", "asked_about_girl"))
     if not start_encounter:
+        d.select("tavernDialog2", "VICTOR_SPEECH", 1 if ask_girl else 0)
+        if not ask_girl:
+            d.select("tavernDialog2", "VICTOR_CLUE", 1)
+        d.select("tavernDialog2", "SUGGEST_TOWN_HALL", 0)
         return
     if direct:
-        d.choose("tavernDialog2", "spawn_cultists", state_id="VICTOR_SPEECH")
+        d.select("tavernDialog2", "VICTOR_SPEECH", 0)
+        d.select("tavernDialog2", "VICTOR_CLUE", 0)
+        d.choose("tavernDialog2", "spawn_cultists", state_id="COURTYARD_PATH")
     else:
         d.select("tavernDialog2", "VICTOR_SPEECH", 1 if ask_girl else 0)
         if not ask_girl:

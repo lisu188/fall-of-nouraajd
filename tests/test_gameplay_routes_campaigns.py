@@ -12,9 +12,67 @@ from unittest.mock import Mock, patch
 
 from tests.castle_walkthrough import MAP_NAMES, TransitRoutes, authoredMap
 from tests.gameplay_routes_campaigns import AUTHORED_UNREACHABLE, CASES, castleTownRest, ritualCountdownAfterTurn
+from tests.gameplay_routes_maps import testMarket as authoredTestMarket
 
 
 class GameplayCampaignRouteTest(unittest.TestCase):
+    def testMapMarketRequiresBothAffordabilityOutcomesAndExactIdentityTransfer(self):
+        player, market, shop, item, loot = (
+            {"__handle__": name} for name in ("player", "market", "shop", "item", "loot")
+        )
+        state = {"gold": 0, "stock": [item], "owned": []}
+        checks, sales = [], []
+
+        def call(handle, method, *args):
+            if method == "getObjectProperty":
+                return market
+            if method == "getItems":
+                return list(state["owned"] if handle == player else state["stock"])
+            if method == "getSellCost":
+                return 10
+            if method == "getBuyCost":
+                return 25
+            if method == "sellItem":
+                if state["gold"] < 10:
+                    return False
+                self.assertIn(args[1], state["stock"])
+                state["gold"] -= 10
+                state["stock"].remove(args[1])
+                state["owned"].append(args[1])
+                return True
+            self.fail(method)
+
+        def sell(name, actual_item):
+            self.assertEqual("market1", name)
+            self.assertEqual(loot, actual_item)
+            self.assertIn(loot, state["owned"])
+            state["owned"].remove(loot)
+            state["stock"].append(loot)
+            state["gold"] += 25
+            sales.append(actual_item)
+
+        def check(branch, condition, **evidence):
+            self.assertTrue(condition, branch)
+            checks.append(branch)
+
+        driver = SimpleNamespace(
+            test=self,
+            player=player,
+            navigateTo=Mock(),
+            object=lambda name: shop,
+            call=call,
+            gold=lambda: state["gold"],
+            sellAt=sell,
+            check=check,
+        )
+        authoredTestMarket(driver, False)
+        self.assertEqual({"gold": 0, "stock": [item], "owned": []}, state)
+        state["owned"].append(loot)
+        authoredTestMarket(driver, True, {"loot"})
+        self.assertEqual(["test.market.insufficientGold", "test.market.purchased"], checks)
+        self.assertEqual([loot], sales)
+        self.assertEqual({"gold": 15, "stock": [loot], "owned": [item]}, state)
+
     def testFinalCastleCapturePaysExactlyCaptureAndVictoryRewardsOnce(self):
         path = Path(__file__).resolve().parents[1] / "res/plugins/castle_campaign.py"
         tree = ast.parse(path.read_text(encoding="utf-8"))
@@ -81,10 +139,14 @@ class GameplayCampaignRouteTest(unittest.TestCase):
                 player.checkQuests.assert_called_once()
 
     def testTownRestUsesAnEarlierNaturalInjuryAndRetainsBlockedDefenders(self):
-        positions = {"town": (0, 0, 0), "harmless": (1, 0, 0), "injures": (2, 0, 0)}
+        positions = {"town": (0, 0, 0), "ally": (1, 0, 0), "harmless": (2, 0, 0), "optional": (9, 0, 0)}
+        positions.update({"injures" + str(index): (index + 3, 0, 0) for index in range(6)})
         objects = {name: {"coords": coords, "properties": {}} for name, coords in positions.items()}
+        for name in ("town", "ally", "optional"):
+            objects[name]["class"] = "CastleSupply"
         objects["town"]["properties"] = {"campaign_loyalTown": True, "campaign_isTown": True}
         state = {"coords": (0, 0, 0), "hp": 20, "gold": 0, "townVisits": 0}
+        claimed = set()
         checks, visits = [], []
         driver = SimpleNamespace(
             test=self,
@@ -92,7 +154,7 @@ class GameplayCampaignRouteTest(unittest.TestCase):
             recoveryEnabled=True,
             coords=lambda: state["coords"],
             gold=lambda: state["gold"],
-            flag=lambda name: state["townVisits"] > 0,
+            flag=lambda name: name in claimed,
             object=lambda name, required=False: {"__handle__": name},
             call=lambda handle, method: state["hp"] if method == "getHp" else 20,
         )
@@ -100,24 +162,30 @@ class GameplayCampaignRouteTest(unittest.TestCase):
         def navigate(driver, coords, walkable, portals, reserved):
             state["coords"] = coords
             visits.append(coords)
+            if len(visits) > 1:
+                self.assertNotIn(positions["optional"], walkable)
             if coords == positions["town"]:
                 state["townVisits"] += 1
                 if state["townVisits"] == 1:
                     state.update(hp=20, gold=25)
-            elif coords == positions["injures"]:
+                    claimed.add("campaign_castleSupply_town")
+            elif coords == positions["ally"]:
+                state.update(hp=20, gold=state["gold"] + 25)
+                claimed.add("campaign_castleSupply_ally")
+            elif coords in {positions["injures" + str(index)] for index in range(6)}:
                 state["hp"] = 12
 
         def rest(name):
             self.assertEqual("town", name)
             self.assertEqual(positions["town"], state["coords"])
             self.assertFalse(driver.recoveryEnabled)
-            if state["hp"] == 20:
+            if state["hp"] == 20 or state["gold"] < 10:
                 return False
             self.assertGreaterEqual(state["gold"], 10)
             state.update(hp=20, gold=state["gold"] - 10)
             return True
 
-        def check(branch, condition):
+        def check(branch, condition, **evidence):
             self.assertTrue(condition, branch)
             checks.append(branch)
 
@@ -128,14 +196,16 @@ class GameplayCampaignRouteTest(unittest.TestCase):
                 objects,
                 set(positions.values()),
                 TransitRoutes(),
-                (3, 0, 0),
-                {"defenderIds": ["harmless", "injures"]},
+                (10, 0, 0),
+                {"defenderIds": ["harmless", *("injures" + str(index) for index in range(6))]},
             )
-        self.assertEqual(["castle.town.rest", "castle.town.fullHealth"], checks)
-        self.assertEqual(15, state["gold"])
-        self.assertEqual(20, state["hp"])
+        self.assertEqual(["castle.town.rest", "castle.town.fullHealth"] * 5 + ["castle.town.insufficientGold"], checks)
+        self.assertEqual(0, state["gold"])
+        self.assertEqual(12, state["hp"])
         self.assertTrue(driver.recoveryEnabled)
-        self.assertEqual([positions["town"], positions["harmless"], positions["injures"], positions["town"]], visits)
+        self.assertEqual([positions["town"], positions["ally"], positions["harmless"]], visits[:3])
+        self.assertEqual(positions["town"], visits[-1])
+        self.assertNotIn(positions["optional"], visits)
         castle = next(case for case in CASES if case.id == "castle-all-authored-content")
         for name, blocker in AUTHORED_UNREACHABLE.items():
             self.assertIn("castle." + blocker["map"] + ".defender." + name, castle.branches)

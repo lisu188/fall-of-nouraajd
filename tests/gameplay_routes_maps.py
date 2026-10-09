@@ -239,7 +239,7 @@ def sunderedmarch(d, banner_first):
     d.navigateTo("learningStone", adjacent=True)
     gold_before = d.gold()
     d.navigateTo("learningStone")
-    d.check("sunderedmarch.learningStone.first", d.flag("shrine_used") and d.gold() >= gold_before + 100)
+    d.check("sunderedmarch.learningStone.first", d.flag("shrine_used") and d.gold() == gold_before + 100)
     gold_before = d.gold()
     d.revisit("learningStone")
     d.check("sunderedmarch.learningStone.repeat", d.flag("shrine_used") and d.gold() == gold_before)
@@ -301,19 +301,67 @@ def multilevel(d):
     d.check("multilevel.stairs.repeat", d.number("levelTransitionCount") == before + 2 and d.coords()[2] == 0)
 
 
+def testMarket(d, purchased, earned_items=()):
+    d.navigateTo("market1")
+    market = d.call(d.object("market1"), "getObjectProperty", "market")
+    stock = d.call(market, "getItems")
+    d.test.assertTrue(stock)
+    item = min(stock, key=lambda value: (d.call(market, "getSellCost", value), value["__handle__"]))
+    price = d.call(market, "getSellCost", item)
+    if purchased:
+        while d.gold() < price:
+            loot = [value for value in d.call(d.player, "getItems") if value["__handle__"] in earned_items]
+            sale = [(d.call(market, "getBuyCost", value), value["__handle__"], value) for value in loot]
+            sale = [value for value in sale if value[0] > 0]
+            d.test.assertTrue(sale, "Real chest and encounter loot must fund the purchase")
+            d.sellAt("market1", max(sale, key=lambda value: value[:2])[2])
+        d.test.assertGreaterEqual(d.gold(), price)
+    else:
+        d.test.assertLess(d.gold(), price)
+    gold_before = d.gold()
+    stock_before = {value["__handle__"] for value in d.call(market, "getItems")}
+    owned_before = {value["__handle__"] for value in d.call(d.player, "getItems")}
+    accepted = d.call(market, "sellItem", d.player, item)
+    stock_after = {value["__handle__"] for value in d.call(market, "getItems")}
+    owned_after = {value["__handle__"] for value in d.call(d.player, "getItems")}
+    d.check(
+        "test.market.purchased" if purchased else "test.market.insufficientGold",
+        accepted == purchased
+        and d.gold() == gold_before - (price if purchased else 0)
+        and stock_after == stock_before - ({item["__handle__"]} if purchased else set())
+        and owned_after == owned_before | ({item["__handle__"]} if purchased else set()),
+        item=item["__handle__"],
+        price=price,
+        goldBefore=gold_before,
+        goldAfter=d.gold(),
+    )
+
+
 def testMap(d):
     d.startMap("test")
     d.tick()
     d.check("test.firstTurn.encounter", d.call(d.game_map, "getTurn") > 0 and bool(hostiles(d)))
+    from tests.castle_walkthrough import TransitRoutes, shortestRoute
+    from tests.narrative_walkthrough import authoredRegion
+
+    positions, walkable = authoredRegion("test")
+    reserved = {positions[name] for name in ("chest", "groundHole", "teleporter1", "teleporter2", "teleporter3")}
+    for _step, arrival in shortestRoute(walkable - reserved, TransitRoutes(), d.coords(), positions["market1"]):
+        d.navigateCoords(arrival)
+        d.test.assertFalse(d.call(d.object("chest"), "getBoolProperty", "looted"))
+    testMarket(d, False)
+    owned_before_loot = {value["__handle__"] for value in d.call(d.player, "getItems")}
     clearHostiles(d)
     d.navigateTo("chest")
     d.check("test.chest.first", d.call(d.object("chest"), "getBoolProperty", "looted"))
+    earned_items = {value["__handle__"] for value in d.call(d.player, "getItems")} - owned_before_loot
     gold_before = d.gold()
     d.revisit("chest")
     d.check("test.chest.repeat", d.gold() == gold_before)
     d.navigateTo("chaosSword")
     d.check("test.item.pickup", d.count("ChaosSword") >= 1)
-    tradeSupplies(d, "market1", "test.market")
+    earned_items.update({value["__handle__"] for value in d.call(d.player, "getItems")} - owned_before_loot)
+    testMarket(d, True, earned_items)
     target = mapObjects("test")["teleporter2"]
     d.navigateTo("teleporter1")
     d.check("test.teleporter.first", d.coords() == target)
@@ -489,7 +537,8 @@ CASES = (
             "test.chest.first",
             "test.chest.repeat",
             "test.item.pickup",
-            "test.market",
+            "test.market.insufficientGold",
+            "test.market.purchased",
             "test.teleporter.first",
             "test.teleporter.disabled",
             "test.teleporter.third",
@@ -497,7 +546,7 @@ CASES = (
             "test.changeMap.inert",
             "test.groundHole",
         ),
-        sources=sources("test"),
+        sources=sources("test") + ("res/plugins/object.py", "src/object/CMarket.cpp"),
     ),
 )
 
@@ -510,6 +559,7 @@ DEFENSIVE_BRANCHES = {
 
 
 SOURCE_BRANCHES = {
+    "res/plugins/object.py:Market.onEnter": ("test.market.insufficientGold", "test.market.purchased"),
     "res/maps/vhulmarn/script.py:StartEvent.onEnter": ("vhulmarn.arrival",),
     "res/maps/vhulmarn/script.py:TideBell.onEnter": ("vhulmarn.bell.tolled", "vhulmarn.bell.repeat"),
     "res/maps/vhulmarn/script.py:AltarThreshold.onEnter": ("vhulmarn.altar.pickup", "vhulmarn.altar.repeat"),

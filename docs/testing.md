@@ -162,11 +162,24 @@ save checkpoints preserve game state, and do not serialize RNG state. Random seq
 platform; Linux and Windows need not produce identical sequences. Generated object names include process-local
 identity, so the seed tests establish native random-source repeatability. The recorded case and action sequence
 are failure diagnostics; they do not establish identical whole-route execution across fresh processes.
+Navigation target actions retain known coordinate triples after temporary MCP coordinate handles are released.
 
 The native driver uses controller targets, adjacent movement, actual map turns, class combat controllers, owned
 consumables, finite stock, and real payments/ingredients. It rejects fixture mutations, unexpected defeat,
 unauthored relocation, stalled routes, and exhausted action/turn budgets. Save/reload checks preserve inventory,
 equipment, quests, journal text, campaign state, and player attributes; map transitions preserve player identity.
+
+Castle defender visits select the nearest reachable remaining authored position from the current player coordinate,
+using the same directed connectors and reserved final objective as the source route planner. Every defender still
+requires its defeat receipt; a remaining live defender with no authored route fails with its exact name.
+A source-only traversal estimate of the three chapters falls from 20,116 turns / 100,663 recorded movement actions
+in mission-index order to 8,652 / 43,343 with nearest-defender ordering. This model visits every reachable defender
+at its authored position, excludes combat delays and paid rest, and treats the 13 disconnected defenders as pending
+obligations rather than completed visits. The mandatory waypoint-only estimate is 5,539 turns / 27,778 actions.
+The generic limits remain 20,000 turns and 50,000 recorded actions. Complete native runtime headroom is unproven:
+six nearest Homecoming town round trips add 284 source hops, while visiting all 48 reachable rest encounters and
+returning after each can add 15,120 hops. Combat, fixed actions, and natural injuries require native receipts before
+any budget decision; these source estimates do not establish a successful whole-campaign runtime bound.
 
 CI shards must partition the complete selected matrix exactly once. Their initial duration estimates are
 provisional until the first native receipts supply measured weights; the planner targets 20 minutes per shard.

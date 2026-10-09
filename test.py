@@ -137,6 +137,7 @@ FAST_TEST_PREFIXES = (
     "GameplayBranchJournalsTest.",
     "GameplayStartingSaveTest.",
     "GameplayCampaignRouteTest.",
+    "GameplayRouteDialogTest.",
     "McpTestSeedTest.",
     "McpBranchShardsTest.",
     "McpEquipmentContractTest.",
@@ -26363,6 +26364,7 @@ if SOURCE_UI_TESTS_AVAILABLE:
     from tests.test_gameplay_branch_journals import GameplayBranchJournalsTest as _GameplayBranchJournalsTest
     from tests.test_gameplay_starting_save import GameplayStartingSaveTest as _GameplayStartingSaveTest
     from tests.test_gameplay_routes_campaigns import GameplayCampaignRouteTest as _GameplayCampaignRouteTest
+    from tests.test_gameplay_route_dialogs import GameplayRouteDialogTest as _GameplayRouteDialogTest
     from tests.test_gameplay_branches_mcp import GameplayBranchMcpTest as _GameplayBranchMcpTest
     from tests.test_mcp_test_seed import McpTestSeedTest as _McpTestSeedTest
     from tests.test_mcp_test_seed import McpTestSeedRuntimeTest as _McpTestSeedRuntimeTest
@@ -26383,6 +26385,9 @@ if SOURCE_UI_TESTS_AVAILABLE:
         pass
 
     class GameplayCampaignRouteTest(_GameplayCampaignRouteTest):
+        pass
+
+    class GameplayRouteDialogTest(_GameplayRouteDialogTest):
         pass
 
     class GameplayBranchMcpTest(_GameplayBranchMcpTest):
@@ -26513,7 +26518,7 @@ if SOURCE_UI_TESTS_AVAILABLE:
     del _NavigationCallbackTest
     del _ConsoleUiInteractionTest, _UiMinimapInteractionTest
     del _GameplayBranchCatalogTest, _GameplayBranchDriverTest, _GameplayBranchJournalsTest, _GameplayBranchMcpTest
-    del _GameplayStartingSaveTest, _GameplayCampaignRouteTest
+    del _GameplayStartingSaveTest, _GameplayCampaignRouteTest, _GameplayRouteDialogTest
     del _McpTestSeedTest, _McpBranchShardsTest
     del _McpTestSeedRuntimeTest, _McpEquipmentContractTest, _McpEquipmentRuntimeTest
 

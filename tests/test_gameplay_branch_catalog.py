@@ -219,6 +219,43 @@ class GameplayBranchCatalogTest(unittest.TestCase):
         with self.assertRaisesRegex(ValueError, "Duplicate dialog option"):
             catalog.dialogCallbacks(dialog, {})
 
+    def testDynamicTownRestOptionsAreIncludedInTheCallbackInventory(self):
+        source = "res/plugins/castle_campaign.py"
+        tree = ast.parse((catalog.ROOT / source).read_text(encoding="utf-8"))
+        expected = {source + ":CastleTownRestDialog." + method for method in ("configureTown", "canRest", "rest")}
+        self.assertEqual(expected, set(catalog.dynamicDialogCallbacks(tree, source)))
+        self.assertTrue(expected <= catalog.sourceCallbacks())
+        for identity in expected:
+            self.assertIn("castle.town.insufficientGold", catalog.sourceBranches()[identity])
+        self.assertNotIn("castle.town.insufficientGold", catalog.defensiveContracts())
+        self.assertNotIn("castle.town.insufficientGold", catalog.contractEvidence())
+
+    def testDynamicDialogAuditRejectsMissingAndUnresolvedAuthoredCallbacks(self):
+        source = """
+class TownDialog:
+    def configure(self):
+        for number, (label, action, condition) in enumerate((("Rest", "rest", "canRest"), ("Leave", "", ""))):
+            option.setStringProperty("action", action)
+            option.setStringProperty("condition", condition)
+        self.setStates({state})
+    def rest(self):
+        pass
+    def canRest(self):
+        pass
+"""
+        expected = {"script:TownDialog." + method for method in ("configure", "canRest", "rest")}
+        self.assertEqual(expected, set(catalog.dynamicDialogCallbacks(ast.parse(source), "script")))
+        with self.assertRaisesRegex(ValueError, "Missing exact dynamic dialog callback.*newRest"):
+            catalog.dynamicDialogCallbacks(ast.parse(source.replace('"rest"', '"newRest"')), "script")
+        with self.assertRaisesRegex(ValueError, "Unresolved dynamic dialog callback"):
+            catalog.dynamicDialogCallbacks(
+                ast.parse(source.replace('"action", action', '"action", unresolved')), "script"
+            )
+        with self.assertRaisesRegex(ValueError, "Unresolved dynamic dialog callback"):
+            catalog.dynamicDialogCallbacks(
+                ast.parse(source.replace('("Leave", "", "")', '("Leave", computedAction, "")')), "script"
+            )
+
     def testEveryDeclaredBranchHasReviewedPrerequisitesOutcomesAndSources(self):
         entries = catalog.branchCatalog()
         self.assertEqual({branch for case in catalog.getCases() for branch in case.branches}, set(entries))
@@ -247,6 +284,21 @@ class GameplayBranchCatalogTest(unittest.TestCase):
             self.assertGreater(evidence["componentCells"], 0)
             self.assertEqual(3, len(evidence["coords"]))
             self.assertIn("disconnected", evidence["reason"])
+
+    def testTestMapMarketRequiresSeparatePurchaseAndInsufficientFundsWitnesses(self):
+        entries = catalog.branchCatalog()
+        identity = "res/plugins/object.py:Market.onEnter"
+        branches = {"test.market.insufficientGold", "test.market.purchased"}
+        self.assertNotIn("test.market", entries, "One outcome must not substitute for the other market branch")
+        self.assertIn(identity, catalog.sourceCallbacks())
+        self.assertTrue(branches <= set(catalog.sourceBranches()[identity]))
+        for branch in branches:
+            entry = entries[branch]
+            self.assertEqual(set(PLAYER_CLASSES), set(entry["classes"]))
+            self.assertIn(identity, entry["callbacks"])
+            self.assertIn("src/object/CMarket.cpp", entry["sources"])
+        self.assertIn("before", entries["test.market.insufficientGold"]["prerequisites"])
+        self.assertIn("enough earned gold", entries["test.market.purchased"]["prerequisites"])
 
     def testLegacyTransitionHasNoAuthoredActor(self):
         directory = catalog.ROOT / "res/maps/nouraajd"

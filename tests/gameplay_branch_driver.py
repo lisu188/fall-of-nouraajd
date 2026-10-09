@@ -112,6 +112,7 @@ class GameplayBranchDriver:
         self._recorded_actions = 0
         self._coordinate_point = None
         self._ephemeral_handles = set()
+        self._coordinate_values = {}
 
     def record(self, action, *, replay=False):
         self.actions.append(action)
@@ -153,8 +154,13 @@ class GameplayBranchDriver:
             here, there = self.coords(handle), self.coords()
             self.test.assertEqual(here[2], there[2])
             self.test.assertLessEqual(max(abs(here[0] - there[0]), abs(here[1] - there[1])), 1)
+        action = {"method": method, "handle": handle.get("__handle__"), "args": args}
+        if method == "setTarget" and args and isinstance(args[-1], dict):
+            coordinates = self._coordinate_values.get(args[-1].get("__handle__"))
+            if coordinates is not None:
+                action["targetCoordinates"] = coordinates
         self.record(
-            {"method": method, "handle": handle.get("__handle__"), "args": args},
+            action,
             replay=method
             in {
                 "move",
@@ -185,6 +191,8 @@ class GameplayBranchDriver:
         if consumed:
             self.harness._mcp_tool(self.session, "engine_release_handles", {"handles": sorted(consumed)})
             self._ephemeral_handles.difference_update(consumed)
+            for identity in consumed:
+                self._coordinate_values.pop(identity, None)
         return result
 
     def properties(self, handle):
@@ -203,6 +211,7 @@ class GameplayBranchDriver:
             if identity in self._ephemeral_handles:
                 self.harness._mcp_tool(self.session, "engine_release_handles", {"handles": [identity]})
                 self._ephemeral_handles.discard(identity)
+                self._coordinate_values.pop(identity, None)
 
     def object(self, name, required=True):
         result = self.call(self.game_map, "getObjectByName", name)
@@ -448,7 +457,9 @@ class GameplayBranchDriver:
         point = self._coordinate_point
         for axis, value in zip("xyz", coords):
             self._rawCall(point, "setNumericProperty", "pos" + axis, value)
-        return self.call(point, "getCoords")
+        result = self.call(point, "getCoords")
+        self._coordinate_values[result["__handle__"]] = tuple(coords)
+        return result
 
     def navigateCoords(self, coords, *, limit=None):
         target = tuple(coords)
@@ -486,7 +497,9 @@ class GameplayBranchDriver:
             if distance <= int(adjacent):
                 return
             controller = self.call(self.player, "getController")
-            self.call(controller, "setTarget", self.player, self.call(target, "getCoords"))
+            target_coordinates = self.call(target, "getCoords")
+            self._coordinate_values[target_coordinates["__handle__"]] = destination
+            self.call(controller, "setTarget", self.player, target_coordinates)
             before, world = self.coords(), self.map_name
             self.tick()
             if self.map_name != world:

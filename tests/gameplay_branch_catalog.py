@@ -227,6 +227,38 @@ FAMILIES = (
         "Initialization, inventory, encounter and enabled/disabled connector behavior are observed in the live map.",
     ),
 )
+BRANCH_DETAILS = {
+    "test.market.insufficientGold": BranchFamily(
+        "test.market.insufficientGold",
+        "Walk from the fresh test-map start to its stocked market before collecting or selling the chest's loot.",
+        "The unaffordable stocked-item purchase returns false and preserves exact stock, inventory and gold.",
+    ),
+    "test.market.purchased": BranchFamily(
+        "test.market.purchased",
+        "Loot the authored chest and defeated creatures, then sell newly earned items through ordinary buyback for enough earned gold.",
+        "The purchase succeeds, deducts its actual price and transfers the exact stocked item into player ownership.",
+    ),
+    "castle.town.rest": BranchFamily(
+        "castle.town.rest",
+        "Collect the loyal town's authored supplies and return with an injury earned from a reachable defender.",
+        "The dynamic rest dialog accepts payment, removes exactly 10 gold and restores full health.",
+    ),
+    "castle.town.locked": BranchFamily(
+        "castle.town.locked",
+        "Approach the initial enemy Homecoming town while its authored guards are still alive and the town is uncaptured.",
+        "The town-rest dialog refuses configuration and preserves the player's actual gold and health.",
+    ),
+    "castle.town.fullHealth": BranchFamily(
+        "castle.town.fullHealth",
+        "Return to the same loyal town immediately after a successful paid rest.",
+        "The dynamic rest dialog rejects a full-health player without another payment or health change.",
+    ),
+    "castle.town.insufficientGold": BranchFamily(
+        "castle.town.insufficientGold",
+        "Keep optional income unclaimed, spend the observed supply gold through real 10-gold rests, then earn another combat injury.",
+        "With less than ten gold and missing health, the dynamic rest dialog rejects payment and preserves gold and health.",
+    ),
+}
 
 
 @lru_cache(maxsize=1)
@@ -256,6 +288,8 @@ def selectedTestNames(class_id=None, group=None):
 
 
 def familyFor(branch_id):
+    if branch_id in BRANCH_DETAILS:
+        return BRANCH_DETAILS[branch_id]
     matches = [family for family in FAMILIES if branch_id.startswith(family.prefix)]
     if len(matches) != 1:
         raise ValueError("Branch needs exactly one reviewed prerequisite/outcome family: " + branch_id)
@@ -447,10 +481,6 @@ def contractEvidence():
             "source-double",
             "tests/test_castle_campaign.py:CastlePresentationTest.testBlockedGarrisonAndLandingAreAnchoredWithoutAcknowledgment",
         ),
-        "castle.town.insufficientGold": (
-            "source-double",
-            own + "testCastlePaidRestRejectsInsufficientGoldAndFullHealth",
-        ),
         "ritual.retryFailedTransition": (
             "source-double",
             "tests/test_narrative_consequences.py:RitualResolutionTest.testBadResolutionPaysOnceSettlesQuestsAndRetriesOnlyFailedJourney",
@@ -623,6 +653,77 @@ def dialogCallbacks(dialog, resources, *, identity="dialog"):
     return resolved.get("class", "CDialog"), frozenset(callbacks)
 
 
+def dynamicCallbackNames(method, identity):
+    """Read callback names from authored literal options without running map or plugin code."""
+    bindings = {}
+    unresolved = set()
+
+    def bind(target, value):
+        if isinstance(target, ast.Name) and isinstance(value, ast.Constant) and isinstance(value.value, str):
+            bindings.setdefault(target.id, set()).add(value.value)
+        elif isinstance(target, ast.Name):
+            unresolved.add(target.id)
+        elif isinstance(target, (ast.Tuple, ast.List)) and isinstance(value, (ast.Tuple, ast.List)):
+            if len(target.elts) == len(value.elts):
+                for child_target, child_value in zip(target.elts, value.elts):
+                    bind(child_target, child_value)
+
+    for node in ast.walk(method):
+        if isinstance(node, ast.Assign):
+            for target in node.targets:
+                bind(target, node.value)
+        elif isinstance(node, ast.For):
+            target, values = node.target, node.iter
+            if isinstance(values, ast.Call) and isinstance(values.func, ast.Name) and values.func.id == "enumerate":
+                if not values.args or not isinstance(target, (ast.Tuple, ast.List)) or len(target.elts) != 2:
+                    continue
+                target, values = target.elts[1], values.args[0]
+            if isinstance(values, (ast.Tuple, ast.List)):
+                for value in values.elts:
+                    bind(target, value)
+    callbacks = set()
+    for node in ast.walk(method):
+        if not isinstance(node, ast.Call) or not isinstance(node.func, ast.Attribute):
+            continue
+        if node.func.attr != "setStringProperty" or len(node.args) != 2:
+            continue
+        key, value = node.args
+        if not isinstance(key, ast.Constant) or key.value not in ("action", "condition", "afterCondition"):
+            continue
+        if isinstance(value, ast.Constant) and isinstance(value.value, str):
+            names = {value.value}
+        elif isinstance(value, ast.Name) and value.id in bindings and value.id not in unresolved:
+            names = bindings[value.id]
+        else:
+            raise ValueError("Unresolved dynamic dialog callback: " + identity + ":" + ast.unparse(value))
+        callbacks.update(name for name in names if name)
+    return frozenset(callbacks)
+
+
+def dynamicDialogCallbacks(tree, source):
+    callbacks = set()
+    for cls in ast.walk(tree):
+        if not isinstance(cls, ast.ClassDef):
+            continue
+        methods = {method.name: method for method in cls.body if isinstance(method, ast.FunctionDef)}
+        for name, method in methods.items():
+            if not any(
+                isinstance(node, ast.Call) and isinstance(node.func, ast.Attribute) and node.func.attr == "setStates"
+                for node in ast.walk(method)
+            ):
+                continue
+            identity = source + ":" + cls.name + "." + name
+            callbacks.add(identity)
+            hooks = dynamicCallbackNames(method, identity)
+            if not hooks:
+                raise ValueError("Dynamic dialog constructor needs reviewed callback declarations: " + identity)
+            for hook in hooks:
+                if hook not in methods:
+                    raise ValueError("Missing exact dynamic dialog callback: " + source + ":" + cls.name + "." + hook)
+                callbacks.add(source + ":" + cls.name + "." + hook)
+    return frozenset(callbacks)
+
+
 def sourceCallbacks(root=ROOT):
     classes, callbacks = classDefinitions(root)
     globals_ = {}
@@ -655,6 +756,12 @@ def sourceCallbacks(root=ROOT):
                 if definition is None or hook not in definition[1]:
                     raise ValueError(f"Missing exact registered dialog callback: {directory.name}:{class_id}.{hook}")
                 callbacks.add(definition[0] + ":" + class_id + "." + hook)
+    paths = set((root / "res/maps").glob("*/script.py")) | set((root / "res/plugins").glob("*.py"))
+    for path in sorted(paths):
+        callbacks.update(
+            dynamicDialogCallbacks(ast.parse(path.read_text(encoding="utf-8")), path.relative_to(root).as_posix())
+        )
+    callbacks.add("res/plugins/object.py:Market.onEnter")
     return frozenset(callbacks)
 
 
