@@ -8,7 +8,9 @@ from functools import partial
 from pathlib import Path
 
 from tests.gameplay_branch_types import RouteCase
+from tests.gameplay_routes_waypoints import verifyWaypointPublication
 from tests.gameplay_branch_journals import verifyJournals
+from tests.gameplay_routes_services import collectedScrollRetreat, marketAttempt, ownedIdentities, readSignpost
 
 ROOT = Path(__file__).resolve().parents[1]
 
@@ -67,48 +69,19 @@ def visitCaves(d, names, prefix):
         d.check(prefix + ".cave." + name, d.object(name, required=False) is None, cave=name)
 
 
-def tradeSupplies(d, market_name, branch):
-    """Buy a real stocked potion only after ordinary loot has paid for it."""
-    d.navigateTo(market_name)
-    market = d.call(d.object(market_name), "getObjectProperty", "market")
-    items = d.call(market, "getItems")
-    d.test.assertTrue(items)
-    choices = sorted(
-        [
-            (
-                d.call(market, "getSellCost", item),
-                d.call(item, "getTypeId"),
-                item,
-            )
-            for item in items
-        ],
-        key=lambda entry: (entry[0], entry[1], entry[2]["__handle__"]),
-    )
-    price, item_id, item = choices[0]
-    gold_before = d.gold()
-    inventory_before = d.count(item_id)
-    if gold_before < price:
-        # A genuine insufficient-funds attempt must leave the stock and player unchanged.
-        d.test.assertFalse(d.call(market, "sellItem", d.player, item))
-        d.test.assertEqual(gold_before, d.gold())
-        d.test.assertEqual(inventory_before, d.count(item_id))
-        d.check(branch, item in d.call(market, "getItems"), outcome="insufficientGold", price=price)
-        return
-    d.buyAt(market_name, item_id, 1)
-    d.check(
-        branch,
-        d.gold() == gold_before - price and d.count(item_id) == inventory_before + 1,
-        outcome="purchased",
-        item=item_id,
-        price=price,
-    )
+def tradeSupplies(d, market_name, branch, earned_items=()):
+    return marketAttempt(d, market_name, branch, purchased=True, earned_items=earned_items)
 
 
 def vhulmarn(d, informed):
     startMap(d, "vhulmarn", "vhulmarnStart")
+    initial_items = ownedIdentities(d)
     d.check("vhulmarn.arrival", "drownedTitheQuest" in d.questNames())
     verifyJournals(d)
     if informed:
+        readSignpost(d, "vhulmarnSign")
+        collectedScrollRetreat(d, "vhulmarn.scroll.retreat")
+        marketAttempt(d, "tarnBarter", "vhulmarn.market.insufficientGold", purchased=False)
         d.navigateTo("oldTollman")
         d.test.assertFalse(d.condition("tollmanDialog", "has_heard_tithe"))
         d.choose("tollmanDialog", "hear_the_tithe")
@@ -118,7 +91,7 @@ def vhulmarn(d, informed):
         d.select("widowDialog", "ENTRY", 0)
         d.check("vhulmarn.widow.warning", before == (d.gold(), d.count("tiaraOfTheDrownedTithe")))
         visitCaves(d, ("caveTarnMouth", "caveSunkenWharf", "caveHybridWarren"), "vhulmarn")
-        tradeSupplies(d, "tarnBarter", "vhulmarn.market")
+        tradeSupplies(d, "tarnBarter", "vhulmarn.market.purchased", ownedIdentities(d) - initial_items)
     d.navigateTo("tideBell")
     d.check("vhulmarn.bell.tolled", d.flag("bell_tolled"))
     clearHostiles(d)
@@ -147,9 +120,13 @@ def vhulmarn(d, informed):
 
 def kadath(d, informed):
     startMap(d, "kadath", "kadathStart")
+    initial_items = ownedIdentities(d)
     d.check("kadath.arrival", "kadathAscentQuest" in d.questNames())
     verifyJournals(d)
     if informed:
+        readSignpost(d, "kadathSign")
+        collectedScrollRetreat(d, "kadath.scroll.retreat")
+        marketAttempt(d, "campBarter", "kadath.market.insufficientGold", purchased=False)
         d.navigateTo("dreamerGuide")
         d.test.assertFalse(d.condition("dreamerDialog", "has_heard_ascent"))
         d.choose("dreamerDialog", "hear_the_ascent")
@@ -159,7 +136,7 @@ def kadath(d, informed):
         d.select("lengPriestDialog", "ENTRY", 0)
         d.check("kadath.priest.refuse", before == (d.gold(), d.count("onyxSignetOfNyarlathotep")))
         visitCaves(d, ("roostNightGaunt", "warrenLeng", "vaultElder", "roostNorth", "nestLengSpider"), "kadath")
-        tradeSupplies(d, "campBarter", "kadath.market")
+        tradeSupplies(d, "campBarter", "kadath.market.purchased", ownedIdentities(d) - initial_items)
         d.navigateTo("dreamGate")
         d.check("kadath.gate.opened", d.flag("gate_opened"))
         clearHostiles(d)
@@ -193,6 +170,11 @@ def kadath(d, informed):
 
 def sunderedmarch(d, banner_first):
     startMap(d, "sunderedmarch", "marchStart")
+    verifyWaypointPublication(d)
+    initial_items = ownedIdentities(d)
+    readSignpost(d, "marchSign")
+    collectedScrollRetreat(d, "sunderedmarch.scroll.retreat")
+    marketAttempt(d, "valeBarter", "sunderedmarch.market.insufficientGold", purchased=False)
     d.check("sunderedmarch.arrival", "sunderedMarchQuest" in d.questNames())
     verifyJournals(d)
     d.navigateTo("gateThreshold")
@@ -266,7 +248,7 @@ def sunderedmarch(d, banner_first):
         gold_before = d.gold()
         d.revisit(name)
         d.check("sunderedmarch.chest." + name, d.gold() == gold_before)
-    tradeSupplies(d, "valeBarter", "sunderedmarch.market")
+    tradeSupplies(d, "valeBarter", "sunderedmarch.market.purchased", ownedIdentities(d) - initial_items)
     d.navigateTo("digSite")
     d.check("sunderedmarch.dig.crown", d.flag("crown_taken") and d.flag("boss_woken") and d.count("barrowCrown") == 1)
     d.test.assertNotIn("sunderedMarchQuest", d.questNames(completed=True))
@@ -340,6 +322,7 @@ def testMarket(d, purchased, earned_items=()):
 def testMap(d):
     d.startMap("test")
     d.tick()
+    verifyWaypointPublication(d)
     d.check("test.firstTurn.encounter", d.call(d.game_map, "getTurn") > 0 and bool(hostiles(d)))
     from tests.castle_walkthrough import TransitRoutes, shortestRoute
     from tests.narrative_walkthrough import authoredRegion
@@ -399,6 +382,7 @@ KADATH_COMMON = (
     "kadath.throne.repeat",
 )
 SUNDERED_COMMON = (
+    "sunderedmarch.waypoint.published",
     "sunderedmarch.arrival",
     "sunderedmarch.gate.locked",
     "sunderedmarch.key.pickup",
@@ -422,7 +406,11 @@ SUNDERED_COMMON = (
     "sunderedmarch.artifact.repeat",
     "sunderedmarch.portal.monolithVale",
     "sunderedmarch.portal.monolithPyre",
-    "sunderedmarch.market",
+    "sunderedmarch.market.insufficientGold",
+    "sunderedmarch.market.purchased",
+    "sunderedmarch.signpost.read",
+    "sunderedmarch.signpost.repeat",
+    "sunderedmarch.scroll.retreat",
     "sunderedmarch.cave.valeGuard",
     "sunderedmarch.cave.gateGuard",
     "sunderedmarch.cave.barrowGuard",
@@ -440,7 +428,9 @@ SUNDERED_COMMON = (
 
 
 def sources(map_name):
-    return tuple("res/maps/" + map_name + "/" + name for name in ("script.py", "config.json", "map.json"))
+    return tuple("res/maps/" + map_name + "/" + name for name in ("script.py", "config.json", "map.json")) + (
+        "res/plugins/object.py",
+    )
 
 
 CASES = (
@@ -453,7 +443,13 @@ CASES = (
         + (
             "vhulmarn.tollman.learned",
             "vhulmarn.widow.warning",
-            "vhulmarn.market",
+            "vhulmarn.market.insufficientGold",
+            "vhulmarn.market.purchased",
+            "vhulmarn.signpost.read",
+            "vhulmarn.signpost.repeat",
+            "vhulmarn.scroll.retreat",
+            "vhulmarn.cave.timedSpawn",
+            "vhulmarn.cave.exhausted",
             "vhulmarn.cave.caveTarnMouth",
             "vhulmarn.cave.caveSunkenWharf",
             "vhulmarn.cave.caveHybridWarren",
@@ -477,7 +473,13 @@ CASES = (
         + (
             "kadath.guide.learned",
             "kadath.priest.refuse",
-            "kadath.market",
+            "kadath.market.insufficientGold",
+            "kadath.market.purchased",
+            "kadath.signpost.read",
+            "kadath.signpost.repeat",
+            "kadath.scroll.retreat",
+            "kadath.cave.timedSpawn",
+            "kadath.cave.exhausted",
             "kadath.gate.opened",
             "kadath.gate.repeat",
             "kadath.cave.roostNightGaunt",
@@ -501,7 +503,13 @@ CASES = (
         group="standalone",
         maps=("sunderedmarch",),
         run=partial(sunderedmarch, banner_first=False),
-        branches=SUNDERED_COMMON + ("sunderedmarch.seer.questFirst", "sunderedmarch.seer.reminder"),
+        branches=SUNDERED_COMMON
+        + (
+            "sunderedmarch.seer.questFirst",
+            "sunderedmarch.seer.reminder",
+            "sunderedmarch.cave.timedSpawn",
+            "sunderedmarch.cave.exhausted",
+        ),
         sources=sources("sunderedmarch"),
     ),
     RouteCase(
@@ -533,6 +541,7 @@ CASES = (
         maps=("test",),
         run=testMap,
         branches=(
+            "test.waypoint.published",
             "test.firstTurn.encounter",
             "test.chest.first",
             "test.chest.repeat",

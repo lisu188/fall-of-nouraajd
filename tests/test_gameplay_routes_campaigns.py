@@ -11,11 +11,91 @@ import unittest
 from unittest.mock import ANY, Mock, patch
 
 from tests.castle_walkthrough import MAP_NAMES, TransitRoutes, authoredMap
+from tests import gameplay_routes_campaigns as campaigns
 from tests.gameplay_routes_campaigns import AUTHORED_UNREACHABLE, CASES, castleTownRest, ritualCountdownAfterTurn
 from tests.gameplay_routes_maps import testMarket as authoredTestMarket
+from tests.test_gameplay_route_dialogs import authoredFunction
 
 
 class GameplayCampaignRouteTest(unittest.TestCase):
+    def testCastleSupplyRepeatSnapshotsAfterCrossingAnUnclaimedAdjacentSupply(self):
+        authored = authoredMap("castleHomecoming")[1]
+        target_name = "castleHomecomingAlly1426"
+        source = authored[target_name]["coords"]
+        for adjacent_name in ("castleHomecomingAlly1430", "castleHomecomingSupportPikeman"):
+            with self.subTest(adjacent=adjacent_name):
+                neighbor = authored[adjacent_name]["coords"]
+                self.assertEqual(1, sum(abs(a - b) for a, b in zip(source, neighbor)))
+                state = {"gold": 0, "flags": set(), "position": source, "items": [], "entries": []}
+                player = SimpleNamespace(
+                    healProc=Mock(),
+                    addItem=state["items"].append,
+                    addGold=lambda amount: state.update(gold=state["gold"] + amount),
+                )
+                game_map, game = object(), object()
+
+                def claim_once(owner, key):
+                    if key in state["flags"]:
+                        return False
+                    state["flags"].add(key)
+                    return True
+
+                on_enter = authoredFunction(
+                    "res/plugins/castle_campaign.py",
+                    "onEnter",
+                    class_id="CastleSupply",
+                    canInteract=lambda actor, cause: cause is player,
+                    claim_once=claim_once,
+                    rewardSnapshot=Mock(return_value={}),
+                    showRewardReceipt=Mock(),
+                    showTownServices=Mock(),
+                )
+                actors = {
+                    name: SimpleNamespace(
+                        getMap=lambda: game_map,
+                        getGame=lambda: game,
+                        getName=lambda name=name: name,
+                        getNumericProperty=lambda key, name=name: int(authored[name]["properties"][key]),
+                        getStringProperty=lambda key: "",
+                    )
+                    for name in (target_name, adjacent_name)
+                }
+
+                def enter(coords):
+                    state["position"] = coords
+                    for name in (target_name, adjacent_name):
+                        if authored[name]["coords"] == coords:
+                            state["entries"].append(name)
+                            on_enter(actors[name], SimpleNamespace(getCause=lambda: player))
+
+                def step(coords):
+                    self.assertEqual(1, sum(abs(a - b) for a, b in zip(state["position"], coords)))
+                    enter(coords)
+
+                def revisit(name):
+                    enter(neighbor)
+                    enter(source)
+
+                driver = SimpleNamespace(
+                    test=self,
+                    map_name="castleHomecoming",
+                    gold=lambda: state["gold"],
+                    flag=lambda key: key in state["flags"],
+                    coords=lambda: state["position"],
+                    step=step,
+                    revisit=revisit,
+                    check=lambda branch, condition, **evidence: self.assertTrue(condition, branch),
+                )
+                with patch.object(campaigns, "castleNavigate", side_effect=lambda d, coords, *args: enter(coords)):
+                    campaigns.castleSupply(
+                        driver, target_name, authored, {source, neighbor}, TransitRoutes(), (100, 100, 0)
+                    )
+                self.assertEqual([target_name, adjacent_name, target_name], state["entries"])
+                self.assertEqual(
+                    sum(int(authored[name]["properties"]["campaign_rewardGold"]) for name in actors), state["gold"]
+                )
+                self.assertEqual(["LifePotion", "LifePotion"], state["items"])
+
     def testPrematureThroneEntryPreservesRewardsQuestsAndCampaign(self):
         path = Path(__file__).resolve().parents[1] / "res/maps/usurpergate/script.py"
         tree = ast.parse(path.read_text(encoding="utf-8"))

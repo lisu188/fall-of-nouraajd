@@ -143,14 +143,35 @@ coverage. Structural audits account for dialog actions/conditions, registered ca
 explicit defensive contracts. Unreachable authored content remains a reported obligation, rather than becoming a
 passing fixture-only route.
 
-The current catalog declares 672 branches across 72 cases and 340 case/class executions, with 14 unresolved
-gameplay obligations. Thirteen are disconnected authored Castle defenders. The remaining obligation is
+The current catalog declares 772 branches across 75 cases and 355 case/class executions, with 53 unresolved
+gameplay obligations. Thirteen are disconnected authored Castle defenders. Another obligation is
 `usurpergate.throne.premature`, required in all four Warden campaign/standalone routes for all five classes:
 enter the actual throne while the Usurper remains alive and verify no reward or quest/campaign progress.
 The source callback test verifies that refusal, but no real route witness has been established. A permissive
 source movement model omitting housecarls finds a path only when the player commits before the pursuing boss;
 native map turns apply actors in unordered-container order. This evidence does not establish an executable
-route or justify defensive credit. All 14 obligations remain mandatory and receive no played-coverage credit.
+route or justify defensive credit. These 14 obligations remain mandatory and receive no played-coverage credit.
+
+Shared callback discovery resolves actual map actor types through global/map configuration references and
+Python inheritance, respecting persistent plugin registrations. It also follows authored nested stock and
+literal constructor references, including the hunt's installed defeat trigger. The current inventory contains
+26 shared callback identities; unused library types add no manufactured gameplay branch. Unknown resource
+references or classes fail the audit. Owner-specific WayPoint edge removal remains an explicit destruction
+contract, backed by its focused cleanup test.
+
+The shared coverage floor includes 103 named requirements, including 45 applicable recipe-specific outcomes.
+A locked outcome applies only to a recipe with an authored unlock flag, and a failure outcome applies only
+below 100 percent success chance. The remaining 39 pending shared requirements are 28 recipe outcomes and
+11 actual life/mana consumptions. Connector publication now has source-ordered creation and later-turn
+oracles. Passive cave observers use existing route turns to prove a new matching clone's native placement,
+an exact one-monster decrement, and two later exhausted turns; they add no waiting loop and stop after
+both outcomes. Two ordinary pre-activation ritual turns also verify all three zero-stock anchors remain
+inactive. These are implemented runtime assertions; a source or pure-test pass gives no played credit.
+They are attached to real cases for all five classes; a route must produce its own receipt before `finish`
+can pass. Missing ingredients cannot stand in for insufficient gold when a recipe requires both, and
+conditional recovery cannot stand in for guaranteed potion/scroll use. Crafting code and recipe data are
+inside the reviewed source digest. Implemented service assertions remain source/test evidence until native
+CI supplies passing route receipts.
 
 ```bash
 python3 test.py --suite mcp-branches --branch-class Wayfarer

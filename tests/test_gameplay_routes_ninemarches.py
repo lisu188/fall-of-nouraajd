@@ -360,6 +360,165 @@ class NineMarchesRecoveryTest(unittest.TestCase):
         self.assertEqual(("arrival", "ninemarches.portal.monolithCold"), actions[-2])
         self.assertEqual(("recovery", positions["monolithAsh"]), actions[-1])
 
+    def testServiceRouteUnlocksTheActualScribeAndFundsItsRecipeWithAnEarnedGift(self):
+        state = {"gold": 0, "flags": {}, "position": "entry", "reputation": 0}
+        items = [self.scroll]
+        gift = {"__handle__": "earned-aegis"}
+        parchment = {"__handle__": "shop-parchment"}
+        mana = {"__handle__": "shop-mana"}
+        crafted = {"__handle__": "crafted-scroll"}
+        types = {
+            self.scroll["__handle__"]: "TownPortalScroll",
+            gift["__handle__"]: "aegisOfHalda",
+            parchment["__handle__"]: "Scroll",
+            mana["__handle__"]: "ManaPotion",
+            crafted["__handle__"]: "TownPortalScroll",
+        }
+        actions = []
+        player = SimpleNamespace(
+            isPlayer=lambda: True,
+            addGold=lambda gold: state.update(gold=state["gold"] + gold),
+            healProc=Mock(),
+            addItem=lambda item_id: items.append(gift),
+            checkQuests=Mock(),
+        )
+        game_instance = SimpleNamespace(getGuiHandler=lambda: SimpleNamespace(notify=Mock()))
+        game_map = SimpleNamespace(
+            getPlayer=lambda: player,
+            getBoolProperty=lambda name: state["flags"].get(name, False),
+            setBoolProperty=lambda name, value: state["flags"].update({name: value}),
+            getGame=lambda: game_instance,
+        )
+        game_instance.getMap = lambda: game_map
+        learning_stone = authoredFunction("res/maps/ninemarches/script.py", "onEnter", class_id="LearningStone")
+        recruit_companion = authoredFunction(
+            "res/maps/ninemarches/script.py",
+            "recruit",
+            class_id="CompanionDialog",
+            adjust_reputation=lambda game_map, value: state.update(reputation=state["reputation"] + value),
+            rewardSnapshot=lambda player: {},
+            showRewardReceipt=Mock(),
+        )
+
+        def call(handle, method, *args):
+            if handle == self.player and method == "getItems":
+                return list(items)
+            if method == "getTypeId":
+                return types[handle["__handle__"]]
+            if method == "getName":
+                return "townPortalScroll" if handle == self.scroll else handle["__handle__"]
+            raise AssertionError((handle, method, args))
+
+        def walk(driver, name, adjacent=False):
+            state["position"] = name
+            if name == "learningStone":
+                learning_stone(SimpleNamespace(getMap=lambda: game_map), SimpleNamespace(getCause=lambda: player))
+
+        def station(driver, name, branch=None, *, navigate):
+            navigate(name)
+            detail = (
+                "Missing: parchment"
+                if state["flags"].get("CAN_CRAFT_SCROLLS")
+                else "Locked: Study Gravewatch's learning stone"
+            )
+            return tuple(
+                {"id": recipe_id, "enabled": False, "detail": detail}
+                for recipe_id in (
+                    "craft_town_portal_scroll",
+                    "scribe_emergency_portal_scroll",
+                )
+            )
+
+        def recipe(driver, station_name, recipe_id, branch, *, outcome, navigate):
+            navigate(station_name)
+            actions.append(("recipe", recipe_id, outcome))
+            if outcome == "locked":
+                self.assertFalse(state["flags"].get("CAN_CRAFT_SCROLLS", False))
+            elif outcome == "missingIngredients":
+                self.assertTrue(state["flags"].get("CAN_CRAFT_SCROLLS"))
+                self.assertNotIn(parchment, items)
+            else:
+                self.assertEqual("success", outcome)
+                self.assertTrue(state["flags"].get("CAN_CRAFT_SCROLLS"))
+                self.assertIn(parchment, items)
+                self.assertIn(mana, items)
+                self.assertGreaterEqual(state["gold"], 35)
+                items.remove(parchment)
+                items.remove(mana)
+                items.append(crafted)
+                state["gold"] -= 35
+
+        def market(driver, name, branch, *, purchased, navigate):
+            navigate(name)
+            if purchased:
+                self.assertGreaterEqual(state["gold"], 200)
+                state["gold"] -= 200
+                items.append(parchment)
+                return parchment
+            self.assertLess(state["gold"], 200)
+
+        def retreat(driver, item, branch):
+            self.assertIs(self.scroll, item)
+            items.remove(item)
+            state["position"] = "entry"
+
+        def recruit(driver, companion):
+            self.assertEqual("halda", companion)
+            before_gold = state["gold"]
+            recruit_companion(
+                SimpleNamespace(
+                    getGame=lambda: game_instance,
+                    can_recruit=lambda: True,
+                    JOINED_FLAG="halda_joined",
+                    BOON="aegisOfHalda",
+                )
+            )
+            self.assertEqual(before_gold, state["gold"], "The actual companion reward is an item, not gold")
+            return "knight", "knightDialog", "aegisOfHalda"
+
+        def sell(name, item):
+            self.assertEqual(name, state["position"])
+            self.assertIs(gift, item)
+            self.assertIn(item, items)
+            actions.append(("sell-earned-gift",))
+            items.remove(item)
+            state["gold"] += 5000
+
+        def buy(name, item_type):
+            self.assertEqual(name, state["position"])
+            self.assertEqual("ManaPotion", item_type)
+            self.assertGreaterEqual(
+                state["gold"], 1600, "Buying cheap parchment alone does not fund the mana ingredient"
+            )
+            actions.append(("buy-finite-mana",))
+            items.append(mana)
+            state["gold"] -= 1600
+
+        self.driver.call = call
+        self.driver.flag = lambda name: state["flags"].get(name, False)
+        self.driver.sellAt = sell
+        self.driver.buyAt = buy
+        with patch.object(marches, "start", side_effect=lambda d: actions.append(("start",))), patch.object(
+            marches, "verifyWaypointPublication", side_effect=lambda d: actions.append(("published",))
+        ), patch.object(marches, "walk", side_effect=walk), patch.object(marches, "readSignpost"), patch.object(
+            marches, "openStation", side_effect=station
+        ), patch.object(
+            marches, "recipeAttempt", side_effect=recipe
+        ), patch.object(
+            marches, "marketAttempt", side_effect=market
+        ), patch.object(
+            marches, "useOwnedScroll", side_effect=retreat
+        ), patch.object(
+            marches, "recruit", side_effect=recruit
+        ):
+            marches.serviceRoute(self.driver)
+        self.assertEqual([crafted], items)
+        self.assertEqual(3285, state["gold"])
+        self.assertEqual(2, state["reputation"])
+        self.assertEqual([("start",), ("published",)], actions[:2])
+        self.assertLess(actions.index(("sell-earned-gift",)), actions.index(("buy-finite-mana",)))
+        self.assertEqual(("recipe", "craft_town_portal_scroll", "success"), actions[-1])
+
 
 if __name__ == "__main__":
     unittest.main()

@@ -8,6 +8,8 @@ import json
 
 from tests.gameplay_branch_types import RouteCase
 from tests.gameplay_branch_journals import verifyJournals
+from tests.gameplay_routes_crafting import openStation, recipeAttempt, recipeDefinitions
+from tests.gameplay_routes_services import marketAttempt, ownedIdentities, readSignpost
 
 SOURCES = tuple(
     "res/maps/nouraajd/" + name
@@ -192,6 +194,7 @@ def letter(d):
     d.navigateTo("nouraajdChapel")
     d.choose("berenDialog", "deliver_letter", condition="can_deliver_letter")
     d.select("berenDialog", "LETTER_DELIVERED", 0)
+    d.tick()
     d.test.assertEqual(0, d.count("letterToBeren"))
     d.test.assertTrue(d.call(d.player, "getBoolProperty", "CAN_CRAFT_SCROLLS"))
     d.test.assertIn("deliverLetterQuest", d.questNames(completed=True))
@@ -208,6 +211,7 @@ def handInRelic(d):
     d.navigateTo("nouraajdChapel")
     d.choose("berenDialog", "return_relic", condition="can_return_relic")
     d.select("berenDialog", "RELIC_RETURNED", 0)
+    d.tick()
     d.test.assertEqual(0, d.count("holyRelic"))
     d.test.assertTrue(d.call(d.player, "getBoolProperty", "CAN_BREW_GREATER_POTIONS"))
     d.test.assertIn("retrieveRelicQuest", d.questNames(completed=True))
@@ -566,6 +570,9 @@ def raceAid(d):
             aidSnapshot(d) == before and not d.call(d.player, "getBoolProperty", "nouraajdRaceServiceClaimed"),
         )
         prepareRolf(d)
+        # Rolf's skull starts the unpaid Gooby hunt; its real completion grants the aid's spending money.
+        d.hunt("finishOriginalMainQuest")
+        d.test.assertIn("mainQuest", d.questNames(completed=True))
         d.hunt("recoverOnRoadPair", (44, 106, 0), (44, 107, 0), "race aid full resources")
         d.navigateTo("nouraajdTownHall")
         d.test.assertGreaterEqual(d.gold(), 5)
@@ -623,6 +630,91 @@ def raceAid(d):
     )
 
 
+def authoredServices(d):
+    start(d)
+    marketAttempt(d, "market1", "nouraajd.market.insufficientGold", purchased=False)
+    readSignpost(d, "nouraajdSign")
+    for station, station_id in (("alchemyTable1", "alchemyTable"), ("scribeDesk1", "scribeDesk")):
+        openStation(d, station, "nouraajd.crafting." + station + ".opened")
+        for identity, recipe in recipeDefinitions().items():
+            if recipe["station"] != station_id:
+                continue
+            outcome = "locked" if recipe.get("unlockFlag") else "missingIngredients"
+            recipeAttempt(d, station, identity, f"nouraajd.crafting.{identity}.{outcome}", outcome=outcome)
+
+
+def fundEarnedCrafting(d, earned_items, required_gold):
+    """Sell only the finite newly earned non-quest inventory, preserving the actual recipe reagents."""
+    d.navigateTo("market1")
+    market = d.call(d.object("market1"), "getObjectProperty", "market")
+    protected = {"Scroll", "ManaPotion", "LesserLifePotion", "LifePotion", "LesserManaPotion"}
+    candidates = [
+        item
+        for item in d.call(d.player, "getItems")
+        if item["__handle__"] in earned_items
+        and d.call(item, "getTypeId") not in protected
+        and not d.call(item, "hasTag", "quest")
+    ]
+    d.test.assertLessEqual(len(candidates), 128, "Only a bounded existing loot list may fund crafting")
+    candidates.sort(key=lambda item: (-d.call(market, "getBuyCost", item), d.call(item, "getName")))
+    for item in candidates:
+        if d.gold() >= required_gold:
+            break
+        if d.call(market, "getBuyCost", item) > 0:
+            d.sellAt("market1", item)
+    d.test.assertGreaterEqual(d.gold(), required_gold, "Actual earned loot did not fund the authored recipe itinerary")
+
+
+def earnedCrafting(d):
+    start(d)
+    letter(d)
+    for identity in ("craft_town_portal_scroll", "scribe_emergency_portal_scroll"):
+        recipeAttempt(
+            d,
+            "scribeDesk1",
+            identity,
+            f"nouraajd.crafting.{identity}.missingIngredients",
+            outcome="missingIngredients",
+        )
+    original = ownedIdentities(d)
+    prepareRolf(d)
+    earned = ownedIdentities(d) - original
+    # Market1's one Scroll and three LesserLifePotions are finite authored stock.
+    # Reserve funds for both exact 100% recipes; no stochastic craft is retried.
+    d.navigateTo("market1")
+    market = d.call(d.object("market1"), "getObjectProperty", "market")
+    stock = d.call(market, "getItems")
+    required = {"Scroll": max(0, 1 - d.count("Scroll")), "LesserLifePotion": max(0, 2 - d.count("LesserLifePotion"))}
+    quotes = 55
+    for identity, count in required.items():
+        candidates = [item for item in stock if d.call(item, "getTypeId") == identity]
+        d.test.assertGreaterEqual(len(candidates), count, "Actual finite ingredient stock is insufficient")
+        quotes += sum(sorted(d.call(market, "getSellCost", item) for item in candidates)[:count])
+    # The declared market purchase happens even when earned loot already supplied its Scroll.
+    quotes += min(d.call(market, "getSellCost", item) for item in stock) if not required["Scroll"] else 0
+    fundEarnedCrafting(d, earned, quotes)
+    marketAttempt(d, "market1", "nouraajd.market.purchased", purchased=True)
+    for identity, target_count in (("LesserLifePotion", 2), ("Scroll", 1)):
+        missing = max(0, target_count - d.count(identity))
+        if missing:
+            d.buyAt("market1", identity, missing)
+    recipeAttempt(
+        d,
+        "alchemyTable1",
+        "brew_life_potion",
+        "nouraajd.crafting.brew_life_potion.success",
+        outcome="success",
+    )
+    d.test.assertGreaterEqual(d.count("ManaPotion"), 1, "The guaranteed scroll requires an actually earned ManaPotion")
+    recipeAttempt(
+        d,
+        "scribeDesk1",
+        "craft_town_portal_scroll",
+        "nouraajd.crafting.craft_town_portal_scroll.success",
+        outcome="success",
+    )
+
+
 def case(case_id, branches, run, **kwargs):
     return RouteCase(
         case_id, "nouraajd", ("nouraajd",), tuple(branches), run, campaign="fallOfNouraajd", sources=SOURCES, **kwargs
@@ -653,6 +745,45 @@ def campaignBranches(outcome):
 
 
 CASES = (
+    RouteCase(
+        "nouraajd_authored_services",
+        "nouraajd",
+        ("nouraajd",),
+        (
+            "nouraajd.market.insufficientGold",
+            "nouraajd.signpost.read",
+            "nouraajd.signpost.repeat",
+            "nouraajd.crafting.alchemyTable1.opened",
+            "nouraajd.crafting.scribeDesk1.opened",
+            *(
+                f"nouraajd.crafting.{identity}.{'locked' if recipe.get('unlockFlag') else 'missingIngredients'}"
+                for identity, recipe in recipeDefinitions().items()
+            ),
+        ),
+        authoredServices,
+        campaign="fallOfNouraajd",
+        sources=SOURCES
+        + ("res/plugins/object.py", "res/plugins/crafting.py", "res/config/crafting.json", "res/game.py"),
+    ),
+    RouteCase(
+        "nouraajd_earned_crafting",
+        "nouraajd",
+        ("nouraajd",),
+        (
+            "nouraajd.market.purchased",
+            "nouraajd.cave.timedSpawn",
+            "nouraajd.cave.exhausted",
+            "nouraajd.crafting.craft_town_portal_scroll.missingIngredients",
+            "nouraajd.crafting.scribe_emergency_portal_scroll.missingIngredients",
+            "nouraajd.crafting.brew_life_potion.success",
+            "nouraajd.crafting.craft_town_portal_scroll.success",
+        ),
+        earnedCrafting,
+        campaign="fallOfNouraajd",
+        sources=SOURCES
+        + ("res/plugins/object.py", "res/plugins/crafting.py", "res/config/crafting.json", "res/game.py"),
+        duration_seconds=1200.0,
+    ),
     *(
         case(
             "nouraajd_gate_" + approach,

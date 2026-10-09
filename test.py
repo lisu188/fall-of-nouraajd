@@ -138,6 +138,11 @@ FAST_TEST_PREFIXES = (
     "GameplayStartingSaveTest.",
     "GameplayCampaignRouteTest.",
     "GameplayRouteDialogTest.",
+    "GameplayRouteServicesTest.",
+    "GameplayCraftingRoutesTest.",
+    "GameplayNouraajdServiceRoutesTest.",
+    "GameplayWaypointPublicationTest.",
+    "GameplayCaveObservationTest.",
     "NineMarchesRecoveryTest.",
     "McpTestSeedTest.",
     "McpBranchShardsTest.",
@@ -26365,6 +26370,13 @@ if SOURCE_UI_TESTS_AVAILABLE:
     from tests.test_gameplay_branch_driver import GameplayBranchDriverTest as _GameplayBranchDriverTest
     from tests.test_gameplay_branch_journals import GameplayBranchJournalsTest as _GameplayBranchJournalsTest
     from tests.test_gameplay_starting_save import GameplayStartingSaveTest as _GameplayStartingSaveTest
+    from tests.test_gameplay_routes_crafting import GameplayCraftingRoutesTest as _GameplayCraftingRoutesTest
+    from tests.test_gameplay_routes_services import GameplayRouteServicesTest as _GameplayRouteServicesTest
+    from tests.test_gameplay_routes_nouraajd import (
+        GameplayNouraajdServiceRoutesTest as _GameplayNouraajdServiceRoutesTest,
+    )
+    from tests.test_gameplay_routes_waypoints import GameplayWaypointPublicationTest as _GameplayWaypointPublicationTest
+    from tests.test_gameplay_routes_caves import GameplayCaveObservationTest as _GameplayCaveObservationTest
     from tests.test_gameplay_routes_campaigns import GameplayCampaignRouteTest as _GameplayCampaignRouteTest
     from tests.test_gameplay_route_dialogs import GameplayRouteDialogTest as _GameplayRouteDialogTest
     from tests.test_gameplay_routes_ninemarches import NineMarchesRecoveryTest as _NineMarchesRecoveryTest
@@ -26386,6 +26398,21 @@ if SOURCE_UI_TESTS_AVAILABLE:
         pass
 
     class GameplayStartingSaveTest(_GameplayStartingSaveTest):
+        pass
+
+    class GameplayCraftingRoutesTest(_GameplayCraftingRoutesTest):
+        pass
+
+    class GameplayNouraajdServiceRoutesTest(_GameplayNouraajdServiceRoutesTest):
+        pass
+
+    class GameplayCaveObservationTest(_GameplayCaveObservationTest):
+        pass
+
+    class GameplayWaypointPublicationTest(_GameplayWaypointPublicationTest):
+        pass
+
+    class GameplayRouteServicesTest(_GameplayRouteServicesTest):
         pass
 
     class GameplayCampaignRouteTest(_GameplayCampaignRouteTest):
@@ -26529,6 +26556,8 @@ if SOURCE_UI_TESTS_AVAILABLE:
     del _ConsoleUiInteractionTest, _UiMinimapInteractionTest
     del _GameplayBranchCatalogTest, _GameplayBranchDriverTest, _GameplayBranchJournalsTest, _GameplayBranchMcpTest
     del _WaypointTraversalTest
+    del _GameplayCraftingRoutesTest, _GameplayRouteServicesTest
+    del _GameplayNouraajdServiceRoutesTest, _GameplayWaypointPublicationTest, _GameplayCaveObservationTest
     del _GameplayStartingSaveTest, _GameplayCampaignRouteTest, _GameplayRouteDialogTest
     del _NineMarchesRecoveryTest
     del _McpTestSeedTest, _McpBranchShardsTest

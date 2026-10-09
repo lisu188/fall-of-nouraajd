@@ -8,11 +8,12 @@ branch receipts establish that a natural route actually reached an outcome.
 """
 
 import ast
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
 from functools import lru_cache
 import hashlib
 import json
 from pathlib import Path
+import re
 
 from tests.gameplay_branch_types import PLAYER_CLASSES, testName
 
@@ -43,7 +44,7 @@ AUTHORED_MAPS = (
 EVENT_CALLBACKS = frozenset(
     {"trigger", "onEnter", "onTurn", "onCreate", "onDestroy", "onOpen", "onUse", "onComplete", "isCompleted"}
 )
-REVIEWED_GAMEPLAY_DIGEST = "964f0852ae171eebfbf1982c560c775d44fb894d955c2032c5127ff512213126"
+REVIEWED_GAMEPLAY_DIGEST = "d7c8d347503657b99af855d639e708cf9106c2c57c599c949c32a004d2b64aa6"
 
 
 @dataclass(frozen=True)
@@ -273,8 +274,238 @@ def routeModules():
     return tuple(import_module(name) for name in ROUTE_MODULES)
 
 
+def sharedServiceObligations(root=ROOT):
+    """Reviewed shared behavior floors, including outcomes not implemented by a route yet."""
+    result = {}
+
+    def require(map_name, suffix, callback, prerequisites, outcomes, *, sources=(), phase="services", **evidence):
+        branch = map_name + "." + suffix
+        source = callback.split(":", 1)[0]
+        result[branch] = {
+            "map": map_name,
+            "callback": callback,
+            "prerequisites": prerequisites,
+            "outcomes": outcomes,
+            "sources": tuple(dict.fromkeys((source, "res/maps/" + map_name + "/map.json", *sources))),
+            "phase": phase,
+            **evidence,
+        }
+
+    for map_name in (
+        "nouraajd",
+        "ninemarches",
+        "vhulmarn",
+        "kadath",
+        "sunderedmarch",
+        "hearthfall",
+        "gravemoor",
+        "usurpergate",
+    ):
+        for outcome in ("read", "repeat"):
+            require(
+                map_name,
+                "signpost." + outcome,
+                "res/plugins/object.py:SignPost.onEnter",
+                "Enter an actual authored SignPost" + (" again after reading it." if outcome == "repeat" else "."),
+                "Observe its exact authored text in the reader trace; gold, inventory, quests and map progress remain unchanged.",
+            )
+    for map_name in ("nouraajd", "ninemarches", "vhulmarn", "kadath", "sunderedmarch"):
+        for outcome in ("insufficientGold", "purchased"):
+            require(
+                map_name,
+                "market." + outcome,
+                "res/plugins/object.py:Market.onEnter",
+                "Enter the authored market and select an exact stocked identity with "
+                + (
+                    "less gold than its actual price."
+                    if outcome == "insufficientGold"
+                    else "enough naturally earned gold."
+                ),
+                "The actual trade request opens; "
+                + (
+                    "purchase refuses with identical stock, ownership and gold."
+                    if outcome == "insufficientGold"
+                    else "purchase transfers only the selected stock identity and deducts its exact price."
+                ),
+                sources=("src/object/CMarket.cpp",),
+                phase="earned" if outcome == "purchased" else "services",
+            )
+        if map_name != "nouraajd":
+            require(
+                map_name,
+                "scroll.retreat",
+                "res/plugins/object.py:TownPortalScroll.onUse",
+                "Collect the actual authored retreat scroll, move away from entry and consume that owned identity.",
+                "The real player arrives at the authored entry and exactly that disposable scroll leaves inventory.",
+            )
+        for potion, callback in (("life", "LifePotion"), ("mana", "ManaPotion")):
+            require(
+                map_name,
+                "potion." + potion + ".used",
+                "res/plugins/potion.py:" + callback + ".onUse",
+                "Earn a real "
+                + ("combat injury" if potion == "life" else "casting deficit")
+                + " and use an owned authored potion.",
+                "The exact capped restoration follows its configured power and only the consumed item identity leaves inventory.",
+                sources=("res/config/potions.json",),
+                phase="earned",
+            )
+        for outcome in ("timedSpawn", "exhausted"):
+            require(
+                map_name,
+                "cave." + outcome,
+                "res/plugins/object.py:Cave.onTurn",
+                "Observe the authored enabled cave's ambient turns "
+                + (
+                    "while its remaining monster count is positive."
+                    if outcome == "timedSpawn"
+                    else "after its monster count reaches zero."
+                ),
+                (
+                    "A real turn decreases the count exactly once and creates a distinct matching monster identity."
+                    if outcome == "timedSpawn"
+                    else "Further real turns leave the exhausted count at zero and create no further ambient monster from that cave."
+                ),
+            )
+    require(
+        "test",
+        "potion.life.used",
+        "res/plugins/potion.py:LifePotion.onUse",
+        "Earn an actual combat injury and purchase/use an owned stocked life potion.",
+        "Configured capped healing applies and exactly the consumed owned identity leaves inventory.",
+        sources=("res/config/potions.json",),
+    )
+    for map_name in ("ninemarches", "sunderedmarch", "test"):
+        require(
+            map_name,
+            "waypoint.published",
+            "res/plugins/object.py:WayPoint.onCreate",
+            "Load the actual authored connectors, then advance ordinary map turns.",
+            "The creation snapshot follows target availability in authored loader order; a later real turn repairs forward references. "
+            "Each enabled target appears once through deduplicated native neighbors; unpublished connectors expose only ordinary neighbors.",
+        )
+    require(
+        "ritual",
+        "cave.inactive",
+        "res/plugins/object.py:Cave.onTurn",
+        "Observe ordinary turns while the three authored ritual anchors still exist with chance=0 and monsters=0.",
+        "Anchor cave counters remain zero and no ambient Cave monster appears; ritual-script waves are accounted separately.",
+    )
+    recipes = json.loads((root / "res/config/crafting.json").read_text(encoding="utf-8"))
+    for map_name, stations in (
+        ("nouraajd", {"alchemyTable1": "alchemyTable", "scribeDesk1": "scribeDesk"}),
+        ("ninemarches", {"gravewatchScribe": "scribeDesk"}),
+    ):
+        for station, station_id in stations.items():
+            require(
+                map_name,
+                "crafting." + station + ".opened",
+                "res/plugins/crafting.py:CraftingStation.onEnter",
+                "Walk onto the actual authored " + station + " station.",
+                "Observe its actual recipe-choice UI request and leave without an inventory, gold or unlock mutation.",
+                sources=("res/plugins/crafting.py", "res/config/crafting.json"),
+                actor=station,
+            )
+            for recipe_id, recipe in recipes.items():
+                if recipe["station"] != station_id:
+                    continue
+                outcomes = ["missingIngredients", "insufficientGold", "success"]
+                if recipe.get("unlockFlag"):
+                    outcomes.insert(0, "locked")
+                if recipe.get("successChance", 100) < 100:
+                    outcomes.append("failure")
+                for outcome in outcomes:
+                    inputs = json.dumps(recipe.get("inputs", ()), sort_keys=True)
+                    requirements = {
+                        "locked": "Before the actual quest/site grants "
+                        + recipe.get("unlockFlag", "")
+                        + ", request this exact locked recipe.",
+                        "missingIngredients": "Unlock this recipe where necessary and request it with fewer than its full authored inputs: "
+                        + inputs
+                        + ".",
+                        "insufficientGold": "Unlock this recipe, own ALL authored inputs "
+                        + inputs
+                        + " and naturally spend gold below "
+                        + str(recipe.get("gold", 0))
+                        + ".",
+                        "success": "Unlock this recipe and naturally earn all inputs "
+                        + inputs
+                        + " plus "
+                        + str(recipe.get("gold", 0))
+                        + " gold; use a seeded successful attempt.",
+                        "failure": "Unlock this recipe and naturally earn all inputs "
+                        + inputs
+                        + " plus "
+                        + str(recipe.get("gold", 0))
+                        + " gold; witness its authored "
+                        + str(recipe.get("successChance", 100))
+                        + "% seeded failure without forcing RNG.",
+                    }
+                    result_text = {
+                        "locked": "The exact locked result consumes no ingredients or gold and grants no output.",
+                        "missingIngredients": "The exact missing-item result preserves all inventory identities and gold.",
+                        "insufficientGold": "The exact missing-gold result preserves ALL required ingredients, inventory identities and gold.",
+                        "success": "The exact required identities and gold cost are consumed and exactly the configured output identities/counts are granted: "
+                        + json.dumps(recipe.get("outputs", recipe.get("output")), sort_keys=True)
+                        + ".",
+                        "failure": "The attempt consumes the exact authored ingredients and gold, grants no output, and reports failed.",
+                    }
+                    require(
+                        map_name,
+                        "crafting." + recipe_id + "." + outcome,
+                        "res/plugins/crafting.py:CraftingStation.onEnter",
+                        requirements[outcome],
+                        result_text[outcome],
+                        sources=("res/config/crafting.json",),
+                        phase="services" if outcome in ("locked", "missingIngredients") else "earned",
+                        actor=station,
+                        recipe=recipe_id,
+                        outcome=outcome,
+                    )
+    return result
+
+
+def sharedServiceCases(cases, requirement):
+    map_name, phase = requirement["map"], requirement["phase"]
+    preferred = {
+        "nouraajd": (
+            "nouraajd_earned_crafting" if phase == "earned" else "nouraajd_authored_services",
+            "nouraajd_chain_LRHB",
+        ),
+        "ninemarches": ("ninemarches_services", "ninemarches_sites"),
+        "vhulmarn": ("vhulmarn-informed",),
+        "kadath": ("kadath-informed",),
+        "sunderedmarch": ("sunderedmarch-quest-first",),
+        "test": ("test-authored-objects",),
+        "ritual": ("ritual-anchor-rescue",),
+    }
+    available = {case.id for case in cases}
+    if map_name in ("hearthfall", "gravemoor", "usurpergate"):
+        return tuple(case.id for case in cases if case.id.startswith("wardens-"))
+    return (next(case_id for case_id in preferred[map_name] if case_id in available),)
+
+
 def getCases():
-    return tuple(case for module in routeModules() for case in module.CASES)
+    cases = tuple(case for module in routeModules() for case in module.CASES)
+    additions, sources = {}, {}
+    for branch, requirement in sharedServiceObligations().items():
+        for case in cases:
+            if branch in case.branches:
+                sources.setdefault(case.id, set()).update(requirement["sources"])
+        coverage = {class_id for case in cases if branch in case.branches for class_id in case.classes}
+        if coverage == set(PLAYER_CLASSES):
+            continue
+        for case_id in sharedServiceCases(cases, requirement):
+            additions.setdefault(case_id, []).append(branch)
+            sources.setdefault(case_id, set()).update(requirement["sources"])
+    return tuple(
+        replace(
+            case,
+            branches=tuple(dict.fromkeys((*case.branches, *additions.get(case.id, ())))),
+            sources=tuple(dict.fromkeys((*case.sources, *sorted(sources.get(case.id, ()))))),
+        )
+        for case in cases
+    )
 
 
 def selectedTestNames(class_id=None, group=None):
@@ -295,6 +526,9 @@ def selectedTestNames(class_id=None, group=None):
 def familyFor(branch_id):
     if branch_id in BRANCH_DETAILS:
         return BRANCH_DETAILS[branch_id]
+    shared = sharedServiceObligations().get(branch_id)
+    if shared is not None:
+        return BranchFamily(branch_id, shared["prerequisites"], shared["outcomes"])
     matches = [family for family in FAMILIES if branch_id.startswith(family.prefix)]
     if len(matches) != 1:
         raise ValueError("Branch needs exactly one reviewed prerequisite/outcome family: " + branch_id)
@@ -431,6 +665,36 @@ def sourceBranches():
             if identity in mapping:
                 raise ValueError("Duplicate source mapping: " + identity)
             mapping[identity] = tuple(witnesses)
+    declared = {branch for case in getCases() for branch in case.branches}
+    shared = {}
+    for branch, requirement in sharedServiceObligations().items():
+        shared.setdefault(requirement["callback"], set()).add(branch)
+    shared["res/plugins/object.py:Chest.onEnter"] = {branch for branch in declared if ".chest." in branch}
+    portals = {
+        branch
+        for branch in declared
+        if branch.startswith(("ninemarches.portal.", "sunderedmarch.portal.", "test.teleporter."))
+    }
+    portals.add("test.groundHole")
+    shared["res/plugins/object.py:WayPoint.onEnter"] = portals
+    shared["res/plugins/object.py:WayPoint.onTurn"] = {
+        map_name + ".waypoint.published" for map_name in ("ninemarches", "sunderedmarch", "test")
+    }
+    shared["res/plugins/object.py:Cave.onEnter"] = {
+        branch
+        for branch in declared
+        if (".cave." in branch and not branch.endswith((".timedSpawn", ".exhausted", ".inactive")))
+        or branch.startswith(("ninemarches.combat.", "ritual.anchor.", "nouraajd.chain."))
+        or (branch.startswith("nouraajd.deed.") and branch.endswith(".ordinaryCombat"))
+    }
+    hunt = {branch for branch in declared if branch.startswith(("nouraajd.hunt.", "nouraajd.chain."))}
+    shared["res/plugins/octobogz_hunt.py:OctobogzLair.onEnter"] = hunt
+    shared["res/plugins/octobogz_hunt.py:OctobogzHuntDefeatTrigger.trigger"] = hunt
+    shared.setdefault("res/plugins/object.py:TownPortalScroll.onUse", set()).add(
+        "nouraajd.hunt.partialReloadAndRetreat"
+    )
+    for identity, witnesses in shared.items():
+        mapping[identity] = tuple(sorted(set(mapping.get(identity, ())) | witnesses))
     return mapping
 
 
@@ -441,6 +705,7 @@ def defensiveContracts():
         "nouraajd.victor.blockedSpawns": "Requires artificial blocked placement/insertion failure; authored courtyard cells are available.",
         "ninemarches.bossBeforeCrown": "The only authored king spawn is the successful crown pickup, so boss-first needs a fixture.",
         "ninemarches.nonplayerEntry": "Player-only event guards are engine contracts rather than selectable player gameplay alternatives.",
+        "res/plugins/object.py:WayPoint.onDestroy": "Authored traversal retains these connectors; owner-specific edge removal is an ordinary destruction/teardown contract.",
     }
     for module in routeModules():
         result.update(getattr(module, "DEFENSIVE_BRANCHES", {}))
@@ -502,6 +767,10 @@ def contractEvidence():
             "source-double",
             own + "testConnectorDestructionUnregistersOnlyItsOwnPublishedEdges",
         ),
+        "res/plugins/object.py:WayPoint.onDestroy": (
+            "source-double",
+            own + "testConnectorDestructionUnregistersOnlyItsOwnPublishedEdges",
+        ),
     }
 
 
@@ -542,6 +811,8 @@ def sourceReviewDigest(root=ROOT):
             "res/plugins/octobogz_hunt.py",
         )
     )
+    paths.update(root / identity.split(":", 1)[0] for identity in sharedActorCallbacks(root))
+    paths.add(root / "res/config/crafting.json")
     digest = hashlib.sha256()
     for path in sorted(paths):
         text = path.read_text(encoding="utf-8")
@@ -631,6 +902,148 @@ def resolveResource(value, resources, ancestors=()):
     result = {**base, **value}
     result["properties"] = {**base.get("properties", {}), **value.get("properties", {})}
     return result
+
+
+def sharedActorCallbacks(root=ROOT):
+    """Resolve only shared callbacks instantiated by authored map objects.
+
+    Global registrations are persistent in CObjectHandler; a map registration
+    cannot replace them. Callback ownership follows the Python base definition,
+    so a Teleporter instance witnesses WayPoint.onEnter rather than a fabricated
+    Teleporter.onEnter method. Unused registered library types add no obligation.
+    """
+    from scripts.validate_content import BUILTIN_CLASSES
+
+    local_classes, _ = classDefinitions(root)
+    shared_classes = {}
+    for path in sorted((root / "res/plugins").glob("*.py")):
+        source = path.relative_to(root).as_posix()
+        for node in ast.walk(ast.parse(path.read_text(encoding="utf-8"))):
+            if isinstance(node, ast.ClassDef):
+                shared_classes[node.name] = (
+                    source,
+                    {method.name: method for method in node.body if isinstance(method, ast.FunctionDef)},
+                    tuple(ast.unparse(base) for base in node.bases),
+                )
+
+    def owner(map_name, class_id, callback, ancestors=()):
+        key = (map_name, class_id)
+        if key in ancestors:
+            raise ValueError("Cyclic authored class inheritance: " + class_id)
+        definition = shared_classes.get(class_id) or local_classes.get(key)
+        if definition is None:
+            return None
+        source, methods, bases = definition
+        if callback in methods:
+            method = methods[callback]
+            if all(isinstance(item, ast.Pass) for item in method.body):
+                return None
+            return source + ":" + class_id + "." + callback
+        for base in bases:
+            inherited = owner(map_name, base, callback, (*ancestors, key))
+            if inherited is not None:
+                return inherited
+        return None
+
+    native_classes = set(BUILTIN_CLASSES)
+    native_table = root / "src/plugin/CGameplayTypeTable.h"
+    if native_table.is_file():
+        native_classes.update(
+            re.findall(r"^\s*FN_(?:TYPE|WRAPPED)\((\w+)", native_table.read_text(encoding="utf-8"), re.MULTILINE)
+        )
+    for path in sorted((root / "src/core").glob("*TypeRegistration.cpp")):
+        native_classes.update(re.findall(r"register_type<(\w+)", path.read_text(encoding="utf-8")))
+    globals_ = {}
+    for path in sorted((root / "res/config").glob("*.json")):
+        value = json.loads(path.read_text(encoding="utf-8"))
+        if isinstance(value, dict):
+            globals_.update(value)
+    uses = {}
+    for directory in sorted((root / "res/maps").iterdir()):
+        if not directory.is_dir():
+            continue
+        resources = dict(globals_)
+        for path in sorted(directory.glob("*.json")):
+            if path.name != "map.json":
+                value = json.loads(path.read_text(encoding="utf-8"))
+                if isinstance(value, dict):
+                    resources.update(value)
+        document = json.loads((directory / "map.json").read_text(encoding="utf-8"))
+
+        def inspectResource(value, evidence, seen_classes, path=""):
+            if isinstance(value, list):
+                for index, child in enumerate(value):
+                    inspectResource(child, evidence, seen_classes, path + "/" + str(index))
+                return
+            if not isinstance(value, dict):
+                return
+            if "ref" in value or "class" in value:
+                resolved = resolveResource(value, resources)
+                class_id = resolved.get("class")
+                if class_id not in shared_classes and (directory.name, class_id) not in local_classes:
+                    if class_id not in native_classes:
+                        raise ValueError(f"Unknown authored shared resource class: {directory.name}:{path}:{class_id}")
+                context = {**evidence, "class": class_id}
+                if path:
+                    context["property"] = path
+                for callback in sorted(EVENT_CALLBACKS):
+                    identity = owner(directory.name, class_id, callback)
+                    if identity is not None and identity.startswith("res/plugins/"):
+                        uses.setdefault(identity, []).append(context)
+                # Literal constructor references retain the same authored root.
+                # This includes the lair -> director -> installed defeat trigger.
+                if class_id not in seen_classes:
+                    seen_classes.add(class_id)
+                    definition = shared_classes.get(class_id)
+                    if definition is not None:
+                        for method_name, method in definition[1].items():
+                            for node in ast.walk(method):
+                                if (
+                                    isinstance(node, ast.Call)
+                                    and isinstance(node.func, ast.Attribute)
+                                    and node.func.attr == "createObject"
+                                    and node.args
+                                    and isinstance(node.args[0], ast.Constant)
+                                    and isinstance(node.args[0].value, str)
+                                ):
+                                    target = node.args[0].value
+                                    if target in seen_classes:
+                                        continue
+                                    reference = {"ref": target} if target in resources else {"class": target}
+                                    inspectResource(
+                                        reference,
+                                        evidence,
+                                        seen_classes,
+                                        path + "/" + class_id + "." + method_name + "/createObject(" + target + ")",
+                                    )
+                value = resolved
+            for key, child in value.items():
+                if key not in ("ref", "class"):
+                    inspectResource(child, evidence, seen_classes, path + "/" + key)
+
+        for layer in document.get("layers", ()):
+            if layer.get("type") != "objectgroup":
+                continue
+            for actor in layer.get("objects", ()):
+                type_id = actor.get("type", "")
+                width, height = int(actor.get("width", 0)), int(actor.get("height", 0))
+                if not type_id or width <= 0 or height <= 0:
+                    continue
+                resolved = resolveResource({"ref": type_id}, resources) if type_id in resources else {"class": type_id}
+                class_id = resolved.get("class", type_id)
+                evidence = {
+                    "map": directory.name,
+                    "actor": actor.get("name", ""),
+                    "type": type_id,
+                    "class": class_id,
+                    "coords": (
+                        int(actor.get("x", 0) / width),
+                        int(actor.get("y", 0) / height),
+                        int(layer.get("properties", {}).get("level", 0)),
+                    ),
+                }
+                inspectResource(resolved, evidence, set())
+    return {identity: tuple(actors) for identity, actors in sorted(uses.items())}
 
 
 def dialogCallbacks(dialog, resources, *, identity="dialog"):
@@ -771,7 +1184,7 @@ def sourceCallbacks(root=ROOT):
         callbacks.update(
             dynamicDialogCallbacks(ast.parse(path.read_text(encoding="utf-8")), path.relative_to(root).as_posix())
         )
-    callbacks.add("res/plugins/object.py:Market.onEnter")
+    callbacks.update(sharedActorCallbacks(root))
     return frozenset(callbacks)
 
 
@@ -799,6 +1212,16 @@ def pendingGameplayObligations():
                 **evidence,
             }
         result.update(getattr(module, "PENDING_GAMEPLAY_OBLIGATIONS", {}))
+    implemented = tuple(case for module in routeModules() for case in module.CASES)
+    for branch, requirement in sharedServiceObligations().items():
+        coverage = {class_id for case in implemented if branch in case.branches for class_id in case.classes}
+        if coverage != set(PLAYER_CLASSES):
+            result[branch] = {
+                **requirement,
+                "classes": PLAYER_CLASSES,
+                "reason": "A complete natural route witness for this newly inventoried shared outcome is not implemented for all five classes. "
+                + requirement["prerequisites"],
+            }
     return result
 
 
@@ -884,6 +1307,7 @@ def auditCatalog(root=ROOT):
         "pendingGameplay": pendingGameplayObligations(),
         "defensiveContracts": defensiveContracts(),
         "contractEvidence": contractEvidence(),
+        "sharedCallbackUses": sharedActorCallbacks(root),
         "caseCount": len(cases),
         "executionCount": len(selectedTestNames()),
         "branchCount": len(branches),

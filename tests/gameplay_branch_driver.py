@@ -7,6 +7,8 @@ from collections import deque
 from functools import lru_cache
 
 from tests.gameplay_branch_journals import verifyJournals
+from tests.gameplay_routes_waypoints import captureWaypointCreation
+from tests.gameplay_routes_caves import captureAmbientCave, beforeAmbientCaveTurn, afterAmbientCaveTurn
 import hashlib
 import json
 import os
@@ -64,6 +66,22 @@ def canonicalNativeState(value, property_name=None):
             result.sort(key=lambda item: json.dumps(item, sort_keys=True, separators=(",", ":"), ensure_ascii=False))
         return result
     return value
+
+
+CAMPAIGN_STRING_PROPERTIES = frozenset(
+    {"campaign_id", "campaign_scenario", "campaign_history", "campaign_pendingTransition"}
+)
+
+
+def campaignCheckpointState(d, reflected):
+    """Read persisted campaign values through the same typed native getters as campaign.py."""
+    keys = CAMPAIGN_STRING_PROPERTIES | {key for key in reflected if key.startswith("campaign_var_")}
+    state = {key: d.call(d.player, "getStringProperty", key) for key in sorted(keys)}
+    # A cleared dynamic string and an omitted string have the same native default.
+    # Retain fixed keys and every nonempty variable; unrelated reflected values stay strict.
+    state = {key: value for key, value in state.items() if key in CAMPAIGN_STRING_PROPERTIES or value != ""}
+    state["campaign_finished"] = d.call(d.player, "getBoolProperty", "campaign_finished")
+    return state
 
 
 def caseSeed(case_id, class_id):
@@ -371,6 +389,8 @@ class GameplayBranchDriver:
         if self.case.initial_reputation is not None:
             self.loadStartingSave(map_id=map_id)
             self.test.assertEqual(map_id, self.map_name)
+            captureWaypointCreation(self)
+            captureAmbientCave(self)
             return
         self.game_map = self.player = None
         self.game = self.engine("CGameLoader.loadGame")
@@ -380,9 +400,13 @@ class GameplayBranchDriver:
         self.test.assertEqual(map_id, self.map_name)
         self.assertSurvival()
         self.pump()
+        captureWaypointCreation(self)
+        captureAmbientCave(self)
 
     def startCampaign(self, campaign_id):
         self.loadStartingSave(campaign_id=campaign_id)
+        captureWaypointCreation(self)
+        captureAmbientCave(self)
 
     def _slot(self, label):
         slot = "mcp-branch-" + uuid.uuid4().hex
@@ -570,6 +594,7 @@ class GameplayBranchDriver:
         recovery = getattr(adapter, "recover_before_map_turn", None)
         if recovery:
             recovery()
+        beforeAmbientCaveTurn(self)
         self.call(self.game_map, "move")
         self.pump()
         self._captureHuntMovement(origin, self.coords())
@@ -577,6 +602,7 @@ class GameplayBranchDriver:
         if self.map_name == map_name:
             self.test.assertEqual(turn + 1, self.call(self.game_map, "getTurn"))
             self._validateMovement(origin, self.coords())
+        afterAmbientCaveTurn(self)
         self.assertSurvival()
 
     def waitTurns(self, limit, predicate):
@@ -649,6 +675,7 @@ class GameplayBranchDriver:
         initial = self.coords(target)
         budget = max(128, 4 * sum(abs(a - b) for a, b in zip(self.coords(), initial)) + 128)
         unchanged = 0
+        committed = None
         for _ in range(budget):
             target = self.object(name, required=False)
             if target is None:
@@ -657,15 +684,19 @@ class GameplayBranchDriver:
             distance = sum(abs(a - b) for a, b in zip(self.coords(), destination))
             if distance <= int(adjacent):
                 return
-            controller = self.call(self.player, "getController")
-            target_coordinates = self.call(target, "getCoords")
-            self._coordinate_values[target_coordinates["__handle__"]] = destination
-            self.call(controller, "setTarget", self.player, target_coordinates)
+            if committed is None or self.coords() == committed or unchanged:
+                # Replacing a path every turn can oscillate beside a moving NPC behind an obstruction.
+                # Finish the actual approach, or replan after an interrupted/blocked native step.
+                controller = self.call(self.player, "getController")
+                target_coordinates = self.call(target, "getCoords")
+                self._coordinate_values[target_coordinates["__handle__"]] = destination
+                self.call(controller, "setTarget", self.player, target_coordinates)
+                committed = destination
             before, world = self.coords(), self.map_name
             self.tick()
             if self.map_name != world:
                 return
-            if self._traversedTarget(destination, self.coords()):
+            if self._traversedTarget(committed, self.coords()):
                 return
             unchanged = unchanged + 1 if before == self.coords() else 0
             if unchanged >= 24:
@@ -820,6 +851,7 @@ class GameplayBranchDriver:
         # checking that this capture did not change the hero's resources or equipment.
         self.test.assertEqual(journals, verifyJournals(self), "Saving changed the observed journal text")
         before = self.properties(self.player)
+        campaign_before = campaignCheckpointState(self, before)
         for key in ("hp", "mana", "gold", "exp", "level", "reputation", "items", "equipped"):
             self.test.assertEqual(
                 canonicalNativeState(initial.get(key), key), canonicalNativeState(before.get(key), key), key
@@ -831,9 +863,12 @@ class GameplayBranchDriver:
         self.test.assertEqual(map_id, self.map_name)
         self.test.assertEqual(turn, self.call(self.game_map, "getTurn"))
         after = self.properties(self.player)
+        self.test.assertEqual(campaign_before, campaignCheckpointState(self, after), "Native campaign checkpoint state")
         for key in ("hp", "mana", "gold", "exp", "level", "reputation", "posx", "posy", "posz", "raceId"):
             self.test.assertEqual(before.get(key), after.get(key), key)
         for key in set(before) | set(after):
+            if key in CAMPAIGN_STRING_PROPERTIES or key == "campaign_finished" or key.startswith("campaign_var_"):
+                continue
             if key.startswith(("campaign_", "questJournal")) or key in {
                 "items",
                 "equipped",

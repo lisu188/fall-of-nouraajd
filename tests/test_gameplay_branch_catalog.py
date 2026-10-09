@@ -7,6 +7,7 @@ import ast
 from collections import deque
 import json
 from pathlib import Path
+import tempfile
 import types
 import unittest
 from unittest.mock import patch
@@ -75,6 +76,190 @@ class GameplayBranchCatalogTest(unittest.TestCase):
         self.assertEqual((), report["issues"])
         self.assertIn("structural-only", report["proof"])
         self.assertEqual(catalog.campaignEdges(), frozenset(catalog.CAMPAIGN_EDGE_BRANCHES))
+
+    def testSharedCallbacksAreDiscoveredThroughAuthoredActorReferencesAndBases(self):
+        callbacks = catalog.sourceCallbacks()
+        for identity in (
+            "res/plugins/object.py:WayPoint.onEnter",
+            "res/plugins/object.py:WayPoint.onCreate",
+            "res/plugins/object.py:WayPoint.onTurn",
+            "res/plugins/object.py:WayPoint.onDestroy",
+            "res/plugins/object.py:Cave.onEnter",
+            "res/plugins/object.py:Cave.onTurn",
+            "res/plugins/object.py:Chest.onEnter",
+            "res/plugins/object.py:SignPost.onEnter",
+            "res/plugins/object.py:TownPortalScroll.onUse",
+            "res/plugins/crafting.py:CraftingStation.onEnter",
+            "res/plugins/octobogz_hunt.py:OctobogzLair.onEnter",
+            "res/plugins/castle_campaign.py:CastleMissionStart.onCreate",
+            "res/plugins/castle_campaign.py:CastlePortal.onTurn",
+        ):
+            with self.subTest(identity=identity):
+                self.assertIn(identity, callbacks)
+        uses = catalog.sharedActorCallbacks()
+        portals = uses["res/plugins/object.py:WayPoint.onEnter"]
+        self.assertEqual(10, len(portals))
+        self.assertEqual({"ninemarches", "sunderedmarch", "test"}, {use["map"] for use in portals})
+        self.assertIn(
+            {"map": "test", "actor": "groundHole", "type": "GroundHole", "class": "GroundHole", "coords": (12, 7, 0)},
+            portals,
+        )
+        self.assertNotIn("res/plugins/object.py:AdventureObelisk.onEnter", callbacks)
+        self.assertNotIn("res/plugins/object.py:TreeOfKnowledge.onEnter", callbacks)
+
+    def testSharedActorAuditResolvesAliasChainsAndPersistentPluginPrecedence(self):
+        with tempfile.TemporaryDirectory(prefix="gameplay-shared-source-") as temporary:
+            root = Path(temporary)
+            for directory in ("res/config", "res/plugins", "res/maps/example"):
+                (root / directory).mkdir(parents=True)
+            (root / "res/plugins/shared.py").write_text(
+                "class SharedBase(CBuilding):\n"
+                "    def onEnter(self, event):\n        self.entered()\n"
+                "    def onTurn(self, event):\n        self.turned()\n"
+                "class Connector(SharedBase):\n"
+                "    def onTurn(self, event):\n        self.updated()\n"
+                "class Unused(CBuilding):\n"
+                "    def onCreate(self, event):\n        self.unused()\n",
+                encoding="utf-8",
+            )
+            (root / "res/maps/example/script.py").write_text(
+                "class Connector(CBuilding):\n    def onEnter(self, event):\n        self.wrong()\n",
+                encoding="utf-8",
+            )
+            (root / "res/config/buildings.json").write_text(
+                json.dumps({"configuredConnector": {"class": "Connector"}}), encoding="utf-8"
+            )
+            (root / "res/maps/example/config.json").write_text(
+                json.dumps({"localAlias": {"ref": "configuredConnector"}, "deepAlias": {"ref": "localAlias"}}),
+                encoding="utf-8",
+            )
+            actor = {"name": "actualConnector", "type": "deepAlias", "x": 64, "y": 96, "width": 32, "height": 32}
+            (root / "res/maps/example/map.json").write_text(
+                json.dumps({"layers": [{"type": "objectgroup", "properties": {"level": "-1"}, "objects": [actor]}]}),
+                encoding="utf-8",
+            )
+            uses = catalog.sharedActorCallbacks(root)
+            self.assertEqual(
+                {"res/plugins/shared.py:SharedBase.onEnter", "res/plugins/shared.py:Connector.onTurn"}, set(uses)
+            )
+            self.assertEqual(
+                (
+                    {
+                        "map": "example",
+                        "actor": "actualConnector",
+                        "type": "deepAlias",
+                        "class": "Connector",
+                        "coords": (2, 3, -1),
+                    },
+                ),
+                uses["res/plugins/shared.py:SharedBase.onEnter"],
+            )
+            self.assertNotIn("res/plugins/shared.py:SharedBase.onTurn", uses)
+            self.assertNotIn("res/plugins/shared.py:Unused.onCreate", uses)
+
+    def testNewCallbackOnUsedSharedClassRequiresItsOwnMapping(self):
+        source = catalog.ROOT / "res/plugins/object.py"
+        original_read = Path.read_text
+
+        def changed_read(path, *args, **kwargs):
+            text = original_read(path, *args, **kwargs)
+            if path == source:
+                text = text.replace(
+                    "class Teleporter(WayPoint):",
+                    "class Teleporter(WayPoint):\n        def onTurn(self, event):\n            self.changed()\n",
+                    1,
+                )
+            return text
+
+        with patch.object(Path, "read_text", changed_read):
+            callbacks = catalog.sourceCallbacks()
+        identity = "res/plugins/object.py:Teleporter.onTurn"
+        self.assertIn(identity, callbacks)
+        issues = catalog.auditMappings(callbacks, catalog.sourceBranches(), catalog.defensiveContracts(), set())
+        self.assertIn("Unmapped authored callback: " + identity, issues)
+
+    def testNestedAuthoredStockAndInstalledHuntTriggersAreAudited(self):
+        uses = catalog.sharedActorCallbacks()
+        life = uses["res/plugins/potion.py:LifePotion.onUse"]
+        mana = uses["res/plugins/potion.py:ManaPotion.onUse"]
+        self.assertEqual(
+            {"nouraajd", "ninemarches", "vhulmarn", "kadath", "sunderedmarch", "test"}, {use["map"] for use in life}
+        )
+        self.assertEqual(
+            {"nouraajd", "ninemarches", "vhulmarn", "kadath", "sunderedmarch"}, {use["map"] for use in mana}
+        )
+        self.assertTrue(all("/market/" in use["property"] for use in (*life, *mana)))
+        hunt = uses["res/plugins/octobogz_hunt.py:OctobogzHuntDefeatTrigger.trigger"]
+        self.assertEqual(1, len(hunt))
+        self.assertEqual(("nouraajd", "cave2"), (hunt[0]["map"], hunt[0]["actor"]))
+        self.assertIn("registerDefeat/createObject(OctobogzHuntDefeatTrigger)", hunt[0]["property"])
+        self.assertIn("res/plugins/octobogz_hunt.py:OctobogzHuntDefeatTrigger.trigger", catalog.sourceCallbacks())
+
+    def testUnknownAuthoredNestedStockReferenceFailsInsteadOfDisappearing(self):
+        source = catalog.ROOT / "res/maps/test/config.json"
+        original_read = Path.read_text
+
+        def changed_read(path, *args, **kwargs):
+            text = original_read(path, *args, **kwargs)
+            return text.replace('"LesserLifePotion"', '"missingAuthoredPotion"') if path == source else text
+
+        with patch.object(Path, "read_text", changed_read):
+            with self.assertRaisesRegex(ValueError, "Missing resource reference: missingAuthoredPotion"):
+                catalog.sharedActorCallbacks()
+
+    def testSharedServiceRequirementsKeepEveryApplicableRecipeOutcomeMandatory(self):
+        requirements = catalog.sharedServiceObligations()
+        entries = catalog.branchCatalog()
+        recipes = json.loads((catalog.ROOT / "res/config/crafting.json").read_text(encoding="utf-8"))
+        expected = set()
+        for map_name, station_ids in (("nouraajd", {"alchemyTable", "scribeDesk"}), ("ninemarches", {"scribeDesk"})):
+            for recipe_id, recipe in recipes.items():
+                if recipe["station"] not in station_ids:
+                    continue
+                outcomes = {"missingIngredients", "insufficientGold", "success"}
+                if recipe.get("unlockFlag"):
+                    outcomes.add("locked")
+                if recipe.get("successChance", 100) < 100:
+                    outcomes.add("failure")
+                expected.update(map_name + ".crafting." + recipe_id + "." + outcome for outcome in outcomes)
+        actual = {branch for branch, evidence in requirements.items() if evidence.get("recipe")}
+        self.assertEqual(expected, actual)
+        self.assertEqual(45, len(actual))
+        for branch in requirements:
+            with self.subTest(branch=branch):
+                self.assertEqual(set(PLAYER_CLASSES), set(entries[branch]["classes"]))
+                self.assertNotIn(branch, catalog.defensiveContracts())
+                self.assertTrue(entries[branch]["callbacks"])
+        pending = catalog.pendingGameplayObligations()
+        raw = tuple(case for module in catalog.routeModules() for case in module.CASES)
+        for branch in set(pending) & set(requirements):
+            actual_classes = {class_id for case in raw if branch in case.branches for class_id in case.classes}
+            self.assertNotEqual(set(PLAYER_CLASSES), actual_classes)
+            self.assertEqual(PLAYER_CLASSES, pending[branch]["classes"])
+        self.assertNotIn("ninemarches.crafting.brew_full_life_potion.success", requirements)
+        self.assertNotIn("nouraajd.crafting.brew_life_potion.locked", requirements)
+        self.assertNotIn("nouraajd.crafting.brew_life_potion.failure", requirements)
+
+    def testSharedCraftingCodeAndRecipeDataBothInvalidateReviewedDigest(self):
+        original_read = Path.read_text
+        before = catalog.sourceReviewDigest()
+        for relative, old, new in (
+            ("res/plugins/crafting.py", "if gold_cost <= 0:", "if gold_cost <= 1:"),
+            ("res/config/crafting.json", '"gold": 20', '"gold": 21'),
+            ("res/plugins/potion.py", "power * 20", "power * 21"),
+        ):
+            with self.subTest(source=relative):
+                source = catalog.ROOT / relative
+
+                def changed_read(path, *args, **kwargs):
+                    text = original_read(path, *args, **kwargs)
+                    if path == source:
+                        self.assertIn(old, text)
+                        text = text.replace(old, new, 1)
+                    return text
+
+                with patch.object(Path, "read_text", changed_read):
+                    self.assertNotEqual(before, catalog.sourceReviewDigest())
 
     def testReviewedSourceDigestRequiresReviewForNewInternalBranches(self):
         self.assertEqual(
@@ -307,7 +492,7 @@ class TownDialog:
     def testPrematureThroneRemainsMandatoryForEveryWardenRouteAndClass(self):
         branch = "usurpergate.throne.premature"
         pending = catalog.pendingGameplayObligations()
-        self.assertEqual(14, len(pending))
+        self.assertEqual(14, len([name for name in pending if name.startswith("castle.") or name == branch]))
         self.assertIn(branch, pending)
         self.assertNotIn(branch, catalog.defensiveContracts())
         self.assertNotIn(branch, catalog.contractEvidence())
@@ -372,12 +557,13 @@ class TownDialog:
         for source, class_id in (
             ("res/maps/multilevel/script.py", "LevelStairs"),
             ("res/plugins/castle_campaign.py", "CastlePortal"),
+            ("res/plugins/object.py", "WayPoint"),
         ):
             with self.subTest(class_id=class_id):
                 removed = []
                 world = types.SimpleNamespace(unregisterNavigationEdgesForObject=removed.append)
                 actor = types.SimpleNamespace(getMap=lambda: world, getName=lambda: "authoredConnector")
-                if class_id == "LevelStairs":
+                if class_id in ("LevelStairs", "WayPoint"):
                     actor.clearNavigationEdge = types.MethodType(
                         sourceMethod(source, class_id, "clearNavigationEdge"), actor
                     )

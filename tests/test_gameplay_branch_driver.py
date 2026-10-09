@@ -16,6 +16,7 @@ from tests.gameplay_branch_driver import (
     GameplayBranchDriver,
     authoredRoadCells,
     canonicalNativeState,
+    campaignCheckpointState,
     readNewNativeTrace,
 )
 from tests.gameplay_branch_types import RouteCase
@@ -62,6 +63,32 @@ class GameplayBranchDriverTest(unittest.TestCase):
             with self.subTest(difference=difference):
                 self.assertNotEqual(canonicalNativeState(first), canonicalNativeState(changed))
         self.assertEqual(["owned", "sharp"], first["items"][0]["properties"]["tags"])
+
+    def testCampaignCheckpointUsesNativeDefaultsWithoutDroppingNonemptyProgress(self):
+        driver = self.driver()
+        native = {"campaign_id": "wardensRoad", "campaign_history": "hearthfall:mercy"}
+        driver.call = Mock(
+            side_effect=lambda actor, method, key: native.get(key, False if method == "getBoolProperty" else "")
+        )
+        before = {**native, "campaign_pendingTransition": "", "campaign_var_cleared": ""}
+        expected = campaignCheckpointState(driver, before)
+        self.assertEqual(expected, campaignCheckpointState(driver, native))
+        self.assertEqual("", expected["campaign_pendingTransition"])
+        self.assertFalse(expected["campaign_finished"])
+        for key, value in (
+            ("campaign_pendingTransition", "{pending}"),
+            ("campaign_var_choice", "wrath"),
+            ("campaign_history", "hearthfall:wrath"),
+            ("campaign_finished", True),
+        ):
+            with self.subTest(key=key):
+                changed = {**native, key: value}
+                driver.call.side_effect = lambda actor, method, name, values=changed: values.get(
+                    name, False if method == "getBoolProperty" else ""
+                )
+                self.assertNotEqual(expected, campaignCheckpointState(driver, changed))
+        self.assertNotEqual(canonicalNativeState({"other": ""}), canonicalNativeState({}))
+        self.assertNotEqual(canonicalNativeState({"campaign_unrecognized": ""}), canonicalNativeState({}))
 
     def driver(self):
         case = RouteCase("unit", "unit", ("test",), ("unit.branch",), lambda driver: None)
@@ -462,7 +489,7 @@ class GameplayBranchDriverTest(unittest.TestCase):
                     observations.append((driver.turns, driver.steps, state["coords"]))
 
                 driver.navigateTo("goal", after_tick=afterTick if observed else None)
-                self.assertEqual([(2, 0, 0), (2, 0, 0)], state["targets"])
+                self.assertEqual([(2, 0, 0)], state["targets"])
                 self.assertEqual((2, 0, 0), state["coords"])
                 self.assertEqual([(1, 1, (1, 0, 0)), (2, 2, (2, 0, 0))] if observed else [], observations)
 
@@ -786,6 +813,54 @@ class GameplayBranchDriverTest(unittest.TestCase):
         driver.snapshot.assert_not_called()
         driver.step.assert_not_called()
         self.assertEqual(1, sum(call.args[1] == "setTarget" for call in driver._rawCall.call_args_list))
+
+    def testPursuitCommitsApproachAcrossAlternatingActualNpcCoordinates(self):
+        # The b920 CI trace showed this exact parallel two-cell oscillation at Victor's courtyard.
+        driver = self.driver()
+        position, enemy = [46, 99, 0], [47, 100, 0]
+        actor, controller = {"__handle__": "leader"}, {"__handle__": "controller"}
+        state = {"alive": True, "path": [], "targets": [], "turns": 0}
+        driver.object = Mock(side_effect=lambda name, required=True: actor if state["alive"] else None)
+        driver.coords = lambda handle=None: tuple(enemy if handle == actor else position)
+        driver.snapshot = Mock(return_value={"coords": position})
+        driver._traversedTarget = Mock(return_value=False)
+
+        def rawCall(handle, method, *args):
+            if method == "getController":
+                return controller
+            if method == "getCoords":
+                return {"__handle__": "coords", "coords": tuple(enemy)}
+            if method == "setTarget":
+                target = args[-1]["coords"]
+                state["targets"].append(target)
+                path, cursor = [], list(position)
+                for axis in (0, 1):
+                    while cursor[axis] != target[axis]:
+                        cursor[axis] += 1 if cursor[axis] < target[axis] else -1
+                        path.append(tuple(cursor))
+                state["path"] = path
+                return
+            raise AssertionError(method)
+
+        def advance():
+            state["turns"] += 1
+            enemy[0] = 46 if enemy[0] == 47 else 47
+            if state["path"]:
+                arrival = state["path"].pop(0)
+                if arrival == tuple(enemy):
+                    state["alive"] = False
+                    state["path"].clear()  # Native combat restores the player's pre-step origin.
+                else:
+                    position[:] = arrival
+
+        driver._rawCall.side_effect = rawCall
+        driver.tick = Mock(side_effect=advance)
+        driver.step = Mock(side_effect=AssertionError("Pursuit bypassed the native controller"))
+        driver.navigateTo("cultLeaderQuest")
+        self.assertFalse(state["alive"])
+        self.assertEqual(2, state["turns"])
+        self.assertEqual([(47, 100, 0)], state["targets"])
+        driver.step.assert_not_called()
 
     def testCoordinateNavigationRetargetsAfterCombatInterruptsTheNativePath(self):
         driver = self.driver()

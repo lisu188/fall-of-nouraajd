@@ -10,6 +10,9 @@ from pathlib import Path
 from tests.gameplay_branch_types import RouteCase
 from tests.gameplay_branch_driver import authoredRoadCells, readNewNativeTrace
 from tests.gameplay_branch_journals import verifyJournals
+from tests.gameplay_routes_services import marketAttempt, readSignpost, useOwnedScroll
+from tests.gameplay_routes_crafting import openStation, recipeAttempt
+from tests.gameplay_routes_waypoints import verifyWaypointPublication
 
 SOURCES = (
     "res/maps/ninemarches/script.py",
@@ -17,6 +20,8 @@ SOURCES = (
     "res/maps/ninemarches/dialog.json",
     "res/maps/ninemarches/map.json",
     "res/plugins/object.py",
+    "res/plugins/crafting.py",
+    "res/config/crafting.json",
 )
 COMPANIONS = {
     "halda": ("companionKnight", "knightDialog", "banditCache", "banditLedger", "aegisOfHalda"),
@@ -355,6 +360,72 @@ def reputationDialog(d, low=False):
     d.check("ninemarches.mayor.high", d.condition("mayorDialog", "high_reputation"))
 
 
+def serviceRoute(d):
+    start(d)
+    verifyWaypointPublication(d)
+    navigate = partial(walk, d)
+    readSignpost(d, "gravewatchSign", navigate=navigate)
+    marketAttempt(d, "gravewatchBarter", "ninemarches.market.insufficientGold", purchased=False, navigate=navigate)
+    options = openStation(d, "gravewatchScribe", "ninemarches.crafting.gravewatchScribe.opened", navigate=navigate)
+    d.test.assertEqual(
+        {"craft_town_portal_scroll", "scribe_emergency_portal_scroll"}, {option["id"] for option in options}
+    )
+    d.test.assertTrue(all(option["enabled"] is False and "Locked" in option["detail"] for option in options))
+    d.test.assertTrue(all("Study Gravewatch's learning stone" in option["detail"] for option in options))
+    for recipe_id in ("craft_town_portal_scroll", "scribe_emergency_portal_scroll"):
+        recipeAttempt(
+            d,
+            "gravewatchScribe",
+            recipe_id,
+            f"ninemarches.crafting.{recipe_id}.locked",
+            outcome="locked",
+            navigate=navigate,
+        )
+    scrolls = [
+        item
+        for item in d.call(d.player, "getItems")
+        if d.call(item, "getName") == d._marches_retreat_scroll_name and d.call(item, "getTypeId") == "TownPortalScroll"
+    ]
+    d.test.assertEqual(1, len(scrolls))
+    useOwnedScroll(d, scrolls[0], "ninemarches.scroll.retreat")
+    d._marches_retreat_scroll_name = None
+    walk(d, "learningStone")
+    d.test.assertTrue(d.flag("CAN_CRAFT_SCROLLS"))
+    options = openStation(d, "gravewatchScribe", navigate=navigate)
+    d.test.assertTrue(all("Locked" not in option["detail"] for option in options))
+    for recipe_id in ("craft_town_portal_scroll", "scribe_emergency_portal_scroll"):
+        recipeAttempt(
+            d,
+            "gravewatchScribe",
+            recipe_id,
+            f"ninemarches.crafting.{recipe_id}.missingIngredients",
+            outcome="missingIngredients",
+            navigate=navigate,
+        )
+    _actor, _dialog, gift = recruit(d, "halda")
+    earned = [item for item in d.call(d.player, "getItems") if d.call(item, "getTypeId") == gift]
+    d.test.assertEqual(1, len(earned))
+    walk(d, "gravewatchBarter")
+    d.sellAt("gravewatchBarter", earned[0])
+    parchment = marketAttempt(
+        d,
+        "gravewatchBarter",
+        "ninemarches.market.purchased",
+        purchased=True,
+        navigate=navigate,
+    )
+    d.test.assertEqual("Scroll", d.call(parchment, "getTypeId"))
+    d.buyAt("gravewatchBarter", "ManaPotion")
+    recipeAttempt(
+        d,
+        "gravewatchScribe",
+        "craft_town_portal_scroll",
+        "ninemarches.crafting.craft_town_portal_scroll.success",
+        outcome="success",
+        navigate=navigate,
+    )
+
+
 def finale(d, allies):
     start(d)
     walk(d, "digSite")
@@ -448,6 +519,27 @@ def case(case_id, branches, run, **kwargs):
 GATE_BRANCHES = tuple(f"ninemarches.gate.{color}.opensWithKey" for color, *_ in GATES)
 OBELISK_BRANCHES = tuple(f"ninemarches.obelisk.{name}.once" for name in OBELISKS)
 CASES = (
+    case(
+        "ninemarches_services",
+        (
+            "ninemarches.market.insufficientGold",
+            "ninemarches.market.purchased",
+            "ninemarches.scroll.retreat",
+            "ninemarches.signpost.read",
+            "ninemarches.signpost.repeat",
+            "ninemarches.waypoint.published",
+            "ninemarches.cave.timedSpawn",
+            "ninemarches.cave.exhausted",
+            "ninemarches.crafting.gravewatchScribe.opened",
+            "ninemarches.crafting.craft_town_portal_scroll.locked",
+            "ninemarches.crafting.craft_town_portal_scroll.missingIngredients",
+            "ninemarches.crafting.craft_town_portal_scroll.success",
+            "ninemarches.crafting.scribe_emergency_portal_scroll.locked",
+            "ninemarches.crafting.scribe_emergency_portal_scroll.missingIngredients",
+        ),
+        serviceRoute,
+        duration_seconds=1200.0,
+    ),
     *(
         case(
             f"ninemarches_{companion}_{order}",

@@ -10,6 +10,8 @@ from tests.castle_walkthrough import MAP_NAMES, authoredMap, shortestRoute
 from tests.narrative_walkthrough import authoredRegion
 from tests.gameplay_branch_types import RouteCase
 from tests.gameplay_branch_journals import rememberJournalContext, verifyJournals
+from tests.gameplay_routes_services import readSignpost
+from tests.gameplay_routes_caves import verifyInactiveRitualCaves
 from tests.gameplay_routes_maps import clearHostiles, hostiles, mapObjects, startMap
 
 WARDEN_MAPS = ("hearthfall", "gravemoor", "usurpergate")
@@ -42,6 +44,7 @@ def wardenCampaign(d, judgment, campaign=True):
     atStart(d, "hearthfallStart")
     d.check("hearthfall.arrival", d.flag("hearthfall_intro") and "hearthfallQuest" in d.questNames())
     verifyJournals(d)
+    readSignpost(d, "hearthfallSign")
     d.check("hearthfall.elder.occupied", d.condition("elderDialog", "still_occupied"))
     fightRemaining(d, ("occupierGate", "occupierWest", "occupierEast", "watchCaptain"))
     d.check("hearthfall.captain.defeated", d.flag("captain_defeated"))
@@ -64,6 +67,7 @@ def wardenCampaign(d, judgment, campaign=True):
     atStart(d, "gravemoorStart")
     d.check("gravemoor.arrival", d.flag("gravemoor_intro") and "gravemoorQuest" in d.questNames())
     verifyJournals(d)
+    readSignpost(d, "gravemoorSign")
     d.navigateTo("quartermasterVoss")
     d.select("vossDialog", "ENTRY", 0)
     d.check("gravemoor.judgment.locked", d.condition("vossDialog", "captives_missing") and not d.flag("voss_judged"))
@@ -120,6 +124,7 @@ def wardenCampaign(d, judgment, campaign=True):
     )
     d.check("usurpergate.arrival", d.flag("usurpergate_intro") and "usurpergateQuest" in d.questNames())
     verifyJournals(d)
+    readSignpost(d, "usurpergateSign")
     d.navigateTo("banneretHild")
     d.select("banneretDialog", "ENTRY", 0)
     d.check("usurpergate.banneret.siege", d.condition("banneretDialog", "usurper_stands"))
@@ -248,6 +253,7 @@ def finishRitualAndSiege(d, outcome, activation="anchor"):
     atStart(d, "ritualStart")
     d.check("ritual.arrival", d.flag("ritual_initialized") and set(RITUAL_QUESTS) <= set(d.questNames()))
     verifyJournals(d)
+    verifyInactiveRitualCaves(d)
     d.navigateTo("ritualWitness")
     d.select("chapelWarningDialog", "ENTRY", 0)
     d.navigateTo("chapelRecords")
@@ -465,6 +471,37 @@ def castleTownRest(d, objects, walkable, portals, reserved, mission):
     d.test.fail(("Authored encounters did not produce enough natural injuries to exhaust paid town rest", d.gold()))
 
 
+def castleSupply(d, name, objects, walkable, portals, reserved):
+    source = objects[name]["coords"]
+    castleNavigate(d, source, walkable, portals, reserved)
+    d.test.assertTrue(d.flag("campaign_castleSupply_" + name))
+    candidates = []
+    for dx, dy in ((1, 0), (-1, 0), (0, 1), (0, -1)):
+        neighbor = (source[0] + dx, source[1] + dy, source[2])
+        if neighbor in walkable and neighbor != reserved:
+            try:
+                route = shortestRoute(walkable - {reserved}, portals, d.coords(), neighbor)
+            except AssertionError:
+                continue
+            candidates.append((len(route), neighbor))
+    d.test.assertTrue(candidates, ("No actual adjacent supply reentry route", name, source))
+    neighbor = min(candidates)[1]
+    castleNavigate(d, neighbor, walkable, portals, reserved)
+    d.test.assertEqual(neighbor, d.coords())
+    # The adjacent approach may itself claim another authored garrison's supplies.
+    # Snapshot only the final one-cell reentry into this already claimed source.
+    gold_before = d.gold()
+    d.step(source)
+    d.test.assertEqual(source, d.coords())
+    d.check(
+        "castle." + d.map_name + ".supply." + name,
+        d.gold() == gold_before and d.flag("campaign_castleSupply_" + name),
+        approach=neighbor,
+        goldBeforeReentry=gold_before,
+        goldAfterReentry=d.gold(),
+    )
+
+
 def castleChapter(d, map_name, rest=False):
     d.test.assertEqual(map_name, d.map_name)
     _document, objects, walkable, portals, mission = authoredMap(map_name)
@@ -519,11 +556,7 @@ def castleChapter(d, map_name, rest=False):
     d.check(prefix + ".officers", mission["questId"] in d.questNames())
     supplies = sorted(name for name, value in objects.items() if value.get("class") == "CastleSupply")
     for name in supplies:
-        castleNavigate(d, objects[name]["coords"], walkable, portals, reserved)
-        d.test.assertTrue(d.flag("campaign_castleSupply_" + name))
-        gold_before = d.gold()
-        d.revisit(name)
-        d.check(prefix + ".supply." + name, d.gold() == gold_before and d.flag("campaign_castleSupply_" + name))
+        castleSupply(d, name, objects, walkable, portals, reserved)
     # Visit every connector before the last required capture can end this chapter.
     for name, value in sorted(objects.items()):
         if value.get("class") != "CastlePortal":
@@ -633,6 +666,12 @@ def castleCampaign(d):
 
 
 WARDEN_COMMON = (
+    "hearthfall.signpost.read",
+    "hearthfall.signpost.repeat",
+    "gravemoor.signpost.read",
+    "gravemoor.signpost.repeat",
+    "usurpergate.signpost.read",
+    "usurpergate.signpost.repeat",
     "hearthfall.arrival",
     "hearthfall.elder.occupied",
     "hearthfall.captain.defeated",
@@ -672,6 +711,7 @@ SIEGE_BRANCHES = (
 )
 RITUAL_COMMON = (
     "ritual.arrival",
+    "ritual.cave.inactive",
     "ritual.records",
     "ritual.captive.locked",
     "ritual.anchor.anchorNorth",
@@ -747,7 +787,7 @@ CASES = (
         branches=WARDEN_COMMON
         + ("gravemoor.judgment.spared", "wardens.route.assault_mercy", "usurpergate.approach.mercy"),
         run=partial(wardenCampaign, judgment="spared"),
-        sources=sources(WARDEN_MAPS),
+        sources=sources(WARDEN_MAPS) + ("res/plugins/object.py",),
         duration_seconds=600,
     ),
     RouteCase(
@@ -758,7 +798,7 @@ CASES = (
         branches=WARDEN_COMMON
         + ("gravemoor.judgment.executed", "wardens.route.assault_wrath", "usurpergate.approach.wrath"),
         run=partial(wardenCampaign, judgment="executed"),
-        sources=sources(WARDEN_MAPS),
+        sources=sources(WARDEN_MAPS) + ("res/plugins/object.py",),
         duration_seconds=600,
     ),
     RouteCase(
@@ -767,7 +807,7 @@ CASES = (
         maps=WARDEN_MAPS,
         branches=WARDEN_FALLBACK_COMMON + ("gravemoor.judgment.spared", "wardens.fallback.toUsurpergate.spared"),
         run=partial(wardenCampaign, judgment="spared", campaign=False),
-        sources=sources(WARDEN_MAPS),
+        sources=sources(WARDEN_MAPS) + ("res/plugins/object.py",),
         duration_seconds=600,
     ),
     RouteCase(
@@ -776,7 +816,7 @@ CASES = (
         maps=WARDEN_MAPS,
         branches=WARDEN_FALLBACK_COMMON + ("gravemoor.judgment.executed", "wardens.fallback.toUsurpergate.executed"),
         run=partial(wardenCampaign, judgment="executed", campaign=False),
-        sources=sources(WARDEN_MAPS),
+        sources=sources(WARDEN_MAPS) + ("res/plugins/object.py",),
         duration_seconds=600,
     ),
     RouteCase(

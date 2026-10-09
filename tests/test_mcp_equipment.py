@@ -373,6 +373,94 @@ class McpEquipmentRuntimeTest(unittest.TestCase):
                     instance.getContext().shutdown()
             """)
 
+    def testHeadlessAuthoredSignpostAndCraftingEntriesTraceTheirActualRequests(self):
+        self.runChild("""
+            import json
+            instance = game.CGameLoader.loadGame()
+            try:
+                game.CGameLoader.startGameWithPlayer(instance, 'nouraajd', 'Warrior')
+                world = instance.getMap()
+                player = world.getPlayer()
+                assert instance.getGui() is None
+                game.configure_playtest_trace(True, max_records=64)
+                sign = world.getObjectByName('nouraajdSign')
+                def enter(actor):
+                    point = actor.getCoords()
+                    player.moveTo(point.x, point.y, point.z)
+                    for _ in range(3):
+                        loop.run()
+                enter(sign)
+                enter(world.getObjectByName('market1'))
+                enter(sign)
+                events = [json.loads(line) for line in game.get_playtest_trace_records()]
+                readers = [event for event in events if event['event'] == 'reader_requested']
+                assert len(readers) == 2, events
+                for event in readers:
+                    assert event['headless'] is True and event['map'] == 'nouraajd', event
+                    assert event['title'] == 'Signpost' and event['body'] == sign.getStringProperty('text'), event
+                    assert event['bodyLength'] == len(event['body'].encode('utf-8')), event
+                    assert event['player']['isPlayer'] is True and event['player']['name'] == player.getName(), event
+                    assert event['playerCoords'] == {'x': 106, 'y': 110, 'z': 0}, event
+                for name, expected_recipe in (('alchemyTable1', 'brew_life_potion'),
+                                               ('scribeDesk1', 'craft_town_portal_scroll')):
+                    game.clear_playtest_trace()
+                    station = world.getObjectByName(name)
+                    enter(station)
+                    events = [json.loads(line) for line in game.get_playtest_trace_records()]
+                    choices = [event for event in events if event['event'] == 'choice_requested']
+                    assert len(choices) == 1, events
+                    event = choices[0]
+                    assert event['headless'] is True and event['map'] == 'nouraajd', event
+                    assert event['title'] == station.getStringProperty('label'), event
+                    assert event['actionLabel'] == 'Craft' and event['backLabel'] == 'Leave station', event
+                    assert event['choicesJsonLength'] == len(event['choicesJson'].encode('utf-8')), event
+                    point = station.getCoords()
+                    assert event['playerCoords'] == {'x': point.x, 'y': point.y, 'z': point.z}, event
+                    payload = json.loads(event['choicesJson'])
+                    recipe = next(choice for choice in payload if choice['id'] == expected_recipe)
+                    assert recipe['enabled'] is False, recipe
+                    assert ('Missing:' if name == 'alchemyTable1' else 'Locked') in recipe['detail'], recipe
+                    assert not any(record['event'] == 'gui_panel_opened' for record in events), events
+                game.configure_playtest_trace(False)
+                game.clear_playtest_trace()
+                enter(sign)
+                enter(world.getObjectByName('scribeDesk1'))
+                assert not game.get_playtest_trace_records()
+            finally:
+                game.configure_playtest_trace(False)
+                instance.getContext().shutdown()
+            """)
+
+    def testHeadlessPresentationTraceBoundsUtf8PayloadWithoutChangingChoiceResult(self):
+        self.runChild("""
+            import json
+            instance = game.CGameLoader.loadGame()
+            try:
+                game.CGameLoader.startGameWithPlayer(instance, 'test', 'Warrior')
+                handler = instance.getGuiHandler()
+                assert instance.getGui() is None
+                game.configure_playtest_trace(True, max_records=8)
+                title, body, label = '\u0105' * 200, '\u017c' * 10000, '\u0142' * 100
+                handler.showCampaignScreen(title, body, label)
+                assert handler.showChoice(title, body, label, label) == ''
+                events = [json.loads(line) for line in game.get_playtest_trace_records()]
+                assert [event['event'] for event in events] == ['reader_requested', 'choice_requested'], events
+                reader, choice = events
+                assert reader['bodyLength'] == len(body.encode('utf-8')), reader
+                assert len(reader['body'].encode('utf-8')) == 4096, reader
+                assert choice['choicesJsonLength'] == len(body.encode('utf-8')), choice
+                assert len(choice['choicesJson'].encode('utf-8')) == 16384, choice
+                for event in events:
+                    assert event['titleLength'] == len(title.encode('utf-8')), event
+                    assert len(event['title'].encode('utf-8')) == 256, event
+                    assert len(event['actionLabel'].encode('utf-8')) == 128, event
+                    assert event['headless'] is True, event
+                assert len(choice['backLabel'].encode('utf-8')) == 128, choice
+            finally:
+                game.configure_playtest_trace(False)
+                instance.getContext().shutdown()
+            """)
+
 
 if __name__ == "__main__":
     unittest.main()
