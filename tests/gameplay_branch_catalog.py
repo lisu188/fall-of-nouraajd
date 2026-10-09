@@ -43,7 +43,7 @@ AUTHORED_MAPS = (
 EVENT_CALLBACKS = frozenset(
     {"trigger", "onEnter", "onTurn", "onCreate", "onDestroy", "onOpen", "onUse", "onComplete", "isCompleted"}
 )
-REVIEWED_GAMEPLAY_DIGEST = "05666b98366af1ce92a684dadd38b052841a8a4cb7990500f841291394cd1863"
+REVIEWED_GAMEPLAY_DIGEST = "964f0852ae171eebfbf1982c560c775d44fb894d955c2032c5127ff512213126"
 
 
 @dataclass(frozen=True)
@@ -228,6 +228,11 @@ FAMILIES = (
     ),
 )
 BRANCH_DETAILS = {
+    "usurpergate.throne.premature": BranchFamily(
+        "usurpergate.throne.premature",
+        "In each Warden campaign or standalone route, enter the actual throne while the authored Usurper is still alive.",
+        "The early-entry message appears without gold, throne flags, quest completion or campaign progress; a real route witness remains unresolved.",
+    ),
     "test.market.insufficientGold": BranchFamily(
         "test.market.insufficientGold",
         "Walk from the fresh test-map start to its stocked market before collecting or selling the chest's loot.",
@@ -530,7 +535,12 @@ def sourceReviewDigest(root=ROOT):
     paths.update((root / "res/campaigns").glob("*/campaign.json"))
     paths.update(
         root / source
-        for source in ("res/narrative.py", "res/plugins/castle_campaign.py", "res/plugins/octobogz_hunt.py")
+        for source in (
+            "res/narrative.py",
+            "res/plugins/castle_campaign.py",
+            "res/plugins/object.py",
+            "res/plugins/octobogz_hunt.py",
+        )
     )
     digest = hashlib.sha256()
     for path in sorted(paths):

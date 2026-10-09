@@ -143,6 +143,15 @@ coverage. Structural audits account for dialog actions/conditions, registered ca
 explicit defensive contracts. Unreachable authored content remains a reported obligation, rather than becoming a
 passing fixture-only route.
 
+The current catalog declares 672 branches across 72 cases and 340 case/class executions, with 14 unresolved
+gameplay obligations. Thirteen are disconnected authored Castle defenders. The remaining obligation is
+`usurpergate.throne.premature`, required in all four Warden campaign/standalone routes for all five classes:
+enter the actual throne while the Usurper remains alive and verify no reward or quest/campaign progress.
+The source callback test verifies that refusal, but no real route witness has been established. A permissive
+source movement model omitting housecarls finds a path only when the player commits before the pursuing boss;
+native map turns apply actors in unordered-container order. This evidence does not establish an executable
+route or justify defensive credit. All 14 obligations remain mandatory and receive no played-coverage credit.
+
 ```bash
 python3 test.py --suite mcp-branches --branch-class Wayfarer
 python3 test.py --suite mcp-branches --branch-group ninemarches

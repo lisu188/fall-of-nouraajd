@@ -8,7 +8,7 @@ from pathlib import Path
 import sys
 from types import SimpleNamespace
 import unittest
-from unittest.mock import Mock, patch
+from unittest.mock import ANY, Mock, patch
 
 from tests.castle_walkthrough import MAP_NAMES, TransitRoutes, authoredMap
 from tests.gameplay_routes_campaigns import AUTHORED_UNREACHABLE, CASES, castleTownRest, ritualCountdownAfterTurn
@@ -16,6 +16,63 @@ from tests.gameplay_routes_maps import testMarket as authoredTestMarket
 
 
 class GameplayCampaignRouteTest(unittest.TestCase):
+    def testPrematureThroneEntryPreservesRewardsQuestsAndCampaign(self):
+        path = Path(__file__).resolve().parents[1] / "res/maps/usurpergate/script.py"
+        tree = ast.parse(path.read_text(encoding="utf-8"))
+        loader = next(node for node in tree.body if isinstance(node, ast.FunctionDef) and node.name == "load")
+        callback = next(
+            node for node in loader.body if isinstance(node, ast.ClassDef) and node.name == "ObsidianThrone"
+        )
+        callback.decorator_list = []
+        defaults = next(
+            node
+            for node in loader.body
+            if isinstance(node, ast.FunctionDef) and node.name == "usurpergate_flags_default"
+        )
+        namespace = {
+            "CEvent": object,
+            "requirementMessage": Mock(),
+            "claim_once": Mock(),
+            "campaign": SimpleNamespace(complete_scenario=Mock()),
+            "rewardSnapshot": Mock(),
+            "showRewardReceipt": Mock(),
+            "THRONE_GOLD_REWARD": 500,
+        }
+        exec(compile(ast.Module(body=[defaults, callback], type_ignores=[]), str(path), "exec"), namespace)
+        for mercy in (False, True):
+            with self.subTest(mercy=mercy):
+                namespace["requirementMessage"].reset_mock()
+                flags = {
+                    "usurpergate_intro": True,
+                    "usurper_defeated": False,
+                    "throne_taken": False,
+                    "throne_reward_claimed": False,
+                    "mercy_route_applied": mercy,
+                }
+                initial = dict(flags)
+                player = SimpleNamespace(isPlayer=lambda: True, addGold=Mock(), checkQuests=Mock())
+                game = object()
+                game_map = SimpleNamespace(
+                    getBoolProperty=lambda name: flags.get(name, False),
+                    setBoolProperty=lambda name, value: flags.update({name: value}),
+                    getGame=lambda: game,
+                    getPlayer=Mock(return_value=player),
+                )
+                throne = namespace["ObsidianThrone"]()
+                throne.getMap = lambda: game_map
+                throne.getGame = Mock(return_value=game)
+                throne.onEnter(SimpleNamespace(getCause=lambda: player))
+                self.assertEqual(initial, flags)
+                namespace["requirementMessage"].assert_called_once_with(game, throne, ANY)
+                player.addGold.assert_not_called()
+                player.checkQuests.assert_not_called()
+                game_map.getPlayer.assert_not_called()
+                throne.getGame.assert_not_called()
+                namespace["claim_once"].assert_not_called()
+                namespace["rewardSnapshot"].assert_not_called()
+                namespace["showRewardReceipt"].assert_not_called()
+                namespace["campaign"].complete_scenario.assert_not_called()
+
     def testMapMarketRequiresBothAffordabilityOutcomesAndExactIdentityTransfer(self):
         player, market, shop, item, loot = (
             {"__handle__": name} for name in ("player", "market", "shop", "item", "loot")

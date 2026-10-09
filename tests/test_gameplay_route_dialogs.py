@@ -34,6 +34,7 @@ class GameplayRouteDialogTest(unittest.TestCase):
         driver.game = {"__handle__": "game"}
         driver.game_map = {"__handle__": "map"}
         driver.player = {"__handle__": "player"}
+        driver.trace_path = Path(__file__).with_name("absent-unit-native.trace.jsonl")
         driver.pump = Mock()
         driver.record = Mock()
         driver.navigateTo = Mock()
@@ -92,7 +93,7 @@ class GameplayRouteDialogTest(unittest.TestCase):
                             state["gift"] += 1
 
                 driver.call = call
-                driver.navigateTo = lambda name: state.update(item=True) if name == "banditCache" else None
+                driver.navigateTo = lambda name, **kwargs: state.update(item=True) if name == "banditCache" else None
                 driver.flag = lambda name: state["started"]
                 driver.count = lambda item: int(state["item"]) if item == "banditLedger" else state["gift"]
                 driver.questNames = lambda completed=False: ["haldaQuest"] if state["joined"] and completed else []
@@ -196,12 +197,18 @@ class GameplayRouteDialogTest(unittest.TestCase):
         positions = {name: (10 * index, 0, 0) for index, name in enumerate(names, 1)}
         state = {"position": (0, 0, 0)}
         entered = []
-        on_enter = authoredFunction("res/plugins/object.py", "onEnter", class_id="WayPoint")
-        event = SimpleNamespace(
-            getCause=lambda: SimpleNamespace(setCoords=lambda coords: state.update(position=coords))
+        on_enter = authoredFunction(
+            "res/plugins/object.py", "onEnter", class_id="WayPoint", active_waypoint_causes=set()
         )
 
-        def navigateTo(name):
+        class Creature:
+            def setCoords(self, coords):
+                state.update(position=coords)
+
+        creature = Creature()
+        event = SimpleNamespace(getCause=lambda: creature)
+
+        def navigateTo(name, **kwargs):
             if state["position"] == positions[name]:
                 return
             state["position"] = positions[name]

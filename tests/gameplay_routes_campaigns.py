@@ -644,6 +644,7 @@ WARDEN_COMMON = (
     "gravemoor.cage.loyalistCageEast",
     "gravemoor.cage.loyalistCageNorth",
     "usurpergate.arrival",
+    "usurpergate.throne.premature",
     "usurpergate.banneret.siege",
     "usurpergate.usurper.defeated",
     "usurpergate.banneret.throne",
@@ -826,6 +827,34 @@ DEFENSIVE_BRANCHES = {
 }
 
 
+PENDING_GAMEPLAY_OBLIGATIONS = {
+    "usurpergate.throne.premature": {
+        "map": "usurpergate",
+        "coords": (12, 3, 0),
+        "actor": "theUsurper",
+        "actorCoords": (12, 6, 0),
+        "reason": (
+            "No real early-throne gameplay witness has been established. The pursuing Usurper and unordered native "
+            "actor commit order make a geometrical detour insufficient: the reviewed finite movement model permits "
+            "a route for player-first commits but finds none for boss-first commits after the existing arrival. "
+            "A pure callback regression proves only the no-reward guard; it gives no gameplay credit."
+        ),
+        "sources": (
+            "res/maps/usurpergate/script.py:ObsidianThrone.onEnter",
+            "res/maps/usurpergate/config.json:theUsurper.controller",
+            "res/maps/usurpergate/map.json",
+            "src/core/CMap.cpp:CMap::move",
+            "src/core/CMap.h:mapObjects",
+            "src/core/CController.cpp:find_shared_target_next_step",
+        ),
+        "supplementalTest": (
+            "tests.test_gameplay_routes_campaigns.GameplayCampaignRouteTest."
+            "testPrematureThroneEntryPreservesRewardsQuestsAndCampaign"
+        ),
+    },
+}
+
+
 # These remain declared route obligations. Static discovery is a content blocker,
 # never a reason to credit or silently drop a natural-combat branch.
 AUTHORED_UNREACHABLE = {
@@ -885,7 +914,11 @@ SOURCE_BRANCHES = {
         "usurpergate.approach.mercy",
         "usurpergate.approach.wrath",
     ),
-    "res/maps/usurpergate/script.py:ObsidianThrone.onEnter": ("usurpergate.throne.taken", "usurpergate.throne.repeat"),
+    "res/maps/usurpergate/script.py:ObsidianThrone.onEnter": (
+        "usurpergate.throne.premature",
+        "usurpergate.throne.taken",
+        "usurpergate.throne.repeat",
+    ),
     "res/maps/usurpergate/script.py:UsurpergateQuest.isCompleted": ("usurpergate.throne.taken",),
     "res/maps/usurpergate/script.py:BanneretDialog.usurper_stands": ("usurpergate.banneret.siege",),
     "res/maps/usurpergate/script.py:BanneretDialog.throne_waits": ("usurpergate.banneret.throne",),

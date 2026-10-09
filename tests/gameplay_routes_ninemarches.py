@@ -3,14 +3,21 @@
 # SPDX-License-Identifier: GPL-3.0-or-later
 """Authored Nine Marches routes; combat, loot and reputation come from play."""
 
-from functools import partial
+from functools import lru_cache, partial
 import json
 from pathlib import Path
 
 from tests.gameplay_branch_types import RouteCase
+from tests.gameplay_branch_driver import authoredRoadCells, readNewNativeTrace
 from tests.gameplay_branch_journals import verifyJournals
 
-SOURCES = ("res/maps/ninemarches/script.py", "res/maps/ninemarches/config.json", "res/maps/ninemarches/dialog.json")
+SOURCES = (
+    "res/maps/ninemarches/script.py",
+    "res/maps/ninemarches/config.json",
+    "res/maps/ninemarches/dialog.json",
+    "res/maps/ninemarches/map.json",
+    "res/plugins/object.py",
+)
 COMPANIONS = {
     "halda": ("companionKnight", "knightDialog", "banditCache", "banditLedger", "aegisOfHalda"),
     "morrigane": ("companionWitch", "witchDialog", "relicCache", "fenRelic", "morriganesCharm"),
@@ -24,22 +31,130 @@ GATES = (
 OBELISKS = ("obeliskFields", "obeliskFen", "obeliskBarrows", "obeliskAsh", "obeliskCoast", "obeliskCold")
 
 
+@lru_cache(maxsize=1)
+def recoveryRoadCells():
+    document = json.loads(
+        (Path(__file__).resolve().parents[1] / "res/maps/ninemarches/map.json").read_text(encoding="utf-8")
+    )
+    reserved = {
+        (
+            int(actor["x"] // document["tilewidth"]),
+            int(actor["y"] // document["tileheight"]),
+            int(layer["properties"]["level"]),
+        )
+        for layer in document["layers"]
+        if layer["type"] == "objectgroup"
+        for actor in layer["objects"]
+    }
+    return authoredRoadCells("ninemarches") - reserved
+
+
+def newCombatWitness(d):
+    """Consume newly appended native records, including the bounded trace's rotated file."""
+    d.test.assertIsNotNone(d.trace_path, "Natural recovery requires the actual native combat trace")
+    positions = getattr(d, "_marches_trace_positions", {})
+    last_seq = getattr(d, "_marches_combat_seq", 0)
+    records = readNewNativeTrace(d.trace_path, positions, after_seq=last_seq)
+    d._marches_trace_positions = positions
+    d._marches_combat_seq = records[-1]["seq"] if records else last_seq
+    return any(
+        record.get("event") == "combat_finished"
+        and record.get("map") == "ninemarches"
+        and record.get("outcome") in (1, 2)
+        and any(
+            actor.get("isPlayer") is True and actor.get("name") == d.call(d.player, "getName")
+            for actor in (record.get("attacker", {}), *record.get("opponents", ()))
+        )
+        and record.get("survivor", {}).get("isPlayer") is True
+        and record["survivor"].get("name") == d.call(d.player, "getName")
+        for record in records
+    )
+
+
+def retreatWithOwnedScroll(d):
+    name = getattr(d, "_marches_retreat_scroll_name", None)
+    items = d.call(d.player, "getItems")
+    scrolls = [
+        item for item in items if d.call(item, "getName") == name and d.call(item, "getTypeId") == "TownPortalScroll"
+    ]
+    d.test.assertEqual(1, len(scrolls), "No unused, actually collected retreat scroll remains")
+    entry = tuple(d.call(d.game_map, method) for method in ("getEntryX", "getEntryY", "getEntryZ"))
+    identity = (d.game_map["__handle__"], d.player["__handle__"])
+    owned = {item["__handle__"] for item in items}
+    d.call(d.player, "useItem", scrolls[0])
+    d.pump()
+    d.test.assertEqual(identity, (d.game_map["__handle__"], d.player["__handle__"]))
+    d.test.assertEqual(entry, d.coords(), "The owned scroll must actually reach the authored map entry")
+    d.test.assertEqual(
+        owned - {scrolls[0]["__handle__"]}, {item["__handle__"] for item in d.call(d.player, "getItems")}
+    )
+    d._marches_retreat_scroll_name = None
+
+
+def afterCombat(d):
+    if not newCombatWitness(d):
+        return
+    if all(
+        d.call(d.player, current) == d.call(d.player, maximum)
+        for current, maximum in (("getHp", "getHpMax"), ("getMana", "getManaMax"))
+    ):
+        return
+    roads = recoveryRoadCells()
+    if d.roadRecoveryTarget(road_cells=roads) is None:
+        retreatWithOwnedScroll(d)
+    recovery_enabled = d.recoveryEnabled
+    d.recoveryEnabled = False
+    try:
+        turns = d.recoverOnAuthoredRoad(road_cells=roads)
+    finally:
+        d.recoveryEnabled = recovery_enabled
+    d.test.assertEqual(d.call(d.player, "getHpMax"), d.call(d.player, "getHp"))
+    d.test.assertEqual(d.call(d.player, "getManaMax"), d.call(d.player, "getMana"))
+    d.record({"naturalRoadRecovery": turns, "nativeCombatSeq": d._marches_combat_seq})
+
+
+def walk(d, name, adjacent=False):
+    afterCombat(d)
+    d.navigateTo(name, adjacent=adjacent, after_tick=lambda: afterCombat(d))
+    afterCombat(d)
+
+
+def fight(d, name):
+    actor = d.object(name)
+    d.test.assertTrue(d.call(actor, "isAlive"), name)
+    experience = d.call(d.player, "getNumericProperty", "exp")
+    afterCombat(d)
+    if d.object(name, required=False) is not None:
+        walk(d, name)
+    d.test.assertIsNone(d.object(name, required=False), f"Enemy survived: {name}")
+    d.test.assertFalse(d.call(actor, "isAlive"), "Despawn is not a combat victory")
+    d.test.assertGreater(d.call(d.player, "getNumericProperty", "exp"), experience)
+    d.combats += 1
+
+
 def start(d):
     d.startMap("ninemarches")
     if d.object("ninemarchesStart", required=False):
         if d.coords() == d.coords(d.object("ninemarchesStart")):
             d.revisit("ninemarchesStart")
         else:
-            d.navigateTo("ninemarchesStart")
+            walk(d, "ninemarchesStart")
     d.test.assertIn("ninemarchesQuest", d.questNames())
+    before = {item["__handle__"] for item in d.call(d.player, "getItems")}
+    walk(d, "townPortalScroll")
+    d.test.assertIsNone(d.object("townPortalScroll", required=False))
+    collected = [item for item in d.call(d.player, "getItems") if item["__handle__"] not in before]
+    d.test.assertEqual(1, len(collected), "Preparation must collect exactly the authored nearby scroll")
+    d.test.assertEqual("TownPortalScroll", d.call(collected[0], "getTypeId"))
+    d._marches_retreat_scroll_name = d.call(collected[0], "getName")
 
 
 def recruit(d, companion, *, item_first=False):
     actor, dialog, cache, item, gift = COMPANIONS[companion]
     if item_first:
-        d.navigateTo(cache)
+        walk(d, cache)
         d.test.assertEqual(1, d.count(item))
-    d.navigateTo(actor)
+    walk(d, actor)
     d.test.assertTrue(d.condition(dialog, "not_met"))
     # Leaving the authored offer does not silently accept the companion's quest.
     d.select(dialog, "ENTRY", 0)
@@ -51,11 +166,11 @@ def recruit(d, companion, *, item_first=False):
         d.test.assertTrue(d.condition(dialog, "questInProgress"))
         d.select(dialog, "ENTRY", 4)
         d.select(dialog, "REMINDER", 0)
-        d.navigateTo(cache)
+        walk(d, cache)
         d.test.assertEqual(1, d.count(item))
         d.revisit(cache)
         d.test.assertEqual(1, d.count(item))
-        d.navigateTo(actor)
+        walk(d, actor)
     d.test.assertTrue(d.condition(dialog, "can_recruit"))
     before_rep = d.call(d.player, "getNumericProperty", "reputation")
     before_gift = d.count(gift)
@@ -77,7 +192,7 @@ def companionRoute(d, companion, item_first):
     d.check(f"ninemarches.companion.{companion}.loyal", d.condition(dialog, "is_joined"))
     d.check(f"ninemarches.companion.{companion}.{'itemFirst' if item_first else 'questFirst'}", d.count(gift) == 1)
     d.saveAndReload(f"{companion}-joined")
-    d.navigateTo(actor)
+    walk(d, actor)
     d.check(f"ninemarches.companion.{companion}.persisted", d.condition(dialog, "is_joined") and d.count(gift) == 1)
 
 
@@ -95,7 +210,7 @@ def negativeReputationRoute(d, companion, leaves):
     )
     d.test.assertFalse(d.condition(dialog, "can_recruit"))
     d.saveAndReload(f"{companion}-negative-reputation")
-    d.navigateTo(actor)
+    walk(d, actor)
     d.test.assertEqual(leaves, d.condition(dialog, "has_left"))
     d.test.assertEqual(1, d.count(gift))
     if leaves:
@@ -107,14 +222,14 @@ def corvynDeparture(d):
     start(d)
     actor, dialog, gift = recruit(d, "corvyn")
     recruit(d, "halda")
-    d.navigateTo(actor)
+    walk(d, actor)
     d.test.assertEqual(4, d.call(d.player, "getNumericProperty", "reputation"))
     d.choose(dialog, "banter", condition="is_joined")
     d.select(dialog, "LOYAL", 0)
     d.check("ninemarches.companion.corvyn.loyalAtFour", d.condition(dialog, "is_joined"))
-    d.navigateTo("witchHut")
+    walk(d, "witchHut")
     d.test.assertEqual(5, d.call(d.player, "getNumericProperty", "reputation"))
-    d.navigateTo(actor)
+    walk(d, actor)
     d.choose(dialog, "banter", condition="is_joined")
     d.select(dialog, "GONE", 0)
     d.check("ninemarches.companion.corvyn.leftAtFive", d.condition(dialog, "has_left"))
@@ -123,20 +238,20 @@ def corvynDeparture(d):
     d.select(dialog, "ENTRY", 3)
     d.select(dialog, "GONE", 0)
     d.saveAndReload("corvyn-departed")
-    d.navigateTo(actor)
+    walk(d, actor)
     d.check("ninemarches.companion.corvyn.departurePersisted", d.condition(dialog, "has_left") and d.count(gift) == 1)
 
 
 def gates(d):
     for color, cache, threshold, gate, chapter in GATES:
-        d.navigateTo(threshold)
+        walk(d, threshold)
         d.test.assertFalse(d.flag(color + "_gate_open"))
         d.test.assertIsNotNone(d.object(gate))
-        d.navigateTo(cache)
+        walk(d, cache)
         d.test.assertEqual(1, d.count(color + "Key"))
         d.revisit(cache)
         d.test.assertEqual(1, d.count(color + "Key"))
-        d.navigateTo(threshold)
+        walk(d, threshold)
         d.check(
             f"ninemarches.gate.{color}.opensWithKey",
             d.flag(color + "_gate_open") and d.object(gate, required=False) is None,
@@ -164,7 +279,7 @@ def sites(d):
         if name == "goldMine":
             # The configured mine amount is authoritative; do not copy a balance constant.
             amount = d.call(target, "getNumericProperty", "value")
-        d.navigateTo(name, adjacent=True)
+        walk(d, name, adjacent=True)
         d.test.assertFalse(d.flag(flag), "The first-claim witness must precede actual entry")
         origin = d.coords()
         gold = d.gold()
@@ -179,13 +294,13 @@ def sites(d):
         d.check(f"ninemarches.site.{name}.once", d.flag(flag))
     d.test.assertTrue(d.flag("CAN_CRAFT_SCROLLS"))
     reputation = d.call(d.player, "getNumericProperty", "reputation")
-    d.navigateTo("witchHut")
+    walk(d, "witchHut")
     d.test.assertEqual(reputation + 1, d.call(d.player, "getNumericProperty", "reputation"))
     d.revisit("witchHut")
     d.check("ninemarches.site.witchHut.once", d.call(d.player, "getNumericProperty", "reputation") == reputation + 1)
     for chest in ("chestFields", "chestFen", "chestBarrows", "chestAsh", "chestCoast", "chestCold"):
         handle = d.object(chest)
-        d.navigateTo(chest)
+        walk(d, chest)
         d.test.assertTrue(d.call(handle, "getBoolProperty", "looted"))
         before = (d.gold(), {item["__handle__"] for item in d.call(d.player, "getItems")})
         d.revisit(chest)
@@ -201,14 +316,19 @@ def portals(d):
         ("monolithAsh", "monolithCold"),
         ("monolithCold", "monolithAsh"),
     ):
+        afterCombat(d)
         destination = d.coords(d.object(target))
-        d.revisit(source)
+        if d.coords() == d.coords(d.object(source)):
+            d.revisit(source)
+        else:
+            d.navigateTo(source, after_tick=lambda: afterCombat(d))
         d.check(f"ninemarches.portal.{source}", d.coords() == destination, destination=destination)
+    afterCombat(d)
 
 
 def reputationDialog(d, low=False):
     start(d)
-    d.navigateTo("mayorHall")
+    walk(d, "mayorHall")
     if low:
         d.test.assertTrue(d.condition("mayorDialog", "low_reputation"))
         d.select("mayorDialog", "ENTRY", 1)
@@ -221,14 +341,14 @@ def reputationDialog(d, low=False):
     d.check("ninemarches.mayor.steady", not d.condition("mayorDialog", "low_reputation"))
     d.select("mayorDialog", "ENTRY", 3)
     d.select("mayorDialog", "LORE", 0)
-    d.navigateTo("gravewatchTavern")
+    walk(d, "gravewatchTavern")
     d.select("tavernDialog", "ENTRY", 0)
     d.select("tavernDialog", "RUMORS", 0)
     d.select("tavernDialog", "ENTRY", 1)
     d.select("tavernDialog", "HIRING", 0)
     recruit(d, "halda")
-    d.navigateTo("witchHut")
-    d.navigateTo("mayorHall")
+    walk(d, "witchHut")
+    walk(d, "mayorHall")
     d.test.assertEqual(3, d.call(d.player, "getNumericProperty", "reputation"))
     d.select("mayorDialog", "ENTRY", 0)
     d.select("mayorDialog", "HIGH", 0)
@@ -237,7 +357,7 @@ def reputationDialog(d, low=False):
 
 def finale(d, allies):
     start(d)
-    d.navigateTo("digSite")
+    walk(d, "digSite")
     d.test.assertFalse(d.flag("crown_taken"))
     d.check("ninemarches.dig.deniedWithoutSigils", d.count("ninefoldCrown") == 0)
     gates(d)
@@ -245,21 +365,21 @@ def finale(d, allies):
         for companion in COMPANIONS:
             recruit(d, companion)
     for index, name in enumerate(OBELISKS, 1):
-        d.navigateTo(name)
+        walk(d, name)
         d.test.assertEqual(index, d.number("obelisks_read"))
         d.revisit(name)
         d.test.assertEqual(index, d.number("obelisks_read"))
         d.check(f"ninemarches.obelisk.{name}.once", True)
         if index == 5:
-            d.navigateTo("digSite")
+            walk(d, "digSite")
             d.check("ninemarches.dig.deniedAtFive", not d.flag("crown_taken") and d.count("ninefoldCrown") == 0)
-    d.navigateTo("digSite")
+    walk(d, "digSite")
     d.check("ninemarches.dig.crownAndKing", d.count("ninefoldCrown") == 1 and d.flag("boss_woken"))
     d.test.assertNotIn("ninemarchesQuest", d.questNames(completed=True))
     verifyJournals(d)
     d.test.assertEqual(4, d.number("chapter"))
     d.saveAndReload("ninefold-crown-before-king")
-    d.fight("theNinefoldKingBoss")
+    fight(d, "theNinefoldKingBoss")
     d.test.assertTrue(d.flag("boss_defeated"))
     d.test.assertIn("ninemarchesQuest", d.questNames(completed=True))
     verifyJournals(d)
@@ -303,7 +423,7 @@ def regionalCombat(d):
     }
     for family, name in groups.items():
         center = d.coords(d.object(name))
-        d.navigateTo(name, adjacent=True)
+        walk(d, name, adjacent=True)
         experience = d.call(d.player, "getNumericProperty", "exp")
         d.step(center)
         d.test.assertIsNone(d.object(name, required=False))
@@ -317,7 +437,7 @@ def regionalCombat(d):
         for enemy in enemies:
             enemy_name = d.call(enemy, "getName")
             if d.object(enemy_name, required=False):
-                d.fight(enemy_name)
+                fight(d, enemy_name)
         d.check(f"ninemarches.combat.{family}", d.call(d.player, "getNumericProperty", "exp") > experience)
 
 

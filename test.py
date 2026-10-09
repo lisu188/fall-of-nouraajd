@@ -138,9 +138,11 @@ FAST_TEST_PREFIXES = (
     "GameplayStartingSaveTest.",
     "GameplayCampaignRouteTest.",
     "GameplayRouteDialogTest.",
+    "NineMarchesRecoveryTest.",
     "McpTestSeedTest.",
     "McpBranchShardsTest.",
     "McpEquipmentContractTest.",
+    "WaypointTraversalTest.",
     "GameDiagnosticsTest.",
     "McpDiagnosticsTest.",
     "OctobogzDiagnosticTest.",
@@ -26365,12 +26367,14 @@ if SOURCE_UI_TESTS_AVAILABLE:
     from tests.test_gameplay_starting_save import GameplayStartingSaveTest as _GameplayStartingSaveTest
     from tests.test_gameplay_routes_campaigns import GameplayCampaignRouteTest as _GameplayCampaignRouteTest
     from tests.test_gameplay_route_dialogs import GameplayRouteDialogTest as _GameplayRouteDialogTest
+    from tests.test_gameplay_routes_ninemarches import NineMarchesRecoveryTest as _NineMarchesRecoveryTest
     from tests.test_gameplay_branches_mcp import GameplayBranchMcpTest as _GameplayBranchMcpTest
     from tests.test_mcp_test_seed import McpTestSeedTest as _McpTestSeedTest
     from tests.test_mcp_test_seed import McpTestSeedRuntimeTest as _McpTestSeedRuntimeTest
     from tests.test_mcp_branch_shards import McpBranchShardsTest as _McpBranchShardsTest
     from tests.test_mcp_equipment import McpEquipmentContractTest as _McpEquipmentContractTest
     from tests.test_mcp_equipment import McpEquipmentRuntimeTest as _McpEquipmentRuntimeTest
+    from tests.test_waypoint_traversal import WaypointTraversalTest as _WaypointTraversalTest
 
     class GameplayBranchCatalogTest(_GameplayBranchCatalogTest):
         pass
@@ -26390,6 +26394,9 @@ if SOURCE_UI_TESTS_AVAILABLE:
     class GameplayRouteDialogTest(_GameplayRouteDialogTest):
         pass
 
+    class NineMarchesRecoveryTest(_NineMarchesRecoveryTest):
+        pass
+
     class GameplayBranchMcpTest(_GameplayBranchMcpTest):
         pass
 
@@ -26406,6 +26413,9 @@ if SOURCE_UI_TESTS_AVAILABLE:
         pass
 
     class McpEquipmentRuntimeTest(_McpEquipmentRuntimeTest):
+        pass
+
+    class WaypointTraversalTest(_WaypointTraversalTest):
         pass
 
     class GameDiagnosticsTest(_GameDiagnosticsTest):
@@ -26518,7 +26528,9 @@ if SOURCE_UI_TESTS_AVAILABLE:
     del _NavigationCallbackTest
     del _ConsoleUiInteractionTest, _UiMinimapInteractionTest
     del _GameplayBranchCatalogTest, _GameplayBranchDriverTest, _GameplayBranchJournalsTest, _GameplayBranchMcpTest
+    del _WaypointTraversalTest
     del _GameplayStartingSaveTest, _GameplayCampaignRouteTest, _GameplayRouteDialogTest
+    del _NineMarchesRecoveryTest
     del _McpTestSeedTest, _McpBranchShardsTest
     del _McpTestSeedRuntimeTest, _McpEquipmentContractTest, _McpEquipmentRuntimeTest
 

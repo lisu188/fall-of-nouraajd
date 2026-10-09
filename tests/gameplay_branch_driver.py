@@ -82,6 +82,62 @@ def mapDefinitions(map_id):
     return result
 
 
+@lru_cache(maxsize=16)
+def authoredRoadCells(map_id):
+    document = json.loads((ROOT / "res/maps" / map_id / "map.json").read_text(encoding="utf-8"))
+    road_ids = {
+        tileset["firstgid"] + int(local_id)
+        for tileset in document["tilesets"]
+        for local_id, properties in tileset.get("tileproperties", {}).items()
+        if properties.get("type") == "RoadTile"
+    }
+    return frozenset(
+        (index % document["width"], index // document["width"], int(layer["properties"]["level"]))
+        for layer in document["layers"]
+        if layer["type"] == "tilelayer"
+        for index, tile in enumerate(layer["data"])
+        if tile in road_ids
+    )
+
+
+def readNewNativeTrace(path, positions, after_seq=0):
+    """Read new bounded native trace records with caller-owned cursors across ordinary file rotation."""
+    path = Path(path)
+    records = {}
+    staged_positions = {}
+    files_present = False
+    for candidate in (Path(str(path) + ".1"), path):
+        if not candidate.is_file():
+            continue
+        files_present = True
+        with candidate.open(encoding="utf-8") as source:
+            first_line = source.readline()
+            if not first_line:
+                continue
+            old_first, old_offset = positions.get(str(candidate), (None, 0))
+            source.seek(old_offset if first_line == old_first else 0)
+            for line in source:
+                record = json.loads(line)
+                seq = record.get("seq")
+                if type(seq) is not int or seq <= 0:
+                    raise AssertionError(("Invalid native trace sequence", record))
+                if seq > after_seq:
+                    if seq in records and records[seq] != record:
+                        raise AssertionError(("Conflicting native trace records", seq))
+                    records[seq] = record
+            staged_positions[str(candidate)] = (first_line, source.tell())
+    if after_seq > 0 and not files_present:
+        raise AssertionError(("Native trace files disappeared", {"path": str(path), "afterSeq": after_seq}))
+    ordered = tuple(records[seq] for seq in sorted(records))
+    for expected, record in enumerate(ordered, after_seq + 1):
+        if record["seq"] != expected:
+            raise AssertionError(
+                ("Native trace evidence was lost", {"expectedSeq": expected, "observedSeq": record["seq"]})
+            )
+    positions.update(staged_positions)
+    return ordered
+
+
 def resolveDefinition(definitions, identity, seen=()):
     if identity in seen:
         raise AssertionError(f"Cyclic resource reference: {seen + (identity,)}")
@@ -109,6 +165,9 @@ class GameplayBranchDriver:
         self._dialog_positions = {}
         self.action_path = None
         self.trace_path = None
+        self._combat_trace_positions = {}
+        self._combat_trace_seq = 0
+        self._combat_failure = None
         self._recorded_actions = 0
         self._coordinate_point = None
         self._ephemeral_handles = set()
@@ -266,6 +325,7 @@ class GameplayBranchDriver:
         self.call(self.player, "setFightController", controller)
 
     def assertSurvival(self):
+        self.assertNativeCombatOutcomes()
         if self.player is not None:
             if self.call(self.player, "getHp") <= 0:
                 self.test.fail(self.snapshot())
@@ -274,6 +334,30 @@ class GameplayBranchDriver:
                 self.call(self.player, "getStringProperty", "uiDefeatReceipt"),
                 "A defeated/respawned hero cannot continue a successful route",
             )
+
+    def assertNativeCombatOutcomes(self):
+        if self._combat_failure is not None:
+            self.test.fail(self._combat_failure)
+        if self.trace_path is None:
+            return
+        try:
+            records = readNewNativeTrace(self.trace_path, self._combat_trace_positions, self._combat_trace_seq)
+        except (AssertionError, OSError, ValueError) as error:
+            self._combat_failure = ("Native combat evidence unavailable", str(error))
+            self.test.fail(self._combat_failure)
+        for record in records:
+            if record.get("event") != "combat_finished":
+                continue
+            participants = [record.get("attacker"), *record.get("opponents", ())]
+            if not any(isinstance(actor, dict) and actor.get("isPlayer") is True for actor in participants):
+                continue
+            outcome = record.get("outcome")
+            # CFightOutcome resolves only AttackerVictory (1) and AttackerDefeat (2).
+            if type(outcome) is not int or outcome not in (1, 2):
+                self._combat_failure = ("Unresolved native player combat", record)
+                self.test.fail(self._combat_failure)
+        if records:
+            self._combat_trace_seq = records[-1]["seq"]
 
     def pump(self):
         loop = self.engine("event_loop.instance")
@@ -386,6 +470,79 @@ class GameplayBranchDriver:
                 owned - {item["__handle__"]}, {entry["__handle__"] for entry in self.call(self.player, "getItems")}
             )
 
+    def roadRecoveryTarget(self, *, road_cells=None, visited=()):
+        """Choose an adjacent native road step that does not approach the nearest live hostile."""
+        self.assertSurvival()
+        if road_cells is None:
+            road_cells = authoredRoadCells(self.map_name)
+        origin = self.coords()
+        affiliation = self.call(self.player, "getStringProperty", "affiliation")
+        hostiles = []
+        for actor in self.call(self.game_map, "getObjects"):
+            if actor["__handle__"] == self.player["__handle__"]:
+                continue
+            methods = {entry["name"] for entry in actor.get("pythonMethods", ())}
+            if actor.get("__type__") not in {"CCreature", "CPlayer"} and "isAlive" not in methods:
+                continue
+            if not self.call(actor, "isAlive") or self.call(actor, "isNpc"):
+                continue
+            if affiliation and self.call(actor, "getStringProperty", "affiliation") == affiliation:
+                continue
+            coords = self.coords(actor)
+            if coords[2] == origin[2]:
+                hostiles.append(coords)
+
+        def clearance(coords):
+            return min((sum(abs(a - b) for a, b in zip(coords, hostile)) for hostile in hostiles), default=float("inf"))
+
+        origin_clearance = clearance(origin)
+        candidates = []
+        for dx, dy in ((-1, 0), (1, 0), (0, -1), (0, 1)):
+            coords = (origin[0] + dx, origin[1] + dy, origin[2])
+            if coords not in road_cells:
+                continue
+            distance = clearance(coords)
+            if distance <= 1 or distance < origin_clearance:
+                continue
+            tile = self.call(self.game_map, "getTile", *coords)
+            if tile is None or self.call(tile, "getTypeId") != "RoadTile" or not self.canStep(coords):
+                continue
+            candidates.append((-distance, visited.count(coords), coords))
+        return min(candidates)[2] if candidates else None
+
+    def recoverOnAuthoredRoad(self, *, limit=128, road_cells=None):
+        """Recover through bounded native road movement and ordinary map turns, or fail the route."""
+        self.test.assertTrue(type(limit) is int and 0 < limit <= 128, "Road recovery permits at most 128 real turns")
+        world, map_name, initial_turns = self.game_map["__handle__"], self.map_name, self.turns
+        visited = [self.coords()]
+        unchanged = 0
+        for index in range(limit + 1):
+            self.assertSurvival()
+            hp, hp_max = self.call(self.player, "getHp"), self.call(self.player, "getHpMax")
+            mana, mana_max = self.call(self.player, "getMana"), self.call(self.player, "getManaMax")
+            if hp >= hp_max and mana >= mana_max:
+                return self.turns - initial_turns
+            if index == limit:
+                break
+            target = self.roadRecoveryTarget(road_cells=road_cells, visited=visited)
+            if target is None:
+                self.test.fail(("No safe adjacent authored road for recovery", self.snapshot()))
+            origin = self.coords()
+            controller = self.call(self.player, "getController")
+            self.call(controller, "setTarget", self.player, self._coordinateHandle(target))
+            self.tick()
+            self.steps += 1
+            self.test.assertEqual(
+                (world, map_name), (self.game_map["__handle__"], self.map_name), "Road recovery left its map"
+            )
+            arrival = self.coords()
+            self.test.assertIn(arrival, (origin, target), "Road recovery left its adjacent native target")
+            unchanged = unchanged + 1 if arrival == origin else 0
+            if unchanged >= 24:
+                self.test.fail(("Native road recovery stalled", target, self.snapshot()))
+            visited.append(arrival)
+        self.test.fail(("Natural road recovery budget exhausted", limit, self.snapshot()))
+
     def _validateMovement(self, origin, arrival):
         if origin[2] == arrival[2] and sum(abs(a - b) for a, b in zip(origin, arrival)) <= 1:
             return
@@ -480,10 +637,14 @@ class GameplayBranchDriver:
             unchanged = unchanged + 1 if self.coords() == before else 0
             if unchanged >= 24:
                 self.test.fail(("Native navigation stalled", target, self.snapshot()))
+            if unchanged:
+                # Native combat restores the origin and interrupts the controller's path.
+                controller = self.call(self.player, "getController")
+                self.call(controller, "setTarget", self.player, self._coordinateHandle(target))
             self.steps += 1
         self.test.fail(("Native route budget exhausted", target, budget, self.snapshot()))
 
-    def navigateTo(self, name, adjacent=False):
+    def navigateTo(self, name, adjacent=False, *, after_tick=None):
         target = self.object(name)
         initial = self.coords(target)
         budget = max(128, 4 * sum(abs(a - b) for a, b in zip(self.coords(), initial)) + 128)
@@ -510,6 +671,8 @@ class GameplayBranchDriver:
             if unchanged >= 24:
                 self.test.fail(("Could not approach authored object", name, self.snapshot()))
             self.steps += 1
+            if after_tick is not None:
+                after_tick()
         self.test.fail(("Authored route budget exhausted", name, budget, self.snapshot()))
 
     def step(self, coords):
@@ -820,6 +983,9 @@ class GameplayBranchDriver:
 
     def finish(self):
         self.assertSurvival()
+        if self.trace_path is not None and self._combat_trace_seq == 0:
+            self._combat_failure = ("No observed native trace records", str(self.trace_path))
+            self.test.fail(self._combat_failure)
         verifyJournals(self)
         self.test.assertEqual(set(self.case.branches), set(self.branches), "Unvisited authored branches")
 

@@ -83,6 +83,23 @@ class GameplayBranchCatalogTest(unittest.TestCase):
             "Authored content changed: review branch obligations before updating the source digest",
         )
 
+    def testSharedObjectCallbackMutationInvalidatesReviewedDigest(self):
+        source = catalog.ROOT / "res/plugins/object.py"
+        original_read = Path.read_text
+
+        def changed_read(path, *args, **kwargs):
+            text = original_read(path, *args, **kwargs)
+            if path == source:
+                guard = "if cause in active_waypoint_causes:"
+                self.assertIn(guard, text)
+                return text.replace(guard, "if False and cause in active_waypoint_causes:", 1)
+            return text
+
+        before = catalog.sourceReviewDigest()
+        with patch.object(Path, "read_text", changed_read):
+            after = catalog.sourceReviewDigest()
+        self.assertNotEqual(before, after, "The shared authored object callbacks must remain inside the source audit")
+
     def testAstNormalizationIgnoresOnlyEmptyVersionSpecificTypeParameters(self):
         source = (
             "class Quest:\n    def completed(self):\n        return True\n    async def advance(self):\n        pass\n"
@@ -280,10 +297,30 @@ class TownDialog:
         self.assertTrue(set(pending) <= declared)
         self.assertFalse(set(pending) & set(catalog.defensiveContracts()))
         for branch, evidence in pending.items():
+            if not branch.startswith("castle."):
+                continue
             self.assertIn(".defender.", branch)
             self.assertGreater(evidence["componentCells"], 0)
             self.assertEqual(3, len(evidence["coords"]))
             self.assertIn("disconnected", evidence["reason"])
+
+    def testPrematureThroneRemainsMandatoryForEveryWardenRouteAndClass(self):
+        branch = "usurpergate.throne.premature"
+        pending = catalog.pendingGameplayObligations()
+        self.assertEqual(14, len(pending))
+        self.assertIn(branch, pending)
+        self.assertNotIn(branch, catalog.defensiveContracts())
+        self.assertNotIn(branch, catalog.contractEvidence())
+        entry = catalog.branchCatalog()[branch]
+        self.assertEqual(
+            {"wardens-mercy", "wardens-wrath", "wardens-standalone-spared", "wardens-standalone-executed"},
+            set(entry["cases"]),
+        )
+        self.assertEqual(set(PLAYER_CLASSES), set(entry["classes"]))
+        self.assertIn("res/maps/usurpergate/script.py:ObsidianThrone.onEnter", entry["callbacks"])
+        self.assertEqual((12, 3, 0), pending[branch]["coords"])
+        self.assertIn("unordered", pending[branch]["reason"])
+        self.assertIn("unresolved", entry["outcomes"])
 
     def testTestMapMarketRequiresSeparatePurchaseAndInsufficientFundsWitnesses(self):
         entries = catalog.branchCatalog()
