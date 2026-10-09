@@ -249,8 +249,13 @@ records include bounded participant coordinates, HP/max HP, mana/max mana and le
 disabled tracing emits no snapshots. A fresh completed native player-caused `object_entered` receipt can
 establish a moving-NPC visit before that NPC leaves later in the same turn. The bounded receipt cache requires
 exact map, target and player identities and the same live MCP target handle; earlier visits, NPC-caused contacts
-and replaced targets do not satisfy the approach. Victor's completed quest is evaluated through the native player
-API after its actual rescue callback, without an extra movement turn.
+and replaced targets do not satisfy the approach. Same-cell overlap is accepted only after a witnessed player
+entry; a single continuing-contact record tracks exact live handles, native identities and coordinates, and any
+subsequent movement by either participant invalidates it. An NPC walking onto a stationary player earns no visit.
+Victor's completed quest is evaluated through the native player API after its actual rescue callback, without an
+extra movement turn. Gooby completion requires the ordered native `quest_completed`, exact 200-gold payment and
+headless reward receipt for the same player and map, including when completion occurs during movement. The bounded
+reward cache preserves that evidence for later hunt hand-ins and rejects duplicate grants or incomplete receipts.
 When an incidental actual Brood victory occurs during the Alpha approach, the hunt validates the dead actor and
 native combat receipt, then uses only owned healing before the next movement or map turn. It fails if those finite
 supplies cannot restore full HP. This correction adds no retreat, relocation, stronger character or combat retry;

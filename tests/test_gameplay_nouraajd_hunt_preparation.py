@@ -3,12 +3,15 @@
 # SPDX-License-Identifier: GPL-3.0-or-later
 """Execute bounded earned hunt preparation without a native game or forced route progress."""
 
+import copy
 import json
 from types import SimpleNamespace
 import unittest
-from unittest.mock import patch
+from unittest.mock import Mock, patch
 
 from tests import gameplay_routes_nouraajd as routes
+from tests.gameplay_branch_rewards import observeMainQuestReward, requireMainQuestReward
+from tests.test_gameplay_route_dialogs import authoredFunction
 
 
 class GameplayNouraajdHuntPreparationTest(unittest.TestCase):
@@ -431,6 +434,241 @@ class GameplayNouraajdHuntPreparationTest(unittest.TestCase):
                 self.assertEqual(outcome, state["victor"])
                 self.assertEqual([], state["order"])
                 meet.assert_not_called()
+
+    def mainQuestRewardFixture(self, *, pay=True):
+        player_ref = {"id": "Warrior", "name": "actual-hero", "typeId": "Warrior", "type": "CPlayer", "isPlayer": True}
+        state = {"gold": 100, "claimed": False, "records": []}
+        player = SimpleNamespace(
+            getItems=lambda: [],
+            getEquipped=lambda: {},
+            getGold=lambda: state["gold"],
+            getNumericProperty=lambda key: 0,
+        )
+        game_map = SimpleNamespace(getPlayer=lambda: player)
+        game = SimpleNamespace(getMap=lambda: game_map)
+
+        def addGold(amount):
+            if pay:
+                before = state["gold"]
+                state["gold"] += amount
+                state["records"].append(
+                    {
+                        "event": "gold_changed",
+                        "actor": player_ref,
+                        "map": "nouraajd",
+                        "before": before,
+                        "after": state["gold"],
+                        "delta": amount,
+                    }
+                )
+
+        def showReader(game_instance, title, body):
+            self.assertIs(game, game_instance)
+            state["records"].append(
+                {
+                    "event": "reader_requested",
+                    "title": title,
+                    "body": body,
+                    "titleLength": len(title.encode("utf-8")),
+                    "bodyLength": len(body.encode("utf-8")),
+                    "player": player_ref,
+                    "map": "nouraajd",
+                    "headless": True,
+                }
+            )
+
+        def claimOnce(world, flag):
+            self.assertIs(game_map, world)
+            self.assertEqual("GOOBY_REWARD_CLAIMED", flag)
+            if state["claimed"]:
+                return False
+            state["claimed"] = True
+            return True
+
+        player.addGold = addGold
+        snapshot = authoredFunction("res/game.py", "rewardSnapshot")
+        receipt = authoredFunction("res/game.py", "showRewardReceipt", rewardSnapshot=snapshot, showReader=showReader)
+        complete = authoredFunction(
+            "res/maps/nouraajd/script.py",
+            "onComplete",
+            class_id="MainQuest",
+            claim_once=claimOnce,
+            rewardSnapshot=snapshot,
+            showRewardReceipt=receipt,
+            MAIN_QUEST_GOLD_REWARD=200,
+        )
+        quest = SimpleNamespace(getGame=lambda: game)
+        state["records"].append(
+            {"event": "quest_completed", "quest": "mainQuest", "player": player_ref, "map": "nouraajd"}
+        )
+        complete(quest)
+        return state, lambda: complete(quest)
+
+    def testActualMainQuestRewardFunctionsProduceExactlyOneNativePaymentAndReceipt(self):
+        state, repeat = self.mainQuestRewardFixture()
+        validator = SimpleNamespace()
+        for record in state["records"]:
+            observeMainQuestReward(validator, [record])
+        receipt = requireMainQuestReward(validator, "actual-hero")
+        self.assertEqual(300, state["gold"])
+        self.assertEqual(200, receipt["payment"]["delta"])
+        before = copy.deepcopy(state)
+        repeat()
+        self.assertEqual(before, state, "The actual claim guard must prevent repeated grants and receipts")
+        observeMainQuestReward(validator, [{"event": "map_moved"}])
+        self.assertIs(receipt, requireMainQuestReward(validator, "actual-hero"))
+
+    def testActualAuthoredReceiptWithoutTheNativePaymentIsRejected(self):
+        state, _repeat = self.mainQuestRewardFixture(pay=False)
+        self.assertIn("No new rewards.", state["records"][-1]["body"])
+        with self.assertRaisesRegex(AssertionError, "no witnessed native payment"):
+            observeMainQuestReward(SimpleNamespace(), state["records"])
+
+    def testMainQuestRewardRejectsWrongPaymentOrPresentation(self):
+        state, _repeat = self.mainQuestRewardFixture()
+        for label, index, changes in (
+            ("amount", 1, {"after": 299, "delta": 199}),
+            ("arithmetic", 1, {"after": 301}),
+            ("boolean", 1, {"before": True}),
+            ("recipient", 1, {"actor": {"name": "another-hero", "isPlayer": True}}),
+            ("payment-map", 1, {"map": "ritual"}),
+            ("receipt-player", 2, {"player": {"name": "another-hero", "isPlayer": True}}),
+            ("receipt-map", 2, {"map": "ritual"}),
+            ("visible-reader", 2, {"headless": False}),
+            ("title-length", 2, {"titleLength": 1}),
+            ("truncated", 2, {"bodyLength": 1}),
+            ("lying-amount", 2, {"body": "Gold: +199", "bodyLength": 10}),
+            ("duplicate-amount", 2, {"body": "Gold: +200\nGold: +200", "bodyLength": 21}),
+            ("conflicting-amount", 2, {"body": "Gold: +200\nGold: +1", "bodyLength": 19}),
+        ):
+            with self.subTest(label=label):
+                records = copy.deepcopy(state["records"])
+                records[index].update(changes)
+                with self.assertRaises(AssertionError):
+                    observeMainQuestReward(SimpleNamespace(), records)
+
+    def testMainQuestRewardRequiresCompletionPaymentAndPresentationInOrder(self):
+        state, _repeat = self.mainQuestRewardFixture()
+        completion, payment, receipt = state["records"]
+        for records in (
+            [receipt],
+            [payment, receipt],
+            [completion, receipt],
+            [completion, payment, payment, receipt],
+            [completion, payment, {"event": "quest_completed", "quest": "anotherQuest"}],
+        ):
+            with self.subTest(records=records), self.assertRaises(AssertionError):
+                observeMainQuestReward(SimpleNamespace(), records)
+        for records in ([], [completion], [completion, payment]):
+            with self.subTest(records=records):
+                validator = SimpleNamespace()
+                observeMainQuestReward(validator, records)
+                with self.assertRaises(AssertionError):
+                    requireMainQuestReward(validator, "actual-hero")
+        validator = SimpleNamespace()
+        observeMainQuestReward(validator, state["records"])
+        with self.assertRaisesRegex(AssertionError, "twice"):
+            observeMainQuestReward(validator, state["records"])
+        with self.assertRaises(AssertionError):
+            requireMainQuestReward(validator, "another-hero")
+
+    def testMainQuestCompletionRequiresAuthoredActualPlayerIdentity(self):
+        state, _repeat = self.mainQuestRewardFixture()
+        for changes in (
+            {"player": None},
+            {"player": {"name": "npc", "isPlayer": False}},
+            {"player": {"name": "", "isPlayer": True}},
+            {"map": "ritual"},
+        ):
+            with self.subTest(changes=changes):
+                records = copy.deepcopy(state["records"])
+                records[0].update(changes)
+                with self.assertRaises(AssertionError):
+                    observeMainQuestReward(SimpleNamespace(), records)
+
+    def testOriginalGoobyHelperRejectsAutomaticCompletionWithoutItsActualReward(self):
+        from tests.test_octobogz_mcp import OctobogzMcpWalkthroughTest
+
+        for pay in (False, True):
+            with self.subTest(pay=pay):
+                state, _repeat = self.mainQuestRewardFixture(pay=pay)
+                helper = OctobogzMcpWalkthroughTest(methodName="runTest")
+                helper.player, helper.game_map = "player", "map"
+                helper.snapshot = Mock()
+                helper.recoverOnRoadPair = Mock()
+                helper.walkTo = Mock()
+                helper.questNames = lambda method: ["mainQuest"]
+                helper.call = lambda actor, method, *args: True if method == "getBoolProperty" else "actual-hero"
+                helper.advanceQuestEvaluationTurn = Mock(
+                    side_effect=AssertionError("Already completed during movement")
+                )
+                validator = SimpleNamespace(test=helper, _combat_failure=None, trace_path=None)
+                helper._native_combat_validator = validator
+
+                def verifyReward():
+                    observeMainQuestReward(validator, state["records"])
+                    return OctobogzMcpWalkthroughTest.requireOriginalMainQuestReward(helper)
+
+                helper.requireOriginalMainQuestReward = verifyReward
+                if pay:
+                    helper.finishOriginalMainQuest()
+                    self.assertEqual(300, state["gold"])
+                else:
+                    with self.assertRaisesRegex(AssertionError, "no witnessed native payment"):
+                        helper.finishOriginalMainQuest()
+                helper.advanceQuestEvaluationTurn.assert_not_called()
+
+    def testMatrixHuntAdapterRequiresTheSameDriverOwnedRewardEvidence(self):
+        state, _repeat = self.mainQuestRewardFixture()
+        driver = SimpleNamespace(
+            assertNativeCombatOutcomes=Mock(), call=Mock(return_value="actual-hero"), player="hero"
+        )
+        verify = authoredFunction(
+            "tests/gameplay_branch_driver.py",
+            "requireOriginalMainQuestReward",
+            class_id="Adapter",
+            driver=driver,
+            requireMainQuestReward=requireMainQuestReward,
+        )
+        with self.assertRaisesRegex(AssertionError, "actual 200-gold"):
+            verify(SimpleNamespace())
+        observeMainQuestReward(driver, state["records"])
+        self.assertEqual(200, verify(SimpleNamespace())["payment"]["delta"])
+        self.assertEqual(2, driver.assertNativeCombatOutcomes.call_count)
+        driver.call.assert_called_with(driver.player, "getName")
+
+    def testSharedNativeValidatorCollectsAndLatchesMainQuestEvidence(self):
+        from tests.gameplay_branch_driver import GameplayBranchDriver
+
+        state, _repeat = self.mainQuestRewardFixture()
+        for pay in (True, False):
+            with self.subTest(pay=pay):
+                records = copy.deepcopy(state["records"])
+                if not pay:
+                    records.pop(1)
+                for seq, record in enumerate(records, start=1):
+                    record["seq"] = seq
+                validator = SimpleNamespace(
+                    test=self,
+                    _combat_failure=None,
+                    trace_path="native.jsonl",
+                    _combat_trace_positions={},
+                    _combat_trace_seq=0,
+                    player=None,
+                )
+                with (
+                    patch.object(GameplayBranchDriver, "assertNativeTraceOutput"),
+                    patch("tests.gameplay_branch_driver.readNewNativeTrace", return_value=records),
+                ):
+                    if pay:
+                        GameplayBranchDriver.assertNativeCombatOutcomes(validator)
+                        self.assertEqual(200, requireMainQuestReward(validator, "actual-hero")["payment"]["delta"])
+                    else:
+                        with self.assertRaisesRegex(AssertionError, "Invalid native MainQuest reward"):
+                            GameplayBranchDriver.assertNativeCombatOutcomes(validator)
+                        self.assertIsNotNone(validator._combat_failure)
+                        with self.assertRaises(AssertionError):
+                            GameplayBranchDriver.assertNativeCombatOutcomes(validator)
 
 
 if __name__ == "__main__":

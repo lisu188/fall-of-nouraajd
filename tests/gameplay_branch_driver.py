@@ -7,6 +7,7 @@ from collections import OrderedDict, deque
 from functools import lru_cache
 
 from tests.gameplay_branch_journals import verifyJournals
+from tests.gameplay_branch_rewards import observeMainQuestReward, requireMainQuestReward
 from tests.gameplay_routes_waypoints import captureWaypointCreation
 from tests.gameplay_routes_potions import observePotionConsumptions
 from tests.gameplay_routes_caves import captureAmbientCave, beforeAmbientCaveTurn, afterAmbientCaveTurn
@@ -196,6 +197,7 @@ class GameplayBranchDriver:
         self._player_victories = OrderedDict()
         self._player_victory_history = deque(maxlen=16)
         self._player_entries = deque(maxlen=64)
+        self._npc_contact = None
         self._recorded_actions = 0
         self._coordinate_point = None
         self._ephemeral_handles = set()
@@ -393,6 +395,11 @@ class GameplayBranchDriver:
             if type(outcome) is not int or outcome not in (1, 2):
                 self._combat_failure = ("Unresolved native player combat", record)
                 self.test.fail(self._combat_failure)
+        try:
+            observeMainQuestReward(self, records)
+        except AssertionError as error:
+            self._combat_failure = ("Invalid native MainQuest reward evidence", str(error))
+            self.test.fail(self._combat_failure)
         if records:
             self._combat_trace_seq = records[-1]["seq"]
             requests = getattr(self, "_trade_requests", None)
@@ -770,6 +777,15 @@ class GameplayBranchDriver:
             destination = self.coords(target)
             distance = sum(abs(a - b) for a, b in zip(self.coords(), destination))
             if distance <= int(adjacent):
+                if moving_npc and not adjacent:
+                    if entry_identity is not None and target["__handle__"] == entry_handle:
+                        entry = self._playerEntryForTarget(entry_identity, after_seq=entry_seq)
+                        if entry is not None:
+                            self._rememberNpcContact(target, entry_identity, entry)
+                            return
+                        if self._continuedNpcContact(target, entry_identity):
+                            return
+                    self.test.fail(("NPC overlap lacks a completed player entry", name, self.snapshot()))
                 return
             if (
                 committed is None
@@ -793,11 +809,15 @@ class GameplayBranchDriver:
                 return
             if arrival != before and self._traversedTarget(committed, arrival):
                 return
-            if entry_identity is not None and self._playerEnteredTarget(entry_identity, after_seq=entry_seq):
+            entry = (
+                self._playerEntryForTarget(entry_identity, after_seq=entry_seq) if entry_identity is not None else None
+            )
+            if entry is not None:
                 current = self.object(name, required=False)
                 if current is not None and current["__handle__"] == entry_handle:
                     # The native player-caused callback completed before this NPC's
                     # later move in the same CMap turn; end-of-turn overlap is unnecessary.
+                    self._rememberNpcContact(current, entry_identity, entry)
                     return
             unchanged = unchanged + 1 if arrival == before else 0
             if unchanged >= 24:
@@ -813,6 +833,9 @@ class GameplayBranchDriver:
         return {"id": type_id or name or native_type, "name": name, "typeId": type_id, "type": native_type or type_id}
 
     def _playerEnteredTarget(self, identities, *, after_seq):
+        return self._playerEntryForTarget(identities, after_seq=after_seq) is not None
+
+    def _playerEntryForTarget(self, identities, *, after_seq):
         target_identity, player_identity = identities
         for record in reversed(self._player_entries):
             if record["seq"] <= after_seq:
@@ -822,8 +845,56 @@ class GameplayBranchDriver:
             if all(record["target"].get(key) == value for key, value in target_identity.items()) and all(
                 record["cause"].get(key) == value for key, value in player_identity.items()
             ):
-                return True
-        return False
+                return record
+        return None
+
+    def _rememberNpcContact(self, target, identities, entry):
+        contact = tuple(entry["targetCoords"][axis] for axis in "xyz")
+        self._npc_contact = None
+        if self.coords() == contact and self.coords(target) == contact:
+            self._npc_contact = {
+                "target": target["__handle__"],
+                "player": self.player["__handle__"],
+                "mapHandle": self.game_map["__handle__"],
+                "map": self.map_name,
+                "identities": identities,
+                "coords": contact,
+                "seq": entry["seq"],
+                "positions": {},
+            }
+
+    def _continuedNpcContact(self, target, identities):
+        contact = self._npc_contact
+        if contact is None or self.trace_path is None:
+            return False
+        if (
+            contact["target"] != target["__handle__"]
+            or contact["player"] != self.player["__handle__"]
+            or contact["mapHandle"] != self.game_map["__handle__"]
+            or contact["map"] != self.map_name
+            or contact["identities"] != identities
+            or self.coords() != contact["coords"]
+            or self.coords(target) != contact["coords"]
+        ):
+            self._npc_contact = None
+            return False
+        try:
+            records = readNewNativeTrace(self.trace_path, contact["positions"], contact["seq"])
+        except (AssertionError, OSError, ValueError) as error:
+            self._combat_failure = ("Native NPC contact evidence unavailable", str(error))
+            self.test.fail(self._combat_failure)
+        for record in records:
+            actor = record.get("object")
+            if record.get("map") not in (None, contact["map"]) or (
+                record.get("event") == "movement"
+                and isinstance(actor, dict)
+                and any(all(actor.get(key) == value for key, value in identity.items()) for identity in identities)
+            ):
+                self._npc_contact = None
+                return False
+        if records:
+            contact["seq"] = records[-1]["seq"]
+        return True
 
     def step(self, coords):
         destination = tuple(coords)
@@ -1107,6 +1178,10 @@ class GameplayBranchDriver:
                 def nativeHuntTracePath(self):
                     driver.test.assertIsNotNone(driver.trace_path, "The hunt requires its matrix native trace")
                     return driver.trace_path
+
+                def requireOriginalMainQuestReward(self):
+                    driver.assertNativeCombatOutcomes()
+                    return requireMainQuestReward(driver, driver.call(driver.player, "getName"))
 
                 def advanceQuestEvaluationTurn(self):
                     driver.tick()

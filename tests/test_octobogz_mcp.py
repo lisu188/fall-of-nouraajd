@@ -1331,6 +1331,15 @@ class OctobogzMcpWalkthroughTest(unittest.TestCase):
         self.assertTrue(self.call(self.player, "isAlive"))
         self.assertEqual(defeat_before, self.call(self.player, "getStringProperty", "uiDefeatReceipt"))
 
+    def requireOriginalMainQuestReward(self):
+        from tests.gameplay_branch_driver import GameplayBranchDriver
+        from tests.gameplay_branch_rewards import requireMainQuestReward
+
+        validator = getattr(self, "_native_combat_validator", None)
+        self.assertIsNotNone(validator, "MainQuest requires its native reward evidence")
+        GameplayBranchDriver.assertNativeCombatOutcomes(validator)
+        return requireMainQuestReward(validator, self.call(self.player, "getName"))
+
     def finishOriginalMainQuest(self):
         self.snapshot("before original Gooby approach after hunt")
         self.recoverOnRoadPair((109, 100, 0), (109, 101, 0), "Gooby road recovery")
@@ -1341,6 +1350,7 @@ class OctobogzMcpWalkthroughTest(unittest.TestCase):
             self.advanceQuestEvaluationTurn()
             self.assertEqual(gold + 200, self.call(self.player, "getGold"))
         self.assertIn("mainQuest", self.questNames("getCompletedQuests"))
+        self.requireOriginalMainQuestReward()
         self.snapshot("original MainQuest complete after hunt")
 
     def useOrdinaryCombatController(self, player_class):
