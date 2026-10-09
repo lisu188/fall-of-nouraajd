@@ -1481,6 +1481,8 @@ class EngineMcpServer:
             }
 
         guard_error = self._validate_pathfinding_call(target, method, resolved_args, resolved_kwargs)
+        if guard_error is None:
+            guard_error = self._validateEquipmentCall(target, method, resolved_args, resolved_kwargs)
         if guard_error is not None:
             return {
                 "content": [{"type": "text", "text": json.dumps(guard_error, ensure_ascii=False)}],
@@ -2211,6 +2213,43 @@ class EngineMcpServer:
                     return int(bound)
             except (TypeError, ValueError):
                 continue
+        return None
+
+    @staticmethod
+    def _validateEquipmentCall(
+        target: Any, method: str, resolved_args: list[Any], resolved_kwargs: dict[str, Any]
+    ) -> dict[str, Any] | None:
+        if method != "equipItem":
+            return None
+        if len(resolved_args) > 2 or set(resolved_kwargs) - {"slot", "item"}:
+            return {"error": "equipItem requires exactly slot and item arguments"}
+        arguments = dict(zip(("slot", "item"), resolved_args))
+        for name, value in resolved_kwargs.items():
+            if name in arguments:
+                return {"error": f"equipItem received multiple values for {name}"}
+            arguments[name] = value
+        if set(arguments) != {"slot", "item"} or not isinstance(arguments["slot"], str):
+            return {"error": "equipItem requires a string slot and an item handle or None"}
+        slot, item = arguments["slot"], arguments["item"]
+        try:
+            equipped = target.getEquipped()
+            if equipped.get(slot) is item:
+                return None
+            if item is not None:
+                if any(candidate is item for candidate in equipped.values()):
+                    return {"error": "equipItem rejected: unequip the item from its current slot first"}
+                if not any(candidate is item for candidate in target.getItems()):
+                    return {"error": "equipItem rejected: item is not owned by this creature"}
+            game_map = target.getMap()
+            if game_map is None:
+                return {"error": "equipItem rejected: creature has no map"}
+            if item is None:
+                return None
+            configuration = game_map.getGame().getSlotConfiguration()
+            if not configuration.canFit(slot, item):
+                return {"error": f"equipItem rejected: item does not fit slot {slot}"}
+        except Exception as exc:
+            return {"error": f"equipItem rejected: cannot validate equipment context: {exc}"}
         return None
 
     def _validate_pathfinding_call(
