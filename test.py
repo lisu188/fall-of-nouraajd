@@ -139,6 +139,7 @@ FAST_TEST_PREFIXES = (
     "GameplayCampaignRouteTest.",
     "GameplayCastleTownRestTest.",
     "GameplayVictorSettlementTest.",
+    "NarrativeRouteTest.",
     "GameplayRouteDialogTest.",
     "GameplayRouteServicesTest.",
     "GameplayCraftingRoutesTest.",
@@ -25817,6 +25818,7 @@ class TestRunnerSuiteTest(unittest.TestCase):
             GameplayNouraajdHuntPreparationTest,
             GameplayCastleTownRestTest,
             GameplayVictorSettlementTest,
+            NarrativeRouteTest,
         ):
             methods = unittest.defaultTestLoader.getTestCaseNames(test_class)
             self.assertTrue(methods)
@@ -26408,6 +26410,7 @@ if SOURCE_UI_TESTS_AVAILABLE:
     from tests.test_gameplay_routes_campaigns import GameplayCampaignRouteTest as _GameplayCampaignRouteTest
     from tests.test_gameplay_castle_town_rest import GameplayCastleTownRestTest as _GameplayCastleTownRestTest
     from tests.test_gameplay_victor_settlement import GameplayVictorSettlementTest as _GameplayVictorSettlementTest
+    from tests.test_narrative_consequences import NarrativeRouteTest as _NarrativeRouteTest
     from tests.test_gameplay_route_dialogs import GameplayRouteDialogTest as _GameplayRouteDialogTest
     from tests.test_gameplay_routes_ninemarches import NineMarchesRecoveryTest as _NineMarchesRecoveryTest
     from tests.test_gameplay_branches_mcp import GameplayBranchMcpTest as _GameplayBranchMcpTest
@@ -26470,6 +26473,9 @@ if SOURCE_UI_TESTS_AVAILABLE:
         pass
 
     class GameplayVictorSettlementTest(_GameplayVictorSettlementTest):
+        pass
+
+    class NarrativeRouteTest(_NarrativeRouteTest):
         pass
 
     class GameplayCastleTownRestTest(_GameplayCastleTownRestTest):
@@ -26636,7 +26642,7 @@ if SOURCE_UI_TESTS_AVAILABLE:
     del _GameplayNouraajdHuntPreparationTest
     del _GameplayPotionConsumptionTest, _GameplayRecipeGoldRoutesTest, _GameplayCallbackMarketRoutesTest
     del _GameplayStartingSaveTest, _GameplayCampaignRouteTest, _GameplayRouteDialogTest
-    del _GameplayCastleTownRestTest, _GameplayVictorSettlementTest
+    del _GameplayCastleTownRestTest, _GameplayVictorSettlementTest, _NarrativeRouteTest
     del _NineMarchesRecoveryTest
     del _McpTestSeedTest, _McpBranchShardsTest, _McpBranchWorkflowTest
     del _McpTestSeedRuntimeTest, _McpEquipmentContractTest, _McpEquipmentRuntimeTest
