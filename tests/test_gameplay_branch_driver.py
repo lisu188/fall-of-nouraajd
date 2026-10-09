@@ -939,6 +939,14 @@ class GameplayBranchDriverTest(unittest.TestCase):
                 driver.call(driver.player, method)
         driver._rawCall.assert_not_called()
 
+    def testStockAndResourceEditsCannotManufactureMarketOrPotionPrerequisites(self):
+        for method in ("add", "remove", "takeGold", "takeMana"):
+            with self.subTest(method=method):
+                driver = self.driver()
+                with self.assertRaisesRegex(AssertionError, "Forbidden gameplay fixture mutation"):
+                    driver.call({"__handle__": "market"} if method in {"add", "remove"} else driver.player, method)
+                driver._rawCall.assert_not_called()
+
     def testManualMovementIsRejectedEvenForAnAdjacentActualPlayer(self):
         driver = self.driver()
         driver.coords = Mock(return_value=(2, 3, 0))

@@ -21,6 +21,10 @@ import uuid
 ROOT = Path(__file__).resolve().parents[1]
 FORBIDDEN_METHODS = frozenset(
     {
+        "add",
+        "remove",
+        "takeGold",
+        "takeMana",
         "addGold",
         "addItem",
         "addItems",
