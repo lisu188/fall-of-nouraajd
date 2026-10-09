@@ -445,7 +445,7 @@ CFightResult resolve_fight_many(std::shared_ptr<CCreature> attacker, const encou
         fields["attackerState"] = snapshot(attacker, fields["attacker"]);
         fields["opponentStates"] = json::array();
         for (std::size_t index = 0; index < allOpponents.size(); ++index) {
-            fields["opponentStates"].push_back(snapshot(allOpponents[index], fields["opponents"][index]));
+            fields["opponentStates"][index] = snapshot(allOpponents[index], fields["opponents"][index]);
         }
         CPlaytestTrace::addMapContext(fields, encounterMap);
         CPlaytestTrace::record("combat_started", fields);
