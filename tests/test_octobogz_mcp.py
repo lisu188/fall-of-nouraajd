@@ -580,6 +580,68 @@ class OctobogzMcpWalkthroughTest(unittest.TestCase):
                 pass
             raise
 
+    def equipEarnedBroodWeapon(self):
+        inventory = self.call(self.player, "getItems")
+        swords = [item for item in inventory if self.call(item, "getTypeId") == "LongSword"]
+        if not swords:
+            return None
+        current = self.call(self.player, "getItemAtSlot", "0")
+        if current is None or self.call(current, "getTypeId") != "Staff":
+            return None
+        self.assertLessEqual(len(swords), 128)
+        sword = min(swords, key=lambda item: self.call(item, "getName"))
+        self.assertEqual("CWeapon", self.call(sword, "getType"))
+        old_bonus = json.loads(self.engine("jsonify", current))["properties"]["bonus"]["properties"]
+        new_bonus = json.loads(self.engine("jsonify", sword))["properties"]["bonus"]["properties"]
+        delta = {
+            key: new_bonus.get(key, 0) - old_bonus.get(key, 0)
+            for key in ("dmgMin", "dmgMax", "stamina", "intelligence")
+        }
+        self.assertGreater(delta["dmgMin"], 0)
+        self.assertGreater(delta["dmgMax"], 0)
+        self.assertEqual(0, delta["stamina"], "Earned weapon preparation must preserve the native HP maximum")
+
+        def nativeContext():
+            data = json.loads(self.engine("jsonify", self.player))["properties"]
+            return (
+                {key: value for key, value in data.items() if key not in ("items", "equipped", "hp", "mana")},
+                self.coords(),
+                self.call(self.game_map, "getTurn"),
+                self.state(),
+                self.questNames(),
+                self.questNames("getCompletedQuests"),
+            )
+
+        context = nativeContext()
+        equipped_before = self.call(self.player, "getEquipped")
+        owned_before = {item["__handle__"] for item in inventory}
+        hp_before, mana_before = self.call(self.player, "getHp"), self.call(self.player, "getMana")
+        hp_max, mana_max = self.call(self.player, "getHpMax"), self.call(self.player, "getManaMax")
+        self.call(self.player, "equipItem", "0", sword)
+        self.assertEqual({**equipped_before, "0": sword}, self.call(self.player, "getEquipped"))
+        self.assertEqual(
+            (owned_before - {sword["__handle__"]}) | {current["__handle__"]},
+            {item["__handle__"] for item in self.call(self.player, "getItems")},
+        )
+        self.assertEqual(context, nativeContext(), "An owned equipment swap cannot change progression or other gear")
+        self.assertEqual(hp_max, self.call(self.player, "getHpMax"))
+        self.assertEqual(mana_max + delta["intelligence"] * 7, self.call(self.player, "getManaMax"))
+        self.assertEqual(hp_before, self.call(self.player, "getHp"))
+        self.assertEqual(min(mana_before, self.call(self.player, "getManaMax")), self.call(self.player, "getMana"))
+        receipt = {
+            "weapon": self.call(sword, "getName"),
+            "ownedHandle": sword["__handle__"],
+            "weaponBonusDelta": delta,
+            "hpMaxBefore": hp_max,
+            "hpMaxAfter": self.call(self.player, "getHpMax"),
+            "manaMaxBefore": mana_max,
+            "manaMaxAfter": self.call(self.player, "getManaMax"),
+            "manaBefore": mana_before,
+            "manaAfter": self.call(self.player, "getMana"),
+        }
+        print("MCP hunt actual earned weapon preparation", receipt, flush=True)
+        return receipt
+
     def recoverBeforeRemainingBrood(self, player_class):
         if self.state()["slots"]["brood"]["status"] == "dead":
             self.assertSlotDefeated("brood")
@@ -592,6 +654,7 @@ class OctobogzMcpWalkthroughTest(unittest.TestCase):
             return
         if player_class == "Sorcerer":
             self.prepareHealingStockAtAuthoredMarket(initial=False)
+            self.equipEarnedBroodWeapon()
             self.recoverOnAuthoredRoad()
 
     def collectAuthoredRetreatScroll(self):
@@ -1042,6 +1105,8 @@ class OctobogzMcpWalkthroughTest(unittest.TestCase):
         self.assertEqual("brood", self.state()["stage"])
         self.assertFalse(self.call(self.game_map, "getBoolProperty", "octobogzHuntCleared"))
         self.trackLivingHuntActors()
+        if getattr(self, "mcp_profile_class", None) == "Sorcerer":
+            self.equipEarnedBroodWeapon()
 
     def observeActors(self, stage, actors):
         for slot, actor in actors.items():

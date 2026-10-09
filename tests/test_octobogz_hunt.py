@@ -3697,6 +3697,155 @@ class OctobogzHuntTest(unittest.TestCase):
             ):
                 walker.requireDecisionReplayExecutable()
 
+    def earnedBroodWeaponFixture(self, corruption=None, *, has_sword=True):
+        from tests.test_octobogz_mcp import OctobogzMcpWalkthroughTest
+
+        walker = OctobogzMcpWalkthroughTest("runTest")
+        walker.player, walker.game_map = "player", "map"
+        definitions = json.loads((ROOT / "res/config/weapons.json").read_text(encoding="utf-8"))
+        handles = {name: {"__handle__": name} for name in ("actualStaff", "earnedLongSword", "actualRobe", "questItem")}
+        metadata = {
+            "actualStaff": {"typeId": "Staff", "name": "actualStaff", **deepcopy(definitions["Staff"]["properties"])},
+            "earnedLongSword": {
+                "typeId": "LongSword",
+                "name": "earnedLongSword",
+                **deepcopy(definitions["LongSword"]["properties"]),
+            },
+            "actualRobe": {"typeId": "Robe", "name": "actualRobe"},
+            "questItem": {"typeId": "holyRelic", "name": "questItem"},
+        }
+        inventory = [handles["questItem"]] + ([handles["earnedLongSword"]] if has_sword else [])
+        equipped = {"0": handles["actualStaff"], "3": handles["actualRobe"]}
+        properties = {"hp": 91, "mana": 175, "gold": 200, "exp": 6250, "level": 4, "effects": None}
+        mana_max, equips = [175], []
+        walker.coords = lambda: (118, 20, 0)
+        walker.state = lambda: {"stage": "brood"}
+        walker.questNames = lambda *args: ["actualQuest"]
+
+        def engine(name, handle):
+            self.assertEqual("jsonify", name)
+            data = properties if handle == "player" else metadata[handle["__handle__"]]
+            if handle == "player":
+                data = {**data, "equipped": deepcopy(equipped), "items": deepcopy(inventory)}
+            return json.dumps({"properties": data})
+
+        def call(handle, method, *args):
+            if handle == "map":
+                self.assertEqual("getTurn", method)
+                return 1380
+            if handle == "player":
+                if method == "getItems":
+                    return list(inventory)
+                if method == "getEquipped":
+                    return dict(equipped)
+                if method == "getItemAtSlot":
+                    return equipped.get(args[0])
+                if method == "getHpMax":
+                    return 91
+                if method == "getManaMax":
+                    return mana_max[0]
+                if method in ("getHp", "getMana"):
+                    return properties["hp" if method == "getHp" else "mana"]
+                if method == "equipItem":
+                    slot, item = args
+                    self.assertEqual(("0", handles["earnedLongSword"]), (slot, item))
+                    self.assertIn(item, inventory)
+                    equips.append((slot, item))
+                    inventory.remove(item)
+                    inventory.append(equipped[slot])
+                    equipped[slot] = item
+                    mana_max[0] = 140
+                    properties["mana"] = min(properties["mana"], mana_max[0])
+                    if corruption == "clone":
+                        equipped[slot] = {"__handle__": "fabricatedClone"}
+                    elif corruption == "extraItem":
+                        inventory.append(item)
+                    elif corruption == "otherSlot":
+                        equipped.pop("3")
+                    elif corruption == "hp":
+                        properties["hp"] -= 1
+                    elif corruption == "mana":
+                        properties["mana"] += 1
+                    elif corruption == "progress":
+                        properties["exp"] += 1
+                    return
+            data = metadata[handle["__handle__"]]
+            if method == "getTypeId":
+                return data["typeId"]
+            if method == "getName":
+                return data["name"]
+            if method == "getType":
+                return "CWeapon"
+            raise AssertionError((handle, method, args))
+
+        walker.call, walker.engine = call, engine
+        return walker, handles, inventory, equipped, properties, equips
+
+    def testRemainingBroodEquipsOnlyTheActualEarnedSwordWithItsNativeManaTradeoff(self):
+        walker, handles, inventory, equipped, properties, equips = self.earnedBroodWeaponFixture()
+        with patch("builtins.print"):
+            receipt = walker.equipEarnedBroodWeapon()
+        self.assertEqual([("0", handles["earnedLongSword"])], equips)
+        self.assertEqual(handles["earnedLongSword"], equipped["0"])
+        self.assertEqual([handles["questItem"], handles["actualStaff"]], inventory)
+        self.assertEqual(91, properties["hp"])
+        self.assertEqual(140, properties["mana"])
+        self.assertEqual({"dmgMin": 5, "dmgMax": 4, "stamina": 0, "intelligence": -5}, receipt["weaponBonusDelta"])
+        self.assertEqual((91, 91), (receipt["hpMaxBefore"], receipt["hpMaxAfter"]))
+        self.assertEqual((175, 140), (receipt["manaMaxBefore"], receipt["manaMaxAfter"]))
+
+    def testBroodWeaponPreparationCannotInventLootOrChangeOtherNativeState(self):
+        walker, *rest = self.earnedBroodWeaponFixture(has_sword=False)
+        with patch("builtins.print"):
+            self.assertIsNone(walker.equipEarnedBroodWeapon())
+        self.assertEqual([], rest[-1])
+        for corruption in ("clone", "extraItem", "otherSlot", "hp", "mana", "progress"):
+            with self.subTest(corruption=corruption):
+                walker, *rest = self.earnedBroodWeaponFixture(corruption)
+                with patch("builtins.print"), self.assertRaises(AssertionError):
+                    walker.equipEarnedBroodWeapon()
+                self.assertEqual(1, len(rest[-1]), "Invalid evidence must fail after one equip, without retries")
+
+    def testLivingSorcererBroodUsesEarnedEquipmentBeforeItsFinalRoadRecovery(self):
+        from tests.test_octobogz_mcp import OctobogzMcpWalkthroughTest
+
+        walker = OctobogzMcpWalkthroughTest("runTest")
+        walker.game_map = "map"
+        walker.state = lambda: {"slots": {"brood": {"status": "living"}}}
+        walker.call = lambda handle, method, *args: None if method == "getBoolProperty" else {"__handle__": "cave2"}
+        actions = []
+        walker.recoverOnAuthoredRoad = lambda: actions.append("actual road recovery")
+        walker.prepareHealingStockAtAuthoredMarket = lambda *, initial: actions.append(("finite stock", initial))
+        walker.equipEarnedBroodWeapon = lambda: actions.append("owned native equip")
+        walker.recoverBeforeRemainingBrood("Sorcerer")
+        self.assertEqual(
+            ["actual road recovery", ("finite stock", False), "owned native equip", "actual road recovery"], actions
+        )
+
+    def testEarnedSorcererWeaponIsEquippedAfterScoutProofBeforeReloadRetreatAndAlpha(self):
+        from tests.test_octobogz_mcp import OctobogzMcpWalkthroughTest
+
+        for class_id in ("Sorcerer", "Warrior"):
+            with self.subTest(class_id=class_id):
+                walker = OctobogzMcpWalkthroughTest("runTest")
+                walker.player, walker.game_map, walker.mcp_profile_class = "player", "map", class_id
+                walker.object = lambda name: {"__handle__": name}
+                walker.coords = lambda actor=None: (165, 21, 0)
+                walker.snapshot = lambda label: {"exp": 6000}
+                walker.state = lambda: {"stage": "brood", "slots": {"scout": {"status": "dead"}}}
+                actions = []
+                walker.walkTo = lambda name: actions.append("native scout approach")
+                walker.assertSlotDefeated = lambda slot: actions.append("actual scout death proof")
+                walker.trackLivingHuntActors = lambda: actions.append("actual remaining actors")
+                walker.equipEarnedBroodWeapon = lambda: actions.append("owned native equip")
+                walker.call = lambda handle, method, *args: (
+                    [] if method == "getItems" else False if method == "getBoolProperty" else 6125
+                )
+                with patch("builtins.print"):
+                    walker.enterHunt()
+                expected = ["native scout approach", "actual scout death proof", "actual remaining actors"]
+                self.assertEqual(expected + (["owned native equip"] if class_id == "Sorcerer" else []), actions)
+
     def testSavedHeroReplayRemainsSeparateFromAutomaticVictoriesAndImmutableSeededComparisons(self):
         source = (ROOT / "tests/test_octobogz_mcp.py").read_text(encoding="utf-8")
         methods = {node.name: node for node in ast.walk(ast.parse(source)) if isinstance(node, ast.FunctionDef)}
