@@ -1844,9 +1844,12 @@ class GameplayBranchDriverTest(unittest.TestCase):
                     driver._rawCall.side_effect = lambda handle, method, *args: (
                         False if method == "getBoolProperty" else original(handle, method, *args)
                     )
-                with self.assertRaisesRegex(AssertionError, "Authored route budget exhausted"):
+                expected_error = (
+                    "NPC identity changed during authored approach" if replaced else "Authored route budget exhausted"
+                )
+                with self.assertRaisesRegex(AssertionError, expected_error):
                     driver.navigateTo("ritualWitness")
-                self.assertEqual(132, state["turns"])
+                self.assertEqual(1 if replaced else 132, state["turns"])
                 self.assertTrue(state["visits"], "Only actual contact evidence is offered to the negative guard")
                 driver.step.assert_not_called()
 
