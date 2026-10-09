@@ -188,6 +188,9 @@ The timed courtyard escape derives its sole exit from the raw authored wall obje
 continuation against native passability and current pursuer coordinates. Each decision permits at most 64 distinct
 native cell probes, with memoization and bounded rejection diagnostics. Pure pursuit models verify route planning
 and the authored 74/75/76-turn boundary; passing native receipts are still required for actual timeout credit.
+Standalone direct-loss cases consume their original collected Town Portal before fleeing, retaining the same
+native countdown, map/player identity, gold and journal state. Campaign cases preserve that unique scroll for
+the later Scout retreat; the standalone correction does not establish a complete bad-campaign route.
 Earned hunt preparation also checks native object passability before committing a step. An incidental Victor rescue
 requires a recent validated actual-player victory against the leader, its original deadline, and the exact payout;
 cleanup of other cultists earns no invented combat experience. Nine Marches keeps the original collected retreat
@@ -199,6 +202,11 @@ checking refusal and unchanged state. A campaign's carried or newly looted wands
 prerequisite. Nouraajd's portal-scroll and greater-life insufficient-gold routes plan from observed finite loot
 quotes and original market identities before any sale, retain the exact ingredients, and require the ordinary
 unlock and crafting refusal. Unsatisfiable quotes fail without retrying startup or recreating stock.
+The greater-life gold-refusal route approaches the market through the cleared courtyard and connected authored
+Road cells. Both previously visited finite caves must be removed, and every living hostile must retain the known
+Pritz ground controller. The grass crafting station requires live hostile distance greater than two before entry
+and greater than one before immediate exit. Unknown controllers, unsafe station timing or native blockage fail;
+the route never waives protected inventory loss or replaces the finite ingredients.
 
 ```bash
 python3 test.py --suite mcp-branches --branch-class Wayfarer
@@ -211,9 +219,12 @@ required race; owner-specific deeds test their own action and other classes' rej
 come from `campaign.start`; only the catalog's documented initial Nine Marches reputation values may differ from
 ordinary startup. All slots and preference files have unique task-owned names and are cleaned after each case.
 
-`mcp.py --stdio --test-seed <uint32>` seeds both native random sources before importing the game bootstrap. The
-private hook is unavailable through MCP exports. Stable SHA-256 case/class seeds, ordered action journals, bounded
-native trace history, failure diagnostics, elapsed time, and branch receipts are written under the selected
+`mcp.py --stdio --test-seed <uint32>` seeds both native random sources before importing the game bootstrap. A
+core-library bridge seeds the engine RNG and process random source; the extension also seeds its separate hidden
+RNG on Linux. The native replay check samples actual core loot, extension draws and combat damage in fresh
+processes within each platform. The private hook is unavailable through MCP exports. Stable SHA-256 case/class seeds,
+ordered action journals, bounded native trace history, failure diagnostics, elapsed time, and branch receipts
+are written under the selected
 `GAME_TEST_OUTPUT_DIR`. Reproduce a failure from process startup with the recorded seed and action sequence;
 save checkpoints preserve game state, and do not serialize RNG state. Random sequences are checked within each
 platform; Linux and Windows need not produce identical sequences. Generated object names include process-local
@@ -227,8 +238,17 @@ unauthored relocation, stalled routes, and exhausted action/turn budgets. Adjace
 targets and map turns, and step counters count actual arrivals. Moving NPC approaches follow their current
 cells; hostile pursuits retain their committed path until arrival or interruption. The actual native trace writer
 must remain healthy before combat receipts are trusted. Validated victories are retained in a bounded cache so
-later recovery turns do not erase the evidence a secondary observer still needs. Victor's completed quest is
-evaluated through the native player API after its actual rescue callback, without an extra movement turn.
+later recovery turns do not erase the evidence a secondary observer still needs. Opt-in native `combat_started`
+records include bounded participant coordinates, HP/max HP, mana/max mana and level before the first round;
+disabled tracing emits no snapshots. A fresh completed native player-caused `object_entered` receipt can
+establish a moving-NPC visit before that NPC leaves later in the same turn. The bounded receipt cache requires
+exact map, target and player identities and the same live MCP target handle; earlier visits, NPC-caused contacts
+and replaced targets do not satisfy the approach. Victor's completed quest is evaluated through the native player
+API after its actual rescue callback, without an extra movement turn.
+When an incidental actual Brood victory occurs during the Alpha approach, the hunt validates the dead actor and
+native combat receipt, then uses only owned healing before the next movement or map turn. It fails if those finite
+supplies cannot restore full HP. This correction adds no retreat, relocation, stronger character or combat retry;
+actual survival and remaining stock still require a native passing receipt.
 Save/reload checks preserve inventory, equipment, quests, journal text, campaign state, and player attributes;
 map transitions preserve player identity.
 
@@ -500,6 +520,20 @@ Optional coverage speed controls:
 - `COVERAGE_JOBS=<n>` controls parallel coverage build and report collection jobs
 - `COVERAGE_PYTHON_TIMEOUT_SECONDS=<seconds>` bounds the coverage Python phase; the default is 1800 seconds
 - `COVERAGE_GCOV_TIMEOUT_SECONDS=<seconds>` bounds each `gcov` JSON extraction; the default is 120 seconds
+
+The parallel runner persists each completed worker's measured test durations before starting the serial save tests
+and the final Xvfb walkthrough. A later Python-phase timeout therefore preserves the measurements already collected;
+the final merge still includes serial and Xvfb results when they finish. Only workers started by the current run are
+merged. The coverage job uses the pinned cache restore/save actions separately, with an explicit `always()` save,
+because the combined cache action saves only after job success. Cache availability does not determine validation
+success, and this scheduling feedback does not change test selection, worker counts, execution order, the 1800-second
+Python cap, or the coverage threshold.
+
+For failed Linux coverage job `113814621992` at head `0f20904c`, the three parallel workers took 1595.510, 1424.404,
+and 1720.249 seconds, followed by 41.358 seconds of serial tests and a 34.116-second Xvfb walkthrough. Repacking all
+1095 recorded parallel-test durations with the existing scheduler projects three groups of about 1579.019 seconds,
+roughly 141 seconds less than the observed longest parallel group. This is an estimate using recorded durations,
+not a native rerun or proof that a later head will finish within the cap.
 
 ## Coverage scope
 The canonical coverage report is scoped to production/native plugin code by default:
