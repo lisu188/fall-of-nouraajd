@@ -196,6 +196,22 @@ class McpTestSeedTest(unittest.TestCase):
         self.assertNotIn("_seedRandomForTests", server.exports)
         self.assertNotIn("_seedRandomForTests", mcp.MCP_ALLOWED_EXPORTS)
 
+    def testPrivateSeedHookSeedsBothSharedLibraryScopesThroughAnExportedCoreBridge(self):
+        module = (ROOT / "src/core/CModule.cpp").read_text(encoding="utf-8")
+        core = (ROOT / "src/handler/CRngHandler.cpp").read_text(encoding="utf-8")
+        header = (ROOT / "src/handler/CRngHandler.h").read_text(encoding="utf-8")
+        hook = module.split('"_seedRandomForTests",', 1)[1].split('py::arg("seed")', 1)[0]
+        self.assertIn("CRngHandler::seedRandomForTests(seed);", hook)
+        self.assertIn("vstd::rng().seed(seed);", hook)
+        self.assertNotIn("std::srand", hook, "The process random source must be seeded once by the core bridge")
+        bridge = core.split("void CRngHandler::seedRandomForTests(std::uint32_t seed)", 1)[1].split("}", 1)[0]
+        self.assertIn("vstd::rng().seed(seed);", bridge)
+        self.assertEqual(1, bridge.count("std::srand(seed);"))
+        self.assertIn("static GAME_CORE_EXPORT void seedRandomForTests(std::uint32_t seed);", header)
+        self.assertNotIn('.def("seedRandomForTests"', module)
+        self.assertNotIn("seedRandomForTests", mcp.MCP_ALLOWED_EXPORTS)
+        self.assertTrue(all("seedRandomForTests" not in methods for methods in mcp.MCP_ALLOWED_HANDLE_METHODS.values()))
+
 
 class McpTestSeedRuntimeTest(unittest.TestCase):
     def testEachNativeRandomSourceReplaysWithinThisPlatform(self):
@@ -207,7 +223,7 @@ class McpTestSeedRuntimeTest(unittest.TestCase):
         ):
             self.skipTest("Current native _game extension required for native random-source replay")
         program = """
-import sys
+import json, sys
 from pathlib import Path
 sys.path.insert(0, sys.argv[1])
 import mcp
@@ -218,22 +234,46 @@ n = server._game_module
 game = n.CGameLoader.loadGame()
 n.CGameLoader.startGameWithPlayer(game, 'test', 'Warrior', 'humanRace')
 player = game.getMap().getPlayer()
+rng = game.getRngHandler()
 def sample(seed):
+    recipient = game.createObject('Pritz')
     n._seedRandomForTests(seed)
-    return ([n.randint(0, 2147483647) for _ in range(64)], [player.getDmg(True) for _ in range(128)])
+    module_draws = [n.randint(0, 2147483647) for _ in range(64)]
+    process_draws = [player.getDmg(True) for _ in range(128)]
+    core_draws = []
+    for _ in range(32):
+        before = {item.getName() for item in recipient.getItems()}
+        rng.addRandomLoot(recipient, 8)
+        core_draws.append(sorted(item.getTypeId() for item in recipient.getItems() if item.getName() not in before))
+    return (module_draws, process_draws, core_draws)
+replays = {}
 for seed in (0, 17, 4294967295):
     first, second = sample(seed), sample(seed)
     assert first == second, (seed, 'native random sources did not replay')
-    assert len(set(first[0])) > 1 and len(set(first[1])) > 1, 'degenerate random-source oracle'
-    assert first[0] != sample((seed + 1) & 0xffffffff)[0]
-print('vstd::rng and std::rand: deterministic within platform')
+    assert all(len({tuple(draw) if isinstance(draw, list) else draw for draw in source}) > 1 for source in first), \
+        'degenerate module/process/core random-source oracle'
+    different = sample(seed ^ 0xA5A5A5A5)
+    assert all(left != right for left, right in zip(first, different)), 'a native random source ignored its seed'
+    replays[str(seed)] = first
+print('NATIVE_SEED_REPLAY=' + json.dumps(replays, sort_keys=True))
 """
-        result = subprocess.run(
-            [sys.executable, "-c", program, str(ROOT), str(harness.build_dir), harness.build_config or ""],
-            cwd=ROOT,
-            capture_output=True,
-            text=True,
-            timeout=90,
+        replays = []
+        for _ in range(2):
+            result = subprocess.run(
+                [sys.executable, "-c", program, str(ROOT), str(harness.build_dir), harness.build_config or ""],
+                cwd=ROOT,
+                capture_output=True,
+                text=True,
+                timeout=90,
+            )
+            self.assertEqual(0, result.returncode, result.stdout[-4096:] + result.stderr[-4096:])
+            payloads = [
+                line.removeprefix("NATIVE_SEED_REPLAY=")
+                for line in result.stdout.splitlines()
+                if line.startswith("NATIVE_SEED_REPLAY=")
+            ]
+            self.assertEqual(1, len(payloads), "The actual native replay proof must be emitted once")
+            replays.append(json.loads(payloads[0]))
+        self.assertEqual(
+            replays[0], replays[1], "Fresh processes did not replay module, process and game_core RNG draws"
         )
-        self.assertEqual(0, result.returncode, result.stdout[-4096:] + result.stderr[-4096:])
-        self.assertIn("std::rand: deterministic", result.stdout)

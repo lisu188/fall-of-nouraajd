@@ -24,6 +24,7 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #include "object/CObject.h"
 
 #include <algorithm>
+#include <cstdlib>
 
 namespace {
 constexpr int MAX_RANDOM_VALUE = 1000;
@@ -40,6 +41,11 @@ int clampRandomValue(int value) { return std::clamp(value, 0, MAX_RANDOM_VALUE);
 constexpr int ASSOCIATED_CLASS_POWER_MULTIPLIER = 1;
 constexpr int NON_ASSOCIATED_CLASS_POWER_MULTIPLIER = 1;
 } // namespace
+
+void CRngHandler::seedRandomForTests(std::uint32_t seed) {
+    vstd::rng().seed(seed);
+    std::srand(seed);
+}
 
 CRngHandler::ClassAssociation CRngHandler::classifyClassAssociation(const std::shared_ptr<CCreature> &creature) {
     if (!creature) {
