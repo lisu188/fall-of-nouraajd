@@ -143,7 +143,7 @@ coverage. Structural audits account for dialog actions/conditions, registered ca
 explicit defensive contracts. Unreachable authored content remains a reported obligation, rather than becoming a
 passing fixture-only route.
 
-The current catalog declares 772 branches across 75 cases and 355 case/class executions, with 53 unresolved
+The current catalog declares 774 branches across 80 cases and 380 case/class executions, with 36 unresolved
 gameplay obligations. Thirteen are disconnected authored Castle defenders. Another obligation is
 `usurpergate.throne.premature`, required in all four Warden campaign/standalone routes for all five classes:
 enter the actual throne while the Usurper remains alive and verify no reward or quest/campaign progress.
@@ -161,8 +161,8 @@ contract, backed by its focused cleanup test.
 
 The shared coverage floor includes 103 named requirements, including 45 applicable recipe-specific outcomes.
 A locked outcome applies only to a recipe with an authored unlock flag, and a failure outcome applies only
-below 100 percent success chance. The remaining 39 pending shared requirements are 28 recipe outcomes and
-11 actual life/mana consumptions. Connector publication now has source-ordered creation and later-turn
+below 100 percent success chance. The remaining 22 pending shared requirements are recipe outcomes.
+Connector publication now has source-ordered creation and later-turn
 oracles. Passive cave observers use existing route turns to prove a new matching clone's native placement,
 an exact one-monster decrement, and two later exhausted turns; they add no waiting loop and stop after
 both outcomes. Two ordinary pre-activation ritual turns also verify all three zero-stock anchors remain
@@ -172,6 +172,15 @@ can pass. Missing ingredients cannot stand in for insufficient gold when a recip
 conditional recovery cannot stand in for guaranteed potion/scroll use. Crafting code and recipe data are
 inside the reviewed source digest. Implemented service assertions remain source/test evidence until native
 CI supplies passing route receipts.
+
+All 11 ordinary life/mana consumption obligations now have mandatory route assertions. The native `item_used`
+receipt identifies the actual player and item, proves an existing resource deficit, verifies the configured
+percentage with its exact cap, and requires that only the used owned identity disappeared while equipment
+stayed unchanged. Rejuvenation, NPC consumption, absent records and full-resource uses cannot earn these
+branches. Fixed routes obtain finite stock before remaining fights, funded by actual quest gifts, collected
+weapons or first-cave loot. Nine Marches consumes at observed postcombat deficits before its normal road
+recovery. A final assertion fails if gameplay never produces a qualifying use; implementation does not establish
+native acceptance.
 
 ```bash
 python3 test.py --suite mcp-branches --branch-class Wayfarer
@@ -214,8 +223,10 @@ any budget decision; these source estimates do not establish a successful whole-
 CI shards must partition the complete selected matrix exactly once. Their initial duration estimates are
 provisional until the first native receipts supply measured weights; the planner targets 20 minutes per shard.
 `GAME_MCP_BRANCH_REQUIRED=1` turns unavailable native prerequisites into failures. The terminal `mcp-branches`
-check requires both platform matrices to succeed. This workflow change also retains strict native/coverage
-authority and requires explicit human review before merge. Canonical coverage drivers remain in `coverage-safe`;
+check requires both platform matrices and all selected native/full-suite/coverage jobs to succeed. An uploaded
+exact-head runtime lets diagnostic shards run even when a later parent test fails; that failure still blocks
+the terminal check. This workflow change retains strict validation authority and requires explicit human
+review before merge. Canonical coverage drivers remain in `coverage-safe`;
 the exhaustive subprocess matrix is separate from the 90% eligible-line coverage gate.
 
 The console and expanded-map interaction checks run once in `gameplay`, `full`, and `coverage-safe`. To run only

@@ -140,13 +140,19 @@ FAST_TEST_PREFIXES = (
     "GameplayRouteDialogTest.",
     "GameplayRouteServicesTest.",
     "GameplayCraftingRoutesTest.",
+    "GameplayRecipeOutcomesTest.",
+    "GameplayRecipeGoldRoutesTest.",
+    "GameplayCallbackMarketRoutesTest.",
+    "GameplayPotionConsumptionTest.",
     "GameplayNouraajdServiceRoutesTest.",
     "GameplayWaypointPublicationTest.",
     "GameplayCaveObservationTest.",
     "NineMarchesRecoveryTest.",
     "McpTestSeedTest.",
     "McpBranchShardsTest.",
+    "McpBranchWorkflowTest.",
     "McpEquipmentContractTest.",
+    "McpTradeMarketContractTest.",
     "WaypointTraversalTest.",
     "GameDiagnosticsTest.",
     "McpDiagnosticsTest.",
@@ -168,6 +174,7 @@ FAST_TEST_PREFIXES = (
     "UiPixelAnalysisTest.",
 )
 FAST_TEST_NAMES = {
+    "GameTest.test_indentation",
     "McpServerTest.testNativeLogSinkSurvivesGameBootstrap",
     "McpServerTest.test_engine_handle_call_scopes_fight_controllers_to_players",
     "GameTest.test_direct_rendercopy_calls_stay_inside_render_context_wrapper",
@@ -192,6 +199,8 @@ GAMEPLAY_TEST_PREFIXES = (
     MCP_BRANCH_TEST_PREFIX,
     "McpTestSeedRuntimeTest.",
     "McpEquipmentRuntimeTest.",
+    "McpTradeMarketRuntimeTest.",
+    "GameplayPotionTraceRuntimeTest.",
     "NativeDiagnosticsRuntimeTest.",
     "EnemyRoleRuntimeTest.",
     "OctobogzMcpWalkthroughTest.",
@@ -26371,6 +26380,13 @@ if SOURCE_UI_TESTS_AVAILABLE:
     from tests.test_gameplay_branch_journals import GameplayBranchJournalsTest as _GameplayBranchJournalsTest
     from tests.test_gameplay_starting_save import GameplayStartingSaveTest as _GameplayStartingSaveTest
     from tests.test_gameplay_routes_crafting import GameplayCraftingRoutesTest as _GameplayCraftingRoutesTest
+    from tests.test_gameplay_routes_recipe_outcomes import GameplayRecipeOutcomesTest as _GameplayRecipeOutcomesTest
+    from tests.test_gameplay_routes_recipe_gold import GameplayRecipeGoldRoutesTest as _GameplayRecipeGoldRoutesTest
+    from tests.test_gameplay_routes_callback_markets import (
+        GameplayCallbackMarketRoutesTest as _GameplayCallbackMarketRoutesTest,
+    )
+    from tests.test_gameplay_potion_trace import GameplayPotionTraceRuntimeTest as _GameplayPotionTraceRuntimeTest
+    from tests.test_gameplay_routes_potions import GameplayPotionConsumptionTest as _GameplayPotionConsumptionTest
     from tests.test_gameplay_routes_services import GameplayRouteServicesTest as _GameplayRouteServicesTest
     from tests.test_gameplay_routes_nouraajd import (
         GameplayNouraajdServiceRoutesTest as _GameplayNouraajdServiceRoutesTest,
@@ -26384,8 +26400,11 @@ if SOURCE_UI_TESTS_AVAILABLE:
     from tests.test_mcp_test_seed import McpTestSeedTest as _McpTestSeedTest
     from tests.test_mcp_test_seed import McpTestSeedRuntimeTest as _McpTestSeedRuntimeTest
     from tests.test_mcp_branch_shards import McpBranchShardsTest as _McpBranchShardsTest
+    from tests.test_mcp_branch_workflow import McpBranchWorkflowTest as _McpBranchWorkflowTest
     from tests.test_mcp_equipment import McpEquipmentContractTest as _McpEquipmentContractTest
     from tests.test_mcp_equipment import McpEquipmentRuntimeTest as _McpEquipmentRuntimeTest
+    from tests.test_mcp_trade_market import McpTradeMarketContractTest as _McpTradeMarketContractTest
+    from tests.test_mcp_trade_market import McpTradeMarketRuntimeTest as _McpTradeMarketRuntimeTest
     from tests.test_waypoint_traversal import WaypointTraversalTest as _WaypointTraversalTest
 
     class GameplayBranchCatalogTest(_GameplayBranchCatalogTest):
@@ -26398,6 +26417,21 @@ if SOURCE_UI_TESTS_AVAILABLE:
         pass
 
     class GameplayStartingSaveTest(_GameplayStartingSaveTest):
+        pass
+
+    class GameplayRecipeOutcomesTest(_GameplayRecipeOutcomesTest):
+        pass
+
+    class GameplayRecipeGoldRoutesTest(_GameplayRecipeGoldRoutesTest):
+        pass
+
+    class GameplayCallbackMarketRoutesTest(_GameplayCallbackMarketRoutesTest):
+        pass
+
+    class GameplayPotionConsumptionTest(_GameplayPotionConsumptionTest):
+        pass
+
+    class GameplayPotionTraceRuntimeTest(_GameplayPotionTraceRuntimeTest):
         pass
 
     class GameplayCraftingRoutesTest(_GameplayCraftingRoutesTest):
@@ -26436,10 +26470,19 @@ if SOURCE_UI_TESTS_AVAILABLE:
     class McpBranchShardsTest(_McpBranchShardsTest):
         pass
 
+    class McpBranchWorkflowTest(_McpBranchWorkflowTest):
+        pass
+
     class McpEquipmentContractTest(_McpEquipmentContractTest):
         pass
 
     class McpEquipmentRuntimeTest(_McpEquipmentRuntimeTest):
+        pass
+
+    class McpTradeMarketContractTest(_McpTradeMarketContractTest):
+        pass
+
+    class McpTradeMarketRuntimeTest(_McpTradeMarketRuntimeTest):
         pass
 
     class WaypointTraversalTest(_WaypointTraversalTest):
@@ -26556,12 +26599,19 @@ if SOURCE_UI_TESTS_AVAILABLE:
     del _ConsoleUiInteractionTest, _UiMinimapInteractionTest
     del _GameplayBranchCatalogTest, _GameplayBranchDriverTest, _GameplayBranchJournalsTest, _GameplayBranchMcpTest
     del _WaypointTraversalTest
-    del _GameplayCraftingRoutesTest, _GameplayRouteServicesTest
+    del (
+        _GameplayCraftingRoutesTest,
+        _GameplayRouteServicesTest,
+        _GameplayRecipeOutcomesTest,
+        _GameplayPotionTraceRuntimeTest,
+    )
     del _GameplayNouraajdServiceRoutesTest, _GameplayWaypointPublicationTest, _GameplayCaveObservationTest
+    del _GameplayPotionConsumptionTest, _GameplayRecipeGoldRoutesTest, _GameplayCallbackMarketRoutesTest
     del _GameplayStartingSaveTest, _GameplayCampaignRouteTest, _GameplayRouteDialogTest
     del _NineMarchesRecoveryTest
-    del _McpTestSeedTest, _McpBranchShardsTest
+    del _McpTestSeedTest, _McpBranchShardsTest, _McpBranchWorkflowTest
     del _McpTestSeedRuntimeTest, _McpEquipmentContractTest, _McpEquipmentRuntimeTest
+    del _McpTradeMarketContractTest, _McpTradeMarketRuntimeTest
 
 
 class McpServerTest(unittest.TestCase):

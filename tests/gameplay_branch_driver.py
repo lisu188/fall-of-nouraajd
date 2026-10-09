@@ -8,6 +8,7 @@ from functools import lru_cache
 
 from tests.gameplay_branch_journals import verifyJournals
 from tests.gameplay_routes_waypoints import captureWaypointCreation
+from tests.gameplay_routes_potions import observePotionConsumptions
 from tests.gameplay_routes_caves import captureAmbientCave, beforeAmbientCaveTurn, afterAmbientCaveTurn
 import hashlib
 import json
@@ -376,6 +377,12 @@ class GameplayBranchDriver:
                 self.test.fail(self._combat_failure)
         if records:
             self._combat_trace_seq = records[-1]["seq"]
+            if self.player is not None and any(record.get("event") == "item_used" for record in records):
+                try:
+                    observePotionConsumptions(self, records, player_name=self.call(self.player, "getName"))
+                except (AssertionError, ValueError) as error:
+                    self._combat_failure = ("Invalid native potion evidence", str(error))
+                    self.test.fail(self._combat_failure)
 
     def pump(self):
         loop = self.engine("event_loop.instance")

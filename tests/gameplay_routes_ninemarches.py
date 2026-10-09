@@ -13,6 +13,7 @@ from tests.gameplay_branch_journals import verifyJournals
 from tests.gameplay_routes_services import marketAttempt, readSignpost, useOwnedScroll
 from tests.gameplay_routes_crafting import openStation, recipeAttempt
 from tests.gameplay_routes_waypoints import verifyWaypointPublication
+from tests.gameplay_routes_potions import consumePotionsAtDeficits
 
 SOURCES = (
     "res/maps/ninemarches/script.py",
@@ -99,6 +100,7 @@ def retreatWithOwnedScroll(d):
 def afterCombat(d):
     if not newCombatWitness(d):
         return
+    consumePotionsAtDeficits(d)
     if all(
         d.call(d.player, current) == d.call(d.player, maximum)
         for current, maximum in (("getHp", "getHpMax"), ("getMana", "getManaMax"))
@@ -461,8 +463,9 @@ def finale(d, allies):
     d.check(branch, d.flag("crown_taken") and d.flag("boss_defeated"))
 
 
-def regionalCombat(d):
-    start(d)
+def regionalCombat(d, *, start_new=True):
+    if start_new:
+        start(d)
     document = json.loads((Path(__file__).resolve().parents[1] / "res/maps/ninemarches/map.json").read_text())
     groups = {
         item["type"]: item["name"]

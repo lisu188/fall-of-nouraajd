@@ -23,6 +23,9 @@ ROUTE_MODULES = (
     "tests.gameplay_routes_ninemarches",
     "tests.gameplay_routes_maps",
     "tests.gameplay_routes_campaigns",
+    "tests.gameplay_routes_recipe_outcomes",
+    "tests.gameplay_routes_recipe_gold",
+    "tests.gameplay_routes_consumables",
 )
 AUTHORED_MAPS = (
     "castleGriffinCliff",
@@ -241,7 +244,7 @@ BRANCH_DETAILS = {
     ),
     "test.market.purchased": BranchFamily(
         "test.market.purchased",
-        "Loot the authored chest and defeated creatures, then sell newly earned items through ordinary buyback for enough earned gold.",
+        "Collect the authored Chaos Sword, then sell that earned item through ordinary buyback for enough earned gold before remaining combat.",
         "The purchase succeeds, deducts its actual price and transfers the exact stocked item into player ownership.",
     ),
     "castle.town.rest": BranchFamily(
@@ -346,8 +349,8 @@ def sharedServiceObligations(root=ROOT):
                 "Earn a real "
                 + ("combat injury" if potion == "life" else "casting deficit")
                 + " and use an owned authored potion.",
-                "The exact capped restoration follows its configured power and only the consumed item identity leaves inventory.",
-                sources=("res/config/potions.json",),
+                "The actual matching-player native item_used event proves exact capped restoration, unchanged equipment and removal of only the consumed owned identity.",
+                sources=("res/config/potions.json", "src/object/CCreature.cpp"),
                 phase="earned",
             )
         for outcome in ("timedSpawn", "exhausted"):
@@ -372,8 +375,8 @@ def sharedServiceObligations(root=ROOT):
         "potion.life.used",
         "res/plugins/potion.py:LifePotion.onUse",
         "Earn an actual combat injury and purchase/use an owned stocked life potion.",
-        "Configured capped healing applies and exactly the consumed owned identity leaves inventory.",
-        sources=("res/config/potions.json",),
+        "The actual matching-player native item_used event proves capped healing, unchanged equipment and removal of only the consumed owned identity.",
+        sources=("res/config/potions.json", "src/object/CCreature.cpp"),
     )
     for map_name in ("ninemarches", "sunderedmarch", "test"):
         require(

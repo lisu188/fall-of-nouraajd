@@ -11,6 +11,7 @@ from tests.gameplay_branch_types import RouteCase
 from tests.gameplay_routes_waypoints import verifyWaypointPublication
 from tests.gameplay_branch_journals import verifyJournals
 from tests.gameplay_routes_services import collectedScrollRetreat, marketAttempt, ownedIdentities, readSignpost
+from tests.gameplay_routes_potions import preparePotionStock, requirePotionConsumptions
 
 ROOT = Path(__file__).resolve().parents[1]
 
@@ -56,8 +57,8 @@ def clearHostiles(d, limit=256):
     d.test.fail({"reason": "Authored encounter did not finish", "map": d.map_name, "remaining": hostiles(d)})
 
 
-def visitCaves(d, names, prefix):
-    for name in names:
+def visitCaves(d, names, prefix, *, after_first=None):
+    for index, name in enumerate(names):
         cave = d.object(name, required=False)
         if cave:
             initial = d.call(cave, "getNumericProperty", "monsters")
@@ -67,6 +68,8 @@ def visitCaves(d, names, prefix):
             d.navigateTo(name)
         clearHostiles(d)
         d.check(prefix + ".cave." + name, d.object(name, required=False) is None, cave=name)
+        if index == 0 and after_first is not None:
+            after_first()
 
 
 def tradeSupplies(d, market_name, branch, earned_items=()):
@@ -90,7 +93,12 @@ def vhulmarn(d, informed):
         before = (d.gold(), d.count("tiaraOfTheDrownedTithe"))
         d.select("widowDialog", "ENTRY", 0)
         d.check("vhulmarn.widow.warning", before == (d.gold(), d.count("tiaraOfTheDrownedTithe")))
-        visitCaves(d, ("caveTarnMouth", "caveSunkenWharf", "caveHybridWarren"), "vhulmarn")
+        visitCaves(
+            d,
+            ("caveTarnMouth", "caveSunkenWharf", "caveHybridWarren"),
+            "vhulmarn",
+            after_first=lambda: preparePotionStock(d, "tarnBarter", ownedIdentities(d) - initial_items),
+        )
         tradeSupplies(d, "tarnBarter", "vhulmarn.market.purchased", ownedIdentities(d) - initial_items)
     d.navigateTo("tideBell")
     d.check("vhulmarn.bell.tolled", d.flag("bell_tolled"))
@@ -116,6 +124,7 @@ def vhulmarn(d, informed):
         "vhulmarn.altar.repeat",
         d.count("tiaraOfTheDrownedTithe") == count_before + 1 and d.object("theNamelessBoss", required=False) is None,
     )
+    requirePotionConsumptions(d)
 
 
 def kadath(d, informed):
@@ -135,7 +144,12 @@ def kadath(d, informed):
         before = (d.gold(), d.count("onyxSignetOfNyarlathotep"))
         d.select("lengPriestDialog", "ENTRY", 0)
         d.check("kadath.priest.refuse", before == (d.gold(), d.count("onyxSignetOfNyarlathotep")))
-        visitCaves(d, ("roostNightGaunt", "warrenLeng", "vaultElder", "roostNorth", "nestLengSpider"), "kadath")
+        visitCaves(
+            d,
+            ("roostNightGaunt", "warrenLeng", "vaultElder", "roostNorth", "nestLengSpider"),
+            "kadath",
+            after_first=lambda: preparePotionStock(d, "campBarter", ownedIdentities(d) - initial_items),
+        )
         tradeSupplies(d, "campBarter", "kadath.market.purchased", ownedIdentities(d) - initial_items)
         d.navigateTo("dreamGate")
         d.check("kadath.gate.opened", d.flag("gate_opened"))
@@ -166,6 +180,7 @@ def kadath(d, informed):
         d.count("onyxSignetOfNyarlathotep") == count_before + 1
         and d.object("theCrawlingChaosBoss", required=False) is None,
     )
+    requirePotionConsumptions(d)
 
 
 def sunderedmarch(d, banner_first):
@@ -240,6 +255,7 @@ def sunderedmarch(d, banner_first):
     for name, target in (("monolithVale", "monolithPyre"), ("monolithPyre", "monolithVale")):
         d.navigateTo(name)
         d.check("sunderedmarch.portal." + name, d.coords() == d.coords(d.object(target)))
+    preparePotionStock(d, "valeBarter", ownedIdentities(d) - initial_items)
     visitCaves(d, ("valeGuard", "gateGuard", "barrowGuard", "fenGuard", "pyreGuard"), "sunderedmarch")
     for name in ("valeChest", "fenChest", "pyreChest", "barrowChest"):
         d.navigateTo(name)
@@ -262,6 +278,7 @@ def sunderedmarch(d, banner_first):
         "sunderedmarch.dig.repeat",
         d.count("barrowCrown") == 1 and d.object("theBarrowWarlordBoss", required=False) is None,
     )
+    requirePotionConsumptions(d)
 
 
 def multilevel(d):
@@ -295,7 +312,7 @@ def testMarket(d, purchased, earned_items=()):
             loot = [value for value in d.call(d.player, "getItems") if value["__handle__"] in earned_items]
             sale = [(d.call(market, "getBuyCost", value), value["__handle__"], value) for value in loot]
             sale = [value for value in sale if value[0] > 0]
-            d.test.assertTrue(sale, "Real chest and encounter loot must fund the purchase")
+            d.test.assertTrue(sale, "Actual collected Chaos Sword or earned encounter loot must fund the purchase")
             d.sellAt("market1", max(sale, key=lambda value: value[:2])[2])
         d.test.assertGreaterEqual(d.gold(), price)
     else:
@@ -334,17 +351,17 @@ def testMap(d):
         d.test.assertFalse(d.call(d.object("chest"), "getBoolProperty", "looted"))
     testMarket(d, False)
     owned_before_loot = {value["__handle__"] for value in d.call(d.player, "getItems")}
+    d.navigateTo("chaosSword")
+    d.check("test.item.pickup", d.count("ChaosSword") >= 1)
+    earned_items = {value["__handle__"] for value in d.call(d.player, "getItems")} - owned_before_loot
+    testMarket(d, True, earned_items)
     clearHostiles(d)
     d.navigateTo("chest")
     d.check("test.chest.first", d.call(d.object("chest"), "getBoolProperty", "looted"))
-    earned_items = {value["__handle__"] for value in d.call(d.player, "getItems")} - owned_before_loot
     gold_before = d.gold()
     d.revisit("chest")
     d.check("test.chest.repeat", d.gold() == gold_before)
-    d.navigateTo("chaosSword")
-    d.check("test.item.pickup", d.count("ChaosSword") >= 1)
-    earned_items.update({value["__handle__"] for value in d.call(d.player, "getItems")} - owned_before_loot)
-    testMarket(d, True, earned_items)
+    requirePotionConsumptions(d, categories=("life",))
     target = mapObjects("test")["teleporter2"]
     d.navigateTo("teleporter1")
     d.check("test.teleporter.first", d.coords() == target)
@@ -450,6 +467,8 @@ CASES = (
             "vhulmarn.scroll.retreat",
             "vhulmarn.cave.timedSpawn",
             "vhulmarn.cave.exhausted",
+            "vhulmarn.potion.life.used",
+            "vhulmarn.potion.mana.used",
             "vhulmarn.cave.caveTarnMouth",
             "vhulmarn.cave.caveSunkenWharf",
             "vhulmarn.cave.caveHybridWarren",
@@ -480,6 +499,8 @@ CASES = (
             "kadath.scroll.retreat",
             "kadath.cave.timedSpawn",
             "kadath.cave.exhausted",
+            "kadath.potion.life.used",
+            "kadath.potion.mana.used",
             "kadath.gate.opened",
             "kadath.gate.repeat",
             "kadath.cave.roostNightGaunt",
@@ -509,6 +530,8 @@ CASES = (
             "sunderedmarch.seer.reminder",
             "sunderedmarch.cave.timedSpawn",
             "sunderedmarch.cave.exhausted",
+            "sunderedmarch.potion.life.used",
+            "sunderedmarch.potion.mana.used",
         ),
         sources=sources("sunderedmarch"),
     ),
@@ -548,6 +571,7 @@ CASES = (
             "test.item.pickup",
             "test.market.insufficientGold",
             "test.market.purchased",
+            "test.potion.life.used",
             "test.teleporter.first",
             "test.teleporter.disabled",
             "test.teleporter.third",

@@ -244,18 +244,42 @@ def reportDecisionReplayFailure(stdout, returncode, evidence):
 class OctobogzMcpWalkthroughTest(unittest.TestCase):
     def setUp(self):
         import test as harness
+        from types import SimpleNamespace
 
         self.native_log_path = harness.TEST_OUTPUT_DIR / f"mcp-octobogz-native-{uuid.uuid4().hex}.log"
         startup = harness.McpServerTest._start_stdio_mcp_process
 
         def startWithNativeLog(instance, *args, **kwargs):
+            kwargs.setdefault("map_name", "nouraajd")
+            kwargs.setdefault("trace_name", "octobogz-" + uuid.uuid4().hex)
             return startup(instance, *args, native_log_file=self.native_log_path, **kwargs)
 
         with patch.object(harness.McpServerTest, "_start_stdio_mcp_process", startWithNativeLog):
             dialogue_mcp.DialogueMcpWalkthroughTest.setUp(self)
+        self._native_combat_validator = SimpleNamespace(
+            test=self,
+            trace_path=self.process._playtest_trace_path,
+            _combat_trace_positions={},
+            _combat_trace_seq=0,
+            _combat_failure=None,
+            player=None,
+        )
+        self.assertIsNotNone(self._native_combat_validator.trace_path)
         print("MCP hunt native log", str(self.native_log_path), flush=True)
+        print("MCP hunt native trace", str(self._native_combat_validator.trace_path), flush=True)
 
-    pump = dialogue_mcp.DialogueMcpWalkthroughTest.pump
+    def pump(self):
+        from tests.gameplay_branch_driver import GameplayBranchDriver
+
+        validator = getattr(self, "_native_combat_validator", None)
+        if validator is not None:
+            GameplayBranchDriver.assertNativeCombatOutcomes(validator)
+        loop = self.engine("event_loop.instance")
+        for _ in range(3):
+            self.call(loop, "run")
+            if validator is not None:
+                GameplayBranchDriver.assertNativeCombatOutcomes(validator)
+
     object = dialogue_mcp.DialogueMcpWalkthroughTest.object
     dialog = dialogue_mcp.DialogueMcpWalkthroughTest.dialog
     action = dialogue_mcp.DialogueMcpWalkthroughTest.action
@@ -967,6 +991,159 @@ class OctobogzMcpWalkthroughTest(unittest.TestCase):
                 pass
             raise
 
+    def purchaseVictorLifePotionWithEarnedWard(self):
+        self.assertEqual("good_end", self.call(self.game_map, "getStringProperty", "quest_state_victor"))
+        self.assertTrue(self.call(self.game_map, "getBoolProperty", "VICTOR_REWARD_GRANTED"))
+        handler = self.call(self.game, "getGuiHandler")
+        market = self.call(handler, "getRequestedTradeMarket")
+        self.assertIsNotNone(market, "The real rescue must expose its actual one-time merchant")
+        self.assertEqual("victorMarket", self.call(market, "getTypeId"))
+        stock = self.call(market, "getItems")
+        self.assertEqual(["LifePotion", "ManaPotion"], sorted(self.call(item, "getTypeId") for item in stock))
+        life = next(item for item in stock if self.call(item, "getTypeId") == "LifePotion")
+        inventory = self.call(self.player, "getItems")
+        scrolls = [item for item in inventory if self.call(item, "getTypeId") == "Scroll"]
+        self.assertEqual(1, len(scrolls), "Only the actual class-deed parchment may fund this purchase")
+        parchment = scrolls[0]
+        equipped = self.call(self.player, "getEquipped")
+        self.assertNotIn(parchment, equipped.values())
+        self.assertFalse(self.call(parchment, "hasTag", "quest"))
+        self.assertTrue(self.call(self.player, "getBoolProperty", "decoded_stained_glass_ward"))
+        before = self.marketTransactionState()
+        owned = {item["__handle__"] for item in inventory}
+        portals = {item["__handle__"] for item in inventory if self.call(item, "getTypeId") == "TownPortalScroll"}
+        self.assertEqual(1, len(portals), "The later actual retreat still needs its collected scroll")
+        self.assertEqual(700, self.call(self.player, "getGold"), "Only Gooby's 200 and Victor's 500 fund this step")
+        self.assertEqual(160, self.call(market, "getBuyCost", parchment))
+        self.call(market, "buyItem", self.player, parchment)
+        self.assertEqual(860, self.call(self.player, "getGold"))
+        self.assertEqual(
+            owned - {parchment["__handle__"]}, {item["__handle__"] for item in self.call(self.player, "getItems")}
+        )
+        self.assertEqual(
+            {item["__handle__"] for item in stock} | {parchment["__handle__"]},
+            {item["__handle__"] for item in self.call(market, "getItems")},
+        )
+        self.assertEqual(800, self.call(market, "getSellCost", life))
+        self.assertTrue(self.call(market, "sellItem", self.player, life))
+        self.assertEqual(60, self.call(self.player, "getGold"))
+        self.assertEqual(
+            (owned - {parchment["__handle__"]}) | {life["__handle__"]},
+            {item["__handle__"] for item in self.call(self.player, "getItems")},
+        )
+        self.assertTrue(portals <= {item["__handle__"] for item in self.call(self.player, "getItems")})
+        self.assertEqual(equipped, self.call(self.player, "getEquipped"))
+        self.assertEqual(before, self.marketTransactionState())
+        remaining = {item["__handle__"] for item in self.call(market, "getItems")}
+        self.assertEqual(
+            ({item["__handle__"] for item in stock} - {life["__handle__"]}) | {parchment["__handle__"]}, remaining
+        )
+        self.assertEqual(market, self.call(handler, "getRequestedTradeMarket"))
+        self.assertFalse(self.call(market, "sellItem", self.player, life))
+        self.assertEqual(60, self.call(self.player, "getGold"))
+        self.assertEqual(remaining, {item["__handle__"] for item in self.call(market, "getItems")})
+        print(
+            "MCP hunt actual Victor merchant preparation",
+            {"life": life, "soldEarnedWard": parchment, "gold": 60},
+            flush=True,
+        )
+        return life
+
+    def prepareVictorHealingStock(self):
+        from tests.gameplay_branch_driver import GameplayBranchDriver
+
+        self.finishOriginalMainQuest()
+        self.assertEqual(200, self.call(self.player, "getGold"))
+        walkthrough = self
+
+        class PreparationDialogue:
+            test = walkthrough
+            map_name = "nouraajd"
+            game = walkthrough.game
+            _dialog_positions = {}
+            call = staticmethod(walkthrough.call)
+            pump = staticmethod(walkthrough.pump)
+            _dialogStates = GameplayBranchDriver._dialogStates
+            choose = GameplayBranchDriver.choose
+            select = GameplayBranchDriver.select
+
+            def record(self, choice, **kwargs):
+                print("MCP hunt Victor preparation dialogue", choice, flush=True)
+
+        dialogue = PreparationDialogue()
+
+        def select(dialog_id, state_id, number):
+            actor = "nouraajdTownHall" if dialog_id == "townHallDialog" else "nouraajdTavern"
+            self.assertEqual(self.coords(self.object(actor)), self.coords(), "Quest choices require actual arrival")
+            return dialogue.select(dialog_id, state_id, number)
+
+        defeat_before = self.call(self.player, "getStringProperty", "uiDefeatReceipt")
+
+        def nativeTurn():
+            before = self.call(self.game_map, "getTurn")
+            self.call(self.game_map, "move")
+            self.pump()
+            self.assertEqual(before + 1, self.call(self.game_map, "getTurn"))
+            if not self.call(self.player, "isAlive"):
+                self.fail(self.snapshot("Victor preparation survival"))
+            self.assertEqual(defeat_before, self.call(self.player, "getStringProperty", "uiDefeatReceipt"))
+
+        self.walkTo("nouraajdTavern")
+        tavern = self.object("nouraajdTavern")
+        self.assertEqual(1, self.call(tavern, "getNumericProperty", "visited"))
+        select("tavernDialog1", "INKEEPER_ABOUT_CULTISTS", 1)
+        select("tavernDialog1", "INKEEPER_ABOUT_GIRL", 2)
+        opened = self.call(tavern, "getNumericProperty", "time_visited")
+        for _ in range(51):
+            if self.call(self.game_map, "getTurn") - opened > 50:
+                break
+            nativeTurn()
+        self.assertGreater(self.call(self.game_map, "getTurn") - opened, 50)
+        position = self.coords(tavern)
+        neighbors = [(position[0] + dx, position[1] + dy, position[2]) for dx, dy in ((1, 0), (-1, 0), (0, 1), (0, -1))]
+        departure = next((value for value in neighbors if value in self.walkable), None)
+        self.assertIsNotNone(departure, "The authored tavern must have a cardinal exit")
+        self.step(departure)
+        self.walkTo("nouraajdTavern")
+        self.assertEqual(2, self.call(tavern, "getNumericProperty", "visited"))
+        select("tavernDialog2", "INKEEPER_RANT", 1)
+        select("tavernDialog2", "YELLED_AT_VICTOR", 0)
+        self.assertTrue(self.call(self.game_map, "getBoolProperty", "TALKED_TO_VICTOR"))
+        select("tavernDialog2", "VICTOR_SPEECH", 1)
+        select("tavernDialog2", "SUGGEST_TOWN_HALL", 0)
+        self.walkTo("nouraajdTownHall")
+        self.assertTrue(self.call(self.dialog("townHallDialog"), "invokeCondition", "can_discuss_victor_records"))
+        dialogue.choose("townHallDialog", "spawn_cultists", condition=None)
+        self.assertEqual("encounter_active", self.call(self.game_map, "getStringProperty", "quest_state_victor"))
+        leader = self.object("cultLeaderQuest")
+        self.assertTrue(self.call(leader, "isAlive"))
+        spawned = self.call(self.game_map, "getNumericProperty", "VICTOR_COURTYARD_TURN")
+        experience = self.call(self.player, "getNumericProperty", "exp")
+        # Actual targeting opponents approach the town hall; chasing the moving leader can oscillate beside a wall.
+        for _ in range(75):
+            if self.call(self.game_map, "getStringProperty", "quest_state_victor") != "encounter_active":
+                break
+            self.assertLess(self.call(self.game_map, "getTurn") - spawned, 75)
+            nativeTurn()
+        self.assertEqual("good_end", self.call(self.game_map, "getStringProperty", "quest_state_victor"))
+        self.assertFalse(self.call(leader, "isAlive"), "Only an actual leader defeat can complete the rescue")
+        self.assertIsNone(self.call(self.game_map, "getObjectByName", "cultLeaderQuest"))
+        self.assertGreater(self.call(self.player, "getNumericProperty", "exp"), experience)
+        history = json.loads(self.call(self.game_map, "getStringProperty", "combatHistory"))
+        self.assertTrue(history, "The real rescue must retain its native combat witness")
+        self.call(self.player, "checkQuests")
+        self.assertIn("victorQuest", self.questNames("getCompletedQuests"))
+        print(
+            "MCP hunt actual Victor rescue",
+            {"turns": self.call(self.game_map, "getTurn") - spawned, "combat": history[-8:]},
+            flush=True,
+        )
+        self.purchaseVictorLifePotionWithEarnedWard()
+
+    def prepareSorcererForHunt(self):
+        self.prepareVictorHealingStock()
+        self.prepareHealingStockAtAuthoredMarket()
+
     def prepareThroughRolf(self):
         self.recoverOnRoadPair((44, 106, 0), (44, 107, 0), "opened gate road recovery")
         self.snapshot("before original Rolf cave")
@@ -1485,7 +1662,7 @@ class OctobogzMcpWalkthroughTest(unittest.TestCase):
                 self.probeCoordinateReadCosts()
                 self.prepareThroughCatacombs()
                 if player_class == "Sorcerer":
-                    self.prepareHealingStockAtAuthoredMarket()
+                    self.prepareSorcererForHunt()
                 self.walkTo("questGiver")
                 if player_class == "Warrior":
                     self.action(self.dialog("dialog"), "accept_quest")
@@ -1557,6 +1734,380 @@ class OctobogzMcpWalkthroughTest(unittest.TestCase):
 
 
 class OctobogzDiagnosticTest(unittest.TestCase):
+    def testLegacyPumpStopsAtTheFirstUnresolvedPlayerCombatAndCannotRetryIntoALaterVictory(self):
+        from types import SimpleNamespace
+        from unittest.mock import Mock
+
+        for outcome in (0, 3, 4):
+            with self.subTest(outcome=outcome), tempfile.TemporaryDirectory() as directory:
+                trace = Path(directory) / "actual-native.trace.jsonl"
+                validator = SimpleNamespace(
+                    test=self,
+                    trace_path=trace,
+                    _combat_trace_positions={},
+                    _combat_trace_seq=0,
+                    _combat_failure=None,
+                    player=None,
+                )
+                calls = []
+
+                def append(seq, result):
+                    with trace.open("a", encoding="utf-8") as output:
+                        output.write(
+                            json.dumps(
+                                {
+                                    "seq": seq,
+                                    "event": "combat_finished",
+                                    "attacker": {"isPlayer": True},
+                                    "opponents": [{"isPlayer": False}],
+                                    "outcome": result,
+                                }
+                            )
+                            + "\n"
+                        )
+
+                def run(handle, method):
+                    calls.append(method)
+                    append(1, outcome)
+
+                fixture = SimpleNamespace(
+                    _native_combat_validator=validator, engine=Mock(return_value="loop"), call=run
+                )
+                with self.assertRaisesRegex(AssertionError, "Unresolved native player combat"):
+                    OctobogzMcpWalkthroughTest.pump(fixture)
+                self.assertEqual(["run"], calls)
+                append(2, 1)
+                with self.assertRaisesRegex(AssertionError, "Unresolved native player combat"):
+                    OctobogzMcpWalkthroughTest.pump(fixture)
+                self.assertEqual(
+                    ["run"], calls, "A later victory cannot clear the first native failure or advance another turn"
+                )
+                fixture.engine.assert_called_once()
+
+    def testVictorMerchantUsesActualAuthoredPayoutsAndWardParchmentWhileRetainingTheRetreatScroll(self):
+        from types import SimpleNamespace
+        from unittest.mock import Mock
+
+        from tests.test_gameplay_route_dialogs import authoredFunction
+
+        state = {"gold": 0, "flags": {}, "victor": "encounter_active"}
+        handles = {
+            name: {"__handle__": name}
+            for name in (
+                "player",
+                "world",
+                "game",
+                "handler",
+                "market",
+                "life",
+                "mana",
+                "ward",
+                "portal",
+                "starter",
+                "quest",
+            )
+        }
+        items = {
+            "life": "LifePotion",
+            "mana": "ManaPotion",
+            "ward": "Scroll",
+            "portal": "TownPortalScroll",
+            "starter": "Staff",
+            "quest": "letterFromRolf",
+        }
+        owned, stock = {"portal", "starter", "quest"}, {"life", "mana"}
+        sold, purchases = [], []
+        equipped = {"0": handles["starter"]}
+        native_player = SimpleNamespace(
+            addGold=lambda value: state.update(gold=state["gold"] + value),
+            healProc=Mock(),
+            addItem=lambda identity: owned.add("ward") if identity == "Scroll" else self.fail(identity),
+            incProperty=Mock(),
+            setBoolProperty=lambda key, value: state["flags"].update({key: value}),
+            addExp=Mock(),
+        )
+        market_object = object()
+        gui = SimpleNamespace(showTrade=Mock())
+        native_game = SimpleNamespace(getGuiHandler=lambda: gui)
+        world = SimpleNamespace(
+            getGame=lambda: native_game,
+            getPlayer=lambda: native_player,
+            getBoolProperty=lambda key: state["flags"].get(key, False),
+        )
+        native_game.getMap = lambda: world
+        native_game.createObject = lambda identity: (
+            market_object if identity == "victorMarket" else SimpleNamespace(getStates=lambda: [])
+        )
+
+        def claim_once(world, flag):
+            if state["flags"].get(flag):
+                return False
+            state["flags"][flag] = True
+            return True
+
+        source = "res/maps/nouraajd/script.py"
+        ward = authoredFunction(
+            source, "decode_stained_glass_ward", class_id="BerenDialog", rewardSnapshot=Mock(), showRewardReceipt=Mock()
+        )
+        ward(SimpleNamespace(getGame=lambda: native_game, can_decode_stained_glass_ward=lambda: True))
+        gooby = authoredFunction(
+            source,
+            "onComplete",
+            class_id="MainQuest",
+            claim_once=claim_once,
+            rewardSnapshot=Mock(),
+            showRewardReceipt=Mock(),
+            MAIN_QUEST_GOLD_REWARD=200,
+        )
+        gooby(SimpleNamespace(getGame=lambda: native_game))
+        quest_system = SimpleNamespace(
+            get_state=lambda quest: state["victor"], mark_victor_good_end=lambda: state.update(victor="good_end")
+        )
+        rescued = authoredFunction(
+            source,
+            "trigger",
+            class_id="CultLeaderQuestTrigger",
+            _quest_system_from=lambda obj: quest_system,
+            claim_once=claim_once,
+            rewardSnapshot=Mock(),
+            showRewardReceipt=Mock(),
+            narrative=SimpleNamespace(victorResponse=lambda game: ""),
+            _clear_victor_encounter=Mock(),
+        )
+        rescued(SimpleNamespace(getGame=lambda: native_game), object(), object())
+        gui.showTrade.assert_called_once_with(market_object)
+        self.assertEqual(700, state["gold"])
+
+        def call(handle, method, *args):
+            identity = handle["__handle__"]
+            if method == "getStringProperty":
+                return state["victor"]
+            if method == "getBoolProperty":
+                return state["flags"].get(args[0], False)
+            if method == "getGuiHandler":
+                return handles["handler"]
+            if method == "getRequestedTradeMarket":
+                return handles["market"]
+            if method == "getTypeId":
+                return "victorMarket" if identity == "market" else items[identity]
+            if method == "getItems":
+                return [handles[key] for key in sorted(owned if identity == "player" else stock)]
+            if method == "getEquipped":
+                return dict(equipped)
+            if method == "hasTag":
+                return identity == "quest"
+            if method == "getGold":
+                return state["gold"]
+            if method == "getBuyCost":
+                self.assertEqual(handles["ward"], args[0])
+                return 160
+            if method == "getSellCost":
+                self.assertEqual(handles["life"], args[0])
+                return 800
+            if method == "buyItem":
+                self.assertEqual((handles["player"], handles["ward"]), args)
+                owned.remove("ward")
+                stock.add("ward")
+                state["gold"] += 160
+                sold.append("ward")
+                return
+            if method == "sellItem":
+                self.assertEqual((handles["player"], handles["life"]), args)
+                if "life" not in stock:
+                    return False
+                self.assertGreaterEqual(state["gold"], 800)
+                stock.remove("life")
+                owned.add("life")
+                state["gold"] -= 800
+                purchases.append("life")
+                return True
+            raise AssertionError((identity, method, args))
+
+        fixture = SimpleNamespace(
+            call=call,
+            game=handles["game"],
+            game_map=handles["world"],
+            player=handles["player"],
+            marketTransactionState=lambda: {"context": "unchanged"},
+        )
+        for name in ("assertEqual", "assertTrue", "assertFalse", "assertNotIn", "assertIsNotNone"):
+            setattr(fixture, name, getattr(self, name))
+        self.assertEqual(handles["life"], OctobogzMcpWalkthroughTest.purchaseVictorLifePotionWithEarnedWard(fixture))
+        self.assertEqual(60, state["gold"])
+        self.assertEqual(["ward"], sold)
+        self.assertEqual(["life"], purchases)
+        self.assertEqual({"life", "portal", "starter", "quest"}, owned)
+        self.assertEqual({"mana", "ward"}, stock)
+        # Claim-first source callbacks cannot mint a second payout or replace the depleted market.
+        gooby(SimpleNamespace(getGame=lambda: native_game))
+        rescued(SimpleNamespace(getGame=lambda: native_game), object(), object())
+        self.assertEqual(60, state["gold"])
+        gui.showTrade.assert_called_once()
+
+    def testSorcererEarnsVictorSuppliesBeforeInitialHuntPreparation(self):
+        from types import SimpleNamespace
+
+        calls = []
+        fixture = SimpleNamespace(
+            prepareVictorHealingStock=lambda: calls.append("actual-Victor-rescue-and-purchase"),
+            prepareHealingStockAtAuthoredMarket=lambda: calls.append("finite-basic-preparation"),
+        )
+        OctobogzMcpWalkthroughTest.prepareSorcererForHunt(fixture)
+        self.assertEqual(["actual-Victor-rescue-and-purchase", "finite-basic-preparation"], calls)
+
+    def victorPreparationSequence(self, mode="success"):
+        from types import SimpleNamespace
+        from unittest.mock import Mock
+
+        state = {
+            "turn": 10,
+            "coords": (58, 115, 0),
+            "visited": 0,
+            "opened": 0,
+            "flags": {},
+            "victor": "not_started",
+            "alive": True,
+            "leader_alive": True,
+            "exp": 6000,
+            "gold": 200,
+            "receipt": "",
+            "spawned": None,
+        }
+        positions = {"nouraajdTavern": (48, 99, 0), "nouraajdTownHall": (43, 101, 0)}
+        actions, visits = [], []
+        handles = {name: {"__handle__": name} for name in ("player", "world", "game", "cultLeaderQuest", *positions)}
+
+        def turn():
+            state["turn"] += 1
+            if state["victor"] == "encounter_active":
+                elapsed = state["turn"] - state["spawned"]
+                if mode == "defeat":
+                    state.update(alive=False, receipt="actual defeat")
+                elif mode == "timeout" and elapsed == 75:
+                    state["victor"] = "bad_end"
+                elif mode == "success" and elapsed == 2:
+                    state.update(victor="good_end", leader_alive=False, gold=700, exp=6250)
+
+        def call(handle, method, *args):
+            identity = handle["__handle__"]
+            if method == "createObject":
+                return {"__handle__": args[0]}
+            if method == "getTurn":
+                return state["turn"]
+            if method == "move":
+                turn()
+                return
+            if method == "getGold":
+                return state["gold"]
+            if method == "getNumericProperty":
+                if args[0] == "visited":
+                    return state["visited"]
+                if args[0] == "time_visited":
+                    return state["opened"]
+                if args[0] == "VICTOR_COURTYARD_TURN":
+                    return state["spawned"]
+                return state[args[0]]
+            if method == "getStringProperty":
+                if args[0] == "quest_state_victor":
+                    return state["victor"]
+                if args[0] == "combatHistory":
+                    return json.dumps(["The cult leader is defeated."])
+                return state["receipt"]
+            if method == "getBoolProperty":
+                return state["flags"].get(args[0], False)
+            if method == "isAlive":
+                return state["leader_alive"] if identity == "cultLeaderQuest" else state["alive"]
+            if method == "getObjectByName":
+                return None if args[0] == "cultLeaderQuest" and not state["leader_alive"] else handles[args[0]]
+            if method == "checkQuests":
+                self.assertEqual("good_end", state["victor"])
+                return
+            if method == "invokeCondition":
+                return {
+                    "asked_about_girl": state["flags"].get("ASKED_ABOUT_GIRL", False),
+                    "can_discuss_victor_records": state["flags"].get("TALKED_TO_VICTOR", False)
+                    and state["victor"] == "not_started",
+                }.get(args[0], False)
+            if method == "invokeAction":
+                expected = "nouraajdTownHall" if identity == "townHallDialog" else "nouraajdTavern"
+                self.assertEqual(positions[expected], state["coords"], "Actual dialogue actions cannot run remotely")
+                actions.append(args[0])
+                if args[0] == "asked_about_girl":
+                    state["flags"]["ASKED_ABOUT_GIRL"] = True
+                elif args[0] == "talked_to_victor":
+                    self.assertEqual(2, state["visited"])
+                    state["flags"]["TALKED_TO_VICTOR"] = True
+                elif args[0] == "spawn_cultists":
+                    self.assertTrue(state["flags"]["TALKED_TO_VICTOR"])
+                    state.update(victor="encounter_active", spawned=state["turn"])
+                else:
+                    self.assertEqual("calmVictor", args[0])
+                return
+            raise AssertionError((identity, method, args))
+
+        def walkTo(name):
+            visits.append(name)
+            state["coords"] = positions[name]
+            if name == "nouraajdTavern":
+                if state["visited"] == 0:
+                    state.update(visited=1, opened=state["turn"])
+                elif state["turn"] - state["opened"] > 50:
+                    state["visited"] = 2
+
+        def step(destination):
+            self.assertEqual(1, sum(abs(a - b) for a, b in zip(destination, state["coords"])))
+            state["coords"] = destination
+            turn()
+
+        fixture = SimpleNamespace(
+            call=call,
+            game=handles["game"],
+            game_map=handles["world"],
+            player=handles["player"],
+            object=lambda name: handles[name],
+            coords=lambda handle=None: state["coords"] if handle is None else positions[handle["__handle__"]],
+            walkTo=walkTo,
+            step=step,
+            walkable={(49, 99, 0)},
+            pump=Mock(),
+            snapshot=lambda label: label,
+            finishOriginalMainQuest=Mock(),
+            dialog=lambda name: {"__handle__": name},
+            questNames=lambda method: ["victorQuest"] if state["victor"] == "good_end" else [],
+            purchaseVictorLifePotionWithEarnedWard=Mock(),
+        )
+        for name in (
+            "assertEqual",
+            "assertTrue",
+            "assertFalse",
+            "assertIsNotNone",
+            "assertIsNone",
+            "assertGreater",
+            "assertLess",
+            "assertIn",
+            "fail",
+        ):
+            setattr(fixture, name, getattr(self, name))
+        return fixture, state, actions, visits
+
+    def testVictorPreparationUsesTheAuthoredDialogueGraphAfterActualVisitsAndNativeWaiting(self):
+        fixture, state, actions, visits = self.victorPreparationSequence()
+        OctobogzMcpWalkthroughTest.prepareVictorHealingStock(fixture)
+        self.assertEqual(["nouraajdTavern", "nouraajdTavern", "nouraajdTownHall"], visits)
+        self.assertEqual(["asked_about_girl", "calmVictor", "talked_to_victor", "spawn_cultists"], actions)
+        self.assertEqual(2, state["turn"] - state["spawned"])
+        self.assertEqual((43, 101, 0), state["coords"], "The actual targeting enemies approach the current town hall")
+        fixture.purchaseVictorLifePotionWithEarnedWard.assert_called_once_with()
+
+    def testVictorPreparationDoesNotBuyAfterDefeatOrTheRealDeadline(self):
+        for mode in ("defeat", "timeout"):
+            with self.subTest(mode=mode):
+                fixture, state, _actions, _visits = self.victorPreparationSequence(mode)
+                with self.assertRaises(AssertionError):
+                    OctobogzMcpWalkthroughTest.prepareVictorHealingStock(fixture)
+                self.assertLessEqual(state["turn"] - state["spawned"], 75)
+                fixture.purchaseVictorLifePotionWithEarnedWard.assert_not_called()
+
     def testNativeLoggerIsOptInAndPassesTheExactFileArgument(self):
         import ast
         from types import SimpleNamespace

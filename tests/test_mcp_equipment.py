@@ -14,6 +14,23 @@ ROOT = Path(__file__).resolve().parents[1]
 
 
 class McpEquipmentContractTest(unittest.TestCase):
+    def testEmbeddedRuntimeProgramsSatisfyTheRepositoryIndentationGate(self):
+        import json
+
+        from tests.test_gameplay_route_dialogs import authoredFunction
+
+        indentation_gate = authoredFunction(
+            "test.py",
+            "test_indentation",
+            class_id="GameTest",
+            game_test=lambda method: method,
+            git_tracked_files=lambda pattern: ("tests/test_mcp_equipment.py",),
+            REPO_ROOT=ROOT,
+            json=json,
+        )
+        success, offenders = indentation_gate(self)
+        self.assertTrue(success, offenders)
+
     def equipmentServer(self):
         item = object()
         configuration = SimpleNamespace(canFit=Mock(return_value=True))
@@ -402,7 +419,7 @@ class McpEquipmentRuntimeTest(unittest.TestCase):
                     assert event['player']['isPlayer'] is True and event['player']['name'] == player.getName(), event
                     assert event['playerCoords'] == {'x': 106, 'y': 110, 'z': 0}, event
                 for name, expected_recipe in (('alchemyTable1', 'brew_life_potion'),
-                                               ('scribeDesk1', 'craft_town_portal_scroll')):
+                                                ('scribeDesk1', 'craft_town_portal_scroll')):
                     game.clear_playtest_trace()
                     station = world.getObjectByName(name)
                     enter(station)

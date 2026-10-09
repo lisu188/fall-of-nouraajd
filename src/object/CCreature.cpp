@@ -1032,10 +1032,52 @@ void CCreature::useItem(std::shared_ptr<CItem> item) {
     if ((restores_hp || restores_mana) && !can_restore_hp && !can_restore_mana) {
         return;
     }
+    const bool trace_use = CPlaytestTrace::enabled() && (restores_hp || restores_mana);
+    std::set<std::shared_ptr<CItem>> owned_before;
+    std::map<std::string, std::shared_ptr<CItem>> equipped_before;
+    json fields;
+    if (trace_use) {
+        owned_before = items;
+        equipped_before = getEquipped();
+        fields = {{"actor", CPlaytestTrace::objectRef(this->ptr<CCreature>())},
+                  {"item", CPlaytestTrace::objectRef(item)},
+                  {"itemNameLength", static_cast<unsigned long long>(item->getName().size())},
+                  {"power", item->getNumericProperty("power")},
+                  {"disposable", item->isDisposable()},
+                  {"restoresHp", restores_hp},
+                  {"restoresMana", restores_mana},
+                  {"hpBefore", getHp()},
+                  {"hpMaxBefore", getHpMax()},
+                  {"manaBefore", getMana()},
+                  {"manaMaxBefore", getManaMax()},
+                  {"ownedBefore", true},
+                  {"inventoryBeforeCount", static_cast<unsigned long long>(owned_before.size())}};
+        CPlaytestTrace::addMapContext(fields, getMap());
+    }
     getMap()->getEventHandler()->gameEvent(item,
                                            std::make_shared<CGameEventCaused>(CGameEvent::CType::onUse, this->ptr()));
     if (item->isDisposable()) {
         removeItem(item);
+    }
+    if (trace_use) {
+        std::size_t removed = 0, added = 0;
+        for (const auto &owned : owned_before) {
+            removed += !items.contains(owned);
+        }
+        for (const auto &owned : items) {
+            added += !owned_before.contains(owned);
+        }
+        fields["hpAfter"] = getHp();
+        fields["hpMaxAfter"] = getHpMax();
+        fields["manaAfter"] = getMana();
+        fields["manaMaxAfter"] = getManaMax();
+        fields["ownedAfter"] = hasInInventory(item);
+        fields["inventoryAfterCount"] = static_cast<unsigned long long>(items.size());
+        fields["removedCount"] = static_cast<unsigned long long>(removed);
+        fields["addedCount"] = static_cast<unsigned long long>(added);
+        fields["onlyUsedItemRemoved"] = removed == 1 && added == 0 && !hasInInventory(item);
+        fields["equipmentUnchanged"] = equipped_before == getEquipped();
+        CPlaytestTrace::record("item_used", fields);
     }
 }
 

@@ -99,6 +99,8 @@ jobs:
     needs: linux-fast
     runs-on: ubuntu-24.04
     timeout-minutes: 90
+    outputs:
+      runtime-ready: ${{ steps.mcp-runtime-upload.outcome == 'success' }}
     env:
       GAME_CONFIGURE_SKIP_APT: "1"
       GAME_CONFIGURE_SKIP_SUBMODULES: "1"
@@ -170,6 +172,7 @@ jobs:
           python3 scripts/mcp_branch_shards.py bundle --build-dir cmake-build-release
           --archive test/mcp-branch-runtime-linux.tar.gz --head "${{ github.sha }}"
       - name: Upload current Linux MCP runtime
+        id: mcp-runtime-upload
         if: needs.linux-fast.outputs.native-needed == 'true'
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a
         with:
@@ -641,6 +644,8 @@ jobs:
     if: needs.linux-fast.outputs.native-needed == 'true'
     runs-on: windows-2022
     timeout-minutes: 120
+    outputs:
+      runtime-ready: ${{ steps.mcp-runtime-upload.outcome == 'success' }}
     env: *windows-env
     steps:
       - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0
@@ -829,6 +834,7 @@ jobs:
           python scripts/mcp_branch_shards.py bundle --build-dir test/mcp-runtime-windows/fall-of-nouraajd
           --archive test/mcp-branch-runtime-windows.tar.gz --head "${{ github.sha }}"
       - name: Upload current Windows MCP runtime
+        id: mcp-runtime-upload
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a
         with:
           name: mcp-branch-runtime-windows-${{ github.sha }}
@@ -892,6 +898,9 @@ jobs:
     needs:
       - linux-fast
       - linux
+    if: >-
+      always() && !cancelled() && needs.linux-fast.result == 'success' &&
+      needs.linux-fast.outputs.native-needed == 'true' && needs.linux.outputs.runtime-ready == 'true'
     runs-on: ubuntu-24.04
     timeout-minutes: ${{ matrix.timeout-minutes }}
     strategy:
@@ -944,6 +953,9 @@ jobs:
     needs:
       - linux-fast
       - windows
+    if: >-
+      always() && !cancelled() && needs.linux-fast.result == 'success' &&
+      needs.linux-fast.outputs.native-needed == 'true' && needs.windows.outputs.runtime-ready == 'true'
     runs-on: windows-2022
     timeout-minutes: ${{ matrix.timeout-minutes }}
     strategy:
@@ -994,6 +1006,11 @@ jobs:
 
   mcp-branches:
     needs:
+      - linux-fast
+      - linux
+      - windows-deps
+      - windows
+      - linux-coverage
       - mcp-branches-linux
       - mcp-branches-windows
     if: always()
@@ -1040,8 +1057,26 @@ jobs:
       - name: Require the complete branch matrix on both platforms
         if: always()
         env:
+          LINUX_FAST_RESULT: ${{ needs.linux-fast.result }}
+          LINUX_RESULT: ${{ needs.linux.result }}
+          WINDOWS_DEPS_RESULT: ${{ needs.windows-deps.result }}
+          WINDOWS_RESULT: ${{ needs.windows.result }}
+          COVERAGE_RESULT: ${{ needs.linux-coverage.result }}
+          COVERAGE_NEEDED: ${{ needs.linux-fast.outputs.coverage-needed }}
           LINUX_BRANCH_RESULT: ${{ needs.mcp-branches-linux.result }}
           WINDOWS_BRANCH_RESULT: ${{ needs.mcp-branches-windows.result }}
         run: |
-          test "${LINUX_BRANCH_RESULT}" = success
-          test "${WINDOWS_BRANCH_RESULT}" = success
+          python3 - <<'PY'
+          import os
+          for name in (
+              "LINUX_FAST_RESULT", "LINUX_RESULT", "WINDOWS_DEPS_RESULT", "WINDOWS_RESULT",
+              "LINUX_BRANCH_RESULT", "WINDOWS_BRANCH_RESULT",
+          ):
+              if os.environ[name] != "success":
+                  raise SystemExit(f"{name} must succeed; observed {os.environ[name]}")
+          coverage = os.environ["COVERAGE_RESULT"]
+          if coverage != "success" and not (
+              os.environ["COVERAGE_NEEDED"] != "true" and coverage == "skipped"
+          ):
+              raise SystemExit(f"Required coverage did not succeed; observed {coverage}")
+          PY

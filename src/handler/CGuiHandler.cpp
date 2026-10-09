@@ -17,6 +17,7 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 #include "CGuiHandler.h"
 #include "core/CGame.h"
+#include "core/CGameContext.h"
 #include "core/CList.h"
 #include "core/CMap.h"
 #include "core/CPlaytestTrace.h"
@@ -161,6 +162,14 @@ bool CGuiHandler::showConfirm(std::string title, std::string body, std::string c
 
 void CGuiHandler::showTrade(std::shared_ptr<CMarket> market) {
     auto game = _game.lock();
+    requestedTradeMarket.reset();
+    requestedTradeMap.reset();
+    if (game && market && !game->getGui() && CPlaytestTrace::enabled() && game->getMap() &&
+        game->getContext()->isActive()) {
+        requestedTradeMarket = market;
+        requestedTradeMap = game->getMap();
+        requestedTradeGeneration = game->getContext()->captureTransitionGeneration();
+    }
     if (game && market && CPlaytestTrace::enabled()) {
         json fields = {{"market", CPlaytestTrace::objectRef(market)},
                        {"sell", market->getSell()},
@@ -184,6 +193,17 @@ void CGuiHandler::showTrade(std::shared_ptr<CMarket> market) {
     panel->setMarket(market);
     game->getGui()->pushChild(panel);
     panel->awaitClosing();
+}
+
+std::shared_ptr<CMarket> CGuiHandler::getRequestedTradeMarket() {
+    auto game = _game.lock();
+    if (!game || !requestedTradeMarket || !game->getMap() || game->getGui() || !CPlaytestTrace::enabled() ||
+        game->getMap() != requestedTradeMap.lock() ||
+        !game->getContext()->isTransitionGenerationCurrent(requestedTradeGeneration)) {
+        requestedTradeMarket.reset();
+        requestedTradeMap.reset();
+    }
+    return requestedTradeMarket;
 }
 
 void CGuiHandler::showDialog(std::shared_ptr<CDialog> dialog) {

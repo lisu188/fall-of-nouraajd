@@ -229,6 +229,43 @@ class GameplayNouraajdServiceRoutesTest(unittest.TestCase):
             nouraajd.fundEarnedCrafting(driver, set(), 20)
         driver.sellAt.assert_not_called()
 
+    def testManaIngredientRequiresActualVictorVictoryAndItsOriginalFiniteMarket(self):
+        state = {"gold": 200, "rescued": False, "order": []}
+        mana = {"__handle__": "actual-mana"}
+
+        def fight(name):
+            self.assertEqual("cultLeaderQuest", name)
+            state.update(gold=700, rescued=True)
+            state["order"].append("actual-fight")
+
+        driver = SimpleNamespace(
+            test=self,
+            hunt=Mock(side_effect=lambda *args: state["order"].append("real-Gooby")),
+            questNames=lambda completed=False: {"mainQuest"},
+            gold=lambda: state["gold"],
+            fight=fight,
+            string=lambda name: "good_end" if state["rescued"] else "encounter_active",
+            flag=lambda name: state["rescued"],
+            check=Mock(),
+        )
+
+        def purchase(d, market, item_type, earned, *, protected_types):
+            self.assertTrue(state["rescued"])
+            self.assertEqual(("victorMarket", "ManaPotion", {"loot", "actual-mana"}), (market, item_type, earned))
+            self.assertIn("LesserManaPotion", protected_types)
+            self.assertIn("Scroll", protected_types)
+            state["order"].append("actual-purchase")
+            return mana
+
+        with (
+            patch.object(nouraajd, "meetVictor", side_effect=lambda *args: state["order"].append("authored-dialog")),
+            patch.object(nouraajd, "purchaseCallbackItem", side_effect=purchase),
+            patch.object(nouraajd, "ownedIdentities", return_value={"starting", "loot", "actual-mana"}),
+        ):
+            nouraajd.earnVictorCraftingMana(driver, {"starting"})
+        self.assertEqual(["real-Gooby", "authored-dialog", "actual-fight", "actual-purchase"], state["order"])
+        self.assertEqual(2, driver.check.call_count)
+
     def testEarnedRecipesUnlockBeforeMissingWitnessThenUseOnlyActuallyPurchasedInputs(self):
         for has_mana in (False, True):
             with self.subTest(has_mana=has_mana):
@@ -277,6 +314,11 @@ class GameplayNouraajdServiceRoutesTest(unittest.TestCase):
                     patch.object(nouraajd, "start", side_effect=lambda d: state["order"].append("start")),
                     patch.object(nouraajd, "letter", side_effect=lambda d: state["order"].append("earned-unlock")),
                     patch.object(nouraajd, "prepareRolf", side_effect=lambda d: state["order"].append("real-Rolf")),
+                    patch.object(
+                        nouraajd,
+                        "earnVictorCraftingMana",
+                        side_effect=lambda d, initial: state["order"].append("actual-Victor-market"),
+                    ),
                     patch.object(nouraajd, "ownedIdentities", side_effect=({"starting"}, {"starting", "loot"})),
                     patch.object(nouraajd, "recipeAttempt", side_effect=attempt),
                     patch.object(nouraajd, "fundEarnedCrafting") as funding,
@@ -299,6 +341,9 @@ class GameplayNouraajdServiceRoutesTest(unittest.TestCase):
                         "real-Rolf",
                     ],
                     state["order"][:5],
+                )
+                self.assertLess(
+                    state["order"].index("actual-Victor-market"), state["order"].index(("brew_life_potion", "success"))
                 )
                 self.assertIn(("brew_life_potion", "success"), state["order"])
                 self.assertEqual(has_mana, ("craft_town_portal_scroll", "success") in state["order"])

@@ -843,6 +843,9 @@ void init_game_module(py::module_ &m) {
         .def("showLoading", &CGuiHandler::showLoading)
         .def("hideLoading", &CGuiHandler::hideLoading)
         .def("showTrade", &CGuiHandler::showTrade, "Open a trade panel.")
+        .def("getRequestedTradeMarket", &CGuiHandler::getRequestedTradeMarket,
+             "Return the last actual traced headless trade request in the active map and transition generation; "
+             "return None after observing disabled tracing or an invalidated session.")
         .def("showDialog", &CGuiHandler::showDialog, "Open a dialog panel.")
         .def("showQuestion", &CGuiHandler::showQuestion, "Open a question/choice panel.")
         .def("showSelection", &CGuiHandler::showSelection, "Open a selection panel.")

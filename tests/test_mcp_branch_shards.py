@@ -294,6 +294,7 @@ class McpBranchShardsTest(unittest.TestCase):
     def testCanonicalRunnerSeparatesExhaustiveRoutesFromCoreAndCoverage(self):
         import test as harness
 
+        self.assertTrue(harness.test_name_matches_suite("GameTest.test_indentation", "fast"))
         exhaustive = "GameplayBranchMcpTest.test_route_Warrior"
         helper = "GameplayBranchDriverTest.testBoundedMovement"
         baseline = "DialogueMcpWalkthroughTest.testExistingRoute"
@@ -305,6 +306,15 @@ class McpBranchShardsTest(unittest.TestCase):
             self.assertTrue(harness.test_name_matches_suite(helper, suite))
         self.assertTrue(harness.test_name_matches_suite(baseline, "gameplay-core"))
         self.assertFalse(harness.test_name_matches_suite(baseline, "mcp-branches"))
+        potion_native = (
+            "GameplayPotionTraceRuntimeTest.testAcceptedPotionUseRecordsExactNativeRestorationAndSelectedIdentity"
+        )
+        trade_native = "McpTradeMarketRuntimeTest.testActualHeadlessTavernCallbackExposesOneFiniteMarketThroughMcp"
+        for name in (potion_native, trade_native):
+            for suite in ("gameplay", "gameplay-core", "full", "coverage-safe"):
+                self.assertTrue(harness.test_name_matches_suite(name, suite))
+            for suite in ("fast", "mcp-branches", "ui"):
+                self.assertFalse(harness.test_name_matches_suite(name, suite))
 
     def testCanonicalRunnerValidatesBranchSelectors(self):
         import test as harness

@@ -282,6 +282,30 @@ class GameplayBranchDriverTest(unittest.TestCase):
             self.assertEqual([3], [record["seq"] for record in readNewNativeTrace(path, positions, after_seq=2)])
             self.assertEqual([1, 2, 3], [record["seq"] for record in readNewNativeTrace(path, {})])
 
+    def testPotionObservationCommitsCursorBeforeChecksAndLatchesInvalidEvidence(self):
+        for invalid in (False, True):
+            with self.subTest(invalid=invalid), tempfile.TemporaryDirectory() as directory:
+                driver = self.driver()
+                driver.trace_path = Path(directory) / "native.trace.jsonl"
+                driver.trace_path.write_text(json.dumps({"seq": 1, "event": "item_used"}) + "\n", encoding="utf-8")
+
+                def observe(observed_driver, records, **kwargs):
+                    self.assertEqual(1, observed_driver._combat_trace_seq)
+                    self.assertEqual([1], [record["seq"] for record in records])
+                    if invalid:
+                        raise AssertionError("A malformed consumed identity cannot be discarded")
+                    observed_driver.assertNativeCombatOutcomes()
+
+                with patch("tests.gameplay_branch_driver.observePotionConsumptions", side_effect=observe) as observer:
+                    if invalid:
+                        with self.assertRaisesRegex(AssertionError, "Invalid native potion evidence"):
+                            driver.assertNativeCombatOutcomes()
+                        with self.assertRaisesRegex(AssertionError, "Invalid native potion evidence"):
+                            driver.assertNativeCombatOutcomes()
+                    else:
+                        driver.assertNativeCombatOutcomes()
+                    observer.assert_called_once()
+
     def testNativeTraceReaderDeduplicatesIdenticalRotatedRecordsAndRejectsConflicts(self):
         with tempfile.TemporaryDirectory() as directory:
             path = Path(directory) / "native.trace.jsonl"

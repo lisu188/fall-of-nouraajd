@@ -10,6 +10,7 @@ from tests.gameplay_branch_types import RouteCase
 from tests.gameplay_branch_journals import verifyJournals
 from tests.gameplay_routes_crafting import openStation, recipeAttempt, recipeDefinitions
 from tests.gameplay_routes_services import marketAttempt, ownedIdentities, readSignpost
+from tests.gameplay_routes_callback_markets import purchaseCallbackItem
 
 SOURCES = tuple(
     "res/maps/nouraajd/" + name
@@ -665,6 +666,23 @@ def fundEarnedCrafting(d, earned_items, required_gold):
     d.test.assertGreaterEqual(d.gold(), required_gold, "Actual earned loot did not fund the authored recipe itinerary")
 
 
+def earnVictorCraftingMana(d, starting_items):
+    d.hunt("finishOriginalMainQuest")
+    d.test.assertIn("mainQuest", d.questNames(completed=True))
+    meetVictor(d, "deescalated", False)
+    gold = d.gold()
+    d.fight("cultLeaderQuest")
+    d.test.assertEqual("good_end", d.string("quest_state_victor"))
+    d.test.assertTrue(d.flag("VICTOR_REWARD_GRANTED"))
+    d.test.assertEqual(gold + 500, d.gold())
+    protected = {entry["item"] for recipe in recipeDefinitions().values() for entry in recipe["inputs"]}
+    potion = purchaseCallbackItem(
+        d, "victorMarket", "ManaPotion", ownedIdentities(d) - starting_items, protected_types=protected
+    )
+    d.check("nouraajd.victor.market.purchased", potion["__handle__"] in ownedIdentities(d))
+    d.check("nouraajd.victor.market.depleted", True, purchasedIdentity=potion["__handle__"])
+
+
 def earnedCrafting(d):
     start(d)
     letter(d)
@@ -678,6 +696,7 @@ def earnedCrafting(d):
         )
     original = ownedIdentities(d)
     prepareRolf(d)
+    earnVictorCraftingMana(d, original)
     earned = ownedIdentities(d) - original
     # Market1's one Scroll and three LesserLifePotions are finite authored stock.
     # Reserve funds for both exact 100% recipes; no stochastic craft is retried.
@@ -777,6 +796,8 @@ CASES = (
             "nouraajd.crafting.scribe_emergency_portal_scroll.missingIngredients",
             "nouraajd.crafting.brew_life_potion.success",
             "nouraajd.crafting.craft_town_portal_scroll.success",
+            "nouraajd.victor.market.purchased",
+            "nouraajd.victor.market.depleted",
         ),
         earnedCrafting,
         campaign="fallOfNouraajd",

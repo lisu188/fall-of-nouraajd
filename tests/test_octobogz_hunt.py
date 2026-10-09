@@ -2482,16 +2482,27 @@ class OctobogzHuntTest(unittest.TestCase):
         route = ast.get_source_segment(
             source, methods["testWarriorAndSorcererFinishThreeRealEncountersWithPartialReloadAndRewardOnce"]
         )
+        self.assertLess(route.index("self.prepareThroughCatacombs()"), route.index("self.prepareSorcererForHunt()"))
+        self.assertLess(route.index("self.prepareSorcererForHunt()"), route.index('self.walkTo("ambientOctobogzNet")'))
+        self.assertLess(route.index("self.prepareSorcererForHunt()"), route.index("self.enterHunt()"))
+        self.assertIn('if player_class == "Sorcerer":\n                    self.prepareSorcererForHunt()', route)
+        preparation = methods["prepareSorcererForHunt"]
+        self.assertEqual(
+            ["prepareVictorHealingStock", "prepareHealingStockAtAuthoredMarket"],
+            [statement.value.func.attr for statement in preparation.body],
+        )
+        victor = ast.get_source_segment(source, methods["prepareVictorHealingStock"])
+        self.assertLess(victor.index("self.finishOriginalMainQuest()"), victor.index('self.walkTo("nouraajdTavern")'))
+        self.assertLess(victor.index('self.walkTo("nouraajdTavern")'), victor.index('self.walkTo("nouraajdTownHall")'))
         self.assertLess(
-            route.index("self.prepareThroughCatacombs()"), route.index("self.prepareHealingStockAtAuthoredMarket()")
+            victor.index('self.walkTo("nouraajdTownHall")'),
+            victor.index("self.purchaseVictorLifePotionWithEarnedWard()"),
         )
         self.assertLess(
-            route.index("self.prepareHealingStockAtAuthoredMarket()"), route.index('self.walkTo("ambientOctobogzNet")')
+            route.index("self.useOrdinaryCombatController(player_class)"), route.index("self.prepareSorcererForHunt()")
         )
-        self.assertLess(route.index("self.prepareHealingStockAtAuthoredMarket()"), route.index("self.enterHunt()"))
-        self.assertIn(
-            'if player_class == "Sorcerer":\n                    self.prepareHealingStockAtAuthoredMarket()', route
-        )
+        self.assertIn("range(75)", victor)
+        self.assertIn("range(512)", ast.get_source_segment(source, methods["walkRoute"]))
 
     def authoredBrewingFixture(self, lessers=6, beers=4, strong_count=5, corruption=None):
         walker, handles, inventory, stock, sales, gold = self.authoredMarketFixture(corruption)
