@@ -195,6 +195,7 @@ class GameplayBranchDriver:
         self._trade_requests = deque(maxlen=16)
         self._player_victories = OrderedDict()
         self._player_victory_history = deque(maxlen=16)
+        self._player_entries = deque(maxlen=64)
         self._recorded_actions = 0
         self._coordinate_point = None
         self._ephemeral_handles = set()
@@ -399,6 +400,27 @@ class GameplayBranchDriver:
                 # The legacy hunt also calls this validator through a minimal namespace.
                 self._trade_requests = requests = deque(maxlen=16)
             requests.extend(record for record in records if record.get("event") == "trade_requested")
+            if self.player is not None and any(record.get("event") == "object_entered" for record in records):
+                player_name = self.call(self.player, "getName")
+                entries = getattr(self, "_player_entries", None)
+                if entries is None:
+                    self._player_entries = entries = deque(maxlen=64)
+                for record in records:
+                    cause, target = record.get("cause"), record.get("target")
+                    contact = record.get("targetCoords")
+                    if (
+                        record.get("event") == "object_entered"
+                        and isinstance(cause, dict)
+                        and cause.get("isPlayer") is True
+                        and cause.get("name") == player_name
+                        and isinstance(target, dict)
+                        and target.get("name") != player_name
+                        and isinstance(contact, dict)
+                        and set(contact) == {"x", "y", "z"}
+                        and all(type(value) is int for value in contact.values())
+                        and contact == record.get("causeCoords")
+                    ):
+                        entries.append(record)
             if self.player is not None and any(record.get("event") == "combat_finished" for record in records):
                 player_name = self.call(self.player, "getName")
 
@@ -733,6 +755,11 @@ class GameplayBranchDriver:
         target = self.object(name)
         initial = self.coords(target)
         moving_npc = self.call(target, "getBoolProperty", "npc") is True
+        entry_identity = None
+        if moving_npc and not adjacent and self.trace_path is not None:
+            self.assertNativeCombatOutcomes()
+            entry_identity = (self._nativeObjectIdentity(target), self._nativeObjectIdentity(self.player))
+        entry_seq, entry_handle = self._combat_trace_seq, target["__handle__"]
         budget = max(128, 4 * sum(abs(a - b) for a, b in zip(self.coords(), initial)) + 128)
         unchanged = 0
         committed = None
@@ -766,12 +793,37 @@ class GameplayBranchDriver:
                 return
             if arrival != before and self._traversedTarget(committed, arrival):
                 return
+            if entry_identity is not None and self._playerEnteredTarget(entry_identity, after_seq=entry_seq):
+                current = self.object(name, required=False)
+                if current is not None and current["__handle__"] == entry_handle:
+                    # The native player-caused callback completed before this NPC's
+                    # later move in the same CMap turn; end-of-turn overlap is unnecessary.
+                    return
             unchanged = unchanged + 1 if arrival == before else 0
             if unchanged >= 24:
                 self.test.fail(("Could not approach authored object", name, self.snapshot()))
             if after_tick is not None:
                 after_tick()
         self.test.fail(("Authored route budget exhausted", name, budget, self.snapshot()))
+
+    def _nativeObjectIdentity(self, handle):
+        name = self.call(handle, "getName")
+        type_id = self.call(handle, "getTypeId")
+        native_type = self.call(handle, "getType")
+        return {"id": type_id or name or native_type, "name": name, "typeId": type_id, "type": native_type or type_id}
+
+    def _playerEnteredTarget(self, identities, *, after_seq):
+        target_identity, player_identity = identities
+        for record in reversed(self._player_entries):
+            if record["seq"] <= after_seq:
+                break
+            if record.get("map") != self.map_name:
+                continue
+            if all(record["target"].get(key) == value for key, value in target_identity.items()) and all(
+                record["cause"].get(key) == value for key, value in player_identity.items()
+            ):
+                return True
+        return False
 
     def step(self, coords):
         destination = tuple(coords)

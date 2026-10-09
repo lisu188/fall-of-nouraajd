@@ -1275,6 +1275,162 @@ class GameplayBranchDriverTest(unittest.TestCase):
         )
         driver.step.assert_not_called()
 
+    def nativeNpcEntryDriver(self, directory, *, player_first=True, change=None):
+        driver, state, actor = self.perimeterPursuitDriver(True)
+        cycle = ((1, 0, 0), (2, 0, 0))
+        state.update(actorIndex=0, seq=0, visits=[])
+        driver.coords = lambda handle=None: cycle[state["actorIndex"]] if handle == actor else state["position"]
+        driver.trace_path = Path(directory) / "native.trace.jsonl"
+        driver.trace_path.write_text("", encoding="utf-8")
+        original_call = driver._rawCall.side_effect
+        identities = {
+            actor["__handle__"]: {
+                "id": "ritualWitness",
+                "name": "ritualWitness",
+                "typeId": "ritualWitness",
+                "type": "CCreature",
+            },
+            driver.player["__handle__"]: {"id": "Wayfarer", "name": "player", "typeId": "Wayfarer", "type": "CPlayer"},
+        }
+
+        def rawCall(handle, method, *args):
+            if method in {"getName", "getTypeId", "getType"}:
+                return identities[handle["__handle__"]][
+                    {"getName": "name", "getTypeId": "typeId", "getType": "type"}[method]
+                ]
+            return original_call(handle, method, *args)
+
+        def advance():
+            state["turns"] += 1
+            if not player_first:
+                state["actorIndex"] = (state["actorIndex"] + 1) % len(cycle)
+            if state["path"]:
+                state["position"] = state["path"].pop(0)
+            state["seq"] += 1
+            record = {"seq": state["seq"], "event": "movement"}
+            if state["position"] == cycle[state["actorIndex"]]:
+                state["visits"].append(state["turns"])
+                contact = dict(zip("xyz", state["position"]))
+                record.update(
+                    event="object_entered",
+                    map=driver.map_name,
+                    target={**identities[actor["__handle__"]], "isPlayer": False},
+                    cause={**identities[driver.player["__handle__"]], "isPlayer": True},
+                    targetCoords=contact,
+                    causeCoords=dict(contact),
+                )
+                if change:
+                    change(record)
+            if player_first:
+                state["actorIndex"] = (state["actorIndex"] + 1) % len(cycle)
+            with driver.trace_path.open("a", encoding="utf-8") as output:
+                output.write(json.dumps(record) + "\n")
+            driver.assertNativeCombatOutcomes()
+
+        driver._rawCall.side_effect = rawCall
+        driver.tick = Mock(side_effect=advance)
+        return driver, state, actor, identities
+
+    def testMovingNpcVisitAcceptsCompletedPlayerEntryBeforeSameTurnDeparture(self):
+        with tempfile.TemporaryDirectory() as directory:
+            driver, state, actor, _ = self.nativeNpcEntryDriver(directory)
+            after_tick = Mock()
+            driver.navigateTo("ritualWitness", after_tick=after_tick)
+            self.assertEqual([1], state["visits"])
+            self.assertEqual((1, 1), (state["turns"], driver.steps))
+            self.assertNotEqual(driver.coords(), driver.coords(actor))
+            self.assertEqual(1, driver._player_entries[-1]["seq"])
+            after_tick.assert_not_called()
+            driver.step.assert_not_called()
+
+    def testMovingNpcVisitRejectsUnobservedStaleWrongActorMapAndIdentity(self):
+        mutations = {
+            "npc-first-no-player-entry": None,
+            "npc-cause": lambda record: record["cause"].update(isPlayer=False),
+            "other-player": lambda record: record["cause"].update(name="otherPlayer"),
+            "wrong-player-type": lambda record: record["cause"].update(typeId="Warrior"),
+            "wrong-map": lambda record: record.update(map="nouraajd"),
+            "wrong-target": lambda record: record["target"].update(name="otherWitness"),
+            "wrong-target-type": lambda record: record["target"].update(typeId="otherWitness"),
+            "remote-cause": lambda record: record["causeCoords"].update(x=9),
+        }
+        for label, change in mutations.items():
+            with self.subTest(label=label), tempfile.TemporaryDirectory() as directory:
+                driver, state, _, _ = self.nativeNpcEntryDriver(
+                    directory, player_first=label != "npc-first-no-player-entry", change=change
+                )
+                with self.assertRaisesRegex(AssertionError, "Authored route budget exhausted"):
+                    driver.navigateTo("ritualWitness")
+                self.assertEqual(132, state["turns"], "A rejected witness must preserve the original route budget")
+                driver.step.assert_not_called()
+
+        with tempfile.TemporaryDirectory() as directory:
+            driver, state, _, identities = self.nativeNpcEntryDriver(directory, player_first=False)
+            contact = {"x": 1, "y": 0, "z": 0}
+            record = {
+                "seq": 1,
+                "event": "object_entered",
+                "map": driver.map_name,
+                "target": identities["moving-actor"],
+                "cause": {**identities["player"], "isPlayer": True},
+                "targetCoords": contact,
+                "causeCoords": contact,
+            }
+            driver.trace_path.write_text(json.dumps(record) + "\n", encoding="utf-8")
+            state["seq"] = 1
+            with self.assertRaisesRegex(AssertionError, "Authored route budget exhausted"):
+                driver.navigateTo("ritualWitness")
+            self.assertEqual(132, state["turns"], "A visit before this approach cannot satisfy a fresh visit")
+
+    def testNativeEntryCacheIsBoundedAndSurvivesTraceRotationWithoutChangingIdentity(self):
+        with tempfile.TemporaryDirectory() as directory:
+            driver, _, _, identities = self.nativeNpcEntryDriver(directory)
+            contact = {"x": 1, "y": 0, "z": 0}
+            records = [
+                {
+                    "seq": seq,
+                    "event": "object_entered",
+                    "map": driver.map_name,
+                    "target": {**identities["moving-actor"], "name": f"witness{seq}"},
+                    "cause": {**identities["player"], "isPlayer": True},
+                    "targetCoords": contact,
+                    "causeCoords": contact,
+                }
+                for seq in range(1, 201)
+            ]
+            driver.trace_path.write_text("".join(json.dumps(record) + "\n" for record in records), encoding="utf-8")
+            driver.assertNativeCombatOutcomes()
+            self.assertEqual(64, len(driver._player_entries))
+            self.assertEqual((137, 200), (driver._player_entries[0]["seq"], driver._player_entries[-1]["seq"]))
+            driver.trace_path.replace(Path(str(driver.trace_path) + ".1"))
+            driver.trace_path.write_text(json.dumps({"seq": 201, "event": "movement"}) + "\n", encoding="utf-8")
+            driver.assertNativeCombatOutcomes()
+            target = {**identities["moving-actor"], "name": "witness200"}
+            self.assertTrue(driver._playerEnteredTarget((target, identities["player"]), after_seq=199))
+            self.assertFalse(driver._playerEnteredTarget((target, identities["player"]), after_seq=200))
+            target["type"] = "CEvent"
+            self.assertFalse(driver._playerEnteredTarget((target, identities["player"]), after_seq=199))
+
+    def testEntryWitnessCannotAcceptAReplacedNpcOrRelaxHostilePursuit(self):
+        for replaced in (True, False):
+            with self.subTest(replaced=replaced), tempfile.TemporaryDirectory() as directory:
+                driver, state, actor, _ = self.nativeNpcEntryDriver(directory)
+                if replaced:
+                    replacement = {"__handle__": "replacement-actor"}
+                    coords = driver.coords
+                    driver.coords = lambda handle=None: coords(actor if handle == replacement else handle)
+                    driver.object = Mock(side_effect=lambda *_args, **_kwargs: replacement if state["turns"] else actor)
+                else:
+                    original = driver._rawCall.side_effect
+                    driver._rawCall.side_effect = lambda handle, method, *args: (
+                        False if method == "getBoolProperty" else original(handle, method, *args)
+                    )
+                with self.assertRaisesRegex(AssertionError, "Authored route budget exhausted"):
+                    driver.navigateTo("ritualWitness")
+                self.assertEqual(132, state["turns"])
+                self.assertTrue(state["visits"], "Only actual contact evidence is offered to the negative guard")
+                driver.step.assert_not_called()
+
     def testNonNpcPursuitRetainsCommittedTargetsAndRejectsUnreachedActorAtOriginalBudget(self):
         for npc in (False, None, 1, "true"):
             with self.subTest(npc=npc):

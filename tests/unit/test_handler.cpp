@@ -459,6 +459,104 @@ void test_event_handler_trigger_registration_uses_named_comparison_helpers() {
                 "trigger registration should preserve distinct trigger names with the same configured type id");
 }
 
+void testObjectEntryTracePreservesActualCauseAndContactBeforeNpcDeparture() {
+    auto game = load_empty_game();
+    auto map = game->getMap();
+    auto player = add_test_player(game);
+    player->relocateWithoutMoveHooks(Coords(0, 0, 0));
+    auto witness = add_test_creature(game, "unitMovingWitness", 1, 0);
+    witness->setNpc(true);
+    witness->setCanStep(true);
+    int callbacks = 0;
+    map->getEventHandler()->registerTrigger(
+        std::make_shared<CCustomTrigger>(witness->getName(), CGameEvent::CType::onEnter, [&](auto object, auto event) {
+            auto caused = std::dynamic_pointer_cast<CGameEventCaused>(event);
+            if (!caused || caused->getCause() != player)
+                return;
+            expect_true(object == witness,
+                        "the normal native onEnter callback should retain its exact target and player cause");
+            callbacks++;
+        }));
+
+    CPlaytestTrace::configure(true, "", 100, true);
+    player->moveTo(1, 0, 0);
+    witness->moveTo(2, 0, 0);
+    int entries = 0;
+    for (const auto &line : CPlaytestTrace::drain()) {
+        const auto record = json::parse(line);
+        if (record.value("event", std::string()) != "object_entered" ||
+            record.at("target").value("name", std::string()) != witness->getName() ||
+            record.at("cause").value("isPlayer", false) != true)
+            continue;
+        entries++;
+        expect_true(record.at("target") == CPlaytestTrace::objectRef(witness) &&
+                        record.at("cause") == CPlaytestTrace::objectRef(player),
+                    "entry evidence should preserve the exact native target and player identities");
+        expect_true(record.at("cause").at("isPlayer") == true &&
+                        record.at("targetCoords") == CPlaytestTrace::coords(Coords(1, 0, 0)) &&
+                        record.at("causeCoords") == record.at("targetCoords"),
+                    "entry evidence should retain actual contact before the witness's later movement");
+        expect_true(record.at("map") == map->getMapName() && record.at("turn") == map->getTurn(),
+                    "entry evidence should retain the active native map and turn");
+    }
+    CPlaytestTrace::configure(false);
+    expect_true(callbacks == 1 && entries == 1 && player->getCoords() == Coords(1, 0, 0) &&
+                    witness->getCoords() == Coords(2, 0, 0),
+                "tracing should observe the completed callback without keeping the moving witness in place");
+}
+
+void testObjectEntryTraceRequiresOptInAndCanonicalColocatedCause() {
+    auto game = load_empty_game();
+    auto map = game->getMap();
+    auto player = add_test_player(game);
+    player->relocateWithoutMoveHooks(Coords(0, 0, 0));
+    auto witness = add_test_creature(game, "unitTraceWitness", 1, 0);
+    witness->setNpc(true);
+    witness->setCanStep(true);
+    int callbacks = 0;
+    map->getEventHandler()->registerTrigger(std::make_shared<CCustomTrigger>(
+        witness->getName(), CGameEvent::CType::onEnter, [&](auto, auto) { callbacks++; }));
+    CPlaytestTrace::configure(false);
+    player->moveTo(1, 0, 0);
+    expect_true(callbacks == 1 && CPlaytestTrace::records().empty(),
+                "disabled entry tracing should preserve the native callback without recording anything");
+
+    CPlaytestTrace::configure(true, "", 2, true);
+    auto handler = map->getEventHandler();
+    handler->gameEvent(nullptr, std::make_shared<CGameEvent>(CGameEvent::CType::onEnter));
+    handler->gameEvent(witness, nullptr);
+    handler->gameEvent(witness, std::make_shared<CGameEvent>(CGameEvent::CType::onEnter));
+    handler->gameEvent(witness, std::make_shared<CGameEventCaused>(CGameEvent::CType::onEnter, nullptr));
+    auto remote = add_test_creature(game, "unitRemoteCause", 3, 0);
+    handler->gameEvent(witness, std::make_shared<CGameEventCaused>(CGameEvent::CType::onEnter, remote));
+    auto detached = std::make_shared<CCreature>();
+    detached->setGame(game);
+    detached->setName(player->getName());
+    detached->relocateWithoutMoveHooks(witness->getCoords());
+    handler->gameEvent(witness, std::make_shared<CGameEventCaused>(CGameEvent::CType::onEnter, detached));
+    for (const auto &line : CPlaytestTrace::drain())
+        expect_true(json::parse(line).value("event", std::string()) != "object_entered",
+                    "absent, remote or noncanonical causes must not become native contact evidence");
+
+    handler->gameEvent(witness, std::make_shared<CGameEvent>(CGameEvent::CType::onTurn));
+    expect_true(CPlaytestTrace::records().empty(), "unrelated native events must not become entry evidence");
+    witness->moveTo(2, 0, 0);
+    witness->moveTo(player->getCoords());
+    int npc_entries = 0;
+    const auto npc_records = CPlaytestTrace::drain();
+    expect_true(npc_records.size() <= 2, "entry records must obey the existing bounded native trace limit");
+    for (const auto &line : npc_records) {
+        const auto record = json::parse(line);
+        if (record.value("event", std::string()) == "object_entered") {
+            npc_entries++;
+            expect_true(record.at("cause").at("isPlayer") == false,
+                        "an NPC moving onto the player must retain its NPC cause");
+        }
+    }
+    CPlaytestTrace::configure(false);
+    expect_true(npc_entries > 0, "valid NPC-caused entries should remain distinguishable from player-caused entries");
+}
+
 void test_fight_handler_rejects_stale_and_cross_map_participants() {
     auto game = load_empty_game();
     auto map = game->getMap();
@@ -2635,6 +2733,10 @@ int main() {
                             test_creature_subtype_inventory_is_enumerable_on_loaded_game);
     nativeTestProfile().run("test_event_handler_trigger_registration_uses_named_comparison_helpers",
                             test_event_handler_trigger_registration_uses_named_comparison_helpers);
+    nativeTestProfile().run("testObjectEntryTracePreservesActualCauseAndContactBeforeNpcDeparture",
+                            testObjectEntryTracePreservesActualCauseAndContactBeforeNpcDeparture);
+    nativeTestProfile().run("testObjectEntryTraceRequiresOptInAndCanonicalColocatedCause",
+                            testObjectEntryTraceRequiresOptInAndCanonicalColocatedCause);
     nativeTestProfile().run("test_fight_handler_rejects_stale_and_cross_map_participants",
                             test_fight_handler_rejects_stale_and_cross_map_participants);
     nativeTestProfile().run("test_fight_handler_attributes_lethal_effects_to_valid_casters",
