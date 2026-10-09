@@ -313,8 +313,8 @@ jobs:
           restore-keys: |
             ${{ steps.ccache.outputs.prefix }}
             ${{ runner.os }}-ccache-
-      - name: Cache Python test timings
-        uses: actions/cache@27d5ce7f107fe9357f9df03efb73ab90386fccae
+      - name: Restore Python test timings
+        uses: actions/cache/restore@27d5ce7f107fe9357f9df03efb73ab90386fccae
         with:
           path: ${{ env.GAME_TEST_TIMINGS_FILE }}
           key: ${{ runner.os }}-test-timings-linux-coverage-${{ github.run_id }}
@@ -322,6 +322,13 @@ jobs:
       - name: coverage
         timeout-minutes: 60
         run: ./scripts/run_coverage.sh
+      - name: Save Python test timings after coverage
+        if: always()
+        continue-on-error: true
+        uses: actions/cache/save@27d5ce7f107fe9357f9df03efb73ab90386fccae
+        with:
+          path: ${{ env.GAME_TEST_TIMINGS_FILE }}
+          key: ${{ runner.os }}-test-timings-linux-coverage-${{ github.run_id }}
       - name: Upload coverage report
         if: always()
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a

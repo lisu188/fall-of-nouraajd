@@ -26280,6 +26280,112 @@ class TestRunnerSuiteTest(unittest.TestCase):
                         events.index(("start", "xvfb-long", (XVFB_GAMEPLAY_PARENT_TEST,))),
                     )
 
+    def testCompletedWorkerTimingsSurviveInterruptionBeforeSerialOrLongTests(self):
+        from unittest.mock import patch
+
+        parallel = ["GameTest.parallelFirst", "GameTest.parallelSecond"]
+        serial = "GameTest.test_missing_save_resource_directory_lists_empty"
+        names = [*parallel, serial, XVFB_GAMEPLAY_PARENT_TEST]
+        for interrupted_shard in ("serial", "xvfb-long"):
+            for parallel_status in (0, 7):
+                with self.subTest(interrupted_shard=interrupted_shard, parallel_status=parallel_status):
+                    with tempfile.TemporaryDirectory(prefix="nouraajd-worker-timings-") as temporary:
+                        output = Path(temporary)
+                        timing_file = output / "combined.json"
+                        completed = {}
+                        events = []
+
+                        def start(test_names, shard_name, extra_env=None):
+                            if shard_name in {"serial", "xvfb-long"}:
+                                self.assertEqual(
+                                    completed,
+                                    load_test_timings(timing_file),
+                                    "Completed worker measurements must be durable before the next isolated phase",
+                                )
+                            events.append(("start", shard_name))
+                            if shard_name == interrupted_shard:
+                                raise KeyboardInterrupt("outer Python phase timeout")
+                            return types.SimpleNamespace(names=test_names)
+
+                        def wait(process, shard_name, test_names, timeout_seconds):
+                            measured = {name: 10.0 + len(completed) + index for index, name in enumerate(test_names)}
+                            write_test_timings(output / "workers" / shard_name / "test-timings.json", measured)
+                            completed.update(measured)
+                            events.append(("wait", shard_name))
+                            return parallel_status if shard_name == "1" else 0
+
+                        with (
+                            patch(__name__ + ".TEST_OUTPUT_DIR", output),
+                            patch(__name__ + ".TEST_TIMINGS_FILE", timing_file),
+                            patch(__name__ + ".run_test_subprocess", side_effect=start),
+                            patch(__name__ + ".wait_test_subprocess", side_effect=wait),
+                            self.assertRaisesRegex(KeyboardInterrupt, "outer Python phase timeout"),
+                        ):
+                            run_sharded_tests(names, 3, allow_xvfb_sidecar=True)
+                        self.assertEqual(completed, load_test_timings(timing_file))
+                        self.assertEqual(interrupted_shard, events[-1][1])
+
+    def testFinalWorkerTimingMergeIncludesLaterResultsAfterAShardFailure(self):
+        from unittest.mock import patch
+
+        parallel = ["GameTest.parallelFirst", "GameTest.parallelSecond"]
+        serial = "GameTest.test_missing_save_resource_directory_lists_empty"
+        names = [*parallel, serial, XVFB_GAMEPLAY_PARENT_TEST]
+        with tempfile.TemporaryDirectory(prefix="nouraajd-worker-timings-") as temporary:
+            output = Path(temporary)
+            timing_file = output / "combined.json"
+            completed = {}
+            starts = []
+            stale = output / "workers" / "unstarted" / "test-timings.json"
+            write_test_timings(stale, {"unrelatedEarlierRun": 900.0})
+
+            def start(test_names, shard_name, extra_env=None):
+                starts.append((shard_name, tuple(test_names)))
+                return types.SimpleNamespace(names=test_names)
+
+            def wait(process, shard_name, test_names, timeout_seconds):
+                measured = {name: 30.0 + len(starts) for name in test_names}
+                write_test_timings(output / "workers" / shard_name / "test-timings.json", measured)
+                completed.update(measured)
+                return 7 if shard_name == "serial" else 0
+
+            with (
+                patch(__name__ + ".TEST_OUTPUT_DIR", output),
+                patch(__name__ + ".TEST_TIMINGS_FILE", timing_file),
+                patch(__name__ + ".run_test_subprocess", side_effect=start),
+                patch(__name__ + ".wait_test_subprocess", side_effect=wait),
+                patch("builtins.print"),
+            ):
+                self.assertEqual(1, run_sharded_tests(names, 3, allow_xvfb_sidecar=True))
+            self.assertEqual(completed, load_test_timings(timing_file))
+            self.assertEqual({"xvfb", "1", "2", "serial", "xvfb-long"}, {name for name, _ in starts})
+            self.assertCountEqual(parallel, [name for shard, group in starts if shard in {"1", "2"} for name in group])
+            self.assertEqual(1, sum(group.count(serial) for _, group in starts))
+            self.assertEqual([XVFB_GAMEPLAY_PARENT_TEST], list(starts[-1][1]))
+
+    def testCoverageTimingCacheSavesMeasurementsEvenWhenCoverageFails(self):
+        from tests.test_mcp_branch_workflow import evaluateCondition, workflowJob, workflowScalar, workflowStep
+
+        job = workflowJob("linux-coverage")
+        restore = workflowStep(job, "Restore Python test timings")
+        save = workflowStep(job, "Save Python test timings after coverage")
+        coverage = workflowStep(job, "coverage")
+        revision = "27d5ce7f107fe9357f9df03efb73ab90386fccae"
+        self.assertEqual("actions/cache/restore@" + revision, workflowScalar(restore, "uses", 8))
+        self.assertEqual("actions/cache/save@" + revision, workflowScalar(save, "uses", 8))
+        self.assertTrue(evaluateCondition(workflowScalar(save, "if", 8), {}, prior_success=False))
+        self.assertEqual("always()", workflowScalar(save, "if", 8))
+        self.assertEqual("${{ env.GAME_TEST_TIMINGS_FILE }}", workflowScalar(restore, "path", 10))
+        self.assertEqual(workflowScalar(restore, "path", 10), workflowScalar(save, "path", 10))
+        self.assertEqual(
+            "${{ runner.os }}-test-timings-linux-coverage-${{ github.run_id }}", workflowScalar(save, "key", 10)
+        )
+        self.assertEqual(workflowScalar(restore, "key", 10), workflowScalar(save, "key", 10))
+        self.assertEqual("${{ runner.os }}-test-timings-linux-coverage-", workflowScalar(restore, "restore-keys", 10))
+        self.assertLess(job.index(coverage), job.index(save))
+        self.assertEqual("./scripts/run_coverage.sh", workflowScalar(coverage, "run", 8))
+        self.assertEqual("60", workflowScalar(coverage, "timeout-minutes", 8))
+
     def test_shard_balancer_spreads_huge_map_walkthroughs(self):
         # With enough jobs the weight-aware packer must isolate the heavy maps onto
         # separate shards so no single shard has to run more than one huge-map
@@ -29366,6 +29472,15 @@ def wait_test_subprocess(proc, shard_name, test_names, timeout_seconds):
         return 124
 
 
+def persistWorkerTestTimings(shard_names):
+    combined_timings = {}
+    for shard_name in shard_names:
+        path = TEST_OUTPUT_DIR / "workers" / shard_name / "test-timings.json"
+        combined_timings.update(load_test_timings(path))
+    if combined_timings:
+        write_test_timings(TEST_TIMINGS_FILE, combined_timings)
+
+
 def run_sharded_tests(test_names, jobs, *, allow_xvfb_sidecar=False):
     sidecar_tests = []
     long_xvfb_tests = []
@@ -29383,6 +29498,7 @@ def run_sharded_tests(test_names, jobs, *, allow_xvfb_sidecar=False):
     ]
     timings = load_test_timings(TEST_TIMINGS_FILE)
     failures = []
+    completed_shards = []
 
     processes = []
     for sidecar_test in sidecar_tests:
@@ -29404,6 +29520,8 @@ def run_sharded_tests(test_names, jobs, *, allow_xvfb_sidecar=False):
 
     for shard_name, group, proc in processes:
         return_code = wait_test_subprocess(proc, shard_name, group, test_group_timeout_seconds(group, timings))
+        completed_shards.append(shard_name)
+        persistWorkerTestTimings([shard_name])
         if return_code != 0:
             failures.append((shard_name, return_code))
 
@@ -29415,6 +29533,8 @@ def run_sharded_tests(test_names, jobs, *, allow_xvfb_sidecar=False):
             serial_tests,
             test_group_timeout_seconds(serial_tests, timings),
         )
+        completed_shards.append("serial")
+        persistWorkerTestTimings(["serial"])
         if return_code != 0:
             failures.append(("serial", return_code))
 
@@ -29430,23 +29550,14 @@ def run_sharded_tests(test_names, jobs, *, allow_xvfb_sidecar=False):
             [long_xvfb_test],
             test_group_timeout_seconds([long_xvfb_test], timings),
         )
+        completed_shards.append("xvfb-long")
+        persistWorkerTestTimings(["xvfb-long"])
         if return_code != 0:
             failures.append(("xvfb-long", return_code))
 
-    # Persist whatever timings the workers recorded, even when a shard failed or
-    # timed out. Each worker writes its own timings only after it finishes, so a
-    # shard killed on timeout contributes nothing -- but the shards that DID finish
-    # recorded real per-test durations. Writing them unconditionally lets the cached
-    # timings self-heal after a single run: the next run weights those tests
-    # accurately, so the balancer stops concentrating the genuinely-slow tests onto
-    # one shard and stops under-sizing that shard's timeout. Writing only on overall
-    # success meant one slow shard discarded every other shard's real timings and the
-    # cold-cache under-estimate was reproduced on every retry.
-    combined_timings = {}
-    for timings_path in (TEST_OUTPUT_DIR / "workers").glob("*/test-timings.json"):
-        combined_timings.update(load_test_timings(timings_path))
-    if combined_timings:
-        write_test_timings(TEST_TIMINGS_FILE, combined_timings)
+    # Earlier checkpoints survive an outer timeout during a later isolated phase.
+    # Merge this run's completed workers once more to include its final measurements.
+    persistWorkerTestTimings(completed_shards)
 
     if failures:
         for shard_name, return_code in failures:
