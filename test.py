@@ -129,8 +129,17 @@ MCP_STDIO_SHUTDOWN_TIMEOUT_SECONDS = 30
 MCP_STDIO_TAIL_LIMIT_BYTES = 8192
 GAME_TEST_WORKER = os.environ.get("GAME_TEST_WORKER") == "1"
 XVFB_GAMEPLAY_PARENT_TEST = "XvfbGameplayTest.test_keyboard_gameplay_under_xvfb"
-VALID_TEST_SUITES = ("fast", "gameplay", "ui", "coverage-safe", "full")
+VALID_TEST_SUITES = ("fast", "gameplay", "gameplay-core", "mcp-branches", "ui", "coverage-safe", "full")
+MCP_BRANCH_TEST_PREFIX = "GameplayBranchMcpTest."
 FAST_TEST_PREFIXES = (
+    "GameplayBranchCatalogTest.",
+    "GameplayBranchDriverTest.",
+    "GameplayBranchJournalsTest.",
+    "GameplayStartingSaveTest.",
+    "GameplayCampaignRouteTest.",
+    "McpTestSeedTest.",
+    "McpBranchShardsTest.",
+    "McpEquipmentContractTest.",
     "GameDiagnosticsTest.",
     "McpDiagnosticsTest.",
     "OctobogzDiagnosticTest.",
@@ -172,6 +181,9 @@ FAST_TEST_NAMES = {
     "PanelLayoutManifestTest.test_reactive_list_views_subscribe_to_model_signals",
 }
 GAMEPLAY_TEST_PREFIXES = (
+    MCP_BRANCH_TEST_PREFIX,
+    "McpTestSeedRuntimeTest.",
+    "McpEquipmentRuntimeTest.",
     "NativeDiagnosticsRuntimeTest.",
     "EnemyRoleRuntimeTest.",
     "OctobogzMcpWalkthroughTest.",
@@ -26346,6 +26358,50 @@ if SOURCE_UI_TESTS_AVAILABLE:
     from tests.test_octobogz_mcp import OctobogzMcpWalkthroughTest as _OctobogzMcpWalkthroughTest
     from tests.test_octobogz_mcp import OctobogzDiagnosticTest as _OctobogzDiagnosticTest
     from tests.test_octobogz_runtime import OctobogzRuntimeTest as _OctobogzRuntimeTest
+    from tests.test_gameplay_branch_catalog import GameplayBranchCatalogTest as _GameplayBranchCatalogTest
+    from tests.test_gameplay_branch_driver import GameplayBranchDriverTest as _GameplayBranchDriverTest
+    from tests.test_gameplay_branch_journals import GameplayBranchJournalsTest as _GameplayBranchJournalsTest
+    from tests.test_gameplay_starting_save import GameplayStartingSaveTest as _GameplayStartingSaveTest
+    from tests.test_gameplay_routes_campaigns import GameplayCampaignRouteTest as _GameplayCampaignRouteTest
+    from tests.test_gameplay_branches_mcp import GameplayBranchMcpTest as _GameplayBranchMcpTest
+    from tests.test_mcp_test_seed import McpTestSeedTest as _McpTestSeedTest
+    from tests.test_mcp_test_seed import McpTestSeedRuntimeTest as _McpTestSeedRuntimeTest
+    from tests.test_mcp_branch_shards import McpBranchShardsTest as _McpBranchShardsTest
+    from tests.test_mcp_equipment import McpEquipmentContractTest as _McpEquipmentContractTest
+    from tests.test_mcp_equipment import McpEquipmentRuntimeTest as _McpEquipmentRuntimeTest
+
+    class GameplayBranchCatalogTest(_GameplayBranchCatalogTest):
+        pass
+
+    class GameplayBranchDriverTest(_GameplayBranchDriverTest):
+        pass
+
+    class GameplayBranchJournalsTest(_GameplayBranchJournalsTest):
+        pass
+
+    class GameplayStartingSaveTest(_GameplayStartingSaveTest):
+        pass
+
+    class GameplayCampaignRouteTest(_GameplayCampaignRouteTest):
+        pass
+
+    class GameplayBranchMcpTest(_GameplayBranchMcpTest):
+        pass
+
+    class McpTestSeedTest(_McpTestSeedTest):
+        pass
+
+    class McpTestSeedRuntimeTest(_McpTestSeedRuntimeTest):
+        pass
+
+    class McpBranchShardsTest(_McpBranchShardsTest):
+        pass
+
+    class McpEquipmentContractTest(_McpEquipmentContractTest):
+        pass
+
+    class McpEquipmentRuntimeTest(_McpEquipmentRuntimeTest):
+        pass
 
     class GameDiagnosticsTest(_GameDiagnosticsTest):
         pass
@@ -26456,6 +26512,10 @@ if SOURCE_UI_TESTS_AVAILABLE:
     del _NavigationMcpWalkthroughTest
     del _NavigationCallbackTest
     del _ConsoleUiInteractionTest, _UiMinimapInteractionTest
+    del _GameplayBranchCatalogTest, _GameplayBranchDriverTest, _GameplayBranchJournalsTest, _GameplayBranchMcpTest
+    del _GameplayStartingSaveTest, _GameplayCampaignRouteTest
+    del _McpTestSeedTest, _McpBranchShardsTest
+    del _McpTestSeedRuntimeTest, _McpEquipmentContractTest, _McpEquipmentRuntimeTest
 
 
 class McpServerTest(unittest.TestCase):
@@ -28851,6 +28911,72 @@ class McpServerTest(unittest.TestCase):
             )
 
 
+def parseBranchRunnerArgs(argv):
+    options = {"class_id": None, "group": None, "shard_index": None, "shard_count": None}
+    names = {
+        "--branch-class": "class_id",
+        "--branch-group": "group",
+        "--branch-shard-index": "shard_index",
+        "--branch-shard-count": "shard_count",
+    }
+    remaining = [argv[0]]
+    index = 1
+    while index < len(argv):
+        arg = argv[index]
+        flag, separator, value = arg.partition("=")
+        if flag not in names:
+            remaining.append(arg)
+            index += 1
+            continue
+        if not separator:
+            if index + 1 >= len(argv) or argv[index + 1].startswith("--"):
+                raise ValueError(f"{flag} requires an argument")
+            index += 1
+            value = argv[index]
+        key = names[flag]
+        if options[key] is not None:
+            raise ValueError(f"{flag} can only be specified once")
+        if key in {"shard_index", "shard_count"}:
+            try:
+                value = int(value)
+            except ValueError:
+                raise ValueError(f"{flag} must be an integer") from None
+        options[key] = value
+        index += 1
+    if options["class_id"] is not None:
+        from tests.gameplay_branch_types import PLAYER_CLASSES
+
+        if options["class_id"] not in PLAYER_CLASSES:
+            raise ValueError(f"--branch-class must be one of: {', '.join(PLAYER_CLASSES)}")
+    shard_index, shard_count = options["shard_index"], options["shard_count"]
+    if (shard_index is None) != (shard_count is None):
+        raise ValueError("--branch-shard-index and --branch-shard-count must be provided together")
+    if shard_count is not None and (shard_count < 1 or not 0 <= shard_index < shard_count):
+        raise ValueError("Branch shard index must be zero-based and smaller than the positive shard count")
+    return options, remaining
+
+
+def selectBranchTestNames(test_names, options):
+    from scripts.mcp_branch_shards import planShards, selectedCases
+    from tests.gameplay_branch_catalog import selectedTestNames
+
+    cases = selectedCases(options["class_id"], options["group"])
+    expected = set(selectedTestNames())
+    discovered = set(test_names)
+    if discovered != expected:
+        raise ValueError(
+            "Authored branch discovery does not match the catalog: "
+            f"missing={sorted(expected - discovered)}, unexpected={sorted(discovered - expected)}"
+        )
+    selected = selectedTestNames(class_id=options["class_id"], group=options["group"])
+    if options["shard_count"] is not None:
+        selected = planShards(cases, shard_count=options["shard_count"])[options["shard_index"]]
+    missing = set(selected) - set(test_names)
+    if missing:
+        raise ValueError(f"Authored branch tests were not discovered: {', '.join(sorted(missing))}")
+    return [name for name in selected if name in test_names]
+
+
 def parse_runner_args(argv):
     jobs = None
     suite_name = "full"
@@ -28893,13 +29019,19 @@ def selected_unittest_args(unittest_argv):
 
 def test_name_matches_suite(test_name, suite_name):
     if suite_name == "coverage-safe":
-        return test_name not in COVERAGE_SAFE_EXCLUDED_TEST_NAMES
+        return test_name not in COVERAGE_SAFE_EXCLUDED_TEST_NAMES and not test_name.startswith(MCP_BRANCH_TEST_PREFIX)
     if suite_name == "full":
         return True
     if suite_name == "fast":
         return test_name in FAST_TEST_NAMES or test_name.startswith(FAST_TEST_PREFIXES)
-    if suite_name == "gameplay":
-        return test_name not in GAMEPLAY_EXCLUDED_TEST_NAMES and test_name.startswith(GAMEPLAY_TEST_PREFIXES)
+    if suite_name in {"gameplay", "gameplay-core"}:
+        return (
+            test_name not in GAMEPLAY_EXCLUDED_TEST_NAMES
+            and test_name.startswith(GAMEPLAY_TEST_PREFIXES)
+            and (suite_name == "gameplay" or not test_name.startswith(MCP_BRANCH_TEST_PREFIX))
+        )
+    if suite_name == "mcp-branches":
+        return test_name.startswith(MCP_BRANCH_TEST_PREFIX)
     if suite_name == "ui":
         return test_name == XVFB_GAMEPLAY_PARENT_TEST or test_name.startswith("PanelLayoutManifestTest.")
     raise ValueError(f"--suite must be one of: {', '.join(VALID_TEST_SUITES)}")
@@ -28934,11 +29066,20 @@ def write_test_timings(path, timings):
     path.write_text(json.dumps(dict(sorted(existing.items())), indent=2, sort_keys=True), encoding="utf-8")
 
 
+@lru_cache(maxsize=1)
+def branchTestDurations():
+    from scripts.mcp_branch_shards import caseWeights, selectedCases
+
+    return caseWeights(selectedCases())
+
+
 def test_duration_weight(test_name, timings):
     if test_name in timings:
         return timings[test_name]
     if test_name in DEFAULT_TEST_DURATIONS:
         return DEFAULT_TEST_DURATIONS[test_name]
+    if test_name.startswith(MCP_BRANCH_TEST_PREFIX) and SOURCE_UI_TESTS_AVAILABLE:
+        return branchTestDurations().get(test_name, 200.0)
     if test_name.startswith("McpServerTest.test_stdio_map_walkthrough_"):
         return 30.0
     if test_name.startswith("XvfbGameplayProcessTest."):
@@ -29177,7 +29318,14 @@ def run_sharded_tests(test_names, jobs, *, allow_xvfb_sidecar=False):
 
 def main():
     try:
-        cli_jobs, suite_name, unittest_argv = parse_runner_args(sys.argv)
+        branch_options, runner_argv = parseBranchRunnerArgs(sys.argv)
+        cli_jobs, suite_name, unittest_argv = parse_runner_args(runner_argv)
+        has_branch_options = any(value is not None for value in branch_options.values())
+        if has_branch_options:
+            if suite_name != "mcp-branches":
+                raise ValueError("Branch selectors require --suite mcp-branches")
+            if selected_unittest_args(unittest_argv):
+                raise ValueError("Branch selectors cannot be combined with explicit test names")
         jobs = runner_jobs(cli_jobs, unittest_argv, suite_name)
     except ValueError as exc:
         print(str(exc), file=sys.stderr)
@@ -29195,6 +29343,12 @@ def main():
         test_names = discover_unittest_test_names(unittest_argv)
         if test_names is not None and suite_name != "full":
             test_names = filter_test_names_by_suite(test_names, suite_name)
+        if test_names is not None and suite_name == "mcp-branches" and not selected_args:
+            try:
+                test_names = selectBranchTestNames(test_names, branch_options)
+            except ValueError as exc:
+                print(str(exc), file=sys.stderr)
+                sys.exit(2)
         if test_names and len(test_names) > 1 and jobs > 1:
             sys.exit(run_sharded_tests(test_names, jobs, allow_xvfb_sidecar=full_suite))
         if test_names:

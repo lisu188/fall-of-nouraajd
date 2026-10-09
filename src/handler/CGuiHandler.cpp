@@ -141,6 +141,14 @@ bool CGuiHandler::showConfirm(std::string title, std::string body, std::string c
 
 void CGuiHandler::showTrade(std::shared_ptr<CMarket> market) {
     auto game = _game.lock();
+    if (game && market && CPlaytestTrace::enabled()) {
+        json fields = {{"market", CPlaytestTrace::objectRef(market)},
+                       {"sell", market->getSell()},
+                       {"buy", market->getBuy()},
+                       {"items", CPlaytestTrace::itemRefs(market->getItems())}};
+        CPlaytestTrace::addMapContext(fields, game->getMap());
+        CPlaytestTrace::record("trade_requested", fields);
+    }
     if (!game || !game->getGui() || !market) {
         return;
     }

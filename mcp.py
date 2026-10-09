@@ -126,6 +126,7 @@ MCP_ALLOWED_HANDLE_METHODS = {
         "getEntryY",
         "getEntryZ",
         "getLocationByName",
+        "getNavigationNeighbors",
         "getObjectByName",
         "getObjects",
         "getObjectsAtCoords",
@@ -149,6 +150,7 @@ MCP_ALLOWED_HANDLE_METHODS = {
         "addItem",
         "addItems",
         "countItems",
+        "equipItem",
         "getActions",
         "getEffectiveInteractions",
         "getArchetypeClassId",
@@ -156,11 +158,13 @@ MCP_ALLOWED_HANDLE_METHODS = {
         "getArchetypeRaceId",
         "getArchetypeRaceLabel",
         "getEffects",
+        "getEquipped",
         "getGold",
         "getHp",
         "getHpMax",
         "getHpRatio",
         "getItems",
+        "getItemAtSlot",
         "getLevel",
         "getMana",
         "getManaMax",
@@ -243,6 +247,8 @@ MCP_ALLOWED_HANDLE_METHODS = {
         "remove",
         "sellItem",
     },
+    "CastleTownRestDialog": {"configureTown"},
+    "CastleObjective": {"capture"},
     "SpawnPoint": {
         "sealBreach",
     },
@@ -319,11 +325,13 @@ class EngineMcpServer:
         native_log_path: Path | None = None,
         build_config: str | None = None,
         diagnostics: Any = None,
+        test_seed: int | None = None,
     ) -> None:
         self.repo_root = repo_root
         self.build_dir = build_dir
         self.build_config = build_config
         self.diagnostics = diagnostics
+        self.test_seed = test_seed
         self.allow_origins = allow_origins or []
         self.trace_messages = trace_messages
         self.native_log_sink = native_log_sink
@@ -371,6 +379,8 @@ class EngineMcpServer:
                 f"{self.build_dir} --target _game` or run mcp.py with `--build`."
             ) from exc
         self._configure_native_logging()
+        if self.test_seed is not None:
+            self._game_module._seedRandomForTests(self.test_seed)
         if self.diagnostics is not None:
             self.diagnostics.configureTrace(self._game_module)
         self.game_module = importlib.import_module("game")
@@ -1482,6 +1492,10 @@ class EngineMcpServer:
             result = method_callable(*resolved_args, **resolved_kwargs)
             if method in {"getQuests", "getCompletedQuests"} and isinstance(result, (set, frozenset)):
                 result = list(result)
+            if method == "getNavigationNeighbors":
+                result = [self._coord_components(coords) for coords in result]
+                if any(coords is None for coords in result):
+                    raise TypeError("Navigation neighbors must contain integer coordinates")
             serialized = self._serialize_result(result, registry)
             structured = {"result": serialized}
             return {
@@ -2926,6 +2940,18 @@ class EngineHttpRequestHandler(BaseHTTPRequestHandler):
         self.send_header("Vary", "Accept, Origin, MCP-Protocol-Version, MCP-Session-Id")
 
 
+def parseTestSeed(value: str) -> int:
+    if not value.isascii() or not value.isdecimal():
+        raise argparse.ArgumentTypeError("test seed must be an unsigned 32-bit integer")
+    try:
+        seed = int(value, 10)
+    except ValueError as exc:
+        raise argparse.ArgumentTypeError("test seed must be an unsigned 32-bit integer") from exc
+    if not 0 <= seed <= 0xFFFFFFFF:
+        raise argparse.ArgumentTypeError("test seed must be an unsigned 32-bit integer")
+    return seed
+
+
 def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(description="MCP server exposing unified game/_game functions")
     parser.add_argument("--repo-root", default=None, help="Repository root path")
@@ -2937,6 +2963,12 @@ def parse_args() -> argparse.Namespace:
     )
     parser.add_argument("--build", action="store_true", help="Build the extension before starting the server")
     parser.add_argument("--stdio", action="store_true", help="Run as a stdio MCP server instead of HTTP")
+    parser.add_argument(
+        "--test-seed",
+        type=parseTestSeed,
+        default=None,
+        help="Seed native random sources for reproducible stdio gameplay tests",
+    )
     parser.add_argument("--host", default="127.0.0.1", help="HTTP host to bind when running in HTTP mode")
     parser.add_argument("--port", type=int, default=8765, help="HTTP port to bind when running in HTTP mode")
     parser.add_argument("--log-level", default=None, help="Python log level (INFO, or DEBUG with --debug)")
@@ -2959,7 +2991,10 @@ def parse_args() -> argparse.Namespace:
         default=None,
         help="File path for native logs when using --native-log-sink file (relative to repo root by default).",
     )
-    return parser.parse_args()
+    args = parser.parse_args()
+    if args.test_seed is not None and not args.stdio:
+        parser.error("--test-seed requires --stdio")
+    return args
 
 
 def configure_logging(
@@ -3046,6 +3081,7 @@ def main() -> int:
             native_log_path=native_log_path,
             build_config=args.build_config,
             diagnostics=diagnostics,
+            test_seed=args.test_seed,
         )
         if args.build:
             server.build_extension(stdio=args.stdio)

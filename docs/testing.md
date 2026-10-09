@@ -110,6 +110,8 @@ The CI Windows job uses a single-config Ninja Release build, so its `ctest` comm
 ```bash
 python3 test.py --suite fast
 python3 test.py --suite gameplay
+python3 test.py --suite gameplay-core
+python3 test.py --suite mcp-branches
 GAME_XVFB_JOBS=4 python3 test.py --suite ui
 python3 test.py --suite coverage-safe
 python3 test.py --suite full
@@ -118,6 +120,11 @@ python3 test.py --suite full
 - `fast` runs runner, bootstrap, manifest, coverage-report, and lightweight MCP protocol checks that do not require the
   compiled `_game` module.
 - `gameplay` runs deterministic engine, map, save/load, quest, combat, and MCP gameplay checks after `_game` is built.
+- `mcp-branches` runs the explicit authored branch/class matrix through a fresh stdio MCP process per case.
+- `gameplay-core` runs the other gameplay checks. CI runs it with the native build, then runs `mcp-branches` in
+  separate Linux and Windows shards against that same workflow head's binary and copied resources.
+  Windows stages the already built runtime through `cmake --install`, which also resolves and copies its dependent
+  DLLs, before archiving the flat installed package. Shards verify and extract that package without compiling again.
 - `ui` runs the Xvfb parent test and GUI layout manifest checks; it is intended for Linux/Unix environments with
   `xvfb-run` and `xauth`.
 - `coverage-safe` is the Python suite used by `./scripts/run_coverage.sh`; it keeps deterministic coverage drivers and
@@ -127,6 +134,44 @@ python3 test.py --suite full
 
 Use `--jobs <n>` with any suite to enable the existing sharded runner, for example
 `python3 test.py --suite gameplay --jobs "$(nproc)"`.
+
+### Exhaustive authored MCP branches
+
+The source catalog is `tests/gameplay_branch_catalog.py`; the route modules declare named obligations and their
+source callbacks. A catalog entry is a test obligation. Only a passing native route receipt establishes played
+coverage. Structural audits account for dialog actions/conditions, registered callbacks, campaign outcomes, and
+explicit defensive contracts. Unreachable authored content remains a reported obligation, rather than becoming a
+passing fixture-only route.
+
+```bash
+python3 test.py --suite mcp-branches --branch-class Wayfarer
+python3 test.py --suite mcp-branches --branch-group ninemarches
+python3 scripts/mcp_branch_shards.py matrix
+```
+
+Every shared route runs for Warrior, Sorcerer, Assasin, Inquisitor, and Wayfarer. Race service cases use the existing
+required race; owner-specific deeds test their own action and other classes' rejection. Starting campaign saves
+come from `campaign.start`; only the catalog's documented initial Nine Marches reputation values may differ from
+ordinary startup. All slots and preference files have unique task-owned names and are cleaned after each case.
+
+`mcp.py --stdio --test-seed <uint32>` seeds both native random sources before importing the game bootstrap. The
+private hook is unavailable through MCP exports. Stable SHA-256 case/class seeds, ordered action journals, bounded
+native trace history, failure diagnostics, elapsed time, and branch receipts are written under the selected
+`GAME_TEST_OUTPUT_DIR`. Reproduce a failure from process startup with the recorded seed and action sequence;
+save checkpoints preserve game state, and do not serialize RNG state. Random sequences are checked within each
+platform; Linux and Windows need not produce identical sequences.
+
+The native driver uses controller targets, adjacent movement, actual map turns, class combat controllers, owned
+consumables, finite stock, and real payments/ingredients. It rejects fixture mutations, unexpected defeat,
+unauthored relocation, stalled routes, and exhausted action/turn budgets. Save/reload checks preserve inventory,
+equipment, quests, journal text, campaign state, and player attributes; map transitions preserve player identity.
+
+CI shards must partition the complete selected matrix exactly once. Their initial duration estimates are
+provisional until the first native receipts supply measured weights; the planner targets 20 minutes per shard.
+`GAME_MCP_BRANCH_REQUIRED=1` turns unavailable native prerequisites into failures. The terminal `mcp-branches`
+check requires both platform matrices to succeed. This workflow change also retains strict native/coverage
+authority and requires explicit human review before merge. Canonical coverage drivers remain in `coverage-safe`;
+the exhaustive subprocess matrix is separate from the 90% eligible-line coverage gate.
 
 The console and expanded-map interaction checks run once in `gameplay`, `full`, and `coverage-safe`. To run only
 these checks, use `python3 test.py ConsoleUiInteractionTest UiMinimapInteractionTest`. Their children use guarded

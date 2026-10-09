@@ -19,6 +19,8 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #include <algorithm>
 #include <atomic>
 #include <cctype>
+#include <cstdlib>
+#include <cstdint>
 #include <optional>
 #include <stdexcept>
 #include <unordered_map>
@@ -444,6 +446,13 @@ void register_python_binding_type_metadata() {
 }
 
 void init_game_module(py::module_ &m) {
+    m.def(
+        "_seedRandomForTests",
+        [](std::uint32_t seed) {
+            vstd::rng().seed(seed);
+            std::srand(seed);
+        },
+        py::arg("seed"));
     auto pythonEventCallbacks = std::make_shared<CPythonEventCallbacks>();
     py::module_::import("atexit").attr("register")(
         py::cpp_function([pythonEventCallbacks]() { pythonEventCallbacks->shutdown(); }));
