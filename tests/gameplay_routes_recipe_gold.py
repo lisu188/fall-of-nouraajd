@@ -3,11 +3,13 @@
 # SPDX-License-Identifier: GPL-3.0-or-later
 """Finite authored purchases that preserve every ingredient before a gold refusal."""
 
-from collections import Counter
-from functools import partial
+from collections import Counter, deque
+from functools import lru_cache, partial
 from itertools import product
+import json
 
 from tests.gameplay_branch_types import RouteCase
+from tests.gameplay_branch_driver import authoredRoadCells
 from tests.gameplay_routes_crafting import recipeAttempt, recipeDefinitions
 from tests.gameplay_routes_callback_markets import callbackContext, requestedMarket
 from tests.gameplay_routes_ninemarches import recruit as recruitNine, start as startNine, walk as walkNine
@@ -21,6 +23,7 @@ from tests.gameplay_routes_nouraajd import (
     raceAid,
     victorCountdownCheckpoint,
     victorRoute,
+    courtyardExitDistances,
 )
 from tests.gameplay_routes_services import ownedIdentities, visitService
 
@@ -206,6 +209,123 @@ def assertRecipeInventoryPreserved(d, expected, stage):
         diagnostic["diagnosticError"] = str(error)[:240]
     d.record({"recipeInventoryFailure": diagnostic})
     d.test.fail(f"Recipe inventory preservation failed: {diagnostic}")
+
+
+@lru_cache(maxsize=16)
+def nourRecipeRoadPath(origin, target):
+    roads = authoredRoadCells("nouraajd")
+    if origin not in roads or target not in roads:
+        raise AssertionError(("Recipe service approach must remain on authored roads", origin, target))
+    previous, pending = {origin: None}, deque([origin])
+    while pending:
+        current = pending.popleft()
+        if current == target:
+            path = []
+            while current != origin:
+                path.append(current)
+                current = previous[current]
+            return tuple(reversed(path))
+        for dx, dy in ((1, 0), (-1, 0), (0, 1), (0, -1)):
+            neighbor = (current[0] + dx, current[1] + dy, current[2])
+            if neighbor in roads and neighbor not in previous:
+                previous[neighbor] = current
+                pending.append(neighbor)
+    raise AssertionError(("The authored recipe road corridor is disconnected", origin, target))
+
+
+def nourRecipeNavigator(d):
+    """Use the opened courtyard and roads; probe the two station turns without waiting or clearing enemies."""
+    d.test.assertEqual("nouraajd", d.map_name)
+    d.test.assertEqual("good_end", d.string("quest_state_victor"))
+    for name in ("cave1", "catacombs"):
+        d.test.assertIsNone(d.object(name, required=False), "Only the two already visited finite caves are required")
+    registry = d.string("octobogzHuntRegistry")
+    hunt_state = json.loads(registry.removeprefix("octobogzHunt.v1:")) if registry else None
+    d.test.assertIn(
+        hunt_state.get("stage") if hunt_state else None,
+        {None, "dormant"},
+        "The unentered distant lair cannot be an active encounter",
+    )
+    door, courtyard = courtyardExitDistances()
+    roads = authoredRoadCells("nouraajd")
+    market = d.coords(d.object("market1"))
+    station = d.coords(d.object("alchemyTable1"))
+    staging = (station[0], market[1], market[2])
+    d.test.assertIn(staging, roads)
+    for target in (market, station):
+        d.test.assertEqual(1, sum(abs(a - b) for a, b in zip(staging, target)))
+
+    def livePritz():
+        opponents = []
+        for actor in d.call(d.game_map, "getObjects"):
+            if actor["__handle__"] == d.player["__handle__"]:
+                continue
+            methods = {method["name"] for method in actor.get("pythonMethods", ())}
+            if actor.get("__type__") not in {"CCreature", "CPlayer"} and "isAlive" not in methods:
+                continue
+            if not d.call(actor, "isAlive") or d.call(actor, "isNpc"):
+                continue
+            d.test.assertEqual("Pritz", d.call(actor, "getTypeId"), "Unknown hostiles invalidate the road proof")
+            controller = d.call(actor, "getObjectProperty", "controller")
+            d.test.assertEqual(
+                "CGroundController", controller.get("__type__"), "A chasing hostile cannot inherit the road proof"
+            )
+            d.test.assertIn(d.call(controller, "getStringProperty", "tileType"), {"grass", "ground"})
+            d.test.assertNotIn(d.coords(actor), roads, "A hostile already on a road invalidates the corridor")
+            opponents.append(actor)
+        return opponents
+
+    # Both finite Cave actors were removed before Victor, so the known roster
+    # cannot gain further ambient spawns while the native road steps commit.
+    livePritz()
+
+    def clearStation(minimum_distance):
+        for actor in livePritz():
+            coords = d.coords(actor)
+            if coords[2] == station[2]:
+                d.test.assertGreater(
+                    sum(abs(a - b) for a, b in zip(coords, station)),
+                    minimum_distance,
+                    ("Recipe station has no safe immediate native entry/exit", d.call(actor, "getName"), coords),
+                )
+
+    def step(target):
+        d.test.assertTrue(d.canStep(target), ("The live authored recipe corridor is blocked", target))
+        d.step(target)
+        d.test.assertEqual(target, d.coords(), "The native step must actually enter its authored corridor cell")
+
+    def roadApproach(target):
+        origin = d.coords()
+        if origin in courtyard and origin != door:
+            while origin != door:
+                candidates = [
+                    (origin[0] + dx, origin[1] + dy, origin[2])
+                    for dx, dy in ((1, 0), (-1, 0), (0, 1), (0, -1))
+                    if courtyard.get((origin[0] + dx, origin[1] + dy, origin[2])) == courtyard[origin] - 1
+                ]
+                d.test.assertTrue(candidates, ("The cleared courtyard has no next authored exit step", origin))
+                step(candidates[0])
+                origin = d.coords()
+        for point in nourRecipeRoadPath(origin, target):
+            step(point)
+
+    def navigate(name, adjacent=False):
+        d.test.assertIn(name, {"market1", "alchemyTable1"})
+        if d.coords() == station:
+            # Entry clearance reserves this immediate next tick too; recheck
+            # the actual origin before an NPC could move first during exit.
+            clearStation(1)
+            step(staging)
+        if name == "market1":
+            roadApproach(staging if adjacent else market)
+            return
+        roadApproach(staging)
+        if not adjacent:
+            # A Pritz may advance once on entry and again before the next exit.
+            clearStation(2)
+            step(station)
+
+    return navigate
 
 
 def finitePortalGoldPlan(gold, loot_quotes, mana_price, scroll_price, lesser_quotes, portal_quote, life_quote, fee=35):
@@ -719,7 +839,8 @@ def nourGreaterLifeGoldRefusal(d):
             operation = sellInCurrentMarket if action == "sale" else purchaseIdentity
             operation(d, callback_market, handles[identity], price)
         assertRecipeInventoryPreserved(d, protected, "greater-life.after-callback-transactions")
-        visitService(d, "market1", "trade_requested")
+        navigate = nourRecipeNavigator(d)
+        visitService(d, "market1", "trade_requested", navigate=navigate)
         assertRecipeInventoryPreserved(d, protected, "greater-life.after-market-entry")
         for action, identity, price in plan["actions"]:
             d.test.assertEqual(context[:3], callbackContext(d)[:3])
@@ -738,7 +859,12 @@ def nourGreaterLifeGoldRefusal(d):
             "The guaranteed brew must consume exactly the two original authored LesserLife identities",
         )
         recipeAttempt(
-            d, "alchemyTable1", "brew_life_potion", "nouraajd.crafting.brew_life_potion.success", outcome="success"
+            d,
+            "alchemyTable1",
+            "brew_life_potion",
+            "nouraajd.crafting.brew_life_potion.success",
+            outcome="success",
+            navigate=navigate,
         )
         after = ownedIdentities(d)
         created = after - before
@@ -757,6 +883,7 @@ def nourGreaterLifeGoldRefusal(d):
             "blend_greater_life_potion",
             "nouraajd.crafting.blend_greater_life_potion.insufficientGold",
             outcome="insufficientGold",
+            navigate=navigate,
         )
         d.test.assertEqual(after, ownedIdentities(d))
         d.test.assertTrue(life_ids <= ownedIdentities(d))

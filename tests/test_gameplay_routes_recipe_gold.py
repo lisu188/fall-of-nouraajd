@@ -150,6 +150,7 @@ class GameplayRecipeGoldRoutesTest(unittest.TestCase):
 
         def station(driver, name, *, navigate=None):
             self.assertEqual("alchemyTable1", name)
+            state.setdefault("stationNavigators", []).append(navigate)
             if ingredient_lost and "crafted-life" in owned:
                 owned.remove("life")
             return tuple(
@@ -181,15 +182,178 @@ class GameplayRecipeGoldRoutesTest(unittest.TestCase):
             return result
 
         driver.engine = Mock(side_effect=engine)
+        navigator = Mock(side_effect=lambda name, adjacent=False: driver.navigateTo(name))
+        state["recipeNavigator"] = navigator
+        state["recipeNavigatorFactory"] = Mock(return_value=navigator)
         for target, name, function in (
             (routes, "relic", relic),
             (routes, "handInRelic", handIn),
             (crafting, "openStation", station),
+            (routes, "nourRecipeNavigator", state["recipeNavigatorFactory"]),
         ):
             patcher = patch.object(target, name, function)
             patcher.start()
             self.addCleanup(patcher.stop)
         return driver, state, owned, stock, transactions, order, removed, attempts
+
+    def testGreaterLifeMarketAndBothCraftAttemptsUseTheSameGuardedNativeCorridor(self):
+        driver, state, _owned, _stock, _transactions, _order, _removed, attempts = self.greaterDriver()
+        routes.nourGreaterLifeGoldRefusal(driver)
+        state["recipeNavigatorFactory"].assert_called_once_with(driver)
+        state["recipeNavigator"].assert_called_once_with("market1")
+        self.assertEqual([state["recipeNavigator"], state["recipeNavigator"]], state["stationNavigators"])
+        self.assertEqual(2, len(attempts))
+
+    def corridorDriver(self, *, origin=(44, 105, 0), pritz=(45, 107, 0), controller="CGroundController", blocked=()):
+        player = {"__handle__": "player", "__type__": "CPlayer"}
+        actor = {"__handle__": "actual-pritz", "__type__": "CCreature"}
+        ground = {"__handle__": "actual-controller", "__type__": controller}
+        positions = {"player": origin, "actual-pritz": pritz, "market1": (106, 111, 0), "alchemyTable1": (105, 110, 0)}
+        steps, calls = [], []
+        _door, courtyard = routes.courtyardExitDistances()
+        cells = set(routes.authoredRoadCells("nouraajd")) | set(courtyard) | {(105, 110, 0)}
+
+        def call(handle, method, *args):
+            calls.append((handle["__handle__"], method))
+            if method == "getObjects":
+                return [player, actor]
+            if method == "isAlive":
+                return True
+            if method == "isNpc":
+                return False
+            if method == "getTypeId":
+                return "Pritz"
+            if method == "getObjectProperty" and args == ("controller",):
+                return ground
+            if method == "getStringProperty" and args == ("tileType",):
+                return "grass"
+            if method == "getName":
+                return "actual-pritz"
+            self.fail((handle, method, args))
+
+        def step(point):
+            self.assertEqual(1, sum(abs(a - b) for a, b in zip(positions["player"], point)))
+            self.assertIn(point, cells)
+            self.assertNotIn(point, blocked)
+            positions["player"] = point
+            steps.append(point)
+
+        driver = SimpleNamespace(
+            test=self,
+            map_name="nouraajd",
+            player=player,
+            game_map={"__handle__": "map"},
+            string=lambda key: "good_end" if key == "quest_state_victor" else 'octobogzHunt.v1:{"stage":"dormant"}',
+            object=lambda name, required=True: None if name in {"cave1", "catacombs"} else {"__handle__": name},
+            call=call,
+            coords=lambda handle=None: positions[(handle or player)["__handle__"]],
+            canStep=lambda point: point in cells and point not in blocked,
+            step=step,
+            navigateTo=Mock(side_effect=AssertionError("The shortest grass approach would consume a protected potion")),
+        )
+        return driver, positions, steps, calls
+
+    def testRecipeCorridorUsesNativeRoadStepsAndRoadStagingForBothStationVisits(self):
+        driver, positions, steps, _calls = self.corridorDriver()
+        navigate = routes.nourRecipeNavigator(driver)
+        navigate("market1", adjacent=True)
+        self.assertEqual((105, 111, 0), positions["player"])
+        navigate("market1")
+        self.assertEqual((106, 111, 0), positions["player"])
+        self.assertEqual(76, len(steps))
+        roads = routes.authoredRoadCells("nouraajd")
+        self.assertTrue(set(steps) <= roads)
+        self.assertNotIn((45, 107, 0), steps, "The actual failed native grass collision must be avoided")
+        for _attempt in range(2):
+            navigate("alchemyTable1", adjacent=True)
+            self.assertEqual((105, 111, 0), positions["player"])
+            navigate("alchemyTable1")
+            self.assertEqual((105, 110, 0), positions["player"])
+        self.assertEqual([(105, 111, 0), (105, 110, 0), (105, 111, 0), (105, 110, 0)], steps[-4:])
+        self.assertNotIn((106, 110, 0), steps, "Repeat entry cannot use the generic grass-side revisit")
+        driver.navigateTo.assert_not_called()
+
+    def testStationEntryReservesTheNextExitTickAndExitRechecksItsActualGrassOrigin(self):
+        for origin, pritz, adjacent in (
+            ((105, 111, 0), (105, 108, 0), False),
+            ((105, 110, 0), (105, 109, 0), True),
+        ):
+            with self.subTest(origin=origin, pritz=pritz):
+                driver, _positions, steps, _calls = self.corridorDriver(origin=origin, pritz=pritz)
+                navigate = routes.nourRecipeNavigator(driver)
+                with self.assertRaisesRegex(AssertionError, "safe immediate native entry/exit"):
+                    navigate("alchemyTable1", adjacent=adjacent)
+                self.assertEqual([], steps, "Unsafe contact cannot be retried, waited out or credited")
+
+    def testRecipeCorridorRejectsUnknownControllersRoadOccupantsAndActualBlockedCells(self):
+        for kwargs, message in (
+            ({"controller": "CTargetController"}, "chasing hostile"),
+            ({"pritz": (44, 107, 0)}, "already on a road"),
+        ):
+            with self.subTest(kwargs=kwargs):
+                driver, _positions, steps, _calls = self.corridorDriver(**kwargs)
+                with self.assertRaisesRegex(AssertionError, message):
+                    routes.nourRecipeNavigator(driver)
+                self.assertEqual([], steps)
+        driver, _positions, steps, _calls = self.corridorDriver(blocked={(44, 108, 0)})
+        navigate = routes.nourRecipeNavigator(driver)
+        with self.assertRaisesRegex(AssertionError, "live authored recipe corridor is blocked"):
+            navigate("market1", adjacent=True)
+        self.assertEqual([(44, 106, 0), (44, 107, 0)], steps)
+        self.assertNotIn((45, 107, 0), steps, "A live wall cannot authorize a fallback through grass")
+
+    def testAuthoredRoadCorridorHasNoCaveSpawnsAndTheDistantLairHasNoAmbientTurnCallback(self):
+        from tests.narrative_walkthrough import authoredRegion
+
+        positions, _tiles = authoredRegion("nouraajd")
+        roads = routes.authoredRoadCells("nouraajd")
+        configs = json.loads((ROOT / "res/maps/nouraajd/config.json").read_text())
+        tiles = json.loads((ROOT / "res/config/tiles.json").read_text())
+        self.assertEqual("road", tiles["RoadTile"]["properties"]["tileType"])
+        self.assertEqual(75, len(routes.nourRecipeRoadPath((44, 106, 0), positions["market1"])))
+        self.assertNotIn(positions["alchemyTable1"], roads)
+        for name in ("cave1", "catacombs"):
+            monster = configs[name]["properties"]["monster"]["properties"]["controller"]
+            self.assertEqual("CGroundController", monster["class"])
+            self.assertIn(monster["properties"]["tileType"], {"ground", "grass"})
+            x, y, z = positions[name]
+            spawn_cells = {(x + dx, y + dy, z) for dx in (-1, 0, 1) for dy in (-1, 0, 1)}
+            self.assertFalse(spawn_cells & roads, "Neither timed nor entrance clones may begin on the safe road")
+        source = (ROOT / "src/core/CController.cpp").read_text()
+        ground_source = source.split("CGroundController::control", 1)[1].split("CRangeController::CRangeController", 1)[
+            0
+        ]
+        self.assertIn("getAdjacentCoords(creature->getCoords(), true)", ground_source)
+        self.assertIn("type == self->getTileType() && map->canStep(c)", ground_source)
+        mcp = ast.parse((ROOT / "mcp.py").read_text())
+        allowed = ast.literal_eval(
+            next(
+                node.value
+                for node in mcp.body
+                if isinstance(node, ast.Assign)
+                and any(
+                    isinstance(target, ast.Name) and target.id == "MCP_ALLOWED_HANDLE_METHODS"
+                    for target in node.targets
+                )
+            )
+        )
+        self.assertTrue({"getObjectProperty", "getStringProperty"} <= allowed["CGameObject"])
+        self.assertIn("controller, getController, setController", (ROOT / "src/object/CCreature.h").read_text())
+        self.assertIn("tileType, getTileType, setTileType", (ROOT / "src/core/CController.h").read_text())
+        plugin = ast.parse((ROOT / "res/plugins/octobogz_hunt.py").read_text())
+        lair = next(node for node in ast.walk(plugin) if isinstance(node, ast.ClassDef) and node.name == "OctobogzLair")
+        self.assertNotIn("onTurn", {node.name for node in lair.body if isinstance(node, ast.FunctionDef)})
+        spawn_cells = ast.literal_eval(
+            next(
+                node.value
+                for node in plugin.body
+                if isinstance(node, ast.Assign)
+                and any(isinstance(target, ast.Name) and target.id == "SPAWN_CELLS" for target in node.targets)
+            )
+        )
+        self.assertTrue(
+            all(sum(abs(a - b) for a, b in zip(cell, positions["alchemyTable1"])) > 1 for cell in spawn_cells)
+        )
 
     def testGreaterLifeRouteExecutesEarnedRelicUnlockGuaranteedBrewAndGoldRefusalForEveryClass(self):
         for class_id in routes.CASES[0].classes:
@@ -790,7 +954,10 @@ class GameplayRecipeGoldRoutesTest(unittest.TestCase):
                 ("meetVictor", meet),
                 ("victorCountdownCheckpoint", Mock()),
                 ("letter", actualLetter),
-                ("visitService", lambda driver, name, event: driver.navigateTo(name)),
+                (
+                    "visitService",
+                    lambda driver, name, event, *, navigate=None: (navigate or driver.navigateTo)(name),
+                ),
             ):
                 patcher = patch.object(routes, name, function)
                 patcher.start()
