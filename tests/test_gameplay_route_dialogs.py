@@ -52,6 +52,22 @@ class GameplayRouteDialogTest(unittest.TestCase):
         inventory = {"starter": {"__handle__": "starter", "type": "LongSword"}}
         equipped = {"0": inventory["starter"]}
         contacts, attempted, performed = [], [], []
+        objects = {
+            "nouraajdDoor": {"__handle__": "nouraajdDoor", "type": "CBuilding", "coords": (44, 106, 0)},
+            **{
+                "nouraajdDoorTrigger"
+                + str(index): {
+                    "__handle__": "nouraajdDoorTrigger" + str(index),
+                    "type": "CMapObject",
+                    "coords": (42 + index, 105, 0),
+                    "canStep": False,
+                }
+                for index in range(1, 4)
+            },
+        }
+        for index, (place, *_rest) in enumerate(nouraajd.DEEDS.values()):
+            objects.setdefault(place, {"__handle__": place, "type": "CBuilding", "coords": (100 + index, 0, 0)})
+        removed, gate_probes = [], []
 
         def addItem(type_id):
             self.assertEqual("Scroll", type_id)
@@ -69,6 +85,7 @@ class GameplayRouteDialogTest(unittest.TestCase):
                 equipped.clear()
 
         player = SimpleNamespace(
+            isPlayer=lambda: True,
             getPlayerClassId=lambda: class_id,
             getBoolProperty=lambda name: state[name],
             incProperty=lambda name, amount: state.__setitem__(name, state[name] + amount),
@@ -76,15 +93,36 @@ class GameplayRouteDialogTest(unittest.TestCase):
             addExp=lambda amount: state.__setitem__("exp", state["exp"] + exp_delta),
             addItem=addItem,
         )
+
+        def removeAll(predicate):
+            for name in list(objects):
+                if predicate(SimpleNamespace(getName=lambda name=name: name)):
+                    removed.append(name)
+                    objects.pop(name)
+
         game_map = SimpleNamespace(
             getPlayer=lambda: player,
-            removeAll=Mock(),
+            removeAll=removeAll,
             getObjectByName=lambda name: SimpleNamespace(
                 setBoolProperty=lambda key, value: state.__setitem__(key, value)
             ),
             setBoolProperty=lambda name, value: state.__setitem__(name, value),
         )
-        game = SimpleNamespace(getMap=lambda: game_map)
+        show_dialog = Mock()
+        game = SimpleNamespace(
+            getMap=lambda: game_map,
+            getGuiHandler=lambda: SimpleNamespace(showDialog=show_dialog),
+            createObject=lambda type_id: type_id,
+        )
+        door = SimpleNamespace(getGame=lambda: game, getBoolProperty=lambda name: state[name])
+        door_trigger = authoredFunction("res/maps/nouraajd/script.py", "trigger", class_id="NouraajdDoorTrigger")
+        open_door_method = authoredFunction(
+            "res/maps/nouraajd/script.py",
+            "open_door",
+            class_id="DoorDialog",
+            narrative=SimpleNamespace(recordGateApproach=Mock()),
+        )
+        open_door = lambda: open_door_method(SimpleNamespace(getGame=lambda: game))
         conditions, actions = {}, {}
         for owner, (_place, dialog_id, action, condition, _flag, _counter) in nouraajd.DEEDS.items():
             source_class = {
@@ -97,7 +135,7 @@ class GameplayRouteDialogTest(unittest.TestCase):
             condition_method = authoredFunction("res/maps/nouraajd/script.py", condition, class_id=source_class)
             conditions[condition] = lambda dialog=dialog, method=condition_method: method(dialog)
             setattr(dialog, condition, conditions[condition])
-            dialog.open_door = lambda: state.__setitem__("opened", True)
+            dialog.open_door = open_door
             dialog.asked_about_girl = lambda: state.__setitem__("ASKED_ABOUT_GIRL", True)
             action_method = authoredFunction(
                 "res/maps/nouraajd/script.py",
@@ -107,7 +145,7 @@ class GameplayRouteDialogTest(unittest.TestCase):
                 showRewardReceipt=Mock(),
             )
             actions[action] = lambda dialog=dialog, method=action_method: method(dialog)
-        actions["open_door"] = lambda: state.__setitem__("opened", True)
+        actions["open_door"] = open_door
 
         def call(handle, method, *args):
             if method == "createObject":
@@ -119,11 +157,17 @@ class GameplayRouteDialogTest(unittest.TestCase):
                     performed.append(args[0])
                 return actions[args[0]]()
             if method in {"getBoolProperty", "getNumericProperty"}:
+                if args[0] == "canStep":
+                    return handle["canStep"]
                 return state[args[0]]
             if method == "getItems":
                 return list(inventory.values())
             if method == "getTypeId":
-                return handle["type"]
+                return class_id if handle == driver.player else handle["type"]
+            if method == "getType":
+                return "CPlayer" if handle == driver.player else handle["type"]
+            if method == "getName":
+                return handle["__handle__"]
             if method == "getEquipped":
                 return copy.deepcopy(equipped)
             if method == "getTurn":
@@ -136,24 +180,52 @@ class GameplayRouteDialogTest(unittest.TestCase):
             if action and action != "open_door":
                 landmark = next(value[0] for value in nouraajd.DEEDS.values() if value[2] == action)
                 self.assertEqual(landmark, contacts[-1], "Every deed selector probe needs actual landmark contact")
+                if action == "brace_gate":
+                    self.assertFalse(state["opened"], "The closed-gate dialogue is unavailable after opening")
+                    self.assertEqual(("doorDialog",), tuple(call.args[0] for call in show_dialog.call_args_list))
+                    gate_probes.append((state["turn"], state["coords"], tuple(objects)))
                 attempted.append(action)
             return choose(dialog_id, action, condition, **kwargs)
 
         def navigateTo(name):
             contacts.append(name)
-            state.update(turn=state["turn"] + 1, coords=(len(contacts), 0, 0))
+            state.update(turn=state["turn"] + 1, coords=objects[name]["coords"])
+            driver._combat_trace_seq += 1
+            driver._player_entries.append(
+                {
+                    "seq": driver._combat_trace_seq,
+                    "map": driver.map_name,
+                    "target": driver._nativeObjectIdentity(objects[name]),
+                    "cause": driver._nativeObjectIdentity(driver.player),
+                    "targetCoords": dict(zip("xyz", state["coords"])),
+                    "causeCoords": dict(zip("xyz", state["coords"])),
+                }
+            )
+            if name == "nouraajdDoor":
+                door_trigger(None, door, SimpleNamespace(getCause=lambda: player))
+
+        def objectByName(name, required=True):
+            if required:
+                self.assertIn(name, objects, "Required authored gate or landmark is missing")
+            return objects.get(name)
 
         driver.call = call
         driver.choose = chooseAtContact
         driver.navigateTo = navigateTo
         driver.startCampaign = Mock()
         driver.hunt = Mock()
-        driver.object = lambda name: {"__handle__": name}
-        driver.coords = lambda handle=None: state["coords"]
+        driver.object = objectByName
+        driver.coords = lambda handle=None: state["coords"] if handle is None else handle["coords"]
         driver.properties = lambda handle: copy.deepcopy({**state, "items": inventory, "equipped": equipped})
         driver.saveAndReload = Mock()
         driver.questNames = lambda completed=False: ["mainQuest"] if completed else []
         driver.check = lambda branch, condition, **evidence: self.assertTrue(condition, branch)
+        driver.assertNativeCombatOutcomes = Mock()
+        driver._deed_objects = objects
+        driver._deed_gate_probes = gate_probes
+        driver._deed_removed = removed
+        driver._deed_show_dialog = show_dialog
+        driver._deed_door_trigger = lambda cause: door_trigger(None, door, SimpleNamespace(getCause=lambda: cause))
         return driver, state, inventory, equipped, attempted, performed, actions
 
     def testWarriorDeedRejectsMissingAndIncorrectAuthoredExperience(self):
@@ -171,8 +243,7 @@ class GameplayRouteDialogTest(unittest.TestCase):
         before = copy.deepcopy(state)
         actions["brace_gate"]()
         self.assertEqual(before, state)
-        with self.assertRaisesRegex(AssertionError, "Authored option is unavailable"):
-            driver.choose("doorDialog", "brace_gate", condition="can_brace_gate")
+        self.assertFalse(driver.condition("doorDialog", "can_brace_gate"))
         self.assertEqual(before, state)
 
     def testSorcererDeedRejectsMissingWrongDuplicateAndDestructiveScrollRewards(self):
@@ -202,9 +273,89 @@ class GameplayRouteDialogTest(unittest.TestCase):
                 own_action = nouraajd.DEEDS[class_id][2]
                 self.assertEqual([own_action], performed)
                 self.assertEqual({value[2] for value in nouraajd.DEEDS.values()}, set(attempted))
+                self.assertEqual(5, len(attempted), "Each owner must attempt exactly four unavailable class options")
+                self.assertEqual(1, len(driver._deed_gate_probes), "The gate option must be tested only before opening")
+                self.assertEqual((1, (44, 106, 0)), driver._deed_gate_probes[0][:2])
+                self.assertEqual(
+                    {"nouraajdDoorTrigger" + str(index) for index in range(1, 4)}, set(driver._deed_removed)
+                )
+
+    def testGateDeedRequiresFreshActualPlayerContactAndAllThreeClosedBlockers(self):
+        for corruption in (
+            "missing-entry",
+            "stale-entry",
+            "wrong-player",
+            "wrong-door",
+            "replaced-door",
+            "not-contact",
+            "opened",
+            "missing-blocker",
+            "walkable-blocker",
+        ):
+            with self.subTest(corruption=corruption):
+                driver, state, *_rest = self.deedDriver("Sorcerer")
+                navigate = driver.navigateTo
+
+                def corruptContact(name):
+                    navigate(name)
+                    if corruption == "missing-entry":
+                        driver._player_entries.clear()
+                    elif corruption == "stale-entry":
+                        driver._player_entries[-1]["seq"] = 0
+                    elif corruption == "wrong-player":
+                        driver._player_entries[-1]["cause"]["name"] = "anotherPlayer"
+                    elif corruption == "wrong-door":
+                        driver._player_entries[-1]["target"]["name"] = "anotherDoor"
+                    elif corruption == "replaced-door":
+                        driver._deed_objects["nouraajdDoor"] = {
+                            **driver._deed_objects["nouraajdDoor"],
+                            "__handle__": "replacementDoor",
+                        }
+                    elif corruption == "not-contact":
+                        state["coords"] = (44, 107, 0)
+                    elif corruption == "opened":
+                        state["opened"] = True
+                    elif corruption == "missing-blocker":
+                        driver._deed_objects.pop("nouraajdDoorTrigger1")
+                    elif corruption == "walkable-blocker":
+                        driver._deed_objects["nouraajdDoorTrigger1"]["canStep"] = True
+
+                driver.navigateTo = corruptContact
+                with self.assertRaises(AssertionError):
+                    nouraajd.start(driver, deed=True)
+                self.assertFalse(state["decoded_stained_glass_ward"])
+
+    def testAuthoredDoorTriggerPresentsClosedGateOnlyForActualPlayerAndOpeningConsumesBlockers(self):
+        driver, state, *_rest, actions = self.deedDriver("Sorcerer")
+        driver._deed_door_trigger(SimpleNamespace(isPlayer=lambda: False))
+        driver._deed_show_dialog.assert_not_called()
+        driver._deed_door_trigger(SimpleNamespace(isPlayer=lambda: True))
+        driver._deed_show_dialog.assert_called_once_with("doorDialog")
+        actions["open_door"]()
+        self.assertTrue(state["opened"])
+        self.assertEqual(3, len(driver._deed_removed))
+        driver._deed_show_dialog.reset_mock()
+        driver._deed_door_trigger(SimpleNamespace(isPlayer=lambda: True))
+        driver._deed_show_dialog.assert_not_called()
+
+    def testOtherClassWarriorProbeAfterOpeningIsNotAnAuthoredGateVisit(self):
+        driver, _state, *_rest = self.deedDriver("Sorcerer")
+        nouraajd.start(driver)
+        with self.assertRaisesRegex(AssertionError, "closed-gate dialogue is unavailable"):
+            driver.choose("doorDialog", "brace_gate", condition="can_brace_gate")
 
     def testRejectedOtherClassSelectorCannotChangePlayerDeedTurnOrDialogState(self):
-        for mutation in ("exp", "braced_nouraajd_gate", "warrior_barricades", "turn", "cursor"):
+        for mutation in (
+            "exp",
+            "braced_nouraajd_gate",
+            "warrior_barricades",
+            "turn",
+            "cursor",
+            "opened",
+            "door",
+            "blocker",
+            "canStep",
+        ):
             with self.subTest(mutation=mutation):
                 driver, state, *_rest = self.deedDriver("Sorcerer")
                 choose = driver.choose
@@ -213,13 +364,23 @@ class GameplayRouteDialogTest(unittest.TestCase):
                     if action == "brace_gate":
                         if mutation == "cursor":
                             driver._dialog_positions[(driver.map_name, dialog_id)] = "WARRIOR_GATE"
+                        elif mutation == "door":
+                            driver._deed_objects["nouraajdDoor"] = {
+                                **driver._deed_objects["nouraajdDoor"],
+                                "__handle__": "replacementDoor",
+                            }
+                        elif mutation == "blocker":
+                            driver._deed_objects.pop("nouraajdDoorTrigger1")
+                        elif mutation == "canStep":
+                            driver._deed_objects["nouraajdDoorTrigger1"]["canStep"] = True
                         else:
                             state[mutation] += 1
                         raise AssertionError("Authored option is unavailable")
                     return choose(dialog_id, action, condition, **kwargs)
 
                 driver.choose = corruptRejection
-                with patch.object(nouraajd, "prepareRolf"), self.assertRaises(AssertionError):
+                expected = "Rejected gate deed changed the closed-gate state" if mutation == "door" else ""
+                with patch.object(nouraajd, "prepareRolf"), self.assertRaisesRegex(AssertionError, expected):
                     nouraajd.deedRoute(driver)
 
     def testDeedRouteStillRejectsLostPersistedCounter(self):

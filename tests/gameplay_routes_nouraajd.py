@@ -86,7 +86,40 @@ def start(d, *, gate="cooperative", deed=False):
     # Gate, confrontation and town recap choices belong to the real campaign store.
     d.startCampaign("fallOfNouraajd")
     d.hunt("collectAuthoredRetreatScroll")
+    if deed:
+        door = d.object("nouraajdDoor")
+        d.assertNativeCombatOutcomes()
+        entry_after = d._combat_trace_seq
+        identities = (d._nativeObjectIdentity(door), d._nativeObjectIdentity(d.player))
     d.navigateTo("nouraajdDoor")
+    if deed:
+        d.test.assertEqual(d.coords(door), d.coords())
+        d.test.assertIsNotNone(
+            d._playerEntryForTarget(identities, after_seq=entry_after),
+            "The class deed selector requires a fresh native player entry at the closed gate",
+        )
+        d.test.assertFalse(d.call(door, "getBoolProperty", "opened"))
+        blocker_names = tuple("nouraajdDoorTrigger" + str(index) for index in range(1, 4))
+
+        def gateState():
+            live_door = d.object("nouraajdDoor")
+            blockers = tuple(d.object(name) for name in blocker_names)
+            return (
+                deedSelectorState(d),
+                (live_door, d.coords(live_door), d.call(live_door, "getBoolProperty", "opened")),
+                tuple(
+                    (blocker, d.coords(blocker), d.call(blocker, "getBoolProperty", "canStep")) for blocker in blockers
+                ),
+            )
+
+        before = gateState()
+        d.test.assertEqual(door, before[1][0], "The closed gate must still be the actual approached door")
+        d.test.assertTrue(all(not can_step for _blocker, _coords, can_step in before[2]))
+        if d.class_id != "Warrior":
+            d.test.assertFalse(d.condition("doorDialog", "can_brace_gate"))
+            with d.test.assertRaisesRegex(AssertionError, "Authored option is unavailable"):
+                d.choose("doorDialog", "brace_gate", condition="can_brace_gate")
+            d.test.assertEqual(before, gateState(), "Rejected gate deed changed the closed-gate state")
     if gate == "threatened":
         d.choose("doorDialog", "threatenGate")
         d.select("doorDialog", "NOT_WELCOME", 0)
@@ -367,13 +400,11 @@ def gateRoute(d, approach):
 
 
 def deedRoute(d):
-    # The Warrior action must be witnessed before the ordinary gate opening consumes the visit.
-    start(d, deed=d.class_id == "Warrior")
-    if d.class_id != "Warrior":
-        performDeed(d)
+    # Both acceptance and rejection of the Warrior option belong to the initial closed-gate visit.
+    start(d, deed=True)
     _landmark, dialog, _action, condition, flag, counter = DEEDS[d.class_id]
     for class_id, (place, other_dialog, hook, other_condition, _flag, _counter) in DEEDS.items():
-        if class_id != d.class_id:
+        if class_id != d.class_id and class_id != "Warrior":
             d.navigateTo(place)
             d.test.assertEqual(d.coords(d.object(place)), d.coords())
             d.test.assertFalse(d.condition(other_dialog, other_condition))
