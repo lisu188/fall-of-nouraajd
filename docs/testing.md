@@ -186,7 +186,11 @@ resource to have a real deficit and receive the exact capped amount.
 
 The timed courtyard escape derives its sole exit from the raw authored wall objects, then checks a six-step
 continuation against native passability and current pursuer coordinates. Each decision permits at most 64 distinct
-native cell probes, with memoization and bounded rejection diagnostics. Pure pursuit models verify route planning
+native cell probes, with memoization and bounded rejection diagnostics. Each decision also snapshots all live
+registered hostile creatures, including incidental Pritz, using the native NPC and affiliation rules. Creature
+classification is cached; liveness, NPC status, affiliation and coordinates are refreshed before planning. The
+64-creature cap exceeds the reviewed 47-creature authored envelope and fails rather than omitting excess actors.
+Pure pursuit models verify route planning
 and the authored 74/75/76-turn boundary; passing native receipts are still required for actual timeout credit.
 Standalone direct-loss cases consume their original collected Town Portal before fleeing, retaining the same
 native countdown, map/player identity, gold and journal state. Campaign cases preserve that unique scroll for
@@ -257,10 +261,15 @@ exact map, target and player identities and the same live MCP target handle; ear
 and replaced targets do not satisfy the approach. Same-cell overlap is accepted only after a witnessed player
 entry; a single continuing-contact record tracks exact live handles, native identities and coordinates, and any
 subsequent movement by either participant invalidates it. An NPC walking onto a stationary player earns no visit.
+The driver can leave such an overlap through a real native cardinal step and reapproach the moving NPC; only
+a new player-caused entry earns contact. Departure and reapproach share the original navigation and stall budgets.
 Victor's completed quest is evaluated through the native player API after its actual rescue callback, without an
 extra movement turn. Gooby completion requires the ordered native `quest_completed`, exact 200-gold payment and
 headless reward receipt for the same player and map, including when completion occurs during movement. The bounded
 reward cache preserves that evidence for later hunt hand-ins and rejects duplicate grants or incomplete receipts.
+Fresh game startup drains the prior trace and resets completed reward receipts; checkpoint reloads retain them.
+An unfinished receipt or latched native failure prevents a fresh-game reset. Wrong-class Warrior deed refusals
+occur at the initial closed gate, with fresh player entry and all three blocking markers still present.
 When an incidental actual Brood victory occurs during the Alpha approach, the hunt validates the dead actor and
 native combat receipt, then uses only owned healing before the next movement or map turn. It fails if those finite
 supplies cannot restore full HP. This correction adds no retreat, relocation, stronger character or combat retry;

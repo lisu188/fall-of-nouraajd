@@ -284,7 +284,10 @@ class GameplayNouraajdServiceRoutesTest(unittest.TestCase):
             mark_victor_bad_end=lambda: state.update(quest="bad_end"),
         )
         game_map = SimpleNamespace(
-            getNumericProperty=lambda name: 10, getTurn=lambda: state["turn"], getGame=lambda: None
+            getNumericProperty=lambda name: 10,
+            getTurn=lambda: state["turn"],
+            getGame=lambda: None,
+            getObjects=lambda: [{"__handle__": "player"}] + ([{"__handle__": "leader"}] if state["leader"] else []),
         )
         expire = authoredFunction(
             "res/maps/nouraajd/script.py",
@@ -317,11 +320,20 @@ class GameplayNouraajdServiceRoutesTest(unittest.TestCase):
             expire(game_map)
             state["turn"] += 1
 
+        def call(handle, method, *args):
+            if handle is game_map:
+                return getattr(handle, method)(*args)
+            if method == "getStringProperty":
+                self.assertEqual(("affiliation",), args)
+                return ""
+            return {"getType": "CCreature", "isAlive": True, "isNpc": False}[method]
+
         driver = SimpleNamespace(
             test=self,
             game_map=game_map,
+            player={"__handle__": "player"},
             number=lambda name: 10,
-            call=lambda handle, method: getattr(handle, method)(),
+            call=call,
             coords=lambda handle=None: state["enemy"] if handle else state["position"],
             object=lambda name, required=False: "leader" if name == "cultLeaderQuest" and state["leader"] else None,
             canStep=can_step,
@@ -400,7 +412,10 @@ class GameplayNouraajdServiceRoutesTest(unittest.TestCase):
             int(layer["properties"]["level"]),
         )
         driver.object = lambda name, required=False: name if name in enemies and state["leader"] else None
-        driver.coords = lambda actor=None: enemies[actor] if actor else state["position"]
+        driver.coords = lambda actor=None: enemies[actor["__handle__"]] if actor else state["position"]
+        driver.game_map.getObjects = lambda: [{"__handle__": "player"}] + (
+            [{"__handle__": name} for name in enemies] if state["leader"] else []
+        )
 
         def neighbors(point):
             return [(point[0] + dx, point[1] + dy, point[2]) for dx, dy in ((1, 0), (0, 1), (-1, 0), (0, -1))]

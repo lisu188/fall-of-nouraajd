@@ -500,6 +500,7 @@ class GameplayRouteDialogTest(unittest.TestCase):
             getNumericProperty=lambda name: 10,
             getTurn=lambda: state["turn"],
             getGame=lambda: None,
+            getObjects=lambda: [{"__handle__": "player"}] + ([{"__handle__": "leader"}] if state["leader"] else []),
         )
         expire = authoredFunction(
             "res/maps/nouraajd/script.py",
@@ -516,11 +517,17 @@ class GameplayRouteDialogTest(unittest.TestCase):
             expire(game_map)
             state["turn"] += 1
 
+        def call(handle, method, *args):
+            if handle is game_map:
+                return getattr(handle, method)(*args)
+            return {"getType": "CCreature", "isAlive": True, "isNpc": False, "getStringProperty": ""}[method]
+
         driver = SimpleNamespace(
             test=self,
             game_map=game_map,
+            player={"__handle__": "player"},
             number=lambda name: 10,
-            call=lambda handle, method: getattr(handle, method)(),
+            call=call,
             coords=lambda handle=None: (45, 100, 0) if handle else state["position"],
             object=lambda name, required=False: "leader" if name == "cultLeaderQuest" and state["leader"] else None,
             canStep=lambda target: True,
@@ -567,6 +574,7 @@ class GameplayRouteDialogTest(unittest.TestCase):
                     getNumericProperty=lambda name: 772,
                     getTurn=lambda: state["turn"],
                     getGame=lambda: None,
+                    getObjects=lambda: [{"__handle__": "player"}] + [{"__handle__": name} for name in actors],
                 )
                 expire = authoredFunction(
                     "res/maps/nouraajd/script.py",
@@ -605,12 +613,18 @@ class GameplayRouteDialogTest(unittest.TestCase):
                 def canStep(target):
                     return 0 <= target[0] <= bounds[0] and 0 <= target[1] <= bounds[1] and target in tiles
 
+                def call(handle, method, *args):
+                    if handle is game_map:
+                        return getattr(handle, method)(*args)
+                    return {"getType": "CCreature", "isAlive": True, "isNpc": False, "getStringProperty": ""}[method]
+
                 driver = SimpleNamespace(
                     test=self,
                     game_map=game_map,
+                    player={"__handle__": "player"},
                     number=lambda name: 772,
-                    call=lambda handle, method: getattr(handle, method)(),
-                    coords=lambda handle=None: actors[handle] if handle else state["position"],
+                    call=call,
+                    coords=lambda handle=None: actors[handle["__handle__"]] if handle else state["position"],
                     object=lambda name, required=False: name if name in actors else None,
                     canStep=canStep,
                     step=step,
@@ -630,6 +644,199 @@ class GameplayRouteDialogTest(unittest.TestCase):
                 self.assertEqual(848, state["turn"])
                 self.assertEqual(56, len(steps))
                 self.assertFalse(actors)
+
+    def fleeRosterFixture(self, actors, *, affiliation=""):
+        state = {"actors": actors, "affiliation": affiliation, "position": (66, 107, 0)}
+        calls, coordinate_reads = [], []
+        game_map, player = {"__handle__": "map"}, {"__handle__": "player"}
+
+        def call(handle, method, *args):
+            identity = handle["__handle__"]
+            calls.append((identity, method, args))
+            if identity == "map":
+                self.assertEqual("getObjects", method)
+                return [{"__handle__": "player", "__type__": "CPlayer"}] + [
+                    {
+                        "__handle__": name,
+                        "__type__": actor.get("type", "CCreature"),
+                        "pythonMethods": actor.get("pythonMethods", []),
+                    }
+                    for name, actor in state["actors"].items()
+                ]
+            if identity == "player":
+                self.assertEqual(("getStringProperty", ("affiliation",)), (method, args))
+                return state["affiliation"]
+            actor = state["actors"][identity]
+            values = {
+                "getType": actor.get("type", "CCreature"),
+                "getName": actor.get("name", identity),
+                "isAlive": actor.get("alive", True),
+                "isNpc": actor.get("npc", False),
+                "getStringProperty": actor.get("affiliation", ""),
+            }
+            if method == "getStringProperty":
+                self.assertEqual(("affiliation",), args)
+            return values[method]
+
+        def coords(handle=None):
+            if handle is None:
+                return state["position"]
+            identity = handle["__handle__"]
+            coordinate_reads.append(identity)
+            return state["actors"][identity]["coords"]
+
+        driver = SimpleNamespace(test=self, game_map=game_map, player=player, call=call, coords=coords)
+        return driver, state, calls, coordinate_reads
+
+    def testVictorFleeAvoidsThePritzPursuitConeDespiteNativePassability(self):
+        # 28ba9d9e/job113882090624: a Pritz victory restored (66,107), then the
+        # leader reached that stationary hero. The earlier three-cell separation
+        # below exercises prevention; it does not claim a reconstructed trace.
+        driver, state, calls, coordinate_reads = self.fleeRosterFixture(
+            {
+                "cultLeaderQuest": {"coords": (62, 105, 0)},
+                "pritz": {"coords": (67, 107, 0)},
+            }
+        )
+        state.update(turn=805, position=(64, 107, 0), quest="encounter_active", steps=[])
+        roster_call = driver.call
+
+        def call(handle, method, *args):
+            if handle is driver.game_map and method == "getTurn":
+                return state["turn"]
+            return roster_call(handle, method, *args)
+
+        def step(target):
+            state["steps"].append(target)
+            state.update(position=target, turn=state["turn"] + 1)
+
+        driver.call = call
+        driver.number = lambda name: 777
+        driver.object = lambda name, required=False: {"__handle__": name} if name == "cultLeaderQuest" else None
+        driver.canStep = lambda target: True
+        driver.step = step
+        driver.string = lambda name: state["quest"]
+        self.assertTrue(driver.canStep((67, 107, 0)), "Native walkability does not reject a hostile occupied cell")
+        nouraajd.fleeCourtyardUntil(driver, 29)
+        self.assertEqual([(64, 108, 0)], state["steps"])
+        self.assertEqual((806, "encounter_active"), (state["turn"], state["quest"]))
+        self.assertEqual(1, sum(method == "getObjects" for _identity, method, _args in calls))
+        self.assertEqual(["cultLeaderQuest", "pritz"], coordinate_reads)
+
+    def testVictorFleeSnapshotSupportsPythonCreaturesAndTheNativeAffiliationPredicate(self):
+        driver, state, calls, coordinate_reads = self.fleeRosterFixture(
+            {
+                "pritz": {"coords": (67, 107, 0)},
+                "pythonRaider": {
+                    "coords": (64, 106, 0),
+                    "type": "AuthoredPythonRaider",
+                    "pythonMethods": [{"name": "isAlive", "signature": "(self)"}],
+                },
+                "dead": {"coords": (68, 107, 0), "alive": False},
+                "neutral": {"coords": (69, 107, 0), "npc": True},
+                "ally": {"coords": (70, 107, 0), "affiliation": "wardens"},
+                "elsewhere": {"coords": (66, 107, 1)},
+                "building": {"coords": (66, 107, 0), "type": "CBuilding"},
+            },
+            affiliation="wardens",
+        )
+        cache = {}
+        self.assertEqual([(67, 107, 0), (64, 106, 0)], nouraajd.fleeHostileCoords(driver, cache))
+        self.assertEqual(["pritz", "pythonRaider", "elsewhere"], coordinate_reads)
+        self.assertFalse(any(identity == "building" and method == "isAlive" for identity, method, _args in calls))
+        state["affiliation"] = ""
+        state["actors"]["ally"]["affiliation"] = ""
+        coordinate_reads.clear()
+        self.assertEqual([(67, 107, 0), (64, 106, 0), (70, 107, 0)], nouraajd.fleeHostileCoords(driver, cache))
+        self.assertIn("ally", coordinate_reads, "Two empty affiliations do not make native creatures allied")
+        self.assertEqual(len(state["actors"]), sum(method == "getType" for _identity, method, _args in calls))
+
+    def testVictorFleeRevalidatesMutableActorFlagsAndReplacementHandlesEveryStep(self):
+        driver, state, calls, coordinate_reads = self.fleeRosterFixture(
+            {
+                "old": {"coords": (67, 107, 0), "name": "sameAuthoredName"},
+                "changing": {"coords": (68, 107, 0), "npc": True},
+            },
+            affiliation="wardens",
+        )
+        cache = {}
+        self.assertEqual([(67, 107, 0)], nouraajd.fleeHostileCoords(driver, cache))
+        state["actors"]["old"]["alive"] = False
+        state["actors"]["changing"].update(npc=False, affiliation="wardens")
+        self.assertEqual([], nouraajd.fleeHostileCoords(driver, cache))
+        state["actors"]["changing"].update(affiliation="raiders", coords=(69, 108, 0))
+        self.assertEqual([(69, 108, 0)], nouraajd.fleeHostileCoords(driver, cache))
+        self.assertEqual(2, sum(method == "getType" for _identity, method, _args in calls))
+        del state["actors"]["old"]
+        state["actors"]["new"] = {"coords": (70, 108, 0), "name": "sameAuthoredName"}
+        coordinate_reads.clear()
+        self.assertEqual([(69, 108, 0), (70, 108, 0)], nouraajd.fleeHostileCoords(driver, cache))
+        self.assertNotIn("old", cache)
+        self.assertIn("new", cache)
+        self.assertEqual(["changing", "new"], coordinate_reads)
+        self.assertEqual(3, sum(method == "getType" for _identity, method, _args in calls))
+
+    def testVictorFleeFailsBeforeMovementIfItsRequiredEncounterActorsAreAbsent(self):
+        driver, _state, _calls, coordinate_reads = self.fleeRosterFixture({"pritz": {"coords": (67, 107, 0)}})
+        roster_call = driver.call
+        driver.call = lambda handle, method, *args: (
+            807 if handle is driver.game_map and method == "getTurn" else roster_call(handle, method, *args)
+        )
+        driver.number = lambda name: 777
+        driver.object = lambda name, required=False: None
+        driver.step = Mock()
+        with self.assertRaisesRegex(AssertionError, "real timed encounter must remain present"):
+            nouraajd.fleeCourtyardUntil(driver, 31)
+        driver.step.assert_not_called()
+        self.assertEqual([], coordinate_reads)
+
+    def testVictorFleeRejectsAnOversizedCreatureRosterBeforeReadingCoordinates(self):
+        driver, _state, calls, coordinate_reads = self.fleeRosterFixture(
+            {"actor" + str(index): {"coords": (index, 0, 0)} for index in range(64)}
+        )
+        with self.assertRaisesRegex(AssertionError, "creature roster exceeds 64") as raised:
+            nouraajd.fleeHostileCoords(driver, {})
+        self.assertIn("actor63", str(raised.exception))
+        self.assertEqual([], coordinate_reads)
+        self.assertFalse(any(method in {"isAlive", "isNpc"} for _identity, method, _args in calls))
+
+    def testVictorFleeRetainsEveryHostileWithinTheCreatureEnvelope(self):
+        for count in (44, 63):
+            with self.subTest(hostiles=count):
+                driver, _state, calls, coordinate_reads = self.fleeRosterFixture(
+                    {"actor" + str(index): {"coords": (index, 0, 0)} for index in range(count)}
+                )
+                self.assertEqual([(index, 0, 0) for index in range(count)], nouraajd.fleeHostileCoords(driver, {}))
+                self.assertEqual(count, len(coordinate_reads))
+                self.assertEqual(count, sum(method == "isAlive" for _identity, method, _args in calls))
+
+    def testVictorFleeRejectsAnAdjacentPritzBeforeItsCombatCanRestoreTheDepartureCell(self):
+        driver, state, _calls, _coordinate_reads = self.fleeRosterFixture(
+            {
+                "cultLeaderQuest": {"coords": (62, 105, 0)},
+                "pritz": {"coords": (67, 107, 0)},
+            }
+        )
+        state.update(turn=807, quest="encounter_active")
+        roster_call = driver.call
+        driver.call = lambda handle, method, *args: (
+            state["turn"] if handle is driver.game_map and method == "getTurn" else roster_call(handle, method, *args)
+        )
+        driver.number = lambda name: 777
+        driver.object = lambda name, required=False: {"__handle__": name} if name == "cultLeaderQuest" else None
+        driver.canStep = lambda target: True
+        driver.step = Mock(side_effect=lambda target: state.update(turn=809, quest="good_end"))
+        driver.string = lambda name: state["quest"]
+        with self.assertRaisesRegex(AssertionError, "No natural escape step remains"):
+            nouraajd.fleeCourtyardUntil(driver, 31)
+        driver.step.assert_not_called()
+
+    def testVictorFleeRejectsAMapRosterThatLostTheActualPlayer(self):
+        driver, _state, _calls, coordinate_reads = self.fleeRosterFixture({"cultLeaderQuest": {"coords": (62, 105, 0)}})
+        driver.call = lambda handle, method, *args: [{"__handle__": "cultLeaderQuest"}]
+        with self.assertRaisesRegex(AssertionError, "active player in the map roster"):
+            nouraajd.fleeHostileCoords(driver, {})
+        self.assertEqual([], coordinate_reads)
 
     def testPairedPortalsReenterTheArrivalObjectBeforeTestingItsReverse(self):
         driver = self.driver("ninemarches")

@@ -736,20 +736,63 @@ def courtyardExitDistances():
     return door, distances
 
 
+def fleeHostileCoords(d, type_cache, *, level=None):
+    """Snapshot current combat-capable actors once; path lookahead never repeats their RPCs."""
+    roster = d.call(d.game_map, "getObjects")
+    live_handles = {actor["__handle__"] for actor in roster}
+    d.test.assertIn(d.player["__handle__"], live_handles, "Victor escape requires the active player in the map roster")
+    for identity in tuple(type_cache):
+        if identity not in live_handles:
+            del type_cache[identity]
+    creatures = []
+    for actor in roster:
+        identity = actor["__handle__"]
+        if identity not in type_cache:
+            if identity == d.player["__handle__"]:
+                type_cache[identity] = True
+            else:
+                native_type = d.call(actor, "getType")
+                methods = {entry["name"] for entry in actor.get("pythonMethods", ())}
+                type_cache[identity] = native_type in {"CCreature", "CPlayer"} or "isAlive" in methods
+        if type_cache[identity]:
+            creatures.append(actor)
+    d.test.assertLessEqual(
+        len(creatures),
+        64,
+        ("Victor escape creature roster exceeds 64", tuple(actor["__handle__"] for actor in creatures[:65])),
+    )
+    affiliation = d.call(d.player, "getStringProperty", "affiliation")
+    hostiles = []
+    for actor in creatures:
+        if actor["__handle__"] == d.player["__handle__"]:
+            continue
+        if not d.call(actor, "isAlive") or d.call(actor, "isNpc"):
+            continue
+        actor_affiliation = d.call(actor, "getStringProperty", "affiliation")
+        if affiliation and actor_affiliation == affiliation:
+            continue
+        hostiles.append(actor)
+    if level is None:
+        level = d.coords()[2]
+    return [position for actor in hostiles if (position := d.coords(actor))[2] == level]
+
+
 def fleeCourtyardUntil(d, elapsed, allow_timeout=False):
     # Keep moving through actual walkable edges so pursuing cultists cannot turn
     # an intended timeout into an automatic combat rescue while the hero waits.
     spawn_turn = d.number("VICTOR_COURTYARD_TURN")
     door, exit_distances = courtyardExitDistances()
     previous = None
+    type_cache = {}
     while d.call(d.game_map, "getTurn") - spawn_turn < elapsed:
         origin = d.coords()
         actors = [
             d.object(name, required=False)
             for name in ("cultLeaderQuest", *("victorCultist" + str(index) for index in range(1, 5)))
         ]
-        opponents = [d.coords(actor) for actor in actors if actor]
-        d.test.assertTrue(opponents, "The real timed encounter must remain present while fleeing")
+        d.test.assertTrue(any(actors), "The real timed encounter must remain present while fleeing")
+        opponents = fleeHostileCoords(d, type_cache, level=origin[2])
+        d.test.assertTrue(opponents, "The timed encounter must retain actual live hostile actors")
         probes = {}
         rejected = []
 
