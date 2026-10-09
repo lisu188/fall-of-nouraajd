@@ -470,6 +470,26 @@ def contractEvidence():
     }
 
 
+def stableAstDump(value):
+    """Retain authored syntax while ignoring Python 3.12's empty generic-definition fields."""
+    if isinstance(value, ast.AST):
+        fields = []
+        for name, child in ast.iter_fields(value):
+            if (
+                name == "type_params"
+                and isinstance(value, (ast.FunctionDef, ast.AsyncFunctionDef, ast.ClassDef))
+                and child == []
+            ):
+                continue
+            if child is None and getattr(type(value), name, ...) is None:
+                continue
+            fields.append(name + "=" + stableAstDump(child))
+        return type(value).__name__ + "(" + ", ".join(fields) + ")"
+    if isinstance(value, list):
+        return "[" + ", ".join(stableAstDump(child) for child in value) + "]"
+    return repr(value)
+
+
 def sourceReviewDigest(root=ROOT):
     """Formatting-independent guard against silently adding branches inside known callbacks.
 
@@ -486,7 +506,7 @@ def sourceReviewDigest(root=ROOT):
     for path in sorted(paths):
         text = path.read_text(encoding="utf-8")
         normalized = (
-            ast.dump(ast.parse(text), include_attributes=False)
+            stableAstDump(ast.parse(text))
             if path.suffix == ".py"
             else (json.dumps(json.loads(text), sort_keys=True, separators=(",", ":")))
         )

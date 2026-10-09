@@ -363,6 +363,52 @@ def castleNavigate(d, coords, walkable, portals, reserved):
         d.test.assertEqual(tuple(arrival), d.coords())
 
 
+def castleTownRest(d, objects, walkable, portals, reserved, mission):
+    towns = [
+        name
+        for name, value in objects.items()
+        if value["properties"].get("campaign_loyalTown") and value["properties"].get("campaign_isTown")
+    ]
+    d.test.assertTrue(towns, "The paid-rest route needs an authored loyal town")
+    town = min(
+        towns,
+        key=lambda name: (
+            len(shortestRoute(walkable - {reserved}, portals, d.coords(), objects[name]["coords"])),
+            name,
+        ),
+    )
+    castleNavigate(d, objects[town]["coords"], walkable, portals, reserved)
+    d.test.assertTrue(d.flag("campaign_castleSupply_" + town))
+    defenders = sorted(
+        mission["defenderIds"],
+        key=lambda name: (sum(abs(a - b) for a, b in zip(objects[name]["coords"], objects[town]["coords"])), name),
+    )
+    for name in defenders:
+        if objects[name]["coords"] == reserved or d.object(name, required=False) is None:
+            continue
+        try:
+            shortestRoute(walkable - {reserved}, portals, d.coords(), objects[name]["coords"])
+        except AssertionError:
+            # This is only a search for natural injury. Every defender still has
+            # its separate mandatory route obligation below.
+            continue
+        castleNavigate(d, objects[name]["coords"], walkable, portals, reserved)
+        if d.call(d.player, "getHp") == d.call(d.player, "getHpMax") or d.gold() < 10:
+            continue
+        recovery = d.recoveryEnabled
+        d.recoveryEnabled = False
+        try:
+            castleNavigate(d, objects[town]["coords"], walkable, portals, reserved)
+            if d.call(d.player, "getHp") == d.call(d.player, "getHpMax"):
+                continue
+            d.check("castle.town.rest", d.restAtTown(town))
+            d.check("castle.town.fullHealth", not d.restAtTown(town))
+            return
+        finally:
+            d.recoveryEnabled = recovery
+    d.test.fail("The reachable authored encounters produced no payable natural injury for town rest")
+
+
 def castleChapter(d, map_name, rest=False):
     d.test.assertEqual(map_name, d.map_name)
     _document, objects, walkable, portals, mission = authoredMap(map_name)
@@ -400,6 +446,8 @@ def castleChapter(d, map_name, rest=False):
         and not d.flag("campaign_castleCaptured_" + guarded_name)
         and d.gold() == gold_before,
     )
+    if rest:
+        castleTownRest(d, objects, walkable, portals, reserved, mission)
     for name in ("castleCatherine", "castleChristian"):
         castleNavigate(d, objects[name]["coords"], walkable, portals, reserved)
         d.choose(objects[name]["properties"]["campaign_dialog"], "reportProgress")
@@ -473,24 +521,6 @@ def castleChapter(d, map_name, rest=False):
         if actor:
             castleNavigate(d, objects[name]["coords"], walkable, portals, reserved)
         d.check(prefix + ".defender." + name, d.flag("campaign_castleDefeated_" + name))
-    if rest:
-        towns = [
-            name
-            for name in supplies + list(mission["captureIds"])
-            if name != final_name and objects[name]["properties"].get("campaign_isTown")
-        ]
-        d.test.assertTrue(towns)
-        town = min(towns, key=lambda name: sum(abs(a - b) for a, b in zip(d.coords(), objects[name]["coords"])))
-        castleNavigate(d, objects[town]["coords"], walkable, portals, reserved)
-        if d.call(d.player, "getHp") < d.call(d.player, "getHpMax"):
-            d.recoveryEnabled = False
-            try:
-                d.check("castle.town.rest", d.restAtTown(town))
-            finally:
-                d.recoveryEnabled = True
-        else:
-            d.test.fail("All authored encounters ended at full health; paid-rest branch needs a natural injury")
-        d.check("castle.town.fullHealth", not d.restAtTown(town))
     d.saveAndReload(map_name + "-before-final-capture")
     for name in final_guards:
         if d.object(name, required=False):
@@ -498,6 +528,7 @@ def castleChapter(d, map_name, rest=False):
         d.check(prefix + ".defender." + name, d.flag("campaign_castleDefeated_" + name))
     source = d.game_map
     gold_before = d.gold()
+    final_capture_gold = d.call(d.object(final_name), "getNumericProperty", "campaign_rewardGold")
     d.navigateTo(final_name)
     d.check(
         prefix + ".capture." + final_name, d.call(source, "getBoolProperty", "campaign_castleCaptured_" + final_name)
@@ -506,7 +537,11 @@ def castleChapter(d, map_name, rest=False):
         prefix + ".complete",
         d.call(source, "getBoolProperty", "campaign_castleFinished_" + mission["scenarioId"])
         and mission["questId"] in d.questNames(completed=True)
-        and d.gold() >= gold_before + mission["victoryGold"],
+        and d.gold() == gold_before + final_capture_gold + mission["victoryGold"],
+        goldBefore=gold_before,
+        captureGold=final_capture_gold,
+        victoryGold=mission["victoryGold"],
+        goldAfter=d.gold(),
     )
 
 

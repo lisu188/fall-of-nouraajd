@@ -9,6 +9,7 @@ import json
 from pathlib import Path
 import types
 import unittest
+from unittest.mock import patch
 
 from tests import gameplay_branch_catalog as catalog
 from tests.gameplay_branch_types import PLAYER_CLASSES, testName
@@ -81,6 +82,52 @@ class GameplayBranchCatalogTest(unittest.TestCase):
             catalog.sourceReviewDigest(),
             "Authored content changed: review branch obligations before updating the source digest",
         )
+
+    def testAstNormalizationIgnoresOnlyEmptyVersionSpecificTypeParameters(self):
+        source = (
+            "class Quest:\n    def completed(self):\n        return True\n    async def advance(self):\n        pass\n"
+        )
+        legacy, modern = ast.parse(source), ast.parse(source)
+        definition_types = (ast.FunctionDef, ast.AsyncFunctionDef, ast.ClassDef)
+        for node in ast.walk(legacy):
+            if isinstance(node, definition_types):
+                node._fields = tuple(name for name in node._fields if name != "type_params")
+                if hasattr(node, "type_params"):
+                    del node.type_params
+        for node in ast.walk(modern):
+            if isinstance(node, definition_types):
+                if "type_params" not in node._fields:
+                    node._fields = (*node._fields, "type_params")
+                node.type_params = []
+        self.assertNotEqual(ast.dump(legacy), ast.dump(modern), "The fixture must reproduce the version mismatch")
+        self.assertEqual(ast.dump(legacy), catalog.stableAstDump(legacy))
+        self.assertEqual(catalog.stableAstDump(legacy), catalog.stableAstDump(modern))
+        modern.body[0].type_params = [ast.Name(id="QuestState", ctx=ast.Load())]
+        self.assertNotEqual(catalog.stableAstDump(legacy), catalog.stableAstDump(modern))
+        self.assertIn("type_params", catalog.stableAstDump(modern))
+
+    def testReviewedDigestIsPortableWithPython312DefinitionFields(self):
+        original_parse = ast.parse
+
+        def parseWithTypeParameters(*args, **kwargs):
+            tree = original_parse(*args, **kwargs)
+            for node in ast.walk(tree):
+                if isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef, ast.ClassDef)):
+                    if "type_params" not in node._fields:
+                        node._fields = (*node._fields, "type_params")
+                    node.type_params = []
+            return tree
+
+        with patch.object(catalog.ast, "parse", parseWithTypeParameters):
+            self.assertEqual(catalog.REVIEWED_GAMEPLAY_DIGEST, catalog.sourceReviewDigest())
+
+    def testAstNormalizationRetainsNewInternalBranches(self):
+        original = "def completed(self):\n    return self.cleared\n"
+        formatted = "def completed( self ):\n    # formatting is not gameplay\n    return (self.cleared)\n"
+        changed = "def completed(self):\n    if self.failed:\n        return False\n    return self.cleared\n"
+        normalized = catalog.stableAstDump(ast.parse(original))
+        self.assertEqual(normalized, catalog.stableAstDump(ast.parse(formatted)))
+        self.assertNotEqual(normalized, catalog.stableAstDump(ast.parse(changed)))
 
     def testEveryDefensiveContractNamesAnExistingAutomatedRegression(self):
         evidence = catalog.contractEvidence()
