@@ -425,11 +425,24 @@ class EngineMcpServer:
                 return candidate
         return None
 
-    def inspect_and_export(self) -> None:
+    def inspect_and_export(self, *, stdio: bool = False) -> None:
         if self._game_module is None or self.game_module is None:
             raise RuntimeError("Modules are not imported")
+        self.exports.pop("playtest_trace_output_available", None)
         self._export_module_callables(self._game_module, source="_game")
         self._export_module_callables(self.game_module, source="game")
+        trace_enabled = os.environ.get("GAME_PLAYTEST_TRACE", "").lower() not in {"", "0", "false", "off", "disabled"}
+        if stdio and trace_enabled:
+            name = "playtest_trace_output_available"
+            getter = getattr(self._game_module, name, None)
+            if callable(getter):
+                self.exports[name] = ExportedCallable(
+                    name=name,
+                    source="_game",
+                    target_name=name,
+                    callable_obj=getter,
+                    signature=self._safe_signature(getter),
+                )
         logger.info("exported %d callables", len(self.exports))
 
     def _configure_native_logging(self) -> None:
@@ -3131,7 +3144,7 @@ def main() -> int:
         if args.build:
             server.build_extension(stdio=args.stdio)
         server.import_modules()
-        server.inspect_and_export()
+        server.inspect_and_export(stdio=args.stdio)
         if args.stdio:
             server.serve_stdio()
         else:

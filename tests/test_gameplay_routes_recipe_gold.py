@@ -19,8 +19,111 @@ ROOT = Path(__file__).resolve().parents[1]
 
 
 class GameplayRecipeGoldRoutesTest(unittest.TestCase):
-    def nourDriver(self, *, ingredient_lost=False):
-        state = {"gold": 0, "flags": {}, "victor": "encounter_active"}
+    def portalPlan(self, loot_quotes):
+        return routes.finitePortalGoldPlan(
+            720,
+            loot_quotes,
+            1600,
+            200,
+            (("a", 400, 320), ("b", 400, 320), ("c", 400, 320), ("d", 400, 320)),
+            ("portal", 200, 160),
+            ("life", 800, 640),
+        )
+
+    def testFinitePlannerUsesActualQuotesForDifferentEarnedLootWithoutRepeatingAnIdentity(self):
+        config = json.loads((ROOT / "res/maps/nouraajd/config.json").read_text(encoding="utf-8"))
+        self.assertEqual(
+            [
+                "DaggerOfVileHeart",
+                "LesserLifePotion",
+                "LesserLifePotion",
+                "LesserLifePotion",
+                "LesserManaPotion",
+                "Scroll",
+            ],
+            [entry["ref"] for entry in config["exampleMarket"]["properties"]["items"]],
+        )
+        self.assertEqual(
+            ["LifePotion", "ManaPotion"], [entry["ref"] for entry in config["victorMarket"]["properties"]["items"]]
+        )
+        weapons = json.loads((ROOT / "res/config/weapons.json").read_text(encoding="utf-8"))
+        self.assertEqual(3, weapons["LongSword"]["properties"]["power"])
+        for quotes in ((("actual-loot", 1280),), (("actual-loot", 2560),), (("loot-a", 640), ("loot-b", 640))):
+            with self.subTest(quotes=quotes):
+                plan = self.portalPlan(quotes)
+                self.assertIsNotNone(plan)
+                self.assertEqual(0, plan["remaining"])
+                self.assertEqual(len(plan["loot"]), len(set(plan["loot"])))
+                sales = [identity for action, identity, _price in plan["actions"] if action == "sale"]
+                purchases = [identity for action, identity, _price in plan["actions"] if action == "purchase"]
+                self.assertEqual(len(sales), len(set(sales)))
+                self.assertEqual(len(purchases), len(set(purchases)))
+                self.assertEqual(720 + sum(dict(quotes)[identity] for identity in plan["loot"]), plan["expense"])
+        self.assertEqual(0, self.portalPlan((("actual-loot", 1280),))["lifeMode"])
+        self.assertNotEqual(0, self.portalPlan((("actual-loot", 2560),))["lifeMode"])
+
+    def testFinitePlannerRejectsUnavailableFundingAndMalformedOrDuplicateQuotesBeforeSales(self):
+        for quotes in ((), (("too-small", 640),), (("too-large", 5000),)):
+            with self.subTest(quotes=quotes):
+                self.assertIsNone(self.portalPlan(quotes))
+        for quotes in ((("a", 1280),), (("same", 640), ("same", 640)), (("free", 0),), (("above-native-cap", 5001),)):
+            with self.subTest(quotes=quotes), self.assertRaises(ValueError):
+                self.portalPlan(quotes)
+        with self.assertRaises(ValueError):
+            self.portalPlan(tuple((str(index), 160) for index in range(129)))
+
+    def testNourPortalGoldRefusalUsesTheLiveVictorMarketBeforeMovementAndPreservesExactInputs(self):
+        driver, state, owned, stock, transactions, order = self.nourDriver(portal_refusal=True)
+        routes.nourPortalGoldRefusal(driver)
+        self.assertEqual(
+            ["human-aid", "real-Rolf", "real-Gooby", "real-Victor-meeting", "real-Victor", "actual-Victor-callback"],
+            order[:6],
+        )
+        self.assertEqual(("sale", "earned", 1280, 2000), transactions[0])
+        self.assertEqual(("purchase", "mana", 1600, 400), transactions[1])
+        self.assertEqual("actual-move:market1", order[6])
+        self.assertIn("actual-letter-unlock", order)
+        self.assertEqual(("purchase", "scroll", 200, 0), transactions[-1])
+        self.assertEqual(0, state["gold"])
+        self.assertTrue({"starter", "letter", "skull", "portal", "mana", "scroll"} <= owned)
+        self.assertNotIn("earned", owned)
+        sales = Counter(identity for action, identity, *_rest in transactions if action == "sale")
+        self.assertTrue(all(count == 1 for count in sales.values()))
+        self.assertNotIn("mana", sales)
+        self.assertNotIn("scroll", sales)
+        self.assertNotIn("starter", sales)
+        self.assertNotIn("letter", sales)
+        self.assertNotIn("skull", sales)
+        driver.engine.assert_called_once()
+        credit = next(call for call in driver.check.call_args_list if call.args[0].endswith("insufficientGold"))
+        self.assertEqual({"ok": False, "reason": "missing:gold"}, credit.kwargs["result"])
+        driver.saveAndReload.assert_called_once_with("portal-gold-victor-rescued")
+        self.assertTrue(driver.recoveryEnabled)
+
+    def testNourPortalGoldRefusalDoesNotSellAnythingWhenActualFundingOrCallbackIsUnavailable(self):
+        for kwargs in ({"loot_value": 5000}, {"callback_invalid": True}):
+            with self.subTest(kwargs=kwargs):
+                driver, _state, owned, _stock, transactions, _order = self.nourDriver(portal_refusal=True, **kwargs)
+                with self.assertRaises(AssertionError):
+                    routes.nourPortalGoldRefusal(driver)
+                self.assertEqual([], transactions)
+                self.assertTrue({"starter", "letter", "portal", "earned"} <= owned)
+                driver.engine.assert_not_called()
+                self.assertFalse(any(call.args[0].endswith("insufficientGold") for call in driver.check.call_args_list))
+                self.assertTrue(driver.recoveryEnabled)
+
+    def testNourPortalGoldRefusalFailsIfNativeTravelConsumedTheManaInput(self):
+        driver, _state, _owned, _stock, _transactions, _order = self.nourDriver(
+            portal_refusal=True, ingredient_lost=True
+        )
+        with self.assertRaisesRegex(AssertionError, "every actual ingredient"):
+            routes.nourPortalGoldRefusal(driver)
+        driver.engine.assert_not_called()
+        self.assertFalse(any(call.args[0].endswith("insufficientGold") for call in driver.check.call_args_list))
+        self.assertTrue(driver.recoveryEnabled)
+
+    def nourDriver(self, *, ingredient_lost=False, portal_refusal=False, loot_value=1280, callback_invalid=False):
+        state = {"gold": 0, "flags": {}, "victor": "encounter_active", "callback": False, "coords": (105, 110, 0)}
         types = {
             "portal": "TownPortalScroll",
             "starter": "Staff",
@@ -32,6 +135,21 @@ class GameplayRecipeGoldRoutesTest(unittest.TestCase):
         }
         owned, stock = {"portal", "starter", "letter"}, {"small1", "small2", "small3"}
         player, game_map, market = ({"__handle__": name} for name in ("player", "map", "market"))
+        callback_market = {"__handle__": "callback-market"}
+        callback_stock = {"life", "mana"}
+        if portal_refusal:
+            types.update(
+                {
+                    "life": "LifePotion",
+                    "mana": "ManaPotion",
+                    "scroll": "Scroll",
+                    "lesserMana": "LesserManaPotion",
+                    "dagger": "DaggerOfVileHeart",
+                    "earned": "LongSword",
+                    "sealedLetter": "letterToBeren",
+                }
+            )
+            stock.update({"scroll", "lesserMana", "dagger"})
         transactions, order = [], []
         equipped = {"0": {"__handle__": "starter"}}
 
@@ -55,14 +173,23 @@ class GameplayRecipeGoldRoutesTest(unittest.TestCase):
             countItems=lambda item_type: sum(types[identity] == item_type for identity in owned),
             removeItem=Mock(side_effect=AssertionError("A gold refusal cannot consume an ingredient")),
         )
-        game = SimpleNamespace(getGuiHandler=lambda: SimpleNamespace(showTrade=Mock()))
+
+        def showTrade(actual_market):
+            self.assertIs(actual_market, callback_market)
+            state["callback"] = not callback_invalid
+            order.append("actual-Victor-callback")
+
+        gui = SimpleNamespace(showTrade=Mock(side_effect=showTrade) if portal_refusal else Mock(), notify=Mock())
+        game = SimpleNamespace(getGuiHandler=lambda: gui)
         world = SimpleNamespace(
             getGame=lambda: game,
             getPlayer=lambda: native_player,
             getBoolProperty=lambda key: state["flags"].get(key, False),
         )
         game.getMap = lambda: world
-        game.createObject = lambda identity: SimpleNamespace(getStates=lambda: [])
+        game.createObject = lambda identity: (
+            callback_market if portal_refusal and identity == "victorMarket" else SimpleNamespace(getStates=lambda: [])
+        )
         source = "res/maps/nouraajd/script.py"
         apply_aid = authoredFunction(source, "_applyRaceService", class_id="TownHallDialog", showReader=Mock())
         aid_dialog = SimpleNamespace(
@@ -94,11 +221,20 @@ class GameplayRecipeGoldRoutesTest(unittest.TestCase):
             _clear_victor_encounter=Mock(),
         )
 
+        def price(identity, buying=False):
+            if identity == "earned":
+                return loot_value
+            sell = {"portal": 200, "scroll": 200, "life": 800, "mana": 1600, "dagger": 100000}.get(identity, 400)
+            return min(5000, sell * 80 // 100) if buying else sell
+
         def call(handle, method, *args):
             identity = handle["__handle__"]
             if method == "getItems":
-                return [{"__handle__": key} for key in sorted(owned if handle == player else stock)]
+                values = owned if handle == player else callback_stock if handle == callback_market else stock
+                return [{"__handle__": key} for key in sorted(values)]
             if method == "getTypeId":
+                if handle == callback_market:
+                    return "victorMarket"
                 return types[identity]
             if method == "getName":
                 return identity
@@ -110,20 +246,42 @@ class GameplayRecipeGoldRoutesTest(unittest.TestCase):
             if method == "hasTag":
                 return identity in {"letter", "skull"}
             if method == "getSellCost":
-                return 400
+                return price(args[0]["__handle__"])
             if method == "getBuyCost":
-                return 160 if args[0]["__handle__"] == "portal" else 320
+                return price(args[0]["__handle__"], buying=True)
+            if method == "getRequestedTradeMarket":
+                self.assertTrue(state["callback"], "No stale callback market may fund the recipe")
+                return callback_market
+            if method == "getGuiHandler":
+                return {"__handle__": "handler"}
             if method == "sellItem":
                 selected = args[1]["__handle__"]
-                self.assertIn(selected, stock)
-                self.assertGreaterEqual(state["gold"], 400)
-                stock.remove(selected)
+                target_stock = callback_stock if handle == callback_market else stock
+                if selected not in target_stock:
+                    return False
+                amount = price(selected)
+                self.assertGreaterEqual(state["gold"], amount)
+                target_stock.remove(selected)
                 owned.add(selected)
-                state["gold"] -= 400
-                transactions.append(("purchase", selected, 400, state["gold"]))
+                state["gold"] -= amount
+                transactions.append(("purchase", selected, amount, state["gold"]))
                 return True
+            if method == "buyItem":
+                selected = args[1]["__handle__"]
+                target_stock = callback_stock if handle == callback_market else stock
+                if handle == callback_market:
+                    self.assertTrue(state["callback"])
+                self.assertIn(selected, owned)
+                owned.remove(selected)
+                target_stock.add(selected)
+                amount = price(selected, buying=True)
+                state["gold"] += amount
+                transactions.append(("sale", selected, amount, state["gold"]))
+                return None
             if method == "getBoolProperty":
-                return False
+                return state["flags"].get(args[0], False)
+            if method == "getStringProperty":
+                return "deescalated"
             if method in {"getHp", "getMana", "getTurn", "getNumericProperty"}:
                 return 12
             raise AssertionError((identity, method, args))
@@ -144,7 +302,9 @@ class GameplayRecipeGoldRoutesTest(unittest.TestCase):
         exec(compile(ast.Module(body=functions, type_ignores=[]), "res/plugins/crafting.py", "exec"), namespace)
 
         def engine(name, game_handle, station, recipe_id):
-            self.assertEqual(("craftRecipe", "brew_life_potion"), (name, recipe_id))
+            self.assertEqual(
+                ("craftRecipe", "craft_town_portal_scroll" if portal_refusal else "brew_life_potion"), (name, recipe_id)
+            )
             recipe = crafting.recipeDefinitions()[recipe_id]
             return namespace["apply_recipe"](
                 game,
@@ -159,6 +319,8 @@ class GameplayRecipeGoldRoutesTest(unittest.TestCase):
         def prepare(driver):
             order.append("real-Rolf")
             owned.add("skull")
+            if portal_refusal:
+                owned.add("earned")
 
         def hunt(method):
             self.assertEqual("finishOriginalMainQuest", method)
@@ -172,30 +334,95 @@ class GameplayRecipeGoldRoutesTest(unittest.TestCase):
             rescue(SimpleNamespace(getGame=lambda: game), object(), object())
 
         def station(driver, name, *, navigate=None):
-            self.assertEqual("alchemyTable1", name)
+            self.assertEqual("scribeDesk1" if portal_refusal else "alchemyTable1", name)
             if ingredient_lost:
-                owned.remove("small1")
-            return ({"id": "brew_life_potion", "enabled": False},)
+                owned.remove("mana" if portal_refusal else "small1")
+            return ({"id": "craft_town_portal_scroll" if portal_refusal else "brew_life_potion", "enabled": False},)
+
+        def navigate(name):
+            state["callback"] = False
+            state["coords"] = (130, 110, 0)
+            order.append("actual-move:" + name)
+
+        def actualLetter(driver):
+            order.append("actual-letter-unlock")
+            issued = authoredFunction(
+                source,
+                "give_letter",
+                class_id="TownHallDialog",
+                _quest_system_from=lambda obj: SimpleNamespace(
+                    needs_letter_delivery=lambda: True, give_letter=lambda player: True
+                ),
+            )
+            native_player.hasItem = lambda predicate: any(
+                predicate(SimpleNamespace(getName=lambda key=key: key)) for key in owned
+            )
+            native_player.addItem = lambda item_type: owned.add("sealedLetter")
+            is_letter = lambda item: item.getName() == "sealedLetter"
+            issued(SimpleNamespace(getGame=lambda: game, _is_letter_to_beren=is_letter))
+            delivered = authoredFunction(
+                source,
+                "deliver_letter",
+                class_id="BerenDialog",
+                _quest_system_from=lambda obj: SimpleNamespace(
+                    mark_letter_delivered=Mock(), is_relic_returned=lambda: True
+                ),
+            )
+            original_remove = native_player.removeItem
+            native_player.removeItem = lambda predicate, all_matching: owned.difference_update(
+                key for key in tuple(owned) if predicate(SimpleNamespace(getName=lambda key=key: key))
+            )
+            delivered(
+                SimpleNamespace(
+                    getGame=lambda: game,
+                    can_deliver_letter=lambda: "sealedLetter" in owned,
+                    _is_letter_to_beren=is_letter,
+                )
+            )
+            native_player.removeItem = original_remove
+            self.assertNotIn("sealedLetter", owned)
+            self.assertTrue(state["flags"].get("CAN_CRAFT_SCROLLS"))
+
+        def fight(name):
+            self.assertEqual("cultLeaderQuest", name)
+            order.append("real-Victor")
+            rescue(SimpleNamespace(getGame=lambda: game), object(), object())
+
+        def meet(driver, approach, direct):
+            self.assertEqual(("deescalated", False), (approach, direct))
+            order.append("real-Victor-meeting")
+
+        def check(branch, condition, **evidence):
+            self.assertTrue(condition, branch)
 
         driver = SimpleNamespace(
             test=self,
             player=player,
             game_map=game_map,
             game={"__handle__": "game"},
+            map_name="nouraajd",
             race_id="humanRace",
             recoveryEnabled=True,
             call=call,
             gold=lambda: state["gold"],
             hunt=hunt,
-            questNames=lambda completed=False: ["mainQuest"],
-            coords=lambda: (105, 110, 0),
-            object=lambda name: {"__handle__": name},
+            questNames=lambda completed=False: ["mainQuest", "victorQuest"],
+            coords=lambda: state["coords"],
+            object=lambda name, required=True: {"__handle__": name},
             record=Mock(),
             sellAt=sellAt,
             engine=Mock(side_effect=engine),
             pump=Mock(),
-            check=Mock(),
-            navigateTo=Mock(),
+            check=Mock(side_effect=check),
+            navigateTo=Mock(side_effect=navigate),
+            fight=fight,
+            string=lambda key: state["victor"],
+            flag=lambda key: state["flags"].get(key, False),
+            condition=lambda dialog, condition: state["victor"] == "good_end",
+            saveAndReload=Mock(),
+            tradeRequests=lambda: [
+                {"market": {"typeId": "victorMarket", "name": "callback-market"}, "map": "nouraajd"}
+            ],
         )
         for target, name, function in (
             (routes, "raceAid", raceAid),
@@ -207,6 +434,16 @@ class GameplayRecipeGoldRoutesTest(unittest.TestCase):
             patcher = patch.object(target, name, function)
             patcher.start()
             self.addCleanup(patcher.stop)
+        if portal_refusal:
+            for name, function in (
+                ("meetVictor", meet),
+                ("victorCountdownCheckpoint", Mock()),
+                ("letter", actualLetter),
+                ("visitService", lambda driver, name, event: driver.navigateTo(name)),
+            ):
+                patcher = patch.object(routes, name, function)
+                patcher.start()
+                self.addCleanup(patcher.stop)
         return driver, state, owned, stock, transactions, order
 
     def testNourGoldRefusalUsesActualHumanAidGoobyAndVictorPayoutsThenOneFiniteReagentBuyback(self):
@@ -519,3 +756,20 @@ class GameplayRecipeGoldRoutesTest(unittest.TestCase):
         self.assertEqual(case.classes, nour.classes)
         self.assertEqual("humanRace", nour.race)
         self.assertIn("nouraajd.crafting.brew_life_potion.insufficientGold", nour.branches)
+        from tests import gameplay_branch_catalog as catalog
+
+        portal = next(value for value in routes.CASES if value.id == "nouraajd_recipe_gold_scroll")
+        self.assertEqual(case.classes, portal.classes)
+        self.assertEqual("humanRace", portal.race)
+        branch = "nouraajd.crafting.craft_town_portal_scroll.insufficientGold"
+        self.assertIn(branch, portal.branches)
+        current = (len(catalog.getCases()), len(catalog.selectedTestNames()), len(catalog.pendingGameplayObligations()))
+        self.assertNotIn(branch, catalog.pendingGameplayObligations())
+        with patch.object(routes, "CASES", tuple(value for value in routes.CASES if value.id != portal.id)):
+            previous = (
+                len(catalog.getCases()),
+                len(catalog.selectedTestNames()),
+                len(catalog.pendingGameplayObligations()),
+            )
+            self.assertIn(branch, catalog.pendingGameplayObligations())
+        self.assertEqual((previous[0] + 1, previous[1] + 5, previous[2] - 1), current)

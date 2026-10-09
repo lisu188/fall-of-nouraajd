@@ -5,12 +5,15 @@
 import argparse
 import contextlib
 import io
+import json
+import os
 from pathlib import Path
 import subprocess
 import sys
+import tempfile
 import types
 import unittest
-from unittest.mock import patch
+from unittest.mock import Mock, patch
 
 import mcp
 
@@ -18,6 +21,137 @@ ROOT = Path(__file__).resolve().parents[1]
 
 
 class McpTestSeedTest(unittest.TestCase):
+    def testTraceHealthExportRequiresExplicitTraceOptInAndStdioAndExcludesAllMutationHooks(self):
+        mutations = (
+            "configure_playtest_trace",
+            "configure_playtest_trace_from_env",
+            "clear_playtest_trace",
+            "get_playtest_trace_records",
+            "drain_playtest_trace_records",
+            "record_playtest_trace_json",
+        )
+        for stdio in (False, True):
+            for enabled in ("", "0", "false", "FALSE", "off", "disabled", "1", "true", "trace.jsonl"):
+                with self.subTest(stdio=stdio, enabled=enabled), patch.dict(os.environ, GAME_PLAYTEST_TRACE=enabled):
+                    getter = Mock(return_value=True)
+                    server = mcp.EngineMcpServer(ROOT, ROOT)
+                    server._game_module = types.SimpleNamespace(
+                        playtest_trace_output_available=getter, **{name: Mock() for name in mutations}
+                    )
+                    server.game_module = types.SimpleNamespace(playtest_trace_output_available=lambda: "spoof")
+                    server.inspect_and_export(stdio=stdio)
+                    expected = stdio and enabled.lower() not in {"", "0", "false", "off", "disabled"}
+                    name = "playtest_trace_output_available"
+                    self.assertEqual(expected, name in server.exports)
+                    self.assertNotIn(name, mcp.MCP_ALLOWED_EXPORTS)
+                    self.assertFalse(set(mutations) & set(server.exports))
+                    if expected:
+                        self.assertEqual(True, server._engine_call({"name": name})["structuredContent"]["result"])
+                        getter.assert_called_once_with()
+                    else:
+                        with self.assertRaisesRegex(mcp.ProtocolError, "Callable not exported"):
+                            server._engine_call({"name": name})
+                        getter.assert_not_called()
+
+    def testTraceHealthExportIsRemovedWhenReinspectionDisablesTheScope(self):
+        server = mcp.EngineMcpServer(ROOT, ROOT)
+        getter = Mock(return_value=True)
+        server._game_module = types.SimpleNamespace(playtest_trace_output_available=getter)
+        server.game_module = types.SimpleNamespace()
+        name = "playtest_trace_output_available"
+        for stdio, enabled in ((False, "1"), (True, "0")):
+            with self.subTest(stdio=stdio, enabled=enabled):
+                with patch.dict(os.environ, GAME_PLAYTEST_TRACE="1"):
+                    server.inspect_and_export(stdio=True)
+                self.assertIn(name, server.exports)
+                with patch.dict(os.environ, GAME_PLAYTEST_TRACE=enabled):
+                    server.inspect_and_export(stdio=stdio)
+                self.assertNotIn(name, server.exports)
+                with self.assertRaisesRegex(mcp.ProtocolError, "Callable not exported"):
+                    server._engine_call({"name": name})
+        getter.assert_not_called()
+
+    def testMainPassesTheActualTransportToScopedTraceHealthExports(self):
+        for stdio in (False, True):
+            args = types.SimpleNamespace(
+                repo_root=str(ROOT),
+                build_dir=str(ROOT),
+                debug=False,
+                debug_dir=None,
+                log_level=None,
+                trace_messages=False,
+                native_log_sink="disabled",
+                native_log_file=None,
+                stdio=stdio,
+                allow_origin=[],
+                build_config=None,
+                test_seed=None,
+                build=False,
+                host="127.0.0.1",
+                port=0,
+            )
+            server = Mock()
+            with (
+                self.subTest(stdio=stdio),
+                patch.dict(os.environ, GAME_PLAYTEST_TRACE=""),
+                patch.object(mcp, "parse_args", return_value=args),
+                patch.object(mcp.game_diagnostics, "startSession", return_value=None),
+                patch.object(mcp, "configure_logging"),
+                patch.object(mcp, "EngineMcpServer", return_value=server),
+            ):
+                self.assertEqual(0, mcp.main())
+                server.inspect_and_export.assert_called_once_with(stdio=stdio)
+
+    def traceHealthDriver(self, path, *, result=True):
+        from tests.gameplay_branch_driver import GameplayBranchDriver
+        from tests.gameplay_branch_types import RouteCase
+
+        case = RouteCase("trace-health", "unit", ("test",), ("unit.branch",), lambda d: None)
+        harness = types.SimpleNamespace(_mcp_engine_call=Mock(return_value=result))
+        driver = GameplayBranchDriver(self, harness, {"proc": object()}, case, "Warrior", ROOT)
+        driver.trace_path = path
+        return driver
+
+    def testTraceHealthRequiresLiteralTrueAndPermanentlyLatchesRpcOrOutputFailures(self):
+        for result in (False, 0, 1, "true", None, [], {}):
+            with self.subTest(result=result):
+                driver = self.traceHealthDriver(Path("actual.trace.jsonl"), result=result)
+                with self.assertRaisesRegex(AssertionError, "Native trace output unavailable"):
+                    driver.assertNativeTraceOutput()
+                driver.harness._mcp_engine_call.return_value = True
+                with self.assertRaisesRegex(AssertionError, "Native trace output unavailable"):
+                    driver.assertNativeTraceOutput()
+                driver.harness._mcp_engine_call.assert_called_once_with(
+                    driver.session, "playtest_trace_output_available", [], timeout=90
+                )
+        driver = self.traceHealthDriver(Path("actual.trace.jsonl"))
+        driver.harness._mcp_engine_call.side_effect = OSError("actual native diagnostic RPC unavailable")
+        with self.assertRaisesRegex(AssertionError, "Native trace output unavailable"):
+            driver.assertNativeTraceOutput()
+        driver.harness._mcp_engine_call.side_effect = None
+        with self.assertRaisesRegex(AssertionError, "Native trace output unavailable"):
+            driver.assertNativeTraceOutput()
+        self.assertEqual(1, driver.harness._mcp_engine_call.call_count)
+
+    def testStoppedNativeWriterFailsEvenWithValidStaleRecordsAndCannotResumeIntoASuccess(self):
+        with tempfile.TemporaryDirectory() as directory:
+            path = Path(directory) / "actual.trace.jsonl"
+            path.write_text(json.dumps({"seq": 1, "event": "movement"}) + "\n", encoding="utf-8")
+            driver = self.traceHealthDriver(path)
+            driver.assertNativeCombatOutcomes()
+            self.assertEqual(1, driver._combat_trace_seq)
+            driver.harness._mcp_engine_call.return_value = False
+            with self.assertRaisesRegex(AssertionError, "Native trace output unavailable"):
+                driver.assertNativeCombatOutcomes()
+            self.assertEqual(1, driver._combat_trace_seq)
+            driver.harness._mcp_engine_call.return_value = True
+            with path.open("a", encoding="utf-8") as output:
+                output.write(json.dumps({"seq": 2, "event": "movement"}) + "\n")
+            with self.assertRaisesRegex(AssertionError, "Native trace output unavailable"):
+                driver.assertNativeCombatOutcomes()
+            self.assertEqual(1, driver._combat_trace_seq)
+            self.assertEqual(2, driver.harness._mcp_engine_call.call_count)
+
     def testUint32BoundsAndInvalidSpellings(self):
         self.assertEqual(0, mcp.parseTestSeed("0"))
         self.assertEqual(0xFFFFFFFF, mcp.parseTestSeed("4294967295"))

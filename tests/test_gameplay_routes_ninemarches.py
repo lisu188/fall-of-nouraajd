@@ -12,6 +12,8 @@ import unittest
 from unittest.mock import Mock, patch
 
 from tests import gameplay_routes_ninemarches as marches
+from tests.gameplay_branch_driver import GameplayBranchDriver
+from tests.gameplay_branch_types import RouteCase
 from tests.test_gameplay_route_dialogs import authoredFunction
 
 
@@ -68,7 +70,10 @@ class NineMarchesRecoveryTest(unittest.TestCase):
             self.state.update(hp=70, mana=35)
             return 35
 
-        self.driver = SimpleNamespace(
+        case = RouteCase("nine_recovery_unit", "unit", ("ninemarches",), (), lambda driver: None)
+        self.driver = GameplayBranchDriver(self, Mock(), None, case, "Warrior", Path("."))
+        self.driver.harness._mcp_engine_call.return_value = True
+        self.driver.__dict__.update(
             test=self,
             trace_path=self.trace,
             player=self.player,
@@ -132,19 +137,20 @@ class NineMarchesRecoveryTest(unittest.TestCase):
         self.assertFalse(marches.newCombatWitness(self.driver))
         self.assertEqual(3, self.driver._marches_combat_seq)
 
-    def testStalledCancelledInvalidAndMissingOutcomesAreNotVictoryWitnesses(self):
+    def testUnresolvedOutcomePermanentlyBlocksRecoveryInsteadOfRetryingALaterVictory(self):
         source = (Path(__file__).resolve().parents[1] / "src/handler/CFightHandler.h").read_text(encoding="utf-8")
         outcomes = {name: int(value) for name, value in re.findall(r"^\s*(\w+)\s*=\s*(\d+),", source, re.MULTILINE)}
         self.assertEqual(
             {"Invalid": 0, "AttackerVictory": 1, "AttackerDefeat": 2, "Stalled": 3, "Cancelled": 4}, outcomes
         )
-        for seq, outcome in enumerate((outcomes["Invalid"], outcomes["Stalled"], outcomes["Cancelled"], None), 1):
-            self.append(seq, outcome=outcome)
-        marches.afterCombat(self.driver)
+        self.append(1, outcome=outcomes["Stalled"])
+        with self.assertRaisesRegex(AssertionError, "Unresolved native player combat"):
+            marches.afterCombat(self.driver)
         self.driver.recoverOnAuthoredRoad.assert_not_called()
-        self.append(5, outcome=outcomes["AttackerDefeat"])
-        marches.afterCombat(self.driver)
-        self.driver.recoverOnAuthoredRoad.assert_called_once_with(road_cells=marches.recoveryRoadCells())
+        self.append(2, outcome=outcomes["AttackerDefeat"])
+        with self.assertRaisesRegex(AssertionError, "Unresolved native player combat"):
+            marches.afterCombat(self.driver)
+        self.driver.recoverOnAuthoredRoad.assert_not_called()
 
     def testVictoryWithFullResourcesNeedsNoRecoveryOrScroll(self):
         self.state.update(hp=70, mana=35)
@@ -193,6 +199,51 @@ class NineMarchesRecoveryTest(unittest.TestCase):
         self.driver.recoverOnAuthoredRoad.assert_called_once_with(road_cells=marches.recoveryRoadCells())
         self.assertEqual(-7, self.state["reputation"])
         self.assertFalse(self.state["shrine_used"])
+
+    def testAConsumedRetreatScrollRequiresRealControllerWalkingToTheAuthoredEntry(self):
+        self.items[:] = [self.other_item]
+        self.driver._marches_retreat_scroll_name = None
+        self.driver.roadRecoveryTarget.return_value = None
+        origin = self.state["position"]
+
+        def navigate(coords):
+            self.assertEqual(self.scroll_destination, coords)
+            self.assertEqual(origin, self.state["position"])
+            self.assertEqual([self.other_item], self.items)
+            self.state["position"] = coords
+
+        self.driver.navigateCoords = Mock(side_effect=navigate)
+        self.append(1)
+        marches.afterCombat(self.driver)
+        self.driver.navigateCoords.assert_called_once_with(self.scroll_destination)
+        self.assertEqual([], self.used)
+        self.assertEqual([self.other_item], self.items)
+        self.assertIsNone(self.driver._marches_retreat_scroll_name)
+        self.driver.recoverOnAuthoredRoad.assert_called_once_with(road_cells=marches.recoveryRoadCells())
+        self.assertEqual(-7, self.state["reputation"])
+        self.assertFalse(self.state["shrine_used"])
+
+    def testWalkingRetreatCannotRetryDefeatOrAcceptAWrongEntryOrChangedPlayer(self):
+        for failure in ("native defeat", "wrong-entry", "changed-player"):
+            with self.subTest(failure=failure):
+                self.driver._marches_retreat_scroll_name = None
+                self.items[:] = [self.other_item]
+                self.driver.recoverOnAuthoredRoad.reset_mock()
+
+                def navigate(coords):
+                    if failure == "native defeat":
+                        raise AssertionError("actual native defeat")
+                    if failure == "changed-player":
+                        self.driver.player = {"__handle__": "replacement"}
+                    self.state["position"] = (1, 1, 0) if failure == "wrong-entry" else coords
+
+                self.driver.navigateCoords = Mock(side_effect=navigate)
+                with self.assertRaises(AssertionError):
+                    marches.retreatToRecoveryRoad(self.driver)
+                self.driver.navigateCoords.assert_called_once_with(self.scroll_destination)
+                self.driver.recoverOnAuthoredRoad.assert_not_called()
+                self.assertEqual([], self.used)
+                self.driver.player = self.player
 
     def testRetreatResolvesTheActuallyOwnedIdentityAfterReload(self):
         self.scroll["__handle__"] = "reloaded-earned-scroll"

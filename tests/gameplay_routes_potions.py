@@ -64,8 +64,10 @@ def potionUseWitness(record, *, player_name, map_name):
         require(type(record.get(key)) is int, "Missing or noninteger native field: " + key)
     require(record["hpMaxBefore"] == record["hpMaxAfter"] > 0, "Potion use changed maximum health")
     require(record["manaMaxBefore"] == record["manaMaxAfter"] > 0, "Potion use changed maximum mana")
-    require(0 < record["hpBefore"] <= record["hpMaxBefore"], "A defeated player cannot earn a potion witness")
-    require(0 <= record["manaBefore"] <= record["manaMaxBefore"], "Invalid native mana before consumption")
+    # Expired stat effects can lower derived caps without clamping stored HP/mana.
+    # Ordinary callbacks leave the other resource untouched; the restored one must have a deficit below.
+    require(record["hpBefore"] > 0, "A defeated player cannot earn a potion witness")
+    require(record["manaBefore"] >= 0, "Invalid native mana before consumption")
     require(
         record.get("ownedBefore") is True and record.get("ownedAfter") is False, "The exact owned item was not consumed"
     )

@@ -30,6 +30,7 @@ class GameplayRouteDialogTest(unittest.TestCase):
     def driver(self, map_name):
         case = RouteCase("dialog-regression", "unit", (map_name,), ("unit.branch",), lambda d: None)
         driver = GameplayBranchDriver(self, Mock(), None, case, "Warrior", Path("."))
+        driver.harness._mcp_engine_call.return_value = True
         driver.map_name = map_name
         driver.game = {"__handle__": "game"}
         driver.game_map = {"__handle__": "map"}

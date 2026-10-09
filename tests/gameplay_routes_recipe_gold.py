@@ -5,11 +5,21 @@
 
 from collections import Counter
 from functools import partial
+from itertools import product
 
 from tests.gameplay_branch_types import RouteCase
-from tests.gameplay_routes_crafting import recipeAttempt
+from tests.gameplay_routes_crafting import recipeAttempt, recipeDefinitions
+from tests.gameplay_routes_callback_markets import callbackContext, requestedMarket
 from tests.gameplay_routes_ninemarches import recruit as recruitNine, start as startNine, walk as walkNine
-from tests.gameplay_routes_nouraajd import SOURCES as NOURAAJD_SOURCES, prepareRolf, raceAid, victorRoute
+from tests.gameplay_routes_nouraajd import (
+    SOURCES as NOURAAJD_SOURCES,
+    letter,
+    meetVictor,
+    prepareRolf,
+    raceAid,
+    victorCountdownCheckpoint,
+    victorRoute,
+)
 from tests.gameplay_routes_services import ownedIdentities, visitService
 
 NINE_STOCK_PRICES = {
@@ -143,6 +153,246 @@ def namedEquipment(d):
     }
 
 
+def finitePortalGoldPlan(gold, loot_quotes, mana_price, scroll_price, lesser_quotes, portal_quote, life_quote, fee=35):
+    """Plan once from finite observed quotes; each original identity can be sold at most once."""
+    if not 0 < fee <= 100 or len(loot_quotes) > 128 or len(lesser_quotes) != 4:
+        raise ValueError("Unexpected finite portal recipe economy")
+    all_ids = [identity for identity, _price in loot_quotes]
+    all_ids += [identity for identity, _sell, _buy in lesser_quotes]
+    all_ids += [portal_quote[0], life_quote[0]]
+    if len(set(all_ids)) != len(all_ids) or gold < 0 or min(mana_price, scroll_price) <= 0:
+        raise ValueError("Distinct actual identities and positive required quotes are necessary")
+    for _identity, sell, buy in (*lesser_quotes, portal_quote, life_quote):
+        if not 0 < buy <= min(5000, sell) or sell > 100000:
+            raise ValueError("The actual merchant spread must be positive and bounded by its price")
+    if any(not 0 < price <= 5000 for _identity, price in loot_quotes):
+        raise ValueError("Only actual positively quoted earned loot may fund this plan")
+    maximum = mana_price + scroll_price + life_quote[1] + sum(sell for _identity, sell, _buy in lesser_quotes)
+    maximum += portal_quote[1] - portal_quote[2] + fee - 1 - gold
+    sums = {0: ()}
+    for identity, quote in sorted(loot_quotes):
+        for total, identities in tuple(sums.items()):
+            new_total = total + quote
+            if new_total > maximum:
+                continue
+            selected = (*identities, identity)
+            previous = sums.get(new_total)
+            if previous is None or (len(selected), selected) < (len(previous), previous):
+                sums[new_total] = selected
+    plans = []
+    for life_mode, *lesser_modes in product(range(3), repeat=5):
+        life_cost = (0, life_quote[1], life_quote[1] - life_quote[2])[life_mode]
+        costs = [(0, sell, sell - buy)[mode] for mode, (_identity, sell, buy) in zip(lesser_modes, lesser_quotes)]
+        for portal_cycle in (False, True):
+            portal_cost = portal_quote[1] - portal_quote[2] if portal_cycle else 0
+            expense = mana_price + scroll_price + life_cost + sum(costs) + portal_cost
+            for remaining in range(fee):
+                selected = sums.get(expense + remaining - gold)
+                if selected is None:
+                    continue
+                available = gold + sum(dict(loot_quotes)[identity] for identity in selected)
+                if life_mode and available < life_quote[1]:
+                    continue
+                # Callback trades must finish before any permanent-market movement.
+                if available - life_cost < mana_price:
+                    continue
+                available -= life_cost + mana_price
+                actions = []
+                if portal_cycle:
+                    available += portal_quote[2]
+                    actions.append(("sale", portal_quote[0], portal_quote[2]))
+                spending = sorted(zip(lesser_modes, lesser_quotes), key=lambda entry: (entry[0] != 2, entry[1][0]))
+                for mode, (identity, sell, buy) in spending:
+                    if not mode:
+                        continue
+                    if available < sell:
+                        break
+                    available -= sell
+                    actions.append(("purchase", identity, sell))
+                    if mode == 2:
+                        available += buy
+                        actions.append(("sale", identity, buy))
+                else:
+                    if portal_cycle:
+                        if available < portal_quote[1]:
+                            continue
+                        available -= portal_quote[1]
+                        actions.append(("purchase", portal_quote[0], portal_quote[1]))
+                    if available < scroll_price:
+                        continue
+                    available -= scroll_price
+                    if available != remaining:
+                        continue
+                    plans.append(
+                        {
+                            "loot": selected,
+                            "lifeMode": life_mode,
+                            "actions": tuple(actions),
+                            "remaining": remaining,
+                            "expense": expense,
+                        }
+                    )
+    if not plans:
+        return None
+    return min(
+        plans,
+        key=lambda plan: (
+            len(plan["loot"]),
+            bool(plan["lifeMode"]),
+            len(plan["actions"]) + plan["lifeMode"],
+            plan["expense"],
+            plan["loot"],
+        ),
+    )
+
+
+def sellInCurrentMarket(d, market, item, expected_price):
+    identity = item["__handle__"]
+    gold, stock, owned = d.gold(), stockIdentities(d, market), ownedIdentities(d)
+    d.test.assertIn(identity, owned)
+    d.test.assertNotIn(identity, stock)
+    d.test.assertFalse(d.call(item, "hasTag", "quest"))
+    d.test.assertEqual(expected_price, d.call(market, "getBuyCost", item))
+    d.call(market, "buyItem", d.player, item)
+    d.test.assertEqual(gold + expected_price, d.gold())
+    d.test.assertEqual(stock | {identity}, stockIdentities(d, market))
+    d.test.assertEqual(owned - {identity}, ownedIdentities(d))
+    d.record({"recipeGoldSale": identity, "price": expected_price, "goldAfter": d.gold()})
+
+
+def nourPortalGoldRefusal(d):
+    d.test.assertEqual("humanRace", d.race_id)
+    raceAid(d)
+    d.test.assertEqual(20, d.gold())
+    starting_items, starting_equipment = namedInventory(d), namedEquipment(d)
+    prepareRolf(d)
+    d.hunt("finishOriginalMainQuest")
+    d.test.assertIn("mainQuest", d.questNames(completed=True))
+    d.test.assertEqual(220, d.gold())
+    meetVictor(d, "deescalated", False)
+    victorCountdownCheckpoint(d, "portal-gold-victor-active", credit=True)
+    d.check(
+        "nouraajd.victor.approach.deescalated",
+        d.call(d.player, "getStringProperty", "campaign_var_nouraajdVictorConfrontation") == "deescalated",
+    )
+    d.check("nouraajd.victor.entry.records", d.object("cultLeaderQuest", required=False) is not None)
+    d.fight("cultLeaderQuest")
+    d.test.assertEqual(720, d.gold())
+    d.check("nouraajd.victor.rescued", d.string("quest_state_victor") == "good_end" and d.flag("VICTOR_REWARD_GRANTED"))
+    d.test.assertIn("victorQuest", d.questNames(completed=True))
+    context = callbackContext(d)
+    handler, callback_market = requestedMarket(d, "victorMarket")
+    callback_stock = {d.call(item, "getTypeId"): item for item in d.call(callback_market, "getItems")}
+    d.test.assertEqual({"LifePotion", "ManaPotion"}, set(callback_stock))
+    market = d.call(d.object("market1"), "getObjectProperty", "market")
+    original_stock = d.call(market, "getItems")
+    d.test.assertEqual(
+        Counter({"DaggerOfVileHeart": 1, "LesserLifePotion": 3, "LesserManaPotion": 1, "Scroll": 1}),
+        Counter(d.call(item, "getTypeId") for item in original_stock),
+    )
+    lesser = sorted(
+        [item for item in original_stock if d.call(item, "getTypeId") in {"LesserLifePotion", "LesserManaPotion"}],
+        key=lambda item: d.call(item, "getName"),
+    )
+    scroll = next(item for item in original_stock if d.call(item, "getTypeId") == "Scroll")
+    inventory = d.call(d.player, "getItems")
+    d.test.assertTrue(starting_items.items() <= namedInventory(d).items())
+    d.test.assertEqual(starting_equipment, namedEquipment(d))
+    portals = [item for item in inventory if d.call(item, "getTypeId") == "TownPortalScroll"]
+    d.test.assertEqual(1, len(portals), "Only the actual collected entry scroll may supply one buyback")
+    portal = portals[0]
+    equipped = {item["__handle__"] for item in d.call(d.player, "getEquipped").values() if item}
+    protected_types = {entry["item"] for recipe in recipeDefinitions().values() for entry in recipe["inputs"]}
+    protected_types.add("TownPortalScroll")
+    protected_types.update({"holyRelic", "skullOfRolf", "letterFromRolf", "letterToBeren"})
+    earned = {
+        item["__handle__"]: item
+        for item in inventory
+        if d.call(item, "getName") not in starting_items
+        and item["__handle__"] not in equipped
+        and d.call(item, "getTypeId") not in protected_types
+        and not d.call(item, "hasTag", "quest")
+    }
+    loot_quotes = [(identity, d.call(callback_market, "getBuyCost", item)) for identity, item in earned.items()]
+    loot_quotes = tuple((identity, price) for identity, price in loot_quotes if price > 0)
+
+    def quote(item, actual_market):
+        return (
+            item["__handle__"],
+            d.call(actual_market, "getSellCost", item),
+            d.call(actual_market, "getBuyCost", item),
+        )
+
+    mana, life = callback_stock["ManaPotion"], callback_stock["LifePotion"]
+    mana_price, scroll_price = d.call(callback_market, "getSellCost", mana), d.call(market, "getSellCost", scroll)
+    plan = finitePortalGoldPlan(
+        d.gold(),
+        loot_quotes,
+        mana_price,
+        scroll_price,
+        tuple(quote(item, market) for item in lesser),
+        quote(portal, market),
+        quote(life, callback_market),
+    )
+    d.test.assertIsNotNone(plan, ("Actual finite earned quotes cannot fund a portal recipe gold refusal", loot_quotes))
+    d.record({"recipeGoldPlan": plan, "actualEarnedQuotes": loot_quotes})
+    protected = ownedIdentities(d) - set(earned)
+    recovery = d.recoveryEnabled
+    d.recoveryEnabled = False
+    try:
+        for identity in plan["loot"]:
+            d.test.assertEqual(context, callbackContext(d))
+            d.test.assertEqual(callback_market, d.call(handler, "getRequestedTradeMarket"))
+            sellInCurrentMarket(d, callback_market, earned[identity], dict(loot_quotes)[identity])
+        if plan["lifeMode"]:
+            _identity, sell, buy = quote(life, callback_market)
+            purchaseIdentity(d, callback_market, life, sell)
+            if plan["lifeMode"] == 2:
+                sellInCurrentMarket(d, callback_market, life, buy)
+        purchaseIdentity(d, callback_market, mana, mana_price)
+        after = (d.gold(), ownedIdentities(d), stockIdentities(d, callback_market))
+        d.test.assertFalse(d.call(callback_market, "sellItem", d.player, mana))
+        d.test.assertEqual(after, (d.gold(), ownedIdentities(d), stockIdentities(d, callback_market)))
+        d.test.assertEqual(context, callbackContext(d))
+        d.test.assertEqual(callback_market, d.call(handler, "getRequestedTradeMarket"))
+        d.test.assertTrue(protected <= ownedIdentities(d))
+        visitService(d, "market1", "trade_requested")
+        handles = {item["__handle__"]: item for item in (*lesser, portal)}
+        for action, identity, price in plan["actions"]:
+            d.test.assertEqual(context[:3], callbackContext(d)[:3])
+            if action == "sale":
+                sellInCurrentMarket(d, market, handles[identity], price)
+            else:
+                purchaseIdentity(d, market, handles[identity], price)
+        purchaseIdentity(d, market, scroll, scroll_price)
+        d.test.assertEqual(plan["remaining"], d.gold())
+        exact_inputs = {mana["__handle__"], scroll["__handle__"], portal["__handle__"]}
+        d.test.assertTrue((protected | exact_inputs) <= ownedIdentities(d))
+        d.test.assertEqual(starting_equipment, namedEquipment(d))
+        letter(d)
+        d.test.assertEqual(plan["remaining"], d.gold(), "The actual letter unlock cannot alter the funding proof")
+        d.test.assertTrue(exact_inputs <= ownedIdentities(d))
+        recipeAttempt(
+            d,
+            "scribeDesk1",
+            "craft_town_portal_scroll",
+            "nouraajd.crafting.craft_town_portal_scroll.insufficientGold",
+            outcome="insufficientGold",
+        )
+        d.test.assertTrue((protected | exact_inputs) <= ownedIdentities(d))
+        d.navigateTo("nouraajdTownHall")
+        gold = d.gold()
+        d.test.assertTrue(d.condition("townHallDialog", "victor_good_end"))
+        d.saveAndReload("portal-gold-victor-rescued")
+        d.check(
+            "nouraajd.victor.endingPersisted", d.gold() == gold and d.condition("townHallDialog", "victor_good_end")
+        )
+        d.test.assertTrue(starting_items.items() <= namedInventory(d).items())
+        d.test.assertEqual(starting_equipment, namedEquipment(d))
+    finally:
+        d.recoveryEnabled = recovery
+
+
 def nourLifeGoldRefusal(d):
     d.test.assertEqual("humanRace", d.race_id)
     raceAid(d)
@@ -200,6 +450,25 @@ def nourLifeGoldRefusal(d):
 
 
 CASES = (
+    RouteCase(
+        id="nouraajd_recipe_gold_scroll",
+        group="nouraajd",
+        maps=("nouraajd",),
+        branches=(
+            "nouraajd.aid.humanRace.claimed",
+            "nouraajd.aid.humanRace.persisted",
+            "nouraajd.victor.approach.deescalated",
+            "nouraajd.victor.entry.records",
+            "nouraajd.victor.countdownPersisted",
+            "nouraajd.victor.rescued",
+            "nouraajd.victor.endingPersisted",
+            "nouraajd.crafting.craft_town_portal_scroll.insufficientGold",
+        ),
+        run=nourPortalGoldRefusal,
+        campaign="fallOfNouraajd",
+        sources=tuple(dict.fromkeys((*NOURAAJD_SOURCES, *SOURCES[4:]))),
+        duration_seconds=1200.0,
+    ),
     RouteCase(
         id="nouraajd_recipe_gold_life",
         group="nouraajd",

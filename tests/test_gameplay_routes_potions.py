@@ -104,6 +104,64 @@ class GameplayPotionConsumptionTest(unittest.TestCase):
         with self.assertRaisesRegex(AssertionError, "exact capped percentage"):
             self.witness(record)
 
+    def testOrdinaryCallbacksPreserveUntouchedResourcesAboveTheirReducedMaximum(self):
+        cases = (
+            ("DarkBeer", "life", 1, 10, 63, 126, 112, 22),
+            ("LifePotion", "life", 2, 45, 77, 156, 154, 75),
+            ("ManaPotion", "mana", 3, 10, 63, 126, 112, 47),
+        )
+        for type_id, category, power, before, maximum, other_value, other_maximum, expected in cases:
+            with self.subTest(type_id=type_id):
+                key, other = ("hp", "mana") if category == "life" else ("mana", "hp")
+                record = nativePotionRecord(category=category, before=before, maximum=maximum)
+                record["item"]["typeId"], record["power"] = type_id, power
+                record[other + "Before"] = record[other + "After"] = other_value
+                record[other + "MaxBefore"] = record[other + "MaxAfter"] = other_maximum
+                values = {key: before, other: other_value}
+
+                def restore(percent):
+                    values[key] = min(maximum, values[key] + max(1, int(percent / 100.0 * maximum)))
+
+                unused = Mock(side_effect=AssertionError("An ordinary potion touched the other resource"))
+                creature = SimpleNamespace(
+                    healProc=restore if category == "life" else unused,
+                    addManaProc=restore if category == "mana" else unused,
+                )
+                potion = potionCallback(record["item"]["type"])()
+                potion.getNumericProperty = lambda name: power
+                potion.onUse(SimpleNamespace(getCause=lambda: creature))
+                self.assertEqual({key: expected, other: other_value}, values)
+                unused.assert_not_called()
+                record[key + "After"] = values[key]
+                self.assertEqual(expected, self.witness(record)[1]["resourceAfter"])
+
+    def testUntouchedOverflowCannotHideInvalidRestorationOwnershipOrResourceChanges(self):
+        for category in ("life", "mana"):
+            key, other = ("hp", "mana") if category == "life" else ("mana", "hp")
+            original = nativePotionRecord(category=category)
+            original[other + "Before"] = original[other + "After"] = 126
+            original[other + "MaxBefore"] = original[other + "MaxAfter"] = 112
+            mutations = (
+                {other + "After": 125},
+                {other + "After": 112},
+                {key + "Before": 100, key + "After": 100},
+                {key + "Before": 101, key + "After": 100},
+                {key + "After": original[key + "After"] + 1},
+                {"hpBefore": 0},
+                {"manaBefore": -1},
+                {"hpBefore": True},
+                {"manaMaxAfter": 0},
+                {"ownedBefore": False},
+                {"onlyUsedItemRemoved": False},
+                {"equipmentUnchanged": False},
+            )
+            for mutation in mutations:
+                with self.subTest(category=category, mutation=mutation):
+                    record = deepcopy(original)
+                    record.update(mutation)
+                    with self.assertRaises(AssertionError):
+                        self.witness(record)
+
     def testUnrelatedNpcOtherPlayerMapAndRejuvenationGiveNoOrdinaryPotionCredit(self):
         for defect in ("npc", "other-player", "other-map", "other-event", "rejuvenation", "unknown-library-item"):
             with self.subTest(defect=defect):

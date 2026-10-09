@@ -11,6 +11,7 @@ import tempfile
 import unittest
 from unittest.mock import Mock, patch
 
+from tests.castle_walkthrough import TransitRoutes, shortestRoute
 from tests.gameplay_branch_driver import (
     FORBIDDEN_METHODS,
     GameplayBranchDriver,
@@ -98,6 +99,7 @@ class GameplayBranchDriverTest(unittest.TestCase):
         driver.player = {"__handle__": "player"}
         driver.map_name = "test"
         driver._rawCall = Mock()
+        driver.harness._mcp_engine_call.return_value = True
         return driver
 
     def roadDriver(self, *, roads, origin=(0, 0, 0), hp=2, hp_max=5, mana=1, mana_max=3, actors=()):
@@ -136,8 +138,12 @@ class GameplayBranchDriverTest(unittest.TestCase):
                 return int(100 * state["hp"] / state["hpMax"])
             if method == "getItems":
                 return []
+            if method == "getBoolProperty":
+                return handle.get(args[0], False)
             if method == "getGold":
                 return 50
+            if method == "getName" and handle == driver.player:
+                return "actual-hero"
             if method == "getStringProperty":
                 if handle == driver.player:
                     return state["defeatReceipt"] if args[0] == "uiDefeatReceipt" else "heroes"
@@ -209,6 +215,27 @@ class GameplayBranchDriverTest(unittest.TestCase):
         self.assertEqual(3, methods.count("move"))
         self.assertEqual(9, methods.count("run"))
         self.assertFalse(set(methods) & (FORBIDDEN_METHODS | {"moveTo", "useItem", "equipItem"}))
+
+    def testNavigationAndRoadRecoveryCountOnlyArrivalsAfterCombatRestoresOrigin(self):
+        for movement in ("coordinates", "object", "road"):
+            with self.subTest(movement=movement):
+                driver, state = self.roadDriver(roads={(0, 0, 0), (1, 0, 0)}, hp=3, mana=3)
+                state["objects"]["goal"] = {"__handle__": "goal", "coords": (2, 0, 0)}
+
+                def nativeCombatRestoresOrigin():
+                    if state["turn"] == 1:
+                        state["coords"] = state["target"] = (0, 0, 0)
+                        state["hp"] = 3
+
+                state["onMove"] = nativeCombatRestoresOrigin
+                if movement == "coordinates":
+                    driver.navigateCoords((2, 0, 0))
+                elif movement == "object":
+                    driver.navigateTo("goal")
+                else:
+                    driver.recoverOnAuthoredRoad()
+                self.assertEqual((3, 3, 2), (state["turn"], driver.turns, driver.steps))
+                self.assertEqual(3, sum(call.args[1] == "move" for call in driver._rawCall.call_args_list))
 
     def testUnresolvedNativePlayerCombatsFailBeforeAnotherMovementAndRemainLatched(self):
         for outcome in (0, 3, 4, None, 99, True):
@@ -334,6 +361,8 @@ class GameplayBranchDriverTest(unittest.TestCase):
                 if method == "getRequestedTradeMarket":
                     self.assertEqual(handler, handle)
                     return active_market
+                if method == "getName" and handle == driver.player:
+                    return "actual-hero"
                 if method in {"getTypeId", "getName"}:
                     self.assertEqual(market, handle)
                     return "victorMarket" if method == "getTypeId" else "actual-victor-market"
@@ -365,6 +394,125 @@ class GameplayBranchDriverTest(unittest.TestCase):
             self.assertNotIn("trade_requested", driver.trace_path.read_text(encoding="utf-8"))
             self.assertNotIn("trade_requested", backup.read_text(encoding="utf-8"))
             self.assertEqual([request], driver.tradeRequests())
+
+    def testNineRecoveryWitnessSurvivesRotationsAlreadyValidatedDuringRecoveryTicks(self):
+        from tests.gameplay_routes_ninemarches import newCombatWitness
+
+        with tempfile.TemporaryDirectory() as directory:
+            driver = self.driver()
+            driver.map_name = "ninemarches"
+            driver.call = Mock(return_value="actual-hero")
+            driver.trace_path = Path(directory) / "native.trace.jsonl"
+            hero, enemy = {"name": "actual-hero", "isPlayer": True}, {"name": "raider", "isPlayer": False}
+            victory = {
+                "seq": 1,
+                "event": "combat_finished",
+                "map": "ninemarches",
+                "outcome": 2,
+                "attacker": enemy,
+                "opponents": [hero],
+                "survivor": hero,
+            }
+            driver.trace_path.write_text(json.dumps(victory) + "\n", encoding="utf-8")
+            driver.assertNativeCombatOutcomes()
+            backup = Path(str(driver.trace_path) + ".1")
+            for seq in range(2, 6):
+                if backup.exists():
+                    backup.unlink()
+                driver.trace_path.replace(backup)
+                driver.trace_path.write_text(json.dumps({"seq": seq, "event": "movement"}) + "\n", encoding="utf-8")
+                driver.assertNativeCombatOutcomes()
+            self.assertEqual(5, driver._combat_trace_seq)
+            self.assertTrue(newCombatWitness(driver))
+            self.assertEqual(1, driver._marches_combat_seq, "Recovery cites the actual victory, not a later movement")
+            self.assertFalse(newCombatWitness(driver), "A consumed victory cannot request recovery again")
+
+    def testPlayerVictoryCacheRequiresActualParticipationAndSurvival(self):
+        with tempfile.TemporaryDirectory() as directory:
+            driver = self.driver()
+            driver.call = Mock(return_value="actual-hero")
+            driver.trace_path = Path(directory) / "native.trace.jsonl"
+            hero = {"name": "actual-hero", "isPlayer": True}
+            npc = {"name": "raider", "isPlayer": False}
+            records = []
+            for attacker, opponents, survivor in (
+                (npc, [npc], hero),
+                (npc, [{"name": "other-player", "isPlayer": True}], hero),
+                (npc, [{"name": "actual-hero", "isPlayer": False}], hero),
+                (hero, [npc], npc),
+            ):
+                records.append(
+                    {
+                        "seq": len(records) + 1,
+                        "event": "combat_finished",
+                        "map": "ninemarches",
+                        "outcome": 2,
+                        "attacker": attacker,
+                        "opponents": opponents,
+                        "survivor": survivor,
+                    }
+                )
+            driver.trace_path.write_text("".join(json.dumps(record) + "\n" for record in records), encoding="utf-8")
+            self.assertIsNone(driver.latestPlayerVictory("ninemarches"))
+            with driver.trace_path.open("a", encoding="utf-8") as output:
+                output.write(
+                    json.dumps({**records[-1], "seq": 5, "attacker": npc, "opponents": [hero], "survivor": hero}) + "\n"
+                )
+            self.assertEqual(5, driver.latestPlayerVictory("ninemarches")["seq"])
+            driver.call.return_value = "different-current-hero"
+            self.assertIsNone(
+                driver.latestPlayerVictory("ninemarches"), "A retained victory belongs to its actual player"
+            )
+
+    def testPlayerVictoryCacheRetainsLatestPerMapWithinItsBound(self):
+        with tempfile.TemporaryDirectory() as directory:
+            driver = self.driver()
+            driver.call = Mock(return_value="actual-hero")
+            driver.trace_path = Path(directory) / "native.trace.jsonl"
+            hero = {"name": "actual-hero", "isPlayer": True}
+            records = [
+                {
+                    "seq": seq,
+                    "event": "combat_finished",
+                    "map": f"map-{seq}",
+                    "outcome": 1,
+                    "attacker": hero,
+                    "opponents": [{"name": "raider", "isPlayer": False}],
+                    "survivor": hero,
+                }
+                for seq in range(1, 18)
+            ]
+            records.append({**records[-1], "seq": 18, "map": "map-2"})
+            driver.trace_path.write_text("".join(json.dumps(record) + "\n" for record in records), encoding="utf-8")
+            self.assertEqual(18, driver.latestPlayerVictory("map-2")["seq"])
+            self.assertEqual(16, len(driver._player_victories))
+            self.assertIsNone(driver.latestPlayerVictory("map-1"))
+            self.assertEqual(17, driver.latestPlayerVictory("map-17")["seq"])
+
+    def testRetainedPlayerVictoryCannotHideLaterLostTraceEvidence(self):
+        with tempfile.TemporaryDirectory() as directory:
+            driver = self.driver()
+            driver.call = Mock(return_value="actual-hero")
+            driver.trace_path = Path(directory) / "native.trace.jsonl"
+            hero = {"name": "actual-hero", "isPlayer": True}
+            victory = {
+                "seq": 1,
+                "event": "combat_finished",
+                "map": "ninemarches",
+                "outcome": 1,
+                "attacker": hero,
+                "opponents": [{"name": "raider", "isPlayer": False}],
+                "survivor": hero,
+            }
+            driver.trace_path.write_text(json.dumps(victory) + "\n", encoding="utf-8")
+            self.assertEqual(victory, driver.latestPlayerVictory("ninemarches"))
+            with driver.trace_path.open("a", encoding="utf-8") as output:
+                output.write(json.dumps({"seq": 3, "event": "movement"}) + "\n")
+            with self.assertRaisesRegex(AssertionError, "Native combat evidence unavailable"):
+                driver.latestPlayerVictory("ninemarches")
+            driver.trace_path.write_text(json.dumps(victory) + "\n", encoding="utf-8")
+            with self.assertRaisesRegex(AssertionError, "Native combat evidence unavailable"):
+                driver.latestPlayerVictory("ninemarches")
 
     def testRetainedCallbackRequestsAreBoundedAndIncremental(self):
         with tempfile.TemporaryDirectory() as directory:
@@ -417,6 +565,8 @@ class GameplayBranchDriverTest(unittest.TestCase):
                 _combat_trace_seq=0,
                 _combat_failure=None,
                 player=None,
+                harness=Mock(_mcp_engine_call=Mock(return_value=True)),
+                session=None,
             )
             GameplayBranchDriver.assertNativeCombatOutcomes(validator)
             self.assertEqual([request], list(validator._trade_requests))
@@ -544,8 +694,8 @@ class GameplayBranchDriverTest(unittest.TestCase):
         self.assertEqual(1, driver.recoverOnAuthoredRoad())
         self.assertEqual([(1, 0, 0)], state["targets"])
 
-    def testRoadRecoveryRejectsBlockedNonroadHostileAndApproachingTargetsBeforeMovement(self):
-        for violation in ("blocked", "nonroad", "hostile", "approaching", "corridor"):
+    def testRoadRecoveryRejectsBlockedNonroadHostileAdjacentAndExcludedTargetsBeforeMovement(self):
+        for violation in ("blocked", "nonroad", "hostile", "adjacent", "corridor"):
             with self.subTest(violation=violation):
                 driver, state = self.roadDriver(roads={(0, 0, 0), (1, 0, 0)})
                 options = {}
@@ -553,8 +703,8 @@ class GameplayBranchDriverTest(unittest.TestCase):
                     state["blocked"].add((1, 0, 0))
                 elif violation == "nonroad":
                     state["roads"].remove((1, 0, 0))
-                elif violation in {"hostile", "approaching"}:
-                    state["actors"]["enemy"] = {"coords": (1 if violation == "hostile" else 4, 0, 0)}
+                elif violation in {"hostile", "adjacent"}:
+                    state["actors"]["enemy"] = {"coords": (1 if violation == "hostile" else 2, 0, 0)}
                 else:
                     options["road_cells"] = {(0, 0, 0)}
                 self.assertIsNone(driver.roadRecoveryTarget(**options))
@@ -562,6 +712,18 @@ class GameplayBranchDriverTest(unittest.TestCase):
                     driver.recoverOnAuthoredRoad(**options)
                 self.assertEqual(0, state["turn"])
                 self.assertFalse(state["targets"])
+
+    def testRoadRecoveryCanReturnAlongAClearRoadAtItsEndWithoutInventingAScroll(self):
+        driver, state = self.roadDriver(
+            roads={(0, 0, 0), (1, 0, 0)},
+            hp=1,
+            actors=({"name": "distant-hostile", "coords": (4, 0, 0)},),
+        )
+        self.assertEqual(4, driver.recoverOnAuthoredRoad())
+        self.assertEqual([(1, 0, 0), (0, 0, 0), (1, 0, 0), (0, 0, 0)], state["targets"])
+        self.assertEqual((5, 3), (state["hp"], state["mana"]))
+        self.assertEqual((4, 4, 4), (state["turn"], driver.turns, driver.steps))
+        self.assertNotIn("useItem", [call.args[1] for call in driver._rawCall.call_args_list])
 
     def testRoadRecoveryReturnsImmediatelyWhenBothResourcesAreAlreadyFull(self):
         driver, state = self.roadDriver(roads=set(), hp=5, mana=3)
@@ -740,15 +902,17 @@ class GameplayBranchDriverTest(unittest.TestCase):
                 driver.call(driver.player, method)
         driver._rawCall.assert_not_called()
 
-    def testMovementRequiresActualPlayerAndOneNativeStep(self):
+    def testManualMovementIsRejectedEvenForAnAdjacentActualPlayer(self):
         driver = self.driver()
         driver.coords = Mock(return_value=(2, 3, 0))
-        for target, destination in ((driver.player, (4, 3, 0)), ({"__handle__": "npc"}, (3, 3, 0))):
+        for target, destination in (
+            (driver.player, (3, 3, 0)),
+            (driver.player, (4, 3, 0)),
+            ({"__handle__": "npc"}, (3, 3, 0)),
+        ):
             with self.subTest(target=target, destination=destination), self.assertRaises(AssertionError):
                 driver.call(target, "moveTo", *destination)
         driver._rawCall.assert_not_called()
-        driver.call(driver.player, "moveTo", 3, 3, 0)
-        driver._rawCall.assert_called_once_with(driver.player, "moveTo", 3, 3, 0)
 
     def testConsumablesAndEquipmentMustBeOwned(self):
         for method, prefix in (("useItem", ()), ("equipItem", ("weapon",))):
@@ -972,6 +1136,8 @@ class GameplayBranchDriverTest(unittest.TestCase):
                 driver._coordinateHandle = lambda coords: {"__handle__": "point", "coords": tuple(coords)}
 
                 def rawCall(handle, method, *args):
+                    if method == "getBoolProperty":
+                        return False
                     if method == "getController":
                         return controller
                     if method == "getCoords":
@@ -1006,7 +1172,77 @@ class GameplayBranchDriverTest(unittest.TestCase):
                 driver.step.assert_not_called()
                 driver.snapshot.assert_not_called()
 
-    def testPursuitCommitsApproachAcrossAlternatingActualNpcCoordinates(self):
+    def perimeterPursuitDriver(self, npc):
+        driver = self.driver()
+        actor, controller = ({"__handle__": name} for name in ("moving-actor", "controller"))
+        cycle = (
+            [(x, 0, 0) for x in range(4)]
+            + [(3, y, 0) for y in range(1, 4)]
+            + [(x, 3, 0) for x in range(2, -1, -1)]
+            + [(0, y, 0) for y in range(2, 0, -1)]
+        )
+        walkable = {(x, y, 0) for x in range(4) for y in range(4)}
+        state = {"position": (0, 0, 0), "actorIndex": 2, "path": [], "targets": [], "turns": 0}
+        driver.object = Mock(return_value=actor)
+        driver.coords = lambda handle=None: cycle[state["actorIndex"]] if handle == actor else state["position"]
+        driver.snapshot = lambda: {"coords": state["position"], "turn": state["turns"]}
+        driver._traversedTarget = Mock(return_value=False)
+
+        def rawCall(handle, method, *args):
+            if method == "getBoolProperty":
+                self.assertEqual((actor, ("npc",)), (handle, args))
+                return npc
+            if method == "getController":
+                return controller
+            if method == "getCoords":
+                return {"__handle__": "actor-coords", "coords": driver.coords(actor)}
+            if method == "setTarget":
+                destination = args[-1]["coords"]
+                state["targets"].append((state["turns"], state["position"], destination))
+                state["path"] = [
+                    arrival for _, arrival in shortestRoute(walkable, TransitRoutes(), state["position"], destination)
+                ]
+                return
+            self.fail(("Unexpected pursuit call", handle, method, args))
+
+        def advance():
+            state["turns"] += 1
+            state["actorIndex"] = (state["actorIndex"] + 1) % len(cycle)
+            if state["path"]:
+                state["position"] = state["path"].pop(0)
+
+        driver._rawCall.side_effect = rawCall
+        driver.tick = Mock(side_effect=advance)
+        driver.step = Mock(side_effect=AssertionError("Pursuit bypassed the native controller"))
+        return driver, state, actor
+
+    def testMovingNpcRetargetsChangedDestinationAndReachesActualSameCell(self):
+        driver, state, actor = self.perimeterPursuitDriver(True)
+        driver.navigateTo("ritualWitness")
+        self.assertEqual(driver.coords(actor), driver.coords())
+        self.assertEqual((8, 8), (state["turns"], driver.steps))
+        self.assertTrue(
+            any(
+                turn > 0 and position != state["targets"][index - 1][2]
+                for index, (turn, position, _) in enumerate(state["targets"])
+                if index
+            )
+        )
+        driver.step.assert_not_called()
+
+    def testNonNpcPursuitRetainsCommittedTargetsAndRejectsUnreachedActorAtOriginalBudget(self):
+        for npc in (False, None, 1, "true"):
+            with self.subTest(npc=npc):
+                driver, state, actor = self.perimeterPursuitDriver(npc)
+                with self.assertRaisesRegex(AssertionError, "Authored route budget exhausted"):
+                    driver.navigateTo("hostile")
+                self.assertEqual(136, state["turns"])
+                self.assertNotEqual(driver.coords(actor), driver.coords())
+                for previous, current in zip(state["targets"], state["targets"][1:]):
+                    self.assertEqual(previous[2], current[1], "Hostile paths must finish before retargeting")
+                driver.step.assert_not_called()
+
+    def testPursuitCommitsApproachAcrossAlternatingHostileCoordinates(self):
         # The b920 CI trace showed this exact parallel two-cell oscillation at Victor's courtyard.
         driver = self.driver()
         position, enemy = [46, 99, 0], [47, 100, 0]
@@ -1018,6 +1254,9 @@ class GameplayBranchDriverTest(unittest.TestCase):
         driver._traversedTarget = Mock(return_value=False)
 
         def rawCall(handle, method, *args):
+            if method == "getBoolProperty":
+                self.assertEqual(("npc",), args)
+                return False
             if method == "getController":
                 return controller
             if method == "getCoords":
@@ -1111,6 +1350,7 @@ class GameplayBranchDriverTest(unittest.TestCase):
         driver._coordinateHandle = Mock(return_value=target)
         driver.coords = lambda handle=None: (1, 0, 0) if handle == portal else tuple(position)
         driver._rawCall.side_effect = lambda handle, method, *args: {
+            "getBoolProperty": False,
             "getController": controller,
             "getCoords": target,
             "setTarget": None,
@@ -1130,68 +1370,138 @@ class GameplayBranchDriverTest(unittest.TestCase):
         self.assertEqual([(1, 0, 0)], [action["targetCoordinates"] for action in targets])
         self.assertFalse(driver._coordinate_values)
 
-    def testStepClearsStaleTargetAtActualPortalArrivalBeforeTurn(self):
+    def testStepUsesNativeTurnAndClearsTargetOnlyAfterActualArrival(self):
         for arrival in ((1, 0, 0), (9, 0, 1)):
             with self.subTest(arrival=arrival):
-                driver = self.driver()
-                position = [0, 0, 0]
-                controller = {"__handle__": "controller"}
-                driver.coords = lambda handle=None: tuple(position)
-                driver.recover = Mock()
-                driver.pump = Mock()
-                driver._validateMovement = Mock()
-                driver._coordinateHandle = lambda coords: {"__handle__": "point", "coords": coords}
-                targets = []
+                driver, state = self.roadDriver(roads=(), hp=5, mana=3)
+                native_call = driver._rawCall.side_effect
 
                 def rawCall(handle, method, *args):
-                    if method == "moveTo":
-                        position[:] = arrival
-                    elif method == "getController":
-                        return controller
-                    elif method == "setTarget":
-                        targets.append(args[-1]["coords"])
+                    if method == "getNavigationNeighbors":
+                        return [arrival] if args[0]["coords"] == (1, 0, 0) else []
+                    return native_call(handle, method, *args)
 
+                def actualTurnArrival():
+                    self.assertEqual([(1, 0, 0)], state["targets"])
+                    self.assertEqual((1, 0, 0), state["coords"], "The controller enters the adjacent cell first")
+                    state["coords"] = arrival
+
+                state["onMove"] = actualTurnArrival
                 driver._rawCall.side_effect = rawCall
-                driver.tick = Mock(side_effect=lambda: self.assertEqual([arrival], targets))
+                driver._captureHuntMovement = Mock()
                 driver.step((1, 0, 0))
-                driver._validateMovement.assert_called_once_with((0, 0, 0), arrival)
-                driver.tick.assert_called_once()
+                self.assertEqual(arrival, state["coords"])
+                self.assertEqual([(1, 0, 0), arrival], state["targets"])
+                self.assertEqual((1, 1, 1), (state["turn"], driver.turns, driver.steps))
+                driver._captureHuntMovement.assert_any_call((0, 0, 0), (1, 0, 0))
+                self.assertNotIn("moveTo", [call.args[1] for call in driver._rawCall.call_args_list])
 
-    def testAdjacentCombatPumpsBeforeBoundaryRecoveryAndNextNativeMapTurn(self):
-        driver = self.driver()
-        position, events, state = [0, 0, 0], [], {"turn": 0}
-        controller, point, loop = ({"__handle__": name} for name in ("controller", "point", "loop"))
-        driver.coords = lambda handle=None: tuple(position)
-        driver.recover = Mock()
-        driver.assertSurvival = Mock()
-        driver.refresh = Mock()
-        driver._captureHuntMovement = Mock()
-        driver._validateMovement = Mock()
-        driver._coordinateHandle = Mock(return_value=point)
-        driver.engine = Mock(return_value=loop)
+    def testAdjacentCombatRunsInsideNativeTurnAndRequiresLaterActualEntry(self):
+        driver, state = self.roadDriver(roads=(), hp=5, mana=3)
+        events = []
         driver._hunt_adapter = SimpleNamespace(recover_before_map_turn=lambda: events.append("boundaryRecovery"))
+        native_call = driver._rawCall.side_effect
 
         def rawCall(handle, method, *args):
-            if method == "moveTo":
-                position[:] = args
-                events.append("moveTo")
-            elif method == "getController":
-                return controller
-            elif method == "run":
+            if method == "run":
                 events.append("pump")
-            elif method == "getTurn":
-                return state["turn"]
             elif method == "move":
                 events.append("mapMove")
-                state["turn"] += 1
+            return native_call(handle, method, *args)
 
+        def nativeCombatOrEntry():
+            self.assertEqual((1, 0, 0), state["coords"])
+            if state["turn"] == 1:
+                events.append("nativeCombat")
+                # CCreature.afterMove restores the attacking player; CMap interrupts its path.
+                state["coords"] = state["target"] = (0, 0, 0)
+            else:
+                events.append("nativeEntry")
+
+        state["onMove"] = nativeCombatOrEntry
         driver._rawCall.side_effect = rawCall
         driver.step((1, 0, 0))
-        self.assertLess(events.index("moveTo"), events.index("pump"))
-        self.assertLess(events.index("pump"), events.index("boundaryRecovery"))
-        self.assertLess(events.index("boundaryRecovery"), events.index("mapMove"))
-        self.assertEqual(1, events.count("boundaryRecovery"))
-        self.assertEqual(1, state["turn"])
+        substantive = [event for event in events if event != "pump"]
+        self.assertEqual(
+            ["boundaryRecovery", "mapMove", "nativeCombat", "boundaryRecovery", "mapMove", "nativeEntry"], substantive
+        )
+        self.assertLess(events.index("nativeCombat"), events.index("pump"))
+        self.assertEqual((1, 0, 0), state["coords"])
+        self.assertEqual([(1, 0, 0)] * 3, state["targets"])
+        self.assertEqual((2, 2, 1), (state["turn"], driver.turns, driver.steps))
+        self.assertNotIn("moveTo", [call.args[1] for call in driver._rawCall.call_args_list])
+
+    def testNativeStepRetainsTwentyFourStationaryTurnLimitWithoutCreditingArrival(self):
+        driver, state = self.roadDriver(roads=(), hp=5, mana=3)
+        state["stall"] = True
+        driver.snapshot = Mock(return_value={})
+        with self.assertRaisesRegex(AssertionError, "Native adjacent step stalled"):
+            driver.step((1, 0, 0))
+        self.assertEqual((0, 0, 0), state["coords"])
+        self.assertEqual((24, 24, 0), (state["turn"], driver.turns, driver.steps))
+        self.assertEqual(24, len(state["targets"]))
+
+    def testNativeStepRejectsNoncardinalRequestsBeforeControllerOrMapWork(self):
+        for destination in ((0, 0, 0), (2, 0, 0), (1, 1, 0), (0, 0, 1)):
+            with self.subTest(destination=destination):
+                driver, state = self.roadDriver(roads=(), hp=5, mana=3)
+                with self.assertRaises(AssertionError):
+                    driver.step(destination)
+                driver._rawCall.assert_not_called()
+                self.assertEqual(0, state["turn"])
+
+    def testNativeStepDoesNotCreditUnexpectedOrUnchangedPortalArrival(self):
+        for arrival in ((0, 0, 0), (8, 0, 1)):
+            with self.subTest(arrival=arrival):
+                driver, state = self.roadDriver(roads=(), hp=5, mana=3)
+                state["onMove"] = lambda: state.update(coords=arrival)
+                driver._validateMovement = Mock()
+                driver.snapshot = Mock(return_value={})
+                with self.assertRaises(AssertionError):
+                    driver.step((1, 0, 0))
+                self.assertEqual(24 if arrival == (0, 0, 0) else 1, state["turn"])
+
+    def testNativeStepFailsDefeatOrUnresolvedCombatBeforeAnotherTurn(self):
+        for failure in ("defeat", "unresolved"):
+            with self.subTest(failure=failure), tempfile.TemporaryDirectory() as directory:
+                driver, state = self.roadDriver(roads=(), hp=5, mana=3)
+                driver.trace_path = Path(directory) / "native.trace.jsonl"
+
+                def failedNativeCombat():
+                    state["coords"] = (0, 0, 0)
+                    if failure == "defeat":
+                        state["defeatReceipt"] = "native defeat receipt"
+                    else:
+                        record = {
+                            "seq": 1,
+                            "event": "combat_finished",
+                            "outcome": 3,
+                            "attacker": {"isPlayer": True, "name": "actual-hero"},
+                            "opponents": [{"isPlayer": False, "name": "enemy"}],
+                        }
+                        driver.trace_path.write_text(json.dumps(record) + "\n", encoding="utf-8")
+
+                state["onMove"] = failedNativeCombat
+                with self.assertRaisesRegex(AssertionError, "defeated/respawned|Unresolved native player combat"):
+                    driver.step((1, 0, 0))
+                self.assertEqual(1, state["turn"], "A failed encounter cannot be retried to manufacture entry")
+                with self.assertRaises(AssertionError):
+                    driver.step((1, 0, 0))
+                self.assertEqual(1, state["turn"])
+
+    def testNativeStepClearsRefreshedControllerAfterAnActualEntryChangesMap(self):
+        driver, state = self.roadDriver(roads=(), hp=5, mana=3)
+
+        def actualEntryChangesMap():
+            self.assertEqual((1, 0, 0), state["coords"])
+            driver.map_name = "destination-map"
+            driver.game_map = {"__handle__": "destination-map"}
+            state["coords"] = (9, 5, 0)
+
+        state["onMove"] = actualEntryChangesMap
+        driver.step((1, 0, 0))
+        self.assertEqual([(1, 0, 0), (9, 5, 0)], state["targets"])
+        self.assertEqual((1, 1, 1), (state["turn"], driver.turns, driver.steps))
 
     def testHuntAdapterUsesLegacyAdjacentRouteOnlyForAnActiveCombatBoundary(self):
         from tests.test_octobogz_mcp import OctobogzMcpWalkthroughTest

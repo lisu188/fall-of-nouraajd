@@ -137,6 +137,7 @@ FAST_TEST_PREFIXES = (
     "GameplayBranchJournalsTest.",
     "GameplayStartingSaveTest.",
     "GameplayCampaignRouteTest.",
+    "GameplayCastleTownRestTest.",
     "GameplayRouteDialogTest.",
     "GameplayRouteServicesTest.",
     "GameplayCraftingRoutesTest.",
@@ -146,6 +147,7 @@ FAST_TEST_PREFIXES = (
     "GameplayPotionConsumptionTest.",
     "GameplayPotionTraceContractTest.",
     "GameplayNouraajdServiceRoutesTest.",
+    "GameplayNouraajdHuntPreparationTest.",
     "GameplayWaypointPublicationTest.",
     "GameplayCaveObservationTest.",
     "NineMarchesRecoveryTest.",
@@ -25811,6 +25813,8 @@ class TestRunnerSuiteTest(unittest.TestCase):
             MonsterBalanceRunnerTest,
             WindowsPythonConfigurationTest,
             GameplayPotionTraceContractTest,
+            GameplayNouraajdHuntPreparationTest,
+            GameplayCastleTownRestTest,
         ):
             methods = unittest.defaultTestLoader.getTestCaseNames(test_class)
             self.assertTrue(methods)
@@ -26394,9 +26398,13 @@ if SOURCE_UI_TESTS_AVAILABLE:
     from tests.test_gameplay_routes_nouraajd import (
         GameplayNouraajdServiceRoutesTest as _GameplayNouraajdServiceRoutesTest,
     )
+    from tests.test_gameplay_nouraajd_hunt_preparation import (
+        GameplayNouraajdHuntPreparationTest as _GameplayNouraajdHuntPreparationTest,
+    )
     from tests.test_gameplay_routes_waypoints import GameplayWaypointPublicationTest as _GameplayWaypointPublicationTest
     from tests.test_gameplay_routes_caves import GameplayCaveObservationTest as _GameplayCaveObservationTest
     from tests.test_gameplay_routes_campaigns import GameplayCampaignRouteTest as _GameplayCampaignRouteTest
+    from tests.test_gameplay_castle_town_rest import GameplayCastleTownRestTest as _GameplayCastleTownRestTest
     from tests.test_gameplay_route_dialogs import GameplayRouteDialogTest as _GameplayRouteDialogTest
     from tests.test_gameplay_routes_ninemarches import NineMarchesRecoveryTest as _NineMarchesRecoveryTest
     from tests.test_gameplay_branches_mcp import GameplayBranchMcpTest as _GameplayBranchMcpTest
@@ -26446,6 +26454,9 @@ if SOURCE_UI_TESTS_AVAILABLE:
     class GameplayNouraajdServiceRoutesTest(_GameplayNouraajdServiceRoutesTest):
         pass
 
+    class GameplayNouraajdHuntPreparationTest(_GameplayNouraajdHuntPreparationTest):
+        pass
+
     class GameplayCaveObservationTest(_GameplayCaveObservationTest):
         pass
 
@@ -26453,6 +26464,9 @@ if SOURCE_UI_TESTS_AVAILABLE:
         pass
 
     class GameplayRouteServicesTest(_GameplayRouteServicesTest):
+        pass
+
+    class GameplayCastleTownRestTest(_GameplayCastleTownRestTest):
         pass
 
     class GameplayCampaignRouteTest(_GameplayCampaignRouteTest):
@@ -26613,8 +26627,10 @@ if SOURCE_UI_TESTS_AVAILABLE:
         _GameplayPotionTraceContractTest,
     )
     del _GameplayNouraajdServiceRoutesTest, _GameplayWaypointPublicationTest, _GameplayCaveObservationTest
+    del _GameplayNouraajdHuntPreparationTest
     del _GameplayPotionConsumptionTest, _GameplayRecipeGoldRoutesTest, _GameplayCallbackMarketRoutesTest
     del _GameplayStartingSaveTest, _GameplayCampaignRouteTest, _GameplayRouteDialogTest
+    del _GameplayCastleTownRestTest
     del _NineMarchesRecoveryTest
     del _McpTestSeedTest, _McpBranchShardsTest, _McpBranchWorkflowTest
     del _McpTestSeedRuntimeTest, _McpEquipmentContractTest, _McpEquipmentRuntimeTest
@@ -27354,11 +27370,18 @@ class McpServerTest(unittest.TestCase):
             "'params': {'message': 'stdout-timeout-marker'}"
             "}) + '\\n')\n"
             "sys.stdout.flush()\n"
+            "sys.stdout.write(json.dumps({'jsonrpc': '2.0', 'id': 0, 'result': 'ready'}) + '\\n')\n"
+            "sys.stdout.flush()\n"
             "for _line in sys.stdin:\n"
             "    pass\n"
         )
         proc = self._start_stdio_process([sys.executable, "-c", script], map_name="diagnosticMap")
         try:
+            self.assertEqual({"jsonrpc": "2.0", "id": 0, "result": "ready"}, self._read_rpc(proc))
+            deadline = time.monotonic() + 10
+            while "stderr-timeout-marker" not in self._mcp_process_tail_text(proc, "stderr"):
+                self.assertLess(time.monotonic(), deadline, "Diagnostic child stderr was not drained after readiness")
+                time.sleep(0.005)
             self._send_rpc(
                 proc,
                 {

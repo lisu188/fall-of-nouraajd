@@ -10,7 +10,7 @@ from tests.gameplay_branch_types import RouteCase
 from tests.gameplay_branch_journals import verifyJournals
 from tests.gameplay_routes_crafting import openStation, recipeAttempt, recipeDefinitions
 from tests.gameplay_routes_services import marketAttempt, ownedIdentities, readSignpost
-from tests.gameplay_routes_callback_markets import purchaseCallbackItem
+from tests.gameplay_routes_callback_markets import purchaseCallbackItem, requestedMarket
 
 SOURCES = tuple(
     "res/maps/nouraajd/" + name
@@ -122,7 +122,179 @@ def prepareRolf(d):
     verifyJournals(d)
 
 
+def huntQuestBoundary(d):
+    quests = {"deliverLetterQuest", "retrieveRelicQuest", "cleanseCaveQuest"}
+    protected_items = {"letterFromRolf", "letterToBeren", "holyRelic", "skullOfRolf"}
+    catacombs = d.object("catacombs", required=False)
+    return (
+        d.game_map,
+        d.player,
+        d.map_name,
+        d.class_id,
+        d.call(d.player, "getFightController"),
+        d.string("quest_state_beren_chain"),
+        tuple(d.flag(name) for name in ("DELIVERED_LETTER", "RELIC_RETURNED", "CAVE_PURGED")),
+        tuple(d.call(d.player, "getBoolProperty", name) for name in ("CAN_CRAFT_SCROLLS", "CAN_BREW_GREATER_POTIONS")),
+        tuple(sorted(quests & set(d.questNames()))),
+        tuple(sorted(quests & set(d.questNames(completed=True)))),
+        tuple(
+            sorted(
+                (item["__handle__"], d.call(item, "getTypeId"))
+                for item in d.call(d.player, "getItems")
+                if d.call(item, "getTypeId") in protected_items
+            )
+        ),
+        catacombs,
+    )
+
+
+def walkHuntPreparation(d, target, walkable, boundary):
+    from tests.castle_walkthrough import shortestRoute, TransitRoutes
+
+    route = []
+    planned = None
+    for _ in range(512):
+        actor = d.object(target, required=False) if isinstance(target, str) else None
+        if isinstance(target, str) and actor is None:
+            return
+        destination = d.coords(actor) if actor is not None else tuple(target)
+        if d.coords() == destination:
+            return
+        if planned != destination or not route:
+            route = shortestRoute(walkable, TransitRoutes(), d.coords(), destination)
+            planned = destination
+        step, arrival = route.pop(0)
+        tile = d.call(d.game_map, "getTile", *step)
+        d.test.assertIsNotNone(tile, step)
+        if not d.call(tile, "getBoolProperty", "canStep"):
+            walkable.discard(step)
+            route = []
+            continue
+        d.step(step)
+        d.test.assertEqual(boundary, huntQuestBoundary(d), "Earned preparation changed the letter/relic boundary")
+        if d.coords() != arrival:
+            if not d.canStep(step):
+                walkable.discard(step)
+            route = []
+    d.test.fail(("Earned hunt preparation movement exhausted its existing 512-step bound", target, d.snapshot()))
+
+
+def prepareEarnedHuntLevel(d):
+    if d.class_id != "Sorcerer" or d.call(d.player, "getLevel") >= 4:
+        return
+    from tests.narrative_walkthrough import authoredRegion
+
+    boundary = huntQuestBoundary(d)
+    d.hunt("finishOriginalMainQuest")
+    d.test.assertEqual(boundary, huntQuestBoundary(d), "Gooby preparation changed the letter/relic boundary")
+    positions, authored_walkable = authoredRegion("nouraajd")
+    walkable = set(authored_walkable)
+    if d.object("catacombs", required=False) is not None:
+        walkable.discard(positions["catacombs"])
+    fought = 0
+    if d.call(d.player, "getLevel") < 4:
+        walkHuntPreparation(d, (57, 115, 0), walkable, boundary)
+    for _ in range(18):
+        if d.call(d.player, "getLevel") >= 4:
+            break
+        d.hunt("recoverOnRoadPair", (57, 115, 0), (58, 115, 0), "earned pre-hunt road recovery")
+        d.test.assertEqual(boundary, huntQuestBoundary(d))
+        candidates = []
+        for actor in d.call(d.game_map, "getObjects"):
+            if d.call(actor, "getTypeId") != "Pritz" or not d.call(actor, "isAlive"):
+                continue
+            if d.call(actor, "getStringProperty", "affiliation") != "gooby":
+                continue
+            coords = d.coords(actor)
+            if coords not in walkable or coords[2] != 0 or abs(coords[0] - 57) + abs(coords[1] - 103) > 55:
+                continue
+            candidates.append((sum(abs(a - b) for a, b in zip(d.coords(), coords)), d.call(actor, "getName"), actor))
+        if not candidates:
+            break
+        _distance, name, actor = min(candidates, key=lambda entry: entry[:2])
+        experience = d.call(d.player, "getNumericProperty", "exp")
+        walkHuntPreparation(d, name, walkable, boundary)
+        d.test.assertIsNone(d.object(name, required=False), "Preparation must resolve the actual spawned opponent")
+        d.test.assertFalse(d.call(actor, "isAlive"), "Preparation despawn is not a native victory")
+        d.test.assertGreater(d.call(d.player, "getNumericProperty", "exp"), experience)
+        d.combats += 1
+        fought += 1
+        walkHuntPreparation(d, (57, 115, 0), walkable, boundary)
+    if d.call(d.player, "getLevel") < 4:
+        prepareVictorHuntStock(d, boundary)
+    d.test.assertEqual(boundary, huntQuestBoundary(d))
+    d.test.assertGreaterEqual(
+        d.call(d.player, "getLevel"), 4, ("Finite authored preparation did not earn level four", fought, d.snapshot())
+    )
+    d.test.assertGreaterEqual(d.call(d.player, "getNumericProperty", "exp"), 6000)
+    d.record({"earnedHuntPreparation": fought, "level": d.call(d.player, "getLevel"), "letterRelicUnchanged": True})
+
+
+def prepareVictorHuntStock(d, boundary):
+    if d.string("quest_state_victor") != "not_started":
+        return False
+    meetVictor(d, "deescalated", False)
+    d.test.assertEqual(boundary, huntQuestBoundary(d))
+    leader = d.object("cultLeaderQuest")
+    cultists = [(name, d.object(name)) for name in ("victorCultist" + str(index) for index in range(1, 5))]
+    spawned = d.number("VICTOR_COURTYARD_TURN")
+    for name, actor in cultists:
+        d.test.assertEqual("encounter_active", d.string("quest_state_victor"))
+        d.test.assertLess(d.call(d.game_map, "getTurn") - spawned, 75)
+        experience = d.call(d.player, "getNumericProperty", "exp")
+        d.fight(name)
+        d.test.assertFalse(d.call(actor, "isAlive"), "Only genuine cultist defeats earn preparation experience")
+        d.test.assertGreater(d.call(d.player, "getNumericProperty", "exp"), experience)
+        d.test.assertLessEqual(d.call(d.game_map, "getTurn") - spawned, 75)
+        d.test.assertEqual(boundary, huntQuestBoundary(d))
+    d.test.assertEqual("encounter_active", d.string("quest_state_victor"))
+    d.test.assertLess(d.call(d.game_map, "getTurn") - spawned, 75)
+    gold = d.gold()
+    experience = d.call(d.player, "getNumericProperty", "exp")
+    d.fight("cultLeaderQuest")
+    d.test.assertFalse(d.call(leader, "isAlive"), "A removed leader does not prove the rescue combat was won")
+    d.test.assertGreater(d.call(d.player, "getNumericProperty", "exp"), experience)
+    d.test.assertLessEqual(d.call(d.game_map, "getTurn") - spawned, 75)
+    d.test.assertEqual("good_end", d.string("quest_state_victor"))
+    d.test.assertTrue(d.flag("VICTOR_REWARD_GRANTED"))
+    d.test.assertEqual(gold + 500, d.gold())
+    d.test.assertEqual(boundary, huntQuestBoundary(d))
+
+    _handler, market = requestedMarket(d, "victorMarket")
+    stock = [item for item in d.call(market, "getItems") if d.call(item, "getTypeId") == "LifePotion"]
+    d.test.assertEqual(1, len(stock))
+    price = d.call(market, "getSellCost", stock[0])
+    d.test.assertGreater(price, 0)
+    equipped = {item["__handle__"] for item in d.call(d.player, "getEquipped").values() if item}
+    candidates = []
+    for item in d.call(d.player, "getItems"):
+        type_id = d.call(item, "getTypeId")
+        if (
+            item["__handle__"] in equipped
+            or type_id == "TownPortalScroll"
+            or d.call(item, "hasTag", "quest")
+            or d.call(item, "hasTag", "heal")
+            or d.call(item, "hasTag", "mana")
+        ):
+            continue
+        candidates.append(item)
+    d.test.assertLessEqual(len(candidates), 128)
+    funds = d.gold() + sum(max(0, d.call(market, "getBuyCost", item)) for item in candidates)
+    d.test.assertGreaterEqual(funds, price, "Observed finite earned funds cannot afford Victor's real LifePotion")
+    potion = purchaseCallbackItem(
+        d,
+        "victorMarket",
+        "LifePotion",
+        {item["__handle__"] for item in candidates},
+        protected_types={"TownPortalScroll"},
+    )
+    d.test.assertEqual(boundary, huntQuestBoundary(d))
+    d.record({"earnedVictorHuntPreparation": True, "lifePotion": potion["__handle__"], "nativeDeadline": 75})
+    return True
+
+
 def clearHunt(d, *, reload_partial=False, retreat=False):
+    prepareEarnedHuntLevel(d)
     d.hunt("prepareHealingStockAtAuthoredMarket")
     d.navigateTo("ambientOctobogzNet")
     d.hunt("recoverOnRoadPair", (118, 21, 0), (118, 20, 0), "before branch hunt")
@@ -132,9 +304,11 @@ def clearHunt(d, *, reload_partial=False, retreat=False):
         d.saveAndReload("branch-hunt-scout-defeated")
         d.test.assertEqual(state, d.string("octobogzHuntRegistry"))
         d.hunt("trackLivingHuntActors")
-    if retreat:
-        d.hunt("retreatWithOwnedAuthoredScroll")
+    # The actual collected scroll separates Scout combat from its newly spawned neighbours.
+    d.hunt("retreatWithOwnedAuthoredScroll")
+    if retreat or d.class_id == "Sorcerer":
         d.hunt("prepareHealingStockAtAuthoredMarket", False)
+    d.hunt("recoverOnAuthoredRoad")
     d.hunt("defeat", "alpha")
     d.hunt("recoverBeforeRemainingBrood", d.class_id)
     d.hunt("defeat", "brood")

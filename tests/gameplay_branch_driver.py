@@ -3,7 +3,7 @@
 # SPDX-License-Identifier: GPL-3.0-or-later
 """Restricted natural-play client; fixture mutations never pass through its action surface."""
 
-from collections import deque
+from collections import OrderedDict, deque
 from functools import lru_cache
 
 from tests.gameplay_branch_journals import verifyJournals
@@ -28,6 +28,7 @@ FORBIDDEN_METHODS = frozenset(
         "addObjectByName",
         "removeObjectByName",
         "replaceTile",
+        "moveTo",
         "setCoords",
         "setNumericProperty",
         "setBoolProperty",
@@ -188,6 +189,7 @@ class GameplayBranchDriver:
         self._combat_trace_seq = 0
         self._combat_failure = None
         self._trade_requests = deque(maxlen=16)
+        self._player_victories = OrderedDict()
         self._recorded_actions = 0
         self._coordinate_point = None
         self._ephemeral_handles = set()
@@ -214,9 +216,6 @@ class GameplayBranchDriver:
 
     def call(self, handle, method, *args):
         self.test.assertNotIn(method, FORBIDDEN_METHODS, f"Forbidden gameplay fixture mutation: {method}")
-        if method == "moveTo":
-            self.test.assertEqual(self.player["__handle__"], handle["__handle__"])
-            self.test.assertEqual(1, sum(abs(a - b) for a, b in zip(self.coords(), args)))
         if method in {"useItem", "equipItem"}:
             item = args[-1]
             if item is not None:
@@ -243,7 +242,6 @@ class GameplayBranchDriver:
             replay=method
             in {
                 "move",
-                "moveTo",
                 "setTarget",
                 "useItem",
                 "useAction",
@@ -355,11 +353,24 @@ class GameplayBranchDriver:
                 "A defeated/respawned hero cannot continue a successful route",
             )
 
+    def assertNativeTraceOutput(self):
+        if self._combat_failure is not None:
+            self.test.fail(self._combat_failure)
+        try:
+            available = self.harness._mcp_engine_call(self.session, "playtest_trace_output_available", [], timeout=90)
+        except Exception as error:
+            self._combat_failure = ("Native trace output unavailable", type(error).__name__, str(error)[:1024])
+            self.test.fail(self._combat_failure)
+        if available is not True:
+            self._combat_failure = ("Native trace output unavailable", str(self.trace_path), repr(available)[:256])
+            self.test.fail(self._combat_failure)
+
     def assertNativeCombatOutcomes(self):
         if self._combat_failure is not None:
             self.test.fail(self._combat_failure)
         if self.trace_path is None:
             return
+        GameplayBranchDriver.assertNativeTraceOutput(self)
         try:
             records = readNewNativeTrace(self.trace_path, self._combat_trace_positions, self._combat_trace_seq)
         except (AssertionError, OSError, ValueError) as error:
@@ -383,6 +394,30 @@ class GameplayBranchDriver:
                 # The legacy hunt also calls this validator through a minimal namespace.
                 self._trade_requests = requests = deque(maxlen=16)
             requests.extend(record for record in records if record.get("event") == "trade_requested")
+            if self.player is not None and any(record.get("event") == "combat_finished" for record in records):
+                player_name = self.call(self.player, "getName")
+
+                def actualPlayer(actor):
+                    return (
+                        isinstance(actor, dict) and actor.get("isPlayer") is True and actor.get("name") == player_name
+                    )
+
+                victories = getattr(self, "_player_victories", None)
+                if victories is None:
+                    self._player_victories = victories = OrderedDict()
+                for record in records:
+                    if record.get("event") != "combat_finished" or record.get("outcome") not in (1, 2):
+                        continue
+                    participants = [record.get("attacker"), *record.get("opponents", ())]
+                    if not any(actualPlayer(actor) for actor in participants) or not actualPlayer(
+                        record.get("survivor")
+                    ):
+                        continue
+                    key = (record.get("map"), player_name)
+                    victories[key] = record
+                    victories.move_to_end(key)
+                    if len(victories) > 16:
+                        victories.popitem(last=False)
             if self.player is not None and any(record.get("event") == "item_used" for record in records):
                 try:
                     observePotionConsumptions(self, records, player_name=self.call(self.player, "getName"))
@@ -508,7 +543,7 @@ class GameplayBranchDriver:
             )
 
     def roadRecoveryTarget(self, *, road_cells=None, visited=()):
-        """Choose an adjacent native road step that does not approach the nearest live hostile."""
+        """Prefer the clearest adjacent native road step, excluding cells next to live hostiles."""
         self.assertSurvival()
         if road_cells is None:
             road_cells = authoredRoadCells(self.map_name)
@@ -532,14 +567,13 @@ class GameplayBranchDriver:
         def clearance(coords):
             return min((sum(abs(a - b) for a, b in zip(coords, hostile)) for hostile in hostiles), default=float("inf"))
 
-        origin_clearance = clearance(origin)
         candidates = []
         for dx, dy in ((-1, 0), (1, 0), (0, -1), (0, 1)):
             coords = (origin[0] + dx, origin[1] + dy, origin[2])
             if coords not in road_cells:
                 continue
             distance = clearance(coords)
-            if distance <= 1 or distance < origin_clearance:
+            if distance <= 1:
                 continue
             tile = self.call(self.game_map, "getTile", *coords)
             if tile is None or self.call(tile, "getTypeId") != "RoadTile" or not self.canStep(coords):
@@ -568,11 +602,12 @@ class GameplayBranchDriver:
             controller = self.call(self.player, "getController")
             self.call(controller, "setTarget", self.player, self._coordinateHandle(target))
             self.tick()
-            self.steps += 1
             self.test.assertEqual(
                 (world, map_name), (self.game_map["__handle__"], self.map_name), "Road recovery left its map"
             )
             arrival = self.coords()
+            if arrival != origin:
+                self.steps += 1
             self.test.assertIn(arrival, (origin, target), "Road recovery left its adjacent native target")
             unchanged = unchanged + 1 if arrival == origin else 0
             if unchanged >= 24:
@@ -669,9 +704,11 @@ class GameplayBranchDriver:
                 return
             before, world = self.coords(), self.map_name
             self.tick()
+            arrival = self.coords()
+            if arrival != before:
+                self.steps += 1
             if self.map_name != world:
                 return
-            arrival = self.coords()
             if arrival != before and self._traversedTarget(target, arrival):
                 return
             unchanged = unchanged + 1 if arrival == before else 0
@@ -681,12 +718,12 @@ class GameplayBranchDriver:
                 # Native combat restores the origin and interrupts the controller's path.
                 controller = self.call(self.player, "getController")
                 self.call(controller, "setTarget", self.player, self._coordinateHandle(target))
-            self.steps += 1
         self.test.fail(("Native route budget exhausted", target, budget, self.snapshot()))
 
     def navigateTo(self, name, adjacent=False, *, after_tick=None):
         target = self.object(name)
         initial = self.coords(target)
+        moving_npc = self.call(target, "getBoolProperty", "npc") is True
         budget = max(128, 4 * sum(abs(a - b) for a, b in zip(self.coords(), initial)) + 128)
         unchanged = 0
         committed = None
@@ -698,9 +735,14 @@ class GameplayBranchDriver:
             distance = sum(abs(a - b) for a, b in zip(self.coords(), destination))
             if distance <= int(adjacent):
                 return
-            if committed is None or self.coords() == committed or unchanged:
-                # Replacing a path every turn can oscillate beside a moving NPC behind an obstruction.
-                # Finish the actual approach, or replan after an interrupted/blocked native step.
+            if (
+                committed is None
+                or self.coords() == committed
+                or unchanged
+                or (moving_npc and destination != committed)
+            ):
+                # Follow an actual NPC's changing cell so its onEnter trigger can run.
+                # Hostile pursuits finish their committed approach unless a native step was interrupted.
                 controller = self.call(self.player, "getController")
                 target_coordinates = self.call(target, "getCoords")
                 self._coordinate_values[target_coordinates["__handle__"]] = destination
@@ -708,15 +750,16 @@ class GameplayBranchDriver:
                 committed = destination
             before, world = self.coords(), self.map_name
             self.tick()
+            arrival = self.coords()
+            if arrival != before:
+                self.steps += 1
             if self.map_name != world:
                 return
-            arrival = self.coords()
             if arrival != before and self._traversedTarget(committed, arrival):
                 return
             unchanged = unchanged + 1 if arrival == before else 0
             if unchanged >= 24:
                 self.test.fail(("Could not approach authored object", name, self.snapshot()))
-            self.steps += 1
             if after_tick is not None:
                 after_tick()
         self.test.fail(("Authored route budget exhausted", name, budget, self.snapshot()))
@@ -724,17 +767,31 @@ class GameplayBranchDriver:
     def step(self, coords):
         destination = tuple(coords)
         origin = self.coords()
+        self.test.assertEqual(origin[2], destination[2], "Adjacent steps must remain on the same level")
         self.test.assertEqual(1, sum(abs(a - b) for a, b in zip(origin, destination)))
-        self.recover()
-        self._captureHuntMovement(origin, destination)
-        self.call(self.player, "moveTo", *destination)
-        self.pump()
-        self._captureHuntMovement(origin, destination)
-        self._validateMovement(origin, self.coords())
         controller = self.call(self.player, "getController")
-        self.call(controller, "setTarget", self.player, self._coordinateHandle(self.coords()))
-        self.steps += 1
-        self.tick()
+        self.call(controller, "setTarget", self.player, self._coordinateHandle(destination))
+        world = self.map_name
+        for attempt in range(24):
+            self._captureHuntMovement(origin, destination)
+            self.tick()
+            arrival = self.coords()
+            if arrival != origin:
+                self.steps += 1
+            if (
+                self.map_name != world
+                or arrival == destination
+                or (arrival != origin and self._traversedTarget(destination, arrival))
+            ):
+                controller = self.call(self.player, "getController")
+                self.call(controller, "setTarget", self.player, self._coordinateHandle(arrival))
+                return
+            self.test.assertEqual(origin, arrival, "Native adjacent step left its authored target")
+            if attempt < 23:
+                # A native player combat restores its origin and interrupts the path.
+                controller = self.call(self.player, "getController")
+                self.call(controller, "setTarget", self.player, self._coordinateHandle(destination))
+        self.test.fail(("Native adjacent step stalled", destination, self.snapshot()))
 
     def revisit(self, name):
         target = self.object(name)
@@ -944,6 +1001,13 @@ class GameplayBranchDriver:
         self.assertNativeCombatOutcomes()
         return list(self._trade_requests)
 
+    def latestPlayerVictory(self, map_name):
+        """Expose only the latest validated actual-player victory; consumers track its sequence once."""
+        self.test.assertIsNotNone(self.trace_path, "The actual native combat trace is required")
+        self.assertNativeCombatOutcomes()
+        self.test.assertIsNotNone(self.player)
+        return self._player_victories.get((map_name, self.call(self.player, "getName")))
+
     def hunt(self, method, *args):
         from tests.test_octobogz_mcp import OctobogzMcpWalkthroughTest
 
@@ -983,8 +1047,8 @@ class GameplayBranchDriver:
 
                 def walkTo(self, name, *, allow_removed=False):
                     if getattr(self, "recover_before_map_turn", None):
-                        # Alpha recovery must occur after adjacent native combat and
-                        # before the next map turn lets the Brood take its action.
+                        # Keep the bounded authored approach and recovery between completed turns.
+                        # Each adjacent step still lets the native controller and every actor act.
                         from tests.narrative_walkthrough import authoredRegion
 
                         self.walkable = authoredRegion("nouraajd")[1]

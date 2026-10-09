@@ -176,6 +176,66 @@ def ritualCountdownAfterTurn(before_turn, countdown, last_tick):
     return countdown - int(before_turn - last_tick >= 5)
 
 
+def siegeBreachState(d, gate):
+    return {
+        "player": d.player["__handle__"],
+        "coords": d.coords(),
+        "gold": d.gold(),
+        "items": sorted(item["__handle__"] for item in d.call(d.player, "getItems")),
+        "quests": sorted(d.questNames()),
+        "completedQuests": sorted(d.questNames(completed=True)),
+        "gate": {
+            key: d.call(gate, "getBoolProperty", key) for key in ("enabled", "destroyed", "pendingSeal", "canStep")
+        },
+    }
+
+
+def siegeMissingWand(d):
+    d.startMap("siege")
+    atStart(d, "siegeStart")
+    d.test.assertTrue(d.flag("siege_initialized"))
+    d.test.assertIn("defendSiegeQuest", d.questNames())
+    d.test.assertEqual(1, d.count("magicWand"), "A fresh Siege starts with only its authored wand")
+    player = d.player["__handle__"]
+    sealed = []
+    for _ in range(1600):
+        remaining = [name for name in GATES if not d.call(d.object(name), "getBoolProperty", "destroyed")]
+        if not remaining:
+            break
+        enabled = [name for name in remaining if d.call(d.object(name), "getBoolProperty", "enabled")]
+        if not enabled:
+            d.tick()
+            continue
+        name = min(enabled, key=lambda value: sum(abs(a - b) for a, b in zip(d.coords(), d.coords(d.object(value)))))
+        d.navigateTo(name)
+        d.test.assertEqual("siege", d.map_name)
+        d.test.assertEqual(player, d.player["__handle__"])
+        gate = d.object(name)
+        d.test.assertEqual(d.coords(gate), d.coords())
+        d.test.assertTrue(d.call(gate, "getBoolProperty", "enabled"))
+        d.test.assertFalse(d.call(gate, "getBoolProperty", "destroyed"))
+        d.test.assertFalse(d.call(gate, "getBoolProperty", "pendingSeal"))
+        if d.count("magicWand") == 0:
+            before = siegeBreachState(d, gate)
+            d.test.assertFalse(d.call(gate, "sealBreach"))
+            d.test.assertEqual(before, siegeBreachState(d, gate))
+            d.check("siege.wand.missing", True, gate=name, sealed=sealed, prerequisite=before)
+            d.saveAndReload("siege-missing-wand")
+            d.test.assertEqual(0, d.count("magicWand"))
+            d.test.assertEqual(before["gate"], siegeBreachState(d, d.object(name))["gate"])
+            return
+        # Only normal successful seals can consume the starting or subsequently earned wands.
+        before = d.count("magicWand")
+        d.test.assertTrue(d.call(gate, "sealBreach"))
+        d.pump()
+        d.test.assertEqual(before - 1, d.count("magicWand"))
+        d.test.assertTrue(d.call(gate, "getBoolProperty", "destroyed"))
+        sealed.append(name)
+        d.navigateTo("siegeStart")
+        d.waitTurns(32, lambda: not d.call(gate, "getBoolProperty", "pendingSeal"))
+    d.test.fail(("No enabled breach was reached without a wand", sealed, d.snapshot()))
+
+
 def finishSiege(d):
     d.test.assertEqual("siege", d.map_name)
     atStart(d, "siegeStart")
@@ -184,7 +244,6 @@ def finishSiege(d):
     d.test.assertGreaterEqual(initial_wands, 1)
     seen_types = set()
     sealed = []
-    missing_wand_seen = False
     for _ in range(1600):
         seen_types.update(creatureTypes(d))
         remaining = [name for name in GATES if not d.call(d.object(name), "getBoolProperty", "destroyed")]
@@ -202,7 +261,6 @@ def finishSiege(d):
                 gold_before = d.gold()
                 d.test.assertFalse(d.call(d.object(name), "sealBreach"))
                 d.test.assertEqual(gold_before, d.gold())
-                missing_wand_seen = True
             d.navigateTo("siegeStart")
             d.tick()
             continue
@@ -229,7 +287,6 @@ def finishSiege(d):
             and not d.call(gate, "getBoolProperty", "canStep"),
         )
         sealed.append(name)
-    d.check("siege.wand.missing", missing_wand_seen)
     d.check("siege.spawn.grunt", "siegePritz" in seen_types)
     # Only naturally defeated mages can replace the one authored starting wand.
     acquired_wands = d.count("magicWand") + len(sealed) - initial_wands
@@ -445,15 +502,21 @@ def castleTownRest(d, objects, walkable, portals, reserved, mission):
         castleNavigate(d, value["coords"], walkable - blocked, portals, reserved)
         d.test.assertTrue(d.flag("campaign_castleSupply_" + name))
     paid_rest_seen = False
-    for _distance, name in sorted(defenders):
-        if d.object(name, required=False) is None:
-            continue
-        castleNavigate(d, objects[name]["coords"], rest_walkable, portals, reserved)
-        if d.call(d.player, "getHp") == d.call(d.player, "getHpMax"):
-            continue
-        recovery = d.recoveryEnabled
-        d.recoveryEnabled = False
-        try:
+    recovery = d.recoveryEnabled
+    d.recoveryEnabled = False
+    try:
+        for _distance, name in sorted(defenders):
+            if d.object(name, required=False) is None:
+                continue
+            route = shortestRoute(rest_walkable, portals, d.coords(), objects[name]["coords"])
+            for _step, arrival in route[:-1]:
+                d.navigateCoords(arrival)
+                d.test.assertEqual(tuple(arrival), d.coords())
+            # Native victory restores the origin. Inspect that combat result before
+            # an extra turn to enter the empty cell can restore more health.
+            d.fight(name)
+            if d.call(d.player, "getHp") == d.call(d.player, "getHpMax"):
+                continue
             castleNavigate(d, objects[town]["coords"], rest_walkable, portals, reserved)
             if d.call(d.player, "getHp") == d.call(d.player, "getHpMax"):
                 continue
@@ -466,8 +529,8 @@ def castleTownRest(d, objects, walkable, portals, reserved, mission):
             d.check("castle.town.rest", d.restAtTown(town))
             d.check("castle.town.fullHealth", not d.restAtTown(town))
             paid_rest_seen = True
-        finally:
-            d.recoveryEnabled = recovery
+    finally:
+        d.recoveryEnabled = recovery
     d.test.fail(("Authored encounters did not produce enough natural injuries to exhaust paid town rest", d.gold()))
 
 
@@ -702,7 +765,6 @@ WARDEN_FALLBACK_COMMON = tuple(branch for branch in WARDEN_COMMON if not branch.
 SIEGE_BRANCHES = (
     "siege.arrival",
     *("siege.gate." + name for name in GATES),
-    "siege.wand.missing",
     "siege.spawn.grunt",
     "siege.spawn.mageAndLoot",
     "siege.quest.complete",
@@ -844,6 +906,15 @@ CASES = (
         branches=RITUAL_COMMON + ("ritual.activation.threshold", "ritual.hazards.active", "ritual.resolution.good"),
         run=partial(ritualRoute, outcome="good", activation="threshold"),
         sources=sources(("ritual", "siege")),
+        duration_seconds=600,
+    ),
+    RouteCase(
+        id="siege-missing-wand",
+        group="standalone",
+        maps=("siege",),
+        branches=("siege.wand.missing",),
+        run=siegeMissingWand,
+        sources=sources(("siege",)),
         duration_seconds=600,
     ),
     RouteCase(

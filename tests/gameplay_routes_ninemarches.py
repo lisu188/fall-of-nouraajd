@@ -8,7 +8,7 @@ import json
 from pathlib import Path
 
 from tests.gameplay_branch_types import RouteCase
-from tests.gameplay_branch_driver import authoredRoadCells, readNewNativeTrace
+from tests.gameplay_branch_driver import authoredRoadCells
 from tests.gameplay_branch_journals import verifyJournals
 from tests.gameplay_routes_services import marketAttempt, readSignpost, useOwnedScroll
 from tests.gameplay_routes_crafting import openStation, recipeAttempt
@@ -56,25 +56,14 @@ def recoveryRoadCells():
 
 
 def newCombatWitness(d):
-    """Consume newly appended native records, including the bounded trace's rotated file."""
+    """Consume each real victory once, even after recovery turns rotate its already validated trace."""
     d.test.assertIsNotNone(d.trace_path, "Natural recovery requires the actual native combat trace")
-    positions = getattr(d, "_marches_trace_positions", {})
+    record = d.latestPlayerVictory("ninemarches")
     last_seq = getattr(d, "_marches_combat_seq", 0)
-    records = readNewNativeTrace(d.trace_path, positions, after_seq=last_seq)
-    d._marches_trace_positions = positions
-    d._marches_combat_seq = records[-1]["seq"] if records else last_seq
-    return any(
-        record.get("event") == "combat_finished"
-        and record.get("map") == "ninemarches"
-        and record.get("outcome") in (1, 2)
-        and any(
-            actor.get("isPlayer") is True and actor.get("name") == d.call(d.player, "getName")
-            for actor in (record.get("attacker", {}), *record.get("opponents", ()))
-        )
-        and record.get("survivor", {}).get("isPlayer") is True
-        and record["survivor"].get("name") == d.call(d.player, "getName")
-        for record in records
-    )
+    if record is None or record["seq"] <= last_seq:
+        return False
+    d._marches_combat_seq = record["seq"]
+    return True
 
 
 def retreatWithOwnedScroll(d):
@@ -97,6 +86,18 @@ def retreatWithOwnedScroll(d):
     d._marches_retreat_scroll_name = None
 
 
+def retreatToRecoveryRoad(d):
+    if getattr(d, "_marches_retreat_scroll_name", None) is not None:
+        retreatWithOwnedScroll(d)
+        return
+    entry = tuple(d.call(d.game_map, method) for method in ("getEntryX", "getEntryY", "getEntryZ"))
+    identity = (d.game_map["__handle__"], d.player["__handle__"])
+    d.navigateCoords(entry)
+    d.test.assertEqual(identity, (d.game_map["__handle__"], d.player["__handle__"]))
+    d.test.assertEqual(entry, d.coords(), "Walking retreat must actually reach the authored map entry")
+    d.record({"naturalWalkingRetreat": entry})
+
+
 def afterCombat(d):
     if not newCombatWitness(d):
         return
@@ -108,7 +109,7 @@ def afterCombat(d):
         return
     roads = recoveryRoadCells()
     if d.roadRecoveryTarget(road_cells=roads) is None:
-        retreatWithOwnedScroll(d)
+        retreatToRecoveryRoad(d)
     recovery_enabled = d.recoveryEnabled
     d.recoveryEnabled = False
     try:

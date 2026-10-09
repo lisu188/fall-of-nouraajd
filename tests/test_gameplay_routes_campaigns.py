@@ -284,7 +284,8 @@ class GameplayCampaignRouteTest(unittest.TestCase):
         objects["town"]["properties"] = {"campaign_loyalTown": True, "campaign_isTown": True}
         state = {"coords": (0, 0, 0), "hp": 20, "gold": 0, "townVisits": 0}
         claimed = set()
-        checks, visits = [], []
+        checks, visits, fights = [], [], []
+        defeated = set()
         driver = SimpleNamespace(
             test=self,
             player={"__handle__": "player"},
@@ -292,7 +293,7 @@ class GameplayCampaignRouteTest(unittest.TestCase):
             coords=lambda: state["coords"],
             gold=lambda: state["gold"],
             flag=lambda name: name in claimed,
-            object=lambda name, required=False: {"__handle__": name},
+            object=lambda name, required=False: None if name in defeated else {"__handle__": name},
             call=lambda handle, method: state["hp"] if method == "getHp" else 20,
         )
 
@@ -326,6 +327,20 @@ class GameplayCampaignRouteTest(unittest.TestCase):
             self.assertTrue(condition, branch)
             checks.append(branch)
 
+        def fight(name):
+            self.assertFalse(driver.recoveryEnabled)
+            self.assertEqual(1, sum(abs(a - b) for a, b in zip(state["coords"], positions[name])))
+            self.assertNotIn(name, defeated)
+            defeated.add(name)
+            fights.append(name)
+            if name != "harmless":
+                state["hp"] = 12
+
+        def navigate_coords(coords):
+            state["coords"] = coords
+            visits.append(coords)
+
+        driver.fight, driver.navigateCoords = fight, navigate_coords
         driver.restAtTown, driver.check = rest, check
         with patch("tests.gameplay_routes_campaigns.castleNavigate", side_effect=navigate):
             castleTownRest(
@@ -340,12 +355,138 @@ class GameplayCampaignRouteTest(unittest.TestCase):
         self.assertEqual(0, state["gold"])
         self.assertEqual(12, state["hp"])
         self.assertTrue(driver.recoveryEnabled)
-        self.assertEqual([positions["town"], positions["ally"], positions["harmless"]], visits[:3])
+        self.assertEqual([positions["town"], positions["ally"]], visits[:2])
+        self.assertEqual(["harmless", *("injures" + str(index) for index in range(6))], fights)
         self.assertEqual(positions["town"], visits[-1])
         self.assertNotIn(positions["optional"], visits)
         castle = next(case for case in CASES if case.id == "castle-all-authored-content")
         for name, blocker in AUTHORED_UNREACHABLE.items():
             self.assertIn("castle." + blocker["map"] + ".defender." + name, castle.branches)
+
+    def siegeRefusalFixture(self, *, mage_loot=False, disable_on_arrival=False, mutate_refusal=False):
+        state = {"wand": 1, "position": (12, 12, 0), "gold": 0, "sealed": [], "checks": []}
+        flags = {
+            name: {"enabled": False, "destroyed": False, "pendingSeal": False, "canStep": True}
+            for name in campaigns.GATES
+        }
+        positions = {name: (index, 0, 0) for index, name in enumerate(campaigns.GATES, 1)}
+        positions["siegeStart"] = (12, 12, 0)
+        player = {"__handle__": "player"}
+        point = lambda: SimpleNamespace(x=state["position"][0], y=state["position"][1], z=0)
+        native_player = SimpleNamespace(
+            getCoords=point,
+            hasItem=lambda predicate: state["wand"] > 0,
+            removeQuestItem=lambda predicate: state.update(wand=state["wand"] - 1),
+            checkQuests=Mock(),
+        )
+        native_game = SimpleNamespace()
+        native_map = SimpleNamespace(getPlayer=lambda: native_player, getGame=lambda: native_game)
+        native_game.getMap = lambda: native_map
+        seal = authoredFunction(
+            "res/maps/siege/script.py", "sealBreach", class_id="SpawnPoint", CTag=SimpleNamespace(WAND="wand")
+        )
+        actors = {}
+        for name in campaigns.GATES:
+            actors[name] = SimpleNamespace(
+                getMap=lambda: native_map,
+                getCoords=lambda name=name: SimpleNamespace(x=positions[name][0], y=0, z=0),
+                getBoolProperty=lambda key, name=name: flags[name][key],
+                setBoolProperty=lambda key, value, name=name: flags[name].update({key: value}),
+                setStringProperty=Mock(),
+                completePendingSeal=Mock(),
+            )
+
+        def call(handle, method, *args):
+            if handle == player and method == "getItems":
+                return [{"__handle__": "wand" + str(index)} for index in range(state["wand"])]
+            name = handle["__handle__"]
+            if method == "getBoolProperty":
+                return flags[name][args[0]]
+            if method == "sealBreach":
+                result = seal(actors[name])
+                if result:
+                    state["sealed"].append(name)
+                elif mutate_refusal:
+                    state["gold"] += 1
+                return result
+            self.fail((name, method, args))
+
+        def navigate(name):
+            state["position"] = positions[name]
+            if name == "siegeStart":
+                for gate in flags.values():
+                    gate["pendingSeal"] = False
+            elif disable_on_arrival and state["wand"] == 0:
+                flags[name]["enabled"] = False
+            elif mage_loot and state["wand"] == 0:
+                state["wand"] += 1
+
+        def tick():
+            for gate in flags.values():
+                if not gate["destroyed"]:
+                    gate["enabled"] = True
+
+        def check(branch, condition, **evidence):
+            self.assertTrue(condition, evidence)
+            state["checks"].append((branch, evidence))
+
+        driver = SimpleNamespace(
+            test=self,
+            player=player,
+            map_name="siege",
+            startMap=Mock(),
+            object=lambda name, required=True: {"__handle__": name},
+            coords=lambda handle=None: state["position"] if handle is None else positions[handle["__handle__"]],
+            flag=lambda name: name == "siege_initialized",
+            count=lambda name: state["wand"],
+            questNames=lambda completed=False: [] if completed else ["defendSiegeQuest"],
+            call=call,
+            navigateTo=navigate,
+            revisit=Mock(),
+            tick=tick,
+            pump=Mock(),
+            waitTurns=lambda budget, predicate: self.assertTrue(predicate()),
+            gold=lambda: state["gold"],
+            check=check,
+            saveAndReload=Mock(),
+            snapshot=lambda: dict(state),
+        )
+        return driver, state
+
+    def testMissingWandUsesAFreshActualSealAndTheAuthoredRefusal(self):
+        driver, state = self.siegeRefusalFixture()
+        campaigns.siegeMissingWand(driver)
+        self.assertEqual(["spawnPoint4"], state["sealed"])
+        self.assertEqual(0, state["wand"])
+        self.assertEqual(1, len(state["checks"]))
+        branch, evidence = state["checks"][0]
+        self.assertEqual("siege.wand.missing", branch)
+        self.assertEqual("spawnPoint3", evidence["gate"])
+        self.assertEqual([], evidence["prerequisite"]["items"])
+        self.assertTrue(evidence["prerequisite"]["gate"]["enabled"])
+        driver.saveAndReload.assert_called_once_with("siege-missing-wand")
+        cases = [case for case in campaigns.CASES if "siege.wand.missing" in case.branches]
+        self.assertEqual(["siege-missing-wand"], [case.id for case in cases])
+        self.assertEqual(("Warrior", "Sorcerer", "Assasin", "Inquisitor", "Wayfarer"), cases[0].classes)
+        self.assertNotIn("siege.wand.missing", campaigns.SIEGE_BRANCHES)
+
+    def testMissingWandCannotCreditDisabledGateOrMutatingRefusal(self):
+        for kwargs in ({"disable_on_arrival": True}, {"mutate_refusal": True}):
+            with self.subTest(kwargs=kwargs):
+                driver, state = self.siegeRefusalFixture(**kwargs)
+                with self.assertRaises(AssertionError):
+                    campaigns.siegeMissingWand(driver)
+                self.assertEqual([], state["checks"])
+                driver.saveAndReload.assert_not_called()
+
+    def testMissingWandCannotCreditALootedWandOrRetryTheFreshRun(self):
+        driver, state = self.siegeRefusalFixture(mage_loot=True)
+        with self.assertRaisesRegex(AssertionError, "No enabled breach was reached without a wand"):
+            campaigns.siegeMissingWand(driver)
+        self.assertEqual(list(reversed(campaigns.GATES)), state["sealed"])
+        self.assertEqual([], state["checks"])
+        driver.startMap.assert_called_once_with("siege")
+        driver.saveAndReload.assert_not_called()
 
     def testRitualCountdownUsesTurnBeforeNativeIncrement(self):
         path = Path(__file__).resolve().parents[1] / "res/maps/ritual/script.py"

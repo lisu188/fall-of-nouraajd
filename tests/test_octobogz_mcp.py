@@ -264,6 +264,8 @@ class OctobogzMcpWalkthroughTest(unittest.TestCase):
             _combat_trace_seq=0,
             _combat_failure=None,
             player=None,
+            harness=self.harness,
+            session=self.session,
         )
         self.assertIsNotNone(self._native_combat_validator.trace_path)
         print("MCP hunt native log", str(self.native_log_path), flush=True)
@@ -1101,15 +1103,79 @@ class OctobogzMcpWalkthroughTest(unittest.TestCase):
 
         defeat_before = self.call(self.player, "getStringProperty", "uiDefeatReceipt")
 
+        def recentTrace():
+            validator = getattr(self, "_native_combat_validator", None)
+            path = getattr(validator, "trace_path", None)
+            if path is None:
+                return (), ()
+            tails, combats = [], {}
+            for source in (Path(str(path) + ".1"), Path(path)):
+                if not source.is_file():
+                    continue
+                tail = readNativeLogTail(source, max_bytes=32768, max_lines=128)
+                tails.append(tail)
+                for line in tail["text"].splitlines():
+                    try:
+                        record = json.loads(line)
+                    except ValueError:
+                        continue
+                    if not isinstance(record, dict) or record.get("event") != "combat_finished":
+                        continue
+                    participants = [record.get("attacker"), *record.get("opponents", ())]
+                    if any(isinstance(actor, dict) and actor.get("isPlayer") is True for actor in participants):
+                        combats[record["seq"]] = record
+            return tuple(tails), tuple(combats[key] for key in sorted(combats))
+
+        def diagnostic(stage, trace=None):
+            # Capture the trace before diagnostic RPCs, retaining the combat that caused the checkpoint.
+            try:
+                tails, combats = recentTrace() if trace is None else trace
+                print("MCP hunt Victor native trace checkpoint", {"stage": stage, "combats": combats}, flush=True)
+                for tail in tails:
+                    print("MCP hunt Victor native trace tail", {"stage": stage, **tail}, flush=True)
+            except Exception as error:
+                print("MCP hunt Victor trace unavailable", stage, type(error).__name__, str(error)[:512], flush=True)
+            try:
+                actors = {}
+                for name in ("cultLeaderQuest", *("victorCultist" + str(index) for index in range(1, 5))):
+                    actor = self.call(self.game_map, "getObjectByName", name)
+                    if actor is not None:
+                        actors[name] = actor
+                self.reportCombatFailure("Victor preparation " + stage, actors)
+            except Exception as error:
+                print("MCP hunt Victor snapshot unavailable", stage, type(error).__name__, str(error)[:512], flush=True)
+
         def nativeTurn():
             before = self.call(self.game_map, "getTurn")
-            self.call(self.game_map, "move")
-            self.pump()
-            self.assertEqual(before + 1, self.call(self.game_map, "getTurn"))
-            if not self.call(self.player, "isAlive"):
-                self.fail(self.snapshot("Victor preparation survival"))
-            self.assertEqual(defeat_before, self.call(self.player, "getStringProperty", "uiDefeatReceipt"))
+            history = self.call(self.game_map, "getStringProperty", "combatHistory")
+            validator = getattr(self, "_native_combat_validator", None)
+            previous_seq = getattr(validator, "_combat_trace_seq", 0)
+            diagnosed = False
+            try:
+                self.call(self.game_map, "move")
+                self.pump()
+                self.assertEqual(before + 1, self.call(self.game_map, "getTurn"))
+                alive = self.call(self.player, "isAlive")
+                receipt = self.call(self.player, "getStringProperty", "uiDefeatReceipt")
+                if not alive or receipt != defeat_before:
+                    diagnostic("failed native turn")
+                    diagnosed = True
+                if not alive:
+                    self.fail(self.snapshot("Victor preparation survival"))
+                self.assertEqual(defeat_before, receipt)
+            except BaseException:
+                if not diagnosed:
+                    diagnostic("failed native turn")
+                raise
+            try:
+                trace = recentTrace()
+                completed = any(record["seq"] > previous_seq for record in trace[1])
+                if completed or history != self.call(self.game_map, "getStringProperty", "combatHistory"):
+                    diagnostic("completed native combat", trace)
+            except Exception as error:
+                print("MCP hunt Victor checkpoint unavailable", type(error).__name__, str(error)[:512], flush=True)
 
+        diagnostic("before tavern approach")
         self.walkTo("nouraajdTavern")
         tavern = self.object("nouraajdTavern")
         self.assertEqual(1, self.call(tavern, "getNumericProperty", "visited"))
@@ -1135,7 +1201,9 @@ class OctobogzMcpWalkthroughTest(unittest.TestCase):
         select("tavernDialog2", "SUGGEST_TOWN_HALL", 0)
         self.walkTo("nouraajdTownHall")
         self.assertTrue(self.call(self.dialog("townHallDialog"), "invokeCondition", "can_discuss_victor_records"))
+        diagnostic("before spawning courtyard")
         dialogue.choose("townHallDialog", "spawn_cultists", condition=None)
+        diagnostic("after spawning courtyard")
         self.assertEqual("encounter_active", self.call(self.game_map, "getStringProperty", "quest_state_victor"))
         leader = self.object("cultLeaderQuest")
         self.assertTrue(self.call(leader, "isAlive"))
@@ -1784,6 +1852,7 @@ class OctobogzDiagnosticTest(unittest.TestCase):
         def dialogueSetup(instance):
             native_harness = SimpleNamespace(assertTrue=self.assertTrue, _start_stdio_process=start)
             instance.process = harness.McpServerTest._start_stdio_mcp_process(native_harness)
+            instance.harness, instance.session = native_harness, {"proc": instance.process}
 
         with tempfile.TemporaryDirectory() as temporary:
             fixture = OctobogzMcpWalkthroughTest("runTest")
@@ -1823,6 +1892,8 @@ class OctobogzDiagnosticTest(unittest.TestCase):
                     _combat_trace_seq=0,
                     _combat_failure=None,
                     player=None,
+                    harness=SimpleNamespace(_mcp_engine_call=Mock(return_value=True)),
+                    session={},
                 )
                 calls = []
 
@@ -2118,6 +2189,7 @@ class OctobogzDiagnosticTest(unittest.TestCase):
             "gold": 200,
             "receipt": "",
             "spawned": None,
+            "history": [],
         }
         positions = {"nouraajdTavern": (48, 99, 0), "nouraajdTownHall": (43, 101, 0)}
         actions, visits = [], []
@@ -2127,8 +2199,9 @@ class OctobogzDiagnosticTest(unittest.TestCase):
             state["turn"] += 1
             if state["victor"] == "encounter_active":
                 elapsed = state["turn"] - state["spawned"]
-                if mode == "defeat":
-                    state.update(alive=False, receipt="actual defeat")
+                state["history"] = [f"Actual courtyard encounter {elapsed} completed."]
+                if mode in ("defeat", "respawn"):
+                    state.update(alive=mode == "respawn", receipt="actual defeat")
                 elif mode == "timeout" and elapsed == 75:
                     state["victor"] = "bad_end"
                 elif mode == "success" and elapsed == 2:
@@ -2157,14 +2230,14 @@ class OctobogzDiagnosticTest(unittest.TestCase):
                 if args[0] == "quest_state_victor":
                     return state["victor"]
                 if args[0] == "combatHistory":
-                    return json.dumps(["The cult leader is defeated."])
+                    return json.dumps(state["history"])
                 return state["receipt"]
             if method == "getBoolProperty":
                 return state["flags"].get(args[0], False)
             if method == "isAlive":
                 return state["leader_alive"] if identity == "cultLeaderQuest" else state["alive"]
             if method == "getObjectByName":
-                return None if args[0] == "cultLeaderQuest" and not state["leader_alive"] else handles[args[0]]
+                return None if args[0] == "cultLeaderQuest" and not state["leader_alive"] else handles.get(args[0])
             if method == "checkQuests":
                 self.assertEqual("good_end", state["victor"])
                 return
@@ -2221,6 +2294,7 @@ class OctobogzDiagnosticTest(unittest.TestCase):
             dialog=lambda name: {"__handle__": name},
             questNames=lambda method: ["victorQuest"] if state["victor"] == "good_end" else [],
             purchaseVictorLifePotionWithEarnedWard=Mock(),
+            reportCombatFailure=Mock(),
         )
         for name in (
             "assertEqual",
@@ -2253,6 +2327,97 @@ class OctobogzDiagnosticTest(unittest.TestCase):
                     OctobogzMcpWalkthroughTest.prepareVictorHealingStock(fixture)
                 self.assertLessEqual(state["turn"] - state["spawned"], 75)
                 fixture.purchaseVictorLifePotionWithEarnedWard.assert_not_called()
+
+    def testVictorPreparationRetainsBoundariesAndCompletedCombatWithoutAddingNativeTurns(self):
+        fixture, state, _actions, _visits = self.victorPreparationSequence()
+        OctobogzMcpWalkthroughTest.prepareVictorHealingStock(fixture)
+        self.assertEqual(
+            [
+                "Victor preparation before tavern approach",
+                "Victor preparation before spawning courtyard",
+                "Victor preparation after spawning courtyard",
+                "Victor preparation completed native combat",
+                "Victor preparation completed native combat",
+            ],
+            [call.args[0] for call in fixture.reportCombatFailure.call_args_list],
+        )
+        self.assertEqual(2, state["turn"] - state["spawned"])
+        fixture.purchaseVictorLifePotionWithEarnedWard.assert_called_once_with()
+
+    def testVictorPreparationRetainsFailedTurnBeforeRejectingTheUnchangedDefeatReceipt(self):
+        fixture, _state, _actions, _visits = self.victorPreparationSequence("respawn")
+        events = []
+        original_assertion = fixture.assertEqual
+
+        def assertEqual(expected, actual, *args):
+            if expected == "" and actual == "actual defeat":
+                events.append("receipt assertion")
+            return original_assertion(expected, actual, *args)
+
+        fixture.assertEqual = assertEqual
+        fixture.reportCombatFailure.side_effect = lambda stage, actors: events.append(stage)
+        with self.assertRaisesRegex(AssertionError, "actual defeat"):
+            OctobogzMcpWalkthroughTest.prepareVictorHealingStock(fixture)
+        self.assertLess(events.index("Victor preparation failed native turn"), events.index("receipt assertion"))
+        self.assertEqual(1, events.count("Victor preparation failed native turn"))
+        fixture.purchaseVictorLifePotionWithEarnedWard.assert_not_called()
+
+    def testVictorPreparationDiagnosticsCannotReplaceTheOriginalNativeFailure(self):
+        fixture, _state, _actions, _visits = self.victorPreparationSequence("respawn")
+        fixture.reportCombatFailure.side_effect = OSError("diagnostic storage unavailable")
+        with self.assertRaisesRegex(AssertionError, "actual defeat"):
+            OctobogzMcpWalkthroughTest.prepareVictorHealingStock(fixture)
+        fixture.purchaseVictorLifePotionWithEarnedWard.assert_not_called()
+
+    def testVictorPreparationUsesBoundedActualTraceEvenWhenConsecutiveCombatHistoryMatches(self):
+        import contextlib
+        import io
+        from types import SimpleNamespace
+
+        fixture, state, _actions, _visits = self.victorPreparationSequence()
+        original_call = fixture.call
+        with tempfile.TemporaryDirectory() as directory:
+            trace = Path(directory) / "native.trace.jsonl"
+            trace.write_text("old unrelated trace record\n" * 4000, encoding="utf-8")
+            validator = SimpleNamespace(trace_path=trace, _combat_trace_seq=0)
+            fixture._native_combat_validator = validator
+            seq = 0
+
+            def call(handle, method, *args):
+                nonlocal seq
+                result = original_call(handle, method, *args)
+                if method == "move" and state["spawned"] is not None:
+                    seq += 1
+                    record = {
+                        "seq": seq,
+                        "event": "combat_finished",
+                        "attacker": {"name": "cultist", "isPlayer": False},
+                        "opponents": [{"name": "player", "isPlayer": True}],
+                        "survivor": {"name": "player", "isPlayer": True},
+                        "outcome": 2,
+                    }
+                    with trace.open("a", encoding="utf-8") as output:
+                        output.write(json.dumps(record) + "\n")
+                if method == "getStringProperty" and args == ("combatHistory",):
+                    return '["The cultist is defeated."]'
+                return result
+
+            fixture.call = call
+            fixture.pump.side_effect = lambda: setattr(validator, "_combat_trace_seq", seq)
+            output = io.StringIO()
+            with contextlib.redirect_stdout(output):
+                OctobogzMcpWalkthroughTest.prepareVictorHealingStock(fixture)
+            self.assertEqual(
+                2,
+                sum(
+                    call.args[0] == "Victor preparation completed native combat"
+                    for call in fixture.reportCombatFailure.call_args_list
+                ),
+            )
+            self.assertIn("'truncated': True", output.getvalue())
+            self.assertIn("'byteLimit': 32768", output.getvalue())
+            self.assertIn("'seq': 2", output.getvalue())
+            self.assertLess(len(output.getvalue().encode("utf-8")), 150000)
 
     def testNativeLoggerIsOptInAndPassesTheExactFileArgument(self):
         import ast
