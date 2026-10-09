@@ -190,7 +190,9 @@ native cell probes, with memoization and bounded rejection diagnostics. Pure pur
 and the authored 74/75/76-turn boundary; passing native receipts are still required for actual timeout credit.
 Standalone direct-loss cases consume their original collected Town Portal before fleeing, retaining the same
 native countdown, map/player identity, gold and journal state. Campaign cases preserve that unique scroll for
-the later Scout retreat; the standalone correction does not establish a complete bad-campaign route.
+the later Scout retreat. Both full campaigns use the authored records entry, keeping the bad campaign's
+forceful confrontation, threatened gate, timed loss and complete history assertions. Four standalone courtyard
+combinations remain mandatory for every class. Passing native receipts are still required for campaign acceptance.
 Earned hunt preparation also checks native object passability before committing a step. An incidental Victor rescue
 requires a recent validated actual-player victory against the leader, its original deadline, and the exact payout;
 cleanup of other cultists earns no invented combat experience. Nine Marches keeps the original collected retreat

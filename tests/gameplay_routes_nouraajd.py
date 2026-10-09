@@ -24,7 +24,13 @@ SOURCES = tuple(
         "dialog4.json",
         "dialog5.json",
     )
-) + ("res/plugins/octobogz_hunt.py", "res/plugins/object.py", "res/narrative.py")
+) + (
+    "res/plugins/octobogz_hunt.py",
+    "res/plugins/object.py",
+    "res/plugins/interaction.py",
+    "res/config/interactions.json",
+    "res/narrative.py",
+)
 DEEDS = {
     "Warrior": (
         "nouraajdDoor",
@@ -860,7 +866,7 @@ def campaignRoute(d, outcome):
     start(d, gate=gate, deed=True)
     prepareRolf(d)
     d.hunt("finishOriginalMainQuest")
-    victorRoute(d, approach, direct=not saved, saved=saved, start_new=False)
+    victorRoute(d, approach, direct=False, saved=saved, start_new=False)
     chainRoute(d, "LRHB", start_new=False)
     d.check(
         "nouraajd.campaign.toRitual",
@@ -964,7 +970,8 @@ def raceAid(d):
             d.pump()
             for name in ("victorCultist1", "victorCultist2", "victorCultist3", "victorCultist4"):
                 if hp_gain and d.call(d.player, "getHp") == d.call(d.player, "getHpMax"):
-                    if d.object(name, required=False):
+                    actor = d.object(name, required=False)
+                    if actor is not None and d.call(actor, "isAlive"):
                         d.fight(name)
             d.navigateTo("nouraajdTownHall")
             before = aidSnapshot(d)
@@ -1109,7 +1116,7 @@ def campaignBranches(outcome):
     return (
         "nouraajd.victor.countdownPersisted",
         "nouraajd.victor.approach." + ("deescalated" if saved else "forceful"),
-        "nouraajd.victor.entry." + ("records" if saved else "courtyard"),
+        "nouraajd.victor.entry.records",
         *(
             ("nouraajd.victor.rescued",)
             if saved
