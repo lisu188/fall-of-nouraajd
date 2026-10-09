@@ -184,6 +184,15 @@ native acceptance. An expired effect may lower the untouched resource's derived 
 stored value; the potion oracle still requires that resource to remain exactly unchanged and the restored
 resource to have a real deficit and receive the exact capped amount.
 
+The timed courtyard escape derives its sole exit from the raw authored wall objects, then checks a six-step
+continuation against native passability and current pursuer coordinates. Each decision permits at most 64 distinct
+native cell probes, with memoization and bounded rejection diagnostics. Pure pursuit models verify route planning
+and the authored 74/75/76-turn boundary; passing native receipts are still required for actual timeout credit.
+Earned hunt preparation also checks native object passability before committing a step. An incidental Victor rescue
+requires a recent validated actual-player victory against the leader, its original deadline, and the exact payout;
+cleanup of other cultists earns no invented combat experience. Nine Marches keeps the original collected retreat
+scroll through its first Halda approach and credits only its verified consumption and movement to the map entry.
+
 The missing-wand Siege refusal has its own fresh standalone case for every class. It consumes actual wands
 through successful seals, then requires an enabled, unsealed breach at the player's actual coordinates before
 checking refusal and unchanged state. A campaign's carried or newly looted wands cannot stand in for that

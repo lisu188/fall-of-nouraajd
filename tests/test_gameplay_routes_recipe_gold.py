@@ -230,6 +230,97 @@ class GameplayRecipeGoldRoutesTest(unittest.TestCase):
         self.assertEqual(2, len(attempts))
         state["fixture"].namespace["randint"].assert_not_called()
 
+    def testGreaterLifeMarketReturnReportsTheActualLostProtectedIdentityWithoutProceeding(self):
+        driver, state, owned, _stock, _transactions, _order, _removed, attempts = self.greaterDriver()
+        original_call, original_navigate = driver.call, driver.navigateTo.side_effect
+
+        def call(handle, method, *args):
+            if method == "getObjects":
+                return []
+            if method in {"getHpMax", "getManaMax"}:
+                return 70
+            return original_call(handle, method, *args)
+
+        def navigate(name):
+            original_navigate(name)
+            owned.remove("portal")
+
+        driver.call = call
+        driver.navigateTo.side_effect = navigate
+        with self.assertRaisesRegex(AssertionError, "greater-life.after-market-entry") as caught:
+            routes.nourGreaterLifeGoldRefusal(driver)
+        message = str(caught.exception)
+        for actual in ("portal", "TownPortalScroll", "nouraajd", "130", "missing", "currentInventory", "hp"):
+            self.assertIn(actual, message)
+        self.assertEqual([], attempts, "An observed inventory loss must stop before either recipe attempt")
+        driver.engine.assert_not_called()
+        self.assertTrue(driver.recoveryEnabled)
+
+    def testRecipePreservationDiagnosticsAreLazyBoundedAndReadOnly(self):
+        player, game_map = {"__handle__": "player"}, {"__handle__": "map"}
+        calls = []
+        owned = [{"__handle__": "owned-" + str(index)} for index in range(15)]
+        actors = [{"__handle__": "actor-" + str(index), "__type__": "CCreature"} for index in range(11)]
+
+        def call(handle, method, *args):
+            calls.append((handle["__handle__"], method))
+            if method == "getItems":
+                return owned
+            if method == "getObjects":
+                return actors
+            if method == "getName":
+                return "actual-" + handle["__handle__"]
+            if method == "getTypeId":
+                return "LesserManaPotion" if handle["__handle__"].startswith("lost-") else "Pritz"
+            if method == "isAlive":
+                return True
+            if method in {"getHp", "getHpMax", "getMana", "getManaMax", "getTurn"}:
+                return 12
+            self.fail((handle, method, args))
+
+        driver = SimpleNamespace(
+            test=self,
+            player=player,
+            game_map=game_map,
+            map_name="nouraajd",
+            call=call,
+            coords=lambda handle=None: (130, 110, 0),
+            gold=lambda: 20,
+            record=Mock(),
+        )
+        routes.assertRecipeInventoryPreserved(driver, {"owned-0"}, "before-movement")
+        self.assertEqual([("player", "getItems")], calls, "Passing checks must add no diagnostic RPCs")
+        calls.clear()
+        expected = {"lost-" + str(index) for index in range(15)}
+        with self.assertRaises(AssertionError):
+            routes.assertRecipeInventoryPreserved(driver, expected, "after-movement")
+        diagnostic = driver.record.call_args.args[0]["recipeInventoryFailure"]
+        self.assertEqual("after-movement", diagnostic["stage"])
+        self.assertEqual(15, diagnostic["missingCount"])
+        self.assertEqual((12, 3), (len(diagnostic["missing"]), diagnostic["missingOmitted"]))
+        self.assertEqual((12, 3), (len(diagnostic["currentInventory"]), diagnostic["inventoryOmitted"]))
+        self.assertEqual((8, 3), (len(diagnostic["remainingActors"]), diagnostic["actorsOmitted"]))
+        self.assertTrue(
+            all(
+                method
+                in {
+                    "getItems",
+                    "getObjects",
+                    "getName",
+                    "getTypeId",
+                    "isAlive",
+                    "getHp",
+                    "getHpMax",
+                    "getMana",
+                    "getManaMax",
+                    "getTurn",
+                }
+                for _, method in calls
+            )
+        )
+        self.assertEqual(12, diagnostic["hp"])
+        self.assertEqual(20, diagnostic["gold"])
+
     def testGreaterLifeRouteRejectsUnsatisfiableFundingAndLostInputsWithoutFalseBranchCredit(self):
         for kwargs, expected_attempts in (
             ({"loot_value": 5000}, 0),

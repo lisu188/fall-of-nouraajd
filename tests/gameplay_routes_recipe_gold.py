@@ -155,6 +155,59 @@ def namedEquipment(d):
     }
 
 
+def assertRecipeInventoryPreserved(d, expected, stage):
+    """Keep the exact preservation guard; gather bounded read-only context only on failure."""
+    inventory = d.call(d.player, "getItems")
+    missing = sorted(set(expected) - {item["__handle__"] for item in inventory})
+    if not missing:
+        return
+    diagnostic = {
+        "stage": str(stage)[:96],
+        "map": d.map_name,
+        "missingCount": len(missing),
+        "missingOmitted": max(0, len(missing) - 12),
+        "inventoryCount": len(inventory),
+        "inventoryOmitted": max(0, len(inventory) - 12),
+    }
+
+    def describe(item):
+        return {
+            "identity": item["__handle__"],
+            "name": str(d.call(item, "getName"))[:96],
+            "type": str(d.call(item, "getTypeId"))[:96],
+        }
+
+    try:
+        # Native handles retain the removed objects, so their actual names and
+        # types remain available without restoring or re-adding any identity.
+        diagnostic["missing"] = [describe({"__handle__": identity}) for identity in missing[:12]]
+        diagnostic["currentInventory"] = [describe(item) for item in inventory[:12]]
+        diagnostic["coords"] = d.coords()
+        diagnostic["hp"] = d.call(d.player, "getHp")
+        diagnostic["hpMax"] = d.call(d.player, "getHpMax")
+        diagnostic["mana"] = d.call(d.player, "getMana")
+        diagnostic["manaMax"] = d.call(d.player, "getManaMax")
+        diagnostic["gold"] = d.gold()
+        diagnostic["turn"] = d.call(d.game_map, "getTurn")
+        actors = [
+            actor
+            for actor in d.call(d.game_map, "getObjects")
+            if actor["__handle__"] != d.player["__handle__"]
+            and (
+                actor.get("__type__") in {"CCreature", "CPlayer"}
+                or any(method["name"] == "isAlive" for method in actor.get("pythonMethods", ()))
+            )
+        ]
+        diagnostic["remainingActors"] = [
+            {**describe(actor), "alive": d.call(actor, "isAlive"), "coords": d.coords(actor)} for actor in actors[:8]
+        ]
+        diagnostic["actorsOmitted"] = max(0, len(actors) - 8)
+    except Exception as error:
+        diagnostic["diagnosticError"] = str(error)[:240]
+    d.record({"recipeInventoryFailure": diagnostic})
+    d.test.fail(f"Recipe inventory preservation failed: {diagnostic}")
+
+
 def finitePortalGoldPlan(gold, loot_quotes, mana_price, scroll_price, lesser_quotes, portal_quote, life_quote, fee=35):
     """Plan once from finite observed quotes; each original identity can be sold at most once."""
     if not 0 < fee <= 100 or len(loot_quotes) > 128 or len(lesser_quotes) != 4:
@@ -665,9 +718,9 @@ def nourGreaterLifeGoldRefusal(d):
             d.test.assertEqual(callback_market, d.call(handler, "getRequestedTradeMarket"))
             operation = sellInCurrentMarket if action == "sale" else purchaseIdentity
             operation(d, callback_market, handles[identity], price)
-        d.test.assertTrue(protected <= ownedIdentities(d))
+        assertRecipeInventoryPreserved(d, protected, "greater-life.after-callback-transactions")
         visitService(d, "market1", "trade_requested")
-        d.test.assertTrue(protected <= ownedIdentities(d))
+        assertRecipeInventoryPreserved(d, protected, "greater-life.after-market-entry")
         for action, identity, price in plan["actions"]:
             d.test.assertEqual(context[:3], callbackContext(d)[:3])
             operation = sellInCurrentMarket if action == "sale" else purchaseIdentity
