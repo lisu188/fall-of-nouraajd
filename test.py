@@ -26375,16 +26375,44 @@ class TestRunnerSuiteTest(unittest.TestCase):
         self.assertEqual("actions/cache/save@" + revision, workflowScalar(save, "uses", 8))
         self.assertTrue(evaluateCondition(workflowScalar(save, "if", 8), {}, prior_success=False))
         self.assertEqual("always()", workflowScalar(save, "if", 8))
-        self.assertEqual("${{ env.GAME_TEST_TIMINGS_FILE }}", workflowScalar(restore, "path", 10))
+        self.assertEqual("$" + "{{ env.GAME_TEST_TIMINGS_FILE }}", workflowScalar(restore, "path", 10))
         self.assertEqual(workflowScalar(restore, "path", 10), workflowScalar(save, "path", 10))
         self.assertEqual(
-            "${{ runner.os }}-test-timings-linux-coverage-${{ github.run_id }}", workflowScalar(save, "key", 10)
+            "$" + "{{ runner.os }}-test-timings-linux-coverage-" + "$" + "{{ github.run_id }}",
+            workflowScalar(save, "key", 10),
         )
         self.assertEqual(workflowScalar(restore, "key", 10), workflowScalar(save, "key", 10))
-        self.assertEqual("${{ runner.os }}-test-timings-linux-coverage-", workflowScalar(restore, "restore-keys", 10))
+        self.assertEqual(
+            "$" + "{{ runner.os }}-test-timings-linux-coverage-", workflowScalar(restore, "restore-keys", 10)
+        )
         self.assertLess(job.index(coverage), job.index(save))
         self.assertEqual("./scripts/run_coverage.sh", workflowScalar(coverage, "run", 8))
         self.assertEqual("60", workflowScalar(coverage, "timeout-minutes", 8))
+
+    def testCmakeCopiesCanonicalRunnerWithoutInterpretingWorkflowExpressions(self):
+        cmake_executable = shutil.which("cmake")
+        if cmake_executable is None:
+            self.skipTest("CMake is unavailable for the canonical runner-copy integration check")
+        cmake = (REPO_ROOT / "CMakeLists.txt").read_text(encoding="utf-8")
+        rules = re.findall(r"configure_file\(\s*test\.py\s+test\.py(?:\s+[^)]*)?\)", cmake)
+        self.assertEqual(1, len(rules), "Exercise the single actual canonical runner-copy rule")
+        source_text = (REPO_ROOT / "test.py").read_text(encoding="utf-8")
+        self.assertLess(len(source_text.encode("utf-8")), 2 * 1024 * 1024, "Keep the source-only copy fixture bounded")
+        with tempfile.TemporaryDirectory(prefix="nouraajd-runner-copy-") as temporary:
+            root = Path(temporary)
+            source = root / "source" / "test.py"
+            source.parent.mkdir()
+            source.write_text(source_text, encoding="utf-8")
+            rule = rules[0].replace("test.py test.py", "source/test.py copied/test.py")
+            self.assertNotEqual(rules[0], rule)
+            script = root / "copy.cmake"
+            script.write_text(rule + "\n", encoding="utf-8")
+            copied = subprocess.run(
+                [cmake_executable, "-P", str(script)], cwd=root, capture_output=True, text=True, timeout=30
+            )
+            self.assertEqual(0, copied.returncode, copied.stdout + copied.stderr)
+            copied_text = (root / "copied" / "test.py").read_text(encoding="utf-8")
+            self.assertEqual(ast.dump(ast.parse(source_text)), ast.dump(ast.parse(copied_text)))
 
     def test_shard_balancer_spreads_huge_map_walkthroughs(self):
         # With enough jobs the weight-aware packer must isolate the heavy maps onto
