@@ -4,7 +4,9 @@
 """Expose the actual opt-in headless callback market without refreshing its finite stock."""
 
 from pathlib import Path
+from types import SimpleNamespace
 import unittest
+import weakref
 
 import mcp
 
@@ -132,6 +134,8 @@ finally:
 """
 
 GUI_PROGRAM = """
+import gc
+
 instance = game.CGameLoader.loadGame()
 try:
     game.configure_playtest_trace(True, max_records=16)
@@ -140,7 +144,11 @@ try:
     assert handler.getRequestedTradeMarket() is None
     handler.showTrade(market)
     assert handler.getRequestedTradeMarket() is None, 'No active map may retain a request'
-    orphan = instance.createObject('CGuiHandler')
+    orphan_owner = game.CGameLoader.loadGame()
+    orphan = orphan_owner.getGuiHandler()
+    orphan_owner.getContext().shutdown()
+    del orphan_owner
+    gc.collect()
     orphan.showTrade(market)
     assert orphan.getRequestedTradeMarket() is None
     game.CGameLoader.startGameWithPlayer(instance, 'test', 'Warrior')
@@ -211,6 +219,85 @@ class McpTradeMarketContractTest(unittest.TestCase):
     def testNativeContractProgramsHaveValidSyntaxWithoutExecutingNativeCode(self):
         for program in (CALLBACK_PROGRAM, LIFETIME_PROGRAM, GUI_PROGRAM):
             compile(program, "<native trade market contract>", "exec")
+
+    def testMissingOwnerFixtureUsesARealContextHandlerAfterOwnerRelease(self):
+        owners = []
+        requests_without_owner = []
+        created_types = []
+        trace_enabled = False
+
+        class Handler:
+            def __init__(self, owner):
+                self.owner = weakref.ref(owner)
+                self.market = None
+
+            def showTrade(self, market):
+                owner = self.owner()
+                self.market = None
+                if owner is None:
+                    requests_without_owner.append(market)
+                elif market is not None and owner.world is not None and owner.gui is None and trace_enabled:
+                    self.market = market
+
+            def getRequestedTradeMarket(self):
+                owner = self.owner()
+                if owner is None or owner.world is None or owner.gui is not None or not trace_enabled:
+                    self.market = None
+                return self.market
+
+        class Instance:
+            def __init__(self):
+                self.world = None
+                self.gui = None
+                self.handler = Handler(self)
+                self.active = True
+
+            def createObject(self, type_id):
+                created_types.append(type_id)
+                return object() if type_id == "CMarket" else None
+
+            def getGuiHandler(self):
+                return self.handler
+
+            def getGui(self):
+                return self.gui
+
+            def getContext(self):
+                return self
+
+            def shutdown(self):
+                self.active = False
+                self.world = None
+                self.handler = None
+
+        def loadGame():
+            instance = Instance()
+            owners.append(weakref.ref(instance))
+            return instance
+
+        def startGameWithPlayer(instance, map_name, class_id):
+            self.assertEqual(("test", "Warrior"), (map_name, class_id))
+            self.assertTrue(instance.active)
+            instance.world = object()
+
+        def configureTrace(enabled, **kwargs):
+            nonlocal trace_enabled
+            trace_enabled = enabled
+
+        game = SimpleNamespace(
+            CGameLoader=SimpleNamespace(
+                loadGame=loadGame,
+                startGameWithPlayer=startGameWithPlayer,
+                loadGui=lambda instance: setattr(instance, "gui", object()),
+            ),
+            configure_playtest_trace=configureTrace,
+        )
+        exec(compile(GUI_PROGRAM, "<actual trade market owner fixture>", "exec"), {"game": game})
+        self.assertEqual(["CMarket"], created_types)
+        self.assertEqual(2, len(owners))
+        self.assertTrue(all(owner() is None for owner in owners))
+        self.assertEqual(1, len(requests_without_owner))
+        self.assertFalse(trace_enabled)
 
 
 class McpTradeMarketRuntimeTest(unittest.TestCase):

@@ -252,7 +252,8 @@ class OctobogzMcpWalkthroughTest(unittest.TestCase):
         def startWithNativeLog(instance, *args, **kwargs):
             kwargs.setdefault("map_name", "nouraajd")
             kwargs.setdefault("trace_name", "octobogz-" + uuid.uuid4().hex)
-            return startup(instance, *args, native_log_file=self.native_log_path, **kwargs)
+            with patch.dict(os.environ, GAME_PLAYTEST_TRACE_RETAIN_RECENT="1"):
+                return startup(instance, *args, native_log_file=self.native_log_path, **kwargs)
 
         with patch.object(harness.McpServerTest, "_start_stdio_mcp_process", startWithNativeLog):
             dialogue_mcp.DialogueMcpWalkthroughTest.setUp(self)
@@ -1228,11 +1229,25 @@ class OctobogzMcpWalkthroughTest(unittest.TestCase):
         self.assertGreaterEqual(self.call(self.player, "getLevel"), 4, self.snapshot("earned hunt preparation"))
         self.assertGreaterEqual(self.call(self.player, "getNumericProperty", "exp"), 6000)
 
+    def advanceQuestEvaluationTurn(self):
+        self.assertTrue(self.call(self.player, "isAlive"))
+        defeat_before = self.call(self.player, "getStringProperty", "uiDefeatReceipt")
+        turn = self.call(self.game_map, "getTurn")
+        self.call(self.game_map, "move")
+        self.pump()
+        self.assertEqual(turn + 1, self.call(self.game_map, "getTurn"))
+        self.assertTrue(self.call(self.player, "isAlive"))
+        self.assertEqual(defeat_before, self.call(self.player, "getStringProperty", "uiDefeatReceipt"))
+
     def finishOriginalMainQuest(self):
         self.snapshot("before original Gooby approach after hunt")
         self.recoverOnRoadPair((109, 100, 0), (109, 101, 0), "Gooby road recovery")
         self.walkTo("gooby1", allow_removed=True)
         self.assertTrue(self.call(self.game_map, "getBoolProperty", "completed_gooby"))
+        if "mainQuest" not in self.questNames("getCompletedQuests"):
+            gold = self.call(self.player, "getGold")
+            self.advanceQuestEvaluationTurn()
+            self.assertEqual(gold + 200, self.call(self.player, "getGold"))
         self.assertIn("mainQuest", self.questNames("getCompletedQuests"))
         self.snapshot("original MainQuest complete after hunt")
 
@@ -1755,6 +1770,45 @@ class OctobogzMcpWalkthroughTest(unittest.TestCase):
 
 
 class OctobogzDiagnosticTest(unittest.TestCase):
+    def testLegacyStartupOptsIntoBoundedRecentTraceBeforeTheActualServerEnvironmentIsCopied(self):
+        from types import SimpleNamespace
+
+        import test as harness
+
+        startups = []
+
+        def start(command, **kwargs):
+            startups.append((command, kwargs))
+            return SimpleNamespace()
+
+        def dialogueSetup(instance):
+            native_harness = SimpleNamespace(assertTrue=self.assertTrue, _start_stdio_process=start)
+            instance.process = harness.McpServerTest._start_stdio_mcp_process(native_harness)
+
+        with tempfile.TemporaryDirectory() as temporary:
+            fixture = OctobogzMcpWalkthroughTest("runTest")
+            with (
+                patch.dict(os.environ, GAME_PLAYTEST_TRACE_RETAIN_RECENT="0"),
+                patch.object(harness, "TEST_OUTPUT_DIR", Path(temporary)),
+                patch.object(dialogue_mcp.DialogueMcpWalkthroughTest, "setUp", dialogueSetup),
+            ):
+                fixture.setUp()
+                self.assertEqual("0", os.environ["GAME_PLAYTEST_TRACE_RETAIN_RECENT"])
+                self.assertEqual(1, len(startups))
+                command, kwargs = startups[0]
+                self.assertEqual("nouraajd", kwargs["map_name"])
+                self.assertEqual("1", kwargs["env"]["GAME_PLAYTEST_TRACE"])
+                self.assertEqual("1", kwargs["env"]["GAME_PLAYTEST_TRACE_RETAIN_RECENT"])
+                self.assertEqual(str(fixture.process._playtest_trace_path), kwargs["env"]["GAME_PLAYTEST_TRACE_FILE"])
+                self.assertEqual(Path(temporary), fixture.process._playtest_trace_path.parent)
+                self.assertTrue(fixture.process._playtest_trace_path.name.startswith("mcp_walkthrough_octobogz-"))
+                self.assertEqual(fixture.native_log_path, fixture.process._native_log_file)
+                self.assertIn(str(fixture.native_log_path), command)
+                # The shared harness retains its caller's opt-in/default behavior outside this route.
+                native_harness = SimpleNamespace(assertTrue=self.assertTrue, _start_stdio_process=start)
+                harness.McpServerTest._start_stdio_mcp_process(native_harness, "nouraajd", trace_name="ordinary")
+                self.assertEqual("0", startups[1][1]["env"]["GAME_PLAYTEST_TRACE_RETAIN_RECENT"])
+
     def testLegacyPumpStopsAtTheFirstUnresolvedPlayerCombatAndCannotRetryIntoALaterVictory(self):
         from types import SimpleNamespace
         from unittest.mock import Mock

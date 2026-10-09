@@ -306,6 +306,121 @@ class GameplayBranchDriverTest(unittest.TestCase):
                         driver.assertNativeCombatOutcomes()
                     observer.assert_called_once()
 
+    def testCallbackMarketRequestSurvivesRotationBeforeItsActualGetterIsRead(self):
+        from tests.gameplay_routes_callback_markets import requestedMarket
+
+        with tempfile.TemporaryDirectory() as directory:
+            driver = self.driver()
+            driver.map_name = "nouraajd"
+            driver.trace_path = Path(directory) / "native.trace.jsonl"
+            request = {
+                "seq": 1,
+                "event": "trade_requested",
+                "map": "nouraajd",
+                "market": {"name": "actual-victor-market", "typeId": "victorMarket"},
+            }
+            Path(str(driver.trace_path) + ".1").write_text(json.dumps(request) + "\n", encoding="utf-8")
+            driver.trace_path.write_text(
+                json.dumps({"seq": 2, "event": "combat_finished", "outcome": 1, "attacker": {"isPlayer": True}}) + "\n",
+                encoding="utf-8",
+            )
+            handler, market = ({"__handle__": name} for name in ("handler", "market"))
+            active_market = market
+
+            def call(handle, method, *args):
+                if method == "getGuiHandler":
+                    self.assertEqual(driver.game, handle)
+                    return handler
+                if method == "getRequestedTradeMarket":
+                    self.assertEqual(handler, handle)
+                    return active_market
+                if method in {"getTypeId", "getName"}:
+                    self.assertEqual(market, handle)
+                    return "victorMarket" if method == "getTypeId" else "actual-victor-market"
+                self.fail((handle, method, args))
+
+            driver.call = call
+            self.assertEqual((handler, market), requestedMarket(driver, "victorMarket"))
+            self.assertEqual([request], driver.tradeRequests())
+            self.assertEqual(2, driver._combat_trace_seq)
+            # A reload/transition invalidates the native getter even while its old receipt is retained.
+            active_market = None
+            with self.assertRaisesRegex(AssertionError, "actual finite market"):
+                requestedMarket(driver, "victorMarket")
+
+    def testValidatedCallbackRequestRemainsAvailableAfterBothTraceFilesRotate(self):
+        with tempfile.TemporaryDirectory() as directory:
+            driver = self.driver()
+            driver.trace_path = Path(directory) / "native.trace.jsonl"
+            request = {"seq": 1, "event": "trade_requested", "market": {"name": "actual-market"}}
+            driver.trace_path.write_text(json.dumps(request) + "\n", encoding="utf-8")
+            driver.assertNativeCombatOutcomes()
+            backup = Path(str(driver.trace_path) + ".1")
+            for seq in (2, 3):
+                if backup.exists():
+                    backup.unlink()
+                driver.trace_path.replace(backup)
+                driver.trace_path.write_text(json.dumps({"seq": seq, "event": "movement"}) + "\n", encoding="utf-8")
+                driver.assertNativeCombatOutcomes()
+            self.assertNotIn("trade_requested", driver.trace_path.read_text(encoding="utf-8"))
+            self.assertNotIn("trade_requested", backup.read_text(encoding="utf-8"))
+            self.assertEqual([request], driver.tradeRequests())
+
+    def testRetainedCallbackRequestsAreBoundedAndIncremental(self):
+        with tempfile.TemporaryDirectory() as directory:
+            driver = self.driver()
+            driver.trace_path = Path(directory) / "native.trace.jsonl"
+            requests = [{"seq": seq, "event": "trade_requested", "market": {"name": str(seq)}} for seq in range(1, 21)]
+            driver.trace_path.write_text("".join(json.dumps(request) + "\n" for request in requests), encoding="utf-8")
+            self.assertEqual(requests[-16:], driver.tradeRequests())
+            self.assertEqual(requests[-16:], driver.tradeRequests(), "Rereading cannot duplicate cached requests")
+
+    def testRetainedTradeReceiptCannotHideInvalidOrMissingLaterNativeEvidence(self):
+        for failure in ("gap", "conflict", "malformed", "unresolved-combat", "missing"):
+            with self.subTest(failure=failure), tempfile.TemporaryDirectory() as directory:
+                driver = self.driver()
+                driver.trace_path = Path(directory) / "native.trace.jsonl"
+                request = {"seq": 1, "event": "trade_requested", "market": {"name": "actual-market"}}
+                driver.trace_path.write_text(json.dumps(request) + "\n", encoding="utf-8")
+                self.assertEqual([request], driver.tradeRequests())
+                backup = Path(str(driver.trace_path) + ".1")
+                driver.trace_path.replace(backup)
+                if failure == "missing":
+                    backup.unlink()
+                elif failure == "malformed":
+                    driver.trace_path.write_text("{bad-json\n", encoding="utf-8")
+                else:
+                    records = [{"seq": 3 if failure == "gap" else 2, "event": "movement"}]
+                    if failure == "conflict":
+                        records.append({"seq": 2, "event": "different-event"})
+                    elif failure == "unresolved-combat":
+                        records[0].update(event="combat_finished", outcome=3, attacker={"isPlayer": True})
+                    driver.trace_path.write_text(
+                        "".join(json.dumps(record) + "\n" for record in records), encoding="utf-8"
+                    )
+                with self.assertRaises(AssertionError):
+                    driver.tradeRequests()
+                # Repaired files cannot clear the same permanent evidence failure.
+                driver.trace_path.write_text(json.dumps({"seq": 2, "event": "movement"}) + "\n", encoding="utf-8")
+                with self.assertRaises(AssertionError):
+                    driver.tradeRequests()
+
+    def testUnboundLegacyCombatValidatorCanRetainCallbackEvidence(self):
+        with tempfile.TemporaryDirectory() as directory:
+            path = Path(directory) / "native.trace.jsonl"
+            request = {"seq": 1, "event": "trade_requested", "market": {"name": "actual-market"}}
+            path.write_text(json.dumps(request) + "\n", encoding="utf-8")
+            validator = SimpleNamespace(
+                test=self,
+                trace_path=path,
+                _combat_trace_positions={},
+                _combat_trace_seq=0,
+                _combat_failure=None,
+                player=None,
+            )
+            GameplayBranchDriver.assertNativeCombatOutcomes(validator)
+            self.assertEqual([request], list(validator._trade_requests))
+
     def testNativeTraceReaderDeduplicatesIdenticalRotatedRecordsAndRejectsConflicts(self):
         with tempfile.TemporaryDirectory() as directory:
             path = Path(directory) / "native.trace.jsonl"
@@ -837,6 +952,59 @@ class GameplayBranchDriverTest(unittest.TestCase):
         driver.snapshot.assert_not_called()
         driver.step.assert_not_called()
         self.assertEqual(1, sum(call.args[1] == "setTarget" for call in driver._rawCall.call_args_list))
+
+    def testDiagonalConnectorCombatRestorationCannotCountAsActualTraversal(self):
+        from tests.castle_walkthrough import authoredMap
+
+        objects = authoredMap("castleHomecoming")[1]
+        destination = objects["castleHomecomingPortal27A"]["coords"]
+        origin = objects["castleHomecomingPortal27B"]["coords"]
+        self.assertEqual(destination, objects["castleHomecomingEncounter963"]["coords"])
+        self.assertEqual("diagonalPassage", objects["castleHomecomingPortal27A"]["properties"]["campaign_portalKind"])
+        for navigation in ("coordinates", "object"):
+            with self.subTest(navigation=navigation):
+                driver = self.driver()
+                position = list(origin)
+                state = {"path": False, "enemyAlive": True}
+                actor, controller = ({"__handle__": name} for name in ("portal", "controller"))
+                driver.object = Mock(return_value=actor)
+                driver.coords = lambda handle=None: destination if handle == actor else tuple(position)
+                driver._coordinateHandle = lambda coords: {"__handle__": "point", "coords": tuple(coords)}
+
+                def rawCall(handle, method, *args):
+                    if method == "getController":
+                        return controller
+                    if method == "getCoords":
+                        return {"__handle__": "target", "coords": destination}
+                    if method == "getNavigationNeighbors":
+                        return [origin]  # The reverse diagonal edge is real, but no movement occurred.
+                    if method == "setTarget":
+                        self.assertEqual(destination, args[-1]["coords"])
+                        state["path"] = True
+                        return
+                    raise AssertionError((method, args))
+
+                def advance():
+                    self.assertTrue(state["path"])
+                    if state["enemyAlive"]:
+                        # Native victory restores the pre-combat origin and interrupts the path.
+                        state.update(enemyAlive=False, path=False)
+                    else:
+                        position[:] = destination
+
+                driver._rawCall.side_effect = rawCall
+                driver.tick = Mock(side_effect=advance)
+                driver.step = Mock(side_effect=AssertionError("Navigation bypassed the native controller"))
+                driver.snapshot = Mock(return_value={"coords": origin})
+                if navigation == "coordinates":
+                    driver.navigateCoords(destination)
+                else:
+                    driver.navigateTo("castleHomecomingPortal27A")
+                self.assertEqual(destination, driver.coords())
+                self.assertEqual(2, driver.tick.call_count)
+                self.assertEqual(2, sum(call.args[1] == "setTarget" for call in driver._rawCall.call_args_list))
+                driver.step.assert_not_called()
+                driver.snapshot.assert_not_called()
 
     def testPursuitCommitsApproachAcrossAlternatingActualNpcCoordinates(self):
         # The b920 CI trace showed this exact parallel two-cell oscillation at Victor's courtyard.

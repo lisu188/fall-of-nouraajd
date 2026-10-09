@@ -187,6 +187,7 @@ class GameplayBranchDriver:
         self._combat_trace_positions = {}
         self._combat_trace_seq = 0
         self._combat_failure = None
+        self._trade_requests = deque(maxlen=16)
         self._recorded_actions = 0
         self._coordinate_point = None
         self._ephemeral_handles = set()
@@ -377,6 +378,11 @@ class GameplayBranchDriver:
                 self.test.fail(self._combat_failure)
         if records:
             self._combat_trace_seq = records[-1]["seq"]
+            requests = getattr(self, "_trade_requests", None)
+            if requests is None:
+                # The legacy hunt also calls this validator through a minimal namespace.
+                self._trade_requests = requests = deque(maxlen=16)
+            requests.extend(record for record in records if record.get("event") == "trade_requested")
             if self.player is not None and any(record.get("event") == "item_used" for record in records):
                 try:
                     observePotionConsumptions(self, records, player_name=self.call(self.player, "getName"))
@@ -665,9 +671,10 @@ class GameplayBranchDriver:
             self.tick()
             if self.map_name != world:
                 return
-            if self._traversedTarget(target, self.coords()):
+            arrival = self.coords()
+            if arrival != before and self._traversedTarget(target, arrival):
                 return
-            unchanged = unchanged + 1 if self.coords() == before else 0
+            unchanged = unchanged + 1 if arrival == before else 0
             if unchanged >= 24:
                 self.test.fail(("Native navigation stalled", target, self.snapshot()))
             if unchanged:
@@ -703,9 +710,10 @@ class GameplayBranchDriver:
             self.tick()
             if self.map_name != world:
                 return
-            if self._traversedTarget(committed, self.coords()):
+            arrival = self.coords()
+            if arrival != before and self._traversedTarget(committed, arrival):
                 return
-            unchanged = unchanged + 1 if before == self.coords() else 0
+            unchanged = unchanged + 1 if arrival == before else 0
             if unchanged >= 24:
                 self.test.fail(("Could not approach authored object", name, self.snapshot()))
             self.steps += 1
@@ -933,14 +941,8 @@ class GameplayBranchDriver:
 
     def tradeRequests(self):
         self.test.assertIsNotNone(self.trace_path, "The actual callback trade trace is required")
-        path = Path(self.trace_path)
-        if not path.is_file():
-            return []
-        return [
-            record
-            for line in path.read_text(encoding="utf-8").splitlines()
-            if (record := json.loads(line)).get("event") == "trade_requested"
-        ]
+        self.assertNativeCombatOutcomes()
+        return list(self._trade_requests)
 
     def hunt(self, method, *args):
         from tests.test_octobogz_mcp import OctobogzMcpWalkthroughTest
@@ -957,6 +959,9 @@ class GameplayBranchDriver:
 
                 def pump(self):
                     driver.pump()
+
+                def advanceQuestEvaluationTurn(self):
+                    driver.tick()
 
                 def coords(self, handle=None):
                     return driver.coords(handle)

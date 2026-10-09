@@ -1726,6 +1726,174 @@ class OctobogzHuntTest(unittest.TestCase):
         objects, _ = __import__("tests.narrative_walkthrough", fromlist=["authoredRegion"]).authoredRegion("nouraajd")
         self.assertEqual((108, 110, 0), objects["townPortalScroll"])
 
+    def originalMainQuestTurnFixture(self, *, failure=None):
+        from tests.test_gameplay_route_dialogs import authoredFunction
+
+        state = {"turn": 0, "gooby": True, "completed": [], "gold": 0, "alive": True, "defeat": "", "claimed": False}
+        events = []
+        player, world = ({"__handle__": name} for name in ("player", "map"))
+        native_player = types.SimpleNamespace(addGold=lambda amount: state.update(gold=state["gold"] + amount))
+        native_world = types.SimpleNamespace(getPlayer=lambda: native_player)
+        native_game = types.SimpleNamespace(
+            getMap=lambda: native_world, getGuiHandler=lambda: types.SimpleNamespace(notify=Mock())
+        )
+        quest_system = types.SimpleNamespace(
+            get_state=lambda name: "active" if state["gooby"] else "gooby_slain",
+            mark_gooby_slain=lambda: state.update(gooby=False),
+        )
+        source = "res/maps/nouraajd/script.py"
+        owner = types.SimpleNamespace(getGame=lambda: native_game)
+        completed = authoredFunction(
+            source, "isCompleted", class_id="MainQuest", _quest_system_from=lambda obj: quest_system
+        )
+
+        def claimOnce(game_map, key):
+            self.assertEqual("GOOBY_REWARD_CLAIMED", key)
+            if state["claimed"]:
+                return False
+            state["claimed"] = True
+            return True
+
+        reward = authoredFunction(
+            source,
+            "onComplete",
+            class_id="MainQuest",
+            claim_once=claimOnce,
+            MAIN_QUEST_GOLD_REWARD=200,
+            rewardSnapshot=Mock(),
+            showRewardReceipt=Mock(),
+        )
+        gooby = authoredFunction(
+            source, "trigger", class_id="GoobyTrigger", _quest_system_from=lambda obj: quest_system
+        )
+
+        def nativeMove():
+            evaluation = not state["gooby"]
+            events.append(("onTurn", state["turn"], state["gooby"]))
+            if completed(owner) and "mainQuest" not in state["completed"] and failure != "missingQuest":
+                reward(owner)
+                state["completed"].append("mainQuest")
+            if state["gooby"]:
+                events.append(("controllerGoobyDefeat", state["turn"]))
+                gooby(owner, None, None)
+            if not (evaluation and failure == "stalledTurn"):
+                state["turn"] += 1
+            if evaluation and failure == "defeat":
+                state.update(alive=False, defeat="actual defeat")
+            if evaluation and failure == "respawn":
+                state["defeat"] = "actual defeat and respawn"
+
+        def call(handle, method, *args):
+            if method == "getTurn":
+                return state["turn"]
+            if method == "move":
+                self.assertEqual(world, handle)
+                nativeMove()
+                return
+            if method == "getBoolProperty":
+                self.assertEqual(("completed_gooby",), args)
+                return not state["gooby"]
+            if method == "getGold":
+                return state["gold"]
+            if method == "isAlive":
+                return state["alive"]
+            if method == "getHp":
+                return 20 if state["alive"] else 0
+            if method == "getStringProperty":
+                self.assertEqual(("uiDefeatReceipt",), args)
+                return state["defeat"]
+            raise AssertionError((handle, method, args))
+
+        return state, events, player, world, call, gooby, owner
+
+    def testMainQuestCompletionUsesOneRealNextTurnAfterControllerCombatAndNoExtraTurnAfterDirectCombat(self):
+        from tests.test_octobogz_mcp import OctobogzMcpWalkthroughTest
+
+        native = (ROOT / "src/core/CMap.cpp").read_text(encoding="utf-8")
+        native_move = native.split("void CMap::move()", 1)[1].split("void CMap::", 1)[0]
+        self.assertLess(native_move.index("CGameEvent::CType::onTurn"), native_move.index("creature->moveTo(target)"))
+        self.assertIn("_player->checkQuests();", native.split("void CMap::registerPlayerTriggers()", 1)[1])
+        for controller_combat in (True, False):
+            with self.subTest(controller_combat=controller_combat):
+                state, events, player, world, call, gooby, owner = self.originalMainQuestTurnFixture()
+                walker = OctobogzMcpWalkthroughTest("runTest")
+                walker.player, walker.game_map, walker.call = player, world, call
+                walker.pump, walker.snapshot, walker.recoverOnRoadPair = Mock(), Mock(), Mock()
+                walker.questNames = lambda method: list(state["completed"])
+
+                def walk(name, *, allow_removed=False):
+                    self.assertEqual(("gooby1", True), (name, allow_removed))
+                    if not state["gooby"]:
+                        return
+                    if not controller_combat:
+                        gooby(owner, None, None)
+                    call(world, "move")
+
+                walker.walkTo = walk
+                walker.finishOriginalMainQuest()
+                self.assertEqual(2 if controller_combat else 1, state["turn"])
+                self.assertEqual(200, state["gold"])
+                self.assertEqual(["mainQuest"], state["completed"])
+                walker.finishOriginalMainQuest()
+                self.assertEqual(200, state["gold"], "The actual claim-first reward cannot repeat")
+                self.assertEqual(2 if controller_combat else 1, state["turn"])
+                if controller_combat:
+                    self.assertEqual(("onTurn", 0, True), events[0])
+                    self.assertEqual(("controllerGoobyDefeat", 0), events[1])
+                    self.assertEqual(("onTurn", 1, False), events[2])
+
+    def testMainQuestSingleEvaluationTurnRejectsStallDefeatRespawnOrUncompletedQuest(self):
+        from tests.test_octobogz_mcp import OctobogzMcpWalkthroughTest
+
+        for failure in ("stalledTurn", "defeat", "respawn", "missingQuest"):
+            with self.subTest(failure=failure):
+                state, _events, player, world, call, _gooby, _owner = self.originalMainQuestTurnFixture(failure=failure)
+                walker = OctobogzMcpWalkthroughTest("runTest")
+                walker.player, walker.game_map, walker.call = player, world, call
+                walker.pump, walker.snapshot, walker.recoverOnRoadPair = Mock(), Mock(), Mock()
+                walker.questNames = lambda method: list(state["completed"])
+                walker.walkTo = lambda *args, **kwargs: call(world, "move")
+                with self.assertRaises(AssertionError):
+                    walker.finishOriginalMainQuest()
+                self.assertLessEqual(state["turn"], 2, "The helper may not retry another quest-evaluation turn")
+
+    def testMainQuestAdapterEvaluationUsesActualDriverTickAndItsUnchangedTurnBudget(self):
+        from tests.gameplay_branch_driver import GameplayBranchDriver
+        from tests.gameplay_branch_types import RouteCase
+        from tests.test_octobogz_mcp import OctobogzMcpWalkthroughTest
+
+        for starting_turns in (0, 19999):
+            with self.subTest(starting_turns=starting_turns):
+                state, _events, player, world, call, _gooby, _owner = self.originalMainQuestTurnFixture()
+                case = RouteCase("quest-order", "unit", ("nouraajd",), ("unit.branch",), lambda d: None)
+                driver = GameplayBranchDriver(self, Mock(), {"proc": object()}, case, "Inquisitor", ROOT)
+                driver.game, driver.game_map, driver.player, driver.map_name = "game", world, player, "nouraajd"
+                driver.call, driver.pump, driver.recover = call, Mock(), Mock()
+                driver.snapshot = Mock(return_value={})
+                driver.coords, driver._validateMovement = lambda handle=None: (100, 100, 0), Mock()
+                driver.turns = starting_turns
+                driver.object = lambda name, required=False: {"__handle__": "gooby"} if state["gooby"] else None
+                driver.navigateTo = lambda name: driver.tick()
+                with (
+                    patch.object(OctobogzMcpWalkthroughTest, "snapshot", return_value={}),
+                    patch.object(OctobogzMcpWalkthroughTest, "recoverOnRoadPair"),
+                    patch.object(
+                        OctobogzMcpWalkthroughTest, "questNames", side_effect=lambda method: list(state["completed"])
+                    ),
+                ):
+                    if starting_turns:
+                        with self.assertRaisesRegex(AssertionError, "Route turn budget exhausted"):
+                            driver.hunt("finishOriginalMainQuest")
+                        self.assertEqual(20000, driver.turns)
+                        self.assertEqual(1, state["turn"])
+                        self.assertEqual(0, state["gold"])
+                    else:
+                        driver.hunt("finishOriginalMainQuest")
+                        self.assertEqual(2, driver.turns)
+                        self.assertEqual(2, state["turn"])
+                        self.assertEqual(200, state["gold"])
+                        self.assertEqual(["mainQuest"], state["completed"])
+
     def runtimeDiagnosticFixture(self, shared_runner):
         from tests import test_python_callback_lifecycle as lifecycle
 

@@ -3,7 +3,76 @@
 # SPDX-License-Identifier: GPL-3.0-or-later
 """Native potion trace contracts; these fixtures receive no played-route credit."""
 
+import ast
+import textwrap
+from types import SimpleNamespace
 import unittest
+from unittest.mock import patch
+
+
+class GameplayPotionTraceContractTest(unittest.TestCase):
+    def runDisabledTraceFixture(self, *, record_disabled_use):
+        programs = []
+        fixture = GameplayPotionTraceRuntimeTest(
+            "testAcceptedPotionUseRecordsExactNativeRestorationAndSelectedIdentity"
+        )
+        with patch.object(fixture, "runChild", side_effect=programs.append):
+            fixture.testAcceptedPotionUseRecordsExactNativeRestorationAndSelectedIdentity()
+        program = ast.parse(textwrap.dedent(programs[0]))
+        statements = next(node for node in program.body if isinstance(node, ast.Try)).body
+        start = next(
+            index
+            for index, node in enumerate(statements)
+            if isinstance(node, ast.Expr)
+            and isinstance(node.value, ast.Call)
+            and isinstance(node.value.func, ast.Attribute)
+            and node.value.func.attr == "clear_playtest_trace"
+        )
+        disabled_program = ast.Module(body=statements[start:], type_ignores=[])
+
+        class NativeStringVector:
+            # The binding is opaque: its empty value does not compare equal to a Python list.
+            def __init__(self):
+                self.records = ["previous-enabled-event"]
+
+            def __iter__(self):
+                return iter(self.records)
+
+        records = NativeStringVector()
+        self.assertNotEqual([], records)
+        potion = object()
+        owned = []
+        uses = []
+
+        def useItem(item):
+            self.assertIs(potion, item)
+            self.assertIn(item, owned)
+            owned.remove(item)
+            uses.append(item)
+            if record_disabled_use:
+                records.records.append("unexpected-disabled-event")
+
+        player = SimpleNamespace(
+            addItem=owned.append,
+            setNumericProperty=lambda name, value: self.assertEqual(("hp", 90), (name, value)),
+            getHpMax=lambda: 100,
+            useItem=useItem,
+        )
+        instance = SimpleNamespace(createObject=lambda type_id: potion if type_id == "LifePotion" else None)
+        game = SimpleNamespace(
+            clear_playtest_trace=records.records.clear,
+            get_playtest_trace_records=lambda: records,
+        )
+        exec(compile(disabled_program, "<actual disabled potion trace fixture>", "exec"), locals())
+        self.assertEqual([potion], uses)
+        self.assertEqual([], owned)
+
+    def testDisabledFixtureAcceptsAnEmptyOpaqueNativeVector(self):
+        self.runDisabledTraceFixture(record_disabled_use=False)
+
+    def testDisabledFixtureStillRejectsAnyUnexpectedTraceRecord(self):
+        with self.assertRaisesRegex(AssertionError, "unexpected-disabled-event"):
+            self.runDisabledTraceFixture(record_disabled_use=True)
 
 
 class GameplayPotionTraceRuntimeTest(unittest.TestCase):
@@ -65,7 +134,8 @@ class GameplayPotionTraceRuntimeTest(unittest.TestCase):
                 player.addItem(potion)
                 player.setNumericProperty('hp', player.getHpMax() - 10)
                 player.useItem(potion)
-                assert game.get_playtest_trace_records() == []
+                records = tuple(game.get_playtest_trace_records())
+                assert records == (), records
             finally:
                 game.configure_playtest_trace(False)
                 instance.getContext().shutdown()

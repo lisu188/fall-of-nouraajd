@@ -144,6 +144,7 @@ FAST_TEST_PREFIXES = (
     "GameplayRecipeGoldRoutesTest.",
     "GameplayCallbackMarketRoutesTest.",
     "GameplayPotionConsumptionTest.",
+    "GameplayPotionTraceContractTest.",
     "GameplayNouraajdServiceRoutesTest.",
     "GameplayWaypointPublicationTest.",
     "GameplayCaveObservationTest.",
@@ -25809,6 +25810,7 @@ class TestRunnerSuiteTest(unittest.TestCase):
             OctobogzDiagnosticTest,
             MonsterBalanceRunnerTest,
             WindowsPythonConfigurationTest,
+            GameplayPotionTraceContractTest,
         ):
             methods = unittest.defaultTestLoader.getTestCaseNames(test_class)
             self.assertTrue(methods)
@@ -26385,6 +26387,7 @@ if SOURCE_UI_TESTS_AVAILABLE:
     from tests.test_gameplay_routes_callback_markets import (
         GameplayCallbackMarketRoutesTest as _GameplayCallbackMarketRoutesTest,
     )
+    from tests.test_gameplay_potion_trace import GameplayPotionTraceContractTest as _GameplayPotionTraceContractTest
     from tests.test_gameplay_potion_trace import GameplayPotionTraceRuntimeTest as _GameplayPotionTraceRuntimeTest
     from tests.test_gameplay_routes_potions import GameplayPotionConsumptionTest as _GameplayPotionConsumptionTest
     from tests.test_gameplay_routes_services import GameplayRouteServicesTest as _GameplayRouteServicesTest
@@ -26432,6 +26435,9 @@ if SOURCE_UI_TESTS_AVAILABLE:
         pass
 
     class GameplayPotionTraceRuntimeTest(_GameplayPotionTraceRuntimeTest):
+        pass
+
+    class GameplayPotionTraceContractTest(_GameplayPotionTraceContractTest):
         pass
 
     class GameplayCraftingRoutesTest(_GameplayCraftingRoutesTest):
@@ -26604,6 +26610,7 @@ if SOURCE_UI_TESTS_AVAILABLE:
         _GameplayRouteServicesTest,
         _GameplayRecipeOutcomesTest,
         _GameplayPotionTraceRuntimeTest,
+        _GameplayPotionTraceContractTest,
     )
     del _GameplayNouraajdServiceRoutesTest, _GameplayWaypointPublicationTest, _GameplayCaveObservationTest
     del _GameplayPotionConsumptionTest, _GameplayRecipeGoldRoutesTest, _GameplayCallbackMarketRoutesTest
