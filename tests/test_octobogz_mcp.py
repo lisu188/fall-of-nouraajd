@@ -510,6 +510,8 @@ class OctobogzMcpWalkthroughTest(unittest.TestCase):
                 self.walkable.discard(step)
                 route = []
                 continue
+            # A Brood encounter can finish during the preceding map turn, before this next movement.
+            self.recoverIncidentalBroodBeforeMapTurn()
             if self.step(step) != expected:
                 # Player victories restore the origin, including repeated fights in a cave cell.
                 if blockers is None:
@@ -1487,8 +1489,109 @@ class OctobogzMcpWalkthroughTest(unittest.TestCase):
             except Exception as exc:
                 print("MCP hunt native failure tail unavailable", type(exc).__name__, str(exc), flush=True)
 
+    def nativeHuntTracePath(self):
+        return getattr(getattr(self, "process", None), "_playtest_trace_path", None)
+
+    def captureAlphaApproachRecovery(self):
+        failure = getattr(self, "_incidental_brood_recovery_failure", None)
+        if failure is not None:
+            self.fail(("Incidental Brood recovery failed", failure))
+        path = self.nativeHuntTracePath()
+        if path is None:
+            return None
+        brood = self.hunt_actors.get("brood")
+        if brood is None or not self.call(brood, "isAlive"):
+            return None
+        tail = readNativeLogTail(path)
+        records = [json.loads(line) for line in tail["text"].splitlines() if line.strip()]
+        self.assertTrue(records, "The Alpha approach requires its current native trace checkpoint")
+        seq = records[-1].get("seq")
+        self.assertIs(type(seq), int)
+        self.assertGreater(seq, 0)
+        return {
+            "path": path,
+            "positions": {},
+            "startSeq": seq,
+            "seq": seq,
+            "playerName": self.call(self.player, "getName"),
+            "brood": brood,
+            "broodName": self.call(brood, "getName"),
+            "victory": None,
+            "handled": False,
+            "failure": None,
+        }
+
+    def recoverIncidentalBroodBeforeMapTurn(self):
+        state = getattr(self, "_alpha_approach_recovery", None)
+        if state is None:
+            return
+        from tests.gameplay_branch_driver import readNewNativeTrace
+
+        if state["failure"] is not None:
+            self.fail(("Incidental Brood recovery failed", state["failure"]))
+        try:
+            records = readNewNativeTrace(state["path"], state["positions"], state["seq"])
+            if records:
+                state["seq"] = records[-1]["seq"]
+
+            def actualPlayer(actor):
+                return (
+                    isinstance(actor, dict)
+                    and actor.get("isPlayer") is True
+                    and actor.get("name") == state["playerName"]
+                )
+
+            def actualBrood(actor):
+                return (
+                    isinstance(actor, dict)
+                    and actor.get("isPlayer") is False
+                    and actor.get("name") == state["broodName"]
+                )
+
+            for record in records:
+                if (
+                    record.get("event") != "combat_finished"
+                    or record.get("map") != "nouraajd"
+                    or type(record.get("outcome")) is not int
+                    or record["outcome"] not in (1, 2)
+                    or not actualPlayer(record.get("survivor"))
+                ):
+                    continue
+                attacker, opponents = record.get("attacker"), record.get("opponents", ())
+                if (
+                    record["outcome"] == 1 and actualPlayer(attacker) and any(actualBrood(actor) for actor in opponents)
+                ) or (
+                    record["outcome"] == 2 and actualBrood(attacker) and any(actualPlayer(actor) for actor in opponents)
+                ):
+                    state["victory"] = record
+            if state["handled"] or self.call(state["brood"], "isAlive"):
+                return
+            self.assertEqual(state["brood"], self.hunt_actors.get("brood"))
+            self.assertEqual(state["playerName"], self.call(self.player, "getName"))
+            self.assertIsNotNone(state["victory"], "Incidental Brood death requires a fresh resolved native victory")
+            self.assertGreater(state["victory"]["seq"], state["startSeq"])
+            self.assertSlotDefeated("brood")
+            before = self.snapshot("actual incidental Brood victory before the next Alpha approach turn")
+            self.recoverBeforeRoadDeparture(target_percent=100)
+            self.assertGreaterEqual(
+                self.call(self.player, "getHp"),
+                self.call(self.player, "getHpMax"),
+                "Finite owned healing cannot safely continue the Alpha approach after the Brood victory",
+            )
+            state["handled"] = True
+            print(
+                "MCP hunt incidental Brood owned recovery",
+                {"combatSeq": state["victory"]["seq"], "before": before, "hpAfter": self.call(self.player, "getHp")},
+                flush=True,
+            )
+        except Exception as error:
+            state["failure"] = (type(error).__name__, str(error)[:2048])
+            self._incidental_brood_recovery_failure = state["failure"]
+            raise
+
     def recoverAfterAlphaVictoryBeforeMapTurn(self, alpha):
         if self.call(alpha, "isAlive"):
+            self.recoverIncidentalBroodBeforeMapTurn()
             return
         self.assertEqual(alpha, self.hunt_actors.get("alpha"))
         self.assertSlotDefeated("alpha")
@@ -1519,12 +1622,14 @@ class OctobogzMcpWalkthroughTest(unittest.TestCase):
         actors = self.livingActors()
         self.snapshot("before " + slot)
         previous_recovery = getattr(self, "recover_before_map_turn", None)
-        if slot == "alpha":
-            alpha = self.hunt_actors.get("alpha")
-            self.assertIsNotNone(alpha)
-            self.assertTrue(self.call(alpha, "isAlive"))
-            self.recover_before_map_turn = lambda: self.recoverAfterAlphaVictoryBeforeMapTurn(alpha)
+        previous_approach = getattr(self, "_alpha_approach_recovery", None)
         try:
+            if slot == "alpha":
+                alpha = self.hunt_actors.get("alpha")
+                self.assertIsNotNone(alpha)
+                self.assertTrue(self.call(alpha, "isAlive"))
+                self._alpha_approach_recovery = self.captureAlphaApproachRecovery()
+                self.recover_before_map_turn = lambda: self.recoverAfterAlphaVictoryBeforeMapTurn(alpha)
             self.walkTo(record["name"], allow_removed=True)
             self.snapshot("after " + slot)
             self.observeActors("after " + slot, actors)
@@ -1540,6 +1645,7 @@ class OctobogzMcpWalkthroughTest(unittest.TestCase):
             raise
         finally:
             self.recover_before_map_turn = previous_recovery
+            self._alpha_approach_recovery = previous_approach
 
     @staticmethod
     def itemIdentity(item):
@@ -1860,6 +1966,173 @@ class OctobogzMcpWalkthroughTest(unittest.TestCase):
 
 
 class OctobogzDiagnosticTest(unittest.TestCase):
+    def incidentalBroodFixture(self, trace, *, record_changes=None, healing=True):
+        from types import SimpleNamespace
+
+        from tests.test_octobogz_hunt import OctobogzHuntTest
+
+        fixture = OctobogzHuntTest("runTest").alphaVictoryStepFixture()
+        walker, handles, inventory, uses, properties, gold, turn, events, calls, guard = fixture
+        alpha, brood = walker.hunt_actors["alpha"], walker.hunt_actors["brood"]
+        slots = walker.state()["slots"]
+        walker.process = SimpleNamespace(_playtest_trace_path=trace)
+        trace.write_text(json.dumps({"seq": 1, "event": "map_loaded"}) + "\n", encoding="utf-8")
+        if not healing:
+            inventory.remove(handles["strong"])
+        original_call = walker.call
+        moved = False
+
+        def call(handle, method, *args):
+            nonlocal moved
+            if handle == "player" and method == "getName":
+                return "actualPlayer"
+            if handle == "player" and method == "moveTo":
+                events.append("moveTo")
+                if not moved:
+                    moved = True
+                    brood.setHp(0)
+                    slots["brood"]["status"] = "dead"
+                    properties.update(hp=62, exp=6250)
+                    record = {
+                        "seq": 2,
+                        "event": "combat_finished",
+                        "map": "nouraajd",
+                        "attacker": {"name": "actualPlayer", "isPlayer": True},
+                        "opponents": [{"name": "brood", "isPlayer": False}],
+                        "survivor": {"name": "actualPlayer", "isPlayer": True},
+                        "outcome": 1,
+                    }
+                    record.update(record_changes or {})
+                    with trace.open("a", encoding="utf-8") as output:
+                        output.write(json.dumps(record) + "\n")
+                return
+            if handle == "map" and method == "getObjectByName" and args == ("brood",):
+                return None
+            return original_call(handle, method, *args)
+
+        def walk(name, **kwargs):
+            walker.step((158, 25, 0))
+            alpha.setHp(0)
+            slots["alpha"]["status"] = "dead"
+
+        walker.call, walker.walkTo = call, walk
+        return fixture
+
+    def testIncidentalBroodVictoryHealsBeforeTheNextAlphaApproachTurnWithoutRelocation(self):
+        with tempfile.TemporaryDirectory() as directory:
+            fixture = self.incidentalBroodFixture(Path(directory) / "native.jsonl")
+            walker, handles, inventory, uses, properties, gold, turn, events, _, _ = fixture
+            before = (properties["mana"], gold[0], walker.coords(), walker.questNames(), properties["equipped"].copy())
+            walker.defeat("alpha")
+            self.assertEqual(["moveTo", "pump", "useItem", "map.move", "pump"], events)
+            self.assertEqual([handles["strong"]], uses)
+            self.assertNotIn(handles["strong"], inventory)
+            self.assertEqual(91, properties["hp"])
+            self.assertEqual(1140, turn[0])
+            self.assertEqual(
+                before,
+                (properties["mana"], gold[0], walker.coords(), walker.questNames(), properties["equipped"].copy()),
+            )
+            self.assertEqual({"alpha", "brood"}, walker.confirmed_dead)
+            self.assertIsNone(walker.recover_before_map_turn)
+
+    def testIncidentalBroodRecoveryRequiresFreshResolvedExactNativeVictory(self):
+        invalid = (
+            {"outcome": 0},
+            {"outcome": 3},
+            {"outcome": 4},
+            {"outcome": True},
+            {"opponents": [{"name": "otherBrood", "isPlayer": False}]},
+            {"survivor": {"name": "otherPlayer", "isPlayer": True}},
+            {"attacker": {"name": "otherPlayer", "isPlayer": True}},
+            {
+                "outcome": 2,
+                "attacker": {"name": "otherEnemy", "isPlayer": False},
+                "opponents": [{"name": "actualPlayer", "isPlayer": True}, {"name": "brood", "isPlayer": False}],
+            },
+            {"map": "otherMap"},
+            {"seq": 1},
+            {"seq": 3},
+        )
+        for changes in invalid:
+            with self.subTest(changes=changes), tempfile.TemporaryDirectory() as directory:
+                fixture = self.incidentalBroodFixture(Path(directory) / "native.jsonl", record_changes=changes)
+                walker, _, _, uses, _, _, turn, events, _, _ = fixture
+                with self.assertRaises(AssertionError):
+                    walker.defeat("alpha")
+                self.assertEqual([], uses)
+                self.assertNotIn("map.move", events)
+                self.assertEqual(1139, turn[0])
+
+    def testIncidentalBroodRecoveryAcceptsAnActualSurvivingPlayerDefender(self):
+        with tempfile.TemporaryDirectory() as directory:
+            fixture = self.incidentalBroodFixture(
+                Path(directory) / "native.jsonl",
+                record_changes={
+                    "attacker": {"name": "brood", "isPlayer": False},
+                    "opponents": [{"name": "actualPlayer", "isPlayer": True}],
+                    "outcome": 2,
+                },
+            )
+            walker, handles, _, uses, properties, _, _, events, _, _ = fixture
+            walker.defeat("alpha")
+            self.assertEqual([handles["strong"]], uses)
+            self.assertEqual(91, properties["hp"])
+            self.assertLess(events.index("useItem"), events.index("map.move"))
+
+    def testIncidentalBroodRecoveryStopsBeforeNextMapTurnWhenOwnedHealingIsInsufficient(self):
+        with tempfile.TemporaryDirectory() as directory:
+            fixture = self.incidentalBroodFixture(Path(directory) / "native.jsonl", healing=False)
+            walker, _, _, uses, properties, _, turn, events, _, _ = fixture
+            with self.assertRaisesRegex(AssertionError, "Finite owned healing"):
+                walker.defeat("alpha")
+            self.assertEqual([], uses)
+            self.assertEqual(62, properties["hp"])
+            self.assertEqual(1139, turn[0])
+            self.assertNotIn("map.move", events)
+
+    def testIncidentalBroodVictoryDuringMapTurnHealsBeforeTheNextWalkRouteMovement(self):
+        with tempfile.TemporaryDirectory() as directory:
+            fixture = self.incidentalBroodFixture(Path(directory) / "native.jsonl")
+            walker, handles, _, uses, properties, _, _, events, _, _ = fixture
+            walker._alpha_approach_recovery = walker.captureAlphaApproachRecovery()
+            current, destinations = [(158, 24, 0)], []
+            walker.coords = lambda handle=None: current[0]
+            walker.walkable = {(158, y, 0) for y in range(24, 27)}
+
+            def completedNativeStep(destination):
+                if destinations:
+                    self.assertGreaterEqual(properties["hp"], 91, "Next native movement preceded Brood recovery")
+                    events.append("next movement")
+                else:
+                    walker.call(walker.player, "moveTo", *destination)
+                    events.append("completed native turn")
+                destinations.append(destination)
+                current[0] = destination
+                return destination
+
+            walker.step = completedNativeStep
+            walker.walkRoute((158, 26, 0))
+            self.assertEqual([(158, 25, 0), (158, 26, 0)], destinations)
+            self.assertEqual([handles["strong"]], uses)
+            self.assertLess(events.index("completed native turn"), events.index("useItem"))
+            self.assertLess(events.index("useItem"), events.index("next movement"))
+
+    def testIncidentalBroodRecoveryFailureCannotBeClearedByALaterVictoryOrNewApproach(self):
+        with tempfile.TemporaryDirectory() as directory:
+            trace = Path(directory) / "native.jsonl"
+            fixture = self.incidentalBroodFixture(trace, record_changes={"seq": 3})
+            walker, _, _, uses, _, _, turn, events, _, _ = fixture
+            with self.assertRaisesRegex(AssertionError, "Native trace evidence was lost"):
+                walker.defeat("alpha")
+            with trace.open("a", encoding="utf-8") as output:
+                output.write(json.dumps({"seq": 4, "event": "combat_finished", "outcome": 1}) + "\n")
+            with self.assertRaisesRegex(AssertionError, "Incidental Brood recovery failed"):
+                walker.defeat("alpha")
+            self.assertEqual([], uses)
+            self.assertEqual(1139, turn[0])
+            self.assertNotIn("map.move", events)
+
     def roadResourceFixture(self, *, hp=8, hp_max=10, mana=7, mana_max=10, corrupt_after_step=None):
         from types import SimpleNamespace
         from unittest.mock import Mock

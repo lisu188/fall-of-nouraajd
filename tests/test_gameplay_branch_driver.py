@@ -1570,6 +1570,40 @@ class GameplayBranchDriverTest(unittest.TestCase):
             adjacent.assert_called_once_with("alpha", allow_removed=True)
             driver.navigateTo.assert_called_once_with("alpha")
 
+    def testHuntAdapterUsesTheMatrixTracePathWithABareProcessForFreshBroodRecovery(self):
+        from tests.test_octobogz_mcp import OctobogzDiagnosticTest, OctobogzMcpWalkthroughTest
+
+        driver = self.driver()
+        driver.session = {"proc": object()}
+        with tempfile.TemporaryDirectory() as directory, patch.object(
+            OctobogzMcpWalkthroughTest, "trackLivingHuntActors", return_value=None
+        ):
+            trace = Path(directory) / "native.jsonl"
+            fixture = OctobogzDiagnosticTest("runTest").incidentalBroodFixture(trace)
+            walker, handles, _, uses, properties, _, turn, events, _, _ = fixture
+            driver.trace_path = trace
+            driver.player, driver.game_map = walker.player, walker.game_map
+            driver.call, driver.engine, driver.coords = walker.call, walker.engine, walker.coords
+            driver.hunt("trackLivingHuntActors")
+            adapter = driver._hunt_adapter
+            for name in ("hunt_actors", "state", "confirmed_dead", "snapshot", "observeActors", "questNames"):
+                setattr(adapter, name, getattr(walker, name))
+            self.assertFalse(hasattr(adapter.process, "_playtest_trace_path"))
+            adapter._alpha_approach_recovery = adapter.captureAlphaApproachRecovery()
+            self.assertIsNotNone(adapter._alpha_approach_recovery, "The matrix cannot silently disable recovery")
+            self.assertEqual(trace, adapter._alpha_approach_recovery["path"])
+            walker.call(walker.player, "moveTo", 158, 25, 0)
+            adapter.recoverIncidentalBroodBeforeMapTurn()
+            adapter.recoverIncidentalBroodBeforeMapTurn()
+            self.assertEqual([handles["strong"]], uses)
+            self.assertEqual(91, properties["hp"])
+            self.assertEqual({"brood"}, adapter.confirmed_dead)
+            self.assertEqual(1139, turn[0])
+            self.assertNotIn("map.move", events)
+            driver.trace_path = None
+            with self.assertRaisesRegex(AssertionError, "matrix native trace"):
+                adapter.captureAlphaApproachRecovery()
+
     def testLongNavigationReusesDetachedPointAndReleasesConsumedCoordinates(self):
         driver = self.driver()
         point, controller = {"__handle__": "point"}, {"__handle__": "controller"}

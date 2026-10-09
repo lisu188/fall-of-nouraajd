@@ -1052,6 +1052,10 @@ class GameplayBranchDriver:
                 def pump(self):
                     driver.pump()
 
+                def nativeHuntTracePath(self):
+                    driver.test.assertIsNotNone(driver.trace_path, "The hunt requires its matrix native trace")
+                    return driver.trace_path
+
                 def advanceQuestEvaluationTurn(self):
                     driver.tick()
 
