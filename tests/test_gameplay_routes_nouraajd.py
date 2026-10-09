@@ -16,6 +16,141 @@ from tests.test_gameplay_route_dialogs import authoredFunction
 
 
 class GameplayNouraajdServiceRoutesTest(unittest.TestCase):
+    def victorScrollFixture(self):
+        source = json.loads(
+            (Path(__file__).resolve().parents[1] / "res/maps/nouraajd/map.json").read_text(encoding="utf-8")
+        )
+        original = [
+            actor
+            for layer in source["layers"]
+            if layer["type"] == "objectgroup"
+            for actor in layer["objects"]
+            if actor["name"] == "townPortalScroll" and actor["type"] == "TownPortalScroll"
+        ]
+        self.assertEqual(1, len(original))
+        entry = tuple(int(source["properties"][axis]) for axis in "xyz")
+        state = {
+            "position": (49, 99, 0),
+            "turn": 300,
+            "spawn": 299,
+            "inventory": {"original", "extra", "quest"},
+            "events": [],
+            "records": [],
+        }
+        identities = {
+            "original": (original[0]["name"], original[0]["type"]),
+            "extra": ("legitimatelyCraftedOtherScroll", "TownPortalScroll"),
+            "quest": ("letterFromRolf", "letterFromRolf"),
+        }
+        game, game_map, player = ({"__handle__": name} for name in ("game", "map", "player"))
+        map_object = SimpleNamespace(getEntryX=lambda: entry[0], getEntryY=lambda: entry[1], getEntryZ=lambda: entry[2])
+        player_object = SimpleNamespace(
+            getMap=lambda: map_object, moveTo=lambda x, y, z: state.update(position=(x, y, z))
+        )
+        on_use = authoredFunction("res/plugins/object.py", "onUse", class_id="TownPortalScroll")
+
+        def call(handle, method, *args):
+            if method == "getItems":
+                return [{"__handle__": name} for name in sorted(state["inventory"])]
+            if method in ("getName", "getTypeId"):
+                return identities[handle["__handle__"]][int(method == "getTypeId")]
+            if method == "useItem":
+                name = args[0]["__handle__"]
+                self.assertIn(name, state["inventory"])
+                state["events"].append(("useItem", name))
+                on_use(None, SimpleNamespace(getCause=lambda: player_object))
+                state["inventory"].remove(name)
+                return
+            return {
+                "getEntryX": entry[0],
+                "getEntryY": entry[1],
+                "getEntryZ": entry[2],
+                "getTurn": state["turn"],
+                "getMap": game_map,
+                "getPlayer": player,
+                "getStringProperty": "",
+                "getHp": 70,
+            }[method]
+
+        driver = SimpleNamespace(
+            test=self,
+            game=game,
+            game_map=game_map,
+            player=player,
+            call=call,
+            coords=lambda: state["position"],
+            object=lambda name, required=False: None if name == "townPortalScroll" else "leader",
+            number=lambda name: state["spawn"],
+            string=lambda name: "encounter_active",
+            flag=lambda name: False,
+            gold=lambda: 200,
+            questNames=lambda completed=False: ["rolfQuest"] if completed else ["victorQuest"],
+            pump=lambda: state["events"].append(("pump",)),
+            record=state["records"].append,
+            check=lambda branch, condition, **kwargs: self.assertTrue(condition),
+        )
+        return driver, state
+
+    def testStandaloneVictorEscapeUsesOnlyTheActualSourceScrollWithoutAdvancingTheDeadline(self):
+        driver, state = self.victorScrollFixture()
+        nouraajd.retreatVictorWithCollectedScroll(driver)
+        self.assertEqual((110, 111, 0), state["position"])
+        self.assertEqual({"extra", "quest"}, state["inventory"])
+        self.assertEqual([("useItem", "original"), ("pump",)], state["events"])
+        self.assertEqual((300, 299), (state["turn"], state["spawn"]))
+        self.assertEqual("original", state["records"][0]["earnedVictorEscape"])
+
+    def testStandaloneVictorEscapeRejectsMissingSourceIdentityAndAnyNativeTurnChange(self):
+        driver, state = self.victorScrollFixture()
+        state["inventory"].remove("original")
+        with self.assertRaisesRegex(AssertionError, "original actually collected"):
+            nouraajd.retreatVictorWithCollectedScroll(driver)
+        self.assertEqual([], state["events"])
+        driver, state = self.victorScrollFixture()
+        driver.pump = lambda: state.update(turn=state["turn"] + 1)
+        with self.assertRaisesRegex(AssertionError, "native deadline"):
+            nouraajd.retreatVictorWithCollectedScroll(driver)
+        self.assertEqual([], state["records"])
+
+    def testOnlyStandaloneDirectLossEscapesBeforeTheUnchangedTimeoutAndSaveBoundaries(self):
+        class ReachedNativeBoundary(Exception):
+            pass
+
+        for start_new, direct, saved in (
+            (True, True, False),
+            (False, True, False),
+            (True, False, False),
+            (True, True, True),
+        ):
+            with self.subTest(start_new=start_new, direct=direct, saved=saved):
+                driver, state = self.victorScrollFixture()
+                actual_call = driver.call
+                driver.call = lambda handle, method, *args: (
+                    "forceful"
+                    if method == "getStringProperty" and args == ("campaign_var_nouraajdVictorConfrontation",)
+                    else actual_call(handle, method, *args)
+                )
+                expected_escape = start_new and direct and not saved
+
+                def stop(driver, elapsed=None):
+                    self.assertEqual(expected_escape, "original" not in state["inventory"])
+                    self.assertEqual((110, 111, 0) if expected_escape else (49, 99, 0), driver.coords())
+                    if not saved:
+                        self.assertEqual(74, elapsed)
+                    raise ReachedNativeBoundary
+
+                driver.fight = lambda name: stop(driver)
+                with (
+                    patch.object(nouraajd, "start"),
+                    patch.object(nouraajd, "prepareRolf"),
+                    patch.object(nouraajd, "meetVictor"),
+                    patch.object(nouraajd, "victorCountdownCheckpoint") as checkpoint,
+                    patch.object(nouraajd, "fleeCourtyardUntil", side_effect=stop),
+                ):
+                    with self.assertRaises(ReachedNativeBoundary):
+                        nouraajd.victorRoute(driver, "forceful", direct, saved, start_new=start_new)
+                    checkpoint.assert_called_once_with(driver, "victor-active-countdown", credit=True)
+
     def courtyardFleeFixture(self, walkable=None):
         from tests.narrative_walkthrough import authoredRegion
 

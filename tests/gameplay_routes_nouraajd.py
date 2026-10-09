@@ -24,7 +24,7 @@ SOURCES = tuple(
         "dialog4.json",
         "dialog5.json",
     )
-) + ("res/plugins/octobogz_hunt.py", "res/narrative.py")
+) + ("res/plugins/octobogz_hunt.py", "res/plugins/object.py", "res/narrative.py")
 DEEDS = {
     "Warrior": (
         "nouraajdDoor",
@@ -753,6 +753,57 @@ def fleeCourtyardUntil(d, elapsed, allow_timeout=False):
         d.test.assertEqual(expected, d.string("quest_state_victor"))
 
 
+def retreatVictorWithCollectedScroll(d):
+    items = d.call(d.player, "getItems")
+    scrolls = [
+        item
+        for item in items
+        if d.call(item, "getName") == "townPortalScroll" and d.call(item, "getTypeId") == "TownPortalScroll"
+    ]
+    d.test.assertEqual(1, len(scrolls), "Standalone escape requires the original actually collected source scroll")
+    d.test.assertIsNone(d.object("townPortalScroll", required=False), "The source scroll must already be owned")
+    scroll = scrolls[0]
+    origin = d.coords()
+    entry = tuple(d.call(d.game_map, method) for method in ("getEntryX", "getEntryY", "getEntryZ"))
+    d.test.assertEqual((110, 111, 0), entry)
+    d.test.assertNotEqual(entry, origin)
+    owned = {item["__handle__"] for item in items}
+    identity = (d.game_map, d.player)
+
+    def deadline():
+        return (
+            d.call(d.game_map, "getTurn"),
+            d.number("VICTOR_COURTYARD_TURN"),
+            d.string("quest_state_victor"),
+            d.flag("VICTOR_REWARD_GRANTED"),
+            d.gold(),
+            tuple(sorted(d.questNames())),
+            tuple(sorted(d.questNames(completed=True))),
+            d.call(d.player, "getStringProperty", "uiDefeatReceipt"),
+        )
+
+    before = deadline()
+    d.test.assertEqual("encounter_active", before[2])
+    d.test.assertEqual("", before[-1], "An escape cannot repair a defeated hero")
+    d.call(d.player, "useItem", scroll)
+    d.pump()
+    d.test.assertEqual(identity, (d.call(d.game, "getMap"), d.call(d.game_map, "getPlayer")))
+    d.test.assertEqual(entry, d.coords(), "The actual scroll must reach the authored map entry")
+    d.test.assertEqual(owned - {scroll["__handle__"]}, ownedIdentities(d))
+    d.test.assertEqual(before, deadline(), "The owned scroll cannot advance or replace Victor's native deadline")
+    d.test.assertGreater(d.call(d.player, "getHp"), 0)
+    d.record(
+        {
+            "earnedVictorEscape": scroll["__handle__"],
+            "sourceName": "townPortalScroll",
+            "origin": origin,
+            "destination": entry,
+            "mapTurn": before[0],
+            "spawnTurn": before[1],
+        }
+    )
+
+
 def victorRoute(d, approach, direct, saved, start_new=True, ask_girl=True):
     if start_new:
         start(d, deed=ask_girl)
@@ -776,6 +827,8 @@ def victorRoute(d, approach, direct, saved, start_new=True, ask_girl=True):
         d.call(d.player, "checkQuests")
         d.test.assertIn("victorQuest", d.questNames(completed=True))
     else:
+        if start_new and direct:
+            retreatVictorWithCollectedScroll(d)
         fleeCourtyardUntil(d, 74)
         victorCountdownCheckpoint(d, "victor-one-turn-before-deadline")
         d.check("nouraajd.victor.activeBeforeDeadline", d.string("quest_state_victor") == "encounter_active")
