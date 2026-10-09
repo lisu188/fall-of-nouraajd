@@ -462,6 +462,7 @@ void test_event_handler_trigger_registration_uses_named_comparison_helpers() {
 void testObjectEntryTracePreservesActualCauseAndContactBeforeNpcDeparture() {
     auto game = load_empty_game();
     auto map = game->getMap();
+    map->setMapName("unitObjectEntry");
     auto player = add_test_player(game);
     player->relocateWithoutMoveHooks(Coords(0, 0, 0));
     auto witness = add_test_creature(game, "unitMovingWitness", 1, 0);
