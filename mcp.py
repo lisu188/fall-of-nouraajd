@@ -2240,6 +2240,11 @@ class EngineMcpServer:
                     return {"error": "equipItem rejected: unequip the item from its current slot first"}
                 if not any(candidate is item for candidate in target.getItems()):
                     return {"error": "equipItem rejected: item is not owned by this creature"}
+                player_type = any(
+                    getattr(cls, "__name__", "") == "CPlayer" for cls in getattr(type(target), "__mro__", ())
+                )
+                if player_type and item.hasTag("quest"):
+                    return {"error": "equipItem rejected: player quest-tagged items cannot leave inventory"}
             game_map = target.getMap()
             if game_map is None:
                 return {"error": "equipItem rejected: creature has no map"}

@@ -175,6 +175,54 @@ class McpEquipmentContractTest(unittest.TestCase):
         self.assertEqual([], creature.calls)
         configuration.canFit.assert_not_called()
 
+    def testQuestEquipmentIsRejectedForEveryPlayerSubtypeBeforeNativeDispatch(self):
+        server, creature, _item, configuration = self.equipmentServer()
+
+        class CPlayer(type(creature)):
+            pass
+
+        class ScriptedPlayer(CPlayer):
+            pass
+
+        for player_type in (CPlayer, ScriptedPlayer):
+            with self.subTest(player_type=player_type.__name__):
+                player = player_type()
+                item = SimpleNamespace(hasTag=Mock(return_value=True))
+                player.items[:] = [item]
+                server.handles.update(player=player, item=item)
+                response = server._engine_handle_call(
+                    {"handle": "player", "method": "equipItem", "args": ["3", {"__handle__": "item"}]}
+                )
+                self.assertTrue(response["isError"], response)
+                self.assertIn("quest-tagged", response["structuredContent"]["error"])
+                self.assertEqual([], player.calls)
+                self.assertEqual([item], player.items)
+                self.assertEqual({}, player.equipped)
+                item.hasTag.assert_called_once_with("quest")
+                configuration.canFit.assert_not_called()
+                player.items.clear()
+                player.equipped["3"] = item
+                item.hasTag.reset_mock()
+                response = server._engine_handle_call(
+                    {"handle": "player", "method": "equipItem", "args": ["3", {"__handle__": "item"}]}
+                )
+                self.assertFalse(response["isError"], response)
+                item.hasTag.assert_not_called()
+                self.assertEqual([("3", item)], player.calls)
+
+    def testQuestEquipmentOnNonPlayerCreaturesKeepsTheNativeRule(self):
+        server, creature, _item, configuration = self.equipmentServer()
+        item = SimpleNamespace(hasTag=Mock(return_value=True))
+        creature.items[:] = [item]
+        server.handles["item"] = item
+        response = server._engine_handle_call(
+            {"handle": "player", "method": "equipItem", "args": ["3", {"__handle__": "item"}]}
+        )
+        self.assertFalse(response["isError"], response)
+        self.assertEqual([("3", item)], creature.calls)
+        configuration.canFit.assert_called_once_with("3", item)
+        item.hasTag.assert_not_called()
+
 
 class McpEquipmentRuntimeTest(unittest.TestCase):
     def runChild(self, code):
@@ -237,6 +285,15 @@ class McpEquipmentRuntimeTest(unittest.TestCase):
                 assert not result['isError'], result
                 assert player.getItemAtSlot('3') is None
                 assert armor in player.getItems()
+                quest_armor = instance.createObject('LeatherArmor')
+                player.addItem(quest_armor)
+                quest_armor.addTag('quest')
+                server.handles['questArmor'] = quest_armor
+                result = call('equipItem', '3', {'__handle__': 'questArmor'})
+                assert result['isError'] and 'quest-tagged' in result['structuredContent']['error'], result
+                assert quest_armor in player.getItems()
+                assert armor in player.getItems()
+                assert player.getItemAtSlot('3') is None
             finally:
                 instance.getContext().shutdown()
             """)
