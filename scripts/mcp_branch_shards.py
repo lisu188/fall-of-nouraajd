@@ -24,6 +24,7 @@ TARGET_SECONDS = 20 * 60
 MAX_MATRIX_SHARDS = 256
 MAX_JOB_MINUTES = 360
 RESOURCE_DIRS = ("campaigns", "config", "fonts", "images", "maps", "plugins")
+ROOT_RESOURCE_FILES = ("game.py", "ui.py", "campaign.py", "narrative.py", "game_diagnostics.py", "quest_state.py")
 CONFIG_DIRS = ("Release", "Debug", "RelWithDebInfo", "MinSizeRel")
 MANIFEST_NAME = "mcp-branch-runtime.json"
 REVIEWED_TIMINGS_FILE = ROOT / "tests/fixtures/mcp_branch_timings.json"
@@ -254,16 +255,25 @@ def isNativeLibrary(path):
 def runtimeFiles(build_dir):
     build_dir = Path(build_dir).resolve(strict=True)
     files = set()
+    found_modules = set()
     for base in (build_dir, *(build_dir / config for config in CONFIG_DIRS)):
         if not base.is_dir():
             continue
         files.update(path for path in base.iterdir() if path.is_file() and isNativeLibrary(path))
+        for name in ROOT_RESOURCE_FILES:
+            path = base / name
+            if path.is_file():
+                files.add(path)
+                found_modules.add(name)
         for resource in RESOURCE_DIRS:
             directory = base / resource
             if directory.is_dir():
                 files.update(
                     path for path in directory.rglob("*") if path.is_file() and "__pycache__" not in path.parts
                 )
+    missing_modules = sorted(set(ROOT_RESOURCE_FILES) - found_modules)
+    if missing_modules:
+        raise ValueError(f"Required copied runtime modules are missing: {', '.join(missing_modules)}")
     for path in files:
         if path.is_symlink() or not path.resolve(strict=True).is_relative_to(build_dir):
             raise ValueError(f"Runtime file escapes its build directory: {path}")

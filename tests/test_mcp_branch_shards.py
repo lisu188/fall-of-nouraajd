@@ -4,9 +4,11 @@
 """Pure scheduling, provenance, and suite routing checks for the exhaustive routes."""
 
 from dataclasses import replace
+import hashlib
 import io
 import json
 from pathlib import Path
+import re
 import tarfile
 import tempfile
 import unittest
@@ -21,6 +23,19 @@ def route():
 
 
 class McpBranchShardsTest(unittest.TestCase):
+    def runtimeModules(self, prefix=""):
+        sources = {
+            "game.py": "res/game.py",
+            "ui.py": "res/ui.py",
+            "campaign.py": "res/campaign.py",
+            "narrative.py": "res/narrative.py",
+            "game_diagnostics.py": "game_diagnostics.py",
+            "quest_state.py": "quest_state.py",
+        }
+        return {
+            (Path(prefix) / name).as_posix(): (shards.ROOT / source).read_bytes() for name, source in sources.items()
+        }
+
     def cases(self):
         return tuple(
             RouteCase(f"route_{index}", "group", ("test",), (f"branch_{index}",), route, duration_seconds=duration)
@@ -99,6 +114,7 @@ class McpBranchShardsTest(unittest.TestCase):
                 "CMakeFiles/engine.obj": b"intermediate",
                 "plugins/__pycache__/script.pyc": b"bytecode",
             }
+            files.update(self.runtimeModules())
             for name, data in files.items():
                 destination = build / name
                 destination.parent.mkdir(parents=True, exist_ok=True)
@@ -118,6 +134,76 @@ class McpBranchShardsTest(unittest.TestCase):
                 shards.unpackRuntime(archive_path, root / "wrong-head", "other-head")
             with self.assertRaisesRegex(ValueError, "empty build"):
                 shards.unpackRuntime(archive_path, destination, "same-head")
+
+    def testRuntimeRootResourcesCoverTheCmakeAuthoredModules(self):
+        cmake = (shards.ROOT / "CMakeLists.txt").read_text(encoding="utf-8")
+        authored = {target for source, target in re.findall(r"configure_file\(\s*(res/[^/\s]+)\s+([^/\s)]+)", cmake)}
+        self.assertEqual({"game.py", "ui.py", "campaign.py", "narrative.py"}, authored)
+        self.assertEqual(authored | {"game_diagnostics.py", "quest_state.py"}, set(shards.ROOT_RESOURCE_FILES))
+
+    def testRuntimeBundlePreservesRootModulesAndExcludesUnrelatedRootArtifacts(self):
+        from tests.test_gameplay_branches_mcp import verifyCopiedSources
+
+        for prefix in ("", "Release"):
+            with self.subTest(layout=prefix or "flat"), tempfile.TemporaryDirectory(
+                prefix="nouraajd-mcp-root-modules-", dir=shards.ROOT
+            ) as temporary:
+                root = Path(temporary)
+                build = root / "build"
+                required = {
+                    **self.runtimeModules(prefix),
+                    (Path(prefix) / "_game.so").as_posix(): b"extension",
+                    "config/monsters.json": b"{}",
+                    "maps/test/map.json": b"{}",
+                    "plugins/example.py": b"plugin",
+                }
+                rejected = ("obsolete_runtime.py", "mcp.py", "test.py", "play.py", "scratch.json", "engine.obj")
+                for name, data in {**required, **dict.fromkeys(rejected, b"not runtime resources")}.items():
+                    path = build / name
+                    path.parent.mkdir(parents=True, exist_ok=True)
+                    path.write_bytes(data)
+                archive_path = root / "runtime.tar.gz"
+                shards.bundleRuntime(build, archive_path, "same-head")
+                extracted = root / "extracted"
+                shards.unpackRuntime(archive_path, extracted, "same-head")
+                manifest = json.loads((extracted / shards.MANIFEST_NAME).read_text())
+                self.assertEqual("same-head", manifest["head"])
+                self.assertEqual(set(required), set(manifest["files"]))
+                for name, data in required.items():
+                    self.assertEqual(data, (extracted / name).read_bytes())
+                    self.assertEqual(hashlib.sha256(data).hexdigest(), manifest["files"][name])
+                for name in rejected:
+                    self.assertFalse((extracted / name).exists(), name)
+                verifyCopiedSources(
+                    str(extracted),
+                    prefix or None,
+                    tuple("res/" + name for name in ("game.py", "ui.py", "campaign.py", "narrative.py")),
+                )
+
+    def testRuntimeBundleRejectsMissingRequiredModulesBeforeCreatingArchive(self):
+        for prefix in ("", "Release"):
+            for missing in ("narrative.py", "game_diagnostics.py", "quest_state.py"):
+                with self.subTest(layout=prefix or "flat", missing=missing), tempfile.TemporaryDirectory(
+                    prefix="nouraajd-mcp-incomplete-runtime-", dir=shards.ROOT
+                ) as temporary:
+                    root = Path(temporary)
+                    build = root / "build"
+                    files = {
+                        **self.runtimeModules(prefix),
+                        (Path(prefix) / "_game.so").as_posix(): b"extension",
+                        "config/monsters.json": b"{}",
+                        "maps/test/map.json": b"{}",
+                        "plugins/example.py": b"plugin",
+                    }
+                    del files[(Path(prefix) / missing).as_posix()]
+                    for name, data in files.items():
+                        path = build / name
+                        path.parent.mkdir(parents=True, exist_ok=True)
+                        path.write_bytes(data)
+                    archive_path = root / "runtime.tar.gz"
+                    with self.assertRaisesRegex(ValueError, "Required copied runtime modules.*" + re.escape(missing)):
+                        shards.bundleRuntime(build, archive_path, "same-head")
+                    self.assertFalse(archive_path.exists())
 
     def testRuntimeExtractionRejectsTraversalAndLinks(self):
         with tempfile.TemporaryDirectory(prefix="nouraajd-mcp-archive-", dir=shards.ROOT) as temporary:
@@ -150,6 +236,7 @@ class McpBranchShardsTest(unittest.TestCase):
                 "config/monsters.json": b"{}",
                 "maps/test/map.json": b"{}",
             }
+            files.update(self.runtimeModules())
             for name, data in files.items():
                 destination = installed / name
                 destination.parent.mkdir(parents=True, exist_ok=True)
