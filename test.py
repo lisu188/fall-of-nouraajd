@@ -138,6 +138,7 @@ FAST_TEST_PREFIXES = (
     "GameplayStartingSaveTest.",
     "GameplayCampaignRouteTest.",
     "GameplayCastleTownRestTest.",
+    "GameplayVictorSettlementTest.",
     "GameplayRouteDialogTest.",
     "GameplayRouteServicesTest.",
     "GameplayCraftingRoutesTest.",
@@ -25815,6 +25816,7 @@ class TestRunnerSuiteTest(unittest.TestCase):
             GameplayPotionTraceContractTest,
             GameplayNouraajdHuntPreparationTest,
             GameplayCastleTownRestTest,
+            GameplayVictorSettlementTest,
         ):
             methods = unittest.defaultTestLoader.getTestCaseNames(test_class)
             self.assertTrue(methods)
@@ -26405,6 +26407,7 @@ if SOURCE_UI_TESTS_AVAILABLE:
     from tests.test_gameplay_routes_caves import GameplayCaveObservationTest as _GameplayCaveObservationTest
     from tests.test_gameplay_routes_campaigns import GameplayCampaignRouteTest as _GameplayCampaignRouteTest
     from tests.test_gameplay_castle_town_rest import GameplayCastleTownRestTest as _GameplayCastleTownRestTest
+    from tests.test_gameplay_victor_settlement import GameplayVictorSettlementTest as _GameplayVictorSettlementTest
     from tests.test_gameplay_route_dialogs import GameplayRouteDialogTest as _GameplayRouteDialogTest
     from tests.test_gameplay_routes_ninemarches import NineMarchesRecoveryTest as _NineMarchesRecoveryTest
     from tests.test_gameplay_branches_mcp import GameplayBranchMcpTest as _GameplayBranchMcpTest
@@ -26464,6 +26467,9 @@ if SOURCE_UI_TESTS_AVAILABLE:
         pass
 
     class GameplayRouteServicesTest(_GameplayRouteServicesTest):
+        pass
+
+    class GameplayVictorSettlementTest(_GameplayVictorSettlementTest):
         pass
 
     class GameplayCastleTownRestTest(_GameplayCastleTownRestTest):
@@ -26630,7 +26636,7 @@ if SOURCE_UI_TESTS_AVAILABLE:
     del _GameplayNouraajdHuntPreparationTest
     del _GameplayPotionConsumptionTest, _GameplayRecipeGoldRoutesTest, _GameplayCallbackMarketRoutesTest
     del _GameplayStartingSaveTest, _GameplayCampaignRouteTest, _GameplayRouteDialogTest
-    del _GameplayCastleTownRestTest
+    del _GameplayCastleTownRestTest, _GameplayVictorSettlementTest
     del _NineMarchesRecoveryTest
     del _McpTestSeedTest, _McpBranchShardsTest, _McpBranchWorkflowTest
     del _McpTestSeedRuntimeTest, _McpEquipmentContractTest, _McpEquipmentRuntimeTest
@@ -28012,7 +28018,7 @@ class McpServerTest(unittest.TestCase):
             self._write_mcp_walkthrough_log(map_name, log)
         return success, log
 
-    def _start_stdio_mcp_process(self, map_name=None, *, trace_name=None, native_log_file=None):
+    def _start_stdio_mcp_process(self, map_name=None, *, trace_name=None, native_log_file=None, test_seed=None):
         script = REPO_ROOT / "mcp.py"
         self.assertTrue(script.exists(), "MCP entry point is missing")
         trace_path = None
@@ -28041,6 +28047,8 @@ class McpServerTest(unittest.TestCase):
             command.extend(["--native-log-file", str(native_log_file)])
         if build_config:
             command.extend(["--build-config", build_config])
+        if test_seed is not None:
+            command.extend(["--test-seed", str(test_seed)])
         proc = self._start_stdio_process(command, env=env, map_name=map_name)
         proc._playtest_trace_path = trace_path
         proc._native_log_file = native_log_file

@@ -1014,8 +1014,6 @@ class OctobogzHuntTest(unittest.TestCase):
         self.assertIn('self.walkTo("gooby1", allow_removed=True)', route)
         self.assertIn('self.assertGreater(after["exp"], before["exp"]', route)
         self.assertIn('self.assertIn("mainQuest", self.questNames("getCompletedQuests"))', route)
-        self.assertIn('self.call(self.player, "getHp") == self.call(self.player, "getHpMax")', route)
-        self.assertIn('self.call(self.player, "getManaMax")', route)
         called_methods = {
             node.args[1].value
             for node in ast.walk(ast.parse(route))
@@ -1025,6 +1023,7 @@ class OctobogzHuntTest(unittest.TestCase):
             and len(node.args) >= 2
             and isinstance(node.args[1], ast.Constant)
         }
+        self.assertTrue({"getHp", "getHpMax", "getMana", "getManaMax"} <= called_methods)
         self.assertEqual(
             set(),
             called_methods

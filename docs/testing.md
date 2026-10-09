@@ -143,7 +143,7 @@ coverage. Structural audits account for dialog actions/conditions, registered ca
 explicit defensive contracts. Unreachable authored content remains a reported obligation, rather than becoming a
 passing fixture-only route.
 
-The current catalog declares 774 branches across 80 cases and 380 case/class executions, with 36 unresolved
+The current catalog declares 774 branches across 83 cases and 395 case/class executions, with 34 unresolved
 gameplay obligations. Thirteen are disconnected authored Castle defenders. Another obligation is
 `usurpergate.throne.premature`, required in all four Warden campaign/standalone routes for all five classes:
 enter the actual throne while the Usurper remains alive and verify no reward or quest/campaign progress.
@@ -161,7 +161,7 @@ contract, backed by its focused cleanup test.
 
 The shared coverage floor includes 103 named requirements, including 45 applicable recipe-specific outcomes.
 A locked outcome applies only to a recipe with an authored unlock flag, and a failure outcome applies only
-below 100 percent success chance. The remaining 22 pending shared requirements are recipe outcomes.
+below 100 percent success chance. The remaining 20 pending shared requirements are recipe outcomes.
 Connector publication now has source-ordered creation and later-turn
 oracles. Passive cave observers use existing route turns to prove a new matching clone's native placement,
 an exact one-monster decrement, and two later exhausted turns; they add no waiting loop and stop after
@@ -180,7 +180,16 @@ stayed unchanged. Rejuvenation, NPC consumption, absent records and full-resourc
 branches. Fixed routes obtain finite stock before remaining fights, funded by actual quest gifts, collected
 weapons or first-cave loot. Nine Marches consumes at observed postcombat deficits before its normal road
 recovery. A final assertion fails if gameplay never produces a qualifying use; implementation does not establish
-native acceptance.
+native acceptance. An expired effect may lower the untouched resource's derived maximum without clamping its
+stored value; the potion oracle still requires that resource to remain exactly unchanged and the restored
+resource to have a real deficit and receive the exact capped amount.
+
+The missing-wand Siege refusal has its own fresh standalone case for every class. It consumes actual wands
+through successful seals, then requires an enabled, unsealed breach at the player's actual coordinates before
+checking refusal and unchanged state. A campaign's carried or newly looted wands cannot stand in for that
+prerequisite. Nouraajd's portal-scroll and greater-life insufficient-gold routes plan from observed finite loot
+quotes and original market identities before any sale, retain the exact ingredients, and require the ordinary
+unlock and crafting refusal. Unsatisfiable quotes fail without retrying startup or recreating stock.
 
 ```bash
 python3 test.py --suite mcp-branches --branch-class Wayfarer
@@ -205,8 +214,14 @@ Navigation target actions retain known coordinate triples after temporary MCP co
 
 The native driver uses controller targets, adjacent movement, actual map turns, class combat controllers, owned
 consumables, finite stock, and real payments/ingredients. It rejects fixture mutations, unexpected defeat,
-unauthored relocation, stalled routes, and exhausted action/turn budgets. Save/reload checks preserve inventory,
-equipment, quests, journal text, campaign state, and player attributes; map transitions preserve player identity.
+unauthored relocation, stalled routes, and exhausted action/turn budgets. Adjacent steps use native controller
+targets and map turns, and step counters count actual arrivals. Moving NPC approaches follow their current
+cells; hostile pursuits retain their committed path until arrival or interruption. The actual native trace writer
+must remain healthy before combat receipts are trusted. Validated victories are retained in a bounded cache so
+later recovery turns do not erase the evidence a secondary observer still needs. Victor's completed quest is
+evaluated through the native player API after its actual rescue callback, without an extra movement turn.
+Save/reload checks preserve inventory, equipment, quests, journal text, campaign state, and player attributes;
+map transitions preserve player identity.
 
 Castle defender visits select the nearest reachable remaining authored position from the current player coordinate,
 using the same directed connectors and reserved final objective as the source route planner. Every defender still

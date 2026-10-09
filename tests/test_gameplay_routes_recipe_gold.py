@@ -19,6 +19,258 @@ ROOT = Path(__file__).resolve().parents[1]
 
 
 class GameplayRecipeGoldRoutesTest(unittest.TestCase):
+    def greaterPlan(self, loot_quotes, **kwargs):
+        return routes.finiteGreaterLifeGoldPlan(
+            720,
+            loot_quotes,
+            ("life", 800, 640),
+            (("small1", 400, 320), ("small2", 400, 320)),
+            (("small3", 400, 320), ("lesserMana", 400, 320), ("scroll", 200, 160)),
+            ("portal", 200, 160),
+            **kwargs,
+        )
+
+    def testGreaterLifePlanRetainsTheActualVictorPotionAndUsesOnlyFiniteOnceSoldIdentities(self):
+        recipes = crafting.recipeDefinitions()
+        self.assertEqual((20, 100), (recipes["brew_life_potion"]["gold"], recipes["brew_life_potion"]["successChance"]))
+        self.assertEqual(45, recipes["blend_greater_life_potion"]["gold"])
+        self.assertEqual([{"item": "LifePotion", "count": 2}], recipes["blend_greater_life_potion"]["inputs"])
+        for quotes in ((("actual-loot", 960),), (("actual-loot", 1280),), (("a", 640), ("b", 640))):
+            with self.subTest(quotes=quotes):
+                plan = self.greaterPlan(quotes)
+                self.assertIsNotNone(plan)
+                self.assertEqual(0, plan["portalMode"], "Prefer to preserve the collected entry scroll")
+                self.assertEqual((("purchase", "life", 800),), plan["callbackActions"])
+                self.assertEqual(20, plan["remaining"])
+                self.assertEqual(720 + sum(dict(quotes)[identity] for identity in plan["loot"]), plan["expense"] + 20)
+                actions = plan["callbackActions"] + plan["actions"]
+                for action in ("purchase", "sale"):
+                    identities = [identity for operation, identity, _price in actions if operation == action]
+                    self.assertEqual(len(identities), len(set(identities)), "An original finite identity cannot repeat")
+                self.assertNotIn("life", [identity for action, identity, _ in actions if action == "sale"])
+                self.assertNotIn("small1", [identity for action, identity, _ in actions if action == "sale"])
+                self.assertNotIn("small2", [identity for action, identity, _ in actions if action == "sale"])
+                if any(identity == "small3" for _, identity, _ in actions):
+                    self.assertIn(
+                        ("sale", "small3", 320), actions, "A third lesser cannot remain for predicate removal"
+                    )
+
+    def testGreaterLifePlanIncludesRequiredExtraReagentSalesOrRefusesBeforeAnyTransaction(self):
+        plan = self.greaterPlan((("actual-loot", 960),), required_sales=(("already-earned-lesser", 320),))
+        self.assertIsNotNone(plan)
+        self.assertIn("already-earned-lesser", plan["loot"])
+        for quotes in ((), (("too-small", 640),), (("too-large", 5000),)):
+            with self.subTest(quotes=quotes):
+                self.assertIsNone(self.greaterPlan(quotes))
+        for quotes, required in (
+            ((("life", 1280),), ()),
+            ((("same", 640), ("same", 640)), ()),
+            ((("a", True),), ()),
+            ((("a", 5001),), ()),
+            ((("a", 1280),), (("a", 320),)),
+            ((("a", 1280),), (("extra", 0),)),
+            (tuple((str(index), 160) for index in range(129)), ()),
+        ):
+            with self.subTest(quotes=quotes, required=required), self.assertRaises(ValueError):
+                self.greaterPlan(quotes, required_sales=required)
+
+    def greaterDriver(self, *, ingredient_lost=False, extra_lesser=False, **kwargs):
+        driver, state, owned, stock, transactions, order = self.nourDriver(portal_refusal=True, **kwargs)
+        fixture = state["fixture"]
+        native_player, game, types = fixture.player, fixture.game, fixture.types
+        removed, attempts = [], []
+
+        def item(identity):
+            return SimpleNamespace(getName=lambda: identity, getTypeId=lambda: types[identity])
+
+        def addItem(value):
+            if isinstance(value, str):
+                identity = value
+                types[identity] = value
+            else:
+                identity = value.getName()
+            owned.add(identity)
+
+        def removeItem(predicate, quest):
+            self.assertIs(quest, True)
+            match = next(identity for identity in sorted(owned) if predicate(item(identity)))
+            owned.remove(match)
+            removed.append(match)
+
+        native_player.addItem = addItem
+        native_player.removeItem = removeItem
+        native_player.setNumericProperty = lambda key, value: (
+            state.update(gold=value) if key == "gold" else self.fail(key)
+        )
+        native_player.hasItem = lambda predicate: any(predicate(item(identity)) for identity in owned)
+
+        def createObject(game_instance, type_id):
+            self.assertIs(game_instance, game)
+            self.assertEqual("LifePotion", type_id)
+            identity = "crafted-life"
+            self.assertNotIn(identity, types, "The guaranteed recipe must run once")
+            types[identity] = type_id
+            return item(identity)
+
+        game.getObjectHandler = lambda: SimpleNamespace(createObject=createObject)
+        quest_system = SimpleNamespace(
+            mark_relic_obtained=Mock(),
+            mark_relic_returned=Mock(),
+            is_cave_purged=lambda: False,
+        )
+        source = "res/maps/nouraajd/script.py"
+        obtain = authoredFunction(
+            source, "trigger", class_id="CatacombsTrigger", _quest_system_from=lambda obj: quest_system
+        )
+        returned = authoredFunction(
+            source, "return_relic", class_id="BerenDialog", _quest_system_from=lambda obj: quest_system
+        )
+
+        def relic(driver):
+            order.append("actual-catacombs-relic")
+            obtain(
+                SimpleNamespace(getGame=lambda: game), SimpleNamespace(getStringProperty=lambda key: "relic"), object()
+            )
+            self.assertIn("holyRelic", owned)
+            self.assertNotIn("CAN_BREW_GREATER_POTIONS", state["flags"])
+            if extra_lesser:
+                # An observed loot variation must be sold once before buying the exact original pair.
+                types["earned-lesser"] = "LesserLifePotion"
+                owned.add("earned-lesser")
+
+        def handIn(driver):
+            order.append("actual-relic-return")
+            returned(
+                SimpleNamespace(
+                    getGame=lambda: game, can_return_relic=lambda: "holyRelic" in owned, _ensure_quest=Mock()
+                )
+            )
+            self.assertNotIn("holyRelic", owned)
+            self.assertTrue(state["flags"]["CAN_BREW_GREATER_POTIONS"])
+
+        def station(driver, name, *, navigate=None):
+            self.assertEqual("alchemyTable1", name)
+            if ingredient_lost and "crafted-life" in owned:
+                owned.remove("life")
+            return tuple(
+                {
+                    "id": recipe_id,
+                    "enabled": (
+                        all(native_player.countItems(entry["item"]) >= entry["count"] for entry in recipe["inputs"])
+                        and state["gold"] >= recipe["gold"]
+                        and (not recipe.get("unlockFlag") or state["flags"].get(recipe["unlockFlag"], False))
+                    ),
+                }
+                for recipe_id, recipe in crafting.recipeDefinitions().items()
+                if recipe["station"] == "alchemyTable"
+            )
+
+        def engine(name, game_handle, station, recipe_id):
+            self.assertEqual("craftRecipe", name)
+            self.assertIn(recipe_id, {"brew_life_potion", "blend_greater_life_potion"})
+            recipe = crafting.recipeDefinitions()[recipe_id]
+            namespace = fixture.namespace
+            actual = {
+                "inputs": namespace["_normalize_item_entries"](recipe["inputs"]),
+                "outputs": namespace["_normalize_item_entries"]([recipe["output"]]),
+                "gold": recipe["gold"],
+                "success_chance": recipe.get("successChance", 100),
+            }
+            result = namespace["apply_recipe"](game, native_player, actual)
+            attempts.append((recipe_id, result))
+            return result
+
+        driver.engine = Mock(side_effect=engine)
+        for target, name, function in (
+            (routes, "relic", relic),
+            (routes, "handInRelic", handIn),
+            (crafting, "openStation", station),
+        ):
+            patcher = patch.object(target, name, function)
+            patcher.start()
+            self.addCleanup(patcher.stop)
+        return driver, state, owned, stock, transactions, order, removed, attempts
+
+    def testGreaterLifeRouteExecutesEarnedRelicUnlockGuaranteedBrewAndGoldRefusalForEveryClass(self):
+        for class_id in routes.CASES[0].classes:
+            with self.subTest(class_id=class_id):
+                driver, state, owned, stock, transactions, order, removed, attempts = self.greaterDriver()
+                driver.class_id = class_id
+                routes.nourGreaterLifeGoldRefusal(driver)
+                self.assertLess(order.index("actual-letter-unlock"), order.index("actual-catacombs-relic"))
+                self.assertLess(order.index("actual-relic-return"), order.index("actual-Victor-callback"))
+                self.assertTrue(state["victorSettled"])
+                self.assertEqual(20, state["gold"])
+                self.assertTrue({"starter", "letter", "skull", "portal", "life", "crafted-life"} <= owned)
+                self.assertEqual(["holyRelic", "small1", "small2"], removed)
+                self.assertEqual(
+                    [
+                        ("brew_life_potion", {"ok": True, "reason": ""}),
+                        ("blend_greater_life_potion", {"ok": False, "reason": "missing:gold"}),
+                    ],
+                    attempts,
+                )
+                self.assertEqual(2, driver.engine.call_count)
+                self.assertTrue(driver.recoveryEnabled)
+                state["fixture"].namespace["randint"].assert_not_called()
+                sales = Counter(identity for action, identity, *_ in transactions if action == "sale")
+                self.assertTrue(all(count == 1 for count in sales.values()))
+                for protected in ("starter", "letter", "skull", "life", "small1", "small2"):
+                    self.assertNotIn(protected, sales)
+
+    def testGreaterLifeRouteSellsOnlyObservedExtraLesserOnceToPreserveExactOriginalRecipeInputs(self):
+        driver, state, owned, stock, transactions, _order, removed, attempts = self.greaterDriver(extra_lesser=True)
+        routes.nourGreaterLifeGoldRefusal(driver)
+        self.assertIn("earned-lesser", stock | {identity for action, identity, *_ in transactions if action == "sale"})
+        self.assertEqual(
+            1, sum(action == "sale" and identity == "earned-lesser" for action, identity, *_ in transactions)
+        )
+        self.assertNotIn("earned-lesser", owned)
+        self.assertEqual(["holyRelic", "small1", "small2"], removed)
+        self.assertEqual(2, len(attempts))
+        state["fixture"].namespace["randint"].assert_not_called()
+
+    def testGreaterLifeRouteRejectsUnsatisfiableFundingAndLostInputsWithoutFalseBranchCredit(self):
+        for kwargs, expected_attempts in (
+            ({"loot_value": 5000}, 0),
+            ({"callback_invalid": True}, 0),
+            ({"ingredient_lost": True}, 1),
+        ):
+            with self.subTest(kwargs=kwargs):
+                driver, state, owned, _stock, transactions, _order, _removed, attempts = self.greaterDriver(**kwargs)
+                with self.assertRaises(AssertionError):
+                    routes.nourGreaterLifeGoldRefusal(driver)
+                self.assertEqual(expected_attempts, len(attempts))
+                if expected_attempts == 0:
+                    self.assertEqual([], transactions, "A failed precomputed plan cannot greedily sell then retry")
+                    self.assertTrue({"starter", "letter", "skull", "portal", "earned"} <= owned)
+                self.assertFalse(any(call.args[0].endswith("insufficientGold") for call in driver.check.call_args_list))
+                self.assertTrue(driver.recoveryEnabled)
+
+    def testGreaterLifeCaseRegistersAllFiveClassesAndItsPreviouslyPendingGoldOutcome(self):
+        from tests import gameplay_branch_catalog as catalog
+
+        case = next(value for value in routes.CASES if value.id == "nouraajd_recipe_gold_greater_life")
+        self.assertEqual(("Warrior", "Sorcerer", "Assasin", "Inquisitor", "Wayfarer"), case.classes)
+        self.assertEqual(("nouraajd",), case.maps)
+        self.assertEqual(("humanRace", "fallOfNouraajd"), (case.race, case.campaign))
+        self.assertIs(case.run, routes.nourGreaterLifeGoldRefusal)
+        branch = "nouraajd.crafting.blend_greater_life_potion.insufficientGold"
+        self.assertIn(branch, case.branches)
+        self.assertIn("nouraajd.crafting.brew_life_potion.success", case.branches)
+        self.assertIn("res/config/crafting.json", case.sources)
+        self.assertIn("src/object/CMarket.cpp", case.sources)
+        current = (len(catalog.getCases()), len(catalog.selectedTestNames()), len(catalog.pendingGameplayObligations()))
+        self.assertNotIn(branch, catalog.pendingGameplayObligations())
+        with patch.object(routes, "CASES", tuple(value for value in routes.CASES if value.id != case.id)):
+            previous = (
+                len(catalog.getCases()),
+                len(catalog.selectedTestNames()),
+                len(catalog.pendingGameplayObligations()),
+            )
+            self.assertIn(branch, catalog.pendingGameplayObligations())
+        self.assertEqual((previous[0] + 1, previous[1] + 5, previous[2] - 1), current)
+
     def portalPlan(self, loot_quotes):
         return routes.finitePortalGoldPlan(
             720,
@@ -254,6 +506,10 @@ class GameplayRecipeGoldRoutesTest(unittest.TestCase):
                 return callback_market
             if method == "getGuiHandler":
                 return {"__handle__": "handler"}
+            if method == "checkQuests":
+                self.assertEqual("good_end", state["victor"], "Quest evaluation must follow the real rescue callback")
+                state["victorSettled"] = True
+                return None
             if method == "sellItem":
                 selected = args[1]["__handle__"]
                 target_stock = callback_stock if handle == callback_market else stock
@@ -346,6 +602,8 @@ class GameplayRecipeGoldRoutesTest(unittest.TestCase):
 
         def actualLetter(driver):
             order.append("actual-letter-unlock")
+            original_add = getattr(native_player, "addItem", None)
+            original_has = getattr(native_player, "hasItem", None)
             issued = authoredFunction(
                 source,
                 "give_letter",
@@ -380,6 +638,8 @@ class GameplayRecipeGoldRoutesTest(unittest.TestCase):
                 )
             )
             native_player.removeItem = original_remove
+            native_player.addItem = original_add
+            native_player.hasItem = original_has
             self.assertNotIn("sealedLetter", owned)
             self.assertTrue(state["flags"].get("CAN_CRAFT_SCROLLS"))
 
@@ -406,7 +666,7 @@ class GameplayRecipeGoldRoutesTest(unittest.TestCase):
             call=call,
             gold=lambda: state["gold"],
             hunt=hunt,
-            questNames=lambda completed=False: ["mainQuest", "victorQuest"],
+            questNames=lambda completed=False: ["mainQuest"] + (["victorQuest"] if state.get("victorSettled") else []),
             coords=lambda: state["coords"],
             object=lambda name, required=True: {"__handle__": name},
             record=Mock(),
@@ -444,6 +704,9 @@ class GameplayRecipeGoldRoutesTest(unittest.TestCase):
                 patcher = patch.object(routes, name, function)
                 patcher.start()
                 self.addCleanup(patcher.stop)
+        state["fixture"] = SimpleNamespace(
+            types=types, player=native_player, game=game, world=world, equipped=equipped, namespace=namespace
+        )
         return driver, state, owned, stock, transactions, order
 
     def testNourGoldRefusalUsesActualHumanAidGoobyAndVictorPayoutsThenOneFiniteReagentBuyback(self):

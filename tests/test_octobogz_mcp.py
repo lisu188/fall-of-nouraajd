@@ -245,15 +245,28 @@ class OctobogzMcpWalkthroughTest(unittest.TestCase):
     def setUp(self):
         import test as harness
         from types import SimpleNamespace
+        from tests.gameplay_branch_driver import caseSeed
 
         self.native_log_path = harness.TEST_OUTPUT_DIR / f"mcp-octobogz-native-{uuid.uuid4().hex}.log"
+        self.test_seed = caseSeed("canonical_octobogz_walkthrough", self._testMethodName)
+        startup_evidence = {
+            "case": "canonical_octobogz_walkthrough",
+            "method": self._testMethodName,
+            "seed": self.test_seed,
+        }
+        self.native_seed_path = self.native_log_path.with_suffix(".startup.json")
+        self.native_seed_path.parent.mkdir(parents=True, exist_ok=True)
+        self.native_seed_path.write_text(json.dumps(startup_evidence) + "\n", encoding="utf-8")
+        print("MCP hunt deterministic startup", {**startup_evidence, "path": str(self.native_seed_path)}, flush=True)
         startup = harness.McpServerTest._start_stdio_mcp_process
 
         def startWithNativeLog(instance, *args, **kwargs):
             kwargs.setdefault("map_name", "nouraajd")
             kwargs.setdefault("trace_name", "octobogz-" + uuid.uuid4().hex)
             with patch.dict(os.environ, GAME_PLAYTEST_TRACE_RETAIN_RECENT="1"):
-                return startup(instance, *args, native_log_file=self.native_log_path, **kwargs)
+                return startup(
+                    instance, *args, native_log_file=self.native_log_path, test_seed=self.test_seed, **kwargs
+                )
 
         with patch.object(harness.McpServerTest, "_start_stdio_mcp_process", startWithNativeLog):
             dialogue_mcp.DialogueMcpWalkthroughTest.setUp(self)
@@ -718,7 +731,16 @@ class OctobogzMcpWalkthroughTest(unittest.TestCase):
         for destination in (first, second):
             tile = self.call(self.game_map, "getTile", *destination)
             self.assertEqual("RoadTile", self.call(tile, "getTypeId"))
+
+        def livingResources():
+            hp, mana = self.call(self.player, "getHp"), self.call(self.player, "getMana")
+            self.assertGreater(hp, 0, "Road recovery cannot revive a defeated player")
+            self.assertGreaterEqual(mana, 0, "Road recovery cannot repair invalid negative mana")
+            return hp, mana
+
+        livingResources()
         self.walkCoords(first)
+        livingResources()
         self.snapshot(stage + " arrival")
         if actors:
             self.observeActors(stage + " arrival", actors)
@@ -727,9 +749,9 @@ class OctobogzMcpWalkthroughTest(unittest.TestCase):
             tile = self.call(self.game_map, "getTile", *destination)
             self.assertEqual("RoadTile", self.call(tile, "getTypeId"))
             self.step(destination)
-            if self.call(self.player, "getHp") == self.call(self.player, "getHpMax") and self.call(
-                self.player, "getMana"
-            ) == self.call(self.player, "getManaMax"):
+            hp, mana = livingResources()
+            # Expired stat bonuses may leave a valid excess that native restoration preserves.
+            if hp >= self.call(self.player, "getHpMax") and mana >= self.call(self.player, "getManaMax"):
                 self.snapshot(stage + " complete")
                 return
         self.fail(
@@ -1838,6 +1860,117 @@ class OctobogzMcpWalkthroughTest(unittest.TestCase):
 
 
 class OctobogzDiagnosticTest(unittest.TestCase):
+    def roadResourceFixture(self, *, hp=8, hp_max=10, mana=7, mana_max=10, corrupt_after_step=None):
+        from types import SimpleNamespace
+        from unittest.mock import Mock
+
+        from tests.test_gameplay_route_dialogs import authoredFunction
+
+        first, second = (118, 21, 0), (118, 20, 0)
+        state = {
+            "hp": hp,
+            "hpMax": hp_max,
+            "mana": mana,
+            "manaMax": mana_max,
+            "coords": first,
+            "turn": 0,
+            "steps": [],
+        }
+        fixture = OctobogzMcpWalkthroughTest("runTest")
+        fixture.player, fixture.game_map = "player", "map"
+
+        def restore(key, amount):
+            # CCreature heal/addMana preserve an existing excess after a stat bonus expires.
+            if state[key] > state[key + "Max"]:
+                return
+            state[key] = min(state[key + "Max"], state[key] + amount)
+
+        creature = SimpleNamespace(heal=lambda amount: restore("hp", amount))
+        road_step = authoredFunction("res/plugins/tile.py", "onStep", class_id="RoadTile")
+
+        def call(handle, method, *args):
+            if handle == "map" and method == "getTile":
+                self.assertIn(args, (first, second))
+                return "road"
+            if handle == "road" and method == "getTypeId":
+                return "RoadTile"
+            if handle == "player":
+                key = {"getHp": "hp", "getHpMax": "hpMax", "getMana": "mana", "getManaMax": "manaMax"}.get(method)
+                if key:
+                    return state[key]
+            self.fail((handle, method, args))
+
+        def step(destination):
+            self.assertEqual(1, sum(abs(a - b) for a, b in zip(destination, state["coords"])))
+            restore("mana", 1)
+            road_step(None, creature)
+            state["coords"] = destination
+            state["turn"] += 1
+            state["steps"].append(destination)
+            if corrupt_after_step:
+                state.update(corrupt_after_step)
+
+        fixture.call = call
+        fixture.step = step
+        fixture.walkCoords = lambda destination: self.assertEqual(first, destination)
+        fixture.snapshot = Mock(
+            side_effect=lambda label: {key: value for key, value in state.items() if key != "steps"}
+        )
+        fixture.observeActors = Mock()
+        return fixture, state, first, second
+
+    def testRoadRecoveryRetainsExpiredBonusExcessAndRestoresOnlyTheRemainingDeficit(self):
+        for resources, expected_steps in (({"mana": 14}, 2), ({"hp": 12, "mana": 8}, 2), ({}, 3)):
+            with self.subTest(resources=resources):
+                fixture, state, first, second = self.roadResourceFixture(**resources)
+                fixture.recoverOnRoadPair(first, second, "actual resource recovery", {"brood": "live"})
+                self.assertEqual(expected_steps, state["turn"])
+                self.assertEqual(expected_steps, len(state["steps"]))
+                self.assertEqual(max(resources.get("hp", 8), 10), state["hp"])
+                self.assertEqual(max(resources.get("mana", 7), 10), state["mana"])
+                fixture.observeActors.assert_called_once_with("actual resource recovery arrival", {"brood": "live"})
+                self.assertEqual("actual resource recovery complete", fixture.snapshot.call_args.args[0])
+
+    def testRoadRecoveryRejectsDefeatAndNegativeManaBeforeMovementAndAfterAnActualStep(self):
+        for invalid in ({"hp": 0}, {"hp": -1}, {"mana": -1}):
+            with self.subTest(invalid=invalid, stage="before movement"):
+                fixture, state, first, second = self.roadResourceFixture(**invalid)
+                with self.assertRaises(AssertionError):
+                    fixture.recoverOnRoadPair(first, second, "invalid initial resources")
+                self.assertEqual([], state["steps"])
+                self.assertEqual(0, state["turn"])
+            with self.subTest(invalid=invalid, stage="after native step"):
+                fixture, state, first, second = self.roadResourceFixture(corrupt_after_step=invalid)
+                with self.assertRaises(AssertionError):
+                    fixture.recoverOnRoadPair(first, second, "invalid resulting resources")
+                self.assertEqual([second], state["steps"])
+                self.assertEqual(1, state["turn"])
+
+    def testRoadRecoveryKeepsIts128ActualStepLimitWhenARealDeficitRemains(self):
+        fixture, state, first, second = self.roadResourceFixture(hp=1, hp_max=200)
+        with self.assertRaisesRegex(AssertionError, "did not restore the ordinary player"):
+            fixture.recoverOnRoadPair(first, second, "bounded actual recovery")
+        self.assertEqual(128, state["turn"])
+        self.assertEqual(128, len(state["steps"]))
+        self.assertEqual(129, state["hp"])
+
+    def testNativeRestorationPreservesExistingExcessWhenAnEffectBonusExpires(self):
+        source = (Path(__file__).resolve().parents[1] / "src/object/CCreature.cpp").read_text(encoding="utf-8")
+        for method, next_method, resource in (
+            ("heal(int i)", "healProc", "hp"),
+            ("addMana(int i)", "addManaProc", "mana"),
+        ):
+            with self.subTest(method=method):
+                body = source[
+                    source.index("void CCreature::" + method) : source.index("void CCreature::" + next_method)
+                ]
+                self.assertIn("if (" + resource + " > " + resource + "Max)", body)
+                self.assertLess(body.index("return;"), body.index(resource + " += i;"))
+        removal = source[source.index("void CCreature::removeEffect(") : source.index("void CCreature::useItem(")]
+        self.assertIn("effects.erase(effectIt);", removal)
+        for clamp in ("setHp(", "setMana(", "std::min(hp", "std::min(mana"):
+            self.assertNotIn(clamp, removal)
+
     def testLegacyStartupOptsIntoBoundedRecentTraceBeforeTheActualServerEnvironmentIsCopied(self):
         from types import SimpleNamespace
 
@@ -1877,6 +2010,54 @@ class OctobogzDiagnosticTest(unittest.TestCase):
                 native_harness = SimpleNamespace(assertTrue=self.assertTrue, _start_stdio_process=start)
                 harness.McpServerTest._start_stdio_mcp_process(native_harness, "nouraajd", trace_name="ordinary")
                 self.assertEqual("0", startups[1][1]["env"]["GAME_PLAYTEST_TRACE_RETAIN_RECENT"])
+
+    def testCanonicalStartupRecordsOneStableIdentitySeedBeforeLaunchingTheNativeServer(self):
+        import contextlib
+        import io
+        from types import SimpleNamespace
+
+        import test as harness
+
+        startups = []
+        canonical = "testWarriorAndSorcererFinishThreeRealEncountersWithPartialReloadAndRewardOnce"
+
+        def start(command, **kwargs):
+            seed = int(command[command.index("--test-seed") + 1])
+            evidence = list(Path(temporary).glob("*.startup.json"))
+            self.assertTrue(evidence, "The seed must be retained before the child process launches")
+            self.assertIn(seed, [json.loads(path.read_text(encoding="utf-8"))["seed"] for path in evidence])
+            startups.append(command)
+            return SimpleNamespace()
+
+        def dialogueSetup(instance):
+            native_harness = SimpleNamespace(assertTrue=self.assertTrue, _start_stdio_process=start)
+            instance.process = harness.McpServerTest._start_stdio_mcp_process(native_harness)
+            instance.harness, instance.session = native_harness, {"proc": instance.process}
+
+        with tempfile.TemporaryDirectory() as temporary:
+            seeds = []
+            for method_name in (canonical, canonical, "runTest"):
+                fixture = OctobogzMcpWalkthroughTest(method_name)
+                output = io.StringIO()
+                with (
+                    contextlib.redirect_stdout(output),
+                    patch.object(harness, "TEST_OUTPUT_DIR", Path(temporary)),
+                    patch.object(dialogue_mcp.DialogueMcpWalkthroughTest, "setUp", dialogueSetup),
+                ):
+                    fixture.setUp()
+                expected = int.from_bytes(
+                    sha256(f"nouraajd:canonical_octobogz_walkthrough:{method_name}".encode()).digest()[:4], "big"
+                )
+                self.assertEqual(expected, fixture.test_seed)
+                self.assertEqual(
+                    {"case": "canonical_octobogz_walkthrough", "method": method_name, "seed": expected},
+                    json.loads(fixture.native_seed_path.read_text(encoding="utf-8")),
+                )
+                self.assertIn(str(expected), output.getvalue())
+                self.assertEqual(1, startups[-1].count("--test-seed"))
+                seeds.append(fixture.test_seed)
+            self.assertEqual(seeds[0], seeds[1], "Random diagnostic filenames must not choose a different seed")
+            self.assertNotEqual(seeds[0], seeds[2], "The stable test method is part of the route identity")
 
     def testLegacyPumpStopsAtTheFirstUnresolvedPlayerCombatAndCannotRetryIntoALaterVictory(self):
         from types import SimpleNamespace
@@ -2463,6 +2644,13 @@ class OctobogzDiagnosticTest(unittest.TestCase):
             self.assertEqual(commands[0][1], commands[1][1])
             self.assertIsNone(default._playtest_trace_path)
             self.assertIsNone(enabled._playtest_trace_path)
+            self.assertNotIn("--test-seed", commands[0][0])
+            self.assertNotIn("--test-seed", commands[1][0])
+            for seed in (0, 0xFFFFFFFF):
+                seeded = namespace[method.name](fixture, native_log_file=path, test_seed=seed)
+                self.assertEqual(path, seeded._native_log_file)
+                self.assertEqual(commands[1][0] + ["--test-seed", str(seed)], commands[-1][0])
+                self.assertEqual(commands[1][1], commands[-1][1])
 
     def testNativeTailBoundsBothReadsAndPrintedBytesAndLines(self):
         with tempfile.TemporaryDirectory() as temporary:

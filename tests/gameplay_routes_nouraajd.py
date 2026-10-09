@@ -639,6 +639,8 @@ def victorRoute(d, approach, direct, saved, start_new=True, ask_girl=True):
         d.check(
             "nouraajd.victor.rescued", d.string("quest_state_victor") == "good_end" and d.flag("VICTOR_REWARD_GRANTED")
         )
+        # Movement combat can finish after this turn's native quest check.
+        d.call(d.player, "checkQuests")
         d.test.assertIn("victorQuest", d.questNames(completed=True))
     else:
         fleeCourtyardUntil(d, 74)
