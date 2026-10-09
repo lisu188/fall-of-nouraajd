@@ -480,7 +480,7 @@ class GameplayPotionConsumptionTest(unittest.TestCase):
     def testNinePotionRouteRetainsQuestFundedOwnedStockForRegionalCombat(self):
         from tests import gameplay_routes_consumables as routes
 
-        player, gift, potion = ({"__handle__": name} for name in ("player", "earned-aegis", "owned-potion"))
+        player, potion = ({"__handle__": name} for name in ("player", "owned-potion"))
         state = {"owned": [], "actions": []}
         driver = SimpleNamespace(
             test=self,
@@ -488,16 +488,9 @@ class GameplayPotionConsumptionTest(unittest.TestCase):
             call=lambda handle, method: list(state["owned"]) if method == "getItems" else "aegisOfHalda",
         )
 
-        def recruit(d, companion):
-            self.assertEqual("halda", companion)
-            state["actions"].append("actual-recruit-gift")
-            state["owned"].append(gift)
-            return "companionKnight", "knightDialog", "aegisOfHalda"
-
-        def stock(d, market, earned, **kwargs):
-            self.assertEqual("gravewatchBarter", market)
-            self.assertEqual({"earned-aegis"}, earned)
-            state["actions"].append("finite-purchase")
+        def stock(d, *, include_mana):
+            self.assertTrue(include_mana)
+            state["actions"].append("shared-finite-earned-preparation")
             state["owned"].append(potion)
 
         def combat(d, *, start_new):
@@ -506,12 +499,8 @@ class GameplayPotionConsumptionTest(unittest.TestCase):
             state["actions"].append("regional-combat-with-owned-potion")
 
         with patch.object(routes, "startMarches", side_effect=lambda d: state["actions"].append("start")), patch.object(
-            routes, "walk", side_effect=lambda d, name: state["actions"].append(name)
-        ), patch.object(routes, "recruit", side_effect=recruit), patch.object(
-            routes, "preparePotionStock", side_effect=stock
-        ), patch.object(
-            routes, "regionalCombat", side_effect=combat
-        ), patch.object(
+            routes, "prepareRegionalSupplies", side_effect=stock
+        ), patch.object(routes, "regionalCombat", side_effect=combat), patch.object(
             routes,
             "requirePotionConsumptions",
             side_effect=lambda d: state["actions"].append("mandatory-native-receipts"),
@@ -520,9 +509,7 @@ class GameplayPotionConsumptionTest(unittest.TestCase):
         self.assertEqual(
             [
                 "start",
-                "learningStone",
-                "actual-recruit-gift",
-                "finite-purchase",
+                "shared-finite-earned-preparation",
                 "regional-combat-with-owned-potion",
                 "mandatory-native-receipts",
             ],

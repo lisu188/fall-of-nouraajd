@@ -3,20 +3,16 @@
 # SPDX-License-Identifier: GPL-3.0-or-later
 """Finite quest-funded potion routes retain actual combat and item-use evidence."""
 
-from functools import partial
-
 from tests.gameplay_branch_types import RouteCase
 from tests.gameplay_routes_maps import clearHostiles
 from tests.gameplay_routes_nouraajd import SOURCES as NOURAAJD_SOURCES, prepareRolf, start, victorRoute
 from tests.gameplay_routes_ninemarches import (
     SOURCES as MARCHES_SOURCES,
-    recruit,
+    prepareRegionalSupplies,
     regionalCombat,
     start as startMarches,
-    walk,
 )
 from tests.gameplay_routes_potions import preparePotionStock, requirePotionConsumptions
-from tests.gameplay_routes_services import ownedIdentities
 
 POTION_SOURCES = (
     "res/plugins/potion.py",
@@ -63,16 +59,7 @@ def nouraajdPotions(d):
 
 def marchesPotions(d):
     startMarches(d)
-    walk(d, "learningStone")
-    before_gift = ownedIdentities(d)
-    _actor, _dialog, gift_type = recruit(d, "halda")
-    gifts = [
-        item
-        for item in d.call(d.player, "getItems")
-        if item["__handle__"] not in before_gift and d.call(item, "getTypeId") == gift_type
-    ]
-    d.test.assertEqual(1, len(gifts), "Only the actual recruited companion's earned gift funds potion stock")
-    preparePotionStock(d, "gravewatchBarter", {gifts[0]["__handle__"]}, navigate=partial(walk, d))
+    prepareRegionalSupplies(d, include_mana=True)
     regionalCombat(d, start_new=False)
     requirePotionConsumptions(d)
 

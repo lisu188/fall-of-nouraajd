@@ -110,6 +110,15 @@ def retreatWithOwnedScroll(d):
         owned - {scrolls[0]["__handle__"]}, {item["__handle__"] for item in d.call(d.player, "getItems")}
     )
     d._marches_retreat_scroll_name = None
+    d._marches_retreat_scroll_receipt = {
+        "item": scrolls[0]["__handle__"],
+        "name": name,
+        "origin": origin,
+        "destination": entry,
+        "map": identity[0],
+        "player": identity[1],
+    }
+    d.record({"naturalOwnedScrollRetreat": d._marches_retreat_scroll_receipt})
     if "ninemarches.scroll.retreat" in d.case.branches:
         d.check("ninemarches.scroll.retreat", True, item=scrolls[0]["__handle__"], origin=origin, destination=entry)
 
@@ -259,12 +268,13 @@ def start(d):
     d._marches_retreat_scroll_name = d.call(collected[0], "getName")
 
 
-def recruit(d, companion, *, item_first=False):
+def recruit(d, companion, *, item_first=False, navigate=None):
     actor, dialog, cache, item, gift = COMPANIONS[companion]
+    navigate = navigate or partial(walk, d)
     if item_first:
-        walk(d, cache)
+        navigate(cache)
         d.test.assertEqual(1, d.count(item))
-    walk(d, actor)
+    navigate(actor)
     d.test.assertTrue(d.condition(dialog, "not_met"))
     # Leaving the authored offer does not silently accept the companion's quest.
     d.select(dialog, "ENTRY", 0)
@@ -276,11 +286,11 @@ def recruit(d, companion, *, item_first=False):
         d.test.assertTrue(d.condition(dialog, "questInProgress"))
         d.select(dialog, "ENTRY", 4)
         d.select(dialog, "REMINDER", 0)
-        walk(d, cache)
+        navigate(cache)
         d.test.assertEqual(1, d.count(item))
         d.revisit(cache)
         d.test.assertEqual(1, d.count(item))
-        walk(d, actor)
+        navigate(actor)
     d.test.assertTrue(d.condition(dialog, "can_recruit"))
     before_rep = d.call(d.player, "getNumericProperty", "reputation")
     before_gift = d.count(gift)
@@ -564,9 +574,131 @@ def finale(d, allies):
     d.check(branch, d.flag("crown_taken") and d.flag("boss_defeated"))
 
 
+def walkPreparationWaypoint(d, target):
+    """Use real adjacent controller steps around the fixed Fields cave, retaining ordinary recovery."""
+    target = tuple(target)
+    identity = (d.game_map["__handle__"], d.player["__handle__"])
+    budget = max(128, 4 * sum(abs(a - b) for a, b in zip(d.coords(), target)) + 128)
+    for _ in range(budget):
+        afterCombat(d)
+        origin = d.coords()
+        if origin == target:
+            return
+        d.test.assertEqual(target[2], origin[2])
+        axis = 0 if origin[0] != target[0] else 1
+        destination = list(origin)
+        destination[axis] += 1 if target[axis] > origin[axis] else -1
+        destination = tuple(destination)
+        d.test.assertTrue(d.canStep(destination), ("Preparation corridor is blocked", origin, destination))
+        d.step(destination)
+        d.test.assertEqual(identity, (d.game_map["__handle__"], d.player["__handle__"]))
+        d.test.assertEqual(destination, d.coords(), "Preparation requires an actual adjacent controller entry")
+    d.test.fail(("Native preparation waypoint budget exhausted", target, d.snapshot()))
+
+
+def prepareRegionalSupplies(d, *, include_mana=False):
+    """Fund finite healing with Halda's actual gift before approaching the first regional encounter."""
+    equipped = d.call(d.player, "getEquipped")
+    scroll_name = getattr(d, "_marches_retreat_scroll_name", None)
+    scroll_identity = None
+    identity = (d.game_map["__handle__"], d.player["__handle__"])
+
+    def assertLoadout():
+        items = d.call(d.player, "getItems")
+        scrolls = [
+            item
+            for item in items
+            if d.call(item, "getName") == scroll_name and d.call(item, "getTypeId") == "TownPortalScroll"
+        ]
+        if not scrolls and scroll_identity is not None:
+            receipt = getattr(d, "_marches_retreat_scroll_receipt", {})
+            d.test.assertEqual(scroll_identity, receipt.get("item"), "Missing original scroll has no validated retreat")
+            d.test.assertEqual(scroll_name, receipt.get("name"))
+            d.test.assertEqual(identity, (receipt.get("map"), receipt.get("player")))
+            d.test.assertEqual(identity, (d.game_map["__handle__"], d.player["__handle__"]))
+            d.test.assertIsNone(d._marches_retreat_scroll_name)
+            d.test.assertNotIn(scroll_identity, {item["__handle__"] for item in items})
+        else:
+            d.test.assertEqual(1, len(scrolls), "Early preparation must preserve the actual collected retreat scroll")
+        if scrolls and scroll_identity is not None:
+            d.test.assertEqual(scroll_identity, scrolls[0]["__handle__"], "Preparation replaced the collected scroll")
+        d.test.assertEqual(equipped, d.call(d.player, "getEquipped"), "Preparation changed the equipped loadout")
+        return scrolls[0]["__handle__"] if scrolls else scroll_identity
+
+    scroll_identity = assertLoadout()
+    walk(d, "learningStone")
+    d.test.assertTrue(d.flag("shrine_used"), "Preparation must actually visit the authored LearningStone")
+    before_gift = {item["__handle__"] for item in d.call(d.player, "getItems")}
+
+    def approach(name):
+        if name == "banditCache":
+            walkPreparationWaypoint(d, (560, 644, 0))
+        elif name == "companionKnight":
+            walkPreparationWaypoint(d, (560, 566, 0))
+        walk(d, name)
+
+    _actor, _dialog, gift_type = recruit(d, "halda", item_first=True, navigate=approach)
+    gifts = [
+        item
+        for item in d.call(d.player, "getItems")
+        if item["__handle__"] not in before_gift and d.call(item, "getTypeId") == gift_type
+    ]
+    d.test.assertEqual(1, len(gifts), "Only the actual recruited companion's earned gift funds potion stock")
+    gift = gifts[0]
+    assertLoadout()
+    origin = d.coords()
+    walkPreparationWaypoint(d, (560, origin[1], origin[2]))
+    walkPreparationWaypoint(d, (560, 652, 0))
+    walk(d, "gravewatchBarter")
+    assertLoadout()
+    market = d.call(d.object("gravewatchBarter"), "getObjectProperty", "market")
+    d.test.assertIsNotNone(market)
+    stock = d.call(market, "getItems")
+    selected = []
+    for item_type in ("LesserLifePotion", "LifePotion", "GreaterLifePotion") + (
+        ("ManaPotion",) if include_mana else ()
+    ):
+        candidates = [item for item in stock if d.call(item, "getTypeId") == item_type]
+        d.test.assertEqual(1, len(candidates), ("Original finite preparation stock is unavailable", item_type))
+        item = candidates[0]
+        price = d.call(market, "getSellCost", item)
+        d.test.assertGreater(price, 0)
+        selected.append((item_type, item, price))
+    owned = {item["__handle__"] for item in d.call(d.player, "getItems")}
+    d.test.assertIn(gift["__handle__"], owned, "The actual earned gift must remain owned before its sale")
+    d.test.assertNotIn(gift["__handle__"], {item["__handle__"] for item in equipped.values() if item})
+    d.test.assertFalse(d.call(gift, "hasTag", "quest"))
+    buyback = d.call(market, "getBuyCost", gift)
+    d.test.assertGreater(buyback, 0)
+    d.test.assertGreaterEqual(d.gold() + buyback, sum(price for _type, _item, price in selected))
+    stock_before = {item["__handle__"] for item in stock}
+    gold_before = d.gold()
+    d.sellAt("gravewatchBarter", gift)
+    d.test.assertEqual(gold_before + buyback, d.gold())
+    d.test.assertEqual(owned - {gift["__handle__"]}, {item["__handle__"] for item in d.call(d.player, "getItems")})
+    d.test.assertEqual(stock_before | {gift["__handle__"]}, {item["__handle__"] for item in d.call(market, "getItems")})
+    purchases = []
+    for item_type, item, price in selected:
+        owned = {entry["__handle__"] for entry in d.call(d.player, "getItems")}
+        stock_before = {entry["__handle__"] for entry in d.call(market, "getItems")}
+        gold_before = d.gold()
+        d.buyAt("gravewatchBarter", item_type)
+        d.test.assertEqual(gold_before - price, d.gold())
+        d.test.assertEqual(
+            owned | {item["__handle__"]}, {entry["__handle__"] for entry in d.call(d.player, "getItems")}
+        )
+        d.test.assertEqual(
+            stock_before - {item["__handle__"]}, {entry["__handle__"] for entry in d.call(market, "getItems")}
+        )
+        purchases.append({"type": item_type, "item": item["__handle__"], "price": price})
+    assertLoadout()
+    d.record({"regionalPreparation": {"gift": gift["__handle__"], "buyback": buyback, "purchases": purchases}})
+
+
 def regionalCombat(d, *, start_new=True):
     if start_new:
         start(d)
+        prepareRegionalSupplies(d)
     document = json.loads((Path(__file__).resolve().parents[1] / "res/maps/ninemarches/map.json").read_text())
     groups = {
         item["type"]: item["name"]

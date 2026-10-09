@@ -491,9 +491,21 @@ class NineMarchesRecoveryTest(unittest.TestCase):
 
     def testRetreatResolvesTheActuallyOwnedIdentityAfterReload(self):
         self.scroll["__handle__"] = "reloaded-earned-scroll"
+        origin = self.state["position"]
         marches.retreatWithOwnedScroll(self.driver)
         self.assertEqual("reloaded-earned-scroll", self.used[0]["__handle__"])
         self.assertEqual([self.other_item], self.items)
+        self.assertEqual(
+            {
+                "item": "reloaded-earned-scroll",
+                "name": "townPortalScroll",
+                "origin": origin,
+                "destination": (500, 662, 0),
+                "map": "map",
+                "player": "player",
+            },
+            self.driver._marches_retreat_scroll_receipt,
+        )
 
     def testActualRecoveryScrollUseCreditsTheDeclaredRetreatWithExactIdentityAndMovement(self):
         branch = "ninemarches.scroll.retreat"
@@ -540,6 +552,7 @@ class NineMarchesRecoveryTest(unittest.TestCase):
                 with self.assertRaises(AssertionError):
                     marches.retreatWithOwnedScroll(self.driver)
                 self.assertNotIn(branch, self.driver.branches, "A failed item-use oracle must never credit retreat")
+                self.assertFalse(hasattr(self.driver, "_marches_retreat_scroll_receipt"))
                 self.driver.call = original
         self.driver.recoverOnAuthoredRoad.assert_not_called()
 
@@ -871,6 +884,290 @@ class NineMarchesRecoveryTest(unittest.TestCase):
     def testServiceRouteRejectsAConsumedOriginalScrollWithoutAnActualRetreatWitness(self):
         with self.assertRaisesRegex(AssertionError, "actual original scroll retreat witness"):
             self.serviceRouteFixture(combat_retreat=True, credited=False)
+
+    def regionalSuppliesFixture(self, *, defect=None, include_mana=False):
+        handles = {
+            name: {"__handle__": name}
+            for name in (
+                "player",
+                "map",
+                "market",
+                "barter",
+                "scroll",
+                "sword",
+                "gift",
+                "lesser",
+                "life",
+                "greater",
+                "mana",
+            )
+        }
+        types = {
+            "scroll": "TownPortalScroll",
+            "gift": "aegisOfHalda",
+            "lesser": "LesserLifePotion",
+            "life": "LifePotion",
+            "greater": "GreaterLifePotion",
+            "mana": "ManaPotion",
+        }
+        prices = {"lesser": 400, "life": 800, "greater": 1600, "mana": 1600}
+        state = {
+            "gold": 0,
+            "flags": {},
+            "position": (502, 660, 0),
+            "owned": [handles["scroll"]],
+            "stock": [handles[name] for name in ("lesser", "life", "greater", "mana")],
+            "equipped": {"0": handles["sword"]},
+            "actions": [],
+        }
+        player = SimpleNamespace(
+            isPlayer=lambda: True,
+            addGold=lambda value: state.update(gold=state["gold"] + value),
+            healProc=Mock(),
+            addItem=lambda item_type: state["owned"].append(handles["gift"]) if defect != "missingGift" else None,
+            checkQuests=Mock(),
+        )
+        game_instance = SimpleNamespace(getGuiHandler=lambda: SimpleNamespace(notify=Mock()))
+        world = SimpleNamespace(
+            getPlayer=lambda: player,
+            getBoolProperty=lambda key: state["flags"].get(key, False),
+            setBoolProperty=lambda key, value: state["flags"].update({key: value}),
+            getGame=lambda: game_instance,
+        )
+        game_instance.getMap = lambda: world
+        stone = authoredFunction("res/maps/ninemarches/script.py", "onEnter", class_id="LearningStone")
+        recruit_action = authoredFunction(
+            "res/maps/ninemarches/script.py",
+            "recruit",
+            class_id="CompanionDialog",
+            adjust_reputation=Mock(),
+            rewardSnapshot=lambda player: {},
+            showRewardReceipt=Mock(),
+        )
+
+        def call(handle, method, *args):
+            name = handle["__handle__"]
+            if method == "getItems":
+                return list(state["owned"] if name == "player" else state["stock"])
+            if method == "getEquipped":
+                return dict(state["equipped"])
+            if method == "getTypeId":
+                return types.get(name, name)
+            if method == "getName":
+                return "collected-scroll" if name == "scroll" else name
+            if method == "getObjectProperty":
+                return handles["market"]
+            if method == "getSellCost":
+                return prices[args[0]["__handle__"]]
+            if method == "getBuyCost":
+                return 1 if defect == "underfunded" else 5000
+            if method == "hasTag":
+                return False
+            self.fail((handle, method, args))
+
+        def walk(driver, name):
+            state["actions"].append(("walk", name))
+            state["position"] = {
+                "learningStone": (520, 644, 0),
+                "banditCache": (560, 600, 0),
+                "companionKnight": (520, 566, 0),
+                "gravewatchBarter": (514, 652, 0),
+            }[name]
+            if name == "learningStone":
+                stone(SimpleNamespace(getMap=lambda: world), SimpleNamespace(getCause=lambda: player))
+
+        def recruit(driver, companion, *, item_first, navigate):
+            self.assertEqual("halda", companion)
+            self.assertTrue(item_first)
+            navigate("banditCache")
+            navigate("companionKnight")
+            state["actions"].append(("actual-recruit",))
+            recruit_action(
+                SimpleNamespace(
+                    getGame=lambda: game_instance,
+                    can_recruit=lambda: True,
+                    JOINED_FLAG="halda_joined",
+                    BOON="aegisOfHalda",
+                )
+            )
+            if defect == "wrongGift":
+                types["gift"] = "Sword"
+            if defect == "lostScroll":
+                state["owned"].remove(handles["scroll"])
+            if defect in {"validatedRetreat", "forgedRetreat"}:
+                state["owned"].remove(handles["scroll"])
+                driver._marches_retreat_scroll_name = None
+                driver._marches_retreat_scroll_receipt = {
+                    "item": "scroll" if defect == "validatedRetreat" else "another-scroll",
+                    "name": "collected-scroll",
+                    "map": "map",
+                    "player": "player",
+                }
+            if defect == "changedEquipment":
+                state["equipped"].clear()
+            return "companionKnight", "knightDialog", "aegisOfHalda"
+
+        def waypoint(driver, target):
+            state["actions"].append(("waypoint", target))
+            state["position"] = target
+
+        def sell(name, item):
+            self.assertEqual("gravewatchBarter", name)
+            self.assertIs(handles["gift"], item)
+            self.assertIn(item, state["owned"])
+            state["actions"].append(("sell-gift",))
+            state["owned"].remove(item)
+            state["stock"].append(item)
+            state["gold"] += 5000 if defect != "wrongBuyback" else 4999
+
+        def buy(name, item_type):
+            self.assertEqual("gravewatchBarter", name)
+            item = next(item for item in state["stock"] if types[item["__handle__"]] == item_type)
+            self.assertGreaterEqual(state["gold"], prices[item["__handle__"]])
+            state["actions"].append(("buy", item_type))
+            if defect == "refusedPurchase":
+                return
+            state["stock"].remove(item)
+            state["owned"].append(item)
+            state["gold"] -= prices[item["__handle__"]] - int(defect == "wrongPayment")
+            if defect == "extraItemRemoved" and handles["scroll"] in state["owned"]:
+                state["owned"].remove(handles["scroll"])
+            if defect == "stockNotRemoved":
+                state["stock"].append(item)
+
+        driver = SimpleNamespace(
+            test=self,
+            player=handles["player"],
+            game_map=handles["map"],
+            _marches_retreat_scroll_name="collected-scroll",
+            call=call,
+            coords=lambda: state["position"],
+            flag=lambda key: state["flags"].get(key, False),
+            object=lambda name: handles["barter"],
+            sellAt=sell,
+            buyAt=buy,
+            gold=lambda: state["gold"],
+            record=lambda value: state["actions"].append(("record", value)),
+            case=SimpleNamespace(branches=()),
+            branches={},
+        )
+        if defect == "missingStock":
+            state["stock"].remove(handles["greater"])
+        with patch.object(marches, "walk", side_effect=walk), patch.object(
+            marches, "recruit", side_effect=recruit
+        ), patch.object(marches, "walkPreparationWaypoint", side_effect=waypoint):
+            marches.prepareRegionalSupplies(driver, include_mana=include_mana)
+        return state, handles, driver
+
+    def testRegionalPreparationUsesActualRewardsAndFiniteStockWithoutPotionBranchDeclarations(self):
+        for include_mana in (False, True):
+            with self.subTest(include_mana=include_mana):
+                state, handles, driver = self.regionalSuppliesFixture(include_mana=include_mana)
+                self.assertEqual(720 if include_mana else 2320, state["gold"])
+                expected = ["LesserLifePotion", "LifePotion", "GreaterLifePotion"] + (
+                    ["ManaPotion"] if include_mana else []
+                )
+                self.assertEqual(expected, [entry[1] for entry in state["actions"] if entry[0] == "buy"])
+                self.assertEqual(("walk", "learningStone"), state["actions"][0])
+                self.assertLess(state["actions"].index(("actual-recruit",)), state["actions"].index(("sell-gift",)))
+                self.assertLess(state["actions"].index(("sell-gift",)), state["actions"].index(("buy", expected[0])))
+                self.assertIn(handles["scroll"], state["owned"])
+                self.assertEqual({"0": handles["sword"]}, state["equipped"])
+                self.assertEqual({}, driver.branches, "Preparatory transactions confer no played branch credit")
+
+    def testRegionalPreparationRejectsMissingRewardsLostLoadoutAndIncorrectTransactions(self):
+        for defect in (
+            "missingGift",
+            "wrongGift",
+            "lostScroll",
+            "changedEquipment",
+            "missingStock",
+            "underfunded",
+            "wrongBuyback",
+            "refusedPurchase",
+            "wrongPayment",
+            "extraItemRemoved",
+            "stockNotRemoved",
+            "forgedRetreat",
+        ):
+            with self.subTest(defect=defect), self.assertRaises(AssertionError):
+                self.regionalSuppliesFixture(defect=defect)
+
+    def testRegionalPreparationAcceptsOnlyTheExactAlreadyValidatedOriginalScrollRetreat(self):
+        state, handles, driver = self.regionalSuppliesFixture(defect="validatedRetreat")
+        self.assertNotIn(handles["scroll"], state["owned"])
+        self.assertIsNone(driver._marches_retreat_scroll_name)
+        self.assertEqual("scroll", driver._marches_retreat_scroll_receipt["item"])
+        self.assertEqual(2320, state["gold"])
+
+    def testRegionalCombatPreparesFiniteHealingBeforeItsFirstEncounterApproach(self):
+        class StopAtApproach(Exception):
+            pass
+
+        actions = []
+        driver = SimpleNamespace(test=self, coords=lambda actor: (470, 590, 0), object=lambda name: name)
+
+        def approach(d, name, *, adjacent):
+            self.assertEqual(["start", "finite-earned-preparation"], actions)
+            self.assertEqual("guardFields2", name)
+            self.assertTrue(adjacent)
+            raise StopAtApproach
+
+        with patch.object(marches, "start", side_effect=lambda d: actions.append("start")), patch.object(
+            marches, "prepareRegionalSupplies", side_effect=lambda d: actions.append("finite-earned-preparation")
+        ), patch.object(marches, "walk", side_effect=approach), self.assertRaises(StopAtApproach):
+            marches.regionalCombat(driver)
+
+    def testRegionalPreparationWaypointUsesAdjacentNativeStepsAndRejectsBlockedCells(self):
+        state = {"position": (560, 600, 0), "steps": []}
+        driver = SimpleNamespace(
+            test=self,
+            game_map={"__handle__": "map"},
+            player={"__handle__": "player"},
+            coords=lambda: state["position"],
+            canStep=lambda destination: True,
+        )
+
+        def step(destination):
+            self.assertEqual(1, sum(abs(a - b) for a, b in zip(state["position"], destination)))
+            state["steps"].append(destination)
+            state["position"] = destination
+
+        driver.step = step
+        with patch.object(marches, "afterCombat") as recovery:
+            marches.walkPreparationWaypoint(driver, (560, 566, 0))
+        self.assertEqual(34, len(state["steps"]))
+        self.assertEqual(35, recovery.call_count)
+        driver.canStep = lambda destination: False
+        with patch.object(marches, "afterCombat"), self.assertRaisesRegex(AssertionError, "corridor is blocked"):
+            marches.walkPreparationWaypoint(driver, (560, 565, 0))
+
+    def testRegionalPreparationWaypointsAvoidTheAuthoredFieldsCaveCenters(self):
+        document = json.loads((Path(__file__).resolve().parents[1] / "res/maps/ninemarches/map.json").read_text())
+        width = document["width"]
+        layer = next(layer for layer in document["layers"] if layer["type"] == "tilelayer")
+        types = {
+            tileset["firstgid"] + int(local): properties["type"]
+            for tileset in document["tilesets"]
+            for local, properties in tileset.get("tileproperties", {}).items()
+        }
+        objects = {
+            (int(actor["x"] // 32), int(actor["y"] // 32)): actor
+            for layer in document["layers"]
+            if layer["type"] == "objectgroup"
+            for actor in layer["objects"]
+        }
+        corridor = {(x, 644) for x in range(520, 561)} | {(560, y) for y in range(566, 653)}
+        corridor |= {(x, 566) for x in range(520, 561)} | {(x, 652) for x in range(514, 561)}
+        for x, y in corridor:
+            self.assertIn(
+                types.get(layer["data"][y * width + x], layer["properties"]["default"]),
+                {"GrassTile", "GroundTile", "RoadTile"},
+            )
+            if (x, y) in objects:
+                self.assertIn(
+                    objects[(x, y)]["name"], {"learningStone", "banditCache", "companionKnight", "gravewatchBarter"}
+                )
 
 
 if __name__ == "__main__":

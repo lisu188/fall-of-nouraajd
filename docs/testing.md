@@ -195,8 +195,13 @@ forceful confrontation, threatened gate, timed loss and complete history asserti
 combinations remain mandatory for every class. Passing native receipts are still required for campaign acceptance.
 Earned hunt preparation also checks native object passability before committing a step. An incidental Victor rescue
 requires a recent validated actual-player victory against the leader, its original deadline, and the exact payout;
-cleanup of other cultists earns no invented combat experience. Nine Marches keeps the original collected retreat
-scroll through its first Halda approach and credits only its verified consumption and movement to the map entry.
+cleanup of other cultists earns no invented combat experience. Nine Marches regional preparation follows native
+waypoint legs around the authored Fields cave, recovers the ledger, recruits Halda, and trades only her exact earned
+gift for original finite healing stock. The dedicated potion route also buys mana stock. Quotes, payments, inventory
+and market identities are checked for every transaction; preparatory purchases earn no branch credit. The original
+retreat scroll remains unchanged unless its validated owned consumption reaches the authored entry with the same
+player and map. Static waypoint checks do not establish safety from moving pursuers; preparation and combat survival
+still require fresh native receipts.
 When an incidental monolith arrival interrupts another approach, the route verifies the actual enabled portal,
 its exit and live passability, then takes one cardinal controller step away before restoring the current target.
 Explicit portal routes retain their exact arrival assertions. Blocked departures, target replacement or unexpected
