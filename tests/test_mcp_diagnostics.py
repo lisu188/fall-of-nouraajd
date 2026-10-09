@@ -313,7 +313,7 @@ class McpDiagnosticsTest(unittest.TestCase):
         server = types.SimpleNamespace(
             build_extension=builder,
             import_modules=lambda: None,
-            inspect_and_export=lambda: None,
+            inspect_and_export=unittest.mock.Mock(),
             serve_stdio=lambda: None,
         )
         with (
@@ -325,6 +325,7 @@ class McpDiagnosticsTest(unittest.TestCase):
         ):
             self.assertEqual(0, mcp.main())
         builder.assert_called_once_with(stdio=True)
+        server.inspect_and_export.assert_called_once_with(stdio=True)
 
     def testStdioRejectsNativeAndGameplayStdout(self):
         with patch.dict(os.environ, {}, clear=True):
@@ -391,7 +392,7 @@ class McpDiagnosticsTest(unittest.TestCase):
             )
             server = types.SimpleNamespace(
                 import_modules=lambda: calls.append(("import", {})),
-                inspect_and_export=lambda: None,
+                inspect_and_export=unittest.mock.Mock(),
                 serve_stdio=lambda: None,
             )
             argv = [
@@ -418,6 +419,7 @@ class McpDiagnosticsTest(unittest.TestCase):
             ):
                 self.assertEqual(0, mcp.main())
             configure.assert_called_once_with("INFO", log_sink="stderr", trace_messages=False)
+            server.inspect_and_export.assert_called_once_with(stdio=True)
             self.assertEqual("disabled", constructor.call_args.kwargs["native_log_sink"])
             self.assertIsNone(constructor.call_args.kwargs["native_log_path"])
             self.assertFalse(constructor.call_args.kwargs["trace_messages"])
@@ -448,11 +450,12 @@ class McpDiagnosticsTest(unittest.TestCase):
         old_handlers, old_level = root_logger.handlers[:], root_logger.level
         old_server_level = mcp.logger.level
         root_logger.handlers = []
+        exporter = unittest.mock.Mock()
 
         def server(**settings):
             instance = original_server(**settings)
             instance.import_modules = lambda: None
-            instance.inspect_and_export = lambda: None
+            instance.inspect_and_export = exporter
 
             def serve():
                 instance._call_tool({"name": "engine_list"}, "stdio", None, request_id=9)
@@ -483,6 +486,7 @@ class McpDiagnosticsTest(unittest.TestCase):
                     patch.object(mcp, "EngineMcpServer", side_effect=server),
                 ):
                     self.assertEqual(0, mcp.main())
+                exporter.assert_called_once_with(stdio=True)
                 runs = list((Path(directory) / "runs").iterdir())
                 self.assertEqual(1, len(runs))
                 return (runs[0] / "runtime.log").read_text(encoding="utf-8"), stdout.getvalue(), stderr.getvalue()
@@ -541,7 +545,7 @@ class McpDiagnosticsTest(unittest.TestCase):
             close=lambda: None,
         )
         server = types.SimpleNamespace(
-            import_modules=lambda: None, inspect_and_export=lambda: None, serve_stdio=lambda: None
+            import_modules=lambda: None, inspect_and_export=unittest.mock.Mock(), serve_stdio=lambda: None
         )
         with (
             patch.object(mcp.sys, "argv", ["mcp.py", "--stdio", "--debug"]),
@@ -554,6 +558,7 @@ class McpDiagnosticsTest(unittest.TestCase):
         ):
             self.assertEqual(0, mcp.main())
         self.assertEqual("stderr", constructor.call_args.kwargs["native_log_sink"])
+        server.inspect_and_export.assert_called_once_with(stdio=True)
         self.assertIsNone(constructor.call_args.kwargs["native_log_path"])
         self.assertTrue(any(fields.get("nativeFileUnavailable") for fields in calls))
 

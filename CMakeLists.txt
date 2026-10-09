@@ -392,22 +392,22 @@ configure_file(res/maps/ritual/script.py maps/ritual/script.py)
 
 configure_file(res/maps/vhulmarn/config.json maps/vhulmarn/config.json)
 configure_file(res/maps/vhulmarn/dialog.json maps/vhulmarn/dialog.json)
-configure_file(res/maps/vhulmarn/map.json maps/vhulmarn/map.json)
+configure_file(res/maps/vhulmarn/map.json maps/vhulmarn/map.json COPYONLY)
 configure_file(res/maps/vhulmarn/script.py maps/vhulmarn/script.py)
 
 configure_file(res/maps/kadath/config.json maps/kadath/config.json)
 configure_file(res/maps/kadath/dialog.json maps/kadath/dialog.json)
-configure_file(res/maps/kadath/map.json maps/kadath/map.json)
+configure_file(res/maps/kadath/map.json maps/kadath/map.json COPYONLY)
 configure_file(res/maps/kadath/script.py maps/kadath/script.py)
 
 configure_file(res/maps/ninemarches/config.json maps/ninemarches/config.json)
 configure_file(res/maps/ninemarches/dialog.json maps/ninemarches/dialog.json)
-configure_file(res/maps/ninemarches/map.json maps/ninemarches/map.json)
+configure_file(res/maps/ninemarches/map.json maps/ninemarches/map.json COPYONLY)
 configure_file(res/maps/ninemarches/script.py maps/ninemarches/script.py)
 
 configure_file(res/maps/sunderedmarch/config.json maps/sunderedmarch/config.json)
 configure_file(res/maps/sunderedmarch/dialog.json maps/sunderedmarch/dialog.json)
-configure_file(res/maps/sunderedmarch/map.json maps/sunderedmarch/map.json)
+configure_file(res/maps/sunderedmarch/map.json maps/sunderedmarch/map.json COPYONLY)
 configure_file(res/maps/sunderedmarch/script.py maps/sunderedmarch/script.py)
 
 configure_file(res/maps/gravemoor/config.json maps/gravemoor/config.json)

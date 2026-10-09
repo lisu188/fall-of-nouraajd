@@ -129,8 +129,36 @@ MCP_STDIO_SHUTDOWN_TIMEOUT_SECONDS = 30
 MCP_STDIO_TAIL_LIMIT_BYTES = 8192
 GAME_TEST_WORKER = os.environ.get("GAME_TEST_WORKER") == "1"
 XVFB_GAMEPLAY_PARENT_TEST = "XvfbGameplayTest.test_keyboard_gameplay_under_xvfb"
-VALID_TEST_SUITES = ("fast", "gameplay", "ui", "coverage-safe", "full")
+VALID_TEST_SUITES = ("fast", "gameplay", "gameplay-core", "mcp-branches", "ui", "coverage-safe", "full")
+MCP_BRANCH_TEST_PREFIX = "GameplayBranchMcpTest."
 FAST_TEST_PREFIXES = (
+    "GameplayBranchCatalogTest.",
+    "GameplayBranchDriverTest.",
+    "GameplayBranchJournalsTest.",
+    "GameplayStartingSaveTest.",
+    "GameplayCampaignRouteTest.",
+    "GameplayCastleTownRestTest.",
+    "GameplayVictorSettlementTest.",
+    "NarrativeRouteTest.",
+    "GameplayRouteDialogTest.",
+    "GameplayRouteServicesTest.",
+    "GameplayCraftingRoutesTest.",
+    "GameplayRecipeOutcomesTest.",
+    "GameplayRecipeGoldRoutesTest.",
+    "GameplayCallbackMarketRoutesTest.",
+    "GameplayPotionConsumptionTest.",
+    "GameplayPotionTraceContractTest.",
+    "GameplayNouraajdServiceRoutesTest.",
+    "GameplayNouraajdHuntPreparationTest.",
+    "GameplayWaypointPublicationTest.",
+    "GameplayCaveObservationTest.",
+    "NineMarchesRecoveryTest.",
+    "McpTestSeedTest.",
+    "McpBranchShardsTest.",
+    "McpBranchWorkflowTest.",
+    "McpEquipmentContractTest.",
+    "McpTradeMarketContractTest.",
+    "WaypointTraversalTest.",
     "GameDiagnosticsTest.",
     "McpDiagnosticsTest.",
     "OctobogzDiagnosticTest.",
@@ -151,6 +179,7 @@ FAST_TEST_PREFIXES = (
     "UiPixelAnalysisTest.",
 )
 FAST_TEST_NAMES = {
+    "GameTest.test_indentation",
     "McpServerTest.testNativeLogSinkSurvivesGameBootstrap",
     "McpServerTest.test_engine_handle_call_scopes_fight_controllers_to_players",
     "GameTest.test_direct_rendercopy_calls_stay_inside_render_context_wrapper",
@@ -172,6 +201,11 @@ FAST_TEST_NAMES = {
     "PanelLayoutManifestTest.test_reactive_list_views_subscribe_to_model_signals",
 }
 GAMEPLAY_TEST_PREFIXES = (
+    MCP_BRANCH_TEST_PREFIX,
+    "McpTestSeedRuntimeTest.",
+    "McpEquipmentRuntimeTest.",
+    "McpTradeMarketRuntimeTest.",
+    "GameplayPotionTraceRuntimeTest.",
     "NativeDiagnosticsRuntimeTest.",
     "EnemyRoleRuntimeTest.",
     "OctobogzMcpWalkthroughTest.",
@@ -25780,6 +25814,11 @@ class TestRunnerSuiteTest(unittest.TestCase):
             OctobogzDiagnosticTest,
             MonsterBalanceRunnerTest,
             WindowsPythonConfigurationTest,
+            GameplayPotionTraceContractTest,
+            GameplayNouraajdHuntPreparationTest,
+            GameplayCastleTownRestTest,
+            GameplayVictorSettlementTest,
+            NarrativeRouteTest,
         ):
             methods = unittest.defaultTestLoader.getTestCaseNames(test_class)
             self.assertTrue(methods)
@@ -26241,6 +26280,140 @@ class TestRunnerSuiteTest(unittest.TestCase):
                         events.index(("start", "xvfb-long", (XVFB_GAMEPLAY_PARENT_TEST,))),
                     )
 
+    def testCompletedWorkerTimingsSurviveInterruptionBeforeSerialOrLongTests(self):
+        from unittest.mock import patch
+
+        parallel = ["GameTest.parallelFirst", "GameTest.parallelSecond"]
+        serial = "GameTest.test_missing_save_resource_directory_lists_empty"
+        names = [*parallel, serial, XVFB_GAMEPLAY_PARENT_TEST]
+        for interrupted_shard in ("serial", "xvfb-long"):
+            for parallel_status in (0, 7):
+                with self.subTest(interrupted_shard=interrupted_shard, parallel_status=parallel_status):
+                    with tempfile.TemporaryDirectory(prefix="nouraajd-worker-timings-") as temporary:
+                        output = Path(temporary)
+                        timing_file = output / "combined.json"
+                        completed = {}
+                        events = []
+
+                        def start(test_names, shard_name, extra_env=None):
+                            if shard_name in {"serial", "xvfb-long"}:
+                                self.assertEqual(
+                                    completed,
+                                    load_test_timings(timing_file),
+                                    "Completed worker measurements must be durable before the next isolated phase",
+                                )
+                            events.append(("start", shard_name))
+                            if shard_name == interrupted_shard:
+                                raise KeyboardInterrupt("outer Python phase timeout")
+                            return types.SimpleNamespace(names=test_names)
+
+                        def wait(process, shard_name, test_names, timeout_seconds):
+                            measured = {name: 10.0 + len(completed) + index for index, name in enumerate(test_names)}
+                            write_test_timings(output / "workers" / shard_name / "test-timings.json", measured)
+                            completed.update(measured)
+                            events.append(("wait", shard_name))
+                            return parallel_status if shard_name == "1" else 0
+
+                        with (
+                            patch(__name__ + ".TEST_OUTPUT_DIR", output),
+                            patch(__name__ + ".TEST_TIMINGS_FILE", timing_file),
+                            patch(__name__ + ".run_test_subprocess", side_effect=start),
+                            patch(__name__ + ".wait_test_subprocess", side_effect=wait),
+                            self.assertRaisesRegex(KeyboardInterrupt, "outer Python phase timeout"),
+                        ):
+                            run_sharded_tests(names, 3, allow_xvfb_sidecar=True)
+                        self.assertEqual(completed, load_test_timings(timing_file))
+                        self.assertEqual(interrupted_shard, events[-1][1])
+
+    def testFinalWorkerTimingMergeIncludesLaterResultsAfterAShardFailure(self):
+        from unittest.mock import patch
+
+        parallel = ["GameTest.parallelFirst", "GameTest.parallelSecond"]
+        serial = "GameTest.test_missing_save_resource_directory_lists_empty"
+        names = [*parallel, serial, XVFB_GAMEPLAY_PARENT_TEST]
+        with tempfile.TemporaryDirectory(prefix="nouraajd-worker-timings-") as temporary:
+            output = Path(temporary)
+            timing_file = output / "combined.json"
+            completed = {}
+            starts = []
+            stale = output / "workers" / "unstarted" / "test-timings.json"
+            write_test_timings(stale, {"unrelatedEarlierRun": 900.0})
+
+            def start(test_names, shard_name, extra_env=None):
+                starts.append((shard_name, tuple(test_names)))
+                return types.SimpleNamespace(names=test_names)
+
+            def wait(process, shard_name, test_names, timeout_seconds):
+                measured = {name: 30.0 + len(starts) for name in test_names}
+                write_test_timings(output / "workers" / shard_name / "test-timings.json", measured)
+                completed.update(measured)
+                return 7 if shard_name == "serial" else 0
+
+            with (
+                patch(__name__ + ".TEST_OUTPUT_DIR", output),
+                patch(__name__ + ".TEST_TIMINGS_FILE", timing_file),
+                patch(__name__ + ".run_test_subprocess", side_effect=start),
+                patch(__name__ + ".wait_test_subprocess", side_effect=wait),
+                patch("builtins.print"),
+            ):
+                self.assertEqual(1, run_sharded_tests(names, 3, allow_xvfb_sidecar=True))
+            self.assertEqual(completed, load_test_timings(timing_file))
+            self.assertEqual({"xvfb", "1", "2", "serial", "xvfb-long"}, {name for name, _ in starts})
+            self.assertCountEqual(parallel, [name for shard, group in starts if shard in {"1", "2"} for name in group])
+            self.assertEqual(1, sum(group.count(serial) for _, group in starts))
+            self.assertEqual([XVFB_GAMEPLAY_PARENT_TEST], list(starts[-1][1]))
+
+    def testCoverageTimingCacheSavesMeasurementsEvenWhenCoverageFails(self):
+        from tests.test_mcp_branch_workflow import evaluateCondition, workflowJob, workflowScalar, workflowStep
+
+        job = workflowJob("linux-coverage")
+        restore = workflowStep(job, "Restore Python test timings")
+        save = workflowStep(job, "Save Python test timings after coverage")
+        coverage = workflowStep(job, "coverage")
+        revision = "27d5ce7f107fe9357f9df03efb73ab90386fccae"
+        self.assertEqual("actions/cache/restore@" + revision, workflowScalar(restore, "uses", 8))
+        self.assertEqual("actions/cache/save@" + revision, workflowScalar(save, "uses", 8))
+        self.assertTrue(evaluateCondition(workflowScalar(save, "if", 8), {}, prior_success=False))
+        self.assertEqual("always()", workflowScalar(save, "if", 8))
+        self.assertEqual("$" + "{{ env.GAME_TEST_TIMINGS_FILE }}", workflowScalar(restore, "path", 10))
+        self.assertEqual(workflowScalar(restore, "path", 10), workflowScalar(save, "path", 10))
+        self.assertEqual(
+            "$" + "{{ runner.os }}-test-timings-linux-coverage-" + "$" + "{{ github.run_id }}",
+            workflowScalar(save, "key", 10),
+        )
+        self.assertEqual(workflowScalar(restore, "key", 10), workflowScalar(save, "key", 10))
+        self.assertEqual(
+            "$" + "{{ runner.os }}-test-timings-linux-coverage-", workflowScalar(restore, "restore-keys", 10)
+        )
+        self.assertLess(job.index(coverage), job.index(save))
+        self.assertEqual("./scripts/run_coverage.sh", workflowScalar(coverage, "run", 8))
+        self.assertEqual("60", workflowScalar(coverage, "timeout-minutes", 8))
+
+    def testCmakeCopiesCanonicalRunnerWithoutInterpretingWorkflowExpressions(self):
+        cmake_executable = shutil.which("cmake")
+        if cmake_executable is None:
+            self.skipTest("CMake is unavailable for the canonical runner-copy integration check")
+        cmake = (REPO_ROOT / "CMakeLists.txt").read_text(encoding="utf-8")
+        rules = re.findall(r"configure_file\(\s*test\.py\s+test\.py(?:\s+[^)]*)?\)", cmake)
+        self.assertEqual(1, len(rules), "Exercise the single actual canonical runner-copy rule")
+        source_text = (REPO_ROOT / "test.py").read_text(encoding="utf-8")
+        self.assertLess(len(source_text.encode("utf-8")), 2 * 1024 * 1024, "Keep the source-only copy fixture bounded")
+        with tempfile.TemporaryDirectory(prefix="nouraajd-runner-copy-") as temporary:
+            root = Path(temporary)
+            source = root / "source" / "test.py"
+            source.parent.mkdir()
+            source.write_text(source_text, encoding="utf-8")
+            rule = rules[0].replace("test.py test.py", "source/test.py copied/test.py")
+            self.assertNotEqual(rules[0], rule)
+            script = root / "copy.cmake"
+            script.write_text(rule + "\n", encoding="utf-8")
+            copied = subprocess.run(
+                [cmake_executable, "-P", str(script)], cwd=root, capture_output=True, text=True, timeout=30
+            )
+            self.assertEqual(0, copied.returncode, copied.stdout + copied.stderr)
+            copied_text = (root / "copied" / "test.py").read_text(encoding="utf-8")
+            self.assertEqual(ast.dump(ast.parse(source_text)), ast.dump(ast.parse(copied_text)))
+
     def test_shard_balancer_spreads_huge_map_walkthroughs(self):
         # With enough jobs the weight-aware packer must isolate the heavy maps onto
         # separate shards so no single shard has to run more than one huge-map
@@ -26346,6 +26519,140 @@ if SOURCE_UI_TESTS_AVAILABLE:
     from tests.test_octobogz_mcp import OctobogzMcpWalkthroughTest as _OctobogzMcpWalkthroughTest
     from tests.test_octobogz_mcp import OctobogzDiagnosticTest as _OctobogzDiagnosticTest
     from tests.test_octobogz_runtime import OctobogzRuntimeTest as _OctobogzRuntimeTest
+    from tests.test_gameplay_branch_catalog import GameplayBranchCatalogTest as _GameplayBranchCatalogTest
+    from tests.test_gameplay_branch_driver import GameplayBranchDriverTest as _GameplayBranchDriverTest
+    from tests.test_gameplay_branch_journals import GameplayBranchJournalsTest as _GameplayBranchJournalsTest
+    from tests.test_gameplay_starting_save import GameplayStartingSaveTest as _GameplayStartingSaveTest
+    from tests.test_gameplay_routes_crafting import GameplayCraftingRoutesTest as _GameplayCraftingRoutesTest
+    from tests.test_gameplay_routes_recipe_outcomes import GameplayRecipeOutcomesTest as _GameplayRecipeOutcomesTest
+    from tests.test_gameplay_routes_recipe_gold import GameplayRecipeGoldRoutesTest as _GameplayRecipeGoldRoutesTest
+    from tests.test_gameplay_routes_callback_markets import (
+        GameplayCallbackMarketRoutesTest as _GameplayCallbackMarketRoutesTest,
+    )
+    from tests.test_gameplay_potion_trace import GameplayPotionTraceContractTest as _GameplayPotionTraceContractTest
+    from tests.test_gameplay_potion_trace import GameplayPotionTraceRuntimeTest as _GameplayPotionTraceRuntimeTest
+    from tests.test_gameplay_routes_potions import GameplayPotionConsumptionTest as _GameplayPotionConsumptionTest
+    from tests.test_gameplay_routes_services import GameplayRouteServicesTest as _GameplayRouteServicesTest
+    from tests.test_gameplay_routes_nouraajd import (
+        GameplayNouraajdServiceRoutesTest as _GameplayNouraajdServiceRoutesTest,
+    )
+    from tests.test_gameplay_nouraajd_hunt_preparation import (
+        GameplayNouraajdHuntPreparationTest as _GameplayNouraajdHuntPreparationTest,
+    )
+    from tests.test_gameplay_routes_waypoints import GameplayWaypointPublicationTest as _GameplayWaypointPublicationTest
+    from tests.test_gameplay_routes_caves import GameplayCaveObservationTest as _GameplayCaveObservationTest
+    from tests.test_gameplay_routes_campaigns import GameplayCampaignRouteTest as _GameplayCampaignRouteTest
+    from tests.test_gameplay_castle_town_rest import GameplayCastleTownRestTest as _GameplayCastleTownRestTest
+    from tests.test_gameplay_victor_settlement import GameplayVictorSettlementTest as _GameplayVictorSettlementTest
+    from tests.test_narrative_consequences import NarrativeRouteTest as _NarrativeRouteTest
+    from tests.test_gameplay_route_dialogs import GameplayRouteDialogTest as _GameplayRouteDialogTest
+    from tests.test_gameplay_routes_ninemarches import NineMarchesRecoveryTest as _NineMarchesRecoveryTest
+    from tests.test_gameplay_branches_mcp import GameplayBranchMcpTest as _GameplayBranchMcpTest
+    from tests.test_mcp_test_seed import McpTestSeedTest as _McpTestSeedTest
+    from tests.test_mcp_test_seed import McpTestSeedRuntimeTest as _McpTestSeedRuntimeTest
+    from tests.test_mcp_branch_shards import McpBranchShardsTest as _McpBranchShardsTest
+    from tests.test_mcp_branch_workflow import McpBranchWorkflowTest as _McpBranchWorkflowTest
+    from tests.test_mcp_equipment import McpEquipmentContractTest as _McpEquipmentContractTest
+    from tests.test_mcp_equipment import McpEquipmentRuntimeTest as _McpEquipmentRuntimeTest
+    from tests.test_mcp_trade_market import McpTradeMarketContractTest as _McpTradeMarketContractTest
+    from tests.test_mcp_trade_market import McpTradeMarketRuntimeTest as _McpTradeMarketRuntimeTest
+    from tests.test_waypoint_traversal import WaypointTraversalTest as _WaypointTraversalTest
+
+    class GameplayBranchCatalogTest(_GameplayBranchCatalogTest):
+        pass
+
+    class GameplayBranchDriverTest(_GameplayBranchDriverTest):
+        pass
+
+    class GameplayBranchJournalsTest(_GameplayBranchJournalsTest):
+        pass
+
+    class GameplayStartingSaveTest(_GameplayStartingSaveTest):
+        pass
+
+    class GameplayRecipeOutcomesTest(_GameplayRecipeOutcomesTest):
+        pass
+
+    class GameplayRecipeGoldRoutesTest(_GameplayRecipeGoldRoutesTest):
+        pass
+
+    class GameplayCallbackMarketRoutesTest(_GameplayCallbackMarketRoutesTest):
+        pass
+
+    class GameplayPotionConsumptionTest(_GameplayPotionConsumptionTest):
+        pass
+
+    class GameplayPotionTraceRuntimeTest(_GameplayPotionTraceRuntimeTest):
+        pass
+
+    class GameplayPotionTraceContractTest(_GameplayPotionTraceContractTest):
+        pass
+
+    class GameplayCraftingRoutesTest(_GameplayCraftingRoutesTest):
+        pass
+
+    class GameplayNouraajdServiceRoutesTest(_GameplayNouraajdServiceRoutesTest):
+        pass
+
+    class GameplayNouraajdHuntPreparationTest(_GameplayNouraajdHuntPreparationTest):
+        pass
+
+    class GameplayCaveObservationTest(_GameplayCaveObservationTest):
+        pass
+
+    class GameplayWaypointPublicationTest(_GameplayWaypointPublicationTest):
+        pass
+
+    class GameplayRouteServicesTest(_GameplayRouteServicesTest):
+        pass
+
+    class GameplayVictorSettlementTest(_GameplayVictorSettlementTest):
+        pass
+
+    class NarrativeRouteTest(_NarrativeRouteTest):
+        pass
+
+    class GameplayCastleTownRestTest(_GameplayCastleTownRestTest):
+        pass
+
+    class GameplayCampaignRouteTest(_GameplayCampaignRouteTest):
+        pass
+
+    class GameplayRouteDialogTest(_GameplayRouteDialogTest):
+        pass
+
+    class NineMarchesRecoveryTest(_NineMarchesRecoveryTest):
+        pass
+
+    class GameplayBranchMcpTest(_GameplayBranchMcpTest):
+        pass
+
+    class McpTestSeedTest(_McpTestSeedTest):
+        pass
+
+    class McpTestSeedRuntimeTest(_McpTestSeedRuntimeTest):
+        pass
+
+    class McpBranchShardsTest(_McpBranchShardsTest):
+        pass
+
+    class McpBranchWorkflowTest(_McpBranchWorkflowTest):
+        pass
+
+    class McpEquipmentContractTest(_McpEquipmentContractTest):
+        pass
+
+    class McpEquipmentRuntimeTest(_McpEquipmentRuntimeTest):
+        pass
+
+    class McpTradeMarketContractTest(_McpTradeMarketContractTest):
+        pass
+
+    class McpTradeMarketRuntimeTest(_McpTradeMarketRuntimeTest):
+        pass
+
+    class WaypointTraversalTest(_WaypointTraversalTest):
+        pass
 
     class GameDiagnosticsTest(_GameDiagnosticsTest):
         pass
@@ -26456,6 +26763,24 @@ if SOURCE_UI_TESTS_AVAILABLE:
     del _NavigationMcpWalkthroughTest
     del _NavigationCallbackTest
     del _ConsoleUiInteractionTest, _UiMinimapInteractionTest
+    del _GameplayBranchCatalogTest, _GameplayBranchDriverTest, _GameplayBranchJournalsTest, _GameplayBranchMcpTest
+    del _WaypointTraversalTest
+    del (
+        _GameplayCraftingRoutesTest,
+        _GameplayRouteServicesTest,
+        _GameplayRecipeOutcomesTest,
+        _GameplayPotionTraceRuntimeTest,
+        _GameplayPotionTraceContractTest,
+    )
+    del _GameplayNouraajdServiceRoutesTest, _GameplayWaypointPublicationTest, _GameplayCaveObservationTest
+    del _GameplayNouraajdHuntPreparationTest
+    del _GameplayPotionConsumptionTest, _GameplayRecipeGoldRoutesTest, _GameplayCallbackMarketRoutesTest
+    del _GameplayStartingSaveTest, _GameplayCampaignRouteTest, _GameplayRouteDialogTest
+    del _GameplayCastleTownRestTest, _GameplayVictorSettlementTest, _NarrativeRouteTest
+    del _NineMarchesRecoveryTest
+    del _McpTestSeedTest, _McpBranchShardsTest, _McpBranchWorkflowTest
+    del _McpTestSeedRuntimeTest, _McpEquipmentContractTest, _McpEquipmentRuntimeTest
+    del _McpTradeMarketContractTest, _McpTradeMarketRuntimeTest
 
 
 class McpServerTest(unittest.TestCase):
@@ -27191,11 +27516,18 @@ class McpServerTest(unittest.TestCase):
             "'params': {'message': 'stdout-timeout-marker'}"
             "}) + '\\n')\n"
             "sys.stdout.flush()\n"
+            "sys.stdout.write(json.dumps({'jsonrpc': '2.0', 'id': 0, 'result': 'ready'}) + '\\n')\n"
+            "sys.stdout.flush()\n"
             "for _line in sys.stdin:\n"
             "    pass\n"
         )
         proc = self._start_stdio_process([sys.executable, "-c", script], map_name="diagnosticMap")
         try:
+            self.assertEqual({"jsonrpc": "2.0", "id": 0, "result": "ready"}, self._read_rpc(proc))
+            deadline = time.monotonic() + 10
+            while "stderr-timeout-marker" not in self._mcp_process_tail_text(proc, "stderr"):
+                self.assertLess(time.monotonic(), deadline, "Diagnostic child stderr was not drained after readiness")
+                time.sleep(0.005)
             self._send_rpc(
                 proc,
                 {
@@ -27826,7 +28158,7 @@ class McpServerTest(unittest.TestCase):
             self._write_mcp_walkthrough_log(map_name, log)
         return success, log
 
-    def _start_stdio_mcp_process(self, map_name=None, *, trace_name=None, native_log_file=None):
+    def _start_stdio_mcp_process(self, map_name=None, *, trace_name=None, native_log_file=None, test_seed=None):
         script = REPO_ROOT / "mcp.py"
         self.assertTrue(script.exists(), "MCP entry point is missing")
         trace_path = None
@@ -27855,6 +28187,8 @@ class McpServerTest(unittest.TestCase):
             command.extend(["--native-log-file", str(native_log_file)])
         if build_config:
             command.extend(["--build-config", build_config])
+        if test_seed is not None:
+            command.extend(["--test-seed", str(test_seed)])
         proc = self._start_stdio_process(command, env=env, map_name=map_name)
         proc._playtest_trace_path = trace_path
         proc._native_log_file = native_log_file
@@ -28851,6 +29185,72 @@ class McpServerTest(unittest.TestCase):
             )
 
 
+def parseBranchRunnerArgs(argv):
+    options = {"class_id": None, "group": None, "shard_index": None, "shard_count": None}
+    names = {
+        "--branch-class": "class_id",
+        "--branch-group": "group",
+        "--branch-shard-index": "shard_index",
+        "--branch-shard-count": "shard_count",
+    }
+    remaining = [argv[0]]
+    index = 1
+    while index < len(argv):
+        arg = argv[index]
+        flag, separator, value = arg.partition("=")
+        if flag not in names:
+            remaining.append(arg)
+            index += 1
+            continue
+        if not separator:
+            if index + 1 >= len(argv) or argv[index + 1].startswith("--"):
+                raise ValueError(f"{flag} requires an argument")
+            index += 1
+            value = argv[index]
+        key = names[flag]
+        if options[key] is not None:
+            raise ValueError(f"{flag} can only be specified once")
+        if key in {"shard_index", "shard_count"}:
+            try:
+                value = int(value)
+            except ValueError:
+                raise ValueError(f"{flag} must be an integer") from None
+        options[key] = value
+        index += 1
+    if options["class_id"] is not None:
+        from tests.gameplay_branch_types import PLAYER_CLASSES
+
+        if options["class_id"] not in PLAYER_CLASSES:
+            raise ValueError(f"--branch-class must be one of: {', '.join(PLAYER_CLASSES)}")
+    shard_index, shard_count = options["shard_index"], options["shard_count"]
+    if (shard_index is None) != (shard_count is None):
+        raise ValueError("--branch-shard-index and --branch-shard-count must be provided together")
+    if shard_count is not None and (shard_count < 1 or not 0 <= shard_index < shard_count):
+        raise ValueError("Branch shard index must be zero-based and smaller than the positive shard count")
+    return options, remaining
+
+
+def selectBranchTestNames(test_names, options):
+    from scripts.mcp_branch_shards import planShards, selectedCases
+    from tests.gameplay_branch_catalog import selectedTestNames
+
+    cases = selectedCases(options["class_id"], options["group"])
+    expected = set(selectedTestNames())
+    discovered = set(test_names)
+    if discovered != expected:
+        raise ValueError(
+            "Authored branch discovery does not match the catalog: "
+            f"missing={sorted(expected - discovered)}, unexpected={sorted(discovered - expected)}"
+        )
+    selected = selectedTestNames(class_id=options["class_id"], group=options["group"])
+    if options["shard_count"] is not None:
+        selected = planShards(cases, shard_count=options["shard_count"])[options["shard_index"]]
+    missing = set(selected) - set(test_names)
+    if missing:
+        raise ValueError(f"Authored branch tests were not discovered: {', '.join(sorted(missing))}")
+    return [name for name in selected if name in test_names]
+
+
 def parse_runner_args(argv):
     jobs = None
     suite_name = "full"
@@ -28893,13 +29293,19 @@ def selected_unittest_args(unittest_argv):
 
 def test_name_matches_suite(test_name, suite_name):
     if suite_name == "coverage-safe":
-        return test_name not in COVERAGE_SAFE_EXCLUDED_TEST_NAMES
+        return test_name not in COVERAGE_SAFE_EXCLUDED_TEST_NAMES and not test_name.startswith(MCP_BRANCH_TEST_PREFIX)
     if suite_name == "full":
         return True
     if suite_name == "fast":
         return test_name in FAST_TEST_NAMES or test_name.startswith(FAST_TEST_PREFIXES)
-    if suite_name == "gameplay":
-        return test_name not in GAMEPLAY_EXCLUDED_TEST_NAMES and test_name.startswith(GAMEPLAY_TEST_PREFIXES)
+    if suite_name in {"gameplay", "gameplay-core"}:
+        return (
+            test_name not in GAMEPLAY_EXCLUDED_TEST_NAMES
+            and test_name.startswith(GAMEPLAY_TEST_PREFIXES)
+            and (suite_name == "gameplay" or not test_name.startswith(MCP_BRANCH_TEST_PREFIX))
+        )
+    if suite_name == "mcp-branches":
+        return test_name.startswith(MCP_BRANCH_TEST_PREFIX)
     if suite_name == "ui":
         return test_name == XVFB_GAMEPLAY_PARENT_TEST or test_name.startswith("PanelLayoutManifestTest.")
     raise ValueError(f"--suite must be one of: {', '.join(VALID_TEST_SUITES)}")
@@ -28934,11 +29340,20 @@ def write_test_timings(path, timings):
     path.write_text(json.dumps(dict(sorted(existing.items())), indent=2, sort_keys=True), encoding="utf-8")
 
 
+@lru_cache(maxsize=1)
+def branchTestDurations():
+    from scripts.mcp_branch_shards import caseWeights, selectedCases
+
+    return caseWeights(selectedCases())
+
+
 def test_duration_weight(test_name, timings):
     if test_name in timings:
         return timings[test_name]
     if test_name in DEFAULT_TEST_DURATIONS:
         return DEFAULT_TEST_DURATIONS[test_name]
+    if test_name.startswith(MCP_BRANCH_TEST_PREFIX) and SOURCE_UI_TESTS_AVAILABLE:
+        return branchTestDurations().get(test_name, 200.0)
     if test_name.startswith("McpServerTest.test_stdio_map_walkthrough_"):
         return 30.0
     if test_name.startswith("XvfbGameplayProcessTest."):
@@ -29085,6 +29500,15 @@ def wait_test_subprocess(proc, shard_name, test_names, timeout_seconds):
         return 124
 
 
+def persistWorkerTestTimings(shard_names):
+    combined_timings = {}
+    for shard_name in shard_names:
+        path = TEST_OUTPUT_DIR / "workers" / shard_name / "test-timings.json"
+        combined_timings.update(load_test_timings(path))
+    if combined_timings:
+        write_test_timings(TEST_TIMINGS_FILE, combined_timings)
+
+
 def run_sharded_tests(test_names, jobs, *, allow_xvfb_sidecar=False):
     sidecar_tests = []
     long_xvfb_tests = []
@@ -29102,6 +29526,7 @@ def run_sharded_tests(test_names, jobs, *, allow_xvfb_sidecar=False):
     ]
     timings = load_test_timings(TEST_TIMINGS_FILE)
     failures = []
+    completed_shards = []
 
     processes = []
     for sidecar_test in sidecar_tests:
@@ -29123,6 +29548,8 @@ def run_sharded_tests(test_names, jobs, *, allow_xvfb_sidecar=False):
 
     for shard_name, group, proc in processes:
         return_code = wait_test_subprocess(proc, shard_name, group, test_group_timeout_seconds(group, timings))
+        completed_shards.append(shard_name)
+        persistWorkerTestTimings([shard_name])
         if return_code != 0:
             failures.append((shard_name, return_code))
 
@@ -29134,6 +29561,8 @@ def run_sharded_tests(test_names, jobs, *, allow_xvfb_sidecar=False):
             serial_tests,
             test_group_timeout_seconds(serial_tests, timings),
         )
+        completed_shards.append("serial")
+        persistWorkerTestTimings(["serial"])
         if return_code != 0:
             failures.append(("serial", return_code))
 
@@ -29149,23 +29578,14 @@ def run_sharded_tests(test_names, jobs, *, allow_xvfb_sidecar=False):
             [long_xvfb_test],
             test_group_timeout_seconds([long_xvfb_test], timings),
         )
+        completed_shards.append("xvfb-long")
+        persistWorkerTestTimings(["xvfb-long"])
         if return_code != 0:
             failures.append(("xvfb-long", return_code))
 
-    # Persist whatever timings the workers recorded, even when a shard failed or
-    # timed out. Each worker writes its own timings only after it finishes, so a
-    # shard killed on timeout contributes nothing -- but the shards that DID finish
-    # recorded real per-test durations. Writing them unconditionally lets the cached
-    # timings self-heal after a single run: the next run weights those tests
-    # accurately, so the balancer stops concentrating the genuinely-slow tests onto
-    # one shard and stops under-sizing that shard's timeout. Writing only on overall
-    # success meant one slow shard discarded every other shard's real timings and the
-    # cold-cache under-estimate was reproduced on every retry.
-    combined_timings = {}
-    for timings_path in (TEST_OUTPUT_DIR / "workers").glob("*/test-timings.json"):
-        combined_timings.update(load_test_timings(timings_path))
-    if combined_timings:
-        write_test_timings(TEST_TIMINGS_FILE, combined_timings)
+    # Earlier checkpoints survive an outer timeout during a later isolated phase.
+    # Merge this run's completed workers once more to include its final measurements.
+    persistWorkerTestTimings(completed_shards)
 
     if failures:
         for shard_name, return_code in failures:
@@ -29177,7 +29597,14 @@ def run_sharded_tests(test_names, jobs, *, allow_xvfb_sidecar=False):
 
 def main():
     try:
-        cli_jobs, suite_name, unittest_argv = parse_runner_args(sys.argv)
+        branch_options, runner_argv = parseBranchRunnerArgs(sys.argv)
+        cli_jobs, suite_name, unittest_argv = parse_runner_args(runner_argv)
+        has_branch_options = any(value is not None for value in branch_options.values())
+        if has_branch_options:
+            if suite_name != "mcp-branches":
+                raise ValueError("Branch selectors require --suite mcp-branches")
+            if selected_unittest_args(unittest_argv):
+                raise ValueError("Branch selectors cannot be combined with explicit test names")
         jobs = runner_jobs(cli_jobs, unittest_argv, suite_name)
     except ValueError as exc:
         print(str(exc), file=sys.stderr)
@@ -29195,6 +29622,12 @@ def main():
         test_names = discover_unittest_test_names(unittest_argv)
         if test_names is not None and suite_name != "full":
             test_names = filter_test_names_by_suite(test_names, suite_name)
+        if test_names is not None and suite_name == "mcp-branches" and not selected_args:
+            try:
+                test_names = selectBranchTestNames(test_names, branch_options)
+            except ValueError as exc:
+                print(str(exc), file=sys.stderr)
+                sys.exit(2)
         if test_names and len(test_names) > 1 and jobs > 1:
             sys.exit(run_sharded_tests(test_names, jobs, allow_xvfb_sidecar=full_suite))
         if test_names:

@@ -110,6 +110,8 @@ The CI Windows job uses a single-config Ninja Release build, so its `ctest` comm
 ```bash
 python3 test.py --suite fast
 python3 test.py --suite gameplay
+python3 test.py --suite gameplay-core
+python3 test.py --suite mcp-branches
 GAME_XVFB_JOBS=4 python3 test.py --suite ui
 python3 test.py --suite coverage-safe
 python3 test.py --suite full
@@ -118,6 +120,11 @@ python3 test.py --suite full
 - `fast` runs runner, bootstrap, manifest, coverage-report, and lightweight MCP protocol checks that do not require the
   compiled `_game` module.
 - `gameplay` runs deterministic engine, map, save/load, quest, combat, and MCP gameplay checks after `_game` is built.
+- `mcp-branches` runs the explicit authored branch/class matrix through a fresh stdio MCP process per case.
+- `gameplay-core` runs the other gameplay checks. CI runs it with the native build, then runs `mcp-branches` in
+  separate Linux and Windows shards against that same workflow head's binary and copied resources.
+  Windows stages the already built runtime through `cmake --install`, which also resolves and copies its dependent
+  DLLs, before archiving the flat installed package. Shards verify and extract that package without compiling again.
 - `ui` runs the Xvfb parent test and GUI layout manifest checks; it is intended for Linux/Unix environments with
   `xvfb-run` and `xauth`.
 - `coverage-safe` is the Python suite used by `./scripts/run_coverage.sh`; it keeps deterministic coverage drivers and
@@ -127,6 +134,171 @@ python3 test.py --suite full
 
 Use `--jobs <n>` with any suite to enable the existing sharded runner, for example
 `python3 test.py --suite gameplay --jobs "$(nproc)"`.
+
+### Exhaustive authored MCP branches
+
+The source catalog is `tests/gameplay_branch_catalog.py`; the route modules declare named obligations and their
+source callbacks. A catalog entry is a test obligation. Only a passing native route receipt establishes played
+coverage. Structural audits account for dialog actions/conditions, registered callbacks, campaign outcomes, and
+explicit defensive contracts. Unreachable authored content remains a reported obligation, rather than becoming a
+passing fixture-only route.
+
+The current catalog declares 774 branches across 83 cases and 395 case/class executions, with 34 unresolved
+gameplay obligations. Thirteen are disconnected authored Castle defenders. Another obligation is
+`usurpergate.throne.premature`, required in all four Warden campaign/standalone routes for all five classes:
+enter the actual throne while the Usurper remains alive and verify no reward or quest/campaign progress.
+The source callback test verifies that refusal, but no real route witness has been established. A permissive
+source movement model omitting housecarls finds a path only when the player commits before the pursuing boss;
+native map turns apply actors in unordered-container order. This evidence does not establish an executable
+route or justify defensive credit. These 14 obligations remain mandatory and receive no played-coverage credit.
+
+Shared callback discovery resolves actual map actor types through global/map configuration references and
+Python inheritance, respecting persistent plugin registrations. It also follows authored nested stock and
+literal constructor references, including the hunt's installed defeat trigger. The current inventory contains
+26 shared callback identities; unused library types add no manufactured gameplay branch. Unknown resource
+references or classes fail the audit. Owner-specific WayPoint edge removal remains an explicit destruction
+contract, backed by its focused cleanup test.
+
+The shared coverage floor includes 103 named requirements, including 45 applicable recipe-specific outcomes.
+A locked outcome applies only to a recipe with an authored unlock flag, and a failure outcome applies only
+below 100 percent success chance. The remaining 20 pending shared requirements are recipe outcomes.
+Connector publication now has source-ordered creation and later-turn
+oracles. Passive cave observers use existing route turns to prove a new matching clone's native placement,
+an exact one-monster decrement, and two later exhausted turns; they add no waiting loop and stop after
+both outcomes. Two ordinary pre-activation ritual turns also verify all three zero-stock anchors remain
+inactive. These are implemented runtime assertions; a source or pure-test pass gives no played credit.
+They are attached to real cases for all five classes; a route must produce its own receipt before `finish`
+can pass. Missing ingredients cannot stand in for insufficient gold when a recipe requires both, and
+conditional recovery cannot stand in for guaranteed potion/scroll use. Crafting code and recipe data are
+inside the reviewed source digest. Implemented service assertions remain source/test evidence until native
+CI supplies passing route receipts.
+
+All 11 ordinary life/mana consumption obligations now have mandatory route assertions. The native `item_used`
+receipt identifies the actual player and item, proves an existing resource deficit, verifies the configured
+percentage with its exact cap, and requires that only the used owned identity disappeared while equipment
+stayed unchanged. Rejuvenation, NPC consumption, absent records and full-resource uses cannot earn these
+branches. Fixed routes obtain finite stock before remaining fights, funded by actual quest gifts, collected
+weapons or first-cave loot. Nine Marches consumes at observed postcombat deficits before its normal road
+recovery. A final assertion fails if gameplay never produces a qualifying use; implementation does not establish
+native acceptance. An expired effect may lower the untouched resource's derived maximum without clamping its
+stored value; the potion oracle still requires that resource to remain exactly unchanged and the restored
+resource to have a real deficit and receive the exact capped amount.
+
+The timed courtyard escape derives its sole exit from the raw authored wall objects, then checks a six-step
+continuation against native passability and current pursuer coordinates. Each decision permits at most 64 distinct
+native cell probes, with memoization and bounded rejection diagnostics. Each decision also snapshots all live
+registered hostile creatures, including incidental Pritz, using the native NPC and affiliation rules. Creature
+classification is cached; liveness, NPC status, affiliation and coordinates are refreshed before planning. The
+64-creature cap exceeds the reviewed 47-creature authored envelope and fails rather than omitting excess actors.
+Pure pursuit models verify route planning
+and the authored 74/75/76-turn boundary; passing native receipts are still required for actual timeout credit.
+Standalone direct-loss cases consume their original collected Town Portal before fleeing, retaining the same
+native countdown, map/player identity, gold and journal state. Campaign cases preserve that unique scroll for
+the later Scout retreat. Both full campaigns use the authored records entry, keeping the bad campaign's
+forceful confrontation, threatened gate, timed loss and complete history assertions. Four standalone courtyard
+combinations remain mandatory for every class. Passing native receipts are still required for campaign acceptance.
+Earned hunt preparation also checks native object passability before committing a step. An incidental Victor rescue
+requires a recent validated actual-player victory against the leader, its original deadline, and the exact payout;
+cleanup of other cultists earns no invented combat experience. Nine Marches regional preparation follows native
+waypoint legs around the authored Fields cave, recovers the ledger, recruits Halda, and trades only her exact earned
+gift for original finite healing stock. The dedicated potion route also buys mana stock. Quotes, payments, inventory
+and market identities are checked for every transaction; preparatory purchases earn no branch credit. The original
+retreat scroll remains unchanged unless its validated owned consumption reaches the authored entry with the same
+player and map. Static waypoint checks do not establish safety from moving pursuers; preparation and combat survival
+still require fresh native receipts.
+When an incidental monolith arrival interrupts another approach, the route verifies the actual enabled portal,
+its exit and live passability, then takes one cardinal controller step away before restoring the current target.
+Explicit portal routes retain their exact arrival assertions. Blocked departures, target replacement or unexpected
+movement fail; the correction changes neither authored portal callbacks nor route budgets.
+
+The missing-wand Siege refusal has its own fresh standalone case for every class. It consumes actual wands
+through successful seals, then requires an enabled, unsealed breach at the player's actual coordinates before
+checking refusal and unchanged state. A campaign's carried or newly looted wands cannot stand in for that
+prerequisite. Nouraajd's portal-scroll and greater-life insufficient-gold routes plan from observed finite loot
+quotes and original market identities before any sale, retain the exact ingredients, and require the ordinary
+unlock and crafting refusal. Unsatisfiable quotes fail without retrying startup or recreating stock.
+The greater-life gold-refusal route approaches the market through the cleared courtyard and connected authored
+Road cells. Both previously visited finite caves must be removed, and every living hostile must retain the known
+Pritz ground controller. The grass crafting station requires live hostile distance greater than two before entry
+and greater than one before immediate exit. Unknown controllers, unsafe station timing or native blockage fail;
+the route never waives protected inventory loss or replaces the finite ingredients.
+
+```bash
+python3 test.py --suite mcp-branches --branch-class Wayfarer
+python3 test.py --suite mcp-branches --branch-group ninemarches
+python3 scripts/mcp_branch_shards.py matrix
+```
+
+Every shared route runs for Warrior, Sorcerer, Assasin, Inquisitor, and Wayfarer. Race service cases use the existing
+required race; owner-specific deeds test their own action and other classes' rejection. Starting campaign saves
+come from `campaign.start`; only the catalog's documented initial Nine Marches reputation values may differ from
+ordinary startup. All slots and preference files have unique task-owned names and are cleaned after each case.
+
+`mcp.py --stdio --test-seed <uint32>` seeds both native random sources before importing the game bootstrap. A
+core-library bridge seeds the engine RNG and process random source; the extension also seeds its separate hidden
+RNG on Linux. The native replay check samples actual core loot, extension draws and combat damage in fresh
+processes within each platform. The private hook is unavailable through MCP exports. Stable SHA-256 case/class seeds,
+ordered action journals, bounded native trace history, failure diagnostics, elapsed time, and branch receipts
+are written under the selected
+`GAME_TEST_OUTPUT_DIR`. Reproduce a failure from process startup with the recorded seed and action sequence;
+save checkpoints preserve game state, and do not serialize RNG state. Each receipt records the actual native
+platform, PR head and merge-checkout commit; the aggregate requires all three to match the scheduled run.
+A receipt from one platform cannot satisfy the other platform. Random sequences are checked within each
+platform; Linux and Windows need not produce identical sequences. Generated object names include process-local
+identity, so the seed tests establish native random-source repeatability. The recorded case and action sequence
+are failure diagnostics; they do not establish identical whole-route execution across fresh processes.
+Navigation target actions retain known coordinate triples after temporary MCP coordinate handles are released.
+
+The native driver uses controller targets, adjacent movement, actual map turns, class combat controllers, owned
+consumables, finite stock, and real payments/ingredients. It rejects fixture mutations, unexpected defeat,
+unauthored relocation, stalled routes, and exhausted action/turn budgets. Adjacent steps use native controller
+targets and map turns, and step counters count actual arrivals. Moving NPC approaches follow their current
+cells; hostile pursuits retain their committed path until arrival or interruption. The actual native trace writer
+must remain healthy before combat receipts are trusted. Validated victories are retained in a bounded cache so
+later recovery turns do not erase the evidence a secondary observer still needs. Opt-in native `combat_started`
+records include bounded participant coordinates, HP/max HP, mana/max mana and level before the first round;
+disabled tracing emits no snapshots. A fresh completed native player-caused `object_entered` receipt can
+establish a moving-NPC visit before that NPC leaves later in the same turn. The bounded receipt cache requires
+exact map, target and player identities and the same live MCP target handle; earlier visits, NPC-caused contacts
+and replaced targets do not satisfy the approach. Same-cell overlap is accepted only after a witnessed player
+entry; a single continuing-contact record tracks exact live handles, native identities and coordinates, and any
+subsequent movement by either participant invalidates it. An NPC walking onto a stationary player earns no visit.
+The driver can leave such an overlap through a real native cardinal step and reapproach the moving NPC; only
+a new player-caused entry earns contact. Departure and reapproach share the original navigation and stall budgets.
+Victor's completed quest is evaluated through the native player API after its actual rescue callback, without an
+extra movement turn. Gooby completion requires the ordered native `quest_completed`, exact 200-gold payment and
+headless reward receipt for the same player and map, including when completion occurs during movement. The bounded
+reward cache preserves that evidence for later hunt hand-ins and rejects duplicate grants or incomplete receipts.
+Fresh game startup drains the prior trace and resets completed reward receipts; checkpoint reloads retain them.
+An unfinished receipt or latched native failure prevents a fresh-game reset. Wrong-class Warrior deed refusals
+occur at the initial closed gate, with fresh player entry and all three blocking markers still present.
+When an incidental actual Brood victory occurs during the Alpha approach, the hunt validates the dead actor and
+native combat receipt, then uses only owned healing before the next movement or map turn. It fails if those finite
+supplies cannot restore full HP. This correction adds no retreat, relocation, stronger character or combat retry;
+actual survival and remaining stock still require a native passing receipt.
+Save/reload checks preserve inventory, equipment, quests, journal text, campaign state, and player attributes;
+map transitions preserve player identity.
+
+Castle defender visits select the nearest reachable remaining authored position from the current player coordinate,
+using the same directed connectors and reserved final objective as the source route planner. Every defender still
+requires its defeat receipt; a remaining live defender with no authored route fails with its exact name.
+A source-only traversal estimate of the three chapters falls from 20,116 turns / 100,663 recorded movement actions
+in mission-index order to 8,652 / 43,343 with nearest-defender ordering. This model visits every reachable defender
+at its authored position, excludes combat delays and paid rest, and treats the 13 disconnected defenders as pending
+obligations rather than completed visits. The mandatory waypoint-only estimate is 5,539 turns / 27,778 actions.
+The generic limits remain 20,000 turns and 50,000 recorded actions. Complete native runtime headroom is unproven:
+six nearest Homecoming town round trips add 284 source hops, while visiting all 48 reachable rest encounters and
+returning after each can add 15,120 hops. Combat, fixed actions, and natural injuries require native receipts before
+any budget decision; these source estimates do not establish a successful whole-campaign runtime bound.
+
+CI shards must partition the complete selected matrix exactly once. Their initial duration estimates are
+provisional until the first native receipts supply measured weights; the planner targets 20 minutes per shard.
+`GAME_MCP_BRANCH_REQUIRED=1` turns unavailable native prerequisites into failures. The terminal `mcp-branches`
+check requires both platform matrices and all selected native/full-suite/coverage jobs to succeed. An uploaded
+exact-head runtime lets diagnostic shards run even when a later parent test fails; that failure still blocks
+the terminal check. This workflow change retains strict validation authority and requires explicit human
+review before merge. Canonical coverage drivers remain in `coverage-safe`;
+the exhaustive subprocess matrix is separate from the 90% eligible-line coverage gate.
 
 The console and expanded-map interaction checks run once in `gameplay`, `full`, and `coverage-safe`. To run only
 these checks, use `python3 test.py ConsoleUiInteractionTest UiMinimapInteractionTest`. Their children use guarded
@@ -375,6 +547,20 @@ Optional coverage speed controls:
 - `COVERAGE_JOBS=<n>` controls parallel coverage build and report collection jobs
 - `COVERAGE_PYTHON_TIMEOUT_SECONDS=<seconds>` bounds the coverage Python phase; the default is 1800 seconds
 - `COVERAGE_GCOV_TIMEOUT_SECONDS=<seconds>` bounds each `gcov` JSON extraction; the default is 120 seconds
+
+The parallel runner persists each completed worker's measured test durations before starting the serial save tests
+and the final Xvfb walkthrough. A later Python-phase timeout therefore preserves the measurements already collected;
+the final merge still includes serial and Xvfb results when they finish. Only workers started by the current run are
+merged. The coverage job uses the pinned cache restore/save actions separately, with an explicit `always()` save,
+because the combined cache action saves only after job success. Cache availability does not determine validation
+success, and this scheduling feedback does not change test selection, worker counts, execution order, the 1800-second
+Python cap, or the coverage threshold.
+
+For failed Linux coverage job `113814621992` at head `0f20904c`, the three parallel workers took 1595.510, 1424.404,
+and 1720.249 seconds, followed by 41.358 seconds of serial tests and a 34.116-second Xvfb walkthrough. Repacking all
+1095 recorded parallel-test durations with the existing scheduler projects three groups of about 1579.019 seconds,
+roughly 141 seconds less than the observed longest parallel group. This is an estimate using recorded durations,
+not a native rerun or proof that a later head will finish within the cap.
 
 ## Coverage scope
 The canonical coverage report is scoped to production/native plugin code by default:

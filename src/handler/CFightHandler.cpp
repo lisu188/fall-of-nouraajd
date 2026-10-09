@@ -431,6 +431,22 @@ CFightResult resolve_fight_many(std::shared_ptr<CCreature> attacker, const encou
             {"attacker", CPlaytestTrace::objectRef(attacker)},
             {"opponents", CPlaytestTrace::objectRefs(allOpponents)},
         };
+        const auto snapshot = [](const std::shared_ptr<CCreature> &creature, const json &object) {
+            return json{
+                {"object", object},
+                {"coords", CPlaytestTrace::coords(creature->getCoords())},
+                {"hp", creature->getHp()},
+                {"hpMax", creature->getHpMax()},
+                {"mana", creature->getMana()},
+                {"manaMax", creature->getManaMax()},
+                {"level", creature->getLevel()},
+            };
+        };
+        fields["attackerState"] = snapshot(attacker, fields["attacker"]);
+        fields["opponentStates"] = json::array();
+        for (std::size_t index = 0; index < allOpponents.size(); ++index) {
+            fields["opponentStates"][index] = snapshot(allOpponents[index], fields["opponents"][index]);
+        }
         CPlaytestTrace::addMapContext(fields, encounterMap);
         CPlaytestTrace::record("combat_started", fields);
     }

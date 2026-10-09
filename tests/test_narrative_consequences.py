@@ -127,7 +127,7 @@ class Game:
         completion(success)
 
 
-def loadMapClasses(map_name):
+def loadMapClasses(map_name, *, randint=None):
     registered = {}
 
     def register(context):
@@ -148,7 +148,7 @@ def loadMapClasses(map_name):
     fake_module.showRewardReceipt = lambda *args: None
     fake_module.requirementMessage = lambda *args: None
     fake_module.logger = lambda *args: None
-    fake_module.randint = lambda low, high: low
+    fake_module.randint = randint or (lambda low, high: low)
     fake_module.CTag = types.SimpleNamespace(WAND="wand")
     for name in ("LegacyBoolFlag", "PlayerQuestRegistry", "QuestStateStore", "ensure_quest"):
         setattr(fake_module, name, getattr(quest_state, name))
@@ -408,45 +408,172 @@ class SiegeBreachTest(unittest.TestCase):
 
 class NarrativeRouteTest(unittest.TestCase):
     def testSiegeWaitLeavesTheSealedBorderBeforeWaitingForMageWands(self):
+        driver, objects = self.waitingSiege(closed={"spawnPoint1", "spawnPoint3", "spawnPoint4"})
+        log = driver.siege()
+        self.assertNotIn(objects["siegeStart"], driver.visited)
+        self.assertEqual(4, len(log["sealedGates"]))
+        self.assertEqual(["spawnPoint2"], driver.seals)
+        self.assertEqual(0, len(driver.sourceGame.player.items))
+        self.assertEqual(500, driver.sourceGame.player.gold)
+        self.assertGreater(log["movementSteps"], 0)
+        self.assertEqual(objects["spawnPoint2"], log["siegeFinalState"]["playerCoords"])
+        self.assertEqual(0, log["siegeFinalState"]["wandCount"])
+        self.assertTrue(all(state["destroyed"] for state in log["siegeFinalState"]["gates"].values()))
+        self.assertEqual(1, len(driver.wandOrigins))
+        self.assertEqual(1, driver.wandOrigins[0]["distance"])
+
+    def testWaitingBesideAuthoredBreachesPreservesFourActualSealCallbacks(self):
+        driver, objects = self.waitingSiege(closed=set())
+        log = driver.siege()
+        self.assertEqual(4, len(driver.seals))
+        self.assertEqual(set(driver.gates), set(driver.seals))
+        self.assertEqual(driver.seals, log["sealedGates"])
+        self.assertEqual(3, len(driver.wandOrigins))
+        self.assertTrue(all(origin["distance"] == 1 for origin in driver.wandOrigins))
+        self.assertTrue(all(origin["source"] == "siegePritzMage" for origin in driver.wandOrigins))
+        self.assertNotIn(objects["siegeStart"], driver.visited[1:])
+        self.assertEqual(500, driver.sourceGame.player.gold)
+        self.assertEqual(0, len(driver.sourceGame.player.items))
+
+    def testWaitingTargetRejectsAnEnabledGateWithoutAReachableInteriorNeighbor(self):
+        driver, objects = self.waitingSiege(closed=set())
+        driver.objects = objects
+        driver.walkable = {objects["spawnPoint2"]}
+        with patch.object(driver, "failureState", side_effect=lambda reason, stage: {"reason": reason, "stage": stage}):
+            with self.assertRaisesRegex(AssertionError, "No reachable authored interior neighbor"):
+                driver.siegeWaitingTarget(["spawnPoint2"])
+        self.assertEqual([], driver.seals)
+        self.assertEqual([], driver.wandOrigins)
+
+    def testWaitingTargetUsesTheReachableAuthoredNeighborRatherThanTheGateCell(self):
+        from tests.narrative_walkthrough import authoredRegion
+
+        driver, objects = self.waitingSiege(closed=set())
+        driver.objects, driver.walkable = objects, authoredRegion("siege")[1]
+        driver.position = (20, 7, 0)
+        target = driver.siegeWaitingTarget(["spawnPoint1", "spawnPoint2", "spawnPoint3", "spawnPoint4"])
+        self.assertEqual((23, 6, 0), target)
+        self.assertIn(target, driver.walkable)
+        self.assertNotIn(target, {objects[name] for name in driver.gates})
+        self.assertEqual(1, sum(abs(a - b) for a, b in zip(target, objects["spawnPoint2"])))
+
+    def testWandEarnedFromAnApproachingMageStopsTheWaitWalkImmediately(self):
+        driver, _ = self.waitingSiege(closed={"spawnPoint1", "spawnPoint3", "spawnPoint4"})
+        driver.position = (21, 6, 0)
+        driver.sourceGame.player.coords = types.SimpleNamespace(x=21, y=6, z=0)
+        driver.spawnAttacker("siegePritzMage", types.SimpleNamespace(x=24, y=6, z=0))
+        # This already spawned pursuer has taken one ordinary interior edge on the previous turn.
+        driver.attackers[0]["coords"] = (23, 6, 0)
+        walks = []
+        original_walk = driver.walkTo
+
+        def recordWalk(target, **kwargs):
+            original_walk(target, **kwargs)
+            walks.append((target, driver.coords(), len(driver.sourceGame.player.items)))
+
+        driver.walkTo = recordWalk
+        driver.siege()
+        self.assertEqual(((23, 6, 0), (22, 6, 0), 1), walks[0])
+        self.assertEqual(1, len(driver.wandOrigins))
+        self.assertEqual(["spawnPoint2"], driver.seals)
+
+    def waitingSiege(self, *, closed):
         from tests.narrative_walkthrough import NarrativeWalkthrough, authoredRegion
+        from tests.castle_walkthrough import TransitRoutes, shortestRoute
 
         objects, walkable = authoredRegion("siege")
         gates = {"spawnPoint1", "spawnPoint2", "spawnPoint3", "spawnPoint4"}
-        closed = gates - {"spawnPoint2"}
+        rolls = []
+        classes = loadMapClasses("siege", randint=lambda low, high: rolls.pop(0) if rolls else low)
+        config = json.loads((REPO_ROOT / "res/maps/siege/config.json").read_text())
+        self.assertEqual("CTargetController", config["siegePritzMage"]["properties"]["controller"]["class"])
+        self.assertEqual("player", config["siegePritzMage"]["properties"]["controller"]["properties"]["target"])
 
         class WaitingSiege(NarrativeWalkthrough):
             def __init__(self):
-                super().__init__(lambda *_: "loop", None, "game", "map", "player")
-                self.position = objects["spawnPoint1"]
-                self.destroyed = set(closed)
-                self.wands = self.gold = 0
+                self.sourceGame = Game()
+                self.sourceGame.map.map_name = "siege"
+                self.position = objects[min(closed)] if closed else objects["siegeStart"]
                 self.visited = [self.position]
+                self.seals = []
+                self.wandOrigins = []
+                self.attackers = []
+                self.gates = {}
+                for name in gates:
+                    gate = classes["SpawnPoint"](self.sourceGame)
+                    gate.coords = types.SimpleNamespace(**dict(zip("xyz", objects[name])))
+                    gate.onCreate(None)
+                    gate.setBoolProperty("destroyed", name in closed)
+                    gate.setBoolProperty("enabled", name not in closed)
+                    self.gates[name] = gate
+                self.sourceGame.map.objects = self.gates
+                self.sourceGame.map.addObjectByName = self.spawnAttacker
+                quest = classes["DefendSiegeQuest"](self.sourceGame)
+                self.sourceGame.player.checkQuests = lambda: quest.onComplete() if quest.isCompleted() else None
+                self.sourceGame.player.coords = types.SimpleNamespace(**dict(zip("xyz", self.position)))
+                if not closed:
+                    self.sourceGame.player.isPlayer = lambda: True
+                    self.sourceGame.player.getQuests = lambda: []
+                    self.sourceGame.player.addQuest = lambda name: None
+                    self.sourceGame.player.addItem = lambda name: self.sourceGame.player.items.append(
+                        types.SimpleNamespace(hasTag=lambda tag: name == "magicWand" and tag == "wand")
+                    )
+                    classes["SiegeStartEvent"](self.sourceGame).onEnter(
+                        types.SimpleNamespace(getCause=lambda: self.sourceGame.player)
+                    )
+                super().__init__(lambda *_: "loop", None, "game", "map", "player")
                 self.log["sealedGates"] = sorted(closed)
+
+            def spawnAttacker(self, template, coords):
+                # Execute the authored spawn callback and carry only that template's actual configured wand.
+                items = config[template]["properties"].get("items", [])
+                assert items == [{"ref": "magicWand"}], (template, items)
+                self.attackers.append({"source": template, "coords": (coords.x, coords.y, coords.z), "items": items})
 
             def coords(self, handle=None):
                 return self.position
 
             def object(self, name):
-                return name
+                return self.gates[name]
 
             def flag(self, name):
-                return name == "campaign_completed" and self.destroyed == gates
+                return self.sourceGame.map.getBoolProperty(name)
 
             def questNames(self, key):
-                completed = self.destroyed == gates
+                completed = all(gate.getBoolProperty("destroyed") for gate in self.gates.values())
                 return ["defendSiegeQuest"] if completed == (key == "completedQuests") else []
 
             def pump(self):
                 pass
 
             def tick(self):
-                assert self.position not in {objects[name] for name in self.destroyed}, (
+                assert self.position not in {
+                    objects[name] for name, gate in self.gates.items() if gate.getBoolProperty("destroyed")
+                }, (
                     "Waiting on a sealed border leaves attackers without an accessible combat target",
                     self.position,
                 )
-                if self.position == objects["siegeStart"]:
-                    self.wands = 1
                 self.log["mapTurns"] += 1
+                for name, gate in self.gates.items():
+                    distance = sum(abs(a - b) for a, b in zip(self.position, objects[name]))
+                    if not self.sourceGame.player.items and gate.getBoolProperty("enabled") and distance == 1:
+                        # Pin one ordinary mage-spawn branch in this unit double, not a runtime seed or retry.
+                        rolls.extend((10, 10))
+                        gate.onTurn(None)
+                        break
+                for attacker in self.attackers[:]:
+                    if attacker["coords"] == self.position:
+                        continue  # CTargetController does not move or fight when its start already equals its goal.
+                    route = shortestRoute(self.walkable, TransitRoutes(), attacker["coords"], self.position)
+                    if route[0][1] == self.position:
+                        # Model a resolved player win; this pure route test does not establish native survivability.
+                        self.wandOrigins.append({**attacker, "distance": len(route), "turn": self.log["mapTurns"]})
+                        self.sourceGame.player.items.extend(
+                            types.SimpleNamespace(hasTag=lambda tag: tag == "wand") for _ in attacker["items"]
+                        )
+                        self.attackers.remove(attacker)
+                    else:
+                        attacker["coords"] = route[0][1]
 
             def call(self, handle, method, args=None):
                 args = args or []
@@ -462,44 +589,30 @@ class NarrativeRouteTest(unittest.TestCase):
                         assert destination in walkable
                         assert sum(abs(a - b) for a, b in zip(self.position, destination)) == 1
                         self.position = destination
+                        self.sourceGame.player.coords = types.SimpleNamespace(**dict(zip("xyz", destination)))
                         self.visited.append(destination)
                     elif method == "countItems":
-                        return self.wands
+                        return len(self.sourceGame.player.items)
                     elif method == "getGold":
-                        return self.gold
+                        return self.sourceGame.player.gold
                     elif method == "getLevel":
                         return 1
                     else:
                         raise AssertionError((handle, method, args))
                 elif handle == "map" and method == "getTurn":
                     return self.log["mapTurns"]
-                elif handle in gates:
+                elif handle in self.gates.values():
                     if method == "getBoolProperty":
-                        return {
-                            "destroyed": handle in self.destroyed,
-                            "enabled": handle not in self.destroyed,
-                            "pendingSeal": False,
-                        }[args[0]]
+                        return handle.getBoolProperty(args[0])
                     if method == "sealBreach":
-                        if handle in self.destroyed or not self.wands or self.position != objects[handle]:
-                            return False
-                        self.wands -= 1
-                        self.gold += 500
-                        self.destroyed.add(handle)
-                        return True
+                        result = handle.sealBreach()
+                        if result:
+                            self.seals.append(next(name for name, gate in self.gates.items() if gate is handle))
+                        return result
                 else:
                     raise AssertionError((handle, method, args))
 
-        driver = WaitingSiege()
-        log = driver.siege()
-        self.assertIn(objects["siegeStart"], driver.visited)
-        self.assertEqual(4, len(log["sealedGates"]))
-        self.assertEqual(0, driver.wands)
-        self.assertEqual(500, driver.gold)
-        self.assertGreater(log["movementSteps"], 0)
-        self.assertEqual(objects["spawnPoint2"], log["siegeFinalState"]["playerCoords"])
-        self.assertEqual(0, log["siegeFinalState"]["wandCount"])
-        self.assertTrue(all(state["destroyed"] for state in log["siegeFinalState"]["gates"].values()))
+        return WaitingSiege(), objects
 
     def testEveryMandatoryRitualLandmarkHasAnAdjacentAuthoredRoute(self):
         from tests.narrative_walkthrough import authoredRegion

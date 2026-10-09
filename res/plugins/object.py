@@ -24,6 +24,8 @@ def load(self, context):
     from game import register
     from game import CScroll
 
+    active_waypoint_causes = set()
+
     def acting_player(event):
         if not event:
             return None
@@ -50,9 +52,16 @@ def load(self, context):
         def onEnter(self, event):
             if not event or not event.getCause():
                 return
+            cause = event.getCause()
+            if cause in active_waypoint_causes:
+                return
             exit_coords = self.getExit()
             if exit_coords:
-                event.getCause().setCoords(exit_coords)
+                active_waypoint_causes.add(cause)
+                try:
+                    cause.setCoords(exit_coords)
+                finally:
+                    active_waypoint_causes.remove(cause)
 
         # merge with onEnter logic
         def onTurn(self, event):
