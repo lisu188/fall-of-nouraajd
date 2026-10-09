@@ -766,7 +766,8 @@ def fleeCourtyardUntil(d, elapsed, allow_timeout=False):
         def strategic_rank(entry):
             if origin in exit_distances and origin != door:
                 return (-exit_distances.get(entry[-1], len(exit_distances) + 1), entry)
-            return (0, entry)
+            # The authored southern edge ends at y=120; the eastern runway extends to x=199.
+            return (0, (entry[0], entry[1], entry[-1][0], entry[-1]))
 
         for distance, _forward, _offset, candidate in sorted(candidates, key=strategic_rank, reverse=True):
             if distance <= 2:

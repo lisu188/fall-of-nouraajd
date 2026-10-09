@@ -375,6 +375,101 @@ class GameplayRouteDialogTest(unittest.TestCase):
         self.assertEqual("bad_end", state["quest"])
         self.assertFalse(state["leader"])
 
+    def testVictorFleePrefersTheLongRunwayAtTheObservedSouthernBoundary(self):
+        from tests.narrative_walkthrough import authoredRegion
+
+        document = json.loads(
+            (Path(__file__).resolve().parents[1] / "res/maps/nouraajd/map.json").read_text(encoding="utf-8")
+        )
+        layer = next(value for value in document["layers"] if value["type"] == "tilelayer")
+        bounds = (int(layer["properties"]["xBound"]), int(layer["properties"]["yBound"]))
+        self.assertEqual((199, 120), bounds)
+        _objects, tiles = authoredRegion("nouraajd")
+        self.assertTrue({(x, 120, 0) for x in range(44, 101)} <= tiles)
+        self.assertFalse(any(y == 120 and x >= 44 for x, y, _z in _objects.values()))
+
+        for x_first in (True, False):
+            with self.subTest(x_first=x_first):
+                # Actual 514c7300/job113861450475: end of turn791, seq19041..19057.
+                state = {"turn": 792, "quest": "encounter_active", "position": (44, 120, 0)}
+                actors = {
+                    "cultLeaderQuest": (44, 117, 0),
+                    "victorCultist3": (44, 116, 0),
+                    "victorCultist4": (44, 118, 0),
+                }
+                steps = []
+                quest = SimpleNamespace(
+                    get_state=lambda name: state["quest"],
+                    mark_victor_bad_end=lambda: state.update(quest="bad_end"),
+                )
+                game_map = SimpleNamespace(
+                    getNumericProperty=lambda name: 772,
+                    getTurn=lambda: state["turn"],
+                    getGame=lambda: None,
+                )
+                expire = authoredFunction(
+                    "res/maps/nouraajd/script.py",
+                    "_expire_victor_search",
+                    _get_quest_system=lambda game_map: quest,
+                    _clear_victor_encounter=lambda game_map: actors.clear(),
+                    VICTOR_COURTYARD_TIMEOUT_TURNS=75,
+                    showReader=Mock(),
+                )
+
+                def step(target):
+                    origin = state["position"]
+                    self.assertEqual(1, sum(abs(a - b) for a, b in zip(origin, target)))
+                    self.assertTrue(canStep(target))
+                    planned = {}
+                    # A source model of both cardinal chase tie orders, not a native receipt.
+                    # Controllers plan against the same pre-turn player cell; either apply
+                    # order is harmless only while no planned pursuer can enter that cell.
+                    for name, position in actors.items():
+                        point = list(position)
+                        for axis in ((0, 1) if x_first else (1, 0)):
+                            if point[axis] != origin[axis]:
+                                point[axis] += 1 if point[axis] < origin[axis] else -1
+                                break
+                        planned[name] = tuple(point)
+                        self.assertNotEqual(origin, planned[name], "A source pursuit reached the stationary hero")
+                    actors.update(planned)
+                    state["position"] = target
+                    self.assertTrue(
+                        all(sum(abs(a - b) for a, b in zip(target, point)) >= 2 for point in actors.values())
+                    )
+                    steps.append(target)
+                    expire(game_map)
+                    state["turn"] += 1
+
+                def canStep(target):
+                    return 0 <= target[0] <= bounds[0] and 0 <= target[1] <= bounds[1] and target in tiles
+
+                driver = SimpleNamespace(
+                    test=self,
+                    game_map=game_map,
+                    number=lambda name: 772,
+                    call=lambda handle, method: getattr(handle, method)(),
+                    coords=lambda handle=None: actors[handle] if handle else state["position"],
+                    object=lambda name, required=False: name if name in actors else None,
+                    canStep=canStep,
+                    step=step,
+                    string=lambda name: state["quest"],
+                )
+                nouraajd.fleeCourtyardUntil(driver, 74)
+                self.assertEqual((98, 120, 0), state["position"])
+                self.assertEqual((45, 120, 0), steps[0], "Equal-safe escape must use the longer eastern runway")
+                self.assertEqual(846, state["turn"])
+                self.assertEqual("encounter_active", state["quest"])
+                nouraajd.fleeCourtyardUntil(driver, 75, allow_timeout=True)
+                self.assertEqual("encounter_active", state["quest"])
+                self.assertEqual(847, state["turn"])
+                nouraajd.fleeCourtyardUntil(driver, 76, allow_timeout=True)
+                self.assertEqual((100, 120, 0), state["position"])
+                self.assertEqual("bad_end", state["quest"])
+                self.assertEqual(848, state["turn"])
+                self.assertEqual(56, len(steps))
+                self.assertFalse(actors)
+
     def testPairedPortalsReenterTheArrivalObjectBeforeTestingItsReverse(self):
         driver = self.driver("ninemarches")
         definitions = json.loads(
