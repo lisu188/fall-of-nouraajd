@@ -160,6 +160,35 @@ class NineMarchesRecoveryTest(unittest.TestCase):
         self.driver.recoverOnAuthoredRoad.assert_not_called()
         self.assertEqual([], self.used)
 
+    def testVictoryAboveDerivedResourceCapsNeedsNoRecoveryOrScroll(self):
+        self.state.update(hp=81, mana=42)
+        self.append(1)
+        marches.afterCombat(self.driver)
+        self.assertEqual(0, self.driver.roadRecoveryTarget.call_count)
+        self.assertEqual(0, self.driver.recoverOnAuthoredRoad.call_count)
+        self.assertEqual((81, 42), (self.state["hp"], self.state["mana"]))
+        self.assertEqual([], self.used)
+
+    def testRecoveryRestoresOnlyTheDeficitWithoutRejectingAnUntouchedOverflow(self):
+        for overflow, deficit, restored in (("mana", "hp", 70), ("hp", "mana", 35)):
+            with self.subTest(overflow=overflow):
+                self.state.update(hp=81 if overflow == "hp" else 35, mana=42 if overflow == "mana" else 2)
+                before = self.state[overflow]
+                self.append(1 if overflow == "mana" else 2)
+
+                def recover(*, road_cells):
+                    self.assertIs(marches.recoveryRoadCells(), road_cells)
+                    self.assertFalse(self.driver.recoveryEnabled)
+                    self.state[deficit] = restored
+                    return 12
+
+                self.driver.recoverOnAuthoredRoad.side_effect = recover
+                marches.afterCombat(self.driver)
+                self.assertEqual(before, self.state[overflow])
+                self.assertEqual(restored, self.state[deficit])
+        self.assertEqual(2, self.driver.recoverOnAuthoredRoad.call_count)
+        self.assertEqual([], self.used)
+
     def testThirdPartyPlayerPoisonCasterDoesNotWitnessParticipationInNpcCombat(self):
         npc = {"name": "fieldRaider", "isPlayer": False}
         self.append(1, outcome=2, participants=(npc, [{"name": "fenGhoul", "isPlayer": False}]))
@@ -251,11 +280,38 @@ class NineMarchesRecoveryTest(unittest.TestCase):
         self.assertEqual("reloaded-earned-scroll", self.used[0]["__handle__"])
         self.assertEqual([self.other_item], self.items)
 
+    def testActualRecoveryScrollUseCreditsTheDeclaredRetreatWithExactIdentityAndMovement(self):
+        branch = "ninemarches.scroll.retreat"
+        self.driver.case = RouteCase("nine_scroll_unit", "unit", ("ninemarches",), (branch,), lambda driver: None)
+        self.driver.snapshot = lambda: {"position": self.state["position"]}
+        origin = self.state["position"]
+        marches.retreatWithOwnedScroll(self.driver)
+        self.assertEqual([self.scroll], self.used)
+        self.assertEqual([self.other_item], self.items)
+        self.assertIn(branch, self.driver.branches)
+        self.assertEqual(
+            {"item": self.scroll["__handle__"], "origin": origin, "destination": (500, 662, 0)},
+            self.driver.branches[branch]["evidence"],
+        )
+        self.assertIsNone(self.driver._marches_retreat_scroll_name)
+
+    def testScrollAtTheEntryCannotClaimRetreatOrConsumeTheOriginal(self):
+        self.state["position"] = self.scroll_destination
+        with self.assertRaisesRegex(AssertionError, "away from the destination"):
+            marches.retreatWithOwnedScroll(self.driver)
+        self.assertEqual([], self.used)
+        self.assertEqual([self.scroll, self.other_item], self.items)
+        self.assertEqual("townPortalScroll", self.driver._marches_retreat_scroll_name)
+
     def testMissingOrUnconsumedScrollCannotBecomeAnEscapeFixture(self):
+        branch = "ninemarches.scroll.retreat"
+        self.driver.case = RouteCase("nine_scroll_unit", "unit", ("ninemarches",), (branch,), lambda driver: None)
+        self.driver.snapshot = lambda: {"position": self.state["position"]}
         for failure in ("missing", "unconsumed", "wrong-destination"):
             with self.subTest(failure=failure):
                 self.items[:] = [self.other_item] if failure == "missing" else [self.scroll, self.other_item]
                 self.driver._marches_retreat_scroll_name = "townPortalScroll"
+                self.state["position"] = (500, 618, 0)
                 self.scroll_destination = (1, 1, 0) if failure == "wrong-destination" else (500, 662, 0)
                 original = self.driver.call
 
@@ -268,6 +324,7 @@ class NineMarchesRecoveryTest(unittest.TestCase):
                 self.driver.call = call
                 with self.assertRaises(AssertionError):
                     marches.retreatWithOwnedScroll(self.driver)
+                self.assertNotIn(branch, self.driver.branches, "A failed item-use oracle must never credit retreat")
                 self.driver.call = original
         self.driver.recoverOnAuthoredRoad.assert_not_called()
 
@@ -411,7 +468,7 @@ class NineMarchesRecoveryTest(unittest.TestCase):
         self.assertEqual(("arrival", "ninemarches.portal.monolithCold"), actions[-2])
         self.assertEqual(("recovery", positions["monolithAsh"]), actions[-1])
 
-    def testServiceRouteUnlocksTheActualScribeAndFundsItsRecipeWithAnEarnedGift(self):
+    def serviceRouteFixture(self, *, combat_retreat=False, credited=True):
         state = {"gold": 0, "flags": {}, "position": "entry", "reputation": 0}
         items = [self.scroll]
         gift = {"__handle__": "earned-aegis"}
@@ -508,13 +565,23 @@ class NineMarchesRecoveryTest(unittest.TestCase):
                 return parchment
             self.assertLess(state["gold"], 200)
 
-        def retreat(driver, item, branch):
-            self.assertIs(self.scroll, item)
-            items.remove(item)
+        def retreat(driver):
+            self.assertIn(self.scroll, items)
+            self.assertEqual("townPortalScroll", driver._marches_retreat_scroll_name)
+            actions.append(("retreat",))
+            items.remove(self.scroll)
             state["position"] = "entry"
+            driver._marches_retreat_scroll_name = None
+            if credited:
+                driver.branches["ninemarches.scroll.retreat"] = {"evidence": {"item": self.scroll["__handle__"]}}
 
         def recruit(driver, companion):
             self.assertEqual("halda", companion)
+            self.assertIn(self.scroll, items, "Preserve the actual retreat scroll through the first Halda approach")
+            self.assertEqual("townPortalScroll", driver._marches_retreat_scroll_name)
+            actions.append(("approach-halda",))
+            if combat_retreat:
+                retreat(driver)
             before_gold = state["gold"]
             recruit_companion(
                 SimpleNamespace(
@@ -525,6 +592,7 @@ class NineMarchesRecoveryTest(unittest.TestCase):
                 )
             )
             self.assertEqual(before_gold, state["gold"], "The actual companion reward is an item, not gold")
+            actions.append(("recruited-halda",))
             return "knight", "knightDialog", "aegisOfHalda"
 
         def sell(name, item):
@@ -558,7 +626,9 @@ class NineMarchesRecoveryTest(unittest.TestCase):
         ), patch.object(
             marches, "marketAttempt", side_effect=market
         ), patch.object(
-            marches, "useOwnedScroll", side_effect=retreat
+            marches, "retreatWithOwnedScroll", side_effect=retreat
+        ), patch.object(
+            marches, "useOwnedScroll", side_effect=lambda d, item, branch: retreat(d), create=True
         ), patch.object(
             marches, "recruit", side_effect=recruit
         ):
@@ -569,6 +639,23 @@ class NineMarchesRecoveryTest(unittest.TestCase):
         self.assertEqual([("start",), ("published",)], actions[:2])
         self.assertLess(actions.index(("sell-earned-gift",)), actions.index(("buy-finite-mana",)))
         self.assertEqual(("recipe", "craft_town_portal_scroll", "success"), actions[-1])
+        self.assertEqual(1, actions.count(("retreat",)))
+        self.assertLess(actions.index(("approach-halda",)), actions.index(("retreat",)))
+        if combat_retreat:
+            self.assertLess(actions.index(("retreat",)), actions.index(("recruited-halda",)))
+        else:
+            self.assertLess(actions.index(("recruited-halda",)), actions.index(("retreat",)))
+        self.assertIn("ninemarches.scroll.retreat", self.driver.branches)
+
+    def testServiceRouteUnlocksTheActualScribeAndFundsItsRecipeWithAnEarnedGift(self):
+        self.serviceRouteFixture()
+
+    def testServiceRouteCreditsTheOriginalScrollUsedDuringTheFirstHaldaApproachOnlyOnce(self):
+        self.serviceRouteFixture(combat_retreat=True)
+
+    def testServiceRouteRejectsAConsumedOriginalScrollWithoutAnActualRetreatWitness(self):
+        with self.assertRaisesRegex(AssertionError, "actual original scroll retreat witness"):
+            self.serviceRouteFixture(combat_retreat=True, credited=False)
 
 
 if __name__ == "__main__":

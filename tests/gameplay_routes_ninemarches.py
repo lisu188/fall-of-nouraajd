@@ -10,7 +10,7 @@ from pathlib import Path
 from tests.gameplay_branch_types import RouteCase
 from tests.gameplay_branch_driver import authoredRoadCells
 from tests.gameplay_branch_journals import verifyJournals
-from tests.gameplay_routes_services import marketAttempt, readSignpost, useOwnedScroll
+from tests.gameplay_routes_services import marketAttempt, readSignpost
 from tests.gameplay_routes_crafting import openStation, recipeAttempt
 from tests.gameplay_routes_waypoints import verifyWaypointPublication
 from tests.gameplay_routes_potions import consumePotionsAtDeficits
@@ -74,6 +74,8 @@ def retreatWithOwnedScroll(d):
     ]
     d.test.assertEqual(1, len(scrolls), "No unused, actually collected retreat scroll remains")
     entry = tuple(d.call(d.game_map, method) for method in ("getEntryX", "getEntryY", "getEntryZ"))
+    origin = d.coords()
+    d.test.assertNotEqual(entry, origin, "A retreat witness must begin away from the destination")
     identity = (d.game_map["__handle__"], d.player["__handle__"])
     owned = {item["__handle__"] for item in items}
     d.call(d.player, "useItem", scrolls[0])
@@ -84,6 +86,8 @@ def retreatWithOwnedScroll(d):
         owned - {scrolls[0]["__handle__"]}, {item["__handle__"] for item in d.call(d.player, "getItems")}
     )
     d._marches_retreat_scroll_name = None
+    if "ninemarches.scroll.retreat" in d.case.branches:
+        d.check("ninemarches.scroll.retreat", True, item=scrolls[0]["__handle__"], origin=origin, destination=entry)
 
 
 def retreatToRecoveryRoad(d):
@@ -103,7 +107,7 @@ def afterCombat(d):
         return
     consumePotionsAtDeficits(d)
     if all(
-        d.call(d.player, current) == d.call(d.player, maximum)
+        d.call(d.player, current) >= d.call(d.player, maximum)
         for current, maximum in (("getHp", "getHpMax"), ("getMana", "getManaMax"))
     ):
         return
@@ -116,8 +120,8 @@ def afterCombat(d):
         turns = d.recoverOnAuthoredRoad(road_cells=roads)
     finally:
         d.recoveryEnabled = recovery_enabled
-    d.test.assertEqual(d.call(d.player, "getHpMax"), d.call(d.player, "getHp"))
-    d.test.assertEqual(d.call(d.player, "getManaMax"), d.call(d.player, "getMana"))
+    d.test.assertGreaterEqual(d.call(d.player, "getHp"), d.call(d.player, "getHpMax"))
+    d.test.assertGreaterEqual(d.call(d.player, "getMana"), d.call(d.player, "getManaMax"))
     d.record({"naturalRoadRecovery": turns, "nativeCombatSeq": d._marches_combat_seq})
 
 
@@ -384,14 +388,6 @@ def serviceRoute(d):
             outcome="locked",
             navigate=navigate,
         )
-    scrolls = [
-        item
-        for item in d.call(d.player, "getItems")
-        if d.call(item, "getName") == d._marches_retreat_scroll_name and d.call(item, "getTypeId") == "TownPortalScroll"
-    ]
-    d.test.assertEqual(1, len(scrolls))
-    useOwnedScroll(d, scrolls[0], "ninemarches.scroll.retreat")
-    d._marches_retreat_scroll_name = None
     walk(d, "learningStone")
     d.test.assertTrue(d.flag("CAN_CRAFT_SCROLLS"))
     options = openStation(d, "gravewatchScribe", navigate=navigate)
@@ -406,6 +402,12 @@ def serviceRoute(d):
             navigate=navigate,
         )
     _actor, _dialog, gift = recruit(d, "halda")
+    if d._marches_retreat_scroll_name is not None:
+        retreatWithOwnedScroll(d)
+    else:
+        d.test.assertIn(
+            "ninemarches.scroll.retreat", d.branches, "The actual original scroll retreat witness is required"
+        )
     earned = [item for item in d.call(d.player, "getItems") if d.call(item, "getTypeId") == gift]
     d.test.assertEqual(1, len(earned))
     walk(d, "gravewatchBarter")
