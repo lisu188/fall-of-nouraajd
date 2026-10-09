@@ -1530,15 +1530,66 @@ void test_fight_handler_records_outcome_trace_metadata() {
         auto game = load_empty_game();
         auto victor = add_test_creature(game, "unitTraceOutcomeVictor");
         victor->setFightController(std::make_shared<KillingFightController>());
+        victor->getBaseStats()->setStamina(11);
+        victor->getBaseStats()->setStrength(13);
+        victor->setLevel(3);
+        victor->setHp(23);
+        victor->setMana(13);
         auto defeated = add_test_creature(game, "unitTraceOutcomeDefeated", 1, 0);
+        defeated->getBaseStats()->setStamina(9);
+        defeated->getBaseStats()->setStrength(8);
+        defeated->setLevel(2);
+        defeated->setHp(6);
+        defeated->setMana(4);
+        auto second = add_test_creature(game, "unitTraceOutcomeSecond", 0, 1);
+        second->getBaseStats()->setStamina(12);
+        second->getBaseStats()->setStrength(14);
+        second->setLevel(4);
+        second->setHp(9);
+        second->setMana(8);
         add_unit_loot(game, defeated, "unitTraceOutcomeLoot");
 
-        const auto result = CFightHandler::fightManyResult(victor, {defeated});
+        const auto result = CFightHandler::fightManyResult(victor, {second, nullptr, defeated, second});
         const auto records = CPlaytestTrace::drain();
 
+        bool found_started = false;
         bool found_finished = false;
         for (const auto &record : records) {
             const auto parsed = json::parse(record);
+            if (parsed.value("event", std::string()) == "combat_started") {
+                expect_true(!found_started, "one encounter should emit exactly one combat_started trace");
+                found_started = true;
+                const auto &attacker_state = parsed.at("attackerState");
+                const auto &opponent_states = parsed.at("opponentStates");
+                expect_true(attacker_state.size() == 7 && opponent_states.at(0).size() == 7 &&
+                                opponent_states.at(1).size() == 7,
+                            "combat-start snapshots should remain limited to identity, coordinates and resources");
+                expect_true(attacker_state.at("object") == parsed.at("attacker") &&
+                                parsed.at("attacker").value("name", std::string()) == victor->getName(),
+                            "combat snapshots should preserve the existing attacker identity reference");
+                expect_true(attacker_state.at("coords") == json{{"x", 0}, {"y", 0}, {"z", 0}} &&
+                                attacker_state.at("hp") == 23 && attacker_state.at("hpMax") == 77 &&
+                                attacker_state.at("mana") == 13 && attacker_state.at("manaMax") == 91 &&
+                                attacker_state.at("level") == 3,
+                            "combat_started should capture actual damaged attacker resources before the first round");
+                expect_true(opponent_states.size() == 2 && parsed.at("opponents").size() == 2,
+                            "combat snapshots should include each sanitized opponent exactly once");
+                expect_true(opponent_states.at(0).at("object") == parsed.at("opponents").at(0) &&
+                                opponent_states.at(1).at("object") == parsed.at("opponents").at(1) &&
+                                opponent_states.at(0).at("object").value("name", std::string()) ==
+                                    defeated->getName() &&
+                                opponent_states.at(1).at("object").value("name", std::string()) == second->getName(),
+                            "combat snapshots should retain existing sanitized opponent references and order");
+                expect_true(opponent_states.at(0).at("coords") == json{{"x", 1}, {"y", 0}, {"z", 0}} &&
+                                opponent_states.at(0).at("hp") == 6 && opponent_states.at(0).at("hpMax") == 63 &&
+                                opponent_states.at(0).at("mana") == 4 && opponent_states.at(0).at("manaMax") == 56 &&
+                                opponent_states.at(0).at("level") == 2 &&
+                                opponent_states.at(1).at("coords") == json{{"x", 0}, {"y", 1}, {"z", 0}} &&
+                                opponent_states.at(1).at("hp") == 9 && opponent_states.at(1).at("hpMax") == 84 &&
+                                opponent_states.at(1).at("mana") == 8 && opponent_states.at(1).at("manaMax") == 98 &&
+                                opponent_states.at(1).at("level") == 4,
+                            "combat_started should retain pre-defeat resources for every actual opponent");
+            }
             if (parsed.value("event", std::string()) != "combat_finished") {
                 continue;
             }
@@ -1551,7 +1602,21 @@ void test_fight_handler_records_outcome_trace_metadata() {
                             parsed["survivor"].value("name", std::string()) == victor->getName(),
                         "combat_finished traces should include the survivor reference");
         }
+        expect_true(found_started, "combat should emit a combat_started trace while tracing is enabled");
         expect_true(found_finished, "combat should emit a combat_finished trace while tracing is enabled");
+        expect_true(result.outcome == CFightOutcome::AttackerVictory && !defeated->isAlive() && !second->isAlive(),
+                    "resource snapshots must describe the start of an actual resolved multi-opponent fight");
+
+        CPlaytestTrace::configure(false);
+        auto untraced = add_test_creature(game, "unitTraceDisabledDefeated", 1, 1);
+        const auto hp_before = victor->getHp();
+        const auto mana_before = victor->getMana();
+        const auto untraced_result = CFightHandler::fightManyResult(victor, {untraced});
+        expect_true(CPlaytestTrace::records().empty(),
+                    "disabled fight tracing should emit neither combat events nor resource snapshots");
+        expect_true(untraced_result.outcome == result.outcome && !untraced->isAlive() && victor->getHp() == hp_before &&
+                        victor->getMana() == mana_before,
+                    "disabling snapshots should preserve the normal fight outcome and surviving resources");
     } catch (...) {
         CPlaytestTrace::configure(false);
         throw;
