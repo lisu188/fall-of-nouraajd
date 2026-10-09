@@ -991,6 +991,22 @@ class OctobogzMcpWalkthroughTest(unittest.TestCase):
                 pass
             raise
 
+    def earnSorcererWardScroll(self):
+        self.assertEqual(self.coords(self.object("nouraajdChapel")), self.coords())
+        dialog = self.dialog("berenDialog")
+        self.assertTrue(self.call(dialog, "invokeCondition", "can_decode_stained_glass_ward"))
+        before = {item["__handle__"] for item in self.call(self.player, "getItems")}
+        self.action(dialog, "decode_stained_glass_ward")
+        inventory = self.call(self.player, "getItems")
+        after = {item["__handle__"] for item in inventory}
+        self.assertTrue(before <= after, "The actual class deed must preserve existing owned items")
+        awarded = [item for item in inventory if item["__handle__"] not in before]
+        self.assertEqual(1, len(awarded), "The actual class deed must award exactly one new parchment")
+        self.assertEqual("Scroll", self.call(awarded[0], "getTypeId"))
+        self.earned_ward_scroll_name = self.call(awarded[0], "getName")
+        self.assertTrue(self.earned_ward_scroll_name)
+        self.assertEqual(1, sum(self.call(item, "getName") == self.earned_ward_scroll_name for item in inventory))
+
     def purchaseVictorLifePotionWithEarnedWard(self):
         self.assertEqual("good_end", self.call(self.game_map, "getStringProperty", "quest_state_victor"))
         self.assertTrue(self.call(self.game_map, "getBoolProperty", "VICTOR_REWARD_GRANTED"))
@@ -1002,7 +1018,12 @@ class OctobogzMcpWalkthroughTest(unittest.TestCase):
         self.assertEqual(["LifePotion", "ManaPotion"], sorted(self.call(item, "getTypeId") for item in stock))
         life = next(item for item in stock if self.call(item, "getTypeId") == "LifePotion")
         inventory = self.call(self.player, "getItems")
-        scrolls = [item for item in inventory if self.call(item, "getTypeId") == "Scroll"]
+        self.assertTrue(getattr(self, "earned_ward_scroll_name", None), "The actual class-deed reward must be tracked")
+        scrolls = [
+            item
+            for item in inventory
+            if self.call(item, "getTypeId") == "Scroll" and self.call(item, "getName") == self.earned_ward_scroll_name
+        ]
         self.assertEqual(1, len(scrolls), "Only the actual class-deed parchment may fund this purchase")
         parchment = scrolls[0]
         equipped = self.call(self.player, "getEquipped")
@@ -1657,7 +1678,7 @@ class OctobogzMcpWalkthroughTest(unittest.TestCase):
                     self.action(self.dialog("doorDialog"), "open_door")
                     _, self.walkable = authoredRegion("nouraajd")
                     self.walkTo("nouraajdChapel")
-                    self.action(self.dialog("berenDialog"), "decode_stained_glass_ward")
+                    self.earnSorcererWardScroll()
                 self.prepareThroughRolf()
                 self.probeCoordinateReadCosts()
                 self.prepareThroughCatacombs()
@@ -1784,7 +1805,71 @@ class OctobogzDiagnosticTest(unittest.TestCase):
                 )
                 fixture.engine.assert_called_once()
 
-    def testVictorMerchantUsesActualAuthoredPayoutsAndWardParchmentWhileRetainingTheRetreatScroll(self):
+    def testSorcererWardTracksTheNewAuthoredRewardAmongExistingParchments(self):
+        from types import SimpleNamespace
+        from unittest.mock import Mock
+
+        from tests.test_gameplay_route_dialogs import authoredFunction
+
+        player = {"__handle__": "player"}
+        dialog = {"__handle__": "beren"}
+        chapel = {"__handle__": "chapel"}
+        original = [{"__handle__": name} for name in ("loot-scroll", "portal", "starter")]
+        awarded = {"__handle__": "ward"}
+        owned = list(original)
+        flags = {}
+        native_player = SimpleNamespace(
+            incProperty=Mock(),
+            setBoolProperty=lambda key, value: flags.update({key: value}),
+            addItem=lambda identity: owned.append(awarded) if identity == "Scroll" else self.fail(identity),
+            addExp=Mock(),
+        )
+        native_game = SimpleNamespace(getMap=lambda: SimpleNamespace(getPlayer=lambda: native_player))
+        ward = authoredFunction(
+            "res/maps/nouraajd/script.py",
+            "decode_stained_glass_ward",
+            class_id="BerenDialog",
+            rewardSnapshot=Mock(),
+            showRewardReceipt=Mock(),
+        )
+
+        def action(selected, name):
+            self.assertEqual((dialog, "decode_stained_glass_ward"), (selected, name))
+            ward(SimpleNamespace(getGame=lambda: native_game, can_decode_stained_glass_ward=lambda: True))
+
+        def call(handle, method, *args):
+            if method == "getItems":
+                self.assertEqual(player, handle)
+                return list(owned)
+            if method == "invokeCondition":
+                self.assertEqual((dialog, "can_decode_stained_glass_ward"), (handle, args[0]))
+                return not flags.get("decoded_stained_glass_ward", False)
+            if method == "getTypeId":
+                return (
+                    "Scroll"
+                    if handle in (original[0], awarded)
+                    else "TownPortalScroll" if handle == original[1] else "Staff"
+                )
+            if method == "getName":
+                return "native-" + handle["__handle__"]
+            raise AssertionError((handle, method, args))
+
+        fixture = SimpleNamespace(
+            player=player,
+            object=lambda name: chapel if name == "nouraajdChapel" else self.fail(name),
+            coords=lambda handle=None: (43, 113, 0),
+            dialog=lambda name: dialog if name == "berenDialog" else self.fail(name),
+            call=call,
+            action=action,
+            assertEqual=self.assertEqual,
+            assertTrue=self.assertTrue,
+        )
+        OctobogzMcpWalkthroughTest.earnSorcererWardScroll(fixture)
+        self.assertEqual("native-ward", fixture.earned_ward_scroll_name)
+        self.assertEqual([*original, awarded], owned)
+        self.assertTrue(flags["decoded_stained_glass_ward"])
+
+    def testVictorMerchantUsesTheTrackedWardAfterHandleRefreshAndRetainsOtherScrollLoot(self):
         from types import SimpleNamespace
         from unittest.mock import Mock
 
@@ -1802,6 +1887,7 @@ class OctobogzDiagnosticTest(unittest.TestCase):
                 "life",
                 "mana",
                 "ward",
+                "loot-scroll",
                 "portal",
                 "starter",
                 "quest",
@@ -1811,11 +1897,12 @@ class OctobogzDiagnosticTest(unittest.TestCase):
             "life": "LifePotion",
             "mana": "ManaPotion",
             "ward": "Scroll",
+            "loot-scroll": "Scroll",
             "portal": "TownPortalScroll",
             "starter": "Staff",
             "quest": "letterFromRolf",
         }
-        owned, stock = {"portal", "starter", "quest"}, {"life", "mana"}
+        owned, stock = {"portal", "starter", "quest", "loot-scroll"}, {"life", "mana"}
         sold, purchases = [], []
         equipped = {"0": handles["starter"]}
         native_player = SimpleNamespace(
@@ -1877,9 +1964,11 @@ class OctobogzDiagnosticTest(unittest.TestCase):
         rescued(SimpleNamespace(getGame=lambda: native_game), object(), object())
         gui.showTrade.assert_called_once_with(market_object)
         self.assertEqual(700, state["gold"])
+        # Native names survive save/reload; MCP handles need not retain their original values.
+        handles["ward"] = {"__handle__": "refreshed-ward"}
 
         def call(handle, method, *args):
-            identity = handle["__handle__"]
+            identity = next(name for name, current in handles.items() if current == handle)
             if method == "getStringProperty":
                 return state["victor"]
             if method == "getBoolProperty":
@@ -1890,6 +1979,8 @@ class OctobogzDiagnosticTest(unittest.TestCase):
                 return handles["market"]
             if method == "getTypeId":
                 return "victorMarket" if identity == "market" else items[identity]
+            if method == "getName":
+                return "native-" + identity
             if method == "getItems":
                 return [handles[key] for key in sorted(owned if identity == "player" else stock)]
             if method == "getEquipped":
@@ -1928,6 +2019,7 @@ class OctobogzDiagnosticTest(unittest.TestCase):
             game=handles["game"],
             game_map=handles["world"],
             player=handles["player"],
+            earned_ward_scroll_name="native-ward",
             marketTransactionState=lambda: {"context": "unchanged"},
         )
         for name in ("assertEqual", "assertTrue", "assertFalse", "assertNotIn", "assertIsNotNone"):
@@ -1936,7 +2028,7 @@ class OctobogzDiagnosticTest(unittest.TestCase):
         self.assertEqual(60, state["gold"])
         self.assertEqual(["ward"], sold)
         self.assertEqual(["life"], purchases)
-        self.assertEqual({"life", "portal", "starter", "quest"}, owned)
+        self.assertEqual({"life", "portal", "starter", "quest", "loot-scroll"}, owned)
         self.assertEqual({"mana", "ward"}, stock)
         # Claim-first source callbacks cannot mint a second payout or replace the depleted market.
         gooby(SimpleNamespace(getGame=lambda: native_game))
