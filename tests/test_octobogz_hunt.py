@@ -1730,8 +1730,37 @@ class OctobogzHuntTest(unittest.TestCase):
 
         state = {"turn": 0, "gooby": True, "completed": [], "gold": 0, "alive": True, "defeat": "", "claimed": False}
         events = []
+        state["reward_records"] = []
+        player_ref = {
+            "id": "Inquisitor",
+            "name": "original-main-quest-player",
+            "typeId": "Inquisitor",
+            "type": "CPlayer",
+            "isPlayer": True,
+        }
         player, world = ({"__handle__": name} for name in ("player", "map"))
-        native_player = types.SimpleNamespace(addGold=lambda amount: state.update(gold=state["gold"] + amount))
+
+        def addGold(amount):
+            before = state["gold"]
+            state["gold"] += amount
+            state["reward_records"].append(
+                {
+                    "event": "gold_changed",
+                    "map": "nouraajd",
+                    "actor": player_ref,
+                    "before": before,
+                    "after": state["gold"],
+                    "delta": amount,
+                }
+            )
+
+        native_player = types.SimpleNamespace(
+            addGold=addGold,
+            getGold=lambda: state["gold"],
+            getItems=lambda: [],
+            getEquipped=lambda: {},
+            getNumericProperty=lambda name: 0,
+        )
         native_world = types.SimpleNamespace(getPlayer=lambda: native_player)
         native_game = types.SimpleNamespace(
             getMap=lambda: native_world, getGuiHandler=lambda: types.SimpleNamespace(notify=Mock())
@@ -1753,14 +1782,31 @@ class OctobogzHuntTest(unittest.TestCase):
             state["claimed"] = True
             return True
 
+        def showReader(game_instance, title, body):
+            self.assertIs(native_game, game_instance)
+            state["reward_records"].append(
+                {
+                    "event": "reader_requested",
+                    "map": "nouraajd",
+                    "player": player_ref,
+                    "title": title,
+                    "body": body,
+                    "headless": True,
+                    "titleLength": len(title.encode("utf-8")),
+                    "bodyLength": len(body.encode("utf-8")),
+                }
+            )
+
+        snapshot = authoredFunction("res/game.py", "rewardSnapshot")
+        receipt = authoredFunction("res/game.py", "showRewardReceipt", rewardSnapshot=snapshot, showReader=showReader)
         reward = authoredFunction(
             source,
             "onComplete",
             class_id="MainQuest",
             claim_once=claimOnce,
             MAIN_QUEST_GOLD_REWARD=200,
-            rewardSnapshot=Mock(),
-            showRewardReceipt=Mock(),
+            rewardSnapshot=snapshot,
+            showRewardReceipt=receipt,
         )
         gooby = authoredFunction(
             source, "trigger", class_id="GoobyTrigger", _quest_system_from=lambda obj: quest_system
@@ -1770,7 +1816,13 @@ class OctobogzHuntTest(unittest.TestCase):
             evaluation = not state["gooby"]
             events.append(("onTurn", state["turn"], state["gooby"]))
             if completed(owner) and "mainQuest" not in state["completed"] and failure != "missingQuest":
+                from tests.gameplay_branch_rewards import observeMainQuestReward
+
+                state["reward_records"].append(
+                    {"event": "quest_completed", "map": "nouraajd", "player": player_ref, "quest": "mainQuest"}
+                )
                 reward(owner)
+                observeMainQuestReward(state["reward_validator"], state["reward_records"])
                 state["completed"].append("mainQuest")
             if state["gooby"]:
                 events.append(("controllerGoobyDefeat", state["turn"]))
@@ -1794,6 +1846,8 @@ class OctobogzHuntTest(unittest.TestCase):
                 return not state["gooby"]
             if method == "getGold":
                 return state["gold"]
+            if method == "getName":
+                return player_ref["name"]
             if method == "isAlive":
                 return state["alive"]
             if method == "getHp":
@@ -1817,6 +1871,9 @@ class OctobogzHuntTest(unittest.TestCase):
                 state, events, player, world, call, gooby, owner = self.originalMainQuestTurnFixture()
                 walker = OctobogzMcpWalkthroughTest("runTest")
                 walker.player, walker.game_map, walker.call = player, world, call
+                walker._native_combat_validator = state["reward_validator"] = types.SimpleNamespace(
+                    test=walker, trace_path=None, _combat_failure=None
+                )
                 walker.pump, walker.snapshot, walker.recoverOnRoadPair = Mock(), Mock(), Mock()
                 walker.questNames = lambda method: list(state["completed"])
 
@@ -1849,6 +1906,9 @@ class OctobogzHuntTest(unittest.TestCase):
                 state, _events, player, world, call, _gooby, _owner = self.originalMainQuestTurnFixture(failure=failure)
                 walker = OctobogzMcpWalkthroughTest("runTest")
                 walker.player, walker.game_map, walker.call = player, world, call
+                walker._native_combat_validator = state["reward_validator"] = types.SimpleNamespace(
+                    test=walker, trace_path=None, _combat_failure=None
+                )
                 walker.pump, walker.snapshot, walker.recoverOnRoadPair = Mock(), Mock(), Mock()
                 walker.questNames = lambda method: list(state["completed"])
                 walker.walkTo = lambda *args, **kwargs: call(world, "move")
@@ -1868,6 +1928,7 @@ class OctobogzHuntTest(unittest.TestCase):
                 driver = GameplayBranchDriver(self, Mock(), {"proc": object()}, case, "Inquisitor", ROOT)
                 driver.game, driver.game_map, driver.player, driver.map_name = "game", world, player, "nouraajd"
                 driver.call, driver.pump, driver.recover = call, Mock(), Mock()
+                state["reward_validator"] = driver
                 driver.snapshot = Mock(return_value={})
                 driver.coords, driver._validateMovement = lambda handle=None: (100, 100, 0), Mock()
                 driver.turns = starting_turns
