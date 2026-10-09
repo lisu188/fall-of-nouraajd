@@ -178,12 +178,14 @@ def rejectDuplicateKeys(pairs):
     return result
 
 
-def auditReceipts(cases, receipts_dir, platform, head, catalog_audit=None):
+def auditReceipts(cases, receipts_dir, platform, head, pr_head, catalog_audit=None):
     from tests.gameplay_branch_driver import caseSeed
     from tests.gameplay_branch_types import testName
 
     if platform not in {"linux", "windows"}:
         raise ValueError("Receipt platform must be linux or windows")
+    if any(not isinstance(value, str) or not value.strip() for value in (head, pr_head)):
+        raise ValueError("Receipt audit requires both expected checkout and PR heads")
     if catalog_audit is not None and (catalog_audit.get("issues") or catalog_audit.get("pendingGameplay")):
         raise ValueError("Authored gameplay catalog still contains structural issues or pending branches")
     cases = tuple(cases)
@@ -203,6 +205,8 @@ def auditReceipts(cases, receipts_dir, platform, head, catalog_audit=None):
             raise ValueError(f"Duplicate case/class receipt: {identity}")
         if receipt.get("status") != "passed":
             raise ValueError(f"Non-passing receipt ({receipt.get('status')}): {identity}")
+        if receipt.get("platform") != platform or receipt.get("prHead") != pr_head:
+            raise ValueError(f"Receipt platform or PR head differs from the scheduled execution: {identity}")
         if receipt.get("head") != head or receipt.get("seed") != caseSeed(*identity):
             raise ValueError(f"Receipt head or random seed differs from the scheduled case: {identity}")
         case = expected[identity]
@@ -238,6 +242,7 @@ def auditReceipts(cases, receipts_dir, platform, head, catalog_audit=None):
         "schema": "mcp_branch_timings.v1",
         "platform": platform,
         "head": head,
+        "prHead": pr_head,
         "reviewed": False,
         "proof": "all current case/class receipts passed; durations require review before scheduling use",
         "executionCount": len(found),
@@ -359,6 +364,7 @@ def main(argv=None):
     auditor.add_argument("--receipts-dir", type=Path, required=True)
     auditor.add_argument("--platform", choices=("linux", "windows"), required=True)
     auditor.add_argument("--head", required=True)
+    auditor.add_argument("--pr-head", required=True)
     auditor.add_argument("--output", type=Path, required=True)
     auditor.add_argument("--audit-root", type=Path, default=ROOT)
     runner = commands.add_parser("run")
@@ -391,7 +397,12 @@ def main(argv=None):
             from tests.gameplay_branch_catalog import auditCatalog
 
             result = auditReceipts(
-                selectedCases(), args.receipts_dir, args.platform, args.head, auditCatalog(args.audit_root)
+                selectedCases(),
+                args.receipts_dir,
+                args.platform,
+                args.head,
+                args.pr_head,
+                auditCatalog(args.audit_root),
             )
             args.output.parent.mkdir(parents=True, exist_ok=True)
             args.output.write_text(json.dumps(result, indent=2) + "\n", encoding="utf-8")

@@ -18,6 +18,20 @@ from unittest.mock import patch
 from tests.gameplay_branch_driver import GameplayBranchDriver, ROOT, caseSeed
 
 
+def receiptProvenance(*, required=False):
+    platform = {"linux": "linux", "win32": "windows"}.get(sys.platform)
+    if platform is None:
+        raise ValueError("Unsupported native branch receipt platform: " + sys.platform)
+    result = {
+        "platform": platform,
+        "head": os.environ.get("GAME_MCP_BRANCH_HEAD"),
+        "prHead": os.environ.get("GAME_MCP_BRANCH_PR_HEAD"),
+    }
+    if required and any(not isinstance(result[key], str) or not result[key].strip() for key in ("head", "prHead")):
+        raise ValueError("Required native branch receipts need both checkout and PR head provenance")
+    return result
+
+
 @lru_cache(maxsize=16)
 def verifyCopiedSources(build_dir, build_config, sources):
     for name in sources:
@@ -40,6 +54,7 @@ class GameplayBranchMcpTest(unittest.TestCase):
         required = os.environ.get("GAME_MCP_BRANCH_REQUIRED") == "1"
         if type(self).__module__ not in {"test", "__main__"} and not required:
             self.skipTest("Run exhaustive routes through test.py --suite mcp-branches")
+        provenance = receiptProvenance(required=required)
         extension_dirs = (harness.build_dir, *harness.extension_dirs)
         if not any(list(path.glob("_game*.pyd")) + list(path.glob("_game*.so")) for path in extension_dirs):
             message = "Current _game extension required for the exhaustive MCP gameplay branch matrix"
@@ -86,7 +101,7 @@ class GameplayBranchMcpTest(unittest.TestCase):
         process = client._start_stdio_process(command, env=environment, map_name=case.maps[0])
         driver = None
         receipt = {
-            "head": os.environ.get("GAME_MCP_BRANCH_HEAD"),
+            **provenance,
             "case": case.id,
             "class": class_id,
             "seed": seed,

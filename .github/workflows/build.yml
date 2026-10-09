@@ -917,6 +917,7 @@ jobs:
       GAME_BUILD_DIR: cmake-build-release
       GAME_MCP_BRANCH_REQUIRED: "1"
       GAME_MCP_BRANCH_HEAD: ${{ github.sha }}
+      GAME_MCP_BRANCH_PR_HEAD: ${{ github.event.pull_request.head.sha || github.sha }}
       GAME_TEST_JOBS: "1"
       GAME_TEST_OUTPUT_DIR: test/mcp-branches-linux-${{ matrix.shard }}
       SDL_VIDEODRIVER: dummy
@@ -973,6 +974,7 @@ jobs:
       GAME_BUILD_CONFIG: Release
       GAME_MCP_BRANCH_REQUIRED: "1"
       GAME_MCP_BRANCH_HEAD: ${{ github.sha }}
+      GAME_MCP_BRANCH_PR_HEAD: ${{ github.event.pull_request.head.sha || github.sha }}
       GAME_TEST_JOBS: "1"
       GAME_TEST_OUTPUT_DIR: test/mcp-branches-windows-${{ matrix.shard }}
       SDL_VIDEODRIVER: dummy
@@ -1046,12 +1048,14 @@ jobs:
         run: >-
           python3 scripts/mcp_branch_shards.py audit-receipts --platform linux
           --receipts-dir test/mcp-receipts-linux --head "${{ github.sha }}"
+          --pr-head "${{ github.event.pull_request.head.sha || github.sha }}"
           --output test/mcp-branch-timings-linux.json
       - name: Require exact Windows receipts and collect measured timings
         if: always()
         run: >-
           python3 scripts/mcp_branch_shards.py audit-receipts --platform windows
           --receipts-dir test/mcp-receipts-windows --head "${{ github.sha }}"
+          --pr-head "${{ github.event.pull_request.head.sha || github.sha }}"
           --output test/mcp-branch-timings-windows.json
       - name: Publish measured branch timings for review
         if: always()

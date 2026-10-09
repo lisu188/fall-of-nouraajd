@@ -221,11 +221,13 @@ class McpBranchWorkflowTest(unittest.TestCase):
             self.runAggregate({**environment, "COVERAGE_NEEDED": "true", "COVERAGE_RESULT": "skipped"})
 
     def testRuntimeTransferAndReceiptAuditsKeepTheCheckoutShaAndPendingGate(self):
+        pr_head = "${{ github.event.pull_request.head.sha || github.sha }}"
         for platform in ("linux", "windows"):
             job = workflowJob("mcp-branches-" + platform)
             self.assertIn("name: mcp-branch-runtime-" + platform + "-${{ github.sha }}", job)
             self.assertIn('--head "${{ github.sha }}"', job)
             self.assertIn("GAME_MCP_BRANCH_HEAD: ${{ github.sha }}", job)
+            self.assertIn("GAME_MCP_BRANCH_PR_HEAD: " + pr_head, job)
         aggregate = workflowJob("mcp-branches")
         for platform in ("Linux", "Windows"):
             audit = workflowStep(aggregate, "Require exact " + platform + " receipts and collect measured timings")
@@ -233,6 +235,7 @@ class McpBranchWorkflowTest(unittest.TestCase):
             self.assertNotIn("continue-on-error:", audit)
             self.assertIn("audit-receipts --platform " + platform.lower(), audit)
             self.assertIn('--head "${{ github.sha }}"', audit)
+            self.assertIn('--pr-head "' + pr_head + '"', audit)
 
 
 if __name__ == "__main__":

@@ -387,7 +387,7 @@ class McpBranchShardsTest(unittest.TestCase):
         self.assertIn("(SDL2.dll SDL2_image.dll SDL2_ttf.dll)", stage_source)
         self.assertIn("--build-dir test/mcp-runtime-windows/fall-of-nouraajd", bundle_source)
 
-    def writeReceipts(self, directory, case):
+    def writeReceipts(self, directory, case, platform="linux"):
         from tests.gameplay_branch_driver import caseSeed
 
         for index, class_id in enumerate(case.classes, start=1):
@@ -397,6 +397,8 @@ class McpBranchShardsTest(unittest.TestCase):
                 "race": case.race,
                 "initialReputation": case.initial_reputation,
                 "head": "current-head",
+                "prHead": "current-pr-head",
+                "platform": platform,
                 "seed": caseSeed(case.id, class_id),
                 "status": "passed",
                 "requiredBranches": list(case.branches),
@@ -413,7 +415,9 @@ class McpBranchShardsTest(unittest.TestCase):
         with tempfile.TemporaryDirectory(prefix="nouraajd-mcp-receipts-", dir=shards.ROOT) as temporary:
             root = Path(temporary)
             self.writeReceipts(root, case)
-            result = shards.auditReceipts((case,), root, "linux", "current-head", {"issues": (), "pendingGameplay": {}})
+            result = shards.auditReceipts(
+                (case,), root, "linux", "current-head", "current-pr-head", {"issues": (), "pendingGameplay": {}}
+            )
             self.assertEqual(2, result["executionCount"])
             self.assertEqual({case.id: 25.0}, result["routeDurationsSeconds"])
             self.assertEqual(
@@ -422,27 +426,29 @@ class McpBranchShardsTest(unittest.TestCase):
             )
             self.assertFalse(result["reviewed"])
             self.assertEqual("current-head", result["head"])
+            self.assertEqual("current-pr-head", result["prHead"])
+            self.assertEqual("linux", result["platform"])
 
     def testReceiptAuditRejectsMissingDuplicateAndNonPassingExecutions(self):
         case = replace(self.cases()[0], classes=PLAYER_CLASSES[:1])
         with tempfile.TemporaryDirectory(prefix="nouraajd-mcp-incomplete-", dir=shards.ROOT) as temporary:
             root = Path(temporary)
             with self.assertRaisesRegex(ValueError, "Missing case/class"):
-                shards.auditReceipts((case,), root, "linux", "current-head")
+                shards.auditReceipts((case,), root, "linux", "current-head", "current-pr-head")
             self.writeReceipts(root, case)
             path = next(root.glob("*.receipt.json"))
             original = path.read_text(encoding="utf-8")
             duplicate = root / "duplicate.receipt.json"
             duplicate.write_text(original, encoding="utf-8")
             with self.assertRaisesRegex(ValueError, "Duplicate case/class"):
-                shards.auditReceipts((case,), root, "linux", "current-head")
+                shards.auditReceipts((case,), root, "linux", "current-head", "current-pr-head")
             duplicate.unlink()
             for status in ("failed", "skipped", "blocked", None):
                 value = json.loads(original)
                 value["status"] = status
                 path.write_text(json.dumps(value), encoding="utf-8")
                 with self.subTest(status=status), self.assertRaisesRegex(ValueError, "Non-passing"):
-                    shards.auditReceipts((case,), root, "linux", "current-head")
+                    shards.auditReceipts((case,), root, "linux", "current-head", "current-pr-head")
 
     def testReceiptAuditRejectsWrongContextAndIncompleteBranchAssertions(self):
         case = replace(self.cases()[0], classes=PLAYER_CLASSES[:1])
@@ -470,16 +476,98 @@ class McpBranchShardsTest(unittest.TestCase):
                 receipt[key] = value
                 path.write_text(json.dumps(receipt), encoding="utf-8")
                 with self.subTest(key=key, value=value), self.assertRaises(ValueError):
-                    shards.auditReceipts((case,), root, "windows", "current-head")
+                    shards.auditReceipts((case,), root, "linux", "current-head", "current-pr-head")
             path.write_text(original[:-1] + ',"status":"passed"}', encoding="utf-8")
             with self.assertRaisesRegex(ValueError, "Duplicate receipt JSON key"):
-                shards.auditReceipts((case,), root, "windows", "current-head")
+                shards.auditReceipts((case,), root, "linux", "current-head", "current-pr-head")
+
+    def testReceiptAuditRejectsMissingWrongAndSwappedPlatformOrPrHead(self):
+        case = replace(self.cases()[0], classes=PLAYER_CLASSES[:1])
+        with tempfile.TemporaryDirectory(prefix="nouraajd-mcp-provenance-", dir=shards.ROOT) as temporary:
+            root = Path(temporary)
+            for platform, other_platform in (("linux", "windows"), ("windows", "linux")):
+                self.writeReceipts(root, case, platform=platform)
+                path = next(root.glob("*.receipt.json"))
+                original = json.loads(path.read_text(encoding="utf-8"))
+                result = shards.auditReceipts((case,), root, platform, "current-head", "current-pr-head")
+                self.assertEqual(platform, result["platform"])
+                with self.subTest(platform=platform, defect="swapped audit"), self.assertRaisesRegex(
+                    ValueError, "platform or PR head"
+                ):
+                    shards.auditReceipts((case,), root, other_platform, "current-head", "current-pr-head")
+                for key, value in (
+                    ("platform", None),
+                    ("platform", other_platform),
+                    ("platform", "darwin"),
+                    ("prHead", None),
+                    ("prHead", ""),
+                    ("prHead", "stale-pr-head"),
+                    ("prHead", "current-head"),
+                ):
+                    receipt = dict(original)
+                    if value is None:
+                        receipt.pop(key)
+                    else:
+                        receipt[key] = value
+                    path.write_text(json.dumps(receipt), encoding="utf-8")
+                    with self.subTest(platform=platform, key=key, value=value), self.assertRaisesRegex(
+                        ValueError, "platform or PR head"
+                    ):
+                        shards.auditReceipts((case,), root, platform, "current-head", "current-pr-head")
+            for head, pr_head in (("", "current-pr-head"), ("current-head", ""), ("current-head", None)):
+                with self.subTest(head=head, pr_head=pr_head), self.assertRaisesRegex(ValueError, "expected checkout"):
+                    shards.auditReceipts((case,), root, "linux", head, pr_head)
+
+    def testRequiredReceiptProvenanceUsesActualOsAndSeparateHeads(self):
+        from tests import test_gameplay_branches_mcp as runtime
+
+        environment = {
+            "GAME_MCP_BRANCH_HEAD": "merge-checkout",
+            "GAME_MCP_BRANCH_PR_HEAD": "pr-source-head",
+            "GAME_MCP_BRANCH_PLATFORM": "untrusted-platform-label",
+        }
+        for actual_platform, expected_platform in (("linux", "linux"), ("win32", "windows")):
+            with self.subTest(platform=actual_platform), patch.object(
+                runtime.sys, "platform", actual_platform
+            ), patch.dict(runtime.os.environ, environment, clear=True):
+                self.assertEqual(
+                    {"platform": expected_platform, "head": "merge-checkout", "prHead": "pr-source-head"},
+                    runtime.receiptProvenance(required=True),
+                )
+                for missing in ("GAME_MCP_BRANCH_HEAD", "GAME_MCP_BRANCH_PR_HEAD"):
+                    with self.subTest(missing=missing), patch.dict(
+                        runtime.os.environ,
+                        {key: value for key, value in environment.items() if key != missing},
+                        clear=True,
+                    ), self.assertRaisesRegex(ValueError, "both checkout and PR head"):
+                        runtime.receiptProvenance(required=True)
+        with patch.object(runtime.sys, "platform", "darwin"), self.assertRaisesRegex(ValueError, "Unsupported"):
+            runtime.receiptProvenance(required=True)
+
+    def testReceiptAuditCliRequiresExpectedPrHead(self):
+        argv = [
+            "audit-receipts",
+            "--receipts-dir",
+            "unused-receipts",
+            "--platform",
+            "linux",
+            "--head",
+            "checkout-head",
+            "--output",
+            "unused-timings.json",
+        ]
+        with patch("sys.stderr", new_callable=io.StringIO) as error, self.assertRaises(SystemExit) as raised:
+            shards.main(argv)
+        self.assertEqual(2, raised.exception.code)
+        self.assertIn("--pr-head", error.getvalue())
 
     def testReceiptAuditNeverCreditsPendingAuthoredBranches(self):
         case = self.cases()[0]
         for audit in ({"issues": ("missing callback",)}, {"pendingGameplay": {"unreachable.actor": "blocked"}}):
             with self.subTest(audit=audit), self.assertRaisesRegex(ValueError, "pending branches"):
-                shards.auditReceipts((case,), shards.ROOT / "absent-receipts", "linux", "current-head", audit)
+                shards.auditReceipts(
+                    (case,), shards.ROOT / "absent-receipts", "linux", "current-head", "current-pr-head", audit
+                )
 
     def testSchedulingUsesOnlyReviewedTwoPlatformMeasurements(self):
         with tempfile.TemporaryDirectory(prefix="nouraajd-mcp-measurements-", dir=shards.ROOT) as temporary:

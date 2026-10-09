@@ -241,7 +241,9 @@ processes within each platform. The private hook is unavailable through MCP expo
 ordered action journals, bounded native trace history, failure diagnostics, elapsed time, and branch receipts
 are written under the selected
 `GAME_TEST_OUTPUT_DIR`. Reproduce a failure from process startup with the recorded seed and action sequence;
-save checkpoints preserve game state, and do not serialize RNG state. Random sequences are checked within each
+save checkpoints preserve game state, and do not serialize RNG state. Each receipt records the actual native
+platform, PR head and merge-checkout commit; the aggregate requires all three to match the scheduled run.
+A receipt from one platform cannot satisfy the other platform. Random sequences are checked within each
 platform; Linux and Windows need not produce identical sequences. Generated object names include process-local
 identity, so the seed tests establish native random-source repeatability. The recorded case and action sequence
 are failure diagnostics; they do not establish identical whole-route execution across fresh processes.
