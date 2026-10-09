@@ -433,11 +433,11 @@ def fleeCourtyardUntil(d, elapsed, allow_timeout=False):
                 candidates.append((distance, target != previous, abs(target[0] - 45) + abs(target[1] - 100), target))
         d.test.assertTrue(candidates, ("No natural escape step remains", origin, opponents))
         target = max(candidates)[-1]
+        before_turn = d.call(d.game_map, "getTurn")
         d.step(target)
         previous = origin
-        expected = (
-            "bad_end" if allow_timeout and d.call(d.game_map, "getTurn") - spawn_turn >= 75 else "encounter_active"
-        )
+        # Native onTurn observes the current counter before CMap::move increments it.
+        expected = "bad_end" if allow_timeout and before_turn - spawn_turn >= 75 else "encounter_active"
         d.test.assertEqual(expected, d.string("quest_state_victor"))
 
 
@@ -466,7 +466,9 @@ def victorRoute(d, approach, direct, saved, start_new=True, ask_girl=True):
         victorCountdownCheckpoint(d, "victor-one-turn-before-deadline")
         d.check("nouraajd.victor.activeBeforeDeadline", d.string("quest_state_victor") == "encounter_active")
         gold = d.gold()
-        fleeCourtyardUntil(d, 75, allow_timeout=True)
+        fleeCourtyardUntil(d, 75)
+        d.test.assertEqual("encounter_active", d.string("quest_state_victor"))
+        fleeCourtyardUntil(d, 76, allow_timeout=True)
         d.check(
             "nouraajd.victor.lostAtDeadline",
             d.string("quest_state_victor") == "bad_end" and not d.flag("VICTOR_REWARD_GRANTED") and d.gold() == gold,

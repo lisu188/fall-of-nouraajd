@@ -202,7 +202,7 @@ def portals(d):
         ("monolithCold", "monolithAsh"),
     ):
         destination = d.coords(d.object(target))
-        d.navigateTo(source)
+        d.revisit(source)
         d.check(f"ninemarches.portal.{source}", d.coords() == destination, destination=destination)
 
 

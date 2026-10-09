@@ -1,9 +1,12 @@
 # fall-of-nouraajd c++ dark fantasy game
 # Copyright (C) 2026 Andrzej Lis
 # SPDX-License-Identifier: GPL-3.0-or-later
-"""Authored dialog graph regressions for natural route sequencing, without native gameplay credit."""
+"""Authored route sequencing regressions, without native gameplay credit."""
 
+import ast
+import json
 from pathlib import Path
+from types import SimpleNamespace
 import unittest
 from unittest.mock import Mock, patch
 
@@ -11,6 +14,16 @@ from tests.gameplay_branch_driver import GameplayBranchDriver
 from tests.gameplay_branch_types import RouteCase
 from tests import gameplay_routes_ninemarches as marches
 from tests import gameplay_routes_nouraajd as nouraajd
+
+
+def authoredFunction(source, function_name, *, class_id=None, **namespace):
+    path = Path(__file__).resolve().parents[1] / source
+    tree = ast.parse(path.read_text(encoding="utf-8"))
+    if class_id:
+        tree = next(node for node in ast.walk(tree) if isinstance(node, ast.ClassDef) and node.name == class_id)
+    function = next(node for node in ast.walk(tree) if isinstance(node, ast.FunctionDef) and node.name == function_name)
+    exec(compile(ast.Module(body=[function], type_ignores=[]), source, "exec"), namespace)
+    return namespace[function_name]
 
 
 class GameplayRouteDialogTest(unittest.TestCase):
@@ -127,3 +140,83 @@ class GameplayRouteDialogTest(unittest.TestCase):
         driver.select("dialog", "COMPLETED_THANKS", 0)
         driver.choose("dialog", "accept_quest", condition="contract_completed")
         self.assertEqual("COMPLETED_THANKS", driver._dialog_positions[("nouraajd", "dialog")])
+
+    def testVictorFleeUsesTheTurnObservedByTheAuthoredTimer(self):
+        state = {"turn": 84, "quest": "encounter_active", "position": (60, 110, 0), "leader": True}
+        quest = SimpleNamespace(
+            get_state=lambda name: state["quest"],
+            mark_victor_bad_end=lambda: state.update(quest="bad_end"),
+        )
+        game_map = SimpleNamespace(
+            getNumericProperty=lambda name: 10,
+            getTurn=lambda: state["turn"],
+            getGame=lambda: None,
+        )
+        expire = authoredFunction(
+            "res/maps/nouraajd/script.py",
+            "_expire_victor_search",
+            _get_quest_system=lambda game_map: quest,
+            _clear_victor_encounter=lambda game_map: state.update(leader=False),
+            VICTOR_COURTYARD_TIMEOUT_TURNS=75,
+            showReader=Mock(),
+        )
+
+        def step(target):
+            state["position"] = target
+            # CMap::move dispatches synchronous onTurn callbacks before turn++.
+            expire(game_map)
+            state["turn"] += 1
+
+        driver = SimpleNamespace(
+            test=self,
+            game_map=game_map,
+            number=lambda name: 10,
+            call=lambda handle, method: getattr(handle, method)(),
+            coords=lambda handle=None: (45, 100, 0) if handle else state["position"],
+            object=lambda name, required=False: "leader" if name == "cultLeaderQuest" and state["leader"] else None,
+            canStep=lambda target: True,
+            step=step,
+            string=lambda name: state["quest"],
+        )
+        nouraajd.fleeCourtyardUntil(driver, 75, allow_timeout=True)
+        self.assertEqual(85, state["turn"])
+        self.assertEqual("encounter_active", state["quest"])
+        self.assertTrue(state["leader"])
+        nouraajd.fleeCourtyardUntil(driver, 76, allow_timeout=True)
+        self.assertEqual(86, state["turn"])
+        self.assertEqual("bad_end", state["quest"])
+        self.assertFalse(state["leader"])
+
+    def testPairedPortalsReenterTheArrivalObjectBeforeTestingItsReverse(self):
+        driver = self.driver("ninemarches")
+        definitions = json.loads(
+            (Path(__file__).resolve().parents[1] / "res/maps/ninemarches/config.json").read_text(encoding="utf-8")
+        )
+        names = ("monolithHub", "monolithCoast", "monolithAsh", "monolithCold")
+        positions = {name: (10 * index, 0, 0) for index, name in enumerate(names, 1)}
+        state = {"position": (0, 0, 0)}
+        entered = []
+        on_enter = authoredFunction("res/plugins/object.py", "onEnter", class_id="WayPoint")
+        event = SimpleNamespace(
+            getCause=lambda: SimpleNamespace(setCoords=lambda coords: state.update(position=coords))
+        )
+
+        def navigateTo(name):
+            if state["position"] == positions[name]:
+                return
+            state["position"] = positions[name]
+            entered.append(name)
+            exit_name = definitions[name]["properties"]["exit"]
+            on_enter(SimpleNamespace(getExit=lambda: positions[exit_name]), event)
+
+        driver.object = lambda name: name
+        driver.coords = lambda handle=None: positions[handle] if handle else state["position"]
+        driver.navigateCoords = lambda coords: state.update(position=coords)
+        driver.navigateTo = navigateTo
+        driver._coordinateHandle = lambda coords: coords
+        driver.call = lambda handle, method, *args: True if method == "canStep" else None
+        driver.revisit = lambda name: GameplayBranchDriver.revisit(driver, name)
+        driver.check = lambda branch_id, condition, **evidence: self.assertTrue(condition, branch_id)
+        with patch.object(marches, "start"):
+            marches.portals(driver)
+        self.assertEqual(list(names), entered)
