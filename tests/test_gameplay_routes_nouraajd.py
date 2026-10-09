@@ -3,6 +3,10 @@
 # SPDX-License-Identifier: GPL-3.0-or-later
 """Pure Nouraajd service sequencing and finite earned-funding regressions."""
 
+import ast
+from collections import deque
+import json
+from pathlib import Path
 from types import SimpleNamespace
 import unittest
 from unittest.mock import Mock, patch
@@ -12,6 +16,244 @@ from tests.test_gameplay_route_dialogs import authoredFunction
 
 
 class GameplayNouraajdServiceRoutesTest(unittest.TestCase):
+    def courtyardFleeFixture(self, walkable=None):
+        from tests.narrative_walkthrough import authoredRegion
+
+        document = json.loads(
+            (Path(__file__).resolve().parents[1] / "res/maps/nouraajd/map.json").read_text(encoding="utf-8")
+        )
+        walls = {
+            (
+                int(actor["x"] // document["tilewidth"]),
+                int(actor["y"] // document["tileheight"]),
+                int(layer["properties"]["level"]),
+            )
+            for layer in document["layers"]
+            if layer["type"] == "objectgroup"
+            for actor in layer["objects"]
+            if actor["type"] == "brickWall" and not actor["name"]
+        }
+        if walkable is None:
+            walkable = authoredRegion("nouraajd")[1] - walls
+        state = {
+            "turn": 10,
+            "position": (40, 96, 0),
+            "enemy": (40, 98, 0),
+            "quest": "encounter_active",
+            "leader": True,
+            "steps": [],
+            "probes": {},
+            "walls": walls,
+            "walkable": walkable,
+            "document": document,
+        }
+        quest = SimpleNamespace(
+            get_state=lambda name: state["quest"],
+            mark_victor_bad_end=lambda: state.update(quest="bad_end"),
+        )
+        game_map = SimpleNamespace(
+            getNumericProperty=lambda name: 10, getTurn=lambda: state["turn"], getGame=lambda: None
+        )
+        expire = authoredFunction(
+            "res/maps/nouraajd/script.py",
+            "_expire_victor_search",
+            _get_quest_system=lambda game_map: quest,
+            _clear_victor_encounter=lambda game_map: state.update(leader=False),
+            VICTOR_COURTYARD_TIMEOUT_TURNS=75,
+            showReader=Mock(),
+        )
+        state["expire"] = lambda: expire(game_map)
+
+        def can_step(target):
+            state["probes"].setdefault(state["turn"], []).append(target)
+            return target in walkable
+
+        def step(target):
+            origin = state["position"]
+            self.assertEqual(1, sum(abs(a - b) for a, b in zip(target, origin)))
+            self.assertIn(target, walkable)
+            enemy = state["enemy"]
+            neighbors = [
+                (enemy[0] + dx, enemy[1] + dy, enemy[2])
+                for dx, dy in ((1, 0), (0, 1), (-1, 0), (0, -1))
+                if (enemy[0] + dx, enemy[1] + dy, enemy[2]) in walkable
+            ]
+            state["enemy"] = min(neighbors, key=lambda point: (sum(abs(a - b) for a, b in zip(point, origin)), point))
+            state["position"] = target
+            state["steps"].append(target)
+            self.assertGreater(sum(abs(a - b) for a, b in zip(target, state["enemy"])), 1)
+            expire(game_map)
+            state["turn"] += 1
+
+        driver = SimpleNamespace(
+            test=self,
+            game_map=game_map,
+            number=lambda name: 10,
+            call=lambda handle, method: getattr(handle, method)(),
+            coords=lambda handle=None: state["enemy"] if handle else state["position"],
+            object=lambda name, required=False: "leader" if name == "cultLeaderQuest" and state["leader"] else None,
+            canStep=can_step,
+            step=step,
+            string=lambda name: state["quest"],
+        )
+        return driver, state
+
+    def testVictorFleeRejectsTheRawUnnamedWallCornerBeforeEnteringIt(self):
+        driver, state = self.courtyardFleeFixture()
+        self.assertTrue({(39, 95, 0), (38, 96, 0)} <= state["walls"])
+        nouraajd.fleeCourtyardUntil(driver, 1)
+        self.assertEqual([(41, 96, 0)], state["steps"])
+        self.assertNotIn((39, 96, 0), state["steps"], "The old greedy choice is the authored closed corner")
+
+    def testVictorFleeLeavesTheActualWallEnclosureWithOneAdvancingPursuerInThePureModel(self):
+        driver, state = self.courtyardFleeFixture()
+        door, distances = nouraajd.courtyardExitDistances()
+        self.assertIn(state["position"], distances)
+        self.assertNotIn((39, 95, 0), distances)
+        nouraajd.fleeCourtyardUntil(driver, 76, allow_timeout=True)
+        self.assertIn(door, state["steps"])
+        self.assertEqual(76, len(state["steps"]))
+        self.assertEqual("bad_end", state["quest"])
+        for probes in state["probes"].values():
+            self.assertLessEqual(len(probes), 64)
+            self.assertEqual(len(probes), len(set(probes)))
+
+    def testVictorExitPlannerRejectsAnotherRawWallOpeningInsteadOfAssumingTheDoorIsTheSoleExit(self):
+        _driver, state = self.courtyardFleeFixture()
+        for layer in state["document"]["layers"]:
+            if layer["type"] == "objectgroup":
+                layer["objects"] = [
+                    actor
+                    for actor in layer["objects"]
+                    if not (
+                        actor["type"] == "brickWall"
+                        and int(actor["x"] // state["document"]["tilewidth"]) == 39
+                        and int(actor["y"] // state["document"]["tileheight"]) == 95
+                    )
+                ]
+        nouraajd.courtyardExitDistances.cache_clear()
+        try:
+            with patch.object(nouraajd.json, "loads", return_value=state["document"]):
+                with self.assertRaisesRegex(AssertionError, "single authored exit"):
+                    nouraajd.courtyardExitDistances()
+        finally:
+            nouraajd.courtyardExitDistances.cache_clear()
+
+    def testVictorRecordsEscapeKeepsAllFiveAuthoredPursuersBehindInThePureModel(self):
+        driver, state = self.courtyardFleeFixture()
+        source = ast.parse(
+            (Path(__file__).resolve().parents[1] / "res/maps/nouraajd/script.py").read_text(encoding="utf-8")
+        )
+        values = {
+            node.targets[0].id: ast.literal_eval(node.value)
+            for node in ast.walk(source)
+            if isinstance(node, ast.Assign)
+            and len(node.targets) == 1
+            and isinstance(node.targets[0], ast.Name)
+            and node.targets[0].id in ("VICTOR_COURTYARD_SPAWNS", "VICTOR_COURTYARD_LEADER_SPAWN")
+        }
+        names = ("cultLeaderQuest", *("victorCultist" + str(index) for index in range(1, 5)))
+        enemies = dict(zip(names, (values["VICTOR_COURTYARD_LEADER_SPAWN"], *values["VICTOR_COURTYARD_SPAWNS"])))
+        town_hall = next(
+            (actor, layer)
+            for layer in state["document"]["layers"]
+            if layer["type"] == "objectgroup"
+            for actor in layer["objects"]
+            if actor["name"] == "nouraajdTownHall"
+        )
+        actor, layer = town_hall
+        state["position"] = (
+            int(actor["x"] // state["document"]["tilewidth"]),
+            int(actor["y"] // state["document"]["tileheight"]),
+            int(layer["properties"]["level"]),
+        )
+        driver.object = lambda name, required=False: name if name in enemies and state["leader"] else None
+        driver.coords = lambda actor=None: enemies[actor] if actor else state["position"]
+
+        def neighbors(point):
+            return [(point[0] + dx, point[1] + dy, point[2]) for dx, dy in ((1, 0), (0, 1), (-1, 0), (0, -1))]
+
+        def step(target):
+            origin = state["position"]
+            self.assertEqual(1, sum(abs(a - b) for a, b in zip(target, origin)))
+            self.assertIn(target, state["walkable"])
+            needed = {point for enemy in enemies.values() for point in neighbors(enemy) if point in state["walkable"]}
+            distances = {origin: 0}
+            pending = deque([origin])
+            while pending and not needed <= distances.keys():
+                position = pending.popleft()
+                for point in neighbors(position):
+                    if point in state["walkable"] and point not in distances:
+                        distances[point] = distances[position] + 1
+                        pending.append(point)
+            for name, enemy in tuple(enemies.items()):
+                options = [point for point in neighbors(enemy) if point in distances]
+                enemies[name] = min(options, key=lambda point: (distances[point], point))
+            self.assertGreater(min(sum(abs(a - b) for a, b in zip(target, enemy)) for enemy in enemies.values()), 1)
+            state["position"] = target
+            state["steps"].append(target)
+            state["expire"]()
+            state["turn"] += 1
+
+        driver.step = step
+        nouraajd.fleeCourtyardUntil(driver, 76, allow_timeout=True)
+        self.assertIn(nouraajd.courtyardExitDistances()[0], state["steps"])
+        self.assertEqual(76, len(state["steps"]))
+        self.assertEqual("bad_end", state["quest"])
+        self.assertEqual(5, len(enemies), "This pure model retains all authored pursuers and models no NPC combat")
+        self.assertTrue(
+            all(len(probes) <= 64 and len(probes) == len(set(probes)) for probes in state["probes"].values())
+        )
+
+    def testVictorFleePreservesTheActualSeventyFourSeventyFiveAndSeventySixTurnBoundary(self):
+        driver, state = self.courtyardFleeFixture({(x, 110, 0) for x in range(45, 160)})
+        state["position"], state["enemy"] = (60, 110, 0), (45, 110, 0)
+        for elapsed, expected in ((74, "encounter_active"), (75, "encounter_active"), (76, "bad_end")):
+            nouraajd.fleeCourtyardUntil(driver, elapsed, allow_timeout=elapsed == 76)
+            self.assertEqual(10 + elapsed, state["turn"])
+            self.assertEqual(elapsed, len(state["steps"]))
+            self.assertEqual(expected, state["quest"])
+        self.assertFalse(state["leader"])
+        for probes in state["probes"].values():
+            self.assertLessEqual(len(probes), 64)
+            self.assertEqual(len(set(probes)), len(probes), "Every native cell is memoized per decision")
+
+    def testVictorFleeFailsBeforeMovementWhenNativeCellProbeBudgetIsExhausted(self):
+        driver, state = self.courtyardFleeFixture()
+        state["position"], state["enemy"] = (0, 0, 0), (500, 500, 0)
+        # Four induced trees each end after five hops: none can certify the sixth.
+        tree = {(0, 0, 0)}
+        for sign in (-1, 1):
+            tree.update((sign * offset, 0, 0) for offset in range(1, 6))
+            tree.update((0, sign * offset, 0) for offset in range(1, 6))
+            for branch_sign in (-1, 1):
+                tree.update((sign * 3, branch_sign * offset, 0) for offset in (1, 2))
+                tree.update((branch_sign * offset, sign * 3, 0) for offset in (1, 2))
+
+        def can_step(target):
+            state["probes"].setdefault(state["turn"], []).append(target)
+            return target in tree
+
+        driver.canStep = can_step
+        driver.step = Mock()
+        with self.assertRaisesRegex(AssertionError, "exhausted 64 distinct native cell probes"):
+            nouraajd.fleeCourtyardUntil(driver, 1)
+        driver.step.assert_not_called()
+        self.assertEqual(10, state["turn"])
+        self.assertEqual(64, len(state["probes"][10]))
+        self.assertEqual(64, len(set(state["probes"][10])))
+
+    def testVictorFleeReportsBoundedRejectionEvidenceWithoutEnteringAnUnsafeCell(self):
+        driver, state = self.courtyardFleeFixture()
+        state["position"], state["enemy"] = (39, 96, 0), (40, 97, 0)
+        driver.step = Mock()
+        with self.assertRaisesRegex(AssertionError, "nativeCellProbes") as raised:
+            nouraajd.fleeCourtyardUntil(driver, 1)
+        self.assertIn("lookaheadHops", str(raised.exception))
+        driver.step.assert_not_called()
+        self.assertEqual(10, state["turn"])
+        self.assertLessEqual(len(state["probes"].get(10, [])), 64)
+
     def testPaidRaceAidEarnsTheGoobyRewardAfterRolfsUnpaidQuest(self):
         class ReachedUnneededAid(Exception):
             pass

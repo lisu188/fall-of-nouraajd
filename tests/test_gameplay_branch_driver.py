@@ -489,6 +489,43 @@ class GameplayBranchDriverTest(unittest.TestCase):
             self.assertIsNone(driver.latestPlayerVictory("map-1"))
             self.assertEqual(17, driver.latestPlayerVictory("map-17")["seq"])
 
+    def testNamedPlayerVictoryRetainsIncidentalOpponentsAfterLaterFightsWithinItsBound(self):
+        with tempfile.TemporaryDirectory() as directory:
+            driver = self.driver()
+            driver.call = Mock(return_value="actual-hero")
+            driver.trace_path = Path(directory) / "native.trace.jsonl"
+            hero = {"name": "actual-hero", "isPlayer": True}
+            records = [
+                {
+                    "seq": seq,
+                    "event": "combat_finished",
+                    "map": "nouraajd",
+                    "outcome": 2,
+                    "attacker": {"name": name, "isPlayer": False},
+                    "opponents": [hero],
+                    "survivor": hero,
+                }
+                for seq, name in enumerate(["cultLeaderQuest", *[f"cultist-{i}" for i in range(1, 17)]], 1)
+            ]
+            driver.trace_path.write_text("".join(json.dumps(record) + "\n" for record in records[:2]), encoding="utf-8")
+            self.assertEqual(1, driver.playerVictoryAgainst("nouraajd", "cultLeaderQuest")["seq"])
+            self.assertEqual(2, driver.latestPlayerVictory("nouraajd")["seq"])
+            self.assertIsNone(driver.playerVictoryAgainst("nouraajd", "cultLeaderQuest", after_seq=1))
+            self.assertIsNone(driver.playerVictoryAgainst("siege", "cultLeaderQuest"))
+            self.assertIsNone(driver.playerVictoryAgainst("nouraajd", "absent"))
+            driver.call.return_value = "different-current-hero"
+            self.assertIsNone(driver.playerVictoryAgainst("nouraajd", "cultLeaderQuest"))
+            driver.call.return_value = "actual-hero"
+            with driver.trace_path.open("a", encoding="utf-8") as output:
+                output.write("".join(json.dumps(record) + "\n" for record in records[2:]))
+            self.assertIsNone(driver.playerVictoryAgainst("nouraajd", "cultLeaderQuest"))
+            self.assertEqual(16, len(driver._player_victory_history))
+            self.assertEqual(17, driver.playerVictoryAgainst("nouraajd", "cultist-16")["seq"])
+            with driver.trace_path.open("a", encoding="utf-8") as output:
+                output.write(json.dumps({"seq": 19, "event": "movement"}) + "\n")
+            with self.assertRaisesRegex(AssertionError, "Native combat evidence unavailable"):
+                driver.playerVictoryAgainst("nouraajd", "cultist-16")
+
     def testRetainedPlayerVictoryCannotHideLaterLostTraceEvidence(self):
         with tempfile.TemporaryDirectory() as directory:
             driver = self.driver()

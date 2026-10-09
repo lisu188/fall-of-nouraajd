@@ -190,6 +190,7 @@ class GameplayBranchDriver:
         self._combat_failure = None
         self._trade_requests = deque(maxlen=16)
         self._player_victories = OrderedDict()
+        self._player_victory_history = deque(maxlen=16)
         self._recorded_actions = 0
         self._coordinate_point = None
         self._ephemeral_handles = set()
@@ -405,6 +406,9 @@ class GameplayBranchDriver:
                 victories = getattr(self, "_player_victories", None)
                 if victories is None:
                     self._player_victories = victories = OrderedDict()
+                history = getattr(self, "_player_victory_history", None)
+                if history is None:
+                    self._player_victory_history = history = deque(maxlen=16)
                 for record in records:
                     if record.get("event") != "combat_finished" or record.get("outcome") not in (1, 2):
                         continue
@@ -413,6 +417,7 @@ class GameplayBranchDriver:
                         record.get("survivor")
                     ):
                         continue
+                    history.append(record)
                     key = (record.get("map"), player_name)
                     victories[key] = record
                     victories.move_to_end(key)
@@ -1007,6 +1012,25 @@ class GameplayBranchDriver:
         self.assertNativeCombatOutcomes()
         self.test.assertIsNotNone(self.player)
         return self._player_victories.get((map_name, self.call(self.player, "getName")))
+
+    def playerVictoryAgainst(self, map_name, opponent_name, *, after_seq=0):
+        """Find a recent validated actual-player victory, including incidental native encounters."""
+        self.test.assertIsNotNone(self.trace_path, "The actual native combat trace is required")
+        self.assertNativeCombatOutcomes()
+        self.test.assertIsNotNone(self.player)
+        player_name = self.call(self.player, "getName")
+        for record in reversed(self._player_victory_history):
+            if record.get("map") != map_name or record["seq"] <= after_seq:
+                continue
+            if record["survivor"]["name"] != player_name:
+                continue
+            participants = [record.get("attacker"), *record.get("opponents", ())]
+            if any(
+                isinstance(actor, dict) and actor.get("isPlayer") is False and actor.get("name") == opponent_name
+                for actor in participants
+            ):
+                return record
+        return None
 
     def hunt(self, method, *args):
         from tests.test_octobogz_mcp import OctobogzMcpWalkthroughTest

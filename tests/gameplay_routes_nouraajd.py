@@ -3,7 +3,7 @@
 # SPDX-License-Identifier: GPL-3.0-or-later
 """Nouraajd branch routes using authored movement, encounters and earned stock."""
 
-from functools import partial
+from functools import lru_cache, partial
 import json
 
 from tests.gameplay_branch_types import RouteCase
@@ -166,7 +166,7 @@ def walkHuntPreparation(d, target, walkable, boundary):
         step, arrival = route.pop(0)
         tile = d.call(d.game_map, "getTile", *step)
         d.test.assertIsNotNone(tile, step)
-        if not d.call(tile, "getBoolProperty", "canStep"):
+        if not d.call(tile, "getBoolProperty", "canStep") or not d.canStep(step):
             walkable.discard(step)
             route = []
             continue
@@ -238,7 +238,13 @@ def prepareVictorHuntStock(d, boundary):
     leader = d.object("cultLeaderQuest")
     cultists = [(name, d.object(name)) for name in ("victorCultist" + str(index) for index in range(1, 5))]
     spawned = d.number("VICTOR_COURTYARD_TURN")
+    gold = d.gold()
+    encounter_experience = d.call(d.player, "getNumericProperty", "exp")
+    previous_victory = d.latestPlayerVictory("nouraajd")
+    after_seq = previous_victory["seq"] if previous_victory else 0
     for name, actor in cultists:
+        if d.string("quest_state_victor") == "good_end":
+            break
         d.test.assertEqual("encounter_active", d.string("quest_state_victor"))
         d.test.assertLess(d.call(d.game_map, "getTurn") - spawned, 75)
         experience = d.call(d.player, "getNumericProperty", "exp")
@@ -247,13 +253,15 @@ def prepareVictorHuntStock(d, boundary):
         d.test.assertGreater(d.call(d.player, "getNumericProperty", "exp"), experience)
         d.test.assertLessEqual(d.call(d.game_map, "getTurn") - spawned, 75)
         d.test.assertEqual(boundary, huntQuestBoundary(d))
-    d.test.assertEqual("encounter_active", d.string("quest_state_victor"))
-    d.test.assertLess(d.call(d.game_map, "getTurn") - spawned, 75)
-    gold = d.gold()
-    experience = d.call(d.player, "getNumericProperty", "exp")
-    d.fight("cultLeaderQuest")
+    if d.string("quest_state_victor") == "encounter_active":
+        d.test.assertLess(d.call(d.game_map, "getTurn") - spawned, 75)
+        d.fight("cultLeaderQuest")
     d.test.assertFalse(d.call(leader, "isAlive"), "A removed leader does not prove the rescue combat was won")
-    d.test.assertGreater(d.call(d.player, "getNumericProperty", "exp"), experience)
+    d.test.assertIsNotNone(
+        d.playerVictoryAgainst("nouraajd", "cultLeaderQuest", after_seq=after_seq),
+        "Preparation requires an actual player victory against the leader after this encounter started",
+    )
+    d.test.assertGreater(d.call(d.player, "getNumericProperty", "exp"), encounter_experience)
     d.test.assertLessEqual(d.call(d.game_map, "getTurn") - spawned, 75)
     d.test.assertEqual("good_end", d.string("quest_state_victor"))
     d.test.assertTrue(d.flag("VICTOR_REWARD_GRANTED"))
@@ -589,10 +597,77 @@ def victorCountdownCheckpoint(d, label, credit=False):
         )
 
 
+@lru_cache(maxsize=1)
+def courtyardExitDistances():
+    from collections import deque
+    from pathlib import Path
+    from tests.narrative_walkthrough import authoredRegion
+
+    document = json.loads(
+        (Path(__file__).resolve().parents[1] / "res/maps/nouraajd/map.json").read_text(encoding="utf-8")
+    )
+    walls, doors = set(), []
+    for layer in document["layers"]:
+        if layer["type"] != "objectgroup":
+            continue
+        for actor in layer["objects"]:
+            coords = (
+                int(actor["x"] // document["tilewidth"]),
+                int(actor["y"] // document["tileheight"]),
+                int(layer["properties"]["level"]),
+            )
+            if actor["type"] == "brickWall":
+                walls.add(coords)
+            if actor["name"] == "nouraajdDoor":
+                doors.append(coords)
+    if len(doors) != 1:
+        raise AssertionError(("Victor escape needs the single authored Nouraajd door", doors))
+    door = doors[0]
+
+    def neighbors(point):
+        return [(point[0] + dx, point[1] + dy, point[2]) for dx, dy in ((1, 0), (0, 1), (-1, 0), (0, -1))]
+
+    boundary = set(walls.intersection(neighbors(door)))
+    pending = deque(boundary)
+    while pending:
+        for point in neighbors(pending.popleft()):
+            if point in walls and point not in boundary:
+                boundary.add(point)
+                pending.append(point)
+    if not boundary:
+        raise AssertionError(("Victor escape door has no authored wall boundary", door))
+    left, right = min(point[0] for point in boundary), max(point[0] for point in boundary)
+    top, bottom = min(point[1] for point in boundary), max(point[1] for point in boundary)
+    perimeter = {
+        (x, y, door[2])
+        for x in range(left, right + 1)
+        for y in range(top, bottom + 1)
+        if x in (left, right) or y in (top, bottom)
+    }
+    if perimeter - boundary != {door} or boundary - perimeter:
+        raise AssertionError(
+            ("Victor courtyard must retain its single authored exit", door, sorted(perimeter - boundary))
+        )
+    _positions, tiles = authoredRegion("nouraajd")
+    cells = {
+        (x, y, door[2]) for x in range(left + 1, right) for y in range(top + 1, bottom) if (x, y, door[2]) in tiles
+    } | {door}
+    distances = {door: 0}
+    pending = deque([door])
+    while pending:
+        position = pending.popleft()
+        for point in neighbors(position):
+            if point in cells and point not in distances:
+                distances[point] = distances[position] + 1
+                pending.append(point)
+    return door, distances
+
+
 def fleeCourtyardUntil(d, elapsed, allow_timeout=False):
     # Keep moving through actual walkable edges so pursuing cultists cannot turn
     # an intended timeout into an automatic combat rescue while the hero waits.
     spawn_turn = d.number("VICTOR_COURTYARD_TURN")
+    door, exit_distances = courtyardExitDistances()
     previous = None
     while d.call(d.game_map, "getTurn") - spawn_turn < elapsed:
         origin = d.coords()
@@ -602,16 +677,74 @@ def fleeCourtyardUntil(d, elapsed, allow_timeout=False):
         ]
         opponents = [d.coords(actor) for actor in actors if actor]
         d.test.assertTrue(opponents, "The real timed encounter must remain present while fleeing")
+        probes = {}
+        rejected = []
+
+        def clearance(target):
+            return min(sum(abs(a - b) for a, b in zip(target, enemy)) for enemy in opponents)
+
+        def can_step(target):
+            if target not in probes:
+                d.test.assertLess(
+                    len(probes),
+                    64,
+                    (
+                        "Victor escape exhausted 64 distinct native cell probes",
+                        origin,
+                        opponents,
+                        tuple(probes.items()),
+                    ),
+                )
+                probes[target] = d.canStep(target)
+            return probes[target]
+
+        def continuation(position, depth, visited):
+            if depth == 6:
+                return True
+            neighbors = sorted(
+                ((position[0] + dx, position[1] + dy, position[2]) for dx, dy in ((1, 0), (0, 1), (-1, 0), (0, -1))),
+                key=lambda point: (clearance(point), point),
+                reverse=True,
+            )
+            for point in neighbors:
+                if point in visited or clearance(point) <= depth + 2:
+                    continue
+                if can_step(point) and continuation(point, depth + 1, visited | {point}):
+                    return True
+            return False
+
         candidates = []
         for dx, dy in ((1, 0), (0, 1), (-1, 0), (0, -1)):
             target = (origin[0] + dx, origin[1] + dy, origin[2])
-            if not d.canStep(target):
-                continue
-            distance = min(sum(abs(a - b) for a, b in zip(target, enemy)) for enemy in opponents)
+            distance = clearance(target)
             if distance > 1:
                 candidates.append((distance, target != previous, abs(target[0] - 45) + abs(target[1] - 100), target))
-        d.test.assertTrue(candidates, ("No natural escape step remains", origin, opponents))
-        target = max(candidates)[-1]
+        target = None
+
+        def strategic_rank(entry):
+            if origin in exit_distances and origin != door:
+                return (-exit_distances.get(entry[-1], len(exit_distances) + 1), entry)
+            return (0, entry)
+
+        for distance, _forward, _offset, candidate in sorted(candidates, key=strategic_rank, reverse=True):
+            if distance <= 2:
+                rejected.append((candidate, "inside first-turn pursuit cone"))
+            elif not can_step(candidate):
+                rejected.append((candidate, "native blocked cell"))
+            elif continuation(candidate, 1, {origin, candidate}):
+                target = candidate
+                break
+            else:
+                rejected.append((candidate, "no six-hop safe continuation"))
+        d.test.assertIsNotNone(
+            target,
+            (
+                "No natural escape step remains",
+                origin,
+                opponents,
+                {"lookaheadHops": 6, "rejected": rejected, "nativeCellProbes": tuple(probes.items())},
+            ),
+        )
         before_turn = d.call(d.game_map, "getTurn")
         d.step(target)
         previous = origin

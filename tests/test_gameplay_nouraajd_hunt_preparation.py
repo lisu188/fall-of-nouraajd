@@ -214,6 +214,31 @@ class GameplayNouraajdHuntPreparationTest(unittest.TestCase):
         self.assertNotIn(authored[0]["catacombs"], state["steps"])
         self.assertEqual(boundary, routes.huntQuestBoundary(driver))
 
+    def testMovementReplansAroundANativeObjectWallOnPassableTerrain(self):
+        driver, state, authored = self.fixture(enemies=0)
+        boundary = routes.huntQuestBoundary(driver)
+        blocked = (58, 115, 0)
+        walkable = (set(authored[1]) - {authored[0]["catacombs"]}) | {(57, 116, 0), (58, 116, 0), (59, 116, 0)}
+        probes = []
+
+        def can_step(destination):
+            probes.append(destination)
+            return destination in walkable and destination != blocked
+
+        original_step = driver.step
+
+        def checked_step(destination):
+            self.assertNotEqual(blocked, destination, "The native controller rejects this object wall")
+            original_step(destination)
+
+        driver.canStep, driver.step = can_step, checked_step
+        routes.walkHuntPreparation(driver, (59, 115, 0), walkable, boundary)
+        self.assertIn(blocked, probes)
+        self.assertNotIn(blocked, state["steps"])
+        self.assertEqual((59, 115, 0), state["coords"])
+        self.assertEqual(boundary, routes.huntQuestBoundary(driver))
+        self.assertLessEqual(len(state["steps"]), 512)
+
     def testMovementStallKeepsTheExistingBoundAndDoesNotAwardExperience(self):
         driver, state, authored = self.fixture(stalled=True)
         with self.assertRaisesRegex(AssertionError, "existing 512-step bound"):
@@ -231,12 +256,29 @@ class GameplayNouraajdHuntPreparationTest(unittest.TestCase):
                 self.assertEqual([], state["order"])
                 self.assertEqual(boundary, routes.huntQuestBoundary(driver))
 
-    def victorFixture(self, *, resolved=None, corrupt=None, turn_cost=1, affordable=True):
+    def victorFixture(
+        self,
+        *,
+        resolved=None,
+        corrupt=None,
+        turn_cost=1,
+        affordable=True,
+        incidental_leader=False,
+        missing_victory=False,
+    ):
         names = ("cultLeaderQuest", *("victorCultist" + str(index) for index in range(1, 5)))
         actors = {name: {"__handle__": name} for name in names}
         items = {name: {"__handle__": name} for name in ("ward", "portal", "quest", "staff", "life")}
         market = {"__handle__": "actual-victor-market"}
-        state = {"victor": resolved or "not_started", "turn": 0, "gold": 200, "exp": 5375, "dead": set(), "order": []}
+        state = {
+            "victor": resolved or "not_started",
+            "turn": 0,
+            "gold": 200,
+            "exp": 5375,
+            "dead": set(),
+            "order": [],
+            "victories": [],
+        }
 
         def fight(name):
             state["order"].append(name)
@@ -245,8 +287,16 @@ class GameplayNouraajdHuntPreparationTest(unittest.TestCase):
                 state["dead"].add(name)
             if corrupt != "experience":
                 state["exp"] += 250 if name == "cultLeaderQuest" else 125
-            if name == "cultLeaderQuest":
-                self.assertEqual(set(names), state["dead"], "The actual cultists must be defeated before their leader")
+            if corrupt != "despawn":
+                state["victories"].append({"seq": len(state["victories"]) + 1, "name": name})
+            if name == "cultLeaderQuest" or incidental_leader:
+                if not incidental_leader:
+                    self.assertEqual(set(names), state["dead"])
+                else:
+                    state["dead"].add("cultLeaderQuest")
+                    state["exp"] += 250
+                    if not missing_victory:
+                        state["victories"].append({"seq": len(state["victories"]) + 1, "name": "cultLeaderQuest"})
                 state.update(victor="good_end", gold=state["gold"] + 500)
 
         def call(handle, method, *args):
@@ -289,6 +339,15 @@ class GameplayNouraajdHuntPreparationTest(unittest.TestCase):
             number=lambda key: 0,
             object=lambda name: actors[name],
             fight=fight,
+            latestPlayerVictory=lambda map_name: state["victories"][-1] if state["victories"] else None,
+            playerVictoryAgainst=lambda map_name, name, after_seq=0: next(
+                (
+                    record
+                    for record in reversed(state["victories"])
+                    if record["name"] == name and record["seq"] > after_seq
+                ),
+                None,
+            ),
             call=call,
             gold=lambda: state["gold"],
             flag=lambda name: state["victor"] == "good_end",
@@ -336,6 +395,32 @@ class GameplayNouraajdHuntPreparationTest(unittest.TestCase):
                     with self.assertRaisesRegex(AssertionError, message):
                         routes.prepareVictorHuntStock(driver, "boundary")
                 purchase.assert_not_called()
+
+    def testIncidentalNativeLeaderVictoryCanFinishPreparationWithoutInventingCultistVictories(self):
+        driver, state, market, items = self.victorFixture(incidental_leader=True)
+        with (
+            patch.object(routes, "huntQuestBoundary", return_value="boundary"),
+            patch.object(routes, "meetVictor", side_effect=lambda *args: state.update(victor="encounter_active")),
+            patch.object(routes, "requestedMarket", return_value=(object(), market)),
+            patch.object(routes, "purchaseCallbackItem", return_value=items["life"]),
+        ):
+            self.assertTrue(routes.prepareVictorHuntStock(driver, "boundary"))
+        self.assertEqual(["victorCultist1"], state["order"][:1])
+        self.assertEqual({"victorCultist1", "cultLeaderQuest"}, state["dead"])
+        self.assertEqual(5750, state["exp"], "Only observed victories earn experience; level four remains required")
+        self.assertEqual(700, state["gold"])
+
+    def testEarlyRescueStateAndRewardCannotReplaceTheActualPlayerLeaderVictory(self):
+        driver, state, market, items = self.victorFixture(incidental_leader=True, missing_victory=True)
+        with (
+            patch.object(routes, "huntQuestBoundary", return_value="boundary"),
+            patch.object(routes, "meetVictor", side_effect=lambda *args: state.update(victor="encounter_active")),
+            patch.object(routes, "requestedMarket", return_value=(object(), market)),
+            patch.object(routes, "purchaseCallbackItem", return_value=items["life"]) as purchase,
+        ):
+            with self.assertRaisesRegex(AssertionError, "actual player victory against the leader"):
+                routes.prepareVictorHuntStock(driver, "boundary")
+        purchase.assert_not_called()
 
     def testOptionalPreparationNeverChangesAnExistingVictorOutcome(self):
         for outcome in ("encounter_active", "good_end", "bad_end"):
