@@ -62,6 +62,23 @@ class PlayBootstrapTest(unittest.TestCase):
 
         self.assertExtensionSelected(build_root / "Release" / "_game.py")
 
+    def testCompilerSpecificReleasePrecedesLegacyBuild(self):
+        name = "cmake-build-clangcl20-release" if os.name == "nt" else "cmake-build-gcc15-release"
+        self.writeExtension(self.root / "cmake-build-release")
+        expected = self.writeExtension(self.root / name)
+
+        self.bootstrap(self.root)
+
+        self.assertExtensionSelected(expected)
+
+    def testCompilerSpecificDebugBuildIsDiscovered(self):
+        name = "cmake-build-clangcl20-debug" if os.name == "nt" else "cmake-build-gcc15-debug"
+        expected = self.writeExtension(self.root / name)
+
+        self.bootstrap(self.root)
+
+        self.assertExtensionSelected(expected)
+
     def testExplicitConfigurationSelectsDebug(self):
         build_root = self.root / "cmake-build-release"
         self.writeExtension(build_root / "Release")
