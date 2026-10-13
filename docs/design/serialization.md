@@ -56,3 +56,23 @@ structural limits, notification batching, and primary/backup recovery keep their
 existing contracts. Standalone object collections retain their per-entry graph
 encoding; collections within an object or an explicitly nested codec share the
 owning operation's graph.
+
+A context-aware custom codec may return an array or scalar. When its operation
+also records actors, the result owns this versioned envelope:
+
+```json
+{
+  "$gameGraphEnvelope": {"version": 1, "value": ["the codec's original payload"]},
+  "effectGraph": {"version": 1, "actors": []}
+}
+```
+
+Readers validate the entire envelope with the existing document structure
+limits, index actor definitions throughout it, then give the codec a borrowed
+reference to `value`. The payload is never copied during unwrapping. The envelope
+requires exactly the displayed fields, version 1, and a non-object payload;
+malformed envelopes return `MalformedGraph`. `$gameGraphEnvelope` is reserved at
+codec roots. When an operation records actors, `effectGraph` is also reserved;
+writers reject either collision with `InvalidInput`. Object save roots retain
+their original `class`, `properties`, and `effectGraph` layout. A non-object result
+without an operation-owned graph retains its original representation.

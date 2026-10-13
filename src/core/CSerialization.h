@@ -115,7 +115,7 @@ class CSerializationReadContext {
     bool begin();
     void end() noexcept;
     void finish(const std::shared_ptr<CGame> &game);
-    void prepare(const std::shared_ptr<CGame> &game, const json &document);
+    const json &prepare(const std::shared_ptr<CGame> &game, const json &document);
     bool isRootOperation() const noexcept { return depth == 1; }
     State &state();
     void keepDocument(std::shared_ptr<const json> document);
@@ -217,8 +217,8 @@ inline CSerializationResult<std::any> CSerializerBase::deserialize(const std::sh
     return serializationResult([&]() -> std::any {
         CSerializationReadContext context;
         CSerializationOperation scope(context);
-        context.prepare(game, object);
-        auto value = serializationValueOrThrow(deserialize(game, object, context));
+        const auto &payload = context.prepare(game, object);
+        auto value = serializationValueOrThrow(deserialize(game, payload, context));
         context.finish(game);
         return value;
     });
@@ -486,10 +486,8 @@ class CSerialization {
         }
         CSerializationOperation scope(context);
         auto call = serializationResult([&]() {
-            if (scope.isRoot()) {
-                context.prepare(game, document);
-            }
-            auto result = codec->deserialize(game, document, context);
+            const auto &payload = context.prepare(game, document);
+            auto result = codec->deserialize(game, payload, context);
             if (result && scope.isRoot()) {
                 context.finish(game);
             }

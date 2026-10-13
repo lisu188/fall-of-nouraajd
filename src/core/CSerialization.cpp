@@ -16,6 +16,7 @@ You should have received a copy of the GNU General Public License
 along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 #include "core/CSerialization.h"
+#include "core/CSaveFormat.h"
 #include "core/CGame.h"
 #include "core/CJsonUtil.h"
 #include "core/CList.h"
@@ -48,6 +49,8 @@ std::map<std::string, std::shared_ptr<CGameObject>> map_deserialize(const std::s
                                                                     CSerializationReadContext &);
 
 namespace {
+
+constexpr const char *graphEnvelopeKey = "$gameGraphEnvelope";
 
 // Only effect actor links are references. Other reflected properties retain the existing tree encoding.
 class EffectWriteContext {
@@ -116,7 +119,28 @@ class EffectWriteContext {
             }
         }
         if (!actors.empty()) {
-            root["effectGraph"] = {{"version", 1}, {"actors", std::move(detached)}};
+            json graph = json::object();
+            graph["version"] = 1;
+            graph["actors"] = std::move(detached);
+            if (root.is_object()) {
+                if (root.contains("effectGraph")) {
+                    throw CSerializationException({CSerializationErrorCode::InvalidInput, context.source(),
+                                                   context.path(), context.objectType(),
+                                                   "Custom codec output collides with the reserved effectGraph field"});
+                }
+                root["effectGraph"] = std::move(graph);
+            } else {
+                json envelope = json::object();
+                envelope["version"] = 1;
+                envelope["value"] = std::move(root);
+                root = json::object();
+                root[graphEnvelopeKey] = std::move(envelope);
+                root["effectGraph"] = std::move(graph);
+                if (auto error = CSaveFormat::validateDocumentStructure(root)) {
+                    throw CSerializationException({CSerializationErrorCode::InvalidInput, context.source(),
+                                                   context.path(), context.objectType(), *error});
+                }
+            }
         }
     }
 
@@ -378,6 +402,10 @@ CSerializationWriteContext::State &CSerializationWriteContext::state() {
     return *operationState;
 }
 void CSerializationWriteContext::finish(json &document) {
+    if (document.is_object() && document.contains(graphEnvelopeKey)) {
+        throw CSerializationException({CSerializationErrorCode::InvalidInput, sourceName, propertyPath, typeName,
+                                       "Custom codec output uses the reserved graph envelope marker"});
+    }
     if (operationState)
         operationState->effects.finish(document, *this);
 }
@@ -415,13 +443,28 @@ CSerializationReadContext::State &CSerializationReadContext::state() {
         operationState = std::make_unique<State>(*this, external);
     return *operationState;
 }
-void CSerializationReadContext::prepare(const std::shared_ptr<CGame> &game, const json &document) {
+const json &CSerializationReadContext::prepare(const std::shared_ptr<CGame> &game, const json &document) {
+    const json *payload = &document;
+    if (document.is_object() && document.contains(graphEnvelopeKey)) {
+        const auto &envelope = document.at(graphEnvelopeKey);
+        if (document.size() != 2 || !document.contains("effectGraph") || !envelope.is_object() ||
+            envelope.size() != 2 || !envelope.contains("version") || !envelope.at("version").is_number_integer() ||
+            envelope.at("version").get<unsigned long long>() != 1 || !envelope.contains("value") ||
+            envelope.at("value").is_object()) {
+            state().effects.fail("malformed or unsupported non-object graph envelope");
+        }
+        if (auto error = CSaveFormat::validateDocumentStructure(document)) {
+            state().effects.fail(*error);
+        }
+        payload = &envelope.at("value");
+    }
     if (document.is_object() && document.contains("effectGraph")) {
         if (!game)
             throw CSerializationException({CSerializationErrorCode::InvalidInput, sourceName, propertyPath, typeName,
                                            "An effect graph requires a game"});
         state().effects.prepare(game, &document);
     }
+    return *payload;
 }
 void CSerializationReadContext::finish(const std::shared_ptr<CGame> &game) {
     if (operationState)
@@ -655,13 +698,12 @@ void CSerialization::setProperty(const std::shared_ptr<CGameObject> &object, con
     setProperty(object, key, *value, context);
 }
 
-void CSerialization::setProperty(const std::shared_ptr<CGameObject> &object, const std::string &key, const json &value,
-                                 CSerializationReadContext &context) {
+void CSerialization::setProperty(const std::shared_ptr<CGameObject> &object, const std::string &key,
+                                 const json &document, CSerializationReadContext &context) {
     if (!object)
         return;
     CSerializationOperation operation(context);
-    if (operation.isRoot())
-        context.prepare(object->getGame(), value);
+    const auto &value = operation.isRoot() ? context.prepare(object->getGame(), document) : document;
     CSerializationReadContext::PropertyScope propertyScope(context, key, object->meta()->name());
     if (value.is_boolean()) {
         setBooleanProperty(object, key, value.get<bool>(), context);
@@ -757,8 +799,8 @@ void CSerialization::setOtherProperty(std::type_index deserializedId, const std:
     }
     std::any result;
     try {
-        context.prepare(object->getGame(), value);
-        result = serializationValueOrThrow(codec->deserialize(object->getGame(), value, context));
+        const auto &payload = context.prepare(object->getGame(), value);
+        result = serializationValueOrThrow(codec->deserialize(object->getGame(), payload, context));
     } catch (const CSerializationException &exception) {
         auto error = exception.getError();
         if (error.propertyPath.empty())
@@ -905,9 +947,10 @@ std::shared_ptr<CGameObject> object_deserialize(const std::shared_ptr<CGame> &ga
 std::shared_ptr<CGameObject> object_deserialize(const std::shared_ptr<CGame> &game, const std::shared_ptr<json> &config,
                                                 CSerializationReadContext &context) {
     CSerializationOperation scope(context);
+    const json *payload = config.get();
     if (scope.isRoot() && config)
-        context.prepare(game, *config);
-    auto object = object_deserialize(game, config.get(), context);
+        payload = &context.prepare(game, *config);
+    auto object = object_deserialize(game, payload, context);
     if (scope.isRoot())
         context.finish(game);
     return object;
@@ -1027,9 +1070,10 @@ std::map<std::string, std::shared_ptr<CGameObject>> map_deserialize(const std::s
                                                                     const std::shared_ptr<json> &document) {
     CSerializationReadContext context;
     CSerializationOperation scope(context);
+    const json *payload = document.get();
     if (document)
-        context.prepare(game, *document);
-    auto result = map_deserialize(game, document.get(), context);
+        payload = &context.prepare(game, *document);
+    auto result = map_deserialize(game, payload, context);
     context.finish(game);
     return result;
 }
@@ -1084,9 +1128,10 @@ std::set<std::shared_ptr<CGameObject>> array_deserialize(const std::shared_ptr<C
                                                          const std::shared_ptr<json> &document) {
     CSerializationReadContext context;
     CSerializationOperation scope(context);
+    const json *payload = document.get();
     if (document)
-        context.prepare(game, *document);
-    auto result = array_deserialize(game, document.get(), context);
+        payload = &context.prepare(game, *document);
+    auto result = array_deserialize(game, payload, context);
     context.finish(game);
     return result;
 }
@@ -1157,9 +1202,10 @@ std::set<std::shared_ptr<CGameObject>>
 CSerializerFunction<std::shared_ptr<json>, std::set<std::shared_ptr<CGameObject>>>::deserialize(
     const std::shared_ptr<CGame> &game, const std::shared_ptr<json> &document, CSerializationReadContext &context) {
     CSerializationOperation scope(context);
+    const json *payload = document.get();
     if (scope.isRoot() && document)
-        context.prepare(game, *document);
-    auto result = array_deserialize(game, document.get(), context);
+        payload = &context.prepare(game, *document);
+    auto result = array_deserialize(game, payload, context);
     if (scope.isRoot())
         context.finish(game);
     return result;
@@ -1181,9 +1227,10 @@ std::map<std::string, std::shared_ptr<CGameObject>>
 CSerializerFunction<std::shared_ptr<json>, std::map<std::string, std::shared_ptr<CGameObject>>>::deserialize(
     const std::shared_ptr<CGame> &game, const std::shared_ptr<json> &document, CSerializationReadContext &context) {
     CSerializationOperation scope(context);
+    const json *payload = document.get();
     if (scope.isRoot() && document)
-        context.prepare(game, *document);
-    auto result = map_deserialize(game, document.get(), context);
+        payload = &context.prepare(game, *document);
+    auto result = map_deserialize(game, payload, context);
     if (scope.isRoot())
         context.finish(game);
     return result;
