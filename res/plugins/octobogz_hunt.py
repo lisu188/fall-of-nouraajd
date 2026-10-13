@@ -23,7 +23,7 @@ def saveHuntState(game_map, state):
 
 
 def load(self, context):
-    from game import CBuilding, CEffect, CEvent, CInteraction, CTrigger, Coords, event_loop, register
+    from game import CBuilding, CEffect, CEvent, CInteraction, CTrigger, Coords, register
 
     def snapshot(actor):
         data = {
@@ -249,7 +249,7 @@ def load(self, context):
                 if player is not None:
                     player.checkQuests()
             else:
-                event_loop.instance().invoke(lambda: self.synchronize(game_map))
+                self.getGame().post(lambda: self.synchronize(game_map))
 
         def objectiveText(self, game_map):
             if not self.isActive(game_map):

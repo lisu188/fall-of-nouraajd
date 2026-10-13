@@ -259,6 +259,8 @@ class CCreature : public CMapObject, public CMoveable, public CVisitable {
 
     virtual void afterMove();
 
+    vstd::task<void> afterMoveAsync() override;
+
     const std::optional<Coords> &getPendingMoveOrigin() const;
 
     void addGold(int gold);

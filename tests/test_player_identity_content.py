@@ -125,7 +125,9 @@ class PlayerIdentityContentTest(unittest.TestCase):
             for relative in ("res/plugins/interaction.py", "res/maps/nouraajd/script.py"):
                 namespace = {}
                 exec(compile((ROOT / relative).read_text(), relative, "exec"), namespace)
-                namespace["load"](None, types.SimpleNamespace(getMap=lambda: None))
+                context = types.SimpleNamespace(getMap=lambda: None, post=lambda _callback: None)
+                context.createWeakResolver = lambda: lambda: context
+                namespace["load"](None, context)
 
     def createPlayer(self, class_id="Warrior", race_id="humanRace"):
         game_map = types.SimpleNamespace()

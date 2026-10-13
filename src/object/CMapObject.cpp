@@ -1,4 +1,6 @@
 #include "CMapObject.h"
+#include "core/CAsync.h"
+#include "core/CGameContext.h"
 #include "core/CGame.h"
 #include "core/CMap.h"
 #include "core/CPythonOverrides.h"
@@ -9,50 +11,70 @@ CMapObject::CMapObject() {}
 CMapObject::~CMapObject() {}
 
 void CMapObject::move(int x, int y, int z) {
+    auto task = moveAsync(Coords(x, y, z));
+    if (auto game = getGame()) {
+        game_async::wait(game->getContext()->spawnTask(std::move(task)));
+    } else {
+        game_async::run(std::move(task));
+    }
+}
+
+vstd::task<void> CMapObject::moveAsync(Coords delta) { return moveOwnedAsync(this->ptr<CMapObject>(), delta, false); }
+
+vstd::task<void> CMapObject::moveToAsync(Coords coords) {
+    return moveOwnedAsync(this->ptr<CMapObject>(), coords, true);
+}
+
+vstd::task<void> CMapObject::moveOwnedAsync(std::shared_ptr<CMapObject> object, Coords coords, bool absolute) {
+    auto loop = vstd::event_loop<>::instance();
+    if (!loop->isMainThread()) {
+        co_await vstd::post(loop);
+    }
     std::optional<pybind11::gil_scoped_acquire> gil;
     if (Py_IsInitialized())
         gil.emplace();
-    auto map = getMap();
+    auto map = object->getMap();
     std::unique_lock<std::recursive_mutex> navigationLock;
     if (map)
         navigationLock = std::unique_lock(map->getNavigationMutex());
-    Coords target(posx + x, posy + y, posz + z);
+    Coords target = absolute ? coords : object->getCoords() + coords;
     if (map) {
         target = map->normalizeCoords(target);
     }
 
-    if (dynamic_cast<CMoveable *>(this) && map) {
-        auto current = map->normalizeCoords(Coords(posx, posy, posz));
+    if (dynamic_cast<CMoveable *>(object.get()) && map) {
+        auto current = map->normalizeCoords(object->getCoords());
         auto delta = map->getShortestDelta(current, target);
-        bool is_registered = map->getObjectByName(getName()) == this->ptr<CMapObject>();
+        bool is_registered = map->getObjectByName(object->getName()) == object;
         bool is_step_move = delta.z == 0 && std::abs(delta.x) + std::abs(delta.y) == 1;
         if (is_registered && is_step_move) {
             navigationLock.unlock();
             const bool can_step = map->canStep(target);
             navigationLock.lock();
             if (!can_step) {
-                vstd::logger::debug(getName(), "cannot step on:", target.x, target.y, target.z);
-                return;
+                vstd::logger::debug(object->getName(), "cannot step on:", target.x, target.y, target.z);
+                co_return;
             }
         }
         navigationLock.unlock();
-        dynamic_cast<CMoveable *>(this)->beforeMove();
+        dynamic_cast<CMoveable *>(object.get())->beforeMove();
         navigationLock.lock();
     }
 
-    Coords oldCoords(posx, posy, posz);
-    posx = target.x;
-    posy = target.y;
-    posz = target.z;
-    Coords newCoords(posx, posy, posz);
+    Coords oldCoords = object->getCoords();
+    object->posx = target.x;
+    object->posy = target.y;
+    object->posz = target.z;
+    Coords newCoords = object->getCoords();
 
-    if (map && map->getObjectByName(getName()) == this->ptr<CMapObject>()) {
-        map->objectMoved(this->ptr<CMapObject>(), oldCoords, newCoords);
+    if (map && map->getObjectByName(object->getName()) == object) {
+        map->objectMoved(object, oldCoords, newCoords);
     }
 
-    if (dynamic_cast<CMoveable *>(this) && map) {
+    if (dynamic_cast<CMoveable *>(object.get()) && map) {
         navigationLock.unlock();
-        dynamic_cast<CMoveable *>(this)->afterMove();
+        gil.reset();
+        co_await dynamic_cast<CMoveable *>(object.get())->afterMoveAsync();
     }
 }
 

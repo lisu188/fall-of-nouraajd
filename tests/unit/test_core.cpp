@@ -16,6 +16,7 @@ You should have received a copy of the GNU General Public License
 along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 
+#include "core/CAsync.h"
 #include "core/CJsonUtil.h"
 #include "core/CGame.h"
 #include "core/CGameContext.h"
@@ -32,6 +33,7 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #include "core/CTags.h"
 #include "core/CTypes.h"
 #include "core/CUtil.h"
+#include "gui/CGui.h"
 #include "gui/CSdlResources.h"
 #include "object/CCreature.h"
 #include "object/CCreatureClass.h"
@@ -54,6 +56,7 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #include <cmath>
 #include <filesystem>
 #include <fstream>
+#include <future>
 #include <limits>
 #include <map>
 #include <memory>
@@ -386,8 +389,9 @@ void test_pathfinder_find_path_without_obstacles() {
     expect_true(path.front() == Coords(1, 0, 0), "findPath should return first move toward goal");
     expect_true(path.back() == Coords(2, 0, 0), "findPath should end on goal");
 
-    auto next_step = CPathFinder::findNextStep(Coords(0, 0, 0), Coords(2, 0, 0), can_step, no_waypoint);
-    expect_true(next_step->get() == Coords(1, 0, 0), "findNextStep should return the first optimal neighbor");
+    auto next_step = CPathFinder::findNextStepAsync(Coords(0, 0, 0), Coords(2, 0, 0), can_step, no_waypoint);
+    expect_true(game_async::run(std::move(next_step), game_async::WaitMode::PostedWork) == Coords(1, 0, 0),
+                "findNextStep should return the first optimal neighbor");
 }
 
 void test_pathfinder_rejects_overflowing_routes() {
@@ -410,8 +414,9 @@ void test_pathfinder_rejects_overflowing_routes() {
     auto path = CPathFinder::findPath(start, goal, can_step, waypoint, neighbors, distance, cost);
     expect_true(path == std::vector<Coords>{cheap, goal},
                 "a 64-bit callback cost must not narrow into a cheap negative route");
-    auto step = CPathFinder::findNextStep(start, goal, can_step, waypoint, neighbors, distance, cost);
-    expect_true(step->get() == cheap, "async next-step search should also preserve 64-bit callback costs");
+    auto step = CPathFinder::findNextStepAsync(start, goal, can_step, waypoint, neighbors, distance, cost);
+    expect_true(game_async::run(std::move(step), game_async::WaitMode::PostedWork) == cheap,
+                "async next-step search should also preserve 64-bit callback costs");
 }
 
 void test_pathfinder_waypoint_and_blocked_goal() {
@@ -467,8 +472,9 @@ void test_pathfinder_waypoint_override() {
         }
         return std::nullopt;
     };
-    auto next_step = CPathFinder::findNextStep(Coords(0, 0, 0), Coords(2, 0, 0), can_step, forced_waypoint);
-    expect_true(next_step->get() == Coords(2, 0, 0), "findNextStep should allow waypoint override when available");
+    auto next_step = CPathFinder::findNextStepAsync(Coords(0, 0, 0), Coords(2, 0, 0), can_step, forced_waypoint);
+    expect_true(game_async::run(std::move(next_step), game_async::WaitMode::PostedWork) == Coords(2, 0, 0),
+                "findNextStep should allow waypoint override when available");
 }
 
 void test_pathfinder_crosses_levels_through_explicit_waypoint() {
@@ -540,8 +546,9 @@ void test_toroidal_pathfinder_prefers_wrapped_route() {
     expect_true(path.front() == Coords(25, 0, 0), "Toroidal path should wrap west-to-east in one move");
 
     auto next_step =
-        CPathFinder::findNextStep(Coords(0, 0, 0), Coords(25, 0, 0), can_step, no_waypoint, neighbors, distance);
-    expect_true(next_step->get() == Coords(25, 0, 0), "Toroidal next step should choose the wrapped edge tile");
+        CPathFinder::findNextStepAsync(Coords(0, 0, 0), Coords(25, 0, 0), can_step, no_waypoint, neighbors, distance);
+    expect_true(game_async::run(std::move(next_step), game_async::WaitMode::PostedWork) == Coords(25, 0, 0),
+                "Toroidal next step should choose the wrapped edge tile");
 }
 
 void test_toroidal_pathfinder_wraps_on_both_axes() {
@@ -1301,6 +1308,251 @@ void test_game_context_transition_generation_helpers_and_shutdown() {
                 "destroying the owning game should advance transition generation");
     expect_true(!context->isTransitionGenerationCurrent(shutdown_generation),
                 "shutdown should make previously captured transition generation stale");
+}
+
+vstd::task<void> shutdownFromOwnedTask(std::shared_ptr<CGameContext> context, std::weak_ptr<CMap> map,
+                                       std::weak_ptr<CResourcesProvider> resources, bool &retained) {
+    co_await vstd::post(vstd::event_loop<>::instance());
+    context->shutdown();
+    retained = !map.expired() && !resources.expired();
+}
+
+vstd::task<void> shutdownFromNestedOwnedTask(std::shared_ptr<CGameContext> context, std::weak_ptr<CMap> map,
+                                             std::weak_ptr<CResourcesProvider> resources, bool &retained) {
+    co_await shutdownFromOwnedTask(std::move(context), std::move(map), std::move(resources), retained);
+}
+
+vstd::task<void> waitForShutdownStop(std::promise<void> &started, std::weak_ptr<CResourcesProvider> resources,
+                                     std::atomic_bool &retained) {
+    auto token = co_await vstd::thisTaskStopToken();
+    co_await vstd::work(game_async::workerPool(), [token, &started, resources, &retained] {
+        std::mutex mutex;
+        std::condition_variable condition;
+        std::stop_callback wake(token, [&condition, &mutex] {
+            std::lock_guard lock(mutex);
+            condition.notify_all();
+        });
+        std::unique_lock lock(mutex);
+        started.set_value();
+        condition.wait(lock, [token] { return token.stop_requested(); });
+        retained.store(!resources.expired());
+    });
+}
+
+void testGameContextDefersShutdownInsideOwnedTask() {
+    for (const bool nested : {false, true}) {
+        auto game = std::make_shared<CGame>();
+        auto context = game->getContext();
+        auto map = std::make_shared<CMap>();
+        map->setGame(game);
+        game->setMap(map);
+        std::weak_ptr<CMap> retained_map = map;
+        map.reset();
+        std::weak_ptr<CResourcesProvider> resources = context->getResourcesProvider();
+        bool retained = false;
+        auto handle =
+            context->spawnTask(nested ? shutdownFromNestedOwnedTask(context, retained_map, resources, retained)
+                                      : shutdownFromOwnedTask(context, retained_map, resources, retained));
+        vstd::event_loop<>::instance()->runUntilIdle();
+        expect_true(handle.finished() && retained, "self-shutdown retains runtime resources until its frame exits");
+        expect_true(retained_map.expired() && resources.expired(),
+                    "the independent finalizer releases resources after all owned tasks finish");
+        expect_true(!context->isActive() && !game->getMap(), "self-shutdown invalidates the game immediately");
+        expect_runtime_error([&] { handle.get(); }, "a task that closes its group has a cancelled result");
+        expect_runtime_error([&] { context->spawnTask(game_async::dispatch([] {})); },
+                             "closed contexts reject new coroutine work");
+        context->shutdown();
+    }
+}
+
+void testGameDestructorJoinsWorkersWithoutRetainingGame() {
+    auto game = std::make_shared<CGame>();
+    auto context = game->getContext();
+    std::weak_ptr<CGame> owner = game;
+    std::weak_ptr<CResourcesProvider> resources = context->getResourcesProvider();
+    std::atomic_bool retained{false};
+    std::promise<void> started;
+    auto handle = context->spawnTask(waitForShutdownStop(started, resources, retained));
+    {
+        pybind11::gil_scoped_release release;
+        started.get_future().wait();
+    }
+    game.reset();
+    expect_true(owner.expired() && handle.finished(), "owned workers cannot keep the CGame destructor alive");
+    expect_true(retained.load() && resources.expired(),
+                "shutdown keeps resources through worker completion and then releases them");
+    expect_runtime_error([&] { handle.get(); }, "shutdown settles outstanding worker tasks as cancelled");
+}
+
+struct ShutdownThreadProbe {
+    const std::thread::id mainThread = std::this_thread::get_id();
+    std::atomic<int> childrenDestroyed{0};
+    std::atomic<int> guisDestroyed{0};
+    std::atomic_bool mainThreadOnly{true};
+
+    void record(std::atomic<int> &counter) {
+        if (std::this_thread::get_id() != mainThread) {
+            mainThreadOnly.store(false);
+        }
+        counter.fetch_add(1);
+    }
+};
+
+class ShutdownProbeGui : public CGui {
+  public:
+    explicit ShutdownProbeGui(std::shared_ptr<ShutdownThreadProbe> probe)
+        : CGui(WithoutWindow{}), probe(std::move(probe)) {}
+    ~ShutdownProbeGui() override { probe->record(probe->guisDestroyed); }
+
+  private:
+    std::shared_ptr<ShutdownThreadProbe> probe;
+};
+
+class ShutdownProbeChild : public CGameGraphicsObject {
+  public:
+    explicit ShutdownProbeChild(std::shared_ptr<ShutdownThreadProbe> probe) : probe(std::move(probe)) {}
+    ~ShutdownProbeChild() override { probe->record(probe->childrenDestroyed); }
+
+  private:
+    std::shared_ptr<ShutdownThreadProbe> probe;
+};
+
+std::weak_ptr<CGui> attachShutdownProbeGui(const std::shared_ptr<CGame> &game,
+                                           const std::shared_ptr<ShutdownThreadProbe> &probe) {
+    auto gui = std::make_shared<ShutdownProbeGui>(probe);
+    gui->addChild(std::make_shared<ShutdownProbeChild>(probe));
+    game->setGui(gui);
+    return gui;
+}
+
+vstd::task<void> shutdownFromOwnedWorker(std::shared_ptr<CGameContext> context, std::weak_ptr<CGui> gui,
+                                         std::promise<void> &started, std::shared_future<void> proceed,
+                                         std::atomic_bool &retained) {
+    co_await vstd::work(game_async::workerPool(), [context, gui, &started, proceed, &retained] {
+        context->shutdown();
+        auto closing_gui = gui.lock();
+        retained.store(closing_gui && !closing_gui->isActive());
+        closing_gui.reset();
+        started.set_value();
+        proceed.wait();
+    });
+}
+
+void testGameContextWorkerShutdownKeepsGuiOnMainThread() {
+    auto loop = vstd::event_loop<>::instance();
+    auto game = std::make_shared<CGame>();
+    auto context = game->getContext();
+    auto probe = std::make_shared<ShutdownThreadProbe>();
+    auto gui = attachShutdownProbeGui(game, probe);
+    std::promise<void> started;
+    auto worker_started = started.get_future();
+    std::promise<void> proceed;
+    std::atomic_bool retained{false};
+    auto handle =
+        context->spawnTask(shutdownFromOwnedWorker(context, gui, started, proceed.get_future().share(), retained));
+    {
+        pybind11::gil_scoped_release release;
+        worker_started.wait();
+    }
+    loop->runReady();
+    expect_true(retained.load() && !game->getGui(), "owned worker shutdown immediately deactivates and detaches GUI");
+    expect_true(probe->childrenDestroyed.load() == 0 && probe->guisDestroyed.load() == 0,
+                "GUI children and resources survive until the owned worker exits");
+    proceed.set_value();
+    expect_runtime_error([&] { game_async::wait(handle, game_async::WaitMode::PostedWork); },
+                         "owned worker shutdown cancels its result without joining itself");
+    loop->runUntilIdle();
+    expect_true(gui.expired() && probe->childrenDestroyed.load() == 1 && probe->guisDestroyed.load() == 1 &&
+                    probe->mainThreadOnly.load(),
+                "owned worker teardown destroys GUI and children once on the main thread");
+}
+
+void testGameContextWorkerBoundaryMarshalsGuiCleanup() {
+    for (const bool destroy_game : {false, true}) {
+        auto game = std::make_shared<CGame>();
+        auto context = destroy_game ? std::shared_ptr<CGameContext>() : game->getContext();
+        std::weak_ptr<CGame> owner = game;
+        auto probe = std::make_shared<ShutdownThreadProbe>();
+        auto gui = attachShutdownProbeGui(game, probe);
+        std::promise<std::string> completed;
+        auto completion = completed.get_future();
+        auto closing_game = destroy_game ? std::move(game) : std::shared_ptr<CGame>();
+        std::thread worker([context, closing_game = std::move(closing_game), &completed]() mutable {
+            pybind11::gil_scoped_acquire acquire;
+            try {
+                if (closing_game) {
+                    closing_game.reset();
+                } else {
+                    context->shutdown();
+                }
+                completed.set_value("");
+            } catch (const std::exception &error) {
+                completed.set_value(error.what());
+            }
+        });
+        while (completion.wait_for(std::chrono::seconds(0)) != std::future_status::ready) {
+            vstd::event_loop<>::instance()->runReady();
+            game_async::waitForProgress();
+        }
+        worker.join();
+        expect_true(completion.get().empty(), "off-main shutdown yields the GIL while waiting for main cleanup");
+        expect_true(destroy_game ? owner.expired() : (!context->isActive() && !game->getGui()),
+                    "off-main shutdown detaches the session even at the CGame destructor boundary");
+        expect_true(gui.expired() && probe->childrenDestroyed.load() == 1 && probe->guisDestroyed.load() == 1 &&
+                        probe->mainThreadOnly.load(),
+                    "off-main boundaries return after GUI and child destruction on the main thread");
+    }
+}
+
+void testGameDestructorWithoutGuiDoesNotRequireMainPump() {
+    auto game = std::make_shared<CGame>();
+    std::weak_ptr<CResourcesProvider> resources = game->getResourcesProvider();
+    std::promise<void> entering;
+    auto entered = entering.get_future();
+    std::promise<void> completed;
+    auto completion = completed.get_future();
+    std::thread worker([closing_game = std::move(game), &entering, &completed]() mutable {
+        pybind11::gil_scoped_acquire acquire;
+        entering.set_value();
+        closing_game.reset();
+        completed.set_value();
+    });
+    bool completed_without_pump;
+    {
+        pybind11::gil_scoped_release release;
+        entered.wait();
+        completed_without_pump = completion.wait_for(std::chrono::seconds(2)) == std::future_status::ready;
+    }
+    while (completion.wait_for(std::chrono::seconds(0)) != std::future_status::ready) {
+        vstd::event_loop<>::instance()->runReady();
+        game_async::waitForProgress();
+    }
+    worker.join();
+    expect_true(completed_without_pump && resources.expired(),
+                "an idle session without GUI or scene work releases resources on the worker without a main pump");
+}
+
+vstd::task<void> acquireGilFromOwnedWorker(std::promise<void> &completed) {
+    co_await vstd::work(game_async::workerPool(), [&] {
+        pybind11::gil_scoped_acquire acquire;
+        completed.set_value();
+    });
+}
+
+void testFrameBoundaryReleasesGilForOwnedWorkers() {
+    auto loop = vstd::event_loop<>::instance();
+    std::promise<void> completed;
+    auto worker_done = completed.get_future();
+    bool rescued = false;
+    auto rescue = loop->scheduleAfter(2000, [&] {
+        rescued = true;
+        pybind11::gil_scoped_release release;
+        worker_done.wait_for(std::chrono::seconds(5));
+    });
+    game_async::run(acquireGilFromOwnedWorker(completed));
+    expect_true(!rescued, "a synchronous frame boundary releases the GIL without requiring a rescue callback");
+    expect_true(worker_done.wait_for(std::chrono::seconds(0)) == std::future_status::ready,
+                "the owned worker completes its Python access before the boundary returns");
 }
 
 void test_game_context_shutdown_is_idempotent_and_preserves_other_game_services() {
@@ -3446,6 +3698,12 @@ int main() {
     test_game_context_owns_distinct_gui_handlers_per_game();
     test_game_context_rejects_services_without_owner_game();
     test_game_context_transition_generation_helpers_and_shutdown();
+    testGameContextDefersShutdownInsideOwnedTask();
+    testGameDestructorJoinsWorkersWithoutRetainingGame();
+    testGameContextWorkerShutdownKeepsGuiOnMainThread();
+    testGameContextWorkerBoundaryMarshalsGuiCleanup();
+    testGameDestructorWithoutGuiDoesNotRequireMainPump();
+    testFrameBoundaryReleasesGilForOwnedWorkers();
     test_game_context_shutdown_is_idempotent_and_preserves_other_game_services();
     test_effect_cycles_release_with_map_and_context_teardown();
     test_effect_owner_registry_releases_finished_and_destroyed_owners();

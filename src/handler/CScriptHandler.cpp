@@ -15,7 +15,9 @@ GNU General Public License for more details.
 You should have received a copy of the GNU General Public License
 along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
+#include "handler/CScriptHandler.h"
 #include "core/CMap.h"
+#include "core/CGame.h"
 #include <memory>
 #include <pybind11/eval.h>
 #include <stdexcept>
@@ -24,6 +26,77 @@ struct CScriptHandler::State {
     pybind11::object mainModule;
     pybind11::dict mainNamespace;
 };
+
+struct CScriptFlow::State {
+    pybind11::object flow;
+    std::weak_ptr<CGame> game;
+};
+
+CScriptFlow::CScriptFlow(std::unique_ptr<State> state) : state(std::move(state)) {}
+
+CScriptFlow::~CScriptFlow() {
+    if (!state) {
+        return;
+    }
+    if (!Py_IsInitialized()) {
+        state->flow.release();
+        return;
+    }
+    pybind11::gil_scoped_acquire acquire;
+    try {
+        state->flow.attr("close")();
+    } catch (pybind11::error_already_set &error) {
+        error.discard_as_unraisable("CScriptFlow teardown");
+    }
+    state.reset();
+}
+
+std::optional<json> CScriptFlow::next(const json &answer) { return resume(answer, std::nullopt); }
+
+std::optional<json> CScriptFlow::fail(const std::string &message) { return resume(nullptr, message); }
+
+std::optional<json> CScriptFlow::resume(const json &answer, const std::optional<std::string> &failure) {
+    auto owner = state->game.lock();
+    if (!owner) {
+        throw std::runtime_error("Cannot resume a UI script after its game has been destroyed.");
+    }
+    pybind11::gil_scoped_acquire acquire;
+    pybind11::object exception = failure ? pybind11::cast(*failure) : pybind11::none();
+    auto result = state->flow.attr("advance")(answer.dump(), exception);
+    if (result.is_none()) {
+        return std::nullopt;
+    }
+    return json::parse(result.cast<std::string>());
+}
+
+std::unique_ptr<CScriptFlow> CScriptHandler::createUiFlow(const std::string &entry, std::weak_ptr<CGame> game) {
+    getState();
+    if (entry != "pause" && entry != "saveMenu" && entry != "showDefeat") {
+        throw std::invalid_argument("Unknown native UI script entry: " + entry);
+    }
+    pybind11::gil_scoped_acquire acquire;
+    auto state = std::make_unique<CScriptFlow::State>();
+    state->game = game;
+    auto getGame = pybind11::cpp_function([game]() {
+        auto owner = game.lock();
+        if (!owner) {
+            throw std::runtime_error("The UI script's game is no longer available.");
+        }
+        return owner;
+    });
+    state->flow = pybind11::module_::import("ui").attr("UiFlow")(entry, getGame);
+    return std::unique_ptr<CScriptFlow>(new CScriptFlow(std::move(state)));
+}
+
+std::unique_ptr<CScriptFlow> CScriptHandler::createCallbackFlow(pybind11::function callback,
+                                                                std::weak_ptr<CGame> game) {
+    getState();
+    pybind11::gil_scoped_acquire acquire;
+    auto state = std::make_unique<CScriptFlow::State>();
+    state->game = std::move(game);
+    state->flow = pybind11::module_::import("ui").attr("UiFlow").attr("fromCallback")(std::move(callback));
+    return std::unique_ptr<CScriptFlow>(new CScriptFlow(std::move(state)));
+}
 
 CScriptHandler::State &CScriptHandler::getState() {
     if (!pythonState) {

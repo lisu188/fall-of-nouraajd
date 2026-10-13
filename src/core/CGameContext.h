@@ -107,6 +107,11 @@ class CGameContext {
 
     bool isActive() const;
 
+    template <typename T> vstd::task_handle<T> spawnTask(vstd::task<T> task) {
+        requireActiveService("task group");
+        return tasks->spawn(std::move(task), vstd::loopScheduler(vstd::event_loop<>::instance()));
+    }
+
     void shutdown();
 
     TransitionGeneration getTransitionGeneration() const;
@@ -118,10 +123,14 @@ class CGameContext {
     TransitionGeneration advanceTransitionGeneration();
 
   private:
+    struct ShutdownState;
+    static vstd::task<void> finishShutdownAsync(std::shared_ptr<ShutdownState> state);
+
     void shutdown(CGame *owner);
 
     void requireActiveService(const char *serviceName) const;
 
+    std::shared_ptr<std::recursive_mutex> resourceMutex;
     std::weak_ptr<CGame> game;
     std::shared_ptr<CGuiHandler> guiHandler;
     std::shared_ptr<CObjectHandler> objectHandler;
@@ -133,7 +142,9 @@ class CGameContext {
     std::shared_ptr<CMapSessionStore> mapSessionStore;
     std::vector<vstd::event_loop<>::connection> eventLoopConnections;
     std::unordered_map<const CCreature *, std::weak_ptr<CCreature>> effectOwners;
-    vstd::lazy<CSlotConfig> slotConfiguration;
+    std::shared_ptr<CSlotConfig> slotConfiguration;
     std::atomic<bool> active = true;
     std::atomic<TransitionGeneration> transitionGeneration = 0;
+    std::shared_ptr<vstd::task_group> tasks = std::make_shared<vstd::task_group>();
+    std::shared_ptr<ShutdownState> shutdownState;
 };

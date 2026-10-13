@@ -16,6 +16,7 @@ You should have received a copy of the GNU General Public License
 along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 #include "core/CController.h"
+#include "core/CAsync.h"
 #include <algorithm>
 #include <cstdint>
 #include <cstdlib>
@@ -154,17 +155,17 @@ void performance_guard::clearTargetFlowCache() { CNavigationService::clearFlows(
 
 CTargetController::CTargetController() {}
 
-std::shared_ptr<vstd::future<Coords, void>> CTargetController::control(std::shared_ptr<CCreature> creature) {
+vstd::task<Coords> CTargetController::controlAsync(std::shared_ptr<CCreature> creature) {
     if (!creature || !creature->getMap()) {
-        return vstd::make_ready_future(ZERO);
+        co_return ZERO;
     }
     auto deferredContext = capture_deferred_creature_context(creature);
     auto sourceMap = deferredContext.map.lock();
     auto target_object = sourceMap ? sourceMap->getObjectByName(target) : nullptr;
     if (!target_object) {
-        return vstd::make_ready_future(deferredContext.fallback);
+        co_return deferredContext.fallback;
     }
-    return vstd::async([deferredContext, target_object]() {
+    co_return co_await vstd::work(game_async::workerPool(), [deferredContext, target_object]() {
         std::shared_ptr<CCreature> creature;
         std::shared_ptr<CMap> map;
         if (!resolve_deferred_creature_context(deferredContext, creature, map)) {
@@ -189,16 +190,15 @@ std::shared_ptr<vstd::future<Coords, void>> CTargetController::control(std::shar
     });
 }
 
-std::shared_ptr<vstd::future<Coords, void>> CController::control(std::shared_ptr<CCreature> c) {
+vstd::task<Coords> CController::controlAsync(std::shared_ptr<CCreature> c) {
     if (!c) {
-        return vstd::make_ready_future(ZERO);
+        co_return ZERO;
     }
     auto deferredContext = capture_deferred_creature_context(c);
     std::shared_ptr<CCreature> creature;
     std::shared_ptr<CMap> map;
-    return vstd::make_ready_future(resolve_deferred_creature_context(deferredContext, creature, map)
-                                       ? creature->getCoords()
-                                       : deferredContext.fallback);
+    co_return resolve_deferred_creature_context(deferredContext, creature, map) ? creature->getCoords()
+                                                                                : deferredContext.fallback;
 }
 
 void CController::onStepCommitted(std::shared_ptr<CCreature>, const Coords &) {}
@@ -211,18 +211,18 @@ std::string CTargetController::getTarget() { return target; }
 
 void CTargetController::setTarget(std::string target) { this->target = target; }
 
-std::shared_ptr<vstd::future<Coords, void>> CRandomController::control(std::shared_ptr<CCreature> creature) {
+vstd::task<Coords> CRandomController::controlAsync(std::shared_ptr<CCreature> creature) {
     if (!creature) {
-        return vstd::make_ready_future(ZERO);
+        co_return ZERO;
     }
     auto deferredContext = capture_deferred_creature_context(creature);
     std::shared_ptr<CCreature> resolvedCreature;
     std::shared_ptr<CMap> map;
     if (!resolve_deferred_creature_context(deferredContext, resolvedCreature, map)) {
-        return vstd::make_ready_future(deferredContext.fallback);
+        co_return deferredContext.fallback;
     }
     Coords target = resolvedCreature->getCoords() + Coords(vstd::rand(-1, 1), vstd::rand(-1, 1), 0);
-    return vstd::make_ready_future(map->normalizeCoords(target));
+    co_return map->normalizeCoords(target);
 }
 
 struct CNpcRandomController::NpcRoute {
@@ -242,21 +242,21 @@ struct CNpcRandomController::NpcRoute {
     Coords origin;
 };
 
-std::shared_ptr<vstd::future<Coords, void>> CNpcRandomController::control(std::shared_ptr<CCreature> creature) {
+vstd::task<Coords> CNpcRandomController::controlAsync(std::shared_ptr<CCreature> creature) {
     if (!creature || !creature->getMap()) {
         interrupt(creature);
-        return vstd::make_ready_future(creature ? creature->getCoords() : ZERO);
+        co_return creature ? creature->getCoords() : ZERO;
     }
     auto deferredContext = capture_deferred_creature_context(creature);
     std::shared_ptr<CMap> map;
     if (!resolve_deferred_creature_context(deferredContext, creature, map)) {
         interrupt(creature);
-        return vstd::make_ready_future(deferredContext.fallback);
+        co_return deferredContext.fallback;
     }
     if (route) {
         if (currentStep >= route->steps.size()) {
             interrupt(creature);
-            return vstd::make_ready_future(creature->getCoords());
+            co_return creature->getCoords();
         }
         const auto expectedOrigin = currentStep ? route->steps[currentStep - 1] : route->origin;
         const auto context = route->context.lock();
@@ -268,13 +268,13 @@ std::shared_ptr<vstd::future<Coords, void>> CNpcRandomController::control(std::s
             creature->getCoords() != expectedOrigin ||
             (route->wasInstalled && creature->getController() != route->installedController.lock())) {
             interrupt(creature);
-            return vstd::make_ready_future(creature->getCoords());
+            co_return creature->getCoords();
         }
         const auto next = map->normalizeCoords(route->steps[currentStep]);
         if (creature_can_follow_step(map, creature, next))
-            return vstd::make_ready_future(next);
+            co_return next;
         interrupt(creature);
-        return vstd::make_ready_future(creature->getCoords());
+        co_return creature->getCoords();
     }
 
     for (int i = 0; i < 10; i++) {
@@ -312,11 +312,11 @@ std::shared_ptr<vstd::future<Coords, void>> CNpcRandomController::control(std::s
     if (route) {
         const auto next = map->normalizeCoords(route->steps[currentStep]);
         if (creature_can_follow_step(map, creature, next))
-            return vstd::make_ready_future(next);
+            co_return next;
         interrupt(creature);
     }
 
-    return vstd::make_ready_future(creature->getCoords());
+    co_return creature->getCoords();
 }
 
 void CNpcRandomController::onStepCommitted(std::shared_ptr<CCreature> creature, const Coords &coords) {
@@ -334,15 +334,15 @@ std::string CGroundController::getTileType() { return _tileType; }
 
 void CGroundController::setTileType(std::string type) { _tileType = type; }
 
-std::shared_ptr<vstd::future<Coords, void>> CGroundController::control(std::shared_ptr<CCreature> creature) {
+vstd::task<Coords> CGroundController::controlAsync(std::shared_ptr<CCreature> creature) {
     auto self = this->ptr<CGroundController>();
     if (!creature || !creature->getMap()) {
-        return vstd::make_ready_future(creature ? creature->getCoords() : ZERO);
+        co_return creature ? creature->getCoords() : ZERO;
     }
     auto deferredContext = capture_deferred_creature_context(creature);
     std::shared_ptr<CMap> map;
     if (!resolve_deferred_creature_context(deferredContext, creature, map)) {
-        return vstd::make_ready_future(deferredContext.fallback);
+        co_return deferredContext.fallback;
     }
     std::vector<Coords> possible;
     for (auto c : map->getAdjacentCoords(creature->getCoords(), true)) {
@@ -352,22 +352,22 @@ std::shared_ptr<vstd::future<Coords, void>> CGroundController::control(std::shar
         }
     }
     if (!possible.empty()) {
-        return vstd::make_ready_future(*vstd::random_element(possible));
+        co_return *vstd::random_element(possible);
     }
-    return vstd::make_ready_future(creature->getCoords());
+    co_return creature->getCoords();
 }
 
 CRangeController::CRangeController() {}
 
-std::shared_ptr<vstd::future<Coords, void>> CRangeController::control(std::shared_ptr<CCreature> creature) {
+vstd::task<Coords> CRangeController::controlAsync(std::shared_ptr<CCreature> creature) {
     auto self = this->ptr<CRangeController>();
     if (!creature || !creature->getMap()) {
-        return vstd::make_ready_future(creature ? creature->getCoords() : ZERO);
+        co_return creature ? creature->getCoords() : ZERO;
     }
     auto deferredContext = capture_deferred_creature_context(creature);
     std::shared_ptr<CMap> map;
     if (!resolve_deferred_creature_context(deferredContext, creature, map)) {
-        return vstd::make_ready_future(deferredContext.fallback);
+        co_return deferredContext.fallback;
     }
     std::vector<Coords> possible;
     std::shared_ptr<CMapObject> targetObject = map->getObjectByName(self->getTarget());
@@ -377,9 +377,9 @@ std::shared_ptr<vstd::future<Coords, void>> CRangeController::control(std::share
         }
     }
     if (!possible.empty()) {
-        return vstd::make_ready_future(*vstd::random_element(possible));
+        co_return *vstd::random_element(possible);
     }
-    return vstd::make_ready_future(creature->getCoords());
+    co_return creature->getCoords();
 }
 
 std::string CRangeController::getTarget() { return target; }
@@ -700,21 +700,16 @@ struct CPlayerController::PlayerRoute {
     Coords origin;
 };
 
-std::shared_ptr<vstd::future<Coords, void>> CPlayerController::control(std::shared_ptr<CCreature> c) {
+vstd::task<Coords> CPlayerController::controlAsync(std::shared_ptr<CCreature> c) {
     auto player = vstd::cast<CPlayer>(c);
     if (!player) {
-        return vstd::now([]() { return ZERO; });
+        co_return ZERO;
     }
-    return vstd::now([this, player]() {
-        if (!canContinue(player)) {
-            // A path that can no longer be continued (finished, or its next step became blocked)
-            // is abandoned outright, so a later poll cannot silently resume a stale route after
-            // the obstacle moves away.
-            clearPath();
-            return player->getCoords();
-        }
-        return route->steps.at(currentStep);
-    });
+    if (!canContinue(player)) {
+        clearPath();
+        co_return player->getCoords();
+    }
+    co_return route->steps.at(currentStep);
 }
 
 void CPlayerController::setTarget(std::shared_ptr<CPlayer> player, Coords _target) {
@@ -848,6 +843,10 @@ CNavigationSearchResult CPlayerController::calculatePath(std::shared_ptr<CPlayer
     return map->getNavigationService()->findPathResult(map, player->getCoords(), *target);
 }
 
+vstd::task<bool> CFightController::controlAsync(std::shared_ptr<CCreature> me, std::shared_ptr<CCreature> opponent) {
+    co_return control(std::move(me), std::move(opponent));
+}
+
 bool CFightController::control(std::shared_ptr<CCreature> me, std::shared_ptr<CCreature> opponent) {
     if (!me || !opponent) {
         return false;
@@ -919,28 +918,46 @@ void CPlayerFightController::start(std::shared_ptr<CCreature> me, std::shared_pt
 }
 
 bool CPlayerFightController::control(std::shared_ptr<CCreature> me, std::shared_ptr<CCreature> opponent) {
-    if (!me || !opponent || !me->getMap() || !me->getMap()->getGame()) {
+    auto game = me ? me->getGame() : nullptr;
+    if (game && !game->getContext()->isActive()) {
         cancelled = true;
         return false;
     }
-    if (hasCancelledContext(me)) {
+    auto task = controlAsync(std::move(me), std::move(opponent));
+    try {
+        return game ? game_async::wait(game->getContext()->spawnTask(std::move(task)))
+                    : game_async::run(std::move(task));
+    } catch (const vstd::task_cancelled &) {
         cancelled = true;
         return false;
+    }
+}
+
+vstd::task<bool> CPlayerFightController::controlAsync(std::shared_ptr<CCreature> me,
+                                                      std::shared_ptr<CCreature> opponent) {
+    if (!me || !opponent || !me->getMap() || !me->getMap()->getGame()) {
+        cancelled = true;
+        co_return false;
+    }
+    if (hasCancelledContext(me)) {
+        cancelled = true;
+        co_return false;
     }
     bool used = false;
     auto gui = me->getMap()->getGame()->getGui();
     if (!gui) {
         cancelled = true;
-        return false;
+        co_return false;
     }
 
     // TODO: what about mana cost?
-    auto target = fightPanel && fightPanel->getEnemy() ? fightPanel->getEnemy() : opponent;
-    if (fightPanel && target) {
-        auto action = fightPanel->selectInteraction();
-        if (fightPanel->isCancelled() || hasCancelledContext(me)) {
+    auto panel = fightPanel;
+    auto target = panel && panel->getEnemy() ? panel->getEnemy() : opponent;
+    if (panel && target) {
+        auto action = co_await panel->selectInteractionAsync();
+        if (fightPanel != panel || panel->isCancelled() || hasCancelledContext(me)) {
             cancelled = true;
-            return false;
+            co_return false;
         }
         if (action) {
             me->useAction(action, target);
@@ -949,7 +966,7 @@ bool CPlayerFightController::control(std::shared_ptr<CCreature> me, std::shared_
     } else {
         cancelled = true;
     }
-    return used;
+    co_return used;
 }
 
 void CPlayerFightController::end(std::shared_ptr<CCreature> me, std::shared_ptr<CCreature> opponent) {

@@ -152,6 +152,9 @@ FAST_TEST_PREFIXES = (
     "NativeTestProfileSourceTest.",
     "PlayerIdentityContentTest.",
     "EffectContractTest.",
+    "SessionDeferredWorkTest.",
+    "UiCoroutineFlowTest.",
+    "CampaignCoroutineFlowTest.",
     "CharacterCreationFlowTest.",
     "CoverageReportTest.",
     "PlayBootstrapTest.",
@@ -5897,6 +5900,72 @@ class GameTest(unittest.TestCase):
         finally:
             shutil.rmtree(dir_a, ignore_errors=True)
             shutil.rmtree(dir_b, ignore_errors=True)
+
+    @game_test
+    def test_session_owned_script_callbacks_cancel_and_release_before_execution(self):
+        import gc
+        import weakref
+        import ui
+
+        game = load_game_module()
+        loop = game.event_loop.instance()
+        owner = game.CGameLoader.loadGame()
+        calls = []
+
+        class Callback:
+            def __call__(self):
+                calls.append("cancelled callback ran")
+
+        callback = Callback()
+        lifetime = weakref.ref(callback)
+        owner.post(callback)
+        del callback
+        gc.collect()
+        self.assertIsNotNone(lifetime(), "queued work must own its Python callback")
+        owner.getContext().shutdown()
+        for _ in range(8):
+            loop.run()
+        gc.collect()
+        self.assertEqual([], calls)
+        self.assertIsNone(lifetime(), "cancelled queued work must release its Python captures")
+        for method in (owner.post, owner.runUiFlowLater):
+            with self.assertRaisesRegex(RuntimeError, "closed game session"):
+                method(lambda: calls.append("rejected callback ran"))
+
+        second = game.CGameLoader.loadGame()
+        resolver = second.createWeakResolver()
+
+        def modalFlow():
+            calls.append("flow started")
+            answer = yield from ui.confirmFlow(ui.UiFlowGame(resolver), "Headless session", "No modal renderer")
+            calls.append(answer)
+
+        try:
+
+            class FailingCallback:
+                def __init__(self):
+                    self.owner = second
+
+                def __call__(self):
+                    raise RuntimeError("Session callback traceback capture regression")
+
+            failure = FailingCallback()
+            failure_lifetime = weakref.ref(failure)
+            second.post(failure)
+            del failure
+            for _ in range(8):
+                loop.run()
+            gc.collect()
+            self.assertIsNone(failure_lifetime(), "failed detached work must release its traceback captures")
+            second.post(lambda: calls.append("posted callback"))
+            second.runUiFlowLater(modalFlow)
+            self.assertEqual([], calls, "session posts must preserve queue snapshot deferral")
+            for _ in range(8):
+                loop.run()
+            self.assertEqual(["posted callback", "flow started", False], calls)
+        finally:
+            second.getContext().shutdown()
+        return True, json.dumps({"cancelled": True, "second_session": calls}, sort_keys=True)
 
     @game_test
     def test_binding_validation_rejects_invalid_logger_and_dynamic_values(self):
@@ -26354,6 +26423,9 @@ if SOURCE_UI_TESTS_AVAILABLE:
     from tests.test_ui_minimap_interactions import UiMinimapInteractionTest as _UiMinimapInteractionTest
     from tests.test_enemy_roles import EnemyRolesTest as _EnemyRoleContractTest
     from tests.test_octobogz_hunt import OctobogzHuntTest as _OctobogzHuntContractTest
+    from tests.test_session_deferred_work import SessionDeferredWorkTest as _SessionDeferredWorkTest
+    from tests.test_ui_coroutine_flow import UiCoroutineFlowTest as _UiCoroutineFlowTest
+    from tests.test_campaign_coroutine_flow import CampaignCoroutineFlowTest as _CampaignCoroutineFlowTest
     from tests.test_monster_balance_runner import MonsterBalanceRunnerTest as _MonsterBalanceRunnerTest
     from tests.test_enemy_role_runtime import EnemyRoleRuntimeTest as _EnemyRoleRuntimeTest
     from tests.test_octobogz_mcp import OctobogzMcpWalkthroughTest as _OctobogzMcpWalkthroughTest
@@ -26426,6 +26498,15 @@ if SOURCE_UI_TESTS_AVAILABLE:
     class OctobogzHuntContractTest(_OctobogzHuntContractTest):
         pass
 
+    class SessionDeferredWorkTest(_SessionDeferredWorkTest):
+        pass
+
+    class UiCoroutineFlowTest(_UiCoroutineFlowTest):
+        pass
+
+    class CampaignCoroutineFlowTest(_CampaignCoroutineFlowTest):
+        pass
+
     class MonsterBalanceRunnerTest(_MonsterBalanceRunnerTest):
         pass
 
@@ -26460,6 +26541,7 @@ if SOURCE_UI_TESTS_AVAILABLE:
     del _UiPixelAnalysisTest
     del _EnemyRoleRuntimeTest
     del _EnemyRoleContractTest, _OctobogzHuntContractTest
+    del _SessionDeferredWorkTest, _UiCoroutineFlowTest, _CampaignCoroutineFlowTest
     del _OctobogzMcpWalkthroughTest
     del _OctobogzDiagnosticTest
     del _OctobogzRuntimeTest
@@ -27749,6 +27831,101 @@ class McpServerTest(unittest.TestCase):
             self.assertTrue(driver.log["portals"])
             self.assertTrue(driver.log["combats"])
             self._write_mcp_walkthrough_log("longLiveTheQueen", driver.log)
+        finally:
+            self._shutdown_process(proc)
+
+    def testStdioRandomSaveReloadAndSecondSessionControllerMovement(self):
+        try:
+            load_game_module()
+        except ImportError as error:
+            self.skipTest("The current _game extension is required for migration acceptance: " + str(error))
+
+        slot = unique_save_name("cpp26-mcp-session")
+        self.addCleanup(cleanup_save_slot, slot)
+        proc = self._start_stdio_mcp_process()
+        try:
+            self._initialize_stdio_mcp(proc)
+            session = {"proc": proc, "next_request_id": 3}
+            handles = set()
+
+            def retain(value):
+                if isinstance(value, dict):
+                    if "__handle__" in value:
+                        handles.add(value["__handle__"])
+                    else:
+                        for child in value.values():
+                            retain(child)
+                elif isinstance(value, list):
+                    for child in value:
+                        retain(child)
+                return value
+
+            def call(name, *args):
+                return retain(
+                    self._mcp_engine_call(session, name, list(args), timeout=MCP_STDIO_MAP_START_TIMEOUT_SECONDS)
+                )
+
+            def method(handle, name, *args):
+                return retain(
+                    self._mcp_handle_call(session, handle, name, list(args), timeout=MCP_STDIO_MAP_JSON_TIMEOUT_SECONDS)
+                )
+
+            def releaseSession():
+                result = self._mcp_tool(session, "engine_release_handles", {"handles": sorted(handles)})
+                self.assertEqual(len(handles), result["released"])
+                handles.clear()
+
+            owner = call("CGameLoader.loadGame")
+            call("CGameLoader.startRandomGameWithPlayer", owner, DEFAULT_PLAYER)
+            random_map = method(owner, "getMap")
+            player = method(random_map, "getPlayer")
+            method(player, "addItem", "LesserLifePotion")
+            method(player, "setStringProperty", "migrationSessionMarker", slot)
+            before = json.loads(call("jsonify", player))
+            random_name = method(random_map, "getStringProperty", "mapName")
+            turn = method(random_map, "getTurn")
+            self.assertTrue(call("CMapLoader.saveWithResult", random_map, slot))
+            saved = json.loads(save_primary_path(slot).read_text(encoding="utf-8"))
+            assert_save_envelope(self, saved, random_name)
+
+            restored_owner = call("CGameLoader.loadGame")
+            call("CGameLoader.loadSavedGame", restored_owner, slot)
+            restored_map = method(restored_owner, "getMap")
+            restored_player = method(restored_map, "getPlayer")
+            restored = json.loads(call("jsonify", restored_player))
+            self.assertEqual(random_name, method(restored_map, "getStringProperty", "mapName"))
+            self.assertEqual(turn, method(restored_map, "getTurn"))
+            self.assertEqual(self._serialized_coords(before), self._serialized_coords(restored))
+            self.assertEqual(slot, method(restored_player, "getStringProperty", "migrationSessionMarker"))
+            self.assertTrue(self._serialized_inventory_has(restored, "LesserLifePotion"))
+            releaseSession()
+
+            second_owner = call("CGameLoader.loadGame")
+            call("CGameLoader.startGameWithPlayer", second_owner, "multilevel", DEFAULT_PLAYER)
+            second_map = method(second_owner, "getMap")
+            second_player = method(second_map, "getPlayer")
+            stairs = method(second_map, "getObjectByName", "stairsUp")
+            controller = method(second_player, "getController")
+            method(controller, "setTarget", second_player, method(stairs, "getCoords"))
+            loop = call("event_loop.instance")
+            for _ in range(24):
+                method(second_map, "move")
+                method(loop, "run")
+                if self._mcp_serialized_player_coords(session, second_map) == [4, 1, 1]:
+                    break
+            self.assertEqual([4, 1, 1], self._mcp_serialized_player_coords(session, second_map))
+            self.assertTrue(method(second_map, "getBoolProperty", "used_stairs_up"))
+            method(second_owner, "changeMap", "ritual")
+            for _ in range(10):
+                method(loop, "run")
+            final_map = method(second_owner, "getMap")
+            self.assertEqual("ritual", method(final_map, "getStringProperty", "mapName"))
+            self.assertTrue(method(final_map, "getBoolProperty", "ritual_initialized"))
+            releaseSession()
+            self._write_mcp_walkthrough_log(
+                "cpp26_sessions",
+                {"randomMap": random_name, "saveSchema": saved["schemaVersion"], "stairs": [4, 1, 1], "map": "ritual"},
+            )
         finally:
             self._shutdown_process(proc)
 

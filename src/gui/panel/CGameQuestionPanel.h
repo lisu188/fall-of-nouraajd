@@ -33,6 +33,8 @@ class CGameQuestionPanel : public CGamePanel {
   public:
     bool awaitAnswer();
 
+    vstd::task<bool> awaitAnswerAsync();
+
     std::string getQuestion();
 
     void setQuestion(std::string question);

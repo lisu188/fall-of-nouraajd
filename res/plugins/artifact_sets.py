@@ -233,12 +233,19 @@ def notifyResult(handler, message):
 
 
 def maybe_offer_assembly(player):
-    """Offered when a set completes: prompt the player to assemble each ready set."""
+    """Synchronous Python adapter for the existing artifact assembly prompt."""
+    for _request in maybeOfferAssemblyFlow(player, asynchronous=False):
+        pass
+
+
+def maybeOfferAssemblyFlow(player, *, asynchronous=True):
+    """Offer each completed set while allowing native callers to await its modal."""
     if player is None or not player.isPlayer():
         return
     runtime = get_runtime()
     game_instance = player.getGame()
     handler = game_instance.getGuiHandler()
+    resolve_game = game_instance.createWeakResolver() if asynchronous else None
     for definition in runtime.completed_sets(player):
         if runtime._has_cursed_piece(player, definition):
             continue
@@ -253,9 +260,20 @@ def maybe_offer_assembly(player):
                     "detail": runtime.assemblyDetail(definition, game_instance=game_instance),
                 }
             ]
-            selection = show_choice("Assemble artifact", json.dumps(choices), "Assemble", DECLINE_ASSEMBLE)
+            if asynchronous:
+                game_instance = None
+                selection = yield {
+                    "operation": "gui.showChoice",
+                    "args": ("Assemble artifact", json.dumps(choices), "Assemble", DECLINE_ASSEMBLE),
+                    "kwargs": {},
+                }
+                game_instance = resolve_game()
+            else:
+                selection = show_choice("Assemble artifact", json.dumps(choices), "Assemble", DECLINE_ASSEMBLE)
             accepted = selection == definition["id"]
         else:
+            if asynchronous:
+                raise RuntimeError("Native artifact assembly requires the choice modal API")
             selection = handler.showSelection(game.list_string(game_instance, options))
             accepted = selection == assemble_option
         if accepted and runtime.assemble(game_instance, player, definition):
@@ -301,7 +319,9 @@ def _schedule_assembly_offer(event):
     player = event.getCause()
     if player is None or not player.isPlayer():
         return
-    game.event_loop.instance().invoke(lambda: maybe_offer_assembly(player))
+    game_instance = player.getGame()
+    if game_instance is not None:
+        game_instance.runUiFlowLater(lambda: maybeOfferAssemblyFlow(player))
 
 
 def load(self, context):

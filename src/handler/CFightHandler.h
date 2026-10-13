@@ -63,6 +63,9 @@ class CFightHandler {
     static CFightResult fightManyResult(std::shared_ptr<CCreature> attacker,
                                         const std::vector<std::shared_ptr<CCreature>> &opponents);
 
+    static vstd::task<CFightResult> fightManyResultAsync(std::shared_ptr<CCreature> attacker,
+                                                         std::vector<std::shared_ptr<CCreature>> opponents);
+
     static CFightOutcome fightManyOutcome(std::shared_ptr<CCreature> attacker,
                                           const std::vector<std::shared_ptr<CCreature>> &opponents);
 

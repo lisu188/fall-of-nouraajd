@@ -27,6 +27,7 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #include "core/CGameContext.h"
 #include "core/CMap.h"
 #include "gui/CAnimation.h"
+#include "gui/CGuiTasks.h"
 #include "gui/CTextManager.h"
 #include "gui/CDetailViewport.h"
 #include "gui/CTextureCache.h"
@@ -198,53 +199,69 @@ void CGameFightPanel::refreshEncounterViews() {
 }
 
 std::shared_ptr<CInteraction> CGameFightPanel::selectInteraction() {
-    auto self = this->ptr<CGameFightPanel>();
-    auto gui = self->getGui();
-    auto game = gui ? gui->getGame() : nullptr;
-    auto context = game ? game->getContext() : nullptr;
-    std::weak_ptr<CMap> weakExpectedMap;
-    if (game) {
-        weakExpectedMap = game->getMap();
+    auto result = gui_async::run(this->ptr<CGameFightPanel>(), selectInteractionAsync());
+    if (!result) {
+        cancel();
     }
-    const bool hadExpectedMap = game && game->getMap() != nullptr;
-    const auto expectedGeneration =
-        context ? context->captureTransitionGeneration() : CGameContext::TransitionGeneration{0};
-    vstd::call_later_block([self, weakExpectedMap, hadExpectedMap, context, expectedGeneration]() {
-        while (self->finalSelected.lock() == nullptr) {
-            if (self->isCancelled()) {
-                return;
-            }
-            auto gui = self->getGui();
-            auto game = gui ? gui->getGame() : nullptr;
-            auto expectedMap = weakExpectedMap.lock();
-            if ((context && !context->isTransitionGenerationCurrent(expectedGeneration)) ||
-                (hadExpectedMap && (!game || !expectedMap || game->getMap() != expectedMap))) {
-                self->cancel();
-                return;
-            }
-            if (!gui || gui->findChild(self) == nullptr) {
-                self->cancel();
-                return;
-            }
-            if (SDL_HasEvent(SDL_QUIT)) {
-                self->cancel();
-                return;
-            }
-            if (!vstd::event_loop<>::instance()->run()) {
-                self->cancel();
-                SDL_Event quit_event;
-                SDL_zero(quit_event);
-                quit_event.type = SDL_QUIT;
-                SDL_PushEvent(&quit_event);
-                return;
-            }
+    return result;
+}
+
+vstd::task<std::shared_ptr<CInteraction>> CGameFightPanel::selectInteractionAsync() {
+    return [](std::shared_ptr<CGameFightPanel> self) -> vstd::task<std::shared_ptr<CInteraction>> {
+        auto loop = vstd::event_loop<>::instance();
+        if (!loop->isMainThread()) {
+            co_await vstd::post(loop);
         }
-    });
-    auto ret = self->finalSelected.lock();
-    self->finalSelected.reset();
-    self->selected.reset();
-    self->refreshEncounterViews();
-    return ret;
+        auto gui = self->getGui();
+        auto game = gui ? gui->getGame() : nullptr;
+        auto context = game ? game->getContext() : nullptr;
+        auto expectedMap = game ? game->getMap() : nullptr;
+        std::weak_ptr<CMap> weakExpectedMap = expectedMap;
+        const bool hadExpectedMap = expectedMap != nullptr;
+        const auto expectedGeneration =
+            context ? context->captureTransitionGeneration() : CGameContext::TransitionGeneration{0};
+        expectedMap.reset();
+        game.reset();
+        gui.reset();
+        try {
+            auto ready = [=]() {
+                if (self->finalSelected.lock()) {
+                    return true;
+                }
+                if (self->isCancelled()) {
+                    return true;
+                }
+                auto gui = self->getGui();
+                auto game = gui ? gui->getGame() : nullptr;
+                auto expectedMap = weakExpectedMap.lock();
+                if ((context && !context->isTransitionGenerationCurrent(expectedGeneration)) ||
+                    (hadExpectedMap && (!game || !expectedMap || game->getMap() != expectedMap))) {
+                    self->cancel();
+                    return true;
+                }
+                if (!gui || gui->findChild(self) == nullptr) {
+                    self->cancel();
+                    return true;
+                }
+                if (SDL_HasEvent(SDL_QUIT) || vstd::event_loop<>::instance()->quitRequested()) {
+                    self->cancel();
+                    return true;
+                }
+                return false;
+            };
+            if (!ready()) {
+                co_await vstd::until(vstd::event_loop<>::instance(), std::move(ready));
+            }
+        } catch (const vstd::task_cancelled &) {
+            self->cancel();
+            throw;
+        }
+        auto ret = self->finalSelected.lock();
+        self->finalSelected.reset();
+        self->selected.reset();
+        self->refreshEncounterViews();
+        co_return ret;
+    }(this->ptr<CGameFightPanel>());
 }
 
 bool CGameFightPanel::isCancelled() const { return cancelled; }

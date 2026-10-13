@@ -16,6 +16,7 @@ You should have received a copy of the GNU General Public License
 along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 #include "core/CPathFinder.h"
+#include "core/CAsync.h"
 #include "core/CMap.h"
 #include "core/CNavigation.h"
 #include "core/CNavigationSearch.h"
@@ -129,10 +130,9 @@ CPathFinder::Distance CPathFinder::mapHeuristic(const std::shared_ptr<CMap> &map
     return [map](const Coords &from, const Coords &to) { return map->getDistance(from, to); };
 }
 
-std::shared_ptr<vstd::future<Coords, void>>
-CPathFinder::findNextStep(Coords start, Coords goal, const CanStep &canStep, const Waypoint waypoint,
-                          const Neighbors &neighbors, const Distance &distance, const StepCost &stepCost) {
-    return vstd::async([=]() {
+vstd::task<Coords> CPathFinder::findNextStepAsync(Coords start, Coords goal, CanStep canStep, Waypoint waypoint,
+                                                  Neighbors neighbors, Distance distance, StepCost stepCost) {
+    co_return co_await vstd::work(game_async::workerPool(), [=]() {
         return CNavigationSearch::findGenericNextStep(start, goal, canStep, waypoint, neighbors, distance, stepCost)
             .firstStep;
     });

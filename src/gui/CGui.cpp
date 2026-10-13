@@ -154,10 +154,16 @@ CGui::CGui() {
     // TODO: check render flags
 }
 
+CGui::CGui(WithoutWindow) : uiPreferences(UiPreferences::defaults()) {}
+
 CGui::~CGui() = default;
 
 void CGui::shutdown() {
-    if (!active.exchange(false, std::memory_order_acq_rel)) {
+    if (!vstd::event_loop<>::instance()->isMainThread()) {
+        throw std::runtime_error("CGui shutdown requires the main thread.");
+    }
+    deactivate();
+    if (std::exchange(shutdownStarted, true)) {
         return;
     }
 
@@ -182,6 +188,8 @@ void CGui::shutdown() {
     _textureCache.clear();
     _textManager.clear();
 }
+
+void CGui::deactivate() { active.store(false, std::memory_order_release); }
 
 void CGui::setSessionPanelGeometry(const std::string &panelType, const PanelGeometry &geometry) {
     if (panelType.empty()) {

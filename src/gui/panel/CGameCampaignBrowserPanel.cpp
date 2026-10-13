@@ -17,6 +17,7 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 #include "CGameCampaignBrowserPanel.h"
 #include "gui/CGui.h"
+#include "gui/CGuiTasks.h"
 #include "gui/CTextManager.h"
 #include "gui/CUiTheme.h"
 #include "gui/CUiArtwork.h"
@@ -213,11 +214,17 @@ std::pair<std::string, std::string> CGameCampaignBrowserPanel::getPreviewedChara
 }
 
 std::pair<std::string, std::string> CGameCampaignBrowserPanel::awaitCharacterChoice() {
-    const auto selected = awaitChoice();
-    if (selected.empty() || selectedRaceIndex < 0) {
-        return {"", ""};
-    }
-    return {selected, races[selectedRaceIndex].id};
+    return gui_async::run(this->ptr<CGameCampaignBrowserPanel>(), awaitCharacterChoiceAsync());
+}
+
+vstd::task<std::pair<std::string, std::string>> CGameCampaignBrowserPanel::awaitCharacterChoiceAsync() {
+    return [](std::shared_ptr<CGameCampaignBrowserPanel> self) -> vstd::task<std::pair<std::string, std::string>> {
+        const auto selected = co_await self->awaitChoiceAsync();
+        if (selected.empty() || self->selectedRaceIndex < 0) {
+            co_return std::pair<std::string, std::string>{"", ""};
+        }
+        co_return std::pair<std::string, std::string>{selected, self->races[self->selectedRaceIndex].id};
+    }(this->ptr<CGameCampaignBrowserPanel>());
 }
 
 bool CGameCampaignBrowserPanel::canConfirm() const {
@@ -526,8 +533,13 @@ void CGameCampaignBrowserPanel::renderObject(std::shared_ptr<CGui> gui, std::sha
 }
 
 std::string CGameCampaignBrowserPanel::awaitChoice() {
-    vstd::wait_until([this]() { return choice != nullptr || !getGui(); });
-    return choice ? *choice : "";
+    return gui_async::run(this->ptr<CGameCampaignBrowserPanel>(), awaitChoiceAsync());
+}
+
+vstd::task<std::string> CGameCampaignBrowserPanel::awaitChoiceAsync() {
+    auto self = this->ptr<CGameCampaignBrowserPanel>();
+    return gui_async::until([self]() { return self->choice != nullptr || !self->getGui(); },
+                            [self]() { return self->choice ? *self->choice : ""; });
 }
 
 bool CGameCampaignBrowserPanel::hasChoice() { return choice != nullptr; }

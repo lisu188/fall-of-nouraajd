@@ -13,7 +13,6 @@ def load(self, context):
     from game import claim_once
     from game import remove_runtime_actors
     from game import ensure_quest
-    from game import event_loop
     from game import register, trigger
 
     # The plugin sandbox only allows importing the game and json modules;
@@ -1274,8 +1273,11 @@ def load(self, context):
     if context.getMap():
         _get_quest_system(context.getMap()).initialize_defaults()
 
+    resolveContext = context.createWeakResolver()
+
     def syncLoadedVictorState():
         # Save loading registers scripts before restoring the map and player.
+        context = resolveContext()
         game_map = context.getMap()
         if not game_map or game_map.mapName != "nouraajd":
             return
@@ -1287,4 +1289,4 @@ def load(self, context):
                 game_map.setBoolProperty("octobogzHuntCleared", False)
             player.getGame().createObject("OctobogzHuntDirector").synchronize(game_map)
 
-    event_loop.instance().invoke(syncLoadedVictorState)
+    context.post(syncLoadedVictorState)

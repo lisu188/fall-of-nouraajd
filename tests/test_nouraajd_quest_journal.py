@@ -83,6 +83,10 @@ def loadQuestClasses(game_map=None, context=None, pending=None):
     game_stub.event_loop = types.SimpleNamespace(instance=lambda: types.SimpleNamespace(invoke=callbacks.append))
     if context is None:
         context = types.SimpleNamespace(getMap=lambda: game_map)
+    if not hasattr(context, "post"):
+        context.post = callbacks.append
+    if not hasattr(context, "createWeakResolver"):
+        context.createWeakResolver = lambda: lambda: context
     with patch.dict(sys.modules, {"game": game_stub}):
         runpy.run_path(str(REPO_ROOT / "res/maps/nouraajd/script.py"))["load"](None, context)
     return classes

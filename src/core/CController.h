@@ -34,7 +34,7 @@ struct CNavigationSearchResult;
 class CController : public CGameObject {
     V_META(CController, CGameObject, vstd::meta::empty())
   public:
-    virtual std::shared_ptr<vstd::future<Coords, void>> control(std::shared_ptr<CCreature> c);
+    virtual vstd::task<Coords> controlAsync(std::shared_ptr<CCreature> c);
 
     virtual void onStepCommitted(std::shared_ptr<CCreature> creature, const Coords &coords);
 
@@ -49,7 +49,7 @@ class CPlayerController : public CController {
   public:
     void setTarget(std::shared_ptr<CPlayer> player, Coords target);
 
-    virtual std::shared_ptr<vstd::future<Coords, void>> control(std::shared_ptr<CCreature> c);
+    virtual vstd::task<Coords> controlAsync(std::shared_ptr<CCreature> c);
 
     std::pair<bool, Coords::Direction> isOnPath(std::shared_ptr<CPlayer> player, Coords coords);
 
@@ -86,6 +86,8 @@ class CFightController : public CGameObject {
   public:
     virtual bool control(std::shared_ptr<CCreature> me, std::shared_ptr<CCreature> opponent);
 
+    virtual vstd::task<bool> controlAsync(std::shared_ptr<CCreature> me, std::shared_ptr<CCreature> opponent);
+
     virtual void start(std::shared_ptr<CCreature> me, std::shared_ptr<CCreature> opponent);
 
     virtual void end(std::shared_ptr<CCreature> me, std::shared_ptr<CCreature> opponent);
@@ -114,6 +116,8 @@ class CPlayerFightController : public CFightController {
     V_META(CPlayerFightController, CFightController, vstd::meta::empty())
   public:
     bool control(std::shared_ptr<CCreature> me, std::shared_ptr<CCreature> opponent) override;
+
+    vstd::task<bool> controlAsync(std::shared_ptr<CCreature> me, std::shared_ptr<CCreature> opponent) override;
 
     void start(std::shared_ptr<CCreature> me, std::shared_ptr<CCreature> opponent) override;
 
@@ -144,7 +148,7 @@ class CTargetController : public CController {
   public:
     CTargetController();
 
-    std::shared_ptr<vstd::future<Coords, void>> control(std::shared_ptr<CCreature> creature) override;
+    vstd::task<Coords> controlAsync(std::shared_ptr<CCreature> creature) override;
 
     std::string getTarget();
 
@@ -157,13 +161,13 @@ class CTargetController : public CController {
 class CRandomController : public CController {
     V_META(CRandomController, CController, vstd::meta::empty())
   public:
-    std::shared_ptr<vstd::future<Coords, void>> control(std::shared_ptr<CCreature> creature) override;
+    vstd::task<Coords> controlAsync(std::shared_ptr<CCreature> creature) override;
 };
 
 class CNpcRandomController : public CController {
     V_META(CNpcRandomController, CController, vstd::meta::empty())
   public:
-    std::shared_ptr<vstd::future<Coords, void>> control(std::shared_ptr<CCreature> creature) override;
+    vstd::task<Coords> controlAsync(std::shared_ptr<CCreature> creature) override;
 
     void onStepCommitted(std::shared_ptr<CCreature> creature, const Coords &coords) override;
 
@@ -179,7 +183,7 @@ class CGroundController : public CController {
     V_META(CGroundController, CController,
            V_PROPERTY(CGroundController, std::string, tileType, getTileType, setTileType))
   public:
-    std::shared_ptr<vstd::future<Coords, void>> control(std::shared_ptr<CCreature> creature) override;
+    vstd::task<Coords> controlAsync(std::shared_ptr<CCreature> creature) override;
 
     std::string getTileType();
 
@@ -196,7 +200,7 @@ class CRangeController : public CController {
   public:
     CRangeController();
 
-    std::shared_ptr<vstd::future<Coords, void>> control(std::shared_ptr<CCreature> creature) override;
+    vstd::task<Coords> controlAsync(std::shared_ptr<CCreature> creature) override;
 
     std::string getTarget();
 

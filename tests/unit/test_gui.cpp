@@ -27,6 +27,7 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #include "core/CTypes.h"
 #include "core/CUtil.h"
 #include "gui/CGui.h"
+#include "gui/CGuiTasks.h"
 #include "gui/CLayout.h"
 #include "gui/CRenderContext.h"
 #include "gui/CSdlResources.h"
@@ -43,10 +44,13 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #include "gui/panel/CGameInventoryPanel.h"
 #include "gui/panel/CGamePanel.h"
 #include "gui/panel/CGameQuestPanel.h"
+#include "gui/panel/CGameQuestionPanel.h"
+#include "gui/panel/CGameTextPanel.h"
 #define GAME_UNIT_TESTS
 #include "gui/panel/CGameDialogPanel.h"
 #undef GAME_UNIT_TESTS
 #include "gui/panel/CListView.h"
+#include "handler/CGuiHandler.h"
 #include "handler/CObjectHandler.h"
 #include "object/CCreature.h"
 #include "object/CDialog.h"
@@ -60,12 +64,115 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 #include <pybind11/embed.h>
 
+#include <atomic>
 #include <chrono>
+#include <future>
+#include <thread>
 #include <limits>
 #include <vector>
 #include <utility>
 
 namespace {
+
+void testAsyncModalWaitsOwnLazyInputsAndNeverPumpTheLoop() {
+    auto loop = vstd::event_loop<>::instance();
+    auto panel = std::make_shared<CGamePanel>();
+    std::weak_ptr<CGamePanel> lifetime = panel;
+    auto pending = panel->awaitClosingAsync();
+    panel.reset();
+    expect_true(!lifetime.expired(), "a lazy modal task must retain its panel before the first resume");
+
+    int postedCalls = 0;
+    loop->invoke([&postedCalls]() { ++postedCalls; });
+    vstd::task_group tasks;
+    auto waiting = tasks.spawn(std::move(pending), vstd::loopScheduler(loop));
+    expect_true(postedCalls == 0 && waiting.finished(),
+                "an already detached panel must resolve inline without pumping unrelated posted callbacks");
+    if (waiting.finished()) {
+        waiting.get();
+    }
+    expect_true(lifetime.expired(), "finished modal frames must release their retained panel owner");
+
+    bool ready = false;
+    auto suspended = tasks.spawn(gui_async::until([&ready]() { return ready; }, []() {}), vstd::loopScheduler(loop));
+    expect_true(postedCalls == 0 && !suspended.finished(),
+                "an unresolved native GUI wait must suspend without pumping the event loop");
+    ready = true;
+    for (int iteration = 0; iteration < 8 && !suspended.finished(); ++iteration) {
+        loop->runReady();
+    }
+    expect_true(suspended.finished() && postedCalls == 1,
+                "the outer event loop must complete the pending wait and run its own queued callbacks");
+
+    auto question = std::make_shared<CGameQuestionPanel>();
+    question->clickYes(nullptr);
+    auto answer = tasks.spawn(question->awaitAnswerAsync(), vstd::loopScheduler(loop));
+    for (int iteration = 0; iteration < 8 && !answer.finished(); ++iteration) {
+        loop->runReady();
+    }
+    expect_true(answer.finished() && answer.get(), "the asynchronous confirmation must retain an explicit answer");
+
+    auto detachedFight = std::make_shared<CGameFightPanel>();
+    auto interaction = tasks.spawn(detachedFight->selectInteractionAsync(), vstd::loopScheduler(loop));
+    expect_true(interaction.finished() && !interaction.get() && detachedFight->isCancelled(),
+                "a detached fight panel must cancel inline without entering a frame or condition wait");
+}
+
+void testPendingGuiInitializationDoesNotRetainDetachedWidgets() {
+    auto loop = vstd::event_loop<>::instance();
+    const auto conditions = loop->getConditionalTaskCount();
+    auto view = std::make_shared<CListView>();
+    std::weak_ptr<CListView> lifetime = view;
+    view->initialize();
+    expect_true(loop->getConditionalTaskCount() == conditions + 1,
+                "a detached list waits for its GUI through one owned conditional task");
+    view.reset();
+    expect_true(lifetime.expired(), "pending initialization must not keep a detached widget alive");
+    for (int iteration = 0; iteration < 8; ++iteration) {
+        loop->runReady();
+    }
+    expect_true(loop->getConditionalTaskCount() == conditions,
+                "destroying a standalone widget must cancel and remove its initialization wait");
+}
+
+void testRejectedGuiRefreshDoesNotLeaveItsBatchQueued() {
+    auto loop = vstd::event_loop<>::instance();
+    auto game = std::make_shared<CGame>();
+    auto handler = game->getGuiHandler();
+    game->getContext()->shutdown();
+    bool handlerRejected = false;
+    try {
+        handler->showConfirm("Closed session", "No work may start after shutdown.");
+    } catch (const std::runtime_error &) {
+        handlerRejected = true;
+    }
+    expect_true(handlerRejected, "a retained headless GUI adapter must still reject a closed game context");
+    bool queuedMessageRejected = false;
+    try {
+        handler->showMessageLater("No queued message may start after shutdown.");
+    } catch (const std::runtime_error &) {
+        queuedMessageRejected = true;
+    }
+    expect_true(queuedMessageRejected, "a queued message adapter must respect its linked context shutdown");
+    auto view = std::make_shared<CListView>();
+    view->setGame(game);
+    bool rejected = false;
+    try {
+        view->refreshFromRefreshEvent();
+    } catch (const std::runtime_error &) {
+        rejected = true;
+    }
+    expect_true(rejected, "a refresh linked to a closed game context must reject new work");
+
+    view->setGame(nullptr);
+    const auto posted = loop->getPendingTaskCount();
+    view->refreshFromRefreshEvent();
+    expect_true(loop->getPendingTaskCount() == posted + 1,
+                "a rejected refresh must clear its batching flag so a later valid owner can queue another refresh");
+    for (int iteration = 0; iteration < 8; ++iteration) {
+        loop->runReady();
+    }
+}
 
 class ClosingRenderObject : public CGameGraphicsObject {
   public:
@@ -379,6 +486,175 @@ std::shared_ptr<CGame> create_gui_game(const std::shared_ptr<CGui> &gui) {
     game->getObjectHandler()->registerType(CProxyGraphicsLayout::static_meta()->name(),
                                            []() { return std::make_shared<CProxyGraphicsLayout>(); });
     return game;
+}
+
+class WindowlessModalTestGui : public CGui {
+  public:
+    WindowlessModalTestGui() : CGui(WithoutWindow{}) {}
+};
+
+struct ModalThreadProbe {
+    std::thread::id createdOn;
+    std::thread::id destroyedOn;
+    std::atomic<bool> created = false;
+    std::atomic<bool> destroyed = false;
+};
+
+class ThreadCheckedQuestionPanel : public CGameQuestionPanel {
+  public:
+    explicit ThreadCheckedQuestionPanel(std::shared_ptr<ModalThreadProbe> probe) : probe(std::move(probe)) {
+        this->probe->createdOn = std::this_thread::get_id();
+        this->probe->created.store(true, std::memory_order_release);
+    }
+    ~ThreadCheckedQuestionPanel() override {
+        probe->destroyedOn = std::this_thread::get_id();
+        probe->destroyed.store(true, std::memory_order_release);
+    }
+
+  private:
+    std::shared_ptr<ModalThreadProbe> probe;
+};
+
+void testWorkerStartedModalConstructsAndCleansUpOnlyOnMainThread() {
+    auto loop = vstd::event_loop<>::instance();
+    const auto mainThread = std::this_thread::get_id();
+    auto gui = std::make_shared<WindowlessModalTestGui>();
+    auto game = create_gui_game(gui);
+    auto probe = std::make_shared<ModalThreadProbe>();
+    game->getObjectHandler()->registerType(CGameQuestionPanel::static_meta()->name(),
+                                           [probe]() { return std::make_shared<ThreadCheckedQuestionPanel>(probe); });
+    game->getObjectHandler()->registerConfig("questionPanel",
+                                             std::make_shared<json>(json{{"class", "CGameQuestionPanel"}}));
+    auto outcome = std::make_shared<std::promise<vstd::task_handle<bool>>>();
+    auto future = outcome->get_future();
+    const bool submitted =
+        game_async::workerPool()->submit([context = game->getContext(), handler = game->getGuiHandler(), outcome]() {
+            try {
+                outcome->set_value(context->spawnTask(handler->showConfirmAsync("Worker request", "Await on main.")));
+            } catch (...) {
+                outcome->set_exception(std::current_exception());
+            }
+        });
+    std::future_status status;
+    {
+        pybind11::gil_scoped_release release;
+        status = future.wait_for(std::chrono::seconds(2));
+    }
+    expect_true(submitted && status == std::future_status::ready, "the worker must start and suspend its modal task");
+    if (!submitted || status != std::future_status::ready) {
+        return;
+    }
+    auto waiting = future.get();
+    expect_true(!probe->created.load(std::memory_order_acquire),
+                "starting a modal on a worker must defer panel construction until the main loop runs");
+    const auto openedDeadline = std::chrono::steady_clock::now() + std::chrono::seconds(2);
+    while (!probe->created.load(std::memory_order_acquire) && !waiting.finished() &&
+           std::chrono::steady_clock::now() < openedDeadline) {
+        loop->runReady();
+        game_async::waitForProgress();
+    }
+    expect_true(probe->created.load(std::memory_order_acquire) && probe->createdOn == mainThread,
+                "the main thread must construct a worker-requested modal");
+    {
+        pybind11::gil_scoped_release release;
+        std::thread cancel([waiting]() { waiting.requestStop(); });
+        cancel.join();
+    }
+    const auto closedDeadline = std::chrono::steady_clock::now() + std::chrono::seconds(2);
+    while (!waiting.finished() && std::chrono::steady_clock::now() < closedDeadline) {
+        loop->runReady();
+        game_async::waitForProgress();
+    }
+    expect_true(waiting.finished() && probe->destroyed.load(std::memory_order_acquire) &&
+                    probe->destroyedOn == mainThread,
+                "worker cancellation must close and destroy the modal on the main thread");
+    expect_true(gui->getChildren().empty(), "worker cancellation must leave no orphan modal panel");
+}
+
+void testCancellingModalTaskClosesItsPanelWithoutShuttingDownTheSession() {
+    SDL_SetHint(SDL_HINT_VIDEODRIVER, "dummy");
+    SDL_SetHint(SDL_HINT_RENDER_DRIVER, "software");
+    auto loop = vstd::event_loop<>::instance();
+    auto gui = std::make_shared<CGui>();
+    auto game = create_gui_game(gui);
+    game->getObjectHandler()->registerType(CGameQuestionPanel::static_meta()->name(),
+                                           []() { return std::make_shared<CGameQuestionPanel>(); });
+    game->getObjectHandler()->registerConfig("questionPanel",
+                                             std::make_shared<json>(json{{"class", "CGameQuestionPanel"}}));
+    const auto children = gui->getChildren().size();
+    auto pending = game->getContext()->spawnTask(game->getGuiHandler()->showConfirmAsync("Pending", "Cancel me."));
+    expect_true(!pending.finished() && gui->getChildren().size() == children + 1,
+                "a pending confirmation must own one attached modal panel");
+    pending.requestStop();
+    for (int iteration = 0; iteration < 16 && !pending.finished(); ++iteration) {
+        loop->runReady();
+    }
+    expect_true(pending.finished() && game->getContext()->isActive(),
+                "cancelling one modal task must finish it while keeping its game context active");
+    expect_true(gui->getChildren().size() == children,
+                "cancelling a modal task must remove its panel instead of leaving an input-blocking orphan");
+
+    auto following = game->getContext()->spawnTask(game->getGuiHandler()->showConfirmAsync("Next", "Still usable."));
+    for (const auto &child : gui->getChildren()) {
+        if (auto question = vstd::cast<CGameQuestionPanel>(child)) {
+            question->clickYes(gui);
+        }
+    }
+    for (int iteration = 0; iteration < 16 && !following.finished(); ++iteration) {
+        loop->runReady();
+    }
+    expect_true(following.finished() && following.get(),
+                "the same active session must support another confirmation after a prior task is cancelled");
+    expect_true(gui->getChildren().size() == children, "the subsequent completed modal must release its panel");
+}
+
+void testConcurrentTextModalsShareInputUntilTheLastLeaseAndPreserveExternalInput() {
+    SDL_SetHint(SDL_HINT_VIDEODRIVER, "dummy");
+    SDL_SetHint(SDL_HINT_RENDER_DRIVER, "software");
+    auto loop = vstd::event_loop<>::instance();
+    auto gui = std::make_shared<CGui>();
+    auto game = create_gui_game(gui);
+    game->getObjectHandler()->registerType(CGameCampaignBrowserPanel::static_meta()->name(),
+                                           []() { return std::make_shared<CGameCampaignBrowserPanel>(); });
+    game->getObjectHandler()->registerConfig("campaignBrowserPanel",
+                                             std::make_shared<json>(json{{"class", "CGameCampaignBrowserPanel"}}));
+    auto otherHandler = std::make_shared<CGuiHandler>(game);
+    const bool originalInput = SDL_IsTextInputActive() == SDL_TRUE;
+    struct RestoreTextInput {
+        bool active;
+        ~RestoreTextInput() {
+            if (active) {
+                SDL_StartTextInput();
+            } else {
+                SDL_StopTextInput();
+            }
+        }
+    } restore{originalInput};
+    const auto children = gui->getChildren().size();
+    for (const bool externalInput : {false, true}) {
+        if (externalInput) {
+            SDL_StartTextInput();
+        } else {
+            SDL_StopTextInput();
+        }
+        auto first = game->getContext()->spawnTask(game->getGuiHandler()->showTextInputAsync("First", "First input"));
+        auto second = game->getContext()->spawnTask(otherHandler->showTextInputAsync("Second", "Second input"));
+        expect_true(!first.finished() && !second.finished() && SDL_IsTextInputActive() == SDL_TRUE,
+                    "overlapping text modals must keep SDL input active across different GUI handlers");
+        first.requestStop();
+        for (int iteration = 0; iteration < 16 && !first.finished(); ++iteration) {
+            loop->runReady();
+        }
+        expect_true(first.finished() && !second.finished() && SDL_IsTextInputActive() == SDL_TRUE,
+                    "cancelling the first text modal must not stop input needed by the remaining modal");
+        second.requestStop();
+        for (int iteration = 0; iteration < 16 && !second.finished(); ++iteration) {
+            loop->runReady();
+        }
+        expect_true(second.finished() && (SDL_IsTextInputActive() == SDL_TRUE) == externalInput,
+                    "the final text modal must restore input ownership without stopping externally active input");
+        expect_true(gui->getChildren().size() == children, "cancelled text modals must release their panels");
+    }
 }
 
 std::shared_ptr<CGame> create_loader_gui_game(const std::string &guiClass = "CGui") {
@@ -1839,6 +2115,61 @@ InventoryRightClickHarness make_inventory_right_click_harness() {
     harness.player->setHp(harness.player->getHpMax());
     harness.map->setPlayer(harness.player);
     return harness;
+}
+
+void test_native_scroll_use_opens_message_without_pumping_or_changing_inventory_or_turn() {
+    auto harness = make_inventory_right_click_harness();
+    type_registration::registerGuiPanelTypes();
+    harness.game->getObjectHandler()->registerType(CGameTextPanel::static_meta()->name(),
+                                                   []() { return std::make_shared<CGameTextPanel>(); });
+    harness.game->getObjectHandler()->registerConfig("textPanel",
+                                                     std::make_shared<json>(json{{"class", "CGameTextPanel"}}));
+    auto scroll = std::make_shared<CScroll>();
+    scroll->setGame(harness.game);
+    scroll->setName("reusableScroll");
+    scroll->setTypeId("reusableScrollType");
+    scroll->setText("A message from a reusable scroll.");
+    harness.player->addItem(scroll);
+    const auto inventorySize = harness.player->getItems().size();
+    const auto turn = harness.map->getTurn();
+    auto loop = vstd::event_loop<>::instance();
+    const auto conditions = loop->getConditionalTaskCount();
+    bool unrelatedWorkRan = false;
+    // The queued close lets the previous blocking implementation return and fail the assertions instead of hanging.
+    loop->invoke([&unrelatedWorkRan, gui = harness.gui]() {
+        unrelatedWorkRan = true;
+        for (const auto &child : gui->getChildren()) {
+            if (auto text = vstd::cast<CGameTextPanel>(child)) {
+                text->close();
+            }
+        }
+    });
+
+    harness.player->useItem(scroll);
+
+    expect_true(!unrelatedWorkRan, "native scroll use must return without pumping unrelated queued work");
+    expect_true(!scroll->isDisposable() && harness.player->getItems().size() == inventorySize &&
+                    harness.player->hasInInventory(scroll),
+                "reading the reusable native scroll must preserve its inventory identity and count");
+    expect_true(harness.map->getTurn() == turn, "reading a native scroll must preserve the map turn");
+    std::weak_ptr<CGameTextPanel> messageLifetime;
+    for (const auto &child : harness.gui->getChildren()) {
+        if (auto text = vstd::cast<CGameTextPanel>(child)) {
+            expect_true(text->getText() == scroll->getText(), "the modal must display the scroll's authored text");
+            messageLifetime = text;
+        }
+    }
+    expect_true(!messageLifetime.expired(), "the scroll message must remain attached when native item use returns");
+    for (int iteration = 0; iteration < 8; ++iteration) {
+        loop->runReady();
+    }
+    expect_true(unrelatedWorkRan && messageLifetime.expired(),
+                "the outer loop must close the message and release its completed coroutine frame");
+    expect_true(loop->getConditionalTaskCount() == conditions,
+                "the completed scroll modal must remove its pending condition wait");
+    expect_true(harness.player->getItems().size() == inventorySize && harness.player->hasInInventory(scroll) &&
+                    harness.map->getTurn() == turn,
+                "closing the queued message must preserve the scroll inventory and turn behavior");
 }
 
 void test_inventory_right_click_inspects_then_explicit_use_consumes_once() {
@@ -3767,6 +4098,13 @@ void test_campaign_browser_selects_by_stable_id_and_cancels_via_escape() {
 int main() {
     pybind11::scoped_interpreter guard{};
 
+    testAsyncModalWaitsOwnLazyInputsAndNeverPumpTheLoop();
+    testPendingGuiInitializationDoesNotRetainDetachedWidgets();
+    testRejectedGuiRefreshDoesNotLeaveItsBatchQueued();
+    testWorkerStartedModalConstructsAndCleansUpOnlyOnMainThread();
+    testCancellingModalTaskClosesItsPanelWithoutShuttingDownTheSession();
+    testConcurrentTextModalsShareInputUntilTheLastLeaseAndPreserveExternalInput();
+
     test_campaign_browser_selects_by_stable_id_and_cancels_via_escape();
     test_campaign_panel_dismisses_via_action_and_keys_but_never_escape();
     test_layout_runtime_overrides_preserve_serialized_percentage_layouts();
@@ -3799,6 +4137,7 @@ int main() {
     test_reactive_list_views_refresh_counts_match_model_changes_exactly();
     test_quest_panel_refresh_count_coalesces_rapid_invalidations();
     test_inventory_repeated_select_inspects_without_using_item();
+    test_native_scroll_use_opens_message_without_pumping_or_changing_inventory_or_turn();
     test_inventory_right_click_inspects_then_explicit_use_consumes_once();
     test_inventory_right_click_full_resource_item_not_consumed();
     test_inventory_right_click_quest_item_is_protected();

@@ -40,6 +40,8 @@ class CCreature;
 
 class CItem;
 
+class CScriptFlow;
+
 class CGuiHandler : public CGameObject {
     V_META(CGuiHandler, CGameObject, vstd::meta::empty())
 
@@ -48,35 +50,74 @@ class CGuiHandler : public CGameObject {
 
     CGuiHandler(std::shared_ptr<CGame> game);
 
+    std::string getSessionSaveStatus() const { return sessionSaveStatus; }
+
+    void setSessionSaveStatus(std::string value) { sessionSaveStatus = std::move(value); }
+
     void showMessage(std::string message);
+
+    vstd::task<void> showMessageAsync(std::string message);
+
+    void showMessageLater(std::string message);
 
     void notify(std::string message);
 
     void showInfo(std::string message, bool centered = false);
 
+    vstd::task<void> showInfoAsync(std::string message, bool centered = false);
+
     bool showQuestion(std::string message);
+
+    vstd::task<bool> showQuestionAsync(std::string message);
 
     bool showConfirm(std::string title, std::string body, std::string confirmLabel = "Confirm",
                      std::string cancelLabel = "Cancel");
 
+    vstd::task<bool> showConfirmAsync(std::string title, std::string body, std::string confirmLabel = "Confirm",
+                                      std::string cancelLabel = "Cancel");
+
     void showTrade(std::shared_ptr<CMarket> market);
+
+    vstd::task<void> showTradeAsync(std::shared_ptr<CMarket> market);
 
     void showDialog(std::shared_ptr<CDialog> dialog);
 
+    vstd::task<void> showDialogAsync(std::shared_ptr<CDialog> dialog);
+
     void showLoot(std::shared_ptr<CCreature>, std::set<std::shared_ptr<CItem>> items);
 
+    vstd::task<void> showLootAsync(std::shared_ptr<CCreature>, std::set<std::shared_ptr<CItem>> items);
+
     std::string showSelection(std::shared_ptr<CListString> list);
+
+    vstd::task<std::string> showSelectionAsync(std::shared_ptr<CListString> list);
 
     std::string showChoice(std::string title, std::string choicesJson, std::string actionLabel = "Select",
                            std::string backLabel = "Back");
 
+    vstd::task<std::string> showChoiceAsync(std::string title, std::string choicesJson,
+                                            std::string actionLabel = "Select", std::string backLabel = "Back");
+
     std::pair<std::string, std::string> showCharacterCreationOptions(std::string classesJson, std::string racesJson);
+
+    vstd::task<std::pair<std::string, std::string>> showCharacterCreationOptionsAsync(std::string classesJson,
+                                                                                      std::string racesJson);
 
     void showPauseMenu();
 
+    vstd::task<void> showPauseMenuAsync();
+
     void showSaveMenu();
 
+    vstd::task<void> showSaveMenuAsync();
+
+    vstd::task<void> showDefeatAsync();
+
+    vstd::task<void> runScriptFlowAsync(std::unique_ptr<CScriptFlow> flow);
+
     std::string showTextInput(std::string title, std::string prompt, std::string initialValue = "");
+
+    vstd::task<std::string> showTextInputAsync(std::string title, std::string prompt, std::string initialValue = "");
 
     void showLoading(std::string message);
 
@@ -90,6 +131,9 @@ class CGuiHandler : public CGameObject {
     std::pair<std::string, std::string> showCharacterCreation(std::shared_ptr<CListString> classes,
                                                               std::shared_ptr<CListString> races);
 
+    vstd::task<std::pair<std::string, std::string>> showCharacterCreationAsync(std::shared_ptr<CListString> classes,
+                                                                               std::shared_ptr<CListString> races);
+
     // Full-window blocking campaign presentation screen (briefing / epilogue /
     // completion): title band, body text, and one action button whose label the
     // campaign driver supplies (BEGIN / CONTINUE / RETURN). Enter, Space, or the
@@ -97,7 +141,12 @@ class CGuiHandler : public CGameObject {
     // progression. Headless execution (no GUI) logs the title/body/action
     // content and returns immediately.
     void showCampaignScreen(std::string title, std::string body, std::string actionLabel);
+
+    vstd::task<void> showCampaignScreenAsync(std::string title, std::string body, std::string actionLabel);
     void showCampaignArtworkScreen(std::string title, std::string body, std::string actionLabel, std::string artwork);
+
+    vstd::task<void> showCampaignArtworkScreenAsync(std::string title, std::string body, std::string actionLabel,
+                                                    std::string artwork);
 
     // Stable-ID campaign browser: titles/descriptions/scenarioCounts are keyed
     // by stable campaign id. Shows a two-column blocking browser (titles left,
@@ -109,16 +158,25 @@ class CGuiHandler : public CGameObject {
                                       std::shared_ptr<CMapStringString> descriptions,
                                       std::shared_ptr<CMapStringInt> scenarioCounts);
 
+    vstd::task<std::string> showCampaignSelectionAsync(std::shared_ptr<CMapStringString> titles,
+                                                       std::shared_ptr<CMapStringString> descriptions,
+                                                       std::shared_ptr<CMapStringInt> scenarioCounts);
+
     void showTooltip(std::string text, int x, int y);
 
     std::shared_ptr<CGamePanel> openPanel(std::string panel);
 
     void flipPanel(std::string panel, std::string hotkey);
 
+    vstd::task<void> flipPanelAsync(std::string panel, std::string hotkey);
+
   private:
+    vstd::task<void> runUiFlowAsync(std::string entry);
+
     std::weak_ptr<CGame> _game;
     std::weak_ptr<CGamePanel> loadingPanel;
     std::weak_ptr<CMap> managementMap;
     std::map<std::string, std::shared_ptr<CGamePanel>> managementPanels;
     std::pair<std::string, std::string> characterPreview;
+    std::string sessionSaveStatus;
 };

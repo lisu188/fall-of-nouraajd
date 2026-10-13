@@ -17,6 +17,7 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 
 #include "core/CController.h"
+#include "core/CAsync.h"
 #include "core/CGame.h"
 #include "core/CGameContext.h"
 #include "core/CLoader.h"
@@ -70,6 +71,35 @@ void pump_event_loop_iterations(int iterations = 10) {
     for (int i = 0; i < iterations; ++i) {
         loop->run();
     }
+}
+
+void testNewSessionClearsQuitLatch() {
+    auto closing_game = CGameLoader::loadGame();
+    auto loop = vstd::event_loop<>::instance();
+    SDL_Event quit{};
+    quit.type = SDL_QUIT;
+    expect_true(SDL_PushEvent(&quit) == 1, "quit-latch fixture queues a real SDL quit event");
+    loop->runReady();
+    expect_true(loop->quitRequested(), "the closing session retains its observed SDL quit request");
+    bool old_callback = false;
+    auto pending = closing_game->getContext()->spawnTask(game_async::dispatch([&] { old_callback = true; }));
+    bool cancelled = false;
+    try {
+        game_async::wait(pending);
+    } catch (const vstd::task_cancelled &) {
+        cancelled = true;
+    }
+    expect_true(cancelled && !old_callback && loop->quitRequested(),
+                "a modal boundary honors the current session's quit instead of clearing it");
+    closing_game->getContext()->shutdown();
+
+    auto next_game = CGameLoader::loadGame();
+    CGameLoader::startGameWithPlayer(next_game, "test", "Warrior");
+    bool next_callback = false;
+    game_async::wait(next_game->getContext()->spawnTask(game_async::dispatch([&] { next_callback = true; })),
+                     game_async::WaitMode::PostedWork);
+    expect_true(next_callback && !loop->quitRequested(),
+                "an explicitly started second session clears the old quit latch");
 }
 
 Coords first_adjacent_walkable(const std::shared_ptr<CMap> &map, Coords origin) {
@@ -489,14 +519,13 @@ class FixedStepController : public CController {
     explicit FixedStepController(Coords target, bool remove_before_return = false)
         : target(target), removeBeforeReturn(remove_before_return) {}
 
-    std::shared_ptr<vstd::future<Coords, void>> control(std::shared_ptr<CCreature> creature) override {
+    vstd::task<Coords> controlAsync(std::shared_ptr<CCreature> creature) override {
         controlCount++;
-        return vstd::later([this, creature]() {
-            if (removeBeforeReturn && creature && creature->getMap()) {
-                creature->getMap()->removeObject(creature);
-            }
-            return target;
-        });
+        co_await vstd::post(vstd::event_loop<>::instance());
+        if (removeBeforeReturn && creature && creature->getMap()) {
+            creature->getMap()->removeObject(creature);
+        }
+        co_return target;
     }
 
     void interrupt(std::shared_ptr<CCreature>) override { interruptCount++; }
@@ -518,14 +547,13 @@ class TransitionDuringControlController : public CController {
     TransitionDuringControlController(std::string map_name, Coords target)
         : mapName(std::move(map_name)), target(target) {}
 
-    std::shared_ptr<vstd::future<Coords, void>> control(std::shared_ptr<CCreature> creature) override {
-        return vstd::later([this, creature]() {
-            futureRan = true;
-            if (creature && creature->getGame()) {
-                creature->getGame()->changeMap(mapName);
-            }
-            return target;
-        });
+    vstd::task<Coords> controlAsync(std::shared_ptr<CCreature> creature) override {
+        co_await vstd::post(vstd::event_loop<>::instance());
+        futureRan = true;
+        if (creature && creature->getGame()) {
+            creature->getGame()->changeMap(mapName);
+        }
+        co_return target;
     }
 
     void onStepCommitted(std::shared_ptr<CCreature>, const Coords &) override { committedCount++; }
@@ -539,18 +567,61 @@ class TransitionDuringControlController : public CController {
     int interruptCount = 0;
 };
 
+class InlineMutationController : public FixedStepController {
+  public:
+    InlineMutationController(Coords target, std::function<void(std::shared_ptr<CCreature>)> mutation)
+        : FixedStepController(target), mutation(std::move(mutation)) {}
+
+    vstd::task<Coords> controlAsync(std::shared_ptr<CCreature> creature) override {
+        ++controlCount;
+        mutation(creature);
+        co_return target;
+    }
+
+  private:
+    std::function<void(std::shared_ptr<CCreature>)> mutation;
+};
+
 class ThrowingController : public CController {
   public:
-    std::shared_ptr<vstd::future<Coords, void>> control(std::shared_ptr<CCreature>) override {
-        return vstd::async([]() -> Coords { throw std::runtime_error("planned movement failed"); });
+    vstd::task<Coords> controlAsync(std::shared_ptr<CCreature>) override {
+        co_return co_await vstd::work(game_async::workerPool(),
+                                      []() -> Coords { throw std::runtime_error("planned movement failed"); });
     }
+};
+
+class ReplacedPlanController : public FixedStepController {
+  public:
+    ReplacedPlanController(Coords target, std::shared_ptr<CController> replacement)
+        : FixedStepController(target), replacement(std::move(replacement)) {}
+
+    vstd::task<Coords> controlAsync(std::shared_ptr<CCreature> creature) override {
+        ++controlCount;
+        co_await vstd::post(vstd::event_loop<>::instance());
+        creature->setController(replacement);
+        co_return target;
+    }
+
+  private:
+    std::shared_ptr<CController> replacement;
+};
+
+class SuspendedFightController : public CFightController {
+  public:
+    vstd::task<bool> controlAsync(std::shared_ptr<CCreature>, std::shared_ptr<CCreature>) override {
+        entered = true;
+        co_await vstd::until(vstd::event_loop<>::instance(), [] { return false; });
+        co_return false;
+    }
+
+    bool entered = false;
 };
 
 class MovementOriginProbeCreature : public CCreature {
   public:
-    void afterMove() override {
+    vstd::task<void> afterMoveAsync() override {
         observedOriginDuringAfterMove = getPendingMoveOrigin();
-        CCreature::afterMove();
+        co_await CCreature::afterMoveAsync();
         originClearedAfterBaseAfterMove = !getPendingMoveOrigin().has_value();
     }
 
@@ -565,9 +636,9 @@ class MoveHookCounterCreature : public CCreature {
         CCreature::beforeMove();
     }
 
-    void afterMove() override {
+    vstd::task<void> afterMoveAsync() override {
         afterMoveCalls++;
-        CCreature::afterMove();
+        co_await CCreature::afterMoveAsync();
     }
 
     int beforeMoveCalls = 0;
@@ -620,9 +691,9 @@ class RecordedPlayerMoveController : public CPlayerController {
   public:
     explicit RecordedPlayerMoveController(std::vector<std::string> &order) : order(order) {}
 
-    std::shared_ptr<vstd::future<Coords, void>> control(std::shared_ptr<CCreature> creature) override {
+    vstd::task<Coords> controlAsync(std::shared_ptr<CCreature> creature) override {
         order.push_back(creature->getName());
-        return CPlayerController::control(creature);
+        return CPlayerController::controlAsync(creature);
     }
 
   private:
@@ -634,9 +705,9 @@ class RecordedEnemyMoveController : public FixedStepController {
     RecordedEnemyMoveController(Coords target, std::vector<std::string> &order)
         : FixedStepController(target), order(order) {}
 
-    std::shared_ptr<vstd::future<Coords, void>> control(std::shared_ptr<CCreature> creature) override {
+    vstd::task<Coords> controlAsync(std::shared_ptr<CCreature> creature) override {
         order.push_back(creature->getName());
-        return FixedStepController::control(creature);
+        return FixedStepController::controlAsync(creature);
     }
 
   private:
@@ -768,6 +839,103 @@ void test_map_move_restores_moving_flag_when_controller_future_fails() {
     expect_true(rethrown, "map move should propagate controller future failures to the caller");
     expect_true(!map->isMoving(), "map move should clear the moving guard after a controller future failure");
     expect_true(map->getTurn() == turnBefore, "a failed controller round must not advance the map turn");
+}
+
+void testMapMoveDiscardsReplacedControllerPlan() {
+    auto game = CGameLoader::loadGame();
+    CGameLoader::startGameWithPlayer(game, "test", "Warrior");
+    auto map = game->getMap();
+    Coords origin = ZERO, delta = ZERO;
+    const bool found = find_walkable_step(map, origin, delta);
+    expect_true(found, "replacement-plan fixture has a walkable authored step");
+    if (!found) {
+        return;
+    }
+    auto replacement = std::make_shared<CController>();
+    auto controller = std::make_shared<ReplacedPlanController>(map->normalizeCoords(origin + delta), replacement);
+    auto creature = test_creature(game, "replacementPlanWalker", origin, controller);
+    creature->setNpc(true);
+    map->addObject(creature);
+    map->move();
+    expect_true(creature->getController() == replacement && creature->getCoords() == origin,
+                "a plan cannot commit after its originating controller has been replaced");
+    expect_true(controller->committedCount == 0 && controller->interruptCount == 1,
+                "discarded plans interrupt their original controller without reporting a committed step");
+}
+
+void testMapMoveSnapshotsActorsBeforeInlinePlans() {
+    auto game = CGameLoader::loadGame();
+    CGameLoader::startGameWithPlayer(game, "test", "Warrior");
+    auto map = game->getMap();
+    Coords origin = ZERO, delta = ZERO;
+    const bool found = find_walkable_step(map, origin, delta);
+    expect_true(found, "inline-plan fixture has a walkable authored step");
+    if (!found) {
+        return;
+    }
+    const auto target = map->normalizeCoords(origin + delta);
+    auto later = std::make_shared<FixedStepController>(target);
+    auto walker = test_creature(game, "zzSnapshotWalker", origin, later);
+    walker->setNpc(true);
+    map->addObject(walker);
+    auto inserted = std::make_shared<FixedStepController>(target);
+    auto newcomer = test_creature(game, "zzSnapshotNew", origin, inserted);
+    newcomer->setNpc(true);
+    auto add_actor = std::make_shared<InlineMutationController>(
+        origin, [newcomer](const auto &creature) { creature->getMap()->addObject(newcomer); });
+    auto mutator = test_creature(game, "aaSnapshotMutator", origin, add_actor);
+    mutator->setNpc(true);
+    map->addObject(mutator);
+    const auto turn = map->getTurn();
+    map->move();
+    expect_true(later->controlCount == 1 && later->committedCount == 1 && walker->getCoords() == target,
+                "an actor later in the frozen order plans and commits exactly once");
+    expect_true(map->getObjectByName(newcomer->getName()) == newcomer && inserted->controlCount == 0 &&
+                    newcomer->getCoords() == origin,
+                "an inline insertion waits until the next turn's planning snapshot");
+
+    map->removeObject(newcomer);
+    walker->relocateWithoutMoveHooks(origin);
+    auto remove_actor = std::make_shared<InlineMutationController>(
+        target, [](const auto &creature) { creature->getMap()->removeObject(creature); });
+    mutator->setController(remove_actor);
+    map->move();
+    expect_true(!map->getObjectByName(mutator->getName()) && remove_actor->controlCount == 1 &&
+                    remove_actor->committedCount == 0 && remove_actor->interruptCount == 1,
+                "an inline self-removal cannot invalidate iteration or commit a stale actor plan");
+    expect_true(later->controlCount == 2 && later->committedCount == 2 && walker->getCoords() == target &&
+                    map->getTurn() == turn + 2,
+                "the later actor and map turn still progress after inline removal");
+}
+
+void testCancelledAsyncCombatRestoresPlayerOrigin() {
+    auto game = CGameLoader::loadGame();
+    CGameLoader::startGameWithPlayer(game, "test", "Warrior");
+    auto map = game->getMap();
+    auto player = map->getPlayer();
+    Coords origin = ZERO, delta = ZERO;
+    const bool found = find_walkable_step(map, origin, delta);
+    expect_true(found, "cancelled combat fixture has a walkable authored step");
+    if (!found) {
+        return;
+    }
+    const auto target = map->normalizeCoords(origin + delta);
+    player->relocateWithoutMoveHooks(origin);
+    player->getBaseStats()->setAgility(1000);
+    auto controller = std::make_shared<SuspendedFightController>();
+    player->setFightController(controller);
+    auto opponent = test_creature(game, "suspendedCombatOpponent", target, std::make_shared<CController>());
+    opponent->setAffiliation("suspendedCombatEnemy");
+    opponent->setFightController(std::make_shared<CFightController>());
+    map->addObject(opponent);
+    auto handle = game->getContext()->spawnTask(player->moveToAsync(target));
+    auto loop = vstd::event_loop<>::instance();
+    loop->runUntilIdle();
+    expect_true(controller->entered && !handle.finished(), "player combat suspends without nested loop polling");
+    handle.requestStop();
+    loop->runUntilIdle();
+    expect_true(handle.finished() && player->getCoords() == origin && !player->getPendingMoveOrigin(),
+                "cancelled native combat restores the player origin and clears its pending movement hook state");
 }
 
 void test_map_move_ignores_controller_future_after_transition_generation_changes() {
@@ -1946,9 +2114,10 @@ void test_scene_manager_reload_vs_persistent_transition_requests() {
 
 class TurnCountingController : public CController {
   public:
-    std::shared_ptr<vstd::future<Coords, void>> control(std::shared_ptr<CCreature> creature) override {
+    vstd::task<Coords> controlAsync(std::shared_ptr<CCreature> creature) override {
         controlCalls++;
-        return vstd::later([creature]() { return creature->getCoords(); });
+        co_await vstd::post(vstd::event_loop<>::instance());
+        co_return creature->getCoords();
     }
 
     int controlCalls = 0;
@@ -1975,6 +2144,156 @@ class PreparedPlayerEntryProbe : public CEvent {
     bool closeSessionOnEntry = false;
     bool failEntry = false;
 };
+
+struct AsyncPreparationState {
+    bool ready = false;
+    bool fail = false;
+    int started = 0;
+    int finished = 0;
+};
+
+vstd::task<void> skippedTransitionChild(std::shared_ptr<scene_detail::CTransitionCompletion> completion,
+                                        bool &started) {
+    started = true;
+    completion->finish(true);
+    co_return;
+}
+
+vstd::task<void> cancelBeforeTransitionChild(vstd::task_group &group,
+                                             std::shared_ptr<scene_detail::CTransitionCompletion> completion,
+                                             bool &started) {
+    group.requestStop();
+    co_await skippedTransitionChild(std::move(completion), started);
+}
+
+void testSceneCompletionOwnsSkippedLazyChildren() {
+    std::vector<bool> results;
+    auto capture = std::make_shared<int>(7);
+    std::weak_ptr<int> lifetime = capture;
+    auto completion = std::make_shared<scene_detail::CTransitionCompletion>([capture, &results](bool success) {
+        expect_true(*capture == 7, "the completion callback retains its owned captures until settlement");
+        results.push_back(success);
+    });
+    capture.reset();
+    bool started = false;
+    vstd::task_group group;
+    auto handle = group.spawn(cancelBeforeTransitionChild(group, std::move(completion), started),
+                              vstd::loopScheduler(vstd::event_loop<>::instance()));
+    for (int phase = 0; phase < 8 && !handle.finished(); ++phase) {
+        vstd::event_loop<>::instance()->runReady();
+    }
+    expect_true(handle.finished() && !started && results == std::vector<bool>{false} && lifetime.expired(),
+                "cancellation before a lazy child starts rejects once and releases its callback captures");
+
+    int calls = 0;
+    auto throwing = std::make_shared<scene_detail::CTransitionCompletion>([&calls](bool success) {
+        ++calls;
+        expect_true(success, "the first completion wins even if its callback throws");
+        throw std::runtime_error("deliberate completion callback failure");
+    });
+    throwing->finish(true);
+    throwing->finish(false);
+    throwing.reset();
+    expect_true(calls == 1, "explicit completion and destructor cleanup cannot repeat a throwing callback");
+}
+
+vstd::task<void> prepareTransitionAsync(std::weak_ptr<CGame> weakGame, std::weak_ptr<CMap> source,
+                                        std::shared_ptr<AsyncPreparationState> state, std::unique_ptr<int> owner) {
+    expect_true(owner && *owner == 41, "async preparation retains its move-only callback capture");
+    state->started++;
+    co_await vstd::until(vstd::event_loop<>::instance(), [state] { return state->ready; });
+    auto game = weakGame.lock();
+    expect_true(game && game->getMap() == source.lock(), "suspended preparation resumes against the source map");
+    if (state->fail) {
+        throw std::runtime_error("deliberate asynchronous preparation failure");
+    }
+    game->getMap()->getPlayer()->setBoolProperty("chapterPrepared", true);
+    state->finished++;
+}
+
+void test_scene_manager_awaits_preparation_and_rolls_back_errors() {
+    auto game = nativeTestProfile().run("CGameLoader::loadGame", [] { return CGameLoader::loadGame(); });
+    CGameLoader::startGameWithPlayer(game, "test", "Warrior");
+    auto source = game->getMap();
+    auto player = source->getPlayer();
+    const auto sourceCoords = player->getCoords();
+    const auto sourceScope = game->getResourcesProvider()->getActiveScope();
+    auto destination = CMapLoader::loadNewMap(game, "ritual");
+    auto probe = std::make_shared<PreparedPlayerEntryProbe>();
+    probe->setName("asyncPreparedEntryProbe");
+    probe->setGame(game);
+    const auto target = first_adjacent_walkable(destination, destination->getEntry());
+    probe->setPosX(target.x);
+    probe->setPosY(target.y);
+    probe->setPosZ(target.z);
+    destination->addObject(probe);
+    game->getContext()->getMapSessionStore()->put(destination);
+    game->setMap(source);
+
+    std::vector<bool> completions;
+    for (const bool fail : {true, false}) {
+        auto state = std::make_shared<AsyncPreparationState>();
+        state->fail = fail;
+        CMapTransitionRequest request;
+        request.targetMap = "ritual";
+        request.targetCoords = target;
+        request.reuseLoadedMap = true;
+        request.onFinished = [&](bool success) { completions.push_back(success); };
+        auto preparation = [weakGame = std::weak_ptr<CGame>(game), weakSource = std::weak_ptr<CMap>(source), state,
+                            owner = std::make_unique<int>(41)]() mutable {
+            return prepareTransitionAsync(weakGame, weakSource, state, std::move(owner));
+        };
+        expect_true(game->getSceneManager()->requestMapChange(game, request, std::move(preparation)),
+                    "a move-only asynchronous preparation is accepted");
+        pump_event_loop_iterations();
+        expect_true(state->started == 1 && state->finished == 0 && !probe->observedPreparation,
+                    "destination entry waits for asynchronous preparation without pumping a nested loop");
+        expect_true(game->getMap() == source && player->getCoords() == sourceCoords &&
+                        game->getResourcesProvider()->getActiveScope() == sourceScope,
+                    "the complete source stays active throughout suspended preparation");
+        expect_true(completions.size() == (fail ? 0U : 1U), "suspended preparation has no premature completion");
+        bool posted = false;
+        vstd::event_loop<>::instance()->invoke([&] { posted = true; });
+        pump_event_loop_iterations(1);
+        expect_true(posted && state->finished == 0, "other main-loop work progresses while preparation is suspended");
+
+        state->ready = true;
+        pump_event_loop_iterations();
+        expect_true(!game->getSceneManager()->isTransitionPending(), "preparation completion releases transition slot");
+        if (fail) {
+            expect_true(completions == std::vector<bool>{false} && state->finished == 0,
+                        "preparation failure reports false exactly once");
+            expect_true(game->getMap() == source && source->getPlayer() == player &&
+                            game->getResourcesProvider()->getActiveScope() == sourceScope,
+                        "preparation failure restores the source before its completion callback");
+        } else {
+            expect_true(completions == std::vector<bool>({false, true}) && state->finished == 1 &&
+                            probe->observedPreparation && game->getMap() == destination,
+                        "a retry commits only after awaited preparation and destination entry");
+        }
+    }
+
+    auto state = std::make_shared<AsyncPreparationState>();
+    auto context = game->getContext();
+    std::weak_ptr<CGame> owner = game;
+    expect_true(game->changeMapWithPreparationFlow(
+                    "test",
+                    [owner, weakSource = std::weak_ptr<CMap>(destination), state,
+                     capture = std::make_unique<int>(41)]() mutable {
+                        return prepareTransitionAsync(owner, weakSource, state, std::move(capture));
+                    },
+                    [&](bool success) { completions.push_back(success); }),
+                "the native flow API queues a suspended preparation");
+    pump_event_loop_iterations();
+    expect_true(state->started == 1 && state->finished == 0, "the final flow is suspended before teardown");
+    game.reset();
+    expect_true(owner.expired() && !context->isActive(),
+                "a suspended preparation cannot retain the game or block its destructor");
+    expect_true(completions == std::vector<bool>({false, true, false}) && state->finished == 0,
+                "teardown cancels suspended preparation and completes it exactly once");
+    pump_event_loop_iterations();
+    expect_true(completions.size() == 3, "cancelled transition continuations cannot repeat completion");
+}
 
 void test_scene_manager_preparation_precedes_entry_and_restores_failed_attachment() {
     auto game = nativeTestProfile().run("CGameLoader::loadGame", [] { return CGameLoader::loadGame(); });
@@ -2707,6 +3026,12 @@ void test_playtest_trace_objectref_distinguishes_creature_spawn_from_archetype_i
 int main() {
     pybind11::scoped_interpreter guard{};
 
+    nativeTestProfile().run("testNewSessionClearsQuitLatch", testNewSessionClearsQuitLatch);
+    nativeTestProfile().run("testMapMoveDiscardsReplacedControllerPlan", testMapMoveDiscardsReplacedControllerPlan);
+    nativeTestProfile().run("testMapMoveSnapshotsActorsBeforeInlinePlans", testMapMoveSnapshotsActorsBeforeInlinePlans);
+    nativeTestProfile().run("testCancelledAsyncCombatRestoresPlayerOrigin",
+                            testCancelledAsyncCombatRestoresPlayerOrigin);
+
     nativeTestProfile().run("test_loader_race_overloads_preserve_default_and_attach_race",
                             test_loader_race_overloads_preserve_default_and_attach_race);
     nativeTestProfile().run("test_loader_invalid_race_leaves_active_map_unchanged",
@@ -2773,6 +3098,9 @@ int main() {
                             test_scene_manager_reload_vs_persistent_transition_requests);
     nativeTestProfile().run("test_scene_manager_preparation_precedes_entry_and_restores_failed_attachment",
                             test_scene_manager_preparation_precedes_entry_and_restores_failed_attachment);
+    nativeTestProfile().run("test_scene_manager_awaits_preparation_and_rolls_back_errors",
+                            test_scene_manager_awaits_preparation_and_rolls_back_errors);
+    nativeTestProfile().run("testSceneCompletionOwnsSkippedLazyChildren", testSceneCompletionOwnsSkippedLazyChildren);
     nativeTestProfile().run("test_scene_manager_prepared_request_rejection_failure_and_cancellation",
                             test_scene_manager_prepared_request_rejection_failure_and_cancellation);
     nativeTestProfile().run("test_scene_manager_destination_entry_shutdown_cancels_commit",

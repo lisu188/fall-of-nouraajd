@@ -16,6 +16,7 @@ You should have received a copy of the GNU General Public License
 along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 #include "CMinimapGraphicsObject.h"
+#include "gui/CGuiTasks.h"
 #include "core/CMap.h"
 #include "core/CUtil.h"
 #include "gui/CGui.h"
@@ -502,41 +503,48 @@ bool CMinimapGraphicsObject::keyboardEvent(std::shared_ptr<CGui> gui, SDL_EventT
 }
 
 void CMinimapGraphicsObject::browseLandmarks(std::shared_ptr<CGui> gui) {
-    auto map = gui->getGame()->getMap();
-    auto player = map ? map->getPlayer() : nullptr;
-    if (!player)
-        return;
-    auto entries = json::array();
-    std::vector<std::shared_ptr<CMapObject>> landmarks;
-    for (const auto &object : map->getObjects()) {
-        if (!object || object == player || object->getCoords().z != player->getCoords().z || object->getLabel().empty())
-            continue;
-        auto coords = object->getCoords();
-        auto id = std::to_string(landmarks.size());
-        entries[entries.size()] = {{"id", id},
-                                   {"label", object->getLabel()},
-                                   {"detail", CTooltipHandler::buildTooltip(object) + "\nDestination: " +
-                                                  std::to_string(coords.x) + ", " + std::to_string(coords.y)}};
-        landmarks.push_back(object);
-    }
-    auto selected =
-        gui->getGame()->getGuiHandler()->showChoice("Known landmarks", entries.dump(), "Travel to landmark", "Back");
-    if (selected.empty() || gui->getGame()->getMap() != map)
-        return;
-    auto index = std::stoul(selected);
-    if (index >= landmarks.size())
-        return;
-    auto controller = vstd::cast<CPlayerController>(player->getController());
-    if (!controller)
-        return;
-    if (auto panel = vstd::cast<CGamePanel>(getParent()))
-        panel->close();
-    controller->setTarget(player, landmarks[index]->getCoords());
-    const int maximum = std::max(1, gui->getTileCountX() * gui->getTileCountY() * 4);
-    for (int step = 0;
-         step < maximum && gui->getGame()->getMap() == map && !controller->isCompleted(player) && !map->isMoving();
-         ++step)
-        map->move();
+    gui_async::spawn(this->ptr<CMinimapGraphicsObject>(), browseLandmarksAsync(std::move(gui)));
+}
+
+vstd::task<void> CMinimapGraphicsObject::browseLandmarksAsync(std::shared_ptr<CGui> gui) {
+    return [](std::shared_ptr<CMinimapGraphicsObject> self, std::shared_ptr<CGui> gui) -> vstd::task<void> {
+        auto map = gui->getGame()->getMap();
+        auto player = map ? map->getPlayer() : nullptr;
+        if (!player)
+            co_return;
+        auto entries = json::array();
+        std::vector<std::shared_ptr<CMapObject>> landmarks;
+        for (const auto &object : map->getObjects()) {
+            if (!object || object == player || object->getCoords().z != player->getCoords().z ||
+                object->getLabel().empty())
+                continue;
+            auto coords = object->getCoords();
+            auto id = std::to_string(landmarks.size());
+            entries[entries.size()] = {{"id", id},
+                                       {"label", object->getLabel()},
+                                       {"detail", CTooltipHandler::buildTooltip(object) + "\nDestination: " +
+                                                      std::to_string(coords.x) + ", " + std::to_string(coords.y)}};
+            landmarks.push_back(object);
+        }
+        auto selected = co_await gui->getGame()->getGuiHandler()->showChoiceAsync("Known landmarks", entries.dump(),
+                                                                                  "Travel to landmark", "Back");
+        if (selected.empty() || gui->getGame()->getMap() != map)
+            co_return;
+        auto index = std::stoul(selected);
+        if (index >= landmarks.size())
+            co_return;
+        auto controller = vstd::cast<CPlayerController>(player->getController());
+        if (!controller)
+            co_return;
+        if (auto panel = vstd::cast<CGamePanel>(self->getParent()))
+            panel->close();
+        controller->setTarget(player, landmarks[index]->getCoords());
+        const int maximum = std::max(1, gui->getTileCountX() * gui->getTileCountY() * 4);
+        for (int step = 0;
+             step < maximum && gui->getGame()->getMap() == map && !controller->isCompleted(player) && !map->isMoving();
+             ++step)
+            co_await map->moveAsync();
+    }(this->ptr<CMinimapGraphicsObject>(), std::move(gui));
 }
 
 bool CMinimapGraphicsObject::mouseMotionEvent(std::shared_ptr<CGui>, SDL_EventType, int, int, int, int) {

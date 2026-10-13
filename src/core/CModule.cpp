@@ -79,6 +79,7 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #include "core/CTypes.h"
 #include "core/CUtil.h"
 #include "core/CWrapper.h"
+#include "handler/CScriptHandler.h"
 #include "plugin/CGameplayTypeTable.h"
 #include "plugin/CPluginRegistrar.h"
 #include <pybind11/operators.h>
@@ -88,6 +89,30 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 namespace py = pybind11;
 
 namespace {
+vstd::task<void> runPostedScriptFlow(std::weak_ptr<CGuiHandler> gui, std::unique_ptr<CScriptFlow> flow) {
+    try {
+        co_await vstd::post(vstd::event_loop<>::instance());
+        if (auto owner = gui.lock()) {
+            co_await owner->runScriptFlowAsync(std::move(flow));
+        }
+    } catch (const vstd::task_cancelled &) {
+        throw;
+    } catch (const vstd::scheduler_rejected &) {
+        throw;
+    } catch (const std::exception &error) {
+        vstd::logger::error("Session script callback failed: " + std::string(error.what()));
+    }
+}
+
+void postScriptFlow(const std::shared_ptr<CGame> &game, py::function callback) {
+    auto context = game->getContext();
+    if (!context->isActive()) {
+        throw std::runtime_error("Cannot post script work to a closed game session.");
+    }
+    auto flow = game->getScriptHandler()->createCallbackFlow(std::move(callback), game);
+    context->spawnTask(runPostedScriptFlow(game->getGuiHandler(), std::move(flow)));
+}
+
 class CPythonEventCallbacks : public std::enable_shared_from_this<CPythonEventCallbacks> {
     struct TransitionCallbacks {
         std::function<void()> beforeEntry;
@@ -136,6 +161,50 @@ class CPythonEventCallbacks : public std::enable_shared_from_this<CPythonEventCa
         };
         try {
             return game->requestMapTransition(std::move(request));
+        } catch (...) {
+            transitions.erase(id);
+            throw;
+        }
+    }
+
+    bool requestTransitionFlow(const std::shared_ptr<CGame> &game, std::string mapName,
+                               std::unique_ptr<CScriptFlow> flow, std::function<void(bool)> completion) {
+        if (!active.load()) {
+            return false;
+        }
+        const auto id = nextId++;
+        transitions.emplace(id, std::make_shared<TransitionCallbacks>(TransitionCallbacks{{}, std::move(completion)}));
+        const auto weakOwner = weak_from_this();
+        const std::weak_ptr<CGuiHandler> weakGui = game->getGuiHandler();
+        auto prepare = [weakOwner, weakGui, flow = std::move(flow)]() mutable -> vstd::task<void> {
+            auto owner = weakOwner.lock();
+            auto gui = weakGui.lock();
+            if (!owner || !owner->active.load() || !gui) {
+                throw std::runtime_error("Python transition callbacks have been released");
+            }
+            return gui->runScriptFlowAsync(std::move(flow));
+        };
+        auto finish = [weakOwner, id](bool success) {
+            auto owner = weakOwner.lock();
+            if (!owner || !owner->active.load()) {
+                return;
+            }
+            py::gil_scoped_acquire gil;
+            if (!owner->active.load()) {
+                return;
+            }
+            auto pending = owner->transitions.extract(id);
+            if (!pending.empty() && pending.mapped()->completion) {
+                pending.mapped()->completion(success);
+            }
+        };
+        try {
+            const bool accepted =
+                game->changeMapWithPreparationFlow(std::move(mapName), std::move(prepare), std::move(finish));
+            if (!accepted) {
+                transitions.erase(id);
+            }
+            return accepted;
         } catch (...) {
             transitions.erase(id);
             throw;
@@ -589,6 +658,30 @@ void init_game_module(py::module_ &m) {
         m, "CGame", "Top-level game container holding the active map, handlers, and GUI.")
         .def("getMap", &CGame::getMap, "Return the currently loaded map.")
         .def("changeMap", &CGame::changeMap, "Load and switch to another map.")
+        .def("post", &postScriptFlow, "Post a callback owned and cancelled by this game session.")
+        .def("runUiFlowLater", &postScriptFlow,
+             "Post a session-owned Python UI generator and await its modal requests natively.")
+        .def(
+            "createWeakResolver",
+            [](const std::shared_ptr<CGame> &game) {
+                return py::cpp_function([owner = std::weak_ptr<CGame>(game)]() {
+                    auto game = owner.lock();
+                    if (!game) {
+                        throw std::runtime_error("The game session is no longer available.");
+                    }
+                    return game;
+                });
+            },
+            "Create a callable that resolves the game without retaining it.")
+        .def(
+            "changeMapWithPreparationFlow",
+            [pythonEventCallbacks](const std::shared_ptr<CGame> &game, std::string mapName, py::function beforeEntry,
+                                   std::function<void(bool)> completion) {
+                auto flow = game->getScriptHandler()->createCallbackFlow(std::move(beforeEntry), game);
+                return pythonEventCallbacks->requestTransitionFlow(game, std::move(mapName), std::move(flow),
+                                                                   std::move(completion));
+            },
+            "Queue a transition whose Python preparation returns a resumable UI generator.")
         .def(
             "changeMapWithPreparation",
             [pythonEventCallbacks](const std::shared_ptr<CGame> &game, std::string mapName,
@@ -820,6 +913,9 @@ void init_game_module(py::module_ &m) {
     py::class_<CGuiHandler, CGameObject, std::shared_ptr<CGuiHandler>>(m, "CGuiHandler",
                                                                        "High-level helper for opening UI panels.")
         .def("showMessage", &CGuiHandler::showMessage, "Show a message panel.")
+        .def("showMessageLater", &CGuiHandler::showMessageLater, "Queue a session-owned message without waiting.")
+        .def("getSessionSaveStatus", &CGuiHandler::getSessionSaveStatus)
+        .def("setSessionSaveStatus", &CGuiHandler::setSessionSaveStatus)
         .def("notify", &CGuiHandler::notify, "Record nonblocking feedback in History.")
         .def("showChoice", &CGuiHandler::showChoice, py::arg("title"), py::arg("choicesJson"),
              py::arg("actionLabel") = "Select", py::arg("backLabel") = "Back")

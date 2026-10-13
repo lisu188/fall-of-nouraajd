@@ -220,9 +220,9 @@ class CGameObject : public vstd::stringable, public std::enable_shared_from_this
                         }
                     };
                     if constexpr (now) {
-                        vstd::call_now(task);
+                        task();
                     } else {
-                        vstd::call_later(task);
+                        dispatchDeferred(std::move(task));
                     }
                 }
                 ++it;
@@ -236,6 +236,8 @@ class CGameObject : public vstd::stringable, public std::enable_shared_from_this
     void recordDirectPropertyChanged(const std::string &name);
 
   private:
+    void dispatchDeferred(std::move_only_function<void()> callback);
+
     std::list<std::tuple<std::string, std::weak_ptr<CGameObject>, std::string>> connections;
 
     std::shared_ptr<CGameObject> _clone();
@@ -289,6 +291,11 @@ class CMoveable {
     virtual void beforeMove() = 0;
 
     virtual void afterMove() = 0;
+
+    virtual vstd::task<void> afterMoveAsync() {
+        afterMove();
+        co_return;
+    }
 };
 
 class CWearable {

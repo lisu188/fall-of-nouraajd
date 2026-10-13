@@ -24,6 +24,7 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #include "core/CUtil.h"
 #include "gui/CAnimation.h"
 #include "gui/CGui.h"
+#include "gui/CGuiTasks.h"
 #include "gui/CLayout.h"
 #include "gui/CTextureCache.h"
 #include "gui/CTextManager.h"
@@ -853,15 +854,16 @@ void CListView::setRefreshProperties(std::set<std::string> refreshProperties) {
 
 void CListView::initialize() {
     auto self = this->ptr<CListView>();
-    vstd::call_when(
-        [self]() {
-            return self->getGui() != nullptr && self->getGui()->getGame() != nullptr &&
-                   self->getGui()->getGame()->getMap() != nullptr;
-        },
-        [self]() {
-            self->refreshSubscriptions();
-            self->refresh();
-        });
+    gui_async::spawn(self, gui_async::whenReady(
+                               std::weak_ptr(self),
+                               [](const auto &self) {
+                                   return self->getGui() != nullptr && self->getGui()->getGame() != nullptr &&
+                                          self->getGui()->getGame()->getMap() != nullptr;
+                               },
+                               [](const auto &self) {
+                                   self->refreshSubscriptions();
+                                   self->refresh();
+                               }));
 }
 
 void CListView::refresh() {
@@ -1012,21 +1014,36 @@ void CListView::refreshFromSubscription() {
 
     refreshFromSubscriptionQueued = true;
     std::weak_ptr<CListView> weakSelf = this->ptr<CListView>();
-    vstd::call_later([weakSelf]() {
-        auto self = weakSelf.lock();
-        if (!self) {
-            return;
-        }
+    try {
+        gui_async::spawn(this->ptr<CListView>(), refreshFromSubscriptionAsync(weakSelf));
+    } catch (...) {
+        refreshFromSubscriptionQueued = false;
+        throw;
+    }
+}
 
-        self->refreshFromSubscriptionQueued = false;
-        auto gui = self->getGui();
-        if (!self->isAttachedToGui(gui)) {
-            return;
+vstd::task<void> CListView::refreshFromSubscriptionAsync(std::weak_ptr<CListView> weakSelf) {
+    try {
+        co_await vstd::post(vstd::event_loop<>::instance());
+    } catch (...) {
+        if (auto self = weakSelf.lock()) {
+            self->refreshFromSubscriptionQueued = false;
         }
+        throw;
+    }
+    auto self = weakSelf.lock();
+    if (!self) {
+        co_return;
+    }
 
-        self->refreshSubscriptions();
-        self->refresh();
-    });
+    self->refreshFromSubscriptionQueued = false;
+    auto gui = self->getGui();
+    if (!self->isAttachedToGui(gui)) {
+        co_return;
+    }
+
+    self->refreshSubscriptions();
+    self->refresh();
 }
 
 bool CListView::shouldRefreshForProperty(const std::string &propertyName) const {

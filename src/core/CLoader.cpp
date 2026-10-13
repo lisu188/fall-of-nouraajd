@@ -1545,6 +1545,7 @@ void CRandomMapGenerator::generateTiles(std::shared_ptr<CMap> &map, const rdg::D
 }
 
 std::shared_ptr<CGame> CGameLoader::loadGame() {
+    vstd::event_loop<>::instance()->resetQuit();
     std::shared_ptr<CGame> game = std::make_shared<CGame>();
     game->getResourcesProvider();
     game->getConfigurationProvider();
@@ -1560,6 +1561,7 @@ void CGameLoader::startGameWithPlayer(const std::shared_ptr<CGame> &game, const 
 
 void CGameLoader::startGameWithPlayer(const std::shared_ptr<CGame> &game, const std::string &file, std::string player,
                                       const std::string &raceId) {
+    vstd::event_loop<>::instance()->resetQuit();
     game->setMap(CMapLoader::loadNewMapWithPlayer(game, file, std::move(player), raceId));
 }
 
@@ -1569,11 +1571,13 @@ void CGameLoader::startRandomGameWithPlayer(const std::shared_ptr<CGame> &game, 
 
 void CGameLoader::startRandomGameWithPlayer(const std::shared_ptr<CGame> &game, std::string player,
                                             const std::string &raceId) {
+    vstd::event_loop<>::instance()->resetQuit();
     game->setMap(CMapLoader::loadRandomMapWithPlayer(game, std::move(player), raceId));
 }
 
 void CGameLoader::loadSavedGame(const std::shared_ptr<CGame> &game, const std::string &save) {
     if (auto loaded = try_load_saved_map(game, save)) {
+        vstd::event_loop<>::instance()->resetQuit();
         game->setMap(loaded->map);
         repair_recovered_backup(game, *loaded, save);
         return;
@@ -1582,6 +1586,7 @@ void CGameLoader::loadSavedGame(const std::shared_ptr<CGame> &game, const std::s
 }
 
 void CGameLoader::startGame(const std::shared_ptr<CGame> &game, const std::string &file) {
+    vstd::event_loop<>::instance()->resetQuit();
     game->setMap(CMapLoader::loadNewMap(game, file));
 }
 

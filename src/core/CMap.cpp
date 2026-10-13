@@ -16,6 +16,7 @@ You should have received a copy of the GNU General Public License
 along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 #include "core/CMap.h"
+#include "core/CAsync.h"
 #include "core/CNavigation.h"
 #include <algorithm>
 #include "core/CController.h"
@@ -768,7 +769,22 @@ void CMap::removeObjects(std::function<bool(std::shared_ptr<CMapObject>)> func) 
 }
 
 void CMap::move() {
-    auto map = this->ptr<CMap>();
+    auto game = getGame();
+    if (game) {
+        auto context = game->getContext();
+        game_async::wait(context->spawnTask(moveAsync()), game_async::WaitMode::PostedWork);
+    } else {
+        game_async::run(moveAsync(), game_async::WaitMode::PostedWork);
+    }
+}
+
+vstd::task<void> CMap::moveAsync() { return moveOwnedAsync(this->ptr<CMap>()); }
+
+vstd::task<void> CMap::moveOwnedAsync(std::shared_ptr<CMap> map) {
+    auto loop = vstd::event_loop<>::instance();
+    if (!loop->isMainThread()) {
+        co_await vstd::post(loop);
+    }
 
     if (map->moving) {
         vstd::logger::fatal("Invalid move request");
@@ -777,10 +793,10 @@ void CMap::move() {
     auto game = map->getGame();
     // Do not begin a new movement/controller cycle once a map transition has been queued. The
     // pending transition will swap the active map, so running another turn on the old map would
-    // only schedule controller futures whose results must then be discarded as stale.
+    // only schedule controller tasks whose results must then be discarded as stale.
     if (auto sceneManager = game ? game->getSceneManager() : nullptr;
         sceneManager && sceneManager->isTransitionPending()) {
-        return;
+        co_return;
     }
 
     map->moving = true;
@@ -824,30 +840,34 @@ void CMap::move() {
         struct PlannedCreature {
             std::shared_ptr<CCreature> creature;
             Coords origin;
+            std::shared_ptr<CController> controller;
         };
         std::vector<PlannedCreature> plannedCreatures;
-        std::vector<std::shared_ptr<vstd::future<Coords, void>>> pending;
+        std::vector<vstd::task_handle<Coords>> pending;
+        vstd::task_group standalone_plans;
+        std::vector<std::shared_ptr<CCreature>> actors;
+        actors.reserve(map->mapObjects.size());
         for (auto object : map->mapObjects | std::views::values | std::views::filter(pred)) {
-            auto creature = vstd::cast<CCreature>(object);
+            actors.push_back(vstd::cast<CCreature>(object));
+        }
+        for (auto creature : actors) {
+            if (!is_active_creature(creature)) {
+                continue;
+            }
             // A result is valid only from the cell observed before controller work, including
             // when an earlier actor's combat synchronously respawns this same live instance.
-            plannedCreatures.push_back({creature, map->normalizeCoords(creature->getCoords())});
-            pending.push_back(creature->getController()->control(creature));
+            auto controller = creature->getController();
+            plannedCreatures.push_back({creature, map->normalizeCoords(creature->getCoords()), controller});
+            auto plan = controller->controlAsync(creature);
+            pending.push_back(transitionContext ? transitionContext->spawnTask(std::move(plan))
+                                                : standalone_plans.spawn(std::move(plan), vstd::loopScheduler(loop)));
         }
 
-        auto plannedFuture = vstd::when_all(pending);
-        auto loop = vstd::event_loop<>::instance();
-        while (!plannedFuture->isReady()) {
-            if (loop->runPostedTasks() == 0) {
-                if (Py_IsInitialized() && PyGILState_Check()) {
-                    pybind11::gil_scoped_release release;
-                    plannedFuture->waitFor(std::chrono::milliseconds(1));
-                } else {
-                    plannedFuture->waitFor(std::chrono::milliseconds(1));
-                }
-            }
+        game.reset();
+        auto plannedCoordinates = co_await vstd::whenAll(std::move(pending));
+        if (!loop->isMainThread()) {
+            co_await vstd::post(loop);
         }
-        auto plannedCoordinates = plannedFuture->get();
         std::list<std::pair<PlannedCreature, Coords>> coordinates;
         if (canApplyDeferredMoveWork()) {
             for (std::size_t index = 0; index < plannedCoordinates.size(); ++index) {
@@ -860,8 +880,8 @@ void CMap::move() {
                 break;
             }
             auto creature = planned.creature;
-            auto controller_ptr = creature->getController();
-            if (!is_active_creature(creature)) {
+            auto controller_ptr = planned.controller;
+            if (creature->getController() != controller_ptr || !is_active_creature(creature)) {
                 controller_ptr->interrupt(creature);
                 continue;
             }
@@ -882,9 +902,10 @@ void CMap::move() {
             }
 
             const bool interrupt_after_step = should_interrupt_after_step(creature, target);
-            creature->moveTo(target);
+            co_await creature->moveToAsync(target);
 
-            if (!is_active_creature(creature) || map->normalizeCoords(creature->getCoords()) != target) {
+            if (!canApplyDeferredMoveWork() || creature->getController() != controller_ptr ||
+                !is_active_creature(creature) || map->normalizeCoords(creature->getCoords()) != target) {
                 controller_ptr->interrupt(creature);
                 continue;
             }

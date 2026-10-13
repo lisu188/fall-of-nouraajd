@@ -164,7 +164,9 @@ def loadMapClasses(map_name):
     script = importlib.util.module_from_spec(spec)
     with patch.dict(sys.modules, {"game": fake_module}):
         spec.loader.exec_module(script)
-        script.load(None, types.SimpleNamespace(getMap=lambda: None))
+        context = types.SimpleNamespace(getMap=lambda: None, post=lambda _callback: None)
+        context.createWeakResolver = lambda: lambda: context
+        script.load(None, context)
     return registered
 
 

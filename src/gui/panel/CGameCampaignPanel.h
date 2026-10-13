@@ -38,6 +38,8 @@ class CGameCampaignPanel : public CGamePanel {
     // down with the GUI). Returns true when the action dismissed it.
     bool awaitDismissal();
 
+    vstd::task<bool> awaitDismissalAsync();
+
     bool isDismissed();
 
     std::string getTitle();

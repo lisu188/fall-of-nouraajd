@@ -17,6 +17,7 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 
 #include "core/CController.h"
+#include "core/CAsync.h"
 #include "core/CGame.h"
 #include "core/CGameContext.h"
 #include "core/CJson.h"
@@ -74,7 +75,12 @@ std::shared_ptr<CTile> walkable_tile() {
     return tile;
 }
 
-Coords resolve_coords(const std::shared_ptr<vstd::future<Coords, void>> &future) { return future->get(); }
+Coords resolve_coords(vstd::task<Coords> task) {
+    return game_async::run(std::move(task), game_async::WaitMode::PostedWork);
+}
+Coords resolve_coords(const vstd::task_handle<Coords> &task) {
+    return game_async::wait(task, game_async::WaitMode::PostedWork);
+}
 
 std::shared_ptr<CTile> tile(bool can_step) {
     auto result = std::make_shared<CTile>();
@@ -148,9 +154,9 @@ void test_movement_controller_null_and_no_map_paths() {
     auto creature = creature_at(2, 3, 4);
 
     auto base_controller = std::make_shared<CController>();
-    expect_true(resolve_coords(base_controller->control(nullptr)) == ZERO,
+    expect_true(resolve_coords(base_controller->controlAsync(nullptr)) == ZERO,
                 "base controller should return ZERO for null creatures");
-    expect_true(resolve_coords(base_controller->control(creature)) == Coords(2, 3, 4),
+    expect_true(resolve_coords(base_controller->controlAsync(creature)) == Coords(2, 3, 4),
                 "base controller should return creature coordinates");
     base_controller->onStepCommitted(creature, creature->getCoords());
     base_controller->interrupt(creature);
@@ -159,19 +165,19 @@ void test_movement_controller_null_and_no_map_paths() {
     auto target_controller = std::make_shared<CTargetController>();
     target_controller->setTarget("missing");
     expect_true(target_controller->getTarget() == "missing", "target controller should expose its target id");
-    expect_true(resolve_coords(target_controller->control(nullptr)) == ZERO,
+    expect_true(resolve_coords(target_controller->controlAsync(nullptr)) == ZERO,
                 "target controller should return ZERO for null creatures");
-    expect_true(resolve_coords(target_controller->control(creature)) == ZERO,
+    expect_true(resolve_coords(target_controller->controlAsync(creature)) == ZERO,
                 "target controller should return ZERO before a creature has a map");
 
     auto random_controller = std::make_shared<CRandomController>();
-    expect_true(resolve_coords(random_controller->control(nullptr)) == ZERO,
+    expect_true(resolve_coords(random_controller->controlAsync(nullptr)) == ZERO,
                 "random controller should return ZERO for null creatures");
 
     auto npc_controller = std::make_shared<CNpcRandomController>();
-    expect_true(resolve_coords(npc_controller->control(nullptr)) == ZERO,
+    expect_true(resolve_coords(npc_controller->controlAsync(nullptr)) == ZERO,
                 "NPC random controller should return ZERO for null creatures");
-    expect_true(resolve_coords(npc_controller->control(creature)) == creature->getCoords(),
+    expect_true(resolve_coords(npc_controller->controlAsync(creature)) == creature->getCoords(),
                 "NPC random controller should stay put before a creature has a map");
     npc_controller->onStepCommitted(creature, creature->getCoords());
     npc_controller->interrupt(creature);
@@ -179,9 +185,9 @@ void test_movement_controller_null_and_no_map_paths() {
     auto ground_controller = std::make_shared<CGroundController>();
     ground_controller->setTileType("floor");
     expect_true(ground_controller->getTileType() == "floor", "ground controller should expose its tile type");
-    expect_true(resolve_coords(ground_controller->control(nullptr)) == ZERO,
+    expect_true(resolve_coords(ground_controller->controlAsync(nullptr)) == ZERO,
                 "ground controller should return ZERO for null creatures");
-    expect_true(resolve_coords(ground_controller->control(creature)) == creature->getCoords(),
+    expect_true(resolve_coords(ground_controller->controlAsync(creature)) == creature->getCoords(),
                 "ground controller should stay put before a creature has a map");
 
     auto range_controller = std::make_shared<CRangeController>();
@@ -189,13 +195,13 @@ void test_movement_controller_null_and_no_map_paths() {
     range_controller->setDistance(3);
     expect_true(range_controller->getTarget() == "player" && range_controller->getDistance() == 3,
                 "range controller should expose target and distance settings");
-    expect_true(resolve_coords(range_controller->control(nullptr)) == ZERO,
+    expect_true(resolve_coords(range_controller->controlAsync(nullptr)) == ZERO,
                 "range controller should return ZERO for null creatures");
-    expect_true(resolve_coords(range_controller->control(creature)) == creature->getCoords(),
+    expect_true(resolve_coords(range_controller->controlAsync(creature)) == creature->getCoords(),
                 "range controller should stay put before a creature has a map");
 
     auto player_controller = std::make_shared<CPlayerController>();
-    expect_true(resolve_coords(player_controller->control(nullptr)) == ZERO,
+    expect_true(resolve_coords(player_controller->controlAsync(nullptr)) == ZERO,
                 "player controller should return ZERO for null creatures");
     player_controller->interrupt(nullptr);
     player_controller->onTurnEnded(nullptr);
@@ -221,7 +227,7 @@ void test_npc_random_controller_clears_current_tile_path() {
     controller->setGame(game);
     creature->setController(controller);
 
-    auto selected = resolve_coords(controller->control(creature));
+    auto selected = resolve_coords(controller->controlAsync(creature));
     expect_true(selected == Coords(0, 0, 0),
                 "NPC random controller should stay put when every random target normalizes to the current tile");
 }
@@ -238,7 +244,7 @@ void test_npc_random_controller_clears_stale_blocked_path() {
     Coords planned = original;
     for (int attempt = 0; attempt < 20 && planned == original; ++attempt) {
         controller->interrupt(creature);
-        planned = resolve_coords(controller->control(creature));
+        planned = resolve_coords(controller->controlAsync(creature));
     }
 
     expect_true(planned != original, "NPC random controller fixture should find a real next step");
@@ -249,7 +255,7 @@ void test_npc_random_controller_clears_stale_blocked_path() {
     expect_true(map->addTile(tile(false), planned.x, planned.y, planned.z), "fixture should block the planned step");
     expect_true(!map->canStep(planned), "fixture should make the planned step impassable");
 
-    auto replanned = resolve_coords(controller->control(creature));
+    auto replanned = resolve_coords(controller->controlAsync(creature));
     expect_true(replanned != planned, "NPC random controller should not keep a newly blocked stale next step");
     expect_true(replanned == original || map->canStep(replanned),
                 "NPC random controller should either stay put or replan to a passable step");
@@ -272,8 +278,8 @@ void testGroundControllerReturnsReadyStepBeforeTransition() {
     creature->setController(controller);
     map->addObject(creature);
 
-    auto result = controller->control(creature);
-    expect_true(result->isReady(), "ground controller should resolve its step without deferred work");
+    auto result = game->getContext()->spawnTask(controller->controlAsync(creature));
+    expect_true(result.ready(), "ground controller should resolve its step without deferred work");
     game->getContext()->advanceTransitionGeneration();
 
     expect_true(resolve_coords(result) == Coords(2, 1, 0),
@@ -366,9 +372,9 @@ void testCatacombsControllerCanLeaveItsAuthoredGrassSpawn() {
     vstd::rng().seed(12345);
     bool moved = false;
     for (int attempt = 0; attempt < 16; ++attempt) {
-        expect_true(resolve_coords(old_controller->control(creature)) == center,
+        expect_true(resolve_coords(old_controller->controlAsync(creature)) == center,
                     "The old ground setting traps Catacombs enemies at their grass spawn");
-        const auto selected = resolve_coords(controller->control(creature));
+        const auto selected = resolve_coords(controller->controlAsync(creature));
         const bool valid_step = std::ranges::find(adjacent, selected) != adjacent.end() && map->canStep(selected) &&
                                 map->getTile(selected)->getTileType() == "grass";
         expect_true(valid_step, "The configured controller must select a native passable grass candidate");
@@ -395,7 +401,7 @@ void test_player_controller_prefers_longer_lower_cost_route() {
     controller->setTarget(player, Coords(4, 0, 0));
 
     for (const auto &expected_step : expected_weighted_detour_path()) {
-        auto actual_step = resolve_coords(controller->control(player));
+        auto actual_step = resolve_coords(controller->controlAsync(player));
         expect_true(actual_step == expected_step, "player controller should follow the cheaper weighted detour");
         player->moveTo(actual_step);
         controller->onStepCommitted(player, actual_step);
@@ -421,7 +427,7 @@ void test_player_controller_stops_and_clears_path_when_obstacle_appears() {
     // Mid-route obstacle: path [1,2,3], block (2,0,0) while the destination itself
     // stays steppable, so the stop comes from the blocked NEXT step.
     controller->setTarget(player, Coords(3, 0, 0));
-    auto first_step = resolve_coords(controller->control(player));
+    auto first_step = resolve_coords(controller->controlAsync(player));
     expect_true(first_step == Coords(1, 0, 0), "player auto-path should start with the adjacent corridor step");
     player->moveTo(first_step);
     controller->onStepCommitted(player, first_step);
@@ -433,7 +439,7 @@ void test_player_controller_stops_and_clears_path_when_obstacle_appears() {
     expect_true(!map->canStep(Coords(2, 0, 0)), "fixture should make the mid-route step impassable");
     expect_true(map->canStep(Coords(3, 0, 0)), "the destination itself should stay steppable");
 
-    auto blocked_step = resolve_coords(controller->control(player));
+    auto blocked_step = resolve_coords(controller->controlAsync(player));
     expect_true(blocked_step == Coords(1, 0, 0), "a blocked auto-path must not steer into the obstacle");
     expect_true(controller->isCompleted(player), "a blocked auto-path counts as completed (stopped)");
     expect_true(!controller->isOnPath(player, Coords(3, 0, 0)).first,
@@ -441,7 +447,7 @@ void test_player_controller_stops_and_clears_path_when_obstacle_appears() {
 
     map->removeTile(2, 0, 0);
     expect_true(map->addTile(tile(true), 2, 0, 0), "fixture should clear the mid-route obstacle again");
-    auto after_unblock = resolve_coords(controller->control(player));
+    auto after_unblock = resolve_coords(controller->controlAsync(player));
     expect_true(after_unblock == Coords(1, 0, 0),
                 "an auto-path stopped by a mid-route obstacle must not resume after the obstacle clears");
     expect_true(controller->isCompleted(player),
@@ -455,11 +461,11 @@ void test_player_controller_stops_and_clears_path_when_obstacle_appears() {
     expect_true(map->addTile(tile(false), 3, 0, 0), "fixture should block the destination");
     expect_true(map->canStep(Coords(2, 0, 0)), "the next step should stay steppable");
 
-    auto blocked_target_step = resolve_coords(controller->control(player));
+    auto blocked_target_step = resolve_coords(controller->controlAsync(player));
     expect_true(blocked_target_step == Coords(1, 0, 0), "a blocked destination must stop the walk immediately");
     map->removeTile(3, 0, 0);
     expect_true(map->addTile(tile(true), 3, 0, 0), "fixture should clear the destination again");
-    auto after_target_unblock = resolve_coords(controller->control(player));
+    auto after_target_unblock = resolve_coords(controller->controlAsync(player));
     expect_true(after_target_unblock == Coords(1, 0, 0),
                 "an auto-path stopped by a blocked destination must not resume after it clears");
     expect_true(controller->isCompleted(player),
@@ -489,7 +495,7 @@ void test_npc_random_controller_prefers_longer_lower_cost_route() {
     expect_true(target_seed_found, "the NPC fixture must choose its authored target without assuming an RNG sequence");
     if (target_seed_found) {
         for (const auto &expected_step : expected_weighted_detour_path()) {
-            const auto actual_step = resolve_coords(controller->control(creature));
+            const auto actual_step = resolve_coords(controller->controlAsync(creature));
             expect_true(actual_step == expected_step,
                         "NPC random controller should follow the cheaper weighted detour");
             creature->moveTo(actual_step);
@@ -522,7 +528,7 @@ void test_target_controller_flow_field_prefers_longer_lower_cost_route() {
 
     performance_guard::clearTargetFlowCache();
     for (const auto &expected_step : expected_weighted_detour_path()) {
-        auto actual_step = resolve_coords(controller->control(chaser));
+        auto actual_step = resolve_coords(controller->controlAsync(chaser));
         expect_true(actual_step == expected_step, "target flow field should follow the cheaper weighted detour");
         chaser->moveTo(actual_step);
     }
@@ -552,26 +558,26 @@ void test_controller_connector_costs_agree_and_invalidate_flow() {
     map->registerNavigationEdge({start, goal, true, false, 20, "costPortal"});
     performance_guard::clearTargetFlowCache();
     player_controller->setTarget(player, goal);
-    expect_true(resolve_coords(player_controller->control(player)) == Coords(1, 0, 0),
+    expect_true(resolve_coords(player_controller->controlAsync(player)) == Coords(1, 0, 0),
                 "player should reject an expensive connector in favor of five ordinary steps");
-    expect_true(resolve_coords(npc_controller->control(chaser)) == Coords(1, 0, 0),
+    expect_true(resolve_coords(npc_controller->controlAsync(chaser)) == Coords(1, 0, 0),
                 "reverse flow field should price the forward connector and agree with player A*");
     map->unregisterNavigationEdgesForObject("costPortal");
     map->registerNavigationEdge({start, goal, true, false, 1, "costPortal"});
     player_controller->interrupt(player);
     player_controller->setTarget(player, goal);
-    expect_true(resolve_coords(player_controller->control(player)) == goal,
+    expect_true(resolve_coords(player_controller->controlAsync(player)) == goal,
                 "player should use the now-cheap connector");
-    expect_true(resolve_coords(npc_controller->control(chaser)) == goal,
+    expect_true(resolve_coords(npc_controller->controlAsync(chaser)) == goal,
                 "changed edge cost should invalidate cached flow");
     map->getTile(goal)->setMovementCost(std::numeric_limits<int>::max());
     map->unregisterNavigationEdgesForObject("costPortal");
     map->registerNavigationEdge({start, goal, true, false, std::numeric_limits<int>::max(), "costPortal"});
     player_controller->interrupt(player);
     player_controller->setTarget(player, goal);
-    expect_true(resolve_coords(player_controller->control(player)) == Coords(1, 0, 0),
+    expect_true(resolve_coords(player_controller->controlAsync(player)) == Coords(1, 0, 0),
                 "a connector price above 32 bits must remain more expensive than walking");
-    expect_true(resolve_coords(npc_controller->control(chaser)) == Coords(1, 0, 0),
+    expect_true(resolve_coords(npc_controller->controlAsync(chaser)) == Coords(1, 0, 0),
                 "reverse pursuit must not narrow a large destination-plus-connector price");
 }
 
@@ -599,16 +605,16 @@ void test_target_controller_concurrent_requests_extend_and_reuse_shared_flow() {
     }
 
     auto verify_batch = [&](bool blocked) {
-        std::vector<std::shared_ptr<vstd::future<Coords, void>>> pending;
+        std::vector<vstd::task_handle<Coords>> pending;
         // Match map-turn scheduling: start every worker before awaiting any result.
         // Increasing distances let later workers extend a field an earlier worker reads.
         for (const auto &chaser : chasers) {
-            pending.push_back(chaser->getController()->control(chaser));
+            pending.push_back(game->getContext()->spawnTask(chaser->getController()->controlAsync(chaser)));
         }
         for (std::size_t i = 0; i < chasers.size(); ++i) {
             const auto start = chasers[i]->getCoords();
             const auto expected = blocked && start.x > 129 ? start : Coords(start.x - 1, 0, 0);
-            expect_true(pending[i]->get() == expected,
+            expect_true(game_async::wait(pending[i], game_async::WaitMode::PostedWork) == expected,
                         "concurrent flow requests must return the correct corridor step or stay put when blocked");
         }
     };
@@ -644,7 +650,7 @@ void test_player_controller_prefers_cheap_navigation_edge_over_expensive_band() 
     player->setController(controller);
     controller->setTarget(player, Coords(4, 0, 0));
 
-    auto first_step = resolve_coords(controller->control(player));
+    auto first_step = resolve_coords(controller->controlAsync(player));
     expect_true(first_step == Coords(4, 0, 0),
                 "weighted pathing should cross the cheap waypoint edge rather than the expensive band or detour");
     player->moveTo(first_step);
@@ -665,7 +671,7 @@ void test_player_controller_approaches_portal_away_from_goal_for_shortest_route(
     controller->setTarget(player, Coords(10, 0, 0));
 
     for (const auto &expected : {Coords(0, 1, 0), Coords(9, 0, 0), Coords(10, 0, 0)}) {
-        const auto actual = resolve_coords(controller->control(player));
+        const auto actual = resolve_coords(controller->controlAsync(player));
         expect_true(actual == expected, "player should use the three-step portal route instead of ten direct steps");
         player->moveTo(actual);
         controller->onStepCommitted(player, actual);
@@ -683,17 +689,17 @@ void test_player_controller_uses_navigation_neighbors_for_cross_level_route() {
     add_navigation_edge(map, Coords(1, 0, 0), Coords(1, 0, 1));
     controller->setTarget(player, Coords(2, 0, 1));
 
-    auto first = resolve_coords(controller->control(player));
+    auto first = resolve_coords(controller->controlAsync(player));
     expect_true(first == Coords(1, 0, 0), "player navigation route should first approach the authored edge");
     player->moveTo(first);
     controller->onStepCommitted(player, first);
 
-    auto second = resolve_coords(controller->control(player));
+    auto second = resolve_coords(controller->controlAsync(player));
     expect_true(second == Coords(1, 0, 1), "player navigation route should cross the authored z-level edge");
     player->moveTo(second);
     controller->onStepCommitted(player, second);
 
-    auto third = resolve_coords(controller->control(player));
+    auto third = resolve_coords(controller->controlAsync(player));
     expect_true(third == Coords(2, 0, 1), "player navigation route should finish on the target level");
 }
 
@@ -718,11 +724,11 @@ void test_target_controller_flow_field_uses_navigation_neighbors_for_cross_level
     map->addObject(chaser);
 
     performance_guard::clearTargetFlowCache();
-    auto first = resolve_coords(controller->control(chaser));
+    auto first = resolve_coords(controller->controlAsync(chaser));
     expect_true(first == Coords(1, 0, 0), "target flow field should approach an authored z-level edge");
     chaser->moveTo(first);
 
-    auto second = resolve_coords(controller->control(chaser));
+    auto second = resolve_coords(controller->controlAsync(chaser));
     expect_true(second == Coords(1, 0, 1), "target flow field should cross the authored z-level edge");
 }
 
@@ -736,7 +742,7 @@ void test_player_controller_respects_disabled_and_one_way_cross_level_edges() {
     player->setController(controller);
 
     controller->setTarget(player, Coords(1, 0, 1));
-    expect_true(resolve_coords(controller->control(player)) == Coords(1, 0, 0),
+    expect_true(resolve_coords(controller->controlAsync(player)) == Coords(1, 0, 0),
                 "disabled cross-level edges should not produce a player route");
 
     map = open_tile_map(game, 3, 1, 2);
@@ -746,14 +752,14 @@ void test_player_controller_respects_disabled_and_one_way_cross_level_edges() {
     auto lower_controller = std::make_shared<CPlayerController>();
     lower_player->setController(lower_controller);
     lower_controller->setTarget(lower_player, Coords(1, 0, 1));
-    expect_true(resolve_coords(lower_controller->control(lower_player)) == Coords(1, 0, 0),
+    expect_true(resolve_coords(lower_controller->controlAsync(lower_player)) == Coords(1, 0, 0),
                 "one-way drops should not be usable in reverse");
 
     auto upper_player = player_at(game, Coords(1, 0, 1));
     auto upper_controller = std::make_shared<CPlayerController>();
     upper_player->setController(upper_controller);
     upper_controller->setTarget(upper_player, Coords(1, 0, 0));
-    expect_true(resolve_coords(upper_controller->control(upper_player)) == Coords(1, 0, 0),
+    expect_true(resolve_coords(upper_controller->controlAsync(upper_player)) == Coords(1, 0, 0),
                 "one-way drops should route from the upper level to the lower level");
 }
 
@@ -767,12 +773,12 @@ void test_player_controller_uses_bidirectional_cross_level_edge_both_ways() {
     lower_player->setController(lower_controller);
     lower_controller->setTarget(lower_player, Coords(2, 0, 1));
 
-    auto lower_first = resolve_coords(lower_controller->control(lower_player));
+    auto lower_first = resolve_coords(lower_controller->controlAsync(lower_player));
     expect_true(lower_first == Coords(1, 0, 0), "bidirectional stairs should be reachable from the lower level");
     lower_player->moveTo(lower_first);
     lower_controller->onStepCommitted(lower_player, lower_first);
 
-    auto lower_second = resolve_coords(lower_controller->control(lower_player));
+    auto lower_second = resolve_coords(lower_controller->controlAsync(lower_player));
     expect_true(lower_second == Coords(1, 0, 1), "bidirectional stairs should cross upward");
 
     auto upper_player = player_at(game, Coords(2, 0, 1));
@@ -780,12 +786,12 @@ void test_player_controller_uses_bidirectional_cross_level_edge_both_ways() {
     upper_player->setController(upper_controller);
     upper_controller->setTarget(upper_player, Coords(0, 0, 0));
 
-    auto upper_first = resolve_coords(upper_controller->control(upper_player));
+    auto upper_first = resolve_coords(upper_controller->controlAsync(upper_player));
     expect_true(upper_first == Coords(1, 0, 1), "bidirectional stairs should be reachable from the upper level");
     upper_player->moveTo(upper_first);
     upper_controller->onStepCommitted(upper_player, upper_first);
 
-    auto upper_second = resolve_coords(upper_controller->control(upper_player));
+    auto upper_second = resolve_coords(upper_controller->controlAsync(upper_player));
     expect_true(upper_second == Coords(1, 0, 0), "bidirectional stairs should cross downward");
 }
 
@@ -809,11 +815,11 @@ void test_target_controller_flow_field_invalidates_when_cross_level_edge_is_adde
     map->addObject(chaser);
 
     performance_guard::clearTargetFlowCache();
-    expect_true(resolve_coords(controller->control(chaser)) == Coords(1, 0, 0),
+    expect_true(resolve_coords(controller->controlAsync(chaser)) == Coords(1, 0, 0),
                 "target flow field should stay put before the cross-level edge exists");
 
     add_navigation_edge(map, Coords(1, 0, 0), Coords(1, 0, 1));
-    expect_true(resolve_coords(controller->control(chaser)) == Coords(1, 0, 1),
+    expect_true(resolve_coords(controller->controlAsync(chaser)) == Coords(1, 0, 1),
                 "target flow field should use a newly added cross-level edge");
 }
 

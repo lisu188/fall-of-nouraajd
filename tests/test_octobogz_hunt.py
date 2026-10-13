@@ -251,6 +251,7 @@ class OctobogzHuntTest(unittest.TestCase):
             spec.loader.exec_module(self.module)
             self.module.load(None, None)
         self.game = Mock()
+        self.game.post.side_effect = self.pending.append
         self.game_map = HuntMap(self.game)
         self.game.getMap.return_value = self.game_map
         self.game.createObject.side_effect = self.createObject

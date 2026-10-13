@@ -53,6 +53,35 @@ CAMPAIGN_VAR_PREFIX = "campaign_var_"
 CAMPAIGN_PENDING_PROPERTY = "campaign_pendingTransition"
 _INFLIGHT_TRANSITIONS = WeakKeyDictionary()
 
+
+class _TransitionGuard:
+    def __init__(self, game):
+        self.game = game
+
+
+def _callbackGame(game):
+    from ui import UiFlowGame
+
+    if isinstance(game, UiFlowGame):
+        return game
+    create_resolver = getattr(game, "createWeakResolver", None)
+    return UiFlowGame(create_resolver()) if callable(create_resolver) else game
+
+
+def _transitionInFlight(game):
+    from ui import uiGame
+
+    owner = uiGame(game)
+    for guard in _INFLIGHT_TRANSITIONS:
+        try:
+            if uiGame(guard.game) is owner:
+                return True
+        except RuntimeError:
+            # Native weak resolvers reject an owner destroyed while its request is being cancelled.
+            continue
+    return False
+
+
 # Carryover policy keys supported at scenario entry. ``gold_max`` clamps gold,
 # the item filters keep/strip inventory by config id. Exactly one of
 # items_allow/items_deny may be present.
@@ -431,23 +460,46 @@ def _show_screen(game, title, body, action_label, fallback_text=None, artwork=""
     _show_message(game, fallback_text if fallback_text is not None else body)
 
 
+def _show_screenFlow(game, title, body, action_label, fallback_text=None, artwork=""):
+    from ui import uiRequest
+
+    if not body:
+        return
+    gui = game.getGuiHandler()
+    if artwork and callable(getattr(gui, "showCampaignArtworkScreen", None)):
+        yield uiRequest("gui.showCampaignArtworkScreen", title, body, action_label, artwork)
+    elif callable(getattr(gui, "showCampaignScreen", None)):
+        yield uiRequest("gui.showCampaignScreen", title, body, action_label)
+    else:
+        yield uiRequest("gui.showMessage", fallback_text if fallback_text is not None else body)
+
+
 def start(game, campaign_id, player_class, race_id=""):
+    from ui import runUiFlow
+
+    return runUiFlow(game, startFlow(game, campaign_id, player_class, race_id))
+
+
+def startFlow(game, campaign_id, player_class, race_id=""):
     """Begin a campaign: start its first scenario map with a fresh player of
     the given class/race, stamp campaign state onto that player, and show the
     opening briefing. Returns the campaign state store."""
+    from ui import uiGame, uiRequest
+
     manifest = get_manifest(campaign_id)
     first_id = manifest["start"]
     scenario = manifest["scenarios"][first_id]
     from _game import CGameLoader  # lazy: keeps this module importable without the engine
 
     if race_id:
-        CGameLoader.startGameWithPlayer(game, scenario["map"], player_class, race_id)
+        CGameLoader.startGameWithPlayer(uiGame(game), scenario["map"], player_class, race_id)
     else:
-        CGameLoader.startGameWithPlayer(game, scenario["map"], player_class)
+        CGameLoader.startGameWithPlayer(uiGame(game), scenario["map"], player_class)
     store = state(game)
     _require(store is not None, f'campaign "{campaign_id}" failed to start map "{scenario["map"]}" with a player')
     store.begin(campaign_id, first_id)
-    _show_screen(
+    yield uiRequest(
+        "campaign._show_screen",
         game,
         scenario["title"],
         scenario["briefing"],
@@ -558,7 +610,7 @@ def _beginTransition(game, store, outcome, target_map, target_id=""):
 def retryPending(game):
     """Retry only the saved transition; authored rewards and judgments stay claimed."""
     pending = _pendingTransition(game)
-    if pending is None or game in _INFLIGHT_TRANSITIONS:
+    if pending is None or _transitionInFlight(game):
         return False
     store = state(game)
     player = store.player
@@ -573,7 +625,11 @@ def retryPending(game):
         _require(target["map"] == pending["targetMap"], "pending campaign map no longer matches its chapter")
     original = None
     token = object()
-    _INFLIGHT_TRANSITIONS[game] = token
+    game = _callbackGame(game)
+    guard = _TransitionGuard(game)
+    _INFLIGHT_TRANSITIONS[guard] = token
+    request_flow = getattr(game, "changeMapWithPreparationFlow", None)
+    asynchronous = callable(request_flow)
 
     def beforeEntry():
         nonlocal original
@@ -593,7 +649,7 @@ def retryPending(game):
             briefing += f"\n\nCarryover\nGold carried: {player.getGold()}\nBag items carried: {len(player.getItems())}"
             if CARRYOVER_GOLD_MAX in target["carryover"]:
                 briefing += f"\nThis chapter limits carried gold to {target['carryover'][CARRYOVER_GOLD_MAX]}."
-        _show_screen(
+        return _show_screenFlow(
             game,
             target["title"],
             briefing,
@@ -603,8 +659,9 @@ def retryPending(game):
         )
 
     def completion(success):
-        if _INFLIGHT_TRANSITIONS.get(game) is token:
-            _INFLIGHT_TRANSITIONS.pop(game, None)
+        if _INFLIGHT_TRANSITIONS.get(guard) is not token:
+            return
+        _INFLIGHT_TRANSITIONS.pop(guard, None)
         if success:
             player.setStringProperty(CAMPAIGN_PENDING_PROPERTY, "")
         else:
@@ -616,18 +673,33 @@ def retryPending(game):
                 _remove_inventory_items(player, lambda item: item not in items)
                 for item in items - set(player.getItems()):
                     player.addItem(item)
-            context = game.getContext() if hasattr(game, "getContext") else None
+            try:
+                context = game.getContext() if hasattr(game, "getContext") else None
+            except RuntimeError:
+                return
             if context is None or context.isActive():
-                _show_message(
-                    game,
+                message = (
                     "The next chapter could not be loaded. Your chapter progress and carried items "
-                    "are unchanged. Retry the chapter transition from the pause menu.",
+                    "are unchanged. Retry the chapter transition from the pause menu."
                 )
+                if asynchronous:
+                    game.getGuiHandler().showMessageLater(message)
+                else:
+                    _show_message(game, message)
+
+    def beforeEntrySynchronous():
+        from ui import runUiFlow
+
+        presentation = beforeEntry()
+        if presentation is not None:
+            runUiFlow(game, presentation)
 
     try:
-        return game.changeMapWithPreparation(pending["targetMap"], beforeEntry, completion)
+        if asynchronous:
+            return request_flow(pending["targetMap"], beforeEntry, completion)
+        return game.changeMapWithPreparation(pending["targetMap"], beforeEntrySynchronous, completion)
     except Exception:
         # A binding error before the native request was queued must also release the retry lock.
-        if _INFLIGHT_TRANSITIONS.get(game) is token:
+        if _INFLIGHT_TRANSITIONS.get(guard) is token:
             completion(False)
         raise

@@ -1,6 +1,6 @@
 /*
 fall-of-nouraajd c++ dark fantasy game
-Copyright (C) 2025  Andrzej Lis
+Copyright (C) 2025-2026  Andrzej Lis
 
 This program is free software: you can redistribute it and/or modify
         it under the terms of the GNU General Public License as published by
@@ -116,4 +116,4 @@ std::string CScroll::getText() const { return text; }
 
 void CScroll::setText(const std::string &value) { text = value; }
 
-void CScroll::onUse(std::shared_ptr<CGameEvent>) { getMap()->getGame()->getGuiHandler()->showMessage(text); }
+void CScroll::onUse(std::shared_ptr<CGameEvent>) { getMap()->getGame()->getGuiHandler()->showMessageLater(text); }

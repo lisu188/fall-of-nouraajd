@@ -16,7 +16,9 @@ You should have received a copy of the GNU General Public License
 along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 #include "object/CGameObject.h"
+#include "core/CAsync.h"
 #include "core/CGame.h"
+#include "core/CGameContext.h"
 #include "core/CList.h"
 #include "core/CMap.h"
 #include "core/CPlaytestTrace.h"
@@ -27,6 +29,20 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #include <map>
 #include <typeindex>
 #include <utility>
+
+void CGameObject::dispatchDeferred(std::move_only_function<void()> callback) {
+    if (auto owner = getGame()) {
+        auto context = owner->getContext();
+        if (context->isActive()) {
+            try {
+                context->spawnTask(game_async::dispatch(std::move(callback)));
+            } catch (const vstd::task_cancelled &) {
+            }
+        }
+    } else {
+        vstd::event_loop<>::instance()->invoke(std::move(callback));
+    }
+}
 
 std::unordered_map<const CGameObject *, pybind11::object> &CPythonOverrides::instances() {
     // One exported registry serves both the engine and hidden-visibility Python

@@ -73,6 +73,10 @@ class CMapObject : public CGameObject, public CCreatable, public CTurnable {
 
     void moveTo(Coords coords);
 
+    vstd::task<void> moveAsync(Coords delta);
+
+    vstd::task<void> moveToAsync(Coords coords);
+
     void relocateWithoutMoveHooks(Coords coords);
 
     bool isAffiliatedWith(std::shared_ptr<CMapObject> object);
@@ -82,6 +86,8 @@ class CMapObject : public CGameObject, public CCreatable, public CTurnable {
     void setCanStep(bool step);
 
   private:
+    static vstd::task<void> moveOwnedAsync(std::shared_ptr<CMapObject> object, Coords coords, bool absolute);
+
     int posx = 0;
     int posy = 0;
     int posz = 0;

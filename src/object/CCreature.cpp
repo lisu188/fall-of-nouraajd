@@ -15,6 +15,7 @@ GNU General Public License for more details.
 You should have received a copy of the GNU General Public License
 along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
+#include "core/CAsync.h"
 #include "CCreature.h"
 #include <algorithm>
 #include <tuple>
@@ -868,11 +869,19 @@ void CCreature::beforeMove() {
 }
 
 void CCreature::afterMove() {
+    if (auto game = getGame()) {
+        game_async::wait(game->getContext()->spawnTask(afterMoveAsync()));
+    } else {
+        game_async::run(afterMoveAsync());
+    }
+}
+
+vstd::task<void> CCreature::afterMoveAsync() {
     ScopeExit clearPendingMoveOrigin([this]() { pendingMoveOrigin.reset(); });
     auto self = this->ptr<CCreature>();
     auto map = getMap();
     if (!map) {
-        return;
+        co_return;
     }
     const auto arrival = map->normalizeCoords(getCoords());
 
@@ -904,7 +913,15 @@ void CCreature::afterMove() {
 
     map->forObjectsAtCoords(arrival, fightAction, fightPred);
     if (!opponents.empty()) {
-        const auto result = CFightHandler::fightManyResult(self, opponents);
+        CFightResult result;
+        try {
+            result = co_await CFightHandler::fightManyResultAsync(self, std::move(opponents));
+        } catch (const vstd::task_cancelled &) {
+            if (self->isPlayer() && moverStillAtArrival() && pendingMoveOrigin) {
+                self->relocateWithoutMoveHooks(*pendingMoveOrigin);
+            }
+            throw;
+        }
         // Post-combat position policy. The fight ran because the mover stepped into a
         // hostile cell. If the attacker was defeated or otherwise removed it already left
         // the arrival square, so there is nothing more to do. For the player every
@@ -913,27 +930,27 @@ void CCreature::afterMove() {
         // hostile cell and onStep/onEnter never fire there. Non-player movers keep the
         // legacy behaviour: only a victory lets them stay and continue onto onStep/onEnter.
         if (!moverStillAtArrival()) {
-            return;
+            co_return;
         }
         if (self->isPlayer()) {
             if (pendingMoveOrigin.has_value()) {
                 self->relocateWithoutMoveHooks(*pendingMoveOrigin);
             }
-            return;
+            co_return;
         }
         if (result.outcome != CFightOutcome::AttackerVictory) {
-            return;
+            co_return;
         }
     }
 
     if (!moverStillAtArrival()) {
-        return;
+        co_return;
     }
     if (map->getTile(arrival)) {
         map->getTile(arrival)->onStep(self);
     }
     if (!moverStillAtArrival()) {
-        return;
+        co_return;
     }
     map->forObjectsAtCoords(arrival, eventAction, visitablePredicate);
 }

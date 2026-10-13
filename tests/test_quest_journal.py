@@ -115,7 +115,8 @@ def loadQuestClasses(path):
     game_stub.remove_runtime_actors = lambda *_args, **_kwargs: 0
     queued_work = []
     game_stub.event_loop = types.SimpleNamespace(instance=lambda: types.SimpleNamespace(invoke=queued_work.append))
-    context = types.SimpleNamespace(getMap=lambda: None)
+    context = types.SimpleNamespace(getMap=lambda: None, post=queued_work.append)
+    context.createWeakResolver = lambda: lambda: context
     with patch.dict(sys.modules, {"game": game_stub, "campaign": campaign_driver}):
         game_stub.narrative = types.SimpleNamespace(**runpy.run_path(str(REPO_ROOT / "res/narrative.py")))
         runpy.run_path(str(path))["load"](None, context)

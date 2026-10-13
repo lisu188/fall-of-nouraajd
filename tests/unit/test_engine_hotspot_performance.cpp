@@ -17,6 +17,8 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 
 #include "core/CController.h"
+#include "core/CAsync.h"
+#include "core/CGameContext.h"
 #include "core/CGame.h"
 #include "core/CMap.h"
 #include "core/CStats.h"
@@ -164,9 +166,7 @@ void add_object(const MapFixture &fixture, const std::shared_ptr<CMapObject> &ob
 }
 
 Coords resolve_step(const std::shared_ptr<CCreature> &actor) {
-    auto future = actor->getController()->control(actor);
-    vstd::event_loop<>::instance()->run();
-    return future->get();
+    return game_async::run(actor->getController()->controlAsync(actor), game_async::WaitMode::PostedWork);
 }
 
 bool is_cardinal_step(const std::shared_ptr<CMap> &map, Coords from, Coords to) {
@@ -215,13 +215,13 @@ void test_many_target_controllers_share_one_goal_without_mutating_navigation() {
     performance_guard::clearTargetFlowCache();
     expect_true(performance_guard::targetFlowCacheSize() == 0, "shared-goal flow cache should start empty");
     performance_guard::resetMapCoordinateLookupProbe();
-    std::vector<std::shared_ptr<vstd::future<Coords, void>>> pending;
+    std::vector<vstd::task_handle<Coords>> pending;
     for (const auto &actor : actors) {
-        pending.push_back(actor->getController()->control(actor));
+        pending.push_back(fixture.game->getContext()->spawnTask(actor->getController()->controlAsync(actor)));
     }
     std::vector<Coords> steps;
-    for (const auto &future : pending) {
-        steps.push_back(future->get());
+    for (const auto &task : pending) {
+        steps.push_back(game_async::wait(task, game_async::WaitMode::PostedWork));
     }
     const auto cold_probes = performance_guard::mapCoordinateLookupProbeCount();
     performance_guard::disableMapCoordinateLookupProbe();
@@ -248,10 +248,10 @@ void test_many_target_controllers_share_one_goal_without_mutating_navigation() {
     pending.clear();
     performance_guard::resetMapCoordinateLookupProbe();
     for (const auto &actor : actors) {
-        pending.push_back(actor->getController()->control(actor));
+        pending.push_back(fixture.game->getContext()->spawnTask(actor->getController()->controlAsync(actor)));
     }
-    for (const auto &future : pending) {
-        future->get();
+    for (const auto &task : pending) {
+        game_async::wait(task, game_async::WaitMode::PostedWork);
     }
     const auto warm_probes = performance_guard::mapCoordinateLookupProbeCount();
     performance_guard::disableMapCoordinateLookupProbe();
@@ -504,11 +504,11 @@ class PlannedMoveWorkProbe : public CController {
   public:
     explicit PlannedMoveWorkProbe(std::vector<std::shared_ptr<CCreature>> &order) : order(order) {}
 
-    std::shared_ptr<vstd::future<Coords, void>> control(std::shared_ptr<CCreature> creature) override {
+    vstd::task<Coords> controlAsync(std::shared_ptr<CCreature> creature) override {
         ++plans;
         order.push_back(creature);
         const auto current = creature->getCoords();
-        return vstd::now([current] { return Coords((current.x + 1) % 8, current.y, current.z); });
+        co_return Coords((current.x + 1) % 8, current.y, current.z);
     }
 
     void onStepCommitted(std::shared_ptr<CCreature> creature, const Coords &) override {
