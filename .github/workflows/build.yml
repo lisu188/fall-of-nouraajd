@@ -824,12 +824,17 @@ jobs:
           if errorlevel 1 exit /b 1
       - name: Smoke test game imports
         shell: cmd
+        env:
+          PYTHONFAULTHANDLER: "1"
+          PYTHONMALLOC: debug
         run: |
           set GAME_BUILD_DIR=cmake-build-clangcl20-release
           set GAME_BUILD_CONFIG=Release
           set PYTHONPATH=%CD%\cmake-build-clangcl20-release\Release;%CD%\cmake-build-clangcl20-release;%CD%\res;%PYTHONPATH%
           set PATH=%CD%\cmake-build-clangcl20-release;%CD%\cmake-build-clangcl20-release\Release;%VCPKG_INSTALLED_DIR%\%VCPKG_TARGET_TRIPLET%\bin;%PATH%
           python -c "import _game; import game; print('game imports ok')"
+          if errorlevel 1 exit /b 1
+          python scripts/check_binding_exceptions.py
           if errorlevel 1 exit /b 1
       - name: sccache stats after build
         if: always()
