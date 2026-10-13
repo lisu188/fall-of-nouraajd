@@ -231,6 +231,8 @@ class WindowsPythonConfigurationTest(unittest.TestCase):
             self.assertEqual(0, result.returncode, result.stdout + result.stderr)
             self.assertEqual(str(include_dir), artifacts.get("Python3_INCLUDE_DIR"))
             self.assertEqual(str(library_path), artifacts.get("Python3_LIBRARY"))
+            self.assertEqual(str(include_dir), artifacts.get("_Python3_INCLUDE_DIR"))
+            self.assertEqual(str(library_path), artifacts.get("_Python3_LIBRARY_RELEASE"))
             self.assertEqual(str(debug_library) if debug_library else "", artifacts.get("_Python3_LIBRARY_DEBUG"))
             self.assertEqual(Path(sys.executable).resolve(), Path(artifacts.get("Python3_EXECUTABLE", "")).resolve())
 
