@@ -26,11 +26,17 @@ def _insert_path(entry: Path) -> None:
         sys.path.insert(0, entry_str)
 
 
+def _default_build_name() -> str:
+    return "cmake-build-clangcl20-release" if os.name == "nt" else "cmake-build-gcc15-release"
+
+
 def _find_build_dir(root: Path) -> Path | None:
     build_dir_override = os.environ.get("GAME_BUILD_DIR")
     if build_dir_override:
         return (root / build_dir_override).resolve()
-    for candidate in (root / "cmake-build-release", root / "cmake-build-debug"):
+    release_name = _default_build_name()
+    for name in (release_name, release_name.replace("-release", "-debug"), "cmake-build-release", "cmake-build-debug"):
+        candidate = root / name
         if candidate.exists():
             return candidate
     return None
@@ -86,7 +92,7 @@ def main(argv=None):
     script_dir = Path(__file__).resolve().parent
     build_dir = _find_build_dir(script_dir)
     if build_dir is None:
-        build_dir = script_dir if _is_resource_root(script_dir) else script_dir / "cmake-build-release"
+        build_dir = script_dir if _is_resource_root(script_dir) else script_dir / _default_build_name()
     session = game_diagnostics.startSession(
         repo_root=script_dir,
         build_dir=build_dir,
