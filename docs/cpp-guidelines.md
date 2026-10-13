@@ -1,8 +1,10 @@
 # C++ language and library guidelines
 
-First-party C++ targets require C++23 with compiler extensions disabled, as configured by
-`configure_cpp_target()` in `CMakeLists.txt`. Keep new code compatible with the Linux and Visual Studio 2022
-toolchains exercised by the build workflow. Do not change vendored libraries or submodules merely to apply these rules.
+First-party C++ targets require C++26 with compiler extensions disabled and no standard fallback, as configured by
+`configure_cpp_target()` in `CMakeLists.txt`. CMake 4.0.2 or newer is required; CI provisions 4.3.1. Desktop CI uses
+GCC 15 on Ubuntu 26.04 and LLVM 20.1.8 clang-cl with Ninja and the Visual Studio 2022 SDK/STL on Windows 2022.
+Configuration probes pack indexing, deleted-function reasons, coroutines, `std::expected`, and
+`std::move_only_function`, rejecting incomplete compiler/library combinations before dependency discovery.
 
 Use the [C++ Core Guidelines](https://isocpp.github.io/CppCoreGuidelines/CppCoreGuidelines) for resource safety,
 interfaces, and object lifetimes. The guidelines are a living document; apply them incrementally with tests rather
@@ -22,6 +24,11 @@ than treating every recommendation as a reason to rewrite working code.
   other integer types and externally visible numeric representations.
 - Default value-type equality when all members participate in equality. Review member changes against that contract.
 - Include the standard header that declares each facility directly rather than relying on a precompiled header.
+- Use C++26 pack indexing for compile-time argument/type selection when the existing contract is preserved.
+- Add a reason to deleted lifetime-unsafe overloads when it explains the required ownership or lifetime.
+- Use `std::move_only_function` for owned, one-shot work; reusable and copied observer callbacks retain `std::function`.
+- Defer `std::inplace_vector`, `std::function_ref`, and saturation-library replacements until the Windows STL supplies
+  them and their behavior has been validated on both desktop toolchains.
 
 ## Lifetime contracts
 
@@ -38,8 +45,13 @@ than treating every recommendation as a reason to rewrite working code.
 
 Check new facilities against the [libstdc++ implementation status](https://gcc.gnu.org/onlinedocs/libstdc++/manual/status.html)
 and [Microsoft C++ conformance table](https://learn.microsoft.com/en-us/cpp/overview/visual-cpp-language-conformance).
-Selecting C++23 does not imply every library facility is available in every compiler release. Avoid draft language
-features or unnecessary compatibility layers for facilities already supported by both CI toolchains.
+Selecting C++26 does not imply every draft library facility is available. Use the configured feature probes and both
+desktop CI toolchains as the compatibility contract. Android support is deferred and unvalidated; existing Android
+checks remain authoritative and must be reported as blockers if they fail.
+
+Use compiler-specific build directories (`cmake-build-gcc15-*` and `cmake-build-clangcl20-*`). Configure scripts
+refuse to repurpose a directory for another generator or compiler, preserving cached output and save backups.
+GCC coverage uses the matching `gcov-15` executable explicitly in both the Python and optional gcovr reporters.
 
 Follow `AGENTS.md` for focused local checks and required PR validation. Lifetime and path-handling changes need
 regression coverage; algorithmic or hot-path changes also need the project's performance evidence. Preserve public

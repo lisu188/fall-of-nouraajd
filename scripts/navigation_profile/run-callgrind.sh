@@ -47,13 +47,13 @@ for directory in ("src", "vstd", "random-dungeon-generator", "third_party/simdjs
 shutil.copyfile(root / "scripts/navigation_profile/callgrind.cpp", workspace / "profile.cpp")
 PY
 
-cxx=${CXX:-g++}
+cxx=${CXX:-g++-15}
 read -r -a python_includes <<< "$(python3 -m pybind11 --includes)"
 read -r -a sdl_flags <<< "$(pkg-config --cflags sdl2 SDL2_image SDL2_ttf)"
 read -r -a libraries <<< "$(pkg-config --libs sdl2 SDL2_image SDL2_ttf) $(python3-config --embed --ldflags)"
 current="$workspace/current"
 old="$workspace/baseline/src"
-flags=(-std=c++23 -O2 -g -ffunction-sections -fdata-sections -DBOOST_ALLOW_DEPRECATED_HEADERS
+flags=(-std=c++26 -O2 -g -ffunction-sections -fdata-sections -DBOOST_ALLOW_DEPRECATED_HEADERS
     -DBOOST_BIND_GLOBAL_PLACEHOLDERS -DSDL_MAIN_HANDLED -I"$current/vstd"
     -I"$current/random-dungeon-generator" -I"$current/third_party/simdjson" -I"$current/third_party/lua"
     "${python_includes[@]}" "${sdl_flags[@]}")
