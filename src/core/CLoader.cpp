@@ -844,8 +844,8 @@ restore_save_document(const std::shared_ptr<CGame> &game, const CSaveFormat::Dec
 
     std::shared_ptr<CMap> map;
     try {
-        CSerialization::StrictScope strict;
-        map = game->getObjectHandler()->createObject<CMap>(game, saveConfigKey);
+        CSerialization::StrictScope strict(saveConfigKey);
+        map = game->getObjectHandler()->createObject<CMap>(game, saveConfigKey, strict);
     } catch (const std::exception &exception) {
         return std::unexpected(std::string("failed to deserialize saved map: ") + exception.what());
     }

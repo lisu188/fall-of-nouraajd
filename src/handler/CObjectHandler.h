@@ -36,6 +36,11 @@ class CObjectHandler : public CGameObject {
         return vstd::cast<T>(_createObject(game, type));
     }
 
+    template <fn::GameObjectDerived T = CGameObject>
+    std::shared_ptr<T> createObject(std::shared_ptr<CGame> game, std::string type, CSerializationReadContext &context) {
+        return vstd::cast<T>(_createObject(game, type, context));
+    }
+
     template <fn::MetaRegisteredGameObject T = CGameObject>
     std::shared_ptr<T> createObject(std::shared_ptr<CGame> game) {
         return vstd::cast<T>(_createObject(game, T::static_meta()->name()));
@@ -82,6 +87,9 @@ class CObjectHandler : public CGameObject {
 
   private:
     std::shared_ptr<CGameObject> _createObject(std::shared_ptr<CGame> map, const std::string &type);
+
+    std::shared_ptr<CGameObject> _createObject(std::shared_ptr<CGame> map, const std::string &type,
+                                               CSerializationReadContext &context);
 
     std::shared_ptr<CGameObject> _clone(const std::shared_ptr<CGameObject> &object);
 

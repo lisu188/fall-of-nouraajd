@@ -1097,7 +1097,8 @@ void test_legacy_and_flattened_primitive_wrappers_deserialize_and_reject_scalars
     expect_runtime_error(
         [&]() {
             CSerialization::StrictScope strict;
-            CSerializerFunction<std::shared_ptr<json>, std::shared_ptr<CGameObject>>::deserialize(game, scalar_config);
+            CSerializerFunction<std::shared_ptr<json>, std::shared_ptr<CGameObject>>::deserialize(game, scalar_config,
+                                                                                                  strict);
         },
         "strict deserialization should reject a bare numeric scalar for a primitive collection property");
 
@@ -1115,8 +1116,8 @@ void test_legacy_and_flattened_primitive_wrappers_deserialize_and_reject_scalars
     expect_runtime_error(
         [&]() {
             CSerialization::StrictScope strict;
-            CSerializerFunction<std::shared_ptr<json>, std::shared_ptr<CGameObject>>::deserialize(game,
-                                                                                                  scalar_string_config);
+            CSerializerFunction<std::shared_ptr<json>, std::shared_ptr<CGameObject>>::deserialize(
+                game, scalar_string_config, strict);
         },
         "strict deserialization should reject a bare string scalar for a primitive collection property");
 }
@@ -2044,40 +2045,35 @@ void test_save_format_bounds_crafted_documents() {
 }
 
 void testSerializationScopeRestoration() {
-    const bool previous = CSerialization::setStrict(false);
+    CSerializationReadContext lenient(false, "lenient-operation");
+    CSerialization::StrictScope strict("strict-operation");
+    expect_true(strict.isStrict() && !lenient.isStrict(), "read policies belong to independent operation owners");
     {
-        CSerialization::StrictScope outer_scope;
-        expect_true(CSerialization::isStrict(), "a strict scope enables strict deserialization");
-        {
-            CSerialization::StrictScope inner_scope;
-            expect_true(CSerialization::isStrict(), "a nested strict scope keeps strict deserialization enabled");
+        CSerializationReadContext nested(false, "nested-operation");
+        expect_true(!nested.isStrict() && strict.isStrict(), "a nested operation cannot change its caller's policy");
+    }
+    const json document = json::object();
+    auto rejected = CSerialization::deserializeExpected<std::shared_ptr<CGameObject>>(nullptr, document, strict);
+    auto accepted = CSerialization::deserializeExpected<std::shared_ptr<CGameObject>>(nullptr, document, lenient);
+    expect_true(!rejected && rejected.error().code == CSerializationErrorCode::InvalidInput &&
+                    rejected.error().source == "strict-operation",
+                "strict operation errors retain the owning context's source");
+    expect_true(accepted && !*accepted, "an independent lenient operation keeps the legacy null result");
+
+    std::atomic_int isolated{0};
+    auto probe = [&isolated, &document](bool strict_policy) {
+        CSerializationReadContext context(strict_policy, "concurrent-operation");
+        for (int index = 0; index < 32; ++index) {
+            auto result = CSerialization::deserializeExpected<std::shared_ptr<CGameObject>>(nullptr, document, context);
+            if (strict_policy ? !result : (result && !*result))
+                ++isolated;
         }
-        expect_true(CSerialization::isStrict(), "a nested scope restores its outer strict state");
-
-        expect_runtime_error(
-            []() {
-                CSerialization::StrictScope inner_scope;
-                throw std::runtime_error("scope restoration probe");
-            },
-            "the nested scope probe must unwind through its guard");
-        expect_true(CSerialization::isStrict(), "exception unwinding preserves the outer strict scope");
-    }
-    expect_true(!CSerialization::isStrict(), "the outer scope restores lenient deserialization");
-
-    expect_runtime_error(
-        []() {
-            CSerialization::StrictScope scope;
-            throw std::runtime_error("scope restoration probe");
-        },
-        "the outer scope probe must unwind through its guard");
-    expect_true(!CSerialization::isStrict(), "exception unwinding restores lenient deserialization");
-
-    CSerialization::setStrict(true);
-    {
-        CSerialization::StrictScope scope;
-    }
-    expect_true(CSerialization::isStrict(), "a scope preserves an already enabled strict setting");
-    CSerialization::setStrict(previous);
+    };
+    std::thread strict_thread(probe, true);
+    std::thread lenient_thread(probe, false);
+    strict_thread.join();
+    lenient_thread.join();
+    expect_true(isolated == 64, "concurrent operation contexts must never share strict policy or graph state");
 }
 
 void testSerializerBaseDestruction() {
@@ -2087,9 +2083,12 @@ void testSerializerBaseDestruction() {
 
         ~SerializerLifetimeProbe() override { destroyed = true; }
 
-        CSerializationResult<json> serialize(const std::any &) const override { return json(); }
+        CSerializationResult<json> serialize(const std::any &, CSerializationWriteContext &) const override {
+            return json();
+        }
 
-        CSerializationResult<std::any> deserialize(const std::shared_ptr<CGame> &, const json &) const override {
+        CSerializationResult<std::any> deserialize(const std::shared_ptr<CGame> &, const json &,
+                                                   CSerializationReadContext &) const override {
             return std::any();
         }
 
@@ -2216,7 +2215,7 @@ void test_serialization_collection_and_error_helpers() {
         [&]() {
             CSerialization::StrictScope strict;
             CSerializerFunction<std::shared_ptr<json>, std::shared_ptr<CGameObject>>::deserialize(
-                nullptr, std::make_shared<json>(json::object()));
+                nullptr, std::make_shared<json>(json::object()), strict);
         },
         "strict object deserialization should reject a missing game");
 
@@ -2225,7 +2224,8 @@ void test_serialization_collection_and_error_helpers() {
     expect_runtime_error(
         [&]() {
             CSerialization::StrictScope strict;
-            CSerializerFunction<std::shared_ptr<json>, std::shared_ptr<CGameObject>>::deserialize(game, unresolved_ref);
+            CSerializerFunction<std::shared_ptr<json>, std::shared_ptr<CGameObject>>::deserialize(game, unresolved_ref,
+                                                                                                  strict);
         },
         "strict object deserialization should report unresolved references");
 
@@ -2239,7 +2239,7 @@ void test_serialization_collection_and_error_helpers() {
         [&]() {
             CSerialization::StrictScope strict;
             CSerializerFunction<std::shared_ptr<json>, std::set<std::shared_ptr<CGameObject>>>::deserialize(
-                game, invalid_array);
+                game, invalid_array, strict);
         },
         "strict array deserialization should reject malformed entries");
 
@@ -2249,7 +2249,8 @@ void test_serialization_collection_and_error_helpers() {
         [&]() {
             CSerialization::StrictScope strict;
             CSerializerFunction<std::shared_ptr<json>,
-                                std::map<std::string, std::shared_ptr<CGameObject>>>::deserialize(game, invalid_map);
+                                std::map<std::string, std::shared_ptr<CGameObject>>>::deserialize(game, invalid_map,
+                                                                                                  strict);
         },
         "strict map deserialization should reject malformed entries");
 }

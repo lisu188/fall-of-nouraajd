@@ -280,7 +280,7 @@ void testMutualEffectGraphSerializationHasBoundedActorDefinitions() {
                 "each referenced actor's properties must be visited exactly once per snapshot");
 
     CSerialization::StrictScope strict;
-    auto restored = std::dynamic_pointer_cast<CMap>(ObjectJson::deserialize(game, serialized));
+    auto restored = std::dynamic_pointer_cast<CMap>(ObjectJson::deserialize(game, serialized, strict));
     expect_true(restored && restored->getObjects().size() == EFFECT_GRAPH_ACTOR_COUNT,
                 "loading the effect graph must not add the detached caster to the map");
     std::shared_ptr<CCreature> detached;

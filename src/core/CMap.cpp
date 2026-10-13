@@ -953,22 +953,22 @@ std::set<std::shared_ptr<CTile>> CMap::getTiles() {
     return result;
 }
 
+void CMap::setObjectsChecked(std::set<std::shared_ptr<CMapObject>> objects) {
+    std::lock_guard lock(navigationMutex);
+    std::set<std::string> names;
+    for (const auto &object : objects) {
+        if (!object)
+            throw std::runtime_error("Saved map contains null object");
+        if (object->getName().empty())
+            throw std::runtime_error("Saved map contains object with empty name");
+        if (!names.insert(object->getName()).second)
+            throw std::runtime_error("Saved map contains duplicate object name: " + object->getName());
+    }
+    setObjects(std::move(objects));
+}
+
 void CMap::setObjects(std::set<std::shared_ptr<CMapObject>> objects) {
     std::lock_guard lock(navigationMutex);
-    if (CSerialization::isStrict()) {
-        std::set<std::string> names;
-        for (const auto &ob : objects) {
-            if (!ob) {
-                throw std::runtime_error("Saved map contains null object");
-            }
-            if (ob->getName().empty()) {
-                throw std::runtime_error("Saved map contains object with empty name");
-            }
-            if (!names.insert(ob->getName()).second) {
-                throw std::runtime_error("Saved map contains duplicate object name: " + ob->getName());
-            }
-        }
-    }
     auto map = this->ptr<CMap>();
     for (const auto &[name, object] : mapObjects) {
         if (object) {

@@ -79,24 +79,11 @@ class CTypes {
         return primitiveValueType(std::type_index(typeid(T)));
     }
 
-    template <typename Serialized, typename Deserialized> static void register_serializer() {
-        registerCodec(typeid(Deserialized), std::make_shared<CSerializer<Serialized, Deserialized>>());
-    }
-
     template <typename T> static void register_custom_setter() {
         (*setters())[std::type_index(typeid(T))] = [](std::shared_ptr<CGameObject> object, std::string key,
                                                       std::any value) {
             object->setProperty(key, vstd::any_cast<T>(value));
         };
-    }
-
-    template <typename Serialized, typename Deserialized, fn::SerializerCallable<Serialized, Deserialized> Serialize,
-              fn::DeserializerCallable<Serialized, Deserialized> Deserialize>
-    static void register_custom_serializer(Serialize serialize, Deserialize deserialize) {
-        registerCodec(typeid(Deserialized),
-                      std::make_shared<CCustomSerializer<Serialized, Deserialized>>(
-                          std::function<Serialized(Deserialized)>(std::move(serialize)),
-                          std::function<Deserialized(std::shared_ptr<CGame>, Serialized)>(std::move(deserialize))));
     }
 
     template <fn::MetaRegisteredGameObject T> static void register_builder() {
@@ -167,13 +154,6 @@ class CTypes {
         register_predicate<T>();
         register_derived_types<T>();
         register_any_cast<T, T>();
-    }
-
-    template <typename T, fn::SerializerCallable<std::shared_ptr<json>, T> Serialize,
-              fn::DeserializerCallable<std::shared_ptr<json>, T> Deserialize>
-    static void register_custom_type(Serialize serialize, Deserialize deserialize) {
-        register_custom_serializer<std::shared_ptr<json>, T>(std::move(serialize), std::move(deserialize));
-        register_custom_setter<T>();
     }
 
     static void set_custom_property(std::shared_ptr<CGameObject> object, std::string key, std::any property) {

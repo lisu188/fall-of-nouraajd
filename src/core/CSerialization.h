@@ -21,15 +21,19 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #include "core/CGlobal.h"
 #include "core/CJsonUtil.h"
 
-#include <variant>
 #include <expected>
+#include <memory>
 #include <stdexcept>
+#include <unordered_map>
+#include <variant>
+#include <vector>
 
 class CGame;
 
 class CGameObject;
 
 class CSerializerBase;
+class CCreature;
 
 enum class CSerializationErrorCode { MissingCodec, InvalidInput, TypeMismatch, MalformedGraph, CodecFailure };
 
@@ -42,6 +46,109 @@ struct CSerializationError {
 };
 
 template <typename T> using CSerializationResult = std::expected<T, CSerializationError>;
+
+class CSerializationWriteContext {
+  public:
+    class State;
+    class PropertyScope {
+      public:
+        PropertyScope(CSerializationWriteContext &context, std::string property, std::string type = {});
+        ~PropertyScope();
+        PropertyScope(const PropertyScope &) = delete;
+        PropertyScope &operator=(const PropertyScope &) = delete;
+
+      private:
+        CSerializationWriteContext &context;
+        std::string previousPath;
+        std::string previousType;
+    };
+    explicit CSerializationWriteContext(std::string source = {}, bool includeDetached = true);
+    ~CSerializationWriteContext();
+    CSerializationWriteContext(const CSerializationWriteContext &) = delete;
+    CSerializationWriteContext &operator=(const CSerializationWriteContext &) = delete;
+    CSerializationWriteContext(CSerializationWriteContext &&) = delete;
+    CSerializationWriteContext &operator=(CSerializationWriteContext &&) = delete;
+    bool begin();
+    void end() noexcept;
+    void finish(json &document);
+    bool isRootOperation() const noexcept { return depth == 1; }
+    State &state();
+    const std::string &source() const noexcept { return sourceName; }
+    const std::string &path() const noexcept { return propertyPath; }
+    const std::string &objectType() const noexcept { return typeName; }
+    std::unordered_map<int, std::shared_ptr<CCreature>> externalActors();
+
+  private:
+    std::string sourceName;
+    std::string propertyPath;
+    std::string typeName;
+    bool includeDetached;
+    std::size_t depth = 0;
+    std::unique_ptr<State> operationState;
+};
+
+class CSerializationReadContext {
+  public:
+    class State;
+    class PropertyScope {
+      public:
+        PropertyScope(CSerializationReadContext &context, std::string property, std::string type = {},
+                      bool index = false);
+        ~PropertyScope();
+        PropertyScope(const PropertyScope &) = delete;
+        PropertyScope &operator=(const PropertyScope &) = delete;
+
+      private:
+        CSerializationReadContext &context;
+        std::string previousPath;
+        std::string previousProperty;
+        std::string previousType;
+    };
+
+    explicit CSerializationReadContext(bool strict = false, std::string source = {},
+                                       std::unordered_map<int, std::shared_ptr<CCreature>> external = {});
+    ~CSerializationReadContext();
+    CSerializationReadContext(const CSerializationReadContext &) = delete;
+    CSerializationReadContext &operator=(const CSerializationReadContext &) = delete;
+    CSerializationReadContext(CSerializationReadContext &&) = delete;
+    CSerializationReadContext &operator=(CSerializationReadContext &&) = delete;
+    bool begin();
+    void end() noexcept;
+    void finish(const std::shared_ptr<CGame> &game);
+    void prepare(const std::shared_ptr<CGame> &game, const json &document);
+    bool isRootOperation() const noexcept { return depth == 1; }
+    State &state();
+    void keepDocument(std::shared_ptr<const json> document);
+    bool isStrict() const noexcept { return strictPolicy; }
+    const std::string &source() const noexcept { return sourceName; }
+    const std::string &path() const noexcept { return propertyPath; }
+    const std::string &property() const noexcept { return propertyName; }
+    const std::string &objectType() const noexcept { return typeName; }
+
+  private:
+    bool strictPolicy;
+    std::string sourceName;
+    std::string propertyPath;
+    std::string propertyName;
+    std::string typeName;
+    std::size_t depth = 0;
+    std::unordered_map<int, std::shared_ptr<CCreature>> external;
+    std::unique_ptr<State> operationState;
+    std::vector<std::shared_ptr<const json>> documents;
+};
+
+template <typename Context> class CSerializationOperation {
+  public:
+    explicit CSerializationOperation(Context &context) : context(context), root(context.begin()) {}
+    ~CSerializationOperation() { context.end(); }
+    CSerializationOperation(const CSerializationOperation &) = delete;
+    CSerializationOperation &operator=(const CSerializationOperation &) = delete;
+    bool isRoot() const noexcept { return root; }
+
+  private:
+    Context &context;
+    bool root;
+};
 
 class CSerializationException : public std::runtime_error {
   public:
@@ -59,19 +166,12 @@ class CSerializerBase {
   public:
     virtual ~CSerializerBase() = default;
 
-    virtual CSerializationResult<json> serialize(const std::any &object) const = 0;
+    CSerializationResult<json> serialize(const std::any &object) const;
+    CSerializationResult<std::any> deserialize(const std::shared_ptr<CGame> &game, const json &object) const;
 
-    virtual CSerializationResult<std::any> deserialize(const std::shared_ptr<CGame> &map, const json &object) const = 0;
-
-    // Compatibility bridge while recursive graph loading migrates to explicit borrowed-document contexts.
-    virtual CSerializationResult<std::any> deserializeShared(const std::shared_ptr<CGame> &map,
-                                                             const std::shared_ptr<json> &object) const {
-        if (!object) {
-            return std::unexpected(
-                CSerializationError{CSerializationErrorCode::InvalidInput, {}, {}, {}, "Missing JSON input"});
-        }
-        return deserialize(map, *object);
-    }
+    virtual CSerializationResult<json> serialize(const std::any &object, CSerializationWriteContext &context) const = 0;
+    virtual CSerializationResult<std::any> deserialize(const std::shared_ptr<CGame> &game, const json &object,
+                                                       CSerializationReadContext &context) const = 0;
 };
 
 template <typename F> auto serializationResult(F &&operation) -> CSerializationResult<std::invoke_result_t<F>> {
@@ -102,20 +202,65 @@ template <typename T> T serializationValueOrThrow(CSerializationResult<T> result
     }
 }
 
+inline CSerializationResult<json> CSerializerBase::serialize(const std::any &object) const {
+    return serializationResult([&]() -> json {
+        CSerializationWriteContext context;
+        CSerializationOperation scope(context);
+        auto document = serializationValueOrThrow(serialize(object, context));
+        context.finish(document);
+        return document;
+    });
+}
+
+inline CSerializationResult<std::any> CSerializerBase::deserialize(const std::shared_ptr<CGame> &game,
+                                                                   const json &object) const {
+    return serializationResult([&]() -> std::any {
+        CSerializationReadContext context;
+        CSerializationOperation scope(context);
+        context.prepare(game, object);
+        auto value = serializationValueOrThrow(deserialize(game, object, context));
+        context.finish(game);
+        return value;
+    });
+}
+
 template <typename T> class CTypedJsonCodec final : public CSerializerBase {
   public:
-    using Encoder = std::function<CSerializationResult<json>(const T &)>;
-    using Decoder = std::function<CSerializationResult<T>(const std::shared_ptr<CGame> &, const json &)>;
+    using Encoder = std::function<CSerializationResult<json>(const T &, CSerializationWriteContext &)>;
+    using Decoder = std::function<CSerializationResult<T>(const std::shared_ptr<CGame> &, const json &,
+                                                          CSerializationReadContext &)>;
 
-    CTypedJsonCodec(Encoder encoder, Decoder decoder) : encoder(std::move(encoder)), decoder(std::move(decoder)) {}
+    template <typename Encode, typename Decode>
+    CTypedJsonCodec(Encode encode, Decode decode)
+        : encoder([encode = std::move(encode)](
+                      const T &value, CSerializationWriteContext &context) mutable -> CSerializationResult<json> {
+              if constexpr (std::invocable<Encode &, const T &, CSerializationWriteContext &>) {
+                  return encode(value, context);
+              } else {
+                  return encode(value);
+              }
+          }),
+          decoder([decode = std::move(decode)](const std::shared_ptr<CGame> &game, const json &document,
+                                               CSerializationReadContext &context) mutable -> CSerializationResult<T> {
+              if constexpr (std::invocable<Decode &, const std::shared_ptr<CGame> &, const json &,
+                                           CSerializationReadContext &>) {
+                  return decode(game, document, context);
+              } else {
+                  return decode(game, document);
+              }
+          }) {}
 
-    CSerializationResult<json> serialize(const std::any &object) const final {
-        auto result = serializationResult([&]() { return encoder(std::any_cast<const T &>(object)); });
+    using CSerializerBase::deserialize;
+    using CSerializerBase::serialize;
+
+    CSerializationResult<json> serialize(const std::any &object, CSerializationWriteContext &context) const final {
+        auto result = serializationResult([&]() { return encoder(std::any_cast<const T &>(object), context); });
         return result ? std::move(*result) : CSerializationResult<json>(std::unexpected(std::move(result.error())));
     }
 
-    CSerializationResult<std::any> deserialize(const std::shared_ptr<CGame> &game, const json &object) const final {
-        auto call = serializationResult([&]() { return decoder(game, object); });
+    CSerializationResult<std::any> deserialize(const std::shared_ptr<CGame> &game, const json &object,
+                                               CSerializationReadContext &context) const final {
+        auto call = serializationResult([&]() { return decoder(game, object, context); });
         if (!call) {
             return std::unexpected(std::move(call.error()));
         }
@@ -147,6 +292,13 @@ template <typename Serialized, typename Deserialized> class CSerializerFunction 
     }
 
     template <typename T = Serialized, typename V = Deserialized>
+        requires fn::SharedPtr<V>
+    static V deserialize(std::shared_ptr<CGame> map, T serialized, CSerializationReadContext &context) {
+        return std::dynamic_pointer_cast<typename V::element_type>(
+            CSerializerFunction<T, std::shared_ptr<CGameObject>>::deserialize(map, serialized, context));
+    }
+
+    template <typename T = Serialized, typename V = Deserialized>
         requires fn::SetLike<V>
     static T serialize(V deserialized) {
         return CSerializerFunction<T, std::set<std::shared_ptr<CGameObject>>>::serialize(
@@ -161,6 +313,13 @@ template <typename Serialized, typename Deserialized> class CSerializerFunction 
     }
 
     template <typename T = Serialized, typename V = Deserialized>
+        requires fn::SetLike<V>
+    static V deserialize(std::shared_ptr<CGame> map, T serialized, CSerializationReadContext &context) {
+        return vstd::cast<V>(
+            CSerializerFunction<T, std::set<std::shared_ptr<CGameObject>>>::deserialize(map, serialized, context));
+    }
+
+    template <typename T = Serialized, typename V = Deserialized>
         requires fn::MapLike<V>
     static T serialize(V deserialized) {
         return CSerializerFunction<T, std::map<std::string, std::shared_ptr<CGameObject>>>::serialize(
@@ -172,6 +331,13 @@ template <typename Serialized, typename Deserialized> class CSerializerFunction 
     static V deserialize(std::shared_ptr<CGame> map, T serialized) {
         return vstd::cast<V>(
             CSerializerFunction<T, std::map<std::string, std::shared_ptr<CGameObject>>>::deserialize(map, serialized));
+    }
+
+    template <typename T = Serialized, typename V = Deserialized>
+        requires fn::MapLike<V>
+    static V deserialize(std::shared_ptr<CGame> map, T serialized, CSerializationReadContext &context) {
+        return vstd::cast<V>(CSerializerFunction<T, std::map<std::string, std::shared_ptr<CGameObject>>>::deserialize(
+            map, serialized, context));
     }
 };
 
@@ -188,6 +354,10 @@ extern std::shared_ptr<json> map_serialize(const std::map<std::string, std::shar
 
 extern std::shared_ptr<CGameObject> object_deserialize(const std::shared_ptr<CGame> &game,
                                                        const std::shared_ptr<json> &config);
+
+extern std::shared_ptr<CGameObject> object_deserialize(const std::shared_ptr<CGame> &game,
+                                                       const std::shared_ptr<json> &config,
+                                                       CSerializationReadContext &context);
 
 extern std::shared_ptr<json> object_serialize(const std::shared_ptr<CGameObject> &object);
 
@@ -223,6 +393,9 @@ template <> class CSerializerFunction<std::shared_ptr<json>, std::shared_ptr<CGa
 
     static std::shared_ptr<CGameObject> deserialize(const std::shared_ptr<CGame> &map,
                                                     const std::shared_ptr<json> &config);
+    static std::shared_ptr<CGameObject> deserialize(const std::shared_ptr<CGame> &map,
+                                                    const std::shared_ptr<json> &config,
+                                                    CSerializationReadContext &context);
 };
 
 template <> class CSerializerFunction<std::shared_ptr<json>, std::map<std::string, std::shared_ptr<CGameObject>>> {
@@ -231,6 +404,9 @@ template <> class CSerializerFunction<std::shared_ptr<json>, std::map<std::strin
 
     static std::map<std::string, std::shared_ptr<CGameObject>> deserialize(const std::shared_ptr<CGame> &map,
                                                                            const std::shared_ptr<json> &object);
+    static std::map<std::string, std::shared_ptr<CGameObject>> deserialize(const std::shared_ptr<CGame> &map,
+                                                                           const std::shared_ptr<json> &object,
+                                                                           CSerializationReadContext &context);
 };
 
 template <> class CSerializerFunction<std::shared_ptr<json>, std::set<std::shared_ptr<CGameObject>>> {
@@ -239,77 +415,9 @@ template <> class CSerializerFunction<std::shared_ptr<json>, std::set<std::share
 
     static std::set<std::shared_ptr<CGameObject>> deserialize(const std::shared_ptr<CGame> &map,
                                                               const std::shared_ptr<json> &object);
-};
-
-template <typename Serialized, typename Deserialized> class CSerializer : public CSerializerBase {
-  public:
-    CSerializationResult<json> serialize(const std::any &object) const final {
-        return serializationResult([&]() -> json {
-            auto result =
-                CSerializerFunction<Serialized, Deserialized>::serialize(vstd::any_cast<Deserialized>(object));
-            if constexpr (std::same_as<Serialized, json>) {
-                return result;
-            } else {
-                if (!result) {
-                    throw CSerializationException({CSerializationErrorCode::InvalidInput,
-                                                   {},
-                                                   {},
-                                                   {},
-                                                   "Legacy codec returned missing JSON output"});
-                }
-                return *result;
-            }
-        });
-    }
-
-    CSerializationResult<std::any> deserialize(const std::shared_ptr<CGame> &map, const json &object) const final {
-        return serializationResult([&]() -> std::any {
-            if constexpr (std::same_as<Serialized, json>) {
-                return CSerializerFunction<Serialized, Deserialized>::deserialize(map, object);
-            } else {
-                return CSerializerFunction<Serialized, Deserialized>::deserialize(map, std::make_shared<json>(object));
-            }
-        });
-    }
-};
-
-template <typename Serialized, typename Deserialized> class CCustomSerializer : public CSerializerBase {
-  private:
-    std::function<Serialized(Deserialized)> _serialize;
-    std::function<Deserialized(std::shared_ptr<CGame>, Serialized)> _deserialize;
-
-  public:
-    CCustomSerializer(std::function<Serialized(Deserialized)> _serialize,
-                      std::function<Deserialized(std::shared_ptr<CGame>, Serialized)> _deserialize)
-        : _serialize(_serialize), _deserialize(_deserialize) {}
-
-    CSerializationResult<json> serialize(const std::any &object) const final {
-        return serializationResult([&]() -> json {
-            auto result = _serialize(vstd::any_cast<Deserialized>(object));
-            if constexpr (std::same_as<Serialized, json>) {
-                return result;
-            } else {
-                if (!result) {
-                    throw CSerializationException({CSerializationErrorCode::InvalidInput,
-                                                   {},
-                                                   {},
-                                                   {},
-                                                   "Legacy codec returned missing JSON output"});
-                }
-                return *result;
-            }
-        });
-    }
-
-    CSerializationResult<std::any> deserialize(const std::shared_ptr<CGame> &map, const json &object) const final {
-        return serializationResult([&]() -> std::any {
-            if constexpr (std::same_as<Serialized, json>) {
-                return _deserialize(map, object);
-            } else {
-                return _deserialize(map, std::make_shared<json>(object));
-            }
-        });
-    }
+    static std::set<std::shared_ptr<CGameObject>> deserialize(const std::shared_ptr<CGame> &map,
+                                                              const std::shared_ptr<json> &object,
+                                                              CSerializationReadContext &context);
 };
 
 class CSerialization {
@@ -322,6 +430,13 @@ class CSerialization {
   public:
     template <typename T>
     static CSerializationResult<json> serializeExpected(const T &object, const std::string &source = {}) {
+        CSerializationWriteContext context(source);
+        return serializeExpected(object, context);
+    }
+
+    template <typename T>
+    static CSerializationResult<json> serializeExpected(const T &object, CSerializationWriteContext &context) {
+        const auto &source = context.source();
         auto codec = serializer<T>();
         if (!codec) {
             return std::unexpected(CSerializationError{CSerializationErrorCode::MissingCodec,
@@ -330,7 +445,14 @@ class CSerialization {
                                                        typeid(T).name(),
                                                        "No JSON codec registered for type"});
         }
-        auto call = serializationResult([&]() { return codec->serialize(std::any(object)); });
+        CSerializationOperation scope(context);
+        auto call = serializationResult([&]() {
+            auto result = codec->serialize(std::any(object), context);
+            if (result && scope.isRoot()) {
+                context.finish(*result);
+            }
+            return result;
+        });
         auto result = call ? std::move(*call) : CSerializationResult<json>(std::unexpected(std::move(call.error())));
         if (!result) {
             if (result.error().source.empty()) {
@@ -346,6 +468,14 @@ class CSerialization {
     template <typename T>
     static CSerializationResult<T> deserializeExpected(const std::shared_ptr<CGame> &game, const json &document,
                                                        const std::string &source = {}) {
+        CSerializationReadContext context(false, source);
+        return deserializeExpected<T>(game, document, context);
+    }
+
+    template <typename T>
+    static CSerializationResult<T> deserializeExpected(const std::shared_ptr<CGame> &game, const json &document,
+                                                       CSerializationReadContext &context) {
+        const auto &source = context.source();
         auto codec = serializer<T>();
         if (!codec) {
             return std::unexpected(CSerializationError{CSerializationErrorCode::MissingCodec,
@@ -354,7 +484,17 @@ class CSerialization {
                                                        typeid(T).name(),
                                                        "No JSON codec registered for type"});
         }
-        auto call = serializationResult([&]() { return codec->deserialize(game, document); });
+        CSerializationOperation scope(context);
+        auto call = serializationResult([&]() {
+            if (scope.isRoot()) {
+                context.prepare(game, document);
+            }
+            auto result = codec->deserialize(game, document, context);
+            if (result && scope.isRoot()) {
+                context.finish(game);
+            }
+            return result;
+        });
         auto result =
             call ? std::move(*call) : CSerializationResult<std::any>(std::unexpected(std::move(call.error())));
         if (!result) {
@@ -374,19 +514,14 @@ class CSerialization {
         return converted;
     }
 
-    class StrictScope {
+    class StrictScope : public CSerializationReadContext {
       public:
-        StrictScope();
-
-        ~StrictScope();
+        explicit StrictScope(std::string source = {}) : CSerializationReadContext(true, std::move(source)) {}
 
         StrictScope(const StrictScope &) = delete;
         StrictScope &operator=(const StrictScope &) = delete;
         StrictScope(StrictScope &&) = delete;
         StrictScope &operator=(StrictScope &&) = delete;
-
-      private:
-        bool previous;
     };
 
     template <typename Serialized, typename Deserialized> static Serialized serialize(Deserialized deserialized) {
@@ -415,8 +550,14 @@ class CSerialization {
     static void setProperty(const std::shared_ptr<CGameObject> &object, const std::string &key,
                             const std::shared_ptr<json> &value);
 
+    static void setProperty(const std::shared_ptr<CGameObject> &object, const std::string &key, const json &value,
+                            CSerializationReadContext &context);
+
     static void setProperty(const std::shared_ptr<json> &conf, const std::string &propertyName,
                             const std::any &propertyValue);
+
+    static void setProperty(const std::shared_ptr<json> &conf, const std::string &propertyName,
+                            const std::any &propertyValue, CSerializationWriteContext &context);
 
     using CoercedStringProperty = std::variant<std::monostate, std::string, int, bool, std::shared_ptr<json>>;
 
@@ -457,31 +598,28 @@ class CSerialization {
     static std::string generateName(const std::shared_ptr<CGameObject> &object,
                                     const std::function<bool(const std::string &)> &isNameTaken);
 
-    static bool isStrict();
-
-    static bool setStrict(bool value);
-
   private:
     static std::type_index getProperty(const std::shared_ptr<CGameObject> &object, const std::string &name);
 
-    static std::type_index getGenericPropertyType(const std::shared_ptr<json> &object);
+    static std::type_index getGenericPropertyType(const json *object);
 
     static void setArrayProperty(const std::shared_ptr<CGameObject> &object, std::type_index property,
-                                 const std::string &key, std::shared_ptr<json> value);
+                                 const std::string &key, const json &value, CSerializationReadContext &context);
 
     static void setObjectProperty(const std::shared_ptr<CGameObject> &object, std::type_index property,
-                                  const std::string &key, std::shared_ptr<json> value);
+                                  const std::string &key, const json &value, CSerializationReadContext &context);
 
     static void setStringProperty(const std::shared_ptr<CGameObject> &object, const std::string &key,
-                                  const std::string &value);
+                                  const std::string &value, CSerializationReadContext &context);
 
-    static void setNumericProperty(const std::shared_ptr<CGameObject> &object, const std::string &key, int value);
+    static void setNumericProperty(const std::shared_ptr<CGameObject> &object, const std::string &key, int value,
+                                   CSerializationReadContext &context);
 
-    static void setBooleanProperty(const std::shared_ptr<CGameObject> &object, const std::string &key, bool value);
+    static void setBooleanProperty(const std::shared_ptr<CGameObject> &object, const std::string &key, bool value,
+                                   CSerializationReadContext &context);
 
-    static void setOtherProperty(std::type_index serializedId, std::type_index deserializedId,
-                                 const std::shared_ptr<CGameObject> &object, const std::string &key,
-                                 const std::any &value);
+    static void setOtherProperty(std::type_index deserializedId, const std::shared_ptr<CGameObject> &object,
+                                 const std::string &key, const json &value, CSerializationReadContext &context);
 
     static bool isString(const std::shared_ptr<CGameObject> &object, const std::string &key);
 };

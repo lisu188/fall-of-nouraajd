@@ -3322,13 +3322,201 @@ void assertSavedEffectState(const std::shared_ptr<CEffect> &effect) {
     expect_true(effect->getCumulative(), "saving or cloning must preserve the cumulative flag");
 }
 
+struct CustomActorValue {
+    std::shared_ptr<CCreature> actor;
+};
+
+class CustomActorValueHolder : public CGameObject {
+    V_META(CustomActorValueHolder, CGameObject,
+           V_PROPERTY(CustomActorValueHolder, CustomActorValue, actorValue, getActorValue, setActorValue),
+           V_PROPERTY(CustomActorValueHolder, std::shared_ptr<CCreature>, sameActor, getSameActor, setSameActor))
+  public:
+    CustomActorValue getActorValue() { return value; }
+    void setActorValue(CustomActorValue next) { value = std::move(next); }
+    std::shared_ptr<CCreature> getSameActor() { return same; }
+    void setSameActor(std::shared_ptr<CCreature> actor) { same = std::move(actor); }
+
+  private:
+    CustomActorValue value;
+    std::shared_ptr<CCreature> same;
+};
+
+class SerializationReentryProbe : public CGameObject {
+    V_META(SerializationReentryProbe, CGameObject, V_METHOD(SerializationReentryProbe, initialize))
+  public:
+    void initialize() {
+        independentLookupCompleted = !getGame()->getObjectHandler()->createObject(getGame(), "missingReentryType");
+    }
+    bool independentLookupCompleted = false;
+};
+
+struct InvalidCodecValue {};
+
+class InvalidCodecValueHolder : public CGameObject {
+    V_META(InvalidCodecValueHolder, CGameObject,
+           V_PROPERTY(InvalidCodecValueHolder, InvalidCodecValue, payload, getPayload, setPayload))
+  public:
+    InvalidCodecValue getPayload() { return {}; }
+    void setPayload(InvalidCodecValue) {}
+};
+
+void testCustomCodecWriteErrorRetainsPropertyPath() {
+    CTypes::registerJsonType<InvalidCodecValue>(
+        [](const InvalidCodecValue &) -> CSerializationResult<json> {
+            return std::unexpected(
+                CSerializationError{CSerializationErrorCode::InvalidInput, {}, "inside", {}, "invalid custom payload"});
+        },
+        [](const std::shared_ptr<CGame> &, const json &) -> CSerializationResult<InvalidCodecValue> {
+            return InvalidCodecValue{};
+        });
+    CTypes::register_type<InvalidCodecValueHolder, CGameObject>();
+    std::shared_ptr<CGameObject> holder = std::make_shared<InvalidCodecValueHolder>();
+    auto rejected = CSerialization::serializeExpected(holder, "custom-write-path");
+    expect_true(!rejected && rejected.error().code == CSerializationErrorCode::InvalidInput &&
+                    rejected.error().propertyPath == "payload.inside" &&
+                    rejected.error().source == "custom-write-path" &&
+                    rejected.error().objectType == "InvalidCodecValueHolder",
+                "custom codec write errors must retain the owning reflected property path and object type");
+}
+
+void testConfiguredReferencesSharePolicyAndBoundaryReentryStartsFresh() {
+    CTypes::register_type<SerializationReentryProbe, CGameObject>();
+    auto game = makeEffectSnapshotGame();
+    game->getObjectHandler()->registerConfig("reentryProbe",
+                                             std::make_shared<json>(json{{"class", "SerializationReentryProbe"}}));
+    CSerialization::StrictScope context("configured-reference-policy");
+    json reference{{"ref", "reentryProbe"}};
+    auto decoded = CSerialization::deserializeExpected<std::shared_ptr<CGameObject>>(game, reference, context);
+    auto probe = decoded ? std::dynamic_pointer_cast<SerializationReentryProbe>(*decoded) : nullptr;
+    expect_true(probe && probe->independentLookupCompleted,
+                "a default API re-entry must use fresh lenient policy during an outer strict operation");
+
+    game->getObjectHandler()->registerConfig("invalidConfiguredReference",
+                                             std::make_shared<json>(json{{"class", "missingConfiguredType"}}));
+    json invalid{{"ref", "invalidConfiguredReference"}};
+    auto rejected = CSerialization::deserializeExpected<std::shared_ptr<CGameObject>>(game, invalid, context);
+    expect_true(!rejected && rejected.error().code == CSerializationErrorCode::InvalidInput &&
+                    rejected.error().source == "configured-reference-policy",
+                "configured references must retain the outer explicit strict policy and source");
+    auto lenient = CSerialization::deserializeExpected<std::shared_ptr<CGameObject>>(game, invalid);
+    expect_true(lenient && !*lenient, "the default entry point must remain independent of prior strict calls");
+}
+
+void testContextAwareCustomCodecPreservesEffectGraphNodeIdentity() {
+    auto observed_node = std::make_shared<const json *>(nullptr);
+    CTypes::registerJsonType<CustomActorValue>(
+        [](const CustomActorValue &value, CSerializationWriteContext &context) -> CSerializationResult<json> {
+            auto actor = CSerialization::serializeExpected(value.actor, context);
+            if (!actor)
+                return std::unexpected(actor.error());
+            return json{{"actor", std::move(*actor)}};
+        },
+        [observed_node](const std::shared_ptr<CGame> &game, const json &document,
+                        CSerializationReadContext &context) -> CSerializationResult<CustomActorValue> {
+            *observed_node = &document.at("actor");
+            auto actor =
+                CSerialization::deserializeExpected<std::shared_ptr<CCreature>>(game, **observed_node, context);
+            if (!actor)
+                return std::unexpected(actor.error());
+            return CustomActorValue{std::move(*actor)};
+        });
+    CTypes::register_type<CustomActorValueHolder, CGameObject>();
+    auto game = makeEffectSnapshotGame();
+    auto actor = makeEffectActor(game, "customCodecActor");
+    attachSavedEffect(actor, actor, "customCodecWard");
+    auto holder = std::make_shared<CustomActorValueHolder>();
+    holder->setGame(game);
+    holder->setActorValue({actor});
+    holder->setSameActor(actor);
+    auto encoded = CSerialization::serializeExpected(std::static_pointer_cast<CGameObject>(holder));
+    expect_true(encoded.has_value(), "a custom codec containing an actor must serialize inside the outer graph");
+    if (!encoded) {
+        actor->setEffects({});
+        return;
+    }
+    CSerialization::StrictScope context("custom-codec-graph");
+    auto decoded = CSerialization::deserializeExpected<std::shared_ptr<CGameObject>>(game, *encoded, context);
+    expect_true(decoded.has_value(), "a custom codec must borrow the original graph node rather than copying it");
+    auto restored = decoded ? std::dynamic_pointer_cast<CustomActorValueHolder>(*decoded) : nullptr;
+    auto restored_actor = restored ? restored->getActorValue().actor : nullptr;
+    expect_true(restored_actor && restored_actor == restored->getSameActor(),
+                "custom and ordinary properties must resolve the same restored actor identity");
+    expect_true(*observed_node == &encoded->at("properties").at("actorValue").at("actor"),
+                "recursive custom decoders must retain the exact input node address from the outer graph");
+    if (restored_actor) {
+        auto effect = findSavedEffect(restored_actor, "customCodecWard");
+        expect_true(effect && effect->getCaster() == restored_actor && effect->getVictim() == restored_actor,
+                    "custom actor values must retain fixed-up caster and victim links");
+        restored_actor->setEffects({});
+    }
+    actor->setEffects({});
+}
+
+void testLenientMalformedNestedEffectRetainsTypedFailure() {
+    auto game = makeEffectSnapshotGame();
+    auto actor = makeEffectActor(game, "lenientMalformedActor");
+    attachSavedEffect(actor, actor, "lenientMalformedWard");
+    auto original = EffectObjectJson::serialize(actor);
+    json malformed = *original;
+    malformed["properties"]["effects"][0]["effectReferences"]["caster"] = "invalid";
+    CSerializationReadContext context(false, "lenient-malformed-graph");
+    auto rejected = CSerialization::deserializeExpected<std::shared_ptr<CGameObject>>(game, malformed, context);
+    expect_true(!rejected && rejected.error().code == CSerializationErrorCode::MalformedGraph &&
+                    rejected.error().source == "lenient-malformed-graph" &&
+                    rejected.error().propertyPath.contains("effects"),
+                "lenient property skipping must retain the structured graph error through final fixups");
+    auto following = CSerialization::deserializeExpected<std::shared_ptr<CGameObject>>(game, *original, context);
+    expect_true(following && *following, "reusing a context starts a clean operation after a graph failure");
+    if (following) {
+        if (auto restored = std::dynamic_pointer_cast<CCreature>(*following))
+            restored->setEffects({});
+    }
+    actor->setEffects({});
+}
+
+void testOperationRetainsConfiguredAndParsedGraphDocuments() {
+    CTypes::register_type<CustomActorValueHolder, CGameObject>();
+    auto game = makeEffectSnapshotGame();
+    auto actor = makeEffectActor(game, "ownedDocumentActor");
+    attachSavedEffect(actor, actor, "ownedDocumentWard");
+    auto saved = EffectObjectJson::serialize(actor);
+    std::shared_ptr<const json> owner = std::make_shared<const json>(*saved);
+    std::weak_ptr<const json> lifetime = owner;
+    game->getObjectHandler()->registerConfig("ownedGraphReference", owner);
+    owner.reset();
+    CSerialization::StrictScope context("owned-document-graph");
+    json reference{{"ref", "ownedGraphReference"}};
+    auto configured = CSerialization::deserializeExpected<std::shared_ptr<CGameObject>>(game, reference, context);
+    game->getObjectHandler()->unregisterConfig("ownedGraphReference");
+    expect_true(configured && *configured && !lifetime.expired(),
+                "the read operation must retain a configured graph owner after its cache entry is removed");
+
+    json string_property{{"class", "CustomActorValueHolder"}, {"properties", json{{"sameActor", saved->dump()}}}};
+    auto parsed = CSerialization::deserializeExpected<std::shared_ptr<CGameObject>>(game, string_property, context);
+    expect_true(lifetime.expired(), "starting the next operation releases the previous configured document");
+    auto holder = parsed ? std::dynamic_pointer_cast<CustomActorValueHolder>(*parsed) : nullptr;
+    auto restored_actor = holder ? holder->getSameActor() : nullptr;
+    expect_true(restored_actor != nullptr, "parsed string properties must remain alive through deferred graph fixups");
+    if (restored_actor) {
+        auto effect = findSavedEffect(restored_actor, "ownedDocumentWard");
+        expect_true(effect && effect->getCaster() == restored_actor && effect->getVictim() == restored_actor,
+                    "parsed graph documents must retain their original identities until effect links are resolved");
+        restored_actor->setEffects({});
+    }
+    if (configured) {
+        if (auto restored = std::dynamic_pointer_cast<CCreature>(*configured))
+            restored->setEffects({});
+    }
+    actor->setEffects({});
+}
+
 void testSavedSelfEffectPreservesStateAndRemainingApplications() {
     auto game = makeEffectSnapshotGame();
     auto actor = makeEffectActor(game, "wardedActor");
     auto effect = attachSavedEffect(actor, actor, "selfWard");
     auto serialized = EffectObjectJson::serialize(actor);
     CSerialization::StrictScope strict;
-    auto restored = std::dynamic_pointer_cast<CCreature>(EffectObjectJson::deserialize(game, serialized));
+    auto restored = std::dynamic_pointer_cast<CCreature>(EffectObjectJson::deserialize(game, serialized, strict));
     auto restored_effect = findSavedEffect(restored, "selfWard");
     assertSavedEffectState(restored_effect);
     if (restored_effect) {
@@ -3372,7 +3560,7 @@ void testSavedMapEffectResolvesForwardAndDetachedActorReferences() {
     expect_true(actors[0]["properties"]["name"].get<std::string>() == "aVictim",
                 "the test must deserialize the victim before its caster");
     CSerialization::StrictScope strict;
-    auto restored = std::dynamic_pointer_cast<CMap>(EffectObjectJson::deserialize(game, serialized));
+    auto restored = std::dynamic_pointer_cast<CMap>(EffectObjectJson::deserialize(game, serialized, strict));
     expect_true(restored && restored->getObjects().size() == 2, "snapshot loading must preserve map actor membership");
     if (!restored) {
         victim->setEffects({});
@@ -3486,7 +3674,7 @@ void testSavedMapForwardActorAliasPreservesNameAndSpatialIndexes() {
                                                  {"effectActorReference", definition["effectActorId"]}};
     (*serialized)["properties"]["trackedActor"] = definition;
     CSerialization::StrictScope strict;
-    auto restored = std::dynamic_pointer_cast<CMap>(EffectObjectJson::deserialize(game, serialized));
+    auto restored = std::dynamic_pointer_cast<CMap>(EffectObjectJson::deserialize(game, serialized, strict));
     auto restored_actor = restored ? restored->getObjectProperty<CCreature>("trackedActor") : nullptr;
     expect_true(restored_actor && restored->getObjectByName("forwardActor") == restored_actor,
                 "an actor alias preceding its definition must populate the map's final name index");
@@ -3528,7 +3716,7 @@ void testSavedEffectsRejectOrdinaryActorPropertyCycles() {
     bool read_rejected = false;
     try {
         CSerialization::StrictScope strict;
-        EffectObjectJson::deserialize(game, std::make_shared<json>(std::move(config)));
+        EffectObjectJson::deserialize(game, std::make_shared<json>(std::move(config)), strict);
     } catch (const std::exception &) {
         read_rejected = true;
     }
@@ -3555,7 +3743,7 @@ void testSavedEffectRejectsMalformedActorReferences() {
         bool rejected = false;
         try {
             CSerialization::StrictScope strict;
-            EffectObjectJson::deserialize(game, std::make_shared<json>(std::move(config)));
+            EffectObjectJson::deserialize(game, std::make_shared<json>(std::move(config)), strict);
         } catch (const std::exception &) {
             rejected = true;
         }
@@ -3619,6 +3807,11 @@ int main() {
     test_typed_engine_signal_still_fires_directly();
     test_effect_applies_for_exactly_its_duration_without_underflow();
     testSavedSelfEffectPreservesStateAndRemainingApplications();
+    testContextAwareCustomCodecPreservesEffectGraphNodeIdentity();
+    testConfiguredReferencesSharePolicyAndBoundaryReentryStartsFresh();
+    testLenientMalformedNestedEffectRetainsTypedFailure();
+    testOperationRetainsConfiguredAndParsedGraphDocuments();
+    testCustomCodecWriteErrorRetainsPropertyPath();
     testSavedMapEffectResolvesForwardAndDetachedActorReferences();
     testEffectCloningRemapsOwnedActorsAndRetainsExternalActors();
     testSavedMapForwardActorAliasPreservesNameAndSpatialIndexes();

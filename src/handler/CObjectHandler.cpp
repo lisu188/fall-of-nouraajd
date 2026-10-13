@@ -145,13 +145,20 @@ void CObjectHandler::endMapScriptScope() { mapScriptScopeActive = false; }
 
 // TODO: add option to provide custom configuration from string
 std::shared_ptr<CGameObject> CObjectHandler::_createObject(std::shared_ptr<CGame> game, const std::string &type) {
+    CSerializationReadContext context(false, type);
+    return _createObject(std::move(game), type, context);
+}
+
+std::shared_ptr<CGameObject> CObjectHandler::_createObject(std::shared_ptr<CGame> game, const std::string &type,
+                                                           CSerializationReadContext &context) {
     auto config = getConfig(type);
     if (!config) {
         vstd::logger::debug("No config found for:", type, "falling back to class-name construction");
         config = std::make_shared<const json>(json{{"class", type}});
     }
+    context.keepDocument(config);
     auto object = serializationValueOrThrow(
-        CSerialization::deserializeExpected<std::shared_ptr<CGameObject>>(game, *config, type));
+        CSerialization::deserializeExpected<std::shared_ptr<CGameObject>>(game, *config, context));
     if (!object) {
         return object;
     }

@@ -337,7 +337,7 @@ void testCatacombsControllerCanLeaveItsAuthoredGrassSpawn() {
     game->getObjectHandler()->registerType("CGroundController", []() { return std::make_shared<CGroundController>(); });
     CSerialization::StrictScope strict;
     auto controller = std::dynamic_pointer_cast<CGroundController>(
-        object_deserialize(game, std::make_shared<json>(controller_config)));
+        object_deserialize(game, std::make_shared<json>(controller_config), strict));
     expect_true(controller != nullptr, "Catacombs must deserialize their actual native ground controller definition");
     if (!controller) {
         return;
