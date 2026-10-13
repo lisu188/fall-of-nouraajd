@@ -71,8 +71,9 @@ Readers validate the entire envelope with the existing document structure
 limits, index actor definitions throughout it, then give the codec a borrowed
 reference to `value`. The payload is never copied during unwrapping. The envelope
 requires exactly the displayed fields, version 1, and a non-object payload;
-malformed envelopes return `MalformedGraph`. `$gameGraphEnvelope` is reserved at
-codec roots. When an operation records actors, `effectGraph` is also reserved;
-writers reject either collision with `InvalidInput`. Object save roots retain
-their original `class`, `properties`, and `effectGraph` layout. A non-object result
-without an operation-owned graph retains its original representation.
+malformed envelopes return `MalformedGraph`. `$gameGraphEnvelope` and `effectGraph`
+are always reserved at codec roots, including value-only codecs that record no
+actors; writers reject either collision with `InvalidInput`. The reservation does
+not apply to nested JSON payload fields or authored object property names. Object
+save roots retain their original `class`, `properties`, and `effectGraph` layout.
+A non-object result without an operation-owned graph retains its original representation.

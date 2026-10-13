@@ -3633,6 +3633,55 @@ void testCustomGraphEnvelopeRejectsCollisionsAndMalformedStructure() {
                 "attaching a graph must reject an existing custom field instead of silently overwriting it");
 }
 
+void testCustomGraphMetadataIsReservedWithoutActors() {
+    struct Value {
+        std::string key;
+        bool nested = false;
+    };
+    auto decoder_calls = std::make_shared<int>(0);
+    CTypes::registerJsonCodec<Value>(
+        [](const Value &value) -> CSerializationResult<json> {
+            json payload{{value.key, "user data"}};
+            return value.nested ? json::array({std::move(payload)}) : std::move(payload);
+        },
+        [decoder_calls](const std::shared_ptr<CGame> &, const json &) -> CSerializationResult<Value> {
+            ++*decoder_calls;
+            return Value{};
+        });
+    const auto codec = CTypes::findCodec(typeid(Value));
+    CSerializationWriteContext context("reserved-no-actor-metadata");
+    for (const auto *key : {"effectGraph", "$gameGraphEnvelope"}) {
+        auto rejected = CSerialization::serializeExpected(Value{key}, context);
+        expect_true(!rejected && rejected.error().code == CSerializationErrorCode::InvalidInput &&
+                        rejected.error().source == "reserved-no-actor-metadata",
+                    "custom root metadata must be rejected even when no actor graph was recorded");
+        auto boundary = codec->serialize(std::any(Value{key}));
+        expect_true(!boundary && boundary.error().code == CSerializationErrorCode::InvalidInput,
+                    "the direct codec write adapter must reject the same reserved root metadata");
+        auto malformed = codec->deserialize(nullptr, json{{key, "user data"}});
+        expect_true(!malformed && *decoder_calls == 0,
+                    "reserved root metadata must fail before reaching the value-only decoder");
+    }
+    auto nested = CSerialization::serializeExpected(Value{"effectGraph", true}, context);
+    auto decoded = nested ? CSerialization::deserializeExpected<Value>(nullptr, *nested)
+                          : CSerializationResult<Value>(std::unexpected(nested.error()));
+    expect_true(nested && nested->at(0).at("effectGraph").get<std::string>() == "user data" && decoded &&
+                    *decoder_calls == 1,
+                "reusing a failed context must permit nested payload fields with reserved root names");
+
+    auto game = makeEffectSnapshotGame();
+    auto actor = makeEffectActor(game, "authoredGraphMetadataProperties");
+    actor->setStringProperty("effectGraph", "authored graph property");
+    actor->setStringProperty("$gameGraphEnvelope", "authored envelope property");
+    auto encoded = CSerialization::serializeExpected(actor);
+    auto restored = encoded ? CSerialization::deserializeExpected<std::shared_ptr<CCreature>>(game, *encoded)
+                            : CSerializationResult<std::shared_ptr<CCreature>>(std::unexpected(encoded.error()));
+    expect_true(encoded && encoded->at("effectGraph").at("version").get<int>() == 1 && restored && *restored &&
+                    (*restored)->getStringProperty("effectGraph") == "authored graph property" &&
+                    (*restored)->getStringProperty("$gameGraphEnvelope") == "authored envelope property",
+                "engine metadata reservation must not reject legitimate authored property names");
+}
+
 void testOperationRetainsConfiguredAndParsedGraphDocuments() {
     CTypes::register_type<CustomActorValueHolder, CGameObject>();
     auto game = makeEffectSnapshotGame();
@@ -3971,6 +4020,7 @@ int main() {
     testLenientMalformedNestedEffectRetainsTypedFailure();
     testCustomArrayRootPreservesItsPayloadAndEffectGraph();
     testCustomGraphEnvelopeRejectsCollisionsAndMalformedStructure();
+    testCustomGraphMetadataIsReservedWithoutActors();
     testOperationRetainsConfiguredAndParsedGraphDocuments();
     testCustomCodecWriteErrorRetainsPropertyPath();
     testSavedMapEffectResolvesForwardAndDetachedActorReferences();

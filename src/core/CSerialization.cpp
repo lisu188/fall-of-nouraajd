@@ -402,9 +402,14 @@ CSerializationWriteContext::State &CSerializationWriteContext::state() {
     return *operationState;
 }
 void CSerializationWriteContext::finish(json &document) {
-    if (document.is_object() && document.contains(graphEnvelopeKey)) {
-        throw CSerializationException({CSerializationErrorCode::InvalidInput, sourceName, propertyPath, typeName,
-                                       "Custom codec output uses the reserved graph envelope marker"});
+    if (document.is_object()) {
+        for (const auto *key : {graphEnvelopeKey, "effectGraph"}) {
+            if (document.contains(key)) {
+                throw CSerializationException(
+                    {CSerializationErrorCode::InvalidInput, sourceName, propertyPath, typeName,
+                     "Custom codec output uses the reserved graph metadata field '" + std::string(key) + "'"});
+            }
+        }
     }
     if (operationState)
         operationState->effects.finish(document, *this);
