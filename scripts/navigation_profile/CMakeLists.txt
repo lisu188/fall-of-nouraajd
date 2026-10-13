@@ -1,5 +1,8 @@
-cmake_minimum_required(VERSION 3.20)
+cmake_minimum_required(VERSION 4.0.2)
 project(nouraajd_navigation_profile LANGUAGES CXX)
+set(CMAKE_CXX_STANDARD 26)
+set(CMAKE_CXX_STANDARD_REQUIRED ON)
+set(CMAKE_CXX_EXTENSIONS OFF)
 if(NOT WIN32)
     message(FATAL_ERROR "This harness links an existing Windows MSVC Release object build.")
 endif()
@@ -8,7 +11,8 @@ find_package(pybind11 CONFIG REQUIRED)
 find_package(SDL2 CONFIG REQUIRED)
 find_package(SDL2_image CONFIG REQUIRED)
 find_package(SDL2_ttf CONFIG REQUIRED)
-file(GLOB_RECURSE GAME_OBJECTS "${GAME_BUILD_DIR}/game_core_objects.dir/Release/*.obj")
+file(GLOB_RECURSE GAME_OBJECTS "${GAME_BUILD_DIR}/game_core_objects.dir/Release/*.obj"
+    "${GAME_BUILD_DIR}/CMakeFiles/game_core_objects.dir/*.obj")
 if(NOT GAME_OBJECTS)
     message(FATAL_ERROR "Build the Release game_core_objects target before this harness.")
 endif()
@@ -20,12 +24,16 @@ option(NAVIGATION_PROFILE_CURRENT_ONLY "Include map-service workloads unavailabl
 if(NAVIGATION_PROFILE_CURRENT_ONLY)
     target_compile_definitions(navigation_profile PRIVATE NAVIGATION_PROFILE_CURRENT_ONLY)
 endif()
-target_compile_features(navigation_profile PRIVATE cxx_std_23)
+target_compile_features(navigation_profile PRIVATE cxx_std_26)
 target_include_directories(navigation_profile PRIVATE "${GAME_HEADER_DIR}" "${GAME_SOURCE_DIR}/vstd"
     "${GAME_SOURCE_DIR}/random-dungeon-generator" "${GAME_SOURCE_DIR}/third_party/simdjson"
     "${GAME_SOURCE_DIR}/third_party/lua")
 target_compile_definitions(navigation_profile PRIVATE BOOST_ALLOW_DEPRECATED_HEADERS BOOST_BIND_GLOBAL_PLACEHOLDERS
     SDL_MAIN_HANDLED _USE_MATH_DEFINES NOMINMAX WIN32_LEAN_AND_MEAN)
 target_compile_options(navigation_profile PRIVATE /W3 /bigobj /permissive- /Zc:preprocessor /EHsc)
+set(GAME_VENDOR_LIBRARY_DIR "${GAME_BUILD_DIR}")
+if(NOT EXISTS "${GAME_VENDOR_LIBRARY_DIR}/simdjson_vendor.lib")
+    set(GAME_VENDOR_LIBRARY_DIR "${GAME_BUILD_DIR}/Release")
+endif()
 target_link_libraries(navigation_profile PRIVATE Python3::Python pybind11::headers SDL2::SDL2 SDL2_image::SDL2_image
-    SDL2_ttf::SDL2_ttf "${GAME_BUILD_DIR}/Release/simdjson_vendor.lib" "${GAME_BUILD_DIR}/Release/lua_vendor.lib")
+    SDL2_ttf::SDL2_ttf "${GAME_VENDOR_LIBRARY_DIR}/simdjson_vendor.lib" "${GAME_VENDOR_LIBRARY_DIR}/lua_vendor.lib")
