@@ -333,6 +333,10 @@ void expect_controller_lifecycle(const std::shared_ptr<NoProgressFightController
 }
 
 void test_script_handler_executes_commands_and_wraps_functions() {
+    static_assert(!std::is_copy_constructible_v<CScriptHandler>);
+    static_assert(!std::is_copy_assignable_v<CScriptHandler>);
+    static_assert(!std::is_move_constructible_v<CScriptHandler>);
+    static_assert(!std::is_move_assignable_v<CScriptHandler>);
     CScriptHandler handler;
 
     handler.execute_script("value = 4");
@@ -403,6 +407,20 @@ void test_script_handler_executes_commands_and_wraps_functions() {
     handler.call_created_function("global created_void_value\ncreated_void_value = value + 1", {"value"}, 4);
     expect_true(handler.get_object<int>("created_void_value") == 5,
                 "void call_created_function should update Python state and clean up its temporary function");
+
+    CScriptHandler surviving_handler;
+    handler.releaseState();
+    handler.releaseState();
+    bool released_state_rejected = false;
+    try {
+        handler.execute_script("released_handler_used = True");
+    } catch (const std::runtime_error &) {
+        released_state_rejected = true;
+    }
+    expect_true(released_state_rejected, "a released handler must reject use after repeated release");
+    surviving_handler.execute_script("surviving_handler_value = 29");
+    expect_true(surviving_handler.get_object<int>("surviving_handler_value") == 29,
+                "releasing one handler must not release another handler's runtime state");
 }
 
 void test_handler_constructors_are_covered_by_native_tests() {

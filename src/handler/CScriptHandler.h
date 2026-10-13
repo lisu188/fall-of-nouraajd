@@ -24,20 +24,21 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #include <memory>
 #include <utility>
 
-template <fn::PythonReturn Ret, typename... Args> struct GAME_CORE_LOCAL CPythonFunctionWrapper {
-    static std::function<Ret(Args...)> call(pybind11::object func) {
-        return [func](Args... args) -> Ret {
-            try {
-                pybind11::object ret = func(std::forward<Args>(args)...);
-                return ret.cast<Ret>();
-            } catch (...) {
-                PYTHON_LOG;
-                PyErr_Clear();
-                return Ret();
-            }
-        };
-    }
-};
+template <fn::PythonReturn Ret, typename... Args>
+struct GAME_CORE_LOCAL CPythonFunctionWrapper{
+    static std::function<Ret(Args...)> call(pybind11::object func){return [func](Args... args) -> Ret {
+        try {
+            pybind11::object ret = func(std::forward<Args>(args)...);
+            return ret.cast<Ret>();
+        } catch (...) {
+            PYTHON_LOG;
+            PyErr_Clear();
+            return Ret();
+        }
+    };
+}
+}
+;
 
 template <typename... Args> struct GAME_CORE_LOCAL CPythonFunctionWrapper<void, Args...> {
     static std::function<void(Args...)> call(pybind11::object func) {
@@ -50,6 +51,11 @@ class CScriptHandler {
     CScriptHandler();
 
     ~CScriptHandler();
+
+    CScriptHandler(const CScriptHandler &) = delete("Python runtime state has one owner");
+    CScriptHandler &operator=(const CScriptHandler &) = delete("Python runtime state has one owner");
+    CScriptHandler(CScriptHandler &&) = delete("Python runtime state cannot move between handlers");
+    CScriptHandler &operator=(CScriptHandler &&) = delete("Python runtime state cannot move between handlers");
 
     void releaseState();
 
@@ -109,5 +115,7 @@ class CScriptHandler {
   private:
     pybind11::object get_py_object(std::string name);
 
-    std::shared_ptr<void> pythonState;
+    struct State;
+    State &getState();
+    std::unique_ptr<State> pythonState;
 };

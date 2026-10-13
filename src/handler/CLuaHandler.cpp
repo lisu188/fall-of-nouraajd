@@ -677,39 +677,36 @@ void push_context_table(lua_State *L, const std::shared_ptr<CGame> &game, std::w
 
 CLuaHandler::~CLuaHandler() { releaseState(); }
 
-void CLuaHandler::releaseState() {
-    if (luaState != nullptr) {
-        lua_close(luaState);
-        luaState = nullptr;
-    }
-}
+void CLuaHandler::LuaStateCloser::operator()(lua_State *state) const noexcept { lua_close(state); }
+
+void CLuaHandler::releaseState() { luaState.reset(); }
 
 bool CLuaHandler::ensureState() {
     if (luaState != nullptr) {
         return true;
     }
-    luaState = luaL_newstate();
+    luaState.reset(luaL_newstate());
     if (luaState == nullptr) {
         vstd::logger::warning("Failed to create Lua state for plugins");
         return false;
     }
     // Only these four libraries are ever opened — io, os, package, debug and coroutine stay
     // closed — and plugins only see the allow-listed copies from build_lua_sandbox_env.
-    luaL_requiref(luaState, LUA_GNAME, luaopen_base, 1);
-    lua_pop(luaState, 1);
-    luaL_requiref(luaState, LUA_MATHLIBNAME, luaopen_math, 1);
-    lua_pop(luaState, 1);
-    luaL_requiref(luaState, LUA_STRLIBNAME, luaopen_string, 1);
-    lua_pop(luaState, 1);
-    luaL_requiref(luaState, LUA_TABLIBNAME, luaopen_table, 1);
-    lua_pop(luaState, 1);
+    luaL_requiref(luaState.get(), LUA_GNAME, luaopen_base, 1);
+    lua_pop(luaState.get(), 1);
+    luaL_requiref(luaState.get(), LUA_MATHLIBNAME, luaopen_math, 1);
+    lua_pop(luaState.get(), 1);
+    luaL_requiref(luaState.get(), LUA_STRLIBNAME, luaopen_string, 1);
+    lua_pop(luaState.get(), 1);
+    luaL_requiref(luaState.get(), LUA_TABLIBNAME, luaopen_table, 1);
+    lua_pop(luaState.get(), 1);
     // Remove bytecode serialization even from the string-method metatable reachable via
     // ("literal"):method syntax.
-    lua_getglobal(luaState, "string");
-    lua_pushnil(luaState);
-    lua_setfield(luaState, -2, "dump");
-    lua_pop(luaState, 1);
-    create_game_object_metatable(luaState);
+    lua_getglobal(luaState.get(), "string");
+    lua_pushnil(luaState.get());
+    lua_setfield(luaState.get(), -2, "dump");
+    lua_pop(luaState.get(), 1);
+    create_game_object_metatable(luaState.get());
     return true;
 }
 
@@ -717,7 +714,7 @@ bool CLuaHandler::loadPlugin(const std::shared_ptr<CGame> &game, const std::stri
     if (!game || !ensureState()) {
         return false;
     }
-    lua_State *L = luaState;
+    lua_State *L = luaState.get();
     const std::string chunkName = "@" + path;
     // Mode "t": text chunks only — precompiled Lua bytecode is rejected outright.
     if (luaL_loadbufferx(L, code.c_str(), code.size(), chunkName.c_str(), "t") != LUA_OK) {
@@ -769,7 +766,7 @@ bool CLuaHandler::dispatch(const CGameObject *object, const char *hook,
         vstd::logger::debug("Lua dispatch skipped for hook after state release:", hook);
         return false;
     }
-    lua_State *L = handler->luaState;
+    lua_State *L = handler->luaState.get();
     lua_rawgeti(L, LUA_REGISTRYINDEX, entry->hooksRef);
     if (!lua_istable(L, -1)) {
         lua_pop(L, 1);
@@ -803,7 +800,7 @@ bool CLuaHandler::dispatchBool(const CGameObject *object, const char *hook,
     if (!self || !handler || handler->luaState == nullptr) {
         return false;
     }
-    lua_State *L = handler->luaState;
+    lua_State *L = handler->luaState.get();
     lua_rawgeti(L, LUA_REGISTRYINDEX, entry->hooksRef);
     if (!lua_istable(L, -1)) {
         lua_pop(L, 1);

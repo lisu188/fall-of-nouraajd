@@ -236,6 +236,10 @@ end
 }
 
 void test_lua_release_state_makes_dispatch_a_safe_noop() {
+    static_assert(!std::is_copy_constructible_v<CLuaHandler>);
+    static_assert(!std::is_copy_assignable_v<CLuaHandler>);
+    static_assert(!std::is_move_constructible_v<CLuaHandler>);
+    static_assert(!std::is_move_assignable_v<CLuaHandler>);
     auto game = std::make_shared<CGame>();
     expect_true(game->getLuaHandler()->loadPlugin(game, "plugins/probe_tile.lua", PROBE_TILE_PLUGIN),
                 "the probe plugin must load");
@@ -245,6 +249,7 @@ void test_lua_release_state_makes_dispatch_a_safe_noop() {
         return;
     }
 
+    game->getLuaHandler()->releaseState();
     game->getLuaHandler()->releaseState();
     auto creature = std::make_shared<CCreature>();
     tile->onStep(creature); // expired handler => fall back to the base implementation, no crash
