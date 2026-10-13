@@ -37,6 +37,7 @@ option(GAME_ENABLE_UNITY_BUILD "Enable unity builds for large shared game target
 set(GAME_UNITY_BATCH_SIZE "${GAME_DEFAULT_UNITY_BATCH_SIZE}" CACHE STRING
     "Number of source files per unity build translation unit.")
 option(GAME_ENABLE_PCH "Enable precompiled headers for large shared game targets." ${GAME_DEFAULT_ENABLE_PCH})
+include(cmake/ConfigurePch.cmake)
 
 if (WIN32)
     set(CPACK_GENERATOR "ZIP")
