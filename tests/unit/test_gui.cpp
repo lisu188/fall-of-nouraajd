@@ -1883,6 +1883,56 @@ void testRetainedPopulatedTextureCachesFailClosedAfterGuiExpiry() {
                 "clearing or destroying retained populated caches must not touch freed SDL textures");
 }
 
+void testRetainedGuiReleasesSdlOwnersAtShutdownBeforeLateTextureAndWorkerCleanup() {
+    auto harness = make_minimap_harness();
+    harness.map->setXBounds({{0, 3}});
+    harness.map->setYBounds({{0, 3}});
+    auto minimap = std::make_shared<CMinimapGraphicsObject>();
+    harness.gui->addChild(minimap);
+    minimap->renderObject(harness.gui, CUtil::rect(0, 0, 128, 128), 0);
+    auto cache = harness.gui->getTextureCache();
+    auto manager = harness.gui->getTextManager();
+    auto retainedManager = std::make_shared<CTextManager>(harness.gui);
+    expect_true(cache->getTexture("images/panel") != nullptr &&
+                    manager->getTextureSize("cached before retained GUI shutdown").first > 0 &&
+                    retainedManager->getTextureSize("released after retained GUI shutdown").first > 0,
+                "the retained GUI regression must populate real image, text, and widget textures");
+    auto texture = fn::sdl::GuiTexturePtr(
+        SDL_CreateTexture(harness.gui->getRenderer(), SDL_PIXELFORMAT_RGBA8888, SDL_TEXTUREACCESS_STATIC, 2, 2),
+        fn::sdl::GuiTextureDeleter{harness.gui});
+    expect_true(texture != nullptr, "a directly retained texture must belong to the GUI renderer");
+    auto window = SDL_RenderGetWindow(harness.gui->getRenderer());
+    expect_true(window != nullptr, "the retained GUI must initially own a real isolated SDL window");
+    const auto windowId = window ? SDL_GetWindowID(window) : 0;
+
+    harness.game->getContext()->shutdown();
+    expect_true(harness.gui->getRenderer() == nullptr && harness.gui->getRenderContext().getRenderer() == nullptr,
+                "session shutdown must release its renderer and clear borrowed rendering state on main");
+    expect_true(windowId != 0 && SDL_GetWindowFromID(windowId) == nullptr,
+                "session shutdown must destroy its SDL window while a GUI wrapper is still retained");
+
+    SDL_ClearError();
+    expect_true(cache->getTexture("images/panel") == nullptr,
+                "a retained image cache must not return freed textures after its live GUI shuts down");
+    expect_true(manager->getTextureSize("cached before retained GUI shutdown") == std::make_pair(0, 0),
+                "a retained text cache must not query freed textures after its live GUI shuts down");
+    texture.reset();
+    minimap.reset();
+    cache.reset();
+    manager.reset();
+    retainedManager.reset();
+    expect_true(std::string(SDL_GetError()).empty(),
+                "late texture, widget, and cache cleanup must not destroy renderer-freed SDL textures again");
+
+    const std::weak_ptr<CGui> owner = harness.gui;
+    {
+        pybind11::gil_scoped_release release;
+        std::thread lastHolder([gui = std::move(harness.gui)]() mutable { gui.reset(); });
+        lastHolder.join();
+    }
+    expect_true(owner.expired(), "the final worker-held GUI wrapper must release after main-thread SDL teardown");
+}
+
 // Builds a GUI where a map-layer recorder and an overlapping minimap overlay share the same parent. The
 // minimap is pushed last so it has the higher priority and is visited first by CGameGraphicsObject::event(),
 // exactly like the live layer ordering. Synthetic SDL events dispatched through gui->event() then let us
@@ -4192,6 +4242,7 @@ int main() {
     testRetainedMinimapTextureDoesNotOutliveItsRenderer();
     testMinimapTextureReparentsAcrossLiveAndExpiredGuiOwners();
     testRetainedPopulatedTextureCachesFailClosedAfterGuiExpiry();
+    testRetainedGuiReleasesSdlOwnersAtShutdownBeforeLateTextureAndWorkerCleanup();
     test_minimap_consumes_inside_pointer_events_and_preserves_outside_and_wheel();
 
     return finish_tests();

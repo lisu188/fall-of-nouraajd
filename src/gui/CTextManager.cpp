@@ -41,11 +41,12 @@ int boundedWidth(int width) { return std::clamp(width, 0, MAX_TEXT_WRAP_WIDTH); 
 } // namespace
 
 SDL_Texture *CTextManager::getTexture(const std::string &text, int width, const std::string &role, SDL_Color color) {
-    if (_gui.expired()) {
+    auto gui = _gui.lock();
+    if (!gui || !gui->getRenderer()) {
         _textures.clear();
         return nullptr;
     }
-    if (auto gui = _gui.lock(); gui && gui->isHighContrast())
+    if (gui->isHighContrast())
         color = {255, 255, 255, 255};
     const auto normalizedRole =
         role == "title" || role == "heading" || role == "dialogue" || role == "small" ? role : "body";

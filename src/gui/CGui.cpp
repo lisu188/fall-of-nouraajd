@@ -136,6 +136,13 @@ void refreshProxyTargets(const std::shared_ptr<CGameGraphicsObject> &root) {
 }
 } // namespace
 
+void fn::sdl::GuiTextureDeleter::operator()(SDL_Texture *texture) const noexcept {
+    // SDL_DestroyRenderer frees its textures, even when a wrapper keeps the inactive GUI alive.
+    if (auto gui = owner.lock(); gui && gui->getRenderer()) {
+        TextureDeleter{}(texture);
+    }
+}
+
 CGui::CGui() {
     // Video lives for the process; repeated initialization can overflow SDL 2's
     // subsystem reference counter and invalidate windows from earlier sessions.
@@ -187,6 +194,9 @@ void CGui::shutdown() {
     clearSessionPanelGeometry();
     _textureCache.clear();
     _textManager.clear();
+    renderContext.setRenderer(nullptr);
+    renderer.reset();
+    window.reset();
 }
 
 void CGui::deactivate() { active.store(false, std::memory_order_release); }
