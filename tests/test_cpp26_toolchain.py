@@ -163,6 +163,75 @@ class ConfigureShellTest(unittest.TestCase):
 
 
 @unittest.skipUnless(shutil.which("cmake"), "CMake is unavailable")
+class PchCompilerPolicyTest(unittest.TestCase):
+    def runProbe(self, *, compiler="Clang", version="20.1.8", frontend="MSVC", requested="ON", expected="OFF"):
+        with tempfile.TemporaryDirectory(prefix="nouraajd-pch-policy-") as directory:
+            script = Path(directory) / "probe.cmake"
+            script.write_text(
+                "cmake_minimum_required(VERSION 3.20)\n"
+                "if(POLICY CMP0126)\n"
+                "  cmake_policy(SET CMP0126 NEW)\n"
+                "endif()\n"
+                f'set(CMAKE_CXX_COMPILER_ID "{compiler}")\n'
+                f'set(CMAKE_CXX_COMPILER_VERSION "{version}")\n'
+                f'set(CMAKE_CXX_COMPILER_FRONTEND_VARIANT "{frontend}")\n'
+                f'set(GAME_ENABLE_PCH "{requested}" CACHE BOOL "Requested PCH" FORCE)\n'
+                f'set(GAME_ENABLE_PCH "{requested}")\n'
+                "set(GAME_ENABLE_UNITY_BUILD ON)\n"
+                "set(CMAKE_CXX_STANDARD 26)\n"
+                "set(CMAKE_CXX_STANDARD_REQUIRED ON)\n"
+                "set(CMAKE_CXX_EXTENSIONS OFF)\n"
+                f'include("{(ROOT / "cmake/ConfigurePch.cmake").as_posix()}")\n'
+                f'if(NOT GAME_ENABLE_PCH STREQUAL "{expected}")\n'
+                '  message(FATAL_ERROR "Effective PCH policy differs: ${GAME_ENABLE_PCH}")\n'
+                "endif()\n"
+                "get_property(cached CACHE GAME_ENABLE_PCH PROPERTY VALUE)\n"
+                f'if(NOT cached STREQUAL "{expected}")\n'
+                '  message(FATAL_ERROR "Cached PCH policy differs: ${cached}")\n'
+                "endif()\n"
+                'if(NOT GAME_ENABLE_UNITY_BUILD OR NOT CMAKE_CXX_STANDARD STREQUAL "26"\n'
+                "    OR NOT CMAKE_CXX_STANDARD_REQUIRED OR CMAKE_CXX_EXTENSIONS)\n"
+                '  message(FATAL_ERROR "PCH policy changed Unity or the required C++26 mode")\n'
+                "endif()\n",
+                encoding="utf-8",
+            )
+            return subprocess.run(["cmake", "-P", str(script)], capture_output=True, text=True, timeout=15)
+
+    def testClang20DisablesRequestedPchForBothFrontends(self):
+        for frontend in ("MSVC", "GNU"):
+            for version in ("20.0.0", "20.1.8", "20.9.0"):
+                with self.subTest(frontend=frontend, version=version):
+                    result = self.runProbe(frontend=frontend, version=version)
+                    self.assertEqual(0, result.returncode, result.stdout + result.stderr)
+                    self.assertIn("Disabling GAME_ENABLE_PCH", result.stdout)
+                    self.assertIn("LLVM #172464 and #205965", result.stdout)
+
+    def testGcc15PreservesRequestedPch(self):
+        result = self.runProbe(compiler="GNU", version="15.2.0", frontend="GNU", expected="ON")
+        self.assertEqual(0, result.returncode, result.stdout + result.stderr)
+        self.assertNotIn("Disabling GAME_ENABLE_PCH", result.stdout)
+
+    def testExplicitOffRemainsOff(self):
+        result = self.runProbe(requested="OFF")
+        self.assertEqual(0, result.returncode, result.stdout + result.stderr)
+        self.assertNotIn("Disabling GAME_ENABLE_PCH", result.stdout)
+
+    def testOtherClangVersionsAreOutsideThisPolicy(self):
+        for version in ("19.1.7", "21.1.0"):
+            with self.subTest(version=version):
+                result = self.runProbe(version=version, expected="ON")
+                self.assertEqual(0, result.returncode, result.stdout + result.stderr)
+
+    def testPolicyRunsAfterTheRootOptionAndWindowsFastBuildKeepsUnity(self):
+        cmake = (ROOT / "CMakeLists.txt").read_text(encoding="utf-8")
+        policy = "include(cmake/ConfigurePch.cmake)"
+        self.assertGreater(cmake.index(policy), cmake.index("option(GAME_ENABLE_PCH "))
+        self.assertLess(cmake.index(policy), cmake.index("if (GAME_ENABLE_PCH)"))
+        configure = (ROOT / "configure.bat").read_text(encoding="utf-8")
+        self.assertIn("-DGAME_ENABLE_UNITY_BUILD=ON -DGAME_ENABLE_PCH=ON -DGAME_UNITY_BATCH_SIZE=16", configure)
+
+
+@unittest.skipUnless(shutil.which("cmake"), "CMake is unavailable")
 class Cxx26ConfigureRejectionTest(unittest.TestCase):
     def runProbe(
         self, *, windows=False, compiler="GNU", version="15.2.0", frontend="GNU", features="cxx_std_26", missing=""
