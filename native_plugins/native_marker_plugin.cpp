@@ -19,18 +19,31 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #include "plugin/CPluginRegistrar.h"
 #include "plugin/NativeMarkerPlugin.h"
 
-extern "C" GAME_PLUGIN_EXPORT bool game_plugin_load_v2(const CPluginHostV2 *host) {
+#if !defined(GAME_PLUGIN_TEST_MISSING_VERSION)
+extern "C" GAME_PLUGIN_EXPORT uint32_t game_plugin_api_version() {
+#if defined(GAME_PLUGIN_TEST_LEGACY_VERSION)
+    return 2;
+#else
+    return GAME_PLUGIN_API_VERSION;
+#endif
+}
+#endif
+
+extern "C" GAME_PLUGIN_EXPORT bool game_plugin_load_v3(const CPluginHostV3 *host) {
     auto *registrar = game_plugin_registrar(host);
     return registrar != nullptr && native_plugin::register_dynamic_marker(*registrar);
 }
 
-extern "C" GAME_PLUGIN_EXPORT bool game_plugin_load_direct_v2(const CPluginHostV2 *host) {
+extern "C" GAME_PLUGIN_EXPORT bool game_plugin_load_direct_v3(const CPluginHostV3 *host) {
     auto *registrar = game_plugin_registrar(host);
     return registrar != nullptr && native_plugin::register_direct_dynamic_marker(*registrar);
 }
 
-extern "C" GAME_PLUGIN_EXPORT bool game_plugin_load_bad_api_v2(const CPluginHostV2 *host) {
+extern "C" GAME_PLUGIN_EXPORT bool game_plugin_load_bad_api_v3(const CPluginHostV3 *host) {
     return host != nullptr && host->api_version == GAME_PLUGIN_API_VERSION + 1;
 }
 
-extern "C" GAME_PLUGIN_EXPORT bool game_plugin_load_false_v2(const CPluginHostV2 *) { return false; }
+extern "C" GAME_PLUGIN_EXPORT bool game_plugin_load_false_v3(const CPluginHostV3 *) { return false; }
+
+// A legacy entry that would succeed if invoked: rejection tests must stop before calling it.
+extern "C" GAME_PLUGIN_EXPORT bool game_plugin_load_v2(const void *) { return true; }

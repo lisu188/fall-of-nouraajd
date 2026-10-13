@@ -24,7 +24,7 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 CObjectHandler::CObjectHandler() {}
 
 void CObjectHandler::registerConfig(const std::string &path) {
-    std::shared_ptr<json> config = CConfigurationProvider::getConfig(path);
+    auto config = CConfigurationProvider::getConfig(path);
     if (!config) {
         vstd::logger::warning("Failed to load config:", path);
         return;
@@ -39,7 +39,11 @@ void CObjectHandler::registerConfig(const std::string &path) {
 }
 
 void CObjectHandler::registerConfig(const std::string &name, std::shared_ptr<json> value) {
-    objectConfig[name] = value;
+    registerConfig(name, value ? std::make_shared<const json>(*value) : std::shared_ptr<const json>());
+}
+
+void CObjectHandler::registerConfig(const std::string &name, std::shared_ptr<const json> value) {
+    objectConfig.insert_or_assign(name, std::move(value));
     navigationConfigRevision.fetch_add(1, std::memory_order_release);
 }
 
@@ -76,11 +80,9 @@ std::optional<std::pair<bool, int>> CObjectHandler::getStaticTileNavigation(cons
                      hasCost ? std::max(1, properties["movementCost"].get<int>()) : 1);
 }
 
-std::shared_ptr<json> CObjectHandler::getConfig(const std::string &type) {
-    if (vstd::ctn(objectConfig, type)) {
-        return objectConfig[type];
-    }
-    return nullptr;
+std::shared_ptr<const json> CObjectHandler::getConfig(const std::string &type) {
+    auto found = objectConfig.find(type);
+    return found == objectConfig.end() ? nullptr : found->second;
 }
 
 std::vector<std::string> CObjectHandler::getAllTypes() {
@@ -143,14 +145,13 @@ void CObjectHandler::endMapScriptScope() { mapScriptScopeActive = false; }
 
 // TODO: add option to provide custom configuration from string
 std::shared_ptr<CGameObject> CObjectHandler::_createObject(std::shared_ptr<CGame> game, const std::string &type) {
-    std::shared_ptr<json> config = getConfig(type);
+    auto config = getConfig(type);
     if (!config) {
         vstd::logger::debug("No config found for:", type, "falling back to class-name construction");
-        config = std::make_shared<json>();
-        (*config)["class"] = type;
+        config = std::make_shared<const json>(json{{"class", type}});
     }
-    std::shared_ptr<CGameObject> object =
-        CSerialization::deserialize<std::shared_ptr<json>, std::shared_ptr<CGameObject>>(game, config);
+    auto object = serializationValueOrThrow(
+        CSerialization::deserializeExpected<std::shared_ptr<CGameObject>>(game, *config, type));
     if (!object) {
         return object;
     }

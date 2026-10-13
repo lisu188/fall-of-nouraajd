@@ -359,7 +359,7 @@ void test_vmeta_explicit_pair_hashers() {
     expect_true(text.at({"label", 120}) == 5, "text cache keys should work with an explicit pair hasher");
     std::unordered_set<std::pair<int, int>, vstd::pair_hash> pixels{{1, 2}, {2, 1}};
     expect_true(pixels.size() == 2, "texture masks should retain distinct coordinate pairs");
-    expect_true(!CTypes::serializers()->empty(), "the serializer registry should initialize with the explicit hasher");
+    expect_true(CTypes::codecCount() != 0, "the typed JSON codec registry should initialize");
 }
 
 void testUtilityBugfixIntegration() {

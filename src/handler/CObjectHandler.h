@@ -53,6 +53,8 @@ class CObjectHandler : public CGameObject {
 
     void registerConfig(const std::string &name, std::shared_ptr<json> value);
 
+    void registerConfig(const std::string &name, std::shared_ptr<const json> value);
+
     void unregisterConfig(const std::string &name);
 
     void registerConfig(const std::set<std::string> &paths);
@@ -72,7 +74,7 @@ class CObjectHandler : public CGameObject {
 
     std::shared_ptr<CGameObject> getType(const std::string &name);
 
-    std::shared_ptr<json> getConfig(const std::string &type);
+    std::shared_ptr<const json> getConfig(const std::string &type);
 
     std::string getClass(const std::string &type);
     std::uint64_t getNavigationConfigRevision() const;
@@ -90,7 +92,7 @@ class CObjectHandler : public CGameObject {
 
     bool mapScriptScopeActive = false;
 
-    std::unordered_map<std::string, std::shared_ptr<json>> objectConfig;
+    std::unordered_map<std::string, std::shared_ptr<const json>> objectConfig;
     std::atomic_uint64_t navigationConfigRevision{1};
     bool nativeTileFactory = false;
 };

@@ -191,15 +191,15 @@ class CConfigurationProvider {
 
     // Compatibility-only process-wide config cache for callers without a game context.
     // Game-attached code must use CGame::getConfigurationProvider()->getConfiguration().
-    static std::shared_ptr<json> getConfig(const std::string &path);
+    static std::shared_ptr<const json> getConfig(const std::string &path);
 
-    std::shared_ptr<json> getConfiguration(const std::string &path);
+    std::shared_ptr<const json> getConfiguration(const std::string &path);
 
   private:
     void loadConfig(const std::string &path);
 
     std::shared_ptr<CResourcesProvider> resourcesProvider;
-    std::map<std::string, std::shared_ptr<json>> configurations;
+    std::map<std::string, std::shared_ptr<const json>> configurations;
 };
 
 class CAnimationProvider {

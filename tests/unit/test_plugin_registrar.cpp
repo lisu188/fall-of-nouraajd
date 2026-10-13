@@ -164,7 +164,7 @@ void test_gameplay_type_table_registration() {
 #define FN_CHECK_WRAPPED(T, ...)                                                                                       \
     FN_CHECK_TYPE(T)                                                                                                   \
     expect_true(wrapperNames.insert(CWrapper<T>::static_meta()->name()).second,                                        \
-                "CWrapper<" #T "> must have a unique reflected type name");                                           \
+                "CWrapper<" #T "> must have a unique reflected type name");                                            \
     expect_true(handler->getType(CWrapper<T>::static_meta()->name()) != nullptr,                                       \
                 "CWrapper<" #T "> must be registered for the scripted base " #T);
     FN_GAMEPLAY_TYPES(FN_CHECK_TYPE, FN_CHECK_WRAPPED)
@@ -179,17 +179,21 @@ void test_gameplay_type_table_registration() {
                 "CPlayer metadata must declare its CCreature base chain");
 }
 
-void test_plugin_host_v2_handshake() {
+void test_plugin_host_v3_handshake() {
+    static_assert(GAME_PLUGIN_API_VERSION == 3);
     auto game = std::make_shared<CGame>();
     CPluginRegistrar registrar(game);
 
-    CPluginHostV2 host{GAME_PLUGIN_API_VERSION, &registrar};
+    CPluginHostV3 host{GAME_PLUGIN_API_VERSION, &registrar};
     expect_true(game_plugin_registrar(&host) == &registrar, "a matching api version must hand back the registrar");
 
-    CPluginHostV2 badVersion{GAME_PLUGIN_API_VERSION + 1, &registrar};
+    CPluginHostV3 badVersion{GAME_PLUGIN_API_VERSION + 1, &registrar};
     expect_true(game_plugin_registrar(&badVersion) == nullptr, "a version mismatch must be rejected");
 
-    CPluginHostV2 nullRegistrar{GAME_PLUGIN_API_VERSION, nullptr};
+    CPluginHostV3 legacyVersion{2, &registrar};
+    expect_true(game_plugin_registrar(&legacyVersion) == nullptr, "a legacy version 2 host must be rejected");
+
+    CPluginHostV3 nullRegistrar{GAME_PLUGIN_API_VERSION, nullptr};
     expect_true(game_plugin_registrar(&nullRegistrar) == nullptr, "a null registrar must be rejected");
     expect_true(game_plugin_registrar(nullptr) == nullptr, "a null host must be rejected");
 }
@@ -219,7 +223,7 @@ int main() {
     test_registrar_rejects_invalid_arguments();
     test_registrar_registers_config_json();
     test_gameplay_type_table_registration();
-    test_plugin_host_v2_handshake();
+    test_plugin_host_v3_handshake();
     test_cpp_plugin_loads_through_registrar();
 
     return finish_tests();

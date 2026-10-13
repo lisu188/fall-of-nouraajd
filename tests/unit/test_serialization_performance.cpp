@@ -27,6 +27,7 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #include "veventloop.h"
 
 #include <cstddef>
+#include <iostream>
 #include <memory>
 #include <set>
 #include <string>
@@ -39,6 +40,42 @@ constexpr int MAP_LOAD_OBJECT_COUNT = 32;
 constexpr int MAP_LOAD_PROPERTY_COUNT = 8;
 constexpr int EFFECT_GRAPH_ACTOR_COUNT = 8;
 constexpr std::size_t EFFECT_GRAPH_BYTES_PER_ACTOR = 8192;
+
+void testTypedCodecWorkIsBoundedPerOperation() {
+    struct Value {
+        int number;
+    };
+    struct Work {
+        std::size_t encodes = 0;
+        std::size_t decodes = 0;
+    };
+    constexpr int operation_count = 512;
+    auto work = std::make_shared<Work>();
+    CTypes::registerJsonCodec<Value>(
+        [work](const Value &value) -> CSerializationResult<json> {
+            ++work->encodes;
+            return json(value.number);
+        },
+        [work](const std::shared_ptr<CGame> &, const json &document) -> CSerializationResult<Value> {
+            ++work->decodes;
+            return Value{document.get<int>()};
+        });
+    const auto registered = CTypes::codecCount();
+    for (int index = 0; index < operation_count; ++index) {
+        auto encoded = CSerialization::serializeExpected(Value{index});
+        expect_true(encoded.has_value(), "bounded typed codec workload must serialize");
+        if (!encoded) {
+            continue;
+        }
+        auto decoded = CSerialization::deserializeExpected<Value>(nullptr, *encoded);
+        expect_true(decoded && decoded->number == index, "bounded typed codec workload must round-trip");
+    }
+    std::cout << "Typed JSON codec work: operations=" << operation_count << " encodes=" << work->encodes
+              << " decodes=" << work->decodes << " registry=" << CTypes::codecCount() << '\n';
+    expect_true(work->encodes == operation_count && work->decodes == operation_count,
+                "one codec invocation is permitted per encode/decode operation");
+    expect_true(CTypes::codecCount() == registered, "codec execution must never mutate registry entries");
+}
 
 class EffectSerializationProbe : public CCreature {
     V_META(EffectSerializationProbe, CCreature,
@@ -284,6 +321,7 @@ void testMutualEffectGraphSerializationHasBoundedActorDefinitions() {
 } // namespace
 
 void run_serialization_performance_tests() {
+    testTypedCodecWorkIsBoundedPerOperation();
     test_map_load_property_notifications_are_bounded_per_object();
     testMutualEffectGraphSerializationHasBoundedActorDefinitions();
 }

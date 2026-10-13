@@ -32,8 +32,8 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #include <unordered_set>
 #include <vector>
 
-std::shared_ptr<CSerializerBase> CSerialization::serializer(std::pair<std::type_index, std::type_index> key) {
-    return (*CTypes::serializers())[key];
+std::shared_ptr<const CSerializerBase> CSerialization::serializer(std::type_index type) {
+    return CTypes::findCodec(type);
 }
 
 namespace {
@@ -139,7 +139,7 @@ class EffectReadContext {
 
     [[noreturn]] void fail(const std::string &message) {
         failure = "Invalid effect graph: " + message;
-        throw std::runtime_error(failure);
+        throw CSerializationException({CSerializationErrorCode::MalformedGraph, {}, {}, {}, failure});
     }
 
     int readId(const json &value) {
@@ -491,34 +491,58 @@ bool rejectScalarForPrimitiveCollection(std::type_index property, const std::str
 
 class CGameObjectPointerSerializer : public CSerializerBase {
   public:
-    std::any serialize(std::any object) final {
-        return std::any(object_serialize(vstd::any_cast<std::shared_ptr<CGameObject>>(object)));
+    CSerializationResult<json> serialize(const std::any &object) const final {
+        return serializationResult([&]() -> json {
+            auto encoded = object_serialize(vstd::any_cast<std::shared_ptr<CGameObject>>(object));
+            return std::move(*encoded);
+        });
     }
 
-    std::any deserialize(std::shared_ptr<CGame> map, std::any object) final {
-        return std::any(object_deserialize(map, vstd::any_cast<std::shared_ptr<json>>(object)));
+    CSerializationResult<std::any> deserialize(const std::shared_ptr<CGame> &map, const json &object) const final {
+        return deserializeShared(map, std::make_shared<json>(object));
+    }
+
+    CSerializationResult<std::any> deserializeShared(const std::shared_ptr<CGame> &map,
+                                                     const std::shared_ptr<json> &object) const final {
+        return serializationResult([&]() -> std::any { return object_deserialize(map, object); });
     }
 };
 
 class CGameObjectSetSerializer : public CSerializerBase {
   public:
-    std::any serialize(std::any object) final {
-        return std::any(array_serialize(vstd::any_cast<std::set<std::shared_ptr<CGameObject>>>(object)));
+    CSerializationResult<json> serialize(const std::any &object) const final {
+        return serializationResult([&]() -> json {
+            auto encoded = array_serialize(vstd::any_cast<std::set<std::shared_ptr<CGameObject>>>(object));
+            return std::move(*encoded);
+        });
     }
 
-    std::any deserialize(std::shared_ptr<CGame> map, std::any object) final {
-        return std::any(array_deserialize(map, vstd::any_cast<std::shared_ptr<json>>(object)));
+    CSerializationResult<std::any> deserialize(const std::shared_ptr<CGame> &map, const json &object) const final {
+        return deserializeShared(map, std::make_shared<json>(object));
+    }
+
+    CSerializationResult<std::any> deserializeShared(const std::shared_ptr<CGame> &map,
+                                                     const std::shared_ptr<json> &object) const final {
+        return serializationResult([&]() -> std::any { return array_deserialize(map, object); });
     }
 };
 
 class CGameObjectMapSerializer : public CSerializerBase {
   public:
-    std::any serialize(std::any object) final {
-        return std::any(map_serialize(vstd::any_cast<std::map<std::string, std::shared_ptr<CGameObject>>>(object)));
+    CSerializationResult<json> serialize(const std::any &object) const final {
+        return serializationResult([&]() -> json {
+            auto encoded = map_serialize(vstd::any_cast<std::map<std::string, std::shared_ptr<CGameObject>>>(object));
+            return std::move(*encoded);
+        });
     }
 
-    std::any deserialize(std::shared_ptr<CGame> map, std::any object) final {
-        return std::any(map_deserialize(map, vstd::any_cast<std::shared_ptr<json>>(object)));
+    CSerializationResult<std::any> deserialize(const std::shared_ptr<CGame> &map, const json &object) const final {
+        return deserializeShared(map, std::make_shared<json>(object));
+    }
+
+    CSerializationResult<std::any> deserializeShared(const std::shared_ptr<CGame> &map,
+                                                     const std::shared_ptr<json> &object) const final {
+        return serializationResult([&]() -> std::any { return map_deserialize(map, object); });
     }
 };
 } // namespace
@@ -625,13 +649,13 @@ bool CSerialization::isString(const std::shared_ptr<CGameObject> &object, const 
 void CSerialization::setOtherProperty(std::type_index serializedId, std::type_index deserializedId,
                                       const std::shared_ptr<CGameObject> &object, const std::string &key,
                                       const std::any &value) {
-    std::shared_ptr<CSerializerBase> serializer =
-        vstd::ctn(*CTypes::serializers(), std::make_pair(serializedId, deserializedId))
-            ? (*CTypes::serializers())[std::make_pair(serializedId, deserializedId)]
-            : nullptr;
+    auto serializer = CTypes::findCodec(deserializedId);
     if (!serializer) {
-        vstd::logger::warning("No serializer for property:", key);
-        return;
+        throw CSerializationException({CSerializationErrorCode::MissingCodec,
+                                       {},
+                                       key,
+                                       object ? object->meta()->name() : std::string(),
+                                       "No JSON codec registered for property '" + key + "'"});
     }
     std::any result;
     try {
@@ -644,7 +668,22 @@ void CSerialization::setOtherProperty(std::type_index serializedId, std::type_in
             }
         }
         CScopedArrayDeserializeContext arrayContext(context);
-        result = vstd::not_null(serializer, "No serializer!")->deserialize(object->getGame(), value);
+        if (serializedId != std::type_index(typeid(std::shared_ptr<json>))) {
+            throw CSerializationException({CSerializationErrorCode::TypeMismatch,
+                                           {},
+                                           key,
+                                           object->meta()->name(),
+                                           "Reflected JSON input has an incompatible erased type"});
+        }
+        result = serializationValueOrThrow(
+            serializer->deserializeShared(object->getGame(), vstd::any_cast<std::shared_ptr<json>>(value)));
+    } catch (const CSerializationException &exception) {
+        auto error = exception.getError();
+        error.propertyPath = key + (error.propertyPath.empty() ? std::string() : "." + error.propertyPath);
+        if (error.objectType.empty()) {
+            error.objectType = object->meta()->name();
+        }
+        throw CSerializationException(std::move(error));
     } catch (const std::exception &ex) {
         throw std::runtime_error("Failed to deserialize property '" + key + "': " + ex.what());
     }
@@ -701,18 +740,16 @@ void CSerialization::setProperty(const std::shared_ptr<json> &conf, const std::s
                 return;
             }
         }
-        std::shared_ptr<CSerializerBase> serializer;
-        for (const auto &entry : *CTypes::serializers()) {
-            auto types = entry.first;
-            if (types.second == propertyType) {
-                vstd::fail_if(serializer, "Ambiguous serializer!");
-                serializer = entry.second;
-            }
-        }
+        auto serializer = CTypes::findCodec(propertyType);
         if (serializer) {
-            add_member(conf, propertyName, vstd::any_cast<std::shared_ptr<json>>(serializer->serialize(propertyValue)));
+            auto result = serializationValueOrThrow(serializer->serialize(propertyValue));
+            (*conf)[propertyName] = std::move(result);
         } else {
-            vstd::logger::warning("No serializer for:", propertyName);
+            throw CSerializationException({CSerializationErrorCode::MissingCodec,
+                                           {},
+                                           propertyName,
+                                           propertyType.name(),
+                                           "No JSON codec registered for reflected property"});
         }
     }
 }
@@ -756,7 +793,11 @@ std::shared_ptr<CGameObject> object_deserialize(const std::shared_ptr<CGame> &ga
     std::shared_ptr<CGameObject> object;
     if (!game || !config || !config->is_object()) {
         if (CSerialization::isStrict()) {
-            throw std::runtime_error("Cannot deserialize a missing or non-object game object");
+            throw CSerializationException({CSerializationErrorCode::InvalidInput,
+                                           {},
+                                           {},
+                                           {},
+                                           "Cannot deserialize a missing or non-object game object"});
         }
         return nullptr;
     }
@@ -790,7 +831,11 @@ std::shared_ptr<CGameObject> object_deserialize(const std::shared_ptr<CGame> &ga
         } else if (config->contains("class") && (*config)["class"].is_string()) {
             type = (*config)["class"].get<std::string>();
         }
-        throw std::runtime_error("Cannot deserialize unresolved game object: " + type);
+        throw CSerializationException({CSerializationErrorCode::InvalidInput,
+                                       {},
+                                       {},
+                                       type,
+                                       "Cannot deserialize unresolved game object: " + type});
     }
     if (object && config->is_object() && config->count("properties")) {
         auto properties = &(*config)["properties"];

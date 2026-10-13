@@ -18,7 +18,9 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #include "plugin/NativePlugin.h"
 #include "plugin/CPluginRegistrar.h"
 
-extern "C" NATIVE_PLUGIN_EXPORT bool game_plugin_load_v2(const CPluginHostV2 *host) {
+extern "C" NATIVE_PLUGIN_EXPORT uint32_t game_plugin_api_version() { return GAME_PLUGIN_API_VERSION; }
+
+extern "C" NATIVE_PLUGIN_EXPORT bool game_plugin_load_v3(const CPluginHostV3 *host) {
     auto *registrar = game_plugin_registrar(host);
     if (registrar == nullptr) {
         return false;

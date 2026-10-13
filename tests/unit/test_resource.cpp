@@ -34,6 +34,7 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #include <iterator>
 #include <memory>
 #include <string>
+#include <type_traits>
 
 std::set<std::string> getPluginAutoDiscoveryExclusions(const json &manifest);
 
@@ -53,7 +54,7 @@ class ScopedCurrentPath {
     std::filesystem::path replacementPath;
 };
 
-std::string json_string_value(const std::shared_ptr<json> &node, const std::string &key) {
+std::string json_string_value(const std::shared_ptr<const json> &node, const std::string &key) {
     if (!node || !node->contains(key) || !node->at(key).is_string()) {
         return {};
     }
@@ -67,6 +68,28 @@ bool write_text_file(const std::filesystem::path &path, const std::string &text)
     }
     stream << text;
     return static_cast<bool>(stream);
+}
+
+void testImmutableObjectConfigurationsKeepTheirDocumentOwner() {
+    auto handler = std::make_shared<CObjectHandler>();
+    auto mutable_document = std::make_shared<json>(json{{"class", "CItem"}, {"properties", {{"power", 7}}}});
+    handler->registerConfig("sealedItem", mutable_document);
+    auto sealed = handler->getConfig("sealedItem");
+    static_assert(std::is_const_v<std::remove_reference_t<decltype(*sealed)>>);
+    (*mutable_document)["properties"]["power"] = 99;
+    expect_true(sealed && sealed->at("properties").at("power").get<int>() == 7,
+                "mutable registration inputs are sealed so later caller writes cannot mutate cached configs");
+
+    auto owner = std::make_shared<const json>(json{{"entry", {{"class", "CItem"}, {"properties", {{"power", 11}}}}}});
+    std::weak_ptr<const json> lifetime = owner;
+    handler->registerConfig("aliasedItem", CJsonUtil::alias(owner, owner->at("entry")));
+    owner.reset();
+    auto alias = handler->getConfig("aliasedItem");
+    handler.reset();
+    expect_true(!lifetime.expired() && alias && alias->at("properties").at("power").get<int>() == 11,
+                "an immutable cached child keeps the whole document alive after its handler is destroyed");
+    alias.reset();
+    expect_true(lifetime.expired(), "the immutable document is released when its final aliased owner is released");
 }
 
 void test_manifest_scopes_control_plugin_auto_discovery() {
@@ -532,9 +555,9 @@ void test_two_game_contexts_isolate_provider_cache_and_object_config() {
 
     expect_true(firstGame->getObjectHandler() != secondGame->getObjectHandler(),
                 "each game context should own a distinct object handler instance");
-    expect_true(firstGame->getObjectHandler()->getConfig(objectTypeId) == firstItemConfig,
+    expect_true(firstGame->getObjectHandler()->getConfig(objectTypeId)->dump() == firstItemConfig->dump(),
                 "the first game object handler should return only its own registered config");
-    expect_true(secondGame->getObjectHandler()->getConfig(objectTypeId) == secondItemConfig,
+    expect_true(secondGame->getObjectHandler()->getConfig(objectTypeId)->dump() == secondItemConfig->dump(),
                 "the second game object handler should return only its own registered config");
 
     auto firstItem = firstGame->createObject<CItem>(objectTypeId);
@@ -778,6 +801,7 @@ int main() {
     test_manifest_scopes_control_plugin_auto_discovery();
     test_manifest_exclusions_require_trusted_script_paths();
     test_resource_provider_paths_and_config_loader();
+    testImmutableObjectConfigurationsKeepTheirDocumentOwner();
     test_resource_provider_save_uses_provider_root_when_cwd_changes();
     test_configuration_provider_instances_do_not_share_config_cache();
     test_load_game_creates_context_owned_providers();

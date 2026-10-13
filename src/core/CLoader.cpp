@@ -735,8 +735,11 @@ std::expected<std::shared_ptr<json>, std::string> build_save_envelope(const std:
     if (auto player = map->getPlayer()) {
         player->captureQuestJournal();
     }
-    auto snapshot = CSerialization::serialize<std::shared_ptr<json>>(map);
-    return CSaveFormat::buildEnvelope(snapshot, map->getMapName());
+    auto snapshot = CSerialization::serializeExpected(map, map->getMapName());
+    if (!snapshot) {
+        return std::unexpected(snapshot.error().message);
+    }
+    return CSaveFormat::buildEnvelope(std::make_shared<json>(std::move(*snapshot)), map->getMapName());
 }
 
 void apply_authored_map_metadata(const std::shared_ptr<CGame> &game, const std::shared_ptr<CMap> &map,
@@ -744,7 +747,7 @@ void apply_authored_map_metadata(const std::shared_ptr<CGame> &game, const std::
     if (!game || !map) {
         return;
     }
-    if (std::shared_ptr<json> mapc = game->getConfigurationProvider()->getConfiguration(getMapPath(mapName))) {
+    if (auto mapc = game->getConfigurationProvider()->getConfiguration(getMapPath(mapName))) {
         map->setDefaultTiles({});
         map->setOutOfBoundsTiles({});
         map->setXBounds({});
@@ -795,7 +798,7 @@ class CScopedObjectConfig {
   private:
     std::shared_ptr<CObjectHandler> handler;
     std::string name;
-    std::shared_ptr<json> previous;
+    std::shared_ptr<const json> previous;
 };
 
 bool rehydrate_loaded_map(const std::shared_ptr<CGame> &game, const std::shared_ptr<CMap> &map,
@@ -1040,7 +1043,7 @@ std::set<std::string> getPluginAutoDiscoveryExclusions(const json &manifest) {
     return paths;
 }
 
-void CMapLoader::loadFromTmx(const std::shared_ptr<CMap> &map, const std::shared_ptr<json> &mapc) {
+void CMapLoader::loadFromTmx(const std::shared_ptr<CMap> &map, const std::shared_ptr<const json> &mapc) {
     if (mapc && mapc->is_object()) {
         const json emptyObject = json::object();
         const json emptyArray = json::array();
@@ -1290,7 +1293,7 @@ void activate_map_scope(const std::shared_ptr<CGame> &game, const std::string &m
 }
 
 std::shared_ptr<CMap> CMapLoader::loadNewMap(const std::shared_ptr<CGame> &game, const std::string &mapName) {
-    if (std::shared_ptr<json> mapc = game->getConfigurationProvider()->getConfiguration(getMapPath(mapName))) {
+    if (auto mapc = game->getConfigurationProvider()->getConfiguration(getMapPath(mapName))) {
         std::shared_ptr<CMap> map = game->getObjectHandler()->createObject<CMap>(game);
         game->setMap(map);
         load_map_resources(game, mapName);

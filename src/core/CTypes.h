@@ -18,6 +18,7 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #pragma once
 
 #include <stdexcept>
+#include <shared_mutex>
 
 #include "core/CConcepts.h"
 #include "core/CGlobal.h"
@@ -28,9 +29,21 @@ class CTypes {
   public:
     static std::unordered_map<std::string, std::function<std::shared_ptr<CGameObject>()>> *builders();
 
-    static std::unordered_map<std::pair<std::type_index, std::type_index>, std::shared_ptr<CSerializerBase>,
-                              vstd::pair_hash> *
-    serializers();
+    static std::shared_ptr<const CSerializerBase> findCodec(std::type_index type);
+
+    static std::size_t codecCount();
+
+    static void registerCodec(std::type_index type, std::shared_ptr<const CSerializerBase> codec);
+
+    template <typename T, typename Encode, typename Decode>
+    static void registerJsonCodec(Encode encode, Decode decode) {
+        registerCodec(typeid(T), std::make_shared<CTypedJsonCodec<T>>(std::move(encode), std::move(decode)));
+    }
+
+    template <typename T, typename Encode, typename Decode> static void registerJsonType(Encode encode, Decode decode) {
+        registerJsonCodec<T>(std::move(encode), std::move(decode));
+        register_custom_setter<T>();
+    }
 
     static std::unordered_set<std::type_index> *pointer_types();
 
@@ -67,8 +80,7 @@ class CTypes {
     }
 
     template <typename Serialized, typename Deserialized> static void register_serializer() {
-        (*serializers())[vstd::type_pair<Serialized, Deserialized>()] =
-            std::make_shared<CSerializer<Serialized, Deserialized>>();
+        registerCodec(typeid(Deserialized), std::make_shared<CSerializer<Serialized, Deserialized>>());
     }
 
     template <typename T> static void register_custom_setter() {
@@ -81,10 +93,10 @@ class CTypes {
     template <typename Serialized, typename Deserialized, fn::SerializerCallable<Serialized, Deserialized> Serialize,
               fn::DeserializerCallable<Serialized, Deserialized> Deserialize>
     static void register_custom_serializer(Serialize serialize, Deserialize deserialize) {
-        (*serializers())[vstd::type_pair<Serialized, Deserialized>()] =
-            std::make_shared<CCustomSerializer<Serialized, Deserialized>>(
-                std::function<Serialized(Deserialized)>(std::move(serialize)),
-                std::function<Deserialized(std::shared_ptr<CGame>, Serialized)>(std::move(deserialize)));
+        registerCodec(typeid(Deserialized),
+                      std::make_shared<CCustomSerializer<Serialized, Deserialized>>(
+                          std::function<Serialized(Deserialized)>(std::move(serialize)),
+                          std::function<Deserialized(std::shared_ptr<CGame>, Serialized)>(std::move(deserialize))));
     }
 
     template <fn::MetaRegisteredGameObject T> static void register_builder() {
@@ -100,12 +112,9 @@ class CTypes {
     template <fn::GameObjectDerived T> static void register_pointer() {}
 
     template <fn::GameObjectDerived T> static void register_serializer() {
-        (*serializers())[vstd::type_pair<std::shared_ptr<json>, std::shared_ptr<T>>()] =
-            game_object_pointer_serializer();
-        (*serializers())[vstd::type_pair<std::shared_ptr<json>, std::set<std::shared_ptr<T>>>()] =
-            game_object_set_serializer();
-        (*serializers())[vstd::type_pair<std::shared_ptr<json>, std::map<std::string, std::shared_ptr<T>>>()] =
-            game_object_map_serializer();
+        registerCodec(typeid(std::shared_ptr<T>), game_object_pointer_serializer());
+        registerCodec(typeid(std::set<std::shared_ptr<T>>), game_object_set_serializer());
+        registerCodec(typeid(std::map<std::string, std::shared_ptr<T>>), game_object_map_serializer());
     }
 
     template <fn::GameObjectDerived T, fn::GameObjectDerived U> static void register_cast() {}
@@ -176,4 +185,8 @@ class CTypes {
         }
         setter->second(object, key, property);
     }
+
+  private:
+    static std::unordered_map<std::type_index, std::shared_ptr<const CSerializerBase>> &codecs();
+    static std::shared_mutex &codecMutex();
 };

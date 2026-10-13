@@ -32,8 +32,8 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 extern "C" {
 #endif
 
-// The native plugin entry handshake. The host constructs a CPluginHostV2 on the stack, resolves
-// the entry symbol (default "game_plugin_load_v2"), and invokes it once. The registrar pointer is
+// The native plugin entry handshake. The host constructs a CPluginHostV3 on the stack, resolves
+// the entry symbol (default "game_plugin_load_v3"), and invokes it once. The registrar pointer is
 // valid only for the duration of that call.
 //
 // In-tree native plugins are trusted, engine-linked modules; the real host surface is the C++
@@ -45,14 +45,15 @@ extern "C" {
 // serializers into process-global tables and per-game closures whose code lives in the plugin
 // module, and scripted runtimes retain object instances for the engine's lifetime, so unloading
 // a module could never be memory-safe. Loaded libraries stay pinned until process exit.
-enum { GAME_PLUGIN_API_VERSION = 2 };
+enum { GAME_PLUGIN_API_VERSION = 3 };
 
-typedef struct CPluginHostV2 {
+typedef struct CPluginHostV3 {
     uint32_t api_version;
     void *registrar; /* CPluginRegistrar*, valid only during the load call */
-} CPluginHostV2;
+} CPluginHostV3;
 
-typedef bool (*CPluginLoadV2)(const CPluginHostV2 *host);
+typedef bool (*CPluginLoadV3)(const CPluginHostV3 *host);
+typedef uint32_t (*CPluginApiVersion)(void);
 
 #ifdef __cplusplus
 }
@@ -61,7 +62,7 @@ typedef bool (*CPluginLoadV2)(const CPluginHostV2 *host);
 #ifdef __cplusplus
 class CPluginRegistrar;
 
-inline CPluginRegistrar *game_plugin_registrar(const CPluginHostV2 *host) {
+inline CPluginRegistrar *game_plugin_registrar(const CPluginHostV3 *host) {
     if (host == nullptr || host->api_version != GAME_PLUGIN_API_VERSION || host->registrar == nullptr) {
         return nullptr;
     }

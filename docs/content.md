@@ -34,8 +34,12 @@ the manifest declares native/cpp plugins, explicit ordering, and map scoping.
 | `library` | native   | Shared library under `plugins/native/` (extension optional). |
 | `type`    | cpp      | Registered `CPlugin` subclass name. |
 | `path`    | python/lua | Resource path under the trusted plugin roots. |
-| `entry`   | no (native) | Entry symbol, default `game_plugin_load_v2`. |
+| `entry`   | no (native) | Entry symbol, default `game_plugin_load_v3`. |
 | `scope`   | no       | `{ "map": "<name>" }` loads the entry with that map's plugins instead of globally. |
+
+Native modules must export `uint32_t game_plugin_api_version()` returning `3` and a version-3 entry accepting
+`const CPluginHostV3 *`. Rebuild older modules against the current headers. The loader checks the version before
+calling an entry, including custom entries, and explicitly rejects version-2 entry names.
 
 The validator schema-checks the manifest (unknown kinds, missing source fields,
 duplicate ids, unknown scope maps, missing plugin files) and cross-checks that

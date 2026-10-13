@@ -599,7 +599,7 @@ void test_json_parse_expected_success_and_failure() {
     expect_true(!CJsonUtil::isMap(null_json), "null json should not be accepted as maps");
 
     auto parsed = CJsonUtil::parse_expected("{\"value\": 3}", "unit-json");
-    expect_true(parsed.has_value() && (*parsed)->at("value").get<int>() == 3,
+    expect_true(parsed.has_value() && parsed->at("value").get<int>() == 3,
                 "parse_expected should return parsed json on success");
 
     auto failed = CJsonUtil::parse_expected("{", "unit-json-error");
@@ -2087,9 +2087,11 @@ void testSerializerBaseDestruction() {
 
         ~SerializerLifetimeProbe() override { destroyed = true; }
 
-        std::any serialize(std::any object) override { return object; }
+        CSerializationResult<json> serialize(const std::any &) const override { return json(); }
 
-        std::any deserialize(std::shared_ptr<CGame>, std::any object) override { return object; }
+        CSerializationResult<std::any> deserialize(const std::shared_ptr<CGame> &, const json &) const override {
+            return std::any();
+        }
 
       private:
         bool &destroyed;
@@ -2101,6 +2103,69 @@ void testSerializerBaseDestruction() {
         expect_true(!destroyed, "the base owner keeps the derived serializer alive");
     }
     expect_true(destroyed, "destruction through the serializer base releases derived resources");
+}
+
+void testTypedJsonCodecsOwnResultsAndPreserveErrors() {
+    struct Value {
+        int number;
+    };
+    struct Missing {
+        int number;
+    };
+    const auto original_count = CTypes::codecCount();
+    for (int index = 0; index < 32; ++index) {
+        auto missing = CSerialization::serializeExpected(Missing{index}, "missing-codec");
+        expect_true(!missing && missing.error().code == CSerializationErrorCode::MissingCodec &&
+                        missing.error().source == "missing-codec" && !missing.error().objectType.empty(),
+                    "missing codecs return a typed diagnostic rather than inserting or dereferencing null");
+        expect_true(!CTypes::findCodec(typeid(Missing)), "missing codec lookups remain read-only");
+    }
+    expect_true(CTypes::codecCount() == original_count, "failed codec lookups must not grow the registry");
+
+    const json *observed_input = nullptr;
+    CTypes::registerJsonCodec<Value>(
+        [](const Value &value) -> CSerializationResult<json> { return json{{"number", value.number}}; },
+        [&observed_input](const std::shared_ptr<CGame> &, const json &document) -> CSerializationResult<Value> {
+            observed_input = &document;
+            if (!document.contains("number") || !document.at("number").is_number_integer()) {
+                return std::unexpected(CSerializationError{
+                    CSerializationErrorCode::InvalidInput, {}, "number", "Value", "number must be an integer"});
+            }
+            return Value{document.at("number").get<int>()};
+        });
+    auto encoded = CSerialization::serializeExpected(Value{7}, "typed-codec");
+    expect_true(encoded && encoded->at("number").get<int>() == 7, "typed codecs return an owned JSON value");
+    const json document{{"number", 11}};
+    auto decoded = CSerialization::deserializeExpected<Value>(nullptr, document, "typed-codec");
+    expect_true(decoded && decoded->number == 11 && observed_input == &document,
+                "typed decoders borrow the caller's const document without copying it");
+    auto rejected = CSerialization::deserializeExpected<Value>(nullptr, json{{"number", "bad"}}, "bad-value");
+    expect_true(!rejected && rejected.error().code == CSerializationErrorCode::InvalidInput &&
+                    rejected.error().source == "bad-value" && rejected.error().propertyPath == "number" &&
+                    rejected.error().objectType == "Value",
+                "typed codec errors preserve source, property path, object type and code");
+    auto wrong_type = CTypes::findCodec(typeid(Value))->serialize(std::any(7));
+    expect_true(!wrong_type && wrong_type.error().code == CSerializationErrorCode::TypeMismatch,
+                "erased values are checked only at the codec boundary");
+
+    auto game = std::make_shared<CGame>();
+    const json malformed_graph{{"class", "CGameObject"}, {"effectGraph", {{"version", 2}, {"actors", json::array()}}}};
+    auto graph_failure =
+        CSerialization::deserializeExpected<std::shared_ptr<CGameObject>>(game, malformed_graph, "malformed-graph");
+    expect_true(!graph_failure && graph_failure.error().code == CSerializationErrorCode::MalformedGraph &&
+                    graph_failure.error().source == "malformed-graph",
+                "malformed graph failures keep their typed code across the native expected boundary");
+    auto following_operation = CSerialization::deserializeExpected<std::shared_ptr<CGameObject>>(
+        game, json{{"class", "CGameObject"}}, "following-operation");
+    expect_true(following_operation && *following_operation,
+                "a failed graph operation must not retain a dangling graph context in the next operation");
+
+    // Replace the stack-observing test codec before its captured local variable leaves scope.
+    CTypes::registerJsonCodec<Value>(
+        [](const Value &value) -> CSerializationResult<json> { return json(value.number); },
+        [](const std::shared_ptr<CGame> &, const json &value) -> CSerializationResult<Value> {
+            return Value{value.get<int>()};
+        });
 }
 
 void test_serialization_collection_and_error_helpers() {
@@ -3396,6 +3461,7 @@ int main() {
     test_save_format_bounds_crafted_documents();
     testSerializationScopeRestoration();
     testSerializerBaseDestruction();
+    testTypedJsonCodecsOwnResultsAndPreserveErrors();
     test_serialization_collection_and_error_helpers();
     test_generate_name_collision_retry();
     test_creature_effective_stats_baseline_capture();
