@@ -1,5 +1,6 @@
 # Copyright (C) 2026 Andrzej Lis
 # SPDX-License-Identifier: GPL-3.0-or-later
+import ast
 import os
 import shutil
 import subprocess
@@ -49,6 +50,57 @@ class BuildDirectoryTest(unittest.TestCase):
             )
             with mock.patch("scripts.check_build_directory.shutil.which", return_value=str(compiler)):
                 validateBuildDirectory(build_dir, "Ninja", "g++-15")
+
+
+class DefaultBuildConsumerTest(unittest.TestCase):
+    def testRunnerDiscoversCompilerSpecificRelease(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            name = "cmake-build-clangcl20-release" if os.name == "nt" else "cmake-build-gcc15-release"
+            (root / name).mkdir()
+            (root / "cmake-build-release").mkdir()
+            tree = ast.parse((ROOT / "test.py").read_text(encoding="utf-8"))
+            body = []
+            for node in tree.body:
+                if isinstance(node, ast.FunctionDef) and node.name == "resolveBuildDirectory":
+                    body.append(node)
+                elif isinstance(node, ast.Assign) and any(
+                    isinstance(target, ast.Name) and target.id in {"build_dir", "build_dir_override"}
+                    for target in node.targets
+                ):
+                    body.append(node)
+                elif (
+                    isinstance(node, ast.If)
+                    and isinstance(node.test, ast.Name)
+                    and node.test.id == "build_dir_override"
+                ):
+                    body.append(node)
+            namespace = {"REPO_ROOT": root, "Path": Path, "os": os}
+            with mock.patch.dict(os.environ, {"GAME_BUILD_DIR": ""}):
+                exec(compile(ast.Module(body=body, type_ignores=[]), "test.py", "exec"), namespace)
+            self.assertEqual(root / name, namespace["build_dir"])
+
+    def testVideoBootstrapDiscoversCompilerSpecificRelease(self):
+        from scripts import generate_walkthrough_video
+        import sys
+
+        previous_cwd = Path.cwd()
+        self.addCleanup(os.chdir, previous_cwd)
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            name = "cmake-build-clangcl20-release" if os.name == "nt" else "cmake-build-gcc15-release"
+            (root / name).mkdir()
+            (root / "cmake-build-release").mkdir()
+            with (
+                mock.patch.object(generate_walkthrough_video, "REPO_ROOT", root),
+                mock.patch.object(sys, "path", sys.path.copy()),
+                mock.patch.dict(os.environ, {"GAME_BUILD_DIR": "", "GAME_BUILD_CONFIG": ""}),
+            ):
+                try:
+                    generate_walkthrough_video._bootstrap_paths()
+                    self.assertEqual(root / name, Path.cwd())
+                finally:
+                    os.chdir(previous_cwd)
 
 
 @unittest.skipUnless(os.name == "posix" and shutil.which("bash"), "Shell probes require POSIX Bash")

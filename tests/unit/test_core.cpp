@@ -840,9 +840,9 @@ void test_map_domain_signals_emit_for_tile_and_object_changes() {
                 "tile mutations should still emit tileChanged for the changed coordinate");
     expect_true(probe->object_changed_coords == expected_object_changed_coords,
                 "object movement should emit objectChanged for the old and new coordinates");
-    expect_true(std::ranges::count(probe->changed_properties, "tiles") == 1,
+    expect_true(std::ranges::count(probe->changed_properties, std::string{"tiles"}) == 1,
                 "tile domain changes should still notify generic property subscribers");
-    expect_true(std::ranges::count(probe->changed_properties, "objects") == 1,
+    expect_true(std::ranges::count(probe->changed_properties, std::string{"objects"}) == 1,
                 "object movement should notify generic property subscribers once");
 }
 

@@ -87,10 +87,20 @@ os.environ.setdefault("SDL_AUDIODRIVER", "dummy")
 os.environ.setdefault("SDL_RENDER_DRIVER", "software")
 os.environ.setdefault("LIBGL_ALWAYS_SOFTWARE", "1")
 
-build_dir = REPO_ROOT / "cmake-build-release"
-build_dir_override = os.environ.get("GAME_BUILD_DIR")
-if build_dir_override:
-    build_dir = (REPO_ROOT / build_dir_override).resolve()
+
+def resolveBuildDirectory():
+    override = os.environ.get("GAME_BUILD_DIR")
+    if override:
+        return (REPO_ROOT / override).resolve()
+    release_name = "cmake-build-clangcl20-release" if os.name == "nt" else "cmake-build-gcc15-release"
+    for name in (release_name, release_name.replace("-release", "-debug"), "cmake-build-release", "cmake-build-debug"):
+        candidate = REPO_ROOT / name
+        if candidate.exists():
+            return candidate
+    return REPO_ROOT / release_name
+
+
+build_dir = resolveBuildDirectory()
 if build_dir.exists():
     os.chdir(build_dir)
 
