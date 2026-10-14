@@ -745,11 +745,15 @@ class OctobogzHuntTest(unittest.TestCase):
     def testMcpJourneyChecksScalarCoordinatesAgainstItsExistingNativeSnapshotWithoutAnotherJsonRead(self):
         from tests.test_octobogz_mcp import OctobogzMcpWalkthroughTest
 
-        for wrong_x in (False, True):
-            with self.subTest(wrong_x=wrong_x):
+        for wrong_x, item_count in ((False, 2), (False, 129), (True, 2)):
+            with self.subTest(wrong_x=wrong_x, item_count=item_count):
                 walker = OctobogzMcpWalkthroughTest("runTest")
                 walker.player, walker.game_map = "player", "map"
-                data = {"posx": 57, "posy": 115, "posz": 0, "hp": 84, "items": []}
+                items = [
+                    {"properties": {"name": f"earned{index:03}", "typeId": "LifePotion", "power": 2, "tags": ["heal"]}}
+                    for index in reversed(range(item_count))
+                ]
+                data = {"posx": 57, "posy": 115, "posz": 0, "hp": 84, "items": items}
                 walker.engine = Mock(return_value=json.dumps({"properties": data}))
                 walker.reportMcpProfile = Mock()
 
@@ -766,7 +770,16 @@ class OctobogzHuntTest(unittest.TestCase):
                         with self.assertRaises(AssertionError):
                             walker.snapshot("prepared checkpoint")
                     else:
-                        self.assertEqual((57, 115, 0), walker.snapshot("prepared checkpoint")["coords"])
+                        snapshot = walker.snapshot("prepared checkpoint")
+                        self.assertEqual((57, 115, 0), snapshot["coords"])
+                        self.assertEqual(
+                            [
+                                {"name": f"earned{index:03}", "typeId": "LifePotion", "power": 2, "tags": ["heal"]}
+                                for index in range(min(item_count, 128))
+                            ],
+                            snapshot.get("itemDetails"),
+                        )
+                        self.assertEqual(item_count > 128, snapshot["itemDetailsTruncated"])
                 walker.engine.assert_called_once_with("jsonify", "player")
 
     def testMcpPairedCoordinateProbeMeasuresTwentyReadonlyPairsAfterWarmup(self):
@@ -1083,7 +1096,7 @@ class OctobogzHuntTest(unittest.TestCase):
             if method == "getNumericProperty":
                 self.assertEqual(("exp",), args)
                 return state["exp"]
-            if method == "getHpRatio":
+            if method in ("getHpRatio", "getHp", "getHpMax", "getMana", "getManaMax"):
                 return 100
             if method == "countItems":
                 self.assertEqual(("holyRelic",), args)
@@ -1130,6 +1143,168 @@ class OctobogzHuntTest(unittest.TestCase):
         )
         self.assertIn('self.assertGreaterEqual(self.call(self.player, "getLevel"), 4', source)
         self.assertIn('self.assertGreaterEqual(self.call(self.player, "getNumericProperty", "exp"), 6000)', source)
+
+    def testLevelingPreparationRecoversIncompleteResourcesAndRefreshesEnemiesBeforeChoosingTheNextFight(self):
+        from tests.test_octobogz_mcp import OctobogzMcpWalkthroughTest
+
+        for preparation, cave, discovery, road, stage in (
+            ("prepareThroughRolf", "cave1", "nearbyRolfEnemies", ((9, 36, 0), (9, 37, 0)), "Rolf road recovery"),
+            (
+                "prepareThroughCatacombs",
+                "catacombs",
+                "nearbyAuthoredPritz",
+                ((57, 115, 0), (58, 115, 0)),
+                "catacombs road recovery",
+            ),
+        ):
+            for hp, mana in ((80, 100), (100, 10), (100, 100)):
+                with self.subTest(preparation=preparation, hp=hp, mana=mana):
+                    walker = OctobogzMcpWalkthroughTest("runTest")
+                    walker.player, walker.game_map = "player", "map"
+                    state = {"exp": 5750, "hp": 100, "mana": 100, "cave": True, "relics": 0, "recovered": False}
+                    fought = set()
+                    actions = []
+                    walker.snapshot = lambda label: {"exp": state["exp"]}
+                    walker.walkCoords = Mock()
+
+                    def call(handle, method, *args):
+                        if method == "getLevel":
+                            return 4 if state["exp"] >= 6000 else 3
+                        if method == "getNumericProperty":
+                            self.assertEqual(("exp",), args)
+                            return state["exp"]
+                        if method in ("getHpRatio", "getHp", "getMana"):
+                            return state["mana" if method == "getMana" else "hp"]
+                        if method in ("getHpMax", "getManaMax"):
+                            return 100
+                        if method == "getObjectByName":
+                            name = args[0]
+                            return name if name == cave and state["cave"] or name not in (cave, *fought) else None
+                        if method == "getBoolProperty":
+                            self.assertEqual(("completed_rolf",), args)
+                            return not state["cave"]
+                        if method == "countItems":
+                            return state["relics"] if args == ("holyRelic",) else 1
+                        self.fail(method)
+
+                    def recover(first, second, label):
+                        if label == stage:
+                            self.assertFalse(state["cave"])
+                            self.assertEqual(road, (first, second))
+                            actions.append("recover")
+                            state.update(hp=100, mana=100, recovered=True)
+
+                    def candidates(*args):
+                        actions.append("discover")
+                        return [(0, "fresh" if state["recovered"] else "stale")]
+
+                    def walk(name, **kwargs):
+                        self.assertEqual({"allow_removed": True}, kwargs)
+                        if name == cave:
+                            state.update(cave=False, hp=hp, mana=mana, relics=1)
+                            return
+                        self.assertEqual((100, 100), (state["hp"], state["mana"]), "Fight only with full resources")
+                        self.assertEqual("fresh" if hp < 100 or mana < 100 else "stale", name)
+                        actions.append("fight")
+                        fought.add(name)
+                        state["exp"] = 6000
+
+                    walker.call = call
+                    walker.recoverOnRoadPair = Mock(side_effect=recover)
+                    walker.walkTo = Mock(side_effect=walk)
+                    setattr(walker, discovery, Mock(side_effect=candidates))
+                    getattr(walker, preparation)()
+                    self.assertEqual(
+                        (
+                            ["discover", "recover", "discover", "fight"]
+                            if hp < 100 or mana < 100
+                            else ["discover", "fight"]
+                        ),
+                        actions,
+                    )
+                    self.assertEqual(6000, state["exp"])
+
+    def testLevelFourPreparationStillOpensTheOriginalCatacombsForItsFiniteEarnedPool(self):
+        from tests.test_octobogz_mcp import OctobogzMcpWalkthroughTest
+
+        walker = OctobogzMcpWalkthroughTest("runTest")
+        walker.player, walker.game_map = "player", "map"
+        original = {"__handle__": "originalCatacombs"}
+        state = {"catacombs": original, "relics": 2, "living": []}
+        walker.snapshot = Mock(return_value={"exp": 6000})
+        walker.walkCoords, walker.recoverOnRoadPair, walker.nearbyAuthoredPritz = Mock(), Mock(), Mock()
+
+        def call(handle, method, *args):
+            if method == "getObjectByName":
+                self.assertEqual(("map", "catacombs"), (handle, args[0]))
+                return state["catacombs"]
+            if method == "getLevel":
+                return 4
+            if method == "getNumericProperty":
+                self.assertEqual(("exp",), args)
+                return 6000
+            if method == "countItems":
+                self.assertEqual(("holyRelic",), args)
+                return state["relics"]
+            self.fail(method)
+
+        def enter(name, **kwargs):
+            self.assertEqual(("catacombs", {"allow_removed": True}), (name, kwargs))
+            self.assertIs(original, state["catacombs"])
+            state["catacombs"] = None
+            state["relics"] += 1
+            state["living"].extend(("authoredCatOne", "authoredCatTwo"))
+
+        walker.call, walker.walkTo = call, Mock(side_effect=enter)
+        walker.prepareThroughCatacombs()
+        self.assertEqual(3, state["relics"])
+        self.assertEqual(["authoredCatOne", "authoredCatTwo"], state["living"])
+        walker.walkTo.assert_called_once_with("catacombs", allow_removed=True)
+        self.assertEqual(
+            [(9, 39, 0), (8, 39, 0), (8, 49, 0), (9, 49, 0), (9, 81, 0), (30, 81, 0), (30, 115, 0)],
+            [call.args[0] for call in walker.walkCoords.call_args_list],
+        )
+        self.assertEqual(
+            ["before original catacombs road recovery", "after catacombs road recovery"],
+            [call.args[2] for call in walker.recoverOnRoadPair.call_args_list],
+        )
+        walker.nearbyAuthoredPritz.assert_not_called()
+        walker.prepareThroughCatacombs()
+        self.assertEqual(3, state["relics"], "the removed original cave must not be reopened or grant another relic")
+        self.assertEqual(1, walker.walkTo.call_count)
+        self.assertEqual(7, walker.walkCoords.call_count)
+        self.assertEqual(2, walker.recoverOnRoadPair.call_count)
+
+    def testLevelFourPreparationLeavesAlreadyRemovedCatacombsAndItsRelicUntouched(self):
+        from tests.test_octobogz_mcp import OctobogzMcpWalkthroughTest
+
+        walker = OctobogzMcpWalkthroughTest("runTest")
+        walker.player, walker.game_map = "player", "map"
+        walker.walkCoords, walker.recoverOnRoadPair, walker.walkTo, walker.nearbyAuthoredPritz = (
+            Mock(),
+            Mock(),
+            Mock(),
+            Mock(),
+        )
+        walker.snapshot = Mock(return_value={"exp": 6000})
+
+        def call(handle, method, *args):
+            if method == "getObjectByName":
+                self.assertEqual(("catacombs",), args)
+                return None
+            if method == "getLevel":
+                return 4
+            if method == "getNumericProperty":
+                self.assertEqual(("exp",), args)
+                return 6000
+            self.fail("Already visited preparation must not mutate or consume resources: " + method)
+
+        walker.call = call
+        walker.prepareThroughCatacombs()
+        walker.walkCoords.assert_not_called()
+        walker.recoverOnRoadPair.assert_not_called()
+        walker.walkTo.assert_not_called()
+        walker.nearbyAuthoredPritz.assert_not_called()
 
     def testCatacombsControllerMatchesItsAuthoredGrassNeighborhoodWithoutChangingTheEncounter(self):
         config = json.loads((ROOT / "res/maps/nouraajd/config.json").read_text(encoding="utf-8"))
