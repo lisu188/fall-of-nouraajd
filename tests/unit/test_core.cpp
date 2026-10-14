@@ -33,6 +33,7 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #include "core/CTypes.h"
 #include "core/CUtil.h"
 #include "gui/CSdlResources.h"
+#include "gui/object/CConsoleGraphicsObject.h"
 #include "object/CCreature.h"
 #include "object/CCreatureClass.h"
 #include "object/CCreatureClassTrack.h"
@@ -2168,6 +2169,65 @@ void testTypedJsonCodecsOwnResultsAndPreserveErrors() {
         });
 }
 
+void testConsoleHistoryCodecPreservesOrderedGuiSnapshots() {
+    const std::list<std::string> history{"second", "first", "second", ""};
+    const auto expected = json::array({"second", "first", "second", ""});
+    auto encoded = CSerialization::serializeExpected(history, "console-history");
+    expect_true(encoded && encoded->dump() == expected.dump(),
+                "ordered string codecs preserve duplicates, empty entries and order");
+    if (!encoded)
+        return;
+    auto decoded = CSerialization::deserializeExpected<std::list<std::string>>(nullptr, *encoded, "console-history");
+    expect_true(decoded && *decoded == history, "ordered string history round-trips through its typed JSON codec");
+    auto empty = CSerialization::serializeExpected(std::list<std::string>{}, "console-empty");
+    expect_true(empty && empty->is_array() && empty->empty(), "empty ordered history encodes as an empty JSON array");
+    auto empty_read =
+        CSerialization::deserializeExpected<std::list<std::string>>(nullptr, json::array(), "console-empty");
+    expect_true(empty_read && empty_read->empty(), "an empty history remains empty at the codec boundary");
+
+    for (const auto &malformed : {json::object(), json::array({"first", 7})}) {
+        auto failure =
+            CSerialization::deserializeExpected<std::list<std::string>>(nullptr, malformed, "console-invalid");
+        expect_true(!failure && failure.error().code == CSerializationErrorCode::TypeMismatch &&
+                        failure.error().source == "console-invalid" && !failure.error().objectType.empty(),
+                    "ordered history rejects invalid shapes and entries with a typed source diagnostic");
+        if (malformed.is_array())
+            expect_true(!failure && failure.error().propertyPath == "[1]", "invalid list entries identify their index");
+    }
+
+    auto game = std::make_shared<CGame>();
+    game->getObjectHandler()->registerType("CConsoleGraphicsObject",
+                                           [] { return std::make_shared<CConsoleGraphicsObject>(); });
+    auto console = std::make_shared<CConsoleGraphicsObject>();
+    console->setGame(game);
+    console->setConsoleHistory(history);
+    auto console_document = CSerialization::serializeExpected(console, "console-object");
+    expect_true(console_document && (*console_document)["properties"]["consoleHistory"].dump() == expected.dump(),
+                "the reflected consoleHistory property has a registered codec");
+    if (!console_document)
+        return;
+    CSerializationReadContext reading(true, "console-round-trip");
+    auto restored =
+        CSerialization::deserializeExpected<std::shared_ptr<CConsoleGraphicsObject>>(game, *console_document, reading);
+    expect_true(restored && *restored && (*restored)->getConsoleHistory() == history,
+                "reflected console history restores without sorting or removing duplicate commands");
+
+    const auto invalid_history = json::array({"valid prefix", 7});
+    CSerializationReadContext invalid_reading(true, "console-property");
+    bool rejected = false;
+    try {
+        CSerialization::setProperty(console, "consoleHistory", invalid_history, invalid_reading);
+    } catch (const CSerializationException &exception) {
+        const auto &error = exception.getError();
+        rejected = error.code == CSerializationErrorCode::TypeMismatch && error.source == "console-property" &&
+                   error.propertyPath == "consoleHistory[1]" && error.objectType == "CConsoleGraphicsObject";
+    }
+    expect_true(rejected, "malformed reflected history retains its source, property index and object type");
+    expect_true(console->getConsoleHistory() == history,
+                "failed list decoding leaves the existing console history unchanged");
+
+}
+
 void test_serialization_collection_and_error_helpers() {
     auto game = std::make_shared<CGame>();
     auto object = std::make_shared<CGameObject>();
@@ -3464,6 +3524,7 @@ int main() {
     testSerializationScopeRestoration();
     testSerializerBaseDestruction();
     testTypedJsonCodecsOwnResultsAndPreserveErrors();
+    testConsoleHistoryCodecPreservesOrderedGuiSnapshots();
     test_serialization_collection_and_error_helpers();
     test_generate_name_collision_retry();
     test_creature_effective_stats_baseline_capture();
