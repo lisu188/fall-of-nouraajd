@@ -23,7 +23,15 @@ ADDITIONAL_CASES = {
         "testEffectTickCappingAndExpiryIgnoreAllocationOrder",
         "testEffectTickLethalityTimingAndCasterIgnoreAllocationOrder",
     ),
-    "map": ("testMapMoveRejectsPlayerPlanCapturedBeforeSynchronousRespawn",),
+    "map": (
+        "testNewSessionClearsQuitLatch",
+        "testMapMoveDiscardsReplacedControllerPlan",
+        "testMapMoveSnapshotsActorsBeforeInlinePlans",
+        "testCancelledAsyncCombatRestoresPlayerOrigin",
+        "testMapMoveRejectsPlayerPlanCapturedBeforeSynchronousRespawn",
+        "test_scene_manager_awaits_preparation_and_rolls_back_errors",
+        "testSceneCompletionOwnsSkippedLazyChildren",
+    ),
 }
 
 

@@ -2400,6 +2400,7 @@ void testTypedJsonCodecsOwnResultsAndPreserveErrors() {
                 "erased values are checked only at the codec boundary");
 
     auto game = std::make_shared<CGame>();
+    game->getObjectHandler()->registerType("CGameObject", [] { return std::make_shared<CGameObject>(); });
     const json malformed_graph{{"class", "CGameObject"}, {"effectGraph", {{"version", 2}, {"actors", json::array()}}}};
     auto graph_failure =
         CSerialization::deserializeExpected<std::shared_ptr<CGameObject>>(game, malformed_graph, "malformed-graph");
