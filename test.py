@@ -143,6 +143,7 @@ VALID_TEST_SUITES = ("fast", "gameplay", "ui", "coverage-safe", "full")
 FAST_TEST_PREFIXES = (
     "GameDiagnosticsTest.",
     "McpDiagnosticsTest.",
+    "McpEngineThreadTest.",
     "OctobogzDiagnosticTest.",
     "WindowsPythonConfigurationTest.",
     "EnemyRoleContractTest.",
@@ -164,6 +165,8 @@ FAST_TEST_PREFIXES = (
     "UiPixelAnalysisTest.",
 )
 FAST_TEST_NAMES = {
+    "McpServerTest.test_native_owner_fixture_starts_in_an_isolated_process",
+    "McpServerTest.test_native_owner_fixture_child_does_not_spawn_again",
     "McpServerTest.testNativeLogSinkSurvivesGameBootstrap",
     "McpServerTest.test_engine_handle_call_scopes_fight_controllers_to_players",
     "GameTest.test_direct_rendercopy_calls_stay_inside_render_context_wrapper",
@@ -186,6 +189,7 @@ FAST_TEST_NAMES = {
 }
 GAMEPLAY_TEST_PREFIXES = (
     "NativeDiagnosticsRuntimeTest.",
+    "McpHttpNativeRuntimeTest.",
     "EnemyRoleRuntimeTest.",
     "OctobogzMcpWalkthroughTest.",
     "OctobogzRuntimeTest.",
@@ -26398,6 +26402,8 @@ SOURCE_UI_TESTS_AVAILABLE = (REPO_ROOT / "tests" / "__init__.py").is_file()
 if SOURCE_UI_TESTS_AVAILABLE:
     from tests.test_game_diagnostics import GameDiagnosticsTest as _GameDiagnosticsTest
     from tests.test_mcp_diagnostics import McpDiagnosticsTest as _McpDiagnosticsTest
+    from tests.test_mcp_engine_thread import McpEngineThreadTest as _McpEngineThreadTest
+    from tests.test_mcp_engine_thread import McpHttpNativeRuntimeTest as _McpHttpNativeRuntimeTest
     from tests.test_native_diagnostics import NativeDiagnosticsRuntimeTest as _NativeDiagnosticsRuntimeTest
     from tests.test_navigation_mcp import NavigationCallbackTest as _NavigationCallbackTest
     from tests.test_navigation_mcp import NavigationMcpWalkthroughTest as _NavigationMcpWalkthroughTest
@@ -26436,6 +26442,12 @@ if SOURCE_UI_TESTS_AVAILABLE:
         pass
 
     class McpDiagnosticsTest(_McpDiagnosticsTest):
+        pass
+
+    class McpEngineThreadTest(_McpEngineThreadTest):
+        pass
+
+    class McpHttpNativeRuntimeTest(_McpHttpNativeRuntimeTest):
         pass
 
     class NativeDiagnosticsRuntimeTest(_NativeDiagnosticsRuntimeTest):
@@ -26534,6 +26546,7 @@ if SOURCE_UI_TESTS_AVAILABLE:
     del _DialogueMcpWalkthroughTest, _ManagementMcpWalkthroughTest, _ArtifactPreviewTest, _PythonCallbackLifecycleTest
     del _PaidActionRuntimeTest
     del _GameDiagnosticsTest, _McpDiagnosticsTest, _NativeDiagnosticsRuntimeTest
+    del _McpEngineThreadTest, _McpHttpNativeRuntimeTest
     del _NativeTestProfileSourceTest, _NativeTestProfileRuntimeTest
     del _WindowsPythonConfigurationTest
     del _NativeCallgrindToolTest
@@ -26830,8 +26843,65 @@ class McpServerTest(unittest.TestCase):
         # A non-pathfinding method is never gated, regardless of arguments.
         self.assertIsNone(server._validate_pathfinding_call(object(), "getName", [], {}))
 
+    def runNativeOwnerFixtureInChild(self):
+        if os.environ.get("GAME_MCP_NATIVE_TEST") == self._testMethodName:
+            return False
+        output_dir = TEST_OUTPUT_DIR / "mcp-owner" / self._testMethodName
+        environment = os.environ.copy()
+        environment.update(
+            GAME_MCP_NATIVE_TEST=self._testMethodName,
+            GAME_BUILD_DIR=str(build_dir),
+            GAME_TEST_WORKER="1",
+            GAME_TEST_JOBS="1",
+            GAME_TEST_OUTPUT_DIR=str(output_dir),
+            GAME_TEST_TIMINGS_FILE=str(output_dir / "test-timings.json"),
+            SDL_VIDEODRIVER="dummy",
+            SDL_AUDIODRIVER="dummy",
+            SDL_RENDER_DRIVER="software",
+            LIBGL_ALWAYS_SOFTWARE="1",
+        )
+        completed = subprocess.run(
+            [sys.executable, str(REPO_ROOT / "test.py"), "McpServerTest." + self._testMethodName],
+            cwd=REPO_ROOT,
+            env=environment,
+            capture_output=True,
+            text=True,
+            timeout=180 if os.environ.get("GAME_COVERAGE_RUN") == "1" else 60,
+        )
+        self.assertEqual(0, completed.returncode, completed.stdout + completed.stderr)
+        return True
+
+    def test_native_owner_fixture_starts_in_an_isolated_process(self):
+        from unittest.mock import patch
+
+        fixture = McpServerTest("test_export_module_includes_pybind_class_methods")
+        completed = types.SimpleNamespace(returncode=0, stdout="", stderr="")
+        with patch.dict(os.environ, {}, clear=True), patch.object(subprocess, "run", return_value=completed) as run:
+            self.assertTrue(fixture.runNativeOwnerFixtureInChild())
+        args, options = run.call_args
+        self.assertEqual("McpServerTest." + fixture._testMethodName, args[0][-1])
+        self.assertEqual(fixture._testMethodName, options["env"]["GAME_MCP_NATIVE_TEST"])
+        self.assertEqual(str(build_dir), options["env"]["GAME_BUILD_DIR"])
+        self.assertEqual("1", options["env"]["GAME_TEST_WORKER"])
+        self.assertEqual("dummy", options["env"]["SDL_VIDEODRIVER"])
+        self.assertEqual(60, options["timeout"])
+
+    def test_native_owner_fixture_child_does_not_spawn_again(self):
+        from unittest.mock import patch
+
+        fixture = McpServerTest("test_export_module_includes_pybind_class_methods")
+        with (
+            patch.dict(os.environ, {"GAME_MCP_NATIVE_TEST": fixture._testMethodName}),
+            patch.object(subprocess, "run") as run,
+        ):
+            self.assertFalse(fixture.runNativeOwnerFixtureInChild())
+        run.assert_not_called()
+
     def test_export_module_includes_pybind_class_methods(self):
+        if self.runNativeOwnerFixtureInChild():
+            return
         server = mcp.EngineMcpServer(repo_root=REPO_ROOT, build_dir=build_dir)
+        self.addCleanup(server.close)
         server.import_modules()
         server.inspect_and_export()
 
@@ -26843,10 +26913,13 @@ class McpServerTest(unittest.TestCase):
         self.assertNotIn("CPluginLoader.loadDynamicPlugin", server.exports)
         self.assertNotIn("CGuiHandler.openPanel", server.exports)
 
-        game_module = server.game_module
-        g = game_module.CGameLoader.loadGame()
-        game_module.CGameLoader.startGameWithPlayer(g, "test", DEFAULT_PLAYER)
-        game_handle = server._serialize_result(g)
+        loaded = server._engine_call({"name": "CGameLoader.loadGame"})
+        self.assertFalse(loaded["isError"])
+        game_handle = loaded["structuredContent"]["result"]
+        started = server._engine_call(
+            {"name": "CGameLoader.startGameWithPlayer", "args": [game_handle, "test", DEFAULT_PLAYER]}
+        )
+        self.assertFalse(started["isError"])
         scene_manager_handle = server._engine_handle_call(
             {
                 "handle": game_handle["__handle__"],
@@ -26860,7 +26933,10 @@ class McpServerTest(unittest.TestCase):
         self.assertTrue({"getTransitionStateName", "requestMapChange"}.issubset(method_names))
 
     def test_simulation_run_tool_executes_nouraajd_steps_without_completing_hunt_from_prop_removal(self):
+        if self.runNativeOwnerFixtureInChild():
+            return
         server = mcp.EngineMcpServer(repo_root=REPO_ROOT, build_dir=build_dir)
+        self.addCleanup(server.close)
         server.import_modules()
 
         result = server._call_tool(

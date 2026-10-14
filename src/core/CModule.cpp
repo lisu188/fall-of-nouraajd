@@ -1379,6 +1379,7 @@ void init_game_module(py::module_ &m) {
                                                                         "Global async event loop utility.")
         .def_static("instance", &CRuntimeBridge::event_loop_instance, "Return the singleton event loop instance.")
         .def("run", &vstd::event_loop<>::run, "Process queued tasks/events once.")
+        .def("isMainThread", &vstd::event_loop<>::isMainThread, "Check whether this thread owns the event loop.")
         .def(
             "invoke",
             [pythonEventCallbacks](vstd::event_loop<> &loop, std::function<void()> callback) {

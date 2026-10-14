@@ -109,18 +109,12 @@ class McpDiagnosticsTest(unittest.TestCase):
         ]
         barrier = threading.Barrier(4)
 
-        def echo(value):
+        def callFromClient(value):
             barrier.wait(timeout=5)
-            return value
+            return self.call("engine_call", {"name": "echo", "args": [value]}, session_id=sessions[value % 2])
 
-        self.server.exports["echo"].callable_obj = echo
         with ThreadPoolExecutor(max_workers=4) as executor:
-            futures = [
-                executor.submit(
-                    self.call, "engine_call", {"name": "echo", "args": [index]}, session_id=sessions[index % 2]
-                )
-                for index in range(4)
-            ]
+            futures = [executor.submit(callFromClient, index) for index in range(4)]
             self.assertEqual(list(range(4)), [future.result()["structuredContent"]["result"] for future in futures])
         records = self.toolRecords()
         starts = [record for record in records if record["message"] == "tool call started"]
@@ -315,6 +309,7 @@ class McpDiagnosticsTest(unittest.TestCase):
             import_modules=lambda: None,
             inspect_and_export=lambda: None,
             serve_stdio=lambda: None,
+            close=lambda: None,
         )
         with (
             patch.object(mcp.sys, "argv", ["mcp.py", "--stdio", "--build", "--native-log-sink", "disabled"]),
@@ -393,6 +388,7 @@ class McpDiagnosticsTest(unittest.TestCase):
                 import_modules=lambda: calls.append(("import", {})),
                 inspect_and_export=lambda: None,
                 serve_stdio=lambda: None,
+                close=lambda: None,
             )
             argv = [
                 "mcp.py",
@@ -541,7 +537,7 @@ class McpDiagnosticsTest(unittest.TestCase):
             close=lambda: None,
         )
         server = types.SimpleNamespace(
-            import_modules=lambda: None, inspect_and_export=lambda: None, serve_stdio=lambda: None
+            import_modules=lambda: None, inspect_and_export=lambda: None, serve_stdio=lambda: None, close=lambda: None
         )
         with (
             patch.object(mcp.sys, "argv", ["mcp.py", "--stdio", "--debug"]),
