@@ -10,7 +10,7 @@ from statistics import median
 import subprocess
 import sys
 import tempfile
-from time import perf_counter
+from time import perf_counter, sleep
 import unittest
 import uuid
 from unittest.mock import patch
@@ -253,7 +253,29 @@ class OctobogzMcpWalkthroughTest(unittest.TestCase):
 
         with patch.object(harness.McpServerTest, "_start_stdio_mcp_process", startWithNativeLog):
             dialogue_mcp.DialogueMcpWalkthroughTest.setUp(self)
+        prefix = "MCP fixture random seed "
+        deadline = perf_counter() + 5
+        while True:
+            stderr = self.harness._mcp_process_tail_text(self.process, "stderr")
+            receipts = [
+                line[len(prefix) :]
+                for line in stderr.splitlines(keepends=True)
+                if line.startswith(prefix) and line.endswith(("\n", "\r"))
+            ]
+            if receipts:
+                self.assertEqual(1, len(receipts), "The fresh MCP process must seed its fixture exactly once")
+                receipt = json.loads(receipts[0])
+                self.assertEqual({"seed": 100}, receipt)
+                print("MCP hunt fixture startup", {"pid": self.process.pid, "receipt": receipt}, flush=True)
+                break
+            self.assertIsNone(self.process.poll(), "The seeded MCP process exited before publishing its receipt")
+            self.assertLess(perf_counter(), deadline, "The fresh MCP process did not publish its seed receipt")
+            sleep(0.001)
         print("MCP hunt native log", str(self.native_log_path), flush=True)
+
+    def restartMcpSession(self):
+        self.assertTrue(self.doCleanups(), "The previous MCP process and environment must close before class restart")
+        self.setUp()
 
     pump = dialogue_mcp.DialogueMcpWalkthroughTest.pump
     object = dialogue_mcp.DialogueMcpWalkthroughTest.object
@@ -1524,6 +1546,8 @@ class OctobogzMcpWalkthroughTest(unittest.TestCase):
         self.phase_observations = []
         self.manual_phase_observations = []
         for player_class in ("Warrior", "Sorcerer"):
+            if player_class == "Sorcerer":
+                self.restartMcpSession()
             with self.subTest(player_class=player_class):
                 self.resetMcpProfile(player_class)
                 self.hunt_actors, self.confirmed_dead = {}, set()
