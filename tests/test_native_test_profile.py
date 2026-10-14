@@ -22,6 +22,9 @@ ADDITIONAL_CASES = {
     "handler": (
         "testEffectTickCappingAndExpiryIgnoreAllocationOrder",
         "testEffectTickLethalityTimingAndCasterIgnoreAllocationOrder",
+        "testAsyncCombatAwaitsLootWithoutPumpingOrGrantingRewardsEarly",
+        "testWorkerStartedCombatDefersControllerAndPanelCreationToMain",
+        "testCancelledLootSettlesStartedRewardsOnceAndSkipsQueuedCombat",
     ),
     "map": (
         "testNewSessionClearsQuitLatch",

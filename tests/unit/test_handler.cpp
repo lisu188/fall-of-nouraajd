@@ -17,6 +17,7 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 
 #include "handler/CGuiHandler.h"
+#include "handler/CEventHandler.h"
 #include "handler/CFightHandler.h"
 #include "handler/CObjectHandler.h"
 #include "handler/CQuestHandler.h"
@@ -24,7 +25,9 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #include "handler/CScriptHandler.h"
 #include "handler/CTooltipHandler.h"
 #include "core/CController.h"
+#include "core/CAsync.h"
 #include "core/CGame.h"
+#include "core/CGameContext.h"
 #include "core/CJsonUtil.h"
 #include "core/CLoader.h"
 #include "core/CMap.h"
@@ -34,6 +37,7 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #include "core/CWrapper.h"
 #include "gui/CGui.h"
 #include "gui/panel/CGameFightPanel.h"
+#include "gui/panel/CGameLootPanel.h"
 #include "object/CCreature.h"
 #include "object/CCreatureClass.h"
 #include "object/CCreatureRace.h"
@@ -49,11 +53,13 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #include <SDL.h>
 #include <pybind11/embed.h>
 #include <algorithm>
+#include <atomic>
 #include <chrono>
 #include <cstdlib>
 #include <filesystem>
 #include <fstream>
 #include <functional>
+#include <future>
 #include <iostream>
 #include <map>
 #include <memory>
@@ -61,6 +67,7 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #include <set>
 #include <stdexcept>
 #include <string>
+#include <thread>
 #include <unordered_map>
 #include <utility>
 #include <vector>
@@ -125,6 +132,32 @@ class KillingFightController : public NoProgressFightController {
         }
         return true;
     }
+};
+
+class WindowlessFightTestGui : public CGui {
+  public:
+    WindowlessFightTestGui() : CGui(WithoutWindow{}) {}
+};
+
+struct FightThreadProbe {
+    std::thread::id startedOn;
+    std::thread::id panelCreatedOn;
+    std::atomic<int> starts = 0;
+    std::atomic<int> panels = 0;
+};
+
+class ThreadCheckedPlayerFightController : public CPlayerFightController {
+  public:
+    explicit ThreadCheckedPlayerFightController(std::shared_ptr<FightThreadProbe> probe) : probe(std::move(probe)) {}
+
+    void start(std::shared_ptr<CCreature> me, std::shared_ptr<CCreature> opponent) override {
+        probe->startedOn = std::this_thread::get_id();
+        CPlayerFightController::start(std::move(me), std::move(opponent));
+        probe->starts.fetch_add(1, std::memory_order_release);
+    }
+
+  private:
+    std::shared_ptr<FightThreadProbe> probe;
 };
 
 class SelfDefeatFightController : public NoProgressFightController {
@@ -257,6 +290,24 @@ void attachFightPanelGuiFixture(const std::shared_ptr<CGame> &game) {
     auto fight_panel_config = std::make_shared<json>();
     (*fight_panel_config)["class"] = "CGameFightPanel";
     game->getObjectHandler()->registerConfig("fightPanel", fight_panel_config);
+}
+
+std::shared_ptr<CGame> makeWindowlessFightGame() {
+    vstd::event_loop<>::instance()->resetQuit();
+    auto game = std::make_shared<CGame>();
+    auto map = std::make_shared<CMap>();
+    map->setGame(game);
+    game->setMap(map);
+    auto gui = std::make_shared<WindowlessFightTestGui>();
+    gui->setGame(game);
+    game->setGui(gui);
+    auto objects = game->getObjectHandler();
+    objects->registerType("CPlayerController", [] { return std::make_shared<CPlayerController>(); });
+    objects->registerType("CPlayerFightController", [] { return std::make_shared<CPlayerFightController>(); });
+    objects->registerType("CGameLootPanel", [] { return std::make_shared<CGameLootPanel>(); });
+    objects->registerConfig("lootPanel", std::make_shared<json>(json{{"class", "CGameLootPanel"}}));
+    objects->registerConfig("fightPanel", std::make_shared<json>(json{{"class", "CGameFightPanel"}}));
+    return game;
 }
 
 void initialize_test_creature_stats(const std::shared_ptr<CCreature> &creature) {
@@ -677,6 +728,196 @@ void test_fight_handler_reports_explicit_outcomes_and_final_status() {
                 "self-defeat should grant transferable loot to the surviving opponent");
     expect_true(self_defeat_game->getMap()->getObjectByName(self_defeating_attacker->getName()) == nullptr,
                 "self-defeat should remove the defeated attacker from the map");
+}
+
+void testAsyncCombatAwaitsLootWithoutPumpingOrGrantingRewardsEarly() {
+    auto loop = vstd::event_loop<>::instance();
+    auto game = makeWindowlessFightGame();
+    auto map = game->getMap();
+    auto player = add_test_player(game);
+    auto controller = std::make_shared<KillingFightController>();
+    player->setFightController(controller);
+    auto defeated = add_test_creature(game, "unitAsyncLootDefeated", 1, 0);
+    auto item = add_unit_loot(game, defeated, "unitAsyncOwnedReward");
+    const auto turn = map->getTurn();
+    const auto exp = player->getExp();
+    auto queuedCallbackRan = std::make_shared<bool>(false);
+    std::weak_ptr<CGui> weakGui = game->getGui();
+    loop->invoke([queuedCallbackRan, weakGui] {
+        *queuedCallbackRan = true;
+        if (auto gui = weakGui.lock()) {
+            // This also bounds the regression on the old nested-wait implementation.
+            if (auto panel = vstd::cast<CGameLootPanel>(gui->findChild("CGameLootPanel"))) {
+                panel->close();
+            }
+        }
+    });
+    auto waiting = game->getContext()->spawnTask(CFightHandler::fightManyResultAsync(player, {defeated}));
+    auto panel = vstd::cast<CGameLootPanel>(game->getGui()->findChild("CGameLootPanel"));
+    expect_true(!*queuedCallbackRan && !waiting.finished() && panel,
+                "native combat must suspend at its loot panel without pumping unrelated queued work");
+    expect_true(
+        player->getExp() > exp && !player->hasInInventory(item) &&
+            map->getObjectByName(defeated->getName()) == defeated && map->getTurn() == turn,
+        "loot presentation must retain experience timing while delaying item grant and removal until dismissal");
+    if (panel) {
+        expect_true(panel->getItems().contains(item), "the suspended loot panel must own the exact dropped item");
+        panel->close();
+    }
+    const auto deadline = std::chrono::steady_clock::now() + std::chrono::seconds(2);
+    while ((!waiting.finished() || !*queuedCallbackRan) && std::chrono::steady_clock::now() < deadline) {
+        loop->runReady();
+        game_async::waitForProgress();
+    }
+    expect_true(waiting.finished(), "closing loot must let the combat coroutine finish");
+    if (waiting.finished()) {
+        const auto result = waiting.get();
+        expect_true(result.outcome == CFightOutcome::AttackerVictory && result.rounds == 1,
+                    "asynchronous loot dismissal must preserve the resolved combat result");
+    }
+    expect_true(
+        *queuedCallbackRan && player->hasInInventory(item) && player->countItems("unitAsyncOwnedReward") == 1 &&
+            map->getObjectByName(defeated->getName()) == nullptr && map->getTurn() == turn,
+        "loot dismissal must grant the original item exactly once and remove the loser without advancing a turn");
+    expect_controller_lifecycle(controller, 1, 1, "asynchronous reward completion must end its controller once");
+    game->getContext()->shutdown();
+}
+
+void testWorkerStartedCombatDefersControllerAndPanelCreationToMain() {
+    auto loop = vstd::event_loop<>::instance();
+    const auto mainThread = std::this_thread::get_id();
+    auto game = makeWindowlessFightGame();
+    auto probe = std::make_shared<FightThreadProbe>();
+    game->getObjectHandler()->registerType("CGameFightPanel", [probe] {
+        probe->panelCreatedOn = std::this_thread::get_id();
+        probe->panels.fetch_add(1, std::memory_order_release);
+        return std::make_shared<CGameFightPanel>();
+    });
+    auto player = add_test_player(game);
+    player->setFightController(std::make_shared<ThreadCheckedPlayerFightController>(probe));
+    auto defender = add_test_creature(game, "unitWorkerCombatDefender", 1, 0);
+    auto outcome = std::make_shared<std::promise<vstd::task_handle<CFightResult>>>();
+    auto future = outcome->get_future();
+    const bool submitted = game_async::workerPool()->submit([context = game->getContext(), player, defender, outcome] {
+        pybind11::gil_scoped_acquire acquire;
+        try {
+            outcome->set_value(context->spawnTask(CFightHandler::fightManyResultAsync(player, {defender})));
+        } catch (...) {
+            outcome->set_exception(std::current_exception());
+        }
+    });
+    std::future_status status;
+    {
+        pybind11::gil_scoped_release release;
+        status = future.wait_for(std::chrono::seconds(2));
+    }
+    expect_true(submitted && status == std::future_status::ready, "the worker must start and suspend its combat task");
+    if (!submitted || status != std::future_status::ready) {
+        return;
+    }
+    auto waiting = future.get();
+    expect_true(probe->starts.load(std::memory_order_acquire) == 0 &&
+                    probe->panels.load(std::memory_order_acquire) == 0,
+                "worker-started combat must defer controller start and GUI creation until the main loop runs");
+    const auto openedDeadline = std::chrono::steady_clock::now() + std::chrono::seconds(2);
+    while (probe->starts.load(std::memory_order_acquire) == 0 && !waiting.finished() &&
+           std::chrono::steady_clock::now() < openedDeadline) {
+        loop->runReady();
+        game_async::waitForProgress();
+    }
+    expect_true(probe->starts.load(std::memory_order_acquire) == 1 && probe->startedOn == mainThread &&
+                    probe->panels.load(std::memory_order_acquire) == 1 && probe->panelCreatedOn == mainThread,
+                "the main thread must start combat controllers and construct their fight panel");
+    if (auto panel = vstd::cast<CGameFightPanel>(game->getGui()->findChild("CGameFightPanel"))) {
+        panel->close();
+    }
+    const auto closedDeadline = std::chrono::steady_clock::now() + std::chrono::seconds(2);
+    while (!waiting.finished() && std::chrono::steady_clock::now() < closedDeadline) {
+        loop->runReady();
+        game_async::waitForProgress();
+    }
+    expect_true(waiting.finished() && waiting.get().outcome == CFightOutcome::Cancelled,
+                "closing the worker-requested fight panel must finish combat as cancelled");
+    expect_true(game->getGui()->getChildren().empty(), "cancelled worker-started combat must leave no fight panel");
+    game->getContext()->shutdown();
+}
+
+void testCancelledLootSettlesStartedRewardsOnceAndSkipsQueuedCombat() {
+    auto loop = vstd::event_loop<>::instance();
+    for (const bool shutdown : {false, true}) {
+        auto game = makeWindowlessFightGame();
+        auto map = game->getMap();
+        auto context = game->getContext();
+        auto player = add_test_player(game);
+        player->setFightController(std::make_shared<KillingFightController>());
+        auto defeated = add_test_creature(game, "unitCancelledLootDefeated", 1, 0);
+        auto item = add_unit_loot(game, defeated, "unitCancelledOwnedReward");
+        auto destroyed = std::make_shared<int>(0);
+        map->getEventHandler()->registerTrigger(std::make_shared<CCustomTrigger>(
+            defeated->getName(), CGameEvent::CType::onDestroy, [destroyed](auto, auto) { ++*destroyed; }));
+        auto waiting = context->spawnTask(CFightHandler::fightManyResultAsync(player, {defeated}));
+        const auto expAfterDefeat = player->getExp();
+        expect_true(!waiting.finished() && !player->hasInInventory(item),
+                    "reward cancellation regression must suspend before inventory settlement");
+        if (shutdown) {
+            context->shutdown();
+        } else {
+            waiting.requestStop();
+        }
+        const auto deadline = std::chrono::steady_clock::now() + std::chrono::seconds(2);
+        while (!waiting.finished() && std::chrono::steady_clock::now() < deadline) {
+            loop->runReady();
+            game_async::waitForProgress();
+        }
+        bool cancelled = false;
+        if (waiting.finished()) {
+            try {
+                waiting.get();
+            } catch (const vstd::task_cancelled &) {
+                cancelled = true;
+            }
+        }
+        expect_true(cancelled && player->hasInInventory(item) && player->countItems("unitCancelledOwnedReward") == 1 &&
+                        player->getExp() == expAfterDefeat,
+                    "cancelling started loot must settle the exact item once without duplicating experience");
+        if (shutdown) {
+            expect_true(!context->isActive() && *destroyed == 0,
+                        "inactive-session reward cleanup must not invoke destruction hooks or reacquire services");
+        } else {
+            expect_true(context->isActive() && map->getObjectByName(defeated->getName()) == nullptr &&
+                            *destroyed == 1 && game->getGui()->getChildren().empty(),
+                        "individual cancellation must remove the loser and modal before finishing cleanup");
+        }
+        waiting.requestStop();
+        loop->runReady();
+        expect_true(player->countItems("unitCancelledOwnedReward") == 1 && player->getExp() == expAfterDefeat,
+                    "repeated cancellation must not repeat reward settlement");
+        context->shutdown();
+    }
+
+    auto game = makeWindowlessFightGame();
+    auto player = add_test_player(game);
+    player->setFightController(std::make_shared<KillingFightController>());
+    auto defender = add_test_creature(game, "unitQueuedCombatDefender", 1, 0);
+    auto item = add_unit_loot(game, defender, "unitQueuedCombatReward");
+    const auto exp = player->getExp();
+    auto queuedTask = [](std::shared_ptr<CPlayer> player,
+                         std::shared_ptr<CCreature> defender) -> vstd::task<CFightResult> {
+        co_await vstd::post(vstd::event_loop<>::instance());
+        std::vector<std::shared_ptr<CCreature>> opponents{std::move(defender)};
+        co_return co_await CFightHandler::fightManyResultAsync(player, std::move(opponents));
+    }(player, defender);
+    auto queued = game->getContext()->spawnTask(std::move(queuedTask));
+    queued.requestStop();
+    const auto deadline = std::chrono::steady_clock::now() + std::chrono::seconds(2);
+    while (!queued.finished() && std::chrono::steady_clock::now() < deadline) {
+        loop->runReady();
+        game_async::waitForProgress();
+    }
+    expect_true(queued.finished() && player->getExp() == exp && defender->isAlive() && defender->hasInInventory(item) &&
+                    !player->hasInInventory(item) && game->getGui()->getChildren().empty(),
+                "cancelling queued combat must skip all controller, defeat, reward, and GUI work");
+    game->getContext()->shutdown();
 }
 
 void test_fight_handler_reports_invalid_result_metadata() {
@@ -2613,6 +2854,12 @@ int main() {
                             testEffectTickCappingAndExpiryIgnoreAllocationOrder);
     nativeTestProfile().run("testEffectTickLethalityTimingAndCasterIgnoreAllocationOrder",
                             testEffectTickLethalityTimingAndCasterIgnoreAllocationOrder);
+    nativeTestProfile().run("testAsyncCombatAwaitsLootWithoutPumpingOrGrantingRewardsEarly",
+                            testAsyncCombatAwaitsLootWithoutPumpingOrGrantingRewardsEarly);
+    nativeTestProfile().run("testWorkerStartedCombatDefersControllerAndPanelCreationToMain",
+                            testWorkerStartedCombatDefersControllerAndPanelCreationToMain);
+    nativeTestProfile().run("testCancelledLootSettlesStartedRewardsOnceAndSkipsQueuedCombat",
+                            testCancelledLootSettlesStartedRewardsOnceAndSkipsQueuedCombat);
     nativeTestProfile().run("test_fight_handler_counts_effect_duration_as_progress",
                             test_fight_handler_counts_effect_duration_as_progress);
     nativeTestProfile().run("test_player_quest_completion_ignores_reentry_and_captures_final_callback_state",

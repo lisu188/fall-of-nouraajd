@@ -1,6 +1,6 @@
 /*
 fall-of-nouraajd c++ dark fantasy game
-Copyright (C) 2025  Andrzej Lis
+Copyright (C) 2025-2026  Andrzej Lis
 
 This program is free software: you can redistribute it and/or modify
         it under the terms of the GNU General Public License as published by
@@ -52,6 +52,8 @@ class CRngHandler : public CGameObject {
     std::set<std::shared_ptr<CCreature>> getRandomEncounter(int value) const;
 
     void addRandomLoot(const std::shared_ptr<CCreature> &creature, const std::set<std::shared_ptr<CItem>> &items);
+
+    vstd::task<void> addRandomLootAsync(std::shared_ptr<CCreature> creature, std::set<std::shared_ptr<CItem>> items);
 
     void addRandomLoot(const std::shared_ptr<CCreature> &creature, int value);
 

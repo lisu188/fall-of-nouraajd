@@ -71,5 +71,7 @@ class CFightHandler {
 
     static void defeatedCreature(const std::shared_ptr<CCreature> &a, const std::shared_ptr<CCreature> &b);
 
+    static vstd::task<void> defeatedCreatureAsync(std::shared_ptr<CCreature> a, std::shared_ptr<CCreature> b);
+
     static void applyEffects(const std::shared_ptr<CCreature> &cr);
 };
