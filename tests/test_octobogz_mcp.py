@@ -400,6 +400,7 @@ class OctobogzMcpWalkthroughTest(unittest.TestCase):
 
     def snapshot(self, stage):
         data = json.loads(self.engine("jsonify", self.player))["properties"]
+        items = data.get("items") or []
         coords = self.coords()
         self.assertEqual(
             tuple(data["pos" + axis] for axis in "xyz"), coords, "Scalar coordinates must match the native snapshot"
@@ -412,7 +413,12 @@ class OctobogzMcpWalkthroughTest(unittest.TestCase):
             "hp": data.get("hp"),
             "mana": self.call(self.player, "getMana"),
             "gold": self.call(self.player, "getGold"),
-            "items": [item["properties"].get("typeId") for item in data.get("items") or []],
+            "items": [item["properties"].get("typeId") for item in items],
+            "itemDetails": sorted(
+                [{**self.itemIdentity(item), "tags": sorted(item["properties"].get("tags") or [])} for item in items],
+                key=lambda item: item["name"],
+            )[:128],
+            "itemDetailsTruncated": len(items) > 128,
             "turn": self.call(self.game_map, "getTurn"),
             "defeat": self.call(self.player, "getStringProperty", "uiDefeatReceipt"),
         }
@@ -1073,7 +1079,9 @@ class OctobogzMcpWalkthroughTest(unittest.TestCase):
             candidates = self.nearbyRolfEnemies()
             if not candidates:
                 break
-            if self.call(self.player, "getHpRatio") < 75:
+            if self.call(self.player, "getHp") < self.call(self.player, "getHpMax") or self.call(
+                self.player, "getMana"
+            ) < self.call(self.player, "getManaMax"):
                 self.recoverOnRoadPair((9, 36, 0), (9, 37, 0), "Rolf road recovery")
                 candidates = self.nearbyRolfEnemies()
                 if not candidates:
@@ -1088,12 +1096,15 @@ class OctobogzMcpWalkthroughTest(unittest.TestCase):
         self.recoverOnRoadPair((9, 36, 0), (9, 37, 0), "before hunt Rolf road recovery")
 
     def prepareThroughCatacombs(self):
-        if self.call(self.player, "getLevel") < 4:
+        original_catacombs = self.call(self.game_map, "getObjectByName", "catacombs")
+        if original_catacombs is not None or self.call(self.player, "getLevel") < 4:
             # Follow authored roads; the grass shortcut crosses the occupied cave before recovery.
             for waypoint in ((9, 39, 0), (8, 39, 0), (8, 49, 0), (9, 49, 0), (9, 81, 0), (30, 81, 0), (30, 115, 0)):
                 self.walkCoords(waypoint)
             self.recoverOnRoadPair((57, 115, 0), (58, 115, 0), "before original catacombs road recovery")
-            self.assertIsNotNone(self.call(self.game_map, "getObjectByName", "catacombs"))
+            catacombs = self.call(self.game_map, "getObjectByName", "catacombs")
+            self.assertIsNotNone(catacombs)
+            self.assertEqual(original_catacombs, catacombs, "Preparation must visit the original authored cave")
             relics_before = self.call(self.player, "countItems", "holyRelic")
             self.snapshot("before original catacombs")
             self.walkTo("catacombs", allow_removed=True)
@@ -1106,7 +1117,9 @@ class OctobogzMcpWalkthroughTest(unittest.TestCase):
                 candidates = self.nearbyAuthoredPritz((57, 103, 0))
                 if not candidates:
                     break
-                if self.call(self.player, "getHpRatio") < 75:
+                if self.call(self.player, "getHp") < self.call(self.player, "getHpMax") or self.call(
+                    self.player, "getMana"
+                ) < self.call(self.player, "getManaMax"):
                     self.recoverOnRoadPair((57, 115, 0), (58, 115, 0), "catacombs road recovery")
                     candidates = self.nearbyAuthoredPritz((57, 103, 0))
                     if not candidates:
