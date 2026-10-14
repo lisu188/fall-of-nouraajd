@@ -3,8 +3,9 @@
 
 """Start a test MCP process with one seed before its first game session.
 
-Octobogz uses seed 100, matching the native deterministic hunt replay. Normal
-MCP startup remains unseeded; this launcher never reseeds save/reload operations.
+Octobogz uses seed 100 as its fixed startup input. Native combat replays seed
+after world creation and do not establish startup-route readiness. Normal MCP
+startup remains unseeded; this launcher never reseeds save/reload operations.
 """
 
 import argparse
