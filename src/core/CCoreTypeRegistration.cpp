@@ -104,6 +104,35 @@ void registerCustomValueTypes() {
 
     auto array_string_serialize = [](const std::set<std::string> &set) { return set_to_json_array(set); };
 
+    auto list_string_deserialize =
+        [](const std::shared_ptr<CGame> &, const json &object,
+           CSerializationReadContext &context) -> CSerializationResult<std::list<std::string>> {
+        if (!object.is_array()) {
+            return std::unexpected(CSerializationError{CSerializationErrorCode::TypeMismatch, context.source(),
+                                                       context.path(), context.objectType(),
+                                                       "Expected an array for an ordered string list"});
+        }
+        std::list<std::string> values;
+        std::size_t index = 0;
+        for (const auto &value : object) {
+            CSerializationReadContext::PropertyScope entryScope(context, "[" + std::to_string(index++) + "]", {}, true);
+            if (!value.is_string()) {
+                return std::unexpected(CSerializationError{CSerializationErrorCode::TypeMismatch, context.source(),
+                                                           context.path(), context.objectType(),
+                                                           "Expected a string in an ordered string list"});
+            }
+            values.push_back(value.get<std::string>());
+        }
+        return values;
+    };
+
+    auto list_string_serialize = [](const std::list<std::string> &values) {
+        auto array = json::array();
+        for (const auto &value : values)
+            array[array.size()] = value;
+        return array;
+    };
+
     auto tags_deserialize = [](const std::shared_ptr<CGame> &, const json &object) {
         return json_array_to_tags(object);
     };
@@ -149,6 +178,7 @@ void registerCustomValueTypes() {
     };
 
     CTypes::registerJsonType<std::set<std::string>>(array_string_serialize, array_string_deserialize);
+    CTypes::registerJsonType<std::list<std::string>>(list_string_serialize, list_string_deserialize);
     CTypes::registerJsonType<CTags>(tags_serialize, tags_deserialize);
     CTypes::registerJsonType<std::set<int>>(array_int_serialize, array_int_deserialize);
     CTypes::registerJsonType<std::map<std::string, std::string>>(map_string_string_serialize,
