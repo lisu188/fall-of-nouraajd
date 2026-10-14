@@ -924,11 +924,19 @@ class OctobogzMcpWalkthroughTest(unittest.TestCase):
             return
         anchors = ((19, 10, 0), (57, 103, 0))
         original = {}
-        for anchor_index, anchor in enumerate(anchors):
-            for _, name in self.nearbyAuthoredPritz(anchor):
-                actor = self.call(self.game_map, "getObjectByName", name)
-                self.assertIsNotNone(actor)
-                original[name] = (actor, anchor_index)
+        for actor in self.call(self.game_map, "getObjects"):
+            if self.call(actor, "getTypeId") != "Pritz" or not self.call(actor, "isAlive"):
+                continue
+            if self.call(actor, "getStringProperty", "affiliation") != "gooby":
+                continue
+            position = self.coords(actor)
+            eligible = [index for index, anchor in enumerate(anchors) if anchor[2] == position[2]]
+            if not eligible:
+                continue
+            anchor_index = min(eligible, key=lambda index: sum(abs(a - b) for a, b in zip(position, anchors[index])))
+            name = self.call(actor, "getName")
+            self.assertEqual(actor, self.call(self.game_map, "getObjectByName", name))
+            original[name] = (actor, anchor_index)
         print(
             "MCP hunt frozen authored healing pool",
             {"initial": initial, "target": target, "count": len(original), "names": sorted(original)},
@@ -1803,6 +1811,14 @@ class OctobogzDiagnosticTest(unittest.TestCase):
         self.assertEqual(13, walker.healingPreparationInventory()["strong"])
         self.assertEqual(["existingPritz0", "existingPritz1"], [call.args[0] for call in walker.walkTo.call_args_list])
         self.assertIn("unearnedNewPritz", living)
+
+    def testReadinessFindsLivingAuthoredActorsThatWanderedBeforePreparationStarted(self):
+        walker, state, *_ = self.authoredReadinessFixture(strong=11, foes=2)
+        walker.coords = lambda actor=None: (140, 110, 0) if actor is not None else (57, 115, 0)
+        with patch("builtins.print"):
+            walker.ensureAuthoredHealingReadiness()
+        self.assertEqual(2, state["fights"])
+        self.assertEqual(13, walker.healingPreparationInventory()["strong"])
 
     def testReadinessCapsActualPreparationFightsAndRejectsExperienceOrIdentityCorruption(self):
         for corruption, pattern, expected_fights in (

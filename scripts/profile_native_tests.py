@@ -73,7 +73,7 @@ def buildMetadata(repo_root, build_dir, tools):
             match = re.match(r"([^:]+):[^=]+=(.*)$", line)
             if match and match.group(1) in CACHE_KEYS:
                 cache[match.group(1)] = match.group(2)
-    compiler = cache.get("CMAKE_CXX_COMPILER", "c++")
+    compiler = cache.get("CMAKE_CXX_COMPILER", os.environ.get("CXX", "g++-15"))
     return {
         "checkout": commandInfo(["git", "rev-parse", "HEAD"], repo_root),
         "parents": parentInfo(repo_root),
@@ -265,7 +265,9 @@ def run(args):
 def main(argv=None):
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--repo-root", type=Path, default=ROOT)
-    parser.add_argument("--build-dir", type=Path, default=Path("cmake-build-relwithdebinfo"))
+    parser.add_argument(
+        "--build-dir", type=Path, default=Path(os.environ.get("GAME_BUILD_DIR", "cmake-build-gcc15-relwithdebinfo"))
+    )
     parser.add_argument("--output-dir", type=Path, required=True)
     parser.add_argument("--suite", choices=("handler", "map", "both"), default="both")
     parser.add_argument("--metadata-only", action="store_true", help="Record selected metadata without running tests")
