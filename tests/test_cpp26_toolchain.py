@@ -52,6 +52,59 @@ class BuildDirectoryTest(unittest.TestCase):
                 validateBuildDirectory(build_dir, "Ninja", "g++-15")
 
 
+class DesktopReleaseToolchainTest(unittest.TestCase):
+    def desktopJob(self):
+        workflow = (ROOT / ".github/workflows/release.yml").read_text(encoding="utf-8")
+        return workflow.split("\n  android:", 1)[0]
+
+    def testTaggedDesktopReleaseProvisionsTheMandatoryPinnedToolchain(self):
+        desktop = self.desktopJob()
+        for setting in (
+            "runs-on: ubuntu-26.04",
+            "CC: gcc-15",
+            "CXX: g++-15",
+            "GAME_CONFIGURE_BUILD_PREFIX: cmake-build-gcc15",
+            "GAME_BUILD_DIR: cmake-build-gcc15-release",
+            "GAME_BUILD_CONFIG: Release",
+            "python3 -m pip install --upgrade cmake==4.3.1",
+            "sudo apt-get install -y build-essential gcc-15 g++-15 ninja-build",
+        ):
+            with self.subTest(setting=setting):
+                self.assertTrue(setting in desktop, "Missing desktop release setting: " + setting)
+        self.assertTrue("cmake==4.3.1" in desktop, "Desktop release must provision the pinned CMake before configure")
+        self.assertLess(
+            desktop.index("cmake==4.3.1"), desktop.index("GAME_CONFIGURE_BUILD_TYPES=Release ./configure.sh")
+        )
+        self.assertNotIn("build-essential cmake ", desktop)
+        self.assertNotIn("CMAKE_CXX_STANDARD=23", desktop)
+        cmake = (ROOT / "CMakeLists.txt").read_text(encoding="utf-8")
+        self.assertIn("set(CMAKE_CXX_STANDARD 26)", cmake)
+        self.assertIn("set(CMAKE_CXX_STANDARD_REQUIRED ON)", cmake)
+        self.assertIn("set(CMAKE_CXX_EXTENSIONS OFF)", cmake)
+
+    def testTaggedDesktopReleaseBuildsValidatesAndPackagesTheConfiguredTree(self):
+        desktop = self.desktopJob()
+        for command in (
+            'cmake --build cmake-build-gcc15-release --target _game for_unit_tests performance_guard_tests -j"$(nproc)"',
+            "ctest --test-dir cmake-build-gcc15-release --output-on-failure -R for_unit_tests",
+            "ctest --test-dir cmake-build-gcc15-release --output-on-failure --verbose -L performance",
+            'python3 test.py --suite full --jobs "$(nproc)"',
+            'cmake --build cmake-build-gcc15-release --target package -j"$(nproc)"',
+            "files: cmake-build-gcc15-release/fall-of-nouraajd-*.tar.gz",
+        ):
+            with self.subTest(command=command):
+                self.assertTrue(command in desktop, "Missing desktop release command: " + command)
+        self.assertNotIn("cmake-build-release", desktop)
+
+    def testReleaseCacheMetadataUsesTheSelectedCompilerWithoutBroadFallback(self):
+        desktop = self.desktopJob()
+        self.assertIn('compiler_id="$("${CXX}" -dumpmachine)-$("${CXX}" -dumpfullversion -dumpversion)"', desktop)
+        self.assertIn("-ccache-cxx26-release-package-${compiler_id}-", desktop)
+        restore = desktop.split("      - name: Restore ccache", 1)[1].split("      - name:", 1)[0]
+        keys = restore.split("restore-keys:", 1)[1].strip().splitlines()
+        self.assertEqual(["${{ steps.ccache.outputs.prefix }}"], [line.strip() for line in keys if line.strip() != "|"])
+
+
 class DefaultBuildConsumerTest(unittest.TestCase):
     def testRunnerDiscoversCompilerSpecificRelease(self):
         with tempfile.TemporaryDirectory() as directory:
