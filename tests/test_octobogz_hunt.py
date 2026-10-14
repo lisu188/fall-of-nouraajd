@@ -2491,7 +2491,9 @@ class OctobogzHuntTest(unittest.TestCase):
         )
         self.assertLess(route.index("self.prepareHealingStockAtAuthoredMarket()"), route.index("self.enterHunt()"))
         self.assertIn(
-            'if player_class == "Sorcerer":\n                    self.prepareHealingStockAtAuthoredMarket()', route
+            'if player_class == "Sorcerer":\n                    self.ensureAuthoredHealingReadiness()\n'
+            "                    self.prepareHealingStockAtAuthoredMarket()",
+            route,
         )
 
     def authoredBrewingFixture(self, lessers=6, beers=4, strong_count=5, corruption=None):
@@ -2928,6 +2930,7 @@ class OctobogzHuntTest(unittest.TestCase):
             return result
 
         walker.call, walker.step = call, step
+        walker.ensureAuthoredHealingReadiness = Mock()
         return fixture
 
     def testRemainingBroodRecoverySkipsPrecombatStockOnlyAfterActualRetainedDeathProof(self):
@@ -2943,6 +2946,7 @@ class OctobogzHuntTest(unittest.TestCase):
         with patch("builtins.print"):
             walker.recoverBeforeRemainingBrood("Sorcerer")
         self.assertEqual({"brood"}, walker.confirmed_dead)
+        walker.ensureAuthoredHealingReadiness.assert_not_called()
         walker.prepareHealingStockAtAuthoredMarket.assert_not_called()
         self.assertFalse(any(walker.call(item, "hasTag", "heal") for item in inventory))
 
@@ -2950,6 +2954,7 @@ class OctobogzHuntTest(unittest.TestCase):
         walker, _, inventory, _, _, _, _, _, _ = self.remainingBroodDepartureFixture(dies_on_road=False)
         with patch("builtins.print"), self.assertRaisesRegex(AssertionError, "genuinely earned stronger healing stock"):
             walker.recoverBeforeRemainingBrood("Sorcerer")
+        walker.ensureAuthoredHealingReadiness.assert_called_once_with(initial=False)
         self.assertEqual(set(), walker.confirmed_dead)
         self.assertEqual([], walker.basicLesserIngredients(inventory))
         self.assertFalse(any(walker.call(item, "hasTag", "heal") for item in inventory))
@@ -2965,6 +2970,7 @@ class OctobogzHuntTest(unittest.TestCase):
         walker.prepareHealingStockAtAuthoredMarket = Mock()
         with patch("builtins.print"):
             walker.recoverBeforeRemainingBrood("Warrior")
+        walker.ensureAuthoredHealingReadiness.assert_not_called()
         walker.prepareHealingStockAtAuthoredMarket.assert_not_called()
 
     def testAlreadyDeadBroodStillRequiresRetainedNativeDeathProofWithoutRoadOrMarketActions(self):
