@@ -591,6 +591,7 @@ class OctobogzMcpWalkthroughTest(unittest.TestCase):
             self.assertSlotDefeated("brood")
             return
         if player_class == "Sorcerer":
+            self.ensureAuthoredHealingReadiness(initial=False)
             self.prepareHealingStockAtAuthoredMarket(initial=False)
             self.recoverOnAuthoredRoad()
 
@@ -887,6 +888,116 @@ class OctobogzMcpWalkthroughTest(unittest.TestCase):
             purchases.append({"name": name, "price": price})
         print("MCP hunt finite authored ingredient purchase", {"initial": initial, "items": purchases}, flush=True)
         return len(purchases)
+
+    def convertOwnedHealingAtAuthoredMarket(self, initial):
+        self.brewOwnedBasicLifePotions()
+        self.sellWeakHealingStockAtAuthoredMarket(preserve_ingredients=True)
+        self.brewOwnedBasicLifePotions()
+        self.buyFiniteBasicIngredientsAtAuthoredMarket(initial)
+        self.brewOwnedBasicLifePotions()
+
+    def healingPreparationInventory(self):
+        properties = json.loads(self.engine("jsonify", self.player))["properties"]
+        items = {}
+        for item in properties.get("items") or []:
+            identity = self.itemIdentity(item)
+            self.assertTrue(identity["name"], "Earned preparation items must have native identities")
+            self.assertNotIn(identity["name"], items, "Earned preparation must not clone item identities")
+            items[identity["name"]] = {**identity, "heal": "heal" in item["properties"].get("tags", [])}
+        strong = sum(item["heal"] and item["power"] > 1 for item in items.values())
+        lesser = sum(item["typeId"] == "LesserLifePotion" for item in items.values())
+        gold = self.call(self.player, "getGold")
+        return {"items": items, "strong": strong, "brewable": min(lesser // 2, gold // 20)}
+
+    def ensureAuthoredHealingReadiness(self, initial=True):
+        # Passing main's Windows route carried thirteen strong potions into the hunt and ten after Scout.
+        # Time-seeded loot cannot make level four alone a reliable preparation receipt.
+        target = 13 if initial else 10
+        self.convertOwnedHealingAtAuthoredMarket(initial)
+        inventory = self.healingPreparationInventory()
+        if inventory["strong"] >= target:
+            print(
+                "MCP hunt measured healing readiness",
+                {"initial": initial, "target": target, "strongStock": inventory["strong"], "fights": 0},
+                flush=True,
+            )
+            return
+        anchors = ((19, 10, 0), (57, 103, 0))
+        original = {}
+        for anchor in anchors:
+            for _, name in self.nearbyAuthoredPritz(anchor):
+                actor = self.call(self.game_map, "getObjectByName", name)
+                self.assertIsNotNone(actor)
+                original[name] = actor
+        consumed = set()
+        fights = 0
+        conversions = 1
+        while inventory["strong"] < target:
+            while inventory["strong"] + inventory["brewable"] < target:
+                candidates = sorted(
+                    (distance, name, index)
+                    for index, anchor in enumerate(anchors)
+                    for distance, name in self.nearbyAuthoredPritz(anchor)
+                    if name in original
+                )
+                if fights >= 18 or not candidates:
+                    # An odd earned Lesser can still pair with the untouched original shop item.
+                    self.assertLess(conversions, 20, "Earned healing conversion must remain bounded")
+                    self.convertOwnedHealingAtAuthoredMarket(initial)
+                    conversions += 1
+                    inventory = self.healingPreparationInventory()
+                    if inventory["strong"] >= target:
+                        break
+                self.assertLess(
+                    fights, 18, ("Bounded authored healing preparation exhausted", target, inventory, fights)
+                )
+                self.assertTrue(
+                    candidates, ("Finite living authored Pritz exhausted before healing readiness", target, inventory)
+                )
+                _, name, anchor_index = candidates[0]
+                actor = self.call(self.game_map, "getObjectByName", name)
+                self.assertEqual(original[name], actor, "Preparation must fight the existing authored actor")
+                before = self.healingPreparationInventory()
+                exp_before = self.call(self.player, "getNumericProperty", "exp")
+                road = ((9, 36, 0), (9, 37, 0)) if anchor_index == 0 else ((57, 115, 0), (58, 115, 0))
+                self.recoverOnRoadPair(*road, "earned healing road recovery")
+                if self.call(self.game_map, "getObjectByName", name) is not None:
+                    self.walkTo(name, allow_removed=True)
+                self.assertIsNone(self.call(self.game_map, "getObjectByName", name))
+                exp_after = self.call(self.player, "getNumericProperty", "exp")
+                self.assertGreater(exp_after, exp_before, "Healing preparation must earn experience in real combat")
+                inventory = self.healingPreparationInventory()
+                self.assertFalse(consumed.intersection(inventory["items"]), "Consumed earned items must not reappear")
+                removed = before["items"].keys() - inventory["items"].keys()
+                added = inventory["items"].keys() - before["items"].keys()
+                for retained in before["items"].keys() & inventory["items"].keys():
+                    self.assertEqual(before["items"][retained], inventory["items"][retained])
+                consumed.update(removed)
+                fights += 1
+                print(
+                    "MCP hunt earned healing combat receipt",
+                    {
+                        "name": name,
+                        "expBefore": exp_before,
+                        "expAfter": exp_after,
+                        "consumed": [before["items"][key] for key in sorted(removed)],
+                        "earned": [inventory["items"][key] for key in sorted(added)],
+                        "strongStock": inventory["strong"],
+                        "ownedBrewable": inventory["brewable"],
+                        "fights": fights,
+                        "fightBudget": 18,
+                    },
+                    flush=True,
+                )
+            self.assertLess(conversions, 20, "Earned healing conversion must remain bounded")
+            self.convertOwnedHealingAtAuthoredMarket(initial)
+            conversions += 1
+            inventory = self.healingPreparationInventory()
+        print(
+            "MCP hunt measured healing readiness",
+            {"initial": initial, "target": target, "strongStock": inventory["strong"], "fights": fights},
+            flush=True,
+        )
 
     def prepareHealingStockAtAuthoredMarket(self, initial=True):
         try:
@@ -1420,6 +1531,7 @@ class OctobogzMcpWalkthroughTest(unittest.TestCase):
                 self.probeCoordinateReadCosts()
                 self.prepareThroughCatacombs()
                 if player_class == "Sorcerer":
+                    self.ensureAuthoredHealingReadiness()
                     self.prepareHealingStockAtAuthoredMarket()
                 self.walkTo("questGiver")
                 if player_class == "Warrior":
@@ -1448,6 +1560,7 @@ class OctobogzMcpWalkthroughTest(unittest.TestCase):
                     gold_before_final = self.call(self.player, "getGold")
                     self.retreatWithOwnedAuthoredScroll()
                     if player_class == "Sorcerer":
+                        self.ensureAuthoredHealingReadiness(initial=False)
                         self.prepareHealingStockAtAuthoredMarket(initial=False)
                     self.recoverOnAuthoredRoad()
                     self.defeat("alpha")
@@ -1492,6 +1605,224 @@ class OctobogzMcpWalkthroughTest(unittest.TestCase):
 
 
 class OctobogzDiagnosticTest(unittest.TestCase):
+    def authoredReadinessFixture(self, *, strong=8, foes=10, lesser_loot=False, corruption=None):
+        from unittest.mock import Mock
+
+        walker = OctobogzMcpWalkthroughTest("runTest")
+        walker.player, walker.game_map = "player", "map"
+        actors = {f"existingPritz{index}": {"__handle__": f"existingPritz{index}"} for index in range(foes)}
+        living = dict(actors)
+        items = {
+            f"earnedStrong{index}": {
+                "name": f"earnedStrong{index}",
+                "typeId": "LifePotion",
+                "power": 2,
+                "tags": ["heal"],
+            }
+            for index in range(strong)
+        }
+        state = {"exp": 6250, "gold": 1600, "fights": 0}
+        walker.original_lesser_shop_names = ("originalOne", "originalTwo", "reservedThird")
+        walker.purchased_lesser_shop_names = {"originalOne", "originalTwo"}
+        walker.retained_lesser_shop_name = "reservedThird"
+        stock = ["reservedThird"]
+        walker.coords = lambda actor=None: (57, 103, 0) if actor else (57, 115, 0)
+
+        def call(handle, method, *args):
+            if handle == "player":
+                if method == "getGold":
+                    return state["gold"]
+                self.assertEqual(("getNumericProperty", "exp"), (method, *args))
+                return state["exp"]
+            if handle == "map":
+                if method == "getObjects":
+                    return list(living.values())
+                self.assertEqual("getObjectByName", method)
+                return living.get(args[0])
+            name = handle["__handle__"]
+            return {
+                "getTypeId": "Pritz",
+                "isAlive": name in living,
+                "getStringProperty": "gooby",
+                "getName": name,
+            }[method]
+
+        def engine(name, handle):
+            self.assertEqual(("jsonify", "player"), (name, handle))
+            return json.dumps({"properties": {"items": [{"properties": item} for item in items.values()]}})
+
+        def fight(name, **kwargs):
+            self.assertEqual({"allow_removed": True}, kwargs)
+            self.assertIn(name, actors, "Readiness may fight only the originally living authored foes")
+            del living[name]
+            state["fights"] += 1
+            if corruption != "noExperience":
+                state["exp"] += 125
+            if corruption != "noLoot":
+                for index in range(2 if lesser_loot else 1):
+                    identity = f"actualLoot{state['fights']}-{index}"
+                    items[identity] = {
+                        "name": identity,
+                        "typeId": "LesserLifePotion" if lesser_loot else "LifePotion",
+                        "power": 1 if lesser_loot else 2,
+                        "tags": ["heal"],
+                    }
+            if corruption == "restoredConsumed":
+                if state["fights"] == 1:
+                    state["consumed"] = items.pop("earnedStrong0")
+                elif state["fights"] == 2:
+                    items["earnedStrong0"] = state["consumed"]
+            if state["fights"] == 1:
+                living["unearnedNewPritz"] = {"__handle__": "unearnedNewPritz"}
+
+        def convert(initial):
+            self.assertEqual(["reservedThird"], stock)
+            lesser = [name for name, item in items.items() if item["typeId"] == "LesserLifePotion"]
+            for index in range(0, len(lesser) - 1, 2):
+                self.assertGreaterEqual(state["gold"], 20)
+                del items[lesser[index]]
+                del items[lesser[index + 1]]
+                identity = f"actualBrew{state['fights']}-{index}"
+                items[identity] = {"name": identity, "typeId": "LifePotion", "power": 2, "tags": ["heal"]}
+                state["gold"] -= 20
+
+        walker.call, walker.engine = call, engine
+        walker.convertOwnedHealingAtAuthoredMarket = Mock(side_effect=convert)
+        walker.walkTo = Mock(side_effect=fight)
+        walker.recoverOnRoadPair = Mock()
+        return walker, state, items, living, stock
+
+    def testReadinessEarnsMeasuredInitialStockFromFiniteAuthoredFoesAndBatchesActualBrewing(self):
+        walker, state, items, living, stock = self.authoredReadinessFixture(lesser_loot=True)
+        with patch("builtins.print"):
+            walker.ensureAuthoredHealingReadiness()
+        self.assertEqual(5, state["fights"])
+        self.assertEqual(6875, state["exp"])
+        self.assertEqual(1500, state["gold"])
+        self.assertEqual(13, walker.healingPreparationInventory()["strong"])
+        self.assertEqual(0, walker.healingPreparationInventory()["brewable"])
+        self.assertEqual(2, walker.convertOwnedHealingAtAuthoredMarket.call_count)
+        self.assertEqual(5, walker.recoverOnRoadPair.call_count)
+        self.assertIn("unearnedNewPritz", living)
+        self.assertEqual(["reservedThird"], stock)
+        self.assertEqual({"originalOne", "originalTwo"}, walker.purchased_lesser_shop_names)
+        self.assertTrue(
+            all(call.args[:2] == ((57, 115, 0), (58, 115, 0)) for call in walker.recoverOnRoadPair.call_args_list)
+        )
+
+    def testReadinessRebuildsActualDepletedPostReloadStockWithoutAssumingScoutIngredients(self):
+        walker, state, items, living, stock = self.authoredReadinessFixture(strong=0)
+        with patch("builtins.print"):
+            walker.ensureAuthoredHealingReadiness(initial=False)
+        self.assertEqual(10, state["fights"])
+        self.assertEqual(10, walker.healingPreparationInventory()["strong"])
+        self.assertEqual(1600, state["gold"])
+        self.assertEqual(["reservedThird"], stock)
+        self.assertEqual(2, walker.convertOwnedHealingAtAuthoredMarket.call_count)
+        self.assertTrue(
+            all(call.args == (False,) for call in walker.convertOwnedHealingAtAuthoredMarket.call_args_list)
+        )
+        self.assertEqual({"unearnedNewPritz"}, set(living))
+
+    def testReadinessUsesExistingSufficientStockWithoutTrainingOrExtraMarketVisits(self):
+        for initial, count in ((True, 13), (False, 10)):
+            with self.subTest(initial=initial):
+                walker, state, *_ = self.authoredReadinessFixture(strong=count, foes=0)
+                with patch("builtins.print"):
+                    walker.ensureAuthoredHealingReadiness(initial=initial)
+                self.assertEqual(0, state["fights"])
+                walker.walkTo.assert_not_called()
+                walker.recoverOnRoadPair.assert_not_called()
+                walker.convertOwnedHealingAtAuthoredMarket.assert_called_once_with(initial)
+
+    def testReadinessUsesTheUntouchedOriginalShopPartnerBeforeReportingFiniteFoesExhausted(self):
+        from unittest.mock import Mock
+
+        walker, state, items, living, stock = self.authoredReadinessFixture(strong=9, foes=1)
+        actual_fight = walker.walkTo.side_effect
+
+        def fight(name, **kwargs):
+            actual_fight(name, **kwargs)
+            items["actualLoot1-0"].update(typeId="LesserLifePotion", power=1)
+
+        def convert(initial):
+            self.assertFalse(initial)
+            if stock and "actualLoot1-0" in items:
+                self.assertEqual("LesserLifePotion", items.pop("actualLoot1-0")["typeId"])
+                original = stock.pop()
+                self.assertEqual("reservedThird", original)
+                walker.purchased_lesser_shop_names.add(original)
+                state["gold"] -= 420
+                items["actualPairedBrew"] = {
+                    "name": "actualPairedBrew",
+                    "typeId": "LifePotion",
+                    "power": 2,
+                    "tags": ["heal"],
+                }
+
+        walker.walkTo.side_effect = fight
+        walker.convertOwnedHealingAtAuthoredMarket = Mock(side_effect=convert)
+        with patch("builtins.print"):
+            walker.ensureAuthoredHealingReadiness(initial=False)
+        self.assertEqual(1, state["fights"])
+        self.assertEqual(1180, state["gold"])
+        self.assertEqual(10, walker.healingPreparationInventory()["strong"])
+        self.assertEqual([], stock)
+        self.assertEqual({"originalOne", "originalTwo", "reservedThird"}, walker.purchased_lesser_shop_names)
+
+    def testReadinessRejectsExhaustedOriginalFoesAndNeverUsesNewlyAppearingActors(self):
+        walker, state, *_ = self.authoredReadinessFixture(foes=2)
+        with patch("builtins.print"), self.assertRaisesRegex(AssertionError, "Finite living authored Pritz exhausted"):
+            walker.ensureAuthoredHealingReadiness()
+        self.assertEqual(2, state["fights"])
+
+    def testReadinessCapsActualPreparationFightsAndRejectsExperienceOrIdentityCorruption(self):
+        for corruption, pattern, expected_fights in (
+            ("noLoot", "Bounded authored healing preparation exhausted", 18),
+            ("noExperience", "earn experience in real combat", 1),
+            ("restoredConsumed", "Consumed earned items must not reappear", 2),
+        ):
+            with self.subTest(corruption=corruption):
+                walker, state, *_ = self.authoredReadinessFixture(foes=20, corruption=corruption)
+                with patch("builtins.print"), self.assertRaisesRegex(AssertionError, pattern):
+                    walker.ensureAuthoredHealingReadiness()
+                self.assertEqual(expected_fights, state["fights"])
+
+    def testReadinessRejectsClonedInventoryIdentitiesAndKeepsEarnedStockAssertions(self):
+        walker, *_ = self.authoredReadinessFixture()
+        duplicate = {"properties": {"name": "duplicate", "typeId": "LifePotion", "power": 2, "tags": ["heal"]}}
+        walker.engine = lambda *args: json.dumps({"properties": {"items": [duplicate, duplicate]}})
+        with self.assertRaisesRegex(AssertionError, "must not clone item identities"):
+            walker.healingPreparationInventory()
+        source = Path(__file__).read_text(encoding="utf-8")
+        import ast
+
+        methods = {node.name: node for node in ast.walk(ast.parse(source)) if isinstance(node, ast.FunctionDef)}
+        readiness = ast.get_source_segment(source, methods["ensureAuthoredHealingReadiness"])
+        forbidden = ("createObject", "addItems", "seed")
+        for node in ast.walk(methods["ensureAuthoredHealingReadiness"]):
+            if isinstance(node, ast.Call) and isinstance(node.func, ast.Attribute):
+                self.assertNotIn(node.func.attr, forbidden)
+                self.assertFalse(node.func.attr.startswith("set"))
+        self.assertIn("fights, 18", readiness)
+        self.assertNotIn("getLevel", readiness)
+        preparation = ast.get_source_segment(source, methods["prepareHealingStockAtAuthoredMarket"])
+        self.assertIn("self.sellWeakHealingStockAtAuthoredMarket()", preparation)
+        route = ast.get_source_segment(
+            source, methods["testWarriorAndSorcererFinishThreeRealEncountersWithPartialReloadAndRewardOnce"]
+        )
+        self.assertLess(route.index("self.ensureAuthoredHealingReadiness()"), route.index("self.enterHunt()"))
+        after_reload = route[route.index('self.snapshot("partial reload")') :]
+        self.assertLess(
+            after_reload.index("self.ensureAuthoredHealingReadiness(initial=False)"),
+            after_reload.index('self.defeat("alpha")'),
+        )
+        brood = ast.get_source_segment(source, methods["recoverBeforeRemainingBrood"])
+        self.assertLess(
+            brood.index("self.ensureAuthoredHealingReadiness(initial=False)"),
+            brood.index("self.prepareHealingStockAtAuthoredMarket(initial=False)"),
+        )
+
     def testNativeLoggerIsOptInAndPassesTheExactFileArgument(self):
         import ast
         from types import SimpleNamespace
