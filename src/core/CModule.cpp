@@ -19,6 +19,7 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #include <algorithm>
 #include <atomic>
 #include <cctype>
+#include <cstdlib>
 #include <optional>
 #include <stdexcept>
 #include <unordered_map>
@@ -1578,6 +1579,11 @@ void init_game_module(py::module_ &m) {
             "Return resolved list grid size as (columns, rows).");
     PY_WRAP_GENERIC_DOC(randint, "randint(lower, upper) -> int: Return a uniform integer with both bounds inclusive. "
                                  "Reversed bounds are normalized.");
+    m.def("_seedRandomForTests", [](std::uint32_t seed) {
+        CRuntimeBridge::seedRandomForTests(seed);
+        vstd::rng().seed(seed);
+        std::srand(seed);
+    });
     m.def("jsonify", &jsonify_py, "jsonify(obj) -> str: Serialize a game object to JSON text.");
     PY_WRAP_GENERIC_DOC(logger, "logger(message) -> None: Write an info log message to the engine logger.");
     m.def("set_logger_sink", set_logger_sink_py, py::arg("sink_name"), py::arg("path") = py::none(),

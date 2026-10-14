@@ -17,10 +17,19 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 #include "core/CRuntimeBridge.h"
 
+#include <cstdlib>
 #include <exception>
 #include <utility>
 
 std::shared_ptr<vstd::event_loop<>> CRuntimeBridge::event_loop_instance() { return vstd::event_loop<>::instance(); }
+
+void CRuntimeBridge::seedRandomForTests(std::uint32_t seed) {
+    if (!event_loop_instance()->isMainThread()) {
+        throw std::logic_error("Test random seeding must run on the engine owner thread before creating a session.");
+    }
+    vstd::rng().seed(seed);
+    std::srand(seed);
+}
 
 void CRuntimeBridge::log_info(std::string message) { vstd::logger::info(std::move(message)); }
 
