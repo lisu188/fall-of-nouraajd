@@ -54,7 +54,8 @@ struct CMapTransitionRequest {
     // their own turn counter by disabling this.
     bool carryTurn = true;
     // Transaction hooks for callers that must prepare the carried player before destination
-    // entry events. Loading/rejection never calls preparation; completion reports every exit.
+    // entry events. This synchronous commit runs after any awaitable preparation and directly
+    // before the map swap. Loading/rejection never calls it; completion reports every exit.
     std::function<void()> beforePlayerEntry;
     std::function<void(bool)> onFinished;
 };

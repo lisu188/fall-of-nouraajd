@@ -186,6 +186,12 @@ vstd::task<void> CSceneManager::runTransitionAsync(std::shared_ptr<CSceneManager
                                                 std::move(beforeEntryAsync), completion);
     } catch (const vstd::task_cancelled &) {
         reject();
+    } catch (const vstd::scheduler_rejected &) {
+        reject();
+        throw;
+    } catch (const std::exception &error) {
+        reject();
+        vstd::logger::error("Map transition failed:", error.what());
     } catch (...) {
         reject();
         throw;
@@ -257,6 +263,10 @@ vstd::task<void> CSceneManager::performMapChangeAsync(std::weak_ptr<CGame> weakG
         if (!map) {
             map = CMapLoader::loadNewMap(game, mapName);
         }
+        if (!game->getContext()->isTransitionGenerationCurrent(expectedGeneration) ||
+            (game->getMap() != oldMap && game->getMap() != map) || (oldMap && oldMap->getPlayer() != player)) {
+            throw std::runtime_error("The game session changed while loading the destination map");
+        }
         if (request.beforePlayerEntry || beforeEntryAsync) {
             if (!map || map->getMapName() != mapName) {
                 throw std::runtime_error("The requested destination map could not be loaded: " + mapName);
@@ -266,17 +276,21 @@ vstd::task<void> CSceneManager::performMapChangeAsync(std::weak_ptr<CGame> weakG
             // prepared player only after the final map swap below.
             game->setMapForResourceLoad(oldMap);
             game->getResourcesProvider()->setActiveScope(oldScope);
-            if (request.beforePlayerEntry) {
-                request.beforePlayerEntry();
-            }
             if (beforeEntryAsync) {
                 game.reset();
                 co_await beforeEntryAsync();
                 game = weakGame.lock();
             }
             if (!game || !game->getContext()->isTransitionGenerationCurrent(expectedGeneration) ||
-                game->getMap() != oldMap) {
+                game->getMap() != oldMap || (oldMap && oldMap->getPlayer() != player)) {
                 throw std::runtime_error("The game session changed during map transition preparation");
+            }
+            if (request.beforePlayerEntry) {
+                request.beforePlayerEntry();
+                if (!game->getContext()->isTransitionGenerationCurrent(expectedGeneration) ||
+                    game->getMap() != oldMap || (oldMap && oldMap->getPlayer() != player)) {
+                    throw std::runtime_error("The game session changed during map transition commit");
+                }
             }
         }
         if (request.retainSourceMap && oldMap) {
@@ -295,18 +309,21 @@ vstd::task<void> CSceneManager::performMapChangeAsync(std::weak_ptr<CGame> weakG
             // targetCoords always win; otherwise a reused retained session returns to the
             // coordinate where it was left instead of replaying the destination entry tile.
             if (player) {
+                game.reset();
                 if (request.targetCoords) {
-                    game->getMap()->attachPlayer(player, *request.targetCoords);
+                    co_await map->attachPlayerAsync(player, *request.targetCoords);
                 } else if (reusedSession && retainedReturnCoords) {
-                    game->getMap()->attachPlayer(player, *retainedReturnCoords);
+                    co_await map->attachPlayerAsync(player, *retainedReturnCoords);
                 } else {
-                    game->getMap()->attachPlayer(player);
+                    co_await map->attachPlayerAsync(player);
                 }
+                game = weakGame.lock();
             }
         }
         // Entry hooks may close or replace the session without throwing. Validate their result
         // before touching the active map or committing the transition.
-        if (!game->getContext()->isTransitionGenerationCurrent(expectedGeneration) || game->getMap() != map) {
+        if (!game || !game->getContext()->isTransitionGenerationCurrent(expectedGeneration) || game->getMap() != map ||
+            (player && map->getPlayer() != player)) {
             throw std::runtime_error("The game session changed during destination entry");
         }
         if (oldMap && map && request.carryTurn) {
@@ -322,12 +339,13 @@ vstd::task<void> CSceneManager::performMapChangeAsync(std::weak_ptr<CGame> weakG
         }
         resetTransition();
     } catch (...) {
-        if (map && map != oldMap && map->getPlayer() == player) {
-            map->detachPlayer();
-        }
         game = weakGame.lock();
         if (game && game->getContext()->isTransitionGenerationCurrent(expectedGeneration) &&
-            (game->getMap() == oldMap || game->getMap() == map)) {
+            (game->getMap() == oldMap || game->getMap() == map) && (!oldMap || oldMap->getPlayer() == player) &&
+            (game->getMap() != map || !map || !map->getPlayer() || map->getPlayer() == player)) {
+            if (map && map != oldMap && map->getPlayer() == player) {
+                map->detachPlayer();
+            }
             game->setMap(oldMap);
             game->getResourcesProvider()->setActiveScope(oldScope);
             if (player && oldMap) {

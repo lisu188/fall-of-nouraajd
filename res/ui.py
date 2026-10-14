@@ -18,11 +18,13 @@
 
 from datetime import datetime
 from contextlib import contextmanager
+from functools import wraps
 import json
 from pathlib import Path
 import re
+import sys
 from types import GeneratorType
-from weakref import WeakKeyDictionary
+from weakref import WeakKeyDictionary, ref
 
 import campaign
 
@@ -88,6 +90,49 @@ class UiFlowGame:
         return self.resolve() == uiGame(other)
 
 
+def flowGame(game):
+    if isinstance(game, UiFlowGame):
+        return game
+    resolver = getattr(game, "createWeakResolver", None)
+    return UiFlowGame(resolver() if callable(resolver) else ref(game))
+
+
+class ResumableHook:
+    def __init__(self, callback):
+        self.callback = callback
+
+    def __set_name__(self, owner, name):
+        callback = self.callback
+        setattr(owner, name + "Flow", callback)
+
+        @wraps(callback)
+        def synchronous(receiver, *args, **kwargs):
+            return runUiFlow(receiver.getGame(), callback(receiver, *args, **kwargs))
+
+        setattr(owner, name, synchronous)
+
+
+def resumableHook(callback):
+    return ResumableHook(callback)
+
+
+def showReader(game, title, body):
+    from game import showReader as read
+
+    return read(uiGame(game), title, body)
+
+
+def showReaderFlow(game, title, body):
+    handler = game.getGuiHandler()
+    gui = game.getGui()
+    if gui is not None:
+        gui.notify(title + "\n" + body)
+    if callable(getattr(handler, "showCampaignScreen", None)):
+        yield uiRequest("gui.showCampaignScreen", title, body, "Continue")
+    else:
+        yield uiRequest("gui.showInfo", body, False)
+
+
 def uiTarget(operation, *, resumable=False):
     module = globals()
     if operation.startswith("campaign."):
@@ -107,11 +152,37 @@ def runUiFlow(game, flow):
         error = None
         try:
             operation = request["operation"]
-            target = (
-                getattr(game.getGuiHandler(), operation.removeprefix("gui."))
-                if operation.startswith("gui.")
-                else uiTarget(operation)
-            )
+            if operation == "gui.addRandomLoot":
+                target = game.getRngHandler().addRandomLoot
+            elif operation == "gui.checkQuests":
+                target = lambda player: player.checkQuests()
+            elif operation == "gui.questCommitted":
+                target = lambda: None
+            elif operation == "gui.moveTo":
+                target = lambda actor, x, y, z: actor.moveTo(x, y, z)
+            elif operation == "gui.removeObject":
+                target = lambda game_map, obj: game_map.removeObject(obj)
+            elif operation == "gui.addObjectByName":
+
+                def target(game_map, name, x, y, z):
+                    from game import Coords
+
+                    return game_map.addObjectByName(name, Coords(x, y, z))
+
+            elif operation in {"gui.startGameWithPlayer", "gui.startRandomGameWithPlayer"}:
+
+                def target(*args):
+                    from _game import CGameLoader
+
+                    loader = getattr(CGameLoader, operation.removeprefix("gui."))
+                    if args[-1]:
+                        return loader(uiGame(game), *args)
+                    return loader(uiGame(game), *args[:-1])
+
+            elif operation.startswith("gui."):
+                target = getattr(game.getGuiHandler(), operation.removeprefix("gui."))
+            else:
+                target = uiTarget(operation)
             answer = target(*request["args"], **request["kwargs"])
         except BaseException as failure:
             error = failure
@@ -124,6 +195,8 @@ class UiFlow:
         if entry not in {"pause", "saveMenu", "showDefeat"}:
             raise ValueError("Unknown native UI flow: " + entry)
         self.frames = [uiTarget(entry, resumable=True)(UiFlowGame(resolve_game))]
+        self.objectArguments = {}
+        self.nextObjectToken = 1
 
     @classmethod
     def fromCallback(cls, callback):
@@ -136,9 +209,34 @@ class UiFlow:
 
         flow = cls.__new__(cls)
         flow.frames = [invoke()]
+        flow.objectArguments = {}
+        flow.nextObjectToken = 1
         return flow
 
+    def encodeArgument(self, value):
+        if value is None or isinstance(value, (str, bool, int, float)):
+            return value
+        if isinstance(value, (list, tuple)):
+            return [self.encodeArgument(item) for item in value]
+        if isinstance(value, dict):
+            if "__nativeObject" in value or not all(isinstance(key, str) for key in value):
+                raise ValueError("Native UI argument dictionaries must use ordinary JSON keys")
+            return {key: self.encodeArgument(item) for key, item in value.items()}
+        native_type = getattr(sys.modules.get("_game"), "CGameObject", ())
+        if not isinstance(value, native_type):
+            raise TypeError("Native UI arguments must be JSON values or CGameObject instances")
+        token = "object_" + str(self.nextObjectToken)
+        self.nextObjectToken += 1
+        self.objectArguments[token] = value
+        return {"__nativeObject": token}
+
+    def takeObjectArgument(self, token):
+        if not isinstance(token, str):
+            raise TypeError("Native UI object tokens must be strings")
+        return self.objectArguments.pop(token)
+
     def advance(self, answer_json, error_message=None):
+        self.objectArguments.clear()
         answer = json.loads(answer_json)
         error = RuntimeError(error_message) if error_message is not None else None
         while self.frames:
@@ -160,7 +258,13 @@ class UiFlow:
             if operation.startswith("gui."):
                 if request["kwargs"]:
                     raise ValueError("Native modal requests use positional arguments")
-                return json.dumps({"operation": operation.removeprefix("gui."), "args": request["args"]})
+                try:
+                    return json.dumps(
+                        {"operation": operation.removeprefix("gui."), "args": self.encodeArgument(request["args"])}
+                    )
+                except BaseException:
+                    self.objectArguments.clear()
+                    raise
             try:
                 self.frames.append(uiTarget(operation, resumable=True)(*request["args"], **request["kwargs"]))
             except BaseException as failure:
@@ -170,6 +274,7 @@ class UiFlow:
         return None
 
     def close(self):
+        self.objectArguments.clear()
         frames, self.frames = self.frames, []
         error = None
         for frame in reversed(frames):
@@ -422,8 +527,6 @@ def newAdventure(game):
 
 
 def newAdventureFlow(game):
-    from _game import CGameLoader
-
     while game.getContext().isActive():
         mode = yield uiRequest(
             "choose",
@@ -501,9 +604,9 @@ def newAdventureFlow(game):
                 if mode == "campaign":
                     (yield uiRequest("campaign.start", game, destination, class_id, race_id))
                 elif mode == "scenario":
-                    CGameLoader.startGameWithPlayer(uiGame(game), destination, class_id, race_id)
+                    yield uiRequest("gui.startGameWithPlayer", destination, class_id, race_id)
                 else:
-                    CGameLoader.startRandomGameWithPlayer(uiGame(game), class_id, race_id)
+                    yield uiRequest("gui.startRandomGameWithPlayer", class_id, race_id)
                 if game.getMap() is None or game.getMap().getPlayer() is None:
                     raise ValueError("No playable map loaded")
             clearSessionSaveStatus(game)
@@ -981,7 +1084,7 @@ def retryChapter(game):
 
 def retryChapterFlow(game):
     try:
-        return campaign.retryPending(game)
+        return (yield uiRequest("campaign.retryPending", game))
     except Exception:
         (
             yield uiRequest(

@@ -18,8 +18,13 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #include "CPlayer.h"
 
 #include "core/CGame.h"
+#include "core/CAsync.h"
+#include "core/CGameContext.h"
 #include "core/CMap.h"
 #include "core/CPlaytestTrace.h"
+#include "handler/CGuiHandler.h"
+#include "handler/CScriptHandler.h"
+#include <exception>
 #include <utility>
 
 namespace {
@@ -56,33 +61,95 @@ void CPlayer::checkQuests() {
     if (checkingQuests) {
         return;
     }
-    QuestCheckGuard checkGuard(checkingQuests);
-    auto set = quests;
-    for (const auto &quest : set) {
-        if (!quest) {
-            quests.erase(quest);
-            continue;
+    if (auto game = getGame()) {
+        game_async::wait(game->getContext()->spawnTask(checkQuestsAsync()));
+    } else {
+        game_async::run(checkQuestsAsync());
+    }
+}
+
+vstd::task<void> CPlayer::checkQuestsAsync() {
+    return [](std::shared_ptr<CPlayer> self) -> vstd::task<void> {
+        auto loop = vstd::event_loop<>::instance();
+        if (!loop->isMainThread()) {
+            co_await vstd::post(loop);
         }
-        if (!quests.contains(quest)) {
-            continue;
+        if (self->checkingQuests) {
+            co_return;
         }
-        if (quest->isCompleted() && quests.contains(quest)) {
+        QuestCheckGuard checkGuard(self->checkingQuests);
+        const auto stop = co_await vstd::thisTaskStopToken();
+        auto owner = self->getGame();
+        auto context = owner ? owner->getContext() : nullptr;
+        owner.reset();
+        auto checkActive = [&] {
+            if (stop.stop_requested() || (context && !context->isActive())) {
+                throw vstd::task_cancelled();
+            }
+        };
+        auto set = self->quests;
+        for (const auto &quest : set) {
+            checkActive();
+            if (!quest) {
+                self->quests.erase(quest);
+                continue;
+            }
+            if (!self->quests.contains(quest)) {
+                continue;
+            }
+            const bool completed = quest->isCompleted();
+            checkActive();
+            if (!completed || !self->quests.contains(quest)) {
+                continue;
+            }
             if (CPlaytestTrace::enabled()) {
-                json fields = {
-                    {"player", CPlaytestTrace::objectRef(this->ptr<CPlayer>())},
-                    {"quest", questId(quest)},
-                };
-                CPlaytestTrace::addMapContext(fields, getMap());
+                json fields = {{"player", CPlaytestTrace::objectRef(self)}, {"quest", questId(quest)}};
+                CPlaytestTrace::addMapContext(fields, self->getMap());
                 CPlaytestTrace::record("quest_completed", fields);
             }
-            quest->onComplete();
-            quest->captureJournal(true);
-            quests.erase(quest);
-            completedQuests.insert(quest);
-            recordDirectPropertyChanged("quests");
-            recordDirectPropertyChanged("completedQuests");
+            auto finish = [self, quest, context](bool notify) {
+                std::exception_ptr captureFailure;
+                if (notify) {
+                    try {
+                        quest->captureJournal(true);
+                    } catch (...) {
+                        captureFailure = std::current_exception();
+                    }
+                }
+                self->quests.erase(quest);
+                self->completedQuests.insert(quest);
+                if (notify && (!context || context->isActive())) {
+                    self->recordDirectPropertyChanged("quests");
+                    if (!context || context->isActive()) {
+                        self->recordDirectPropertyChanged("completedQuests");
+                    }
+                }
+                if (captureFailure) {
+                    std::rethrow_exception(captureFailure);
+                }
+            };
+            auto game = self->getGame();
+            auto committed = std::make_shared<bool>(false);
+            auto flow = CScriptHandler::createObjectFlow(quest, "onCompleteFlow", {}, game, committed);
+            checkActive();
+            if (flow) {
+                auto gui = game->getGuiHandler();
+                game.reset();
+                try {
+                    co_await gui->runScriptFlowAsync(std::move(flow));
+                } catch (...) {
+                    if (*committed) {
+                        finish(context->isActive());
+                    }
+                    throw;
+                }
+            } else {
+                game.reset();
+                quest->onComplete();
+            }
+            finish(!context || context->isActive());
         }
-    }
+    }(this->ptr<CPlayer>());
 }
 
 void CPlayer::captureQuestJournal() {

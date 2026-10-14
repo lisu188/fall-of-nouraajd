@@ -3,6 +3,7 @@ fall-of-nouraajd c++ dark fantasy game
 Copyright (C) 2026 Andrzej Lis
 SPDX-License-Identifier: GPL-3.0-or-later
 */
+#include "core/CAsync.h"
 #include "core/CController.h"
 #include "core/CGame.h"
 #include "core/CGameContext.h"
@@ -22,6 +23,10 @@ SPDX-License-Identifier: GPL-3.0-or-later
 #include <pybind11/embed.h>
 
 namespace {
+Coords resolvePlan(vstd::task<Coords> plan) {
+    return game_async::run(std::move(plan), game_async::WaitMode::PostedWork);
+}
+
 struct PreviewFixture {
     std::shared_ptr<CGame> game = std::make_shared<CGame>();
     std::shared_ptr<CMap> map = std::make_shared<CMap>();
@@ -131,23 +136,23 @@ void testCommittedLegalRoutesSurviveUnrelatedGraphChangesAndStopPermanentlyWhenB
     fixture.controller->setTarget(fixture.player, Coords(6, 0, 0));
     const auto searches = fixture.map->getNavigationService()->searchCount();
     fixture.map->getTile(Coords(7, 1, 0))->setMovementCost(2);
-    const auto first = fixture.controller->control(fixture.player)->get();
+    const auto first = resolvePlan(fixture.controller->controlAsync(fixture.player));
     expect_true(first == Coords(1, 0, 0), "an unrelated graph edit preserves the next legal committed step");
     fixture.player->moveTo(first);
     fixture.controller->onStepCommitted(fixture.player, first);
     expect_true(fixture.controller->isOnPath(fixture.player, Coords(1, 0, 0)).first,
                 "the current route cell remains visible after its step commits");
-    const auto second = fixture.controller->control(fixture.player)->get();
+    const auto second = resolvePlan(fixture.controller->controlAsync(fixture.player));
     fixture.player->moveTo(second);
     fixture.controller->onStepCommitted(fixture.player, second);
     expect_true(!fixture.controller->isOnPath(fixture.player, Coords(1, 0, 0)).first &&
                     fixture.controller->isOnPath(fixture.player, second).first,
                 "overlay indices discard cells behind the current route position");
     fixture.map->getTile(Coords(3, 0, 0))->setCanStep(false);
-    expect_true(fixture.controller->control(fixture.player)->get() == second,
+    expect_true(resolvePlan(fixture.controller->controlAsync(fixture.player)) == second,
                 "a blocked next step stops the committed route");
     fixture.map->getTile(Coords(3, 0, 0))->setCanStep(true);
-    expect_true(fixture.controller->control(fixture.player)->get() == second &&
+    expect_true(resolvePlan(fixture.controller->controlAsync(fixture.player)) == second &&
                     fixture.controller->isCompleted(fixture.player),
                 "removing the obstacle does not resurrect the abandoned route");
     expect_true(fixture.map->getNavigationService()->searchCount() == searches,
@@ -199,7 +204,7 @@ void testCompletedPollingAbandonsBlockedRouteBeforeMovement() {
                 "the travel-loop completion guard detects the blocked next step before polling control");
     fixture.map->getTile(Coords(1, 0, 0))->setCanStep(true);
     expect_true(fixture.controller->isCompleted(fixture.player) &&
-                    fixture.controller->control(fixture.player)->get() == ZERO,
+                    resolvePlan(fixture.controller->controlAsync(fixture.player)) == ZERO,
                 "reopening a route stopped by completion polling cannot resurrect its old order");
     expect_true(fixture.map->getTurn() == turn && fixture.map->getNavigationService()->searchCount() == searches,
                 "completion polling abandons routing state without movement, turns or another search");
@@ -235,30 +240,33 @@ void testNpcRoutesUseSessionBudgetAndDoNotReplanDuringBlockedOrStaleControl() {
     }
     vstd::rng() = route_rng;
     const auto searches = service->searchCount();
-    const auto first = controller->control(fixture.player)->get();
+    const auto first = resolvePlan(controller->controlAsync(fixture.player));
     expect_true(first == Coords(0, 1, 0) && service->searchCount() == searches + 1,
                 "NPC wandering uses one exact session search and the cheaper weighted detour");
     const auto bytes = budget->used();
     for (int sample = 0; sample < 256; ++sample)
-        expect_true(controller->control(fixture.player)->get() == first, "a retained NPC route remains stable");
+        expect_true(resolvePlan(controller->controlAsync(fixture.player)) == first,
+                    "a retained NPC route remains stable");
     expect_true(service->searchCount() == searches + 1 && budget->used() == bytes,
                 "warm NPC route reads neither search again nor allocate retained storage");
     fixture.map->getTile(first)->setCanStep(false);
-    expect_true(controller->control(fixture.player)->get() == ZERO && service->searchCount() == searches + 1,
+    expect_true(resolvePlan(controller->controlAsync(fixture.player)) == ZERO && service->searchCount() == searches + 1,
                 "a blocked NPC route is abandoned without another random search in the same control call");
     expect_true(budget->used() < bytes, "blocked NPC cancellation releases its charged route storage");
     fixture.map->getTile(first)->setCanStep(true);
     vstd::rng() = route_rng;
-    expect_true(controller->control(fixture.player)->get() == first && service->searchCount() == searches + 2,
+    expect_true(resolvePlan(controller->controlAsync(fixture.player)) == first &&
+                    service->searchCount() == searches + 2,
                 "a later wandering decision searches independently instead of resuming the old route");
     fixture.game->getContext()->advanceTransitionGeneration();
-    expect_true(controller->control(fixture.player)->get() == ZERO && service->searchCount() == searches + 2,
+    expect_true(resolvePlan(controller->controlAsync(fixture.player)) == ZERO && service->searchCount() == searches + 2,
                 "a changed session generation abandons the NPC route without planning in that call");
     vstd::rng() = route_rng;
-    expect_true(controller->control(fixture.player)->get() == first, "a fresh request can plan in the new generation");
+    expect_true(resolvePlan(controller->controlAsync(fixture.player)) == first,
+                "a fresh request can plan in the new generation");
     const auto latestSearch = service->searchCount();
     fixture.player->setController(std::make_shared<CNpcRandomController>());
-    expect_true(controller->control(fixture.player)->get() == ZERO && service->searchCount() == latestSearch,
+    expect_true(resolvePlan(controller->controlAsync(fixture.player)) == ZERO && service->searchCount() == latestSearch,
                 "a route owned by a replaced NPC controller cannot continue");
     vstd::rng() = saved_rng;
     std::cout << "[NPC route reuse] warm_reads=256 additional_searches=0 additional_retained_bytes=0\n";

@@ -5,6 +5,7 @@ import runpy
 import sys
 import types
 import unittest
+from tests.hook_flow_support import installHookFlows
 from unittest.mock import patch
 
 import quest_state
@@ -117,6 +118,7 @@ def loadQuestClasses(path):
     game_stub.event_loop = types.SimpleNamespace(instance=lambda: types.SimpleNamespace(invoke=queued_work.append))
     context = types.SimpleNamespace(getMap=lambda: None, post=queued_work.append)
     context.createWeakResolver = lambda: lambda: context
+    installHookFlows(game_stub)
     with patch.dict(sys.modules, {"game": game_stub, "campaign": campaign_driver}):
         game_stub.narrative = types.SimpleNamespace(**runpy.run_path(str(REPO_ROOT / "res/narrative.py")))
         runpy.run_path(str(path))["load"](None, context)

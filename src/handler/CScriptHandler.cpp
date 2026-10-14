@@ -18,6 +18,8 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #include "handler/CScriptHandler.h"
 #include "core/CMap.h"
 #include "core/CGame.h"
+#include "core/CGameContext.h"
+#include "core/CPythonOverrides.h"
 #include <memory>
 #include <pybind11/eval.h>
 #include <stdexcept>
@@ -30,6 +32,7 @@ struct CScriptHandler::State {
 struct CScriptFlow::State {
     pybind11::object flow;
     std::weak_ptr<CGame> game;
+    std::shared_ptr<bool> committed;
 };
 
 CScriptFlow::CScriptFlow(std::unique_ptr<State> state) : state(std::move(state)) {}
@@ -54,6 +57,25 @@ CScriptFlow::~CScriptFlow() {
 std::optional<json> CScriptFlow::next(const json &answer) { return resume(answer, std::nullopt); }
 
 std::optional<json> CScriptFlow::fail(const std::string &message) { return resume(nullptr, message); }
+
+void CScriptFlow::markCommitted() {
+    if (state->committed) {
+        *state->committed = true;
+    }
+}
+
+std::shared_ptr<CGameObject> CScriptFlow::takeObjectArgument(const std::string &token) {
+    auto owner = state->game.lock();
+    if (!owner) {
+        throw std::runtime_error("Cannot take a UI object after its game has been destroyed.");
+    }
+    pybind11::gil_scoped_acquire acquire;
+    auto object = state->flow.attr("takeObjectArgument")(token).cast<std::shared_ptr<CGameObject>>();
+    if (!object || object->getGame() != owner) {
+        throw std::invalid_argument("A UI flow object must belong to its game session.");
+    }
+    return object;
+}
 
 std::optional<json> CScriptFlow::resume(const json &answer, const std::optional<std::string> &failure) {
     auto owner = state->game.lock();
@@ -96,6 +118,36 @@ std::unique_ptr<CScriptFlow> CScriptHandler::createCallbackFlow(pybind11::functi
     state->game = std::move(game);
     state->flow = pybind11::module_::import("ui").attr("UiFlow").attr("fromCallback")(std::move(callback));
     return std::unique_ptr<CScriptFlow>(new CScriptFlow(std::move(state)));
+}
+
+std::unique_ptr<CScriptFlow>
+CScriptHandler::createObjectFlow(const std::shared_ptr<CGameObject> &object, const std::string &method,
+                                 const std::vector<std::shared_ptr<CGameObject>> &arguments, std::weak_ptr<CGame> game,
+                                 std::shared_ptr<bool> committed) {
+    if (!object || !Py_IsInitialized()) {
+        return nullptr;
+    }
+    pybind11::gil_scoped_acquire acquire;
+    auto override = CPythonOverrides::find_override(object.get(), method.c_str());
+    if (override.is_none()) {
+        return nullptr;
+    }
+    if (!PyCallable_Check(override.ptr())) {
+        throw std::invalid_argument("A script flow hook must be callable: " + method);
+    }
+    auto owner = game.lock();
+    if (!owner || !owner->getContext()->isActive()) {
+        throw std::runtime_error("Cannot create an event flow for a closed game session.");
+    }
+    pybind11::tuple args(arguments.size());
+    for (std::size_t index = 0; index < arguments.size(); ++index) {
+        args[index] = pybind11::cast(arguments[index]);
+    }
+    auto callback =
+        pybind11::cpp_function([override = std::move(override), args = std::move(args)]() { return override(*args); });
+    auto flow = owner->getScriptHandler()->createCallbackFlow(std::move(callback), game);
+    flow->state->committed = std::move(committed);
+    return flow;
 }
 
 CScriptHandler::State &CScriptHandler::getState() {

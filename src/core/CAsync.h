@@ -50,8 +50,11 @@ template <typename T> T wait(const vstd::task_handle<T> &handle, WaitMode mode =
             if (!handle.finished()) {
                 waitForProgress();
             }
-        } else if (loop->runReady() == 0) {
-            waitForProgress();
+        } else {
+            loop->runReady();
+            if (!handle.finished()) {
+                waitForProgress();
+            }
         }
     }
     return handle.get();

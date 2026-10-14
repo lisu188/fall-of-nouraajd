@@ -1,5 +1,7 @@
 def load(self, context):
-    from game import showReader, rewardSnapshot, showRewardReceipt
+    from game import resumableHook, uiRequest, flowGame, removeObjectsFlow
+    from game import showRewardReceiptFlow
+    from game import rewardSnapshot
     from game import CDialog
     from game import CEvent
     from game import CQuest
@@ -41,20 +43,23 @@ def load(self, context):
 
     @register(context)
     class GravemoorStart(CEvent):
+        @resumableHook
         def onEnter(self, event):
             if not event.getCause().isPlayer():
                 return
             game_map = self.getMap()
             gravemoor_flags_default(game_map)
             if game_map.getBoolProperty("gravemoor_intro"):
+                yield from removeObjectsFlow(game_map, lambda obj: obj.getName() == self.getName())
                 return
-            game_map.setBoolProperty("gravemoor_intro", True)
-            showReader(game_map.getGame(), "Gravemoor", self.getStringProperty("text"))
-            game_map.removeAll(lambda ob: ob.getName() == self.getName())
             ensure_quest(event.getCause(), "gravemoorQuest")
+            game_map.setBoolProperty("gravemoor_intro", True)
+            (yield uiRequest("showReader", flowGame(game_map.getGame()), "Gravemoor", self.getStringProperty("text")))
+            (yield from removeObjectsFlow(game_map, lambda ob: ob.getName() == self.getName()))
 
     @register(context)
     class LoyalistCage(CEvent):
+        @resumableHook
         def onEnter(self, event):
             if not event.getCause().isPlayer():
                 return
@@ -67,7 +72,7 @@ def load(self, context):
                     "All three cages stand open. The freed loyalists gather at the crossroads, waiting on the "
                     "Warden's judgment of Quartermaster Voss."
                 )
-            game_map.removeAll(lambda ob: ob.getName() == self.getName())
+            (yield from removeObjectsFlow(game_map, lambda ob: ob.getName() == self.getName()))
 
     @register(context)
     @mapQuest("gravemoor")
@@ -108,50 +113,60 @@ def load(self, context):
         def already_judged(self):
             return self.getGame().getMap().getBoolProperty("voss_judged")
 
+        @resumableHook
         def _pass_judgment(self, spared):
             game_map = self.getGame().getMap()
             if not self.ready_to_judge():
                 return False
             game_map.setBoolProperty("voss_judged", True)
             game_map.setBoolProperty("voss_spared", spared)
-            game_map.getPlayer().checkQuests()
+            (yield uiRequest("gui.checkQuests", game_map.getPlayer()))
             return True
 
+        @resumableHook
         def spare_voss(self):
             game_map = self.getGame().getMap()
-            if not self._pass_judgment(True):
+            if not (yield from self._pass_judgmentFlow(True)):
                 return
             if claim_once(game_map, "judgment_reward_claimed"):
                 reward_before = rewardSnapshot(game_map.getPlayer())
                 game_map.getPlayer().addGold(SPARE_GOLD_REWARD)
-                showRewardReceipt(
-                    self.getGame(),
-                    "A debt sworn",
-                    reward_before,
-                    "Voss chokes out where the occupation pay-chests are cached - "
-                    f"{SPARE_GOLD_REWARD} gold - and swears his ledgers to the Warden's cause. "
-                    "The loyalists watch you spare him, and remember.",
+                campaign.prepareCompletion(self.getGame(), "spared", fallback_map="usurpergate")
+                (
+                    yield from showRewardReceiptFlow(
+                        flowGame(self.getGame()),
+                        "A debt sworn",
+                        reward_before,
+                        "Voss chokes out where the occupation pay-chests are cached - "
+                        f"{SPARE_GOLD_REWARD} gold - and swears his ledgers to the Warden's cause. "
+                        "The loyalists watch you spare him, and remember.",
+                    )
                 )
-            campaign.complete_scenario(self.getGame(), "spared", fallback_map="usurpergate")
+            (yield from campaign.complete_scenarioFlow(self.getGame(), "spared", fallback_map="usurpergate"))
 
+        @resumableHook
         def execute_voss(self):
             game_map = self.getGame().getMap()
-            if not self._pass_judgment(False):
+            if not (yield from self._pass_judgmentFlow(False)):
                 return
             if claim_once(game_map, "judgment_reward_claimed"):
                 reward_before = rewardSnapshot(game_map.getPlayer())
                 game_map.getPlayer().addGold(EXECUTE_GOLD_REWARD)
-                showRewardReceipt(
-                    self.getGame(),
-                    "Judgment at the crossroads",
-                    reward_before,
-                    f"The moor takes the traitor. His purse - {EXECUTE_GOLD_REWARD} gold - goes to the freed. "
-                    "The loyalists watch you do it, and remember that too.",
+                campaign.prepareCompletion(self.getGame(), "executed", fallback_map="usurpergate")
+                (
+                    yield from showRewardReceiptFlow(
+                        flowGame(self.getGame()),
+                        "Judgment at the crossroads",
+                        reward_before,
+                        f"The moor takes the traitor. His purse - {EXECUTE_GOLD_REWARD} gold - goes to the freed. "
+                        "The loyalists watch you do it, and remember that too.",
+                    )
                 )
-            campaign.complete_scenario(self.getGame(), "executed", fallback_map="usurpergate")
+            (yield from campaign.complete_scenarioFlow(self.getGame(), "executed", fallback_map="usurpergate"))
 
     @trigger(context, "onEnter", "quartermasterVoss")
     class VossTrigger(CTrigger):
+        @resumableHook
         def trigger(self, object, event):
             if event.getCause().isPlayer():
-                object.getGame().getGuiHandler().showDialog(object.getGame().createObject("vossDialog"))
+                (yield uiRequest("gui.showDialog", object.getGame().createObject("vossDialog")))

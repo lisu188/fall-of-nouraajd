@@ -1540,6 +1540,52 @@ vstd::task<void> acquireGilFromOwnedWorker(std::promise<void> &completed) {
     });
 }
 
+vstd::task<void> acquireGilAfterWorkerStarts(std::promise<void> &started, std::promise<void> &completed) {
+    co_await vstd::work(game_async::workerPool(), [&] {
+        started.set_value();
+        pybind11::gil_scoped_acquire acquire;
+        completed.set_value();
+    });
+}
+
+void testPostedBoundaryReleasesGilBetweenBusySnapshots() {
+    auto loop = vstd::event_loop<>::instance();
+    loop->runUntilIdle();
+    std::promise<void> started;
+    auto worker_started = started.get_future();
+    std::promise<void> completed;
+    auto worker_done = completed.get_future();
+    vstd::task_group group;
+    auto waiting = group.spawn(acquireGilAfterWorkerStarts(started, completed), vstd::loopScheduler(loop));
+    worker_started.wait();
+
+    bool rescued = false;
+    bool callbacks_held_gil = true;
+    int snapshots = 0;
+    std::function<void()> heartbeat;
+    heartbeat = [&] {
+        callbacks_held_gil = callbacks_held_gil && PyGILState_Check();
+        if (worker_done.wait_for(std::chrono::seconds(0)) == std::future_status::ready) {
+            return;
+        }
+        if (++snapshots == 256) {
+            rescued = true;
+            pybind11::gil_scoped_release release;
+            worker_done.wait_for(std::chrono::seconds(5));
+            return;
+        }
+        loop->invoke(heartbeat);
+    };
+    loop->invoke(heartbeat);
+    game_async::wait(waiting, game_async::WaitMode::PostedWork);
+    loop->runUntilIdle();
+
+    expect_true(!rescued, "busy posted snapshots must yield the GIL before their worker needs a rescue");
+    expect_true(callbacks_held_gil, "posted callbacks retain the GIL while the boundary yields between snapshots");
+    expect_true(worker_done.wait_for(std::chrono::seconds(0)) == std::future_status::ready,
+                "the GIL-dependent worker finishes before the posted-work boundary returns");
+}
+
 void testFrameBoundaryReleasesGilForOwnedWorkers() {
     auto loop = vstd::event_loop<>::instance();
     std::promise<void> completed;
@@ -3774,6 +3820,7 @@ int main() {
     testGameContextWorkerShutdownKeepsGuiOnMainThread();
     testGameContextWorkerBoundaryMarshalsGuiCleanup();
     testGameDestructorWithoutGuiDoesNotRequireMainPump();
+    testPostedBoundaryReleasesGilBetweenBusySnapshots();
     testFrameBoundaryReleasesGilForOwnedWorkers();
     test_game_context_shutdown_is_idempotent_and_preserves_other_game_services();
     test_effect_cycles_release_with_map_and_context_teardown();

@@ -450,19 +450,38 @@ void CGameFightPanel::executeSelectedAction(std::shared_ptr<CGui> gui) {
 }
 
 void CGameFightPanel::useSelectedItem(std::shared_ptr<CGui> gui) {
-    auto player = active_player(gui);
-    auto item = selectedItem.lock();
-    actionMessage = cancelled ? "This encounter has ended." : ManagementActions::itemUseReason(player, item);
-    if (!actionMessage.empty()) {
-        return;
-    }
-    player->useItem(item);
-    if (!player->hasInInventory(item)) {
-        selectedItem.reset();
-    }
-    actionMessage.clear();
-    detailsOffset = 0;
-    refreshEncounterViews();
+    gui_async::spawn(this->ptr<CGameFightPanel>(),
+                     [](std::shared_ptr<CGameFightPanel> self, std::shared_ptr<CGui> gui) -> vstd::task<void> {
+                         auto loop = vstd::event_loop<>::instance();
+                         if (!loop->isMainThread()) {
+                             co_await vstd::post(loop);
+                         }
+                         auto player = active_player(gui);
+                         auto item = self->selectedItem.lock();
+                         self->actionMessage = self->cancelled ? "This encounter has ended."
+                                                               : ManagementActions::itemUseReason(player, item);
+                         if (!self->actionMessage.empty()) {
+                             co_return;
+                         }
+                         try {
+                             co_await player->useItemAsync(item);
+                             if (active_player(gui) != player || !self->isAttachedToGui(gui)) {
+                                 co_return;
+                             }
+                             if (!player->hasInInventory(item) && self->selectedItem.lock() == item) {
+                                 self->selectedItem.reset();
+                             }
+                             self->actionMessage.clear();
+                             self->detailsOffset = 0;
+                             self->refreshEncounterViews();
+                         } catch (const vstd::task_cancelled &) {
+                             throw;
+                         } catch (const vstd::scheduler_rejected &) {
+                             throw;
+                         } catch (const std::exception &error) {
+                             vstd::logger::error("Combat item use failed:", error.what());
+                         }
+                     }(this->ptr<CGameFightPanel>(), std::move(gui)));
 }
 
 bool CGameFightPanel::mouseWheelEvent(std::shared_ptr<CGui> gui, SDL_EventType type, int x, int y, int wheelX,

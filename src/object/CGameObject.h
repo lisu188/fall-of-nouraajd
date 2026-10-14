@@ -283,12 +283,24 @@ class CVisitable {
   public:
     virtual void onEnter(std::shared_ptr<CGameEvent>) = 0;
 
+    virtual vstd::task<void> onEnterAsync(std::shared_ptr<CGameEvent> event) {
+        onEnter(std::move(event));
+        co_return;
+    }
+
     virtual void onLeave(std::shared_ptr<CGameEvent>) = 0;
 };
 
 class CMoveable {
   public:
     virtual void beforeMove() = 0;
+
+    virtual vstd::task<void> beforeMoveAsync() {
+        beforeMove();
+        co_return;
+    }
+
+    virtual void cancelMove() {}
 
     virtual void afterMove() = 0;
 

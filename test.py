@@ -155,6 +155,8 @@ FAST_TEST_PREFIXES = (
     "EffectContractTest.",
     "SessionDeferredWorkTest.",
     "UiCoroutineFlowTest.",
+    "FirstPartyHookFlowTest.",
+    "NativeCoroutineCallbackSelectionTest.",
     "CampaignCoroutineFlowTest.",
     "CharacterCreationFlowTest.",
     "CoverageReportTest.",
@@ -188,6 +190,7 @@ FAST_TEST_NAMES = {
     "PanelLayoutManifestTest.test_reactive_list_views_subscribe_to_model_signals",
 }
 GAMEPLAY_TEST_PREFIXES = (
+    "NativeCoroutineCallbackTest.",
     "NativeDiagnosticsRuntimeTest.",
     "McpHttpNativeRuntimeTest.",
     "EnemyRoleRuntimeTest.",
@@ -15607,15 +15610,15 @@ class GameTest(unittest.TestCase):
             ),
             "catacombs_uses_catacombs_image": config["catacombs"]["properties"].get("animation")
             == "images/buildings/catacombs",
-            "actor_cleanup_helper_imported": "from game import remove_runtime_actors" in script,
+            "actor_cleanup_helper_imported": "from game import removeRuntimeActorsFlow" in script,
             "victor_cleanup_uses_helper": (
-                'remove_runtime_actors(game_map, names=("cultLeaderQuest",), prefixes=(VICTOR_CULTIST_PREFIX,))'
+                'removeRuntimeActorsFlow(game_map, names=("cultLeaderQuest",), prefixes=(VICTOR_CULTIST_PREFIX,))'
                 in script
             ),
             "amulet_cleanup_uses_helper": (
-                'remove_runtime_actors(game_map, names=("amuletGoblin", "oldWoman"))' in script
+                'removeRuntimeActorsFlow(game_map, names=("amuletGoblin", "oldWoman"))' in script
             ),
-            "old_woman_cleanup_uses_helper": 'remove_runtime_actors(game_map, names=("oldWoman",))' in script,
+            "old_woman_cleanup_uses_helper": 'removeRuntimeActorsFlow(game_map, names=("oldWoman",))' in script,
             "actor_cleanup_dedupes_removal": (
                 'game_map.getObjectByName("amuletGoblin")' not in script
                 and "game_map.removeObject(amulet_goblin)" not in script
@@ -26431,6 +26434,11 @@ if SOURCE_UI_TESTS_AVAILABLE:
     from tests.test_octobogz_hunt import OctobogzHuntTest as _OctobogzHuntContractTest
     from tests.test_session_deferred_work import SessionDeferredWorkTest as _SessionDeferredWorkTest
     from tests.test_ui_coroutine_flow import UiCoroutineFlowTest as _UiCoroutineFlowTest
+    from tests.test_first_party_hook_flows import FirstPartyHookFlowTest as _FirstPartyHookFlowTest
+    from tests.test_coroutine_callbacks import NativeCoroutineCallbackTest as _NativeCoroutineCallbackTest
+    from tests.test_coroutine_callbacks import (
+        NativeCoroutineCallbackSelectionTest as _NativeCoroutineCallbackSelectionTest,
+    )
     from tests.test_campaign_coroutine_flow import CampaignCoroutineFlowTest as _CampaignCoroutineFlowTest
     from tests.test_monster_balance_runner import MonsterBalanceRunnerTest as _MonsterBalanceRunnerTest
     from tests.test_enemy_role_runtime import EnemyRoleRuntimeTest as _EnemyRoleRuntimeTest
@@ -26516,6 +26524,15 @@ if SOURCE_UI_TESTS_AVAILABLE:
     class UiCoroutineFlowTest(_UiCoroutineFlowTest):
         pass
 
+    class FirstPartyHookFlowTest(_FirstPartyHookFlowTest):
+        pass
+
+    class NativeCoroutineCallbackTest(_NativeCoroutineCallbackTest):
+        requireCurrentNativeBinary = True
+
+    class NativeCoroutineCallbackSelectionTest(_NativeCoroutineCallbackSelectionTest):
+        pass
+
     class CampaignCoroutineFlowTest(_CampaignCoroutineFlowTest):
         pass
 
@@ -26555,6 +26572,9 @@ if SOURCE_UI_TESTS_AVAILABLE:
     del _EnemyRoleRuntimeTest
     del _EnemyRoleContractTest, _OctobogzHuntContractTest
     del _SessionDeferredWorkTest, _UiCoroutineFlowTest, _CampaignCoroutineFlowTest
+    del _FirstPartyHookFlowTest
+    del _NativeCoroutineCallbackTest
+    del _NativeCoroutineCallbackSelectionTest
     del _OctobogzMcpWalkthroughTest
     del _OctobogzDiagnosticTest
     del _OctobogzRuntimeTest
@@ -27361,12 +27381,19 @@ class McpServerTest(unittest.TestCase):
             "'method': 'notifications/progress', "
             "'params': {'message': 'stdout-timeout-marker'}"
             "}) + '\\n')\n"
+            "sys.stdout.write(json.dumps({'jsonrpc': '2.0', 'id': 0, 'result': 'ready'}) + '\\n')\n"
             "sys.stdout.flush()\n"
             "for _line in sys.stdin:\n"
             "    pass\n"
         )
         proc = self._start_stdio_process([sys.executable, "-c", script], map_name="diagnosticMap")
         try:
+            self.assertEqual("ready", self._read_rpc(proc)["result"])
+            startup_deadline = time.monotonic() + 10.0
+            while "stderr-timeout-marker" not in self._mcp_process_tail_text(proc, "stderr"):
+                if time.monotonic() >= startup_deadline:
+                    self.fail("The timeout fixture did not publish its startup stderr marker")
+                time.sleep(0.001)
             self._send_rpc(
                 proc,
                 {
@@ -28092,8 +28119,8 @@ class McpServerTest(unittest.TestCase):
             self._write_mcp_walkthrough_log(map_name, log)
         return success, log
 
-    def _start_stdio_mcp_process(self, map_name=None, *, trace_name=None, native_log_file=None):
-        script = REPO_ROOT / "mcp.py"
+    def _start_stdio_mcp_process(self, map_name=None, *, trace_name=None, native_log_file=None, fixture_seed=None):
+        script = REPO_ROOT / "mcp.py" if fixture_seed is None else REPO_ROOT / "tests" / "mcp_seed_fixture.py"
         self.assertTrue(script.exists(), "MCP entry point is missing")
         trace_path = None
         env = None
@@ -28115,6 +28142,8 @@ class McpServerTest(unittest.TestCase):
             "--native-log-sink",
             "file" if native_log_file is not None else "disabled",
         ]
+        if fixture_seed is not None:
+            command.extend(["--fixture-seed", str(fixture_seed)])
         if native_log_file is not None:
             native_log_file = Path(native_log_file)
             native_log_file.parent.mkdir(parents=True, exist_ok=True)

@@ -58,10 +58,12 @@ bool CGame::requestMapTransition(CMapTransitionRequest request) {
 
 bool CGame::changeMapWithPreparationFlow(std::string mapName,
                                          std::move_only_function<vstd::task<void>()> beforeEntryAsync,
-                                         std::function<void(bool)> completion) {
+                                         std::function<void(bool)> completion,
+                                         std::function<void()> commitBeforeEntry) {
     CMapTransitionRequest request;
     request.targetMap = std::move(mapName);
     request.onFinished = std::move(completion);
+    request.beforePlayerEntry = std::move(commitBeforeEntry);
     return getSceneManager()->requestMapChange(this->ptr<CGame>(), std::move(request), std::move(beforeEntryAsync));
 }
 

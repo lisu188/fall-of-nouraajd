@@ -27,6 +27,7 @@ import sys
 import tempfile
 import types
 import unittest
+from tests.hook_flow_support import installHookFlows
 from unittest.mock import patch
 from pathlib import Path
 
@@ -763,6 +764,7 @@ class ShippedJudgmentRetryTest(unittest.TestCase):
         script_path = REPO_ROOT / "res" / "maps" / "gravemoor" / "script.py"
         spec = importlib.util.spec_from_file_location("gravemoorRetryFixture", script_path)
         script = importlib.util.module_from_spec(spec)
+        installHookFlows(fake_game_module)
         with patch.dict(sys.modules, {"game": fake_game_module}):
             spec.loader.exec_module(script)
             script.load(None, None)

@@ -1,5 +1,7 @@
 def load(self, context):
-    from game import showReader, rewardSnapshot, showRewardReceipt, requirementMessage
+    from game import resumableHook, uiRequest, flowGame, removeObjectByNameFlow, removeObjectsFlow
+    from game import showRewardReceiptFlow
+    from game import rewardSnapshot, requirementMessage
     from game import CDialog
     from game import CEvent
     from game import CQuest
@@ -37,16 +39,21 @@ def load(self, context):
 
     @register(context)
     class StartEvent(CEvent):
+        @resumableHook
         def onEnter(self, event):
+            if self.getBoolProperty("introInitialized"):
+                yield from removeObjectsFlow(self.getMap(), lambda obj: obj.getName() == self.getName())
+                return
             if not event.getCause().isPlayer():
                 return
             game_map = self.getMap()
-            game = game_map.getGame()
+            game = flowGame(game_map.getGame())
             player = game_map.getPlayer()
             quest_flags_default(game_map)
-            showReader(game, "The Sundered March", self.getStringProperty("text"))
-            game_map.removeAll(lambda ob: ob.getName() == self.getName())
             ensure_quest(player, "sunderedMarchQuest")
+            self.setBoolProperty("introInitialized", True)
+            (yield uiRequest("showReader", flowGame(game), "The Sundered March", self.getStringProperty("text")))
+            (yield from removeObjectsFlow(game_map, lambda ob: ob.getName() == self.getName()))
 
     @register(context)
     class LearningStone(CEvent):
@@ -71,6 +78,7 @@ def load(self, context):
 
     @register(context)
     class Obelisk(CEvent):
+        @resumableHook
         def onEnter(self, event):
             if not event.getCause().isPlayer():
                 return
@@ -80,8 +88,8 @@ def load(self, context):
             game_map = self.getMap()
             game_map.incProperty("sigils_found", 1)
             found = game_map.getNumericProperty("sigils_found")
-            game = game_map.getGame()
-            showReader(game, "Barrow obelisk", self.getStringProperty("text"))
+            game = flowGame(game_map.getGame())
+            (yield uiRequest("showReader", flowGame(game), "Barrow obelisk", self.getStringProperty("text")))
             game.getGuiHandler().notify(f"A barrow-sigil burns itself into your memory. ({found}/3 obelisks read.)")
 
     @register(context)
@@ -100,15 +108,16 @@ def load(self, context):
 
     @register(context)
     class GateThreshold(CEvent):
+        @resumableHook
         def onEnter(self, event):
             if not event.getCause().isPlayer():
                 return
             game_map = self.getMap()
-            game = game_map.getGame()
+            game = flowGame(game_map.getGame())
             if game_map.getBoolProperty("gate_open"):
                 return
             if has_item(game_map.getPlayer(), "ironKey"):
-                game_map.removeObjectByName("borderGate")
+                (yield from removeObjectByNameFlow(game_map, "borderGate"))
                 game_map.setBoolProperty("gate_open", True)
                 game.getGuiHandler().notify(
                     "The Keeper's iron key turns, and the barred gate grinds open onto the barrow road."
@@ -148,13 +157,15 @@ def load(self, context):
 
     @register(context)
     class DigSite(CEvent):
+        @resumableHook
         def onEnter(self, event):
             if not event.getCause().isPlayer():
                 return
             game_map = self.getMap()
-            game = game_map.getGame()
+            game = flowGame(game_map.getGame())
             player = game_map.getPlayer()
             if game_map.getBoolProperty("crown_taken"):
+                yield from self.wakeBossFlow()
                 return
             if game_map.getNumericProperty("sigils_found") < 3:
                 found = game_map.getNumericProperty("sigils_found")
@@ -167,26 +178,44 @@ def load(self, context):
             reward_before = rewardSnapshot(player)
             player.addItem("barrowCrown")
             game_map.setBoolProperty("crown_taken", True)
-            showRewardReceipt(
-                game,
-                "Barrow-Warlord's Crown",
-                reward_before,
-                "The three sigils sing and the barrow gives up its dead king. You lift the Crown of the Barrow-Warlord "
-                "from the grave - and the grave lifts its owner after it. The cult has its crowned king at last, and it "
-                "is wearing your face.",
+            (
+                yield from showRewardReceiptFlow(
+                    flowGame(game),
+                    "Barrow-Warlord's Crown",
+                    reward_before,
+                    "The three sigils sing and the barrow gives up its dead king. You lift the Crown of the Barrow-Warlord "
+                    "from the grave - and the grave lifts its owner after it. The cult has its crowned king at last, and it "
+                    "is wearing your face.",
+                )
             )
-            if not game_map.getBoolProperty("boss_woken"):
+            yield from self.wakeBossFlow()
+
+        @resumableHook
+        def onTurn(self, event):
+            game_map = self.getMap()
+            if game_map.getBoolProperty("crown_taken") and not game_map.getBoolProperty("boss_woken"):
+                yield from self.wakeBossFlow()
+
+        def wakeBossFlow(self):
+            game_map = self.getMap()
+            if game_map.getBoolProperty("boss_woken") or game_map.getBoolProperty("boss_defeated"):
+                return
+            game = flowGame(game_map.getGame())
+            boss = game_map.getObjectByName("theBarrowWarlordBoss")
+            if boss is None:
                 boss = game.createObject("theBarrowWarlord")
                 boss.setStringProperty("name", "theBarrowWarlordBoss")
                 controller = game.createObject("CTargetController")
                 controller.setTarget("player")
                 boss.setController(controller)
                 game_map.addObject(boss)
-                boss.moveTo(*BOSS_SPAWN)
-                game_map.setBoolProperty("boss_woken", True)
-            # Refresh objectives/completion so pickup-first ordering converges with a
-            # later boss defeat. The quest still needs the Barrow-Warlord put down.
-            player.checkQuests()
+            placed = boss.getCoords()
+            if (placed.x, placed.y, placed.z) != BOSS_SPAWN:
+                yield uiRequest("gui.moveTo", boss, *BOSS_SPAWN)
+            game_map.setBoolProperty("boss_woken", True)
+            # Refresh pickup-first objectives after placement. A cancelled move
+            # leaves this named actor registered for the next turn to resume.
+            yield uiRequest("gui.checkQuests", game_map.getPlayer())
 
     @register(context)
     @mapQuest("sunderedmarch")
@@ -212,12 +241,17 @@ def load(self, context):
         def getHint(self):
             return "Key first, then the gate. The three obelisks stand in the vale, the fen, and the pyre. Monoliths shorten the road."
 
+        @resumableHook
         def onComplete(self):
-            showReader(
-                self.getGame(),
-                "The March remembers",
-                "The crown is dug up and the March is 'saved' the only way the cult ever meant it to be - "
-                "with a new dead king on the throne.",
+            yield uiRequest("gui.questCommitted")
+            (
+                yield uiRequest(
+                    "showReader",
+                    flowGame(self.getGame()),
+                    "The March remembers",
+                    "The crown is dug up and the March is 'saved' the only way the cult ever meant it to be - "
+                    "with a new dead king on the throne.",
+                )
             )
 
     @register(context)
@@ -269,6 +303,7 @@ def load(self, context):
             game_map.setBoolProperty("seer_started", True)
             ensure_quest(game_map.getPlayer(), "seerHuntQuest")
 
+        @resumableHook
         def finish_seer_hunt(self):
             game_map = self.getGame().getMap()
             if not self.can_return_banner():
@@ -278,19 +313,22 @@ def load(self, context):
             player.addGold(SEER_REWARD_GOLD)
             player.addItem("GreaterLifePotion")
             game_map.setBoolProperty("seer_done", True)
-            showRewardReceipt(
-                self.getGame(),
-                "The Seer remembers",
-                reward_before,
-                "The Seer reads the drowned names off the banner's hem, pays you 300 gold and a Greater Life Potion, "
-                "and tells you the thing you did not want to know: the crown is meant for your head.",
+            (
+                yield from showRewardReceiptFlow(
+                    flowGame(self.getGame()),
+                    "The Seer remembers",
+                    reward_before,
+                    "The Seer reads the drowned names off the banner's hem, pays you 300 gold and a Greater Life Potion, "
+                    "and tells you the thing you did not want to know: the crown is meant for your head.",
+                )
             )
 
     @trigger(context, "onEnter", "seerHut")
     class SeerTrigger(CTrigger):
+        @resumableHook
         def trigger(self, obj, event):
             if event.getCause().isPlayer():
-                obj.getGame().getGuiHandler().showDialog(obj.getGame().createObject("seerDialog"))
+                (yield uiRequest("gui.showDialog", obj.getGame().createObject("seerDialog")))
 
     @trigger(context, "onDestroy", "valeGuard")
     class ValeGuardTrigger(CTrigger):
@@ -314,15 +352,19 @@ def load(self, context):
 
     @trigger(context, "onDestroy", "theBarrowWarlordBoss")
     class BarrowWarlordTrigger(CTrigger):
+        @resumableHook
         def trigger(self, obj, event):
             game_map = obj.getGame().getMap()
             game_map.setBoolProperty("boss_defeated", True)
-            showReader(
-                obj.getGame(),
-                "The warlord falls",
-                "The Crowned Barrow-Warlord falls a second and final time. The plague-crown cracks on the stones, "
-                "and for the first time in a hundred years the Sundered March is only quiet - not waiting.",
+            (
+                yield uiRequest(
+                    "showReader",
+                    flowGame(obj.getGame()),
+                    "The warlord falls",
+                    "The Crowned Barrow-Warlord falls a second and final time. The plague-crown cracks on the stones, "
+                    "and for the first time in a hundred years the Sundered March is only quiet - not waiting.",
+                )
             )
             # Boss-defeat transition: converge with the crown pickup so the finale
             # completes once both requirements are met, in either order.
-            game_map.getPlayer().checkQuests()
+            (yield uiRequest("gui.checkQuests", game_map.getPlayer()))

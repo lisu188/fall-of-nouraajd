@@ -1293,9 +1293,34 @@ void activate_map_scope(const std::shared_ptr<CGame> &game, const std::string &m
 }
 
 std::shared_ptr<CMap> CMapLoader::loadNewMap(const std::shared_ptr<CGame> &game, const std::string &mapName) {
+    const auto oldMap = game->getMap();
+    const auto oldScope = game->getResourcesProvider()->getActiveScope();
+    const auto context = game->getContext();
+    const auto generation = context->captureTransitionGeneration();
+    std::shared_ptr<CMap> stagedMap;
+    try {
+        return loadNewMapForOperation(game, mapName, stagedMap);
+    } catch (...) {
+        if (stagedMap && context->isTransitionGenerationCurrent(generation) && game->getMap() == stagedMap) {
+            game->setMap(oldMap);
+            game->getResourcesProvider()->setActiveScope(oldScope);
+        }
+        throw;
+    }
+}
+
+std::shared_ptr<CMap> CMapLoader::loadNewMapForOperation(const std::shared_ptr<CGame> &game, const std::string &mapName,
+                                                         std::shared_ptr<CMap> &stagedMap, bool *installed) {
+    if (installed) {
+        *installed = false;
+    }
     if (auto mapc = game->getConfigurationProvider()->getConfiguration(getMapPath(mapName))) {
-        std::shared_ptr<CMap> map = game->getObjectHandler()->createObject<CMap>(game);
+        auto map = game->getObjectHandler()->createObject<CMap>(game);
+        stagedMap = map;
         game->setMap(map);
+        if (installed) {
+            *installed = true;
+        }
         load_map_resources(game, mapName);
         activate_map_scope(game, mapName);
         loadFromTmx(map, mapc);
@@ -1377,6 +1402,66 @@ std::shared_ptr<CMap> CMapLoader::loadRandomMapWithPlayer(const std::shared_ptr<
     std::shared_ptr<CMap> map = CRandomMapGenerator::loadRandomMap(game);
     map->setPlayer(ptr);
     return map;
+}
+
+vstd::task<std::shared_ptr<CMap>> CMapLoader::loadMapWithPlayerAsync(std::weak_ptr<CGame> weakGame, std::string name,
+                                                                     std::string playerName, std::string raceId,
+                                                                     bool randomMap) {
+    auto loop = vstd::event_loop<>::instance();
+    if (!loop->isMainThread()) {
+        co_await vstd::post(loop);
+    }
+    auto game = weakGame.lock();
+    if (!game || !game->getContext()->isActive()) {
+        throw vstd::task_cancelled();
+    }
+    auto player = createPlayer(game, playerName, raceId);
+    if (!player) {
+        co_return game->getMap();
+    }
+    const auto context = game->getContext();
+    const auto oldMap = game->getMap();
+    const auto oldScope = game->getResourcesProvider()->getActiveScope();
+    const auto generation = context->captureTransitionGeneration();
+    std::shared_ptr<CMap> map;
+    try {
+        if (randomMap) {
+            game.reset();
+            map = co_await CRandomMapGenerator::loadRandomMapAsync(weakGame);
+            game = weakGame.lock();
+            if (!game || !context->isTransitionGenerationCurrent(generation) || game->getMap() != oldMap) {
+                throw vstd::task_cancelled();
+            }
+        } else {
+            bool installed = false;
+            map = loadNewMapForOperation(game, name, map, &installed);
+            if (!context->isTransitionGenerationCurrent(generation) || game->getMap() != (installed ? map : oldMap)) {
+                throw vstd::task_cancelled();
+            }
+        }
+        if (game->getMap() != map) {
+            game->setMap(map);
+        }
+        game.reset();
+        co_await map->setPlayerAsync(player);
+        game = weakGame.lock();
+        if (!game || !context->isTransitionGenerationCurrent(generation) || game->getMap() != map ||
+            map->getPlayer() != player) {
+            throw vstd::task_cancelled();
+        }
+        co_return map;
+    } catch (...) {
+        game = weakGame.lock();
+        if (game && map && context->isTransitionGenerationCurrent(generation) && game->getMap() == map &&
+            (!map->getPlayer() || map->getPlayer() == player)) {
+            if (map->getPlayer() == player) {
+                map->detachPlayer();
+            }
+            game->setMap(oldMap);
+            game->getResourcesProvider()->setActiveScope(oldScope);
+        }
+        throw;
+    }
 }
 
 void CMapLoader::save(const std::shared_ptr<CMap> &map, const std::string &name) { saveWithResult(map, name); }
@@ -1520,6 +1605,70 @@ std::shared_ptr<CMap> CRandomMapGenerator::loadRandomMap(const std::shared_ptr<C
     return map;
 }
 
+vstd::task<std::shared_ptr<CMap>> CRandomMapGenerator::loadRandomMapAsync(std::weak_ptr<CGame> weakGame) {
+    auto loop = vstd::event_loop<>::instance();
+    if (!loop->isMainThread()) {
+        co_await vstd::post(loop);
+    }
+    auto game = weakGame.lock();
+    if (!game || !game->getContext()->isActive()) {
+        throw vstd::task_cancelled();
+    }
+    auto map = CMapLoader::loadNewMap(game, "");
+    auto options = rdg::Options();
+    options.n_rows = 555;
+    options.n_cols = 555;
+    options.corridor_layout = rdg::CorridorLayout::BENT;
+    auto dungeon = rdg::create_dungeon(options);
+    const auto &stairs = dungeon.getStairs();
+    const auto entry = vstd::any(stairs);
+    if (entry != stairs.end()) {
+        map->setEntryX(entry->row);
+        map->setEntryY(entry->col);
+        map->setEntryZ(0);
+    }
+    generateTiles(map, dungeon);
+    game.reset();
+    co_await generateEncountersAsync(weakGame, map, dungeon.getRooms());
+    co_return map;
+}
+
+vstd::task<void> CRandomMapGenerator::generateEncountersAsync(std::weak_ptr<CGame> weakGame, std::shared_ptr<CMap> map,
+                                                              std::vector<rdg::Room> rooms) {
+    auto game = weakGame.lock();
+    if (!game || !game->getContext()->isActive()) {
+        throw vstd::task_cancelled();
+    }
+    const auto context = game->getContext();
+    const auto activeMap = game->getMap();
+    const auto generation = context->captureTransitionGeneration();
+    game.reset();
+    auto checkCurrent = [&] {
+        auto owner = weakGame.lock();
+        if (!owner || !context->isTransitionGenerationCurrent(generation) || owner->getMap() != activeMap) {
+            throw vstd::task_cancelled();
+        }
+    };
+    for (const auto &room : rooms) {
+        checkCurrent();
+        const auto roomCoords = Coords(room.row + room.height / 2, room.col + room.width / 2, 0);
+        if (roomCoords.getDist(map->getEntry()) <= 5) {
+            continue;
+        }
+        auto game = weakGame.lock();
+        if (!game || !game->getContext()->isActive()) {
+            throw vstd::task_cancelled();
+        }
+        auto encounter = game->getRngHandler()->getRandomEncounter(5);
+        game.reset();
+        for (const auto &creature : encounter) {
+            checkCurrent();
+            co_await map->addObjectAsync(creature, roomCoords);
+            checkCurrent();
+        }
+    }
+}
+
 void CRandomMapGenerator::generateEncounters(const std::shared_ptr<CGame> &game, std::shared_ptr<CMap> &map,
                                              const std::vector<rdg::Room> &rooms) {
     for (const auto &room : rooms) {
@@ -1573,6 +1722,36 @@ void CGameLoader::startRandomGameWithPlayer(const std::shared_ptr<CGame> &game, 
                                             const std::string &raceId) {
     vstd::event_loop<>::instance()->resetQuit();
     game->setMap(CMapLoader::loadRandomMapWithPlayer(game, std::move(player), raceId));
+}
+
+vstd::task<void> CGameLoader::startGameWithPlayerAsync(std::weak_ptr<CGame> game, std::string file, std::string player,
+                                                       std::string raceId) {
+    auto loop = vstd::event_loop<>::instance();
+    if (!loop->isMainThread()) {
+        co_await vstd::post(loop);
+    }
+    auto owner = game.lock();
+    if (!owner || !owner->getContext()->isActive()) {
+        throw vstd::task_cancelled();
+    }
+    owner.reset();
+    vstd::event_loop<>::instance()->resetQuit();
+    co_await CMapLoader::loadMapWithPlayerAsync(std::move(game), std::move(file), std::move(player), std::move(raceId));
+}
+
+vstd::task<void> CGameLoader::startRandomGameWithPlayerAsync(std::weak_ptr<CGame> game, std::string player,
+                                                             std::string raceId) {
+    auto loop = vstd::event_loop<>::instance();
+    if (!loop->isMainThread()) {
+        co_await vstd::post(loop);
+    }
+    auto owner = game.lock();
+    if (!owner || !owner->getContext()->isActive()) {
+        throw vstd::task_cancelled();
+    }
+    owner.reset();
+    vstd::event_loop<>::instance()->resetQuit();
+    co_await CMapLoader::loadMapWithPlayerAsync(std::move(game), {}, std::move(player), std::move(raceId), true);
 }
 
 void CGameLoader::loadSavedGame(const std::shared_ptr<CGame> &game, const std::string &save) {

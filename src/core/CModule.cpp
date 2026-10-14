@@ -19,6 +19,7 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #include <algorithm>
 #include <atomic>
 #include <cctype>
+#include <cstdlib>
 #include <optional>
 #include <stdexcept>
 #include <unordered_map>
@@ -168,12 +169,14 @@ class CPythonEventCallbacks : public std::enable_shared_from_this<CPythonEventCa
     }
 
     bool requestTransitionFlow(const std::shared_ptr<CGame> &game, std::string mapName,
-                               std::unique_ptr<CScriptFlow> flow, std::function<void(bool)> completion) {
+                               std::unique_ptr<CScriptFlow> flow, std::function<void(bool)> completion,
+                               std::function<void()> commitBeforeEntry) {
         if (!active.load()) {
             return false;
         }
         const auto id = nextId++;
-        transitions.emplace(id, std::make_shared<TransitionCallbacks>(TransitionCallbacks{{}, std::move(completion)}));
+        transitions.emplace(id, std::make_shared<TransitionCallbacks>(
+                                    TransitionCallbacks{std::move(commitBeforeEntry), std::move(completion)}));
         const auto weakOwner = weak_from_this();
         const std::weak_ptr<CGuiHandler> weakGui = game->getGuiHandler();
         auto prepare = [weakOwner, weakGui, flow = std::move(flow)]() mutable -> vstd::task<void> {
@@ -198,9 +201,24 @@ class CPythonEventCallbacks : public std::enable_shared_from_this<CPythonEventCa
                 pending.mapped()->completion(success);
             }
         };
+        auto commit = [weakOwner, id] {
+            auto owner = weakOwner.lock();
+            if (!owner || !owner->active.load()) {
+                throw std::runtime_error("Python transition callbacks have been released");
+            }
+            py::gil_scoped_acquire gil;
+            auto pending = owner->transitions.find(id);
+            if (!owner->active.load() || pending == owner->transitions.end()) {
+                throw std::runtime_error("Python transition callbacks have been released");
+            }
+            auto bundle = pending->second;
+            if (bundle->beforeEntry) {
+                bundle->beforeEntry();
+            }
+        };
         try {
-            const bool accepted =
-                game->changeMapWithPreparationFlow(std::move(mapName), std::move(prepare), std::move(finish));
+            const bool accepted = game->changeMapWithPreparationFlow(std::move(mapName), std::move(prepare),
+                                                                     std::move(finish), std::move(commit));
             if (!accepted) {
                 transitions.erase(id);
             }
@@ -676,12 +694,14 @@ void init_game_module(py::module_ &m) {
         .def(
             "changeMapWithPreparationFlow",
             [pythonEventCallbacks](const std::shared_ptr<CGame> &game, std::string mapName, py::function beforeEntry,
-                                   std::function<void(bool)> completion) {
+                                   std::function<void(bool)> completion, std::function<void()> commitBeforeEntry) {
                 auto flow = game->getScriptHandler()->createCallbackFlow(std::move(beforeEntry), game);
                 return pythonEventCallbacks->requestTransitionFlow(game, std::move(mapName), std::move(flow),
-                                                                   std::move(completion));
+                                                                   std::move(completion), std::move(commitBeforeEntry));
             },
-            "Queue a transition whose Python preparation returns a resumable UI generator.")
+            py::arg("mapName"), py::arg("beforeEntry"), py::arg("completion"),
+            py::arg("commitBeforeEntry") = py::none(),
+            "Queue an awaitable preparation, then commit synchronously immediately before destination entry.")
         .def(
             "changeMapWithPreparation",
             [pythonEventCallbacks](const std::shared_ptr<CGame> &game, std::string mapName,
@@ -1675,6 +1695,11 @@ void init_game_module(py::module_ &m) {
             "Return resolved list grid size as (columns, rows).");
     PY_WRAP_GENERIC_DOC(randint, "randint(lower, upper) -> int: Return a uniform integer with both bounds inclusive. "
                                  "Reversed bounds are normalized.");
+    m.def("_seedRandomForTests", [](std::uint32_t seed) {
+        CRuntimeBridge::seedRandomForTests(seed);
+        vstd::rng().seed(seed);
+        std::srand(seed);
+    });
     m.def("jsonify", &jsonify_py, "jsonify(obj) -> str: Serialize a game object to JSON text.");
     PY_WRAP_GENERIC_DOC(logger, "logger(message) -> None: Write an info log message to the engine logger.");
     m.def("set_logger_sink", set_logger_sink_py, py::arg("sink_name"), py::arg("path") = py::none(),

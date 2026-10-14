@@ -99,7 +99,11 @@ class CMap : public CGameObject {
 
     void addObject(const std::shared_ptr<CMapObject> &mapObject, Coords coords);
 
+    vstd::task<void> addObjectAsync(std::shared_ptr<CMapObject> mapObject, Coords coords);
+
     void removeObject(const std::shared_ptr<CMapObject> &mapObject);
+
+    vstd::task<void> removeObjectAsync(std::shared_ptr<CMapObject> mapObject);
 
     int getEntryX();
 
@@ -145,6 +149,8 @@ class CMap : public CGameObject {
 
     std::string addObjectByName(std::string name, Coords coords);
 
+    vstd::task<std::string> addObjectByNameAsync(std::string name, Coords coords);
+
     void replaceTile(std::string name, Coords coords);
 
     Coords getLocationByName(std::string name);
@@ -153,11 +159,17 @@ class CMap : public CGameObject {
 
     void setPlayer(std::shared_ptr<CPlayer> player);
 
+    vstd::task<void> setPlayerAsync(std::shared_ptr<CPlayer> player);
+
     std::shared_ptr<CPlayer> detachPlayer();
 
     void attachPlayer(std::shared_ptr<CPlayer> player);
 
     void attachPlayer(std::shared_ptr<CPlayer> player, Coords coords);
+
+    vstd::task<void> attachPlayerAsync(std::shared_ptr<CPlayer> player);
+
+    vstd::task<void> attachPlayerAsync(std::shared_ptr<CPlayer> player, Coords coords);
 
     bool restorePlayerAfterLoad(std::string &error);
 

@@ -868,6 +868,30 @@ void CCreature::beforeMove() {
     clearOnFailure.release();
 }
 
+vstd::task<void> CCreature::beforeMoveAsync() {
+    return [](std::shared_ptr<CCreature> self) -> vstd::task<void> {
+        auto loop = vstd::event_loop<>::instance();
+        if (!loop->isMainThread()) {
+            co_await vstd::post(loop);
+        }
+        auto map = self->getMap();
+        self->pendingMoveOrigin = map ? map->normalizeCoords(self->getCoords()) : self->getCoords();
+        ScopeExit clearOnFailure([self]() { self->pendingMoveOrigin.reset(); });
+        if (map) {
+            const auto snapshot = map->getObjectsAtCoords(self->getCoords());
+            for (const auto &object : snapshot) {
+                if (visitablePredicate(object)) {
+                    auto event = std::make_shared<CGameEventCaused>(CGameEvent::CType::onLeave, self);
+                    co_await map->getEventHandler()->gameEventAsync(object, std::move(event));
+                }
+            }
+        }
+        clearOnFailure.release();
+    }(this->ptr<CCreature>());
+}
+
+void CCreature::cancelMove() { pendingMoveOrigin.reset(); }
+
 void CCreature::afterMove() {
     if (auto game = getGame()) {
         game_async::wait(game->getContext()->spawnTask(afterMoveAsync()));
@@ -877,82 +901,104 @@ void CCreature::afterMove() {
 }
 
 vstd::task<void> CCreature::afterMoveAsync() {
-    ScopeExit clearPendingMoveOrigin([this]() { pendingMoveOrigin.reset(); });
-    auto self = this->ptr<CCreature>();
-    auto map = getMap();
-    if (!map) {
-        co_return;
-    }
-    const auto arrival = map->normalizeCoords(getCoords());
-
-    auto moverStillAtArrival = [self, map, arrival]() {
-        return self->isAlive() && self->getMap() == map &&
-               CGameObject::sameRuntimeIdentity(map->getObjectByName(self->getName()), self) &&
-               map->normalizeCoords(self->getCoords()) == arrival;
-    };
-
-    auto fightPred = [self, map](std::shared_ptr<CMapObject> object) {
-        auto other = vstd::cast<CCreature>(object);
-        return other && !CGameObject::sameInstance(self, object) && !self->isNpc() && !other->isNpc() &&
-               !self->isAffiliatedWith(object) && self->getMap() == map &&
-               CGameObject::sameRuntimeIdentity(map->getObjectByName(self->getName()), self) &&
-               other->getMap() == map &&
-               CGameObject::sameRuntimeIdentity(map->getObjectByName(other->getName()), other);
-    };
-
-    std::vector<std::shared_ptr<CCreature>> opponents;
-    auto fightAction = [&opponents](auto object) {
-        if (auto creature = vstd::cast<CCreature>(object)) {
-            opponents.push_back(creature);
+    return [](std::shared_ptr<CCreature> self) -> vstd::task<void> {
+        auto loop = vstd::event_loop<>::instance();
+        if (!loop->isMainThread()) {
+            co_await vstd::post(loop);
         }
-    };
+        ScopeExit clearPendingMoveOrigin([self]() { self->pendingMoveOrigin.reset(); });
+        auto map = self->getMap();
+        if (!map) {
+            co_return;
+        }
+        const auto arrival = map->normalizeCoords(self->getCoords());
+        auto owner = self->getGame();
+        const auto context = owner ? owner->getContext() : nullptr;
+        const auto generation = context ? context->captureTransitionGeneration() : 0;
+        const auto activeMap = owner ? owner->getMap() : nullptr;
+        const std::weak_ptr<CGame> weakGame = owner;
+        owner.reset();
 
-    auto eventAction = [self, map](auto object) {
-        map->getEventHandler()->gameEvent(object, std::make_shared<CGameEventCaused>(CGameEvent::CType::onEnter, self));
-    };
-
-    map->forObjectsAtCoords(arrival, fightAction, fightPred);
-    if (!opponents.empty()) {
-        CFightResult result;
-        try {
-            result = co_await CFightHandler::fightManyResultAsync(self, std::move(opponents));
-        } catch (const vstd::task_cancelled &) {
-            if (self->isPlayer() && moverStillAtArrival() && pendingMoveOrigin) {
-                self->relocateWithoutMoveHooks(*pendingMoveOrigin);
+        auto moverStillAtArrival = [self, map, arrival, context, generation, activeMap, weakGame]() {
+            if (context) {
+                auto game = weakGame.lock();
+                if (!game || game->getMap() != activeMap || !context->isTransitionGenerationCurrent(generation)) {
+                    return false;
+                }
             }
-            throw;
+            return self->isAlive() && self->getMap() == map &&
+                   CGameObject::sameRuntimeIdentity(map->getObjectByName(self->getName()), self) &&
+                   map->normalizeCoords(self->getCoords()) == arrival;
+        };
+
+        auto fightPred = [self, map](std::shared_ptr<CMapObject> object) {
+            auto other = vstd::cast<CCreature>(object);
+            return other && !CGameObject::sameInstance(self, object) && !self->isNpc() && !other->isNpc() &&
+                   !self->isAffiliatedWith(object) && self->getMap() == map &&
+                   CGameObject::sameRuntimeIdentity(map->getObjectByName(self->getName()), self) &&
+                   other->getMap() == map &&
+                   CGameObject::sameRuntimeIdentity(map->getObjectByName(other->getName()), other);
+        };
+
+        std::vector<std::shared_ptr<CCreature>> opponents;
+        auto fightAction = [&opponents](auto object) {
+            if (auto creature = vstd::cast<CCreature>(object)) {
+                opponents.push_back(creature);
+            }
+        };
+
+        map->forObjectsAtCoords(arrival, fightAction, fightPred);
+        if (!opponents.empty()) {
+            CFightResult result;
+            try {
+                result = co_await CFightHandler::fightManyResultAsync(self, std::move(opponents));
+            } catch (const vstd::task_cancelled &) {
+                if (self->isPlayer() && moverStillAtArrival() && self->pendingMoveOrigin) {
+                    self->relocateWithoutMoveHooks(*self->pendingMoveOrigin);
+                }
+                throw;
+            }
+            // Post-combat position policy. The fight ran because the mover stepped into a
+            // hostile cell. If the attacker was defeated or otherwise removed it already left
+            // the arrival square, so there is nothing more to do. For the player every
+            // resolved encounter (victory, cancellation or stall) restores the pre-step origin
+            // via the non-hook relocation helper, so the player never lingers inside the
+            // hostile cell and onStep/onEnter never fire there. Non-player movers keep the
+            // legacy behaviour: only a victory lets them stay and continue onto onStep/onEnter.
+            if (!moverStillAtArrival()) {
+                co_return;
+            }
+            if (self->isPlayer()) {
+                if (self->pendingMoveOrigin.has_value()) {
+                    self->relocateWithoutMoveHooks(*self->pendingMoveOrigin);
+                }
+                co_return;
+            }
+            if (result.outcome != CFightOutcome::AttackerVictory) {
+                co_return;
+            }
         }
-        // Post-combat position policy. The fight ran because the mover stepped into a
-        // hostile cell. If the attacker was defeated or otherwise removed it already left
-        // the arrival square, so there is nothing more to do. For the player every
-        // resolved encounter (victory, cancellation or stall) restores the pre-step origin
-        // via the non-hook relocation helper, so the player never lingers inside the
-        // hostile cell and onStep/onEnter never fire there. Non-player movers keep the
-        // legacy behaviour: only a victory lets them stay and continue onto onStep/onEnter.
+
         if (!moverStillAtArrival()) {
             co_return;
         }
-        if (self->isPlayer()) {
-            if (pendingMoveOrigin.has_value()) {
-                self->relocateWithoutMoveHooks(*pendingMoveOrigin);
+        if (auto tile = map->getTile(arrival)) {
+            co_await CEventHandler::tileStepAsync(std::move(tile), self);
+        }
+        if (!moverStillAtArrival()) {
+            co_return;
+        }
+        const auto snapshot = map->getObjectsAtCoords(arrival);
+        for (const auto &object : snapshot) {
+            if (!moverStillAtArrival()) {
+                co_return;
             }
-            co_return;
+            if (visitablePredicate(object)) {
+                auto event = std::make_shared<CGameEventCaused>(CGameEvent::CType::onEnter, self);
+                co_await map->getEventHandler()->gameEventAsync(object, std::move(event));
+            }
         }
-        if (result.outcome != CFightOutcome::AttackerVictory) {
-            co_return;
-        }
-    }
-
-    if (!moverStillAtArrival()) {
-        co_return;
-    }
-    if (map->getTile(arrival)) {
-        map->getTile(arrival)->onStep(self);
-    }
-    if (!moverStillAtArrival()) {
-        co_return;
-    }
-    map->forObjectsAtCoords(arrival, eventAction, visitablePredicate);
+    }(this->ptr<CCreature>());
 }
 
 const std::optional<Coords> &CCreature::getPendingMoveOrigin() const { return pendingMoveOrigin; }
@@ -1041,19 +1087,52 @@ void CCreature::removeEffect(std::shared_ptr<CEffect> effect) {
 }
 
 void CCreature::useItem(std::shared_ptr<CItem> item) {
-    vstd::fail_if(!hasInInventory(item), "Tried to use item not in inventory!");
-    const bool restores_hp = item->hasTag(CTag::Heal);
-    const bool restores_mana = item->hasTag(CTag::Mana);
-    const bool can_restore_hp = restores_hp && getHp() < getHpMax();
-    const bool can_restore_mana = restores_mana && getMana() < getManaMax();
-    if ((restores_hp || restores_mana) && !can_restore_hp && !can_restore_mana) {
-        return;
+    if (auto game = getGame()) {
+        game_async::wait(game->getContext()->spawnTask(useItemAsync(std::move(item))));
+    } else {
+        game_async::run(useItemAsync(std::move(item)));
     }
-    getMap()->getEventHandler()->gameEvent(item,
-                                           std::make_shared<CGameEventCaused>(CGameEvent::CType::onUse, this->ptr()));
-    if (item->isDisposable()) {
-        removeItem(item);
-    }
+}
+
+vstd::task<void> CCreature::useItemAsync(std::shared_ptr<CItem> item) {
+    return [](std::shared_ptr<CCreature> self, std::shared_ptr<CItem> item) -> vstd::task<void> {
+        auto loop = vstd::event_loop<>::instance();
+        if (!loop->isMainThread()) {
+            co_await vstd::post(loop);
+        }
+        vstd::fail_if(!self->hasInInventory(item), "Tried to use item not in inventory!");
+        if (!self->pendingItemUses.insert(item.get()).second) {
+            co_return;
+        }
+        ScopeExit clearPendingUse([self, item] { self->pendingItemUses.erase(item.get()); });
+        const bool restoresHp = item->hasTag(CTag::Heal);
+        const bool restoresMana = item->hasTag(CTag::Mana);
+        const bool canRestoreHp = restoresHp && self->getHp() < self->getHpMax();
+        const bool canRestoreMana = restoresMana && self->getMana() < self->getManaMax();
+        if ((restoresHp || restoresMana) && !canRestoreHp && !canRestoreMana) {
+            co_return;
+        }
+        auto map = self->getMap();
+        if (!map) {
+            co_return;
+        }
+        auto game = self->getGame();
+        auto context = game ? game->getContext() : nullptr;
+        std::weak_ptr<CGame> weakGame = game;
+        const auto generation = context ? context->captureTransitionGeneration() : 0;
+        const auto activeMap = game ? game->getMap() : nullptr;
+        game.reset();
+        auto event = std::make_shared<CGameEventCaused>(CGameEvent::CType::onUse, self);
+        co_await map->getEventHandler()->gameEventAsync(item, std::move(event));
+        game = weakGame.lock();
+        if (self->getMap() != map || (game && game->getMap() != activeMap) ||
+            (context && !context->isTransitionGenerationCurrent(generation))) {
+            co_return;
+        }
+        if (item->isDisposable() && self->hasInInventory(item)) {
+            self->removeItem(item);
+        }
+    }(this->ptr<CCreature>(), std::move(item));
 }
 
 void CCreature::setLevel(int level) { this->level = level; }

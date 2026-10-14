@@ -232,6 +232,16 @@ def notifyResult(handler, message):
         handler.showInfo(message, True)
 
 
+def notifyResultFlow(handler, message):
+    uiRequest = game.uiRequest
+
+    notify = getattr(handler, "notify", None)
+    if callable(notify):
+        notify(message)
+    else:
+        (yield uiRequest("gui.showInfo", message, True))
+
+
 def maybe_offer_assembly(player):
     """Synchronous Python adapter for the existing artifact assembly prompt."""
     for _request in maybeOfferAssemblyFlow(player, asynchronous=False):
@@ -243,9 +253,8 @@ def maybeOfferAssemblyFlow(player, *, asynchronous=True):
     if player is None or not player.isPlayer():
         return
     runtime = get_runtime()
-    game_instance = player.getGame()
+    game_instance = game.flowGame(player.getGame()) if asynchronous else player.getGame()
     handler = game_instance.getGuiHandler()
-    resolve_game = game_instance.createWeakResolver() if asynchronous else None
     for definition in runtime.completed_sets(player):
         if runtime._has_cursed_piece(player, definition):
             continue
@@ -257,17 +266,15 @@ def maybeOfferAssemblyFlow(player, *, asynchronous=True):
                 {
                     "id": definition["id"],
                     "label": definition["label"],
-                    "detail": runtime.assemblyDetail(definition, game_instance=game_instance),
+                    "detail": runtime.assemblyDetail(definition, game_instance=game.uiGame(game_instance)),
                 }
             ]
             if asynchronous:
-                game_instance = None
                 selection = yield {
                     "operation": "gui.showChoice",
                     "args": ("Assemble artifact", json.dumps(choices), "Assemble", DECLINE_ASSEMBLE),
                     "kwargs": {},
                 }
-                game_instance = resolve_game()
             else:
                 selection = show_choice("Assemble artifact", json.dumps(choices), "Assemble", DECLINE_ASSEMBLE)
             accepted = selection == definition["id"]
@@ -276,19 +283,27 @@ def maybeOfferAssemblyFlow(player, *, asynchronous=True):
                 raise RuntimeError("Native artifact assembly requires the choice modal API")
             selection = handler.showSelection(game.list_string(game_instance, options))
             accepted = selection == assemble_option
-        if accepted and runtime.assemble(game_instance, player, definition):
-            notifyResult(handler, "The pieces fuse into the " + definition["label"] + ".")
+        if accepted and runtime.assemble(game.uiGame(game_instance), player, definition):
+            if asynchronous:
+                yield from notifyResultFlow(handler, "The pieces fuse into the " + definition["label"] + ".")
+            else:
+                notifyResult(handler, "The pieces fuse into the " + definition["label"] + ".")
 
 
 def offer_disassembly(combined_item, player):
+    return game.runUiFlow(player.getGame() if player else None, offerDisassemblyFlow(combined_item, player))
+
+
+def offerDisassemblyFlow(combined_item, player):
     """Prompt to break a combined artifact back into its pieces."""
+    uiRequest, flowGame, uiGame = game.uiRequest, game.flowGame, game.uiGame
     if player is None or not player.isPlayer():
         return
     runtime = get_runtime()
     definition = runtime.set_for_combined(combined_item.getTypeId())
     if definition is None:
         return
-    game_instance = player.getGame()
+    game_instance = flowGame(player.getGame())
     handler = game_instance.getGuiHandler()
     disassemble_option = DISASSEMBLE_PREFIX + definition["label"]
     options = [disassemble_option, DECLINE_DISASSEMBLE]
@@ -299,17 +314,21 @@ def offer_disassembly(combined_item, player):
             {
                 "id": definition["id"],
                 "label": definition["label"],
-                "detail": runtime.assemblyDetail(definition, disassembling=True, game_instance=game_instance),
+                "detail": runtime.assemblyDetail(
+                    definition, disassembling=True, game_instance=game.uiGame(game_instance)
+                ),
                 "enabled": not cursed,
             }
         ]
-        selection = show_choice("Disassemble artifact", json.dumps(choices), "Disassemble", DECLINE_DISASSEMBLE)
+        selection = yield uiRequest(
+            "gui.showChoice", "Disassemble artifact", json.dumps(choices), "Disassemble", DECLINE_DISASSEMBLE
+        )
         accepted = selection == definition["id"]
     else:
-        selection = handler.showSelection(game.list_string(game_instance, options))
+        selection = yield uiRequest("gui.showSelection", game.list_string(game_instance, options))
         accepted = selection == disassemble_option
-    if accepted and runtime.disassemble(game_instance, player, combined_item):
-        notifyResult(handler, "You separate the " + definition["label"] + " into its pieces.")
+    if accepted and runtime.disassemble(uiGame(game_instance), player, combined_item):
+        (yield from notifyResultFlow(handler, "You separate the " + definition["label"] + " into its pieces."))
 
 
 def _schedule_assembly_offer(event):
@@ -325,6 +344,7 @@ def _schedule_assembly_offer(event):
 
 
 def load(self, context):
+    from game import resumableHook
     from game import CArmor
     from game import CBelt
     from game import CBoots
@@ -386,20 +406,24 @@ def load(self, context):
 
     @register(context)
     class CompoundArmor(CArmor):
+        @resumableHook
         def onUse(self, event):
-            offer_disassembly(self, event.getCause())
+            (yield from offerDisassemblyFlow(self, event.getCause()))
 
     @register(context)
     class CompoundWeapon(CWeapon):
+        @resumableHook
         def onUse(self, event):
-            offer_disassembly(self, event.getCause())
+            (yield from offerDisassemblyFlow(self, event.getCause()))
 
     @register(context)
     class CompoundHelmet(CHelmet):
+        @resumableHook
         def onUse(self, event):
-            offer_disassembly(self, event.getCause())
+            (yield from offerDisassemblyFlow(self, event.getCause()))
 
     @register(context)
     class CompoundShield(CShield):
+        @resumableHook
         def onUse(self, event):
-            offer_disassembly(self, event.getCause())
+            (yield from offerDisassemblyFlow(self, event.getCause()))

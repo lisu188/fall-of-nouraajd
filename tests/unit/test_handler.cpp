@@ -32,21 +32,25 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #include "core/CLoader.h"
 #include "core/CMap.h"
 #include "core/CPlaytestTrace.h"
+#include "core/CPythonOverrides.h"
 #include "core/CStats.h"
 #include "core/CTypes.h"
 #include "core/CWrapper.h"
 #include "gui/CGui.h"
 #include "gui/panel/CGameFightPanel.h"
 #include "gui/panel/CGameLootPanel.h"
+#include "gui/panel/CGameTextPanel.h"
 #include "object/CCreature.h"
 #include "object/CCreatureClass.h"
 #include "object/CCreatureRace.h"
 #include "object/CInteraction.h"
 #include "object/CEffect.h"
+#include "object/CEvent.h"
 #include "object/CItem.h"
 #include "object/CPlayer.h"
 #include "object/CQuest.h"
 #include "object/CTrigger.h"
+#include "object/CTile.h"
 #include "test_harness.h"
 #include "native_test_profile.h"
 
@@ -138,6 +142,75 @@ class WindowlessFightTestGui : public CGui {
   public:
     WindowlessFightTestGui() : CGui(WithoutWindow{}) {}
 };
+
+class TurnHookRegistrationProbe : public CMapObject {
+  public:
+    std::function<void()> hook;
+
+    void onTurn(std::shared_ptr<CGameEvent>) override { hook(); }
+};
+
+class DestroyHookProbe : public CMapObject {
+  public:
+    int destroyed = 0;
+    std::function<void()> hook;
+
+    void onDestroy(std::shared_ptr<CGameEvent>) override {
+        ++destroyed;
+        if (hook) {
+            hook();
+        }
+    }
+};
+
+class StepHookShutdownProbe : public CTile {
+  public:
+    int steps = 0;
+    std::shared_ptr<CGameContext> context;
+
+    void onStep(std::shared_ptr<CCreature>) override {
+        ++steps;
+        context->shutdown();
+    }
+};
+
+template <typename Predicate> bool pumpHandlerUntil(Predicate ready) {
+    auto loop = vstd::event_loop<>::instance();
+    const auto deadline = std::chrono::steady_clock::now() + std::chrono::seconds(2);
+    while (!ready() && std::chrono::steady_clock::now() < deadline) {
+        loop->runReady();
+        game_async::waitForProgress();
+    }
+    return static_cast<bool>(ready());
+}
+
+class StepHookCallbackProbe : public CTile {
+  public:
+    std::function<void()> hook;
+    int steps = 0;
+
+    void onStep(std::shared_ptr<CCreature>) override {
+        ++steps;
+        if (hook) {
+            hook();
+        }
+    }
+};
+
+struct AsyncTriggerProbe {
+    std::vector<std::string> entered;
+    std::set<std::string> released;
+};
+
+vstd::task<void> awaitTriggerProbe(std::shared_ptr<AsyncTriggerProbe> probe, std::string name,
+                                   std::function<void()> onStart = {}) {
+    probe->entered.push_back(name);
+    if (onStart) {
+        onStart();
+    }
+    auto loop = vstd::event_loop<>::instance();
+    co_await vstd::until(loop, [probe, name] { return probe->released.contains(name); });
+}
 
 struct FightThreadProbe {
     std::thread::id startedOn;
@@ -730,6 +803,509 @@ void test_fight_handler_reports_explicit_outcomes_and_final_status() {
                 "self-defeat should remove the defeated attacker from the map");
 }
 
+void testAsyncEventsAwaitOrderedTriggerSnapshotsAfterObjectHooks() {
+    auto loop = vstd::event_loop<>::instance();
+    auto game = makeWindowlessFightGame();
+    auto handler = game->getMap()->getEventHandler();
+    auto object = std::make_shared<TurnHookRegistrationProbe>();
+    object->setGame(game);
+    object->setName("unitAsyncHook");
+    auto probe = std::make_shared<AsyncTriggerProbe>();
+    auto lateCalls = std::make_shared<int>(0);
+    auto late =
+        std::make_shared<CCustomTrigger>(object->getName(), "onTurn", [lateCalls](auto, auto) { ++*lateCalls; });
+    late->setName("unitLateTrigger");
+    std::weak_ptr<CEventHandler> weakHandler = handler;
+    auto makeTrigger = [&](std::string name) {
+        auto trigger =
+            std::make_shared<CCustomTrigger>(object->getName(), "onTurn", [probe, weakHandler, late, name](auto, auto) {
+                return awaitTriggerProbe(probe, name, [weakHandler, late] {
+                    if (auto handler = weakHandler.lock()) {
+                        handler->registerTrigger(late);
+                    }
+                });
+            });
+        trigger->setName(name);
+        return trigger;
+    };
+    auto first = makeTrigger("unitFirstTrigger");
+    auto addedByHook = makeTrigger("unitHookTrigger");
+    handler->registerTrigger(first);
+    object->hook = [handler, addedByHook] { handler->registerTrigger(addedByHook); };
+    bool queued = false;
+    loop->invoke([&queued] { queued = true; });
+    auto waiting = game->getContext()->spawnTask(
+        handler->gameEventAsync(object, std::make_shared<CGameEvent>(CGameEvent::CType::onTurn)));
+    expect_true(!waiting.finished() && !queued, "spawning an event must return without pumping queued callbacks");
+    expect_true(pumpHandlerUntil([&] { return !probe->entered.empty() || waiting.finished(); }) &&
+                    probe->entered.size() == 1 && !waiting.finished(),
+                "the outer loop must reach the first trigger before starting later captured triggers");
+    if (!probe->entered.empty()) {
+        probe->released.insert(probe->entered.front());
+    }
+    const auto deadline = std::chrono::steady_clock::now() + std::chrono::seconds(2);
+    while (probe->entered.size() < 2 && std::chrono::steady_clock::now() < deadline) {
+        loop->runReady();
+        game_async::waitForProgress();
+    }
+    expect_true(probe->entered.size() == 2 && !waiting.finished() && *lateCalls == 0,
+                "the hook-added trigger must join this event, while trigger-added observers wait for another event");
+    probe->released.insert("unitFirstTrigger");
+    probe->released.insert("unitHookTrigger");
+    while (!waiting.finished() && std::chrono::steady_clock::now() < deadline) {
+        loop->runReady();
+        game_async::waitForProgress();
+    }
+    expect_true(waiting.finished() && probe->entered.size() == 2 && *lateCalls == 0 && queued,
+                "the event must finish each captured trigger once in sequence");
+    if (waiting.finished()) {
+        waiting.get();
+    } else {
+        waiting.requestStop();
+        while (!waiting.finished()) {
+            loop->runReady();
+        }
+    }
+    game->getContext()->shutdown();
+
+    auto turnGame = makeWindowlessFightGame();
+    auto turnMap = turnGame->getMap();
+    auto turnObject = std::make_shared<CMapObject>();
+    turnObject->setGame(turnGame);
+    turnObject->setName("unitSuspendedTurnObject");
+    turnMap->addObject(turnObject);
+    auto turnProbe = std::make_shared<AsyncTriggerProbe>();
+    auto turnTrigger = std::make_shared<CCustomTrigger>(
+        turnObject->getName(), "onTurn", [turnProbe](auto, auto) { return awaitTriggerProbe(turnProbe, "turn"); });
+    turnTrigger->setName("unitSuspendedTurnTrigger");
+    turnMap->getEventHandler()->registerTrigger(turnTrigger);
+    const auto originalTurn = turnMap->getTurn();
+    auto pendingTurn = turnGame->getContext()->spawnTask(turnMap->moveAsync());
+    expect_true(pumpHandlerUntil([&] { return !turnProbe->entered.empty() || pendingTurn.finished(); }) &&
+                    !pendingTurn.finished() && turnProbe->entered.size() == 1,
+                "map turns must await their asynchronous event triggers");
+    auto replacement = std::make_shared<CMap>();
+    replacement->setGame(turnGame);
+    turnGame->setMap(replacement);
+    turnProbe->released.insert("turn");
+    const auto turnDeadline = std::chrono::steady_clock::now() + std::chrono::seconds(2);
+    while (!pendingTurn.finished() && std::chrono::steady_clock::now() < turnDeadline) {
+        loop->runReady();
+        game_async::waitForProgress();
+    }
+    expect_true(pendingTurn.finished() && turnMap->getTurn() == originalTurn,
+                "a turn invalidated during a hook must not run old-map controllers or commit another turn");
+    if (pendingTurn.finished()) {
+        pendingTurn.get();
+    }
+    turnGame->getContext()->shutdown();
+}
+
+void testAsyncLeaveHooksRejectStaleMovesAndCleanCancellation() {
+    enum class Finish { Commit, Relocate, Block, Transition, Cancel };
+    auto loop = vstd::event_loop<>::instance();
+    for (auto finish : {Finish::Commit, Finish::Relocate, Finish::Block, Finish::Transition, Finish::Cancel}) {
+        auto game = makeWindowlessFightGame();
+        auto map = game->getMap();
+        auto originTile = std::make_shared<CTile>();
+        originTile->setCanStep(true);
+        auto destinationTile = std::make_shared<CTile>();
+        destinationTile->setCanStep(true);
+        map->addTile(originTile, 0, 0, 0);
+        map->addTile(destinationTile, 1, 0, 0);
+        auto creature = add_test_creature(game, "unitAsyncLeaver");
+        auto marker = std::make_shared<CEvent>();
+        marker->setGame(game);
+        marker->setName("unitAsyncLeaveMarker");
+        map->addObject(marker);
+        auto probe = std::make_shared<AsyncTriggerProbe>();
+        auto trigger = std::make_shared<CCustomTrigger>(
+            marker->getName(), "onLeave", [probe](auto, auto) { return awaitTriggerProbe(probe, "leave"); });
+        trigger->setName("unitAsyncLeaveTrigger");
+        map->getEventHandler()->registerTrigger(trigger);
+        bool queued = false;
+        loop->invoke([&queued] { queued = true; });
+        auto waiting = game->getContext()->spawnTask(creature->moveToAsync(Coords(1, 0, 0)));
+        expect_true(!waiting.finished() && !queued, "spawning movement must not pump unrelated queued callbacks");
+        expect_true(pumpHandlerUntil([&] { return !probe->entered.empty() || waiting.finished(); }) &&
+                        !waiting.finished() && probe->entered.size() == 1 && creature->getCoords() == Coords(0, 0, 0) &&
+                        creature->getPendingMoveOrigin() == std::optional<Coords>(Coords(0, 0, 0)),
+                    "a pending leave hook must suspend before committing movement");
+        if (finish == Finish::Relocate) {
+            creature->relocateWithoutMoveHooks(Coords(3, 0, 0));
+        } else if (finish == Finish::Block) {
+            destinationTile->setCanStep(false);
+        } else if (finish == Finish::Transition) {
+            auto replacement = std::make_shared<CMap>();
+            replacement->setGame(game);
+            game->setMap(replacement);
+        } else if (finish == Finish::Cancel) {
+            waiting.requestStop();
+        }
+        probe->released.insert("leave");
+        const auto deadline = std::chrono::steady_clock::now() + std::chrono::seconds(2);
+        while ((!waiting.finished() || !queued) && std::chrono::steady_clock::now() < deadline) {
+            loop->runReady();
+            game_async::waitForProgress();
+        }
+        expect_true(waiting.finished() && queued && !creature->getPendingMoveOrigin(),
+                    "movement completion, stale rejection and cancellation must all clear the pending origin");
+        const auto expected = finish == Finish::Commit     ? Coords(1, 0, 0)
+                              : finish == Finish::Relocate ? Coords(3, 0, 0)
+                                                           : Coords(0, 0, 0);
+        expect_true(creature->getCoords() == expected,
+                    "a leave hook must not commit a stale origin, blocked target or inactive map generation");
+        if (waiting.finished()) {
+            if (finish == Finish::Cancel) {
+                bool cancelled = false;
+                try {
+                    waiting.get();
+                } catch (const vstd::task_cancelled &) {
+                    cancelled = true;
+                }
+                expect_true(cancelled, "cancelled leave hooks must preserve task cancellation");
+            } else {
+                waiting.get();
+            }
+        }
+        game->getContext()->shutdown();
+    }
+}
+
+void testArrivalHooksRejectChangedMapAndGeneration() {
+    auto loop = vstd::event_loop<>::instance();
+    auto detached = std::make_shared<CCreature>();
+    std::weak_ptr<CCreature> lifetime = detached;
+    auto lazyArrival = detached->afterMoveAsync();
+    detached.reset();
+    expect_true(!lifetime.expired(), "a lazy public arrival task must own its actor before execution starts");
+    if (!lifetime.expired()) {
+        vstd::task_group standalone;
+        auto finished = standalone.spawn(std::move(lazyArrival), vstd::loopScheduler(loop));
+        expect_true(finished.finished() && lifetime.expired(),
+                    "a detached arrival must finish inline and release its owned actor");
+    }
+    for (bool fromTile : {false, true}) {
+        for (bool changeGeneration : {false, true}) {
+            auto game = makeWindowlessFightGame();
+            auto map = game->getMap();
+            auto creature = add_test_creature(game, "unitStaleArrival");
+            auto tile = std::make_shared<StepHookCallbackProbe>();
+            tile->setCanStep(true);
+            map->addTile(tile, 1, 0, 0);
+            auto replacement = std::make_shared<CMap>();
+            replacement->setGame(game);
+            auto changeOwner = [weakGame = std::weak_ptr<CGame>(game), replacement, changeGeneration] {
+                auto owner = weakGame.lock();
+                if (changeGeneration) {
+                    owner->getContext()->advanceTransitionGeneration();
+                } else {
+                    owner->setMap(replacement);
+                }
+            };
+            if (fromTile) {
+                tile->hook = changeOwner;
+            }
+            int entries = 0;
+            for (const auto &name : {"unitFirstArrival", "unitSecondArrival"}) {
+                auto marker = std::make_shared<CEvent>();
+                marker->setGame(game);
+                marker->setName(name);
+                marker->setPosX(1);
+                map->addObject(marker);
+                auto trigger = std::make_shared<CCustomTrigger>(name, "onEnter", [&entries, changeOwner](auto, auto) {
+                    ++entries;
+                    changeOwner();
+                });
+                trigger->setName(std::string(name) + "Trigger");
+                map->getEventHandler()->registerTrigger(trigger);
+            }
+            auto move = game->getContext()->spawnTask(creature->moveToAsync(Coords(1, 0, 0)));
+            expect_true(pumpHandlerUntil([&] { return move.finished(); }),
+                        "a changed arrival owner must finish without waiting for later hooks");
+            if (move.finished()) {
+                move.get();
+            }
+            expect_true(tile->steps == 1 && entries == (fromTile ? 0 : 1) && !creature->getPendingMoveOrigin(),
+                        "map or generation changes during tile/entry hooks must suppress every later arrival hook");
+            game->getContext()->shutdown();
+        }
+    }
+}
+
+void testAsyncNamedSpawnsAwaitEntryWithoutPumping() {
+    auto loop = vstd::event_loop<>::instance();
+    for (bool cancel : {false, true}) {
+        auto game = makeWindowlessFightGame();
+        auto map = game->getMap();
+        auto targetTile = std::make_shared<CTile>();
+        targetTile->setCanStep(true);
+        map->addTile(targetTile, 1, 0, 0);
+        auto created = std::make_shared<std::shared_ptr<CCreature>>();
+        auto constructions = std::make_shared<int>(0);
+        game->getObjectHandler()->registerType("unitAsyncSpawnType", [created, constructions] {
+            auto creature = std::make_shared<CCreature>();
+            creature->setName("unitAsyncSpawnedActor");
+            initialize_test_creature_stats(creature);
+            creature->setHp(10);
+            *created = creature;
+            ++*constructions;
+            return creature;
+        });
+        auto marker = std::make_shared<CEvent>();
+        marker->setGame(game);
+        marker->setName("unitSpawnEntryMarker");
+        marker->setPosX(1);
+        map->addObject(marker);
+        auto probe = std::make_shared<AsyncTriggerProbe>();
+        auto trigger = std::make_shared<CCustomTrigger>(
+            marker->getName(), "onEnter", [probe](auto, auto) { return awaitTriggerProbe(probe, "spawn"); });
+        trigger->setName("unitSpawnEntryReceipt");
+        map->getEventHandler()->registerTrigger(trigger);
+        bool queued = false;
+        loop->invoke([&queued] { queued = true; });
+        auto spawn = game->getContext()->spawnTask(map->addObjectByNameAsync("unitAsyncSpawnType", Coords(1, 0, 0)));
+        expect_true(!queued && *constructions == 1 && *created && !spawn.finished(),
+                    "named spawning must construct/register inline and suspend movement without pumping queued work");
+        expect_true(pumpHandlerUntil([&] { return !probe->entered.empty() || spawn.finished(); }) &&
+                        probe->entered.size() == 1 && !spawn.finished() &&
+                        map->getObjectByName((*created)->getName()) == *created &&
+                        (*created)->getCoords() == Coords(1, 0, 0),
+                    "spawned entry hooks must retain the exact registered actor at its committed destination");
+        if (cancel) {
+            spawn.requestStop();
+        } else {
+            probe->released.insert("spawn");
+        }
+        expect_true(pumpHandlerUntil([&] { return spawn.finished(); }) && !(*created)->getPendingMoveOrigin(),
+                    "completion or cancellation must drain the spawn frame and its movement origin");
+        bool cancelled = false;
+        if (spawn.finished()) {
+            try {
+                expect_true(spawn.get() == "unitAsyncSpawnType", "successful spawn preserves its legacy name result");
+            } catch (const vstd::task_cancelled &) {
+                cancelled = true;
+            }
+        }
+        expect_true(cancelled == cancel && *constructions == 1 && queued,
+                    "spawn cancellation must propagate without cloning or constructing another actor");
+        targetTile->setCanStep(false);
+        auto blocked = game->getContext()->spawnTask(map->addObjectByNameAsync("unitAsyncSpawnType", Coords(1, 0, 0)));
+        expect_true(blocked.finished() && blocked.get().empty() && *constructions == 1,
+                    "blocked named spawns must reject before constructing an actor");
+        game->getContext()->shutdown();
+    }
+}
+
+void testAsyncRemovalAwaitsDestroyHooksAndFinalizesCancellation() {
+    auto loop = vstd::event_loop<>::instance();
+    for (bool respawn : {false, true}) {
+        auto game = makeWindowlessFightGame();
+        auto map = game->getMap();
+        auto object = std::make_shared<DestroyHookProbe>();
+        object->setGame(game);
+        object->setName("unitAsyncRemoval");
+        map->addObject(object);
+        if (respawn) {
+            std::weak_ptr<CMap> weakMap = map;
+            std::weak_ptr<DestroyHookProbe> weakObject = object;
+            object->hook = [weakMap, weakObject] { weakMap.lock()->addObject(weakObject.lock()); };
+        }
+        auto probe = std::make_shared<AsyncTriggerProbe>();
+        auto trigger = std::make_shared<CCustomTrigger>(
+            object->getName(), "onDestroy", [probe](auto, auto) { return awaitTriggerProbe(probe, "destroy"); });
+        trigger->setName("unitAsyncRemovalTrigger");
+        map->getEventHandler()->registerTrigger(trigger);
+        bool queued = false;
+        loop->invoke([&queued] { queued = true; });
+        auto pending = game->getContext()->spawnTask(map->removeObjectAsync(object));
+        expect_true(!pending.finished() && !queued && !map->getObjectByName(object->getName()),
+                    "removal must detach inline without pumping destruction hooks or unrelated work");
+        expect_true(pumpHandlerUntil([&] { return !probe->entered.empty() || pending.finished(); }) &&
+                        !pending.finished() && object->destroyed == 1 && probe->entered.size() == 1 &&
+                        (map->getObjectByName(object->getName()) == object) == respawn,
+                    "removal must await destruction hooks and preserve hook-respawned identity");
+        pending.requestStop();
+        const auto deadline = std::chrono::steady_clock::now() + std::chrono::seconds(2);
+        while ((!pending.finished() || !queued) && std::chrono::steady_clock::now() < deadline) {
+            loop->runReady();
+            game_async::waitForProgress();
+        }
+        bool cancelled = false;
+        if (pending.finished()) {
+            try {
+                pending.get();
+            } catch (const vstd::task_cancelled &) {
+                cancelled = true;
+            }
+        }
+        auto replacement = std::make_shared<CMap>();
+        replacement->setGame(game);
+        game->setMap(replacement);
+        expect_true(cancelled && object->destroyed == 1 && object->getMap() == (respawn ? map : replacement),
+                    "cancelled removal must release detached map ownership while retaining a hook-respawned owner");
+        game->getContext()->shutdown();
+    }
+
+    auto game = makeWindowlessFightGame();
+    auto winner = add_test_creature(game, "unitAsyncDestroyWinner");
+    auto loser = add_test_creature(game, "unitAsyncDestroyLoser", 1, 0);
+    loser->setHp(0);
+    auto probe = std::make_shared<AsyncTriggerProbe>();
+    auto trigger = std::make_shared<CCustomTrigger>(loser->getName(), "onDestroy",
+                                                    [probe](auto, auto) { return awaitTriggerProbe(probe, "defeat"); });
+    trigger->setName("unitAsyncDefeatDestroy");
+    game->getMap()->getEventHandler()->registerTrigger(trigger);
+    bool queued = false;
+    loop->invoke([&queued] { queued = true; });
+    auto defeat = game->getContext()->spawnTask(CFightHandler::defeatedCreatureAsync(winner, loser));
+    expect_true(!defeat.finished() && !queued, "native defeat must return without pumping unrelated queued work");
+    expect_true(pumpHandlerUntil([&] { return !probe->entered.empty() || defeat.finished(); }) && !defeat.finished() &&
+                    probe->entered.size() == 1 && !game->getMap()->getObjectByName(loser->getName()),
+                "native defeat must await destruction receipts without entering the synchronous removal adapter");
+    probe->released.insert("defeat");
+    const auto deadline = std::chrono::steady_clock::now() + std::chrono::seconds(2);
+    while (!defeat.finished() && std::chrono::steady_clock::now() < deadline) {
+        loop->runReady();
+        game_async::waitForProgress();
+    }
+    expect_true(defeat.finished() && queued && probe->entered.size() == 1,
+                "the outer loop must finish each defeated actor's destruction hook once");
+    if (defeat.finished()) {
+        defeat.get();
+    }
+    game->getContext()->shutdown();
+
+    auto pickupGame = makeWindowlessFightGame();
+    auto pickupMap = pickupGame->getMap();
+    auto floor = std::make_shared<CTile>();
+    floor->setCanStep(true);
+    pickupMap->addTile(floor, 1, 0, 0);
+    auto visitor = add_test_creature(pickupGame, "unitAsyncPickupVisitor");
+    auto item = std::make_shared<CItem>();
+    item->setGame(pickupGame);
+    item->setName("unitAsyncPickupItem");
+    item->setPosX(1);
+    pickupMap->addObject(item);
+    auto pickupProbe = std::make_shared<AsyncTriggerProbe>();
+    auto pickupTrigger = std::make_shared<CCustomTrigger>(
+        item->getName(), "onDestroy", [pickupProbe](auto, auto) { return awaitTriggerProbe(pickupProbe, "pickup"); });
+    pickupTrigger->setName("unitAsyncPickupDestroy");
+    pickupMap->getEventHandler()->registerTrigger(pickupTrigger);
+    bool pickupQueued = false;
+    loop->invoke([&pickupQueued] { pickupQueued = true; });
+    auto pickup = pickupGame->getContext()->spawnTask(visitor->moveToAsync(Coords(1, 0, 0)));
+    expect_true(!pickup.finished() && !pickupQueued, "native pickup must return without pumping unrelated queued work");
+    expect_true(pumpHandlerUntil([&] { return !pickupProbe->entered.empty() || pickup.finished(); }) &&
+                    !pickup.finished() && pickupProbe->entered.size() == 1 && visitor->hasInInventory(item) &&
+                    !pickupMap->getObjectByName(item->getName()),
+                "native item pickup must transfer the exact item then await destruction without nested polling");
+    pickup.requestStop();
+    const auto pickupDeadline = std::chrono::steady_clock::now() + std::chrono::seconds(2);
+    while ((!pickup.finished() || !pickupQueued) && std::chrono::steady_clock::now() < pickupDeadline) {
+        loop->runReady();
+        game_async::waitForProgress();
+    }
+    bool pickupCancelled = false;
+    if (pickup.finished()) {
+        try {
+            pickup.get();
+        } catch (const vstd::task_cancelled &) {
+            pickupCancelled = true;
+        }
+    }
+    auto pickupReplacement = std::make_shared<CMap>();
+    pickupReplacement->setGame(pickupGame);
+    pickupGame->setMap(pickupReplacement);
+    expect_true(
+        pickupCancelled && visitor->hasInInventory(item) && item->getMap() == pickupReplacement &&
+            !visitor->getPendingMoveOrigin() && pickupMap->getTurn() == 0,
+        "cancelled pickup receipts must release old-map ownership without losing or cloning the inventory item");
+    pickupGame->getContext()->shutdown();
+}
+
+void testAsyncEventHooksStopAfterContextShutdown() {
+    auto loop = vstd::event_loop<>::instance();
+    for (bool owned : {false, true}) {
+        for (bool shutdownInObject : {false, true}) {
+            auto game = makeWindowlessFightGame();
+            auto context = game->getContext();
+            auto handler = game->getMap()->getEventHandler();
+            auto object = std::make_shared<TurnHookRegistrationProbe>();
+            object->setGame(game);
+            object->setName("unitShutdownEventObject");
+            int objectCalls = 0;
+            int triggerCalls = 0;
+            object->hook = [&objectCalls, shutdownInObject, context] {
+                ++objectCalls;
+                if (shutdownInObject) {
+                    context->shutdown();
+                }
+            };
+            for (const auto &name : {"unitShutdownFirst", "unitShutdownSecond"}) {
+                auto trigger =
+                    std::make_shared<CCustomTrigger>(object->getName(), "onTurn", [&triggerCalls, context](auto, auto) {
+                        ++triggerCalls;
+                        context->shutdown();
+                    });
+                trigger->setName(name);
+                handler->registerTrigger(trigger);
+            }
+            vstd::task_group standalone;
+            auto task = handler->gameEventAsync(object, std::make_shared<CGameEvent>(CGameEvent::CType::onTurn));
+            auto pending = owned ? context->spawnTask(std::move(task))
+                                 : standalone.spawn(std::move(task), vstd::loopScheduler(loop));
+            const auto deadline = std::chrono::steady_clock::now() + std::chrono::seconds(2);
+            while (!pending.finished() && std::chrono::steady_clock::now() < deadline) {
+                loop->runReady();
+                game_async::waitForProgress();
+            }
+            bool cancelled = false;
+            if (pending.finished()) {
+                try {
+                    pending.get();
+                } catch (const vstd::task_cancelled &) {
+                    cancelled = true;
+                }
+            }
+            expect_true(cancelled && objectCalls == 1 && triggerCalls == (shutdownInObject ? 0 : 1),
+                        "context shutdown in an object or trigger must stop later observers, even in an unowned task");
+            context->shutdown();
+        }
+        auto game = makeWindowlessFightGame();
+        auto creature = add_test_creature(game, "unitShutdownTileVisitor");
+        auto tile = std::make_shared<StepHookShutdownProbe>();
+        tile->context = game->getContext();
+        vstd::task_group standalone;
+        auto task = CEventHandler::tileStepAsync(tile, creature);
+        auto pending = owned ? tile->context->spawnTask(std::move(task))
+                             : standalone.spawn(std::move(task), vstd::loopScheduler(loop));
+        for (int iteration = 0; iteration < 12; ++iteration) {
+            loop->runReady();
+        }
+        bool cancelled = false;
+        if (pending.finished()) {
+            try {
+                pending.get();
+            } catch (const vstd::task_cancelled &) {
+                cancelled = true;
+            }
+        }
+        auto rejected = standalone.spawn(CEventHandler::tileStepAsync(tile, creature), vstd::loopScheduler(loop));
+        bool closedCancelled = false;
+        if (rejected.finished()) {
+            try {
+                rejected.get();
+            } catch (const vstd::task_cancelled &) {
+                closedCancelled = true;
+            }
+        }
+        expect_true(cancelled && closedCancelled && tile->steps == 1,
+                    "tile hooks must propagate shutdown cancellation and reject another hook on the closed context");
+        tile->context->shutdown();
+    }
+}
+
 void testAsyncCombatAwaitsLootWithoutPumpingOrGrantingRewardsEarly() {
     auto loop = vstd::event_loop<>::instance();
     auto game = makeWindowlessFightGame();
@@ -743,19 +1319,21 @@ void testAsyncCombatAwaitsLootWithoutPumpingOrGrantingRewardsEarly() {
     const auto exp = player->getExp();
     auto queuedCallbackRan = std::make_shared<bool>(false);
     std::weak_ptr<CGui> weakGui = game->getGui();
-    loop->invoke([queuedCallbackRan, weakGui] {
-        *queuedCallbackRan = true;
+    auto legacyDismissal = loop->connectFrameCallback([weakGui](int) {
         if (auto gui = weakGui.lock()) {
-            // This also bounds the regression on the old nested-wait implementation.
             if (auto panel = vstd::cast<CGameLootPanel>(gui->findChild("CGameLootPanel"))) {
                 panel->close();
             }
         }
     });
+    loop->invoke([queuedCallbackRan] { *queuedCallbackRan = true; });
     auto waiting = game->getContext()->spawnTask(CFightHandler::fightManyResultAsync(player, {defeated}));
+    expect_true(!*queuedCallbackRan && !waiting.finished(),
+                "native combat must return without pumping unrelated queued work");
+    expect_true(pumpHandlerUntil([&] { return game->getGui()->findChild("CGameLootPanel") || waiting.finished(); }),
+                "the outer loop must reach combat's loot receipt");
     auto panel = vstd::cast<CGameLootPanel>(game->getGui()->findChild("CGameLootPanel"));
-    expect_true(!*queuedCallbackRan && !waiting.finished() && panel,
-                "native combat must suspend at its loot panel without pumping unrelated queued work");
+    expect_true(panel && !waiting.finished(), "combat must await dismissal of its loot panel");
     expect_true(
         player->getExp() > exp && !player->hasInInventory(item) &&
             map->getObjectByName(defeated->getName()) == defeated && map->getTurn() == turn,
@@ -820,8 +1398,8 @@ void testWorkerStartedCombatDefersControllerAndPanelCreationToMain() {
                     probe->panels.load(std::memory_order_acquire) == 0,
                 "worker-started combat must defer controller start and GUI creation until the main loop runs");
     const auto openedDeadline = std::chrono::steady_clock::now() + std::chrono::seconds(2);
-    while (probe->starts.load(std::memory_order_acquire) == 0 && !waiting.finished() &&
-           std::chrono::steady_clock::now() < openedDeadline) {
+    while ((probe->starts.load(std::memory_order_acquire) == 0 || probe->panels.load(std::memory_order_acquire) == 0) &&
+           !waiting.finished() && std::chrono::steady_clock::now() < openedDeadline) {
         loop->runReady();
         game_async::waitForProgress();
     }
@@ -856,6 +1434,10 @@ void testCancelledLootSettlesStartedRewardsOnceAndSkipsQueuedCombat() {
         map->getEventHandler()->registerTrigger(std::make_shared<CCustomTrigger>(
             defeated->getName(), CGameEvent::CType::onDestroy, [destroyed](auto, auto) { ++*destroyed; }));
         auto waiting = context->spawnTask(CFightHandler::fightManyResultAsync(player, {defeated}));
+        expect_true(
+            pumpHandlerUntil([&] { return game->getGui()->findChild("CGameLootPanel") || waiting.finished(); }) &&
+                game->getGui()->findChild("CGameLootPanel"),
+            "the outer loop must reach started loot before testing its cancellation settlement");
         const auto expAfterDefeat = player->getExp();
         expect_true(!waiting.finished() && !player->hasInInventory(item),
                     "reward cancellation regression must suspend before inventory settlement");
@@ -893,6 +1475,47 @@ void testCancelledLootSettlesStartedRewardsOnceAndSkipsQueuedCombat() {
         expect_true(player->countItems("unitCancelledOwnedReward") == 1 && player->getExp() == expAfterDefeat,
                     "repeated cancellation must not repeat reward settlement");
         context->shutdown();
+    }
+
+    {
+        auto game = makeWindowlessFightGame();
+        auto gui = game->getGui();
+        game->getObjectHandler()->registerType("CGameTextPanel", [] { return std::make_shared<CGameTextPanel>(); });
+        game->getObjectHandler()->registerConfig("textPanel",
+                                                 std::make_shared<json>(json{{"class", "CGameTextPanel"}}));
+        auto player = add_test_player(game);
+        player->setFightController(std::make_shared<KillingFightController>());
+        auto defeated = add_test_creature(game, "unitCancelledCleanupReceipt", 1, 0);
+        auto item = add_unit_loot(game, defeated, "unitCancelledCleanupReward");
+        int destroyed = 0;
+        auto trigger = std::make_shared<CCustomTrigger>(
+            defeated->getName(), "onDestroy",
+            [&destroyed, weakGui = std::weak_ptr<CGuiHandler>(game->getGuiHandler())](auto, auto) {
+                ++destroyed;
+                return weakGui.lock()->showMessageAsync("Mandatory destruction receipt");
+            });
+        trigger->setName("unitCancelledCleanupReceiptTrigger");
+        game->getMap()->getEventHandler()->registerTrigger(trigger);
+        auto waiting = game->getContext()->spawnTask(CFightHandler::fightManyResultAsync(player, {defeated}));
+        expect_true(pumpHandlerUntil([&] { return gui->findChild("CGameLootPanel"); }),
+                    "the cleanup regression must reach the original loot receipt");
+        waiting.requestStop();
+        expect_true(pumpHandlerUntil([&] { return gui->findChild("CGameTextPanel") || waiting.finished(); }) &&
+                        !waiting.finished() && destroyed == 1 && player->hasInInventory(item),
+                    "individual cancellation must drain mandatory destruction after settling the original reward");
+        game->getContext()->shutdown();
+        expect_true(pumpHandlerUntil([&] { return waiting.finished(); }) && gui->getChildren().empty() &&
+                        player->countItems("unitCancelledCleanupReward") == 1,
+                    "context shutdown must cancel a suspended mandatory cleanup receipt without hanging execution");
+        bool cancelled = false;
+        if (waiting.finished()) {
+            try {
+                waiting.get();
+            } catch (const vstd::task_cancelled &) {
+                cancelled = true;
+            }
+        }
+        expect_true(cancelled, "mandatory cleanup must preserve the original combat cancellation");
     }
 
     auto game = makeWindowlessFightGame();
@@ -1513,6 +2136,77 @@ void test_fight_handler_counts_effect_duration_as_progress() {
     expect_true(game->getMap()->getObjectByName(attacker->getName()) == attacker &&
                     game->getMap()->getObjectByName(defender->getName()) == defender,
                 "timed-effect stale handling should not remove living participants");
+}
+
+void testIndividualQuestCancellationHonorsExplicitRewardCommit() {
+    auto loop = vstd::event_loop<>::instance();
+    auto game = makeWindowlessFightGame();
+    game->getObjectHandler()->registerType("CGameTextPanel", [] { return std::make_shared<CGameTextPanel>(); });
+    game->getObjectHandler()->registerConfig("textPanel", std::make_shared<json>(json{{"class", "CGameTextPanel"}}));
+    auto player = add_test_player(game);
+    auto quest = std::make_shared<QuestLifecycleProbe>();
+    quest->setGame(game);
+    quest->setTypeId("unitExplicitCommitQuest");
+    player->setQuests({quest});
+    int rewards = 0;
+    pybind11::dict scope;
+    scope["grant"] = pybind11::cpp_function([&rewards] { ++rewards; });
+    pybind11::exec(R"(
+class CompletionFlowProbe:
+    committed = False
+    closed = 0
+    def onCompleteFlow(self):
+        try:
+            if self.committed:
+                grant()
+                yield {"operation": "gui.questCommitted", "args": [], "kwargs": {}}
+            yield {"operation": "gui.showMessage", "args": ["Quest receipt"], "kwargs": {}}
+        finally:
+            self.closed += 1
+callbacks = CompletionFlowProbe()
+)",
+                   scope);
+    auto callbacks = scope["callbacks"];
+    CPythonOverrides::retain(quest, callbacks);
+    struct OverrideOwner {
+        std::shared_ptr<CQuest> quest;
+        ~OverrideOwner() { CPythonOverrides::release(quest.get()); }
+    } releaseOverride{quest};
+    const auto conditions = loop->getConditionalTaskCount();
+    for (bool committed : {false, true}) {
+        callbacks.attr("committed") = committed;
+        auto waiting = game->getContext()->spawnTask(player->checkQuestsAsync());
+        expect_true(pumpHandlerUntil([&] { return !game->getGui()->getChildren().empty() || waiting.finished(); }) &&
+                        !waiting.finished() && !game->getGui()->getChildren().empty(),
+                    "quest completion must suspend at its receipt before individual cancellation");
+        waiting.requestStop();
+        const auto deadline = std::chrono::steady_clock::now() + std::chrono::seconds(2);
+        while (!waiting.finished() && std::chrono::steady_clock::now() < deadline) {
+            loop->runReady();
+            game_async::waitForProgress();
+        }
+        bool cancelled = false;
+        if (waiting.finished()) {
+            try {
+                waiting.get();
+            } catch (const vstd::task_cancelled &) {
+                cancelled = true;
+            }
+        }
+        expect_true(cancelled && game->getContext()->isActive() && game->getGui()->getChildren().empty(),
+                    "individual quest cancellation must close its receipt while retaining the active context");
+        expect_true(player->getCompletedQuests().contains(quest) == committed &&
+                        player->getQuests().contains(quest) != committed && rewards == (committed ? 1 : 0),
+                    "precommit cancellation must retain the quest, while committed rewards settle membership once");
+        expect_true(quest->captures == (committed ? std::vector<bool>{true} : std::vector<bool>{}),
+                    "only an explicitly committed cancellation may capture the completed journal");
+    }
+    player->checkQuests();
+    expect_true(rewards == 1 && quest->captures == std::vector<bool>{true} && callbacks.attr("closed").cast<int>() == 2,
+                "repeated completion checks must neither duplicate committed rewards nor retain cancelled generators");
+    expect_true(loop->getConditionalTaskCount() == conditions,
+                "cancelled quest receipts must release all conditional waits");
+    game->getContext()->shutdown();
 }
 
 void test_player_quest_completion_ignores_reentry_and_captures_final_callback_state() {
@@ -2860,6 +3554,19 @@ int main() {
                             testWorkerStartedCombatDefersControllerAndPanelCreationToMain);
     nativeTestProfile().run("testCancelledLootSettlesStartedRewardsOnceAndSkipsQueuedCombat",
                             testCancelledLootSettlesStartedRewardsOnceAndSkipsQueuedCombat);
+    nativeTestProfile().run("testAsyncEventsAwaitOrderedTriggerSnapshotsAfterObjectHooks",
+                            testAsyncEventsAwaitOrderedTriggerSnapshotsAfterObjectHooks);
+    nativeTestProfile().run("testAsyncLeaveHooksRejectStaleMovesAndCleanCancellation",
+                            testAsyncLeaveHooksRejectStaleMovesAndCleanCancellation);
+    nativeTestProfile().run("testArrivalHooksRejectChangedMapAndGeneration",
+                            testArrivalHooksRejectChangedMapAndGeneration);
+    nativeTestProfile().run("testAsyncNamedSpawnsAwaitEntryWithoutPumping",
+                            testAsyncNamedSpawnsAwaitEntryWithoutPumping);
+    nativeTestProfile().run("testIndividualQuestCancellationHonorsExplicitRewardCommit",
+                            testIndividualQuestCancellationHonorsExplicitRewardCommit);
+    nativeTestProfile().run("testAsyncRemovalAwaitsDestroyHooksAndFinalizesCancellation",
+                            testAsyncRemovalAwaitsDestroyHooksAndFinalizesCancellation);
+    nativeTestProfile().run("testAsyncEventHooksStopAfterContextShutdown", testAsyncEventHooksStopAfterContextShutdown);
     nativeTestProfile().run("test_fight_handler_counts_effect_duration_as_progress",
                             test_fight_handler_counts_effect_duration_as_progress);
     nativeTestProfile().run("test_player_quest_completion_ignores_reentry_and_captures_final_callback_state",

@@ -73,7 +73,8 @@ class CGame : public CGameObject {
     bool requestMapTransition(CMapTransitionRequest request);
 
     bool changeMapWithPreparationFlow(std::string mapName, std::move_only_function<vstd::task<void>()> beforeEntryAsync,
-                                      std::function<void(bool)> completion);
+                                      std::function<void(bool)> completion,
+                                      std::function<void()> commitBeforeEntry = {});
 
     std::shared_ptr<CMap> getMap() const;
 

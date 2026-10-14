@@ -15,6 +15,7 @@ GNU General Public License for more details.
 You should have received a copy of the GNU General Public License
 along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
+#include "core/CAsync.h"
 #include "core/CController.h"
 #include "core/CGame.h"
 #include "core/CGameContext.h"
@@ -712,14 +713,20 @@ void testInFlightShutdownCancelsControllerAndDirectFlow() {
         creature->setController(controller);
         map->addObject(creature);
         auto service = map->getNavigationService();
-        std::packaged_task<bool()> request([mode, service, map, target, creature, controller]() {
-            if (mode == 0)
-                return controller->control(creature)->get() == ZERO;
+        vstd::task_group controllerTasks;
+        vstd::task_handle<Coords> controllerResult;
+        std::packaged_task<bool()> request([service, map, target]() {
             return service->nextStep(map, target, ZERO, target->getCoords(), 0).status ==
                    CNavigationFlowStatus::Cancelled;
         });
         auto result = request.get_future();
-        std::thread worker(std::move(request));
+        std::thread worker;
+        if (mode == 0) {
+            controllerResult = controllerTasks.spawn(controller->controlAsync(creature),
+                                                     vstd::loopScheduler(vstd::event_loop<>::instance()));
+        } else {
+            worker = std::thread(std::move(request));
+        }
         bool reached_factory;
         {
             pybind11::gil_scoped_release release;
@@ -727,15 +734,17 @@ void testInFlightShutdownCancelsControllerAndDirectFlow() {
         }
         game->getContext()->shutdown();
         gate->resume.set_value();
-        {
+        if (worker.joinable()) {
             pybind11::gil_scoped_release release;
             worker.join();
         }
         expect_true(reached_factory, "shutdown fixture must interrupt a running controller or flow query");
         try {
-            expect_true(result.get(), "an in-flight query must cancel after shutdown without returning movement");
+            const bool cancelled =
+                mode == 0 ? game_async::wait(controllerResult, game_async::WaitMode::PostedWork) == ZERO : result.get();
+            expect_true(cancelled, "an in-flight query must cancel after shutdown without returning movement");
         } catch (...) {
-            expect_true(false, "an in-flight shutdown must not escape through the controller or flow future");
+            expect_true(false, "an in-flight shutdown must not escape through the controller or flow result");
         }
     }
 }

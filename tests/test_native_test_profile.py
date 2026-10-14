@@ -25,6 +25,13 @@ ADDITIONAL_CASES = {
         "testAsyncCombatAwaitsLootWithoutPumpingOrGrantingRewardsEarly",
         "testWorkerStartedCombatDefersControllerAndPanelCreationToMain",
         "testCancelledLootSettlesStartedRewardsOnceAndSkipsQueuedCombat",
+        "testAsyncEventsAwaitOrderedTriggerSnapshotsAfterObjectHooks",
+        "testAsyncLeaveHooksRejectStaleMovesAndCleanCancellation",
+        "testArrivalHooksRejectChangedMapAndGeneration",
+        "testAsyncNamedSpawnsAwaitEntryWithoutPumping",
+        "testIndividualQuestCancellationHonorsExplicitRewardCommit",
+        "testAsyncRemovalAwaitsDestroyHooksAndFinalizesCancellation",
+        "testAsyncEventHooksStopAfterContextShutdown",
     ),
     "map": (
         "testNewSessionClearsQuitLatch",
@@ -34,6 +41,9 @@ ADDITIONAL_CASES = {
         "testMapMoveRejectsPlayerPlanCapturedBeforeSynchronousRespawn",
         "test_scene_manager_awaits_preparation_and_rolls_back_errors",
         "testSceneCompletionOwnsSkippedLazyChildren",
+        "testSceneCommitRunsAfterPreparationAndBeforeQueuedObservers",
+        "testAsyncGameStartOwnsSuspendedEntryAndRollsBackCancellation",
+        "testAsyncRandomEncountersStopBeforeAnotherStaleRoomOrRngDraw",
     ),
 }
 

@@ -5,6 +5,7 @@ import json
 import sys
 import types
 import unittest
+from tests.hook_flow_support import installHookFlows
 from pathlib import Path
 from unittest.mock import patch
 
@@ -127,7 +128,7 @@ class Game:
         completion(success)
 
 
-def loadMapClasses(map_name):
+def loadMapClasses(map_name, hook_api=None):
     registered = {}
 
     def register(context):
@@ -157,11 +158,14 @@ def loadMapClasses(map_name):
     fake_module.claim_once = lambda obj, flag: (
         False if obj.getBoolProperty(flag) else obj.setBoolProperty(flag, True) or True
     )
-    for name in ("CDialog", "CEvent", "CQuest", "CTrigger", "CCreature", "CPlayer", "Coords"):
+    for name in ("CBuilding", "CDialog", "CEvent", "CQuest", "CTrigger", "CCreature", "CPlayer", "Coords"):
         setattr(fake_module, name, type(name, (PropertyObject,), {}))
     script_path = REPO_ROOT / "res/maps" / map_name / "script.py"
     spec = importlib.util.spec_from_file_location(map_name + "NarrativeFixture", script_path)
     script = importlib.util.module_from_spec(spec)
+    installHookFlows(fake_module)
+    if hook_api:
+        vars(fake_module).update(hook_api)
     with patch.dict(sys.modules, {"game": fake_module}):
         spec.loader.exec_module(script)
         context = types.SimpleNamespace(getMap=lambda: None, post=lambda _callback: None)

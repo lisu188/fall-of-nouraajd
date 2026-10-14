@@ -35,6 +35,39 @@ class UiCoroutineFlowTest(unittest.TestCase):
         self.assertEqual([], game.handler.screens)
         self.assertTrue(game.context.active)
 
+    def testNewAdventureYieldsNativeStartBeforeLoadingEitherMapKind(self):
+        from tests.test_ui_frontend import FakeProvider
+
+        for mode, race in (("random", ""), ("scenario", "humanRace")):
+            with self.subTest(mode=mode):
+                game = FakeGame(current=None)
+                game.provider = FakeProvider(maps=["nouraajd"])
+                loader = Mock()
+                with (
+                    patch.dict(sys.modules, {"_game": SimpleNamespace(CGameLoader=loader)}),
+                    patch.object(ui.campaign, "list_campaigns", return_value=[]),
+                ):
+                    flow = ui.newAdventureFlow(game)
+                    self.addCleanup(flow.close)
+                    self.assertEqual("choose", next(flow)["operation"])
+                    request = flow.send(mode)
+                    if mode == "scenario":
+                        self.assertEqual("Choose a scenario", request["args"][1])
+                        request = flow.send("nouraajd")
+                    self.assertEqual("chooseCharacter", request["operation"])
+                    request = flow.send(("Warrior", race))
+                    expected = ["Warrior", race] if mode == "random" else ["nouraajd", "Warrior", race]
+                    operation = "gui.startRandomGameWithPlayer" if mode == "random" else "gui.startGameWithPlayer"
+                    self.assertEqual(operation, request["operation"])
+                    self.assertEqual(expected, list(request["args"]))
+                    loader.startGameWithPlayer.assert_not_called()
+                    loader.startRandomGameWithPlayer.assert_not_called()
+                    game.current = SimpleNamespace(getPlayer=lambda: object())
+                    with self.assertRaises(StopIteration) as finished:
+                        flow.send(None)
+                    self.assertTrue(finished.exception.value)
+                self.assertEqual("closed", game.handler.loading[-1])
+
     def testSettingsFlowAppliesTheExistingPreferenceBehavior(self):
         game = FakeGame(current=object())
         flow = ui.UiFlow("pause", lambda: game)
@@ -163,6 +196,104 @@ class UiCoroutineFlowTest(unittest.TestCase):
         self.assertEqual(["native modal failure"], recovered)
         self.assertIsNone(self.advance(flow))
         callback.assert_called_once_with()
+
+    def testNativeObjectArgumentsRetainIdentityAndTokensAreConsumedPerOperation(self):
+        class NativeObject:
+            pass
+
+        item = NativeObject()
+
+        def prepare():
+            yield ui.uiRequest("gui.showDialog", item, item)
+            yield ui.uiRequest("gui.showDialog", item)
+
+        flow = ui.UiFlow.fromCallback(prepare)
+        self.addCleanup(flow.close)
+        with patch.dict(sys.modules, {"_game": SimpleNamespace(CGameObject=NativeObject)}):
+            first = self.advance(flow)
+            tokens = [value["__nativeObject"] for value in first["args"]]
+            self.assertNotEqual(tokens[0], tokens[1])
+            self.assertIs(item, flow.takeObjectArgument(tokens[0]))
+            with self.assertRaises(KeyError):
+                flow.takeObjectArgument(tokens[0])
+            second = self.advance(flow)
+            with self.assertRaises(KeyError):
+                flow.takeObjectArgument(tokens[1])
+            token = second["args"][0]["__nativeObject"]
+            self.assertNotIn(token, tokens)
+            self.assertIs(item, flow.takeObjectArgument(token))
+            self.assertIsNone(self.advance(flow))
+        self.assertEqual({}, flow.objectArguments)
+
+    def testObjectArgumentsReleaseOnFailureAndCloseAndRejectFabricatedTokens(self):
+        class NativeObject:
+            pass
+
+        references = []
+
+        def prepare():
+            item = NativeObject()
+            references.append(weakref.ref(item))
+            try:
+                yield ui.uiRequest("gui.showDialog", item)
+            finally:
+                del item
+
+        with patch.dict(sys.modules, {"_game": SimpleNamespace(CGameObject=NativeObject)}):
+            for fail in (False, True):
+                flow = ui.UiFlow.fromCallback(prepare)
+                self.advance(flow)
+                self.assertIsNotNone(references[-1]())
+                if fail:
+                    with self.assertRaisesRegex(RuntimeError, "modal failed"):
+                        flow.advance("null", "modal failed")
+                flow.close()
+                self.assertIsNone(references[-1]())
+                self.assertEqual({}, flow.objectArguments)
+            for value in (object(), {"__nativeObject": "object_1"}):
+                with self.assertRaises((TypeError, ValueError)):
+                    ui.UiFlow.fromCallback(lambda: iter(())).encodeArgument(value)
+        with self.assertRaises(TypeError):
+            flow.takeObjectArgument(1)
+        with self.assertRaises(KeyError):
+            flow.takeObjectArgument("fabricated")
+
+    def testResumableHookSharesSynchronousBehaviorAndSuspendsWithoutOwningGame(self):
+        class NativeObject:
+            pass
+
+        events = []
+        game = FakeGame()
+        game.handler.showTrade = lambda item: events.append(("shown", item))
+        reference = weakref.ref(game)
+        item = NativeObject()
+
+        class Receiver:
+            getGame = staticmethod(reference)
+
+            @ui.resumableHook
+            def onEnter(self, item):
+                events.append(("before", item))
+                game = ui.flowGame(self.getGame())
+                yield ui.uiRequest("gui.showTrade", item)
+                events.append(("after", item))
+                return 7
+
+        receiver = Receiver()
+        self.assertEqual(7, receiver.onEnter(item))
+        self.assertEqual([("before", item), ("shown", item), ("after", item)], events)
+        events.clear()
+        flow = ui.UiFlow.fromCallback(lambda: receiver.onEnterFlow(item))
+        with patch.dict(sys.modules, {"_game": SimpleNamespace(CGameObject=NativeObject)}):
+            request = self.advance(flow)
+        self.assertEqual("showTrade", request["operation"])
+        self.assertEqual([("before", item)], events)
+        del game
+        gc.collect()
+        self.assertIsNone(reference())
+        self.assertIsNone(self.advance(flow))
+        self.assertEqual([("before", item), ("after", item)], events)
+        flow.close()
 
 
 if __name__ == "__main__":

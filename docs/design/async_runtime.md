@@ -64,3 +64,42 @@ captures, reject a closed session, and release cancelled callbacks without
 invoking them. UI callbacks return a generator that yields modal requests;
 ordinary callbacks return `None`. Artifact choices use this generator path,
 while the global event-loop adapter remains available to external consumers.
+
+Native event, tile-step, item-use, pickup, and destruction paths await their
+hooks. Authored Python hooks use `@resumableHook`, which retains the synchronous
+name and installs a `<name>Flow` generator for native callers. Object hooks
+finish before the trigger snapshot is captured; captured triggers run in order.
+Context shutdown stops subsequent hook phases even when the caller owns a
+separate task group. Native item subclasses that customize pickup override
+`onEnterAsync`; the default native item implementation awaits destruction after
+transferring the original shared item into inventory.
+
+Flow JSON carries operation-local object tokens rather than serialized copies.
+`takeObjectArgument` consumes each token once and checks its native type and
+session before use. Advancing or closing a flow releases unused token owners.
+Concurrent use of the same inventory item is rejected while its hook is pending;
+cancellation releases that guard and closes the modal. Disposable items are
+removed after successful hook completion with fresh ownership and session checks.
+
+Quest reward generators yield `gui.questCommitted` after reward mutations and
+before a receipt. Cancellation before that marker leaves the quest active;
+cancellation after it settles completed membership once. Shutdown avoids new
+Python journal hooks while preserving already committed membership. Map removal
+similarly finalizes detached ownership on cancellation and preserves an actor
+that its destruction hook has respawned.
+
+Chapter transitions await presentation against the complete source map, then run
+`commitBeforeEntry` synchronously before the destination swap. Native
+`attachPlayerAsync` installs destination ownership, controllers and normalized
+entry coordinates before its first suspension, then awaits tile and entry hooks
+once. Source-map coordinates are not destination leave cells or combat retreat
+points. Failed or cancelled entry restores the source player identity and
+coordinates before reporting failure; pending campaign state stays durable
+through any destination entry receipt.
+
+Named spawns from authored flows use `addObjectByNameAsync`: check walkability,
+construct, register, then await movement of that same object. Arrival hooks stop
+when the captured map or session generation changes. Cancelling an already
+resolved fight settles its reward once and drains mandatory destruction/respawn
+cleanup before execution completes. A destruction hook may still await its own
+receipt; context shutdown cancels that owned cleanup and closes the receipt.

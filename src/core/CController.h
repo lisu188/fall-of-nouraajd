@@ -106,6 +106,8 @@ class CMonsterFightController : public CFightController {
   public:
     bool control(std::shared_ptr<CCreature> me, std::shared_ptr<CCreature> opponent) override;
 
+    vstd::task<bool> controlAsync(std::shared_ptr<CCreature> me, std::shared_ptr<CCreature> opponent) override;
+
   private:
     std::shared_ptr<CInteraction> selectInteraction(std::shared_ptr<CCreature> me, std::shared_ptr<CCreature> opponent);
 

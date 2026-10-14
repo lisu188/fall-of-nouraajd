@@ -235,6 +235,9 @@ class OctobogzHuntTest(unittest.TestCase):
         game_stub.randint = Mock()
         game_stub.register = lambda context: lambda cls: self.registered.setdefault(cls.__name__, cls)
         game_stub.event_loop = types.SimpleNamespace(instance=lambda: types.SimpleNamespace(invoke=self.pending.append))
+        from tests.hook_flow_support import installHookFlows
+
+        installHookFlows(game_stub)
         with patch.dict(sys.modules, {"game": game_stub}):
             attack_spec = importlib.util.spec_from_file_location(
                 "hunt_attack_under_test", ROOT / "res/plugins/interaction.py"
@@ -515,6 +518,14 @@ class OctobogzHuntTest(unittest.TestCase):
         source = (ROOT / "res/plugins/octobogz_hunt.py").read_text(encoding="utf-8")
         tree = ast.parse(source)
         local = {node.name for node in ast.walk(tree) if isinstance(node, ast.FunctionDef)}
+        local.update(
+            node.name + "Flow"
+            for node in ast.walk(tree)
+            if isinstance(node, ast.FunctionDef)
+            and any(
+                isinstance(decorator, ast.Name) and decorator.id == "resumableHook" for decorator in node.decorator_list
+            )
+        )
         called = {
             node.func.attr
             for node in ast.walk(tree)
@@ -3636,7 +3647,7 @@ class OctobogzHuntTest(unittest.TestCase):
         stdout = "NATIVE_HUNT_DECISION_RESULT " + json.dumps(
             {
                 "decisions": [
-                    {"round": 1, "target": "ж" * 10000, "action": "Attack", "hpBefore": {"unexpected": "object"}}
+                    {"round": 1, "target": "Ð¶" * 10000, "action": "Attack", "hpBefore": {"unexpected": "object"}}
                 ],
                 "error": "failure" * 10000,
             }

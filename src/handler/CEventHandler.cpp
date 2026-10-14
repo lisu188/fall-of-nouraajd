@@ -1,6 +1,6 @@
 /*
 fall-of-nouraajd c++ dark fantasy game
-Copyright (C) 2025  Andrzej Lis
+Copyright (C) 2025-2026  Andrzej Lis
 
 This program is free software: you can redistribute it and/or modify
         it under the terms of the GNU General Public License as published by
@@ -16,6 +16,9 @@ You should have received a copy of the GNU General Public License
 along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 #include "handler/CHandler.h"
+#include "core/CAsync.h"
+#include "core/CGame.h"
+#include "core/CGameContext.h"
 
 std::string CGameEvent::CType::onEnter = "onEnter";
 std::string CGameEvent::CType::onTurn = "onTurn";
@@ -26,7 +29,33 @@ std::string CGameEvent::CType::onUse = "onUse";
 std::string CGameEvent::CType::onEquip = "onEquip";
 std::string CGameEvent::CType::onUnequip = "onUnequip";
 
-void CEventHandler::gameEvent(std::shared_ptr<CMapObject> object, std::shared_ptr<CGameEvent> event) const {
+namespace {
+vstd::task<bool> invokeObjectFlowAsync(std::shared_ptr<CGameObject> object, std::string method,
+                                       std::vector<std::shared_ptr<CGameObject>> arguments,
+                                       std::weak_ptr<CGame> weakGame) {
+    try {
+        auto flow = CScriptHandler::createObjectFlow(object, method, arguments, weakGame);
+        if (!flow) {
+            co_return false;
+        }
+        auto game = weakGame.lock();
+        if (!game) {
+            throw std::runtime_error("Cannot run a script event after its game has been destroyed.");
+        }
+        auto gui = game->getGuiHandler();
+        game.reset();
+        co_await gui->runScriptFlowAsync(std::move(flow));
+    } catch (const vstd::task_cancelled &) {
+        throw;
+    } catch (const vstd::scheduler_rejected &) {
+        throw;
+    } catch (const std::exception &error) {
+        vstd::logger::error("Script event flow failed:", method, error.what());
+    }
+    co_return true;
+}
+
+void dispatchObjectEvent(const std::shared_ptr<CMapObject> &object, const std::shared_ptr<CGameEvent> &event) {
     if (!object || !event) {
         return;
     }
@@ -66,10 +95,94 @@ void CEventHandler::gameEvent(std::shared_ptr<CMapObject> object, std::shared_pt
     } else {
         vstd::logger::fatal("Unrecognized event type:", event->getType());
     }
+}
+} // namespace
 
+void CEventHandler::gameEvent(std::shared_ptr<CMapObject> object, std::shared_ptr<CGameEvent> event) const {
+    if (!object || !event) {
+        return;
+    }
+    dispatchObjectEvent(object, event);
     auto range = triggers.equal_range(std::make_pair(object->getName(), event->getType()));
     std::for_each(range.first, range.second,
                   [object, event](TriggerMap::value_type x) { x.second->trigger(object, event); });
+}
+
+vstd::task<void> CEventHandler::gameEventAsync(std::shared_ptr<CMapObject> object, std::shared_ptr<CGameEvent> event) {
+    return [](std::shared_ptr<CEventHandler> self, std::shared_ptr<CMapObject> object,
+              std::shared_ptr<CGameEvent> event) -> vstd::task<void> {
+        auto loop = vstd::event_loop<>::instance();
+        if (!loop->isMainThread()) {
+            co_await vstd::post(loop);
+        }
+        if (!object || !event) {
+            co_return;
+        }
+        const auto stop = co_await vstd::thisTaskStopToken();
+        auto owner = object->getGame();
+        auto context = owner ? owner->getContext() : nullptr;
+        std::weak_ptr<CGame> game = owner;
+        owner.reset();
+        const auto checkActive = [&] {
+            if (stop.stop_requested() || (context && !context->isActive())) {
+                throw vstd::task_cancelled();
+            }
+        };
+        checkActive();
+        std::vector<std::shared_ptr<CGameObject>> arguments{event};
+        if (!(co_await invokeObjectFlowAsync(object, event->getType() + "Flow", std::move(arguments), game))) {
+            if (auto visitable = vstd::cast<CVisitable>(object);
+                visitable && event->getType() == CGameEvent::CType::onEnter) {
+                co_await visitable->onEnterAsync(event);
+            } else {
+                dispatchObjectEvent(object, event);
+            }
+        }
+        checkActive();
+        // Object hooks can register triggers; take the observer snapshot after they finish.
+        auto range = self->triggers.equal_range(std::make_pair(object->getName(), event->getType()));
+        std::vector<std::shared_ptr<CTrigger>> snapshot;
+        for (auto it = range.first; it != range.second; ++it) {
+            snapshot.push_back(it->second);
+        }
+        for (const auto &trigger : snapshot) {
+            checkActive();
+            if (!trigger) {
+                continue;
+            }
+            std::vector<std::shared_ptr<CGameObject>> arguments{object, event};
+            if (!(co_await invokeObjectFlowAsync(trigger, "triggerFlow", std::move(arguments), game))) {
+                co_await trigger->triggerAsync(object, event);
+            }
+            checkActive();
+        }
+    }(this->ptr<CEventHandler>(), std::move(object), std::move(event));
+}
+
+vstd::task<void> CEventHandler::tileStepAsync(std::shared_ptr<CTile> tile, std::shared_ptr<CCreature> creature) {
+    auto loop = vstd::event_loop<>::instance();
+    if (!loop->isMainThread()) {
+        co_await vstd::post(loop);
+    }
+    if (!tile || !creature) {
+        co_return;
+    }
+    const auto stop = co_await vstd::thisTaskStopToken();
+    auto owner = creature->getGame();
+    auto context = owner ? owner->getContext() : nullptr;
+    std::weak_ptr<CGame> game = owner;
+    owner.reset();
+    const auto checkActive = [&] {
+        if (stop.stop_requested() || (context && !context->isActive())) {
+            throw vstd::task_cancelled();
+        }
+    };
+    checkActive();
+    std::vector<std::shared_ptr<CGameObject>> arguments{creature};
+    if (!(co_await invokeObjectFlowAsync(tile, "onStepFlow", std::move(arguments), game))) {
+        tile->onStep(creature);
+    }
+    checkActive();
 }
 
 void CEventHandler::registerTrigger(std::shared_ptr<CTrigger> trigger) {

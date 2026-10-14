@@ -37,6 +37,10 @@ class CMapLoader {
     static std::shared_ptr<CMap> loadRandomMapWithPlayer(const std::shared_ptr<CGame> &game, std::string player,
                                                          const std::string &raceId);
 
+    static vstd::task<std::shared_ptr<CMap>> loadMapWithPlayerAsync(std::weak_ptr<CGame> game, std::string name,
+                                                                    std::string player, std::string raceId,
+                                                                    bool randomMap = false);
+
     static std::shared_ptr<CMap> loadNewMap(const std::shared_ptr<CGame> &game, const std::string &name);
 
     static std::shared_ptr<CMap> loadSavedMap(const std::shared_ptr<CGame> &game, const std::string &name);
@@ -47,6 +51,9 @@ class CMapLoader {
     static void loadFromTmx(const std::shared_ptr<CMap> &map, const std::shared_ptr<const json> &mapc);
 
   private:
+    static std::shared_ptr<CMap> loadNewMapForOperation(const std::shared_ptr<CGame> &game, const std::string &name,
+                                                        std::shared_ptr<CMap> &stagedMap, bool *installed = nullptr);
+
     static void handleTileLayer(const std::shared_ptr<CMap> &map, const std::vector<std::string> &tileTypes,
                                 const json &layer);
 
@@ -69,6 +76,12 @@ class CGameLoader {
 
     static void startRandomGameWithPlayer(const std::shared_ptr<CGame> &game, std::string player,
                                           const std::string &raceId);
+
+    static vstd::task<void> startGameWithPlayerAsync(std::weak_ptr<CGame> game, std::string file, std::string player,
+                                                     std::string raceId = {});
+
+    static vstd::task<void> startRandomGameWithPlayerAsync(std::weak_ptr<CGame> game, std::string player,
+                                                           std::string raceId = {});
 
     static void startGame(const std::shared_ptr<CGame> &game, const std::string &file);
 
@@ -115,8 +128,15 @@ class CRandomMapGenerator {
   public:
     static std::shared_ptr<CMap> loadRandomMap(const std::shared_ptr<CGame> &game);
 
+    static vstd::task<std::shared_ptr<CMap>> loadRandomMapAsync(std::weak_ptr<CGame> game);
+
   private:
+    friend struct CRandomMapGeneratorTestAccess;
+
     static void generateTiles(std::shared_ptr<CMap> &map, const rdg::Dungeon &dungeon);
+
+    static vstd::task<void> generateEncountersAsync(std::weak_ptr<CGame> game, std::shared_ptr<CMap> map,
+                                                    std::vector<rdg::Room> rooms);
 
     static void generateEncounters(const std::shared_ptr<CGame> &game, std::shared_ptr<CMap> &map,
                                    const std::vector<rdg::Room> &rooms);

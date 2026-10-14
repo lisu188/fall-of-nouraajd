@@ -65,10 +65,16 @@ class Player:
 
 class SessionDeferredWorkTest(unittest.TestCase):
     def artifactModule(self):
+        from tests.hook_flow_support import installHookFlows
+
         legacy = []
         module = ModuleType("game")
         module.register = lambda _context: lambda cls: cls
         module.event_loop = SimpleNamespace(instance=lambda: SimpleNamespace(invoke=legacy.append))
+        installHookFlows(module)
+        from ui import flowGame, uiGame
+
+        module.flowGame, module.uiGame = flowGame, uiGame
         specification = importlib.util.spec_from_file_location(
             "session_artifact_sets", ROOT / "res/plugins/artifact_sets.py"
         )

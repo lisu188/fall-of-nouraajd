@@ -26,6 +26,7 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #include <utility>
 
 class CGame;
+class CGameObject;
 
 class CScriptFlow {
   public:
@@ -34,6 +35,8 @@ class CScriptFlow {
     CScriptFlow &operator=(const CScriptFlow &) = delete("A script flow has one coroutine owner");
     std::optional<json> next(const json &answer = nullptr);
     std::optional<json> fail(const std::string &message);
+    std::shared_ptr<CGameObject> takeObjectArgument(const std::string &token);
+    void markCommitted();
 
   private:
     friend class CScriptHandler;
@@ -80,6 +83,11 @@ class CScriptHandler {
 
     std::unique_ptr<CScriptFlow> createUiFlow(const std::string &entry, std::weak_ptr<CGame> game);
     std::unique_ptr<CScriptFlow> createCallbackFlow(pybind11::function callback, std::weak_ptr<CGame> game);
+    static std::unique_ptr<CScriptFlow> createObjectFlow(const std::shared_ptr<CGameObject> &object,
+                                                         const std::string &method,
+                                                         const std::vector<std::shared_ptr<CGameObject>> &arguments,
+                                                         std::weak_ptr<CGame> game,
+                                                         std::shared_ptr<bool> committed = {});
 
     void execute_script(std::string script, pybind11::object name_space = pybind11::none());
 

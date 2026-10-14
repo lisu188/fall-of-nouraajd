@@ -51,6 +51,7 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #undef GAME_UNIT_TESTS
 #include "gui/panel/CListView.h"
 #include "handler/CGuiHandler.h"
+#include "handler/CEventHandler.h"
 #include "handler/CObjectHandler.h"
 #include "object/CCreature.h"
 #include "object/CDialog.h"
@@ -60,6 +61,7 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #include "object/CPlayer.h"
 #include "object/CQuest.h"
 #include "object/CTile.h"
+#include "object/CTrigger.h"
 #include "test_harness.h"
 
 #include <pybind11/embed.h>
@@ -73,6 +75,16 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #include <utility>
 
 namespace {
+
+template <typename Predicate> bool pumpGuiUntil(Predicate ready) {
+    auto loop = vstd::event_loop<>::instance();
+    const auto deadline = std::chrono::steady_clock::now() + std::chrono::seconds(2);
+    while (!ready() && std::chrono::steady_clock::now() < deadline) {
+        loop->runReady();
+        game_async::waitForProgress();
+    }
+    return ready();
+}
 
 void testAsyncModalWaitsOwnLazyInputsAndNeverPumpTheLoop() {
     auto loop = vstd::event_loop<>::instance();
@@ -2185,19 +2197,14 @@ void test_native_scroll_use_opens_message_without_pumping_or_changing_inventory_
     auto loop = vstd::event_loop<>::instance();
     const auto conditions = loop->getConditionalTaskCount();
     bool unrelatedWorkRan = false;
-    // The queued close lets the previous blocking implementation return and fail the assertions instead of hanging.
-    loop->invoke([&unrelatedWorkRan, gui = harness.gui]() {
-        unrelatedWorkRan = true;
-        for (const auto &child : gui->getChildren()) {
-            if (auto text = vstd::cast<CGameTextPanel>(child)) {
-                text->close();
-            }
-        }
-    });
-
-    harness.player->useItem(scroll);
-
+    loop->invoke([&unrelatedWorkRan] { unrelatedWorkRan = true; });
+    auto use = harness.game->getContext()->spawnTask(harness.player->useItemAsync(scroll));
     expect_true(!unrelatedWorkRan, "native scroll use must return without pumping unrelated queued work");
+    expect_true(pumpGuiUntil([&] { return use.finished() && harness.gui->findChild("CGameTextPanel"); }),
+                "the outer loop must complete scroll use while its separately owned message remains open");
+    if (use.finished()) {
+        use.get();
+    }
     expect_true(!scroll->isDisposable() && harness.player->getItems().size() == inventorySize &&
                     harness.player->hasInInventory(scroll),
                 "reading the reusable native scroll must preserve its inventory identity and count");
@@ -2209,10 +2216,11 @@ void test_native_scroll_use_opens_message_without_pumping_or_changing_inventory_
             messageLifetime = text;
         }
     }
-    expect_true(!messageLifetime.expired(), "the scroll message must remain attached when native item use returns");
-    for (int iteration = 0; iteration < 8; ++iteration) {
-        loop->runReady();
+    expect_true(!messageLifetime.expired(), "the scroll message must remain attached after native item use finishes");
+    if (auto message = messageLifetime.lock()) {
+        message->close();
     }
+    pumpGuiUntil([&] { return messageLifetime.expired() && loop->getConditionalTaskCount() == conditions; });
     expect_true(unrelatedWorkRan && messageLifetime.expired(),
                 "the outer loop must close the message and release its completed coroutine frame");
     expect_true(loop->getConditionalTaskCount() == conditions,
@@ -2220,6 +2228,98 @@ void test_native_scroll_use_opens_message_without_pumping_or_changing_inventory_
     expect_true(harness.player->getItems().size() == inventorySize && harness.player->hasInInventory(scroll) &&
                     harness.map->getTurn() == turn,
                 "closing the queued message must preserve the scroll inventory and turn behavior");
+}
+
+class AsyncUseProbeItem : public CItem {
+  public:
+    int uses = 0;
+
+    void onUse(std::shared_ptr<CGameEvent>) override { ++uses; }
+
+    bool isDisposable() override { return true; }
+};
+
+void testNativeItemClicksAwaitHooksAndReleaseCancelledUseGuards() {
+    auto harness = make_inventory_right_click_harness();
+    harness.game->getObjectHandler()->registerType(CGameTextPanel::static_meta()->name(),
+                                                   [] { return std::make_shared<CGameTextPanel>(); });
+    harness.game->getObjectHandler()->registerConfig("textPanel",
+                                                     std::make_shared<json>(json{{"class", "CGameTextPanel"}}));
+    auto item = std::make_shared<AsyncUseProbeItem>();
+    item->setGame(harness.game);
+    item->setName("unitAsyncUseItem");
+    item->setTypeId("unitAsyncUseItem");
+    harness.player->addItem(item);
+    std::weak_ptr<CGuiHandler> weakHandler = harness.game->getGuiHandler();
+    auto trigger = std::make_shared<CCustomTrigger>(item->getName(), "onUse", [weakHandler](auto, auto) {
+        return weakHandler.lock()->showMessageAsync("An item-use receipt.");
+    });
+    trigger->setName("unitAsyncItemReceipt");
+    harness.map->getEventHandler()->registerTrigger(trigger);
+    auto loop = vstd::event_loop<>::instance();
+    const auto conditions = loop->getConditionalTaskCount();
+    const auto turn = harness.map->getTurn();
+    bool queued = false;
+    loop->invoke([&queued] { queued = true; });
+    auto legacyDismissal = loop->connectFrameCallback([gui = harness.gui](int) {
+        for (const auto &child : gui->getChildren()) {
+            if (auto text = vstd::cast<CGameTextPanel>(child)) {
+                text->close();
+            }
+        }
+    });
+    const auto textPanels = [&] {
+        std::vector<std::shared_ptr<CGameTextPanel>> panels;
+        for (const auto &child : harness.gui->getChildren()) {
+            if (auto text = vstd::cast<CGameTextPanel>(child)) {
+                panels.push_back(text);
+            }
+        }
+        return panels;
+    };
+    harness.panel->inventoryCallback(harness.gui, 0, item);
+    harness.panel->useSelected(harness.gui);
+    harness.panel->useSelected(harness.gui);
+    expect_true(!queued, "native inventory use must return without pumping unrelated queued work");
+    expect_true(pumpGuiUntil([&] { return !textPanels().empty(); }) && item->uses == 1 && textPanels().size() == 1 &&
+                    harness.player->hasInInventory(item),
+                "native inventory use must await its receipt without duplicating use or disposing early");
+    for (const auto &panel : textPanels()) {
+        panel->close();
+    }
+    pumpGuiUntil([&] { return !harness.player->hasInInventory(item) && textPanels().empty(); });
+    expect_true(queued && !harness.player->hasInInventory(item) && textPanels().empty(),
+                "closing an item receipt must dispose the exact item once");
+
+    harness.player->addItem(item);
+    harness.panel->inventoryCallback(harness.gui, 0, item);
+    auto pending = harness.game->getContext()->spawnTask(harness.player->useItemAsync(item));
+    expect_true(pumpGuiUntil([&] { return !textPanels().empty() || pending.finished(); }) && item->uses == 2 &&
+                    !pending.finished() && textPanels().size() == 1,
+                "a subsequent item use must enter a fresh asynchronous hook");
+    pending.requestStop();
+    pumpGuiUntil([&] { return pending.finished(); });
+    bool cancelled = false;
+    if (pending.finished()) {
+        try {
+            pending.get();
+        } catch (const vstd::task_cancelled &) {
+            cancelled = true;
+        }
+    }
+    expect_true(cancelled && textPanels().empty() && harness.player->hasInInventory(item),
+                "cancelled item hooks must close their modal and retain an uncommitted disposable item");
+    harness.panel->useSelected(harness.gui);
+    expect_true(pumpGuiUntil([&] { return !textPanels().empty(); }) && item->uses == 3 && textPanels().size() == 1,
+                "cancellation must release the pending-use guard for the next native click");
+    for (const auto &panel : textPanels()) {
+        panel->close();
+    }
+    pumpGuiUntil(
+        [&] { return !harness.player->hasInInventory(item) && loop->getConditionalTaskCount() == conditions; });
+    expect_true(!harness.player->hasInInventory(item) && harness.map->getTurn() == turn &&
+                    loop->getConditionalTaskCount() == conditions,
+                "native item flows must preserve turn rules and remove all modal waits");
 }
 
 void test_inventory_right_click_inspects_then_explicit_use_consumes_once() {
@@ -2241,6 +2341,8 @@ void test_inventory_right_click_inspects_then_explicit_use_consumes_once() {
     expect_true(harness.player->getItems().size() == inventory_size,
                 "right-clicking a usable item must not consume it");
     harness.panel->useSelected(harness.gui);
+    expect_true(pumpGuiUntil([&] { return !harness.player->hasInInventory(potion); }),
+                "the outer loop must complete explicit item use");
     expect_true(harness.player->getItems().size() == inventory_size - 1,
                 "explicit use should consume the selected disposable potion exactly once");
     expect_true(!harness.player->hasInInventory(potion),
@@ -4188,6 +4290,7 @@ int main() {
     test_quest_panel_refresh_count_coalesces_rapid_invalidations();
     test_inventory_repeated_select_inspects_without_using_item();
     test_native_scroll_use_opens_message_without_pumping_or_changing_inventory_or_turn();
+    testNativeItemClicksAwaitHooksAndReleaseCancelledUseGuards();
     test_inventory_right_click_inspects_then_explicit_use_consumes_once();
     test_inventory_right_click_full_resource_item_not_consumed();
     test_inventory_right_click_quest_item_is_protected();

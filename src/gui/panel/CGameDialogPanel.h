@@ -88,6 +88,7 @@ class CGameDialogPanel : public CGamePanel {
     bool readingObjective = false;
     bool historyPressed = false;
     bool objectivePressed = false;
+    bool selectingOption = false;
 
     void appendHistory(const std::string &speaker, const std::string &text, const std::string &kind);
 
@@ -102,6 +103,8 @@ class CGameDialogPanel : public CGamePanel {
     void selectOption(int option);
 
     void selectOption(const std::shared_ptr<CDialogOption> &option);
+
+    vstd::task<void> selectOptionAsync(std::shared_ptr<CDialogOption> option);
 
     std::map<int, std::shared_ptr<CDialogOption>> getCurrentOptions();
 };

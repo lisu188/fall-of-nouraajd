@@ -45,6 +45,14 @@ vstd::task<void> CMapObject::moveOwnedAsync(std::shared_ptr<CMapObject> object, 
     if (dynamic_cast<CMoveable *>(object.get()) && map) {
         auto current = map->normalizeCoords(object->getCoords());
         auto delta = map->getShortestDelta(current, target);
+        const auto origin = object->getCoords();
+        const auto name = object->getName();
+        auto game = object->getGame();
+        std::weak_ptr<CGame> weakGame = game;
+        const auto activeMap = game ? game->getMap() : nullptr;
+        auto context = game ? game->getContext() : nullptr;
+        const auto generation = context ? context->captureTransitionGeneration() : 0;
+        game.reset();
         bool is_registered = map->getObjectByName(object->getName()) == object;
         bool is_step_move = delta.z == 0 && std::abs(delta.x) + std::abs(delta.y) == 1;
         if (is_registered && is_step_move) {
@@ -56,9 +64,38 @@ vstd::task<void> CMapObject::moveOwnedAsync(std::shared_ptr<CMapObject> object, 
                 co_return;
             }
         }
+        const auto routingEpoch = map->getRoutingEpoch();
         navigationLock.unlock();
-        dynamic_cast<CMoveable *>(object.get())->beforeMove();
+        gil.reset();
+        auto moveable = dynamic_cast<CMoveable *>(object.get());
+        try {
+            co_await moveable->beforeMoveAsync();
+        } catch (...) {
+            moveable->cancelMove();
+            throw;
+        }
+        if (Py_IsInitialized()) {
+            gil.emplace();
+        }
         navigationLock.lock();
+        game = weakGame.lock();
+        if (object->getMap() != map || object->getCoords() != origin || object->getName() != name ||
+            (game && game->getMap() != activeMap) || (is_registered && map->getObjectByName(name) != object) ||
+            (context && !context->isTransitionGenerationCurrent(generation))) {
+            navigationLock.unlock();
+            moveable->cancelMove();
+            co_return;
+        }
+        if (is_registered && is_step_move && map->getRoutingEpoch() != routingEpoch) {
+            navigationLock.unlock();
+            const bool canStep = map->canStep(target);
+            navigationLock.lock();
+            if (!canStep) {
+                navigationLock.unlock();
+                moveable->cancelMove();
+                co_return;
+            }
+        }
     }
 
     Coords oldCoords = object->getCoords();

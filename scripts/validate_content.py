@@ -810,10 +810,12 @@ class ScriptAnalyzer(ast.NodeVisitor):
         self._function_stack: list[str] = []
         self._state_alias_stack: list[dict[str, str]] = []
         self._string_values_stack: list[dict[str, set[str]]] = []
-        # Maps a local variable name to the SpawnedCreature it was assigned from
-        # (via createObject) so a later setStringProperty("name", ...) on that
-        # variable can attach the runtime name. Scoped per function body.
-        self._spawn_vars_stack: list[dict[str, SpawnedCreature]] = []
+        # A conditional template alias can create several known templates. Retain
+        # its branch predicates so a literal name attaches only to matching choices.
+        self._spawn_vars_stack: list[dict[str, list[SpawnedCreature]]] = []
+        self._string_choices_stack: list[dict[str, list[tuple[str, tuple[tuple[str, bool], ...]]]]] = []
+        self._spawn_guards: dict[int, tuple[tuple[str, bool], ...]] = {}
+        self._branch_guards: list[tuple[str, bool]] = []
 
     def visit_ClassDef(self, node: ast.ClassDef) -> Any:
         self.info.classes.add(node.name)
@@ -838,15 +840,26 @@ class ScriptAnalyzer(ast.NodeVisitor):
         self._state_alias_stack.append({})
         self._string_values_stack.append({})
         self._spawn_vars_stack.append({})
+        self._string_choices_stack.append({})
         for child in node.body:
             self.visit(child)
         self._spawn_vars_stack.pop()
+        self._string_choices_stack.pop()
         self._string_values_stack.pop()
         self._state_alias_stack.pop()
         self._function_stack.pop()
 
     def visit_AsyncFunctionDef(self, node: ast.AsyncFunctionDef) -> Any:
         self.visit_FunctionDef(node)
+
+    def visit_If(self, node: ast.If) -> Any:
+        self.visit(node.test)
+        condition = ast.dump(node.test, include_attributes=False)
+        for branch, children in ((True, node.body), (False, node.orelse)):
+            self._branch_guards.append((condition, branch))
+            for child in children:
+                self.visit(child)
+            self._branch_guards.pop()
 
     def visit_Assign(self, node: ast.Assign) -> Any:
         self._record_class_constant_assignment(node)
@@ -887,18 +900,26 @@ class ScriptAnalyzer(ast.NodeVisitor):
         self.generic_visit(node)
 
     def _record_script_call(self, name: str, node: ast.Call) -> None:
-        literal = first_string_arg(node)
-        if literal is None:
+        if name == "uiRequest" and node.args and string_literal(node.args[0]) == "gui.addObjectByName":
+            name = "addObjectByName"
+            values = self._literal_string_values(node.args[2]) if len(node.args) > 2 else set()
+        elif name == "createObject" and node.args:
+            values = {value for value, _guards in self._string_choices(node.args[0])}
+        else:
+            literal = first_string_arg(node)
+            values = {literal} if literal is not None else set()
+        if not values:
             return
         context = ".".join([*self._class_stack, *self._function_stack])
         if (
             name
             in SCRIPT_REF_CALLS | SCRIPT_ITEM_CALLS | SCRIPT_QUEST_CALLS | SCRIPT_MAP_CALLS | SCRIPT_OBJECT_NAME_CALLS
         ):
-            call = ScriptCall(name=name, value=literal, lineno=node.lineno, context=context)
-            self.info.calls.append(call)
-            if name in SCRIPT_QUEST_CALLS:
-                self.info.quest_grants.append(call)
+            for literal in sorted(values):
+                call = ScriptCall(name=name, value=literal, lineno=node.lineno, context=context)
+                self.info.calls.append(call)
+                if name in SCRIPT_QUEST_CALLS:
+                    self.info.quest_grants.append(call)
 
     def _recordClassQuestGrant(self, name: str, node: ast.Call) -> None:
         if name not in SCRIPT_QUEST_CALLS or not self._class_stack or not self._function_stack:
@@ -925,20 +946,24 @@ class ScriptAnalyzer(ast.NodeVisitor):
         addObjectByName instantiates a template directly on the map without binding
         a Python variable, so there is never a runtime name to attach.
         """
-        if name != "addObjectByName":
+        if name == "uiRequest" and node.args and string_literal(node.args[0]) == "gui.addObjectByName":
+            name = "addObjectByName"
+            templates = self._literal_string_values(node.args[2]) if len(node.args) > 2 else set()
+        elif name == "addObjectByName":
+            template = first_string_arg(node)
+            templates = {template} if template is not None else set()
+        else:
             return
-        template = first_string_arg(node)
-        if template is None:
-            return
-        self.info.spawned_creatures.append(
-            SpawnedCreature(
-                template=template,
-                spawn_call=name,
-                lineno=node.lineno,
-                context=self._context,
-                runtime_name=None,
+        for template in sorted(templates):
+            self.info.spawned_creatures.append(
+                SpawnedCreature(
+                    template=template,
+                    spawn_call=name,
+                    lineno=node.lineno,
+                    context=self._context,
+                    runtime_name=None,
+                )
             )
-        )
 
     def _record_spawn_assignment(self, targets: list[ast.expr], value: ast.AST) -> None:
         """Track ``var = ...createObject("template")`` so a later name write can attach.
@@ -950,23 +975,27 @@ class ScriptAnalyzer(ast.NodeVisitor):
         if not self._spawn_vars_stack:
             return
         spawn_vars = self._spawn_vars_stack[-1]
-        template = self._created_object_template(value)
+        templates = self._created_object_templates(value)
         for target in targets:
             target_name = assigned_name(target)
             if target_name is None:
                 continue
-            if template is None:
+            if not templates:
                 spawn_vars.pop(target_name, None)
                 continue
-            creature = SpawnedCreature(
-                template=template,
-                spawn_call="createObject",
-                lineno=getattr(value, "lineno", 0),
-                context=self._context,
-                runtime_name=None,
-            )
-            self.info.spawned_creatures.append(creature)
-            spawn_vars[target_name] = creature
+            creatures = []
+            for template, guards in templates:
+                creature = SpawnedCreature(
+                    template=template,
+                    spawn_call="createObject",
+                    lineno=getattr(value, "lineno", 0),
+                    context=self._context,
+                    runtime_name=None,
+                )
+                self.info.spawned_creatures.append(creature)
+                creatures.append(creature)
+                self._spawn_guards[id(creature)] = guards
+            spawn_vars[target_name] = creatures
 
     def _record_runtime_spawn_name(self, name: str, node: ast.Call) -> None:
         """Attach a literal runtime name to a tracked createObject spawn variable."""
@@ -982,15 +1011,36 @@ class ScriptAnalyzer(ast.NodeVisitor):
         if receiver_name is None or not self._spawn_vars_stack:
             return
         for spawn_vars in reversed(self._spawn_vars_stack):
-            creature = spawn_vars.get(receiver_name)
-            if creature is not None and creature.runtime_name is None:
-                creature.runtime_name = runtime_name
+            creatures = spawn_vars.get(receiver_name)
+            if creatures is not None:
+                for creature in creatures:
+                    guards = self._spawn_guards[id(creature)]
+                    if creature.runtime_name is None and not any(
+                        (condition, not branch) in self._branch_guards for condition, branch in guards
+                    ):
+                        creature.runtime_name = runtime_name
                 return
 
-    def _created_object_template(self, node: ast.AST) -> str | None:
-        if isinstance(node, ast.Call) and call_name(node.func) == "createObject":
-            return first_string_arg(node)
-        return None
+    def _created_object_templates(self, node: ast.AST) -> list[tuple[str, tuple[tuple[str, bool], ...]]]:
+        if isinstance(node, ast.Call) and call_name(node.func) == "createObject" and node.args:
+            return self._string_choices(node.args[0])
+        return []
+
+    def _string_choices(self, node: ast.AST) -> list[tuple[str, tuple[tuple[str, bool], ...]]]:
+        if isinstance(node, ast.Constant) and isinstance(node.value, str):
+            return [(node.value, ())]
+        if isinstance(node, ast.IfExp):
+            condition = ast.dump(node.test, include_attributes=False)
+            return [
+                (value, (*guards, (condition, branch)))
+                for branch, expression in ((True, node.body), (False, node.orelse))
+                for value, guards in self._string_choices(expression)
+            ]
+        if isinstance(node, ast.Name):
+            for choices in reversed(self._string_choices_stack):
+                if node.id in choices:
+                    return choices[node.id]
+        return []
 
     def _record_class_constant_assignment(self, node: ast.Assign | ast.AnnAssign) -> None:
         if not self._class_stack:
@@ -1063,10 +1113,15 @@ class ScriptAnalyzer(ast.NodeVisitor):
         string_values = self._string_values_stack[-1]
         quest_key = get_state_key(value)
         literal_values = self._literal_string_values(value)
+        string_choices = self._string_choices(value)
         for target in targets:
             target_name = assigned_name(target)
             if target_name is None:
                 continue
+            if string_choices:
+                self._string_choices_stack[-1][target_name] = string_choices
+            else:
+                self._string_choices_stack[-1].pop(target_name, None)
             if quest_key:
                 state_aliases[target_name] = quest_key
             else:

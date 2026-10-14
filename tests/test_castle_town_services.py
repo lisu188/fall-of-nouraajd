@@ -9,6 +9,7 @@ import json
 import sys
 import types
 import unittest
+from tests.hook_flow_support import installHookFlows
 from unittest import mock
 
 from tests.test_castle_campaign import FakeMap, FakeObject, FakePlayer, loadCastleModule, presentationApi
@@ -85,6 +86,7 @@ class CastleTownServicesTest(unittest.TestCase):
             campaign=types.SimpleNamespace(state=lambda game: None),
             **presentationApi(),
         )
+        installHookFlows(game_api)
         patcher = mock.patch.dict(sys.modules, {"game": game_api})
         patcher.start()
         self.addCleanup(patcher.stop)

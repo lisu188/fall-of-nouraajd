@@ -1132,6 +1132,31 @@ void test_monster_fight_controller_heals_when_heal_outpaces_incoming_damage() {
                 "monster fight controller should spend the least powerful heal item first");
 }
 
+void testMonsterItemTurnsSuspendWithoutPumpingPostedWork() {
+    for (bool healing : {true, false}) {
+        auto game = fight_fixture_game();
+        auto monster = fight_fixture_monster(game, 10, healing ? 20 : 70);
+        monster->setMana(healing ? monster->getManaMax() : 0);
+        auto opponent = fight_fixture_hitter(game, 2);
+        auto potion = std::make_shared<CPotion>();
+        potion->setGame(game);
+        potion->setPower(5);
+        potion->addTag(healing ? CTag::Heal : CTag::Mana);
+        monster->addItem(potion);
+        auto controller = std::make_shared<CMonsterFightController>();
+        auto loop = vstd::event_loop<>::instance();
+        int posted = 0;
+        loop->invoke([&posted] { ++posted; });
+        auto task = game->getContext()->spawnTask(controller->controlAsync(monster, opponent));
+        expect_true(posted == 0 && !task.finished() && monster->hasItem(potion),
+                    "a native item turn must suspend before queued work or item hooks run");
+        expect_true(game_async::wait(task, game_async::WaitMode::PostedWork),
+                    "the suspended item turn must report the selected ordinary action");
+        expect_true(posted == 1 && !monster->hasItem(potion),
+                    "resuming the item turn must consume its one owned potion after the posted snapshot");
+    }
+}
+
 void testMonsterFightControllerSelectsStrongerViableHeal() {
     auto game = fight_fixture_game();
     // Max hp 70, current hp 35: power 1 restores 14, while power 5 is capped at 35.
@@ -1530,9 +1555,9 @@ void testMonsterRolesUseEligibleSignatureOnceAndKeepFallback() {
         attack->setName("attack");
         attack->setTypeId("Attack");
         monster->addAction(attack);
-        CMonsterFightController controller;
+        auto controller = std::make_shared<CMonsterFightController>();
         if (std::string(trigger) != "opening") {
-            expect_true(controller.control(monster, opponent), "healthy monster should retain its ordinary attack");
+            expect_true(controller->control(monster, opponent), "healthy monster should retain its ordinary attack");
             expect_true(signature->calls == 0 && attack->calls == 1, "signature condition must gate the action");
             if (std::string(trigger) == "wounded") {
                 monster->setHp(monster->getHpMax() / 2);
@@ -1542,10 +1567,10 @@ void testMonsterRolesUseEligibleSignatureOnceAndKeepFallback() {
                 opponent->getBaseStats()->setBlock(10);
             }
         }
-        expect_true(controller.control(monster, opponent), "eligible zero-mana signature should use one turn");
+        expect_true(controller->control(monster, opponent), "eligible zero-mana signature should use one turn");
         expect_true(signature->calls == 1 && monster->getBoolProperty("enemyRoleUsed"),
                     "signature must persist its once-per-actor flag");
-        expect_true(controller.control(monster, opponent), "spent signature should fall back to the ordinary attack");
+        expect_true(controller->control(monster, opponent), "spent signature should fall back to the ordinary attack");
         expect_true(signature->calls == 1, "offensive fallback must never select the spent signature");
         expect_true(monster->getMana() == 0, "class signatures must remain affordable at zero mana");
     }
@@ -1570,21 +1595,21 @@ void testMonsterRitualMinimumManaGatesEligibilityWithoutSpending() {
     attack->setGame(game);
     attack->setTypeId("Attack");
     monster->addAction(attack);
-    CMonsterFightController controller;
+    auto controller = std::make_shared<CMonsterFightController>();
     monster->setHp(std::max(1, monster->getHpMax() / 2));
     monster->setMana(5);
-    expect_true(controller.control(monster, opponent), "a ritual must wait until critical health");
+    expect_true(controller->control(monster, opponent), "a ritual must wait until critical health");
     expect_true(attack->calls == 1 && signature->calls == 0 && monster->getMana() == 5 &&
                     !monster->getBoolProperty("enemyRoleUsed"),
                 "a half-health cultist must retain ordinary Attack despite its eligible mana reserve");
     monster->setHp(std::max(1, monster->getHpMax() / 4));
     monster->setMana(4);
-    expect_true(controller.control(monster, opponent), "an exhausted cultist must retain ordinary Attack");
+    expect_true(controller->control(monster, opponent), "an exhausted cultist must retain ordinary Attack");
     expect_true(attack->calls == 2 && signature->calls == 0 && monster->getMana() == 4 &&
                     !monster->getBoolProperty("enemyRoleUsed"),
                 "ritual reserve eligibility must not consume the action or mana below five points");
     monster->setMana(5);
-    expect_true(controller.control(monster, opponent), "a critical cultist with five mana may use its ritual");
+    expect_true(controller->control(monster, opponent), "a critical cultist with five mana may use its ritual");
     expect_true(attack->calls == 2 && signature->calls == 1 && monster->getMana() == 5,
                 "the ritual threshold must gate eligibility without charging mana");
 }
@@ -1614,12 +1639,12 @@ void testCriticalHealthUsesExactQuarterInsteadOfTruncatedPercentage() {
         expect_true(maximumHp == (stamina == 5 ? 35 : 140), "the actual boundary fixture must retain its authored HP");
         monster->setHp(maximumHp / 4 + 1);
         expect_true(monster->getHpRatio() == 25, "the rejected boundary must expose percentage truncation");
-        CMonsterFightController controller;
-        expect_true(controller.control(monster, opponent), "above exact quarter health must retain ordinary Attack");
+        auto controller = std::make_shared<CMonsterFightController>();
+        expect_true(controller->control(monster, opponent), "above exact quarter health must retain ordinary Attack");
         expect_true(attack->calls == 1 && signature->calls == 0 && !monster->getBoolProperty("enemyRoleUsed"),
                     "9/35 and36/140 HP must not prematurely consume the critical signature");
         monster->setHp(maximumHp / 4);
-        expect_true(controller.control(monster, opponent), "at or below exact quarter health may use the signature");
+        expect_true(controller->control(monster, opponent), "at or below exact quarter health may use the signature");
         expect_true(attack->calls == 1 && signature->calls == 1 && monster->getBoolProperty("enemyRoleUsed"),
                     "8/35 and35/140 HP must admit the critical signature once");
     }
@@ -1685,9 +1710,9 @@ void testMonsterRoleExclusionsAndMalformedActions() {
             monster->addAction(attack);
         }
         monster->addAction(signature);
-        CMonsterFightController controller;
+        auto controller = std::make_shared<CMonsterFightController>();
         const bool expected = std::string(mode) == "guardedWounded";
-        const bool acted = controller.control(monster, opponent);
+        const bool acted = controller->control(monster, opponent);
         if (acted != expected || signature->calls != (expected ? 1 : 0)) {
             std::cerr << "role exclusion fixture: " << mode << '\n';
         }
@@ -1727,12 +1752,12 @@ void testOctobogzPhasesAreExclusiveBoundedAndNeverStallWithoutMana() {
         auto creatureClass = std::make_shared<CCreatureClass>();
         creatureClass->setCombatRole("brute");
         actor->setCreatureClass(creatureClass);
-        CMonsterFightController controller;
-        expect_true(controller.control(actor, opponent), "healthy hunt actors must execute their selected Attack");
+        auto controller = std::make_shared<CMonsterFightController>();
+        expect_true(controller->control(actor, opponent), "healthy hunt actors must execute their selected Attack");
         if (role == std::string("alpha")) {
             expect_true(attack->calls == 1 && charge->calls == 0, "the Alpha warning must wait for half health");
             actor->setHp(std::max(1, actor->getHpMax() / 2));
-            expect_true(controller.control(actor, opponent), "the wounded Alpha should warn on its selected Attack");
+            expect_true(controller->control(actor, opponent), "the wounded Alpha should warn on its selected Attack");
         } else {
             expect_true(attack->calls == 0 && charge->calls == 1,
                         "the shadow brood must warn on its first selected Attack");
@@ -1740,15 +1765,15 @@ void testOctobogzPhasesAreExclusiveBoundedAndNeverStallWithoutMana() {
         expect_true(charge->calls == 1 && brace->calls == 0,
                     "warning must not also select the generic brace or another outer action");
         expect_true(actor->getStringProperty("octobogzCombatPhase") == "charged", "charged phase must persist");
-        expect_true(controller.control(actor, opponent), "charged hunt actor should release one five-mana pulse");
+        expect_true(controller->control(actor, opponent), "charged hunt actor should release one five-mana pulse");
         expect_true(pulse->calls == 1 && actor->getMana() == 0 && actor->getBoolProperty("octobogzPulseUsed"),
                     "pulse must cost exactly five mana and persist its consumed flag");
-        expect_true(controller.control(actor, opponent), "spent hunt actor should resume ordinary attacks");
+        expect_true(controller->control(actor, opponent), "spent hunt actor should resume ordinary attacks");
         expect_true(pulse->calls == 1 && charge->calls == 1 && brace->calls == 0,
                     "Alpha and brood signatures must never repeat or fall through to the brute role");
         actor->setStringProperty("octobogzCombatPhase", "charged");
         actor->setBoolProperty("octobogzPulseUsed", false);
-        expect_true(controller.control(actor, opponent),
+        expect_true(controller->control(actor, opponent),
                     "unaffordable charged pulse must fall back instead of stalling");
         expect_true(actor->getStringProperty("octobogzCombatPhase") == "spent" && pulse->calls == 1,
                     "no-mana fallback must consume the phase without granting a free pulse");
@@ -1758,7 +1783,7 @@ void testOctobogzPhasesAreExclusiveBoundedAndNeverStallWithoutMana() {
         potion->setPower(1);
         potion->addTag(CTag::Mana);
         actor->addItem(potion);
-        expect_true(controller.control(actor, opponent), "charged hunt actor may recover using a carried mana item");
+        expect_true(controller->control(actor, opponent), "charged hunt actor may recover using a carried mana item");
         expect_true(actor->getItems().empty() && pulse->calls == 1, "mana recovery must be an exclusive action turn");
     }
 }
@@ -1789,8 +1814,9 @@ void testHuntPhasesKeepOrdinarySpellAndItemPriority() {
             auto spell = addAction("Barrier", false);
             spell->setSelfTarget(true);
             spell->setEffect(named_self_effect(game, "ordinaryHuntBarrier", CTag::Buff));
-            CMonsterFightController controller;
-            expect_true(controller.control(actor, opponent), "a hunt actor must retain useful ordinary spell priority");
+            auto controller = std::make_shared<CMonsterFightController>();
+            expect_true(controller->control(actor, opponent),
+                        "a hunt actor must retain useful ordinary spell priority");
             expect_true(spell->calls == 1 && attack->calls == 0 && charge->calls == 0 && pulse->calls == 0,
                         "hunt phases must not replace a selected ordinary spell");
             expect_true(actor->getStringProperty("octobogzCombatPhase") == phase &&
@@ -1802,7 +1828,7 @@ void testHuntPhasesKeepOrdinarySpellAndItemPriority() {
             potion->setPower(1);
             potion->addTag(CTag::Mana);
             actor->addItem(potion);
-            expect_true(controller.control(actor, opponent), "a hunt actor must retain ordinary mana-item priority");
+            expect_true(controller->control(actor, opponent), "a hunt actor must retain ordinary mana-item priority");
             expect_true(actor->getItems().empty() && charge->calls == 0 && pulse->calls == 0,
                         "an ordinary item turn must not additionally execute a hunt signature");
             expect_true(actor->getStringProperty("octobogzCombatPhase") == phase,
@@ -1833,14 +1859,14 @@ void testOpponentRoleEffectDuplicateRetainsUnusedSignatureAndOrdinaryAttack() {
     attack->setTypeId("Attack");
     monster->addAction(attack);
     opponent->addEffect(effect);
-    CMonsterFightController controller;
-    expect_true(controller.control(monster, opponent), "duplicate opponent effect must retain ordinary Attack");
+    auto controller = std::make_shared<CMonsterFightController>();
+    expect_true(controller->control(monster, opponent), "duplicate opponent effect must retain ordinary Attack");
     expect_true(attack->calls == 1 && signature->calls == 0 && !monster->getBoolProperty("enemyRoleUsed"),
                 "a recipient duplicate must not consume the role flag");
     expect_true(signature->getObjectProperty<CGameObject>("roleEffect") == effect,
                 "a recipient duplicate must not consume its eager owned effect");
     opponent->setEffects({});
-    expect_true(controller.control(monster, opponent) && signature->calls == 1,
+    expect_true(controller->control(monster, opponent) && signature->calls == 1,
                 "the signature must become eligible after the recipient effect expires");
 }
 
@@ -1872,8 +1898,8 @@ void testMonsterSignatureNeverReplacesAnOrdinaryDefensiveCast() {
     ordinaryBarrier->setTypeId("ordinaryBarrier");
     spell->setEffect(ordinaryBarrier);
     monster->addAction(spell);
-    CMonsterFightController controller;
-    expect_true(controller.control(monster, opponent), "ordinary defensive cast must retain its AI priority");
+    auto controller = std::make_shared<CMonsterFightController>();
+    expect_true(controller->control(monster, opponent), "ordinary defensive cast must retain its AI priority");
     expect_true(spell->calls == 1 && signature->calls == 0 && !monster->getBoolProperty("enemyRoleUsed"),
                 "class signature must not delay an ordinary selected spell");
     const auto effects = monster->getEffects();
@@ -1882,7 +1908,7 @@ void testMonsterSignatureNeverReplacesAnOrdinaryDefensiveCast() {
     if (clonedBonus) {
         expect_true((*effects.begin())->getTypeId() == ordinaryBarrier->getTypeId(),
                     "the ordinary Barrier clone must retain the configured effect identity");
-        expect_true(controller.control(monster, opponent), "a second control must safely inspect the cloned Barrier");
+        expect_true(controller->control(monster, opponent), "a second control must safely inspect the cloned Barrier");
         expect_true(spell->calls == 1 && signature->calls == 1 && monster->getBoolProperty("enemyRoleUsed"),
                     "an active ordinary Barrier must be skipped before the eligible attack signature");
         expect_true(monster->getEffects().size() == 1,
@@ -1919,6 +1945,7 @@ int main() {
     test_monster_fight_controller_uses_mana_item_when_mana_is_low();
     test_monster_fight_controller_attacks_hard_hitter_instead_of_wasting_heal();
     test_monster_fight_controller_heals_when_heal_outpaces_incoming_damage();
+    testMonsterItemTurnsSuspendWithoutPumpingPostedWork();
     testMonsterFightControllerSelectsStrongerViableHeal();
     testMonsterFightControllerSkipsHealEqualToIncomingDamage();
     testMonsterFightControllerChoosesLeastPowerfulViableHeal();

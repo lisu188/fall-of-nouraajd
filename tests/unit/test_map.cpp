@@ -59,6 +59,13 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #include <utility>
 #include <vector>
 
+struct CRandomMapGeneratorTestAccess {
+    static vstd::task<void> generate(std::weak_ptr<CGame> game, std::shared_ptr<CMap> map,
+                                     std::vector<rdg::Room> rooms) {
+        return CRandomMapGenerator::generateEncountersAsync(std::move(game), std::move(map), std::move(rooms));
+    }
+};
+
 namespace {
 
 CNativeTestProfile &nativeTestProfile() {
@@ -66,7 +73,7 @@ CNativeTestProfile &nativeTestProfile() {
     return profile;
 }
 
-void pump_event_loop_iterations(int iterations = 10) {
+void pump_event_loop_iterations(int iterations = 32) {
     auto loop = vstd::event_loop<>::instance();
     for (int i = 0; i < iterations; ++i) {
         loop->run();
@@ -2152,6 +2159,109 @@ struct AsyncPreparationState {
     int finished = 0;
 };
 
+struct AtomicEntryState {
+    bool ready = false;
+    bool cancel = false;
+    bool fail = false;
+    int entered = 0;
+};
+
+vstd::task<void> awaitAtomicEntry(std::shared_ptr<AtomicEntryState> state) {
+    ++state->entered;
+    co_await vstd::until(vstd::event_loop<>::instance(), [state] { return state->ready; });
+    if (state->cancel) {
+        throw vstd::task_cancelled();
+    }
+    if (state->fail) {
+        throw std::runtime_error("deliberate asynchronous entry failure");
+    }
+}
+
+struct AsyncStartState {
+    bool ready = false;
+    int entered = 0;
+};
+
+class SuspendedStartPlayer : public CPlayer {
+  public:
+    explicit SuspendedStartPlayer(std::shared_ptr<AsyncStartState> state) : state(std::move(state)) {}
+
+    vstd::task<void> afterMoveAsync() override {
+        return [](std::shared_ptr<CPlayer> self, std::shared_ptr<AsyncStartState> state) -> vstd::task<void> {
+            struct OriginOwner {
+                std::shared_ptr<CPlayer> self;
+                ~OriginOwner() { self->cancelMove(); }
+            } originOwner{self};
+            ++state->entered;
+            co_await vstd::until(vstd::event_loop<>::instance(), [state] { return state->ready; });
+            co_await self->CCreature::afterMoveAsync();
+        }(this->ptr<CPlayer>(), state);
+    }
+
+  private:
+    std::shared_ptr<AsyncStartState> state;
+};
+
+class AsyncStartMapFixture {
+  public:
+    explicit AsyncStartMapFixture(bool malformed = true) {
+        const auto stamp = std::chrono::steady_clock::now().time_since_epoch().count();
+        for (int attempt = 0; attempt < 32; ++attempt) {
+            auto candidate = std::filesystem::temp_directory_path() /
+                             ("nouraajd-async-start-" + std::to_string(stamp) + "-" + std::to_string(attempt));
+            if (std::filesystem::create_directory(candidate)) {
+                root = candidate;
+                break;
+            }
+        }
+        if (root.empty()) {
+            throw std::runtime_error("Cannot create isolated async-start map fixture");
+        }
+        const auto packaged = root / "packaged";
+        const auto writable = root / "writable";
+        const auto mapDirectory = packaged / "maps" / "unitAsyncStartFixture";
+        std::filesystem::create_directories(mapDirectory);
+        std::filesystem::create_directory(writable);
+        json document = {
+            {"properties", {{"x", 0}, {"y", 0}, {"z", 0}}},
+            {"layers", json::array({{{"type", "tilelayer"},
+                                     {"properties", {{"level", 0}}},
+                                     {"width", 1},
+                                     {"height", 1},
+                                     {"data", json::array({malformed ? json("bad-tile-id") : json(1)})}}})}};
+        std::ofstream output(mapDirectory / "map.json");
+        document["tilesets"] = json::array({{{"tileproperties", {{"0", {{"type", "unitReentrantStartTile"}}}}}}});
+        output << document.dump();
+        output.close();
+        expect_true(CResourcesProvider::configurePlatformRoots(packaged.string(), writable.string()),
+                    "the malformed start fixture must use isolated packaged and writable roots");
+    }
+
+    ~AsyncStartMapFixture() {
+        CResourcesProvider::clearPlatformRoots();
+        std::error_code error;
+        std::filesystem::remove_all(root, error);
+    }
+
+  private:
+    std::filesystem::path root;
+};
+
+struct AtomicPreparationState {
+    bool ready = false;
+    int started = 0;
+    int finished = 0;
+    std::function<void()> snapshotBeforeCommit;
+};
+
+vstd::task<void> prepareAtomicTransition(std::shared_ptr<AtomicPreparationState> state) {
+    ++state->started;
+    auto loop = vstd::event_loop<>::instance();
+    co_await vstd::until(loop, [state] { return state->ready; });
+    ++state->finished;
+    loop->invoke(state->snapshotBeforeCommit);
+}
+
 vstd::task<void> skippedTransitionChild(std::shared_ptr<scene_detail::CTransitionCompletion> completion,
                                         bool &started) {
     started = true;
@@ -2293,6 +2403,400 @@ void test_scene_manager_awaits_preparation_and_rolls_back_errors() {
                 "teardown cancels suspended preparation and completes it exactly once");
     pump_event_loop_iterations();
     expect_true(completions.size() == 3, "cancelled transition continuations cannot repeat completion");
+}
+
+void testSceneCommitRunsAfterPreparationAndBeforeQueuedObservers() {
+    enum class Result {
+        RejectPreparation,
+        ReplaceSourcePlayer,
+        CancelEntry,
+        FailEntry,
+        ReplaceDestinationPlayer,
+        SupersededEntry,
+        Complete
+    };
+    auto game = nativeTestProfile().run("CGameLoader::loadGame", [] { return CGameLoader::loadGame(); });
+    CGameLoader::startGameWithPlayer(game, "test", "Warrior");
+    auto source = game->getMap();
+    auto player = source->getPlayer();
+    const auto sourceCoords = player->getCoords();
+    const auto sourceController = player->getController();
+    const auto sourceFightController = player->getFightController();
+    const auto sourceScope = game->getResourcesProvider()->getActiveScope();
+    auto destination = CMapLoader::loadNewMap(game, "ritual");
+    const auto target = first_adjacent_walkable(destination, destination->getEntry());
+    auto marker = std::make_shared<CEvent>();
+    marker->setName("atomicEntryMarker");
+    marker->setGame(game);
+    marker->setPosX(target.x);
+    marker->setPosY(target.y);
+    marker->setPosZ(target.z);
+    destination->addObject(marker);
+    auto entry = std::make_shared<AtomicEntryState>();
+    auto trigger = std::make_shared<CCustomTrigger>(marker->getName(), "onEnter",
+                                                    [entry](auto, auto) { return awaitAtomicEntry(entry); });
+    trigger->setName("atomicEntryReceipt");
+    destination->getEventHandler()->registerTrigger(trigger);
+    game->getContext()->getMapSessionStore()->put(destination);
+    game->setMap(source);
+    auto loop = vstd::event_loop<>::instance();
+    auto restoreSource = [&] {
+        destination->detachPlayer();
+        game->setMap(source);
+        auto attachment = game->getContext()->spawnTask(source->attachPlayerAsync(player, sourceCoords));
+        for (int phase = 0; phase < 64 && !attachment.finished(); ++phase) {
+            loop->runReady();
+        }
+        expect_true(attachment.finished(), "the fixture must restore its source attachment before the next request");
+        if (attachment.finished()) {
+            attachment.get();
+        }
+        player->setController(sourceController);
+        player->setFightController(sourceFightController);
+    };
+    for (auto result : {Result::RejectPreparation, Result::ReplaceSourcePlayer, Result::CancelEntry, Result::FailEntry,
+                        Result::ReplaceDestinationPlayer, Result::SupersededEntry, Result::Complete}) {
+        auto state = std::make_shared<AtomicPreparationState>();
+        *entry = AtomicEntryState{};
+        entry->cancel = result == Result::CancelEntry;
+        entry->fail = result == Result::FailEntry;
+        const bool replacedSource = result == Result::ReplaceSourcePlayer;
+        const bool rejected = result == Result::RejectPreparation || replacedSource;
+        std::shared_ptr<CPlayer> replacement;
+        vstd::task_handle<void> replacementAttachment;
+        const bool success = result == Result::Complete;
+        const bool superseded = result == Result::SupersededEntry;
+        const bool replacedDestination = result == Result::ReplaceDestinationPlayer;
+        bool observedSource = false;
+        bool observedDestination = false;
+        int commits = 0;
+        std::vector<bool> completed;
+        player->setBoolProperty("chapterPrepared", false);
+        state->snapshotBeforeCommit = [&] {
+            observedSource = true;
+            expect_true(game->getMap() == source && !player->getBoolProperty("chapterPrepared"),
+                        "a queued save after preparation completion must still observe source chapter state");
+            if (replacedSource) {
+                source->detachPlayer();
+                replacement = game->createObject<CPlayer>("Warrior");
+                replacementAttachment =
+                    game->getContext()->spawnTask(source->attachPlayerAsync(replacement, sourceCoords));
+            } else if (rejected) {
+                game->getContext()->advanceTransitionGeneration();
+            }
+        };
+        CMapTransitionRequest request;
+        request.targetMap = "ritual";
+        request.targetCoords = target;
+        request.reuseLoadedMap = true;
+        request.beforePlayerEntry = [&] {
+            ++commits;
+            expect_true(state->finished == 1 && game->getMap() == source,
+                        "synchronous commit must run after preparation and against the validated source");
+            player->setBoolProperty("chapterPrepared", true);
+            loop->invoke([&] {
+                observedDestination = true;
+                expect_true(
+                    game->getMap() == destination && destination->getPlayer() == player &&
+                        destination->getObjectByName("player") == player &&
+                        source->getObjectByName("player") == player &&
+                        player->getCoords() == destination->normalizeCoords(target) &&
+                        player->getBoolProperty("chapterPrepared") && !player->getPendingMoveOrigin(),
+                    "work posted by commit must see paired destination identity, coordinates and chapter state");
+            });
+        };
+        request.onFinished = [&](bool completedSuccessfully) {
+            completed.push_back(completedSuccessfully);
+            if (!completedSuccessfully && !superseded) {
+                player->setBoolProperty("chapterPrepared", false);
+            }
+        };
+        expect_true(game->getSceneManager()->requestMapChange(game, std::move(request),
+                                                              [state] { return prepareAtomicTransition(state); }),
+                    "an asynchronous preparation with a synchronous commit must be accepted");
+        expect_true(state->started == 0, "requesting a transition must not pump preparation or queued observers");
+        for (int phase = 0; phase < 32 && state->started == 0; ++phase) {
+            loop->runReady();
+        }
+        expect_true(state->started == 1 && commits == 0 && !player->getBoolProperty("chapterPrepared"),
+                    "suspended presentation must not apply any campaign commit");
+        state->ready = true;
+        for (int phase = 0; phase < 64 && (rejected ? completed.empty() : entry->entered == 0); ++phase) {
+            loop->runReady();
+        }
+        expect_true(observedSource && state->finished == 1 && commits == (rejected ? 0 : 1),
+                    "the queued source snapshot must precede a valid commit and prevent any stale commit");
+        if (!rejected) {
+            expect_true(
+                observedDestination && entry->entered == 1 && completed.empty() && game->getMap() == destination &&
+                    player->getCoords() == target,
+                "destination entry must suspend after atomic attachment without completing or nesting the loop");
+            if (replacedDestination) {
+                replacement = game->createObject<CPlayer>("Warrior");
+                replacementAttachment =
+                    game->getContext()->spawnTask(destination->attachPlayerAsync(replacement, destination->getEntry()));
+            } else if (superseded) {
+                game->getContext()->advanceTransitionGeneration();
+                player->relocateWithoutMoveHooks(destination->getEntry());
+            }
+            entry->ready = true;
+            for (int phase = 0; phase < 64 && completed.empty(); ++phase) {
+                loop->runReady();
+            }
+        }
+        expect_true(completed == std::vector<bool>{success} && observedDestination == !rejected,
+                    "preparation rejection, entry cancellation, entry failure and success must each settle once");
+        if (replacedSource) {
+            expect_true(
+                game->getMap() == source && source->getPlayer() == replacement &&
+                    source->getObjectByName("player") == replacement && replacement->getCoords() == sourceCoords,
+                "preparation rejection must preserve a replacement source player instead of restoring stale identity");
+            for (int phase = 0; phase < 64 && !replacementAttachment.finished(); ++phase) {
+                loop->runReady();
+            }
+            expect_true(replacementAttachment.finished(), "the replacement source attachment must complete");
+            source->detachPlayer();
+            restoreSource();
+        } else if (replacedDestination) {
+            expect_true(game->getMap() == destination && destination->getPlayer() == replacement &&
+                            destination->getObjectByName("player") == replacement &&
+                            replacement->getMap() == destination,
+                        "a rejected old entry must preserve a same-generation replacement destination player");
+            for (int phase = 0; phase < 64 && !replacementAttachment.finished(); ++phase) {
+                loop->runReady();
+            }
+            expect_true(replacementAttachment.finished(), "the replacement destination attachment must complete");
+            restoreSource();
+        } else if (superseded) {
+            expect_true(game->getMap() == destination && destination->getPlayer() == player &&
+                            destination->getObjectByName("player") == player && player->getMap() == destination &&
+                            player->getCoords() == destination->getEntry() &&
+                            player->getBoolProperty("chapterPrepared"),
+                        "a stale entry task must not detach or roll back the current destination player");
+            restoreSource();
+        } else if (!success) {
+            expect_true(
+                game->getMap() == source && source->getPlayer() == player && player->getMap() == source &&
+                    player->getCoords() == sourceCoords && player->getController() == sourceController &&
+                    player->getFightController() == sourceFightController &&
+                    game->getResourcesProvider()->getActiveScope() == sourceScope &&
+                    destination->getPlayer() == nullptr && !player->getBoolProperty("chapterPrepared"),
+                "failed or cancelled entry must restore the original player, controllers, coordinates and scope");
+        } else {
+            expect_true(game->getMap() == destination && destination->getPlayer() == player,
+                        "successful entry must retain the atomically installed destination identity");
+        }
+    }
+    game->getContext()->shutdown();
+}
+
+void testAsyncGameStartOwnsSuspendedEntryAndRollsBackCancellation() {
+    enum class Finish { MalformedMap, ReentrantTile, Complete, Cancel, ReleaseGame };
+    auto loop = vstd::event_loop<>::instance();
+    for (auto finish :
+         {Finish::MalformedMap, Finish::ReentrantTile, Finish::Complete, Finish::Cancel, Finish::ReleaseGame}) {
+        auto game = nativeTestProfile().run("CGameLoader::loadGame", [] { return CGameLoader::loadGame(); });
+        CGameLoader::startGameWithPlayer(game, "test", "Warrior");
+        auto source = game->getMap();
+        auto sourcePlayer = source->getPlayer();
+        const auto sourceCoords = sourcePlayer->getCoords();
+        const auto sourceScope = game->getResourcesProvider()->getActiveScope();
+        auto state = std::make_shared<AsyncStartState>();
+        game->getObjectHandler()->registerType("unitSuspendedStartPlayer", [state] {
+            auto player = std::make_shared<SuspendedStartPlayer>(state);
+            player->setBaseStats(std::make_shared<CStats>());
+            player->setLevelStats(std::make_shared<CStats>());
+            player->getBaseStats()->setMainStat("strength");
+            player->getBaseStats()->setStamina(10);
+            player->setHp(10);
+            return player;
+        });
+        std::unique_ptr<AsyncStartMapFixture> fixture;
+        if (finish == Finish::MalformedMap || finish == Finish::ReentrantTile) {
+            fixture = std::make_unique<AsyncStartMapFixture>(finish == Finish::MalformedMap);
+        }
+        auto replacement = std::make_shared<CMap>();
+        replacement->setGame(game);
+        int tileCreations = 0;
+        if (finish == Finish::ReentrantTile) {
+            game->getObjectHandler()->registerType(
+                "unitReentrantStartTile", [weakGame = std::weak_ptr<CGame>(game), replacement, &tileCreations] {
+                    ++tileCreations;
+                    auto owner = weakGame.lock();
+                    owner->setMap(replacement);
+                    owner->getContext()->advanceTransitionGeneration();
+                    auto tile = std::make_shared<CTile>();
+                    tile->setCanStep(true);
+                    return tile;
+                });
+        }
+        bool queued = false;
+        loop->invoke([&queued] { queued = true; });
+        std::weak_ptr<CGame> lifetime = game;
+        auto context = game->getContext();
+        auto start = context->spawnTask(CGameLoader::startGameWithPlayerAsync(
+            lifetime, fixture ? "unitAsyncStartFixture" : "test", "unitSuspendedStartPlayer"));
+        expect_true(!queued && !start.finished(), "native game start must return without pumping queued work");
+        for (int phase = 0; phase < 64 && state->entered == 0 && !start.finished(); ++phase) {
+            loop->runReady();
+        }
+        if (finish == Finish::ReentrantTile) {
+            bool cancelled = false;
+            if (start.finished()) {
+                try {
+                    start.get();
+                } catch (const vstd::task_cancelled &) {
+                    cancelled = true;
+                }
+            }
+            expect_true(cancelled && state->entered == 0 && tileCreations > 0 && game->getMap() == replacement &&
+                            replacement->getPlayer() == nullptr && source->getPlayer() == sourcePlayer,
+                        "a reentrant tile constructor must cancel stale native start without attaching or overwriting "
+                        "its replacement");
+            std::vector<bool> completed;
+            CMapTransitionRequest request;
+            request.targetMap = "unitAsyncStartFixture";
+            request.onFinished = [&](bool success) { completed.push_back(success); };
+            expect_true(game->requestMapTransition(std::move(request)), "the reentrant scene fixture must queue");
+            for (int phase = 0; phase < 64 && completed.empty(); ++phase) {
+                loop->runReady();
+            }
+            expect_true(completed == std::vector<bool>{false} && game->getMap() == replacement &&
+                            replacement->getPlayer() == nullptr,
+                        "a queued scene transition must also preserve the replacement installed by a tile constructor");
+            context->shutdown();
+            continue;
+        }
+        if (finish == Finish::MalformedMap) {
+            bool failed = false;
+            if (start.finished()) {
+                try {
+                    start.get();
+                } catch (const std::exception &) {
+                    failed = true;
+                }
+            }
+            expect_true(failed && state->entered == 0 && game->getMap() == source &&
+                            source->getPlayer() == sourcePlayer && sourcePlayer->getCoords() == sourceCoords &&
+                            game->getResourcesProvider()->getActiveScope() == sourceScope,
+                        "a TMX type error after map installation must restore the complete source before entry");
+            std::vector<bool> completed;
+            CMapTransitionRequest request;
+            request.targetMap = "unitAsyncStartFixture";
+            request.onFinished = [&](bool success) { completed.push_back(success); };
+            expect_true(game->requestMapTransition(std::move(request)),
+                        "the malformed destination transition must be accepted for loading");
+            for (int phase = 0; phase < 64 && completed.empty(); ++phase) {
+                loop->runReady();
+            }
+            expect_true(completed == std::vector<bool>{false} && game->getMap() == source &&
+                            source->getPlayer() == sourcePlayer && sourcePlayer->getCoords() == sourceCoords &&
+                            game->getResourcesProvider()->getActiveScope() == sourceScope,
+                        "a queued scene transition must also roll back a partially initialized malformed destination");
+            context->shutdown();
+            continue;
+        }
+        auto destination = game->getMap();
+        auto player = destination->getPlayer();
+        expect_true(
+            state->entered == 1 && !start.finished() && destination != source && player != sourcePlayer &&
+                player->getCoords() == destination->getEntry() && source->getPlayer() == sourcePlayer,
+            "native start must install a fresh player then await its entry without mutating the source registry");
+        if (finish == Finish::ReleaseGame) {
+            game.reset();
+            expect_true(lifetime.expired() && !context->isActive(),
+                        "a suspended new-adventure task must not retain its game or prevent teardown");
+        } else if (finish == Finish::Cancel) {
+            start.requestStop();
+        } else {
+            state->ready = true;
+        }
+        for (int phase = 0; phase < 64 && !start.finished(); ++phase) {
+            loop->runReady();
+        }
+        bool cancelled = false;
+        if (start.finished()) {
+            try {
+                start.get();
+            } catch (const vstd::task_cancelled &) {
+                cancelled = true;
+            }
+        }
+        expect_true(start.finished() && cancelled == (finish != Finish::Complete) && !player->getPendingMoveOrigin(),
+                    "native start completion/cancellation must drain its entry frame and movement state");
+        if (finish == Finish::Cancel) {
+            expect_true(game->getMap() == source && source->getPlayer() == sourcePlayer &&
+                            sourcePlayer->getCoords() == sourceCoords && destination->getPlayer() == nullptr &&
+                            game->getResourcesProvider()->getActiveScope() == sourceScope,
+                        "cancelled new-adventure entry must restore the source map, player and resource scope");
+        } else if (finish == Finish::Complete) {
+            expect_true(game->getMap() == destination && destination->getPlayer() == player,
+                        "successful native start must retain the installed destination player");
+        }
+        context->shutdown();
+    }
+}
+
+class RandomEncounterStepProbe : public CTile {
+  public:
+    int steps = 0;
+    std::function<void()> hook;
+
+    void onStep(std::shared_ptr<CCreature>) override {
+        ++steps;
+        if (hook) {
+            hook();
+        }
+    }
+};
+
+void testAsyncRandomEncountersStopBeforeAnotherStaleRoomOrRngDraw() {
+    struct RandomOwner {
+        std::mt19937_64 saved = vstd::rng();
+        ~RandomOwner() { vstd::rng() = saved; }
+    } randomOwner;
+    auto game = nativeTestProfile().run("CGameLoader::loadGame", [] { return CGameLoader::loadGame(); });
+    CGameLoader::startGameWithPlayer(game, "test", "Warrior");
+    auto activeMap = game->getMap();
+    auto map = std::make_shared<CMap>();
+    map->setGame(game);
+    auto first = std::make_shared<RandomEncounterStepProbe>();
+    first->setCanStep(true);
+    map->addTile(first, 11, 11, 0);
+    auto second = std::make_shared<RandomEncounterStepProbe>();
+    second->setCanStep(true);
+    map->addTile(second, 21, 21, 0);
+    std::mt19937_64 afterFirst;
+    first->hook = [&] {
+        afterFirst = vstd::rng();
+        game->getContext()->advanceTransitionGeneration();
+    };
+    rdg::Room firstRoom;
+    firstRoom.row = firstRoom.col = 10;
+    firstRoom.width = firstRoom.height = 2;
+    rdg::Room secondRoom;
+    secondRoom.row = secondRoom.col = 20;
+    secondRoom.width = secondRoom.height = 2;
+    vstd::rng().seed(100);
+    auto generation =
+        game->getContext()->spawnTask(CRandomMapGeneratorTestAccess::generate(game, map, {firstRoom, secondRoom}));
+    for (int phase = 0; phase < 64 && !generation.finished(); ++phase) {
+        vstd::event_loop<>::instance()->runReady();
+    }
+    bool cancelled = false;
+    if (generation.finished()) {
+        try {
+            generation.get();
+        } catch (const vstd::task_cancelled &) {
+            cancelled = true;
+        }
+    }
+    expect_true(
+        generation.finished() && cancelled && first->steps == 1 && second->steps == 0 &&
+            map->getObjectsAtCoords(Coords(21, 21, 0)).empty() && vstd::rng() == afterFirst &&
+            game->getMap() == activeMap,
+        "a generation change in one encounter must stop later rooms and RNG draws while retaining the active map");
+    game->getContext()->shutdown();
 }
 
 void test_scene_manager_preparation_precedes_entry_and_restores_failed_attachment() {
@@ -3101,6 +3605,12 @@ int main() {
     nativeTestProfile().run("test_scene_manager_awaits_preparation_and_rolls_back_errors",
                             test_scene_manager_awaits_preparation_and_rolls_back_errors);
     nativeTestProfile().run("testSceneCompletionOwnsSkippedLazyChildren", testSceneCompletionOwnsSkippedLazyChildren);
+    nativeTestProfile().run("testSceneCommitRunsAfterPreparationAndBeforeQueuedObservers",
+                            testSceneCommitRunsAfterPreparationAndBeforeQueuedObservers);
+    nativeTestProfile().run("testAsyncGameStartOwnsSuspendedEntryAndRollsBackCancellation",
+                            testAsyncGameStartOwnsSuspendedEntryAndRollsBackCancellation);
+    nativeTestProfile().run("testAsyncRandomEncountersStopBeforeAnotherStaleRoomOrRngDraw",
+                            testAsyncRandomEncountersStopBeforeAnotherStaleRoomOrRngDraw);
     nativeTestProfile().run("test_scene_manager_prepared_request_rejection_failure_and_cancellation",
                             test_scene_manager_prepared_request_rejection_failure_and_cancellation);
     nativeTestProfile().run("test_scene_manager_destination_entry_shutdown_cancels_commit",

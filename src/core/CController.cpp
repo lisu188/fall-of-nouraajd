@@ -528,61 +528,75 @@ std::shared_ptr<CInteraction> monsterRoleAction(const std::shared_ptr<CCreature>
 } // namespace
 
 bool CMonsterFightController::control(std::shared_ptr<CCreature> me, std::shared_ptr<CCreature> opponent) {
-    if (!me || !opponent) {
-        return false;
-    }
-    const auto huntRole = me->getStringProperty("octobogzCombatRole");
-    const bool huntActor = (huntRole == "alpha" || huntRole == "shadow") && !me->isPlayer() && !me->isNpc() &&
-                           me->isAlive() && opponent->isAlive() && !me->isAffiliatedWith(opponent);
-    if (me->getHpRatio() < 75) {
-        if (auto object = selectHealingItem(me, opponent)) {
-            me->useItem(object);
-            return true;
+    auto game = me ? me->getGame() : nullptr;
+    auto task = controlAsync(std::move(me), std::move(opponent));
+    return game ? game_async::wait(game->getContext()->spawnTask(std::move(task))) : game_async::run(std::move(task));
+}
+
+vstd::task<bool> CMonsterFightController::controlAsync(std::shared_ptr<CCreature> me,
+                                                       std::shared_ptr<CCreature> opponent) {
+    return [](std::shared_ptr<CMonsterFightController> self, std::shared_ptr<CCreature> me,
+              std::shared_ptr<CCreature> opponent) -> vstd::task<bool> {
+        auto loop = vstd::event_loop<>::instance();
+        if (!loop->isMainThread()) {
+            co_await vstd::post(loop);
         }
-    }
-    if (me->getManaRatio() < 75) {
-        auto object = getLeastPowerfulItemWithTag(me, CTag::Mana);
-        if (object) {
-            me->useItem(object);
-            return true;
+        if (!me || !opponent) {
+            co_return false;
         }
-    }
-    if (auto action = selectInteraction(me, opponent)) {
-        if (action->getTypeId() == "Attack" && huntActor) {
-            auto use = [me, opponent](const std::string &typeId) {
-                for (const auto &signature : me->getInteractions()) {
-                    if (signature->getTypeId() == typeId && signature->getManaCost() <= me->getMana()) {
-                        me->useAction(signature, opponent);
-                        return true;
+        const auto huntRole = me->getStringProperty("octobogzCombatRole");
+        const bool huntActor = (huntRole == "alpha" || huntRole == "shadow") && !me->isPlayer() && !me->isNpc() &&
+                               me->isAlive() && opponent->isAlive() && !me->isAffiliatedWith(opponent);
+        if (me->getHpRatio() < 75) {
+            if (auto object = selectHealingItem(me, opponent)) {
+                co_await me->useItemAsync(object);
+                co_return true;
+            }
+        }
+        if (me->getManaRatio() < 75) {
+            auto object = self->getLeastPowerfulItemWithTag(me, CTag::Mana);
+            if (object) {
+                co_await me->useItemAsync(object);
+                co_return true;
+            }
+        }
+        if (auto action = self->selectInteraction(me, opponent)) {
+            if (action->getTypeId() == "Attack" && huntActor) {
+                auto use = [me, opponent](const std::string &typeId) {
+                    for (const auto &signature : me->getInteractions()) {
+                        if (signature->getTypeId() == typeId && signature->getManaCost() <= me->getMana()) {
+                            me->useAction(signature, opponent);
+                            return true;
+                        }
                     }
+                    return false;
+                };
+                const auto phase = me->getStringProperty("octobogzCombatPhase");
+                if ((phase.empty() || phase == "predator") && (huntRole == "shadow" || me->getHpRatio() <= 50) &&
+                    use("octobogzCharge")) {
+                    me->setStringProperty("octobogzCombatPhase", "charged");
+                    co_return true;
                 }
-                return false;
-            };
-            const auto phase = me->getStringProperty("octobogzCombatPhase");
-            if ((phase.empty() || phase == "predator") && (huntRole == "shadow" || me->getHpRatio() <= 50) &&
-                use("octobogzCharge")) {
-                me->setStringProperty("octobogzCombatPhase", "charged");
-                return true;
-            }
-            if (phase == "charged") {
-                if (!me->getBoolProperty("octobogzPulseUsed") && use("octobogzShadowPulse")) {
+                if (phase == "charged") {
+                    if (!me->getBoolProperty("octobogzPulseUsed") && use("octobogzShadowPulse")) {
+                        me->setStringProperty("octobogzCombatPhase", "spent");
+                        me->setBoolProperty("octobogzPulseUsed", true);
+                        co_return true;
+                    }
                     me->setStringProperty("octobogzCombatPhase", "spent");
-                    me->setBoolProperty("octobogzPulseUsed", true);
-                    return true;
                 }
-                me->setStringProperty("octobogzCombatPhase", "spent");
+            } else if (action->getTypeId() == "Attack") {
+                if (auto signature = monsterRoleAction(me, opponent)) {
+                    me->useAction(signature, opponent);
+                    me->setBoolProperty("enemyRoleUsed", true);
+                    co_return true;
+                }
             }
-        } else if (action->getTypeId() == "Attack") {
-            if (auto signature = monsterRoleAction(me, opponent)) {
-                me->useAction(signature, opponent);
-                me->setBoolProperty("enemyRoleUsed", true);
-                return true;
-            }
+            me->useAction(action, opponent);
+            co_return true;
         }
-        me->useAction(action, opponent);
-        return true;
-    }
-    return false;
+        co_return false;
+    }(this->ptr<CMonsterFightController>(), std::move(me), std::move(opponent));
 }
 
 std::shared_ptr<CItem> CMonsterFightController::getLeastPowerfulItemWithTag(std::shared_ptr<CCreature> cr, CTag tag) {

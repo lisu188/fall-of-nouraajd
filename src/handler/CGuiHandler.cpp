@@ -20,6 +20,7 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #include "core/CAsync.h"
 #include "core/CGameContext.h"
 #include "core/CList.h"
+#include "core/CLoader.h"
 #include "core/CMap.h"
 #include "core/CPlaytestTrace.h"
 #include "gui/CLayout.h"
@@ -36,6 +37,7 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #include "object/CDialog.h"
 #include "object/CMarket.h"
 #include "handler/CScriptHandler.h"
+#include "handler/CRngHandler.h"
 
 #include <algorithm>
 
@@ -74,6 +76,16 @@ struct ModalPanelOwner {
     std::shared_ptr<CGamePanel> panel;
     ~ModalPanelOwner() { panel->close(); }
 };
+
+template <typename T>
+std::shared_ptr<T> flowObjectArgument(CScriptFlow &flow, const json &arguments, std::size_t index) {
+    auto object = flow.takeObjectArgument(arguments.at(index).at("__nativeObject").get<std::string>());
+    auto result = vstd::cast<T>(object);
+    if (!result) {
+        throw std::invalid_argument("UI flow argument must have type " + T::static_meta()->name());
+    }
+    return result;
+}
 
 template <typename T> T runGuiTask(const std::shared_ptr<CGame> &game, vstd::task<T> task) {
     try {
@@ -449,12 +461,27 @@ vstd::task<void> CGuiHandler::runScriptFlowAsync(std::unique_ptr<CScriptFlow> fl
         if (!flow) {
             throw std::invalid_argument("Cannot run an empty UI script flow.");
         }
+        const auto stop = co_await vstd::thisTaskStopToken();
+        auto game = self->_game.lock();
+        const auto context = game ? game->getContext() : nullptr;
+        game.reset();
+        auto checkActive = [&] {
+            if (stop.stop_requested() || (context && !context->isActive())) {
+                throw vstd::task_cancelled();
+            }
+        };
+        checkActive();
         json answer;
         auto request = flow->next(answer);
         while (request) {
             std::optional<std::string> failure;
             try {
                 const auto operation = request->at("operation").get<std::string>();
+                if (operation == "questCommitted") {
+                    // A callback can grant its reward and shut down before yielding the commit intent.
+                    flow->markCommitted();
+                }
+                checkActive();
                 const auto &arguments = request->at("args");
                 auto stringArgument = [&arguments](std::size_t index) {
                     return arguments.at(index).get<std::string>();
@@ -470,6 +497,14 @@ vstd::task<void> CGuiHandler::runScriptFlowAsync(std::unique_ptr<CScriptFlow> fl
                 } else if (operation == "showMessage") {
                     co_await self->showMessageAsync(stringArgument(0));
                     answer = nullptr;
+                } else if (operation == "showInfo") {
+                    co_await self->showInfoAsync(stringArgument(0),
+                                                 arguments.size() > 1 ? arguments.at(1).get<bool>() : false);
+                    answer = nullptr;
+                } else if (operation == "showQuestion") {
+                    answer = co_await self->showQuestionAsync(stringArgument(0));
+                } else if (operation == "showSelection") {
+                    answer = co_await self->showSelectionAsync(flowObjectArgument<CListString>(*flow, arguments, 0));
                 } else if (operation == "showCampaignScreen") {
                     co_await self->showCampaignScreenAsync(stringArgument(0), stringArgument(1), stringArgument(2));
                     answer = nullptr;
@@ -481,6 +516,51 @@ vstd::task<void> CGuiHandler::runScriptFlowAsync(std::unique_ptr<CScriptFlow> fl
                     const auto selection =
                         co_await self->showCharacterCreationOptionsAsync(stringArgument(0), stringArgument(1));
                     answer = json::array({selection.first, selection.second});
+                } else if (operation == "showTrade") {
+                    co_await self->showTradeAsync(flowObjectArgument<CMarket>(*flow, arguments, 0));
+                    answer = nullptr;
+                } else if (operation == "showDialog") {
+                    co_await self->showDialogAsync(flowObjectArgument<CDialog>(*flow, arguments, 0));
+                    answer = nullptr;
+                } else if (operation == "addRandomLoot") {
+                    auto creature = flowObjectArgument<CCreature>(*flow, arguments, 0);
+                    auto game = self->_game.lock();
+                    if (!game) {
+                        throw std::runtime_error("Cannot grant UI flow loot after its game has been destroyed.");
+                    }
+                    auto rng = game->getRngHandler();
+                    auto items = rng->getRandomLoot(arguments.at(1).get<int>());
+                    game.reset();
+                    co_await rng->addRandomLootAsync(std::move(creature), std::move(items));
+                    answer = nullptr;
+                } else if (operation == "checkQuests") {
+                    co_await flowObjectArgument<CPlayer>(*flow, arguments, 0)->checkQuestsAsync();
+                    answer = nullptr;
+                } else if (operation == "questCommitted") {
+                    answer = nullptr;
+                } else if (operation == "moveTo") {
+                    auto object = flowObjectArgument<CMapObject>(*flow, arguments, 0);
+                    co_await object->moveToAsync(
+                        Coords(arguments.at(1).get<int>(), arguments.at(2).get<int>(), arguments.at(3).get<int>()));
+                    answer = nullptr;
+                } else if (operation == "removeObject") {
+                    auto map = flowObjectArgument<CMap>(*flow, arguments, 0);
+                    auto object = flowObjectArgument<CMapObject>(*flow, arguments, 1);
+                    co_await map->removeObjectAsync(std::move(object));
+                    answer = nullptr;
+                } else if (operation == "addObjectByName") {
+                    auto map = flowObjectArgument<CMap>(*flow, arguments, 0);
+                    answer = co_await map->addObjectByNameAsync(
+                        stringArgument(1),
+                        Coords(arguments.at(2).get<int>(), arguments.at(3).get<int>(), arguments.at(4).get<int>()));
+                } else if (operation == "startGameWithPlayer") {
+                    co_await CGameLoader::startGameWithPlayerAsync(self->_game, stringArgument(0), stringArgument(1),
+                                                                   stringArgument(2));
+                    answer = nullptr;
+                } else if (operation == "startRandomGameWithPlayer") {
+                    co_await CGameLoader::startRandomGameWithPlayerAsync(self->_game, stringArgument(0),
+                                                                         stringArgument(1));
+                    answer = nullptr;
                 } else {
                     throw std::runtime_error("Unsupported asynchronous UI operation: " + operation);
                 }
@@ -491,6 +571,7 @@ vstd::task<void> CGuiHandler::runScriptFlowAsync(std::unique_ptr<CScriptFlow> fl
             } catch (const std::exception &error) {
                 failure = error.what();
             }
+            checkActive();
             request = failure ? flow->fail(*failure) : flow->next(answer);
         }
     }(this->ptr<CGuiHandler>(), std::move(flow));

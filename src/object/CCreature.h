@@ -257,6 +257,10 @@ class CCreature : public CMapObject, public CMoveable, public CVisitable {
 
     virtual void beforeMove();
 
+    vstd::task<void> beforeMoveAsync() override;
+
+    void cancelMove() override;
+
     virtual void afterMove();
 
     vstd::task<void> afterMoveAsync() override;
@@ -282,6 +286,8 @@ class CCreature : public CMapObject, public CMoveable, public CVisitable {
     void useAction(std::shared_ptr<CInteraction> action, std::shared_ptr<CCreature> creature);
 
     void useItem(std::shared_ptr<CItem> item);
+
+    vstd::task<void> useItemAsync(std::shared_ptr<CItem> item);
 
     std::shared_ptr<CStats> getStats();
 
@@ -345,6 +351,7 @@ class CCreature : public CMapObject, public CMoveable, public CVisitable {
     std::weak_ptr<CGameContext> effectOwnerContext;
 
     std::set<std::shared_ptr<CItem>> items;
+    std::set<const CItem *> pendingItemUses;
     std::set<std::shared_ptr<CInteraction>> actions;
     std::set<std::shared_ptr<CEffect>> effects;
 

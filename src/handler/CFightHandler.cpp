@@ -320,7 +320,7 @@ vstd::task<bool> resolve_defeat_async(std::shared_ptr<CMap> encounterMap, std::s
     if (is_reward_eligible_winner(encounterMap, attacker, opponents, loser, winner)) {
         co_await CFightHandler::defeatedCreatureAsync(winner, loser);
     } else {
-        encounterMap->removeObject(loser);
+        co_await encounterMap->removeObjectAsync(loser);
     }
     co_return true;
 }
@@ -787,7 +787,16 @@ vstd::task<void> CFightHandler::defeatedCreatureAsync(std::shared_ptr<CCreature>
             std::rethrow_exception(cancellation);
         }
     }
-    encounterMap->removeObject(b);
+    if (cancellation) {
+        auto removal = context->spawnTask(encounterMap->removeObjectAsync(b));
+        co_await removal.waitFinished();
+        try {
+            removal.get();
+        } catch (const vstd::task_cancelled &) {
+        }
+    } else {
+        co_await encounterMap->removeObjectAsync(b);
+    }
     if (b->isPlayer()) {
         json receipt = {
             {"map", encounterMap->getLabel().empty() ? encounterMap->getMapName() : encounterMap->getLabel()},

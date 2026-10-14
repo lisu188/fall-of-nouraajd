@@ -7,6 +7,7 @@ from pathlib import Path
 import sys
 import types
 import unittest
+from tests.hook_flow_support import installHookFlows
 from unittest.mock import Mock, patch
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -29,6 +30,7 @@ class ChestRewardsTest(unittest.TestCase):
             return True
 
         game.claim_once = claim
+        installHookFlows(game)
         with patch.dict(sys.modules, {"game": game}):
             spec = importlib.util.spec_from_file_location("chest_plugin_under_test", ROOT / "res/plugins/object.py")
             module = importlib.util.module_from_spec(spec)
