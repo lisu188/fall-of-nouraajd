@@ -924,22 +924,37 @@ class OctobogzMcpWalkthroughTest(unittest.TestCase):
             return
         anchors = ((19, 10, 0), (57, 103, 0))
         original = {}
-        for anchor in anchors:
+        for anchor_index, anchor in enumerate(anchors):
             for _, name in self.nearbyAuthoredPritz(anchor):
                 actor = self.call(self.game_map, "getObjectByName", name)
                 self.assertIsNotNone(actor)
-                original[name] = actor
+                original[name] = (actor, anchor_index)
+        print(
+            "MCP hunt frozen authored healing pool",
+            {"initial": initial, "target": target, "count": len(original), "names": sorted(original)},
+            flush=True,
+        )
         consumed = set()
         fights = 0
         conversions = 1
         while inventory["strong"] < target:
             while inventory["strong"] + inventory["brewable"] < target:
-                candidates = sorted(
-                    (distance, name, index)
-                    for index, anchor in enumerate(anchors)
-                    for distance, name in self.nearbyAuthoredPritz(anchor)
-                    if name in original
-                )
+                current = self.coords()
+                candidates = []
+                for name, (frozen_actor, index) in original.items():
+                    actor = self.call(self.game_map, "getObjectByName", name)
+                    if actor is None:
+                        continue
+                    self.assertEqual(frozen_actor, actor, "Preparation must retain the frozen authored actor identity")
+                    if not self.call(actor, "isAlive"):
+                        continue
+                    destination = self.coords(actor)
+                    if destination[2] != anchors[index][2]:
+                        continue
+                    self.assertEqual("Pritz", self.call(actor, "getTypeId"))
+                    self.assertEqual("gooby", self.call(actor, "getStringProperty", "affiliation"))
+                    candidates.append((sum(abs(a - b) for a, b in zip(current, destination)), name, index))
+                candidates.sort()
                 if fights >= 18 or not candidates:
                     # An odd earned Lesser can still pair with the untouched original shop item.
                     self.assertLess(conversions, 20, "Earned healing conversion must remain bounded")
@@ -956,7 +971,7 @@ class OctobogzMcpWalkthroughTest(unittest.TestCase):
                 )
                 _, name, anchor_index = candidates[0]
                 actor = self.call(self.game_map, "getObjectByName", name)
-                self.assertEqual(original[name], actor, "Preparation must fight the existing authored actor")
+                self.assertEqual(original[name][0], actor, "Preparation must fight the existing authored actor")
                 before = self.healingPreparationInventory()
                 exp_before = self.call(self.player, "getNumericProperty", "exp")
                 road = ((9, 36, 0), (9, 37, 0)) if anchor_index == 0 else ((57, 115, 0), (58, 115, 0))
@@ -1775,6 +1790,19 @@ class OctobogzDiagnosticTest(unittest.TestCase):
         with patch("builtins.print"), self.assertRaisesRegex(AssertionError, "Finite living authored Pritz exhausted"):
             walker.ensureAuthoredHealingReadiness()
         self.assertEqual(2, state["fights"])
+
+    def testReadinessFollowsFrozenAuthoredActorsAfterTheyWanderOutsideTheirDiscoveryRadius(self):
+        walker, state, items, living, stock = self.authoredReadinessFixture(strong=11, foes=2)
+        original_coords = walker.coords
+        walker.coords = lambda actor=None: (
+            (140, 110, 0) if actor is not None and state["fights"] else original_coords(actor)
+        )
+        with patch("builtins.print"):
+            walker.ensureAuthoredHealingReadiness()
+        self.assertEqual(2, state["fights"])
+        self.assertEqual(13, walker.healingPreparationInventory()["strong"])
+        self.assertEqual(["existingPritz0", "existingPritz1"], [call.args[0] for call in walker.walkTo.call_args_list])
+        self.assertIn("unearnedNewPritz", living)
 
     def testReadinessCapsActualPreparationFightsAndRejectsExperienceOrIdentityCorruption(self):
         for corruption, pattern, expected_fights in (
