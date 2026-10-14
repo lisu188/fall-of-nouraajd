@@ -1118,20 +1118,45 @@ vstd::task<void> CCreature::useItemAsync(std::shared_ptr<CItem> item) {
         }
         auto game = self->getGame();
         auto context = game ? game->getContext() : nullptr;
-        std::weak_ptr<CGame> weakGame = game;
-        const auto generation = context ? context->captureTransitionGeneration() : 0;
-        const auto activeMap = game ? game->getMap() : nullptr;
         game.reset();
+        if (context && !context->isActive()) {
+            throw vstd::task_cancelled();
+        }
+        struct DisposalPolicy {
+            bool disposable = false;
+            bool protectedQuestItem = false;
+        };
+        auto policy = std::make_shared<DisposalPolicy>();
+        const auto stop = co_await vstd::thisTaskStopToken();
+        auto prepareCommit = std::make_shared<std::move_only_function<void()>>([self, item, context, policy, stop] {
+            if (stop.stop_requested() || (context && !context->isActive())) {
+                throw vstd::task_cancelled();
+            }
+            policy->disposable = item->isDisposable();
+            policy->protectedQuestItem = vstd::castable<CPlayer>(self) && item->hasTag(CTag::Quest);
+            if (stop.stop_requested() || (context && !context->isActive())) {
+                throw vstd::task_cancelled();
+            }
+        });
+        auto commit =
+            std::make_shared<std::move_only_function<void()>>([self, item, context, policy, settled = false]() mutable {
+                if (std::exchange(settled, true) || !policy->disposable || policy->protectedQuestItem) {
+                    return;
+                }
+                if (context && !context->isActive()) {
+                    auto found = std::find_if(self->items.begin(), self->items.end(), [&item](const auto &candidate) {
+                        return CGameObject::sameInstance(candidate, item);
+                    });
+                    if (found != self->items.end()) {
+                        self->items.erase(found);
+                    }
+                } else if (self->hasInInventory(item)) {
+                    self->removeItem(item);
+                }
+            });
         auto event = std::make_shared<CGameEventCaused>(CGameEvent::CType::onUse, self);
-        co_await map->getEventHandler()->gameEventAsync(item, std::move(event));
-        game = weakGame.lock();
-        if (self->getMap() != map || (game && game->getMap() != activeMap) ||
-            (context && !context->isTransitionGenerationCurrent(generation))) {
-            co_return;
-        }
-        if (item->isDisposable() && self->hasInInventory(item)) {
-            self->removeItem(item);
-        }
+        co_await map->getEventHandler()->gameEventAsync(item, std::move(event), std::move(commit),
+                                                        std::move(prepareCommit));
     }(this->ptr<CCreature>(), std::move(item));
 }
 

@@ -32,9 +32,11 @@ std::string CGameEvent::CType::onUnequip = "onUnequip";
 namespace {
 vstd::task<bool> invokeObjectFlowAsync(std::shared_ptr<CGameObject> object, std::string method,
                                        std::vector<std::shared_ptr<CGameObject>> arguments,
-                                       std::weak_ptr<CGame> weakGame) {
+                                       std::weak_ptr<CGame> weakGame,
+                                       std::shared_ptr<std::move_only_function<void()>> commit = {},
+                                       std::shared_ptr<std::move_only_function<void()>> prepareCommit = {}) {
     try {
-        auto flow = CScriptHandler::createObjectFlow(object, method, arguments, weakGame);
+        auto flow = CScriptHandler::createObjectFlow(object, method, arguments, weakGame, {}, commit, prepareCommit);
         if (!flow) {
             co_return false;
         }
@@ -108,9 +110,12 @@ void CEventHandler::gameEvent(std::shared_ptr<CMapObject> object, std::shared_pt
                   [object, event](TriggerMap::value_type x) { x.second->trigger(object, event); });
 }
 
-vstd::task<void> CEventHandler::gameEventAsync(std::shared_ptr<CMapObject> object, std::shared_ptr<CGameEvent> event) {
+vstd::task<void> CEventHandler::gameEventAsync(std::shared_ptr<CMapObject> object, std::shared_ptr<CGameEvent> event,
+                                               std::shared_ptr<std::move_only_function<void()>> commit,
+                                               std::shared_ptr<std::move_only_function<void()>> prepareCommit) {
     return [](std::shared_ptr<CEventHandler> self, std::shared_ptr<CMapObject> object,
-              std::shared_ptr<CGameEvent> event) -> vstd::task<void> {
+              std::shared_ptr<CGameEvent> event, std::shared_ptr<std::move_only_function<void()>> commit,
+              std::shared_ptr<std::move_only_function<void()>> prepareCommit) -> vstd::task<void> {
         auto loop = vstd::event_loop<>::instance();
         if (!loop->isMainThread()) {
             co_await vstd::post(loop);
@@ -130,12 +135,22 @@ vstd::task<void> CEventHandler::gameEventAsync(std::shared_ptr<CMapObject> objec
         };
         checkActive();
         std::vector<std::shared_ptr<CGameObject>> arguments{event};
-        if (!(co_await invokeObjectFlowAsync(object, event->getType() + "Flow", std::move(arguments), game))) {
+        auto objectCommit = event->getType() == CGameEvent::CType::onUse ? commit : nullptr;
+        if (!(co_await invokeObjectFlowAsync(object, event->getType() + "Flow", std::move(arguments), game,
+                                             objectCommit, prepareCommit))) {
             if (auto visitable = vstd::cast<CVisitable>(object);
                 visitable && event->getType() == CGameEvent::CType::onEnter) {
                 co_await visitable->onEnterAsync(event);
             } else {
+                checkActive();
+                if (objectCommit && prepareCommit) {
+                    (*prepareCommit)();
+                }
+                checkActive();
                 dispatchObjectEvent(object, event);
+                if (objectCommit) {
+                    (*objectCommit)();
+                }
             }
         }
         checkActive();
@@ -156,7 +171,7 @@ vstd::task<void> CEventHandler::gameEventAsync(std::shared_ptr<CMapObject> objec
             }
             checkActive();
         }
-    }(this->ptr<CEventHandler>(), std::move(object), std::move(event));
+    }(this->ptr<CEventHandler>(), std::move(object), std::move(event), std::move(commit), std::move(prepareCommit));
 }
 
 vstd::task<void> CEventHandler::tileStepAsync(std::shared_ptr<CTile> tile, std::shared_ptr<CCreature> creature) {

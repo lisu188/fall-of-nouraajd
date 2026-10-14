@@ -480,6 +480,8 @@ vstd::task<void> CGuiHandler::runScriptFlowAsync(std::unique_ptr<CScriptFlow> fl
                 if (operation == "questCommitted") {
                     // A callback can grant its reward and shut down before yielding the commit intent.
                     flow->markCommitted();
+                } else if (operation == "itemCommitted") {
+                    flow->markItemCommitted();
                 }
                 checkActive();
                 const auto &arguments = request->at("args");
@@ -536,12 +538,19 @@ vstd::task<void> CGuiHandler::runScriptFlowAsync(std::unique_ptr<CScriptFlow> fl
                 } else if (operation == "checkQuests") {
                     co_await flowObjectArgument<CPlayer>(*flow, arguments, 0)->checkQuestsAsync();
                     answer = nullptr;
-                } else if (operation == "questCommitted") {
+                } else if (operation == "questCommitted" || operation == "itemCommitted") {
                     answer = nullptr;
                 } else if (operation == "moveTo") {
                     auto object = flowObjectArgument<CMapObject>(*flow, arguments, 0);
                     co_await object->moveToAsync(
                         Coords(arguments.at(1).get<int>(), arguments.at(2).get<int>(), arguments.at(3).get<int>()));
+                    answer = nullptr;
+                } else if (operation == "itemMoveTo") {
+                    auto commit = flow->commitCallback();
+                    auto object = flowObjectArgument<CMapObject>(*flow, arguments, 0);
+                    co_await object->moveToAsync(
+                        Coords(arguments.at(1).get<int>(), arguments.at(2).get<int>(), arguments.at(3).get<int>()),
+                        std::move(commit));
                     answer = nullptr;
                 } else if (operation == "removeObject") {
                     auto map = flowObjectArgument<CMap>(*flow, arguments, 0);

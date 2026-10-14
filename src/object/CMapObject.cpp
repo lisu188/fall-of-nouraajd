@@ -21,11 +21,12 @@ void CMapObject::move(int x, int y, int z) {
 
 vstd::task<void> CMapObject::moveAsync(Coords delta) { return moveOwnedAsync(this->ptr<CMapObject>(), delta, false); }
 
-vstd::task<void> CMapObject::moveToAsync(Coords coords) {
-    return moveOwnedAsync(this->ptr<CMapObject>(), coords, true);
+vstd::task<void> CMapObject::moveToAsync(Coords coords, std::move_only_function<void()> positionCommit) {
+    return moveOwnedAsync(this->ptr<CMapObject>(), coords, true, std::move(positionCommit));
 }
 
-vstd::task<void> CMapObject::moveOwnedAsync(std::shared_ptr<CMapObject> object, Coords coords, bool absolute) {
+vstd::task<void> CMapObject::moveOwnedAsync(std::shared_ptr<CMapObject> object, Coords coords, bool absolute,
+                                            std::move_only_function<void()> positionCommit) {
     auto loop = vstd::event_loop<>::instance();
     if (!loop->isMainThread()) {
         co_await vstd::post(loop);
@@ -102,10 +103,24 @@ vstd::task<void> CMapObject::moveOwnedAsync(std::shared_ptr<CMapObject> object, 
     object->posx = target.x;
     object->posy = target.y;
     object->posz = target.z;
+    std::exception_ptr commitFailure;
+    if (positionCommit) {
+        try {
+            positionCommit();
+        } catch (...) {
+            commitFailure = std::current_exception();
+        }
+    }
     Coords newCoords = object->getCoords();
 
     if (map && map->getObjectByName(object->getName()) == object) {
         map->objectMoved(object, oldCoords, newCoords);
+    }
+    if (commitFailure) {
+        if (auto moveable = dynamic_cast<CMoveable *>(object.get())) {
+            moveable->cancelMove();
+        }
+        std::rethrow_exception(commitFailure);
     }
 
     if (dynamic_cast<CMoveable *>(object.get()) && map) {

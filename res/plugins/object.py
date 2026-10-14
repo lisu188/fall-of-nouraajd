@@ -434,7 +434,7 @@ def load(self, context):
         def onUse(self, event):
             player = event.getCause()
             cur_map = player.getMap()
-            yield uiRequest("gui.moveTo", player, cur_map.getEntryX(), cur_map.getEntryY(), cur_map.getEntryZ())
+            yield uiRequest("gui.itemMoveTo", player, cur_map.getEntryX(), cur_map.getEntryY(), cur_map.getEntryZ())
 
         def isDisposable(self):
             return True

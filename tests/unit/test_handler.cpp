@@ -2138,6 +2138,334 @@ void test_fight_handler_counts_effect_duration_as_progress() {
                 "timed-effect stale handling should not remove living participants");
 }
 
+class ItemCommitHealingProbe : public CItem {
+  public:
+    std::function<void()> afterHeal;
+    std::function<void()> readPolicy;
+    int uses = 0;
+    int policyReads = 0;
+
+    bool isDisposable() override {
+        ++policyReads;
+        if (readPolicy) {
+            readPolicy();
+        }
+        return true;
+    }
+
+    void onUse(std::shared_ptr<CGameEvent> event) override {
+        ++uses;
+        auto caused = vstd::cast<CGameEventCaused>(event);
+        vstd::cast<CCreature>(caused->getCause())->heal(5);
+        if (afterHeal) {
+            afterHeal();
+        }
+    }
+};
+
+void testDisposableItemCommitConsumesBeforeReceiptsAndCancellation() {
+    auto loop = vstd::event_loop<>::instance();
+    for (int mode : {0, 1, 2, 3, 4, 5}) {
+        auto game = makeWindowlessFightGame();
+        auto player = add_test_player(game);
+        player->setHp(1);
+        auto item = std::make_shared<ItemCommitHealingProbe>();
+        item->setGame(game);
+        item->setName("unitCommittedHealingItem");
+        item->setTypeId("unitCommittedHealingItem");
+        player->addItem(item);
+        vstd::task_handle<void> use;
+        if (mode == 0) {
+            item->afterHeal = [&use] { use.requestStop(); };
+        } else if (mode == 1) {
+            item->afterHeal = [context = game->getContext()] { context->shutdown(); };
+        } else if (mode == 4) {
+            item->readPolicy = [context = game->getContext()] { context->shutdown(); };
+        } else if (mode == 5) {
+            item->readPolicy = [&use] { use.requestStop(); };
+        }
+        auto receipt = std::make_shared<AsyncTriggerProbe>();
+        if (mode == 2) {
+            auto trigger = std::make_shared<CCustomTrigger>(
+                item->getName(), "onUse", [receipt](auto, auto) { return awaitTriggerProbe(receipt, "receipt"); });
+            trigger->setName("unitCommittedItemReceipt");
+            game->getMap()->getEventHandler()->registerTrigger(trigger);
+        }
+        use = game->getContext()->spawnTask(player->useItemAsync(item));
+        if (mode == 3) {
+            use.requestStop();
+        } else if (mode == 2) {
+            expect_true(pumpHandlerUntil([&] { return !receipt->entered.empty() || use.finished(); }) &&
+                            !use.finished() && player->getHp() == 6 && !player->hasInInventory(item),
+                        "a suspended item receipt must expose healed HP and an already-consumed inventory item");
+            use.requestStop();
+        }
+        expect_true(pumpHandlerUntil([&] { return use.finished(); }),
+                    "cancelled disposable use must release every owned execution frame");
+        bool cancelled = false;
+        if (use.finished()) {
+            try {
+                use.get();
+            } catch (const vstd::task_cancelled &) {
+                cancelled = true;
+            }
+        }
+        const bool committed = mode < 3;
+        expect_true(cancelled && item->uses == (committed ? 1 : 0) && player->getHp() == (committed ? 6 : 1) &&
+                        player->hasInInventory(item) != committed && item->policyReads == (mode == 3 ? 0 : 1),
+                    "committed healing must consume once, while cancellation before onUse must retain the item");
+        if (committed && game->getContext()->isActive()) {
+            auto repeated = game->getContext()->spawnTask(player->useItemAsync(item));
+            bool rejected = false;
+            if (repeated.finished()) {
+                try {
+                    repeated.get();
+                } catch (const std::exception &) {
+                    rejected = true;
+                }
+            }
+            expect_true(rejected && player->getHp() == 6 && item->uses == 1,
+                        "a cancelled committed potion must not be usable for a second healing effect");
+        }
+        game->getContext()->shutdown();
+    }
+    auto game = makeWindowlessFightGame();
+    auto player = add_test_player(game);
+    player->setHp(1);
+    auto protectedItem = std::make_shared<ItemCommitHealingProbe>();
+    protectedItem->setGame(game);
+    protectedItem->setName("unitDetachedQuestItem");
+    protectedItem->addTag(CTag::Quest);
+    player->addItem(protectedItem);
+    game->getMap()->detachPlayer();
+    protectedItem->afterHeal = [context = game->getContext()] { context->shutdown(); };
+    auto protectedUse = game->getContext()->spawnTask(player->useItemAsync(protectedItem));
+    expect_true(pumpHandlerUntil([&] { return protectedUse.finished(); }),
+                "detached-player quest-item shutdown must finish its owned use");
+    bool cancelled = false;
+    if (protectedUse.finished()) {
+        try {
+            protectedUse.get();
+        } catch (const vstd::task_cancelled &) {
+            cancelled = true;
+        }
+    }
+    expect_true(cancelled && player->getHp() == 6 && player->hasInInventory(protectedItem) &&
+                    protectedItem->policyReads == 1,
+                "inactive cleanup must preserve legacy quest-item protection for detached CPlayer owners");
+    game->getContext()->shutdown();
+    loop->runReady();
+}
+
+class ItemPositionCommitProbe : public CCreature {
+  public:
+    bool beforeReleased = false;
+    bool afterEntered = false;
+    bool afterReleased = false;
+
+    vstd::task<void> beforeMoveAsync() override {
+        return [](std::shared_ptr<ItemPositionCommitProbe> self) -> vstd::task<void> {
+            co_await vstd::until(vstd::event_loop<>::instance(), [self] { return self->beforeReleased; });
+        }(this->ptr<ItemPositionCommitProbe>());
+    }
+
+    vstd::task<void> afterMoveAsync() override {
+        return [](std::shared_ptr<ItemPositionCommitProbe> self) -> vstd::task<void> {
+            self->afterEntered = true;
+            co_await vstd::until(vstd::event_loop<>::instance(), [self] { return self->afterReleased; });
+        }(this->ptr<ItemPositionCommitProbe>());
+    }
+};
+
+void testItemPositionCommitOwnsConsumptionBeforeArrivalCancellation() {
+    auto loop = vstd::event_loop<>::instance();
+    const auto conditions = loop->getConditionalTaskCount();
+    for (bool afterPosition : {false, true}) {
+        for (bool shutdown : {false, true}) {
+            auto game = makeWindowlessFightGame();
+            auto actor = std::make_shared<ItemPositionCommitProbe>();
+            actor->setGame(game);
+            actor->setName("unitItemPositionActor");
+            initialize_test_creature_stats(actor);
+            game->getMap()->addObject(actor);
+            auto tile = std::make_shared<CTile>();
+            tile->setCanStep(true);
+            game->getMap()->addTile(tile, 1, 0, 0);
+            auto item = add_unit_loot(game, actor, "unitPositionDisposable");
+            int commits = 0;
+            auto commit =
+                std::make_shared<std::move_only_function<void()>>([actor, item, &commits, settled = false]() mutable {
+                    if (!std::exchange(settled, true)) {
+                        ++commits;
+                        actor->removeItem(item);
+                    }
+                });
+            pybind11::dict scope;
+            pybind11::exec("class ItemFlowProbe:\n    def onUseFlow(self):\n        yield from ()\n"
+                           "callbacks = ItemFlowProbe()\n",
+                           scope);
+            auto callbacks = scope["callbacks"];
+            CPythonOverrides::retain(item, callbacks);
+            auto flow = CScriptHandler::createObjectFlow(item, "onUseFlow", {}, game, {}, commit);
+            expect_true(flow != nullptr, "the position commit fixture must create an owned script flow");
+            bool wrongQuestCommitRejected = false;
+            if (flow) {
+                try {
+                    flow->markCommitted();
+                } catch (const std::invalid_argument &) {
+                    wrongQuestCommitRejected = true;
+                }
+            }
+            expect_true(wrongQuestCommitRejected && commits == 0 && actor->hasInInventory(item),
+                        "a quest marker must not consume an item-use capability");
+            auto positionCommit = flow ? flow->commitCallback() : std::move_only_function<void()>{[] {}};
+            flow.reset();
+            CPythonOverrides::release(item.get());
+            commit.reset();
+            auto move = game->getContext()->spawnTask(actor->moveToAsync(Coords(1, 0, 0), std::move(positionCommit)));
+            if (afterPosition) {
+                actor->beforeReleased = true;
+                expect_true(pumpHandlerUntil([&] { return actor->afterEntered || move.finished(); }) &&
+                                !move.finished() && actor->getCoords() == Coords(1, 0, 0) && commits == 1 &&
+                                !actor->hasInInventory(item),
+                            "the owned position commit must consume before any suspended arrival hook");
+            } else {
+                expect_true(!move.finished() && commits == 0 && actor->getCoords() == Coords(0, 0, 0) &&
+                                actor->hasInInventory(item),
+                            "a suspended preparation must preserve both position and disposable item");
+            }
+            if (shutdown) {
+                game->getContext()->shutdown();
+            } else {
+                move.requestStop();
+            }
+            expect_true(pumpHandlerUntil([&] { return move.finished(); }),
+                        "position cancellation must finish and release its owned commit capability");
+            bool cancelled = false;
+            if (move.finished()) {
+                try {
+                    move.get();
+                } catch (const vstd::task_cancelled &) {
+                    cancelled = true;
+                }
+            }
+            expect_true(cancelled && commits == (afterPosition ? 1 : 0) &&
+                            actor->hasInInventory(item) != afterPosition &&
+                            actor->getCoords() == (afterPosition ? Coords(1, 0, 0) : Coords(0, 0, 0)),
+                        "cancellation must retain preposition items and never restore a committed item or move twice");
+            game->getContext()->shutdown();
+        }
+    }
+    for (int mode : {0, 1, 2}) {
+        auto game = makeWindowlessFightGame();
+        auto actor = std::make_shared<ItemPositionCommitProbe>();
+        actor->setGame(game);
+        actor->setName("unitNormalPositionActor");
+        initialize_test_creature_stats(actor);
+        game->getMap()->addObject(actor);
+        if (mode == 1) {
+            auto tile = std::make_shared<CTile>();
+            tile->setCanStep(true);
+            game->getMap()->addTile(tile, 1, 0, 0);
+        }
+        auto item = add_unit_loot(game, actor, "unitNormalPositionItem");
+        int commits = 0;
+        auto commit =
+            std::make_shared<std::move_only_function<void()>>([actor, item, &commits, settled = false]() mutable {
+                if (!std::exchange(settled, true)) {
+                    ++commits;
+                    actor->removeItem(item);
+                }
+            });
+        pybind11::dict scope;
+        pybind11::exec("class NormalItemFlowProbe:\n    def onUseFlow(self):\n        yield from ()\n"
+                       "callbacks = NormalItemFlowProbe()\n",
+                       scope);
+        auto callbacks = scope["callbacks"];
+        CPythonOverrides::retain(item, callbacks);
+        auto flow = CScriptHandler::createObjectFlow(item, "onUseFlow", {}, game, {}, commit);
+        expect_true(flow != nullptr, "normal-return movement must create its explicit commit flow");
+        auto positionCommit = flow ? flow->commitCallback() : std::move_only_function<void()>{[] {}};
+        if (mode == 2) {
+            actor->beforeReleased = true;
+            actor->afterReleased = true;
+        }
+        auto move = game->getContext()->spawnTask(
+            actor->moveToAsync(mode == 2 ? Coords(0, 0, 0) : Coords(1, 0, 0), std::move(positionCommit)));
+        if (mode == 1) {
+            game->getContext()->advanceTransitionGeneration();
+            actor->beforeReleased = true;
+        }
+        expect_true(pumpHandlerUntil([&] { return move.finished(); }),
+                    "blocked, stale, and same-coordinate movement must settle without waiting forever");
+        if (move.finished()) {
+            move.get();
+        }
+        if (flow) {
+            expect_true(!flow->next(), "the flow must return normally after its position operation");
+        }
+        expect_true(commits == (mode == 2 ? 1 : 0) && actor->hasInInventory(item) != (mode == 2),
+                    "normal-return blocked/stale moves must retain items; same-coordinate success commits once");
+        flow.reset();
+        CPythonOverrides::release(item.get());
+        game->getContext()->shutdown();
+    }
+    {
+        auto game = makeWindowlessFightGame();
+        auto actor = add_test_creature(game, "unitOrdinaryItemFlowActor");
+        auto item = add_unit_loot(game, actor, "unitOrdinaryItemFlow");
+        int commits = 0;
+        auto commit =
+            std::make_shared<std::move_only_function<void()>>([actor, item, &commits, settled = false]() mutable {
+                if (!std::exchange(settled, true)) {
+                    ++commits;
+                    actor->removeItem(item);
+                }
+            });
+        pybind11::dict scope;
+        pybind11::exec("class OrdinaryItemFlowProbe:\n    def onUseFlow(self):\n        yield from ()\n"
+                       "callbacks = OrdinaryItemFlowProbe()\n",
+                       scope);
+        auto callbacks = scope["callbacks"];
+        CPythonOverrides::retain(item, callbacks);
+        auto flow = CScriptHandler::createObjectFlow(item, "onUseFlow", {}, game, {}, commit);
+        expect_true(flow && !flow->next() && commits == 1 && !actor->hasInInventory(item),
+                    "ordinary successful onUseFlow must consume inline before any parent continuation");
+        if (flow) {
+            expect_true(!flow->next(), "reading completed flow state again must remain complete");
+            flow->markItemCommitted();
+        }
+        expect_true(commits == 1, "repeat completion and explicit settlement must not consume an item twice");
+        flow.reset();
+        CPythonOverrides::release(item.get());
+        game->getContext()->shutdown();
+    }
+    auto game = makeWindowlessFightGame();
+    auto actor = add_test_creature(game, "unitFailedPositionCommit");
+    auto tile = std::make_shared<CTile>();
+    tile->setCanStep(true);
+    game->getMap()->addTile(tile, 1, 0, 0);
+    auto failed = game->getContext()->spawnTask(
+        actor->moveToAsync(Coords(1, 0, 0), [] { throw std::runtime_error("position commit notification failure"); }));
+    expect_true(pumpHandlerUntil([&] { return failed.finished(); }),
+                "a failed position callback must settle its move without entering later hooks");
+    bool rejected = false;
+    if (failed.finished()) {
+        try {
+            failed.get();
+        } catch (const std::runtime_error &) {
+            rejected = true;
+        }
+    }
+    expect_true(rejected && actor->getCoords() == Coords(1, 0, 0) && !actor->getPendingMoveOrigin() &&
+                    game->getMap()->getObjectsAtCoords(Coords(1, 0, 0)).contains(actor) &&
+                    !game->getMap()->getObjectsAtCoords(Coords(0, 0, 0)).contains(actor),
+                "position commit failure must preserve the spatial index and clear movement origin state");
+    game->getContext()->shutdown();
+    expect_true(loop->getConditionalTaskCount() == conditions,
+                "item position cancellation must remove all preparation and arrival waits");
+}
+
 void testIndividualQuestCancellationHonorsExplicitRewardCommit() {
     auto loop = vstd::event_loop<>::instance();
     auto game = makeWindowlessFightGame();
@@ -2201,6 +2529,24 @@ callbacks = CompletionFlowProbe()
         expect_true(quest->captures == (committed ? std::vector<bool>{true} : std::vector<bool>{}),
                     "only an explicitly committed cancellation may capture the completed journal");
     }
+    auto unrelatedCommit = std::make_shared<bool>(false);
+    auto isolated = CScriptHandler::createObjectFlow(quest, "onCompleteFlow", {}, game, unrelatedCommit);
+    int wrongItemCommitRejections = 0;
+    if (isolated) {
+        try {
+            isolated->markItemCommitted();
+        } catch (const std::invalid_argument &) {
+            ++wrongItemCommitRejections;
+        }
+        try {
+            (void)isolated->commitCallback();
+        } catch (const std::invalid_argument &) {
+            ++wrongItemCommitRejections;
+        }
+    }
+    expect_true(wrongItemCommitRejections == 2 && !*unrelatedCommit,
+                "neither an item marker nor item movement capability may commit a quest reward");
+    isolated.reset();
     player->checkQuests();
     expect_true(rewards == 1 && quest->captures == std::vector<bool>{true} && callbacks.attr("closed").cast<int>() == 2,
                 "repeated completion checks must neither duplicate committed rewards nor retain cancelled generators");
@@ -3562,6 +3908,10 @@ int main() {
                             testArrivalHooksRejectChangedMapAndGeneration);
     nativeTestProfile().run("testAsyncNamedSpawnsAwaitEntryWithoutPumping",
                             testAsyncNamedSpawnsAwaitEntryWithoutPumping);
+    nativeTestProfile().run("testDisposableItemCommitConsumesBeforeReceiptsAndCancellation",
+                            testDisposableItemCommitConsumesBeforeReceiptsAndCancellation);
+    nativeTestProfile().run("testItemPositionCommitOwnsConsumptionBeforeArrivalCancellation",
+                            testItemPositionCommitOwnsConsumptionBeforeArrivalCancellation);
     nativeTestProfile().run("testIndividualQuestCancellationHonorsExplicitRewardCommit",
                             testIndividualQuestCancellationHonorsExplicitRewardCommit);
     nativeTestProfile().run("testAsyncRemovalAwaitsDestroyHooksAndFinalizesCancellation",

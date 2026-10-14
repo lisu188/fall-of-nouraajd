@@ -29,6 +29,8 @@ ADDITIONAL_CASES = {
         "testAsyncLeaveHooksRejectStaleMovesAndCleanCancellation",
         "testArrivalHooksRejectChangedMapAndGeneration",
         "testAsyncNamedSpawnsAwaitEntryWithoutPumping",
+        "testDisposableItemCommitConsumesBeforeReceiptsAndCancellation",
+        "testItemPositionCommitOwnsConsumptionBeforeArrivalCancellation",
         "testIndividualQuestCancellationHonorsExplicitRewardCommit",
         "testAsyncRemovalAwaitsDestroyHooksAndFinalizesCancellation",
         "testAsyncEventHooksStopAfterContextShutdown",

@@ -175,6 +175,285 @@ class NativeCoroutineCallbackTest(unittest.TestCase):
         self.game.runUiFlowLater(callback)
         return self.awaitPanel("CGameDialogPanel")
 
+    def beginInventoryItemUse(self, item):
+        import test as harness
+
+        self.player.setItems({item})
+        panel = self.game.getGuiHandler().openPanel("inventoryPanel")
+        self.settle()
+        inventory = harness.find_list_view(panel, "inventoryCollection")
+        self.assertIn(item, harness.list_cell_objects(inventory, self.gui, 0, 0))
+        harness.activate_list_cell(inventory, self.gui, 0, 0)
+        buttons = [
+            button
+            for button in harness.find_descendants_by_type(panel, "CButton")
+            if button.getStringProperty("click") == "useSelected"
+        ]
+        self.assertEqual(1, len(buttons))
+        self.assertTrue(buttons[0].getBoolProperty("enabled"))
+        # Dispatch the native button without pumping away the queued-cancellation boundary.
+        harness.activate_widget(buttons[0], self.gui)
+        return panel
+
+    def installPortalReceipt(self, *, before_position):
+        api, ui = self.api, self.ui
+        events = []
+        game_map = self.game.getMap()
+        destination = api.Coords(game_map.getEntryX(), game_map.getEntryY(), game_map.getEntryZ())
+        origin = destination + api.Coords(2, 0, 0)
+        self.player.relocateWithoutMoveHooks(origin)
+
+        class PortalReceiptEvent(api.CEvent):
+            def onLeaveFlow(receipt, event):
+                if before_position:
+                    try:
+                        events.append("before position")
+                        yield ui.uiRequest("gui.showCampaignScreen", "Before portal", "Wait", "Continue")
+                        events.append("left origin")
+                    finally:
+                        events.append("leave closed")
+
+            def onEnterFlow(receipt, event):
+                if not before_position:
+                    try:
+                        events.append("after position")
+                        yield ui.uiRequest("gui.showCampaignScreen", "Portal arrival", "Wait", "Continue")
+                        events.append("arrival returned")
+                    finally:
+                        events.append("arrival closed")
+
+        self.game.getObjectHandler().registerType("PortalReceiptEvent", PortalReceiptEvent)
+        receipt = self.game.createObject("PortalReceiptEvent")
+        receipt.setCoords(origin if before_position else destination)
+        game_map.addObject(receipt)
+        scroll = self.game.createObject("TownPortalScroll")
+        return scroll, origin, destination, events
+
+    def testNativeDisposableHealingIsAbsentFromAPendingReceiptSaveBeforeShutdown(self):
+        import test as harness
+
+        api, ui = self.api, self.ui
+        events = []
+
+        class CommittedHealingPotion(api.CPotion):
+            def onUseFlow(potion, event):
+                try:
+                    event.getCause().heal(5)
+                    events.append("healed")
+                    yield ui.uiRequest("gui.itemCommitted")
+                    yield ui.uiRequest("gui.showCampaignScreen", "Healing receipt", "HP +5", "Continue")
+                    events.append("unexpected receipt resume")
+                finally:
+                    events.append("healing closed")
+
+        self.game.getObjectHandler().registerType("CommittedHealingPotion", CommittedHealingPotion)
+        item = self.game.createObject("CommittedHealingPotion")
+        self.player.setHp(1)
+        self.beginInventoryItemUse(item)
+        self.assertEqual("Healing receipt", self.awaitPanel("CGameCampaignPanel").getTitle())
+        self.assertEqual(["healed"], events)
+        self.assertEqual(6, self.player.getHp())
+        self.assertNotIn(item, self.player.getItems())
+        slot = harness.unique_save_name("native-item-pending-receipt")
+        self.addCleanup(harness.cleanup_save_slot, slot)
+        self.assertTrue(api.CMapLoader.saveWithResult(self.game.getMap(), slot))
+        snapshot = self.game.getResourcesProvider().load(f"save/{slot}.json")
+        self.assertNotIn(item.getName(), json.dumps(json.loads(snapshot)))
+        self.game.getContext().shutdown()
+        self.settle()
+        self.assertEqual(["healed", "healing closed"], events)
+        self.assertEqual(6, self.player.getHp())
+        self.assertNotIn(item, self.player.getItems())
+        self.assertFlowsReleased()
+        restored = self.newGame()
+        api.CGameLoader.loadSavedGame(restored, slot)
+        self.assertEqual(6, restored.getMap().getPlayer().getHp())
+        self.assertEqual(set(), restored.getMap().getPlayer().getItems())
+        self.assertEqual(snapshot, restored.getResourcesProvider().load(f"save/{slot}.json"))
+
+    def testNativeTownPortalConsumesAtPositionBeforeItsArrivalReceiptCanBeCancelled(self):
+        scroll, origin, destination, events = self.installPortalReceipt(before_position=False)
+        self.beginInventoryItemUse(scroll)
+        self.assertEqual("Portal arrival", self.awaitPanel("CGameCampaignPanel").getTitle())
+        self.assertEqual(destination, self.player.getCoords())
+        self.assertNotEqual(origin, self.player.getCoords())
+        self.assertNotIn(scroll, self.player.getItems())
+        self.assertEqual(["after position"], events)
+        snapshot = json.loads(self.native.jsonify(self.game.getMap()))
+        self.assertNotIn(scroll.getName(), json.dumps(snapshot))
+        self.game.getContext().shutdown()
+        self.settle()
+        self.assertEqual(destination, self.player.getCoords())
+        self.assertNotIn(scroll, self.player.getItems())
+        self.assertEqual(["after position", "arrival closed"], events)
+        self.assertFlowsReleased()
+
+    def testNativeTownPortalCancellationDuringLeaveRetainsItsItemAndOriginalPosition(self):
+        scroll, origin, destination, events = self.installPortalReceipt(before_position=True)
+        self.beginInventoryItemUse(scroll)
+        self.assertEqual("Before portal", self.awaitPanel("CGameCampaignPanel").getTitle())
+        self.assertEqual(origin, self.player.getCoords())
+        self.assertIn(scroll, self.player.getItems())
+        self.game.getContext().shutdown()
+        self.settle()
+        self.assertEqual(origin, self.player.getCoords())
+        self.assertNotEqual(destination, self.player.getCoords())
+        self.assertIn(scroll, self.player.getItems())
+        self.assertEqual(["before position", "leave closed"], events)
+        self.assertFlowsReleased()
+
+    def testNativeBlockedTownPortalNormalReturnRetainsItsUncommittedScroll(self):
+        api = self.api
+        game_map = self.game.getMap()
+        destination = api.Coords(game_map.getEntryX(), game_map.getEntryY(), game_map.getEntryZ())
+        origin = destination + api.Coords(1, 0, 0)
+        self.player.relocateWithoutMoveHooks(origin)
+        game_map.replaceTile("MountainTile", destination)
+        self.assertFalse(game_map.canStep(destination))
+        scroll = self.game.createObject("TownPortalScroll")
+        self.beginInventoryItemUse(scroll)
+        self.pumpUntil(
+            lambda: self.flow_refs and all(reference() is None for reference in self.flow_refs),
+            "Blocked portal flow did not finish its normal return",
+        )
+        self.settle()
+        self.assertTrue(self.game.getContext().isActive())
+        self.assertEqual(origin, self.player.getCoords())
+        self.assertIn(scroll, self.player.getItems())
+        self.assertIsNone(self.panel("CGameCampaignPanel"))
+        self.assertFlowsReleased()
+
+    def testNativeStaleTownPortalNormalReturnRetainsItsUncommittedScroll(self):
+        scroll, origin, destination, events = self.installPortalReceipt(before_position=True)
+        self.beginInventoryItemUse(scroll)
+        receipt = self.awaitPanel("CGameCampaignPanel")
+        replacement = origin + self.api.Coords(1, 1, 0)
+        self.player.relocateWithoutMoveHooks(replacement)
+        receipt.clickAction()
+        self.pumpUntil(
+            lambda: self.flow_refs and all(reference() is None for reference in self.flow_refs),
+            "Stale portal flow did not finish its normal return",
+        )
+        self.settle()
+        self.assertTrue(self.game.getContext().isActive())
+        self.assertEqual(replacement, self.player.getCoords())
+        self.assertNotEqual(destination, self.player.getCoords())
+        self.assertIn(scroll, self.player.getItems())
+        self.assertEqual(["before position", "left origin", "leave closed"], events)
+        self.assertFlowsReleased()
+
+    def testNativeQueuedInventoryShutdownRetainsTheUnusedDisposable(self):
+        api = self.api
+        events = []
+
+        class UnstartedDisposable(api.CPotion):
+            def onUseFlow(potion, event):
+                events.append("unexpected use")
+                yield self.ui.uiRequest("gui.itemCommitted")
+
+        self.game.getObjectHandler().registerType("UnstartedDisposable", UnstartedDisposable)
+        item = self.game.createObject("UnstartedDisposable")
+        self.beginInventoryItemUse(item)
+        self.assertEqual([], events)
+        self.game.getContext().shutdown()
+        self.settle()
+        self.assertEqual([], events)
+        self.assertIn(item, self.player.getItems())
+        self.assertTrue(all(reference() is None for reference in self.flow_refs))
+
+    def testNativeSynchronousHealingShutdownConsumesOnceWithoutReusingItsEffect(self):
+        api = self.api
+        events = []
+
+        class ShutdownHealingPotion(api.CPotion):
+            def onUse(potion, event):
+                event.getCause().heal(5)
+                events.append("healed")
+                potion.getGame().getContext().shutdown()
+
+        self.game.getObjectHandler().registerType("ShutdownHealingPotion", ShutdownHealingPotion)
+        item = self.game.createObject("ShutdownHealingPotion")
+        self.player.setHp(1)
+        self.beginInventoryItemUse(item)
+        self.pumpUntil(lambda: not self.game.getContext().isActive(), "Synchronous item use did not shut down")
+        self.settle()
+        self.assertEqual(["healed"], events)
+        self.assertEqual(6, self.player.getHp())
+        self.assertNotIn(item, self.player.getItems())
+        with self.assertRaises(RuntimeError):
+            self.player.useItem(item)
+        self.assertEqual(["healed"], events)
+        self.assertEqual(6, self.player.getHp())
+        self.assertTrue(all(reference() is None for reference in self.flow_refs))
+
+    def testNativeQuestAndItemCommitOpcodesRejectForeignOperationCapabilities(self):
+        api, ui = self.api, self.ui
+        for index, operation in enumerate(("itemCommitted", "itemMoveTo", "questCommitted")):
+            with self.subTest(operation=operation):
+                if index:
+                    self.game = self.newGame(gui=True)
+                    self.gui = self.game.getGui()
+                    self.player = self.game.getMap().getPlayer()
+                errors, events = [], []
+                origin = self.player.getCoords()
+                target = origin + api.Coords(2, 0, 0)
+                arguments = (self.player, target.x, target.y, target.z) if operation == "itemMoveTo" else ()
+
+                def wrongCommitFlow():
+                    try:
+                        try:
+                            yield ui.uiRequest("gui." + operation, *arguments)
+                            events.append("unexpected accepted commit")
+                        except RuntimeError as error:
+                            errors.append(str(error))
+                        yield ui.uiRequest("gui.showCampaignScreen", "Rejected commit", "Wait", "Continue")
+                        events.append("unexpected cancelled resume")
+                    finally:
+                        events.append("flow closed")
+
+                if operation == "questCommitted":
+
+                    class InvalidItemCommit(api.CPotion):
+                        def onUseFlow(item, event):
+                            yield from wrongCommitFlow()
+
+                    self.game.getObjectHandler().registerType("InvalidItemCommit", InvalidItemCommit)
+                    owned = self.game.createObject("InvalidItemCommit")
+                    self.beginInventoryItemUse(owned)
+                    expected = "active quest-completion operation"
+                else:
+
+                    class InvalidQuestCommit(api.CQuest):
+                        def isCompleted(quest):
+                            return True
+
+                        def onCompleteFlow(quest):
+                            yield from wrongCommitFlow()
+
+                    self.game.getObjectHandler().registerType("InvalidQuestCommit", InvalidQuestCommit)
+                    owned = self.game.createObject("InvalidQuestCommit")
+                    self.player.setQuests({owned})
+                    self.player.setCompletedQuests(set())
+                    self.checkQuestsLater()
+                    expected = "active item-use operation"
+                self.assertEqual("Rejected commit", self.awaitPanel("CGameCampaignPanel").getTitle())
+                self.assertEqual([], events)
+                self.assertEqual(1, len(errors))
+                self.assertIn(expected, errors[0])
+                self.assertEqual(
+                    origin, self.player.getCoords(), "A foreign item capability must not move a quest actor"
+                )
+                self.game.getContext().shutdown()
+                self.settle()
+                self.assertEqual(["flow closed"], events)
+                self.assertEqual(origin, self.player.getCoords())
+                if operation == "questCommitted":
+                    self.assertIn(owned, self.player.getItems())
+                else:
+                    self.assertIn(owned, self.player.getQuests())
+                    self.assertNotIn(owned, self.player.getCompletedQuests())
+                self.assertFlowsReleased()
+
     def testNativeFailingTransitionCommitReleasesItsCapturedSecondSessionBeforeAnotherSpawn(self):
         owner = self.newGame()
         source = owner.getMap()

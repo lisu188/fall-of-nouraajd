@@ -136,11 +136,34 @@ class FirstPartyHookFlowTest(unittest.TestCase):
         player.getMap.return_value = SimpleNamespace(getEntryX=lambda: 12, getEntryY=lambda: 8, getEntryZ=lambda: 2)
         flow = scroll.onUseFlow(SimpleNamespace(getCause=lambda: player))
         self.addCleanup(flow.close)
-        self.assertEqual({"operation": "gui.moveTo", "args": (player, 12, 8, 2), "kwargs": {}}, next(flow))
+        self.assertEqual({"operation": "gui.itemMoveTo", "args": (player, 12, 8, 2), "kwargs": {}}, next(flow))
         player.moveTo.assert_not_called()
         with self.assertRaises(StopIteration):
             flow.send(None)
         self.assertTrue(scroll.isDisposable())
+
+    def testTownPortalCancellationBeforePositionDispatchCannotPrecommitItsUse(self):
+        classes, _api = objectClasses()
+        scroll = classes["TownPortalScroll"]()
+        player = Mock()
+        player.getMap.return_value = SimpleNamespace(getEntryX=lambda: 12, getEntryY=lambda: 8, getEntryZ=lambda: 2)
+        flow = scroll.onUseFlow(SimpleNamespace(getCause=lambda: player))
+        request = next(flow)
+        self.assertEqual("gui.itemMoveTo", request["operation"])
+        self.assertEqual((player, 12, 8, 2), request["args"])
+        flow.close()
+        player.moveTo.assert_not_called()
+        with self.assertRaises(StopIteration):
+            next(flow)
+
+    def testTownPortalItemMovementOpcodeKeepsTheSynchronousPythonBoundary(self):
+        player = Mock()
+
+        def flow():
+            yield ui.uiRequest("gui.itemMoveTo", player, 12, 8, 2)
+
+        ui.runUiFlow(None, flow())
+        player.moveTo.assert_called_once_with(12, 8, 2)
 
     def testMultilevelStairsAwaitArrivalBeforeRecordingTheTransition(self):
         from tests.test_narrative_consequences import loadMapClasses

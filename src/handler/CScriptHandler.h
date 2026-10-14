@@ -37,6 +37,9 @@ class CScriptFlow {
     std::optional<json> fail(const std::string &message);
     std::shared_ptr<CGameObject> takeObjectArgument(const std::string &token);
     void markCommitted();
+    void markItemCommitted();
+    // An explicit capability replaces automatic settlement when the flow returns.
+    std::move_only_function<void()> commitCallback() const;
 
   private:
     friend class CScriptHandler;
@@ -83,11 +86,11 @@ class CScriptHandler {
 
     std::unique_ptr<CScriptFlow> createUiFlow(const std::string &entry, std::weak_ptr<CGame> game);
     std::unique_ptr<CScriptFlow> createCallbackFlow(pybind11::function callback, std::weak_ptr<CGame> game);
-    static std::unique_ptr<CScriptFlow> createObjectFlow(const std::shared_ptr<CGameObject> &object,
-                                                         const std::string &method,
-                                                         const std::vector<std::shared_ptr<CGameObject>> &arguments,
-                                                         std::weak_ptr<CGame> game,
-                                                         std::shared_ptr<bool> committed = {});
+    static std::unique_ptr<CScriptFlow>
+    createObjectFlow(const std::shared_ptr<CGameObject> &object, const std::string &method,
+                     const std::vector<std::shared_ptr<CGameObject>> &arguments, std::weak_ptr<CGame> game,
+                     std::shared_ptr<bool> committed = {}, std::shared_ptr<std::move_only_function<void()>> commit = {},
+                     std::shared_ptr<std::move_only_function<void()>> prepareCommit = {});
 
     void execute_script(std::string script, pybind11::object name_space = pybind11::none());
 

@@ -156,9 +156,9 @@ def runUiFlow(game, flow):
                 target = game.getRngHandler().addRandomLoot
             elif operation == "gui.checkQuests":
                 target = lambda player: player.checkQuests()
-            elif operation == "gui.questCommitted":
+            elif operation in {"gui.questCommitted", "gui.itemCommitted"}:
                 target = lambda: None
-            elif operation == "gui.moveTo":
+            elif operation in {"gui.moveTo", "gui.itemMoveTo"}:
                 target = lambda actor, x, y, z: actor.moveTo(x, y, z)
             elif operation == "gui.removeObject":
                 target = lambda game_map, obj: game_map.removeObject(obj)

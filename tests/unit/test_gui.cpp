@@ -2282,8 +2282,8 @@ void testNativeItemClicksAwaitHooksAndReleaseCancelledUseGuards() {
     harness.panel->useSelected(harness.gui);
     expect_true(!queued, "native inventory use must return without pumping unrelated queued work");
     expect_true(pumpGuiUntil([&] { return !textPanels().empty(); }) && item->uses == 1 && textPanels().size() == 1 &&
-                    harness.player->hasInInventory(item),
-                "native inventory use must await its receipt without duplicating use or disposing early");
+                    !harness.player->hasInInventory(item),
+                "native inventory use must consume its committed item before suspending at the receipt");
     for (const auto &panel : textPanels()) {
         panel->close();
     }
@@ -2307,8 +2307,10 @@ void testNativeItemClicksAwaitHooksAndReleaseCancelledUseGuards() {
             cancelled = true;
         }
     }
-    expect_true(cancelled && textPanels().empty() && harness.player->hasInInventory(item),
-                "cancelled item hooks must close their modal and retain an uncommitted disposable item");
+    expect_true(cancelled && textPanels().empty() && !harness.player->hasInInventory(item),
+                "cancelling a committed item receipt must close its modal without restoring the used item");
+    harness.player->addItem(item);
+    harness.panel->inventoryCallback(harness.gui, 0, item);
     harness.panel->useSelected(harness.gui);
     expect_true(pumpGuiUntil([&] { return !textPanels().empty(); }) && item->uses == 3 && textPanels().size() == 1,
                 "cancellation must release the pending-use guard for the next native click");

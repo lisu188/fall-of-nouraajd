@@ -64,6 +64,29 @@ class Player:
 
 
 class SessionDeferredWorkTest(unittest.TestCase):
+    def testCancelledTownPortalFrameReleasesItsPlayerWithoutOwningTheSession(self):
+        from tests.test_first_party_hook_flows import objectClasses
+
+        classes, _api = objectClasses()
+        session = Session()
+
+        class PortalPlayer(Player):
+            def getMap(self):
+                return SimpleNamespace(getEntryX=lambda: 12, getEntryY=lambda: 8, getEntryZ=lambda: 2)
+
+        player = PortalPlayer(session)
+        player_reference, session_reference = weakref.ref(player), weakref.ref(session)
+        flow = classes["TownPortalScroll"]().onUseFlow(SimpleNamespace(getCause=lambda: player))
+        request = next(flow)
+        self.assertEqual("gui.itemMoveTo", request["operation"])
+        del request, player, session
+        gc.collect()
+        self.assertIsNone(session_reference())
+        self.assertIsNotNone(player_reference(), "the pending operation must retain its exact actor")
+        flow.close()
+        gc.collect()
+        self.assertIsNone(player_reference(), "cancelling before movement must release the pending actor")
+
     def artifactModule(self):
         from tests.hook_flow_support import installHookFlows
 

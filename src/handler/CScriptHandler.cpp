@@ -33,6 +33,9 @@ struct CScriptFlow::State {
     pybind11::object flow;
     std::weak_ptr<CGame> game;
     std::shared_ptr<bool> committed;
+    std::shared_ptr<std::move_only_function<void()>> commit;
+    std::shared_ptr<std::move_only_function<void()>> prepareCommit;
+    bool explicitCommit = false;
 };
 
 CScriptFlow::CScriptFlow(std::unique_ptr<State> state) : state(std::move(state)) {}
@@ -59,9 +62,20 @@ std::optional<json> CScriptFlow::next(const json &answer) { return resume(answer
 std::optional<json> CScriptFlow::fail(const std::string &message) { return resume(nullptr, message); }
 
 void CScriptFlow::markCommitted() {
-    if (state->committed) {
-        *state->committed = true;
+    if (!state->committed) {
+        throw std::invalid_argument("A quest commit requires an active quest-completion operation.");
     }
+    *state->committed = true;
+}
+
+void CScriptFlow::markItemCommitted() { commitCallback()(); }
+
+std::move_only_function<void()> CScriptFlow::commitCallback() const {
+    if (!state->commit) {
+        throw std::invalid_argument("An item commit requires an active item-use operation.");
+    }
+    state->explicitCommit = true;
+    return [commit = state->commit] { (*commit)(); };
 }
 
 std::shared_ptr<CGameObject> CScriptFlow::takeObjectArgument(const std::string &token) {
@@ -83,9 +97,16 @@ std::optional<json> CScriptFlow::resume(const json &answer, const std::optional<
         throw std::runtime_error("Cannot resume a UI script after its game has been destroyed.");
     }
     pybind11::gil_scoped_acquire acquire;
+    if (state->prepareCommit) {
+        auto prepare = std::exchange(state->prepareCommit, {});
+        (*prepare)();
+    }
     pybind11::object exception = failure ? pybind11::cast(*failure) : pybind11::none();
     auto result = state->flow.attr("advance")(answer.dump(), exception);
     if (result.is_none()) {
+        if (state->commit && !state->explicitCommit) {
+            (*state->commit)();
+        }
         return std::nullopt;
     }
     return json::parse(result.cast<std::string>());
@@ -123,7 +144,9 @@ std::unique_ptr<CScriptFlow> CScriptHandler::createCallbackFlow(pybind11::functi
 std::unique_ptr<CScriptFlow>
 CScriptHandler::createObjectFlow(const std::shared_ptr<CGameObject> &object, const std::string &method,
                                  const std::vector<std::shared_ptr<CGameObject>> &arguments, std::weak_ptr<CGame> game,
-                                 std::shared_ptr<bool> committed) {
+                                 std::shared_ptr<bool> committed,
+                                 std::shared_ptr<std::move_only_function<void()>> commit,
+                                 std::shared_ptr<std::move_only_function<void()>> prepareCommit) {
     if (!object || !Py_IsInitialized()) {
         return nullptr;
     }
@@ -147,6 +170,8 @@ CScriptHandler::createObjectFlow(const std::shared_ptr<CGameObject> &object, con
         pybind11::cpp_function([override = std::move(override), args = std::move(args)]() { return override(*args); });
     auto flow = owner->getScriptHandler()->createCallbackFlow(std::move(callback), game);
     flow->state->committed = std::move(committed);
+    flow->state->commit = std::move(commit);
+    flow->state->prepareCommit = std::move(prepareCommit);
     return flow;
 }
 
