@@ -249,7 +249,7 @@ class OctobogzMcpWalkthroughTest(unittest.TestCase):
         startup = harness.McpServerTest._start_stdio_mcp_process
 
         def startWithNativeLog(instance, *args, **kwargs):
-            return startup(instance, *args, native_log_file=self.native_log_path, **kwargs)
+            return startup(instance, *args, native_log_file=self.native_log_path, fixture_seed=100, **kwargs)
 
         with patch.object(harness.McpServerTest, "_start_stdio_mcp_process", startWithNativeLog):
             dialogue_mcp.DialogueMcpWalkthroughTest.setUp(self)
