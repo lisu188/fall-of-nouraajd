@@ -24,8 +24,11 @@ class NativeCallgrindToolTest(unittest.TestCase):
         temporary = tempfile.TemporaryDirectory(prefix="native-callgrind-check-", dir=scratch_root)
         self.addCleanup(temporary.cleanup)
         self.root = Path(temporary.name).resolve()
-        self.build_dir = self.root / "cmake-build-relwithdebinfo"
+        self.build_dir = self.root / "cmake-build-gcc15-relwithdebinfo"
         self.build_dir.mkdir()
+        environment = patch.dict(os.environ, {"GAME_BUILD_DIR": str(self.build_dir)})
+        environment.start()
+        self.addCleanup(environment.stop)
         self.binary = self.build_dir / "handler_unit_tests"
         self.binary.write_text("fixture", encoding="utf-8")
         self.runtime_files = [
@@ -332,6 +335,67 @@ class NativeCallgrindToolTest(unittest.TestCase):
         self.assertIn("hashFiles('CMakeLists.txt', 'cmake/**', 'src/**', 'tests/unit/**'", workflow)
         self.assertEqual(2, workflow.count("path: ${{ env.CCACHE_DIR }}"))
         self.assertIn("Save bounded diagnostic compiler cache\n        if: always()", workflow)
+
+    def testDefaultBuildDirectoryUsesSelectedEnvironmentOrGcc15Tree(self):
+        for selected in (None, "build/selected-profile"):
+            with self.subTest(selected=selected), patch.dict(os.environ):
+                if selected is None:
+                    os.environ.pop("GAME_BUILD_DIR", None)
+                else:
+                    os.environ["GAME_BUILD_DIR"] = selected
+                with patch.object(profile, "run", return_value=0) as run_profile:
+                    self.assertEqual(0, profile.main(["--output-dir", "test/native-callgrind/selected"]))
+                self.assertEqual(
+                    Path(selected or "cmake-build-gcc15-relwithdebinfo"), run_profile.call_args.args[0].build_dir
+                )
+        with patch.dict(os.environ, {"GAME_BUILD_DIR": "build/environment-profile"}):
+            with patch.object(profile, "run", return_value=0) as run_profile:
+                self.assertEqual(
+                    0,
+                    profile.main(
+                        ["--build-dir", "build/explicit-profile", "--output-dir", "test/native-callgrind/selected"]
+                    ),
+                )
+            self.assertEqual(Path("build/explicit-profile"), run_profile.call_args.args[0].build_dir)
+
+    def testMetadataFallbackUsesSelectedCompilerWithoutDefaultCxxFallback(self):
+        for selected in (None, "/tools/selected-g++"):
+            with self.subTest(selected=selected), patch.dict(os.environ):
+                if selected is None:
+                    os.environ.pop("CXX", None)
+                else:
+                    os.environ["CXX"] = selected
+                with patch.object(profile, "commandInfo", return_value={}) as command_info:
+                    with patch.object(profile, "parentInfo", return_value={}):
+                        profile.buildMetadata(self.root, self.build_dir, self.tools)
+                self.assertIn(
+                    ([selected or "g++-15", "--version"], self.root),
+                    [call.args for call in command_info.call_args_list],
+                )
+
+    def testWorkflowUsesMandatoryDesktopToolchainAndCompilerSeparatedPaths(self):
+        workflow = (ROOT / ".github/workflows/profile-native.yml").read_text(encoding="utf-8")
+        for required in (
+            "runs-on: ubuntu-26.04",
+            "CC: gcc-15",
+            "CXX: g++-15",
+            "GAME_CONFIGURE_BUILD_PREFIX: cmake-build-gcc15",
+            "GAME_BUILD_DIR: cmake-build-gcc15-relwithdebinfo",
+            "GAME_BUILD_CONFIG: RelWithDebInfo",
+            "python3 -m pip install --upgrade cmake==4.3.1",
+            "build-essential gcc-15 g++-15 ninja-build",
+            'compiler_id="$("${CXX}" -dumpmachine)-$("${CXX}" -dumpfullversion -dumpversion)"',
+            "native-profile-ccache-cxx26-relwithdebinfo-${compiler_id}-",
+            "cmake --build cmake-build-gcc15-relwithdebinfo --target _game",
+        ):
+            with self.subTest(required=required):
+                self.assertIn(required, workflow)
+        self.assertEqual(2, workflow.count("--build-dir cmake-build-gcc15-relwithdebinfo"))
+        self.assertEqual(4, workflow.count("${{ steps.ccache.outputs.prefix }}"))
+        self.assertNotIn("${{ runner.os }}-native-profile-ccache-v1-", workflow)
+        self.assertNotIn("--build-dir cmake-build-relwithdebinfo", workflow)
+        self.assertNotIn("build-essential cmake", workflow)
+        self.assertLess(workflow.index("cmake==4.3.1"), workflow.index("./configure.sh"))
 
 
 if __name__ == "__main__":
