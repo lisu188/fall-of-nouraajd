@@ -27836,8 +27836,8 @@ class McpServerTest(unittest.TestCase):
             self._write_mcp_walkthrough_log(map_name, log)
         return success, log
 
-    def _start_stdio_mcp_process(self, map_name=None, *, trace_name=None, native_log_file=None):
-        script = REPO_ROOT / "mcp.py"
+    def _start_stdio_mcp_process(self, map_name=None, *, trace_name=None, native_log_file=None, fixture_seed=None):
+        script = REPO_ROOT / "mcp.py" if fixture_seed is None else REPO_ROOT / "tests" / "mcp_seed_fixture.py"
         self.assertTrue(script.exists(), "MCP entry point is missing")
         trace_path = None
         env = None
@@ -27859,6 +27859,8 @@ class McpServerTest(unittest.TestCase):
             "--native-log-sink",
             "file" if native_log_file is not None else "disabled",
         ]
+        if fixture_seed is not None:
+            command.extend(["--fixture-seed", str(fixture_seed)])
         if native_log_file is not None:
             native_log_file = Path(native_log_file)
             native_log_file.parent.mkdir(parents=True, exist_ok=True)
