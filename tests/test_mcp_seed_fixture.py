@@ -16,14 +16,17 @@ ROOT = Path(__file__).resolve().parents[1]
 
 
 class McpSeedFixtureTest(unittest.TestCase):
-    def fixtureModule(self, *, seed_hook=True, owner_thread=True, seed_error=None, import_error=None):
+    def fixtureModule(
+        self, *, seed_hook=True, owner_thread=True, seed_error=None, import_error=None, legacy_import=False
+    ):
         events = []
-        native = SimpleNamespace(
-            event_loop=SimpleNamespace(instance=lambda: SimpleNamespace(isMainThread=lambda: owner_thread))
-        )
+        loop = SimpleNamespace() if legacy_import else SimpleNamespace(isMainThread=lambda: owner_thread)
+        native = SimpleNamespace(event_loop=SimpleNamespace(instance=lambda: loop))
         if seed_hook is True:
 
             def seed(seed_value):
+                if not owner_thread:
+                    raise RuntimeError("The private seed hook requires the engine owner thread")
                 events.append(("seed", seed_value))
                 if seed_error is not None:
                     raise seed_error
@@ -39,12 +42,17 @@ class McpSeedFixtureTest(unittest.TestCase):
                     raise import_error
                 self._game_module = native
 
+        if legacy_import:
+            Server.import_modules = Server._importModules
+            del Server._importModules
+
         def main():
             events.append(("argv", sys.argv.copy()))
             server = Server()
-            server._importModules()
+            import_modules = getattr(server, "_importModules", None) or server.import_modules
+            import_modules()
             events.append("loadGame")
-            server._importModules()
+            import_modules()
             events.append("loadSavedGame")
             print('{"jsonrpc":"2.0","id":1,"result":{}}')
             print("native diagnostics", file=sys.stderr)
@@ -65,6 +73,21 @@ class McpSeedFixtureTest(unittest.TestCase):
         self.assertIs(original_argv, sys.argv)
         self.assertEqual('{"jsonrpc":"2.0","id":1,"result":{}}\n', stdout.getvalue())
         self.assertEqual('MCP fixture random seed {"seed": 100}\nnative diagnostics\n', stderr.getvalue())
+
+    def testLegacySynchronousBootstrapSeedsOnceWithoutAddingPublicBindings(self):
+        module, events = self.fixtureModule(legacy_import=True)
+        original_import = module.EngineMcpServer.import_modules
+        with redirect_stdout(io.StringIO()), redirect_stderr(io.StringIO()):
+            mcp_seed_fixture.runSeededMcp(100, [], mcp_module=module)
+        self.assertEqual(["import", ("seed", 100), "loadGame", "import", "loadSavedGame"], events[1:])
+        self.assertIs(original_import, module.EngineMcpServer.import_modules)
+        self.assertFalse(hasattr(module.EngineMcpServer, "_importModules"))
+
+    def testLegacyBootstrapPropagatesPrivateOwnerGuardBeforeLoading(self):
+        module, events = self.fixtureModule(legacy_import=True, owner_thread=False)
+        with self.assertRaisesRegex(RuntimeError, "engine owner thread"):
+            mcp_seed_fixture.runSeededMcp(100, [], mcp_module=module)
+        self.assertEqual(["import"], events[1:])
 
     def testForwardsNormalMcpArgumentsWithoutChangingPathsOrValues(self):
         module, events = self.fixtureModule()
