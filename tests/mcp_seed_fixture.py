@@ -28,7 +28,8 @@ def runSeededMcp(seed, arguments, *, mcp_module=None):
     if mcp_module is None:
         mcp_module = importlib.import_module("mcp")
     server_type = mcp_module.EngineMcpServer
-    import_modules = server_type._importModules
+    import_method = "_importModules" if hasattr(server_type, "_importModules") else "import_modules"
+    import_modules = getattr(server_type, import_method)
     seeded = False
 
     def importSeededModules(server):
@@ -41,13 +42,14 @@ def runSeededMcp(seed, arguments, *, mcp_module=None):
         if not callable(seed_random):
             raise RuntimeError("The compiled _game module lacks _seedRandomForTests; rebuild the current test binary")
         loop = native.event_loop.instance()
-        if not loop.isMainThread():
+        is_main_thread = getattr(loop, "isMainThread", None)
+        if callable(is_main_thread) and not is_main_thread():
             raise RuntimeError("The MCP fixture must seed on the engine owner thread before loading a game")
         seed_random(seed)
         seeded = True
         print("MCP fixture random seed " + json.dumps({"seed": seed}), file=sys.stderr, flush=True)
 
-    with patch.object(server_type, "_importModules", importSeededModules):
+    with patch.object(server_type, import_method, importSeededModules):
         with patch.object(sys, "argv", [str(ROOT / "mcp.py"), *arguments]):
             return mcp_module.main()
 
