@@ -126,6 +126,34 @@ class McpSeedFixtureTest(unittest.TestCase):
             mcp_seed_fixture.runSeededMcp(100, [], mcp_module=module)
         self.assertEqual(["import"], events[1:])
 
+    def testLateSessionSeedRejectionFailsBeforeLoadingOrPublishingAReceipt(self):
+        failure = RuntimeError("Test random seeding must run once before the first game session is created.")
+        module, events = self.fixtureModule(seed_error=failure)
+        stderr = io.StringIO()
+        with redirect_stderr(stderr), self.assertRaises(RuntimeError) as caught:
+            mcp_seed_fixture.runSeededMcp(100, [], mcp_module=module)
+        self.assertIs(failure, caught.exception)
+        self.assertNotIn("loadGame", events)
+        self.assertNotIn("loadSavedGame", events)
+        self.assertEqual("", stderr.getvalue())
+
+    def testNativeFixtureNamesStayBehindTheExistingPrivateStartupHook(self):
+        bridge = (ROOT / "src/core/CRuntimeBridge.cpp").read_text(encoding="utf-8")
+        method = bridge.split("void CRuntimeBridge::seedRandomForTests", 1)[1].split("\nvoid ", 1)[0]
+        self.assertLess(method.index("isMainThread"), method.index("seedGeneratedNamesForTests"))
+        self.assertLess(method.index("seedGeneratedNamesForTests"), method.index("vstd::rng().seed"))
+        self.assertLess(method.index("seedGeneratedNamesForTests"), method.index("std::srand"))
+        header = (ROOT / "src/core/CSerialization.h").read_text(encoding="utf-8")
+        private = header.split("class CSerialization {", 1)[1].rsplit("  private:", 1)[1]
+        self.assertIn("static void seedGeneratedNamesForTests", private)
+        self.assertIn("friend class CRuntimeBridge", private)
+        game = (ROOT / "src/core/CGame.cpp").read_text(encoding="utf-8")
+        self.assertIn("CGame::CGame() { CSerialization::markGameSessionStarted(); }", game)
+        for filename in ("mcp.py", "src/core/CModule.cpp"):
+            source = (ROOT / filename).read_text(encoding="utf-8")
+            self.assertNotIn("seedGeneratedNamesForTests", source)
+            self.assertNotIn("NameFixtureScopeForTests", source)
+
     def testImportAndSeedExceptionsPropagateWithoutLoadingOrFallback(self):
         for failure_stage in ("import_error", "seed_error"):
             with self.subTest(failure_stage=failure_stage):
