@@ -2603,6 +2603,7 @@ void test_serialization_collection_and_error_helpers() {
         CSerializerFunction<std::shared_ptr<json>, std::set<std::shared_ptr<CGameObject>>>::deserialize(game,
                                                                                                         invalid_array);
     expect_true(non_strict_skipped.empty(), "non-strict array deserialization should skip malformed entries");
+    std::cout << "[core-test] collection helpers: lenient array complete" << std::endl;
 
     expect_runtime_error(
         [&]() {
@@ -2611,6 +2612,7 @@ void test_serialization_collection_and_error_helpers() {
                 game, invalid_array, strict);
         },
         "strict array deserialization should reject malformed entries");
+    std::cout << "[core-test] collection helpers: strict array complete" << std::endl;
 
     auto invalid_map = std::make_shared<json>(json::object());
     (*invalid_map)["bad"] = 1;
@@ -2622,6 +2624,7 @@ void test_serialization_collection_and_error_helpers() {
                                                                                                   strict);
         },
         "strict map deserialization should reject malformed entries");
+    std::cout << "[core-test] collection helpers: strict map complete" << std::endl;
 }
 
 // EPIC_01/STORY_02/SUBSTORY_01: pre-migration characterization baseline.
@@ -3776,6 +3779,11 @@ void test_generate_name_collision_retry() {
 
 int main() {
     pybind11::scoped_interpreter guard{};
+    const auto runDiagnosedCase = [](const char *name, void (*test)()) {
+        std::cout << "[core-test] ENTER " << name << std::endl;
+        test();
+        std::cout << "[core-test] EXIT " << name << std::endl;
+    };
 
     test_string_deserialization_preserves_empty_and_whitespace();
     test_string_deserialization_coerces_non_string_targets();
@@ -3836,14 +3844,17 @@ int main() {
     test_script_rejects_executable_expressions();
     test_save_format_codec_validation();
     test_save_format_bounds_crafted_documents();
-    testSerializationScopeRestoration();
-    testSerializerBaseDestruction();
-    testTypedJsonCodecsOwnResultsAndPreserveErrors();
-    testConsoleHistoryCodecPreservesOrderedGuiSnapshots();
-    test_serialization_collection_and_error_helpers();
-    test_generate_name_collision_retry();
-    test_creature_effective_stats_baseline_capture();
-    test_creature_effective_actions_baseline_capture();
+    runDiagnosedCase("testSerializationScopeRestoration", testSerializationScopeRestoration);
+    runDiagnosedCase("testSerializerBaseDestruction", testSerializerBaseDestruction);
+    runDiagnosedCase("testTypedJsonCodecsOwnResultsAndPreserveErrors", testTypedJsonCodecsOwnResultsAndPreserveErrors);
+    runDiagnosedCase("testConsoleHistoryCodecPreservesOrderedGuiSnapshots",
+                     testConsoleHistoryCodecPreservesOrderedGuiSnapshots);
+    runDiagnosedCase("test_serialization_collection_and_error_helpers",
+                     test_serialization_collection_and_error_helpers);
+    runDiagnosedCase("test_generate_name_collision_retry", test_generate_name_collision_retry);
+    runDiagnosedCase("test_creature_effective_stats_baseline_capture", test_creature_effective_stats_baseline_capture);
+    runDiagnosedCase("test_creature_effective_actions_baseline_capture",
+                     test_creature_effective_actions_baseline_capture);
     test_interaction_self_target_property_round_trip();
     test_creature_race_metadata_round_trip();
     test_creature_class_metadata_round_trip();
