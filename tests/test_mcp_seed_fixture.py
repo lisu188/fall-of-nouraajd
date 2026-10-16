@@ -196,7 +196,11 @@ class McpSeedFixtureTest(unittest.TestCase):
             with redirect_stderr(io.StringIO()), self.assertRaises(SystemExit) as caught:
                 mcp.parse_args()
         self.assertEqual(2, caught.exception.code)
-        self.assertNotIn("_seedRandomForTests", (ROOT / "mcp.py").read_text(encoding="utf-8"))
+        self.assertIsNone(options.test_seed)
+        self.assertNotIn("_seedRandomForTests", mcp.MCP_ALLOWED_EXPORTS)
+        self.assertTrue(
+            all("_seedRandomForTests" not in methods for methods in mcp.MCP_ALLOWED_HANDLE_METHODS.values())
+        )
 
     def testRunnerOnlySelectsTheTestLauncherForAnExplicitFixtureSeed(self):
         tree = ast.parse((ROOT / "test.py").read_text(encoding="utf-8"))
@@ -247,7 +251,11 @@ class McpSeedFixtureTest(unittest.TestCase):
         starts = []
         tail_values = iter(tails)
         last_tail = tails[-1]
-        process = SimpleNamespace(pid=12345, poll=lambda: poll_result)
+        process = SimpleNamespace(
+            pid=12345,
+            poll=lambda: poll_result,
+            _playtest_trace_path=ROOT / "test" / "seed-startup-fixture.jsonl",
+        )
 
         class Harness:
             def _start_stdio_mcp_process(self, *args, **kwargs):
@@ -262,6 +270,7 @@ class McpSeedFixtureTest(unittest.TestCase):
         def setUp(case):
             case.harness = Harness()
             case.process = case.harness._start_stdio_mcp_process()
+            case.session = {"proc": case.process}
 
         harness = SimpleNamespace(TEST_OUTPUT_DIR=ROOT / "test", McpServerTest=Harness)
         output = io.StringIO()
@@ -274,6 +283,8 @@ class McpSeedFixtureTest(unittest.TestCase):
         ):
             case = walkthrough.OctobogzMcpWalkthroughTest("runTest")
             case.setUp()
+        self.assertIs(process, case._native_combat_validator.session["proc"])
+        self.assertEqual(process._playtest_trace_path, case._native_combat_validator.trace_path)
         return starts, output.getvalue(), sleep.call_count
 
     def testWalkthroughStartupPublishesTheObservedReceiptAndWaitsForItsCompleteLine(self):

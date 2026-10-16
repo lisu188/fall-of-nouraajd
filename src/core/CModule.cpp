@@ -20,6 +20,7 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #include <atomic>
 #include <cctype>
 #include <cstdlib>
+#include <cstdint>
 #include <optional>
 #include <stdexcept>
 #include <unordered_map>
@@ -835,6 +836,9 @@ void init_game_module(py::module_ &m) {
         .def("showLoading", &CGuiHandler::showLoading)
         .def("hideLoading", &CGuiHandler::hideLoading)
         .def("showTrade", &CGuiHandler::showTrade, "Open a trade panel.")
+        .def("getRequestedTradeMarket", &CGuiHandler::getRequestedTradeMarket,
+             "Return the last actual traced headless trade request in the active map and transition generation; "
+             "return None after observing disabled tracing or an invalidated session.")
         .def("showDialog", &CGuiHandler::showDialog, "Open a dialog panel.")
         .def("showQuestion", &CGuiHandler::showQuestion, "Open a question/choice panel.")
         .def("showSelection", &CGuiHandler::showSelection, "Open a selection panel.")
@@ -1579,11 +1583,14 @@ void init_game_module(py::module_ &m) {
             "Return resolved list grid size as (columns, rows).");
     PY_WRAP_GENERIC_DOC(randint, "randint(lower, upper) -> int: Return a uniform integer with both bounds inclusive. "
                                  "Reversed bounds are normalized.");
-    m.def("_seedRandomForTests", [](std::uint32_t seed) {
-        CRuntimeBridge::seedRandomForTests(seed);
-        vstd::rng().seed(seed);
-        std::srand(seed);
-    });
+    m.def(
+        "_seedRandomForTests",
+        [](std::uint32_t seed) {
+            CRuntimeBridge::seedRandomForTests(seed);
+            // This module has a hidden RNG instance outside game_core on Linux.
+            vstd::rng().seed(seed);
+        },
+        py::arg("seed"));
     m.def("jsonify", &jsonify_py, "jsonify(obj) -> str: Serialize a game object to JSON text.");
     PY_WRAP_GENERIC_DOC(logger, "logger(message) -> None: Write an info log message to the engine logger.");
     m.def("set_logger_sink", set_logger_sink_py, py::arg("sink_name"), py::arg("path") = py::none(),
