@@ -1014,8 +1014,6 @@ class OctobogzHuntTest(unittest.TestCase):
         self.assertIn('self.walkTo("gooby1", allow_removed=True)', route)
         self.assertIn('self.assertGreater(after["exp"], before["exp"]', route)
         self.assertIn('self.assertIn("mainQuest", self.questNames("getCompletedQuests"))', route)
-        self.assertIn('self.call(self.player, "getHp") == self.call(self.player, "getHpMax")', route)
-        self.assertIn('self.call(self.player, "getManaMax")', route)
         called_methods = {
             node.args[1].value
             for node in ast.walk(ast.parse(route))
@@ -1025,6 +1023,7 @@ class OctobogzHuntTest(unittest.TestCase):
             and len(node.args) >= 2
             and isinstance(node.args[1], ast.Constant)
         }
+        self.assertTrue({"getHp", "getHpMax", "getMana", "getManaMax"} <= called_methods)
         self.assertEqual(
             set(),
             called_methods
@@ -1725,6 +1724,235 @@ class OctobogzHuntTest(unittest.TestCase):
         self.assertIn('"MCP hunt actual earned healing stock"', source)
         objects, _ = __import__("tests.narrative_walkthrough", fromlist=["authoredRegion"]).authoredRegion("nouraajd")
         self.assertEqual((108, 110, 0), objects["townPortalScroll"])
+
+    def originalMainQuestTurnFixture(self, *, failure=None):
+        from tests.test_gameplay_route_dialogs import authoredFunction
+
+        state = {"turn": 0, "gooby": True, "completed": [], "gold": 0, "alive": True, "defeat": "", "claimed": False}
+        events = []
+        state["reward_records"] = []
+        player_ref = {
+            "id": "Inquisitor",
+            "name": "original-main-quest-player",
+            "typeId": "Inquisitor",
+            "type": "CPlayer",
+            "isPlayer": True,
+        }
+        player, world = ({"__handle__": name} for name in ("player", "map"))
+
+        def addGold(amount):
+            before = state["gold"]
+            state["gold"] += amount
+            state["reward_records"].append(
+                {
+                    "event": "gold_changed",
+                    "map": "nouraajd",
+                    "actor": player_ref,
+                    "before": before,
+                    "after": state["gold"],
+                    "delta": amount,
+                }
+            )
+
+        native_player = types.SimpleNamespace(
+            addGold=addGold,
+            getGold=lambda: state["gold"],
+            getItems=lambda: [],
+            getEquipped=lambda: {},
+            getNumericProperty=lambda name: 0,
+        )
+        native_world = types.SimpleNamespace(getPlayer=lambda: native_player)
+        native_game = types.SimpleNamespace(
+            getMap=lambda: native_world, getGuiHandler=lambda: types.SimpleNamespace(notify=Mock())
+        )
+        quest_system = types.SimpleNamespace(
+            get_state=lambda name: "active" if state["gooby"] else "gooby_slain",
+            mark_gooby_slain=lambda: state.update(gooby=False),
+        )
+        source = "res/maps/nouraajd/script.py"
+        owner = types.SimpleNamespace(getGame=lambda: native_game)
+        completed = authoredFunction(
+            source, "isCompleted", class_id="MainQuest", _quest_system_from=lambda obj: quest_system
+        )
+
+        def claimOnce(game_map, key):
+            self.assertEqual("GOOBY_REWARD_CLAIMED", key)
+            if state["claimed"]:
+                return False
+            state["claimed"] = True
+            return True
+
+        def showReader(game_instance, title, body):
+            self.assertIs(native_game, game_instance)
+            state["reward_records"].append(
+                {
+                    "event": "reader_requested",
+                    "map": "nouraajd",
+                    "player": player_ref,
+                    "title": title,
+                    "body": body,
+                    "headless": True,
+                    "titleLength": len(title.encode("utf-8")),
+                    "bodyLength": len(body.encode("utf-8")),
+                }
+            )
+
+        snapshot = authoredFunction("res/game.py", "rewardSnapshot")
+        receipt = authoredFunction("res/game.py", "showRewardReceipt", rewardSnapshot=snapshot, showReader=showReader)
+        reward = authoredFunction(
+            source,
+            "onComplete",
+            class_id="MainQuest",
+            claim_once=claimOnce,
+            MAIN_QUEST_GOLD_REWARD=200,
+            rewardSnapshot=snapshot,
+            showRewardReceipt=receipt,
+        )
+        gooby = authoredFunction(
+            source, "trigger", class_id="GoobyTrigger", _quest_system_from=lambda obj: quest_system
+        )
+
+        def nativeMove():
+            evaluation = not state["gooby"]
+            events.append(("onTurn", state["turn"], state["gooby"]))
+            if completed(owner) and "mainQuest" not in state["completed"] and failure != "missingQuest":
+                from tests.gameplay_branch_rewards import observeMainQuestReward
+
+                state["reward_records"].append(
+                    {"event": "quest_completed", "map": "nouraajd", "player": player_ref, "quest": "mainQuest"}
+                )
+                reward(owner)
+                observeMainQuestReward(state["reward_validator"], state["reward_records"])
+                state["completed"].append("mainQuest")
+            if state["gooby"]:
+                events.append(("controllerGoobyDefeat", state["turn"]))
+                gooby(owner, None, None)
+            if not (evaluation and failure == "stalledTurn"):
+                state["turn"] += 1
+            if evaluation and failure == "defeat":
+                state.update(alive=False, defeat="actual defeat")
+            if evaluation and failure == "respawn":
+                state["defeat"] = "actual defeat and respawn"
+
+        def call(handle, method, *args):
+            if method == "getTurn":
+                return state["turn"]
+            if method == "move":
+                self.assertEqual(world, handle)
+                nativeMove()
+                return
+            if method == "getBoolProperty":
+                self.assertEqual(("completed_gooby",), args)
+                return not state["gooby"]
+            if method == "getGold":
+                return state["gold"]
+            if method == "getName":
+                return player_ref["name"]
+            if method == "isAlive":
+                return state["alive"]
+            if method == "getHp":
+                return 20 if state["alive"] else 0
+            if method == "getStringProperty":
+                self.assertEqual(("uiDefeatReceipt",), args)
+                return state["defeat"]
+            raise AssertionError((handle, method, args))
+
+        return state, events, player, world, call, gooby, owner
+
+    def testMainQuestCompletionUsesOneRealNextTurnAfterControllerCombatAndNoExtraTurnAfterDirectCombat(self):
+        from tests.test_octobogz_mcp import OctobogzMcpWalkthroughTest
+
+        native = (ROOT / "src/core/CMap.cpp").read_text(encoding="utf-8")
+        native_move = native.split("void CMap::move()", 1)[1].split("void CMap::", 1)[0]
+        self.assertLess(native_move.index("CGameEvent::CType::onTurn"), native_move.index("creature->moveTo(target)"))
+        self.assertIn("_player->checkQuests();", native.split("void CMap::registerPlayerTriggers()", 1)[1])
+        for controller_combat in (True, False):
+            with self.subTest(controller_combat=controller_combat):
+                state, events, player, world, call, gooby, owner = self.originalMainQuestTurnFixture()
+                walker = OctobogzMcpWalkthroughTest("runTest")
+                walker.player, walker.game_map, walker.call = player, world, call
+                walker._native_combat_validator = state["reward_validator"] = types.SimpleNamespace(
+                    test=walker, trace_path=None, _combat_failure=None
+                )
+                walker.pump, walker.snapshot, walker.recoverOnRoadPair = Mock(), Mock(), Mock()
+                walker.questNames = lambda method: list(state["completed"])
+
+                def walk(name, *, allow_removed=False):
+                    self.assertEqual(("gooby1", True), (name, allow_removed))
+                    if not state["gooby"]:
+                        return
+                    if not controller_combat:
+                        gooby(owner, None, None)
+                    call(world, "move")
+
+                walker.walkTo = walk
+                walker.finishOriginalMainQuest()
+                self.assertEqual(2 if controller_combat else 1, state["turn"])
+                self.assertEqual(200, state["gold"])
+                self.assertEqual(["mainQuest"], state["completed"])
+                walker.finishOriginalMainQuest()
+                self.assertEqual(200, state["gold"], "The actual claim-first reward cannot repeat")
+                self.assertEqual(2 if controller_combat else 1, state["turn"])
+                if controller_combat:
+                    self.assertEqual(("onTurn", 0, True), events[0])
+                    self.assertEqual(("controllerGoobyDefeat", 0), events[1])
+                    self.assertEqual(("onTurn", 1, False), events[2])
+
+    def testMainQuestSingleEvaluationTurnRejectsStallDefeatRespawnOrUncompletedQuest(self):
+        from tests.test_octobogz_mcp import OctobogzMcpWalkthroughTest
+
+        for failure in ("stalledTurn", "defeat", "respawn", "missingQuest"):
+            with self.subTest(failure=failure):
+                state, _events, player, world, call, _gooby, _owner = self.originalMainQuestTurnFixture(failure=failure)
+                walker = OctobogzMcpWalkthroughTest("runTest")
+                walker.player, walker.game_map, walker.call = player, world, call
+                walker._native_combat_validator = state["reward_validator"] = types.SimpleNamespace(
+                    test=walker, trace_path=None, _combat_failure=None
+                )
+                walker.pump, walker.snapshot, walker.recoverOnRoadPair = Mock(), Mock(), Mock()
+                walker.questNames = lambda method: list(state["completed"])
+                walker.walkTo = lambda *args, **kwargs: call(world, "move")
+                with self.assertRaises(AssertionError):
+                    walker.finishOriginalMainQuest()
+                self.assertLessEqual(state["turn"], 2, "The helper may not retry another quest-evaluation turn")
+
+    def testMainQuestAdapterEvaluationUsesActualDriverTickAndItsUnchangedTurnBudget(self):
+        from tests.gameplay_branch_driver import GameplayBranchDriver
+        from tests.gameplay_branch_types import RouteCase
+        from tests.test_octobogz_mcp import OctobogzMcpWalkthroughTest
+
+        for starting_turns in (0, 19999):
+            with self.subTest(starting_turns=starting_turns):
+                state, _events, player, world, call, _gooby, _owner = self.originalMainQuestTurnFixture()
+                case = RouteCase("quest-order", "unit", ("nouraajd",), ("unit.branch",), lambda d: None)
+                driver = GameplayBranchDriver(self, Mock(), {"proc": object()}, case, "Inquisitor", ROOT)
+                driver.game, driver.game_map, driver.player, driver.map_name = "game", world, player, "nouraajd"
+                driver.call, driver.pump, driver.recover = call, Mock(), Mock()
+                state["reward_validator"] = driver
+                driver.snapshot = Mock(return_value={})
+                driver.coords, driver._validateMovement = lambda handle=None: (100, 100, 0), Mock()
+                driver.turns = starting_turns
+                driver.object = lambda name, required=False: {"__handle__": "gooby"} if state["gooby"] else None
+                driver.navigateTo = lambda name: driver.tick()
+                with (
+                    patch.object(OctobogzMcpWalkthroughTest, "snapshot", return_value={}),
+                    patch.object(OctobogzMcpWalkthroughTest, "recoverOnRoadPair"),
+                    patch.object(
+                        OctobogzMcpWalkthroughTest, "questNames", side_effect=lambda method: list(state["completed"])
+                    ),
+                ):
+                    if starting_turns:
+                        with self.assertRaisesRegex(AssertionError, "Route turn budget exhausted"):
+                            driver.hunt("finishOriginalMainQuest")
+                        self.assertEqual(20000, driver.turns)
+                        self.assertEqual(1, state["turn"])
+                        self.assertEqual(0, state["gold"])
+                    else:
+                        driver.hunt("finishOriginalMainQuest")
+                        self.assertEqual(2, driver.turns)
+                        self.assertEqual(2, state["turn"])
+                        self.assertEqual(200, state["gold"])
+                        self.assertEqual(["mainQuest"], state["completed"])
 
     def runtimeDiagnosticFixture(self, shared_runner):
         from tests import test_python_callback_lifecycle as lifecycle
@@ -2482,16 +2710,27 @@ class OctobogzHuntTest(unittest.TestCase):
         route = ast.get_source_segment(
             source, methods["testWarriorAndSorcererFinishThreeRealEncountersWithPartialReloadAndRewardOnce"]
         )
+        self.assertLess(route.index("self.prepareThroughCatacombs()"), route.index("self.prepareSorcererForHunt()"))
+        self.assertLess(route.index("self.prepareSorcererForHunt()"), route.index('self.walkTo("ambientOctobogzNet")'))
+        self.assertLess(route.index("self.prepareSorcererForHunt()"), route.index("self.enterHunt()"))
+        self.assertIn('if player_class == "Sorcerer":\n                    self.prepareSorcererForHunt()', route)
+        preparation = methods["prepareSorcererForHunt"]
+        self.assertEqual(
+            ["prepareVictorHealingStock", "prepareHealingStockAtAuthoredMarket"],
+            [statement.value.func.attr for statement in preparation.body],
+        )
+        victor = ast.get_source_segment(source, methods["prepareVictorHealingStock"])
+        self.assertLess(victor.index("self.finishOriginalMainQuest()"), victor.index('self.walkTo("nouraajdTavern")'))
+        self.assertLess(victor.index('self.walkTo("nouraajdTavern")'), victor.index('self.walkTo("nouraajdTownHall")'))
         self.assertLess(
-            route.index("self.prepareThroughCatacombs()"), route.index("self.prepareHealingStockAtAuthoredMarket()")
+            victor.index('self.walkTo("nouraajdTownHall")'),
+            victor.index("self.purchaseVictorLifePotionWithEarnedWard()"),
         )
         self.assertLess(
-            route.index("self.prepareHealingStockAtAuthoredMarket()"), route.index('self.walkTo("ambientOctobogzNet")')
+            route.index("self.useOrdinaryCombatController(player_class)"), route.index("self.prepareSorcererForHunt()")
         )
-        self.assertLess(route.index("self.prepareHealingStockAtAuthoredMarket()"), route.index("self.enterHunt()"))
-        self.assertIn(
-            'if player_class == "Sorcerer":\n                    self.prepareHealingStockAtAuthoredMarket()', route
-        )
+        self.assertIn("range(75)", victor)
+        self.assertIn("range(512)", ast.get_source_segment(source, methods["walkRoute"]))
 
     def authoredBrewingFixture(self, lessers=6, beers=4, strong_count=5, corruption=None):
         walker, handles, inventory, stock, sales, gold = self.authoredMarketFixture(corruption)
@@ -3696,6 +3935,155 @@ class OctobogzHuntTest(unittest.TestCase):
                 self.assertRaises(unittest.SkipTest),
             ):
                 walker.requireDecisionReplayExecutable()
+
+    def earnedBroodWeaponFixture(self, corruption=None, *, has_sword=True):
+        from tests.test_octobogz_mcp import OctobogzMcpWalkthroughTest
+
+        walker = OctobogzMcpWalkthroughTest("runTest")
+        walker.player, walker.game_map = "player", "map"
+        definitions = json.loads((ROOT / "res/config/weapons.json").read_text(encoding="utf-8"))
+        handles = {name: {"__handle__": name} for name in ("actualStaff", "earnedLongSword", "actualRobe", "questItem")}
+        metadata = {
+            "actualStaff": {"typeId": "Staff", "name": "actualStaff", **deepcopy(definitions["Staff"]["properties"])},
+            "earnedLongSword": {
+                "typeId": "LongSword",
+                "name": "earnedLongSword",
+                **deepcopy(definitions["LongSword"]["properties"]),
+            },
+            "actualRobe": {"typeId": "Robe", "name": "actualRobe"},
+            "questItem": {"typeId": "holyRelic", "name": "questItem"},
+        }
+        inventory = [handles["questItem"]] + ([handles["earnedLongSword"]] if has_sword else [])
+        equipped = {"0": handles["actualStaff"], "3": handles["actualRobe"]}
+        properties = {"hp": 91, "mana": 175, "gold": 200, "exp": 6250, "level": 4, "effects": None}
+        mana_max, equips = [175], []
+        walker.coords = lambda: (118, 20, 0)
+        walker.state = lambda: {"stage": "brood"}
+        walker.questNames = lambda *args: ["actualQuest"]
+
+        def engine(name, handle):
+            self.assertEqual("jsonify", name)
+            data = properties if handle == "player" else metadata[handle["__handle__"]]
+            if handle == "player":
+                data = {**data, "equipped": deepcopy(equipped), "items": deepcopy(inventory)}
+            return json.dumps({"properties": data})
+
+        def call(handle, method, *args):
+            if handle == "map":
+                self.assertEqual("getTurn", method)
+                return 1380
+            if handle == "player":
+                if method == "getItems":
+                    return list(inventory)
+                if method == "getEquipped":
+                    return dict(equipped)
+                if method == "getItemAtSlot":
+                    return equipped.get(args[0])
+                if method == "getHpMax":
+                    return 91
+                if method == "getManaMax":
+                    return mana_max[0]
+                if method in ("getHp", "getMana"):
+                    return properties["hp" if method == "getHp" else "mana"]
+                if method == "equipItem":
+                    slot, item = args
+                    self.assertEqual(("0", handles["earnedLongSword"]), (slot, item))
+                    self.assertIn(item, inventory)
+                    equips.append((slot, item))
+                    inventory.remove(item)
+                    inventory.append(equipped[slot])
+                    equipped[slot] = item
+                    mana_max[0] = 140
+                    properties["mana"] = min(properties["mana"], mana_max[0])
+                    if corruption == "clone":
+                        equipped[slot] = {"__handle__": "fabricatedClone"}
+                    elif corruption == "extraItem":
+                        inventory.append(item)
+                    elif corruption == "otherSlot":
+                        equipped.pop("3")
+                    elif corruption == "hp":
+                        properties["hp"] -= 1
+                    elif corruption == "mana":
+                        properties["mana"] += 1
+                    elif corruption == "progress":
+                        properties["exp"] += 1
+                    return
+            data = metadata[handle["__handle__"]]
+            if method == "getTypeId":
+                return data["typeId"]
+            if method == "getName":
+                return data["name"]
+            if method == "getType":
+                return "CWeapon"
+            raise AssertionError((handle, method, args))
+
+        walker.call, walker.engine = call, engine
+        return walker, handles, inventory, equipped, properties, equips
+
+    def testRemainingBroodEquipsOnlyTheActualEarnedSwordWithItsNativeManaTradeoff(self):
+        walker, handles, inventory, equipped, properties, equips = self.earnedBroodWeaponFixture()
+        with patch("builtins.print"):
+            receipt = walker.equipEarnedBroodWeapon()
+        self.assertEqual([("0", handles["earnedLongSword"])], equips)
+        self.assertEqual(handles["earnedLongSword"], equipped["0"])
+        self.assertEqual([handles["questItem"], handles["actualStaff"]], inventory)
+        self.assertEqual(91, properties["hp"])
+        self.assertEqual(140, properties["mana"])
+        self.assertEqual({"dmgMin": 5, "dmgMax": 4, "stamina": 0, "intelligence": -5}, receipt["weaponBonusDelta"])
+        self.assertEqual((91, 91), (receipt["hpMaxBefore"], receipt["hpMaxAfter"]))
+        self.assertEqual((175, 140), (receipt["manaMaxBefore"], receipt["manaMaxAfter"]))
+
+    def testBroodWeaponPreparationCannotInventLootOrChangeOtherNativeState(self):
+        walker, *rest = self.earnedBroodWeaponFixture(has_sword=False)
+        with patch("builtins.print"):
+            self.assertIsNone(walker.equipEarnedBroodWeapon())
+        self.assertEqual([], rest[-1])
+        for corruption in ("clone", "extraItem", "otherSlot", "hp", "mana", "progress"):
+            with self.subTest(corruption=corruption):
+                walker, *rest = self.earnedBroodWeaponFixture(corruption)
+                with patch("builtins.print"), self.assertRaises(AssertionError):
+                    walker.equipEarnedBroodWeapon()
+                self.assertEqual(1, len(rest[-1]), "Invalid evidence must fail after one equip, without retries")
+
+    def testLivingSorcererBroodUsesEarnedEquipmentBeforeItsFinalRoadRecovery(self):
+        from tests.test_octobogz_mcp import OctobogzMcpWalkthroughTest
+
+        walker = OctobogzMcpWalkthroughTest("runTest")
+        walker.game_map = "map"
+        walker.state = lambda: {"slots": {"brood": {"status": "living"}}}
+        walker.call = lambda handle, method, *args: None if method == "getBoolProperty" else {"__handle__": "cave2"}
+        actions = []
+        walker.recoverOnAuthoredRoad = lambda: actions.append("actual road recovery")
+        walker.prepareHealingStockAtAuthoredMarket = lambda *, initial: actions.append(("finite stock", initial))
+        walker.equipEarnedBroodWeapon = lambda: actions.append("owned native equip")
+        walker.recoverBeforeRemainingBrood("Sorcerer")
+        self.assertEqual(
+            ["actual road recovery", ("finite stock", False), "owned native equip", "actual road recovery"], actions
+        )
+
+    def testEarnedSorcererWeaponIsEquippedAfterScoutProofBeforeReloadRetreatAndAlpha(self):
+        from tests.test_octobogz_mcp import OctobogzMcpWalkthroughTest
+
+        for class_id in ("Sorcerer", "Warrior"):
+            with self.subTest(class_id=class_id):
+                walker = OctobogzMcpWalkthroughTest("runTest")
+                walker.player, walker.game_map, walker.mcp_profile_class = "player", "map", class_id
+                walker.object = lambda name: {"__handle__": name}
+                walker.coords = lambda actor=None: (165, 21, 0)
+                walker.snapshot = lambda label: {"exp": 6000}
+                walker.state = lambda: {"stage": "brood", "slots": {"scout": {"status": "dead"}}}
+                actions = []
+                walker.walkTo = lambda name: actions.append("native scout approach")
+                walker.assertSlotDefeated = lambda slot: actions.append("actual scout death proof")
+                walker.trackLivingHuntActors = lambda: actions.append("actual remaining actors")
+                walker.equipEarnedBroodWeapon = lambda: actions.append("owned native equip")
+                walker.call = lambda handle, method, *args: (
+                    [] if method == "getItems" else False if method == "getBoolProperty" else 6125
+                )
+                with patch("builtins.print"):
+                    walker.enterHunt()
+                expected = ["native scout approach", "actual scout death proof", "actual remaining actors"]
+                self.assertEqual(expected + (["owned native equip"] if class_id == "Sorcerer" else []), actions)
 
     def testSavedHeroReplayRemainsSeparateFromAutomaticVictoriesAndImmutableSeededComparisons(self):
         source = (ROOT / "tests/test_octobogz_mcp.py").read_text(encoding="utf-8")

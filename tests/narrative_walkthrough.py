@@ -323,6 +323,27 @@ class NarrativeWalkthrough:
             "equipped": self.properties(self.player).get("equipped"),
         }
 
+    def siegeWaitingTarget(self, enabled):
+        gate_coords = {coords for name, coords in self.objects.items() if name.startswith("spawnPoint")}
+        interior = self.walkable - gate_coords
+        here = self.coords()
+        candidates = []
+        for name in enabled:
+            x, y, z = self.objects[name]
+            for dx, dy in ((-1, 0), (1, 0), (0, -1), (0, 1)):
+                target = (x + dx, y + dy, z)
+                if target not in interior:
+                    continue
+                try:
+                    route = shortestRoute(interior, TransitRoutes(), here, target)
+                except AssertionError:
+                    continue
+                candidates.append((len(route), name, target))
+        if not candidates:
+            raise AssertionError(self.failureState("No reachable authored interior neighbor", "before siege waiting"))
+        # A mage spawned on the breach must move onto this distinct, reachable player cell to start combat.
+        return min(candidates)[2]
+
     def siege(self, expected_bounty=500):
         self.objects, self.walkable = authoredRegion("siege")
         gates = ["spawnPoint1", "spawnPoint2", "spawnPoint3", "spawnPoint4"]
@@ -331,10 +352,18 @@ class NarrativeWalkthrough:
             if not remaining:
                 break
             enabled = [name for name in remaining if self.call(self.object(name), "getBoolProperty", ["enabled"])]
-            if not enabled or not self.call(self.player, "countItems", ["magicWand"]):
+            if not enabled:
                 # Leave a sealed border breach so attackers can reach the ordinary interior target.
                 self.walkTo(self.objects["siegeStart"])
                 self.tick()
+                continue
+            if not self.call(self.player, "countItems", ["magicWand"]):
+                self.walkTo(
+                    self.siegeWaitingTarget(enabled),
+                    stop=lambda: self.call(self.player, "countItems", ["magicWand"]) > 0,
+                )
+                if not self.call(self.player, "countItems", ["magicWand"]):
+                    self.tick()
                 continue
             name = min(enabled, key=lambda name: sum(abs(a - b) for a, b in zip(self.coords(), self.objects[name])))
             self.walkTo(self.objects[name])
