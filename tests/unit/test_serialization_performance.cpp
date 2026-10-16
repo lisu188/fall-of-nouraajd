@@ -17,16 +17,19 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 
 #include "core/CGame.h"
+#include "core/CSerialization.h"
 #include "core/CController.h"
 #include "core/CLoader.h"
 #include "core/CTypes.h"
 #include "object/CCreature.h"
 #include "object/CEffect.h"
+#include "object/CTile.h"
 #include "object/CMapObject.h"
 #include "test_harness.h"
 #include "veventloop.h"
 
 #include <cstddef>
+#include <iostream>
 #include <memory>
 #include <set>
 #include <string>
@@ -39,6 +42,91 @@ constexpr int MAP_LOAD_OBJECT_COUNT = 32;
 constexpr int MAP_LOAD_PROPERTY_COUNT = 8;
 constexpr int EFFECT_GRAPH_ACTOR_COUNT = 8;
 constexpr std::size_t EFFECT_GRAPH_BYTES_PER_ACTOR = 8192;
+
+class ScalarMetadataTile : public CTile {
+  public:
+    mutable std::size_t metadataCalls = 0;
+
+    std::shared_ptr<vstd::meta> meta() override {
+        ++metadataCalls;
+        return CTile::meta();
+    }
+    std::shared_ptr<const vstd::meta> meta() const override {
+        ++metadataCalls;
+        return CTile::meta();
+    }
+};
+
+void testScalarPropertyMetadataWorkIsBounded() {
+    constexpr std::size_t tileCount = 32;
+    constexpr std::size_t propertyCount = 5;
+    std::size_t directCalls = 0;
+    std::size_t decodedCalls = 0;
+    CSerializationReadContext context(true, "performance.scalarMetadata");
+    for (std::size_t index = 0; index < tileCount; ++index) {
+        auto direct = std::make_shared<ScalarMetadataTile>();
+        auto decoded = std::make_shared<ScalarMetadataTile>();
+        direct->metadataCalls = decoded->metadataCalls = 0;
+        direct->setStringProperty("animation", "images/tiles/ground");
+        direct->setStringProperty("label", "Ground");
+        direct->setStringProperty("tileType", "ground");
+        direct->setBoolProperty("canStep", true);
+        direct->setNumericProperty("movementCost", 2);
+        CSerialization::setProperty(decoded, "animation", json("images/tiles/ground"), context);
+        CSerialization::setProperty(decoded, "label", json("Ground"), context);
+        CSerialization::setProperty(decoded, "tileType", json("ground"), context);
+        CSerialization::setProperty(decoded, "canStep", json(true), context);
+        CSerialization::setProperty(decoded, "movementCost", json(2), context);
+        directCalls += direct->metadataCalls;
+        decodedCalls += decoded->metadataCalls;
+        expect_true(decoded->getAnimation() == direct->getAnimation() &&
+                        decoded->getStringProperty("label") == direct->getStringProperty("label") &&
+                        decoded->getTileType() == direct->getTileType() && decoded->canStep() == direct->canStep() &&
+                        decoded->getMovementCost() == direct->getMovementCost(),
+                    "bounded scalar metadata work must preserve the initialized tile properties");
+    }
+    // Each public decode scopes the property's type name and resolves its scalar type once.
+    const auto budget = directCalls + 2 * tileCount * propertyCount;
+    std::cout << "[performance] scalar metadata calls=" << decodedCalls << " direct=" << directCalls
+              << " budget=" << budget << '\n';
+    expect_true(decodedCalls <= budget, "scalar decoding must not repeat the reflected property type lookup");
+}
+
+void testTypedCodecWorkIsBoundedPerOperation() {
+    struct Value {
+        int number;
+    };
+    struct Work {
+        std::size_t encodes = 0;
+        std::size_t decodes = 0;
+    };
+    constexpr int operation_count = 512;
+    auto work = std::make_shared<Work>();
+    CTypes::registerJsonCodec<Value>(
+        [work](const Value &value) -> CSerializationResult<json> {
+            ++work->encodes;
+            return json(value.number);
+        },
+        [work](const std::shared_ptr<CGame> &, const json &document) -> CSerializationResult<Value> {
+            ++work->decodes;
+            return Value{document.get<int>()};
+        });
+    const auto registered = CTypes::codecCount();
+    for (int index = 0; index < operation_count; ++index) {
+        auto encoded = CSerialization::serializeExpected(Value{index});
+        expect_true(encoded.has_value(), "bounded typed codec workload must serialize");
+        if (!encoded) {
+            continue;
+        }
+        auto decoded = CSerialization::deserializeExpected<Value>(nullptr, *encoded);
+        expect_true(decoded && decoded->number == index, "bounded typed codec workload must round-trip");
+    }
+    std::cout << "Typed JSON codec work: operations=" << operation_count << " encodes=" << work->encodes
+              << " decodes=" << work->decodes << " registry=" << CTypes::codecCount() << '\n';
+    expect_true(work->encodes == operation_count && work->decodes == operation_count,
+                "one codec invocation is permitted per encode/decode operation");
+    expect_true(CTypes::codecCount() == registered, "codec execution must never mutate registry entries");
+}
 
 class EffectSerializationProbe : public CCreature {
     V_META(EffectSerializationProbe, CCreature,
@@ -243,7 +331,7 @@ void testMutualEffectGraphSerializationHasBoundedActorDefinitions() {
                 "each referenced actor's properties must be visited exactly once per snapshot");
 
     CSerialization::StrictScope strict;
-    auto restored = std::dynamic_pointer_cast<CMap>(ObjectJson::deserialize(game, serialized));
+    auto restored = std::dynamic_pointer_cast<CMap>(ObjectJson::deserialize(game, serialized, strict));
     expect_true(restored && restored->getObjects().size() == EFFECT_GRAPH_ACTOR_COUNT,
                 "loading the effect graph must not add the detached caster to the map");
     std::shared_ptr<CCreature> detached;
@@ -284,6 +372,8 @@ void testMutualEffectGraphSerializationHasBoundedActorDefinitions() {
 } // namespace
 
 void run_serialization_performance_tests() {
+    testTypedCodecWorkIsBoundedPerOperation();
     test_map_load_property_notifications_are_bounded_per_object();
     testMutualEffectGraphSerializationHasBoundedActorDefinitions();
+    testScalarPropertyMetadataWorkIsBounded();
 }

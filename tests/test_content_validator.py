@@ -2788,7 +2788,7 @@ class ContentValidatorTest(unittest.TestCase):
                         "kind": "native",
                         "id": "nativeOptional",
                         "library": "plugins/native/native_optional",
-                        "entry": "native_optional_load_v2",
+                        "entry": "native_optional_load_v3",
                     }
                 ],
             },
@@ -2818,7 +2818,7 @@ class ContentValidatorTest(unittest.TestCase):
             "res/maps/broken/config.json",
             "unloadedNative.class",
             'class "CUnloadedNative" is registered by native plugin code',
-            "native_optional:native_optional_load_v2",
+            "native_optional:native_optional_load_v3",
         )
 
     def test_plugin_manifest_schema_diagnostics(self):
@@ -2898,7 +2898,7 @@ class ContentValidatorTest(unittest.TestCase):
         native_entry.parent.mkdir(parents=True, exist_ok=True)
         native_entry.write_text(
             textwrap.dedent("""
-                extern "C" NATIVE_PLUGIN_EXPORT bool native_optional_load_v2(const CPluginHostV2 *host) {
+                extern "C" NATIVE_PLUGIN_EXPORT bool native_optional_load_v3(const CPluginHostV3 *host) {
                     auto *registrar = game_plugin_registrar(host);
                     return registrar != nullptr && native_plugin::register_gameplay_types(*registrar);
                 }

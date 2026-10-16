@@ -19,6 +19,7 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 #include "core/CConcepts.h"
 #include "core/CGlobal.h"
+#include <expected>
 
 namespace CJsonUtil {
 struct JsonParseError {
@@ -28,10 +29,14 @@ struct JsonParseError {
     std::source_location location;
 };
 
-using JsonParseResult = std::expected<std::shared_ptr<json>, JsonParseError>;
+using JsonParseResult = std::expected<json, JsonParseError>;
 
 inline std::shared_ptr<json> alias(const std::shared_ptr<json> &owner, json &value) {
     return std::shared_ptr<json>(owner, &value);
+}
+
+inline std::shared_ptr<const json> alias(const std::shared_ptr<const json> &owner, const json &value) {
+    return std::shared_ptr<const json>(owner, &value);
 }
 
 inline std::string preview_json(std::string text, size_t limit = 120) {
@@ -109,7 +114,7 @@ template <fn::JsonMapPointer T> bool isMap(T object) {
 inline JsonParseResult parse_expected(std::string json_string, const std::string &source = std::string(),
                                       std::source_location location = std::source_location::current()) {
     try {
-        return std::make_shared<json>(json::parse(json_string));
+        return json::parse(json_string);
     } catch (const std::exception &exception) {
         return std::unexpected(
             JsonParseError{source, exception.what(), preview_json(std::move(json_string)), location});
@@ -123,7 +128,7 @@ std::shared_ptr<json> from_string(std::string json_string, const std::string &so
         log_parse_error(result.error());
         return nullptr;
     }
-    return *result;
+    return std::make_shared<json>(std::move(*result));
     //        vstd::logger::debug(json,reader.getFormatedErrorMessages());
 }
 
@@ -132,6 +137,8 @@ template <fn::JsonDumpPointer T> std::string to_string(T value, int indent = -1)
 inline std::shared_ptr<json> clone(const json &value) { return std::make_shared<json>(value); }
 
 inline std::shared_ptr<json> clone(const std::shared_ptr<json> &value) { return std::make_shared<json>(*value); }
+
+inline std::shared_ptr<json> clone(const std::shared_ptr<const json> &value) { return std::make_shared<json>(*value); }
 
 inline std::shared_ptr<json> clone(const json *value) { return std::make_shared<json>(*value); }
 } // namespace CJsonUtil

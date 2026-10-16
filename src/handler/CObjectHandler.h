@@ -26,14 +26,43 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #include <atomic>
 
 class CMap;
+class CConfigurationProvider;
 
 class CObjectHandler : public CGameObject {
   public:
     CObjectHandler();
 
+    // Snapshots the per-game registration tables for one synchronous load operation. A committed
+    // nested operation supersedes an older snapshot; a failed nested operation restores its parent.
+    class RegistrationTransaction {
+      public:
+        explicit RegistrationTransaction(std::shared_ptr<CObjectHandler> handler,
+                                         std::function<bool()> canRollback = {});
+        ~RegistrationTransaction();
+
+        RegistrationTransaction(const RegistrationTransaction &) = delete("registration transactions own a scope");
+        RegistrationTransaction &
+        operator=(const RegistrationTransaction &) = delete("registration transactions own a scope");
+        RegistrationTransaction(RegistrationTransaction &&) = delete("registration transactions own a scope");
+        RegistrationTransaction &
+        operator=(RegistrationTransaction &&) = delete("registration transactions own a scope");
+
+        bool isCurrent() const;
+        bool commit();
+
+      private:
+        struct State;
+        std::unique_ptr<State> state;
+    };
+
     template <fn::GameObjectDerived T = CGameObject>
     std::shared_ptr<T> createObject(std::shared_ptr<CGame> game, std::string type) {
         return vstd::cast<T>(_createObject(game, type));
+    }
+
+    template <fn::GameObjectDerived T = CGameObject>
+    std::shared_ptr<T> createObject(std::shared_ptr<CGame> game, std::string type, CSerializationReadContext &context) {
+        return vstd::cast<T>(_createObject(game, type, context));
     }
 
     template <fn::MetaRegisteredGameObject T = CGameObject>
@@ -49,13 +78,21 @@ class CObjectHandler : public CGameObject {
 
     std::vector<std::string> getAllSubTypes(const std::string &claz);
 
+    // Provider-less file registration retains the process-wide compatibility cache.
+    // Game-owned loaders pass their context provider explicitly.
     void registerConfig(const std::string &path);
 
+    void registerConfig(const std::string &path, CConfigurationProvider &provider);
+
     void registerConfig(const std::string &name, std::shared_ptr<json> value);
+
+    void registerConfig(const std::string &name, std::shared_ptr<const json> value);
 
     void unregisterConfig(const std::string &name);
 
     void registerConfig(const std::set<std::string> &paths);
+
+    void registerConfig(const std::set<std::string> &paths, CConfigurationProvider &provider);
 
     void registerType(std::string name, std::function<std::shared_ptr<CGameObject>()> constructor);
     void registerNativeType(std::string name, std::function<std::shared_ptr<CGameObject>()> constructor);
@@ -72,14 +109,19 @@ class CObjectHandler : public CGameObject {
 
     std::shared_ptr<CGameObject> getType(const std::string &name);
 
-    std::shared_ptr<json> getConfig(const std::string &type);
+    std::shared_ptr<const json> getConfig(const std::string &type);
 
     std::string getClass(const std::string &type);
     std::uint64_t getNavigationConfigRevision() const;
     std::optional<std::pair<bool, int>> getStaticTileNavigation(const std::string &type);
 
   private:
+    void registerConfigDocument(const std::string &path, const std::shared_ptr<const json> &config);
+
     std::shared_ptr<CGameObject> _createObject(std::shared_ptr<CGame> map, const std::string &type);
+
+    std::shared_ptr<CGameObject> _createObject(std::shared_ptr<CGame> map, const std::string &type,
+                                               CSerializationReadContext &context);
 
     std::shared_ptr<CGameObject> _clone(const std::shared_ptr<CGameObject> &object);
 
@@ -90,7 +132,9 @@ class CObjectHandler : public CGameObject {
 
     bool mapScriptScopeActive = false;
 
-    std::unordered_map<std::string, std::shared_ptr<json>> objectConfig;
+    std::unordered_map<std::string, std::shared_ptr<const json>> objectConfig;
     std::atomic_uint64_t navigationConfigRevision{1};
     bool nativeTileFactory = false;
+    std::uint64_t nextRegistrationEpoch = 0;
+    std::uint64_t registrationEpoch = 0;
 };

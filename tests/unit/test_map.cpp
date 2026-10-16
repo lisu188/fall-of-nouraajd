@@ -1311,12 +1311,12 @@ void test_map_defensive_branches_and_strict_validation() {
     expect_true(map->getObjects().size() == 1, "addObject should ignore null and duplicate objects");
 
     {
-        CSerialization::StrictScope strict;
-        expect_runtime_error([&]() { map->setObjects({nullptr}); }, "strict setObjects should reject null objects");
+        expect_runtime_error([&]() { map->setObjectsChecked({nullptr}); },
+                             "strict setObjects should reject null objects");
 
         auto empty_name = std::make_shared<CMapObject>();
         empty_name->setName("");
-        expect_runtime_error([&]() { map->setObjects({empty_name}); },
+        expect_runtime_error([&]() { map->setObjectsChecked({empty_name}); },
                              "strict setObjects should reject empty object names");
     }
 

@@ -21,6 +21,7 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #include "core/CJsonUtil.h"
 #include "core/CLoader.h"
 #include "core/CStats.h"
+#include "core/CSaveFormat.h"
 #include "core/CMap.h"
 #include "core/CTypeRegistration.h"
 #include "core/CTypes.h"
@@ -3322,13 +3323,551 @@ void assertSavedEffectState(const std::shared_ptr<CEffect> &effect) {
     expect_true(effect->getCumulative(), "saving or cloning must preserve the cumulative flag");
 }
 
+struct CustomActorValue {
+    std::shared_ptr<CCreature> actor;
+};
+
+struct CustomActorArray {
+    std::shared_ptr<CCreature> actor;
+    std::shared_ptr<CCreature> alias;
+};
+
+void registerCustomActorArrayCodec(std::shared_ptr<const json *> observed = {}) {
+    CTypes::registerJsonCodec<CustomActorArray>(
+        [](const CustomActorArray &value, CSerializationWriteContext &context) -> CSerializationResult<json> {
+            auto actor = CSerialization::serializeExpected(value.actor, context);
+            if (!actor)
+                return std::unexpected(actor.error());
+            auto alias = CSerialization::serializeExpected(value.alias, context);
+            if (!alias)
+                return std::unexpected(alias.error());
+            return json::array({std::move(*actor), std::move(*alias), 17});
+        },
+        [observed](const std::shared_ptr<CGame> &game, const json &document,
+                   CSerializationReadContext &context) -> CSerializationResult<CustomActorArray> {
+            if (observed)
+                *observed = &document;
+            if (!document.is_array() || document.size() != 3 || document.at(2).get<int>() != 17) {
+                return std::unexpected(CSerializationError{
+                    CSerializationErrorCode::InvalidInput, {}, {}, {}, "Expected the custom actor array payload"});
+            }
+            auto actor = CSerialization::deserializeExpected<std::shared_ptr<CCreature>>(game, document.at(0), context);
+            if (!actor)
+                return std::unexpected(actor.error());
+            auto alias = CSerialization::deserializeExpected<std::shared_ptr<CCreature>>(game, document.at(1), context);
+            if (!alias)
+                return std::unexpected(alias.error());
+            return CustomActorArray{std::move(*actor), std::move(*alias)};
+        });
+}
+
+class CustomActorValueHolder : public CGameObject {
+    V_META(CustomActorValueHolder, CGameObject,
+           V_PROPERTY(CustomActorValueHolder, CustomActorValue, actorValue, getActorValue, setActorValue),
+           V_PROPERTY(CustomActorValueHolder, std::shared_ptr<CCreature>, sameActor, getSameActor, setSameActor))
+  public:
+    CustomActorValue getActorValue() { return value; }
+    void setActorValue(CustomActorValue next) { value = std::move(next); }
+    std::shared_ptr<CCreature> getSameActor() { return same; }
+    void setSameActor(std::shared_ptr<CCreature> actor) { same = std::move(actor); }
+
+  private:
+    CustomActorValue value;
+    std::shared_ptr<CCreature> same;
+};
+
+class SerializationReentryProbe : public CGameObject {
+    V_META(SerializationReentryProbe, CGameObject, V_METHOD(SerializationReentryProbe, initialize))
+  public:
+    void initialize() {
+        independentLookupCompleted = !getGame()->getObjectHandler()->createObject(getGame(), "missingReentryType");
+    }
+    bool independentLookupCompleted = false;
+};
+
+struct InvalidCodecValue {};
+
+class InvalidCodecValueHolder : public CGameObject {
+    V_META(InvalidCodecValueHolder, CGameObject,
+           V_PROPERTY(InvalidCodecValueHolder, InvalidCodecValue, payload, getPayload, setPayload))
+  public:
+    InvalidCodecValue getPayload() { return {}; }
+    void setPayload(InvalidCodecValue) {}
+};
+
+void testCustomCodecWriteErrorRetainsPropertyPath() {
+    CTypes::registerJsonType<InvalidCodecValue>(
+        [](const InvalidCodecValue &) -> CSerializationResult<json> {
+            return std::unexpected(
+                CSerializationError{CSerializationErrorCode::InvalidInput, {}, "inside", {}, "invalid custom payload"});
+        },
+        [](const std::shared_ptr<CGame> &, const json &) -> CSerializationResult<InvalidCodecValue> {
+            return InvalidCodecValue{};
+        });
+    CTypes::register_type<InvalidCodecValueHolder, CGameObject>();
+    std::shared_ptr<CGameObject> holder = std::make_shared<InvalidCodecValueHolder>();
+    auto rejected = CSerialization::serializeExpected(holder, "custom-write-path");
+    expect_true(!rejected && rejected.error().code == CSerializationErrorCode::InvalidInput &&
+                    rejected.error().propertyPath == "payload.inside" &&
+                    rejected.error().source == "custom-write-path" &&
+                    rejected.error().objectType == "InvalidCodecValueHolder",
+                "custom codec write errors must retain the owning reflected property path and object type");
+
+    auto game = makeEffectSnapshotGame();
+    const json document{{"class", "InvalidCodecValueHolder"}, {"properties", {{"payload", json::object()}}}};
+    for (const auto &[reportedPath, expectedPath] : std::vector<std::pair<std::string, std::string>>{
+             {"", "payload"},
+             {"inside", "payload.inside"},
+             {"payloadExtra", "payload.payloadExtra"},
+             {"[1].inside", "payload[1].inside"},
+             {"payload.inside", "payload.inside"},
+             {"payload[1].inside", "payload[1].inside"},
+         }) {
+        const CSerializationError error{
+            CSerializationErrorCode::InvalidInput, {}, reportedPath, {}, "invalid reflected codec value"};
+        CTypes::registerJsonType<InvalidCodecValue>(
+            [error](const InvalidCodecValue &) -> CSerializationResult<json> { return std::unexpected(error); },
+            [error](const std::shared_ptr<CGame> &, const json &) -> CSerializationResult<InvalidCodecValue> {
+                return std::unexpected(error);
+            });
+        auto encoded = CSerialization::serializeExpected(holder, "reflected-write-path");
+        CSerializationReadContext reading(true, "reflected-read-path");
+        auto decoded = CSerialization::deserializeExpected<std::shared_ptr<CGameObject>>(game, document, reading);
+        expect_true(!encoded && encoded.error().propertyPath == expectedPath &&
+                        encoded.error().source == "reflected-write-path" &&
+                        encoded.error().objectType == "InvalidCodecValueHolder" &&
+                        encoded.error().code == CSerializationErrorCode::InvalidInput,
+                    "reflected codec writes must qualify relative and index paths once at property boundaries");
+        expect_true(!decoded && decoded.error().propertyPath == expectedPath &&
+                        decoded.error().source == "reflected-read-path" &&
+                        decoded.error().objectType == "InvalidCodecValueHolder" &&
+                        decoded.error().code == CSerializationErrorCode::InvalidInput,
+                    "reflected codec reads must qualify relative and index paths once at property boundaries");
+    }
+}
+
+void testTypedCodecErrorsRetainNestedOperationDiagnostics() {
+    struct Child {};
+    struct Parent {};
+    CTypes::registerJsonCodec<Parent>(
+        [](const Parent &, CSerializationWriteContext &context) -> CSerializationResult<json> {
+            CSerializationWriteContext::PropertyScope property(context, "payload", "CodecOwner");
+            return CSerialization::serializeExpected(Child{}, context);
+        },
+        [](const std::shared_ptr<CGame> &game, const json &document,
+           CSerializationReadContext &context) -> CSerializationResult<Parent> {
+            CSerializationReadContext::PropertyScope property(context, "payload", "CodecOwner");
+            auto child = CSerialization::deserializeExpected<Child>(game, document, context);
+            if (!child)
+                return std::unexpected(child.error());
+            return Parent{};
+        });
+    CSerializationWriteContext writing("nested-codec-source");
+    CSerializationReadContext reading(true, "nested-codec-source");
+    const json document;
+    auto check = [&](CSerializationErrorCode code, const std::string &path, const std::string &source,
+                     const std::string &type, const std::string &message) {
+        {
+            CSerializationWriteContext::PropertyScope writeScope(writing, "outer", "OuterOwner");
+            CSerializationReadContext::PropertyScope readScope(reading, "outer", "OuterOwner");
+            auto encoded = CSerialization::serializeExpected(Parent{}, writing);
+            auto decoded = CSerialization::deserializeExpected<Parent>(nullptr, document, reading);
+            for (const auto *error : {encoded ? nullptr : &encoded.error(), decoded ? nullptr : &decoded.error()}) {
+                expect_true(error && error->code == code && error->propertyPath == path && error->source == source &&
+                                error->objectType == type &&
+                                (message.empty() ? !error->message.empty() : error->message == message),
+                            "nested typed encode and decode failures must retain complete operation diagnostics");
+            }
+            expect_true(writing.path() == "outer" && reading.path() == "outer" &&
+                            writing.objectType() == "OuterOwner" && reading.objectType() == "OuterOwner" &&
+                            reading.property() == "outer",
+                        "failing nested typed codecs must restore their caller's property and type scopes");
+        }
+        expect_true(writing.path().empty() && reading.path().empty() && writing.objectType().empty() &&
+                        reading.objectType().empty() && reading.property().empty() && reading.isStrict(),
+                    "each failed operation must leave its reusable context's scope and policy intact");
+    };
+    check(CSerializationErrorCode::MissingCodec, "outer.payload", "nested-codec-source", "CodecOwner",
+          "No JSON codec registered for type");
+
+    struct Diagnostic {
+        std::string reportedPath;
+        std::string expectedPath;
+        std::string source;
+        std::string type;
+        bool throws = false;
+    };
+    for (const auto &diagnostic : std::vector<Diagnostic>{
+             {"", "outer.payload", {}, {}},
+             {"inside", "outer.payload.inside", {}, {}},
+             {"[1].inside", "outer.payload[1].inside", {}, {}},
+             {"outer.payload", "outer.payload", {}, {}},
+             {"outer.payload.inside", "outer.payload.inside", {}, {}},
+             {"outer.payload[1].inside", "outer.payload[1].inside", {}, {}},
+             {"outer.payloadExtra", "outer.payload.outer.payloadExtra", {}, {}},
+             {"inside", "outer.payload.inside", "codec-supplied-source", "CodecValue"},
+             {"inside", "outer.payload.inside", "thrown-supplied-source", "ThrownValue", true},
+         }) {
+        auto error = CSerializationError{CSerializationErrorCode::InvalidInput, diagnostic.source,
+                                         diagnostic.reportedPath, diagnostic.type, "invalid nested codec value"};
+        CTypes::registerJsonCodec<Child>(
+            [error, throws = diagnostic.throws](const Child &) -> CSerializationResult<json> {
+                if (throws)
+                    throw CSerializationException(error);
+                return std::unexpected(error);
+            },
+            [error, throws = diagnostic.throws](const std::shared_ptr<CGame> &,
+                                                const json &) -> CSerializationResult<Child> {
+                if (throws)
+                    throw CSerializationException(error);
+                return std::unexpected(error);
+            });
+        check(CSerializationErrorCode::InvalidInput, diagnostic.expectedPath,
+              diagnostic.source.empty() ? "nested-codec-source" : diagnostic.source,
+              diagnostic.type.empty() ? "CodecOwner" : diagnostic.type, "invalid nested codec value");
+    }
+
+    CTypes::registerJsonCodec<Child>(
+        [](const Child &) -> CSerializationResult<json> { throw std::runtime_error("thrown nested codec failure"); },
+        [](const std::shared_ptr<CGame> &, const json &) -> CSerializationResult<Child> {
+            throw std::runtime_error("thrown nested codec failure");
+        });
+    check(CSerializationErrorCode::CodecFailure, "outer.payload", "nested-codec-source", "CodecOwner",
+          "thrown nested codec failure");
+
+    class WrongErasedValueCodec final : public CSerializerBase {
+      public:
+        CSerializationResult<json> serialize(const std::any &value, CSerializationWriteContext &) const override {
+            (void)std::any_cast<int>(value);
+            return json();
+        }
+        CSerializationResult<std::any> deserialize(const std::shared_ptr<CGame> &, const json &,
+                                                   CSerializationReadContext &) const override {
+            return std::any(7);
+        }
+    };
+    CTypes::registerCodec(typeid(Child), std::make_shared<WrongErasedValueCodec>());
+    check(CSerializationErrorCode::TypeMismatch, "outer.payload", "nested-codec-source", "CodecOwner", {});
+
+    CTypes::registerJsonCodec<Child>(
+        [](const Child &) -> CSerializationResult<json> { return json(); },
+        [](const std::shared_ptr<CGame> &, const json &) -> CSerializationResult<Child> { return Child{}; });
+    expect_true(CSerialization::serializeExpected(Parent{}, writing).has_value() &&
+                    CSerialization::deserializeExpected<Parent>(nullptr, document, reading).has_value(),
+                "contexts reused after nested codec failures must still complete a following valid operation");
+}
+
+void testConfiguredReferencesSharePolicyAndBoundaryReentryStartsFresh() {
+    CTypes::register_type<SerializationReentryProbe, CGameObject>();
+    auto game = makeEffectSnapshotGame();
+    game->getObjectHandler()->registerConfig("reentryProbe",
+                                             std::make_shared<json>(json{{"class", "SerializationReentryProbe"}}));
+    CSerialization::StrictScope context("configured-reference-policy");
+    json reference{{"ref", "reentryProbe"}};
+    auto decoded = CSerialization::deserializeExpected<std::shared_ptr<CGameObject>>(game, reference, context);
+    auto probe = decoded ? std::dynamic_pointer_cast<SerializationReentryProbe>(*decoded) : nullptr;
+    expect_true(probe && probe->independentLookupCompleted,
+                "a default API re-entry must use fresh lenient policy during an outer strict operation");
+
+    game->getObjectHandler()->registerConfig("invalidConfiguredReference",
+                                             std::make_shared<json>(json{{"class", "missingConfiguredType"}}));
+    json invalid{{"ref", "invalidConfiguredReference"}};
+    auto rejected = CSerialization::deserializeExpected<std::shared_ptr<CGameObject>>(game, invalid, context);
+    expect_true(!rejected && rejected.error().code == CSerializationErrorCode::InvalidInput &&
+                    rejected.error().source == "configured-reference-policy",
+                "configured references must retain the outer explicit strict policy and source");
+    auto lenient = CSerialization::deserializeExpected<std::shared_ptr<CGameObject>>(game, invalid);
+    expect_true(lenient && !*lenient, "the default entry point must remain independent of prior strict calls");
+}
+
+void testContextAwareCustomCodecPreservesEffectGraphNodeIdentity() {
+    auto observed_node = std::make_shared<const json *>(nullptr);
+    CTypes::registerJsonType<CustomActorValue>(
+        [](const CustomActorValue &value, CSerializationWriteContext &context) -> CSerializationResult<json> {
+            auto actor = CSerialization::serializeExpected(value.actor, context);
+            if (!actor)
+                return std::unexpected(actor.error());
+            return json{{"actor", std::move(*actor)}};
+        },
+        [observed_node](const std::shared_ptr<CGame> &game, const json &document,
+                        CSerializationReadContext &context) -> CSerializationResult<CustomActorValue> {
+            *observed_node = &document.at("actor");
+            auto actor =
+                CSerialization::deserializeExpected<std::shared_ptr<CCreature>>(game, **observed_node, context);
+            if (!actor)
+                return std::unexpected(actor.error());
+            return CustomActorValue{std::move(*actor)};
+        });
+    CTypes::register_type<CustomActorValueHolder, CGameObject>();
+    auto game = makeEffectSnapshotGame();
+    auto actor = makeEffectActor(game, "customCodecActor");
+    attachSavedEffect(actor, actor, "customCodecWard");
+    auto holder = std::make_shared<CustomActorValueHolder>();
+    holder->setGame(game);
+    holder->setActorValue({actor});
+    holder->setSameActor(actor);
+    auto encoded = CSerialization::serializeExpected(std::static_pointer_cast<CGameObject>(holder));
+    expect_true(encoded.has_value(), "a custom codec containing an actor must serialize inside the outer graph");
+    if (!encoded) {
+        actor->setEffects({});
+        return;
+    }
+    CSerialization::StrictScope context("custom-codec-graph");
+    auto decoded = CSerialization::deserializeExpected<std::shared_ptr<CGameObject>>(game, *encoded, context);
+    expect_true(decoded.has_value(), "a custom codec must borrow the original graph node rather than copying it");
+    auto restored = decoded ? std::dynamic_pointer_cast<CustomActorValueHolder>(*decoded) : nullptr;
+    auto restored_actor = restored ? restored->getActorValue().actor : nullptr;
+    expect_true(restored_actor && restored_actor == restored->getSameActor(),
+                "custom and ordinary properties must resolve the same restored actor identity");
+    expect_true(*observed_node == &encoded->at("properties").at("actorValue").at("actor"),
+                "recursive custom decoders must retain the exact input node address from the outer graph");
+    if (restored_actor) {
+        auto effect = findSavedEffect(restored_actor, "customCodecWard");
+        expect_true(effect && effect->getCaster() == restored_actor && effect->getVictim() == restored_actor,
+                    "custom actor values must retain fixed-up caster and victim links");
+        restored_actor->setEffects({});
+    }
+    actor->setEffects({});
+}
+
+void testLenientMalformedNestedEffectRetainsTypedFailure() {
+    auto game = makeEffectSnapshotGame();
+    auto actor = makeEffectActor(game, "lenientMalformedActor");
+    attachSavedEffect(actor, actor, "lenientMalformedWard");
+    auto original = EffectObjectJson::serialize(actor);
+    json malformed = *original;
+    malformed["properties"]["effects"][0]["effectReferences"]["caster"] = "invalid";
+    CSerializationReadContext context(false, "lenient-malformed-graph");
+    auto rejected = CSerialization::deserializeExpected<std::shared_ptr<CGameObject>>(game, malformed, context);
+    expect_true(!rejected && rejected.error().code == CSerializationErrorCode::MalformedGraph &&
+                    rejected.error().source == "lenient-malformed-graph" &&
+                    rejected.error().propertyPath.contains("effects"),
+                "lenient property skipping must retain the structured graph error through final fixups");
+    auto following = CSerialization::deserializeExpected<std::shared_ptr<CGameObject>>(game, *original, context);
+    expect_true(following && *following, "reusing a context starts a clean operation after a graph failure");
+    if (following) {
+        if (auto restored = std::dynamic_pointer_cast<CCreature>(*following))
+            restored->setEffects({});
+    }
+    actor->setEffects({});
+}
+
+void testCustomArrayRootPreservesItsPayloadAndEffectGraph() {
+    auto observed = std::make_shared<const json *>(nullptr);
+    registerCustomActorArrayCodec(observed);
+    auto game = makeEffectSnapshotGame();
+    auto actor = makeEffectActor(game, "arrayCodecActor");
+    attachSavedEffect(actor, actor, "arrayCodecWard");
+    auto encoded = CSerialization::serializeExpected(CustomActorArray{actor, actor}, "array-codec-graph");
+    expect_true(encoded.has_value(), "a custom array root must serialize its actor graph successfully");
+    if (!encoded) {
+        actor->setEffects({});
+        return;
+    }
+    const bool has_envelope = encoded->is_object() && encoded->contains("$gameGraphEnvelope");
+    expect_true(has_envelope && encoded->at("effectGraph").at("version").get<int>() == 1,
+                "a non-object codec root must own a versioned payload envelope alongside the existing graph");
+    if (!has_envelope) {
+        actor->setEffects({});
+        return;
+    }
+    const auto &payload = encoded->at("$gameGraphEnvelope").at("value");
+    CSerialization::StrictScope context("array-codec-graph");
+    auto restored = CSerialization::deserializeExpected<CustomActorArray>(game, *encoded, context);
+    expect_true(restored && restored->actor && restored->actor == restored->alias && restored->actor != actor,
+                "the unwrapped array payload must preserve repeated restored actor identity");
+    expect_true(*observed == &payload, "decoders must borrow the original payload inside its owning envelope");
+    if (restored && restored->actor) {
+        auto effect = findSavedEffect(restored->actor, "arrayCodecWard");
+        expect_true(effect && effect->getCaster() == restored->actor && effect->getVictim() == restored->actor,
+                    "the envelope's graph scan must include payload definitions and resolve effect links");
+        restored->actor->setEffects({});
+    }
+    auto codec = CTypes::findCodec(typeid(CustomActorArray));
+    auto boundary = codec->deserialize(game, *encoded);
+    expect_true(boundary.has_value(), "the codec's fresh-operation adapter must unwrap the same envelope");
+    if (boundary) {
+        auto value = std::any_cast<CustomActorArray>(*boundary);
+        expect_true(value.actor == value.alias, "direct codec reads must retain the envelope's shared identity");
+        if (value.actor)
+            value.actor->setEffects({});
+    }
+    auto saved_object = EffectObjectJson::serialize(actor);
+    expect_true(saved_object->contains("class") && saved_object->contains("effectGraph") &&
+                    !saved_object->contains("$gameGraphEnvelope"),
+                "existing object save roots must keep their original graph format");
+    auto legacy_array = CSerialization::serializeExpected(std::set<std::shared_ptr<CGameObject>>{actor});
+    expect_true(legacy_array && legacy_array->is_array() && legacy_array->at(0).contains("effectGraph"),
+                "standalone object collections must retain their original per-entry graph representation");
+    actor->setEffects({});
+}
+
+void testCustomGraphEnvelopeRejectsCollisionsAndMalformedStructure() {
+    registerCustomActorArrayCodec();
+    auto game = makeEffectSnapshotGame();
+    auto actor = makeEffectActor(game, "malformedArrayCodecActor");
+    auto encoded = CSerialization::serializeExpected(CustomActorArray{actor, actor});
+    expect_true(encoded.has_value(), "the malformed envelope fixture must start from a valid array graph");
+    if (!encoded)
+        return;
+    expect_true(encoded->contains("$gameGraphEnvelope"),
+                "the malformed fixture requires the non-object graph envelope");
+    if (!encoded->contains("$gameGraphEnvelope"))
+        return;
+    std::vector<json> malformed;
+    auto changed = *encoded;
+    changed["$gameGraphEnvelope"]["version"] = 2;
+    malformed.push_back(std::move(changed));
+    changed = *encoded;
+    changed.erase("effectGraph");
+    malformed.push_back(std::move(changed));
+    changed = *encoded;
+    changed["extra"] = true;
+    malformed.push_back(std::move(changed));
+    changed = *encoded;
+    changed["$gameGraphEnvelope"]["value"] = json::object();
+    malformed.push_back(std::move(changed));
+    changed = *encoded;
+    changed["$gameGraphEnvelope"]["extra"] = true;
+    malformed.push_back(std::move(changed));
+    changed = *encoded;
+    changed["effectGraph"]["version"] = 2;
+    malformed.push_back(std::move(changed));
+    json deep = 17;
+    for (std::size_t index = 0; index < CSaveFormat::MAX_DOCUMENT_DEPTH; ++index)
+        deep = json::array({std::move(deep)});
+    changed = *encoded;
+    changed["$gameGraphEnvelope"]["value"] = std::move(deep);
+    malformed.push_back(std::move(changed));
+    for (const auto &document : malformed) {
+        auto rejected = CSerialization::deserializeExpected<CustomActorArray>(game, document, "malformed-envelope");
+        expect_true(!rejected && rejected.error().code == CSerializationErrorCode::MalformedGraph &&
+                        rejected.error().source == "malformed-envelope",
+                    "envelope shape, version, and structural bounds must fail before invoking the payload codec");
+    }
+
+    struct ReservedMarker {};
+    CTypes::registerJsonCodec<ReservedMarker>(
+        [](const ReservedMarker &) -> CSerializationResult<json> { return json{{"$gameGraphEnvelope", "user data"}}; },
+        [](const std::shared_ptr<CGame> &, const json &) -> CSerializationResult<ReservedMarker> {
+            return ReservedMarker{};
+        });
+    auto collision = CSerialization::serializeExpected(ReservedMarker{}, "reserved-envelope-marker");
+    expect_true(!collision && collision.error().code == CSerializationErrorCode::InvalidInput &&
+                    collision.error().source == "reserved-envelope-marker",
+                "custom object roots must reject the reserved envelope marker rather than producing ambiguous JSON");
+
+    struct GraphFieldCollision {
+        std::shared_ptr<CCreature> actor;
+    };
+    CTypes::registerJsonCodec<GraphFieldCollision>(
+        [](const GraphFieldCollision &value, CSerializationWriteContext &context) -> CSerializationResult<json> {
+            auto child = CSerialization::serializeExpected(value.actor, context);
+            if (!child)
+                return std::unexpected(child.error());
+            return json{{"actor", std::move(*child)}, {"effectGraph", "user data"}};
+        },
+        [](const std::shared_ptr<CGame> &, const json &) -> CSerializationResult<GraphFieldCollision> {
+            return GraphFieldCollision{};
+        });
+    auto graph_collision = CSerialization::serializeExpected(GraphFieldCollision{actor}, "reserved-graph-field");
+    expect_true(!graph_collision && graph_collision.error().code == CSerializationErrorCode::InvalidInput &&
+                    graph_collision.error().source == "reserved-graph-field",
+                "attaching a graph must reject an existing custom field instead of silently overwriting it");
+}
+
+void testCustomGraphMetadataIsReservedWithoutActors() {
+    struct Value {
+        std::string key;
+        bool nested = false;
+    };
+    auto decoder_calls = std::make_shared<int>(0);
+    CTypes::registerJsonCodec<Value>(
+        [](const Value &value) -> CSerializationResult<json> {
+            json payload{{value.key, "user data"}};
+            return value.nested ? json::array({std::move(payload)}) : std::move(payload);
+        },
+        [decoder_calls](const std::shared_ptr<CGame> &, const json &) -> CSerializationResult<Value> {
+            ++*decoder_calls;
+            return Value{};
+        });
+    const auto codec = CTypes::findCodec(typeid(Value));
+    CSerializationWriteContext context("reserved-no-actor-metadata");
+    for (const auto *key : {"effectGraph", "$gameGraphEnvelope"}) {
+        auto rejected = CSerialization::serializeExpected(Value{key}, context);
+        expect_true(!rejected && rejected.error().code == CSerializationErrorCode::InvalidInput &&
+                        rejected.error().source == "reserved-no-actor-metadata",
+                    "custom root metadata must be rejected even when no actor graph was recorded");
+        auto boundary = codec->serialize(std::any(Value{key}));
+        expect_true(!boundary && boundary.error().code == CSerializationErrorCode::InvalidInput,
+                    "the direct codec write adapter must reject the same reserved root metadata");
+        auto malformed = codec->deserialize(nullptr, json{{key, "user data"}});
+        expect_true(!malformed && *decoder_calls == 0,
+                    "reserved root metadata must fail before reaching the value-only decoder");
+    }
+    auto nested = CSerialization::serializeExpected(Value{"effectGraph", true}, context);
+    auto decoded = nested ? CSerialization::deserializeExpected<Value>(nullptr, *nested)
+                          : CSerializationResult<Value>(std::unexpected(nested.error()));
+    expect_true(nested && nested->at(0).at("effectGraph").get<std::string>() == "user data" && decoded &&
+                    *decoder_calls == 1,
+                "reusing a failed context must permit nested payload fields with reserved root names");
+
+    auto game = makeEffectSnapshotGame();
+    auto actor = makeEffectActor(game, "authoredGraphMetadataProperties");
+    actor->setStringProperty("effectGraph", "authored graph property");
+    actor->setStringProperty("$gameGraphEnvelope", "authored envelope property");
+    auto encoded = CSerialization::serializeExpected(actor);
+    auto restored = encoded ? CSerialization::deserializeExpected<std::shared_ptr<CCreature>>(game, *encoded)
+                            : CSerializationResult<std::shared_ptr<CCreature>>(std::unexpected(encoded.error()));
+    expect_true(encoded && encoded->at("effectGraph").at("version").get<int>() == 1 && restored && *restored &&
+                    (*restored)->getStringProperty("effectGraph") == "authored graph property" &&
+                    (*restored)->getStringProperty("$gameGraphEnvelope") == "authored envelope property",
+                "engine metadata reservation must not reject legitimate authored property names");
+}
+
+void testOperationRetainsConfiguredAndParsedGraphDocuments() {
+    CTypes::register_type<CustomActorValueHolder, CGameObject>();
+    auto game = makeEffectSnapshotGame();
+    auto actor = makeEffectActor(game, "ownedDocumentActor");
+    attachSavedEffect(actor, actor, "ownedDocumentWard");
+    auto saved = EffectObjectJson::serialize(actor);
+    std::shared_ptr<const json> owner = std::make_shared<const json>(*saved);
+    std::weak_ptr<const json> lifetime = owner;
+    game->getObjectHandler()->registerConfig("ownedGraphReference", owner);
+    owner.reset();
+    CSerialization::StrictScope context("owned-document-graph");
+    json reference{{"ref", "ownedGraphReference"}};
+    auto configured = CSerialization::deserializeExpected<std::shared_ptr<CGameObject>>(game, reference, context);
+    game->getObjectHandler()->unregisterConfig("ownedGraphReference");
+    expect_true(configured && *configured && !lifetime.expired(),
+                "the read operation must retain a configured graph owner after its cache entry is removed");
+
+    json string_property{{"class", "CustomActorValueHolder"}, {"properties", json{{"sameActor", saved->dump()}}}};
+    auto parsed = CSerialization::deserializeExpected<std::shared_ptr<CGameObject>>(game, string_property, context);
+    expect_true(lifetime.expired(), "starting the next operation releases the previous configured document");
+    auto holder = parsed ? std::dynamic_pointer_cast<CustomActorValueHolder>(*parsed) : nullptr;
+    auto restored_actor = holder ? holder->getSameActor() : nullptr;
+    expect_true(restored_actor != nullptr, "parsed string properties must remain alive through deferred graph fixups");
+    if (restored_actor) {
+        auto effect = findSavedEffect(restored_actor, "ownedDocumentWard");
+        expect_true(effect && effect->getCaster() == restored_actor && effect->getVictim() == restored_actor,
+                    "parsed graph documents must retain their original identities until effect links are resolved");
+        restored_actor->setEffects({});
+    }
+    if (configured) {
+        if (auto restored = std::dynamic_pointer_cast<CCreature>(*configured))
+            restored->setEffects({});
+    }
+    actor->setEffects({});
+}
+
 void testSavedSelfEffectPreservesStateAndRemainingApplications() {
     auto game = makeEffectSnapshotGame();
     auto actor = makeEffectActor(game, "wardedActor");
     auto effect = attachSavedEffect(actor, actor, "selfWard");
     auto serialized = EffectObjectJson::serialize(actor);
     CSerialization::StrictScope strict;
-    auto restored = std::dynamic_pointer_cast<CCreature>(EffectObjectJson::deserialize(game, serialized));
+    auto restored = std::dynamic_pointer_cast<CCreature>(EffectObjectJson::deserialize(game, serialized, strict));
     auto restored_effect = findSavedEffect(restored, "selfWard");
     assertSavedEffectState(restored_effect);
     if (restored_effect) {
@@ -3372,7 +3911,7 @@ void testSavedMapEffectResolvesForwardAndDetachedActorReferences() {
     expect_true(actors[0]["properties"]["name"].get<std::string>() == "aVictim",
                 "the test must deserialize the victim before its caster");
     CSerialization::StrictScope strict;
-    auto restored = std::dynamic_pointer_cast<CMap>(EffectObjectJson::deserialize(game, serialized));
+    auto restored = std::dynamic_pointer_cast<CMap>(EffectObjectJson::deserialize(game, serialized, strict));
     expect_true(restored && restored->getObjects().size() == 2, "snapshot loading must preserve map actor membership");
     if (!restored) {
         victim->setEffects({});
@@ -3486,7 +4025,7 @@ void testSavedMapForwardActorAliasPreservesNameAndSpatialIndexes() {
                                                  {"effectActorReference", definition["effectActorId"]}};
     (*serialized)["properties"]["trackedActor"] = definition;
     CSerialization::StrictScope strict;
-    auto restored = std::dynamic_pointer_cast<CMap>(EffectObjectJson::deserialize(game, serialized));
+    auto restored = std::dynamic_pointer_cast<CMap>(EffectObjectJson::deserialize(game, serialized, strict));
     auto restored_actor = restored ? restored->getObjectProperty<CCreature>("trackedActor") : nullptr;
     expect_true(restored_actor && restored->getObjectByName("forwardActor") == restored_actor,
                 "an actor alias preceding its definition must populate the map's final name index");
@@ -3528,7 +4067,7 @@ void testSavedEffectsRejectOrdinaryActorPropertyCycles() {
     bool read_rejected = false;
     try {
         CSerialization::StrictScope strict;
-        EffectObjectJson::deserialize(game, std::make_shared<json>(std::move(config)));
+        EffectObjectJson::deserialize(game, std::make_shared<json>(std::move(config)), strict);
     } catch (const std::exception &) {
         read_rejected = true;
     }
@@ -3555,7 +4094,7 @@ void testSavedEffectRejectsMalformedActorReferences() {
         bool rejected = false;
         try {
             CSerialization::StrictScope strict;
-            EffectObjectJson::deserialize(game, std::make_shared<json>(std::move(config)));
+            EffectObjectJson::deserialize(game, std::make_shared<json>(std::move(config)), strict);
         } catch (const std::exception &) {
             rejected = true;
         }
@@ -3619,6 +4158,15 @@ int main() {
     test_typed_engine_signal_still_fires_directly();
     test_effect_applies_for_exactly_its_duration_without_underflow();
     testSavedSelfEffectPreservesStateAndRemainingApplications();
+    testContextAwareCustomCodecPreservesEffectGraphNodeIdentity();
+    testConfiguredReferencesSharePolicyAndBoundaryReentryStartsFresh();
+    testLenientMalformedNestedEffectRetainsTypedFailure();
+    testCustomArrayRootPreservesItsPayloadAndEffectGraph();
+    testCustomGraphEnvelopeRejectsCollisionsAndMalformedStructure();
+    testCustomGraphMetadataIsReservedWithoutActors();
+    testOperationRetainsConfiguredAndParsedGraphDocuments();
+    testCustomCodecWriteErrorRetainsPropertyPath();
+    testTypedCodecErrorsRetainNestedOperationDiagnostics();
     testSavedMapEffectResolvesForwardAndDetachedActorReferences();
     testEffectCloningRemapsOwnedActorsAndRetainsExternalActors();
     testSavedMapForwardActorAliasPreservesNameAndSpatialIndexes();

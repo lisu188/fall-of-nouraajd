@@ -330,14 +330,14 @@ CConfigurationProvider::CConfigurationProvider(std::shared_ptr<CResourcesProvide
 
 // Compatibility-only: serves callers without a game context through a cache that lives for the
 // whole process. Game-attached code must use CGame::getConfigurationProvider() instead.
-std::shared_ptr<json> CConfigurationProvider::getConfig(const std::string &path) {
+std::shared_ptr<const json> CConfigurationProvider::getConfig(const std::string &path) {
     static CConfigurationProvider instance;
     return instance.getConfiguration(path);
 }
 
 CConfigurationProvider::~CConfigurationProvider() = default;
 
-std::shared_ptr<json> CConfigurationProvider::getConfiguration(const std::string &path) {
+std::shared_ptr<const json> CConfigurationProvider::getConfiguration(const std::string &path) {
     auto config = configurations.find(path);
     if (config != configurations.end()) {
         return config->second;
@@ -408,7 +408,7 @@ std::shared_ptr<json> CResourcesProvider::loadJson(std::string path) {
         CJsonUtil::log_parse_error(parsed.error());
         return nullptr;
     }
-    return *parsed;
+    return std::make_shared<json>(std::move(*parsed));
 }
 
 // Trusted resources such as native plugin libraries must resolve only through packaged/base roots.

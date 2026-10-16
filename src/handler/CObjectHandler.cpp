@@ -23,13 +23,98 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 CObjectHandler::CObjectHandler() {}
 
+struct CObjectHandler::RegistrationTransaction::State {
+    std::shared_ptr<CObjectHandler> handler;
+    std::function<bool()> canRollback;
+    decltype(CObjectHandler::constructors) constructors;
+    decltype(CObjectHandler::mapScopedTypes) mapScopedTypes;
+    decltype(CObjectHandler::objectConfig) objectConfig;
+    bool mapScriptScopeActive;
+    bool nativeTileFactory;
+    std::uint64_t previousEpoch;
+    std::uint64_t epoch;
+    bool committed = false;
+
+    State(std::shared_ptr<CObjectHandler> handler, std::function<bool()> canRollback)
+        : handler(std::move(handler)), canRollback(std::move(canRollback)), constructors(this->handler->constructors),
+          mapScopedTypes(this->handler->mapScopedTypes), objectConfig(this->handler->objectConfig),
+          mapScriptScopeActive(this->handler->mapScriptScopeActive),
+          nativeTileFactory(this->handler->nativeTileFactory), previousEpoch(this->handler->registrationEpoch),
+          epoch(++this->handler->nextRegistrationEpoch) {
+        this->handler->registrationEpoch = epoch;
+    }
+};
+
+CObjectHandler::RegistrationTransaction::RegistrationTransaction(std::shared_ptr<CObjectHandler> handler,
+                                                                 std::function<bool()> canRollback) {
+    if (!handler)
+        throw std::invalid_argument("registration transaction requires an object handler");
+    // Script factories may own py::object captures, including while their std::functions are copied.
+    std::optional<pybind11::gil_scoped_acquire> gil;
+    if (Py_IsInitialized())
+        gil.emplace();
+    state = std::make_unique<State>(std::move(handler), std::move(canRollback));
+}
+
+CObjectHandler::RegistrationTransaction::~RegistrationTransaction() {
+    std::optional<pybind11::gil_scoped_acquire> gil;
+    if (Py_IsInitialized())
+        gil.emplace();
+    bool restore = !state->committed && isCurrent();
+    if (restore && state->canRollback) {
+        try {
+            restore = state->canRollback();
+        } catch (...) {
+            restore = false;
+        }
+    }
+    if (restore) {
+        auto &handler = *state->handler;
+        handler.constructors.swap(state->constructors);
+        handler.mapScopedTypes.swap(state->mapScopedTypes);
+        handler.objectConfig.swap(state->objectConfig);
+        handler.mapScriptScopeActive = state->mapScriptScopeActive;
+        handler.nativeTileFactory = state->nativeTileFactory;
+        handler.registrationEpoch = state->previousEpoch;
+        // Cache generations cannot be reused after temporarily publishing different registrations.
+        handler.navigationConfigRevision.fetch_add(1, std::memory_order_release);
+    }
+    state.reset(); // Release replaced or superseded Python factories before releasing the GIL.
+}
+
+bool CObjectHandler::RegistrationTransaction::isCurrent() const {
+    return state->handler->registrationEpoch == state->epoch;
+}
+
+bool CObjectHandler::RegistrationTransaction::commit() {
+    if (!isCurrent())
+        return false;
+    state->committed = true;
+    std::optional<pybind11::gil_scoped_acquire> gil;
+    if (Py_IsInitialized())
+        gil.emplace();
+    // Releasing displaced script factories can itself reenter the engine. Do it while ownership
+    // can still be checked, before the caller publishes the restored map.
+    state->constructors.clear();
+    state->mapScopedTypes.clear();
+    state->objectConfig.clear();
+    return isCurrent();
+}
+
 void CObjectHandler::registerConfig(const std::string &path) {
-    std::shared_ptr<json> config = CConfigurationProvider::getConfig(path);
+    registerConfigDocument(path, CConfigurationProvider::getConfig(path));
+}
+
+void CObjectHandler::registerConfig(const std::string &path, CConfigurationProvider &provider) {
+    registerConfigDocument(path, provider.getConfiguration(path));
+}
+
+void CObjectHandler::registerConfigDocument(const std::string &path, const std::shared_ptr<const json> &config) {
     if (!config) {
         vstd::logger::warning("Failed to load config:", path);
         return;
     }
-    for (auto &[key, value] : config->items()) {
+    for (const auto &[key, value] : config->items()) {
         if (value.is_object() && !value.count("class") && !value.count("ref")) {
             continue;
         }
@@ -39,7 +124,11 @@ void CObjectHandler::registerConfig(const std::string &path) {
 }
 
 void CObjectHandler::registerConfig(const std::string &name, std::shared_ptr<json> value) {
-    objectConfig[name] = value;
+    registerConfig(name, value ? std::make_shared<const json>(*value) : std::shared_ptr<const json>());
+}
+
+void CObjectHandler::registerConfig(const std::string &name, std::shared_ptr<const json> value) {
+    objectConfig.insert_or_assign(name, std::move(value));
     navigationConfigRevision.fetch_add(1, std::memory_order_release);
 }
 
@@ -76,11 +165,9 @@ std::optional<std::pair<bool, int>> CObjectHandler::getStaticTileNavigation(cons
                      hasCost ? std::max(1, properties["movementCost"].get<int>()) : 1);
 }
 
-std::shared_ptr<json> CObjectHandler::getConfig(const std::string &type) {
-    if (vstd::ctn(objectConfig, type)) {
-        return objectConfig[type];
-    }
-    return nullptr;
+std::shared_ptr<const json> CObjectHandler::getConfig(const std::string &type) {
+    auto found = objectConfig.find(type);
+    return found == objectConfig.end() ? nullptr : found->second;
 }
 
 std::vector<std::string> CObjectHandler::getAllTypes() {
@@ -143,14 +230,20 @@ void CObjectHandler::endMapScriptScope() { mapScriptScopeActive = false; }
 
 // TODO: add option to provide custom configuration from string
 std::shared_ptr<CGameObject> CObjectHandler::_createObject(std::shared_ptr<CGame> game, const std::string &type) {
-    std::shared_ptr<json> config = getConfig(type);
+    CSerializationReadContext context(false, type);
+    return _createObject(std::move(game), type, context);
+}
+
+std::shared_ptr<CGameObject> CObjectHandler::_createObject(std::shared_ptr<CGame> game, const std::string &type,
+                                                           CSerializationReadContext &context) {
+    auto config = getConfig(type);
     if (!config) {
         vstd::logger::debug("No config found for:", type, "falling back to class-name construction");
-        config = std::make_shared<json>();
-        (*config)["class"] = type;
+        config = std::make_shared<const json>(json{{"class", type}});
     }
-    std::shared_ptr<CGameObject> object =
-        CSerialization::deserialize<std::shared_ptr<json>, std::shared_ptr<CGameObject>>(game, config);
+    context.keepDocument(config);
+    auto object = serializationValueOrThrow(
+        CSerialization::deserializeExpected<std::shared_ptr<CGameObject>>(game, *config, context));
     if (!object) {
         return object;
     }
@@ -199,5 +292,11 @@ std::string CObjectHandler::getClass(const std::string &type) {
 void CObjectHandler::registerConfig(const std::set<std::string> &paths) {
     for (const auto &path : paths) {
         registerConfig(path);
+    }
+}
+
+void CObjectHandler::registerConfig(const std::set<std::string> &paths, CConfigurationProvider &provider) {
+    for (const auto &path : paths) {
+        registerConfig(path, provider);
     }
 }

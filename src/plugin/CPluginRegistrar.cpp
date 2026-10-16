@@ -43,12 +43,12 @@ bool CPluginRegistrar::registerConfigJson(const std::string &id, const std::stri
         CJsonUtil::log_parse_error(parsed.error());
         return false;
     }
-    if (!(*parsed)->is_object()) {
+    if (!parsed->is_object()) {
         vstd::logger::warning("Plugin config is not an object:", id);
         return false;
     }
 
-    _game->getObjectHandler()->registerConfig(id, *parsed);
+    _game->getObjectHandler()->registerConfig(id, std::make_shared<const json>(std::move(*parsed)));
     return true;
 }
 

@@ -33,48 +33,47 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #include <iterator>
 
 namespace {
-template <typename Value> std::set<Value> json_array_to_set(const std::shared_ptr<json> &object) {
+template <typename Value> std::set<Value> json_array_to_set(const json &object) {
     std::set<Value> values;
-    std::ranges::transform(*object, std::inserter(values, values.end()),
+    std::ranges::transform(object, std::inserter(values, values.end()),
                            [](const json &value) { return value.get<Value>(); });
     return values;
 }
 
-CTags json_array_to_tags(const std::shared_ptr<json> &object) {
+CTags json_array_to_tags(const json &object) {
     CTags tags;
-    std::ranges::for_each(*object,
+    std::ranges::for_each(object,
                           [&tags](const json &value) { tags.insert(CTags::fromString(value.get<std::string>())); });
     return tags;
 }
 
-template <typename Value> std::shared_ptr<json> set_to_json_array(const std::set<Value> &values) {
-    auto arr = std::make_shared<json>(json::array());
+template <typename Value> json set_to_json_array(const std::set<Value> &values) {
+    auto arr = json::array();
     for (const auto &value : values) {
-        add_arr_member(arr, value);
+        arr[arr.size()] = value;
     }
     return arr;
 }
 
-std::shared_ptr<json> tags_to_json_array(const CTags &tags) {
-    auto arr = std::make_shared<json>(json::array());
+json tags_to_json_array(const CTags &tags) {
+    auto arr = json::array();
     for (CTag tag : tags) {
-        add_arr_member(arr, std::string(CTags::toString(tag)));
+        arr[arr.size()] = std::string(CTags::toString(tag));
     }
     return arr;
 }
 
-template <typename Value>
-std::map<std::string, Value> json_object_to_string_key_map(const std::shared_ptr<json> &object) {
+template <typename Value> std::map<std::string, Value> json_object_to_string_key_map(const json &object) {
     std::map<std::string, Value> values;
-    for (auto [key, value] : object->items()) {
+    for (auto [key, value] : object.items()) {
         values.emplace(key, value.template get<Value>());
     }
     return values;
 }
 
-template <typename Value> std::map<int, Value> json_object_to_int_key_map(const std::shared_ptr<json> &object) {
+template <typename Value> std::map<int, Value> json_object_to_int_key_map(const json &object) {
     std::map<int, Value> values;
-    for (auto [key, value] : object->items()) {
+    for (auto [key, value] : object.items()) {
         if (key.empty()) {
             vstd::logger::warning("Skipping empty integer map key");
             continue;
@@ -90,34 +89,63 @@ template <typename Value> std::map<int, Value> json_object_to_int_key_map(const 
 }
 
 template <typename Key, typename Value, typename KeySerializer>
-std::shared_ptr<json> map_to_json_object(const std::map<Key, Value> &values, KeySerializer key_serializer) {
-    auto object = std::make_shared<json>();
+json map_to_json_object(const std::map<Key, Value> &values, KeySerializer key_serializer) {
+    json object;
     for (const auto &[key, value] : values) {
-        add_member(object, key_serializer(key), value);
+        object[key_serializer(key)] = value;
     }
     return object;
 }
 
 void registerCustomValueTypes() {
-    auto array_string_deserialize = [](std::shared_ptr<CGame>, std::shared_ptr<json> object) {
+    auto array_string_deserialize = [](const std::shared_ptr<CGame> &, const json &object) {
         return json_array_to_set<std::string>(object);
     };
 
     auto array_string_serialize = [](const std::set<std::string> &set) { return set_to_json_array(set); };
 
-    auto tags_deserialize = [](std::shared_ptr<CGame>, std::shared_ptr<json> object) {
+    auto list_string_deserialize =
+        [](const std::shared_ptr<CGame> &, const json &object,
+           CSerializationReadContext &context) -> CSerializationResult<std::list<std::string>> {
+        if (!object.is_array()) {
+            return std::unexpected(CSerializationError{CSerializationErrorCode::TypeMismatch, context.source(),
+                                                       context.path(), context.objectType(),
+                                                       "Expected an array for an ordered string list"});
+        }
+        std::list<std::string> values;
+        std::size_t index = 0;
+        for (const auto &value : object) {
+            CSerializationReadContext::PropertyScope entryScope(context, "[" + std::to_string(index++) + "]", {}, true);
+            if (!value.is_string()) {
+                return std::unexpected(CSerializationError{CSerializationErrorCode::TypeMismatch, context.source(),
+                                                           context.path(), context.objectType(),
+                                                           "Expected a string in an ordered string list"});
+            }
+            values.push_back(value.get<std::string>());
+        }
+        return values;
+    };
+
+    auto list_string_serialize = [](const std::list<std::string> &values) {
+        auto array = json::array();
+        for (const auto &value : values)
+            array[array.size()] = value;
+        return array;
+    };
+
+    auto tags_deserialize = [](const std::shared_ptr<CGame> &, const json &object) {
         return json_array_to_tags(object);
     };
 
     auto tags_serialize = [](const CTags &tags) { return tags_to_json_array(tags); };
 
-    auto array_int_deserialize = [](std::shared_ptr<CGame>, std::shared_ptr<json> object) {
+    auto array_int_deserialize = [](const std::shared_ptr<CGame> &, const json &object) {
         return json_array_to_set<int>(object);
     };
 
     auto array_int_serialize = [](const std::set<int> &set) { return set_to_json_array(set); };
 
-    auto map_string_string_deserialize = [](std::shared_ptr<CGame>, std::shared_ptr<json> object) {
+    auto map_string_string_deserialize = [](const std::shared_ptr<CGame> &, const json &object) {
         return json_object_to_string_key_map<std::string>(object);
     };
 
@@ -125,7 +153,7 @@ void registerCustomValueTypes() {
         return map_to_json_object(map, std::identity{});
     };
 
-    auto map_string_int_deserialize = [](std::shared_ptr<CGame>, std::shared_ptr<json> object) {
+    auto map_string_int_deserialize = [](const std::shared_ptr<CGame> &, const json &object) {
         return json_object_to_string_key_map<int>(object);
     };
 
@@ -133,7 +161,7 @@ void registerCustomValueTypes() {
         return map_to_json_object(map, std::identity{});
     };
 
-    auto map_int_string_deserialize = [](std::shared_ptr<CGame>, std::shared_ptr<json> object) {
+    auto map_int_string_deserialize = [](const std::shared_ptr<CGame> &, const json &object) {
         return json_object_to_int_key_map<std::string>(object);
     };
 
@@ -141,7 +169,7 @@ void registerCustomValueTypes() {
         return map_to_json_object(map, [](int key) { return vstd::str(key); });
     };
 
-    auto map_int_int_deserialize = [](std::shared_ptr<CGame>, std::shared_ptr<json> object) {
+    auto map_int_int_deserialize = [](const std::shared_ptr<CGame> &, const json &object) {
         return json_object_to_int_key_map<int>(object);
     };
 
@@ -149,14 +177,15 @@ void registerCustomValueTypes() {
         return map_to_json_object(map, [](int key) { return vstd::str(key); });
     };
 
-    CTypes::register_custom_type<std::set<std::string>>(array_string_serialize, array_string_deserialize);
-    CTypes::register_custom_type<CTags>(tags_serialize, tags_deserialize);
-    CTypes::register_custom_type<std::set<int>>(array_int_serialize, array_int_deserialize);
-    CTypes::register_custom_type<std::map<std::string, std::string>>(map_string_string_serialize,
-                                                                     map_string_string_deserialize);
-    CTypes::register_custom_type<std::map<std::string, int>>(map_string_int_serialize, map_string_int_deserialize);
-    CTypes::register_custom_type<std::map<int, std::string>>(map_int_string_serialize, map_int_string_deserialize);
-    CTypes::register_custom_type<std::map<int, int>>(map_int_int_serialize, map_int_int_deserialize);
+    CTypes::registerJsonType<std::set<std::string>>(array_string_serialize, array_string_deserialize);
+    CTypes::registerJsonType<std::list<std::string>>(list_string_serialize, list_string_deserialize);
+    CTypes::registerJsonType<CTags>(tags_serialize, tags_deserialize);
+    CTypes::registerJsonType<std::set<int>>(array_int_serialize, array_int_deserialize);
+    CTypes::registerJsonType<std::map<std::string, std::string>>(map_string_string_serialize,
+                                                                 map_string_string_deserialize);
+    CTypes::registerJsonType<std::map<std::string, int>>(map_string_int_serialize, map_string_int_deserialize);
+    CTypes::registerJsonType<std::map<int, std::string>>(map_int_string_serialize, map_int_string_deserialize);
+    CTypes::registerJsonType<std::map<int, int>>(map_int_int_serialize, map_int_int_deserialize);
 }
 } // namespace
 

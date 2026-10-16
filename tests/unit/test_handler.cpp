@@ -77,14 +77,9 @@ void testGameplayMetadataIsAvailableBeforePluginLoading() {
         using Pointer = std::shared_ptr<T>;
         using Set = std::set<Pointer>;
         using Map = std::map<std::string, Pointer>;
-        const auto hasSerializer = [](auto key) {
-            auto found = CTypes::serializers()->find(key);
-            return found != CTypes::serializers()->end() && found->second;
-        };
         expect_true(CTypes::is_pointer_type<Pointer>() && CTypes::is_array_type<Set>() && CTypes::is_map_type<Map>() &&
-                        hasSerializer(vstd::type_pair<std::shared_ptr<json>, Pointer>()) &&
-                        hasSerializer(vstd::type_pair<std::shared_ptr<json>, Set>()) &&
-                        hasSerializer(vstd::type_pair<std::shared_ptr<json>, Map>()),
+                        CTypes::findCodec(typeid(Pointer)) && CTypes::findCodec(typeid(Set)) &&
+                        CTypes::findCodec(typeid(Map)),
                     message);
         expect_true(!CTypes::builders()->contains(T::static_meta()->name()),
                     "gameplay builders must remain unavailable until the native plugin registers them");
