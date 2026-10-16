@@ -17,6 +17,7 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 #include "CGuiHandler.h"
 #include "core/CGame.h"
+#include "core/CGameContext.h"
 #include "core/CList.h"
 #include "core/CMap.h"
 #include "core/CPlaytestTrace.h"
@@ -33,11 +34,31 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #include "gui/panel/CGameTradePanel.h"
 #include "object/CDialog.h"
 #include "object/CMarket.h"
+#include "object/CPlayer.h"
 #include "handler/CScriptHandler.h"
 
 #include <algorithm>
 
 namespace {
+std::string boundedPresentationText(const std::string &value, std::size_t limit) {
+    if (value.size() <= limit) {
+        return value;
+    }
+    while (limit > 0 && (static_cast<unsigned char>(value[limit]) & 0xC0) == 0x80) {
+        --limit;
+    }
+    return value.substr(0, limit);
+}
+
+void addPresentationContext(json &fields, const std::shared_ptr<CGame> &game) {
+    auto map = game->getMap();
+    CPlaytestTrace::addMapContext(fields, map);
+    if (map && map->getPlayer()) {
+        fields["player"] = CPlaytestTrace::objectRef(map->getPlayer());
+        fields["playerCoords"] = CPlaytestTrace::coords(map->getPlayer()->getCoords());
+    }
+}
+
 std::shared_ptr<CLayout> create_tooltip_layout(const std::shared_ptr<CGame> &game, const std::string &text, int x,
                                                int y) {
     const auto gui = game->getGui();
@@ -141,6 +162,22 @@ bool CGuiHandler::showConfirm(std::string title, std::string body, std::string c
 
 void CGuiHandler::showTrade(std::shared_ptr<CMarket> market) {
     auto game = _game.lock();
+    requestedTradeMarket.reset();
+    requestedTradeMap.reset();
+    if (game && market && !game->getGui() && CPlaytestTrace::enabled() && game->getMap() &&
+        game->getContext()->isActive()) {
+        requestedTradeMarket = market;
+        requestedTradeMap = game->getMap();
+        requestedTradeGeneration = game->getContext()->captureTransitionGeneration();
+    }
+    if (game && market && CPlaytestTrace::enabled()) {
+        json fields = {{"market", CPlaytestTrace::objectRef(market)},
+                       {"sell", market->getSell()},
+                       {"buy", market->getBuy()},
+                       {"items", CPlaytestTrace::itemRefs(market->getItems())}};
+        CPlaytestTrace::addMapContext(fields, game->getMap());
+        CPlaytestTrace::record("trade_requested", fields);
+    }
     if (!game || !game->getGui() || !market) {
         return;
     }
@@ -156,6 +193,17 @@ void CGuiHandler::showTrade(std::shared_ptr<CMarket> market) {
     panel->setMarket(market);
     game->getGui()->pushChild(panel);
     panel->awaitClosing();
+}
+
+std::shared_ptr<CMarket> CGuiHandler::getRequestedTradeMarket() {
+    auto game = _game.lock();
+    if (!game || !requestedTradeMarket || !game->getMap() || game->getGui() || !CPlaytestTrace::enabled() ||
+        game->getMap() != requestedTradeMap.lock() ||
+        !game->getContext()->isTransitionGenerationCurrent(requestedTradeGeneration)) {
+        requestedTradeMarket.reset();
+        requestedTradeMap.reset();
+    }
+    return requestedTradeMarket;
 }
 
 void CGuiHandler::showDialog(std::shared_ptr<CDialog> dialog) {
@@ -205,6 +253,17 @@ CGuiHandler::CGuiHandler(std::shared_ptr<CGame> game) : _game(game) {}
 std::string CGuiHandler::showChoice(std::string title, std::string choicesJson, std::string actionLabel,
                                     std::string backLabel) {
     auto game = _game.lock();
+    if (game && CPlaytestTrace::enabled()) {
+        json fields = {{"title", boundedPresentationText(title, 256)},
+                       {"titleLength", static_cast<unsigned long long>(title.size())},
+                       {"choicesJson", boundedPresentationText(choicesJson, 16384)},
+                       {"choicesJsonLength", static_cast<unsigned long long>(choicesJson.size())},
+                       {"actionLabel", boundedPresentationText(actionLabel, 128)},
+                       {"backLabel", boundedPresentationText(backLabel, 128)},
+                       {"headless", !game->getGui()}};
+        addPresentationContext(fields, game);
+        CPlaytestTrace::record("choice_requested", fields);
+    }
     if (!game || !game->getGui()) {
         return "";
     }
@@ -358,6 +417,16 @@ void CGuiHandler::showCampaignScreen(std::string title, std::string body, std::s
 void CGuiHandler::showCampaignArtworkScreen(std::string title, std::string body, std::string actionLabel,
                                             std::string artwork) {
     auto game = _game.lock();
+    if (game && CPlaytestTrace::enabled()) {
+        json fields = {{"title", boundedPresentationText(title, 256)},
+                       {"titleLength", static_cast<unsigned long long>(title.size())},
+                       {"body", boundedPresentationText(body, 4096)},
+                       {"bodyLength", static_cast<unsigned long long>(body.size())},
+                       {"actionLabel", boundedPresentationText(actionLabel, 128)},
+                       {"headless", !game->getGui()}};
+        addPresentationContext(fields, game);
+        CPlaytestTrace::record("reader_requested", fields);
+    }
     if (!game || !game->getGui()) {
         // Headless execution: log the full presentation content and return
         // immediately so automated campaign runs never block on input.
