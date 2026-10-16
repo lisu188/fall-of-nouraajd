@@ -656,9 +656,15 @@ class ObjectChangedProbe : public CGameObject {
     V_META(ObjectChangedProbe, CGameObject, V_METHOD(ObjectChangedProbe, onObjectChanged, void, Coords))
 
   public:
-    void onObjectChanged(Coords coords) { objectChangedCoords.push_back(coords); }
+    void onObjectChanged(Coords coords) {
+        objectChangedCoords.push_back(coords);
+        if (auto callback = std::exchange(onNextChange, {})) {
+            callback();
+        }
+    }
 
     std::vector<Coords> objectChangedCoords;
+    std::function<void()> onNextChange;
 };
 
 // Drives the attacker's side of a step-combat encounter to a deterministic outcome so the
@@ -2166,6 +2172,222 @@ struct AtomicEntryState {
     int entered = 0;
 };
 
+struct AsyncCreateState {
+    bool ready = false;
+    bool fail = false;
+    bool spawnReturned = false;
+    int entered = 0;
+    int finished = 0;
+    int queued = 0;
+    int frames = 0;
+};
+
+vstd::task<void> awaitAsyncCreate(std::shared_ptr<AsyncCreateState> state) {
+    ++state->entered;
+    co_await vstd::until(vstd::event_loop<>::instance(), [state] { return state->ready; });
+    if (state->fail) {
+        throw std::runtime_error("deliberate asynchronous creation failure");
+    }
+    ++state->finished;
+}
+
+class AsyncCreateProbe : public CMapObject {
+  public:
+    int created = 0;
+
+    void onCreate(std::shared_ptr<CGameEvent>) override { ++created; }
+};
+
+class AsyncPlayerCreateProbe : public CPlayer {
+  public:
+    int created = 0;
+
+    void onCreate(std::shared_ptr<CGameEvent>) override { ++created; }
+};
+
+void testAsyncObjectCreationSuspendsWithoutNestedPumpingAndRejectsStaleMovement() {
+    enum class Outcome { Complete, Cancel, Fail, Superseded, Replaced, Relocated, Blocked, ObserverRelocated };
+    CTypes::register_type_metadata<ObjectChangedProbe, CGameObject>();
+    auto game = CGameLoader::loadGame();
+    auto context = game->getContext();
+    auto map = std::make_shared<CMap>();
+    map->setGame(game);
+    game->setMap(map);
+    for (const auto coords : {Coords(2, 0, 0), Coords(4, 0, 0)}) {
+        auto tile = std::make_shared<CTile>();
+        tile->setCanStep(true);
+        map->addTile(tile, coords.x, coords.y, coords.z);
+    }
+    auto loop = vstd::event_loop<>::instance();
+    int identity = 0;
+    for (auto outcome : {Outcome::Complete, Outcome::Cancel, Outcome::Fail, Outcome::Superseded, Outcome::Replaced,
+                         Outcome::Relocated, Outcome::Blocked, Outcome::ObserverRelocated}) {
+        map->getTile(2, 0, 0)->setCanStep(true);
+        auto state = std::make_shared<AsyncCreateState>();
+        auto object = std::make_shared<AsyncCreateProbe>();
+        object->setName("asyncCreateProbe" + std::to_string(++identity));
+        object->setCanStep(true);
+        object->setGame(game);
+        const auto origin = object->getCoords();
+        auto trigger = std::make_shared<CCustomTrigger>(object->getName(), "onCreate",
+                                                        [state](auto, auto) { return awaitAsyncCreate(state); });
+        map->getEventHandler()->registerTrigger(trigger);
+        auto frame = loop->connectFrameCallback([state](int) { ++state->frames; });
+        loop->invoke([state] {
+            ++state->queued;
+            if (!state->spawnReturned) {
+                state->ready = true;
+            }
+        });
+        auto creation = context->spawnTask(map->addObjectAsync(object, Coords(2, 0, 0)));
+        state->spawnReturned = true;
+        expect_true(!creation.finished() && state->queued == 0 && state->frames == 0 && object->getCoords() == origin &&
+                        map->getObjectByName(object->getName()) == object,
+                    "async creation must suspend its native receipt without pumping queued work or display frames");
+        for (int phase = 0; phase < 64 && !state->entered && !creation.finished(); ++phase) {
+            loop->runReady();
+        }
+        expect_true(!creation.finished() && object->created == 1 && state->entered == 1 && state->finished == 0 &&
+                        !state->ready && state->frames == 0,
+                    "ordered coroutine phases must reach the creation receipt without completing its closed gate");
+        std::shared_ptr<ObjectChangedProbe> observer;
+        if (outcome == Outcome::Cancel) {
+            creation.requestStop();
+        } else if (outcome == Outcome::Fail) {
+            state->fail = true;
+        } else if (outcome == Outcome::Superseded) {
+            context->advanceTransitionGeneration();
+        } else if (outcome == Outcome::Replaced) {
+            auto replacement = std::make_shared<CMapObject>();
+            replacement->setName(object->getName());
+            replacement->setCanStep(true);
+            replacement->setGame(game);
+            map->setObjects({replacement});
+        } else if (outcome == Outcome::Relocated) {
+            object->relocateWithoutMoveHooks(Coords(3, 0, 0));
+        } else if (outcome == Outcome::Blocked) {
+            map->getTile(2, 0, 0)->setCanStep(false);
+        } else if (outcome == Outcome::ObserverRelocated) {
+            observer = std::make_shared<ObjectChangedProbe>();
+            observer->setGame(game);
+            observer->onNextChange = [object] { object->relocateWithoutMoveHooks(Coords(3, 0, 0)); };
+            map->connect("objectChanged", observer, "onObjectChanged");
+        }
+        state->ready = true;
+        for (int phase = 0; phase < 64 && !creation.finished(); ++phase) {
+            loop->runReady();
+        }
+        expect_true(creation.finished(), "creation completion or cancellation must finish within bounded ready phases");
+        bool cancelled = false;
+        bool failed = false;
+        if (creation.finished()) {
+            try {
+                creation.get();
+            } catch (const vstd::task_cancelled &) {
+                cancelled = true;
+            } catch (const std::runtime_error &error) {
+                failed = std::string(error.what()) == "deliberate asynchronous creation failure";
+            }
+        }
+        loop->runReady();
+        const auto expected = outcome == Outcome::Complete                                             ? Coords(2, 0, 0)
+                              : outcome == Outcome::Relocated || outcome == Outcome::ObserverRelocated ? Coords(3, 0, 0)
+                                                                                                       : origin;
+        expect_true(
+            cancelled == (outcome == Outcome::Cancel) && failed == (outcome == Outcome::Fail) &&
+                object->getCoords() == expected && object->created == 1 && state->entered == 1 &&
+                state->finished == ((cancelled || failed) ? 0 : 1) && state->queued == 1 && state->frames == 0,
+            "creation receipts must run once and reject cancelled, failed, stale, replaced or blocked movement");
+        if (outcome != Outcome::Replaced) {
+            expect_true(map->getObjectByName(object->getName()) == object &&
+                            map->getObjectsAtCoords(expected).contains(object),
+                        "creation and observer relocation must preserve the exact actor's spatial registration");
+            auto duplicate = context->spawnTask(map->addObjectAsync(object, Coords(4, 0, 0)));
+            for (int phase = 0; phase < 64 && !duplicate.finished(); ++phase) {
+                loop->runReady();
+            }
+            expect_true(duplicate.finished() && object->getCoords() == expected && object->created == 1 &&
+                            state->entered == 1 && state->frames == 0,
+                        "a duplicate async insertion must not repeat creation or move the existing actor");
+            if (duplicate.finished()) {
+                duplicate.get();
+            }
+        }
+    }
+    auto checkEntryPath = [&](const auto &entryMap, const auto &object, auto start, bool attached) {
+        auto state = std::make_shared<AsyncCreateState>();
+        entryMap->getEventHandler()->registerTrigger(std::make_shared<CCustomTrigger>(
+            object->getName(), "onCreate", [state](auto, auto) { return awaitAsyncCreate(state); }));
+        auto frame = loop->connectFrameCallback([state](int) { ++state->frames; });
+        loop->invoke([state] {
+            ++state->queued;
+            if (!state->spawnReturned) {
+                state->ready = true;
+            }
+        });
+        auto creation = context->spawnTask(start());
+        state->spawnReturned = true;
+        expect_true(!creation.finished() && state->queued == 0 && state->frames == 0,
+                    "named creation and player setup/attachment must return without nested queue or frame pumping");
+        for (int phase = 0; phase < 64 && !state->entered && !creation.finished(); ++phase) {
+            loop->runReady();
+        }
+        expect_true(!creation.finished() && object->created == 1 && state->entered == 1 && !state->ready &&
+                        object->getCoords() == (attached ? Coords(2, 0, 0) : ZERO) &&
+                        entryMap->getObjectByName(object->getName()) == object,
+                    "creation gates must preserve each entry path's committed object and coordinate ordering");
+        state->ready = true;
+        for (int phase = 0; phase < 64 && !creation.finished(); ++phase) {
+            loop->runReady();
+        }
+        expect_true(creation.finished(), "every creation entry path must complete in bounded ready phases");
+        if (creation.finished()) {
+            (void)creation.get();
+        }
+        expect_true(object->created == 1 && state->entered == 1 && state->finished == 1 && state->queued == 1 &&
+                        state->frames == 0 && object->getCoords() == Coords(2, 0, 0),
+                    "creation entry paths must await exactly one receipt and finish at the requested destination");
+    };
+    auto makeEntryMap = [&] {
+        auto destination = std::make_shared<CMap>();
+        destination->setGame(game);
+        destination->setEntryX(2);
+        auto tile = std::make_shared<CTile>();
+        tile->setCanStep(true);
+        destination->addTile(tile, 2, 0, 0);
+        game->setMap(destination);
+        return destination;
+    };
+    {
+        auto destination = makeEntryMap();
+        auto object = std::make_shared<AsyncCreateProbe>();
+        object->setGame(game);
+        object->setName("namedAsyncCreateProbe");
+        object->setCanStep(true);
+        game->getObjectHandler()->registerType("nativeAsyncCreateTemplate", [object] { return object; });
+        checkEntryPath(
+            destination, object,
+            [&] { return destination->addObjectByNameAsync("nativeAsyncCreateTemplate", Coords(2, 0, 0)); }, false);
+    }
+    for (bool attached : {false, true}) {
+        auto destination = makeEntryMap();
+        auto player = std::make_shared<AsyncPlayerCreateProbe>();
+        player->setGame(game);
+        player->setName("player");
+        player->setLevel(1);
+        checkEntryPath(
+            destination, player,
+            [&] {
+                return attached ? destination->attachPlayerAsync(player, Coords(2, 0, 0))
+                                : destination->setPlayerAsync(player);
+            },
+            attached);
+        expect_true(destination->getPlayer() == player && !player->getPendingMoveOrigin(),
+                    "player creation must preserve paired attachment identity and finish its movement origin");
+    }
+    context->shutdown();
+}
+
 vstd::task<void> awaitAtomicEntry(std::shared_ptr<AtomicEntryState> state) {
     ++state->entered;
     co_await vstd::until(vstd::event_loop<>::instance(), [state] { return state->ready; });
@@ -3611,6 +3833,8 @@ int main() {
                             testAsyncGameStartOwnsSuspendedEntryAndRollsBackCancellation);
     nativeTestProfile().run("testAsyncRandomEncountersStopBeforeAnotherStaleRoomOrRngDraw",
                             testAsyncRandomEncountersStopBeforeAnotherStaleRoomOrRngDraw);
+    nativeTestProfile().run("testAsyncObjectCreationSuspendsWithoutNestedPumpingAndRejectsStaleMovement",
+                            testAsyncObjectCreationSuspendsWithoutNestedPumpingAndRejectsStaleMovement);
     nativeTestProfile().run("test_scene_manager_prepared_request_rejection_failure_and_cancellation",
                             test_scene_manager_prepared_request_rejection_failure_and_cancellation);
     nativeTestProfile().run("test_scene_manager_destination_entry_shutdown_cancels_commit",

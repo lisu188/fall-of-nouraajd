@@ -46,6 +46,7 @@ ADDITIONAL_CASES = {
         "testSceneCommitRunsAfterPreparationAndBeforeQueuedObservers",
         "testAsyncGameStartOwnsSuspendedEntryAndRollsBackCancellation",
         "testAsyncRandomEncountersStopBeforeAnotherStaleRoomOrRngDraw",
+        "testAsyncObjectCreationSuspendsWithoutNestedPumpingAndRejectsStaleMovement",
     ),
 }
 

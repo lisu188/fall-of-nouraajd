@@ -337,6 +337,17 @@ class CMap : public CGameObject {
 
     bool removeObjectWithoutEvents(const std::shared_ptr<CMapObject> &mapObject);
 
+    bool addObjectWithoutEvents(const std::shared_ptr<CMapObject> &mapObject);
+
+    vstd::task<void> addObjectWithEventsAsync(std::shared_ptr<CMapObject> mapObject,
+                                              std::move_only_function<vstd::task<void>()> afterCreate);
+
+    static vstd::task<void> moveCreatedObjectAsync(std::shared_ptr<CMap> map, std::shared_ptr<CMapObject> object,
+                                                   Coords coords);
+
+    static vstd::task<void> finishPlayerCreationAsync(std::shared_ptr<CMap> map, std::shared_ptr<CPlayer> player,
+                                                      std::optional<Coords> target);
+
     int normalizeAxis(int value, int z, bool wrapAxis, const IntMap &bounds) const;
 
     void bumpNavigationRevision();
