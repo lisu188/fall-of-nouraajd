@@ -84,6 +84,9 @@ class SessionDeferredWorkTest(unittest.TestCase):
         self.assertIsNone(session_reference())
         self.assertIsNotNone(player_reference(), "the pending operation must retain its exact actor")
         flow.close()
+        self.assertIsNone(flow.gi_frame, "cancellation must close the suspended generator frame")
+        # CPython 3.12 can retain arguments in the closed generator; native CScriptFlow also destroys its owner.
+        del flow
         gc.collect()
         self.assertIsNone(player_reference(), "cancelling before movement must release the pending actor")
 
