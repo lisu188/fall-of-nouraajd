@@ -835,14 +835,7 @@ void CSerialization::setOtherProperty(std::type_index deserializedId, const std:
         result = serializationValueOrThrow(codec->deserialize(object->getGame(), payload, context));
     } catch (const CSerializationException &exception) {
         auto error = exception.getError();
-        if (error.propertyPath.empty())
-            error.propertyPath = context.path();
-        else if (!context.path().empty() && !error.propertyPath.starts_with(context.path()))
-            error.propertyPath = context.path() + "." + error.propertyPath;
-        if (error.objectType.empty())
-            error.objectType = object->meta()->name();
-        if (error.source.empty())
-            error.source = context.source();
+        completeError(error, context, object->meta()->name());
         throw CSerializationException(std::move(error));
     } catch (const std::exception &exception) {
         throw CSerializationException({CSerializationErrorCode::CodecFailure, context.source(), context.path(),
@@ -923,14 +916,7 @@ void CSerialization::setProperty(const std::shared_ptr<json> &conf, const std::s
             auto result = serializer->serialize(propertyValue, context);
             if (!result) {
                 auto error = std::move(result.error());
-                if (error.propertyPath.empty())
-                    error.propertyPath = context.path();
-                else if (!error.propertyPath.starts_with(context.path()))
-                    error.propertyPath = context.path() + "." + error.propertyPath;
-                if (error.source.empty())
-                    error.source = context.source();
-                if (error.objectType.empty())
-                    error.objectType = context.objectType();
+                completeError(error, context, propertyType.name());
                 throw CSerializationException(std::move(error));
             }
             (*conf)[propertyName] = std::move(*result);

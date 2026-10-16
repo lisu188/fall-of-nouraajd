@@ -3412,6 +3412,149 @@ void testCustomCodecWriteErrorRetainsPropertyPath() {
                     rejected.error().source == "custom-write-path" &&
                     rejected.error().objectType == "InvalidCodecValueHolder",
                 "custom codec write errors must retain the owning reflected property path and object type");
+
+    auto game = makeEffectSnapshotGame();
+    const json document{{"class", "InvalidCodecValueHolder"}, {"properties", {{"payload", json::object()}}}};
+    for (const auto &[reportedPath, expectedPath] : std::vector<std::pair<std::string, std::string>>{
+             {"", "payload"},
+             {"inside", "payload.inside"},
+             {"payloadExtra", "payload.payloadExtra"},
+             {"[1].inside", "payload[1].inside"},
+             {"payload.inside", "payload.inside"},
+             {"payload[1].inside", "payload[1].inside"},
+         }) {
+        const CSerializationError error{
+            CSerializationErrorCode::InvalidInput, {}, reportedPath, {}, "invalid reflected codec value"};
+        CTypes::registerJsonType<InvalidCodecValue>(
+            [error](const InvalidCodecValue &) -> CSerializationResult<json> { return std::unexpected(error); },
+            [error](const std::shared_ptr<CGame> &, const json &) -> CSerializationResult<InvalidCodecValue> {
+                return std::unexpected(error);
+            });
+        auto encoded = CSerialization::serializeExpected(holder, "reflected-write-path");
+        CSerializationReadContext reading(true, "reflected-read-path");
+        auto decoded = CSerialization::deserializeExpected<std::shared_ptr<CGameObject>>(game, document, reading);
+        expect_true(!encoded && encoded.error().propertyPath == expectedPath &&
+                        encoded.error().source == "reflected-write-path" &&
+                        encoded.error().objectType == "InvalidCodecValueHolder" &&
+                        encoded.error().code == CSerializationErrorCode::InvalidInput,
+                    "reflected codec writes must qualify relative and index paths once at property boundaries");
+        expect_true(!decoded && decoded.error().propertyPath == expectedPath &&
+                        decoded.error().source == "reflected-read-path" &&
+                        decoded.error().objectType == "InvalidCodecValueHolder" &&
+                        decoded.error().code == CSerializationErrorCode::InvalidInput,
+                    "reflected codec reads must qualify relative and index paths once at property boundaries");
+    }
+}
+
+void testTypedCodecErrorsRetainNestedOperationDiagnostics() {
+    struct Child {};
+    struct Parent {};
+    CTypes::registerJsonCodec<Parent>(
+        [](const Parent &, CSerializationWriteContext &context) -> CSerializationResult<json> {
+            CSerializationWriteContext::PropertyScope property(context, "payload", "CodecOwner");
+            return CSerialization::serializeExpected(Child{}, context);
+        },
+        [](const std::shared_ptr<CGame> &game, const json &document,
+           CSerializationReadContext &context) -> CSerializationResult<Parent> {
+            CSerializationReadContext::PropertyScope property(context, "payload", "CodecOwner");
+            auto child = CSerialization::deserializeExpected<Child>(game, document, context);
+            if (!child)
+                return std::unexpected(child.error());
+            return Parent{};
+        });
+    CSerializationWriteContext writing("nested-codec-source");
+    CSerializationReadContext reading(true, "nested-codec-source");
+    const json document;
+    auto check = [&](CSerializationErrorCode code, const std::string &path, const std::string &source,
+                     const std::string &type, const std::string &message) {
+        {
+            CSerializationWriteContext::PropertyScope writeScope(writing, "outer", "OuterOwner");
+            CSerializationReadContext::PropertyScope readScope(reading, "outer", "OuterOwner");
+            auto encoded = CSerialization::serializeExpected(Parent{}, writing);
+            auto decoded = CSerialization::deserializeExpected<Parent>(nullptr, document, reading);
+            for (const auto *error : {encoded ? nullptr : &encoded.error(), decoded ? nullptr : &decoded.error()}) {
+                expect_true(error && error->code == code && error->propertyPath == path && error->source == source &&
+                                error->objectType == type &&
+                                (message.empty() ? !error->message.empty() : error->message == message),
+                            "nested typed encode and decode failures must retain complete operation diagnostics");
+            }
+            expect_true(writing.path() == "outer" && reading.path() == "outer" &&
+                            writing.objectType() == "OuterOwner" && reading.objectType() == "OuterOwner" &&
+                            reading.property() == "outer",
+                        "failing nested typed codecs must restore their caller's property and type scopes");
+        }
+        expect_true(writing.path().empty() && reading.path().empty() && writing.objectType().empty() &&
+                        reading.objectType().empty() && reading.property().empty() && reading.isStrict(),
+                    "each failed operation must leave its reusable context's scope and policy intact");
+    };
+    check(CSerializationErrorCode::MissingCodec, "outer.payload", "nested-codec-source", "CodecOwner",
+          "No JSON codec registered for type");
+
+    struct Diagnostic {
+        std::string reportedPath;
+        std::string expectedPath;
+        std::string source;
+        std::string type;
+        bool throws = false;
+    };
+    for (const auto &diagnostic : std::vector<Diagnostic>{
+             {"", "outer.payload", {}, {}},
+             {"inside", "outer.payload.inside", {}, {}},
+             {"[1].inside", "outer.payload[1].inside", {}, {}},
+             {"outer.payload", "outer.payload", {}, {}},
+             {"outer.payload.inside", "outer.payload.inside", {}, {}},
+             {"outer.payload[1].inside", "outer.payload[1].inside", {}, {}},
+             {"outer.payloadExtra", "outer.payload.outer.payloadExtra", {}, {}},
+             {"inside", "outer.payload.inside", "codec-supplied-source", "CodecValue"},
+             {"inside", "outer.payload.inside", "thrown-supplied-source", "ThrownValue", true},
+         }) {
+        auto error = CSerializationError{CSerializationErrorCode::InvalidInput, diagnostic.source,
+                                         diagnostic.reportedPath, diagnostic.type, "invalid nested codec value"};
+        CTypes::registerJsonCodec<Child>(
+            [error, throws = diagnostic.throws](const Child &) -> CSerializationResult<json> {
+                if (throws)
+                    throw CSerializationException(error);
+                return std::unexpected(error);
+            },
+            [error, throws = diagnostic.throws](const std::shared_ptr<CGame> &,
+                                                const json &) -> CSerializationResult<Child> {
+                if (throws)
+                    throw CSerializationException(error);
+                return std::unexpected(error);
+            });
+        check(CSerializationErrorCode::InvalidInput, diagnostic.expectedPath,
+              diagnostic.source.empty() ? "nested-codec-source" : diagnostic.source,
+              diagnostic.type.empty() ? "CodecOwner" : diagnostic.type, "invalid nested codec value");
+    }
+
+    CTypes::registerJsonCodec<Child>(
+        [](const Child &) -> CSerializationResult<json> { throw std::runtime_error("thrown nested codec failure"); },
+        [](const std::shared_ptr<CGame> &, const json &) -> CSerializationResult<Child> {
+            throw std::runtime_error("thrown nested codec failure");
+        });
+    check(CSerializationErrorCode::CodecFailure, "outer.payload", "nested-codec-source", "CodecOwner",
+          "thrown nested codec failure");
+
+    class WrongErasedValueCodec final : public CSerializerBase {
+      public:
+        CSerializationResult<json> serialize(const std::any &value, CSerializationWriteContext &) const override {
+            (void)std::any_cast<int>(value);
+            return json();
+        }
+        CSerializationResult<std::any> deserialize(const std::shared_ptr<CGame> &, const json &,
+                                                   CSerializationReadContext &) const override {
+            return std::any(7);
+        }
+    };
+    CTypes::registerCodec(typeid(Child), std::make_shared<WrongErasedValueCodec>());
+    check(CSerializationErrorCode::TypeMismatch, "outer.payload", "nested-codec-source", "CodecOwner", {});
+
+    CTypes::registerJsonCodec<Child>(
+        [](const Child &) -> CSerializationResult<json> { return json(); },
+        [](const std::shared_ptr<CGame> &, const json &) -> CSerializationResult<Child> { return Child{}; });
+    expect_true(CSerialization::serializeExpected(Parent{}, writing).has_value() &&
+                    CSerialization::deserializeExpected<Parent>(nullptr, document, reading).has_value(),
+                "contexts reused after nested codec failures must still complete a following valid operation");
 }
 
 void testConfiguredReferencesSharePolicyAndBoundaryReentryStartsFresh() {
@@ -4023,6 +4166,7 @@ int main() {
     testCustomGraphMetadataIsReservedWithoutActors();
     testOperationRetainsConfiguredAndParsedGraphDocuments();
     testCustomCodecWriteErrorRetainsPropertyPath();
+    testTypedCodecErrorsRetainNestedOperationDiagnostics();
     testSavedMapEffectResolvesForwardAndDetachedActorReferences();
     testEffectCloningRemapsOwnedActorsAndRetainsExternalActors();
     testSavedMapForwardActorAliasPreservesNameAndSpatialIndexes();

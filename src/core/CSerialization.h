@@ -428,6 +428,22 @@ class CSerialization {
         return serializer(std::type_index(typeid(Deserialized)));
     }
 
+    template <typename Context>
+    static void completeError(CSerializationError &error, const Context &context, const std::string &fallbackType) {
+        if (error.source.empty()) {
+            error.source = context.source();
+        }
+        const auto &path = context.path();
+        if (!path.empty() && error.propertyPath != path && !error.propertyPath.starts_with(path + ".") &&
+            !error.propertyPath.starts_with(path + "[")) {
+            error.propertyPath = path + (error.propertyPath.empty() || error.propertyPath.front() == '[' ? "" : ".") +
+                                 error.propertyPath;
+        }
+        if (error.objectType.empty()) {
+            error.objectType = context.objectType().empty() ? fallbackType : context.objectType();
+        }
+    }
+
   public:
     template <typename T>
     static CSerializationResult<json> serializeExpected(const T &object, const std::string &source = {}) {
@@ -437,14 +453,12 @@ class CSerialization {
 
     template <typename T>
     static CSerializationResult<json> serializeExpected(const T &object, CSerializationWriteContext &context) {
-        const auto &source = context.source();
         auto codec = serializer<T>();
         if (!codec) {
-            return std::unexpected(CSerializationError{CSerializationErrorCode::MissingCodec,
-                                                       source,
-                                                       {},
-                                                       typeid(T).name(),
-                                                       "No JSON codec registered for type"});
+            CSerializationError error{
+                CSerializationErrorCode::MissingCodec, {}, {}, {}, "No JSON codec registered for type"};
+            completeError(error, context, typeid(T).name());
+            return std::unexpected(std::move(error));
         }
         CSerializationOperation scope(context);
         auto call = serializationResult([&]() {
@@ -456,12 +470,7 @@ class CSerialization {
         });
         auto result = call ? std::move(*call) : CSerializationResult<json>(std::unexpected(std::move(call.error())));
         if (!result) {
-            if (result.error().source.empty()) {
-                result.error().source = source;
-            }
-            if (result.error().objectType.empty()) {
-                result.error().objectType = typeid(T).name();
-            }
+            completeError(result.error(), context, typeid(T).name());
         }
         return result;
     }
@@ -476,14 +485,12 @@ class CSerialization {
     template <typename T>
     static CSerializationResult<T> deserializeExpected(const std::shared_ptr<CGame> &game, const json &document,
                                                        CSerializationReadContext &context) {
-        const auto &source = context.source();
         auto codec = serializer<T>();
         if (!codec) {
-            return std::unexpected(CSerializationError{CSerializationErrorCode::MissingCodec,
-                                                       source,
-                                                       {},
-                                                       typeid(T).name(),
-                                                       "No JSON codec registered for type"});
+            CSerializationError error{
+                CSerializationErrorCode::MissingCodec, {}, {}, {}, "No JSON codec registered for type"};
+            completeError(error, context, typeid(T).name());
+            return std::unexpected(std::move(error));
         }
         CSerializationOperation scope(context);
         auto call = serializationResult([&]() {
@@ -497,18 +504,12 @@ class CSerialization {
         auto result =
             call ? std::move(*call) : CSerializationResult<std::any>(std::unexpected(std::move(call.error())));
         if (!result) {
-            if (result.error().source.empty()) {
-                result.error().source = source;
-            }
-            if (result.error().objectType.empty()) {
-                result.error().objectType = typeid(T).name();
-            }
+            completeError(result.error(), context, typeid(T).name());
             return std::unexpected(std::move(result.error()));
         }
         auto converted = serializationResult([&]() -> T { return vstd::any_cast<T>(*result); });
         if (!converted) {
-            converted.error().source = source;
-            converted.error().objectType = typeid(T).name();
+            completeError(converted.error(), context, typeid(T).name());
         }
         return converted;
     }
