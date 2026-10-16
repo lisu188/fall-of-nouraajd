@@ -4,11 +4,32 @@ import argparse
 import tempfile
 import unittest
 from pathlib import Path, PurePosixPath, PureWindowsPath
+from unittest import mock
 
 from scripts import coverage_report
 
 
 class CoverageReportTest(unittest.TestCase):
+    def testConfiguredGcovExecutableIsUsedForExtraction(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            with mock.patch.object(coverage_report.subprocess, "run") as run:
+                coverage_report.collect_reports_for_gcda(root / "a.gcda", root / "output", 12, "/tools/gcov-15")
+            self.assertEqual(["/tools/gcov-15", "-j", "-p", str(root / "a.gcda")], run.call_args.args[0])
+            self.assertEqual(12, run.call_args.kwargs["timeout"])
+
+    def testConfiguredGcovReachesEverySerialAndParallelWorker(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            for name in ("a.gcda", "b.gcda"):
+                (root / name).touch()
+            for jobs in (1, 2):
+                with self.subTest(jobs=jobs):
+                    with mock.patch.object(coverage_report, "collect_reports_for_gcda", return_value=[]) as collect:
+                        coverage_report.collect_gcov_reports(root, jobs, 12, "/tools/gcov-15")
+                    self.assertEqual(2, collect.call_count)
+                    self.assertTrue(all(call.args[3] == "/tools/gcov-15" for call in collect.call_args_list))
+
     def test_positive_int_rejects_non_integer_and_below_one(self) -> None:
         self.assertEqual(4, coverage_report.positive_int("4"))
         with self.assertRaises(argparse.ArgumentTypeError):

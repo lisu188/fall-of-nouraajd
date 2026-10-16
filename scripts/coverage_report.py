@@ -19,6 +19,11 @@ def parse_args():
     parser.add_argument("--min-line", required=True, type=float)
     parser.add_argument("--jobs", default=max(1, os.cpu_count() or 1), type=positive_int)
     parser.add_argument(
+        "--gcov-executable",
+        default=os.environ.get("GCOV_EXECUTABLE", "gcov-15"),
+        help="gcov executable matching the compiler that produced the coverage data (default: gcov-15).",
+    )
+    parser.add_argument(
         "--gcov-timeout",
         default=positive_float(os.environ.get("COVERAGE_GCOV_TIMEOUT_SECONDS", "120")),
         type=positive_float,
@@ -131,11 +136,11 @@ def is_included(root: Path, source_path: Path, include_prefixes=()) -> bool:
     return False
 
 
-def collect_reports_for_gcda(gcda: Path, output_dir: Path, timeout_seconds: float):
+def collect_reports_for_gcda(gcda: Path, output_dir: Path, timeout_seconds: float, gcov_executable: str = "gcov-15"):
     output_dir.mkdir()
     try:
         subprocess.run(
-            ["gcov", "-j", "-p", str(gcda)],
+            [gcov_executable, "-j", "-p", str(gcda)],
             cwd=output_dir,
             check=True,
             stdout=subprocess.DEVNULL,
@@ -152,7 +157,7 @@ def collect_reports_for_gcda(gcda: Path, output_dir: Path, timeout_seconds: floa
     return reports
 
 
-def collect_gcov_reports(build_dir: Path, jobs: int, timeout_seconds: float):
+def collect_gcov_reports(build_dir: Path, jobs: int, timeout_seconds: float, gcov_executable: str = "gcov-15"):
     gcda_files = sorted(build_dir.rglob("*.gcda"))
     if not gcda_files:
         raise RuntimeError(f"No .gcda files found under {build_dir}")
@@ -165,12 +170,16 @@ def collect_gcov_reports(build_dir: Path, jobs: int, timeout_seconds: float):
 
         if jobs == 1:
             for index, gcda in enumerate(gcda_files):
-                reports.extend(collect_reports_for_gcda(gcda, tmp_path / f"gcov-{index}", timeout_seconds))
+                reports.extend(
+                    collect_reports_for_gcda(gcda, tmp_path / f"gcov-{index}", timeout_seconds, gcov_executable)
+                )
             return reports
 
         with concurrent.futures.ThreadPoolExecutor(max_workers=jobs) as executor:
             futures = [
-                executor.submit(collect_reports_for_gcda, gcda, tmp_path / f"gcov-{index}", timeout_seconds)
+                executor.submit(
+                    collect_reports_for_gcda, gcda, tmp_path / f"gcov-{index}", timeout_seconds, gcov_executable
+                )
                 for index, gcda in enumerate(gcda_files)
             ]
             for future in concurrent.futures.as_completed(futures):
@@ -285,7 +294,7 @@ def main():
     report_dir.mkdir(parents=True, exist_ok=True)
 
     include_prefixes = load_include_prefixes(root, args.include_prefix)
-    reports = collect_gcov_reports(build_dir, args.jobs, args.gcov_timeout)
+    reports = collect_gcov_reports(build_dir, args.jobs, args.gcov_timeout, args.gcov_executable)
     merged = merge_line_counts(root, reports, include_prefixes)
     summary, covered_lines, total_lines, total_percentage = summarize(root, merged)
 

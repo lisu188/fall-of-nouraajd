@@ -16,6 +16,7 @@ You should have received a copy of the GNU General Public License
 along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 
+#include "core/CRuntimeBridge.h"
 #include "core/CJsonUtil.h"
 #include "core/CGame.h"
 #include "core/CGameContext.h"
@@ -840,9 +841,9 @@ void test_map_domain_signals_emit_for_tile_and_object_changes() {
                 "tile mutations should still emit tileChanged for the changed coordinate");
     expect_true(probe->object_changed_coords == expected_object_changed_coords,
                 "object movement should emit objectChanged for the old and new coordinates");
-    expect_true(std::ranges::count(probe->changed_properties, "tiles") == 1,
+    expect_true(std::ranges::count(probe->changed_properties, std::string{"tiles"}) == 1,
                 "tile domain changes should still notify generic property subscribers");
-    expect_true(std::ranges::count(probe->changed_properties, "objects") == 1,
+    expect_true(std::ranges::count(probe->changed_properties, std::string{"objects"}) == 1,
                 "object movement should notify generic property subscribers once");
 }
 
@@ -3337,6 +3338,168 @@ void test_generate_name_collision_retry() {
         "generateName throws instead of returning a name when every candidate collides");
 }
 
+class NameFixtureRngRestore {
+  public:
+    ~NameFixtureRngRestore() { vstd::rng() = previous; }
+
+  private:
+    std::mt19937_64 previous = vstd::rng();
+};
+
+void testGeneratedNameFixturesIgnoreAddressesAndRestoreNestedState() {
+    NameFixtureRngRestore restoreRng;
+    auto first = std::make_shared<CGameObject>();
+    auto second = std::make_shared<CGameObject>();
+    expect_true(first.get() != second.get(), "the fixture compares two distinct live allocations");
+    std::string firstName;
+    {
+        CSerialization::NameFixtureScopeForTests fixture(100);
+        vstd::rng().seed(100);
+        firstName = CSerialization::generateName(first);
+        expect_true(firstName == "fixture-100-0", "fixture names use the fixed seed and counter format");
+        {
+            CSerialization::NameFixtureScopeForTests nested(101);
+            expect_true(CSerialization::generateName(second) == "fixture-101-0",
+                        "nested native fixtures own an independent name counter");
+        }
+        expect_true(CSerialization::generateName(second) == "fixture-100-1",
+                    "nested native fixtures restore the previous seed and next counter");
+    }
+    {
+        CSerialization::NameFixtureScopeForTests fixture(100);
+        vstd::rng().seed(100);
+        expect_true(CSerialization::generateName(second) == firstName,
+                    "the same fixture seed and counter produce the same name at a different address");
+        auto game = std::make_shared<CGame>();
+        game->getObjectHandler()->registerType("CGameObject", [] { return std::make_shared<CGameObject>(); });
+        auto authored = object_deserialize(
+            game,
+            std::make_shared<json>(json{{"class", "CGameObject"}, {"properties", {{"name", "originalAuthoredName"}}}}));
+        expect_true(authored && authored->getName() == "originalAuthoredName",
+                    "fixture names preserve authored identities through real deserialization");
+    }
+    {
+        CSerialization::NameFixtureScopeForTests production;
+        vstd::rng().seed(100);
+        const auto expected = vstd::to_hex_hash(vstd::to_hex(first), vstd::rand(), std::uint64_t{0});
+        const auto expectedState = vstd::rng();
+        vstd::rng().seed(100);
+        expect_true(CSerialization::generateName(first) == expected,
+                    "production names retain the exact address, random draw and sequence hash");
+        expect_true(vstd::rng() == expectedState, "production name generation retains its complete RNG state");
+        {
+            CSerialization::NameFixtureScopeForTests fixture(100);
+            CSerialization::generateName(second);
+        }
+        const auto beforeNext = vstd::rng();
+        const auto expectedNext = vstd::to_hex_hash(vstd::to_hex(second), vstd::rand(), std::uint64_t{1});
+        vstd::rng() = beforeNext;
+        expect_true(CSerialization::generateName(second) == expectedNext,
+                    "native fixture teardown restores production mode and its previous sequence");
+    }
+}
+
+void testGeneratedNameFixturesPreserveRngAndCollisionBounds() {
+    NameFixtureRngRestore restoreRng;
+    auto object = std::make_shared<CGameObject>();
+    CSerialization::NameFixtureScopeForTests fixture(100);
+    vstd::rng().seed(100);
+    for (int index = 0; index < 4; ++index) {
+        static_cast<void>(vstd::rand());
+    }
+    const auto afterFourAttempts = vstd::rng();
+    vstd::rng().seed(100);
+    int attempts = 0;
+    std::vector<std::string> offered;
+    const auto accepted = CSerialization::generateName(object, [&](const std::string &candidate) {
+        offered.push_back(candidate);
+        return ++attempts < 4;
+    });
+    expect_true(offered ==
+                        std::vector<std::string>{"fixture-100-0", "fixture-100-1", "fixture-100-2", "fixture-100-3"} &&
+                    accepted == offered.back(),
+                "fixture collisions advance the same bounded counter without returning rejected names");
+    expect_true(vstd::rng() == afterFourAttempts, "fixture retries preserve one complete random draw per attempt");
+    const auto beforeExhaustion = vstd::rng();
+    for (int index = 0; index < 256; ++index) {
+        static_cast<void>(vstd::rand());
+    }
+    const auto afterExhaustion = vstd::rng();
+    vstd::rng() = beforeExhaustion;
+    attempts = 0;
+    expect_runtime_error(
+        [&]() {
+            CSerialization::generateName(object, [&](const std::string &) {
+                ++attempts;
+                return true;
+            });
+        },
+        "fixture names still reject exhausted collision attempts");
+    expect_true(attempts == 256 && vstd::rng() == afterExhaustion,
+                "fixture collision exhaustion preserves the 256-attempt limit and complete RNG state");
+    std::string nestedName;
+    const auto outerName = CSerialization::generateName(object, [&](const std::string &) {
+        nestedName = CSerialization::generateName(object);
+        return false;
+    });
+    expect_true(outerName == "fixture-100-260" && nestedName == "fixture-100-261",
+                "a nested name operation in a collision predicate resumes outside the generator lock");
+}
+
+void testGeneratedNameFixtureSeedHookRejectsLateAndRepeatedActivation() {
+    // These are the final serial core cases: std::rand has no snapshot API, and no
+    // subsequent case depends on its seed. The native generator is restored in full.
+    NameFixtureRngRestore restoreRng;
+    const auto rejected = [](std::uint32_t seed) {
+        const auto before = vstd::rng();
+        bool threw = false;
+        try {
+            CRuntimeBridge::seedRandomForTests(seed);
+        } catch (const std::logic_error &) {
+            threw = true;
+        }
+        expect_true(threw && vstd::rng() == before, "rejected fixture activation leaves the complete RNG state intact");
+    };
+    auto object = std::make_shared<CGameObject>();
+    {
+        CSerialization::NameFixtureScopeForTests production;
+        CRuntimeBridge::seedRandomForTests(100);
+        expect_true(CSerialization::generateName(object) == "fixture-100-0",
+                    "the existing private seed hook enables the name fixture before a session");
+        rejected(101);
+        expect_true(CSerialization::generateName(object) == "fixture-100-1",
+                    "repeat activation cannot reset names or choose a replacement seed");
+    }
+    {
+        CSerialization::NameFixtureScopeForTests production;
+        const auto before = vstd::rng();
+        bool wrongThreadRejected = false;
+        std::thread worker([&]() {
+            try {
+                CRuntimeBridge::seedRandomForTests(100);
+            } catch (const std::logic_error &) {
+                wrongThreadRejected = true;
+            }
+        });
+        worker.join();
+        expect_true(wrongThreadRejected && vstd::rng() == before,
+                    "a non-owner thread cannot mutate random or name fixture state");
+        CRuntimeBridge::seedRandomForTests(100);
+        expect_true(CSerialization::generateName(object) == "fixture-100-0",
+                    "wrong-thread rejection leaves startup activation available to the owner");
+    }
+    {
+        CSerialization::NameFixtureScopeForTests production;
+        auto game = std::make_shared<CGame>();
+        rejected(100);
+        game->getContext()->shutdown();
+        game.reset();
+        rejected(100);
+        expect_true(!CSerialization::generateName(object).starts_with("fixture-"),
+                    "late activation remains rejected after shutdown without enabling fixture names");
+    }
+}
+
 } // namespace
 
 int main() {
@@ -3411,6 +3574,10 @@ int main() {
     test_creature_clone_preserves_class_tracks();
     test_creature_composed_stat_order();
     test_creature_composed_main_stat_selection();
+
+    testGeneratedNameFixturesIgnoreAddressesAndRestoreNestedState();
+    testGeneratedNameFixturesPreserveRngAndCollisionBounds();
+    testGeneratedNameFixtureSeedHookRejectsLateAndRepeatedActivation();
 
     return finish_tests();
 }

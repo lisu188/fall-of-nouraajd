@@ -12,6 +12,17 @@ from scripts import generate_walkthrough_video
 
 
 class ScreenshotDisplayIsolationTest(unittest.TestCase):
+    def testCaptureUsesTheCompilerSpecificBuild(self):
+        import os
+
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            name = "cmake-build-clangcl20-release" if os.name == "nt" else "cmake-build-gcc15-release"
+            (root / name).mkdir()
+            (root / "cmake-build-release").mkdir()
+            with patch.object(generate_screenshots, "REPO_ROOT", root), patch.dict(os.environ, {"GAME_BUILD_DIR": ""}):
+                self.assertEqual(root / name, generate_screenshots._selected_build_dir())
+
     def testCapturePreferencesAreIsolatedAndRemovedEvenAfterFailure(self):
         for fail in (False, True):
             with self.subTest(fail=fail), tempfile.TemporaryDirectory() as directory:

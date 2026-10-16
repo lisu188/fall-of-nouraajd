@@ -3013,7 +3013,10 @@ def parseTestSeed(value: str) -> int:
 def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(description="MCP server exposing unified game/_game functions")
     parser.add_argument("--repo-root", default=None, help="Repository root path")
-    parser.add_argument("--build-dir", default="cmake-build-release", help="Build directory containing _game")
+    default_build_dir = os.environ.get("GAME_BUILD_DIR") or (
+        "cmake-build-clangcl20-release" if os.name == "nt" else "cmake-build-gcc15-release"
+    )
+    parser.add_argument("--build-dir", default=default_build_dir, help="Build directory containing _game")
     parser.add_argument(
         "--build-config",
         default=os.environ.get("GAME_BUILD_CONFIG"),

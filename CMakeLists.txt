@@ -13,12 +13,17 @@
 #
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <https://www.gnu.org/licenses/>.
-cmake_minimum_required(VERSION 3.20)
+cmake_minimum_required(VERSION 4.0.2)
 if (POLICY CMP0087)
     cmake_policy(SET CMP0087 NEW)
 endif ()
 
 project(fall-of-nouraajd)
+
+set(CMAKE_CXX_STANDARD 26)
+set(CMAKE_CXX_STANDARD_REQUIRED ON)
+set(CMAKE_CXX_EXTENSIONS OFF)
+include(cmake/RequireCxx26.cmake)
 
 set(GAME_DEFAULT_ENABLE_UNITY_BUILD OFF)
 set(GAME_DEFAULT_ENABLE_PCH OFF)
@@ -32,6 +37,8 @@ option(GAME_ENABLE_UNITY_BUILD "Enable unity builds for large shared game target
 set(GAME_UNITY_BATCH_SIZE "${GAME_DEFAULT_UNITY_BATCH_SIZE}" CACHE STRING
     "Number of source files per unity build translation unit.")
 option(GAME_ENABLE_PCH "Enable precompiled headers for large shared game targets." ${GAME_DEFAULT_ENABLE_PCH})
+include(cmake/ConfigurePch.cmake)
+include(cmake/ConfigureCompilePool.cmake)
 
 if (WIN32)
     set(CPACK_GENERATOR "ZIP")
@@ -72,7 +79,7 @@ if (NOT SDL2_ttf_FOUND AND NOT TARGET SDL2_ttf::SDL2_ttf)
 endif ()
 
 add_library(simdjson_vendor STATIC ${CMAKE_SOURCE_DIR}/third_party/simdjson/simdjson.cpp)
-target_compile_features(simdjson_vendor PUBLIC cxx_std_23)
+target_compile_features(simdjson_vendor PUBLIC cxx_std_26)
 target_include_directories(simdjson_vendor SYSTEM PUBLIC ${CMAKE_SOURCE_DIR}/third_party/simdjson)
 set_target_properties(simdjson_vendor PROPERTIES POSITION_INDEPENDENT_CODE ON)
 
@@ -88,7 +95,8 @@ if (UNIX)
 endif ()
 
 function(configure_cpp_target target_name)
-    target_compile_features(${target_name} PRIVATE cxx_std_23)
+    configure_profile_compile_pool(${target_name})
+    target_compile_features(${target_name} PRIVATE cxx_std_26)
     set_target_properties(${target_name} PROPERTIES
         CXX_STANDARD_REQUIRED ON
         CXX_EXTENSIONS OFF
@@ -109,8 +117,11 @@ function(configure_cpp_target target_name)
     if (WIN32)
         target_compile_definitions(${target_name} PRIVATE SDL_MAIN_HANDLED)
     endif ()
-    if (MSVC)
-        target_compile_options(${target_name} PRIVATE /W3 /bigobj /MP /permissive- /Zc:preprocessor /EHsc)
+    if (CMAKE_CXX_COMPILER_FRONTEND_VARIANT STREQUAL "MSVC")
+        target_compile_options(${target_name} PRIVATE /W3 /bigobj /permissive- /Zc:preprocessor /EHsc)
+        if (CMAKE_CXX_COMPILER_ID STREQUAL "MSVC")
+            target_compile_options(${target_name} PRIVATE /MP)
+        endif ()
         target_compile_definitions(${target_name} PRIVATE
             _USE_MATH_DEFINES
             NOMINMAX
@@ -233,7 +244,8 @@ elseif (UNIX)
         INSTALL_RPATH "$ORIGIN"
     )
 endif ()
-if (CMAKE_CXX_COMPILER_ID MATCHES "GNU|Clang|AppleClang")
+if (CMAKE_CXX_COMPILER_ID MATCHES "GNU|Clang|AppleClang"
+        AND NOT CMAKE_CXX_COMPILER_FRONTEND_VARIANT STREQUAL "MSVC")
     target_compile_options(_game PRIVATE -fvisibility=hidden -fvisibility-inlines-hidden)
 endif ()
 
@@ -270,7 +282,8 @@ function(add_native_plugin target_name source_file)
             )
         endforeach ()
     endif ()
-    if (CMAKE_CXX_COMPILER_ID MATCHES "GNU|Clang|AppleClang")
+    if (CMAKE_CXX_COMPILER_ID MATCHES "GNU|Clang|AppleClang"
+            AND NOT CMAKE_CXX_COMPILER_FRONTEND_VARIANT STREQUAL "MSVC")
         target_compile_options(${target_name} PRIVATE -fvisibility=hidden -fvisibility-inlines-hidden)
     endif ()
     # Plugins consume the CPluginRegistrar host surface, whose headers reach engine headers

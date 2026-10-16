@@ -15,6 +15,7 @@ GNU General Public License for more details.
 You should have received a copy of the GNU General Public License
 along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
+#include "core/CSerialization.h"
 #include "core/CGame.h"
 #include "core/CNavigation.h"
 #include "core/CGameContext.h"
@@ -27,7 +28,7 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #include "gui/panel/CGamePanel.h"
 #include "gui/CTooltip.h"
 
-CGame::CGame() {}
+CGame::CGame() { CSerialization::markGameSessionStarted(); }
 
 std::shared_ptr<CNavigationService> CGame::getNavigationService() {
     std::lock_guard lock(navigationServiceMutex);

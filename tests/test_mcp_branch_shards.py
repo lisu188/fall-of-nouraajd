@@ -408,7 +408,7 @@ class McpBranchShardsTest(unittest.TestCase):
         stage_source = windows.split(stage, 1)[1].split("      - name:", 1)[0]
         bundle_source = windows.split(bundle, 1)[1].split("      - name:", 1)[0]
         self.assertIn(
-            "cmake --install cmake-build-release --config Release --prefix test/mcp-runtime-windows", stage_source
+            "cmake --install cmake-build-clangcl20-release --config Release --prefix test/mcp-runtime-windows", stage_source
         )
         self.assertIn("%VCPKG_INSTALLED_DIR%\\%VCPKG_TARGET_TRIPLET%\\bin", stage_source)
         self.assertIn("(SDL2.dll SDL2_image.dll SDL2_ttf.dll)", stage_source)

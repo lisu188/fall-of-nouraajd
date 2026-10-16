@@ -86,11 +86,21 @@ def _reexec_under_xvfb_if_needed():
     )
 
 
+def selectedBuildDirectory():
+    override = os.environ.get("GAME_BUILD_DIR")
+    if override:
+        return (REPO_ROOT / override).resolve()
+    release_name = "cmake-build-clangcl20-release" if os.name == "nt" else "cmake-build-gcc15-release"
+    for name in (release_name, release_name.replace("-release", "-debug"), "cmake-build-release", "cmake-build-debug"):
+        candidate = REPO_ROOT / name
+        if candidate.exists():
+            return candidate
+    return REPO_ROOT / release_name
+
+
 def _bootstrap_paths():
     """Replicate ``play.py``'s path setup so ``import game`` finds ``_game``."""
-    build_dir = REPO_ROOT / (os.environ.get("GAME_BUILD_DIR") or "cmake-build-release")
-    if not build_dir.exists():
-        build_dir = REPO_ROOT / "cmake-build-debug"
+    build_dir = selectedBuildDirectory()
 
     def insert(entry: Path):
         if entry.exists() and str(entry) not in sys.path:
@@ -143,7 +153,7 @@ def _load_game_module():
             f"  underlying error: {exc!r}\n"
             "Build it first, e.g.:\n"
             "  ./configure.sh\n"
-            "  cmake --build cmake-build-release --target _game -j$(nproc)\n"
+            f"  cmake --build {selectedBuildDirectory()} --target _game\n"
         )
 
 
