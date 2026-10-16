@@ -38,6 +38,7 @@ set(GAME_UNITY_BATCH_SIZE "${GAME_DEFAULT_UNITY_BATCH_SIZE}" CACHE STRING
     "Number of source files per unity build translation unit.")
 option(GAME_ENABLE_PCH "Enable precompiled headers for large shared game targets." ${GAME_DEFAULT_ENABLE_PCH})
 include(cmake/ConfigurePch.cmake)
+include(cmake/ConfigureCompilePool.cmake)
 
 if (WIN32)
     set(CPACK_GENERATOR "ZIP")
@@ -94,6 +95,7 @@ if (UNIX)
 endif ()
 
 function(configure_cpp_target target_name)
+    configure_profile_compile_pool(${target_name})
     target_compile_features(${target_name} PRIVATE cxx_std_26)
     set_target_properties(${target_name} PROPERTIES
         CXX_STANDARD_REQUIRED ON
