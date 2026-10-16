@@ -1102,7 +1102,9 @@ vstd::task<void> CCreature::useItemAsync(std::shared_ptr<CItem> item) {
         if (!loop->isMainThread()) {
             co_await vstd::post(loop);
         }
-        vstd::fail_if(!self->hasInInventory(item), "Tried to use item not in inventory!");
+        if (!item || !self->hasInInventory(item)) {
+            throw std::invalid_argument("Tried to use item not in inventory!");
+        }
         if (!self->pendingItemUses.insert(item.get()).second) {
             co_return;
         }

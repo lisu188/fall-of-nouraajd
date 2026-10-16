@@ -3950,65 +3950,98 @@ int main() {
         std::cout << "[core-test] EXIT " << name << std::endl;
     };
 
-    test_string_deserialization_preserves_empty_and_whitespace();
-    test_string_deserialization_coerces_non_string_targets();
-    test_happy_path_add_and_distance();
-    test_edge_case_adjacent_or_same();
-    test_comparison_and_ordering();
-    test_boundary_invalid_key_parsing();
-    test_near_coords_helpers();
-    test_pathfinder_find_path_without_obstacles();
-    test_pathfinder_waypoint_and_blocked_goal();
-    test_pathfinder_rejects_overflowing_routes();
-    test_pathfinder_returns_start_when_passable_goal_has_no_route();
-    test_pathfinder_caches_passability_checks();
-    test_pathfinder_waypoint_override();
-    test_pathfinder_crosses_levels_through_explicit_waypoint();
-    test_toroidal_pathfinder_prefers_wrapped_route();
-    test_toroidal_pathfinder_wraps_on_both_axes();
-    test_json_parse_expected_success_and_failure();
-    test_json_parse_dump_and_type_helpers();
-    test_sdl_raii_alias_owns_surface();
-    test_direction_mapping();
-    test_rect_bounds_inclusion();
-    test_tag_round_trip_and_ordering();
-    test_unknown_tag_rejection();
-    test_tag_mutation_iteration_and_range_helpers();
-    test_public_stats_apply_preserves_zero_notifications_and_midpoint_dynamic_shadows();
-    test_property_setters_emit_change_signals();
-    test_inventory_mutation_notifies_property_subscribers_once();
-    test_map_domain_signals_emit_for_tile_and_object_changes();
-    test_reviewed_value_wrappers_have_explicit_primitive_metadata();
-    test_nested_primitive_wrappers_serialize_direct_values_and_round_trip();
-    test_legacy_and_flattened_primitive_wrappers_deserialize_and_reject_scalars();
-    test_nested_property_notification_batches_emit_one_deterministic_signal();
-    test_object_deserialization_batches_property_notifications();
-    test_bulk_object_deserialization_notifications_stay_batched();
-    test_object_clone_batches_property_notifications();
-    test_game_context_owns_distinct_gui_handlers_per_game();
-    test_game_context_rejects_services_without_owner_game();
-    test_game_context_transition_generation_helpers_and_shutdown();
-    testGameContextDefersShutdownInsideOwnedTask();
-    testGameDestructorJoinsWorkersWithoutRetainingGame();
-    testGameContextWorkerShutdownKeepsGuiOnMainThread();
-    testGameContextWorkerBoundaryMarshalsGuiCleanup();
-    testGameDestructorWithoutGuiDoesNotRequireMainPump();
-    testPostedBoundaryReleasesGilBetweenBusySnapshots();
-    testFrameBoundaryReleasesGilForOwnedWorkers();
-    test_game_context_shutdown_is_idempotent_and_preserves_other_game_services();
-    test_effect_cycles_release_with_map_and_context_teardown();
-    test_effect_owner_registry_releases_finished_and_destroyed_owners();
-    test_playtest_trace_records_and_helper_payloads();
-    test_playtest_trace_unicode_truncation_preserves_json();
-    test_playtest_trace_bad_payload_does_not_escape_or_stop_history();
-    test_playtest_trace_recent_history_keeps_latest_events();
-    test_playtest_trace_recent_files_rotate_and_keep_disk_counters();
-    test_playtest_trace_output_failure_keeps_memory_and_warns_once();
-    test_playtest_trace_concurrent_file_records_follow_sequence_order();
-    test_delayed_future_handlers_run_through_event_loop();
-    test_script_rejects_executable_expressions();
-    test_save_format_codec_validation();
-    test_save_format_bounds_crafted_documents();
+    runDiagnosedCase("test_string_deserialization_preserves_empty_and_whitespace",
+                     test_string_deserialization_preserves_empty_and_whitespace);
+    runDiagnosedCase("test_string_deserialization_coerces_non_string_targets",
+                     test_string_deserialization_coerces_non_string_targets);
+    runDiagnosedCase("test_happy_path_add_and_distance", test_happy_path_add_and_distance);
+    runDiagnosedCase("test_edge_case_adjacent_or_same", test_edge_case_adjacent_or_same);
+    runDiagnosedCase("test_comparison_and_ordering", test_comparison_and_ordering);
+    runDiagnosedCase("test_boundary_invalid_key_parsing", test_boundary_invalid_key_parsing);
+    runDiagnosedCase("test_near_coords_helpers", test_near_coords_helpers);
+    runDiagnosedCase("test_pathfinder_find_path_without_obstacles", test_pathfinder_find_path_without_obstacles);
+    runDiagnosedCase("test_pathfinder_waypoint_and_blocked_goal", test_pathfinder_waypoint_and_blocked_goal);
+    runDiagnosedCase("test_pathfinder_rejects_overflowing_routes", test_pathfinder_rejects_overflowing_routes);
+    runDiagnosedCase("test_pathfinder_returns_start_when_passable_goal_has_no_route",
+                     test_pathfinder_returns_start_when_passable_goal_has_no_route);
+    runDiagnosedCase("test_pathfinder_caches_passability_checks", test_pathfinder_caches_passability_checks);
+    runDiagnosedCase("test_pathfinder_waypoint_override", test_pathfinder_waypoint_override);
+    runDiagnosedCase("test_pathfinder_crosses_levels_through_explicit_waypoint",
+                     test_pathfinder_crosses_levels_through_explicit_waypoint);
+    runDiagnosedCase("test_toroidal_pathfinder_prefers_wrapped_route", test_toroidal_pathfinder_prefers_wrapped_route);
+    runDiagnosedCase("test_toroidal_pathfinder_wraps_on_both_axes", test_toroidal_pathfinder_wraps_on_both_axes);
+    runDiagnosedCase("test_json_parse_expected_success_and_failure", test_json_parse_expected_success_and_failure);
+    runDiagnosedCase("test_json_parse_dump_and_type_helpers", test_json_parse_dump_and_type_helpers);
+    runDiagnosedCase("test_sdl_raii_alias_owns_surface", test_sdl_raii_alias_owns_surface);
+    runDiagnosedCase("test_direction_mapping", test_direction_mapping);
+    runDiagnosedCase("test_rect_bounds_inclusion", test_rect_bounds_inclusion);
+    runDiagnosedCase("test_tag_round_trip_and_ordering", test_tag_round_trip_and_ordering);
+    runDiagnosedCase("test_unknown_tag_rejection", test_unknown_tag_rejection);
+    runDiagnosedCase("test_tag_mutation_iteration_and_range_helpers", test_tag_mutation_iteration_and_range_helpers);
+    runDiagnosedCase("test_public_stats_apply_preserves_zero_notifications_and_midpoint_dynamic_shadows",
+                     test_public_stats_apply_preserves_zero_notifications_and_midpoint_dynamic_shadows);
+    runDiagnosedCase("test_property_setters_emit_change_signals", test_property_setters_emit_change_signals);
+    runDiagnosedCase("test_inventory_mutation_notifies_property_subscribers_once",
+                     test_inventory_mutation_notifies_property_subscribers_once);
+    runDiagnosedCase("test_map_domain_signals_emit_for_tile_and_object_changes",
+                     test_map_domain_signals_emit_for_tile_and_object_changes);
+    runDiagnosedCase("test_reviewed_value_wrappers_have_explicit_primitive_metadata",
+                     test_reviewed_value_wrappers_have_explicit_primitive_metadata);
+    runDiagnosedCase("test_nested_primitive_wrappers_serialize_direct_values_and_round_trip",
+                     test_nested_primitive_wrappers_serialize_direct_values_and_round_trip);
+    runDiagnosedCase("test_legacy_and_flattened_primitive_wrappers_deserialize_and_reject_scalars",
+                     test_legacy_and_flattened_primitive_wrappers_deserialize_and_reject_scalars);
+    runDiagnosedCase("test_nested_property_notification_batches_emit_one_deterministic_signal",
+                     test_nested_property_notification_batches_emit_one_deterministic_signal);
+    runDiagnosedCase("test_object_deserialization_batches_property_notifications",
+                     test_object_deserialization_batches_property_notifications);
+    runDiagnosedCase("test_bulk_object_deserialization_notifications_stay_batched",
+                     test_bulk_object_deserialization_notifications_stay_batched);
+    runDiagnosedCase("test_object_clone_batches_property_notifications",
+                     test_object_clone_batches_property_notifications);
+    runDiagnosedCase("test_game_context_owns_distinct_gui_handlers_per_game",
+                     test_game_context_owns_distinct_gui_handlers_per_game);
+    runDiagnosedCase("test_game_context_rejects_services_without_owner_game",
+                     test_game_context_rejects_services_without_owner_game);
+    runDiagnosedCase("test_game_context_transition_generation_helpers_and_shutdown",
+                     test_game_context_transition_generation_helpers_and_shutdown);
+    runDiagnosedCase("testGameContextDefersShutdownInsideOwnedTask", testGameContextDefersShutdownInsideOwnedTask);
+    runDiagnosedCase("testGameDestructorJoinsWorkersWithoutRetainingGame",
+                     testGameDestructorJoinsWorkersWithoutRetainingGame);
+    runDiagnosedCase("testGameContextWorkerShutdownKeepsGuiOnMainThread",
+                     testGameContextWorkerShutdownKeepsGuiOnMainThread);
+    runDiagnosedCase("testGameContextWorkerBoundaryMarshalsGuiCleanup",
+                     testGameContextWorkerBoundaryMarshalsGuiCleanup);
+    runDiagnosedCase("testGameDestructorWithoutGuiDoesNotRequireMainPump",
+                     testGameDestructorWithoutGuiDoesNotRequireMainPump);
+    runDiagnosedCase("testPostedBoundaryReleasesGilBetweenBusySnapshots",
+                     testPostedBoundaryReleasesGilBetweenBusySnapshots);
+    runDiagnosedCase("testFrameBoundaryReleasesGilForOwnedWorkers", testFrameBoundaryReleasesGilForOwnedWorkers);
+    runDiagnosedCase("test_game_context_shutdown_is_idempotent_and_preserves_other_game_services",
+                     test_game_context_shutdown_is_idempotent_and_preserves_other_game_services);
+    runDiagnosedCase("test_effect_cycles_release_with_map_and_context_teardown",
+                     test_effect_cycles_release_with_map_and_context_teardown);
+    runDiagnosedCase("test_effect_owner_registry_releases_finished_and_destroyed_owners",
+                     test_effect_owner_registry_releases_finished_and_destroyed_owners);
+    runDiagnosedCase("test_playtest_trace_records_and_helper_payloads",
+                     test_playtest_trace_records_and_helper_payloads);
+    runDiagnosedCase("test_playtest_trace_unicode_truncation_preserves_json",
+                     test_playtest_trace_unicode_truncation_preserves_json);
+    runDiagnosedCase("test_playtest_trace_bad_payload_does_not_escape_or_stop_history",
+                     test_playtest_trace_bad_payload_does_not_escape_or_stop_history);
+    runDiagnosedCase("test_playtest_trace_recent_history_keeps_latest_events",
+                     test_playtest_trace_recent_history_keeps_latest_events);
+    runDiagnosedCase("test_playtest_trace_recent_files_rotate_and_keep_disk_counters",
+                     test_playtest_trace_recent_files_rotate_and_keep_disk_counters);
+    runDiagnosedCase("test_playtest_trace_output_failure_keeps_memory_and_warns_once",
+                     test_playtest_trace_output_failure_keeps_memory_and_warns_once);
+    runDiagnosedCase("test_playtest_trace_concurrent_file_records_follow_sequence_order",
+                     test_playtest_trace_concurrent_file_records_follow_sequence_order);
+    runDiagnosedCase("test_delayed_future_handlers_run_through_event_loop",
+                     test_delayed_future_handlers_run_through_event_loop);
+    runDiagnosedCase("test_script_rejects_executable_expressions", test_script_rejects_executable_expressions);
+    runDiagnosedCase("test_save_format_codec_validation", test_save_format_codec_validation);
+    runDiagnosedCase("test_save_format_bounds_crafted_documents", test_save_format_bounds_crafted_documents);
     runDiagnosedCase("testSerializationScopeRestoration", testSerializationScopeRestoration);
     runDiagnosedCase("testSerializerBaseDestruction", testSerializerBaseDestruction);
     runDiagnosedCase("testTypedJsonCodecsOwnResultsAndPreserveErrors", testTypedJsonCodecsOwnResultsAndPreserveErrors);
@@ -4020,17 +4053,22 @@ int main() {
     runDiagnosedCase("test_creature_effective_stats_baseline_capture", test_creature_effective_stats_baseline_capture);
     runDiagnosedCase("test_creature_effective_actions_baseline_capture",
                      test_creature_effective_actions_baseline_capture);
-    test_interaction_self_target_property_round_trip();
-    test_creature_race_metadata_round_trip();
-    test_creature_class_metadata_round_trip();
-    test_creature_archetype_property_wiring();
-    test_archetype_types_are_registered_with_type_system();
-    test_levelup_legacy_path_serializes_unlock_into_actions();
-    test_levelup_composed_path_unlocks_via_effective_interactions_without_serializing();
-    test_creature_clone_preserves_composed_archetypes();
-    test_creature_clone_preserves_class_tracks();
-    test_creature_composed_stat_order();
-    test_creature_composed_main_stat_selection();
+    runDiagnosedCase("test_interaction_self_target_property_round_trip",
+                     test_interaction_self_target_property_round_trip);
+    runDiagnosedCase("test_creature_race_metadata_round_trip", test_creature_race_metadata_round_trip);
+    runDiagnosedCase("test_creature_class_metadata_round_trip", test_creature_class_metadata_round_trip);
+    runDiagnosedCase("test_creature_archetype_property_wiring", test_creature_archetype_property_wiring);
+    runDiagnosedCase("test_archetype_types_are_registered_with_type_system",
+                     test_archetype_types_are_registered_with_type_system);
+    runDiagnosedCase("test_levelup_legacy_path_serializes_unlock_into_actions",
+                     test_levelup_legacy_path_serializes_unlock_into_actions);
+    runDiagnosedCase("test_levelup_composed_path_unlocks_via_effective_interactions_without_serializing",
+                     test_levelup_composed_path_unlocks_via_effective_interactions_without_serializing);
+    runDiagnosedCase("test_creature_clone_preserves_composed_archetypes",
+                     test_creature_clone_preserves_composed_archetypes);
+    runDiagnosedCase("test_creature_clone_preserves_class_tracks", test_creature_clone_preserves_class_tracks);
+    runDiagnosedCase("test_creature_composed_stat_order", test_creature_composed_stat_order);
+    runDiagnosedCase("test_creature_composed_main_stat_selection", test_creature_composed_main_stat_selection);
     runDiagnosedCase("testGeneratedNameFixturesIgnoreAddressesAndRestoreNestedState",
                      testGeneratedNameFixturesIgnoreAddressesAndRestoreNestedState);
     runDiagnosedCase("testGeneratedNameFixturesPreserveRngAndCollisionBounds",

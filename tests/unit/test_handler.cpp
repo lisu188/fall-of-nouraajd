@@ -78,8 +78,25 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 namespace {
 
-CNativeTestProfile &nativeTestProfile() {
-    static CNativeTestProfile profile("handler");
+class DiagnosedNativeTestProfile : public CNativeTestProfile {
+  public:
+    using CNativeTestProfile::CNativeTestProfile;
+
+    template <typename Action> auto run(const char *name, Action &&action) -> std::invoke_result_t<Action> {
+        std::cout << "[handler-test] ENTER " << name << std::endl;
+        if constexpr (std::is_void_v<std::invoke_result_t<Action>>) {
+            CNativeTestProfile::run(name, std::forward<Action>(action));
+            std::cout << "[handler-test] EXIT " << name << std::endl;
+        } else {
+            decltype(auto) result = CNativeTestProfile::run(name, std::forward<Action>(action));
+            std::cout << "[handler-test] EXIT " << name << std::endl;
+            return result;
+        }
+    }
+};
+
+DiagnosedNativeTestProfile &nativeTestProfile() {
+    static DiagnosedNativeTestProfile profile("handler");
     return profile;
 }
 
@@ -2242,13 +2259,62 @@ void testDisposableItemCommitConsumesBeforeReceiptsAndCancellation() {
             if (repeated.finished()) {
                 try {
                     repeated.get();
-                } catch (const std::exception &) {
-                    rejected = true;
+                } catch (const std::invalid_argument &error) {
+                    rejected = std::string(error.what()) == "Tried to use item not in inventory!";
                 }
             }
             expect_true(rejected && player->getHp() == 6 && item->uses == 1,
                         "a cancelled committed potion must not be usable for a second healing effect");
         }
+        game->getContext()->shutdown();
+    }
+    {
+        auto game = makeWindowlessFightGame();
+        auto player = add_test_player(game);
+        auto other = add_test_creature(game, "unitForeignItemOwner", 1, 0);
+        player->setHp(1);
+        auto owned = std::make_shared<ItemCommitHealingProbe>();
+        owned->setGame(game);
+        owned->setName("unitValidItemAfterRejection");
+        player->addItem(owned);
+        auto foreign = std::make_shared<ItemCommitHealingProbe>();
+        foreign->setGame(game);
+        foreign->setName("unitForeignItemAfterRejection");
+        other->addItem(foreign);
+        const auto inventory = player->getItems();
+        const auto otherInventory = other->getItems();
+        for (const auto &invalid : std::vector<std::shared_ptr<CItem>>{nullptr, foreign}) {
+            for (bool synchronous : {false, true}) {
+                bool rejected = false;
+                try {
+                    if (synchronous) {
+                        player->useItem(invalid);
+                    } else {
+                        auto use = game->getContext()->spawnTask(player->useItemAsync(invalid));
+                        expect_true(use.finished(), "invalid item arguments must settle without queuing gameplay work");
+                        if (use.finished()) {
+                            use.get();
+                        }
+                    }
+                } catch (const std::invalid_argument &error) {
+                    rejected = std::string(error.what()) == "Tried to use item not in inventory!";
+                }
+                expect_true(rejected && player->getHp() == 1 && player->getItems() == inventory &&
+                                other->getItems() == otherInventory && owned->uses == 0 && owned->policyReads == 0 &&
+                                foreign->uses == 0 && foreign->policyReads == 0 && game->getContext()->isActive(),
+                            "null and foreign items must reject recoverably at both boundaries without gameplay work");
+            }
+        }
+        auto use = game->getContext()->spawnTask(player->useItemAsync(owned));
+        expect_true(pumpHandlerUntil([&] { return use.finished(); }),
+                    "a valid item must remain usable after rejected item arguments");
+        if (use.finished()) {
+            use.get();
+        }
+        expect_true(player->getHp() == 6 && !player->hasInInventory(owned) && owned->uses == 1 &&
+                        owned->policyReads == 1 && other->getItems() == otherInventory && foreign->uses == 0 &&
+                        foreign->policyReads == 0,
+                    "argument rejection must preserve normal subsequent consumption and the foreign inventory");
         game->getContext()->shutdown();
     }
     auto game = makeWindowlessFightGame();
