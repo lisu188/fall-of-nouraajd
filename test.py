@@ -27687,13 +27687,14 @@ class McpServerTest(unittest.TestCase):
         import campaign as campaign_module
         from tests.narrative_walkthrough import NarrativeWalkthrough
 
-        proc = self._start_stdio_mcp_process("ritual")
-        try:
-            self._initialize_stdio_mcp(proc)
-            session = {"proc": proc, "next_request_id": 3}
-            for class_id in ("Warrior", "Sorcerer"):
-                for outcome in ("good", "bad"):
-                    with self.subTest(class_id=class_id, outcome=outcome):
+        for class_id in ("Warrior", "Sorcerer"):
+            for outcome in ("good", "bad"):
+                with self.subTest(class_id=class_id, outcome=outcome):
+                    proc = self._start_stdio_mcp_process("ritual", fixture_seed=100)
+                    try:
+                        self._initialize_stdio_mcp(proc)
+                        self._assertMcpFixtureSeed(proc, 100)
+                        session = {"proc": proc, "next_request_id": 3}
                         game_handle, map_handle, player_handle = self._mcp_load_game_map_with_player(
                             session, "ritual", class_id
                         )
@@ -27733,8 +27734,8 @@ class McpServerTest(unittest.TestCase):
                         finally:
                             for path in save_paths:
                                 path.unlink(missing_ok=True)
-        finally:
-            self._shutdown_process(proc)
+                    finally:
+                        self._shutdown_process(proc)
 
     def test_stdio_map_walkthrough_siege(self):
         self._assert_mcp_walkthrough("siege")
@@ -28154,6 +28155,27 @@ class McpServerTest(unittest.TestCase):
         proc._playtest_trace_path = trace_path
         proc._native_log_file = native_log_file
         return proc
+
+    def _assertMcpFixtureSeed(self, proc, seed):
+        prefix = "MCP fixture random seed "
+        deadline = time.monotonic() + 5.0
+        while True:
+            self.assertIsNone(proc.poll(), "The seeded MCP process exited before its startup receipt was validated")
+            stderr = self._mcp_process_tail_text(proc, "stderr")
+            receipts = [
+                line[len(prefix) :]
+                for line in stderr.splitlines(keepends=True)
+                if line.startswith(prefix) and line.endswith(("\n", "\r"))
+            ]
+            if receipts:
+                self.assertEqual(1, len(receipts), "The fresh MCP process must seed its fixture exactly once")
+                receipt = json.loads(receipts[0])
+                self.assertEqual({"seed": seed}, receipt)
+                self.assertTrue(type(proc.pid) is int and proc.pid > 0, "The seed receipt requires a live process PID")
+                print("MCP fixture startup", {"pid": proc.pid, "receipt": receipt}, flush=True)
+                return receipt
+            self.assertLess(time.monotonic(), deadline, "The fresh MCP process did not publish its seed receipt")
+            time.sleep(0.001)
 
     def _start_stdio_process(self, command, *, env=None, map_name=None):
         proc = subprocess.Popen(
