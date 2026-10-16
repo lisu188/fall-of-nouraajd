@@ -3,8 +3,9 @@
 
 import ast
 import copy
-from contextlib import redirect_stderr, redirect_stdout
+from contextlib import nullcontext, redirect_stderr, redirect_stdout
 import io
+import json
 from pathlib import Path
 import sys
 from types import SimpleNamespace
@@ -343,6 +344,168 @@ class McpSeedFixtureTest(unittest.TestCase):
             self.assertEqual(1, len(assignments))
             self.assertLess(assignments[0].lineno, loop.lineno)
         self.assertNotIn("_seedRandomForTests", ast.get_source_segment(source, method))
+
+    def narrativeFixture(self, *, receipt_error=None, route_error=None):
+        source = (ROOT / "test.py").read_text(encoding="utf-8")
+        owner = next(
+            node for node in ast.parse(source).body if isinstance(node, ast.ClassDef) and node.name == "McpServerTest"
+        )
+        method = next(
+            node
+            for node in owner.body
+            if isinstance(node, ast.FunctionDef)
+            and node.name == "test_stdio_narrative_outcomes_complete_with_natural_objectives"
+        )
+        namespace = {"build_dir": ROOT / "test" / "unused-narrative-fixture-build"}
+        exec(compile(ast.Module(body=[method], type_ignores=[]), "<actual-narrative-fixture>", "exec"), namespace)
+        events = []
+        campaign = SimpleNamespace(
+            CAMPAIGN_ID_PROPERTY="campaignId",
+            CAMPAIGN_SCENARIO_PROPERTY="scenario",
+            CAMPAIGN_FINISHED_PROPERTY="finished",
+            CAMPAIGN_HISTORY_PROPERTY="history",
+        )
+
+        def start(map_name, **kwargs):
+            process = SimpleNamespace(pid=100 + sum(event[0] == "start" for event in events))
+            events.append(("start", process.pid, map_name, kwargs))
+            return process
+
+        def receipt(process, seed):
+            events.append(("receipt", process.pid, seed))
+            if receipt_error:
+                raise receipt_error
+            return {"seed": seed}
+
+        def load(session, map_name, class_id):
+            events.append(("load", session["proc"].pid, map_name, class_id, session["next_request_id"]))
+            return "game", "map", {"pid": session["proc"].pid, "class": class_id}
+
+        class Driver:
+            def __init__(self, engine, call, game, map_handle, player):
+                self.player = player
+
+            def call(self, player, method_name, arguments):
+                if method_name == "setStringProperty":
+                    events.append(("property", player["pid"], *arguments))
+                    return None
+                if method_name == "getBoolProperty":
+                    return True
+                if method_name == "getStringProperty":
+                    return f"cleansing:{self.outcome}_ending,siege:completed"
+                raise AssertionError((method_name, arguments))
+
+            def ritual(self, outcome, *, save_name):
+                self.outcome = outcome
+                events.append(("ritual", self.player["pid"], outcome, save_name))
+                if route_error:
+                    raise route_error
+
+            def siege(self):
+                events.append(("siege", self.player["pid"]))
+                return {"class": self.player["class"], "outcome": self.outcome}
+
+        fixture = SimpleNamespace(
+            subTest=lambda **kwargs: nullcontext(),
+            assertTrue=self.assertTrue,
+            assertEqual=self.assertEqual,
+            _start_stdio_mcp_process=start,
+            _initialize_stdio_mcp=lambda process: events.append(("initialize", process.pid)),
+            _assertMcpFixtureSeed=receipt,
+            _mcp_load_game_map_with_player=load,
+            _write_mcp_walkthrough_log=lambda name, log: events.append(("log", name, log)),
+            _shutdown_process=lambda process: events.append(("shutdown", process.pid)),
+        )
+
+        def run():
+            with patch.dict(
+                sys.modules,
+                {"campaign": campaign, "tests.narrative_walkthrough": SimpleNamespace(NarrativeWalkthrough=Driver)},
+            ):
+                namespace[method.name](fixture)
+
+        return run, events
+
+    def testNarrativeCasesUseFourFreshSeededProcessesBeforeAnyGameLoad(self):
+        run, events = self.narrativeFixture()
+        run()
+        starts = [event for event in events if event[0] == "start"]
+        self.assertEqual(4, len(starts), "Each class/outcome case must own a fresh random stream")
+        self.assertEqual(4, len({event[1] for event in starts}))
+        expected_cases = [(class_id, outcome) for class_id in ("Warrior", "Sorcerer") for outcome in ("good", "bad")]
+        for index, ((class_id, outcome), (_, pid, map_name, options)) in enumerate(zip(expected_cases, starts)):
+            self.assertEqual("ritual", map_name)
+            self.assertEqual({"fixture_seed": 100}, options)
+            case_events = [event for event in events if len(event) > 1 and event[1] == pid]
+            self.assertEqual(
+                ["start", "initialize", "receipt", "load", "property", "property", "ritual", "siege", "shutdown"],
+                [event[0] for event in case_events],
+            )
+            self.assertEqual(("receipt", pid, 100), case_events[2])
+            self.assertEqual(("load", pid, "ritual", class_id, 3), case_events[3])
+            self.assertEqual(outcome, case_events[6][2])
+            if index:
+                self.assertLess(events.index(("shutdown", starts[index - 1][1])), events.index(starts[index]))
+        logs = [event for event in events if event[0] == "log"]
+        self.assertEqual(
+            [f"narrative-{class_id}-{outcome}" for class_id, outcome in expected_cases], [e[1] for e in logs]
+        )
+
+    def testNarrativeStartupAndRouteFailuresAlwaysCloseTheirProcess(self):
+        for stage in ("receipt_error", "route_error"):
+            with self.subTest(stage=stage):
+                failure = RuntimeError(stage)
+                run, events = self.narrativeFixture(**{stage: failure})
+                with self.assertRaises(RuntimeError) as caught:
+                    run()
+                self.assertIs(failure, caught.exception)
+                self.assertEqual(("shutdown", 100), events[-1])
+                self.assertEqual(1, sum(event[0] == "start" for event in events))
+                if stage == "receipt_error":
+                    self.assertFalse(any(event[0] == "load" for event in events))
+
+    def narrativeStartup(self, tails, *, clock=(0, 1), poll_result=None, pid=12345):
+        tree = ast.parse((ROOT / "test.py").read_text(encoding="utf-8"))
+        owner = next(node for node in tree.body if isinstance(node, ast.ClassDef) and node.name == "McpServerTest")
+        method = next(
+            node for node in owner.body if isinstance(node, ast.FunctionDef) and node.name == "_assertMcpFixtureSeed"
+        )
+        ticks = iter(clock)
+        time = SimpleNamespace(monotonic=lambda: next(ticks), sleep=lambda duration: None)
+        namespace = {"json": json, "time": time}
+        exec(compile(ast.Module(body=[method], type_ignores=[]), "<actual-seed-receipt>", "exec"), namespace)
+        tail_values = iter(tails)
+        process = SimpleNamespace(pid=pid, poll=lambda: poll_result)
+        fixture = SimpleNamespace(
+            assertIsNone=self.assertIsNone,
+            assertEqual=self.assertEqual,
+            assertTrue=self.assertTrue,
+            assertLess=self.assertLess,
+            _mcp_process_tail_text=lambda active, stream: next(tail_values, tails[-1]),
+        )
+        output = io.StringIO()
+        with redirect_stdout(output):
+            receipt = namespace[method.name](fixture, process, 100)
+        return receipt, output.getvalue()
+
+    def testNarrativeStartupWaitsForACompleteObservedSeedReceiptAndPublishesPid(self):
+        receipt, output = self.narrativeStartup(
+            ['MCP fixture random seed {"seed":', 'MCP fixture random seed {"seed": 100}\n']
+        )
+        self.assertEqual({"seed": 100}, receipt)
+        self.assertIn("{'pid': 12345, 'receipt': {'seed': 100}}", output)
+
+    def testNarrativeStartupRejectsMissingWrongDuplicateMalformedExitedAndInvalidPidReceipts(self):
+        for tails, clock, poll_result, pid, error in (
+            (["other log\n"], (0, 6), None, 12345, AssertionError),
+            (['MCP fixture random seed {"seed": 101}\n'], (0,), None, 12345, AssertionError),
+            (['MCP fixture random seed {"seed": 100}\n' * 2], (0,), None, 12345, AssertionError),
+            (["MCP fixture random seed invalid\n"], (0,), None, 12345, ValueError),
+            (['MCP fixture random seed {"seed": 100}\n'], (0,), 1, 12345, AssertionError),
+            (['MCP fixture random seed {"seed": 100}\n'], (0,), None, 0, AssertionError),
+        ):
+            with self.subTest(tails=tails, poll_result=poll_result, pid=pid), self.assertRaises(error):
+                self.narrativeStartup(tails, clock=clock, poll_result=poll_result, pid=pid)
 
 
 if __name__ == "__main__":
