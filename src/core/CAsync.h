@@ -25,12 +25,19 @@ std::shared_ptr<vstd::thread_pool<16>> workerPool();
 
 vstd::task<void> dispatch(std::move_only_function<void()> callback);
 
-inline void waitForProgress() {
+inline void waitForProgress(bool readyWork = false) {
+    const auto yield = [readyWork] {
+        if (readyWork) {
+            std::this_thread::yield();
+        } else {
+            std::this_thread::sleep_for(std::chrono::milliseconds(1));
+        }
+    };
     if (Py_IsInitialized() && PyGILState_Check()) {
         pybind11::gil_scoped_release release;
-        std::this_thread::sleep_for(std::chrono::milliseconds(1));
+        yield();
     } else {
-        std::this_thread::sleep_for(std::chrono::milliseconds(1));
+        yield();
     }
 }
 
@@ -48,12 +55,12 @@ template <typename T> T wait(const vstd::task_handle<T> &handle, WaitMode mode =
                 handle.requestStop();
             }
             if (!handle.finished()) {
-                waitForProgress();
+                waitForProgress(loop->hasReadyWork());
             }
         } else {
             loop->runReady();
             if (!handle.finished()) {
-                waitForProgress();
+                waitForProgress(loop->hasReadyWork());
             }
         }
     }

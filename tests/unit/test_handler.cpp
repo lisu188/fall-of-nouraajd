@@ -545,20 +545,20 @@ void test_script_handler_executes_commands_and_wraps_functions() {
 void test_handler_constructors_are_covered_by_native_tests() {
     CQuestHandler quest_handler;
     CRngHandler rng_handler;
-    CGuiHandler gui_handler;
+    auto gui_handler = std::make_shared<CGuiHandler>();
 
     expect_true(CGuiHandler::static_meta()->name() == "CGuiHandler",
                 "GUI handler metadata should expose its type name");
-    expect_true(gui_handler.meta()->inherits("CGameObject"), "GUI handler metadata should preserve its object base");
-    gui_handler.showMessage("native handler constructor coverage");
-    gui_handler.showInfo("native handler info coverage");
+    expect_true(gui_handler->meta()->inherits("CGameObject"), "GUI handler metadata should preserve its object base");
+    gui_handler->showMessage("native handler constructor coverage");
+    gui_handler->showInfo("native handler info coverage");
     // Headless campaign screens log the title/body/action content and return
     // immediately instead of blocking on input.
-    gui_handler.showCampaignScreen("Chapter I - Hearthfall", "Ten years of exile end here.", "BEGIN");
+    gui_handler->showCampaignScreen("Chapter I - Hearthfall", "Ten years of exile end here.", "BEGIN");
     // The headless campaign browser resolves to the empty stable id immediately.
-    expect_true(gui_handler.showCampaignSelection(nullptr, nullptr, nullptr).empty(),
+    expect_true(gui_handler->showCampaignSelection(nullptr, nullptr, nullptr).empty(),
                 "headless campaign selection should resolve to the empty stable id");
-    expect_true(!gui_handler.showQuestion("native handler question coverage"),
+    expect_true(!gui_handler->showQuestion("native handler question coverage"),
                 "headless GUI handler questions should return false");
     expect_true(rng_handler.getRandomLoot(0).empty(), "default RNG handler should return no loot without a game");
     expect_true(rng_handler.getRandomEncounter(0).empty(),
@@ -1591,31 +1591,53 @@ void test_fight_handler_reports_cancelled_quit_event() {
     expect_true(SDL_InitSubSystem(SDL_INIT_EVENTS) == 0, "SDL event subsystem should initialize for quit events");
     SDL_FlushEvent(SDL_QUIT);
 
-    auto game = load_empty_game();
-    auto attacker = add_test_creature(game, "unitCancelledAttacker");
-    auto defender = add_test_creature(game, "unitCancelledDefender", 1, 0);
-    const auto attacker_controller =
-        std::dynamic_pointer_cast<NoProgressFightController>(attacker->getFightController());
-    const auto defender_controller =
-        std::dynamic_pointer_cast<NoProgressFightController>(defender->getFightController());
+    for (bool afterSuspension : {false, true}) {
+        auto loop = vstd::event_loop<>::instance();
+        auto game = load_empty_game();
+        auto attacker = add_test_creature(game, "unitCancelledAttacker");
+        auto defender = add_test_creature(game, "unitCancelledDefender", 1, 0);
+        const auto attacker_controller =
+            std::dynamic_pointer_cast<NoProgressFightController>(attacker->getFightController());
+        const auto defender_controller =
+            std::dynamic_pointer_cast<NoProgressFightController>(defender->getFightController());
 
-    SDL_Event quit_event{};
-    quit_event.type = SDL_QUIT;
-    expect_true(SDL_PushEvent(&quit_event) == 1, "SDL_QUIT event should be queued for cancellation coverage");
+        SDL_Event quit_event{};
+        quit_event.type = SDL_QUIT;
+        auto pushQuit = [quit_event]() mutable {
+            expect_true(SDL_PushEvent(&quit_event) == 1, "SDL_QUIT event should be queued for cancellation coverage");
+        };
+        if (afterSuspension) {
+            loop->invoke(pushQuit);
+        } else {
+            pushQuit();
+        }
 
-    const auto result = CFightHandler::fightManyResult(attacker, {defender});
-    SDL_FlushEvent(SDL_QUIT);
+        const auto result = CFightHandler::fightManyResult(attacker, {defender});
+        SDL_FlushEvent(SDL_QUIT);
 
-    expect_true(result.outcome == CFightOutcome::Cancelled, "queued SDL_QUIT should report cancelled combat");
-    expect_true(result.rounds == 0, "cancelled combat before a turn should report no completed rounds");
-    expect_true(result.survivor == attacker && result.opponent == defender,
-                "cancelled combat should keep participant metadata");
-    expect_true(!result.resolved() && !result.attackerSucceeded(),
-                "cancelled combat should stay distinct from resolved bool outcomes");
-    expect_controller_lifecycle(attacker_controller, 1, 1, "attacker cleanup should run when combat is cancelled");
-    expect_controller_lifecycle(defender_controller, 1, 1, "opponent cleanup should run when combat is cancelled");
-    expect_true(game->getMap()->getStringProperty("combatStatus").find("cancelled") != std::string::npos,
-                "cancelled combat should publish the cancelled status text");
+        expect_true(result.outcome == CFightOutcome::Cancelled, "queued SDL_QUIT should report cancelled combat");
+        expect_true(afterSuspension ? result.rounds <= 1 : result.rounds == 0,
+                    "quit cancellation must retain the original pre-turn and next-round bounds");
+        expect_true(!afterSuspension || loop->quitRequested(),
+                    "the posted quit fixture must exercise an event consumed by the outer loop");
+        expect_true(result.survivor == attacker && result.opponent == defender,
+                    "cancelled combat should keep participant metadata");
+        expect_true(!result.resolved() && !result.attackerSucceeded(),
+                    "cancelled combat should stay distinct from resolved bool outcomes");
+        expect_controller_lifecycle(attacker_controller, 1, 1, "attacker cleanup should run when combat is cancelled");
+        expect_controller_lifecycle(defender_controller, 1, 1, "opponent cleanup should run when combat is cancelled");
+        expect_true(game->getMap()->getStringProperty("combatStatus").find("cancelled") != std::string::npos,
+                    "cancelled combat should publish the cancelled status text");
+        if (afterSuspension) {
+            auto nextGame = load_empty_game();
+            auto nextAttacker = add_test_creature(nextGame, "unitNextSessionAttacker");
+            auto nextDefender = add_test_creature(nextGame, "unitNextSessionDefender", 1, 0);
+            expect_true(!loop->quitRequested(), "starting the next session must clear its prior loop quit state");
+            const auto nextResult = CFightHandler::fightManyResult(nextAttacker, {nextDefender});
+            expect_true(nextResult.outcome == CFightOutcome::Stalled && nextResult.rounds == 20,
+                        "the surviving next session must execute its full ordinary no-progress combat budget");
+        }
+    }
 }
 
 void test_fight_handler_ends_original_started_controllers() {

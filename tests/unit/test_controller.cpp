@@ -1136,6 +1136,7 @@ void testMonsterItemTurnsSuspendWithoutPumpingPostedWork() {
     for (bool healing : {true, false}) {
         auto game = fight_fixture_game();
         auto monster = fight_fixture_monster(game, 10, healing ? 20 : 70);
+        monster->getBaseStats()->setIntelligence(10);
         monster->setMana(healing ? monster->getManaMax() : 0);
         auto opponent = fight_fixture_hitter(game, 2);
         auto potion = std::make_shared<CPotion>();

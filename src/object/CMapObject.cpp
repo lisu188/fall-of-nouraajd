@@ -13,9 +13,10 @@ CMapObject::~CMapObject() {}
 void CMapObject::move(int x, int y, int z) {
     auto task = moveAsync(Coords(x, y, z));
     if (auto game = getGame()) {
-        game_async::wait(game->getContext()->spawnTask(std::move(task)));
+        game_async::wait(game->getContext()->spawnTask(std::move(task)),
+                         game->getGui() ? game_async::WaitMode::Frames : game_async::WaitMode::PostedWork);
     } else {
-        game_async::run(std::move(task));
+        game_async::run(std::move(task), game_async::WaitMode::PostedWork);
     }
 }
 

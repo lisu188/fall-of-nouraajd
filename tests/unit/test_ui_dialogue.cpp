@@ -155,6 +155,7 @@ void testArrowSelectedReplyAcceptsEachActivationKey() {
         harness.key(SDLK_DOWN);
         expect_true(harness.actionCount == 0, "arrow selection must not commit a reply");
         harness.key(key);
+        vstd::event_loop<>::instance()->runUntilIdle();
         expect_true(harness.actionCount == 1, "Enter, keypad Enter and Space must activate the chosen reply");
         expect_true(!harness.panel->getGui(), "activating the EXIT reply must dismiss the conversation");
     }
@@ -247,6 +248,7 @@ void testActionOutcomeChoosesTheActualDepartureSpeech() {
     harness.option->setStringProperty("afterCondition", "hasLeft");
     harness.option->setStringProperty("afterStateId", "GONE");
     harness.key(SDLK_1);
+    vstd::event_loop<>::instance()->runUntilIdle();
     const auto history = json::parse(harness.history());
     expect_true(harness.actionCount == 1 && harness.panel->getGui() != nullptr,
                 "the action must run once and keep the actual outcome speech readable");
@@ -263,6 +265,7 @@ void testMapTransitionDoesNotReviveTheOldDialogue() {
     harness.option->setNextStateId("OLD_SCENE");
     harness.changeMap = true;
     harness.key(SDLK_1);
+    vstd::event_loop<>::instance()->runUntilIdle();
     expect_true(harness.actionCount == 1 && harness.game->getMap() != harness.map,
                 "the selected transition action must change the active map exactly once");
     expect_true(!harness.panel->getGui(), "a map-changing action must leave the outgoing conversation detached");
@@ -279,10 +282,11 @@ void testQueuedMapTransitionClosesBeforeOutgoingSpeechCanReload() {
     harness.option->setNextStateId("OLD_SCENE");
     harness.queueMapChange = true;
     harness.key(SDLK_1);
+    vstd::event_loop<>::instance()->runReady();
     expect_true(harness.game->getMap() == harness.map && harness.game->getSceneManager()->isTransitionPending(),
                 "the fixture must queue a real transition without pumping its deferred work");
     expect_true(harness.actionCount == 1 && !harness.panel->getGui(),
-                "a pending map transition must detach the outgoing conversation immediately");
+                "the next outer-loop snapshot must detach the outgoing conversation before its transition commits");
     expect_true(json::parse(harness.history()).size() == 2,
                 "a queued transition must not record stale outgoing speech before the scene changes");
 }

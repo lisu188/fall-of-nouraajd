@@ -81,6 +81,7 @@ struct PreviewFixture {
         gui->event(&event);
         event.type = SDL_KEYUP;
         gui->event(&event);
+        vstd::event_loop<>::instance()->runUntilIdle();
     }
 };
 

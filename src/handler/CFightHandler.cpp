@@ -494,7 +494,7 @@ vstd::task<CFightResult> resolveFightManyAsync(std::shared_ptr<CCreature> attack
     for (int turn = 0; turn < 100 && stale_turns < 20 && result.outcome == CFightOutcome::Invalid &&
                        is_active_participant(encounterMap, attacker) && !opponents.empty();
          ++turn) {
-        if (SDL_HasEvent(SDL_QUIT)) {
+        if (loop->quitRequested() || SDL_HasEvent(SDL_QUIT)) {
             cancel_fight(result, attacker, current);
             break;
         }
@@ -701,9 +701,10 @@ CFightResult CFightHandler::fightManyResult(std::shared_ptr<CCreature> attacker,
     auto task = fightManyResultAsync(attacker, encounterOpponents);
     try {
         if (auto game = attacker ? attacker->getGame() : nullptr) {
-            return game_async::wait(game->getContext()->spawnTask(std::move(task)));
+            return game_async::wait(game->getContext()->spawnTask(std::move(task)),
+                                    game->getGui() ? game_async::WaitMode::Frames : game_async::WaitMode::PostedWork);
         }
-        return game_async::run(std::move(task));
+        return game_async::run(std::move(task), game_async::WaitMode::PostedWork);
     } catch (const vstd::task_cancelled &) {
         CFightResult result;
         cancel_fight(result, attacker, encounterOpponents.empty() ? nullptr : encounterOpponents.front());
@@ -722,9 +723,10 @@ vstd::task<CFightResult> CFightHandler::fightManyResultAsync(std::shared_ptr<CCr
 void CFightHandler::defeatedCreature(const std::shared_ptr<CCreature> &a, const std::shared_ptr<CCreature> &b) {
     auto task = defeatedCreatureAsync(a, b);
     if (auto game = b ? b->getGame() : nullptr) {
-        game_async::wait(game->getContext()->spawnTask(std::move(task)));
+        game_async::wait(game->getContext()->spawnTask(std::move(task)),
+                         game->getGui() ? game_async::WaitMode::Frames : game_async::WaitMode::PostedWork);
     } else {
-        game_async::run(std::move(task));
+        game_async::run(std::move(task), game_async::WaitMode::PostedWork);
     }
 }
 

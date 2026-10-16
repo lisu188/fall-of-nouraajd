@@ -805,12 +805,16 @@ void testHealingItemSelectionWorkAndCallbacksAreBounded() {
                 "healing selection fixture must retain its fixed inventory and health scale");
     auto controller = std::make_shared<CMonsterFightController>();
     HealingSelectionProbeScope probe;
+    int renderedFrames = 0;
+    auto frameObserver = vstd::event_loop<>::instance()->connectFrameCallback([&](int) { ++renderedFrames; });
     for (std::size_t turn = 0; turn < turns; ++turn) {
         const auto previousCalls = selected->calls;
         expect_true(controller->control(actor, opponent), "healing selection must take one action per turn");
         expect_true(selected->calls == previousCalls + 1,
                     "each healing selection must invoke the exact least viable item once");
     }
+    expect_true(renderedFrames == 0,
+                "headless item boundaries must not render or pace frames between coroutine continuations");
     const auto visits = performance_guard::healingItemSelectionProbeCount();
     std::size_t itemCalls = 0;
     for (const auto &item : itemProbes) {
@@ -829,7 +833,8 @@ void testHealingItemSelectionWorkAndCallbacksAreBounded() {
                 "the counting-only item callback must keep the repeated workload fixed");
     std::cout << "healing item selection guard: inventory=" << inventoryCount << " turns=" << turns
               << " visits=" << visits << " visit budget=" << inventoryCount * turns << " item callbacks=" << itemCalls
-              << " callback budget=" << turns << " attack callbacks=" << attack->calls << "\n";
+              << " callback budget=" << turns << " attack callbacks=" << attack->calls
+              << " renderedFrames=" << renderedFrames << " frameBudget=0\n";
 }
 
 struct MonsterItemWorkCounters {

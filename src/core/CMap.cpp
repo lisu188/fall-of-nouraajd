@@ -749,9 +749,10 @@ void CMap::addObject(const std::shared_ptr<CMapObject> &mapObject) {
 
 void CMap::removeObject(const std::shared_ptr<CMapObject> &mapObject) {
     if (auto game = getGame()) {
-        game_async::wait(game->getContext()->spawnTask(removeObjectAsync(mapObject)));
+        game_async::wait(game->getContext()->spawnTask(removeObjectAsync(mapObject)),
+                         game->getGui() ? game_async::WaitMode::Frames : game_async::WaitMode::PostedWork);
     } else {
-        game_async::run(removeObjectAsync(mapObject));
+        game_async::run(removeObjectAsync(mapObject), game_async::WaitMode::PostedWork);
     }
 }
 

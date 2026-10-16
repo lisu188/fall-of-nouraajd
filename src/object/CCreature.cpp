@@ -894,9 +894,10 @@ void CCreature::cancelMove() { pendingMoveOrigin.reset(); }
 
 void CCreature::afterMove() {
     if (auto game = getGame()) {
-        game_async::wait(game->getContext()->spawnTask(afterMoveAsync()));
+        game_async::wait(game->getContext()->spawnTask(afterMoveAsync()),
+                         game->getGui() ? game_async::WaitMode::Frames : game_async::WaitMode::PostedWork);
     } else {
-        game_async::run(afterMoveAsync());
+        game_async::run(afterMoveAsync(), game_async::WaitMode::PostedWork);
     }
 }
 
@@ -1088,9 +1089,10 @@ void CCreature::removeEffect(std::shared_ptr<CEffect> effect) {
 
 void CCreature::useItem(std::shared_ptr<CItem> item) {
     if (auto game = getGame()) {
-        game_async::wait(game->getContext()->spawnTask(useItemAsync(std::move(item))));
+        game_async::wait(game->getContext()->spawnTask(useItemAsync(std::move(item))),
+                         game->getGui() ? game_async::WaitMode::Frames : game_async::WaitMode::PostedWork);
     } else {
-        game_async::run(useItemAsync(std::move(item)));
+        game_async::run(useItemAsync(std::move(item)), game_async::WaitMode::PostedWork);
     }
 }
 

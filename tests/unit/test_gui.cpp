@@ -2288,6 +2288,7 @@ void testNativeItemClicksAwaitHooksAndReleaseCancelledUseGuards() {
         panel->close();
     }
     pumpGuiUntil([&] { return !harness.player->hasInInventory(item) && textPanels().empty(); });
+    loop->runUntilIdle();
     expect_true(queued && !harness.player->hasInInventory(item) && textPanels().empty(),
                 "closing an item receipt must dispose the exact item once");
 
@@ -2461,6 +2462,8 @@ void test_fight_panel_right_click_inspects_then_explicit_use_works() {
     expect_true(harness.player->getItems().size() == inventory_size,
                 "combat inspection must not consume the selected item");
     fight_panel->useSelectedItem(harness.gui);
+    expect_true(pumpGuiUntil([&] { return !harness.player->hasInInventory(potion); }),
+                "the outer loop must complete the selected combat item use");
     expect_true(harness.player->getItems().size() == inventory_size - 1,
                 "the explicit combat Use action must consume the selected usable potion");
 }

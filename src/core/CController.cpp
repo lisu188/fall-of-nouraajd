@@ -530,7 +530,9 @@ std::shared_ptr<CInteraction> monsterRoleAction(const std::shared_ptr<CCreature>
 bool CMonsterFightController::control(std::shared_ptr<CCreature> me, std::shared_ptr<CCreature> opponent) {
     auto game = me ? me->getGame() : nullptr;
     auto task = controlAsync(std::move(me), std::move(opponent));
-    return game ? game_async::wait(game->getContext()->spawnTask(std::move(task))) : game_async::run(std::move(task));
+    return game ? game_async::wait(game->getContext()->spawnTask(std::move(task)),
+                                   game->getGui() ? game_async::WaitMode::Frames : game_async::WaitMode::PostedWork)
+                : game_async::run(std::move(task), game_async::WaitMode::PostedWork);
 }
 
 vstd::task<bool> CMonsterFightController::controlAsync(std::shared_ptr<CCreature> me,
@@ -939,8 +941,9 @@ bool CPlayerFightController::control(std::shared_ptr<CCreature> me, std::shared_
     }
     auto task = controlAsync(std::move(me), std::move(opponent));
     try {
-        return game ? game_async::wait(game->getContext()->spawnTask(std::move(task)))
-                    : game_async::run(std::move(task));
+        return game ? game_async::wait(game->getContext()->spawnTask(std::move(task)),
+                                       game->getGui() ? game_async::WaitMode::Frames : game_async::WaitMode::PostedWork)
+                    : game_async::run(std::move(task), game_async::WaitMode::PostedWork);
     } catch (const vstd::task_cancelled &) {
         cancelled = true;
         return false;
