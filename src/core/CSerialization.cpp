@@ -780,25 +780,28 @@ void CSerialization::setObjectProperty(const std::shared_ptr<CGameObject> &objec
 
 void CSerialization::setNumericProperty(const std::shared_ptr<CGameObject> &object, const std::string &key, int value,
                                         CSerializationReadContext &context) {
-    if (isString(object, key))
+    const auto property = getProperty(object, key);
+    if (property == std::type_index(typeid(std::string)))
         object->setStringProperty(key, vstd::str(value));
-    else if (!rejectScalarForPrimitiveCollection(getProperty(object, key), key, context))
+    else if (!rejectScalarForPrimitiveCollection(property, key, context))
         object->setNumericProperty(key, value);
 }
 
 void CSerialization::setBooleanProperty(const std::shared_ptr<CGameObject> &object, const std::string &key, bool value,
                                         CSerializationReadContext &context) {
-    if (isString(object, key))
+    const auto property = getProperty(object, key);
+    if (property == std::type_index(typeid(std::string)))
         object->setStringProperty(key, vstd::str(value));
-    else if (!rejectScalarForPrimitiveCollection(getProperty(object, key), key, context))
+    else if (!rejectScalarForPrimitiveCollection(property, key, context))
         object->setBoolProperty(key, value);
 }
 
 void CSerialization::setStringProperty(const std::shared_ptr<CGameObject> &object, const std::string &key,
                                        const std::string &value, CSerializationReadContext &context) {
-    auto coerced = coerceStringProperty(getProperty(object, key), value);
+    const auto property = getProperty(object, key);
+    auto coerced = coerceStringProperty(property, value);
     if (std::holds_alternative<std::string>(coerced)) {
-        if (!rejectScalarForPrimitiveCollection(getProperty(object, key), key, context))
+        if (!rejectScalarForPrimitiveCollection(property, key, context))
             object->setStringProperty(key, std::get<std::string>(coerced));
     } else if (std::holds_alternative<int>(coerced)) {
         setNumericProperty(object, key, std::get<int>(coerced), context);

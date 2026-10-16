@@ -329,7 +329,7 @@ class NativeCoroutineCallbackTest(unittest.TestCase):
         receipt = self.awaitPanel("CGameCampaignPanel")
         replacement = origin + self.api.Coords(1, 1, 0)
         self.player.relocateWithoutMoveHooks(replacement)
-        receipt.clickAction()
+        receipt.clickAction(self.gui)
         self.pumpUntil(
             lambda: self.flow_refs and all(reference() is None for reference in self.flow_refs),
             "Stale portal flow did not finish its normal return",
@@ -642,7 +642,7 @@ class NativeCoroutineCallbackTest(unittest.TestCase):
         self.assertEqual(gold_before + 7, self.player.getGold())
         self.assertIn(quest, self.player.getQuests())
         self.assertNotIn(quest, self.player.getCompletedQuests())
-        receipt.clickAction()
+        receipt.clickAction(self.gui)
         self.pumpUntil(lambda: quest in self.player.getCompletedQuests(), "Quest did not commit after receipt closure")
         self.assertNotIn(quest, self.player.getQuests())
         self.assertEqual("receipt closed", quest.getStringProperty("capturedPhase"))
@@ -753,7 +753,7 @@ class NativeCoroutineCallbackTest(unittest.TestCase):
         self.assertIn(quest, self.player.getQuests())
         self.assertEqual(gold_before, self.player.getGold())
         self.checkQuestsLater()
-        self.awaitPanel("CGameCampaignPanel").clickAction()
+        self.awaitPanel("CGameCampaignPanel").clickAction(self.gui)
         self.pumpUntil(lambda: quest in self.player.getCompletedQuests(), "Failed quest guard blocked a later retry")
         self.assertEqual(1, events.count("reward"))
         self.assertEqual(gold_before + 7, self.player.getGold())
@@ -845,7 +845,7 @@ class NativeCoroutineCallbackTest(unittest.TestCase):
         self.assertEqual(["action started"], events)
         panel.close()
         self.pumpUntil(lambda: "outer closed" in outer, "Closing the outgoing dialog did not release its owner")
-        receipt.clickAction()
+        receipt.clickAction(self.gui)
         self.pumpUntil(lambda: "action closed" in events, "Nested action did not settle after source-panel close")
         self.assertIsNone(panel.getParent())
         self.assertIsNone(self.panel("CGameDialogPanel"))
@@ -861,7 +861,7 @@ class NativeCoroutineCallbackTest(unittest.TestCase):
         self.game.changeMap("test")
         self.pumpUntil(lambda: self.game.getMap() is not old_map, "Queued transition did not change the active map")
         if receipt.getParent() is not None:
-            receipt.clickAction()
+            receipt.clickAction(self.gui)
         self.pumpUntil(lambda: "action closed" in events, "Stale dialog action did not finish its callback")
         self.settle()
         self.assertIsNone(panel.getParent())
@@ -890,13 +890,13 @@ class NativeCoroutineCallbackTest(unittest.TestCase):
         dialog, option, events, state = self.installActionDialog(error=True)
         panel = self.openDialogLater(dialog, [])
         panel.keyboardEvent(self.gui, 768, ord("1"))
-        self.awaitPanel("CGameCampaignPanel").clickAction()
+        self.awaitPanel("CGameCampaignPanel").clickAction(self.gui)
         self.pumpUntil(lambda: "action closed" in events, "Failing dialog callback did not settle")
         self.assertIs(panel.getParent(), self.gui)
         self.assertNotIn("AFTER", self.historyStates())
         state["error"] = False
         panel.keyboardEvent(self.gui, 768, ord("1"))
-        self.awaitPanel("CGameCampaignPanel").clickAction()
+        self.awaitPanel("CGameCampaignPanel").clickAction(self.gui)
         self.pumpUntil(lambda: "AFTER" in self.historyStates(), "Dialog selection guard did not permit a retry")
         self.assertEqual(2, events.count("action started"))
         self.assertEqual(1, events.count("action returned"))
@@ -919,7 +919,7 @@ class NativeCoroutineCallbackTest(unittest.TestCase):
         panel = self.openDialogLater(dialog, [])
         panels.append(panel)
         panel.keyboardEvent(self.gui, 768, ord("1"))
-        self.awaitPanel("CGameCampaignPanel").clickAction()
+        self.awaitPanel("CGameCampaignPanel").clickAction(self.gui)
         self.pumpUntil(lambda: "action closed" in events, "Dialog after-condition did not finish")
         self.settle()
         self.assertIs(panel.getObjectProperty("dialog"), replacement)
@@ -964,6 +964,146 @@ class NativeCoroutineCallbackTest(unittest.TestCase):
 
 
 class NativeCoroutineCallbackSelectionTest(unittest.TestCase):
+    def runTransitionBoundary(self, mode, *, stuck=None):
+        tree = ast.parse((ROOT / "test.py").read_text(encoding="utf-8"))
+        class_name, method_name = (
+            ("GameTest", "test_campaign_state_survives_save_load")
+            if mode == "campaign"
+            else ("McpServerTest", "test_stdio_scene_manager_map_transition_walkthrough")
+        )
+        owner = next(node for node in tree.body if isinstance(node, ast.ClassDef) and node.name == class_name)
+        method = next(node for node in owner.body if isinstance(node, ast.FunctionDef) and node.name == method_name)
+        body = next(node for node in method.body if isinstance(node, ast.Try)).body
+
+        def stateAssertion(node, state):
+            return (
+                isinstance(node, ast.Expr)
+                and isinstance(node.value, ast.Call)
+                and isinstance(node.value.func, ast.Attribute)
+                and node.value.func.attr == "assertEqual"
+                and node.value.args
+                and isinstance(node.value.args[0], ast.Constant)
+                and node.value.args[0].value == state
+            )
+
+        start = next(index for index, node in enumerate(body) if stateAssertion(node, "TransitionPending"))
+        end = next(index for index in range(start, len(body)) if stateAssertion(body[index], "Idle"))
+        helpers = [
+            node
+            for node in tree.body
+            if isinstance(node, ast.FunctionDef) and node.name in {"pump_event_loop", "pump_event_loop_until"}
+        ]
+        state = {"steps": 0, "elapsed": 0.0, "localLoads": 0}
+        self.transitionWaitState = state
+
+        def pump():
+            state["steps"] += 1
+            state["elapsed"] += 0.01
+
+        def pending():
+            return stuck == "pending" or state["steps"] < 13
+
+        def mapName():
+            return "ritual" if stuck != "map" and state["steps"] >= 9 else "test"
+
+        manager = SimpleNamespace(
+            isTransitionPending=pending,
+            getTransitionStateName=lambda: "TransitionPending" if pending() else "Idle",
+            getPendingMapName=lambda: "ritual",
+        )
+        player = object()
+        game = SimpleNamespace(
+            getSceneManager=lambda: manager,
+            getMap=lambda: SimpleNamespace(mapName=mapName(), getPlayer=lambda: player),
+        )
+
+        def loadNative():
+            state["localLoads"] += 1
+            self.assertEqual("campaign", mode, "Remote MCP waits must never import or pump the local native engine")
+            return SimpleNamespace(event_loop=SimpleNamespace(instance=lambda: SimpleNamespace(run=pump)))
+
+        def handleCall(_session, handle, method, args=None):
+            if (handle, method) == ("loop", "run"):
+                return pump()
+            if handle == "manager":
+                return getattr(manager, method)()
+            if (handle, method) == ("game", "getMap"):
+                return "map"
+            if (handle, method) == ("map", "getPlayer"):
+                return "player"
+            self.assertEqual(("map", "getStringProperty", ["mapName"]), (handle, method, args))
+            return mapName()
+
+        receiver = SimpleNamespace(
+            assertEqual=self.assertEqual,
+            assertTrue=self.assertTrue,
+            _mcp_handle_call=handleCall,
+            _mcp_engine_call=lambda *_args: "loop",
+            _mcp_serialized_map=lambda *_args: {"properties": {"mapName": mapName()}},
+            _serialized_player=lambda _map: {"properties": {}},
+        )
+        namespace = {
+            "self": receiver,
+            "load_game_module": loadNative,
+            "time": SimpleNamespace(
+                monotonic=lambda: state["elapsed"],
+                sleep=lambda seconds: state.update(elapsed=state["elapsed"] + seconds),
+            ),
+            "loaded_game": game,
+            "loaded_player": player,
+            "loaded_store": SimpleNamespace(
+                scenario=lambda: "recovery" if pending() else "cleansing",
+                history=lambda: [] if pending() else [("recovery", "completed")],
+            ),
+            "session": {},
+            "game_handle": "game",
+            "manager_handle": "manager",
+        }
+        exec(compile(ast.Module(body=helpers + body[start : end + 1], type_ignores=[]), method_name, "exec"), namespace)
+        return state
+
+    def testTransitionBoundariesWaitForPostedCompletionsBeyondTenSnapshots(self):
+        for mode in ("campaign", "mcp"):
+            with self.subTest(boundary=mode):
+                state = self.runTransitionBoundary(mode)
+                self.assertEqual(13, state["steps"], "Map publication at step nine is not execution completion")
+                self.assertLess(state["elapsed"], 1.0)
+                self.assertEqual(int(mode == "campaign"), state["localLoads"])
+
+    def testTransitionBoundariesRejectStuckMapOrPendingStateWithinTheirExistingBudget(self):
+        for mode in ("campaign", "mcp"):
+            for stuck in ("map", "pending"):
+                with self.subTest(boundary=mode, stuck=stuck):
+                    with self.assertRaisesRegex(AssertionError, "existing wait budget"):
+                        self.runTransitionBoundary(mode, stuck=stuck)
+                    state = self.transitionWaitState
+                    self.assertGreaterEqual(state["elapsed"], 1.0)
+                    self.assertLess(state["elapsed"], 1.02)
+                    self.assertLessEqual(state["steps"], 1001)
+                    self.assertEqual(int(mode == "campaign"), state["localLoads"])
+
+    def testRemotePumpPreservesMinimumIterationsWithoutImportingTheLocalEngine(self):
+        tree = ast.parse((ROOT / "test.py").read_text(encoding="utf-8"))
+        helper = next(
+            node for node in tree.body if isinstance(node, ast.FunctionDef) and node.name == "pump_event_loop_until"
+        )
+        state = {"steps": 0, "elapsed": 0.0}
+
+        def pump():
+            state["steps"] += 1
+            state["elapsed"] += 0.01
+
+        namespace = {
+            "load_game_module": lambda: self.fail("A supplied remote pump must not load the local engine"),
+            "time": SimpleNamespace(
+                monotonic=lambda: state["elapsed"],
+                sleep=lambda seconds: state.update(elapsed=state["elapsed"] + seconds),
+            ),
+        }
+        exec(compile(ast.Module(body=[helper], type_ignores=[]), "actual_wait_helper", "exec"), namespace)
+        self.assertTrue(namespace["pump_event_loop_until"](lambda: True, min_iterations=5, pump=pump))
+        self.assertEqual(5, state["steps"])
+
     def runMissingBinaryCase(self, *, required, explicit):
         case = NativeCoroutineCallbackTest("testQueuedShutdownSkipsCallbackBodyAndReward")
         case.requireCurrentNativeBinary = required

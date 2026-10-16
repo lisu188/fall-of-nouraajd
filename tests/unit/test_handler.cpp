@@ -229,6 +229,25 @@ vstd::task<void> awaitTriggerProbe(std::shared_ptr<AsyncTriggerProbe> probe, std
     co_await vstd::until(loop, [probe, name] { return probe->released.contains(name); });
 }
 
+class SuspendedEntryTraceProbe : public CEvent {
+  public:
+    std::shared_ptr<AsyncTriggerProbe> probe;
+
+    vstd::task<void> onEnterAsync(std::shared_ptr<CGameEvent>) override { return awaitTriggerProbe(probe, "hook"); }
+};
+
+class SuspendedTraceFightController : public NoProgressFightController {
+  public:
+    std::shared_ptr<AsyncTriggerProbe> probe;
+
+    vstd::task<bool> controlAsync(std::shared_ptr<CCreature>, std::shared_ptr<CCreature>) override {
+        return [](std::shared_ptr<AsyncTriggerProbe> state) -> vstd::task<bool> {
+            co_await awaitTriggerProbe(std::move(state), "control");
+            co_return true;
+        }(probe);
+    }
+};
+
 struct FightThreadProbe {
     std::thread::id startedOn;
     std::thread::id panelCreatedOn;
@@ -611,6 +630,177 @@ void test_event_handler_trigger_registration_uses_named_comparison_helpers() {
     handler.registerTrigger(same_type_different_name);
     expect_true(handler.getTriggers().size() == 2,
                 "trigger registration should preserve distinct trigger names with the same configured type id");
+}
+
+void testObjectEntryTracePreservesActualCauseAndContactBeforeNpcDeparture() {
+    auto game = load_empty_game();
+    auto map = game->getMap();
+    map->setMapName("unitObjectEntry");
+    auto player = add_test_player(game);
+    player->relocateWithoutMoveHooks(Coords(0, 0, 0));
+    auto witness = add_test_creature(game, "unitMovingWitness", 1, 0);
+    witness->setNpc(true);
+    witness->setCanStep(true);
+    int callbacks = 0;
+    map->getEventHandler()->registerTrigger(
+        std::make_shared<CCustomTrigger>(witness->getName(), CGameEvent::CType::onEnter, [&](auto object, auto event) {
+            auto caused = std::dynamic_pointer_cast<CGameEventCaused>(event);
+            if (!caused || caused->getCause() != player)
+                return;
+            expect_true(object == witness,
+                        "the normal native onEnter callback should retain its exact target and player cause");
+            callbacks++;
+        }));
+
+    CPlaytestTrace::configure(true, "", 100, true);
+    player->moveTo(1, 0, 0);
+    witness->moveTo(2, 0, 0);
+    int entries = 0;
+    for (const auto &line : CPlaytestTrace::drain()) {
+        const auto record = json::parse(line);
+        if (record.value("event", std::string()) != "object_entered" ||
+            record.at("target").value("name", std::string()) != witness->getName() ||
+            record.at("cause").value("isPlayer", false) != true)
+            continue;
+        entries++;
+        expect_true(record.at("target").dump() == CPlaytestTrace::objectRef(witness).dump() &&
+                        record.at("cause").dump() == CPlaytestTrace::objectRef(player).dump(),
+                    "entry evidence should preserve the exact native target and player identities");
+        expect_true(record.at("cause").at("isPlayer").get<bool>() == true &&
+                        record.at("targetCoords").dump() == CPlaytestTrace::coords(Coords(1, 0, 0)).dump() &&
+                        record.at("causeCoords").dump() == record.at("targetCoords").dump(),
+                    "entry evidence should retain actual contact before the witness's later movement");
+        expect_true(record.at("map").get<std::string>() == map->getMapName() &&
+                        record.at("turn").get<int>() == map->getTurn(),
+                    "entry evidence should retain the active native map and turn");
+    }
+    CPlaytestTrace::configure(false);
+    expect_true(callbacks == 1 && entries == 1 && player->getCoords() == Coords(1, 0, 0) &&
+                    witness->getCoords() == Coords(2, 0, 0),
+                "tracing should observe the completed callback without keeping the moving witness in place");
+}
+
+void testObjectEntryTraceRequiresOptInAndCanonicalColocatedCause() {
+    auto game = load_empty_game();
+    auto map = game->getMap();
+    auto player = add_test_player(game);
+    player->relocateWithoutMoveHooks(Coords(0, 0, 0));
+    auto witness = add_test_creature(game, "unitTraceWitness", 1, 0);
+    witness->setNpc(true);
+    witness->setCanStep(true);
+    int callbacks = 0;
+    map->getEventHandler()->registerTrigger(std::make_shared<CCustomTrigger>(
+        witness->getName(), CGameEvent::CType::onEnter, [&](auto, auto) { callbacks++; }));
+    CPlaytestTrace::configure(false);
+    player->moveTo(1, 0, 0);
+    expect_true(callbacks == 1 && CPlaytestTrace::records().empty(),
+                "disabled entry tracing should preserve the native callback without recording anything");
+
+    CPlaytestTrace::configure(true, "", 2, true);
+    auto handler = map->getEventHandler();
+    handler->gameEvent(nullptr, std::make_shared<CGameEvent>(CGameEvent::CType::onEnter));
+    handler->gameEvent(witness, nullptr);
+    handler->gameEvent(witness, std::make_shared<CGameEvent>(CGameEvent::CType::onEnter));
+    handler->gameEvent(witness, std::make_shared<CGameEventCaused>(CGameEvent::CType::onEnter, nullptr));
+    auto remote = add_test_creature(game, "unitRemoteCause", 3, 0);
+    handler->gameEvent(witness, std::make_shared<CGameEventCaused>(CGameEvent::CType::onEnter, remote));
+    auto detached = std::make_shared<CCreature>();
+    detached->setGame(game);
+    detached->setName(player->getName());
+    detached->relocateWithoutMoveHooks(witness->getCoords());
+    handler->gameEvent(witness, std::make_shared<CGameEventCaused>(CGameEvent::CType::onEnter, detached));
+    for (const auto &line : CPlaytestTrace::drain())
+        expect_true(json::parse(line).value("event", std::string()) != "object_entered",
+                    "absent, remote or noncanonical causes must not become native contact evidence");
+
+    handler->gameEvent(witness, std::make_shared<CGameEvent>(CGameEvent::CType::onTurn));
+    expect_true(CPlaytestTrace::records().empty(), "unrelated native events must not become entry evidence");
+    witness->moveTo(2, 0, 0);
+    witness->moveTo(player->getCoords());
+    int npc_entries = 0;
+    const auto npc_records = CPlaytestTrace::drain();
+    expect_true(npc_records.size() <= 2, "entry records must obey the existing bounded native trace limit");
+    for (const auto &line : npc_records) {
+        const auto record = json::parse(line);
+        if (record.value("event", std::string()) == "object_entered") {
+            npc_entries++;
+            expect_true(record.at("cause").at("isPlayer").get<bool>() == false,
+                        "an NPC moving onto the player must retain its NPC cause");
+        }
+    }
+    CPlaytestTrace::configure(false);
+    expect_true(npc_entries > 0, "valid NPC-caused entries should remain distinguishable from player-caused entries");
+}
+
+void testAsyncObjectEntryTraceWaitsForHooksAndPreservesContactOnResume() {
+    for (const bool cancel : {false, true}) {
+        auto game = load_empty_game();
+        auto map = game->getMap();
+        map->setMapName("unitSuspendedEntryTrace");
+        map->setTurn(17);
+        auto player = add_test_player(game);
+        player->relocateWithoutMoveHooks(ZERO);
+        auto probe = std::make_shared<AsyncTriggerProbe>();
+        auto target = std::make_shared<SuspendedEntryTraceProbe>();
+        target->probe = probe;
+        target->setGame(game);
+        target->setName("unitSuspendedEntryTarget");
+        target->setCanStep(true);
+        map->addObject(target);
+        auto trigger = std::make_shared<CCustomTrigger>(
+            target->getName(), "onEnter", [probe](auto, auto) { return awaitTriggerProbe(probe, "trigger"); });
+        trigger->setName("unitSuspendedEntryTrigger");
+        map->getEventHandler()->registerTrigger(trigger);
+        const auto entries = [] {
+            std::vector<json> found;
+            for (const auto &line : CPlaytestTrace::records()) {
+                auto record = json::parse(line);
+                if (record.value("event", std::string()) == "object_entered") {
+                    found.push_back(std::move(record));
+                }
+            }
+            return found;
+        };
+        CPlaytestTrace::configure(true, "", 100, true);
+        auto entry = game->getContext()->spawnTask(map->getEventHandler()->gameEventAsync(
+            target, std::make_shared<CGameEventCaused>(CGameEvent::CType::onEnter, player)));
+        expect_true(pumpHandlerUntil([&] { return !probe->entered.empty() || entry.finished(); }) &&
+                        probe->entered == std::vector<std::string>{"hook"} && entries().empty(),
+                    "an entry trace must wait for its asynchronous object hook without publishing completion");
+        target->relocateWithoutMoveHooks(Coords(2, 0, 0));
+        player->relocateWithoutMoveHooks(Coords(3, 0, 0));
+        map->setTurn(99);
+        if (cancel) {
+            entry.requestStop();
+        } else {
+            probe->released.insert("hook");
+            expect_true(pumpHandlerUntil([&] { return probe->entered.size() == 2 || entry.finished(); }) &&
+                            probe->entered == std::vector<std::string>({"hook", "trigger"}) && entries().empty(),
+                        "an entry trace must also wait for the ordered trigger snapshot after its object hook");
+            probe->released.insert("trigger");
+        }
+        expect_true(pumpHandlerUntil([&] { return entry.finished(); }), "entry trace execution must finish boundedly");
+        bool cancelled = false;
+        if (entry.finished()) {
+            try {
+                entry.get();
+            } catch (const vstd::task_cancelled &) {
+                cancelled = true;
+            }
+        }
+        const auto records = entries();
+        expect_true(cancelled == cancel && records.size() == (cancel ? 0U : 1U),
+                    "a completed asynchronous entry records once and a cancelled entry records no completion");
+        if (!records.empty()) {
+            expect_true(records.front().at("targetCoords").dump() == CPlaytestTrace::coords(ZERO).dump() &&
+                            records.front().at("causeCoords").dump() == CPlaytestTrace::coords(ZERO).dump() &&
+                            records.front().at("turn").get<int>() == 17 &&
+                            records.front().at("map").get<std::string>() == "unitSuspendedEntryTrace",
+                        "resuming entry callbacks must retain owned contact/map/turn snapshots from before the yield");
+        }
+        CPlaytestTrace::configure(false);
+        game->getContext()->shutdown();
+    }
 }
 
 void test_fight_handler_rejects_stale_and_cross_map_participants() {
@@ -2183,13 +2373,14 @@ class ItemCommitHealingProbe : public CItem {
     std::function<void()> readPolicy;
     int uses = 0;
     int policyReads = 0;
+    bool disposable = true;
 
     bool isDisposable() override {
         ++policyReads;
         if (readPolicy) {
             readPolicy();
         }
-        return true;
+        return disposable;
     }
 
     void onUse(std::shared_ptr<CGameEvent> event) override {
@@ -2212,7 +2403,10 @@ void testDisposableItemCommitConsumesBeforeReceiptsAndCancellation() {
         item->setGame(game);
         item->setName("unitCommittedHealingItem");
         item->setTypeId("unitCommittedHealingItem");
+        item->addTag(CTag::Heal);
+        item->setNumericProperty("power", 5);
         player->addItem(item);
+        CPlaytestTrace::configure(true, "", 100, true);
         vstd::task_handle<void> use;
         if (mode == 0) {
             item->afterHeal = [&use] { use.requestStop(); };
@@ -2237,6 +2431,16 @@ void testDisposableItemCommitConsumesBeforeReceiptsAndCancellation() {
             expect_true(pumpHandlerUntil([&] { return !receipt->entered.empty() || use.finished(); }) &&
                             !use.finished() && player->getHp() == 6 && !player->hasInInventory(item),
                         "a suspended item receipt must expose healed HP and an already-consumed inventory item");
+            bool tracedBeforeReceipt = false;
+            for (const auto &line : CPlaytestTrace::records()) {
+                const auto record = json::parse(line);
+                if (record.value("event", std::string()) == "item_used") {
+                    tracedBeforeReceipt = record.at("hpBefore").get<int>() == 1 &&
+                                          record.at("hpAfter").get<int>() == 6 && !record.at("ownedAfter").get<bool>();
+                }
+            }
+            expect_true(tracedBeforeReceipt,
+                        "item-use evidence must settle with consumption before a later receipt can suspend or save");
             use.requestStop();
         }
         expect_true(pumpHandlerUntil([&] { return use.finished(); }),
@@ -2253,6 +2457,21 @@ void testDisposableItemCommitConsumesBeforeReceiptsAndCancellation() {
         expect_true(cancelled && item->uses == (committed ? 1 : 0) && player->getHp() == (committed ? 6 : 1) &&
                         player->hasInInventory(item) != committed && item->policyReads == (mode == 3 ? 0 : 1),
                     "committed healing must consume once, while cancellation before onUse must retain the item");
+        int usedRecords = 0;
+        for (const auto &line : CPlaytestTrace::drain()) {
+            const auto record = json::parse(line);
+            if (record.value("event", std::string()) == "item_used") {
+                ++usedRecords;
+                expect_true(
+                    record.at("disposable").get<bool>() && record.at("hpBefore").get<int>() == 1 &&
+                        record.at("hpAfter").get<int>() == 6 && !record.at("ownedAfter").get<bool>() &&
+                        record.at("onlyUsedItemRemoved").get<bool>() && record.at("equipmentUnchanged").get<bool>(),
+                    "committed/cancelled/shutdown item traces must use cached policy and actual consumed state");
+            }
+        }
+        expect_true(usedRecords == (committed ? 1 : 0),
+                    "item traces must record an actual commit once and never record a cancelled pre-use operation");
+        CPlaytestTrace::configure(false);
         if (committed && game->getContext()->isActive()) {
             auto repeated = game->getContext()->spawnTask(player->useItemAsync(item));
             bool rejected = false;
@@ -2912,15 +3131,72 @@ void test_fight_handler_records_outcome_trace_metadata() {
         auto game = load_empty_game();
         auto victor = add_test_creature(game, "unitTraceOutcomeVictor");
         victor->setFightController(std::make_shared<KillingFightController>());
+        victor->getBaseStats()->setStamina(11);
+        victor->getBaseStats()->setStrength(13);
+        victor->setLevel(3);
+        victor->setHp(23);
+        victor->setMana(13);
         auto defeated = add_test_creature(game, "unitTraceOutcomeDefeated", 1, 0);
+        defeated->getBaseStats()->setStamina(9);
+        defeated->getBaseStats()->setStrength(8);
+        defeated->setLevel(2);
+        defeated->setHp(6);
+        defeated->setMana(4);
+        auto second = add_test_creature(game, "unitTraceOutcomeSecond", 0, 1);
+        second->getBaseStats()->setStamina(12);
+        second->getBaseStats()->setStrength(14);
+        second->setLevel(4);
+        second->setHp(9);
+        second->setMana(8);
         add_unit_loot(game, defeated, "unitTraceOutcomeLoot");
 
-        const auto result = CFightHandler::fightManyResult(victor, {defeated});
+        const auto result = CFightHandler::fightManyResult(victor, {second, nullptr, defeated, second});
         const auto records = CPlaytestTrace::drain();
 
+        bool found_started = false;
         bool found_finished = false;
         for (const auto &record : records) {
             const auto parsed = json::parse(record);
+            if (parsed.value("event", std::string()) == "combat_started") {
+                expect_true(!found_started, "one encounter should emit exactly one combat_started trace");
+                found_started = true;
+                const auto &attacker_state = parsed.at("attackerState");
+                const auto &opponent_states = parsed.at("opponentStates");
+                expect_true(attacker_state.size() == 7 && opponent_states.at(0).size() == 7 &&
+                                opponent_states.at(1).size() == 7,
+                            "combat-start snapshots should remain limited to identity, coordinates and resources");
+                expect_true(attacker_state.at("object").dump() == parsed.at("attacker").dump() &&
+                                parsed.at("attacker").value("name", std::string()) == victor->getName(),
+                            "combat snapshots should preserve the existing attacker identity reference");
+                expect_true(
+                    attacker_state.at("coords").dump() == json{{"x", 0}, {"y", 0}, {"z", 0}}.dump() &&
+                        attacker_state.at("hp").get<int>() == 23 && attacker_state.at("hpMax").get<int>() == 77 &&
+                        attacker_state.at("mana").get<int>() == 13 && attacker_state.at("manaMax").get<int>() == 91 &&
+                        attacker_state.at("level").get<int>() == 3,
+                    "combat_started should capture actual damaged attacker resources before the first round");
+                expect_true(opponent_states.size() == 2 && parsed.at("opponents").size() == 2,
+                            "combat snapshots should include each sanitized opponent exactly once");
+                expect_true(opponent_states.at(0).at("object").dump() == parsed.at("opponents").at(0).dump() &&
+                                opponent_states.at(1).at("object").dump() == parsed.at("opponents").at(1).dump() &&
+                                opponent_states.at(0).at("object").value("name", std::string()) ==
+                                    defeated->getName() &&
+                                opponent_states.at(1).at("object").value("name", std::string()) == second->getName(),
+                            "combat snapshots should retain existing sanitized opponent references and order");
+                expect_true(opponent_states.at(0).at("coords").dump() == json{{"x", 1}, {"y", 0}, {"z", 0}}.dump() &&
+                                opponent_states.at(0).at("hp").get<int>() == 6 &&
+                                opponent_states.at(0).at("hpMax").get<int>() == 63 &&
+                                opponent_states.at(0).at("mana").get<int>() == 4 &&
+                                opponent_states.at(0).at("manaMax").get<int>() == 56 &&
+                                opponent_states.at(0).at("level").get<int>() == 2 &&
+                                opponent_states.at(1).at("coords").dump() ==
+                                    json{{"x", 0}, {"y", 1}, {"z", 0}}.dump() &&
+                                opponent_states.at(1).at("hp").get<int>() == 9 &&
+                                opponent_states.at(1).at("hpMax").get<int>() == 84 &&
+                                opponent_states.at(1).at("mana").get<int>() == 8 &&
+                                opponent_states.at(1).at("manaMax").get<int>() == 98 &&
+                                opponent_states.at(1).at("level").get<int>() == 4,
+                            "combat_started should retain pre-defeat resources for every actual opponent");
+            }
             if (parsed.value("event", std::string()) != "combat_finished") {
                 continue;
             }
@@ -2933,12 +3209,81 @@ void test_fight_handler_records_outcome_trace_metadata() {
                             parsed["survivor"].value("name", std::string()) == victor->getName(),
                         "combat_finished traces should include the survivor reference");
         }
+        expect_true(found_started, "combat should emit a combat_started trace while tracing is enabled");
         expect_true(found_finished, "combat should emit a combat_finished trace while tracing is enabled");
+        expect_true(result.outcome == CFightOutcome::AttackerVictory && !defeated->isAlive() && !second->isAlive(),
+                    "resource snapshots must describe the start of an actual resolved multi-opponent fight");
+
+        CPlaytestTrace::configure(false);
+        auto untraced = add_test_creature(game, "unitTraceDisabledDefeated", 1, 1);
+        const auto hp_before = victor->getHp();
+        const auto mana_before = victor->getMana();
+        const auto untraced_result = CFightHandler::fightManyResult(victor, {untraced});
+        expect_true(CPlaytestTrace::records().empty(),
+                    "disabled fight tracing should emit neither combat events nor resource snapshots");
+        expect_true(untraced_result.outcome == result.outcome && !untraced->isAlive() && victor->getHp() == hp_before &&
+                        victor->getMana() == mana_before,
+                    "disabling snapshots should preserve the normal fight outcome and surviving resources");
     } catch (...) {
         CPlaytestTrace::configure(false);
         throw;
     }
     CPlaytestTrace::configure(false);
+}
+
+void testAsyncCombatTraceCapturesResourcesBeforeControllerSuspension() {
+    auto game = load_empty_game();
+    auto attacker = add_test_creature(game, "unitAsyncTraceAttacker");
+    auto opponent = add_test_creature(game, "unitAsyncTraceDefender", 1, 0);
+    attacker->getBaseStats()->setAgility(99);
+    attacker->getBaseStats()->setStamina(3);
+    attacker->setHp(7);
+    attacker->setMana(4);
+    opponent->setHp(6);
+    const auto hpMax = attacker->getHpMax();
+    const auto manaMax = attacker->getManaMax();
+    auto probe = std::make_shared<AsyncTriggerProbe>();
+    auto controller = std::make_shared<SuspendedTraceFightController>();
+    controller->probe = probe;
+    attacker->setFightController(controller);
+    CPlaytestTrace::configure(true, "", 100, true);
+    bool queued = false;
+    vstd::event_loop<>::instance()->invoke([&queued] { queued = true; });
+    auto fight = game->getContext()->spawnTask(CFightHandler::fightManyResultAsync(attacker, {opponent}));
+    expect_true(!queued, "capturing combat-start resources must not pump unrelated work before controller await");
+    expect_true(pumpHandlerUntil([&] { return !probe->entered.empty() || fight.finished(); }) && !fight.finished(),
+                "the combat trace regression must suspend in its actual asynchronous controller");
+    attacker->setHp(1);
+    attacker->setMana(1);
+    attacker->relocateWithoutMoveHooks(Coords(2, 0, 0));
+    fight.requestStop();
+    expect_true(pumpHandlerUntil([&] { return fight.finished(); }), "cancelled traced combat must release its frames");
+    bool cancelled = false;
+    if (fight.finished()) {
+        try {
+            (void)fight.get();
+        } catch (const vstd::task_cancelled &) {
+            cancelled = true;
+        }
+    }
+    int starts = 0;
+    for (const auto &line : CPlaytestTrace::drain()) {
+        const auto record = json::parse(line);
+        if (record.value("event", std::string()) == "combat_started") {
+            ++starts;
+            const auto &state = record.at("attackerState");
+            expect_true(
+                state.at("hp").get<int>() == 7 && state.at("mana").get<int>() == 4 &&
+                    state.at("hpMax").get<int>() == hpMax && state.at("manaMax").get<int>() == manaMax &&
+                    state.at("coords").dump() == CPlaytestTrace::coords(ZERO).dump() &&
+                    record.at("opponentStates").at(0).at("hp").get<int>() == 6,
+                "combat-start snapshots must retain original resources and coordinates across suspension/cancel");
+        }
+    }
+    expect_true(cancelled && starts == 1 && controller->start_count == 1 && controller->end_count == 1,
+                "cancelling a traced controller must retain one start record and clean its controller exactly once");
+    CPlaytestTrace::configure(false);
+    game->getContext()->shutdown();
 }
 
 void test_player_respawn_normalizes_wrapped_entry_coords() {
@@ -3952,6 +4297,12 @@ int main() {
                             test_creature_subtype_inventory_is_enumerable_on_loaded_game);
     nativeTestProfile().run("test_event_handler_trigger_registration_uses_named_comparison_helpers",
                             test_event_handler_trigger_registration_uses_named_comparison_helpers);
+    nativeTestProfile().run("testObjectEntryTracePreservesActualCauseAndContactBeforeNpcDeparture",
+                            testObjectEntryTracePreservesActualCauseAndContactBeforeNpcDeparture);
+    nativeTestProfile().run("testObjectEntryTraceRequiresOptInAndCanonicalColocatedCause",
+                            testObjectEntryTraceRequiresOptInAndCanonicalColocatedCause);
+    nativeTestProfile().run("testAsyncObjectEntryTraceWaitsForHooksAndPreservesContactOnResume",
+                            testAsyncObjectEntryTraceWaitsForHooksAndPreservesContactOnResume);
     nativeTestProfile().run("test_fight_handler_rejects_stale_and_cross_map_participants",
                             test_fight_handler_rejects_stale_and_cross_map_participants);
     nativeTestProfile().run("test_fight_handler_attributes_lethal_effects_to_valid_casters",
@@ -4025,6 +4376,8 @@ int main() {
                             test_playtest_trace_environment_targets_and_fallback_ids);
     nativeTestProfile().run("test_fight_handler_records_outcome_trace_metadata",
                             test_fight_handler_records_outcome_trace_metadata);
+    nativeTestProfile().run("testAsyncCombatTraceCapturesResourcesBeforeControllerSuspension",
+                            testAsyncCombatTraceCapturesResourcesBeforeControllerSuspension);
     nativeTestProfile().run("test_player_respawn_normalizes_wrapped_entry_coords",
                             test_player_respawn_normalizes_wrapped_entry_coords);
 

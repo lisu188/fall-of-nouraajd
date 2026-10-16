@@ -13,6 +13,9 @@ test/
 *.h.*
 *.cpp.*
 .idea/
+!/.idea/
+/.idea/*
+!/.idea/misc.xml
 /cmake-build-*
 /json/
 /vcpkg_installed/

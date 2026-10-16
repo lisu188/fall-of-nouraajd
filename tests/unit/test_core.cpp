@@ -46,6 +46,7 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #include "object/CGameObject.h"
 #include "object/CInteraction.h"
 #include "object/CItem.h"
+#include "handler/CEventHandler.h"
 #include "test_harness.h"
 #include "native_crash_diagnostics.h"
 #include "stat_composition_fixture.h"
@@ -4109,6 +4110,66 @@ void testGeneratedNameFixtureSeedHookRejectsLateAndRepeatedActivation() {
 
 } // namespace
 
+class ReusableTraceHealingItem : public CItem {
+  public:
+    int policyReads = 0;
+    int uses = 0;
+
+    bool isDisposable() override {
+        ++policyReads;
+        return false;
+    }
+
+    void onUse(std::shared_ptr<CGameEvent> event) override {
+        ++uses;
+        auto caused = vstd::cast<CGameEventCaused>(event);
+        vstd::cast<CCreature>(caused->getCause())->heal(2);
+    }
+};
+
+void testReusableItemTraceRecordsAtCommitWithoutRepeatingPolicy() {
+    auto game = std::make_shared<CGame>();
+    auto map = std::make_shared<CMap>();
+    map->setGame(game);
+    game->setMap(map);
+    auto actor = std::make_shared<CCreature>();
+    actor->setGame(game);
+    actor->setName("unitReusableTraceActor");
+    actor->getBaseStats()->setStamina(3);
+    actor->getBaseStats()->setMainStat("strength");
+    actor->getBaseStats()->setStrength(5);
+    map->addObject(actor);
+    actor->setHp(1);
+    auto item = std::make_shared<ReusableTraceHealingItem>();
+    item->setGame(game);
+    item->setName("unitReusableTraceItem");
+    item->addTag(CTag::Heal);
+    item->setNumericProperty("power", 2);
+    actor->addItem(item);
+    CPlaytestTrace::configure(true, "", 100, true);
+    game_async::wait(game->getContext()->spawnTask(actor->useItemAsync(item)), game_async::WaitMode::PostedWork);
+    int used = 0;
+    for (const auto &line : CPlaytestTrace::drain()) {
+        const auto record = json::parse(line);
+        if (record.value("event", std::string()) == "item_used") {
+            ++used;
+            expect_true(!record.at("disposable").get<bool>() && record.at("ownedAfter").get<bool>() &&
+                            record.at("hpBefore").get<int>() == 1 && record.at("hpAfter").get<int>() == 3 &&
+                            record.at("removedCount").get<int>() == 0 && record.at("addedCount").get<int>() == 0 &&
+                            record.at("equipmentUnchanged").get<bool>(),
+                        "a reusable healing item must record its committed effect without claiming consumption");
+        }
+    }
+    expect_true(used == 1 && item->policyReads == 1 && item->uses == 1 && actor->hasInInventory(item),
+                "tracing must use the cached disposal policy exactly once for a reusable healing commit");
+    CPlaytestTrace::configure(false);
+    actor->useItem(item);
+    expect_true(CPlaytestTrace::records().empty() && item->policyReads == 2 && item->uses == 2 && actor->getHp() == 5 &&
+                    actor->hasInInventory(item),
+                "the synchronous legacy boundary must retain item behavior and policy calls when tracing is disabled");
+    game->getContext()->shutdown();
+}
+
 int main() {
     native_test_diagnostics::installWindowsCrashDiagnostics();
     pybind11::scoped_interpreter guard{};
@@ -4247,6 +4308,8 @@ int main() {
                      testGeneratedNameFixturesPreserveRngAndCollisionBounds);
     runDiagnosedCase("testGeneratedNameFixtureSeedHookRejectsLateAndRepeatedActivation",
                      testGeneratedNameFixtureSeedHookRejectsLateAndRepeatedActivation);
+    runDiagnosedCase("testReusableItemTraceRecordsAtCommitWithoutRepeatingPolicy",
+                     testReusableItemTraceRecordsAtCommitWithoutRepeatingPolicy);
 
     return finish_tests();
 }

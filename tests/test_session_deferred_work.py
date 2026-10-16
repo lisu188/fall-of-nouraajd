@@ -1,6 +1,7 @@
 # Copyright (C) 2026 Andrzej Lis
 # SPDX-License-Identifier: GPL-3.0-or-later
 
+import ast
 import gc
 import importlib.util
 from pathlib import Path
@@ -64,6 +65,75 @@ class Player:
 
 
 class SessionDeferredWorkTest(unittest.TestCase):
+    def testQuestDeathFixtureDrainsActualLoadSynchronizationBeforeRemovingItsFirstActor(self):
+        fixture = hunt_tests.OctobogzHuntTest()
+        fixture.setUp()
+        self.addCleanup(fixture.doCleanups)
+        fixture.game_map.player.setStringProperty("nouraajdVictorState", "already-synchronized")
+        callback_tree = ast.parse((ROOT / "res/maps/nouraajd/script.py").read_text(encoding="utf-8"))
+        callback = next(
+            node
+            for node in ast.walk(callback_tree)
+            if isinstance(node, ast.FunctionDef) and node.name == "syncLoadedVictorState"
+        )
+        callback_namespace = {
+            "resolveContext": lambda: fixture.game,
+            "_get_quest_system": Mock(side_effect=AssertionError("This fixture already synchronized Victor")),
+        }
+        exec(
+            compile(ast.Module(body=[callback], type_ignores=[]), "actual_loaded_map_sync", "exec"), callback_namespace
+        )
+        events, pumps = [], []
+
+        def synchronizeLoadedMap():
+            events.append("loaded-map-sync")
+            callback_namespace["syncLoadedVictorState"]()
+
+        fixture.pending.append(synchronizeLoadedMap)
+
+        def runSnapshot():
+            snapshot = list(fixture.pending)
+            fixture.pending.clear()
+            for work in snapshot:
+                work()
+
+        def pump(iterations):
+            pumps.append(iterations)
+            for _ in range(iterations):
+                runSnapshot()
+
+        def removeAtNativeSuspensionBoundary(actor):
+            name = actor.getName()
+            events.append("remove:" + name)
+            fixture.game_map.objects.pop(name)
+            if isinstance(actor, hunt_tests.Actor):
+                actor.effects.clear()
+            if name == "cave2" and fixture.game_map.getBoolProperty("octobogzHuntCleared"):
+                fixture.game_map.completed += 1
+            # Native removal erases the object before its missing onDestroyFlow lookup suspends.
+            # A ready load callback can therefore run before the trigger sees the original actor.
+            runSnapshot()
+            for trigger in list(fixture.game_map.triggers.values()):
+                if trigger.getStringProperty("object") == name:
+                    trigger.trigger(actor, None)
+            actor.game_map = None
+
+        fixture.game_map.removeObject = removeAtNativeSuspensionBoundary
+        source = ast.parse((ROOT / "test.py").read_text(encoding="utf-8"))
+        complete = next(
+            node for node in source.body if isinstance(node, ast.FunctionDef) and node.name == "completeOctobogzFixture"
+        )
+        namespace = {"json": __import__("json"), "pump_event_loop": pump}
+        exec(compile(ast.Module(body=[complete], type_ignores=[]), "actual_quest_death_fixture", "exec"), namespace)
+        namespace["completeOctobogzFixture"](fixture.game_map)
+        self.assertEqual("loaded-map-sync", events[0], "Load synchronization must finish before the first removal")
+        self.assertEqual(
+            [3, 3, 3, 3], pumps, "Keep the existing three post-death pumps and one initialization boundary"
+        )
+        self.assertEqual(1, fixture.game_map.added.count("octobogzScout"), "The original Scout must never be recreated")
+        self.assertEqual({"dead"}, {record["status"] for record in fixture.state()["slots"].values()})
+        self.assertEqual(1, fixture.game_map.completed)
+
     def testCancelledTownPortalFrameReleasesItsPlayerWithoutOwningTheSession(self):
         from tests.test_first_party_hook_flows import objectClasses
 
@@ -89,6 +159,60 @@ class SessionDeferredWorkTest(unittest.TestCase):
         del flow
         gc.collect()
         self.assertIsNone(player_reference(), "cancelling before movement must release the pending actor")
+
+    def testPairedWaypointGuardSpansSuspensionWithoutBlockingAnotherActor(self):
+        from tests.test_first_party_hook_flows import objectClasses
+
+        classes, _api = objectClasses()
+        first, paired = classes["WayPoint"](), classes["WayPoint"]()
+        destination = SimpleNamespace(x=4, y=5, z=1)
+        first.getExit = paired.getExit = lambda: destination
+        actor, other_actor = Mock(), Mock()
+        event = SimpleNamespace(getCause=lambda: actor)
+        flow = first.onEnterFlow(event)
+        self.addCleanup(flow.close)
+        request = next(flow)
+        self.assertEqual({"operation": "gui.moveTo", "args": (actor, 4, 5, 1), "kwargs": {}}, request)
+        nested = paired.onEnterFlow(event)
+        self.addCleanup(nested.close)
+        with self.assertRaises(StopIteration):
+            next(nested)
+        other = paired.onEnterFlow(SimpleNamespace(getCause=lambda: other_actor))
+        self.addCleanup(other.close)
+        self.assertEqual(other_actor, next(other)["args"][0])
+        other.close()
+        with self.assertRaises(StopIteration):
+            flow.send(None)
+        reentry = paired.onEnterFlow(event)
+        self.addCleanup(reentry.close)
+        self.assertEqual(actor, next(reentry)["args"][0])
+
+    def testCancelledWaypointFrameReleasesItsRecursionGuardForLaterMovement(self):
+        from tests.test_first_party_hook_flows import objectClasses
+
+        for cancellation in ("close", "throw"):
+            with self.subTest(cancellation=cancellation):
+                classes, _api = objectClasses()
+                first, paired = classes["WayPoint"](), classes["WayPoint"]()
+                first.getExit = paired.getExit = lambda: SimpleNamespace(x=4, y=5, z=1)
+                actor = Mock()
+                event = SimpleNamespace(getCause=lambda: actor)
+                flow = first.onEnterFlow(event)
+                self.addCleanup(flow.close)
+                next(flow)
+                nested = paired.onEnterFlow(event)
+                self.addCleanup(nested.close)
+                with self.assertRaises(StopIteration):
+                    next(nested)
+                if cancellation == "close":
+                    flow.close()
+                else:
+                    with self.assertRaisesRegex(RuntimeError, "cancelled arrival"):
+                        flow.throw(RuntimeError("cancelled arrival"))
+                self.assertIsNone(flow.gi_frame)
+                retry = paired.onEnterFlow(event)
+                self.addCleanup(retry.close)
+                self.assertEqual(actor, next(retry)["args"][0])
 
     def artifactModule(self):
         from tests.hook_flow_support import installHookFlows

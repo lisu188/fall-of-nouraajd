@@ -19,6 +19,7 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 #include "object/CGameObject.h"
 
+#include <cstdint>
 #include <utility>
 #include <map>
 
@@ -79,6 +80,8 @@ class CGuiHandler : public CGameObject {
     void showTrade(std::shared_ptr<CMarket> market);
 
     vstd::task<void> showTradeAsync(std::shared_ptr<CMarket> market);
+
+    std::shared_ptr<CMarket> getRequestedTradeMarket();
 
     void showDialog(std::shared_ptr<CDialog> dialog);
 
@@ -174,6 +177,9 @@ class CGuiHandler : public CGameObject {
     vstd::task<void> runUiFlowAsync(std::string entry);
 
     std::weak_ptr<CGame> _game;
+    std::shared_ptr<CMarket> requestedTradeMarket;
+    std::weak_ptr<CMap> requestedTradeMap;
+    std::uint64_t requestedTradeGeneration = 0;
     std::weak_ptr<CGamePanel> loadingPanel;
     std::weak_ptr<CMap> managementMap;
     std::map<std::string, std::shared_ptr<CGamePanel>> managementPanels;

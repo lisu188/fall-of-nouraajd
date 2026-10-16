@@ -21,6 +21,7 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #include "core/CJsonUtil.h"
 #include "core/CLoader.h"
 #include "core/CMap.h"
+#include "core/CPlaytestTrace.h"
 #include "core/CScript.h"
 #include "core/CStats.h"
 #include "core/CTypeRegistration.h"
@@ -58,6 +59,7 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #include "object/CEffect.h"
 #include "object/CInteraction.h"
 #include "object/CItem.h"
+#include "object/CMarket.h"
 #include "object/CPlayer.h"
 #include "object/CQuest.h"
 #include "object/CTile.h"
@@ -84,6 +86,193 @@ template <typename Predicate> bool pumpGuiUntil(Predicate ready) {
         game_async::waitForProgress();
     }
     return ready();
+}
+
+struct HeadlessGuiTraceFixture {
+    std::shared_ptr<CGame> game = std::make_shared<CGame>();
+    std::shared_ptr<CMap> map = std::make_shared<CMap>();
+    std::shared_ptr<CGuiHandler> handler;
+    HeadlessGuiTraceFixture() {
+        game->setMap(map);
+        map->setGame(game);
+        map->setMapName("unitAsyncRequests");
+        handler = game->getGuiHandler();
+        CPlaytestTrace::configure(true, "", 32, true);
+    }
+    ~HeadlessGuiTraceFixture() {
+        CPlaytestTrace::configure(false);
+        game->getContext()->shutdown();
+    }
+};
+
+void testAsyncHeadlessRequestsPreserveOriginalMarketAndPresentationTraces() {
+    HeadlessGuiTraceFixture fixture;
+    auto context = fixture.game->getContext();
+    auto loop = vstd::event_loop<>::instance();
+    auto market = std::make_shared<CMarket>();
+    market->setName("unitOriginalCallbackMarket");
+    market->setSell(123);
+    market->setBuy(87);
+    auto first = std::make_shared<CItem>();
+    auto second = std::make_shared<CItem>();
+    first->setName("unitOriginalFirst");
+    second->setName("unitOriginalSecond");
+    market->setItems({first, second});
+    std::weak_ptr<CMarket> originalMarket = market;
+    auto lazy = fixture.handler->showTradeAsync(market);
+    market.reset();
+    expect_true(!fixture.handler->getRequestedTradeMarket() && CPlaytestTrace::records().empty(),
+                "a lazy request must not publish its original market before execution");
+    auto sentinels = std::make_shared<int>(0);
+    loop->invoke([sentinels] { ++*sentinels; });
+    auto traded = context->spawnTask(std::move(lazy));
+    expect_true(traded.finished() && *sentinels == 0,
+                "a headless trade must publish inline without pumping unrelated queued work");
+    if (traded.finished()) {
+        traded.get();
+    }
+    market = originalMarket.lock();
+    expect_true(market && fixture.handler->getRequestedTradeMarket() == market && market->getItems().size() == 2,
+                "the actual ephemeral callback market must remain owned by its request");
+    if (!market) {
+        return;
+    }
+    market->remove(first);
+    expect_true(fixture.handler->getRequestedTradeMarket() == market && market->getItems().size() == 1 &&
+                    market->getItems().contains(second),
+                "repeated request lookup must preserve the exact depleted stock without reconstruction");
+
+    std::string title, body, label;
+    for (int index = 0; index < 200; ++index) {
+        title += "\xC4\x85";
+        label += "\xC5\x82";
+    }
+    for (int index = 0; index < 10000; ++index) {
+        body += "\xC5\xBC";
+    }
+    auto choice = context->spawnTask(fixture.handler->showChoiceAsync(title, body, label, label));
+    auto reader = context->spawnTask(fixture.handler->showCampaignScreenAsync(title, body, label));
+    expect_true(choice.finished() && choice.get().empty() && *sentinels == 0,
+                "a headless choice must retain its empty result without parsing invalid JSON or pumping work");
+    expect_true(pumpGuiUntil([&reader] { return reader.finished(); }),
+                "a delegating headless reader task must finish through bounded outer-loop pumping");
+    if (reader.finished()) {
+        reader.get();
+    }
+    expect_true(*sentinels == 1, "only outer-loop pumping may run the queued sentinel");
+    std::vector<json> requests;
+    for (const auto &line : CPlaytestTrace::drain()) {
+        auto record = json::parse(line);
+        if (record.value("event", std::string()) == "trade_requested" ||
+            record.value("event", std::string()) == "choice_requested" ||
+            record.value("event", std::string()) == "reader_requested") {
+            requests.push_back(std::move(record));
+        }
+    }
+    expect_true(requests.size() == 3, "each direct or delegating async request must emit exactly one native witness");
+    if (requests.size() != 3) {
+        return;
+    }
+    expect_true(requests[0].at("event").get<std::string>() == "trade_requested" &&
+                    requests[0].at("sell").get<int>() == 123 && requests[0].at("buy").get<int>() == 87 &&
+                    requests[0].at("items").size() == 2 &&
+                    requests[0].at("market").at("name").get<std::string>() == market->getName(),
+                "the trade witness must capture original identity, prices and stock before subsequent depletion");
+    const auto &choices = requests[1];
+    const auto &reading = requests[2];
+    expect_true(choices.at("event").get<std::string>() == "choice_requested" &&
+                    reading.at("event").get<std::string>() == "reader_requested" &&
+                    choices.at("headless").get<bool>() && reading.at("headless").get<bool>() &&
+                    choices.at("map").get<std::string>() == "unitAsyncRequests" &&
+                    reading.at("map").get<std::string>() == "unitAsyncRequests",
+                "headless presentation traces must retain their native map context");
+    expect_true(choices.at("titleLength").get<std::size_t>() == title.size() &&
+                    reading.at("titleLength").get<std::size_t>() == title.size() &&
+                    choices.at("choicesJsonLength").get<std::size_t>() == body.size() &&
+                    reading.at("bodyLength").get<std::size_t>() == body.size() &&
+                    choices.at("title").get<std::string>().size() == 256 &&
+                    choices.at("choicesJson").get<std::string>().size() == 16384 &&
+                    reading.at("body").get<std::string>().size() == 4096 &&
+                    choices.at("actionLabel").get<std::string>().size() == 128 &&
+                    choices.at("backLabel").get<std::string>().size() == 128,
+                "async presentation must preserve exact byte lengths and UTF-8-safe payload bounds");
+    const auto boundaryTitle = std::string(255, 'x') + "\xF0\x9F\x8C\x99";
+    auto boundary = context->spawnTask(fixture.handler->showChoiceAsync(boundaryTitle, "[]", "Go", "Back"));
+    expect_true(boundary.finished(), "a headless boundary-title request must complete inline");
+    auto boundaryRecords = CPlaytestTrace::drain();
+    expect_true(boundaryRecords.size() == 1 &&
+                    json::parse(boundaryRecords.front()).at("title").get<std::string>() == std::string(255, 'x') &&
+                    json::parse(boundaryRecords.front()).at("titleLength").get<std::size_t>() == boundaryTitle.size(),
+                "UTF-8 cropping must omit a multibyte character that crosses the byte limit");
+    context->advanceTransitionGeneration();
+    expect_true(!fixture.handler->getRequestedTradeMarket(),
+                "an original callback request must expire when its transition generation changes");
+    CPlaytestTrace::configure(false);
+    auto disabled = context->spawnTask(fixture.handler->showTradeAsync(market));
+    expect_true(disabled.finished() && !fixture.handler->getRequestedTradeMarket() && CPlaytestTrace::records().empty(),
+                "disabled tracing must publish neither a market nor a trace from the direct async path");
+}
+
+void testWorkerHeadlessTradePublishesOnlyOnOwnerAndSkipsQueuedCancellation() {
+    HeadlessGuiTraceFixture fixture;
+    auto context = fixture.game->getContext();
+    auto original = std::make_shared<CMarket>();
+    original->setName("unitPreviousRequest");
+    auto previous = context->spawnTask(fixture.handler->showTradeAsync(original));
+    expect_true(previous.finished() && fixture.handler->getRequestedTradeMarket() == original,
+                "the fixture must establish one real prior headless request");
+    CPlaytestTrace::clear();
+    for (const bool cancel : {true, false}) {
+        auto next = std::make_shared<CMarket>();
+        next->setName(cancel ? "unitCancelledRequest" : "unitWorkerRequest");
+        auto outcome = std::make_shared<std::promise<vstd::task_handle<void>>>();
+        auto future = outcome->get_future();
+        const bool submitted = game_async::workerPool()->submit([context, handler = fixture.handler, next, outcome] {
+            try {
+                outcome->set_value(context->spawnTask(handler->showTradeAsync(next)));
+            } catch (...) {
+                outcome->set_exception(std::current_exception());
+            }
+        });
+        std::future_status status;
+        {
+            pybind11::gil_scoped_release release;
+            status = future.wait_for(std::chrono::seconds(2));
+        }
+        expect_true(submitted && status == std::future_status::ready,
+                    "a worker request must start without needing an owner-loop pump");
+        if (!submitted || status != std::future_status::ready) {
+            return;
+        }
+        auto waiting = future.get();
+        expect_true(!waiting.finished() && fixture.handler->getRequestedTradeMarket() == original &&
+                        CPlaytestTrace::records().empty(),
+                    "worker execution must not mutate the request cache or emit a trace before owner posting");
+        if (cancel) {
+            waiting.requestStop();
+        }
+        expect_true(pumpGuiUntil([&waiting] { return waiting.finished(); }),
+                    "the worker request must settle through bounded outer-loop pumping");
+        if (!waiting.finished()) {
+            return;
+        }
+        bool cancelled = false;
+        try {
+            waiting.get();
+        } catch (const vstd::task_cancelled &) {
+            cancelled = true;
+        }
+        expect_true(cancelled == cancel, "only explicitly cancelled queued work should settle as cancelled");
+        if (cancel) {
+            expect_true(fixture.handler->getRequestedTradeMarket() == original && CPlaytestTrace::records().empty(),
+                        "queued cancellation must preserve the prior actual request without publishing new work");
+        } else {
+            auto records = CPlaytestTrace::drain();
+            expect_true(fixture.handler->getRequestedTradeMarket() == next && records.size() == 1 &&
+                            json::parse(records.front()).at("event").get<std::string>() == "trade_requested",
+                        "owner execution must replace the request with the exact worker market and one witness");
+        }
+    }
 }
 
 void testAsyncModalWaitsOwnLazyInputsAndNeverPumpTheLoop() {
@@ -4261,6 +4450,8 @@ int main() {
     testWorkerStartedModalConstructsAndCleansUpOnlyOnMainThread();
     testCancellingModalTaskClosesItsPanelWithoutShuttingDownTheSession();
     testConcurrentTextModalsShareInputUntilTheLastLeaseAndPreserveExternalInput();
+    testAsyncHeadlessRequestsPreserveOriginalMarketAndPresentationTraces();
+    testWorkerHeadlessTradePublishesOnlyOnOwnerAndSkipsQueuedCancellation();
 
     test_campaign_browser_selects_by_stable_id_and_cancels_via_escape();
     test_campaign_panel_dismisses_via_action_and_keys_but_never_escape();

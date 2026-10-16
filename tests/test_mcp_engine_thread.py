@@ -393,14 +393,22 @@ class McpEngineThreadTest(unittest.TestCase):
         server = mcp.EngineMcpServer(ROOT, ROOT)
         self.addCleanup(server.close)
         identities = []
+        scopes = []
+
+        def inspectOwned(*, stdio=False):
+            identities.append(threading.get_ident())
+            scopes.append(stdio)
+
         with (
             patch.object(server, "_importModules", side_effect=lambda: identities.append(threading.get_ident())),
-            patch.object(server, "_inspectAndExport", side_effect=lambda: identities.append(threading.get_ident())),
+            patch.object(server, "_inspectAndExport", side_effect=inspectOwned),
         ):
             server.import_modules()
             server.inspect_and_export()
+            server.inspect_and_export(stdio=True)
         nested = server._engine_owner.run(lambda: server._engine_owner.run(threading.get_ident))
-        self.assertEqual([nested, nested], identities)
+        self.assertEqual([nested, nested, nested], identities)
+        self.assertEqual([False, True], scopes)
         self.assertNotEqual(threading.get_ident(), nested)
 
     def testExceptionFramesReleaseOwnerOnlyObjectsBeforeForwarding(self):
@@ -489,7 +497,7 @@ class McpHttpNativeRuntimeTest(unittest.TestCase):
             finally:
                 server.close()
             replacement = mcp.EngineMcpServer(Path(sys.argv[1]), Path(sys.argv[2]),
-                                             build_config=sys.argv[3] or None, native_log_sink='disabled')
+                                            build_config=sys.argv[3] or None, native_log_sink='disabled')
             try:
                 replacement.import_modules()
                 replacement.inspect_and_export()

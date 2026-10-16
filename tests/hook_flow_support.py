@@ -18,29 +18,32 @@ def installHookFlows(api):
 
     def run(game, flow):
         result = None
-        while True:
-            try:
-                pending = flow.send(result)
-            except StopIteration as complete:
-                return complete.value
-            operation = pending["operation"]
-            args, kwargs = pending.get("args", ()), pending.get("kwargs", {})
-            if operation == "gui.questCommitted":
-                result = None
-            elif operation == "gui.checkQuests":
-                result = args[0].checkQuests()
-            elif operation == "gui.moveTo":
-                result = args[0].moveTo(*args[1:])
-            elif operation == "gui.removeObject":
-                result = args[0].removeObject(args[1])
-            elif operation == "gui.addObjectByName":
-                result = args[0].addObjectByName(args[1], SimpleNamespace(x=args[2], y=args[3], z=args[4]))
-            elif operation == "gui.addRandomLoot":
-                result = game.getRngHandler().addRandomLoot(*args, **kwargs)
-            elif operation.startswith("gui."):
-                result = getattr(game.getGuiHandler(), operation[4:])(*args, **kwargs)
-            else:
-                result = namespace[operation](*args, **kwargs)
+        try:
+            while True:
+                try:
+                    pending = flow.send(result)
+                except StopIteration as complete:
+                    return complete.value
+                operation = pending["operation"]
+                args, kwargs = pending.get("args", ()), pending.get("kwargs", {})
+                if operation in {"gui.questCommitted", "gui.itemCommitted"}:
+                    result = None
+                elif operation == "gui.checkQuests":
+                    result = args[0].checkQuests()
+                elif operation in {"gui.moveTo", "gui.itemMoveTo"}:
+                    result = args[0].moveTo(*args[1:])
+                elif operation == "gui.removeObject":
+                    result = args[0].removeObject(args[1])
+                elif operation == "gui.addObjectByName":
+                    result = args[0].addObjectByName(args[1], SimpleNamespace(x=args[2], y=args[3], z=args[4]))
+                elif operation == "gui.addRandomLoot":
+                    result = game.getRngHandler().addRandomLoot(*args, **kwargs)
+                elif operation.startswith("gui."):
+                    result = getattr(game.getGuiHandler(), operation[4:])(*args, **kwargs)
+                else:
+                    result = namespace[operation](*args, **kwargs)
+        finally:
+            flow.close()
 
     class Hook:
         def __init__(self, callback):

@@ -20,6 +20,9 @@ BASELINE_CASES = {
 }
 ADDITIONAL_CASES = {
     "handler": (
+        "testObjectEntryTracePreservesActualCauseAndContactBeforeNpcDeparture",
+        "testObjectEntryTraceRequiresOptInAndCanonicalColocatedCause",
+        "testAsyncObjectEntryTraceWaitsForHooksAndPreservesContactOnResume",
         "testEffectTickCappingAndExpiryIgnoreAllocationOrder",
         "testEffectTickLethalityTimingAndCasterIgnoreAllocationOrder",
         "testAsyncCombatAwaitsLootWithoutPumpingOrGrantingRewardsEarly",
@@ -34,6 +37,7 @@ ADDITIONAL_CASES = {
         "testIndividualQuestCancellationHonorsExplicitRewardCommit",
         "testAsyncRemovalAwaitsDestroyHooksAndFinalizesCancellation",
         "testAsyncEventHooksStopAfterContextShutdown",
+        "testAsyncCombatTraceCapturesResourcesBeforeControllerSuspension",
     ),
     "map": (
         "testNewSessionClearsQuitLatch",

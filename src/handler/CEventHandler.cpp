@@ -19,6 +19,8 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #include "core/CAsync.h"
 #include "core/CGame.h"
 #include "core/CGameContext.h"
+#include "core/CMap.h"
+#include "core/CPlaytestTrace.h"
 
 std::string CGameEvent::CType::onEnter = "onEnter";
 std::string CGameEvent::CType::onTurn = "onTurn";
@@ -55,6 +57,24 @@ vstd::task<bool> invokeObjectFlowAsync(std::shared_ptr<CGameObject> object, std:
         vstd::logger::error("Script event flow failed:", method, error.what());
     }
     co_return true;
+}
+
+json captureObjectEntry(const std::shared_ptr<CMapObject> &object, const std::shared_ptr<CGameEvent> &event) {
+    json entry_fields;
+    if (object && event && CPlaytestTrace::enabled() && event->getType() == CGameEvent::CType::onEnter) {
+        auto caused = std::dynamic_pointer_cast<CGameEventCaused>(event);
+        auto cause = caused ? std::dynamic_pointer_cast<CMapObject>(caused->getCause()) : nullptr;
+        auto map = object->getMap();
+        if (map && cause && cause->getMap() == map && object->getCoords() == cause->getCoords() &&
+            map->getObjectByName(object->getName()) == object && map->getObjectByName(cause->getName()) == cause) {
+            entry_fields = {{"target", CPlaytestTrace::objectRef(object)},
+                            {"cause", CPlaytestTrace::objectRef(cause)},
+                            {"targetCoords", CPlaytestTrace::coords(object->getCoords())},
+                            {"causeCoords", CPlaytestTrace::coords(cause->getCoords())}};
+            CPlaytestTrace::addMapContext(entry_fields, map);
+        }
+    }
+    return entry_fields;
 }
 
 void dispatchObjectEvent(const std::shared_ptr<CMapObject> &object, const std::shared_ptr<CGameEvent> &event) {
@@ -104,10 +124,14 @@ void CEventHandler::gameEvent(std::shared_ptr<CMapObject> object, std::shared_pt
     if (!object || !event) {
         return;
     }
+    auto entry_fields = captureObjectEntry(object, event);
     dispatchObjectEvent(object, event);
     auto range = triggers.equal_range(std::make_pair(object->getName(), event->getType()));
     std::for_each(range.first, range.second,
                   [object, event](TriggerMap::value_type x) { x.second->trigger(object, event); });
+    if (!entry_fields.is_null()) {
+        CPlaytestTrace::record("object_entered", std::move(entry_fields));
+    }
 }
 
 vstd::task<void> CEventHandler::gameEventAsync(std::shared_ptr<CMapObject> object, std::shared_ptr<CGameEvent> event,
@@ -134,6 +158,7 @@ vstd::task<void> CEventHandler::gameEventAsync(std::shared_ptr<CMapObject> objec
             }
         };
         checkActive();
+        auto entry_fields = captureObjectEntry(object, event);
         std::vector<std::shared_ptr<CGameObject>> arguments{event};
         auto objectCommit = event->getType() == CGameEvent::CType::onUse ? commit : nullptr;
         if (!(co_await invokeObjectFlowAsync(object, event->getType() + "Flow", std::move(arguments), game,
@@ -170,6 +195,9 @@ vstd::task<void> CEventHandler::gameEventAsync(std::shared_ptr<CMapObject> objec
                 co_await trigger->triggerAsync(object, event);
             }
             checkActive();
+        }
+        if (!entry_fields.is_null()) {
+            CPlaytestTrace::record("object_entered", std::move(entry_fields));
         }
     }(this->ptr<CEventHandler>(), std::move(object), std::move(event), std::move(commit), std::move(prepareCommit));
 }
