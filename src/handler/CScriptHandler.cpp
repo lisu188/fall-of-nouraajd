@@ -20,24 +20,21 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #include <pybind11/eval.h>
 #include <stdexcept>
 
-namespace {
-class CScriptHandlerState {
-  public:
+struct CScriptHandler::State {
     pybind11::object mainModule;
     pybind11::dict mainNamespace;
 };
 
-CScriptHandlerState &get_state(const std::shared_ptr<void> &pythonState) {
+CScriptHandler::State &CScriptHandler::getState() {
     if (!pythonState) {
         throw std::runtime_error("Python script handler state has been released.");
     }
-    return *std::static_pointer_cast<CScriptHandlerState>(pythonState);
+    return *pythonState;
 }
-} // namespace
 
 CScriptHandler::CScriptHandler() {
-    pythonState = std::make_shared<CScriptHandlerState>();
-    auto &state = get_state(pythonState);
+    pythonState = std::make_unique<State>();
+    auto &state = getState();
     state.mainModule = pybind11::module::import("__main__");
     state.mainNamespace = state.mainModule.attr("__dict__");
 }
@@ -47,7 +44,7 @@ CScriptHandler::~CScriptHandler() = default;
 void CScriptHandler::releaseState() { pythonState.reset(); }
 
 void CScriptHandler::execute_script(std::string script, pybind11::object name_space) {
-    auto &state = get_state(pythonState);
+    auto &state = getState();
     auto target = name_space.is_none() ? state.mainNamespace : name_space;
     pybind11::exec(script + "\n", target, target);
 }
@@ -112,7 +109,7 @@ void CScriptHandler::execute_command(std::initializer_list<std::string> list) { 
 
 pybind11::object CScriptHandler::get_py_object(std::string name) {
     execute_script(vstd::join({"__tmp__", name}, "="));
-    pybind11::object object = get_state(pythonState).mainNamespace["__tmp__"];
+    pybind11::object object = getState().mainNamespace["__tmp__"];
     execute_script("del __tmp__");
     return object;
 }

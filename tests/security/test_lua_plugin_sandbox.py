@@ -40,7 +40,7 @@ class LuaPluginSandboxTest(unittest.TestCase):
         self.assertNotIn('"bt"', self.lua_handler_source)
 
     def test_lua_string_dump_is_removed_from_the_method_metatable(self):
-        self.assertIn('lua_setfield(luaState, -2, "dump");', self.lua_handler_source)
+        self.assertIn('lua_setfield(luaState.get(), -2, "dump");', self.lua_handler_source)
 
     def test_lua_plugin_paths_are_validated_before_loading(self):
         self.assertIn("is_allowed_lua_plugin_path", self.loader_source)
