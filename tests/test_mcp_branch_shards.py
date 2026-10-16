@@ -168,6 +168,33 @@ class McpBranchShardsTest(unittest.TestCase):
                     self.assertEqual(0, copied.returncode, copied.stdout + copied.stderr)
                     self.assertEqual(source.read_bytes(), (root / f"maps/{map_id}/map.json").read_bytes())
 
+    def testCmakeStaticTestConfigurationPreservesAllLineEndings(self):
+        cmake_executable = shutil.which("cmake")
+        if cmake_executable is None:
+            self.skipTest("CMake is unavailable for the resource-copy integration check")
+        cmake = (shards.ROOT / "CMakeLists.txt").read_text(encoding="utf-8")
+        rules = re.findall(
+            r"configure_file\(\s*res/maps/test/config\.json\s+maps/test/config\.json(?:\s+[^)]*)?\)", cmake
+        )
+        self.assertEqual(1, len(rules), "Exercise the single actual test-map configuration copy rule")
+        variants = {"noFinalNewline": b'{"key": "value"}', "lf": b'{\n    "key": "value"\n}\n'}
+        variants["crlf"] = variants["lf"].replace(b"\n", b"\r\n")
+        for line_ending, contents in variants.items():
+            with self.subTest(lineEnding=line_ending), tempfile.TemporaryDirectory(
+                prefix="nouraajd-mcp-config-copy-", dir=shards.ROOT
+            ) as temporary:
+                root = Path(temporary)
+                source = root / "res/maps/test/config.json"
+                source.parent.mkdir(parents=True)
+                source.write_bytes(contents)
+                script = root / "copy.cmake"
+                script.write_text(rules[0] + "\n", encoding="utf-8")
+                copied = subprocess.run(
+                    [cmake_executable, "-P", str(script)], cwd=root, capture_output=True, text=True, timeout=30
+                )
+                self.assertEqual(0, copied.returncode, copied.stdout + copied.stderr)
+                self.assertEqual(contents, (root / "maps/test/config.json").read_bytes())
+
     def testRuntimeBundlePreservesRootModulesAndExcludesUnrelatedRootArtifacts(self):
         from tests.test_gameplay_branches_mcp import verifyCopiedSources
 

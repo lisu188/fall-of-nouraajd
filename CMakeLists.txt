@@ -425,7 +425,7 @@ configure_file(res/maps/usurpergate/dialog.json maps/usurpergate/dialog.json)
 configure_file(res/maps/usurpergate/map.json maps/usurpergate/map.json)
 configure_file(res/maps/usurpergate/script.py maps/usurpergate/script.py)
 
-configure_file(res/maps/test/config.json maps/test/config.json)
+configure_file(res/maps/test/config.json maps/test/config.json COPYONLY)
 configure_file(res/maps/test/map.json maps/test/map.json)
 configure_file(res/maps/test/script.py maps/test/script.py)
 
