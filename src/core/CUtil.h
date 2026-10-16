@@ -174,5 +174,5 @@ template <fn::SdlStatusCallable F> auto sdl_safe(F f) {
 template <fn::SdlVoidCallable F> void sdl_safe(F f) { f(); }
 
 #define SDL_SAFE(x) sdl_safe([&]() { return x; })
-#define JSONIFY(x) CJsonUtil::to_string(CSerialization::serialize<std::shared_ptr<json>>(x))
-#define JSONIFY_STYLED(x) CJsonUtil::to_string(CSerialization::serialize<std::shared_ptr<json>>(x), -1)
+#define JSONIFY(x) serializationValueOrThrow(CSerialization::serializeExpected(x)).dump()
+#define JSONIFY_STYLED(x) serializationValueOrThrow(CSerialization::serializeExpected(x)).dump(-1)

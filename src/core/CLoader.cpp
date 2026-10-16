@@ -47,14 +47,17 @@ std::string getMapPath(std::string mapName);
 std::set<std::string> get_saved_map_dependencies(const std::shared_ptr<CGame> &game, const json &save,
                                                  const std::string &mapName);
 
-void load_map_resources(const std::shared_ptr<CGame> &game, const std::string &mapName);
+bool load_map_resources(const std::shared_ptr<CGame> &game, const std::string &mapName,
+                        const std::function<bool()> &isCurrent = {});
 
 void activate_map_scope(const std::shared_ptr<CGame> &game, const std::string &mapName);
 
 class CScopedGameMap {
   public:
-    explicit CScopedGameMap(std::shared_ptr<CGame> game, std::shared_ptr<CMap> replacement = nullptr)
-        : game(std::move(game)), previous(this->game ? this->game->getMap() : nullptr) {
+    explicit CScopedGameMap(std::shared_ptr<CGame> game, std::shared_ptr<CMap> replacement = nullptr,
+                            std::function<bool()> canRestore = {})
+        : game(std::move(game)), previous(this->game ? this->game->getMap() : nullptr), replacement(replacement),
+          canRestore(std::move(canRestore)) {
         if (this->game) {
             // Resource registration needs a detached map context, but it does not commit a scene change.
             this->game->setMapForResourceLoad(std::move(replacement));
@@ -62,7 +65,7 @@ class CScopedGameMap {
     }
 
     ~CScopedGameMap() {
-        if (game) {
+        if (game && (!canRestore || (canRestore() && game->getMap() == replacement))) {
             game->setMapForResourceLoad(previous);
         }
     }
@@ -73,16 +76,19 @@ class CScopedGameMap {
   private:
     std::shared_ptr<CGame> game;
     std::shared_ptr<CMap> previous;
+    std::shared_ptr<CMap> replacement;
+    std::function<bool()> canRestore;
 };
 
 namespace {
 class ScopedResourceScope {
   public:
-    explicit ScopedResourceScope(std::shared_ptr<CResourcesProvider> provider)
-        : provider(std::move(provider)), previous(this->provider->getActiveScope()) {}
+    explicit ScopedResourceScope(std::shared_ptr<CResourcesProvider> provider, std::function<bool()> canRestore = {})
+        : provider(std::move(provider)), previous(this->provider->getActiveScope()), canRestore(std::move(canRestore)) {
+    }
 
     ~ScopedResourceScope() {
-        if (!committed) {
+        if (!committed && (!canRestore || canRestore())) {
             provider->setActiveScope(previous);
         }
     }
@@ -97,6 +103,7 @@ class ScopedResourceScope {
   private:
     std::shared_ptr<CResourcesProvider> provider;
     std::string previous;
+    std::function<bool()> canRestore;
     bool committed = false;
 };
 
@@ -735,8 +742,11 @@ std::expected<std::shared_ptr<json>, std::string> build_save_envelope(const std:
     if (auto player = map->getPlayer()) {
         player->captureQuestJournal();
     }
-    auto snapshot = CSerialization::serialize<std::shared_ptr<json>>(map);
-    return CSaveFormat::buildEnvelope(snapshot, map->getMapName());
+    auto snapshot = CSerialization::serializeExpected(map, map->getMapName());
+    if (!snapshot) {
+        return std::unexpected(snapshot.error().message);
+    }
+    return CSaveFormat::buildEnvelope(std::make_shared<json>(std::move(*snapshot)), map->getMapName());
 }
 
 void apply_authored_map_metadata(const std::shared_ptr<CGame> &game, const std::shared_ptr<CMap> &map,
@@ -744,7 +754,7 @@ void apply_authored_map_metadata(const std::shared_ptr<CGame> &game, const std::
     if (!game || !map) {
         return;
     }
-    if (std::shared_ptr<json> mapc = game->getConfigurationProvider()->getConfiguration(getMapPath(mapName))) {
+    if (auto mapc = game->getConfigurationProvider()->getConfiguration(getMapPath(mapName))) {
         map->setDefaultTiles({});
         map->setOutOfBoundsTiles({});
         map->setXBounds({});
@@ -775,11 +785,12 @@ class CScopedObjectConfig {
         if (this->handler) {
             previous = this->handler->getConfig(this->name);
             this->handler->registerConfig(this->name, std::move(value));
+            installed = this->handler->getConfig(this->name);
         }
     }
 
     ~CScopedObjectConfig() {
-        if (!handler) {
+        if (!handler || handler->getConfig(name) != installed) {
             return;
         }
         if (previous) {
@@ -795,7 +806,8 @@ class CScopedObjectConfig {
   private:
     std::shared_ptr<CObjectHandler> handler;
     std::string name;
-    std::shared_ptr<json> previous;
+    std::shared_ptr<const json> previous;
+    std::shared_ptr<const json> installed;
 };
 
 bool rehydrate_loaded_map(const std::shared_ptr<CGame> &game, const std::shared_ptr<CMap> &map,
@@ -816,48 +828,88 @@ bool rehydrate_loaded_map(const std::shared_ptr<CGame> &game, const std::shared_
 
 std::expected<std::shared_ptr<CMap>, std::string>
 restore_save_document(const std::shared_ptr<CGame> &game, const CSaveFormat::DecodedDocument &saveDocument,
-                      const std::string &slotName) {
+                      const std::string &slotName, bool &superseded) {
     if (!game) {
         return std::unexpected("cannot restore save without a game");
     }
 
-    ScopedResourceScope resourceScope(game->getResourcesProvider());
+    const auto context = game->getContext();
+    const auto generation = context->captureTransitionGeneration();
+    const auto previousMap = game->getMap();
+    const auto handler = game->getObjectHandler();
+    const auto ownsScene = [&] {
+        return context->isTransitionGenerationCurrent(generation) && game->getMap() == previousMap;
+    };
+    CObjectHandler::RegistrationTransaction registrations(handler, ownsScene);
+    const auto isCurrent = [&] {
+        const bool current = registrations.isCurrent() && context->isTransitionGenerationCurrent(generation);
+        superseded = superseded || !current;
+        return current;
+    };
+    const auto canRestore = [&] { return isCurrent() && ownsScene(); };
+    ScopedResourceScope resourceScope(game->getResourcesProvider(), canRestore);
 
-    {
-        CScopedGameMap scopedMap(game);
-        load_map_resources(game, saveDocument.mapName);
-        for (const auto &requiredMap : get_saved_map_dependencies(game, *saveDocument.snapshot, saveDocument.mapName)) {
-            if (requiredMap != saveDocument.mapName) {
-                load_map_resources(game, requiredMap);
-            }
-        }
-        // Activate the primary saved map's scope last so dependency maps loaded above for their
-        // config/quest data do not leave their scope active.
-        activate_map_scope(game, saveDocument.mapName);
-    }
-
-    const auto saveConfigKey = CSaveFormat::savedMapConfigKey(slotName);
-    CScopedObjectConfig scopedSaveConfig(game->getObjectHandler(), saveConfigKey, saveDocument.snapshot);
-
-    std::shared_ptr<CMap> map;
     try {
-        CSerialization::StrictScope strict;
-        map = game->getObjectHandler()->createObject<CMap>(game, saveConfigKey);
+        if (!isCurrent())
+            return std::unexpected("saved map load was superseded");
+        {
+            CScopedGameMap scopedMap(game, nullptr, isCurrent);
+            const auto resourcesCurrent = [&] {
+                const bool current = isCurrent() && !game->getMap();
+                superseded = superseded || !current;
+                return current;
+            };
+            if (!load_map_resources(game, saveDocument.mapName, resourcesCurrent))
+                return std::unexpected("saved map resource load was superseded");
+            for (const auto &requiredMap :
+                 get_saved_map_dependencies(game, *saveDocument.snapshot, saveDocument.mapName)) {
+                if (requiredMap != saveDocument.mapName && !load_map_resources(game, requiredMap, resourcesCurrent))
+                    return std::unexpected("saved map dependency load was superseded");
+            }
+            if (!isCurrent() || game->getMap()) {
+                superseded = true;
+                return std::unexpected("saved map resource load changed the active scene");
+            }
+            // Dependency resources must not leave another map's asset scope selected.
+            activate_map_scope(game, saveDocument.mapName);
+        }
+        if (!isCurrent() || !ownsScene()) {
+            superseded = true;
+            return std::unexpected("saved map load changed the active scene");
+        }
+        std::shared_ptr<CMap> map;
+        {
+            const auto saveConfigKey = CSaveFormat::savedMapConfigKey(slotName);
+            CScopedObjectConfig scopedSaveConfig(handler, saveConfigKey, saveDocument.snapshot);
+            CSerialization::StrictScope strict(saveConfigKey);
+            map = handler->createObject<CMap>(game, saveConfigKey, strict);
+        }
+        if (!isCurrent() || !ownsScene()) {
+            superseded = true;
+            return std::unexpected("saved map construction was superseded");
+        }
+        std::string rehydrateError;
+        if (!rehydrate_loaded_map(game, map, saveDocument.mapName, rehydrateError))
+            return std::unexpected(rehydrateError);
+        if (!isCurrent() || !ownsScene()) {
+            superseded = true;
+            return std::unexpected("saved map rehydration was superseded");
+        }
+        if (!registrations.commit() || !isCurrent() || !ownsScene()) {
+            superseded = true;
+            return std::unexpected("saved map registration commit was superseded");
+        }
+        resourceScope.commit();
+        return map;
     } catch (const std::exception &exception) {
+        superseded = superseded || !isCurrent() || !ownsScene();
         return std::unexpected(std::string("failed to deserialize saved map: ") + exception.what());
     }
-
-    std::string rehydrateError;
-    if (!rehydrate_loaded_map(game, map, saveDocument.mapName, rehydrateError)) {
-        return std::unexpected(rehydrateError);
-    }
-
-    resourceScope.commit();
-    return map;
 }
 
-std::expected<std::shared_ptr<CMap>, std::string>
-load_save_candidate(const std::shared_ptr<CGame> &game, const std::string &slotName, const std::string &path) {
+std::expected<std::shared_ptr<CMap>, std::string> load_save_candidate(const std::shared_ptr<CGame> &game,
+                                                                      const std::string &slotName,
+                                                                      const std::string &path, bool &superseded) {
     auto raw = game->getResourcesProvider()->loadJson(path);
     if (!raw) {
         return std::unexpected("save file could not be read or parsed");
@@ -869,7 +921,7 @@ load_save_candidate(const std::shared_ptr<CGame> &game, const std::string &slotN
     if (decoded->encoding == CSaveFormat::Encoding::Legacy) {
         vstd::logger::info("Migrating legacy save in memory:", slotName, path);
     }
-    return restore_save_document(game, *decoded, slotName);
+    return restore_save_document(game, *decoded, slotName, superseded);
 }
 
 std::optional<SaveLoadResult> try_load_saved_map(const std::shared_ptr<CGame> &game, const std::string &name) {
@@ -878,16 +930,32 @@ std::optional<SaveLoadResult> try_load_saved_map(const std::shared_ptr<CGame> &g
         return std::nullopt;
     }
 
+    const auto context = game->getContext();
+    const auto generation = context->captureTransitionGeneration();
+    const auto previousMap = game->getMap();
+    const auto ownsScene = [&] {
+        return context->isTransitionGenerationCurrent(generation) && game->getMap() == previousMap;
+    };
+    if (!ownsScene())
+        return std::nullopt;
+
     const auto primaryPath = CSaveFormat::primaryPath(name);
-    auto primary = load_save_candidate(game, name, primaryPath);
+    bool superseded = false;
+    auto primary = load_save_candidate(game, name, primaryPath, superseded);
+    if (!ownsScene())
+        return std::nullopt;
     if (primary) {
         return SaveLoadResult{*primary, primaryPath, false};
     }
 
     vstd::logger::warning("Rejected primary save:", primaryPath, "reason:", primary.error());
+    if (superseded)
+        return std::nullopt;
 
     const auto backupPath = CSaveFormat::backupPath(name);
-    auto backup = load_save_candidate(game, name, backupPath);
+    auto backup = load_save_candidate(game, name, backupPath, superseded);
+    if (!ownsScene())
+        return std::nullopt;
     if (backup) {
         vstd::logger::warning("Recovered save slot from backup:", name, backupPath);
         return SaveLoadResult{*backup, backupPath, true};
@@ -1040,7 +1108,7 @@ std::set<std::string> getPluginAutoDiscoveryExclusions(const json &manifest) {
     return paths;
 }
 
-void CMapLoader::loadFromTmx(const std::shared_ptr<CMap> &map, const std::shared_ptr<json> &mapc) {
+void CMapLoader::loadFromTmx(const std::shared_ptr<CMap> &map, const std::shared_ptr<const json> &mapc) {
     if (mapc && mapc->is_object()) {
         const json emptyObject = json::object();
         const json emptyArray = json::array();
@@ -1264,10 +1332,17 @@ std::set<std::string> get_saved_map_dependencies(const std::shared_ptr<CGame> &g
     return maps;
 }
 
-void load_map_resources(const std::shared_ptr<CGame> &game, const std::string &mapName) {
-    game->getObjectHandler()->registerConfig(getConfigPaths(game->getResourcesProvider(), mapName));
+bool load_map_resources(const std::shared_ptr<CGame> &game, const std::string &mapName,
+                        const std::function<bool()> &isCurrent) {
+    if (isCurrent && !isCurrent())
+        return false;
+    const auto configuration = game->getConfigurationProvider();
+    game->getObjectHandler()->registerConfig(getConfigPaths(game->getResourcesProvider(), mapName), *configuration);
     CPluginLoader::loadMapPlugins(game, mapName);
-    game->getObjectHandler()->registerConfig(getConfigPaths(game->getResourcesProvider(), mapName));
+    if (isCurrent && !isCurrent())
+        return false;
+    game->getObjectHandler()->registerConfig(getConfigPaths(game->getResourcesProvider(), mapName), *configuration);
+    return true;
 }
 
 // Register the map's directory as a scoped search root and make it the active scope so that
@@ -1290,7 +1365,7 @@ void activate_map_scope(const std::shared_ptr<CGame> &game, const std::string &m
 }
 
 std::shared_ptr<CMap> CMapLoader::loadNewMap(const std::shared_ptr<CGame> &game, const std::string &mapName) {
-    if (std::shared_ptr<json> mapc = game->getConfigurationProvider()->getConfiguration(getMapPath(mapName))) {
+    if (auto mapc = game->getConfigurationProvider()->getConfiguration(getMapPath(mapName))) {
         std::shared_ptr<CMap> map = game->getObjectHandler()->createObject<CMap>(game);
         game->setMap(map);
         load_map_resources(game, mapName);
@@ -1591,8 +1666,9 @@ void CGameLoader::changeMap(const std::shared_ptr<CGame> &game, const std::strin
 }
 
 void CGameLoader::initConfigurations(const std::shared_ptr<CGame> &game) {
+    const auto configuration = game->getConfigurationProvider();
     for (const std::string &path : game->getResourcesProvider()->getFiles(CResType::CONFIG)) {
-        game->getObjectHandler()->registerConfig(path);
+        game->getObjectHandler()->registerConfig(path, *configuration);
     }
 }
 

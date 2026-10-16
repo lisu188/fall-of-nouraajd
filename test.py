@@ -6034,16 +6034,19 @@ class GameTest(unittest.TestCase):
         g = game.CGameLoader.loadGame()
         sample_library = "plugins/native/native_marker_plugin"
 
-        self.assertTrue(game.CPluginLoader.loadDynamicPlugin(g, sample_library, "game_plugin_load_direct_v2"))
+        self.assertTrue(game.CPluginLoader.loadDynamicPlugin(g, sample_library, "game_plugin_load_direct_v3"))
         marker = g.createObject("directDynamicPluginMarker")
         self.assertIsNotNone(marker)
         self.assertEqual("Direct dynamic plugin marker", marker.getStringProperty("label"))
         self.assertTrue(marker.getBoolProperty("directDynamicPluginLoaded"))
 
         self.assertFalse(game.CPluginLoader.loadDynamicPlugin(g, "plugins/native/definitely_missing_plugin"))
-        self.assertFalse(game.CPluginLoader.loadDynamicPlugin(g, sample_library, "game_plugin_load_missing_v2"))
-        self.assertFalse(game.CPluginLoader.loadDynamicPlugin(g, sample_library, "game_plugin_load_bad_api_v2"))
-        self.assertFalse(game.CPluginLoader.loadDynamicPlugin(g, sample_library, "game_plugin_load_false_v2"))
+        self.assertFalse(game.CPluginLoader.loadDynamicPlugin(g, sample_library, "game_plugin_load_missing_v3"))
+        self.assertFalse(game.CPluginLoader.loadDynamicPlugin(g, sample_library, "game_plugin_load_bad_api_v3"))
+        self.assertFalse(game.CPluginLoader.loadDynamicPlugin(g, sample_library, "game_plugin_load_false_v3"))
+        self.assertFalse(game.CPluginLoader.loadDynamicPlugin(g, sample_library, "game_plugin_load_v2"))
+        self.assertFalse(game.CPluginLoader.loadDynamicPlugin(g, "plugins/native/native_legacy_probe"))
+        self.assertFalse(game.CPluginLoader.loadDynamicPlugin(g, "plugins/native/native_missing_version_probe"))
 
         report = {
             "direct": marker.getBoolProperty("directDynamicPluginLoaded"),

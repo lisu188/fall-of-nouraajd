@@ -31,7 +31,7 @@ namespace native_plugin {
 void registerGameplayTypeMetadata();
 
 // Registers every content-constructible gameplay type from plugin/CGameplayTypeTable.h.
-// Invoked by the native_gameplay plugin's game_plugin_load_v2 entry point.
+// Invoked by the native_gameplay plugin's game_plugin_load_v3 entry point.
 GAME_CORE_EXPORT bool register_gameplay_types(CPluginRegistrar &registrar);
 
 } // namespace native_plugin

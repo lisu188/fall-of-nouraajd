@@ -1858,7 +1858,7 @@ class ContentValidator:
             library = entry.get("library")
             if not isinstance(library, str) or not library:
                 continue
-            function_name = entry.get("entry", "game_plugin_load_v2")
+            function_name = entry.get("entry", "game_plugin_load_v3")
             if isinstance(function_name, str) and function_name:
                 loaded_entries.add((Path(library).name, function_name))
         return loaded_entries

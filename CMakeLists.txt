@@ -294,6 +294,11 @@ endfunction()
 
 add_native_plugin(native_marker_plugin native_plugins/native_marker_plugin.cpp)
 add_native_plugin(native_gameplay native_plugins/native_gameplay.cpp)
+set(NATIVE_PLUGIN_INSTALL_TARGETS ${NATIVE_PLUGIN_TARGETS})
+add_native_plugin(native_legacy_probe native_plugins/native_marker_plugin.cpp)
+target_compile_definitions(native_legacy_probe PRIVATE GAME_PLUGIN_TEST_LEGACY_VERSION)
+add_native_plugin(native_missing_version_probe native_plugins/native_marker_plugin.cpp)
+target_compile_definitions(native_missing_version_probe PRIVATE GAME_PLUGIN_TEST_MISSING_VERSION)
 add_dependencies(_game ${NATIVE_PLUGIN_TARGETS})
 
 configure_file(res/config/adventure.json config/adventure.json)
@@ -739,7 +744,7 @@ configure_file(game_simulation.py game_simulation.py)
 configure_file(quest_state.py quest_state.py)
 
 install(TARGETS game_core _game DESTINATION fall-of-nouraajd)
-install(TARGETS ${NATIVE_PLUGIN_TARGETS}
+install(TARGETS ${NATIVE_PLUGIN_INSTALL_TARGETS}
     LIBRARY DESTINATION fall-of-nouraajd/plugins/native
     RUNTIME DESTINATION fall-of-nouraajd/plugins/native
     BUNDLE DESTINATION fall-of-nouraajd/plugins/native

@@ -56,7 +56,7 @@ The relevant ones (file:line are approximate and tracked against current source)
   (`src/handler/CLuaHandler.cpp`).
 - `CPluginLoader::loadDynamicPlugin` / `plugin_runtime::loadNativePlugin` /
   `resolve_dynamic_library_path` (`src/plugin/CNativePluginRuntime.cpp`):
-  `dlopen`s a native plugin library and performs the `CPluginHostV2` entry
+  `dlopen`s a native plugin library and performs the `CPluginHostV3` entry
   handshake (`src/plugin/CPluginAbi.h`) that hands the plugin its
   `CPluginRegistrar`.
 - `CPluginLoader::loadMapPlugins` / `getScriptPath` / `getMapPath` /

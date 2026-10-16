@@ -244,6 +244,8 @@ class CMap : public CGameObject {
 
     void setObjects(std::set<std::shared_ptr<CMapObject>> objects);
 
+    void setObjectsChecked(std::set<std::shared_ptr<CMapObject>> objects);
+
     std::set<std::shared_ptr<CTile>> getTiles();
 
     void setTiles(std::set<std::shared_ptr<CTile>> objects);

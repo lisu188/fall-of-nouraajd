@@ -1268,7 +1268,7 @@ void init_game_module(py::module_ &m) {
         .def("loadLuaPlugin", &CPluginLoader::loadLuaPlugin, "Load a Lua plugin resource into the game.")
         .def("loadCppPlugin", &CPluginLoader::loadCppPlugin, "Load a compiled C++ plugin type into the game.")
         .def_static("loadDynamicPlugin", &CPluginLoader::loadDynamicPlugin, py::arg("game"), py::arg("library"),
-                    py::arg("entry") = "game_plugin_load_v2", "Load a dynamic C++ plugin shared library into the game.")
+                    py::arg("entry") = "game_plugin_load_v3", "Load a dynamic C++ plugin shared library into the game.")
         .def("loadGlobalPlugins", &CPluginLoader::loadGlobalPlugins, "Load configured global plugins.")
         .def("loadMapPlugins", &CPluginLoader::loadMapPlugins, "Load configured plugins for a map.");
 

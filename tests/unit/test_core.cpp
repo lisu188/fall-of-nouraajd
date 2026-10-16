@@ -34,6 +34,7 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #include "core/CTypes.h"
 #include "core/CUtil.h"
 #include "gui/CSdlResources.h"
+#include "gui/object/CConsoleGraphicsObject.h"
 #include "object/CCreature.h"
 #include "object/CCreatureClass.h"
 #include "object/CCreatureClassTrack.h"
@@ -600,7 +601,7 @@ void test_json_parse_expected_success_and_failure() {
     expect_true(!CJsonUtil::isMap(null_json), "null json should not be accepted as maps");
 
     auto parsed = CJsonUtil::parse_expected("{\"value\": 3}", "unit-json");
-    expect_true(parsed.has_value() && (*parsed)->at("value").get<int>() == 3,
+    expect_true(parsed.has_value() && parsed->at("value").get<int>() == 3,
                 "parse_expected should return parsed json on success");
 
     auto failed = CJsonUtil::parse_expected("{", "unit-json-error");
@@ -1098,7 +1099,8 @@ void test_legacy_and_flattened_primitive_wrappers_deserialize_and_reject_scalars
     expect_runtime_error(
         [&]() {
             CSerialization::StrictScope strict;
-            CSerializerFunction<std::shared_ptr<json>, std::shared_ptr<CGameObject>>::deserialize(game, scalar_config);
+            CSerializerFunction<std::shared_ptr<json>, std::shared_ptr<CGameObject>>::deserialize(game, scalar_config,
+                                                                                                  strict);
         },
         "strict deserialization should reject a bare numeric scalar for a primitive collection property");
 
@@ -1116,8 +1118,8 @@ void test_legacy_and_flattened_primitive_wrappers_deserialize_and_reject_scalars
     expect_runtime_error(
         [&]() {
             CSerialization::StrictScope strict;
-            CSerializerFunction<std::shared_ptr<json>, std::shared_ptr<CGameObject>>::deserialize(game,
-                                                                                                  scalar_string_config);
+            CSerializerFunction<std::shared_ptr<json>, std::shared_ptr<CGameObject>>::deserialize(
+                game, scalar_string_config, strict);
         },
         "strict deserialization should reject a bare string scalar for a primitive collection property");
 }
@@ -2045,40 +2047,35 @@ void test_save_format_bounds_crafted_documents() {
 }
 
 void testSerializationScopeRestoration() {
-    const bool previous = CSerialization::setStrict(false);
+    CSerializationReadContext lenient(false, "lenient-operation");
+    CSerialization::StrictScope strict("strict-operation");
+    expect_true(strict.isStrict() && !lenient.isStrict(), "read policies belong to independent operation owners");
     {
-        CSerialization::StrictScope outer_scope;
-        expect_true(CSerialization::isStrict(), "a strict scope enables strict deserialization");
-        {
-            CSerialization::StrictScope inner_scope;
-            expect_true(CSerialization::isStrict(), "a nested strict scope keeps strict deserialization enabled");
+        CSerializationReadContext nested(false, "nested-operation");
+        expect_true(!nested.isStrict() && strict.isStrict(), "a nested operation cannot change its caller's policy");
+    }
+    const json document = json::object();
+    auto rejected = CSerialization::deserializeExpected<std::shared_ptr<CGameObject>>(nullptr, document, strict);
+    auto accepted = CSerialization::deserializeExpected<std::shared_ptr<CGameObject>>(nullptr, document, lenient);
+    expect_true(!rejected && rejected.error().code == CSerializationErrorCode::InvalidInput &&
+                    rejected.error().source == "strict-operation",
+                "strict operation errors retain the owning context's source");
+    expect_true(accepted && !*accepted, "an independent lenient operation keeps the legacy null result");
+
+    std::atomic_int isolated{0};
+    auto probe = [&isolated, &document](bool strict_policy) {
+        CSerializationReadContext context(strict_policy, "concurrent-operation");
+        for (int index = 0; index < 32; ++index) {
+            auto result = CSerialization::deserializeExpected<std::shared_ptr<CGameObject>>(nullptr, document, context);
+            if (strict_policy ? !result : (result && !*result))
+                ++isolated;
         }
-        expect_true(CSerialization::isStrict(), "a nested scope restores its outer strict state");
-
-        expect_runtime_error(
-            []() {
-                CSerialization::StrictScope inner_scope;
-                throw std::runtime_error("scope restoration probe");
-            },
-            "the nested scope probe must unwind through its guard");
-        expect_true(CSerialization::isStrict(), "exception unwinding preserves the outer strict scope");
-    }
-    expect_true(!CSerialization::isStrict(), "the outer scope restores lenient deserialization");
-
-    expect_runtime_error(
-        []() {
-            CSerialization::StrictScope scope;
-            throw std::runtime_error("scope restoration probe");
-        },
-        "the outer scope probe must unwind through its guard");
-    expect_true(!CSerialization::isStrict(), "exception unwinding restores lenient deserialization");
-
-    CSerialization::setStrict(true);
-    {
-        CSerialization::StrictScope scope;
-    }
-    expect_true(CSerialization::isStrict(), "a scope preserves an already enabled strict setting");
-    CSerialization::setStrict(previous);
+    };
+    std::thread strict_thread(probe, true);
+    std::thread lenient_thread(probe, false);
+    strict_thread.join();
+    lenient_thread.join();
+    expect_true(isolated == 64, "concurrent operation contexts must never share strict policy or graph state");
 }
 
 void testSerializerBaseDestruction() {
@@ -2088,9 +2085,14 @@ void testSerializerBaseDestruction() {
 
         ~SerializerLifetimeProbe() override { destroyed = true; }
 
-        std::any serialize(std::any object) override { return object; }
+        CSerializationResult<json> serialize(const std::any &, CSerializationWriteContext &) const override {
+            return json();
+        }
 
-        std::any deserialize(std::shared_ptr<CGame>, std::any object) override { return object; }
+        CSerializationResult<std::any> deserialize(const std::shared_ptr<CGame> &, const json &,
+                                                   CSerializationReadContext &) const override {
+            return std::any();
+        }
 
       private:
         bool &destroyed;
@@ -2102,6 +2104,129 @@ void testSerializerBaseDestruction() {
         expect_true(!destroyed, "the base owner keeps the derived serializer alive");
     }
     expect_true(destroyed, "destruction through the serializer base releases derived resources");
+}
+
+void testTypedJsonCodecsOwnResultsAndPreserveErrors() {
+    struct Value {
+        int number;
+    };
+    struct Missing {
+        int number;
+    };
+    const auto original_count = CTypes::codecCount();
+    for (int index = 0; index < 32; ++index) {
+        auto missing = CSerialization::serializeExpected(Missing{index}, "missing-codec");
+        expect_true(!missing && missing.error().code == CSerializationErrorCode::MissingCodec &&
+                        missing.error().source == "missing-codec" && !missing.error().objectType.empty(),
+                    "missing codecs return a typed diagnostic rather than inserting or dereferencing null");
+        expect_true(!CTypes::findCodec(typeid(Missing)), "missing codec lookups remain read-only");
+    }
+    expect_true(CTypes::codecCount() == original_count, "failed codec lookups must not grow the registry");
+
+    const json *observed_input = nullptr;
+    CTypes::registerJsonCodec<Value>(
+        [](const Value &value) -> CSerializationResult<json> { return json{{"number", value.number}}; },
+        [&observed_input](const std::shared_ptr<CGame> &, const json &document) -> CSerializationResult<Value> {
+            observed_input = &document;
+            if (!document.contains("number") || !document.at("number").is_number_integer()) {
+                return std::unexpected(CSerializationError{
+                    CSerializationErrorCode::InvalidInput, {}, "number", "Value", "number must be an integer"});
+            }
+            return Value{document.at("number").get<int>()};
+        });
+    auto encoded = CSerialization::serializeExpected(Value{7}, "typed-codec");
+    expect_true(encoded && encoded->at("number").get<int>() == 7, "typed codecs return an owned JSON value");
+    const json document{{"number", 11}};
+    auto decoded = CSerialization::deserializeExpected<Value>(nullptr, document, "typed-codec");
+    expect_true(decoded && decoded->number == 11 && observed_input == &document,
+                "typed decoders borrow the caller's const document without copying it");
+    auto rejected = CSerialization::deserializeExpected<Value>(nullptr, json{{"number", "bad"}}, "bad-value");
+    expect_true(!rejected && rejected.error().code == CSerializationErrorCode::InvalidInput &&
+                    rejected.error().source == "bad-value" && rejected.error().propertyPath == "number" &&
+                    rejected.error().objectType == "Value",
+                "typed codec errors preserve source, property path, object type and code");
+    auto wrong_type = CTypes::findCodec(typeid(Value))->serialize(std::any(7));
+    expect_true(!wrong_type && wrong_type.error().code == CSerializationErrorCode::TypeMismatch,
+                "erased values are checked only at the codec boundary");
+
+    auto game = std::make_shared<CGame>();
+    game->getObjectHandler()->registerType("CGameObject", [] { return std::make_shared<CGameObject>(); });
+    const json malformed_graph{{"class", "CGameObject"}, {"effectGraph", {{"version", 2}, {"actors", json::array()}}}};
+    auto graph_failure =
+        CSerialization::deserializeExpected<std::shared_ptr<CGameObject>>(game, malformed_graph, "malformed-graph");
+    expect_true(!graph_failure && graph_failure.error().code == CSerializationErrorCode::MalformedGraph &&
+                    graph_failure.error().source == "malformed-graph",
+                "malformed graph failures keep their typed code across the native expected boundary");
+    auto following_operation = CSerialization::deserializeExpected<std::shared_ptr<CGameObject>>(
+        game, json{{"class", "CGameObject"}}, "following-operation");
+    expect_true(following_operation && *following_operation,
+                "a failed graph operation must not retain a dangling graph context in the next operation");
+
+    // Replace the stack-observing test codec before its captured local variable leaves scope.
+    CTypes::registerJsonCodec<Value>(
+        [](const Value &value) -> CSerializationResult<json> { return json(value.number); },
+        [](const std::shared_ptr<CGame> &, const json &value) -> CSerializationResult<Value> {
+            return Value{value.get<int>()};
+        });
+}
+
+void testConsoleHistoryCodecPreservesOrderedGuiSnapshots() {
+    const std::list<std::string> history{"second", "first", "second", ""};
+    const auto expected = json::array({"second", "first", "second", ""});
+    auto encoded = CSerialization::serializeExpected(history, "console-history");
+    expect_true(encoded && encoded->dump() == expected.dump(),
+                "ordered string codecs preserve duplicates, empty entries and order");
+    if (!encoded)
+        return;
+    auto decoded = CSerialization::deserializeExpected<std::list<std::string>>(nullptr, *encoded, "console-history");
+    expect_true(decoded && *decoded == history, "ordered string history round-trips through its typed JSON codec");
+    auto empty = CSerialization::serializeExpected(std::list<std::string>{}, "console-empty");
+    expect_true(empty && empty->is_array() && empty->empty(), "empty ordered history encodes as an empty JSON array");
+    auto empty_read =
+        CSerialization::deserializeExpected<std::list<std::string>>(nullptr, json::array(), "console-empty");
+    expect_true(empty_read && empty_read->empty(), "an empty history remains empty at the codec boundary");
+
+    for (const auto &malformed : {json::object(), json::array({"first", 7})}) {
+        auto failure =
+            CSerialization::deserializeExpected<std::list<std::string>>(nullptr, malformed, "console-invalid");
+        expect_true(!failure && failure.error().code == CSerializationErrorCode::TypeMismatch &&
+                        failure.error().source == "console-invalid" && !failure.error().objectType.empty(),
+                    "ordered history rejects invalid shapes and entries with a typed source diagnostic");
+        if (malformed.is_array())
+            expect_true(!failure && failure.error().propertyPath == "[1]", "invalid list entries identify their index");
+    }
+
+    auto game = std::make_shared<CGame>();
+    game->getObjectHandler()->registerType("CConsoleGraphicsObject",
+                                           [] { return std::make_shared<CConsoleGraphicsObject>(); });
+    auto console = std::make_shared<CConsoleGraphicsObject>();
+    console->setGame(game);
+    console->setConsoleHistory(history);
+    auto console_document = CSerialization::serializeExpected(console, "console-object");
+    expect_true(console_document && (*console_document)["properties"]["consoleHistory"].dump() == expected.dump(),
+                "the reflected consoleHistory property has a registered codec");
+    if (!console_document)
+        return;
+    CSerializationReadContext reading(true, "console-round-trip");
+    auto restored =
+        CSerialization::deserializeExpected<std::shared_ptr<CConsoleGraphicsObject>>(game, *console_document, reading);
+    expect_true(restored && *restored && (*restored)->getConsoleHistory() == history,
+                "reflected console history restores without sorting or removing duplicate commands");
+
+    const auto invalid_history = json::array({"valid prefix", 7});
+    CSerializationReadContext invalid_reading(true, "console-property");
+    bool rejected = false;
+    try {
+        CSerialization::setProperty(console, "consoleHistory", invalid_history, invalid_reading);
+    } catch (const CSerializationException &exception) {
+        const auto &error = exception.getError();
+        rejected = error.code == CSerializationErrorCode::TypeMismatch && error.source == "console-property" &&
+                   error.propertyPath == "consoleHistory[1]" && error.objectType == "CConsoleGraphicsObject";
+    }
+    expect_true(rejected, "malformed reflected history retains its source, property index and object type");
+    expect_true(console->getConsoleHistory() == history,
+                "failed list decoding leaves the existing console history unchanged");
+
 }
 
 void test_serialization_collection_and_error_helpers() {
@@ -2152,7 +2277,7 @@ void test_serialization_collection_and_error_helpers() {
         [&]() {
             CSerialization::StrictScope strict;
             CSerializerFunction<std::shared_ptr<json>, std::shared_ptr<CGameObject>>::deserialize(
-                nullptr, std::make_shared<json>(json::object()));
+                nullptr, std::make_shared<json>(json::object()), strict);
         },
         "strict object deserialization should reject a missing game");
 
@@ -2161,7 +2286,8 @@ void test_serialization_collection_and_error_helpers() {
     expect_runtime_error(
         [&]() {
             CSerialization::StrictScope strict;
-            CSerializerFunction<std::shared_ptr<json>, std::shared_ptr<CGameObject>>::deserialize(game, unresolved_ref);
+            CSerializerFunction<std::shared_ptr<json>, std::shared_ptr<CGameObject>>::deserialize(game, unresolved_ref,
+                                                                                                  strict);
         },
         "strict object deserialization should report unresolved references");
 
@@ -2175,7 +2301,7 @@ void test_serialization_collection_and_error_helpers() {
         [&]() {
             CSerialization::StrictScope strict;
             CSerializerFunction<std::shared_ptr<json>, std::set<std::shared_ptr<CGameObject>>>::deserialize(
-                game, invalid_array);
+                game, invalid_array, strict);
         },
         "strict array deserialization should reject malformed entries");
 
@@ -2185,7 +2311,8 @@ void test_serialization_collection_and_error_helpers() {
         [&]() {
             CSerialization::StrictScope strict;
             CSerializerFunction<std::shared_ptr<json>,
-                                std::map<std::string, std::shared_ptr<CGameObject>>>::deserialize(game, invalid_map);
+                                std::map<std::string, std::shared_ptr<CGameObject>>>::deserialize(game, invalid_map,
+                                                                                                  strict);
         },
         "strict map deserialization should reject malformed entries");
 }
@@ -3559,6 +3686,8 @@ int main() {
     test_save_format_bounds_crafted_documents();
     testSerializationScopeRestoration();
     testSerializerBaseDestruction();
+    testTypedJsonCodecsOwnResultsAndPreserveErrors();
+    testConsoleHistoryCodecPreservesOrderedGuiSnapshots();
     test_serialization_collection_and_error_helpers();
     test_generate_name_collision_retry();
     test_creature_effective_stats_baseline_capture();

@@ -18,6 +18,7 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #include "core/CTypes.h"
 #include "core/CTypeRegistration.h"
 #include "plugin/NativePlugin.h"
+#include <mutex>
 
 std::unordered_map<std::string, std::function<std::shared_ptr<CGameObject>()>> *CTypes::builders() {
     static std::unordered_map<std::string, std::function<std::shared_ptr<CGameObject>()>> reg;
@@ -31,12 +32,37 @@ CTypes::setters() {
     return &reg;
 }
 
-std::unordered_map<std::pair<std::type_index, std::type_index>, std::shared_ptr<CSerializerBase>, vstd::pair_hash> *
-CTypes::serializers() {
-    static std::unordered_map<std::pair<std::type_index, std::type_index>, std::shared_ptr<CSerializerBase>,
-                              vstd::pair_hash>
-        reg;
-    return &reg;
+std::unordered_map<std::type_index, std::shared_ptr<const CSerializerBase>> &CTypes::codecs() {
+    static std::unordered_map<std::type_index, std::shared_ptr<const CSerializerBase>> registry;
+    return registry;
+}
+
+std::shared_ptr<const CSerializerBase> CTypes::findCodec(std::type_index type) {
+    std::shared_lock lock(codecMutex());
+    const auto &registry = codecs();
+    auto found = registry.find(type);
+    return found == registry.end() ? nullptr : found->second;
+}
+
+std::size_t CTypes::codecCount() {
+    std::shared_lock lock(codecMutex());
+    return codecs().size();
+}
+
+std::shared_mutex &CTypes::codecMutex() {
+    static std::shared_mutex mutex;
+    return mutex;
+}
+
+void CTypes::registerCodec(std::type_index type, std::shared_ptr<const CSerializerBase> codec) {
+    if (!codec) {
+        throw std::invalid_argument("Cannot register a null JSON codec");
+    }
+    std::shared_ptr<const CSerializerBase> previous;
+    {
+        std::unique_lock lock(codecMutex());
+        previous = std::exchange(codecs()[type], std::move(codec));
+    }
 }
 
 std::unordered_map<std::type_index, std::type_index> *CTypes::primitiveTypes() {

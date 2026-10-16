@@ -44,7 +44,7 @@ class CMapLoader {
     static void save(const std::shared_ptr<CMap> &map, const std::string &name);
     static bool saveWithResult(const std::shared_ptr<CMap> &map, const std::string &name);
 
-    static void loadFromTmx(const std::shared_ptr<CMap> &map, const std::shared_ptr<json> &mapc);
+    static void loadFromTmx(const std::shared_ptr<CMap> &map, const std::shared_ptr<const json> &mapc);
 
   private:
     static void handleTileLayer(const std::shared_ptr<CMap> &map, const std::vector<std::string> &tileTypes,
@@ -104,7 +104,7 @@ class CPluginLoader {
     static bool loadCppPlugin(const std::shared_ptr<CGame> &game, const std::string &type);
 
     static bool loadDynamicPlugin(const std::shared_ptr<CGame> &game, const std::string &library,
-                                  const std::string &entry = "game_plugin_load_v2");
+                                  const std::string &entry = "game_plugin_load_v3");
 
     static bool loadGlobalPlugins(const std::shared_ptr<CGame> &game);
 

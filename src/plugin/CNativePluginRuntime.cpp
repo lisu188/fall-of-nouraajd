@@ -42,7 +42,7 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 namespace {
 
-constexpr const char *NATIVE_PLUGIN_DEFAULT_ENTRY = "game_plugin_load_v2";
+constexpr const char *NATIVE_PLUGIN_DEFAULT_ENTRY = "game_plugin_load_v3";
 
 #if defined(__ANDROID__)
 std::optional<bool> load_android_builtin_plugin(const std::shared_ptr<CGame> &game, const std::string &library,
@@ -57,10 +57,10 @@ std::optional<bool> load_android_builtin_plugin(const std::shared_ptr<CGame> &ga
         if (symbolName == NATIVE_PLUGIN_DEFAULT_ENTRY) {
             return native_plugin::register_dynamic_marker(registrar);
         }
-        if (symbolName == "game_plugin_load_direct_v2") {
+        if (symbolName == "game_plugin_load_direct_v3") {
             return native_plugin::register_direct_dynamic_marker(registrar);
         }
-        if (symbolName == "game_plugin_load_bad_api_v2" || symbolName == "game_plugin_load_false_v2") {
+        if (symbolName == "game_plugin_load_bad_api_v3" || symbolName == "game_plugin_load_false_v3") {
             return false;
         }
     }
@@ -95,7 +95,24 @@ class CDynamicLibrary {
 
     bool isLoaded() const { return handle != nullptr; }
 
-    CPluginLoadV2 loadSymbol(const std::string &symbolName) const {
+    std::optional<std::uint32_t> apiVersion() const {
+        if (!handle)
+            return std::nullopt;
+#if defined(_WIN32)
+        auto symbol = GetProcAddress(handle, "game_plugin_api_version");
+#else
+        auto symbol = dlsym(handle, "game_plugin_api_version");
+#endif
+        if (!symbol)
+            return std::nullopt;
+        try {
+            return reinterpret_cast<CPluginApiVersion>(symbol)();
+        } catch (...) {
+            return std::nullopt;
+        }
+    }
+
+    CPluginLoadV3 loadSymbol(const std::string &symbolName) const {
         if (!handle) {
             return nullptr;
         }
@@ -107,7 +124,7 @@ class CDynamicLibrary {
                                   "error code:", static_cast<int>(GetLastError()));
             return nullptr;
         }
-        return reinterpret_cast<CPluginLoadV2>(symbol);
+        return reinterpret_cast<CPluginLoadV3>(symbol);
 #else
         dlerror();
         auto symbol = dlsym(handle, symbolName.c_str());
@@ -116,7 +133,7 @@ class CDynamicLibrary {
             vstd::logger::warning("Failed to find dynamic plugin symbol:", symbolName, "in:", path, "error:", error);
             return nullptr;
         }
-        return reinterpret_cast<CPluginLoadV2>(symbol);
+        return reinterpret_cast<CPluginLoadV3>(symbol);
 #endif
     }
 
@@ -225,6 +242,11 @@ bool loadNativePlugin(const std::shared_ptr<CGame> &game, const std::string &lib
     }
 
     const auto symbolName = entry.empty() ? std::string(NATIVE_PLUGIN_DEFAULT_ENTRY) : entry;
+    if (symbolName.ends_with("_v2")) {
+        vstd::logger::warning("Native plugin API version 2 is unsupported; rebuild the plugin for version 3:", library,
+                              symbolName);
+        return false;
+    }
 
 #if defined(__ANDROID__)
     if (auto loaded = load_android_builtin_plugin(game, library, symbolName)) {
@@ -244,13 +266,21 @@ bool loadNativePlugin(const std::shared_ptr<CGame> &game, const std::string &lib
         return false;
     }
 
+    const auto apiVersion = dynamicLibrary->apiVersion();
+    if (!apiVersion || *apiVersion != GAME_PLUGIN_API_VERSION) {
+        vstd::logger::warning("Native plugin API version is missing or unsupported; rebuild for version 3:", library);
+        return false;
+    }
+
     auto entrypoint = dynamicLibrary->loadSymbol(symbolName);
     if (!entrypoint) {
+        vstd::logger::warning(
+            "Native plugins require API version 3; rebuild older plugins with current headers:", library, symbolName);
         return false;
     }
 
     CPluginRegistrar registrar(game);
-    CPluginHostV2 host{GAME_PLUGIN_API_VERSION, &registrar};
+    CPluginHostV3 host{GAME_PLUGIN_API_VERSION, &registrar};
     try {
         if (!entrypoint(&host)) {
             vstd::logger::warning("Dynamic C++ plugin entrypoint returned false:", library, symbolName);
