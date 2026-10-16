@@ -23,6 +23,84 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 CObjectHandler::CObjectHandler() {}
 
+struct CObjectHandler::RegistrationTransaction::State {
+    std::shared_ptr<CObjectHandler> handler;
+    std::function<bool()> canRollback;
+    decltype(CObjectHandler::constructors) constructors;
+    decltype(CObjectHandler::mapScopedTypes) mapScopedTypes;
+    decltype(CObjectHandler::objectConfig) objectConfig;
+    bool mapScriptScopeActive;
+    bool nativeTileFactory;
+    std::uint64_t previousEpoch;
+    std::uint64_t epoch;
+    bool committed = false;
+
+    State(std::shared_ptr<CObjectHandler> handler, std::function<bool()> canRollback)
+        : handler(std::move(handler)), canRollback(std::move(canRollback)), constructors(this->handler->constructors),
+          mapScopedTypes(this->handler->mapScopedTypes), objectConfig(this->handler->objectConfig),
+          mapScriptScopeActive(this->handler->mapScriptScopeActive),
+          nativeTileFactory(this->handler->nativeTileFactory), previousEpoch(this->handler->registrationEpoch),
+          epoch(++this->handler->nextRegistrationEpoch) {
+        this->handler->registrationEpoch = epoch;
+    }
+};
+
+CObjectHandler::RegistrationTransaction::RegistrationTransaction(std::shared_ptr<CObjectHandler> handler,
+                                                                 std::function<bool()> canRollback) {
+    if (!handler)
+        throw std::invalid_argument("registration transaction requires an object handler");
+    // Script factories may own py::object captures, including while their std::functions are copied.
+    std::optional<pybind11::gil_scoped_acquire> gil;
+    if (Py_IsInitialized())
+        gil.emplace();
+    state = std::make_unique<State>(std::move(handler), std::move(canRollback));
+}
+
+CObjectHandler::RegistrationTransaction::~RegistrationTransaction() {
+    std::optional<pybind11::gil_scoped_acquire> gil;
+    if (Py_IsInitialized())
+        gil.emplace();
+    bool restore = !state->committed && isCurrent();
+    if (restore && state->canRollback) {
+        try {
+            restore = state->canRollback();
+        } catch (...) {
+            restore = false;
+        }
+    }
+    if (restore) {
+        auto &handler = *state->handler;
+        handler.constructors.swap(state->constructors);
+        handler.mapScopedTypes.swap(state->mapScopedTypes);
+        handler.objectConfig.swap(state->objectConfig);
+        handler.mapScriptScopeActive = state->mapScriptScopeActive;
+        handler.nativeTileFactory = state->nativeTileFactory;
+        handler.registrationEpoch = state->previousEpoch;
+        // Cache generations cannot be reused after temporarily publishing different registrations.
+        handler.navigationConfigRevision.fetch_add(1, std::memory_order_release);
+    }
+    state.reset(); // Release replaced or superseded Python factories before releasing the GIL.
+}
+
+bool CObjectHandler::RegistrationTransaction::isCurrent() const {
+    return state->handler->registrationEpoch == state->epoch;
+}
+
+bool CObjectHandler::RegistrationTransaction::commit() {
+    if (!isCurrent())
+        return false;
+    state->committed = true;
+    std::optional<pybind11::gil_scoped_acquire> gil;
+    if (Py_IsInitialized())
+        gil.emplace();
+    // Releasing displaced script factories can itself reenter the engine. Do it while ownership
+    // can still be checked, before the caller publishes the restored map.
+    state->constructors.clear();
+    state->mapScopedTypes.clear();
+    state->objectConfig.clear();
+    return isCurrent();
+}
+
 void CObjectHandler::registerConfig(const std::string &path) {
     registerConfigDocument(path, CConfigurationProvider::getConfig(path));
 }

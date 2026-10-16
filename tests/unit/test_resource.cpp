@@ -22,7 +22,10 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #include "core/CLoader.h"
 #include "core/CSaveFormat.h"
 #include "handler/CObjectHandler.h"
+#include "object/CEvent.h"
 #include "object/CItem.h"
+#include "object/CPlayer.h"
+#include "object/CTile.h"
 #include "test_harness.h"
 
 #include <pybind11/embed.h>
@@ -874,6 +877,256 @@ void test_failed_save_restore_preserves_resource_scope() {
     std::filesystem::remove_all(directoryB);
 }
 
+void testRegistrationTransactionsPreserveNestedOwnershipAndNavigationRevisions() {
+    auto handler = std::make_shared<CObjectHandler>();
+    const auto factory = [](const std::string &label) {
+        return [label] {
+            auto object = std::make_shared<CEvent>();
+            object->setLabel(label);
+            return object;
+        };
+    };
+    auto original = std::make_shared<const json>(json{{"class", "StartEvent"}});
+    handler->beginMapScriptScope();
+    handler->registerType("StartEvent", factory("source"));
+    handler->registerConfig("start", original);
+    const auto revision = handler->getNavigationConfigRevision();
+    {
+        CObjectHandler::RegistrationTransaction outer(handler);
+        handler->registerType("StartEvent", factory("outer"));
+        {
+            CObjectHandler::RegistrationTransaction inner(handler);
+            handler->registerType("StartEvent", factory("inner"));
+            handler->registerConfig("start", std::make_shared<const json>(json{{"class", "CEvent"}}));
+            handler->registerType("TemporaryType", factory("temporary"));
+            handler->endMapScriptScope();
+        }
+        expect_true(outer.isCurrent() && handler->getType("StartEvent")->getLabel() == "outer",
+                    "failed nested registration restores its parent operation and factory");
+        expect_true(!handler->getType("TemporaryType"),
+                    "failed nested registration removes destination-only factories");
+        handler->registerType("StartEvent", factory("restored scope"));
+        expect_true(handler->getType("StartEvent")->getLabel() == "restored scope",
+                    "rollback restores the active map-script registration flag");
+    }
+    expect_true(handler->getType("StartEvent")->getLabel() == "source" && handler->getConfig("start") == original,
+                "failed outer registration restores the original factory and immutable config owner");
+    expect_true(handler->getNavigationConfigRevision() > revision,
+                "registration rollback invalidates navigation without reusing a previous revision");
+    {
+        CObjectHandler::RegistrationTransaction outer(handler);
+        handler->registerType("StartEvent", factory("older"));
+        {
+            CObjectHandler::RegistrationTransaction inner(handler);
+            handler->registerType("StartEvent", factory("newer"));
+            handler->registerConfig("newerOnly", original);
+            expect_true(inner.commit(), "current nested registration can commit");
+        }
+        expect_true(!outer.isCurrent() && !outer.commit(), "committed nested registration supersedes an older scope");
+    }
+    expect_true(handler->getType("StartEvent")->getLabel() == "newer" && handler->getConfig("newerOnly") == original,
+                "superseded registration rollback cannot overwrite a newer committed owner");
+    handler->endMapScriptScope();
+    {
+        CObjectHandler::RegistrationTransaction transaction(handler, [] { return false; });
+        handler->registerConfig("externalOwner", original);
+    }
+    expect_true(handler->getConfig("externalOwner") == original,
+                "an operation whose scene ownership changed cannot roll back another owner's registrations");
+
+    auto tileHandler = std::make_shared<CObjectHandler>();
+    tileHandler->registerType("CTile", [] { return std::make_shared<CTile>(); });
+    auto tileConfig = std::make_shared<const json>(json{{"class", "CTile"}, {"properties", {{"canStep", true}}}});
+    tileHandler->registerConfig("tile", tileConfig);
+    expect_true(!tileHandler->getStaticTileNavigation("tile"), "an untrusted tile factory disables static navigation");
+    auto nativeHandler = std::make_shared<CObjectHandler>();
+    {
+        CObjectHandler::RegistrationTransaction transaction(nativeHandler);
+        nativeHandler->registerNativeType("CTile", [] { return std::make_shared<CTile>(); });
+        nativeHandler->registerConfig("tile", tileConfig);
+        expect_true(nativeHandler->getStaticTileNavigation("tile").has_value(), "native tile factory enables metadata");
+    }
+    nativeHandler->registerType("CTile", [] { return std::make_shared<CTile>(); });
+    nativeHandler->registerConfig("tile", tileConfig);
+    expect_true(!nativeHandler->getStaticTileNavigation("tile"),
+                "rollback restores the native tile trust flag along with the factory tables");
+}
+
+void testFailedSavedMapRegistrationsRollBackAndBackupCommits() {
+    auto game = CGameLoader::loadGame();
+    auto provider = game->getResourcesProvider();
+    auto handler = game->getObjectHandler();
+    const auto configPath = std::filesystem::path(provider->getPath("config/items.json"));
+    expect_true(!configPath.empty(), "resource root must exist for saved registration rollback regression");
+    if (configPath.empty())
+        return;
+    const auto nonce = std::to_string(std::chrono::steady_clock::now().time_since_epoch().count());
+    const std::string sourceName = "unit_registration_source_" + nonce;
+    const std::string destinationName = "unit_registration_destination_" + nonce;
+    const auto mapsRoot = configPath.parent_path().parent_path() / "maps";
+    const auto sourceDirectory = mapsRoot / sourceName;
+    const auto destinationDirectory = mapsRoot / destinationName;
+    std::filesystem::create_directories(sourceDirectory);
+    std::filesystem::create_directories(destinationDirectory);
+    const auto mapConfig = R"({"properties":{"x":0,"y":0,"z":0},"layers":[]})";
+    const std::string slot = "registration-rollback-" + nonce;
+    const auto cleanup = [&] {
+        for (const auto &path : {CSaveFormat::primaryPath(slot), CSaveFormat::backupPath(slot)}) {
+            const auto resolved = provider->getPath(path);
+            if (!resolved.empty())
+                std::filesystem::remove(resolved);
+        }
+        for (const auto &path :
+             {sourceDirectory / "map.json", destinationDirectory / "map.json", destinationDirectory / "config.json"})
+            std::filesystem::remove(path);
+        std::filesystem::remove(sourceDirectory);
+        std::filesystem::remove(destinationDirectory);
+    };
+    const bool written = write_text_file(sourceDirectory / "map.json", mapConfig) &&
+                         write_text_file(destinationDirectory / "map.json", mapConfig) &&
+                         write_text_file(destinationDirectory / "config.json",
+                                         R"({"sourceStart":{"class":"StartEvent","properties":{"label":"destination"}},
+                                              "destinationOnlyConfig":{"class":"CEvent"}})");
+    expect_true(written, "saved registration fixtures must be written");
+    if (!written) {
+        cleanup();
+        return;
+    }
+    auto sourceMap = CMapLoader::loadNewMap(game, sourceName);
+    game->setMap(sourceMap);
+    auto sourcePlayer = game->createObject<CPlayer>("Warrior");
+    sourceMap->attachPlayer(sourcePlayer);
+    auto original =
+        std::make_shared<const json>(json{{"class", "StartEvent"}, {"properties", {{"label", "source config"}}}});
+    const auto sourceFactory = [] {
+        auto object = std::make_shared<CEvent>();
+        object->setLabel("source factory");
+        return object;
+    };
+    handler->beginMapScriptScope();
+    handler->registerType("StartEvent", sourceFactory);
+    handler->endMapScriptScope();
+    handler->registerConfig("sourceStart", original);
+    std::weak_ptr<CObjectHandler> weakHandler = handler;
+    auto reentrantLoad = std::make_shared<std::function<void()>>();
+    handler->registerType("RegistrationProbe", [weakHandler, reentrantLoad] {
+        auto current = weakHandler.lock();
+        current->beginMapScriptScope();
+        current->registerType("StartEvent", [] {
+            auto object = std::make_shared<CEvent>();
+            object->setLabel("destination factory");
+            return object;
+        });
+        current->registerType("DestinationOnlyType", [] { return std::make_shared<CEvent>(); });
+        current->endMapScriptScope();
+        if (*reentrantLoad)
+            (*reentrantLoad)();
+        return std::make_shared<CEvent>();
+    });
+    auto makeSnapshot = [&](bool invalid) {
+        auto objects = json::array({json{{"class", "RegistrationProbe"}, {"properties", {{"name", "probe"}}}},
+                                    json{{"class", "CPlayer"}, {"properties", {{"name", "player"}}}}});
+        if (invalid)
+            objects[objects.size()] = json{{"class", "MissingRegistrationActor"}};
+        return std::make_shared<json>(
+            json{{"class", "CMap"}, {"properties", {{"mapName", destinationName}, {"objects", objects}}}});
+    };
+    auto rejected = CSaveFormat::buildEnvelope(makeSnapshot(true), destinationName);
+    auto accepted = CSaveFormat::buildEnvelope(makeSnapshot(false), destinationName);
+    expect_true(rejected && accepted, "both registration fixtures must pass envelope validation");
+    if (!rejected || !accepted) {
+        cleanup();
+        return;
+    }
+    const auto before = handler->getNavigationConfigRevision();
+    expect_true(provider->save(CSaveFormat::primaryPath(slot), *rejected),
+                "invalid primary must be saved without backup");
+    CGameLoader::loadSavedGame(game, slot);
+    expect_true(game->getMap() == sourceMap && sourceMap->getPlayer() == sourcePlayer &&
+                    provider->getActiveScope() == sourceName,
+                "failed strict construction preserves the original active map, player and asset scope");
+    expect_true(handler->getConfig("sourceStart") == original &&
+                    handler->getType("StartEvent")->getLabel() == "source factory",
+                "failed saved-map construction restores immutable config identity and the source StartEvent factory");
+    expect_true(!handler->getConfig("destinationOnlyConfig") && !handler->getType("DestinationOnlyType"),
+                "failed saved-map construction removes destination-only configurations and factories");
+    expect_true(!handler->getConfig(CSaveFormat::savedMapConfigKey(slot)) &&
+                    handler->getNavigationConfigRevision() > before,
+                "failed save clears its temporary config and invalidates navigation monotonically");
+
+    auto missingPlayer = makeSnapshot(false);
+    (*missingPlayer)["properties"]["objects"] =
+        json::array({json{{"class", "RegistrationProbe"}, {"properties", {{"name", "probe"}}}}});
+    auto rehydrationFailure = CSaveFormat::buildEnvelope(missingPlayer, destinationName);
+    expect_true(rehydrationFailure && provider->save(CSaveFormat::primaryPath(slot), *rehydrationFailure),
+                "valid-shaped map without a player must reach rehydration");
+    CGameLoader::loadSavedGame(game, slot);
+    expect_true(game->getMap() == sourceMap && provider->getActiveScope() == sourceName &&
+                    handler->getConfig("sourceStart") == original &&
+                    handler->getType("StartEvent")->getLabel() == "source factory" &&
+                    !handler->getConfig("destinationOnlyConfig") && !handler->getType("DestinationOnlyType"),
+                "failed player rehydration rolls back the same registration tables as strict construction failure");
+
+    expect_true(provider->save(CSaveFormat::primaryPath(slot), *accepted), "valid primary must be saved");
+    CGameLoader::loadSavedGame(game, slot);
+    expect_true(game->getMap() != sourceMap && game->getMap()->getMapName() == destinationName &&
+                    provider->getActiveScope() == destinationName,
+                "successful strict construction commits the destination map and asset scope");
+    expect_true(handler->getType("StartEvent")->getLabel() == "destination factory" &&
+                    handler->getConfig("sourceStart") != original && handler->getConfig("destinationOnlyConfig") &&
+                    handler->getType("DestinationOnlyType") &&
+                    !handler->getConfig(CSaveFormat::savedMapConfigKey(slot)),
+                "successful load commits destination registrations and clears its temporary save config");
+
+    game->setMap(sourceMap);
+    handler->beginMapScriptScope();
+    handler->registerType("StartEvent", sourceFactory);
+    handler->endMapScriptScope();
+    handler->registerConfig("sourceStart", original);
+    expect_true(provider->save(CSaveFormat::primaryPath(slot), *rejected) &&
+                    provider->save(CSaveFormat::backupPath(slot), *accepted),
+                "invalid primary and valid backup must be saved");
+    CGameLoader::loadSavedGame(game, slot);
+    expect_true(game->getMap() != sourceMap && game->getMap()->getMapName() == destinationName &&
+                    handler->getType("StartEvent")->getLabel() == "destination factory" &&
+                    handler->getConfig("sourceStart") != original && provider->getActiveScope() == destinationName,
+                "primary rollback allows backup recovery to commit its own destination registrations");
+    const auto repaired = CSaveFormat::decodeDocument(provider->loadJson(CSaveFormat::primaryPath(slot)));
+    expect_true(repaired && repaired->snapshot->dump() == (*accepted)->at("snapshot").dump(),
+                "successful backup recovery repairs the primary using the accepted document");
+
+    game->setMap(sourceMap);
+    auto newerMap = game->createObject<CMap>();
+    newerMap->setMapName(sourceName);
+    auto newerConfig = std::make_shared<const json>(json{{"class", "CEvent"}});
+    std::weak_ptr<CGame> weakGame = game;
+    *reentrantLoad = [weakHandler, weakGame, newerMap, newerConfig] {
+        auto current = weakHandler.lock();
+        CObjectHandler::RegistrationTransaction newer(current);
+        current->beginMapScriptScope();
+        current->registerType("StartEvent", [] {
+            auto object = std::make_shared<CEvent>();
+            object->setLabel("newer factory");
+            return object;
+        });
+        current->endMapScriptScope();
+        current->registerConfig("sourceStart", newerConfig);
+        newer.commit();
+        auto owner = weakGame.lock();
+        owner->setMap(newerMap);
+        owner->getContext()->advanceTransitionGeneration();
+    };
+    expect_true(provider->save(CSaveFormat::primaryPath(slot), *rejected), "superseded primary fixture must be saved");
+    CGameLoader::loadSavedGame(game, slot);
+    expect_true(game->getMap() == newerMap && handler->getConfig("sourceStart") == newerConfig &&
+                    handler->getType("StartEvent")->getLabel() == "newer factory" &&
+                    provider->getActiveScope() == sourceName &&
+                    !handler->getConfig(CSaveFormat::savedMapConfigKey(slot)),
+                "a reentrant committed scene is preserved without rolling back or retrying the older load's backup");
+    *reentrantLoad = {};
+    cleanup();
+}
+
 } // namespace
 
 int main() {
@@ -895,6 +1148,8 @@ int main() {
     test_base_search_path_resolution_bypasses_active_map_scope();
     test_map_load_activates_scope_for_map_local_assets();
     test_failed_save_restore_preserves_resource_scope();
+    testRegistrationTransactionsPreserveNestedOwnershipAndNavigationRevisions();
+    testFailedSavedMapRegistrationsRollBackAndBackupCommits();
 
     return finish_tests();
 }

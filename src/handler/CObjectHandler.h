@@ -32,6 +32,29 @@ class CObjectHandler : public CGameObject {
   public:
     CObjectHandler();
 
+    // Snapshots the per-game registration tables for one synchronous load operation. A committed
+    // nested operation supersedes an older snapshot; a failed nested operation restores its parent.
+    class RegistrationTransaction {
+      public:
+        explicit RegistrationTransaction(std::shared_ptr<CObjectHandler> handler,
+                                         std::function<bool()> canRollback = {});
+        ~RegistrationTransaction();
+
+        RegistrationTransaction(const RegistrationTransaction &) = delete("registration transactions own a scope");
+        RegistrationTransaction &
+        operator=(const RegistrationTransaction &) = delete("registration transactions own a scope");
+        RegistrationTransaction(RegistrationTransaction &&) = delete("registration transactions own a scope");
+        RegistrationTransaction &
+        operator=(RegistrationTransaction &&) = delete("registration transactions own a scope");
+
+        bool isCurrent() const;
+        bool commit();
+
+      private:
+        struct State;
+        std::unique_ptr<State> state;
+    };
+
     template <fn::GameObjectDerived T = CGameObject>
     std::shared_ptr<T> createObject(std::shared_ptr<CGame> game, std::string type) {
         return vstd::cast<T>(_createObject(game, type));
@@ -112,4 +135,6 @@ class CObjectHandler : public CGameObject {
     std::unordered_map<std::string, std::shared_ptr<const json>> objectConfig;
     std::atomic_uint64_t navigationConfigRevision{1};
     bool nativeTileFactory = false;
+    std::uint64_t nextRegistrationEpoch = 0;
+    std::uint64_t registrationEpoch = 0;
 };
