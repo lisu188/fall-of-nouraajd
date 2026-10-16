@@ -28,6 +28,7 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #include <atomic>
 #include <cstdint>
 #include <limits>
+#include <mutex>
 #include <stdexcept>
 #include <unordered_map>
 #include <unordered_set>
@@ -49,6 +50,33 @@ std::map<std::string, std::shared_ptr<CGameObject>> map_deserialize(const std::s
                                                                     CSerializationReadContext &);
 
 namespace {
+
+struct NameGenerationState {
+    std::optional<std::uint32_t> fixtureSeed;
+    std::uint64_t fixtureSequence = 0;
+    bool startupSeeded = false;
+    bool sessionStarted = false;
+};
+
+NameGenerationState &nameGenerationState() {
+    static NameGenerationState state;
+    return state;
+}
+
+std::mutex &nameGenerationMutex() {
+    static std::mutex mutex;
+    return mutex;
+}
+
+std::atomic<bool> &fixtureNamesEnabled() {
+    static std::atomic<bool> enabled{false};
+    return enabled;
+}
+
+std::atomic<std::uint64_t> &productionNameSequence() {
+    static std::atomic<std::uint64_t> sequence{0};
+    return sequence;
+}
 
 constexpr const char *graphEnvelopeKey = "$gameGraphEnvelope";
 
@@ -1037,15 +1065,70 @@ std::string CSerialization::generateName(const std::shared_ptr<CGameObject> &obj
     });
 }
 
+class CSerialization::NameFixtureScopeForTests::State {
+  public:
+    NameGenerationState names;
+    std::uint64_t productionSequence = 0;
+};
+
+CSerialization::NameFixtureScopeForTests::NameFixtureScopeForTests(std::optional<std::uint32_t> seed)
+    : previous(std::make_unique<State>()) {
+    if (!vstd::event_loop<>::instance()->isMainThread()) {
+        throw std::logic_error("Native name fixtures require the engine owner thread and serial use.");
+    }
+    std::lock_guard lock(nameGenerationMutex());
+    previous->names = nameGenerationState();
+    previous->productionSequence = productionNameSequence().load();
+    nameGenerationState() = {};
+    nameGenerationState().fixtureSeed = seed;
+    productionNameSequence().store(0);
+    fixtureNamesEnabled().store(seed.has_value(), std::memory_order_release);
+}
+
+CSerialization::NameFixtureScopeForTests::~NameFixtureScopeForTests() {
+    std::lock_guard lock(nameGenerationMutex());
+    nameGenerationState() = previous->names;
+    productionNameSequence().store(previous->productionSequence);
+    fixtureNamesEnabled().store(previous->names.fixtureSeed.has_value(), std::memory_order_release);
+}
+
+void CSerialization::seedGeneratedNamesForTests(std::uint32_t seed) {
+    std::lock_guard lock(nameGenerationMutex());
+    auto &state = nameGenerationState();
+    if (state.sessionStarted || state.startupSeeded) {
+        throw std::logic_error("Test random seeding must run once before the first game session is created.");
+    }
+    state.fixtureSeed = seed;
+    state.fixtureSequence = 0;
+    state.startupSeeded = true;
+    fixtureNamesEnabled().store(true, std::memory_order_release);
+}
+
+void CSerialization::markGameSessionStarted() {
+    std::lock_guard lock(nameGenerationMutex());
+    nameGenerationState().sessionStarted = true;
+}
+
 std::string CSerialization::generateName(const std::shared_ptr<CGameObject> &object,
                                          const std::function<bool(const std::string &)> &isNameTaken) {
     // A colliding generated name silently drops the newcomer from name-keyed registries such as
     // CMap::mapObjects, so candidates are re-rolled until free. The sequence counter keeps hash
     // inputs distinct even when the allocator reuses an object address and the RNG repeats.
-    static std::atomic<std::uint64_t> sequence{0};
     constexpr int maxAttempts = 256;
     for (int attempt = 0; attempt < maxAttempts; attempt++) {
-        auto candidate = vstd::to_hex_hash(to_hex(object), vstd::rand(), sequence.fetch_add(1));
+        auto candidate = [&]() {
+            if (fixtureNamesEnabled().load(std::memory_order_acquire)) {
+                std::lock_guard lock(nameGenerationMutex());
+                auto &state = nameGenerationState();
+                if (state.fixtureSeed) {
+                    // Names do not consume a different gameplay stream in seeded fixtures.
+                    static_cast<void>(vstd::rand());
+                    return "fixture-" + std::to_string(*state.fixtureSeed) + "-" +
+                           std::to_string(state.fixtureSequence++);
+                }
+            }
+            return vstd::to_hex_hash(to_hex(object), vstd::rand(), productionNameSequence().fetch_add(1));
+        }();
         if (!isNameTaken || !isNameTaken(candidate)) {
             return candidate;
         }

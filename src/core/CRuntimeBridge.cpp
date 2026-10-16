@@ -16,6 +16,7 @@ You should have received a copy of the GNU General Public License
 along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 #include "core/CRuntimeBridge.h"
+#include "core/CSerialization.h"
 
 #include <cstdlib>
 #include <exception>
@@ -27,6 +28,7 @@ void CRuntimeBridge::seedRandomForTests(std::uint32_t seed) {
     if (!event_loop_instance()->isMainThread()) {
         throw std::logic_error("Test random seeding must run on the engine owner thread before creating a session.");
     }
+    CSerialization::seedGeneratedNamesForTests(seed);
     vstd::rng().seed(seed);
     std::srand(seed);
 }

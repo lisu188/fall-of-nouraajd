@@ -23,6 +23,7 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 #include <expected>
 #include <memory>
+#include <optional>
 #include <stdexcept>
 #include <unordered_map>
 #include <variant>
@@ -596,7 +597,29 @@ class CSerialization {
     static std::string generateName(const std::shared_ptr<CGameObject> &object,
                                     const std::function<bool(const std::string &)> &isNameTaken);
 
+    // For isolated, serial native fixtures on the loop owner, with no concurrent name generation.
+    // Nested scopes restore all name-generator state, including startup guards.
+    // Runtime RNGs are deliberately independent; callers save and restore them separately.
+    class NameFixtureScopeForTests {
+      public:
+        explicit NameFixtureScopeForTests(std::optional<std::uint32_t> seed = std::nullopt);
+        ~NameFixtureScopeForTests();
+        NameFixtureScopeForTests(const NameFixtureScopeForTests &) = delete;
+        NameFixtureScopeForTests &operator=(const NameFixtureScopeForTests &) = delete;
+        NameFixtureScopeForTests(NameFixtureScopeForTests &&) = delete;
+        NameFixtureScopeForTests &operator=(NameFixtureScopeForTests &&) = delete;
+
+      private:
+        class State;
+        std::unique_ptr<State> previous;
+    };
+
   private:
+    friend class CGame;
+    friend class CRuntimeBridge;
+    static void seedGeneratedNamesForTests(std::uint32_t seed);
+    static void markGameSessionStarted();
+
     static std::type_index getProperty(const std::shared_ptr<CGameObject> &object, const std::string &name);
 
     static std::type_index getGenericPropertyType(const json *object);

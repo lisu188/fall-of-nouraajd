@@ -20,6 +20,7 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #include "core/CGameContext.h"
 #include "core/CLoader.h"
 #include "core/CSceneManager.h"
+#include "core/CSerialization.h"
 #include "core/CMap.h"
 #include "core/CProvider.h"
 #include "plugin/CPluginRegistrar.h"
@@ -27,7 +28,7 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #include "gui/panel/CGamePanel.h"
 #include "gui/CTooltip.h"
 
-CGame::CGame() {}
+CGame::CGame() { CSerialization::markGameSessionStarted(); }
 
 std::shared_ptr<CNavigationService> CGame::getNavigationService() {
     std::lock_guard resource_lock(*resourceMutex);
