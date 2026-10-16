@@ -76,7 +76,7 @@ class OctobogzRuntimeTest(unittest.TestCase):
             alpha_name = state()['slots']['alpha']['name']
             alpha = game_map.getObjectByName(alpha_name)
             registry_snapshot = state()
-            print('native hunt alpha lookup ' + json.dumps({
+            print('native hunt alpha lookup', {
                 'stage': str(registry_snapshot.get('stage', ''))[:32],
                 'slots': {
                     slot: {
@@ -87,7 +87,7 @@ class OctobogzRuntimeTest(unittest.TestCase):
                 },
                 'placementWarning': bool(registry_snapshot.get('placementWarning', False)),
                 'alphaPresent': alpha is not None,
-            }, sort_keys=True), flush=True)
+            }, flush=True)
             assert json.loads(game.jsonify(alpha))['properties']['creatureClass']['properties']['combatRole'] == 'brute'
             assert {'Attack', 'octobogzCharge', 'octobogzShadowPulse'} <= {
                 action.getTypeId() for action in alpha.getActions()}
