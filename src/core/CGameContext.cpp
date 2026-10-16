@@ -165,11 +165,13 @@ void CGameContext::addEventLoopConnection(vstd::event_loop<>::connection connect
     eventLoopConnections.push_back(std::move(connection));
 }
 
-void CGameContext::trackEffectOwner(const std::shared_ptr<CCreature> &creature) {
+bool CGameContext::trackEffectOwner(const std::shared_ptr<CCreature> &creature) {
     std::lock_guard lock(*resourceMutex);
     if (isActive() && creature) {
         effectOwners[creature.get()] = creature;
+        return true;
     }
+    return false;
 }
 
 void CGameContext::untrackEffectOwner(const CCreature *creature) {
@@ -262,6 +264,7 @@ struct CGameContext::ShutdownState {
     std::shared_ptr<CMapSessionStore> mapSessionStore;
     std::shared_ptr<CNavigationService> navigationService;
     std::unordered_map<const CCreature *, std::weak_ptr<CCreature>> effectOwners;
+    std::shared_ptr<const int> effectOwnerIdentity;
     std::shared_ptr<CSlotConfig> slotConfiguration;
     bool released = false;
 
@@ -281,7 +284,7 @@ struct CGameContext::ShutdownState {
         }
         for (const auto &[identity, reference] : effectOwners) {
             if (auto creature = reference.lock()) {
-                creature->releaseEffectReferences();
+                creature->releaseEffectReferences(effectOwnerIdentity);
             }
         }
         effectOwners.clear();
@@ -343,6 +346,7 @@ void CGameContext::shutdown(CGame *owner) {
             state->navigationService = std::move(owner->navigationService);
         }
         state->effectOwners = std::move(effectOwners);
+        state->effectOwnerIdentity = effectOwnerIdentity;
         effectOwners.clear();
         state->slotConfiguration = std::move(slotConfiguration);
         state->mapSessionStore = std::move(mapSessionStore);

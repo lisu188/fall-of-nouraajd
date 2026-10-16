@@ -1757,6 +1757,107 @@ void test_effect_cycles_release_with_map_and_context_teardown() {
     expect_true(retainedActor.expired(), "shutdown must release retained-map actor/effect cycles");
 }
 
+vstd::task<void> closeEffectOwnerContextFromOwnedTask(std::shared_ptr<CGameContext> context) {
+    context->shutdown();
+    co_return;
+}
+
+void testEffectOwnershipFollowsLateGameAttachmentAndReassignment() {
+    auto loop = vstd::event_loop<>::instance();
+    loop->runUntilIdle();
+    {
+        auto game = std::make_shared<CGame>();
+        auto context = game->getContext();
+        auto actor = std::make_shared<CCreature>();
+        auto effect = std::make_shared<CEffect>();
+        effect->setCaster(actor);
+        effect->setVictim(actor);
+        effect->setDuration(7);
+        actor->addEffect(effect);
+        std::shared_ptr<CGameObject> base = actor;
+        base->setGame(game);
+        expect_true(context->getEffectOwnerCount() == 1,
+                    "late game attachment through the base API must register existing detached effects");
+        std::weak_ptr<CCreature> retainedActor = actor;
+        std::weak_ptr<CEffect> retainedEffect = effect;
+        actor.reset();
+        effect.reset();
+        base.reset();
+        context->shutdown();
+        expect_true(retainedActor.expired() && retainedEffect.expired(),
+                    "late-attached detached actor/effect cycles must release at context shutdown");
+        if (auto leaked = retainedActor.lock()) {
+            leaked->setEffects({});
+        }
+    }
+
+    for (const bool deferredShutdown : {false, true}) {
+        auto firstGame = std::make_shared<CGame>();
+        auto firstContext = firstGame->getContext();
+        auto secondGame = std::make_shared<CGame>();
+        auto secondContext = secondGame->getContext();
+        auto actor = std::make_shared<CCreature>();
+        actor->setGame(firstGame);
+        auto effect = std::make_shared<CEffect>();
+        effect->setCaster(actor);
+        effect->setVictim(actor);
+        effect->setDuration(9);
+        actor->addEffect(effect);
+        expect_true(firstContext->getEffectOwnerCount() == 1, "the first context must initially own the effects");
+        if (deferredShutdown) {
+            auto closed = firstContext->spawnTask(closeEffectOwnerContextFromOwnedTask(firstContext));
+            expect_true(closed.finished() && !firstContext->isActive() && actor->getEffects().contains(effect),
+                        "owned-task shutdown snapshots effects before its independent finalizer runs");
+        }
+        std::shared_ptr<CGameObject> base = actor;
+        if (deferredShutdown) {
+            std::exception_ptr transferFailure;
+            std::thread transfer([base, secondGame, &transferFailure] {
+                try {
+                    base->setGame(secondGame);
+                } catch (...) {
+                    transferFailure = std::current_exception();
+                }
+            });
+            {
+                pybind11::gil_scoped_release release;
+                transfer.join();
+            }
+            expect_true(!transferFailure, "detached effect reassignment must also complete from a native worker");
+        } else {
+            base->setGame(secondGame);
+        }
+        base->setGame(secondGame);
+        expect_true(actor->getGame() == secondGame && firstContext->getEffectOwnerCount() == 0 &&
+                        secondContext->getEffectOwnerCount() == 1,
+                    "game reassignment must transfer one effect registry entry and remain idempotent");
+        if (deferredShutdown) {
+            loop->runUntilIdle();
+        } else {
+            firstContext->shutdown();
+        }
+        expect_true(actor->getEffects().contains(effect) && effect->getCaster() == actor &&
+                        effect->getVictim() == actor && effect->getTimeLeft() == 9 && secondContext->isActive(),
+                    "old-context teardown must preserve a surviving session's transferred effect identity and time");
+        expect_runtime_error([&] { base->setGame(firstGame); },
+                             "a closed context must reject adoption of live detached effects");
+        expect_true(actor->getGame() == secondGame && actor->getEffects().contains(effect) &&
+                        firstContext->getEffectOwnerCount() == 0 && secondContext->getEffectOwnerCount() == 1,
+                    "rejected reassignment must preserve the active game's ownership and effect registry");
+        std::weak_ptr<CCreature> retainedActor = actor;
+        std::weak_ptr<CEffect> retainedEffect = effect;
+        actor.reset();
+        effect.reset();
+        base.reset();
+        secondContext->shutdown();
+        expect_true(retainedActor.expired() && retainedEffect.expired(),
+                    "the final owning context must release transferred detached actor/effect cycles");
+        if (auto leaked = retainedActor.lock()) {
+            leaked->setEffects({});
+        }
+    }
+}
+
 void test_effect_owner_registry_releases_finished_and_destroyed_owners() {
     auto game = std::make_shared<CGame>();
     auto context = game->getContext();
@@ -4021,6 +4122,8 @@ int main() {
                      test_game_context_shutdown_is_idempotent_and_preserves_other_game_services);
     runDiagnosedCase("test_effect_cycles_release_with_map_and_context_teardown",
                      test_effect_cycles_release_with_map_and_context_teardown);
+    runDiagnosedCase("testEffectOwnershipFollowsLateGameAttachmentAndReassignment",
+                     testEffectOwnershipFollowsLateGameAttachmentAndReassignment);
     runDiagnosedCase("test_effect_owner_registry_releases_finished_and_destroyed_owners",
                      test_effect_owner_registry_releases_finished_and_destroyed_owners);
     runDiagnosedCase("test_playtest_trace_records_and_helper_payloads",

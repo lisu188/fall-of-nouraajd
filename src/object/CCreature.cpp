@@ -100,6 +100,30 @@ CCreature::~CCreature() {
     }
 }
 
+void CCreature::setGame(std::shared_ptr<CGame> game) {
+    std::lock_guard lock(effectOwnershipMutex);
+    updateEffectOwnerContext(game);
+    CGameObject::setGame(std::move(game));
+}
+
+void CCreature::updateEffectOwnerContext(const std::shared_ptr<CGame> &game) {
+    auto previous = effectOwnerContext.lock();
+    auto context = game && !effects.empty() ? game->getContext() : nullptr;
+    if (context) {
+        if (!context->trackEffectOwner(this->ptr<CCreature>())) {
+            throw std::runtime_error("Cannot attach creature effects after CGameContext shutdown.");
+        }
+        effectOwnerContext = context;
+        effectOwnerIdentity = context->effectOwnerIdentity;
+    } else {
+        effectOwnerContext.reset();
+        effectOwnerIdentity.reset();
+    }
+    if (previous && previous != context) {
+        previous->untrackEffectOwner(this);
+    }
+}
+
 void CCreature::addExpScaled(int scale) {
     int rank = level - scale;
     // TODO: rethink this
@@ -515,6 +539,7 @@ void CCreature::addAction(std::shared_ptr<CInteraction> action) {
 }
 
 void CCreature::addEffect(std::shared_ptr<CEffect> effect) {
+    std::lock_guard lock(effectOwnershipMutex);
     if (!effect) {
         vstd::logger::warning("Skipping null effect for", to_string());
         return;
@@ -524,13 +549,11 @@ void CCreature::addEffect(std::shared_ptr<CEffect> effect) {
     } else {
         vstd::logger::debug(effect->to_string(), "starts for", this->to_string());
         effects.insert(effect);
-        if (auto game = getGame()) {
-            auto context = game->getContext();
-            if (auto previous = effectOwnerContext.lock(); previous && previous != context) {
-                previous->untrackEffectOwner(this);
-            }
-            effectOwnerContext = context;
-            context->trackEffectOwner(this->ptr<CCreature>());
+        try {
+            updateEffectOwnerContext(getGame());
+        } catch (...) {
+            effects.erase(effect);
+            throw;
         }
         recordDirectPropertyChanged("effects");
         signal("effectsChanged");
@@ -538,11 +561,20 @@ void CCreature::addEffect(std::shared_ptr<CEffect> effect) {
 }
 
 void CCreature::releaseEffectReferences() {
+    std::lock_guard lock(effectOwnershipMutex);
     if (auto context = effectOwnerContext.lock()) {
         context->untrackEffectOwner(this);
     }
     effectOwnerContext.reset();
+    effectOwnerIdentity.reset();
     effects.clear();
+}
+
+void CCreature::releaseEffectReferences(const std::shared_ptr<const int> &expectedOwner) {
+    std::lock_guard lock(effectOwnershipMutex);
+    if (effectOwnerIdentity.lock() == expectedOwner) {
+        releaseEffectReferences();
+    }
 }
 
 int CCreature::getMana() { return mana; }
@@ -1008,13 +1040,17 @@ void CCreature::addGold(int gold) { this->setGold(this->getGold() + gold); }
 
 void CCreature::takeGold(int gold) { this->setGold(this->getGold() - gold); }
 
-std::set<std::shared_ptr<CEffect>> CCreature::getEffects() const { return effects; }
+std::set<std::shared_ptr<CEffect>> CCreature::getEffects() const {
+    std::lock_guard lock(effectOwnershipMutex);
+    return effects;
+}
 
 void CCreature::onEnter(std::shared_ptr<CGameEvent>) {}
 
 void CCreature::onLeave(std::shared_ptr<CGameEvent>) {}
 
 void CCreature::onDestroy(std::shared_ptr<CGameEvent>) {
+    std::lock_guard lock(effectOwnershipMutex);
     if (!effects.empty()) {
         releaseEffectReferences();
         recordDirectPropertyChanged("effects");
@@ -1022,6 +1058,7 @@ void CCreature::onDestroy(std::shared_ptr<CGameEvent>) {
 }
 
 void CCreature::setEffects(const std::set<std::shared_ptr<CEffect>> &value) {
+    std::lock_guard lock(effectOwnershipMutex);
     CGameObject::PropertyNotificationBatch notificationBatch(*this);
     releaseEffectReferences();
     recordDirectPropertyChanged("effects");
@@ -1074,6 +1111,7 @@ void CCreature::useAction(std::shared_ptr<CInteraction> action, std::shared_ptr<
 }
 
 void CCreature::removeEffect(std::shared_ptr<CEffect> effect) {
+    std::lock_guard lock(effectOwnershipMutex);
     auto effectIt = std::find_if(effects.begin(), effects.end(), [effect](const auto &candidate) {
         return CGameObject::sameInstance(candidate, effect);
     });

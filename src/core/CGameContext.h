@@ -73,6 +73,7 @@ class CMapSessionStore {
 
 class CGameContext {
     friend class CGame;
+    friend class CCreature;
 
   public:
     using TransitionGeneration = std::uint64_t;
@@ -99,7 +100,7 @@ class CGameContext {
 
     void addEventLoopConnection(vstd::event_loop<>::connection connection);
 
-    void trackEffectOwner(const std::shared_ptr<CCreature> &creature);
+    bool trackEffectOwner(const std::shared_ptr<CCreature> &creature);
 
     void untrackEffectOwner(const CCreature *creature);
 
@@ -142,6 +143,7 @@ class CGameContext {
     std::shared_ptr<CMapSessionStore> mapSessionStore;
     std::vector<vstd::event_loop<>::connection> eventLoopConnections;
     std::unordered_map<const CCreature *, std::weak_ptr<CCreature>> effectOwners;
+    const std::shared_ptr<const int> effectOwnerIdentity = std::make_shared<const int>(0);
     std::shared_ptr<CSlotConfig> slotConfiguration;
     std::atomic<bool> active = true;
     std::atomic<TransitionGeneration> transitionGeneration = 0;

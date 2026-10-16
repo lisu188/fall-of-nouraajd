@@ -89,7 +89,7 @@ class CGameObject : public vstd::stringable, public std::enable_shared_from_this
     // TODO: get rid of game as a property!
     std::shared_ptr<CGame> getGame();
 
-    void setGame(std::shared_ptr<CGame> game);
+    virtual void setGame(std::shared_ptr<CGame> game);
 
     template <fn::GameObjectDerived T = CGameObject> std::shared_ptr<T> ptr() {
         //_cast purposedly
