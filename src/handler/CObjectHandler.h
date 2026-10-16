@@ -26,6 +26,7 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #include <atomic>
 
 class CMap;
+class CConfigurationProvider;
 
 class CObjectHandler : public CGameObject {
   public:
@@ -54,7 +55,11 @@ class CObjectHandler : public CGameObject {
 
     std::vector<std::string> getAllSubTypes(const std::string &claz);
 
+    // Provider-less file registration retains the process-wide compatibility cache.
+    // Game-owned loaders pass their context provider explicitly.
     void registerConfig(const std::string &path);
+
+    void registerConfig(const std::string &path, CConfigurationProvider &provider);
 
     void registerConfig(const std::string &name, std::shared_ptr<json> value);
 
@@ -63,6 +68,8 @@ class CObjectHandler : public CGameObject {
     void unregisterConfig(const std::string &name);
 
     void registerConfig(const std::set<std::string> &paths);
+
+    void registerConfig(const std::set<std::string> &paths, CConfigurationProvider &provider);
 
     void registerType(std::string name, std::function<std::shared_ptr<CGameObject>()> constructor);
     void registerNativeType(std::string name, std::function<std::shared_ptr<CGameObject>()> constructor);
@@ -86,6 +93,8 @@ class CObjectHandler : public CGameObject {
     std::optional<std::pair<bool, int>> getStaticTileNavigation(const std::string &type);
 
   private:
+    void registerConfigDocument(const std::string &path, const std::shared_ptr<const json> &config);
+
     std::shared_ptr<CGameObject> _createObject(std::shared_ptr<CGame> map, const std::string &type);
 
     std::shared_ptr<CGameObject> _createObject(std::shared_ptr<CGame> map, const std::string &type,
