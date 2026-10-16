@@ -619,7 +619,6 @@ class OctobogzMcpWalkthroughTest(unittest.TestCase):
             self.assertSlotDefeated("brood")
             return
         if player_class == "Sorcerer":
-            self.ensureAuthoredHealingReadiness(initial=False)
             self.prepareHealingStockAtAuthoredMarket(initial=False)
             self.recoverOnAuthoredRoad()
 
@@ -1665,6 +1664,28 @@ class OctobogzMcpWalkthroughTest(unittest.TestCase):
 
 
 class OctobogzDiagnosticTest(unittest.TestCase):
+    def testPostAlphaRecoveryDoesNotReapplyThePostScoutStockThreshold(self):
+        from types import SimpleNamespace
+        from unittest.mock import Mock
+
+        recovery = Mock()
+        preparation = Mock()
+        readiness = Mock(side_effect=AssertionError("The post-Scout stock was already checked before Alpha"))
+        walker = SimpleNamespace(
+            state=lambda: {"slots": {"brood": {"status": "living"}}},
+            game_map="map",
+            call=lambda handle, method, *args: "originalCave" if method == "getObjectByName" else False,
+            assertIsNotNone=self.assertIsNotNone,
+            assertFalse=self.assertFalse,
+            recoverOnAuthoredRoad=recovery,
+            prepareHealingStockAtAuthoredMarket=preparation,
+            ensureAuthoredHealingReadiness=readiness,
+        )
+        OctobogzMcpWalkthroughTest.recoverBeforeRemainingBrood(walker, "Sorcerer")
+        self.assertEqual(2, recovery.call_count)
+        preparation.assert_called_once_with(initial=False)
+        readiness.assert_not_called()
+
     def authoredReadinessFixture(self, *, strong=8, foes=10, lesser_loot=False, corruption=None):
         from unittest.mock import Mock
 
@@ -1899,10 +1920,8 @@ class OctobogzDiagnosticTest(unittest.TestCase):
             after_reload.index('self.defeat("alpha")'),
         )
         brood = ast.get_source_segment(source, methods["recoverBeforeRemainingBrood"])
-        self.assertLess(
-            brood.index("self.ensureAuthoredHealingReadiness(initial=False)"),
-            brood.index("self.prepareHealingStockAtAuthoredMarket(initial=False)"),
-        )
+        self.assertNotIn("ensureAuthoredHealingReadiness", brood)
+        self.assertIn("self.prepareHealingStockAtAuthoredMarket(initial=False)", brood)
 
     def testNativeLoggerIsOptInAndPassesTheExactFileArgument(self):
         import ast

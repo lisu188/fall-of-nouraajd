@@ -3124,11 +3124,11 @@ class OctobogzHuntTest(unittest.TestCase):
         walker.prepareHealingStockAtAuthoredMarket.assert_not_called()
         self.assertFalse(any(walker.call(item, "hasTag", "heal") for item in inventory))
 
-    def testRemainingBroodWithNoStrongStockStillRequiresActualFinitePreparationAndRejectsFalseDeaths(self):
+    def testRemainingBroodWithNoStrongStockStillRequiresEarnedStockAndRejectsFalseDeaths(self):
         walker, _, inventory, _, _, _, _, _, _ = self.remainingBroodDepartureFixture(dies_on_road=False)
         with patch("builtins.print"), self.assertRaisesRegex(AssertionError, "genuinely earned stronger healing stock"):
             walker.recoverBeforeRemainingBrood("Sorcerer")
-        walker.ensureAuthoredHealingReadiness.assert_called_once_with(initial=False)
+        walker.ensureAuthoredHealingReadiness.assert_not_called()
         self.assertEqual(set(), walker.confirmed_dead)
         self.assertEqual([], walker.basicLesserIngredients(inventory))
         self.assertFalse(any(walker.call(item, "hasTag", "heal") for item in inventory))
