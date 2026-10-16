@@ -284,6 +284,154 @@ class PchCompilerPolicyTest(unittest.TestCase):
         self.assertIn("-DGAME_ENABLE_UNITY_BUILD=ON -DGAME_ENABLE_PCH=ON -DGAME_UNITY_BATCH_SIZE=16", configure)
 
 
+@unittest.skipUnless(shutil.which("cmake") and shutil.which("ninja"), "CMake and Ninja are required")
+class ProfileCompilePoolPolicyTest(unittest.TestCase):
+    def runProbe(
+        self,
+        *,
+        generator="Ninja",
+        build_type="RelWithDebInfo",
+        system="Linux",
+        global_pools=None,
+        fallback_pools="",
+        inherited_pool=None,
+        explicit_pool=None,
+    ):
+        with tempfile.TemporaryDirectory(prefix="nouraajd-profile-pool-") as directory:
+            root = Path(directory)
+            (root / "dummy.h").write_text(
+                "// Header-only configure fixture; no compiler is enabled.\n", encoding="utf-8"
+            )
+            settings = [
+                "cmake_minimum_required(VERSION 3.20)",
+                "project(profile_pool_policy LANGUAGES NONE)",
+                f'set(CMAKE_BUILD_TYPE "{build_type}")',
+                f'set(CMAKE_SYSTEM_NAME "{system}")',
+                f"set(WIN32 {'TRUE' if system == 'Windows' else 'FALSE'})",
+                f'set(CMAKE_JOB_POOLS "{fallback_pools}")',
+            ]
+            if global_pools is not None:
+                settings.append(f'set_property(GLOBAL PROPERTY JOB_POOLS "{global_pools}")')
+            if inherited_pool is not None:
+                settings.append(f'set(CMAKE_JOB_POOL_COMPILE "{inherited_pool}")')
+            settings.extend(
+                [
+                    f'include("{(ROOT / "cmake/ConfigureCompilePool.cmake").as_posix()}")',
+                    "foreach(target IN ITEMS first second vendor)",
+                    "  add_library(${target} OBJECT dummy.h)",
+                    "  set_target_properties(${target} PROPERTIES LINKER_LANGUAGE CXX CXX_STANDARD 26",
+                    '    CXX_STANDARD_REQUIRED ON CXX_EXTENSIONS OFF COMPILE_OPTIONS "-O2;-g")',
+                    "endforeach()",
+                ]
+            )
+            if explicit_pool is not None:
+                settings.append(f'set_property(TARGET first PROPERTY JOB_POOL_COMPILE "{explicit_pool}")')
+            settings.extend(
+                [
+                    "configure_profile_compile_pool(first)",
+                    "configure_profile_compile_pool(second)",
+                    "configure_profile_compile_pool(first)",
+                    "get_property(pools GLOBAL PROPERTY JOB_POOLS)",
+                    'file(WRITE "${CMAKE_BINARY_DIR}/policy.txt" "pools=${pools}\\n")',
+                    "foreach(target IN ITEMS first second vendor)",
+                    "  foreach(property IN ITEMS JOB_POOL_COMPILE COMPILE_OPTIONS CXX_STANDARD",
+                    "      CXX_STANDARD_REQUIRED CXX_EXTENSIONS)",
+                    "    get_property(value TARGET ${target} PROPERTY ${property})",
+                    '    file(APPEND "${CMAKE_BINARY_DIR}/policy.txt" "${target}.${property}=${value}\\n")',
+                    "  endforeach()",
+                    "endforeach()",
+                ]
+            )
+            (root / "CMakeLists.txt").write_text("\n".join(settings) + "\n", encoding="utf-8")
+            result = subprocess.run(
+                ["cmake", "-S", str(root), "-B", str(root / "build"), "-G", generator],
+                capture_output=True,
+                text=True,
+                timeout=15,
+            )
+            report = root / "build/policy.txt"
+            values = dict(line.split("=", 1) for line in report.read_text().splitlines()) if report.is_file() else {}
+            rules = root / "build/CMakeFiles/rules.ninja"
+            ninja = rules.read_text() if rules.is_file() else ""
+            if result.returncode == 0:
+                for target in ("first", "second", "vendor"):
+                    self.assertEqual("-O2;-g", values[f"{target}.COMPILE_OPTIONS"])
+                    self.assertEqual("26", values[f"{target}.CXX_STANDARD"])
+                    self.assertEqual("ON", values[f"{target}.CXX_STANDARD_REQUIRED"])
+                    self.assertEqual("OFF", values[f"{target}.CXX_EXTENSIONS"])
+                self.assertNotIn("CXX compiler identification", result.stdout)
+                self.assertFalse(list((root / "build").rglob("*.obj")))
+                self.assertFalse(list((root / "build").rglob("*.o")))
+            return result, values, ninja
+
+    def successfulProbe(self, **arguments):
+        result, values, ninja = self.runProbe(**arguments)
+        self.assertEqual(0, result.returncode, result.stdout + result.stderr)
+        return values, ninja
+
+    def testDesktopProfileUsesOneSharedDepthTwoPoolWithoutChangingFlagsOrVendors(self):
+        for system in ("Linux", "Windows"):
+            with self.subTest(system=system):
+                values, ninja = self.successfulProbe(system=system)
+                self.assertEqual("nouraajd_profile_compile=2", values["pools"])
+                self.assertEqual("nouraajd_profile_compile", values["first.JOB_POOL_COMPILE"])
+                self.assertEqual("nouraajd_profile_compile", values["second.JOB_POOL_COMPILE"])
+                self.assertEqual("", values["vendor.JOB_POOL_COMPILE"])
+                self.assertEqual(1, ninja.count("pool nouraajd_profile_compile\n"))
+                self.assertIn("pool nouraajd_profile_compile\n  depth = 2", ninja)
+
+    def testOtherConfigurationsPlatformsAndMultiConfigStayUnchanged(self):
+        cases = (
+            {"build_type": "Debug"},
+            {"build_type": "Release"},
+            {"system": "Android"},
+            {"system": "Darwin"},
+            {"generator": "Ninja Multi-Config"},
+        )
+        for arguments in cases:
+            with self.subTest(arguments=arguments):
+                values, ninja = self.successfulProbe(**arguments)
+                self.assertEqual("", values["pools"])
+                self.assertEqual("", values["first.JOB_POOL_COMPILE"])
+                self.assertEqual("", values["second.JOB_POOL_COMPILE"])
+                self.assertNotIn("pool nouraajd_profile_compile", ninja)
+
+    def testVariableFallbackAndGlobalPoolsRetainTheirPrecedence(self):
+        values, ninja = self.successfulProbe(fallback_pools="custom_compile=3;custom_link=1")
+        self.assertEqual("custom_compile=3;custom_link=1;nouraajd_profile_compile=2", values["pools"])
+        self.assertIn("pool custom_compile\n  depth = 3", ninja)
+        self.assertIn("pool custom_link\n  depth = 1", ninja)
+        values, ninja = self.successfulProbe(global_pools="custom=4", fallback_pools="ignored=9")
+        self.assertEqual("custom=4;nouraajd_profile_compile=2", values["pools"])
+        self.assertNotIn("pool ignored", ninja)
+        values, _ninja = self.successfulProbe(global_pools="", fallback_pools="ignored=9")
+        self.assertEqual("nouraajd_profile_compile=2", values["pools"])
+
+    def testExplicitAndInheritedTargetAssignmentsArePreserved(self):
+        for assigned in ("custom", ""):
+            with self.subTest(assigned=assigned):
+                values, _ninja = self.successfulProbe(global_pools="custom=1", explicit_pool=assigned)
+                self.assertEqual(assigned, values["first.JOB_POOL_COMPILE"])
+                self.assertEqual("nouraajd_profile_compile", values["second.JOB_POOL_COMPILE"])
+        values, ninja = self.successfulProbe(global_pools="custom=1", inherited_pool="custom")
+        self.assertEqual("custom=1", values["pools"])
+        for target in ("first", "second", "vendor"):
+            self.assertEqual("custom", values[f"{target}.JOB_POOL_COMPILE"])
+        self.assertNotIn("pool nouraajd_profile_compile", ninja)
+
+    def testConflictingReservedPoolFailsAtConfigureWithoutReplacingIt(self):
+        result, _values, _ninja = self.runProbe(global_pools="custom=1;nouraajd_profile_compile=4")
+        self.assertNotEqual(0, result.returncode)
+        self.assertIn("nouraajd_profile_compile pool is reserved with depth 2", result.stderr)
+
+    def testPolicyIsAppliedOnlyThroughTheOwnedTargetHelper(self):
+        cmake = (ROOT / "CMakeLists.txt").read_text(encoding="utf-8")
+        self.assertIn("include(cmake/ConfigureCompilePool.cmake)", cmake)
+        helper = cmake.split("function(configure_cpp_target target_name)", 1)[1].split("endfunction()", 1)[0]
+        self.assertIn("configure_profile_compile_pool(${target_name})", helper)
+        self.assertNotIn("CMAKE_JOB_POOL_COMPILE", cmake)
+
+
 @unittest.skipUnless(shutil.which("cmake"), "CMake is unavailable")
 class Cxx26ConfigureRejectionTest(unittest.TestCase):
     def runProbe(
