@@ -262,6 +262,87 @@ void test_configuration_provider_instances_do_not_share_config_cache() {
     std::filesystem::remove(tempConfigPath);
 }
 
+void testFileRegistrationUsesContextDocumentsAndRetainsImmutableAliases() {
+    const auto resources = CResourcesProvider::getInstance();
+    const auto itemsPath = std::filesystem::path(resources->getPath("config/items.json"));
+    expect_true(!itemsPath.empty(), "file registration fixture must resolve the configuration directory");
+    if (itemsPath.empty()) {
+        return;
+    }
+    const auto nonce = std::to_string(std::chrono::steady_clock::now().time_since_epoch().count());
+    const auto logicalPath = "unit_file_registration_" + nonce + ".json";
+    const auto registeredPath = "config/" + logicalPath;
+    const auto itemId = "unitFileItem" + nonce;
+    const auto referenceId = "unitFileReference" + nonce;
+    const auto fixturePath = itemsPath.parent_path() / logicalPath;
+    struct FixtureOwner {
+        std::filesystem::path path;
+        ~FixtureOwner() {
+            std::error_code error;
+            std::filesystem::remove(path, error);
+        }
+    } fixture{fixturePath};
+    const auto document = [&](int power) {
+        return json{{itemId, {{"class", "CItem"}, {"properties", {{"power", power}}}}},
+                    {referenceId, {{"ref", itemId}}}}
+            .dump();
+    };
+    const auto sameOwner = [](const auto &left, const auto &right) {
+        return !left.owner_before(right) && !right.owner_before(left);
+    };
+    expect_true(write_text_file(fixturePath, document(11)), "first registration document must be written");
+    if (!std::filesystem::exists(fixturePath)) {
+        return;
+    }
+
+    auto firstGame = CGameLoader::loadGame();
+    auto firstProvider = firstGame->getConfigurationProvider();
+    auto firstHandler = firstGame->getObjectHandler();
+    auto firstDocument = firstProvider->getConfiguration(registeredPath);
+    auto retainedEntry = firstHandler->getConfig(itemId);
+    expect_true(firstDocument && retainedEntry && sameOwner(firstDocument, retainedEntry),
+                "file registration must alias the immutable document owned by the game's provider");
+    if (!firstDocument || !retainedEntry) {
+        return;
+    }
+    std::weak_ptr<const json> documentLifetime = firstDocument;
+    auto firstItem = firstGame->createObject<CItem>(referenceId);
+    expect_true(firstItem && firstItem->getPower() == 11,
+                "configured references must resolve the first session's registered document");
+
+    expect_true(write_text_file(fixturePath, document(22)), "second registration document must replace the fixture");
+    auto secondGame = CGameLoader::loadGame();
+    const auto secondDocument = secondGame->getConfigurationProvider()->getConfiguration(registeredPath);
+    const auto secondEntry = secondGame->getObjectHandler()->getConfig(itemId);
+    expect_true(secondDocument && secondEntry && sameOwner(secondDocument, secondEntry),
+                "the next session must register its own provider's immutable document");
+    expect_true(secondEntry && secondEntry->at("properties").at("power").get<int>() == 22,
+                "the same file path must load its rewritten value in a second game context");
+    auto secondItem = secondGame->createObject<CItem>(referenceId);
+    expect_true(secondItem && secondItem->getPower() == 22,
+                "configured references must use the current session's object registration");
+    expect_true(retainedEntry->at("properties").at("power").get<int>() == 11,
+                "a later session must preserve the first immutable registration snapshot");
+
+    expect_true(write_text_file(fixturePath, document(33)), "the compatibility-cache witness must replace the fixture");
+    const auto globalDocument = CConfigurationProvider::getConfig(registeredPath);
+    expect_true(globalDocument && globalDocument->at(itemId).at("properties").at("power").get<int>() == 33,
+                "first-party file registration must leave the process-wide compatibility cache untouched");
+    expect_true(globalDocument && !sameOwner(globalDocument, firstDocument) &&
+                    !sameOwner(globalDocument, secondDocument),
+                "compatibility and session providers must keep independent immutable owners");
+
+    firstGame->getContext()->shutdown();
+    firstGame.reset();
+    firstHandler.reset();
+    firstProvider.reset();
+    firstDocument.reset();
+    expect_true(!documentLifetime.expired() && retainedEntry->at("properties").at("power").get<int>() == 11,
+                "retained file-registration aliases must survive shutdown of their context provider");
+    retainedEntry.reset();
+    expect_true(documentLifetime.expired(), "the final registration alias must release its immutable document");
+}
+
 void test_load_game_creates_context_owned_providers() {
     auto first_game = CGameLoader::loadGame();
     auto second_game = CGameLoader::loadGame();
@@ -804,6 +885,7 @@ int main() {
     testImmutableObjectConfigurationsKeepTheirDocumentOwner();
     test_resource_provider_save_uses_provider_root_when_cwd_changes();
     test_configuration_provider_instances_do_not_share_config_cache();
+    testFileRegistrationUsesContextDocumentsAndRetainsImmutableAliases();
     test_load_game_creates_context_owned_providers();
     test_game_contexts_isolate_same_logical_config_id();
     test_map_load_resolves_through_context_owned_providers();

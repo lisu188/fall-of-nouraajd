@@ -1268,9 +1268,10 @@ std::set<std::string> get_saved_map_dependencies(const std::shared_ptr<CGame> &g
 }
 
 void load_map_resources(const std::shared_ptr<CGame> &game, const std::string &mapName) {
-    game->getObjectHandler()->registerConfig(getConfigPaths(game->getResourcesProvider(), mapName));
+    const auto configuration = game->getConfigurationProvider();
+    game->getObjectHandler()->registerConfig(getConfigPaths(game->getResourcesProvider(), mapName), *configuration);
     CPluginLoader::loadMapPlugins(game, mapName);
-    game->getObjectHandler()->registerConfig(getConfigPaths(game->getResourcesProvider(), mapName));
+    game->getObjectHandler()->registerConfig(getConfigPaths(game->getResourcesProvider(), mapName), *configuration);
 }
 
 // Register the map's directory as a scoped search root and make it the active scope so that
@@ -1778,8 +1779,9 @@ void CGameLoader::changeMap(const std::shared_ptr<CGame> &game, const std::strin
 }
 
 void CGameLoader::initConfigurations(const std::shared_ptr<CGame> &game) {
+    const auto configuration = game->getConfigurationProvider();
     for (const std::string &path : game->getResourcesProvider()->getFiles(CResType::CONFIG)) {
-        game->getObjectHandler()->registerConfig(path);
+        game->getObjectHandler()->registerConfig(path, *configuration);
     }
 }
 

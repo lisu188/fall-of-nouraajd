@@ -24,12 +24,19 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 CObjectHandler::CObjectHandler() {}
 
 void CObjectHandler::registerConfig(const std::string &path) {
-    auto config = CConfigurationProvider::getConfig(path);
+    registerConfigDocument(path, CConfigurationProvider::getConfig(path));
+}
+
+void CObjectHandler::registerConfig(const std::string &path, CConfigurationProvider &provider) {
+    registerConfigDocument(path, provider.getConfiguration(path));
+}
+
+void CObjectHandler::registerConfigDocument(const std::string &path, const std::shared_ptr<const json> &config) {
     if (!config) {
         vstd::logger::warning("Failed to load config:", path);
         return;
     }
-    for (auto &[key, value] : config->items()) {
+    for (const auto &[key, value] : config->items()) {
         if (value.is_object() && !value.count("class") && !value.count("ref")) {
             continue;
         }
@@ -207,5 +214,11 @@ std::string CObjectHandler::getClass(const std::string &type) {
 void CObjectHandler::registerConfig(const std::set<std::string> &paths) {
     for (const auto &path : paths) {
         registerConfig(path);
+    }
+}
+
+void CObjectHandler::registerConfig(const std::set<std::string> &paths, CConfigurationProvider &provider) {
+    for (const auto &path : paths) {
+        registerConfig(path, provider);
     }
 }
