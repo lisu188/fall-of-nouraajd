@@ -107,6 +107,10 @@ void CCreature::setGame(std::shared_ptr<CGame> game) {
 }
 
 void CCreature::updateEffectOwnerContext(const std::shared_ptr<CGame> &game) {
+    // Detached effects keep their last context responsible for breaking ownership cycles.
+    if (!game && !effects.empty()) {
+        return;
+    }
     auto previous = effectOwnerContext.lock();
     auto context = game && !effects.empty() ? game->getContext() : nullptr;
     if (context) {

@@ -1810,6 +1810,9 @@ void testEffectOwnershipFollowsLateGameAttachmentAndReassignment() {
                         "owned-task shutdown snapshots effects before its independent finalizer runs");
         }
         std::shared_ptr<CGameObject> base = actor;
+        base->setGame(nullptr);
+        expect_true(!actor->getGame() && actor->getEffects().contains(effect),
+                    "detaching a buffed actor must preserve its effects until a new game adopts it");
         if (deferredShutdown) {
             std::exception_ptr transferFailure;
             std::thread transfer([base, secondGame, &transferFailure] {
@@ -1854,6 +1857,62 @@ void testEffectOwnershipFollowsLateGameAttachmentAndReassignment() {
                     "the final owning context must release transferred detached actor/effect cycles");
         if (auto leaked = retainedActor.lock()) {
             leaked->setEffects({});
+        }
+    }
+}
+
+void testNullGameDetachmentRetainsEffectCleanupOwnership() {
+    auto loop = vstd::event_loop<>::instance();
+    for (const bool deferredShutdown : {false, true}) {
+        for (const bool crossed : {false, true}) {
+            auto game = std::make_shared<CGame>();
+            auto context = game->getContext();
+            std::vector<std::shared_ptr<CCreature>> actors;
+            std::vector<std::shared_ptr<CEffect>> effects;
+            std::vector<std::weak_ptr<CCreature>> actorLifetimes;
+            std::vector<std::weak_ptr<CEffect>> effectLifetimes;
+            for (int index = 0; index < (crossed ? 2 : 1); ++index) {
+                auto actor = std::make_shared<CCreature>();
+                actor->setGame(game);
+                actorLifetimes.push_back(actor);
+                actors.push_back(std::move(actor));
+            }
+            for (std::size_t index = 0; index < actors.size(); ++index) {
+                auto effect = std::make_shared<CEffect>();
+                effect->setCaster(actors[(index + 1) % actors.size()]);
+                effect->setVictim(actors[index]);
+                actors[index]->addEffect(effect);
+                effectLifetimes.push_back(effect);
+                effects.push_back(std::move(effect));
+            }
+            if (deferredShutdown) {
+                auto closed = context->spawnTask(closeEffectOwnerContextFromOwnedTask(context));
+                expect_true(closed.finished() && !context->isActive(),
+                            "the detached cleanup fixture must snapshot ownership before finalization");
+            }
+            for (const auto &actor : actors) {
+                std::shared_ptr<CGameObject> base = actor;
+                base->setGame(nullptr);
+                expect_true(!actor->getGame() && actor->getEffects().size() == 1,
+                            "null game assignment must clear the public game while preserving live effects");
+            }
+            expect_true(context->getEffectOwnerCount() == (deferredShutdown ? 0 : actors.size()),
+                        "null game detachment must retain cleanup registration until context teardown");
+            actors.clear();
+            effects.clear();
+            if (deferredShutdown) {
+                loop->runUntilIdle();
+            } else {
+                context->shutdown();
+            }
+            expect_true(std::ranges::all_of(actorLifetimes, [](const auto &actor) { return actor.expired(); }) &&
+                            std::ranges::all_of(effectLifetimes, [](const auto &effect) { return effect.expired(); }),
+                        "the prior cleanup context must release null-detached self and cross-actor effect cycles");
+            for (const auto &actor : actorLifetimes) {
+                if (auto leaked = actor.lock()) {
+                    leaked->setEffects({});
+                }
+            }
         }
     }
 }
@@ -4124,6 +4183,8 @@ int main() {
                      test_effect_cycles_release_with_map_and_context_teardown);
     runDiagnosedCase("testEffectOwnershipFollowsLateGameAttachmentAndReassignment",
                      testEffectOwnershipFollowsLateGameAttachmentAndReassignment);
+    runDiagnosedCase("testNullGameDetachmentRetainsEffectCleanupOwnership",
+                     testNullGameDetachmentRetainsEffectCleanupOwnership);
     runDiagnosedCase("test_effect_owner_registry_releases_finished_and_destroyed_owners",
                      test_effect_owner_registry_releases_finished_and_destroyed_owners);
     runDiagnosedCase("test_playtest_trace_records_and_helper_payloads",
