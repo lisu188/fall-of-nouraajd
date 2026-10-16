@@ -39,6 +39,8 @@ class GAME_CORE_EXPORT CLuaHandler : public std::enable_shared_from_this<CLuaHan
 
     CLuaHandler(const CLuaHandler &) = delete;
     CLuaHandler &operator=(const CLuaHandler &) = delete;
+    CLuaHandler(CLuaHandler &&) = delete("Lua runtime state cannot move between handlers");
+    CLuaHandler &operator=(CLuaHandler &&) = delete("Lua runtime state cannot move between handlers");
 
     // Closes the lua_State. Objects retained past this point dispatch as "no override".
     void releaseState();
@@ -59,5 +61,8 @@ class GAME_CORE_EXPORT CLuaHandler : public std::enable_shared_from_this<CLuaHan
   private:
     bool ensureState();
 
-    lua_State *luaState = nullptr;
+    struct LuaStateCloser {
+        void operator()(lua_State *state) const noexcept;
+    };
+    std::unique_ptr<lua_State, LuaStateCloser> luaState;
 };
