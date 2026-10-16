@@ -150,6 +150,7 @@ FAST_TEST_PREFIXES = (
     "OctobogzHuntContractTest.",
     "MonsterBalanceRunnerTest.",
     "NativeCallgrindToolTest.",
+    "ScriptFlowExportTest.",
     "NativeTestProfileSourceTest.",
     "PlayerIdentityContentTest.",
     "EffectContractTest.",
@@ -25950,6 +25951,18 @@ class TestRunnerSuiteTest(unittest.TestCase):
         self.assertNotIn("_EffectContractTest", globals())
         self.assertNotIn("_CharacterCreationFlowTest", globals())
 
+    def testScriptFlowExportRegressionIsDiscoveredOnceInSourceSuites(self):
+        if not SOURCE_UI_TESTS_AVAILABLE:
+            self.skipTest("Source-only contracts are not installed with the game")
+        methods = unittest.defaultTestLoader.getTestCaseNames(ScriptFlowExportTest)
+        self.assertTrue(methods)
+        for method in methods:
+            test_name = f"ScriptFlowExportTest.{method}"
+            self.assertEqual(f"{__name__}.{test_name}", ScriptFlowExportTest(method).id())
+            for suite_name in ("fast", "full", "coverage-safe"):
+                self.assertTrue(test_name_matches_suite(test_name, suite_name), (test_name, suite_name))
+        self.assertNotIn("_ScriptFlowExportTest", globals())
+
     def test_explicit_transition_wait_accepts_completed_slow_pump(self):
         from unittest.mock import Mock, patch
 
@@ -26413,6 +26426,7 @@ if SOURCE_UI_TESTS_AVAILABLE:
     from tests.test_python_callback_lifecycle import PythonCallbackLifecycleTest as _PythonCallbackLifecycleTest
     from tests.test_ui_mcp_dialogue import DialogueMcpWalkthroughTest as _DialogueMcpWalkthroughTest
     from tests.test_native_callgrind import NativeCallgrindToolTest as _NativeCallgrindToolTest
+    from tests.test_script_flow_exports import ScriptFlowExportTest as _ScriptFlowExportTest
     from tests.test_native_test_profile import NativeTestProfileSourceTest as _NativeTestProfileSourceTest
     from tests.test_native_test_profile import NativeTestProfileRuntimeTest as _NativeTestProfileRuntimeTest
     from tests.test_windows_python_configuration import (
@@ -26471,6 +26485,9 @@ if SOURCE_UI_TESTS_AVAILABLE:
         pass
 
     class NativeCallgrindToolTest(_NativeCallgrindToolTest):
+        pass
+
+    class ScriptFlowExportTest(_ScriptFlowExportTest):
         pass
 
     class NativeTestProfileRuntimeTest(_NativeTestProfileRuntimeTest):
@@ -26567,6 +26584,7 @@ if SOURCE_UI_TESTS_AVAILABLE:
     del _NativeTestProfileSourceTest, _NativeTestProfileRuntimeTest
     del _WindowsPythonConfigurationTest
     del _NativeCallgrindToolTest
+    del _ScriptFlowExportTest
     del _EffectContractTest, _EffectSemanticRuntimeTest, _CharacterCreationFlowTest, _CharacterPreviewRuntimeTest
     del _UiPixelAnalysisTest
     del _EnemyRoleRuntimeTest

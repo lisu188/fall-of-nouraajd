@@ -85,6 +85,9 @@ class CScriptHandler {
     void releaseState();
 
     std::unique_ptr<CScriptFlow> createUiFlow(const std::string &entry, std::weak_ptr<CGame> game);
+#if !defined(_WIN32)
+    GAME_CORE_EXPORT
+#endif
     std::unique_ptr<CScriptFlow> createCallbackFlow(pybind11::function callback, std::weak_ptr<CGame> game);
     static std::unique_ptr<CScriptFlow>
     createObjectFlow(const std::shared_ptr<CGameObject> &object, const std::string &method,
