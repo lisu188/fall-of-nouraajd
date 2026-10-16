@@ -2618,7 +2618,11 @@ void test_scene_manager_awaits_preparation_and_rolls_back_errors() {
                 "the native flow API queues a suspended preparation");
     pump_event_loop_iterations();
     expect_true(state->started == 1 && state->finished == 0, "the final flow is suspended before teardown");
+    std::cout << "[map-lifetime] preparation beforeReset owners=" << game.use_count()
+              << " active=" << context->isActive() << std::endl;
     game.reset();
+    std::cout << "[map-lifetime] preparation afterReset owners=" << owner.use_count()
+              << " active=" << context->isActive() << " completions=" << completions.size() << std::endl;
     expect_true(owner.expired() && !context->isActive(),
                 "a suspended preparation cannot retain the game or block its destructor");
     expect_true(completions == std::vector<bool>({false, true, false}) && state->finished == 0,
@@ -2925,7 +2929,11 @@ void testAsyncGameStartOwnsSuspendedEntryAndRollsBackCancellation() {
                 player->getCoords() == destination->getEntry() && source->getPlayer() == sourcePlayer,
             "native start must install a fresh player then await its entry without mutating the source registry");
         if (finish == Finish::ReleaseGame) {
+            std::cout << "[map-lifetime] start beforeReset owners=" << game.use_count()
+                      << " active=" << context->isActive() << std::endl;
             game.reset();
+            std::cout << "[map-lifetime] start afterReset owners=" << lifetime.use_count()
+                      << " active=" << context->isActive() << " finished=" << start.finished() << std::endl;
             expect_true(lifetime.expired() && !context->isActive(),
                         "a suspended new-adventure task must not retain its game or prevent teardown");
         } else if (finish == Finish::Cancel) {

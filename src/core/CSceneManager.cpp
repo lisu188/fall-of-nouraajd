@@ -340,6 +340,10 @@ vstd::task<void> CSceneManager::performMapChangeAsync(std::weak_ptr<CGame> weakG
         resetTransition();
     } catch (...) {
         game = weakGame.lock();
+        if ((!game || !game->getContext()->isActive()) && map && map != oldMap && player && map->player == player &&
+            map->getObjectByName("player") == player && player->getMap() == map) {
+            map->detachPlayer();
+        }
         if (game && game->getContext()->isTransitionGenerationCurrent(expectedGeneration) &&
             (game->getMap() == oldMap || game->getMap() == map) && (!oldMap || oldMap->getPlayer() == player) &&
             (game->getMap() != map || !map || !map->getPlayer() || map->getPlayer() == player)) {

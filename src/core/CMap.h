@@ -66,6 +66,7 @@ class CMap : public CGameObject {
     using BoundsMap = std::map<int, std::pair<int, int>>;
 
     friend class CMapLoader;
+    friend class CSceneManager;
 
     friend class CRandomMapGenerator;
     friend class CNavigationSnapshot;
