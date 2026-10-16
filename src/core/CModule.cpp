@@ -19,6 +19,7 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #include <algorithm>
 #include <atomic>
 #include <cctype>
+#include <cstdlib>
 #include <cstdint>
 #include <optional>
 #include <stdexcept>
@@ -445,14 +446,6 @@ void register_python_binding_type_metadata() {
 }
 
 void init_game_module(py::module_ &m) {
-    m.def(
-        "_seedRandomForTests",
-        [](std::uint32_t seed) {
-            CRngHandler::seedRandomForTests(seed);
-            // Linux builds this module with hidden symbols outside game_core.
-            vstd::rng().seed(seed);
-        },
-        py::arg("seed"));
     auto pythonEventCallbacks = std::make_shared<CPythonEventCallbacks>();
     py::module_::import("atexit").attr("register")(
         py::cpp_function([pythonEventCallbacks]() { pythonEventCallbacks->shutdown(); }));
@@ -1590,6 +1583,14 @@ void init_game_module(py::module_ &m) {
             "Return resolved list grid size as (columns, rows).");
     PY_WRAP_GENERIC_DOC(randint, "randint(lower, upper) -> int: Return a uniform integer with both bounds inclusive. "
                                  "Reversed bounds are normalized.");
+    m.def(
+        "_seedRandomForTests",
+        [](std::uint32_t seed) {
+            CRuntimeBridge::seedRandomForTests(seed);
+            // This module has a hidden RNG instance outside game_core on Linux.
+            vstd::rng().seed(seed);
+        },
+        py::arg("seed"));
     m.def("jsonify", &jsonify_py, "jsonify(obj) -> str: Serialize a game object to JSON text.");
     PY_WRAP_GENERIC_DOC(logger, "logger(message) -> None: Write an info log message to the engine logger.");
     m.def("set_logger_sink", set_logger_sink_py, py::arg("sink_name"), py::arg("path") = py::none(),

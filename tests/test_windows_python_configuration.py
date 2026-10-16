@@ -130,14 +130,17 @@ class WindowsPythonConfigurationTest(unittest.TestCase):
             shutil.copyfile(
                 REPO_ROOT / "scripts" / "windows_python_artifacts.py", root / "scripts" / "windows_python_artifacts.py"
             )
+            shutil.copyfile(
+                REPO_ROOT / "scripts" / "check_build_directory.py", root / "scripts" / "check_build_directory.py"
+            )
             env = dict(os.environ)
             env.update(
                 PATH=os.pathsep.join((str(tools_dir), str(Path(sys.executable).parent), env.get("PATH", ""))),
                 GAME_CMAKE_CAPTURE=str(capture_path),
                 GAME_WINDOWS_FAST_BUILD="0",
                 GAME_WINDOWS_INSTALL_FAST_TOOLS="0",
-                CMAKE_GENERATOR="Visual Studio 17 2022",
-                CMAKE_GENERATOR_PLATFORM="x64",
+                CMAKE_GENERATOR="Ninja",
+                CMAKE_GENERATOR_PLATFORM="",
                 CONFIGURE_BUILD_DIRS="probe-build",
                 VCPKG_ROOT=str(vcpkg_root),
                 VCPKG_INSTALLATION_ROOT=str(vcpkg_root),
@@ -228,6 +231,8 @@ class WindowsPythonConfigurationTest(unittest.TestCase):
             self.assertEqual(0, result.returncode, result.stdout + result.stderr)
             self.assertEqual(str(include_dir), artifacts.get("Python3_INCLUDE_DIR"))
             self.assertEqual(str(library_path), artifacts.get("Python3_LIBRARY"))
+            self.assertEqual(str(include_dir), artifacts.get("_Python3_INCLUDE_DIR"))
+            self.assertEqual(str(library_path), artifacts.get("_Python3_LIBRARY_RELEASE"))
             self.assertEqual(str(debug_library) if debug_library else "", artifacts.get("_Python3_LIBRARY_DEBUG"))
             self.assertEqual(Path(sys.executable).resolve(), Path(artifacts.get("Python3_EXECUTABLE", "")).resolve())
 

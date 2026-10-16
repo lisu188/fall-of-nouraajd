@@ -49,18 +49,21 @@ commit a choice. Reading, inspecting and scrolling do not advance turns.
 
 ## running
 ### ubuntu
-`./configure.sh` installs the Ubuntu native dependencies used by the project and initializes submodules.
+Use Ubuntu 26.04 with GCC 15 and CMake 4.0.2 or newer (CI uses CMake 4.3.1). `./configure.sh` installs the Ubuntu
+native dependencies used by the project and initializes submodules. C++26 is required without a standard fallback.
 
 ```sh
 git submodule update --init --recursive
 ./configure.sh
-cmake --build cmake-build-release --target _game -j$(nproc)
+cmake --build cmake-build-gcc15-release --target _game -j$(nproc)
+export GAME_BUILD_DIR=cmake-build-gcc15-release
 python3 play.py
 ```
 
 ### windows
-Install Visual Studio 2022 with the **Desktop development with C++** workload and CMake tools, install Python 3.12,
-then install and bootstrap vcpkg. From a normal `cmd.exe` shell:
+Install Visual Studio 2022 with the **Desktop development with C++** workload, LLVM 20.1.8 clang-cl, CMake 4.0.2 or
+newer, Ninja, and Python 3.12, then install and bootstrap vcpkg. The compiler uses the Visual Studio SDK, runtime,
+and STL. From a normal `cmd.exe` shell:
 <pre>
 git clone https://github.com/microsoft/vcpkg C:\vcpkg
 C:\vcpkg\bootstrap-vcpkg.bat
@@ -69,12 +72,18 @@ python -m pip install --upgrade -r requirements-dev.txt
 git submodule update --init --recursive
 %VCPKG_ROOT%\vcpkg install --triplet x64-windows
 configure.bat
-cmake --build cmake-build-release --config Release --target _game
-set GAME_BUILD_DIR=cmake-build-release
+cmake --build cmake-build-clangcl20-release --target _game
+set GAME_BUILD_DIR=cmake-build-clangcl20-release
 set GAME_BUILD_CONFIG=Release
-set PATH=%CD%\cmake-build-release;%CD%\cmake-build-release\Release;%VCPKG_ROOT%\installed\x64-windows\bin;%PATH%
+set PATH=%CD%\cmake-build-clangcl20-release;%CD%\vcpkg_installed\x64-windows\bin;%PATH%
 python play.py
 </pre>
+
+The configure scripts use separate compiler-specific build directories and preserve older builds and saves. To use
+another supported compiler on Linux, set `CC`, `CXX`, and optionally `GAME_CONFIGURE_BUILD_PREFIX`. On Windows,
+set `CMAKE_CXX_COMPILER` to an absolute clang-cl path when LLVM is installed elsewhere. An incompatible cached
+generator/compiler requires a new build directory. Android support is deferred and is not validated by this desktop
+migration; existing Android checks are retained.
 
 `python3 play.py` opens the main menu with Continue, New adventure, Load game, Settings, Help and Quit.
 New adventure offers a campaign, standalone scenario or random map, followed by character creation.
@@ -91,7 +100,8 @@ python3 scripts/generate_walkthrough_video.py --output screenshots/nouraajd-walk
 
 ### mcp server (engine api)
 <pre>
-cmake --build cmake-build-release --target _game -j$(nproc)
+cmake --build cmake-build-gcc15-release --target _game -j$(nproc)
+export GAME_BUILD_DIR=cmake-build-gcc15-release
 # start HTTP MCP server (defaults to 127.0.0.1:8765)
 python3 mcp.py
 # or build the extension on demand and run
@@ -110,19 +120,19 @@ GUI tree with `jsonify(...)` without adding repo-specific MCP tools.
 
 To use stdio transport instead (required by some Codex flows), run from the repository root:
 <pre>
-python3 mcp.py --stdio --repo-root . --build-dir cmake-build-release
+python3 mcp.py --stdio --repo-root . --build-dir cmake-build-gcc15-release
 </pre>
-On Windows Visual Studio builds, use:
+On Windows clang-cl builds, use:
 <pre>
-python mcp.py --stdio --repo-root . --build-dir cmake-build-release --build-config Release
+python mcp.py --stdio --repo-root . --build-dir cmake-build-clangcl20-release
 </pre>
 
 For an opt-in debug bundle that Codex can inspect after a failure:
 <pre>
 python play.py --debug
-python mcp.py --stdio --repo-root . --build-dir cmake-build-release --debug
+python mcp.py --stdio --repo-root . --build-dir cmake-build-gcc15-release --debug
 </pre>
-On Windows Visual Studio builds, retain `--build-config Release` for MCP and set
+On Windows clang-cl builds, use `--build-dir cmake-build-clangcl20-release` for MCP and set
 `GAME_BUILD_CONFIG=Release` for the game launcher. Both launchers also accept
 `GAME_DEBUG=1` and an optional `GAME_DEBUG_DIR`; `--debug-dir` overrides that directory.
 Directory settings alone do not enable debugging.
@@ -149,9 +159,10 @@ From the repository root, run:
 <pre>
 python3 scripts/validate_content.py --repo-root .
 python3 -m unittest tests.test_content_validator
-cmake --build cmake-build-release --target _game for_unit_tests performance_guard_tests -j$(nproc)
-ctest --test-dir cmake-build-release --output-on-failure -R for_unit_tests
-ctest --test-dir cmake-build-release --output-on-failure --verbose -L performance
+cmake --build cmake-build-gcc15-release --target _game for_unit_tests performance_guard_tests -j$(nproc)
+ctest --test-dir cmake-build-gcc15-release --output-on-failure -R for_unit_tests
+ctest --test-dir cmake-build-gcc15-release --output-on-failure --verbose -L performance
+export GAME_BUILD_DIR=cmake-build-gcc15-release
 python3 test.py
 </pre>
 Optional playtest trace for walkthrough/debugging runs:
@@ -165,8 +176,8 @@ Tests can also use `game.configure_playtest_trace()`, `game.get_playtest_trace()
 For focused Python feedback, use the named suites documented in
 `docs/testing.md`, for example `python3 test.py --suite fast`,
 `python3 test.py --suite gameplay`, and `GAME_XVFB_JOBS=4 python3 test.py --suite ui`.
-For Windows Visual Studio builds, use `--config Release`, pass `-C Release` to `ctest`,
-then set `GAME_BUILD_DIR=cmake-build-release` and `GAME_BUILD_CONFIG=Release` before running `python test.py`. Use
+For Windows clang-cl builds, use `cmake-build-clangcl20-release` in the build and CTest commands,
+then set `GAME_BUILD_DIR=cmake-build-clangcl20-release` and `GAME_BUILD_CONFIG=Release` before running `python test.py`. Use
 `python scripts/validate_content.py --repo-root .` and
 `python -m unittest tests.test_content_validator` for the Windows content-validation
 steps.

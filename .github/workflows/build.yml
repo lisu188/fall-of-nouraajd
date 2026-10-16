@@ -97,11 +97,16 @@ jobs:
 
   linux:
     needs: linux-fast
-    runs-on: ubuntu-24.04
+    runs-on: ubuntu-26.04
     timeout-minutes: 90
     outputs:
       runtime-ready: ${{ steps.mcp-runtime-upload.outcome == 'success' }}
     env:
+      CC: gcc-15
+      CXX: g++-15
+      GAME_CONFIGURE_BUILD_PREFIX: cmake-build-gcc15
+      GAME_BUILD_DIR: cmake-build-gcc15-release
+      GAME_BUILD_CONFIG: Release
       GAME_CONFIGURE_SKIP_APT: "1"
       GAME_CONFIGURE_SKIP_SUBMODULES: "1"
       GAME_TEST_TIMINGS_FILE: test/test-timings-linux.json
@@ -123,11 +128,14 @@ jobs:
       - name: Skip native validation
         if: needs.linux-fast.outputs.native-needed != 'true'
         run: echo "Native validation is not required for these changed paths."
+      - name: Install CMake 4.3.1
+        if: needs.linux-fast.outputs.native-needed == 'true'
+        run: python3 -m pip install --upgrade cmake==4.3.1
       - name: Install native deps
         if: needs.linux-fast.outputs.native-needed == 'true'
         run: |
           sudo apt-get update
-          sudo apt-get install -y build-essential cmake ninja-build ccache clang-format black \
+          sudo apt-get install -y build-essential gcc-15 g++-15 ninja-build ccache clang-format black \
             python3 python3-dev python3-pip python3-venv pybind11-dev python3-pil \
             libboost-dev \
             libsdl2-dev libsdl2-ttf-dev libsdl2-image-dev \
@@ -137,10 +145,10 @@ jobs:
         id: ccache
         shell: bash
         run: |
-          compiler_id="$(c++ -dumpmachine)-$(c++ -dumpfullversion -dumpversion)"
+          compiler_id="$("${CXX}" -dumpmachine)-$("${CXX}" -dumpfullversion -dumpversion)"
           compiler_id="${compiler_id//[^A-Za-z0-9_.-]/-}"
           echo "dir=$(ccache --get-config cache_dir)" >> "${GITHUB_OUTPUT}"
-          echo "prefix=${{ runner.os }}-ccache-release-${compiler_id}-" >> "${GITHUB_OUTPUT}"
+          echo "prefix=${{ runner.os }}-ccache-cxx26-release-${compiler_id}-" >> "${GITHUB_OUTPUT}"
       - name: Restore ccache
         if: needs.linux-fast.outputs.native-needed == 'true'
         uses: actions/cache/restore@27d5ce7f107fe9357f9df03efb73ab90386fccae
@@ -149,7 +157,6 @@ jobs:
           key: ${{ steps.ccache.outputs.prefix }}${{ github.run_id }}-${{ github.run_attempt }}
           restore-keys: |
             ${{ steps.ccache.outputs.prefix }}
-            ${{ runner.os }}-ccache-
       - name: Cache Python test timings
         if: needs.linux-fast.outputs.native-needed == 'true'
         uses: actions/cache@27d5ce7f107fe9357f9df03efb73ab90386fccae
@@ -162,14 +169,14 @@ jobs:
         run: GAME_CONFIGURE_BUILD_TYPES=Release ./configure.sh
       - name: build test targets
         if: needs.linux-fast.outputs.native-needed == 'true'
-        run: cmake --build cmake-build-release --target _game for_unit_tests performance_guard_tests -j"$(nproc)"
+        run: cmake --build cmake-build-gcc15-release --target _game for_unit_tests performance_guard_tests -j"$(nproc)"
       - name: Smoke test game imports
         if: needs.linux-fast.outputs.native-needed == 'true'
-        run: PYTHONPATH=cmake-build-release:res python3 -c "import _game; import game; print('game imports ok')"
+        run: PYTHONPATH=cmake-build-gcc15-release:res python3 -c "import _game; import game; print('game imports ok')"
       - name: Bundle current Linux runtime for MCP branches
         if: needs.linux-fast.outputs.native-needed == 'true'
         run: >-
-          python3 scripts/mcp_branch_shards.py bundle --build-dir cmake-build-release
+          python3 scripts/mcp_branch_shards.py bundle --build-dir cmake-build-gcc15-release
           --archive test/mcp-branch-runtime-linux.tar.gz --head "${{ github.sha }}"
       - name: Upload current Linux MCP runtime
         id: mcp-runtime-upload
@@ -202,10 +209,10 @@ jobs:
           fi
       - name: test (c++)
         if: needs.linux-fast.outputs.native-needed == 'true'
-        run: ctest --test-dir cmake-build-release --output-on-failure -R for_unit_tests
+        run: ctest --test-dir cmake-build-gcc15-release --output-on-failure -R for_unit_tests
       - name: performance guard (native)
         if: needs.linux-fast.outputs.native-needed == 'true'
-        run: ctest --test-dir cmake-build-release --output-on-failure --verbose -L performance
+        run: ctest --test-dir cmake-build-gcc15-release --output-on-failure --verbose -L performance
       - name: test (python gameplay)
         if: needs.linux-fast.outputs.native-needed == 'true'
         timeout-minutes: 45
@@ -250,13 +257,13 @@ jobs:
             GameTest.test_campaign_driver_routes_full_campaign_with_carryover
       - name: package
         if: github.event_name != 'pull_request' && needs.linux-fast.outputs.native-needed == 'true'
-        run: cmake --build cmake-build-release --target package -j"$(nproc)"
+        run: cmake --build cmake-build-gcc15-release --target package -j"$(nproc)"
       - name: publish
         if: github.event_name != 'pull_request' && needs.linux-fast.outputs.native-needed == 'true'
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a
         with:
           name: fall-of-nouraajd-linux
-          path: cmake-build-release/fall-of-nouraajd-*.tar.gz
+          path: cmake-build-gcc15-release/fall-of-nouraajd-*.tar.gz
       - name: Save ccache
         if: always() && needs.linux-fast.outputs.native-needed == 'true'
         continue-on-error: true
@@ -268,9 +275,13 @@ jobs:
   linux-coverage:
     needs: linux-fast
     if: needs.linux-fast.outputs.coverage-needed == 'true'
-    runs-on: ubuntu-24.04
+    runs-on: ubuntu-26.04
     timeout-minutes: 75
     env:
+      CC: gcc-15
+      CXX: g++-15
+      GCOV_EXECUTABLE: gcov-15
+      BUILD_DIR: cmake-build-gcc15-coverage
       COVERAGE_INCLUDE_PREFIXES: src native_plugins
       COVERAGE_REPORTER: python
       GAME_TEST_TIMINGS_FILE: test/test-timings-linux-coverage.json
@@ -289,10 +300,12 @@ jobs:
         run: python3 -m pip install --upgrade -r requirements-dev.txt
       - name: Smoke test Python deps
         run: python3 -c "from PIL import Image; import black; print('python deps ok')"
+      - name: Install CMake 4.3.1
+        run: python3 -m pip install --upgrade cmake==4.3.1
       - name: Install native deps
         run: |
           sudo apt-get update
-          sudo apt-get install -y build-essential cmake ninja-build ccache clang-format black \
+          sudo apt-get install -y build-essential gcc-15 g++-15 ninja-build ccache clang-format black \
             python3 python3-dev python3-pip python3-venv pybind11-dev python3-pil \
             libboost-dev \
             libsdl2-dev libsdl2-ttf-dev libsdl2-image-dev \
@@ -301,10 +314,10 @@ jobs:
         id: ccache
         shell: bash
         run: |
-          compiler_id="$(c++ -dumpmachine)-$(c++ -dumpfullversion -dumpversion)"
+          compiler_id="$("${CXX}" -dumpmachine)-$("${CXX}" -dumpfullversion -dumpversion)"
           compiler_id="${compiler_id//[^A-Za-z0-9_.-]/-}"
           echo "dir=$(ccache --get-config cache_dir)" >> "${GITHUB_OUTPUT}"
-          echo "prefix=${{ runner.os }}-ccache-coverage-${compiler_id}-" >> "${GITHUB_OUTPUT}"
+          echo "prefix=${{ runner.os }}-ccache-cxx26-coverage-${compiler_id}-" >> "${GITHUB_OUTPUT}"
       - name: Restore ccache
         uses: actions/cache/restore@27d5ce7f107fe9357f9df03efb73ab90386fccae
         with:
@@ -312,7 +325,6 @@ jobs:
           key: ${{ steps.ccache.outputs.prefix }}${{ github.run_id }}-${{ github.run_attempt }}
           restore-keys: |
             ${{ steps.ccache.outputs.prefix }}
-            ${{ runner.os }}-ccache-
       - name: Restore Python test timings
         uses: actions/cache/restore@27d5ce7f107fe9357f9df03efb73ab90386fccae
         with:
@@ -361,7 +373,11 @@ jobs:
     outputs:
       vcpkg-installed-cache-key: ${{ steps.select-vcpkg-installed-cache.outputs.key }}
     env: &windows-env
-      CONFIGURE_BUILD_DIRS: cmake-build-release
+      CONFIGURE_BUILD_DIRS: cmake-build-clangcl20-release
+      GAME_BUILD_DIR: cmake-build-clangcl20-release
+      GAME_BUILD_CONFIG: Release
+      CMAKE_GENERATOR: Ninja
+      LLVM_VERSION: "20.1.8"
       GAME_TEST_TIMINGS_FILE: test/test-timings-windows.json
       GAME_WINDOWS_FAST_BUILD: "1"
       GAME_WINDOWS_INSTALL_FAST_TOOLS: "0"
@@ -386,6 +402,9 @@ jobs:
         run: python -m pip install --upgrade -r requirements-dev.txt
       - name: Smoke test Python deps
         run: python -c "from PIL import Image; import black; print('python deps ok')"
+      - &setup-windows-cmake
+        name: Install CMake 4.3.1
+        run: python -m pip install --upgrade cmake==4.3.1
       - name: Validate content JSON
         run: |
           python scripts/validate_content.py --repo-root .
@@ -400,6 +419,22 @@ jobs:
         uses: ilammy/msvc-dev-cmd@0b201ec74fa43914dc39ae48a89fd1d8cb592756
         with:
           arch: x64
+      - &setup-clang-cl
+        name: Select LLVM 20.1.8 clang-cl
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = "Stop"
+          $clangCl = Join-Path $env:ProgramFiles "LLVM\bin\clang-cl.exe"
+          if (-not (Test-Path -LiteralPath $clangCl)) {
+            throw "LLVM $env:LLVM_VERSION clang-cl is missing at $clangCl."
+          }
+          $version = & $clangCl --version
+          if ($LASTEXITCODE -ne 0 -or ($version -join "`n") -notmatch "clang version $([regex]::Escape($env:LLVM_VERSION))(?:\s|$)") {
+            throw "Expected LLVM $env:LLVM_VERSION clang-cl; found $version. Update the pinned toolchain explicitly."
+          }
+          $version
+          "CMAKE_C_COMPILER=$clangCl" | Out-File -FilePath $env:GITHUB_ENV -Append
+          "CMAKE_CXX_COMPILER=$clangCl" | Out-File -FilePath $env:GITHUB_ENV -Append
       - &setup-vcpkg
         name: Set up vcpkg
         shell: pwsh
@@ -668,6 +703,7 @@ jobs:
         run: python -m pip install --upgrade -r requirements-dev.txt
       - name: Smoke test Python deps
         run: python -c "from PIL import Image; import black; print('python deps ok')"
+      - *setup-windows-cmake
       - name: Validate content JSON
         run: |
           python scripts/validate_content.py --repo-root .
@@ -678,6 +714,7 @@ jobs:
       - name: test (python fast)
         run: python test.py --suite fast
       - *setup-msvc
+      - *setup-clang-cl
       - *setup-vcpkg
       - *enable-vcpkg-x-gha
       - *setup-windows-fast-tools
@@ -783,7 +820,7 @@ jobs:
           }
           $toolset = $toolset -replace "[^A-Za-z0-9_.-]", "-"
           $sccacheVersion = $env:SCCACHE_VERSION -replace "[^A-Za-z0-9_.-]", "-"
-          "prefix=${{ runner.os }}-sccache-$sccacheVersion-msvc-$toolset-" | Out-File -FilePath $env:GITHUB_OUTPUT -Append
+          "prefix=${{ runner.os }}-sccache-$sccacheVersion-clangcl-${{ env.LLVM_VERSION }}-cxx26-$toolset-" | Out-File -FilePath $env:GITHUB_OUTPUT -Append
       - name: Restore sccache
         uses: actions/cache/restore@27d5ce7f107fe9357f9df03efb73ab90386fccae
         with:
@@ -791,8 +828,6 @@ jobs:
           key: ${{ steps.windows-sccache.outputs.prefix }}${{ github.run_id }}-${{ github.run_attempt }}
           restore-keys: |
             ${{ steps.windows-sccache.outputs.prefix }}
-            ${{ runner.os }}-sccache-${{ env.SCCACHE_VERSION }}-
-            ${{ runner.os }}-sccache-
       - name: Cache Python test timings
         uses: actions/cache@27d5ce7f107fe9357f9df03efb73ab90386fccae
         with:
@@ -818,22 +853,27 @@ jobs:
       - name: Build test targets
         shell: cmd
         run: |
-          cmake --build cmake-build-release --target _game for_unit_tests performance_guard_tests --parallel %CMAKE_BUILD_PARALLEL_LEVEL%
+          cmake --build cmake-build-clangcl20-release --target _game for_unit_tests performance_guard_tests --parallel %CMAKE_BUILD_PARALLEL_LEVEL%
           if errorlevel 1 exit /b 1
       - name: Smoke test game imports
         shell: cmd
+        env:
+          PYTHONFAULTHANDLER: "1"
+          PYTHONMALLOC: debug
         run: |
-          set GAME_BUILD_DIR=cmake-build-release
+          set GAME_BUILD_DIR=cmake-build-clangcl20-release
           set GAME_BUILD_CONFIG=Release
-          set PYTHONPATH=%CD%\cmake-build-release\Release;%CD%\cmake-build-release;%CD%\res;%PYTHONPATH%
-          set PATH=%CD%\cmake-build-release;%CD%\cmake-build-release\Release;%VCPKG_INSTALLED_DIR%\%VCPKG_TARGET_TRIPLET%\bin;%PATH%
+          set PYTHONPATH=%CD%\cmake-build-clangcl20-release\Release;%CD%\cmake-build-clangcl20-release;%CD%\res;%PYTHONPATH%
+          set PATH=%CD%\cmake-build-clangcl20-release;%CD%\cmake-build-clangcl20-release\Release;%VCPKG_INSTALLED_DIR%\%VCPKG_TARGET_TRIPLET%\bin;%PATH%
           python -c "import _game; import game; print('game imports ok')"
+          if errorlevel 1 exit /b 1
+          python scripts/check_binding_exceptions.py
           if errorlevel 1 exit /b 1
       - name: Stage complete Windows runtime for MCP branches
         shell: cmd
         run: |
-          set PATH=%CD%\cmake-build-release;%CD%\cmake-build-release\Release;%VCPKG_INSTALLED_DIR%\%VCPKG_TARGET_TRIPLET%\bin;%PATH%
-          cmake --install cmake-build-release --config Release --prefix test/mcp-runtime-windows
+          set PATH=%CD%\cmake-build-clangcl20-release;%CD%\cmake-build-clangcl20-release\Release;%VCPKG_INSTALLED_DIR%\%VCPKG_TARGET_TRIPLET%\bin;%PATH%
+          cmake --install cmake-build-clangcl20-release --config Release --prefix test/mcp-runtime-windows
           if errorlevel 1 exit /b 1
           for %%F in (SDL2.dll SDL2_image.dll SDL2_ttf.dll) do if not exist "test\mcp-runtime-windows\fall-of-nouraajd\%%F" exit /b 1
       - name: Bundle current Windows runtime for MCP branches
@@ -858,27 +898,30 @@ jobs:
       - name: test (c++)
         shell: cmd
         run: |
-          ctest --test-dir cmake-build-release --output-on-failure -R for_unit_tests
+          ctest --test-dir cmake-build-clangcl20-release --output-on-failure -R for_unit_tests
           if errorlevel 1 exit /b 1
       - name: performance guard (native)
         shell: cmd
         run: |
-          ctest --test-dir cmake-build-release --output-on-failure --verbose -L performance
+          ctest --test-dir cmake-build-clangcl20-release --output-on-failure --verbose -L performance
           if errorlevel 1 exit /b 1
       - name: test (python gameplay)
         timeout-minutes: 45
+        env:
+          PYTHONFAULTHANDLER: "1"
+          PYTHONMALLOC: debug
         shell: cmd
         run: |
-          set GAME_BUILD_DIR=cmake-build-release
+          set GAME_BUILD_DIR=cmake-build-clangcl20-release
           set GAME_BUILD_CONFIG=Release
-          set PATH=%CD%\cmake-build-release;%CD%\cmake-build-release\Release;%VCPKG_INSTALLED_DIR%\%VCPKG_TARGET_TRIPLET%\bin;%PATH%
+          set PATH=%CD%\cmake-build-clangcl20-release;%CD%\cmake-build-clangcl20-release\Release;%VCPKG_INSTALLED_DIR%\%VCPKG_TARGET_TRIPLET%\bin;%PATH%
           python test.py --suite gameplay-core
           if errorlevel 1 exit /b 1
       - name: package
         if: github.event_name != 'pull_request'
         shell: cmd
         run: |
-          cmake --build cmake-build-release --target package --parallel %CMAKE_BUILD_PARALLEL_LEVEL%
+          cmake --build cmake-build-clangcl20-release --target package --parallel %CMAKE_BUILD_PARALLEL_LEVEL%
           if errorlevel 1 exit /b 1
       - name: sccache stats after package
         if: github.event_name != 'pull_request' && always()
@@ -892,7 +935,7 @@ jobs:
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a
         with:
           name: fall-of-nouraajd-windows
-          path: cmake-build-release/fall-of-nouraajd-*.zip
+          path: cmake-build-clangcl20-release/fall-of-nouraajd-*.zip
       - name: Save sccache
         if: always() && steps.windows-sccache.outputs.prefix != ''
         continue-on-error: true
@@ -908,13 +951,15 @@ jobs:
     if: >-
       always() && !cancelled() && needs.linux-fast.result == 'success' &&
       needs.linux-fast.outputs.native-needed == 'true' && needs.linux.outputs.runtime-ready == 'true'
-    runs-on: ubuntu-24.04
+    runs-on: ubuntu-26.04
     timeout-minutes: ${{ matrix.timeout-minutes }}
     strategy:
       fail-fast: false
       matrix: ${{ fromJSON(needs.linux-fast.outputs.mcp-branch-matrix) }}
     env:
-      GAME_BUILD_DIR: cmake-build-release
+      CC: gcc-15
+      CXX: g++-15
+      GAME_BUILD_DIR: cmake-build-gcc15-release
       GAME_MCP_BRANCH_REQUIRED: "1"
       GAME_MCP_BRANCH_HEAD: ${{ github.sha }}
       GAME_MCP_BRANCH_PR_HEAD: ${{ github.event.pull_request.head.sha || github.sha }}
@@ -942,7 +987,7 @@ jobs:
           path: test/runtime-download
       - name: Verify and unpack the current Linux runtime
         run: >-
-          python3 scripts/mcp_branch_shards.py unpack --build-dir cmake-build-release
+          python3 scripts/mcp_branch_shards.py unpack --build-dir cmake-build-gcc15-release
           --archive test/runtime-download/mcp-branch-runtime-linux.tar.gz --head "${{ github.sha }}"
       - name: Run exhaustive MCP branch shard
         run: >-
@@ -970,7 +1015,7 @@ jobs:
       fail-fast: false
       matrix: ${{ fromJSON(needs.linux-fast.outputs.mcp-branch-matrix) }}
     env:
-      GAME_BUILD_DIR: cmake-build-release
+      GAME_BUILD_DIR: cmake-build-clangcl20-release
       GAME_BUILD_CONFIG: Release
       GAME_MCP_BRANCH_REQUIRED: "1"
       GAME_MCP_BRANCH_HEAD: ${{ github.sha }}
@@ -996,12 +1041,12 @@ jobs:
           path: test/runtime-download
       - name: Verify and unpack the current Windows runtime
         run: >-
-          python scripts/mcp_branch_shards.py unpack --build-dir cmake-build-release
+          python scripts/mcp_branch_shards.py unpack --build-dir cmake-build-clangcl20-release
           --archive test/runtime-download/mcp-branch-runtime-windows.tar.gz --head "${{ github.sha }}"
       - name: Run exhaustive MCP branch shard
         shell: cmd
         run: |
-          set PATH=%CD%\cmake-build-release;%CD%\cmake-build-release\Release;%PATH%
+          set PATH=%CD%\cmake-build-clangcl20-release;%CD%\cmake-build-clangcl20-release\Release;%PATH%
           python scripts/mcp_branch_shards.py run --shard-index ${{ matrix.shard }} --shard-count ${{ matrix.count }}
           if errorlevel 1 exit /b 1
       - name: Upload branch traces and timings

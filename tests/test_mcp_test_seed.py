@@ -7,12 +7,15 @@ import contextlib
 import io
 import json
 import os
+import random
 from pathlib import Path
 import subprocess
 import sys
 import tempfile
 import types
+import traceback
 import unittest
+from time import monotonic
 from unittest.mock import Mock, patch
 
 import mcp
@@ -198,19 +201,272 @@ class McpTestSeedTest(unittest.TestCase):
 
     def testPrivateSeedHookSeedsBothSharedLibraryScopesThroughAnExportedCoreBridge(self):
         module = (ROOT / "src/core/CModule.cpp").read_text(encoding="utf-8")
-        core = (ROOT / "src/handler/CRngHandler.cpp").read_text(encoding="utf-8")
-        header = (ROOT / "src/handler/CRngHandler.h").read_text(encoding="utf-8")
+        core = (ROOT / "src/core/CRuntimeBridge.cpp").read_text(encoding="utf-8")
+        header = (ROOT / "src/core/CRuntimeBridge.h").read_text(encoding="utf-8")
+        game = (ROOT / "src/core/CGame.cpp").read_text(encoding="utf-8")
+        self.assertEqual(1, module.count('"_seedRandomForTests"'), "Bind the private startup hook exactly once")
         hook = module.split('"_seedRandomForTests",', 1)[1].split('py::arg("seed")', 1)[0]
-        self.assertIn("CRngHandler::seedRandomForTests(seed);", hook)
+        self.assertIn("CRuntimeBridge::seedRandomForTests(seed);", hook)
         self.assertIn("vstd::rng().seed(seed);", hook)
+        self.assertLess(hook.index("CRuntimeBridge::seedRandomForTests(seed);"), hook.index("vstd::rng().seed(seed);"))
         self.assertNotIn("std::srand", hook, "The process random source must be seeded once by the core bridge")
-        bridge = core.split("void CRngHandler::seedRandomForTests(std::uint32_t seed)", 1)[1].split("}", 1)[0]
+        bridge = core.split("void CRuntimeBridge::seedRandomForTests(std::uint32_t seed)", 1)[1].split("\n}\n", 1)[0]
         self.assertIn("vstd::rng().seed(seed);", bridge)
         self.assertEqual(1, bridge.count("std::srand(seed);"))
-        self.assertIn("static GAME_CORE_EXPORT void seedRandomForTests(std::uint32_t seed);", header)
+        self.assertIn("static void seedRandomForTests(std::uint32_t seed);", header)
+        self.assertIn("!event_loop_instance()->isMainThread()", bridge)
+        name_owners = [
+            owner for owner in ("CUtil", "CSerialization") if owner + "::seedGeneratedNamesForTests(seed);" in bridge
+        ]
+        self.assertEqual(1, len(name_owners), "One canonical core name owner must guard startup seeding")
+        name_owner = name_owners[0]
+        guard_call = name_owner + "::seedGeneratedNamesForTests(seed);"
+        self.assertLess(bridge.index("!event_loop_instance()->isMainThread()"), bridge.index(guard_call))
+        self.assertLess(bridge.index(guard_call), bridge.index("vstd::rng().seed(seed);"))
+        serialization = (ROOT / f"src/core/{name_owner}.cpp").read_text(encoding="utf-8")
+        guard = serialization.split(f"void {name_owner}::seedGeneratedNamesForTests(std::uint32_t seed)", 1)[1]
+        guard = guard.split("\n}\n", 1)[0]
+        self.assertIn("state.sessionStarted || state.startupSeeded", guard)
+        self.assertLess(
+            guard.index("state.sessionStarted || state.startupSeeded"), guard.index("state.fixtureSeed = seed;")
+        )
+        self.assertIn("state.startupSeeded = true;", guard)
+        self.assertIn(name_owner + "::markGameSessionStarted();", game)
         self.assertNotIn('.def("seedRandomForTests"', module)
         self.assertNotIn("seedRandomForTests", mcp.MCP_ALLOWED_EXPORTS)
         self.assertTrue(all("seedRandomForTests" not in methods for methods in mcp.MCP_ALLOWED_HANDLE_METHODS.values()))
+
+    def runOracle(
+        self, module, *, seconds_per_child=0, ignored_source=None, degenerate_source=None, engine_owner=False
+    ):
+        launches, children = [], []
+        self.launchedChildren = launches
+        clock = [0.0]
+
+        def runChild(command, **kwargs):
+            self.assertTrue(kwargs["capture_output"], "subprocess.run must drain both child pipes")
+            self.assertTrue(kwargs["text"])
+            self.assertLessEqual(kwargs["timeout"], 90)
+            launches.append({"command": command, "timeout": kwargs["timeout"]})
+            child = {
+                "seeded": False,
+                "started": False,
+                "seedCalls": 0,
+                "counts": [0, 0, 0],
+                "ownerActive": False,
+                "dispatches": [],
+                "releases": [],
+            }
+            children.append(child)
+            generators = [None, None, None]
+
+            def requireOwner():
+                if engine_owner:
+                    self.assertTrue(child["ownerActive"], "Native sampling crossed the engine owner boundary")
+
+            def seedNative(seed):
+                requireOwner()
+                child["seedCalls"] += 1
+                if child["seeded"] or child["started"]:
+                    raise RuntimeError("Test random seeding must run once before the first game session is created.")
+                child["seeded"] = True
+                child["seed"] = seed
+                for index in range(3):
+                    generators[index] = random.Random((0 if ignored_source == index else seed) ^ (index + 1))
+
+            def drawModule(lower, upper):
+                requireOwner()
+                child["counts"][0] += 1
+                if degenerate_source == 0:
+                    return child["seed"]
+                return generators[0].randint(lower, upper)
+
+            def drawProcess(allow_crit):
+                requireOwner()
+                child["counts"][1] += 1
+                if degenerate_source == 1:
+                    return child["seed"]
+                return generators[1].randrange(1000)
+
+            def addLoot(recipient, scale):
+                requireOwner()
+                self.assertEqual(8, scale)
+                child["counts"][2] += 1
+                name = "owned-" + str(child["counts"][2])
+                identity = "loot-" + str(child["seed"] if degenerate_source == 2 else generators[2].randrange(1000))
+                recipient.items.append(Item(name, identity))
+
+            class NativeObject:
+                def __del__(self):
+                    child["releases"].append((type(self).__name__, child["ownerActive"]))
+
+            class Item(NativeObject):
+                def __init__(self, name, identity):
+                    self.name, self.identity = name, identity
+
+                def getName(self):
+                    requireOwner()
+                    return self.name
+
+                def getTypeId(self):
+                    requireOwner()
+                    return self.identity
+
+            class Player(NativeObject):
+                def getDmg(self, allow_crit):
+                    return drawProcess(allow_crit)
+
+            class Map(NativeObject):
+                def __init__(self):
+                    self.player = Player()
+
+                def getPlayer(self):
+                    requireOwner()
+                    return self.player
+
+            class Rng(NativeObject):
+                def addRandomLoot(self, recipient, scale):
+                    addLoot(recipient, scale)
+
+            class Recipient(NativeObject):
+                def __init__(self):
+                    self.items = []
+
+                def getItems(self):
+                    requireOwner()
+                    return self.items
+
+            class Game(NativeObject):
+                def __init__(self):
+                    self.game_map, self.rng = Map(), Rng()
+
+                def getMap(self):
+                    requireOwner()
+                    return self.game_map
+
+                def getRngHandler(self):
+                    requireOwner()
+                    return self.rng
+
+                def createObject(self, identity):
+                    requireOwner()
+                    self_case.assertEqual("Pritz", identity)
+                    return Recipient()
+
+            self_case = self
+
+            def loadGame():
+                requireOwner()
+                self.assertTrue(child["seeded"], "Seed before game creation")
+                child["started"] = True
+                return Game()
+
+            def startGameWithPlayer(*args):
+                requireOwner()
+
+            class EngineOwner:
+                def run(self, callback):
+                    self_case.assertFalse(child["ownerActive"])
+                    child["dispatches"].append(callback.__name__)
+                    child["ownerActive"] = True
+                    try:
+                        return callback()
+                    finally:
+                        child["ownerActive"] = False
+
+            native = types.SimpleNamespace(
+                _seedRandomForTests=seedNative,
+                randint=drawModule,
+                CGameLoader=types.SimpleNamespace(loadGame=loadGame, startGameWithPlayer=startGameWithPlayer),
+            )
+
+            class EngineMcpServer:
+                def __init__(self, *args, test_seed=None, **kwargs):
+                    self._game_module = native
+                    self.test_seed = test_seed
+                    if engine_owner:
+                        self._engine_owner = EngineOwner()
+
+                def import_modules(self):
+                    callback = lambda: seedNative(self.test_seed)
+                    if engine_owner:
+                        self._engine_owner.run(callback)
+                    else:
+                        callback()
+
+            fake_mcp = types.SimpleNamespace(EngineMcpServer=EngineMcpServer)
+            stdout, stderr = io.StringIO(), io.StringIO()
+            returncode = 0
+            with (
+                patch.dict(sys.modules, {"mcp": fake_mcp}),
+                patch.object(sys, "argv", ["-c", *command[3:]]),
+                patch.object(sys, "path", list(sys.path)),
+                contextlib.redirect_stdout(stdout),
+                contextlib.redirect_stderr(stderr),
+            ):
+                try:
+                    exec(command[2], {"__name__": "__main__"})
+                except Exception:
+                    traceback.print_exc()
+                    returncode = 1
+            clock[0] += seconds_per_child
+            return subprocess.CompletedProcess(command, returncode, stdout.getvalue(), stderr.getvalue())
+
+        with tempfile.TemporaryDirectory(prefix="seed-oracle-mock-", dir=ROOT) as temporary:
+            build = Path(temporary)
+            (build / "_game.mock.so").write_bytes(b"")
+            harness = types.SimpleNamespace(build_dir=build, extension_dirs=(), build_config="")
+            instance = module.McpTestSeedRuntimeTest("testEachNativeRandomSourceReplaysWithinThisPlatform")
+            with (
+                patch.dict(sys.modules, {"test": harness}),
+                patch.object(module.subprocess, "run", side_effect=runChild),
+                patch.object(module, "monotonic", lambda: clock[0], create=True),
+            ):
+                instance.testEachNativeRandomSourceReplaysWithinThisPlatform()
+        return launches, children
+
+    def testFreshChildrenHonorOneTimePreBootstrapSeedAndRetainAllSamples(self):
+        module = sys.modules[__name__]
+        launches, children = self.runOracle(module)
+        self.assertEqual(12, len(launches))
+        self.assertTrue(all(child["seedCalls"] == 1 for child in children))
+        self.assertTrue(all(child["counts"] == [64, 128, 32] for child in children))
+        expected = {seed for primary in (0, 17, 4294967295) for seed in (primary, primary ^ 0xA5A5A5A5)}
+        self.assertEqual(expected, {child["seed"] for child in children})
+        self.assertTrue(all(sum(child["seed"] == seed for child in children) == 2 for seed in expected))
+
+    def testAllChildrenShareTheOriginalOverallDeadline(self):
+        module = sys.modules[__name__]
+        with self.assertRaisesRegex(AssertionError, "original 180-second"):
+            self.runOracle(module, seconds_per_child=20)
+        self.assertEqual([90] * 5 + [80, 60, 40, 20], [launch["timeout"] for launch in self.launchedChildren])
+
+    def testNativeOracleSamplesAndReleasesNativeStateOnTheEngineOwner(self):
+        launches, children = self.runOracle(sys.modules[__name__], engine_owner=True)
+        self.assertEqual(12, len(launches))
+        for child in children:
+            self.assertEqual(1, child["seedCalls"])
+            self.assertEqual([64, 128, 32], child["counts"])
+            self.assertEqual(1, child["dispatches"].count("sampleSources"))
+            self.assertEqual(
+                {"Game", "Map", "Player", "Rng", "Recipient", "Item"}, {kind for kind, _active in child["releases"]}
+            )
+            self.assertTrue(
+                all(active for _kind, active in child["releases"]),
+                "Native oracle objects must be released before returning from the owner callback",
+            )
+
+    def testEveryNativeSourceMustObserveDifferentSeeds(self):
+        module = sys.modules[__name__]
+        for source in range(3):
+            with self.subTest(source=source), self.assertRaisesRegex(AssertionError, "ignored its seed"):
+                self.runOracle(module, ignored_source=source)
+
+    def testEveryNativeSourceMustRemainNondegenerate(self):
+        module = sys.modules[__name__]
+        for source in range(3):
+            with self.subTest(source=source), self.assertRaisesRegex(AssertionError, "degenerate"):
+                self.runOracle(module, degenerate_source=source)
 
 
 class McpTestSeedRuntimeTest(unittest.TestCase):
@@ -227,53 +483,80 @@ import json, sys
 from pathlib import Path
 sys.path.insert(0, sys.argv[1])
 import mcp
+seed = int(sys.argv[4])
 server = mcp.EngineMcpServer(Path(sys.argv[1]), Path(sys.argv[2]),
-    build_config=sys.argv[3] or None, native_log_sink='disabled', test_seed=0)
+    build_config=sys.argv[3] or None, native_log_sink='disabled', test_seed=seed)
 server.import_modules()
 n = server._game_module
-game = n.CGameLoader.loadGame()
-n.CGameLoader.startGameWithPlayer(game, 'test', 'Warrior', 'humanRace')
-player = game.getMap().getPlayer()
-rng = game.getRngHandler()
-def sample(seed):
-    recipient = game.createObject('Pritz')
-    n._seedRandomForTests(seed)
-    module_draws = [n.randint(0, 2147483647) for _ in range(64)]
-    process_draws = [player.getDmg(True) for _ in range(128)]
-    core_draws = []
-    for _ in range(32):
-        before = {item.getName() for item in recipient.getItems()}
-        rng.addRandomLoot(recipient, 8)
-        core_draws.append(sorted(item.getTypeId() for item in recipient.getItems() if item.getName() not in before))
-    return (module_draws, process_draws, core_draws)
-replays = {}
-for seed in (0, 17, 4294967295):
-    first, second = sample(seed), sample(seed)
-    assert first == second, (seed, 'native random sources did not replay')
-    assert all(len({tuple(draw) if isinstance(draw, list) else draw for draw in source}) > 1 for source in first), \
-        'degenerate module/process/core random-source oracle'
-    different = sample(seed ^ 0xA5A5A5A5)
-    assert all(left != right for left, right in zip(first, different)), 'a native random source ignored its seed'
-    replays[str(seed)] = first
-print('NATIVE_SEED_REPLAY=' + json.dumps(replays, sort_keys=True))
+def sampleSources():
+    game = player = rng = recipient = None
+    try:
+        game = n.CGameLoader.loadGame()
+        n.CGameLoader.startGameWithPlayer(game, 'test', 'Warrior', 'humanRace')
+        player = game.getMap().getPlayer()
+        rng = game.getRngHandler()
+        recipient = game.createObject('Pritz')
+        module_draws = [n.randint(0, 2147483647) for _ in range(64)]
+        process_draws = [player.getDmg(True) for _ in range(128)]
+        core_draws = []
+        for _ in range(32):
+            before = {item.getName() for item in recipient.getItems()}
+            rng.addRandomLoot(recipient, 8)
+            core_draws.append(sorted(item.getTypeId() for item in recipient.getItems() if item.getName() not in before))
+        return module_draws, process_draws, core_draws
+    finally:
+        recipient = player = rng = game = None
+owner = getattr(server, '_engine_owner', None)
+samples = owner.run(sampleSources) if owner is not None else sampleSources()
+print('NATIVE_SEED_REPLAY=' + json.dumps(samples, sort_keys=True))
 """
+        seeds = (0, 17, 4294967295)
+        deadline = monotonic() + 180
         replays = []
         for _ in range(2):
-            result = subprocess.run(
-                [sys.executable, "-c", program, str(ROOT), str(harness.build_dir), harness.build_config or ""],
-                cwd=ROOT,
-                capture_output=True,
-                text=True,
-                timeout=90,
-            )
-            self.assertEqual(0, result.returncode, result.stdout[-4096:] + result.stderr[-4096:])
-            payloads = [
-                line.removeprefix("NATIVE_SEED_REPLAY=")
-                for line in result.stdout.splitlines()
-                if line.startswith("NATIVE_SEED_REPLAY=")
-            ]
-            self.assertEqual(1, len(payloads), "The actual native replay proof must be emitted once")
-            replays.append(json.loads(payloads[0]))
+            draws = {}
+            for seed in seeds:
+                for sample_seed in (seed, seed ^ 0xA5A5A5A5):
+                    remaining = deadline - monotonic()
+                    self.assertGreater(remaining, 0, "The original 180-second native replay budget was exhausted")
+                    result = subprocess.run(
+                        [
+                            sys.executable,
+                            "-c",
+                            program,
+                            str(ROOT),
+                            str(harness.build_dir),
+                            harness.build_config or "",
+                            str(sample_seed),
+                        ],
+                        cwd=ROOT,
+                        capture_output=True,
+                        text=True,
+                        timeout=min(90, remaining),
+                    )
+                    self.assertEqual(0, result.returncode, result.stdout[-4096:] + result.stderr[-4096:])
+                    payloads = [
+                        line.removeprefix("NATIVE_SEED_REPLAY=")
+                        for line in result.stdout.splitlines()
+                        if line.startswith("NATIVE_SEED_REPLAY=")
+                    ]
+                    self.assertEqual(1, len(payloads), "The actual native replay proof must be emitted once")
+                    sample = json.loads(payloads[0])
+                    self.assertEqual([64, 128, 32], [len(source) for source in sample])
+                    self.assertTrue(
+                        all(
+                            len({tuple(draw) if isinstance(draw, list) else draw for draw in source}) > 1
+                            for source in sample
+                        ),
+                        "degenerate module/process/core random-source oracle",
+                    )
+                    draws[sample_seed] = sample
+                self.assertTrue(
+                    all(left != right for left, right in zip(draws[seed], draws[seed ^ 0xA5A5A5A5])),
+                    "a native random source ignored its seed",
+                )
+            replays.append(draws)
         self.assertEqual(
             replays[0], replays[1], "Fresh processes did not replay module, process and game_core RNG draws"
         )
+        self.assertLessEqual(monotonic(), deadline, "The original 180-second native replay budget was exhausted")

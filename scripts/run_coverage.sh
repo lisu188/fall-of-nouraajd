@@ -2,7 +2,10 @@
 set -euo pipefail
 
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
-BUILD_DIR="${BUILD_DIR:-cmake-build-coverage}"
+BUILD_DIR="${BUILD_DIR:-cmake-build-gcc15-coverage}"
+export CC="${CC:-gcc-15}"
+export CXX="${CXX:-g++-15}"
+GCOV_EXECUTABLE="${GCOV_EXECUTABLE:-gcov-15}"
 MIN_COVERAGE="${MIN_COVERAGE:-90}"
 REPORT_DIR="${ROOT_DIR}/coverage"
 COVERAGE_INCLUDE_PREFIXES="${COVERAGE_INCLUDE_PREFIXES:-src native_plugins}"
@@ -112,6 +115,8 @@ fi
 cmake_args=(
     -S . -B "${BUILD_DIR}" -G Ninja
     -DCMAKE_BUILD_TYPE=Debug
+    -DCMAKE_C_COMPILER="${CC}"
+    -DCMAKE_CXX_COMPILER="${CXX}"
     "${cmake_launcher_args[@]}"
     -DCMAKE_CXX_FLAGS=--coverage
     -DCMAKE_EXE_LINKER_FLAGS=--coverage
@@ -149,6 +154,7 @@ generate_report() {
         # gcov can emit negative branch counts for some files; keep reporting and the line gate intact.
         gcovr \
             "${gcovr_args[@]}" \
+            --gcov-executable "${GCOV_EXECUTABLE}" \
             --root "${ROOT_DIR}" \
             --object-directory "${BUILD_DIR}" \
             --gcov-ignore-errors source_not_found --gcov-ignore-errors no_working_dir_found \
@@ -165,6 +171,7 @@ generate_report() {
             --min-line "${MIN_COVERAGE}"
             --jobs "${COVERAGE_JOBS}"
             --gcov-timeout "${COVERAGE_GCOV_TIMEOUT_SECONDS}"
+            --gcov-executable "${GCOV_EXECUTABLE}"
         )
         if [[ -n "${COVERAGE_INCLUDE_PREFIXES}" ]]; then
             read -r -a coverage_include_prefixes <<<"${COVERAGE_INCLUDE_PREFIXES}"
@@ -198,6 +205,18 @@ run_python_coverage_tests() {
     return "${status}"
 }
 
+if ! command -v "${GCOV_EXECUTABLE}" >/dev/null 2>&1; then
+    echo "Matching GCC coverage tool ${GCOV_EXECUTABLE} was not found." >&2
+    exit 2
+fi
+compiler_major="$("${CXX}" -dumpversion | cut -d. -f1)"
+gcov_major="$("${GCOV_EXECUTABLE}" --version | sed -n '1s/.* \([0-9][0-9]*\)\.[0-9][0-9]*.*/\1/p')"
+if [[ "${compiler_major}" != "${gcov_major}" ]]; then
+    echo "Coverage requires matching compiler/gcov versions: CXX=${compiler_major}, gcov=${gcov_major}." >&2
+    exit 2
+fi
+python3 "${ROOT_DIR}/scripts/check_build_directory.py" \
+    --build-dir "${BUILD_DIR}" --generator Ninja --compiler "${CXX}"
 run_phase "configure" cmake "${cmake_args[@]}"
 run_phase "build _game, for_unit_tests, and performance_guard_tests" \
     cmake --build "${BUILD_DIR}" --target _game for_unit_tests performance_guard_tests -j"${COVERAGE_JOBS}"

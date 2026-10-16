@@ -237,6 +237,72 @@ class McpBranchWorkflowTest(unittest.TestCase):
             self.assertIn('--head "${{ github.sha }}"', audit)
             self.assertIn('--pr-head "' + pr_head + '"', audit)
 
+    def testAllLinuxBinaryProducersAndConsumersUseUbuntu26(self):
+        for name in ("linux", "linux-coverage", "mcp-branches-linux"):
+            self.assertEqual("ubuntu-26.04", workflowScalar(workflowJob(name), "runs-on", 4), name)
+        for name in ("linux", "linux-coverage", "mcp-branches-linux"):
+            self.assertEqual("gcc-15", workflowScalar(workflowJob(name), "CC", 6), name)
+            self.assertEqual("g++-15", workflowScalar(workflowJob(name), "CXX", 6), name)
+
+    def testLinuxBundleAndConsumerUseTheGcc15Tree(self):
+        producer, consumer = workflowJob("linux"), workflowJob("mcp-branches-linux")
+        self.assertEqual("cmake-build-gcc15-release", workflowScalar(producer, "GAME_BUILD_DIR", 6))
+        self.assertEqual("cmake-build-gcc15-release", workflowScalar(consumer, "GAME_BUILD_DIR", 6))
+        self.assertIn(
+            "bundle --build-dir cmake-build-gcc15-release",
+            workflowStep(producer, "Bundle current Linux runtime for MCP branches"),
+        )
+        self.assertIn(
+            "unpack --build-dir cmake-build-gcc15-release",
+            workflowStep(consumer, "Verify and unpack the current Linux runtime"),
+        )
+        self.assertIn("cmake --build cmake-build-gcc15-release", producer)
+        self.assertIn("ctest --test-dir cmake-build-gcc15-release", producer)
+
+    def testWindowsInstallAndConsumerUseTheClangCl20Tree(self):
+        producer, consumer = workflowJob("windows"), workflowJob("mcp-branches-windows")
+        self.assertEqual("windows-2022", workflowScalar(consumer, "runs-on", 4))
+        self.assertEqual("cmake-build-clangcl20-release", workflowScalar(consumer, "GAME_BUILD_DIR", 6))
+        self.assertEqual("Release", workflowScalar(consumer, "GAME_BUILD_CONFIG", 6))
+        self.assertIn(
+            "cmake --install cmake-build-clangcl20-release",
+            workflowStep(producer, "Stage complete Windows runtime for MCP branches"),
+        )
+        self.assertIn(
+            "unpack --build-dir cmake-build-clangcl20-release",
+            workflowStep(consumer, "Verify and unpack the current Windows runtime"),
+        )
+        self.assertIn(
+            "set PATH=%CD%\\cmake-build-clangcl20-release;%CD%\\cmake-build-clangcl20-release\\Release;", consumer
+        )
+        self.assertIn('python-version: "3.12"', consumer)
+
+    def testCompilerCoverageAndExceptionChecksRemainSelected(self):
+        coverage = workflowJob("linux-coverage")
+        self.assertEqual("gcov-15", workflowScalar(coverage, "GCOV_EXECUTABLE", 6))
+        self.assertEqual("cmake-build-gcc15-coverage", workflowScalar(coverage, "BUILD_DIR", 6))
+        self.assertEqual("60", workflowScalar(workflowStep(coverage, "coverage"), "timeout-minutes", 8))
+        self.assertIn("cmake==4.3.1", workflowJob("linux"))
+        self.assertIn("LLVM 20.1.8", workflowJob("windows-deps"))
+        smoke = workflowStep(workflowJob("windows"), "Smoke test game imports")
+        self.assertIn("python scripts/check_binding_exceptions.py", smoke)
+        self.assertIn('PYTHONFAULTHANDLER: "1"', smoke)
+        self.assertIn("PYTHONMALLOC: debug", smoke)
+
+    def testCoverageTimingsAndCompilerCacheBoundariesRemainIntact(self):
+        coverage = workflowJob("linux-coverage")
+        restore = workflowStep(coverage, "Restore Python test timings")
+        save = workflowStep(coverage, "Save Python test timings after coverage")
+        self.assertIn("actions/cache/restore@", restore)
+        self.assertIn("actions/cache/save@", save)
+        self.assertEqual("always()", workflowScalar(save, "if", 8))
+        self.assertLess(
+            coverage.index("- name: coverage"), coverage.index("- name: Save Python test timings after coverage")
+        )
+        all_text = (ROOT / ".github/workflows/build.yml").read_text()
+        self.assertNotIn("            ${{ runner.os }}-ccache-\n", all_text)
+        self.assertNotIn("cmake-build-release", all_text)
+
 
 if __name__ == "__main__":
     unittest.main()

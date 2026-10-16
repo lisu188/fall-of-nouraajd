@@ -87,10 +87,20 @@ os.environ.setdefault("SDL_AUDIODRIVER", "dummy")
 os.environ.setdefault("SDL_RENDER_DRIVER", "software")
 os.environ.setdefault("LIBGL_ALWAYS_SOFTWARE", "1")
 
-build_dir = REPO_ROOT / "cmake-build-release"
-build_dir_override = os.environ.get("GAME_BUILD_DIR")
-if build_dir_override:
-    build_dir = (REPO_ROOT / build_dir_override).resolve()
+
+def resolveBuildDirectory():
+    override = os.environ.get("GAME_BUILD_DIR")
+    if override:
+        return (REPO_ROOT / override).resolve()
+    release_name = "cmake-build-clangcl20-release" if os.name == "nt" else "cmake-build-gcc15-release"
+    for name in (release_name, release_name.replace("-release", "-debug"), "cmake-build-release", "cmake-build-debug"):
+        candidate = REPO_ROOT / name
+        if candidate.exists():
+            return candidate
+    return REPO_ROOT / release_name
+
+
+build_dir = resolveBuildDirectory()
 if build_dir.exists():
     os.chdir(build_dir)
 
@@ -27821,13 +27831,14 @@ class McpServerTest(unittest.TestCase):
         import campaign as campaign_module
         from tests.narrative_walkthrough import NarrativeWalkthrough
 
-        proc = self._start_stdio_mcp_process("ritual")
-        try:
-            self._initialize_stdio_mcp(proc)
-            session = {"proc": proc, "next_request_id": 3}
-            for class_id in ("Warrior", "Sorcerer"):
-                for outcome in ("good", "bad"):
-                    with self.subTest(class_id=class_id, outcome=outcome):
+        for class_id in ("Warrior", "Sorcerer"):
+            for outcome in ("good", "bad"):
+                with self.subTest(class_id=class_id, outcome=outcome):
+                    proc = self._start_stdio_mcp_process("ritual", fixture_seed=100)
+                    try:
+                        self._initialize_stdio_mcp(proc)
+                        self._assertMcpFixtureSeed(proc, 100)
+                        session = {"proc": proc, "next_request_id": 3}
                         game_handle, map_handle, player_handle = self._mcp_load_game_map_with_player(
                             session, "ritual", class_id
                         )
@@ -27867,8 +27878,8 @@ class McpServerTest(unittest.TestCase):
                         finally:
                             for path in save_paths:
                                 path.unlink(missing_ok=True)
-        finally:
-            self._shutdown_process(proc)
+                    finally:
+                        self._shutdown_process(proc)
 
     def test_stdio_map_walkthrough_siege(self):
         self._assert_mcp_walkthrough("siege")
@@ -28158,8 +28169,12 @@ class McpServerTest(unittest.TestCase):
             self._write_mcp_walkthrough_log(map_name, log)
         return success, log
 
-    def _start_stdio_mcp_process(self, map_name=None, *, trace_name=None, native_log_file=None, test_seed=None):
-        script = REPO_ROOT / "mcp.py"
+    def _start_stdio_mcp_process(
+        self, map_name=None, *, trace_name=None, native_log_file=None, fixture_seed=None, test_seed=None
+    ):
+        if fixture_seed is not None and test_seed is not None:
+            raise ValueError("Choose fixture_seed or test_seed, not both")
+        script = REPO_ROOT / "mcp.py" if fixture_seed is None else REPO_ROOT / "tests" / "mcp_seed_fixture.py"
         self.assertTrue(script.exists(), "MCP entry point is missing")
         trace_path = None
         env = None
@@ -28181,6 +28196,8 @@ class McpServerTest(unittest.TestCase):
             "--native-log-sink",
             "file" if native_log_file is not None else "disabled",
         ]
+        if fixture_seed is not None:
+            command.extend(["--fixture-seed", str(fixture_seed)])
         if native_log_file is not None:
             native_log_file = Path(native_log_file)
             native_log_file.parent.mkdir(parents=True, exist_ok=True)
@@ -28193,6 +28210,27 @@ class McpServerTest(unittest.TestCase):
         proc._playtest_trace_path = trace_path
         proc._native_log_file = native_log_file
         return proc
+
+    def _assertMcpFixtureSeed(self, proc, seed):
+        prefix = "MCP fixture random seed "
+        deadline = time.monotonic() + 5.0
+        while True:
+            self.assertIsNone(proc.poll(), "The seeded MCP process exited before its startup receipt was validated")
+            stderr = self._mcp_process_tail_text(proc, "stderr")
+            receipts = [
+                line[len(prefix) :]
+                for line in stderr.splitlines(keepends=True)
+                if line.startswith(prefix) and line.endswith(("\n", "\r"))
+            ]
+            if receipts:
+                self.assertEqual(1, len(receipts), "The fresh MCP process must seed its fixture exactly once")
+                receipt = json.loads(receipts[0])
+                self.assertEqual({"seed": seed}, receipt)
+                self.assertTrue(type(proc.pid) is int and proc.pid > 0, "The seed receipt requires a live process PID")
+                print("MCP fixture startup", {"pid": proc.pid, "receipt": receipt}, flush=True)
+                return receipt
+            self.assertLess(time.monotonic(), deadline, "The fresh MCP process did not publish its seed receipt")
+            time.sleep(0.001)
 
     def _start_stdio_process(self, command, *, env=None, map_name=None):
         proc = subprocess.Popen(

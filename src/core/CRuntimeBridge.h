@@ -23,6 +23,8 @@ class CRuntimeBridge {
   public:
     static std::shared_ptr<vstd::event_loop<>> event_loop_instance();
 
+    static void seedRandomForTests(std::uint32_t seed);
+
     static void log_info(std::string message);
 
     static void set_logger_sink(vstd::logger::sink target, const std::string &path);

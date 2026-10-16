@@ -14,7 +14,7 @@ if not defined GAME_WINDOWS_INSTALL_FAST_TOOLS (
 where cmake >nul 2>nul
 if errorlevel 1 (
     echo CMake was not found on PATH.
-    echo Install Visual Studio 2022 with the C++ CMake tools component, or add CMake to PATH.
+    echo Install CMake 4.0.2 or newer, or add it to PATH. CI uses CMake 4.3.1.
     exit /b 1
 )
 
@@ -90,7 +90,7 @@ if not exist "!VCPKG_TOOLCHAIN_FILE!" (
 )
 
 if "!GAME_WINDOWS_FAST_BUILD!"=="1" (
-    if not defined CONFIGURE_BUILD_DIRS set "CONFIGURE_BUILD_DIRS=cmake-build-release"
+    if not defined CONFIGURE_BUILD_DIRS set "CONFIGURE_BUILD_DIRS=cmake-build-clangcl20-release"
     if not defined VCPKG_TARGET_TRIPLET set "VCPKG_TARGET_TRIPLET=x64-windows-release"
     if not defined VCPKG_INSTALLED_DIR set "VCPKG_INSTALLED_DIR=%CD%\vcpkg_installed\fast"
 
@@ -105,21 +105,26 @@ if "!GAME_WINDOWS_FAST_BUILD!"=="1" (
     )
 )
 
-if not defined CMAKE_GENERATOR (
-    if "!GAME_WINDOWS_FAST_BUILD!"=="1" (
-        where ninja >nul 2>nul
-        if not errorlevel 1 set "CMAKE_GENERATOR=Ninja"
-    )
+if not defined CMAKE_GENERATOR set "CMAKE_GENERATOR=Ninja"
+if /I not "!CMAKE_GENERATOR!"=="Ninja" (
+    echo The C++26 Windows desktop build requires the Ninja generator with clang-cl.
+    exit /b 1
 )
-if not defined CMAKE_GENERATOR set "CMAKE_GENERATOR=Visual Studio 17 2022"
-
-if /I "!CMAKE_GENERATOR!"=="Ninja" (
-    set "CMAKE_GENERATOR_PLATFORM="
-    call :ensure_msvc_env
-    if errorlevel 1 exit /b 1
-) else (
-    if not defined CMAKE_GENERATOR_PLATFORM set "CMAKE_GENERATOR_PLATFORM=x64"
+where ninja >nul 2>nul
+if errorlevel 1 (
+    echo Ninja was not found on PATH. Install Ninja before configuring.
+    exit /b 1
 )
+set "CMAKE_GENERATOR_PLATFORM="
+call :ensure_msvc_env
+if errorlevel 1 exit /b 1
+if not defined CMAKE_CXX_COMPILER set "CMAKE_CXX_COMPILER=%ProgramFiles%\LLVM\bin\clang-cl.exe"
+if not exist "!CMAKE_CXX_COMPILER!" (
+    echo LLVM 20.1.8+ clang-cl was not found at !CMAKE_CXX_COMPILER!.
+    echo Install LLVM or set CMAKE_CXX_COMPILER to its absolute clang-cl.exe path.
+    exit /b 1
+)
+if not defined CMAKE_C_COMPILER set "CMAKE_C_COMPILER=!CMAKE_CXX_COMPILER!"
 
 if "!GAME_WINDOWS_FAST_BUILD!"=="1" (
     if not defined SCCACHE_EXECUTABLE (
@@ -137,7 +142,7 @@ if not defined VCPKG_TARGET_TRIPLET set "VCPKG_TARGET_TRIPLET=x64-windows"
 if not defined VCPKG_INSTALLED_DIR set "VCPKG_INSTALLED_DIR=%CD%\vcpkg_installed"
 if not defined VCPKG_OVERLAY_TRIPLETS set "VCPKG_OVERLAY_TRIPLETS="
 if not defined VCPKG_MANIFEST_MODE set "VCPKG_MANIFEST_MODE=ON"
-if not defined CONFIGURE_BUILD_DIRS set "CONFIGURE_BUILD_DIRS=cmake-build-debug cmake-build-release"
+if not defined CONFIGURE_BUILD_DIRS set "CONFIGURE_BUILD_DIRS=cmake-build-clangcl20-debug cmake-build-clangcl20-release"
 set "VCPKG_INSTALLED_DIR_CMAKE=!VCPKG_INSTALLED_DIR:\=/!"
 
 for %%d in (!CONFIGURE_BUILD_DIRS!) do (
@@ -225,41 +230,23 @@ set "GAME_FAST_CMAKE_ARGS="
 
 if defined CMAKE_GENERATOR_PLATFORM set "CMAKE_GENERATOR_PLATFORM_ARG=-A !CMAKE_GENERATOR_PLATFORM!"
 if /I "!CMAKE_GENERATOR!"=="Ninja" set "CMAKE_BUILD_TYPE_ARG=-DCMAKE_BUILD_TYPE=Release"
+if /I "!BUILD_DIR:~-6!"=="-debug" set "CMAKE_BUILD_TYPE_ARG=-DCMAKE_BUILD_TYPE=Debug"
 if defined CMAKE_C_COMPILER_LAUNCHER set "CMAKE_COMPILER_LAUNCHER_ARGS=-DCMAKE_C_COMPILER_LAUNCHER=!CMAKE_C_COMPILER_LAUNCHER! -DCMAKE_CXX_COMPILER_LAUNCHER=!CMAKE_CXX_COMPILER_LAUNCHER!"
 if "!GAME_WINDOWS_FAST_BUILD!"=="1" set "GAME_FAST_CMAKE_ARGS=-DGAME_ENABLE_UNITY_BUILD=ON -DGAME_ENABLE_PCH=ON -DGAME_UNITY_BATCH_SIZE=16"
 
+python "%~dp0scripts\check_build_directory.py" --build-dir "!BUILD_DIR!" --generator "!CMAKE_GENERATOR!" --compiler "!CMAKE_CXX_COMPILER!"
+if errorlevel 1 exit /b 1
 if exist "!BUILD_DIR!\CMakeCache.txt" (
-    findstr /C:"CMAKE_GENERATOR:INTERNAL=!CMAKE_GENERATOR!" "!BUILD_DIR!\CMakeCache.txt" >nul 2>nul
-    if errorlevel 1 (
-        echo Recreating !BUILD_DIR! because it was configured with a different CMake generator.
-        del /q "!BUILD_DIR!\CMakeCache.txt" 2>nul
-        rmdir /s /q "!BUILD_DIR!\CMakeFiles" 2>nul
-    ) else (
-        if defined CMAKE_GENERATOR_PLATFORM (
-            findstr /C:"CMAKE_GENERATOR_PLATFORM:INTERNAL=!CMAKE_GENERATOR_PLATFORM!" "!BUILD_DIR!\CMakeCache.txt" >nul 2>nul
-            if errorlevel 1 (
-                echo Recreating !BUILD_DIR! because it was configured for a different platform.
-                del /q "!BUILD_DIR!\CMakeCache.txt" 2>nul
-                rmdir /s /q "!BUILD_DIR!\CMakeFiles" 2>nul
-            )
-        )
-    )
-    if exist "!BUILD_DIR!\CMakeCache.txt" (
         findstr /C:"VCPKG_INSTALLED_DIR:PATH=!VCPKG_INSTALLED_DIR_CMAKE!" "!BUILD_DIR!\CMakeCache.txt" >nul 2>nul
         if errorlevel 1 (
-            echo Recreating !BUILD_DIR! because it was configured with a different vcpkg installed directory.
-            del /q "!BUILD_DIR!\CMakeCache.txt" 2>nul
-            rmdir /s /q "!BUILD_DIR!\CMakeFiles" 2>nul
+            echo Preserving !BUILD_DIR! because it uses a different vcpkg installed directory. Choose a new build directory.
+            exit /b 1
         )
-    )
-    if exist "!BUILD_DIR!\CMakeCache.txt" (
         findstr /C:"VCPKG_TARGET_TRIPLET:STRING=!VCPKG_TARGET_TRIPLET!" "!BUILD_DIR!\CMakeCache.txt" >nul 2>nul
         if errorlevel 1 (
-            echo Recreating !BUILD_DIR! because it was configured with a different vcpkg target triplet.
-            del /q "!BUILD_DIR!\CMakeCache.txt" 2>nul
-            rmdir /s /q "!BUILD_DIR!\CMakeFiles" 2>nul
+            echo Preserving !BUILD_DIR! because it uses a different vcpkg target triplet. Choose a new build directory.
+            exit /b 1
         )
-    )
 )
 
 rem Keep vcpkg from retaining a debug import library from another Python minor version.
@@ -272,6 +259,8 @@ cmake -B ./!BUILD_DIR! -S . ^
     !CMAKE_BUILD_TYPE_ARG! ^
     !CMAKE_COMPILER_LAUNCHER_ARGS! ^
     !GAME_FAST_CMAKE_ARGS! ^
+    -DCMAKE_C_COMPILER="!CMAKE_C_COMPILER!" ^
+    -DCMAKE_CXX_COMPILER="!CMAKE_CXX_COMPILER!" ^
     -DCMAKE_TOOLCHAIN_FILE="!VCPKG_TOOLCHAIN_FILE!" ^
     -DVCPKG_INSTALLED_DIR="!VCPKG_INSTALLED_DIR!" ^
     -DVCPKG_TARGET_TRIPLET="!VCPKG_TARGET_TRIPLET!" ^
@@ -280,5 +269,7 @@ cmake -B ./!BUILD_DIR! -S . ^
     -DPython3_EXECUTABLE="!PYTHON_EXECUTABLE!" ^
     -DPython3_INCLUDE_DIR="!PYTHON_INCLUDE_DIR!" ^
     -DPython3_LIBRARY="!PYTHON_LIBRARY!" ^
+    -D_Python3_INCLUDE_DIR:PATH="!PYTHON_INCLUDE_DIR!" ^
+    -D_Python3_LIBRARY_RELEASE:FILEPATH="!PYTHON_LIBRARY!" ^
     -D_Python3_LIBRARY_DEBUG:FILEPATH="!PYTHON_LIBRARY_DEBUG!"
 exit /b %ERRORLEVEL%
