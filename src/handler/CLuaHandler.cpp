@@ -30,6 +30,7 @@ extern "C" {
 }
 
 #include <array>
+#include <variant>
 
 // Implementation discipline: no lua_CFunction in this file ever raises a Lua error (no
 // luaL_error / lua_error / luaL_check*). Lua errors longjmp past C++ destructors, so every
@@ -89,13 +90,25 @@ const LuaBaseInfo *find_lua_base(const char *name) {
     return nullptr;
 }
 
-std::shared_ptr<CGameObject> *test_game_object(lua_State *L, int index) {
-    return static_cast<std::shared_ptr<CGameObject> *>(luaL_testudata(L, index, GAME_OBJECT_METATABLE));
+using LuaGameObjectReference = std::variant<std::shared_ptr<CGameObject>, std::weak_ptr<CGameObject>>;
+
+LuaGameObjectReference *test_game_object(lua_State *L, int index) {
+    return static_cast<LuaGameObjectReference *>(luaL_testudata(L, index, GAME_OBJECT_METATABLE));
 }
 
 std::shared_ptr<CGameObject> to_game_object(lua_State *L, int index) {
     auto *pointer = test_game_object(L, index);
-    return pointer == nullptr ? nullptr : *pointer;
+    if (!pointer) {
+        return nullptr;
+    }
+    if (const auto *owner = std::get_if<std::shared_ptr<CGameObject>>(pointer)) {
+        return *owner;
+    }
+    auto game = std::get<std::weak_ptr<CGameObject>>(*pointer).lock();
+    if (!game) {
+        vstd::logger::warning("Lua plugin game session is no longer available");
+    }
+    return game;
 }
 
 void push_game_object(lua_State *L, const std::shared_ptr<CGameObject> &object) {
@@ -103,15 +116,19 @@ void push_game_object(lua_State *L, const std::shared_ptr<CGameObject> &object) 
         lua_pushnil(L);
         return;
     }
-    void *storage = lua_newuserdatauv(L, sizeof(std::shared_ptr<CGameObject>), 0);
-    new (storage) std::shared_ptr<CGameObject>(object);
+    void *storage = lua_newuserdatauv(L, sizeof(LuaGameObjectReference), 0);
+    if (dynamic_cast<CGame *>(object.get())) {
+        new (storage) LuaGameObjectReference(std::in_place_type<std::weak_ptr<CGameObject>>, object);
+    } else {
+        new (storage) LuaGameObjectReference(std::in_place_type<std::shared_ptr<CGameObject>>, object);
+    }
     luaL_setmetatable(L, GAME_OBJECT_METATABLE);
 }
 
 int lua_object_gc(lua_State *L) {
     auto *pointer = test_game_object(L, 1);
     if (pointer != nullptr) {
-        pointer->~shared_ptr();
+        pointer->~LuaGameObjectReference();
     }
     return 0;
 }
@@ -667,8 +684,8 @@ void push_context_table(lua_State *L, const std::shared_ptr<CGame> &game, std::w
 
     lua_pushcfunction(L, lua_plugin_log);
     lua_setfield(L, -2, "log");
-    // context.game is a normal CGameObject userdata, i.e. a strong reference to the game. The
-    // table is scoped to the load(context) call and becomes collectable as soon as it returns.
+    // The state belongs to this game, so even an uncollected or retained load context must
+    // borrow the game. Other gameplay userdata keeps its existing shared ownership.
     push_game_object(L, game);
     lua_setfield(L, -2, "game");
 }

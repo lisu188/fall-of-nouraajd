@@ -17,6 +17,7 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 
 #include "core/CGame.h"
+#include "core/CGameContext.h"
 #include "core/CLoader.h"
 #include "core/CLuaOverrides.h"
 #include "handler/CEventHandler.h"
@@ -140,6 +141,82 @@ void test_lua_factory_objects_are_released() {
     expect_true(observer.expired(), "a dispatched Lua object must be released after the state and caller release it");
     expect_true(CLuaOverrides::instances().size() == originalEntries,
                 "Lua state shutdown must not leave entries for discarded objects");
+}
+
+void testLuaLoadContextsDoNotRetainGameSessions() {
+    for (const bool fail : {false, true}) {
+        auto game = std::make_shared<CGame>();
+        auto context = game->getContext();
+        auto handler = game->getLuaHandler();
+        std::weak_ptr<CGame> lifetime = game;
+        const char *code =
+            fail ? "function load(context) error('deliberate load failure') end" : "function load(context) end";
+        expect_true(handler->loadPlugin(game, "plugins/owner_probe.lua", code) != fail,
+                    "the Lua lifetime fixture must preserve successful and contained-error load results");
+        expect_true(game.use_count() == 1, "a completed Lua load must not wait for GC to release its game owner");
+        game.reset();
+        expect_true(lifetime.expired() && !context->isActive(),
+                    "dropping the last game owner must close a successfully or partially initialized Lua session");
+        context->shutdown();
+        handler->releaseState();
+        handler->releaseState();
+    }
+}
+
+void testLuaRetainedContextsBorrowGamesAndOwnGameplayObjects() {
+    auto game = std::make_shared<CGame>();
+    auto context = game->getContext();
+    auto handler = game->getLuaHandler();
+    std::weak_ptr<CGame> lifetime = game;
+    std::weak_ptr<CGameObject> retainedObject;
+    game->getObjectHandler()->registerType("LuaOwnedObjectProbe", [&retainedObject] {
+        auto object = std::make_shared<CGameObject>();
+        retainedObject = object;
+        return object;
+    });
+    const char *code = R"lua(
+function load(context)
+    local borrowedGame = context.game
+    local ownedObject = context.game:createObject("LuaOwnedObjectProbe")
+    context.registerType("LuaRetainedContextProbe", {
+        base = "CTile",
+        onStep = function(self, creature)
+            assert(borrowedGame == context.game)
+            ownedObject:setNumericProperty("calls", 1)
+            creature:setNumericProperty("retainedContextCalled", ownedObject:getNumericProperty("calls"))
+        end,
+    })
+end
+)lua";
+    expect_true(handler->loadPlugin(game, "plugins/retained_context_probe.lua", code),
+                "a Lua hook may retain its load context and gameplay objects");
+    auto tile = game->createObject<CTile>("LuaRetainedContextProbe");
+    auto creature = std::make_shared<CCreature>();
+    expect_true(!retainedObject.expired(), "Lua must retain ordinary gameplay objects through their hook captures");
+    if (tile) {
+        tile->onStep(creature);
+    }
+    expect_true(creature->hasProperty("retainedContextCalled") &&
+                    creature->getNumericProperty("retainedContextCalled") == 1,
+                "a retained weak game reference must preserve live-session API access and identity");
+    expect_true(game.use_count() == 1, "a registered hook retaining context.game must borrow the session");
+    game.reset();
+    expect_true(lifetime.expired() && !context->isActive() && retainedObject.expired(),
+                "game teardown must close retained Lua contexts and release their shared gameplay captures");
+    handler->releaseState();
+    context->shutdown();
+
+    auto nextGame = std::make_shared<CGame>();
+    expect_true(nextGame->getLuaHandler()->loadPlugin(nextGame, "plugins/second_session.lua", PROBE_TILE_PLUGIN),
+                "a second session must still load and construct Lua hooks after previous teardown");
+    auto nextTile = nextGame->createObject<CTile>("LuaProbeTile");
+    auto nextCreature = std::make_shared<CCreature>();
+    if (nextTile) {
+        nextTile->onStep(nextCreature);
+    }
+    expect_true(nextCreature->hasProperty("luaTouched") && nextCreature->getNumericProperty("luaTouched") == 1,
+                "the second session must dispatch its own Lua state independently");
+    nextGame->getContext()->shutdown();
 }
 
 void test_lua_sandbox_blocks_dangerous_globals() {
@@ -667,6 +744,8 @@ int main() {
     test_lua_hook_dispatch_and_property_bridge();
     test_lua_config_json_and_reflection_construction();
     test_lua_factory_objects_are_released();
+    testLuaLoadContextsDoNotRetainGameSessions();
+    testLuaRetainedContextsBorrowGamesAndOwnGameplayObjects();
     test_lua_sandbox_blocks_dangerous_globals();
     test_lua_rejects_bytecode_chunks();
     test_lua_load_contract_and_syntax_errors();
