@@ -25,6 +25,7 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #include "core/CTypes.h"
 #include "handler/CObjectHandler.h"
 #include "test_harness.h"
+#include "native_crash_diagnostics.h"
 
 #include <climits>
 #include <future>
@@ -380,6 +381,7 @@ void testLargeMapLazyChunksAndWarmReuse() {
 } // namespace
 
 int main() {
+    native_test_diagnostics::installWindowsCrashDiagnostics();
     pybind11::scoped_interpreter guard{};
     CRuntimeBridge::set_logger_sink(vstd::logger::sink::disabled, "");
     testLargeCostsAndFailureSentinels();

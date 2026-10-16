@@ -47,6 +47,7 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #include "object/CInteraction.h"
 #include "object/CItem.h"
 #include "test_harness.h"
+#include "native_crash_diagnostics.h"
 #include "stat_composition_fixture.h"
 #include "vutil.h"
 
@@ -388,14 +389,20 @@ void test_pathfinder_find_path_without_obstacles() {
     };
     auto no_waypoint = [](const Coords &) -> std::optional<Coords> { return std::nullopt; };
 
+    std::cout << "[core-pathfinder] ENTER synchronous search" << std::endl;
     auto path = CPathFinder::findPath(Coords(0, 0, 0), Coords(2, 0, 0), can_step, no_waypoint);
+    std::cout << "[core-pathfinder] EXIT synchronous search" << std::endl;
     expect_true(path.size() == 2, "findPath should include each next step until goal");
     expect_true(path.front() == Coords(1, 0, 0), "findPath should return first move toward goal");
     expect_true(path.back() == Coords(2, 0, 0), "findPath should end on goal");
 
+    std::cout << "[core-pathfinder] ENTER lazy task construction" << std::endl;
     auto next_step = CPathFinder::findNextStepAsync(Coords(0, 0, 0), Coords(2, 0, 0), can_step, no_waypoint);
-    expect_true(game_async::run(std::move(next_step), game_async::WaitMode::PostedWork) == Coords(1, 0, 0),
-                "findNextStep should return the first optimal neighbor");
+    std::cout << "[core-pathfinder] EXIT lazy task construction" << std::endl;
+    std::cout << "[core-pathfinder] ENTER worker execution and posted continuation" << std::endl;
+    auto next_coords = game_async::run(std::move(next_step), game_async::WaitMode::PostedWork);
+    std::cout << "[core-pathfinder] EXIT worker execution and posted continuation" << std::endl;
+    expect_true(next_coords == Coords(1, 0, 0), "findNextStep should return the first optimal neighbor");
 }
 
 void test_pathfinder_rejects_overflowing_routes() {
@@ -4103,6 +4110,7 @@ void testGeneratedNameFixtureSeedHookRejectsLateAndRepeatedActivation() {
 } // namespace
 
 int main() {
+    native_test_diagnostics::installWindowsCrashDiagnostics();
     pybind11::scoped_interpreter guard{};
     const auto runDiagnosedCase = [](const char *name, void (*test)()) {
         std::cout << "[core-test] ENTER " << name << std::endl;

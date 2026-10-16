@@ -151,6 +151,7 @@ FAST_TEST_PREFIXES = (
     "MonsterBalanceRunnerTest.",
     "NativeCallgrindToolTest.",
     "ScriptFlowExportTest.",
+    "WindowsNativeCrashDiagnosticsTest.",
     "NativeTestProfileSourceTest.",
     "PlayerIdentityContentTest.",
     "EffectContractTest.",
@@ -25963,6 +25964,18 @@ class TestRunnerSuiteTest(unittest.TestCase):
                 self.assertTrue(test_name_matches_suite(test_name, suite_name), (test_name, suite_name))
         self.assertNotIn("_ScriptFlowExportTest", globals())
 
+    def testWindowsCrashDiagnosticsAreDiscoveredOnceInSourceSuites(self):
+        if not SOURCE_UI_TESTS_AVAILABLE:
+            self.skipTest("Source-only contracts are not installed with the game")
+        methods = unittest.defaultTestLoader.getTestCaseNames(WindowsNativeCrashDiagnosticsTest)
+        self.assertEqual(len(methods), 4)
+        for method in methods:
+            test_name = f"WindowsNativeCrashDiagnosticsTest.{method}"
+            self.assertEqual(f"{__name__}.{test_name}", WindowsNativeCrashDiagnosticsTest(method).id())
+            for suite_name in ("fast", "full", "coverage-safe"):
+                self.assertTrue(test_name_matches_suite(test_name, suite_name), (test_name, suite_name))
+        self.assertNotIn("_WindowsNativeCrashDiagnosticsTest", globals())
+
     def test_explicit_transition_wait_accepts_completed_slow_pump(self):
         from unittest.mock import Mock, patch
 
@@ -26427,6 +26440,9 @@ if SOURCE_UI_TESTS_AVAILABLE:
     from tests.test_ui_mcp_dialogue import DialogueMcpWalkthroughTest as _DialogueMcpWalkthroughTest
     from tests.test_native_callgrind import NativeCallgrindToolTest as _NativeCallgrindToolTest
     from tests.test_script_flow_exports import ScriptFlowExportTest as _ScriptFlowExportTest
+    from tests.test_windows_native_crash_diagnostics import (
+        WindowsNativeCrashDiagnosticsTest as _WindowsNativeCrashDiagnosticsTest,
+    )
     from tests.test_native_test_profile import NativeTestProfileSourceTest as _NativeTestProfileSourceTest
     from tests.test_native_test_profile import NativeTestProfileRuntimeTest as _NativeTestProfileRuntimeTest
     from tests.test_windows_python_configuration import (
@@ -26488,6 +26504,9 @@ if SOURCE_UI_TESTS_AVAILABLE:
         pass
 
     class ScriptFlowExportTest(_ScriptFlowExportTest):
+        pass
+
+    class WindowsNativeCrashDiagnosticsTest(_WindowsNativeCrashDiagnosticsTest):
         pass
 
     class NativeTestProfileRuntimeTest(_NativeTestProfileRuntimeTest):
@@ -26585,6 +26604,7 @@ if SOURCE_UI_TESTS_AVAILABLE:
     del _WindowsPythonConfigurationTest
     del _NativeCallgrindToolTest
     del _ScriptFlowExportTest
+    del _WindowsNativeCrashDiagnosticsTest
     del _EffectContractTest, _EffectSemanticRuntimeTest, _CharacterCreationFlowTest, _CharacterPreviewRuntimeTest
     del _UiPixelAnalysisTest
     del _EnemyRoleRuntimeTest
