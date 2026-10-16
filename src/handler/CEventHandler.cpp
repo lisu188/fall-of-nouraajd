@@ -1,6 +1,6 @@
 /*
 fall-of-nouraajd c++ dark fantasy game
-Copyright (C) 2025  Andrzej Lis
+Copyright (C) 2025-2026  Andrzej Lis
 
 This program is free software: you can redistribute it and/or modify
         it under the terms of the GNU General Public License as published by
@@ -16,6 +16,8 @@ You should have received a copy of the GNU General Public License
 along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 #include "handler/CHandler.h"
+#include "core/CMap.h"
+#include "core/CPlaytestTrace.h"
 
 std::string CGameEvent::CType::onEnter = "onEnter";
 std::string CGameEvent::CType::onTurn = "onTurn";
@@ -29,6 +31,20 @@ std::string CGameEvent::CType::onUnequip = "onUnequip";
 void CEventHandler::gameEvent(std::shared_ptr<CMapObject> object, std::shared_ptr<CGameEvent> event) const {
     if (!object || !event) {
         return;
+    }
+    json entry_fields;
+    if (CPlaytestTrace::enabled() && event->getType() == CGameEvent::CType::onEnter) {
+        auto caused = std::dynamic_pointer_cast<CGameEventCaused>(event);
+        auto cause = caused ? std::dynamic_pointer_cast<CMapObject>(caused->getCause()) : nullptr;
+        auto map = object->getMap();
+        if (map && cause && cause->getMap() == map && object->getCoords() == cause->getCoords() &&
+            map->getObjectByName(object->getName()) == object && map->getObjectByName(cause->getName()) == cause) {
+            entry_fields = {{"target", CPlaytestTrace::objectRef(object)},
+                            {"cause", CPlaytestTrace::objectRef(cause)},
+                            {"targetCoords", CPlaytestTrace::coords(object->getCoords())},
+                            {"causeCoords", CPlaytestTrace::coords(cause->getCoords())}};
+            CPlaytestTrace::addMapContext(entry_fields, map);
+        }
     }
     // TODO: maybe add reflection
     if (event->getType() == CGameEvent::CType::onEnter) {
@@ -70,6 +86,9 @@ void CEventHandler::gameEvent(std::shared_ptr<CMapObject> object, std::shared_pt
     auto range = triggers.equal_range(std::make_pair(object->getName(), event->getType()));
     std::for_each(range.first, range.second,
                   [object, event](TriggerMap::value_type x) { x.second->trigger(object, event); });
+    if (!entry_fields.is_null()) {
+        CPlaytestTrace::record("object_entered", std::move(entry_fields));
+    }
 }
 
 void CEventHandler::registerTrigger(std::shared_ptr<CTrigger> trigger) {
