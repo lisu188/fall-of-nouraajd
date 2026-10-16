@@ -126,6 +126,7 @@ MCP_ALLOWED_HANDLE_METHODS = {
         "getEntryY",
         "getEntryZ",
         "getLocationByName",
+        "getNavigationNeighbors",
         "getObjectByName",
         "getObjects",
         "getObjectsAtCoords",
@@ -149,6 +150,7 @@ MCP_ALLOWED_HANDLE_METHODS = {
         "addItem",
         "addItems",
         "countItems",
+        "equipItem",
         "getActions",
         "getEffectiveInteractions",
         "getArchetypeClassId",
@@ -156,11 +158,13 @@ MCP_ALLOWED_HANDLE_METHODS = {
         "getArchetypeRaceId",
         "getArchetypeRaceLabel",
         "getEffects",
+        "getEquipped",
         "getGold",
         "getHp",
         "getHpMax",
         "getHpRatio",
         "getItems",
+        "getItemAtSlot",
         "getLevel",
         "getMana",
         "getManaMax",
@@ -203,6 +207,7 @@ MCP_ALLOWED_HANDLE_METHODS = {
         "getAllTypes",
     },
     "CGuiHandler": {
+        "getRequestedTradeMarket",
         "openPanel",
         "showDialog",
         "showInfo",
@@ -243,6 +248,8 @@ MCP_ALLOWED_HANDLE_METHODS = {
         "remove",
         "sellItem",
     },
+    "CastleTownRestDialog": {"configureTown"},
+    "CastleObjective": {"capture"},
     "SpawnPoint": {
         "sealBreach",
     },
@@ -319,11 +326,13 @@ class EngineMcpServer:
         native_log_path: Path | None = None,
         build_config: str | None = None,
         diagnostics: Any = None,
+        test_seed: int | None = None,
     ) -> None:
         self.repo_root = repo_root
         self.build_dir = build_dir
         self.build_config = build_config
         self.diagnostics = diagnostics
+        self.test_seed = test_seed
         self.allow_origins = allow_origins or []
         self.trace_messages = trace_messages
         self.native_log_sink = native_log_sink
@@ -371,6 +380,8 @@ class EngineMcpServer:
                 f"{self.build_dir} --target _game` or run mcp.py with `--build`."
             ) from exc
         self._configure_native_logging()
+        if self.test_seed is not None:
+            self._game_module._seedRandomForTests(self.test_seed)
         if self.diagnostics is not None:
             self.diagnostics.configureTrace(self._game_module)
         self.game_module = importlib.import_module("game")
@@ -414,11 +425,24 @@ class EngineMcpServer:
                 return candidate
         return None
 
-    def inspect_and_export(self) -> None:
+    def inspect_and_export(self, *, stdio: bool = False) -> None:
         if self._game_module is None or self.game_module is None:
             raise RuntimeError("Modules are not imported")
+        self.exports.pop("playtest_trace_output_available", None)
         self._export_module_callables(self._game_module, source="_game")
         self._export_module_callables(self.game_module, source="game")
+        trace_enabled = os.environ.get("GAME_PLAYTEST_TRACE", "").lower() not in {"", "0", "false", "off", "disabled"}
+        if stdio and trace_enabled:
+            name = "playtest_trace_output_available"
+            getter = getattr(self._game_module, name, None)
+            if callable(getter):
+                self.exports[name] = ExportedCallable(
+                    name=name,
+                    source="_game",
+                    target_name=name,
+                    callable_obj=getter,
+                    signature=self._safe_signature(getter),
+                )
         logger.info("exported %d callables", len(self.exports))
 
     def _configure_native_logging(self) -> None:
@@ -1471,6 +1495,8 @@ class EngineMcpServer:
             }
 
         guard_error = self._validate_pathfinding_call(target, method, resolved_args, resolved_kwargs)
+        if guard_error is None:
+            guard_error = self._validateEquipmentCall(target, method, resolved_args, resolved_kwargs)
         if guard_error is not None:
             return {
                 "content": [{"type": "text", "text": json.dumps(guard_error, ensure_ascii=False)}],
@@ -1482,6 +1508,10 @@ class EngineMcpServer:
             result = method_callable(*resolved_args, **resolved_kwargs)
             if method in {"getQuests", "getCompletedQuests"} and isinstance(result, (set, frozenset)):
                 result = list(result)
+            if method == "getNavigationNeighbors":
+                result = [self._coord_components(coords) for coords in result]
+                if any(coords is None for coords in result):
+                    raise TypeError("Navigation neighbors must contain integer coordinates")
             serialized = self._serialize_result(result, registry)
             structured = {"result": serialized}
             return {
@@ -2197,6 +2227,48 @@ class EngineMcpServer:
                     return int(bound)
             except (TypeError, ValueError):
                 continue
+        return None
+
+    @staticmethod
+    def _validateEquipmentCall(
+        target: Any, method: str, resolved_args: list[Any], resolved_kwargs: dict[str, Any]
+    ) -> dict[str, Any] | None:
+        if method != "equipItem":
+            return None
+        if len(resolved_args) > 2 or set(resolved_kwargs) - {"slot", "item"}:
+            return {"error": "equipItem requires exactly slot and item arguments"}
+        arguments = dict(zip(("slot", "item"), resolved_args))
+        for name, value in resolved_kwargs.items():
+            if name in arguments:
+                return {"error": f"equipItem received multiple values for {name}"}
+            arguments[name] = value
+        if set(arguments) != {"slot", "item"} or not isinstance(arguments["slot"], str):
+            return {"error": "equipItem requires a string slot and an item handle or None"}
+        slot, item = arguments["slot"], arguments["item"]
+        try:
+            equipped = target.getEquipped()
+            if equipped.get(slot) is item:
+                return None
+            if item is not None:
+                if any(candidate is item for candidate in equipped.values()):
+                    return {"error": "equipItem rejected: unequip the item from its current slot first"}
+                if not any(candidate is item for candidate in target.getItems()):
+                    return {"error": "equipItem rejected: item is not owned by this creature"}
+                player_type = any(
+                    getattr(cls, "__name__", "") == "CPlayer" for cls in getattr(type(target), "__mro__", ())
+                )
+                if player_type and item.hasTag("quest"):
+                    return {"error": "equipItem rejected: player quest-tagged items cannot leave inventory"}
+            game_map = target.getMap()
+            if game_map is None:
+                return {"error": "equipItem rejected: creature has no map"}
+            if item is None:
+                return None
+            configuration = game_map.getGame().getSlotConfiguration()
+            if not configuration.canFit(slot, item):
+                return {"error": f"equipItem rejected: item does not fit slot {slot}"}
+        except Exception as exc:
+            return {"error": f"equipItem rejected: cannot validate equipment context: {exc}"}
         return None
 
     def _validate_pathfinding_call(
@@ -2926,6 +2998,18 @@ class EngineHttpRequestHandler(BaseHTTPRequestHandler):
         self.send_header("Vary", "Accept, Origin, MCP-Protocol-Version, MCP-Session-Id")
 
 
+def parseTestSeed(value: str) -> int:
+    if not value.isascii() or not value.isdecimal():
+        raise argparse.ArgumentTypeError("test seed must be an unsigned 32-bit integer")
+    try:
+        seed = int(value, 10)
+    except ValueError as exc:
+        raise argparse.ArgumentTypeError("test seed must be an unsigned 32-bit integer") from exc
+    if not 0 <= seed <= 0xFFFFFFFF:
+        raise argparse.ArgumentTypeError("test seed must be an unsigned 32-bit integer")
+    return seed
+
+
 def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(description="MCP server exposing unified game/_game functions")
     parser.add_argument("--repo-root", default=None, help="Repository root path")
@@ -2937,6 +3021,12 @@ def parse_args() -> argparse.Namespace:
     )
     parser.add_argument("--build", action="store_true", help="Build the extension before starting the server")
     parser.add_argument("--stdio", action="store_true", help="Run as a stdio MCP server instead of HTTP")
+    parser.add_argument(
+        "--test-seed",
+        type=parseTestSeed,
+        default=None,
+        help="Seed native random sources for reproducible stdio gameplay tests",
+    )
     parser.add_argument("--host", default="127.0.0.1", help="HTTP host to bind when running in HTTP mode")
     parser.add_argument("--port", type=int, default=8765, help="HTTP port to bind when running in HTTP mode")
     parser.add_argument("--log-level", default=None, help="Python log level (INFO, or DEBUG with --debug)")
@@ -2959,7 +3049,10 @@ def parse_args() -> argparse.Namespace:
         default=None,
         help="File path for native logs when using --native-log-sink file (relative to repo root by default).",
     )
-    return parser.parse_args()
+    args = parser.parse_args()
+    if args.test_seed is not None and not args.stdio:
+        parser.error("--test-seed requires --stdio")
+    return args
 
 
 def configure_logging(
@@ -3046,11 +3139,12 @@ def main() -> int:
             native_log_path=native_log_path,
             build_config=args.build_config,
             diagnostics=diagnostics,
+            test_seed=args.test_seed,
         )
         if args.build:
             server.build_extension(stdio=args.stdio)
         server.import_modules()
-        server.inspect_and_export()
+        server.inspect_and_export(stdio=args.stdio)
         if args.stdio:
             server.serve_stdio()
         else:

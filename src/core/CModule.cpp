@@ -19,6 +19,7 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #include <algorithm>
 #include <atomic>
 #include <cctype>
+#include <cstdint>
 #include <optional>
 #include <stdexcept>
 #include <unordered_map>
@@ -444,6 +445,14 @@ void register_python_binding_type_metadata() {
 }
 
 void init_game_module(py::module_ &m) {
+    m.def(
+        "_seedRandomForTests",
+        [](std::uint32_t seed) {
+            CRngHandler::seedRandomForTests(seed);
+            // Linux builds this module with hidden symbols outside game_core.
+            vstd::rng().seed(seed);
+        },
+        py::arg("seed"));
     auto pythonEventCallbacks = std::make_shared<CPythonEventCallbacks>();
     py::module_::import("atexit").attr("register")(
         py::cpp_function([pythonEventCallbacks]() { pythonEventCallbacks->shutdown(); }));
@@ -834,6 +843,9 @@ void init_game_module(py::module_ &m) {
         .def("showLoading", &CGuiHandler::showLoading)
         .def("hideLoading", &CGuiHandler::hideLoading)
         .def("showTrade", &CGuiHandler::showTrade, "Open a trade panel.")
+        .def("getRequestedTradeMarket", &CGuiHandler::getRequestedTradeMarket,
+             "Return the last actual traced headless trade request in the active map and transition generation; "
+             "return None after observing disabled tracing or an invalidated session.")
         .def("showDialog", &CGuiHandler::showDialog, "Open a dialog panel.")
         .def("showQuestion", &CGuiHandler::showQuestion, "Open a question/choice panel.")
         .def("showSelection", &CGuiHandler::showSelection, "Open a selection panel.")

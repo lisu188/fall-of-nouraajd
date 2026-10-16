@@ -20,6 +20,8 @@ BASELINE_CASES = {
 }
 ADDITIONAL_CASES = {
     "handler": (
+        "testObjectEntryTracePreservesActualCauseAndContactBeforeNpcDeparture",
+        "testObjectEntryTraceRequiresOptInAndCanonicalColocatedCause",
         "testEffectTickCappingAndExpiryIgnoreAllocationOrder",
         "testEffectTickLethalityTimingAndCasterIgnoreAllocationOrder",
     ),

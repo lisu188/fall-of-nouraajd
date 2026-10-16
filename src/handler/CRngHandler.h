@@ -1,6 +1,6 @@
 /*
 fall-of-nouraajd c++ dark fantasy game
-Copyright (C) 2025  Andrzej Lis
+Copyright (C) 2025-2026  Andrzej Lis
 
 This program is free software: you can redistribute it and/or modify
         it under the terms of the GNU General Public License as published by
@@ -17,8 +17,11 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 #pragma once
 
+#include "core/CExport.h"
 #include "core/CGlobal.h"
 #include "object/CGameObject.h"
+
+#include <cstdint>
 
 class CItem;
 
@@ -37,6 +40,8 @@ class CRngHandler : public CGameObject {
     CRngHandler() = default;
 
     explicit CRngHandler(const std::shared_ptr<CGame> &map);
+
+    static GAME_CORE_EXPORT void seedRandomForTests(std::uint32_t seed);
 
     // Classifies the race/class pairing the encounter-scale hook below consumes.
     static ClassAssociation classifyClassAssociation(const std::shared_ptr<CCreature> &creature);

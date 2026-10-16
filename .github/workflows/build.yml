@@ -33,6 +33,7 @@ jobs:
     outputs:
       coverage-needed: ${{ steps.change-classification.outputs.coverage-needed }}
       native-needed: ${{ steps.change-classification.outputs.native-needed }}
+      mcp-branch-matrix: ${{ steps.mcp-branch-plan.outputs.mcp-branch-matrix }}
     steps:
       - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0
         with:
@@ -53,6 +54,18 @@ jobs:
         run: python3 -m unittest discover -s tests -t .
       - name: test (python fast)
         run: python3 test.py --suite fast
+      - name: Plan exhaustive MCP branch shards
+        id: mcp-branch-plan
+        run: >-
+          python3 scripts/mcp_branch_shards.py matrix --github-output "${GITHUB_OUTPUT}"
+          --catalog-output test/mcp-branch-catalog.json
+      - name: Upload authored branch obligations and pending blockers
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a
+        with:
+          name: mcp-branch-catalog-${{ github.sha }}
+          path: test/mcp-branch-catalog.json
+          if-no-files-found: error
+          retention-days: 7
       - name: classify changed paths
         id: change-classification
         shell: bash
@@ -76,21 +89,18 @@ jobs:
             fi
           fi
 
-          force_native=()
-          if [[ "${{ github.event_name }}" != "pull_request" ]]; then
-            force_native=(--force-native)
-          fi
-
           python3 scripts/ci_change_classifier.py \
             --base "${base}" \
             --head "${head}" \
-            "${force_native[@]}" \
+            --force-native \
             --github-output "${GITHUB_OUTPUT}"
 
   linux:
     needs: linux-fast
     runs-on: ubuntu-24.04
     timeout-minutes: 90
+    outputs:
+      runtime-ready: ${{ steps.mcp-runtime-upload.outcome == 'success' }}
     env:
       GAME_CONFIGURE_SKIP_APT: "1"
       GAME_CONFIGURE_SKIP_SUBMODULES: "1"
@@ -156,6 +166,20 @@ jobs:
       - name: Smoke test game imports
         if: needs.linux-fast.outputs.native-needed == 'true'
         run: PYTHONPATH=cmake-build-release:res python3 -c "import _game; import game; print('game imports ok')"
+      - name: Bundle current Linux runtime for MCP branches
+        if: needs.linux-fast.outputs.native-needed == 'true'
+        run: >-
+          python3 scripts/mcp_branch_shards.py bundle --build-dir cmake-build-release
+          --archive test/mcp-branch-runtime-linux.tar.gz --head "${{ github.sha }}"
+      - name: Upload current Linux MCP runtime
+        id: mcp-runtime-upload
+        if: needs.linux-fast.outputs.native-needed == 'true'
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a
+        with:
+          name: mcp-branch-runtime-linux-${{ github.sha }}
+          path: test/mcp-branch-runtime-linux.tar.gz
+          if-no-files-found: error
+          retention-days: 3
       - name: campaign gate (nouraajd smoke)
         if: needs.linux-fast.outputs.native-needed == 'true'
         timeout-minutes: 10
@@ -185,7 +209,7 @@ jobs:
       - name: test (python gameplay)
         if: needs.linux-fast.outputs.native-needed == 'true'
         timeout-minutes: 45
-        run: python3 test.py --suite gameplay --jobs "$(nproc)"
+        run: python3 test.py --suite gameplay-core --jobs "$(nproc)"
       - name: test (python ui)
         if: needs.linux-fast.outputs.native-needed == 'true'
         timeout-minutes: 45
@@ -289,8 +313,8 @@ jobs:
           restore-keys: |
             ${{ steps.ccache.outputs.prefix }}
             ${{ runner.os }}-ccache-
-      - name: Cache Python test timings
-        uses: actions/cache@27d5ce7f107fe9357f9df03efb73ab90386fccae
+      - name: Restore Python test timings
+        uses: actions/cache/restore@27d5ce7f107fe9357f9df03efb73ab90386fccae
         with:
           path: ${{ env.GAME_TEST_TIMINGS_FILE }}
           key: ${{ runner.os }}-test-timings-linux-coverage-${{ github.run_id }}
@@ -298,6 +322,13 @@ jobs:
       - name: coverage
         timeout-minutes: 60
         run: ./scripts/run_coverage.sh
+      - name: Save Python test timings after coverage
+        if: always()
+        continue-on-error: true
+        uses: actions/cache/save@27d5ce7f107fe9357f9df03efb73ab90386fccae
+        with:
+          path: ${{ env.GAME_TEST_TIMINGS_FILE }}
+          key: ${{ runner.os }}-test-timings-linux-coverage-${{ github.run_id }}
       - name: Upload coverage report
         if: always()
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a
@@ -620,6 +651,8 @@ jobs:
     if: needs.linux-fast.outputs.native-needed == 'true'
     runs-on: windows-2022
     timeout-minutes: 120
+    outputs:
+      runtime-ready: ${{ steps.mcp-runtime-upload.outcome == 'success' }}
     env: *windows-env
     steps:
       - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0
@@ -796,6 +829,25 @@ jobs:
           set PATH=%CD%\cmake-build-release;%CD%\cmake-build-release\Release;%VCPKG_INSTALLED_DIR%\%VCPKG_TARGET_TRIPLET%\bin;%PATH%
           python -c "import _game; import game; print('game imports ok')"
           if errorlevel 1 exit /b 1
+      - name: Stage complete Windows runtime for MCP branches
+        shell: cmd
+        run: |
+          set PATH=%CD%\cmake-build-release;%CD%\cmake-build-release\Release;%VCPKG_INSTALLED_DIR%\%VCPKG_TARGET_TRIPLET%\bin;%PATH%
+          cmake --install cmake-build-release --config Release --prefix test/mcp-runtime-windows
+          if errorlevel 1 exit /b 1
+          for %%F in (SDL2.dll SDL2_image.dll SDL2_ttf.dll) do if not exist "test\mcp-runtime-windows\fall-of-nouraajd\%%F" exit /b 1
+      - name: Bundle current Windows runtime for MCP branches
+        run: >-
+          python scripts/mcp_branch_shards.py bundle --build-dir test/mcp-runtime-windows/fall-of-nouraajd
+          --archive test/mcp-branch-runtime-windows.tar.gz --head "${{ github.sha }}"
+      - name: Upload current Windows MCP runtime
+        id: mcp-runtime-upload
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a
+        with:
+          name: mcp-branch-runtime-windows-${{ github.sha }}
+          path: test/mcp-branch-runtime-windows.tar.gz
+          if-no-files-found: error
+          retention-days: 3
       - name: sccache stats after build
         if: always()
         shell: cmd
@@ -820,7 +872,7 @@ jobs:
           set GAME_BUILD_DIR=cmake-build-release
           set GAME_BUILD_CONFIG=Release
           set PATH=%CD%\cmake-build-release;%CD%\cmake-build-release\Release;%VCPKG_INSTALLED_DIR%\%VCPKG_TARGET_TRIPLET%\bin;%PATH%
-          python test.py --suite gameplay
+          python test.py --suite gameplay-core
           if errorlevel 1 exit /b 1
       - name: package
         if: github.event_name != 'pull_request'
@@ -848,3 +900,194 @@ jobs:
         with:
           path: ${{ env.SCCACHE_DIR }}
           key: ${{ steps.windows-sccache.outputs.prefix }}${{ github.run_id }}-${{ github.run_attempt }}
+
+  mcp-branches-linux:
+    needs:
+      - linux-fast
+      - linux
+    if: >-
+      always() && !cancelled() && needs.linux-fast.result == 'success' &&
+      needs.linux-fast.outputs.native-needed == 'true' && needs.linux.outputs.runtime-ready == 'true'
+    runs-on: ubuntu-24.04
+    timeout-minutes: ${{ matrix.timeout-minutes }}
+    strategy:
+      fail-fast: false
+      matrix: ${{ fromJSON(needs.linux-fast.outputs.mcp-branch-matrix) }}
+    env:
+      GAME_BUILD_DIR: cmake-build-release
+      GAME_MCP_BRANCH_REQUIRED: "1"
+      GAME_MCP_BRANCH_HEAD: ${{ github.sha }}
+      GAME_MCP_BRANCH_PR_HEAD: ${{ github.event.pull_request.head.sha || github.sha }}
+      GAME_TEST_JOBS: "1"
+      GAME_TEST_OUTPUT_DIR: test/mcp-branches-linux-${{ matrix.shard }}
+      SDL_VIDEODRIVER: dummy
+      SDL_AUDIODRIVER: dummy
+      SDL_RENDER_DRIVER: software
+      LIBGL_ALWAYS_SOFTWARE: "1"
+    steps:
+      - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0
+      - uses: actions/setup-python@a309ff8b426b58ec0e2a45f0f869d46889d02405
+        with:
+          python-version: "3.12"
+          cache: pip
+          cache-dependency-path: requirements-dev.txt
+      - name: Install Python and native runtime dependencies
+        run: |
+          python3 -m pip install --upgrade -r requirements-dev.txt
+          sudo apt-get update
+          sudo apt-get install -y libsdl2-2.0-0 libsdl2-image-2.0-0 libsdl2-ttf-2.0-0
+      - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093
+        with:
+          name: mcp-branch-runtime-linux-${{ github.sha }}
+          path: test/runtime-download
+      - name: Verify and unpack the current Linux runtime
+        run: >-
+          python3 scripts/mcp_branch_shards.py unpack --build-dir cmake-build-release
+          --archive test/runtime-download/mcp-branch-runtime-linux.tar.gz --head "${{ github.sha }}"
+      - name: Run exhaustive MCP branch shard
+        run: >-
+          python3 scripts/mcp_branch_shards.py run
+          --shard-index ${{ matrix.shard }} --shard-count ${{ matrix.count }}
+      - name: Upload branch traces and timings
+        if: always()
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a
+        with:
+          name: mcp-branches-linux-${{ matrix.shard }}-${{ github.sha }}
+          path: test/mcp-branches-linux-${{ matrix.shard }}
+          if-no-files-found: warn
+          retention-days: 7
+
+  mcp-branches-windows:
+    needs:
+      - linux-fast
+      - windows
+    if: >-
+      always() && !cancelled() && needs.linux-fast.result == 'success' &&
+      needs.linux-fast.outputs.native-needed == 'true' && needs.windows.outputs.runtime-ready == 'true'
+    runs-on: windows-2022
+    timeout-minutes: ${{ matrix.timeout-minutes }}
+    strategy:
+      fail-fast: false
+      matrix: ${{ fromJSON(needs.linux-fast.outputs.mcp-branch-matrix) }}
+    env:
+      GAME_BUILD_DIR: cmake-build-release
+      GAME_BUILD_CONFIG: Release
+      GAME_MCP_BRANCH_REQUIRED: "1"
+      GAME_MCP_BRANCH_HEAD: ${{ github.sha }}
+      GAME_MCP_BRANCH_PR_HEAD: ${{ github.event.pull_request.head.sha || github.sha }}
+      GAME_TEST_JOBS: "1"
+      GAME_TEST_OUTPUT_DIR: test/mcp-branches-windows-${{ matrix.shard }}
+      SDL_VIDEODRIVER: dummy
+      SDL_AUDIODRIVER: dummy
+      SDL_RENDER_DRIVER: software
+      LIBGL_ALWAYS_SOFTWARE: "1"
+    steps:
+      - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0
+      - uses: actions/setup-python@a309ff8b426b58ec0e2a45f0f869d46889d02405
+        with:
+          python-version: "3.12"
+          cache: pip
+          cache-dependency-path: requirements-dev.txt
+      - name: Install Python runtime dependencies
+        run: python -m pip install --upgrade -r requirements-dev.txt
+      - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093
+        with:
+          name: mcp-branch-runtime-windows-${{ github.sha }}
+          path: test/runtime-download
+      - name: Verify and unpack the current Windows runtime
+        run: >-
+          python scripts/mcp_branch_shards.py unpack --build-dir cmake-build-release
+          --archive test/runtime-download/mcp-branch-runtime-windows.tar.gz --head "${{ github.sha }}"
+      - name: Run exhaustive MCP branch shard
+        shell: cmd
+        run: |
+          set PATH=%CD%\cmake-build-release;%CD%\cmake-build-release\Release;%PATH%
+          python scripts/mcp_branch_shards.py run --shard-index ${{ matrix.shard }} --shard-count ${{ matrix.count }}
+          if errorlevel 1 exit /b 1
+      - name: Upload branch traces and timings
+        if: always()
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a
+        with:
+          name: mcp-branches-windows-${{ matrix.shard }}-${{ github.sha }}
+          path: test/mcp-branches-windows-${{ matrix.shard }}
+          if-no-files-found: warn
+          retention-days: 7
+
+  mcp-branches:
+    needs:
+      - linux-fast
+      - linux
+      - windows-deps
+      - windows
+      - linux-coverage
+      - mcp-branches-linux
+      - mcp-branches-windows
+    if: always()
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0
+      - uses: actions/setup-python@a309ff8b426b58ec0e2a45f0f869d46889d02405
+        with:
+          python-version: "3.12"
+      - name: Download Linux branch receipts
+        if: always()
+        continue-on-error: true
+        uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093
+        with:
+          pattern: mcp-branches-linux-*-${{ github.sha }}
+          path: test/mcp-receipts-linux
+      - name: Download Windows branch receipts
+        if: always()
+        continue-on-error: true
+        uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093
+        with:
+          pattern: mcp-branches-windows-*-${{ github.sha }}
+          path: test/mcp-receipts-windows
+      - name: Require exact Linux receipts and collect measured timings
+        if: always()
+        run: >-
+          python3 scripts/mcp_branch_shards.py audit-receipts --platform linux
+          --receipts-dir test/mcp-receipts-linux --head "${{ github.sha }}"
+          --pr-head "${{ github.event.pull_request.head.sha || github.sha }}"
+          --output test/mcp-branch-timings-linux.json
+      - name: Require exact Windows receipts and collect measured timings
+        if: always()
+        run: >-
+          python3 scripts/mcp_branch_shards.py audit-receipts --platform windows
+          --receipts-dir test/mcp-receipts-windows --head "${{ github.sha }}"
+          --pr-head "${{ github.event.pull_request.head.sha || github.sha }}"
+          --output test/mcp-branch-timings-windows.json
+      - name: Publish measured branch timings for review
+        if: always()
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a
+        with:
+          name: mcp-branch-measured-timings-${{ github.sha }}
+          path: test/mcp-branch-timings-*.json
+          if-no-files-found: warn
+          retention-days: 14
+      - name: Require the complete branch matrix on both platforms
+        if: always()
+        env:
+          LINUX_FAST_RESULT: ${{ needs.linux-fast.result }}
+          LINUX_RESULT: ${{ needs.linux.result }}
+          WINDOWS_DEPS_RESULT: ${{ needs.windows-deps.result }}
+          WINDOWS_RESULT: ${{ needs.windows.result }}
+          COVERAGE_RESULT: ${{ needs.linux-coverage.result }}
+          COVERAGE_NEEDED: ${{ needs.linux-fast.outputs.coverage-needed }}
+          LINUX_BRANCH_RESULT: ${{ needs.mcp-branches-linux.result }}
+          WINDOWS_BRANCH_RESULT: ${{ needs.mcp-branches-windows.result }}
+        run: |
+          python3 - <<'PY'
+          import os
+          for name in (
+              "LINUX_FAST_RESULT", "LINUX_RESULT", "WINDOWS_DEPS_RESULT", "WINDOWS_RESULT",
+              "LINUX_BRANCH_RESULT", "WINDOWS_BRANCH_RESULT",
+          ):
+              if os.environ[name] != "success":
+                  raise SystemExit(f"{name} must succeed; observed {os.environ[name]}")
+          coverage = os.environ["COVERAGE_RESULT"]
+          if coverage != "success" and not (
+              os.environ["COVERAGE_NEEDED"] != "true" and coverage == "skipped"
+          ):
+              raise SystemExit(f"Required coverage did not succeed; observed {coverage}")
+          PY

@@ -3,6 +3,7 @@ from __future__ import annotations
 import io
 import json
 import os
+import shlex
 import subprocess
 import tempfile
 import unittest
@@ -238,9 +239,7 @@ class CiChangeClassifierTest(unittest.TestCase):
 
             ci_change_classifier.writeGithubOutput(output, classification)
 
-            values = dict(
-                line.split("=", 1) for line in output.read_text(encoding="utf-8").splitlines()
-            )
+            values = dict(line.split("=", 1) for line in output.read_text(encoding="utf-8").splitlines())
             self.assertEqual("true", values["authority-change"])
             self.assertEqual("true", values["human-review-required"])
             self.assertEqual("true", values["native-needed"])
@@ -290,13 +289,18 @@ class CiChangeClassifierTest(unittest.TestCase):
         self.assertEqual(("docs/testing.md",), paths)
         self.assertFalse(ci_change_classifier.classifyPaths(paths).nativeNeeded)
 
-    def test_build_workflow_uses_classifier_outputs_for_native_routing(self) -> None:
+    def test_build_workflow_always_requests_native_validation_for_both_platform_matrices(self) -> None:
         workflow = (REPO_ROOT / ".github/workflows/build.yml").read_text(encoding="utf-8")
 
         self.assertIn("coverage-needed: ${{ steps.change-classification.outputs.coverage-needed }}", workflow)
         self.assertIn("native-needed: ${{ steps.change-classification.outputs.native-needed }}", workflow)
         self.assertIn("python3 scripts/ci_change_classifier.py", workflow)
-        self.assertIn("force_native=(--force-native)", workflow)
+        classification_step = workflow.split("      - name: classify changed paths\n", 1)[1].split("\n  linux:", 1)[0]
+        classifier_command = classification_step.split("python3 scripts/ci_change_classifier.py", 1)[1]
+        self.assertEqual(
+            ["--base", "${base}", "--head", "${head}", "--force-native", "--github-output", "${GITHUB_OUTPUT}"],
+            shlex.split(classifier_command.replace("\\\n", "")),
+        )
         self.assertIn("if: needs.linux-fast.outputs.native-needed != 'true'", workflow)
         self.assertIn("if: needs.linux-fast.outputs.native-needed == 'true'", workflow)
 
