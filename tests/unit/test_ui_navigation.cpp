@@ -233,6 +233,7 @@ void testRowPagingHasWorkingPreviousAndNextControls() {
 void testManualMovementAndWaitCancelOldDestinationPreview() {
     NavigationHarness h;
     auto world = std::make_shared<CMapGraphicsObject>();
+    world->setType("CMapGraphicsObject");
     world->setGame(h.game);
     world->setLayout(fixedLayout(0, 0, 1200, 800));
     h.gui->pushChild(world);
@@ -262,6 +263,7 @@ void testManualMovementAndWaitCancelOldDestinationPreview() {
 void testOpeningPanelStopsAutomaticTravelAfterCurrentStep() {
     NavigationHarness h;
     auto world = std::make_shared<CMapGraphicsObject>();
+    world->setType("CMapGraphicsObject");
     world->setGame(h.game);
     world->setLayout(fixedLayout(0, 0, 1200, 800));
     h.gui->pushChild(world);
@@ -283,6 +285,7 @@ void testOpeningPanelStopsAutomaticTravelAfterCurrentStep() {
 void testManualMovementAndWaitReplaceAutomaticTravelAtStepBoundary() {
     NavigationHarness h;
     auto world = std::make_shared<CMapGraphicsObject>();
+    world->setType("CMapGraphicsObject");
     world->setGame(h.game);
     world->setLayout(fixedLayout(0, 0, 1200, 800));
     h.gui->pushChild(world);
@@ -332,6 +335,7 @@ void testResponsivePageNavigationRequiresAMatchingHeaderClick() {
 void testMapAndPlayerReplacementInvalidatePendingTravel() {
     NavigationHarness h;
     auto world = std::make_shared<CMapGraphicsObject>();
+    world->setType("CMapGraphicsObject");
     world->setGame(h.game);
     world->setLayout(fixedLayout(0, 0, 1200, 800));
     h.gui->pushChild(world);

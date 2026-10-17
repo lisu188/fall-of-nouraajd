@@ -109,6 +109,9 @@ struct PreviewFixture {
     Uint32 frameTime = 1000;
 
     explicit PreviewFixture(int width = 8, bool withGui = true) {
+        game->getObjectHandler()->registerType("CAnimation", [] { return std::make_shared<SolidMovementAnimation>(); });
+        game->getObjectHandler()->registerType("CStaticAnimation",
+                                               [] { return std::make_shared<SolidMovementAnimation>(); });
         for (const auto &[name, builder] : *CTypes::builders())
             game->getObjectHandler()->registerType(name, builder);
         game->setMap(map);
@@ -138,6 +141,7 @@ struct PreviewFixture {
             gui->setLayout(std::make_shared<CLayout>());
             gui->getLayout()->setRect(0, 0, 1280, 720);
             world = std::make_shared<CMapGraphicsObject>();
+            world->setType("CMapGraphicsObject");
             world->setGame(game);
             world->setLayout(std::make_shared<CLayout>());
             world->getLayout()->setRect(0, 0, 1280, 720);
@@ -175,9 +179,6 @@ struct PreviewFixture {
     }
 
     void initializeSolidProxyGrid() {
-        game->getObjectHandler()->registerType("CAnimation", [] { return std::make_shared<SolidMovementAnimation>(); });
-        game->getObjectHandler()->registerType("CStaticAnimation",
-                                               [] { return std::make_shared<SolidMovementAnimation>(); });
         world->setProxyLayout("CProxyGraphicsLayout");
         world->initialize();
         vstd::event_loop<>::instance()->runUntilIdle();
@@ -307,10 +308,6 @@ void testMovingActorRendersAboveAdjacentTerrainAndReceivesVisibleRightClicks() {
         fixture.gui->setWidth(1280);
         fixture.gui->setHeight(720);
         fixture.gui->setTileSize(64);
-        fixture.game->getObjectHandler()->registerType("CAnimation",
-                                                       [] { return std::make_shared<SolidMovementAnimation>(); });
-        fixture.game->getObjectHandler()->registerType("CStaticAnimation",
-                                                       [] { return std::make_shared<SolidMovementAnimation>(); });
         auto actor = std::make_shared<CCreature>();
         actor->setGame(fixture.game);
         actor->setName("movingColorActor");
@@ -419,6 +416,7 @@ void testPostAnimationRefreshFailureCannotTerminateCompletedOrCancelledTravel() 
     for (const bool cancel : {false, true}) {
         PreviewFixture fixture;
         auto world = std::make_shared<FailingCleanupMapGraphicsObject>();
+        world->setType("CMapGraphicsObject");
         world->setGame(fixture.game);
         world->setLayout(fixture.world->getLayout());
         fixture.gui->removeChild(fixture.world);
@@ -476,10 +474,6 @@ void testWrappedMapKeepsEveryVisibleActorAliasDuringPresentation() {
     fixture.gui->setHeight(720);
     fixture.gui->setTileSize(64);
     fixture.map->setWrapX({{0, 1}});
-    fixture.game->getObjectHandler()->registerType("CAnimation",
-                                                   [] { return std::make_shared<SolidMovementAnimation>(); });
-    fixture.game->getObjectHandler()->registerType("CStaticAnimation",
-                                                   [] { return std::make_shared<SolidMovementAnimation>(); });
     auto actor = std::make_shared<CCreature>();
     actor->setGame(fixture.game);
     actor->setName("movingColorActor");

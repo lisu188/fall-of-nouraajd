@@ -270,6 +270,7 @@ void testPendingGuiMovementDoesNotRetainTheGameOwner() {
     gui->setLayout(std::make_shared<CLayout>());
     gui->getLayout()->setRect(0, 0, 1280, 720);
     auto world = std::make_shared<CMapGraphicsObject>();
+    world->setType("CMapGraphicsObject");
     world->setGame(fixture.game);
     world->setLayout(std::make_shared<CLayout>());
     world->getLayout()->setRect(0, 0, 1280, 720);
