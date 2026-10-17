@@ -104,12 +104,25 @@ installed controller, origin and session-generation checks prevent reusing a rou
 Direct calls to an NPC controller that was never installed on the creature remain supported; the installed-controller
 identity check applies only when that controller owned the creature's movement slot when the route was created.
 
-World inspection plans a destination without moving the player or advancing turns. Repeated inspection of an unchanged
-destination reuses that route, and explicit Enter/click commit performs no second search. A preview records map, player,
-controller, session generation, origin, routing epoch and controller request serial. A change to any of them invalidates
-the preview. Cancellation only interrupts the route that the preview owns; it must not cancel a newer external order.
-Scene changes, interrupts and new targets advance the request identity. Movement commitment rechecks those identities
-between steps.
+Explicit destination previews do not move the player or advance turns. Repeated previews of an unchanged destination
+reuse that route, and committing the preview does not search again. A left click plans a destination and starts walking
+immediately. Normal turns continue until the route completes or an encounter, dialog, interactive object, blocked path,
+death, or map change interrupts it. Closing an interaction does not resume the route. A preview records map, player,
+controller, session generation, origin, routing epoch and controller request serial. A change to any of them invalidates the preview.
+Cancellation only interrupts the route that the preview owns; it must not cancel a newer external order. Scene changes,
+interrupts and new targets advance the request identity. Movement commitment rechecks those identities between steps.
+
+GUI movement passes an optional native presenter through the map turn to each actor's committed step. Visible adjacent
+steps are presented sequentially in the existing actor order, at approximately 150 ms per tile, after occupancy changes
+and before arrival hooks. Player motion scrolls the camera smoothly; wrapped edges use their shortest displacement,
+while teleports and floor or map changes snap. Reduced motion uses discrete, paced steps. Frame waits release navigation
+locks and the Python GIL, then revalidate the actor, map and session before continuing. Synchronous, Python, MCP and
+headless turns remain immediate, including headless calls on a session with a GUI attached.
+
+A new destination or a keyboard step/wait replaces the remaining journey at the next completed-turn boundary. Escape
+cancels further travel and opens Pause. An already committed turn finishes without cancelling its active movement task
+or replacing an actor's controller midway through the turn. Clicking the current tile or an unreachable destination
+consumes no turn; right-click inspection is unchanged.
 
 ## Validation and profiling
 

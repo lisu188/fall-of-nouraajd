@@ -25,6 +25,7 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #include "gui/CTextManager.h"
 #include "gui/CUiTheme.h"
 #include "gui/object/CWidget.h"
+#include "gui/object/CMapGraphicsObject.h"
 #include "gui/panel/CGamePanel.h"
 #include "core/CController.h"
 #include "handler/CGuiHandler.h"
@@ -538,12 +539,8 @@ vstd::task<void> CMinimapGraphicsObject::browseLandmarksAsync(std::shared_ptr<CG
             co_return;
         if (auto panel = vstd::cast<CGamePanel>(self->getParent()))
             panel->close();
-        controller->setTarget(player, landmarks[index]->getCoords());
-        const int maximum = std::max(1, gui->getTileCountX() * gui->getTileCountY() * 4);
-        for (int step = 0;
-             step < maximum && gui->getGame()->getMap() == map && !controller->isCompleted(player) && !map->isMoving();
-             ++step)
-            co_await map->moveAsync();
+        if (auto world = vstd::cast<CMapGraphicsObject>(gui->findChild("CMapGraphicsObject")))
+            world->startTravel(gui, landmarks[index]->getCoords());
     }(this->ptr<CMinimapGraphicsObject>(), std::move(gui));
 }
 

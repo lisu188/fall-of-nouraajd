@@ -15145,6 +15145,25 @@ class GameTest(unittest.TestCase):
         return True, json.dumps(resolved, sort_keys=True)
 
     @game_test
+    def test_map_turn_progress_binding_tracks_real_turn_hooks(self):
+        game = load_game_module()
+        g = game.CGameLoader.loadGame()
+        game.CGameLoader.startGame(g, "empty")
+        game_map = g.getMap()
+        observed = [game_map.isMoving()]
+
+        class TurnProgressProbe(game.CMapObject):
+            def onTurn(self, event):
+                observed.append(game_map.isMoving())
+
+        g.getObjectHandler().registerType("TurnProgressProbe", TurnProgressProbe)
+        probe = g.createObject("TurnProgressProbe")
+        game_map.addObject(probe)
+        game_map.move()
+        observed.append(game_map.isMoving())
+        return observed == [False, True, False], json.dumps(observed)
+
+    @game_test
     def test_turns(self):
         game = load_game_module()
 
@@ -22009,7 +22028,10 @@ def assert_player_moves_to_key_target(test_case, game_map, player, target, keyco
     initial_turn = game_map.getTurn()
     push_sdl_key_event(keycode, scancode, SDL_KEYDOWN)
     push_sdl_key_event(keycode, scancode, SDL_KEYUP)
-    pump_event_loop(5)
+    test_case.assertTrue(
+        pump_event_loop_until(lambda: game_map.getTurn() > initial_turn, timeout=5.0),
+        "Expected the animated movement turn to finish.",
+    )
 
     moved = player.getCoords()
     test_case.assertEqual((target.x, target.y, target.z), (moved.x, moved.y, moved.z))
@@ -22028,12 +22050,14 @@ def assert_rendered_map_proxy_grid(test_case, g):
     x, y, width, height = resolved_rect(map_graph)
     tile = gui.getNumericProperty("tileSize")
     expected = {
-        (x + column * tile, y + row * tile, tile, tile)
-        for column in range(width // tile + 1)
-        for row in range(height // tile + 1)
+        (x + (column - 1) * tile, y + (row - 1) * tile, tile, tile)
+        for column in range(width // tile + 3)
+        for row in range(height // tile + 3)
     }
     cells = [child for child in map_graph.getChildren() if child.getType() in {"", "CProxyGraphicsObject"}]
-    test_case.assertEqual(len(expected), len(cells), "Map proxy cells must cover the resized viewport exactly once.")
+    test_case.assertEqual(
+        len(expected), len(cells), "Map proxy cells must cover the resized viewport and one tile of overscan exactly once."
+    )
     test_case.assertEqual(expected, {resolved_rect(cell) for cell in cells})
     assert_rendered_map_proxy_cells(test_case, g)
 
@@ -22487,13 +22511,10 @@ class XvfbGameplayProcessTest(unittest.TestCase):
         initial_turn = game_map.getTurn()
 
         push_sdl_mouse_click(click_x, click_y)
-        pump_event_loop(5)
-
-        previewed = player.getCoords()
-        self.assertEqual((initial.x, initial.y, initial.z), (previewed.x, previewed.y, previewed.z))
-        self.assertEqual(initial_turn, game_map.getTurn())
-        push_sdl_key_event(SDLK_RETURN, 0)
-        pump_event_loop(5)
+        self.assertTrue(
+            pump_event_loop_until(lambda: game_map.getTurn() > initial_turn, timeout=5.0),
+            "A single map click must finish its movement turn without Enter.",
+        )
         moved = player.getCoords()
         self.assertEqual((target.x, target.y, target.z), (moved.x, moved.y, moved.z))
         self.assertGreater(game_map.getTurn(), initial_turn)
@@ -22723,14 +22744,10 @@ class XvfbGameplayProcessTest(unittest.TestCase):
         click_x, click_y = visible_map_cell_center(initial, target)
 
         push_sdl_mouse_click(click_x, click_y)
-        pump_event_loop(5)
-
-        previewed = player.getCoords()
-        self.assertEqual((initial.x, initial.y, initial.z), (previewed.x, previewed.y, previewed.z))
-        self.assertEqual(initial_turn, game_map.getTurn())
-        assert_screenshot_has_rendered_pixels(self, g, "xvfb_mouse_route_preview_screenshot")
-        push_sdl_key_event(SDLK_RETURN, 0)
-        pump_event_loop(5)
+        self.assertTrue(
+            pump_event_loop_until(lambda: game_map.getTurn() > initial_turn, timeout=5.0),
+            "A single map click must finish its movement turn before the screenshot.",
+        )
         moved = player.getCoords()
         self.assertEqual((target.x, target.y, target.z), (moved.x, moved.y, moved.z))
         self.assertGreater(game_map.getTurn(), initial_turn)
@@ -22745,7 +22762,10 @@ class XvfbGameplayProcessTest(unittest.TestCase):
 
         push_sdl_key_event(ord(" "), 44, SDL_KEYDOWN)
         push_sdl_key_event(ord(" "), 44, SDL_KEYUP)
-        pump_event_loop(5)
+        self.assertTrue(
+            pump_event_loop_until(lambda: game_map.getTurn() > initial_turn, timeout=5.0),
+            "Expected the waiting turn and visible actor movement to finish.",
+        )
 
         self.assertGreater(game_map.getTurn(), initial_turn)
         assert_screenshot_has_rendered_pixels(self, g, "xvfb_wait_hotkey_screenshot")

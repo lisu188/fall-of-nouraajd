@@ -9,7 +9,7 @@ import unittest
 from unittest.mock import Mock, patch
 import weakref
 
-from tests.test_ui_frontend import FakeGame, ui
+from tests.test_ui_frontend import FakeGame, FakeMap, ui
 
 
 class UiCoroutineFlowTest(unittest.TestCase):
@@ -94,7 +94,7 @@ class UiCoroutineFlowTest(unittest.TestCase):
     def testSaveResultAndFailureUseTheSharedPythonBehavior(self):
         for successful in (True, False):
             with self.subTest(successful=successful):
-                game = FakeGame(current=object())
+                game = FakeGame(current=FakeMap())
                 save = Mock(return_value=successful)
                 native = SimpleNamespace(CMapLoader=SimpleNamespace(saveWithResult=save))
                 flow = ui.UiFlow("saveMenu", lambda: game)

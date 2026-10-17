@@ -907,6 +907,7 @@ set_tests_properties(for_unit_tests.navigation_search_unit_tests
 add_game_unit_test(gui_unit_tests tests/unit/test_gui.cpp)
 add_game_unit_test(ui_management_unit_tests tests/unit/test_ui_management.cpp)
 add_game_unit_test(ui_navigation_unit_tests tests/unit/test_ui_navigation.cpp)
+add_game_unit_test(gui_movement_unit_tests tests/unit/test_gui_movement.cpp)
 add_game_unit_test(ui_frontend_unit_tests tests/unit/test_ui_frontend.cpp)
 add_game_unit_test(ui_dialogue_unit_tests tests/unit/test_ui_dialogue.cpp)
 add_game_unit_test(ui_foundations_unit_tests tests/unit/test_ui_foundations.cpp)
