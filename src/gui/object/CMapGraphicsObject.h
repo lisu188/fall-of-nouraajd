@@ -63,9 +63,11 @@ class CMapGraphicsObject : public CProxyTargetGraphicsObject {
                                       Coords destination);
     SDL_Point getCameraOffset(int tileSize) const;
     SDL_Point getActorOffset(const std::shared_ptr<CGameObject> &object, int tileSize) const;
+    std::shared_ptr<SDL_Rect> getMotionRect();
 
   protected:
     void render(std::shared_ptr<CGui> gui, int frameTime) override;
+    bool event(std::shared_ptr<CGui> gui, SDL_Event *event) override;
 
   private:
     struct ProxyAnimationSlot {
@@ -103,6 +105,8 @@ class CMapGraphicsObject : public CProxyTargetGraphicsObject {
         bool movesCamera = false;
         bool started = false;
         CMovementAnimation animation;
+        std::shared_ptr<CAnimation> overlay;
+        std::vector<std::shared_ptr<CAnimation>> overlays;
     };
     std::optional<TravelOrder> pendingOrder;
     std::optional<Motion> motion;
@@ -111,6 +115,7 @@ class CMapGraphicsObject : public CProxyTargetGraphicsObject {
     void submitOrder(std::shared_ptr<CGui> gui, TravelOrder order);
     vstd::task<void> travelAsync(std::shared_ptr<CGui> gui, bool reusePreview);
     bool motionIsCurrent(const std::shared_ptr<CGui> &gui);
+    void clearMotion();
     void clearDestinationPreview();
     void validateDestinationPreview(const std::shared_ptr<CGui> &gui);
 

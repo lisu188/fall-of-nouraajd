@@ -747,6 +747,16 @@ def saveGameFlow(game, slot):
     game_map = game.getMap()
     if game_map is None:
         return False
+    if game_map.isMoving():
+        (
+            yield uiRequest(
+                "showError",
+                game,
+                "Wait for the current turn to finish before saving.",
+                "Turn in progress",
+            )
+        )
+        return False
     try:
         with loading(game, "Saving your adventure..."):
             if not CMapLoader.saveWithResult(game_map, slot):

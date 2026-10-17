@@ -89,7 +89,9 @@ class CMap : public CGameObject {
 
     void move();
 
-    vstd::task<void> moveAsync(CMovementPresenter presenter = {});
+    vstd::task<void> moveAsync();
+
+    vstd::task<void> moveAsync(CMovementPresenter presenter);
 
     std::shared_ptr<CTile> getTile(int x, int y, int z);
 

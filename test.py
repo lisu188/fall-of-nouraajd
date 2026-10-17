@@ -15145,6 +15145,25 @@ class GameTest(unittest.TestCase):
         return True, json.dumps(resolved, sort_keys=True)
 
     @game_test
+    def test_map_turn_progress_binding_tracks_real_turn_hooks(self):
+        game = load_game_module()
+        g = game.CGameLoader.loadGame()
+        game.CGameLoader.startGame(g, "empty")
+        game_map = g.getMap()
+        observed = [game_map.isMoving()]
+
+        class TurnProgressProbe(game.CMapObject):
+            def onTurn(self, event):
+                observed.append(game_map.isMoving())
+
+        g.getObjectHandler().registerType("TurnProgressProbe", TurnProgressProbe)
+        probe = g.createObject("TurnProgressProbe")
+        game_map.addObject(probe)
+        game_map.move()
+        observed.append(game_map.isMoving())
+        return observed == [False, True, False], json.dumps(observed)
+
+    @game_test
     def test_turns(self):
         game = load_game_module()
 
