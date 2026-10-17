@@ -12,10 +12,14 @@ SPDX-License-Identifier: GPL-3.0-or-later
 #include "core/CRuntimeBridge.h"
 #include "core/CStats.h"
 #include "core/CTypes.h"
+#include "gui/CAnimation.h"
 #include "gui/CGui.h"
+#include "gui/CLayout.h"
 #include "gui/CMovementAnimation.h"
+#include "gui/object/CMapGraphicsObject.h"
 #include "handler/CObjectHandler.h"
 #include "object/CCreature.h"
+#include "object/CPlayer.h"
 #include "object/CTile.h"
 #include "test_harness.h"
 
@@ -144,7 +148,10 @@ struct MovementFixture {
         vstd::event_loop<>::instance()->runUntilIdle();
     }
 
-    ~MovementFixture() { game->getContext()->shutdown(); }
+    ~MovementFixture() {
+        if (game)
+            game->getContext()->shutdown();
+    }
 };
 
 struct PresenterGate {
@@ -239,6 +246,56 @@ void testEmptyPresenterPreservesHeadlessTurnsWithoutFrames() {
                         "a GUI without a renderer must also finish its explicit turn boundary without frames");
         }
     }
+}
+
+void testPendingGuiMovementDoesNotRetainTheGameOwner() {
+    MovementFixture fixture(0);
+    fixture.game->getObjectHandler()->registerType("CAnimation", [] { return std::make_shared<CAnimation>(); });
+    fixture.game->getObjectHandler()->registerType("CPlayerController",
+                                                   [] { return std::make_shared<CPlayerController>(); });
+    fixture.game->getObjectHandler()->registerType("CPlayerFightController",
+                                                   [] { return std::make_shared<CPlayerFightController>(); });
+    auto player = std::make_shared<CPlayer>();
+    player->setGame(fixture.game);
+    auto stats = std::make_shared<CStats>();
+    stats->setMainStat("stamina");
+    stats->setStamina(10);
+    player->setBaseStats(stats);
+    fixture.map->setPlayer(player);
+    auto controller = std::dynamic_pointer_cast<CPlayerController>(player->getController());
+    controller->setTarget(player, Coords(2, 0, 0));
+    auto gui = std::make_shared<CGui>();
+    gui->setGame(fixture.game);
+    fixture.game->setGui(gui);
+    gui->setLayout(std::make_shared<CLayout>());
+    gui->getLayout()->setRect(0, 0, 1280, 720);
+    auto world = std::make_shared<CMapGraphicsObject>();
+    world->setGame(fixture.game);
+    world->setLayout(std::make_shared<CLayout>());
+    world->getLayout()->setRect(0, 0, 1280, 720);
+    gui->pushChild(world);
+    auto context = fixture.game->getContext();
+    std::weak_ptr<CGame> owner = fixture.game;
+    auto movement = context->spawnTask(gui->moveMapTurnAsync());
+    auto loop = vstd::event_loop<>::instance();
+    loop->runUntilIdle();
+    expect_true(!movement.finished() && fixture.map->isMoving() && player->getCoords() == Coords(1, 0, 0) &&
+                    player->getPendingMoveOrigin().has_value(),
+                "owner destruction must interrupt an actual committed step waiting for GUI presentation");
+    fixture.game.reset();
+    expect_true(owner.expired() && !context->isActive() && movement.finished() && !fixture.map->isMoving() &&
+                    !player->getPendingMoveOrigin() && !gui->isActive(),
+                "pending GUI presentation must let the last game owner destruct and cancel the complete turn");
+    bool cancelled = false;
+    if (movement.finished()) {
+        try {
+            movement.get();
+        } catch (const vstd::task_cancelled &) {
+            cancelled = true;
+        }
+    }
+    expect_true(cancelled, "destruction must settle a pending GUI turn as cancelled without another display frame");
+    context->shutdown();
 }
 
 void testStalePresentationNeverDispatchesOldArrival() {
@@ -354,6 +411,7 @@ int main() {
     testMovementClockWrapBackwardFramesAndReducedMotion();
     testMapWaitsForEachActorPresentationBeforeArrivalAndNextActor();
     testEmptyPresenterPreservesHeadlessTurnsWithoutFrames();
+    testPendingGuiMovementDoesNotRetainTheGameOwner();
     testStalePresentationNeverDispatchesOldArrival();
     testPresentationFailureAndCancellationClearTurnAndMoveState();
     testWrappedStepsPresentButRelocationAndUnregisteredObjectsDoNot();

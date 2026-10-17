@@ -249,6 +249,7 @@ vstd::task<void> CGui::moveMapTurnAsync() {
         if (!map || !gui->isActive() || map->isMoving())
             co_return;
         auto world = vstd::cast<CMapGraphicsObject>(gui->findChild("CMapGraphicsObject"));
+        game.reset();
         co_await map->moveAsync(world ? world->movementPresenter(gui) : CMovementPresenter{});
         if (gui->isActive() && world && world->isAttachedToGui(gui) && gui->getRenderer())
             co_await vstd::nextFrame(vstd::event_loop<>::instance());

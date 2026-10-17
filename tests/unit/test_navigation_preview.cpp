@@ -27,6 +27,8 @@ SPDX-License-Identifier: GPL-3.0-or-later
 
 #include <array>
 #include <algorithm>
+#include <stdexcept>
+#include <utility>
 #include <vector>
 
 namespace {
@@ -61,6 +63,21 @@ class SolidMovementAnimation : public CStaticAnimation {
             return true;
         }
         return CAnimation::mouseEvent(std::move(gui), type, button, x, y);
+    }
+};
+
+class FailingCleanupMapGraphicsObject : public CMapGraphicsObject {
+  public:
+    bool failNextRefresh = false;
+    int cleanupFailures = 0;
+
+    std::list<std::shared_ptr<CGameGraphicsObject>> getProxiedObjects(std::shared_ptr<CGui> gui, int x,
+                                                                      int y) override {
+        if (std::exchange(failNextRefresh, false)) {
+            ++cleanupFailures;
+            throw std::runtime_error("post-animation refresh failed");
+        }
+        return CMapGraphicsObject::getProxiedObjects(std::move(gui), x, y);
     }
 };
 
@@ -256,6 +273,7 @@ void testPlayerAndVisibleActorsUseInterpolatedViewOffsets() {
         const auto destination = actor->getCoords() + EAST;
         auto movement = fixture.game->getContext()->spawnTask(
             actor->moveToAsync(destination, {}, fixture.world->movementPresenter(fixture.gui)));
+        vstd::event_loop<>::instance()->runUntilIdle();
         auto rect = fixture.world->getLayout()->getRect(fixture.world);
         fixture.world->renderObject(fixture.gui, rect, 1000);
         auto actorOffset = fixture.world->getActorOffset(actor, 64);
@@ -325,6 +343,7 @@ void testMovingActorRendersAboveAdjacentTerrainAndReceivesVisibleRightClicks() {
         const auto sourceRect = *sourceProxy->getLayout()->getRect(sourceProxy);
         auto movement = fixture.game->getContext()->spawnTask(
             actor->moveToAsync(destination, {}, fixture.world->movementPresenter(fixture.gui)));
+        vstd::event_loop<>::instance()->runUntilIdle();
         for (const Uint32 elapsed : {Uint32{0}, Uint32{75}, Uint32{150}}) {
             SolidMovementAnimation::actorRects.clear();
             fixture.gui->render(static_cast<int>(1000 + elapsed));
@@ -396,6 +415,61 @@ void testClippedOverscanCannotStartTravelOutsideTheMapViewport() {
                 "the same viewport boundary must map a visible click to the correct authored destination");
 }
 
+void testPostAnimationRefreshFailureCannotTerminateCompletedOrCancelledTravel() {
+    for (const bool cancel : {false, true}) {
+        PreviewFixture fixture;
+        auto world = std::make_shared<FailingCleanupMapGraphicsObject>();
+        world->setGame(fixture.game);
+        world->setLayout(fixture.world->getLayout());
+        fixture.gui->removeChild(fixture.world);
+        fixture.world = world;
+        fixture.gui->pushChild(world);
+        fixture.initializeSolidProxyGrid();
+        const int turn = fixture.map->getTurn();
+        world->previewDestination(fixture.gui, Coords(1, 0, 0));
+        auto movement = fixture.game->getContext()->spawnTask(world->commitDestinationAsync(fixture.gui));
+        auto loop = vstd::event_loop<>::instance();
+        loop->runUntilIdle();
+        expect_true(world->isTravelling() && fixture.map->isMoving() && !movement.finished(),
+                    "cleanup failure must exercise an actual pending animated map turn");
+        const auto rect = world->getLayout()->getRect(world);
+        world->renderObject(fixture.gui, rect, 1000);
+        if (!cancel)
+            world->renderObject(fixture.gui, rect, 1150);
+        world->failNextRefresh = true;
+        if (cancel)
+            movement.requestStop();
+        for (int frame = 0; frame < 8; ++frame) {
+            loop->runFrame();
+            loop->runUntilIdle();
+            if (movement.finished() && !world->isTravelling() && !fixture.map->isMoving())
+                break;
+        }
+        bool expectedOutcome = false;
+        if (movement.finished()) {
+            try {
+                movement.get();
+                expectedOutcome = !cancel;
+            } catch (const vstd::task_cancelled &) {
+                expectedOutcome = cancel;
+            }
+        }
+        const auto actorOffset = world->getActorOffset(fixture.player, 64);
+        const auto cameraOffset = world->getCameraOffset(64);
+        const auto children = world->getChildren();
+        const auto overlays = std::count_if(children.begin(), children.end(),
+                                            [](const auto &child) { return vstd::cast<CAnimation>(child) != nullptr; });
+        expect_true(movement.finished() && expectedOutcome && world->cleanupFailures == 1,
+                    "throwing cleanup refreshes must preserve normal completion or the original cancellation");
+        expect_true(!world->isTravelling() && !fixture.map->isMoving() && !fixture.player->getPendingMoveOrigin() &&
+                        fixture.map->getTurn() == turn + (cancel ? 0 : 1),
+                    "cleanup errors must leave settled travel, actor arrival and map-turn state");
+        expect_true(actorOffset.x == 0 && actorOffset.y == 0 && cameraOffset.x == 0 && cameraOffset.y == 0 &&
+                        world->getMotionRect()->w == 0 && overlays == 0,
+                    "cleanup refresh failures must not retain movement geometry or attached actor overlays");
+    }
+}
+
 void testWrappedMapKeepsEveryVisibleActorAliasDuringPresentation() {
     PreviewFixture fixture;
     fixture.gui->setWidth(1280);
@@ -437,6 +511,7 @@ void testWrappedMapKeepsEveryVisibleActorAliasDuringPresentation() {
     expect_true(original.size() > 1, "the torus regression must start with multiple visible images of one actor");
     auto movement = fixture.game->getContext()->spawnTask(
         actor->moveToAsync(Coords(4, 1, 0), {}, fixture.world->movementPresenter(fixture.gui)));
+    vstd::event_loop<>::instance()->runUntilIdle();
     const int tile = fixture.gui->getTileSize();
     for (const int elapsed : {0, 75, 150}) {
         const auto visible = captureActors(1000 + elapsed);
@@ -666,6 +741,7 @@ int main() {
     testPlayerAndVisibleActorsUseInterpolatedViewOffsets();
     testMovingActorRendersAboveAdjacentTerrainAndReceivesVisibleRightClicks();
     testClippedOverscanCannotStartTravelOutsideTheMapViewport();
+    testPostAnimationRefreshFailureCannotTerminateCompletedOrCancelledTravel();
     testWrappedMapKeepsEveryVisibleActorAliasDuringPresentation();
     testPreviewRejectsChangedRequestControllerGraphOriginAndSession();
     testCommittedLegalRoutesSurviveUnrelatedGraphChangesAndStopPermanentlyWhenBlocked();

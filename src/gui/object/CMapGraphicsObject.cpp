@@ -10,14 +10,30 @@
 #include "gui/panel/CGameInventoryPanel.h"
 
 #include <algorithm>
+#include <exception>
 
 namespace {
+void reportMovementCleanupFailure(const char *message) noexcept {
+    try {
+        vstd::logger::error("GUI movement cleanup failed:", message);
+    } catch (...) {
+    }
+}
+
 template <typename Callback> class ScopeExit {
   public:
     explicit ScopeExit(Callback callback) : callback(std::move(callback)) {}
     ScopeExit(const ScopeExit &) = delete;
     ScopeExit &operator=(const ScopeExit &) = delete;
-    ~ScopeExit() { callback(); }
+    ~ScopeExit() noexcept {
+        try {
+            callback();
+        } catch (const std::exception &error) {
+            reportMovementCleanupFailure(error.what());
+        } catch (...) {
+            reportMovementCleanupFailure("unknown exception");
+        }
+    }
 
   private:
     Callback callback;
@@ -316,12 +332,12 @@ vstd::task<void> CMapGraphicsObject::travelAsync(std::shared_ptr<CGui> gui, bool
             self->stopRequested = false;
         self->clearDestinationPreview();
         ScopeExit finish([self, gui, context, controller, player, &request] {
-            if (controller->getRequestSerial() == request)
-                controller->interrupt(player);
             self->travelling = false;
             self->pendingOrder.reset();
             self->stopRequested = false;
             self->clearMotion();
+            if (controller->getRequestSerial() == request)
+                controller->interrupt(player);
             if (gui->isActive() && context->isActive() && self->isAttachedToGui(gui))
                 self->refreshAll();
         });
