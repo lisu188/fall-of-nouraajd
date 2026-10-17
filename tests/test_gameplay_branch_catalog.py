@@ -20,11 +20,29 @@ def sourceMethod(source, class_id, method_name, **namespace):
     tree = ast.parse((catalog.ROOT / source).read_text(encoding="utf-8"))
     cls = next(node for node in ast.walk(tree) if isinstance(node, ast.ClassDef) and node.name == class_id)
     method = next(node for node in cls.body if isinstance(node, ast.FunctionDef) and node.name == method_name)
-    exec(compile(ast.Module(body=[method], type_ignores=[]), source, "exec"), namespace)
-    return namespace[method_name]
+    from tests.test_gameplay_route_dialogs import compileAuthoredFunction
+
+    return compileAuthoredFunction(method, namespace, source)
 
 
 class GameplayBranchCatalogTest(unittest.TestCase):
+    def testDeferredEncounterCallbacksKeepTheirOriginalOutcomeObligations(self):
+        mapping = catalog.sourceBranches()
+        callbacks = catalog.sourceCallbacks()
+        for map_name, class_name in (
+            ("kadath", "DreamGate"),
+            ("kadath", "OnyxThrone"),
+            ("ninemarches", "DigSite"),
+            ("sunderedmarch", "DigSite"),
+            ("vhulmarn", "TideBell"),
+            ("vhulmarn", "AltarThreshold"),
+        ):
+            identity = f"res/maps/{map_name}/script.py:{class_name}"
+            with self.subTest(callback=identity):
+                self.assertIn(identity + ".onTurn", callbacks)
+                self.assertTrue(mapping[identity + ".onEnter"])
+                self.assertEqual(mapping[identity + ".onEnter"], mapping[identity + ".onTurn"])
+
     def testEveryAuthoredMapAndApplicableClassHasNamedRoutes(self):
         cases = catalog.getCases()
         self.assertEqual(len(cases), len({case.id for case in cases}))
@@ -538,7 +556,10 @@ class TownDialog:
 
     def testNineMarchesNonplayerEventsAreInertContracts(self):
         event = types.SimpleNamespace(getCause=lambda: types.SimpleNamespace(isPlayer=lambda: False))
-        actor = types.SimpleNamespace(getMap=lambda: self.fail("Nonplayer entry reached player gameplay effects"))
+        actor = types.SimpleNamespace(
+            getBoolProperty=lambda _key: False,
+            getMap=lambda: self.fail("Nonplayer entry reached player gameplay effects"),
+        )
         for class_id in (
             "StartEvent",
             "LearningStone",
@@ -590,6 +611,7 @@ class TownDialog:
                 else:
                     actor.ready_to_judge = lambda: False
                     actor._pass_judgment = types.MethodType(sourceMethod(source, class_id, "_pass_judgment"), actor)
+                    actor._pass_judgmentFlow = types.MethodType(actor._pass_judgment.__wrapped__, actor)
                     sourceMethod(source, class_id, "spare_voss")(actor)
                     sourceMethod(source, class_id, "execute_voss")(actor)
 

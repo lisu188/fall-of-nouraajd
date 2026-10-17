@@ -16,6 +16,7 @@ You should have received a copy of the GNU General Public License
 along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 #include "CRngHandler.h"
+#include "handler/CGuiHandler.h"
 #include "core/CController.h"
 #include "core/CGame.h"
 #include "core/CMap.h"
@@ -165,6 +166,31 @@ void CRngHandler::addRandomLoot(const std::shared_ptr<CCreature> &creature,
 
 void CRngHandler::addRandomLoot(const std::shared_ptr<CCreature> &creature, int value) {
     addRandomLoot(creature, getRandomLoot(value));
+}
+
+vstd::task<void> CRngHandler::addRandomLootAsync(std::shared_ptr<CCreature> creature,
+                                                 std::set<std::shared_ptr<CItem>> items) {
+    return [](std::shared_ptr<CCreature> creature, std::set<std::shared_ptr<CItem>> items) -> vstd::task<void> {
+        auto loop = vstd::event_loop<>::instance();
+        if (!loop->isMainThread()) {
+            co_await vstd::post(loop);
+        }
+        if (!creature) {
+            co_return;
+        }
+        if (creature->isPlayer()) {
+            auto game = creature->getGame();
+            auto gui = game->getGuiHandler();
+            game.reset();
+            try {
+                co_await gui->showLootAsync(creature, items);
+            } catch (const vstd::task_cancelled &) {
+                creature->addItems(items);
+                throw;
+            }
+        }
+        creature->addItems(items);
+    }(std::move(creature), std::move(items));
 }
 
 std::set<std::shared_ptr<CCreature>> CRngHandler::calculateRandomEncounter(int value) const {

@@ -47,7 +47,7 @@ AUTHORED_MAPS = (
 EVENT_CALLBACKS = frozenset(
     {"trigger", "onEnter", "onTurn", "onCreate", "onDestroy", "onOpen", "onUse", "onComplete", "isCompleted"}
 )
-REVIEWED_GAMEPLAY_DIGEST = "d7c8d347503657b99af855d639e708cf9106c2c57c599c949c32a004d2b64aa6"
+REVIEWED_GAMEPLAY_DIGEST = "e5da46ac74a0384bfd777936cbad4514a17c4b8f136b774c5ed3d2e07cb3e5b8"
 
 
 @dataclass(frozen=True)
@@ -698,6 +698,17 @@ def sourceBranches():
     )
     for identity, witnesses in shared.items():
         mapping[identity] = tuple(sorted(set(mapping.get(identity, ())) | witnesses))
+    # Deferred placement retries complete the same authored encounter or reward outcome.
+    for map_name, class_name in (
+        ("kadath", "DreamGate"),
+        ("kadath", "OnyxThrone"),
+        ("ninemarches", "DigSite"),
+        ("sunderedmarch", "DigSite"),
+        ("vhulmarn", "TideBell"),
+        ("vhulmarn", "AltarThreshold"),
+    ):
+        identity = f"res/maps/{map_name}/script.py:{class_name}"
+        mapping[identity + ".onTurn"] = mapping[identity + ".onEnter"]
     return mapping
 
 

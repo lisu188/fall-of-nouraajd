@@ -17,13 +17,13 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 #pragma once
 
-#include <optional>
 #include "core/CConcepts.h"
 #include "core/CGlobal.h"
 #include "core/CJsonUtil.h"
 
 #include <expected>
 #include <memory>
+#include <optional>
 #include <stdexcept>
 #include <unordered_map>
 #include <variant>

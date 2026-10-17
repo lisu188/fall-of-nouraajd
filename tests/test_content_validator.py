@@ -1070,6 +1070,58 @@ class ContentValidatorTest(unittest.TestCase):
         self.assertEqual("gooby1", named.get("gooby"))
         self.assertEqual("amuletGoblin", named.get("goblinThief"))
 
+    def test_script_analyzer_inventories_conditional_template_aliases_without_cross_naming(self):
+        root = self.make_fixture()
+        script_path = root / "res/maps/broken/script.py"
+        script_path.write_text(
+            textwrap.dedent("""
+                def load(self, context):
+                    def spawnFlow(game, game_map, index):
+                        type_id = "CultLeader" if index == 0 else "Cultist"
+                        actor = game.createObject(type_id)
+                        if index == 0:
+                            actor.setStringProperty("name", "cultLeaderQuest")
+                        else:
+                            actor.setStringProperty("name", f"cultist{index}")
+                        game_map.addObject(actor)
+                        yield uiRequest("gui.moveTo", actor, 45, 100, 0)
+                        original = "gooby"
+                        alias = original
+                        creature = game.createObject(alias)
+                        creature.setStringProperty("name", "gooby1")
+            """).lstrip(),
+            encoding="utf-8",
+        )
+        info = ContentValidator(root)._parse_script(script_path)
+        self.assertIsNotNone(info)
+        spawns = {(entry.template, entry.runtime_name) for entry in info.spawned_creatures}
+        self.assertIn(("CultLeader", "cultLeaderQuest"), spawns)
+        self.assertIn(("Cultist", None), spawns)
+        self.assertNotIn(("Cultist", "cultLeaderQuest"), spawns)
+        self.assertIn(("gooby", "gooby1"), spawns)
+        self.assertTrue({"CultLeader", "Cultist", "gooby"}.issubset({call.value for call in info.calls}))
+
+    def test_script_analyzer_inventories_awaited_spawn_opcodes_as_native_refs(self):
+        root = self.make_fixture()
+        script_path = root / "res/maps/broken/script.py"
+        script_path.write_text(
+            textwrap.dedent("""
+                def load(self, context):
+                    def spawnFlow(game_map):
+                        yield uiRequest("gui.addObjectByName", game_map, "siegePritz", 7, 8, 0)
+                        yield uiRequest("gui.moveTo", existing, 7, 8, 0)
+            """).lstrip(),
+            encoding="utf-8",
+        )
+        info = ContentValidator(root)._parse_script(script_path)
+        self.assertIsNotNone(info)
+        self.assertEqual(
+            [("addObjectByName", "siegePritz", None)],
+            [(entry.spawn_call, entry.template, entry.runtime_name) for entry in info.spawned_creatures],
+        )
+        self.assertEqual([("addObjectByName", "siegePritz")], [(call.name, call.value) for call in info.calls])
+        self.assertIssueContains(validate_repo(root), "res/maps/broken/script.py", '"siegePritz"')
+
     def test_real_gooby_quest_runtime_names_preserved(self):
         # The real nouraajd chain (createObject("gooby") -> name "gooby1", onDestroy
         # trigger on "gooby1") must satisfy the runtime-name preservation guard.

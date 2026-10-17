@@ -15,6 +15,7 @@ GNU General Public License for more details.
 You should have received a copy of the GNU General Public License
 along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
+#include "core/CAsync.h"
 #include "core/CController.h"
 #include "core/CGame.h"
 #include "core/CGameContext.h"
@@ -33,6 +34,7 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #include <atomic>
 #include <chrono>
 #include <cstdint>
+#include <cstdlib>
 #include <functional>
 #include <future>
 #include <limits>
@@ -242,10 +244,44 @@ void testNativeMovementWaitsForPythonBeforeLockingTheMap() {
         lock.unlock();
         std::this_thread::yield();
     }
+    auto loop = vstd::event_loop<>::instance();
+    const auto complete = [&] {
+        return std::ranges::all_of(results, [](auto &result) {
+            return result.wait_for(std::chrono::seconds(0)) == std::future_status::ready;
+        });
+    };
+    const auto completionDeadline = std::chrono::steady_clock::now() + std::chrono::seconds(2);
+    while (!complete() && std::chrono::steady_clock::now() < completionDeadline) {
+        loop->runReady();
+        game_async::waitForProgress(loop->hasReadyWork());
+    }
+    const bool completedInTime = complete();
+    expect_true(completedInTime, "the outer loop must complete worker lifecycle requests within the existing bound");
+    if (!completedInTime) {
+        auto context = game->getContext();
+        auto cleanup = context->spawnTask([](std::shared_ptr<CGameContext> context) -> vstd::task<void> {
+            context->shutdown();
+            co_return;
+        }(context));
+        const auto cleanupDeadline = std::chrono::steady_clock::now() + std::chrono::seconds(2);
+        while ((!complete() || !cleanup.finished()) && std::chrono::steady_clock::now() < cleanupDeadline) {
+            loop->runReady();
+            game_async::waitForProgress(loop->hasReadyWork());
+        }
+        if (!complete() || !cleanup.finished()) {
+            std::cerr << "FAIL: cancelled worker lifecycle requests did not drain within the cleanup bound"
+                      << std::endl;
+            std::_Exit(EXIT_FAILURE);
+        }
+        loop->runUntilIdle();
+    }
     {
         pybind11::gil_scoped_release release;
         for (auto &worker : workers)
             worker.join();
+    }
+    if (!completedInTime) {
+        return;
     }
     for (auto &result : results) {
         try {
@@ -257,7 +293,7 @@ void testNativeMovementWaitsForPythonBeforeLockingTheMap() {
     expect_true(map_remained_available, "a worker awaiting Python must not retain the map navigation mutex");
     expect_true(mover->getCoords() == Coords(3, 1, 0) && fixture.map->getObjectByName(added->getName()) == added &&
                     !fixture.map->getObjectByName(fixture.target->getName()),
-                "native movement and lifecycle workers must complete after the GIL is released");
+                "native movement and lifecycle workers must complete through the owning main-loop scheduler");
 }
 
 std::int64_t authoredStepCost(const std::shared_ptr<CMap> &map, Coords from, Coords to) {
@@ -712,14 +748,20 @@ void testInFlightShutdownCancelsControllerAndDirectFlow() {
         creature->setController(controller);
         map->addObject(creature);
         auto service = map->getNavigationService();
-        std::packaged_task<bool()> request([mode, service, map, target, creature, controller]() {
-            if (mode == 0)
-                return controller->control(creature)->get() == ZERO;
+        vstd::task_group controllerTasks;
+        vstd::task_handle<Coords> controllerResult;
+        std::packaged_task<bool()> request([service, map, target]() {
             return service->nextStep(map, target, ZERO, target->getCoords(), 0).status ==
                    CNavigationFlowStatus::Cancelled;
         });
         auto result = request.get_future();
-        std::thread worker(std::move(request));
+        std::thread worker;
+        if (mode == 0) {
+            controllerResult = controllerTasks.spawn(controller->controlAsync(creature),
+                                                     vstd::loopScheduler(vstd::event_loop<>::instance()));
+        } else {
+            worker = std::thread(std::move(request));
+        }
         bool reached_factory;
         {
             pybind11::gil_scoped_release release;
@@ -727,15 +769,17 @@ void testInFlightShutdownCancelsControllerAndDirectFlow() {
         }
         game->getContext()->shutdown();
         gate->resume.set_value();
-        {
+        if (worker.joinable()) {
             pybind11::gil_scoped_release release;
             worker.join();
         }
         expect_true(reached_factory, "shutdown fixture must interrupt a running controller or flow query");
         try {
-            expect_true(result.get(), "an in-flight query must cancel after shutdown without returning movement");
+            const bool cancelled =
+                mode == 0 ? game_async::wait(controllerResult, game_async::WaitMode::PostedWork) == ZERO : result.get();
+            expect_true(cancelled, "an in-flight query must cancel after shutdown without returning movement");
         } catch (...) {
-            expect_true(false, "an in-flight shutdown must not escape through the controller or flow future");
+            expect_true(false, "an in-flight shutdown must not escape through the controller or flow result");
         }
     }
 }

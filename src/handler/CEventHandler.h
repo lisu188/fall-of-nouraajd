@@ -1,6 +1,6 @@
 /*
 fall-of-nouraajd c++ dark fantasy game
-Copyright (C) 2025  Andrzej Lis
+Copyright (C) 2025-2026  Andrzej Lis
 
 This program is free software: you can redistribute it and/or modify
         it under the terms of the GNU General Public License as published by
@@ -73,6 +73,12 @@ class CEventHandler : public CGameObject {
 
   public:
     void gameEvent(std::shared_ptr<CMapObject> mapObject, std::shared_ptr<CGameEvent> event) const;
+
+    vstd::task<void> gameEventAsync(std::shared_ptr<CMapObject> mapObject, std::shared_ptr<CGameEvent> event,
+                                    std::shared_ptr<std::move_only_function<void()>> commit = {},
+                                    std::shared_ptr<std::move_only_function<void()>> prepareCommit = {});
+
+    static vstd::task<void> tileStepAsync(std::shared_ptr<CTile> tile, std::shared_ptr<CCreature> creature);
 
     void registerTrigger(std::shared_ptr<CTrigger> trigger);
 

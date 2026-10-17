@@ -2,6 +2,7 @@ from _game import *
 import json
 import game_diagnostics as _game_diagnostics
 import traceback as _traceback
+from ui import flowGame, resumableHook, runUiFlow, uiGame, uiRequest
 
 
 def craftRecipe(game_instance, station, recipe_id):
@@ -58,8 +59,8 @@ def rewardSnapshot(player):
     return {"gold": player.getGold(), "experience": player.getNumericProperty("exp"), "items": items}
 
 
-def showRewardReceipt(game_instance, title, before, message=""):
-    """Acknowledge only observed inventory/gold gains; reward grants remain owned by the caller."""
+def rewardReceiptText(game_instance, before, message=""):
+    """Describe observed rewards without mutating or presenting them."""
     after = rewardSnapshot(game_instance.getMap().getPlayer())
     rows = []
     gold = after["gold"] - before["gold"]
@@ -73,7 +74,62 @@ def showRewardReceipt(game_instance, title, before, message=""):
         if count > 0:
             rows.append(f"{entry['label']}: +{count}")
     receipt = "Rewards received\n" + "\n".join(rows) if rows else "No new rewards."
-    showReader(game_instance, title, (message + "\n\n" if message else "") + receipt)
+    return (message + "\n\n" if message else "") + receipt
+
+
+def showRewardReceipt(game_instance, title, before, message=""):
+    """Acknowledge only observed gains; reward grants remain owned by the caller."""
+    showReader(game_instance, title, rewardReceiptText(game_instance, before, message))
+
+
+def showRewardReceiptFlow(game_instance, title, before, message=""):
+    """Capture the committed reward before waiting for its acknowledgment."""
+    game_instance = flowGame(game_instance)
+    yield uiRequest("showReader", game_instance, title, rewardReceiptText(game_instance, before, message))
+
+
+def removeObjectFlow(game_map, obj):
+    if obj is not None:
+        yield uiRequest("gui.removeObject", game_map, obj)
+
+
+def removeObjectByNameFlow(game_map, name):
+    yield from removeObjectFlow(game_map, game_map.getObjectByName(name))
+
+
+def removeObjectsFlow(game_map, predicate):
+    snapshot = sorted(game_map.getObjects(), key=lambda obj: obj.getName())
+    for obj in snapshot:
+        if predicate(obj):
+            yield from removeObjectFlow(game_map, obj)
+
+
+def spawnObjectsFlow(game_map, owner, progress_property, placements):
+    """Resume a bounded authored group using its saved cursor and exact registered actor."""
+    raw = owner.getStringProperty(progress_property)
+    progress = json.loads(raw) if raw else {"index": 0, "actor": "", "placements": list(placements)}
+    placements = progress["placements"]
+    while progress["index"] < len(placements):
+        type_id, x, y, z = placements[progress["index"]]
+        pending_name = progress["actor"]
+        if pending_name:
+            actor = game_map.getObjectByName(pending_name)
+        elif game_map.canStep(Coords(x, y, z)):
+            actor = game_map.getGame().createObject(type_id)
+            if actor is not None:
+                game_map.addObject(actor)
+                progress["actor"] = actor.getName()
+                owner.setStringProperty(progress_property, json.dumps(progress, sort_keys=True))
+        else:
+            actor = None
+        if actor is not None:
+            placed = actor.getCoords() if pending_name else None
+            if placed is None or (placed.x, placed.y, placed.z) != (x, y, z):
+                yield uiRequest("gui.moveTo", actor, x, y, z)
+        progress["index"] += 1
+        progress["actor"] = ""
+        owner.setStringProperty(progress_property, json.dumps(progress, sort_keys=True))
+    owner.setStringProperty(progress_property, "")
 
 
 def requirementMessage(game_instance, target, message):
@@ -177,6 +233,21 @@ def remove_runtime_actors(game_map, names=(), prefixes=()):
     game_map.forObjects(doomed.append, _matches)
     for obj in doomed:
         game_map.removeObject(obj)
+    return len(doomed)
+
+
+def removeRuntimeActorsFlow(game_map, names=(), prefixes=()):
+    name_set = frozenset(name for name in names if name)
+    prefix_tuple = tuple(prefix for prefix in prefixes if prefix)
+    if not name_set and not prefix_tuple:
+        return 0
+    doomed = []
+    game_map.forObjects(
+        doomed.append,
+        lambda obj: obj.getName() in name_set or bool(prefix_tuple) and obj.getName().startswith(prefix_tuple),
+    )
+    for obj in doomed:
+        yield from removeObjectFlow(game_map, obj)
     return len(doomed)
 
 
@@ -362,6 +433,29 @@ class CDialog(CDialogBase2):
                 error=type(exc).__name__,
             )
             return False
+
+    def getActionFlow(self, action):
+        if self._get_public_callback(action) is None:
+            return None
+        callback = self._get_public_callback(action + "Flow")
+        if callback is None:
+            return None
+
+        def invoke():
+            try:
+                record_playtest_trace("dialog_action", action=action, dialog=playtest_object_ref(self))
+                return (yield from callback())
+            except Exception as exc:
+                _reportDialogFailure("action", action, self, exc)
+                record_playtest_trace(
+                    "dialog_action_failed",
+                    action=action,
+                    dialog=playtest_object_ref(self),
+                    error=type(exc).__name__,
+                )
+                raise
+
+        return invoke
 
     def invokeCondition(self, condition):
         callback = self._get_public_callback(condition)

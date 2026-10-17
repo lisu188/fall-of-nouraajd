@@ -138,6 +138,8 @@ class CGameGraphicsObject : public CGameObject {
 
     int getTileSize(const std::shared_ptr<CGameGraphicsObject> &object);
 
+    vstd::task_group &getGuiTaskGroup() { return guiTasks; }
+
   protected:
     // Called by the parent before this object's own mouse/keyboard hooks; the default forwards to the
     // children (highest priority first) and only then to this object. Overridable so a subclass can
@@ -159,4 +161,5 @@ class CGameGraphicsObject : public CGameObject {
 
     bool modal = false;
     bool runtimeHidden = false;
+    vstd::task_group guiTasks;
 };

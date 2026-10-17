@@ -25,6 +25,7 @@ import sys
 import struct
 import types
 import unittest
+from tests.hook_flow_support import installHookFlows
 from pathlib import Path
 from unittest import mock
 
@@ -42,7 +43,14 @@ def loadCastleModule():
 
 
 def presentationApi():
-    names = {"showReader", "rewardSnapshot", "showRewardReceipt", "requirementMessage"}
+    names = {
+        "showReader",
+        "rewardSnapshot",
+        "rewardReceiptText",
+        "showRewardReceipt",
+        "showRewardReceiptFlow",
+        "requirementMessage",
+    }
     path = REPO_ROOT / "res/game.py"
     tree = ast.parse(path.read_text(encoding="utf-8"))
     module = ast.Module(
@@ -50,6 +58,9 @@ def presentationApi():
         type_ignores=[],
     )
     namespace = {}
+    from tests.hook_flow_support import installHookFlows
+
+    installHookFlows(namespace)
     exec(compile(module, str(path), "exec"), namespace)
     return {name: namespace[name] for name in names}
 
@@ -240,6 +251,7 @@ class CastleCampaignGateTest(unittest.TestCase):
             mapQuest=lambda _source: lambda cls: cls,
             **presentationApi(),
         )
+        installHookFlows(self.game_stub)
         self.patch = mock.patch.dict(sys.modules, {"game": self.game_stub})
         self.patch.start()
         self.addCleanup(self.patch.stop)

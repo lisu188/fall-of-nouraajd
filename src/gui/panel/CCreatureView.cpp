@@ -18,6 +18,7 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #include "CCreatureView.h"
 #include "core/CScript.h"
 #include "gui/CGui.h"
+#include "gui/CGuiTasks.h"
 #include "gui/CLayout.h"
 #include "gui/CTextManager.h"
 #include "gui/CTextureCache.h"
@@ -81,12 +82,13 @@ int CCreatureView::getSizeY(std::shared_ptr<CGui> gui) { return 1; }
 
 void CCreatureView::initialize() {
     auto self = this->ptr<CCreatureView>();
-    vstd::call_when(
-        [self]() {
-            return self->getGui() != nullptr && self->getGui()->getGame() != nullptr &&
-                   self->getGui()->getGame()->getMap() != nullptr;
-        },
-        [self]() { self->refresh(); });
+    gui_async::spawn(self, gui_async::whenReady(
+                               std::weak_ptr(self),
+                               [](const auto &self) {
+                                   return self->getGui() != nullptr && self->getGui()->getGame() != nullptr &&
+                                          self->getGui()->getGame()->getMap() != nullptr;
+                               },
+                               [](const auto &self) { self->refresh(); }));
 }
 
 CListView::collection_pointer CCreatureView::getEffects(std::shared_ptr<CGui>) {

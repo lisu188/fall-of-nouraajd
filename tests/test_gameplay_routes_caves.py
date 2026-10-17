@@ -10,6 +10,7 @@ from types import SimpleNamespace
 import unittest
 from unittest.mock import Mock, patch
 
+from tests.test_gameplay_route_dialogs import compileAuthoredFunction
 from tests.gameplay_routes_caves import (
     AMBIENT_CAVES,
     RITUAL_ANCHORS,
@@ -28,10 +29,13 @@ def caveType(randint):
     tree = ast.parse(path.read_text(encoding="utf-8"))
     loader = next(node for node in tree.body if isinstance(node, ast.FunctionDef) and node.name == "load")
     callback = next(node for node in loader.body if isinstance(node, ast.ClassDef) and node.name == "Cave")
-    callback.decorator_list = []
-    namespace = {"CBuilding": object, "randint": randint, "Coords": Coords}
-    exec(compile(ast.Module(body=[callback], type_ignores=[]), str(path), "exec"), namespace)
-    return namespace["Cave"]
+    namespace = {"randint": randint, "Coords": Coords}
+    methods = {
+        method.name: compileAuthoredFunction(method, namespace, str(path))
+        for method in callback.body
+        if isinstance(method, ast.FunctionDef)
+    }
+    return type(callback.name, (object,), methods)
 
 
 class GameplayCaveObservationTest(unittest.TestCase):
@@ -43,9 +47,13 @@ class GameplayCaveObservationTest(unittest.TestCase):
         callback = next(
             node for node in loader.body if isinstance(node, ast.ClassDef) and node.name == "RitualTurnTrigger"
         )
-        callback.decorator_list = []
-        namespace = {"CTrigger": object}
-        exec(compile(ast.Module(body=[callback], type_ignores=[]), str(path), "exec"), namespace)
+        namespace = {}
+        methods = {
+            method.name: compileAuthoredFunction(method, namespace, str(path))
+            for method in callback.body
+            if isinstance(method, ast.FunctionDef)
+        }
+        trigger_class = type(callback.name, (object,), methods)
         state = {"turn": 0, "countdown": 14, "started": False, "active": False, "destroyed": 0}
         actors, registry, checks = {}, {}, []
         world = SimpleNamespace(getBoolProperty=lambda key: False, addObject=Mock())
@@ -58,7 +66,7 @@ class GameplayCaveObservationTest(unittest.TestCase):
             handle = {"__handle__": name}
             actors[name], registry[name] = handle, actor
         turn_anchor = SimpleNamespace(getMap=lambda: world)
-        turn_trigger = namespace["RitualTurnTrigger"]()
+        turn_trigger = trigger_class()
 
         def call(handle, method, *args):
             if handle == driver.game_map:
@@ -127,7 +135,7 @@ class GameplayCaveObservationTest(unittest.TestCase):
         template.clone = clone
         cave.getMap = lambda: world
         cave.getCoords = lambda: Coords(*definition["coords"])
-        cave.getBoolProperty = lambda key: state["enabled"]
+        cave.getBoolProperty = lambda key: state["enabled"] if key == "enabled" else False
         cave.getNumericProperty = lambda key: state["monsters"] if key == "monsters" else definition["chance"]
         cave.getObjectProperty = lambda key: template
         cave.incProperty = lambda key, delta: state.__setitem__(key, state[key] + delta)

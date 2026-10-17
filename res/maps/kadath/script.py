@@ -1,5 +1,7 @@
 def load(self, context):
-    from game import showReader, rewardSnapshot, showRewardReceipt
+    from game import resumableHook, uiRequest, flowGame, removeObjectsFlow
+    from game import showRewardReceiptFlow
+    from game import rewardSnapshot, spawnObjectsFlow
     from game import CDialog
     from game import CEvent
     from game import CQuest
@@ -23,32 +25,36 @@ def load(self, context):
             if not hasattr(game_map, flag):
                 game_map.setBoolProperty(flag, False)
 
-    def spawn_walkable(game_map, base, offsets, unit):
-        for dx, dy in offsets:
-            coords = Coords(base.x + dx, base.y + dy, base.z)
-            if game_map.canStep(coords):
-                game_map.addObjectByName(unit, coords)
+    def spawnWalkableFlow(game_map, owner, base, offsets, unit):
+        placements = [(unit, base.x + dx, base.y + dy, base.z) for dx, dy in offsets]
+        yield from spawnObjectsFlow(game_map, owner, "pendingSpawns", placements)
 
     @register(context)
     class StartEvent(CEvent):
+        @resumableHook
         def onEnter(self, event):
+            if self.getBoolProperty("introInitialized"):
+                yield from removeObjectsFlow(self.getMap(), lambda obj: obj.getName() == self.getName())
+                return
             if not event.getCause().isPlayer():
                 return
             game_map = self.getMap()
-            game = game_map.getGame()
+            game = flowGame(game_map.getGame())
             player = game_map.getPlayer()
             quest_flags_default(game_map)
-            showReader(game, "Kadath", self.getStringProperty("text"))
-            game_map.removeAll(lambda ob: ob.getName() == self.getName())
             ensure_quest(player, "kadathAscentQuest")
+            self.setBoolProperty("introInitialized", True)
+            (yield uiRequest("showReader", flowGame(game), "Kadath", self.getStringProperty("text")))
+            (yield from removeObjectsFlow(game_map, lambda ob: ob.getName() == self.getName()))
 
     @register(context)
     class DreamGate(CEvent):
+        @resumableHook
         def onEnter(self, event):
             if not event.getCause().isPlayer():
                 return
             game_map = self.getMap()
-            game = game_map.getGame()
+            game = flowGame(game_map.getGame())
             if game_map.getBoolProperty("gate_opened"):
                 game.getGuiHandler().notify(
                     "The standing stones are quiet now; the gate you opened does not open twice."
@@ -58,42 +64,68 @@ def load(self, context):
                 "You pass through the ring of stones and the dream deepens. Out of the drifting snow the "
                 "Night-Gaunts descend on silent wings to test the dreamer who dares the climb."
             )
-            spawn_walkable(game_map, self.getCoords(), GATE_SPAWN_OFFSETS, "nightGaunt")
+            yield from spawnWalkableFlow(game_map, self, self.getCoords(), GATE_SPAWN_OFFSETS, "nightGaunt")
             game_map.setBoolProperty("gate_opened", True)
+
+        @resumableHook
+        def onTurn(self, event):
+            if self.getStringProperty("pendingSpawns"):
+                yield from spawnWalkableFlow(self.getMap(), self, self.getCoords(), GATE_SPAWN_OFFSETS, "nightGaunt")
+                self.getMap().setBoolProperty("gate_opened", True)
 
     @register(context)
     class OnyxThrone(CEvent):
+        @resumableHook
         def onEnter(self, event):
             if not event.getCause().isPlayer():
                 return
             game_map = self.getMap()
-            game = game_map.getGame()
+            game = flowGame(game_map.getGame())
             player = game_map.getPlayer()
             if game_map.getBoolProperty("throne_taken"):
+                yield from self.wakeBossFlow()
                 return
             reward_before = rewardSnapshot(player)
             player.addItem("onyxSignetOfNyarlathotep")
             game_map.setBoolProperty("throne_taken", True)
-            showRewardReceipt(
-                game,
-                "Gift of the Crawling Chaos",
-                reward_before,
-                "The onyx throne is not empty. A tall, dark figure with a pleasant, ancient face rises smiling "
-                "and sets the Onyx Signet upon your brow - a gift, he says, from the Crawling Chaos. Then the "
-                "smile comes apart, and Nyarlathotep is only the last shape before the blind piping of the void.",
+            (
+                yield from showRewardReceiptFlow(
+                    flowGame(game),
+                    "Gift of the Crawling Chaos",
+                    reward_before,
+                    "The onyx throne is not empty. A tall, dark figure with a pleasant, ancient face rises smiling "
+                    "and sets the Onyx Signet upon your brow - a gift, he says, from the Crawling Chaos. Then the "
+                    "smile comes apart, and Nyarlathotep is only the last shape before the blind piping of the void.",
+                )
             )
-            if not game_map.getBoolProperty("boss_woken"):
+            yield from self.wakeBossFlow()
+
+        @resumableHook
+        def onTurn(self, event):
+            game_map = self.getMap()
+            if game_map.getBoolProperty("throne_taken") and not game_map.getBoolProperty("boss_woken"):
+                yield from self.wakeBossFlow()
+
+        def wakeBossFlow(self):
+            game_map = self.getMap()
+            if game_map.getBoolProperty("boss_woken") or game_map.getBoolProperty("boss_defeated"):
+                return
+            game = flowGame(game_map.getGame())
+            boss = game_map.getObjectByName("theCrawlingChaosBoss")
+            if boss is None:
                 boss = game.createObject("theCrawlingChaos")
                 boss.setStringProperty("name", "theCrawlingChaosBoss")
                 controller = game.createObject("CTargetController")
                 controller.setTarget("player")
                 boss.setController(controller)
                 game_map.addObject(boss)
-                boss.moveTo(*BOSS_SPAWN)
-                game_map.setBoolProperty("boss_woken", True)
-            # Refresh objectives/completion so pickup-first ordering converges with a
-            # later boss defeat. The quest still needs the Crawling Chaos put down.
-            player.checkQuests()
+            placed = boss.getCoords()
+            if (placed.x, placed.y, placed.z) != BOSS_SPAWN:
+                yield uiRequest("gui.moveTo", boss, *BOSS_SPAWN)
+            game_map.setBoolProperty("boss_woken", True)
+            # Refresh pickup-first objectives after placement. A cancelled move
+            # leaves this named actor registered for the next turn to resume.
+            yield uiRequest("gui.checkQuests", game_map.getPlayer())
 
     @register(context)
     @mapQuest("kadath")
@@ -120,12 +152,17 @@ def load(self, context):
         def getHint(self):
             return "The frozen dreamer's guide in the camp knows the road. The warmth on the basalt is bait."
 
+        @resumableHook
         def onComplete(self):
-            showReader(
-                self.getGame(),
-                "Kadath's throne",
-                "You reached the throne of Kadath, and the throne was waiting for you. The Great Ones were never "
-                "the danger. Their messenger was.",
+            yield uiRequest("gui.questCommitted")
+            (
+                yield uiRequest(
+                    "showReader",
+                    flowGame(self.getGame()),
+                    "Kadath's throne",
+                    "You reached the throne of Kadath, and the throne was waiting for you. The Great Ones were never "
+                    "the danger. Their messenger was.",
+                )
             )
 
     @register(context)
@@ -144,15 +181,17 @@ def load(self, context):
 
     @trigger(context, "onEnter", "dreamerGuide")
     class DreamerTrigger(CTrigger):
+        @resumableHook
         def trigger(self, obj, event):
             if event.getCause().isPlayer():
-                obj.getGame().getGuiHandler().showDialog(obj.getGame().createObject("dreamerDialog"))
+                (yield uiRequest("gui.showDialog", obj.getGame().createObject("dreamerDialog")))
 
     @trigger(context, "onEnter", "lengPriest")
     class LengPriestTrigger(CTrigger):
+        @resumableHook
         def trigger(self, obj, event):
             if event.getCause().isPlayer():
-                obj.getGame().getGuiHandler().showDialog(obj.getGame().createObject("lengPriestDialog"))
+                (yield uiRequest("gui.showDialog", obj.getGame().createObject("lengPriestDialog")))
 
     @trigger(context, "onDestroy", "roostNightGaunt")
     class RoostNightGauntTrigger(CTrigger):
@@ -171,15 +210,19 @@ def load(self, context):
 
     @trigger(context, "onDestroy", "theCrawlingChaosBoss")
     class CrawlingChaosTrigger(CTrigger):
+        @resumableHook
         def trigger(self, obj, event):
             game_map = obj.getGame().getMap()
             game_map.setBoolProperty("boss_defeated", True)
-            showReader(
-                obj.getGame(),
-                "Between dreams",
-                "The last shape sloughs away and the Crawling Chaos withdraws into the dark between dreams. You "
-                "are still wearing his signet. Somewhere, in the ultimate void, an idiot flute keeps your time.",
+            (
+                yield uiRequest(
+                    "showReader",
+                    flowGame(obj.getGame()),
+                    "Between dreams",
+                    "The last shape sloughs away and the Crawling Chaos withdraws into the dark between dreams. You "
+                    "are still wearing his signet. Somewhere, in the ultimate void, an idiot flute keeps your time.",
+                )
             )
             # Boss-defeat transition: converge with the throne pickup so the finale
             # completes once both requirements are met, in either order.
-            game_map.getPlayer().checkQuests()
+            (yield uiRequest("gui.checkQuests", game_map.getPlayer()))

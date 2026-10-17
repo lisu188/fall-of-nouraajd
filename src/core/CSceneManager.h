@@ -19,6 +19,7 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 #include <memory>
 #include <cstdint>
+#include <atomic>
 #include <functional>
 #include <optional>
 #include <string>
@@ -27,6 +28,7 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 class CGame;
 class CGameContext;
+class CMap;
 
 // Opt-in description of a single map transition. The legacy CGame::changeMap(std::string) path is
 // equivalent to a request with only targetMap set: the destination is reloaded from content, the
@@ -52,10 +54,24 @@ struct CMapTransitionRequest {
     // their own turn counter by disabling this.
     bool carryTurn = true;
     // Transaction hooks for callers that must prepare the carried player before destination
-    // entry events. Loading/rejection never calls preparation; completion reports every exit.
+    // entry events. This synchronous commit runs after any awaitable preparation and directly
+    // before the map swap. Loading/rejection never calls it; completion reports every exit.
     std::function<void()> beforePlayerEntry;
     std::function<void(bool)> onFinished;
 };
+
+namespace scene_detail {
+class CTransitionCompletion {
+  public:
+    explicit CTransitionCompletion(std::function<void(bool)> callback);
+    ~CTransitionCompletion();
+    void finish(bool success) noexcept;
+
+  private:
+    std::atomic_bool settled = false;
+    std::function<void(bool)> callback;
+};
+} // namespace scene_detail
 
 class CSceneManager : public std::enable_shared_from_this<CSceneManager> {
     friend class CGameContext;
@@ -69,6 +85,9 @@ class CSceneManager : public std::enable_shared_from_this<CSceneManager> {
 
     bool requestMapChange(const std::shared_ptr<CGame> &game, CMapTransitionRequest request);
 
+    bool requestMapChange(const std::shared_ptr<CGame> &game, CMapTransitionRequest request,
+                          std::move_only_function<vstd::task<void>()> beforeEntryAsync);
+
     bool isTransitionPending() const;
 
     TransitionState getTransitionState() const;
@@ -78,7 +97,17 @@ class CSceneManager : public std::enable_shared_from_this<CSceneManager> {
     std::string getPendingMapName() const;
 
   private:
-    void performMapChange(const std::shared_ptr<CGame> &game, const CMapTransitionRequest &request);
+    static vstd::task<void> runTransitionAsync(std::shared_ptr<CSceneManager> manager, std::weak_ptr<CGame> game,
+                                               std::weak_ptr<CGameContext> context, std::weak_ptr<CMap> expectedMap,
+                                               bool hadExpectedMap, std::uint64_t generation,
+                                               CMapTransitionRequest request,
+                                               std::move_only_function<vstd::task<void>()> beforeEntryAsync,
+                                               std::shared_ptr<scene_detail::CTransitionCompletion> completion);
+
+    vstd::task<void> performMapChangeAsync(std::weak_ptr<CGame> game, std::uint64_t generation,
+                                           CMapTransitionRequest request,
+                                           std::move_only_function<vstd::task<void>()> beforeEntryAsync,
+                                           std::shared_ptr<scene_detail::CTransitionCompletion> completion);
 
     void resetTransition();
 

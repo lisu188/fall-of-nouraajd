@@ -79,6 +79,9 @@ def load_crafting_with_fake_game():
 
     fake_game.CResourcesProvider = FakeResourcesProvider
     old_game = sys.modules.get("game")
+    from tests.hook_flow_support import installHookFlows
+
+    installHookFlows(fake_game)
     sys.modules["game"] = fake_game
     try:
         spec = importlib.util.spec_from_file_location(

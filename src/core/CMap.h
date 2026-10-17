@@ -66,6 +66,7 @@ class CMap : public CGameObject {
     using BoundsMap = std::map<int, std::pair<int, int>>;
 
     friend class CMapLoader;
+    friend class CSceneManager;
 
     friend class CRandomMapGenerator;
     friend class CNavigationSnapshot;
@@ -87,6 +88,8 @@ class CMap : public CGameObject {
 
     void move();
 
+    vstd::task<void> moveAsync();
+
     std::shared_ptr<CTile> getTile(int x, int y, int z);
 
     std::shared_ptr<CTile> getTile(Coords coords);
@@ -97,7 +100,11 @@ class CMap : public CGameObject {
 
     void addObject(const std::shared_ptr<CMapObject> &mapObject, Coords coords);
 
+    vstd::task<void> addObjectAsync(std::shared_ptr<CMapObject> mapObject, Coords coords);
+
     void removeObject(const std::shared_ptr<CMapObject> &mapObject);
+
+    vstd::task<void> removeObjectAsync(std::shared_ptr<CMapObject> mapObject);
 
     int getEntryX();
 
@@ -143,6 +150,8 @@ class CMap : public CGameObject {
 
     std::string addObjectByName(std::string name, Coords coords);
 
+    vstd::task<std::string> addObjectByNameAsync(std::string name, Coords coords);
+
     void replaceTile(std::string name, Coords coords);
 
     Coords getLocationByName(std::string name);
@@ -151,11 +160,17 @@ class CMap : public CGameObject {
 
     void setPlayer(std::shared_ptr<CPlayer> player);
 
+    vstd::task<void> setPlayerAsync(std::shared_ptr<CPlayer> player);
+
     std::shared_ptr<CPlayer> detachPlayer();
 
     void attachPlayer(std::shared_ptr<CPlayer> player);
 
     void attachPlayer(std::shared_ptr<CPlayer> player, Coords coords);
+
+    vstd::task<void> attachPlayerAsync(std::shared_ptr<CPlayer> player);
+
+    vstd::task<void> attachPlayerAsync(std::shared_ptr<CPlayer> player, Coords coords);
 
     bool restorePlayerAfterLoad(std::string &error);
 
@@ -267,6 +282,8 @@ class CMap : public CGameObject {
     void objectMoved(const std::shared_ptr<CMapObject> &object, Coords _old, Coords _new);
 
   private:
+    static vstd::task<void> moveOwnedAsync(std::shared_ptr<CMap> map);
+
     std::unordered_map<std::string, std::shared_ptr<CMapObject>> mapObjects;
     // TODO: cleanup and after load initialization
     std::unordered_multimap<Coords, std::string> mapObjectsCache;
@@ -320,6 +337,17 @@ class CMap : public CGameObject {
     std::shared_ptr<CTile> resolveTileForLookup(Coords coords);
 
     bool removeObjectWithoutEvents(const std::shared_ptr<CMapObject> &mapObject);
+
+    bool addObjectWithoutEvents(const std::shared_ptr<CMapObject> &mapObject);
+
+    vstd::task<void> addObjectWithEventsAsync(std::shared_ptr<CMapObject> mapObject,
+                                              std::move_only_function<vstd::task<void>()> afterCreate);
+
+    static vstd::task<void> moveCreatedObjectAsync(std::shared_ptr<CMap> map, std::shared_ptr<CMapObject> object,
+                                                   Coords coords);
+
+    static vstd::task<void> finishPlayerCreationAsync(std::shared_ptr<CMap> map, std::shared_ptr<CPlayer> player,
+                                                      std::optional<Coords> target);
 
     int normalizeAxis(int value, int z, bool wrapAxis, const IntMap &bounds) const;
 

@@ -4,6 +4,7 @@
 #include "core/CGameContext.h"
 #include "core/CLoader.h"
 #include "gui/CAnimation.h"
+#include "gui/CGuiTasks.h"
 #include "gui/CLayout.h"
 #include "gui/object/CProxyGraphicsObject.h"
 #include "gui/panel/CGameInventoryPanel.h"
@@ -156,27 +157,31 @@ void CMapGraphicsObject::showFootprint(std::shared_ptr<CGui> &gui, Coords::Direc
 
 void CMapGraphicsObject::initialize() {
     auto self = this->ptr<CMapGraphicsObject>();
-    vstd::call_when(
-        [self]() { return self->getGui() && self->getGui()->getGame() && self->getGui()->getGame()->getMap(); },
-        [self]() {
-            self->getGui()->getGame()->getMap()->connect("turnPassed", self, "refreshAll");
-            self->getGui()->getGame()->getMap()->connect("tileChanged", self, "refreshObject");
-            self->getGui()->getGame()->getMap()->connect("objectChanged", self, "refreshObject");
-            self->refresh();
-            auto action = self->getGui()->getGame()->createObject<CButton>();
-            action->setText("Travel to destination  Enter");
-            action->setClick("commitDestination");
-            auto layout = std::make_shared<CLayout>();
-            layout->setHorizontal("CENTER");
-            layout->setVertical("DOWN");
-            layout->setW("400");
-            layout->setH("56");
-            action->setLayout(layout);
-            action->setPriority(10);
-            action->setRuntimeHidden(true);
-            self->destinationButton = action;
-            self->addChild(action);
-        });
+    gui_async::spawn(self, gui_async::whenReady(
+                               std::weak_ptr(self),
+                               [](const std::shared_ptr<CMapGraphicsObject> &self) {
+                                   return self->getGui() && self->getGui()->getGame() &&
+                                          self->getGui()->getGame()->getMap();
+                               },
+                               [](const std::shared_ptr<CMapGraphicsObject> &self) {
+                                   self->getGui()->getGame()->getMap()->connect("turnPassed", self, "refreshAll");
+                                   self->getGui()->getGame()->getMap()->connect("tileChanged", self, "refreshObject");
+                                   self->getGui()->getGame()->getMap()->connect("objectChanged", self, "refreshObject");
+                                   self->refresh();
+                                   auto action = self->getGui()->getGame()->createObject<CButton>();
+                                   action->setText("Travel to destination  Enter");
+                                   action->setClick("commitDestination");
+                                   auto layout = std::make_shared<CLayout>();
+                                   layout->setHorizontal("CENTER");
+                                   layout->setVertical("DOWN");
+                                   layout->setW("400");
+                                   layout->setH("56");
+                                   action->setLayout(layout);
+                                   action->setPriority(10);
+                                   action->setRuntimeHidden(true);
+                                   self->destinationButton = action;
+                                   self->addChild(action);
+                               }));
 }
 
 void CMapGraphicsObject::previewDestination(std::shared_ptr<CGui> gui, Coords destination) {
@@ -209,26 +214,33 @@ void CMapGraphicsObject::previewDestination(std::shared_ptr<CGui> gui, Coords de
 }
 
 void CMapGraphicsObject::commitDestination(std::shared_ptr<CGui> gui) {
-    validateDestinationPreview(gui);
-    auto map = gui && gui->getGame() ? gui->getGame()->getMap() : nullptr;
-    auto player = map ? map->getPlayer() : nullptr;
-    if (!player || !previewTarget || previewMap.lock() != map || map->isMoving())
-        return;
-    auto controller = vstd::cast<CPlayerController>(player->getController());
-    if (!controller || controller != previewController.lock()) {
-        clearDestinationPreview();
-        return;
-    }
-    const auto request = previewRequest;
-    const auto generation = previewGeneration;
-    const auto context = previewContext.lock();
-    clearDestinationPreview();
-    const int maxSteps = std::max(1, gui->getTileCountX() * gui->getTileCountY() * 4);
-    for (int step = 0; step < maxSteps && gui->getGame()->getMap() == map && map->getPlayer() == player &&
-                       player->getController() == controller && controller->getRequestSerial() == request && context &&
-                       context->isTransitionGenerationCurrent(generation) && !controller->isCompleted(player);
-         ++step)
-        map->move();
+    gui_async::spawn(this->ptr<CMapGraphicsObject>(), commitDestinationAsync(std::move(gui)));
+}
+
+vstd::task<void> CMapGraphicsObject::commitDestinationAsync(std::shared_ptr<CGui> gui) {
+    return [](std::shared_ptr<CMapGraphicsObject> self, std::shared_ptr<CGui> gui) -> vstd::task<void> {
+        self->validateDestinationPreview(gui);
+        auto map = gui && gui->getGame() ? gui->getGame()->getMap() : nullptr;
+        auto player = map ? map->getPlayer() : nullptr;
+        if (!player || !self->previewTarget || self->previewMap.lock() != map || map->isMoving())
+            co_return;
+        auto controller = vstd::cast<CPlayerController>(player->getController());
+        if (!controller || controller != self->previewController.lock()) {
+            self->clearDestinationPreview();
+            co_return;
+        }
+        const auto request = self->previewRequest;
+        const auto generation = self->previewGeneration;
+        const auto context = self->previewContext.lock();
+        self->clearDestinationPreview();
+        const int maxSteps = std::max(1, gui->getTileCountX() * gui->getTileCountY() * 4);
+        for (int step = 0;
+             step < maxSteps && gui->getGame()->getMap() == map && map->getPlayer() == player &&
+             player->getController() == controller && controller->getRequestSerial() == request && context &&
+             context->isTransitionGenerationCurrent(generation) && !controller->isCompleted(player);
+             ++step)
+            co_await map->moveAsync();
+    }(this->ptr<CMapGraphicsObject>(), std::move(gui));
 }
 
 void CMapGraphicsObject::clearDestinationPreview() {
@@ -295,26 +307,26 @@ bool CMapGraphicsObject::keyboardEvent(std::shared_ptr<CGui> gui, SDL_EventType 
         switch (i) {
         case SDLK_UP:
             controller->setTarget(player, player->getCoords() + NORTH);
-            gui->getGame()->getMap()->move();
+            gui->getGame()->getContext()->spawnTask(gui->getGame()->getMap()->moveAsync());
             return true;
         case SDLK_DOWN:
             controller->setTarget(player, player->getCoords() + SOUTH);
-            gui->getGame()->getMap()->move();
+            gui->getGame()->getContext()->spawnTask(gui->getGame()->getMap()->moveAsync());
             return true;
         case SDLK_LEFT:
             controller->setTarget(player, player->getCoords() + WEST);
-            gui->getGame()->getMap()->move();
+            gui->getGame()->getContext()->spawnTask(gui->getGame()->getMap()->moveAsync());
             return true;
         case SDLK_RIGHT:
             controller->setTarget(player, player->getCoords() + EAST);
-            gui->getGame()->getMap()->move();
+            gui->getGame()->getContext()->spawnTask(gui->getGame()->getMap()->moveAsync());
             return true;
         case SDLK_SPACE:
             controller->setTarget(player, player->getCoords() + ZERO);
-            gui->getGame()->getMap()->move();
+            gui->getGame()->getContext()->spawnTask(gui->getGame()->getMap()->moveAsync());
             return true;
         case SDLK_s:
-            gui->getGame()->getGuiHandler()->showSaveMenu();
+            gui->getGame()->getContext()->spawnTask(gui->getGame()->getGuiHandler()->showSaveMenuAsync());
             return true;
         }
     }

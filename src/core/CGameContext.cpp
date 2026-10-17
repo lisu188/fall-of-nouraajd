@@ -16,6 +16,7 @@ You should have received a copy of the GNU General Public License
 along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 #include "core/CGameContext.h"
+#include "core/CAsync.h"
 #include "core/CController.h"
 #include "core/CGame.h"
 #include "core/CNavigation.h"
@@ -35,9 +36,14 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #include <stdexcept>
 #include <utility>
 
-CGameContext::CGameContext(std::shared_ptr<CGame> game) : game(std::move(game)) {}
+CGameContext::CGameContext(std::shared_ptr<CGame> game)
+    : resourceMutex(game ? game->resourceMutex : std::make_shared<std::recursive_mutex>()), game(std::move(game)) {
+    // Establish the loop thread at session creation, including sessions that only attach a GUI.
+    vstd::event_loop<>::instance();
+}
 
 std::shared_ptr<CObjectHandler> CGameContext::getObjectHandler() {
+    std::lock_guard lock(*resourceMutex);
     requireActiveService("CObjectHandler");
     if (!objectHandler) {
         objectHandler = std::make_shared<CObjectHandler>();
@@ -46,9 +52,10 @@ std::shared_ptr<CObjectHandler> CGameContext::getObjectHandler() {
 }
 
 std::shared_ptr<CGuiHandler> CGameContext::getGuiHandler() {
+    auto owner = game.lock();
+    std::lock_guard lock(*resourceMutex);
     requireActiveService("CGuiHandler");
     if (!guiHandler) {
-        auto owner = game.lock();
         if (!owner) {
             throw std::runtime_error("Cannot create CGuiHandler without an active CGame.");
         }
@@ -58,14 +65,24 @@ std::shared_ptr<CGuiHandler> CGameContext::getGuiHandler() {
 }
 
 std::shared_ptr<CScriptHandler> CGameContext::getScriptHandler() {
+    {
+        std::lock_guard lock(*resourceMutex);
+        requireActiveService("CScriptHandler");
+        if (scriptHandler) {
+            return scriptHandler;
+        }
+    }
+    auto created = std::make_shared<CScriptHandler>();
+    std::lock_guard lock(*resourceMutex);
     requireActiveService("CScriptHandler");
     if (!scriptHandler) {
-        scriptHandler = std::make_shared<CScriptHandler>();
+        scriptHandler = std::move(created);
     }
     return scriptHandler;
 }
 
 std::shared_ptr<CLuaHandler> CGameContext::getLuaHandler() {
+    std::lock_guard lock(*resourceMutex);
     requireActiveService("CLuaHandler");
     if (!luaHandler) {
         luaHandler = std::make_shared<CLuaHandler>();
@@ -74,29 +91,49 @@ std::shared_ptr<CLuaHandler> CGameContext::getLuaHandler() {
 }
 
 std::shared_ptr<CRngHandler> CGameContext::getRngHandler() {
+    {
+        std::lock_guard lock(*resourceMutex);
+        requireActiveService("CRngHandler");
+        if (rngHandler) {
+            return rngHandler;
+        }
+    }
+    auto owner = game.lock();
+    if (!owner) {
+        throw std::runtime_error("Cannot create CRngHandler without an active CGame.");
+    }
+    auto created = std::make_shared<CRngHandler>(owner);
+    std::lock_guard lock(*resourceMutex);
     requireActiveService("CRngHandler");
     if (!rngHandler) {
-        auto owner = game.lock();
-        if (!owner) {
-            throw std::runtime_error("Cannot create CRngHandler without an active CGame.");
-        }
-        rngHandler = std::make_shared<CRngHandler>(owner);
+        rngHandler = std::move(created);
     }
     return rngHandler;
 }
 
 std::shared_ptr<CSlotConfig> CGameContext::getSlotConfiguration() {
-    requireActiveService("CSlotConfig");
-    return slotConfiguration.get([this]() {
-        auto owner = game.lock();
-        if (!owner) {
-            throw std::runtime_error("Cannot create CSlotConfig without an active CGame.");
+    {
+        std::lock_guard lock(*resourceMutex);
+        requireActiveService("CSlotConfig");
+        if (slotConfiguration) {
+            return slotConfiguration;
         }
-        return owner->createObject<CSlotConfig>("slotConfiguration");
-    });
+    }
+    auto owner = game.lock();
+    if (!owner) {
+        throw std::runtime_error("Cannot create CSlotConfig without an active CGame.");
+    }
+    auto created = owner->createObject<CSlotConfig>("slotConfiguration");
+    std::lock_guard lock(*resourceMutex);
+    requireActiveService("CSlotConfig");
+    if (!slotConfiguration) {
+        slotConfiguration = std::move(created);
+    }
+    return slotConfiguration;
 }
 
 std::shared_ptr<CResourcesProvider> CGameContext::getResourcesProvider() {
+    std::lock_guard lock(*resourceMutex);
     requireActiveService("CResourcesProvider");
     if (!resourcesProvider) {
         resourcesProvider = std::make_shared<CResourcesProvider>();
@@ -105,6 +142,7 @@ std::shared_ptr<CResourcesProvider> CGameContext::getResourcesProvider() {
 }
 
 std::shared_ptr<CConfigurationProvider> CGameContext::getConfigurationProvider() {
+    std::lock_guard lock(*resourceMutex);
     requireActiveService("CConfigurationProvider");
     if (!configurationProvider) {
         configurationProvider = std::make_shared<CConfigurationProvider>(getResourcesProvider());
@@ -113,6 +151,7 @@ std::shared_ptr<CConfigurationProvider> CGameContext::getConfigurationProvider()
 }
 
 std::shared_ptr<CMapSessionStore> CGameContext::getMapSessionStore() {
+    std::lock_guard lock(*resourceMutex);
     requireActiveService("CMapSessionStore");
     if (!mapSessionStore) {
         mapSessionStore = std::make_shared<CMapSessionStore>();
@@ -121,19 +160,29 @@ std::shared_ptr<CMapSessionStore> CGameContext::getMapSessionStore() {
 }
 
 void CGameContext::addEventLoopConnection(vstd::event_loop<>::connection connection) {
+    std::lock_guard lock(*resourceMutex);
     requireActiveService("event loop");
     eventLoopConnections.push_back(std::move(connection));
 }
 
-void CGameContext::trackEffectOwner(const std::shared_ptr<CCreature> &creature) {
+bool CGameContext::trackEffectOwner(const std::shared_ptr<CCreature> &creature) {
+    std::lock_guard lock(*resourceMutex);
     if (isActive() && creature) {
         effectOwners[creature.get()] = creature;
+        return true;
     }
+    return false;
 }
 
-void CGameContext::untrackEffectOwner(const CCreature *creature) { effectOwners.erase(creature); }
+void CGameContext::untrackEffectOwner(const CCreature *creature) {
+    std::lock_guard lock(*resourceMutex);
+    effectOwners.erase(creature);
+}
 
-std::size_t CGameContext::getEffectOwnerCount() const { return effectOwners.size(); }
+std::size_t CGameContext::getEffectOwnerCount() const {
+    std::lock_guard lock(*resourceMutex);
+    return effectOwners.size();
+}
 
 std::string CMapSessionStore::makeKey(const std::string &mapName, const std::string &instanceId) {
     // Length-prefix the map name so distinct (mapName, instanceId) pairs never collide.
@@ -199,60 +248,127 @@ void CGameContext::shutdown() {
     shutdown(owner.get());
 }
 
+struct CGameContext::ShutdownState {
+    std::shared_ptr<vstd::task_group> tasks;
+    vstd::task_group finalizer;
+    std::shared_ptr<CGui> gui;
+    std::shared_ptr<CSceneManager> sceneManager;
+    std::shared_ptr<CMap> map;
+    std::shared_ptr<CGuiHandler> guiHandler;
+    std::shared_ptr<CObjectHandler> objectHandler;
+    std::shared_ptr<CScriptHandler> scriptHandler;
+    std::shared_ptr<CLuaHandler> luaHandler;
+    std::shared_ptr<CRngHandler> rngHandler;
+    std::shared_ptr<CResourcesProvider> resourcesProvider;
+    std::shared_ptr<CConfigurationProvider> configurationProvider;
+    std::shared_ptr<CMapSessionStore> mapSessionStore;
+    std::shared_ptr<CNavigationService> navigationService;
+    std::unordered_map<const CCreature *, std::weak_ptr<CCreature>> effectOwners;
+    std::shared_ptr<const int> effectOwnerIdentity;
+    std::shared_ptr<CSlotConfig> slotConfiguration;
+    bool released = false;
+
+    void release() {
+        if (std::exchange(released, true)) {
+            return;
+        }
+        std::optional<pybind11::gil_scoped_acquire> gil;
+        if (Py_IsInitialized()) {
+            gil.emplace();
+        }
+        if (sceneManager) {
+            sceneManager->resetTransition();
+        }
+        if (gui) {
+            gui->shutdown();
+        }
+        for (const auto &[identity, reference] : effectOwners) {
+            if (auto creature = reference.lock()) {
+                creature->releaseEffectReferences(effectOwnerIdentity);
+            }
+        }
+        effectOwners.clear();
+        gui.reset();
+        sceneManager.reset();
+        map.reset();
+        if (luaHandler) {
+            luaHandler->releaseState();
+        }
+        if (scriptHandler) {
+            scriptHandler->releaseState();
+        }
+        slotConfiguration.reset();
+        if (mapSessionStore) {
+            mapSessionStore->clear();
+        }
+        mapSessionStore.reset();
+        configurationProvider.reset();
+        resourcesProvider.reset();
+        luaHandler.reset();
+        scriptHandler.reset();
+        guiHandler.reset();
+        rngHandler.reset();
+        objectHandler.reset();
+        if (navigationService) {
+            navigationService->clearSessionCaches();
+        }
+        navigationService.reset();
+    }
+};
+
+vstd::task<void> CGameContext::finishShutdownAsync(std::shared_ptr<ShutdownState> state) {
+    co_await vstd::post(vstd::event_loop<>::instance());
+    co_await vstd::until(vstd::event_loop<>::instance(), [state] { return state->tasks->finished(); });
+    state->release();
+}
+
 void CGameContext::shutdown(CGame *owner) {
-    if (!active.exchange(false, std::memory_order_acq_rel)) {
+    std::shared_ptr<ShutdownState> state;
+    std::vector<vstd::event_loop<>::connection> connections;
+    {
+        std::lock_guard resource_lock(*resourceMutex);
+        if (!active.exchange(false, std::memory_order_acq_rel)) {
+            return;
+        }
+        advanceTransitionGeneration();
+        connections = std::move(eventLoopConnections);
+        state = std::make_shared<ShutdownState>();
+        shutdownState = state;
+        state->tasks = tasks;
+        if (owner) {
+            if (owner->_gui) {
+                owner->_gui->deactivate();
+                state->gui = std::move(owner->_gui);
+            }
+            state->sceneManager = owner->sceneManager;
+            state->map = std::move(owner->map);
+            std::lock_guard lock(owner->navigationServiceMutex);
+            state->navigationService = std::move(owner->navigationService);
+        }
+        state->effectOwners = std::move(effectOwners);
+        state->effectOwnerIdentity = effectOwnerIdentity;
+        effectOwners.clear();
+        state->slotConfiguration = std::move(slotConfiguration);
+        state->mapSessionStore = std::move(mapSessionStore);
+        state->configurationProvider = std::move(configurationProvider);
+        state->resourcesProvider = std::move(resourcesProvider);
+        state->luaHandler = std::move(luaHandler);
+        state->scriptHandler = std::move(scriptHandler);
+        state->guiHandler = std::move(guiHandler);
+        state->rngHandler = std::move(rngHandler);
+        state->objectHandler = std::move(objectHandler);
+    }
+    connections.clear();
+    const bool inside_task = tasks->ownsCurrentTask();
+    tasks->requestStop();
+    if (!inside_task && !state->gui && !state->sceneManager && tasks->finished()) {
+        state->release();
         return;
     }
-
-    advanceTransitionGeneration();
-    eventLoopConnections.clear();
-    if (owner) {
-        if (owner->sceneManager) {
-            owner->sceneManager->resetTransition();
-        }
-        if (owner->_gui) {
-            owner->_gui->shutdown();
-            owner->_gui.reset();
-        }
-    }
-    // Effects retain their actors for save/reload continuity. Break their cycles before releasing
-    // maps and plugin runtimes, including actors kept alive only by detached effect graphs.
-    auto pendingEffectOwners = std::move(effectOwners);
-    effectOwners.clear();
-    for (const auto &[identity, reference] : pendingEffectOwners) {
-        if (auto creature = reference.lock()) {
-            creature->releaseEffectReferences();
-        }
-    }
-    if (owner) {
-        owner->map.reset();
-    }
-    // Close the Lua state before the Python script handler releases: Lua-registered factories
-    // and hook tables die with the state, and retained objects fall back to base behavior
-    // through the expired weak_ptr guard in CLuaOverrides.
-    if (luaHandler) {
-        luaHandler->releaseState();
-    }
-    if (scriptHandler) {
-        scriptHandler->releaseState();
-    }
-    slotConfiguration.clear();
-    if (mapSessionStore) {
-        mapSessionStore->clear();
-    }
-    mapSessionStore.reset();
-    configurationProvider.reset();
-    resourcesProvider.reset();
-    luaHandler.reset();
-    scriptHandler.reset();
-    guiHandler.reset();
-    rngHandler.reset();
-    objectHandler.reset();
-    if (owner) {
-        std::lock_guard lock(owner->navigationServiceMutex);
-        if (owner->navigationService)
-            owner->navigationService->clearSessionCaches();
-        owner->navigationService.reset();
+    auto completion =
+        state->finalizer.spawn(finishShutdownAsync(state), vstd::loopScheduler(vstd::event_loop<>::instance()));
+    if (!inside_task) {
+        game_async::wait(completion, game_async::WaitMode::PostedWork);
     }
 }
 

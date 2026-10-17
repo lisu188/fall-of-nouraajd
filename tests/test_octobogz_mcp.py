@@ -2956,6 +2956,7 @@ class OctobogzDiagnosticTest(unittest.TestCase):
             getGame=lambda: native_game,
             getPlayer=lambda: native_player,
             getBoolProperty=lambda key: state["flags"].get(key, False),
+            setBoolProperty=lambda key, value: state["flags"].update({key: value}),
         )
         native_game.getMap = lambda: world
         native_game.createObject = lambda identity: (
@@ -2986,6 +2987,12 @@ class OctobogzDiagnosticTest(unittest.TestCase):
         quest_system = SimpleNamespace(
             get_state=lambda quest: state["victor"], mark_victor_good_end=lambda: state.update(victor="good_end")
         )
+        clear_encounter = Mock()
+
+        def clearEncounterFlow(game_map):
+            clear_encounter(game_map)
+            yield from ()
+
         rescued = authoredFunction(
             source,
             "trigger",
@@ -2995,9 +3002,10 @@ class OctobogzDiagnosticTest(unittest.TestCase):
             rewardSnapshot=Mock(),
             showRewardReceipt=Mock(),
             narrative=SimpleNamespace(victorResponse=lambda game: ""),
-            _clear_victor_encounter=Mock(),
+            clearVictorEncounterFlow=clearEncounterFlow,
         )
         rescued(SimpleNamespace(getGame=lambda: native_game), object(), object())
+        clear_encounter.assert_called_once_with(world)
         gui.showTrade.assert_called_once_with(market_object)
         self.assertEqual(700, state["gold"])
         # Native names survive save/reload; MCP handles need not retain their original values.

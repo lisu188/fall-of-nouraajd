@@ -10,6 +10,7 @@ import unittest
 from unittest.mock import patch
 
 from tests.gameplay_routes_waypoints import captureWaypointCreation, verifyWaypointPublication, waypointDefinitions
+from tests.hook_flow_support import installHookFlows
 
 Coords = namedtuple("Coords", "x y z")
 
@@ -29,6 +30,7 @@ def waypointTypes():
         return decorate
 
     game.register = register
+    installHookFlows(game)
     path = Path(__file__).resolve().parents[1] / "res/plugins/object.py"
     namespace = {}
     exec(compile(path.read_text(encoding="utf-8"), str(path), "exec"), namespace)

@@ -15,12 +15,12 @@ GNU General Public License for more details.
 You should have received a copy of the GNU General Public License
 along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
-#include "core/CSerialization.h"
 #include "core/CGame.h"
 #include "core/CNavigation.h"
 #include "core/CGameContext.h"
 #include "core/CLoader.h"
 #include "core/CSceneManager.h"
+#include "core/CSerialization.h"
 #include "core/CMap.h"
 #include "core/CProvider.h"
 #include "plugin/CPluginRegistrar.h"
@@ -31,6 +31,7 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 CGame::CGame() { CSerialization::markGameSessionStarted(); }
 
 std::shared_ptr<CNavigationService> CGame::getNavigationService() {
+    std::lock_guard resource_lock(*resourceMutex);
     std::lock_guard lock(navigationServiceMutex);
     if (context && !context->isActive())
         throw std::runtime_error("Cannot access CNavigationService after CGameContext shutdown.");
@@ -40,8 +41,13 @@ std::shared_ptr<CNavigationService> CGame::getNavigationService() {
 }
 
 CGame::~CGame() {
-    if (context) {
-        context->shutdown(this);
+    std::shared_ptr<CGameContext> closing_context;
+    {
+        std::lock_guard lock(*resourceMutex);
+        closing_context = context;
+    }
+    if (closing_context) {
+        closing_context->shutdown(this);
     }
 }
 
@@ -51,30 +57,61 @@ bool CGame::requestMapTransition(CMapTransitionRequest request) {
     return getSceneManager()->requestMapChange(this->ptr<CGame>(), std::move(request));
 }
 
-std::shared_ptr<CMap> CGame::getMap() const { return map; }
+bool CGame::changeMapWithPreparationFlow(std::string mapName,
+                                         std::move_only_function<vstd::task<void>()> beforeEntryAsync,
+                                         std::function<void(bool)> completion,
+                                         std::function<void()> commitBeforeEntry) {
+    CMapTransitionRequest request;
+    request.targetMap = std::move(mapName);
+    request.onFinished = std::move(completion);
+    request.beforePlayerEntry = std::move(commitBeforeEntry);
+    return getSceneManager()->requestMapChange(this->ptr<CGame>(), std::move(request), std::move(beforeEntryAsync));
+}
+
+std::shared_ptr<CMap> CGame::getMap() const {
+    std::lock_guard lock(*resourceMutex);
+    return map;
+}
 
 void CGame::setMap(std::shared_ptr<CMap> map) {
-    if (context && !context->isActive() && map) {
-        throw std::runtime_error("Cannot set an active map after the game session has closed");
+    std::shared_ptr<CGui> gui;
+    std::shared_ptr<CGameContext> current_context;
+    {
+        std::lock_guard lock(*resourceMutex);
+        current_context = context;
+        if (current_context && !current_context->isActive() && map) {
+            throw std::runtime_error("Cannot set an active map after the game session has closed");
+        }
+        if (this->map != map) {
+            gui = _gui;
+        }
     }
-    if (this->map != map && _gui) {
-        auto children = _gui->getChildren();
+    if (gui) {
+        auto children = gui->getChildren();
         for (const auto &child : children) {
             if (auto panel = vstd::cast<CGamePanel>(child))
                 panel->close();
             else if (vstd::cast<CTooltip>(child))
-                _gui->removeChild(child);
+                gui->removeChild(child);
         }
-        _gui->clearDragSession();
-        _gui->releasePointerCapture();
+        gui->clearDragSession();
+        gui->releasePointerCapture();
     }
-    this->map = map;
-    if (context && context->isActive()) {
-        context->getResourcesProvider()->setActiveScope(map ? map->getMapName() : std::string());
+    {
+        std::lock_guard lock(*resourceMutex);
+        current_context = context;
+        if (current_context && !current_context->isActive() && map) {
+            throw std::runtime_error("Cannot set an active map after the game session has closed");
+        }
+        this->map = map;
+    }
+    if (current_context && current_context->isActive()) {
+        current_context->getResourcesProvider()->setActiveScope(map ? map->getMapName() : std::string());
     }
 }
 
 void CGame::setMapForResourceLoad(std::shared_ptr<CMap> map) {
+    std::lock_guard lock(*resourceMutex);
     if (context && !context->isActive()) {
         this->map.reset();
         return;
@@ -83,6 +120,7 @@ void CGame::setMapForResourceLoad(std::shared_ptr<CMap> map) {
 }
 
 std::shared_ptr<CGameContext> CGame::getContext() {
+    std::lock_guard lock(*resourceMutex);
     if (!context) {
         context = std::make_shared<CGameContext>(this->ptr<CGame>());
     }
@@ -98,6 +136,7 @@ std::shared_ptr<CLuaHandler> CGame::getLuaHandler() { return getContext()->getLu
 std::shared_ptr<CObjectHandler> CGame::getObjectHandler() { return getContext()->getObjectHandler(); }
 
 std::shared_ptr<CSceneManager> CGame::getSceneManager() {
+    std::lock_guard lock(*resourceMutex);
     if (!sceneManager) {
         sceneManager = std::make_shared<CSceneManager>();
     }
@@ -109,9 +148,19 @@ void CGame::loadPlugin(std::function<std::shared_ptr<CPlugin>()> plugin) {
     plugin()->load(registrar);
 }
 
-std::shared_ptr<CGui> CGame::getGui() const { return _gui; }
+std::shared_ptr<CGui> CGame::getGui() const {
+    std::lock_guard lock(*resourceMutex);
+    return _gui;
+}
 
-void CGame::setGui(std::shared_ptr<CGui> _gui) { CGame::_gui = _gui; }
+void CGame::setGui(std::shared_ptr<CGui> _gui) {
+    auto current_context = getContext();
+    std::lock_guard lock(*resourceMutex);
+    if (_gui && !current_context->isActive()) {
+        throw std::runtime_error("Cannot set an active GUI after the game session has closed");
+    }
+    CGame::_gui = std::move(_gui);
+}
 
 std::shared_ptr<CSlotConfig> CGame::getSlotConfiguration() { return getContext()->getSlotConfiguration(); }
 

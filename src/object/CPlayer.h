@@ -63,6 +63,8 @@ class CPlayer : public CCreature {
 
     void checkQuests();
 
+    vstd::task<void> checkQuestsAsync();
+
     void captureQuestJournal();
 
     void incTurn();

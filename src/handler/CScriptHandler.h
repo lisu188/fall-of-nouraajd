@@ -22,7 +22,32 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #include "core/CGlobal.h"
 #include "core/CUtil.h"
 #include <memory>
+#include <optional>
 #include <utility>
+
+class CGame;
+class CGameObject;
+
+class CScriptFlow {
+  public:
+    ~CScriptFlow();
+    CScriptFlow(const CScriptFlow &) = delete("A script flow has one coroutine owner");
+    CScriptFlow &operator=(const CScriptFlow &) = delete("A script flow has one coroutine owner");
+    std::optional<json> next(const json &answer = nullptr);
+    std::optional<json> fail(const std::string &message);
+    std::shared_ptr<CGameObject> takeObjectArgument(const std::string &token);
+    void markCommitted();
+    void markItemCommitted();
+    // An explicit capability replaces automatic settlement when the flow returns.
+    std::move_only_function<void()> commitCallback() const;
+
+  private:
+    friend class CScriptHandler;
+    struct State;
+    explicit CScriptFlow(std::unique_ptr<State> state);
+    std::optional<json> resume(const json &answer, const std::optional<std::string> &failure);
+    std::unique_ptr<State> state;
+};
 
 template <fn::PythonReturn Ret, typename... Args>
 struct GAME_CORE_LOCAL CPythonFunctionWrapper{
@@ -58,6 +83,17 @@ class CScriptHandler {
     CScriptHandler &operator=(CScriptHandler &&) = delete("Python runtime state cannot move between handlers");
 
     void releaseState();
+
+    std::unique_ptr<CScriptFlow> createUiFlow(const std::string &entry, std::weak_ptr<CGame> game);
+#if !defined(_WIN32)
+    GAME_CORE_EXPORT
+#endif
+    std::unique_ptr<CScriptFlow> createCallbackFlow(pybind11::function callback, std::weak_ptr<CGame> game);
+    static std::unique_ptr<CScriptFlow>
+    createObjectFlow(const std::shared_ptr<CGameObject> &object, const std::string &method,
+                     const std::vector<std::shared_ptr<CGameObject>> &arguments, std::weak_ptr<CGame> game,
+                     std::shared_ptr<bool> committed = {}, std::shared_ptr<std::move_only_function<void()>> commit = {},
+                     std::shared_ptr<std::move_only_function<void()>> prepareCommit = {});
 
     void execute_script(std::string script, pybind11::object name_space = pybind11::none());
 

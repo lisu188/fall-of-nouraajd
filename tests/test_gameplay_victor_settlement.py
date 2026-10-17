@@ -38,6 +38,7 @@ class GameplayVictorSettlementTest(unittest.TestCase):
         world = SimpleNamespace(
             getPlayer=lambda: native_player,
             getBoolProperty=lambda key: state["flags"].get(key, False),
+            setBoolProperty=lambda key, value: state["flags"].update({key: value}),
         )
         gui = SimpleNamespace(showTrade=lambda market: state["order"].append("actual-callback-market"))
         game = SimpleNamespace(
@@ -56,6 +57,13 @@ class GameplayVictorSettlementTest(unittest.TestCase):
             state["flags"][key] = True
             return True
 
+        clear_encounter = Mock()
+        state["clearEncounter"] = clear_encounter
+
+        def clearEncounterFlow(game_map):
+            clear_encounter(game_map)
+            yield from ()
+
         source = "res/maps/nouraajd/script.py"
         rescue = authoredFunction(
             source,
@@ -66,7 +74,7 @@ class GameplayVictorSettlementTest(unittest.TestCase):
             rewardSnapshot=Mock(),
             showRewardReceipt=Mock(),
             narrative=SimpleNamespace(victorResponse=lambda actual_game: ""),
-            _clear_victor_encounter=Mock(),
+            clearVictorEncounterFlow=clearEncounterFlow,
         )
         completed = authoredFunction(source, "isCompleted", class_id="VictorQuest")
         quest = SimpleNamespace(_getState=lambda: state["victor"])
@@ -157,6 +165,8 @@ class GameplayVictorSettlementTest(unittest.TestCase):
                     self.assertEqual(12, state["turn"])
                     self.assertEqual({"rolfQuest", "mainQuest", "victorQuest"}, state["completed"])
                     self.assertEqual(set(), state["active"])
+                    self.assertFalse(state["flags"]["pendingVictorCleanup"])
+                    state["clearEncounter"].assert_called_once()
 
     def testARefusedRescueCallbackCannotBeSettledIntoACompletedQuest(self):
         for route in ("victor", "portal-gold"):
@@ -179,14 +189,13 @@ class GameplayVictorSettlementTest(unittest.TestCase):
 
     def testNativeQuestEvaluationOccursBeforeTheTurnMovementAndDoesNotMoveThePlayer(self):
         map_source = (ROOT / "src/core/CMap.cpp").read_text(encoding="utf-8")
-        move = map_source[map_source.index("void CMap::move() {") :]
+        move = map_source[map_source.index("vstd::task<void> CMap::moveAsync() {") :]
         self.assertLess(move.index("CGameEvent::CType::onTurn"), move.index("struct PlannedCreature"))
-        trigger = map_source[
-            map_source.index('auto turnTrigger = std::make_shared<CCustomTrigger>("player", "onTurn"') :
-        ]
-        self.assertIn("_player->checkQuests();", trigger[:400])
+        trigger = map_source[map_source.index("auto turnTrigger =") :]
+        self.assertIn('std::make_shared<CCustomTrigger>("player", "onTurn"', trigger[:400])
+        self.assertIn("co_await _player->checkQuestsAsync();", trigger[:400])
         player_source = (ROOT / "src/object/CPlayer.cpp").read_text(encoding="utf-8")
-        check = player_source[player_source.index("void CPlayer::checkQuests() {") :]
+        check = player_source[player_source.index("vstd::task<void> CPlayer::checkQuestsAsync() {") :]
         check = check[: check.index("void CPlayer::captureQuestJournal()")]
         self.assertIn("quest->isCompleted()", check)
         self.assertIn("completedQuests.insert(quest);", check)

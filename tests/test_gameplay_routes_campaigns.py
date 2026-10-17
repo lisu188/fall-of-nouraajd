@@ -15,6 +15,7 @@ from tests import gameplay_routes_campaigns as campaigns
 from tests.gameplay_routes_campaigns import AUTHORED_UNREACHABLE, CASES, castleTownRest, ritualCountdownAfterTurn
 from tests.gameplay_routes_maps import testMarket as authoredTestMarket
 from tests.test_gameplay_route_dialogs import authoredFunction
+from tests.hook_flow_support import installHookFlows
 
 
 class GameplayCampaignRouteTest(unittest.TestCase):
@@ -40,6 +41,12 @@ class GameplayCampaignRouteTest(unittest.TestCase):
                     state["flags"].add(key)
                     return True
 
+                town_services = Mock()
+
+                def showTownServicesFlow(*args):
+                    town_services(*args)
+                    yield from ()
+
                 on_enter = authoredFunction(
                     "res/plugins/castle_campaign.py",
                     "onEnter",
@@ -48,7 +55,8 @@ class GameplayCampaignRouteTest(unittest.TestCase):
                     claim_once=claim_once,
                     rewardSnapshot=Mock(return_value={}),
                     showRewardReceipt=Mock(),
-                    showTownServices=Mock(),
+                    showTownServices=town_services,
+                    showTownServicesFlow=showTownServicesFlow,
                 )
                 actors = {
                     name: SimpleNamespace(
@@ -118,6 +126,7 @@ class GameplayCampaignRouteTest(unittest.TestCase):
             "showRewardReceipt": Mock(),
             "THRONE_GOLD_REWARD": 500,
         }
+        installHookFlows(namespace)
         exec(compile(ast.Module(body=[defaults, callback], type_ignores=[]), str(path), "exec"), namespace)
         for mercy in (False, True):
             with self.subTest(mercy=mercy):
@@ -141,7 +150,7 @@ class GameplayCampaignRouteTest(unittest.TestCase):
                 throne = namespace["ObsidianThrone"]()
                 throne.getMap = lambda: game_map
                 throne.getGame = Mock(return_value=game)
-                throne.onEnter(SimpleNamespace(getCause=lambda: player))
+                namespace["runUiFlow"](None, throne.onEnterFlow(SimpleNamespace(getCause=lambda: player)))
                 self.assertEqual(initial, flags)
                 namespace["requirementMessage"].assert_called_once_with(game, throne, ANY)
                 player.addGold.assert_not_called()
@@ -216,7 +225,8 @@ class GameplayCampaignRouteTest(unittest.TestCase):
         callbacks = [
             node
             for node in tree.body
-            if isinstance(node, ast.FunctionDef) and node.name in ("captureObjective", "finishMission")
+            if isinstance(node, ast.FunctionDef)
+            and node.name in ("captureObjective", "finishMission", "captureObjectiveFlow", "finishMissionFlow")
         ]
         for map_name in MAP_NAMES:
             with self.subTest(map=map_name):
@@ -262,6 +272,7 @@ class GameplayCampaignRouteTest(unittest.TestCase):
                     rewardSnapshot=lambda player: {"gold": player.getGold()},
                     showRewardReceipt=Mock(),
                 )
+                installHookFlows(game_module)
                 exec(compile(ast.Module(body=callbacks, type_ignores=[]), str(path), "exec"), namespace)
                 with patch.dict(sys.modules, {"game": game_module}):
                     self.assertTrue(namespace["captureObjective"](marker, player))
@@ -497,11 +508,19 @@ class GameplayCampaignRouteTest(unittest.TestCase):
         )
         trigger.decorator_list = []
         namespace = {"CTrigger": object, "spawn_wave": Mock()}
+
+        def spawnWaveFlow(game_map):
+            namespace["spawn_wave"](game_map)
+            yield from ()
+
+        installHookFlows(namespace)
+        namespace["spawnWaveFlow"] = spawnWaveFlow
         exec(compile(ast.Module(body=[trigger], type_ignores=[]), str(path), "exec"), namespace)
         properties = {"ritual_countdown": 14, "ritual_last_tick_turn": 0, "ritual_last_wave_turn": 0}
         current = {"turn": 0}
         game_map = SimpleNamespace(
             getBoolProperty=lambda name: name == "ritual_active",
+            getStringProperty=lambda name: "",
             getNumericProperty=lambda name: properties[name],
             setNumericProperty=lambda name, value: properties.update({name: value}),
             getTurn=lambda: current["turn"],
@@ -510,7 +529,7 @@ class GameplayCampaignRouteTest(unittest.TestCase):
         for turn in range(7):
             current["turn"] = turn
             before, last_tick = properties["ritual_countdown"], properties["ritual_last_tick_turn"]
-            namespace["RitualTurnTrigger"]().trigger(actor, None)
+            namespace["runUiFlow"](None, namespace["RitualTurnTrigger"]().triggerFlow(actor, None))
             self.assertEqual(ritualCountdownAfterTurn(turn, before, last_tick), properties["ritual_countdown"])
         self.assertEqual(14, ritualCountdownAfterTurn(4, 14, 0))
         self.assertEqual(13, ritualCountdownAfterTurn(5, 14, 0))

@@ -17,16 +17,17 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 
 #include "core/CController.h"
-#include "core/CGame.h"
-#include "handler/CLuaHandler.h"
-#include "core/CLuaOverrides.h"
+#include "core/CAsync.h"
 #include "core/CGameContext.h"
+#include "core/CGame.h"
+#include "core/CLuaOverrides.h"
 #include "core/CMap.h"
 #include "core/CStats.h"
 #include "core/CTypes.h"
 #include "core/CTags.h"
 #include "core/CUtil.h"
 #include "handler/CFightHandler.h"
+#include "handler/CLuaHandler.h"
 #include "gui/CGui.h"
 #include "gui/object/CMinimapGraphicsObject.h"
 #include "object/CCreature.h"
@@ -167,9 +168,7 @@ void add_object(const MapFixture &fixture, const std::shared_ptr<CMapObject> &ob
 }
 
 Coords resolve_step(const std::shared_ptr<CCreature> &actor) {
-    auto future = actor->getController()->control(actor);
-    vstd::event_loop<>::instance()->run();
-    return future->get();
+    return game_async::run(actor->getController()->controlAsync(actor), game_async::WaitMode::PostedWork);
 }
 
 bool is_cardinal_step(const std::shared_ptr<CMap> &map, Coords from, Coords to) {
@@ -218,13 +217,13 @@ void test_many_target_controllers_share_one_goal_without_mutating_navigation() {
     performance_guard::clearTargetFlowCache();
     expect_true(performance_guard::targetFlowCacheSize() == 0, "shared-goal flow cache should start empty");
     performance_guard::resetMapCoordinateLookupProbe();
-    std::vector<std::shared_ptr<vstd::future<Coords, void>>> pending;
+    std::vector<vstd::task_handle<Coords>> pending;
     for (const auto &actor : actors) {
-        pending.push_back(actor->getController()->control(actor));
+        pending.push_back(fixture.game->getContext()->spawnTask(actor->getController()->controlAsync(actor)));
     }
     std::vector<Coords> steps;
-    for (const auto &future : pending) {
-        steps.push_back(future->get());
+    for (const auto &task : pending) {
+        steps.push_back(game_async::wait(task, game_async::WaitMode::PostedWork));
     }
     const auto cold_probes = performance_guard::mapCoordinateLookupProbeCount();
     performance_guard::disableMapCoordinateLookupProbe();
@@ -251,10 +250,10 @@ void test_many_target_controllers_share_one_goal_without_mutating_navigation() {
     pending.clear();
     performance_guard::resetMapCoordinateLookupProbe();
     for (const auto &actor : actors) {
-        pending.push_back(actor->getController()->control(actor));
+        pending.push_back(fixture.game->getContext()->spawnTask(actor->getController()->controlAsync(actor)));
     }
-    for (const auto &future : pending) {
-        future->get();
+    for (const auto &task : pending) {
+        game_async::wait(task, game_async::WaitMode::PostedWork);
     }
     const auto warm_probes = performance_guard::mapCoordinateLookupProbeCount();
     performance_guard::disableMapCoordinateLookupProbe();
@@ -507,11 +506,11 @@ class PlannedMoveWorkProbe : public CController {
   public:
     explicit PlannedMoveWorkProbe(std::vector<std::shared_ptr<CCreature>> &order) : order(order) {}
 
-    std::shared_ptr<vstd::future<Coords, void>> control(std::shared_ptr<CCreature> creature) override {
+    vstd::task<Coords> controlAsync(std::shared_ptr<CCreature> creature) override {
         ++plans;
         order.push_back(creature);
         const auto current = creature->getCoords();
-        return vstd::now([current] { return Coords((current.x + 1) % 8, current.y, current.z); });
+        co_return Coords((current.x + 1) % 8, current.y, current.z);
     }
 
     void onStepCommitted(std::shared_ptr<CCreature> creature, const Coords &) override {
@@ -806,14 +805,18 @@ void testHealingItemSelectionWorkAndCallbacksAreBounded() {
     const int mana = actor->getMana();
     expect_true(inventory.size() == inventoryCount && actor->getHpMax() == 70,
                 "healing selection fixture must retain its fixed inventory and health scale");
-    CMonsterFightController controller;
+    auto controller = std::make_shared<CMonsterFightController>();
     HealingSelectionProbeScope probe;
+    int renderedFrames = 0;
+    auto frameObserver = vstd::event_loop<>::instance()->connectFrameCallback([&](int) { ++renderedFrames; });
     for (std::size_t turn = 0; turn < turns; ++turn) {
         const auto previousCalls = selected->calls;
-        expect_true(controller.control(actor, opponent), "healing selection must take one action per turn");
+        expect_true(controller->control(actor, opponent), "healing selection must take one action per turn");
         expect_true(selected->calls == previousCalls + 1,
                     "each healing selection must invoke the exact least viable item once");
     }
+    expect_true(renderedFrames == 0,
+                "headless item boundaries must not render or pace frames between coroutine continuations");
     const auto visits = performance_guard::healingItemSelectionProbeCount();
     std::size_t itemCalls = 0;
     for (const auto &item : itemProbes) {
@@ -832,7 +835,134 @@ void testHealingItemSelectionWorkAndCallbacksAreBounded() {
                 "the counting-only item callback must keep the repeated workload fixed");
     std::cout << "healing item selection guard: inventory=" << inventoryCount << " turns=" << turns
               << " visits=" << visits << " visit budget=" << inventoryCount * turns << " item callbacks=" << itemCalls
-              << " callback budget=" << turns << " attack callbacks=" << attack->calls << "\n";
+              << " callback budget=" << turns << " attack callbacks=" << attack->calls
+              << " renderedFrames=" << renderedFrames << " frameBudget=0\n";
+}
+
+struct MonsterItemWorkCounters {
+    int started = 0;
+    int resumed = 0;
+    int destroyedFrames = 0;
+    int callbacks = 0;
+    int disposalChecks = 0;
+    int destroyedItems = 0;
+};
+
+class MonsterItemWorkProbe : public CPotion {
+  public:
+    explicit MonsterItemWorkProbe(MonsterItemWorkCounters &counters) : counters(counters) {}
+    ~MonsterItemWorkProbe() override { ++counters.destroyedItems; }
+    void onUse(std::shared_ptr<CGameEvent>) override { ++counters.callbacks; }
+    bool isDisposable() override {
+        ++counters.disposalChecks;
+        return true;
+    }
+
+  private:
+    MonsterItemWorkCounters &counters;
+};
+
+vstd::task<bool> countedMonsterItemTurn(std::shared_ptr<CMonsterFightController> controller,
+                                        std::shared_ptr<CCreature> actor, std::shared_ptr<CCreature> opponent,
+                                        MonsterItemWorkCounters &counters) {
+    struct FrameGuard {
+        MonsterItemWorkCounters &counters;
+        ~FrameGuard() { ++counters.destroyedFrames; }
+    } guard{counters};
+    ++counters.started;
+    const auto result = co_await controller->controlAsync(std::move(actor), std::move(opponent));
+    ++counters.resumed;
+    co_return result;
+}
+
+void testMonsterItemTurnDispatchAndCleanupAreBounded() {
+    constexpr int TURNS = 32;
+    constexpr int SNAPSHOT_BUDGET = 8;
+    constexpr std::size_t QUEUE_PEAK_BUDGET = 2;
+    MonsterItemWorkCounters counters;
+    auto fixture = make_open_map(2, 1);
+    auto actor = make_actor(fixture, "itemBudgetActor", Coords(0, 0, 0), "opponent");
+    auto opponent = make_actor(fixture, "itemBudgetOpponent", Coords(1, 0, 0), "itemBudgetActor");
+    actor->setHp(actor->getHpMax() / 2);
+    auto loop = vstd::event_loop<>::instance();
+    loop->runUntilIdle();
+    const auto initialPending = loop->getPendingTaskCount();
+    auto context = fixture.game->getContext();
+    int snapshots = 0;
+    int consumptions = 0;
+    int cancellations = 0;
+    std::size_t queuePeak = 0;
+    for (int turn = 0; turn <= TURNS; ++turn) {
+        const bool cancel = turn == TURNS;
+        auto item = std::make_shared<MonsterItemWorkProbe>(counters);
+        item->setGame(fixture.game);
+        item->setName("itemTurnBudget" + std::to_string(turn));
+        item->setPower(2);
+        item->addTag(CTag::Heal);
+        actor->addItem(item);
+        std::weak_ptr<MonsterItemWorkProbe> itemLifetime = item;
+        auto controller = std::make_shared<CMonsterFightController>();
+        std::weak_ptr<CMonsterFightController> controllerLifetime = controller;
+        auto task = context->spawnTask(countedMonsterItemTurn(controller, actor, opponent, counters));
+        controller.reset();
+        expect_true(!task.finished() && counters.callbacks == turn,
+                    "each item turn must suspend before its one item callback without pumping queued work");
+        if (cancel) {
+            task.requestStop();
+        }
+        for (int phase = 0; phase < SNAPSHOT_BUDGET && !task.finished(); ++phase) {
+            queuePeak = std::max(queuePeak, loop->getPendingTaskCount() - initialPending);
+            loop->runPostedTasks();
+            ++snapshots;
+        }
+        expect_true(task.finished(), "one sequential item chain must finish within eight posted snapshots");
+        if (!task.finished()) {
+            task.requestStop();
+            for (int rescue = 0; rescue < 32 && !task.finished(); ++rescue) {
+                loop->runPostedTasks();
+            }
+        }
+        if (!task.finished()) {
+            context->shutdown();
+            return;
+        }
+        try {
+            const auto used = task.get();
+            expect_true(!cancel && used, "an ordinary item turn must report its one completed action");
+        } catch (const vstd::task_cancelled &) {
+            ++cancellations;
+            expect_true(cancel, "only the deliberately cancelled item turn may report cancellation");
+        }
+        if (cancel) {
+            expect_true(actor->hasItem(item), "cancellation before onUse must preserve the unconsumed item");
+            actor->removeItem(item);
+        } else {
+            expect_true(!actor->hasItem(item), "each completed disposable item turn must consume its exact item");
+            ++consumptions;
+        }
+        item.reset();
+        expect_true(controllerLifetime.expired() && itemLifetime.expired(),
+                    "completed and cancelled native item frames must release their controller and item captures");
+        expect_true(loop->getPendingTaskCount() == initialPending && counters.destroyedFrames == turn + 1 &&
+                        counters.destroyedItems == turn + 1,
+                    "each item turn must drain its continuations and release its frame and item before the next turn");
+    }
+    expect_true(counters.started == TURNS + 1 && counters.resumed == TURNS && counters.destroyedFrames == TURNS + 1 &&
+                    counters.callbacks == TURNS && counters.disposalChecks == TURNS && consumptions == TURNS &&
+                    cancellations == 1,
+                "32 completed item turns and one cancelled turn must have exact bounded work and cleanup counts");
+    // Sequential awaits need one continuation; allow one additional cancellation dispatch, independent of turn count.
+    expect_true(queuePeak <= QUEUE_PEAK_BUDGET && snapshots <= (TURNS + 1) * SNAPSHOT_BUDGET,
+                "item turn queue growth and continuation snapshots must remain bounded by the fixed workload");
+    expect_true(actor->getItems().empty() && fixture.map->getObjects().empty(),
+                "item turns must not accumulate inventory or spawn map actors");
+    std::cout << "monster item coroutine guard: turns=" << TURNS << " starts=" << counters.started
+              << " resumes=" << counters.resumed << " framesDestroyed=" << counters.destroyedFrames
+              << " callbacks=" << counters.callbacks << " disposalChecks=" << counters.disposalChecks
+              << " consumptions=" << consumptions << " cancellations=" << cancellations << " queuePeak=" << queuePeak
+              << " queuePeakBudget=" << QUEUE_PEAK_BUDGET << " snapshots=" << snapshots
+              << " snapshotBudget=" << (TURNS + 1) * SNAPSHOT_BUDGET << '\n';
+    context->shutdown();
 }
 
 void testMonsterRoleCallbackAndStateGrowthAreBounded() {
@@ -864,10 +994,10 @@ void testMonsterRoleCallbackAndStateGrowthAreBounded() {
         actor->addAction(excluded);
     }
     const auto actionCount = actor->getInteractions().size();
-    CMonsterFightController controller;
+    auto controller = std::make_shared<CMonsterFightController>();
     constexpr int turns = 200;
     for (int i = 0; i < turns; ++i) {
-        expect_true(controller.control(actor, opponent),
+        expect_true(controller->control(actor, opponent),
                     "bounded role fixture should take exactly one action per turn");
     }
     expect_true(signature->calls == 1 && attack->calls == turns - 1,
@@ -902,10 +1032,10 @@ void testOctobogzPhaseCallbackAndStateGrowthAreBounded() {
     charge->setBoolProperty("enemySignature", true);
     pulse->setBoolProperty("enemySignature", true);
     const auto actionCount = actor->getInteractions().size();
-    CMonsterFightController controller;
+    auto controller = std::make_shared<CMonsterFightController>();
     constexpr int turns = 200;
     for (int i = 0; i < turns; ++i) {
-        expect_true(controller.control(actor, opponent), "hunt phases must take one bounded action per turn");
+        expect_true(controller->control(actor, opponent), "hunt phases must take one bounded action per turn");
     }
     expect_true(charge->calls == 1 && pulse->calls == 1 && attack->calls == turns - 2,
                 "200 hunt turns must produce one warning, one paid pulse, and 198 attacks");
@@ -1111,6 +1241,7 @@ void run_engine_hotspot_performance_tests() {
     testStalePlannedMapMoveWorkIsBounded();
     test_bulk_inventory_property_notifications_are_count_bounded();
     testHealingItemSelectionWorkAndCallbacksAreBounded();
+    testMonsterItemTurnDispatchAndCleanupAreBounded();
     testMonsterRoleCallbackAndStateGrowthAreBounded();
     testOctobogzPhaseCallbackAndStateGrowthAreBounded();
     testEffectTickCallbacksAndExpiryAreBounded();

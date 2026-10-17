@@ -52,6 +52,8 @@ class CGameFightPanel : public CGamePanel {
 
     std::shared_ptr<CInteraction> selectInteraction();
 
+    vstd::task<std::shared_ptr<CInteraction>> selectInteractionAsync();
+
     bool isCancelled() const;
 
     void cancel();

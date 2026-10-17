@@ -18,10 +18,13 @@
 
 from datetime import datetime
 from contextlib import contextmanager
+from functools import wraps
 import json
 from pathlib import Path
 import re
-from weakref import WeakKeyDictionary
+import sys
+from types import GeneratorType
+from weakref import WeakKeyDictionary, ref
 
 import campaign
 
@@ -65,19 +68,245 @@ ACTION_LABELS = {
 }
 
 
+def uiRequest(operation, *args, **kwargs):
+    return {"operation": operation, "args": args, "kwargs": kwargs}
+
+
+def uiGame(game):
+    return game.resolve() if isinstance(game, UiFlowGame) else game
+
+
+class UiFlowGame:
+    def __init__(self, resolve):
+        self.resolve = resolve
+
+    def __getattr__(self, name):
+        return getattr(self.resolve(), name)
+
+    def __hash__(self):
+        return hash(self.resolve())
+
+    def __eq__(self, other):
+        return self.resolve() == uiGame(other)
+
+
+def flowGame(game):
+    if isinstance(game, UiFlowGame):
+        return game
+    resolver = getattr(game, "createWeakResolver", None)
+    return UiFlowGame(resolver() if callable(resolver) else ref(game))
+
+
+class ResumableHook:
+    def __init__(self, callback):
+        self.callback = callback
+
+    def __set_name__(self, owner, name):
+        callback = self.callback
+        setattr(owner, name + "Flow", callback)
+
+        @wraps(callback)
+        def synchronous(receiver, *args, **kwargs):
+            return runUiFlow(receiver.getGame(), callback(receiver, *args, **kwargs))
+
+        setattr(owner, name, synchronous)
+
+
+def resumableHook(callback):
+    return ResumableHook(callback)
+
+
+def showReader(game, title, body):
+    from game import showReader as read
+
+    return read(uiGame(game), title, body)
+
+
+def showReaderFlow(game, title, body):
+    handler = game.getGuiHandler()
+    gui = game.getGui()
+    if gui is not None:
+        gui.notify(title + "\n" + body)
+    if callable(getattr(handler, "showCampaignScreen", None)):
+        yield uiRequest("gui.showCampaignScreen", title, body, "Continue")
+    else:
+        yield uiRequest("gui.showInfo", body, False)
+
+
+def uiTarget(operation, *, resumable=False):
+    module = globals()
+    if operation.startswith("campaign."):
+        module = vars(campaign)
+        operation = operation.removeprefix("campaign.")
+    return module[operation + ("Flow" if resumable else "")]
+
+
+def runUiFlow(game, flow):
+    answer = None
+    error = None
+    while True:
+        try:
+            request = flow.throw(error) if error is not None else flow.send(answer)
+        except StopIteration as completed:
+            return completed.value
+        error = None
+        try:
+            operation = request["operation"]
+            if operation == "gui.addRandomLoot":
+                target = game.getRngHandler().addRandomLoot
+            elif operation == "gui.checkQuests":
+                target = lambda player: player.checkQuests()
+            elif operation in {"gui.questCommitted", "gui.itemCommitted"}:
+                target = lambda: None
+            elif operation in {"gui.moveTo", "gui.itemMoveTo"}:
+                target = lambda actor, x, y, z: actor.moveTo(x, y, z)
+            elif operation == "gui.removeObject":
+                target = lambda game_map, obj: game_map.removeObject(obj)
+            elif operation == "gui.addObjectByName":
+
+                def target(game_map, name, x, y, z):
+                    from game import Coords
+
+                    return game_map.addObjectByName(name, Coords(x, y, z))
+
+            elif operation in {"gui.startGameWithPlayer", "gui.startRandomGameWithPlayer"}:
+
+                def target(*args):
+                    from _game import CGameLoader
+
+                    loader = getattr(CGameLoader, operation.removeprefix("gui."))
+                    if args[-1]:
+                        return loader(uiGame(game), *args)
+                    return loader(uiGame(game), *args[:-1])
+
+            elif operation.startswith("gui."):
+                target = getattr(game.getGuiHandler(), operation.removeprefix("gui."))
+            else:
+                target = uiTarget(operation)
+            answer = target(*request["args"], **request["kwargs"])
+        except BaseException as failure:
+            error = failure
+
+
+class UiFlow:
+    """Resume Python menu decisions until the next native modal request."""
+
+    def __init__(self, entry, resolve_game):
+        if entry not in {"pause", "saveMenu", "showDefeat"}:
+            raise ValueError("Unknown native UI flow: " + entry)
+        self.frames = [uiTarget(entry, resumable=True)(UiFlowGame(resolve_game))]
+        self.objectArguments = {}
+        self.nextObjectToken = 1
+
+    @classmethod
+    def fromCallback(cls, callback):
+        def invoke():
+            result = callback()
+            if result is not None:
+                if not isinstance(result, GeneratorType):
+                    raise TypeError("A UI preparation callback must return a generator or None")
+                yield from result
+
+        flow = cls.__new__(cls)
+        flow.frames = [invoke()]
+        flow.objectArguments = {}
+        flow.nextObjectToken = 1
+        return flow
+
+    def encodeArgument(self, value):
+        if value is None or isinstance(value, (str, bool, int, float)):
+            return value
+        if isinstance(value, (list, tuple)):
+            return [self.encodeArgument(item) for item in value]
+        if isinstance(value, dict):
+            if "__nativeObject" in value or not all(isinstance(key, str) for key in value):
+                raise ValueError("Native UI argument dictionaries must use ordinary JSON keys")
+            return {key: self.encodeArgument(item) for key, item in value.items()}
+        native_type = getattr(sys.modules.get("_game"), "CGameObject", ())
+        if not isinstance(value, native_type):
+            raise TypeError("Native UI arguments must be JSON values or CGameObject instances")
+        token = "object_" + str(self.nextObjectToken)
+        self.nextObjectToken += 1
+        self.objectArguments[token] = value
+        return {"__nativeObject": token}
+
+    def takeObjectArgument(self, token):
+        if not isinstance(token, str):
+            raise TypeError("Native UI object tokens must be strings")
+        return self.objectArguments.pop(token)
+
+    def advance(self, answer_json, error_message=None):
+        self.objectArguments.clear()
+        answer = json.loads(answer_json)
+        error = RuntimeError(error_message) if error_message is not None else None
+        while self.frames:
+            frame = self.frames[-1]
+            try:
+                request = frame.throw(error) if error is not None else frame.send(answer)
+            except StopIteration as completed:
+                self.frames.pop()
+                answer = completed.value
+                error = None
+                continue
+            except BaseException as failure:
+                self.frames.pop()
+                error = failure
+                continue
+            answer = None
+            error = None
+            operation = request["operation"]
+            if operation.startswith("gui."):
+                if request["kwargs"]:
+                    raise ValueError("Native modal requests use positional arguments")
+                try:
+                    return json.dumps(
+                        {"operation": operation.removeprefix("gui."), "args": self.encodeArgument(request["args"])}
+                    )
+                except BaseException:
+                    self.objectArguments.clear()
+                    raise
+            try:
+                self.frames.append(uiTarget(operation, resumable=True)(*request["args"], **request["kwargs"]))
+            except BaseException as failure:
+                error = failure
+        if error is not None:
+            raise error
+        return None
+
+    def close(self):
+        self.objectArguments.clear()
+        frames, self.frames = self.frames, []
+        error = None
+        for frame in reversed(frames):
+            try:
+                frame.close()
+            except BaseException as failure:
+                error = error or failure
+        if error is not None:
+            raise error
+
+
 def choose(game, title, choices, action_label="Select", back_label="Back"):
+    return runUiFlow(game, chooseFlow(game, title, choices, action_label, back_label))
+
+
+def chooseFlow(game, title, choices, action_label="Select", back_label="Back"):
     """Return a validated enabled stable id; duplicate labels never identify choices."""
     rows = list(choices)
     ids = [row["id"] for row in rows]
     if any(not isinstance(value, str) or not value for value in ids) or len(ids) != len(set(ids)):
         raise ValueError("Choice ids must be nonempty unique strings")
     handler = game.getGuiHandler()
-    result = handler.showChoice(title, json.dumps(rows), action_label, back_label)
+    result = yield uiRequest("gui.showChoice", title, json.dumps(rows), action_label, back_label)
     return result if any(row["id"] == result and row.get("enabled", True) for row in rows) else ""
 
 
 def confirm(game, title, body, confirm_label="Confirm", cancel_label="Cancel"):
-    return game.getGuiHandler().showConfirm(title, body, confirm_label, cancel_label)
+    return runUiFlow(game, confirmFlow(game, title, body, confirm_label, cancel_label))
+
+
+def confirmFlow(game, title, body, confirm_label="Confirm", cancel_label="Cancel"):
+    return (yield uiRequest("gui.showConfirm", title, body, confirm_label, cancel_label))
 
 
 def notify(game, text):
@@ -87,17 +316,35 @@ def notify(game, text):
 
 
 def showError(game, text, title="Error"):
-    game.getGuiHandler().showCampaignScreen(title, text, "Continue")
+    return runUiFlow(game, showErrorFlow(game, text, title))
+
+
+def showErrorFlow(game, text, title="Error"):
+    (yield uiRequest("gui.showCampaignScreen", title, text, "Continue"))
 
 
 def recordSessionSave(game, slot, operation):
-    SESSION_SAVE_STATUS[game] = (
-        f"Last successful {operation}: {datetime.now():%Y-%m-%d %H:%M:%S} · {displayName(slot)}."
-    )
+    status = f"Last successful {operation}: {datetime.now():%Y-%m-%d %H:%M:%S} · {displayName(slot)}."
+    setter = getattr(game.getGuiHandler(), "setSessionSaveStatus", None)
+    if callable(setter):
+        setter(status)
+    else:
+        SESSION_SAVE_STATUS[uiGame(game)] = status
 
 
 def sessionSaveStatus(game):
-    return SESSION_SAVE_STATUS.get(game, "No successful save in this session.")
+    getter = getattr(game.getGuiHandler(), "getSessionSaveStatus", None)
+    if callable(getter):
+        return getter() or "No successful save in this session."
+    return SESSION_SAVE_STATUS.get(uiGame(game), "No successful save in this session.")
+
+
+def clearSessionSaveStatus(game):
+    setter = getattr(game.getGuiHandler(), "setSessionSaveStatus", None)
+    if callable(setter):
+        setter("")
+    else:
+        SESSION_SAVE_STATUS.pop(uiGame(game), None)
 
 
 def discardProgressText(game):
@@ -220,25 +467,37 @@ def characterChoices(game):
 
 
 def chooseCharacter(game):
+    return runUiFlow(game, chooseCharacterFlow(game))
+
+
+def chooseCharacterFlow(game):
     classes, races = characterChoices(game)
     if not classes:
-        showError(game, "No playable characters are available in this content set.")
+        (yield uiRequest("showError", game, "No playable characters are available in this content set."))
         return "", ""
-    class_id, race_id = game.getGuiHandler().showCharacterCreationOptions(json.dumps(classes), json.dumps(races))
+    class_id, race_id = yield uiRequest("gui.showCharacterCreationOptions", json.dumps(classes), json.dumps(races))
     if class_id not in {row["id"] for row in classes} or race_id not in {row["id"] for row in races}:
         return "", ""
     return class_id, "" if race_id == DEFAULT_RACE_ID else race_id
 
 
 def chooseCampaign(game):
+    return runUiFlow(game, chooseCampaignFlow(game))
+
+
+def chooseCampaignFlow(game):
     try:
         manifests = campaign.list_campaigns()
         chapter_counts = {manifest["campaignId"]: campaign.chapterCount(manifest) for manifest in manifests}
     except (OSError, ValueError):
-        showError(game, "Campaign information could not be read. Check that the game content is installed.")
+        (
+            yield uiRequest(
+                "showError", game, "Campaign information could not be read. Check that the game content is installed."
+            )
+        )
         return ""
     if not manifests:
-        showError(game, "No campaigns are available.")
+        (yield uiRequest("showError", game, "No campaigns are available."))
         return ""
     rows = []
     saves = savedGames(game)
@@ -260,14 +519,17 @@ def chooseCampaign(game):
         if artwork:
             row["image"] = artwork
         rows.append(row)
-    return choose(game, "Choose a campaign", rows, "Create character")
+    return (yield uiRequest("choose", game, "Choose a campaign", rows, "Create character"))
 
 
 def newAdventure(game):
-    from _game import CGameLoader
+    return runUiFlow(game, newAdventureFlow(game))
 
+
+def newAdventureFlow(game):
     while game.getContext().isActive():
-        mode = choose(
+        mode = yield uiRequest(
+            "choose",
             game,
             "New adventure",
             [
@@ -293,7 +555,7 @@ def newAdventure(game):
             return False
         destination = ""
         if mode == "campaign":
-            destination = chooseCampaign(game)
+            destination = yield uiRequest("chooseCampaign", game)
         elif mode == "scenario":
             try:
                 campaign_maps = {
@@ -302,18 +564,22 @@ def newAdventure(game):
                     for scenario in manifest["scenarios"].values()
                 }
             except (OSError, ValueError, TypeError, KeyError, AttributeError):
-                showError(
-                    game,
-                    "Campaign information could not be read. Check the game content, then try again or go Back.",
+                (
+                    yield uiRequest(
+                        "showError",
+                        game,
+                        "Campaign information could not be read. Check the game content, then try again or go Back.",
+                    )
                 )
                 continue
             maps = sorted(
                 map_name for map_name in game.getResourcesProvider().getFiles("MAP") if map_name not in campaign_maps
             )
             if not maps:
-                showError(game, "No scenarios are available.")
+                (yield uiRequest("showError", game, "No scenarios are available."))
                 continue
-            destination = choose(
+            destination = yield uiRequest(
+                "choose",
                 game,
                 "Choose a scenario",
                 scenarioChoices(game, maps),
@@ -321,11 +587,11 @@ def newAdventure(game):
             )
         if mode != "random" and not destination:
             continue
-        class_id, race_id = chooseCharacter(game)
+        class_id, race_id = yield uiRequest("chooseCharacter", game)
         if not class_id:
             continue
-        if game.getMap() is not None and not confirm(
-            game, "Start a new adventure?", discardProgressText(game), "Start adventure"
+        if game.getMap() is not None and not (
+            yield uiRequest("confirm", game, "Start a new adventure?", discardProgressText(game), "Start adventure")
         ):
             continue
         try:
@@ -336,17 +602,23 @@ def newAdventure(game):
             }[mode]
             with loading(game, loading_message):
                 if mode == "campaign":
-                    campaign.start(game, destination, class_id, race_id)
+                    (yield uiRequest("campaign.start", game, destination, class_id, race_id))
                 elif mode == "scenario":
-                    CGameLoader.startGameWithPlayer(game, destination, class_id, race_id)
+                    yield uiRequest("gui.startGameWithPlayer", destination, class_id, race_id)
                 else:
-                    CGameLoader.startRandomGameWithPlayer(game, class_id, race_id)
+                    yield uiRequest("gui.startRandomGameWithPlayer", class_id, race_id)
                 if game.getMap() is None or game.getMap().getPlayer() is None:
                     raise ValueError("No playable map loaded")
-            SESSION_SAVE_STATUS.pop(game, None)
+            clearSessionSaveStatus(game)
             return True
         except Exception:
-            showError(game, "This adventure could not be started. Choose another scenario or check the game content.")
+            (
+                yield uiRequest(
+                    "showError",
+                    game,
+                    "This adventure could not be started. Choose another scenario or check the game content.",
+                )
+            )
     return False
 
 
@@ -413,24 +685,33 @@ def savedGames(game):
 
 
 def loadGame(game, slot, ask_replace=True):
+    return runUiFlow(game, loadGameFlow(game, slot, ask_replace))
+
+
+def loadGameFlow(game, slot, ask_replace=True):
     from _game import CGameLoader
 
     previous = game.getMap()
     if (
         previous is not None
         and ask_replace
-        and not confirm(game, "Load saved adventure?", discardProgressText(game), "Load save")
+        and not (yield uiRequest("confirm", game, "Load saved adventure?", discardProgressText(game), "Load save"))
     ):
         return False
     try:
         with loading(game, "Loading saved adventure..."):
-            CGameLoader.loadSavedGame(game, slot)
+            CGameLoader.loadSavedGame(uiGame(game), slot)
             loaded = game.getMap()
             if loaded is None or loaded == previous:
                 raise ValueError("Save loader retained the previous map")
     except Exception:
-        showError(
-            game, "The saved adventure could not be loaded. Choose another save or its recovery copy.", "Load failed"
+        (
+            yield uiRequest(
+                "showError",
+                game,
+                "The saved adventure could not be loaded. Choose another save or its recovery copy.",
+                "Load failed",
+            )
         )
         return False
     recordSessionSave(game, slot, "load")
@@ -439,20 +720,28 @@ def loadGame(game, slot, ask_replace=True):
 
 
 def loadMenu(game):
+    return runUiFlow(game, loadMenuFlow(game))
+
+
+def loadMenuFlow(game):
     while game.getContext().isActive():
         saves = savedGames(game)
         if not saves:
-            showError(game, "No saved adventures are available yet.")
+            (yield uiRequest("showError", game, "No saved adventures are available yet."))
             return False
-        slot = choose(game, "Load adventure", saves, "Load save")
+        slot = yield uiRequest("choose", game, "Load adventure", saves, "Load save")
         if not slot:
             return False
-        if loadGame(game, slot):
+        if (yield uiRequest("loadGame", game, slot)):
             return True
     return False
 
 
 def saveGame(game, slot):
+    return runUiFlow(game, saveGameFlow(game, slot))
+
+
+def saveGameFlow(game, slot):
     from _game import CMapLoader
 
     game_map = game.getMap()
@@ -463,10 +752,13 @@ def saveGame(game, slot):
             if not CMapLoader.saveWithResult(game_map, slot):
                 raise OSError("Save write failed")
     except Exception:
-        showError(
-            game,
-            "Your adventure could not be saved. Check that the save location is writable and has free space.",
-            "Save failed",
+        (
+            yield uiRequest(
+                "showError",
+                game,
+                "Your adventure could not be saved. Check that the save location is writable and has free space.",
+                "Save failed",
+            )
         )
         return False
     SAVE_PREVIEW_CACHE.clear()
@@ -476,6 +768,10 @@ def saveGame(game, slot):
 
 
 def saveMenu(game):
+    return runUiFlow(game, saveMenuFlow(game))
+
+
+def saveMenuFlow(game):
     if game.getMap() is None:
         return False
     saves = savedGames(game)
@@ -483,13 +779,14 @@ def saveMenu(game):
         {"id": "newSave", "label": "New save", "detail": "Create a new save without replacing an existing adventure."}
     ]
     rows.extend(dict(row, id="slot:" + row["id"]) for row in saves)
-    selection = choose(game, "Save adventure", rows, "Save")
+    selection = yield uiRequest("choose", game, "Save adventure", rows, "Save")
     if not selection:
         return False
     if selection == "newSave":
         suggested = "journey-" + datetime.now().strftime("%Y%m%d-%H%M%S")
         while True:
-            entered = game.getGuiHandler().showTextInput(
+            entered = yield uiRequest(
+                "gui.showTextInput",
                 "Name this save",
                 "Use letters, numbers, spaces, hyphens, underscores, or single dots. "
                 "Choose a name that helps you recognize this moment.",
@@ -500,10 +797,13 @@ def saveMenu(game):
             slot = normalizeSaveName(entered)
             if slot:
                 break
-            showError(
-                game,
-                "Use 1-80 letters, numbers, spaces, hyphens, underscores, or single dots. "
-                "A save name cannot begin with a dot or contain two dots together.",
+            (
+                yield uiRequest(
+                    "showError",
+                    game,
+                    "Use 1-80 letters, numbers, spaces, hyphens, underscores, or single dots. "
+                    "A save name cannot begin with a dot or contain two dots together.",
+                )
             )
             suggested = entered
     else:
@@ -511,11 +811,17 @@ def saveMenu(game):
     existing_slot = existingSaveSlot(game.getResourcesProvider(), slot, saves)
     if existing_slot:
         slot = existing_slot
-        if not confirm(
-            game, "Replace this save?", "The selected save will be replaced by your current adventure.", "Replace save"
+        if not (
+            yield uiRequest(
+                "confirm",
+                game,
+                "Replace this save?",
+                "The selected save will be replaced by your current adventure.",
+                "Replace save",
+            )
         ):
             return False
-    return saveGame(game, slot)
+    return (yield uiRequest("saveGame", game, slot))
 
 
 def existingSaveSlot(provider, slot, saves):
@@ -581,12 +887,21 @@ def helpText(game):
 
 
 def showHelp(game):
-    game.getGuiHandler().showCampaignScreen("Help", helpText(game), "Continue")
+    return runUiFlow(game, showHelpFlow(game))
+
+
+def showHelpFlow(game):
+    (yield uiRequest("gui.showCampaignScreen", "Help", helpText(game), "Continue"))
 
 
 def configureBinding(game, settings):
+    return runUiFlow(game, configureBindingFlow(game, settings))
+
+
+def configureBindingFlow(game, settings):
     bindings = dict(DEFAULT_BINDINGS, **settings.get("bindings", {}))
-    action = choose(
+    action = yield uiRequest(
+        "choose",
         game,
         "Controls",
         [
@@ -606,7 +921,8 @@ def configureBinding(game, settings):
     keys += list("abcdefghijklmnopqrstuvwxyz0123456789") + [f"F{number}" for number in range(1, 13)]
     used = {key.lower(): name for name, key in bindings.items() if name != action}
     reserved = {"m": "Reserved for the expanded map."}
-    key = choose(
+    key = yield uiRequest(
+        "choose",
         game,
         ACTION_LABELS[action],
         [
@@ -632,6 +948,10 @@ def configureBinding(game, settings):
 
 
 def showSettings(game):
+    return runUiFlow(game, showSettingsFlow(game))
+
+
+def showSettingsFlow(game):
     while game.getContext().isActive():
         settings = preferences(game)
         fields = [
@@ -688,7 +1008,8 @@ def showSettings(game):
                 "\nMovement: arrow keys\nWait: Space\nInventory: I\nJournal: J\nCharacter: C\nSave: S\nPause: Escape",
             }
         )
-        field = choose(
+        field = yield uiRequest(
+            "choose",
             game,
             "Settings",
             rows,
@@ -697,19 +1018,22 @@ def showSettings(game):
         if not field:
             return
         if field == "reset":
-            if not confirm(game, "Reset interface settings?", rows[-1]["detail"], "Reset defaults"):
+            if not (
+                yield uiRequest("confirm", game, "Reset interface settings?", rows[-1]["detail"], "Reset defaults")
+            ):
                 continue
             # The native preferences API fills omitted fields from its authoritative defaults.
             changed = {}
         elif field == "bindings":
-            changed = configureBinding(game, settings)
+            changed = yield uiRequest("configureBinding", game, settings)
             if changed is None:
                 continue
         elif field in {"highContrast", "reducedMotion", "fullscreen"}:
             changed = dict(settings, **{field: not settings.get(field, False)})
         else:
             values = [0, 250, 500, 750, 1000, 1500] if field == "tooltipDelayMs" else [100, 125, 150, 175, 200]
-            value = choose(
+            value = yield uiRequest(
+                "choose",
                 game,
                 next(label for key, label, _, _ in fields if key == field),
                 [
@@ -731,7 +1055,13 @@ def showSettings(game):
                 continue
             changed = dict(settings, **{field: int(value)})
         if not game.getGui().applyUiPreferences(json.dumps(changed)):
-            showError(game, "These settings could not be applied or saved. Your previous preferences remain available.")
+            (
+                yield uiRequest(
+                    "showError",
+                    game,
+                    "These settings could not be applied or saved. Your previous preferences remain available.",
+                )
+            )
         else:
             notify(game, "Settings saved.")
 
@@ -749,14 +1079,28 @@ def pendingChapterChoices(game):
 
 
 def retryChapter(game):
+    return runUiFlow(game, retryChapterFlow(game))
+
+
+def retryChapterFlow(game):
     try:
-        return campaign.retryPending(game)
+        return (yield uiRequest("campaign.retryPending", game))
     except Exception:
-        showError(game, "The chapter transition could not be retried. Check the game content, then try again.")
+        (
+            yield uiRequest(
+                "showError",
+                game,
+                "The chapter transition could not be retried. Check the game content, then try again.",
+            )
+        )
         return False
 
 
 def mainMenu(game, in_session=False):
+    return runUiFlow(game, mainMenuFlow(game, in_session))
+
+
+def mainMenuFlow(game, in_session=False):
     while game.getContext().isActive():
         current = game.getMap() is not None
         saves = savedGames(game)
@@ -769,7 +1113,8 @@ def mainMenu(game, in_session=False):
                 else "Start an adventure or load a save first."
             )
         )
-        action = choose(
+        action = yield uiRequest(
+            "choose",
             game,
             "Fall of Nouraajd",
             [
@@ -793,32 +1138,39 @@ def mainMenu(game, in_session=False):
         if not action and current:
             return True
         if action == "continue":
-            if current or (saves and loadGame(game, saves[0]["id"], ask_replace=False)):
+            if current or (saves and (yield uiRequest("loadGame", game, saves[0]["id"], ask_replace=False))):
                 return True
         elif action == "retryChapter":
-            if retryChapter(game):
+            if (yield uiRequest("retryChapter", game)):
                 return True
         elif action == "new":
-            if newAdventure(game):
+            if (yield uiRequest("newAdventure", game)):
                 return True
         elif action == "load":
-            if loadMenu(game):
+            if (yield uiRequest("loadMenu", game)):
                 return True
         elif action == "settings":
-            showSettings(game)
+            (yield uiRequest("showSettings", game))
         elif action == "help":
-            showHelp(game)
+            (yield uiRequest("showHelp", game))
         elif action in {"quit", ""}:
-            if not current or confirm(game, "Quit the game?", discardProgressText(game), "Quit game"):
+            if not current or (
+                yield uiRequest("confirm", game, "Quit the game?", discardProgressText(game), "Quit game")
+            ):
                 game.getContext().shutdown()
                 return False
     return False
 
 
 def pause(game):
+    return runUiFlow(game, pauseFlow(game))
+
+
+def pauseFlow(game):
     while game.getContext().isActive() and game.getMap() is not None:
         saves = savedGames(game)
-        action = choose(
+        action = yield uiRequest(
+            "choose",
             game,
             "Paused",
             [
@@ -850,26 +1202,32 @@ def pause(game):
         if action in {"", "resume"}:
             return
         if action == "retryChapter":
-            if retryChapter(game):
+            if (yield uiRequest("retryChapter", game)):
                 return
         elif action == "save":
-            saveMenu(game)
+            (yield uiRequest("saveMenu", game))
         elif action == "load":
-            if loadMenu(game):
+            if (yield uiRequest("loadMenu", game)):
                 return
         elif action == "settings":
-            showSettings(game)
+            (yield uiRequest("showSettings", game))
         elif action == "help":
-            showHelp(game)
+            (yield uiRequest("showHelp", game))
         elif action == "menu":
-            mainMenu(game, in_session=True)
+            (yield uiRequest("mainMenu", game, in_session=True))
             return
-        elif action == "quit" and confirm(game, "Quit the game?", discardProgressText(game), "Quit game"):
+        elif action == "quit" and (
+            yield uiRequest("confirm", game, "Quit the game?", discardProgressText(game), "Quit game")
+        ):
             game.getContext().shutdown()
             return
 
 
 def showDefeat(game):
+    return runUiFlow(game, showDefeatFlow(game))
+
+
+def showDefeatFlow(game):
     game_map = game.getMap()
     if game_map is None or game_map.getPlayer() is None:
         return
@@ -898,7 +1256,8 @@ def showDefeat(game):
         detail += "\nHealth after recovery: " + str(receipt["hp"])
     detail += "\n\nItems lost\n" + (items or "No inventory items were lost.")
     while game.getContext().isActive():
-        action = choose(
+        action = yield uiRequest(
+            "choose",
             game,
             "Defeated",
             [
@@ -908,5 +1267,5 @@ def showDefeat(game):
             "Continue",
             "Return to adventure",
         )
-        if action != "load" or loadMenu(game):
+        if action != "load" or (yield uiRequest("loadMenu", game)):
             return

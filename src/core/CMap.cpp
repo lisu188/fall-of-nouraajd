@@ -16,6 +16,7 @@ You should have received a copy of the GNU General Public License
 along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 #include "core/CMap.h"
+#include "core/CAsync.h"
 #include "core/CNavigation.h"
 #include <algorithm>
 #include "core/CController.h"
@@ -154,6 +155,23 @@ std::string CMap::addObjectByName(std::string name, Coords coords) {
     return "";
 }
 
+vstd::task<std::string> CMap::addObjectByNameAsync(std::string name, Coords coords) {
+    return [](std::shared_ptr<CMap> map, std::string name, Coords coords) -> vstd::task<std::string> {
+        auto loop = vstd::event_loop<>::instance();
+        if (!loop->isMainThread()) {
+            co_await vstd::post(loop);
+        }
+        if (map->canStep(coords)) {
+            auto object = map->getGame()->createObject<CMapObject>(name);
+            if (object) {
+                co_await map->addObjectAsync(object, coords);
+                co_return name;
+            }
+        }
+        co_return "";
+    }(this->ptr<CMap>(), std::move(name), coords);
+}
+
 void CMap::replaceTile(std::string name, Coords coords) {
     removeTile(coords.x, coords.y, coords.z);
     addTile(getGame()->createObject<CTile>(name), coords.x, coords.y, coords.z);
@@ -195,6 +213,31 @@ void CMap::setPlayer(std::shared_ptr<CPlayer> player) {
     registerPlayerTriggers();
     addObject(player);
     player->moveTo(entryx, entryy, entryz);
+}
+
+vstd::task<void> CMap::setPlayerAsync(std::shared_ptr<CPlayer> player) {
+    return [](std::shared_ptr<CMap> map, std::shared_ptr<CPlayer> player) -> vstd::task<void> {
+        auto loop = vstd::event_loop<>::instance();
+        if (!loop->isMainThread()) {
+            co_await vstd::post(loop);
+        }
+        if (!player) {
+            vstd::logger::warning("Ignoring null player assignment");
+            co_return;
+        }
+        player->setOwningMap(map);
+        player->setName("player");
+        player->setController(map->getGame()->createObject<CPlayerController>());
+        player->setFightController(map->getGame()->createObject<CPlayerFightController>());
+        map->player = player;
+        map->registerPlayerTriggers();
+        if (map->getObjectByName("player") == player) {
+            co_await finishPlayerCreationAsync(map, player, map->getEntry());
+        } else {
+            co_await map->addObjectWithEventsAsync(
+                player, [map, player] { return finishPlayerCreationAsync(map, player, map->getEntry()); });
+        }
+    }(this->ptr<CMap>(), std::move(player));
 }
 
 std::shared_ptr<CPlayer> CMap::detachPlayer() {
@@ -249,6 +292,45 @@ void CMap::attachPlayer(std::shared_ptr<CPlayer> player, Coords coords) {
 
     addObject(player);
     player->moveTo(target);
+}
+
+vstd::task<void> CMap::attachPlayerAsync(std::shared_ptr<CPlayer> player) {
+    return attachPlayerAsync(std::move(player), getEntry());
+}
+
+vstd::task<void> CMap::attachPlayerAsync(std::shared_ptr<CPlayer> player, Coords coords) {
+    return [](std::shared_ptr<CMap> map, std::shared_ptr<CPlayer> player, Coords coords) -> vstd::task<void> {
+        auto loop = vstd::event_loop<>::instance();
+        if (!loop->isMainThread()) {
+            co_await vstd::post(loop);
+        }
+        if (!player) {
+            vstd::logger::warning("Ignoring null player attachment");
+            co_return;
+        }
+
+        auto existing = map->getObjectByName("player");
+        if (existing && existing != player) {
+            map->removeObjectWithoutEvents(existing);
+        }
+        if (map->player && map->player != player) {
+            map->removeObjectWithoutEvents(map->player);
+        }
+        player->setOwningMap(map);
+        player->setName("player");
+        player->setController(map->getGame()->createObject<CPlayerController>());
+        player->setFightController(map->getGame()->createObject<CPlayerFightController>());
+        map->player = player;
+        player->cancelMove();
+        player->relocateWithoutMoveHooks(map->normalizeCoords(coords));
+        map->registerPlayerTriggers();
+        if (map->getObjectByName("player") != player) {
+            co_await map->addObjectWithEventsAsync(
+                player, [map, player] { return finishPlayerCreationAsync(map, player, std::nullopt); });
+        } else {
+            co_await finishPlayerCreationAsync(map, player, std::nullopt);
+        }
+    }(this->ptr<CMap>(), std::move(player), coords);
 }
 
 bool CMap::restorePlayerAfterLoad(std::string &error) {
@@ -629,14 +711,22 @@ void CMap::addObject(const std::shared_ptr<CMapObject> &mapObject) {
     std::optional<pybind11::gil_scoped_acquire> gil;
     if (Py_IsInitialized())
         gil.emplace();
+    if (!addObjectWithoutEvents(mapObject)) {
+        return;
+    }
+    getEventHandler()->gameEvent(mapObject, std::make_shared<CGameEvent>(CGameEvent::CType::onCreate));
+    signal("objectChanged", mapObject->getCoords());
+}
+
+bool CMap::addObjectWithoutEvents(const std::shared_ptr<CMapObject> &mapObject) {
     std::unique_lock lock(navigationMutex);
     if (!mapObject) {
         vstd::logger::warning("Ignoring null map object");
-        return;
+        return false;
     }
     if (vstd::ctn(mapObjects, mapObject->getName())) {
         vstd::logger::warning("Ignoring duplicate map object:", mapObject->getName());
-        return;
+        return false;
     }
     std::shared_ptr<CCreature> creature = vstd::cast<CCreature>(mapObject);
     mapObject->setOwningMap(this->ptr<CMap>());
@@ -654,7 +744,7 @@ void CMap::addObject(const std::shared_ptr<CMapObject> &mapObject) {
         if (mapObjects.at(mapObject->getName()) != mapObject)
             mapObject->clearOwningMap(this->ptr<CMap>());
         vstd::logger::warning("Ignoring duplicate map object after initialization:", mapObject->getName());
-        return;
+        return false;
     }
     mapObjects.insert(std::make_pair(mapObject->getName(), mapObject));
     mapObjectsCache.insert(std::make_pair(normalizeCoords(mapObject->getCoords()), mapObject->getName()));
@@ -662,40 +752,92 @@ void CMap::addObject(const std::shared_ptr<CMapObject> &mapObject) {
     if (!mapObject->getCanStep())
         routingChanged(mapObject->getCoords());
     recordDirectPropertyChanged("objects");
-    lock.unlock();
-    getEventHandler()->gameEvent(mapObject, std::make_shared<CGameEvent>(CGameEvent::CType::onCreate));
-    signal("objectChanged", mapObject->getCoords());
+    return true;
 }
 
 void CMap::removeObject(const std::shared_ptr<CMapObject> &mapObject) {
-    std::optional<pybind11::gil_scoped_acquire> gil;
-    if (Py_IsInitialized())
-        gil.emplace();
-    std::unique_lock lock(navigationMutex);
-    if (!mapObject) {
-        return;
+    if (auto game = getGame()) {
+        game_async::wait(game->getContext()->spawnTask(removeObjectAsync(mapObject)),
+                         game->getGui() ? game_async::WaitMode::Frames : game_async::WaitMode::PostedWork);
+    } else {
+        game_async::run(removeObjectAsync(mapObject), game_async::WaitMode::PostedWork);
     }
+}
 
-    auto map_object_it = mapObjects.find(mapObject->getName());
-    if (map_object_it == mapObjects.end() || map_object_it->second != mapObject) {
-        return;
-    }
-
-    mapObjects.erase(map_object_it);
-    vstd::erase_if(mapObjectsCache, [mapObject](auto it) { return it.second == mapObject->getName(); });
-    bumpNavigationRevision();
-    if (!mapObject->getCanStep())
-        routingChanged(mapObject->getCoords());
-    recordDirectPropertyChanged("objects");
-    lock.unlock();
-    getEventHandler()->gameEvent(mapObject, std::make_shared<CGameEvent>(CGameEvent::CType::onDestroy));
-    lock.lock();
-    auto current_object_it = mapObjects.find(mapObject->getName());
-    if (current_object_it == mapObjects.end() || current_object_it->second != mapObject) {
-        mapObject->clearOwningMap(this->ptr<CMap>());
-    }
-    lock.unlock();
-    signal("objectChanged", mapObject->getCoords());
+vstd::task<void> CMap::removeObjectAsync(std::shared_ptr<CMapObject> mapObject) {
+    return [](std::shared_ptr<CMap> map, std::shared_ptr<CMapObject> object) -> vstd::task<void> {
+        auto loop = vstd::event_loop<>::instance();
+        if (!loop->isMainThread()) {
+            co_await vstd::post(loop);
+        }
+        if (!object) {
+            co_return;
+        }
+        std::optional<pybind11::gil_scoped_acquire> gil;
+        if (Py_IsInitialized()) {
+            gil.emplace();
+        }
+        std::unique_lock lock(map->navigationMutex);
+        auto registered = map->mapObjects.find(object->getName());
+        if (registered == map->mapObjects.end() || registered->second != object) {
+            co_return;
+        }
+        const auto registeredName = registered->first;
+        map->mapObjects.erase(registered);
+        vstd::erase_if(map->mapObjectsCache, [&registeredName](auto entry) { return entry.second == registeredName; });
+        map->bumpNavigationRevision();
+        if (!object->getCanStep()) {
+            map->routingChanged(object->getCoords());
+        }
+        map->recordDirectPropertyChanged("objects");
+        lock.unlock();
+        gil.reset();
+        struct RemovalOwner {
+            std::shared_ptr<CMap> map;
+            std::shared_ptr<CMapObject> object;
+            bool finished = false;
+            ~RemovalOwner() {
+                if (!finished) {
+                    std::unique_lock lock(map->navigationMutex);
+                    for (const auto &current : map->mapObjects | std::views::values) {
+                        if (current == object) {
+                            return;
+                        }
+                    }
+                    object->clearOwningMap(map);
+                }
+            }
+            void finish() {
+                if (finished) {
+                    return;
+                }
+                std::unique_lock lock(map->navigationMutex);
+                auto current = map->mapObjects.find(object->getName());
+                if (current == map->mapObjects.end() || current->second != object) {
+                    object->clearOwningMap(map);
+                }
+                finished = true;
+            }
+        } removalOwner{map, object};
+        auto event = std::make_shared<CGameEvent>(CGameEvent::CType::onDestroy);
+        std::exception_ptr failure;
+        try {
+            co_await map->getEventHandler()->gameEventAsync(object, std::move(event));
+        } catch (...) {
+            failure = std::current_exception();
+        }
+        removalOwner.finish();
+        try {
+            map->signal("objectChanged", object->getCoords());
+        } catch (...) {
+            if (!failure) {
+                failure = std::current_exception();
+            }
+        }
+        if (failure) {
+            std::rethrow_exception(failure);
+        }
+    }(this->ptr<CMap>(), std::move(mapObject));
 }
 
 bool CMap::removeObjectWithoutEvents(const std::shared_ptr<CMapObject> &mapObject) {
@@ -768,7 +910,22 @@ void CMap::removeObjects(std::function<bool(std::shared_ptr<CMapObject>)> func) 
 }
 
 void CMap::move() {
-    auto map = this->ptr<CMap>();
+    auto game = getGame();
+    if (game) {
+        auto context = game->getContext();
+        game_async::wait(context->spawnTask(moveAsync()), game_async::WaitMode::PostedWork);
+    } else {
+        game_async::run(moveAsync(), game_async::WaitMode::PostedWork);
+    }
+}
+
+vstd::task<void> CMap::moveAsync() { return moveOwnedAsync(this->ptr<CMap>()); }
+
+vstd::task<void> CMap::moveOwnedAsync(std::shared_ptr<CMap> map) {
+    auto loop = vstd::event_loop<>::instance();
+    if (!loop->isMainThread()) {
+        co_await vstd::post(loop);
+    }
 
     if (map->moving) {
         vstd::logger::fatal("Invalid move request");
@@ -777,10 +934,10 @@ void CMap::move() {
     auto game = map->getGame();
     // Do not begin a new movement/controller cycle once a map transition has been queued. The
     // pending transition will swap the active map, so running another turn on the old map would
-    // only schedule controller futures whose results must then be discarded as stale.
+    // only schedule controller tasks whose results must then be discarded as stale.
     if (auto sceneManager = game ? game->getSceneManager() : nullptr;
         sceneManager && sceneManager->isTransitionPending()) {
-        return;
+        co_return;
     }
 
     map->moving = true;
@@ -799,9 +956,20 @@ void CMap::move() {
             return !game || game->getMap() == map;
         };
 
-        map->forObjects([map](std::shared_ptr<CMapObject> mapObject) {
-            map->getEventHandler()->gameEvent(mapObject, std::make_shared<CGameEvent>(CGameEvent::CType::onTurn));
-        });
+        game.reset();
+        const auto turnObjects = map->mapObjects;
+        for (const auto &object : turnObjects | std::views::values) {
+            if (!canApplyDeferredMoveWork()) {
+                map->moving = false;
+                co_return;
+            }
+            auto event = std::make_shared<CGameEvent>(CGameEvent::CType::onTurn);
+            co_await map->getEventHandler()->gameEventAsync(object, std::move(event));
+        }
+        if (!canApplyDeferredMoveWork()) {
+            map->moving = false;
+            co_return;
+        }
 
         auto is_active_creature = [map](const std::shared_ptr<CCreature> &creature) {
             return creature && creature->getMap() == map && map->getObjectByName(creature->getName()) == creature &&
@@ -824,30 +992,34 @@ void CMap::move() {
         struct PlannedCreature {
             std::shared_ptr<CCreature> creature;
             Coords origin;
+            std::shared_ptr<CController> controller;
         };
         std::vector<PlannedCreature> plannedCreatures;
-        std::vector<std::shared_ptr<vstd::future<Coords, void>>> pending;
+        std::vector<vstd::task_handle<Coords>> pending;
+        vstd::task_group standalone_plans;
+        std::vector<std::shared_ptr<CCreature>> actors;
+        actors.reserve(map->mapObjects.size());
         for (auto object : map->mapObjects | std::views::values | std::views::filter(pred)) {
-            auto creature = vstd::cast<CCreature>(object);
+            actors.push_back(vstd::cast<CCreature>(object));
+        }
+        for (auto creature : actors) {
+            if (!is_active_creature(creature)) {
+                continue;
+            }
             // A result is valid only from the cell observed before controller work, including
             // when an earlier actor's combat synchronously respawns this same live instance.
-            plannedCreatures.push_back({creature, map->normalizeCoords(creature->getCoords())});
-            pending.push_back(creature->getController()->control(creature));
+            auto controller = creature->getController();
+            plannedCreatures.push_back({creature, map->normalizeCoords(creature->getCoords()), controller});
+            auto plan = controller->controlAsync(creature);
+            pending.push_back(transitionContext ? transitionContext->spawnTask(std::move(plan))
+                                                : standalone_plans.spawn(std::move(plan), vstd::loopScheduler(loop)));
         }
 
-        auto plannedFuture = vstd::when_all(pending);
-        auto loop = vstd::event_loop<>::instance();
-        while (!plannedFuture->isReady()) {
-            if (loop->runPostedTasks() == 0) {
-                if (Py_IsInitialized() && PyGILState_Check()) {
-                    pybind11::gil_scoped_release release;
-                    plannedFuture->waitFor(std::chrono::milliseconds(1));
-                } else {
-                    plannedFuture->waitFor(std::chrono::milliseconds(1));
-                }
-            }
+        game.reset();
+        auto plannedCoordinates = co_await vstd::whenAll(std::move(pending));
+        if (!loop->isMainThread()) {
+            co_await vstd::post(loop);
         }
-        auto plannedCoordinates = plannedFuture->get();
         std::list<std::pair<PlannedCreature, Coords>> coordinates;
         if (canApplyDeferredMoveWork()) {
             for (std::size_t index = 0; index < plannedCoordinates.size(); ++index) {
@@ -860,8 +1032,8 @@ void CMap::move() {
                 break;
             }
             auto creature = planned.creature;
-            auto controller_ptr = creature->getController();
-            if (!is_active_creature(creature)) {
+            auto controller_ptr = planned.controller;
+            if (creature->getController() != controller_ptr || !is_active_creature(creature)) {
                 controller_ptr->interrupt(creature);
                 continue;
             }
@@ -882,9 +1054,10 @@ void CMap::move() {
             }
 
             const bool interrupt_after_step = should_interrupt_after_step(creature, target);
-            creature->moveTo(target);
+            co_await creature->moveToAsync(target);
 
-            if (!is_active_creature(creature) || map->normalizeCoords(creature->getCoords()) != target) {
+            if (!canApplyDeferredMoveWork() || creature->getController() != controller_ptr ||
+                !is_active_creature(creature) || map->normalizeCoords(creature->getCoords()) != target) {
                 controller_ptr->interrupt(creature);
                 continue;
             }
@@ -1112,6 +1285,97 @@ void CMap::addObject(const std::shared_ptr<CMapObject> &mapObject, Coords coords
     }
 }
 
+vstd::task<void> CMap::addObjectWithEventsAsync(std::shared_ptr<CMapObject> mapObject,
+                                                std::move_only_function<vstd::task<void>()> afterCreate) {
+    return [](std::shared_ptr<CMap> map, std::shared_ptr<CMapObject> object,
+              std::move_only_function<vstd::task<void>()> afterCreate) -> vstd::task<void> {
+        auto loop = vstd::event_loop<>::instance();
+        if (!loop->isMainThread()) {
+            co_await vstd::post(loop);
+        }
+        if (!object) {
+            co_return;
+        }
+        const auto stop = co_await vstd::thisTaskStopToken();
+        auto owner = map->getGame();
+        auto context = owner ? owner->getContext() : nullptr;
+        std::weak_ptr<CGame> weakGame = owner;
+        const auto activeMap = owner ? owner->getMap() : nullptr;
+        const auto generation = context ? context->captureTransitionGeneration() : 0;
+        owner.reset();
+        if (stop.stop_requested() || (context && !context->isActive())) {
+            throw vstd::task_cancelled();
+        }
+        const auto origin = object->getCoords();
+        const auto name = object->getName();
+        {
+            std::optional<pybind11::gil_scoped_acquire> gil;
+            if (Py_IsInitialized()) {
+                gil.emplace();
+            }
+            if (!map->addObjectWithoutEvents(object)) {
+                co_return;
+            }
+        }
+        std::exception_ptr failure;
+        try {
+            co_await map->getEventHandler()->gameEventAsync(object,
+                                                            std::make_shared<CGameEvent>(CGameEvent::CType::onCreate));
+        } catch (...) {
+            failure = std::current_exception();
+        }
+        map->signal("objectChanged", object->getCoords());
+        if (failure) {
+            std::rethrow_exception(failure);
+        }
+        if (stop.stop_requested() || (context && !context->isActive())) {
+            throw vstd::task_cancelled();
+        }
+        owner = weakGame.lock();
+        if (object->getMap() != map || object->getGame() != owner || object->getName() != name ||
+            object->getCoords() != origin || map->getObjectByName(name) != object ||
+            (owner && owner->getMap() != activeMap) ||
+            (context && !context->isTransitionGenerationCurrent(generation))) {
+            co_return;
+        }
+        owner.reset();
+        co_await afterCreate();
+    }(this->ptr<CMap>(), std::move(mapObject), std::move(afterCreate));
+}
+
+vstd::task<void> CMap::moveCreatedObjectAsync(std::shared_ptr<CMap> map, std::shared_ptr<CMapObject> object,
+                                              Coords coords) {
+    if (map->canStep(coords)) {
+        co_await object->moveToAsync(coords);
+    }
+}
+
+vstd::task<void> CMap::finishPlayerCreationAsync(std::shared_ptr<CMap> map, std::shared_ptr<CPlayer> player,
+                                                 std::optional<Coords> target) {
+    if (map->getPlayer() != player || map->getObjectByName("player") != player) {
+        co_return;
+    }
+    if (target) {
+        co_await player->moveToAsync(*target);
+    } else {
+        // A transition enters a new map directly, without a destination leave or retreat cell.
+        co_await player->afterMoveAsync();
+    }
+}
+
+vstd::task<void> CMap::addObjectAsync(std::shared_ptr<CMapObject> mapObject, Coords coords) {
+    return [](std::shared_ptr<CMap> map, std::shared_ptr<CMapObject> object, Coords coords) -> vstd::task<void> {
+        auto loop = vstd::event_loop<>::instance();
+        if (!loop->isMainThread()) {
+            co_await vstd::post(loop);
+        }
+        if (object && map->canStep(coords)) {
+            co_await map->addObjectWithEventsAsync(
+                object, [map, object, coords] { return moveCreatedObjectAsync(map, object, coords); });
+        }
+    }(this->ptr<CMap>(), std::move(mapObject), coords);
+}
+
 Coords CMap::getEntry() { return Coords(getEntryX(), getEntryY(), getEntryZ()); }
 
 bool CMap::hasBounds(int z) const { return vstd::ctn(xBounds, z) && vstd::ctn(yBounds, z); }
@@ -1236,12 +1500,13 @@ void CMap::registerPlayerTriggers() {
         _player->setHp(1);
     });
 
-    auto turnTrigger = std::make_shared<CCustomTrigger>("player", "onTurn", [](auto object, auto event) {
-        auto _player = vstd::cast<CPlayer>(object);
-        _player->addMana(_player->getManaRegRate());
-        _player->incTurn();
-        _player->checkQuests();
-    });
+    auto turnTrigger =
+        std::make_shared<CCustomTrigger>("player", "onTurn", [](auto object, auto event) -> vstd::task<void> {
+            auto _player = vstd::cast<CPlayer>(object);
+            _player->addMana(_player->getManaRegRate());
+            _player->incTurn();
+            co_await _player->checkQuestsAsync();
+        });
 
     getEventHandler()->registerTrigger(restartTrigger);
     getEventHandler()->registerTrigger(turnTrigger);

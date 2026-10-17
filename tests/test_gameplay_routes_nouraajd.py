@@ -13,6 +13,7 @@ from unittest.mock import Mock, patch
 
 from tests import gameplay_routes_nouraajd as nouraajd
 from tests.test_gameplay_route_dialogs import authoredFunction
+from tests.hook_flow_support import installHookFlows
 
 
 class GameplayNouraajdServiceRoutesTest(unittest.TestCase):
@@ -289,15 +290,21 @@ class GameplayNouraajdServiceRoutesTest(unittest.TestCase):
             getGame=lambda: None,
             getObjects=lambda: [{"__handle__": "player"}] + ([{"__handle__": "leader"}] if state["leader"] else []),
         )
-        expire = authoredFunction(
+        hooks = installHookFlows({"showReader": Mock()})
+
+        def clearVictorEncounterFlow(game_map):
+            state.update(leader=False)
+            yield from ()
+
+        expire_flow = authoredFunction(
             "res/maps/nouraajd/script.py",
-            "_expire_victor_search",
+            "expireVictorSearchFlow",
             _get_quest_system=lambda game_map: quest,
-            _clear_victor_encounter=lambda game_map: state.update(leader=False),
+            clearVictorEncounterFlow=clearVictorEncounterFlow,
             VICTOR_COURTYARD_TIMEOUT_TURNS=75,
-            showReader=Mock(),
+            **hooks,
         )
-        state["expire"] = lambda: expire(game_map)
+        state["expire"] = lambda: hooks["runUiFlow"](None, expire_flow(game_map))
 
         def can_step(target):
             state["probes"].setdefault(state["turn"], []).append(target)
@@ -317,7 +324,7 @@ class GameplayNouraajdServiceRoutesTest(unittest.TestCase):
             state["position"] = target
             state["steps"].append(target)
             self.assertGreater(sum(abs(a - b) for a, b in zip(target, state["enemy"])), 1)
-            expire(game_map)
+            state["expire"]()
             state["turn"] += 1
 
         def call(handle, method, *args):

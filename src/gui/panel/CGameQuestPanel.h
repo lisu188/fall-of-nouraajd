@@ -61,6 +61,8 @@ class CGameQuestPanel : public CGamePanel {
 
     void chooseTrackedQuest(std::shared_ptr<CGui> gui);
 
+    vstd::task<void> chooseTrackedQuestAsync(std::shared_ptr<CGui> gui);
+
     bool setTrackedQuest(std::shared_ptr<CGui> gui, const std::string &questId);
 
     CListView::collection_pointer questCollection(std::shared_ptr<CGui> gui);

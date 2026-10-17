@@ -692,6 +692,7 @@ class GameplayRecipeGoldRoutesTest(unittest.TestCase):
             getGame=lambda: game,
             getPlayer=lambda: native_player,
             getBoolProperty=lambda key: state["flags"].get(key, False),
+            setBoolProperty=lambda key, value: state["flags"].update({key: value}),
         )
         game.getMap = lambda: world
         game.createObject = lambda identity: (
@@ -703,6 +704,7 @@ class GameplayRecipeGoldRoutesTest(unittest.TestCase):
             getGame=lambda: game, _canOfferRaceService=lambda identity: identity == "humanRace"
         )
         aid_dialog._applyRaceService = lambda *args: apply_aid(aid_dialog, *args)
+        aid_dialog._applyRaceServiceFlow = lambda *args: apply_aid.__wrapped__(aid_dialog, *args)
         aid = authoredFunction(source, "claimHumanRation", class_id="TownHallDialog")
         gooby = authoredFunction(
             source,
@@ -716,6 +718,12 @@ class GameplayRecipeGoldRoutesTest(unittest.TestCase):
         quest_system = SimpleNamespace(
             get_state=lambda identity: state["victor"], mark_victor_good_end=lambda: state.update(victor="good_end")
         )
+        clear_encounter = Mock()
+
+        def clearEncounterFlow(game_map):
+            clear_encounter(game_map)
+            yield from ()
+
         rescue = authoredFunction(
             source,
             "trigger",
@@ -725,7 +733,7 @@ class GameplayRecipeGoldRoutesTest(unittest.TestCase):
             rewardSnapshot=Mock(),
             showRewardReceipt=Mock(),
             narrative=SimpleNamespace(victorResponse=lambda game: ""),
-            _clear_victor_encounter=Mock(),
+            clearVictorEncounterFlow=clearEncounterFlow,
         )
 
         def price(identity, buying=False):

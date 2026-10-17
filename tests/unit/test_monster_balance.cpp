@@ -17,6 +17,7 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 
 #include "core/CController.h"
+#include "core/CAsync.h"
 #include "core/CGame.h"
 #include "core/CGameContext.h"
 #include "core/CJson.h"
@@ -181,6 +182,22 @@ class ObservedFightController : public CFightController {
         }
         observer->observe();
         return result;
+    }
+
+    vstd::task<bool> controlAsync(std::shared_ptr<CCreature> me, std::shared_ptr<CCreature> opponent) override {
+        return [](std::shared_ptr<ObservedFightController> self, std::shared_ptr<CCreature> me,
+                  std::shared_ptr<CCreature> opponent) -> vstd::task<bool> {
+            self->observer->observe();
+            const auto before = self->ritualTurns ? observeRitualTurn(me, opponent) : RitualTurnState{};
+            self->reportDiagnosticState("before", me, opponent);
+            const bool result = co_await self->delegate->controlAsync(me, opponent);
+            self->reportDiagnosticState("after", me, opponent);
+            if (self->ritualTurns) {
+                self->ritualTurns->push_back({before, observeRitualTurn(me, opponent)});
+            }
+            self->observer->observe();
+            co_return result;
+        }(this->ptr<ObservedFightController>(), std::move(me), std::move(opponent));
     }
 
     void start(std::shared_ptr<CCreature> me, std::shared_ptr<CCreature> opponent) override {
@@ -630,8 +647,8 @@ signatureType.performAction = recordedSignature
                                                                : recipient->getStats()->getNormalResist();
             vstd::rng().seed(seed);
             std::srand(seed);
-            CMonsterFightController controller;
-            const bool acted = controller.control(actor, player);
+            auto controller = std::make_shared<CMonsterFightController>();
+            const bool acted = controller->control(actor, player);
             const auto afterNativeRng = vstd::rng();
             const int nextBlockRoll = std::rand();
             pybind11::exec(R"(
@@ -758,12 +775,15 @@ class HexAttackProbe : public CMonsterFightController {
   public:
     explicit HexAttackProbe(std::vector<std::string> &order) : order(order) {}
 
-    bool control(std::shared_ptr<CCreature> me, std::shared_ptr<CCreature> opponent) override {
-        order.push_back(me->getName());
-        const int before = opponent->getHp();
-        const bool acted = CMonsterFightController::control(me, opponent);
-        damage.push_back(before - opponent->getHp());
-        return acted;
+    vstd::task<bool> controlAsync(std::shared_ptr<CCreature> me, std::shared_ptr<CCreature> opponent) override {
+        return [](std::shared_ptr<HexAttackProbe> self, std::shared_ptr<CCreature> me,
+                  std::shared_ptr<CCreature> opponent) -> vstd::task<bool> {
+            self->order.push_back(me->getName());
+            const int before = opponent->getHp();
+            const bool acted = co_await self->CMonsterFightController::controlAsync(me, opponent);
+            self->damage.push_back(before - opponent->getHp());
+            co_return acted;
+        }(this->ptr<HexAttackProbe>(), std::move(me), std::move(opponent));
     }
 
     std::vector<int> damage;
@@ -968,8 +988,8 @@ void testActivePlayerNeverUsesMonsterSignature() {
     enemy->setPosX(1);
     game->getMap()->addObject(enemy);
     expect_true(player->isPlayer(), "role exclusion fixture must use the real canonical player");
-    CMonsterFightController controller;
-    expect_true(controller.control(player, enemy), "player should retain an ordinary attack");
+    auto controller = std::make_shared<CMonsterFightController>();
+    expect_true(controller->control(player, enemy), "player should retain an ordinary attack");
     expect_true(!player->getBoolProperty("enemyRoleUsed"), "player must never use a monster signature");
 }
 

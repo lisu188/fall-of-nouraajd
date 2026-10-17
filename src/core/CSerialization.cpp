@@ -15,7 +15,6 @@ GNU General Public License for more details.
 You should have received a copy of the GNU General Public License
 along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
-#include <mutex>
 #include "core/CSerialization.h"
 #include "core/CSaveFormat.h"
 #include "core/CGame.h"
@@ -29,6 +28,7 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #include <atomic>
 #include <cstdint>
 #include <limits>
+#include <mutex>
 #include <stdexcept>
 #include <unordered_map>
 #include <unordered_set>
@@ -50,6 +50,7 @@ std::map<std::string, std::shared_ptr<CGameObject>> map_deserialize(const std::s
                                                                     CSerializationReadContext &);
 
 namespace {
+
 struct NameGenerationState {
     std::optional<std::uint32_t> fixtureSeed;
     std::uint64_t fixtureSequence = 0;

@@ -88,7 +88,8 @@ void putpixel(SDL_Surface *surface, int x, int y, Uint32 pixel) {
 }
 
 SDL_Texture *CTextureCache::getTexture(std::string path) {
-    if (_gui.expired()) {
+    auto gui = _gui.lock();
+    if (!gui || !gui->getRenderer()) {
         _textures.clear();
         return nullptr;
     }

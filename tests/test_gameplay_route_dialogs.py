@@ -5,6 +5,7 @@
 
 import ast
 import copy
+from functools import wraps
 import json
 from pathlib import Path
 from types import SimpleNamespace
@@ -13,21 +14,162 @@ from unittest.mock import Mock, patch
 
 from tests.gameplay_branch_driver import GameplayBranchDriver
 from tests.gameplay_branch_types import RouteCase
+from tests.hook_flow_support import installHookFlows
 from tests import gameplay_routes_ninemarches as marches
 from tests import gameplay_routes_nouraajd as nouraajd
 
 
-def authoredFunction(source, function_name, *, class_id=None, **namespace):
+def compileAuthoredFunction(function, namespace, source_name, *, run_flow=False):
+    is_hook = any(
+        isinstance(decorator, ast.Name) and decorator.id == "resumableHook" for decorator in function.decorator_list
+    )
+    if is_hook or run_flow:
+        installHookFlows(namespace)
+    if is_hook:
+        function = copy.deepcopy(function)
+        function.decorator_list = [
+            decorator
+            for decorator in function.decorator_list
+            if not (isinstance(decorator, ast.Name) and decorator.id == "resumableHook")
+        ]
+    exec(compile(ast.Module(body=[function], type_ignores=[]), source_name, "exec"), namespace)
+    callback = namespace[function.name]
+    if not (is_hook or run_flow):
+        return callback
+
+    @wraps(callback)
+    def runHook(receiver, *args, **kwargs):
+        class ModelGame:
+            game = None
+
+            def __getattr__(self, name):
+                if self.game is None:
+                    for candidate in (receiver, *args):
+                        if hasattr(candidate, "getGame"):
+                            self.game = candidate.getGame()
+                        elif hasattr(candidate, "getMap"):
+                            game_map = candidate.getMap()
+                            if hasattr(game_map, "getGame"):
+                                self.game = game_map.getGame()
+                        if self.game is not None:
+                            break
+                if self.game is None:
+                    raise AttributeError("The authored model UI request requires a game service: " + name)
+                return getattr(self.game, name)
+
+        return namespace["runUiFlow"](ModelGame(), callback(receiver, *args, **kwargs))
+
+    return runHook
+
+
+def authoredFunction(source, function_name, *, class_id=None, run_flow=False, **namespace):
     path = Path(__file__).resolve().parents[1] / source
     tree = ast.parse(path.read_text(encoding="utf-8"))
     if class_id:
         tree = next(node for node in ast.walk(tree) if isinstance(node, ast.ClassDef) and node.name == class_id)
     function = next(node for node in ast.walk(tree) if isinstance(node, ast.FunctionDef) and node.name == function_name)
-    exec(compile(ast.Module(body=[function], type_ignores=[]), source, "exec"), namespace)
-    return namespace[function_name]
+    return compileAuthoredFunction(function, namespace, source, run_flow=run_flow)
 
 
 class GameplayRouteDialogTest(unittest.TestCase):
+    def testAuthoredGuardReturnsBeforeResolvingItsGameOrMap(self):
+        callback = self.authoredHook(
+            "    @resumableHook\n"
+            "    def invoke(self):\n"
+            "        return 7\n"
+            "        yield uiRequest('gui.showInfo', 'unreachable')\n"
+        )
+        for name in ("getGame", "getMap"):
+            with self.subTest(service=name):
+                lookup = Mock(side_effect=AssertionError("A rejected hook must not resolve a service"))
+                self.assertEqual(7, callback(SimpleNamespace(**{name: lookup})))
+                lookup.assert_not_called()
+
+    def authoredHook(self, body, **namespace):
+        source = "class AuthoredHook:\n" + body
+        read_text = Path.read_text
+
+        def readSource(path, *args, **kwargs):
+            return source if path.name == "fixture.py" else read_text(path, *args, **kwargs)
+
+        with patch.object(Path, "read_text", autospec=True, side_effect=readSource):
+            return authoredFunction("fixture.py", "invoke", class_id="AuthoredHook", **namespace)
+
+    def testAuthoredFunctionPreservesOrdinaryCallableAndReturnValue(self):
+        callback = self.authoredHook("    def invoke(self, amount):\n        return self + amount\n")
+        self.assertEqual(7, callback(3, 4))
+        self.assertEqual("invoke", callback.__name__)
+
+    def testAuthoredFunctionLeavesPlainGeneratorsLazyUnlessExplicitlyDriven(self):
+        callback = self.authoredHook("    def invoke(self):\n        yield 7\n        return 9\n")
+        flow = callback(None)
+        self.assertEqual(7, next(flow))
+        with self.assertRaises(StopIteration) as complete:
+            next(flow)
+        self.assertEqual(9, complete.exception.value)
+        callback = self.authoredHook(
+            "    def invoke(self):\n        yield uiRequest('gui.questCommitted')\n        return 9\n", run_flow=True
+        )
+        self.assertEqual(9, callback(None))
+
+    def testAuthoredFunctionDrivesYieldedRequestsAndPreservesReturnedResult(self):
+        choose = Mock(return_value="selected")
+        game = SimpleNamespace(getGuiHandler=lambda: SimpleNamespace(showChoice=choose))
+        callback = self.authoredHook(
+            "    @resumableHook\n"
+            "    def invoke(self):\n"
+            "        selected = yield uiRequest('gui.showChoice', {'a': 'A'})\n"
+            "        return selected\n"
+        )
+        self.assertEqual("selected", callback(SimpleNamespace(getGame=lambda: game)))
+        choose.assert_called_once_with({"a": "A"})
+        self.assertEqual("invoke", callback.__name__)
+
+    def testAuthoredFunctionResolvesMapOwnedReceiverAndRunsCleanupOnFailure(self):
+        calls = []
+        notify = Mock(side_effect=RuntimeError("model request failed"))
+        game = SimpleNamespace(getGuiHandler=lambda: SimpleNamespace(notify=notify))
+        callback = self.authoredHook(
+            "    @resumableHook\n"
+            "    def invoke(self):\n"
+            "        try:\n"
+            "            yield uiRequest('gui.notify', 'notice')\n"
+            "        finally:\n"
+            "            calls.append('closed')\n",
+            calls=calls,
+        )
+        with self.assertRaisesRegex(RuntimeError, "model request failed"):
+            callback(SimpleNamespace(getMap=lambda: SimpleNamespace(getGame=lambda: game)))
+        self.assertEqual(["closed"], calls)
+        notify.assert_called_once_with("notice")
+
+    def testAuthoredFunctionSupportsItemHookWithNoReceiverAndNoGameLookup(self):
+        actor = SimpleNamespace(moveTo=Mock(return_value="moved"))
+        callback = self.authoredHook(
+            "    @resumableHook\n"
+            "    def invoke(self, actor):\n"
+            "        result = yield uiRequest('gui.itemMoveTo', actor, 2, 3, 0)\n"
+            "        yield uiRequest('gui.itemCommitted')\n"
+            "        return result\n"
+        )
+        self.assertEqual("moved", callback(None, actor))
+        actor.moveTo.assert_called_once_with(2, 3, 0)
+
+    def testAuthoredFunctionDoesNotSwallowHookOrUnknownRequestErrors(self):
+        callback = self.authoredHook(
+            "    @resumableHook\n" "    def invoke(self):\n" "        yield uiRequest('unrecognized')\n"
+        )
+        with self.assertRaises(KeyError):
+            callback(None)
+        callback = self.authoredHook(
+            "    @resumableHook\n"
+            "    def invoke(self):\n"
+            "        yield uiRequest('gui.questCommitted')\n"
+            "        raise ValueError('authored failure')\n"
+        )
+        with self.assertRaisesRegex(ValueError, "authored failure"):
+            callback(None)
+
     def driver(self, map_name):
         case = RouteCase("dialog-regression", "unit", (map_name,), ("unit.branch",), lambda d: None)
         driver = GameplayBranchDriver(self, Mock(), None, case, "Warrior", Path("."))
@@ -103,6 +245,8 @@ class GameplayRouteDialogTest(unittest.TestCase):
         game_map = SimpleNamespace(
             getPlayer=lambda: player,
             removeAll=removeAll,
+            getObjects=lambda: [SimpleNamespace(getName=lambda name=name: name) for name in objects],
+            removeObject=lambda obj: removeAll(lambda candidate: candidate.getName() == obj.getName()),
             getObjectByName=lambda name: SimpleNamespace(
                 setBoolProperty=lambda key, value: state.__setitem__(key, value)
             ),
@@ -136,6 +280,7 @@ class GameplayRouteDialogTest(unittest.TestCase):
             conditions[condition] = lambda dialog=dialog, method=condition_method: method(dialog)
             setattr(dialog, condition, conditions[condition])
             dialog.open_door = open_door
+            dialog.open_doorFlow = lambda dialog=dialog: open_door_method.__wrapped__(dialog)
             dialog.asked_about_girl = lambda: state.__setitem__("ASKED_ABOUT_GIRL", True)
             action_method = authoredFunction(
                 "res/maps/nouraajd/script.py",
@@ -502,11 +647,17 @@ class GameplayRouteDialogTest(unittest.TestCase):
             getGame=lambda: None,
             getObjects=lambda: [{"__handle__": "player"}] + ([{"__handle__": "leader"}] if state["leader"] else []),
         )
+
+        def clearEncounter(game_map):
+            state.update(leader=False)
+            yield from ()
+
         expire = authoredFunction(
             "res/maps/nouraajd/script.py",
-            "_expire_victor_search",
+            "expireVictorSearchFlow",
+            run_flow=True,
             _get_quest_system=lambda game_map: quest,
-            _clear_victor_encounter=lambda game_map: state.update(leader=False),
+            clearVictorEncounterFlow=lambda game_map: clearEncounter(game_map),
             VICTOR_COURTYARD_TIMEOUT_TURNS=75,
             showReader=Mock(),
         )
@@ -576,11 +727,17 @@ class GameplayRouteDialogTest(unittest.TestCase):
                     getGame=lambda: None,
                     getObjects=lambda: [{"__handle__": "player"}] + [{"__handle__": name} for name in actors],
                 )
+
+                def clearEncounter(game_map):
+                    actors.clear()
+                    yield from ()
+
                 expire = authoredFunction(
                     "res/maps/nouraajd/script.py",
-                    "_expire_victor_search",
+                    "expireVictorSearchFlow",
+                    run_flow=True,
                     _get_quest_system=lambda game_map: quest,
-                    _clear_victor_encounter=lambda game_map: actors.clear(),
+                    clearVictorEncounterFlow=clearEncounter,
                     VICTOR_COURTYARD_TIMEOUT_TURNS=75,
                     showReader=Mock(),
                 )
@@ -852,8 +1009,8 @@ class GameplayRouteDialogTest(unittest.TestCase):
         )
 
         class Creature:
-            def setCoords(self, coords):
-                state.update(position=coords)
+            def moveTo(self, x, y, z):
+                state.update(position=(x, y, z))
 
         creature = Creature()
         event = SimpleNamespace(getCause=lambda: creature)
@@ -864,7 +1021,7 @@ class GameplayRouteDialogTest(unittest.TestCase):
             state["position"] = positions[name]
             entered.append(name)
             exit_name = definitions[name]["properties"]["exit"]
-            on_enter(SimpleNamespace(getExit=lambda: positions[exit_name]), event)
+            on_enter(SimpleNamespace(getExit=lambda: SimpleNamespace(**dict(zip("xyz", positions[exit_name])))), event)
 
         driver.object = lambda name: name
         driver.coords = lambda handle=None: positions[handle] if handle else state["position"]

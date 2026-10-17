@@ -80,10 +80,14 @@ class CGameCampaignBrowserPanel : public CGamePanel {
 
     std::pair<std::string, std::string> awaitCharacterChoice();
 
+    vstd::task<std::pair<std::string, std::string>> awaitCharacterChoiceAsync();
+
     // Blocks until SELECT confirms a campaign, CANCEL/Escape aborts, or the
     // panel is torn down. Returns the confirmed stable campaign id, or "" for
     // every cancel path.
     std::string awaitChoice();
+
+    vstd::task<std::string> awaitChoiceAsync();
 
     bool hasChoice();
 

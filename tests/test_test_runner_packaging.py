@@ -60,6 +60,7 @@ class TestRunnerPackagingTest(unittest.TestCase):
             "test_python_callback_lifecycle.py",
             "test_game_diagnostics.py",
             "test_mcp_diagnostics.py",
+            "test_mcp_engine_thread.py",
             "test_native_diagnostics.py",
         ):
             shutil.copy2(ROOT / "tests" / name, source_tests / name)

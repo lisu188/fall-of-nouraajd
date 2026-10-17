@@ -50,6 +50,8 @@ class CMapGraphicsObject : public CProxyTargetGraphicsObject {
     void refreshObject(Coords coords);
     void previewDestination(std::shared_ptr<CGui> gui, Coords destination);
     void commitDestination(std::shared_ptr<CGui> gui);
+
+    vstd::task<void> commitDestinationAsync(std::shared_ptr<CGui> gui);
     void renderObject(std::shared_ptr<CGui> gui, std::shared_ptr<SDL_Rect> rect, int frameTime) override;
 
   private:

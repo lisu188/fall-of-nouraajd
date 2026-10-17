@@ -16,7 +16,7 @@ You should have received a copy of the GNU General Public License
 along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 
-#include "core/CRuntimeBridge.h"
+#include "core/CAsync.h"
 #include "core/CJsonUtil.h"
 #include "core/CGame.h"
 #include "core/CGameContext.h"
@@ -26,6 +26,7 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #include "core/CPathFinder.h"
 #include "core/CPlaytestTrace.h"
 #include "core/CProvider.h"
+#include "core/CRuntimeBridge.h"
 #include "core/CSaveFormat.h"
 #include "core/CSerialization.h"
 #include "core/CScript.h"
@@ -33,6 +34,7 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #include "core/CTags.h"
 #include "core/CTypes.h"
 #include "core/CUtil.h"
+#include "gui/CGui.h"
 #include "gui/CSdlResources.h"
 #include "gui/object/CConsoleGraphicsObject.h"
 #include "object/CCreature.h"
@@ -44,7 +46,9 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #include "object/CGameObject.h"
 #include "object/CInteraction.h"
 #include "object/CItem.h"
+#include "handler/CEventHandler.h"
 #include "test_harness.h"
+#include "native_crash_diagnostics.h"
 #include "stat_composition_fixture.h"
 #include "vutil.h"
 
@@ -56,6 +60,7 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #include <cmath>
 #include <filesystem>
 #include <fstream>
+#include <future>
 #include <limits>
 #include <map>
 #include <memory>
@@ -75,6 +80,8 @@ static_assert(!std::is_copy_constructible_v<CSerialization::StrictScope>);
 static_assert(!std::is_copy_assignable_v<CSerialization::StrictScope>);
 static_assert(!std::is_move_constructible_v<CSerialization::StrictScope>);
 static_assert(!std::is_move_assignable_v<CSerialization::StrictScope>);
+static_assert(!std::is_copy_constructible_v<CSerialization::NameFixtureScopeForTests>);
+static_assert(!std::is_move_constructible_v<CSerialization::NameFixtureScopeForTests>);
 
 template <typename Func> void expect_runtime_error(Func func, const char *message) {
     bool threw = false;
@@ -383,13 +390,20 @@ void test_pathfinder_find_path_without_obstacles() {
     };
     auto no_waypoint = [](const Coords &) -> std::optional<Coords> { return std::nullopt; };
 
+    std::cout << "[core-pathfinder] ENTER synchronous search" << std::endl;
     auto path = CPathFinder::findPath(Coords(0, 0, 0), Coords(2, 0, 0), can_step, no_waypoint);
+    std::cout << "[core-pathfinder] EXIT synchronous search" << std::endl;
     expect_true(path.size() == 2, "findPath should include each next step until goal");
     expect_true(path.front() == Coords(1, 0, 0), "findPath should return first move toward goal");
     expect_true(path.back() == Coords(2, 0, 0), "findPath should end on goal");
 
-    auto next_step = CPathFinder::findNextStep(Coords(0, 0, 0), Coords(2, 0, 0), can_step, no_waypoint);
-    expect_true(next_step->get() == Coords(1, 0, 0), "findNextStep should return the first optimal neighbor");
+    std::cout << "[core-pathfinder] ENTER lazy task construction" << std::endl;
+    auto next_step = CPathFinder::findNextStepAsync(Coords(0, 0, 0), Coords(2, 0, 0), can_step, no_waypoint);
+    std::cout << "[core-pathfinder] EXIT lazy task construction" << std::endl;
+    std::cout << "[core-pathfinder] ENTER worker execution and posted continuation" << std::endl;
+    auto next_coords = game_async::run(std::move(next_step), game_async::WaitMode::PostedWork);
+    std::cout << "[core-pathfinder] EXIT worker execution and posted continuation" << std::endl;
+    expect_true(next_coords == Coords(1, 0, 0), "findNextStep should return the first optimal neighbor");
 }
 
 void test_pathfinder_rejects_overflowing_routes() {
@@ -412,8 +426,9 @@ void test_pathfinder_rejects_overflowing_routes() {
     auto path = CPathFinder::findPath(start, goal, can_step, waypoint, neighbors, distance, cost);
     expect_true(path == std::vector<Coords>{cheap, goal},
                 "a 64-bit callback cost must not narrow into a cheap negative route");
-    auto step = CPathFinder::findNextStep(start, goal, can_step, waypoint, neighbors, distance, cost);
-    expect_true(step->get() == cheap, "async next-step search should also preserve 64-bit callback costs");
+    auto step = CPathFinder::findNextStepAsync(start, goal, can_step, waypoint, neighbors, distance, cost);
+    expect_true(game_async::run(std::move(step), game_async::WaitMode::PostedWork) == cheap,
+                "async next-step search should also preserve 64-bit callback costs");
 }
 
 void test_pathfinder_waypoint_and_blocked_goal() {
@@ -469,8 +484,9 @@ void test_pathfinder_waypoint_override() {
         }
         return std::nullopt;
     };
-    auto next_step = CPathFinder::findNextStep(Coords(0, 0, 0), Coords(2, 0, 0), can_step, forced_waypoint);
-    expect_true(next_step->get() == Coords(2, 0, 0), "findNextStep should allow waypoint override when available");
+    auto next_step = CPathFinder::findNextStepAsync(Coords(0, 0, 0), Coords(2, 0, 0), can_step, forced_waypoint);
+    expect_true(game_async::run(std::move(next_step), game_async::WaitMode::PostedWork) == Coords(2, 0, 0),
+                "findNextStep should allow waypoint override when available");
 }
 
 void test_pathfinder_crosses_levels_through_explicit_waypoint() {
@@ -542,8 +558,9 @@ void test_toroidal_pathfinder_prefers_wrapped_route() {
     expect_true(path.front() == Coords(25, 0, 0), "Toroidal path should wrap west-to-east in one move");
 
     auto next_step =
-        CPathFinder::findNextStep(Coords(0, 0, 0), Coords(25, 0, 0), can_step, no_waypoint, neighbors, distance);
-    expect_true(next_step->get() == Coords(25, 0, 0), "Toroidal next step should choose the wrapped edge tile");
+        CPathFinder::findNextStepAsync(Coords(0, 0, 0), Coords(25, 0, 0), can_step, no_waypoint, neighbors, distance);
+    expect_true(game_async::run(std::move(next_step), game_async::WaitMode::PostedWork) == Coords(25, 0, 0),
+                "Toroidal next step should choose the wrapped edge tile");
 }
 
 void test_toroidal_pathfinder_wraps_on_both_axes() {
@@ -1305,6 +1322,297 @@ void test_game_context_transition_generation_helpers_and_shutdown() {
                 "shutdown should make previously captured transition generation stale");
 }
 
+vstd::task<void> shutdownFromOwnedTask(std::shared_ptr<CGameContext> context, std::weak_ptr<CMap> map,
+                                       std::weak_ptr<CResourcesProvider> resources, bool &retained) {
+    co_await vstd::post(vstd::event_loop<>::instance());
+    context->shutdown();
+    retained = !map.expired() && !resources.expired();
+}
+
+vstd::task<void> shutdownFromNestedOwnedTask(std::shared_ptr<CGameContext> context, std::weak_ptr<CMap> map,
+                                             std::weak_ptr<CResourcesProvider> resources, bool &retained) {
+    co_await shutdownFromOwnedTask(std::move(context), std::move(map), std::move(resources), retained);
+}
+
+vstd::task<void> waitForShutdownStop(std::promise<void> &started, std::weak_ptr<CResourcesProvider> resources,
+                                     std::atomic_bool &retained) {
+    auto token = co_await vstd::thisTaskStopToken();
+    co_await vstd::work(game_async::workerPool(), [token, &started, resources, &retained] {
+        std::mutex mutex;
+        std::condition_variable condition;
+        std::stop_callback wake(token, [&condition, &mutex] {
+            std::lock_guard lock(mutex);
+            condition.notify_all();
+        });
+        std::unique_lock lock(mutex);
+        started.set_value();
+        condition.wait(lock, [token] { return token.stop_requested(); });
+        retained.store(!resources.expired());
+    });
+}
+
+void testGameContextDefersShutdownInsideOwnedTask() {
+    for (const bool nested : {false, true}) {
+        auto game = std::make_shared<CGame>();
+        auto context = game->getContext();
+        auto map = std::make_shared<CMap>();
+        map->setGame(game);
+        game->setMap(map);
+        std::weak_ptr<CMap> retained_map = map;
+        map.reset();
+        std::weak_ptr<CResourcesProvider> resources = context->getResourcesProvider();
+        bool retained = false;
+        auto handle =
+            context->spawnTask(nested ? shutdownFromNestedOwnedTask(context, retained_map, resources, retained)
+                                      : shutdownFromOwnedTask(context, retained_map, resources, retained));
+        vstd::event_loop<>::instance()->runUntilIdle();
+        expect_true(handle.finished() && retained, "self-shutdown retains runtime resources until its frame exits");
+        expect_true(retained_map.expired() && resources.expired(),
+                    "the independent finalizer releases resources after all owned tasks finish");
+        expect_true(!context->isActive() && !game->getMap(), "self-shutdown invalidates the game immediately");
+        expect_runtime_error([&] { handle.get(); }, "a task that closes its group has a cancelled result");
+        expect_runtime_error([&] { context->spawnTask(game_async::dispatch([] {})); },
+                             "closed contexts reject new coroutine work");
+        context->shutdown();
+    }
+}
+
+void testGameDestructorJoinsWorkersWithoutRetainingGame() {
+    auto game = std::make_shared<CGame>();
+    auto context = game->getContext();
+    std::weak_ptr<CGame> owner = game;
+    std::weak_ptr<CResourcesProvider> resources = context->getResourcesProvider();
+    std::atomic_bool retained{false};
+    std::promise<void> started;
+    auto handle = context->spawnTask(waitForShutdownStop(started, resources, retained));
+    {
+        pybind11::gil_scoped_release release;
+        started.get_future().wait();
+    }
+    game.reset();
+    expect_true(owner.expired() && handle.finished(), "owned workers cannot keep the CGame destructor alive");
+    expect_true(retained.load() && resources.expired(),
+                "shutdown keeps resources through worker completion and then releases them");
+    expect_runtime_error([&] { handle.get(); }, "shutdown settles outstanding worker tasks as cancelled");
+}
+
+struct ShutdownThreadProbe {
+    const std::thread::id mainThread = std::this_thread::get_id();
+    std::atomic<int> childrenDestroyed{0};
+    std::atomic<int> guisDestroyed{0};
+    std::atomic_bool mainThreadOnly{true};
+
+    void record(std::atomic<int> &counter) {
+        if (std::this_thread::get_id() != mainThread) {
+            mainThreadOnly.store(false);
+        }
+        counter.fetch_add(1);
+    }
+};
+
+class ShutdownProbeGui : public CGui {
+  public:
+    explicit ShutdownProbeGui(std::shared_ptr<ShutdownThreadProbe> probe)
+        : CGui(WithoutWindow{}), probe(std::move(probe)) {}
+    ~ShutdownProbeGui() override { probe->record(probe->guisDestroyed); }
+
+  private:
+    std::shared_ptr<ShutdownThreadProbe> probe;
+};
+
+class ShutdownProbeChild : public CGameGraphicsObject {
+  public:
+    explicit ShutdownProbeChild(std::shared_ptr<ShutdownThreadProbe> probe) : probe(std::move(probe)) {}
+    ~ShutdownProbeChild() override { probe->record(probe->childrenDestroyed); }
+
+  private:
+    std::shared_ptr<ShutdownThreadProbe> probe;
+};
+
+std::weak_ptr<CGui> attachShutdownProbeGui(const std::shared_ptr<CGame> &game,
+                                           const std::shared_ptr<ShutdownThreadProbe> &probe) {
+    auto gui = std::make_shared<ShutdownProbeGui>(probe);
+    gui->addChild(std::make_shared<ShutdownProbeChild>(probe));
+    game->setGui(gui);
+    return gui;
+}
+
+vstd::task<void> shutdownFromOwnedWorker(std::shared_ptr<CGameContext> context, std::weak_ptr<CGui> gui,
+                                         std::promise<void> &started, std::shared_future<void> proceed,
+                                         std::atomic_bool &retained) {
+    co_await vstd::work(game_async::workerPool(), [context, gui, &started, proceed, &retained] {
+        context->shutdown();
+        auto closing_gui = gui.lock();
+        retained.store(closing_gui && !closing_gui->isActive());
+        closing_gui.reset();
+        started.set_value();
+        proceed.wait();
+    });
+}
+
+void testGameContextWorkerShutdownKeepsGuiOnMainThread() {
+    auto loop = vstd::event_loop<>::instance();
+    auto game = std::make_shared<CGame>();
+    auto context = game->getContext();
+    auto probe = std::make_shared<ShutdownThreadProbe>();
+    auto gui = attachShutdownProbeGui(game, probe);
+    std::promise<void> started;
+    auto worker_started = started.get_future();
+    std::promise<void> proceed;
+    std::atomic_bool retained{false};
+    auto handle =
+        context->spawnTask(shutdownFromOwnedWorker(context, gui, started, proceed.get_future().share(), retained));
+    {
+        pybind11::gil_scoped_release release;
+        worker_started.wait();
+    }
+    loop->runReady();
+    expect_true(retained.load() && !game->getGui(), "owned worker shutdown immediately deactivates and detaches GUI");
+    expect_true(probe->childrenDestroyed.load() == 0 && probe->guisDestroyed.load() == 0,
+                "GUI children and resources survive until the owned worker exits");
+    proceed.set_value();
+    expect_runtime_error([&] { game_async::wait(handle, game_async::WaitMode::PostedWork); },
+                         "owned worker shutdown cancels its result without joining itself");
+    loop->runUntilIdle();
+    expect_true(gui.expired() && probe->childrenDestroyed.load() == 1 && probe->guisDestroyed.load() == 1 &&
+                    probe->mainThreadOnly.load(),
+                "owned worker teardown destroys GUI and children once on the main thread");
+}
+
+void testGameContextWorkerBoundaryMarshalsGuiCleanup() {
+    for (const bool destroy_game : {false, true}) {
+        auto game = std::make_shared<CGame>();
+        auto context = destroy_game ? std::shared_ptr<CGameContext>() : game->getContext();
+        std::weak_ptr<CGame> owner = game;
+        auto probe = std::make_shared<ShutdownThreadProbe>();
+        auto gui = attachShutdownProbeGui(game, probe);
+        std::promise<std::string> completed;
+        auto completion = completed.get_future();
+        auto closing_game = destroy_game ? std::move(game) : std::shared_ptr<CGame>();
+        std::thread worker([context, closing_game = std::move(closing_game), &completed]() mutable {
+            pybind11::gil_scoped_acquire acquire;
+            try {
+                if (closing_game) {
+                    closing_game.reset();
+                } else {
+                    context->shutdown();
+                }
+                completed.set_value("");
+            } catch (const std::exception &error) {
+                completed.set_value(error.what());
+            }
+        });
+        while (completion.wait_for(std::chrono::seconds(0)) != std::future_status::ready) {
+            vstd::event_loop<>::instance()->runReady();
+            game_async::waitForProgress();
+        }
+        worker.join();
+        expect_true(completion.get().empty(), "off-main shutdown yields the GIL while waiting for main cleanup");
+        expect_true(destroy_game ? owner.expired() : (!context->isActive() && !game->getGui()),
+                    "off-main shutdown detaches the session even at the CGame destructor boundary");
+        expect_true(gui.expired() && probe->childrenDestroyed.load() == 1 && probe->guisDestroyed.load() == 1 &&
+                        probe->mainThreadOnly.load(),
+                    "off-main boundaries return after GUI and child destruction on the main thread");
+    }
+}
+
+void testGameDestructorWithoutGuiDoesNotRequireMainPump() {
+    auto game = std::make_shared<CGame>();
+    std::weak_ptr<CResourcesProvider> resources = game->getResourcesProvider();
+    std::promise<void> entering;
+    auto entered = entering.get_future();
+    std::promise<void> completed;
+    auto completion = completed.get_future();
+    std::thread worker([closing_game = std::move(game), &entering, &completed]() mutable {
+        pybind11::gil_scoped_acquire acquire;
+        entering.set_value();
+        closing_game.reset();
+        completed.set_value();
+    });
+    bool completed_without_pump;
+    {
+        pybind11::gil_scoped_release release;
+        entered.wait();
+        completed_without_pump = completion.wait_for(std::chrono::seconds(2)) == std::future_status::ready;
+    }
+    while (completion.wait_for(std::chrono::seconds(0)) != std::future_status::ready) {
+        vstd::event_loop<>::instance()->runReady();
+        game_async::waitForProgress();
+    }
+    worker.join();
+    expect_true(completed_without_pump && resources.expired(),
+                "an idle session without GUI or scene work releases resources on the worker without a main pump");
+}
+
+vstd::task<void> acquireGilFromOwnedWorker(std::promise<void> &completed) {
+    co_await vstd::work(game_async::workerPool(), [&] {
+        pybind11::gil_scoped_acquire acquire;
+        completed.set_value();
+    });
+}
+
+vstd::task<void> acquireGilAfterWorkerStarts(std::promise<void> &started, std::promise<void> &completed) {
+    co_await vstd::work(game_async::workerPool(), [&] {
+        started.set_value();
+        pybind11::gil_scoped_acquire acquire;
+        completed.set_value();
+    });
+}
+
+void testPostedBoundaryReleasesGilBetweenBusySnapshots() {
+    auto loop = vstd::event_loop<>::instance();
+    loop->runUntilIdle();
+    std::promise<void> started;
+    auto worker_started = started.get_future();
+    std::promise<void> completed;
+    auto worker_done = completed.get_future();
+    vstd::task_group group;
+    auto waiting = group.spawn(acquireGilAfterWorkerStarts(started, completed), vstd::loopScheduler(loop));
+    worker_started.wait();
+
+    bool rescued = false;
+    bool callbacks_held_gil = true;
+    int snapshots = 0;
+    std::function<void()> heartbeat;
+    heartbeat = [&] {
+        callbacks_held_gil = callbacks_held_gil && PyGILState_Check();
+        if (worker_done.wait_for(std::chrono::seconds(0)) == std::future_status::ready) {
+            return;
+        }
+        if (++snapshots == 256) {
+            rescued = true;
+            pybind11::gil_scoped_release release;
+            worker_done.wait_for(std::chrono::seconds(5));
+            return;
+        }
+        loop->invoke(heartbeat);
+    };
+    loop->invoke(heartbeat);
+    game_async::wait(waiting, game_async::WaitMode::PostedWork);
+    loop->runUntilIdle();
+
+    expect_true(!rescued, "busy posted snapshots must yield the GIL before their worker needs a rescue");
+    expect_true(callbacks_held_gil, "posted callbacks retain the GIL while the boundary yields between snapshots");
+    expect_true(worker_done.wait_for(std::chrono::seconds(0)) == std::future_status::ready,
+                "the GIL-dependent worker finishes before the posted-work boundary returns");
+}
+
+void testFrameBoundaryReleasesGilForOwnedWorkers() {
+    auto loop = vstd::event_loop<>::instance();
+    std::promise<void> completed;
+    auto worker_done = completed.get_future();
+    bool rescued = false;
+    auto rescue = loop->scheduleAfter(2000, [&] {
+        rescued = true;
+        pybind11::gil_scoped_release release;
+        worker_done.wait_for(std::chrono::seconds(5));
+    });
+    game_async::run(acquireGilFromOwnedWorker(completed));
+    expect_true(!rescued, "a synchronous frame boundary releases the GIL without requiring a rescue callback");
+    expect_true(worker_done.wait_for(std::chrono::seconds(0)) == std::future_status::ready,
+                "the owned worker completes its Python access before the boundary returns");
+}
+
 void test_game_context_shutdown_is_idempotent_and_preserves_other_game_services() {
     auto closing_game = std::make_shared<CGame>();
     auto survivor_game = std::make_shared<CGame>();
@@ -1455,6 +1763,166 @@ void test_effect_cycles_release_with_map_and_context_teardown() {
     expect_true(detachedFirst.expired() && detachedSecond.expired() && detachedEffect.expired(),
                 "shutdown must also release detached and mutually linked effect actors");
     expect_true(retainedActor.expired(), "shutdown must release retained-map actor/effect cycles");
+}
+
+vstd::task<void> closeEffectOwnerContextFromOwnedTask(std::shared_ptr<CGameContext> context) {
+    context->shutdown();
+    co_return;
+}
+
+void testEffectOwnershipFollowsLateGameAttachmentAndReassignment() {
+    auto loop = vstd::event_loop<>::instance();
+    loop->runUntilIdle();
+    {
+        auto game = std::make_shared<CGame>();
+        auto context = game->getContext();
+        auto actor = std::make_shared<CCreature>();
+        auto effect = std::make_shared<CEffect>();
+        effect->setCaster(actor);
+        effect->setVictim(actor);
+        effect->setDuration(7);
+        actor->addEffect(effect);
+        std::shared_ptr<CGameObject> base = actor;
+        base->setGame(game);
+        expect_true(context->getEffectOwnerCount() == 1,
+                    "late game attachment through the base API must register existing detached effects");
+        std::weak_ptr<CCreature> retainedActor = actor;
+        std::weak_ptr<CEffect> retainedEffect = effect;
+        actor.reset();
+        effect.reset();
+        base.reset();
+        context->shutdown();
+        expect_true(retainedActor.expired() && retainedEffect.expired(),
+                    "late-attached detached actor/effect cycles must release at context shutdown");
+        if (auto leaked = retainedActor.lock()) {
+            leaked->setEffects({});
+        }
+    }
+
+    for (const bool deferredShutdown : {false, true}) {
+        auto firstGame = std::make_shared<CGame>();
+        auto firstContext = firstGame->getContext();
+        auto secondGame = std::make_shared<CGame>();
+        auto secondContext = secondGame->getContext();
+        auto actor = std::make_shared<CCreature>();
+        actor->setGame(firstGame);
+        auto effect = std::make_shared<CEffect>();
+        effect->setCaster(actor);
+        effect->setVictim(actor);
+        effect->setDuration(9);
+        actor->addEffect(effect);
+        expect_true(firstContext->getEffectOwnerCount() == 1, "the first context must initially own the effects");
+        if (deferredShutdown) {
+            auto closed = firstContext->spawnTask(closeEffectOwnerContextFromOwnedTask(firstContext));
+            expect_true(closed.finished() && !firstContext->isActive() && actor->getEffects().contains(effect),
+                        "owned-task shutdown snapshots effects before its independent finalizer runs");
+        }
+        std::shared_ptr<CGameObject> base = actor;
+        base->setGame(nullptr);
+        expect_true(!actor->getGame() && actor->getEffects().contains(effect),
+                    "detaching a buffed actor must preserve its effects until a new game adopts it");
+        if (deferredShutdown) {
+            std::exception_ptr transferFailure;
+            std::thread transfer([base, secondGame, &transferFailure] {
+                try {
+                    base->setGame(secondGame);
+                } catch (...) {
+                    transferFailure = std::current_exception();
+                }
+            });
+            {
+                pybind11::gil_scoped_release release;
+                transfer.join();
+            }
+            expect_true(!transferFailure, "detached effect reassignment must also complete from a native worker");
+        } else {
+            base->setGame(secondGame);
+        }
+        base->setGame(secondGame);
+        expect_true(actor->getGame() == secondGame && firstContext->getEffectOwnerCount() == 0 &&
+                        secondContext->getEffectOwnerCount() == 1,
+                    "game reassignment must transfer one effect registry entry and remain idempotent");
+        if (deferredShutdown) {
+            loop->runUntilIdle();
+        } else {
+            firstContext->shutdown();
+        }
+        expect_true(actor->getEffects().contains(effect) && effect->getCaster() == actor &&
+                        effect->getVictim() == actor && effect->getTimeLeft() == 9 && secondContext->isActive(),
+                    "old-context teardown must preserve a surviving session's transferred effect identity and time");
+        expect_runtime_error([&] { base->setGame(firstGame); },
+                             "a closed context must reject adoption of live detached effects");
+        expect_true(actor->getGame() == secondGame && actor->getEffects().contains(effect) &&
+                        firstContext->getEffectOwnerCount() == 0 && secondContext->getEffectOwnerCount() == 1,
+                    "rejected reassignment must preserve the active game's ownership and effect registry");
+        std::weak_ptr<CCreature> retainedActor = actor;
+        std::weak_ptr<CEffect> retainedEffect = effect;
+        actor.reset();
+        effect.reset();
+        base.reset();
+        secondContext->shutdown();
+        expect_true(retainedActor.expired() && retainedEffect.expired(),
+                    "the final owning context must release transferred detached actor/effect cycles");
+        if (auto leaked = retainedActor.lock()) {
+            leaked->setEffects({});
+        }
+    }
+}
+
+void testNullGameDetachmentRetainsEffectCleanupOwnership() {
+    auto loop = vstd::event_loop<>::instance();
+    for (const bool deferredShutdown : {false, true}) {
+        for (const bool crossed : {false, true}) {
+            auto game = std::make_shared<CGame>();
+            auto context = game->getContext();
+            std::vector<std::shared_ptr<CCreature>> actors;
+            std::vector<std::shared_ptr<CEffect>> effects;
+            std::vector<std::weak_ptr<CCreature>> actorLifetimes;
+            std::vector<std::weak_ptr<CEffect>> effectLifetimes;
+            for (int index = 0; index < (crossed ? 2 : 1); ++index) {
+                auto actor = std::make_shared<CCreature>();
+                actor->setGame(game);
+                actorLifetimes.push_back(actor);
+                actors.push_back(std::move(actor));
+            }
+            for (std::size_t index = 0; index < actors.size(); ++index) {
+                auto effect = std::make_shared<CEffect>();
+                effect->setCaster(actors[(index + 1) % actors.size()]);
+                effect->setVictim(actors[index]);
+                actors[index]->addEffect(effect);
+                effectLifetimes.push_back(effect);
+                effects.push_back(std::move(effect));
+            }
+            if (deferredShutdown) {
+                auto closed = context->spawnTask(closeEffectOwnerContextFromOwnedTask(context));
+                expect_true(closed.finished() && !context->isActive(),
+                            "the detached cleanup fixture must snapshot ownership before finalization");
+            }
+            for (const auto &actor : actors) {
+                std::shared_ptr<CGameObject> base = actor;
+                base->setGame(nullptr);
+                expect_true(!actor->getGame() && actor->getEffects().size() == 1,
+                            "null game assignment must clear the public game while preserving live effects");
+            }
+            expect_true(context->getEffectOwnerCount() == (deferredShutdown ? 0 : actors.size()),
+                        "null game detachment must retain cleanup registration until context teardown");
+            actors.clear();
+            effects.clear();
+            if (deferredShutdown) {
+                loop->runUntilIdle();
+            } else {
+                context->shutdown();
+            }
+            expect_true(std::ranges::all_of(actorLifetimes, [](const auto &actor) { return actor.expired(); }) &&
+                            std::ranges::all_of(effectLifetimes, [](const auto &effect) { return effect.expired(); }),
+                        "the prior cleanup context must release null-detached self and cross-actor effect cycles");
+            for (const auto &actor : actorLifetimes) {
+                if (auto leaked = actor.lock()) {
+                    leaked->setEffects({});
+                }
+            }
+        }
+    }
 }
 
 void test_effect_owner_registry_releases_finished_and_destroyed_owners() {
@@ -2227,6 +2695,16 @@ void testConsoleHistoryCodecPreservesOrderedGuiSnapshots() {
     expect_true(console->getConsoleHistory() == history,
                 "failed list decoding leaves the existing console history unchanged");
 
+    class SerializationGui final : public CGui {
+      public:
+        SerializationGui() : CGui(WithoutWindow{}) {}
+    };
+    std::shared_ptr<CGui> gui = std::make_shared<SerializationGui>();
+    gui->addChild(console);
+    auto gui_document = CSerialization::serializeExpected(gui, "gui-with-console");
+    expect_true(gui_document && (*gui_document)["properties"]["children"][0]["properties"]["consoleHistory"].dump() ==
+                                    expected.dump(),
+                "a real headless GUI snapshot containing its console serializes without a missing-codec error");
 }
 
 void test_serialization_collection_and_error_helpers() {
@@ -2296,6 +2774,7 @@ void test_serialization_collection_and_error_helpers() {
         CSerializerFunction<std::shared_ptr<json>, std::set<std::shared_ptr<CGameObject>>>::deserialize(game,
                                                                                                         invalid_array);
     expect_true(non_strict_skipped.empty(), "non-strict array deserialization should skip malformed entries");
+    std::cout << "[core-test] collection helpers: lenient array complete" << std::endl;
 
     expect_runtime_error(
         [&]() {
@@ -2304,6 +2783,7 @@ void test_serialization_collection_and_error_helpers() {
                 game, invalid_array, strict);
         },
         "strict array deserialization should reject malformed entries");
+    std::cout << "[core-test] collection helpers: strict array complete" << std::endl;
 
     auto invalid_map = std::make_shared<json>(json::object());
     (*invalid_map)["bad"] = 1;
@@ -2315,6 +2795,7 @@ void test_serialization_collection_and_error_helpers() {
                                                                                                   strict);
         },
         "strict map deserialization should reject malformed entries");
+    std::cout << "[core-test] collection helpers: strict map complete" << std::endl;
 }
 
 // EPIC_01/STORY_02/SUBSTORY_01: pre-migration characterization baseline.
@@ -3629,84 +4110,206 @@ void testGeneratedNameFixtureSeedHookRejectsLateAndRepeatedActivation() {
 
 } // namespace
 
+class ReusableTraceHealingItem : public CItem {
+  public:
+    int policyReads = 0;
+    int uses = 0;
+
+    bool isDisposable() override {
+        ++policyReads;
+        return false;
+    }
+
+    void onUse(std::shared_ptr<CGameEvent> event) override {
+        ++uses;
+        auto caused = vstd::cast<CGameEventCaused>(event);
+        vstd::cast<CCreature>(caused->getCause())->heal(2);
+    }
+};
+
+void testReusableItemTraceRecordsAtCommitWithoutRepeatingPolicy() {
+    auto game = std::make_shared<CGame>();
+    auto map = std::make_shared<CMap>();
+    map->setGame(game);
+    game->setMap(map);
+    auto actor = std::make_shared<CCreature>();
+    actor->setGame(game);
+    actor->setName("unitReusableTraceActor");
+    actor->getBaseStats()->setStamina(3);
+    actor->getBaseStats()->setMainStat("strength");
+    actor->getBaseStats()->setStrength(5);
+    map->addObject(actor);
+    actor->setHp(1);
+    auto item = std::make_shared<ReusableTraceHealingItem>();
+    item->setGame(game);
+    item->setName("unitReusableTraceItem");
+    item->addTag(CTag::Heal);
+    item->setNumericProperty("power", 2);
+    actor->addItem(item);
+    CPlaytestTrace::configure(true, "", 100, true);
+    game_async::wait(game->getContext()->spawnTask(actor->useItemAsync(item)), game_async::WaitMode::PostedWork);
+    int used = 0;
+    for (const auto &line : CPlaytestTrace::drain()) {
+        const auto record = json::parse(line);
+        if (record.value("event", std::string()) == "item_used") {
+            ++used;
+            expect_true(!record.at("disposable").get<bool>() && record.at("ownedAfter").get<bool>() &&
+                            record.at("hpBefore").get<int>() == 1 && record.at("hpAfter").get<int>() == 3 &&
+                            record.at("removedCount").get<int>() == 0 && record.at("addedCount").get<int>() == 0 &&
+                            record.at("equipmentUnchanged").get<bool>(),
+                        "a reusable healing item must record its committed effect without claiming consumption");
+        }
+    }
+    expect_true(used == 1 && item->policyReads == 1 && item->uses == 1 && actor->hasInInventory(item),
+                "tracing must use the cached disposal policy exactly once for a reusable healing commit");
+    CPlaytestTrace::configure(false);
+    actor->useItem(item);
+    expect_true(CPlaytestTrace::records().empty() && item->policyReads == 2 && item->uses == 2 && actor->getHp() == 5 &&
+                    actor->hasInInventory(item),
+                "the synchronous legacy boundary must retain item behavior and policy calls when tracing is disabled");
+    game->getContext()->shutdown();
+}
+
 int main() {
+    native_test_diagnostics::installWindowsCrashDiagnostics();
     pybind11::scoped_interpreter guard{};
+    const auto runDiagnosedCase = [](const char *name, void (*test)()) {
+        std::cout << "[core-test] ENTER " << name << std::endl;
+        test();
+        std::cout << "[core-test] EXIT " << name << std::endl;
+    };
 
-    test_string_deserialization_preserves_empty_and_whitespace();
-    test_string_deserialization_coerces_non_string_targets();
-    test_happy_path_add_and_distance();
-    test_edge_case_adjacent_or_same();
-    test_comparison_and_ordering();
-    test_boundary_invalid_key_parsing();
-    test_near_coords_helpers();
-    test_pathfinder_find_path_without_obstacles();
-    test_pathfinder_waypoint_and_blocked_goal();
-    test_pathfinder_rejects_overflowing_routes();
-    test_pathfinder_returns_start_when_passable_goal_has_no_route();
-    test_pathfinder_caches_passability_checks();
-    test_pathfinder_waypoint_override();
-    test_pathfinder_crosses_levels_through_explicit_waypoint();
-    test_toroidal_pathfinder_prefers_wrapped_route();
-    test_toroidal_pathfinder_wraps_on_both_axes();
-    test_json_parse_expected_success_and_failure();
-    test_json_parse_dump_and_type_helpers();
-    test_sdl_raii_alias_owns_surface();
-    test_direction_mapping();
-    test_rect_bounds_inclusion();
-    test_tag_round_trip_and_ordering();
-    test_unknown_tag_rejection();
-    test_tag_mutation_iteration_and_range_helpers();
-    test_public_stats_apply_preserves_zero_notifications_and_midpoint_dynamic_shadows();
-    test_property_setters_emit_change_signals();
-    test_inventory_mutation_notifies_property_subscribers_once();
-    test_map_domain_signals_emit_for_tile_and_object_changes();
-    test_reviewed_value_wrappers_have_explicit_primitive_metadata();
-    test_nested_primitive_wrappers_serialize_direct_values_and_round_trip();
-    test_legacy_and_flattened_primitive_wrappers_deserialize_and_reject_scalars();
-    test_nested_property_notification_batches_emit_one_deterministic_signal();
-    test_object_deserialization_batches_property_notifications();
-    test_bulk_object_deserialization_notifications_stay_batched();
-    test_object_clone_batches_property_notifications();
-    test_game_context_owns_distinct_gui_handlers_per_game();
-    test_game_context_rejects_services_without_owner_game();
-    test_game_context_transition_generation_helpers_and_shutdown();
-    test_game_context_shutdown_is_idempotent_and_preserves_other_game_services();
-    test_effect_cycles_release_with_map_and_context_teardown();
-    test_effect_owner_registry_releases_finished_and_destroyed_owners();
-    test_playtest_trace_records_and_helper_payloads();
-    test_playtest_trace_unicode_truncation_preserves_json();
-    test_playtest_trace_bad_payload_does_not_escape_or_stop_history();
-    test_playtest_trace_recent_history_keeps_latest_events();
-    test_playtest_trace_recent_files_rotate_and_keep_disk_counters();
-    test_playtest_trace_output_failure_keeps_memory_and_warns_once();
-    test_playtest_trace_concurrent_file_records_follow_sequence_order();
-    test_delayed_future_handlers_run_through_event_loop();
-    test_script_rejects_executable_expressions();
-    test_save_format_codec_validation();
-    test_save_format_bounds_crafted_documents();
-    testSerializationScopeRestoration();
-    testSerializerBaseDestruction();
-    testTypedJsonCodecsOwnResultsAndPreserveErrors();
-    testConsoleHistoryCodecPreservesOrderedGuiSnapshots();
-    test_serialization_collection_and_error_helpers();
-    test_generate_name_collision_retry();
-    test_creature_effective_stats_baseline_capture();
-    test_creature_effective_actions_baseline_capture();
-    test_interaction_self_target_property_round_trip();
-    test_creature_race_metadata_round_trip();
-    test_creature_class_metadata_round_trip();
-    test_creature_archetype_property_wiring();
-    test_archetype_types_are_registered_with_type_system();
-    test_levelup_legacy_path_serializes_unlock_into_actions();
-    test_levelup_composed_path_unlocks_via_effective_interactions_without_serializing();
-    test_creature_clone_preserves_composed_archetypes();
-    test_creature_clone_preserves_class_tracks();
-    test_creature_composed_stat_order();
-    test_creature_composed_main_stat_selection();
-
-    testGeneratedNameFixturesIgnoreAddressesAndRestoreNestedState();
-    testGeneratedNameFixturesPreserveRngAndCollisionBounds();
-    testGeneratedNameFixtureSeedHookRejectsLateAndRepeatedActivation();
+    runDiagnosedCase("test_string_deserialization_preserves_empty_and_whitespace",
+                     test_string_deserialization_preserves_empty_and_whitespace);
+    runDiagnosedCase("test_string_deserialization_coerces_non_string_targets",
+                     test_string_deserialization_coerces_non_string_targets);
+    runDiagnosedCase("test_happy_path_add_and_distance", test_happy_path_add_and_distance);
+    runDiagnosedCase("test_edge_case_adjacent_or_same", test_edge_case_adjacent_or_same);
+    runDiagnosedCase("test_comparison_and_ordering", test_comparison_and_ordering);
+    runDiagnosedCase("test_boundary_invalid_key_parsing", test_boundary_invalid_key_parsing);
+    runDiagnosedCase("test_near_coords_helpers", test_near_coords_helpers);
+    runDiagnosedCase("test_pathfinder_find_path_without_obstacles", test_pathfinder_find_path_without_obstacles);
+    runDiagnosedCase("test_pathfinder_waypoint_and_blocked_goal", test_pathfinder_waypoint_and_blocked_goal);
+    runDiagnosedCase("test_pathfinder_rejects_overflowing_routes", test_pathfinder_rejects_overflowing_routes);
+    runDiagnosedCase("test_pathfinder_returns_start_when_passable_goal_has_no_route",
+                     test_pathfinder_returns_start_when_passable_goal_has_no_route);
+    runDiagnosedCase("test_pathfinder_caches_passability_checks", test_pathfinder_caches_passability_checks);
+    runDiagnosedCase("test_pathfinder_waypoint_override", test_pathfinder_waypoint_override);
+    runDiagnosedCase("test_pathfinder_crosses_levels_through_explicit_waypoint",
+                     test_pathfinder_crosses_levels_through_explicit_waypoint);
+    runDiagnosedCase("test_toroidal_pathfinder_prefers_wrapped_route", test_toroidal_pathfinder_prefers_wrapped_route);
+    runDiagnosedCase("test_toroidal_pathfinder_wraps_on_both_axes", test_toroidal_pathfinder_wraps_on_both_axes);
+    runDiagnosedCase("test_json_parse_expected_success_and_failure", test_json_parse_expected_success_and_failure);
+    runDiagnosedCase("test_json_parse_dump_and_type_helpers", test_json_parse_dump_and_type_helpers);
+    runDiagnosedCase("test_sdl_raii_alias_owns_surface", test_sdl_raii_alias_owns_surface);
+    runDiagnosedCase("test_direction_mapping", test_direction_mapping);
+    runDiagnosedCase("test_rect_bounds_inclusion", test_rect_bounds_inclusion);
+    runDiagnosedCase("test_tag_round_trip_and_ordering", test_tag_round_trip_and_ordering);
+    runDiagnosedCase("test_unknown_tag_rejection", test_unknown_tag_rejection);
+    runDiagnosedCase("test_tag_mutation_iteration_and_range_helpers", test_tag_mutation_iteration_and_range_helpers);
+    runDiagnosedCase("test_public_stats_apply_preserves_zero_notifications_and_midpoint_dynamic_shadows",
+                     test_public_stats_apply_preserves_zero_notifications_and_midpoint_dynamic_shadows);
+    runDiagnosedCase("test_property_setters_emit_change_signals", test_property_setters_emit_change_signals);
+    runDiagnosedCase("test_inventory_mutation_notifies_property_subscribers_once",
+                     test_inventory_mutation_notifies_property_subscribers_once);
+    runDiagnosedCase("test_map_domain_signals_emit_for_tile_and_object_changes",
+                     test_map_domain_signals_emit_for_tile_and_object_changes);
+    runDiagnosedCase("test_reviewed_value_wrappers_have_explicit_primitive_metadata",
+                     test_reviewed_value_wrappers_have_explicit_primitive_metadata);
+    runDiagnosedCase("test_nested_primitive_wrappers_serialize_direct_values_and_round_trip",
+                     test_nested_primitive_wrappers_serialize_direct_values_and_round_trip);
+    runDiagnosedCase("test_legacy_and_flattened_primitive_wrappers_deserialize_and_reject_scalars",
+                     test_legacy_and_flattened_primitive_wrappers_deserialize_and_reject_scalars);
+    runDiagnosedCase("test_nested_property_notification_batches_emit_one_deterministic_signal",
+                     test_nested_property_notification_batches_emit_one_deterministic_signal);
+    runDiagnosedCase("test_object_deserialization_batches_property_notifications",
+                     test_object_deserialization_batches_property_notifications);
+    runDiagnosedCase("test_bulk_object_deserialization_notifications_stay_batched",
+                     test_bulk_object_deserialization_notifications_stay_batched);
+    runDiagnosedCase("test_object_clone_batches_property_notifications",
+                     test_object_clone_batches_property_notifications);
+    runDiagnosedCase("test_game_context_owns_distinct_gui_handlers_per_game",
+                     test_game_context_owns_distinct_gui_handlers_per_game);
+    runDiagnosedCase("test_game_context_rejects_services_without_owner_game",
+                     test_game_context_rejects_services_without_owner_game);
+    runDiagnosedCase("test_game_context_transition_generation_helpers_and_shutdown",
+                     test_game_context_transition_generation_helpers_and_shutdown);
+    runDiagnosedCase("testGameContextDefersShutdownInsideOwnedTask", testGameContextDefersShutdownInsideOwnedTask);
+    runDiagnosedCase("testGameDestructorJoinsWorkersWithoutRetainingGame",
+                     testGameDestructorJoinsWorkersWithoutRetainingGame);
+    runDiagnosedCase("testGameContextWorkerShutdownKeepsGuiOnMainThread",
+                     testGameContextWorkerShutdownKeepsGuiOnMainThread);
+    runDiagnosedCase("testGameContextWorkerBoundaryMarshalsGuiCleanup",
+                     testGameContextWorkerBoundaryMarshalsGuiCleanup);
+    runDiagnosedCase("testGameDestructorWithoutGuiDoesNotRequireMainPump",
+                     testGameDestructorWithoutGuiDoesNotRequireMainPump);
+    runDiagnosedCase("testPostedBoundaryReleasesGilBetweenBusySnapshots",
+                     testPostedBoundaryReleasesGilBetweenBusySnapshots);
+    runDiagnosedCase("testFrameBoundaryReleasesGilForOwnedWorkers", testFrameBoundaryReleasesGilForOwnedWorkers);
+    runDiagnosedCase("test_game_context_shutdown_is_idempotent_and_preserves_other_game_services",
+                     test_game_context_shutdown_is_idempotent_and_preserves_other_game_services);
+    runDiagnosedCase("test_effect_cycles_release_with_map_and_context_teardown",
+                     test_effect_cycles_release_with_map_and_context_teardown);
+    runDiagnosedCase("testEffectOwnershipFollowsLateGameAttachmentAndReassignment",
+                     testEffectOwnershipFollowsLateGameAttachmentAndReassignment);
+    runDiagnosedCase("testNullGameDetachmentRetainsEffectCleanupOwnership",
+                     testNullGameDetachmentRetainsEffectCleanupOwnership);
+    runDiagnosedCase("test_effect_owner_registry_releases_finished_and_destroyed_owners",
+                     test_effect_owner_registry_releases_finished_and_destroyed_owners);
+    runDiagnosedCase("test_playtest_trace_records_and_helper_payloads",
+                     test_playtest_trace_records_and_helper_payloads);
+    runDiagnosedCase("test_playtest_trace_unicode_truncation_preserves_json",
+                     test_playtest_trace_unicode_truncation_preserves_json);
+    runDiagnosedCase("test_playtest_trace_bad_payload_does_not_escape_or_stop_history",
+                     test_playtest_trace_bad_payload_does_not_escape_or_stop_history);
+    runDiagnosedCase("test_playtest_trace_recent_history_keeps_latest_events",
+                     test_playtest_trace_recent_history_keeps_latest_events);
+    runDiagnosedCase("test_playtest_trace_recent_files_rotate_and_keep_disk_counters",
+                     test_playtest_trace_recent_files_rotate_and_keep_disk_counters);
+    runDiagnosedCase("test_playtest_trace_output_failure_keeps_memory_and_warns_once",
+                     test_playtest_trace_output_failure_keeps_memory_and_warns_once);
+    runDiagnosedCase("test_playtest_trace_concurrent_file_records_follow_sequence_order",
+                     test_playtest_trace_concurrent_file_records_follow_sequence_order);
+    runDiagnosedCase("test_delayed_future_handlers_run_through_event_loop",
+                     test_delayed_future_handlers_run_through_event_loop);
+    runDiagnosedCase("test_script_rejects_executable_expressions", test_script_rejects_executable_expressions);
+    runDiagnosedCase("test_save_format_codec_validation", test_save_format_codec_validation);
+    runDiagnosedCase("test_save_format_bounds_crafted_documents", test_save_format_bounds_crafted_documents);
+    runDiagnosedCase("testSerializationScopeRestoration", testSerializationScopeRestoration);
+    runDiagnosedCase("testSerializerBaseDestruction", testSerializerBaseDestruction);
+    runDiagnosedCase("testTypedJsonCodecsOwnResultsAndPreserveErrors", testTypedJsonCodecsOwnResultsAndPreserveErrors);
+    runDiagnosedCase("testConsoleHistoryCodecPreservesOrderedGuiSnapshots",
+                     testConsoleHistoryCodecPreservesOrderedGuiSnapshots);
+    runDiagnosedCase("test_serialization_collection_and_error_helpers",
+                     test_serialization_collection_and_error_helpers);
+    runDiagnosedCase("test_generate_name_collision_retry", test_generate_name_collision_retry);
+    runDiagnosedCase("test_creature_effective_stats_baseline_capture", test_creature_effective_stats_baseline_capture);
+    runDiagnosedCase("test_creature_effective_actions_baseline_capture",
+                     test_creature_effective_actions_baseline_capture);
+    runDiagnosedCase("test_interaction_self_target_property_round_trip",
+                     test_interaction_self_target_property_round_trip);
+    runDiagnosedCase("test_creature_race_metadata_round_trip", test_creature_race_metadata_round_trip);
+    runDiagnosedCase("test_creature_class_metadata_round_trip", test_creature_class_metadata_round_trip);
+    runDiagnosedCase("test_creature_archetype_property_wiring", test_creature_archetype_property_wiring);
+    runDiagnosedCase("test_archetype_types_are_registered_with_type_system",
+                     test_archetype_types_are_registered_with_type_system);
+    runDiagnosedCase("test_levelup_legacy_path_serializes_unlock_into_actions",
+                     test_levelup_legacy_path_serializes_unlock_into_actions);
+    runDiagnosedCase("test_levelup_composed_path_unlocks_via_effective_interactions_without_serializing",
+                     test_levelup_composed_path_unlocks_via_effective_interactions_without_serializing);
+    runDiagnosedCase("test_creature_clone_preserves_composed_archetypes",
+                     test_creature_clone_preserves_composed_archetypes);
+    runDiagnosedCase("test_creature_clone_preserves_class_tracks", test_creature_clone_preserves_class_tracks);
+    runDiagnosedCase("test_creature_composed_stat_order", test_creature_composed_stat_order);
+    runDiagnosedCase("test_creature_composed_main_stat_selection", test_creature_composed_main_stat_selection);
+    runDiagnosedCase("testGeneratedNameFixturesIgnoreAddressesAndRestoreNestedState",
+                     testGeneratedNameFixturesIgnoreAddressesAndRestoreNestedState);
+    runDiagnosedCase("testGeneratedNameFixturesPreserveRngAndCollisionBounds",
+                     testGeneratedNameFixturesPreserveRngAndCollisionBounds);
+    runDiagnosedCase("testGeneratedNameFixtureSeedHookRejectsLateAndRepeatedActivation",
+                     testGeneratedNameFixtureSeedHookRejectsLateAndRepeatedActivation);
+    runDiagnosedCase("testReusableItemTraceRecordsAtCommitWithoutRepeatingPolicy",
+                     testReusableItemTraceRecordsAtCommitWithoutRepeatingPolicy);
 
     return finish_tests();
 }

@@ -58,6 +58,8 @@ class CRngHandler : public CGameObject {
 
     void addRandomLoot(const std::shared_ptr<CCreature> &creature, const std::set<std::shared_ptr<CItem>> &items);
 
+    vstd::task<void> addRandomLootAsync(std::shared_ptr<CCreature> creature, std::set<std::shared_ptr<CItem>> items);
+
     void addRandomLoot(const std::shared_ptr<CCreature> &creature, int value);
 
     void addRandomEncounter(const std::shared_ptr<CMap> &map, int x, int y, int z, int value);

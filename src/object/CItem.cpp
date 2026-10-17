@@ -1,6 +1,6 @@
 /*
 fall-of-nouraajd c++ dark fantasy game
-Copyright (C) 2025  Andrzej Lis
+Copyright (C) 2025-2026  Andrzej Lis
 
 This program is free software: you can redistribute it and/or modify
         it under the terms of the GNU General Public License as published by
@@ -16,6 +16,7 @@ You should have received a copy of the GNU General Public License
 along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 #include "CItem.h"
+#include "core/CAsync.h"
 #include "core/CGame.h"
 #include "core/CMap.h"
 #include "core/CPythonOverrides.h"
@@ -43,6 +44,38 @@ void CItem::onEnter(std::shared_ptr<CGameEvent> event) {
 }
 
 void CItem::onLeave(std::shared_ptr<CGameEvent>) {}
+
+vstd::task<void> CItem::onEnterAsync(std::shared_ptr<CGameEvent> event) {
+    return [](std::shared_ptr<CItem> self, std::shared_ptr<CGameEvent> event) -> vstd::task<void> {
+        auto loop = vstd::event_loop<>::instance();
+        if (!loop->isMainThread()) {
+            co_await vstd::post(loop);
+        }
+        if (Py_IsInitialized()) {
+            pybind11::gil_scoped_acquire acquire;
+            auto override = CPythonOverrides::find_override(self.get(), "onEnter");
+            if (override.is_none()) {
+                override = pybind11::get_override(self.get(), "onEnter");
+            }
+            if (override && !override.is_none()) {
+                PY_SAFE(override(event);)
+                co_return;
+            }
+        }
+        auto caused = vstd::cast<CGameEventCaused>(event);
+        auto map = self->getMap();
+        auto visitor = caused ? vstd::cast<CCreature>(caused->getCause()) : nullptr;
+        if (!map || !visitor) {
+            co_return;
+        }
+        auto item = vstd::cast<CItem>(map->getObjectByName(self->getName()));
+        if (!item) {
+            co_return;
+        }
+        visitor->addItem(item);
+        co_await map->removeObjectAsync(std::move(item));
+    }(this->ptr<CItem>(), std::move(event));
+}
 
 void CItem::onEquip(std::shared_ptr<CGameEvent> event) {
     vstd::logger::debug(vstd::cast<CGameEventCaused>(event)->getCause()->getType(), "equipped", getType(), "\n");
@@ -116,4 +149,4 @@ std::string CScroll::getText() const { return text; }
 
 void CScroll::setText(const std::string &value) { text = value; }
 
-void CScroll::onUse(std::shared_ptr<CGameEvent>) { getMap()->getGame()->getGuiHandler()->showMessage(text); }
+void CScroll::onUse(std::shared_ptr<CGameEvent>) { getMap()->getGame()->getGuiHandler()->showMessageLater(text); }

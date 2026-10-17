@@ -89,7 +89,7 @@ class CGameObject : public vstd::stringable, public std::enable_shared_from_this
     // TODO: get rid of game as a property!
     std::shared_ptr<CGame> getGame();
 
-    void setGame(std::shared_ptr<CGame> game);
+    virtual void setGame(std::shared_ptr<CGame> game);
 
     template <fn::GameObjectDerived T = CGameObject> std::shared_ptr<T> ptr() {
         //_cast purposedly
@@ -220,9 +220,9 @@ class CGameObject : public vstd::stringable, public std::enable_shared_from_this
                         }
                     };
                     if constexpr (now) {
-                        vstd::call_now(task);
+                        task();
                     } else {
-                        vstd::call_later(task);
+                        dispatchDeferred(std::move(task));
                     }
                 }
                 ++it;
@@ -236,6 +236,8 @@ class CGameObject : public vstd::stringable, public std::enable_shared_from_this
     void recordDirectPropertyChanged(const std::string &name);
 
   private:
+    void dispatchDeferred(std::move_only_function<void()> callback);
+
     std::list<std::tuple<std::string, std::weak_ptr<CGameObject>, std::string>> connections;
 
     std::shared_ptr<CGameObject> _clone();
@@ -281,6 +283,11 @@ class CVisitable {
   public:
     virtual void onEnter(std::shared_ptr<CGameEvent>) = 0;
 
+    virtual vstd::task<void> onEnterAsync(std::shared_ptr<CGameEvent> event) {
+        onEnter(std::move(event));
+        co_return;
+    }
+
     virtual void onLeave(std::shared_ptr<CGameEvent>) = 0;
 };
 
@@ -288,7 +295,19 @@ class CMoveable {
   public:
     virtual void beforeMove() = 0;
 
+    virtual vstd::task<void> beforeMoveAsync() {
+        beforeMove();
+        co_return;
+    }
+
+    virtual void cancelMove() {}
+
     virtual void afterMove() = 0;
+
+    virtual vstd::task<void> afterMoveAsync() {
+        afterMove();
+        co_return;
+    }
 };
 
 class CWearable {

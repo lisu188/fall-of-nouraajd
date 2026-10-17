@@ -8,6 +8,7 @@ import re
 import sys
 import types
 import unittest
+from tests.hook_flow_support import installHookFlows
 from pathlib import Path
 from unittest.mock import patch
 
@@ -121,11 +122,14 @@ class PlayerIdentityContentTest(unittest.TestCase):
         )
         game_module.campaign = types.SimpleNamespace()
         game_module.narrative = types.SimpleNamespace()
+        installHookFlows(game_module)
         with patch.dict(sys.modules, {"game": game_module}):
             for relative in ("res/plugins/interaction.py", "res/maps/nouraajd/script.py"):
                 namespace = {}
                 exec(compile((ROOT / relative).read_text(), relative, "exec"), namespace)
-                namespace["load"](None, types.SimpleNamespace(getMap=lambda: None))
+                context = types.SimpleNamespace(getMap=lambda: None, post=lambda _callback: None)
+                context.createWeakResolver = lambda: lambda: context
+                namespace["load"](None, context)
 
     def createPlayer(self, class_id="Warrior", race_id="humanRace"):
         game_map = types.SimpleNamespace()

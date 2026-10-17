@@ -15,7 +15,7 @@ class SlotContextOwnershipTest(unittest.TestCase):
 
         self.assertIn("class CSlotConfig;", context_header)
         self.assertIn("std::shared_ptr<CSlotConfig> getSlotConfiguration();", context_header)
-        self.assertIn("vstd::lazy<CSlotConfig> slotConfiguration;", context_header)
+        self.assertIn("std::shared_ptr<CSlotConfig> slotConfiguration;", context_header)
 
     def test_game_keeps_slot_configuration_facade_without_lazy_owner(self) -> None:
         game_header = readSource("src/core/CGame.h")

@@ -3,7 +3,6 @@ import json
 import unittest
 from pathlib import Path
 
-
 REPO_ROOT = Path(__file__).resolve().parents[1]
 NOURAAJD_SCRIPT = REPO_ROOT / "res" / "maps" / "nouraajd" / "script.py"
 NOURAAJD_DIALOG2 = REPO_ROOT / "res" / "maps" / "nouraajd" / "dialog2.json"
@@ -32,11 +31,7 @@ def _method(class_node, name):
 
 def _returned_string(method):
     for node in ast.walk(method):
-        if (
-            isinstance(node, ast.Return)
-            and isinstance(node.value, ast.Constant)
-            and isinstance(node.value.value, str)
-        ):
+        if isinstance(node, ast.Return) and isinstance(node.value, ast.Constant) and isinstance(node.value.value, str):
             return node.value.value
     raise AssertionError(f"missing literal string return in {method.name}")
 
@@ -55,21 +50,26 @@ class NouraajdReviewRegressionTest(unittest.TestCase):
         entry = next(state for state in states if state["properties"]["stateId"] == "ENTRY")
         options = entry["properties"]["options"]
         completed = next(
-            option
-            for option in options
-            if option.get("properties", {}).get("condition") == "contract_completed"
+            option for option in options if option.get("properties", {}).get("condition") == "contract_completed"
         )
         self.assertEqual("accept_quest", completed["properties"].get("action"))
         self.assertEqual("COMPLETED_THANKS", completed["properties"].get("nextStateId"))
 
         dialog_class = _find_nested_class(self.script_tree, "OctoBogzDialog")
         accept = _method(dialog_class, "accept_quest")
-        calls = {
-            node.func.attr
+        quest_waits = [
+            node.value
             for node in ast.walk(accept)
-            if isinstance(node, ast.Call) and isinstance(node.func, ast.Attribute)
-        }
-        self.assertIn("checkQuests", calls)
+            if isinstance(node, ast.Yield)
+            and isinstance(node.value, ast.Call)
+            and isinstance(node.value.func, ast.Name)
+            and node.value.func.id == "uiRequest"
+            and node.value.args
+            and isinstance(node.value.args[0], ast.Constant)
+            and node.value.args[0].value == "gui.checkQuests"
+        ]
+        self.assertEqual(1, len(quest_waits))
+        self.assertEqual("player", quest_waits[0].args[1].id)
 
     def test_dialog_action_dispatch_reports_failure_and_panel_does_not_advance(self):
         dialog_class = _find_nested_class(self.game_tree, "CDialog")
@@ -87,10 +87,17 @@ class NouraajdReviewRegressionTest(unittest.TestCase):
         panel_cpp = DIALOG_PANEL_CPP.read_text(encoding="utf-8")
         self.assertIn("bool invokeActionChecked(std::string action);", dialog_h)
         self.assertIn("bool CDialog::invokeActionChecked(std::string action)", dialog_cpp)
-        self.assertIn("!dialog->invokeActionChecked(option->getAction())", panel_cpp)
+        self.assertIn("vstd::task<bool> invokeActionCheckedAsync(std::string action);", dialog_h)
+        self.assertIn("vstd::task<bool> CDialog::invokeActionCheckedAsync(std::string action)", dialog_cpp)
+        self.assertIn("!(co_await dialog->invokeActionCheckedAsync(option->getAction()))", panel_cpp)
 
-        guard = panel_cpp.index("!dialog->invokeActionChecked(option->getAction())")
-        advance = panel_cpp.index("currentStateId = option->getNextStateId().empty()")
+        guard = panel_cpp.index("!(co_await dialog->invokeActionCheckedAsync(option->getAction()))")
+        failure_return = panel_cpp.index("co_return;", guard)
+        next_state = panel_cpp.index("auto nextState = option->getNextStateId().empty()", guard)
+        advance = panel_cpp.index("self->currentStateId = std::move(nextState);", next_state)
+        self.assertLess(guard, failure_return)
+        self.assertLess(failure_return, next_state)
+        self.assertLess(next_state, advance)
         self.assertLess(guard, advance)
 
     def test_reused_retained_session_restores_departure_coordinate(self):
@@ -106,11 +113,11 @@ class NouraajdReviewRegressionTest(unittest.TestCase):
             scene_cpp,
         )
         self.assertIn("reusedSession && retainedReturnCoords", scene_cpp)
-        self.assertIn("game->getMap()->attachPlayer(player, *retainedReturnCoords)", scene_cpp)
+        self.assertIn("co_await map->attachPlayerAsync(player, *retainedReturnCoords)", scene_cpp)
 
         explicit_target = scene_cpp.index("if (request.targetCoords)")
         retained_target = scene_cpp.index("reusedSession && retainedReturnCoords")
-        entry_fallback = scene_cpp.index("game->getMap()->attachPlayer(player);", retained_target)
+        entry_fallback = scene_cpp.index("co_await map->attachPlayerAsync(player);", retained_target)
         self.assertLess(explicit_target, retained_target)
         self.assertLess(retained_target, entry_fallback)
 

@@ -1,5 +1,7 @@
 def load(self, context):
-    from game import showReader, rewardSnapshot, showRewardReceipt
+    from game import resumableHook, uiRequest, flowGame, removeObjectsFlow
+    from game import showRewardReceiptFlow
+    from game import rewardSnapshot, spawnObjectsFlow
     from game import CDialog
     from game import CEvent
     from game import CQuest
@@ -32,7 +34,7 @@ def load(self, context):
         game_map.setNumericProperty("ritual_last_tick_turn", game_map.getTurn())
         game_map.getGame().getGuiHandler().notify("The sanctum erupts. The soul-binding ritual has begun.")
 
-    def spawn_wave(game_map):
+    def spawnWaveFlow(game_map):
         spawn_points = ["waveSpawnNorth", "waveSpawnWest", "waveSpawnEast"]
         countdown = game_map.getNumericProperty("ritual_countdown")
         if countdown <= 4:
@@ -42,57 +44,74 @@ def load(self, context):
         else:
             wave = ["ritualCultist"]
 
+        placements = []
         for i, unit in enumerate(wave):
             marker = game_map.getObjectByName(spawn_points[i % len(spawn_points)])
             if marker:
-                game_map.addObjectByName(unit, marker.getCoords())
+                coords = marker.getCoords()
+                placements.append((unit, coords.x, coords.y, coords.z))
+        yield from spawnObjectsFlow(game_map, game_map, "pendingRitualWave", placements)
 
-    def try_spawn_leader(game_map):
-        if game_map.getBoolProperty("leader_spawned"):
+    def trySpawnLeaderFlow(game_map):
+        if game_map.getBoolProperty("leader_spawned") or game_map.getBoolProperty("leader_defeated"):
             return
         spawn_marker = game_map.getObjectByName("bossSpawn")
         if not spawn_marker:
             return
-        leader = game_map.getGame().createObject("ritualLeaderTemplate")
+        leader = game_map.getObjectByName("ritualLeader")
+        registered = leader is not None
+        if not registered:
+            leader = game_map.getGame().createObject("ritualLeaderTemplate")
         if leader:
-            leader.setStringProperty("name", "ritualLeader")
-            game_map.addObject(leader)
-            leader.moveTo(spawn_marker.getCoords().x, spawn_marker.getCoords().y, spawn_marker.getCoords().z)
+            if not registered:
+                leader.setStringProperty("name", "ritualLeader")
+                game_map.addObject(leader)
+            target = spawn_marker.getCoords()
+            placed = leader.getCoords() if registered else None
+            if placed is None or (placed.x, placed.y, placed.z) != (target.x, target.y, target.z):
+                yield uiRequest("gui.moveTo", leader, target.x, target.y, target.z)
             game_map.setBoolProperty("leader_spawned", True)
             game_map.getGame().getGuiHandler().notify("The Ritual Leader descends into the sanctum!")
 
-    def set_bad_outcome(game_map, message, reward_before=None):
+    def setBadOutcomeFlow(game_map, message, reward_before=None):
         if game_map.getBoolProperty("good_ending") or game_map.getBoolProperty("bad_ending"):
             if reward_before is not None:
-                showRewardReceipt(game_map.getGame(), "The broken ritual", reward_before, message)
+                (
+                    yield from showRewardReceiptFlow(
+                        flowGame(game_map.getGame()), "The broken ritual", reward_before, message
+                    )
+                )
             return
         game_map.setBoolProperty("bad_ending", True)
         game_map.setBoolProperty("ritual_active", False)
         game_map.setBoolProperty("ritual_finished", True)
         if reward_before is not None:
-            showRewardReceipt(game_map.getGame(), "The ritual is lost", reward_before, message)
+            (
+                yield from showRewardReceiptFlow(
+                    flowGame(game_map.getGame()), "The ritual is lost", reward_before, message
+                )
+            )
         else:
-            showReader(game_map.getGame(), "The ritual is lost", message)
+            (yield uiRequest("showReader", flowGame(game_map.getGame()), "The ritual is lost", message))
 
-    def update_anchor_progress(game_map):
+    def updateAnchorProgressFlow(game_map):
         if game_map.getNumericProperty("anchors_destroyed_count") >= 3 and not game_map.getBoolProperty(
             "anchors_destroyed"
         ):
             game_map.setBoolProperty("anchors_destroyed", True)
             game_map.getGame().getGuiHandler().notify("All anchors are down. The leader is exposed.")
-            try_spawn_leader(game_map)
+            (yield from trySpawnLeaderFlow(game_map))
 
     @register(context)
     class StartEvent(CEvent):
+        @resumableHook
         def onEnter(self, event):
             if event.getCause().getName() != "player":
                 return
             game_map = self.getMap()
             if game_map.getBoolProperty("ritual_initialized"):
+                yield from removeObjectsFlow(game_map, lambda obj: obj.getName() == self.getName())
                 return
-
-            showReader(game_map.getGame(), "The chapel ritual", self.getStringProperty("text"))
-            game_map.removeAll(lambda ob: ob.getName() == self.getName())
 
             game_map.setBoolProperty("ritual_initialized", True)
             game_map.setBoolProperty("ritual_started", False)
@@ -114,12 +133,18 @@ def load(self, context):
             game_map.setNumericProperty("ritual_countdown", 14)
             game_map.setNumericProperty("ritual_last_wave_turn", 0)
             game_map.setNumericProperty("ritual_last_tick_turn", 0)
-
             player = event.getCause()
             ensure_quest(player, "ritualQuest")
             ensure_quest(player, "destroyAnchorsQuest")
             ensure_quest(player, "rescueCaptiveQuest")
             ensure_quest(player, "finalResolutionQuest")
+            (
+                yield uiRequest(
+                    "showReader", flowGame(game_map.getGame()), "The chapel ritual", self.getStringProperty("text")
+                )
+            )
+
+            (yield from removeObjectsFlow(game_map, lambda ob: ob.getName() == self.getName()))
 
     @register(context)
     @mapQuest("ritual")
@@ -239,13 +264,14 @@ def load(self, context):
             here, destination = player.getCoords(), captive.getCoords()
             return (here.x, here.y, here.z) == (destination.x, destination.y, destination.z)
 
+        @resumableHook
         def continueAfterLoss(self):
             if not self.canContinueAfterLoss():
                 return
             game_map = self.getGame().getMap()
             player = game_map.getPlayer()
             if game_map.getBoolProperty("ritual_resolution_chosen"):
-                campaign.retryPending(self.getGame())
+                (yield from campaign.retryPendingFlow(self.getGame()))
                 return
             game_map.setBoolProperty("ritual_resolution_chosen", True)
             narrative.recordRitualOutcome(self.getGame(), "bad")
@@ -253,11 +279,17 @@ def load(self, context):
             if not game_map.getBoolProperty("reward_claimed"):
                 game_map.setBoolProperty("reward_claimed", True)
                 player.addGold(100)
-            showRewardReceipt(
-                self.getGame(), "The chapel's warning", reward_before, narrative.ritualSummary(self.getGame())
+            campaign.prepareCompletion(self.getGame(), "bad_ending", fallback_map="siege")
+            (
+                yield from showRewardReceiptFlow(
+                    flowGame(self.getGame()),
+                    "The chapel's warning",
+                    reward_before,
+                    narrative.ritualSummary(self.getGame()),
+                )
             )
-            player.checkQuests()
-            campaign.complete_scenario(self.getGame(), "bad_ending", fallback_map="siege")
+            (yield uiRequest("gui.checkQuests", player))
+            (yield from campaign.complete_scenarioFlow(self.getGame(), "bad_ending", fallback_map="siege"))
 
         def can_free_captive(self):
             game_map = self.getGame().getMap()
@@ -282,6 +314,7 @@ def load(self, context):
                 and not self.is_captive_freed()
             )
 
+        @resumableHook
         def free_captive(self):
             game_map = self.getGame().getMap()
             if not self.can_free_captive():
@@ -299,23 +332,32 @@ def load(self, context):
                 game_map.setBoolProperty("reward_claimed", True)
                 player.addGold(300)
                 player.addItem("LifePotion")
-                showRewardReceipt(
-                    self.getGame(),
-                    "The captive is free",
-                    reward_before,
-                    "You earn 300 gold and a Life Potion. The rescued captive points toward a siege beyond the marsh.",
+                campaign.prepareCompletion(self.getGame(), "good_ending", fallback_map="siege")
+                (
+                    yield from showRewardReceiptFlow(
+                        flowGame(self.getGame()),
+                        "The captive is free",
+                        reward_before,
+                        "You earn 300 gold and a Life Potion. The rescued captive points toward a siege beyond the marsh.",
+                    )
                 )
-            player.checkQuests()
-            campaign.complete_scenario(self.getGame(), "good_ending", fallback_map="siege")
+            campaign.prepareCompletion(self.getGame(), "good_ending", fallback_map="siege")
+            (yield uiRequest("gui.checkQuests", player))
+            (yield from campaign.complete_scenarioFlow(self.getGame(), "good_ending", fallback_map="siege"))
 
     @trigger(context, "onTurn", "ritualTurnAnchor")
     class RitualTurnTrigger(CTrigger):
+        @resumableHook
         def trigger(self, object, event):
             game_map = object.getMap()
             if not game_map.getBoolProperty("ritual_active") or game_map.getBoolProperty("ritual_finished"):
                 return
 
             current_turn = game_map.getTurn()
+            if game_map.getStringProperty("pendingRitualWave"):
+                yield from spawnWaveFlow(game_map)
+                game_map.setNumericProperty("ritual_last_wave_turn", current_turn)
+                yield from updateAnchorProgressFlow(game_map)
             last_tick = game_map.getNumericProperty("ritual_last_tick_turn")
             if current_turn - last_tick >= 5:
                 countdown = game_map.getNumericProperty("ritual_countdown") - 1
@@ -328,30 +370,36 @@ def load(self, context):
                     game_map.getGame().getGuiHandler().notify("The chapel trembles. The captive is almost lost.")
                 if countdown <= 0:
                     game_map.setBoolProperty("captive_lost", True)
-                    set_bad_outcome(game_map, "The final verse completes. The captive soul is bound forever.")
+                    (
+                        yield from setBadOutcomeFlow(
+                            game_map, "The final verse completes. The captive soul is bound forever."
+                        )
+                    )
 
             last_wave = game_map.getNumericProperty("ritual_last_wave_turn")
             if current_turn - last_wave >= 4 and not game_map.getBoolProperty("anchors_destroyed"):
-                spawn_wave(game_map)
+                yield from spawnWaveFlow(game_map)
                 game_map.setNumericProperty("ritual_last_wave_turn", current_turn)
 
             if game_map.getBoolProperty("anchors_destroyed") and not game_map.getBoolProperty("leader_spawned"):
-                try_spawn_leader(game_map)
+                (yield from trySpawnLeaderFlow(game_map))
 
     @trigger(context, "onEnter", "ritualWitness")
     class WitnessTrigger(CTrigger):
+        @resumableHook
         def trigger(self, object, event):
             if event.getCause().isPlayer():
-                game = object.getGame()
+                game = flowGame(object.getGame())
                 dialog = game.createObject("chapelWarningDialog")
                 narrative.appendDialogContext(dialog, "ENTRY", narrative.townRecap(game))
-                game.getGuiHandler().showDialog(dialog)
+                (yield uiRequest("gui.showDialog", dialog))
 
     @trigger(context, "onEnter", "chapelRecords")
     class RecordsTrigger(CTrigger):
+        @resumableHook
         def trigger(self, object, event):
             if event.getCause().isPlayer():
-                object.getGame().getGuiHandler().showDialog(object.getGame().createObject("recordsDialog"))
+                (yield uiRequest("gui.showDialog", object.getGame().createObject("recordsDialog")))
 
     @trigger(context, "onEnter", "sanctumThreshold")
     class SanctumTrigger(CTrigger):
@@ -361,6 +409,7 @@ def load(self, context):
 
     @trigger(context, "onDestroy", "anchorNorth")
     class AnchorNorthTrigger(CTrigger):
+        @resumableHook
         def trigger(self, object, event):
             game_map = object.getMap()
             if game_map.getBoolProperty("anchor_north_destroyed"):
@@ -369,11 +418,12 @@ def load(self, context):
             game_map.incProperty("anchors_destroyed_count", 1)
             start_ritual(game_map)
             game_map.getGame().getGuiHandler().notify(object.getStringProperty("message"))
-            spawn_wave(game_map)
-            update_anchor_progress(game_map)
+            yield from spawnWaveFlow(game_map)
+            (yield from updateAnchorProgressFlow(game_map))
 
     @trigger(context, "onDestroy", "anchorCrypt")
     class AnchorCryptTrigger(CTrigger):
+        @resumableHook
         def trigger(self, object, event):
             game_map = object.getMap()
             if game_map.getBoolProperty("anchor_crypt_destroyed"):
@@ -382,11 +432,12 @@ def load(self, context):
             game_map.incProperty("anchors_destroyed_count", 1)
             start_ritual(game_map)
             game_map.getGame().getGuiHandler().notify(object.getStringProperty("message"))
-            spawn_wave(game_map)
-            update_anchor_progress(game_map)
+            yield from spawnWaveFlow(game_map)
+            (yield from updateAnchorProgressFlow(game_map))
 
     @trigger(context, "onDestroy", "anchorSanctum")
     class AnchorSanctumTrigger(CTrigger):
+        @resumableHook
         def trigger(self, object, event):
             game_map = object.getMap()
             if game_map.getBoolProperty("anchor_sanctum_destroyed"):
@@ -395,18 +446,19 @@ def load(self, context):
             game_map.incProperty("anchors_destroyed_count", 1)
             start_ritual(game_map)
             game_map.getGame().getGuiHandler().notify(object.getStringProperty("message"))
-            spawn_wave(game_map)
-            update_anchor_progress(game_map)
+            yield from spawnWaveFlow(game_map)
+            (yield from updateAnchorProgressFlow(game_map))
 
     @trigger(context, "onDestroy", "ritualLeader")
     class RitualLeaderTrigger(CTrigger):
+        @resumableHook
         def trigger(self, object, event):
             game_map = object.getMap()
             game_map.setBoolProperty("leader_defeated", True)
             game_map.setBoolProperty("ritual_active", False)
 
             if game_map.getBoolProperty("captive_lost"):
-                set_bad_outcome(game_map, "The leader falls, but the soul-binding is already complete.")
+                (yield from setBadOutcomeFlow(game_map, "The leader falls, but the soul-binding is already complete."))
                 game_map.getGame().getGuiHandler().notify(
                     "The rite is broken. Return to the stained glass prison and carry its warning to the gatehouse."
                 )
@@ -418,18 +470,19 @@ def load(self, context):
 
     @trigger(context, "onEnter", "ritualCaptive")
     class CaptiveTrigger(CTrigger):
+        @resumableHook
         def trigger(self, object, event):
             if event.getCause().isPlayer():
-                object.getGame().getGuiHandler().showDialog(object.getGame().createObject("capturedSoulDialog"))
+                (yield uiRequest("gui.showDialog", object.getGame().createObject("capturedSoulDialog")))
 
     @trigger(context, "onEnter", "hazardNorth")
     class HazardNorthTrigger(CTrigger):
+        @resumableHook
         def trigger(self, object, event):
             if event.getCause().isPlayer() and object.getMap().getBoolProperty("ritual_active"):
                 object.getGame().getGuiHandler().notify("Soulfire erupts from the floor. Move quickly.")
-                object.getMap().addObjectByName(
-                    "ritualCultist", object.getMap().getObjectByName("waveSpawnNorth").getCoords()
-                )
+                coords = object.getMap().getObjectByName("waveSpawnNorth").getCoords()
+                yield uiRequest("gui.addObjectByName", object.getMap(), "ritualCultist", coords.x, coords.y, coords.z)
 
     @trigger(context, "onEnter", "hazardCenter")
     class HazardCenterTrigger(CTrigger):
@@ -439,12 +492,12 @@ def load(self, context):
 
     @trigger(context, "onEnter", "hazardSouth")
     class HazardSouthTrigger(CTrigger):
+        @resumableHook
         def trigger(self, object, event):
             if event.getCause().isPlayer() and object.getMap().getBoolProperty("ritual_active"):
                 object.getGame().getGuiHandler().notify("Crypt vents exhale poison. More defenders gather.")
-                object.getMap().addObjectByName(
-                    "ritualPritz", object.getMap().getObjectByName("waveSpawnWest").getCoords()
-                )
+                coords = object.getMap().getObjectByName("waveSpawnWest").getCoords()
+                yield uiRequest("gui.addObjectByName", object.getMap(), "ritualPritz", coords.x, coords.y, coords.z)
 
     @trigger(context, "onEnter", "entryCourtyard")
     class EntryCourtyardTrigger(CTrigger):

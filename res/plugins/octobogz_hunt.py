@@ -23,7 +23,8 @@ def saveHuntState(game_map, state):
 
 
 def load(self, context):
-    from game import CBuilding, CEffect, CEvent, CInteraction, CTrigger, Coords, event_loop, register
+    from game import resumableHook, uiRequest, removeObjectFlow
+    from game import CBuilding, CEffect, CEvent, CInteraction, CTrigger, Coords, register
 
     def snapshot(actor):
         data = {
@@ -209,6 +210,7 @@ def load(self, context):
                 )
             self.synchronize(game_map)
 
+        @resumableHook
         def actorRemoved(self, actor):
             game_map = actor.getMap()
             if not self.isActive(game_map):
@@ -244,12 +246,12 @@ def load(self, context):
                     lair.setStringProperty("name", "cave2")
                     lair.relocateWithoutMoveHooks(Coords(166, 21, 0))
                     game_map.addObject(lair)
-                game_map.removeObject(lair)
+                (yield from removeObjectFlow(game_map, lair))
                 player = game_map.getPlayer()
                 if player is not None:
-                    player.checkQuests()
+                    yield uiRequest("gui.checkQuests", player)
             else:
-                event_loop.instance().invoke(lambda: self.synchronize(game_map))
+                self.getGame().post(lambda: self.synchronize(game_map))
 
         def objectiveText(self, game_map):
             if not self.isActive(game_map):
@@ -281,8 +283,9 @@ def load(self, context):
 
     @register(context)
     class OctobogzHuntDefeatTrigger(CTrigger):
+        @resumableHook
         def trigger(self, actor, event):
-            self.getGame().createObject("OctobogzHuntDirector").actorRemoved(actor)
+            yield from self.getGame().createObject("OctobogzHuntDirector").actorRemovedFlow(actor)
 
     def ordinaryAttack(first, second):
         if second is None or not first.isAlive() or not second.isAlive():

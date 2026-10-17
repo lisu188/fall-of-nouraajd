@@ -22,6 +22,7 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #include "core/CMap.h"
 #include "core/CSlotConfig.h"
 #include "gui/CGui.h"
+#include "gui/CGuiTasks.h"
 #include "gui/CLayout.h"
 #include "gui/CTextureCache.h"
 #include "gui/CTextManager.h"
@@ -412,17 +413,35 @@ void CGameInventoryPanel::renderSelectionDetails(std::shared_ptr<CGui> gui, std:
 }
 
 void CGameInventoryPanel::useSelected(std::shared_ptr<CGui> gui) {
-    auto player = inventory_player(gui);
-    auto item = selectedInventory.lock();
-    actionMessage = ManagementActions::itemUseReason(player, item);
-    if (!actionMessage.empty()) {
-        return;
-    }
-    player->useItem(item);
-    if (!player->hasInInventory(item)) {
-        selectedInventory.reset();
-    }
-    refreshViews();
+    gui_async::spawn(this->ptr<CGameInventoryPanel>(),
+                     [](std::shared_ptr<CGameInventoryPanel> self, std::shared_ptr<CGui> gui) -> vstd::task<void> {
+                         auto loop = vstd::event_loop<>::instance();
+                         if (!loop->isMainThread()) {
+                             co_await vstd::post(loop);
+                         }
+                         auto player = inventory_player(gui);
+                         auto item = self->selectedInventory.lock();
+                         self->actionMessage = ManagementActions::itemUseReason(player, item);
+                         if (!self->actionMessage.empty()) {
+                             co_return;
+                         }
+                         try {
+                             co_await player->useItemAsync(item);
+                             if (inventory_player(gui) != player || !self->isAttachedToGui(gui)) {
+                                 co_return;
+                             }
+                             if (!player->hasInInventory(item) && self->selectedInventory.lock() == item) {
+                                 self->selectedInventory.reset();
+                             }
+                             self->refreshViews();
+                         } catch (const vstd::task_cancelled &) {
+                             throw;
+                         } catch (const vstd::scheduler_rejected &) {
+                             throw;
+                         } catch (const std::exception &error) {
+                             vstd::logger::error("Inventory item use failed:", error.what());
+                         }
+                     }(this->ptr<CGameInventoryPanel>(), std::move(gui)));
 }
 
 void CGameInventoryPanel::equipSelected(std::shared_ptr<CGui> gui) {

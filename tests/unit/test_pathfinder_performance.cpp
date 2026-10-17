@@ -16,6 +16,7 @@ You should have received a copy of the GNU General Public License
 along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 
+#include "core/CAsync.h"
 #include "core/CPathFinder.h"
 #include "core/CNavigation.h"
 #include "core/CNavigationSearch.h"
@@ -87,6 +88,42 @@ void expectMetricInSet(const std::string &label, const Coords &metric, const std
            << " threshold=" << allowed.size();
     const auto message = stream.str();
     expect_true(allowed.contains(metric), message.c_str());
+}
+
+vstd::task<void> countedCoroutine(int &started, int &resumed, int &destroyed) {
+    struct FrameGuard {
+        int &destroyed;
+        ~FrameGuard() { ++destroyed; }
+    } guard{destroyed};
+    ++started;
+    co_await vstd::post(vstd::event_loop<>::instance());
+    ++resumed;
+}
+
+void testCoroutineDispatchAndFrameBudgets() {
+    constexpr int task_count = 256;
+    auto loop = vstd::event_loop<>::instance();
+    loop->runUntilIdle();
+    vstd::task_group group;
+    int started = 0, resumed = 0, destroyed = 0;
+    std::vector<vstd::task_handle<void>> handles;
+    handles.reserve(task_count);
+    const auto initial_pending = loop->getPendingTaskCount();
+    for (int index = 0; index < task_count; ++index) {
+        handles.push_back(group.spawn(countedCoroutine(started, resumed, destroyed), vstd::loopScheduler(loop)));
+    }
+    expectMetricEquals("coroutine inline starts", started, task_count);
+    expectMetricEquals("coroutine pending dispatches", loop->getPendingTaskCount() - initial_pending, task_count);
+    expect_true(!group.finished(), "posted coroutine frames remain active before their dispatch batch");
+    loop->runPostedTasks();
+    expectMetricEquals("coroutine resumptions", resumed, task_count);
+    expectMetricEquals("coroutine destroyed frames", destroyed, task_count);
+    expect_true(group.finished() && group.join(), "one posted batch completes and releases every bounded task frame");
+    for (const auto &handle : handles) {
+        handle.get();
+    }
+    std::cout << "coroutine guard tasks=" << task_count << " starts=" << started << " resumes=" << resumed
+              << " framesDestroyed=" << destroyed << '\n';
 }
 
 std::vector<Coords> countedDefaultNeighbors(CallbackCounters &counters, const Coords &coords) {
@@ -436,9 +473,10 @@ void testRepeatedAsyncFindNextStep() {
     auto step_cost = [&counters](const Coords &from, const Coords &to) { return countedUnitCost(counters, from, to); };
 
     for (int i = 0; i < repetitions; ++i) {
-        const auto next_step =
-            CPathFinder::findNextStep(start, goal, can_step, waypoint, neighbors, distance, step_cost);
-        expect_true(next_step->get() == Coords(1, 0, 0), "async next step metric=1 baseline=1 threshold=1");
+        auto next_step =
+            CPathFinder::findNextStepAsync(start, goal, can_step, waypoint, neighbors, distance, step_cost);
+        expect_true(game_async::run(std::move(next_step), game_async::WaitMode::PostedWork) == Coords(1, 0, 0),
+                    "async next step metric=1 baseline=1 threshold=1");
     }
 
     expectMetricAtMost("async neighbor calls", counters.neighbors, repetitions * expected_step_count,
@@ -859,6 +897,7 @@ void testWeightedConnectorCostsStayWithinWorkBound() {
 } // namespace
 
 void run_pathfinder_performance_tests() {
+    testCoroutineDispatchAndFrameBudgets();
     testExplicitBudgetBoundsUnreachableGoalInOpenPlane();
     testEnvelopeBudgetPreservesReachableNavigation();
     testLargeBoundedOpenGrid();

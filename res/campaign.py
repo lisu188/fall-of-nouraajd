@@ -52,6 +52,80 @@ CAMPAIGN_HISTORY_PROPERTY = "campaign_history"
 CAMPAIGN_VAR_PREFIX = "campaign_var_"
 CAMPAIGN_PENDING_PROPERTY = "campaign_pendingTransition"
 _INFLIGHT_TRANSITIONS = WeakKeyDictionary()
+_INFLIGHT_PRESENTATIONS = WeakKeyDictionary()
+
+
+class _TransitionGuard:
+    def __init__(self, game):
+        self.game = game
+
+
+class _CompletionOwner:
+    def __init__(self, game, store):
+        from ui import flowGame
+
+        self.game = flowGame(game)
+        self.map = game.getMap()
+        self.player = store.player
+        self.campaign = store.campaign_id()
+        self.scenario = store.scenario()
+        self.finished = store.finished()
+        self.history = store.history()
+        self.pending = self.player.getStringProperty(CAMPAIGN_PENDING_PROPERTY)
+        getter = getattr(game, "getContext", None)
+        self.context = getter() if callable(getter) else None
+        capture = getattr(self.context, "captureTransitionGeneration", None)
+        self.generation = capture() if callable(capture) else None
+
+    def isCurrent(self, check_generation=True):
+        try:
+            if self.context is not None:
+                if not self.context.isActive():
+                    return False
+                if check_generation and self.generation is not None:
+                    if not self.context.isTransitionGenerationCurrent(self.generation):
+                        return False
+            current_map = self.game.getMap()
+            if current_map is not self.map or current_map is None or current_map.getPlayer() is not self.player:
+                return False
+            store = CampaignStateStore(self.player)
+            return (
+                store.campaign_id() == self.campaign
+                and store.scenario() == self.scenario
+                and store.finished() == self.finished
+                and store.history() == self.history
+                and self.player.getStringProperty(CAMPAIGN_PENDING_PROPERTY) == self.pending
+            )
+        except RuntimeError:
+            return False
+
+
+def _callbackGame(game):
+    from ui import UiFlowGame
+
+    if isinstance(game, UiFlowGame):
+        return game
+    create_resolver = getattr(game, "createWeakResolver", None)
+    return UiFlowGame(create_resolver()) if callable(create_resolver) else game
+
+
+def _transitionInFlight(game):
+    return _operationInFlight(game, _INFLIGHT_TRANSITIONS)
+
+
+def _operationInFlight(game, operations):
+    from ui import uiGame
+
+    owner = uiGame(game)
+    for guard in operations:
+        try:
+            if uiGame(guard.game) is owner:
+                return True
+        except RuntimeError:
+            # Native weak resolvers reject an owner destroyed while its request is being cancelled.
+            continue
+    return False
+
 
 # Carryover policy keys supported at scenario entry. ``gold_max`` clamps gold,
 # the item filters keep/strip inventory by config id. Exactly one of
@@ -323,6 +397,18 @@ def apply_carryover(player, carryover):
         _remove_inventory_items(player, lambda item: item.getTypeId() in denied)
 
 
+def _carryoverPreview(player, policy):
+    gold = min(player.getGold(), policy.get(CARRYOVER_GOLD_MAX, player.getGold()))
+    allowed = policy.get(CARRYOVER_ITEMS_ALLOW)
+    denied = policy.get(CARRYOVER_ITEMS_DENY, ())
+    count = sum(
+        1
+        for item in player.getItems()
+        if (allowed is None or item.getTypeId() in allowed) and item.getTypeId() not in denied
+    )
+    return gold, count
+
+
 def _remove_inventory_items(player, predicate):
     match_count = sum(1 for item in player.getItems() if predicate(item))
     for _ in range(match_count):
@@ -431,23 +517,43 @@ def _show_screen(game, title, body, action_label, fallback_text=None, artwork=""
     _show_message(game, fallback_text if fallback_text is not None else body)
 
 
+def _show_screenFlow(game, title, body, action_label, fallback_text=None, artwork=""):
+    from ui import uiRequest
+
+    if not body:
+        return
+    gui = game.getGuiHandler()
+    if artwork and callable(getattr(gui, "showCampaignArtworkScreen", None)):
+        yield uiRequest("gui.showCampaignArtworkScreen", title, body, action_label, artwork)
+    elif callable(getattr(gui, "showCampaignScreen", None)):
+        yield uiRequest("gui.showCampaignScreen", title, body, action_label)
+    else:
+        yield uiRequest("gui.showMessage", fallback_text if fallback_text is not None else body)
+
+
 def start(game, campaign_id, player_class, race_id=""):
+    from ui import runUiFlow
+
+    return runUiFlow(game, startFlow(game, campaign_id, player_class, race_id))
+
+
+def startFlow(game, campaign_id, player_class, race_id=""):
     """Begin a campaign: start its first scenario map with a fresh player of
     the given class/race, stamp campaign state onto that player, and show the
     opening briefing. Returns the campaign state store."""
+    from ui import flowGame, uiRequest
+
+    game = flowGame(game)
+
     manifest = get_manifest(campaign_id)
     first_id = manifest["start"]
     scenario = manifest["scenarios"][first_id]
-    from _game import CGameLoader  # lazy: keeps this module importable without the engine
-
-    if race_id:
-        CGameLoader.startGameWithPlayer(game, scenario["map"], player_class, race_id)
-    else:
-        CGameLoader.startGameWithPlayer(game, scenario["map"], player_class)
+    yield uiRequest("gui.startGameWithPlayer", scenario["map"], player_class, race_id)
     store = state(game)
     _require(store is not None, f'campaign "{campaign_id}" failed to start map "{scenario["map"]}" with a player')
     store.begin(campaign_id, first_id)
-    _show_screen(
+    yield uiRequest(
+        "campaign._show_screen",
         game,
         scenario["title"],
         scenario["briefing"],
@@ -468,25 +574,102 @@ def complete_scenario(game, outcome, fallback_map=None, outcome_summary=""):
     caller and is included in the existing outcome acknowledgment. Returns the
     next scenario id, "" when the campaign finished, or None when no campaign was active.
     """
+    from ui import runUiFlow
+
+    return runUiFlow(game, complete_scenarioFlow(game, outcome, fallback_map, outcome_summary))
+
+
+def prepareCompletion(game, outcome, fallback_map=None, outcome_summary=""):
+    """Persist a committed authored outcome before its reward acknowledgment can be cancelled."""
     store = state(game)
-    if store is None or not store.active():
-        if store is not None and fallback_map:
-            _beginTransition(game, store, outcome, fallback_map)
-        elif fallback_map:
-            game.changeMap(fallback_map)
+    if store is None:
         return None
     pending = _pendingTransition(game)
+    if pending and pending.get("stage") == "entry":
+        _finalizeEntry(store, pending)
+        pending = None
     if pending:
         _require(
             pending["scenario"] == store.scenario() and pending["outcome"] == outcome,
             "a different campaign outcome is already awaiting its map transition",
         )
-        retryPending(game)
+        return pending
+    if not store.active() and not fallback_map:
+        return None
+    target_id, target_map, stage = "", fallback_map or "", "authored"
+    if store.active():
+        manifest = get_manifest(store.campaign_id())
+        target_id = next_scenario(manifest, store.scenario(), outcome)
+        target_map = manifest["scenarios"][target_id]["map"] if target_id is not None else ""
+        stage = "outcome"
+    pending = {
+        "campaignId": store.campaign_id(),
+        "scenario": store.scenario(),
+        "outcome": outcome,
+        "targetMap": target_map,
+        "targetScenario": target_id or "",
+        "stage": stage,
+        "outcomeSummary": outcome_summary,
+    }
+    map_name = getattr(game.getMap(), "getMapName", None)
+    if callable(map_name):
+        pending["sourceMap"] = map_name()
+    store.player.setStringProperty(CAMPAIGN_PENDING_PROPERTY, json.dumps(pending, sort_keys=True))
+    return pending
+
+
+def complete_scenarioFlow(game, outcome, fallback_map=None, outcome_summary=""):
+    from ui import flowGame
+
+    game = flowGame(game)
+    pending = prepareCompletion(game, outcome, fallback_map, outcome_summary)
+    if pending is None:
+        if state(game) is None and fallback_map:
+            game.changeMap(fallback_map)
+        return None
+    store = state(game)
+    if pending.get("stage", "transition") in {"transition", "authored"}:
+        _requestPendingTransition(game, pending)
+        return pending["targetScenario"] if store.active() else None
+    if _operationInFlight(game, _INFLIGHT_PRESENTATIONS):
         return pending["targetScenario"]
-    manifest = get_manifest(store.campaign_id())
-    current_id = store.scenario()
+    guard = _TransitionGuard(game)
+    _INFLIGHT_PRESENTATIONS[guard] = True
+    try:
+        return (yield from _presentCompletionFlow(game, store, pending))
+    finally:
+        _INFLIGHT_PRESENTATIONS.pop(guard, None)
+
+
+def _presentCompletionFlow(game, store, pending):
+    owner = _CompletionOwner(game, store)
+    if not owner.isCurrent():
+        return None
+    manifest = get_manifest(pending["campaignId"])
+    expected_id = next_scenario(manifest, pending["scenario"], pending["outcome"])
+    _require(
+        (expected_id or "") == pending["targetScenario"], "pending completion no longer matches the campaign route"
+    )
+    expected_map = manifest["scenarios"][expected_id]["map"] if expected_id is not None else ""
+    _require(expected_map == pending["targetMap"], "pending completion map no longer matches its chapter")
+    if pending["stage"] == "completion":
+        _require(expected_id is None and store.finished(), "pending campaign completion was not committed")
+        yield from _finishPresentationFlow(game, store, manifest)
+        return ""
+    if store.finished():
+        _require(
+            expected_id is None and (pending["scenario"], pending["outcome"]) in store.history(),
+            "pending outcome conflicts with committed campaign completion",
+        )
+        pending["stage"] = "completion"
+        store.player.setStringProperty(CAMPAIGN_PENDING_PROPERTY, json.dumps(pending, sort_keys=True))
+        yield from _finishPresentationFlow(game, store, manifest)
+        return ""
+    current_id = pending["scenario"]
     current = manifest["scenarios"][current_id]
-    target_id = next_scenario(manifest, current_id, outcome)
+    target_id = pending["targetScenario"] or None
+    outcome = pending["outcome"]
+    outcome_summary = pending.get("outcomeSummary", "")
     outcome_body = "Outcome: " + outcome.replace("_", " ").capitalize() + "."
     if current.get("epilogue"):
         outcome_body += "\n\n" + current["epilogue"]
@@ -494,7 +677,7 @@ def complete_scenario(game, outcome, fallback_map=None, outcome_summary=""):
         outcome_body += "\n\n" + outcome_summary
     if target_id is not None:
         outcome_body += "\n\nNext chapter: " + manifest["scenarios"][target_id]["title"]
-    _show_screen(
+    yield from _show_screenFlow(
         game,
         current["title"],
         outcome_body,
@@ -502,19 +685,33 @@ def complete_scenario(game, outcome, fallback_map=None, outcome_summary=""):
         fallback_text=outcome_body if outcome_summary else current.get("epilogue", outcome_body),
         artwork=current.get("artwork", ""),
     )
+    if not owner.isCurrent():
+        return None
     if target_id is None:
-        store.record_outcome(current_id, outcome)
+        if (current_id, outcome) not in store.history():
+            store.record_outcome(current_id, outcome)
         store.finish()
-        _show_screen(
-            game,
-            manifest["title"],
-            manifest.get("completionText") or f'The campaign "{manifest["title"]}" is complete.',
-            ACTION_RETURN,
-            artwork=manifest.get("artwork", ""),
-        )
+        pending["stage"] = "completion"
+        store.player.setStringProperty(CAMPAIGN_PENDING_PROPERTY, json.dumps(pending, sort_keys=True))
+        yield from _finishPresentationFlow(game, store, manifest)
         return ""
-    _beginTransition(game, store, outcome, manifest["scenarios"][target_id]["map"], target_id)
+    pending["stage"] = "transition"
+    store.player.setStringProperty(CAMPAIGN_PENDING_PROPERTY, json.dumps(pending, sort_keys=True))
+    _requestPendingTransition(game, pending)
     return target_id
+
+
+def _finishPresentationFlow(game, store, manifest):
+    owner = _CompletionOwner(game, store)
+    yield from _show_screenFlow(
+        game,
+        manifest["title"],
+        manifest.get("completionText") or f'The campaign "{manifest["title"]}" is complete.',
+        ACTION_RETURN,
+        artwork=manifest.get("artwork", ""),
+    )
+    if owner.isCurrent():
+        store.player.setStringProperty(CAMPAIGN_PENDING_PROPERTY, "")
 
 
 def _pendingTransition(game):
@@ -533,13 +730,25 @@ def _pendingTransition(game):
             return None
         if pending["campaignId"] != store.campaign_id() or pending["scenario"] != store.scenario():
             return None
+        if pending.get("stage", "transition") not in {"transition", "authored", "outcome", "completion", "entry"}:
+            return None
+        if not isinstance(pending.get("outcomeSummary", ""), str):
+            return None
+        if "sourceMap" in pending:
+            map_name = getattr(game.getMap(), "getMapName", None)
+            if (
+                not isinstance(pending["sourceMap"], str)
+                or not callable(map_name)
+                or map_name() != pending["sourceMap"]
+            ):
+                return None
         return pending
     except (ValueError, TypeError):
         return None
 
 
 def hasPendingTransition(game):
-    """Whether a saved chapter outcome still needs its map transition."""
+    """Whether a saved chapter outcome still needs acknowledgment or its map transition."""
     return _pendingTransition(game) is not None
 
 
@@ -557,11 +766,65 @@ def _beginTransition(game, store, outcome, target_map, target_id=""):
 
 def retryPending(game):
     """Retry only the saved transition; authored rewards and judgments stay claimed."""
+    from ui import runUiFlow
+
+    return runUiFlow(game, retryPendingFlow(game))
+
+
+def retryPendingFlow(game):
+    from ui import flowGame, uiRequest
+
+    game = flowGame(game)
     pending = _pendingTransition(game)
-    if pending is None or game in _INFLIGHT_TRANSITIONS:
+    if pending is None or _transitionInFlight(game) or _operationInFlight(game, _INFLIGHT_PRESENTATIONS):
         return False
     store = state(game)
+    owner = _CompletionOwner(game, store)
+    if pending.get("stage") == "entry":
+        if not owner.isCurrent():
+            return False
+        _finalizeEntry(store, pending)
+        if callable(getattr(store.player, "checkQuests", None)):
+            yield uiRequest("gui.checkQuests", store.player)
+        return True
+    guard = _TransitionGuard(game)
+    _INFLIGHT_PRESENTATIONS[guard] = True
+    try:
+        if pending.get("stage", "transition") in {"outcome", "authored"}:
+            player = state(game).player
+            if callable(getattr(player, "checkQuests", None)):
+                yield uiRequest("gui.checkQuests", player)
+                if not owner.isCurrent():
+                    return False
+        if pending.get("stage", "transition") in {"outcome", "completion"}:
+            result = yield from _presentCompletionFlow(game, store, pending)
+            return result is not None
+        return _requestPendingTransition(game, pending)
+    finally:
+        _INFLIGHT_PRESENTATIONS.pop(guard, None)
+
+
+def _finalizeEntry(store, pending):
+    if pending["targetScenario"]:
+        _require(
+            (pending.get("sourceScenario", ""), pending["outcome"]) in store.history(),
+            "pending destination entry has no committed outcome",
+        )
+    store.player.setStringProperty(CAMPAIGN_PENDING_PROPERTY, "")
+
+
+def _requestPendingTransition(game, pending):
+    if _transitionInFlight(game):
+        return False
+    store = state(game)
+    if store is None or _pendingTransition(game) != pending:
+        return False
+    owner = _CompletionOwner(game, store)
+    if not owner.isCurrent():
+        return False
     player = store.player
+    source_scenario = pending["scenario"]
+    owned_pending = owner.pending
     target = None
     if pending["targetScenario"]:
         manifest = get_manifest(pending["campaignId"])
@@ -572,11 +835,18 @@ def retryPending(game):
         target = manifest["scenarios"][pending["targetScenario"]]
         _require(target["map"] == pending["targetMap"], "pending campaign map no longer matches its chapter")
     original = None
+    committed = False
     token = object()
-    _INFLIGHT_TRANSITIONS[game] = token
+    game = _callbackGame(game)
+    guard = _TransitionGuard(game)
+    _INFLIGHT_TRANSITIONS[guard] = token
+    request_flow = getattr(game, "changeMapWithPreparationFlow", None)
+    asynchronous = callable(request_flow)
 
     def beforeEntry():
-        nonlocal original
+        nonlocal original, committed
+        _require(owner.isCurrent(check_generation=False), "The source adventure changed before chapter preparation")
+        entry_owner = _CompletionOwner(game, store)
         original = (
             store.scenario(),
             player.getStringProperty(CAMPAIGN_HISTORY_PROPERTY),
@@ -585,30 +855,76 @@ def retryPending(game):
         )
         if target is None:
             return
-        apply_carryover(player, target.get("carryover"))
-        store.record_outcome(pending["scenario"], pending["outcome"])
-        store.advance(pending["targetScenario"])
         briefing = target["briefing"]
         if target.get("carryover"):
-            briefing += f"\n\nCarryover\nGold carried: {player.getGold()}\nBag items carried: {len(player.getItems())}"
+            gold, count = _carryoverPreview(player, target["carryover"])
+            briefing += f"\n\nCarryover\nGold carried: {gold}\nBag items carried: {count}"
             if CARRYOVER_GOLD_MAX in target["carryover"]:
                 briefing += f"\nThis chapter limits carried gold to {target['carryover'][CARRYOVER_GOLD_MAX]}."
-        _show_screen(
-            game,
-            target["title"],
-            briefing,
-            ACTION_BEGIN,
-            fallback_text=_scenario_intro(target),
-            artwork=target.get("artwork", ""),
-        )
+
+        def prepareFlow():
+            yield from _show_screenFlow(
+                game,
+                target["title"],
+                briefing,
+                ACTION_BEGIN,
+                fallback_text=_scenario_intro(target),
+                artwork=target.get("artwork", ""),
+            )
+            _require(entry_owner.isCurrent(), "The source adventure changed during chapter preparation")
+
+        return prepareFlow()
+
+    def commitBeforeEntry():
+        nonlocal committed, owned_pending
+        _require(owner.isCurrent(check_generation=False), "The source adventure changed before chapter commit")
+        if target is not None:
+            apply_carryover(player, target.get("carryover"))
+            if (source_scenario, pending["outcome"]) not in store.history():
+                store.record_outcome(source_scenario, pending["outcome"])
+            store.advance(pending["targetScenario"])
+        committed = True
+        pending["sourceScenario"] = source_scenario
+        pending["scenario"] = store.scenario()
+        pending["stage"] = "entry"
+        if "sourceMap" in pending:
+            pending["sourceMap"] = pending["targetMap"]
+        owned_pending = json.dumps(pending, sort_keys=True)
+        player.setStringProperty(CAMPAIGN_PENDING_PROPERTY, owned_pending)
 
     def completion(success):
-        if _INFLIGHT_TRANSITIONS.get(game) is token:
-            _INFLIGHT_TRANSITIONS.pop(game, None)
+        if _INFLIGHT_TRANSITIONS.get(guard) is not token:
+            return
+        _INFLIGHT_TRANSITIONS.pop(guard, None)
+        expected_scenario = pending["targetScenario"] if committed and target is not None else source_scenario
+        owns_player = (
+            store.campaign_id() == pending["campaignId"]
+            and store.scenario() == expected_scenario
+            and player.getStringProperty(CAMPAIGN_PENDING_PROPERTY) == owned_pending
+        )
         if success:
-            player.setStringProperty(CAMPAIGN_PENDING_PROPERTY, "")
+            try:
+                current = state(game)
+                active = owner.context is None or owner.context.isActive()
+                if (
+                    owns_player
+                    and active
+                    and (target is None or committed)
+                    and current is not None
+                    and current.player is player
+                ):
+                    player.setStringProperty(CAMPAIGN_PENDING_PROPERTY, "")
+            except RuntimeError:
+                pass
         else:
-            if original is not None:
+            can_restore = owns_player
+            try:
+                current_map = game.getMap()
+                if current_map is not owner.map and current_map is not None and current_map.getPlayer() is player:
+                    can_restore = False
+            except RuntimeError:
+                pass
+            if original is not None and can_restore:
                 scenario_id, history, gold, items = original
                 store.advance(scenario_id)
                 player.setStringProperty(CAMPAIGN_HISTORY_PROPERTY, history)
@@ -616,18 +932,62 @@ def retryPending(game):
                 _remove_inventory_items(player, lambda item: item not in items)
                 for item in items - set(player.getItems()):
                     player.addItem(item)
-            context = game.getContext() if hasattr(game, "getContext") else None
+                player.setStringProperty(CAMPAIGN_PENDING_PROPERTY, owner.pending)
+            if not owner.isCurrent(check_generation=False):
+                return
+            try:
+                context = game.getContext() if hasattr(game, "getContext") else None
+            except RuntimeError:
+                return
             if context is None or context.isActive():
-                _show_message(
-                    game,
+                message = (
                     "The next chapter could not be loaded. Your chapter progress and carried items "
-                    "are unchanged. Retry the chapter transition from the pause menu.",
+                    "are unchanged. Retry the chapter transition from the pause menu."
                 )
+                if asynchronous:
+                    game.getGuiHandler().showMessageLater(message)
+                else:
+                    _show_message(game, message)
+
+    def beforeEntrySynchronous():
+        from ui import runUiFlow
+
+        presentation = beforeEntry()
+        if presentation is not None:
+            runUiFlow(game, presentation)
+        commitBeforeEntry()
+
+    def beforeEntryLegacyFlow():
+        presentation = beforeEntry()
+        if presentation is not None:
+            yield from presentation
+        commitBeforeEntry()
 
     try:
-        return game.changeMapWithPreparation(pending["targetMap"], beforeEntry, completion)
+        if asynchronous:
+            if _supportsCommitCallback(request_flow):
+                return request_flow(pending["targetMap"], beforeEntry, completion, commitBeforeEntry)
+            return request_flow(pending["targetMap"], beforeEntryLegacyFlow, completion)
+        return game.changeMapWithPreparation(pending["targetMap"], beforeEntrySynchronous, completion)
     except Exception:
         # A binding error before the native request was queued must also release the retry lock.
-        if _INFLIGHT_TRANSITIONS.get(game) is token:
+        if _INFLIGHT_TRANSITIONS.get(guard) is token:
             completion(False)
         raise
+
+
+def _supportsCommitCallback(callback):
+    # Older Python adapters can preserve their synchronous preparation contract.
+    # Native bindings must support the atomic fourth callback from this engine version.
+    if not hasattr(callback, "__code__"):
+        return True
+    from inspect import Parameter, signature
+
+    parameters = tuple(signature(callback).parameters.values())
+    return (
+        any(parameter.kind == Parameter.VAR_POSITIONAL for parameter in parameters)
+        or sum(
+            parameter.kind in {Parameter.POSITIONAL_ONLY, Parameter.POSITIONAL_OR_KEYWORD} for parameter in parameters
+        )
+        >= 4
+    )
