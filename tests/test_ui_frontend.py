@@ -711,10 +711,12 @@ class FrontendSaveTest(unittest.TestCase):
 class FrontendPreferencesTest(unittest.TestCase):
     def testSettingsUpdatesPreserveOtherFields(self):
         game = FakeGame(["textScale", "150", ""])
+        game.gui.settings["reducedMotion"] = True
         ui.showSettings(game)
         self.assertEqual(150, game.gui.settings["textScale"])
         self.assertEqual("preserve", game.gui.settings["customSetting"])
         self.assertEqual(ui.DEFAULT_BINDINGS, game.gui.settings["bindings"])
+        self.assertTrue(game.gui.settings["reducedMotion"])
 
     def testHelpReflectsRemappedKeys(self):
         game = FakeGame()
@@ -722,8 +724,10 @@ class FrontendPreferencesTest(unittest.TestCase):
         text = ui.helpText(game)
         self.assertIn("Inventory: b", text)
         self.assertNotIn("Developer console", text)
-        self.assertIn("preview a route", text)
-        self.assertIn("Choose Travel or press Enter", text)
+        self.assertIn("Click a walkable tile once to walk there", text)
+        self.assertIn("each step shown in turn", text)
+        self.assertIn("Travel stops for encounters", text)
+        self.assertIn("Escape stops travel", text)
         self.assertIn("Select an item to inspect", text)
         self.assertIn("holding a key does not repeat", text)
         self.assertIn("Press M to expand", text)
@@ -737,6 +741,7 @@ class FrontendPreferencesTest(unittest.TestCase):
         game.gui.applyUiPreferences.assert_called_once_with("{}")
         self.assertEqual("Reset defaults", game.handler.confirmations[0][2])
         self.assertIn("Text size: 100%", game.handler.confirmations[0][1])
+        self.assertIn("Reduced motion: Off", game.handler.confirmations[0][1])
         self.assertEqual(["Settings saved."], game.gui.notifications)
 
     def testCancellingResetKeepsCurrentSettings(self):

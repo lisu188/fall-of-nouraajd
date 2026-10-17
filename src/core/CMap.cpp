@@ -919,9 +919,11 @@ void CMap::move() {
     }
 }
 
-vstd::task<void> CMap::moveAsync() { return moveOwnedAsync(this->ptr<CMap>()); }
+vstd::task<void> CMap::moveAsync(CMovementPresenter presenter) {
+    return moveOwnedAsync(this->ptr<CMap>(), std::move(presenter));
+}
 
-vstd::task<void> CMap::moveOwnedAsync(std::shared_ptr<CMap> map) {
+vstd::task<void> CMap::moveOwnedAsync(std::shared_ptr<CMap> map, CMovementPresenter presenter) {
     auto loop = vstd::event_loop<>::instance();
     if (!loop->isMainThread()) {
         co_await vstd::post(loop);
@@ -1054,7 +1056,7 @@ vstd::task<void> CMap::moveOwnedAsync(std::shared_ptr<CMap> map) {
             }
 
             const bool interrupt_after_step = should_interrupt_after_step(creature, target);
-            co_await creature->moveToAsync(target);
+            co_await creature->moveToAsync(target, {}, presenter);
 
             if (!canApplyDeferredMoveWork() || creature->getController() != controller_ptr ||
                 !is_active_creature(creature) || map->normalizeCoords(creature->getCoords()) != target) {

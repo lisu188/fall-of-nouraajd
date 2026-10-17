@@ -12,6 +12,43 @@
 #include <algorithm>
 
 namespace {
+class CMapProxyLayout : public CProxyGraphicsLayout {
+  public:
+    explicit CMapProxyLayout(std::weak_ptr<CMapGraphicsObject> owner) : owner(std::move(owner)) {}
+
+    std::shared_ptr<SDL_Rect> getRect(std::shared_ptr<CGameGraphicsObject> object) override {
+        auto rect = CProxyGraphicsLayout::getRect(std::move(object));
+        if (auto view = owner.lock()) {
+            const auto offset = view->getCameraOffset(rect->w);
+            rect->x += offset.x - rect->w;
+            rect->y += offset.y - rect->h;
+        }
+        return rect;
+    }
+
+  private:
+    std::weak_ptr<CMapGraphicsObject> owner;
+};
+
+class CMapActorLayout : public CParentLayout {
+  public:
+    explicit CMapActorLayout(std::weak_ptr<CMapGraphicsObject> owner) : owner(std::move(owner)) {}
+
+    std::shared_ptr<SDL_Rect> getRect(std::shared_ptr<CGameGraphicsObject> object) override {
+        auto rect = CParentLayout::getRect(object);
+        auto animation = vstd::cast<CAnimation>(object);
+        if (auto view = owner.lock(); view && animation) {
+            const auto offset = view->getActorOffset(animation->getObject(), rect->w);
+            rect->x += offset.x;
+            rect->y += offset.y;
+        }
+        return rect;
+    }
+
+  private:
+    std::weak_ptr<CMapGraphicsObject> owner;
+};
+
 std::shared_ptr<CAnimation> clone_proxy_animation(const std::shared_ptr<CGui> &gui,
                                                   const std::shared_ptr<CAnimation> &cached) {
     auto animation = gui->getGame()->createObject<CAnimation>(cached->meta()->name());
@@ -34,6 +71,7 @@ std::shared_ptr<CAnimation> CMapGraphicsObject::syncProxyAnimation(std::shared_p
     }
     if (!animation || animation->meta()->name() != cached->meta()->name()) {
         animation = clone_proxy_animation(gui, cached);
+        animation->setLayout(std::make_shared<CMapActorLayout>(ptr<CMapGraphicsObject>()));
     }
     animation->setObject(object);
     animation->setPriority(cached->getPriority());
@@ -69,7 +107,8 @@ std::list<std::shared_ptr<CGameGraphicsObject>> CMapGraphicsObject::getProxiedOb
     auto proxyCoords = Coords(x, y, playerCoords.z);
     int tileCountX = gui->getTileCountX();
     int tileCountY = gui->getTileCountY();
-    auto rawCoords = Coords(playerCoords.x - tileCountX / 2 + x, playerCoords.y - tileCountY / 2 + y, playerCoords.z);
+    auto rawCoords =
+        Coords(playerCoords.x - tileCountX / 2 + x - 1, playerCoords.y - tileCountY / 2 + y - 1, playerCoords.z);
     auto actualCoords = map->normalizeCoords(rawCoords);
     auto &slot = proxyAnimations[proxyCoords];
 
@@ -81,7 +120,7 @@ std::list<std::shared_ptr<CGameGraphicsObject>> CMapGraphicsObject::getProxiedOb
             [actualCoords, weakSelf](std::shared_ptr<CGui> gui, SDL_EventType type, int button, int, int) {
                 if (type == SDL_MOUSEBUTTONDOWN && button == SDL_BUTTON_LEFT) {
                     if (auto self = weakSelf.lock())
-                        self->previewDestination(gui, actualCoords);
+                        self->startTravel(gui, actualCoords);
                     return true;
                 }
                 return false;
@@ -168,19 +207,6 @@ void CMapGraphicsObject::initialize() {
                                    self->getGui()->getGame()->getMap()->connect("tileChanged", self, "refreshObject");
                                    self->getGui()->getGame()->getMap()->connect("objectChanged", self, "refreshObject");
                                    self->refresh();
-                                   auto action = self->getGui()->getGame()->createObject<CButton>();
-                                   action->setText("Travel to destination  Enter");
-                                   action->setClick("commitDestination");
-                                   auto layout = std::make_shared<CLayout>();
-                                   layout->setHorizontal("CENTER");
-                                   layout->setVertical("DOWN");
-                                   layout->setW("400");
-                                   layout->setH("56");
-                                   action->setLayout(layout);
-                                   action->setPriority(10);
-                                   action->setRuntimeHidden(true);
-                                   self->destinationButton = action;
-                                   self->addChild(action);
                                }));
 }
 
@@ -206,10 +232,6 @@ void CMapGraphicsObject::previewDestination(std::shared_ptr<CGui> gui, Coords de
     previewEpoch = map->getRoutingEpoch();
     previewGeneration = gui->getGame()->getContext()->captureTransitionGeneration();
     previewRequest = controller->getRequestSerial();
-    if (destinationButton)
-        destinationButton->setRuntimeHidden(false);
-    gui->notify("Destination " + std::to_string(destination.x) + ", " + std::to_string(destination.y) +
-                ". Inspect the route, then choose Travel to destination.");
     refreshAll();
 }
 
@@ -218,29 +240,104 @@ void CMapGraphicsObject::commitDestination(std::shared_ptr<CGui> gui) {
 }
 
 vstd::task<void> CMapGraphicsObject::commitDestinationAsync(std::shared_ptr<CGui> gui) {
-    return [](std::shared_ptr<CMapGraphicsObject> self, std::shared_ptr<CGui> gui) -> vstd::task<void> {
+    return travelAsync(std::move(gui), true);
+}
+
+void CMapGraphicsObject::startTravel(std::shared_ptr<CGui> gui, Coords destination) {
+    submitOrder(std::move(gui), {destination});
+}
+
+void CMapGraphicsObject::submitOrder(std::shared_ptr<CGui> gui, TravelOrder order) {
+    auto map = gui && gui->getGame() ? gui->getGame()->getMap() : nullptr;
+    if (!map || !map->getPlayer() || !map->getPlayer()->isAlive() || !gui->isActive())
+        return;
+    if (map->isMoving() && !travelling)
+        return;
+    pendingOrder = order;
+    stopRequested = false;
+    if (travelling)
+        return;
+    travelling = true;
+    try {
+        gui_async::spawn(ptr<CMapGraphicsObject>(), travelAsync(std::move(gui), false));
+    } catch (...) {
+        travelling = false;
+        pendingOrder.reset();
+        throw;
+    }
+}
+
+void CMapGraphicsObject::cancelTravel() {
+    stopRequested = true;
+    pendingOrder.reset();
+}
+
+vstd::task<void> CMapGraphicsObject::travelAsync(std::shared_ptr<CGui> gui, bool reusePreview) {
+    return [](std::shared_ptr<CMapGraphicsObject> self, std::shared_ptr<CGui> gui,
+              bool reusePreview) -> vstd::task<void> {
         self->validateDestinationPreview(gui);
         auto map = gui && gui->getGame() ? gui->getGame()->getMap() : nullptr;
         auto player = map ? map->getPlayer() : nullptr;
-        if (!player || !self->previewTarget || self->previewMap.lock() != map || map->isMoving())
-            co_return;
-        auto controller = vstd::cast<CPlayerController>(player->getController());
-        if (!controller || controller != self->previewController.lock()) {
-            self->clearDestinationPreview();
+        if (!player || map->isMoving() ||
+            (reusePreview && (!self->previewTarget || self->previewMap.lock() != map || self->travelling))) {
+            if (!reusePreview) {
+                self->travelling = false;
+                self->pendingOrder.reset();
+            }
             co_return;
         }
-        const auto request = self->previewRequest;
-        const auto generation = self->previewGeneration;
-        const auto context = self->previewContext.lock();
+        auto controller = vstd::cast<CPlayerController>(player->getController());
+        if (!controller || (reusePreview && controller != self->previewController.lock())) {
+            self->clearDestinationPreview();
+            self->travelling = false;
+            self->pendingOrder.reset();
+            co_return;
+        }
+        auto request = controller->getRequestSerial();
+        const auto context = gui->getGame()->getContext();
+        const auto generation = context->captureTransitionGeneration();
+        self->travelling = true;
+        if (reusePreview)
+            self->stopRequested = false;
         self->clearDestinationPreview();
-        const int maxSteps = std::max(1, gui->getTileCountX() * gui->getTileCountY() * 4);
-        for (int step = 0;
-             step < maxSteps && gui->getGame()->getMap() == map && map->getPlayer() == player &&
-             player->getController() == controller && controller->getRequestSerial() == request && context &&
-             context->isTransitionGenerationCurrent(generation) && !controller->isCompleted(player);
-             ++step)
-            co_await map->moveAsync();
-    }(this->ptr<CMapGraphicsObject>(), std::move(gui));
+        ScopeExit finish([self, gui, context, controller, player, &request] {
+            if (controller->getRequestSerial() == request)
+                controller->interrupt(player);
+            self->travelling = false;
+            self->pendingOrder.reset();
+            self->stopRequested = false;
+            self->motion.reset();
+            if (gui->isActive() && context->isActive() && self->isAttachedToGui(gui))
+                self->refreshAll();
+        });
+        bool singleTurn = false;
+        while (gui->isActive() && self->isAttachedToGui(gui) && !self->stopRequested &&
+               gui->getGame()->getMap() == map && map->getPlayer() == player && player->isAlive() &&
+               player->getController() == controller && context->isTransitionGenerationCurrent(generation)) {
+            bool wait = false;
+            if (self->pendingOrder) {
+                const auto order = *std::exchange(self->pendingOrder, std::nullopt);
+                singleTurn = order.singleTurn;
+                wait = order.wait;
+                const auto destination = order.relative ? player->getCoords() + order.destination : order.destination;
+                controller->setTarget(player, destination);
+                request = controller->getRequestSerial();
+                if (!wait && controller->isCompleted(player)) {
+                    if (map->normalizeCoords(destination) != player->getCoords())
+                        gui->notify("That destination is not reachable.");
+                    break;
+                }
+                self->refreshAll();
+            } else if (controller->getRequestSerial() != request || controller->isCompleted(player)) {
+                break;
+            }
+            if (map->isMoving())
+                break;
+            co_await gui->moveMapTurnAsync();
+            if (singleTurn && !self->pendingOrder)
+                break;
+        }
+    }(ptr<CMapGraphicsObject>(), std::move(gui), reusePreview);
 }
 
 void CMapGraphicsObject::clearDestinationPreview() {
@@ -253,8 +350,6 @@ void CMapGraphicsObject::clearDestinationPreview() {
     previewEpoch = 0;
     previewGeneration = 0;
     previewRequest = 0;
-    if (destinationButton)
-        destinationButton->setRuntimeHidden(true);
 }
 
 void CMapGraphicsObject::validateDestinationPreview(const std::shared_ptr<CGui> &gui) {
@@ -274,13 +369,127 @@ void CMapGraphicsObject::validateDestinationPreview(const std::shared_ptr<CGui> 
     }
 }
 
-void CMapGraphicsObject::renderObject(std::shared_ptr<CGui> gui, std::shared_ptr<SDL_Rect>, int) {
-    validateDestinationPreview(gui);
+bool CMapGraphicsObject::motionIsCurrent(const std::shared_ptr<CGui> &gui) {
+    if (!motion || !gui || !gui->isActive() || !isVisible())
+        return false;
+    const auto actor = motion->actor.lock();
+    const auto map = motion->map.lock();
+    const auto context = motion->context.lock();
+    const auto game = gui->getGame();
+    return actor && map && context && context->isActive() &&
+           context->isTransitionGenerationCurrent(motion->generation) && game && game->getMap() == map &&
+           actor->getMap() == map && map->getObjectByName(actor->getName()) == actor &&
+           actor->getCoords() == motion->destination;
 }
 
-int CMapGraphicsObject::getSizeY(std::shared_ptr<CGui> gui) { return gui->getTileCountY(); }
+CMovementPresenter CMapGraphicsObject::movementPresenter(std::shared_ptr<CGui> gui) {
+    return [owner = std::weak_ptr(ptr<CMapGraphicsObject>()), gui = std::weak_ptr(gui)](
+               std::shared_ptr<CMapObject> actor, Coords origin, Coords destination) -> vstd::task<void> {
+        auto view = owner.lock();
+        auto activeGui = gui.lock();
+        if (view && activeGui)
+            return view->presentMoveAsync(std::move(activeGui), std::move(actor), origin, destination);
+        return [](std::shared_ptr<CMapObject>) -> vstd::task<void> { co_return; }(std::move(actor));
+    };
+}
 
-int CMapGraphicsObject::getSizeX(std::shared_ptr<CGui> gui) { return gui->getTileCountX(); }
+vstd::task<void> CMapGraphicsObject::presentMoveAsync(std::shared_ptr<CGui> gui, std::shared_ptr<CMapObject> actor,
+                                                      Coords origin, Coords destination) {
+    return [](std::shared_ptr<CMapGraphicsObject> self, std::shared_ptr<CGui> gui, std::shared_ptr<CMapObject> actor,
+              Coords origin, Coords destination) -> vstd::task<void> {
+        auto map = gui && gui->getGame() ? gui->getGame()->getMap() : nullptr;
+        auto player = map ? map->getPlayer() : nullptr;
+        if (!player || !actor || actor->getMap() != map || !gui->isActive() || !gui->getRenderer() ||
+            !self->isAttachedToGui(gui) || !self->isVisible() || origin.z != destination.z ||
+            destination.z != player->getCoords().z)
+            co_return;
+        const auto delta = map->getShortestDelta(origin, destination);
+        if (delta.z || std::abs(delta.x) + std::abs(delta.y) != 1)
+            co_return;
+        auto inView = [&](Coords coords) {
+            const auto distance = map->getShortestDelta(player->getCoords(), coords);
+            return std::abs(distance.x) <= gui->getTileCountX() / 2 + 1 &&
+                   std::abs(distance.y) <= gui->getTileCountY() / 2 + 1;
+        };
+        if (!inView(origin) && !inView(destination))
+            co_return;
+        auto context = gui->getGame()->getContext();
+        Motion motion;
+        motion.actor = actor;
+        motion.map = map;
+        motion.context = context;
+        motion.destination = destination;
+        motion.delta = delta;
+        motion.generation = context->captureTransitionGeneration();
+        motion.reducedMotion = json::parse(gui->getUiPreferences()).value("reducedMotion", false);
+        motion.movesCamera = actor == player;
+        self->motion = std::move(motion);
+        ScopeExit clear([self] { self->motion.reset(); });
+        if (actor == player) {
+            self->refreshAll();
+        } else {
+            self->refreshObject(origin);
+            self->refreshObject(destination);
+        }
+        auto loop = vstd::event_loop<>::instance();
+        while (self->motionIsCurrent(gui) && self->isAttachedToGui(gui) &&
+               (!self->motion->started || !self->motion->animation.isCompleted()))
+            co_await vstd::nextFrame(loop);
+    }(ptr<CMapGraphicsObject>(), std::move(gui), std::move(actor), origin, destination);
+}
+
+SDL_Point CMapGraphicsObject::getCameraOffset(int tileSize) const {
+    if (!motion || !motion->movesCamera || motion->reducedMotion)
+        return {0, 0};
+    if (!motion->started)
+        return {motion->delta.x * tileSize, motion->delta.y * tileSize};
+    return motion->animation.cameraOffset(tileSize);
+}
+
+SDL_Point CMapGraphicsObject::getActorOffset(const std::shared_ptr<CGameObject> &object, int tileSize) const {
+    if (!motion || motion->actor.lock() != object || motion->reducedMotion)
+        return {0, 0};
+    if (!motion->started)
+        return {-motion->delta.x * tileSize, -motion->delta.y * tileSize};
+    return motion->animation.actorOffset(tileSize);
+}
+
+void CMapGraphicsObject::render(std::shared_ptr<CGui> gui, int frameTime) {
+    auto renderer = gui ? gui->getRenderer() : nullptr;
+    if (!renderer || !getLayout())
+        return;
+    SDL_Rect previous{};
+    const bool clipped = SDL_RenderIsClipEnabled(renderer);
+    SDL_RenderGetClipRect(renderer, &previous);
+    auto viewport = *getLayout()->getRect(ptr<CGameGraphicsObject>());
+    if (clipped)
+        SDL_IntersectRect(&previous, &viewport, &viewport);
+    SDL_RenderSetClipRect(renderer, &viewport);
+    ScopeExit restore([gui, renderer, clipped, previous] {
+        if (gui->getRenderer() == renderer)
+            SDL_RenderSetClipRect(renderer, clipped ? &previous : nullptr);
+    });
+    CGameGraphicsObject::render(std::move(gui), frameTime);
+}
+
+void CMapGraphicsObject::renderObject(std::shared_ptr<CGui> gui, std::shared_ptr<SDL_Rect>, int frameTime) {
+    validateDestinationPreview(gui);
+    if (motion) {
+        if (!motionIsCurrent(gui)) {
+            motion.reset();
+        } else if (!motion->started) {
+            motion->animation.begin(motion->delta, static_cast<Uint32>(frameTime), motion->reducedMotion,
+                                    motion->movesCamera);
+            motion->started = true;
+        } else {
+            motion->animation.advance(static_cast<Uint32>(frameTime));
+        }
+    }
+}
+
+int CMapGraphicsObject::getSizeY(std::shared_ptr<CGui> gui) { return gui->getTileCountY() + 2; }
+
+int CMapGraphicsObject::getSizeX(std::shared_ptr<CGui> gui) { return gui->getTileCountX() + 2; }
 
 bool CMapGraphicsObject::keyboardEvent(std::shared_ptr<CGui> gui, SDL_EventType type, SDL_Keycode i) {
     if (type == SDL_KEYDOWN) {
@@ -289,9 +498,6 @@ bool CMapGraphicsObject::keyboardEvent(std::shared_ptr<CGui> gui, SDL_EventType 
             return false;
         if (i == SDLK_RETURN && previewTarget) {
             commitDestination(gui);
-            return true;
-        }
-        if (gui->getGame()->getMap()->isMoving()) {
             return true;
         }
         std::shared_ptr<CPlayer> player = gui->getGame()->getMap()->getPlayer();
@@ -306,24 +512,19 @@ bool CMapGraphicsObject::keyboardEvent(std::shared_ptr<CGui> gui, SDL_EventType 
             clearDestinationPreview();
         switch (i) {
         case SDLK_UP:
-            controller->setTarget(player, player->getCoords() + NORTH);
-            gui->getGame()->getContext()->spawnTask(gui->getGame()->getMap()->moveAsync());
+            submitOrder(gui, {NORTH, true, true});
             return true;
         case SDLK_DOWN:
-            controller->setTarget(player, player->getCoords() + SOUTH);
-            gui->getGame()->getContext()->spawnTask(gui->getGame()->getMap()->moveAsync());
+            submitOrder(gui, {SOUTH, true, true});
             return true;
         case SDLK_LEFT:
-            controller->setTarget(player, player->getCoords() + WEST);
-            gui->getGame()->getContext()->spawnTask(gui->getGame()->getMap()->moveAsync());
+            submitOrder(gui, {WEST, true, true});
             return true;
         case SDLK_RIGHT:
-            controller->setTarget(player, player->getCoords() + EAST);
-            gui->getGame()->getContext()->spawnTask(gui->getGame()->getMap()->moveAsync());
+            submitOrder(gui, {EAST, true, true});
             return true;
         case SDLK_SPACE:
-            controller->setTarget(player, player->getCoords() + ZERO);
-            gui->getGame()->getContext()->spawnTask(gui->getGame()->getMap()->moveAsync());
+            submitOrder(gui, {ZERO, true, true, true});
             return true;
         case SDLK_s:
             gui->getGame()->getContext()->spawnTask(gui->getGame()->getGuiHandler()->showSaveMenuAsync());
@@ -341,7 +542,7 @@ Coords CMapGraphicsObject::mapToGui(std::shared_ptr<CGui> gui, Coords coords) {
     }
     auto playerCoords = player->getCoords();
     auto delta = map->getShortestDelta(playerCoords, coords);
-    return Coords(delta.x + gui->getTileCountX() / 2, delta.y + gui->getTileCountY() / 2, coords.z);
+    return Coords(delta.x + gui->getTileCountX() / 2 + 1, delta.y + gui->getTileCountY() / 2 + 1, coords.z);
 }
 
 Coords CMapGraphicsObject::guiToMap(std::shared_ptr<CGui> gui, Coords coords) {
@@ -351,8 +552,8 @@ Coords CMapGraphicsObject::guiToMap(std::shared_ptr<CGui> gui, Coords coords) {
         return ZERO;
     }
     auto playerCoords = player->getCoords();
-    auto raw = Coords(playerCoords.x - gui->getTileCountX() / 2 + coords.x,
-                      playerCoords.y - gui->getTileCountY() / 2 + coords.y, playerCoords.z);
+    auto raw = Coords(playerCoords.x - gui->getTileCountX() / 2 + coords.x - 1,
+                      playerCoords.y - gui->getTileCountY() / 2 + coords.y - 1, playerCoords.z);
     return map->normalizeCoords(raw);
 }
 
@@ -384,6 +585,13 @@ void CMapGraphicsObject::refreshObject(Coords coords) {
 
 void CMapGraphicsObject::onProxyGridResized(int sizeX, int sizeY) {
     auto gui = getGui();
+    for (const auto &child : getChildren()) {
+        if (vstd::cast<CProxyGraphicsObject>(child)) {
+            auto layout = std::make_shared<CMapProxyLayout>(ptr<CMapGraphicsObject>());
+            layout->setTileSize(getTileSize(ptr<CGameGraphicsObject>()));
+            child->setLayout(std::move(layout));
+        }
+    }
     auto map = gui->getGame()->getMap();
     if (!map) {
         proxyAnimations.clear();

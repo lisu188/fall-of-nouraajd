@@ -25,6 +25,7 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #include "gui/CGui.h"
 #include "gui/CDetailViewport.h"
 #include "gui/CLayout.h"
+#include "gui/CMovementAnimation.h"
 #include "gui/CRenderContext.h"
 #include "gui/CSdlResources.h"
 #include "gui/CTextManager.h"
@@ -39,8 +40,10 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #include "test_harness.h"
 
 #include <cstddef>
+#include <array>
 #include <memory>
 #include <iostream>
+#include <type_traits>
 
 namespace {
 
@@ -425,6 +428,65 @@ void testLoadingReaderReusesWarmTextures() {
     reader->close();
 }
 
+void testMovementSamplingReusesOneBoundedRecord() {
+    static_assert(std::is_trivially_copyable_v<CMovementAnimation>,
+                  "movement interpolation must retain scalar state without an allocated history");
+    constexpr std::size_t moves = 512;
+    constexpr std::size_t samplesPerMove = 16;
+    constexpr int tileSize = 64;
+    constexpr std::array<Coords, 4> directions = {NORTH, EAST, SOUTH, WEST};
+    CMovementAnimation animation;
+    std::size_t samples = 0;
+    std::size_t completedMoves = 0;
+    std::size_t movingActorSamples = 0;
+    std::size_t movingCameraSamples = 0;
+    bool offsetsBounded = true;
+    bool cameraConsistent = true;
+    bool reducedMotionSnaps = true;
+    bool completedOffsetsClear = true;
+
+    performance_guard::resetMapCoordinateLookupProbe();
+    for (std::size_t move = 0; move < moves; ++move) {
+        const Uint32 startedAt = 1000 + static_cast<Uint32>(move) * 200;
+        const bool reducedMotion = move % 5 == 0;
+        const bool movesCamera = move % 3 == 0;
+        animation.begin(directions[move % directions.size()], startedAt, reducedMotion, movesCamera);
+        for (std::size_t sample = 0; sample < samplesPerMove; ++sample) {
+            animation.advance(startedAt + static_cast<Uint32>(sample) * 10);
+            const auto actor = animation.actorOffset(tileSize);
+            const auto camera = animation.cameraOffset(tileSize);
+            offsetsBounded &= std::abs(actor.x) <= tileSize && std::abs(actor.y) <= tileSize &&
+                              std::abs(camera.x) <= tileSize && std::abs(camera.y) <= tileSize;
+            cameraConsistent &=
+                movesCamera ? actor.x + camera.x == 0 && actor.y + camera.y == 0 : camera.x == 0 && camera.y == 0;
+            reducedMotionSnaps &= !reducedMotion || (actor.x == 0 && actor.y == 0 && camera.x == 0 && camera.y == 0);
+            movingActorSamples += actor.x != 0 || actor.y != 0;
+            movingCameraSamples += camera.x != 0 || camera.y != 0;
+            ++samples;
+        }
+        completedMoves += animation.isCompleted();
+        animation.advance(startedAt + 10000);
+        const auto actor = animation.actorOffset(tileSize);
+        const auto camera = animation.cameraOffset(tileSize);
+        completedOffsetsClear &=
+            animation.isCompleted() && actor.x == 0 && actor.y == 0 && camera.x == 0 && camera.y == 0;
+    }
+    const auto coordinateLookups = performance_guard::mapCoordinateLookupProbeCount();
+    performance_guard::disableMapCoordinateLookupProbe();
+
+    expect_true(sizeof(animation) <= 64, "one movement interpolation record must fit its 64-byte state budget");
+    expect_true(samples == moves * samplesPerMove && completedMoves == moves,
+                "fixed movement samples must complete every reused record without a growing queue");
+    expect_true(offsetsBounded && cameraConsistent && reducedMotionSnaps && completedOffsetsClear,
+                "movement sampling must keep bounded offsets and clear completed or reduced-motion translations");
+    expect_true(movingActorSamples > 0 && movingCameraSamples > 0,
+                "the movement guard must exercise both sprite and camera interpolation");
+    expect_true(coordinateLookups == 0, "pure movement frame sampling must perform zero map coordinate lookups");
+    std::cout << "[movement sampling] moves=" << moves << " samples=" << samples
+              << " sample budget=" << moves * samplesPerMove << " reused records=1 state bytes=" << sizeof(animation)
+              << " state budget=64 coordinate lookups=" << coordinateLookups << " lookup budget=0\n";
+}
+
 } // namespace
 
 void run_render_context_performance_tests() {
@@ -436,4 +498,5 @@ void run_render_context_performance_tests() {
     test_reward_receipt_draws_only_visible_cached_rows();
     testCharacterAbilityDetailsReuseTexturesAndRefreshAvailability();
     testLoadingReaderReusesWarmTextures();
+    testMovementSamplingReusesOneBoundedRecord();
 }

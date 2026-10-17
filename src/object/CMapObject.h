@@ -18,6 +18,7 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #pragma once
 
 #include "CGameObject.h"
+#include "core/CMovementPresenter.h"
 #include "core/CUtil.h"
 
 class CGameEvent;
@@ -75,7 +76,8 @@ class CMapObject : public CGameObject, public CCreatable, public CTurnable {
 
     vstd::task<void> moveAsync(Coords delta);
 
-    vstd::task<void> moveToAsync(Coords coords, std::move_only_function<void()> positionCommit = {});
+    vstd::task<void> moveToAsync(Coords coords, std::move_only_function<void()> positionCommit = {},
+                                 CMovementPresenter presenter = {});
 
     void relocateWithoutMoveHooks(Coords coords);
 
@@ -87,7 +89,8 @@ class CMapObject : public CGameObject, public CCreatable, public CTurnable {
 
   private:
     static vstd::task<void> moveOwnedAsync(std::shared_ptr<CMapObject> object, Coords coords, bool absolute,
-                                           std::move_only_function<void()> positionCommit = {});
+                                           std::move_only_function<void()> positionCommit = {},
+                                           CMovementPresenter presenter = {});
 
     int posx = 0;
     int posy = 0;

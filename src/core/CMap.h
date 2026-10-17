@@ -22,6 +22,7 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #include <mutex>
 
 #include "core/CGlobal.h"
+#include "core/CMovementPresenter.h"
 
 #include "CPlugin.h"
 #include "core/CProvider.h"
@@ -88,7 +89,7 @@ class CMap : public CGameObject {
 
     void move();
 
-    vstd::task<void> moveAsync();
+    vstd::task<void> moveAsync(CMovementPresenter presenter = {});
 
     std::shared_ptr<CTile> getTile(int x, int y, int z);
 
@@ -282,7 +283,7 @@ class CMap : public CGameObject {
     void objectMoved(const std::shared_ptr<CMapObject> &object, Coords _old, Coords _new);
 
   private:
-    static vstd::task<void> moveOwnedAsync(std::shared_ptr<CMap> map);
+    static vstd::task<void> moveOwnedAsync(std::shared_ptr<CMap> map, CMovementPresenter presenter);
 
     std::unordered_map<std::string, std::shared_ptr<CMapObject>> mapObjects;
     // TODO: cleanup and after load initialization

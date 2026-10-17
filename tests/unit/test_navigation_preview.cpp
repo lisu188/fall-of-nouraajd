@@ -11,7 +11,9 @@ SPDX-License-Identifier: GPL-3.0-or-later
 #include "core/CNavigation.h"
 #include "core/CRuntimeBridge.h"
 #include "core/CStats.h"
+#include "core/CTypeRegistration.h"
 #include "core/CTypes.h"
+#include "gui/CAnimation.h"
 #include "gui/CGui.h"
 #include "gui/CLayout.h"
 #include "gui/object/CMapGraphicsObject.h"
@@ -34,6 +36,7 @@ struct PreviewFixture {
     std::shared_ptr<CPlayerController> controller = std::make_shared<CPlayerController>();
     std::shared_ptr<CGui> gui;
     std::shared_ptr<CMapGraphicsObject> world;
+    Uint32 frameTime = 1000;
 
     explicit PreviewFixture(int width = 8, bool withGui = true) {
         for (const auto &[name, builder] : *CTypes::builders())
@@ -74,6 +77,33 @@ struct PreviewFixture {
 
     ~PreviewFixture() { game->getContext()->shutdown(); }
 
+    void frame() {
+        world->renderObject(gui, world->getLayout()->getRect(world), static_cast<int>(frameTime));
+        frameTime += 75;
+        auto loop = vstd::event_loop<>::instance();
+        loop->runFrame();
+        loop->runUntilIdle();
+    }
+
+    void finishMovement() {
+        for (int frames = 0; frames < 128 && (world->isTravelling() || map->isMoving()); ++frames)
+            frame();
+        expect_true(!world->isTravelling() && !map->isMoving(),
+                    "animated GUI movement must finish within bounded frames");
+    }
+
+    bool clickDestination(Coords destination) {
+        const auto delta = map->getShortestDelta(player->getCoords(), destination);
+        auto graphics = world->getProxiedObjects(gui, gui->getTileCountX() / 2 + delta.x + 1,
+                                                 gui->getTileCountY() / 2 + delta.y + 1);
+        expect_true(!graphics.empty(), "a destination click must target an actual tile animation");
+        if (graphics.empty())
+            return false;
+        const bool handled = graphics.front()->mouseEvent(gui, SDL_MOUSEBUTTONDOWN, SDL_BUTTON_LEFT, 0, 0);
+        graphics.front()->mouseEvent(gui, SDL_MOUSEBUTTONUP, SDL_BUTTON_LEFT, 0, 0);
+        return handled;
+    }
+
     void commit() {
         SDL_Event event{};
         event.type = SDL_KEYDOWN;
@@ -82,6 +112,7 @@ struct PreviewFixture {
         event.type = SDL_KEYUP;
         gui->event(&event);
         vstd::event_loop<>::instance()->runUntilIdle();
+        finishMovement();
     }
 };
 
@@ -103,6 +134,91 @@ void testPreviewAndCommitReuseOneSearch() {
     fixture.commit();
     expect_true(fixture.player->getCoords() == Coords(3, 0, 0), "Enter commits the previewed real player route");
     expect_true(service->searchCount() == before + 1, "committing an unchanged preview does not repeat its search");
+}
+
+void testOneClickWalksEveryStepWithoutEnterAndStopsAtDestination() {
+    PreviewFixture fixture;
+    const auto turn = fixture.map->getTurn();
+    const auto searches = fixture.map->getNavigationService()->searchCount();
+    expect_true(fixture.clickDestination(Coords(3, 0, 0)), "one left click starts the selected route");
+    vstd::event_loop<>::instance()->runUntilIdle();
+    expect_true(fixture.world->isTravelling() && fixture.map->isMoving() && fixture.map->getTurn() == turn &&
+                    fixture.player->getCoords() == Coords(1, 0, 0),
+                "posted-work draining must leave the first committed step waiting for its visible animation");
+    fixture.finishMovement();
+    expect_true(fixture.player->getCoords() == Coords(3, 0, 0) && fixture.map->getTurn() == turn + 3,
+                "a single click walks three real steps and consumes exactly three turns without Enter");
+    expect_true(fixture.map->getNavigationService()->searchCount() == searches + 1,
+                "automatic step presentation must reuse the selected route instead of replanning every frame");
+    fixture.frame();
+    fixture.frame();
+    expect_true(fixture.player->getCoords() == Coords(3, 0, 0) && fixture.map->getTurn() == turn + 3,
+                "completed travel must not continue producing idle turns on later frames");
+}
+
+void testNewClickAndEscapeInterruptAtTheNextStepBoundary() {
+    PreviewFixture fixture;
+    const auto turn = fixture.map->getTurn();
+    fixture.world->startTravel(fixture.gui, Coords(6, 0, 0));
+    vstd::event_loop<>::instance()->runUntilIdle();
+    fixture.world->startTravel(fixture.gui, Coords(1, 1, 0));
+    fixture.finishMovement();
+    expect_true(fixture.player->getCoords() == Coords(1, 1, 0) && fixture.map->getTurn() == turn + 2,
+                "a new destination replaces the old route after the already committed step finishes");
+    fixture.world->startTravel(fixture.gui, Coords(6, 1, 0));
+    vstd::event_loop<>::instance()->runUntilIdle();
+    SDL_Event escape{};
+    escape.type = SDL_KEYDOWN;
+    escape.key.keysym.sym = SDLK_ESCAPE;
+    fixture.gui->event(&escape);
+    fixture.finishMovement();
+    expect_true(fixture.player->getCoords() == Coords(2, 1, 0) && fixture.map->getTurn() == turn + 3,
+                "Escape finishes the committed animation and prevents another route step");
+}
+
+void testPlayerAndVisibleActorsUseInterpolatedViewOffsets() {
+    for (int kind = 0; kind < 3; ++kind) {
+        PreviewFixture fixture;
+        std::shared_ptr<CCreature> actor = fixture.player;
+        if (kind != 0) {
+            actor = std::make_shared<CCreature>();
+            actor->setGame(fixture.game);
+            actor->setName(kind == 1 ? "visibleNpc" : "visibleEnemy");
+            actor->setNpc(kind == 1);
+            actor->setBaseStats(fixture.player->getBaseStats());
+            actor->setHp(actor->getHpMax());
+            actor->setPosX(4);
+            actor->setPosY(1);
+            fixture.map->addObject(actor);
+        }
+        const auto destination = actor->getCoords() + EAST;
+        auto movement = fixture.game->getContext()->spawnTask(
+            actor->moveToAsync(destination, {}, fixture.world->movementPresenter(fixture.gui)));
+        auto rect = fixture.world->getLayout()->getRect(fixture.world);
+        fixture.world->renderObject(fixture.gui, rect, 1000);
+        auto actorOffset = fixture.world->getActorOffset(actor, 64);
+        auto cameraOffset = fixture.world->getCameraOffset(64);
+        expect_true(!movement.finished() && actor->getCoords() == destination && actorOffset.x == -64 &&
+                        actorOffset.y == 0 && cameraOffset.x == (kind == 0 ? 64 : 0) && cameraOffset.y == 0,
+                    "visible player, NPC and enemy presentation starts at the source after the real position commits");
+        fixture.world->renderObject(fixture.gui, rect, 1075);
+        actorOffset = fixture.world->getActorOffset(actor, 64);
+        cameraOffset = fixture.world->getCameraOffset(64);
+        expect_true(actorOffset.x == -32 && actorOffset.y == 0 && cameraOffset.x == (kind == 0 ? 32 : 0),
+                    "visible actors interpolate halfway while only player movement scrolls the camera");
+        fixture.world->renderObject(fixture.gui, rect, 1150);
+        actorOffset = fixture.world->getActorOffset(actor, 64);
+        cameraOffset = fixture.world->getCameraOffset(64);
+        expect_true(actorOffset.x == 0 && actorOffset.y == 0 && cameraOffset.x == 0 && cameraOffset.y == 0,
+                    "the final rendered frame exposes committed geometry before arrival resumes");
+        auto loop = vstd::event_loop<>::instance();
+        loop->runFrame();
+        loop->runUntilIdle();
+        expect_true(movement.finished() && !actor->getPendingMoveOrigin(),
+                    "arrival resumes after the final visible actor frame without retaining pending movement");
+        if (movement.finished())
+            movement.get();
+    }
 }
 
 void testPreviewRejectsChangedRequestControllerGraphOriginAndSession() {
@@ -280,8 +396,18 @@ int main() {
     SDL_setenv("SDL_RENDER_DRIVER", "software", 1);
     SDL_setenv("GAME_UI_PREFERENCES_PATH", "navigation-preview-preferences.json", 1);
     pybind11::scoped_interpreter interpreter;
+    type_registration::registerCoreTypes();
+    type_registration::registerObjectTypes();
+    type_registration::registerHandlerTypes();
+    type_registration::registerGuiTypes();
+    type_registration::registerGuiPanelTypes();
+    type_registration::registerGuiWidgetTypes();
+    type_registration::registerGuiAnimationTypes();
     CRuntimeBridge::set_logger_sink(vstd::logger::sink::disabled, "");
     testPreviewAndCommitReuseOneSearch();
+    testOneClickWalksEveryStepWithoutEnterAndStopsAtDestination();
+    testNewClickAndEscapeInterruptAtTheNextStepBoundary();
+    testPlayerAndVisibleActorsUseInterpolatedViewOffsets();
     testPreviewRejectsChangedRequestControllerGraphOriginAndSession();
     testCommittedLegalRoutesSurviveUnrelatedGraphChangesAndStopPermanentlyWhenBlocked();
     testOverlayLookupsAndRetainedStorageAreBounded();

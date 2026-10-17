@@ -167,6 +167,8 @@ class CGui : public CGameGraphicsObject {
 
     bool event(SDL_Event *event);
 
+    vstd::task<void> moveMapTurnAsync();
+
     void capturePointer(std::shared_ptr<CGameGraphicsObject> widget);
 
     void releasePointerCapture();
