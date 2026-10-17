@@ -23,6 +23,7 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #include "core/CProvider.h"
 #include "core/CUtil.h"
 #include "gui/CGui.h"
+#include "gui/CGuiTasks.h"
 #include "gui/CTextureCache.h"
 #include "gui/CUiTheme.h"
 
@@ -130,47 +131,50 @@ void CDynamicAnimation::renderObject(std::shared_ptr<CGui> gui, std::shared_ptr<
 
 void CDynamicAnimation::initialize() {
     auto self = this->ptr<CDynamicAnimation>();
-    vstd::call_when([self]() { return self->getObject() != nullptr; },
-                    [self]() {
-                        auto currentObject = self->getObject();
-                        if (!currentObject) {
-                            return;
-                        }
-                        std::string path = currentObject->getAnimation();
-                        const auto timingPath = path + "/" + "time.json";
-                        // Load timing tables through the owning game's per-session configuration
-                        // provider; fall back to the legacy process-wide accessor only when the
-                        // animation is detached from a game (compatibility path).
-                        auto game = self->getGame();
-                        auto time = game ? game->getConfigurationProvider()->getConfiguration(timingPath)
-                                         : CConfigurationProvider::getConfig(timingPath);
-                        if (!time || !time->is_object() || time->empty()) {
-                            vstd::logger::warning("CDynamicAnimation: missing or malformed timing table", path);
-                            return;
-                        }
-                        self->size = time->size();
-                        for (int i = 0; i < self->size; i++) {
-                            const auto key = std::to_string(i);
-                            if (!time->contains(key) || !(*time)[key].is_number_integer()) {
-                                vstd::logger::warning("CDynamicAnimation: invalid timing entry", key, "in", path);
-                                self->paths.clear();
-                                self->times.clear();
-                                self->size = 0;
-                                return;
-                            }
-                            const int frameTime = (*time)[key].get<int>();
-                            if (frameTime == 0) {
-                                vstd::logger::warning("CDynamicAnimation: zero timing entry", key, "in", path);
-                                self->paths.clear();
-                                self->times.clear();
-                                self->size = 0;
-                                return;
-                            }
-                            self->paths.push_back(path + "/" + key + ".png");
-                            self->times.push_back(frameTime);
-                        }
-                        self->initialized = self->size > 0;
-                    });
+    gui_async::spawn(self,
+                     gui_async::whenReady(
+                         std::weak_ptr(self),
+                         [](const std::shared_ptr<CDynamicAnimation> &self) { return self->getObject() != nullptr; },
+                         [](const std::shared_ptr<CDynamicAnimation> &self) {
+                             auto currentObject = self->getObject();
+                             if (!currentObject) {
+                                 return;
+                             }
+                             std::string path = currentObject->getAnimation();
+                             const auto timingPath = path + "/" + "time.json";
+                             // Load timing tables through the owning game's per-session configuration
+                             // provider; fall back to the legacy process-wide accessor only when the
+                             // animation is detached from a game (compatibility path).
+                             auto game = self->getGame();
+                             auto time = game ? game->getConfigurationProvider()->getConfiguration(timingPath)
+                                              : CConfigurationProvider::getConfig(timingPath);
+                             if (!time || !time->is_object() || time->empty()) {
+                                 vstd::logger::warning("CDynamicAnimation: missing or malformed timing table", path);
+                                 return;
+                             }
+                             self->size = time->size();
+                             for (int i = 0; i < self->size; i++) {
+                                 const auto key = std::to_string(i);
+                                 if (!time->contains(key) || !(*time)[key].is_number_integer()) {
+                                     vstd::logger::warning("CDynamicAnimation: invalid timing entry", key, "in", path);
+                                     self->paths.clear();
+                                     self->times.clear();
+                                     self->size = 0;
+                                     return;
+                                 }
+                                 const int frameTime = (*time)[key].get<int>();
+                                 if (frameTime == 0) {
+                                     vstd::logger::warning("CDynamicAnimation: zero timing entry", key, "in", path);
+                                     self->paths.clear();
+                                     self->times.clear();
+                                     self->size = 0;
+                                     return;
+                                 }
+                                 self->paths.push_back(path + "/" + key + ".png");
+                                 self->times.push_back(frameTime);
+                             }
+                             self->initialized = self->size > 0;
+                         }));
 }
 
 int CDynamicAnimation::get_ttl() { return vstd::rand(5000, 30000); }

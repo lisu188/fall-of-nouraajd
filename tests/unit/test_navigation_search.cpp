@@ -15,6 +15,7 @@ GNU General Public License for more details.
 You should have received a copy of the GNU General Public License
 along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
+#include "core/CAsync.h"
 #include "core/CGame.h"
 #include "core/CLoader.h"
 #include "core/CMap.h"
@@ -24,6 +25,7 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #include "core/CTypes.h"
 #include "handler/CObjectHandler.h"
 #include "test_harness.h"
+#include "native_crash_diagnostics.h"
 
 #include <climits>
 #include <future>
@@ -47,8 +49,10 @@ void testLargeCostsAndFailureSentinels() {
                 "route totals use checked 64-bit arithmetic without wrapping");
     auto path = CPathFinder::findPath(start, goal, passable, noWaypoint, default_neighbors, zeroDistance, cost);
     expect_true(path.size() == 3 && path.back() == goal, "legacy path API preserves large-cost routes");
-    auto next = CPathFinder::findNextStep(start, goal, passable, noWaypoint, default_neighbors, zeroDistance, cost);
-    expect_true(next->get() == Coords(1, 0, 0), "legacy future returns the large-cost first step");
+    auto next =
+        CPathFinder::findNextStepAsync(start, goal, passable, noWaypoint, default_neighbors, zeroDistance, cost);
+    expect_true(game_async::run(std::move(next), game_async::WaitMode::PostedWork) == Coords(1, 0, 0),
+                "legacy future returns the large-cost first step");
     auto competingNeighbors = [](Coords from) {
         if (from.x == 0)
             return std::vector<Coords>{{3, 0, 0}, {1, 0, 0}};
@@ -377,6 +381,7 @@ void testLargeMapLazyChunksAndWarmReuse() {
 } // namespace
 
 int main() {
+    native_test_diagnostics::installWindowsCrashDiagnostics();
     pybind11::scoped_interpreter guard{};
     CRuntimeBridge::set_logger_sink(vstd::logger::sink::disabled, "");
     testLargeCostsAndFailureSentinels();

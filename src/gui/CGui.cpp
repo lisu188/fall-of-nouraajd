@@ -136,6 +136,13 @@ void refreshProxyTargets(const std::shared_ptr<CGameGraphicsObject> &root) {
 }
 } // namespace
 
+void fn::sdl::GuiTextureDeleter::operator()(SDL_Texture *texture) const noexcept {
+    // SDL_DestroyRenderer frees its textures, even when a wrapper keeps the inactive GUI alive.
+    if (auto gui = owner.lock(); gui && gui->getRenderer()) {
+        TextureDeleter{}(texture);
+    }
+}
+
 CGui::CGui() {
     // Video lives for the process; repeated initialization can overflow SDL 2's
     // subsystem reference counter and invalidate windows from earlier sessions.
@@ -154,10 +161,16 @@ CGui::CGui() {
     // TODO: check render flags
 }
 
+CGui::CGui(WithoutWindow) : uiPreferences(UiPreferences::defaults()) {}
+
 CGui::~CGui() = default;
 
 void CGui::shutdown() {
-    if (!active.exchange(false, std::memory_order_acq_rel)) {
+    if (!vstd::event_loop<>::instance()->isMainThread()) {
+        throw std::runtime_error("CGui shutdown requires the main thread.");
+    }
+    deactivate();
+    if (std::exchange(shutdownStarted, true)) {
         return;
     }
 
@@ -181,7 +194,12 @@ void CGui::shutdown() {
     clearSessionPanelGeometry();
     _textureCache.clear();
     _textManager.clear();
+    renderContext.setRenderer(nullptr);
+    renderer.reset();
+    window.reset();
 }
+
+void CGui::deactivate() { active.store(false, std::memory_order_release); }
 
 void CGui::setSessionPanelGeometry(const std::string &panelType, const PanelGeometry &geometry) {
     if (panelType.empty()) {

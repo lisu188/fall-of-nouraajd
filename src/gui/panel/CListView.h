@@ -108,6 +108,8 @@ class CListView : public CProxyTargetGraphicsObject {
     void refreshFromPropertySpecificChanged();
 
   private:
+    static vstd::task<void> refreshFromSubscriptionAsync(std::weak_ptr<CListView> weakSelf);
+
     std::string refreshEvent;
 
     bool refreshOnPropertyChanged = false;

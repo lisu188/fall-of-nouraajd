@@ -41,12 +41,7 @@ struct TextureDeleter {
 struct GuiTextureDeleter {
     std::weak_ptr<CGui> owner;
 
-    void operator()(SDL_Texture *texture) const noexcept {
-        // SDL_DestroyRenderer already frees its textures. A detached cache/widget can outlive its GUI.
-        if (auto gui = owner.lock()) {
-            TextureDeleter{}(texture);
-        }
-    }
+    void operator()(SDL_Texture *texture) const noexcept;
 };
 
 struct RendererDeleter {

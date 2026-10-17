@@ -171,15 +171,24 @@ FAST_TEST_PREFIXES = (
     "WaypointTraversalTest.",
     "GameDiagnosticsTest.",
     "McpDiagnosticsTest.",
+    "McpEngineThreadTest.",
     "OctobogzDiagnosticTest.",
     "WindowsPythonConfigurationTest.",
     "EnemyRoleContractTest.",
     "OctobogzHuntContractTest.",
     "MonsterBalanceRunnerTest.",
     "NativeCallgrindToolTest.",
+    "ScriptFlowExportTest.",
+    "WindowsNativeCrashDiagnosticsTest.",
     "NativeTestProfileSourceTest.",
     "PlayerIdentityContentTest.",
     "EffectContractTest.",
+    "SessionDeferredWorkTest.",
+    "UiCoroutineFlowTest.",
+    "FirstPartyHookFlowTest.",
+    "NativeCoroutineCallbackSelectionTest.",
+    "DialogueTransitionBoundaryTest.",
+    "CampaignCoroutineFlowTest.",
     "CharacterCreationFlowTest.",
     "CoverageReportTest.",
     "PlayBootstrapTest.",
@@ -189,6 +198,8 @@ FAST_TEST_PREFIXES = (
     "UiPixelAnalysisTest.",
 )
 FAST_TEST_NAMES = {
+    "McpServerTest.test_native_owner_fixture_starts_in_an_isolated_process",
+    "McpServerTest.test_native_owner_fixture_child_does_not_spawn_again",
     "GameTest.test_indentation",
     "McpServerTest.testNativeLogSinkSurvivesGameBootstrap",
     "McpServerTest.test_engine_handle_call_scopes_fight_controllers_to_players",
@@ -211,12 +222,14 @@ FAST_TEST_NAMES = {
     "PanelLayoutManifestTest.test_reactive_list_views_subscribe_to_model_signals",
 }
 GAMEPLAY_TEST_PREFIXES = (
+    "NativeCoroutineCallbackTest.",
     MCP_BRANCH_TEST_PREFIX,
     "McpTestSeedRuntimeTest.",
     "McpEquipmentRuntimeTest.",
     "McpTradeMarketRuntimeTest.",
     "GameplayPotionTraceRuntimeTest.",
     "NativeDiagnosticsRuntimeTest.",
+    "McpHttpNativeRuntimeTest.",
     "EnemyRoleRuntimeTest.",
     "OctobogzMcpWalkthroughTest.",
     "OctobogzRuntimeTest.",
@@ -1660,12 +1673,14 @@ def pump_event_loop(iterations=30):
         game.event_loop.instance().run()
 
 
-def pump_event_loop_until(predicate, *, timeout=1.0, min_iterations=1):
-    game = load_game_module()
+def pump_event_loop_until(predicate, *, timeout=1.0, min_iterations=1, pump=None):
+    if pump is None:
+        game = load_game_module()
+        pump = lambda: game.event_loop.instance().run()
     deadline = time.monotonic() + timeout
     iterations = 0
     while True:
-        game.event_loop.instance().run()
+        pump()
         iterations += 1
         try:
             ready = predicate()
@@ -4937,6 +4952,8 @@ def walkthrough_ritual_map():
 
 def completeOctobogzFixture(game_map):
     """Resolve three actor deaths for quest boundary fixtures; this is not a combat walkthrough."""
+    # Complete queued load synchronization before a death temporarily removes its registered actor.
+    pump_event_loop(3)
     game_map.getGame().createObject("OctobogzHuntDirector").start(game_map)
     for slot in ("scout", "brood", "alpha"):
         state = json.loads(game_map.getStringProperty("octobogzHuntRegistry").removeprefix("octobogzHunt.v1:"))
@@ -5931,6 +5948,72 @@ class GameTest(unittest.TestCase):
         finally:
             shutil.rmtree(dir_a, ignore_errors=True)
             shutil.rmtree(dir_b, ignore_errors=True)
+
+    @game_test
+    def test_session_owned_script_callbacks_cancel_and_release_before_execution(self):
+        import gc
+        import weakref
+        import ui
+
+        game = load_game_module()
+        loop = game.event_loop.instance()
+        owner = game.CGameLoader.loadGame()
+        calls = []
+
+        class Callback:
+            def __call__(self):
+                calls.append("cancelled callback ran")
+
+        callback = Callback()
+        lifetime = weakref.ref(callback)
+        owner.post(callback)
+        del callback
+        gc.collect()
+        self.assertIsNotNone(lifetime(), "queued work must own its Python callback")
+        owner.getContext().shutdown()
+        for _ in range(8):
+            loop.run()
+        gc.collect()
+        self.assertEqual([], calls)
+        self.assertIsNone(lifetime(), "cancelled queued work must release its Python captures")
+        for method in (owner.post, owner.runUiFlowLater):
+            with self.assertRaisesRegex(RuntimeError, "closed game session"):
+                method(lambda: calls.append("rejected callback ran"))
+
+        second = game.CGameLoader.loadGame()
+        resolver = second.createWeakResolver()
+
+        def modalFlow():
+            calls.append("flow started")
+            answer = yield from ui.confirmFlow(ui.UiFlowGame(resolver), "Headless session", "No modal renderer")
+            calls.append(answer)
+
+        try:
+
+            class FailingCallback:
+                def __init__(self):
+                    self.owner = second
+
+                def __call__(self):
+                    raise RuntimeError("Session callback traceback capture regression")
+
+            failure = FailingCallback()
+            failure_lifetime = weakref.ref(failure)
+            second.post(failure)
+            del failure
+            for _ in range(8):
+                loop.run()
+            gc.collect()
+            self.assertIsNone(failure_lifetime(), "failed detached work must release its traceback captures")
+            second.post(lambda: calls.append("posted callback"))
+            second.runUiFlowLater(modalFlow)
+            self.assertEqual([], calls, "session posts must preserve queue snapshot deferral")
+            for _ in range(8):
+                loop.run()
+            self.assertEqual(["posted callback", "flow started", False], calls)
+        finally:
+            second.getContext().shutdown()
+        return True, json.dumps({"cancelled": True, "second_session": calls}, sort_keys=True)
 
     @game_test
     def test_binding_validation_rejects_invalid_logger_and_dynamic_values(self):
@@ -15568,15 +15651,15 @@ class GameTest(unittest.TestCase):
             ),
             "catacombs_uses_catacombs_image": config["catacombs"]["properties"].get("animation")
             == "images/buildings/catacombs",
-            "actor_cleanup_helper_imported": "from game import remove_runtime_actors" in script,
+            "actor_cleanup_helper_imported": "from game import removeRuntimeActorsFlow" in script,
             "victor_cleanup_uses_helper": (
-                'remove_runtime_actors(game_map, names=("cultLeaderQuest",), prefixes=(VICTOR_CULTIST_PREFIX,))'
+                'removeRuntimeActorsFlow(game_map, names=("cultLeaderQuest",), prefixes=(VICTOR_CULTIST_PREFIX,))'
                 in script
             ),
             "amulet_cleanup_uses_helper": (
-                'remove_runtime_actors(game_map, names=("amuletGoblin", "oldWoman"))' in script
+                'removeRuntimeActorsFlow(game_map, names=("amuletGoblin", "oldWoman"))' in script
             ),
-            "old_woman_cleanup_uses_helper": 'remove_runtime_actors(game_map, names=("oldWoman",))' in script,
+            "old_woman_cleanup_uses_helper": 'removeRuntimeActorsFlow(game_map, names=("oldWoman",))' in script,
             "actor_cleanup_dedupes_removal": (
                 'game_map.getObjectByName("amuletGoblin")' not in script
                 and "game_map.removeObject(amulet_goblin)" not in script
@@ -19149,7 +19232,14 @@ class GameTest(unittest.TestCase):
             self.assertEqual([], loaded_store.history())
             self.assertEqual("TransitionPending", loaded_game.getSceneManager().getTransitionStateName())
             self.assertEqual("ritual", loaded_game.getSceneManager().getPendingMapName())
-            pump_event_loop(10)
+            self.assertTrue(
+                pump_event_loop_until(
+                    lambda: loaded_game.getMap().mapName == "ritual"
+                    and not loaded_game.getSceneManager().isTransitionPending(),
+                    timeout=1.0,
+                ),
+                "The restored campaign transition did not finish within its existing wait budget",
+            )
             self.assertEqual("cleansing", loaded_store.scenario())
             self.assertEqual([("recovery", "completed")], loaded_store.history())
             self.assertEqual("ritual", loaded_game.getMap().mapName)
@@ -25832,6 +25922,7 @@ class TestRunnerSuiteTest(unittest.TestCase):
             GameplayCastleTownRestTest,
             GameplayVictorSettlementTest,
             NarrativeRouteTest,
+            DialogueTransitionBoundaryTest,
         ):
             methods = unittest.defaultTestLoader.getTestCaseNames(test_class)
             self.assertTrue(methods)
@@ -25912,6 +26003,30 @@ class TestRunnerSuiteTest(unittest.TestCase):
                 self.assertFalse(test_name_matches_suite(test_name, "gameplay"))
         self.assertNotIn("_EffectContractTest", globals())
         self.assertNotIn("_CharacterCreationFlowTest", globals())
+
+    def testScriptFlowExportRegressionIsDiscoveredOnceInSourceSuites(self):
+        if not SOURCE_UI_TESTS_AVAILABLE:
+            self.skipTest("Source-only contracts are not installed with the game")
+        methods = unittest.defaultTestLoader.getTestCaseNames(ScriptFlowExportTest)
+        self.assertTrue(methods)
+        for method in methods:
+            test_name = f"ScriptFlowExportTest.{method}"
+            self.assertEqual(f"{__name__}.{test_name}", ScriptFlowExportTest(method).id())
+            for suite_name in ("fast", "full", "coverage-safe"):
+                self.assertTrue(test_name_matches_suite(test_name, suite_name), (test_name, suite_name))
+        self.assertNotIn("_ScriptFlowExportTest", globals())
+
+    def testWindowsCrashDiagnosticsAreDiscoveredOnceInSourceSuites(self):
+        if not SOURCE_UI_TESTS_AVAILABLE:
+            self.skipTest("Source-only contracts are not installed with the game")
+        methods = unittest.defaultTestLoader.getTestCaseNames(WindowsNativeCrashDiagnosticsTest)
+        self.assertEqual(len(methods), 4)
+        for method in methods:
+            test_name = f"WindowsNativeCrashDiagnosticsTest.{method}"
+            self.assertEqual(f"{__name__}.{test_name}", WindowsNativeCrashDiagnosticsTest(method).id())
+            for suite_name in ("fast", "full", "coverage-safe"):
+                self.assertTrue(test_name_matches_suite(test_name, suite_name), (test_name, suite_name))
+        self.assertNotIn("_WindowsNativeCrashDiagnosticsTest", globals())
 
     def test_explicit_transition_wait_accepts_completed_slow_pump(self):
         from unittest.mock import Mock, patch
@@ -26502,12 +26617,19 @@ SOURCE_UI_TESTS_AVAILABLE = (REPO_ROOT / "tests" / "__init__.py").is_file()
 if SOURCE_UI_TESTS_AVAILABLE:
     from tests.test_game_diagnostics import GameDiagnosticsTest as _GameDiagnosticsTest
     from tests.test_mcp_diagnostics import McpDiagnosticsTest as _McpDiagnosticsTest
+    from tests.test_mcp_engine_thread import McpEngineThreadTest as _McpEngineThreadTest
+    from tests.test_mcp_engine_thread import McpHttpNativeRuntimeTest as _McpHttpNativeRuntimeTest
     from tests.test_native_diagnostics import NativeDiagnosticsRuntimeTest as _NativeDiagnosticsRuntimeTest
     from tests.test_navigation_mcp import NavigationCallbackTest as _NavigationCallbackTest
     from tests.test_navigation_mcp import NavigationMcpWalkthroughTest as _NavigationMcpWalkthroughTest
     from tests.test_python_callback_lifecycle import PythonCallbackLifecycleTest as _PythonCallbackLifecycleTest
     from tests.test_ui_mcp_dialogue import DialogueMcpWalkthroughTest as _DialogueMcpWalkthroughTest
+    from tests.test_ui_mcp_dialogue import DialogueTransitionBoundaryTest as _DialogueTransitionBoundaryTest
     from tests.test_native_callgrind import NativeCallgrindToolTest as _NativeCallgrindToolTest
+    from tests.test_script_flow_exports import ScriptFlowExportTest as _ScriptFlowExportTest
+    from tests.test_windows_native_crash_diagnostics import (
+        WindowsNativeCrashDiagnosticsTest as _WindowsNativeCrashDiagnosticsTest,
+    )
     from tests.test_native_test_profile import NativeTestProfileSourceTest as _NativeTestProfileSourceTest
     from tests.test_native_test_profile import NativeTestProfileRuntimeTest as _NativeTestProfileRuntimeTest
     from tests.test_windows_python_configuration import (
@@ -26527,6 +26649,14 @@ if SOURCE_UI_TESTS_AVAILABLE:
     from tests.test_ui_minimap_interactions import UiMinimapInteractionTest as _UiMinimapInteractionTest
     from tests.test_enemy_roles import EnemyRolesTest as _EnemyRoleContractTest
     from tests.test_octobogz_hunt import OctobogzHuntTest as _OctobogzHuntContractTest
+    from tests.test_session_deferred_work import SessionDeferredWorkTest as _SessionDeferredWorkTest
+    from tests.test_ui_coroutine_flow import UiCoroutineFlowTest as _UiCoroutineFlowTest
+    from tests.test_first_party_hook_flows import FirstPartyHookFlowTest as _FirstPartyHookFlowTest
+    from tests.test_coroutine_callbacks import NativeCoroutineCallbackTest as _NativeCoroutineCallbackTest
+    from tests.test_coroutine_callbacks import (
+        NativeCoroutineCallbackSelectionTest as _NativeCoroutineCallbackSelectionTest,
+    )
+    from tests.test_campaign_coroutine_flow import CampaignCoroutineFlowTest as _CampaignCoroutineFlowTest
     from tests.test_monster_balance_runner import MonsterBalanceRunnerTest as _MonsterBalanceRunnerTest
     from tests.test_enemy_role_runtime import EnemyRoleRuntimeTest as _EnemyRoleRuntimeTest
     from tests.test_octobogz_mcp import OctobogzMcpWalkthroughTest as _OctobogzMcpWalkthroughTest
@@ -26673,6 +26803,12 @@ if SOURCE_UI_TESTS_AVAILABLE:
     class McpDiagnosticsTest(_McpDiagnosticsTest):
         pass
 
+    class McpEngineThreadTest(_McpEngineThreadTest):
+        pass
+
+    class McpHttpNativeRuntimeTest(_McpHttpNativeRuntimeTest):
+        pass
+
     class NativeDiagnosticsRuntimeTest(_NativeDiagnosticsRuntimeTest):
         pass
 
@@ -26686,6 +26822,12 @@ if SOURCE_UI_TESTS_AVAILABLE:
         pass
 
     class NativeCallgrindToolTest(_NativeCallgrindToolTest):
+        pass
+
+    class ScriptFlowExportTest(_ScriptFlowExportTest):
+        pass
+
+    class WindowsNativeCrashDiagnosticsTest(_WindowsNativeCrashDiagnosticsTest):
         pass
 
     class NativeTestProfileRuntimeTest(_NativeTestProfileRuntimeTest):
@@ -26704,6 +26846,9 @@ if SOURCE_UI_TESTS_AVAILABLE:
         pass
 
     class DialogueMcpWalkthroughTest(_DialogueMcpWalkthroughTest):
+        pass
+
+    class DialogueTransitionBoundaryTest(_DialogueTransitionBoundaryTest):
         pass
 
     class PlayerIdentityMcpTest(_PlayerIdentityMcpTest):
@@ -26733,6 +26878,24 @@ if SOURCE_UI_TESTS_AVAILABLE:
     class OctobogzHuntContractTest(_OctobogzHuntContractTest):
         pass
 
+    class SessionDeferredWorkTest(_SessionDeferredWorkTest):
+        pass
+
+    class UiCoroutineFlowTest(_UiCoroutineFlowTest):
+        pass
+
+    class FirstPartyHookFlowTest(_FirstPartyHookFlowTest):
+        pass
+
+    class NativeCoroutineCallbackTest(_NativeCoroutineCallbackTest):
+        requireCurrentNativeBinary = True
+
+    class NativeCoroutineCallbackSelectionTest(_NativeCoroutineCallbackSelectionTest):
+        pass
+
+    class CampaignCoroutineFlowTest(_CampaignCoroutineFlowTest):
+        pass
+
     class MonsterBalanceRunnerTest(_MonsterBalanceRunnerTest):
         pass
 
@@ -26758,15 +26921,23 @@ if SOURCE_UI_TESTS_AVAILABLE:
         pass
 
     del _DialogueMcpWalkthroughTest, _ManagementMcpWalkthroughTest, _ArtifactPreviewTest, _PythonCallbackLifecycleTest
+    del _DialogueTransitionBoundaryTest
     del _PaidActionRuntimeTest
     del _GameDiagnosticsTest, _McpDiagnosticsTest, _NativeDiagnosticsRuntimeTest
+    del _McpEngineThreadTest, _McpHttpNativeRuntimeTest
     del _NativeTestProfileSourceTest, _NativeTestProfileRuntimeTest
     del _WindowsPythonConfigurationTest
     del _NativeCallgrindToolTest
+    del _ScriptFlowExportTest
+    del _WindowsNativeCrashDiagnosticsTest
     del _EffectContractTest, _EffectSemanticRuntimeTest, _CharacterCreationFlowTest, _CharacterPreviewRuntimeTest
     del _UiPixelAnalysisTest
     del _EnemyRoleRuntimeTest
     del _EnemyRoleContractTest, _OctobogzHuntContractTest
+    del _SessionDeferredWorkTest, _UiCoroutineFlowTest, _CampaignCoroutineFlowTest
+    del _FirstPartyHookFlowTest
+    del _NativeCoroutineCallbackTest
+    del _NativeCoroutineCallbackSelectionTest
     del _OctobogzMcpWalkthroughTest
     del _OctobogzDiagnosticTest
     del _OctobogzRuntimeTest
@@ -27073,8 +27244,65 @@ class McpServerTest(unittest.TestCase):
         # A non-pathfinding method is never gated, regardless of arguments.
         self.assertIsNone(server._validate_pathfinding_call(object(), "getName", [], {}))
 
+    def runNativeOwnerFixtureInChild(self):
+        if os.environ.get("GAME_MCP_NATIVE_TEST") == self._testMethodName:
+            return False
+        output_dir = TEST_OUTPUT_DIR / "mcp-owner" / self._testMethodName
+        environment = os.environ.copy()
+        environment.update(
+            GAME_MCP_NATIVE_TEST=self._testMethodName,
+            GAME_BUILD_DIR=str(build_dir),
+            GAME_TEST_WORKER="1",
+            GAME_TEST_JOBS="1",
+            GAME_TEST_OUTPUT_DIR=str(output_dir),
+            GAME_TEST_TIMINGS_FILE=str(output_dir / "test-timings.json"),
+            SDL_VIDEODRIVER="dummy",
+            SDL_AUDIODRIVER="dummy",
+            SDL_RENDER_DRIVER="software",
+            LIBGL_ALWAYS_SOFTWARE="1",
+        )
+        completed = subprocess.run(
+            [sys.executable, str(REPO_ROOT / "test.py"), "McpServerTest." + self._testMethodName],
+            cwd=REPO_ROOT,
+            env=environment,
+            capture_output=True,
+            text=True,
+            timeout=180 if os.environ.get("GAME_COVERAGE_RUN") == "1" else 60,
+        )
+        self.assertEqual(0, completed.returncode, completed.stdout + completed.stderr)
+        return True
+
+    def test_native_owner_fixture_starts_in_an_isolated_process(self):
+        from unittest.mock import patch
+
+        fixture = McpServerTest("test_export_module_includes_pybind_class_methods")
+        completed = types.SimpleNamespace(returncode=0, stdout="", stderr="")
+        with patch.dict(os.environ, {}, clear=True), patch.object(subprocess, "run", return_value=completed) as run:
+            self.assertTrue(fixture.runNativeOwnerFixtureInChild())
+        args, options = run.call_args
+        self.assertEqual("McpServerTest." + fixture._testMethodName, args[0][-1])
+        self.assertEqual(fixture._testMethodName, options["env"]["GAME_MCP_NATIVE_TEST"])
+        self.assertEqual(str(build_dir), options["env"]["GAME_BUILD_DIR"])
+        self.assertEqual("1", options["env"]["GAME_TEST_WORKER"])
+        self.assertEqual("dummy", options["env"]["SDL_VIDEODRIVER"])
+        self.assertEqual(60, options["timeout"])
+
+    def test_native_owner_fixture_child_does_not_spawn_again(self):
+        from unittest.mock import patch
+
+        fixture = McpServerTest("test_export_module_includes_pybind_class_methods")
+        with (
+            patch.dict(os.environ, {"GAME_MCP_NATIVE_TEST": fixture._testMethodName}),
+            patch.object(subprocess, "run") as run,
+        ):
+            self.assertFalse(fixture.runNativeOwnerFixtureInChild())
+        run.assert_not_called()
+
     def test_export_module_includes_pybind_class_methods(self):
+        if self.runNativeOwnerFixtureInChild():
+            return
         server = mcp.EngineMcpServer(repo_root=REPO_ROOT, build_dir=build_dir)
+        self.addCleanup(server.close)
         server.import_modules()
         server.inspect_and_export()
 
@@ -27086,10 +27314,13 @@ class McpServerTest(unittest.TestCase):
         self.assertNotIn("CPluginLoader.loadDynamicPlugin", server.exports)
         self.assertNotIn("CGuiHandler.openPanel", server.exports)
 
-        game_module = server.game_module
-        g = game_module.CGameLoader.loadGame()
-        game_module.CGameLoader.startGameWithPlayer(g, "test", DEFAULT_PLAYER)
-        game_handle = server._serialize_result(g)
+        loaded = server._engine_call({"name": "CGameLoader.loadGame"})
+        self.assertFalse(loaded["isError"])
+        game_handle = loaded["structuredContent"]["result"]
+        started = server._engine_call(
+            {"name": "CGameLoader.startGameWithPlayer", "args": [game_handle, "test", DEFAULT_PLAYER]}
+        )
+        self.assertFalse(started["isError"])
         scene_manager_handle = server._engine_handle_call(
             {
                 "handle": game_handle["__handle__"],
@@ -27103,7 +27334,10 @@ class McpServerTest(unittest.TestCase):
         self.assertTrue({"getTransitionStateName", "requestMapChange"}.issubset(method_names))
 
     def test_simulation_run_tool_executes_nouraajd_steps_without_completing_hunt_from_prop_removal(self):
+        if self.runNativeOwnerFixtureInChild():
+            return
         server = mcp.EngineMcpServer(repo_root=REPO_ROOT, build_dir=build_dir)
+        self.addCleanup(server.close)
         server.import_modules()
 
         result = server._call_tool(
@@ -27528,7 +27762,6 @@ class McpServerTest(unittest.TestCase):
             "'method': 'notifications/progress', "
             "'params': {'message': 'stdout-timeout-marker'}"
             "}) + '\\n')\n"
-            "sys.stdout.flush()\n"
             "sys.stdout.write(json.dumps({'jsonrpc': '2.0', 'id': 0, 'result': 'ready'}) + '\\n')\n"
             "sys.stdout.flush()\n"
             "for _line in sys.stdin:\n"
@@ -28085,6 +28318,101 @@ class McpServerTest(unittest.TestCase):
         finally:
             self._shutdown_process(proc)
 
+    def testStdioRandomSaveReloadAndSecondSessionControllerMovement(self):
+        try:
+            load_game_module()
+        except ImportError as error:
+            self.skipTest("The current _game extension is required for migration acceptance: " + str(error))
+
+        slot = unique_save_name("cpp26-mcp-session")
+        self.addCleanup(cleanup_save_slot, slot)
+        proc = self._start_stdio_mcp_process()
+        try:
+            self._initialize_stdio_mcp(proc)
+            session = {"proc": proc, "next_request_id": 3}
+            handles = set()
+
+            def retain(value):
+                if isinstance(value, dict):
+                    if "__handle__" in value:
+                        handles.add(value["__handle__"])
+                    else:
+                        for child in value.values():
+                            retain(child)
+                elif isinstance(value, list):
+                    for child in value:
+                        retain(child)
+                return value
+
+            def call(name, *args):
+                return retain(
+                    self._mcp_engine_call(session, name, list(args), timeout=MCP_STDIO_MAP_START_TIMEOUT_SECONDS)
+                )
+
+            def method(handle, name, *args):
+                return retain(
+                    self._mcp_handle_call(session, handle, name, list(args), timeout=MCP_STDIO_MAP_JSON_TIMEOUT_SECONDS)
+                )
+
+            def releaseSession():
+                result = self._mcp_tool(session, "engine_release_handles", {"handles": sorted(handles)})
+                self.assertEqual(len(handles), result["released"])
+                handles.clear()
+
+            owner = call("CGameLoader.loadGame")
+            call("CGameLoader.startRandomGameWithPlayer", owner, DEFAULT_PLAYER)
+            random_map = method(owner, "getMap")
+            player = method(random_map, "getPlayer")
+            method(player, "addItem", "LesserLifePotion")
+            method(player, "setStringProperty", "migrationSessionMarker", slot)
+            before = json.loads(call("jsonify", player))
+            random_name = method(random_map, "getStringProperty", "mapName")
+            turn = method(random_map, "getTurn")
+            self.assertTrue(call("CMapLoader.saveWithResult", random_map, slot))
+            saved = json.loads(save_primary_path(slot).read_text(encoding="utf-8"))
+            assert_save_envelope(self, saved, random_name)
+
+            restored_owner = call("CGameLoader.loadGame")
+            call("CGameLoader.loadSavedGame", restored_owner, slot)
+            restored_map = method(restored_owner, "getMap")
+            restored_player = method(restored_map, "getPlayer")
+            restored = json.loads(call("jsonify", restored_player))
+            self.assertEqual(random_name, method(restored_map, "getStringProperty", "mapName"))
+            self.assertEqual(turn, method(restored_map, "getTurn"))
+            self.assertEqual(self._serialized_coords(before), self._serialized_coords(restored))
+            self.assertEqual(slot, method(restored_player, "getStringProperty", "migrationSessionMarker"))
+            self.assertTrue(self._serialized_inventory_has(restored, "LesserLifePotion"))
+            releaseSession()
+
+            second_owner = call("CGameLoader.loadGame")
+            call("CGameLoader.startGameWithPlayer", second_owner, "multilevel", DEFAULT_PLAYER)
+            second_map = method(second_owner, "getMap")
+            second_player = method(second_map, "getPlayer")
+            stairs = method(second_map, "getObjectByName", "stairsUp")
+            controller = method(second_player, "getController")
+            method(controller, "setTarget", second_player, method(stairs, "getCoords"))
+            loop = call("event_loop.instance")
+            for _ in range(24):
+                method(second_map, "move")
+                method(loop, "run")
+                if self._mcp_serialized_player_coords(session, second_map) == [4, 1, 1]:
+                    break
+            self.assertEqual([4, 1, 1], self._mcp_serialized_player_coords(session, second_map))
+            self.assertTrue(method(second_map, "getBoolProperty", "used_stairs_up"))
+            method(second_owner, "changeMap", "ritual")
+            for _ in range(10):
+                method(loop, "run")
+            final_map = method(second_owner, "getMap")
+            self.assertEqual("ritual", method(final_map, "getStringProperty", "mapName"))
+            self.assertTrue(method(final_map, "getBoolProperty", "ritual_initialized"))
+            releaseSession()
+            self._write_mcp_walkthrough_log(
+                "cpp26_sessions",
+                {"randomMap": random_name, "saveSchema": saved["schemaVersion"], "stairs": [4, 1, 1], "map": "ritual"},
+            )
+        finally:
+            self._shutdown_process(proc)
+
     def test_stdio_scene_manager_map_transition_walkthrough(self):
         proc = None
         try:
@@ -28105,8 +28433,21 @@ class McpServerTest(unittest.TestCase):
             )
 
             event_loop_handle = self._mcp_engine_call(session, "event_loop.instance")
-            for _ in range(10):
-                self._mcp_handle_call(session, event_loop_handle, "run")
+
+            def transitionComplete():
+                current_map = self._mcp_handle_call(session, game_handle, "getMap")
+                return self._mcp_handle_call(
+                    session, current_map, "getStringProperty", ["mapName"]
+                ) == "ritual" and not (self._mcp_handle_call(session, manager_handle, "isTransitionPending"))
+
+            self.assertTrue(
+                pump_event_loop_until(
+                    transitionComplete,
+                    timeout=1.0,
+                    pump=lambda: self._mcp_handle_call(session, event_loop_handle, "run"),
+                ),
+                "The MCP scene transition did not finish within its existing wait budget",
+            )
 
             ritual_map_handle = self._mcp_handle_call(session, game_handle, "getMap")
             ritual_player_handle = self._mcp_handle_call(session, ritual_map_handle, "getPlayer")

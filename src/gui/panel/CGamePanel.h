@@ -51,6 +51,8 @@ class CGamePanel : public CGameGraphicsObject {
 
     void awaitClosing();
 
+    vstd::task<void> awaitClosingAsync();
+
     virtual void close();
 
     // Opt-in user resize handle. Off by default so existing panels are unchanged: only a panel that

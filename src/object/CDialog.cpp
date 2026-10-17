@@ -1,6 +1,6 @@
 /*
 fall-of-nouraajd c++ dark fantasy game
-Copyright (C) 2025  Andrzej Lis
+Copyright (C) 2025-2026  Andrzej Lis
 
 This program is free software: you can redistribute it and/or modify
         it under the terms of the GNU General Public License as published by
@@ -17,6 +17,9 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 #include "CDialog.h"
 #include "core/CPythonOverrides.h"
+#include "core/CGame.h"
+#include "handler/CGuiHandler.h"
+#include "handler/CScriptHandler.h"
 
 const std::set<std::shared_ptr<CDialogState>> &CDialog::getStates() const { return states; }
 
@@ -35,6 +38,45 @@ bool CDialog::invokeActionChecked(std::string action) {
         PY_SAFE_RET_VAL(return override(action).cast<bool>();, false)
     }
     return false;
+}
+
+vstd::task<bool> CDialog::invokeActionCheckedAsync(std::string action) {
+    return [](std::shared_ptr<CDialog> self, std::string action) -> vstd::task<bool> {
+        auto loop = vstd::event_loop<>::instance();
+        if (!loop->isMainThread()) {
+            co_await vstd::post(loop);
+        }
+        try {
+            std::unique_ptr<CScriptFlow> flow;
+            std::shared_ptr<CGuiHandler> gui;
+            {
+                pybind11::gil_scoped_acquire acquire;
+                auto getter = CPythonOverrides::find_override(self.get(), "getActionFlow");
+                if (getter.is_none()) {
+                    co_return self->invokeActionChecked(std::move(action));
+                }
+                auto callback = getter(action);
+                if (callback.is_none()) {
+                    co_return self->invokeActionChecked(std::move(action));
+                }
+                auto game = self->getGame();
+                if (!game) {
+                    co_return false;
+                }
+                gui = game->getGuiHandler();
+                flow = game->getScriptHandler()->createCallbackFlow(callback.cast<pybind11::function>(), game);
+            }
+            co_await gui->runScriptFlowAsync(std::move(flow));
+            co_return true;
+        } catch (const vstd::task_cancelled &) {
+            throw;
+        } catch (const vstd::scheduler_rejected &) {
+            throw;
+        } catch (...) {
+            PYTHON_LOG;
+            co_return false;
+        }
+    }(this->ptr<CDialog>(), std::move(action));
 }
 
 bool CDialog::invokeCondition(std::string condition) {

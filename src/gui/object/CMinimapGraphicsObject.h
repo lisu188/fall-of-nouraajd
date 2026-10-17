@@ -46,6 +46,8 @@ class CMinimapGraphicsObject : public CGameGraphicsObject {
 
     bool mouseMotionEvent(std::shared_ptr<CGui> gui, SDL_EventType type, int x, int y, int xrel, int yrel) override;
     void browseLandmarks(std::shared_ptr<CGui> gui);
+
+    vstd::task<void> browseLandmarksAsync(std::shared_ptr<CGui> gui);
     void expandMap(std::shared_ptr<CGui> gui);
     bool keyboardEvent(std::shared_ptr<CGui> gui, SDL_EventType type, SDL_Keycode key) override;
 };

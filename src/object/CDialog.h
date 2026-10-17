@@ -1,6 +1,6 @@
 /*
 fall-of-nouraajd c++ dark fantasy game
-Copyright (C) 2025  Andrzej Lis
+Copyright (C) 2025-2026  Andrzej Lis
 
 This program is free software: you can redistribute it and/or modify
         it under the terms of the GNU General Public License as published by
@@ -100,6 +100,8 @@ class CDialog : public CGameObject {
     virtual void invokeAction(std::string action);
 
     bool invokeActionChecked(std::string action);
+
+    vstd::task<bool> invokeActionCheckedAsync(std::string action);
 
     virtual bool invokeCondition(std::string action);
 

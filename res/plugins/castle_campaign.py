@@ -72,17 +72,31 @@ def restAtTown(marker, player):
 
 
 def showTownServices(marker, player):
+    from game import runUiFlow
+
+    return runUiFlow(marker.getGame() if marker else None, showTownServicesFlow(marker, player))
+
+
+def showTownServicesFlow(marker, player):
+    from game import uiRequest
+
     if not canUseTown(marker, player):
         return False
     dialog = marker.getGame().createObject("CastleTownRestDialog")
     if not dialog.configureTown(marker):
         return False
-    marker.getGame().getGuiHandler().showDialog(dialog)
+    (yield uiRequest("gui.showDialog", dialog))
     return True
 
 
 def finishMission(game_map):
-    from game import campaign
+    from game import runUiFlow
+
+    return runUiFlow(game_map.getGame() if game_map else None, finishMissionFlow(game_map))
+
+
+def finishMissionFlow(game_map):
+    from game import campaign, uiRequest
 
     data = missionData(game_map)
     player = game_map.getPlayer() if game_map else None
@@ -110,18 +124,34 @@ def finishMission(game_map):
     gold_before = player.getGold()
     player.addGold(data.get("victoryGold", 0))
     gold_received = player.getGold() - gold_before
-    player.checkQuests()
-    campaign.complete_scenario(
+    campaign.prepareCompletion(
         game_map.getGame(),
         "completed",
         fallback_map=data.get("nextMap") or None,
         outcome_summary=f"Rewards received\nGold: +{gold_received}" if gold_received > 0 else "",
     )
+    (yield uiRequest("gui.checkQuests", player))
+    (
+        yield from campaign.complete_scenarioFlow(
+            game_map.getGame(),
+            "completed",
+            fallback_map=data.get("nextMap") or None,
+            outcome_summary=f"Rewards received\nGold: +{gold_received}" if gold_received > 0 else "",
+        )
+    )
     return True
 
 
 def captureObjective(marker, player):
-    from game import requirementMessage, rewardSnapshot, showRewardReceipt
+    from game import runUiFlow
+
+    return runUiFlow(marker.getGame() if marker else None, captureObjectiveFlow(marker, player))
+
+
+def captureObjectiveFlow(marker, player):
+    from game import flowGame, showRewardReceiptFlow
+
+    from game import requirementMessage, rewardSnapshot
 
     if not canInteract(marker, player):
         return False
@@ -144,14 +174,20 @@ def captureObjective(marker, player):
     label = marker.getStringProperty("label") or "Captured position"
     message = label + " now flies Erathia's banner."
     if player.getGold() > before["gold"]:
-        showRewardReceipt(game_map.getGame(), label, before, message)
+        (yield from showRewardReceiptFlow(flowGame(game_map.getGame()), label, before, message))
     else:
         game_map.getGame().getGuiHandler().notify(message)
-    finishMission(game_map)
+    (yield from finishMissionFlow(game_map))
     return True
 
 
 def markDefeated(actor):
+    from game import runUiFlow
+
+    return runUiFlow(actor.getGame() if actor else None, markDefeatedFlow(actor))
+
+
+def markDefeatedFlow(actor):
     game_map = actor.getMap() if actor else None
     if not game_map or actor.isAlive() or game_map.getGame().getMap() != game_map:
         return False
@@ -162,11 +198,12 @@ def markDefeated(actor):
     if game_map.getBoolProperty(flag):
         return False
     game_map.setBoolProperty(flag, True)
-    finishMission(game_map)
+    (yield from finishMissionFlow(game_map))
     return True
 
 
 def load(self, context):
+    from game import resumableHook, uiRequest, flowGame, showRewardReceiptFlow
     from game import CBuilding
     from game import CDialog
     from game import CEvent
@@ -176,7 +213,7 @@ def load(self, context):
     from game import Coords
     from game import claim_once
     from game import register
-    from game import requirementMessage, rewardSnapshot, showRewardReceipt
+    from game import requirementMessage, rewardSnapshot
 
     @register(context)
     class CastleMissionStart(CEvent):
@@ -206,6 +243,7 @@ def load(self, context):
                 trigger.setStringProperty("event", "onEnter")
                 game_map.getEventHandler().registerTrigger(trigger)
 
+        @resumableHook
         def initializeMission(self):
             game_map = self.getMap()
             player = game_map.getPlayer() if game_map else None
@@ -224,25 +262,30 @@ def load(self, context):
                 player.healProc(100)
                 player.addItem("LifePotion")
                 player.addItem("LifePotion")
-                showRewardReceipt(self.getGame(), "Mission briefing", before, data["intro"])
+                (yield from showRewardReceiptFlow(flowGame(self.getGame()), "Mission briefing", before, data["intro"]))
             self.setBoolProperty("campaign_castleInitialized", True)
             return True
 
+        @resumableHook
         def onTurn(self, event):
-            self.initializeMission()
+            (yield from self.initializeMissionFlow())
+            yield from finishMissionFlow(self.getMap())
 
+        @resumableHook
         def onEnter(self, event):
             if canInteract(self, event.getCause() if event else None):
-                self.initializeMission()
+                (yield from self.initializeMissionFlow())
 
     @register(context)
     class CastleObjective(CBuilding):
+        @resumableHook
         def capture(self, player):
-            return captureObjective(self, player)
+            return (yield from captureObjectiveFlow(self, player))
 
+        @resumableHook
         def onEnter(self, event):
             player = event.getCause() if event else None
-            return self.capture(player) or showTownServices(self, player)
+            return (yield from self.captureFlow(player)) or (yield from showTownServicesFlow(self, player))
 
     @register(context)
     class CastleTownRestDialog(CDialog):
@@ -339,8 +382,9 @@ def load(self, context):
 
     @register(context)
     class CastleDefeatTrigger(CTrigger):
+        @resumableHook
         def trigger(self, object, event):
-            return markDefeated(object)
+            return (yield from markDefeatedFlow(object))
 
     @register(context)
     class CastleOfficerDialog(CDialog):
@@ -349,11 +393,12 @@ def load(self, context):
 
     @register(context)
     class CastleOfficerTrigger(CTrigger):
+        @resumableHook
         def trigger(self, object, event):
             player = event.getCause() if event else None
             if canInteract(object, player):
                 dialog_id = object.getStringProperty("campaign_dialog")
-                self.getGame().getGuiHandler().showDialog(self.getGame().createObject(dialog_id))
+                (yield uiRequest("gui.showDialog", self.getGame().createObject(dialog_id)))
 
     @register(context)
     class CastlePortal(CBuilding):
@@ -386,6 +431,7 @@ def load(self, context):
             if self.getMap():
                 self.getMap().unregisterNavigationEdgesForObject(self.getName())
 
+        @resumableHook
         def onEnter(self, event):
             player = event.getCause() if event else None
             if not canInteract(self, player):
@@ -405,10 +451,11 @@ def load(self, context):
                 requirementMessage(self.getGame(), self, "The landing is blocked.")
                 return
             player.setStringProperty("campaign_castlePortalArrival", f"{target.x},{target.y},{target.z}")
-            player.setCoords(target)
+            yield uiRequest("gui.moveTo", player, target.x, target.y, target.z)
 
     @register(context)
     class CastleSupply(CBuilding):
+        @resumableHook
         def onEnter(self, event):
             player = event.getCause() if event else None
             if canInteract(self, player) and claim_once(self.getMap(), "campaign_castleSupply_" + self.getName()):
@@ -417,10 +464,12 @@ def load(self, context):
                 player.addItem("LifePotion")
                 player.addGold(self.getNumericProperty("campaign_rewardGold"))
                 message = self.getStringProperty("campaign_aidMessage")
-                showRewardReceipt(
-                    self.getGame(),
-                    self.getStringProperty("label") or "Garrison supplies",
-                    before,
-                    message or "The loyal garrison tends your wounds and shares its supplies.",
+                (
+                    yield from showRewardReceiptFlow(
+                        flowGame(self.getGame()),
+                        self.getStringProperty("label") or "Garrison supplies",
+                        before,
+                        message or "The loyal garrison tends your wounds and shares its supplies.",
+                    )
                 )
-            showTownServices(self, player)
+            (yield from showTownServicesFlow(self, player))

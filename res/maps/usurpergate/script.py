@@ -1,5 +1,7 @@
 def load(self, context):
-    from game import showReader, rewardSnapshot, showRewardReceipt, requirementMessage
+    from game import resumableHook, uiRequest, flowGame, removeObjectsFlow
+    from game import showRewardReceiptFlow
+    from game import rewardSnapshot, requirementMessage
     from game import CDialog
     from game import CEvent
     from game import CQuest
@@ -60,41 +62,44 @@ def load(self, context):
             and store.scenario() == "assault_mercy"
         )
 
-    def apply_mercy_route(game_map):
+    def applyMercyRouteFlow(game_map):
         # Idempotent across reloads and repeated start hooks: the persisted
         # mercy_route_applied map flag guards the side effects, so the removal
         # and the arrival copy happen exactly once per campaign run.
         if game_map.getBoolProperty("mercy_route_applied"):
             return False
         for defender in MERCY_ROUTE_DEFENDERS:
-            game_map.removeAll(lambda ob, target=defender: ob.getName() == target)
+            (yield from removeObjectsFlow(game_map, lambda ob, target=defender: ob.getName() == target))
         game_map.setBoolProperty("mercy_route_applied", True)
         return True
 
     @register(context)
     class UsurpergateStart(CEvent):
+        @resumableHook
         def onEnter(self, event):
             if not event.getCause().isPlayer():
                 return
             game_map = self.getMap()
-            game = game_map.getGame()
+            game = flowGame(game_map.getGame())
             usurpergate_flags_default(game_map)
             if game_map.getBoolProperty("usurpergate_intro"):
+                yield from removeObjectsFlow(game_map, lambda obj: obj.getName() == self.getName())
                 return
-            game_map.setBoolProperty("usurpergate_intro", True)
             # Mercy route: stand down the bought west defenders BEFORE the first
             # introduction, and show the mercy-specific arrival copy instead of
             # the standard assault text. Wrath/standalone keep the full assault.
-            if mercy_route_active(game):
-                apply_mercy_route(game_map)
-                showReader(game, "Voss keeps his word", MERCY_ARRIVAL_TEXT)
-            else:
-                showReader(game, "Usurper's Gate", self.getStringProperty("text"))
-            game_map.removeAll(lambda ob: ob.getName() == self.getName())
             ensure_quest(event.getCause(), "usurpergateQuest")
+            game_map.setBoolProperty("usurpergate_intro", True)
+            if mercy_route_active(game):
+                (yield from applyMercyRouteFlow(game_map))
+                (yield uiRequest("showReader", flowGame(game), "Voss keeps his word", MERCY_ARRIVAL_TEXT))
+            else:
+                (yield uiRequest("showReader", flowGame(game), "Usurper's Gate", self.getStringProperty("text")))
+            (yield from removeObjectsFlow(game_map, lambda ob: ob.getName() == self.getName()))
 
     @register(context)
     class ObsidianThrone(CEvent):
+        @resumableHook
         def onEnter(self, event):
             if not event.getCause().isPlayer():
                 return
@@ -115,15 +120,18 @@ def load(self, context):
                 player = game_map.getPlayer()
                 reward_before = rewardSnapshot(player)
                 player.addGold(THRONE_GOLD_REWARD)
-                player.checkQuests()
-                showRewardReceipt(
-                    game_map.getGame(),
-                    "The Warden's throne",
-                    reward_before,
-                    "You take the obsidian throne of the Wardenskeep. The treasury the Usurper hoarded - "
-                    f"{THRONE_GOLD_REWARD} gold - returns to the marches, and the marches return to their Warden.",
+                campaign.prepareCompletion(self.getGame(), "completed")
+                (yield uiRequest("gui.checkQuests", player))
+                (
+                    yield from showRewardReceiptFlow(
+                        flowGame(game_map.getGame()),
+                        "The Warden's throne",
+                        reward_before,
+                        "You take the obsidian throne of the Wardenskeep. The treasury the Usurper hoarded - "
+                        f"{THRONE_GOLD_REWARD} gold - returns to the marches, and the marches return to their Warden.",
+                    )
                 )
-            campaign.complete_scenario(self.getGame(), "completed")
+            (yield from campaign.complete_scenarioFlow(self.getGame(), "completed"))
 
     @register(context)
     @mapQuest("usurpergate")
@@ -162,9 +170,10 @@ def load(self, context):
 
     @trigger(context, "onEnter", "banneretHild")
     class BanneretTrigger(CTrigger):
+        @resumableHook
         def trigger(self, object, event):
             if event.getCause().isPlayer():
-                object.getGame().getGuiHandler().showDialog(object.getGame().createObject("banneretDialog"))
+                (yield uiRequest("gui.showDialog", object.getGame().createObject("banneretDialog")))
 
     @trigger(context, "onDestroy", "theUsurper")
     class UsurperTrigger(CTrigger):

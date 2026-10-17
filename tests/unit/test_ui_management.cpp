@@ -102,6 +102,7 @@ void testInventoryInspectionNeverConsumesAnItem() {
     expect_true(panel->getSelectionDetails(h.gui).find("Healing potion") != std::string::npos,
                 "selection must expose a persistent item name");
     panel->useSelected(h.gui);
+    vstd::event_loop<>::instance()->runUntilIdle();
     expect_true(!h.player->hasInInventory(potion), "the explicit Use action must use the selected potion");
     const auto count = h.player->getItems().size();
     panel->useSelected(h.gui);
@@ -189,6 +190,7 @@ void testCombatInspectionAndUnavailableActionFeedback() {
     expect_true(!panel->itemsRightClickCallback(h.gui, 0, potion), "combat right click must inspect");
     expect_true(h.player->hasInInventory(potion), "combat inspection must not consume items");
     panel->useSelectedItem(h.gui);
+    vstd::event_loop<>::instance()->runUntilIdle();
     expect_true(!h.player->hasInInventory(potion), "combat explicit Use must preserve item behavior");
 
     auto action = std::make_shared<CInteraction>();

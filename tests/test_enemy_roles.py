@@ -323,7 +323,15 @@ class EnemyRolesTest(unittest.TestCase):
         ]
         self.assertIn("clonedBonus != nullptr", priority)
         self.assertIn("if (clonedBonus)", priority)
-        self.assertEqual(2, priority.count("controller.control(monster, opponent)"))
+        control_call = "controller->control(monster, opponent)"
+        self.assertEqual(2, priority.count(control_call))
+        first_control = priority.index(control_call)
+        cloned_bonus = priority.index("clonedBonus != nullptr", first_control)
+        clone_guard = priority.index("if (clonedBonus)", cloned_bonus)
+        second_control = priority.index(control_call, first_control + len(control_call))
+        self.assertLess(first_control, cloned_bonus)
+        self.assertLess(cloned_bonus, clone_guard)
+        self.assertLess(clone_guard, second_control)
         self.assertIn('ordinaryBarrier->setTypeId("ordinaryBarrier")', priority)
         self.assertIn("(*effects.begin())->getTypeId() == ordinaryBarrier->getTypeId()", priority)
         self.assertIn("monster->getEffects().size() == 1", priority)

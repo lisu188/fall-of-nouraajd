@@ -21,6 +21,7 @@ paid, which turned ``successChance`` into a free retry (no reagents lost).
 These tests pin the contract that the cost is paid on BOTH the success and
 failure paths, while outputs are granted only on success.
 """
+
 import importlib.util
 import sys
 import types
@@ -45,6 +46,9 @@ def load_crafting_with_fake_game(randint_fn):
 
     fake_game.CResourcesProvider = FakeResourcesProvider
     old_game = sys.modules.get("game")
+    from tests.hook_flow_support import installHookFlows
+
+    installHookFlows(fake_game)
     sys.modules["game"] = fake_game
     try:
         spec = importlib.util.spec_from_file_location(

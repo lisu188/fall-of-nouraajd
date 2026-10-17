@@ -21,12 +21,14 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #include "core/CJsonUtil.h"
 #include "core/CLoader.h"
 #include "core/CMap.h"
+#include "core/CPlaytestTrace.h"
 #include "core/CScript.h"
 #include "core/CStats.h"
 #include "core/CTypeRegistration.h"
 #include "core/CTypes.h"
 #include "core/CUtil.h"
 #include "gui/CGui.h"
+#include "gui/CGuiTasks.h"
 #include "gui/CLayout.h"
 #include "gui/CRenderContext.h"
 #include "gui/CSdlResources.h"
@@ -43,29 +45,335 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #include "gui/panel/CGameInventoryPanel.h"
 #include "gui/panel/CGamePanel.h"
 #include "gui/panel/CGameQuestPanel.h"
+#include "gui/panel/CGameQuestionPanel.h"
+#include "gui/panel/CGameTextPanel.h"
 #define GAME_UNIT_TESTS
 #include "gui/panel/CGameDialogPanel.h"
 #undef GAME_UNIT_TESTS
 #include "gui/panel/CListView.h"
+#include "handler/CGuiHandler.h"
+#include "handler/CEventHandler.h"
 #include "handler/CObjectHandler.h"
 #include "object/CCreature.h"
 #include "object/CDialog.h"
 #include "object/CEffect.h"
 #include "object/CInteraction.h"
 #include "object/CItem.h"
+#include "object/CMarket.h"
 #include "object/CPlayer.h"
 #include "object/CQuest.h"
 #include "object/CTile.h"
+#include "object/CTrigger.h"
 #include "test_harness.h"
 
 #include <pybind11/embed.h>
 
+#include <atomic>
 #include <chrono>
+#include <future>
+#include <thread>
 #include <limits>
 #include <vector>
 #include <utility>
 
 namespace {
+
+template <typename Predicate> bool pumpGuiUntil(Predicate ready) {
+    auto loop = vstd::event_loop<>::instance();
+    const auto deadline = std::chrono::steady_clock::now() + std::chrono::seconds(2);
+    while (!ready() && std::chrono::steady_clock::now() < deadline) {
+        loop->runReady();
+        game_async::waitForProgress();
+    }
+    return ready();
+}
+
+struct HeadlessGuiTraceFixture {
+    std::shared_ptr<CGame> game = std::make_shared<CGame>();
+    std::shared_ptr<CMap> map = std::make_shared<CMap>();
+    std::shared_ptr<CGuiHandler> handler;
+    HeadlessGuiTraceFixture() {
+        game->setMap(map);
+        map->setGame(game);
+        map->setMapName("unitAsyncRequests");
+        handler = game->getGuiHandler();
+        CPlaytestTrace::configure(true, "", 32, true);
+    }
+    ~HeadlessGuiTraceFixture() {
+        CPlaytestTrace::configure(false);
+        game->getContext()->shutdown();
+    }
+};
+
+void testAsyncHeadlessRequestsPreserveOriginalMarketAndPresentationTraces() {
+    HeadlessGuiTraceFixture fixture;
+    auto context = fixture.game->getContext();
+    auto loop = vstd::event_loop<>::instance();
+    auto market = std::make_shared<CMarket>();
+    market->setName("unitOriginalCallbackMarket");
+    market->setSell(123);
+    market->setBuy(87);
+    auto first = std::make_shared<CItem>();
+    auto second = std::make_shared<CItem>();
+    first->setName("unitOriginalFirst");
+    second->setName("unitOriginalSecond");
+    market->setItems({first, second});
+    std::weak_ptr<CMarket> originalMarket = market;
+    auto lazy = fixture.handler->showTradeAsync(market);
+    market.reset();
+    expect_true(!fixture.handler->getRequestedTradeMarket() && CPlaytestTrace::records().empty(),
+                "a lazy request must not publish its original market before execution");
+    auto sentinels = std::make_shared<int>(0);
+    loop->invoke([sentinels] { ++*sentinels; });
+    auto traded = context->spawnTask(std::move(lazy));
+    expect_true(traded.finished() && *sentinels == 0,
+                "a headless trade must publish inline without pumping unrelated queued work");
+    if (traded.finished()) {
+        traded.get();
+    }
+    market = originalMarket.lock();
+    expect_true(market && fixture.handler->getRequestedTradeMarket() == market && market->getItems().size() == 2,
+                "the actual ephemeral callback market must remain owned by its request");
+    if (!market) {
+        return;
+    }
+    market->remove(first);
+    expect_true(fixture.handler->getRequestedTradeMarket() == market && market->getItems().size() == 1 &&
+                    market->getItems().contains(second),
+                "repeated request lookup must preserve the exact depleted stock without reconstruction");
+
+    std::string title, body, label;
+    for (int index = 0; index < 200; ++index) {
+        title += "\xC4\x85";
+        label += "\xC5\x82";
+    }
+    for (int index = 0; index < 10000; ++index) {
+        body += "\xC5\xBC";
+    }
+    auto choice = context->spawnTask(fixture.handler->showChoiceAsync(title, body, label, label));
+    auto reader = context->spawnTask(fixture.handler->showCampaignScreenAsync(title, body, label));
+    expect_true(choice.finished() && choice.get().empty() && *sentinels == 0,
+                "a headless choice must retain its empty result without parsing invalid JSON or pumping work");
+    expect_true(pumpGuiUntil([&reader] { return reader.finished(); }),
+                "a delegating headless reader task must finish through bounded outer-loop pumping");
+    if (reader.finished()) {
+        reader.get();
+    }
+    expect_true(*sentinels == 1, "only outer-loop pumping may run the queued sentinel");
+    std::vector<json> requests;
+    for (const auto &line : CPlaytestTrace::drain()) {
+        auto record = json::parse(line);
+        if (record.value("event", std::string()) == "trade_requested" ||
+            record.value("event", std::string()) == "choice_requested" ||
+            record.value("event", std::string()) == "reader_requested") {
+            requests.push_back(std::move(record));
+        }
+    }
+    expect_true(requests.size() == 3, "each direct or delegating async request must emit exactly one native witness");
+    if (requests.size() != 3) {
+        return;
+    }
+    expect_true(requests[0].at("event").get<std::string>() == "trade_requested" &&
+                    requests[0].at("sell").get<int>() == 123 && requests[0].at("buy").get<int>() == 87 &&
+                    requests[0].at("items").size() == 2 &&
+                    requests[0].at("market").at("name").get<std::string>() == market->getName(),
+                "the trade witness must capture original identity, prices and stock before subsequent depletion");
+    const auto &choices = requests[1];
+    const auto &reading = requests[2];
+    expect_true(choices.at("event").get<std::string>() == "choice_requested" &&
+                    reading.at("event").get<std::string>() == "reader_requested" &&
+                    choices.at("headless").get<bool>() && reading.at("headless").get<bool>() &&
+                    choices.at("map").get<std::string>() == "unitAsyncRequests" &&
+                    reading.at("map").get<std::string>() == "unitAsyncRequests",
+                "headless presentation traces must retain their native map context");
+    expect_true(choices.at("titleLength").get<std::size_t>() == title.size() &&
+                    reading.at("titleLength").get<std::size_t>() == title.size() &&
+                    choices.at("choicesJsonLength").get<std::size_t>() == body.size() &&
+                    reading.at("bodyLength").get<std::size_t>() == body.size() &&
+                    choices.at("title").get<std::string>().size() == 256 &&
+                    choices.at("choicesJson").get<std::string>().size() == 16384 &&
+                    reading.at("body").get<std::string>().size() == 4096 &&
+                    choices.at("actionLabel").get<std::string>().size() == 128 &&
+                    choices.at("backLabel").get<std::string>().size() == 128,
+                "async presentation must preserve exact byte lengths and UTF-8-safe payload bounds");
+    const auto boundaryTitle = std::string(255, 'x') + "\xF0\x9F\x8C\x99";
+    auto boundary = context->spawnTask(fixture.handler->showChoiceAsync(boundaryTitle, "[]", "Go", "Back"));
+    expect_true(boundary.finished(), "a headless boundary-title request must complete inline");
+    auto boundaryRecords = CPlaytestTrace::drain();
+    expect_true(boundaryRecords.size() == 1 &&
+                    json::parse(boundaryRecords.front()).at("title").get<std::string>() == std::string(255, 'x') &&
+                    json::parse(boundaryRecords.front()).at("titleLength").get<std::size_t>() == boundaryTitle.size(),
+                "UTF-8 cropping must omit a multibyte character that crosses the byte limit");
+    context->advanceTransitionGeneration();
+    expect_true(!fixture.handler->getRequestedTradeMarket(),
+                "an original callback request must expire when its transition generation changes");
+    CPlaytestTrace::configure(false);
+    auto disabled = context->spawnTask(fixture.handler->showTradeAsync(market));
+    expect_true(disabled.finished() && !fixture.handler->getRequestedTradeMarket() && CPlaytestTrace::records().empty(),
+                "disabled tracing must publish neither a market nor a trace from the direct async path");
+}
+
+void testWorkerHeadlessTradePublishesOnlyOnOwnerAndSkipsQueuedCancellation() {
+    HeadlessGuiTraceFixture fixture;
+    auto context = fixture.game->getContext();
+    auto original = std::make_shared<CMarket>();
+    original->setName("unitPreviousRequest");
+    auto previous = context->spawnTask(fixture.handler->showTradeAsync(original));
+    expect_true(previous.finished() && fixture.handler->getRequestedTradeMarket() == original,
+                "the fixture must establish one real prior headless request");
+    CPlaytestTrace::clear();
+    for (const bool cancel : {true, false}) {
+        auto next = std::make_shared<CMarket>();
+        next->setName(cancel ? "unitCancelledRequest" : "unitWorkerRequest");
+        auto outcome = std::make_shared<std::promise<vstd::task_handle<void>>>();
+        auto future = outcome->get_future();
+        const bool submitted = game_async::workerPool()->submit([context, handler = fixture.handler, next, outcome] {
+            try {
+                outcome->set_value(context->spawnTask(handler->showTradeAsync(next)));
+            } catch (...) {
+                outcome->set_exception(std::current_exception());
+            }
+        });
+        std::future_status status;
+        {
+            pybind11::gil_scoped_release release;
+            status = future.wait_for(std::chrono::seconds(2));
+        }
+        expect_true(submitted && status == std::future_status::ready,
+                    "a worker request must start without needing an owner-loop pump");
+        if (!submitted || status != std::future_status::ready) {
+            return;
+        }
+        auto waiting = future.get();
+        expect_true(!waiting.finished() && fixture.handler->getRequestedTradeMarket() == original &&
+                        CPlaytestTrace::records().empty(),
+                    "worker execution must not mutate the request cache or emit a trace before owner posting");
+        if (cancel) {
+            waiting.requestStop();
+        }
+        expect_true(pumpGuiUntil([&waiting] { return waiting.finished(); }),
+                    "the worker request must settle through bounded outer-loop pumping");
+        if (!waiting.finished()) {
+            return;
+        }
+        bool cancelled = false;
+        try {
+            waiting.get();
+        } catch (const vstd::task_cancelled &) {
+            cancelled = true;
+        }
+        expect_true(cancelled == cancel, "only explicitly cancelled queued work should settle as cancelled");
+        if (cancel) {
+            expect_true(fixture.handler->getRequestedTradeMarket() == original && CPlaytestTrace::records().empty(),
+                        "queued cancellation must preserve the prior actual request without publishing new work");
+        } else {
+            auto records = CPlaytestTrace::drain();
+            expect_true(fixture.handler->getRequestedTradeMarket() == next && records.size() == 1 &&
+                            json::parse(records.front()).at("event").get<std::string>() == "trade_requested",
+                        "owner execution must replace the request with the exact worker market and one witness");
+        }
+    }
+}
+
+void testAsyncModalWaitsOwnLazyInputsAndNeverPumpTheLoop() {
+    auto loop = vstd::event_loop<>::instance();
+    auto panel = std::make_shared<CGamePanel>();
+    std::weak_ptr<CGamePanel> lifetime = panel;
+    auto pending = panel->awaitClosingAsync();
+    panel.reset();
+    expect_true(!lifetime.expired(), "a lazy modal task must retain its panel before the first resume");
+
+    int postedCalls = 0;
+    loop->invoke([&postedCalls]() { ++postedCalls; });
+    vstd::task_group tasks;
+    auto waiting = tasks.spawn(std::move(pending), vstd::loopScheduler(loop));
+    expect_true(postedCalls == 0 && waiting.finished(),
+                "an already detached panel must resolve inline without pumping unrelated posted callbacks");
+    if (waiting.finished()) {
+        waiting.get();
+    }
+    expect_true(lifetime.expired(), "finished modal frames must release their retained panel owner");
+
+    bool ready = false;
+    auto suspended = tasks.spawn(gui_async::until([&ready]() { return ready; }, []() {}), vstd::loopScheduler(loop));
+    expect_true(postedCalls == 0 && !suspended.finished(),
+                "an unresolved native GUI wait must suspend without pumping the event loop");
+    ready = true;
+    for (int iteration = 0; iteration < 8 && !suspended.finished(); ++iteration) {
+        loop->runReady();
+    }
+    expect_true(suspended.finished() && postedCalls == 1,
+                "the outer event loop must complete the pending wait and run its own queued callbacks");
+
+    auto question = std::make_shared<CGameQuestionPanel>();
+    question->clickYes(nullptr);
+    auto answer = tasks.spawn(question->awaitAnswerAsync(), vstd::loopScheduler(loop));
+    for (int iteration = 0; iteration < 8 && !answer.finished(); ++iteration) {
+        loop->runReady();
+    }
+    expect_true(answer.finished() && answer.get(), "the asynchronous confirmation must retain an explicit answer");
+
+    auto detachedFight = std::make_shared<CGameFightPanel>();
+    auto interaction = tasks.spawn(detachedFight->selectInteractionAsync(), vstd::loopScheduler(loop));
+    expect_true(interaction.finished() && !interaction.get() && detachedFight->isCancelled(),
+                "a detached fight panel must cancel inline without entering a frame or condition wait");
+}
+
+void testPendingGuiInitializationDoesNotRetainDetachedWidgets() {
+    auto loop = vstd::event_loop<>::instance();
+    const auto conditions = loop->getConditionalTaskCount();
+    auto view = std::make_shared<CListView>();
+    std::weak_ptr<CListView> lifetime = view;
+    view->initialize();
+    expect_true(loop->getConditionalTaskCount() == conditions + 1,
+                "a detached list waits for its GUI through one owned conditional task");
+    view.reset();
+    expect_true(lifetime.expired(), "pending initialization must not keep a detached widget alive");
+    for (int iteration = 0; iteration < 8; ++iteration) {
+        loop->runReady();
+    }
+    expect_true(loop->getConditionalTaskCount() == conditions,
+                "destroying a standalone widget must cancel and remove its initialization wait");
+}
+
+void testRejectedGuiRefreshDoesNotLeaveItsBatchQueued() {
+    auto loop = vstd::event_loop<>::instance();
+    auto game = std::make_shared<CGame>();
+    auto handler = game->getGuiHandler();
+    game->getContext()->shutdown();
+    bool handlerRejected = false;
+    try {
+        handler->showConfirm("Closed session", "No work may start after shutdown.");
+    } catch (const std::runtime_error &) {
+        handlerRejected = true;
+    }
+    expect_true(handlerRejected, "a retained headless GUI adapter must still reject a closed game context");
+    bool queuedMessageRejected = false;
+    try {
+        handler->showMessageLater("No queued message may start after shutdown.");
+    } catch (const std::runtime_error &) {
+        queuedMessageRejected = true;
+    }
+    expect_true(queuedMessageRejected, "a queued message adapter must respect its linked context shutdown");
+    auto view = std::make_shared<CListView>();
+    view->setGame(game);
+    bool rejected = false;
+    try {
+        view->refreshFromRefreshEvent();
+    } catch (const std::runtime_error &) {
+        rejected = true;
+    }
+    expect_true(rejected, "a refresh linked to a closed game context must reject new work");
+
+    view->setGame(nullptr);
+    const auto posted = loop->getPendingTaskCount();
+    view->refreshFromRefreshEvent();
+    expect_true(loop->getPendingTaskCount() == posted + 1,
+                "a rejected refresh must clear its batching flag so a later valid owner can queue another refresh");
+    for (int iteration = 0; iteration < 8; ++iteration) {
+        loop->runReady();
+    }
+}
 
 class ClosingRenderObject : public CGameGraphicsObject {
   public:
@@ -379,6 +687,175 @@ std::shared_ptr<CGame> create_gui_game(const std::shared_ptr<CGui> &gui) {
     game->getObjectHandler()->registerType(CProxyGraphicsLayout::static_meta()->name(),
                                            []() { return std::make_shared<CProxyGraphicsLayout>(); });
     return game;
+}
+
+class WindowlessModalTestGui : public CGui {
+  public:
+    WindowlessModalTestGui() : CGui(WithoutWindow{}) {}
+};
+
+struct ModalThreadProbe {
+    std::thread::id createdOn;
+    std::thread::id destroyedOn;
+    std::atomic<bool> created = false;
+    std::atomic<bool> destroyed = false;
+};
+
+class ThreadCheckedQuestionPanel : public CGameQuestionPanel {
+  public:
+    explicit ThreadCheckedQuestionPanel(std::shared_ptr<ModalThreadProbe> probe) : probe(std::move(probe)) {
+        this->probe->createdOn = std::this_thread::get_id();
+        this->probe->created.store(true, std::memory_order_release);
+    }
+    ~ThreadCheckedQuestionPanel() override {
+        probe->destroyedOn = std::this_thread::get_id();
+        probe->destroyed.store(true, std::memory_order_release);
+    }
+
+  private:
+    std::shared_ptr<ModalThreadProbe> probe;
+};
+
+void testWorkerStartedModalConstructsAndCleansUpOnlyOnMainThread() {
+    auto loop = vstd::event_loop<>::instance();
+    const auto mainThread = std::this_thread::get_id();
+    auto gui = std::make_shared<WindowlessModalTestGui>();
+    auto game = create_gui_game(gui);
+    auto probe = std::make_shared<ModalThreadProbe>();
+    game->getObjectHandler()->registerType(CGameQuestionPanel::static_meta()->name(),
+                                           [probe]() { return std::make_shared<ThreadCheckedQuestionPanel>(probe); });
+    game->getObjectHandler()->registerConfig("questionPanel",
+                                             std::make_shared<json>(json{{"class", "CGameQuestionPanel"}}));
+    auto outcome = std::make_shared<std::promise<vstd::task_handle<bool>>>();
+    auto future = outcome->get_future();
+    const bool submitted =
+        game_async::workerPool()->submit([context = game->getContext(), handler = game->getGuiHandler(), outcome]() {
+            try {
+                outcome->set_value(context->spawnTask(handler->showConfirmAsync("Worker request", "Await on main.")));
+            } catch (...) {
+                outcome->set_exception(std::current_exception());
+            }
+        });
+    std::future_status status;
+    {
+        pybind11::gil_scoped_release release;
+        status = future.wait_for(std::chrono::seconds(2));
+    }
+    expect_true(submitted && status == std::future_status::ready, "the worker must start and suspend its modal task");
+    if (!submitted || status != std::future_status::ready) {
+        return;
+    }
+    auto waiting = future.get();
+    expect_true(!probe->created.load(std::memory_order_acquire),
+                "starting a modal on a worker must defer panel construction until the main loop runs");
+    const auto openedDeadline = std::chrono::steady_clock::now() + std::chrono::seconds(2);
+    while (!probe->created.load(std::memory_order_acquire) && !waiting.finished() &&
+           std::chrono::steady_clock::now() < openedDeadline) {
+        loop->runReady();
+        game_async::waitForProgress();
+    }
+    expect_true(probe->created.load(std::memory_order_acquire) && probe->createdOn == mainThread,
+                "the main thread must construct a worker-requested modal");
+    {
+        pybind11::gil_scoped_release release;
+        std::thread cancel([waiting]() { waiting.requestStop(); });
+        cancel.join();
+    }
+    const auto closedDeadline = std::chrono::steady_clock::now() + std::chrono::seconds(2);
+    while (!waiting.finished() && std::chrono::steady_clock::now() < closedDeadline) {
+        loop->runReady();
+        game_async::waitForProgress();
+    }
+    expect_true(waiting.finished() && probe->destroyed.load(std::memory_order_acquire) &&
+                    probe->destroyedOn == mainThread,
+                "worker cancellation must close and destroy the modal on the main thread");
+    expect_true(gui->getChildren().empty(), "worker cancellation must leave no orphan modal panel");
+}
+
+void testCancellingModalTaskClosesItsPanelWithoutShuttingDownTheSession() {
+    SDL_SetHint(SDL_HINT_VIDEODRIVER, "dummy");
+    SDL_SetHint(SDL_HINT_RENDER_DRIVER, "software");
+    auto loop = vstd::event_loop<>::instance();
+    auto gui = std::make_shared<CGui>();
+    auto game = create_gui_game(gui);
+    game->getObjectHandler()->registerType(CGameQuestionPanel::static_meta()->name(),
+                                           []() { return std::make_shared<CGameQuestionPanel>(); });
+    game->getObjectHandler()->registerConfig("questionPanel",
+                                             std::make_shared<json>(json{{"class", "CGameQuestionPanel"}}));
+    const auto children = gui->getChildren().size();
+    auto pending = game->getContext()->spawnTask(game->getGuiHandler()->showConfirmAsync("Pending", "Cancel me."));
+    expect_true(!pending.finished() && gui->getChildren().size() == children + 1,
+                "a pending confirmation must own one attached modal panel");
+    pending.requestStop();
+    for (int iteration = 0; iteration < 16 && !pending.finished(); ++iteration) {
+        loop->runReady();
+    }
+    expect_true(pending.finished() && game->getContext()->isActive(),
+                "cancelling one modal task must finish it while keeping its game context active");
+    expect_true(gui->getChildren().size() == children,
+                "cancelling a modal task must remove its panel instead of leaving an input-blocking orphan");
+
+    auto following = game->getContext()->spawnTask(game->getGuiHandler()->showConfirmAsync("Next", "Still usable."));
+    for (const auto &child : gui->getChildren()) {
+        if (auto question = vstd::cast<CGameQuestionPanel>(child)) {
+            question->clickYes(gui);
+        }
+    }
+    for (int iteration = 0; iteration < 16 && !following.finished(); ++iteration) {
+        loop->runReady();
+    }
+    expect_true(following.finished() && following.get(),
+                "the same active session must support another confirmation after a prior task is cancelled");
+    expect_true(gui->getChildren().size() == children, "the subsequent completed modal must release its panel");
+}
+
+void testConcurrentTextModalsShareInputUntilTheLastLeaseAndPreserveExternalInput() {
+    SDL_SetHint(SDL_HINT_VIDEODRIVER, "dummy");
+    SDL_SetHint(SDL_HINT_RENDER_DRIVER, "software");
+    auto loop = vstd::event_loop<>::instance();
+    auto gui = std::make_shared<CGui>();
+    auto game = create_gui_game(gui);
+    game->getObjectHandler()->registerType(CGameCampaignBrowserPanel::static_meta()->name(),
+                                           []() { return std::make_shared<CGameCampaignBrowserPanel>(); });
+    game->getObjectHandler()->registerConfig("campaignBrowserPanel",
+                                             std::make_shared<json>(json{{"class", "CGameCampaignBrowserPanel"}}));
+    auto otherHandler = std::make_shared<CGuiHandler>(game);
+    const bool originalInput = SDL_IsTextInputActive() == SDL_TRUE;
+    struct RestoreTextInput {
+        bool active;
+        ~RestoreTextInput() {
+            if (active) {
+                SDL_StartTextInput();
+            } else {
+                SDL_StopTextInput();
+            }
+        }
+    } restore{originalInput};
+    const auto children = gui->getChildren().size();
+    for (const bool externalInput : {false, true}) {
+        if (externalInput) {
+            SDL_StartTextInput();
+        } else {
+            SDL_StopTextInput();
+        }
+        auto first = game->getContext()->spawnTask(game->getGuiHandler()->showTextInputAsync("First", "First input"));
+        auto second = game->getContext()->spawnTask(otherHandler->showTextInputAsync("Second", "Second input"));
+        expect_true(!first.finished() && !second.finished() && SDL_IsTextInputActive() == SDL_TRUE,
+                    "overlapping text modals must keep SDL input active across different GUI handlers");
+        first.requestStop();
+        for (int iteration = 0; iteration < 16 && !first.finished(); ++iteration) {
+            loop->runReady();
+        }
+        expect_true(first.finished() && !second.finished() && SDL_IsTextInputActive() == SDL_TRUE,
+                    "cancelling the first text modal must not stop input needed by the remaining modal");
+        second.requestStop();
+        for (int iteration = 0; iteration < 16 && !second.finished(); ++iteration) {
+            loop->runReady();
+        }
+        expect_true(second.finished() && (SDL_IsTextInputActive() == SDL_TRUE) == externalInput,
+                    "the final text modal must restore input ownership without stopping externally active input");
+        expect_true(gui->getChildren().size() == children, "cancelled text modals must release their panels");
+    }
 }
 
 std::shared_ptr<CGame> create_loader_gui_game(const std::string &guiClass = "CGui") {
@@ -1607,6 +2084,56 @@ void testRetainedPopulatedTextureCachesFailClosedAfterGuiExpiry() {
                 "clearing or destroying retained populated caches must not touch freed SDL textures");
 }
 
+void testRetainedGuiReleasesSdlOwnersAtShutdownBeforeLateTextureAndWorkerCleanup() {
+    auto harness = make_minimap_harness();
+    harness.map->setXBounds({{0, 3}});
+    harness.map->setYBounds({{0, 3}});
+    auto minimap = std::make_shared<CMinimapGraphicsObject>();
+    harness.gui->addChild(minimap);
+    minimap->renderObject(harness.gui, CUtil::rect(0, 0, 128, 128), 0);
+    auto cache = harness.gui->getTextureCache();
+    auto manager = harness.gui->getTextManager();
+    auto retainedManager = std::make_shared<CTextManager>(harness.gui);
+    expect_true(cache->getTexture("images/panel") != nullptr &&
+                    manager->getTextureSize("cached before retained GUI shutdown").first > 0 &&
+                    retainedManager->getTextureSize("released after retained GUI shutdown").first > 0,
+                "the retained GUI regression must populate real image, text, and widget textures");
+    auto texture = fn::sdl::GuiTexturePtr(
+        SDL_CreateTexture(harness.gui->getRenderer(), SDL_PIXELFORMAT_RGBA8888, SDL_TEXTUREACCESS_STATIC, 2, 2),
+        fn::sdl::GuiTextureDeleter{harness.gui});
+    expect_true(texture != nullptr, "a directly retained texture must belong to the GUI renderer");
+    auto window = SDL_RenderGetWindow(harness.gui->getRenderer());
+    expect_true(window != nullptr, "the retained GUI must initially own a real isolated SDL window");
+    const auto windowId = window ? SDL_GetWindowID(window) : 0;
+
+    harness.game->getContext()->shutdown();
+    expect_true(harness.gui->getRenderer() == nullptr && harness.gui->getRenderContext().getRenderer() == nullptr,
+                "session shutdown must release its renderer and clear borrowed rendering state on main");
+    expect_true(windowId != 0 && SDL_GetWindowFromID(windowId) == nullptr,
+                "session shutdown must destroy its SDL window while a GUI wrapper is still retained");
+
+    SDL_ClearError();
+    expect_true(cache->getTexture("images/panel") == nullptr,
+                "a retained image cache must not return freed textures after its live GUI shuts down");
+    expect_true(manager->getTextureSize("cached before retained GUI shutdown") == std::make_pair(0, 0),
+                "a retained text cache must not query freed textures after its live GUI shuts down");
+    texture.reset();
+    minimap.reset();
+    cache.reset();
+    manager.reset();
+    retainedManager.reset();
+    expect_true(std::string(SDL_GetError()).empty(),
+                "late texture, widget, and cache cleanup must not destroy renderer-freed SDL textures again");
+
+    const std::weak_ptr<CGui> owner = harness.gui;
+    {
+        pybind11::gil_scoped_release release;
+        std::thread lastHolder([gui = std::move(harness.gui)]() mutable { gui.reset(); });
+        lastHolder.join();
+    }
+    expect_true(owner.expired(), "the final worker-held GUI wrapper must release after main-thread SDL teardown");
+}
+
 // Builds a GUI where a map-layer recorder and an overlapping minimap overlay share the same parent. The
 // minimap is pushed last so it has the higher priority and is visited first by CGameGraphicsObject::event(),
 // exactly like the live layer ordering. Synthetic SDL events dispatched through gui->event() then let us
@@ -1841,6 +2368,152 @@ InventoryRightClickHarness make_inventory_right_click_harness() {
     return harness;
 }
 
+void test_native_scroll_use_opens_message_without_pumping_or_changing_inventory_or_turn() {
+    auto harness = make_inventory_right_click_harness();
+    type_registration::registerGuiPanelTypes();
+    harness.game->getObjectHandler()->registerType(CGameTextPanel::static_meta()->name(),
+                                                   []() { return std::make_shared<CGameTextPanel>(); });
+    harness.game->getObjectHandler()->registerConfig("textPanel",
+                                                     std::make_shared<json>(json{{"class", "CGameTextPanel"}}));
+    auto scroll = std::make_shared<CScroll>();
+    scroll->setGame(harness.game);
+    scroll->setName("reusableScroll");
+    scroll->setTypeId("reusableScrollType");
+    scroll->setText("A message from a reusable scroll.");
+    harness.player->addItem(scroll);
+    const auto inventorySize = harness.player->getItems().size();
+    const auto turn = harness.map->getTurn();
+    auto loop = vstd::event_loop<>::instance();
+    const auto conditions = loop->getConditionalTaskCount();
+    bool unrelatedWorkRan = false;
+    loop->invoke([&unrelatedWorkRan] { unrelatedWorkRan = true; });
+    auto use = harness.game->getContext()->spawnTask(harness.player->useItemAsync(scroll));
+    expect_true(!unrelatedWorkRan, "native scroll use must return without pumping unrelated queued work");
+    expect_true(pumpGuiUntil([&] { return use.finished() && harness.gui->findChild("CGameTextPanel"); }),
+                "the outer loop must complete scroll use while its separately owned message remains open");
+    if (use.finished()) {
+        use.get();
+    }
+    expect_true(!scroll->isDisposable() && harness.player->getItems().size() == inventorySize &&
+                    harness.player->hasInInventory(scroll),
+                "reading the reusable native scroll must preserve its inventory identity and count");
+    expect_true(harness.map->getTurn() == turn, "reading a native scroll must preserve the map turn");
+    std::weak_ptr<CGameTextPanel> messageLifetime;
+    for (const auto &child : harness.gui->getChildren()) {
+        if (auto text = vstd::cast<CGameTextPanel>(child)) {
+            expect_true(text->getText() == scroll->getText(), "the modal must display the scroll's authored text");
+            messageLifetime = text;
+        }
+    }
+    expect_true(!messageLifetime.expired(), "the scroll message must remain attached after native item use finishes");
+    if (auto message = messageLifetime.lock()) {
+        message->close();
+    }
+    pumpGuiUntil([&] { return messageLifetime.expired() && loop->getConditionalTaskCount() == conditions; });
+    expect_true(unrelatedWorkRan && messageLifetime.expired(),
+                "the outer loop must close the message and release its completed coroutine frame");
+    expect_true(loop->getConditionalTaskCount() == conditions,
+                "the completed scroll modal must remove its pending condition wait");
+    expect_true(harness.player->getItems().size() == inventorySize && harness.player->hasInInventory(scroll) &&
+                    harness.map->getTurn() == turn,
+                "closing the queued message must preserve the scroll inventory and turn behavior");
+}
+
+class AsyncUseProbeItem : public CItem {
+  public:
+    int uses = 0;
+
+    void onUse(std::shared_ptr<CGameEvent>) override { ++uses; }
+
+    bool isDisposable() override { return true; }
+};
+
+void testNativeItemClicksAwaitHooksAndReleaseCancelledUseGuards() {
+    auto harness = make_inventory_right_click_harness();
+    harness.game->getObjectHandler()->registerType(CGameTextPanel::static_meta()->name(),
+                                                   [] { return std::make_shared<CGameTextPanel>(); });
+    harness.game->getObjectHandler()->registerConfig("textPanel",
+                                                     std::make_shared<json>(json{{"class", "CGameTextPanel"}}));
+    auto item = std::make_shared<AsyncUseProbeItem>();
+    item->setGame(harness.game);
+    item->setName("unitAsyncUseItem");
+    item->setTypeId("unitAsyncUseItem");
+    harness.player->addItem(item);
+    std::weak_ptr<CGuiHandler> weakHandler = harness.game->getGuiHandler();
+    auto trigger = std::make_shared<CCustomTrigger>(item->getName(), "onUse", [weakHandler](auto, auto) {
+        return weakHandler.lock()->showMessageAsync("An item-use receipt.");
+    });
+    trigger->setName("unitAsyncItemReceipt");
+    harness.map->getEventHandler()->registerTrigger(trigger);
+    auto loop = vstd::event_loop<>::instance();
+    const auto conditions = loop->getConditionalTaskCount();
+    const auto turn = harness.map->getTurn();
+    bool queued = false;
+    loop->invoke([&queued] { queued = true; });
+    auto legacyDismissal = loop->connectFrameCallback([gui = harness.gui](int) {
+        for (const auto &child : gui->getChildren()) {
+            if (auto text = vstd::cast<CGameTextPanel>(child)) {
+                text->close();
+            }
+        }
+    });
+    const auto textPanels = [&] {
+        std::vector<std::shared_ptr<CGameTextPanel>> panels;
+        for (const auto &child : harness.gui->getChildren()) {
+            if (auto text = vstd::cast<CGameTextPanel>(child)) {
+                panels.push_back(text);
+            }
+        }
+        return panels;
+    };
+    harness.panel->inventoryCallback(harness.gui, 0, item);
+    harness.panel->useSelected(harness.gui);
+    harness.panel->useSelected(harness.gui);
+    expect_true(!queued, "native inventory use must return without pumping unrelated queued work");
+    expect_true(pumpGuiUntil([&] { return !textPanels().empty(); }) && item->uses == 1 && textPanels().size() == 1 &&
+                    !harness.player->hasInInventory(item),
+                "native inventory use must consume its committed item before suspending at the receipt");
+    for (const auto &panel : textPanels()) {
+        panel->close();
+    }
+    pumpGuiUntil([&] { return !harness.player->hasInInventory(item) && textPanels().empty(); });
+    loop->runUntilIdle();
+    expect_true(queued && !harness.player->hasInInventory(item) && textPanels().empty(),
+                "closing an item receipt must dispose the exact item once");
+
+    harness.player->addItem(item);
+    harness.panel->inventoryCallback(harness.gui, 0, item);
+    auto pending = harness.game->getContext()->spawnTask(harness.player->useItemAsync(item));
+    expect_true(pumpGuiUntil([&] { return !textPanels().empty() || pending.finished(); }) && item->uses == 2 &&
+                    !pending.finished() && textPanels().size() == 1,
+                "a subsequent item use must enter a fresh asynchronous hook");
+    pending.requestStop();
+    pumpGuiUntil([&] { return pending.finished(); });
+    bool cancelled = false;
+    if (pending.finished()) {
+        try {
+            pending.get();
+        } catch (const vstd::task_cancelled &) {
+            cancelled = true;
+        }
+    }
+    expect_true(cancelled && textPanels().empty() && !harness.player->hasInInventory(item),
+                "cancelling a committed item receipt must close its modal without restoring the used item");
+    harness.player->addItem(item);
+    harness.panel->inventoryCallback(harness.gui, 0, item);
+    harness.panel->useSelected(harness.gui);
+    expect_true(pumpGuiUntil([&] { return !textPanels().empty(); }) && item->uses == 3 && textPanels().size() == 1,
+                "cancellation must release the pending-use guard for the next native click");
+    for (const auto &panel : textPanels()) {
+        panel->close();
+    }
+    pumpGuiUntil(
+        [&] { return !harness.player->hasInInventory(item) && loop->getConditionalTaskCount() == conditions; });
+    expect_true(!harness.player->hasInInventory(item) && harness.map->getTurn() == turn &&
+                    loop->getConditionalTaskCount() == conditions,
+                "native item flows must preserve turn rules and remove all modal waits");
+}
+
 void test_inventory_right_click_inspects_then_explicit_use_consumes_once() {
     auto harness = make_inventory_right_click_harness();
     auto potion = std::make_shared<CPotion>();
@@ -1860,6 +2533,8 @@ void test_inventory_right_click_inspects_then_explicit_use_consumes_once() {
     expect_true(harness.player->getItems().size() == inventory_size,
                 "right-clicking a usable item must not consume it");
     harness.panel->useSelected(harness.gui);
+    expect_true(pumpGuiUntil([&] { return !harness.player->hasInInventory(potion); }),
+                "the outer loop must complete explicit item use");
     expect_true(harness.player->getItems().size() == inventory_size - 1,
                 "explicit use should consume the selected disposable potion exactly once");
     expect_true(!harness.player->hasInInventory(potion),
@@ -1976,6 +2651,8 @@ void test_fight_panel_right_click_inspects_then_explicit_use_works() {
     expect_true(harness.player->getItems().size() == inventory_size,
                 "combat inspection must not consume the selected item");
     fight_panel->useSelectedItem(harness.gui);
+    expect_true(pumpGuiUntil([&] { return !harness.player->hasInInventory(potion); }),
+                "the outer loop must complete the selected combat item use");
     expect_true(harness.player->getItems().size() == inventory_size - 1,
                 "the explicit combat Use action must consume the selected usable potion");
 }
@@ -3767,6 +4444,15 @@ void test_campaign_browser_selects_by_stable_id_and_cancels_via_escape() {
 int main() {
     pybind11::scoped_interpreter guard{};
 
+    testAsyncModalWaitsOwnLazyInputsAndNeverPumpTheLoop();
+    testPendingGuiInitializationDoesNotRetainDetachedWidgets();
+    testRejectedGuiRefreshDoesNotLeaveItsBatchQueued();
+    testWorkerStartedModalConstructsAndCleansUpOnlyOnMainThread();
+    testCancellingModalTaskClosesItsPanelWithoutShuttingDownTheSession();
+    testConcurrentTextModalsShareInputUntilTheLastLeaseAndPreserveExternalInput();
+    testAsyncHeadlessRequestsPreserveOriginalMarketAndPresentationTraces();
+    testWorkerHeadlessTradePublishesOnlyOnOwnerAndSkipsQueuedCancellation();
+
     test_campaign_browser_selects_by_stable_id_and_cancels_via_escape();
     test_campaign_panel_dismisses_via_action_and_keys_but_never_escape();
     test_layout_runtime_overrides_preserve_serialized_percentage_layouts();
@@ -3799,6 +4485,8 @@ int main() {
     test_reactive_list_views_refresh_counts_match_model_changes_exactly();
     test_quest_panel_refresh_count_coalesces_rapid_invalidations();
     test_inventory_repeated_select_inspects_without_using_item();
+    test_native_scroll_use_opens_message_without_pumping_or_changing_inventory_or_turn();
+    testNativeItemClicksAwaitHooksAndReleaseCancelledUseGuards();
     test_inventory_right_click_inspects_then_explicit_use_consumes_once();
     test_inventory_right_click_full_resource_item_not_consumed();
     test_inventory_right_click_quest_item_is_protected();
@@ -3853,6 +4541,7 @@ int main() {
     testRetainedMinimapTextureDoesNotOutliveItsRenderer();
     testMinimapTextureReparentsAcrossLiveAndExpiredGuiOwners();
     testRetainedPopulatedTextureCachesFailClosedAfterGuiExpiry();
+    testRetainedGuiReleasesSdlOwnersAtShutdownBeforeLateTextureAndWorkerCleanup();
     test_minimap_consumes_inside_pointer_events_and_preserves_outside_and_wheel();
 
     return finish_tests();

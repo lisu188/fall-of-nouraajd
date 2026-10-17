@@ -493,7 +493,10 @@ class GameplayNouraajdHuntPreparationTest(unittest.TestCase):
 
         player.addGold = addGold
         snapshot = authoredFunction("res/game.py", "rewardSnapshot")
-        receipt = authoredFunction("res/game.py", "showRewardReceipt", rewardSnapshot=snapshot, showReader=showReader)
+        receipt_text = authoredFunction("res/game.py", "rewardReceiptText", rewardSnapshot=snapshot)
+        receipt = authoredFunction(
+            "res/game.py", "showRewardReceipt", rewardReceiptText=receipt_text, showReader=showReader
+        )
         complete = authoredFunction(
             "res/maps/nouraajd/script.py",
             "onComplete",

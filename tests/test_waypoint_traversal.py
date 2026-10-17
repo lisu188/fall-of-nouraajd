@@ -8,6 +8,8 @@ from types import ModuleType, SimpleNamespace
 import unittest
 from unittest.mock import patch
 
+from tests.hook_flow_support import installHookFlows
+
 ROOT = Path(__file__).resolve().parents[1]
 
 
@@ -26,6 +28,7 @@ def waypointTypes(source=None):
         return decorate
 
     game.register = register
+    installHookFlows(game)
     namespace = {}
     path = ROOT / "res/plugins/object.py"
     exec(compile(source if source is not None else path.read_text(encoding="utf-8"), str(path), "exec"), namespace)
@@ -42,7 +45,8 @@ class WaypointTraversalTest(unittest.TestCase):
         game_map = SimpleNamespace(getObjectByName=portals.get, canStep=lambda coords: True)
         for name, portal in portals.items():
             portal.getMap = lambda: game_map
-            portal.getCoords = lambda name=name: name
+            portal.getGame = lambda: None
+            portal.getCoords = lambda name=name: SimpleNamespace(x=0 if name == "left" else 1, y=0, z=0)
             portal.getBoolProperty = lambda field: True
             portal.getStringProperty = lambda field, name=name: "right" if name == "left" else "left"
 
@@ -50,6 +54,11 @@ class WaypointTraversalTest(unittest.TestCase):
             def __init__(self):
                 self.coords = "left"
                 self.arrivals = []
+
+            def moveTo(self, x, y, z):
+                if (x, y, z) not in ((0, 0, 0), (1, 0, 0)):
+                    raise AssertionError("Unexpected authored movement destination")
+                self.setCoords("left" if x == 0 else "right")
 
             def setCoords(self, coords):
                 self.coords = coords

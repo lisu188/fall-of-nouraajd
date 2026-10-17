@@ -235,6 +235,9 @@ class OctobogzHuntTest(unittest.TestCase):
         game_stub.randint = Mock()
         game_stub.register = lambda context: lambda cls: self.registered.setdefault(cls.__name__, cls)
         game_stub.event_loop = types.SimpleNamespace(instance=lambda: types.SimpleNamespace(invoke=self.pending.append))
+        from tests.hook_flow_support import installHookFlows
+
+        installHookFlows(game_stub)
         with patch.dict(sys.modules, {"game": game_stub}):
             attack_spec = importlib.util.spec_from_file_location(
                 "hunt_attack_under_test", ROOT / "res/plugins/interaction.py"
@@ -251,6 +254,7 @@ class OctobogzHuntTest(unittest.TestCase):
             spec.loader.exec_module(self.module)
             self.module.load(None, None)
         self.game = Mock()
+        self.game.post.side_effect = self.pending.append
         self.game_map = HuntMap(self.game)
         self.game.getMap.return_value = self.game_map
         self.game.createObject.side_effect = self.createObject
@@ -514,6 +518,14 @@ class OctobogzHuntTest(unittest.TestCase):
         source = (ROOT / "res/plugins/octobogz_hunt.py").read_text(encoding="utf-8")
         tree = ast.parse(source)
         local = {node.name for node in ast.walk(tree) if isinstance(node, ast.FunctionDef)}
+        local.update(
+            node.name + "Flow"
+            for node in ast.walk(tree)
+            if isinstance(node, ast.FunctionDef)
+            and any(
+                isinstance(decorator, ast.Name) and decorator.id == "resumableHook" for decorator in node.decorator_list
+            )
+        )
         called = {
             node.func.attr
             for node in ast.walk(tree)
@@ -1973,7 +1985,10 @@ class OctobogzHuntTest(unittest.TestCase):
             )
 
         snapshot = authoredFunction("res/game.py", "rewardSnapshot")
-        receipt = authoredFunction("res/game.py", "showRewardReceipt", rewardSnapshot=snapshot, showReader=showReader)
+        receipt_text = authoredFunction("res/game.py", "rewardReceiptText", rewardSnapshot=snapshot)
+        receipt = authoredFunction(
+            "res/game.py", "showRewardReceipt", rewardReceiptText=receipt_text, showReader=showReader
+        )
         reward = authoredFunction(
             source,
             "onComplete",
@@ -2038,9 +2053,13 @@ class OctobogzHuntTest(unittest.TestCase):
         from tests.test_octobogz_mcp import OctobogzMcpWalkthroughTest
 
         native = (ROOT / "src/core/CMap.cpp").read_text(encoding="utf-8")
-        native_move = native.split("void CMap::move()", 1)[1].split("void CMap::", 1)[0]
-        self.assertLess(native_move.index("CGameEvent::CType::onTurn"), native_move.index("creature->moveTo(target)"))
-        self.assertIn("_player->checkQuests();", native.split("void CMap::registerPlayerTriggers()", 1)[1])
+        native_move = native.split("vstd::task<void> CMap::moveAsync()", 1)[1].split("void CMap::", 1)[0]
+        self.assertLess(
+            native_move.index("CGameEvent::CType::onTurn"), native_move.index("co_await creature->moveToAsync(target)")
+        )
+        self.assertIn(
+            "co_await _player->checkQuestsAsync();", native.split("void CMap::registerPlayerTriggers()", 1)[1]
+        )
         for controller_combat in (True, False):
             with self.subTest(controller_combat=controller_combat):
                 state, events, player, world, call, gooby, owner = self.originalMainQuestTurnFixture()

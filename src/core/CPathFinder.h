@@ -78,11 +78,10 @@ class CPathFinder {
     static Distance mapHeuristic(const std::shared_ptr<CMap> &map);
 
     // Distances must be admissible for optimal routes. Searches fail closed on resource limits.
-    static std::shared_ptr<vstd::future<Coords, void>> findNextStep(Coords start, Coords goal, const CanStep &canStep,
-                                                                    const Waypoint waypoint,
-                                                                    const Neighbors &neighbors = default_neighbors,
-                                                                    const Distance &distance = DefaultDistance{},
-                                                                    const StepCost &stepCost = DefaultStepCost{});
+    static vstd::task<Coords> findNextStepAsync(Coords start, Coords goal, CanStep canStep, Waypoint waypoint,
+                                                Neighbors neighbors = default_neighbors,
+                                                Distance distance = DefaultDistance{},
+                                                StepCost stepCost = DefaultStepCost{});
 
     static std::vector<Coords> findPath(Coords start, Coords goal, const CanStep &canStep, const Waypoint waypoint,
                                         const Neighbors &neighbors = default_neighbors,

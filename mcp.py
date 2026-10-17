@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 
 import argparse
+import atexit
 import ast
 import importlib
 import inspect
@@ -14,6 +15,8 @@ import sys
 import threading
 import time
 import traceback
+import weakref
+from concurrent.futures import Future
 from dataclasses import dataclass, field
 from http import HTTPStatus
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
@@ -315,6 +318,291 @@ class ProtocolError(Exception):
 MCP_ALLOWED_BUILTIN_CLASS_METHODS = frozenset({"event_loop.instance"})
 
 
+@dataclass(eq=False)
+class EngineResources:
+    stdio_handles: HandleRegistry = field(default_factory=HandleRegistry)
+    http_sessions: dict[str, ConnectionState] = field(default_factory=dict)
+    exports: dict[str, ExportedCallable] = field(default_factory=dict)
+    game_module: Any = None
+    native_module: Any = None
+    lock: Any = field(default_factory=threading.RLock)
+    closed: bool = False
+    owner: Any = None
+
+
+def _closeStream(stream: ClientStream) -> None:
+    while True:
+        try:
+            stream.queue.put_nowait(None)
+            return
+        except queue.Full:
+            try:
+                stream.queue.get_nowait()
+            except queue.Empty:
+                pass
+
+
+def _releaseRegistry(registry: HandleRegistry, lock) -> None:
+    with lock:
+        registry.closed = True
+        values = list(registry.handles.values())
+        registry.handles.clear()
+        registry.object_handles.clear()
+    values.clear()
+
+
+def _releaseEngineResources(resources: EngineResources) -> None:
+    with resources.lock:
+        if resources.closed:
+            return
+        resources.closed = True
+        sessions = list(resources.http_sessions.values())
+        resources.http_sessions.clear()
+    for state in sessions:
+        _releaseRegistry(state.handle_registry, resources.lock)
+        for stream in state.streams.values():
+            _closeStream(stream)
+    _releaseRegistry(resources.stdio_handles, resources.lock)
+    resources.exports.clear()
+    resources.game_module = None
+    resources.native_module = None
+    owner = resources.owner() if resources.owner is not None else None
+    if owner is not None:
+        owner.resources.discard(resources)
+
+
+class EnginePump:
+    def __init__(self, owner):
+        self.owner = weakref.ref(owner)
+        self.lock = threading.Lock()
+        self.active = True
+
+    def deactivate(self):
+        with self.lock:
+            self.active = False
+
+    def schedule(self):
+        with self.lock:
+            if not self.active:
+                return
+        owner = self.owner()
+        if owner is not None:
+            owner._schedulePump(self)
+
+    def pump(self):
+        with self.lock:
+            active = self.active
+        owner = self.owner()
+        if not active or owner is None:
+            return
+        if threading.current_thread() is not owner._thread:
+            raise RuntimeError("Native event loop must run on the MCP engine owner thread")
+        owner._drainReady()
+        if not owner._queue.empty():
+            self.schedule()
+
+
+class EngineOwner:
+    """Keep native initialization, calls, and final releases on one persistent thread."""
+
+    def __init__(self) -> None:
+        self._queue = queue.Queue()
+        self._lock = threading.Lock()
+        self._thread: threading.Thread | None = None
+        self._closed = False
+        self._closing_future = None
+        self._native_loop = None
+        self._active_pump = None
+        self._pump_pending = False
+        self.resources = set()
+        self._finalizer = weakref.finalize(self, self._queue.put, None)
+
+    def _start(self) -> None:
+        if self._thread is None:
+            self._thread = threading.Thread(
+                target=EngineOwner._serve, args=(self._queue, weakref.ref(self)), name="mcp-engine-owner", daemon=True
+            )
+            self._thread.start()
+
+    @staticmethod
+    def _serve(work_queue, reference) -> None:
+        while True:
+            job = work_queue.get()
+            if job is None:
+                return
+            owner = reference()
+            if owner is None:
+                return
+            owner._execute(job)
+            owner = None
+            job = None
+
+    def attachNativeLoop(self, loop):
+        is_main_thread = getattr(loop, "isMainThread", None)
+        if callable(is_main_thread) and not is_main_thread():
+            raise RuntimeError(
+                "The native event loop was initialized on another thread. Start MCP in a fresh Python process "
+                "and let EngineMcpServer.import_modules initialize the engine before using native loaders."
+            )
+        if self._native_loop is None:
+            self._native_loop = loop
+            # Register after native imports, so resource cleanup precedes their interpreter-exit hooks.
+            atexit.register(_closeProcessEngine)
+
+    def _execute(self, job):
+        future, callback, args, kwargs = job
+        job.clear()
+        job = None
+        if not future.set_running_or_notify_cancel():
+            return
+        with self._lock:
+            pump = (
+                EnginePump(self)
+                if self._native_loop and self._active_pump is None and future is not self._closing_future
+                else None
+            )
+            if pump:
+                self._active_pump = pump
+            progress_pump = self._active_pump
+        result = error = None
+        try:
+            if progress_pump and not self._queue.empty():
+                progress_pump.schedule()
+            result = callback(*args, **kwargs)
+        except BaseException as caught:
+            # Do not send native-owning frames to another thread through a Future or an exception chain.
+            seen = set()
+            pending = [caught]
+            while pending:
+                current = pending.pop()
+                if id(current) in seen:
+                    continue
+                seen.add(id(current))
+                current.__traceback__ = None
+                pending.extend(item for item in (current.__cause__, current.__context__) if item is not None)
+            current = None
+            error = caught
+        finally:
+            callback = args = kwargs = None
+            if pump:
+                pump.deactivate()
+                with self._lock:
+                    self._active_pump = None
+        if error is None:
+            future.set_result(result)
+        else:
+            future.set_exception(error)
+
+    def _drainReady(self):
+        # Bound each pump and leave pending calls available to a nested synchronous boundary.
+        for _ in range(min(64, self._queue.qsize())):
+            try:
+                job = self._queue.get_nowait()
+            except queue.Empty:
+                break
+            if job is None:
+                self._queue.put(None)
+                break
+            self._execute(job)
+
+    def _schedulePump(self, pump):
+        with self._lock:
+            if self._active_pump is not pump or self._pump_pending or self._native_loop is None:
+                return
+            self._pump_pending = True
+            loop = self._native_loop
+        reference = weakref.ref(self)
+
+        def progress():
+            owner = reference()
+            if owner is not None:
+                with owner._lock:
+                    owner._pump_pending = False
+                    active = owner._active_pump
+                if active is not None:
+                    active.pump()
+
+        try:
+            accepted = loop.invoke(progress)
+        except BaseException:
+            with self._lock:
+                self._pump_pending = False
+            raise
+        if not accepted:
+            with self._lock:
+                self._pump_pending = False
+            raise RuntimeError("Native event loop rejected MCP owner progress")
+
+    def submit(self, callback, *args, **kwargs):
+        future = Future()
+        with self._lock:
+            if self._closed:
+                raise RuntimeError("MCP engine owner has closed")
+            self._start()
+            self._queue.put([future, callback, args, kwargs])
+            pump = self._active_pump
+        if pump:
+            try:
+                pump.schedule()
+            except BaseException:
+                if future.cancel():
+                    raise
+        return future
+
+    def run(self, callback, *args, **kwargs):
+        if threading.current_thread() is self._thread:
+            return callback(*args, **kwargs)
+        return self.submit(callback, *args, **kwargs).result()
+
+    def close(self, cleanup) -> None:
+        future = Future()
+        with self._lock:
+            if self._closed:
+                return
+            self._closed = True
+            self._closing_future = future
+            self._start()
+            self._queue.put([future, cleanup, (), {}])
+            self._queue.put(None)
+            self._finalizer.detach()
+            pump = self._active_pump
+        if pump:
+            pump.schedule()
+        if threading.current_thread() is not self._thread:
+            try:
+                future.result()
+            finally:
+                self._thread.join()
+
+
+_PROCESS_ENGINE_OWNER = EngineOwner()
+
+
+def _closeProcessEngine():
+    def cleanup():
+        for resources in list(_PROCESS_ENGINE_OWNER.resources):
+            _releaseEngineResources(resources)
+        _PROCESS_ENGINE_OWNER._native_loop = None
+
+    if _PROCESS_ENGINE_OWNER._thread is None:
+        cleanup()
+    else:
+        _PROCESS_ENGINE_OWNER.close(cleanup)
+
+
+def _queueEngineCleanup(owner, resources):
+    if not resources.closed:
+        try:
+            owner.submit(_releaseEngineResources, resources)
+        except RuntimeError:
+            if not owner._closed:
+                raise
+            # Process cleanup owns all remaining bundles before stopping the shared thread.
+
+
+atexit.register(_closeProcessEngine)
+
+
 class EngineMcpServer:
     def __init__(
         self,
@@ -337,18 +625,40 @@ class EngineMcpServer:
         self.trace_messages = trace_messages
         self.native_log_sink = native_log_sink
         self.native_log_path = native_log_path
-        self._stdio_handles = HandleRegistry()
+        self._resources = EngineResources()
+        self._stdio_handles = self._resources.stdio_handles
         self.handles = self._stdio_handles.handles
         self.next_handle = 1
-        self.exports: dict[str, ExportedCallable] = {}
-        self.game_module: Any | None = None
-        self._game_module: Any | None = None
-        self.http_sessions: dict[str, ConnectionState] = {}
+        self.exports = self._resources.exports
+        self.http_sessions = self._resources.http_sessions
         self.stdio_state: ConnectionState | None = None
-        self._lock = threading.RLock()
+        self._lock = self._resources.lock
         self._next_stream_seq = 1
         self._next_invocation = 1
         self._next_session_label = 1
+        self._engine_owner = _PROCESS_ENGINE_OWNER
+        with self._engine_owner._lock:
+            if self._engine_owner._closed:
+                raise RuntimeError("MCP process engine owner has closed")
+            self._resources.owner = weakref.ref(self._engine_owner)
+            self._engine_owner.resources.add(self._resources)
+        self._finalizer = weakref.finalize(self, _queueEngineCleanup, self._engine_owner, self._resources)
+
+    @property
+    def game_module(self):
+        return self._resources.game_module
+
+    @game_module.setter
+    def game_module(self, value):
+        self._resources.game_module = value
+
+    @property
+    def _game_module(self):
+        return self._resources.native_module
+
+    @_game_module.setter
+    def _game_module(self, value):
+        self._resources.native_module = value
 
     def build_extension(self, stdio: bool = False) -> None:
         logger.info("building extension target _game in %s", self.build_dir)
@@ -365,6 +675,11 @@ class EngineMcpServer:
         )
 
     def import_modules(self) -> None:
+        return self._engine_owner.run(self._importModules)
+
+    def _importModules(self) -> None:
+        if self._resources.closed:
+            raise RuntimeError("MCP server has closed")
         os.chdir(self.build_dir)
         self._insert_import_path(self.repo_root / "res")
         self._insert_import_path(self.repo_root)
@@ -387,6 +702,9 @@ class EngineMcpServer:
         self.game_module = importlib.import_module("game")
         # The game bootstrap sets its default sink; restore the caller's requested destination.
         self._configure_native_logging()
+        loop_type = getattr(self._game_module, "event_loop", None)
+        if loop_type is not None:
+            self._engine_owner.attachNativeLoop(loop_type.instance())
         if self.diagnostics is not None:
             try:
                 resource_root = self._resource_root()
@@ -426,6 +744,9 @@ class EngineMcpServer:
         return None
 
     def inspect_and_export(self, *, stdio: bool = False) -> None:
+        return self._engine_owner.run(self._inspectAndExport, stdio=stdio)
+
+    def _inspectAndExport(self, *, stdio: bool = False) -> None:
         if self._game_module is None or self.game_module is None:
             raise RuntimeError("Modules are not imported")
         self.exports.pop("playtest_trace_output_available", None)
@@ -550,7 +871,12 @@ class EngineMcpServer:
         try:
             self._serveStdioMessages()
         finally:
-            self._closeHandleRegistry(self._stdio_handles)
+            self.close()
+
+    def close(self) -> None:
+        if not self._resources.closed:
+            self._engine_owner.run(_releaseEngineResources, self._resources)
+        self._finalizer.detach()
 
     def _serveStdioMessages(self) -> None:
         logger.info("starting stdio MCP server")
@@ -876,6 +1202,7 @@ class EngineMcpServer:
             if self.stdio_state is not None:
                 self._closeHandleRegistry(self._stdio_handles)
                 self._stdio_handles = HandleRegistry()
+                self._resources.stdio_handles = self._stdio_handles
                 self.handles = self._stdio_handles.handles
             state.handle_registry = self._stdio_handles
             self.stdio_state = state
@@ -972,15 +1299,11 @@ class EngineMcpServer:
     def terminate_session(self, session_id: str) -> bool:
         with self._lock:
             state = self.http_sessions.pop(session_id, None)
-            if state is not None:
-                self._closeHandleRegistry(state.handle_registry)
         if state is None:
             return False
+        self._closeHandleRegistry(state.handle_registry)
         for stream in list(state.streams.values()):
-            try:
-                stream.queue.put_nowait(None)
-            except Exception:
-                pass
+            _closeStream(stream)
         logger.info("terminated HTTP MCP session")
         return True
 
@@ -1303,6 +1626,9 @@ class EngineMcpServer:
             pass
 
     def _dispatch_tool(self, params: dict[str, Any], transport: str, session_id: str | None) -> dict[str, Any]:
+        return self._engine_owner.run(self._dispatchToolOwned, params, transport, session_id)
+
+    def _dispatchToolOwned(self, params: dict[str, Any], transport: str, session_id: str | None) -> dict[str, Any]:
         tool_name = params.get("name")
         arguments = params.get("arguments", {})
 
@@ -1367,6 +1693,9 @@ class EngineMcpServer:
         raise ProtocolError(-32602, f"Unknown tool: {tool_name}")
 
     def _engine_call(self, arguments: dict[str, Any], registry: HandleRegistry | None = None) -> dict[str, Any]:
+        return self._engine_owner.run(self._engineCallOwned, arguments, registry)
+
+    def _engineCallOwned(self, arguments: dict[str, Any], registry: HandleRegistry | None = None) -> dict[str, Any]:
         name = arguments.get("name")
         call_args = arguments.get("args", [])
         call_kwargs = arguments.get("kwargs", {})
@@ -1421,6 +1750,11 @@ class EngineMcpServer:
             }
 
     def _engine_handle_call(self, arguments: dict[str, Any], registry: HandleRegistry | None = None) -> dict[str, Any]:
+        return self._engine_owner.run(self._engineHandleCallOwned, arguments, registry)
+
+    def _engineHandleCallOwned(
+        self, arguments: dict[str, Any], registry: HandleRegistry | None = None
+    ) -> dict[str, Any]:
         registry = registry if registry is not None else self._stdio_handles
         handle = arguments.get("handle")
         method = arguments.get("method")
@@ -1541,6 +1875,9 @@ class EngineMcpServer:
             }
 
     def _simulation_run(self, arguments: dict[str, Any]) -> dict[str, Any]:
+        return self._engine_owner.run(self._simulationRunOwned, arguments)
+
+    def _simulationRunOwned(self, arguments: dict[str, Any]) -> dict[str, Any]:
         map_name = arguments.get("map")
         player_class = arguments.get("player_class", "Warrior")
         load_gui = arguments.get("load_gui", False)
@@ -2355,10 +2692,10 @@ class EngineMcpServer:
         return 1
 
     def _closeHandleRegistry(self, registry: HandleRegistry) -> None:
-        with self._lock:
-            registry.closed = True
-            registry.handles.clear()
-            registry.object_handles.clear()
+        return self._engine_owner.run(self._closeHandleRegistryOwned, registry)
+
+    def _closeHandleRegistryOwned(self, registry: HandleRegistry) -> None:
+        _releaseRegistry(registry, self._lock)
 
     def _resolve_handle_references(self, value: Any, registry: HandleRegistry | None = None) -> Any:
         registry = registry if registry is not None else self._stdio_handles
@@ -2399,6 +2736,9 @@ class EngineMcpServer:
         return methods
 
     def _serialize_result(self, value: Any, registry: HandleRegistry | None = None) -> Any:
+        return self._engine_owner.run(self._serializeResultOwned, value, registry)
+
+    def _serializeResultOwned(self, value: Any, registry: HandleRegistry | None = None) -> Any:
         registry = registry if registry is not None else self._stdio_handles
         added = []
         with self._lock:
@@ -2649,6 +2989,12 @@ class EngineHttpServer(ThreadingHTTPServer):
     def __init__(self, server_address, request_handler_class, mcp_server: EngineMcpServer) -> None:
         super().__init__(server_address, request_handler_class)
         self.mcp_server = mcp_server
+
+    def server_close(self) -> None:
+        try:
+            super().server_close()
+        finally:
+            self.mcp_server.close()
 
 
 class EngineHttpRequestHandler(BaseHTTPRequestHandler):
@@ -3101,6 +3447,7 @@ def main() -> int:
     diagnostics = game_diagnostics.startSession(
         repo_root=repo_root, build_dir=build_dir, entrypoint="mcp", debug=args.debug, debug_dir=args.debug_dir
     )
+    server = None
     try:
         python_log_sink = "stderr" if args.stdio else "stdout"
         log_level = args.log_level or ("DEBUG" if diagnostics is not None else "INFO")
@@ -3160,6 +3507,8 @@ def main() -> int:
             diagnostics.finish(status="failed", error=exc)
         raise
     finally:
+        if server is not None:
+            server.close()
         if diagnostics is not None:
             diagnostics.close()
 

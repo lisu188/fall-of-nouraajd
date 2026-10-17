@@ -16,6 +16,7 @@ You should have received a copy of the GNU General Public License
 along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 #include "CGameQuestPanel.h"
+#include "gui/CGuiTasks.h"
 #include "core/CMap.h"
 #include "core/CUtil.h"
 #include "gui/CGui.h"
@@ -391,26 +392,32 @@ bool CGameQuestPanel::setTrackedQuest(std::shared_ptr<CGui> gui, const std::stri
 }
 
 void CGameQuestPanel::chooseTrackedQuest(std::shared_ptr<CGui> gui) {
-    auto player = resolveQuestSource(gui);
-    if (!player || !gui || !gui->getGame()) {
-        return;
-    }
-    json choices = json::array();
-    choices[choices.size()] = {{"id", "clearTracking"},
-                               {"label", "Stop tracking"},
-                               {"detail", "Keep your journal available without a tracked objective."}};
-    for (const auto &quest : player->getQuests()) {
-        if (quest) {
-            choices[choices.size()] = {{"id", quest->getName()},
-                                       {"label", quest->getDescription()},
-                                       {"detail", quest->getObjective() + "\n" + quest->getHint()}};
+    gui_async::spawn(this->ptr<CGameQuestPanel>(), chooseTrackedQuestAsync(std::move(gui)));
+}
+
+vstd::task<void> CGameQuestPanel::chooseTrackedQuestAsync(std::shared_ptr<CGui> gui) {
+    return [](std::shared_ptr<CGameQuestPanel> self, std::shared_ptr<CGui> gui) -> vstd::task<void> {
+        auto player = self->resolveQuestSource(gui);
+        if (!player || !gui || !gui->getGame()) {
+            co_return;
         }
-    }
-    const auto choice =
-        gui->getGame()->getGuiHandler()->showChoice("Track a quest", choices.dump(), "Track quest", "Back");
-    if (!choice.empty()) {
-        setTrackedQuest(gui, choice == "clearTracking" ? "" : choice);
-    }
+        json choices = json::array();
+        choices[choices.size()] = {{"id", "clearTracking"},
+                                   {"label", "Stop tracking"},
+                                   {"detail", "Keep your journal available without a tracked objective."}};
+        for (const auto &quest : player->getQuests()) {
+            if (quest) {
+                choices[choices.size()] = {{"id", quest->getName()},
+                                           {"label", quest->getDescription()},
+                                           {"detail", quest->getObjective() + "\n" + quest->getHint()}};
+            }
+        }
+        const auto choice = co_await gui->getGame()->getGuiHandler()->showChoiceAsync("Track a quest", choices.dump(),
+                                                                                      "Track quest", "Back");
+        if (!choice.empty()) {
+            self->setTrackedQuest(gui, choice == "clearTracking" ? "" : choice);
+        }
+    }(this->ptr<CGameQuestPanel>(), std::move(gui));
 }
 
 CListView::collection_pointer CGameQuestPanel::questCollection(std::shared_ptr<CGui> gui) {

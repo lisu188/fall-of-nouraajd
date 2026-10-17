@@ -17,6 +17,7 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 #include "CGameCampaignPanel.h"
 #include "gui/CGui.h"
+#include "gui/CGuiTasks.h"
 #include "gui/CLayout.h"
 #include "gui/CTextManager.h"
 #include "gui/CUiArtwork.h"
@@ -27,8 +28,13 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #include <sstream>
 
 bool CGameCampaignPanel::awaitDismissal() {
-    vstd::wait_until([this]() { return dismissed != nullptr || !getGui(); });
-    return dismissed ? *dismissed : false;
+    return gui_async::run(this->ptr<CGameCampaignPanel>(), awaitDismissalAsync());
+}
+
+vstd::task<bool> CGameCampaignPanel::awaitDismissalAsync() {
+    auto self = this->ptr<CGameCampaignPanel>();
+    return gui_async::until([self]() { return self->dismissed != nullptr || !self->getGui(); },
+                            [self]() { return self->dismissed ? *self->dismissed : false; });
 }
 
 bool CGameCampaignPanel::isDismissed() { return dismissed != nullptr && *dismissed; }

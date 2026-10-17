@@ -403,13 +403,19 @@ def recipeChoice(runtime, player, recipe, station=None, last_result=""):
 
 
 def open_crafting_station(station, player):
+    return game.runUiFlow(station.getGame() if station else None, openCraftingStationFlow(station, player))
+
+
+def openCraftingStationFlow(station, player):
+    uiRequest, flowGame = game.uiRequest, game.flowGame
+
     if not player or not player.isPlayer():
         return
     runtime = get_runtime()
     station_id = _get_station_identifier(station)
     if not station_id:
         return
-    game_instance = station.getGame()
+    game_instance = flowGame(station.getGame())
     handler = game_instance.getGuiHandler()
     station_label = station.getStringProperty("label") or station_id
     last_result = ""
@@ -417,7 +423,7 @@ def open_crafting_station(station, player):
     while True:
         recipes, option_map = runtime.station_options(player, station_id, station)
         if not recipes:
-            handler.showInfo(f"No known recipes for {station_label}.", True)
+            (yield uiRequest("gui.showInfo", f"No known recipes for {station_label}.", True))
             return
         show_choice = getattr(handler, "showChoice", None)
         if callable(show_choice):
@@ -427,7 +433,7 @@ def open_crafting_station(station, player):
                 choice = recipeChoice(runtime, player, recipe, station, last_result if selected else "")
                 choice["selected"] = selected
                 choices.append(choice)
-            selection = show_choice(station_label, json.dumps(choices), "Craft", "Leave station")
+            selection = yield uiRequest("gui.showChoice", station_label, json.dumps(choices), "Craft", "Leave station")
             recipe = None
             for candidate in recipes:
                 if candidate["id"] == selection:
@@ -436,20 +442,26 @@ def open_crafting_station(station, player):
             if recipe is None:
                 break
             selected_id = recipe["id"]
-            result = runtime.execute_recipe(game_instance, player, recipe)
+            result = runtime.execute_recipe(game.uiGame(game_instance), player, recipe)
             last_result = _format_result_message(runtime, recipe, result, player, station)
             continue
         options = list(option_map.keys())
         options.append(LEAVE_OPTION)
-        selection = handler.showSelection(game.list_string(game_instance, options))
+        selection = yield uiRequest("gui.showSelection", game.list_string(game_instance, options))
         if selection == LEAVE_OPTION or selection not in option_map:
             break
         recipe = option_map[selection]
         if not runtime.is_unlocked(player, recipe):
-            handler.showInfo(_format_result_message(runtime, recipe, _status(False, "locked"), player, station), True)
+            (
+                yield uiRequest(
+                    "gui.showInfo",
+                    _format_result_message(runtime, recipe, _status(False, "locked"), player, station),
+                    True,
+                )
+            )
             continue
-        result = runtime.execute_recipe(game_instance, player, recipe)
-        handler.showInfo(_format_result_message(runtime, recipe, result, player, station), True)
+        result = runtime.execute_recipe(game.uiGame(game_instance), player, recipe)
+        (yield uiRequest("gui.showInfo", _format_result_message(runtime, recipe, result, player, station), True))
 
 
 def craft_recipe(game_instance, player, recipe_id):
@@ -461,11 +473,13 @@ def craft_recipe(game_instance, player, recipe_id):
 
 
 def load(self, context):
+    from game import resumableHook
     from game import CBuilding
     from game import register
 
     @register(context)
     class CraftingStation(CBuilding):
+        @resumableHook
         def onEnter(self, event):
             if event.getCause().isPlayer():
-                open_crafting_station(self, event.getCause())
+                (yield from openCraftingStationFlow(self, event.getCause()))

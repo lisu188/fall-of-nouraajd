@@ -16,6 +16,7 @@ You should have received a copy of the GNU General Public License
 along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 #include "CGameTradePanel.h"
+#include "gui/CGuiTasks.h"
 #include "CManagementActions.h"
 #include "gui/CLayout.h"
 #include "core/CGame.h"
@@ -163,68 +164,84 @@ bool CGameTradePanel::validatePendingTrade(std::shared_ptr<CGui> gui, bool sale,
 }
 
 void CGameTradePanel::finalizeSell(std::shared_ptr<CGui> gui) {
-    auto player = gui && gui->getGame() && gui->getGame()->getMap() ? gui->getGame()->getMap()->getPlayer() : nullptr;
-    if (!market || !player) {
-        return;
-    }
-    const auto quotedMarket = market;
-    const int total = getTotalSellCost();
-    if (!validatePendingTrade(gui, true, total)) {
-        return;
-    }
-    if (!selectedInventory.empty() && gui->getGame()->getGuiHandler()->showConfirm(
-                                          "Review sale",
-                                          vstd::join(getItemNames(selectedInventory), "\n") +
-                                              "\n\nGold after sale: " + std::to_string(player->getGold() + total),
-                                          "Sell for " + std::to_string(total) + " gold", "Cancel")) {
-        const auto currentMap = gui->getGame()->getMap();
-        if (!currentMap || currentMap->getPlayer() != player || market != quotedMarket) {
-            actionMessage = "This trade is no longer available.";
-            return;
+    gui_async::spawn(this->ptr<CGameTradePanel>(), finalizeSellAsync(std::move(gui)));
+}
+
+vstd::task<void> CGameTradePanel::finalizeSellAsync(std::shared_ptr<CGui> gui) {
+    return [](std::shared_ptr<CGameTradePanel> self, std::shared_ptr<CGui> gui) -> vstd::task<void> {
+        auto player =
+            gui && gui->getGame() && gui->getGame()->getMap() ? gui->getGame()->getMap()->getPlayer() : nullptr;
+        if (!self->market || !player) {
+            co_return;
         }
-        if (!validatePendingTrade(gui, true, total)) {
-            return;
+        const auto quotedMarket = self->market;
+        const int total = self->getTotalSellCost();
+        if (!self->validatePendingTrade(gui, true, total)) {
+            co_return;
         }
-        for (auto item : selectedInventory) {
-            market->buyItem(player, item.lock());
+        if (!self->selectedInventory.empty() &&
+            co_await gui->getGame()->getGuiHandler()->showConfirmAsync(
+                "Review sale",
+                vstd::join(self->getItemNames(self->selectedInventory), "\n") +
+                    "\n\nGold after sale: " + std::to_string(player->getGold() + total),
+                "Sell for " + std::to_string(total) + " gold", "Cancel")) {
+            const auto currentMap = gui->getGame()->getMap();
+            if (!currentMap || currentMap->getPlayer() != player || self->market != quotedMarket) {
+                self->actionMessage = "This trade is no longer available.";
+                co_return;
+            }
+            if (!self->validatePendingTrade(gui, true, total)) {
+                co_return;
+            }
+            for (auto item : self->selectedInventory) {
+                self->market->buyItem(player, item.lock());
+            }
+            self->selectedInventory.clear();
+            self->inspectedItem.reset();
+            self->actionMessage = "Sale completed.";
+            self->refreshViews();
         }
-        selectedInventory.clear();
-        inspectedItem.reset();
-        actionMessage = "Sale completed.";
-        refreshViews();
-    }
+    }(this->ptr<CGameTradePanel>(), std::move(gui));
 }
 
 void CGameTradePanel::finalizeBuy(std::shared_ptr<CGui> gui) {
-    auto player = gui && gui->getGame() && gui->getGame()->getMap() ? gui->getGame()->getMap()->getPlayer() : nullptr;
-    if (!market || !player) {
-        return;
-    }
-    const auto quotedMarket = market;
-    const int total = getTotalBuyCost();
-    if (validatePendingTrade(gui, false, total)) {
-        if (!selectedMarket.empty() && gui->getGame()->getGuiHandler()->showConfirm(
-                                           "Review purchase",
-                                           vstd::join(getItemNames(selectedMarket), "\n") +
-                                               "\n\nGold after purchase: " + std::to_string(player->getGold() - total),
-                                           "Buy for " + std::to_string(total) + " gold", "Cancel")) {
-            const auto currentMap = gui->getGame()->getMap();
-            if (!currentMap || currentMap->getPlayer() != player || market != quotedMarket) {
-                actionMessage = "This trade is no longer available.";
-                return;
-            }
-            if (!validatePendingTrade(gui, false, total)) {
-                return;
-            }
-            for (auto item : selectedMarket) {
-                market->sellItem(player, item.lock());
-            }
-            selectedMarket.clear();
-            inspectedItem.reset();
-            actionMessage = "Purchase completed.";
-            refreshViews();
+    gui_async::spawn(this->ptr<CGameTradePanel>(), finalizeBuyAsync(std::move(gui)));
+}
+
+vstd::task<void> CGameTradePanel::finalizeBuyAsync(std::shared_ptr<CGui> gui) {
+    return [](std::shared_ptr<CGameTradePanel> self, std::shared_ptr<CGui> gui) -> vstd::task<void> {
+        auto player =
+            gui && gui->getGame() && gui->getGame()->getMap() ? gui->getGame()->getMap()->getPlayer() : nullptr;
+        if (!self->market || !player) {
+            co_return;
         }
-    }
+        const auto quotedMarket = self->market;
+        const int total = self->getTotalBuyCost();
+        if (self->validatePendingTrade(gui, false, total)) {
+            if (!self->selectedMarket.empty() &&
+                co_await gui->getGame()->getGuiHandler()->showConfirmAsync(
+                    "Review purchase",
+                    vstd::join(self->getItemNames(self->selectedMarket), "\n") +
+                        "\n\nGold after purchase: " + std::to_string(player->getGold() - total),
+                    "Buy for " + std::to_string(total) + " gold", "Cancel")) {
+                const auto currentMap = gui->getGame()->getMap();
+                if (!currentMap || currentMap->getPlayer() != player || self->market != quotedMarket) {
+                    self->actionMessage = "This trade is no longer available.";
+                    co_return;
+                }
+                if (!self->validatePendingTrade(gui, false, total)) {
+                    co_return;
+                }
+                for (auto item : self->selectedMarket) {
+                    self->market->sellItem(player, item.lock());
+                }
+                self->selectedMarket.clear();
+                self->inspectedItem.reset();
+                self->actionMessage = "Purchase completed.";
+                self->refreshViews();
+            }
+        }
+    }(this->ptr<CGameTradePanel>(), std::move(gui));
 }
 
 std::vector<std::string> CGameTradePanel::getItemNames(std::list<std::weak_ptr<CItem>> items) {

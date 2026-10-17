@@ -52,9 +52,9 @@ class NineMarchesRecoveryTest(unittest.TestCase):
         )
 
         class Traveller:
-            def setCoords(self, destination):
+            def moveTo(self, x, y, z):
                 previous = state["position"]
-                state["position"] = (destination.x, destination.y, destination.z)
+                state["position"] = (x, y, z)
                 state["movements"].append((previous, state["position"]))
                 for name in names:
                     if positions[name] == state["position"]:
@@ -102,7 +102,7 @@ class NineMarchesRecoveryTest(unittest.TestCase):
             self.assertEqual(1, sum(abs(a - b) for a, b in zip(state["position"], destination)))
             self.assertTrue(driver.canStep(destination))
             state["steps"].append(tuple(destination))
-            traveller.setCoords(SimpleNamespace(x=destination[0], y=destination[1], z=destination[2]))
+            traveller.moveTo(*destination)
             state["turn"] += 1
             state["target"] = state["position"]
             if moving_npc:
@@ -129,7 +129,7 @@ class NineMarchesRecoveryTest(unittest.TestCase):
                     destination = list(before)
                     destination[axis] += 1 if state["target"][axis] > before[axis] else -1
                 state["inTick"] = True
-                traveller.setCoords(SimpleNamespace(x=destination[0], y=destination[1], z=destination[2]))
+                traveller.moveTo(*destination)
                 state["turn"] += 1
                 contact = state["position"] == positions[name]
                 if moving_npc:

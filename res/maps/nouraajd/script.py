@@ -1,5 +1,8 @@
 def load(self, context):
-    from game import showReader, rewardSnapshot, showRewardReceipt
+    import json
+    from game import resumableHook, uiRequest, flowGame, removeObjectsFlow
+    from game import showRewardReceiptFlow
+    from game import rewardSnapshot
     from game import CEvent
     from game import CTrigger
     from game import CQuest
@@ -11,9 +14,8 @@ def load(self, context):
     from game import PlayerQuestRegistry
     from game import QuestStateStore
     from game import claim_once
-    from game import remove_runtime_actors
+    from game import removeRuntimeActorsFlow
     from game import ensure_quest
-    from game import event_loop
     from game import register, trigger
 
     # The plugin sandbox only allows importing the game and json modules;
@@ -31,8 +33,8 @@ def load(self, context):
     VICTOR_COURTYARD_FALLBACK_RADIUS = 3
     MAIN_QUEST_GOLD_REWARD = 200
 
-    def _clear_victor_encounter(game_map):
-        remove_runtime_actors(game_map, names=("cultLeaderQuest",), prefixes=(VICTOR_CULTIST_PREFIX,))
+    def clearVictorEncounterFlow(game_map):
+        yield from removeRuntimeActorsFlow(game_map, names=("cultLeaderQuest",), prefixes=(VICTOR_CULTIST_PREFIX,))
         game_map.setNumericProperty("VICTOR_COURTYARD_TURN", -1)
         game_map.setNumericProperty("VICTOR_CULTISTS_PLACED", 0)
 
@@ -60,7 +62,7 @@ def load(self, context):
                 return coords
         return None
 
-    def _expire_victor_search(game_map):
+    def expireVictorSearchFlow(game_map):
         quest_system = _get_quest_system(game_map)
         if quest_system.get_state("victor") != "encounter_active":
             return False
@@ -70,16 +72,19 @@ def load(self, context):
         if game_map.getTurn() - spawn_turn < VICTOR_COURTYARD_TIMEOUT_TURNS:
             return False
         quest_system.mark_victor_bad_end()
-        _clear_victor_encounter(game_map)
-        showReader(
-            game_map.getGame(),
-            "Victor's daughter",
-            "You find the courtyard scrubbed bare; Victor's daughter is gone, carried off with the cult's hush.",
+        yield from clearVictorEncounterFlow(game_map)
+        (
+            yield uiRequest(
+                "showReader",
+                flowGame(game_map.getGame()),
+                "Victor's daughter",
+                "You find the courtyard scrubbed bare; Victor's daughter is gone, carried off with the cult's hush.",
+            )
         )
         return True
 
-    def _spawn_victor_encounter(dialog):
-        game = dialog.getGame()
+    def spawnVictorEncounterFlow(dialog):
+        game = flowGame(dialog.getGame())
         game_map = game.getMap()
         quest_system = _quest_system_from(dialog)
         victor_state = quest_system.get_state("victor")
@@ -94,47 +99,70 @@ def load(self, context):
             )
             return False
         if victor_state == "encounter_active":
-            _expire_victor_search(game_map)
+            (yield from expireVictorSearchFlow(game_map))
             return False
 
-        _clear_victor_encounter(game_map)
-        reserved = set()
-        leader_coords = _find_victor_spawn_coords(game_map, dialog.COURTYARD_LEADER_SPAWN, reserved)
-        if leader_coords is None:
-            game.getGuiHandler().notify(
-                "The courtyard is choked with bodies and barricades; the cult's hidden door cannot be reached yet."
-            )
-            return False
-
-        leader = game.createObject("CultLeader")
-        leader.setStringProperty("name", "cultLeaderQuest")
-        target_ctrl = game.createObject("CTargetController")
-        target_ctrl.setTarget("player")
-        leader.setController(target_ctrl)
-        game_map.addObject(leader)
-        if game_map.getObjectByName("cultLeaderQuest") is None:
-            game.getGuiHandler().notify(
-                "The cult door shudders open, then slams shut before the leader can be drawn into the courtyard."
-            )
-            return False
-        leader.moveTo(leader_coords.x, leader_coords.y, leader_coords.z)
-
-        placed_cultists = 0
-        for index, preferred in enumerate(dialog.COURTYARD_SPAWNS, start=1):
-            coords = _find_victor_spawn_coords(game_map, preferred, reserved)
-            if coords is None:
-                continue
-            mon = game.createObject("Cultist")
-            target_ctrl = game.createObject("CTargetController")
-            target_ctrl.setTarget("player")
-            mon.setController(target_ctrl)
-            mon.setStringProperty("name", f"{VICTOR_CULTIST_PREFIX}{index}")
-            game_map.addObject(mon)
-            mon.moveTo(coords.x, coords.y, coords.z)
-            placed_cultists += 1
+        raw = game_map.getStringProperty("pendingVictorEncounter")
+        if raw:
+            progress = json.loads(raw)
+        else:
+            yield from clearVictorEncounterFlow(game_map)
+            progress = {"index": 0, "placed": 0, "reserved": [], "target": None, "registered": False}
+        leader_spawn = getattr(dialog, "COURTYARD_LEADER_SPAWN", VICTOR_COURTYARD_LEADER_SPAWN)
+        cultist_spawns = getattr(dialog, "COURTYARD_SPAWNS", VICTOR_COURTYARD_SPAWNS)
+        while progress["index"] <= len(cultist_spawns):
+            index = progress["index"]
+            name = "cultLeaderQuest" if index == 0 else f"{VICTOR_CULTIST_PREFIX}{index}"
+            type_id = "CultLeader" if index == 0 else "Cultist"
+            reserved = {tuple(coords) for coords in progress["reserved"]}
+            if progress["target"] is None:
+                preferred = leader_spawn if index == 0 else cultist_spawns[index - 1]
+                coords = _find_victor_spawn_coords(game_map, preferred, reserved)
+                if coords is None:
+                    if index == 0:
+                        game.getGuiHandler().notify(
+                            "The courtyard is choked with bodies and barricades; the cult's hidden door cannot be reached yet."
+                        )
+                        return False
+                    progress["index"] += 1
+                    continue
+                progress["target"] = [coords.x, coords.y, coords.z]
+                progress["reserved"] = sorted(reserved)
+            actor = game_map.getObjectByName(name) if progress["registered"] else None
+            if not progress["registered"]:
+                actor = game.createObject(type_id)
+                if index == 0:
+                    actor.setStringProperty("name", "cultLeaderQuest")
+                else:
+                    actor.setStringProperty("name", name)
+                target_ctrl = game.createObject("CTargetController")
+                target_ctrl.setTarget("player")
+                actor.setController(target_ctrl)
+                game_map.addObject(actor)
+                if index == 0 and game_map.getObjectByName(name) is None:
+                    game.getGuiHandler().notify(
+                        "The cult door shudders open, then slams shut before the leader can be drawn into the courtyard."
+                    )
+                    return False
+                progress["registered"] = True
+                game_map.setStringProperty("pendingVictorEncounter", json.dumps(progress, sort_keys=True))
+                placed = None
+            else:
+                placed = actor.getCoords() if actor is not None else None
+            target = tuple(progress["target"])
+            if actor is not None and (placed is None or (placed.x, placed.y, placed.z) != target):
+                yield uiRequest("gui.moveTo", actor, *target)
+            if index > 0:
+                progress["placed"] += 1
+            progress["index"] += 1
+            progress["target"] = None
+            progress["registered"] = False
+            game_map.setStringProperty("pendingVictorEncounter", json.dumps(progress, sort_keys=True))
+        placed_cultists = progress["placed"]
+        game_map.setStringProperty("pendingVictorEncounter", "")
 
         if placed_cultists == 0:
-            _clear_victor_encounter(game_map)
+            yield from clearVictorEncounterFlow(game_map)
             game.getGuiHandler().notify(
                 "The cult leader vanishes back through the branded door; the courtyard is too choked for a fight."
             )
@@ -407,15 +435,17 @@ def load(self, context):
 
     @register(context)
     class StartEvent(CEvent):
+        @resumableHook
         def onEnter(self, event):
+            if self.getBoolProperty("introInitialized"):
+                yield from removeObjectsFlow(self.getMap(), lambda obj: obj.getName() == self.getName())
+                return
             if event.getCause().isPlayer():
                 game_map = self.getMap()
-                game = game_map.getGame()
+                game = flowGame(game_map.getGame())
                 player = game_map.getPlayer()
                 quest_system = _get_quest_system(game_map)
                 _reset_player_quests(player)
-                showReader(game, "Nouraajd", self.getStringProperty("text"))
-                game_map.removeAll(lambda ob: ob.getStringProperty("type") == self.getStringProperty("type"))
                 quest_system.reset_all()
                 game_map.setBoolProperty("ASKED_ABOUT_GIRL", False)
                 game_map.setBoolProperty("TALKED_TO_VICTOR", False)
@@ -432,14 +462,23 @@ def load(self, context):
                 _set_bool_property_default(player, "nouraajdRaceServiceClaimed", False)
                 _grant_quest(player, "rolfQuest")
                 player.addItem("letterFromRolf")
+                self.setBoolProperty("introInitialized", True)
+                (yield uiRequest("showReader", flowGame(game), "Nouraajd", self.getStringProperty("text")))
+                (
+                    yield from removeObjectsFlow(
+                        game_map, lambda ob: ob.getStringProperty("type") == self.getStringProperty("type")
+                    )
+                )
 
     @register(context)
     class ChangeMap(CEvent):
+        @resumableHook
         def onEnter(self, event):
-            game = self.getMap().getGame()
+            game = flowGame(self.getMap().getGame())
             narrative.snapshotTown(game, _quest_system_from(self).get_state("victor"))
-            game.getMap().getPlayer().checkQuests()
-            campaign.complete_scenario(game, "completed", fallback_map="ritual")
+            campaign.prepareCompletion(game, "completed", fallback_map="ritual")
+            (yield uiRequest("gui.checkQuests", game.getMap().getPlayer()))
+            (yield from campaign.complete_scenarioFlow(game, "completed", fallback_map="ritual"))
 
     @register(context)
     @mapQuest("nouraajd")
@@ -456,6 +495,7 @@ def load(self, context):
         def getHint(self):
             return "Search the cave outside town for the first sign of Rolf."
 
+        @resumableHook
         def onComplete(self):
             game_map = self.getGame().getMap()
             # Claim-first: set the claim flag before granting so a repeated dialog/trigger run cannot
@@ -463,11 +503,14 @@ def load(self, context):
             if claim_once(game_map, "GOOBY_REWARD_CLAIMED"):
                 reward_before = rewardSnapshot(game_map.getPlayer())
                 game_map.getPlayer().addGold(MAIN_QUEST_GOLD_REWARD)
-                showRewardReceipt(
-                    self.getGame(),
-                    "Nouraajd's thanks",
-                    reward_before,
-                    "Gooby lies butchered, and weary townsfolk dare a ragged cheer.",
+                yield uiRequest("gui.questCommitted")
+                (
+                    yield from showRewardReceiptFlow(
+                        flowGame(self.getGame()),
+                        "Nouraajd's thanks",
+                        reward_before,
+                        "Gooby lies butchered, and weary townsfolk dare a ragged cheer.",
+                    )
                 )
 
     @register(context)
@@ -618,8 +661,9 @@ def load(self, context):
         def getHint(self):
             return "The travelers in Nouraajd know the route."
 
+        @resumableHook
         def onComplete(self):
-            game = self.getGame()
+            game = flowGame(self.getGame())
             game_map = game.getMap()
             # Claim-first: claim the reward before handing out gold and the item so the payout
             # cannot repeat if onComplete runs again.
@@ -629,11 +673,14 @@ def load(self, context):
             reward_before = rewardSnapshot(player)
             player.addGold(1000)
             player.addItem("ShadowBlade")
-            showRewardReceipt(
-                game,
-                "The OctoBogz bounty",
-                reward_before,
-                "The refugees press 1000 gold and the Shadow Blade into your hands.",
+            yield uiRequest("gui.questCommitted")
+            (
+                yield from showRewardReceiptFlow(
+                    flowGame(game),
+                    "The OctoBogz bounty",
+                    reward_before,
+                    "The refugees press 1000 gold and the Shadow Blade into your hands.",
+                )
             )
 
     @register(context)
@@ -663,8 +710,9 @@ def load(self, context):
 
     @trigger(context, "onDestroy", "cave1")
     class CaveTrigger(CTrigger):
+        @resumableHook
         def trigger(self, object, event):
-            game = self.getGame()
+            game = flowGame(self.getGame())
             game.getGuiHandler().notify(object.getStringProperty("message"))
             game_map = game.getMap()
             player = game_map.getPlayer()
@@ -672,9 +720,11 @@ def load(self, context):
             gooby = game.createObject("gooby")
             gooby.setStringProperty("name", "gooby1")
             game_map.addObject(gooby)
-            gooby.moveTo(100, 100, 0)
             player.addItem("skullOfRolf")
             quest_system.mark_rolf_skull_found(player)
+            game_map.setBoolProperty("pendingGoobyPlacement", True)
+            (yield uiRequest("gui.moveTo", gooby, 100, 100, 0))
+            game_map.setBoolProperty("pendingGoobyPlacement", False)
 
     @trigger(context, "onDestroy", "catacombs")
     class CatacombsTrigger(CTrigger):
@@ -712,9 +762,10 @@ def load(self, context):
 
     @trigger(context, "onEnter", "nouraajdDoor")
     class NouraajdDoorTrigger(CTrigger):
+        @resumableHook
         def trigger(self, object, event):
             if event.getCause().isPlayer() and not object.getBoolProperty("opened"):
-                object.getGame().getGuiHandler().showDialog(object.getGame().createObject("doorDialog"))
+                (yield uiRequest("gui.showDialog", object.getGame().createObject("doorDialog")))
 
     @register(context)
     class DoorDialog(CDialog):
@@ -725,6 +776,7 @@ def load(self, context):
             player = self.getGame().getMap().getPlayer()
             return player.getPlayerClassId() == "Warrior" and not player.getBoolProperty("braced_nouraajd_gate")
 
+        @resumableHook
         def brace_gate(self):
             player = self.getGame().getMap().getPlayer()
             if not self.can_brace_gate():
@@ -733,41 +785,50 @@ def load(self, context):
             player.setBoolProperty("braced_nouraajd_gate", True)
             reward_before = rewardSnapshot(player)
             player.addExp(750)
-            self.open_door()
-            showRewardReceipt(
-                self.getGame(),
-                "Rolf's last marks",
-                reward_before,
-                "You shoulder the warped gate back onto its braces; Rolf's last chalk marks point east. "
-                "You now recover 3 mana after every Barrier cast, while still needing its full 17 mana to cast.",
+            (yield from self.open_doorFlow())
+            (
+                yield from showRewardReceiptFlow(
+                    flowGame(self.getGame()),
+                    "Rolf's last marks",
+                    reward_before,
+                    "You shoulder the warped gate back onto its braces; Rolf's last chalk marks point east. "
+                    "You now recover 3 mana after every Barrier cast, while still needing its full 17 mana to cast.",
+                )
             )
 
+        @resumableHook
         def open_door(self):
             narrative.recordGateApproach(self.getGame(), "cooperative")
-            self.getGame().getMap().removeAll(lambda ob: ob.getName().startswith("nouraajdDoorTrigger"))
+            (
+                yield from removeObjectsFlow(
+                    self.getGame().getMap(), lambda ob: ob.getName().startswith("nouraajdDoorTrigger")
+                )
+            )
             self.getGame().getMap().getObjectByName("nouraajdDoor").setBoolProperty("opened", True)
 
     @trigger(context, "onEnter", "nouraajdTavern")
     class NouraajdTavernTrigger(CTrigger):
+        @resumableHook
         def trigger(self, tavern, event):
             if tavern.getNumericProperty("visited") == 0 and tavern.getNumericProperty("time_visited") == 0:
-                tavern.getGame().getGuiHandler().showDialog(tavern.getGame().createObject("tavernDialog1"))
+                (yield uiRequest("gui.showDialog", tavern.getGame().createObject("tavernDialog1")))
                 tavern.setNumericProperty("time_visited", tavern.getGame().getMap().getTurn())
                 tavern.incProperty("visited", 1)
             elif (
                 tavern.getNumericProperty("visited") == 1
                 and tavern.getGame().getMap().getTurn() - tavern.getNumericProperty("time_visited") > 50
             ):
-                tavern.getGame().getGuiHandler().showDialog(tavern.getGame().createObject("tavernDialog2"))
+                (yield uiRequest("gui.showDialog", tavern.getGame().createObject("tavernDialog2")))
                 tavern.incProperty("visited", 1)
 
     @register(context)
     class TavernDialog1(CDialog):
+        @resumableHook
         def sell_beer(self):
-            game = self.getGame()
+            game = flowGame(self.getGame())
             market = game.createObject("tavernBeerMarket")
             market.setNumericProperty("sell", narrative.beerSalePercent(game))
-            game.getGuiHandler().showTrade(market)
+            (yield uiRequest("gui.showTrade", market))
 
         def asked_about_girl(self):
             self.getGame().getMap().setBoolProperty("ASKED_ABOUT_GIRL", True)
@@ -776,6 +837,7 @@ def load(self, context):
             player = self.getGame().getMap().getPlayer()
             return player.getPlayerClassId() == "Assasin" and not player.getBoolProperty("shadowed_robed_men")
 
+        @resumableHook
         def shadow_robed_men(self):
             player = self.getGame().getMap().getPlayer()
             if not self.can_shadow_robed_men():
@@ -785,12 +847,14 @@ def load(self, context):
             reward_before = rewardSnapshot(player)
             player.addExp(750)
             self.asked_about_girl()
-            showRewardReceipt(
-                self.getGame(),
-                "The courtyard trail",
-                reward_before,
-                "You ghost after the robed men long enough to mark their courtyard turn and the child's yellow ribbon. "
-                "You now recover 3 mana after every Sneak Attack, while still needing its full 15 mana to strike.",
+            (
+                yield from showRewardReceiptFlow(
+                    flowGame(self.getGame()),
+                    "The courtyard trail",
+                    reward_before,
+                    "You ghost after the robed men long enough to mark their courtyard turn and the child's yellow ribbon. "
+                    "You now recover 3 mana after every Sneak Attack, while still needing its full 15 mana to strike.",
+                )
             )
 
     @register(context)
@@ -817,15 +881,17 @@ def load(self, context):
             self._ensure_victor_quest()
             self.getGame().getMap().setBoolProperty("TALKED_TO_VICTOR", True)
 
+        @resumableHook
         def spawn_cultists(self):
             self._ensure_victor_quest()
-            _spawn_victor_encounter(self)
+            (yield from spawnVictorEncounterFlow(self))
 
     @trigger(context, "onEnter", "nouraajdTownHall")
     class TownHallTrigger(CTrigger):
+        @resumableHook
         def trigger(self, object, event):
             if event.getCause().isPlayer():
-                object.getGame().getGuiHandler().showDialog(object.getGame().createObject("townHallDialog"))
+                (yield uiRequest("gui.showDialog", object.getGame().createObject("townHallDialog")))
 
     @register(context)
     class TownHallDialog(CDialog):
@@ -855,20 +921,31 @@ def load(self, context):
         def canOfferWandererFocus(self):
             return self._canOfferRaceService("wandererRace")
 
+        @resumableHook
         def _applyRaceService(self, race_id, cost, hp, mana, text):
             if not self._canOfferRaceService(race_id):
                 return False
             player = self.getGame().getMap().getPlayer()
             if player.getGold() < cost:
-                showReader(
-                    self.getGame(), "Irvin's aid", "The hall needs 5 gold for these supplies. Return when you can pay."
+                (
+                    yield uiRequest(
+                        "showReader",
+                        flowGame(self.getGame()),
+                        "Irvin's aid",
+                        "The hall needs 5 gold for these supplies. Return when you can pay.",
+                    )
                 )
                 return False
             hp_gain = min(hp, max(0, player.getHpMax() - player.getHp()))
             mana_gain = min(mana, max(0, player.getManaMax() - player.getMana()))
             if cost and hp_gain == 0 and mana_gain == 0:
-                showReader(
-                    self.getGame(), "Irvin's aid", "You need no recovery now. The hall will hold your one-time aid."
+                (
+                    yield uiRequest(
+                        "showReader",
+                        flowGame(self.getGame()),
+                        "Irvin's aid",
+                        "You need no recovery now. The hall will hold your one-time aid.",
+                    )
                 )
                 return False
             player.setBoolProperty("nouraajdRaceServiceClaimed", True)
@@ -883,47 +960,59 @@ def load(self, context):
                 rows.append(f"Health: +{hp_gain}")
             if mana_gain:
                 rows.append(f"Mana: +{mana_gain}")
-            showReader(self.getGame(), "Irvin's aid", text + "\n\n" + "\n".join(rows))
+            (yield uiRequest("showReader", flowGame(self.getGame()), "Irvin's aid", text + "\n\n" + "\n".join(rows)))
             return True
 
+        @resumableHook
         def claimHumanRation(self):
-            return self._applyRaceService(
-                "humanRace",
-                0,
-                0,
-                0,
-                "Irvin finds your people's ration ledger and releases 20 gold from its emergency allowance. "
-                "The entry is marked paid; the hall can grant this aid only once.",
+            return (
+                yield from self._applyRaceServiceFlow(
+                    "humanRace",
+                    0,
+                    0,
+                    0,
+                    "Irvin finds your people's ration ledger and releases 20 gold from its emergency allowance. "
+                    "The entry is marked paid; the hall can grant this aid only once.",
+                )
             )
 
+        @resumableHook
         def claimOutlanderRations(self):
-            return self._applyRaceService(
-                "outlanderRace",
-                5,
-                5,
-                5,
-                "Irvin recognizes an outlander's travel marks and shares the hall's trail rations. "
-                "For 5 gold you recover up to 5 health and 5 mana; this aid can be claimed only once.",
+            return (
+                yield from self._applyRaceServiceFlow(
+                    "outlanderRace",
+                    5,
+                    5,
+                    5,
+                    "Irvin recognizes an outlander's travel marks and shares the hall's trail rations. "
+                    "For 5 gold you recover up to 5 health and 5 mana; this aid can be claimed only once.",
+                )
             )
 
+        @resumableHook
         def claimHighlanderAid(self):
-            return self._applyRaceService(
-                "highlanderRace",
-                5,
-                10,
-                0,
-                "Irvin remembers the highland shield bearers who held Nouraajd's walls and opens their medical chest. "
-                "For 5 gold you recover up to 10 health; this aid can be claimed only once.",
+            return (
+                yield from self._applyRaceServiceFlow(
+                    "highlanderRace",
+                    5,
+                    10,
+                    0,
+                    "Irvin remembers the highland shield bearers who held Nouraajd's walls and opens their medical chest. "
+                    "For 5 gold you recover up to 10 health; this aid can be claimed only once.",
+                )
             )
 
+        @resumableHook
         def claimWandererFocus(self):
-            return self._applyRaceService(
-                "wandererRace",
-                5,
-                0,
-                10,
-                "Irvin recognizes a wanderer's route signs and offers a quiet desk beside the old star charts. "
-                "For 5 gold you recover up to 10 mana; this aid can be claimed only once.",
+            return (
+                yield from self._applyRaceServiceFlow(
+                    "wandererRace",
+                    5,
+                    0,
+                    10,
+                    "Irvin recognizes a wanderer's route signs and offers a quiet desk beside the old star charts. "
+                    "For 5 gold you recover up to 10 mana; this aid can be claimed only once.",
+                )
             )
 
         def _is_letter_to_beren(self, item):
@@ -942,6 +1031,7 @@ def load(self, context):
             # Wayfarer saves keep working while explicit class identities are honored.
             return player.getPlayerClassId() == "Wayfarer" and not player.getBoolProperty("charted_smuggler_route")
 
+        @resumableHook
         def chart_wayfarer_route(self):
             player = self.getGame().getMap().getPlayer()
             if not self.can_chart_wayfarer_route():
@@ -950,11 +1040,13 @@ def load(self, context):
             player.setBoolProperty("charted_smuggler_route", True)
             reward_before = rewardSnapshot(player)
             player.addExp(750)
-            showRewardReceipt(
-                self.getGame(),
-                "The courier alleys",
-                reward_before,
-                "You chart forgotten courier alleys through Nouraajd; each hidden turn steadies your stride when the lane rots away.",
+            (
+                yield from showRewardReceiptFlow(
+                    flowGame(self.getGame()),
+                    "The courier alleys",
+                    reward_before,
+                    "You chart forgotten courier alleys through Nouraajd; each hidden turn steadies your stride when the lane rots away.",
+                )
             )
 
         def give_letter(self):
@@ -1003,25 +1095,47 @@ def load(self, context):
             quest_system.record_victor_records()
             self._ensure_quest("victorQuest")
 
+        @resumableHook
         def spawn_cultists(self):
             self.start_victor_quest()
             quest_system = _quest_system_from(self)
             quest_system.mark_courtyard_known()
-            _spawn_victor_encounter(self)
+            (yield from spawnVictorEncounterFlow(self))
 
     @trigger(context, "onTurn", "nouraajdTownHall")
     class VictorCourtyardTimerTrigger(CTrigger):
+        @resumableHook
         def trigger(self, obj, event):
             game_map = obj.getGame().getMap()
+            pending_placements = game_map.getBoolProperty("pendingGoobyPlacement") or game_map.getBoolProperty(
+                "pendingAmuletPlacement"
+            )
+            for flag, name, target in (
+                ("pendingGoobyPlacement", "gooby1", (100, 100, 0)),
+                ("pendingAmuletPlacement", "amuletGoblin", (195, 8, 0)),
+            ):
+                if pending_placements and game_map.getBoolProperty(flag):
+                    actor = game_map.getObjectByName(name)
+                    if actor is not None:
+                        placed = actor.getCoords()
+                        if (placed.x, placed.y, placed.z) != target:
+                            yield uiRequest("gui.moveTo", actor, *target)
+                    game_map.setBoolProperty(flag, False)
+            if game_map.getBoolProperty("pendingVictorCleanup"):
+                yield from clearVictorEncounterFlow(game_map)
+                game_map.setBoolProperty("pendingVictorCleanup", False)
+            if game_map.getStringProperty("pendingVictorEncounter"):
+                yield from spawnVictorEncounterFlow(obj)
             if _quest_system_from(obj).get_state("victor") != "encounter_active":
                 return
-            _expire_victor_search(game_map)
+            (yield from expireVictorSearchFlow(game_map))
 
     @trigger(context, "onEnter", "nouraajdChapel")
     class ChapelTrigger(CTrigger):
+        @resumableHook
         def trigger(self, object, event):
             if event.getCause().isPlayer():
-                object.getGame().getGuiHandler().showDialog(object.getGame().createObject("berenDialog"))
+                (yield uiRequest("gui.showDialog", object.getGame().createObject("berenDialog")))
 
     @register(context)
     class BerenDialog(CDialog):
@@ -1039,6 +1153,7 @@ def load(self, context):
             # Gate on the class identity (playerClassId) with type-id fallback for pre-identity saves.
             return player.getPlayerClassId() == "Inquisitor" and not player.getBoolProperty("inspected_stained_glass")
 
+        @resumableHook
         def inspect_stained_glass(self):
             player = self.getGame().getMap().getPlayer()
             if not self.can_inspect_stained_glass():
@@ -1047,17 +1162,20 @@ def load(self, context):
             player.setBoolProperty("inspected_stained_glass", True)
             reward_before = rewardSnapshot(player)
             player.addExp(750)
-            showRewardReceipt(
-                self.getGame(),
-                "The stained-glass cipher",
-                reward_before,
-                "The stained glass hides a Marumi Baso seal; zeal hardens as you memorize the cult's patient cipher.",
+            (
+                yield from showRewardReceiptFlow(
+                    flowGame(self.getGame()),
+                    "The stained-glass cipher",
+                    reward_before,
+                    "The stained glass hides a Marumi Baso seal; zeal hardens as you memorize the cult's patient cipher.",
+                )
             )
 
         def can_decode_stained_glass_ward(self):
             player = self.getGame().getMap().getPlayer()
             return player.getPlayerClassId() == "Sorcerer" and not player.getBoolProperty("decoded_stained_glass_ward")
 
+        @resumableHook
         def decode_stained_glass_ward(self):
             player = self.getGame().getMap().getPlayer()
             if not self.can_decode_stained_glass_ward():
@@ -1067,12 +1185,14 @@ def load(self, context):
             reward_before = rewardSnapshot(player)
             player.addItem("Scroll")
             player.addExp(750)
-            showRewardReceipt(
-                self.getGame(),
-                "The copied ward",
-                reward_before,
-                "You unwind a cold ward from the stained glass and copy its safest stroke onto a blank scroll. "
-                "You now recover 3 mana after every Frost Bolt, while still needing its full 20 mana to cast.",
+            (
+                yield from showRewardReceiptFlow(
+                    flowGame(self.getGame()),
+                    "The copied ward",
+                    reward_before,
+                    "You unwind a cold ward from the stained glass and copy its safest stroke onto a blank scroll. "
+                    "You now recover 3 mana after every Frost Bolt, while still needing its full 20 mana to cast.",
+                )
             )
 
         def can_deliver_letter(self):
@@ -1119,18 +1239,23 @@ def load(self, context):
             if not quest_system.is_cave_purged():
                 self._ensure_quest("cleanseCaveQuest")
 
+        @resumableHook
         def finish_cleanse(self):
             quest_system = _quest_system_from(self)
             if self.can_finish_cleanse():
                 quest_system.mark_cave_purged()
-                showReader(
-                    self.getGame(),
-                    "The ritual chapel",
-                    "For a breath, the town is spared. Beren points you toward the abandoned ritual chapel.",
-                )
                 narrative.snapshotTown(self.getGame(), quest_system.get_state("victor"))
-                self.getGame().getMap().getPlayer().checkQuests()
-                campaign.complete_scenario(self.getGame(), "completed", fallback_map="ritual")
+                campaign.prepareCompletion(self.getGame(), "completed", fallback_map="ritual")
+                (
+                    yield uiRequest(
+                        "showReader",
+                        flowGame(self.getGame()),
+                        "The ritual chapel",
+                        "For a breath, the town is spared. Beren points you toward the abandoned ritual chapel.",
+                    )
+                )
+                (yield uiRequest("gui.checkQuests", self.getGame().getMap().getPlayer()))
+                (yield from campaign.complete_scenarioFlow(self.getGame(), "completed", fallback_map="ritual"))
             else:
                 self.getGame().getGuiHandler().notify("The cave still writhes with OctoBogz corruption.")
 
@@ -1151,6 +1276,7 @@ def load(self, context):
         def contract_completed(self):
             return _quest_system_from(self).is_octobogz_contract_completed()
 
+        @resumableHook
         def accept_quest(self):
             game_map = self.getGame().getMap()
             player = game_map.getPlayer()
@@ -1165,19 +1291,21 @@ def load(self, context):
             _grant_quest(player, "octoBogzQuest")
             quest_system.activate_octobogz_contract()
             if quest_system.is_octobogz_contract_completed():
-                player.checkQuests()
+                (yield uiRequest("gui.checkQuests", player))
 
     @trigger(context, "onEnter", "questGiver")
     class QuestGiverTrigger(CTrigger):
+        @resumableHook
         def trigger(self, obj, event):
             if event.getCause().isPlayer():
-                game = obj.getGame()
-                game.getGuiHandler().showDialog(game.createObject("dialog"))
+                game = flowGame(obj.getGame())
+                (yield uiRequest("gui.showDialog", game.createObject("dialog")))
 
     @trigger(context, "onDestroy", "cultLeaderQuest")
     class CultLeaderQuestTrigger(CTrigger):
+        @resumableHook
         def trigger(self, leader, event):
-            game = self.getGame()
+            game = flowGame(self.getGame())
             game_map = game.getMap()
             quest_system = _quest_system_from(self)
             if quest_system.get_state("victor") != "encounter_active":
@@ -1203,34 +1331,38 @@ def load(self, context):
             response = narrative.victorResponse(game)
             if response:
                 reward_text += "\n\n" + response
-            showRewardReceipt(game, "Victor's daughter is safe", reward_before, reward_text)
-            game.getGuiHandler().showTrade(game.createObject("victorMarket"))
             quest_system.mark_victor_good_end()
-            _clear_victor_encounter(game_map)
+            game_map.setBoolProperty("pendingVictorCleanup", True)
+            (yield from showRewardReceiptFlow(flowGame(game), "Victor's daughter is safe", reward_before, reward_text))
+            (yield uiRequest("gui.showTrade", game.createObject("victorMarket")))
+            yield from clearVictorEncounterFlow(game_map)
+            game_map.setBoolProperty("pendingVictorCleanup", False)
 
     @trigger(context, "onEnter", "oldWoman")
     class OldWomanTrigger(CTrigger):
+        @resumableHook
         def trigger(self, obj, event):
             if event.getCause().isPlayer():
-                game = obj.getGame()
+                game = flowGame(obj.getGame())
                 game_map = game.getMap()
                 quest_system = _quest_system_from(obj)
                 amulet_state = quest_system.get_state("amulet")
                 if amulet_state == "returned":
-                    remove_runtime_actors(game_map, names=("oldWoman",))
+                    yield from removeRuntimeActorsFlow(game_map, names=("oldWoman",))
                     return
                 player = game_map.getPlayer()
                 if player.hasItem(lambda it: it.getName() == "preciousAmulet"):
-                    game.getGuiHandler().showDialog(game.createObject("questReturnDialog"))
+                    (yield uiRequest("gui.showDialog", game.createObject("questReturnDialog")))
                 elif amulet_state == "not_started":
-                    game.getGuiHandler().showDialog(game.createObject("questDialog"))
+                    (yield uiRequest("gui.showDialog", game.createObject("questDialog")))
                 else:
                     game.getGuiHandler().notify("The goblin still clutches my amulet; please bring it back!")
 
     @register(context)
     class QuestDialog(CDialog):
+        @resumableHook
         def start_amulet_quest(self):
-            game = self.getGame()
+            game = flowGame(self.getGame())
             game_map = game.getMap()
             quest_system = _quest_system_from(self)
             if quest_system.get_state("amulet") != "not_started":
@@ -1241,13 +1373,16 @@ def load(self, context):
             goblin.setStringProperty("name", "amuletGoblin")
             game_map.addObject(goblin)
             # spawn near the old woman within map bounds
-            goblin.moveTo(195, 8, 0)
             quest_system.start_amulet()
+            game_map.setBoolProperty("pendingAmuletPlacement", True)
+            (yield uiRequest("gui.moveTo", goblin, 195, 8, 0))
+            game_map.setBoolProperty("pendingAmuletPlacement", False)
 
     @register(context)
     class QuestReturnDialog(CDialog):
+        @resumableHook
         def complete_amulet_quest(self):
-            game = self.getGame()
+            game = flowGame(self.getGame())
             game_map = game.getMap()
             player = game_map.getPlayer()
             quest_system = _quest_system_from(self)
@@ -1263,19 +1398,24 @@ def load(self, context):
                 reward_before = rewardSnapshot(player)
                 player.addGold(50)
                 quest_system.finish_amulet()
-                remove_runtime_actors(game_map, names=("amuletGoblin", "oldWoman"))
-                showRewardReceipt(
-                    game,
-                    "Amulet returned",
-                    reward_before,
-                    "The old woman presses 50 gold upon you, tears streaking her dust-caked cheeks.",
+                yield from removeRuntimeActorsFlow(game_map, names=("amuletGoblin", "oldWoman"))
+                (
+                    yield from showRewardReceiptFlow(
+                        flowGame(game),
+                        "Amulet returned",
+                        reward_before,
+                        "The old woman presses 50 gold upon you, tears streaking her dust-caked cheeks.",
+                    )
                 )
 
     if context.getMap():
         _get_quest_system(context.getMap()).initialize_defaults()
 
+    resolveContext = context.createWeakResolver()
+
     def syncLoadedVictorState():
         # Save loading registers scripts before restoring the map and player.
+        context = resolveContext()
         game_map = context.getMap()
         if not game_map or game_map.mapName != "nouraajd":
             return
@@ -1287,4 +1427,4 @@ def load(self, context):
                 game_map.setBoolProperty("octobogzHuntCleared", False)
             player.getGame().createObject("OctobogzHuntDirector").synchronize(game_map)
 
-    event_loop.instance().invoke(syncLoadedVictorState)
+    context.post(syncLoadedVictorState)

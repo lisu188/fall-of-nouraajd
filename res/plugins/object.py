@@ -16,7 +16,8 @@
 
 
 def load(self, context):
-    from game import showReader, requirementMessage
+    from game import resumableHook, uiRequest, flowGame, removeObjectByNameFlow
+    from game import requirementMessage
     from game import randint
     from game import claim_once
     from game import CBuilding
@@ -32,9 +33,16 @@ def load(self, context):
         cause = event.getCause()
         return cause if cause and cause.isPlayer() else None
 
-    def show_info(building, text):
+    def showInfoFlow(building, text):
         if text and building.getMap():
-            showReader(building.getMap().getGame(), building.getStringProperty("label") or "Mapmaker's notes", text)
+            (
+                yield uiRequest(
+                    "showReader",
+                    flowGame(building.getMap().getGame()),
+                    building.getStringProperty("label") or "Mapmaker's notes",
+                    text,
+                )
+            )
 
     def notifyAdventure(building, text):
         if text and building.getMap():
@@ -49,6 +57,7 @@ def load(self, context):
 
     @register(context)
     class WayPoint(CBuilding):
+        @resumableHook
         def onEnter(self, event):
             if not event or not event.getCause():
                 return
@@ -59,7 +68,7 @@ def load(self, context):
             if exit_coords:
                 active_waypoint_causes.add(cause)
                 try:
-                    cause.setCoords(exit_coords)
+                    yield uiRequest("gui.moveTo", cause, exit_coords.x, exit_coords.y, exit_coords.z)
                 finally:
                     active_waypoint_causes.remove(cause)
 
@@ -127,20 +136,27 @@ def load(self, context):
 
     @register(context)
     class Market(CBuilding):
+        @resumableHook
         def onEnter(self, event):
             if event and event.getCause() and event.getCause().isPlayer():
                 market = self.getObjectProperty("market")
                 if market:
-                    self.getMap().getGame().getGuiHandler().showTrade(market)
+                    (yield uiRequest("gui.showTrade", market))
 
     @register(context)
     class SignPost(CBuilding):
+        @resumableHook
         def onEnter(self, event):
             if event.getCause().isPlayer():
-                showReader(self.getMap().getGame(), "Signpost", self.getStringProperty("text"))
+                (
+                    yield uiRequest(
+                        "showReader", flowGame(self.getMap().getGame()), "Signpost", self.getStringProperty("text")
+                    )
+                )
 
     @register(context)
     class Chest(CBuilding):
+        @resumableHook
         def onEnter(self, event):
             player = acting_player(event)
             game_map = self.getMap()
@@ -148,26 +164,52 @@ def load(self, context):
                 return
             if not claim_once(self, "looted"):
                 return
-            self.getGame().getRngHandler().addRandomLoot(player, self.getNumericProperty("value"))
+            (yield uiRequest("gui.addRandomLoot", player, self.getNumericProperty("value")))
 
     @register(context)
     class Cave(CBuilding):
+        @resumableHook
         def onEnter(self, event):
             if not event.getCause().isPlayer():
                 return
             if self.getBoolProperty("enabled"):
                 self.setBoolProperty("enabled", False)
-                location = self.getCoords()
-                for i in range(-1, 2):
-                    for j in range(-1, 2):
-                        if not (j == 0 and i == 0):
-                            if self.getMap().canStep(Coords(location.x + i, location.y + j, location.z)):
-                                mon = self.getObjectProperty("monster").clone()
-                                self.getMap().addObject(mon)
-                                mon.moveTo(location.x + i, location.y + j, location.z)
-                self.getMap().removeObjectByName(self.getName())
+                self.setBoolProperty("lairOpened", True)
+                self.setNumericProperty("lairSpawnIndex", 0)
+            if self.getBoolProperty("lairOpened"):
+                yield from self.openLairFlow()
 
+        def openLairFlow(self):
+            game_map = self.getMap()
+            location = self.getCoords()
+            offsets = [(i, j) for i in range(-1, 2) for j in range(-1, 2) if i or j]
+            index = max(0, min(int(self.getNumericProperty("lairSpawnIndex")), len(offsets)))
+            while index < len(offsets):
+                i, j = offsets[index]
+                x, y, z = location.x + i, location.y + j, location.z
+                pending_name = self.getStringProperty("lairSpawnName")
+                if pending_name:
+                    mon = game_map.getObjectByName(pending_name)
+                elif game_map.canStep(Coords(x, y, z)):
+                    mon = self.getObjectProperty("monster").clone()
+                    game_map.addObject(mon)
+                    self.setStringProperty("lairSpawnName", mon.getName())
+                else:
+                    mon = None
+                if mon is not None:
+                    placed = mon.getCoords() if pending_name else None
+                    if placed is None or (placed.x, placed.y, placed.z) != (x, y, z):
+                        yield uiRequest("gui.moveTo", mon, x, y, z)
+                self.setStringProperty("lairSpawnName", "")
+                index += 1
+                self.setNumericProperty("lairSpawnIndex", index)
+            yield from removeObjectByNameFlow(game_map, self.getName())
+
+        @resumableHook
         def onTurn(self, event):
+            if self.getBoolProperty("lairOpened"):
+                yield from self.openLairFlow()
+                return
             chance = self.getNumericProperty("chance")
             monsters = self.getNumericProperty("monsters")
             enabled = self.getBoolProperty("enabled")
@@ -175,8 +217,8 @@ def load(self, context):
                 location = self.getCoords()
                 mon = self.getObjectProperty("monster").clone()
                 self.getMap().addObject(mon)
-                mon.moveTo(location.x, location.y, location.z)
                 self.incProperty("monsters", -1)
+                (yield uiRequest("gui.moveTo", mon, location.x, location.y, location.z))
 
     # Heroes of Might and Magic III inspired adventure objects. Each visitable
     # location keys its one-time rewards to the visiting player through
@@ -197,14 +239,18 @@ def load(self, context):
 
     @register(context)
     class Campfire(CBuilding):
+        @resumableHook
         def onEnter(self, event):
             player = acting_player(event)
             if not player:
                 return
+            if not claim_once(self, "looted"):
+                yield from removeObjectByNameFlow(self.getMap(), self.getName())
+                return
             player.addGold(self.getNumericProperty("gold"))
-            self.getGame().getRngHandler().addRandomLoot(player, self.getNumericProperty("value"))
+            (yield uiRequest("gui.addRandomLoot", player, self.getNumericProperty("value")))
             notifyAdventure(self, "You scavenge supplies abandoned around a cold campfire.")
-            self.getMap().removeObjectByName(self.getName())
+            (yield from removeObjectByNameFlow(self.getMap(), self.getName()))
 
     @register(context)
     class FountainOfYouth(CBuilding):
@@ -312,16 +358,18 @@ def load(self, context):
 
     @register(context)
     class AdventureObelisk(CBuilding):
+        @resumableHook
         def onEnter(self, event):
             player = acting_player(event)
             if not player:
                 return
             if claim_once(player, "obelisk_" + self.getName()):
                 player.incProperty("obelisksVisited", 1)
-            show_info(self, self.getStringProperty("text"))
+            (yield from showInfoFlow(self, self.getStringProperty("text")))
 
     @register(context)
     class WarriorsTomb(CBuilding):
+        @resumableHook
         def onEnter(self, event):
             player = acting_player(event)
             if not player:
@@ -330,12 +378,15 @@ def load(self, context):
                 notifyAdventure(self, "The tomb lies plundered and empty.")
                 return
             self.setBoolProperty("enabled", False)
-            self.getGame().getRngHandler().addRandomLoot(player, self.getNumericProperty("value"))
-            # The guardian's toll bypasses armor and block, so it is applied
-            # straight to HP instead of through the combat damage pipeline.
-            toll = min(player.getHp() - 1, player.getHpMax() * self.getNumericProperty("damage") // 100)
-            if toll > 0:
-                player.setHp(player.getHp() - toll)
+            maximum_toll = player.getHpMax() * self.getNumericProperty("damage") // 100
+            try:
+                (yield uiRequest("gui.addRandomLoot", player, self.getNumericProperty("value")))
+            finally:
+                # Loot is settled even on cancellation. Settle its toll using the
+                # same player without consulting services of an inactive session.
+                toll = min(player.getHp() - 1, maximum_toll)
+                if toll > 0:
+                    player.setHp(player.getHp() - toll)
             notifyAdventure(self, "You pry treasure from the warrior's tomb, but its restless guardian exacts a toll.")
 
     @register(context)
@@ -371,6 +422,7 @@ def load(self, context):
 
     @register(context)
     class BorderGuard(CBuilding):
+        @resumableHook
         def onTurn(self, event):
             game_map = self.getMap()
             if not game_map:
@@ -383,13 +435,15 @@ def load(self, context):
             there = player.getCoords()
             if here.z == there.z and abs(here.x - there.x) <= 1 and abs(here.y - there.y) <= 1:
                 notifyAdventure(self, "The border guard honors your " + color + " pass and stands aside.")
-                game_map.removeObjectByName(self.getName())
+                (yield from removeObjectByNameFlow(game_map, self.getName()))
 
     @register(context)
     class TownPortalScroll(CScroll):
+        @resumableHook
         def onUse(self, event):
-            cur_map = event.getCause().getMap()
-            event.getCause().moveTo(cur_map.getEntryX(), cur_map.getEntryY(), cur_map.getEntryZ())
+            player = event.getCause()
+            cur_map = player.getMap()
+            yield uiRequest("gui.itemMoveTo", player, cur_map.getEntryX(), cur_map.getEntryY(), cur_map.getEntryZ())
 
         def isDisposable(self):
             return True

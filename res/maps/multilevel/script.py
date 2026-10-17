@@ -1,4 +1,5 @@
 def load(self, context):
+    from game import resumableHook, uiRequest
     from game import CBuilding
     from game import CEvent
     from game import Coords
@@ -53,6 +54,7 @@ def load(self, context):
         def onTurn(self, event):
             self.publishWaypoint()
 
+        @resumableHook
         def onEnter(self, event):
             cause = event.getCause() if event else None
             if not cause or not cause.isPlayer():
@@ -69,7 +71,7 @@ def load(self, context):
 
             origin = self.getCoords()
             cause.setBoolProperty(TRANSITION_GUARD, True)
-            cause.setCoords(target)
+            (yield uiRequest("gui.moveTo", cause, target.x, target.y, target.z))
             game_map.setStringProperty("lastLevelTransition", self.getName())
             game_map.setNumericProperty(
                 "levelTransitionCount",

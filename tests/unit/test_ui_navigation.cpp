@@ -228,6 +228,7 @@ void testManualMovementAndWaitCancelOldDestinationPreview() {
     world->previewDestination(h.gui, Coords(6, 0, 0));
     expect_true(h.player->getCoords() == initial, "previewing a destination must not move the player");
     keyEvent(h.gui, SDLK_RIGHT);
+    vstd::event_loop<>::instance()->runUntilIdle();
     const auto afterStep = h.player->getCoords();
     const auto turnAfterStep = h.map->getTurn();
     expect_true(afterStep != initial, "manual movement regression must drive a real player step");
@@ -236,6 +237,7 @@ void testManualMovementAndWaitCancelOldDestinationPreview() {
                 "Enter after a manual step must not commit an obsolete route preview");
     world->previewDestination(h.gui, Coords(7, 0, 0));
     keyEvent(h.gui, SDLK_SPACE);
+    vstd::event_loop<>::instance()->runUntilIdle();
     const auto afterWait = h.player->getCoords();
     const auto turnAfterWait = h.map->getTurn();
     keyEvent(h.gui, SDLK_RETURN);

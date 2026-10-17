@@ -18,6 +18,7 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #pragma once
 
 #include <optional>
+#include <mutex>
 #include <vector>
 
 #include "core/CStats.h"
@@ -87,6 +88,8 @@ class CCreature : public CMapObject, public CMoveable, public CVisitable {
     CCreature();
 
     virtual ~CCreature();
+
+    void setGame(std::shared_ptr<CGame> game) override;
 
     void setActions(std::set<std::shared_ptr<CInteraction>> value);
 
@@ -257,7 +260,13 @@ class CCreature : public CMapObject, public CMoveable, public CVisitable {
 
     virtual void beforeMove();
 
+    vstd::task<void> beforeMoveAsync() override;
+
+    void cancelMove() override;
+
     virtual void afterMove();
+
+    vstd::task<void> afterMoveAsync() override;
 
     const std::optional<Coords> &getPendingMoveOrigin() const;
 
@@ -280,6 +289,8 @@ class CCreature : public CMapObject, public CMoveable, public CVisitable {
     void useAction(std::shared_ptr<CInteraction> action, std::shared_ptr<CCreature> creature);
 
     void useItem(std::shared_ptr<CItem> item);
+
+    vstd::task<void> useItemAsync(std::shared_ptr<CItem> item);
 
     std::shared_ptr<CStats> getStats();
 
@@ -338,11 +349,18 @@ class CCreature : public CMapObject, public CMoveable, public CVisitable {
     virtual void levelUp();
 
   private:
+    void updateEffectOwnerContext(const std::shared_ptr<CGame> &game);
+
     void releaseEffectReferences();
 
+    void releaseEffectReferences(const std::shared_ptr<const int> &expectedOwner);
+
+    mutable std::recursive_mutex effectOwnershipMutex;
     std::weak_ptr<CGameContext> effectOwnerContext;
+    std::weak_ptr<const int> effectOwnerIdentity;
 
     std::set<std::shared_ptr<CItem>> items;
+    std::set<const CItem *> pendingItemUses;
     std::set<std::shared_ptr<CInteraction>> actions;
     std::set<std::shared_ptr<CEffect>> effects;
 

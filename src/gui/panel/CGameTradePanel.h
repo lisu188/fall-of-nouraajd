@@ -69,7 +69,11 @@ class CGameTradePanel : public CGamePanel {
 
     void finalizeSell(std::shared_ptr<CGui> shared_ptr);
 
+    vstd::task<void> finalizeSellAsync(std::shared_ptr<CGui> gui);
+
     void finalizeBuy(std::shared_ptr<CGui> shared_ptr);
+
+    vstd::task<void> finalizeBuyAsync(std::shared_ptr<CGui> gui);
 
     int getTotalSellCost();
 

@@ -18,6 +18,7 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #include "CSideBar.h"
 #include "core/CList.h"
 #include "gui/CGui.h"
+#include "gui/CGuiTasks.h"
 #include "gui/panel/CGamePanel.h"
 #include "gui/CTextManager.h"
 #include "gui/CUiTheme.h"
@@ -34,7 +35,9 @@ void CSideBar::clickJournal(std::shared_ptr<CGui> gui) { flipPanel(gui, "questPa
 
 void CSideBar::clickCharacter(std::shared_ptr<CGui> gui) { flipPanel(gui, "characterPanel"); }
 
-void CSideBar::clickPause(std::shared_ptr<CGui> gui) { gui->getGame()->getGuiHandler()->showPauseMenu(); }
+void CSideBar::clickPause(std::shared_ptr<CGui> gui) {
+    gui->getGame()->getContext()->spawnTask(gui->getGame()->getGuiHandler()->showPauseMenuAsync());
+}
 
 void CSideBar::renderObject(std::shared_ptr<CGui> gui, std::shared_ptr<SDL_Rect> rect, int) {
     auto map = gui->getGame() ? gui->getGame()->getMap() : nullptr;
@@ -155,7 +158,7 @@ void CSideBar::setPanelKeys(std::shared_ptr<CMapStringString> _panelKeys) { this
 void CSideBar::flipPanel(std::shared_ptr<CGui> gui, std::string panel) {
     for (auto val : panelKeys->getValues()) {
         if (val.second == panel) {
-            gui->getGame()->getGuiHandler()->flipPanel(panel, val.first);
+            gui->getGame()->getContext()->spawnTask(gui->getGame()->getGuiHandler()->flipPanelAsync(panel, val.first));
         }
     }
 }

@@ -10,6 +10,7 @@ import json
 import sys
 import types
 import unittest
+from tests.hook_flow_support import installHookFlows
 from pathlib import Path
 from unittest.mock import patch
 
@@ -28,6 +29,7 @@ def dialogueStates(path, dialog_id):
 
 
 def loadClasses(path, names, namespace):
+    installHookFlows(namespace)
     tree = ast.parse((ROOT / path).read_text(encoding="utf-8"))
     classes = {node.name: node for node in ast.walk(tree) if isinstance(node, ast.ClassDef)}
     body = []
@@ -364,12 +366,16 @@ class DialogueContentTest(unittest.TestCase):
             map_instance.setBoolProperty(flag, True)
             return True
 
+        def clearFlow(game_map):
+            cleared.append(game_map)
+            yield from ()
+
         namespace = loadPresentation()
         namespace.update(
             CTrigger=FakeDialog,
             _quest_system_from=lambda owner: quest_system,
             claim_once=claimOnce,
-            _clear_victor_encounter=cleared.append,
+            clearVictorEncounterFlow=clearFlow,
             narrative=types.SimpleNamespace(victorResponse=lambda game: ""),
         )
         loadClasses("res/maps/nouraajd/script.py", ["CultLeaderQuestTrigger"], namespace)
@@ -405,7 +411,17 @@ class DialogueContentTest(unittest.TestCase):
             for node in ast.walk(classes["StartEvent"])
             if isinstance(node, ast.Call) and isinstance(node.func, ast.Name)
         }
-        self.assertIn("showReader", arrival_calls)
+        self.assertIn("uiRequest", arrival_calls)
+        self.assertTrue(
+            any(
+                isinstance(node, ast.Call)
+                and isinstance(node.func, ast.Name)
+                and node.func.id == "uiRequest"
+                and isinstance(node.args[0], ast.Constant)
+                and node.args[0].value == "showReader"
+                for node in ast.walk(classes["StartEvent"])
+            )
+        )
 
     def testQuestContextReferencesOnlyExistingQuestDefinitions(self):
         conversations = 0
@@ -455,6 +471,7 @@ def loadCrafting():
         getInstance=lambda: types.SimpleNamespace(load=lambda filename: "{}")
     )
     fake_game.list_string = lambda game, options: list(options)
+    installHookFlows(fake_game)
     with patch.dict(sys.modules, {"game": fake_game}):
         spec = importlib.util.spec_from_file_location("ui_crafting_under_test", ROOT / "res/plugins/crafting.py")
         module = importlib.util.module_from_spec(spec)

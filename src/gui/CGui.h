@@ -159,6 +159,8 @@ class CGui : public CGameGraphicsObject {
 
     void shutdown();
 
+    void deactivate();
+
     bool isActive() const;
 
     void render(int i1);
@@ -202,6 +204,10 @@ class CGui : public CGameGraphicsObject {
 
     vstd::lazy<CTextManager> _textManager;
 
+  protected:
+    struct WithoutWindow {};
+    explicit CGui(WithoutWindow);
+
   private:
     bool dispatchPointerCaptureEvent(SDL_Event *event);
 
@@ -242,4 +248,5 @@ class CGui : public CGameGraphicsObject {
     SDL_Keycode remapKey(SDL_Keycode key) const;
 
     std::atomic<bool> active = true;
+    bool shutdownStarted = false;
 };

@@ -1,5 +1,7 @@
 def load(self, context):
-    from game import showReader, rewardSnapshot, showRewardReceipt
+    from game import resumableHook, uiRequest, flowGame, removeObjectsFlow
+    from game import showRewardReceiptFlow
+    from game import rewardSnapshot
     from game import CDialog
     from game import CEvent
     from game import CQuest
@@ -32,17 +34,19 @@ def load(self, context):
 
     @register(context)
     class HearthfallStart(CEvent):
+        @resumableHook
         def onEnter(self, event):
             if not event.getCause().isPlayer():
                 return
             game_map = self.getMap()
             hearthfall_flags_default(game_map)
             if game_map.getBoolProperty("hearthfall_intro"):
+                yield from removeObjectsFlow(game_map, lambda obj: obj.getName() == self.getName())
                 return
-            game_map.setBoolProperty("hearthfall_intro", True)
-            showReader(game_map.getGame(), "Hearthfall", self.getStringProperty("text"))
-            game_map.removeAll(lambda ob: ob.getName() == self.getName())
             ensure_quest(event.getCause(), "hearthfallQuest")
+            game_map.setBoolProperty("hearthfall_intro", True)
+            (yield uiRequest("showReader", flowGame(game_map.getGame()), "Hearthfall", self.getStringProperty("text")))
+            (yield from removeObjectsFlow(game_map, lambda ob: ob.getName() == self.getName()))
 
     @register(context)
     @mapQuest("hearthfall")
@@ -79,6 +83,7 @@ def load(self, context):
         def victory_reported(self):
             return self.getGame().getMap().getBoolProperty("victory_reported")
 
+        @resumableHook
         def report_victory(self):
             game_map = self.getGame().getMap()
             if not self.captain_down():
@@ -88,21 +93,25 @@ def load(self, context):
             if claim_once(game_map, "victory_reward_claimed"):
                 reward_before = rewardSnapshot(player)
                 player.addGold(VICTORY_GOLD_REWARD)
-                showRewardReceipt(
-                    self.getGame(),
-                    "Hearthfall liberated",
-                    reward_before,
-                    "Maren presses the village's hidden purse into your hands. 'The Gravemoor holds our people. "
-                    "Bring them home, Warden.'",
+                campaign.prepareCompletion(self.getGame(), "completed", fallback_map="gravemoor")
+                (
+                    yield from showRewardReceiptFlow(
+                        flowGame(self.getGame()),
+                        "Hearthfall liberated",
+                        reward_before,
+                        "Maren presses the village's hidden purse into your hands. 'The Gravemoor holds our people. "
+                        "Bring them home, Warden.'",
+                    )
                 )
-            player.checkQuests()
-            campaign.complete_scenario(self.getGame(), "completed", fallback_map="gravemoor")
+            (yield uiRequest("gui.checkQuests", player))
+            (yield from campaign.complete_scenarioFlow(self.getGame(), "completed", fallback_map="gravemoor"))
 
     @trigger(context, "onEnter", "elderMaren")
     class ElderTrigger(CTrigger):
+        @resumableHook
         def trigger(self, object, event):
             if event.getCause().isPlayer():
-                object.getGame().getGuiHandler().showDialog(object.getGame().createObject("elderDialog"))
+                (yield uiRequest("gui.showDialog", object.getGame().createObject("elderDialog")))
 
     @trigger(context, "onDestroy", "watchCaptain")
     class CaptainTrigger(CTrigger):

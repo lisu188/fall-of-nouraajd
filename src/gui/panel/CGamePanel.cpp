@@ -18,6 +18,7 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #include "CGamePanel.h"
 #include "core/CUtil.h"
 #include "gui/CGui.h"
+#include "gui/CGuiTasks.h"
 #include "gui/CLayout.h"
 #include "gui/CTextureCache.h"
 #include "gui/CTextManager.h"
@@ -33,7 +34,7 @@ bool CGamePanel::keyboardEvent(std::shared_ptr<CGui> gui, SDL_EventType type, SD
         if (closeable) {
             close();
         } else if (getTypeId() == "fightPanel" && gui && gui->getGame()) {
-            gui->getGame()->getGuiHandler()->showPauseMenu();
+            gui->getGame()->getContext()->spawnTask(gui->getGame()->getGuiHandler()->showPauseMenuAsync());
         }
     }
     return true;
@@ -535,9 +536,12 @@ CGamePanel::CGamePanel() {
     setModal(true);
 }
 
-void CGamePanel::awaitClosing() {
+void CGamePanel::awaitClosing() { gui_async::run(this->ptr<CGamePanel>(), awaitClosingAsync()); }
+
+vstd::task<void> CGamePanel::awaitClosingAsync() {
     auto self = this->ptr<CGamePanel>();
-    vstd::wait_until([self]() { return !self->getGui() || self->getGui()->findChild(self) == nullptr; });
+    return gui_async::until([self]() { return !self->getGui() || self->getGui()->findChild(self) == nullptr; },
+                            []() {});
 }
 
 void CGamePanel::close() {

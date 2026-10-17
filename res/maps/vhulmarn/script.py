@@ -1,5 +1,7 @@
 def load(self, context):
-    from game import showReader, rewardSnapshot, showRewardReceipt
+    from game import resumableHook, uiRequest, flowGame, removeObjectsFlow
+    from game import showRewardReceiptFlow
+    from game import rewardSnapshot, spawnObjectsFlow
     from game import CDialog
     from game import CEvent
     from game import CQuest
@@ -23,35 +25,36 @@ def load(self, context):
             if not hasattr(game_map, flag):
                 game_map.setBoolProperty(flag, False)
 
-    def spawn_walkable(game_map, base, offsets, unit):
-        placed = 0
-        for dx, dy in offsets:
-            coords = Coords(base.x + dx, base.y + dy, base.z)
-            if game_map.canStep(coords):
-                game_map.addObjectByName(unit, coords)
-                placed += 1
-        return placed
+    def spawnWalkableFlow(game_map, owner, base, offsets, unit):
+        placements = [(unit, base.x + dx, base.y + dy, base.z) for dx, dy in offsets]
+        yield from spawnObjectsFlow(game_map, owner, "pendingSpawns", placements)
 
     @register(context)
     class StartEvent(CEvent):
+        @resumableHook
         def onEnter(self, event):
+            if self.getBoolProperty("introInitialized"):
+                yield from removeObjectsFlow(self.getMap(), lambda obj: obj.getName() == self.getName())
+                return
             if not event.getCause().isPlayer():
                 return
             game_map = self.getMap()
-            game = game_map.getGame()
+            game = flowGame(game_map.getGame())
             player = game_map.getPlayer()
             quest_system_flags_default(game_map)
-            showReader(game, "Vhulmarn", self.getStringProperty("text"))
-            game_map.removeAll(lambda ob: ob.getName() == self.getName())
             ensure_quest(player, "drownedTitheQuest")
+            self.setBoolProperty("introInitialized", True)
+            (yield uiRequest("showReader", flowGame(game), "Vhulmarn", self.getStringProperty("text")))
+            (yield from removeObjectsFlow(game_map, lambda ob: ob.getName() == self.getName()))
 
     @register(context)
     class TideBell(CEvent):
+        @resumableHook
         def onEnter(self, event):
             if not event.getCause().isPlayer():
                 return
             game_map = self.getMap()
-            game = game_map.getGame()
+            game = flowGame(game_map.getGame())
             if game_map.getBoolProperty("bell_tolled"):
                 game.getGuiHandler().notify(
                     "The bell's iron note still hangs over the tarn. It has been answered once; the deep does "
@@ -62,42 +65,68 @@ def load(self, context):
                 "You toll the drowned bell. The note goes out flat across the tarn, and the tarn answers: "
                 "the water bulges, and Deep-Spawn rise dripping onto the causeway."
             )
-            spawn_walkable(game_map, self.getCoords(), BELL_SPAWN_OFFSETS, "deepSpawn")
+            yield from spawnWalkableFlow(game_map, self, self.getCoords(), BELL_SPAWN_OFFSETS, "deepSpawn")
             game_map.setBoolProperty("bell_tolled", True)
+
+        @resumableHook
+        def onTurn(self, event):
+            if self.getStringProperty("pendingSpawns"):
+                yield from spawnWalkableFlow(self.getMap(), self, self.getCoords(), BELL_SPAWN_OFFSETS, "deepSpawn")
+                self.getMap().setBoolProperty("bell_tolled", True)
 
     @register(context)
     class AltarThreshold(CEvent):
+        @resumableHook
         def onEnter(self, event):
             if not event.getCause().isPlayer():
                 return
             game_map = self.getMap()
-            game = game_map.getGame()
+            game = flowGame(game_map.getGame())
             player = game_map.getPlayer()
             if game_map.getBoolProperty("tithe_taken"):
+                yield from self.wakeBossFlow()
                 return
             reward_before = rewardSnapshot(player)
             player.addItem("tiaraOfTheDrownedTithe")
             game_map.setBoolProperty("tithe_taken", True)
-            showRewardReceipt(
-                game,
-                "Drowned Tithe",
-                reward_before,
-                "The offered gold is a tiara of the Order, and it is already warm. You lift the Tiara of the "
-                "Drowned Tithe from the altar - and far below, in Y'ha-nthlei, something that has dreamed of this "
-                "for a thousand tides opens an eye. Tekeli-li! Tekeli-li!",
+            (
+                yield from showRewardReceiptFlow(
+                    flowGame(game),
+                    "Drowned Tithe",
+                    reward_before,
+                    "The offered gold is a tiara of the Order, and it is already warm. You lift the Tiara of the "
+                    "Drowned Tithe from the altar - and far below, in Y'ha-nthlei, something that has dreamed of this "
+                    "for a thousand tides opens an eye. Tekeli-li! Tekeli-li!",
+                )
             )
-            if not game_map.getBoolProperty("boss_woken"):
+            yield from self.wakeBossFlow()
+
+        @resumableHook
+        def onTurn(self, event):
+            game_map = self.getMap()
+            if game_map.getBoolProperty("tithe_taken") and not game_map.getBoolProperty("boss_woken"):
+                yield from self.wakeBossFlow()
+
+        def wakeBossFlow(self):
+            game_map = self.getMap()
+            if game_map.getBoolProperty("boss_woken") or game_map.getBoolProperty("boss_defeated"):
+                return
+            game = flowGame(game_map.getGame())
+            boss = game_map.getObjectByName("theNamelessBoss")
+            if boss is None:
                 boss = game.createObject("theNameless")
                 boss.setStringProperty("name", "theNamelessBoss")
                 controller = game.createObject("CTargetController")
                 controller.setTarget("player")
                 boss.setController(controller)
                 game_map.addObject(boss)
-                boss.moveTo(*BOSS_SPAWN)
-                game_map.setBoolProperty("boss_woken", True)
-            # Refresh objectives/completion so pickup-first ordering converges with a
-            # later boss defeat. The quest still needs the Nameless put down.
-            player.checkQuests()
+            placed = boss.getCoords()
+            if (placed.x, placed.y, placed.z) != BOSS_SPAWN:
+                yield uiRequest("gui.moveTo", boss, *BOSS_SPAWN)
+            game_map.setBoolProperty("boss_woken", True)
+            # Refresh pickup-first objectives after placement. A cancelled move
+            # leaves this named actor registered for the next turn to resume.
+            yield uiRequest("gui.checkQuests", game_map.getPlayer())
 
     @register(context)
     @mapQuest("vhulmarn")
@@ -122,11 +151,16 @@ def load(self, context):
         def getHint(self):
             return "The old tollman by the gate will talk. The causeway bell is best left silent."
 
+        @resumableHook
         def onComplete(self):
-            showReader(
-                self.getGame(),
-                "The tithe",
-                "The tithe is uncovered, and it was never a debt that could be paid off - only carried.",
+            yield uiRequest("gui.questCommitted")
+            (
+                yield uiRequest(
+                    "showReader",
+                    flowGame(self.getGame()),
+                    "The tithe",
+                    "The tithe is uncovered, and it was never a debt that could be paid off - only carried.",
+                )
             )
 
     @register(context)
@@ -145,15 +179,17 @@ def load(self, context):
 
     @trigger(context, "onEnter", "oldTollman")
     class TollmanTrigger(CTrigger):
+        @resumableHook
         def trigger(self, obj, event):
             if event.getCause().isPlayer():
-                obj.getGame().getGuiHandler().showDialog(obj.getGame().createObject("tollmanDialog"))
+                (yield uiRequest("gui.showDialog", obj.getGame().createObject("tollmanDialog")))
 
     @trigger(context, "onEnter", "markedWidow")
     class WidowTrigger(CTrigger):
+        @resumableHook
         def trigger(self, obj, event):
             if event.getCause().isPlayer():
-                obj.getGame().getGuiHandler().showDialog(obj.getGame().createObject("widowDialog"))
+                (yield uiRequest("gui.showDialog", obj.getGame().createObject("widowDialog")))
 
     @trigger(context, "onDestroy", "caveTarnMouth")
     class TarnMouthTrigger(CTrigger):
@@ -172,15 +208,19 @@ def load(self, context):
 
     @trigger(context, "onDestroy", "theNamelessBoss")
     class NamelessTrigger(CTrigger):
+        @resumableHook
         def trigger(self, obj, event):
             game_map = obj.getGame().getMap()
             game_map.setBoolProperty("boss_defeated", True)
-            showReader(
-                obj.getGame(),
-                "The Nameless withdraws",
-                "The Nameless folds back into the tarn, and for one held breath the drowned bell will not ring. "
-                "It is not death. The deep is patient, and the stars will come right again.",
+            (
+                yield uiRequest(
+                    "showReader",
+                    flowGame(obj.getGame()),
+                    "The Nameless withdraws",
+                    "The Nameless folds back into the tarn, and for one held breath the drowned bell will not ring. "
+                    "It is not death. The deep is patient, and the stars will come right again.",
+                )
             )
             # Boss-defeat transition: converge with the tithe pickup so the finale
             # completes once both requirements are met, in either order.
-            game_map.getPlayer().checkQuests()
+            (yield uiRequest("gui.checkQuests", game_map.getPlayer()))

@@ -65,12 +65,29 @@ class OctobogzRuntimeTest(unittest.TestCase):
             director.start(game_map)
             scout = game_map.getObjectByName(state()['slots']['scout']['name'])
             assert scout.getController().getTarget() == 'cave2' and scout.getController().getDistance() == 10
-            scout.setHp(0)
-            game_map.removeObject(scout)
-            for _ in range(3): loop.run()
+            game.set_logger_sink('stderr')
+            try:
+                scout.setHp(0)
+                game_map.removeObject(scout)
+                for _ in range(3): loop.run()
+            finally:
+                game.set_logger_sink('disabled')
             assert state()['stage'] == 'brood'
             alpha_name = state()['slots']['alpha']['name']
             alpha = game_map.getObjectByName(alpha_name)
+            registry_snapshot = state()
+            print('native hunt alpha lookup', {
+                'stage': str(registry_snapshot.get('stage', ''))[:32],
+                'slots': {
+                    slot: {
+                        'name': str(registry_snapshot.get('slots', {}).get(slot, {}).get('name', ''))[:128],
+                        'status': str(registry_snapshot.get('slots', {}).get(slot, {}).get('status', ''))[:32],
+                    }
+                    for slot in ('scout', 'brood', 'alpha')
+                },
+                'placementWarning': bool(registry_snapshot.get('placementWarning', False)),
+                'alphaPresent': alpha is not None,
+            }, flush=True)
             assert json.loads(game.jsonify(alpha))['properties']['creatureClass']['properties']['combatRole'] == 'brute'
             assert {'Attack', 'octobogzCharge', 'octobogzShadowPulse'} <= {
                 action.getTypeId() for action in alpha.getActions()}

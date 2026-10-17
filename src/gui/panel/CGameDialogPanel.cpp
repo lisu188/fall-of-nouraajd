@@ -18,10 +18,12 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 #include "CGameDialogPanel.h"
 #include "core/CGame.h"
+#include "core/CGameContext.h"
 #include "core/CMap.h"
 #include "core/CPlaytestTrace.h"
 #include "core/CSceneManager.h"
 #include "gui/CLayout.h"
+#include "gui/CGuiTasks.h"
 #include "gui/CTextManager.h"
 #include "gui/CUiTheme.h"
 #include "gui/object/CWidget.h"
@@ -355,45 +357,118 @@ std::map<int, std::shared_ptr<CDialogOption>> CGameDialogPanel::getCurrentOption
 void CGameDialogPanel::selectOption(int option) { selectOption(getOption(option)); }
 
 void CGameDialogPanel::selectOption(const std::shared_ptr<CDialogOption> &option) {
-    if (!option || !dialog || readingHistory || readingObjective || !getGui()) {
-        return;
+    try {
+        gui_async::spawn(this->ptr<CGameDialogPanel>(), selectOptionAsync(option));
+    } catch (const std::exception &error) {
+        vstd::logger::error("Cannot start dialog action:", error.what());
     }
-    // Conditions may have changed since the reply was laid out.
-    if (!option->getCondition().empty() && !dialog->invokeCondition(option->getCondition())) {
-        reload();
-        return;
-    }
-    if (CPlaytestTrace::enabled()) {
-        json fields = {{"action", option->getAction()},
-                       {"dialog", CPlaytestTrace::objectRef(dialog)},
-                       {"nextStateId", option->getNextStateId()},
-                       {"optionNumber", option->getNumber()},
-                       {"stateId", currentStateId}};
-        CPlaytestTrace::addMapContext(fields, getGame() ? getGame()->getMap() : nullptr);
-        CPlaytestTrace::record("dialog_option_selected", fields);
-    }
-    auto game = getGame();
-    auto sourceMap = game ? game->getMap() : nullptr;
-    appendHistory("You", option->getText(), "reply");
-    if (!option->getAction().empty() && !dialog->invokeActionChecked(option->getAction())) {
-        return;
-    }
-    // An action may complete a chapter or destroy its speaker. Never revive the outgoing panel.
-    if (!getGui() || (game && (game->getMap() != sourceMap || game->getSceneManager()->isTransitionPending()))) {
-        close();
-        return;
-    }
-    currentStateId = option->getNextStateId().empty() ? "EXIT" : option->getNextStateId();
-    const auto afterCondition = option->getStringProperty("afterCondition");
-    const auto afterState = option->getStringProperty("afterStateId");
-    if (!afterCondition.empty() && !afterState.empty() && dialog->invokeCondition(afterCondition)) {
-        currentStateId = afterState;
-    }
-    recordedStateId.clear();
-    bodyScroll = 0;
-    choiceStart = 0;
-    focusedChoice = -1;
-    reload();
+}
+
+vstd::task<void> CGameDialogPanel::selectOptionAsync(std::shared_ptr<CDialogOption> option) {
+    return [](std::shared_ptr<CGameDialogPanel> self, std::shared_ptr<CDialogOption> option) -> vstd::task<void> {
+        auto loop = vstd::event_loop<>::instance();
+        if (!loop->isMainThread()) {
+            co_await vstd::post(loop);
+        }
+        auto sourceGui = self->getGui();
+        if (!option || !self->dialog || self->readingHistory || self->readingObjective || self->selectingOption ||
+            !sourceGui || !self->isAttachedToGui(sourceGui)) {
+            co_return;
+        }
+        self->selectingOption = true;
+        struct SelectionGuard {
+            bool &selecting;
+            ~SelectionGuard() { selecting = false; }
+        } selectionGuard{self->selectingOption};
+        try {
+            auto dialog = self->dialog;
+            const auto sourceState = self->currentStateId;
+            auto game = self->getGame();
+            auto sourceMap = game ? game->getMap() : nullptr;
+            auto context = game ? game->getContext() : nullptr;
+            const auto generation = context ? context->captureTransitionGeneration() : 0;
+            std::weak_ptr<CGame> weakGame = game;
+            auto panelCurrent = [self, dialog, sourceGui, sourceState] {
+                return self->dialog == dialog && self->currentStateId == sourceState &&
+                       self->isAttachedToGui(sourceGui);
+            };
+            auto sessionCurrent = [context, generation, sourceMap, weakGame] {
+                if (!context) {
+                    return true;
+                }
+                auto owner = weakGame.lock();
+                return owner && context->isTransitionGenerationCurrent(generation) && owner->getMap() == sourceMap &&
+                       !owner->getSceneManager()->isTransitionPending();
+            };
+            game.reset();
+            if (!panelCurrent()) {
+                co_return;
+            }
+            if (!sessionCurrent()) {
+                self->close();
+                co_return;
+            }
+            if (!option->getCondition().empty()) {
+                const bool allowed = dialog->invokeCondition(option->getCondition());
+                if (!panelCurrent()) {
+                    co_return;
+                }
+                if (!sessionCurrent()) {
+                    self->close();
+                    co_return;
+                }
+                if (!allowed) {
+                    self->reload();
+                    co_return;
+                }
+            }
+            if (CPlaytestTrace::enabled()) {
+                json fields = {{"action", option->getAction()},
+                               {"dialog", CPlaytestTrace::objectRef(dialog)},
+                               {"nextStateId", option->getNextStateId()},
+                               {"optionNumber", option->getNumber()},
+                               {"stateId", self->currentStateId}};
+                CPlaytestTrace::addMapContext(fields, sourceMap);
+                CPlaytestTrace::record("dialog_option_selected", fields);
+            }
+            self->appendHistory("You", option->getText(), "reply");
+            if (!option->getAction().empty() && !(co_await dialog->invokeActionCheckedAsync(option->getAction()))) {
+                co_return;
+            }
+            if (!panelCurrent()) {
+                co_return;
+            }
+            if (!sessionCurrent()) {
+                self->close();
+                co_return;
+            }
+            auto nextState = option->getNextStateId().empty() ? "EXIT" : option->getNextStateId();
+            const auto afterCondition = option->getStringProperty("afterCondition");
+            const auto afterState = option->getStringProperty("afterStateId");
+            if (!afterCondition.empty() && !afterState.empty() && dialog->invokeCondition(afterCondition)) {
+                nextState = afterState;
+            }
+            if (!panelCurrent()) {
+                co_return;
+            }
+            if (!sessionCurrent()) {
+                self->close();
+                co_return;
+            }
+            self->currentStateId = std::move(nextState);
+            self->recordedStateId.clear();
+            self->bodyScroll = 0;
+            self->choiceStart = 0;
+            self->focusedChoice = -1;
+            self->reload();
+        } catch (const vstd::task_cancelled &) {
+            throw;
+        } catch (const vstd::scheduler_rejected &) {
+            throw;
+        } catch (const std::exception &error) {
+            vstd::logger::error("Dialog action failed:", error.what());
+        }
+    }(this->ptr<CGameDialogPanel>(), std::move(option));
 }
 
 bool CGameDialogPanel::event(std::shared_ptr<CGui> gui, SDL_Event *event) {

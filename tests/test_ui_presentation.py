@@ -12,11 +12,21 @@ import unittest
 def loadPresentation():
     path = Path(__file__).resolve().parents[1] / "res/game.py"
     tree = ast.parse(path.read_text(encoding="utf-8"))
-    names = {"showReader", "rewardSnapshot", "showRewardReceipt", "requirementMessage"}
+    names = {
+        "showReader",
+        "rewardSnapshot",
+        "rewardReceiptText",
+        "showRewardReceipt",
+        "showRewardReceiptFlow",
+        "requirementMessage",
+    }
     module = ast.Module(
         body=[node for node in tree.body if isinstance(node, ast.FunctionDef) and node.name in names], type_ignores=[]
     )
     namespace = {}
+    from tests.hook_flow_support import installHookFlows
+
+    installHookFlows(namespace)
     exec(compile(module, str(path), "exec"), namespace)
     return namespace
 

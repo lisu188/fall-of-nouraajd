@@ -1,5 +1,7 @@
 def load(self, context):
-    from game import showReader, rewardSnapshot, showRewardReceipt, requirementMessage
+    from game import resumableHook, uiRequest, flowGame, removeObjectByNameFlow, removeObjectsFlow
+    from game import showRewardReceiptFlow
+    from game import rewardSnapshot, requirementMessage
     from game import CDialog
     from game import CEvent
     from game import CQuest
@@ -67,15 +69,20 @@ def load(self, context):
     # ---- arrival ----
     @register(context)
     class StartEvent(CEvent):
+        @resumableHook
         def onEnter(self, event):
+            if self.getBoolProperty("introInitialized"):
+                yield from removeObjectsFlow(self.getMap(), lambda obj: obj.getName() == self.getName())
+                return
             if not event.getCause().isPlayer():
                 return
             game_map = self.getMap()
-            game = game_map.getGame()
+            game = flowGame(game_map.getGame())
             quest_flags_default(game_map)
-            showReader(game, "The Nine Marches", self.getStringProperty("text"))
-            game_map.removeAll(lambda ob: ob.getName() == self.getName())
             ensure_quest(game_map.getPlayer(), "ninemarchesQuest")
+            self.setBoolProperty("introInitialized", True)
+            (yield uiRequest("showReader", flowGame(game), "The Nine Marches", self.getStringProperty("text")))
+            (yield from removeObjectsFlow(game_map, lambda ob: ob.getName() == self.getName()))
 
     # ---- Heroes-3 structures ----
     @register(context)
@@ -153,16 +160,17 @@ def load(self, context):
 
     @register(context)
     class GateThreshold(CEvent):
+        @resumableHook
         def onEnter(self, event):
             if not event.getCause().isPlayer():
                 return
             game_map = self.getMap()
-            game = game_map.getGame()
+            game = flowGame(game_map.getGame())
             flag = self.getStringProperty("flag")
             if game_map.getBoolProperty(flag):
                 return
             if has_item(game_map.getPlayer(), self.getStringProperty("key")):
-                game_map.removeObjectByName(self.getStringProperty("gate"))
+                (yield from removeObjectByNameFlow(game_map, self.getStringProperty("gate")))
                 game_map.setBoolProperty(flag, True)
                 bump_chapter(game_map, int(self.getNumericProperty("chapter")))
                 game.getGuiHandler().notify(
@@ -178,6 +186,7 @@ def load(self, context):
 
     @register(context)
     class Obelisk(CEvent):
+        @resumableHook
         def onEnter(self, event):
             if not event.getCause().isPlayer():
                 return
@@ -187,8 +196,8 @@ def load(self, context):
             game_map = self.getMap()
             game_map.incProperty("obelisks_read", 1)
             read = game_map.getNumericProperty("obelisks_read")
-            game = game_map.getGame()
-            showReader(game, "March obelisk", self.getStringProperty("text"))
+            game = flowGame(game_map.getGame())
+            (yield uiRequest("showReader", flowGame(game), "March obelisk", self.getStringProperty("text")))
             game.getGuiHandler().notify(f"A march-sigil burns into your memory. ({read}/6 obelisks read.)")
 
     @register(context)
@@ -206,13 +215,15 @@ def load(self, context):
 
     @register(context)
     class DigSite(CEvent):
+        @resumableHook
         def onEnter(self, event):
             if not event.getCause().isPlayer():
                 return
             game_map = self.getMap()
-            game = game_map.getGame()
+            game = flowGame(game_map.getGame())
             player = game_map.getPlayer()
             if game_map.getBoolProperty("crown_taken"):
+                yield from self.wakeBossFlow()
                 return
             if game_map.getNumericProperty("obelisks_read") < 6:
                 read = game_map.getNumericProperty("obelisks_read")
@@ -226,28 +237,45 @@ def load(self, context):
             player.addItem("ninefoldCrown")
             game_map.setBoolProperty("crown_taken", True)
             bump_chapter(game_map, 4)
-            showRewardReceipt(
-                game,
-                "The Ninefold Crown",
-                reward_before,
-                "The six sigils sing as one and the Cyclopean Citadel gives up its god. You lift the Ninefold Crown "
-                "from the grave - and the grave lifts its owner after it. The cult has its crowned king at last, and "
-                "it is wearing your face.",
+            (
+                yield from showRewardReceiptFlow(
+                    flowGame(game),
+                    "The Ninefold Crown",
+                    reward_before,
+                    "The six sigils sing as one and the Cyclopean Citadel gives up its god. You lift the Ninefold Crown "
+                    "from the grave - and the grave lifts its owner after it. The cult has its crowned king at last, and "
+                    "it is wearing your face.",
+                )
             )
-            if not game_map.getBoolProperty("boss_woken"):
+            yield from self.wakeBossFlow()
+
+        @resumableHook
+        def onTurn(self, event):
+            game_map = self.getMap()
+            if game_map.getBoolProperty("crown_taken") and not game_map.getBoolProperty("boss_woken"):
+                yield from self.wakeBossFlow()
+
+        def wakeBossFlow(self):
+            game_map = self.getMap()
+            if game_map.getBoolProperty("boss_woken") or game_map.getBoolProperty("boss_defeated"):
+                return
+            game = flowGame(game_map.getGame())
+            boss = game_map.getObjectByName("theNinefoldKingBoss")
+            if boss is None:
                 boss = game.createObject("theNinefoldKing")
                 boss.setStringProperty("name", "theNinefoldKingBoss")
                 controller = game.createObject("CTargetController")
                 controller.setTarget("player")
                 boss.setController(controller)
                 game_map.addObject(boss)
-                boss.moveTo(*BOSS_SPAWN)
-                game_map.setBoolProperty("boss_woken", True)
-            # Refresh objectives/completion so pickup-first ordering converges with a
-            # later boss defeat. The quest still needs the Ninefold King put down.
-            player.checkQuests()
+            placed = boss.getCoords()
+            if (placed.x, placed.y, placed.z) != BOSS_SPAWN:
+                yield uiRequest("gui.moveTo", boss, *BOSS_SPAWN)
+            game_map.setBoolProperty("boss_woken", True)
+            # Refresh pickup-first objectives after placement. A cancelled move
+            # leaves this named actor registered for the next turn to resume.
+            yield uiRequest("gui.checkQuests", game_map.getPlayer())
 
-    # ---- Quests ----
     @register(context)
     @mapQuest("ninemarches")
     class NineMarchesQuest(CQuest):
@@ -286,12 +314,17 @@ def load(self, context):
         def getHint(self):
             return "Keys open the roads; obelisks open the grave. Recruit the marches' lost - a knight, a witch, a turncoat - before the Citadel."
 
+        @resumableHook
         def onComplete(self):
-            showReader(
-                self.getGame(),
-                "The marches remember",
-                "The crown is dug up and the Nine Marches are 'saved' the only way the cult ever meant - with a new "
-                "dead god on the throne of the world, and your name the last it answered to.",
+            yield uiRequest("gui.questCommitted")
+            (
+                yield uiRequest(
+                    "showReader",
+                    flowGame(self.getGame()),
+                    "The marches remember",
+                    "The crown is dug up and the Nine Marches are 'saved' the only way the cult ever meant - with a new "
+                    "dead god on the throne of the world, and your name the last it answered to.",
+                )
             )
 
     @mapQuest("ninemarches")
@@ -410,6 +443,7 @@ def load(self, context):
             game_map.setBoolProperty(self.STARTED_FLAG, True)
             ensure_quest(game_map.getPlayer(), self.QUEST)
 
+        @resumableHook
         def recruit(self):
             game_map = self.getGame().getMap()
             if not self.can_recruit():
@@ -418,8 +452,8 @@ def load(self, context):
             adjust_reputation(game_map, 2)
             reward_before = rewardSnapshot(game_map.getPlayer())
             game_map.getPlayer().addItem(self.BOON)
-            game_map.getPlayer().checkQuests()
-            showRewardReceipt(self.getGame(), "A companion's gift", reward_before)
+            (yield uiRequest("gui.checkQuests", game_map.getPlayer()))
+            (yield from showRewardReceiptFlow(flowGame(self.getGame()), "A companion's gift", reward_before))
 
         def banter(self):
             # Baldur's-Gate-style reputation reactivity: a companion may leave if your
@@ -544,46 +578,55 @@ def load(self, context):
     # ---- Triggers ----
     @trigger(context, "onEnter", "mayorHall")
     class MayorTrigger(CTrigger):
+        @resumableHook
         def trigger(self, obj, event):
             if event.getCause().isPlayer():
-                obj.getGame().getGuiHandler().showDialog(obj.getGame().createObject("mayorDialog"))
+                (yield uiRequest("gui.showDialog", obj.getGame().createObject("mayorDialog")))
 
     @trigger(context, "onEnter", "gravewatchTavern")
     class TavernTrigger(CTrigger):
+        @resumableHook
         def trigger(self, obj, event):
             if event.getCause().isPlayer():
-                obj.getGame().getGuiHandler().showDialog(obj.getGame().createObject("tavernDialog"))
+                (yield uiRequest("gui.showDialog", obj.getGame().createObject("tavernDialog")))
 
     @trigger(context, "onEnter", "companionKnight")
     class KnightTrigger(CTrigger):
+        @resumableHook
         def trigger(self, obj, event):
             if event.getCause().isPlayer():
-                obj.getGame().getGuiHandler().showDialog(obj.getGame().createObject("knightDialog"))
+                (yield uiRequest("gui.showDialog", obj.getGame().createObject("knightDialog")))
 
     @trigger(context, "onEnter", "companionWitch")
     class WitchTrigger(CTrigger):
+        @resumableHook
         def trigger(self, obj, event):
             if event.getCause().isPlayer():
-                obj.getGame().getGuiHandler().showDialog(obj.getGame().createObject("witchDialog"))
+                (yield uiRequest("gui.showDialog", obj.getGame().createObject("witchDialog")))
 
     @trigger(context, "onEnter", "companionSellsword")
     class SellswordTrigger(CTrigger):
+        @resumableHook
         def trigger(self, obj, event):
             if event.getCause().isPlayer():
-                obj.getGame().getGuiHandler().showDialog(obj.getGame().createObject("sellswordDialog"))
+                (yield uiRequest("gui.showDialog", obj.getGame().createObject("sellswordDialog")))
 
     @trigger(context, "onDestroy", "theNinefoldKingBoss")
     class NinefoldKingTrigger(CTrigger):
+        @resumableHook
         def trigger(self, obj, event):
             game_map = obj.getGame().getMap()
             game_map.setBoolProperty("boss_defeated", True)
-            showReader(
-                obj.getGame(),
-                "The Crowned God falls",
-                "The Crowned God falls, and nine circlets of black iron crack apart on the Citadel stones. For the "
-                "first time in nine hundred years the Nine Marches are only quiet - not waiting. You still wear a "
-                "shard of its crown; the marches will remember that, too.",
+            (
+                yield uiRequest(
+                    "showReader",
+                    flowGame(obj.getGame()),
+                    "The Crowned God falls",
+                    "The Crowned God falls, and nine circlets of black iron crack apart on the Citadel stones. For the "
+                    "first time in nine hundred years the Nine Marches are only quiet - not waiting. You still wear a "
+                    "shard of its crown; the marches will remember that, too.",
+                )
             )
             # Boss-defeat transition: converge with the crown pickup so the finale
             # completes once both requirements are met, in either order.
-            game_map.getPlayer().checkQuests()
+            (yield uiRequest("gui.checkQuests", game_map.getPlayer()))

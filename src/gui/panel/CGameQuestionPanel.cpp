@@ -17,6 +17,7 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 #include "CGameQuestionPanel.h"
 #include "gui/CGui.h"
+#include "gui/CGuiTasks.h"
 #include "gui/CLayout.h"
 #include "gui/CTextManager.h"
 #include "gui/CUiTheme.h"
@@ -67,9 +68,12 @@ void CGameQuestionPanel::refreshButtons() {
     }
 }
 
-bool CGameQuestionPanel::awaitAnswer() {
-    vstd::wait_until([this]() { return selection != nullptr || !getGui(); });
-    return selection ? *selection : false;
+bool CGameQuestionPanel::awaitAnswer() { return gui_async::run(this->ptr<CGameQuestionPanel>(), awaitAnswerAsync()); }
+
+vstd::task<bool> CGameQuestionPanel::awaitAnswerAsync() {
+    auto self = this->ptr<CGameQuestionPanel>();
+    return gui_async::until([self]() { return self->selection != nullptr || !self->getGui(); },
+                            [self]() { return self->selection ? *self->selection : false; });
 }
 
 void CGameQuestionPanel::clickNo(std::shared_ptr<CGui>) {
@@ -91,9 +95,9 @@ void CGameQuestionPanel::renderObject(std::shared_ptr<CGui> gui, std::shared_ptr
     const int buttonWidth = std::max(1, (width - gap) / 2);
     const int textWidth = std::max(1, buttonWidth - gap);
     auto manager = gui->getTextManager();
-    const int buttonHeight = std::max({UiTheme::scaled(gui, 44),
-                                       manager->measureText(confirmLabel, textWidth).second + gap,
-                                       manager->measureText(cancelLabel, textWidth).second + gap});
+    const int buttonHeight =
+        std::max({UiTheme::scaled(gui, 44), manager->measureText(confirmLabel, textWidth).second + gap,
+                  manager->measureText(cancelLabel, textWidth).second + gap});
     const int top = getShellHeaderHeight(gui) + gap;
     const int footerTop = rect->h - padding - buttonHeight;
     questionRect = CUtil::rect(rect->x + padding, rect->y + top, width, std::max(1, footerTop - gap - top));
