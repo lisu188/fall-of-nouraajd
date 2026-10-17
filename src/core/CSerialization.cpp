@@ -1119,8 +1119,8 @@ std::string CSerialization::generateName(const std::shared_ptr<CGameObject> &obj
                            std::to_string(state.fixtureSequence++);
                 }
             }
-            return generatedNameDetail::formatProductionName(reinterpret_cast<std::uintptr_t>(object.get()),
-                                                             vstd::rand(), productionNameSequence().fetch_add(1));
+            return generatedNameDetail::formatProductionName(vstd::to_hex(object), vstd::rand(),
+                                                             productionNameSequence().fetch_add(1));
         }();
         if (!isNameTaken || !isNameTaken(candidate)) {
             return candidate;

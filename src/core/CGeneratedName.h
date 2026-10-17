@@ -38,9 +38,9 @@ template <typename Unsigned> std::string formatHex(Unsigned value) {
     return std::string(buffer, result.ptr);
 }
 
-inline std::string formatProductionName(std::uintptr_t address, double randomDraw, std::uint64_t sequence) {
-    // Hash the uppercase address string before combining the original random and sequence types.
-    auto hash = std::hash<std::string>{}(formatHex(address));
+inline std::string formatProductionName(const std::string &formattedAddress, double randomDraw,
+                                        std::uint64_t sequence) {
+    auto hash = std::hash<std::string>{}(formattedAddress);
     hash = hash * 31 + std::hash<double>{}(randomDraw);
     hash = hash * 31 + std::hash<std::uint64_t>{}(sequence);
     return formatHex(hash);
