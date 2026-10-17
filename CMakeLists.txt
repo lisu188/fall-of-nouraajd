@@ -788,7 +788,7 @@ if (WIN32)
                     \"api-ms-.*\"
                     \"ext-ms-.*\"
                 POST_EXCLUDE_REGEXES
-                    \".*[Ww][Ii][Nn][Dd][Oo][Ww][Ss][\\/][Ss]ystem32.*\"
+                    \".*[Ww][Ii][Nn][Dd][Oo][Ww][Ss][\\\\/][Ss]ystem32.*\"
             )
             foreach (runtime_dep IN LISTS runtime_deps)
                 file(INSTALL

@@ -11,6 +11,7 @@ from pathlib import Path
 import re
 import shutil
 import subprocess
+import sys
 import tarfile
 import tempfile
 import unittest
@@ -396,6 +397,55 @@ class McpBranchShardsTest(unittest.TestCase):
         self.assertTrue(classification.coverageNeeded)
         self.assertTrue(classification.authorityChange)
         self.assertTrue(classification.humanReviewRequired)
+
+    @unittest.skipUnless(shutil.which("cmake"), "CMake is unavailable")
+    def testWindowsRuntimeFilterKeepsPrivateCrtAndExcludesSystemCopy(self):
+        cmake_source = (shards.ROOT / "CMakeLists.txt").read_text(encoding="utf-8")
+        rules = re.findall(r'^    install\(CODE "\n.*?^    "\)', cmake_source, re.MULTILINE | re.DOTALL)
+        self.assertEqual(1, len(rules), "Exercise the actual Windows runtime installation rule")
+        with tempfile.TemporaryDirectory(prefix="nouraajd-windows-runtime-") as directory:
+            root = Path(directory)
+            game, system, python = root / "game", root / r"Windows\system32", root / "Python"
+            for folder in (game, system, python):
+                folder.mkdir(parents=True)
+            core, runtime, crt = (
+                "nouraajd_fixture_core.dll",
+                "nouraajd_fixture_python.dll",
+                "nouraajd_fixture_crt.dll",
+            )
+            for path in (game / "game.pyd", game / core, python / runtime):
+                path.write_bytes(b"dependency fixture")
+            (system / crt).write_bytes(b"system runtime must stay excluded")
+            (python / crt).write_bytes(b"private Python runtime must be bundled")
+            stub = root / "dumpbin.py"
+            stub.write_text(
+                "import sys\nfrom pathlib import Path\n"
+                + f"dependencies = {{'game.pyd': [{core!r}, {runtime!r}], {core!r}: [{crt!r}], "
+                + f"{runtime!r}: [{crt!r}]}}\n"
+                + "for dependency in dependencies.get(Path(sys.argv[-1]).name, []):\n"
+                + "    sys.stdout.buffer.write(('    ' + dependency + '\\r\\n').encode())\n",
+                encoding="utf-8",
+            )
+            # Supply the binary inspector's dependency graph; CMake still performs real resolution and installation.
+            setup = (
+                "cmake_minimum_required(VERSION 3.20)\nproject(runtime_filter LANGUAGES NONE)\n"
+                + "add_library(_game MODULE IMPORTED)\n"
+                + f"set_target_properties(_game PROPERTIES IMPORTED_LOCATION [[{(game / 'game.pyd').as_posix()}]])\n"
+                + "set(WINDOWS_RUNTIME_DEPENDENCY_CODE [==[list(APPEND runtime_search_dirs "
+                + f"[[{system}]] [[{python}]])]==])\n"
+                + "install(CODE [=[\nset(CMAKE_GET_RUNTIME_DEPENDENCIES_PLATFORM windows+pe)\n"
+                + "set(CMAKE_GET_RUNTIME_DEPENDENCIES_TOOL dumpbin)\n"
+                + f"set(CMAKE_GET_RUNTIME_DEPENDENCIES_COMMAND [[{Path(sys.executable).as_posix()};{stub.as_posix()}]])\n"
+                + "]=])\n"
+            )
+            (root / "CMakeLists.txt").write_text(setup + rules[0] + "\n", encoding="utf-8")
+            build, stage = root / "build", root / "stage"
+            for arguments in (("-S", str(root), "-B", str(build)), ("--install", str(build), "--prefix", str(stage))):
+                result = subprocess.run([shutil.which("cmake"), *arguments], capture_output=True, text=True, timeout=30)
+                self.assertEqual(0, result.returncode, result.stdout + result.stderr)
+            installed = stage / "fall-of-nouraajd"
+            self.assertEqual({core, runtime, crt}, {path.name for path in installed.iterdir()})
+            self.assertEqual((python / crt).read_bytes(), (installed / crt).read_bytes())
 
     def testWindowsWorkflowStagesDependenciesBeforeBundlingRuntime(self):
         workflow = (shards.ROOT / ".github/workflows/build.yml").read_text(encoding="utf-8")
