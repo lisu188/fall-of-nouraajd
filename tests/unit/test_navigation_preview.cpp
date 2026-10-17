@@ -26,6 +26,7 @@ SPDX-License-Identifier: GPL-3.0-or-later
 #include <pybind11/embed.h>
 
 #include <array>
+#include <algorithm>
 #include <vector>
 
 namespace {
@@ -36,6 +37,7 @@ Coords resolvePlan(vstd::task<Coords> plan) {
 class SolidMovementAnimation : public CStaticAnimation {
   public:
     inline static std::vector<SDL_Rect> actorRects;
+    inline static std::vector<const CGameObject *> actorInstances;
     inline static std::string rightClickTarget;
 
     void renderObject(std::shared_ptr<CGui> gui, std::shared_ptr<SDL_Rect> rect, int) override {
@@ -43,8 +45,10 @@ class SolidMovementAnimation : public CStaticAnimation {
         if (!object)
             return;
         const bool actor = object->getName() == "movingColorActor";
-        if (actor)
+        if (actor) {
             actorRects.push_back(*rect);
+            actorInstances.push_back(object.get());
+        }
         const auto renderer = gui->getRenderer();
         SDL_SetRenderDrawColor(renderer, actor ? 255 : 0, actor ? 0 : 200, 0, 255);
         expect_true(SDL_RenderFillRect(renderer, rect.get()) == 0, "solid movement fixtures must render opaque cells");
@@ -392,6 +396,87 @@ void testClippedOverscanCannotStartTravelOutsideTheMapViewport() {
                 "the same viewport boundary must map a visible click to the correct authored destination");
 }
 
+void testWrappedMapKeepsEveryVisibleActorAliasDuringPresentation() {
+    PreviewFixture fixture;
+    fixture.gui->setWidth(1280);
+    fixture.gui->setHeight(720);
+    fixture.gui->setTileSize(64);
+    fixture.map->setWrapX({{0, 1}});
+    fixture.game->getObjectHandler()->registerType("CAnimation",
+                                                   [] { return std::make_shared<SolidMovementAnimation>(); });
+    fixture.game->getObjectHandler()->registerType("CStaticAnimation",
+                                                   [] { return std::make_shared<SolidMovementAnimation>(); });
+    auto actor = std::make_shared<CCreature>();
+    actor->setGame(fixture.game);
+    actor->setName("movingColorActor");
+    actor->setNpc(true);
+    actor->setBaseStats(fixture.player->getBaseStats());
+    actor->setPosX(3);
+    actor->setPosY(1);
+    fixture.map->addObject(actor);
+    actor->getGraphicsObject()->setPriority(5);
+    fixture.initializeSolidProxyGrid();
+    const auto viewport = *fixture.world->getLayout()->getRect(fixture.world);
+    auto captureActors = [&](int timestamp) {
+        SolidMovementAnimation::actorRects.clear();
+        SolidMovementAnimation::actorInstances.clear();
+        fixture.gui->render(timestamp);
+        std::vector<SDL_Rect> visible;
+        for (std::size_t index = 0; index < SolidMovementAnimation::actorRects.size(); ++index) {
+            const auto &rect = SolidMovementAnimation::actorRects[index];
+            if (SDL_HasIntersection(&viewport, &rect)) {
+                expect_true(SolidMovementAnimation::actorInstances[index] == actor.get(),
+                            "every wrapped image must retain the identity of the same real actor");
+                visible.push_back(rect);
+            }
+        }
+        std::sort(visible.begin(), visible.end(), [](const auto &left, const auto &right) { return left.x < right.x; });
+        return visible;
+    };
+    const auto original = captureActors(900);
+    expect_true(original.size() > 1, "the torus regression must start with multiple visible images of one actor");
+    auto movement = fixture.game->getContext()->spawnTask(
+        actor->moveToAsync(Coords(4, 1, 0), {}, fixture.world->movementPresenter(fixture.gui)));
+    const int tile = fixture.gui->getTileSize();
+    for (const int elapsed : {0, 75, 150}) {
+        const auto visible = captureActors(1000 + elapsed);
+        expect_true(visible.size() == original.size(),
+                    "animation must preserve every legitimate visible torus alias without adding ghost copies");
+        for (std::size_t index = 0; index < std::min(visible.size(), original.size()); ++index) {
+            const auto &before = original[index];
+            const auto &now = visible[index];
+            const int expectedX = before.x + elapsed * tile / 150;
+            expect_true(now.x == expectedX && now.y == before.y && now.w == before.w && now.h == before.h &&
+                            isActorPixel(fixture.gui, expectedX + tile / 4, now.y + tile / 2) &&
+                            isActorPixel(fixture.gui, expectedX + 3 * tile / 4, now.y + tile / 2),
+                        "all repeated actor images must interpolate together above the actual opaque proxy terrain");
+            if (elapsed == 75)
+                expect_true(isTerrainPixel(fixture.gui, before.x + tile / 4, before.y + tile / 2),
+                            "none of the wrapped source cells may retain a stationary actor ghost");
+        }
+        if (elapsed == 75 && !visible.empty()) {
+            SolidMovementAnimation::rightClickTarget.clear();
+            SDL_Event click{};
+            click.type = SDL_MOUSEBUTTONDOWN;
+            click.button.button = SDL_BUTTON_RIGHT;
+            click.button.x = visible.front().x + tile / 4;
+            click.button.y = visible.front().y + tile / 2;
+            fixture.gui->event(&click);
+            expect_true(SolidMovementAnimation::rightClickTarget == actor->getName(),
+                        "right-clicking a repeated motion image must inspect the same canonical actor");
+        }
+    }
+    auto loop = vstd::event_loop<>::instance();
+    loop->runFrame();
+    loop->runUntilIdle();
+    expect_true(movement.finished(), "wrapped presentation must finish after its final rendered aliases");
+    if (movement.finished())
+        movement.get();
+    const auto restored = captureActors(1200);
+    expect_true(restored.size() == original.size(),
+                "completion must restore the ordinary wrapped aliases without leaving motion overlays");
+}
+
 void testPreviewRejectsChangedRequestControllerGraphOriginAndSession() {
     for (int change = 0; change < 6; ++change) {
         PreviewFixture fixture;
@@ -581,6 +666,7 @@ int main() {
     testPlayerAndVisibleActorsUseInterpolatedViewOffsets();
     testMovingActorRendersAboveAdjacentTerrainAndReceivesVisibleRightClicks();
     testClippedOverscanCannotStartTravelOutsideTheMapViewport();
+    testWrappedMapKeepsEveryVisibleActorAliasDuringPresentation();
     testPreviewRejectsChangedRequestControllerGraphOriginAndSession();
     testCommittedLegalRoutesSurviveUnrelatedGraphChangesAndStopPermanentlyWhenBlocked();
     testOverlayLookupsAndRetainedStorageAreBounded();

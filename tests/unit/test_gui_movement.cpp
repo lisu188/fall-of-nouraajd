@@ -12,6 +12,7 @@ SPDX-License-Identifier: GPL-3.0-or-later
 #include "core/CRuntimeBridge.h"
 #include "core/CStats.h"
 #include "core/CTypes.h"
+#include "gui/CGui.h"
 #include "gui/CMovementAnimation.h"
 #include "handler/CObjectHandler.h"
 #include "object/CCreature.h"
@@ -173,6 +174,11 @@ CMovementPresenter gatedPresenter(const std::shared_ptr<PresenterGate> &gate) {
     };
 }
 
+class HeadlessMovementGui : public CGui {
+  public:
+    HeadlessMovementGui() : CGui(WithoutWindow{}) {}
+};
+
 void testMapWaitsForEachActorPresentationBeforeArrivalAndNextActor() {
     MovementFixture fixture(3);
     auto gate = std::make_shared<PresenterGate>();
@@ -207,17 +213,32 @@ void testMapWaitsForEachActorPresentationBeforeArrivalAndNextActor() {
 }
 
 void testEmptyPresenterPreservesHeadlessTurnsWithoutFrames() {
-    MovementFixture fixture(3);
-    int frames = 0;
-    auto loop = vstd::event_loop<>::instance();
-    auto observer = loop->connectFrameCallback([&frames](int) { ++frames; });
-    const int turn = fixture.map->getTurn();
-    fixture.map->move();
-    expect_true(frames == 0 && !fixture.map->isMoving() && fixture.map->getTurn() == turn + 1,
-                "the synchronous headless map API must complete one turn without rendering or frame pacing");
-    for (const auto &actor : fixture.actors)
-        expect_true(actor->getPosX() == 2 && actor->arrivals == 1 && !actor->getPendingMoveOrigin(),
-                    "empty presentation retains actual actor movement and arrival behavior");
+    for (bool attachedGui : {false, true}) {
+        MovementFixture fixture(3);
+        std::shared_ptr<CGui> gui;
+        if (attachedGui) {
+            gui = std::make_shared<HeadlessMovementGui>();
+            gui->setGame(fixture.game);
+            fixture.game->setGui(gui);
+            expect_true(!gui->getRenderer(), "the attached headless GUI fixture must not create a display renderer");
+        }
+        int frames = 0;
+        auto loop = vstd::event_loop<>::instance();
+        auto observer = loop->connectFrameCallback([&frames](int) { ++frames; });
+        const int turn = fixture.map->getTurn();
+        fixture.map->move();
+        expect_true(frames == 0 && !fixture.map->isMoving() && fixture.map->getTurn() == turn + 1,
+                    "empty presentation must finish a synchronous turn without pacing, even with an attached GUI");
+        for (const auto &actor : fixture.actors)
+            expect_true(actor->getPosX() == 2 && actor->arrivals == 1 && !actor->getPendingMoveOrigin(),
+                        "empty presentation retains actual actor movement and arrival behavior");
+        if (gui) {
+            game_async::wait(fixture.game->getContext()->spawnTask(gui->moveMapTurnAsync()),
+                             game_async::WaitMode::PostedWork);
+            expect_true(frames == 0 && !fixture.map->isMoving() && fixture.map->getTurn() == turn + 2,
+                        "a GUI without a renderer must also finish its explicit turn boundary without frames");
+        }
+    }
 }
 
 void testStalePresentationNeverDispatchesOldArrival() {
