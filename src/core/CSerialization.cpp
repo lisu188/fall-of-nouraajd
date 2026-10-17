@@ -16,6 +16,7 @@ You should have received a copy of the GNU General Public License
 along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 #include "core/CSerialization.h"
+#include "core/CGeneratedName.h"
 #include "core/CSaveFormat.h"
 #include "core/CGame.h"
 #include "core/CJsonUtil.h"
@@ -1021,13 +1022,15 @@ std::shared_ptr<CGameObject> object_deserialize(const std::shared_ptr<CGame> &ga
     }
     if (object && config->contains("properties")) {
         CGameObject::PropertyNotificationBatch notificationBatch(*object);
-        for (const auto &[key, value] : (*config)["properties"].items()) {
-            try {
-                CSerialization::setProperty(object, key, value, context);
-            } catch (const std::exception &exception) {
-                if (context.isStrict())
-                    throw;
-                vstd::logger::warning("Skipping malformed property:", key, exception.what());
+        if (!game->getObjectHandler()->applyTileRecipe(object, *config)) {
+            for (const auto &[key, value] : (*config)["properties"].items()) {
+                try {
+                    CSerialization::setProperty(object, key, value, context);
+                } catch (const std::exception &exception) {
+                    if (context.isStrict())
+                        throw;
+                    vstd::logger::warning("Skipping malformed property:", key, exception.what());
+                }
             }
         }
     }
@@ -1116,7 +1119,8 @@ std::string CSerialization::generateName(const std::shared_ptr<CGameObject> &obj
                            std::to_string(state.fixtureSequence++);
                 }
             }
-            return vstd::to_hex_hash(to_hex(object), vstd::rand(), productionNameSequence().fetch_add(1));
+            return generatedNameDetail::formatProductionName(reinterpret_cast<std::uintptr_t>(object.get()),
+                                                             vstd::rand(), productionNameSequence().fetch_add(1));
         }();
         if (!isNameTaken || !isNameTaken(candidate)) {
             return candidate;

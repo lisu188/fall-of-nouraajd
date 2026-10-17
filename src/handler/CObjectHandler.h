@@ -115,7 +115,29 @@ class CObjectHandler : public CGameObject {
     std::uint64_t getNavigationConfigRevision() const;
     std::optional<std::pair<bool, int>> getStaticTileNavigation(const std::string &type);
 
+    struct TileRecipeDiagnostics {
+        std::size_t compilations = 0;
+        std::size_t applications = 0;
+        std::size_t invalidations = 0;
+    };
+    TileRecipeDiagnostics getTileRecipeDiagnostics() const;
+
+    // Used inside the regular object codec's property batch; unsupported configurations retain its scalar dispatch.
+    bool applyTileRecipe(const std::shared_ptr<CGameObject> &object, const json &config);
+
   private:
+    struct TileRecipe {
+        struct Property {
+            std::string key;
+            std::variant<std::string, bool, int> value;
+        };
+        std::shared_ptr<const json> config;
+        std::vector<Property> properties;
+        bool eligible = false;
+    };
+    void prepareTileRecipe(const std::shared_ptr<const json> &config);
+    void refreshTileRecipes();
+
     void registerConfigDocument(const std::string &path, const std::shared_ptr<const json> &config);
 
     std::shared_ptr<CGameObject> _createObject(std::shared_ptr<CGame> map, const std::string &type);
@@ -135,6 +157,9 @@ class CObjectHandler : public CGameObject {
     std::unordered_map<std::string, std::shared_ptr<const json>> objectConfig;
     std::atomic_uint64_t navigationConfigRevision{1};
     bool nativeTileFactory = false;
+    std::unordered_map<const json *, std::shared_ptr<const TileRecipe>> tileRecipes;
+    std::uint64_t tileRecipeRevision = 0;
+    TileRecipeDiagnostics tileRecipeDiagnostics;
     std::uint64_t nextRegistrationEpoch = 0;
     std::uint64_t registrationEpoch = 0;
 };

@@ -940,6 +940,9 @@ add_executable(performance_guard_tests
     tests/unit/test_engine_hotspot_performance.cpp
     tests/unit/test_serialization_performance.cpp
     tests/unit/test_render_context_performance.cpp
+    tests/unit/test_random_map_optimizations.cpp
+    tests/unit/test_tile_recipes.cpp
+    tests/unit/test_generated_names.cpp
 )
 if (WIN32)
     target_sources(performance_guard_tests PRIVATE $<TARGET_OBJECTS:game_core_objects>)
@@ -983,6 +986,12 @@ if (WIN32)
 endif ()
 add_game_unit_test(vstd_unit_tests tests/unit/test_vstd.cpp)
 add_game_unit_test(random_dungeon_unit_tests tests/unit/test_random_dungeon.cpp)
+add_game_unit_test(random_map_optimization_tests
+    tests/unit/test_random_map_optimizations.cpp
+    tests/unit/test_tile_recipes.cpp
+    tests/unit/test_generated_names.cpp
+)
+target_compile_definitions(random_map_optimization_tests PRIVATE GAME_RANDOM_MAP_OPTIMIZATION_MAIN)
 if (CMAKE_SYSTEM_NAME STREQUAL "Linux")
     add_game_unit_test(map_unit_tests tests/unit/test_map.cpp)
     target_compile_definitions(map_unit_tests PRIVATE

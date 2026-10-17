@@ -18,6 +18,9 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #include "CHandler.h"
 #include "core/CGame.h"
 #include "core/CJsonUtil.h"
+#include "core/CPythonOverrides.h"
+#include "core/CWrapper.h"
+#include "object/CTile.h"
 
 #include <algorithm>
 
@@ -165,6 +168,76 @@ std::optional<std::pair<bool, int>> CObjectHandler::getStaticTileNavigation(cons
                      hasCost ? std::max(1, properties["movementCost"].get<int>()) : 1);
 }
 
+void CObjectHandler::refreshTileRecipes() {
+    const auto revision = getNavigationConfigRevision();
+    if (tileRecipeRevision != revision) {
+        if (!tileRecipes.empty())
+            ++tileRecipeDiagnostics.invalidations;
+        tileRecipes.clear();
+        tileRecipeRevision = revision;
+    }
+}
+
+void CObjectHandler::prepareTileRecipe(const std::shared_ptr<const json> &config) {
+    refreshTileRecipes();
+    if (!nativeTileFactory || !config || tileRecipes.contains(config.get()))
+        return;
+    if (!config->is_object() || config->size() != 2 || !config->contains("class") || !(*config)["class"].is_string() ||
+        (*config)["class"].get<std::string>() != "CTile" || !config->contains("properties") ||
+        !(*config)["properties"].is_object())
+        return;
+    auto recipe = std::make_shared<TileRecipe>();
+    recipe->config = config;
+    // Retain rejected documents as immutable owners too; a reused allocation must never inherit an old recipe.
+    tileRecipes.emplace(config.get(), recipe);
+    for (const auto &[key, value] : (*config)["properties"].items()) {
+        if (key == "animation" || key == "label" || key == "description" || key == "tileType" || key == "name" ||
+            key == "type" || key == "typeId") {
+            if (!value.is_string())
+                return;
+            recipe->properties.push_back({key, value.get<std::string>()});
+        } else if (key == "canStep") {
+            if (!value.is_boolean())
+                return;
+            recipe->properties.push_back({key, value.get<bool>()});
+        } else if (key == "movementCost" || key == "posx" || key == "posy" || key == "posz") {
+            if (!value.is_number_integer())
+                return;
+            recipe->properties.push_back({key, value.get<int>()});
+        } else {
+            return;
+        }
+    }
+    recipe->eligible = true;
+    ++tileRecipeDiagnostics.compilations;
+}
+
+CObjectHandler::TileRecipeDiagnostics CObjectHandler::getTileRecipeDiagnostics() const { return tileRecipeDiagnostics; }
+
+bool CObjectHandler::applyTileRecipe(const std::shared_ptr<CGameObject> &object, const json &config) {
+    refreshTileRecipes();
+    // Native registration alone does not authorize bypassing a plugin's derived metadata or setters.
+    if (!nativeTileFactory || !object)
+        return false;
+    const bool native_wrapper = typeid(*object) == typeid(CWrapper<CTile>);
+    if (typeid(*object) != typeid(CTile) && !native_wrapper)
+        return false;
+    if (native_wrapper && Py_IsInitialized()) {
+        pybind11::gil_scoped_acquire gil;
+        if (CPythonOverrides::find(object.get()))
+            return false;
+    }
+    auto found = tileRecipes.find(&config);
+    if (found == tileRecipes.end() || !found->second->eligible)
+        return false;
+    auto recipe = found->second;
+    for (const auto &property : recipe->properties) {
+        std::visit([&](const auto &value) { object->setProperty(property.key, value); }, property.value);
+    }
+    ++tileRecipeDiagnostics.applications;
+    return true;
+}
+
 std::shared_ptr<const json> CObjectHandler::getConfig(const std::string &type) {
     auto found = objectConfig.find(type);
     return found == objectConfig.end() ? nullptr : found->second;
@@ -241,6 +314,7 @@ std::shared_ptr<CGameObject> CObjectHandler::_createObject(std::shared_ptr<CGame
         vstd::logger::debug("No config found for:", type, "falling back to class-name construction");
         config = std::make_shared<const json>(json{{"class", type}});
     }
+    prepareTileRecipe(config);
     context.keepDocument(config);
     auto object = serializationValueOrThrow(
         CSerialization::deserializeExpected<std::shared_ptr<CGameObject>>(game, *config, context));
