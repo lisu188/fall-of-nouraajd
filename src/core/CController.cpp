@@ -795,13 +795,16 @@ void CPlayerController::interrupt(std::shared_ptr<CCreature>) { clearPath(); }
 void CPlayerController::onTurnEnded(std::shared_ptr<CCreature>) {}
 
 std::pair<bool, Coords::Direction> CPlayerController::isOnPath(std::shared_ptr<CPlayer> player, Coords coords) {
-    if (!isCompleted(player)) {
+    const auto map = player ? player->getMap() : nullptr;
+    // The committed position precedes the route cursor while a turn awaits presentation or arrival hooks.
+    const bool current = map && map->isMoving() ? hasCurrentRoute(player) : !isCompleted(player);
+    if (current) {
         ++overlayLookupCount;
-        const auto found = route->firstRemaining.find(player->getMap()->normalizeCoords(coords));
+        const auto found = route->firstRemaining.find(map->normalizeCoords(coords));
         if (found != route->firstRemaining.end()) {
             const auto index = found->second;
             const auto previous = index ? route->steps[index - 1] : route->origin;
-            const auto direction = player->getMap()->getShortestDelta(previous, route->steps[index]);
+            const auto direction = map->getShortestDelta(previous, route->steps[index]);
             return std::make_pair(true, CUtil::getDirection(direction));
         }
     }
@@ -827,7 +830,7 @@ std::uint64_t CPlayerController::getRequestSerial() const { return requestSerial
 
 std::uint64_t CPlayerController::getOverlayLookupCount() const { return overlayLookupCount; }
 
-bool CPlayerController::hasPendingPath(std::shared_ptr<CPlayer> player) {
+bool CPlayerController::hasCurrentRoute(std::shared_ptr<CPlayer> player) {
     if (!target || !route || !player || !player->getMap() || currentStep >= route->steps.size()) {
         return false;
     }
@@ -840,6 +843,13 @@ bool CPlayerController::hasPendingPath(std::shared_ptr<CPlayer> player) {
             !context->isTransitionGenerationCurrent(route->generation))
             return false;
     }
+    return true;
+}
+
+bool CPlayerController::hasPendingPath(std::shared_ptr<CPlayer> player) {
+    if (!hasCurrentRoute(player))
+        return false;
+    const auto map = player->getMap();
     const auto expectedOrigin = currentStep ? route->steps[currentStep - 1] : route->origin;
     if (player->getCoords() != expectedOrigin)
         return false;

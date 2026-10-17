@@ -16,10 +16,12 @@ You should have received a copy of the GNU General Public License
 along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 
+#include "core/CAsync.h"
 #include "core/CController.h"
 #include "core/CGame.h"
 #include "core/CGameContext.h"
 #include "core/CMap.h"
+#include "core/CNavigation.h"
 #include "core/CStats.h"
 #include "core/CUtil.h"
 #include "gui/CGui.h"
@@ -37,6 +39,7 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #include "handler/CObjectHandler.h"
 #include "object/CInteraction.h"
 #include "object/CPlayer.h"
+#include "object/CTile.h"
 #include "test_harness.h"
 
 #include <cstddef>
@@ -487,6 +490,97 @@ void testMovementSamplingReusesOneBoundedRecord() {
               << " state budget=64 coordinate lookups=" << coordinateLookups << " lookup budget=0\n";
 }
 
+struct ActiveTurnOverlayGate {
+    bool entered = false;
+    bool released = false;
+};
+
+vstd::task<void> waitForActiveTurnOverlay(std::shared_ptr<ActiveTurnOverlayGate> gate) {
+    gate->entered = true;
+    co_await vstd::until(vstd::event_loop<>::instance(), [gate] { return gate->released; });
+}
+
+void testActiveTurnOverlayReadsReuseTheCommittedPlayerRoute() {
+    constexpr int routeLength = 32;
+    constexpr int queries = 20'000;
+    auto game = std::make_shared<CGame>();
+    game->getObjectHandler()->registerType("CPlayerController", [] { return std::make_shared<CPlayerController>(); });
+    game->getObjectHandler()->registerType("CPlayerFightController",
+                                           [] { return std::make_shared<CPlayerFightController>(); });
+    auto map = std::make_shared<CMap>();
+    game->setMap(map);
+    map->setGame(game);
+    map->setXBounds({{0, routeLength}});
+    map->setYBounds({{0, 0}});
+    for (int x = 0; x <= routeLength; ++x) {
+        auto tile = std::make_shared<CTile>();
+        tile->setGame(game);
+        tile->setCanStep(true);
+        map->addTile(tile, x, 0, 0);
+    }
+    auto player = std::make_shared<CPlayer>();
+    player->setGame(game);
+    auto stats = std::make_shared<CStats>();
+    stats->setMainStat("stamina");
+    stats->setStamina(10);
+    player->setBaseStats(stats);
+    map->setPlayer(player);
+    auto controller = std::dynamic_pointer_cast<CPlayerController>(player->getController());
+    controller->setTarget(player, Coords(routeLength, 0, 0));
+    auto gate = std::make_shared<ActiveTurnOverlayGate>();
+    auto loop = vstd::event_loop<>::instance();
+    const int turn = map->getTurn();
+    auto movement = game->getContext()->spawnTask(map->moveAsync(
+        [gate](std::shared_ptr<CMapObject>, Coords, Coords) { return waitForActiveTurnOverlay(gate); }));
+    loop->runUntilIdle();
+    expect_true(gate->entered && !movement.finished() && map->isMoving() && player->getCoords() == Coords(1, 0, 0),
+                "the route-overlay guard must hold a real turn after coordinate commitment and before cursor advance");
+    const auto navigation = map->getNavigationService();
+    const auto budget = navigation->budget();
+    const auto retainedBefore = budget->used();
+    const auto searchesBefore = navigation->searchCount();
+    const auto requestBefore = controller->getRequestSerial();
+    const auto probesBefore = controller->getOverlayLookupCount();
+    performance_guard::resetMapCoordinateLookupProbe();
+    bool allRouteCellsVisible = true;
+    for (int index = 0; index < queries; ++index) {
+        const auto result = controller->isOnPath(player, Coords(2 + (index * 17) % (routeLength - 1), 0, 0));
+        allRouteCellsVisible &= result.first && result.second == Coords::EAST;
+    }
+    const auto coordinateLookups = performance_guard::mapCoordinateLookupProbeCount();
+    performance_guard::disableMapCoordinateLookupProbe();
+    const auto indexProbes = controller->getOverlayLookupCount() - probesBefore;
+    const auto retainedAfter = budget->used();
+    const auto searchesAfter = navigation->searchCount();
+    const auto requestAfter = controller->getRequestSerial();
+    expect_true(allRouteCellsVisible && indexProbes == queries,
+                "active-turn overlay queries must each perform one indexed probe and preserve every future route cell");
+    expect_true(requestAfter == requestBefore && searchesAfter == searchesBefore && retainedBefore > 0 &&
+                    retainedAfter == retainedBefore,
+                "active-turn rendering must neither cancel or replan the route nor change its retained allocation");
+    expect_true(coordinateLookups == 0,
+                "cached active-turn overlay queries must perform zero map coordinate lookups or movement validation");
+    expect_true(!movement.finished() && map->isMoving() && map->getTurn() == turn &&
+                    player->getCoords() == Coords(1, 0, 0),
+                "twenty thousand overlay reads must not resume presentation or advance the pending map turn");
+    gate->released = true;
+    loop->runUntilIdle();
+    expect_true(movement.finished() && !map->isMoving() && map->getTurn() == turn + 1 &&
+                    player->getCoords() == Coords(1, 0, 0),
+                "releasing the fixed presentation gate must finish exactly the original map turn");
+    if (movement.finished()) {
+        movement.get();
+        expect_true(game_async::run(controller->controlAsync(player), game_async::WaitMode::PostedWork) == Coords(2, 0, 0),
+                    "the real player route must continue at its next step after the measured overlay reads");
+    }
+    std::cout << "[active-turn route overlay] route=" << routeLength << " queries=" << queries
+              << " index probes=" << indexProbes << " index budget=" << queries
+              << " coordinate lookups=" << coordinateLookups << " coordinate budget=0 retained before=" << retainedBefore
+              << " retained after=" << retainedAfter << " request changes=" << requestAfter - requestBefore
+              << " additional searches=" << searchesAfter - searchesBefore << '\n';
+    game->getContext()->shutdown();
+}
+
 } // namespace
 
 void run_render_context_performance_tests() {
@@ -499,4 +593,5 @@ void run_render_context_performance_tests() {
     testCharacterAbilityDetailsReuseTexturesAndRefreshAvailability();
     testLoadingReaderReusesWarmTextures();
     testMovementSamplingReusesOneBoundedRecord();
+    testActiveTurnOverlayReadsReuseTheCommittedPlayerRoute();
 }

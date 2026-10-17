@@ -218,6 +218,7 @@ void testPreviewAndCommitReuseOneSearch() {
 
 void testOneClickWalksEveryStepWithoutEnterAndStopsAtDestination() {
     PreviewFixture fixture;
+    fixture.initializeSolidProxyGrid();
     const auto turn = fixture.map->getTurn();
     const auto searches = fixture.map->getNavigationService()->searchCount();
     expect_true(fixture.clickDestination(Coords(3, 0, 0)), "one left click starts the selected route");
@@ -234,6 +235,44 @@ void testOneClickWalksEveryStepWithoutEnterAndStopsAtDestination() {
     fixture.frame();
     expect_true(fixture.player->getCoords() == Coords(3, 0, 0) && fixture.map->getTurn() == turn + 3,
                 "completed travel must not continue producing idle turns on later frames");
+}
+
+void testRouteOverlayReadsPreserveAnAnimatedTurnUntilArrivalCommits() {
+    PreviewFixture fixture;
+    fixture.initializeSolidProxyGrid();
+    fixture.controller->setTarget(fixture.player, Coords(3, 0, 0));
+    const auto request = fixture.controller->getRequestSerial();
+    const auto searches = fixture.map->getNavigationService()->searchCount();
+    const auto turn = fixture.map->getTurn();
+    auto movement =
+        fixture.game->getContext()->spawnTask(fixture.map->moveAsync(fixture.world->movementPresenter(fixture.gui)));
+    auto loop = vstd::event_loop<>::instance();
+    loop->runUntilIdle();
+    expect_true(fixture.map->isMoving() && !movement.finished() && fixture.map->getTurn() == turn &&
+                    fixture.player->getCoords() == Coords(1, 0, 0) && fixture.player->getPendingMoveOrigin() == ZERO,
+                "the route regression must inspect a committed player step gated before its arrival hooks");
+    for (int refresh = 0; refresh < 3; ++refresh) {
+        fixture.world->refreshAll();
+        const auto next = fixture.controller->isOnPath(fixture.player, Coords(2, 0, 0));
+        const auto destination = fixture.controller->isOnPath(fixture.player, Coords(3, 0, 0));
+        expect_true(next.first && next.second == Coords::Direction::EAST && destination.first &&
+                        fixture.controller->getRequestSerial() == request,
+                    "refreshing the real grid during presentation must read the indexed route without clearing it");
+    }
+    const auto rect = fixture.world->getLayout()->getRect(fixture.world);
+    fixture.world->renderObject(fixture.gui, rect, 1000);
+    fixture.world->renderObject(fixture.gui, rect, 1150);
+    loop->runFrame();
+    loop->runUntilIdle();
+    expect_true(movement.finished() && !fixture.map->isMoving() && !fixture.player->getPendingMoveOrigin() &&
+                    fixture.map->getTurn() == turn + 1 && fixture.controller->getRequestSerial() == request &&
+                    !fixture.controller->isCompleted(fixture.player) &&
+                    resolvePlan(fixture.controller->controlAsync(fixture.player)) == Coords(2, 0, 0),
+                "arrival must advance the original route cursor only after the pending presentation finishes");
+    if (movement.finished())
+        movement.get();
+    expect_true(fixture.map->getNavigationService()->searchCount() == searches,
+                "pending-frame overlay reads and arrival must not search for a replacement route");
 }
 
 void testNewClickAndEscapeInterruptAtTheNextStepBoundary() {
@@ -731,6 +770,7 @@ int main() {
     CRuntimeBridge::set_logger_sink(vstd::logger::sink::disabled, "");
     testPreviewAndCommitReuseOneSearch();
     testOneClickWalksEveryStepWithoutEnterAndStopsAtDestination();
+    testRouteOverlayReadsPreserveAnAnimatedTurnUntilArrivalCommits();
     testNewClickAndEscapeInterruptAtTheNextStepBoundary();
     testPlayerAndVisibleActorsUseInterpolatedViewOffsets();
     testMovingActorRendersAboveAdjacentTerrainAndReceivesVisibleRightClicks();
