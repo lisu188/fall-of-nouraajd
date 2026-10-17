@@ -12,6 +12,17 @@
 #include <algorithm>
 
 namespace {
+template <typename Callback> class ScopeExit {
+  public:
+    explicit ScopeExit(Callback callback) : callback(std::move(callback)) {}
+    ScopeExit(const ScopeExit &) = delete;
+    ScopeExit &operator=(const ScopeExit &) = delete;
+    ~ScopeExit() { callback(); }
+
+  private:
+    Callback callback;
+};
+
 class CMapProxyLayout : public CProxyGraphicsLayout {
   public:
     explicit CMapProxyLayout(std::weak_ptr<CMapGraphicsObject> owner) : owner(std::move(owner)) {}
