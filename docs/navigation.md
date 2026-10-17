@@ -104,11 +104,11 @@ installed controller, origin and session-generation checks prevent reusing a rou
 Direct calls to an NPC controller that was never installed on the creature remain supported; the installed-controller
 identity check applies only when that controller owned the creature's movement slot when the route was created.
 
-World inspection plans a destination without moving the player or advancing turns. Repeated inspection of an unchanged
-destination reuses that route. A left click commits the destination immediately without a second search and advances
-normal turns until the route completes or an encounter, dialog, interactive object, blocked path, death, or map change
-interrupts it. Closing an interaction does not resume the route. A preview records map, player, controller, session
-generation, origin, routing epoch and controller request serial. A change to any of them invalidates the preview.
+Explicit destination previews do not move the player or advance turns. Repeated previews of an unchanged destination
+reuse that route, and committing the preview does not search again. A left click plans a destination and starts walking
+immediately. Normal turns continue until the route completes or an encounter, dialog, interactive object, blocked path,
+death, or map change interrupts it. Closing an interaction does not resume the route. A preview records map, player,
+controller, session generation, origin, routing epoch and controller request serial. A change to any of them invalidates the preview.
 Cancellation only interrupts the route that the preview owns; it must not cancel a newer external order. Scene changes,
 interrupts and new targets advance the request identity. Movement commitment rechecks those identities between steps.
 
