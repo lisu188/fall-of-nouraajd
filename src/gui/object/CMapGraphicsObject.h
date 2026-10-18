@@ -21,6 +21,8 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #include <vector>
 
 #include "core/CList.h"
+#include "core/CMovementPresenter.h"
+#include "gui/CMovementAnimation.h"
 #include "gui/object/CProxyTargetGraphicsObject.h"
 
 class CProxyGraphicsObject;
@@ -53,6 +55,19 @@ class CMapGraphicsObject : public CProxyTargetGraphicsObject {
 
     vstd::task<void> commitDestinationAsync(std::shared_ptr<CGui> gui);
     void renderObject(std::shared_ptr<CGui> gui, std::shared_ptr<SDL_Rect> rect, int frameTime) override;
+    void startTravel(std::shared_ptr<CGui> gui, Coords destination);
+    void cancelTravel();
+    bool isTravelling() const { return travelling; }
+    CMovementPresenter movementPresenter(std::shared_ptr<CGui> gui);
+    vstd::task<void> presentMoveAsync(std::shared_ptr<CGui> gui, std::shared_ptr<CMapObject> actor, Coords origin,
+                                      Coords destination);
+    SDL_Point getCameraOffset(int tileSize) const;
+    SDL_Point getActorOffset(const std::shared_ptr<CGameObject> &object, int tileSize) const;
+    std::shared_ptr<SDL_Rect> getMotionRect();
+
+  protected:
+    void render(std::shared_ptr<CGui> gui, int frameTime) override;
+    bool event(std::shared_ptr<CGui> gui, SDL_Event *event) override;
 
   private:
     struct ProxyAnimationSlot {
@@ -73,7 +88,34 @@ class CMapGraphicsObject : public CProxyTargetGraphicsObject {
     std::uint64_t previewEpoch = 0;
     std::uint64_t previewGeneration = 0;
     std::uint64_t previewRequest = 0;
-    std::shared_ptr<CGameGraphicsObject> destinationButton;
+    struct TravelOrder {
+        Coords destination;
+        bool relative = false;
+        bool singleTurn = false;
+        bool wait = false;
+    };
+    struct Motion {
+        std::weak_ptr<CMapObject> actor;
+        std::weak_ptr<CMap> map;
+        std::weak_ptr<CGameContext> context;
+        Coords destination;
+        Coords delta;
+        std::uint64_t generation = 0;
+        bool reducedMotion = false;
+        bool movesCamera = false;
+        bool started = false;
+        CMovementAnimation animation;
+        std::shared_ptr<CAnimation> overlay;
+        std::vector<std::shared_ptr<CAnimation>> overlays;
+    };
+    std::optional<TravelOrder> pendingOrder;
+    std::optional<Motion> motion;
+    bool travelling = false;
+    bool stopRequested = false;
+    void submitOrder(std::shared_ptr<CGui> gui, TravelOrder order);
+    vstd::task<void> travelAsync(std::shared_ptr<CGui> gui, bool reusePreview);
+    bool motionIsCurrent(const std::shared_ptr<CGui> &gui);
+    void clearMotion();
     void clearDestinationPreview();
     void validateDestinationPreview(const std::shared_ptr<CGui> &gui);
 

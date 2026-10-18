@@ -747,6 +747,16 @@ def saveGameFlow(game, slot):
     game_map = game.getMap()
     if game_map is None:
         return False
+    if game_map.isMoving():
+        (
+            yield uiRequest(
+                "showError",
+                game,
+                "Wait for the current turn to finish before saving.",
+                "Turn in progress",
+            )
+        )
+        return False
     try:
         with loading(game, "Saving your adventure..."):
             if not CMapLoader.saveWithResult(game_map, slot):
@@ -863,8 +873,10 @@ def helpText(game):
         if action in ACTION_LABELS and action != "console"
     )
     return (
-        "Exploring Nouraajd\n\nClick a walkable tile to preview a route. Choose Travel or press Enter to begin it. "
-        "Use the movement keys for individual steps. Entering a location can open a conversation, encounter, or service. "
+        "Exploring Nouraajd\n\nClick a walkable tile once to walk there, with each step shown in turn. "
+        "Travel stops for encounters, conversations, interactive objects, blocked paths, and map changes. "
+        "Click a new destination to change the remaining route, or use a movement key for an individual step. "
+        "Wait replaces the route with one waiting turn. Escape stops travel and opens the pause menu. "
         "Press M to expand the map. Movement, waiting, and combat advance turns; inspecting menus does not.\n\n"
         + controls
         + "\n\nInventory and character\nSelect an item to inspect its details before using or equipping it. "
@@ -977,7 +989,7 @@ def showSettingsFlow(game):
                 "reducedMotion",
                 "Reduced motion",
                 "On" if settings.get("reducedMotion") else "Off",
-                "Reduce interface motion and decorative effects.",
+                "Show discrete, paced walking steps instead of smooth movement and scrolling.",
             ),
             (
                 "fullscreen",
@@ -1004,7 +1016,7 @@ def showSettingsFlow(game):
                 "id": "reset",
                 "label": "Reset defaults",
                 "detail": "Restore the standard interface and controls.\n\nInterface scale: 100%\nText size: 100%"
-                "\nHigh contrast: Off\nReduced motion: On\nFullscreen: Off\nTooltip delay: 300 ms"
+                "\nHigh contrast: Off\nReduced motion: Off\nFullscreen: Off\nTooltip delay: 300 ms"
                 "\nMovement: arrow keys\nWait: Space\nInventory: I\nJournal: J\nCharacter: C\nSave: S\nPause: Escape",
             }
         )

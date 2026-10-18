@@ -73,6 +73,7 @@ struct NavigationHarness {
     std::shared_ptr<CMap> map = std::make_shared<CMap>();
     std::shared_ptr<CGui> gui = std::make_shared<CGui>();
     std::shared_ptr<CPlayer> player = std::make_shared<CPlayer>();
+    Uint32 frameTime = 1000;
 
     NavigationHarness() {
         for (const auto &[name, builder] : *CTypes::builders())
@@ -109,6 +110,17 @@ struct NavigationHarness {
     }
 
     ~NavigationHarness() { game->getContext()->shutdown(); }
+
+    void finishMovement(const std::shared_ptr<CMapGraphicsObject> &world) {
+        auto loop = vstd::event_loop<>::instance();
+        for (int frames = 0; frames < 128 && (world->isTravelling() || map->isMoving()); ++frames) {
+            world->renderObject(gui, world->getLayout()->getRect(world), static_cast<int>(frameTime));
+            frameTime += 75;
+            loop->runFrame();
+            loop->runUntilIdle();
+        }
+        expect_true(!world->isTravelling() && !map->isMoving(), "UI navigation must settle within bounded frames");
+    }
 
     std::shared_ptr<CItem> item(const std::string &label) {
         auto item = std::make_shared<CItem>();
@@ -221,6 +233,7 @@ void testRowPagingHasWorkingPreviousAndNextControls() {
 void testManualMovementAndWaitCancelOldDestinationPreview() {
     NavigationHarness h;
     auto world = std::make_shared<CMapGraphicsObject>();
+    world->setType("CMapGraphicsObject");
     world->setGame(h.game);
     world->setLayout(fixedLayout(0, 0, 1200, 800));
     h.gui->pushChild(world);
@@ -229,6 +242,7 @@ void testManualMovementAndWaitCancelOldDestinationPreview() {
     expect_true(h.player->getCoords() == initial, "previewing a destination must not move the player");
     keyEvent(h.gui, SDLK_RIGHT);
     vstd::event_loop<>::instance()->runUntilIdle();
+    h.finishMovement(world);
     const auto afterStep = h.player->getCoords();
     const auto turnAfterStep = h.map->getTurn();
     expect_true(afterStep != initial, "manual movement regression must drive a real player step");
@@ -238,11 +252,56 @@ void testManualMovementAndWaitCancelOldDestinationPreview() {
     world->previewDestination(h.gui, Coords(7, 0, 0));
     keyEvent(h.gui, SDLK_SPACE);
     vstd::event_loop<>::instance()->runUntilIdle();
+    h.finishMovement(world);
     const auto afterWait = h.player->getCoords();
     const auto turnAfterWait = h.map->getTurn();
     keyEvent(h.gui, SDLK_RETURN);
     expect_true(h.player->getCoords() == afterWait && h.map->getTurn() == turnAfterWait,
                 "Wait must cancel a pending preview instead of leaving a hidden travel command");
+}
+
+void testOpeningPanelStopsAutomaticTravelAfterCurrentStep() {
+    NavigationHarness h;
+    auto world = std::make_shared<CMapGraphicsObject>();
+    world->setType("CMapGraphicsObject");
+    world->setGame(h.game);
+    world->setLayout(fixedLayout(0, 0, 1200, 800));
+    h.gui->pushChild(world);
+    const auto turn = h.map->getTurn();
+    world->startTravel(h.gui, Coords(6, 0, 0));
+    vstd::event_loop<>::instance()->runUntilIdle();
+    expect_true(world->isTravelling() && h.map->isMoving() && h.player->getCoords() == Coords(1, 0, 0),
+                "panel cancellation must exercise a real route with a committed animation in flight");
+    auto panel = h.panel();
+    h.finishMovement(world);
+    expect_true(h.player->getCoords() == Coords(1, 0, 0) && h.map->getTurn() == turn + 1,
+                "opening a panel must finish the current step without automatically advancing the next turn");
+    h.gui->removeChild(panel);
+    vstd::event_loop<>::instance()->runUntilIdle();
+    expect_true(!world->isTravelling() && h.player->getCoords() == Coords(1, 0, 0) && h.map->getTurn() == turn + 1,
+                "closing a panel cannot resume an interrupted route or replay its movement input");
+}
+
+void testManualMovementAndWaitReplaceAutomaticTravelAtStepBoundary() {
+    NavigationHarness h;
+    auto world = std::make_shared<CMapGraphicsObject>();
+    world->setType("CMapGraphicsObject");
+    world->setGame(h.game);
+    world->setLayout(fixedLayout(0, 0, 1200, 800));
+    h.gui->pushChild(world);
+    const auto turn = h.map->getTurn();
+    world->startTravel(h.gui, Coords(6, 0, 0));
+    vstd::event_loop<>::instance()->runUntilIdle();
+    keyEvent(h.gui, SDLK_DOWN);
+    h.finishMovement(world);
+    expect_true(h.player->getCoords() == Coords(1, 1, 0) && h.map->getTurn() == turn + 2,
+                "manual movement replaces an automatic route after its already committed step");
+    world->startTravel(h.gui, Coords(6, 1, 0));
+    vstd::event_loop<>::instance()->runUntilIdle();
+    keyEvent(h.gui, SDLK_SPACE);
+    h.finishMovement(world);
+    expect_true(h.player->getCoords() == Coords(2, 1, 0) && h.map->getTurn() == turn + 4,
+                "Wait replaces the route with one stationary turn after the current movement finishes");
 }
 
 void testResponsivePageNavigationRequiresAMatchingHeaderClick() {
@@ -276,6 +335,7 @@ void testResponsivePageNavigationRequiresAMatchingHeaderClick() {
 void testMapAndPlayerReplacementInvalidatePendingTravel() {
     NavigationHarness h;
     auto world = std::make_shared<CMapGraphicsObject>();
+    world->setType("CMapGraphicsObject");
     world->setGame(h.game);
     world->setLayout(fixedLayout(0, 0, 1200, 800));
     h.gui->pushChild(world);
@@ -372,6 +432,8 @@ int main() {
     testSearchTextDoesNotTriggerPanelHotkeys();
     testRowPagingHasWorkingPreviousAndNextControls();
     testManualMovementAndWaitCancelOldDestinationPreview();
+    testOpeningPanelStopsAutomaticTravelAfterCurrentStep();
+    testManualMovementAndWaitReplaceAutomaticTravelAtStepBoundary();
     testResponsivePageNavigationRequiresAMatchingHeaderClick();
     testMapAndPlayerReplacementInvalidatePendingTravel();
     testQuestRowsUseTheAuthoredQuestDescription();

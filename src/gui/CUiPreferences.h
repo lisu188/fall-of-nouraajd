@@ -12,7 +12,7 @@ inline json defaults() {
     return {{"uiScale", 100},
             {"textScale", 100},
             {"highContrast", false},
-            {"reducedMotion", true},
+            {"reducedMotion", false},
             {"fullscreen", false},
             {"tooltipDelayMs", 300},
             {"bindings",

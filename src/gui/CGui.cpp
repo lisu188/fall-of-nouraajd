@@ -27,6 +27,7 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #include "gui/CTooltip.h"
 #include "gui/object/CWidget.h"
 #include "gui/object/CProxyTargetGraphicsObject.h"
+#include "gui/object/CMapGraphicsObject.h"
 #include "gui/panel/CGamePanel.h"
 #include "handler/CTooltipHandler.h"
 #include "core/CMap.h"
@@ -221,6 +222,10 @@ void CGui::clearSessionPanelGeometry() { sessionPanelGeometry.clear(); }
 void CGui::addChild(const std::shared_ptr<CGameGraphicsObject> &child) {
     const bool attached = child && child->isAttachedToGui(this->ptr<CGui>());
     CGameGraphicsObject::addChild(child);
+    if (!attached && child && vstd::cast<CGamePanel>(child)) {
+        if (auto world = vstd::cast<CMapGraphicsObject>(findChild("CMapGraphicsObject")))
+            world->cancelTravel();
+    }
     // A panel joining the GUI gets any geometry the user gave it earlier this session, so a
     // closed/reopened or rebuilt panel keeps its adjusted size. The panel clamps against its
     // current parent bounds, so a window resized in between cannot restore an out-of-range rect.
@@ -236,6 +241,20 @@ void CGui::addChild(const std::shared_ptr<CGameGraphicsObject> &child) {
 }
 
 bool CGui::isActive() const { return active.load(std::memory_order_acquire); }
+
+vstd::task<void> CGui::moveMapTurnAsync() {
+    return [](std::shared_ptr<CGui> gui) -> vstd::task<void> {
+        auto game = gui->getGame();
+        auto map = game ? game->getMap() : nullptr;
+        if (!map || !gui->isActive() || map->isMoving())
+            co_return;
+        auto world = vstd::cast<CMapGraphicsObject>(gui->findChild("CMapGraphicsObject"));
+        game.reset();
+        co_await map->moveAsync(world ? world->movementPresenter(gui) : CMovementPresenter{});
+        if (gui->isActive() && world && world->isAttachedToGui(gui) && gui->getRenderer())
+            co_await vstd::nextFrame(vstd::event_loop<>::instance());
+    }(ptr<CGui>());
+}
 
 void CGui::render(int i1) {
     if (!isActive()) {
@@ -331,6 +350,10 @@ bool CGui::event(SDL_Event *event) {
         if (!modal) {
             mappedEvent.key.keysym.sym = remapKey(event->key.keysym.sym);
             event = &mappedEvent;
+            if (event->type == SDL_KEYDOWN && event->key.keysym.sym == SDLK_ESCAPE) {
+                if (auto world = vstd::cast<CMapGraphicsObject>(findChild("CMapGraphicsObject")))
+                    world->cancelTravel();
+            }
         }
     }
     if (event->type == SDL_WINDOWEVENT && event->window.event == SDL_WINDOWEVENT_SIZE_CHANGED) {

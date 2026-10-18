@@ -117,6 +117,15 @@ class FakeProvider:
         return self.saves if kind == "SAVE" else self.maps
 
 
+class FakeMap:
+    def __init__(self):
+        self.moving = False
+        self.flags = {}
+
+    def isMoving(self):
+        return self.moving
+
+
 class FakeGame:
     def __init__(self, selections=(), current=None):
         self.gui = FakeGui()
@@ -468,7 +477,7 @@ class FrontendSaveTest(unittest.TestCase):
         self.enterContext(patch.object(ui.campaign, "hasPendingTransition", return_value=False))
 
     def testSuccessfulSaveTimestampIsShownInPauseAndRetainedAfterFailure(self):
-        game = FakeGame(["resume"], current=object())
+        game = FakeGame(["resume"], current=FakeMap())
         original_settings = dict(game.gui.settings)
         loader = types.SimpleNamespace(saveWithResult=Mock(return_value=True))
         with (
@@ -588,7 +597,7 @@ class FrontendSaveTest(unittest.TestCase):
         self.assertNotIn("enabled", row)
 
     def testSaveFailureDoesNotClaimSuccess(self):
-        game = FakeGame(current=object())
+        game = FakeGame(current=FakeMap())
         loader = types.SimpleNamespace(saveWithResult=Mock(return_value=False))
         with patch.dict(sys.modules, {"_game": types.SimpleNamespace(CMapLoader=loader)}):
             self.assertFalse(ui.saveGame(game, "journey"))
@@ -599,13 +608,80 @@ class FrontendSaveTest(unittest.TestCase):
         self.assertEqual("Continue", game.handler.screens[-1][2])
 
     def testSuccessfulSaveUsesNativeStatusAndNotifies(self):
-        game = FakeGame(current=object())
+        game = FakeGame(current=FakeMap())
         loader = types.SimpleNamespace(saveWithResult=Mock(return_value=True))
         with patch.dict(sys.modules, {"_game": types.SimpleNamespace(CMapLoader=loader)}):
             self.assertTrue(ui.saveGame(game, "journey"))
         loader.saveWithResult.assert_called_once_with(game.current, "journey")
         self.assertEqual(["Saved Journey."], game.gui.notifications)
         self.assertEqual(["Saving your adventure...", "closed"], game.handler.loading)
+
+    def testMovingTurnRefusesSaveWithoutChangingSavedOrPendingState(self):
+        game = FakeGame(current=FakeMap())
+        game.current.moving = True
+        game.current.flags = {"pendingChapter": True, "pendingMovement": True}
+        pending_flags = dict(game.current.flags)
+        ui.recordSessionSave(game, "previous", "save")
+        previous_status = ui.sessionSaveStatus(game)
+        ui.SAVE_PREVIEW_CACHE["previous"] = {"turn": 4}
+        previous_previews = dict(ui.SAVE_PREVIEW_CACHE)
+        saved_states = [{"turn": 4}]
+
+        def persist(game_map, slot):
+            saved_states.append(dict(game_map.flags))
+            return True
+
+        loader = types.SimpleNamespace(saveWithResult=Mock(side_effect=persist))
+        with patch.dict(sys.modules, {"_game": types.SimpleNamespace(CMapLoader=loader)}):
+            self.assertFalse(ui.saveGame(game, "journey"))
+            loader.saveWithResult.assert_not_called()
+            self.assertEqual([{"turn": 4}], saved_states)
+            self.assertEqual(previous_status, ui.sessionSaveStatus(game))
+            self.assertEqual(previous_previews, ui.SAVE_PREVIEW_CACHE)
+            self.assertEqual(pending_flags, game.current.flags)
+            self.assertTrue(game.current.isMoving())
+            self.assertEqual([], game.handler.loading)
+            self.assertEqual([], game.gui.notifications)
+            self.assertEqual(
+                ("Turn in progress", "Wait for the current turn to finish before saving.", "Continue"),
+                game.handler.screens[-1],
+            )
+
+            game.current.moving = False
+            loader.saveWithResult.assert_not_called()
+            self.assertTrue(ui.saveGame(game, "journey"))
+
+        loader.saveWithResult.assert_called_once_with(game.current, "journey")
+        self.assertEqual([{"turn": 4}, pending_flags], saved_states)
+        self.assertEqual(pending_flags, game.current.flags)
+        self.assertEqual(["Saved Journey."], game.gui.notifications)
+
+    def testNamedAndPauseSavesRequireAnExplicitRetryAfterMovement(self):
+        for entry in ("hotkey", "pause"):
+            with self.subTest(entry=entry):
+                game = FakeGame(current=FakeMap())
+                game.current.moving = True
+                game.handler.input_value = "journey"
+                loader = types.SimpleNamespace(saveWithResult=Mock(return_value=True))
+
+                def save_from_menu():
+                    if entry == "hotkey":
+                        game.handler.selections = ["newSave"]
+                        return ui.saveMenu(game)
+                    game.handler.selections = ["save", "newSave", "resume"]
+                    return ui.pause(game)
+
+                with patch.dict(sys.modules, {"_game": types.SimpleNamespace(CMapLoader=loader)}):
+                    self.assertFalse(save_from_menu())
+                    loader.saveWithResult.assert_not_called()
+                    self.assertEqual([], game.handler.loading)
+                    self.assertTrue(any(screen[0] == "Turn in progress" for screen in game.handler.screens))
+                    game.current.moving = False
+                    loader.saveWithResult.assert_not_called()
+                    save_from_menu()
+
+                loader.saveWithResult.assert_called_once_with(game.current, "journey")
+                self.assertEqual(["Saved Journey."], game.gui.notifications)
 
     def testManualSaveUsesEnteredName(self):
         game = FakeGame(["newSave"], current=object())
@@ -711,10 +787,12 @@ class FrontendSaveTest(unittest.TestCase):
 class FrontendPreferencesTest(unittest.TestCase):
     def testSettingsUpdatesPreserveOtherFields(self):
         game = FakeGame(["textScale", "150", ""])
+        game.gui.settings["reducedMotion"] = True
         ui.showSettings(game)
         self.assertEqual(150, game.gui.settings["textScale"])
         self.assertEqual("preserve", game.gui.settings["customSetting"])
         self.assertEqual(ui.DEFAULT_BINDINGS, game.gui.settings["bindings"])
+        self.assertTrue(game.gui.settings["reducedMotion"])
 
     def testHelpReflectsRemappedKeys(self):
         game = FakeGame()
@@ -722,8 +800,10 @@ class FrontendPreferencesTest(unittest.TestCase):
         text = ui.helpText(game)
         self.assertIn("Inventory: b", text)
         self.assertNotIn("Developer console", text)
-        self.assertIn("preview a route", text)
-        self.assertIn("Choose Travel or press Enter", text)
+        self.assertIn("Click a walkable tile once to walk there", text)
+        self.assertIn("each step shown in turn", text)
+        self.assertIn("Travel stops for encounters", text)
+        self.assertIn("Escape stops travel", text)
         self.assertIn("Select an item to inspect", text)
         self.assertIn("holding a key does not repeat", text)
         self.assertIn("Press M to expand", text)
@@ -737,6 +817,7 @@ class FrontendPreferencesTest(unittest.TestCase):
         game.gui.applyUiPreferences.assert_called_once_with("{}")
         self.assertEqual("Reset defaults", game.handler.confirmations[0][2])
         self.assertIn("Text size: 100%", game.handler.confirmations[0][1])
+        self.assertIn("Reduced motion: Off", game.handler.confirmations[0][1])
         self.assertEqual(["Settings saved."], game.gui.notifications)
 
     def testCancellingResetKeepsCurrentSettings(self):
