@@ -22,12 +22,14 @@ void CMapObject::move(int x, int y, int z) {
 
 vstd::task<void> CMapObject::moveAsync(Coords delta) { return moveOwnedAsync(this->ptr<CMapObject>(), delta, false); }
 
-vstd::task<void> CMapObject::moveToAsync(Coords coords, std::move_only_function<void()> positionCommit) {
-    return moveOwnedAsync(this->ptr<CMapObject>(), coords, true, std::move(positionCommit));
+vstd::task<void> CMapObject::moveToAsync(Coords coords, std::move_only_function<void()> positionCommit,
+                                         CMovementPresenter presenter) {
+    return moveOwnedAsync(this->ptr<CMapObject>(), coords, true, std::move(positionCommit), std::move(presenter));
 }
 
 vstd::task<void> CMapObject::moveOwnedAsync(std::shared_ptr<CMapObject> object, Coords coords, bool absolute,
-                                            std::move_only_function<void()> positionCommit) {
+                                            std::move_only_function<void()> positionCommit,
+                                            CMovementPresenter presenter) {
     auto loop = vstd::event_loop<>::instance();
     if (!loop->isMainThread()) {
         co_await vstd::post(loop);
@@ -44,19 +46,27 @@ vstd::task<void> CMapObject::moveOwnedAsync(std::shared_ptr<CMapObject> object, 
         target = map->normalizeCoords(target);
     }
 
-    if (dynamic_cast<CMoveable *>(object.get()) && map) {
+    auto moveable = dynamic_cast<CMoveable *>(object.get());
+    const auto origin = object->getCoords();
+    const auto name = object->getName();
+    std::weak_ptr<CGame> weakGame;
+    std::shared_ptr<CMap> activeMap;
+    std::shared_ptr<CGameContext> context;
+    CGameContext::TransitionGeneration generation = 0;
+    bool is_registered = false;
+    bool is_step_move = false;
+
+    if (moveable && map) {
         auto current = map->normalizeCoords(object->getCoords());
         auto delta = map->getShortestDelta(current, target);
-        const auto origin = object->getCoords();
-        const auto name = object->getName();
         auto game = object->getGame();
-        std::weak_ptr<CGame> weakGame = game;
-        const auto activeMap = game ? game->getMap() : nullptr;
-        auto context = game ? game->getContext() : nullptr;
-        const auto generation = context ? context->captureTransitionGeneration() : 0;
+        weakGame = game;
+        activeMap = game ? game->getMap() : nullptr;
+        context = game ? game->getContext() : nullptr;
+        generation = context ? context->captureTransitionGeneration() : 0;
         game.reset();
-        bool is_registered = map->getObjectByName(object->getName()) == object;
-        bool is_step_move = delta.z == 0 && std::abs(delta.x) + std::abs(delta.y) == 1;
+        is_registered = map->getObjectByName(name) == object;
+        is_step_move = delta.z == 0 && std::abs(delta.x) + std::abs(delta.y) == 1;
         if (is_registered && is_step_move) {
             navigationLock.unlock();
             const bool can_step = map->canStep(target);
@@ -69,7 +79,6 @@ vstd::task<void> CMapObject::moveOwnedAsync(std::shared_ptr<CMapObject> object, 
         const auto routingEpoch = map->getRoutingEpoch();
         navigationLock.unlock();
         gil.reset();
-        auto moveable = dynamic_cast<CMoveable *>(object.get());
         try {
             co_await moveable->beforeMoveAsync();
         } catch (...) {
@@ -118,16 +127,46 @@ vstd::task<void> CMapObject::moveOwnedAsync(std::shared_ptr<CMapObject> object, 
         map->objectMoved(object, oldCoords, newCoords);
     }
     if (commitFailure) {
-        if (auto moveable = dynamic_cast<CMoveable *>(object.get())) {
+        if (moveable) {
             moveable->cancelMove();
         }
         std::rethrow_exception(commitFailure);
     }
 
-    if (dynamic_cast<CMoveable *>(object.get()) && map) {
+    if (moveable && map) {
         navigationLock.unlock();
         gil.reset();
-        co_await dynamic_cast<CMoveable *>(object.get())->afterMoveAsync();
+        if (presenter && is_registered && is_step_move && newCoords == target && oldCoords != newCoords) {
+            const auto stop = co_await vstd::thisTaskStopToken();
+            try {
+                co_await presenter(object, oldCoords, newCoords);
+                if (!loop->isMainThread()) {
+                    co_await vstd::post(loop);
+                }
+                if (stop.stop_requested()) {
+                    throw vstd::task_cancelled();
+                }
+            } catch (...) {
+                moveable->cancelMove();
+                throw;
+            }
+            if (Py_IsInitialized()) {
+                gil.emplace();
+            }
+            navigationLock.lock();
+            const auto game = weakGame.lock();
+            const bool stale = object->getMap() != map || object->getCoords() != newCoords ||
+                               object->getName() != name || map->getObjectByName(name) != object ||
+                               (game && (game->getMap() != activeMap || object->getGame() != game)) ||
+                               (context && (!game || !context->isTransitionGenerationCurrent(generation)));
+            navigationLock.unlock();
+            gil.reset();
+            if (stale) {
+                moveable->cancelMove();
+                co_return;
+            }
+        }
+        co_await moveable->afterMoveAsync();
     }
 }
 

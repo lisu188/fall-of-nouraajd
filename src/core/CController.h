@@ -76,6 +76,8 @@ class CPlayerController : public CController {
 
     void clearPath();
 
+    bool hasCurrentRoute(std::shared_ptr<CPlayer> player);
+
     bool hasPendingPath(std::shared_ptr<CPlayer> player);
 
     bool canContinue(std::shared_ptr<CPlayer> player);

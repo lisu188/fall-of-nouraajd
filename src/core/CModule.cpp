@@ -862,6 +862,7 @@ void init_game_module(py::module_ &m) {
         .def("addObject", addObject, "Add an existing map object to this map.")
         .def("getGame", &CMap::getGame, "Return the owning game instance.")
         .def("move", &CMap::move, "Advance map simulation by one turn.")
+        .def("isMoving", &CMap::isMoving, "Return whether a map turn is still in progress.")
         .def("getObjectByName", &CMap::getObjectByName, "Return a map object by name or None.")
         .def("forObjects", &CMap::forObjects, "Apply a callback for objects matching an optional predicate.")
         .def("canStep", canStep, "Return whether coordinates are walkable.")

@@ -146,9 +146,10 @@ class CGameGraphicsObject : public CGameObject {
     // claim an event ahead of its children (e.g. a panel's resize handle under a covering child).
     virtual bool event(std::shared_ptr<CGui> gui, SDL_Event *event);
 
-  private:
+  protected:
     virtual void render(std::shared_ptr<CGui> renderer, int frameTime);
 
+  private:
     int getTopPriority();
 
     std::shared_ptr<SDL_Rect> getRect();

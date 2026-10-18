@@ -34,7 +34,7 @@ Default controls. World-action bindings can be changed in Settings.
 ```text
 Arrows - move in the world; navigate lists in panels
 Space - wait when the world has focus; activate a focused control in panels
-Enter - activate a focused control or confirm a previewed route
+Enter - activate a focused control
 Tab - move interface focus
 Escape - close the top cancellable panel or open Pause, including during combat
 I / J / C - inventory / journal / character sheet
@@ -44,8 +44,14 @@ S - named save menu
 F12 - Python console when GAME_ENABLE_PYTHON_CONSOLE=1
 ```
 
-Left-click selects or previews; right-click inspects. Use the explicit Use, Equip, Buy, Craft, or Cast action to
-commit a choice. Reading, inspecting and scrolling do not advance turns.
+Left-click a walkable map tile once to walk there. Each tile advances one normal turn, with the player and visible
+actors moving in sequence. Travel stops for encounters, conversations, interactive objects, blocked paths, death,
+and map changes. Click a new destination to replace the remaining route at the end of the current turn; an arrow
+key or Space replaces it with one step or waiting turn. Escape stops travel and opens Pause.
+
+Right-click inspects. In panels, select a row to preview it, then use the explicit Use, Equip, Buy, Craft, or Cast
+action to commit a choice. Reading, inspecting and scrolling do not advance turns. Settings offers Reduced motion
+for discrete, paced steps in place of smooth walking and camera scrolling.
 
 ## running
 ### ubuntu
