@@ -32,6 +32,7 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #include <atomic>
 #include <chrono>
 #include <limits>
+#include <stdexcept>
 
 namespace {
 std::atomic_bool mapCoordinateLookupProbeEnabled{false};
@@ -616,6 +617,33 @@ bool CMap::addTile(std::shared_ptr<CTile> tile, int x, int y, int z) {
     recordDirectPropertyChanged("tiles");
     signal("tileChanged", coords);
     return true;
+}
+
+std::size_t CMap::installTiles(std::span<const std::shared_ptr<CTile>> newTiles) {
+    std::lock_guard lock(navigationMutex);
+    if (!tiles.empty()) {
+        throw std::logic_error("Tile installation requires an empty map");
+    }
+    tiles.reserve(newTiles.size());
+    auto map = this->ptr<CMap>();
+    for (const auto &tile : newTiles) {
+        if (!tile) {
+            continue;
+        }
+        const auto coords = normalizeCoords(tile->getCoords());
+        if (!tiles.emplace(coords, tile).second) {
+            continue;
+        }
+        tile->setOwningMap(map);
+        tile->setXYZ(coords.x, coords.y, coords.z);
+        includeNavigationTile(coords);
+    }
+    if (!tiles.empty()) {
+        bumpNavigationRevision();
+        routingChanged();
+        recordDirectPropertyChanged("tiles");
+    }
+    return tiles.size();
 }
 
 void CMap::removeTile(int x, int y, int z) {

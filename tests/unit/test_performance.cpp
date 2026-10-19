@@ -33,6 +33,9 @@ void run_pathfinder_performance_tests();
 void run_engine_hotspot_performance_tests();
 void run_serialization_performance_tests();
 void run_render_context_performance_tests();
+void run_random_map_optimization_performance_tests();
+void run_tile_recipe_performance_tests();
+void run_generated_name_performance_tests();
 
 namespace {
 class JournalCaptureCountQuest : public CQuest {
@@ -144,6 +147,9 @@ int main() {
     run_engine_hotspot_performance_tests();
     run_serialization_performance_tests();
     run_render_context_performance_tests();
+    run_random_map_optimization_performance_tests();
+    run_tile_recipe_performance_tests();
+    run_generated_name_performance_tests();
     run_quest_journal_performance_guard();
     run_recent_trace_performance_guard();
 

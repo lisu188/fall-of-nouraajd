@@ -26,6 +26,7 @@ class CCreature;
 
 class CTile : public CGameObject {
     friend class CMap;
+    friend class CRandomMapGenerator;
 
     V_META(CTile, CGameObject, V_PROPERTY(CTile, bool, canStep, canStep, setCanStep),
            V_PROPERTY(CTile, int, posx, getPosx, setPosx), V_PROPERTY(CTile, int, posy, getPosy, setPosy),
