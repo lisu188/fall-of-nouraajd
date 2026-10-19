@@ -1754,15 +1754,20 @@ void CRandomMapGenerator::generateEncounters(const std::shared_ptr<CGame> &game,
 }
 
 void CRandomMapGenerator::generateTiles(std::shared_ptr<CMap> &map, const rdg::Dungeon &dungeon) {
+    const auto game = map->getGame();
+    std::vector<std::shared_ptr<CTile>> tiles;
+    tiles.reserve(static_cast<std::size_t>(dungeon.rowCount()) * static_cast<std::size_t>(dungeon.colCount()));
     for (int row = 0; row < dungeon.rowCount(); row++) {
         for (int col = 0; col < dungeon.colCount(); col++) {
-            if (dungeon.cellAt(row, col).isOpenspace()) {
-                map->addTile(map->getGame()->createObject<CTile>("GroundTile"), row, col, 0);
-            } else {
-                map->addTile(map->getGame()->createObject<CTile>("MountainTile"), row, col, 0);
+            auto tile =
+                game->createObject<CTile>(dungeon.cellAt(row, col).isOpenspace() ? "GroundTile" : "MountainTile");
+            if (tile) {
+                tile->setXYZ(row, col, 0);
             }
+            tiles.push_back(std::move(tile));
         }
     }
+    map->installTiles(tiles);
 }
 
 std::shared_ptr<CGame> CGameLoader::loadGame() {

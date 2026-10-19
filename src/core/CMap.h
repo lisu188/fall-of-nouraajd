@@ -20,6 +20,7 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #include <cstddef>
 #include <atomic>
 #include <mutex>
+#include <span>
 
 #include "core/CGlobal.h"
 #include "core/CMovementPresenter.h"
@@ -84,6 +85,9 @@ class CMap : public CGameObject {
     ~CMap() override;
 
     bool addTile(std::shared_ptr<CTile> tile, int x, int y, int z);
+
+    // Installs prepositioned tiles on an empty map, retaining the first tile at each normalized coordinate.
+    std::size_t installTiles(std::span<const std::shared_ptr<CTile>> newTiles);
 
     void removeTile(int x, int y, int z);
 
