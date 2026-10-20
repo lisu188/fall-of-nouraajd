@@ -422,8 +422,7 @@ pybind11::object protect_helper_result(pybind11::object result) {
         pybind11::dict globals;
         globals["__name__"] = "game";
         globals["__builtins__"] = build_restricted_plugin_builtins();
-        pybind11::exec(R"(
-class ResourceFlow:
+        pybind11::exec(R"(class ResourceFlow:
     __slots__ = ("_send", "_throw", "_close")
 
     def __init__(self, send, throw, close):
