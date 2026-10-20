@@ -21,6 +21,13 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 namespace game_async {
 enum class WaitMode { PostedWork, Frames };
+struct FramePumpBudget {
+    std::size_t maxReadyPasses = 1024;
+    std::optional<std::chrono::steady_clock::duration> maxReadyTime = std::chrono::milliseconds(4);
+};
+
+bool runFrame(vstd::event_loop<> &loop, FramePumpBudget budget = {});
+
 std::shared_ptr<vstd::thread_pool<16>> workerPool();
 
 vstd::task<void> dispatch(std::move_only_function<void()> callback);
@@ -51,7 +58,7 @@ template <typename T> T wait(const vstd::task_handle<T> &handle, WaitMode mode =
         if (!loop->isMainThread()) {
             waitForProgress();
         } else if (mode == WaitMode::Frames && !loop->quitRequested()) {
-            if (!loop->runFrame()) {
+            if (!runFrame(*loop)) {
                 handle.requestStop();
             }
             if (!handle.finished()) {

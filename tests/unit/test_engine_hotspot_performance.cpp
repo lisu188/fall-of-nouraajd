@@ -502,6 +502,103 @@ void test_moderate_actor_map_move_turn_state_and_revision_bounds() {
                 "moderate actor turn should not add or remove map objects");
 }
 
+class StationaryTurnFrameProbe : public CMapObject {
+  public:
+    explicit StationaryTurnFrameProbe(int &callbacks) : callbacks(callbacks) {}
+
+    void onTurn(std::shared_ptr<CGameEvent>) override {
+        ++turns;
+        ++callbacks;
+    }
+
+    int turns = 0;
+
+  private:
+    int &callbacks;
+};
+
+void testStationaryMapTurnsCompleteBeforeRendering() {
+    constexpr int OBJECTS = 128;
+    constexpr int TURNS = 4;
+    constexpr std::size_t READY_PASS_BUDGET = 1024;
+    int callbacks = 0;
+    auto fixture = make_open_map(16, 8);
+    auto context = fixture.game->getContext();
+    std::vector<std::shared_ptr<StationaryTurnFrameProbe>> probes;
+    for (int index = 0; index < OBJECTS; ++index) {
+        auto object = std::make_shared<StationaryTurnFrameProbe>(callbacks);
+        object->setGame(fixture.game);
+        object->setName("stationaryTurnFrameProbe" + std::to_string(index));
+        object->setCanStep(true);
+        object->setCoords(Coords(index % 16, index / 16, 0));
+        add_object(fixture, object);
+        probes.push_back(object);
+    }
+    auto loop = vstd::event_loop<>::instance();
+    loop->runUntilIdle(READY_PASS_BUDGET);
+    const auto pending_before = loop->getPendingTaskCount();
+    const auto conditional_before = loop->getConditionalTaskCount();
+    const auto delayed_before = loop->getDelayedTaskCount();
+    const auto frame_callbacks_before = loop->getFrameCallbackCount();
+    const auto revision_before = fixture.map->getNavigationRevision();
+    const auto initial_turn = fixture.map->getTurn();
+    game_async::FramePumpBudget budget;
+    budget.maxReadyPasses = READY_PASS_BUDGET;
+    budget.maxReadyTime = std::nullopt;
+    int frames = 0;
+    int complete_frames = 0;
+    for (int turn = 0; turn < TURNS; ++turn) {
+        const auto callbacks_before = callbacks;
+        const auto frames_before = frames;
+        int callbacks_at_frame = 0;
+        auto movement = context->spawnTask(fixture.map->moveAsync());
+        auto frame = loop->connectFrameCallback([&](int) {
+            ++frames;
+            callbacks_at_frame = callbacks - callbacks_before;
+            if (movement.finished() && fixture.map->getTurn() == initial_turn + turn + 1 && !fixture.map->isMoving()) {
+                ++complete_frames;
+            }
+        });
+        const bool running = game_async::runFrame(*loop, budget);
+        frame.reset();
+        expect_true(running && frames == frames_before + 1,
+                    "one bounded pump must render exactly one frame for a stationary map turn");
+        expect_true(callbacks_at_frame == OBJECTS && complete_frames == turn + 1,
+                    "all 128 onTurn callbacks and the turn commit must finish before that frame renders");
+        expect_true(movement.finished(), "128 stationary map objects must fit within the fixed ready-pass budget");
+        // Drain a failing implementation without adding frames or leaving references to this fixture queued.
+        loop->runUntilIdle(READY_PASS_BUDGET * 4);
+        if (!movement.finished()) {
+            context->shutdown();
+            loop->runUntilIdle(READY_PASS_BUDGET * 4);
+            return;
+        }
+        movement.get();
+        expect_true(callbacks == (turn + 1) * OBJECTS && fixture.map->getTurn() == initial_turn + turn + 1 &&
+                        !fixture.map->isMoving(),
+                    "each stationary turn must dispatch exactly one callback per object and commit exactly once");
+        expect_true(loop->getPendingTaskCount() == pending_before &&
+                        loop->getConditionalTaskCount() == conditional_before &&
+                        loop->getDelayedTaskCount() == delayed_before &&
+                        loop->getFrameCallbackCount() == frame_callbacks_before,
+                    "a stationary turn must release its continuations without growing event-loop registrations");
+    }
+    for (int index = 0; index < OBJECTS; ++index) {
+        expect_true(probes[index]->turns == TURNS && probes[index]->getCoords() == Coords(index % 16, index / 16, 0),
+                    "stationary objects must receive four callbacks without changing position");
+    }
+    expect_true(fixture.map->getNavigationRevision() == revision_before &&
+                    fixture.map->getObjects().size() == OBJECTS &&
+                    fixture.map->getObjectCacheEntryCountForTesting() == OBJECTS,
+                "stationary turns must preserve navigation and object/cache cardinality");
+    std::cout << "stationary map turn frame guard: objects=" << OBJECTS << " turns=" << TURNS
+              << " callbacks=" << callbacks << " callbackBudget=" << OBJECTS * TURNS << " frames=" << frames
+              << " frameBudget=" << TURNS << " completedBeforeFrame=" << complete_frames
+              << " readyPassBudget=" << READY_PASS_BUDGET << "\n";
+    context->shutdown();
+    loop->runUntilIdle(READY_PASS_BUDGET);
+}
+
 class PlannedMoveWorkProbe : public CController {
   public:
     explicit PlannedMoveWorkProbe(std::vector<std::shared_ptr<CCreature>> &order) : order(order) {}
@@ -1238,6 +1335,7 @@ void run_engine_hotspot_performance_tests() {
     test_irrelevant_metadata_activity_does_not_invalidate_navigation();
     test_coordinate_cache_lookup_cardinality_and_move_updates();
     test_moderate_actor_map_move_turn_state_and_revision_bounds();
+    testStationaryMapTurnsCompleteBeforeRendering();
     testStalePlannedMapMoveWorkIsBounded();
     test_bulk_inventory_property_notifications_are_count_bounded();
     testHealingItemSelectionWorkAndCallbacksAreBounded();
