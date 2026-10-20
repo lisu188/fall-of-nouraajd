@@ -35,8 +35,6 @@ namespace py = pybind11;
 
 namespace nouraajd::bindings {
 namespace {
-int randint(int i, int j) { return vstd::rand(i, j); }
-
 std::string jsonify(std::shared_ptr<CGameObject> x) { return JSONIFY(x); }
 
 std::string jsonify_py(const py::handle &value) {
@@ -236,14 +234,7 @@ void bindPanelsAndUtilities(py::module_ &m) {
             "Return resolved list grid size as (columns, rows).");
     PY_WRAP_GENERIC_DOC(randint, "randint(lower, upper) -> int: Return a uniform integer with both bounds inclusive. "
                                  "Reversed bounds are normalized.");
-    m.def(
-        "_seedRandomForTests",
-        [](std::uint32_t seed) {
-            CRuntimeBridge::seedRandomForTests(seed);
-            // This module has a hidden RNG instance outside game_core on Linux.
-            vstd::rng().seed(seed);
-        },
-        py::arg("seed"));
+    m.def("_seedRandomForTests", [](std::uint32_t seed) { seedModuleRandomForTests(seed); }, py::arg("seed"));
     m.def("jsonify", &jsonify_py, "jsonify(obj) -> str: Serialize a game object to JSON text.");
     PY_WRAP_GENERIC_DOC(logger, "logger(message) -> None: Write an info log message to the engine logger.");
     m.def("set_logger_sink", set_logger_sink_py, py::arg("sink_name"), py::arg("path") = py::none(),

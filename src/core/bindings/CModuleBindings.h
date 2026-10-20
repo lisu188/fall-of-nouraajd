@@ -23,10 +23,16 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 PYBIND11_MAKE_OPAQUE(std::vector<std::string>);
 
 class CCreature;
+class CGame;
 class CGameObject;
 
 namespace nouraajd::bindings {
 class CPythonEventCallbacks;
+
+// These adapters compile with each consumer's original runtime-symbol visibility.
+int randint(int i, int j);
+void seedModuleRandomForTests(std::uint32_t seed);
+void postScriptFlow(const std::shared_ptr<CGame> &game, pybind11::function callback);
 
 void bindFoundationAndSession(pybind11::module_ &m, const std::shared_ptr<CPythonEventCallbacks> &pythonEventCallbacks);
 void bindGraphicsAndWorld(pybind11::module_ &m);

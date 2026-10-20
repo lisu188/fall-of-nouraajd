@@ -271,6 +271,34 @@ class SharedCompilationGraphTest(unittest.TestCase):
         for target in targets:
             self.assertRegex(ninja, rf"build {target}[^\n]*: [^\n]*game_binding_objects\.dir")
 
+    def testRuntimeAdaptersCompileInEachConsumerWithItsOwnVisibility(self):
+        commands = self.commandsFor("src/core/CModuleRuntime.cpp")
+        self.assertEqual(2, len(commands), "Module and embedded interpreter need separate runtime adapters")
+        owners = (
+            ("game_core", "monster_balance_unit_tests") if os.name == "nt" else ("_game", "monster_balance_unit_tests")
+        )
+        for owner in owners:
+            with self.subTest(owner=owner):
+                owned = [
+                    entry for entry in commands if f"CMakeFiles/{owner}.dir/" in entry["command"].replace("\\", "/")
+                ]
+                self.assertEqual(1, len(owned), f"Compile the runtime adapter once inside {owner}")
+                command = owned[0]["command"]
+                self.assertNotIn("game_binding_objects.dir", command)
+                self.assertNotIn("game_core_objects.dir", command)
+                if os.name == "nt":
+                    self.assertIn("GAME_CORE_BUILD", command)
+                elif owner == "_game":
+                    self.assertIn("-fvisibility=hidden", command)
+                    self.assertIn("-fvisibility-inlines-hidden", command)
+                else:
+                    self.assertNotIn("-fvisibility=hidden", command)
+                    self.assertNotIn("-fvisibility-inlines-hidden", command)
+        unity_sources = {Path(entry["file"]) for entry in self.commands if "Unity" in Path(entry["file"]).parts}
+        self.assertTrue(unity_sources)
+        for unity in unity_sources:
+            self.assertNotIn("CModuleRuntime.cpp", unity.read_text(encoding="utf-8"))
+
     def testSharedRandomMapBodiesCompileOnceForBothTestExecutables(self):
         for name in ("test_random_map_optimizations.cpp", "test_tile_recipes.cpp", "test_generated_names.cpp"):
             with self.subTest(source=name):

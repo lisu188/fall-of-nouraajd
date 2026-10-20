@@ -20,7 +20,7 @@ from unittest.mock import Mock, patch
 
 import mcp
 
-from tests.cpp_bindings import readBindingSources
+from tests.cpp_bindings import readBindingSources, registrationBody
 
 ROOT = Path(__file__).resolve().parents[1]
 
@@ -208,10 +208,15 @@ class McpTestSeedTest(unittest.TestCase):
         game = (ROOT / "src/core/CGame.cpp").read_text(encoding="utf-8")
         self.assertEqual(1, module.count('"_seedRandomForTests"'), "Bind the private startup hook exactly once")
         hook = module.split('"_seedRandomForTests",', 1)[1].split('py::arg("seed")', 1)[0]
-        self.assertIn("CRuntimeBridge::seedRandomForTests(seed);", hook)
-        self.assertIn("vstd::rng().seed(seed);", hook)
-        self.assertLess(hook.index("CRuntimeBridge::seedRandomForTests(seed);"), hook.index("vstd::rng().seed(seed);"))
-        self.assertNotIn("std::srand", hook, "The process random source must be seeded once by the core bridge")
+        self.assertIn("seedModuleRandomForTests(seed);", hook)
+        runtime = (ROOT / "src/core/CModuleRuntime.cpp").read_text(encoding="utf-8")
+        adapter = registrationBody(runtime, "seedModuleRandomForTests")
+        self.assertIn("CRuntimeBridge::seedRandomForTests(seed);", adapter)
+        self.assertIn("vstd::rng().seed(seed);", adapter)
+        self.assertLess(
+            adapter.index("CRuntimeBridge::seedRandomForTests(seed);"), adapter.index("vstd::rng().seed(seed);")
+        )
+        self.assertNotIn("std::srand", adapter, "The process random source must be seeded once by the core bridge")
         bridge = core.split("void CRuntimeBridge::seedRandomForTests(std::uint32_t seed)", 1)[1].split("\n}\n", 1)[0]
         self.assertIn("vstd::rng().seed(seed);", bridge)
         self.assertEqual(1, bridge.count("std::srand(seed);"))

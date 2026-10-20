@@ -31,30 +31,6 @@ namespace py = pybind11;
 
 namespace nouraajd::bindings {
 namespace {
-vstd::task<void> runPostedScriptFlow(std::weak_ptr<CGuiHandler> gui, std::unique_ptr<CScriptFlow> flow) {
-    try {
-        co_await vstd::post(vstd::event_loop<>::instance());
-        if (auto owner = gui.lock()) {
-            co_await owner->runScriptFlowAsync(std::move(flow));
-        }
-    } catch (const vstd::task_cancelled &) {
-        throw;
-    } catch (const vstd::scheduler_rejected &) {
-        throw;
-    } catch (const std::exception &error) {
-        vstd::logger::error("Session script callback failed: " + std::string(error.what()));
-    }
-}
-
-void postScriptFlow(const std::shared_ptr<CGame> &game, py::function callback) {
-    auto context = game->getContext();
-    if (!context->isActive()) {
-        throw std::runtime_error("Cannot post script work to a closed game session.");
-    }
-    auto flow = game->getScriptHandler()->createCallbackFlow(std::move(callback), game);
-    context->spawnTask(runPostedScriptFlow(game->getGuiHandler(), std::move(flow)));
-}
-
 void game_object_setattr(CGameObject &self, const std::string &name, const py::handle &value) {
     if (py::isinstance<py::bool_>(value)) {
         self.setBoolProperty(name, value.cast<bool>());

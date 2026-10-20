@@ -22,7 +22,7 @@ CPP_TOKENS = re.compile(
 
 
 def bindingSourcePaths(root=ROOT):
-    return (root / "src/core/CModule.cpp",) + tuple(
+    return (root / "src/core/CModule.cpp", root / "src/core/CModuleRuntime.cpp") + tuple(
         root / "src/core/bindings" / filename for filename, _ in BINDING_GROUPS
     )
 

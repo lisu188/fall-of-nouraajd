@@ -157,6 +157,7 @@ endif ()
 
 set(GAME_CORE_SRC ${GAME_SRC})
 list(FILTER GAME_CORE_SRC EXCLUDE REGEX ".*/src/core/CModuleEntry\\.cpp$")
+list(FILTER GAME_CORE_SRC EXCLUDE REGEX ".*/src/core/CModuleRuntime\\.cpp$")
 list(FILTER GAME_CORE_SRC EXCLUDE REGEX ".*/src/core/CModule\\.cpp$")
 list(FILTER GAME_CORE_SRC EXCLUDE REGEX ".*/src/core/bindings/.*\\.cpp$")
 set(GAME_MODULE_SRC ${CMAKE_SOURCE_DIR}/src/core/CModuleEntry.cpp)
@@ -217,7 +218,10 @@ target_link_libraries(game_core_objects PRIVATE ${GAME_CORE_LINK_LIBS})
 
 set(GAME_CORE_SHARED_SRC $<TARGET_OBJECTS:game_core_objects>)
 if (WIN32)
-    list(APPEND GAME_CORE_SHARED_SRC $<TARGET_OBJECTS:game_binding_objects>)
+    list(APPEND GAME_CORE_SHARED_SRC
+        $<TARGET_OBJECTS:game_binding_objects>
+        src/core/CModuleRuntime.cpp
+    )
 endif ()
 
 add_library(game_core SHARED ${GAME_CORE_SHARED_SRC})
@@ -235,7 +239,10 @@ target_link_libraries(game_core PRIVATE
 pybind11_add_module(_game NO_EXTRAS ${GAME_MODULE_SRC})
 configure_cpp_target(_game)
 if (NOT WIN32)
-    target_sources(_game PRIVATE $<TARGET_OBJECTS:game_binding_objects>)
+    target_sources(_game PRIVATE
+        $<TARGET_OBJECTS:game_binding_objects>
+        src/core/CModuleRuntime.cpp
+    )
 endif ()
 target_link_libraries(_game PRIVATE game_core)
 if (APPLE)
@@ -886,6 +893,7 @@ add_game_unit_test(controller_unit_tests tests/unit/test_controller.cpp)
 add_game_unit_test(monster_balance_unit_tests
     tests/unit/test_monster_balance.cpp
     src/core/CModuleEntry.cpp
+    src/core/CModuleRuntime.cpp
     $<TARGET_OBJECTS:game_binding_objects>
 )
 if (WIN32)

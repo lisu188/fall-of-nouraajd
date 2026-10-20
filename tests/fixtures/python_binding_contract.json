@@ -30,7 +30,8 @@
     {
       "source": "src/core/bindings/CModulePanels.cpp",
       "registration": "bindPanelsAndUtilities",
-      "registrationTokenSha256": "58e52572c271446068bc53ff4627502380e89d5d90112c98814a513010961686"
+      "registrationTokenSha256": "9d1b7ad41639523915a0c9a2fa7b29fc6906c1b061929373a48d89ae60699295"
     }
-  ]
+  ],
+  "runtimeAdapterReview": "Only the private seed hook delegates to per-consumer adapters; public registrations, arguments, defaults and docs remain unchanged."
 }
