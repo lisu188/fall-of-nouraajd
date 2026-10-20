@@ -23,6 +23,7 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #include "core/CList.h"
 #include "core/CMovementPresenter.h"
 #include "gui/CMovementAnimation.h"
+#include "gui/CMovementBatch.h"
 #include "gui/object/CProxyTargetGraphicsObject.h"
 
 class CProxyGraphicsObject;
@@ -59,11 +60,13 @@ class CMapGraphicsObject : public CProxyTargetGraphicsObject {
     void cancelTravel();
     bool isTravelling() const { return travelling; }
     CMovementPresenter movementPresenter(std::shared_ptr<CGui> gui);
+    CMovementPresentation movementPresentation(std::shared_ptr<CGui> gui);
     vstd::task<void> presentMoveAsync(std::shared_ptr<CGui> gui, std::shared_ptr<CMapObject> actor, Coords origin,
                                       Coords destination);
     SDL_Point getCameraOffset(int tileSize) const;
     SDL_Point getActorOffset(const std::shared_ptr<CGameObject> &object, int tileSize) const;
     std::shared_ptr<SDL_Rect> getMotionRect();
+    std::shared_ptr<SDL_Rect> getMotionRect(const std::shared_ptr<CGameObject> &actor);
 
   protected:
     void render(std::shared_ptr<CGui> gui, int frameTime) override;
@@ -104,17 +107,34 @@ class CMapGraphicsObject : public CProxyTargetGraphicsObject {
         bool reducedMotion = false;
         bool movesCamera = false;
         bool started = false;
+        bool arrivalFootprint = false;
+        Coords::Direction arrivalDirection = Coords::UNDEFINED;
         CMovementAnimation animation;
         std::shared_ptr<CAnimation> overlay;
         std::vector<std::shared_ptr<CAnimation>> overlays;
     };
+    struct PresentationBatch {
+        CMovementBatch occupied;
+        bool sequential = false;
+        std::optional<std::pair<bool, Coords::Direction>> arrivalFootprint;
+    };
     std::optional<TravelOrder> pendingOrder;
-    std::optional<Motion> motion;
+    std::vector<Motion> motions;
+    bool motionBatchStarted = false;
     bool travelling = false;
     bool stopRequested = false;
     void submitOrder(std::shared_ptr<CGui> gui, TravelOrder order);
     vstd::task<void> travelAsync(std::shared_ptr<CGui> gui, bool reusePreview);
-    bool motionIsCurrent(const std::shared_ptr<CGui> &gui);
+    bool motionIsCurrent(const std::shared_ptr<CGui> &gui, const Motion &motion);
+    bool stepNeedsSequentialPresentation(const std::shared_ptr<CMapObject> &actor, Coords origin, Coords destination);
+    bool enqueueMotion(const std::shared_ptr<CGui> &gui, const std::shared_ptr<CMapObject> &actor, Coords origin,
+                       Coords destination,
+                       std::optional<std::pair<bool, Coords::Direction>> arrivalFootprint = std::nullopt);
+    vstd::task<void> finishMotionBatchAsync(std::shared_ptr<CGui> gui);
+    vstd::task<void> preparePresentationStepAsync(std::shared_ptr<CGui> gui, std::shared_ptr<PresentationBatch> batch,
+                                                  std::shared_ptr<CMapObject> actor, Coords origin, Coords destination);
+    vstd::task<void> presentPresentationStepAsync(std::shared_ptr<CGui> gui, std::shared_ptr<PresentationBatch> batch,
+                                                  std::shared_ptr<CMapObject> actor, Coords origin, Coords destination);
     void clearMotion();
     void clearDestinationPreview();
     void validateDestinationPreview(const std::shared_ptr<CGui> &gui);

@@ -175,7 +175,7 @@ class NativeCoroutineCallbackTest(unittest.TestCase):
         self.game.runUiFlowLater(callback)
         return self.awaitPanel("CGameDialogPanel")
 
-    def beginInventoryItemUse(self, item):
+    def beginInventoryItemUse(self, item, *, dispatch=None):
         import test as harness
 
         self.player.setItems({item})
@@ -192,7 +192,7 @@ class NativeCoroutineCallbackTest(unittest.TestCase):
         self.assertEqual(1, len(buttons))
         self.assertTrue(buttons[0].getBoolProperty("enabled"))
         # Dispatch the native button without pumping away the queued-cancellation boundary.
-        harness.activate_widget(buttons[0], self.gui)
+        (dispatch or harness.activate_widget)(buttons[0], self.gui)
         return panel
 
     def installPortalReceipt(self, *, before_position):
@@ -343,8 +343,11 @@ class NativeCoroutineCallbackTest(unittest.TestCase):
         self.assertFlowsReleased()
 
     def testNativeQueuedInventoryShutdownRetainsTheUnusedDisposable(self):
+        import test as harness
+
         api = self.api
         events = []
+        queued_references = []
 
         class UnstartedDisposable(api.CPotion):
             def onUseFlow(potion, event):
@@ -353,13 +356,27 @@ class NativeCoroutineCallbackTest(unittest.TestCase):
 
         self.game.getObjectHandler().registerType("UnstartedDisposable", UnstartedDisposable)
         item = self.game.createObject("UnstartedDisposable")
-        self.beginInventoryItemUse(item)
+
+        def queueBeforeShutdown(button, gui):
+            class QueuedInventoryUse:
+                def __call__(callback):
+                    events.append("unexpected activation")
+                    harness.activate_widget(button, gui)
+
+            callback = QueuedInventoryUse()
+            queued_references.append(weakref.ref(callback))
+            self.game.post(callback)
+
+        self.beginInventoryItemUse(item, dispatch=queueBeforeShutdown)
         self.assertEqual([], events)
+        self.assertTrue(self.game.getContext().isActive())
         self.game.getContext().shutdown()
         self.settle()
+        self.assertFalse(self.game.getContext().isActive())
         self.assertEqual([], events)
         self.assertIn(item, self.player.getItems())
-        self.assertTrue(all(reference() is None for reference in self.flow_refs))
+        self.assertTrue(queued_references and all(reference() is None for reference in queued_references))
+        self.assertFlowsReleased()
 
     def testNativeSynchronousHealingShutdownConsumesOnceWithoutReusingItsEffect(self):
         api = self.api

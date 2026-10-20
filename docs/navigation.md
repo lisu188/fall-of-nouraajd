@@ -112,12 +112,18 @@ controller, session generation, origin, routing epoch and controller request ser
 Cancellation only interrupts the route that the preview owns; it must not cancel a newer external order. Scene changes,
 interrupts and new targets advance the request identity. Movement commitment rechecks those identities between steps.
 
-GUI movement passes an optional native presenter through the map turn to each actor's committed step. Visible adjacent
-steps are presented sequentially in the existing actor order, at approximately 150 ms per tile, after occupancy changes
-and before arrival hooks. Player motion scrolls the camera smoothly; wrapped edges use their shortest displacement,
-while teleports and floor or map changes snap. Reduced motion uses discrete, paced steps. Frame waits release navigation
-locks and the Python GIL, then revalidate the actor, map and session before continuing. Synchronous, Python, MCP and
-headless turns remain immediate, including headless calls on a session with a GUI attached.
+GUI movement keeps logical movement, arrival hooks and controller callbacks in their existing actor order. Independent
+visible steps share a 150 ms animation interval. Each pending step reserves its origin, destination and their cardinal
+neighbors; an overlapping reservation flushes the earlier group before the next actor moves. Normalized cells preserve
+this ordering across wrapped edges. Combat, visitable endpoints, scripted movement or tile effects, and unknown native
+movement implementations also flush the group and retain presentation before arrival hooks. Safe steps can finish
+their empty arrival hooks before their group is displayed; the map turn remains active until all presentations finish.
+
+Player motion scrolls the camera smoothly; teleports and floor or map changes snap. A traversed footprint disappears on
+the frame the player reaches its cell, independently of other actors. Reduced motion snaps geometry and footprints while
+retaining group pacing. Frame waits release navigation locks and the Python GIL, then revalidate the actor, map and
+session before continuing. Synchronous, Python, MCP and headless turns remain immediate, including headless calls on a
+session with a GUI attached. The original per-step native presenter remains available for sequential callers.
 
 A new destination or a keyboard step/wait replaces the remaining journey at the next completed-turn boundary. Escape
 cancels further travel and opens Pause. An already committed turn finishes without cancelling its active movement task
