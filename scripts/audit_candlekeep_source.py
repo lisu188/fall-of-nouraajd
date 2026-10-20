@@ -547,6 +547,73 @@ def parseWorldMap(data):
     return {"worlds": worlds}, refs, []
 
 
+def parseNumericTwoDa(data):
+    """Read a fully specified numeric 2DA, refusing string/default-expansion ambiguities."""
+    try:
+        lines = [line.split() for line in data.decode("ascii").splitlines() if line.strip()]
+    except UnicodeDecodeError as error:
+        raise AuditError("numeric 2DA must use ASCII tokens") from error
+    if len(lines) < 3 or lines[0] != ["2DA", "V1.0"] or len(lines[1]) != 1:
+        raise AuditError("unsupported numeric 2DA header")
+    columns = lines[2]
+    if not columns or len(columns) != len(set(columns)) or len(lines) - 3 > MAX_RECORDS:
+        raise AuditError("invalid numeric 2DA columns or excessive record count")
+    rows = {}
+    try:
+        default = int(lines[1][0])
+        for tokens in lines[3:]:
+            if len(tokens) != len(columns) + 1 or tokens[0] in rows:
+                raise AuditError("numeric 2DA needs unique row IDs and explicit cells for every column")
+            rows[tokens[0]] = dict(zip(columns, (int(value) for value in tokens[1:])))
+    except ValueError as error:
+        if isinstance(error, AuditError):
+            raise
+        raise AuditError("numeric 2DA contains a non-integer cell") from error
+    return {"default": default, "columns": columns, "rows": rows}, [], []
+
+
+def parseGame(data):
+    """Read BG-family GAM party/NPC placement records, retaining embedded CRE state when present."""
+    reader = Binary(data)
+    signature = reader.span(0, 8)
+    if signature not in (b"GAMEV1.1", b"GAMEV2.0"):
+        raise AuditError(f"unsupported BG-family GAM signature/version {signature!r}")
+    reader.signature(signature, 0xB4)
+    result = {"version": signature[4:].decode("ascii"), "party_members": [], "non_party_members": []}
+    refs = []
+    for table, offset_field, count_field in (("party_members", 0x20, 0x24), ("non_party_members", 0x30, 0x34)):
+        for index, offset in enumerate(reader.table(reader.number(offset_field), reader.number(count_field), 0x160)):
+            creature_offset, creature_size = reader.number(offset + 4), reader.number(offset + 8)
+            if bool(creature_offset) != bool(creature_size):
+                raise AuditError("GAM embedded CRE offset and size must both be zero or both be present")
+            row = {
+                "sourceIndex": index,
+                "recordOffset": offset,
+                "selection_flags": reader.number(offset, "H"),
+                "party_order": reader.number(offset + 2, "H"),
+                "creature": reader.ref(offset + 0xC),
+                "orientation": reader.number(offset + 0x14),
+                "area": reader.ref(offset + 0x18),
+                "position": [reader.number(offset + 0x20, "H"), reader.number(offset + 0x22, "H")],
+                "modal_action": reader.number(offset + 0x28, "H"),
+                "happiness": reader.number(offset + 0x2A, "H"),
+                "talk_count": reader.number(offset + 0xE0),
+                "embedded_creature_offset": creature_offset,
+                "embedded_creature_size": creature_size,
+            }
+            if creature_size:
+                creature_data = reader.span(creature_offset, creature_size)
+                creature, children, _ = parseCreature(creature_data)
+                row["embedded_creature"] = creature
+                row["embedded_creature_sha256"] = sha256(creature_data)
+                refs.extend(children)
+            else:
+                refs.append(reference(row["creature"], "CRE", "GAM NPC creature"))
+            refs.append(reference(row["area"], "ARE", "GAM NPC current area"))
+            result[table].append(row)
+    return result, refs, []
+
+
 def parseCreature(data):
     reader = Binary(data)
     reader.signature(b"CRE V1.0", 0x2D4)
@@ -921,7 +988,14 @@ def auditInstallation(game_root, language="en_US", area="AR2600", encoding=None,
                     if line.strip().startswith("~")
                 ]
             report["mods"].append(evidence)
-    parsers = {"ARE": parseArea, "CRE": parseCreature, "DLG": parseDialogue, "STO": parseStore, "ITM": parseItem}
+    parsers = {
+        "ARE": parseArea,
+        "CRE": parseCreature,
+        "DLG": parseDialogue,
+        "STO": parseStore,
+        "ITM": parseItem,
+        "GAM": parseGame,
+    }
     for view in ("base", "effective"):
         ids = {}
         ids_evidence = {}

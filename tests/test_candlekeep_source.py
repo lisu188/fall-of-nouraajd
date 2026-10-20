@@ -117,6 +117,79 @@ def installation(root, resources):
 
 
 class BinaryParserTests(unittest.TestCase):
+    def testNumericTwoDaRetainsDonationCellsAndRejectsAmbiguousRows(self):
+        data = b"2DA V1.0\n0\nMONEY_CHURCH BASE_CHURCH\n10 10 300\n18 0 0\n"
+        parsed, refs, strings = audit.parseNumericTwoDa(data)
+        self.assertEqual({"MONEY_CHURCH": 10, "BASE_CHURCH": 300}, parsed["rows"]["10"])
+        self.assertEqual({"MONEY_CHURCH": 0, "BASE_CHURCH": 0}, parsed["rows"]["18"])
+        self.assertEqual(([], []), (refs, strings))
+        for malformed in (
+            data.replace(b"10 10 300", b"10 10"),
+            data + b"10 0 100\n",
+            data.replace(b"10 10 300", b"10 10 unknown"),
+        ):
+            with self.subTest(malformed=malformed), self.assertRaises(audit.AuditError):
+                audit.parseNumericTwoDa(malformed)
+
+    def testGameNpcPlacementUsesDocumentedTablesAndPreservesState(self):
+        for version in ("GAMEV1.1", "GAMEV2.0"):
+            with self.subTest(version=version):
+                data = bytearray(0xB4 + 2 * 0x160)
+                putText(data, 0, version)
+                putNumber(data, 0x20, 0xB4)
+                putNumber(data, 0x24, 1)
+                putNumber(data, 0x30, 0xB4 + 0x160)
+                putNumber(data, 0x34, 1)
+                putText(data, 0xB4 + 0xC, "PARTY")
+                offset = 0xB4 + 0x160
+                putNumber(data, offset, 0x8001, "H")
+                putNumber(data, offset + 2, 0xFFFF, "H")
+                putText(data, offset + 0xC, "ALORA")
+                putText(data, offset + 0x18, "AR0130")
+                putNumber(data, offset + 0x20, 759, "H")
+                putNumber(data, offset + 0x22, 764, "H")
+                putNumber(data, offset + 0x14, 7)
+                putNumber(data, offset + 0xE0, 37)
+                parsed, refs, strings = audit.parseGame(data)
+                self.assertEqual("PARTY", parsed["party_members"][0]["creature"])
+                row = parsed["non_party_members"][0]
+                self.assertEqual(("ALORA", "AR0130", [759, 764]), (row["creature"], row["area"], row["position"]))
+                self.assertEqual(
+                    (0x8001, 0xFFFF, 7, 37),
+                    (row["selection_flags"], row["party_order"], row["orientation"], row["talk_count"]),
+                )
+                self.assertIn(("ALORA", "CRE"), {(ref["name"], ref["type"]) for ref in refs if ref})
+                self.assertEqual([], strings)
+
+    def testGameEmbeddedCreatureAndMalformedRecordsFailClosed(self):
+        data = bytearray(0xB4 + 0x160)
+        putText(data, 0, "GAMEV1.1")
+        putNumber(data, 0x30, 0xB4)
+        putNumber(data, 0x34, 1)
+        embedded = creature("QUEST")
+        putNumber(data, 0xB4 + 4, len(data))
+        putNumber(data, 0xB4 + 8, len(embedded))
+        data.extend(embedded)
+        parsed, refs, _ = audit.parseGame(data)
+        row = parsed["non_party_members"][0]
+        self.assertEqual("QUEST", row["embedded_creature"]["dialogue"])
+        self.assertEqual(audit.sha256(embedded), row["embedded_creature_sha256"])
+        self.assertTrue(any(ref and ref["name"] == "QUEST" and ref["type"] == "DLG" for ref in refs))
+        with self.assertRaises(audit.AuditError):
+            audit.parseGame(data[:-1])
+        putNumber(data, 0xB4 + 4, 0)
+        with self.assertRaises(audit.AuditError):
+            audit.parseGame(data)
+        putText(data, 0, "GAMEV9.9")
+        with self.assertRaises(audit.AuditError):
+            audit.parseGame(data)
+        data = bytearray(0xB4)
+        putText(data, 0, "GAMEV1.1")
+        putNumber(data, 0x30, 0xB4)
+        putNumber(data, 0x34, 1)
+        with self.assertRaises(audit.AuditError):
+            audit.parseGame(data)
+
     def testAreaAdjacencyAndTravelPolygon(self):
         data = emptyArea()
         putText(data, 0x18, "AR0200")
@@ -361,6 +434,44 @@ class BinaryParserTests(unittest.TestCase):
 
 
 class SourceAuditTests(unittest.TestCase):
+    def testCityDonationThresholdsRetainSourceFingerprintAndReputationRows(self):
+        fixture = json.loads(
+            (MODULE_PATH.parents[1] / "tests/fixtures/baldurs_gate_city_source.json").read_text(encoding="utf-8")
+        )
+        rule = fixture["numericSourceRules"]["REPUTATI.2DA"]
+        self.assertEqual("65ab70beb4b455b35545a83e690bc439b092032025ac2a3a9fb71c4ef4ac680d", rule["sha256"])
+        self.assertEqual(
+            [1500, 1200, 1000, 600, 500, 300, 150, 100, 200, 300, 500, 800, 1000, 1500, 2000, 2500, 5000, 0, 0, 0],
+            [rule["rows"][str(value)]["BASE_CHURCH"] for value in range(1, 21)],
+        )
+        self.assertEqual([10] * 17 + [0] * 3, [rule["rows"][str(value)]["MONEY_CHURCH"] for value in range(1, 21)])
+        self.assertFalse(fixture["originalParityEstablished"])
+
+    def testCityCampaignNpcPlacementsRemainFactualAndExternalMapsStayExcluded(self):
+        fixture = json.loads(
+            (MODULE_PATH.parents[1] / "tests/fixtures/baldurs_gate_city_source.json").read_text(encoding="utf-8")
+        )
+        rows = {row["creature"]: row for row in fixture["campaignNpcs"]}
+        expected = {
+            "ALORA": ("AR0130", [759, 764], "city"),
+            "TIAX": ("AR1100", [1445, 1615], "city"),
+            "SKIE": ("AR0102", [701, 1262], "city"),
+            "QUAYLE": ("AR0900", [483, 803], "boundaryHistory"),
+            "ELDOTH": ("AR1600", [3181, 3493], "externalHistory"),
+        }
+        self.assertEqual(set(expected), set(rows))
+        for creature_id, values in expected.items():
+            row = rows[creature_id]
+            self.assertEqual(values, (row["area"], row["position"], row["scopeClassification"]))
+            self.assertEqual(fixture["campaignGame"]["sha256"], row["sourceSha256"])
+            self.assertIn(row["creatureMetadata"], fixture["creatures"])
+            self.assertTrue(row["displayName"])
+            self.assertRegex(row["creatureSha256"], r"^[a-f0-9]{64}$")
+        self.assertEqual(36, fixture["campaignGame"]["nonPartyCount"])
+        self.assertEqual(5, fixture["counts"]["campaignNpcs"])
+        self.assertNotIn("AR0900", fixture["areas"])
+        self.assertNotIn("AR1600", fixture["areas"])
+
     def testCityAuditScopeIsBoundedAndUnknownScopesFailClosed(self):
         with patch(
             "scripts.build_baldurs_gate_source_fixture.buildCityFixture", return_value={"scope": "city"}

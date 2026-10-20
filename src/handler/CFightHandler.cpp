@@ -1094,14 +1094,28 @@ vstd::task<void> CFightHandler::defeatedCreatureAsync(std::shared_ptr<CCreature>
     }
     vstd::logger::debug(a->to_string(), a->getName(), "defeated", b->to_string());
     a->addExpScaled(b->getScale());
-    // TODO: loot handler
-    std::set<std::shared_ptr<CItem>> items = b->getGame()->getRngHandler()->getRandomLoot(b->getScale());
+    const bool fixedLoot = encounterMap->getBoolProperty("plugin_cityFixedLoot");
+    std::set<std::shared_ptr<CItem>> items =
+        fixedLoot ? std::set<std::shared_ptr<CItem>>{} : b->getGame()->getRngHandler()->getRandomLoot(b->getScale());
+    auto equipment = b->getEquipped();
+    const int ownedGold = fixedLoot && !b->isPlayer() ? std::max(0, b->getGold()) : 0;
+    if (ownedGold) {
+        b->setGold(0);
+        a->addGold(ownedGold);
+    }
     std::map<std::string, std::pair<std::string, int>> lostItems;
     auto game = b->getGame();
     const bool showDefeat = b->isPlayer() && game->getGui() && game->getGui()->findChild("CGameFightPanel");
-    for (const std::shared_ptr<CItem> &item : b->getInInventory()) {
+    const auto possessions = fixedLoot && !b->isPlayer() ? b->getAllItems() : b->getInInventory();
+    for (const std::shared_ptr<CItem> &item : possessions) {
+        if (fixedLoot && item->getBoolProperty("plugin_cityUndroppable")) {
+            continue;
+        }
         if (!b->isPlayer() || !item->hasTag(CTag::Quest)) {
             b->removeItem(item);
+            if (fixedLoot && !b->isPlayer()) {
+                std::erase_if(equipment, [&item](const auto &slot) { return slot.second == item; });
+            }
             items.insert(item);
             if (b->isPlayer() && !b->hasInInventory(item)) {
                 auto &entry = lostItems[item->getTypeId().empty() ? item->getName() : item->getTypeId()];
@@ -1110,9 +1124,13 @@ vstd::task<void> CFightHandler::defeatedCreatureAsync(std::shared_ptr<CCreature>
             }
         }
     }
+    if (fixedLoot && !b->isPlayer() && equipment != b->getEquipped()) {
+        b->setEquipped(std::move(equipment));
+    }
     if (CPlaytestTrace::enabled()) {
         json fields = {
             {"defeated", CPlaytestTrace::objectRef(b)},
+            {"ownedGold", ownedGold},
             {"items", CPlaytestTrace::itemRefs(items)},
             {"recipient", CPlaytestTrace::objectRef(a)},
             {"rewardSource", "combat"},
