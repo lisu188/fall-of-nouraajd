@@ -38,6 +38,9 @@ one decode per value, one insertion per object key, and one reservation for a
 4096-element array. They also check that oversized inputs do not expand retained
 storage. Timing is not a CI gate.
 
+Input hashes, individual samples, source hashes, and the benchmark binary hash are
+retained in [simdjson-results.json](simdjson-results.json).
+
 ## Measured result
 
 Linux x86-64, Intel Core i5-14400F, GCC 13.3, Release `-O3 -DNDEBUG`, simdjson 4.6.4
@@ -57,6 +60,21 @@ order alternates. Requested C++ allocation bytes per ten rounds fell from
 versus 96.2 MB (37.7% lower). The allocation counters cover `new`/`new[]` requests,
 including result destruction, and exclude direct `malloc`. RSS includes the
 preloaded corpus. Cold-process single samples are diagnostic only.
+
+Complete Callgrind benchmark invocations recorded 2,031,039,028 instructions for
+the previous adapter versus 1,498,520,955 for the optimized adapter. These totals
+include file reads, warm-up, and fingerprints. The SIMD stage-2 instruction count
+was identical; array default construction and assignment accounted for much of
+the avoidable work. Reproduce both modes with a newline-separated corpus file list:
+
+```sh
+valgrind --tool=callgrind --callgrind-out-file=/tmp/nouraajd-json-baseline.callgrind \
+    /tmp/nouraajd-json-build/json_parse_benchmark --file-list /tmp/nouraajd-json-corpus.txt \
+    --mode baseline --rounds 1 --samples 1
+valgrind --tool=callgrind --callgrind-out-file=/tmp/nouraajd-json-candidate.callgrind \
+    /tmp/nouraajd-json-build/json_parse_benchmark --file-list /tmp/nouraajd-json-corpus.txt \
+    --mode candidate --rounds 1 --samples 1
+```
 
 A fully owning On-Demand decoder was also tested. It improved on the previous
 adapter but was 5.7–23.7% slower than the optimized DOM stage in three direct

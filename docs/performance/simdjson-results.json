@@ -839,6 +839,16 @@
     "src/core/CJson.cpp": "df7fa303c61871f00293ea270e519f004014aff099622a8bccd471f7169d252a",
     "src/core/CJson.h": "57a4c0eafa91e24c6ef011d50aa19ca578fcec67ae4b50816a02be53eada9ef4",
     "tests/json/LegacyJsonParser.cpp": "27503dc94a2fb81f4f443043ef193387edb5add38a09315f05c50c5f05e420e2",
-    "tests/json/JsonParseBenchmark.cpp": "94ee494c675a010b4083775bcf78853d89df5fae50b47e05f52d4f3bbee11f2f"
+    "tests/json/JsonParseBenchmark.cpp": "aa7cb03c01623d85a77a9cea77b250cca0ef2d612f69dc29680ac92ac74c6f74"
+  },
+  "benchmark_sha256": {
+    "baseline": "d2946bdfe525eb903ffef0caf625caf684d54a59aa30c7c568a5e8d2728db84b",
+    "candidate": "d2946bdfe525eb903ffef0caf625caf684d54a59aa30c7c568a5e8d2728db84b"
+  },
+  "callgrind": {
+    "baseline_instructions": 2031039028,
+    "candidate_instructions": 1498520955,
+    "scope": "Complete process includes corpus loading, warm-up, one timed corpus round, and fingerprints",
+    "command": "valgrind --tool=callgrind --callgrind-out-file=/tmp/nouraajd-json-MODE.callgrind /tmp/nouraajd-json-build/json_parse_benchmark --file-list /tmp/nouraajd-json-corpus.txt --mode MODE --rounds 1 --samples 1"
   }
 }
