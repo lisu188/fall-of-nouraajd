@@ -7,7 +7,6 @@ import unittest
 import xml.etree.ElementTree as ET
 from pathlib import Path
 
-
 ROOT = Path(__file__).resolve().parents[1]
 ANDROID_NS = "{http://schemas.android.com/apk/res/android}"
 
@@ -16,11 +15,11 @@ class AndroidPortScaffoldTest(unittest.TestCase):
     def test_android_native_host_embeds_existing_game_module(self):
         source = (ROOT / "src/platform/android/CAndroidMain.cpp").read_text(encoding="utf-8")
         self.assertIn('PyImport_AppendInittab("_game", &PyInit__game)', source)
-        self.assertIn('CResourcesProvider::configurePlatformRoots(runtimeRoot.string(), writableRoot.string())', source)
+        self.assertIn("CResourcesProvider::configurePlatformRoots(runtimeRoot.string(), writableRoot.string())", source)
         self.assertIn('std::getenv("TMPDIR")', source)
         self.assertIn('::setenv("TMPDIR", tempRoot.string().c_str(), 0)', source)
-        self.assertIn('PyConfig_SetBytesString(&config, &config.home, pythonRoot.string().c_str())', source)
-        self.assertIn('PyList_Insert(sysPath, 0, runtimePath)', source)
+        self.assertIn("PyConfig_SetBytesString(&config, &config.home, pythonRoot.string().c_str())", source)
+        self.assertIn("PyList_Insert(sysPath, 0, runtimePath)", source)
         self.assertIn('PyImport_ImportModule("game")', source)
         self.assertIn('PyObject_CallMethod(gameModule, "new", nullptr)', source)
         self.assertIn('filesRoot / "runtime"', source)
@@ -30,15 +29,17 @@ class AndroidPortScaffoldTest(unittest.TestCase):
 
     def test_android_cmake_builds_monolithic_sdl_main_without_duplicate_module_entry(self):
         cmake = (ROOT / "android/CMakeLists.txt").read_text(encoding="utf-8")
-        self.assertIn('add_library(main SHARED ${GAME_ANDROID_SRC})', cmake)
-        self.assertIn('src/core/CModuleEntry\\\\.cpp$', cmake)
-        self.assertIn('game_android_python', cmake)
-        self.assertIn('pybind11::headers', cmake)
-        self.assertIn('${SDL2_ANDROID_LIBS}', cmake)
-        self.assertIn('${SDL2_ANDROID_MAIN_LIBS}', cmake)
-        self.assertIn('SDL2::SDL2main', cmake)
-        self.assertIn('${SDL2_IMAGE_ANDROID_LIBS}', cmake)
-        self.assertIn('${SDL2_TTF_ANDROID_LIBS}', cmake)
+        self.assertIn("add_library(main SHARED ${GAME_ANDROID_SRC})", cmake)
+        self.assertNotIn("src/core/CModuleEntry\\\\.cpp$", cmake)
+        entry = (ROOT / "src/core/CModuleEntry.cpp").read_text(encoding="utf-8")
+        self.assertEqual(1, entry.count("PYBIND11_MODULE(_game, m)"))
+        self.assertIn("game_android_python", cmake)
+        self.assertIn("pybind11::headers", cmake)
+        self.assertIn("${SDL2_ANDROID_LIBS}", cmake)
+        self.assertIn("${SDL2_ANDROID_MAIN_LIBS}", cmake)
+        self.assertIn("SDL2::SDL2main", cmake)
+        self.assertIn("${SDL2_IMAGE_ANDROID_LIBS}", cmake)
+        self.assertIn("${SDL2_TTF_ANDROID_LIBS}", cmake)
 
     def testAndroidCmakeFindsTargetPackagesOutsideTheSysroot(self):
         cmake = shutil.which("cmake")
@@ -125,7 +126,7 @@ class AndroidPortScaffoldTest(unittest.TestCase):
         self.assertIn('ignoreAssetsPattern = "fall-of-nouraajd-dont-ignore-anything"', gradle)
         self.assertIn('File(repositoryRoot, "android/CMakeLists.txt")', gradle)
         self.assertIn('abiFilters += "arm64-v8a"', gradle)
-        self.assertIn('minSdk = 28', gradle)
+        self.assertIn("minSdk = 28", gradle)
         self.assertIn('"-DGAME_ANDROID_DEPENDENCY_PREFIX=${dependencyPrefix.absolutePath}"', gradle)
 
     def testGradleSelectsTheLibraryMatchingPythonHeaders(self):
@@ -315,7 +316,7 @@ class AndroidPortScaffoldTest(unittest.TestCase):
         bootstrap = (ROOT / "android/bootstrap-deps.sh").read_text(encoding="utf-8")
         triplet = (ROOT / "android/triplets/arm64-android-dynamic.cmake").read_text(encoding="utf-8")
         self.assertIn('PYTHON_VERSION="${GAME_ANDROID_PYTHON_VERSION:-3.14.7}"', bootstrap)
-        self.assertIn('6d50cc3aa66e414a439594089bcdfb5f1264358155c70c1f00471c24cfb477fb', bootstrap)
+        self.assertIn("6d50cc3aa66e414a439594089bcdfb5f1264358155c70c1f00471c24cfb477fb", bootstrap)
         self.assertIn('VCPKG_REF="${GAME_ANDROID_VCPKG_REF:-2026.05.25}"', bootstrap)
         self.assertIn('VCPKG_TRIPLET="arm64-android-dynamic"', bootstrap)
         self.assertIn('--overlay-triplets="${SCRIPT_DIR}/triplets"', bootstrap)
@@ -331,11 +332,11 @@ class AndroidPortScaffoldTest(unittest.TestCase):
             "sdl2-ttf",
         ):
             self.assertIn(dependency, bootstrap)
-        self.assertIn('lib/libSDL2.so', bootstrap)
-        self.assertIn('set(VCPKG_LIBRARY_LINKAGE dynamic)', triplet)
-        self.assertIn('set(VCPKG_CMAKE_SYSTEM_NAME Android)', triplet)
-        self.assertIn('set(VCPKG_CMAKE_SYSTEM_VERSION 28)', triplet)
-        self.assertIn('set(VCPKG_CMAKE_CONFIGURE_OPTIONS -DANDROID_ABI=arm64-v8a)', triplet)
+        self.assertIn("lib/libSDL2.so", bootstrap)
+        self.assertIn("set(VCPKG_LIBRARY_LINKAGE dynamic)", triplet)
+        self.assertIn("set(VCPKG_CMAKE_SYSTEM_NAME Android)", triplet)
+        self.assertIn("set(VCPKG_CMAKE_SYSTEM_VERSION 28)", triplet)
+        self.assertIn("set(VCPKG_CMAKE_CONFIGURE_OPTIONS -DANDROID_ABI=arm64-v8a)", triplet)
 
     def test_manifest_launches_sdl_activity_in_landscape(self):
         root = ET.parse(ROOT / "android/app/src/main/AndroidManifest.xml").getroot()
@@ -365,7 +366,9 @@ class AndroidPortScaffoldTest(unittest.TestCase):
         self.assertIn("clearPlatformRoots", header)
         self.assertIn("searchPath.push_front(*packaged)", source)
         self.assertIn("searchPath.push_front(*writable)", source)
-        self.assertLess(source.index("searchPath.push_front(*packaged)"), source.index("searchPath.push_front(*writable)"))
+        self.assertLess(
+            source.index("searchPath.push_front(*packaged)"), source.index("searchPath.push_front(*writable)")
+        )
 
 
 if __name__ == "__main__":

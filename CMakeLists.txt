@@ -20,6 +20,8 @@ endif ()
 
 project(fall-of-nouraajd)
 
+include(cmake/ConfigureBuildPolicy.cmake)
+
 set(CMAKE_CXX_STANDARD 26)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_CXX_EXTENSIONS OFF)
@@ -38,7 +40,9 @@ set(GAME_UNITY_BATCH_SIZE "${GAME_DEFAULT_UNITY_BATCH_SIZE}" CACHE STRING
     "Number of source files per unity build translation unit.")
 option(GAME_ENABLE_PCH "Enable precompiled headers for large shared game targets." ${GAME_DEFAULT_ENABLE_PCH})
 include(cmake/ConfigurePch.cmake)
+include(cmake/ConfigureCompilerCache.cmake)
 include(cmake/ConfigureCompilePool.cmake)
+include(cmake/ConfigureTestPch.cmake)
 
 if (WIN32)
     set(CPACK_GENERATOR "ZIP")
@@ -153,12 +157,10 @@ endif ()
 
 set(GAME_CORE_SRC ${GAME_SRC})
 list(FILTER GAME_CORE_SRC EXCLUDE REGEX ".*/src/core/CModuleEntry\\.cpp$")
-if (WIN32)
-    set(GAME_MODULE_SRC ${CMAKE_SOURCE_DIR}/src/core/CModuleEntry.cpp)
-else ()
-    list(FILTER GAME_CORE_SRC EXCLUDE REGEX ".*/src/core/CModule\\.cpp$")
-    set(GAME_MODULE_SRC ${CMAKE_SOURCE_DIR}/src/core/CModule.cpp)
-endif ()
+list(FILTER GAME_CORE_SRC EXCLUDE REGEX ".*/src/core/CModuleRuntime\\.cpp$")
+list(FILTER GAME_CORE_SRC EXCLUDE REGEX ".*/src/core/CModule\\.cpp$")
+list(FILTER GAME_CORE_SRC EXCLUDE REGEX ".*/src/core/bindings/.*\\.cpp$")
+set(GAME_MODULE_SRC ${CMAKE_SOURCE_DIR}/src/core/CModuleEntry.cpp)
 
 set(GAME_CORE_LINK_LIBS
     Python3::Python
@@ -170,10 +172,30 @@ set(GAME_CORE_LINK_LIBS
     ${CMAKE_DL_LIBS}
 )
 
-set(GAME_CORE_OBJECT_SRC ${GAME_CORE_SRC})
+set(GAME_BINDING_SRC
+    src/core/CModule.cpp
+    src/core/bindings/CModuleFoundation.cpp
+    src/core/bindings/CModuleWorld.cpp
+    src/core/bindings/CModuleGameplay.cpp
+    src/core/bindings/CModuleServices.cpp
+    src/core/bindings/CModuleCreatures.cpp
+    src/core/bindings/CModulePanels.cpp
+)
+add_library(game_binding_objects OBJECT ${GAME_BINDING_SRC})
+configure_cpp_target(game_binding_objects)
+set_target_properties(game_binding_objects PROPERTIES POSITION_INDEPENDENT_CODE ON UNITY_BUILD OFF)
+target_link_libraries(game_binding_objects PRIVATE ${GAME_CORE_LINK_LIBS})
 if (WIN32)
-    list(FILTER GAME_CORE_OBJECT_SRC EXCLUDE REGEX ".*/src/core/CModule\\.cpp$")
+    target_compile_definitions(game_binding_objects PRIVATE GAME_CORE_BUILD)
+else ()
+    target_compile_options(game_binding_objects PRIVATE -fvisibility=hidden -fvisibility-inlines-hidden)
 endif ()
+if (GAME_ENABLE_PCH)
+    target_precompile_headers(game_binding_objects PRIVATE
+        "${CMAKE_SOURCE_DIR}/src/core/bindings/CModuleBindings.h")
+endif ()
+
+set(GAME_CORE_OBJECT_SRC ${GAME_CORE_SRC})
 
 add_library(game_core_objects OBJECT ${GAME_CORE_OBJECT_SRC})
 configure_cpp_target(game_core_objects)
@@ -196,7 +218,10 @@ target_link_libraries(game_core_objects PRIVATE ${GAME_CORE_LINK_LIBS})
 
 set(GAME_CORE_SHARED_SRC $<TARGET_OBJECTS:game_core_objects>)
 if (WIN32)
-    list(APPEND GAME_CORE_SHARED_SRC ${CMAKE_SOURCE_DIR}/src/core/CModule.cpp)
+    list(APPEND GAME_CORE_SHARED_SRC
+        $<TARGET_OBJECTS:game_binding_objects>
+        src/core/CModuleRuntime.cpp
+    )
 endif ()
 
 add_library(game_core SHARED ${GAME_CORE_SHARED_SRC})
@@ -207,15 +232,18 @@ set_target_properties(game_core PROPERTIES
 if (WIN32)
     target_compile_definitions(game_core PRIVATE GAME_CORE_BUILD)
 endif ()
-if (GAME_ENABLE_PCH AND WIN32)
-    target_precompile_headers(game_core PRIVATE "${CMAKE_SOURCE_DIR}/src/core/CGlobal.h")
-endif ()
 target_link_libraries(game_core PRIVATE
     ${GAME_CORE_LINK_LIBS}
 )
 
 pybind11_add_module(_game NO_EXTRAS ${GAME_MODULE_SRC})
 configure_cpp_target(_game)
+if (NOT WIN32)
+    target_sources(_game PRIVATE
+        $<TARGET_OBJECTS:game_binding_objects>
+        src/core/CModuleRuntime.cpp
+    )
+endif ()
 target_link_libraries(_game PRIVATE game_core)
 if (APPLE)
     set_target_properties(_game PROPERTIES
@@ -862,9 +890,14 @@ endfunction()
 
 add_game_unit_test(core_unit_tests tests/unit/test_core.cpp)
 add_game_unit_test(controller_unit_tests tests/unit/test_controller.cpp)
-add_game_unit_test(monster_balance_unit_tests tests/unit/test_monster_balance.cpp src/core/CModule.cpp)
+add_game_unit_test(monster_balance_unit_tests
+    tests/unit/test_monster_balance.cpp
+    src/core/CModuleEntry.cpp
+    src/core/CModuleRuntime.cpp
+    $<TARGET_OBJECTS:game_binding_objects>
+)
 if (WIN32)
-    target_sources(monster_balance_unit_tests PRIVATE src/core/CModuleEntry.cpp)
+    target_compile_definitions(monster_balance_unit_tests PRIVATE GAME_CORE_BUILD)
 endif ()
 target_compile_definitions(monster_balance_unit_tests PRIVATE
     GAME_MONSTER_BALANCE_TEST_RESOURCE_ROOT="${CMAKE_CURRENT_BINARY_DIR}"
@@ -923,15 +956,24 @@ set_tests_properties("for_unit_tests.native_test_profile_contracts" PROPERTIES
     ENVIRONMENT "GAME_NATIVE_TEST_PROFILE_FIXTURE=$<TARGET_FILE:native_test_profile_fixture>"
 )
 
+add_library(random_map_test_objects OBJECT
+    tests/unit/test_random_map_optimizations.cpp
+    tests/unit/test_tile_recipes.cpp
+    tests/unit/test_generated_names.cpp
+)
+configure_cpp_target(random_map_test_objects)
+target_link_libraries(random_map_test_objects PRIVATE ${GAME_CORE_LINK_LIBS} ${SDL2_EXECUTABLE_LIBS})
+if (NOT WIN32)
+    target_link_libraries(random_map_test_objects PRIVATE game_core)
+endif ()
+
 add_executable(performance_guard_tests
     tests/unit/test_performance.cpp
     tests/unit/test_pathfinder_performance.cpp
     tests/unit/test_engine_hotspot_performance.cpp
     tests/unit/test_serialization_performance.cpp
     tests/unit/test_render_context_performance.cpp
-    tests/unit/test_random_map_optimizations.cpp
-    tests/unit/test_tile_recipes.cpp
-    tests/unit/test_generated_names.cpp
+    $<TARGET_OBJECTS:random_map_test_objects>
 )
 if (WIN32)
     target_sources(performance_guard_tests PRIVATE $<TARGET_OBJECTS:game_core_objects>)
@@ -976,11 +1018,9 @@ endif ()
 add_game_unit_test(vstd_unit_tests tests/unit/test_vstd.cpp)
 add_game_unit_test(random_dungeon_unit_tests tests/unit/test_random_dungeon.cpp)
 add_game_unit_test(random_map_optimization_tests
-    tests/unit/test_random_map_optimizations.cpp
-    tests/unit/test_tile_recipes.cpp
-    tests/unit/test_generated_names.cpp
+    tests/unit/random_map_optimization_main.cpp
+    $<TARGET_OBJECTS:random_map_test_objects>
 )
-target_compile_definitions(random_map_optimization_tests PRIVATE GAME_RANDOM_MAP_OPTIMIZATION_MAIN)
 if (CMAKE_SYSTEM_NAME STREQUAL "Linux")
     add_game_unit_test(map_unit_tests tests/unit/test_map.cpp)
     target_compile_definitions(map_unit_tests PRIVATE
@@ -989,6 +1029,23 @@ if (CMAKE_SYSTEM_NAME STREQUAL "Linux")
 endif ()
 
 add_custom_target(for_unit_tests DEPENDS ${GAME_UNIT_TEST_TARGETS})
+
+if (GAME_ENABLE_PCH)
+    file(GENERATE OUTPUT "${CMAKE_CURRENT_BINARY_DIR}/game_test_pch.cpp"
+        CONTENT "// Generated precompiled-header anchor.\n")
+    add_library(game_test_pch OBJECT "${CMAKE_CURRENT_BINARY_DIR}/game_test_pch.cpp")
+    configure_cpp_target(game_test_pch)
+    target_link_libraries(game_test_pch PRIVATE ${GAME_CORE_LINK_LIBS} ${SDL2_EXECUTABLE_LIBS})
+    if (NOT WIN32)
+        target_link_libraries(game_test_pch PRIVATE game_core)
+    endif ()
+    target_precompile_headers(game_test_pch PRIVATE "${CMAKE_SOURCE_DIR}/src/core/CGlobal.h")
+    foreach (test_target IN LISTS GAME_UNIT_TEST_TARGETS)
+        configure_test_pch(${test_target} game_test_pch)
+    endforeach ()
+    configure_test_pch(performance_guard_tests game_test_pch)
+    configure_test_pch(random_map_test_objects game_test_pch)
+endif ()
 
 if (WIN32)
     set(CPACK_STRIP_FILES _game.pyd)

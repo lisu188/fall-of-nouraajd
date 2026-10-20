@@ -31,6 +31,7 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #include "core/CSerialization.h"
 #include "core/CStats.h"
 #include "handler/CFightHandler.h"
+#include "handler/CRngHandler.h"
 #include "object/CCreature.h"
 #include "object/CCreatureClass.h"
 #include "object/CEffect.h"
@@ -495,6 +496,32 @@ void initializeBalancePythonContent() {
     pybind11::module_::import("game");
     pybind11::module_::import("json");
     std::cerr << "monster balance: game and json initialized\n";
+}
+
+void testEmbeddedPythonRandomUsesTheNativeSeededStream() {
+    const auto previousRng = vstd::rng();
+    const pybind11::object randint = pybind11::module_::import("_game").attr("randint");
+    for (unsigned seed : {0u, 100u, 1234567u}) {
+        auto expectedRng = previousRng;
+        expectedRng.seed(seed);
+        vstd::rng().seed(seed ^ 0xA5A5A5A5u);
+        CRngHandler::seedRandomForTests(seed);
+        expect_true(vstd::rng() == expectedRng,
+                    "core RNG seeding must reach the embedded interpreter executable's native stream");
+        vstd::rng().seed(seed);
+        for (const auto &[lower, upper] : {std::pair{-17, 83}, std::pair{100, 1}, std::pair{0, 0}}) {
+            std::uniform_int_distribution<int> distribution(std::min(lower, upper), std::max(lower, upper));
+            const int expectedPython = distribution(expectedRng);
+            const int actualPython = randint(lower, upper).cast<int>();
+            expect_true(actualPython == expectedPython,
+                        "embedded Python randint must observe direct native RNG reseeding");
+            expect_true(vstd::rng() == expectedRng, "embedded Python randint must preserve native RNG consumption");
+            const int expectedNative = distribution(expectedRng);
+            expect_true(vstd::rand(lower, upper) == expectedNative && vstd::rng() == expectedRng,
+                        "native draws must continue the same stream after embedded Python randint");
+        }
+    }
+    vstd::rng() = previousRng;
 }
 
 void testInheritedNativeMethodsDoNotBecomePythonOverrides() {
@@ -1748,6 +1775,7 @@ int main(int argc, char **argv) {
     }
     pybind11::scoped_interpreter interpreter{};
     initializeBalancePythonContent();
+    testEmbeddedPythonRandomUsesTheNativeSeededStream();
     if (huntDecision) {
         testManualHuntDecisionFromEarnedSave(argv[2]);
         return finish_tests();

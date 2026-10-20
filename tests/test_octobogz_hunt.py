@@ -15,6 +15,8 @@ import types
 import unittest
 from unittest.mock import Mock, patch
 
+from tests.cpp_bindings import readBindingSources
+
 ROOT = Path(__file__).resolve().parents[1]
 
 
@@ -513,7 +515,7 @@ class OctobogzHuntTest(unittest.TestCase):
         self.assertIsNotNone(self.game_map.getObjectByName("cave2"))
 
     def testHuntCallsUseThePublishedNativeObjectApi(self):
-        bindings = (ROOT / "src/core/CModule.cpp").read_text(encoding="utf-8")
+        bindings = readBindingSources(ROOT)
         published = set(re.findall(r'\.def(?:_static)?\s*\(\s*"([^"]+)"', bindings))
         source = (ROOT / "res/plugins/octobogz_hunt.py").read_text(encoding="utf-8")
         tree = ast.parse(source)
@@ -2335,7 +2337,7 @@ class OctobogzHuntTest(unittest.TestCase):
     def testRuntimeChildrenUseOnlyPublishedNativeCallsAndExistingScriptMethods(self):
         import textwrap
 
-        bindings = (ROOT / "src/core/CModule.cpp").read_text(encoding="utf-8")
+        bindings = readBindingSources(ROOT)
         published = set(re.findall(r'\.def(?:_static)?\s*\(\s*"([^"]+)"', bindings))
         tree = ast.parse((ROOT / "tests/test_octobogz_runtime.py").read_text(encoding="utf-8"))
         python_methods = {"loads", "uuid4", "unlink", "get", "append", "removeprefix", "startswith", "read_text"}

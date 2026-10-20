@@ -20,14 +20,12 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #include "core/CLoader.h"
 #include "core/CMap.h"
 #include "core/CNavigation.h"
-#include "core/CRuntimeBridge.h"
 #include "core/CSerialization.h"
 #include "handler/CObjectHandler.h"
 #include "object/CTile.h"
 #include "test_harness.h"
 #include "veventloop.h"
 
-#include <pybind11/embed.h>
 #include <rdg.h>
 
 #include <algorithm>
@@ -268,21 +266,9 @@ void testTileInstallationWorkBudget() {
 
 void run_random_map_optimization_performance_tests() { testTileInstallationWorkBudget(); }
 
-#ifdef GAME_RANDOM_MAP_OPTIMIZATION_MAIN
-void run_tile_recipe_tests();
-void run_generated_name_tests();
-void run_generated_name_performance_tests();
-
-int main() {
-    pybind11::scoped_interpreter guard{};
-    CRuntimeBridge::set_logger_sink(vstd::logger::sink::disabled, "");
+void run_random_map_optimization_tests() {
     testFreshTileInstallationNormalizesAndKeepsFirst();
     testTileInstallationRejectsNonemptyMapsBeforeMutation();
     testRandomDungeonTilesMatchIndividualCreation();
     run_random_map_optimization_performance_tests();
-    run_tile_recipe_tests();
-    run_generated_name_tests();
-    run_generated_name_performance_tests();
-    return finish_tests();
 }
-#endif
