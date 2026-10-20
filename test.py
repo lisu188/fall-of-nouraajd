@@ -6137,11 +6137,9 @@ class GameTest(unittest.TestCase):
         }
         return True, json.dumps(report, sort_keys=True)
 
-    @game_test
-    def test_lua_plugin_loader_api_is_absent(self):
+    def testLuaPluginLoaderApiIsAbsent(self):
         game = load_game_module()
         self.assertFalse(hasattr(game.CPluginLoader, "loadLuaPlugin"))
-        return True, json.dumps({"removed_loader_api_absent": True}, sort_keys=True)
 
     @game_test
     def test_dynamic_domain_plugins_register_gameplay_classes(self):
@@ -26950,7 +26948,7 @@ class McpServerTest(unittest.TestCase):
         "usurpergate": "_mcp_walkthrough_usurpergate",
     }
 
-    def test_python_road_tile_step_under_stdio_mcp(self):
+    def testPythonRoadTileStepUnderStdioMcp(self):
         from unittest.mock import patch
 
         try:
