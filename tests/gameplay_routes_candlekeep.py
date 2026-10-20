@@ -121,6 +121,7 @@ def container(d, actor, *, credit=True, force=False):
     elif d.condition(dialog, "canForce"):
         d.choose(dialog, "forceContainer")
         clearWatch(d)
+    d.navigateTo(actor)
     before = resources(d)
     if d.condition(dialog, "canOpen"):
         contents = [item for item in d.call(d.object(actor), "getStringProperty", "contents").split(",") if item]
@@ -245,7 +246,7 @@ def training(d, abandon, start=True):
     d.test.assertEqual("active", d.string("candlekeep_trainingStage"))
     if abandon:
         d.saveAndReload("candlekeep-training-active")
-        d.choose("obeDialog", "forceExitTraining")
+        visit(d, "obe", "forceExitTraining")
         d.check(
             "candlekeep.training.abandon",
             d.string("candlekeep_trainingStage") == "abandoned" and d.flag("candlekeepTrainingForcedExit"),
@@ -263,12 +264,12 @@ def training(d, abandon, start=True):
         d.waitTurns(
             80, lambda: all(d.object("trainingFoe" + str(number), required=False) is None for number in range(2, 7))
         )
-        d.choose("obeDialog", "trainingRound")
+        visit(d, "obe", "trainingRound")
     d.check(
         "candlekeep.training.complete",
         d.flag("candlekeepTrainingCompleted") and d.string("candlekeep_trainingStage") == "completed",
     )
-    d.choose("obeDialog", "forceExitTraining")
+    visit(d, "obe", "forceExitTraining")
 
 
 def declines(d):

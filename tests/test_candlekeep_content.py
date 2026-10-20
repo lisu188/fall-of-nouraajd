@@ -529,6 +529,97 @@ class CandlekeepContentTest(unittest.TestCase):
 
 
 class CandlekeepModelTest(unittest.TestCase):
+    def routeDriver(self):
+        model = CandlekeepModel(strength=18, agility=18)
+        for name, (obj, level) in authoredObjects().items():
+            actor = model.game_map.getObjectByName(name)
+            if actor:
+                actor.moveTo(int(obj["x"] // 32), int(obj["y"] // 32), level)
+        choices, movement = [], []
+
+        def position(actor):
+            coords = actor.getCoords()
+            return coords.x, coords.y, coords.z
+
+        def navigateTo(name):
+            destination = position(model.game_map.getObjectByName(name))
+            movement.append((position(model.player), destination))
+            model.player.moveTo(*destination)
+
+        def choose(dialog_id, action):
+            dialog = model.createObject(dialog_id)
+            actor = model.game_map.getObjectByName(dialog.actorId())
+            self.assertEqual(
+                position(actor), position(model.player), f"{dialog_id}.{action} requires an authored approach"
+            )
+            choices.append((dialog.actorId(), action, position(model.player)))
+            return getattr(dialog, action)()
+
+        driver = SimpleNamespace(
+            test=self,
+            case=SimpleNamespace(branches=("candlekeep.training.accept",)),
+            player=model.player,
+            game_map=model.game_map,
+            navigateTo=navigateTo,
+            choose=choose,
+            call=lambda actor, method, *args: getattr(actor, method)(*args),
+            object=lambda name, required=True: model.game_map.getObjectByName(name),
+            condition=lambda dialog_id, method: getattr(model.createObject(dialog_id), method)(),
+            gold=model.player.getGold,
+            count=model.player.countItems,
+            flag=model.game_map.getBoolProperty,
+            string=model.game_map.getStringProperty,
+            check=lambda branch, condition, **_evidence: self.assertTrue(condition, branch),
+            startMap=lambda name: self.assertEqual("candlekeep", name),
+            saveAndReload=Mock(),
+        )
+        return driver, model, choices, movement
+
+    def testTrainingRouteReturnsToObeAfterCombatBeforeProgressAndExitChoices(self):
+        from tests.gameplay_routes_candlekeep import training
+
+        for abandon in (False, True):
+            with self.subTest(abandon=abandon):
+                driver, model, choices, movement = self.routeDriver()
+                combat_origins = []
+
+                def fight(name):
+                    origin = model.player.getCoords()
+                    combat_origins.append((origin.x, origin.y, origin.z))
+                    model.game_map.removeObject(model.game_map.getObjectByName(name))
+
+                def waitTurns(_limit, predicate):
+                    for number in range(2, 7):
+                        actor = model.game_map.getObjectByName("trainingFoe" + str(number))
+                        if actor:
+                            model.game_map.removeObject(actor)
+                    self.assertTrue(predicate())
+
+                driver.fight, driver.waitTurns = fight, waitTurns
+                training(driver, abandon=abandon)
+                self.assertTrue(movement)
+                obe_choices = [choice for choice in choices if choice[0] == "obe"]
+                self.assertEqual("forceExitTraining", obe_choices[-1][1])
+                if abandon:
+                    driver.saveAndReload.assert_called_once()
+                else:
+                    self.assertEqual(2, len(combat_origins))
+                    self.assertNotEqual(obe_choices[0][2], combat_origins[0])
+                    self.assertEqual(2, sum(choice[1] == "trainingRound" for choice in obe_choices))
+
+    def testForcedContainerRouteReapproachesLootAfterGuardCombat(self):
+        from tests.gameplay_routes_candlekeep import container
+
+        driver, model, choices, _movement = self.routeDriver()
+
+        def clearWatch(_driver):
+            model.player.moveTo(4, 2, 1)
+
+        with patch("tests.gameplay_routes_candlekeep.clearWatch", side_effect=clearWatch):
+            container(driver, "priestChest", force=True)
+        self.assertEqual(["forceContainer", "stealContainer"], [choice[1] for choice in choices])
+        self.assertTrue(model.game_map.getBoolProperty("candlekeepLooted_priestChest"))
+
     def testQuestRewardAndClinicGiftTransferTheActualOwnersItemsWithoutCloning(self):
         model = CandlekeepModel(intelligence=12)
         phlydia = model.game_map.getObjectByName("phlydia")
@@ -577,6 +668,22 @@ class CandlekeepModelTest(unittest.TestCase):
         model.game_map.removeObject(actor)
         self.assertFalse(clinic.acceptPotion())
         self.assertEqual(before, model.rewardSnapshot())
+        for removed in (False, True):
+            with self.subTest(gorionRemoved=removed):
+                model = CandlekeepModel()
+                gorion = model.dialog("gorion")
+                actor = model.game_map.getObjectByName("gorion")
+                actor.properties["hp"] = 0
+                if removed:
+                    model.game_map.removeObject(actor)
+                model.player.setHp(47)
+                readers_before = list(model.reader_requests)
+                gorion.leaveCandlekeep()
+                self.assertFalse(model.game_map.getBoolProperty("candlekeepDeparted"))
+                self.assertFalse(model.game_map.getBoolProperty("candlekeepGorionAdvice"))
+                self.assertFalse(model.game_map.getBoolProperty("candlekeepEpilogueShown"))
+                self.assertEqual(47, model.player.getHp())
+                self.assertEqual(readers_before, model.reader_requests)
 
     def testTempleHealChargesExactSourcePriceOnlyForAnActualHealthDeficit(self):
         model = CandlekeepModel()

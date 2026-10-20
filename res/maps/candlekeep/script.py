@@ -1355,7 +1355,7 @@ def load(self, context):
 
         @resumableHook
         def leaveCandlekeep(self):
-            if self.actorId() != "gorion":
+            if self.actorId() != "gorion" or not self._progressAllowed():
                 return
             if self.getGame().getMap().getBoolProperty("candlekeepDeparted"):
                 return
