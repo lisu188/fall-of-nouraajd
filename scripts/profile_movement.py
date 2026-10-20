@@ -193,7 +193,12 @@ def main():
 
     game.set_logger_sink("disabled")
     client = ctypes.CDLL(str(args.callgrind_client.resolve(strict=True))) if args.callgrind_client else None
-    source_files = ("src/core/CAsync.h", "src/core/CFuture.cpp", "src/core/CModule.cpp")
+    source_files = (
+        "src/core/CAsync.h",
+        "src/core/CFuture.cpp",
+        "src/core/CModule.cpp",
+        "src/gui/object/CMapGraphicsObject.cpp",
+    )
     source_hashes = {name: hashlib.sha256((root / name).read_bytes()).hexdigest() for name in source_files}
     core_library = loadedCoreLibrary()
     records = []

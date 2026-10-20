@@ -685,6 +685,12 @@ void CMapGraphicsObject::refreshObject(Coords coords) {
     }
     Coords normalized = map->normalizeCoords(coords);
 
+    // Player relocation changes the camera origin used by every cached tile callback.
+    if (normalized == map->getPlayer()->getCoords()) {
+        refreshAll();
+        return;
+    }
+
     if (map->wrapsX(normalized.z) || map->wrapsY(normalized.z)) {
         for (int x = 0; x < getSizeX(gui); x++) {
             for (int y = 0; y < getSizeY(gui); y++) {

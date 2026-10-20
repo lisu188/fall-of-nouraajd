@@ -22056,7 +22056,9 @@ def assert_rendered_map_proxy_grid(test_case, g):
     }
     cells = [child for child in map_graph.getChildren() if child.getType() in {"", "CProxyGraphicsObject"}]
     test_case.assertEqual(
-        len(expected), len(cells), "Map proxy cells must cover the resized viewport and one tile of overscan exactly once."
+        len(expected),
+        len(cells),
+        "Map proxy cells must cover the resized viewport and one tile of overscan exactly once.",
     )
     test_case.assertEqual(expected, {resolved_rect(cell) for cell in cells})
     assert_rendered_map_proxy_cells(test_case, g)
@@ -22507,17 +22509,16 @@ class XvfbGameplayProcessTest(unittest.TestCase):
         _, g, game_map, player = create_xvfb_gameplay_session(self)
         initial = player.getCoords()
         target, _, _ = find_adjacent_walkable_direction(game_map, initial)
-        click_x, click_y = visible_map_cell_center(initial, target)
-        initial_turn = game_map.getTurn()
-
-        push_sdl_mouse_click(click_x, click_y)
-        self.assertTrue(
-            pump_event_loop_until(lambda: game_map.getTurn() > initial_turn, timeout=5.0),
-            "A single map click must finish its movement turn without Enter.",
-        )
-        moved = player.getCoords()
-        self.assertEqual((target.x, target.y, target.z), (moved.x, moved.y, moved.z))
-        self.assertGreater(game_map.getTurn(), initial_turn)
+        for destination in (target, initial):
+            click_x, click_y = visible_map_cell_center(player.getCoords(), destination)
+            initial_turn = game_map.getTurn()
+            push_sdl_mouse_click(click_x, click_y)
+            self.assertTrue(
+                pump_event_loop_until(lambda: game_map.getTurn() > initial_turn, timeout=5.0),
+                "A single map click must finish its movement turn without Enter, including after camera relocation.",
+            )
+            moved = player.getCoords()
+            self.assertEqual((destination.x, destination.y, destination.z), (moved.x, moved.y, moved.z))
         assert_rendered_map_proxy_cells(self, g)
 
     def test_window_resize_event_updates_gui_dimensions(self):
