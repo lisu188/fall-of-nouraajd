@@ -1,0 +1,854 @@
+{
+  "base_revision": "85109f40",
+  "compiler": "GNU 13.3.0, Release -O3 -DNDEBUG, C++17",
+  "platform": "Linux-6.18.54.1-microsoft-standard-WSL2-x86_64-with-glibc2.39",
+  "cpu": "Intel Core i5-14400F",
+  "simdjson_version": "4.6.4",
+  "corpus_bytes": 5225881,
+  "corpus": [
+    {
+      "path": "res/config/adventure.json",
+      "bytes": 2982,
+      "sha256": "b6688ef3c267595028c24b2b46eb1622fde7b505c6459c10364166cde7966c3c",
+      "accepted": true,
+      "owning_tree_fingerprint": "1891715751421301032"
+    },
+    {
+      "path": "res/config/armors.json",
+      "bytes": 5273,
+      "sha256": "4f106b94a1cee65b33033040609d30606634726d3934c49ff22a604b23a34e49",
+      "accepted": true,
+      "owning_tree_fingerprint": "4817931647469410338"
+    },
+    {
+      "path": "res/config/artifact_sets.json",
+      "bytes": 474,
+      "sha256": "9e8dc628a35ccc19ff22f57a639004efd8fcccc9dfebe9b0141a8d167ca424b6",
+      "accepted": true,
+      "owning_tree_fingerprint": "9859376046528470399"
+    },
+    {
+      "path": "res/config/buildings.json",
+      "bytes": 1279,
+      "sha256": "bb36b648886d672e016f59b94df6e4fb033d79fbab10d7d139bcbc61ecb90417",
+      "accepted": true,
+      "owning_tree_fingerprint": "15306307913404243814"
+    },
+    {
+      "path": "res/config/classes.json",
+      "bytes": 599,
+      "sha256": "8b352eb05307d6554f5440618cb851ccc67ad71a0d00f33fef75f81d76f2d3ef",
+      "accepted": true,
+      "owning_tree_fingerprint": "1793049575528256167"
+    },
+    {
+      "path": "res/config/crafting.json",
+      "bytes": 2968,
+      "sha256": "f030bcc96a597c904051e4cbe68ebf52d24c8ce6ebba3f7da01937a5e3f4588c",
+      "accepted": true,
+      "owning_tree_fingerprint": "17993527425519637518"
+    },
+    {
+      "path": "res/config/creature_classes.json",
+      "bytes": 5182,
+      "sha256": "e7240f09426b7fce291c53c0806e4c2f05c7243570da5d3d937f83eb5b0bb45e",
+      "accepted": true,
+      "owning_tree_fingerprint": "4755937634701171765"
+    },
+    {
+      "path": "res/config/creature_races.json",
+      "bytes": 2046,
+      "sha256": "5cf4bf4293a2f982a93948843cf42ad753eb2571f8a6a22aa040b7a09fd8c854",
+      "accepted": true,
+      "owning_tree_fingerprint": "7755480704846330364"
+    },
+    {
+      "path": "res/config/creature_templates.json",
+      "bytes": 1012,
+      "sha256": "e9c2f403cd5311a724cb17a24a18f9c48868d2e90fffd313f2bc4f25365c9f6d",
+      "accepted": true,
+      "owning_tree_fingerprint": "3656279087600330520"
+    },
+    {
+      "path": "res/config/creature_types.json",
+      "bytes": 646,
+      "sha256": "4f8acf9fe9ece196d7c3b8d99f6f05543b1c08aad43459eb430fd97c62990ccc",
+      "accepted": true,
+      "owning_tree_fingerprint": "17115699360557817483"
+    },
+    {
+      "path": "res/config/effects.json",
+      "bytes": 4507,
+      "sha256": "cd327eb6cb20d192336b75cb10968f7a4ed7c86c06554426e72fa60aa8aaa9b9",
+      "accepted": true,
+      "owning_tree_fingerprint": "16727181663721825995"
+    },
+    {
+      "path": "res/config/graphics.json",
+      "bytes": 4285,
+      "sha256": "a2a04c0a80aa5af6bb129b6c66e8cb258730fe3fa620e4cd043ec545e4079097",
+      "accepted": true,
+      "owning_tree_fingerprint": "1183921229574657367"
+    },
+    {
+      "path": "res/config/interactions.json",
+      "bytes": 20727,
+      "sha256": "7dbf7779388f96ec76187723a9e3d9fe1842eb2ed036d21b7b63aedff600c757",
+      "accepted": true,
+      "owning_tree_fingerprint": "4602497248954515741"
+    },
+    {
+      "path": "res/config/items.json",
+      "bytes": 14280,
+      "sha256": "7ce65edd40e5c392dd629af2c4128ee667d9d045ef14c0c9f8a5138d0b08f9f2",
+      "accepted": true,
+      "owning_tree_fingerprint": "2657267937356780886"
+    },
+    {
+      "path": "res/config/misc.json",
+      "bytes": 967,
+      "sha256": "61cf017feb7eb900db4d24c9c074b97e82d5e0711262bc08b870c13de1243102",
+      "accepted": true,
+      "owning_tree_fingerprint": "13947479675594034847"
+    },
+    {
+      "path": "res/config/monsters.json",
+      "bytes": 12433,
+      "sha256": "ccb67f1357ccd9dce16a7b2edd7bb033054c12b504f753436ea71cfcb5995002",
+      "accepted": true,
+      "owning_tree_fingerprint": "18297009832845732109"
+    },
+    {
+      "path": "res/config/panels.json",
+      "bytes": 36176,
+      "sha256": "406ebbee6636eea1113e688ea67c42849fa8143e9e73e3bcb783987fa747069c",
+      "accepted": true,
+      "owning_tree_fingerprint": "15613505632816592173"
+    },
+    {
+      "path": "res/config/potions.json",
+      "bytes": 6546,
+      "sha256": "343e9e01d0af0811e49b655d9c66797801f33dd7db31b1e7701a8fad92b441cb",
+      "accepted": true,
+      "owning_tree_fingerprint": "8611794803991665502"
+    },
+    {
+      "path": "res/config/races.json",
+      "bytes": 390,
+      "sha256": "cebdf410238c97ead1ebede96bf11b6b363b0aef72ef64002fb2ff7d26d5b16a",
+      "accepted": true,
+      "owning_tree_fingerprint": "16540528335051625273"
+    },
+    {
+      "path": "res/config/slots.json",
+      "bytes": 1635,
+      "sha256": "2cb07c1bc70e6d005bafaa65c1c9f89a5d61ceb23e169909f83ebf9ad0f72c99",
+      "accepted": true,
+      "owning_tree_fingerprint": "15185081356090114357"
+    },
+    {
+      "path": "res/config/tiles.json",
+      "bytes": 2100,
+      "sha256": "4fa971a58a393f30048f1b955380ab7841f0e11726a053fb0dff1c84342b462a",
+      "accepted": true,
+      "owning_tree_fingerprint": "2550973445310963223"
+    },
+    {
+      "path": "res/config/weapons.json",
+      "bytes": 12459,
+      "sha256": "3f00b29d72d6cc5d53be861309741a3fef4db20cb151a94f8521f3a60b2fb143",
+      "accepted": true,
+      "owning_tree_fingerprint": "4448114373409986918"
+    },
+    {
+      "path": "res/maps/castleGriffinCliff/config.json",
+      "bytes": 3048,
+      "sha256": "745f51f901fc9bccedcbdb377b5e27db0dc2b8a4aa2ba61530c04a8b8d70c865",
+      "accepted": true,
+      "owning_tree_fingerprint": "1730583061362232631"
+    },
+    {
+      "path": "res/maps/castleGriffinCliff/dialog.json",
+      "bytes": 2112,
+      "sha256": "9dbc829133d1df2d057afabb092fb380f094a08a64e3038f12ff7f896ae1c85e",
+      "accepted": true,
+      "owning_tree_fingerprint": "14991815280125243638"
+    },
+    {
+      "path": "res/maps/castleGriffinCliff/map.json",
+      "bytes": 549976,
+      "sha256": "2b3bfef741e430b96ea98d6a28f79e814115c719172b5864db9a8df68531097d",
+      "accepted": true,
+      "owning_tree_fingerprint": "9625599821146423180"
+    },
+    {
+      "path": "res/maps/castleGuardianAngels/config.json",
+      "bytes": 3022,
+      "sha256": "e21dd7f869f5cc5ab682a5f31bc62971d974a3fe190478af056acd2997805baf",
+      "accepted": true,
+      "owning_tree_fingerprint": "11183607132997199870"
+    },
+    {
+      "path": "res/maps/castleGuardianAngels/dialog.json",
+      "bytes": 2119,
+      "sha256": "c504a383762b7c9b5557471069972ec83cda1a4a01aa378088333d67ecb34525",
+      "accepted": true,
+      "owning_tree_fingerprint": "15833391626618414694"
+    },
+    {
+      "path": "res/maps/castleGuardianAngels/map.json",
+      "bytes": 224316,
+      "sha256": "f7041a15790f3c3cb6ec956ef7376a1ed8e5dd81a56e1589175402b769e11e43",
+      "accepted": true,
+      "owning_tree_fingerprint": "4672192146523957771"
+    },
+    {
+      "path": "res/maps/castleHomecoming/config.json",
+      "bytes": 2948,
+      "sha256": "b58f6477462e164d0a86775eed45f3aeacc34b3d3fdc9d625398e938768a5672",
+      "accepted": true,
+      "owning_tree_fingerprint": "9132628221647474358"
+    },
+    {
+      "path": "res/maps/castleHomecoming/dialog.json",
+      "bytes": 2146,
+      "sha256": "d6b10ad9be0adb9ae7c40b13c9f44dfdbe8b26fc8baf5beed562f178284cad71",
+      "accepted": true,
+      "owning_tree_fingerprint": "13923669893078353090"
+    },
+    {
+      "path": "res/maps/castleHomecoming/map.json",
+      "bytes": 370423,
+      "sha256": "edcc1af696506a6fa5dfb2a32af1e0fa92ba179363a3f57e3aed08f030f0d6be",
+      "accepted": true,
+      "owning_tree_fingerprint": "1200227774905637214"
+    },
+    {
+      "path": "res/maps/gravemoor/config.json",
+      "bytes": 3591,
+      "sha256": "a68cdf4018f5c2564f5cd106286acf35f139553720c824388a18c69522bfd990",
+      "accepted": true,
+      "owning_tree_fingerprint": "4054874431321353265"
+    },
+    {
+      "path": "res/maps/gravemoor/dialog.json",
+      "bytes": 4272,
+      "sha256": "0a93f6386e2ac58c38ca4d9ade364e4db0298a38ebcb98d38ce80762d3f5f5ae",
+      "accepted": true,
+      "owning_tree_fingerprint": "1370298890344057908"
+    },
+    {
+      "path": "res/maps/gravemoor/map.json",
+      "bytes": 8974,
+      "sha256": "1ae237fd9bd7a3ed822dcd45de91351c30b4cf2161cfc983b623a51c4cd2d176",
+      "accepted": true,
+      "owning_tree_fingerprint": "17937941666047584085"
+    },
+    {
+      "path": "res/maps/hearthfall/config.json",
+      "bytes": 3018,
+      "sha256": "6b857587a8cdb80e1414ebc735e63dd98811fd757a73f4d92ce86dfa2806627c",
+      "accepted": true,
+      "owning_tree_fingerprint": "2175293915505203401"
+    },
+    {
+      "path": "res/maps/hearthfall/dialog.json",
+      "bytes": 3365,
+      "sha256": "e1d982ad0cd5f8c7deca127cc418c83fb4ac5d47a29ba3f37903ba4cc37579f6",
+      "accepted": true,
+      "owning_tree_fingerprint": "6345954082405107896"
+    },
+    {
+      "path": "res/maps/hearthfall/map.json",
+      "bytes": 8843,
+      "sha256": "9acc39e690afa899717f7fde6d19b9e2743f8eb6ce2d3bf332fd517c4b6ad652",
+      "accepted": true,
+      "owning_tree_fingerprint": "1944704549650705941"
+    },
+    {
+      "path": "res/maps/kadath/config.json",
+      "bytes": 18425,
+      "sha256": "804027d56129f833e92d976ba68cc683dc9c7bd39e97dc2ee6d47b23133239b1",
+      "accepted": true,
+      "owning_tree_fingerprint": "10796255985101754308"
+    },
+    {
+      "path": "res/maps/kadath/dialog.json",
+      "bytes": 5385,
+      "sha256": "6c06a173a25688f6b2ecaece3929f3815fa55557da6f26822204698418ad0c02",
+      "accepted": true,
+      "owning_tree_fingerprint": "2841049568230391629"
+    },
+    {
+      "path": "res/maps/kadath/map.json",
+      "bytes": 293682,
+      "sha256": "5d6d869af298b07e60de446aa7e300826d1869d5ada8e8b8fcfe84745f8f7baa",
+      "accepted": true,
+      "owning_tree_fingerprint": "17580512112959900511"
+    },
+    {
+      "path": "res/maps/multilevel/config.json",
+      "bytes": 1040,
+      "sha256": "dd65e68de9499747ee807c109f24dd6dc83a3fdf951ea679fc4dbef7cdfb25b7",
+      "accepted": true,
+      "owning_tree_fingerprint": "8227483156750666269"
+    },
+    {
+      "path": "res/maps/multilevel/map.json",
+      "bytes": 6873,
+      "sha256": "bb1792c466a1be24a74f47964310bef3821b048074fd6121cbeaab604dc22321",
+      "accepted": true,
+      "owning_tree_fingerprint": "15044702632774350760"
+    },
+    {
+      "path": "res/maps/ninemarches/config.json",
+      "bytes": 26602,
+      "sha256": "1ce6235e464c4adbc1a8c49946369eaa5118ab202c50d3ac2b37e4411065ab32",
+      "accepted": true,
+      "owning_tree_fingerprint": "14186961996483125774"
+    },
+    {
+      "path": "res/maps/ninemarches/dialog.json",
+      "bytes": 18233,
+      "sha256": "13c4f13462a875bfae618d10b857cc3fd8d70032d837a9e1ae3def1daecfbc84",
+      "accepted": true,
+      "owning_tree_fingerprint": "13688294700805173370"
+    },
+    {
+      "path": "res/maps/ninemarches/map.json",
+      "bytes": 2087196,
+      "sha256": "e076817ebc993c95821be05d5840bd6fcbd621a689a9e05a7d0efa9af79f0f6b",
+      "accepted": true,
+      "owning_tree_fingerprint": "1831219848016527104"
+    },
+    {
+      "path": "res/maps/nouraajd/config.json",
+      "bytes": 19246,
+      "sha256": "ea012885817466ddc32eddde8a09c189a1447899377e3c0b564b75ed2dfd4b10",
+      "accepted": true,
+      "owning_tree_fingerprint": "15853081209879363476"
+    },
+    {
+      "path": "res/maps/nouraajd/dialog.json",
+      "bytes": 10430,
+      "sha256": "50c47ef3de209da547905242f509db5201d37d4229ed5d8e98e99e8eca9e470d",
+      "accepted": true,
+      "owning_tree_fingerprint": "13439418738367792681"
+    },
+    {
+      "path": "res/maps/nouraajd/dialog2.json",
+      "bytes": 6446,
+      "sha256": "4c376867e2ff3f3887b013ab89faa8c90fcfd6d62602a3df4ddc52a6b2307482",
+      "accepted": true,
+      "owning_tree_fingerprint": "7124293541375738805"
+    },
+    {
+      "path": "res/maps/nouraajd/dialog3.json",
+      "bytes": 7536,
+      "sha256": "30113bdc9303d761b5e89e867d923f2c8d1adbec4fafb6a2b5831694ecc990f8",
+      "accepted": true,
+      "owning_tree_fingerprint": "12389698674337673247"
+    },
+    {
+      "path": "res/maps/nouraajd/dialog4.json",
+      "bytes": 9613,
+      "sha256": "c8f97b70b09c2f33b3385520b66a9e6715b2b3d4798e753fbee5d79641cecc25",
+      "accepted": true,
+      "owning_tree_fingerprint": "10373453141019207023"
+    },
+    {
+      "path": "res/maps/nouraajd/dialog5.json",
+      "bytes": 4966,
+      "sha256": "835cbdeae5e2c903dfe03e4b9fd4302a5c45799f854e2fa7b5f65b859363f934",
+      "accepted": true,
+      "owning_tree_fingerprint": "17104298405408962706"
+    },
+    {
+      "path": "res/maps/nouraajd/map.json",
+      "bytes": 476649,
+      "sha256": "e1df0d7ce90e1d757c037fbb1854d60527e65f71e87caf91cf69be9b64d08a52",
+      "accepted": true,
+      "owning_tree_fingerprint": "8068002934360604315"
+    },
+    {
+      "path": "res/maps/ritual/config.json",
+      "bytes": 9480,
+      "sha256": "657c20fa03668a807b8353b4430977f6ae19a7348dde2b4ce29a891bd022859d",
+      "accepted": true,
+      "owning_tree_fingerprint": "4619926999888127345"
+    },
+    {
+      "path": "res/maps/ritual/map.json",
+      "bytes": 14659,
+      "sha256": "abee826418ed07dcb4c0093db12ed145e45160b2aa065124d473f2db487b3491",
+      "accepted": true,
+      "owning_tree_fingerprint": "12219926307864531833"
+    },
+    {
+      "path": "res/maps/siege/config.json",
+      "bytes": 1048,
+      "sha256": "3192d0c98b79ec7b0c4a330defbc8ab757ab4b6756ba63b1c87bcec86cdd6196",
+      "accepted": true,
+      "owning_tree_fingerprint": "3381345781489872565"
+    },
+    {
+      "path": "res/maps/siege/map.json",
+      "bytes": 11181,
+      "sha256": "e25ecdb23df7256f855629394e831564faec709e50c9de3628ff98ef2b9c89c0",
+      "accepted": true,
+      "owning_tree_fingerprint": "12214904943138849379"
+    },
+    {
+      "path": "res/maps/sunderedmarch/config.json",
+      "bytes": 19495,
+      "sha256": "4446ed70660c8be07701716015d64046c028560f8c13f3c7180139b500d55b64",
+      "accepted": true,
+      "owning_tree_fingerprint": "16319245650816584006"
+    },
+    {
+      "path": "res/maps/sunderedmarch/dialog.json",
+      "bytes": 4424,
+      "sha256": "2fefaccf72cb4bad521814f60a5eca3f9b848c175dace2d1f5132c9b76d26c5e",
+      "accepted": true,
+      "owning_tree_fingerprint": "12643049428882580511"
+    },
+    {
+      "path": "res/maps/sunderedmarch/map.json",
+      "bytes": 318307,
+      "sha256": "2e64f92ee5b97d4ee69542ee6ba32cf6ef680005b69525e813d20026d9674a1e",
+      "accepted": true,
+      "owning_tree_fingerprint": "6548988069166775711"
+    },
+    {
+      "path": "res/maps/test/config.json",
+      "bytes": 455,
+      "sha256": "94dba3f6408b20e5b053dc6ebd8fbfc82c31d25798c9d6d15559d84e5d036f18",
+      "accepted": true,
+      "owning_tree_fingerprint": "15590408349093676943"
+    },
+    {
+      "path": "res/maps/test/map.json",
+      "bytes": 446088,
+      "sha256": "6daaf2c7b95e082115db87c8e790153e79db628ac22852b849d8fcd6881b1265",
+      "accepted": true,
+      "owning_tree_fingerprint": "8915604860562676186"
+    },
+    {
+      "path": "res/maps/usurpergate/config.json",
+      "bytes": 2900,
+      "sha256": "cde668e65bc99ee3c312aa4c1ff1832a520005e6bca2a7b8d713b26a19cb2f01",
+      "accepted": true,
+      "owning_tree_fingerprint": "10887497085725485076"
+    },
+    {
+      "path": "res/maps/usurpergate/dialog.json",
+      "bytes": 3249,
+      "sha256": "fb31fd387b07a301184f6f194e44206765702f592cd6df4e7216544267bca794",
+      "accepted": true,
+      "owning_tree_fingerprint": "15300658118970259072"
+    },
+    {
+      "path": "res/maps/usurpergate/map.json",
+      "bytes": 9164,
+      "sha256": "6fc75b449bf540b09b2f6e9338faf4716db234bdc851880a45d3233df006c416",
+      "accepted": true,
+      "owning_tree_fingerprint": "7140013847346266839"
+    },
+    {
+      "path": "res/maps/vhulmarn/config.json",
+      "bytes": 13348,
+      "sha256": "94a570059de2ae0c2cff173d3e2f67e401655373c4175d296ee43c386c724c76",
+      "accepted": true,
+      "owning_tree_fingerprint": "8462878348169983728"
+    },
+    {
+      "path": "res/maps/vhulmarn/dialog.json",
+      "bytes": 5290,
+      "sha256": "045f9a52090ae2ff3ac9c60e1fe755605b7dc3442d65f04406a113b732c9e145",
+      "accepted": true,
+      "owning_tree_fingerprint": "7505091503443883001"
+    },
+    {
+      "path": "res/maps/vhulmarn/map.json",
+      "bytes": 30601,
+      "sha256": "a76cc5e8d99879e20accf7fb825a3b2cab5d3c6e8e3e5ccce4b4210a53c882ad",
+      "accepted": true,
+      "owning_tree_fingerprint": "7912294493850627347"
+    },
+    {
+      "path": "tests/fixtures/save_compatibility/composed_archetype_v1.json",
+      "bytes": 1575,
+      "sha256": "c817a59f82ea7d399027c6fa7c316ac89bb1e5cb0f6508fa05ba144ac88fbf8c",
+      "accepted": true,
+      "owning_tree_fingerprint": "9360330611795943045"
+    },
+    {
+      "path": "tests/fixtures/save_compatibility/explicit_class_race_v1.json",
+      "bytes": 715,
+      "sha256": "5819462fce60f7f8796f78794c41d10c3b02cac7f0a19bacb172a2beb9a954b2",
+      "accepted": true,
+      "owning_tree_fingerprint": "2153934135550325350"
+    },
+    {
+      "path": "tests/fixtures/save_compatibility/invalid_primary_valid_backup.json",
+      "bytes": 13,
+      "sha256": "485df45c59d45a4331ee073f586cd71ba1aac0736b065a1401314fd817931ecb",
+      "accepted": false,
+      "owning_tree_fingerprint": "14695981039346656037"
+    },
+    {
+      "path": "tests/fixtures/save_compatibility/legacy_unversioned_test_map.json",
+      "bytes": 482,
+      "sha256": "68bf8e5b266e6fa366abeee7dabc606a5a3b1cdc3852656457d9a79cd21332be",
+      "accepted": true,
+      "owning_tree_fingerprint": "11075317365283967123"
+    },
+    {
+      "path": "tests/fixtures/save_compatibility/nouraajd_active_quests_v1.json",
+      "bytes": 1329,
+      "sha256": "1cda6ebb719ae4a5e984b1001bc6a94eab03114afa5bdb05f051480542813741",
+      "accepted": true,
+      "owning_tree_fingerprint": "13592895081191467394"
+    },
+    {
+      "path": "tests/fixtures/save_compatibility/nouraajd_runtime_spawned_quest_actors_v1.json",
+      "bytes": 2162,
+      "sha256": "57ac7954b6dbdfd0aff538a7bf992469cb5c7e419d1dcc65c9922d59d3d178ee",
+      "accepted": true,
+      "owning_tree_fingerprint": "2656780544766846273"
+    },
+    {
+      "path": "tests/fixtures/save_compatibility/primitive_wrappers_flattened_v1.json",
+      "bytes": 778,
+      "sha256": "5eb64d5fd0631d9956beb4bb50074ed87b95819be57a79ad7d37d0a21592963c",
+      "accepted": true,
+      "owning_tree_fingerprint": "6921478118621688934"
+    },
+    {
+      "path": "tests/fixtures/save_compatibility/primitive_wrappers_legacy_v1.json",
+      "bytes": 993,
+      "sha256": "3999c575b18d2b263e1a0a19e63d94db7b484cd31f8058ea4a0f2928ab8fea45",
+      "accepted": true,
+      "owning_tree_fingerprint": "6667259253247328734"
+    },
+    {
+      "path": "tests/fixtures/save_compatibility/ritual_completed_nouraajd_quest_v1.json",
+      "bytes": 851,
+      "sha256": "f242c74c4e77eddca64a3e731284136e2677dac8629370ab4663d0622fc8bcfe",
+      "accepted": true,
+      "owning_tree_fingerprint": "7820058313179842551"
+    },
+    {
+      "path": "tests/fixtures/save_compatibility/ritual_progression_v1.json",
+      "bytes": 1976,
+      "sha256": "6809500805df3672d02da1788a1aef0d714b03aa2a0f0c7ea6c587ffe51b3586",
+      "accepted": true,
+      "owning_tree_fingerprint": "3265833158729181291"
+    },
+    {
+      "path": "tests/fixtures/save_compatibility/schema_v1_test_map.json",
+      "bytes": 619,
+      "sha256": "f23154e336e5e2599aa51a0edf5d6e879e27685b9f814cee59f9f81b414323cc",
+      "accepted": true,
+      "owning_tree_fingerprint": "2770944642753027153"
+    },
+    {
+      "path": "tests/fixtures/save_compatibility/siege_progression_v1.json",
+      "bytes": 1238,
+      "sha256": "f7e557140c1c318ed4f2394dd2662a4a0e95383df09730a7044c274eb7b1db48",
+      "accepted": true,
+      "owning_tree_fingerprint": "17816999239996371120"
+    }
+  ],
+  "allocation_scope": "C++ new/new[] requests during parse and result destruction; excludes direct malloc",
+  "meets_parse_gate": true,
+  "comparisons": [
+    {
+      "speedup_percent": 46.82678234249131,
+      "baseline": {
+        "median_ms": 716.024,
+        "sample_ms": [
+          704.756,
+          716.024,
+          732.599,
+          728.11,
+          729.58,
+          804.037,
+          699.104,
+          683.995,
+          678.136
+        ],
+        "cpp_allocations": [
+          539290,
+          539290,
+          539290,
+          539290,
+          539290,
+          539290,
+          539290,
+          539290,
+          539290
+        ],
+        "cpp_allocated_bytes": [
+          2347310530,
+          2347310530,
+          2347310530,
+          2347310530,
+          2347310530,
+          2347310530,
+          2347310530,
+          2347310530,
+          2347310530
+        ],
+        "peak_rss_bytes": 154431488,
+        "rounds": 10,
+        "accepted_per_round": 78,
+        "rejected_per_round": 1
+      },
+      "candidate": {
+        "median_ms": 380.733,
+        "sample_ms": [
+          379.842,
+          375.922,
+          375.008,
+          374.633,
+          380.733,
+          407.3,
+          408.959,
+          392.141,
+          401.704
+        ],
+        "cpp_allocations": [
+          487790,
+          487790,
+          487790,
+          487790,
+          487790,
+          487790,
+          487790,
+          487790,
+          487790
+        ],
+        "cpp_allocated_bytes": [
+          716620400,
+          716620400,
+          716620400,
+          716620400,
+          716620400,
+          716620400,
+          716620400,
+          716620400,
+          716620400
+        ],
+        "peak_rss_bytes": 96243712,
+        "rounds": 10,
+        "accepted_per_round": 78,
+        "rejected_per_round": 1
+      }
+    },
+    {
+      "speedup_percent": 45.57851111167651,
+      "baseline": {
+        "median_ms": 707.454,
+        "sample_ms": [
+          707.454,
+          699.58,
+          683.515,
+          693.007,
+          774.395,
+          727.841,
+          787.668,
+          957.073,
+          699.872
+        ],
+        "cpp_allocations": [
+          539290,
+          539290,
+          539290,
+          539290,
+          539290,
+          539290,
+          539290,
+          539290,
+          539290
+        ],
+        "cpp_allocated_bytes": [
+          2347310530,
+          2347310530,
+          2347310530,
+          2347310530,
+          2347310530,
+          2347310530,
+          2347310530,
+          2347310530,
+          2347310530
+        ],
+        "peak_rss_bytes": 154529792,
+        "rounds": 10,
+        "accepted_per_round": 78,
+        "rejected_per_round": 1
+      },
+      "candidate": {
+        "median_ms": 385.007,
+        "sample_ms": [
+          383.973,
+          386.961,
+          397.081,
+          479.5,
+          460.565,
+          385.007,
+          361.761,
+          357.373,
+          358.893
+        ],
+        "cpp_allocations": [
+          487790,
+          487790,
+          487790,
+          487790,
+          487790,
+          487790,
+          487790,
+          487790,
+          487790
+        ],
+        "cpp_allocated_bytes": [
+          716620400,
+          716620400,
+          716620400,
+          716620400,
+          716620400,
+          716620400,
+          716620400,
+          716620400,
+          716620400
+        ],
+        "peak_rss_bytes": 96182272,
+        "rounds": 10,
+        "accepted_per_round": 78,
+        "rejected_per_round": 1
+      }
+    },
+    {
+      "speedup_percent": 48.72503519094759,
+      "baseline": {
+        "median_ms": 698.333,
+        "sample_ms": [
+          689.05,
+          657.67,
+          698.333,
+          723.753,
+          678.705,
+          689.616,
+          762.285,
+          732.866,
+          726.571
+        ],
+        "cpp_allocations": [
+          539290,
+          539290,
+          539290,
+          539290,
+          539290,
+          539290,
+          539290,
+          539290,
+          539290
+        ],
+        "cpp_allocated_bytes": [
+          2347310530,
+          2347310530,
+          2347310530,
+          2347310530,
+          2347310530,
+          2347310530,
+          2347310530,
+          2347310530,
+          2347310530
+        ],
+        "peak_rss_bytes": 154492928,
+        "rounds": 10,
+        "accepted_per_round": 78,
+        "rejected_per_round": 1
+      },
+      "candidate": {
+        "median_ms": 358.07,
+        "sample_ms": [
+          373.138,
+          370.51,
+          360.433,
+          358.07,
+          362.326,
+          351.378,
+          348.753,
+          355.395,
+          349.94
+        ],
+        "cpp_allocations": [
+          487790,
+          487790,
+          487790,
+          487790,
+          487790,
+          487790,
+          487790,
+          487790,
+          487790
+        ],
+        "cpp_allocated_bytes": [
+          716620400,
+          716620400,
+          716620400,
+          716620400,
+          716620400,
+          716620400,
+          716620400,
+          716620400,
+          716620400
+        ],
+        "peak_rss_bytes": 96239616,
+        "rounds": 10,
+        "accepted_per_round": 78,
+        "rejected_per_round": 1
+      }
+    }
+  ],
+  "commands": [
+    "cmake -S tests/json -B /tmp/nouraajd-json-build -G Ninja -DCMAKE_BUILD_TYPE=Release",
+    "cmake --build /tmp/nouraajd-json-build --target json_parse_regression json_parse_benchmark -j 4",
+    "python3 scripts/profile_json.py --repo-root . --benchmark /tmp/nouraajd-json-build/json_parse_benchmark --rounds 10 --samples 9 --comparisons 3 --output /tmp/nouraajd-json-profile.json"
+  ],
+  "discarded_ondemand_comparisons": [
+    {
+      "dom_median_ms": 326.818,
+      "ondemand_median_ms": 404.163,
+      "speedup_percent": -23.66607714385378
+    },
+    {
+      "dom_median_ms": 364.552,
+      "ondemand_median_ms": 409.785,
+      "speedup_percent": -12.407832078825521
+    },
+    {
+      "dom_median_ms": 383.435,
+      "ondemand_median_ms": 405.181,
+      "speedup_percent": -5.671365420475438
+    }
+  ],
+  "source_sha256": {
+    "src/core/CJson.cpp": "df7fa303c61871f00293ea270e519f004014aff099622a8bccd471f7169d252a",
+    "src/core/CJson.h": "57a4c0eafa91e24c6ef011d50aa19ca578fcec67ae4b50816a02be53eada9ef4",
+    "tests/json/LegacyJsonParser.cpp": "27503dc94a2fb81f4f443043ef193387edb5add38a09315f05c50c5f05e420e2",
+    "tests/json/JsonParseBenchmark.cpp": "aa7cb03c01623d85a77a9cea77b250cca0ef2d612f69dc29680ac92ac74c6f74"
+  },
+  "benchmark_sha256": {
+    "baseline": "d2946bdfe525eb903ffef0caf625caf684d54a59aa30c7c568a5e8d2728db84b",
+    "candidate": "d2946bdfe525eb903ffef0caf625caf684d54a59aa30c7c568a5e8d2728db84b"
+  },
+  "callgrind": {
+    "baseline_instructions": 2031039028,
+    "candidate_instructions": 1498520955,
+    "scope": "Complete process includes corpus loading, warm-up, one timed corpus round, and fingerprints",
+    "command": "valgrind --tool=callgrind --callgrind-out-file=/tmp/nouraajd-json-MODE.callgrind /tmp/nouraajd-json-build/json_parse_benchmark --file-list /tmp/nouraajd-json-corpus.txt --mode MODE --rounds 1 --samples 1"
+  }
+}

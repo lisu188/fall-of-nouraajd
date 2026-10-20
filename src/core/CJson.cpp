@@ -16,105 +16,196 @@ You should have received a copy of the GNU General Public License
 along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 #include "core/CJson.h"
+#include "core/CJsonParseDiagnostics.h"
 
 #include <cmath>
+#include <cstring>
 #include <iomanip>
 #include <limits>
+#include <optional>
 #include <sstream>
 
 #include <simdjson.h>
 
 namespace {
-json fromSimdjson(const simdjson::dom::element &element);
+constexpr std::size_t retainedInputLimit = 4 * 1024 * 1024;
+
+#ifdef GAME_JSON_DIAGNOSTICS
+thread_local game::json_detail::ParseDiagnostics diagnostics;
+#define GAME_JSON_RECORD(counter) (++diagnostics.counter)
+#else
+#define GAME_JSON_RECORD(counter) ((void)0)
+#endif
 
 std::runtime_error simdjsonError(const std::string &context, simdjson::error_code error) {
     return std::runtime_error(context + ": " + simdjson::error_message(error));
 }
 
-json fromSimdjsonArray(const simdjson::dom::element &element) {
-    simdjson::dom::array array;
-    if (auto error = element.get_array().get(array); error != simdjson::SUCCESS) {
-        throw simdjsonError("failed to read JSON array", error);
+void checkParseError(simdjson::error_code error) {
+    if (error != simdjson::SUCCESS) {
+        throw simdjsonError("failed to parse JSON", error);
     }
-
-    json result = json::array();
-    for (auto child : array) {
-        result[result.size()] = fromSimdjson(child);
-    }
-    return result;
 }
 
-json fromSimdjsonObject(const simdjson::dom::element &element) {
-    simdjson::dom::object object;
-    if (auto error = element.get_object().get(object); error != simdjson::SUCCESS) {
-        throw simdjsonError("failed to read JSON object", error);
+struct ParseContext {
+    simdjson::dom::parser parser;
+    std::vector<char> input;
+    bool active = false;
+
+    ParseContext() { GAME_JSON_RECORD(parserCreations); }
+
+    void prepare(std::string_view text) {
+        std::size_t capacity = text.size();
+        if (capacity <= retainedInputLimit) {
+            capacity = 64;
+            while (capacity < text.size()) {
+                capacity *= 2;
+            }
+        }
+        if (capacity > input.max_size() - simdjson::SIMDJSON_PADDING) {
+            throw simdjsonError("failed to parse JSON", simdjson::CAPACITY);
+        }
+        if (input.size() < capacity + simdjson::SIMDJSON_PADDING) {
+            input.resize(capacity + simdjson::SIMDJSON_PADDING);
+            GAME_JSON_RECORD(scratchGrowths);
+        }
+        if (parser.capacity() < capacity) {
+            checkParseError(parser.allocate(capacity));
+            GAME_JSON_RECORD(parserGrowths);
+        }
+        if (!text.empty()) {
+            std::memcpy(input.data(), text.data(), text.size());
+        }
+        std::memset(input.data() + text.size(), 0, simdjson::SIMDJSON_PADDING);
+    }
+};
+
+thread_local ParseContext retainedContext;
+
+class ParseLease {
+  public:
+    explicit ParseLease(std::size_t size) {
+        if (size <= retainedInputLimit && !retainedContext.active) {
+            context = &retainedContext;
+            context->active = true;
+        } else {
+            temporary.emplace();
+            context = &*temporary;
+            GAME_JSON_RECORD(temporaryContexts);
+        }
     }
 
-    json result = json::object();
-    for (simdjson::dom::key_value_pair field : object) {
-        const auto key = std::string(field.key);
-        if (result.contains(key)) {
-            throw std::runtime_error("duplicate JSON object key: " + key);
+    ParseLease(const ParseLease &) = delete;
+    ParseLease &operator=(const ParseLease &) = delete;
+    ParseLease(ParseLease &&) = delete;
+    ParseLease &operator=(ParseLease &&) = delete;
+
+    ~ParseLease() {
+        if (context == &retainedContext) {
+            context->active = false;
         }
-        result[key] = fromSimdjson(field.value);
     }
+
+    ParseContext &get() { return *context; }
+
+  private:
+    std::optional<ParseContext> temporary;
+    ParseContext *context = nullptr;
+};
+} // namespace
+
+namespace game::json_detail {
+ParseDiagnostics parseDiagnostics() noexcept {
+#ifdef GAME_JSON_DIAGNOSTICS
+    auto result = diagnostics;
+    result.retainedCapacity =
+        retainedContext.input.empty() ? 0 : retainedContext.input.size() - simdjson::SIMDJSON_PADDING;
     return result;
+#else
+    return {};
+#endif
 }
 
-json fromSimdjson(const simdjson::dom::element &element) {
-    switch (element.type()) {
-    case simdjson::dom::element_type::ARRAY:
-        return fromSimdjsonArray(element);
-    case simdjson::dom::element_type::OBJECT:
-        return fromSimdjsonObject(element);
-    case simdjson::dom::element_type::STRING: {
-        std::string_view value;
-        if (auto error = element.get_string().get(value); error != simdjson::SUCCESS) {
-            throw simdjsonError("failed to read JSON string", error);
+void resetParseDiagnostics() noexcept {
+#ifdef GAME_JSON_DIAGNOSTICS
+    diagnostics = {};
+#endif
+}
+
+class Decoder {
+  public:
+    static json decode(const simdjson::dom::element &element) {
+        GAME_JSON_RECORD(valuesDecoded);
+        switch (element.type()) {
+        case simdjson::dom::element_type::ARRAY: {
+            simdjson::dom::array array;
+            checkParseError(element.get_array().get(array));
+            json result = json::array();
+            auto &values = std::get<json::array_t>(result.data);
+            if (array.size() != 0) {
+                values.reserve(array.size());
+                GAME_JSON_RECORD(arrayGrowths);
+            }
+            for (auto child : array) {
+                values.emplace_back(decode(child));
+                GAME_JSON_RECORD(arrayAppends);
+            }
+            return result;
         }
-        return json(std::string(value));
-    }
-    case simdjson::dom::element_type::INT64: {
-        std::int64_t value = 0;
-        if (auto error = element.get_int64().get(value); error != simdjson::SUCCESS) {
-            throw simdjsonError("failed to read JSON integer", error);
+        case simdjson::dom::element_type::OBJECT: {
+            simdjson::dom::object object;
+            checkParseError(element.get_object().get(object));
+            json result = json::object();
+            auto &fields = std::get<json::object_t>(result.data);
+            for (simdjson::dom::key_value_pair field : object) {
+                auto [entry, inserted] = fields.try_emplace(std::string(field.key));
+                if (!inserted) {
+                    throw std::runtime_error("duplicate JSON object key: " + entry->first);
+                }
+                GAME_JSON_RECORD(objectInsertions);
+                entry->second = decode(field.value);
+            }
+            return result;
         }
-        return json(static_cast<long long>(value));
-    }
-    case simdjson::dom::element_type::UINT64: {
-        std::uint64_t value = 0;
-        if (auto error = element.get_uint64().get(value); error != simdjson::SUCCESS) {
-            throw simdjsonError("failed to read JSON unsigned integer", error);
+        case simdjson::dom::element_type::STRING: {
+            std::string_view value;
+            checkParseError(element.get_string().get(value));
+            return json(std::string(value));
         }
-        return json(static_cast<unsigned long long>(value));
-    }
-    case simdjson::dom::element_type::DOUBLE: {
-        double value = 0;
-        if (auto error = element.get_double().get(value); error != simdjson::SUCCESS) {
-            throw simdjsonError("failed to read JSON number", error);
+        case simdjson::dom::element_type::INT64: {
+            std::int64_t value = 0;
+            checkParseError(element.get_int64().get(value));
+            return json(static_cast<long long>(value));
         }
-        return json(value);
-    }
-    case simdjson::dom::element_type::BOOL: {
-        bool value = false;
-        if (auto error = element.get_bool().get(value); error != simdjson::SUCCESS) {
-            throw simdjsonError("failed to read JSON boolean", error);
+        case simdjson::dom::element_type::UINT64: {
+            std::uint64_t value = 0;
+            checkParseError(element.get_uint64().get(value));
+            return json(static_cast<unsigned long long>(value));
         }
-        return json(value);
-    }
-    case simdjson::dom::element_type::NULL_VALUE:
+        case simdjson::dom::element_type::DOUBLE: {
+            double value = 0;
+            checkParseError(element.get_double().get(value));
+            return json(value);
+        }
+        case simdjson::dom::element_type::BOOL: {
+            bool value = false;
+            checkParseError(element.get_bool().get(value));
+            return json(value);
+        }
+        case simdjson::dom::element_type::NULL_VALUE:
+            return json(nullptr);
+        case simdjson::dom::element_type::BIGINT: {
+            std::string_view value;
+            checkParseError(element.get_string().get(value));
+            return json(std::string(value));
+        }
+        }
         return json(nullptr);
-    case simdjson::dom::element_type::BIGINT: {
-        std::string_view value;
-        if (auto error = element.get_string().get(value); error != simdjson::SUCCESS) {
-            throw simdjsonError("failed to read JSON bigint", error);
-        }
-        return json(std::string(value));
     }
-    }
-    return json(nullptr);
-}
+};
+} // namespace game::json_detail
 
+namespace {
 void appendEscapedString(std::ostringstream &stream, const std::string &value) {
     stream << '"';
     for (unsigned char ch : value) {
@@ -274,13 +365,12 @@ json json::parse(const char *text) { return parse(std::string_view(text == nullp
 json json::parse(const std::string &text) { return parse(std::string_view(text)); }
 
 json json::parse(std::string_view text) {
-    simdjson::dom::parser parser;
-    simdjson::padded_string padded(text);
+    ParseLease lease(text.size());
+    auto &context = lease.get();
+    context.prepare(text);
     simdjson::dom::element element;
-    if (auto error = parser.parse(padded).get(element); error != simdjson::SUCCESS) {
-        throw simdjsonError("failed to parse JSON", error);
-    }
-    return fromSimdjson(element);
+    checkParseError(context.parser.parse(context.input.data(), text.size(), false).get(element));
+    return game::json_detail::Decoder::decode(element);
 }
 
 bool json::is_null() const { return std::holds_alternative<std::nullptr_t>(data); }
