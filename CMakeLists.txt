@@ -982,6 +982,10 @@ if (CMAKE_SYSTEM_NAME STREQUAL "Linux")
     add_game_unit_test(resource_unit_tests tests/unit/test_resource.cpp)
 endif ()
 
+add_subdirectory(tests/json)
+list(APPEND GAME_UNIT_TEST_TARGETS json_parse_regression)
+add_dependencies(performance_guard_tests json_parse_regression)
+
 add_custom_target(for_unit_tests DEPENDS ${GAME_UNIT_TEST_TARGETS})
 
 if (WIN32)
