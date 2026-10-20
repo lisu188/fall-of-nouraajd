@@ -27,6 +27,13 @@ Normal modal boundaries drive frames; the synchronous map-turn boundary uses
 `WaitMode::PostedWork` to avoid recursive rendering. Blocking boundary sleeps
 release the GIL. Native coroutine callers await asynchronous APIs directly.
 
+Desktop frame boundaries share `game_async::runFrame`. It drains successive
+ready-work snapshots before rendering, stopping when idle, after 1,024 passes,
+or after a cooperative 4 ms budget. Each snapshot still services input, ready
+conditions, and due timers; one callback can exceed the time budget. Remaining
+work continues on the next frame. Nested modal boundaries have independent
+budgets, while `nextFrame` and movement presentation still await actual frames.
+
 Gameplay uses `controlAsync`, `findNextStepAsync`, and `CMap::moveAsync`.
 Controller plans start together, then the main thread commits in actor order
 after checking origin, identity, map, and transition generation. GUI movement

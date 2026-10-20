@@ -18,6 +18,22 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #include "core/CAsync.h"
 
 namespace game_async {
+bool runFrame(vstd::event_loop<> &loop, FramePumpBudget budget) {
+    const auto started = std::chrono::steady_clock::now();
+    for (std::size_t pass = 0; pass < budget.maxReadyPasses; ++pass) {
+        if (loop.quitRequested()) {
+            return false;
+        }
+        if (budget.maxReadyTime && std::chrono::steady_clock::now() - started >= *budget.maxReadyTime) {
+            break;
+        }
+        if (loop.runReady() == 0) {
+            break;
+        }
+    }
+    return !loop.quitRequested() && loop.runFrame();
+}
+
 std::shared_ptr<vstd::thread_pool<16>> workerPool() {
     static auto pool = std::make_shared<vstd::thread_pool<16>>()->start();
     return pool;
@@ -50,7 +66,9 @@ std::function<void(std::function<bool()>)> get_wait_until_handler() {
     return [](std::function<bool()> pred) {
         vstd::event_loop<>::instance()->await([pred]() {
             while (!pred()) {
-                vstd::event_loop<>::instance()->run();
+                if (!game_async::runFrame(*vstd::event_loop<>::instance())) {
+                    break;
+                }
             }
         });
     };

@@ -26,6 +26,7 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #include <unordered_map>
 
 #include "CGlobal.h"
+#include "core/CAsync.h"
 #include "../../vstd/veventloop.h"
 #include "../gui/CAnimation.h"
 #include "../gui/CGui.h"
@@ -1403,7 +1404,9 @@ void init_game_module(py::module_ &m) {
     py::class_<vstd::event_loop<>, std::shared_ptr<vstd::event_loop<>>>(m, "event_loop",
                                                                         "Global async event loop utility.")
         .def_static("instance", &CRuntimeBridge::event_loop_instance, "Return the singleton event loop instance.")
-        .def("run", &vstd::event_loop<>::run, "Process queued tasks/events once.")
+        .def(
+            "run", [](vstd::event_loop<> &loop) { return game_async::runFrame(loop); },
+            "Process ready work and render one paced frame.")
         .def("isMainThread", &vstd::event_loop<>::isMainThread, "Check whether this thread owns the event loop.")
         .def(
             "invoke",
