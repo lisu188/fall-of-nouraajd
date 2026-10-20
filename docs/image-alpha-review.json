@@ -1,0 +1,3774 @@
+{
+  "version": 1,
+  "description": "All 192 game PNGs visually reviewed. Preserve authored transparency and rectangular terrain/UI/icon artwork; remove only reviewed sprite backdrops. RGB pixels and dimensions remain unchanged.",
+  "images": [
+    {
+      "path": "ambient/brazier.png",
+      "size": [
+        1024,
+        1024
+      ],
+      "sourceSha256": "21f67c913af6b162508e2c02c606a56e0e68ee04f14f867b8393496c28107269",
+      "rgbSha256": "6c0377b8b6db2402d592345e22b6ba5018497cbd65e99053557b0c58eb28d7c5",
+      "policy": {
+        "action": "preserve",
+        "reason": "Existing authored alpha and antialiased/glowing edges are already present."
+      },
+      "resultSha256": "21f67c913af6b162508e2c02c606a56e0e68ee04f14f867b8393496c28107269",
+      "metadataSha256": "44136fa355b3678a1146ad16f7e8649e94fb4fc21fe77e8310c060f61caaff8a"
+    },
+    {
+      "path": "ambient/broken_cart.png",
+      "size": [
+        1024,
+        1024
+      ],
+      "sourceSha256": "6c092c5427667b2f97d163b47d9b284042597d1d45e999ef923488c8c361e147",
+      "rgbSha256": "55052a09049597f5a6e075207884853f57db9ff4979c0c5ce01f804ba2ff453d",
+      "policy": {
+        "action": "preserve",
+        "reason": "Existing authored alpha and antialiased/glowing edges are already present."
+      },
+      "resultSha256": "6c092c5427667b2f97d163b47d9b284042597d1d45e999ef923488c8c361e147",
+      "metadataSha256": "44136fa355b3678a1146ad16f7e8649e94fb4fc21fe77e8310c060f61caaff8a"
+    },
+    {
+      "path": "ambient/broken_fence.png",
+      "size": [
+        1024,
+        1024
+      ],
+      "sourceSha256": "2cf18a5879424dd6b3afa4b44261df91f80b477a704cb195d4acf6e462af186f",
+      "rgbSha256": "61730ec3dda4e103ccb03da25a17a20b592c27e1fdaf026fde1e6905647776b9",
+      "policy": {
+        "action": "preserve",
+        "reason": "Existing authored alpha and antialiased/glowing edges are already present."
+      },
+      "resultSha256": "2cf18a5879424dd6b3afa4b44261df91f80b477a704cb195d4acf6e462af186f",
+      "metadataSha256": "44136fa355b3678a1146ad16f7e8649e94fb4fc21fe77e8310c060f61caaff8a"
+    },
+    {
+      "path": "ambient/campfire_cauldron.png",
+      "size": [
+        1024,
+        1024
+      ],
+      "sourceSha256": "a2c80e69447cce22d3c3803a7e1de352a183dc3b1e0dd0f6f5e1894fa941754c",
+      "rgbSha256": "79ca88bb705808032ef439f6bf029c45e635fc00f0012e60af6f978ccfc059f5",
+      "policy": {
+        "action": "preserve",
+        "reason": "Existing authored alpha and antialiased/glowing edges are already present."
+      },
+      "resultSha256": "a2c80e69447cce22d3c3803a7e1de352a183dc3b1e0dd0f6f5e1894fa941754c",
+      "metadataSha256": "44136fa355b3678a1146ad16f7e8649e94fb4fc21fe77e8310c060f61caaff8a"
+    },
+    {
+      "path": "ambient/dead_tree.png",
+      "size": [
+        1024,
+        1024
+      ],
+      "sourceSha256": "ec35fea581c87d58c16a846a082cec3e79b4dee549d8ae94d0013c59c2834a28",
+      "rgbSha256": "c5f460f7248e83897531e5653602abac4dd24017e7609bce12cd710be39d07fd",
+      "policy": {
+        "action": "preserve",
+        "reason": "Existing authored alpha and antialiased/glowing edges are already present."
+      },
+      "resultSha256": "ec35fea581c87d58c16a846a082cec3e79b4dee549d8ae94d0013c59c2834a28",
+      "metadataSha256": "44136fa355b3678a1146ad16f7e8649e94fb4fc21fe77e8310c060f61caaff8a"
+    },
+    {
+      "path": "ambient/gravestone_cluster.png",
+      "size": [
+        1024,
+        1024
+      ],
+      "sourceSha256": "e2511cee2c8eb493b7417b85a63028b84108f4a48415f5a855a5b6e45424ebe0",
+      "rgbSha256": "9bfac339b977065253b4641f432d72faddf076c5deaaea4878021fdd06cd771d",
+      "policy": {
+        "action": "preserve",
+        "reason": "Existing authored alpha and antialiased/glowing edges are already present."
+      },
+      "resultSha256": "e2511cee2c8eb493b7417b85a63028b84108f4a48415f5a855a5b6e45424ebe0",
+      "metadataSha256": "44136fa355b3678a1146ad16f7e8649e94fb4fc21fe77e8310c060f61caaff8a"
+    },
+    {
+      "path": "ambient/hay_bales.png",
+      "size": [
+        1024,
+        1024
+      ],
+      "sourceSha256": "e5312501a8bd9019ce62aab2e788f04230bf0aa38268d255a90a2b84c240020a",
+      "rgbSha256": "e3ba19fa3d9dc05fa68b194de7334b0fb644b0801f59091d91927a5e38bd7dca",
+      "policy": {
+        "action": "preserve",
+        "reason": "Existing authored alpha and antialiased/glowing edges are already present."
+      },
+      "resultSha256": "e5312501a8bd9019ce62aab2e788f04230bf0aa38268d255a90a2b84c240020a",
+      "metadataSha256": "44136fa355b3678a1146ad16f7e8649e94fb4fc21fe77e8310c060f61caaff8a"
+    },
+    {
+      "path": "ambient/market_stall.png",
+      "size": [
+        1024,
+        1024
+      ],
+      "sourceSha256": "8e4cf805e529c54eb8760d3d53a96ce0467ceb5f164634639d7e3f8be1940ef4",
+      "rgbSha256": "497d549cf569910b70fefaebee73f9a483439c45af483659fedc82b9ff5a758a",
+      "policy": {
+        "action": "preserve",
+        "reason": "Existing authored alpha and antialiased/glowing edges are already present."
+      },
+      "resultSha256": "8e4cf805e529c54eb8760d3d53a96ce0467ceb5f164634639d7e3f8be1940ef4",
+      "metadataSha256": "44136fa355b3678a1146ad16f7e8649e94fb4fc21fe77e8310c060f61caaff8a"
+    },
+    {
+      "path": "ambient/notice_board.png",
+      "size": [
+        1024,
+        1024
+      ],
+      "sourceSha256": "3e9d39054261b0c9f0adc1b3b822f524e9bef8830ebacc5903841999b8ca77fc",
+      "rgbSha256": "033e7eaa06ac6c170c51168512cfd9f4a43273d0991cf019b48e110692731595",
+      "policy": {
+        "action": "preserve",
+        "reason": "Existing authored alpha and antialiased/glowing edges are already present."
+      },
+      "resultSha256": "3e9d39054261b0c9f0adc1b3b822f524e9bef8830ebacc5903841999b8ca77fc",
+      "metadataSha256": "44136fa355b3678a1146ad16f7e8649e94fb4fc21fe77e8310c060f61caaff8a"
+    },
+    {
+      "path": "ambient/rubble_and_skulls.png",
+      "size": [
+        1024,
+        1024
+      ],
+      "sourceSha256": "ab7610b4504f99e64908ae24b7f0f9f94953421cba166ec8250676f142284b81",
+      "rgbSha256": "8652a95d7c7312574bda3024d08b03001cc0282ce027d262058e6aee4cc71533",
+      "policy": {
+        "action": "preserve",
+        "reason": "Existing authored alpha and antialiased/glowing edges are already present."
+      },
+      "resultSha256": "ab7610b4504f99e64908ae24b7f0f9f94953421cba166ec8250676f142284b81",
+      "metadataSha256": "44136fa355b3678a1146ad16f7e8649e94fb4fc21fe77e8310c060f61caaff8a"
+    },
+    {
+      "path": "ambient/signpost.png",
+      "size": [
+        1024,
+        1024
+      ],
+      "sourceSha256": "c7be06d6b3f03bd073831697a545b2c4067b17d823c4c34a14d410e7f8d916d5",
+      "rgbSha256": "e0d6d947b20688708ea3d4aafbc480b2266e190dddef1b42ce7fddab5647771d",
+      "policy": {
+        "action": "preserve",
+        "reason": "Existing authored alpha and antialiased/glowing edges are already present."
+      },
+      "resultSha256": "c7be06d6b3f03bd073831697a545b2c4067b17d823c4c34a14d410e7f8d916d5",
+      "metadataSha256": "44136fa355b3678a1146ad16f7e8649e94fb4fc21fe77e8310c060f61caaff8a"
+    },
+    {
+      "path": "ambient/stone_shrine.png",
+      "size": [
+        1024,
+        1024
+      ],
+      "sourceSha256": "54611e3623ab270aad85aecd8770626b998136efff586b72253091c6c72d65c6",
+      "rgbSha256": "fadd2e5b107abf1f93b7f2b28821f5850b61e1ae058de08de01e760e1d5baa39",
+      "policy": {
+        "action": "preserve",
+        "reason": "Existing authored alpha and antialiased/glowing edges are already present."
+      },
+      "resultSha256": "54611e3623ab270aad85aecd8770626b998136efff586b72253091c6c72d65c6",
+      "metadataSha256": "44136fa355b3678a1146ad16f7e8649e94fb4fc21fe77e8310c060f61caaff8a"
+    },
+    {
+      "path": "ambient/stone_well.png",
+      "size": [
+        1024,
+        1024
+      ],
+      "sourceSha256": "0e88e56d0976a4180de249ce4278b297792c7ffa6f6d04dd599a33737d07a746",
+      "rgbSha256": "6fbe0bae89752d15284deb3af91291917e8f374a170db93765c3b4aa70512397",
+      "policy": {
+        "action": "preserve",
+        "reason": "Existing authored alpha and antialiased/glowing edges are already present."
+      },
+      "resultSha256": "0e88e56d0976a4180de249ce4278b297792c7ffa6f6d04dd599a33737d07a746",
+      "metadataSha256": "44136fa355b3678a1146ad16f7e8649e94fb4fc21fe77e8310c060f61caaff8a"
+    },
+    {
+      "path": "ambient/street_lantern.png",
+      "size": [
+        1024,
+        1024
+      ],
+      "sourceSha256": "0c2cea0b6cd06d217ffd3eb20fedd1adf83a34f712792975cea6030f53d2a6e1",
+      "rgbSha256": "2d1745307f0bcfbef0974fe7567ee618e03347cc6b2d70f8e76f77df7563d06c",
+      "policy": {
+        "action": "preserve",
+        "reason": "Existing authored alpha and antialiased/glowing edges are already present."
+      },
+      "resultSha256": "0c2cea0b6cd06d217ffd3eb20fedd1adf83a34f712792975cea6030f53d2a6e1",
+      "metadataSha256": "44136fa355b3678a1146ad16f7e8649e94fb4fc21fe77e8310c060f61caaff8a"
+    },
+    {
+      "path": "ambient/supply_pile.png",
+      "size": [
+        1024,
+        1024
+      ],
+      "sourceSha256": "2e924548b8e695448302c8d395a69a75617917adcfd2f7dba2ead7138778a0ad",
+      "rgbSha256": "36c7b52c653f62f58811a234e5dba8f02ecbc3e115309c9f9b22dc1ca74a1c64",
+      "policy": {
+        "action": "preserve",
+        "reason": "Existing authored alpha and antialiased/glowing edges are already present."
+      },
+      "resultSha256": "2e924548b8e695448302c8d395a69a75617917adcfd2f7dba2ead7138778a0ad",
+      "metadataSha256": "44136fa355b3678a1146ad16f7e8649e94fb4fc21fe77e8310c060f61caaff8a"
+    },
+    {
+      "path": "ambient/wooden_bench.png",
+      "size": [
+        1024,
+        1024
+      ],
+      "sourceSha256": "5216bb14a37a7b1872f2e23130716729460293e7494b34ccaf60e597723af372",
+      "rgbSha256": "a5ba7a36edd3f8c818285d9e56f893608899a0d95a1b080f60a9a56e1ea1ac0c",
+      "policy": {
+        "action": "preserve",
+        "reason": "Existing authored alpha and antialiased/glowing edges are already present."
+      },
+      "resultSha256": "5216bb14a37a7b1872f2e23130716729460293e7494b34ccaf60e597723af372",
+      "metadataSha256": "44136fa355b3678a1146ad16f7e8649e94fb4fc21fe77e8310c060f61caaff8a"
+    },
+    {
+      "path": "arrows/left.png",
+      "size": [
+        1024,
+        1024
+      ],
+      "sourceSha256": "20544218cba485d5de47575d80cb369ae7511a547f0f660104445e24e42f5ee2",
+      "rgbSha256": "9f6466057da2d0c08c0c71b23cb2ae3f21c26a134451197441c5bfd29d2f7140",
+      "policy": {
+        "action": "preserve",
+        "reason": "Existing authored alpha and antialiased/glowing edges are already present."
+      },
+      "resultSha256": "20544218cba485d5de47575d80cb369ae7511a547f0f660104445e24e42f5ee2",
+      "metadataSha256": "44136fa355b3678a1146ad16f7e8649e94fb4fc21fe77e8310c060f61caaff8a"
+    },
+    {
+      "path": "arrows/right.png",
+      "size": [
+        1024,
+        1024
+      ],
+      "sourceSha256": "39884345d786da8b3cdedde186c7b6c95009193f6fb04b6fdcf1fbc800b9cde0",
+      "rgbSha256": "63eccd15860b1541a83906e97c22742b18582bd0a3322715732cc1cf9fb85351",
+      "policy": {
+        "action": "preserve",
+        "reason": "Existing authored alpha and antialiased/glowing edges are already present."
+      },
+      "resultSha256": "39884345d786da8b3cdedde186c7b6c95009193f6fb04b6fdcf1fbc800b9cde0",
+      "metadataSha256": "7a99c31ac01074c9963c14d029715b3220a0f589c4837c7dd42143820ecf7a50"
+    },
+    {
+      "path": "buildings/catacombs.png",
+      "size": [
+        1024,
+        1024
+      ],
+      "sourceSha256": "9a10943378ebcdab63c31a3e8125eea8a3dece237dc1470831a71a41ec309d39",
+      "rgbSha256": "417107839a00b1ab2185c8d8f2f2cd4ea06e41f58c39da4d3b14739cff567290",
+      "policy": {
+        "action": "preserve",
+        "reason": "Existing authored alpha and antialiased/glowing edges are already present."
+      },
+      "resultSha256": "9a10943378ebcdab63c31a3e8125eea8a3dece237dc1470831a71a41ec309d39",
+      "metadataSha256": "44136fa355b3678a1146ad16f7e8649e94fb4fc21fe77e8310c060f61caaff8a"
+    },
+    {
+      "path": "buildings/cave.png",
+      "size": [
+        1024,
+        1024
+      ],
+      "sourceSha256": "39e97f33e5729b2c22fabc83c98b377f0ee80b176a6baa22b04407ce59896484",
+      "rgbSha256": "c91aa29e108842452855fcd684c9d4aac44431497b135bd562e2b7bc0f73d513",
+      "policy": {
+        "action": "preserve",
+        "reason": "Existing authored alpha and antialiased/glowing edges are already present."
+      },
+      "resultSha256": "39e97f33e5729b2c22fabc83c98b377f0ee80b176a6baa22b04407ce59896484",
+      "metadataSha256": "44136fa355b3678a1146ad16f7e8649e94fb4fc21fe77e8310c060f61caaff8a"
+    },
+    {
+      "path": "buildings/chapel.png",
+      "size": [
+        1024,
+        1024
+      ],
+      "sourceSha256": "0ee750ceaca87895192ce9472f90d6c8b8e270f6638ba3e55631814b3823516c",
+      "rgbSha256": "d5f1190242ce26f832a137541942cff4d8ea17e892aadf4bbf0943a808dc17e5",
+      "policy": {
+        "action": "preserve",
+        "reason": "Existing authored alpha and antialiased/glowing edges are already present."
+      },
+      "resultSha256": "0ee750ceaca87895192ce9472f90d6c8b8e270f6638ba3e55631814b3823516c",
+      "metadataSha256": "44136fa355b3678a1146ad16f7e8649e94fb4fc21fe77e8310c060f61caaff8a"
+    },
+    {
+      "path": "buildings/dungeon.png",
+      "size": [
+        1024,
+        1024
+      ],
+      "sourceSha256": "a54d97ee18c22ad58c943c45893ab880f4a45231afdeddb4bebe9af7e0c0c90c",
+      "rgbSha256": "9cf83ae24bd9388e3c886b65e001263ff04bc66091a1598865d138272596b06b",
+      "policy": {
+        "action": "mask",
+        "reason": "Foreground sprite on a removable border backdrop.",
+        "background": [
+          0,
+          0,
+          0
+        ],
+        "tolerance": 3,
+        "feather": 1,
+        "opening": 16,
+        "protect": [
+          [
+            310,
+            330,
+            710,
+            870
+          ]
+        ]
+      },
+      "resultSha256": "57461ff69097ada535d154a1ff9ab168ef85f2e7a4e80334d28c673256b8495e",
+      "sourceBytes": 541998,
+      "resultBytes": 547015,
+      "transparentPixels": 426055,
+      "partialPixels": 0,
+      "metadataSha256": "44136fa355b3678a1146ad16f7e8649e94fb4fc21fe77e8310c060f61caaff8a",
+      "rgbaSha256": "99f87d8bc123da7e4b1520c42a75ea92b01b996a161066e9e5404570a4e874d6"
+    },
+    {
+      "path": "buildings/groundhole.png",
+      "size": [
+        1024,
+        1024
+      ],
+      "sourceSha256": "a2dfe38af99b2ca94b15b27eaf04aecdd4a15781dc4602eab922c063f7c387b7",
+      "rgbSha256": "4e977ce482991f94260f61448efa4af458b38cbf7367929ed3cd80c6d081cc0e",
+      "policy": {
+        "action": "preserve",
+        "reason": "Existing authored alpha and antialiased/glowing edges are already present."
+      },
+      "resultSha256": "a2dfe38af99b2ca94b15b27eaf04aecdd4a15781dc4602eab922c063f7c387b7",
+      "metadataSha256": "44136fa355b3678a1146ad16f7e8649e94fb4fc21fe77e8310c060f61caaff8a"
+    },
+    {
+      "path": "buildings/market.png",
+      "size": [
+        1024,
+        1024
+      ],
+      "sourceSha256": "3969f58738f921e7b25171e799f6524b8c2fbed9515d70b342a5361dc78ab7a7",
+      "rgbSha256": "554985a99717e8c26f8d3d00be40e9df4d37551cfdee896f326adecdeb57c644",
+      "policy": {
+        "action": "preserve",
+        "reason": "Existing authored alpha and antialiased/glowing edges are already present."
+      },
+      "resultSha256": "3969f58738f921e7b25171e799f6524b8c2fbed9515d70b342a5361dc78ab7a7",
+      "metadataSha256": "44136fa355b3678a1146ad16f7e8649e94fb4fc21fe77e8310c060f61caaff8a"
+    },
+    {
+      "path": "buildings/stairs_down.png",
+      "size": [
+        1024,
+        1024
+      ],
+      "sourceSha256": "983c352024ab75bfbc6cc9b13a484c291a44c082a9f5f0c6c96480509cbe2263",
+      "rgbSha256": "148fc7ad5d73513d44d95442640e73a655254cff112bd45ffd737671bc42bcb5",
+      "policy": {
+        "action": "preserve",
+        "reason": "Existing authored alpha and antialiased/glowing edges are already present."
+      },
+      "resultSha256": "983c352024ab75bfbc6cc9b13a484c291a44c082a9f5f0c6c96480509cbe2263",
+      "metadataSha256": "44136fa355b3678a1146ad16f7e8649e94fb4fc21fe77e8310c060f61caaff8a"
+    },
+    {
+      "path": "buildings/stairs_up.png",
+      "size": [
+        1024,
+        1024
+      ],
+      "sourceSha256": "9803d9887b4643e6a46c00d98b62d8f300493792ed12cdce0a11b08133d44e9a",
+      "rgbSha256": "da988b43f02e0e5718fe31dac2124489db9e303205945723bfe53c49af6c3658",
+      "policy": {
+        "action": "preserve",
+        "reason": "Existing authored alpha and antialiased/glowing edges are already present."
+      },
+      "resultSha256": "9803d9887b4643e6a46c00d98b62d8f300493792ed12cdce0a11b08133d44e9a",
+      "metadataSha256": "44136fa355b3678a1146ad16f7e8649e94fb4fc21fe77e8310c060f61caaff8a"
+    },
+    {
+      "path": "buildings/tavern.png",
+      "size": [
+        1024,
+        1024
+      ],
+      "sourceSha256": "812b28cea9334c1796b3e230d98f6bf0c81cd6f54e8004b3177bdd62f65a0790",
+      "rgbSha256": "e40b8f4b4db1b62dc67113b5dd25e9f8d797c5217a9936ea9c0f95fb70028175",
+      "policy": {
+        "action": "preserve",
+        "reason": "Existing authored alpha and antialiased/glowing edges are already present."
+      },
+      "resultSha256": "812b28cea9334c1796b3e230d98f6bf0c81cd6f54e8004b3177bdd62f65a0790",
+      "metadataSha256": "44136fa355b3678a1146ad16f7e8649e94fb4fc21fe77e8310c060f61caaff8a"
+    },
+    {
+      "path": "buildings/teleporter.png",
+      "size": [
+        1024,
+        1024
+      ],
+      "sourceSha256": "1ab8edbecf95cd3e4fdb1a4b80b3d7185d170da1f31f4f0242e78bfd3cd860ec",
+      "rgbSha256": "118e7876be95078fb7d5f0240276e0765895c9361203c6ca03452ad2b248782f",
+      "policy": {
+        "action": "preserve",
+        "reason": "Existing authored alpha and antialiased/glowing edges are already present."
+      },
+      "resultSha256": "1ab8edbecf95cd3e4fdb1a4b80b3d7185d170da1f31f4f0242e78bfd3cd860ec",
+      "metadataSha256": "44136fa355b3678a1146ad16f7e8649e94fb4fc21fe77e8310c060f61caaff8a"
+    },
+    {
+      "path": "buildings/town_hall.png",
+      "size": [
+        1024,
+        1024
+      ],
+      "sourceSha256": "934b7d24c8e620585c6a7a5553fb13642a90097ed8aea5b9942d2607f8579411",
+      "rgbSha256": "a3bb1af3530ad740b2e528c87290ddba0a825e1727a6ecbc5892c3b88b5ab739",
+      "policy": {
+        "action": "mask",
+        "reason": "Foreground sprite on a removable border backdrop.",
+        "background": [
+          255,
+          255,
+          255
+        ],
+        "tolerance": 24,
+        "feather": 12
+      },
+      "resultSha256": "a608f69e9a76dbb1befebd2fb95bcccfc974c678607c9302de20337c0fa5c5fc",
+      "sourceBytes": 1245817,
+      "resultBytes": 1269564,
+      "transparentPixels": 373958,
+      "partialPixels": 84,
+      "metadataSha256": "44136fa355b3678a1146ad16f7e8649e94fb4fc21fe77e8310c060f61caaff8a",
+      "rgbaSha256": "a28e579cd3457f0d9d8b738371355dc0150cdecc53b1b36e54f4c25bd11f7556"
+    },
+    {
+      "path": "button_off.png",
+      "size": [
+        594,
+        146
+      ],
+      "sourceSha256": "ae58363142589e497ac6ef847d44cadf106753d90c20ecd0aa9c2030b46a8773",
+      "rgbSha256": "d261f610927d8775f97f79f6981d0211e96384f2bd83158b95c14274d9f3c059",
+      "policy": {
+        "action": "preserve",
+        "reason": "Painted terrain, UI surface or framed icon; its background belongs to the artwork."
+      },
+      "resultSha256": "ae58363142589e497ac6ef847d44cadf106753d90c20ecd0aa9c2030b46a8773",
+      "metadataSha256": "44136fa355b3678a1146ad16f7e8649e94fb4fc21fe77e8310c060f61caaff8a"
+    },
+    {
+      "path": "button_on.png",
+      "size": [
+        594,
+        146
+      ],
+      "sourceSha256": "031d0bcde116fa9632cc20a1762cdddd0e58deba50825191e44c47697cd31bbc",
+      "rgbSha256": "9af899d69a9b2e4869d2fa0b2cae91b0b7fc0e625dfcb6179ac03367fee67042",
+      "policy": {
+        "action": "preserve",
+        "reason": "Painted terrain, UI surface or framed icon; its background belongs to the artwork."
+      },
+      "resultSha256": "031d0bcde116fa9632cc20a1762cdddd0e58deba50825191e44c47697cd31bbc",
+      "metadataSha256": "44136fa355b3678a1146ad16f7e8649e94fb4fc21fe77e8310c060f61caaff8a"
+    },
+    {
+      "path": "castle/angel.png",
+      "size": [
+        1254,
+        1254
+      ],
+      "sourceSha256": "7d645e9517df8c164bee2ea46fbbdbf74574b9f182b5526571dba17b06b2d33b",
+      "rgbSha256": "8abd085b4508d52b9d9f7da8be21290d534a9a7ce2b5386aa6fdd1043edba3bf",
+      "policy": {
+        "action": "preserve",
+        "reason": "Existing authored alpha and antialiased/glowing edges are already present."
+      },
+      "resultSha256": "7d645e9517df8c164bee2ea46fbbdbf74574b9f182b5526571dba17b06b2d33b",
+      "metadataSha256": "44136fa355b3678a1146ad16f7e8649e94fb4fc21fe77e8310c060f61caaff8a"
+    },
+    {
+      "path": "castle/castleTown.png",
+      "size": [
+        1254,
+        1254
+      ],
+      "sourceSha256": "0ff401a60d01508823fb1f139774768b7215475bdd8f50233e1ac2658b9b5cd6",
+      "rgbSha256": "48bf9b6f1e0b4c9eed7b307787b2d1fcb761ad7080642875b613cc88650dbaeb",
+      "policy": {
+        "action": "preserve",
+        "reason": "Existing authored alpha and antialiased/glowing edges are already present."
+      },
+      "resultSha256": "0ff401a60d01508823fb1f139774768b7215475bdd8f50233e1ac2658b9b5cd6",
+      "metadataSha256": "44136fa355b3678a1146ad16f7e8649e94fb4fc21fe77e8310c060f61caaff8a"
+    },
+    {
+      "path": "castle/catherine.png",
+      "size": [
+        1254,
+        1254
+      ],
+      "sourceSha256": "38615223370fc297b98e81c7f6c1c9647659da2618dd5b15b3b3bc761883f5d1",
+      "rgbSha256": "c3c5684346daacc9304b278f53a239f051f5f82b9c8fb84149c8361bbc589285",
+      "policy": {
+        "action": "preserve",
+        "reason": "Existing authored alpha and antialiased/glowing edges are already present."
+      },
+      "resultSha256": "38615223370fc297b98e81c7f6c1c9647659da2618dd5b15b3b3bc761883f5d1",
+      "metadataSha256": "44136fa355b3678a1146ad16f7e8649e94fb4fc21fe77e8310c060f61caaff8a"
+    },
+    {
+      "path": "castle/cavalier.png",
+      "size": [
+        1254,
+        1254
+      ],
+      "sourceSha256": "9caf228dc201fded57faec749ed0b3c3ecbb3d6f6a6413a2962091a7de3ac41f",
+      "rgbSha256": "c429331c4040f7c6c728dc04d6a9e510232f237bd2d5e707a2e0265977e1d623",
+      "policy": {
+        "action": "preserve",
+        "reason": "Existing authored alpha and antialiased/glowing edges are already present."
+      },
+      "resultSha256": "9caf228dc201fded57faec749ed0b3c3ecbb3d6f6a6413a2962091a7de3ac41f",
+      "metadataSha256": "44136fa355b3678a1146ad16f7e8649e94fb4fc21fe77e8310c060f61caaff8a"
+    },
+    {
+      "path": "castle/christian.png",
+      "size": [
+        1254,
+        1254
+      ],
+      "sourceSha256": "7548cc492d58864898706346c0e392deeab1d1821aceb5764a4a543dfec2b5a7",
+      "rgbSha256": "da9070b29f5d09b5219d241997d6402a3c4e6e8c2c3c8f44ba1f75f366a9f9ee",
+      "policy": {
+        "action": "preserve",
+        "reason": "Existing authored alpha and antialiased/glowing edges are already present."
+      },
+      "resultSha256": "7548cc492d58864898706346c0e392deeab1d1821aceb5764a4a543dfec2b5a7",
+      "metadataSha256": "44136fa355b3678a1146ad16f7e8649e94fb4fc21fe77e8310c060f61caaff8a"
+    },
+    {
+      "path": "castle/demon.png",
+      "size": [
+        1254,
+        1254
+      ],
+      "sourceSha256": "cdc8d868c998d90e2795d608e0a482ee4acfe81d985760369ff429e11522105c",
+      "rgbSha256": "49b616f4ea973cd4748975e74dc35bda7af546e5ff50b6866d8b841c14bef9ef",
+      "policy": {
+        "action": "preserve",
+        "reason": "Existing authored alpha and antialiased/glowing edges are already present."
+      },
+      "resultSha256": "cdc8d868c998d90e2795d608e0a482ee4acfe81d985760369ff429e11522105c",
+      "metadataSha256": "44136fa355b3678a1146ad16f7e8649e94fb4fc21fe77e8310c060f61caaff8a"
+    },
+    {
+      "path": "castle/devil.png",
+      "size": [
+        1254,
+        1254
+      ],
+      "sourceSha256": "d634a93cc46a48eb174d5283f70b0be9b6e78ea04150376b317a92c471b1010d",
+      "rgbSha256": "27ec4a54757b82860f2d19d8cb297a9fb68c0450daa4aeb62db17f1d41b5fd84",
+      "policy": {
+        "action": "preserve",
+        "reason": "Existing authored alpha and antialiased/glowing edges are already present."
+      },
+      "resultSha256": "d634a93cc46a48eb174d5283f70b0be9b6e78ea04150376b317a92c471b1010d",
+      "metadataSha256": "44136fa355b3678a1146ad16f7e8649e94fb4fc21fe77e8310c060f61caaff8a"
+    },
+    {
+      "path": "castle/griffin.png",
+      "size": [
+        1254,
+        1254
+      ],
+      "sourceSha256": "f09ca9ea44509fd2e1bb064e491d4bd80e2dff2473bb7728abdaa9c559ef1e66",
+      "rgbSha256": "d09049fcc3654e79523bf94cd65c0b69a9a8962f85ee57841df572c8a6896f86",
+      "policy": {
+        "action": "preserve",
+        "reason": "Existing authored alpha and antialiased/glowing edges are already present."
+      },
+      "resultSha256": "f09ca9ea44509fd2e1bb064e491d4bd80e2dff2473bb7728abdaa9c559ef1e66",
+      "metadataSha256": "44136fa355b3678a1146ad16f7e8649e94fb4fc21fe77e8310c060f61caaff8a"
+    },
+    {
+      "path": "castle/griffinTower.png",
+      "size": [
+        1254,
+        1254
+      ],
+      "sourceSha256": "8a746df75956d14e12db4660bd01664cb3936817892763792a18669e147b19f8",
+      "rgbSha256": "434cda4d5d82fdaac80da16a4d64c50ba75afb20a692b5b87b0991a42b62f36d",
+      "policy": {
+        "action": "preserve",
+        "reason": "Existing authored alpha and antialiased/glowing edges are already present."
+      },
+      "resultSha256": "8a746df75956d14e12db4660bd01664cb3936817892763792a18669e147b19f8",
+      "metadataSha256": "44136fa355b3678a1146ad16f7e8649e94fb4fc21fe77e8310c060f61caaff8a"
+    },
+    {
+      "path": "castle/liberatedBanner.png",
+      "size": [
+        1254,
+        1254
+      ],
+      "sourceSha256": "1324971a9c61283b8cd10713ebd49886f008ab3eca75402c380c891a5b2e53cb",
+      "rgbSha256": "4ce1a5a361da2ed7309284481b65139486ebe86bd3c9c60a32fe2e49f6659292",
+      "policy": {
+        "action": "preserve",
+        "reason": "Existing authored alpha and antialiased/glowing edges are already present."
+      },
+      "resultSha256": "1324971a9c61283b8cd10713ebd49886f008ab3eca75402c380c891a5b2e53cb",
+      "metadataSha256": "44136fa355b3678a1146ad16f7e8649e94fb4fc21fe77e8310c060f61caaff8a"
+    },
+    {
+      "path": "castle/marksman.png",
+      "size": [
+        1254,
+        1254
+      ],
+      "sourceSha256": "a1bbd0d4d088e5ad7e61bdb2e60ecd95568fd80ffe63957db4150c7bb321d478",
+      "rgbSha256": "af326beff2e97188f57ae3cfc8eaf9027e7aec419675ac7588727a99fd1c0f26",
+      "policy": {
+        "action": "preserve",
+        "reason": "Existing authored alpha and antialiased/glowing edges are already present."
+      },
+      "resultSha256": "a1bbd0d4d088e5ad7e61bdb2e60ecd95568fd80ffe63957db4150c7bb321d478",
+      "metadataSha256": "44136fa355b3678a1146ad16f7e8649e94fb4fc21fe77e8310c060f61caaff8a"
+    },
+    {
+      "path": "castle/minotaur.png",
+      "size": [
+        1254,
+        1254
+      ],
+      "sourceSha256": "febfa5c45e5ac1ecace28a111e335edd2c7f76fe7319102130e0eafc3ac1518a",
+      "rgbSha256": "f4a475be3e61e00a6d9a553752c8df153c110253a9f742dcab484693081cdebe",
+      "policy": {
+        "action": "preserve",
+        "reason": "Existing authored alpha and antialiased/glowing edges are already present."
+      },
+      "resultSha256": "febfa5c45e5ac1ecace28a111e335edd2c7f76fe7319102130e0eafc3ac1518a",
+      "metadataSha256": "44136fa355b3678a1146ad16f7e8649e94fb4fc21fe77e8310c060f61caaff8a"
+    },
+    {
+      "path": "castle/monk.png",
+      "size": [
+        1254,
+        1254
+      ],
+      "sourceSha256": "cc13edf6b04adc0a3b5713506cc78ea34320a4b3901facc6a36da2a2297f11d8",
+      "rgbSha256": "d7e61580f5c3ae122737674ea611a85c30a782d63f12ed76edc5561466f32de5",
+      "policy": {
+        "action": "preserve",
+        "reason": "Existing authored alpha and antialiased/glowing edges are already present."
+      },
+      "resultSha256": "cc13edf6b04adc0a3b5713506cc78ea34320a4b3901facc6a36da2a2297f11d8",
+      "metadataSha256": "44136fa355b3678a1146ad16f7e8649e94fb4fc21fe77e8310c060f61caaff8a"
+    },
+    {
+      "path": "castle/occupiedBanner.png",
+      "size": [
+        1254,
+        1254
+      ],
+      "sourceSha256": "a9c2bab46ecf0675bbbc51ba93fcf993679a65a6fe144898fc5d45029716c474",
+      "rgbSha256": "eed8967c5193ec2a44f2bbe17c64ce3a16f9d7ef59e2e0529e0b2c17814e8f93",
+      "policy": {
+        "action": "preserve",
+        "reason": "Existing authored alpha and antialiased/glowing edges are already present."
+      },
+      "resultSha256": "a9c2bab46ecf0675bbbc51ba93fcf993679a65a6fe144898fc5d45029716c474",
+      "metadataSha256": "44136fa355b3678a1146ad16f7e8649e94fb4fc21fe77e8310c060f61caaff8a"
+    },
+    {
+      "path": "castle/pikeman.png",
+      "size": [
+        1254,
+        1254
+      ],
+      "sourceSha256": "c12aac8b0c588276d68382cca449f6094a82853a47d4fb812c3d19553b68a796",
+      "rgbSha256": "6045d63a1a1e10bbef92161f61c84c52ab0c05d2931c084e29fbe0c703c78213",
+      "policy": {
+        "action": "preserve",
+        "reason": "Existing authored alpha and antialiased/glowing edges are already present."
+      },
+      "resultSha256": "c12aac8b0c588276d68382cca449f6094a82853a47d4fb812c3d19553b68a796",
+      "metadataSha256": "44136fa355b3678a1146ad16f7e8649e94fb4fc21fe77e8310c060f61caaff8a"
+    },
+    {
+      "path": "castle/swordsman.png",
+      "size": [
+        1254,
+        1254
+      ],
+      "sourceSha256": "030abd478505a747d698fe8095a62719ad74db84177f10e3887dda28bb96e9ee",
+      "rgbSha256": "7666d8f44ebf2d0122d1897a4bc4017f5cb89765934384dafbbdebe5ed489aab",
+      "policy": {
+        "action": "preserve",
+        "reason": "Existing authored alpha and antialiased/glowing edges are already present."
+      },
+      "resultSha256": "030abd478505a747d698fe8095a62719ad74db84177f10e3887dda28bb96e9ee",
+      "metadataSha256": "44136fa355b3678a1146ad16f7e8649e94fb4fc21fe77e8310c060f61caaff8a"
+    },
+    {
+      "path": "castle/troglodyte.png",
+      "size": [
+        1254,
+        1254
+      ],
+      "sourceSha256": "4d1cba4763f3ec1f1934d44e2d310cd98aabfeeee7de43593c3432249635826e",
+      "rgbSha256": "88a7af5e58f24e53956f56e065d1b6dacf54e5fd9c5e414cadb8846d7d9557a3",
+      "policy": {
+        "action": "preserve",
+        "reason": "Existing authored alpha and antialiased/glowing edges are already present."
+      },
+      "resultSha256": "4d1cba4763f3ec1f1934d44e2d310cd98aabfeeee7de43593c3432249635826e",
+      "metadataSha256": "44136fa355b3678a1146ad16f7e8649e94fb4fc21fe77e8310c060f61caaff8a"
+    },
+    {
+      "path": "footprint.png",
+      "size": [
+        64,
+        64
+      ],
+      "sourceSha256": "282c731fd598092f335a94027343f13c8242c11fdaec764e791d85522a030ca9",
+      "rgbSha256": "f3cc103136423a57975750907ebc1d367e2985ac6338976d4d5a439f50323f4a",
+      "policy": {
+        "action": "preserve",
+        "reason": "Existing authored alpha and antialiased/glowing edges are already present."
+      },
+      "resultSha256": "282c731fd598092f335a94027343f13c8242c11fdaec764e791d85522a030ca9",
+      "metadataSha256": "505409b9dca3c156ac44ea64f0831e65d1c7291af85cae8c0cf51f2b47048ce4"
+    },
+    {
+      "path": "interactions/abyssalshadows.png",
+      "size": [
+        64,
+        64
+      ],
+      "sourceSha256": "07cb42c9b283fd4c04a1486e3dc207bf631fef02dd774ae6e29bb8950bd02398",
+      "rgbSha256": "676d50e74fb1fbe3cb6498561b8ad94b6a23777247e893f028e80e63e956b25d",
+      "policy": {
+        "action": "preserve",
+        "reason": "Painted terrain, UI surface or framed icon; its background belongs to the artwork."
+      },
+      "resultSha256": "07cb42c9b283fd4c04a1486e3dc207bf631fef02dd774ae6e29bb8950bd02398",
+      "metadataSha256": "df80efb9353f46052928e64199b83b9814132ab0ccf1a6128724ec589b34425f"
+    },
+    {
+      "path": "interactions/armorofendlesswinter.png",
+      "size": [
+        64,
+        64
+      ],
+      "sourceSha256": "a3ef4298d68e1a3f3e02010362fba3c1a1fc34808930c816ccead4eb2378df8d",
+      "rgbSha256": "b43c11c9467fc36785df98f34bd4eac635933e66b7c9c4e09563d63ac32f1c29",
+      "policy": {
+        "action": "preserve",
+        "reason": "Painted terrain, UI surface or framed icon; its background belongs to the artwork."
+      },
+      "resultSha256": "a3ef4298d68e1a3f3e02010362fba3c1a1fc34808930c816ccead4eb2378df8d",
+      "metadataSha256": "df80efb9353f46052928e64199b83b9814132ab0ccf1a6128724ec589b34425f"
+    },
+    {
+      "path": "interactions/attack.png",
+      "size": [
+        64,
+        64
+      ],
+      "sourceSha256": "43ab0a5cd12951a3be7ecf547b9d154acf6da949763a24018dbbe7f156579b91",
+      "rgbSha256": "3d0e394043af663b146e15a3aafcf39e6dbe96e88afcb04364dca88e2f92c1ea",
+      "policy": {
+        "action": "preserve",
+        "reason": "Painted terrain, UI surface or framed icon; its background belongs to the artwork."
+      },
+      "resultSha256": "43ab0a5cd12951a3be7ecf547b9d154acf6da949763a24018dbbe7f156579b91",
+      "metadataSha256": "df80efb9353f46052928e64199b83b9814132ab0ccf1a6128724ec589b34425f"
+    },
+    {
+      "path": "interactions/backstab.png",
+      "size": [
+        64,
+        64
+      ],
+      "sourceSha256": "c89a43bb6def8d290e2147abbb40374c5133d52c9f46f3843e2b4ca913ab3663",
+      "rgbSha256": "b3cf3b9869897e9ed5ed382fd70cf56360b975d2c91e389b7d83bf5301d1aa9f",
+      "policy": {
+        "action": "preserve",
+        "reason": "Painted terrain, UI surface or framed icon; its background belongs to the artwork."
+      },
+      "resultSha256": "c89a43bb6def8d290e2147abbb40374c5133d52c9f46f3843e2b4ca913ab3663",
+      "metadataSha256": "df80efb9353f46052928e64199b83b9814132ab0ccf1a6128724ec589b34425f"
+    },
+    {
+      "path": "interactions/barrier.png",
+      "size": [
+        64,
+        64
+      ],
+      "sourceSha256": "790132a8aef56777672ea70d2cde861d92a9c6bdca3ddd6b20e38df45945535e",
+      "rgbSha256": "e3aa1ed87ef71aadf4ccb7bb449967223fb5486f683e4dfaee3e094c3bc59817",
+      "policy": {
+        "action": "preserve",
+        "reason": "Painted terrain, UI surface or framed icon; its background belongs to the artwork."
+      },
+      "resultSha256": "790132a8aef56777672ea70d2cde861d92a9c6bdca3ddd6b20e38df45945535e",
+      "metadataSha256": "df80efb9353f46052928e64199b83b9814132ab0ccf1a6128724ec589b34425f"
+    },
+    {
+      "path": "interactions/bloodlash.png",
+      "size": [
+        64,
+        64
+      ],
+      "sourceSha256": "853187c73a72f7250c1374c2817d5dbcadae099b9cbf0a5df327285ad6a66d1b",
+      "rgbSha256": "447fd76b23e4ec1052a80e262b98d7560b9f582d34b5c225d301ed0cdf16dbff",
+      "policy": {
+        "action": "preserve",
+        "reason": "Painted terrain, UI surface or framed icon; its background belongs to the artwork."
+      },
+      "resultSha256": "853187c73a72f7250c1374c2817d5dbcadae099b9cbf0a5df327285ad6a66d1b",
+      "metadataSha256": "df80efb9353f46052928e64199b83b9814132ab0ccf1a6128724ec589b34425f"
+    },
+    {
+      "path": "interactions/bloodthirst.png",
+      "size": [
+        64,
+        64
+      ],
+      "sourceSha256": "dffa9919ce78ea9c630049f9f5aae6db025814c7a6f5fec8d28b20d66b7ea52c",
+      "rgbSha256": "1bdf43f5ceaf1bbeeea3cacc94f81b813f61a77900c1eed18ad126b5da920e59",
+      "policy": {
+        "action": "preserve",
+        "reason": "Painted terrain, UI surface or framed icon; its background belongs to the artwork."
+      },
+      "resultSha256": "dffa9919ce78ea9c630049f9f5aae6db025814c7a6f5fec8d28b20d66b7ea52c",
+      "metadataSha256": "df80efb9353f46052928e64199b83b9814132ab0ccf1a6128724ec589b34425f"
+    },
+    {
+      "path": "interactions/chaosblast.png",
+      "size": [
+        64,
+        64
+      ],
+      "sourceSha256": "255c6409d532ed1ca2539d6d8340680b3a223c7199a0a1ff0cdfd5ff20d4ed8a",
+      "rgbSha256": "9748328a935424c5d7f2276c621a3e6c42830bbfd61d68c18084472c64cf554d",
+      "policy": {
+        "action": "preserve",
+        "reason": "Painted terrain, UI surface or framed icon; its background belongs to the artwork."
+      },
+      "resultSha256": "255c6409d532ed1ca2539d6d8340680b3a223c7199a0a1ff0cdfd5ff20d4ed8a",
+      "metadataSha256": "df80efb9353f46052928e64199b83b9814132ab0ccf1a6128724ec589b34425f"
+    },
+    {
+      "path": "interactions/chloroform.png",
+      "size": [
+        64,
+        64
+      ],
+      "sourceSha256": "4246708ff5abd3f1e71af3157b331e42785fdde83ec757ec3411faf7eb6b5735",
+      "rgbSha256": "42c2285b382864377042f613efb0f4c6c9a56c018ad8659ffa1f8271ebfc5560",
+      "policy": {
+        "action": "preserve",
+        "reason": "Painted terrain, UI surface or framed icon; its background belongs to the artwork."
+      },
+      "resultSha256": "4246708ff5abd3f1e71af3157b331e42785fdde83ec757ec3411faf7eb6b5735",
+      "metadataSha256": "77fc6b5916ec29250ad6e3940c277a2b7c7a49af744e6fa3d09afebf562d7c5f"
+    },
+    {
+      "path": "interactions/deathstrike.png",
+      "size": [
+        64,
+        64
+      ],
+      "sourceSha256": "c0b87a24c16574cd27b5239d0b443c050440085d3978ba748e4809c4f48fcaf0",
+      "rgbSha256": "20225c575b61e953ddd4207a4ca199a6acea250382cad575a72b1093610f00c4",
+      "policy": {
+        "action": "preserve",
+        "reason": "Painted terrain, UI surface or framed icon; its background belongs to the artwork."
+      },
+      "resultSha256": "c0b87a24c16574cd27b5239d0b443c050440085d3978ba748e4809c4f48fcaf0",
+      "metadataSha256": "df80efb9353f46052928e64199b83b9814132ab0ccf1a6128724ec589b34425f"
+    },
+    {
+      "path": "interactions/devour.png",
+      "size": [
+        64,
+        64
+      ],
+      "sourceSha256": "8c85a01931f710885837616bae6891f3f98eea25707f595178752605f791ad00",
+      "rgbSha256": "f41c96e331b94d0ab51e1bc96f5c253495d9a9c9d6ea610b31b298a6c3b3d6de",
+      "policy": {
+        "action": "preserve",
+        "reason": "Painted terrain, UI surface or framed icon; its background belongs to the artwork."
+      },
+      "resultSha256": "8c85a01931f710885837616bae6891f3f98eea25707f595178752605f791ad00",
+      "metadataSha256": "df80efb9353f46052928e64199b83b9814132ab0ccf1a6128724ec589b34425f"
+    },
+    {
+      "path": "interactions/doubleattack.png",
+      "size": [
+        64,
+        64
+      ],
+      "sourceSha256": "c62e498185044edc2f35b9e4025800bc8f99b9af8fe5c899947955008e28500b",
+      "rgbSha256": "e15c0462f231b5eb9bcbe1a35d1cc0891da202278dd4a4c3a7bf6e97902681c1",
+      "policy": {
+        "action": "preserve",
+        "reason": "Painted terrain, UI surface or framed icon; its background belongs to the artwork."
+      },
+      "resultSha256": "c62e498185044edc2f35b9e4025800bc8f99b9af8fe5c899947955008e28500b",
+      "metadataSha256": "df80efb9353f46052928e64199b83b9814132ab0ccf1a6128724ec589b34425f"
+    },
+    {
+      "path": "interactions/endlesspain.png",
+      "size": [
+        64,
+        64
+      ],
+      "sourceSha256": "f893283c0a7253076f8becd9b3ca496959bed2d7a8c113407e1112ea6b5500da",
+      "rgbSha256": "aec091b9bb9ab24d30abf0264a961af53ba912fc9aeabb9ce9152fb2110858fe",
+      "policy": {
+        "action": "preserve",
+        "reason": "Painted terrain, UI surface or framed icon; its background belongs to the artwork."
+      },
+      "resultSha256": "f893283c0a7253076f8becd9b3ca496959bed2d7a8c113407e1112ea6b5500da",
+      "metadataSha256": "df80efb9353f46052928e64199b83b9814132ab0ccf1a6128724ec589b34425f"
+    },
+    {
+      "path": "interactions/frostbolt.png",
+      "size": [
+        64,
+        64
+      ],
+      "sourceSha256": "320b12e60d00ec6c19d0b2283656a7867cb8709357426198c39ea200aa7d2a94",
+      "rgbSha256": "808d76b0d7ab7f3c5f564d84742d343197ed3a8c5bb5f3959bf7435cb12cdba9",
+      "policy": {
+        "action": "preserve",
+        "reason": "Painted terrain, UI surface or framed icon; its background belongs to the artwork."
+      },
+      "resultSha256": "320b12e60d00ec6c19d0b2283656a7867cb8709357426198c39ea200aa7d2a94",
+      "metadataSha256": "df80efb9353f46052928e64199b83b9814132ab0ccf1a6128724ec589b34425f"
+    },
+    {
+      "path": "interactions/lethalpoison.png",
+      "size": [
+        64,
+        64
+      ],
+      "sourceSha256": "bbed760353474361861bac85752f03822e4a347b83e8e94bebb5d84b9abfaf73",
+      "rgbSha256": "d20673327814910e25b961868712f3c2697faa7fc410d3eeaeb879595c38527d",
+      "policy": {
+        "action": "preserve",
+        "reason": "Painted terrain, UI surface or framed icon; its background belongs to the artwork."
+      },
+      "resultSha256": "bbed760353474361861bac85752f03822e4a347b83e8e94bebb5d84b9abfaf73",
+      "metadataSha256": "df80efb9353f46052928e64199b83b9814132ab0ccf1a6128724ec589b34425f"
+    },
+    {
+      "path": "interactions/magicmissile.png",
+      "size": [
+        64,
+        64
+      ],
+      "sourceSha256": "3d330005b87da024d4a9efd312fc29b67501296cf5013625c7a696c7b623b69b",
+      "rgbSha256": "b48ef06b0fd074b68c85e6bbb4d160a748b4c9a0af765768bd84e6b6d073102f",
+      "policy": {
+        "action": "preserve",
+        "reason": "Painted terrain, UI surface or framed icon; its background belongs to the artwork."
+      },
+      "resultSha256": "3d330005b87da024d4a9efd312fc29b67501296cf5013625c7a696c7b623b69b",
+      "metadataSha256": "df80efb9353f46052928e64199b83b9814132ab0ccf1a6128724ec589b34425f"
+    },
+    {
+      "path": "interactions/mutilation.png",
+      "size": [
+        64,
+        64
+      ],
+      "sourceSha256": "aa4f24b9800f68b0fd2055efb1ffeb4b58338bf90c349e8ae22d4dfd8cd7964a",
+      "rgbSha256": "495ccc537f5e560a7ea38c041e10290b8c7baceba921c990d2ffcbaeb4e233ec",
+      "policy": {
+        "action": "preserve",
+        "reason": "Painted terrain, UI surface or framed icon; its background belongs to the artwork."
+      },
+      "resultSha256": "aa4f24b9800f68b0fd2055efb1ffeb4b58338bf90c349e8ae22d4dfd8cd7964a",
+      "metadataSha256": "df80efb9353f46052928e64199b83b9814132ab0ccf1a6128724ec589b34425f"
+    },
+    {
+      "path": "interactions/shadowbolt.png",
+      "size": [
+        64,
+        64
+      ],
+      "sourceSha256": "13cfabf00bef6f2780dea5906e83a4462a2a096a0b3bbd425256fcbf93e2b941",
+      "rgbSha256": "55b5a97b1e29f02d230ef3f8f61abc439b64e91fa2cbf8bcf8bf997b99ccf3fc",
+      "policy": {
+        "action": "preserve",
+        "reason": "Painted terrain, UI surface or framed icon; its background belongs to the artwork."
+      },
+      "resultSha256": "13cfabf00bef6f2780dea5906e83a4462a2a096a0b3bbd425256fcbf93e2b941",
+      "metadataSha256": "df80efb9353f46052928e64199b83b9814132ab0ccf1a6128724ec589b34425f"
+    },
+    {
+      "path": "interactions/sneakattack.png",
+      "size": [
+        64,
+        64
+      ],
+      "sourceSha256": "5531765521c55e08750bbd5b829fd5e49990d0149b991afc1ca8c33a54e5775f",
+      "rgbSha256": "35ada6d3723442eeea0de21fb15ad28d075bb341044f5f4f78eba6c1e0e38dd7",
+      "policy": {
+        "action": "preserve",
+        "reason": "Painted terrain, UI surface or framed icon; its background belongs to the artwork."
+      },
+      "resultSha256": "5531765521c55e08750bbd5b829fd5e49990d0149b991afc1ca8c33a54e5775f",
+      "metadataSha256": "df80efb9353f46052928e64199b83b9814132ab0ccf1a6128724ec589b34425f"
+    },
+    {
+      "path": "interactions/strike.png",
+      "size": [
+        56,
+        56
+      ],
+      "sourceSha256": "21edb56961749e8f4ebbf8bde378492d8b4ae64ddb20ab519fcbe5cc7ba57c06",
+      "rgbSha256": "c71e209708c4b6c5f2c5c7ef257e48ecac7dd88f354eae978b20516e755a2d4d",
+      "policy": {
+        "action": "preserve",
+        "reason": "Painted terrain, UI surface or framed icon; its background belongs to the artwork."
+      },
+      "resultSha256": "21edb56961749e8f4ebbf8bde378492d8b4ae64ddb20ab519fcbe5cc7ba57c06",
+      "metadataSha256": "7c1cc8146740009869a93bbbc994e13e32d1c34c0390e3c7433e09d9118fdd92"
+    },
+    {
+      "path": "interactions/stun.png",
+      "size": [
+        64,
+        64
+      ],
+      "sourceSha256": "a7dd3bc29c13fe238c2bbd3c3fe2832f4eba1c4f231f2bf880dfae22a63f76ed",
+      "rgbSha256": "ed0b7be8cd5077a56b61d4cac71a668563d06245b47d8d9fce48d7e73cd67b77",
+      "policy": {
+        "action": "preserve",
+        "reason": "Painted terrain, UI surface or framed icon; its background belongs to the artwork."
+      },
+      "resultSha256": "a7dd3bc29c13fe238c2bbd3c3fe2832f4eba1c4f231f2bf880dfae22a63f76ed",
+      "metadataSha256": "df80efb9353f46052928e64199b83b9814132ab0ccf1a6128724ec589b34425f"
+    },
+    {
+      "path": "item.png",
+      "size": [
+        905,
+        905
+      ],
+      "sourceSha256": "45a50bf3e9797b4d4f884014f4593098c180864769e283c7dbf4bad5214652b8",
+      "rgbSha256": "0ca588cd867203ebb7217d78289848293e45ed61be3cfbba4b9c306bd661d4e1",
+      "policy": {
+        "action": "preserve",
+        "reason": "Painted terrain, UI surface or framed icon; its background belongs to the artwork."
+      },
+      "resultSha256": "45a50bf3e9797b4d4f884014f4593098c180864769e283c7dbf4bad5214652b8",
+      "metadataSha256": "2ede37d76fcc5ec163b3754911d5bb44b3de2d2f2730bd9150b8d143c0699a62"
+    },
+    {
+      "path": "items/armors/chestplateofnorth.png",
+      "size": [
+        1024,
+        1024
+      ],
+      "sourceSha256": "f3dd67427e4f4ce89a67e33b7b3e74a4f08bd329e7b857f5ddf679a877c4a5a7",
+      "rgbSha256": "e7c9ef77595efcb3272d137926acbecba0f935370580faf7f182991b347ea682",
+      "policy": {
+        "action": "preserve",
+        "reason": "Existing authored alpha and antialiased/glowing edges are already present."
+      },
+      "resultSha256": "f3dd67427e4f4ce89a67e33b7b3e74a4f08bd329e7b857f5ddf679a877c4a5a7",
+      "metadataSha256": "44136fa355b3678a1146ad16f7e8649e94fb4fc21fe77e8310c060f61caaff8a"
+    },
+    {
+      "path": "items/armors/leatherarmor.png",
+      "size": [
+        1024,
+        1024
+      ],
+      "sourceSha256": "9201d6c63ad34438e010fd709503eb3f731d4c990d75322fdee11852fab31b7b",
+      "rgbSha256": "6266ecc4b05fb19569fe283d198cdabf014d694e859e3440d46d6ab8c14d9271",
+      "policy": {
+        "action": "preserve",
+        "reason": "Existing authored alpha and antialiased/glowing edges are already present."
+      },
+      "resultSha256": "9201d6c63ad34438e010fd709503eb3f731d4c990d75322fdee11852fab31b7b",
+      "metadataSha256": "44136fa355b3678a1146ad16f7e8649e94fb4fc21fe77e8310c060f61caaff8a"
+    },
+    {
+      "path": "items/armors/platearmor.png",
+      "size": [
+        1024,
+        1024
+      ],
+      "sourceSha256": "95f78658e43bcbfcedb34ff6eda9788ec72a7b674edb561335d70f7132c839d9",
+      "rgbSha256": "e6c0e57b1be5e54809d3beb0613f8ef8eb2bc7d7e82dea2371fd241be714fb8a",
+      "policy": {
+        "action": "mask",
+        "reason": "Foreground sprite on a removable border backdrop.",
+        "background": [
+          10,
+          10,
+          10
+        ],
+        "tolerance": 4,
+        "feather": 2
+      },
+      "resultSha256": "5c59f48b694f92b239bbed25087d0061d0719bf615a0e2cf6a672f1b6115f1a6",
+      "sourceBytes": 1231462,
+      "resultBytes": 1342343,
+      "transparentPixels": 490258,
+      "partialPixels": 745,
+      "metadataSha256": "44136fa355b3678a1146ad16f7e8649e94fb4fc21fe77e8310c060f61caaff8a",
+      "rgbaSha256": "e161d70bf51227d0416ff7d801d49ec118ce4489977fa428cc38a88b255632f4"
+    },
+    {
+      "path": "items/armors/robe.png",
+      "size": [
+        1024,
+        1024
+      ],
+      "sourceSha256": "4c291ee1dd9b8e033d5e5eb016c7258b83a0fc5e8280625852a641971aa8c6ab",
+      "rgbSha256": "0aaa8254beee2e65be6338899ffcaea54f0c137b138532f37fb4f2b824c9110f",
+      "policy": {
+        "action": "preserve",
+        "reason": "Existing authored alpha and antialiased/glowing edges are already present."
+      },
+      "resultSha256": "4c291ee1dd9b8e033d5e5eb016c7258b83a0fc5e8280625852a641971aa8c6ab",
+      "metadataSha256": "44136fa355b3678a1146ad16f7e8649e94fb4fc21fe77e8310c060f61caaff8a"
+    },
+    {
+      "path": "items/belts/undestructiblebelt.png",
+      "size": [
+        1024,
+        1024
+      ],
+      "sourceSha256": "d8df3f21ca22395ac2c56f8e2d1e2bd70d34653d04cd9a2274c2e11c80341c68",
+      "rgbSha256": "57ac1d9a7d8799d8fd6723ef259baff36fd53a3c102b29a1f05ce6cbf599e102",
+      "policy": {
+        "action": "mask",
+        "reason": "Foreground sprite on a removable border backdrop.",
+        "background": [
+          14,
+          14,
+          13
+        ],
+        "tolerance": 3,
+        "feather": 0
+      },
+      "resultSha256": "11fe85f7697ee0ca47f019efc5a21c62321ac8c53256e798ab746d328023092a",
+      "sourceBytes": 1486121,
+      "resultBytes": 1616253,
+      "transparentPixels": 513695,
+      "partialPixels": 0,
+      "metadataSha256": "44136fa355b3678a1146ad16f7e8649e94fb4fc21fe77e8310c060f61caaff8a",
+      "rgbaSha256": "fe8c23de4c89cf708057c90713c006ece16716c625cb922f56e5b4267b55c664"
+    },
+    {
+      "path": "items/boots/eradicatorsboots.png",
+      "size": [
+        1024,
+        1024
+      ],
+      "sourceSha256": "ad93b5882e1aee39efe0cab751ff4bc2bd5f5610785dbb4c5a897bddbc4bc6e1",
+      "rgbSha256": "887a79c2d4dd80f5f1ad6da5caeae3ac2ee7f951e7b6ec45133844c02a7f1508",
+      "policy": {
+        "action": "mask",
+        "reason": "Foreground sprite on a removable border backdrop.",
+        "background": [
+          255,
+          255,
+          255
+        ],
+        "tolerance": 24,
+        "feather": 12
+      },
+      "resultSha256": "a17df79f147f8105c37de497e4de996fbf07d5cd4ac912eb7fc31a16884f188e",
+      "sourceBytes": 1131958,
+      "resultBytes": 1150835,
+      "transparentPixels": 436014,
+      "partialPixels": 125,
+      "metadataSha256": "44136fa355b3678a1146ad16f7e8649e94fb4fc21fe77e8310c060f61caaff8a",
+      "rgbaSha256": "549f46863b72ce57125a0528d49b7db998d80d41d533b91e9a4f194f1623b075"
+    },
+    {
+      "path": "items/gloves/glovesoftheassasin.png",
+      "size": [
+        1024,
+        1024
+      ],
+      "sourceSha256": "cfb0823ff3677fc87421e9767ea07ab1ff37acbc758155168df51dece3bcfe1d",
+      "rgbSha256": "df917214cdbce834c91fc693a49359307c480cc30b3dce1f7a6be5cbbaff79f0",
+      "policy": {
+        "action": "mask",
+        "reason": "Foreground sprite on a removable border backdrop.",
+        "background": [
+          0,
+          0,
+          0
+        ],
+        "tolerance": 0,
+        "feather": 1,
+        "opening": 2
+      },
+      "resultSha256": "353199808db13f68619e09318b92888a60c2e27fa4b4db30f797224151912783",
+      "sourceBytes": 880542,
+      "resultBytes": 937313,
+      "transparentPixels": 488626,
+      "partialPixels": 0,
+      "metadataSha256": "44136fa355b3678a1146ad16f7e8649e94fb4fc21fe77e8310c060f61caaff8a",
+      "rgbaSha256": "dca4c5dcaf222efcd5577b60b165910e448e33fc038a845be2f396587f8e6986"
+    },
+    {
+      "path": "items/helmets/crownofnightmares.png",
+      "size": [
+        1024,
+        1024
+      ],
+      "sourceSha256": "82fa235b8628c036fff28f6c7b40b90d23e9b936084aabfb46b069ccbb33babe",
+      "rgbSha256": "b54aa0b9e329276c15a147c15e48cc07d4fa2dfa67e1f6b8857ac8d6e0a24990",
+      "policy": {
+        "action": "preserve",
+        "reason": "Existing authored alpha and antialiased/glowing edges are already present."
+      },
+      "resultSha256": "82fa235b8628c036fff28f6c7b40b90d23e9b936084aabfb46b069ccbb33babe",
+      "metadataSha256": "44136fa355b3678a1146ad16f7e8649e94fb4fc21fe77e8310c060f61caaff8a"
+    },
+    {
+      "path": "items/potions/bless.png",
+      "size": [
+        1024,
+        1024
+      ],
+      "sourceSha256": "03c4ab28a1e81d49776a675cf09914e5f00f9400c758848f44ca232bbbca812f",
+      "rgbSha256": "4232a5c009ff7d7fb92fb6fa9a2f919fbd0b8a96ab374256e89d614090171bfd",
+      "policy": {
+        "action": "preserve",
+        "reason": "Existing authored alpha and antialiased/glowing edges are already present."
+      },
+      "resultSha256": "03c4ab28a1e81d49776a675cf09914e5f00f9400c758848f44ca232bbbca812f",
+      "metadataSha256": "44136fa355b3678a1146ad16f7e8649e94fb4fc21fe77e8310c060f61caaff8a"
+    },
+    {
+      "path": "items/potions/dark_beer.png",
+      "size": [
+        1024,
+        1024
+      ],
+      "sourceSha256": "01bf5b300cc962f0ad563812d5208f42689dc396f5745f524f24124155ddc24c",
+      "rgbSha256": "6217b679bc9f869f49f07df15e269522be5d5d676f5a8f55974e6521f0bea1d1",
+      "policy": {
+        "action": "preserve",
+        "reason": "Existing authored alpha and antialiased/glowing edges are already present."
+      },
+      "resultSha256": "01bf5b300cc962f0ad563812d5208f42689dc396f5745f524f24124155ddc24c",
+      "metadataSha256": "44136fa355b3678a1146ad16f7e8649e94fb4fc21fe77e8310c060f61caaff8a"
+    },
+    {
+      "path": "items/potions/life.png",
+      "size": [
+        1024,
+        1024
+      ],
+      "sourceSha256": "9e9c945ff87ef5a855441270102128461764a86c3a67821b56fbda770d4e298b",
+      "rgbSha256": "c6475cb0581bc9f8bed6fc17a5a33f3432a63460091b08059a9d98ac3fd13038",
+      "policy": {
+        "action": "mask",
+        "reason": "Foreground sprite on a removable border backdrop.",
+        "background": [
+          1,
+          0,
+          0
+        ],
+        "tolerance": 3,
+        "feather": 2,
+        "opening": 16
+      },
+      "resultSha256": "82338ece824417962509803f7fa045a99ecd144e80d90d663c487377712ad183",
+      "sourceBytes": 881917,
+      "resultBytes": 851217,
+      "transparentPixels": 670447,
+      "partialPixels": 91,
+      "metadataSha256": "44136fa355b3678a1146ad16f7e8649e94fb4fc21fe77e8310c060f61caaff8a",
+      "rgbaSha256": "04d150122297d98dd489e7ac1ea15aaad11bd0d6ae6417e405256fe74f117043"
+    },
+    {
+      "path": "items/potions/mana.png",
+      "size": [
+        1024,
+        1024
+      ],
+      "sourceSha256": "40c6c7fc169115ec722b9bfb8b541e0257939c7eed5564a8ffee3364d20385ef",
+      "rgbSha256": "4cdcbcc77ae658b37c6ad5d5650e3ea5176588e4e8c4d2a3cbf84f5c8f670910",
+      "policy": {
+        "action": "preserve",
+        "reason": "Existing authored alpha and antialiased/glowing edges are already present."
+      },
+      "resultSha256": "40c6c7fc169115ec722b9bfb8b541e0257939c7eed5564a8ffee3364d20385ef",
+      "metadataSha256": "44136fa355b3678a1146ad16f7e8649e94fb4fc21fe77e8310c060f61caaff8a"
+    },
+    {
+      "path": "items/potions/poison.png",
+      "size": [
+        1024,
+        1024
+      ],
+      "sourceSha256": "9fe7e8de1fe80c558bf27f5fcc0b84d1012b2cca701db528770ca167fb45c337",
+      "rgbSha256": "178558417a7fe92c57a1dbd783eaf884e2f7c5ec569e63f1d00297fc5bb82a1f",
+      "policy": {
+        "action": "preserve",
+        "reason": "Existing authored alpha and antialiased/glowing edges are already present."
+      },
+      "resultSha256": "9fe7e8de1fe80c558bf27f5fcc0b84d1012b2cca701db528770ca167fb45c337",
+      "metadataSha256": "44136fa355b3678a1146ad16f7e8649e94fb4fc21fe77e8310c060f61caaff8a"
+    },
+    {
+      "path": "items/potions/spiced_beer.png",
+      "size": [
+        1024,
+        1024
+      ],
+      "sourceSha256": "7810e24a863a4dab85159342ceefd9e5ce8c8f56fbdea993b29886b4bf1d1c96",
+      "rgbSha256": "8822ee2d6af9087d1ae025cee994fb615f13bf962e046dd230d2c65694a90efb",
+      "policy": {
+        "action": "preserve",
+        "reason": "Existing authored alpha and antialiased/glowing edges are already present."
+      },
+      "resultSha256": "7810e24a863a4dab85159342ceefd9e5ce8c8f56fbdea993b29886b4bf1d1c96",
+      "metadataSha256": "44136fa355b3678a1146ad16f7e8649e94fb4fc21fe77e8310c060f61caaff8a"
+    },
+    {
+      "path": "items/quest/ashRelic.png",
+      "size": [
+        2048,
+        2048
+      ],
+      "sourceSha256": "be7f0298b6476686de6c5c2898b973fd0ee27ff5cf7c75eccfad2d21134a1300",
+      "rgbSha256": "b21c5ae126b931b2a84eef6891f9560c78eddfbe478f0fe3a7fa81865f0ff85f",
+      "policy": {
+        "action": "mask",
+        "reason": "Foreground sprite on a removable border backdrop. Reviewed seeds clear enclosed holes in the object.",
+        "background": [
+          255,
+          255,
+          254
+        ],
+        "tolerance": 24,
+        "feather": 12,
+        "seeds": [
+          [
+            1000,
+            1430
+          ]
+        ]
+      },
+      "resultSha256": "1e84e657b8826d1d6de51d8d5f6a094645079daaf7769cbeeca6f0cc81974675",
+      "sourceBytes": 1183743,
+      "resultBytes": 1220438,
+      "transparentPixels": 2171343,
+      "partialPixels": 702,
+      "metadataSha256": "464b07430a3cbe82cfa71420ab05a176e0b1b0ddc217d615ea655953d8dc96d2",
+      "rgbaSha256": "85761d10a30b61a1e6ee0f084bc6a161e44a2e0f7c40a3b2ba296898dfdc6628"
+    },
+    {
+      "path": "items/quest/boneKey.png",
+      "size": [
+        2048,
+        2048
+      ],
+      "sourceSha256": "58a8b103307972d39ffd8930ef1737e781785bed5751df25dcddaec55851fabf",
+      "rgbSha256": "c9585bda2e9ada9cc7dfd2dacee22da83fe106f057f1ccbc95cadfe43dc5a220",
+      "policy": {
+        "action": "mask",
+        "reason": "Foreground sprite on a removable border backdrop. Reviewed seeds clear enclosed holes in the object.",
+        "background": [
+          255,
+          255,
+          254
+        ],
+        "tolerance": 24,
+        "feather": 12,
+        "seeds": [
+          [
+            460,
+            1080
+          ]
+        ]
+      },
+      "resultSha256": "f26c6712334810a2a4a39bd74d444fa694894bc4aeb9433b56b92f3821139fea",
+      "sourceBytes": 584156,
+      "resultBytes": 616545,
+      "transparentPixels": 3523875,
+      "partialPixels": 495,
+      "metadataSha256": "aaf6871068328321be9397ff07a12d2c86335c82eeb6a4b8d712e5e192e2f5a6",
+      "rgbaSha256": "fad8d941fc59bac6f96834cdf89fc28845f01a99c23be02309fd8f63f2ddf5bc"
+    },
+    {
+      "path": "items/quest/brassKey.png",
+      "size": [
+        2048,
+        2048
+      ],
+      "sourceSha256": "fc4f83c032cad8b8d5873ed2a88723297ff1e5a715db412d8d0b5ead69039927",
+      "rgbSha256": "529585021c1bbb6273aad02a5f64f672c8fa0343d51ac7fd29d50b90d99217d3",
+      "policy": {
+        "action": "mask",
+        "reason": "Foreground sprite on a removable border backdrop. Reviewed seeds clear enclosed holes in the object.",
+        "background": [
+          255,
+          255,
+          255
+        ],
+        "tolerance": 24,
+        "feather": 12,
+        "seeds": [
+          [
+            1520,
+            590
+          ]
+        ]
+      },
+      "resultSha256": "ecf996792d0edeaba84b4ba75448327c3ebc3e9fef131da6c9878a6280b2f252",
+      "sourceBytes": 689456,
+      "resultBytes": 730515,
+      "transparentPixels": 3100037,
+      "partialPixels": 520,
+      "metadataSha256": "faeea617be96c30002ab3858e2d3d97c8b8aab35cf95ae85fc5c765b06bca69f",
+      "rgbaSha256": "d104567718f4313541658cf5d92e98aed1b588b41b481f2e1c34d693e2587878"
+    },
+    {
+      "path": "items/quest/fenRelic.png",
+      "size": [
+        2048,
+        2048
+      ],
+      "sourceSha256": "1589d009cfa8bb7e4441612841fc5d2ff659eb4d87f6d08a674842eb95f54aa6",
+      "rgbSha256": "bc20f2e01d62662a5b4cac0b8b879dd66e6c397919deb3782655ce5c496fdbf8",
+      "policy": {
+        "action": "mask",
+        "reason": "Foreground sprite on a removable border backdrop.",
+        "background": [
+          255,
+          255,
+          254
+        ],
+        "tolerance": 24,
+        "feather": 12
+      },
+      "resultSha256": "02c356e9ed37b11e72de4d4e2d2a2bd9f26dcb3f8ed91437807bcfc8ae98fbdd",
+      "sourceBytes": 2335694,
+      "resultBytes": 2524065,
+      "transparentPixels": 2147469,
+      "partialPixels": 29393,
+      "metadataSha256": "eadb0e16f5de10fe2526f2b0576251d376fac86d496e73af7ee0b25ac628f045",
+      "rgbaSha256": "e856ffccb24f4b5fe17f9caadc25c9cd2a4a4b73f0a2d93ef30418d57e752c9f"
+    },
+    {
+      "path": "items/quest/holyRelic.png",
+      "size": [
+        2048,
+        2048
+      ],
+      "sourceSha256": "e51afaaa828dcbb39d01ad6e30d2d8688be793189ff4d571e82476045a67bc14",
+      "rgbSha256": "66bb92f665d206cd1e2264da424b58408bc1880fad44e5a031293b4db33e002f",
+      "policy": {
+        "action": "mask",
+        "reason": "Foreground sprite on a removable border backdrop.",
+        "background": [
+          67,
+          56,
+          42
+        ],
+        "tolerance": 36,
+        "feather": 10
+      },
+      "resultSha256": "2e7171d10c5438772a1751043cf95124e54317952c3d1ea1e3dc8a97a4e831f1",
+      "sourceBytes": 8352187,
+      "resultBytes": 9539821,
+      "transparentPixels": 3576022,
+      "partialPixels": 2815,
+      "metadataSha256": "abcacf03dfd7011f88b8dbf552c269988faafa49201a096b5ba9db427c3e429b",
+      "rgbaSha256": "f1f403ad51d5787bc05de47c9da2844da9b0ffc9689c32bb8a134ef507461780"
+    },
+    {
+      "path": "items/quest/ironKey.png",
+      "size": [
+        2048,
+        2048
+      ],
+      "sourceSha256": "ba8a3d381e85fe7c72f646fa33f40ce5dc4f94b18a30d6538dd89922dfed89b8",
+      "rgbSha256": "85aba996132c727ce92f3bc6cb9625fc90f6bd01d2c69c2cb414d8fe6ecefb91",
+      "policy": {
+        "action": "mask",
+        "reason": "Foreground sprite on a removable border backdrop. Reviewed seeds clear enclosed holes in the object.",
+        "background": [
+          255,
+          255,
+          254
+        ],
+        "tolerance": 24,
+        "feather": 12,
+        "seeds": [
+          [
+            460,
+            1000
+          ]
+        ]
+      },
+      "resultSha256": "a4671c35fe7ed89a87fa12f1d796a8a6f8fcf0aec6f99a01558c08db5687c8c5",
+      "sourceBytes": 521292,
+      "resultBytes": 532250,
+      "transparentPixels": 3286931,
+      "partialPixels": 875,
+      "metadataSha256": "8353381727499d18b85d74191d30da7362b4de15f17c3584e4f18f13a158a0e7",
+      "rgbaSha256": "6f504428ae8362f94199bd87d9f99db809ed4edd545217bd61a885fd30445861"
+    },
+    {
+      "path": "items/quest/preciousAmulet.png",
+      "size": [
+        2048,
+        2048
+      ],
+      "sourceSha256": "e8d4059f05cc9681908e21404b1396888fb8c222d47e3c575e1c7663c6593977",
+      "rgbSha256": "a90f88e8f461f2ad90323a4ba70e10c57e584c4bbe8b630a33bfac5d119e2864",
+      "policy": {
+        "action": "mask",
+        "reason": "Foreground sprite on a removable border backdrop.",
+        "background": [
+          85,
+          84,
+          84
+        ],
+        "tolerance": 20,
+        "feather": 8
+      },
+      "resultSha256": "e751c7ce46d396f9b30acd9ffcb5adcb43cc233203ad925284e6a3f12273535a",
+      "sourceBytes": 1545755,
+      "resultBytes": 1584737,
+      "transparentPixels": 1999021,
+      "partialPixels": 16706,
+      "metadataSha256": "61dd135a628375cbc90b39710be260d45dcafb9d1871c3d7a9cb2a11be5d4331",
+      "rgbaSha256": "1869ae4fc8977b4a0497c7211ae9622b4518f35f680f0ec62309b2a9c9d93e8a"
+    },
+    {
+      "path": "items/quest/skullOfRolf.png",
+      "size": [
+        2048,
+        2048
+      ],
+      "sourceSha256": "ea3b5681ae1805745c9770075f8cf36bc16f94fe4528b2527571e630d05cabc6",
+      "rgbSha256": "7057a2277164e656feb3830c3c1217037ceb1ae4c12a3309c8cc6c6100b185dd",
+      "policy": {
+        "action": "mask",
+        "reason": "Foreground sprite on a removable border backdrop.",
+        "background": [
+          255,
+          255,
+          254
+        ],
+        "tolerance": 24,
+        "feather": 12
+      },
+      "resultSha256": "72d6f69c8ce63659ebdc322ff64dbc6df53a0d8e54a48fd59959ded82c31dc98",
+      "sourceBytes": 1684262,
+      "resultBytes": 1799987,
+      "transparentPixels": 1930752,
+      "partialPixels": 544,
+      "metadataSha256": "76598710d0c5581d9ce904448c7fc7f8b92d57e0537697ba60fb14ac22c84572",
+      "rgbaSha256": "598562b9e289ccd457f3103e42f5e7cf042c268b60076462f6ce04bfcbf82246"
+    },
+    {
+      "path": "items/quest/warBanner.png",
+      "size": [
+        2048,
+        2048
+      ],
+      "sourceSha256": "773d9c89f6299a48ff2af11230155243f049039d4741a87346a2b0edde83fa0b",
+      "rgbSha256": "681bcf9b60593f342f35248a86ee7243bee55b1a50793826c00f61b9039440e7",
+      "policy": {
+        "action": "mask",
+        "reason": "Foreground sprite on a removable border backdrop. Reviewed seed clears the opening between the branch and cloth.",
+        "background": [
+          255,
+          255,
+          254
+        ],
+        "tolerance": 24,
+        "feather": 12,
+        "seeds": [
+          [
+            850,
+            580
+          ]
+        ]
+      },
+      "resultSha256": "bb7b722277da97da7a1ae89363996299931d45889c7e402aea7fb80f7729b45c",
+      "sourceBytes": 1304938,
+      "resultBytes": 1373099,
+      "transparentPixels": 2574373,
+      "partialPixels": 2419,
+      "metadataSha256": "087da3b4865dd813efa2f25848cd51e06c8d1b453ff0b40cd9afb106388b25b6",
+      "rgbaSha256": "7d86684f35fe46792d0cc7547a80a2c859ed943bef5cf00b8b6ba3909dd79f47"
+    },
+    {
+      "path": "items/scroll.png",
+      "size": [
+        1024,
+        1024
+      ],
+      "sourceSha256": "40727456087bd5e40a13a1553a1a55f912b1b000741261bb1a05ef09aa86111d",
+      "rgbSha256": "af7c9318d72655a48debfd41cd24c4cecea9019f927a2df87d0a016bbf228661",
+      "policy": {
+        "action": "preserve",
+        "reason": "Existing authored alpha and antialiased/glowing edges are already present."
+      },
+      "resultSha256": "40727456087bd5e40a13a1553a1a55f912b1b000741261bb1a05ef09aa86111d",
+      "metadataSha256": "44136fa355b3678a1146ad16f7e8649e94fb4fc21fe77e8310c060f61caaff8a"
+    },
+    {
+      "path": "items/weapons/bladeofdarkdreams.png",
+      "size": [
+        1024,
+        1024
+      ],
+      "sourceSha256": "c03f0481db21214fe5b26b29e1d3335e8946cb5ef5e12916455a2b8685bd2e56",
+      "rgbSha256": "9c28b9c5257ce0ad11c365b4414b0e2d7dab07ed85ac38536415a55f27a7f3e2",
+      "policy": {
+        "action": "mask",
+        "reason": "Foreground sprite on a removable border backdrop.",
+        "background": [
+          40,
+          45,
+          48
+        ],
+        "tolerance": 7,
+        "feather": 1
+      },
+      "resultSha256": "31909e94c479ec685577fafb1455f1f125fa326cf8c484153431cfcdc86220cc",
+      "sourceBytes": 1443885,
+      "resultBytes": 1584884,
+      "transparentPixels": 912372,
+      "partialPixels": 0,
+      "metadataSha256": "44136fa355b3678a1146ad16f7e8649e94fb4fc21fe77e8310c060f61caaff8a",
+      "rgbaSha256": "6288e20cfd974b39866440e84242f3d3e1f92a5757dae62c085c29343622eb9f"
+    },
+    {
+      "path": "items/weapons/broadsword.png",
+      "size": [
+        1024,
+        1024
+      ],
+      "sourceSha256": "7e7795d333c49719456ad62afd492290666d2c683d89cdc9b32ebcc7afc61f12",
+      "rgbSha256": "17aad6948a8141598e2cd9683594408a91935867397b09e45ca9860003d12e13",
+      "policy": {
+        "action": "mask",
+        "reason": "Foreground sprite on a removable border backdrop.",
+        "background": [
+          42,
+          42,
+          38
+        ],
+        "tolerance": 7,
+        "feather": 0
+      },
+      "resultSha256": "f08f551f1f7a80139c8f2ae9ccb688a7b2f6d58e293788307e612159ce30009a",
+      "sourceBytes": 1229819,
+      "resultBytes": 1354946,
+      "transparentPixels": 819618,
+      "partialPixels": 0,
+      "metadataSha256": "44136fa355b3678a1146ad16f7e8649e94fb4fc21fe77e8310c060f61caaff8a",
+      "rgbaSha256": "ad269e66ba18866727877ce8d319b238fc2c6ea8a814cf016cf7d69ef1a5cb3b"
+    },
+    {
+      "path": "items/weapons/chaossword.png",
+      "size": [
+        1024,
+        1024
+      ],
+      "sourceSha256": "71bda947dd1bd036c1a3f6033f298d776d4c1c5c1738dde5f2e15003c0559ae8",
+      "rgbSha256": "8724480b696731d8fa1d3e81e7fcc07e226ebf8a27ecefa05b17194b13af6208",
+      "policy": {
+        "action": "preserve",
+        "reason": "Existing authored alpha and antialiased/glowing edges are already present."
+      },
+      "resultSha256": "71bda947dd1bd036c1a3f6033f298d776d4c1c5c1738dde5f2e15003c0559ae8",
+      "metadataSha256": "44136fa355b3678a1146ad16f7e8649e94fb4fc21fe77e8310c060f61caaff8a"
+    },
+    {
+      "path": "items/weapons/dagger.png",
+      "size": [
+        1024,
+        1024
+      ],
+      "sourceSha256": "9c139e801f1180f862652f8fa49d94678f8e34b173a4fd3c3b82c6b5cd8840ed",
+      "rgbSha256": "34bee52f43accd0a44a792418d6bdbf22d50b995a98b4654e65cf1de6a50b1fc",
+      "policy": {
+        "action": "mask",
+        "reason": "Foreground sprite on a removable border backdrop.",
+        "background": [
+          248,
+          248,
+          249
+        ],
+        "tolerance": 24,
+        "feather": 12
+      },
+      "resultSha256": "b10e80dc970f3426de4e0d46bc914127724b7a268cc98333a904d29b2fbeaf9a",
+      "sourceBytes": 1296939,
+      "resultBytes": 1358438,
+      "transparentPixels": 820994,
+      "partialPixels": 130,
+      "metadataSha256": "44136fa355b3678a1146ad16f7e8649e94fb4fc21fe77e8310c060f61caaff8a",
+      "rgbaSha256": "31931172a85605f6330cfc156b0f095959e5ac2bfd94d2187b5a82c98e31124c"
+    },
+    {
+      "path": "items/weapons/daggerofvileheart.png",
+      "size": [
+        1024,
+        1024
+      ],
+      "sourceSha256": "72582f023fc1fc5a26409f3ee0dbc2bb08f669241e011439b0d03438d0a6f893",
+      "rgbSha256": "dd29eb7162655627ae167ed52e9fec85a0c0330cb321307a10e19fe3d6fd7195",
+      "policy": {
+        "action": "mask",
+        "reason": "Foreground sprite on a removable border backdrop.",
+        "background": [
+          9,
+          9,
+          9
+        ],
+        "tolerance": 4,
+        "feather": 2
+      },
+      "resultSha256": "8902c7a682c544fe68d8027a5fc9ab51e537a60a87df5cc7638febb357577f80",
+      "sourceBytes": 1187619,
+      "resultBytes": 1275634,
+      "transparentPixels": 794616,
+      "partialPixels": 6639,
+      "metadataSha256": "44136fa355b3678a1146ad16f7e8649e94fb4fc21fe77e8310c060f61caaff8a",
+      "rgbaSha256": "032abb7a842e025bc3c6d3904a17761939f294854bdb5536c87e40cbfd62dce3"
+    },
+    {
+      "path": "items/weapons/knife.png",
+      "size": [
+        1024,
+        1024
+      ],
+      "sourceSha256": "de8e28ffa6c15e48289f6b79189812af5f47e19256d6cae537a876bdca1db042",
+      "rgbSha256": "70c846c0cc1869377de1132841e6200511037fa133ab156fed3fbe3479ba2daa",
+      "policy": {
+        "action": "mask",
+        "reason": "Foreground sprite on a removable border backdrop.",
+        "background": [
+          255,
+          255,
+          255
+        ],
+        "tolerance": 24,
+        "feather": 12
+      },
+      "resultSha256": "852537a74a0914f5bccc0069313100cfb87b9b30b0987d77492d694ac14f4e31",
+      "sourceBytes": 1046545,
+      "resultBytes": 1079092,
+      "transparentPixels": 806123,
+      "partialPixels": 94,
+      "metadataSha256": "44136fa355b3678a1146ad16f7e8649e94fb4fc21fe77e8310c060f61caaff8a",
+      "rgbaSha256": "8a76de9ad469f5ca8a429283876382177bfa3b195c8c912ab5af3234e59b6b27"
+    },
+    {
+      "path": "items/weapons/longsword.png",
+      "size": [
+        1024,
+        1024
+      ],
+      "sourceSha256": "a07b495d9da614702f169b6a23688bf65f2a6fc091c0e86f6f4c5d3ef6b17770",
+      "rgbSha256": "95fbf4a248768c63d15e9c7613f0778cf77b15dd053c87fe350ec2e4eb65dc51",
+      "policy": {
+        "action": "mask",
+        "reason": "Foreground sprite on a removable border backdrop.",
+        "background": [
+          48,
+          45,
+          41
+        ],
+        "tolerance": 3,
+        "feather": 1
+      },
+      "resultSha256": "f4cbe3402e29074371ac0296062952a6543b78fae51c6347f3ceeada34d80de5",
+      "sourceBytes": 1093012,
+      "resultBytes": 1149353,
+      "transparentPixels": 864505,
+      "partialPixels": 0,
+      "metadataSha256": "44136fa355b3678a1146ad16f7e8649e94fb4fc21fe77e8310c060f61caaff8a",
+      "rgbaSha256": "eb436e021d572504578f10d7493cf3795c4e93fa845a4376b1ffd05bc12cfef4"
+    },
+    {
+      "path": "items/weapons/shadowblade.png",
+      "size": [
+        1024,
+        1024
+      ],
+      "sourceSha256": "bcdcbd6f204514b613de89e47c5c1b4db62b82edd9194d924bda69dc4dcb8649",
+      "rgbSha256": "b29e4185b4e9fff9be99c905c66b2a8c9f47a1c0901e5d71a3660830087042ea",
+      "policy": {
+        "action": "preserve",
+        "reason": "Existing authored alpha and antialiased/glowing edges are already present."
+      },
+      "resultSha256": "bcdcbd6f204514b613de89e47c5c1b4db62b82edd9194d924bda69dc4dcb8649",
+      "metadataSha256": "44136fa355b3678a1146ad16f7e8649e94fb4fc21fe77e8310c060f61caaff8a"
+    },
+    {
+      "path": "items/weapons/shortstaff.png",
+      "size": [
+        1024,
+        1024
+      ],
+      "sourceSha256": "75f3b8efc27daf50d8128d3c558aba57492af3bff8d4b6e9f4aebdb4b0f74780",
+      "rgbSha256": "aa44a4eaa5f630a65b4ee4768d2d929be71bbb58ac0567112e41a2a9d1429b83",
+      "policy": {
+        "action": "preserve",
+        "reason": "Existing authored alpha and antialiased/glowing edges are already present."
+      },
+      "resultSha256": "75f3b8efc27daf50d8128d3c558aba57492af3bff8d4b6e9f4aebdb4b0f74780",
+      "metadataSha256": "44136fa355b3678a1146ad16f7e8649e94fb4fc21fe77e8310c060f61caaff8a"
+    },
+    {
+      "path": "items/weapons/shortsword.png",
+      "size": [
+        1024,
+        1024
+      ],
+      "sourceSha256": "ecdac09f4e933427a650da6cab0b6e9c2d267cb31bc047cd417bebc3e72ada37",
+      "rgbSha256": "c53596c14c3bea73ac511e0b3534fc3da65a93c0fbb34a7ab11f55d8b3e35def",
+      "policy": {
+        "action": "preserve",
+        "reason": "Existing authored alpha and antialiased/glowing edges are already present."
+      },
+      "resultSha256": "ecdac09f4e933427a650da6cab0b6e9c2d267cb31bc047cd417bebc3e72ada37",
+      "metadataSha256": "44136fa355b3678a1146ad16f7e8649e94fb4fc21fe77e8310c060f61caaff8a"
+    },
+    {
+      "path": "items/weapons/staff.png",
+      "size": [
+        1024,
+        1024
+      ],
+      "sourceSha256": "db7bc21017fae8a504e7276bb5b508da2f25685b68bb39ebcfdd78f07a2b0f52",
+      "rgbSha256": "04a4df98a15684a806e1a7289729e7d3960a21fbfe45dc4761d2f34c00d9e613",
+      "policy": {
+        "action": "preserve",
+        "reason": "Existing authored alpha and antialiased/glowing edges are already present."
+      },
+      "resultSha256": "db7bc21017fae8a504e7276bb5b508da2f25685b68bb39ebcfdd78f07a2b0f52",
+      "metadataSha256": "44136fa355b3678a1146ad16f7e8649e94fb4fc21fe77e8310c060f61caaff8a"
+    },
+    {
+      "path": "items/weapons/staffoftheabyss.png",
+      "size": [
+        1024,
+        1024
+      ],
+      "sourceSha256": "3e46a83eed4c9c8d4208837fd7acecd1d94e23bc98a71c31fd805cd88fee52ba",
+      "rgbSha256": "6c714440415a4cb82ac626eed39a3dc0c9c2b3412a34d8684f59dac804dbdf92",
+      "policy": {
+        "action": "preserve",
+        "reason": "Existing authored alpha and antialiased/glowing edges are already present."
+      },
+      "resultSha256": "3e46a83eed4c9c8d4208837fd7acecd1d94e23bc98a71c31fd805cd88fee52ba",
+      "metadataSha256": "44136fa355b3678a1146ad16f7e8649e94fb4fc21fe77e8310c060f61caaff8a"
+    },
+    {
+      "path": "items/weapons/stiletto.png",
+      "size": [
+        1024,
+        1024
+      ],
+      "sourceSha256": "112cadfa140d7ad61946ea17f7b2cd99e39217bac29f1cd12f20bace75facd11",
+      "rgbSha256": "b0600d1aac59af040ed6dc482610a37e65ae6303769e3edbc9760766ad81588b",
+      "policy": {
+        "action": "mask",
+        "reason": "Foreground sprite on a removable border backdrop.",
+        "background": [
+          145,
+          147,
+          148
+        ],
+        "tolerance": 25,
+        "feather": 10
+      },
+      "resultSha256": "3bf74f0ed9dc7ea6f4860d326d612777a9f6fd3b3808586d507bb5fd7efb34a2",
+      "sourceBytes": 1227746,
+      "resultBytes": 1301066,
+      "transparentPixels": 896396,
+      "partialPixels": 657,
+      "metadataSha256": "44136fa355b3678a1146ad16f7e8649e94fb4fc21fe77e8310c060f61caaff8a",
+      "rgbaSha256": "b24ba021f7b8e4bf29e7eead7fadc897462987b86ed4b22ce72753bb7f1286c6"
+    },
+    {
+      "path": "items/weapons/sword.png",
+      "size": [
+        1024,
+        1024
+      ],
+      "sourceSha256": "0c03dcee225553b851d0fc96eabcf25d705ff5b2d864e02cf212a0d0effec19a",
+      "rgbSha256": "221edcd310beebc6fa20e3eb6e9e90dc316ac37b44f36e369fc0ee5b7f80ec22",
+      "policy": {
+        "action": "preserve",
+        "reason": "Existing authored alpha and antialiased/glowing edges are already present."
+      },
+      "resultSha256": "0c03dcee225553b851d0fc96eabcf25d705ff5b2d864e02cf212a0d0effec19a",
+      "metadataSha256": "44136fa355b3678a1146ad16f7e8649e94fb4fc21fe77e8310c060f61caaff8a"
+    },
+    {
+      "path": "items/weapons/valkyrie.png",
+      "size": [
+        1024,
+        1024
+      ],
+      "sourceSha256": "2006db4882a33119f3a6d35a62f119cd9fb272c5bbf16b8f2f57fbe179cb9087",
+      "rgbSha256": "e741ff17e16fcc8af8ac94e2b49fbf1c82d1c0ec632ee74c3e759540835c6e79",
+      "policy": {
+        "action": "preserve",
+        "reason": "Existing authored alpha and antialiased/glowing edges are already present."
+      },
+      "resultSha256": "2006db4882a33119f3a6d35a62f119cd9fb272c5bbf16b8f2f57fbe179cb9087",
+      "metadataSha256": "44136fa355b3678a1146ad16f7e8649e94fb4fc21fe77e8310c060f61caaff8a"
+    },
+    {
+      "path": "items/weapons/void.png",
+      "size": [
+        1024,
+        1536
+      ],
+      "sourceSha256": "69c90a75a2f1ae7cf63a365fb182d771b4f227c430c89759a61e2d67976350a8",
+      "rgbSha256": "c47f8b681425f882c52cff90136173fa317d0b1955b40c281eed1a003b8c0974",
+      "policy": {
+        "action": "preserve",
+        "reason": "Existing authored alpha and antialiased/glowing edges are already present."
+      },
+      "resultSha256": "69c90a75a2f1ae7cf63a365fb182d771b4f227c430c89759a61e2d67976350a8",
+      "metadataSha256": "44136fa355b3678a1146ad16f7e8649e94fb4fc21fe77e8310c060f61caaff8a"
+    },
+    {
+      "path": "items/weapons/wand.png",
+      "size": [
+        1024,
+        1024
+      ],
+      "sourceSha256": "9ccc34bf092f75a09288053e44a3f4ab21d87501fc4bb7042ea2fe948c7488ac",
+      "rgbSha256": "8db9d26a7b592994485e41d12e03754e19225d6c9d662d4e6b7df19d91b1e71b",
+      "policy": {
+        "action": "preserve",
+        "reason": "Existing authored alpha and antialiased/glowing edges are already present."
+      },
+      "resultSha256": "9ccc34bf092f75a09288053e44a3f4ab21d87501fc4bb7042ea2fe948c7488ac",
+      "metadataSha256": "44136fa355b3678a1146ad16f7e8649e94fb4fc21fe77e8310c060f61caaff8a"
+    },
+    {
+      "path": "misc/chest.png",
+      "size": [
+        1024,
+        1024
+      ],
+      "sourceSha256": "988942e211b75d5d184a49626f1cd3e40d096a2627d9a6dc272dc8c0bde40080",
+      "rgbSha256": "cbd8ace5e45f7307588feca2b1c4190359bf01e56b11db4f69ec1b574e5549c1",
+      "policy": {
+        "action": "mask",
+        "reason": "Foreground sprite on a removable border backdrop.",
+        "background": [
+          32,
+          21,
+          5
+        ],
+        "tolerance": 3,
+        "feather": 1
+      },
+      "resultSha256": "d65df237ee336513f6ef803895e3198781982d5882b0880734553aa01316dfbf",
+      "sourceBytes": 1027781,
+      "resultBytes": 1043858,
+      "transparentPixels": 446644,
+      "partialPixels": 0,
+      "metadataSha256": "44136fa355b3678a1146ad16f7e8649e94fb4fc21fe77e8310c060f61caaff8a",
+      "rgbaSha256": "1d77815a3bfa851410e3bee20cef98c0bd22b38cf28d66eef8c285e2c457cbe4"
+    },
+    {
+      "path": "misc/closed_door.png",
+      "size": [
+        1024,
+        1024
+      ],
+      "sourceSha256": "54330917f144a98de1bd498e418e43b15983d96910b3e99e1b099dfb54cd4963",
+      "rgbSha256": "9ee8e46f1df2211e923f66f8885ac3e40747dc5c75f4f7e2093c55c936b5a85b",
+      "policy": {
+        "action": "mask",
+        "reason": "Foreground sprite on a removable border backdrop.",
+        "background": [
+          5,
+          5,
+          3
+        ],
+        "tolerance": 3,
+        "feather": 1
+      },
+      "resultSha256": "4b110e4a08159874f37835139195557ca47b0686039c54230a88a4e0f204ca1c",
+      "sourceBytes": 1115691,
+      "resultBytes": 1187970,
+      "transparentPixels": 425540,
+      "partialPixels": 0,
+      "metadataSha256": "44136fa355b3678a1146ad16f7e8649e94fb4fc21fe77e8310c060f61caaff8a",
+      "rgbaSha256": "59580ce749263426beb07c04df549a62e007375944cba3fd0f93d4a76227b5ca"
+    },
+    {
+      "path": "misc/open_door.png",
+      "size": [
+        1024,
+        1024
+      ],
+      "sourceSha256": "eec54693585f6c407fadc6576d7f7452fcbdaaa14a2b2667245e849e79aa1005",
+      "rgbSha256": "6aedfc54fd53d17999524e4071408e93bd62967ed0f1e2e6f0d5a2f0cde0c366",
+      "policy": {
+        "action": "mask",
+        "reason": "Foreground sprite on a removable border backdrop.",
+        "background": [
+          6,
+          5,
+          1
+        ],
+        "tolerance": 3,
+        "feather": 1
+      },
+      "resultSha256": "a6c5506c0315cc7912df5d8397cfd10969c7e9e85d16636455ca12b4062ea6bf",
+      "sourceBytes": 1125662,
+      "resultBytes": 1198143,
+      "transparentPixels": 431836,
+      "partialPixels": 0,
+      "metadataSha256": "44136fa355b3678a1146ad16f7e8649e94fb4fc21fe77e8310c060f61caaff8a",
+      "rgbaSha256": "1e8763eca1ace0c6d20f169faf07112d23a48e20b132a4ebd057b438117d59bd"
+    },
+    {
+      "path": "misc/signpost.png",
+      "size": [
+        1024,
+        1024
+      ],
+      "sourceSha256": "5e75179d8a6abb92824d304baab027d574aea7610f116a64cb7b8a0970506c7b",
+      "rgbSha256": "830aefcb1c2bc43daa1f8b2526b22c3e0ef6e89838a8ca6bd00e9f7953ca26cf",
+      "policy": {
+        "action": "preserve",
+        "reason": "Existing authored alpha and antialiased/glowing edges are already present."
+      },
+      "resultSha256": "5e75179d8a6abb92824d304baab027d574aea7610f116a64cb7b8a0970506c7b",
+      "metadataSha256": "44136fa355b3678a1146ad16f7e8649e94fb4fc21fe77e8310c060f61caaff8a"
+    },
+    {
+      "path": "misc/wall.png",
+      "size": [
+        1024,
+        1024
+      ],
+      "sourceSha256": "acc355a11391816c58274a1c501c4de369fa636b540d975e5178aab76e6021c8",
+      "rgbSha256": "27cae096348792146c4e1e8f0db0fef80463026e27b8600617b38071259860b7",
+      "policy": {
+        "action": "preserve",
+        "reason": "Existing authored alpha and antialiased/glowing edges are already present."
+      },
+      "resultSha256": "acc355a11391816c58274a1c501c4de369fa636b540d975e5178aab76e6021c8",
+      "metadataSha256": "44136fa355b3678a1146ad16f7e8649e94fb4fc21fe77e8310c060f61caaff8a"
+    },
+    {
+      "path": "monsters/barrowKnight.png",
+      "size": [
+        2048,
+        2048
+      ],
+      "sourceSha256": "2e3f9610d93e92c86363625ebb5c587b2b77e3323652899cc8c3366cf49aaaf7",
+      "rgbSha256": "6831b566d3785c560a88cb6c4cabb9ce272bd635badfbd2ecc8d69032ffb6365",
+      "policy": {
+        "action": "mask",
+        "reason": "Foreground sprite on a removable border backdrop.",
+        "background": [
+          208,
+          198,
+          175
+        ],
+        "tolerance": 26,
+        "feather": 10
+      },
+      "resultSha256": "dcdef920719bea6b4c74ed5bd035a4243b672ca61031245178aaafeb9d220044",
+      "sourceBytes": 1128933,
+      "resultBytes": 1128826,
+      "transparentPixels": 2612932,
+      "partialPixels": 534,
+      "metadataSha256": "b3880937721b672e172c900217c56c7fb08ee53e4e7389c25d7b318fba9baba3",
+      "rgbaSha256": "98b75508ede6bf10dba34f08592c22196ff895d84e108f98e84ca68db6644e4c"
+    },
+    {
+      "path": "monsters/citadelPriest.png",
+      "size": [
+        2048,
+        2048
+      ],
+      "sourceSha256": "9c6da599e98b37a74645a51543f315be93239e37e5cdf2780b3d02d92d906346",
+      "rgbSha256": "21f24e272b7f815e994b712d97d6191cf495aecdc0a3693c453947b9be2d8a82",
+      "policy": {
+        "action": "mask",
+        "reason": "Foreground sprite on a removable border backdrop.",
+        "background": [
+          255,
+          255,
+          255
+        ],
+        "tolerance": 24,
+        "feather": 12
+      },
+      "resultSha256": "9f3b2e2652019aa4c27922c160008eae4d165de93e42ddae5c0cd633178ea43d",
+      "sourceBytes": 1230022,
+      "resultBytes": 1297512,
+      "transparentPixels": 2524182,
+      "partialPixels": 665,
+      "metadataSha256": "0dd4a69886f7ded854508e36b0a79dceeab24b3bcd672ed0409c8d89e4167a5e",
+      "rgbaSha256": "7a580797818db8a3a3931447f7a32f2303899b41b8e5f198c4c2f3e28934741b"
+    },
+    {
+      "path": "monsters/cryptWardenEast.png",
+      "size": [
+        2048,
+        2048
+      ],
+      "sourceSha256": "9db02a03bb3eccc81554f763c85015c493a29e9ab8b87269e5331ad5563c018c",
+      "rgbSha256": "488d422ccb26a4f182dc4f3fd36e85edd4caa4964917eac868e9731b321c9b77",
+      "policy": {
+        "action": "mask",
+        "reason": "Foreground sprite on a removable border backdrop.",
+        "background": [
+          255,
+          255,
+          254
+        ],
+        "tolerance": 24,
+        "feather": 12
+      },
+      "resultSha256": "ff9cb1b4e9385f0a50d126fe116191bac27bf2bb1da94456005cd64574ccceab",
+      "sourceBytes": 1660773,
+      "resultBytes": 1762247,
+      "transparentPixels": 2349732,
+      "partialPixels": 597,
+      "metadataSha256": "25806f75dc0f20d685ea5653daf7a4155c3fe0cd0ba1a05ed4c505c4e191e4cf",
+      "rgbaSha256": "f051e9fc9a472a28ac83b5b048b8009c0e792874b9a72a5887e46062f90d732d"
+    },
+    {
+      "path": "monsters/cryptWardenNorth.png",
+      "size": [
+        2048,
+        2048
+      ],
+      "sourceSha256": "449bacf9014c559f53c66d1805ac84cd7292d02105867ce902f1772f29e480e6",
+      "rgbSha256": "e791da3ec3893a85fe0e33413aa785139ff3ad989e1b45430fa6e2a8eac2ed57",
+      "policy": {
+        "action": "mask",
+        "reason": "Foreground sprite on a removable border backdrop.",
+        "background": [
+          255,
+          255,
+          254
+        ],
+        "tolerance": 24,
+        "feather": 12
+      },
+      "resultSha256": "64d764f6454fb5ff5b76a19a987a8fe86551f8d739236d501f8fb50991782455",
+      "sourceBytes": 1199070,
+      "resultBytes": 1279146,
+      "transparentPixels": 2700730,
+      "partialPixels": 587,
+      "metadataSha256": "64ed67e7bb2b7933d03468fbe501b68f2620540e9f94789c6fc907c01d23dc1b",
+      "rgbaSha256": "afefee1a7e5a31b9a7039244c5e196cc5ed4fe89e1cf559142352b89d1e30bb5"
+    },
+    {
+      "path": "monsters/cryptWardenWest.png",
+      "size": [
+        2048,
+        2048
+      ],
+      "sourceSha256": "d5cc608633c09879fbf4c8d3496bc00b4b692385f71a2fb7b8c6c21c61b991d2",
+      "rgbSha256": "ecd8e0cb8be82b0a41330eb251432806e260d6dbb7a157bd0577b0c519a4f22b",
+      "policy": {
+        "action": "mask",
+        "reason": "Foreground sprite on a removable border backdrop.",
+        "background": [
+          255,
+          255,
+          254
+        ],
+        "tolerance": 24,
+        "feather": 12
+      },
+      "resultSha256": "6090c9d4ad1284a9834776297a6bd43a4a4508a5e04a08b1f70d9920a70291ea",
+      "sourceBytes": 1247534,
+      "resultBytes": 1324730,
+      "transparentPixels": 2435826,
+      "partialPixels": 541,
+      "metadataSha256": "cc12e533e05f11d3e441cb643bf3c7c30b5cf4aba066c535899c174e4ddb0419",
+      "rgbaSha256": "cf31a87664a1fd348046d2422fafd73ee68c70efe118a8ae4ede81727bc570fc"
+    },
+    {
+      "path": "monsters/cult_leader.png",
+      "size": [
+        1024,
+        1024
+      ],
+      "sourceSha256": "b86ac77a373640491b7feb43d66ee35d726f716b2c5e091f1a9e3b3335c8a09d",
+      "rgbSha256": "5ebb5497a3a0ec0ae05a3f3a8608a0cb806257720b6a1cf6216c64b781fc2850",
+      "policy": {
+        "action": "preserve",
+        "reason": "Existing authored alpha and antialiased/glowing edges are already present."
+      },
+      "resultSha256": "b86ac77a373640491b7feb43d66ee35d726f716b2c5e091f1a9e3b3335c8a09d",
+      "metadataSha256": "44136fa355b3678a1146ad16f7e8649e94fb4fc21fe77e8310c060f61caaff8a"
+    },
+    {
+      "path": "monsters/cultist.png",
+      "size": [
+        1024,
+        1024
+      ],
+      "sourceSha256": "0ba068017cbf83ddcf14409b757f65f530f68487eddd0f972ba2139fd51285bb",
+      "rgbSha256": "98854eb7598e08c25d0f7f86b7cc0d8102af208bf4591d3ec8b21e8dc3cd319d",
+      "policy": {
+        "action": "preserve",
+        "reason": "Existing authored alpha and antialiased/glowing edges are already present."
+      },
+      "resultSha256": "0ba068017cbf83ddcf14409b757f65f530f68487eddd0f972ba2139fd51285bb",
+      "metadataSha256": "44136fa355b3678a1146ad16f7e8649e94fb4fc21fe77e8310c060f61caaff8a"
+    },
+    {
+      "path": "monsters/deepSpawn.png",
+      "size": [
+        2048,
+        2048
+      ],
+      "sourceSha256": "ab5e13306aebe4137c4d33879aabb3d2da188149d6a4b2d3e9d4f82e5127f6ae",
+      "rgbSha256": "cde3d8a2ab0458c5dddf34c86de63358b4eff2d81ef3aeae175f7c8abf5ea0de",
+      "policy": {
+        "action": "mask",
+        "reason": "Foreground sprite on a removable border backdrop.",
+        "background": [
+          255,
+          255,
+          254
+        ],
+        "tolerance": 24,
+        "feather": 12
+      },
+      "resultSha256": "a6dd6f22b82421df4f873995a4ebebad2f5ae5975b8911ec334806545c25bd83",
+      "sourceBytes": 1571408,
+      "resultBytes": 1666535,
+      "transparentPixels": 2294245,
+      "partialPixels": 74098,
+      "metadataSha256": "798b5ff4fce21d725e52790a5f1ebf2691bfe5b6e4af9938c67a3cfe3eecae72",
+      "rgbaSha256": "0d226d1f8c2eabae50242fcaa1d1c5e497f10a680aae70f98af4b2fc26cad3c8"
+    },
+    {
+      "path": "monsters/drownedHybrid.png",
+      "size": [
+        2048,
+        2048
+      ],
+      "sourceSha256": "3b6dfa5d3015340499359e10e81fbbbe42612f1a4947e919fb467cafae0d252e",
+      "rgbSha256": "2c22c5f5f325c6af68c02dfc25b612bc2e274f62c33a5039a051f77adc8e92f9",
+      "policy": {
+        "action": "mask",
+        "reason": "Foreground sprite on a removable border backdrop.",
+        "background": [
+          255,
+          255,
+          254
+        ],
+        "tolerance": 24,
+        "feather": 12
+      },
+      "resultSha256": "4b3fadd4b559412fd96c966fac90384c2c9c06f1e76e5f037d3c2476d249d3b1",
+      "sourceBytes": 1543050,
+      "resultBytes": 1656475,
+      "transparentPixels": 2433692,
+      "partialPixels": 14890,
+      "metadataSha256": "5d199dea862589bfc10b456b32f1bce4e01f822bab4ec54dea10d46fa3661aa4",
+      "rgbaSha256": "e7a917b92bd9061db8b9527da728e7ecc57232074c99320592d8f32f41b50e8b"
+    },
+    {
+      "path": "monsters/elderThing.png",
+      "size": [
+        2048,
+        2048
+      ],
+      "sourceSha256": "5e5f6b3bfcdb08e8b231c738f939a451c0e7327f3dada23966753908362f8bb2",
+      "rgbSha256": "02bd003e40809b7ea3cdeae8c6f16b6d616d566ca2a7af5a3cfb14cf30456826",
+      "policy": {
+        "action": "mask",
+        "reason": "Foreground sprite on a removable border backdrop.",
+        "background": [
+          255,
+          255,
+          254
+        ],
+        "tolerance": 24,
+        "feather": 12
+      },
+      "resultSha256": "1818eaa2ec5c5399e80bbb9bd6470595f3f51c99a90d46674ddb4e015c3c32e9",
+      "sourceBytes": 1375854,
+      "resultBytes": 1439081,
+      "transparentPixels": 2264061,
+      "partialPixels": 629,
+      "metadataSha256": "503c90c1e60855465d3e9a974147a23d8ad6de7c0a0c2f8f27340951529969e8",
+      "rgbaSha256": "842c5b44e60f1fb8661c6a651050139a4692371fdaee7eae01d70a4eb81796ec"
+    },
+    {
+      "path": "monsters/fenGhoul.png",
+      "size": [
+        2048,
+        2048
+      ],
+      "sourceSha256": "033594589a2a5397db0bbd07d081b8143f6c27898ab66c9c1c387979f62affa2",
+      "rgbSha256": "52abb2bdcb354f964158ea90e205814c4ac6657b73e13703965c373acd4f075b",
+      "policy": {
+        "action": "mask",
+        "reason": "Foreground sprite on a removable border backdrop.",
+        "background": [
+          255,
+          255,
+          255
+        ],
+        "tolerance": 24,
+        "feather": 12
+      },
+      "resultSha256": "231f5768ffad9aee0392729eeabd4dbccfa9d9fb8179b2b59d148ade02846656",
+      "sourceBytes": 1192393,
+      "resultBytes": 1251831,
+      "transparentPixels": 2618167,
+      "partialPixels": 1238,
+      "metadataSha256": "ed793f7ec035501e6f7b2d93d48331aaaf6ebce7f1300b2021c17af9ff7ae4af",
+      "rgbaSha256": "5682d8a455b2a8f404d686a9f23df34e157a6f8f4d041516125fe563e6d707cc"
+    },
+    {
+      "path": "monsters/fieldRaider.png",
+      "size": [
+        2048,
+        2048
+      ],
+      "sourceSha256": "1b72badd2f561929314cc50180a316880642f8df066f9d8fa8799c9fd0620ece",
+      "rgbSha256": "402617bf70f4a0920f103ca937c226afeddbd46d31b5eb5191516ba10ea5c8ef",
+      "policy": {
+        "action": "mask",
+        "reason": "Foreground sprite on a removable border backdrop.",
+        "background": [
+          255,
+          255,
+          254
+        ],
+        "tolerance": 24,
+        "feather": 12
+      },
+      "resultSha256": "caa4fb12b3f11c9506120026659d587fb27dfd65f11051fc4fa81436c214943a",
+      "sourceBytes": 1185508,
+      "resultBytes": 1261955,
+      "transparentPixels": 2505677,
+      "partialPixels": 967,
+      "metadataSha256": "04695722db448f6e0e6afe18659c241a520e3266d7631dc2a9ddc6e86044683a",
+      "rgbaSha256": "9441c26b018cf3498d4de33c2f52013df9d5784f1179fa9e8bb3058f8a569af3"
+    },
+    {
+      "path": "monsters/goblin_thief.png",
+      "size": [
+        1024,
+        1024
+      ],
+      "sourceSha256": "cefafe04d9c82c5f913475ea7480f64786c0390986852a49b332876ee880790f",
+      "rgbSha256": "8e99f5ae5c16642fbd7aa60c852ca6397dd9e23ed6acaf41e262f56f1c041bd7",
+      "policy": {
+        "action": "mask",
+        "reason": "Foreground sprite on a removable border backdrop.",
+        "background": [
+          240,
+          237,
+          231
+        ],
+        "tolerance": 24,
+        "feather": 12
+      },
+      "resultSha256": "5593dbcd1b01b31d5f6fb08b0e3848ae7af6750c8fcf6460513b6422800920e8",
+      "sourceBytes": 1754455,
+      "resultBytes": 1859798,
+      "transparentPixels": 510185,
+      "partialPixels": 190,
+      "metadataSha256": "44136fa355b3678a1146ad16f7e8649e94fb4fc21fe77e8310c060f61caaff8a",
+      "rgbaSha256": "27a5267b7a22250a5e1126cd5c43d8e9545a12a1bd7b7e4d7bc34315931d0789"
+    },
+    {
+      "path": "monsters/gooby.png",
+      "size": [
+        1730,
+        1385
+      ],
+      "sourceSha256": "310cc3ceedb3f12670b9c3c95421392d08af72f072cec590bbc5609d7625bebf",
+      "rgbSha256": "e8baf3f22cc2416f559a45873db5235b80d84ae448c93caaf587b4496b9943bd",
+      "policy": {
+        "action": "preserve",
+        "reason": "Existing authored alpha and antialiased/glowing edges are already present."
+      },
+      "resultSha256": "310cc3ceedb3f12670b9c3c95421392d08af72f072cec590bbc5609d7625bebf",
+      "metadataSha256": "505409b9dca3c156ac44ea64f0831e65d1c7291af85cae8c0cf51f2b47048ce4"
+    },
+    {
+      "path": "monsters/highPriestOfLeng.png",
+      "size": [
+        2048,
+        2048
+      ],
+      "sourceSha256": "c36232c105abef37a954832643269d5a0fb417f942e943b8eef61f3ce46a8a2e",
+      "rgbSha256": "69f0d6b037f1dee756567295d02a4f3f93a7c85ff408ae416b242c3b0ff53048",
+      "policy": {
+        "action": "mask",
+        "reason": "Foreground sprite on a removable border backdrop.",
+        "background": [
+          255,
+          255,
+          254
+        ],
+        "tolerance": 24,
+        "feather": 12
+      },
+      "resultSha256": "bd23d7c5f10bd1f4186babfec4b463f82c984a786941b303a035a6d2267fc185",
+      "sourceBytes": 1407752,
+      "resultBytes": 1528156,
+      "transparentPixels": 2621969,
+      "partialPixels": 750,
+      "metadataSha256": "274ec47778dacc6b0e9578fa2374e54a134a69a5a564bb454d62b973d4933986",
+      "rgbaSha256": "d6d2b8663de003d9239cde03cc43310d54bd1bc7e08936c2953f0b2ffedc494c"
+    },
+    {
+      "path": "monsters/housecarlEast.png",
+      "size": [
+        2048,
+        2048
+      ],
+      "sourceSha256": "7a3639152295e83c06863d1fbd0154124715fba62d3264523f8776ff599f734b",
+      "rgbSha256": "2f16aa5c8e327419a10bee18cdf0dd7f65aa97b5eb437b3ca434a51d0c5d3b9c",
+      "policy": {
+        "action": "mask",
+        "reason": "Foreground sprite on a removable border backdrop.",
+        "background": [
+          255,
+          255,
+          255
+        ],
+        "tolerance": 24,
+        "feather": 12
+      },
+      "resultSha256": "1471c5c3c1573d5b12eeb5db060fffc90b19b869967091e7125d228f0a276b7a",
+      "sourceBytes": 1391646,
+      "resultBytes": 1467141,
+      "transparentPixels": 2302149,
+      "partialPixels": 648,
+      "metadataSha256": "4c8258f7a7d5f2a2b387594569a5e01bcaa1d77282b96d235553be79e3ff3649",
+      "rgbaSha256": "5f7601ad241d691111dbc4b9453cda6a7af70a9b6bf52d2faa936472bd963dda"
+    },
+    {
+      "path": "monsters/housecarlWest.png",
+      "size": [
+        2048,
+        2048
+      ],
+      "sourceSha256": "0f358063b3891c94521287d84447fbc7786e3fef1919adce4730445dcc86fac3",
+      "rgbSha256": "cc1f54bb920aeb51970cece0a7391b8577790207c89bdf208cbe382ecb2bf3c8",
+      "policy": {
+        "action": "mask",
+        "reason": "Foreground sprite on a removable border backdrop.",
+        "background": [
+          254,
+          255,
+          254
+        ],
+        "tolerance": 24,
+        "feather": 12
+      },
+      "resultSha256": "cb40e35d7bbb8549941425343f841bd3b8b7ecf23abfe9d8ada80e2b0db4fba4",
+      "sourceBytes": 1963619,
+      "resultBytes": 2057013,
+      "transparentPixels": 1401525,
+      "partialPixels": 857,
+      "metadataSha256": "98d58137ac41e50c3757ddd5242dd30aa5796a3ea7f35356bfc09992c8c33f02",
+      "rgbaSha256": "56fc9d8d2e63d612353aafec03ba9fc0374c84e3008b06772dea9396de30db83"
+    },
+    {
+      "path": "monsters/lengMan.png",
+      "size": [
+        2048,
+        2048
+      ],
+      "sourceSha256": "86f78dccc7cac4ac93be06865669dffe7c27c83dd24847813ca4db3a378cb916",
+      "rgbSha256": "a0919466e768190afd84eb832d2c01beefd7f410b444e7641f91b2b2c6fe5961",
+      "policy": {
+        "action": "mask",
+        "reason": "Foreground sprite on a removable border backdrop.",
+        "background": [
+          255,
+          255,
+          255
+        ],
+        "tolerance": 24,
+        "feather": 12
+      },
+      "resultSha256": "c8991200faa2a2148d87018a650bcd7b104441b575240611a8d7d00b4f12fe3f",
+      "sourceBytes": 1047218,
+      "resultBytes": 1102908,
+      "transparentPixels": 2383330,
+      "partialPixels": 832,
+      "metadataSha256": "482c2c86e4e91655e731e30b2635c3c9b8d55d5d78a8f6142113e71dc09e1a43",
+      "rgbaSha256": "b6ea9455aa9f3979aa1d25e126611483ba29cd859f1362d581ba7b30779cde58"
+    },
+    {
+      "path": "monsters/lengSpider.png",
+      "size": [
+        2048,
+        2048
+      ],
+      "sourceSha256": "5e70c6fd2f14215deb8bd15c32f8f18628939406185e476321608955fef72a3a",
+      "rgbSha256": "dc4bc4df1bc93c9ee9da309b181fb3f1074e9d00bea6d5d3864c4bbd2c3f75a9",
+      "policy": {
+        "action": "mask",
+        "reason": "Foreground sprite on a removable border backdrop.",
+        "background": [
+          255,
+          255,
+          255
+        ],
+        "tolerance": 24,
+        "feather": 12
+      },
+      "resultSha256": "0d37316953ff6f7e630031531e42bbcc113a01f010bd8055ef2dd1d916e58561",
+      "sourceBytes": 913753,
+      "resultBytes": 924789,
+      "transparentPixels": 2053244,
+      "partialPixels": 681,
+      "metadataSha256": "b71c92000880c9c6e2a82b51418ad0c2c21e40c092467dd3ddba4d161345096d",
+      "rgbaSha256": "b1fa8925e6b59d47842be699b86f0e4342d6c92bc7ae5bfbb4b47269243bc8a6"
+    },
+    {
+      "path": "monsters/nightGaunt.png",
+      "size": [
+        2048,
+        2048
+      ],
+      "sourceSha256": "07b4905f52c94cd3fdde11595d5a4b7a258c3d52afefac219a3385ed276ff41b",
+      "rgbSha256": "0184d65d418fdb09a1bdff2bb0bb024154522b05dff50e409b2fa8c951b60a06",
+      "policy": {
+        "action": "mask",
+        "reason": "Foreground sprite on a removable border backdrop.",
+        "background": [
+          255,
+          255,
+          255
+        ],
+        "tolerance": 24,
+        "feather": 12
+      },
+      "resultSha256": "293e95cddad4aba1d98e1bd4ea31e9faaa12f57caf22e66333dd26342ee6cb82",
+      "sourceBytes": 758387,
+      "resultBytes": 795428,
+      "transparentPixels": 3001838,
+      "partialPixels": 909,
+      "metadataSha256": "afe6b1e7d5b60c049190b030dbc31580e0cc9faadf37b57407e26a2b68af53f7",
+      "rgbaSha256": "10b07a82f464185581823c631364bd0b110ee22b273ac126fe785948fe84b741"
+    },
+    {
+      "path": "monsters/occupierEast.png",
+      "size": [
+        2048,
+        2048
+      ],
+      "sourceSha256": "1a26da1ea15078c55cc3e2ab1892191c3243087a99d4e12d00a8c0057b67aa4c",
+      "rgbSha256": "7c8a7f2be7689bb313d44c1adffe7cfa281791171080bcadbaf447cdc88b3db9",
+      "policy": {
+        "action": "mask",
+        "reason": "Foreground sprite on a removable border backdrop.",
+        "background": [
+          255,
+          255,
+          255
+        ],
+        "tolerance": 24,
+        "feather": 12
+      },
+      "resultSha256": "54980a4856d1b6aee18d4fe92893c7b0f24ea8c7bfa5df42c2e01eabe5eb655d",
+      "sourceBytes": 729760,
+      "resultBytes": 747614,
+      "transparentPixels": 2432896,
+      "partialPixels": 744,
+      "metadataSha256": "f6ff484936d81d1ac72fd45800e8d113b2b37ee69f479d83a9d2f22df132e4a2",
+      "rgbaSha256": "bc19028f68b3806695e3fd3d18a93cb7d0f939448d7a03e0a53a0d78a0188a59"
+    },
+    {
+      "path": "monsters/occupierGate.png",
+      "size": [
+        2048,
+        2048
+      ],
+      "sourceSha256": "0c0be61534b023101dc371dc5490b0d49509431f4a2395a1e84a61eb805c6bf0",
+      "rgbSha256": "c2d542f39e943e4c6e87043026e4fabb89b412277ede452bd3a52b21c259d86b",
+      "policy": {
+        "action": "mask",
+        "reason": "Foreground sprite on a removable border backdrop.",
+        "background": [
+          255,
+          255,
+          255
+        ],
+        "tolerance": 24,
+        "feather": 12
+      },
+      "resultSha256": "44ec0ec80134e460fd2c460faa663984d04c540edefbf2cc7af2493c7c97f219",
+      "sourceBytes": 875970,
+      "resultBytes": 907028,
+      "transparentPixels": 2701699,
+      "partialPixels": 514,
+      "metadataSha256": "81aeb6c6794ad88c5e46d0238bd4176d0eaec1e901785d2558876d60be5ac59a",
+      "rgbaSha256": "b075a479e05901fe26ba136895b6f3854d53a347eca0762f372e17f0956ab08e"
+    },
+    {
+      "path": "monsters/occupierWest.png",
+      "size": [
+        2048,
+        2048
+      ],
+      "sourceSha256": "6d13e6fce2c9265b67984b93c2cf15263bdf4a08196bce363db3e50043729cf4",
+      "rgbSha256": "8bd9f9b4eb000245c346f76e409855e1c0d39defe2748e4ec73518f62b3324c6",
+      "policy": {
+        "action": "mask",
+        "reason": "Foreground sprite on a removable border backdrop.",
+        "background": [
+          255,
+          255,
+          255
+        ],
+        "tolerance": 24,
+        "feather": 12
+      },
+      "resultSha256": "2f98384800824a2df288e2642ee011bab72b48fec1afba9e170e98e83914a2f2",
+      "sourceBytes": 1105022,
+      "resultBytes": 1160161,
+      "transparentPixels": 2571206,
+      "partialPixels": 531,
+      "metadataSha256": "42ff062a6fd213c9e6f08ab8ab55bb08edfb9c1aceab8441ca5ae76a144ad2d2",
+      "rgbaSha256": "e3e70b63d37757d50a420bb5d6db9954d0b9287e4218ad2c7426a2a1a30cb792"
+    },
+    {
+      "path": "monsters/octobogz/0.png",
+      "size": [
+        184,
+        184
+      ],
+      "sourceSha256": "86a262753b784afcef015417e33716fa323eb8a27f1fe65781f503b95724ee4a",
+      "rgbSha256": "7e8ee48a0d76e8a1b2ecc24d0c00db93ac177d27141eb36172acf13973b4b859",
+      "policy": {
+        "action": "mask",
+        "reason": "Foreground sprite on a removable border backdrop.",
+        "background": [
+          255,
+          255,
+          255
+        ],
+        "tolerance": 12,
+        "feather": 10
+      },
+      "resultSha256": "e9ceb16005f9de8082ed35001cc9b1faed0b732fdbd15a3e47746bf1807ac19b",
+      "sourceBytes": 31604,
+      "resultBytes": 37807,
+      "transparentPixels": 21322,
+      "partialPixels": 167,
+      "metadataSha256": "1b3b3ae198e09f8ecf135006b1922acd04931cb51687b8346cd5a9c0ab9c8289",
+      "rgbaSha256": "e379713ecddd1399522fe19297ce5eb2fe2f9032412f2bad6d360e7fdc3e8ce4"
+    },
+    {
+      "path": "monsters/octobogz/1.png",
+      "size": [
+        184,
+        184
+      ],
+      "sourceSha256": "d6b36635bd38e7b97e809bd094b50ff3956164271c7612d465ad5f01a754562d",
+      "rgbSha256": "3b531c0d4dc06233d6b35b8aa33261ef8f51ab920de3da0c306728650db37652",
+      "policy": {
+        "action": "mask",
+        "reason": "Foreground sprite on a removable border backdrop.",
+        "background": [
+          255,
+          255,
+          255
+        ],
+        "tolerance": 12,
+        "feather": 10
+      },
+      "resultSha256": "fbaa9c9d9572007878e1b9c6a2f4e948afb9738fad1daccbabb811f1f461bb5f",
+      "sourceBytes": 32853,
+      "resultBytes": 38952,
+      "transparentPixels": 20441,
+      "partialPixels": 161,
+      "metadataSha256": "1b3b3ae198e09f8ecf135006b1922acd04931cb51687b8346cd5a9c0ab9c8289",
+      "rgbaSha256": "cd73b9938572d9b5279717608b83a4b4aad9ef445b0e6054d6b9c773e296d7ac"
+    },
+    {
+      "path": "monsters/plagueCultist.png",
+      "size": [
+        2048,
+        2048
+      ],
+      "sourceSha256": "158e8edb77352a2817264bc62d6a8dfa4cad959a1e94fd307dc68f8ec5b1c1f3",
+      "rgbSha256": "bf0e453ec64267a679aebc466ca707b93467e8746c1eb199f48ac9ef7ee29c77",
+      "policy": {
+        "action": "mask",
+        "reason": "Foreground sprite on a removable border backdrop.",
+        "background": [
+          255,
+          255,
+          255
+        ],
+        "tolerance": 24,
+        "feather": 12
+      },
+      "resultSha256": "51d4e41fc15d330c734c718da39c3937e347852acecceed7d701ebe5f104ace9",
+      "sourceBytes": 1007074,
+      "resultBytes": 1051920,
+      "transparentPixels": 2358833,
+      "partialPixels": 559,
+      "metadataSha256": "7817ec3f53d3cc5f77da923fb357a33c21f0cd83e58258a1974bf0615b693ac1",
+      "rgbaSha256": "63cbcdcb7a9795745d8907ce42538035d403209eadcded199d996272780964de"
+    },
+    {
+      "path": "monsters/pritz/0.png",
+      "size": [
+        142,
+        142
+      ],
+      "sourceSha256": "0bc6d72ba0dd68ddb73f07a62ce8d158342866e3847e3503c22503b0b8f9155d",
+      "rgbSha256": "7c0a891b2a784c47c3550d7c68187aa5f615468cb651a9b4a797ed2528c3d750",
+      "policy": {
+        "action": "preserve",
+        "reason": "Existing authored alpha and antialiased/glowing edges are already present."
+      },
+      "resultSha256": "0bc6d72ba0dd68ddb73f07a62ce8d158342866e3847e3503c22503b0b8f9155d",
+      "metadataSha256": "6a0f2b0b2cc4e9484bbb89ae5f22d0957ded6b70362973e4e2c6ec80438068de"
+    },
+    {
+      "path": "monsters/pritz/1.png",
+      "size": [
+        142,
+        142
+      ],
+      "sourceSha256": "b6c47915f24ce03fb6f751382f2c11a4f6b0f7cb9a19d0c09f08d13af313a067",
+      "rgbSha256": "bc21815f09790280459ea0f9b36f4802c2e9d52fe966bac57e6feed849291daa",
+      "policy": {
+        "action": "preserve",
+        "reason": "Existing authored alpha and antialiased/glowing edges are already present."
+      },
+      "resultSha256": "b6c47915f24ce03fb6f751382f2c11a4f6b0f7cb9a19d0c09f08d13af313a067",
+      "metadataSha256": "6a0f2b0b2cc4e9484bbb89ae5f22d0957ded6b70362973e4e2c6ec80438068de"
+    },
+    {
+      "path": "monsters/pritzmage/0.png",
+      "size": [
+        142,
+        142
+      ],
+      "sourceSha256": "cdd6ae0e50fc1f9e82e8f65786351903a6b9db66e24c0e47484d10b328fd8f2f",
+      "rgbSha256": "e9b9c0ec8be6118d17f99336badf33901467e1fb973e5ba03d4f0d904918852c",
+      "policy": {
+        "action": "preserve",
+        "reason": "Existing authored alpha and antialiased/glowing edges are already present."
+      },
+      "resultSha256": "cdd6ae0e50fc1f9e82e8f65786351903a6b9db66e24c0e47484d10b328fd8f2f",
+      "metadataSha256": "6a0f2b0b2cc4e9484bbb89ae5f22d0957ded6b70362973e4e2c6ec80438068de"
+    },
+    {
+      "path": "monsters/pritzmage/1.png",
+      "size": [
+        142,
+        142
+      ],
+      "sourceSha256": "6f5374e17263414430a9a3603649a177eccf543e91b074c757b11beadce0ab27",
+      "rgbSha256": "2a94c5e059036f56b5a49fd3de134d3e1d3b2e14c9aaa9f971e0d97fea1205eb",
+      "policy": {
+        "action": "preserve",
+        "reason": "Existing authored alpha and antialiased/glowing edges are already present."
+      },
+      "resultSha256": "6f5374e17263414430a9a3603649a177eccf543e91b074c757b11beadce0ab27",
+      "metadataSha256": "6a0f2b0b2cc4e9484bbb89ae5f22d0957ded6b70362973e4e2c6ec80438068de"
+    },
+    {
+      "path": "monsters/pritzmage/2.png",
+      "size": [
+        142,
+        142
+      ],
+      "sourceSha256": "26ee0e2191c8c895e1e80e2764a94438234118173d9d816ba86eb1ced2d65b97",
+      "rgbSha256": "c7d9a75b609d6b3fce88afc271ffb2e8c593469dcb2a826c02ed81226fd0f3af",
+      "policy": {
+        "action": "preserve",
+        "reason": "Existing authored alpha and antialiased/glowing edges are already present."
+      },
+      "resultSha256": "26ee0e2191c8c895e1e80e2764a94438234118173d9d816ba86eb1ced2d65b97",
+      "metadataSha256": "6a0f2b0b2cc4e9484bbb89ae5f22d0957ded6b70362973e4e2c6ec80438068de"
+    },
+    {
+      "path": "monsters/pritzmage/3.png",
+      "size": [
+        142,
+        142
+      ],
+      "sourceSha256": "ae5fe64ae2eef3b959e09928f847836e0598c381409a5751464486f4be39a4f4",
+      "rgbSha256": "27931ef999918d51672e57011eaa1896702f114550851fa00fa5e12487d3dd12",
+      "policy": {
+        "action": "preserve",
+        "reason": "Existing authored alpha and antialiased/glowing edges are already present."
+      },
+      "resultSha256": "ae5fe64ae2eef3b959e09928f847836e0598c381409a5751464486f4be39a4f4",
+      "metadataSha256": "6a0f2b0b2cc4e9484bbb89ae5f22d0957ded6b70362973e4e2c6ec80438068de"
+    },
+    {
+      "path": "monsters/ritualCultist.png",
+      "size": [
+        2048,
+        2048
+      ],
+      "sourceSha256": "27343e34251915b104fdfc86be096a86357fb386530353defbdb40eb9068ec62",
+      "rgbSha256": "f7c04ecbfa88b00eb30cbbdb72d953538407282891862a85b27807b15cd9f965",
+      "policy": {
+        "action": "mask",
+        "reason": "Foreground sprite on a removable border backdrop.",
+        "background": [
+          255,
+          255,
+          254
+        ],
+        "tolerance": 24,
+        "feather": 12
+      },
+      "resultSha256": "4404b90e9e8b3625d5c6b036ab9e4f46c6154f85b64cb19e94d0fe220a671d72",
+      "sourceBytes": 1221824,
+      "resultBytes": 1294783,
+      "transparentPixels": 2524284,
+      "partialPixels": 507,
+      "metadataSha256": "0fac5f2fe7b8d6f0ced944bc31dc4433278e2226a1226843bd62313ff881ec78",
+      "rgbaSha256": "b24f04ebf3a57245f6c820ec1cb89c843f6a7abb88b41ec1e214df3303952485"
+    },
+    {
+      "path": "monsters/ritualLeaderTemplate.png",
+      "size": [
+        2048,
+        2048
+      ],
+      "sourceSha256": "5108b2cbd0f39724de229ba951887ff1b6da68e453737ad0195dbcd9c5738592",
+      "rgbSha256": "691a877ea5ff006b44e53632eabc5fa3165067caf2520ea7bdaae299317978d3",
+      "policy": {
+        "action": "mask",
+        "reason": "Foreground sprite on a removable border backdrop.",
+        "background": [
+          255,
+          255,
+          255
+        ],
+        "tolerance": 24,
+        "feather": 12
+      },
+      "resultSha256": "21e0d21bd8ed10b79b927a69ab983922b7165307d971bd7a0edf23c6a4ba455a",
+      "sourceBytes": 1226464,
+      "resultBytes": 1270079,
+      "transparentPixels": 2232664,
+      "partialPixels": 635,
+      "metadataSha256": "06ba2524ef299493a58709cb9ddb1a334e56783e71b7909935aac0d5a5b55f8c",
+      "rgbaSha256": "38cde217df0d50b93cda2f306e68c7b64fd5cc9b266d113f3762ccd8a520a864"
+    },
+    {
+      "path": "monsters/ritualMage.png",
+      "size": [
+        2048,
+        2048
+      ],
+      "sourceSha256": "6ed3d3415efae882985422a1cabe82d3b8fab9b6e68bf27c1df5d2c215d6793b",
+      "rgbSha256": "406fc51220ed61f0fdf157dfbc398b831b24927dc4d6a1454b88e58aea0926fe",
+      "policy": {
+        "action": "mask",
+        "reason": "Foreground sprite on a removable border backdrop.",
+        "background": [
+          255,
+          255,
+          254
+        ],
+        "tolerance": 24,
+        "feather": 12
+      },
+      "resultSha256": "55ef407775a7a5b4c521e47431ede9d2c3e030cd198cdb936032293665e8f172",
+      "sourceBytes": 1284732,
+      "resultBytes": 1345992,
+      "transparentPixels": 1996230,
+      "partialPixels": 526,
+      "metadataSha256": "e565bad36b5113d2e749f8c9503ff218b1b8860b03a5828898ad0f17e16b6f74",
+      "rgbaSha256": "2d8d227663bea222974ba73e38cd9fe06fd5f901914d61f6f9975bd1d51dfcf6"
+    },
+    {
+      "path": "monsters/ritualPritz.png",
+      "size": [
+        2048,
+        2048
+      ],
+      "sourceSha256": "56333daba1933134833b0ddc7f4d15898473a974ae00b37dd1be387f2d3f2f17",
+      "rgbSha256": "6e8e4f91d7659557479b4daebca01909a524a53689fc264062abd933b3ab749e",
+      "policy": {
+        "action": "mask",
+        "reason": "Foreground sprite on a removable border backdrop.",
+        "background": [
+          255,
+          255,
+          254
+        ],
+        "tolerance": 24,
+        "feather": 12
+      },
+      "resultSha256": "08afd857ff9f12a4d5c3325d81e16d96be6c027f1e1c2d4a1d380184b3f728e0",
+      "sourceBytes": 2528615,
+      "resultBytes": 2664716,
+      "transparentPixels": 1414875,
+      "partialPixels": 3983,
+      "metadataSha256": "21edcd850695b109f63d2a202ebc6915907faab32be6c829c872a28ca917704e",
+      "rgbaSha256": "04662f5fe90302b026cdadd7d6ad4533843d0c851c7d9102dc3e2ee7af6b414e"
+    },
+    {
+      "path": "monsters/theBarrowWarlord.png",
+      "size": [
+        2048,
+        2048
+      ],
+      "sourceSha256": "53ae6825f228c8da83dcc3fff4fef3806a4278ff5971aa7ae8dc58737b132243",
+      "rgbSha256": "497d243558424c9ffec5d87a96d4b864c264f36d9b1d86f05cb5e247034a3ae4",
+      "policy": {
+        "action": "mask",
+        "reason": "Foreground sprite on a removable border backdrop.",
+        "background": [
+          255,
+          255,
+          255
+        ],
+        "tolerance": 24,
+        "feather": 12
+      },
+      "resultSha256": "d2bd906dfb9e7584de8d3d2e2fa22a8a6f31b7b269defb9d82f7713f0f6b6fe1",
+      "sourceBytes": 1537955,
+      "resultBytes": 1631693,
+      "transparentPixels": 2081390,
+      "partialPixels": 949,
+      "metadataSha256": "c2acf0b48a687e54f690a5366bd2354cfe5d7bab981d866933d118d2eac4f49c",
+      "rgbaSha256": "40c36bb72526be600a2d9c70bb8be8660d44f928058162cd3687be9b92df6103"
+    },
+    {
+      "path": "monsters/theCrawlingChaos.png",
+      "size": [
+        2048,
+        2048
+      ],
+      "sourceSha256": "c63def75d4f9ab6ce54742695c82840df5527bc502754314a5a57e5938c90925",
+      "rgbSha256": "d63bd6d7f59afb44873c3cc29f64a294de6734e0c868993b431f9b340abc7d35",
+      "policy": {
+        "action": "mask",
+        "reason": "Foreground sprite on a removable border backdrop.",
+        "background": [
+          255,
+          255,
+          255
+        ],
+        "tolerance": 24,
+        "feather": 12
+      },
+      "resultSha256": "4d6891bfcd62cfb7c07c1d20e40156de479198c9d1f3a5e9e73b373b25525597",
+      "sourceBytes": 1251482,
+      "resultBytes": 1307476,
+      "transparentPixels": 1947344,
+      "partialPixels": 2098,
+      "metadataSha256": "f70f296826adaddca0c83c3f03245d514aca7216f1bf68f04bfe389309bf5571",
+      "rgbaSha256": "7b87b64c97df6833b94711b50ee3595995f6e3e3767f1dd3f65212e24b6168cd"
+    },
+    {
+      "path": "monsters/theNameless.png",
+      "size": [
+        2048,
+        2048
+      ],
+      "sourceSha256": "e3e43843274f7e7b2ea0f23271224a5bf827e1dfa74240fa52941635e35dd05a",
+      "rgbSha256": "0108f48bcfab2cf644e3f99ec44e6ddc5b0b4e69210b449ed6eb11033f4f9180",
+      "policy": {
+        "action": "mask",
+        "reason": "Foreground sprite on a removable border backdrop.",
+        "background": [
+          255,
+          255,
+          254
+        ],
+        "tolerance": 24,
+        "feather": 12
+      },
+      "resultSha256": "9dd688568c81cd1eb25bea1e362d18e38bddfc221581fc84a313bc509fb0b6c9",
+      "sourceBytes": 1315052,
+      "resultBytes": 1411888,
+      "transparentPixels": 2653449,
+      "partialPixels": 53835,
+      "metadataSha256": "9fcb9e2c8c0910808d9ab90d125029e5f57e19c25bbd0bf19cd4271aaa87b04e",
+      "rgbaSha256": "ffde8aeada3ff95f3b84e2b29bf9d8f4cc4a34de6ade57087d23a1f42e79c9e7"
+    },
+    {
+      "path": "monsters/theNinefoldKing.png",
+      "size": [
+        2048,
+        2048
+      ],
+      "sourceSha256": "bd586e2d758cf57fb10d766cafbb3d0b61043ed63813537121b673182fb8c291",
+      "rgbSha256": "f2782396ea37344274860b03b7bd9d48132e372ef8a6707978c8afd94433a3a2",
+      "policy": {
+        "action": "mask",
+        "reason": "Foreground sprite on a removable border backdrop.",
+        "background": [
+          255,
+          255,
+          255
+        ],
+        "tolerance": 24,
+        "feather": 12
+      },
+      "resultSha256": "a4ca2eb1daaa75d95835f33ef70830bbf1d9fd67fe2ef30017b632b2acfbcc63",
+      "sourceBytes": 1201621,
+      "resultBytes": 1239480,
+      "transparentPixels": 1687346,
+      "partialPixels": 609,
+      "metadataSha256": "91731aaa6c4d17527768882441f0fe07ee1e92e062c5e9f34dbc26959ffbed37",
+      "rgbaSha256": "009816065d20d8799977936e46d35e5b874cf7bb81c66f95ff657fd2dd6b898b"
+    },
+    {
+      "path": "monsters/theUsurper.png",
+      "size": [
+        2048,
+        2048
+      ],
+      "sourceSha256": "ad607625f8451999ae50713be937e7f9f97250525163554d26e3bf4d5eefcac4",
+      "rgbSha256": "2879863ed48f837c15fe88d32f034b536f81333bfe312c9511c3f54269a194a4",
+      "policy": {
+        "action": "mask",
+        "reason": "Foreground sprite on a removable border backdrop.",
+        "background": [
+          255,
+          255,
+          254
+        ],
+        "tolerance": 24,
+        "feather": 12
+      },
+      "resultSha256": "5c5a9b316134655f01653615245cd78566b4ddee5917aeaf6084866ce637d535",
+      "sourceBytes": 1695848,
+      "resultBytes": 1762987,
+      "transparentPixels": 1705841,
+      "partialPixels": 647,
+      "metadataSha256": "4df9daa763e31dd49ed1a45c2f1c2420571a8fc9018711dee2a57ae350ea292d",
+      "rgbaSha256": "23f68994c575c816bd0628abbc7b3e448d1e2d12516e9a77aa9d63c3b8dd5b54"
+    },
+    {
+      "path": "monsters/tideHierophant.png",
+      "size": [
+        2048,
+        2048
+      ],
+      "sourceSha256": "1a9f8af3f90b1ab67c432cd514912852a482c879677bf01b0666dac6cb881216",
+      "rgbSha256": "65d21f2147ba4e95fed780a9739054187fccd79346b58d46e261a1b85701c056",
+      "policy": {
+        "action": "mask",
+        "reason": "Foreground sprite on a removable border backdrop.",
+        "background": [
+          255,
+          255,
+          254
+        ],
+        "tolerance": 24,
+        "feather": 12
+      },
+      "resultSha256": "5698066cdc97fb9c9dae601a952b152bdaa85ae26dbec1c307fee980dfd7a21f",
+      "sourceBytes": 1837872,
+      "resultBytes": 1984823,
+      "transparentPixels": 2356050,
+      "partialPixels": 159470,
+      "metadataSha256": "55419f794ea356ba462d0e48a48fa322fbdb705204684444665403300f487986",
+      "rgbaSha256": "3d5a04c323dda4f733a6dad63c4d880eeef4386439239c8fe4d7ed4dd4a512b1"
+    },
+    {
+      "path": "monsters/watchCaptain.png",
+      "size": [
+        2048,
+        2048
+      ],
+      "sourceSha256": "323bfd4672737dfa5b3100ef7031d15dd551272519dab71ea9ebab1602c13999",
+      "rgbSha256": "262a48a12160f7196aab9c8241368f3f250c4b797a1318e85db25f25178c17f1",
+      "policy": {
+        "action": "mask",
+        "reason": "Foreground sprite on a removable border backdrop.",
+        "background": [
+          255,
+          255,
+          254
+        ],
+        "tolerance": 24,
+        "feather": 12
+      },
+      "resultSha256": "bb27d7a3ab71d91c2eae7ca8aac92a3dc0ff5c17f772d574e32864b2835d2234",
+      "sourceBytes": 1123995,
+      "resultBytes": 1161012,
+      "transparentPixels": 2067601,
+      "partialPixels": 714,
+      "metadataSha256": "3bdeba81631374c6dcd720d30f57ffa895f2b5c79cbc3253008640b87a3e71b8",
+      "rgbaSha256": "094925d3fc107c2fe54023106c1e6022c6ce6b45cf6051cbe789ceab76a125fd"
+    },
+    {
+      "path": "npc/banneretHild.png",
+      "size": [
+        2048,
+        2048
+      ],
+      "sourceSha256": "7baa7116807514722a9e8d014acd2543bddb06e8287e6e1419702297c3aec39a",
+      "rgbSha256": "2760314932bc699ec0e50ee49f5fc5768f10f375b0b674da400cec0084df1728",
+      "policy": {
+        "action": "mask",
+        "reason": "Foreground sprite on a removable border backdrop.",
+        "background": [
+          255,
+          255,
+          255
+        ],
+        "tolerance": 24,
+        "feather": 12
+      },
+      "resultSha256": "9c298a0e5a5ab941311b589b171105be3eede8a96858b31435740f761469fcab",
+      "sourceBytes": 975463,
+      "resultBytes": 1005176,
+      "transparentPixels": 2562870,
+      "partialPixels": 516,
+      "metadataSha256": "f4560cd847492c5fb195657917f5c0f644f035338e7c023700547c81c395b07a",
+      "rgbaSha256": "42d25fec475c6cf30dbb0b8857374e41c5371db2b04009d1cb20dc608b003ffb"
+    },
+    {
+      "path": "npc/dreamerGuide.png",
+      "size": [
+        2048,
+        2048
+      ],
+      "sourceSha256": "0f22914f50dacce3f027724f842d77b4d52660ad24ee886cf46e88595cb2003e",
+      "rgbSha256": "91129ca22a41a07b0367c2cc8104b8168bb21996b88b4596235055f9722fc33d",
+      "policy": {
+        "action": "mask",
+        "reason": "Foreground sprite on a removable border backdrop.",
+        "background": [
+          255,
+          255,
+          254
+        ],
+        "tolerance": 24,
+        "feather": 12
+      },
+      "resultSha256": "fc52ecc1122bf42b2159c6318b99640dd1d772e1d13357767d3d300b096f516d",
+      "sourceBytes": 1035854,
+      "resultBytes": 1093414,
+      "transparentPixels": 2542275,
+      "partialPixels": 504,
+      "metadataSha256": "5baf6f5dc84e69da3b3446daa6d530c05b67f12a6d80efd04eaf5333e51393da",
+      "rgbaSha256": "51b5400582a8824dd783bb021a2ad5940d5ac1919394ea0c87b98109ade472df"
+    },
+    {
+      "path": "npc/elderMaren.png",
+      "size": [
+        2048,
+        2048
+      ],
+      "sourceSha256": "509c66ab91fa903b7f7f806cad4f3ace3e059885be19c8f12a5d03768c774a01",
+      "rgbSha256": "f1dd923c96c0716ca828e31f0dc26af22ee1c01ddd71a921372bf3d3fdea9041",
+      "policy": {
+        "action": "mask",
+        "reason": "Foreground sprite on a removable border backdrop.",
+        "background": [
+          255,
+          255,
+          255
+        ],
+        "tolerance": 24,
+        "feather": 12
+      },
+      "resultSha256": "215cc6bf554d4353267f40941a42cb200513fef2bb1084e0cc26d87500fd8473",
+      "sourceBytes": 1406954,
+      "resultBytes": 1477430,
+      "transparentPixels": 1658186,
+      "partialPixels": 419,
+      "metadataSha256": "206f76803d39ce0f173c8ed9a7bd35572bad4892e901c26924da93b72aedfe9e",
+      "rgbaSha256": "b207cfbfcad296a414c2aaee76e9fe6d506a79ebde0cb3e5dcce31d4ec452b9e"
+    },
+    {
+      "path": "npc/lengMerchant.png",
+      "size": [
+        2048,
+        2048
+      ],
+      "sourceSha256": "2ef4d890a4faafc62337cdac2a2cbaeb5243e5031d37b5f606bedae0421d1055",
+      "rgbSha256": "983b285ebb6819456fc9d6291b3d959eb63991b6bbd0bd936bb9deec746c8d2f",
+      "policy": {
+        "action": "mask",
+        "reason": "Foreground sprite on a removable border backdrop.",
+        "background": [
+          255,
+          255,
+          254
+        ],
+        "tolerance": 24,
+        "feather": 12
+      },
+      "resultSha256": "7c5cf7ff72acf52eec181788fea59463155a4cd276a6629b27551b1beea5f22b",
+      "sourceBytes": 1157649,
+      "resultBytes": 1234920,
+      "transparentPixels": 2688889,
+      "partialPixels": 651,
+      "metadataSha256": "086b078b9b39aeb316baf5c2ef7d0a79f8a4be3ced01483093f17e6cf98551fb",
+      "rgbaSha256": "cf674563fc157b62abe53c60177cec0245c8efe50cc06938df5d14fc4d9ab39e"
+    },
+    {
+      "path": "npc/lengPriest.png",
+      "size": [
+        2048,
+        2048
+      ],
+      "sourceSha256": "b4b185694fbb84b2ad5359cd0c73a97a0cca17f228a5f14fc2735a70b03ef5fe",
+      "rgbSha256": "32eb751e681b6c5dadec46ff8b122631e7f4b78790bd27922470db27fe6ef4b2",
+      "policy": {
+        "action": "mask",
+        "reason": "Foreground sprite on a removable border backdrop.",
+        "background": [
+          255,
+          255,
+          254
+        ],
+        "tolerance": 24,
+        "feather": 12
+      },
+      "resultSha256": "b103c19cacd8948a8d135cab60624636ee9f4892036b69fd77912681f81436d4",
+      "sourceBytes": 1115078,
+      "resultBytes": 1173813,
+      "transparentPixels": 2714214,
+      "partialPixels": 488,
+      "metadataSha256": "223fccbc154c0b49d7b59441b9217388cbebf95ee0e884b95d43c14e89b5bd39",
+      "rgbaSha256": "4639aab5835e5258b98bf0cffd649782c3140b3cf0cda5b80a6b1121f9fbe5c5"
+    },
+    {
+      "path": "npc/markedWidow.png",
+      "size": [
+        2048,
+        2048
+      ],
+      "sourceSha256": "a4880aa833a51dc708f37fff65abcc186104eefae2549aa82d06af82b7339eea",
+      "rgbSha256": "d5de1f53ea90fa39e77e0c5be761743e67a1b234628b9e4e87db46f6170a579c",
+      "policy": {
+        "action": "mask",
+        "reason": "Foreground sprite on a removable border backdrop.",
+        "background": [
+          255,
+          255,
+          254
+        ],
+        "tolerance": 24,
+        "feather": 12
+      },
+      "resultSha256": "189ddb5abceb8967872b789d0ec94d37cf01010f3bb66025fbb688f00896439d",
+      "sourceBytes": 1044715,
+      "resultBytes": 1112022,
+      "transparentPixels": 2947064,
+      "partialPixels": 508,
+      "metadataSha256": "5c78a7f4facda4da4c49088beccfaa09b9f5061efdbaf62b06ce0dc9dd517cf1",
+      "rgbaSha256": "9945f814745accae124dee5b8cb45a64e2d5cc8920ddfddaaf99faf8b1b09c1e"
+    },
+    {
+      "path": "npc/oldTollman.png",
+      "size": [
+        2048,
+        2048
+      ],
+      "sourceSha256": "45832380c8f5c3a6b570a2bb6d651ec174b1f735f539f083c6205fd04b9f3cac",
+      "rgbSha256": "9409831907166e3b58b56cb4c1fd93b925c2d999f2282dce2fcb739727a6c2ee",
+      "policy": {
+        "action": "mask",
+        "reason": "Foreground sprite on a removable border backdrop.",
+        "background": [
+          255,
+          255,
+          254
+        ],
+        "tolerance": 24,
+        "feather": 12
+      },
+      "resultSha256": "3925d852c51fc7f4bcbd5befee7984296c367251f6637d3f62bcfdf72c1182bd",
+      "sourceBytes": 1532059,
+      "resultBytes": 1613831,
+      "transparentPixels": 2116836,
+      "partialPixels": 831,
+      "metadataSha256": "913093ca51a3db65520aa52b46792364b80600e3d3a2898b863eb32883b48534",
+      "rgbaSha256": "f55f42479bac0a477b6dac389205bb7f21fae82da4282abba82436409bd111f6"
+    },
+    {
+      "path": "npc/oldWoman.png",
+      "size": [
+        512,
+        512
+      ],
+      "sourceSha256": "7766eff27cf1b7af8ee631b3e1cb21f5422c18e971733c9fedce2f3dd22a9cff",
+      "rgbSha256": "2318d72897aaa233e6c03decccfb0a7bb62724ac3cfca9341443d9aa5c302222",
+      "policy": {
+        "action": "preserve",
+        "reason": "Existing authored alpha and antialiased/glowing edges are already present."
+      },
+      "resultSha256": "7766eff27cf1b7af8ee631b3e1cb21f5422c18e971733c9fedce2f3dd22a9cff",
+      "metadataSha256": "11cc98553d4487978c804d6f49a739741b6f781f2e3bc31fb751151a0e3fc7b3"
+    },
+    {
+      "path": "npc/quartermasterVoss.png",
+      "size": [
+        2048,
+        2048
+      ],
+      "sourceSha256": "5c67e3aed6a53572fa562437d5a634ed311f67cac312aa4a2d20ac2242e5ccb0",
+      "rgbSha256": "5a40dee3f78284d0fc3b6f75582288cc4a1dcc88501c1c303c73bebdca9f4896",
+      "policy": {
+        "action": "mask",
+        "reason": "Foreground sprite on a removable border backdrop.",
+        "background": [
+          255,
+          255,
+          254
+        ],
+        "tolerance": 24,
+        "feather": 12
+      },
+      "resultSha256": "a6ed47fdd5d05bcffd61b3102194d2bba7def9d9ae4f460bb33e11e3d79c362f",
+      "sourceBytes": 1308318,
+      "resultBytes": 1374184,
+      "transparentPixels": 2114976,
+      "partialPixels": 606,
+      "metadataSha256": "cb6bcafaf9ee68eeb6d1c8321676ce7fcd77660d114d3a9ca0bc68bda6e695f6",
+      "rgbaSha256": "677d4f8d14803679683701b019f6b2118c315b1f5125a7cad3129ddd58fd8864"
+    },
+    {
+      "path": "npc/questGiver.png",
+      "size": [
+        512,
+        512
+      ],
+      "sourceSha256": "1a0c5a33e678680a22a738f4395178da8e475e499a540cc5f1d6057012677eb1",
+      "rgbSha256": "974bce1995aa9628b57e3d9d0fe1e4842048b7fd22c119a9e0f9d8185cd7b112",
+      "policy": {
+        "action": "preserve",
+        "reason": "Existing authored alpha and antialiased/glowing edges are already present."
+      },
+      "resultSha256": "1a0c5a33e678680a22a738f4395178da8e475e499a540cc5f1d6057012677eb1",
+      "metadataSha256": "11cc98553d4487978c804d6f49a739741b6f781f2e3bc31fb751151a0e3fc7b3"
+    },
+    {
+      "path": "npc/ritualCaptive.png",
+      "size": [
+        2048,
+        2048
+      ],
+      "sourceSha256": "a28491801d5441a7455879abab6fcc6aa877bb09039a0f9d820d2bd71c09e6a9",
+      "rgbSha256": "54126b6d2b17306ae0e343e0d30857cb58bec5fb7de5de31b46ded77ae4bd438",
+      "policy": {
+        "action": "mask",
+        "reason": "Foreground sprite on a removable border backdrop.",
+        "background": [
+          255,
+          255,
+          254
+        ],
+        "tolerance": 24,
+        "feather": 12
+      },
+      "resultSha256": "397ea78661793fca8c8e1fb088469e14658815fe9742d8acd97fa3292f1cfd83",
+      "sourceBytes": 1591313,
+      "resultBytes": 1698619,
+      "transparentPixels": 2097035,
+      "partialPixels": 565,
+      "metadataSha256": "88c629bcf552ce436028954c25f6d8021a7e8c5d9d8e8b2e46ad7c06a0a5db6c",
+      "rgbaSha256": "85a17a83f0501501ea5e557ea8bfd864563083b987a47aa3f92822f206672360"
+    },
+    {
+      "path": "npc/ritualWitness.png",
+      "size": [
+        2048,
+        2048
+      ],
+      "sourceSha256": "ab937775ebd17a021b6d0a444a0fad302d9863363ec4a15a71f3c7c4c9f2b367",
+      "rgbSha256": "49510a69482c9c8fb69ddad1a39f170e35778b1b02702ff8eb51d552f8500714",
+      "policy": {
+        "action": "mask",
+        "reason": "Foreground sprite on a removable border backdrop.",
+        "background": [
+          255,
+          255,
+          254
+        ],
+        "tolerance": 24,
+        "feather": 12
+      },
+      "resultSha256": "bdbd0dea07b9f2cdae1b6d517e42a76246fd329f68339f58c0ba290af88862c5",
+      "sourceBytes": 1225539,
+      "resultBytes": 1299658,
+      "transparentPixels": 2706926,
+      "partialPixels": 515,
+      "metadataSha256": "bd3fc4b8fa0688acd2713a050a3d5d415ade6087b54675316110e137cdb9aed1",
+      "rgbaSha256": "3282088a6a49e82686da0c9e3505045fbba45a1b0aa7dbaf977ce53c51d2c7ac"
+    },
+    {
+      "path": "panel.png",
+      "size": [
+        1440,
+        900
+      ],
+      "sourceSha256": "7bae107ba7860d4a71d7e5016ed40a86fb446beb8eb994b727d092d887cfce20",
+      "rgbSha256": "e9315e174b30b920ae796bf92697e5228858769c5b243138b53897d5b2ef575e",
+      "policy": {
+        "action": "preserve",
+        "reason": "Painted terrain, UI surface or framed icon; its background belongs to the artwork."
+      },
+      "resultSha256": "7bae107ba7860d4a71d7e5016ed40a86fb446beb8eb994b727d092d887cfce20",
+      "metadataSha256": "505409b9dca3c156ac44ea64f0831e65d1c7291af85cae8c0cf51f2b47048ce4"
+    },
+    {
+      "path": "players/assasin.png",
+      "size": [
+        512,
+        512
+      ],
+      "sourceSha256": "e47d0e80999c6008db20cb873540b67c6ae8f760e07be9932b8129301a747bd2",
+      "rgbSha256": "0670105625156ed1fc8d42c9f01814b7300328fd90d7fd6a20393ca02e4d2b21",
+      "policy": {
+        "action": "preserve",
+        "reason": "Existing authored alpha and antialiased/glowing edges are already present."
+      },
+      "resultSha256": "e47d0e80999c6008db20cb873540b67c6ae8f760e07be9932b8129301a747bd2",
+      "metadataSha256": "11cc98553d4487978c804d6f49a739741b6f781f2e3bc31fb751151a0e3fc7b3"
+    },
+    {
+      "path": "players/inquisitor.png",
+      "size": [
+        1024,
+        1024
+      ],
+      "sourceSha256": "62172046f0c5e2bd64a39666b55eb03b17319b44496d932d0f14872e600a7529",
+      "rgbSha256": "9e49ebff024366e0929cda31fc770a444de8f62fbe9d567ad4aa2fd5468ecda7",
+      "policy": {
+        "action": "preserve",
+        "reason": "Existing authored alpha and antialiased/glowing edges are already present."
+      },
+      "resultSha256": "62172046f0c5e2bd64a39666b55eb03b17319b44496d932d0f14872e600a7529",
+      "metadataSha256": "44136fa355b3678a1146ad16f7e8649e94fb4fc21fe77e8310c060f61caaff8a"
+    },
+    {
+      "path": "players/sorcerer.png",
+      "size": [
+        512,
+        512
+      ],
+      "sourceSha256": "52b809d9b834c31ae4e979236be36ef719eb98fcfc4758e486678bfbda83068e",
+      "rgbSha256": "cf43e3669f39425a2d026d9854394e7ba7611d15cf020555da6b1a465686d3a0",
+      "policy": {
+        "action": "preserve",
+        "reason": "Existing authored alpha and antialiased/glowing edges are already present."
+      },
+      "resultSha256": "52b809d9b834c31ae4e979236be36ef719eb98fcfc4758e486678bfbda83068e",
+      "metadataSha256": "11cc98553d4487978c804d6f49a739741b6f781f2e3bc31fb751151a0e3fc7b3"
+    },
+    {
+      "path": "players/warrior.png",
+      "size": [
+        512,
+        512
+      ],
+      "sourceSha256": "957127f41689724435f83e5168096c037e6ddee36222edad9463ee1ef07fbd1c",
+      "rgbSha256": "ef9757c7a237653db32952ad0642f981acd50679f4932f29fb6f86555f75d91b",
+      "policy": {
+        "action": "preserve",
+        "reason": "Existing authored alpha and antialiased/glowing edges are already present."
+      },
+      "resultSha256": "957127f41689724435f83e5168096c037e6ddee36222edad9463ee1ef07fbd1c",
+      "metadataSha256": "11cc98553d4487978c804d6f49a739741b6f781f2e3bc31fb751151a0e3fc7b3"
+    },
+    {
+      "path": "players/wayfarer.png",
+      "size": [
+        1024,
+        1024
+      ],
+      "sourceSha256": "c90039a2458eb96a49aea3951e5eccb58e08fdeea78e489cc9a91cc5ee6714ea",
+      "rgbSha256": "86d14fa522f3a2ef4893119e6e081b28a11f94bca961d42d79b43f627b1c5053",
+      "policy": {
+        "action": "preserve",
+        "reason": "Existing authored alpha and antialiased/glowing edges are already present."
+      },
+      "resultSha256": "c90039a2458eb96a49aea3951e5eccb58e08fdeea78e489cc9a91cc5ee6714ea",
+      "metadataSha256": "44136fa355b3678a1146ad16f7e8649e94fb4fc21fe77e8310c060f61caaff8a"
+    },
+    {
+      "path": "skull.png",
+      "size": [
+        1024,
+        1024
+      ],
+      "sourceSha256": "e7b7d7086cf076ab3a05c147798ac8088f406924172a4d177f7bef959b383cdb",
+      "rgbSha256": "8227e7cb6b756fee26db64c90b84391bc2345caf925c88dcc4890d32f8266e60",
+      "policy": {
+        "action": "preserve",
+        "reason": "Existing authored alpha and antialiased/glowing edges are already present."
+      },
+      "resultSha256": "e7b7d7086cf076ab3a05c147798ac8088f406924172a4d177f7bef959b383cdb",
+      "metadataSha256": "44136fa355b3678a1146ad16f7e8649e94fb4fc21fe77e8310c060f61caaff8a"
+    },
+    {
+      "path": "terrain.png",
+      "size": [
+        128,
+        96
+      ],
+      "sourceSha256": "8f8934ffca475a2a2d9c8df50941839f7da2b142835c6b7277a57f4a64d1a358",
+      "rgbSha256": "0f8ad51f964e05db74f74480b71c992271bbb89ce522f308da7b937983657a58",
+      "policy": {
+        "action": "preserve",
+        "reason": "Painted terrain, UI surface or framed icon; its background belongs to the artwork."
+      },
+      "resultSha256": "8f8934ffca475a2a2d9c8df50941839f7da2b142835c6b7277a57f4a64d1a358",
+      "metadataSha256": "f88bfe05dd01da48418349d0876ce35b2eb72bd95679304d5887c94ee7224388"
+    },
+    {
+      "path": "tiles/beach.png",
+      "size": [
+        1024,
+        1024
+      ],
+      "sourceSha256": "24a4c93c14498c174a1ed96bbc576c02fb01072fc51d1bf8bdc97ca1fcdfc8b5",
+      "rgbSha256": "d1a6dc4602b51fc56c01863cffe3b1f265a93c4e8e6eff43bd2746585f085bf5",
+      "policy": {
+        "action": "preserve",
+        "reason": "Painted terrain, UI surface or framed icon; its background belongs to the artwork."
+      },
+      "resultSha256": "24a4c93c14498c174a1ed96bbc576c02fb01072fc51d1bf8bdc97ca1fcdfc8b5",
+      "metadataSha256": "44136fa355b3678a1146ad16f7e8649e94fb4fc21fe77e8310c060f61caaff8a"
+    },
+    {
+      "path": "tiles/desert.png",
+      "size": [
+        1024,
+        1024
+      ],
+      "sourceSha256": "6f9ad5ca130710b1fb79ec95868c762c133cb4578ea309219cf666c56a5a2dfb",
+      "rgbSha256": "c6524c47beb18e739df77ceb4bec553828afa7026d3e82e41db4291791aedeb1",
+      "policy": {
+        "action": "preserve",
+        "reason": "Painted terrain, UI surface or framed icon; its background belongs to the artwork."
+      },
+      "resultSha256": "6f9ad5ca130710b1fb79ec95868c762c133cb4578ea309219cf666c56a5a2dfb",
+      "metadataSha256": "44136fa355b3678a1146ad16f7e8649e94fb4fc21fe77e8310c060f61caaff8a"
+    },
+    {
+      "path": "tiles/grass.png",
+      "size": [
+        1024,
+        1024
+      ],
+      "sourceSha256": "4d19e970d327929e4ec18e37a665093ee7c82609601316625cd4ea7aac351bf7",
+      "rgbSha256": "73a7d1dd2b7fbe47a3337cad2ec89dfc747a33d04010007c767d847b3187b816",
+      "policy": {
+        "action": "preserve",
+        "reason": "Painted terrain, UI surface or framed icon; its background belongs to the artwork."
+      },
+      "resultSha256": "4d19e970d327929e4ec18e37a665093ee7c82609601316625cd4ea7aac351bf7",
+      "metadataSha256": "44136fa355b3678a1146ad16f7e8649e94fb4fc21fe77e8310c060f61caaff8a"
+    },
+    {
+      "path": "tiles/ground.png",
+      "size": [
+        1024,
+        1024
+      ],
+      "sourceSha256": "e35f32cceb8d2b1440408531a995459bf43f52caf63135e83ce49eef493189c0",
+      "rgbSha256": "de882f83c5b9403cfc335f040a2c186389677490d1daedd3451a85747774189c",
+      "policy": {
+        "action": "preserve",
+        "reason": "Painted terrain, UI surface or framed icon; its background belongs to the artwork."
+      },
+      "resultSha256": "e35f32cceb8d2b1440408531a995459bf43f52caf63135e83ce49eef493189c0",
+      "metadataSha256": "44136fa355b3678a1146ad16f7e8649e94fb4fc21fe77e8310c060f61caaff8a"
+    },
+    {
+      "path": "tiles/lava.png",
+      "size": [
+        1024,
+        1024
+      ],
+      "sourceSha256": "1ca0f41d06ba42b76c6fedf57f442e165ed1364e542c895c78676254ca8554f3",
+      "rgbSha256": "a3b7d98c3b2bc065e1a554b3a0a4c91e9cd4af52a9105e647d79a143af6d0281",
+      "policy": {
+        "action": "preserve",
+        "reason": "Painted terrain, UI surface or framed icon; its background belongs to the artwork."
+      },
+      "resultSha256": "1ca0f41d06ba42b76c6fedf57f442e165ed1364e542c895c78676254ca8554f3",
+      "metadataSha256": "44136fa355b3678a1146ad16f7e8649e94fb4fc21fe77e8310c060f61caaff8a"
+    },
+    {
+      "path": "tiles/mountain.png",
+      "size": [
+        1024,
+        1024
+      ],
+      "sourceSha256": "f86894bc026eb29727d6c7e91e7772be9d0cfc69cc908025d197de607e471422",
+      "rgbSha256": "ff43316fa7e93cdf23e82d07407f6cc255ddfbb44619f0b4acaca002f8113046",
+      "policy": {
+        "action": "preserve",
+        "reason": "Painted terrain, UI surface or framed icon; its background belongs to the artwork."
+      },
+      "resultSha256": "f86894bc026eb29727d6c7e91e7772be9d0cfc69cc908025d197de607e471422",
+      "metadataSha256": "44136fa355b3678a1146ad16f7e8649e94fb4fc21fe77e8310c060f61caaff8a"
+    },
+    {
+      "path": "tiles/road.png",
+      "size": [
+        1024,
+        1024
+      ],
+      "sourceSha256": "9db5aaed6a7bde1c82c4af9199efff78dadd68cf03238946b667c4709e235d95",
+      "rgbSha256": "5d383f2b8d35277e1f9a53cea83acc062cff01028dd14244c6575405da85ec18",
+      "policy": {
+        "action": "preserve",
+        "reason": "Painted terrain, UI surface or framed icon; its background belongs to the artwork."
+      },
+      "resultSha256": "9db5aaed6a7bde1c82c4af9199efff78dadd68cf03238946b667c4709e235d95",
+      "metadataSha256": "44136fa355b3678a1146ad16f7e8649e94fb4fc21fe77e8310c060f61caaff8a"
+    },
+    {
+      "path": "tiles/snow.png",
+      "size": [
+        1024,
+        1024
+      ],
+      "sourceSha256": "f9e4ed837a58ca9af38f7d369a0215bb6c294686b160978f0b40fd560bd1d6a7",
+      "rgbSha256": "5ada2c7aac1a0cbd3136708d10aa06912c27b0e07f136573492c68b30a23e5f5",
+      "policy": {
+        "action": "preserve",
+        "reason": "Painted terrain, UI surface or framed icon; its background belongs to the artwork."
+      },
+      "resultSha256": "f9e4ed837a58ca9af38f7d369a0215bb6c294686b160978f0b40fd560bd1d6a7",
+      "metadataSha256": "44136fa355b3678a1146ad16f7e8649e94fb4fc21fe77e8310c060f61caaff8a"
+    },
+    {
+      "path": "tiles/swamp.png",
+      "size": [
+        1024,
+        1024
+      ],
+      "sourceSha256": "92a6d42080197f7da8c000c7d0ff662f1fe17489bbc779247c96d0c2c577863d",
+      "rgbSha256": "56d64543f4a3927398b4cf12e87547d6e077d6a295643e94843cc3d1b87b027e",
+      "policy": {
+        "action": "preserve",
+        "reason": "Painted terrain, UI surface or framed icon; its background belongs to the artwork."
+      },
+      "resultSha256": "92a6d42080197f7da8c000c7d0ff662f1fe17489bbc779247c96d0c2c577863d",
+      "metadataSha256": "44136fa355b3678a1146ad16f7e8649e94fb4fc21fe77e8310c060f61caaff8a"
+    },
+    {
+      "path": "tiles/wasteland.png",
+      "size": [
+        1024,
+        1024
+      ],
+      "sourceSha256": "6caf057e92cf2dc34739284a0d022c6402d434c427b2c66067e317db515bbb09",
+      "rgbSha256": "03998c2487b8a3895cc5b3cbd93b53f9f95ac9a421ecd685be9f37d52a8ae339",
+      "policy": {
+        "action": "preserve",
+        "reason": "Painted terrain, UI surface or framed icon; its background belongs to the artwork."
+      },
+      "resultSha256": "6caf057e92cf2dc34739284a0d022c6402d434c427b2c66067e317db515bbb09",
+      "metadataSha256": "44136fa355b3678a1146ad16f7e8649e94fb4fc21fe77e8310c060f61caaff8a"
+    },
+    {
+      "path": "tiles/water.png",
+      "size": [
+        1024,
+        1024
+      ],
+      "sourceSha256": "51b00bb091ee725430a8c476b3b9f7ebd96fefc2696665eec11f1d5a33750c70",
+      "rgbSha256": "2f774431e49f57a3cead2ceacc3b84f5cbdb468c02d4b75ba5ee90476a446cc8",
+      "policy": {
+        "action": "preserve",
+        "reason": "Painted terrain, UI surface or framed icon; its background belongs to the artwork."
+      },
+      "resultSha256": "51b00bb091ee725430a8c476b3b9f7ebd96fefc2696665eec11f1d5a33750c70",
+      "metadataSha256": "44136fa355b3678a1146ad16f7e8649e94fb4fc21fe77e8310c060f61caaff8a"
+    },
+    {
+      "path": "tooltip.png",
+      "size": [
+        1024,
+        1024
+      ],
+      "sourceSha256": "3a41c0006ed5e5c8f831df72878f17699457c5af9fe10c386668851fd6b17875",
+      "rgbSha256": "b067873d3197c6bf28f27cfe20dfa0c589ad9449300b388bdc6becbb039073ef",
+      "policy": {
+        "action": "preserve",
+        "reason": "Painted terrain, UI surface or framed icon; its background belongs to the artwork."
+      },
+      "resultSha256": "3a41c0006ed5e5c8f831df72878f17699457c5af9fe10c386668851fd6b17875",
+      "metadataSha256": "44136fa355b3678a1146ad16f7e8649e94fb4fc21fe77e8310c060f61caaff8a"
+    }
+  ],
+  "encoding": {
+    "python": "3.11.9",
+    "pillow": "12.2.0",
+    "zlib": "1.3.1",
+    "compressLevel": 9,
+    "note": "Result hashes identify the reviewed encoding. Regeneration with another encoder version may refuse byte-different output safely."
+  }
+}
