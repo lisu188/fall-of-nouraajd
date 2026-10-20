@@ -1,0 +1,3549 @@
+{
+  "schemaVersion": 1,
+  "source": {
+    "edition": "enhanced_edition_supporting_only",
+    "view": "base_key_biff_archives",
+    "originalParityEstablished": false,
+    "keySha256": "728f50c48187f3a095e262fc2cc9e43004b4519ae9b96dd6c2615aeae4f85bce",
+    "tlkSha256": "a530306b14439e680f3c2d9f4b368b418b529fef9a015ac76d19a0b229be1d96",
+    "overrideCount": 2046,
+    "notes": [
+      "Stock is read from installed EE archive resources, not overrides; original unmodded BG1 stock remains unverified.",
+      "Three documented EE weapon additions are excluded explicitly. Remaining EE/classic stock differences are unresolved.",
+      "Labels are short item/service names only; original descriptions and dialogue are not redistributed.",
+      "Native purchases use max(1, base item price * sell markup // 100); ammunition bundles cost one gold.",
+      "Finite stock counts bundles; limit zero is unlimited. Each native bundled item carries its source quantity as metadata.",
+      "Sell prices use base item price * buy markup // 100 without charisma, depreciation or reputation adjustments.",
+      "Equipment uses existing native combat templates. Shields and helmets use existing native equipment classes and ordinary armor bonuses; ammunition remains a bundled inventory item.",
+      "Closure retains shared NPC dialogue dependencies from other chapters as supporting references; excluded AREs and external scripts are listed locally. It is not a prologue reachability proof."
+    ],
+    "auditCounts": {
+      "ARE": 9,
+      "BCS": 113,
+      "CRE": 106,
+      "DLG": 176,
+      "ITM": 332,
+      "SPL": 55,
+      "STO": 2
+    },
+    "unresolvedReferencesPerView": 62,
+    "baseEffectiveDifferences": 119
+  },
+  "excludedEnhancedEditionItems": [
+    "SW1H43",
+    "SW1H46",
+    "SW1H48"
+  ],
+  "nativeConversions": {
+    "AX1H01": {
+      "itemId": "candlekeepBattleAxe",
+      "template": "Sword",
+      "conversion": "native melee equipment; original weapon category, range and AD&D rules are not implemented",
+      "nativePrice": 7,
+      "nativeSellPrice": 2,
+      "quantity": 1
+    },
+    "AX1H04": {
+      "itemId": "candlekeepStockAx1h04",
+      "template": "Sword",
+      "conversion": "native melee equipment; original weapon category, range and AD&D rules are not implemented",
+      "nativePrice": 1,
+      "nativeSellPrice": 0,
+      "quantity": 5
+    },
+    "BLUN01": {
+      "itemId": "candlekeepStockBlun01",
+      "template": "Staff",
+      "conversion": "native melee equipment; original weapon category, range and AD&D rules are not implemented",
+      "nativePrice": 1,
+      "nativeSellPrice": 0,
+      "quantity": 1
+    },
+    "BLUN02": {
+      "itemId": "candlekeepStockBlun02",
+      "template": "Staff",
+      "conversion": "native melee equipment; original weapon category, range and AD&D rules are not implemented",
+      "nativePrice": 22,
+      "nativeSellPrice": 7,
+      "quantity": 1
+    },
+    "BLUN04": {
+      "itemId": "candlekeepMace",
+      "template": "Staff",
+      "conversion": "native melee equipment; original weapon category, range and AD&D rules are not implemented",
+      "nativePrice": 12,
+      "nativeSellPrice": 4,
+      "quantity": 1
+    },
+    "BLUN06": {
+      "itemId": "candlekeepStockBlun06",
+      "template": "Staff",
+      "conversion": "native melee equipment; original weapon category, range and AD&D rules are not implemented",
+      "nativePrice": 15,
+      "nativeSellPrice": 5,
+      "quantity": 1
+    },
+    "BOW01": {
+      "itemId": "candlekeepStockBow01",
+      "template": "Staff",
+      "conversion": "native melee equipment; original weapon category, range and AD&D rules are not implemented",
+      "nativePrice": 150,
+      "nativeSellPrice": 50,
+      "quantity": 1
+    },
+    "BOW03": {
+      "itemId": "candlekeepStockBow03",
+      "template": "Staff",
+      "conversion": "native melee equipment; original weapon category, range and AD&D rules are not implemented",
+      "nativePrice": 112,
+      "nativeSellPrice": 37,
+      "quantity": 1
+    },
+    "BOW05": {
+      "itemId": "candlekeepStockBow05",
+      "template": "Staff",
+      "conversion": "native melee equipment; original weapon category, range and AD&D rules are not implemented",
+      "nativePrice": 45,
+      "nativeSellPrice": 15,
+      "quantity": 1
+    },
+    "DAGG01": {
+      "itemId": "candlekeepDagger",
+      "template": "Dagger",
+      "conversion": "native dagger melee equipment",
+      "nativePrice": 3,
+      "nativeSellPrice": 1,
+      "quantity": 1
+    },
+    "DAGG05": {
+      "itemId": "candlekeepStockDagg05",
+      "template": "Dagger",
+      "conversion": "native dagger melee equipment",
+      "nativePrice": 1,
+      "nativeSellPrice": 0,
+      "quantity": 5
+    },
+    "DART01": {
+      "itemId": "candlekeepStockDart01",
+      "template": "Sword",
+      "conversion": "native melee equipment; original weapon category, range and AD&D rules are not implemented",
+      "nativePrice": 1,
+      "nativeSellPrice": 0,
+      "quantity": 10
+    },
+    "HALB01": {
+      "itemId": "candlekeepStockHalb01",
+      "template": "Staff",
+      "conversion": "native melee equipment; original weapon category, range and AD&D rules are not implemented",
+      "nativePrice": 15,
+      "nativeSellPrice": 5,
+      "quantity": 1
+    },
+    "HAMM01": {
+      "itemId": "candlekeepWarhammer",
+      "template": "Staff",
+      "conversion": "native melee equipment; original weapon category, range and AD&D rules are not implemented",
+      "nativePrice": 3,
+      "nativeSellPrice": 1,
+      "quantity": 1
+    },
+    "SLNG01": {
+      "itemId": "candlekeepStockSlng01",
+      "template": "Staff",
+      "conversion": "native melee equipment; original weapon category, range and AD&D rules are not implemented",
+      "nativePrice": 1,
+      "nativeSellPrice": 0,
+      "quantity": 1
+    },
+    "SPER01": {
+      "itemId": "candlekeepStockSper01",
+      "template": "Staff",
+      "conversion": "native melee equipment; original weapon category, range and AD&D rules are not implemented",
+      "nativePrice": 1,
+      "nativeSellPrice": 0,
+      "quantity": 1
+    },
+    "STAF01": {
+      "itemId": "candlekeepStockStaf01",
+      "template": "Staff",
+      "conversion": "native melee equipment; original weapon category, range and AD&D rules are not implemented",
+      "nativePrice": 1,
+      "nativeSellPrice": 0,
+      "quantity": 1
+    },
+    "SW1H01": {
+      "itemId": "candlekeepStockSw1h01",
+      "template": "Sword",
+      "conversion": "native melee equipment; original weapon category, range and AD&D rules are not implemented",
+      "nativePrice": 37,
+      "nativeSellPrice": 12,
+      "quantity": 1
+    },
+    "SW1H04": {
+      "itemId": "candlekeepLongsword",
+      "template": "Sword",
+      "conversion": "native melee equipment; original weapon category, range and AD&D rules are not implemented",
+      "nativePrice": 22,
+      "nativeSellPrice": 7,
+      "quantity": 1
+    },
+    "SW1H07": {
+      "itemId": "candlekeepStockSw1h07",
+      "template": "Sword",
+      "conversion": "native melee equipment; original weapon category, range and AD&D rules are not implemented",
+      "nativePrice": 15,
+      "nativeSellPrice": 5,
+      "quantity": 1
+    },
+    "SW2H01": {
+      "itemId": "candlekeepStockSw2h01",
+      "template": "Sword",
+      "conversion": "native melee equipment; original weapon category, range and AD&D rules are not implemented",
+      "nativePrice": 75,
+      "nativeSellPrice": 25,
+      "quantity": 1
+    },
+    "SW1H20": {
+      "itemId": "candlekeepStockSw1h20",
+      "template": "Sword",
+      "conversion": "native melee equipment; original weapon category, range and AD&D rules are not implemented",
+      "nativePrice": 82,
+      "nativeSellPrice": 27,
+      "quantity": 1
+    },
+    "BULL01": {
+      "itemId": "candlekeepStockBull01",
+      "template": null,
+      "conversion": "inventory item; native slot or original operation is unavailable",
+      "nativePrice": 1,
+      "nativeSellPrice": 0,
+      "quantity": 20
+    },
+    "XBOW01": {
+      "itemId": "candlekeepStockXbow01",
+      "template": "Staff",
+      "conversion": "native melee equipment; original weapon category, range and AD&D rules are not implemented",
+      "nativePrice": 75,
+      "nativeSellPrice": 25,
+      "quantity": 1
+    },
+    "XBOW04": {
+      "itemId": "candlekeepStockXbow04",
+      "template": "Staff",
+      "conversion": "native melee equipment; original weapon category, range and AD&D rules are not implemented",
+      "nativePrice": 52,
+      "nativeSellPrice": 17,
+      "quantity": 1
+    },
+    "BOLT01": {
+      "itemId": "candlekeepBolts",
+      "template": null,
+      "conversion": "inventory item; native slot or original operation is unavailable",
+      "nativePrice": 1,
+      "nativeSellPrice": 0,
+      "quantity": 20
+    },
+    "AROW01": {
+      "itemId": "candlekeepArrows",
+      "template": null,
+      "conversion": "inventory item; native slot or original operation is unavailable",
+      "nativePrice": 1,
+      "nativeSellPrice": 0,
+      "quantity": 20
+    },
+    "CHAN01": {
+      "itemId": "candlekeepStockChan01",
+      "template": "PlateArmor",
+      "conversion": "native body armor; original armor class and usability are not implemented",
+      "nativePrice": 112,
+      "nativeSellPrice": 37,
+      "quantity": 1
+    },
+    "CHAN04": {
+      "itemId": "candlekeepStockChan04",
+      "template": "PlateArmor",
+      "conversion": "native body armor; original armor class and usability are not implemented",
+      "nativePrice": 120,
+      "nativeSellPrice": 40,
+      "quantity": 1
+    },
+    "LEAT01": {
+      "itemId": "candlekeepStockLeat01",
+      "template": "LeatherArmor",
+      "conversion": "native body armor; original armor class and usability are not implemented",
+      "nativePrice": 7,
+      "nativeSellPrice": 2,
+      "quantity": 1
+    },
+    "LEAT04": {
+      "itemId": "candlekeepStockLeat04",
+      "template": "LeatherArmor",
+      "conversion": "native body armor; original armor class and usability are not implemented",
+      "nativePrice": 30,
+      "nativeSellPrice": 10,
+      "quantity": 1
+    },
+    "SHLD01": {
+      "itemId": "candlekeepStockShld01",
+      "template": "CShield",
+      "conversion": "native left-hand shield using the ordinary LeatherArmor bonus; original AD&D shield and color rules are not replicated",
+      "nativePrice": 4,
+      "nativeSellPrice": 1,
+      "quantity": 1,
+      "slot": "1",
+      "bonusTemplate": "LeatherArmor"
+    },
+    "SHLD03": {
+      "itemId": "candlekeepStockShld03",
+      "template": "CShield",
+      "conversion": "native left-hand shield using the ordinary LeatherArmor bonus; original AD&D shield and color rules are not replicated",
+      "nativePrice": 10,
+      "nativeSellPrice": 3,
+      "quantity": 1,
+      "slot": "1",
+      "bonusTemplate": "LeatherArmor"
+    },
+    "SHLD05": {
+      "itemId": "candlekeepStockShld05",
+      "template": "CShield",
+      "conversion": "native left-hand shield using the ordinary LeatherArmor bonus; original AD&D shield and color rules are not replicated",
+      "nativePrice": 15,
+      "nativeSellPrice": 5,
+      "quantity": 1,
+      "slot": "1",
+      "bonusTemplate": "LeatherArmor"
+    },
+    "SHLD08": {
+      "itemId": "candlekeepStockShld08",
+      "template": "CShield",
+      "conversion": "native left-hand shield using the ordinary LeatherArmor bonus; original AD&D shield and color rules are not replicated",
+      "nativePrice": 1,
+      "nativeSellPrice": 0,
+      "quantity": 1,
+      "slot": "1",
+      "bonusTemplate": "LeatherArmor"
+    },
+    "SHLD09": {
+      "itemId": "candlekeepStockShld09",
+      "template": "CShield",
+      "conversion": "native left-hand shield using the ordinary LeatherArmor bonus; original AD&D shield and color rules are not replicated",
+      "nativePrice": 1,
+      "nativeSellPrice": 0,
+      "quantity": 1,
+      "slot": "1",
+      "bonusTemplate": "LeatherArmor"
+    },
+    "SHLD10": {
+      "itemId": "candlekeepStockShld10",
+      "template": "CShield",
+      "conversion": "native left-hand shield using the ordinary LeatherArmor bonus; original AD&D shield and color rules are not replicated",
+      "nativePrice": 1,
+      "nativeSellPrice": 0,
+      "quantity": 1,
+      "slot": "1",
+      "bonusTemplate": "LeatherArmor"
+    },
+    "SHLD11": {
+      "itemId": "candlekeepStockShld11",
+      "template": "CShield",
+      "conversion": "native left-hand shield using the ordinary LeatherArmor bonus; original AD&D shield and color rules are not replicated",
+      "nativePrice": 4,
+      "nativeSellPrice": 1,
+      "quantity": 1,
+      "slot": "1",
+      "bonusTemplate": "LeatherArmor"
+    },
+    "SHLD12": {
+      "itemId": "candlekeepStockShld12",
+      "template": "CShield",
+      "conversion": "native left-hand shield using the ordinary LeatherArmor bonus; original AD&D shield and color rules are not replicated",
+      "nativePrice": 4,
+      "nativeSellPrice": 1,
+      "quantity": 1,
+      "slot": "1",
+      "bonusTemplate": "LeatherArmor"
+    },
+    "SHLD13": {
+      "itemId": "candlekeepStockShld13",
+      "template": "CShield",
+      "conversion": "native left-hand shield using the ordinary LeatherArmor bonus; original AD&D shield and color rules are not replicated",
+      "nativePrice": 10,
+      "nativeSellPrice": 3,
+      "quantity": 1,
+      "slot": "1",
+      "bonusTemplate": "LeatherArmor"
+    },
+    "SHLD14": {
+      "itemId": "candlekeepStockShld14",
+      "template": "CShield",
+      "conversion": "native left-hand shield using the ordinary LeatherArmor bonus; original AD&D shield and color rules are not replicated",
+      "nativePrice": 10,
+      "nativeSellPrice": 3,
+      "quantity": 1,
+      "slot": "1",
+      "bonusTemplate": "LeatherArmor"
+    },
+    "SHLD15": {
+      "itemId": "candlekeepStockShld15",
+      "template": "CShield",
+      "conversion": "native left-hand shield using the ordinary LeatherArmor bonus; original AD&D shield and color rules are not replicated",
+      "nativePrice": 15,
+      "nativeSellPrice": 5,
+      "quantity": 1,
+      "slot": "1",
+      "bonusTemplate": "LeatherArmor"
+    },
+    "SHLD16": {
+      "itemId": "candlekeepStockShld16",
+      "template": "CShield",
+      "conversion": "native left-hand shield using the ordinary LeatherArmor bonus; original AD&D shield and color rules are not replicated",
+      "nativePrice": 15,
+      "nativeSellPrice": 5,
+      "quantity": 1,
+      "slot": "1",
+      "bonusTemplate": "LeatherArmor"
+    },
+    "HELM01": {
+      "itemId": "candlekeepStockHelm01",
+      "template": "CHelmet",
+      "conversion": "native head equipment using the ordinary PlateArmor bonus; original AD&D helmet rules are not replicated",
+      "nativePrice": 1,
+      "nativeSellPrice": 0,
+      "quantity": 1,
+      "slot": "2",
+      "bonusTemplate": "PlateArmor"
+    },
+    "POTN08": {
+      "itemId": "candlekeepHealingPotion",
+      "template": "LesserLifePotion",
+      "conversion": "native lesser life potion",
+      "nativePrice": 112,
+      "nativeSellPrice": 37,
+      "quantity": 1
+    },
+    "POTN17": {
+      "itemId": "candlekeepStockPotn17",
+      "template": "LifePotion",
+      "conversion": "native life potion; original health and status-clearing effects are not replicated",
+      "nativePrice": 375,
+      "nativeSellPrice": 125,
+      "quantity": 1
+    },
+    "POTN20": {
+      "itemId": "candlekeepAntidote",
+      "template": null,
+      "conversion": "native quest antidote inventory item for Nessa; original potion use is unavailable",
+      "nativePrice": 150,
+      "nativeSellPrice": 50,
+      "quantity": 1
+    },
+    "SCRLPET": {
+      "itemId": "candlekeepStockScrlpet",
+      "template": null,
+      "conversion": "stone-to-flesh manuscript inventory item; native petrification reversal is unavailable",
+      "nativePrice": 225,
+      "nativeSellPrice": 75,
+      "quantity": 1
+    }
+  },
+  "stores": {
+    "INN2616": {
+      "sourceSha256": "4768c5994e3b2ade428d5b4eb3458d0a8ee9f03843f665e1512172f2e9aceeb5",
+      "sellMarkup": 150,
+      "buyMarkup": 50,
+      "identifyPrice": 100,
+      "roomPrices": [
+        1,
+        3,
+        5,
+        8
+      ],
+      "stock": [
+        {
+          "id": "AX1H01",
+          "label": "Battle Axe",
+          "itemType": 25,
+          "basePrice": 5,
+          "stock": 4,
+          "infinite": false,
+          "charges": [
+            0,
+            0,
+            0
+          ],
+          "flags": 1,
+          "itemSha256": "90f8674e07fef6ae61e9746704464cada7390630f9145f114afa35728eaf1a3e",
+          "excludedEnhancedEditionAddition": false,
+          "nativeItemId": "candlekeepBattleAxe",
+          "nativePrice": 7,
+          "nativeLimit": 4
+        },
+        {
+          "id": "AX1H04",
+          "label": "Throwing Axe",
+          "itemType": 25,
+          "basePrice": 1,
+          "stock": 25,
+          "infinite": false,
+          "charges": [
+            5,
+            0,
+            0
+          ],
+          "flags": 1,
+          "itemSha256": "74d6f3316555a21c7c4ead5f4087d64c860703b1709ea7a34fcaabc2d3b01691",
+          "excludedEnhancedEditionAddition": false,
+          "nativeItemId": "candlekeepStockAx1h04",
+          "nativePrice": 1,
+          "nativeLimit": 25
+        },
+        {
+          "id": "BLUN01",
+          "label": "Club",
+          "itemType": 17,
+          "basePrice": 0,
+          "stock": 0,
+          "infinite": true,
+          "charges": [
+            0,
+            0,
+            0
+          ],
+          "flags": 1,
+          "itemSha256": "ad79cc6fe3d47247ef226a87df5621009caed824e1c9cabaf30b12002acf1765",
+          "excludedEnhancedEditionAddition": false,
+          "nativeItemId": "candlekeepStockBlun01",
+          "nativePrice": 1,
+          "nativeLimit": 0
+        },
+        {
+          "id": "BLUN02",
+          "label": "Flail",
+          "itemType": 23,
+          "basePrice": 15,
+          "stock": 5,
+          "infinite": false,
+          "charges": [
+            0,
+            0,
+            0
+          ],
+          "flags": 1,
+          "itemSha256": "1894998e57a2befbabe12f53cc116e322f8d261f8bde899237a4a945eb138767",
+          "excludedEnhancedEditionAddition": false,
+          "nativeItemId": "candlekeepStockBlun02",
+          "nativePrice": 22,
+          "nativeLimit": 5
+        },
+        {
+          "id": "BLUN04",
+          "label": "Mace",
+          "itemType": 17,
+          "basePrice": 8,
+          "stock": 5,
+          "infinite": false,
+          "charges": [
+            0,
+            0,
+            0
+          ],
+          "flags": 1,
+          "itemSha256": "cecd06015c83d7ef1d97c38f17652a622891e688b961cd8ac33e6c1762160e46",
+          "excludedEnhancedEditionAddition": false,
+          "nativeItemId": "candlekeepMace",
+          "nativePrice": 12,
+          "nativeLimit": 5
+        },
+        {
+          "id": "BLUN06",
+          "label": "Morning Star",
+          "itemType": 22,
+          "basePrice": 10,
+          "stock": 5,
+          "infinite": false,
+          "charges": [
+            0,
+            0,
+            0
+          ],
+          "flags": 1,
+          "itemSha256": "84f92ad08013762428adb9ec56d123ba95de97528eb08d35adbf4de344f14601",
+          "excludedEnhancedEditionAddition": false,
+          "nativeItemId": "candlekeepStockBlun06",
+          "nativePrice": 15,
+          "nativeLimit": 5
+        },
+        {
+          "id": "BOW01",
+          "label": "Composite Longbow",
+          "itemType": 15,
+          "basePrice": 100,
+          "stock": 1,
+          "infinite": false,
+          "charges": [
+            0,
+            0,
+            0
+          ],
+          "flags": 1,
+          "itemSha256": "bcde11f079c61156a9456c81f07a578243ae0ebeff96104dc59550ec42d1efa0",
+          "excludedEnhancedEditionAddition": false,
+          "nativeItemId": "candlekeepStockBow01",
+          "nativePrice": 150,
+          "nativeLimit": 1
+        },
+        {
+          "id": "BOW03",
+          "label": "Longbow",
+          "itemType": 15,
+          "basePrice": 75,
+          "stock": 4,
+          "infinite": false,
+          "charges": [
+            0,
+            0,
+            0
+          ],
+          "flags": 1,
+          "itemSha256": "67a7dda1c68973dcc6fe3a12abd36a604b0a41c8eb6937535278efca43a0132b",
+          "excludedEnhancedEditionAddition": false,
+          "nativeItemId": "candlekeepStockBow03",
+          "nativePrice": 112,
+          "nativeLimit": 4
+        },
+        {
+          "id": "BOW05",
+          "label": "Shortbow",
+          "itemType": 15,
+          "basePrice": 30,
+          "stock": 5,
+          "infinite": false,
+          "charges": [
+            0,
+            0,
+            0
+          ],
+          "flags": 1,
+          "itemSha256": "ef40a568895d12814114f7db3acb0f422e60e76e8937fe082528af5dcc060c88",
+          "excludedEnhancedEditionAddition": false,
+          "nativeItemId": "candlekeepStockBow05",
+          "nativePrice": 45,
+          "nativeLimit": 5
+        },
+        {
+          "id": "DAGG01",
+          "label": "Dagger",
+          "itemType": 16,
+          "basePrice": 2,
+          "stock": 0,
+          "infinite": true,
+          "charges": [
+            0,
+            0,
+            0
+          ],
+          "flags": 1,
+          "itemSha256": "5b3e4a3aeee1bc544640a212e375700ccdfbcc22e6de3cca27e373bb4f3f9346",
+          "excludedEnhancedEditionAddition": false,
+          "nativeItemId": "candlekeepDagger",
+          "nativePrice": 3,
+          "nativeLimit": 0
+        },
+        {
+          "id": "DAGG05",
+          "label": "Throwing Dagger",
+          "itemType": 16,
+          "basePrice": 1,
+          "stock": 0,
+          "infinite": true,
+          "charges": [
+            5,
+            0,
+            0
+          ],
+          "flags": 1,
+          "itemSha256": "5691ec6cc7c6448fa3c81808c180410e232a915100b7c40eba2629363544b7eb",
+          "excludedEnhancedEditionAddition": false,
+          "nativeItemId": "candlekeepStockDagg05",
+          "nativePrice": 1,
+          "nativeLimit": 0
+        },
+        {
+          "id": "DART01",
+          "label": "Dart",
+          "itemType": 24,
+          "basePrice": 0,
+          "stock": 0,
+          "infinite": true,
+          "charges": [
+            10,
+            0,
+            0
+          ],
+          "flags": 1,
+          "itemSha256": "bd26fc6ed1f1c68901d71823d366275c4e4dd42f7af3b2c3af62d9e7ef753671",
+          "excludedEnhancedEditionAddition": false,
+          "nativeItemId": "candlekeepStockDart01",
+          "nativePrice": 1,
+          "nativeLimit": 0
+        },
+        {
+          "id": "HALB01",
+          "label": "Halberd",
+          "itemType": 30,
+          "basePrice": 10,
+          "stock": 3,
+          "infinite": false,
+          "charges": [
+            0,
+            0,
+            0
+          ],
+          "flags": 1,
+          "itemSha256": "11318429a638598e944e7443922cdfdad05e31d06f5e3a0b09ce626b89ded024",
+          "excludedEnhancedEditionAddition": false,
+          "nativeItemId": "candlekeepStockHalb01",
+          "nativePrice": 15,
+          "nativeLimit": 3
+        },
+        {
+          "id": "HAMM01",
+          "label": "War Hammer",
+          "itemType": 21,
+          "basePrice": 2,
+          "stock": 5,
+          "infinite": false,
+          "charges": [
+            0,
+            0,
+            0
+          ],
+          "flags": 1,
+          "itemSha256": "e1345132a336a254c248f98fbfc201d4d793e962f0b0e6a37984625aef2b0238",
+          "excludedEnhancedEditionAddition": false,
+          "nativeItemId": "candlekeepWarhammer",
+          "nativePrice": 3,
+          "nativeLimit": 5
+        },
+        {
+          "id": "SLNG01",
+          "label": "Sling",
+          "itemType": 18,
+          "basePrice": 0,
+          "stock": 0,
+          "infinite": true,
+          "charges": [
+            0,
+            0,
+            0
+          ],
+          "flags": 1,
+          "itemSha256": "0847a1fe825b1b2d6e61e401f0a48aa019de9414c8f85df70bb29225cdc06273",
+          "excludedEnhancedEditionAddition": false,
+          "nativeItemId": "candlekeepStockSlng01",
+          "nativePrice": 1,
+          "nativeLimit": 0
+        },
+        {
+          "id": "SPER01",
+          "label": "Spear",
+          "itemType": 29,
+          "basePrice": 1,
+          "stock": 10,
+          "infinite": false,
+          "charges": [
+            0,
+            0,
+            0
+          ],
+          "flags": 1,
+          "itemSha256": "6fa97450d965149baab83c70db5c09ad0be37dc05ab44e6a78ddc42131c319cb",
+          "excludedEnhancedEditionAddition": false,
+          "nativeItemId": "candlekeepStockSper01",
+          "nativePrice": 1,
+          "nativeLimit": 10
+        },
+        {
+          "id": "STAF01",
+          "label": "Quarterstaff",
+          "itemType": 26,
+          "basePrice": 0,
+          "stock": 0,
+          "infinite": true,
+          "charges": [
+            0,
+            0,
+            0
+          ],
+          "flags": 1,
+          "itemSha256": "983fbd856b528b36f712ae4c5dcd8d578e8498202cb5a8aa818a2a6b49608ad1",
+          "excludedEnhancedEditionAddition": false,
+          "nativeItemId": "candlekeepStockStaf01",
+          "nativePrice": 1,
+          "nativeLimit": 0
+        },
+        {
+          "id": "SW1H01",
+          "label": "Bastard Sword",
+          "itemType": 20,
+          "basePrice": 25,
+          "stock": 3,
+          "infinite": false,
+          "charges": [
+            0,
+            0,
+            0
+          ],
+          "flags": 1,
+          "itemSha256": "e52ff7f1d8463e616412726a2ba3b80e0efe6fc22820f5eb53234119bd9d4ec4",
+          "excludedEnhancedEditionAddition": false,
+          "nativeItemId": "candlekeepStockSw1h01",
+          "nativePrice": 37,
+          "nativeLimit": 3
+        },
+        {
+          "id": "SW1H04",
+          "label": "Long Sword",
+          "itemType": 20,
+          "basePrice": 15,
+          "stock": 7,
+          "infinite": false,
+          "charges": [
+            0,
+            0,
+            0
+          ],
+          "flags": 1,
+          "itemSha256": "328fbd6b3ed682e3e351651ae3b2fa30f19bb062b5ab2802f63ae597a4a895cd",
+          "excludedEnhancedEditionAddition": false,
+          "nativeItemId": "candlekeepLongsword",
+          "nativePrice": 22,
+          "nativeLimit": 7
+        },
+        {
+          "id": "SW1H07",
+          "label": "Short Sword",
+          "itemType": 19,
+          "basePrice": 10,
+          "stock": 12,
+          "infinite": false,
+          "charges": [
+            0,
+            0,
+            0
+          ],
+          "flags": 1,
+          "itemSha256": "b70b5cffc975115a9dfde18abcfbf47fdce74c340019e10ce1eed0360171e623",
+          "excludedEnhancedEditionAddition": false,
+          "nativeItemId": "candlekeepStockSw1h07",
+          "nativePrice": 15,
+          "nativeLimit": 12
+        },
+        {
+          "id": "SW1H48",
+          "label": "Ninjatō",
+          "itemType": 20,
+          "basePrice": 12,
+          "stock": 1,
+          "infinite": false,
+          "charges": [
+            0,
+            0,
+            0
+          ],
+          "flags": 1,
+          "itemSha256": "56c4d6845257fd2b2b374aaec9ce8e3557ca0f05cbdce06d6aed6c06ba0c4a63",
+          "excludedEnhancedEditionAddition": true
+        },
+        {
+          "id": "SW1H43",
+          "label": "Katana",
+          "itemType": 20,
+          "basePrice": 500,
+          "stock": 1,
+          "infinite": false,
+          "charges": [
+            1,
+            0,
+            0
+          ],
+          "flags": 1,
+          "itemSha256": "92d330727b94401ac6cd5f45a17bee7f31a840e6b8e46655ece9e04144513222",
+          "excludedEnhancedEditionAddition": true
+        },
+        {
+          "id": "SW1H46",
+          "label": "Wakizashi",
+          "itemType": 19,
+          "basePrice": 50,
+          "stock": 1,
+          "infinite": false,
+          "charges": [
+            1,
+            0,
+            0
+          ],
+          "flags": 1,
+          "itemSha256": "a724cd5b079ffcabfc041fa0d0a7e89b51a814ad49318cbd33d05b32e0654014",
+          "excludedEnhancedEditionAddition": true
+        },
+        {
+          "id": "SW2H01",
+          "label": "Two-handed Sword",
+          "itemType": 20,
+          "basePrice": 50,
+          "stock": 1,
+          "infinite": false,
+          "charges": [
+            0,
+            0,
+            0
+          ],
+          "flags": 1,
+          "itemSha256": "1fbcd1468017290615e500d4542975c5805206c0479d7e442ed6eac4119f67b0",
+          "excludedEnhancedEditionAddition": false,
+          "nativeItemId": "candlekeepStockSw2h01",
+          "nativePrice": 75,
+          "nativeLimit": 1
+        },
+        {
+          "id": "SW1H20",
+          "label": "Scimitar",
+          "itemType": 20,
+          "basePrice": 55,
+          "stock": 0,
+          "infinite": true,
+          "charges": [
+            0,
+            0,
+            0
+          ],
+          "flags": 1,
+          "itemSha256": "6e61b4d7acb44aa422549ad78fda7d8fefa7719d9f6e2bc29fc7fccaca29455f",
+          "excludedEnhancedEditionAddition": false,
+          "nativeItemId": "candlekeepStockSw1h20",
+          "nativePrice": 82,
+          "nativeLimit": 0
+        },
+        {
+          "id": "BULL01",
+          "label": "Bullet",
+          "itemType": 14,
+          "basePrice": 0,
+          "stock": 0,
+          "infinite": true,
+          "charges": [
+            20,
+            0,
+            0
+          ],
+          "flags": 1,
+          "itemSha256": "10d1e0aac900160a9370e85175659fdd63d29f86c4834585afa185d9ce9ade0a",
+          "excludedEnhancedEditionAddition": false,
+          "nativeItemId": "candlekeepStockBull01",
+          "nativePrice": 1,
+          "nativeLimit": 0
+        },
+        {
+          "id": "XBOW01",
+          "label": "Heavy Crossbow",
+          "itemType": 27,
+          "basePrice": 50,
+          "stock": 2,
+          "infinite": false,
+          "charges": [
+            0,
+            0,
+            0
+          ],
+          "flags": 1,
+          "itemSha256": "d5465d8f80dae4819f5403d9c108141ab0bdf4e447c29588133b1ddf277be5cf",
+          "excludedEnhancedEditionAddition": false,
+          "nativeItemId": "candlekeepStockXbow01",
+          "nativePrice": 75,
+          "nativeLimit": 2
+        },
+        {
+          "id": "XBOW04",
+          "label": "Light Crossbow",
+          "itemType": 27,
+          "basePrice": 35,
+          "stock": 5,
+          "infinite": false,
+          "charges": [
+            0,
+            0,
+            0
+          ],
+          "flags": 1,
+          "itemSha256": "9795899c4691a1e03b38847fe1d7d1ae74efc4dd600eb06725b80060ae6d07cb",
+          "excludedEnhancedEditionAddition": false,
+          "nativeItemId": "candlekeepStockXbow04",
+          "nativePrice": 52,
+          "nativeLimit": 5
+        },
+        {
+          "id": "BOLT01",
+          "label": "Bolt",
+          "itemType": 31,
+          "basePrice": 0,
+          "stock": 0,
+          "infinite": true,
+          "charges": [
+            20,
+            0,
+            0
+          ],
+          "flags": 1,
+          "itemSha256": "cec95a988ab63c5c4385b067ebab72f1a07c838e4f3c1c4ae4e4b66ca03b4d88",
+          "excludedEnhancedEditionAddition": false,
+          "nativeItemId": "candlekeepBolts",
+          "nativePrice": 1,
+          "nativeLimit": 0
+        },
+        {
+          "id": "AROW01",
+          "label": "Arrow",
+          "itemType": 5,
+          "basePrice": 0,
+          "stock": 0,
+          "infinite": true,
+          "charges": [
+            20,
+            0,
+            0
+          ],
+          "flags": 1,
+          "itemSha256": "4e3191b499a850589f13415f4217b19448d42cd14735930d4a058d7a7aaeec23",
+          "excludedEnhancedEditionAddition": false,
+          "nativeItemId": "candlekeepArrows",
+          "nativePrice": 1,
+          "nativeLimit": 0
+        },
+        {
+          "id": "CHAN01",
+          "label": "Chain Mail",
+          "itemType": 2,
+          "basePrice": 75,
+          "stock": 2,
+          "infinite": false,
+          "charges": [
+            0,
+            0,
+            0
+          ],
+          "flags": 1,
+          "itemSha256": "186416bd8170ea2e70c69a99e3904cde4aa5cdc93b7026c52d9da547242add27",
+          "excludedEnhancedEditionAddition": false,
+          "nativeItemId": "candlekeepStockChan01",
+          "nativePrice": 112,
+          "nativeLimit": 2
+        },
+        {
+          "id": "CHAN04",
+          "label": "Splint Mail",
+          "itemType": 2,
+          "basePrice": 80,
+          "stock": 1,
+          "infinite": false,
+          "charges": [
+            0,
+            0,
+            0
+          ],
+          "flags": 1,
+          "itemSha256": "b734677f9f63272187a2b3d508a8ea10161e1ea5299ef2421a1f3dea1d156e60",
+          "excludedEnhancedEditionAddition": false,
+          "nativeItemId": "candlekeepStockChan04",
+          "nativePrice": 120,
+          "nativeLimit": 1
+        },
+        {
+          "id": "LEAT01",
+          "label": "Leather Armor",
+          "itemType": 2,
+          "basePrice": 5,
+          "stock": 10,
+          "infinite": false,
+          "charges": [
+            0,
+            0,
+            0
+          ],
+          "flags": 1,
+          "itemSha256": "e78a0bd7d41df9008d93bde1e93834bd42c4fc10eb64f74abd2c489c4cd40dd9",
+          "excludedEnhancedEditionAddition": false,
+          "nativeItemId": "candlekeepStockLeat01",
+          "nativePrice": 7,
+          "nativeLimit": 10
+        },
+        {
+          "id": "LEAT04",
+          "label": "Studded Leather Armor",
+          "itemType": 2,
+          "basePrice": 20,
+          "stock": 7,
+          "infinite": false,
+          "charges": [
+            0,
+            0,
+            0
+          ],
+          "flags": 1,
+          "itemSha256": "f6bfb1fd6e921e7af20788e557d2dc7067b7283b7b615446293087dacb317eeb",
+          "excludedEnhancedEditionAddition": false,
+          "nativeItemId": "candlekeepStockLeat04",
+          "nativePrice": 30,
+          "nativeLimit": 7
+        },
+        {
+          "id": "SHLD01",
+          "label": "Small Shield",
+          "itemType": 12,
+          "basePrice": 3,
+          "stock": 10,
+          "infinite": false,
+          "charges": [
+            0,
+            0,
+            0
+          ],
+          "flags": 1,
+          "itemSha256": "2562bdf7ea46ea3d76d5d3c80d6dea49fe87cbe6f0daca03944e8be4c9bc5db8",
+          "excludedEnhancedEditionAddition": false,
+          "nativeItemId": "candlekeepStockShld01",
+          "nativePrice": 4,
+          "nativeLimit": 10
+        },
+        {
+          "id": "SHLD03",
+          "label": "Medium Shield",
+          "itemType": 12,
+          "basePrice": 7,
+          "stock": 6,
+          "infinite": false,
+          "charges": [
+            0,
+            0,
+            0
+          ],
+          "flags": 1,
+          "itemSha256": "e0f452532cca01fb1cc26a0c50e32dfc54bf81635130edc5f75d021d47c9f547",
+          "excludedEnhancedEditionAddition": false,
+          "nativeItemId": "candlekeepStockShld03",
+          "nativePrice": 10,
+          "nativeLimit": 6
+        },
+        {
+          "id": "SHLD05",
+          "label": "Large Shield",
+          "itemType": 12,
+          "basePrice": 10,
+          "stock": 3,
+          "infinite": false,
+          "charges": [
+            0,
+            0,
+            0
+          ],
+          "flags": 1,
+          "itemSha256": "05d8588f0007c432f10892a56f15055756b2acdcb6aec7c29c492fe107d46abd",
+          "excludedEnhancedEditionAddition": false,
+          "nativeItemId": "candlekeepStockShld05",
+          "nativePrice": 15,
+          "nativeLimit": 3
+        },
+        {
+          "id": "SHLD08",
+          "label": "Buckler",
+          "itemType": 12,
+          "basePrice": 1,
+          "stock": 0,
+          "infinite": true,
+          "charges": [
+            0,
+            0,
+            0
+          ],
+          "flags": 1,
+          "itemSha256": "b89793f78415a1e0b9100878ae79b75d462760c9d7d3ab6fac56bf7578727777",
+          "excludedEnhancedEditionAddition": false,
+          "nativeItemId": "candlekeepStockShld08",
+          "nativePrice": 1,
+          "nativeLimit": 0
+        },
+        {
+          "id": "SHLD09",
+          "label": "Buckler",
+          "itemType": 12,
+          "basePrice": 1,
+          "stock": 0,
+          "infinite": true,
+          "charges": [
+            0,
+            0,
+            0
+          ],
+          "flags": 1,
+          "itemSha256": "3357132ee71a5e77eac5e8b527e1ff73a01cfe88255febc3aba610b5a88e280e",
+          "excludedEnhancedEditionAddition": false,
+          "nativeItemId": "candlekeepStockShld09",
+          "nativePrice": 1,
+          "nativeLimit": 0
+        },
+        {
+          "id": "SHLD10",
+          "label": "Buckler",
+          "itemType": 12,
+          "basePrice": 1,
+          "stock": 0,
+          "infinite": true,
+          "charges": [
+            0,
+            0,
+            0
+          ],
+          "flags": 1,
+          "itemSha256": "dda62ec8f043dcc7498e867144dba2d117cd9039caa4d68a1e4fea86e1b8ba45",
+          "excludedEnhancedEditionAddition": false,
+          "nativeItemId": "candlekeepStockShld10",
+          "nativePrice": 1,
+          "nativeLimit": 0
+        },
+        {
+          "id": "SHLD11",
+          "label": "Small Shield",
+          "itemType": 12,
+          "basePrice": 3,
+          "stock": 4,
+          "infinite": false,
+          "charges": [
+            0,
+            0,
+            0
+          ],
+          "flags": 1,
+          "itemSha256": "7f569ebfc86b8e55f09bab18589dee14b6a0ea13ef6f6597a0aa34f2d3c3def4",
+          "excludedEnhancedEditionAddition": false,
+          "nativeItemId": "candlekeepStockShld11",
+          "nativePrice": 4,
+          "nativeLimit": 4
+        },
+        {
+          "id": "SHLD12",
+          "label": "Small Shield",
+          "itemType": 12,
+          "basePrice": 3,
+          "stock": 4,
+          "infinite": false,
+          "charges": [
+            0,
+            0,
+            0
+          ],
+          "flags": 1,
+          "itemSha256": "29dcbbf41da7f49ab029e5a15411727c12de5b947b4eff1acc02b54f46772adc",
+          "excludedEnhancedEditionAddition": false,
+          "nativeItemId": "candlekeepStockShld12",
+          "nativePrice": 4,
+          "nativeLimit": 4
+        },
+        {
+          "id": "SHLD13",
+          "label": "Medium Shield",
+          "itemType": 12,
+          "basePrice": 7,
+          "stock": 4,
+          "infinite": false,
+          "charges": [
+            0,
+            0,
+            0
+          ],
+          "flags": 1,
+          "itemSha256": "ffbc613c42c68cfd797665a5fd8416f47de2a9023478acaf73103023c1b50c56",
+          "excludedEnhancedEditionAddition": false,
+          "nativeItemId": "candlekeepStockShld13",
+          "nativePrice": 10,
+          "nativeLimit": 4
+        },
+        {
+          "id": "SHLD14",
+          "label": "Medium Shield",
+          "itemType": 12,
+          "basePrice": 7,
+          "stock": 4,
+          "infinite": false,
+          "charges": [
+            0,
+            0,
+            0
+          ],
+          "flags": 1,
+          "itemSha256": "aac98ec8b83758567e34e39500b67228114f89caab2ab505d75f9ba58645f753",
+          "excludedEnhancedEditionAddition": false,
+          "nativeItemId": "candlekeepStockShld14",
+          "nativePrice": 10,
+          "nativeLimit": 4
+        },
+        {
+          "id": "SHLD15",
+          "label": "Large Shield",
+          "itemType": 12,
+          "basePrice": 10,
+          "stock": 4,
+          "infinite": false,
+          "charges": [
+            0,
+            0,
+            0
+          ],
+          "flags": 1,
+          "itemSha256": "34c7098bc4cec597ff0c5744f77eda2aab73b7fd13a315e0ac9bb87ae31dcdfd",
+          "excludedEnhancedEditionAddition": false,
+          "nativeItemId": "candlekeepStockShld15",
+          "nativePrice": 15,
+          "nativeLimit": 4
+        },
+        {
+          "id": "SHLD16",
+          "label": "Large Shield",
+          "itemType": 12,
+          "basePrice": 10,
+          "stock": 4,
+          "infinite": false,
+          "charges": [
+            0,
+            0,
+            0
+          ],
+          "flags": 1,
+          "itemSha256": "d5519f1bb831f9319b2a370b4965411e2c60b047ca7f30df7b9ca8e391aab9f6",
+          "excludedEnhancedEditionAddition": false,
+          "nativeItemId": "candlekeepStockShld16",
+          "nativePrice": 15,
+          "nativeLimit": 4
+        },
+        {
+          "id": "HELM01",
+          "label": "Helmet",
+          "itemType": 7,
+          "basePrice": 1,
+          "stock": 0,
+          "infinite": true,
+          "charges": [
+            0,
+            0,
+            0
+          ],
+          "flags": 1,
+          "itemSha256": "a077e8690295cb0887265297457424614070455b8245c421fee7f5ffa32451ab",
+          "excludedEnhancedEditionAddition": false,
+          "nativeItemId": "candlekeepStockHelm01",
+          "nativePrice": 1,
+          "nativeLimit": 0
+        }
+      ],
+      "nativeRows": [
+        {
+          "id": "AX1H01",
+          "label": "Battle Axe",
+          "itemId": "candlekeepBattleAxe",
+          "price": 7,
+          "limit": 4,
+          "quantity": 1
+        },
+        {
+          "id": "AX1H04",
+          "label": "Throwing Axe (5)",
+          "itemId": "candlekeepStockAx1h04",
+          "price": 1,
+          "limit": 25,
+          "quantity": 5
+        },
+        {
+          "id": "BLUN01",
+          "label": "Club",
+          "itemId": "candlekeepStockBlun01",
+          "price": 1,
+          "limit": 0,
+          "quantity": 1
+        },
+        {
+          "id": "BLUN02",
+          "label": "Flail",
+          "itemId": "candlekeepStockBlun02",
+          "price": 22,
+          "limit": 5,
+          "quantity": 1
+        },
+        {
+          "id": "BLUN04",
+          "label": "Mace",
+          "itemId": "candlekeepMace",
+          "price": 12,
+          "limit": 5,
+          "quantity": 1
+        },
+        {
+          "id": "BLUN06",
+          "label": "Morning Star",
+          "itemId": "candlekeepStockBlun06",
+          "price": 15,
+          "limit": 5,
+          "quantity": 1
+        },
+        {
+          "id": "BOW01",
+          "label": "Composite Longbow",
+          "itemId": "candlekeepStockBow01",
+          "price": 150,
+          "limit": 1,
+          "quantity": 1
+        },
+        {
+          "id": "BOW03",
+          "label": "Longbow",
+          "itemId": "candlekeepStockBow03",
+          "price": 112,
+          "limit": 4,
+          "quantity": 1
+        },
+        {
+          "id": "BOW05",
+          "label": "Shortbow",
+          "itemId": "candlekeepStockBow05",
+          "price": 45,
+          "limit": 5,
+          "quantity": 1
+        },
+        {
+          "id": "DAGG01",
+          "label": "Dagger",
+          "itemId": "candlekeepDagger",
+          "price": 3,
+          "limit": 0,
+          "quantity": 1
+        },
+        {
+          "id": "DAGG05",
+          "label": "Throwing Dagger (5)",
+          "itemId": "candlekeepStockDagg05",
+          "price": 1,
+          "limit": 0,
+          "quantity": 5
+        },
+        {
+          "id": "DART01",
+          "label": "Dart (10)",
+          "itemId": "candlekeepStockDart01",
+          "price": 1,
+          "limit": 0,
+          "quantity": 10
+        },
+        {
+          "id": "HALB01",
+          "label": "Halberd",
+          "itemId": "candlekeepStockHalb01",
+          "price": 15,
+          "limit": 3,
+          "quantity": 1
+        },
+        {
+          "id": "HAMM01",
+          "label": "War Hammer",
+          "itemId": "candlekeepWarhammer",
+          "price": 3,
+          "limit": 5,
+          "quantity": 1
+        },
+        {
+          "id": "SLNG01",
+          "label": "Sling",
+          "itemId": "candlekeepStockSlng01",
+          "price": 1,
+          "limit": 0,
+          "quantity": 1
+        },
+        {
+          "id": "SPER01",
+          "label": "Spear",
+          "itemId": "candlekeepStockSper01",
+          "price": 1,
+          "limit": 10,
+          "quantity": 1
+        },
+        {
+          "id": "STAF01",
+          "label": "Quarterstaff",
+          "itemId": "candlekeepStockStaf01",
+          "price": 1,
+          "limit": 0,
+          "quantity": 1
+        },
+        {
+          "id": "SW1H01",
+          "label": "Bastard Sword",
+          "itemId": "candlekeepStockSw1h01",
+          "price": 37,
+          "limit": 3,
+          "quantity": 1
+        },
+        {
+          "id": "SW1H04",
+          "label": "Long Sword",
+          "itemId": "candlekeepLongsword",
+          "price": 22,
+          "limit": 7,
+          "quantity": 1
+        },
+        {
+          "id": "SW1H07",
+          "label": "Short Sword",
+          "itemId": "candlekeepStockSw1h07",
+          "price": 15,
+          "limit": 12,
+          "quantity": 1
+        },
+        {
+          "id": "SW2H01",
+          "label": "Two-handed Sword",
+          "itemId": "candlekeepStockSw2h01",
+          "price": 75,
+          "limit": 1,
+          "quantity": 1
+        },
+        {
+          "id": "SW1H20",
+          "label": "Scimitar",
+          "itemId": "candlekeepStockSw1h20",
+          "price": 82,
+          "limit": 0,
+          "quantity": 1
+        },
+        {
+          "id": "BULL01",
+          "label": "Bullet (20)",
+          "itemId": "candlekeepStockBull01",
+          "price": 1,
+          "limit": 0,
+          "quantity": 20
+        },
+        {
+          "id": "XBOW01",
+          "label": "Heavy Crossbow",
+          "itemId": "candlekeepStockXbow01",
+          "price": 75,
+          "limit": 2,
+          "quantity": 1
+        },
+        {
+          "id": "XBOW04",
+          "label": "Light Crossbow",
+          "itemId": "candlekeepStockXbow04",
+          "price": 52,
+          "limit": 5,
+          "quantity": 1
+        },
+        {
+          "id": "BOLT01",
+          "label": "Bolt (20)",
+          "itemId": "candlekeepBolts",
+          "price": 1,
+          "limit": 0,
+          "quantity": 20
+        },
+        {
+          "id": "AROW01",
+          "label": "Arrow (20)",
+          "itemId": "candlekeepArrows",
+          "price": 1,
+          "limit": 0,
+          "quantity": 20
+        },
+        {
+          "id": "CHAN01",
+          "label": "Chain Mail",
+          "itemId": "candlekeepStockChan01",
+          "price": 112,
+          "limit": 2,
+          "quantity": 1
+        },
+        {
+          "id": "CHAN04",
+          "label": "Splint Mail",
+          "itemId": "candlekeepStockChan04",
+          "price": 120,
+          "limit": 1,
+          "quantity": 1
+        },
+        {
+          "id": "LEAT01",
+          "label": "Leather Armor",
+          "itemId": "candlekeepStockLeat01",
+          "price": 7,
+          "limit": 10,
+          "quantity": 1
+        },
+        {
+          "id": "LEAT04",
+          "label": "Studded Leather Armor",
+          "itemId": "candlekeepStockLeat04",
+          "price": 30,
+          "limit": 7,
+          "quantity": 1
+        },
+        {
+          "id": "SHLD01",
+          "label": "Small Shield [SHLD01]",
+          "itemId": "candlekeepStockShld01",
+          "price": 4,
+          "limit": 10,
+          "quantity": 1
+        },
+        {
+          "id": "SHLD03",
+          "label": "Medium Shield [SHLD03]",
+          "itemId": "candlekeepStockShld03",
+          "price": 10,
+          "limit": 6,
+          "quantity": 1
+        },
+        {
+          "id": "SHLD05",
+          "label": "Large Shield [SHLD05]",
+          "itemId": "candlekeepStockShld05",
+          "price": 15,
+          "limit": 3,
+          "quantity": 1
+        },
+        {
+          "id": "SHLD08",
+          "label": "Buckler [SHLD08]",
+          "itemId": "candlekeepStockShld08",
+          "price": 1,
+          "limit": 0,
+          "quantity": 1
+        },
+        {
+          "id": "SHLD09",
+          "label": "Buckler [SHLD09]",
+          "itemId": "candlekeepStockShld09",
+          "price": 1,
+          "limit": 0,
+          "quantity": 1
+        },
+        {
+          "id": "SHLD10",
+          "label": "Buckler [SHLD10]",
+          "itemId": "candlekeepStockShld10",
+          "price": 1,
+          "limit": 0,
+          "quantity": 1
+        },
+        {
+          "id": "SHLD11",
+          "label": "Small Shield [SHLD11]",
+          "itemId": "candlekeepStockShld11",
+          "price": 4,
+          "limit": 4,
+          "quantity": 1
+        },
+        {
+          "id": "SHLD12",
+          "label": "Small Shield [SHLD12]",
+          "itemId": "candlekeepStockShld12",
+          "price": 4,
+          "limit": 4,
+          "quantity": 1
+        },
+        {
+          "id": "SHLD13",
+          "label": "Medium Shield [SHLD13]",
+          "itemId": "candlekeepStockShld13",
+          "price": 10,
+          "limit": 4,
+          "quantity": 1
+        },
+        {
+          "id": "SHLD14",
+          "label": "Medium Shield [SHLD14]",
+          "itemId": "candlekeepStockShld14",
+          "price": 10,
+          "limit": 4,
+          "quantity": 1
+        },
+        {
+          "id": "SHLD15",
+          "label": "Large Shield [SHLD15]",
+          "itemId": "candlekeepStockShld15",
+          "price": 15,
+          "limit": 4,
+          "quantity": 1
+        },
+        {
+          "id": "SHLD16",
+          "label": "Large Shield [SHLD16]",
+          "itemId": "candlekeepStockShld16",
+          "price": 15,
+          "limit": 4,
+          "quantity": 1
+        },
+        {
+          "id": "HELM01",
+          "label": "Helmet",
+          "itemId": "candlekeepStockHelm01",
+          "price": 1,
+          "limit": 0,
+          "quantity": 1
+        }
+      ],
+      "drinks": [
+        {
+          "id": "BLOOD_WINE",
+          "label": "Blood Wine",
+          "price": 8,
+          "strength": 50
+        },
+        {
+          "id": "FIREWINE",
+          "label": "Firewine",
+          "price": 1,
+          "strength": 25
+        },
+        {
+          "id": "MEAD",
+          "label": "Mead",
+          "price": 4,
+          "strength": 40
+        },
+        {
+          "id": "BITTER_BLACK_ALE",
+          "label": "Bitter Black Ale",
+          "price": 1,
+          "strength": 23
+        },
+        {
+          "id": "ARABELLAN_DRY_WINE",
+          "label": "Arabellan Dry Wine",
+          "price": 2,
+          "strength": 45
+        }
+      ],
+      "cures": []
+    },
+    "TEM2601": {
+      "sourceSha256": "44ea0652a4ae5d63afe2316c75e204942a302c4c319f04b820dcd620f0cc4b08",
+      "sellMarkup": 150,
+      "buyMarkup": 50,
+      "identifyPrice": 100,
+      "roomPrices": [
+        1,
+        3,
+        5,
+        8
+      ],
+      "stock": [
+        {
+          "id": "POTN08",
+          "label": "Potion of Healing",
+          "itemType": 9,
+          "basePrice": 75,
+          "stock": 20,
+          "infinite": false,
+          "charges": [
+            1,
+            0,
+            0
+          ],
+          "flags": 1,
+          "itemSha256": "94a82db21e6338f46531fc2d106b9bc57b09142fba55521daf6c016102637ae1",
+          "excludedEnhancedEditionAddition": false,
+          "nativeItemId": "candlekeepHealingPotion",
+          "nativePrice": 112,
+          "nativeLimit": 20
+        },
+        {
+          "id": "POTN17",
+          "label": "Elixir of Health",
+          "itemType": 9,
+          "basePrice": 250,
+          "stock": 4,
+          "infinite": false,
+          "charges": [
+            1,
+            0,
+            0
+          ],
+          "flags": 1,
+          "itemSha256": "d10f700a66140576c0b89f3cdad3c91334066ac9c93bc1b8d7f71a78c17e891f",
+          "excludedEnhancedEditionAddition": false,
+          "nativeItemId": "candlekeepStockPotn17",
+          "nativePrice": 375,
+          "nativeLimit": 4
+        },
+        {
+          "id": "POTN20",
+          "label": "Antidote",
+          "itemType": 9,
+          "basePrice": 100,
+          "stock": 15,
+          "infinite": false,
+          "charges": [
+            1,
+            0,
+            0
+          ],
+          "flags": 1,
+          "itemSha256": "cb6af766623bc3c6d00a0b35cfc23bc7a4912a4fd32888567eb409b280f6c193",
+          "excludedEnhancedEditionAddition": false,
+          "nativeItemId": "candlekeepAntidote",
+          "nativePrice": 150,
+          "nativeLimit": 15
+        },
+        {
+          "id": "SCRLPET",
+          "label": "Stone to Flesh Scroll",
+          "itemType": 11,
+          "basePrice": 150,
+          "stock": 15,
+          "infinite": false,
+          "charges": [
+            1,
+            0,
+            0
+          ],
+          "flags": 1,
+          "itemSha256": "1440360159f4ada2ff1f5655079d681c72c1e3258258e971279bb3c43fe46e66",
+          "excludedEnhancedEditionAddition": false,
+          "nativeItemId": "candlekeepStockScrlpet",
+          "nativePrice": 225,
+          "nativeLimit": 15
+        }
+      ],
+      "nativeRows": [
+        {
+          "id": "POTN08",
+          "label": "Potion of Healing",
+          "itemId": "candlekeepHealingPotion",
+          "price": 112,
+          "limit": 20,
+          "quantity": 1
+        },
+        {
+          "id": "POTN17",
+          "label": "Elixir of Health",
+          "itemId": "candlekeepStockPotn17",
+          "price": 375,
+          "limit": 4,
+          "quantity": 1
+        },
+        {
+          "id": "POTN20",
+          "label": "Antidote",
+          "itemId": "candlekeepAntidote",
+          "price": 150,
+          "limit": 15,
+          "quantity": 1
+        },
+        {
+          "id": "SCRLPET",
+          "label": "Stone to Flesh Scroll",
+          "itemId": "candlekeepStockScrlpet",
+          "price": 225,
+          "limit": 15,
+          "quantity": 1
+        }
+      ],
+      "drinks": [],
+      "cures": [
+        {
+          "spell": "SPPR103",
+          "price": 50
+        },
+        {
+          "spell": "SPPR303",
+          "price": 200
+        },
+        {
+          "spell": "SPPR307",
+          "price": 500
+        },
+        {
+          "spell": "SPPR401",
+          "price": 100
+        },
+        {
+          "spell": "SPPR212",
+          "price": 150
+        },
+        {
+          "spell": "SPPR504",
+          "price": 750
+        }
+      ],
+      "nativeServices": [
+        {
+          "id": "SPPR103",
+          "label": "Cure Light Wounds",
+          "price": 50,
+          "operation": "heal"
+        },
+        {
+          "id": "SPPR303",
+          "label": "Cure Disease",
+          "price": 200,
+          "operation": "cureDisease"
+        },
+        {
+          "id": "SPPR307",
+          "label": "Remove Curse",
+          "price": 500,
+          "operation": "removeCurse"
+        },
+        {
+          "id": "SPPR401",
+          "label": "Neutralize Poison",
+          "price": 100,
+          "operation": "curePoison"
+        },
+        {
+          "id": "SPPR212",
+          "label": "Slow Poison",
+          "price": 150,
+          "operation": "slowPoison"
+        },
+        {
+          "id": "SPPR504",
+          "label": "Raise Dead",
+          "price": 750,
+          "operation": "resurrect"
+        }
+      ]
+    }
+  },
+  "npcPossessions": {
+    "phlydia": {
+      "sourceCreature": "PHLYDI.CRE",
+      "sha256": "044834240727d171dfb8b5d7b998f07e972fe075d189116326393fef2e5b5fb5",
+      "sourceItems": {
+        "AMUL10": 1,
+        "DAGG01": 1,
+        "MISC17": 1,
+        "CLCK10": 1
+      },
+      "nativeItems": {
+        "candlekeepGoldNecklace": 1,
+        "candlekeepLynxEyeGem": 1,
+        "candlekeepDagger": 1,
+        "candlekeepPhlydiaRobe": 1
+      },
+      "pickpocketItems": [
+        "candlekeepGoldNecklace",
+        "candlekeepLynxEyeGem"
+      ],
+      "conversionNotes": [
+        "Gold necklace and lynx-eye gem are shared between pocket theft, quest rewards and the real creature inventory.",
+        "Source DAGG01 uses the existing native dagger; CLCK10 uses the existing native Robe. Original fire resistance is not implemented.",
+        "Inventory records are not proof of source equipment-slot behavior; these fixed items are carried in native bags."
+      ]
+    },
+    "fuller": {
+      "sourceCreature": "FULLER.CRE",
+      "sha256": "3695a6f9da414730f7e3076e200e1208b91c9b9ccb1fc5adc6479fe42daf2624",
+      "sourceItems": {
+        "STAF01": 1,
+        "PLAT01": 1,
+        "DAGG02": 1
+      },
+      "nativeItems": {
+        "candlekeepDaggerPlusOne": 1,
+        "candlekeepStockStaf01": 1,
+        "candlekeepFullerPlateArmor": 1
+      },
+      "pickpocketItems": [
+        "candlekeepDaggerPlusOne"
+      ],
+      "conversionNotes": [
+        "One actual Dagger +1 is shared by pocket theft and the favorable-reaction quest reward.",
+        "Source STAF01 and PLAT01 use existing native Staff and PlateArmor templates; original AD&D weapon/armor rules are not replicated."
+      ]
+    },
+    "clinicPriest": {
+      "sourceCreature": "POGHMA4.CRE",
+      "sha256": "ec776b2c18c08cd66f6dd216f3c2cc8b69ca98298fcdd5dc3b53a801e4c7ca71",
+      "sourceItems": {
+        "POTN08": 2
+      },
+      "nativeItems": {
+        "candlekeepHealingPotion": 2
+      },
+      "pickpocketItems": [
+        "candlekeepHealingPotion"
+      ],
+      "conversionNotes": [
+        "Two actual healing potions: one gift and one pocket item. The desk potion is owned by the separate authored container."
+      ]
+    },
+    "thurston": {
+      "sourceCreature": "NOBL4.CRE",
+      "sha256": "68a4741ca638b3614bf0fe1d1e523e4d3063ef0863707dfdeba4497f5ec0e04d",
+      "sourceItems": {},
+      "nativeItems": {},
+      "pickpocketItems": [],
+      "conversionNotes": [
+        "Unsupported necklace pocket offers removed: source CRE has no item records, and the classic guides do not corroborate the offer."
+      ]
+    },
+    "lovey": {
+      "sourceCreature": "NOBW4.CRE",
+      "sha256": "4775efffef1bda5ff71ef239d25293be5ab7a5bd22ad110a7840c439c94ec4d1",
+      "sourceItems": {},
+      "nativeItems": {},
+      "pickpocketItems": [],
+      "conversionNotes": [
+        "Unsupported necklace pocket offers removed: source CRE has no item records, and the classic guides do not corroborate the offer."
+      ]
+    },
+    "watcher": {
+      "sourceCreature": "WATCH.CRE",
+      "sha256": "66765ad2b2ecaef89232c859173bbc8c9b4841ad944cfd4fa9e4c2b287db900e",
+      "sourceItems": {
+        "STAF01": 1,
+        "PLAT01": 1,
+        "HELM10": 1
+      },
+      "nativeItems": {},
+      "pickpocketItems": [],
+      "conversionNotes": [
+        "Unsupported bolt pocket offer removed: source WATCH.CRE has no bolts, and the classic guides do not corroborate the offer.",
+        "Source staff, plate mail and helmet remain an explicitly unimplemented ownership/equipment gap for the native Watcher."
+      ]
+    }
+  },
+  "npcPossessionsEvidence": {
+    "edition": "enhanced_edition_supporting_only",
+    "view": "base_key_biff_archives",
+    "originalParityEstablished": false,
+    "classicGuides": [
+      "https://www.forgottenwars.com/bg1/ar2600.htm",
+      "https://www.gamebanshee.com/baldursgate/walkthrough/candlekeep.php"
+    ],
+    "notes": [
+      "The classic guides corroborate Phlydia necklace/gem, Fuller dagger and the independent infirmary gift/pocket potions.",
+      "The source CRE actor identities follow the prologue ARE actor records; parsed inventory items do not establish original equipped-slot behavior.",
+      "Fixed inventory ownership uses native bag transfer on defeat; source gold, reputation and unique NPC combat powers are separate unresolved behavior gaps."
+    ]
+  },
+  "containers": {
+    "barracksBarrel": {
+      "area": "AR2600",
+      "container": 1,
+      "areaSha256": "c49dfa8125afaa41fc91c5474b2a2945f731ba566e551a07883c11ac0fb15afc",
+      "position": [
+        1412,
+        2690
+      ],
+      "areaSizePixels": [
+        5120,
+        3840
+      ],
+      "flags": 0,
+      "lockDifficulty": 100,
+      "breakDifficulty": 0,
+      "trapped": 0,
+      "trapDetection": 0,
+      "trapRemoval": 100,
+      "owner": "",
+      "key": "",
+      "script": "",
+      "scriptSha256": null,
+      "sourceItems": [
+        {
+          "item": "MISC07",
+          "expiration": 0,
+          "charges": [
+            8,
+            0,
+            0
+          ],
+          "flags": 0
+        }
+      ],
+      "nativeItems": [],
+      "gold": 8,
+      "nativeLockAgility": 12,
+      "nativeForceStrength": 12,
+      "nativeGuardCount": 0,
+      "nativeAlwaysGuard": false
+    },
+    "courtyardEmpty1": {
+      "area": "AR2600",
+      "container": 2,
+      "areaSha256": "c49dfa8125afaa41fc91c5474b2a2945f731ba566e551a07883c11ac0fb15afc",
+      "position": [
+        1936,
+        2918
+      ],
+      "areaSizePixels": [
+        5120,
+        3840
+      ],
+      "flags": 0,
+      "lockDifficulty": 100,
+      "breakDifficulty": 0,
+      "trapped": 0,
+      "trapDetection": 0,
+      "trapRemoval": 100,
+      "owner": "",
+      "key": "",
+      "script": "",
+      "scriptSha256": null,
+      "sourceItems": [],
+      "nativeItems": [],
+      "gold": 0,
+      "nativeLockAgility": 12,
+      "nativeForceStrength": 12,
+      "nativeGuardCount": 0,
+      "nativeAlwaysGuard": false
+    },
+    "bunkhouseBarrel": {
+      "area": "AR2600",
+      "container": 3,
+      "areaSha256": "c49dfa8125afaa41fc91c5474b2a2945f731ba566e551a07883c11ac0fb15afc",
+      "position": [
+        2142,
+        2773
+      ],
+      "areaSizePixels": [
+        5120,
+        3840
+      ],
+      "flags": 0,
+      "lockDifficulty": 100,
+      "breakDifficulty": 0,
+      "trapped": 0,
+      "trapDetection": 0,
+      "trapRemoval": 100,
+      "owner": "",
+      "key": "",
+      "script": "",
+      "scriptSha256": null,
+      "sourceItems": [
+        {
+          "item": "MISC07",
+          "expiration": 0,
+          "charges": [
+            15,
+            0,
+            0
+          ],
+          "flags": 0
+        }
+      ],
+      "nativeItems": [],
+      "gold": 15,
+      "nativeLockAgility": 12,
+      "nativeForceStrength": 12,
+      "nativeGuardCount": 0,
+      "nativeAlwaysGuard": false
+    },
+    "phlydiaHay": {
+      "area": "AR2600",
+      "container": 4,
+      "areaSha256": "c49dfa8125afaa41fc91c5474b2a2945f731ba566e551a07883c11ac0fb15afc",
+      "position": [
+        3264,
+        334
+      ],
+      "areaSizePixels": [
+        5120,
+        3840
+      ],
+      "flags": 0,
+      "lockDifficulty": 100,
+      "breakDifficulty": 0,
+      "trapped": 0,
+      "trapDetection": 0,
+      "trapRemoval": 100,
+      "owner": "",
+      "key": "",
+      "script": "",
+      "scriptSha256": null,
+      "sourceItems": [
+        {
+          "item": "BOOK16",
+          "expiration": 0,
+          "charges": [
+            0,
+            0,
+            0
+          ],
+          "flags": 0
+        }
+      ],
+      "nativeItems": [
+        "candlekeepHistoryHalruaa"
+      ],
+      "gold": 0,
+      "nativeLockAgility": 12,
+      "nativeForceStrength": 12,
+      "nativeGuardCount": 0,
+      "nativeAlwaysGuard": false
+    },
+    "courtyardEmpty2": {
+      "area": "AR2600",
+      "container": 5,
+      "areaSha256": "c49dfa8125afaa41fc91c5474b2a2945f731ba566e551a07883c11ac0fb15afc",
+      "position": [
+        4278,
+        1361
+      ],
+      "areaSizePixels": [
+        5120,
+        3840
+      ],
+      "flags": 0,
+      "lockDifficulty": 100,
+      "breakDifficulty": 0,
+      "trapped": 0,
+      "trapDetection": 0,
+      "trapRemoval": 100,
+      "owner": "",
+      "key": "",
+      "script": "",
+      "scriptSha256": null,
+      "sourceItems": [],
+      "nativeItems": [],
+      "gold": 0,
+      "nativeLockAgility": 12,
+      "nativeForceStrength": 12,
+      "nativeGuardCount": 0,
+      "nativeAlwaysGuard": false
+    },
+    "priestChest": {
+      "area": "AR2602",
+      "container": 1,
+      "areaSha256": "636bea43e88388f0a38035adfe6de3461939a48639fbd1752f0c81ded05db3f8",
+      "position": [
+        151,
+        337
+      ],
+      "areaSizePixels": [
+        640,
+        512
+      ],
+      "flags": 1,
+      "lockDifficulty": 30,
+      "breakDifficulty": 0,
+      "trapped": 1,
+      "trapDetection": 500,
+      "trapRemoval": 500,
+      "owner": "",
+      "key": "",
+      "script": "ACT10",
+      "scriptSha256": "cf2e4bb69f179c620334e6611c15519f9b23e7a4f8266aa0cd80bdc03414f052",
+      "sourceItems": [
+        {
+          "item": "DAGG01",
+          "expiration": 0,
+          "charges": [
+            0,
+            0,
+            0
+          ],
+          "flags": 0
+        }
+      ],
+      "nativeItems": [
+        "candlekeepDagger"
+      ],
+      "gold": 0,
+      "nativeLockAgility": 16,
+      "nativeForceStrength": 12,
+      "nativeGuardCount": 1,
+      "nativeAlwaysGuard": true
+    },
+    "priestEmpty1": {
+      "area": "AR2602",
+      "container": 2,
+      "areaSha256": "636bea43e88388f0a38035adfe6de3461939a48639fbd1752f0c81ded05db3f8",
+      "position": [
+        91,
+        283
+      ],
+      "areaSizePixels": [
+        640,
+        512
+      ],
+      "flags": 0,
+      "lockDifficulty": 100,
+      "breakDifficulty": 0,
+      "trapped": 0,
+      "trapDetection": 0,
+      "trapRemoval": 100,
+      "owner": "",
+      "key": "",
+      "script": "",
+      "scriptSha256": null,
+      "sourceItems": [],
+      "nativeItems": [],
+      "gold": 0,
+      "nativeLockAgility": 12,
+      "nativeForceStrength": 12,
+      "nativeGuardCount": 0,
+      "nativeAlwaysGuard": false
+    },
+    "priestTable": {
+      "area": "AR2602",
+      "container": 3,
+      "areaSha256": "636bea43e88388f0a38035adfe6de3461939a48639fbd1752f0c81ded05db3f8",
+      "position": [
+        119,
+        240
+      ],
+      "areaSizePixels": [
+        640,
+        512
+      ],
+      "flags": 0,
+      "lockDifficulty": 100,
+      "breakDifficulty": 0,
+      "trapped": 0,
+      "trapDetection": 0,
+      "trapRemoval": 100,
+      "owner": "",
+      "key": "",
+      "script": "",
+      "scriptSha256": null,
+      "sourceItems": [
+        {
+          "item": "MISC07",
+          "expiration": 0,
+          "charges": [
+            8,
+            0,
+            0
+          ],
+          "flags": 0
+        }
+      ],
+      "nativeItems": [],
+      "gold": 8,
+      "nativeLockAgility": 12,
+      "nativeForceStrength": 12,
+      "nativeGuardCount": 0,
+      "nativeAlwaysGuard": false
+    },
+    "priestCrates": {
+      "area": "AR2602",
+      "container": 4,
+      "areaSha256": "636bea43e88388f0a38035adfe6de3461939a48639fbd1752f0c81ded05db3f8",
+      "position": [
+        465,
+        258
+      ],
+      "areaSizePixels": [
+        640,
+        512
+      ],
+      "flags": 0,
+      "lockDifficulty": 100,
+      "breakDifficulty": 0,
+      "trapped": 0,
+      "trapDetection": 0,
+      "trapRemoval": 100,
+      "owner": "",
+      "key": "",
+      "script": "",
+      "scriptSha256": null,
+      "sourceItems": [
+        {
+          "item": "HAMM01",
+          "expiration": 0,
+          "charges": [
+            0,
+            0,
+            0
+          ],
+          "flags": 0
+        }
+      ],
+      "nativeItems": [
+        "candlekeepWarhammer"
+      ],
+      "gold": 0,
+      "nativeLockAgility": 12,
+      "nativeForceStrength": 12,
+      "nativeGuardCount": 0,
+      "nativeAlwaysGuard": false
+    },
+    "priestEmpty2": {
+      "area": "AR2602",
+      "container": 5,
+      "areaSha256": "636bea43e88388f0a38035adfe6de3461939a48639fbd1752f0c81ded05db3f8",
+      "position": [
+        517,
+        265
+      ],
+      "areaSizePixels": [
+        640,
+        512
+      ],
+      "flags": 0,
+      "lockDifficulty": 100,
+      "breakDifficulty": 0,
+      "trapped": 0,
+      "trapDetection": 0,
+      "trapRemoval": 100,
+      "owner": "",
+      "key": "",
+      "script": "",
+      "scriptSha256": null,
+      "sourceItems": [],
+      "nativeItems": [],
+      "gold": 0,
+      "nativeLockAgility": 12,
+      "nativeForceStrength": 12,
+      "nativeGuardCount": 0,
+      "nativeAlwaysGuard": false
+    },
+    "clinicDesk": {
+      "area": "AR2605",
+      "container": 1,
+      "areaSha256": "b08677f9afe26b7dd34ff782879ed1d648222eb9067a163c67d4ab774a42ffdb",
+      "position": [
+        636,
+        440
+      ],
+      "areaSizePixels": [
+        896,
+        704
+      ],
+      "flags": 1,
+      "lockDifficulty": 25,
+      "breakDifficulty": 0,
+      "trapped": 1,
+      "trapDetection": 100,
+      "trapRemoval": 100,
+      "owner": "",
+      "key": "",
+      "script": "ACT10",
+      "scriptSha256": "cf2e4bb69f179c620334e6611c15519f9b23e7a4f8266aa0cd80bdc03414f052",
+      "sourceItems": [
+        {
+          "item": "POTN08",
+          "expiration": 0,
+          "charges": [
+            0,
+            0,
+            0
+          ],
+          "flags": 0
+        }
+      ],
+      "nativeItems": [
+        "candlekeepHealingPotion"
+      ],
+      "gold": 0,
+      "nativeLockAgility": 16,
+      "nativeForceStrength": 12,
+      "nativeGuardCount": 1,
+      "nativeAlwaysGuard": true
+    },
+    "northwestBarrel": {
+      "area": "AR2606",
+      "container": 1,
+      "areaSha256": "f6f3476be6ceafa15230c15eb13300e09a799c0c7676bae94eddd0ac17e83845",
+      "position": [
+        101,
+        234
+      ],
+      "areaSizePixels": [
+        640,
+        512
+      ],
+      "flags": 0,
+      "lockDifficulty": 100,
+      "breakDifficulty": 0,
+      "trapped": 0,
+      "trapDetection": 0,
+      "trapRemoval": 100,
+      "owner": "",
+      "key": "",
+      "script": "",
+      "scriptSha256": null,
+      "sourceItems": [
+        {
+          "item": "RING11",
+          "expiration": 0,
+          "charges": [
+            0,
+            0,
+            0
+          ],
+          "flags": 0
+        }
+      ],
+      "nativeItems": [
+        "candlekeepSilverRing"
+      ],
+      "gold": 0,
+      "nativeLockAgility": 12,
+      "nativeForceStrength": 12,
+      "nativeGuardCount": 0,
+      "nativeAlwaysGuard": false
+    },
+    "storehouseEmpty1": {
+      "area": "AR2606",
+      "container": 2,
+      "areaSha256": "f6f3476be6ceafa15230c15eb13300e09a799c0c7676bae94eddd0ac17e83845",
+      "position": [
+        261,
+        362
+      ],
+      "areaSizePixels": [
+        640,
+        512
+      ],
+      "flags": 0,
+      "lockDifficulty": 100,
+      "breakDifficulty": 0,
+      "trapped": 0,
+      "trapDetection": 0,
+      "trapRemoval": 100,
+      "owner": "",
+      "key": "",
+      "script": "",
+      "scriptSha256": null,
+      "sourceItems": [],
+      "nativeItems": [],
+      "gold": 0,
+      "nativeLockAgility": 12,
+      "nativeForceStrength": 12,
+      "nativeGuardCount": 0,
+      "nativeAlwaysGuard": false
+    },
+    "storehouseEmpty2": {
+      "area": "AR2606",
+      "container": 3,
+      "areaSha256": "f6f3476be6ceafa15230c15eb13300e09a799c0c7676bae94eddd0ac17e83845",
+      "position": [
+        275,
+        424
+      ],
+      "areaSizePixels": [
+        640,
+        512
+      ],
+      "flags": 0,
+      "lockDifficulty": 100,
+      "breakDifficulty": 0,
+      "trapped": 0,
+      "trapDetection": 0,
+      "trapRemoval": 100,
+      "owner": "",
+      "key": "",
+      "script": "",
+      "scriptSha256": null,
+      "sourceItems": [],
+      "nativeItems": [],
+      "gold": 0,
+      "nativeLockAgility": 12,
+      "nativeForceStrength": 12,
+      "nativeGuardCount": 0,
+      "nativeAlwaysGuard": false
+    },
+    "bunkhouseEmpty": {
+      "area": "AR2607",
+      "container": 1,
+      "areaSha256": "982f531413b634e8e8bfdcde42dd11cd3dad778973224b0f396b3109bdd25010",
+      "position": [
+        196,
+        126
+      ],
+      "areaSizePixels": [
+        640,
+        384
+      ],
+      "flags": 0,
+      "lockDifficulty": 100,
+      "breakDifficulty": 0,
+      "trapped": 0,
+      "trapDetection": 0,
+      "trapRemoval": 100,
+      "owner": "",
+      "key": "",
+      "script": "",
+      "scriptSha256": null,
+      "sourceItems": [],
+      "nativeItems": [],
+      "gold": 0,
+      "nativeLockAgility": 12,
+      "nativeForceStrength": 12,
+      "nativeGuardCount": 0,
+      "nativeAlwaysGuard": false
+    },
+    "innKitchen": {
+      "area": "AR2616",
+      "container": 1,
+      "areaSha256": "64af7a764a139d77f97888b6941461651333cdecf8cb8653a8fcb0246c2ae891",
+      "position": [
+        638,
+        170
+      ],
+      "areaSizePixels": [
+        960,
+        704
+      ],
+      "flags": 0,
+      "lockDifficulty": 100,
+      "breakDifficulty": 0,
+      "trapped": 0,
+      "trapDetection": 0,
+      "trapRemoval": 100,
+      "owner": "",
+      "key": "",
+      "script": "",
+      "scriptSha256": null,
+      "sourceItems": [
+        {
+          "item": "DAGG01",
+          "expiration": 0,
+          "charges": [
+            0,
+            0,
+            0
+          ],
+          "flags": 0
+        }
+      ],
+      "nativeItems": [
+        "candlekeepDagger"
+      ],
+      "gold": 0,
+      "nativeLockAgility": 12,
+      "nativeForceStrength": 12,
+      "nativeGuardCount": 0,
+      "nativeAlwaysGuard": false
+    },
+    "innOffice": {
+      "area": "AR2616",
+      "container": 2,
+      "areaSha256": "64af7a764a139d77f97888b6941461651333cdecf8cb8653a8fcb0246c2ae891",
+      "position": [
+        763,
+        280
+      ],
+      "areaSizePixels": [
+        960,
+        704
+      ],
+      "flags": 1,
+      "lockDifficulty": 20,
+      "breakDifficulty": 0,
+      "trapped": 1,
+      "trapDetection": 100,
+      "trapRemoval": 100,
+      "owner": "",
+      "key": "PLAT01",
+      "script": "ACT11",
+      "scriptSha256": "bf2ca3293982e158f9b8db50a0fa7212790fdd4bb936aaac640e1d2ee00cf969",
+      "sourceItems": [
+        {
+          "item": "MISC07",
+          "expiration": 0,
+          "charges": [
+            18,
+            0,
+            0
+          ],
+          "flags": 0
+        },
+        {
+          "item": "SCRL67",
+          "expiration": 0,
+          "charges": [
+            0,
+            0,
+            0
+          ],
+          "flags": 0
+        },
+        {
+          "item": "SCRL76",
+          "expiration": 0,
+          "charges": [
+            0,
+            0,
+            0
+          ],
+          "flags": 0
+        }
+      ],
+      "nativeItems": [
+        "candlekeepArmorScroll",
+        "candlekeepInfravisionScroll"
+      ],
+      "gold": 18,
+      "nativeLockAgility": 12,
+      "nativeForceStrength": 12,
+      "nativeGuardCount": 2,
+      "nativeAlwaysGuard": false
+    },
+    "innCoinDrawer": {
+      "area": "AR2617",
+      "container": 1,
+      "areaSha256": "84c75a3743dfc4fa5b7646f7fa8972cdd77e5844e232c6480533da39bc1534a2",
+      "position": [
+        119,
+        300
+      ],
+      "areaSizePixels": [
+        768,
+        512
+      ],
+      "flags": 0,
+      "lockDifficulty": 100,
+      "breakDifficulty": 0,
+      "trapped": 0,
+      "trapDetection": 0,
+      "trapRemoval": 100,
+      "owner": "",
+      "key": "",
+      "script": "",
+      "scriptSha256": null,
+      "sourceItems": [
+        {
+          "item": "MISC07",
+          "expiration": 0,
+          "charges": [
+            4,
+            0,
+            0
+          ],
+          "flags": 0
+        }
+      ],
+      "nativeItems": [],
+      "gold": 4,
+      "nativeLockAgility": 12,
+      "nativeForceStrength": 12,
+      "nativeGuardCount": 0,
+      "nativeAlwaysGuard": false
+    },
+    "innSilverDrawer": {
+      "area": "AR2617",
+      "container": 2,
+      "areaSha256": "84c75a3743dfc4fa5b7646f7fa8972cdd77e5844e232c6480533da39bc1534a2",
+      "position": [
+        211,
+        371
+      ],
+      "areaSizePixels": [
+        768,
+        512
+      ],
+      "flags": 1,
+      "lockDifficulty": 10,
+      "breakDifficulty": 0,
+      "trapped": 0,
+      "trapDetection": 0,
+      "trapRemoval": 100,
+      "owner": "",
+      "key": "",
+      "script": "",
+      "scriptSha256": null,
+      "sourceItems": [
+        {
+          "item": "AMUL09",
+          "expiration": 0,
+          "charges": [
+            0,
+            0,
+            0
+          ],
+          "flags": 0
+        }
+      ],
+      "nativeItems": [
+        "candlekeepSilverNecklace"
+      ],
+      "gold": 0,
+      "nativeLockAgility": 12,
+      "nativeForceStrength": 12,
+      "nativeGuardCount": 0,
+      "nativeAlwaysGuard": false
+    },
+    "innClarityDrawer": {
+      "area": "AR2617",
+      "container": 3,
+      "areaSha256": "84c75a3743dfc4fa5b7646f7fa8972cdd77e5844e232c6480533da39bc1534a2",
+      "position": [
+        360,
+        420
+      ],
+      "areaSizePixels": [
+        768,
+        512
+      ],
+      "flags": 1,
+      "lockDifficulty": 30,
+      "breakDifficulty": 0,
+      "trapped": 0,
+      "trapDetection": 0,
+      "trapRemoval": 100,
+      "owner": "",
+      "key": "",
+      "script": "",
+      "scriptSha256": null,
+      "sourceItems": [
+        {
+          "item": "POTN21",
+          "expiration": 0,
+          "charges": [
+            0,
+            0,
+            0
+          ],
+          "flags": 0
+        },
+        {
+          "item": "MISC07",
+          "expiration": 0,
+          "charges": [
+            36,
+            0,
+            0
+          ],
+          "flags": 0
+        }
+      ],
+      "nativeItems": [
+        "candlekeepClarityPotion"
+      ],
+      "gold": 36,
+      "nativeLockAgility": 16,
+      "nativeForceStrength": 12,
+      "nativeGuardCount": 0,
+      "nativeAlwaysGuard": false
+    },
+    "innJewelryDrawer": {
+      "area": "AR2617",
+      "container": 4,
+      "areaSha256": "84c75a3743dfc4fa5b7646f7fa8972cdd77e5844e232c6480533da39bc1534a2",
+      "position": [
+        555,
+        314
+      ],
+      "areaSizePixels": [
+        768,
+        512
+      ],
+      "flags": 1,
+      "lockDifficulty": 30,
+      "breakDifficulty": 0,
+      "trapped": 1,
+      "trapDetection": 100,
+      "trapRemoval": 100,
+      "owner": "",
+      "key": "",
+      "script": "ACT10",
+      "scriptSha256": "cf2e4bb69f179c620334e6611c15519f9b23e7a4f8266aa0cd80bdc03414f052",
+      "sourceItems": [
+        {
+          "item": "RING17",
+          "expiration": 0,
+          "charges": [
+            0,
+            0,
+            0
+          ],
+          "flags": 0
+        },
+        {
+          "item": "MISC07",
+          "expiration": 0,
+          "charges": [
+            86,
+            0,
+            0
+          ],
+          "flags": 0
+        }
+      ],
+      "nativeItems": [
+        "candlekeepFlamedanceRing"
+      ],
+      "gold": 86,
+      "nativeLockAgility": 16,
+      "nativeForceStrength": 12,
+      "nativeGuardCount": 1,
+      "nativeAlwaysGuard": true
+    },
+    "innSapphireDrawer": {
+      "area": "AR2617",
+      "container": 5,
+      "areaSha256": "84c75a3743dfc4fa5b7646f7fa8972cdd77e5844e232c6480533da39bc1534a2",
+      "position": [
+        397,
+        194
+      ],
+      "areaSizePixels": [
+        768,
+        512
+      ],
+      "flags": 1,
+      "lockDifficulty": 65,
+      "breakDifficulty": 0,
+      "trapped": 1,
+      "trapDetection": 100,
+      "trapRemoval": 100,
+      "owner": "",
+      "key": "",
+      "script": "ACT11NOB",
+      "scriptSha256": "ca0150a97ff4e7c4dad93865c81516c6889984bee08a75fc593652e214d2d7f3",
+      "sourceItems": [
+        {
+          "item": "MISC41",
+          "expiration": 0,
+          "charges": [
+            0,
+            0,
+            0
+          ],
+          "flags": 0
+        }
+      ],
+      "nativeItems": [
+        "candlekeepStarSapphire"
+      ],
+      "gold": 0,
+      "nativeLockAgility": 18,
+      "nativeForceStrength": 14,
+      "nativeGuardCount": 2,
+      "nativeAlwaysGuard": false
+    },
+    "barracksChest1": {
+      "area": "AR2618",
+      "container": 1,
+      "areaSha256": "a9226e5e2b54350fc9fcf6912e10fb58804724f9e37cf941eeb3fe1b866e48c9",
+      "position": [
+        229,
+        187
+      ],
+      "areaSizePixels": [
+        768,
+        512
+      ],
+      "flags": 1,
+      "lockDifficulty": 40,
+      "breakDifficulty": 0,
+      "trapped": 1,
+      "trapDetection": 1000,
+      "trapRemoval": 100,
+      "owner": "",
+      "key": "",
+      "script": "ACT11",
+      "scriptSha256": "bf2ca3293982e158f9b8db50a0fa7212790fdd4bb936aaac640e1d2ee00cf969",
+      "sourceItems": [
+        {
+          "item": "DAGG01",
+          "expiration": 0,
+          "charges": [
+            0,
+            0,
+            0
+          ],
+          "flags": 0
+        },
+        {
+          "item": "SW1H04",
+          "expiration": 0,
+          "charges": [
+            0,
+            0,
+            0
+          ],
+          "flags": 0
+        }
+      ],
+      "nativeItems": [
+        "candlekeepDagger",
+        "candlekeepLongsword"
+      ],
+      "gold": 0,
+      "nativeLockAgility": 16,
+      "nativeForceStrength": 12,
+      "nativeGuardCount": 2,
+      "nativeAlwaysGuard": false
+    },
+    "barracksChest2": {
+      "area": "AR2618",
+      "container": 2,
+      "areaSha256": "a9226e5e2b54350fc9fcf6912e10fb58804724f9e37cf941eeb3fe1b866e48c9",
+      "position": [
+        208,
+        256
+      ],
+      "areaSizePixels": [
+        768,
+        512
+      ],
+      "flags": 1,
+      "lockDifficulty": 40,
+      "breakDifficulty": 0,
+      "trapped": 1,
+      "trapDetection": 100,
+      "trapRemoval": 100,
+      "owner": "",
+      "key": "",
+      "script": "ACT11",
+      "scriptSha256": "bf2ca3293982e158f9b8db50a0fa7212790fdd4bb936aaac640e1d2ee00cf969",
+      "sourceItems": [
+        {
+          "item": "HAMM01",
+          "expiration": 0,
+          "charges": [
+            0,
+            0,
+            0
+          ],
+          "flags": 0
+        },
+        {
+          "item": "DAGG01",
+          "expiration": 0,
+          "charges": [
+            0,
+            0,
+            0
+          ],
+          "flags": 0
+        }
+      ],
+      "nativeItems": [
+        "candlekeepWarhammer",
+        "candlekeepDagger"
+      ],
+      "gold": 0,
+      "nativeLockAgility": 16,
+      "nativeForceStrength": 12,
+      "nativeGuardCount": 2,
+      "nativeAlwaysGuard": false
+    },
+    "barracksChest3": {
+      "area": "AR2618",
+      "container": 3,
+      "areaSha256": "a9226e5e2b54350fc9fcf6912e10fb58804724f9e37cf941eeb3fe1b866e48c9",
+      "position": [
+        192,
+        329
+      ],
+      "areaSizePixels": [
+        768,
+        512
+      ],
+      "flags": 1,
+      "lockDifficulty": 40,
+      "breakDifficulty": 0,
+      "trapped": 1,
+      "trapDetection": 100,
+      "trapRemoval": 100,
+      "owner": "",
+      "key": "",
+      "script": "ACT11",
+      "scriptSha256": "bf2ca3293982e158f9b8db50a0fa7212790fdd4bb936aaac640e1d2ee00cf969",
+      "sourceItems": [
+        {
+          "item": "AX1H01",
+          "expiration": 0,
+          "charges": [
+            0,
+            0,
+            0
+          ],
+          "flags": 0
+        }
+      ],
+      "nativeItems": [
+        "candlekeepBattleAxe"
+      ],
+      "gold": 0,
+      "nativeLockAgility": 16,
+      "nativeForceStrength": 12,
+      "nativeGuardCount": 2,
+      "nativeAlwaysGuard": false
+    },
+    "barracksChest4": {
+      "area": "AR2618",
+      "container": 4,
+      "areaSha256": "a9226e5e2b54350fc9fcf6912e10fb58804724f9e37cf941eeb3fe1b866e48c9",
+      "position": [
+        161,
+        402
+      ],
+      "areaSizePixels": [
+        768,
+        512
+      ],
+      "flags": 1,
+      "lockDifficulty": 40,
+      "breakDifficulty": 0,
+      "trapped": 1,
+      "trapDetection": 100,
+      "trapRemoval": 100,
+      "owner": "",
+      "key": "",
+      "script": "ACT11",
+      "scriptSha256": "bf2ca3293982e158f9b8db50a0fa7212790fdd4bb936aaac640e1d2ee00cf969",
+      "sourceItems": [
+        {
+          "item": "SW1H04",
+          "expiration": 0,
+          "charges": [
+            0,
+            0,
+            0
+          ],
+          "flags": 0
+        },
+        {
+          "item": "BLUN04",
+          "expiration": 0,
+          "charges": [
+            0,
+            0,
+            0
+          ],
+          "flags": 0
+        }
+      ],
+      "nativeItems": [
+        "candlekeepLongsword",
+        "candlekeepMace"
+      ],
+      "gold": 0,
+      "nativeLockAgility": 16,
+      "nativeForceStrength": 12,
+      "nativeGuardCount": 2,
+      "nativeAlwaysGuard": false
+    },
+    "hullChest": {
+      "area": "AR2618",
+      "container": 5,
+      "areaSha256": "a9226e5e2b54350fc9fcf6912e10fb58804724f9e37cf941eeb3fe1b866e48c9",
+      "position": [
+        646,
+        293
+      ],
+      "areaSizePixels": [
+        768,
+        512
+      ],
+      "flags": 0,
+      "lockDifficulty": 100,
+      "breakDifficulty": 0,
+      "trapped": 0,
+      "trapDetection": 100,
+      "trapRemoval": 100,
+      "owner": "",
+      "key": "",
+      "script": "ACT11",
+      "scriptSha256": "bf2ca3293982e158f9b8db50a0fa7212790fdd4bb936aaac640e1d2ee00cf969",
+      "sourceItems": [
+        {
+          "item": "SW1H12",
+          "expiration": 0,
+          "charges": [
+            0,
+            0,
+            0
+          ],
+          "flags": 0
+        },
+        {
+          "item": "POTN20",
+          "expiration": 0,
+          "charges": [
+            0,
+            0,
+            0
+          ],
+          "flags": 0
+        }
+      ],
+      "nativeItems": [
+        "candlekeepHullSword",
+        "candlekeepAntidote"
+      ],
+      "gold": 0,
+      "nativeLockAgility": 12,
+      "nativeForceStrength": 12,
+      "nativeGuardCount": 0,
+      "nativeAlwaysGuard": false
+    },
+    "trainingChest1": {
+      "area": "AR2643",
+      "container": 1,
+      "areaSha256": "de44f1d8dfdb2cb30eea009d1fdbd18bf323213f247ec5953dc6e238d3175411",
+      "position": [
+        826,
+        314
+      ],
+      "areaSizePixels": [
+        1792,
+        1408
+      ],
+      "flags": 0,
+      "lockDifficulty": 100,
+      "breakDifficulty": 0,
+      "trapped": 0,
+      "trapDetection": 0,
+      "trapRemoval": 100,
+      "owner": "",
+      "key": "",
+      "script": "",
+      "scriptSha256": null,
+      "sourceItems": [],
+      "nativeItems": [],
+      "gold": 0,
+      "nativeLockAgility": 12,
+      "nativeForceStrength": 12,
+      "nativeGuardCount": 0,
+      "nativeAlwaysGuard": false
+    },
+    "trainingChest2": {
+      "area": "AR2643",
+      "container": 2,
+      "areaSha256": "de44f1d8dfdb2cb30eea009d1fdbd18bf323213f247ec5953dc6e238d3175411",
+      "position": [
+        937,
+        324
+      ],
+      "areaSizePixels": [
+        1792,
+        1408
+      ],
+      "flags": 0,
+      "lockDifficulty": 100,
+      "breakDifficulty": 0,
+      "trapped": 0,
+      "trapDetection": 0,
+      "trapRemoval": 100,
+      "owner": "",
+      "key": "",
+      "script": "",
+      "scriptSha256": null,
+      "sourceItems": [],
+      "nativeItems": [],
+      "gold": 0,
+      "nativeLockAgility": 12,
+      "nativeForceStrength": 12,
+      "nativeGuardCount": 0,
+      "nativeAlwaysGuard": false
+    },
+    "trainingChest3": {
+      "area": "AR2643",
+      "container": 3,
+      "areaSha256": "de44f1d8dfdb2cb30eea009d1fdbd18bf323213f247ec5953dc6e238d3175411",
+      "position": [
+        1089,
+        350
+      ],
+      "areaSizePixels": [
+        1792,
+        1408
+      ],
+      "flags": 0,
+      "lockDifficulty": 100,
+      "breakDifficulty": 0,
+      "trapped": 0,
+      "trapDetection": 0,
+      "trapRemoval": 100,
+      "owner": "",
+      "key": "",
+      "script": "",
+      "scriptSha256": null,
+      "sourceItems": [],
+      "nativeItems": [],
+      "gold": 0,
+      "nativeLockAgility": 12,
+      "nativeForceStrength": 12,
+      "nativeGuardCount": 0,
+      "nativeAlwaysGuard": false
+    },
+    "trainingChest4": {
+      "area": "AR2643",
+      "container": 4,
+      "areaSha256": "de44f1d8dfdb2cb30eea009d1fdbd18bf323213f247ec5953dc6e238d3175411",
+      "position": [
+        1471,
+        506
+      ],
+      "areaSizePixels": [
+        1792,
+        1408
+      ],
+      "flags": 0,
+      "lockDifficulty": 100,
+      "breakDifficulty": 0,
+      "trapped": 0,
+      "trapDetection": 0,
+      "trapRemoval": 100,
+      "owner": "",
+      "key": "",
+      "script": "",
+      "scriptSha256": null,
+      "sourceItems": [],
+      "nativeItems": [],
+      "gold": 0,
+      "nativeLockAgility": 12,
+      "nativeForceStrength": 12,
+      "nativeGuardCount": 0,
+      "nativeAlwaysGuard": false
+    },
+    "trainingChest5": {
+      "area": "AR2643",
+      "container": 5,
+      "areaSha256": "de44f1d8dfdb2cb30eea009d1fdbd18bf323213f247ec5953dc6e238d3175411",
+      "position": [
+        1603,
+        528
+      ],
+      "areaSizePixels": [
+        1792,
+        1408
+      ],
+      "flags": 1,
+      "lockDifficulty": 50,
+      "breakDifficulty": 0,
+      "trapped": 0,
+      "trapDetection": 0,
+      "trapRemoval": 100,
+      "owner": "",
+      "key": "",
+      "script": "",
+      "scriptSha256": null,
+      "sourceItems": [],
+      "nativeItems": [],
+      "gold": 0,
+      "nativeLockAgility": 18,
+      "nativeForceStrength": 14,
+      "nativeGuardCount": 0,
+      "nativeAlwaysGuard": false
+    },
+    "trainingChest6": {
+      "area": "AR2643",
+      "container": 6,
+      "areaSha256": "de44f1d8dfdb2cb30eea009d1fdbd18bf323213f247ec5953dc6e238d3175411",
+      "position": [
+        1182,
+        609
+      ],
+      "areaSizePixels": [
+        1792,
+        1408
+      ],
+      "flags": 0,
+      "lockDifficulty": 100,
+      "breakDifficulty": 0,
+      "trapped": 0,
+      "trapDetection": 0,
+      "trapRemoval": 100,
+      "owner": "",
+      "key": "",
+      "script": "",
+      "scriptSha256": null,
+      "sourceItems": [],
+      "nativeItems": [],
+      "gold": 0,
+      "nativeLockAgility": 12,
+      "nativeForceStrength": 12,
+      "nativeGuardCount": 0,
+      "nativeAlwaysGuard": false
+    },
+    "trainingChest7": {
+      "area": "AR2643",
+      "container": 7,
+      "areaSha256": "de44f1d8dfdb2cb30eea009d1fdbd18bf323213f247ec5953dc6e238d3175411",
+      "position": [
+        635,
+        559
+      ],
+      "areaSizePixels": [
+        1792,
+        1408
+      ],
+      "flags": 0,
+      "lockDifficulty": 100,
+      "breakDifficulty": 0,
+      "trapped": 0,
+      "trapDetection": 0,
+      "trapRemoval": 100,
+      "owner": "",
+      "key": "",
+      "script": "",
+      "scriptSha256": null,
+      "sourceItems": [],
+      "nativeItems": [],
+      "gold": 0,
+      "nativeLockAgility": 12,
+      "nativeForceStrength": 12,
+      "nativeGuardCount": 0,
+      "nativeAlwaysGuard": false
+    },
+    "trainingChest8": {
+      "area": "AR2643",
+      "container": 8,
+      "areaSha256": "de44f1d8dfdb2cb30eea009d1fdbd18bf323213f247ec5953dc6e238d3175411",
+      "position": [
+        721,
+        981
+      ],
+      "areaSizePixels": [
+        1792,
+        1408
+      ],
+      "flags": 1,
+      "lockDifficulty": 60,
+      "breakDifficulty": 0,
+      "trapped": 0,
+      "trapDetection": 0,
+      "trapRemoval": 100,
+      "owner": "",
+      "key": "",
+      "script": "",
+      "scriptSha256": null,
+      "sourceItems": [],
+      "nativeItems": [],
+      "gold": 0,
+      "nativeLockAgility": 18,
+      "nativeForceStrength": 14,
+      "nativeGuardCount": 0,
+      "nativeAlwaysGuard": false
+    },
+    "trainingChest9": {
+      "area": "AR2643",
+      "container": 9,
+      "areaSha256": "de44f1d8dfdb2cb30eea009d1fdbd18bf323213f247ec5953dc6e238d3175411",
+      "position": [
+        926,
+        949
+      ],
+      "areaSizePixels": [
+        1792,
+        1408
+      ],
+      "flags": 0,
+      "lockDifficulty": 100,
+      "breakDifficulty": 0,
+      "trapped": 0,
+      "trapDetection": 0,
+      "trapRemoval": 100,
+      "owner": "",
+      "key": "",
+      "script": "",
+      "scriptSha256": null,
+      "sourceItems": [],
+      "nativeItems": [],
+      "gold": 0,
+      "nativeLockAgility": 12,
+      "nativeForceStrength": 12,
+      "nativeGuardCount": 0,
+      "nativeAlwaysGuard": false
+    },
+    "trainingChest10": {
+      "area": "AR2643",
+      "container": 10,
+      "areaSha256": "de44f1d8dfdb2cb30eea009d1fdbd18bf323213f247ec5953dc6e238d3175411",
+      "position": [
+        676,
+        1182
+      ],
+      "areaSizePixels": [
+        1792,
+        1408
+      ],
+      "flags": 0,
+      "lockDifficulty": 50,
+      "breakDifficulty": 0,
+      "trapped": 0,
+      "trapDetection": 0,
+      "trapRemoval": 100,
+      "owner": "",
+      "key": "",
+      "script": "",
+      "scriptSha256": null,
+      "sourceItems": [],
+      "nativeItems": [],
+      "gold": 0,
+      "nativeLockAgility": 12,
+      "nativeForceStrength": 12,
+      "nativeGuardCount": 0,
+      "nativeAlwaysGuard": false
+    }
+  },
+  "containersEvidence": {
+    "edition": "enhanced_edition_supporting_only",
+    "view": "base_key_biff_archives",
+    "originalParityEstablished": false,
+    "count": 37,
+    "gold": 175,
+    "lockedCount": 13,
+    "notes": [
+      "Each source area container record has its own native object and save-state claim; empty containers are preserved.",
+      "Source lock difficulty and flags are retained separately from native conversion: 10/20 -> Agility12 Strength12; 25/30/40 -> Agility16 Strength12; 50/60/65 -> Agility18 Strength14.",
+      "An unlocked source container remains unlocked even when its unused lock-difficulty field is high.",
+      "ACT10 creates one guard; ACT11 and ACT11NOB create two. Native guard counts apply when the adapted theft/force detection fires.",
+      "ACT10 detection is mapped to mandatory guards; ACT11 detection uses native Agility16. Original visibility, actor state checks and three-second delay are not evaluated.",
+      "Hull chest is untrapped in the source despite ACT11 attachment; native quest permission and theft treatment are an explicit adaptation.",
+      "EE-only ACT11NOB dynamic noble-jewelry insertion is excluded from this original-BG1 target; only the default Star Sapphire is authored.",
+      "Source gold charges are converted to native gold. Item charge/flag records are retained here; original charge mechanics are not inferred."
+    ]
+  },
+  "lootNeutralSalePrices": {
+    "candlekeepDaggerPlusOne": {
+      "resource": "DAGG02",
+      "itemSha256": "1d3eda9f1ae6d53f1b2ac1877169c624c3320332be5fc66b973a40e1eb46150f",
+      "basePrice": 300,
+      "buyMarkup": 50,
+      "neutralSellPrice": 150
+    },
+    "candlekeepGoldNecklace": {
+      "resource": "AMUL10",
+      "itemSha256": "52a652710bb9dee0785da36bd637a5025da8d785163b09fc6b83b8b8a5d79fb2",
+      "basePrice": 60,
+      "buyMarkup": 50,
+      "neutralSellPrice": 30
+    },
+    "candlekeepSilverNecklace": {
+      "resource": "AMUL09",
+      "itemSha256": "2a9af0c4d0377236cfbe21371ad123f2e84f6afdb8f8197d2bb78ee0b1cd560b",
+      "basePrice": 10,
+      "buyMarkup": 50,
+      "neutralSellPrice": 5
+    },
+    "candlekeepSilverRing": {
+      "resource": "RING11",
+      "itemSha256": "5534cd11284bc9523d3b7c39cd3ab363ab4c0e333e63be634a96fde0d9754275",
+      "basePrice": 5,
+      "buyMarkup": 50,
+      "neutralSellPrice": 2
+    },
+    "candlekeepFlamedanceRing": {
+      "resource": "RING17",
+      "itemSha256": "a1a7455243c88ffdbf93b0a01bb7230b5267aceca42d0b3676c790e53b8615f9",
+      "basePrice": 125,
+      "buyMarkup": 50,
+      "neutralSellPrice": 62
+    },
+    "candlekeepClarityPotion": {
+      "resource": "POTN21",
+      "itemSha256": "b2ab2e7864c7c593c36808d12cefeffc9a73a3638f4316c517cb4876dabe3107",
+      "basePrice": 700,
+      "buyMarkup": 50,
+      "neutralSellPrice": 350
+    }
+  }
+}

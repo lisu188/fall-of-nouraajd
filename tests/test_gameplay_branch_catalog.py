@@ -201,12 +201,16 @@ class GameplayBranchCatalogTest(unittest.TestCase):
         life = uses["res/plugins/potion.py:LifePotion.onUse"]
         mana = uses["res/plugins/potion.py:ManaPotion.onUse"]
         self.assertEqual(
-            {"nouraajd", "ninemarches", "vhulmarn", "kadath", "sunderedmarch", "test"}, {use["map"] for use in life}
+            {"nouraajd", "ninemarches", "vhulmarn", "kadath", "sunderedmarch", "test", "candlekeep"},
+            {use["map"] for use in life},
         )
         self.assertEqual(
             {"nouraajd", "ninemarches", "vhulmarn", "kadath", "sunderedmarch"}, {use["map"] for use in mana}
         )
-        self.assertTrue(all("/market/" in use["property"] for use in (*life, *mana)))
+        self.assertTrue(all("/market/" in use["property"] for use in (*life, *mana) if use["map"] != "candlekeep"))
+        clinic_uses = [use for use in life if use["map"] == "candlekeep"]
+        self.assertEqual({"clinicPriest"}, {use["actor"] for use in clinic_uses})
+        self.assertEqual({"/properties/items/0", "/properties/items/1"}, {use["property"] for use in clinic_uses})
         hunt = uses["res/plugins/octobogz_hunt.py:OctobogzHuntDefeatTrigger.trigger"]
         self.assertEqual(1, len(hunt))
         self.assertEqual(("nouraajd", "cave2"), (hunt[0]["map"], hunt[0]["actor"]))
@@ -497,7 +501,11 @@ class TownDialog:
         pending = catalog.pendingGameplayObligations()
         self.assertTrue(pending)
         declared = {branch for case in catalog.getCases() for branch in case.branches}
-        self.assertTrue(set(pending) <= declared)
+        from tests.gameplay_routes_candlekeep import PENDING_GAMEPLAY_OBLIGATIONS
+
+        selected_gui_pending = set(PENDING_GAMEPLAY_OBLIGATIONS)
+        self.assertTrue((set(pending) - selected_gui_pending) <= declared)
+        self.assertFalse(selected_gui_pending & declared)
         self.assertFalse(set(pending) & set(catalog.defensiveContracts()))
         for branch, evidence in pending.items():
             if not branch.startswith("castle."):

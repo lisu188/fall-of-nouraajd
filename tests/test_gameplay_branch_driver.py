@@ -1076,6 +1076,183 @@ class GameplayBranchDriverTest(unittest.TestCase):
         with self.assertRaisesRegex(AssertionError, "Unexpected unauthored relocation"):
             driver._validateMovement((5, 5, 0), (5, 5, 1))
 
+    def testCandlekeepCompletedQuestRepeatUsesTheVisibleCompletedOption(self):
+        from tests.gameplay_routes_candlekeep import complete
+
+        driver = self.driver()
+        driver.map_name = "candlekeep"
+        driver.case = RouteCase(
+            "candlekeep-repeat",
+            "candlekeep",
+            ("candlekeep",),
+            ("candlekeep.quest.firebead.complete", "candlekeep.quest.firebead.repeat"),
+            lambda driver: None,
+        )
+        state = {"completed": False, "exp": 0}
+        driver.navigateTo = Mock()
+        driver.pump = Mock()
+        driver.snapshot = Mock(return_value={})
+        driver.gold = Mock(return_value=50)
+        driver.number = Mock(return_value=0)
+        driver.questNames = lambda completed=False: ["firebeadQuest"] if completed == state["completed"] else []
+
+        def call(handle, method, *args):
+            if method == "createObject":
+                return {"__handle__": args[0]}
+            if method == "getStats":
+                return {"__handle__": "stats"}
+            if method == "getItems":
+                return []
+            if method == "getNumericProperty":
+                return state["exp"] if args[0] == "exp" else 5
+            if method == "invokeCondition":
+                return {
+                    "canAcceptQuest": False,
+                    "canReturnQuest": not state["completed"],
+                    "questActive": not state["completed"],
+                    "questCompleted": state["completed"],
+                }[args[0]]
+            if method == "invokeAction":
+                if args[0] == "returnQuest":
+                    state.update(completed=True, exp=50)
+                return
+            self.fail((handle, method, args))
+
+        driver.call = call
+        complete(driver, "firebead")
+        self.assertEqual(4, driver.actions[-1]["option"])
+        self.assertEqual("talk", driver.actions[-1]["action"])
+        self.assertEqual(set(driver.case.branches), set(driver.branches))
+
+    def candlekeepTimeoutDriver(self, *, before=None, after=None):
+        driver = self.driver()
+        driver.map_name = "candlekeep"
+        driver.case = RouteCase(
+            "candlekeep-timeout",
+            "candlekeep",
+            ("candlekeep",),
+            ("candlekeep.training.timedExit",),
+            lambda driver: None,
+        )
+        objects = {name: {"__handle__": name} for name in ("obe", "trainingEntrance")}
+        state = {
+            "coords": (27, 44, 1),
+            "turn": 1000,
+            "alive": True,
+            "candlekeep_trainingStage": "active",
+            "candlekeepTrainingAccepted": True,
+            "candlekeepTrainingTurns": 119,
+            "candlekeepTrainingTurnLimit": 120,
+            "candlekeepTrainingTimedOut": False,
+            "candlekeepTrainingForcedExit": False,
+            "candlekeepTrainingDefeatPending": False,
+            "candlekeepPortalGuard": "",
+            "candlekeepTrainingInventoryNames": '["sword"]',
+            "candlekeepTrainingEquipment": '{"0":"sword"}',
+            "candlekeepTrainingAffiliation": "heroes",
+            "affiliation": "candlekeepTraining",
+            "items": [{"__handle__": "sword", "name": "sword"}],
+            "equipped": {"0": {"__handle__": "sword", "name": "sword"}},
+        }
+        state.update(before or {})
+        driver.assertSurvival = Mock()
+        driver.recover = Mock()
+        driver.pump = Mock()
+        driver.snapshot = Mock(return_value={})
+        driver._hasNavigationEdge = Mock(return_value=False)
+        driver.coords = lambda actor=None: (
+            state["coords"]
+            if actor is None or actor == driver.player
+            else (38, 44, 0) if actor == objects["trainingEntrance"] else (27, 44, 1)
+        )
+
+        def call(handle, method, *args):
+            if method == "getObjectByName":
+                return objects.get(args[0])
+            if method == "isAlive":
+                return state["alive"]
+            if method == "getName":
+                return handle["name"]
+            if method == "getItems":
+                return state["items"]
+            if method == "getEquipped":
+                return state["equipped"]
+            if method == "getBoolProperty" and handle != driver.game_map:
+                return handle.get(args[0], False)
+            if method in {"getBoolProperty", "getNumericProperty", "getStringProperty"}:
+                return state.get(args[0], False if method == "getBoolProperty" else 0)
+            if method == "getTurn":
+                return state["turn"]
+            if method == "move":
+                state.update(
+                    coords=(38, 44, 0),
+                    turn=1001,
+                    candlekeep_trainingStage="abandoned",
+                    candlekeepTrainingTurns=120,
+                    candlekeepTrainingTimedOut=True,
+                    candlekeepTrainingForcedExit=True,
+                    candlekeepPortalGuard="",
+                    affiliation="heroes",
+                )
+                state.update(after or {})
+                return
+            self.fail((handle, method, args))
+
+        driver.call = call
+        return driver, state, objects
+
+    def testCandlekeepTimeoutRelocationRequiresTheObservedTimerAndCleanupTransition(self):
+        driver, state, _objects = self.candlekeepTimeoutDriver()
+        driver.tick()
+        self.assertEqual((38, 44, 0), state["coords"])
+        self.assertEqual(1, driver.turns)
+        self.assertEqual("candlekeepTrainingTimeout", driver.actions[-1]["scriptedMovement"])
+
+    def testCandlekeepTimeoutWitnessCannotPermitAnUnrelatedOrIncompleteRelocation(self):
+        mutations = (
+            ({"candlekeep_trainingStage": "idle"}, {}),
+            ({"candlekeepTrainingTurns": 118}, {}),
+            ({"candlekeepTrainingTurnLimit": 121}, {}),
+            ({"candlekeepTrainingTimedOut": True}, {}),
+            ({"candlekeepTrainingForcedExit": True}, {}),
+            ({"candlekeepTrainingAccepted": False}, {}),
+            ({"candlekeepTrainingDefeatPending": True}, {}),
+            ({"alive": False}, {}),
+            ({}, {"candlekeepTrainingTurns": 121}),
+            ({}, {"candlekeep_trainingStage": "active"}),
+            ({}, {"candlekeepTrainingTimedOut": False}),
+            ({}, {"candlekeepTrainingForcedExit": False}),
+            ({}, {"candlekeepTrainingDefeatPending": True}),
+            ({}, {"candlekeepPortalGuard": "otherPortal"}),
+            ({}, {"coords": (39, 44, 0)}),
+            ({}, {"affiliation": "candlekeepTraining"}),
+            ({}, {"items": [], "equipped": {}}),
+            ({}, {"equipped": {}}),
+            ({}, {"items": [{"__handle__": "loan", "plugin_candlekeepTemporary": True}]}),
+            ({}, {"equipped": {"0": {"__handle__": "loan", "plugin_candlekeepTemporary": True}}}),
+        )
+        for before, after in mutations:
+            with self.subTest(before=before, after=after):
+                driver, _state, _objects = self.candlekeepTimeoutDriver(before=before, after=after)
+                with self.assertRaisesRegex(AssertionError, "Unexpected unauthored relocation"):
+                    driver.tick()
+        for missing in ("obe", "trainingEntrance"):
+            with self.subTest(missing=missing):
+                driver, _state, objects = self.candlekeepTimeoutDriver()
+                del objects[missing]
+                with self.assertRaisesRegex(AssertionError, "Unexpected unauthored relocation"):
+                    driver.tick()
+        driver, _state, _objects = self.candlekeepTimeoutDriver()
+        driver.case = RouteCase("other", "other", ("candlekeep",), ("other.branch",), lambda driver: None)
+        with self.assertRaisesRegex(AssertionError, "Unexpected unauthored relocation"):
+            driver.tick()
+        for remaining in ("arkanis", "trainingFoe1"):
+            with self.subTest(remaining=remaining):
+                driver, _state, objects = self.candlekeepTimeoutDriver()
+                objects[remaining] = {"__handle__": remaining}
+                with self.assertRaisesRegex(AssertionError, "Unexpected unauthored relocation"):
+                    driver.tick()
+
     def testMovementValidationAllowsCardinalStepAndRequiresEnabledDirectionalNeighborsForTransit(self):
         driver = self.driver()
         driver._coordinateHandle = lambda coords: {"__handle__": "point", "coords": tuple(coords)}

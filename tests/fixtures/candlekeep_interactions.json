@@ -1,0 +1,5421 @@
+{
+  "schemaVersion": 1,
+  "edition": "Original unmodded BG1 prologue; native-stat adaptation",
+  "mapId": "candlekeep",
+  "sourceAudit": {
+    "status": "pending",
+    "supportingEdition": "BG1 Enhanced Edition",
+    "classicOriginalDataAvailable": false,
+    "acceptanceBlockers": [
+      "Original unmodded BG1 resources unavailable in readable C: files; reconcile every original-versus-EE difference",
+      "Resolve original tutor branches, training timers/rewards/damage and crime/donation behavior",
+      "Audit every reachable original dialog branch and establish classic stock and service semantics",
+      "62 unresolved references in each supporting graph; structural closure is not branch reachability",
+      "Native MCP and isolated screenshots remain pending; source/model checks confer no native acceptance",
+      "Infravision and active Slow Poison lack faithful native equivalents; Raise Dead has no native companion target",
+      "Exact Jondalar/Erik first-hit lesson, invulnerable Tethtoril/retaliation and full NPC hostile-action spell/XP/possession semantics need reconciliation",
+      "Native guard count can preserve source one/two actors, but visibility, opening delay, escape and warning dialogs remain unresolved",
+      "Merchant buyback and original reaction/depreciation prices are not implemented"
+    ],
+    "supportingEvidence": {
+      "edition": "enhanced_edition_supporting_only",
+      "keySha256": "728f50c48187f3a095e262fc2cc9e43004b4519ae9b96dd6c2615aeae4f85bce",
+      "tlkSha256": "a530306b14439e680f3c2d9f4b368b418b529fef9a015ac76d19a0b229be1d96",
+      "baseResourceCounts": {
+        "ARE": 9,
+        "BCS": 113,
+        "CRE": 106,
+        "DLG": 176,
+        "ITM": 332,
+        "SPL": 55,
+        "STO": 2
+      },
+      "effectiveResourceCounts": {
+        "ARE": 9,
+        "BCS": 113,
+        "CRE": 106,
+        "DLG": 176,
+        "ITM": 332,
+        "SPL": 55,
+        "STO": 2
+      },
+      "overrideFiles": 2046,
+      "referencedDifferences": 119,
+      "unresolvedBaseReferences": [
+        {
+          "resource": "VOIEAS.DLG",
+          "reason": "VOIEAS.CRE: creature dialogue",
+          "error": "missing base resource VOIEAS.DLG"
+        },
+        {
+          "resource": "VOIWES.DLG",
+          "reason": "VOIWES.CRE: creature dialogue",
+          "error": "missing base resource VOIWES.DLG"
+        },
+        {
+          "resource": "VOISOU.DLG",
+          "reason": "VOISOU.CRE: creature dialogue",
+          "error": "missing base resource VOISOU.DLG"
+        },
+        {
+          "resource": "VOINOR.DLG",
+          "reason": "VOINOR.CRE: creature dialogue",
+          "error": "missing base resource VOINOR.DLG"
+        },
+        {
+          "resource": "AR2618.BCS",
+          "reason": "AR2618.ARE: area script",
+          "error": "missing base resource AR2618.BCS"
+        },
+        {
+          "resource": "AR2607.BCS",
+          "reason": "AR2607.ARE: area script",
+          "error": "missing base resource AR2607.BCS"
+        },
+        {
+          "resource": "NONE2.BCS",
+          "reason": "RAT2.CRE: creature script",
+          "error": "missing base resource NONE2.BCS"
+        },
+        {
+          "resource": "SCRL9P.ITM",
+          "reason": "OHMADD01.BCS: HasItem(S:ResRef*,O:Object*)",
+          "error": "missing base resource SCRL9P.ITM"
+        },
+        {
+          "resource": "SCRL9L.ITM",
+          "reason": "OHMADD01.BCS: HasItem(S:ResRef*,O:Object*)",
+          "error": "missing base resource SCRL9L.ITM"
+        },
+        {
+          "resource": "SCRL9C.ITM",
+          "reason": "OHMADD01.BCS: HasItem(S:ResRef*,O:Object*)",
+          "error": "missing base resource SCRL9C.ITM"
+        },
+        {
+          "resource": "SCRL8J.ITM",
+          "reason": "OHMADD01.BCS: HasItem(S:ResRef*,O:Object*)",
+          "error": "missing base resource SCRL8J.ITM"
+        },
+        {
+          "resource": "SCRL8E.ITM",
+          "reason": "OHMADD01.BCS: HasItem(S:ResRef*,O:Object*)",
+          "error": "missing base resource SCRL8E.ITM"
+        },
+        {
+          "resource": "SCRL8D.ITM",
+          "reason": "OHMADD01.BCS: HasItem(S:ResRef*,O:Object*)",
+          "error": "missing base resource SCRL8D.ITM"
+        },
+        {
+          "resource": "SCRL8F.ITM",
+          "reason": "OHMADD01.BCS: HasItem(S:ResRef*,O:Object*)",
+          "error": "missing base resource SCRL8F.ITM"
+        },
+        {
+          "resource": "SCRL8M.ITM",
+          "reason": "OHMADD01.BCS: HasItem(S:ResRef*,O:Object*)",
+          "error": "missing base resource SCRL8M.ITM"
+        },
+        {
+          "resource": "SCRL7K.ITM",
+          "reason": "OHMADD01.BCS: HasItem(S:ResRef*,O:Object*)",
+          "error": "missing base resource SCRL7K.ITM"
+        },
+        {
+          "resource": "SCRL7M.ITM",
+          "reason": "OHMADD01.BCS: HasItem(S:ResRef*,O:Object*)",
+          "error": "missing base resource SCRL7M.ITM"
+        },
+        {
+          "resource": "SCRL7F.ITM",
+          "reason": "OHMADD01.BCS: HasItem(S:ResRef*,O:Object*)",
+          "error": "missing base resource SCRL7F.ITM"
+        },
+        {
+          "resource": "SCRL6Q.ITM",
+          "reason": "OHMADD01.BCS: HasItem(S:ResRef*,O:Object*)",
+          "error": "missing base resource SCRL6Q.ITM"
+        },
+        {
+          "resource": "SCRL7V.ITM",
+          "reason": "OHMADD01.BCS: HasItem(S:ResRef*,O:Object*)",
+          "error": "missing base resource SCRL7V.ITM"
+        },
+        {
+          "resource": "SCRL9R.ITM",
+          "reason": "OHMADD01.BCS: HasItem(S:ResRef*,O:Object*)",
+          "error": "missing base resource SCRL9R.ITM"
+        },
+        {
+          "resource": "SCRL9M.ITM",
+          "reason": "OHMADD01.BCS: HasItem(S:ResRef*,O:Object*)",
+          "error": "missing base resource SCRL9M.ITM"
+        },
+        {
+          "resource": "SCRL9A.ITM",
+          "reason": "OHMADD01.BCS: HasItem(S:ResRef*,O:Object*)",
+          "error": "missing base resource SCRL9A.ITM"
+        },
+        {
+          "resource": "SCRL8G.ITM",
+          "reason": "OHMADD01.BCS: HasItem(S:ResRef*,O:Object*)",
+          "error": "missing base resource SCRL8G.ITM"
+        },
+        {
+          "resource": "SCRL7L.ITM",
+          "reason": "OHMADD01.BCS: HasItem(S:ResRef*,O:Object*)",
+          "error": "missing base resource SCRL7L.ITM"
+        },
+        {
+          "resource": "SCRL9T.ITM",
+          "reason": "OHMADD01.BCS: HasItem(S:ResRef*,O:Object*)",
+          "error": "missing base resource SCRL9T.ITM"
+        },
+        {
+          "resource": "SCRL9U.ITM",
+          "reason": "OHMADD01.BCS: HasItem(S:ResRef*,O:Object*)",
+          "error": "missing base resource SCRL9U.ITM"
+        },
+        {
+          "resource": "SCRLAO.ITM",
+          "reason": "OHMADD01.BCS: HasItem(S:ResRef*,O:Object*)",
+          "error": "missing base resource SCRLAO.ITM"
+        },
+        {
+          "resource": "SCRL8O.ITM",
+          "reason": "OHMADD01.BCS: HasItem(S:ResRef*,O:Object*)",
+          "error": "missing base resource SCRL8O.ITM"
+        },
+        {
+          "resource": "SCRL8P.ITM",
+          "reason": "OHMADD01.BCS: HasItem(S:ResRef*,O:Object*)",
+          "error": "missing base resource SCRL8P.ITM"
+        },
+        {
+          "resource": "SCRL7T.ITM",
+          "reason": "OHMADD01.BCS: HasItem(S:ResRef*,O:Object*)",
+          "error": "missing base resource SCRL7T.ITM"
+        },
+        {
+          "resource": "SCRL7S.ITM",
+          "reason": "OHMADD01.BCS: HasItem(S:ResRef*,O:Object*)",
+          "error": "missing base resource SCRL7S.ITM"
+        },
+        {
+          "resource": "SCRL9V.ITM",
+          "reason": "OHMADD01.BCS: HasItem(S:ResRef*,O:Object*)",
+          "error": "missing base resource SCRL9V.ITM"
+        },
+        {
+          "resource": "SCRL9E.ITM",
+          "reason": "OHMADD01.BCS: HasItem(S:ResRef*,O:Object*)",
+          "error": "missing base resource SCRL9E.ITM"
+        },
+        {
+          "resource": "SCRL9G.ITM",
+          "reason": "OHMADD01.BCS: HasItem(S:ResRef*,O:Object*)",
+          "error": "missing base resource SCRL9G.ITM"
+        },
+        {
+          "resource": "SCRL8N.ITM",
+          "reason": "OHMADD01.BCS: HasItem(S:ResRef*,O:Object*)",
+          "error": "missing base resource SCRL8N.ITM"
+        },
+        {
+          "resource": "SCRL7I.ITM",
+          "reason": "OHMADD01.BCS: HasItem(S:ResRef*,O:Object*)",
+          "error": "missing base resource SCRL7I.ITM"
+        },
+        {
+          "resource": "SCRL7R.ITM",
+          "reason": "OHMADD01.BCS: HasItem(S:ResRef*,O:Object*)",
+          "error": "missing base resource SCRL7R.ITM"
+        },
+        {
+          "resource": "SCRL9S.ITM",
+          "reason": "OHMADD01.BCS: HasItem(S:ResRef*,O:Object*)",
+          "error": "missing base resource SCRL9S.ITM"
+        },
+        {
+          "resource": "SCRL9W.ITM",
+          "reason": "OHMADD01.BCS: HasItem(S:ResRef*,O:Object*)",
+          "error": "missing base resource SCRL9W.ITM"
+        },
+        {
+          "resource": "SCRL9H.ITM",
+          "reason": "OHMADD01.BCS: HasItem(S:ResRef*,O:Object*)",
+          "error": "missing base resource SCRL9H.ITM"
+        },
+        {
+          "resource": "SCRL9J.ITM",
+          "reason": "OHMADD01.BCS: HasItem(S:ResRef*,O:Object*)",
+          "error": "missing base resource SCRL9J.ITM"
+        },
+        {
+          "resource": "SCRLAP.ITM",
+          "reason": "OHMADD01.BCS: HasItem(S:ResRef*,O:Object*)",
+          "error": "missing base resource SCRLAP.ITM"
+        },
+        {
+          "resource": "SCRL9F.ITM",
+          "reason": "OHMADD01.BCS: HasItem(S:ResRef*,O:Object*)",
+          "error": "missing base resource SCRL9F.ITM"
+        },
+        {
+          "resource": "SCRL8Q.ITM",
+          "reason": "OHMADD01.BCS: HasItem(S:ResRef*,O:Object*)",
+          "error": "missing base resource SCRL8Q.ITM"
+        },
+        {
+          "resource": "SCRL7P.ITM",
+          "reason": "OHMADD01.BCS: HasItem(S:ResRef*,O:Object*)",
+          "error": "missing base resource SCRL7P.ITM"
+        },
+        {
+          "resource": "SCRL7H.ITM",
+          "reason": "OHMADD01.BCS: HasItem(S:ResRef*,O:Object*)",
+          "error": "missing base resource SCRL7H.ITM"
+        },
+        {
+          "resource": "SCRL9N.ITM",
+          "reason": "OHMADD01.BCS: HasItem(S:ResRef*,O:Object*)",
+          "error": "missing base resource SCRL9N.ITM"
+        },
+        {
+          "resource": "SCRL9B.ITM",
+          "reason": "OHMADD01.BCS: HasItem(S:ResRef*,O:Object*)",
+          "error": "missing base resource SCRL9B.ITM"
+        },
+        {
+          "resource": "SCRL8I.ITM",
+          "reason": "OHMADD01.BCS: HasItem(S:ResRef*,O:Object*)",
+          "error": "missing base resource SCRL8I.ITM"
+        },
+        {
+          "resource": "SCRL8U.ITM",
+          "reason": "OHMADD01.BCS: HasItem(S:ResRef*,O:Object*)",
+          "error": "missing base resource SCRL8U.ITM"
+        },
+        {
+          "resource": "SCRL8T.ITM",
+          "reason": "OHMADD01.BCS: HasItem(S:ResRef*,O:Object*)",
+          "error": "missing base resource SCRL8T.ITM"
+        },
+        {
+          "resource": "SCRL8S.ITM",
+          "reason": "OHMADD01.BCS: HasItem(S:ResRef*,O:Object*)",
+          "error": "missing base resource SCRL8S.ITM"
+        },
+        {
+          "resource": "SCRL8B.ITM",
+          "reason": "OHMADD01.BCS: HasItem(S:ResRef*,O:Object*)",
+          "error": "missing base resource SCRL8B.ITM"
+        },
+        {
+          "resource": "SCRL7E.ITM",
+          "reason": "OHMADD01.BCS: HasItem(S:ResRef*,O:Object*)",
+          "error": "missing base resource SCRL7E.ITM"
+        },
+        {
+          "resource": "SCRL7W.ITM",
+          "reason": "OHMADD01.BCS: HasItem(S:ResRef*,O:Object*)",
+          "error": "missing base resource SCRL7W.ITM"
+        },
+        {
+          "resource": "SCRL7Y.ITM",
+          "reason": "OHMADD01.BCS: HasItem(S:ResRef*,O:Object*)",
+          "error": "missing base resource SCRL7Y.ITM"
+        },
+        {
+          "resource": "SCRL7X.ITM",
+          "reason": "OHMADD01.BCS: HasItem(S:ResRef*,O:Object*)",
+          "error": "missing base resource SCRL7X.ITM"
+        },
+        {
+          "resource": "SCRL7Z.ITM",
+          "reason": "OHMADD01.BCS: HasItem(S:ResRef*,O:Object*)",
+          "error": "missing base resource SCRL7Z.ITM"
+        },
+        {
+          "resource": "SCRL8A.ITM",
+          "reason": "OHMADD01.BCS: HasItem(S:ResRef*,O:Object*)",
+          "error": "missing base resource SCRL8A.ITM"
+        },
+        {
+          "resource": "RING42.ITM",
+          "reason": "OHTHDD01.BCS: HasItemEquiped(S:ResRef*,O:Object*)",
+          "error": "missing base resource RING42.ITM"
+        },
+        {
+          "resource": "SMUGCUT3.BCS",
+          "reason": "FLAMC7.DLG: StartCutScene(S:CutScene*)",
+          "error": "missing base resource SMUGCUT3.BCS"
+        }
+      ],
+      "allInteractionsAccountedFor": false,
+      "unresolvedEffectiveReferenceCount": 62,
+      "auditPayloadSha256": "36f545a938bef46acf00fcc759ada01af6351bddca3bc8f5857d223ba0b39e27",
+      "originalParityEstablished": false,
+      "graphMeaning": "Structural overapproximation; shared actors reference other chapters. Not execution or exhaustive prologue reachability.",
+      "excludedAreas": [
+        {
+          "resource": "AR2631.ARE",
+          "reason": "CH6CUT02.BCS: LeaveAreaLUAPanic(S:Area*,S:Parchment*,P:Point*,I:Face*DIR)"
+        },
+        {
+          "resource": "AR2631.ARE",
+          "reason": "CH6CUT02.BCS: LeaveAreaLUA(S:Area*,S:Parchment*,P:Point*,I:Face*DIR)"
+        },
+        {
+          "resource": "AR2631.ARE",
+          "reason": "CH6CUT02.BCS: LeaveAreaLUA(S:Area*,S:Parchment*,P:Point*,I:Face*DIR)"
+        },
+        {
+          "resource": "AR2631.ARE",
+          "reason": "CH6CUT02.BCS: LeaveAreaLUA(S:Area*,S:Parchment*,P:Point*,I:Face*DIR)"
+        },
+        {
+          "resource": "AR2631.ARE",
+          "reason": "CH6CUT02.BCS: LeaveAreaLUA(S:Area*,S:Parchment*,P:Point*,I:Face*DIR)"
+        },
+        {
+          "resource": "AR2631.ARE",
+          "reason": "CH6CUT02.BCS: LeaveAreaLUA(S:Area*,S:Parchment*,P:Point*,I:Face*DIR)"
+        },
+        {
+          "resource": "AR2631.ARE",
+          "reason": "CH6CUT02.BCS: LeaveAreaLUA(S:Area*,S:Parchment*,P:Point*,I:Face*DIR)"
+        },
+        {
+          "resource": "AR2700.ARE",
+          "reason": "CH1CUT01.BCS: LeaveAreaLUAPanic(S:Area*,S:Parchment*,P:Point*,I:Face*DIR)"
+        },
+        {
+          "resource": "AR2700.ARE",
+          "reason": "CH1CUT01.BCS: LeaveAreaLUA(S:Area*,S:Parchment*,P:Point*,I:Face*DIR)"
+        },
+        {
+          "resource": "AR2700.ARE",
+          "reason": "CH1CUT01.BCS: LeaveAreaLUA(S:Area*,S:Parchment*,P:Point*,I:Face*DIR)"
+        },
+        {
+          "resource": "AR2700.ARE",
+          "reason": "CH1CUT01.BCS: LeaveAreaLUA(S:Area*,S:Parchment*,P:Point*,I:Face*DIR)"
+        },
+        {
+          "resource": "AR2700.ARE",
+          "reason": "CH1CUT01.BCS: LeaveAreaLUA(S:Area*,S:Parchment*,P:Point*,I:Face*DIR)"
+        },
+        {
+          "resource": "AR2700.ARE",
+          "reason": "CH1CUT01.BCS: LeaveAreaLUA(S:Area*,S:Parchment*,P:Point*,I:Face*DIR)"
+        },
+        {
+          "resource": "AR2700.ARE",
+          "reason": "CH1CUT01.BCS: LeaveAreaLUA(S:Area*,S:Parchment*,P:Point*,I:Face*DIR)"
+        },
+        {
+          "resource": "AR0153.ARE",
+          "reason": "CUTBELT.BCS: LeaveAreaLUAPanic(S:Area*,S:Parchment*,P:Point*,I:Face*DIR)"
+        },
+        {
+          "resource": "AR0153.ARE",
+          "reason": "CUTBELT.BCS: LeaveAreaLUA(S:Area*,S:Parchment*,P:Point*,I:Face*DIR)"
+        },
+        {
+          "resource": "AR0153.ARE",
+          "reason": "CUTBELT.BCS: LeaveAreaLUA(S:Area*,S:Parchment*,P:Point*,I:Face*DIR)"
+        },
+        {
+          "resource": "AR0153.ARE",
+          "reason": "CUTBELT.BCS: LeaveAreaLUA(S:Area*,S:Parchment*,P:Point*,I:Face*DIR)"
+        },
+        {
+          "resource": "AR0153.ARE",
+          "reason": "CUTBELT.BCS: LeaveAreaLUA(S:Area*,S:Parchment*,P:Point*,I:Face*DIR)"
+        },
+        {
+          "resource": "AR0153.ARE",
+          "reason": "CUTBELT.BCS: LeaveAreaLUA(S:Area*,S:Parchment*,P:Point*,I:Face*DIR)"
+        },
+        {
+          "resource": "AR0153.ARE",
+          "reason": "CUTBELT.BCS: LeaveAreaLUA(S:Area*,S:Parchment*,P:Point*,I:Face*DIR)"
+        },
+        {
+          "resource": "AR1100.ARE",
+          "reason": "CAPCUT04.BCS: LeaveAreaLUAPanic(S:Area*,S:Parchment*,P:Point*,I:Face*DIR)"
+        },
+        {
+          "resource": "AR1100.ARE",
+          "reason": "CAPCUT04.BCS: LeaveAreaLUA(S:Area*,S:Parchment*,P:Point*,I:Face*DIR)"
+        },
+        {
+          "resource": "AR1100.ARE",
+          "reason": "CAPCUT04.BCS: LeaveAreaLUA(S:Area*,S:Parchment*,P:Point*,I:Face*DIR)"
+        },
+        {
+          "resource": "AR1100.ARE",
+          "reason": "CAPCUT04.BCS: LeaveAreaLUA(S:Area*,S:Parchment*,P:Point*,I:Face*DIR)"
+        },
+        {
+          "resource": "AR1100.ARE",
+          "reason": "CAPCUT04.BCS: LeaveAreaLUA(S:Area*,S:Parchment*,P:Point*,I:Face*DIR)"
+        },
+        {
+          "resource": "AR1100.ARE",
+          "reason": "CAPCUT04.BCS: LeaveAreaLUA(S:Area*,S:Parchment*,P:Point*,I:Face*DIR)"
+        },
+        {
+          "resource": "AR1100.ARE",
+          "reason": "CAPCUT04.BCS: LeaveAreaLUA(S:Area*,S:Parchment*,P:Point*,I:Face*DIR)"
+        },
+        {
+          "resource": "AR0129.ARE",
+          "reason": "ALDCUT02.BCS: LeaveAreaLUA(S:Area*,S:Parchment*,P:Point*,I:Face*DIR)"
+        },
+        {
+          "resource": "AR0129.ARE",
+          "reason": "ALDCUT02.BCS: LeaveAreaLUA(S:Area*,S:Parchment*,P:Point*,I:Face*DIR)"
+        },
+        {
+          "resource": "AR0129.ARE",
+          "reason": "ALDCUT02.BCS: LeaveAreaLUA(S:Area*,S:Parchment*,P:Point*,I:Face*DIR)"
+        },
+        {
+          "resource": "AR0129.ARE",
+          "reason": "ALDCUT02.BCS: LeaveAreaLUA(S:Area*,S:Parchment*,P:Point*,I:Face*DIR)"
+        },
+        {
+          "resource": "AR0129.ARE",
+          "reason": "ALDCUT02.BCS: LeaveAreaLUA(S:Area*,S:Parchment*,P:Point*,I:Face*DIR)"
+        },
+        {
+          "resource": "AR0129.ARE",
+          "reason": "ALDCUT02.BCS: LeaveAreaLUA(S:Area*,S:Parchment*,P:Point*,I:Face*DIR)"
+        },
+        {
+          "resource": "AR1100.ARE",
+          "reason": "CUTRS1E.BCS: MoveBetweenAreas(S:Area*,P:Location*,I:Face*DIR)"
+        },
+        {
+          "resource": "AR1100.ARE",
+          "reason": "CUTRS1E.BCS: LeaveAreaLUAPanic(S:Area*,S:Parchment*,P:Point*,I:Face*DIR)"
+        },
+        {
+          "resource": "AR1100.ARE",
+          "reason": "CUTRS1E.BCS: LeaveAreaLUA(S:Area*,S:Parchment*,P:Point*,I:Face*DIR)"
+        },
+        {
+          "resource": "AR1100.ARE",
+          "reason": "CUTRS1E.BCS: LeaveAreaLUA(S:Area*,S:Parchment*,P:Point*,I:Face*DIR)"
+        },
+        {
+          "resource": "AR1100.ARE",
+          "reason": "CUTRS1E.BCS: LeaveAreaLUA(S:Area*,S:Parchment*,P:Point*,I:Face*DIR)"
+        },
+        {
+          "resource": "AR1100.ARE",
+          "reason": "CUTRS1E.BCS: LeaveAreaLUA(S:Area*,S:Parchment*,P:Point*,I:Face*DIR)"
+        },
+        {
+          "resource": "AR1100.ARE",
+          "reason": "CUTRS1E.BCS: LeaveAreaLUA(S:Area*,S:Parchment*,P:Point*,I:Face*DIR)"
+        },
+        {
+          "resource": "AR1100.ARE",
+          "reason": "CUTRS1E.BCS: LeaveAreaLUA(S:Area*,S:Parchment*,P:Point*,I:Face*DIR)"
+        },
+        {
+          "resource": "AR1900.ARE",
+          "reason": "BANCUT01.BCS: LeaveAreaLUAPanic(S:Area*,S:Parchment*,P:Point*,I:Face*DIR)"
+        },
+        {
+          "resource": "AR1900.ARE",
+          "reason": "BANCUT01.BCS: LeaveAreaLUA(S:Area*,S:Parchment*,P:Point*,I:Face*DIR)"
+        },
+        {
+          "resource": "AR1900.ARE",
+          "reason": "BANCUT01.BCS: LeaveAreaLUA(S:Area*,S:Parchment*,P:Point*,I:Face*DIR)"
+        },
+        {
+          "resource": "AR1900.ARE",
+          "reason": "BANCUT01.BCS: LeaveAreaLUA(S:Area*,S:Parchment*,P:Point*,I:Face*DIR)"
+        },
+        {
+          "resource": "AR1900.ARE",
+          "reason": "BANCUT01.BCS: LeaveAreaLUA(S:Area*,S:Parchment*,P:Point*,I:Face*DIR)"
+        },
+        {
+          "resource": "AR1900.ARE",
+          "reason": "BANCUT01.BCS: LeaveAreaLUA(S:Area*,S:Parchment*,P:Point*,I:Face*DIR)"
+        },
+        {
+          "resource": "AR1900.ARE",
+          "reason": "BANCUT01.BCS: LeaveAreaLUA(S:Area*,S:Parchment*,P:Point*,I:Face*DIR)"
+        },
+        {
+          "resource": "AR1900.ARE",
+          "reason": "BANCUT02.BCS: LeaveAreaLUAPanic(S:Area*,S:Parchment*,P:Point*,I:Face*DIR)"
+        },
+        {
+          "resource": "AR1900.ARE",
+          "reason": "BANCUT02.BCS: LeaveAreaLUA(S:Area*,S:Parchment*,P:Point*,I:Face*DIR)"
+        },
+        {
+          "resource": "AR1900.ARE",
+          "reason": "BANCUT02.BCS: LeaveAreaLUA(S:Area*,S:Parchment*,P:Point*,I:Face*DIR)"
+        },
+        {
+          "resource": "AR1900.ARE",
+          "reason": "BANCUT02.BCS: LeaveAreaLUA(S:Area*,S:Parchment*,P:Point*,I:Face*DIR)"
+        },
+        {
+          "resource": "AR1900.ARE",
+          "reason": "BANCUT02.BCS: LeaveAreaLUA(S:Area*,S:Parchment*,P:Point*,I:Face*DIR)"
+        },
+        {
+          "resource": "AR1900.ARE",
+          "reason": "BANCUT02.BCS: LeaveAreaLUA(S:Area*,S:Parchment*,P:Point*,I:Face*DIR)"
+        },
+        {
+          "resource": "AR1900.ARE",
+          "reason": "BANCUT02.BCS: LeaveAreaLUA(S:Area*,S:Parchment*,P:Point*,I:Face*DIR)"
+        },
+        {
+          "resource": "AR0607.ARE",
+          "reason": "CAPCUT01.BCS: LeaveAreaLUAPanic(S:Area*,S:Parchment*,P:Point*,I:Face*DIR)"
+        },
+        {
+          "resource": "AR0607.ARE",
+          "reason": "CAPCUT01.BCS: LeaveAreaLUA(S:Area*,S:Parchment*,P:Point*,I:Face*DIR)"
+        },
+        {
+          "resource": "AR0607.ARE",
+          "reason": "CAPCUT01.BCS: LeaveAreaLUA(S:Area*,S:Parchment*,P:Point*,I:Face*DIR)"
+        },
+        {
+          "resource": "AR0607.ARE",
+          "reason": "CAPCUT01.BCS: LeaveAreaLUA(S:Area*,S:Parchment*,P:Point*,I:Face*DIR)"
+        },
+        {
+          "resource": "AR0607.ARE",
+          "reason": "CAPCUT01.BCS: LeaveAreaLUA(S:Area*,S:Parchment*,P:Point*,I:Face*DIR)"
+        },
+        {
+          "resource": "AR0607.ARE",
+          "reason": "CAPCUT01.BCS: LeaveAreaLUA(S:Area*,S:Parchment*,P:Point*,I:Face*DIR)"
+        },
+        {
+          "resource": "AR0607.ARE",
+          "reason": "CAPCUT01.BCS: LeaveAreaLUA(S:Area*,S:Parchment*,P:Point*,I:Face*DIR)"
+        },
+        {
+          "resource": "AR0607.ARE",
+          "reason": "FLAMC7.DLG: MoveBetweenAreas(S:Area*,P:Location*,I:Face*DIR)"
+        }
+      ],
+      "excludedResources": [
+        {
+          "resource": "CUTSKIP1.BCS",
+          "reason": "Enhanced Edition generic skip controller branches into other chapters",
+          "from": "CH6CUT02.BCS: SetAreaScript(S:Script*,I:ScriptSlot*ASCRLEV)"
+        },
+        {
+          "resource": "CUTSKIP1.BCS",
+          "reason": "Enhanced Edition generic skip controller branches into other chapters",
+          "from": "CH6CUT02.BCS: SetAreaScript(S:Script*,I:ScriptSlot*ASCRLEV)"
+        },
+        {
+          "resource": "CUTSKIP1.BCS",
+          "reason": "Enhanced Edition generic skip controller branches into other chapters",
+          "from": "CH1CUT01.BCS: SetAreaScript(S:Script*,I:ScriptSlot*ASCRLEV)"
+        },
+        {
+          "resource": "CH1CUT02.BCS",
+          "reason": "road ambush after the Candlekeep departure handoff",
+          "from": "CH1CUT01.BCS: StartCutScene(S:CutScene*)"
+        }
+      ]
+    }
+  },
+  "sources": [
+    {
+      "id": "dudleyville",
+      "url": "https://www.forgottenwars.com/bg1/ar2600.htm"
+    },
+    {
+      "id": "gamebanshee",
+      "url": "https://www.gamebanshee.com/baldursgate/walkthrough/candlekeep.php"
+    },
+    {
+      "id": "classicMap",
+      "url": "https://www.forgottenwars.com/bg1/maps/x_2600.jpg"
+    },
+    {
+      "id": "gatewarden",
+      "url": "https://baldursgate.fandom.com/wiki/Gatewarden"
+    },
+    {
+      "id": "tutors",
+      "url": "https://baldursgate.fandom.com/wiki/Tutor"
+    },
+    {
+      "id": "iesdp",
+      "url": "https://gibberlings3.github.io/iesdp/file_formats/index.htm"
+    }
+  ],
+  "interactions": [
+    {
+      "id": "quest.firebead",
+      "category": "quest",
+      "sourceIds": [
+        "dudleyville",
+        "gamebanshee"
+      ],
+      "sourceStatus": "web-reconciled",
+      "objectId": "firebead",
+      "dialogId": "firebeadDialog",
+      "actions": [
+        "acceptQuest",
+        "returnQuest"
+      ],
+      "branches": [
+        "candlekeep.quest.firebead.accept",
+        "candlekeep.quest.firebead.complete",
+        "candlekeep.quest.firebead.repeat"
+      ],
+      "conditions": [
+        "Requested scroll from Tethtoril; return or retain",
+        "Acquisition before acceptance and repeat conversations preserve state"
+      ],
+      "outcomes": [
+        "50 XP, healing potion and protection on return; retaining scroll leaves errand unfinished",
+        "Claims survive save/reload"
+      ],
+      "implementation": [
+        "res/maps/candlekeep/config.json:firebead",
+        "res/maps/candlekeep/dialog.json:firebeadDialog"
+      ],
+      "automatedCoverage": {
+        "structural": "tests/test_candlekeep_content.py:CandlekeepContentTest.testIndependentSourceLedgerHasImplementationsAndDeclaredWitnesses",
+        "nativeRoutes": [
+          "candlekeep.quest.firebead.accept",
+          "candlekeep.quest.firebead.complete",
+          "candlekeep.quest.firebead.repeat"
+        ],
+        "nativeReceipts": "pending"
+      },
+      "editionDifferences": [
+        "Classic target; installed modded EE base archives are supporting evidence. Original branch parity is not established."
+      ]
+    },
+    {
+      "id": "quest.phlydia",
+      "category": "quest",
+      "sourceIds": [
+        "dudleyville",
+        "gamebanshee"
+      ],
+      "sourceStatus": "web-reconciled",
+      "objectId": "phlydia",
+      "dialogId": "phlydiaDialog",
+      "actions": [
+        "acceptQuest",
+        "returnQuest"
+      ],
+      "branches": [
+        "candlekeep.quest.phlydia.accept",
+        "candlekeep.quest.phlydia.complete",
+        "candlekeep.quest.phlydia.repeat"
+      ],
+      "conditions": [
+        "Book in hay; low social reaction withholds gem",
+        "Acquisition before acceptance and repeat conversations preserve state"
+      ],
+      "outcomes": [
+        "50 XP; shared lynx-eye gem unless unfavorable; theft prevents duplicated gem",
+        "Claims survive save/reload"
+      ],
+      "implementation": [
+        "res/maps/candlekeep/config.json:phlydia",
+        "res/maps/candlekeep/dialog.json:phlydiaDialog"
+      ],
+      "automatedCoverage": {
+        "structural": "tests/test_candlekeep_content.py:CandlekeepContentTest.testIndependentSourceLedgerHasImplementationsAndDeclaredWitnesses",
+        "nativeRoutes": [
+          "candlekeep.quest.phlydia.accept",
+          "candlekeep.quest.phlydia.complete",
+          "candlekeep.quest.phlydia.repeat"
+        ],
+        "nativeReceipts": "pending"
+      },
+      "editionDifferences": [
+        "Classic target; installed modded EE base archives are supporting evidence. Original branch parity is not established."
+      ]
+    },
+    {
+      "id": "quest.dreppin",
+      "category": "quest",
+      "sourceIds": [
+        "dudleyville",
+        "gamebanshee"
+      ],
+      "sourceStatus": "web-reconciled",
+      "objectId": "dreppin",
+      "dialogId": "dreppinDialog",
+      "actions": [
+        "acceptQuest",
+        "returnQuest"
+      ],
+      "branches": [
+        "candlekeep.quest.dreppin.accept",
+        "candlekeep.quest.dreppin.complete",
+        "candlekeep.quest.dreppin.repeat"
+      ],
+      "conditions": [
+        "First book hint then cow errand; antidote in Hull chest",
+        "Acquisition before acceptance and repeat conversations preserve state"
+      ],
+      "outcomes": [
+        "Consume antidote; cure Nessa; 50 XP",
+        "Claims survive save/reload"
+      ],
+      "implementation": [
+        "res/maps/candlekeep/config.json:dreppin",
+        "res/maps/candlekeep/dialog.json:dreppinDialog"
+      ],
+      "automatedCoverage": {
+        "structural": "tests/test_candlekeep_content.py:CandlekeepContentTest.testIndependentSourceLedgerHasImplementationsAndDeclaredWitnesses",
+        "nativeRoutes": [
+          "candlekeep.quest.dreppin.accept",
+          "candlekeep.quest.dreppin.complete",
+          "candlekeep.quest.dreppin.repeat"
+        ],
+        "nativeReceipts": "pending"
+      },
+      "editionDifferences": [
+        "Classic target; installed modded EE base archives are supporting evidence. Original branch parity is not established."
+      ]
+    },
+    {
+      "id": "quest.hull",
+      "category": "quest",
+      "sourceIds": [
+        "dudleyville",
+        "gamebanshee"
+      ],
+      "sourceStatus": "web-reconciled",
+      "objectId": "hull",
+      "dialogId": "hullDialog",
+      "actions": [
+        "acceptQuest",
+        "returnQuest"
+      ],
+      "branches": [
+        "candlekeep.quest.hull.accept",
+        "candlekeep.quest.hull.complete",
+        "candlekeep.quest.hull.repeat"
+      ],
+      "conditions": [
+        "Named sword in authorized barracks chest; reaction controls reward",
+        "Acquisition before acceptance and repeat conversations preserve state"
+      ],
+      "outcomes": [
+        "Consume sword; 50 XP; 10 gold or 20 when favorable",
+        "Claims survive save/reload"
+      ],
+      "implementation": [
+        "res/maps/candlekeep/config.json:hull",
+        "res/maps/candlekeep/dialog.json:hullDialog"
+      ],
+      "automatedCoverage": {
+        "structural": "tests/test_candlekeep_content.py:CandlekeepContentTest.testIndependentSourceLedgerHasImplementationsAndDeclaredWitnesses",
+        "nativeRoutes": [
+          "candlekeep.quest.hull.accept",
+          "candlekeep.quest.hull.complete",
+          "candlekeep.quest.hull.repeat"
+        ],
+        "nativeReceipts": "pending"
+      },
+      "editionDifferences": [
+        "Classic target; installed modded EE base archives are supporting evidence. Original branch parity is not established."
+      ]
+    },
+    {
+      "id": "quest.fuller",
+      "category": "quest",
+      "sourceIds": [
+        "dudleyville",
+        "gamebanshee"
+      ],
+      "sourceStatus": "web-reconciled",
+      "objectId": "fuller",
+      "dialogId": "fullerDialog",
+      "actions": [
+        "acceptQuest",
+        "returnQuest"
+      ],
+      "branches": [
+        "candlekeep.quest.fuller.accept",
+        "candlekeep.quest.fuller.complete",
+        "candlekeep.quest.fuller.repeat"
+      ],
+      "conditions": [
+        "Explicitly select errand; 20 bolts bought for 1 gold",
+        "Acquisition before acceptance and repeat conversations preserve state"
+      ],
+      "outcomes": [
+        "50 XP; 10 gold or shared enchanted dagger; theft prevents duplicate",
+        "Claims survive save/reload"
+      ],
+      "implementation": [
+        "res/maps/candlekeep/config.json:fuller",
+        "res/maps/candlekeep/dialog.json:fullerDialog"
+      ],
+      "automatedCoverage": {
+        "structural": "tests/test_candlekeep_content.py:CandlekeepContentTest.testIndependentSourceLedgerHasImplementationsAndDeclaredWitnesses",
+        "nativeRoutes": [
+          "candlekeep.quest.fuller.accept",
+          "candlekeep.quest.fuller.complete",
+          "candlekeep.quest.fuller.repeat"
+        ],
+        "nativeReceipts": "pending"
+      },
+      "editionDifferences": [
+        "Classic target; installed modded EE base archives are supporting evidence. Original branch parity is not established."
+      ]
+    },
+    {
+      "id": "quest.reevor",
+      "category": "quest",
+      "sourceIds": [
+        "dudleyville",
+        "gamebanshee"
+      ],
+      "sourceStatus": "web-reconciled",
+      "objectId": "reevor",
+      "dialogId": "reevorDialog",
+      "actions": [
+        "acceptQuest",
+        "returnQuest"
+      ],
+      "branches": [
+        "candlekeep.quest.reevor.accept",
+        "candlekeep.quest.reevor.complete",
+        "candlekeep.quest.reevor.repeat"
+      ],
+      "conditions": [
+        "Five actual nonrespawning rats defeated",
+        "Acquisition before acceptance and repeat conversations preserve state"
+      ],
+      "outcomes": [
+        "1 XP per rat then 50 XP and 5 gold once",
+        "Claims survive save/reload"
+      ],
+      "implementation": [
+        "res/maps/candlekeep/config.json:reevor",
+        "res/maps/candlekeep/dialog.json:reevorDialog"
+      ],
+      "automatedCoverage": {
+        "structural": "tests/test_candlekeep_content.py:CandlekeepContentTest.testIndependentSourceLedgerHasImplementationsAndDeclaredWitnesses",
+        "nativeRoutes": [
+          "candlekeep.quest.reevor.accept",
+          "candlekeep.quest.reevor.complete",
+          "candlekeep.quest.reevor.repeat"
+        ],
+        "nativeReceipts": "pending"
+      },
+      "editionDifferences": [
+        "Classic target; installed modded EE base archives are supporting evidence. Original branch parity is not established."
+      ]
+    },
+    {
+      "id": "container.hullChest",
+      "category": "container",
+      "sourceIds": [
+        "dudleyville",
+        "gamebanshee"
+      ],
+      "sourceStatus": "supporting-base-audited-classic-pending",
+      "objectId": "hullChest",
+      "dialogId": "hullChestDialog",
+      "actions": [
+        "openContainer"
+      ],
+      "branches": [
+        "candlekeep.containers.hullChest"
+      ],
+      "conditions": [
+        "A distinct fixed container from AR2618 #5",
+        "Source lock difficulty 100; flags 0; script ACT11",
+        "Approved native tiers; source visibility/delay and classic differences remain unresolved"
+      ],
+      "outcomes": [
+        "candlekeepHullSword, candlekeepAntidote",
+        "0 gold; one saved ownership claim, retained across revisits/reload"
+      ],
+      "implementation": [
+        "res/maps/candlekeep/config.json:hullChest",
+        "res/maps/candlekeep/dialog.json:hullChestDialog",
+        "res/maps/candlekeep/script.py:CandlekeepDialog.takeContents"
+      ],
+      "automatedCoverage": {
+        "source": "tests/test_candlekeep_source.py:SourceAuditTests.testAllSourceContainersRemainSeparateWithFixedContents",
+        "structural": "tests/test_candlekeep_content.py:CandlekeepContentTest.testIndependentSourceLedgerHasImplementationsAndDeclaredWitnesses",
+        "nativeRoutes": [
+          "candlekeep.containers.hullChest"
+        ],
+        "nativeReceipts": "pending"
+      },
+      "editionDifferences": [
+        "All 37 supporting EE base containers are mapped separately; original BG1 equivalence and exact guard semantics remain unproven."
+      ],
+      "nativeChecks": {
+        "lockAgility": 12,
+        "forceStrength": 12,
+        "alwaysDetected": false,
+        "guardCount": 0
+      },
+      "sourceEvidence": {
+        "fixture": "tests/fixtures/candlekeep_shop_stock.json:containers.hullChest",
+        "area": "AR2618",
+        "container": 5,
+        "areaSha256": "a9226e5e2b54350fc9fcf6912e10fb58804724f9e37cf941eeb3fe1b866e48c9"
+      }
+    },
+    {
+      "id": "container.phlydiaHay",
+      "category": "container",
+      "sourceIds": [
+        "dudleyville",
+        "gamebanshee"
+      ],
+      "sourceStatus": "supporting-base-audited-classic-pending",
+      "objectId": "phlydiaHay",
+      "dialogId": "phlydiaHayDialog",
+      "actions": [
+        "openContainer"
+      ],
+      "branches": [
+        "candlekeep.containers.phlydiaHay"
+      ],
+      "conditions": [
+        "A distinct fixed container from AR2600 #4",
+        "Source lock difficulty 100; flags 0; script none",
+        "Approved native tiers; source visibility/delay and classic differences remain unresolved"
+      ],
+      "outcomes": [
+        "candlekeepHistoryHalruaa",
+        "0 gold; one saved ownership claim, retained across revisits/reload"
+      ],
+      "implementation": [
+        "res/maps/candlekeep/config.json:phlydiaHay",
+        "res/maps/candlekeep/dialog.json:phlydiaHayDialog",
+        "res/maps/candlekeep/script.py:CandlekeepDialog.takeContents"
+      ],
+      "automatedCoverage": {
+        "source": "tests/test_candlekeep_source.py:SourceAuditTests.testAllSourceContainersRemainSeparateWithFixedContents",
+        "structural": "tests/test_candlekeep_content.py:CandlekeepContentTest.testIndependentSourceLedgerHasImplementationsAndDeclaredWitnesses",
+        "nativeRoutes": [
+          "candlekeep.containers.phlydiaHay"
+        ],
+        "nativeReceipts": "pending"
+      },
+      "editionDifferences": [
+        "All 37 supporting EE base containers are mapped separately; original BG1 equivalence and exact guard semantics remain unproven."
+      ],
+      "nativeChecks": {
+        "lockAgility": 12,
+        "forceStrength": 12,
+        "alwaysDetected": false,
+        "guardCount": 0
+      },
+      "sourceEvidence": {
+        "fixture": "tests/fixtures/candlekeep_shop_stock.json:containers.phlydiaHay",
+        "area": "AR2600",
+        "container": 4,
+        "areaSha256": "c49dfa8125afaa41fc91c5474b2a2945f731ba566e551a07883c11ac0fb15afc"
+      }
+    },
+    {
+      "id": "container.innOffice",
+      "category": "container",
+      "sourceIds": [
+        "dudleyville",
+        "gamebanshee"
+      ],
+      "sourceStatus": "supporting-base-audited-classic-pending",
+      "objectId": "innOffice",
+      "dialogId": "innOfficeDialog",
+      "actions": [
+        "openContainer"
+      ],
+      "branches": [
+        "candlekeep.containers.innOffice"
+      ],
+      "conditions": [
+        "A distinct fixed container from AR2616 #2",
+        "Source lock difficulty 20; flags 1; script ACT11",
+        "Approved native tiers; source visibility/delay and classic differences remain unresolved"
+      ],
+      "outcomes": [
+        "candlekeepArmorScroll, candlekeepInfravisionScroll",
+        "18 gold; one saved ownership claim, retained across revisits/reload"
+      ],
+      "implementation": [
+        "res/maps/candlekeep/config.json:innOffice",
+        "res/maps/candlekeep/dialog.json:innOfficeDialog",
+        "res/maps/candlekeep/script.py:CandlekeepDialog.takeContents"
+      ],
+      "automatedCoverage": {
+        "source": "tests/test_candlekeep_source.py:SourceAuditTests.testAllSourceContainersRemainSeparateWithFixedContents",
+        "structural": "tests/test_candlekeep_content.py:CandlekeepContentTest.testIndependentSourceLedgerHasImplementationsAndDeclaredWitnesses",
+        "nativeRoutes": [
+          "candlekeep.containers.innOffice"
+        ],
+        "nativeReceipts": "pending"
+      },
+      "editionDifferences": [
+        "All 37 supporting EE base containers are mapped separately; original BG1 equivalence and exact guard semantics remain unproven."
+      ],
+      "nativeChecks": {
+        "lockAgility": 12,
+        "forceStrength": 12,
+        "alwaysDetected": false,
+        "guardCount": 2
+      },
+      "sourceEvidence": {
+        "fixture": "tests/fixtures/candlekeep_shop_stock.json:containers.innOffice",
+        "area": "AR2616",
+        "container": 2,
+        "areaSha256": "64af7a764a139d77f97888b6941461651333cdecf8cb8653a8fcb0246c2ae891"
+      }
+    },
+    {
+      "id": "container.innSapphireDrawer",
+      "category": "container",
+      "sourceIds": [
+        "dudleyville",
+        "gamebanshee"
+      ],
+      "sourceStatus": "supporting-base-audited-classic-pending",
+      "objectId": "innSapphireDrawer",
+      "dialogId": "innSapphireDrawerDialog",
+      "actions": [
+        "openContainer"
+      ],
+      "branches": [
+        "candlekeep.containers.innSapphireDrawer"
+      ],
+      "conditions": [
+        "A distinct fixed container from AR2617 #5",
+        "Source lock difficulty 65; flags 1; script ACT11NOB",
+        "Approved native tiers; source visibility/delay and classic differences remain unresolved"
+      ],
+      "outcomes": [
+        "candlekeepStarSapphire",
+        "0 gold; one saved ownership claim, retained across revisits/reload"
+      ],
+      "implementation": [
+        "res/maps/candlekeep/config.json:innSapphireDrawer",
+        "res/maps/candlekeep/dialog.json:innSapphireDrawerDialog",
+        "res/maps/candlekeep/script.py:CandlekeepDialog.takeContents"
+      ],
+      "automatedCoverage": {
+        "source": "tests/test_candlekeep_source.py:SourceAuditTests.testAllSourceContainersRemainSeparateWithFixedContents",
+        "structural": "tests/test_candlekeep_content.py:CandlekeepContentTest.testIndependentSourceLedgerHasImplementationsAndDeclaredWitnesses",
+        "nativeRoutes": [
+          "candlekeep.containers.innSapphireDrawer"
+        ],
+        "nativeReceipts": "pending"
+      },
+      "editionDifferences": [
+        "All 37 supporting EE base containers are mapped separately; original BG1 equivalence and exact guard semantics remain unproven."
+      ],
+      "nativeChecks": {
+        "lockAgility": 18,
+        "forceStrength": 14,
+        "alwaysDetected": false,
+        "guardCount": 2
+      },
+      "sourceEvidence": {
+        "fixture": "tests/fixtures/candlekeep_shop_stock.json:containers.innSapphireDrawer",
+        "area": "AR2617",
+        "container": 5,
+        "areaSha256": "84c75a3743dfc4fa5b7646f7fa8972cdd77e5844e232c6480533da39bc1534a2"
+      }
+    },
+    {
+      "id": "container.innClarityDrawer",
+      "category": "container",
+      "sourceIds": [
+        "dudleyville",
+        "gamebanshee"
+      ],
+      "sourceStatus": "supporting-base-audited-classic-pending",
+      "objectId": "innClarityDrawer",
+      "dialogId": "innClarityDrawerDialog",
+      "actions": [
+        "openContainer"
+      ],
+      "branches": [
+        "candlekeep.containers.innClarityDrawer"
+      ],
+      "conditions": [
+        "A distinct fixed container from AR2617 #3",
+        "Source lock difficulty 30; flags 1; script none",
+        "Approved native tiers; source visibility/delay and classic differences remain unresolved"
+      ],
+      "outcomes": [
+        "candlekeepClarityPotion",
+        "36 gold; one saved ownership claim, retained across revisits/reload"
+      ],
+      "implementation": [
+        "res/maps/candlekeep/config.json:innClarityDrawer",
+        "res/maps/candlekeep/dialog.json:innClarityDrawerDialog",
+        "res/maps/candlekeep/script.py:CandlekeepDialog.takeContents"
+      ],
+      "automatedCoverage": {
+        "source": "tests/test_candlekeep_source.py:SourceAuditTests.testAllSourceContainersRemainSeparateWithFixedContents",
+        "structural": "tests/test_candlekeep_content.py:CandlekeepContentTest.testIndependentSourceLedgerHasImplementationsAndDeclaredWitnesses",
+        "nativeRoutes": [
+          "candlekeep.containers.innClarityDrawer"
+        ],
+        "nativeReceipts": "pending"
+      },
+      "editionDifferences": [
+        "All 37 supporting EE base containers are mapped separately; original BG1 equivalence and exact guard semantics remain unproven."
+      ],
+      "nativeChecks": {
+        "lockAgility": 16,
+        "forceStrength": 12,
+        "alwaysDetected": false,
+        "guardCount": 0
+      },
+      "sourceEvidence": {
+        "fixture": "tests/fixtures/candlekeep_shop_stock.json:containers.innClarityDrawer",
+        "area": "AR2617",
+        "container": 3,
+        "areaSha256": "84c75a3743dfc4fa5b7646f7fa8972cdd77e5844e232c6480533da39bc1534a2"
+      }
+    },
+    {
+      "id": "container.innJewelryDrawer",
+      "category": "container",
+      "sourceIds": [
+        "dudleyville",
+        "gamebanshee"
+      ],
+      "sourceStatus": "supporting-base-audited-classic-pending",
+      "objectId": "innJewelryDrawer",
+      "dialogId": "innJewelryDrawerDialog",
+      "actions": [
+        "openContainer"
+      ],
+      "branches": [
+        "candlekeep.containers.innJewelryDrawer"
+      ],
+      "conditions": [
+        "A distinct fixed container from AR2617 #4",
+        "Source lock difficulty 30; flags 1; script ACT10",
+        "Approved native tiers; source visibility/delay and classic differences remain unresolved"
+      ],
+      "outcomes": [
+        "candlekeepFlamedanceRing",
+        "86 gold; one saved ownership claim, retained across revisits/reload"
+      ],
+      "implementation": [
+        "res/maps/candlekeep/config.json:innJewelryDrawer",
+        "res/maps/candlekeep/dialog.json:innJewelryDrawerDialog",
+        "res/maps/candlekeep/script.py:CandlekeepDialog.takeContents"
+      ],
+      "automatedCoverage": {
+        "source": "tests/test_candlekeep_source.py:SourceAuditTests.testAllSourceContainersRemainSeparateWithFixedContents",
+        "structural": "tests/test_candlekeep_content.py:CandlekeepContentTest.testIndependentSourceLedgerHasImplementationsAndDeclaredWitnesses",
+        "nativeRoutes": [
+          "candlekeep.containers.innJewelryDrawer"
+        ],
+        "nativeReceipts": "pending"
+      },
+      "editionDifferences": [
+        "All 37 supporting EE base containers are mapped separately; original BG1 equivalence and exact guard semantics remain unproven."
+      ],
+      "nativeChecks": {
+        "lockAgility": 16,
+        "forceStrength": 12,
+        "alwaysDetected": true,
+        "guardCount": 1
+      },
+      "sourceEvidence": {
+        "fixture": "tests/fixtures/candlekeep_shop_stock.json:containers.innJewelryDrawer",
+        "area": "AR2617",
+        "container": 4,
+        "areaSha256": "84c75a3743dfc4fa5b7646f7fa8972cdd77e5844e232c6480533da39bc1534a2"
+      }
+    },
+    {
+      "id": "container.priestChest",
+      "category": "container",
+      "sourceIds": [
+        "dudleyville",
+        "gamebanshee"
+      ],
+      "sourceStatus": "supporting-base-audited-classic-pending",
+      "objectId": "priestChest",
+      "dialogId": "priestChestDialog",
+      "actions": [
+        "openContainer"
+      ],
+      "branches": [
+        "candlekeep.containers.priestChest"
+      ],
+      "conditions": [
+        "A distinct fixed container from AR2602 #1",
+        "Source lock difficulty 30; flags 1; script ACT10",
+        "Approved native tiers; source visibility/delay and classic differences remain unresolved"
+      ],
+      "outcomes": [
+        "candlekeepDagger",
+        "0 gold; one saved ownership claim, retained across revisits/reload"
+      ],
+      "implementation": [
+        "res/maps/candlekeep/config.json:priestChest",
+        "res/maps/candlekeep/dialog.json:priestChestDialog",
+        "res/maps/candlekeep/script.py:CandlekeepDialog.takeContents"
+      ],
+      "automatedCoverage": {
+        "source": "tests/test_candlekeep_source.py:SourceAuditTests.testAllSourceContainersRemainSeparateWithFixedContents",
+        "structural": "tests/test_candlekeep_content.py:CandlekeepContentTest.testIndependentSourceLedgerHasImplementationsAndDeclaredWitnesses",
+        "nativeRoutes": [
+          "candlekeep.containers.priestChest"
+        ],
+        "nativeReceipts": "pending"
+      },
+      "editionDifferences": [
+        "All 37 supporting EE base containers are mapped separately; original BG1 equivalence and exact guard semantics remain unproven."
+      ],
+      "nativeChecks": {
+        "lockAgility": 16,
+        "forceStrength": 12,
+        "alwaysDetected": true,
+        "guardCount": 1
+      },
+      "sourceEvidence": {
+        "fixture": "tests/fixtures/candlekeep_shop_stock.json:containers.priestChest",
+        "area": "AR2602",
+        "container": 1,
+        "areaSha256": "636bea43e88388f0a38035adfe6de3461939a48639fbd1752f0c81ded05db3f8"
+      }
+    },
+    {
+      "id": "container.northwestBarrel",
+      "category": "container",
+      "sourceIds": [
+        "dudleyville",
+        "gamebanshee"
+      ],
+      "sourceStatus": "supporting-base-audited-classic-pending",
+      "objectId": "northwestBarrel",
+      "dialogId": "northwestBarrelDialog",
+      "actions": [
+        "openContainer"
+      ],
+      "branches": [
+        "candlekeep.containers.northwestBarrel"
+      ],
+      "conditions": [
+        "A distinct fixed container from AR2606 #1",
+        "Source lock difficulty 100; flags 0; script none",
+        "Approved native tiers; source visibility/delay and classic differences remain unresolved"
+      ],
+      "outcomes": [
+        "candlekeepSilverRing",
+        "0 gold; one saved ownership claim, retained across revisits/reload"
+      ],
+      "implementation": [
+        "res/maps/candlekeep/config.json:northwestBarrel",
+        "res/maps/candlekeep/dialog.json:northwestBarrelDialog",
+        "res/maps/candlekeep/script.py:CandlekeepDialog.takeContents"
+      ],
+      "automatedCoverage": {
+        "source": "tests/test_candlekeep_source.py:SourceAuditTests.testAllSourceContainersRemainSeparateWithFixedContents",
+        "structural": "tests/test_candlekeep_content.py:CandlekeepContentTest.testIndependentSourceLedgerHasImplementationsAndDeclaredWitnesses",
+        "nativeRoutes": [
+          "candlekeep.containers.northwestBarrel"
+        ],
+        "nativeReceipts": "pending"
+      },
+      "editionDifferences": [
+        "All 37 supporting EE base containers are mapped separately; original BG1 equivalence and exact guard semantics remain unproven."
+      ],
+      "nativeChecks": {
+        "lockAgility": 12,
+        "forceStrength": 12,
+        "alwaysDetected": false,
+        "guardCount": 0
+      },
+      "sourceEvidence": {
+        "fixture": "tests/fixtures/candlekeep_shop_stock.json:containers.northwestBarrel",
+        "area": "AR2606",
+        "container": 1,
+        "areaSha256": "f6f3476be6ceafa15230c15eb13300e09a799c0c7676bae94eddd0ac17e83845"
+      }
+    },
+    {
+      "id": "container.bunkhouseBarrel",
+      "category": "container",
+      "sourceIds": [
+        "dudleyville",
+        "gamebanshee"
+      ],
+      "sourceStatus": "supporting-base-audited-classic-pending",
+      "objectId": "bunkhouseBarrel",
+      "dialogId": "bunkhouseBarrelDialog",
+      "actions": [
+        "openContainer"
+      ],
+      "branches": [
+        "candlekeep.containers.bunkhouseBarrel"
+      ],
+      "conditions": [
+        "A distinct fixed container from AR2600 #3",
+        "Source lock difficulty 100; flags 0; script none",
+        "Approved native tiers; source visibility/delay and classic differences remain unresolved"
+      ],
+      "outcomes": [
+        "No items",
+        "15 gold; one saved ownership claim, retained across revisits/reload"
+      ],
+      "implementation": [
+        "res/maps/candlekeep/config.json:bunkhouseBarrel",
+        "res/maps/candlekeep/dialog.json:bunkhouseBarrelDialog",
+        "res/maps/candlekeep/script.py:CandlekeepDialog.takeContents"
+      ],
+      "automatedCoverage": {
+        "source": "tests/test_candlekeep_source.py:SourceAuditTests.testAllSourceContainersRemainSeparateWithFixedContents",
+        "structural": "tests/test_candlekeep_content.py:CandlekeepContentTest.testIndependentSourceLedgerHasImplementationsAndDeclaredWitnesses",
+        "nativeRoutes": [
+          "candlekeep.containers.bunkhouseBarrel"
+        ],
+        "nativeReceipts": "pending"
+      },
+      "editionDifferences": [
+        "All 37 supporting EE base containers are mapped separately; original BG1 equivalence and exact guard semantics remain unproven."
+      ],
+      "nativeChecks": {
+        "lockAgility": 12,
+        "forceStrength": 12,
+        "alwaysDetected": false,
+        "guardCount": 0
+      },
+      "sourceEvidence": {
+        "fixture": "tests/fixtures/candlekeep_shop_stock.json:containers.bunkhouseBarrel",
+        "area": "AR2600",
+        "container": 3,
+        "areaSha256": "c49dfa8125afaa41fc91c5474b2a2945f731ba566e551a07883c11ac0fb15afc"
+      }
+    },
+    {
+      "id": "container.clinicDesk",
+      "category": "container",
+      "sourceIds": [
+        "dudleyville",
+        "gamebanshee"
+      ],
+      "sourceStatus": "supporting-base-audited-classic-pending",
+      "objectId": "clinicDesk",
+      "dialogId": "clinicDeskDialog",
+      "actions": [
+        "openContainer"
+      ],
+      "branches": [
+        "candlekeep.containers.clinicDesk"
+      ],
+      "conditions": [
+        "A distinct fixed container from AR2605 #1",
+        "Source lock difficulty 25; flags 1; script ACT10",
+        "Approved native tiers; source visibility/delay and classic differences remain unresolved"
+      ],
+      "outcomes": [
+        "candlekeepHealingPotion",
+        "0 gold; one saved ownership claim, retained across revisits/reload"
+      ],
+      "implementation": [
+        "res/maps/candlekeep/config.json:clinicDesk",
+        "res/maps/candlekeep/dialog.json:clinicDeskDialog",
+        "res/maps/candlekeep/script.py:CandlekeepDialog.takeContents"
+      ],
+      "automatedCoverage": {
+        "source": "tests/test_candlekeep_source.py:SourceAuditTests.testAllSourceContainersRemainSeparateWithFixedContents",
+        "structural": "tests/test_candlekeep_content.py:CandlekeepContentTest.testIndependentSourceLedgerHasImplementationsAndDeclaredWitnesses",
+        "nativeRoutes": [
+          "candlekeep.containers.clinicDesk"
+        ],
+        "nativeReceipts": "pending"
+      },
+      "editionDifferences": [
+        "All 37 supporting EE base containers are mapped separately; original BG1 equivalence and exact guard semantics remain unproven."
+      ],
+      "nativeChecks": {
+        "lockAgility": 16,
+        "forceStrength": 12,
+        "alwaysDetected": true,
+        "guardCount": 1
+      },
+      "sourceEvidence": {
+        "fixture": "tests/fixtures/candlekeep_shop_stock.json:containers.clinicDesk",
+        "area": "AR2605",
+        "container": 1,
+        "areaSha256": "b08677f9afe26b7dd34ff782879ed1d648222eb9067a163c67d4ab774a42ffdb"
+      }
+    },
+    {
+      "id": "container.barracksChest1",
+      "category": "container",
+      "sourceIds": [
+        "dudleyville",
+        "gamebanshee"
+      ],
+      "sourceStatus": "supporting-base-audited-classic-pending",
+      "objectId": "barracksChest1",
+      "dialogId": "barracksChest1Dialog",
+      "actions": [
+        "openContainer"
+      ],
+      "branches": [
+        "candlekeep.containers.barracksChest1"
+      ],
+      "conditions": [
+        "A distinct fixed container from AR2618 #1",
+        "Source lock difficulty 40; flags 1; script ACT11",
+        "Approved native tiers; source visibility/delay and classic differences remain unresolved"
+      ],
+      "outcomes": [
+        "candlekeepDagger, candlekeepLongsword",
+        "0 gold; one saved ownership claim, retained across revisits/reload"
+      ],
+      "implementation": [
+        "res/maps/candlekeep/config.json:barracksChest1",
+        "res/maps/candlekeep/dialog.json:barracksChest1Dialog",
+        "res/maps/candlekeep/script.py:CandlekeepDialog.takeContents"
+      ],
+      "automatedCoverage": {
+        "source": "tests/test_candlekeep_source.py:SourceAuditTests.testAllSourceContainersRemainSeparateWithFixedContents",
+        "structural": "tests/test_candlekeep_content.py:CandlekeepContentTest.testIndependentSourceLedgerHasImplementationsAndDeclaredWitnesses",
+        "nativeRoutes": [
+          "candlekeep.containers.barracksChest1"
+        ],
+        "nativeReceipts": "pending"
+      },
+      "editionDifferences": [
+        "All 37 supporting EE base containers are mapped separately; original BG1 equivalence and exact guard semantics remain unproven."
+      ],
+      "nativeChecks": {
+        "lockAgility": 16,
+        "forceStrength": 12,
+        "alwaysDetected": false,
+        "guardCount": 2
+      },
+      "sourceEvidence": {
+        "fixture": "tests/fixtures/candlekeep_shop_stock.json:containers.barracksChest1",
+        "area": "AR2618",
+        "container": 1,
+        "areaSha256": "a9226e5e2b54350fc9fcf6912e10fb58804724f9e37cf941eeb3fe1b866e48c9"
+      }
+    },
+    {
+      "id": "container.barracksChest2",
+      "category": "container",
+      "sourceIds": [
+        "dudleyville",
+        "gamebanshee"
+      ],
+      "sourceStatus": "supporting-base-audited-classic-pending",
+      "objectId": "barracksChest2",
+      "dialogId": "barracksChest2Dialog",
+      "actions": [
+        "openContainer"
+      ],
+      "branches": [
+        "candlekeep.containers.barracksChest2"
+      ],
+      "conditions": [
+        "A distinct fixed container from AR2618 #2",
+        "Source lock difficulty 40; flags 1; script ACT11",
+        "Approved native tiers; source visibility/delay and classic differences remain unresolved"
+      ],
+      "outcomes": [
+        "candlekeepWarhammer, candlekeepDagger",
+        "0 gold; one saved ownership claim, retained across revisits/reload"
+      ],
+      "implementation": [
+        "res/maps/candlekeep/config.json:barracksChest2",
+        "res/maps/candlekeep/dialog.json:barracksChest2Dialog",
+        "res/maps/candlekeep/script.py:CandlekeepDialog.takeContents"
+      ],
+      "automatedCoverage": {
+        "source": "tests/test_candlekeep_source.py:SourceAuditTests.testAllSourceContainersRemainSeparateWithFixedContents",
+        "structural": "tests/test_candlekeep_content.py:CandlekeepContentTest.testIndependentSourceLedgerHasImplementationsAndDeclaredWitnesses",
+        "nativeRoutes": [
+          "candlekeep.containers.barracksChest2"
+        ],
+        "nativeReceipts": "pending"
+      },
+      "editionDifferences": [
+        "All 37 supporting EE base containers are mapped separately; original BG1 equivalence and exact guard semantics remain unproven."
+      ],
+      "nativeChecks": {
+        "lockAgility": 16,
+        "forceStrength": 12,
+        "alwaysDetected": false,
+        "guardCount": 2
+      },
+      "sourceEvidence": {
+        "fixture": "tests/fixtures/candlekeep_shop_stock.json:containers.barracksChest2",
+        "area": "AR2618",
+        "container": 2,
+        "areaSha256": "a9226e5e2b54350fc9fcf6912e10fb58804724f9e37cf941eeb3fe1b866e48c9"
+      }
+    },
+    {
+      "id": "container.barracksChest3",
+      "category": "container",
+      "sourceIds": [
+        "dudleyville",
+        "gamebanshee"
+      ],
+      "sourceStatus": "supporting-base-audited-classic-pending",
+      "objectId": "barracksChest3",
+      "dialogId": "barracksChest3Dialog",
+      "actions": [
+        "openContainer"
+      ],
+      "branches": [
+        "candlekeep.containers.barracksChest3"
+      ],
+      "conditions": [
+        "A distinct fixed container from AR2618 #3",
+        "Source lock difficulty 40; flags 1; script ACT11",
+        "Approved native tiers; source visibility/delay and classic differences remain unresolved"
+      ],
+      "outcomes": [
+        "candlekeepBattleAxe",
+        "0 gold; one saved ownership claim, retained across revisits/reload"
+      ],
+      "implementation": [
+        "res/maps/candlekeep/config.json:barracksChest3",
+        "res/maps/candlekeep/dialog.json:barracksChest3Dialog",
+        "res/maps/candlekeep/script.py:CandlekeepDialog.takeContents"
+      ],
+      "automatedCoverage": {
+        "source": "tests/test_candlekeep_source.py:SourceAuditTests.testAllSourceContainersRemainSeparateWithFixedContents",
+        "structural": "tests/test_candlekeep_content.py:CandlekeepContentTest.testIndependentSourceLedgerHasImplementationsAndDeclaredWitnesses",
+        "nativeRoutes": [
+          "candlekeep.containers.barracksChest3"
+        ],
+        "nativeReceipts": "pending"
+      },
+      "editionDifferences": [
+        "All 37 supporting EE base containers are mapped separately; original BG1 equivalence and exact guard semantics remain unproven."
+      ],
+      "nativeChecks": {
+        "lockAgility": 16,
+        "forceStrength": 12,
+        "alwaysDetected": false,
+        "guardCount": 2
+      },
+      "sourceEvidence": {
+        "fixture": "tests/fixtures/candlekeep_shop_stock.json:containers.barracksChest3",
+        "area": "AR2618",
+        "container": 3,
+        "areaSha256": "a9226e5e2b54350fc9fcf6912e10fb58804724f9e37cf941eeb3fe1b866e48c9"
+      }
+    },
+    {
+      "id": "container.barracksChest4",
+      "category": "container",
+      "sourceIds": [
+        "dudleyville",
+        "gamebanshee"
+      ],
+      "sourceStatus": "supporting-base-audited-classic-pending",
+      "objectId": "barracksChest4",
+      "dialogId": "barracksChest4Dialog",
+      "actions": [
+        "openContainer"
+      ],
+      "branches": [
+        "candlekeep.containers.barracksChest4"
+      ],
+      "conditions": [
+        "A distinct fixed container from AR2618 #4",
+        "Source lock difficulty 40; flags 1; script ACT11",
+        "Approved native tiers; source visibility/delay and classic differences remain unresolved"
+      ],
+      "outcomes": [
+        "candlekeepLongsword, candlekeepMace",
+        "0 gold; one saved ownership claim, retained across revisits/reload"
+      ],
+      "implementation": [
+        "res/maps/candlekeep/config.json:barracksChest4",
+        "res/maps/candlekeep/dialog.json:barracksChest4Dialog",
+        "res/maps/candlekeep/script.py:CandlekeepDialog.takeContents"
+      ],
+      "automatedCoverage": {
+        "source": "tests/test_candlekeep_source.py:SourceAuditTests.testAllSourceContainersRemainSeparateWithFixedContents",
+        "structural": "tests/test_candlekeep_content.py:CandlekeepContentTest.testIndependentSourceLedgerHasImplementationsAndDeclaredWitnesses",
+        "nativeRoutes": [
+          "candlekeep.containers.barracksChest4"
+        ],
+        "nativeReceipts": "pending"
+      },
+      "editionDifferences": [
+        "All 37 supporting EE base containers are mapped separately; original BG1 equivalence and exact guard semantics remain unproven."
+      ],
+      "nativeChecks": {
+        "lockAgility": 16,
+        "forceStrength": 12,
+        "alwaysDetected": false,
+        "guardCount": 2
+      },
+      "sourceEvidence": {
+        "fixture": "tests/fixtures/candlekeep_shop_stock.json:containers.barracksChest4",
+        "area": "AR2618",
+        "container": 4,
+        "areaSha256": "a9226e5e2b54350fc9fcf6912e10fb58804724f9e37cf941eeb3fe1b866e48c9"
+      }
+    },
+    {
+      "id": "encounter.shank",
+      "category": "encounter",
+      "sourceIds": [
+        "dudleyville",
+        "gamebanshee"
+      ],
+      "sourceStatus": "web-reconciled",
+      "objectId": "shank",
+      "dialogId": "",
+      "actions": [],
+      "branches": [
+        "candlekeep.assassins.shank"
+      ],
+      "conditions": [
+        "Real hostile encounter in correct interior"
+      ],
+      "outcomes": [
+        "20 XP; dagger; Parda conversation becomes available"
+      ],
+      "implementation": [
+        "res/maps/candlekeep/config.json:shank"
+      ],
+      "automatedCoverage": {
+        "structural": "tests/test_candlekeep_content.py:CandlekeepContentTest.testIndependentSourceLedgerHasImplementationsAndDeclaredWitnesses",
+        "nativeRoutes": [
+          "candlekeep.assassins.shank"
+        ],
+        "nativeReceipts": "pending"
+      },
+      "editionDifferences": [
+        "Classic target; installed modded EE base archives are supporting evidence. Original branch parity is not established."
+      ]
+    },
+    {
+      "id": "encounter.carbos",
+      "category": "encounter",
+      "sourceIds": [
+        "dudleyville",
+        "gamebanshee"
+      ],
+      "sourceStatus": "web-reconciled",
+      "objectId": "carbos",
+      "dialogId": "",
+      "actions": [],
+      "branches": [
+        "candlekeep.assassins.carbos"
+      ],
+      "conditions": [
+        "Real hostile encounter in correct interior"
+      ],
+      "outcomes": [
+        "20 XP; dagger; Karan conversation becomes available"
+      ],
+      "implementation": [
+        "res/maps/candlekeep/config.json:carbos"
+      ],
+      "automatedCoverage": {
+        "structural": "tests/test_candlekeep_content.py:CandlekeepContentTest.testIndependentSourceLedgerHasImplementationsAndDeclaredWitnesses",
+        "nativeRoutes": [
+          "candlekeep.assassins.carbos"
+        ],
+        "nativeReceipts": "pending"
+      },
+      "editionDifferences": [
+        "Classic target; installed modded EE base archives are supporting evidence. Original branch parity is not established."
+      ]
+    },
+    {
+      "id": "social.parda",
+      "category": "conversation",
+      "sourceIds": [
+        "dudleyville",
+        "gamebanshee"
+      ],
+      "sourceStatus": "web-reconciled",
+      "objectId": "parda",
+      "dialogId": "pardaDialog",
+      "actions": [],
+      "branches": [
+        "candlekeep.social.parda"
+      ],
+      "conditions": [
+        "After Shank"
+      ],
+      "outcomes": [
+        "Distinct explanations and consolation"
+      ],
+      "implementation": [
+        "res/maps/candlekeep/config.json:parda",
+        "res/maps/candlekeep/dialog.json:pardaDialog"
+      ],
+      "automatedCoverage": {
+        "structural": "tests/test_candlekeep_content.py:CandlekeepContentTest.testIndependentSourceLedgerHasImplementationsAndDeclaredWitnesses",
+        "nativeRoutes": [
+          "candlekeep.social.parda"
+        ],
+        "nativeReceipts": "pending"
+      },
+      "editionDifferences": [
+        "Classic target; installed modded EE base archives are supporting evidence. Original branch parity is not established."
+      ]
+    },
+    {
+      "id": "social.karan",
+      "category": "conversation",
+      "sourceIds": [
+        "dudleyville",
+        "gamebanshee"
+      ],
+      "sourceStatus": "web-reconciled",
+      "objectId": "karan",
+      "dialogId": "karanDialog",
+      "actions": [],
+      "branches": [
+        "candlekeep.social.karan"
+      ],
+      "conditions": [
+        "After Carbos"
+      ],
+      "outcomes": [
+        "Distinct explanations and consolation"
+      ],
+      "implementation": [
+        "res/maps/candlekeep/config.json:karan",
+        "res/maps/candlekeep/dialog.json:karanDialog"
+      ],
+      "automatedCoverage": {
+        "structural": "tests/test_candlekeep_content.py:CandlekeepContentTest.testIndependentSourceLedgerHasImplementationsAndDeclaredWitnesses",
+        "nativeRoutes": [
+          "candlekeep.social.karan"
+        ],
+        "nativeReceipts": "pending"
+      },
+      "editionDifferences": [
+        "Classic target; installed modded EE base archives are supporting evidence. Original branch parity is not established."
+      ]
+    },
+    {
+      "id": "social.imoen",
+      "category": "conversation",
+      "sourceIds": [
+        "dudleyville",
+        "gamebanshee"
+      ],
+      "sourceStatus": "web-reconciled",
+      "objectId": "imoen",
+      "dialogId": "imoenDialog",
+      "actions": [],
+      "branches": [
+        "candlekeep.social.imoen"
+      ],
+      "conditions": [
+        "Before departure"
+      ],
+      "outcomes": [
+        "Friendship and departure talk; no prologue recruitment"
+      ],
+      "implementation": [
+        "res/maps/candlekeep/config.json:imoen",
+        "res/maps/candlekeep/dialog.json:imoenDialog"
+      ],
+      "automatedCoverage": {
+        "structural": "tests/test_candlekeep_content.py:CandlekeepContentTest.testIndependentSourceLedgerHasImplementationsAndDeclaredWitnesses",
+        "nativeRoutes": [
+          "candlekeep.social.imoen"
+        ],
+        "nativeReceipts": "pending"
+      },
+      "editionDifferences": [
+        "Classic target; installed modded EE base archives are supporting evidence. Original branch parity is not established."
+      ]
+    },
+    {
+      "id": "social.tethtoril",
+      "category": "conversation",
+      "sourceIds": [
+        "dudleyville",
+        "gamebanshee"
+      ],
+      "sourceStatus": "web-reconciled",
+      "objectId": "tethtoril",
+      "dialogId": "tethtorilDialog",
+      "actions": [],
+      "branches": [
+        "candlekeep.social.tethtoril"
+      ],
+      "conditions": [
+        "One scroll; actual Firebead errand state"
+      ],
+      "outcomes": [
+        "Retrieve scroll once; subsequent conversation changes"
+      ],
+      "implementation": [
+        "res/maps/candlekeep/config.json:tethtoril",
+        "res/maps/candlekeep/dialog.json:tethtorilDialog"
+      ],
+      "automatedCoverage": {
+        "structural": "tests/test_candlekeep_content.py:CandlekeepContentTest.testIndependentSourceLedgerHasImplementationsAndDeclaredWitnesses",
+        "nativeRoutes": [
+          "candlekeep.social.tethtoril"
+        ],
+        "nativeReceipts": "pending"
+      },
+      "editionDifferences": [
+        "Classic target; installed modded EE base archives are supporting evidence. Original branch parity is not established."
+      ]
+    },
+    {
+      "id": "social.thurston",
+      "category": "conversation",
+      "sourceIds": [
+        "dudleyville",
+        "gamebanshee"
+      ],
+      "sourceStatus": "web-reconciled",
+      "objectId": "thurston",
+      "dialogId": "thurstonDialog",
+      "actions": [],
+      "branches": [
+        "candlekeep.social.thurston"
+      ],
+      "conditions": [
+        "Original noble dialogue"
+      ],
+      "outcomes": [
+        "No EE-only jewelry award"
+      ],
+      "implementation": [
+        "res/maps/candlekeep/config.json:thurston",
+        "res/maps/candlekeep/dialog.json:thurstonDialog"
+      ],
+      "automatedCoverage": {
+        "structural": "tests/test_candlekeep_content.py:CandlekeepContentTest.testIndependentSourceLedgerHasImplementationsAndDeclaredWitnesses",
+        "nativeRoutes": [
+          "candlekeep.social.thurston"
+        ],
+        "nativeReceipts": "pending"
+      },
+      "editionDifferences": [
+        "Classic target; installed modded EE base archives are supporting evidence. Original branch parity is not established."
+      ]
+    },
+    {
+      "id": "social.lovey",
+      "category": "conversation",
+      "sourceIds": [
+        "dudleyville",
+        "gamebanshee"
+      ],
+      "sourceStatus": "web-reconciled",
+      "objectId": "lovey",
+      "dialogId": "loveyDialog",
+      "actions": [],
+      "branches": [
+        "candlekeep.social.lovey"
+      ],
+      "conditions": [
+        "Original noble dialogue"
+      ],
+      "outcomes": [
+        "No EE-only reward"
+      ],
+      "implementation": [
+        "res/maps/candlekeep/config.json:lovey",
+        "res/maps/candlekeep/dialog.json:loveyDialog"
+      ],
+      "automatedCoverage": {
+        "structural": "tests/test_candlekeep_content.py:CandlekeepContentTest.testIndependentSourceLedgerHasImplementationsAndDeclaredWitnesses",
+        "nativeRoutes": [
+          "candlekeep.social.lovey"
+        ],
+        "nativeReceipts": "pending"
+      },
+      "editionDifferences": [
+        "Classic target; installed modded EE base archives are supporting evidence. Original branch parity is not established."
+      ]
+    },
+    {
+      "id": "social.nessa",
+      "category": "conversation",
+      "sourceIds": [
+        "dudleyville",
+        "gamebanshee"
+      ],
+      "sourceStatus": "web-reconciled",
+      "objectId": "nessa",
+      "dialogId": "nessaDialog",
+      "actions": [],
+      "branches": [
+        "candlekeep.social.nessa"
+      ],
+      "conditions": [
+        "Before and after antidote"
+      ],
+      "outcomes": [
+        "Observable cow recovery"
+      ],
+      "implementation": [
+        "res/maps/candlekeep/config.json:nessa",
+        "res/maps/candlekeep/dialog.json:nessaDialog"
+      ],
+      "automatedCoverage": {
+        "structural": "tests/test_candlekeep_content.py:CandlekeepContentTest.testIndependentSourceLedgerHasImplementationsAndDeclaredWitnesses",
+        "nativeRoutes": [
+          "candlekeep.social.nessa"
+        ],
+        "nativeReceipts": "pending"
+      },
+      "editionDifferences": [
+        "Classic target; installed modded EE base archives are supporting evidence. Original branch parity is not established."
+      ]
+    },
+    {
+      "id": "social.keeper",
+      "category": "conversation",
+      "sourceIds": [
+        "dudleyville",
+        "gamebanshee"
+      ],
+      "sourceStatus": "web-reconciled",
+      "objectId": "keeper",
+      "dialogId": "keeperDialog",
+      "actions": [],
+      "branches": [
+        "candlekeep.social.keeper"
+      ],
+      "conditions": [
+        "Prologue permissions"
+      ],
+      "outcomes": [
+        "Library refusal and book requirement explanation"
+      ],
+      "implementation": [
+        "res/maps/candlekeep/config.json:keeper",
+        "res/maps/candlekeep/dialog.json:keeperDialog"
+      ],
+      "automatedCoverage": {
+        "structural": "tests/test_candlekeep_content.py:CandlekeepContentTest.testIndependentSourceLedgerHasImplementationsAndDeclaredWitnesses",
+        "nativeRoutes": [
+          "candlekeep.social.keeper"
+        ],
+        "nativeReceipts": "pending"
+      },
+      "editionDifferences": [
+        "Classic target; installed modded EE base archives are supporting evidence. Original branch parity is not established."
+      ]
+    },
+    {
+      "id": "social.watcher",
+      "category": "conversation",
+      "sourceIds": [
+        "dudleyville",
+        "gamebanshee"
+      ],
+      "sourceStatus": "web-reconciled",
+      "objectId": "watcher",
+      "dialogId": "watcherDialog",
+      "actions": [],
+      "branches": [
+        "candlekeep.social.watcher"
+      ],
+      "conditions": [
+        "Theft or hostile action"
+      ],
+      "outcomes": [
+        "Guard response and local standing consequences"
+      ],
+      "implementation": [
+        "res/maps/candlekeep/config.json:watcher",
+        "res/maps/candlekeep/dialog.json:watcherDialog"
+      ],
+      "automatedCoverage": {
+        "structural": "tests/test_candlekeep_content.py:CandlekeepContentTest.testIndependentSourceLedgerHasImplementationsAndDeclaredWitnesses",
+        "nativeRoutes": [
+          "candlekeep.social.watcher"
+        ],
+        "nativeReceipts": "pending"
+      },
+      "editionDifferences": [
+        "Classic target; installed modded EE base archives are supporting evidence. Original branch parity is not established."
+      ]
+    },
+    {
+      "id": "theft.fuller",
+      "category": "theft",
+      "sourceIds": [
+        "dudleyville",
+        "gamebanshee"
+      ],
+      "sourceStatus": "web-reconciled",
+      "objectId": "fuller",
+      "dialogId": "fullerDialog",
+      "actions": [
+        "pickPocket"
+      ],
+      "branches": [
+        "candlekeep.social.fullerTheft"
+      ],
+      "conditions": [
+        "Native agility check; owner possesses item; failure consequences"
+      ],
+      "outcomes": [
+        "Unique enchanted dagger transferred once; reward and theft share ownership"
+      ],
+      "implementation": [
+        "res/maps/candlekeep/config.json:fuller",
+        "res/maps/candlekeep/dialog.json:fullerDialog"
+      ],
+      "automatedCoverage": {
+        "structural": "tests/test_candlekeep_content.py:CandlekeepContentTest.testIndependentSourceLedgerHasImplementationsAndDeclaredWitnesses",
+        "nativeRoutes": [
+          "candlekeep.social.fullerTheft"
+        ],
+        "nativeReceipts": "pending"
+      },
+      "editionDifferences": [
+        "Classic target; installed modded EE base archives are supporting evidence. Original branch parity is not established."
+      ]
+    },
+    {
+      "id": "theft.phlydia",
+      "category": "theft",
+      "sourceIds": [
+        "dudleyville",
+        "gamebanshee"
+      ],
+      "sourceStatus": "web-reconciled",
+      "objectId": "phlydia",
+      "dialogId": "phlydiaDialog",
+      "actions": [
+        "pickPocket"
+      ],
+      "branches": [
+        "candlekeep.social.phlydiaTheft"
+      ],
+      "conditions": [
+        "Native agility check; owner possesses item; failure consequences"
+      ],
+      "outcomes": [
+        "Gold necklace and reward gem transferred once; reward and theft share ownership"
+      ],
+      "implementation": [
+        "res/maps/candlekeep/config.json:phlydia",
+        "res/maps/candlekeep/dialog.json:phlydiaDialog"
+      ],
+      "automatedCoverage": {
+        "structural": "tests/test_candlekeep_content.py:CandlekeepContentTest.testIndependentSourceLedgerHasImplementationsAndDeclaredWitnesses",
+        "nativeRoutes": [
+          "candlekeep.social.phlydiaTheft"
+        ],
+        "nativeReceipts": "pending"
+      },
+      "editionDifferences": [
+        "Classic target; installed modded EE base archives are supporting evidence. Original branch parity is not established."
+      ]
+    },
+    {
+      "id": "theft.clinicPriest",
+      "category": "theft",
+      "sourceIds": [
+        "dudleyville",
+        "gamebanshee"
+      ],
+      "sourceStatus": "web-reconciled",
+      "objectId": "clinicPriest",
+      "dialogId": "clinicPriestDialog",
+      "actions": [
+        "pickPocket"
+      ],
+      "branches": [
+        "candlekeep.social.clinicPriestTheft"
+      ],
+      "conditions": [
+        "Native agility check; owner possesses item; failure consequences"
+      ],
+      "outcomes": [
+        "Separate carried healing potion transferred once; reward and theft share ownership"
+      ],
+      "implementation": [
+        "res/maps/candlekeep/config.json:clinicPriest",
+        "res/maps/candlekeep/dialog.json:clinicPriestDialog"
+      ],
+      "automatedCoverage": {
+        "structural": "tests/test_candlekeep_content.py:CandlekeepContentTest.testIndependentSourceLedgerHasImplementationsAndDeclaredWitnesses",
+        "nativeRoutes": [
+          "candlekeep.social.clinicPriestTheft"
+        ],
+        "nativeReceipts": "pending"
+      },
+      "editionDifferences": [
+        "Classic target; installed modded EE base archives are supporting evidence. Original branch parity is not established."
+      ]
+    },
+    {
+      "id": "prophecy.chanter",
+      "category": "ambient",
+      "sourceIds": [
+        "dudleyville",
+        "gamebanshee"
+      ],
+      "sourceStatus": "web-reconciled",
+      "objectId": "chanter",
+      "dialogId": "chanterDialog",
+      "actions": [],
+      "branches": [
+        "candlekeep.social.chanter"
+      ],
+      "conditions": [
+        "Individually accessible"
+      ],
+      "outcomes": [
+        "Prophecy topic retained with newly authored wording"
+      ],
+      "implementation": [
+        "res/maps/candlekeep/config.json:chanter",
+        "res/maps/candlekeep/dialog.json:chanterDialog"
+      ],
+      "automatedCoverage": {
+        "structural": "tests/test_candlekeep_content.py:CandlekeepContentTest.testIndependentSourceLedgerHasImplementationsAndDeclaredWitnesses",
+        "nativeRoutes": [
+          "candlekeep.social.chanter"
+        ],
+        "nativeReceipts": "pending"
+      },
+      "editionDifferences": [
+        "Classic target; installed modded EE base archives are supporting evidence. Original branch parity is not established."
+      ]
+    },
+    {
+      "id": "prophecy.voiceNorth",
+      "category": "ambient",
+      "sourceIds": [
+        "dudleyville",
+        "gamebanshee"
+      ],
+      "sourceStatus": "web-reconciled",
+      "objectId": "voiceNorth",
+      "dialogId": "voiceNorthDialog",
+      "actions": [],
+      "branches": [
+        "candlekeep.social.voiceNorth"
+      ],
+      "conditions": [
+        "Individually accessible"
+      ],
+      "outcomes": [
+        "Prophecy topic retained with newly authored wording"
+      ],
+      "implementation": [
+        "res/maps/candlekeep/config.json:voiceNorth",
+        "res/maps/candlekeep/dialog.json:voiceNorthDialog"
+      ],
+      "automatedCoverage": {
+        "structural": "tests/test_candlekeep_content.py:CandlekeepContentTest.testIndependentSourceLedgerHasImplementationsAndDeclaredWitnesses",
+        "nativeRoutes": [
+          "candlekeep.social.voiceNorth"
+        ],
+        "nativeReceipts": "pending"
+      },
+      "editionDifferences": [
+        "Classic target; installed modded EE base archives are supporting evidence. Original branch parity is not established."
+      ]
+    },
+    {
+      "id": "prophecy.voiceSouth",
+      "category": "ambient",
+      "sourceIds": [
+        "dudleyville",
+        "gamebanshee"
+      ],
+      "sourceStatus": "web-reconciled",
+      "objectId": "voiceSouth",
+      "dialogId": "voiceSouthDialog",
+      "actions": [],
+      "branches": [
+        "candlekeep.social.voiceSouth"
+      ],
+      "conditions": [
+        "Individually accessible"
+      ],
+      "outcomes": [
+        "Prophecy topic retained with newly authored wording"
+      ],
+      "implementation": [
+        "res/maps/candlekeep/config.json:voiceSouth",
+        "res/maps/candlekeep/dialog.json:voiceSouthDialog"
+      ],
+      "automatedCoverage": {
+        "structural": "tests/test_candlekeep_content.py:CandlekeepContentTest.testIndependentSourceLedgerHasImplementationsAndDeclaredWitnesses",
+        "nativeRoutes": [
+          "candlekeep.social.voiceSouth"
+        ],
+        "nativeReceipts": "pending"
+      },
+      "editionDifferences": [
+        "Classic target; installed modded EE base archives are supporting evidence. Original branch parity is not established."
+      ]
+    },
+    {
+      "id": "prophecy.voiceEast",
+      "category": "ambient",
+      "sourceIds": [
+        "dudleyville",
+        "gamebanshee"
+      ],
+      "sourceStatus": "web-reconciled",
+      "objectId": "voiceEast",
+      "dialogId": "voiceEastDialog",
+      "actions": [],
+      "branches": [
+        "candlekeep.social.voiceEast"
+      ],
+      "conditions": [
+        "Individually accessible"
+      ],
+      "outcomes": [
+        "Prophecy topic retained with newly authored wording"
+      ],
+      "implementation": [
+        "res/maps/candlekeep/config.json:voiceEast",
+        "res/maps/candlekeep/dialog.json:voiceEastDialog"
+      ],
+      "automatedCoverage": {
+        "structural": "tests/test_candlekeep_content.py:CandlekeepContentTest.testIndependentSourceLedgerHasImplementationsAndDeclaredWitnesses",
+        "nativeRoutes": [
+          "candlekeep.social.voiceEast"
+        ],
+        "nativeReceipts": "pending"
+      },
+      "editionDifferences": [
+        "Classic target; installed modded EE base archives are supporting evidence. Original branch parity is not established."
+      ]
+    },
+    {
+      "id": "prophecy.voiceWest",
+      "category": "ambient",
+      "sourceIds": [
+        "dudleyville",
+        "gamebanshee"
+      ],
+      "sourceStatus": "web-reconciled",
+      "objectId": "voiceWest",
+      "dialogId": "voiceWestDialog",
+      "actions": [],
+      "branches": [
+        "candlekeep.social.voiceWest"
+      ],
+      "conditions": [
+        "Individually accessible"
+      ],
+      "outcomes": [
+        "Prophecy topic retained with newly authored wording"
+      ],
+      "implementation": [
+        "res/maps/candlekeep/config.json:voiceWest",
+        "res/maps/candlekeep/dialog.json:voiceWestDialog"
+      ],
+      "automatedCoverage": {
+        "structural": "tests/test_candlekeep_content.py:CandlekeepContentTest.testIndependentSourceLedgerHasImplementationsAndDeclaredWitnesses",
+        "nativeRoutes": [
+          "candlekeep.social.voiceWest"
+        ],
+        "nativeReceipts": "pending"
+      },
+      "editionDifferences": [
+        "Classic target; installed modded EE base archives are supporting evidence. Original branch parity is not established."
+      ]
+    },
+    {
+      "id": "tutorial.tutor1",
+      "category": "tutorial",
+      "sourceIds": [
+        "tutors"
+      ],
+      "sourceStatus": "pending",
+      "objectId": "tutor1",
+      "dialogId": "tutor1Dialog",
+      "actions": [],
+      "branches": [
+        "candlekeep.social.tutor1"
+      ],
+      "conditions": [
+        "Individual tutor; introduction"
+      ],
+      "outcomes": [
+        "Engine-correct instructions; original branch audit remains pending"
+      ],
+      "implementation": [
+        "res/maps/candlekeep/config.json:tutor1",
+        "res/maps/candlekeep/dialog.json:tutor1Dialog"
+      ],
+      "automatedCoverage": {
+        "structural": "tests/test_candlekeep_content.py:CandlekeepContentTest.testIndependentSourceLedgerHasImplementationsAndDeclaredWitnesses",
+        "nativeRoutes": [
+          "candlekeep.social.tutor1"
+        ],
+        "nativeReceipts": "pending"
+      },
+      "editionDifferences": [
+        "Classic target; installed modded EE base archives are supporting evidence. Original branch parity is not established."
+      ]
+    },
+    {
+      "id": "tutorial.tutor2",
+      "category": "tutorial",
+      "sourceIds": [
+        "tutors"
+      ],
+      "sourceStatus": "pending",
+      "objectId": "tutor2",
+      "dialogId": "tutor2Dialog",
+      "actions": [],
+      "branches": [
+        "candlekeep.social.tutor2"
+      ],
+      "conditions": [
+        "Individual tutor; allegiance"
+      ],
+      "outcomes": [
+        "Engine-correct instructions; original branch audit remains pending"
+      ],
+      "implementation": [
+        "res/maps/candlekeep/config.json:tutor2",
+        "res/maps/candlekeep/dialog.json:tutor2Dialog"
+      ],
+      "automatedCoverage": {
+        "structural": "tests/test_candlekeep_content.py:CandlekeepContentTest.testIndependentSourceLedgerHasImplementationsAndDeclaredWitnesses",
+        "nativeRoutes": [
+          "candlekeep.social.tutor2"
+        ],
+        "nativeReceipts": "pending"
+      },
+      "editionDifferences": [
+        "Classic target; installed modded EE base archives are supporting evidence. Original branch parity is not established."
+      ]
+    },
+    {
+      "id": "tutorial.tutor3",
+      "category": "tutorial",
+      "sourceIds": [
+        "tutors"
+      ],
+      "sourceStatus": "pending",
+      "objectId": "tutor3",
+      "dialogId": "tutor3Dialog",
+      "actions": [],
+      "branches": [
+        "candlekeep.social.tutor3"
+      ],
+      "conditions": [
+        "Individual tutor; inventory"
+      ],
+      "outcomes": [
+        "Engine-correct instructions; original branch audit remains pending"
+      ],
+      "implementation": [
+        "res/maps/candlekeep/config.json:tutor3",
+        "res/maps/candlekeep/dialog.json:tutor3Dialog"
+      ],
+      "automatedCoverage": {
+        "structural": "tests/test_candlekeep_content.py:CandlekeepContentTest.testIndependentSourceLedgerHasImplementationsAndDeclaredWitnesses",
+        "nativeRoutes": [
+          "candlekeep.social.tutor3"
+        ],
+        "nativeReceipts": "pending"
+      },
+      "editionDifferences": [
+        "Classic target; installed modded EE base archives are supporting evidence. Original branch parity is not established."
+      ]
+    },
+    {
+      "id": "tutorial.tutor4",
+      "category": "tutorial",
+      "sourceIds": [
+        "tutors"
+      ],
+      "sourceStatus": "pending",
+      "objectId": "tutor4",
+      "dialogId": "tutor4Dialog",
+      "actions": [],
+      "branches": [
+        "candlekeep.social.tutor4"
+      ],
+      "conditions": [
+        "Individual tutor; status"
+      ],
+      "outcomes": [
+        "Engine-correct instructions; original branch audit remains pending"
+      ],
+      "implementation": [
+        "res/maps/candlekeep/config.json:tutor4",
+        "res/maps/candlekeep/dialog.json:tutor4Dialog"
+      ],
+      "automatedCoverage": {
+        "structural": "tests/test_candlekeep_content.py:CandlekeepContentTest.testIndependentSourceLedgerHasImplementationsAndDeclaredWitnesses",
+        "nativeRoutes": [
+          "candlekeep.social.tutor4"
+        ],
+        "nativeReceipts": "pending"
+      },
+      "editionDifferences": [
+        "Classic target; installed modded EE base archives are supporting evidence. Original branch parity is not established."
+      ]
+    },
+    {
+      "id": "tutorial.tutor5",
+      "category": "tutorial",
+      "sourceIds": [
+        "tutors"
+      ],
+      "sourceStatus": "pending",
+      "objectId": "tutor5",
+      "dialogId": "tutor5Dialog",
+      "actions": [],
+      "branches": [
+        "candlekeep.social.tutor5"
+      ],
+      "conditions": [
+        "Individual tutor; quickSlots"
+      ],
+      "outcomes": [
+        "Engine-correct instructions; original branch audit remains pending"
+      ],
+      "implementation": [
+        "res/maps/candlekeep/config.json:tutor5",
+        "res/maps/candlekeep/dialog.json:tutor5Dialog"
+      ],
+      "automatedCoverage": {
+        "structural": "tests/test_candlekeep_content.py:CandlekeepContentTest.testIndependentSourceLedgerHasImplementationsAndDeclaredWitnesses",
+        "nativeRoutes": [
+          "candlekeep.social.tutor5"
+        ],
+        "nativeReceipts": "pending"
+      },
+      "editionDifferences": [
+        "Classic target; installed modded EE base archives are supporting evidence. Original branch parity is not established."
+      ]
+    },
+    {
+      "id": "tutorial.tutor6",
+      "category": "tutorial",
+      "sourceIds": [
+        "tutors"
+      ],
+      "sourceStatus": "pending",
+      "objectId": "tutor6",
+      "dialogId": "tutor6Dialog",
+      "actions": [],
+      "branches": [
+        "candlekeep.social.tutor6"
+      ],
+      "conditions": [
+        "Individual tutor; temple"
+      ],
+      "outcomes": [
+        "Engine-correct instructions; original branch audit remains pending"
+      ],
+      "implementation": [
+        "res/maps/candlekeep/config.json:tutor6",
+        "res/maps/candlekeep/dialog.json:tutor6Dialog"
+      ],
+      "automatedCoverage": {
+        "structural": "tests/test_candlekeep_content.py:CandlekeepContentTest.testIndependentSourceLedgerHasImplementationsAndDeclaredWitnesses",
+        "nativeRoutes": [
+          "candlekeep.social.tutor6"
+        ],
+        "nativeReceipts": "pending"
+      },
+      "editionDifferences": [
+        "Classic target; installed modded EE base archives are supporting evidence. Original branch parity is not established."
+      ]
+    },
+    {
+      "id": "tutorial.tutor7",
+      "category": "tutorial",
+      "sourceIds": [
+        "tutors"
+      ],
+      "sourceStatus": "pending",
+      "objectId": "tutor7",
+      "dialogId": "tutor7Dialog",
+      "actions": [],
+      "branches": [
+        "candlekeep.social.tutor7"
+      ],
+      "conditions": [
+        "Individual tutor; saving"
+      ],
+      "outcomes": [
+        "Engine-correct instructions; original branch audit remains pending"
+      ],
+      "implementation": [
+        "res/maps/candlekeep/config.json:tutor7",
+        "res/maps/candlekeep/dialog.json:tutor7Dialog"
+      ],
+      "automatedCoverage": {
+        "structural": "tests/test_candlekeep_content.py:CandlekeepContentTest.testIndependentSourceLedgerHasImplementationsAndDeclaredWitnesses",
+        "nativeRoutes": [
+          "candlekeep.social.tutor7"
+        ],
+        "nativeReceipts": "pending"
+      },
+      "editionDifferences": [
+        "Classic target; installed modded EE base archives are supporting evidence. Original branch parity is not established."
+      ]
+    },
+    {
+      "id": "tutorial.tutor8",
+      "category": "tutorial",
+      "sourceIds": [
+        "tutors"
+      ],
+      "sourceStatus": "pending",
+      "objectId": "tutor8",
+      "dialogId": "tutor8Dialog",
+      "actions": [],
+      "branches": [
+        "candlekeep.social.tutor8"
+      ],
+      "conditions": [
+        "Individual tutor; journal"
+      ],
+      "outcomes": [
+        "Engine-correct instructions; original branch audit remains pending"
+      ],
+      "implementation": [
+        "res/maps/candlekeep/config.json:tutor8",
+        "res/maps/candlekeep/dialog.json:tutor8Dialog"
+      ],
+      "automatedCoverage": {
+        "structural": "tests/test_candlekeep_content.py:CandlekeepContentTest.testIndependentSourceLedgerHasImplementationsAndDeclaredWitnesses",
+        "nativeRoutes": [
+          "candlekeep.social.tutor8"
+        ],
+        "nativeReceipts": "pending"
+      },
+      "editionDifferences": [
+        "Classic target; installed modded EE base archives are supporting evidence. Original branch parity is not established."
+      ]
+    },
+    {
+      "id": "tutorial.tutor9",
+      "category": "tutorial",
+      "sourceIds": [
+        "tutors"
+      ],
+      "sourceStatus": "pending",
+      "objectId": "tutor9",
+      "dialogId": "tutor9Dialog",
+      "actions": [],
+      "branches": [
+        "candlekeep.social.tutor9"
+      ],
+      "conditions": [
+        "Individual tutor; spells"
+      ],
+      "outcomes": [
+        "Engine-correct instructions; original branch audit remains pending"
+      ],
+      "implementation": [
+        "res/maps/candlekeep/config.json:tutor9",
+        "res/maps/candlekeep/dialog.json:tutor9Dialog"
+      ],
+      "automatedCoverage": {
+        "structural": "tests/test_candlekeep_content.py:CandlekeepContentTest.testIndependentSourceLedgerHasImplementationsAndDeclaredWitnesses",
+        "nativeRoutes": [
+          "candlekeep.social.tutor9"
+        ],
+        "nativeReceipts": "pending"
+      },
+      "editionDifferences": [
+        "Classic target; installed modded EE base archives are supporting evidence. Original branch parity is not established."
+      ]
+    },
+    {
+      "id": "tutorial.tutor10",
+      "category": "tutorial",
+      "sourceIds": [
+        "tutors"
+      ],
+      "sourceStatus": "pending",
+      "objectId": "tutor10",
+      "dialogId": "tutor10Dialog",
+      "actions": [],
+      "branches": [
+        "candlekeep.social.tutor10"
+      ],
+      "conditions": [
+        "Individual tutor; thieving"
+      ],
+      "outcomes": [
+        "Engine-correct instructions; original branch audit remains pending"
+      ],
+      "implementation": [
+        "res/maps/candlekeep/config.json:tutor10",
+        "res/maps/candlekeep/dialog.json:tutor10Dialog"
+      ],
+      "automatedCoverage": {
+        "structural": "tests/test_candlekeep_content.py:CandlekeepContentTest.testIndependentSourceLedgerHasImplementationsAndDeclaredWitnesses",
+        "nativeRoutes": [
+          "candlekeep.social.tutor10"
+        ],
+        "nativeReceipts": "pending"
+      },
+      "editionDifferences": [
+        "Classic target; installed modded EE base archives are supporting evidence. Original branch parity is not established."
+      ]
+    },
+    {
+      "id": "tutorial.tutor11",
+      "category": "tutorial",
+      "sourceIds": [
+        "tutors"
+      ],
+      "sourceStatus": "pending",
+      "objectId": "tutor11",
+      "dialogId": "tutor11Dialog",
+      "actions": [],
+      "branches": [
+        "candlekeep.social.tutor11"
+      ],
+      "conditions": [
+        "Individual tutor; classAbilities"
+      ],
+      "outcomes": [
+        "Engine-correct instructions; original branch audit remains pending"
+      ],
+      "implementation": [
+        "res/maps/candlekeep/config.json:tutor11",
+        "res/maps/candlekeep/dialog.json:tutor11Dialog"
+      ],
+      "automatedCoverage": {
+        "structural": "tests/test_candlekeep_content.py:CandlekeepContentTest.testIndependentSourceLedgerHasImplementationsAndDeclaredWitnesses",
+        "nativeRoutes": [
+          "candlekeep.social.tutor11"
+        ],
+        "nativeReceipts": "pending"
+      },
+      "editionDifferences": [
+        "Classic target; installed modded EE base archives are supporting evidence. Original branch parity is not established."
+      ]
+    },
+    {
+      "id": "tutorial.tutor12",
+      "category": "tutorial",
+      "sourceIds": [
+        "tutors"
+      ],
+      "sourceStatus": "pending",
+      "objectId": "tutor12",
+      "dialogId": "tutor12Dialog",
+      "actions": [],
+      "branches": [
+        "candlekeep.social.tutor12"
+      ],
+      "conditions": [
+        "Individual tutor; fighting"
+      ],
+      "outcomes": [
+        "Engine-correct instructions; original branch audit remains pending"
+      ],
+      "implementation": [
+        "res/maps/candlekeep/config.json:tutor12",
+        "res/maps/candlekeep/dialog.json:tutor12Dialog"
+      ],
+      "automatedCoverage": {
+        "structural": "tests/test_candlekeep_content.py:CandlekeepContentTest.testIndependentSourceLedgerHasImplementationsAndDeclaredWitnesses",
+        "nativeRoutes": [
+          "candlekeep.social.tutor12"
+        ],
+        "nativeReceipts": "pending"
+      },
+      "editionDifferences": [
+        "Classic target; installed modded EE base archives are supporting evidence. Original branch parity is not established."
+      ]
+    },
+    {
+      "id": "tutorial.tutor13",
+      "category": "tutorial",
+      "sourceIds": [
+        "tutors"
+      ],
+      "sourceStatus": "pending",
+      "objectId": "tutor13",
+      "dialogId": "tutor13Dialog",
+      "actions": [],
+      "branches": [
+        "candlekeep.social.tutor13"
+      ],
+      "conditions": [
+        "Individual tutor; merchants"
+      ],
+      "outcomes": [
+        "Engine-correct instructions; original branch audit remains pending"
+      ],
+      "implementation": [
+        "res/maps/candlekeep/config.json:tutor13",
+        "res/maps/candlekeep/dialog.json:tutor13Dialog"
+      ],
+      "automatedCoverage": {
+        "structural": "tests/test_candlekeep_content.py:CandlekeepContentTest.testIndependentSourceLedgerHasImplementationsAndDeclaredWitnesses",
+        "nativeRoutes": [
+          "candlekeep.social.tutor13"
+        ],
+        "nativeReceipts": "pending"
+      },
+      "editionDifferences": [
+        "Classic target; installed modded EE base archives are supporting evidence. Original branch parity is not established."
+      ]
+    },
+    {
+      "id": "tutorial.tutor14",
+      "category": "tutorial",
+      "sourceIds": [
+        "tutors"
+      ],
+      "sourceStatus": "pending",
+      "objectId": "tutor14",
+      "dialogId": "tutor14Dialog",
+      "actions": [],
+      "branches": [
+        "candlekeep.social.tutor14"
+      ],
+      "conditions": [
+        "Individual tutor; doors"
+      ],
+      "outcomes": [
+        "Engine-correct instructions; original branch audit remains pending"
+      ],
+      "implementation": [
+        "res/maps/candlekeep/config.json:tutor14",
+        "res/maps/candlekeep/dialog.json:tutor14Dialog"
+      ],
+      "automatedCoverage": {
+        "structural": "tests/test_candlekeep_content.py:CandlekeepContentTest.testIndependentSourceLedgerHasImplementationsAndDeclaredWitnesses",
+        "nativeRoutes": [
+          "candlekeep.social.tutor14"
+        ],
+        "nativeReceipts": "pending"
+      },
+      "editionDifferences": [
+        "Classic target; installed modded EE base archives are supporting evidence. Original branch parity is not established."
+      ]
+    },
+    {
+      "id": "service.buyBolts",
+      "category": "service",
+      "sourceIds": [
+        "dudleyville",
+        "gamebanshee"
+      ],
+      "sourceStatus": "web-reconciled",
+      "objectId": "winthrop",
+      "dialogId": "winthropDialog",
+      "actions": [
+        "buyBolts"
+      ],
+      "branches": [
+        "candlekeep.services.buyBolts"
+      ],
+      "conditions": [
+        "Correct actor; insufficient funds and cancellation preserve state"
+      ],
+      "outcomes": [
+        "20-bolt bundle for 1 gold"
+      ],
+      "implementation": [
+        "res/maps/candlekeep/config.json:winthrop",
+        "res/maps/candlekeep/dialog.json:winthropDialog"
+      ],
+      "automatedCoverage": {
+        "structural": "tests/test_candlekeep_content.py:CandlekeepContentTest.testIndependentSourceLedgerHasImplementationsAndDeclaredWitnesses",
+        "nativeRoutes": [
+          "candlekeep.services.buyBolts"
+        ],
+        "nativeReceipts": "pending"
+      },
+      "editionDifferences": [
+        "Classic target; installed modded EE base archives are supporting evidence. Original branch parity is not established."
+      ]
+    },
+    {
+      "id": "service.buyHealingPotion",
+      "category": "service",
+      "sourceIds": [
+        "dudleyville",
+        "gamebanshee"
+      ],
+      "sourceStatus": "supporting-base-audited-classic-pending",
+      "objectId": "templePriest",
+      "dialogId": "templePriestDialog",
+      "actions": [
+        "buyHealingPotion"
+      ],
+      "branches": [
+        "candlekeep.services.buyHealingPotion"
+      ],
+      "conditions": [
+        "Temple supply POTN08; neutral price 112 gold; finite stock of 20",
+        "Insufficient money leaves stock, gold and inventory unchanged"
+      ],
+      "outcomes": [
+        "Audited finite stock and price"
+      ],
+      "implementation": [
+        "res/maps/candlekeep/config.json:templePriest",
+        "res/maps/candlekeep/dialog.json:templePriestDialog"
+      ],
+      "automatedCoverage": {
+        "structural": "tests/test_candlekeep_content.py:CandlekeepContentTest.testIndependentSourceLedgerHasImplementationsAndDeclaredWitnesses",
+        "nativeRoutes": [
+          "candlekeep.services.buyHealingPotion"
+        ],
+        "nativeReceipts": "pending"
+      },
+      "editionDifferences": [
+        "Classic target; installed modded EE base archives are supporting evidence. Original branch parity is not established."
+      ]
+    },
+    {
+      "id": "service.restBasic",
+      "category": "service",
+      "sourceIds": [
+        "dudleyville",
+        "gamebanshee"
+      ],
+      "sourceStatus": "web-reconciled",
+      "objectId": "winthrop",
+      "dialogId": "winthropDialog",
+      "actions": [
+        "restBasic"
+      ],
+      "branches": [
+        "candlekeep.services.restBasic"
+      ],
+      "conditions": [
+        "Correct actor; insufficient funds and cancellation preserve state"
+      ],
+      "outcomes": [
+        "Basic paid room"
+      ],
+      "implementation": [
+        "res/maps/candlekeep/config.json:winthrop",
+        "res/maps/candlekeep/dialog.json:winthropDialog"
+      ],
+      "automatedCoverage": {
+        "structural": "tests/test_candlekeep_content.py:CandlekeepContentTest.testIndependentSourceLedgerHasImplementationsAndDeclaredWitnesses",
+        "nativeRoutes": [
+          "candlekeep.services.restBasic"
+        ],
+        "nativeReceipts": "pending"
+      },
+      "editionDifferences": [
+        "Classic target; installed modded EE base archives are supporting evidence. Original branch parity is not established."
+      ]
+    },
+    {
+      "id": "service.restMerchant",
+      "category": "service",
+      "sourceIds": [
+        "dudleyville",
+        "gamebanshee"
+      ],
+      "sourceStatus": "web-reconciled",
+      "objectId": "winthrop",
+      "dialogId": "winthropDialog",
+      "actions": [
+        "restMerchant"
+      ],
+      "branches": [
+        "candlekeep.services.restMerchant"
+      ],
+      "conditions": [
+        "Correct actor; insufficient funds and cancellation preserve state"
+      ],
+      "outcomes": [
+        "Merchant paid room"
+      ],
+      "implementation": [
+        "res/maps/candlekeep/config.json:winthrop",
+        "res/maps/candlekeep/dialog.json:winthropDialog"
+      ],
+      "automatedCoverage": {
+        "structural": "tests/test_candlekeep_content.py:CandlekeepContentTest.testIndependentSourceLedgerHasImplementationsAndDeclaredWitnesses",
+        "nativeRoutes": [
+          "candlekeep.services.restMerchant"
+        ],
+        "nativeReceipts": "pending"
+      },
+      "editionDifferences": [
+        "Classic target; installed modded EE base archives are supporting evidence. Original branch parity is not established."
+      ]
+    },
+    {
+      "id": "service.restNoble",
+      "category": "service",
+      "sourceIds": [
+        "dudleyville",
+        "gamebanshee"
+      ],
+      "sourceStatus": "web-reconciled",
+      "objectId": "winthrop",
+      "dialogId": "winthropDialog",
+      "actions": [
+        "restNoble"
+      ],
+      "branches": [
+        "candlekeep.services.restNoble"
+      ],
+      "conditions": [
+        "Correct actor; insufficient funds and cancellation preserve state"
+      ],
+      "outcomes": [
+        "Noble paid room"
+      ],
+      "implementation": [
+        "res/maps/candlekeep/config.json:winthrop",
+        "res/maps/candlekeep/dialog.json:winthropDialog"
+      ],
+      "automatedCoverage": {
+        "structural": "tests/test_candlekeep_content.py:CandlekeepContentTest.testIndependentSourceLedgerHasImplementationsAndDeclaredWitnesses",
+        "nativeRoutes": [
+          "candlekeep.services.restNoble"
+        ],
+        "nativeReceipts": "pending"
+      },
+      "editionDifferences": [
+        "Classic target; installed modded EE base archives are supporting evidence. Original branch parity is not established."
+      ]
+    },
+    {
+      "id": "service.restRoyal",
+      "category": "service",
+      "sourceIds": [
+        "dudleyville",
+        "gamebanshee"
+      ],
+      "sourceStatus": "web-reconciled",
+      "objectId": "winthrop",
+      "dialogId": "winthropDialog",
+      "actions": [
+        "restRoyal"
+      ],
+      "branches": [
+        "candlekeep.services.restRoyal"
+      ],
+      "conditions": [
+        "Correct actor; insufficient funds and cancellation preserve state"
+      ],
+      "outcomes": [
+        "Royal paid room"
+      ],
+      "implementation": [
+        "res/maps/candlekeep/config.json:winthrop",
+        "res/maps/candlekeep/dialog.json:winthropDialog"
+      ],
+      "automatedCoverage": {
+        "structural": "tests/test_candlekeep_content.py:CandlekeepContentTest.testIndependentSourceLedgerHasImplementationsAndDeclaredWitnesses",
+        "nativeRoutes": [
+          "candlekeep.services.restRoyal"
+        ],
+        "nativeReceipts": "pending"
+      },
+      "editionDifferences": [
+        "Classic target; installed modded EE base archives are supporting evidence. Original branch parity is not established."
+      ]
+    },
+    {
+      "id": "service.drinkBeer",
+      "category": "service",
+      "sourceIds": [
+        "dudleyville",
+        "gamebanshee"
+      ],
+      "sourceStatus": "supporting-base-audited-classic-pending",
+      "objectId": "winthrop",
+      "dialogId": "winthropDialog",
+      "actions": [
+        "drinkBeer"
+      ],
+      "branches": [
+        "candlekeep.services.drinkBeer"
+      ],
+      "conditions": [
+        "Correct actor; insufficient funds and cancellation preserve state"
+      ],
+      "outcomes": [
+        "Firewine, 1 gold; saved intoxication metadata and rumor",
+        "Native intoxication effects and classic rumor conditions remain unresolved"
+      ],
+      "implementation": [
+        "res/maps/candlekeep/config.json:winthrop",
+        "res/maps/candlekeep/dialog.json:winthropDialog"
+      ],
+      "automatedCoverage": {
+        "structural": "tests/test_candlekeep_content.py:CandlekeepContentTest.testIndependentSourceLedgerHasImplementationsAndDeclaredWitnesses",
+        "nativeRoutes": [
+          "candlekeep.services.drinkBeer"
+        ],
+        "nativeReceipts": "pending"
+      },
+      "editionDifferences": [
+        "Classic target; installed modded EE base archives are supporting evidence. Original branch parity is not established."
+      ]
+    },
+    {
+      "id": "service.drinkWine",
+      "category": "service",
+      "sourceIds": [
+        "dudleyville",
+        "gamebanshee"
+      ],
+      "sourceStatus": "supporting-base-audited-classic-pending",
+      "objectId": "winthrop",
+      "dialogId": "winthropDialog",
+      "actions": [
+        "drinkWine"
+      ],
+      "branches": [
+        "candlekeep.services.drinkWine"
+      ],
+      "conditions": [
+        "Correct actor; insufficient funds and cancellation preserve state"
+      ],
+      "outcomes": [
+        "Arabellan Dry Wine, 2 gold; saved intoxication metadata and rumor",
+        "Native intoxication effects and classic rumor conditions remain unresolved"
+      ],
+      "implementation": [
+        "res/maps/candlekeep/config.json:winthrop",
+        "res/maps/candlekeep/dialog.json:winthropDialog"
+      ],
+      "automatedCoverage": {
+        "structural": "tests/test_candlekeep_content.py:CandlekeepContentTest.testIndependentSourceLedgerHasImplementationsAndDeclaredWitnesses",
+        "nativeRoutes": [
+          "candlekeep.services.drinkWine"
+        ],
+        "nativeReceipts": "pending"
+      },
+      "editionDifferences": [
+        "Classic target; installed modded EE base archives are supporting evidence. Original branch parity is not established."
+      ]
+    },
+    {
+      "id": "service.drinkAle",
+      "category": "service",
+      "sourceIds": [
+        "dudleyville",
+        "gamebanshee"
+      ],
+      "sourceStatus": "supporting-base-audited-classic-pending",
+      "objectId": "winthrop",
+      "dialogId": "winthropDialog",
+      "actions": [
+        "drinkAle"
+      ],
+      "branches": [
+        "candlekeep.services.drinkAle"
+      ],
+      "conditions": [
+        "Correct actor; insufficient funds and cancellation preserve state"
+      ],
+      "outcomes": [
+        "Bitter Black Ale, 1 gold; saved intoxication metadata and rumor",
+        "Native intoxication effects and classic rumor conditions remain unresolved"
+      ],
+      "implementation": [
+        "res/maps/candlekeep/config.json:winthrop",
+        "res/maps/candlekeep/dialog.json:winthropDialog"
+      ],
+      "automatedCoverage": {
+        "structural": "tests/test_candlekeep_content.py:CandlekeepContentTest.testIndependentSourceLedgerHasImplementationsAndDeclaredWitnesses",
+        "nativeRoutes": [
+          "candlekeep.services.drinkAle"
+        ],
+        "nativeReceipts": "pending"
+      },
+      "editionDifferences": [
+        "Classic target; installed modded EE base archives are supporting evidence. Original branch parity is not established."
+      ]
+    },
+    {
+      "id": "service.donate",
+      "category": "service",
+      "sourceIds": [
+        "dudleyville",
+        "gamebanshee"
+      ],
+      "sourceStatus": "web-reconciled",
+      "objectId": "templePriest",
+      "dialogId": "templePriestDialog",
+      "actions": [
+        "donate"
+      ],
+      "branches": [
+        "candlekeep.services.donate"
+      ],
+      "conditions": [
+        "Correct actor; insufficient funds and cancellation preserve state"
+      ],
+      "outcomes": [
+        "Paid local standing change"
+      ],
+      "implementation": [
+        "res/maps/candlekeep/config.json:templePriest",
+        "res/maps/candlekeep/dialog.json:templePriestDialog"
+      ],
+      "automatedCoverage": {
+        "structural": "tests/test_candlekeep_content.py:CandlekeepContentTest.testIndependentSourceLedgerHasImplementationsAndDeclaredWitnesses",
+        "nativeRoutes": [
+          "candlekeep.services.donate"
+        ],
+        "nativeReceipts": "pending"
+      },
+      "editionDifferences": [
+        "Classic target; installed modded EE base archives are supporting evidence. Original branch parity is not established."
+      ]
+    },
+    {
+      "id": "service.identifyItem",
+      "category": "service",
+      "sourceIds": [
+        "dudleyville",
+        "gamebanshee"
+      ],
+      "sourceStatus": "web-reconciled",
+      "objectId": "templePriest",
+      "dialogId": "templePriestDialog",
+      "actions": [
+        "identifyItem"
+      ],
+      "branches": [
+        "candlekeep.services.identifyItem"
+      ],
+      "conditions": [
+        "Correct actor; insufficient funds and cancellation preserve state"
+      ],
+      "outcomes": [
+        "Identify an actually owned item"
+      ],
+      "implementation": [
+        "res/maps/candlekeep/config.json:templePriest",
+        "res/maps/candlekeep/dialog.json:templePriestDialog"
+      ],
+      "automatedCoverage": {
+        "structural": "tests/test_candlekeep_content.py:CandlekeepContentTest.testIndependentSourceLedgerHasImplementationsAndDeclaredWitnesses",
+        "nativeRoutes": [
+          "candlekeep.services.identifyItem"
+        ],
+        "nativeReceipts": "pending"
+      },
+      "editionDifferences": [
+        "Classic target; installed modded EE base archives are supporting evidence. Original branch parity is not established."
+      ]
+    },
+    {
+      "id": "service.healAtTemple",
+      "category": "service",
+      "sourceIds": [
+        "dudleyville",
+        "gamebanshee"
+      ],
+      "sourceStatus": "web-reconciled",
+      "objectId": "templePriest",
+      "dialogId": "templePriestDialog",
+      "actions": [
+        "healAtTemple"
+      ],
+      "branches": [
+        "candlekeep.services.healAtTemple"
+      ],
+      "conditions": [
+        "Correct actor; insufficient funds and cancellation preserve state"
+      ],
+      "outcomes": [
+        "Restore actual missing health"
+      ],
+      "implementation": [
+        "res/maps/candlekeep/config.json:templePriest",
+        "res/maps/candlekeep/dialog.json:templePriestDialog"
+      ],
+      "automatedCoverage": {
+        "structural": "tests/test_candlekeep_content.py:CandlekeepContentTest.testIndependentSourceLedgerHasImplementationsAndDeclaredWitnesses",
+        "nativeRoutes": [
+          "candlekeep.services.healAtTemple"
+        ],
+        "nativeReceipts": "pending"
+      },
+      "editionDifferences": [
+        "Classic target; installed modded EE base archives are supporting evidence. Original branch parity is not established."
+      ]
+    },
+    {
+      "id": "service.acceptPotion",
+      "category": "service",
+      "sourceIds": [
+        "dudleyville",
+        "gamebanshee"
+      ],
+      "sourceStatus": "web-reconciled",
+      "objectId": "clinicPriest",
+      "dialogId": "clinicPriestDialog",
+      "actions": [
+        "acceptPotion"
+      ],
+      "branches": [
+        "candlekeep.services.acceptPotion"
+      ],
+      "conditions": [
+        "Correct actor; insufficient funds and cancellation preserve state"
+      ],
+      "outcomes": [
+        "One gift from shared carried stock"
+      ],
+      "implementation": [
+        "res/maps/candlekeep/config.json:clinicPriest",
+        "res/maps/candlekeep/dialog.json:clinicPriestDialog"
+      ],
+      "automatedCoverage": {
+        "structural": "tests/test_candlekeep_content.py:CandlekeepContentTest.testIndependentSourceLedgerHasImplementationsAndDeclaredWitnesses",
+        "nativeRoutes": [
+          "candlekeep.services.acceptPotion"
+        ],
+        "nativeReceipts": "pending"
+      },
+      "editionDifferences": [
+        "Classic target; installed modded EE base archives are supporting evidence. Original branch parity is not established."
+      ]
+    },
+    {
+      "id": "service.declinePotion",
+      "category": "service",
+      "sourceIds": [
+        "dudleyville",
+        "gamebanshee"
+      ],
+      "sourceStatus": "web-reconciled",
+      "objectId": "clinicPriest",
+      "dialogId": "clinicPriestDialog",
+      "actions": [
+        "declinePotion"
+      ],
+      "branches": [
+        "candlekeep.services.declinePotion"
+      ],
+      "conditions": [
+        "Correct actor; insufficient funds and cancellation preserve state"
+      ],
+      "outcomes": [
+        "Gift remains available"
+      ],
+      "implementation": [
+        "res/maps/candlekeep/config.json:clinicPriest",
+        "res/maps/candlekeep/dialog.json:clinicPriestDialog"
+      ],
+      "automatedCoverage": {
+        "structural": "tests/test_candlekeep_content.py:CandlekeepContentTest.testIndependentSourceLedgerHasImplementationsAndDeclaredWitnesses",
+        "nativeRoutes": [
+          "candlekeep.services.declinePotion"
+        ],
+        "nativeReceipts": "pending"
+      },
+      "editionDifferences": [
+        "Classic target; installed modded EE base archives are supporting evidence. Original branch parity is not established."
+      ]
+    },
+    {
+      "id": "training.jondalar",
+      "category": "training",
+      "sourceIds": [
+        "dudleyville",
+        "gamebanshee"
+      ],
+      "sourceStatus": "pending",
+      "objectId": "jondalar",
+      "dialogId": "jondalarDialog",
+      "actions": [
+        "beginLesson"
+      ],
+      "branches": [
+        "candlekeep.social.jondalar"
+      ],
+      "conditions": [
+        "Consent; Erik participates"
+      ],
+      "outcomes": [
+        "Nonlethal fight; stop after successful hit",
+        "Painless proxy combat is a native adaptation; original first-hit stopping and Erik archer behavior remain unimplemented."
+      ],
+      "implementation": [
+        "res/maps/candlekeep/config.json:jondalar",
+        "res/maps/candlekeep/dialog.json:jondalarDialog"
+      ],
+      "automatedCoverage": {
+        "structural": "tests/test_candlekeep_content.py:CandlekeepContentTest.testIndependentSourceLedgerHasImplementationsAndDeclaredWitnesses",
+        "nativeRoutes": [
+          "candlekeep.social.jondalar"
+        ],
+        "nativeReceipts": "pending"
+      },
+      "editionDifferences": [
+        "Classic target; installed modded EE base archives are supporting evidence. Original branch parity is not established."
+      ]
+    },
+    {
+      "id": "training.gatewarden.accept",
+      "category": "training",
+      "sourceIds": [
+        "gatewarden",
+        "dudleyville"
+      ],
+      "sourceStatus": "web-reconciled",
+      "objectId": "gatewarden",
+      "dialogId": "gatewardenDialog",
+      "actions": [
+        "acceptTraining"
+      ],
+      "branches": [
+        "candlekeep.training.accept"
+      ],
+      "conditions": [
+        "Invitation persists across visits and saves"
+      ],
+      "outcomes": [
+        "Open cellar and guide to entrance"
+      ],
+      "implementation": [
+        "res/maps/candlekeep/config.json:gatewarden",
+        "res/maps/candlekeep/dialog.json:gatewardenDialog"
+      ],
+      "automatedCoverage": {
+        "structural": "tests/test_candlekeep_content.py:CandlekeepContentTest.testIndependentSourceLedgerHasImplementationsAndDeclaredWitnesses",
+        "nativeRoutes": [
+          "candlekeep.training.accept"
+        ],
+        "nativeReceipts": "pending"
+      },
+      "editionDifferences": [
+        "Classic target; installed modded EE base archives are supporting evidence. Original branch parity is not established."
+      ]
+    },
+    {
+      "id": "training.gatewarden.declineOnce",
+      "category": "training",
+      "sourceIds": [
+        "gatewarden",
+        "dudleyville"
+      ],
+      "sourceStatus": "web-reconciled",
+      "objectId": "gatewarden",
+      "dialogId": "gatewardenDialog",
+      "actions": [
+        "declineTraining"
+      ],
+      "branches": [
+        "candlekeep.training.declineOnce"
+      ],
+      "conditions": [
+        "Invitation persists across visits and saves"
+      ],
+      "outcomes": [
+        "Second offer remains"
+      ],
+      "implementation": [
+        "res/maps/candlekeep/config.json:gatewarden",
+        "res/maps/candlekeep/dialog.json:gatewardenDialog"
+      ],
+      "automatedCoverage": {
+        "structural": "tests/test_candlekeep_content.py:CandlekeepContentTest.testIndependentSourceLedgerHasImplementationsAndDeclaredWitnesses",
+        "nativeRoutes": [
+          "candlekeep.training.declineOnce"
+        ],
+        "nativeReceipts": "pending"
+      },
+      "editionDifferences": [
+        "Classic target; installed modded EE base archives are supporting evidence. Original branch parity is not established."
+      ]
+    },
+    {
+      "id": "training.gatewarden.declineTwice",
+      "category": "training",
+      "sourceIds": [
+        "gatewarden",
+        "dudleyville"
+      ],
+      "sourceStatus": "web-reconciled",
+      "objectId": "gatewarden",
+      "dialogId": "gatewardenDialog",
+      "actions": [
+        "closeTrainingGate"
+      ],
+      "branches": [
+        "candlekeep.training.declineTwice"
+      ],
+      "conditions": [
+        "Invitation persists across visits and saves"
+      ],
+      "outcomes": [
+        "Permanent refusal closes cellar"
+      ],
+      "implementation": [
+        "res/maps/candlekeep/config.json:gatewarden",
+        "res/maps/candlekeep/dialog.json:gatewardenDialog"
+      ],
+      "automatedCoverage": {
+        "structural": "tests/test_candlekeep_content.py:CandlekeepContentTest.testIndependentSourceLedgerHasImplementationsAndDeclaredWitnesses",
+        "nativeRoutes": [
+          "candlekeep.training.declineTwice"
+        ],
+        "nativeReceipts": "pending"
+      },
+      "editionDifferences": [
+        "Classic target; installed modded EE base archives are supporting evidence. Original branch parity is not established."
+      ]
+    },
+    {
+      "id": "training.obe.complete",
+      "category": "training",
+      "sourceIds": [
+        "dudleyville",
+        "gamebanshee"
+      ],
+      "sourceStatus": "pending",
+      "objectId": "obe",
+      "dialogId": "obeDialog",
+      "actions": [
+        "beginTraining",
+        "trainingRound",
+        "finishTraining"
+      ],
+      "branches": [
+        "candlekeep.training.complete"
+      ],
+      "conditions": [
+        "Five actual allies: Arkanis, Canderous, Deder, Mordaine, Osprey",
+        "Periodic stop and forced departure",
+        "Two native waves must actually be defeated; saved 120-map-turn limit"
+      ],
+      "outcomes": [
+        "Bounded native ally/enemy actions; completion",
+        "Temporary equipment cleaned; classic timer/reward/damage conflicts remain blockers"
+      ],
+      "implementation": [
+        "res/maps/candlekeep/config.json:obe",
+        "res/maps/candlekeep/dialog.json:obeDialog"
+      ],
+      "automatedCoverage": {
+        "structural": "tests/test_candlekeep_content.py:CandlekeepContentTest.testIndependentSourceLedgerHasImplementationsAndDeclaredWitnesses",
+        "nativeRoutes": [
+          "candlekeep.training.complete"
+        ],
+        "nativeReceipts": "pending"
+      },
+      "editionDifferences": [
+        "Classic target; installed modded EE base archives are supporting evidence. Original branch parity is not established."
+      ]
+    },
+    {
+      "id": "training.obe.abandon",
+      "category": "training",
+      "sourceIds": [
+        "dudleyville",
+        "gamebanshee"
+      ],
+      "sourceStatus": "pending",
+      "objectId": "obe",
+      "dialogId": "obeDialog",
+      "actions": [
+        "beginTraining",
+        "forceExitTraining"
+      ],
+      "branches": [
+        "candlekeep.training.abandon"
+      ],
+      "conditions": [
+        "Five actual allies: Arkanis, Canderous, Deder, Mordaine, Osprey",
+        "Periodic stop and forced departure"
+      ],
+      "outcomes": [
+        "Early exit restores ordinary play",
+        "Temporary equipment cleaned; classic timer/reward/damage conflicts remain blockers"
+      ],
+      "implementation": [
+        "res/maps/candlekeep/config.json:obe",
+        "res/maps/candlekeep/dialog.json:obeDialog"
+      ],
+      "automatedCoverage": {
+        "structural": "tests/test_candlekeep_content.py:CandlekeepContentTest.testIndependentSourceLedgerHasImplementationsAndDeclaredWitnesses",
+        "nativeRoutes": [
+          "candlekeep.training.abandon"
+        ],
+        "nativeReceipts": "pending"
+      },
+      "editionDifferences": [
+        "Classic target; installed modded EE base archives are supporting evidence. Original branch parity is not established."
+      ]
+    },
+    {
+      "id": "firebead.repeatedTalk",
+      "category": "easterEgg",
+      "sourceIds": [
+        "dudleyville",
+        "gamebanshee"
+      ],
+      "sourceStatus": "web-reconciled",
+      "objectId": "firebead",
+      "dialogId": "firebeadDialog",
+      "actions": [
+        "countConversation"
+      ],
+      "branches": [
+        "candlekeep.social.firebeadRepeatedTalk"
+      ],
+      "conditions": [
+        "Thirty genuine conversations"
+      ],
+      "outcomes": [
+        "300 gold once; counter and claim survive reload"
+      ],
+      "implementation": [
+        "res/maps/candlekeep/config.json:firebead",
+        "res/maps/candlekeep/dialog.json:firebeadDialog"
+      ],
+      "automatedCoverage": {
+        "structural": "tests/test_candlekeep_content.py:CandlekeepContentTest.testIndependentSourceLedgerHasImplementationsAndDeclaredWitnesses",
+        "nativeRoutes": [
+          "candlekeep.social.firebeadRepeatedTalk"
+        ],
+        "nativeReceipts": "pending"
+      },
+      "editionDifferences": [
+        "Classic target; installed modded EE base archives are supporting evidence. Original branch parity is not established."
+      ]
+    },
+    {
+      "id": "departure.refuse",
+      "category": "departure",
+      "sourceIds": [
+        "dudleyville",
+        "gamebanshee"
+      ],
+      "sourceStatus": "web-reconciled",
+      "objectId": "gorion",
+      "dialogId": "gorionDialog",
+      "actions": [
+        "refuseDeparture"
+      ],
+      "branches": [
+        "candlekeep.departure.refuse"
+      ],
+      "conditions": [
+        "Explicit choice; unfinished errands remain optional"
+      ],
+      "outcomes": [
+        "Continue exploring"
+      ],
+      "implementation": [
+        "res/maps/candlekeep/config.json:gorion",
+        "res/maps/candlekeep/dialog.json:gorionDialog"
+      ],
+      "automatedCoverage": {
+        "structural": "tests/test_candlekeep_content.py:CandlekeepContentTest.testIndependentSourceLedgerHasImplementationsAndDeclaredWitnesses",
+        "nativeRoutes": [
+          "candlekeep.departure.refuse"
+        ],
+        "nativeReceipts": "pending"
+      },
+      "editionDifferences": [
+        "Classic target; installed modded EE base archives are supporting evidence. Original branch parity is not established."
+      ]
+    },
+    {
+      "id": "departure.complete",
+      "category": "departure",
+      "sourceIds": [
+        "dudleyville",
+        "gamebanshee"
+      ],
+      "sourceStatus": "web-reconciled",
+      "objectId": "gorion",
+      "dialogId": "gorionDialog",
+      "actions": [
+        "leaveCandlekeep"
+      ],
+      "branches": [
+        "candlekeep.departure.complete"
+      ],
+      "conditions": [
+        "Explicit choice; unfinished errands remain optional"
+      ],
+      "outcomes": [
+        "Heal, advise, complete scenario and epilogue; no unrelated map"
+      ],
+      "implementation": [
+        "res/maps/candlekeep/config.json:gorion",
+        "res/maps/candlekeep/dialog.json:gorionDialog"
+      ],
+      "automatedCoverage": {
+        "structural": "tests/test_candlekeep_content.py:CandlekeepContentTest.testIndependentSourceLedgerHasImplementationsAndDeclaredWitnesses",
+        "nativeRoutes": [
+          "candlekeep.departure.complete"
+        ],
+        "nativeReceipts": "pending"
+      },
+      "editionDifferences": [
+        "Classic target; installed modded EE base archives are supporting evidence. Original branch parity is not established."
+      ]
+    },
+    {
+      "id": "service.innStock",
+      "category": "service",
+      "sourceIds": [
+        "dudleyville",
+        "gamebanshee",
+        "iesdp"
+      ],
+      "sourceStatus": "supporting-base-audited-classic-pending",
+      "objectId": "winthrop",
+      "dialogId": "winthropDialog",
+      "actions": [
+        "browseStock"
+      ],
+      "branches": [
+        "candlekeep.services.stockCancelled"
+      ],
+      "conditions": [
+        "44 source stock rows after excluding three documented EE weapon additions; source quantities and limits",
+        "Shared stock counters for full browser and quick purchases; item-specific sale selection"
+      ],
+      "outcomes": [
+        "Selected purchases and sales have focused model tests",
+        "Native selection receipts are pending; cancelled browser preserves ownership"
+      ],
+      "implementation": [
+        "res/maps/candlekeep/script.py:CandlekeepDialog",
+        "res/maps/candlekeep/dialog.json:winthropDialog"
+      ],
+      "automatedCoverage": {
+        "structural": "tests/test_candlekeep_content.py:CandlekeepContentTest.testIndependentSourceLedgerHasImplementationsAndDeclaredWitnesses",
+        "nativeRoutes": [
+          "candlekeep.services.stockCancelled"
+        ],
+        "nativeReceipts": "pending"
+      },
+      "pendingBranches": [
+        "candlekeep.services.stockSelected",
+        "candlekeep.services.saleSelected"
+      ],
+      "editionDifferences": [
+        "Supporting EE base evidence only; classic behavior remains an acceptance requirement."
+      ]
+    },
+    {
+      "id": "service.templeStock",
+      "category": "service",
+      "sourceIds": [
+        "dudleyville",
+        "gamebanshee",
+        "iesdp"
+      ],
+      "sourceStatus": "supporting-base-audited-classic-pending",
+      "objectId": "templePriest",
+      "dialogId": "templePriestDialog",
+      "actions": [
+        "browseStock",
+        "browseServices"
+      ],
+      "branches": [
+        "candlekeep.services.servicesCancelled"
+      ],
+      "conditions": [
+        "Four supply rows and six spell services from base INN/temple store records",
+        "Original stock differences, reaction pricing and unsupported service semantics are unresolved"
+      ],
+      "outcomes": [
+        "Exact neutral transaction amounts and finite limits; no charge for unsupported/no-target service"
+      ],
+      "implementation": [
+        "res/maps/candlekeep/script.py:CandlekeepDialog",
+        "res/maps/candlekeep/dialog.json:templePriestDialog"
+      ],
+      "automatedCoverage": {
+        "structural": "tests/test_candlekeep_content.py:CandlekeepContentTest.testIndependentSourceLedgerHasImplementationsAndDeclaredWitnesses",
+        "nativeRoutes": [
+          "candlekeep.services.servicesCancelled"
+        ],
+        "nativeReceipts": "pending"
+      },
+      "pendingBranches": [
+        "candlekeep.services.serviceSelected"
+      ],
+      "editionDifferences": [
+        "Supporting EE base evidence only; classic behavior remains an acceptance requirement."
+      ]
+    },
+    {
+      "id": "service.allDrinks",
+      "category": "service",
+      "sourceIds": [
+        "dudleyville",
+        "gamebanshee",
+        "iesdp"
+      ],
+      "sourceStatus": "supporting-base-audited-classic-pending",
+      "objectId": "winthrop",
+      "dialogId": "winthropDialog",
+      "actions": [
+        "browseDrinks"
+      ],
+      "branches": [
+        "candlekeep.services.drinksCancelled"
+      ],
+      "conditions": [
+        "Five actual source drink rows with saved prices and strength metadata"
+      ],
+      "outcomes": [
+        "Quick orders share the full-browser implementation; native selected-row receipts pending"
+      ],
+      "implementation": [
+        "res/maps/candlekeep/script.py:CandlekeepDialog",
+        "res/maps/candlekeep/dialog.json:winthropDialog"
+      ],
+      "automatedCoverage": {
+        "structural": "tests/test_candlekeep_content.py:CandlekeepContentTest.testIndependentSourceLedgerHasImplementationsAndDeclaredWitnesses",
+        "nativeRoutes": [
+          "candlekeep.services.drinksCancelled"
+        ],
+        "nativeReceipts": "pending"
+      },
+      "pendingBranches": [
+        "candlekeep.services.drinkSelected"
+      ],
+      "editionDifferences": [
+        "Supporting EE base evidence only; classic behavior remains an acceptance requirement."
+      ]
+    },
+    {
+      "id": "training.companions",
+      "category": "training",
+      "sourceIds": [
+        "dudleyville",
+        "gamebanshee",
+        "iesdp"
+      ],
+      "sourceStatus": "supporting-base-audited-classic-pending",
+      "objectId": "obe",
+      "dialogId": "obeDialog",
+      "actions": [
+        "beginTraining"
+      ],
+      "branches": [
+        "candlekeep.training.companion.arkanis",
+        "candlekeep.training.companion.canderous",
+        "candlekeep.training.companion.deder",
+        "candlekeep.training.companion.mordaine",
+        "candlekeep.training.companion.osprey",
+        "candlekeep.training.borrowCancelled"
+      ],
+      "conditions": [
+        "Five map-local actors with native actions, controllers and equipment",
+        "Equipment selected from actual actor inventory; all temporary gear removed on exit"
+      ],
+      "outcomes": [
+        "Participation flags record spawn/inspection, not proof every ally acted",
+        "Native loan selection remains pending"
+      ],
+      "implementation": [
+        "res/maps/candlekeep/script.py:CandlekeepDialog",
+        "res/maps/candlekeep/dialog.json:obeDialog"
+      ],
+      "automatedCoverage": {
+        "structural": "tests/test_candlekeep_content.py:CandlekeepContentTest.testIndependentSourceLedgerHasImplementationsAndDeclaredWitnesses",
+        "nativeRoutes": [
+          "candlekeep.training.companion.arkanis",
+          "candlekeep.training.companion.canderous",
+          "candlekeep.training.companion.deder",
+          "candlekeep.training.companion.mordaine",
+          "candlekeep.training.companion.osprey",
+          "candlekeep.training.borrowCancelled"
+        ],
+        "nativeReceipts": "pending"
+      },
+      "pendingBranches": [
+        "candlekeep.training.borrowSelected"
+      ],
+      "editionDifferences": [
+        "Supporting EE base evidence only; classic behavior remains an acceptance requirement."
+      ]
+    },
+    {
+      "id": "training.timeout",
+      "category": "training",
+      "sourceIds": [
+        "dudleyville",
+        "gamebanshee",
+        "iesdp"
+      ],
+      "sourceStatus": "supporting-base-audited-classic-pending",
+      "objectId": "obe",
+      "dialogId": "obeDialog",
+      "actions": [
+        "beginTraining"
+      ],
+      "branches": [
+        "candlekeep.training.timedExit"
+      ],
+      "conditions": [
+        "Saved timer ends exercise at exactly 120 map turns"
+      ],
+      "outcomes": [
+        "Cleanup restores HP, mana, affiliation and owned equipment; no original timer parity claim"
+      ],
+      "implementation": [
+        "res/maps/candlekeep/script.py:CandlekeepDialog",
+        "res/maps/candlekeep/dialog.json:obeDialog"
+      ],
+      "automatedCoverage": {
+        "structural": "tests/test_candlekeep_content.py:CandlekeepContentTest.testIndependentSourceLedgerHasImplementationsAndDeclaredWitnesses",
+        "nativeRoutes": [
+          "candlekeep.training.timedExit"
+        ],
+        "nativeReceipts": "pending"
+      },
+      "pendingBranches": [],
+      "editionDifferences": [
+        "Supporting EE base evidence only; classic behavior remains an acceptance requirement."
+      ]
+    },
+    {
+      "id": "crime.attack",
+      "category": "crime",
+      "sourceIds": [
+        "dudleyville",
+        "gamebanshee",
+        "iesdp"
+      ],
+      "sourceStatus": "supporting-base-audited-classic-pending",
+      "objectId": "watcher",
+      "dialogId": "watcherDialog",
+      "actions": [
+        "attack"
+      ],
+      "branches": [
+        "candlekeep.crime.attack"
+      ],
+      "conditions": [
+        "Threatening a neutral actor starts native hostility and summons a guard"
+      ],
+      "outcomes": [
+        "Saved local crime/standing and murder state; classic details unresolved"
+      ],
+      "implementation": [
+        "res/maps/candlekeep/script.py:CandlekeepDialog",
+        "res/maps/candlekeep/dialog.json:watcherDialog"
+      ],
+      "automatedCoverage": {
+        "structural": "tests/test_candlekeep_content.py:CandlekeepContentTest.testIndependentSourceLedgerHasImplementationsAndDeclaredWitnesses",
+        "nativeRoutes": [
+          "candlekeep.crime.attack"
+        ],
+        "nativeReceipts": "pending"
+      },
+      "pendingBranches": [],
+      "editionDifferences": [
+        "Supporting EE base evidence only; classic behavior remains an acceptance requirement."
+      ]
+    },
+    {
+      "id": "scroll.identify",
+      "category": "scroll",
+      "sourceIds": [
+        "dudleyville",
+        "gamebanshee",
+        "iesdp"
+      ],
+      "sourceStatus": "supporting-base-audited-classic-pending",
+      "objectId": "tethtoril",
+      "dialogId": "tethtorilDialog",
+      "actions": [
+        "deliverScroll"
+      ],
+      "branches": [
+        "candlekeep.scroll.identifyNoTarget",
+        "candlekeep.scroll.identifyConsumed"
+      ],
+      "conditions": [
+        "Only an owned unidentified item permits consumption"
+      ],
+      "outcomes": [
+        "No target retains the scroll; using it can leave Firebead errand incomplete"
+      ],
+      "implementation": [
+        "res/maps/candlekeep/script.py:CandlekeepDialog",
+        "res/maps/candlekeep/dialog.json:tethtorilDialog"
+      ],
+      "automatedCoverage": {
+        "structural": "tests/test_candlekeep_content.py:CandlekeepContentTest.testIndependentSourceLedgerHasImplementationsAndDeclaredWitnesses",
+        "nativeRoutes": [
+          "candlekeep.scroll.identifyNoTarget",
+          "candlekeep.scroll.identifyConsumed"
+        ],
+        "nativeReceipts": "pending"
+      },
+      "pendingBranches": [],
+      "editionDifferences": [
+        "Supporting EE base evidence only; classic behavior remains an acceptance requirement."
+      ]
+    },
+    {
+      "id": "scroll.armor",
+      "category": "scroll",
+      "sourceIds": [
+        "dudleyville",
+        "gamebanshee",
+        "iesdp"
+      ],
+      "sourceStatus": "supporting-base-audited-classic-pending",
+      "objectId": "innOffice",
+      "dialogId": "innOfficeDialog",
+      "actions": [
+        "openContainer"
+      ],
+      "branches": [
+        "candlekeep.scroll.armorConsumed"
+      ],
+      "conditions": [
+        "Owned scroll produces a native effect"
+      ],
+      "outcomes": [
+        "20 native armor for 12 effect ticks, consuming once; explicit spell conversion"
+      ],
+      "implementation": [
+        "res/maps/candlekeep/script.py:CandlekeepDialog",
+        "res/maps/candlekeep/dialog.json:innOfficeDialog"
+      ],
+      "automatedCoverage": {
+        "structural": "tests/test_candlekeep_content.py:CandlekeepContentTest.testIndependentSourceLedgerHasImplementationsAndDeclaredWitnesses",
+        "nativeRoutes": [
+          "candlekeep.scroll.armorConsumed"
+        ],
+        "nativeReceipts": "pending"
+      },
+      "pendingBranches": [],
+      "editionDifferences": [
+        "Supporting EE base evidence only; classic behavior remains an acceptance requirement."
+      ]
+    },
+    {
+      "id": "scroll.infravision",
+      "category": "scroll",
+      "sourceIds": [
+        "dudleyville",
+        "gamebanshee",
+        "iesdp"
+      ],
+      "sourceStatus": "supporting-base-audited-classic-pending",
+      "objectId": "innOffice",
+      "dialogId": "innOfficeDialog",
+      "actions": [
+        "openContainer"
+      ],
+      "branches": [
+        "candlekeep.scroll.infravisionRetained"
+      ],
+      "conditions": [
+        "Native terrain has no darkness or vision-range API"
+      ],
+      "outcomes": [
+        "Explicit unsupported outcome retains scroll; original behavior remains unresolved"
+      ],
+      "implementation": [
+        "res/maps/candlekeep/script.py:CandlekeepDialog",
+        "res/maps/candlekeep/dialog.json:innOfficeDialog"
+      ],
+      "automatedCoverage": {
+        "structural": "tests/test_candlekeep_content.py:CandlekeepContentTest.testIndependentSourceLedgerHasImplementationsAndDeclaredWitnesses",
+        "nativeRoutes": [
+          "candlekeep.scroll.infravisionRetained"
+        ],
+        "nativeReceipts": "pending"
+      },
+      "pendingBranches": [],
+      "editionDifferences": [
+        "Supporting EE base evidence only; classic behavior remains an acceptance requirement."
+      ]
+    },
+    {
+      "id": "departure.preparations",
+      "category": "departure",
+      "sourceIds": [
+        "dudleyville",
+        "gamebanshee",
+        "iesdp"
+      ],
+      "sourceStatus": "supporting-base-audited-classic-pending",
+      "objectId": "gorion",
+      "dialogId": "gorionDialog",
+      "actions": [
+        "reviewPreparations"
+      ],
+      "branches": [
+        "candlekeep.social.preparations"
+      ],
+      "conditions": [
+        "Read saved quest stages and preparation flags"
+      ],
+      "outcomes": [
+        "Read-only status report; authored native adaptation"
+      ],
+      "implementation": [
+        "res/maps/candlekeep/script.py:CandlekeepDialog",
+        "res/maps/candlekeep/dialog.json:gorionDialog"
+      ],
+      "automatedCoverage": {
+        "structural": "tests/test_candlekeep_content.py:CandlekeepContentTest.testIndependentSourceLedgerHasImplementationsAndDeclaredWitnesses",
+        "nativeRoutes": [
+          "candlekeep.social.preparations"
+        ],
+        "nativeReceipts": "pending"
+      },
+      "pendingBranches": [],
+      "editionDifferences": [
+        "Supporting EE base evidence only; classic behavior remains an acceptance requirement."
+      ]
+    },
+    {
+      "id": "departure.early",
+      "category": "departure",
+      "sourceIds": [
+        "dudleyville",
+        "gamebanshee",
+        "iesdp"
+      ],
+      "sourceStatus": "supporting-base-audited-classic-pending",
+      "objectId": "gorion",
+      "dialogId": "gorionDialog",
+      "actions": [
+        "leaveCandlekeep"
+      ],
+      "branches": [
+        "candlekeep.departure.early"
+      ],
+      "conditions": [
+        "Gorion accepts departure with unfinished errands"
+      ],
+      "outcomes": [
+        "Final effects, completion and epilogue once; preserves unfinished journal"
+      ],
+      "implementation": [
+        "res/maps/candlekeep/script.py:CandlekeepDialog",
+        "res/maps/candlekeep/dialog.json:gorionDialog"
+      ],
+      "automatedCoverage": {
+        "structural": "tests/test_candlekeep_content.py:CandlekeepContentTest.testIndependentSourceLedgerHasImplementationsAndDeclaredWitnesses",
+        "nativeRoutes": [
+          "candlekeep.departure.early"
+        ],
+        "nativeReceipts": "pending"
+      },
+      "pendingBranches": [],
+      "editionDifferences": [
+        "Supporting EE base evidence only; classic behavior remains an acceptance requirement."
+      ]
+    },
+    {
+      "id": "container.barracksBarrel",
+      "category": "container",
+      "sourceIds": [
+        "iesdp",
+        "dudleyville",
+        "gamebanshee"
+      ],
+      "objectId": "barracksBarrel",
+      "dialogId": "barracksBarrelDialog",
+      "actions": [
+        "openContainer"
+      ],
+      "branches": [
+        "candlekeep.containers.barracksBarrel"
+      ],
+      "sourceStatus": "supporting-base-audited-classic-pending",
+      "sourceEvidence": {
+        "fixture": "tests/fixtures/candlekeep_shop_stock.json:containers.barracksBarrel",
+        "area": "AR2600",
+        "container": 1,
+        "areaSha256": "c49dfa8125afaa41fc91c5474b2a2945f731ba566e551a07883c11ac0fb15afc"
+      },
+      "conditions": [
+        "A distinct fixed container from AR2600 #1",
+        "Source lock difficulty 100; flags 0; script none",
+        "Approved native tiers; source visibility/delay and classic differences remain unresolved"
+      ],
+      "outcomes": [
+        "No items",
+        "8 gold; one saved ownership claim, retained across revisits/reload"
+      ],
+      "nativeChecks": {
+        "lockAgility": 12,
+        "forceStrength": 12,
+        "alwaysDetected": false,
+        "guardCount": 0
+      },
+      "implementation": [
+        "res/maps/candlekeep/config.json:barracksBarrel",
+        "res/maps/candlekeep/dialog.json:barracksBarrelDialog",
+        "res/maps/candlekeep/script.py:CandlekeepDialog.takeContents"
+      ],
+      "automatedCoverage": {
+        "source": "tests/test_candlekeep_source.py:SourceAuditTests.testAllSourceContainersRemainSeparateWithFixedContents",
+        "structural": "tests/test_candlekeep_content.py:CandlekeepContentTest.testIndependentSourceLedgerHasImplementationsAndDeclaredWitnesses",
+        "nativeRoutes": [
+          "candlekeep.containers.barracksBarrel"
+        ],
+        "nativeReceipts": "pending"
+      },
+      "editionDifferences": [
+        "All 37 supporting EE base containers are mapped separately; original BG1 equivalence and exact guard semantics remain unproven."
+      ]
+    },
+    {
+      "id": "container.courtyardEmpty1",
+      "category": "container",
+      "sourceIds": [
+        "iesdp",
+        "dudleyville",
+        "gamebanshee"
+      ],
+      "objectId": "courtyardEmpty1",
+      "dialogId": "courtyardEmpty1Dialog",
+      "actions": [
+        "openContainer"
+      ],
+      "branches": [
+        "candlekeep.containers.courtyardEmpty1"
+      ],
+      "sourceStatus": "supporting-base-audited-classic-pending",
+      "sourceEvidence": {
+        "fixture": "tests/fixtures/candlekeep_shop_stock.json:containers.courtyardEmpty1",
+        "area": "AR2600",
+        "container": 2,
+        "areaSha256": "c49dfa8125afaa41fc91c5474b2a2945f731ba566e551a07883c11ac0fb15afc"
+      },
+      "conditions": [
+        "A distinct fixed container from AR2600 #2",
+        "Source lock difficulty 100; flags 0; script none",
+        "Approved native tiers; source visibility/delay and classic differences remain unresolved"
+      ],
+      "outcomes": [
+        "No items",
+        "0 gold; one saved ownership claim, retained across revisits/reload"
+      ],
+      "nativeChecks": {
+        "lockAgility": 12,
+        "forceStrength": 12,
+        "alwaysDetected": false,
+        "guardCount": 0
+      },
+      "implementation": [
+        "res/maps/candlekeep/config.json:courtyardEmpty1",
+        "res/maps/candlekeep/dialog.json:courtyardEmpty1Dialog",
+        "res/maps/candlekeep/script.py:CandlekeepDialog.takeContents"
+      ],
+      "automatedCoverage": {
+        "source": "tests/test_candlekeep_source.py:SourceAuditTests.testAllSourceContainersRemainSeparateWithFixedContents",
+        "structural": "tests/test_candlekeep_content.py:CandlekeepContentTest.testIndependentSourceLedgerHasImplementationsAndDeclaredWitnesses",
+        "nativeRoutes": [
+          "candlekeep.containers.courtyardEmpty1"
+        ],
+        "nativeReceipts": "pending"
+      },
+      "editionDifferences": [
+        "All 37 supporting EE base containers are mapped separately; original BG1 equivalence and exact guard semantics remain unproven."
+      ]
+    },
+    {
+      "id": "container.courtyardEmpty2",
+      "category": "container",
+      "sourceIds": [
+        "iesdp",
+        "dudleyville",
+        "gamebanshee"
+      ],
+      "objectId": "courtyardEmpty2",
+      "dialogId": "courtyardEmpty2Dialog",
+      "actions": [
+        "openContainer"
+      ],
+      "branches": [
+        "candlekeep.containers.courtyardEmpty2"
+      ],
+      "sourceStatus": "supporting-base-audited-classic-pending",
+      "sourceEvidence": {
+        "fixture": "tests/fixtures/candlekeep_shop_stock.json:containers.courtyardEmpty2",
+        "area": "AR2600",
+        "container": 5,
+        "areaSha256": "c49dfa8125afaa41fc91c5474b2a2945f731ba566e551a07883c11ac0fb15afc"
+      },
+      "conditions": [
+        "A distinct fixed container from AR2600 #5",
+        "Source lock difficulty 100; flags 0; script none",
+        "Approved native tiers; source visibility/delay and classic differences remain unresolved"
+      ],
+      "outcomes": [
+        "No items",
+        "0 gold; one saved ownership claim, retained across revisits/reload"
+      ],
+      "nativeChecks": {
+        "lockAgility": 12,
+        "forceStrength": 12,
+        "alwaysDetected": false,
+        "guardCount": 0
+      },
+      "implementation": [
+        "res/maps/candlekeep/config.json:courtyardEmpty2",
+        "res/maps/candlekeep/dialog.json:courtyardEmpty2Dialog",
+        "res/maps/candlekeep/script.py:CandlekeepDialog.takeContents"
+      ],
+      "automatedCoverage": {
+        "source": "tests/test_candlekeep_source.py:SourceAuditTests.testAllSourceContainersRemainSeparateWithFixedContents",
+        "structural": "tests/test_candlekeep_content.py:CandlekeepContentTest.testIndependentSourceLedgerHasImplementationsAndDeclaredWitnesses",
+        "nativeRoutes": [
+          "candlekeep.containers.courtyardEmpty2"
+        ],
+        "nativeReceipts": "pending"
+      },
+      "editionDifferences": [
+        "All 37 supporting EE base containers are mapped separately; original BG1 equivalence and exact guard semantics remain unproven."
+      ]
+    },
+    {
+      "id": "container.priestEmpty1",
+      "category": "container",
+      "sourceIds": [
+        "iesdp",
+        "dudleyville",
+        "gamebanshee"
+      ],
+      "objectId": "priestEmpty1",
+      "dialogId": "priestEmpty1Dialog",
+      "actions": [
+        "openContainer"
+      ],
+      "branches": [
+        "candlekeep.containers.priestEmpty1"
+      ],
+      "sourceStatus": "supporting-base-audited-classic-pending",
+      "sourceEvidence": {
+        "fixture": "tests/fixtures/candlekeep_shop_stock.json:containers.priestEmpty1",
+        "area": "AR2602",
+        "container": 2,
+        "areaSha256": "636bea43e88388f0a38035adfe6de3461939a48639fbd1752f0c81ded05db3f8"
+      },
+      "conditions": [
+        "A distinct fixed container from AR2602 #2",
+        "Source lock difficulty 100; flags 0; script none",
+        "Approved native tiers; source visibility/delay and classic differences remain unresolved"
+      ],
+      "outcomes": [
+        "No items",
+        "0 gold; one saved ownership claim, retained across revisits/reload"
+      ],
+      "nativeChecks": {
+        "lockAgility": 12,
+        "forceStrength": 12,
+        "alwaysDetected": false,
+        "guardCount": 0
+      },
+      "implementation": [
+        "res/maps/candlekeep/config.json:priestEmpty1",
+        "res/maps/candlekeep/dialog.json:priestEmpty1Dialog",
+        "res/maps/candlekeep/script.py:CandlekeepDialog.takeContents"
+      ],
+      "automatedCoverage": {
+        "source": "tests/test_candlekeep_source.py:SourceAuditTests.testAllSourceContainersRemainSeparateWithFixedContents",
+        "structural": "tests/test_candlekeep_content.py:CandlekeepContentTest.testIndependentSourceLedgerHasImplementationsAndDeclaredWitnesses",
+        "nativeRoutes": [
+          "candlekeep.containers.priestEmpty1"
+        ],
+        "nativeReceipts": "pending"
+      },
+      "editionDifferences": [
+        "All 37 supporting EE base containers are mapped separately; original BG1 equivalence and exact guard semantics remain unproven."
+      ]
+    },
+    {
+      "id": "container.priestTable",
+      "category": "container",
+      "sourceIds": [
+        "iesdp",
+        "dudleyville",
+        "gamebanshee"
+      ],
+      "objectId": "priestTable",
+      "dialogId": "priestTableDialog",
+      "actions": [
+        "openContainer"
+      ],
+      "branches": [
+        "candlekeep.containers.priestTable"
+      ],
+      "sourceStatus": "supporting-base-audited-classic-pending",
+      "sourceEvidence": {
+        "fixture": "tests/fixtures/candlekeep_shop_stock.json:containers.priestTable",
+        "area": "AR2602",
+        "container": 3,
+        "areaSha256": "636bea43e88388f0a38035adfe6de3461939a48639fbd1752f0c81ded05db3f8"
+      },
+      "conditions": [
+        "A distinct fixed container from AR2602 #3",
+        "Source lock difficulty 100; flags 0; script none",
+        "Approved native tiers; source visibility/delay and classic differences remain unresolved"
+      ],
+      "outcomes": [
+        "No items",
+        "8 gold; one saved ownership claim, retained across revisits/reload"
+      ],
+      "nativeChecks": {
+        "lockAgility": 12,
+        "forceStrength": 12,
+        "alwaysDetected": false,
+        "guardCount": 0
+      },
+      "implementation": [
+        "res/maps/candlekeep/config.json:priestTable",
+        "res/maps/candlekeep/dialog.json:priestTableDialog",
+        "res/maps/candlekeep/script.py:CandlekeepDialog.takeContents"
+      ],
+      "automatedCoverage": {
+        "source": "tests/test_candlekeep_source.py:SourceAuditTests.testAllSourceContainersRemainSeparateWithFixedContents",
+        "structural": "tests/test_candlekeep_content.py:CandlekeepContentTest.testIndependentSourceLedgerHasImplementationsAndDeclaredWitnesses",
+        "nativeRoutes": [
+          "candlekeep.containers.priestTable"
+        ],
+        "nativeReceipts": "pending"
+      },
+      "editionDifferences": [
+        "All 37 supporting EE base containers are mapped separately; original BG1 equivalence and exact guard semantics remain unproven."
+      ]
+    },
+    {
+      "id": "container.priestCrates",
+      "category": "container",
+      "sourceIds": [
+        "iesdp",
+        "dudleyville",
+        "gamebanshee"
+      ],
+      "objectId": "priestCrates",
+      "dialogId": "priestCratesDialog",
+      "actions": [
+        "openContainer"
+      ],
+      "branches": [
+        "candlekeep.containers.priestCrates"
+      ],
+      "sourceStatus": "supporting-base-audited-classic-pending",
+      "sourceEvidence": {
+        "fixture": "tests/fixtures/candlekeep_shop_stock.json:containers.priestCrates",
+        "area": "AR2602",
+        "container": 4,
+        "areaSha256": "636bea43e88388f0a38035adfe6de3461939a48639fbd1752f0c81ded05db3f8"
+      },
+      "conditions": [
+        "A distinct fixed container from AR2602 #4",
+        "Source lock difficulty 100; flags 0; script none",
+        "Approved native tiers; source visibility/delay and classic differences remain unresolved"
+      ],
+      "outcomes": [
+        "candlekeepWarhammer",
+        "0 gold; one saved ownership claim, retained across revisits/reload"
+      ],
+      "nativeChecks": {
+        "lockAgility": 12,
+        "forceStrength": 12,
+        "alwaysDetected": false,
+        "guardCount": 0
+      },
+      "implementation": [
+        "res/maps/candlekeep/config.json:priestCrates",
+        "res/maps/candlekeep/dialog.json:priestCratesDialog",
+        "res/maps/candlekeep/script.py:CandlekeepDialog.takeContents"
+      ],
+      "automatedCoverage": {
+        "source": "tests/test_candlekeep_source.py:SourceAuditTests.testAllSourceContainersRemainSeparateWithFixedContents",
+        "structural": "tests/test_candlekeep_content.py:CandlekeepContentTest.testIndependentSourceLedgerHasImplementationsAndDeclaredWitnesses",
+        "nativeRoutes": [
+          "candlekeep.containers.priestCrates"
+        ],
+        "nativeReceipts": "pending"
+      },
+      "editionDifferences": [
+        "All 37 supporting EE base containers are mapped separately; original BG1 equivalence and exact guard semantics remain unproven."
+      ]
+    },
+    {
+      "id": "container.priestEmpty2",
+      "category": "container",
+      "sourceIds": [
+        "iesdp",
+        "dudleyville",
+        "gamebanshee"
+      ],
+      "objectId": "priestEmpty2",
+      "dialogId": "priestEmpty2Dialog",
+      "actions": [
+        "openContainer"
+      ],
+      "branches": [
+        "candlekeep.containers.priestEmpty2"
+      ],
+      "sourceStatus": "supporting-base-audited-classic-pending",
+      "sourceEvidence": {
+        "fixture": "tests/fixtures/candlekeep_shop_stock.json:containers.priestEmpty2",
+        "area": "AR2602",
+        "container": 5,
+        "areaSha256": "636bea43e88388f0a38035adfe6de3461939a48639fbd1752f0c81ded05db3f8"
+      },
+      "conditions": [
+        "A distinct fixed container from AR2602 #5",
+        "Source lock difficulty 100; flags 0; script none",
+        "Approved native tiers; source visibility/delay and classic differences remain unresolved"
+      ],
+      "outcomes": [
+        "No items",
+        "0 gold; one saved ownership claim, retained across revisits/reload"
+      ],
+      "nativeChecks": {
+        "lockAgility": 12,
+        "forceStrength": 12,
+        "alwaysDetected": false,
+        "guardCount": 0
+      },
+      "implementation": [
+        "res/maps/candlekeep/config.json:priestEmpty2",
+        "res/maps/candlekeep/dialog.json:priestEmpty2Dialog",
+        "res/maps/candlekeep/script.py:CandlekeepDialog.takeContents"
+      ],
+      "automatedCoverage": {
+        "source": "tests/test_candlekeep_source.py:SourceAuditTests.testAllSourceContainersRemainSeparateWithFixedContents",
+        "structural": "tests/test_candlekeep_content.py:CandlekeepContentTest.testIndependentSourceLedgerHasImplementationsAndDeclaredWitnesses",
+        "nativeRoutes": [
+          "candlekeep.containers.priestEmpty2"
+        ],
+        "nativeReceipts": "pending"
+      },
+      "editionDifferences": [
+        "All 37 supporting EE base containers are mapped separately; original BG1 equivalence and exact guard semantics remain unproven."
+      ]
+    },
+    {
+      "id": "container.storehouseEmpty1",
+      "category": "container",
+      "sourceIds": [
+        "iesdp",
+        "dudleyville",
+        "gamebanshee"
+      ],
+      "objectId": "storehouseEmpty1",
+      "dialogId": "storehouseEmpty1Dialog",
+      "actions": [
+        "openContainer"
+      ],
+      "branches": [
+        "candlekeep.containers.storehouseEmpty1"
+      ],
+      "sourceStatus": "supporting-base-audited-classic-pending",
+      "sourceEvidence": {
+        "fixture": "tests/fixtures/candlekeep_shop_stock.json:containers.storehouseEmpty1",
+        "area": "AR2606",
+        "container": 2,
+        "areaSha256": "f6f3476be6ceafa15230c15eb13300e09a799c0c7676bae94eddd0ac17e83845"
+      },
+      "conditions": [
+        "A distinct fixed container from AR2606 #2",
+        "Source lock difficulty 100; flags 0; script none",
+        "Approved native tiers; source visibility/delay and classic differences remain unresolved"
+      ],
+      "outcomes": [
+        "No items",
+        "0 gold; one saved ownership claim, retained across revisits/reload"
+      ],
+      "nativeChecks": {
+        "lockAgility": 12,
+        "forceStrength": 12,
+        "alwaysDetected": false,
+        "guardCount": 0
+      },
+      "implementation": [
+        "res/maps/candlekeep/config.json:storehouseEmpty1",
+        "res/maps/candlekeep/dialog.json:storehouseEmpty1Dialog",
+        "res/maps/candlekeep/script.py:CandlekeepDialog.takeContents"
+      ],
+      "automatedCoverage": {
+        "source": "tests/test_candlekeep_source.py:SourceAuditTests.testAllSourceContainersRemainSeparateWithFixedContents",
+        "structural": "tests/test_candlekeep_content.py:CandlekeepContentTest.testIndependentSourceLedgerHasImplementationsAndDeclaredWitnesses",
+        "nativeRoutes": [
+          "candlekeep.containers.storehouseEmpty1"
+        ],
+        "nativeReceipts": "pending"
+      },
+      "editionDifferences": [
+        "All 37 supporting EE base containers are mapped separately; original BG1 equivalence and exact guard semantics remain unproven."
+      ]
+    },
+    {
+      "id": "container.storehouseEmpty2",
+      "category": "container",
+      "sourceIds": [
+        "iesdp",
+        "dudleyville",
+        "gamebanshee"
+      ],
+      "objectId": "storehouseEmpty2",
+      "dialogId": "storehouseEmpty2Dialog",
+      "actions": [
+        "openContainer"
+      ],
+      "branches": [
+        "candlekeep.containers.storehouseEmpty2"
+      ],
+      "sourceStatus": "supporting-base-audited-classic-pending",
+      "sourceEvidence": {
+        "fixture": "tests/fixtures/candlekeep_shop_stock.json:containers.storehouseEmpty2",
+        "area": "AR2606",
+        "container": 3,
+        "areaSha256": "f6f3476be6ceafa15230c15eb13300e09a799c0c7676bae94eddd0ac17e83845"
+      },
+      "conditions": [
+        "A distinct fixed container from AR2606 #3",
+        "Source lock difficulty 100; flags 0; script none",
+        "Approved native tiers; source visibility/delay and classic differences remain unresolved"
+      ],
+      "outcomes": [
+        "No items",
+        "0 gold; one saved ownership claim, retained across revisits/reload"
+      ],
+      "nativeChecks": {
+        "lockAgility": 12,
+        "forceStrength": 12,
+        "alwaysDetected": false,
+        "guardCount": 0
+      },
+      "implementation": [
+        "res/maps/candlekeep/config.json:storehouseEmpty2",
+        "res/maps/candlekeep/dialog.json:storehouseEmpty2Dialog",
+        "res/maps/candlekeep/script.py:CandlekeepDialog.takeContents"
+      ],
+      "automatedCoverage": {
+        "source": "tests/test_candlekeep_source.py:SourceAuditTests.testAllSourceContainersRemainSeparateWithFixedContents",
+        "structural": "tests/test_candlekeep_content.py:CandlekeepContentTest.testIndependentSourceLedgerHasImplementationsAndDeclaredWitnesses",
+        "nativeRoutes": [
+          "candlekeep.containers.storehouseEmpty2"
+        ],
+        "nativeReceipts": "pending"
+      },
+      "editionDifferences": [
+        "All 37 supporting EE base containers are mapped separately; original BG1 equivalence and exact guard semantics remain unproven."
+      ]
+    },
+    {
+      "id": "container.bunkhouseEmpty",
+      "category": "container",
+      "sourceIds": [
+        "iesdp",
+        "dudleyville",
+        "gamebanshee"
+      ],
+      "objectId": "bunkhouseEmpty",
+      "dialogId": "bunkhouseEmptyDialog",
+      "actions": [
+        "openContainer"
+      ],
+      "branches": [
+        "candlekeep.containers.bunkhouseEmpty"
+      ],
+      "sourceStatus": "supporting-base-audited-classic-pending",
+      "sourceEvidence": {
+        "fixture": "tests/fixtures/candlekeep_shop_stock.json:containers.bunkhouseEmpty",
+        "area": "AR2607",
+        "container": 1,
+        "areaSha256": "982f531413b634e8e8bfdcde42dd11cd3dad778973224b0f396b3109bdd25010"
+      },
+      "conditions": [
+        "A distinct fixed container from AR2607 #1",
+        "Source lock difficulty 100; flags 0; script none",
+        "Approved native tiers; source visibility/delay and classic differences remain unresolved"
+      ],
+      "outcomes": [
+        "No items",
+        "0 gold; one saved ownership claim, retained across revisits/reload"
+      ],
+      "nativeChecks": {
+        "lockAgility": 12,
+        "forceStrength": 12,
+        "alwaysDetected": false,
+        "guardCount": 0
+      },
+      "implementation": [
+        "res/maps/candlekeep/config.json:bunkhouseEmpty",
+        "res/maps/candlekeep/dialog.json:bunkhouseEmptyDialog",
+        "res/maps/candlekeep/script.py:CandlekeepDialog.takeContents"
+      ],
+      "automatedCoverage": {
+        "source": "tests/test_candlekeep_source.py:SourceAuditTests.testAllSourceContainersRemainSeparateWithFixedContents",
+        "structural": "tests/test_candlekeep_content.py:CandlekeepContentTest.testIndependentSourceLedgerHasImplementationsAndDeclaredWitnesses",
+        "nativeRoutes": [
+          "candlekeep.containers.bunkhouseEmpty"
+        ],
+        "nativeReceipts": "pending"
+      },
+      "editionDifferences": [
+        "All 37 supporting EE base containers are mapped separately; original BG1 equivalence and exact guard semantics remain unproven."
+      ]
+    },
+    {
+      "id": "container.innKitchen",
+      "category": "container",
+      "sourceIds": [
+        "iesdp",
+        "dudleyville",
+        "gamebanshee"
+      ],
+      "objectId": "innKitchen",
+      "dialogId": "innKitchenDialog",
+      "actions": [
+        "openContainer"
+      ],
+      "branches": [
+        "candlekeep.containers.innKitchen"
+      ],
+      "sourceStatus": "supporting-base-audited-classic-pending",
+      "sourceEvidence": {
+        "fixture": "tests/fixtures/candlekeep_shop_stock.json:containers.innKitchen",
+        "area": "AR2616",
+        "container": 1,
+        "areaSha256": "64af7a764a139d77f97888b6941461651333cdecf8cb8653a8fcb0246c2ae891"
+      },
+      "conditions": [
+        "A distinct fixed container from AR2616 #1",
+        "Source lock difficulty 100; flags 0; script none",
+        "Approved native tiers; source visibility/delay and classic differences remain unresolved"
+      ],
+      "outcomes": [
+        "candlekeepDagger",
+        "0 gold; one saved ownership claim, retained across revisits/reload"
+      ],
+      "nativeChecks": {
+        "lockAgility": 12,
+        "forceStrength": 12,
+        "alwaysDetected": false,
+        "guardCount": 0
+      },
+      "implementation": [
+        "res/maps/candlekeep/config.json:innKitchen",
+        "res/maps/candlekeep/dialog.json:innKitchenDialog",
+        "res/maps/candlekeep/script.py:CandlekeepDialog.takeContents"
+      ],
+      "automatedCoverage": {
+        "source": "tests/test_candlekeep_source.py:SourceAuditTests.testAllSourceContainersRemainSeparateWithFixedContents",
+        "structural": "tests/test_candlekeep_content.py:CandlekeepContentTest.testIndependentSourceLedgerHasImplementationsAndDeclaredWitnesses",
+        "nativeRoutes": [
+          "candlekeep.containers.innKitchen"
+        ],
+        "nativeReceipts": "pending"
+      },
+      "editionDifferences": [
+        "All 37 supporting EE base containers are mapped separately; original BG1 equivalence and exact guard semantics remain unproven."
+      ]
+    },
+    {
+      "id": "container.innCoinDrawer",
+      "category": "container",
+      "sourceIds": [
+        "iesdp",
+        "dudleyville",
+        "gamebanshee"
+      ],
+      "objectId": "innCoinDrawer",
+      "dialogId": "innCoinDrawerDialog",
+      "actions": [
+        "openContainer"
+      ],
+      "branches": [
+        "candlekeep.containers.innCoinDrawer"
+      ],
+      "sourceStatus": "supporting-base-audited-classic-pending",
+      "sourceEvidence": {
+        "fixture": "tests/fixtures/candlekeep_shop_stock.json:containers.innCoinDrawer",
+        "area": "AR2617",
+        "container": 1,
+        "areaSha256": "84c75a3743dfc4fa5b7646f7fa8972cdd77e5844e232c6480533da39bc1534a2"
+      },
+      "conditions": [
+        "A distinct fixed container from AR2617 #1",
+        "Source lock difficulty 100; flags 0; script none",
+        "Approved native tiers; source visibility/delay and classic differences remain unresolved"
+      ],
+      "outcomes": [
+        "No items",
+        "4 gold; one saved ownership claim, retained across revisits/reload"
+      ],
+      "nativeChecks": {
+        "lockAgility": 12,
+        "forceStrength": 12,
+        "alwaysDetected": false,
+        "guardCount": 0
+      },
+      "implementation": [
+        "res/maps/candlekeep/config.json:innCoinDrawer",
+        "res/maps/candlekeep/dialog.json:innCoinDrawerDialog",
+        "res/maps/candlekeep/script.py:CandlekeepDialog.takeContents"
+      ],
+      "automatedCoverage": {
+        "source": "tests/test_candlekeep_source.py:SourceAuditTests.testAllSourceContainersRemainSeparateWithFixedContents",
+        "structural": "tests/test_candlekeep_content.py:CandlekeepContentTest.testIndependentSourceLedgerHasImplementationsAndDeclaredWitnesses",
+        "nativeRoutes": [
+          "candlekeep.containers.innCoinDrawer"
+        ],
+        "nativeReceipts": "pending"
+      },
+      "editionDifferences": [
+        "All 37 supporting EE base containers are mapped separately; original BG1 equivalence and exact guard semantics remain unproven."
+      ]
+    },
+    {
+      "id": "container.innSilverDrawer",
+      "category": "container",
+      "sourceIds": [
+        "iesdp",
+        "dudleyville",
+        "gamebanshee"
+      ],
+      "objectId": "innSilverDrawer",
+      "dialogId": "innSilverDrawerDialog",
+      "actions": [
+        "openContainer"
+      ],
+      "branches": [
+        "candlekeep.containers.innSilverDrawer"
+      ],
+      "sourceStatus": "supporting-base-audited-classic-pending",
+      "sourceEvidence": {
+        "fixture": "tests/fixtures/candlekeep_shop_stock.json:containers.innSilverDrawer",
+        "area": "AR2617",
+        "container": 2,
+        "areaSha256": "84c75a3743dfc4fa5b7646f7fa8972cdd77e5844e232c6480533da39bc1534a2"
+      },
+      "conditions": [
+        "A distinct fixed container from AR2617 #2",
+        "Source lock difficulty 10; flags 1; script none",
+        "Approved native tiers; source visibility/delay and classic differences remain unresolved"
+      ],
+      "outcomes": [
+        "candlekeepSilverNecklace",
+        "0 gold; one saved ownership claim, retained across revisits/reload"
+      ],
+      "nativeChecks": {
+        "lockAgility": 12,
+        "forceStrength": 12,
+        "alwaysDetected": false,
+        "guardCount": 0
+      },
+      "implementation": [
+        "res/maps/candlekeep/config.json:innSilverDrawer",
+        "res/maps/candlekeep/dialog.json:innSilverDrawerDialog",
+        "res/maps/candlekeep/script.py:CandlekeepDialog.takeContents"
+      ],
+      "automatedCoverage": {
+        "source": "tests/test_candlekeep_source.py:SourceAuditTests.testAllSourceContainersRemainSeparateWithFixedContents",
+        "structural": "tests/test_candlekeep_content.py:CandlekeepContentTest.testIndependentSourceLedgerHasImplementationsAndDeclaredWitnesses",
+        "nativeRoutes": [
+          "candlekeep.containers.innSilverDrawer"
+        ],
+        "nativeReceipts": "pending"
+      },
+      "editionDifferences": [
+        "All 37 supporting EE base containers are mapped separately; original BG1 equivalence and exact guard semantics remain unproven."
+      ]
+    },
+    {
+      "id": "container.trainingChest1",
+      "category": "container",
+      "sourceIds": [
+        "iesdp",
+        "dudleyville",
+        "gamebanshee"
+      ],
+      "objectId": "trainingChest1",
+      "dialogId": "trainingChest1Dialog",
+      "actions": [
+        "openContainer"
+      ],
+      "branches": [
+        "candlekeep.containers.trainingChest1"
+      ],
+      "sourceStatus": "supporting-base-audited-classic-pending",
+      "sourceEvidence": {
+        "fixture": "tests/fixtures/candlekeep_shop_stock.json:containers.trainingChest1",
+        "area": "AR2643",
+        "container": 1,
+        "areaSha256": "de44f1d8dfdb2cb30eea009d1fdbd18bf323213f247ec5953dc6e238d3175411"
+      },
+      "conditions": [
+        "A distinct fixed container from AR2643 #1",
+        "Source lock difficulty 100; flags 0; script none",
+        "Approved native tiers; source visibility/delay and classic differences remain unresolved"
+      ],
+      "outcomes": [
+        "No items",
+        "0 gold; one saved ownership claim, retained across revisits/reload"
+      ],
+      "nativeChecks": {
+        "lockAgility": 12,
+        "forceStrength": 12,
+        "alwaysDetected": false,
+        "guardCount": 0
+      },
+      "implementation": [
+        "res/maps/candlekeep/config.json:trainingChest1",
+        "res/maps/candlekeep/dialog.json:trainingChest1Dialog",
+        "res/maps/candlekeep/script.py:CandlekeepDialog.takeContents"
+      ],
+      "automatedCoverage": {
+        "source": "tests/test_candlekeep_source.py:SourceAuditTests.testAllSourceContainersRemainSeparateWithFixedContents",
+        "structural": "tests/test_candlekeep_content.py:CandlekeepContentTest.testIndependentSourceLedgerHasImplementationsAndDeclaredWitnesses",
+        "nativeRoutes": [
+          "candlekeep.containers.trainingChest1"
+        ],
+        "nativeReceipts": "pending"
+      },
+      "editionDifferences": [
+        "All 37 supporting EE base containers are mapped separately; original BG1 equivalence and exact guard semantics remain unproven."
+      ]
+    },
+    {
+      "id": "container.trainingChest2",
+      "category": "container",
+      "sourceIds": [
+        "iesdp",
+        "dudleyville",
+        "gamebanshee"
+      ],
+      "objectId": "trainingChest2",
+      "dialogId": "trainingChest2Dialog",
+      "actions": [
+        "openContainer"
+      ],
+      "branches": [
+        "candlekeep.containers.trainingChest2"
+      ],
+      "sourceStatus": "supporting-base-audited-classic-pending",
+      "sourceEvidence": {
+        "fixture": "tests/fixtures/candlekeep_shop_stock.json:containers.trainingChest2",
+        "area": "AR2643",
+        "container": 2,
+        "areaSha256": "de44f1d8dfdb2cb30eea009d1fdbd18bf323213f247ec5953dc6e238d3175411"
+      },
+      "conditions": [
+        "A distinct fixed container from AR2643 #2",
+        "Source lock difficulty 100; flags 0; script none",
+        "Approved native tiers; source visibility/delay and classic differences remain unresolved"
+      ],
+      "outcomes": [
+        "No items",
+        "0 gold; one saved ownership claim, retained across revisits/reload"
+      ],
+      "nativeChecks": {
+        "lockAgility": 12,
+        "forceStrength": 12,
+        "alwaysDetected": false,
+        "guardCount": 0
+      },
+      "implementation": [
+        "res/maps/candlekeep/config.json:trainingChest2",
+        "res/maps/candlekeep/dialog.json:trainingChest2Dialog",
+        "res/maps/candlekeep/script.py:CandlekeepDialog.takeContents"
+      ],
+      "automatedCoverage": {
+        "source": "tests/test_candlekeep_source.py:SourceAuditTests.testAllSourceContainersRemainSeparateWithFixedContents",
+        "structural": "tests/test_candlekeep_content.py:CandlekeepContentTest.testIndependentSourceLedgerHasImplementationsAndDeclaredWitnesses",
+        "nativeRoutes": [
+          "candlekeep.containers.trainingChest2"
+        ],
+        "nativeReceipts": "pending"
+      },
+      "editionDifferences": [
+        "All 37 supporting EE base containers are mapped separately; original BG1 equivalence and exact guard semantics remain unproven."
+      ]
+    },
+    {
+      "id": "container.trainingChest3",
+      "category": "container",
+      "sourceIds": [
+        "iesdp",
+        "dudleyville",
+        "gamebanshee"
+      ],
+      "objectId": "trainingChest3",
+      "dialogId": "trainingChest3Dialog",
+      "actions": [
+        "openContainer"
+      ],
+      "branches": [
+        "candlekeep.containers.trainingChest3"
+      ],
+      "sourceStatus": "supporting-base-audited-classic-pending",
+      "sourceEvidence": {
+        "fixture": "tests/fixtures/candlekeep_shop_stock.json:containers.trainingChest3",
+        "area": "AR2643",
+        "container": 3,
+        "areaSha256": "de44f1d8dfdb2cb30eea009d1fdbd18bf323213f247ec5953dc6e238d3175411"
+      },
+      "conditions": [
+        "A distinct fixed container from AR2643 #3",
+        "Source lock difficulty 100; flags 0; script none",
+        "Approved native tiers; source visibility/delay and classic differences remain unresolved"
+      ],
+      "outcomes": [
+        "No items",
+        "0 gold; one saved ownership claim, retained across revisits/reload"
+      ],
+      "nativeChecks": {
+        "lockAgility": 12,
+        "forceStrength": 12,
+        "alwaysDetected": false,
+        "guardCount": 0
+      },
+      "implementation": [
+        "res/maps/candlekeep/config.json:trainingChest3",
+        "res/maps/candlekeep/dialog.json:trainingChest3Dialog",
+        "res/maps/candlekeep/script.py:CandlekeepDialog.takeContents"
+      ],
+      "automatedCoverage": {
+        "source": "tests/test_candlekeep_source.py:SourceAuditTests.testAllSourceContainersRemainSeparateWithFixedContents",
+        "structural": "tests/test_candlekeep_content.py:CandlekeepContentTest.testIndependentSourceLedgerHasImplementationsAndDeclaredWitnesses",
+        "nativeRoutes": [
+          "candlekeep.containers.trainingChest3"
+        ],
+        "nativeReceipts": "pending"
+      },
+      "editionDifferences": [
+        "All 37 supporting EE base containers are mapped separately; original BG1 equivalence and exact guard semantics remain unproven."
+      ]
+    },
+    {
+      "id": "container.trainingChest4",
+      "category": "container",
+      "sourceIds": [
+        "iesdp",
+        "dudleyville",
+        "gamebanshee"
+      ],
+      "objectId": "trainingChest4",
+      "dialogId": "trainingChest4Dialog",
+      "actions": [
+        "openContainer"
+      ],
+      "branches": [
+        "candlekeep.containers.trainingChest4"
+      ],
+      "sourceStatus": "supporting-base-audited-classic-pending",
+      "sourceEvidence": {
+        "fixture": "tests/fixtures/candlekeep_shop_stock.json:containers.trainingChest4",
+        "area": "AR2643",
+        "container": 4,
+        "areaSha256": "de44f1d8dfdb2cb30eea009d1fdbd18bf323213f247ec5953dc6e238d3175411"
+      },
+      "conditions": [
+        "A distinct fixed container from AR2643 #4",
+        "Source lock difficulty 100; flags 0; script none",
+        "Approved native tiers; source visibility/delay and classic differences remain unresolved"
+      ],
+      "outcomes": [
+        "No items",
+        "0 gold; one saved ownership claim, retained across revisits/reload"
+      ],
+      "nativeChecks": {
+        "lockAgility": 12,
+        "forceStrength": 12,
+        "alwaysDetected": false,
+        "guardCount": 0
+      },
+      "implementation": [
+        "res/maps/candlekeep/config.json:trainingChest4",
+        "res/maps/candlekeep/dialog.json:trainingChest4Dialog",
+        "res/maps/candlekeep/script.py:CandlekeepDialog.takeContents"
+      ],
+      "automatedCoverage": {
+        "source": "tests/test_candlekeep_source.py:SourceAuditTests.testAllSourceContainersRemainSeparateWithFixedContents",
+        "structural": "tests/test_candlekeep_content.py:CandlekeepContentTest.testIndependentSourceLedgerHasImplementationsAndDeclaredWitnesses",
+        "nativeRoutes": [
+          "candlekeep.containers.trainingChest4"
+        ],
+        "nativeReceipts": "pending"
+      },
+      "editionDifferences": [
+        "All 37 supporting EE base containers are mapped separately; original BG1 equivalence and exact guard semantics remain unproven."
+      ]
+    },
+    {
+      "id": "container.trainingChest5",
+      "category": "container",
+      "sourceIds": [
+        "iesdp",
+        "dudleyville",
+        "gamebanshee"
+      ],
+      "objectId": "trainingChest5",
+      "dialogId": "trainingChest5Dialog",
+      "actions": [
+        "openContainer"
+      ],
+      "branches": [
+        "candlekeep.containers.trainingChest5"
+      ],
+      "sourceStatus": "supporting-base-audited-classic-pending",
+      "sourceEvidence": {
+        "fixture": "tests/fixtures/candlekeep_shop_stock.json:containers.trainingChest5",
+        "area": "AR2643",
+        "container": 5,
+        "areaSha256": "de44f1d8dfdb2cb30eea009d1fdbd18bf323213f247ec5953dc6e238d3175411"
+      },
+      "conditions": [
+        "A distinct fixed container from AR2643 #5",
+        "Source lock difficulty 50; flags 1; script none",
+        "Approved native tiers; source visibility/delay and classic differences remain unresolved"
+      ],
+      "outcomes": [
+        "No items",
+        "0 gold; one saved ownership claim, retained across revisits/reload"
+      ],
+      "nativeChecks": {
+        "lockAgility": 18,
+        "forceStrength": 14,
+        "alwaysDetected": false,
+        "guardCount": 0
+      },
+      "implementation": [
+        "res/maps/candlekeep/config.json:trainingChest5",
+        "res/maps/candlekeep/dialog.json:trainingChest5Dialog",
+        "res/maps/candlekeep/script.py:CandlekeepDialog.takeContents"
+      ],
+      "automatedCoverage": {
+        "source": "tests/test_candlekeep_source.py:SourceAuditTests.testAllSourceContainersRemainSeparateWithFixedContents",
+        "structural": "tests/test_candlekeep_content.py:CandlekeepContentTest.testIndependentSourceLedgerHasImplementationsAndDeclaredWitnesses",
+        "nativeRoutes": [
+          "candlekeep.containers.trainingChest5"
+        ],
+        "nativeReceipts": "pending"
+      },
+      "editionDifferences": [
+        "All 37 supporting EE base containers are mapped separately; original BG1 equivalence and exact guard semantics remain unproven."
+      ]
+    },
+    {
+      "id": "container.trainingChest6",
+      "category": "container",
+      "sourceIds": [
+        "iesdp",
+        "dudleyville",
+        "gamebanshee"
+      ],
+      "objectId": "trainingChest6",
+      "dialogId": "trainingChest6Dialog",
+      "actions": [
+        "openContainer"
+      ],
+      "branches": [
+        "candlekeep.containers.trainingChest6"
+      ],
+      "sourceStatus": "supporting-base-audited-classic-pending",
+      "sourceEvidence": {
+        "fixture": "tests/fixtures/candlekeep_shop_stock.json:containers.trainingChest6",
+        "area": "AR2643",
+        "container": 6,
+        "areaSha256": "de44f1d8dfdb2cb30eea009d1fdbd18bf323213f247ec5953dc6e238d3175411"
+      },
+      "conditions": [
+        "A distinct fixed container from AR2643 #6",
+        "Source lock difficulty 100; flags 0; script none",
+        "Approved native tiers; source visibility/delay and classic differences remain unresolved"
+      ],
+      "outcomes": [
+        "No items",
+        "0 gold; one saved ownership claim, retained across revisits/reload"
+      ],
+      "nativeChecks": {
+        "lockAgility": 12,
+        "forceStrength": 12,
+        "alwaysDetected": false,
+        "guardCount": 0
+      },
+      "implementation": [
+        "res/maps/candlekeep/config.json:trainingChest6",
+        "res/maps/candlekeep/dialog.json:trainingChest6Dialog",
+        "res/maps/candlekeep/script.py:CandlekeepDialog.takeContents"
+      ],
+      "automatedCoverage": {
+        "source": "tests/test_candlekeep_source.py:SourceAuditTests.testAllSourceContainersRemainSeparateWithFixedContents",
+        "structural": "tests/test_candlekeep_content.py:CandlekeepContentTest.testIndependentSourceLedgerHasImplementationsAndDeclaredWitnesses",
+        "nativeRoutes": [
+          "candlekeep.containers.trainingChest6"
+        ],
+        "nativeReceipts": "pending"
+      },
+      "editionDifferences": [
+        "All 37 supporting EE base containers are mapped separately; original BG1 equivalence and exact guard semantics remain unproven."
+      ]
+    },
+    {
+      "id": "container.trainingChest7",
+      "category": "container",
+      "sourceIds": [
+        "iesdp",
+        "dudleyville",
+        "gamebanshee"
+      ],
+      "objectId": "trainingChest7",
+      "dialogId": "trainingChest7Dialog",
+      "actions": [
+        "openContainer"
+      ],
+      "branches": [
+        "candlekeep.containers.trainingChest7"
+      ],
+      "sourceStatus": "supporting-base-audited-classic-pending",
+      "sourceEvidence": {
+        "fixture": "tests/fixtures/candlekeep_shop_stock.json:containers.trainingChest7",
+        "area": "AR2643",
+        "container": 7,
+        "areaSha256": "de44f1d8dfdb2cb30eea009d1fdbd18bf323213f247ec5953dc6e238d3175411"
+      },
+      "conditions": [
+        "A distinct fixed container from AR2643 #7",
+        "Source lock difficulty 100; flags 0; script none",
+        "Approved native tiers; source visibility/delay and classic differences remain unresolved"
+      ],
+      "outcomes": [
+        "No items",
+        "0 gold; one saved ownership claim, retained across revisits/reload"
+      ],
+      "nativeChecks": {
+        "lockAgility": 12,
+        "forceStrength": 12,
+        "alwaysDetected": false,
+        "guardCount": 0
+      },
+      "implementation": [
+        "res/maps/candlekeep/config.json:trainingChest7",
+        "res/maps/candlekeep/dialog.json:trainingChest7Dialog",
+        "res/maps/candlekeep/script.py:CandlekeepDialog.takeContents"
+      ],
+      "automatedCoverage": {
+        "source": "tests/test_candlekeep_source.py:SourceAuditTests.testAllSourceContainersRemainSeparateWithFixedContents",
+        "structural": "tests/test_candlekeep_content.py:CandlekeepContentTest.testIndependentSourceLedgerHasImplementationsAndDeclaredWitnesses",
+        "nativeRoutes": [
+          "candlekeep.containers.trainingChest7"
+        ],
+        "nativeReceipts": "pending"
+      },
+      "editionDifferences": [
+        "All 37 supporting EE base containers are mapped separately; original BG1 equivalence and exact guard semantics remain unproven."
+      ]
+    },
+    {
+      "id": "container.trainingChest8",
+      "category": "container",
+      "sourceIds": [
+        "iesdp",
+        "dudleyville",
+        "gamebanshee"
+      ],
+      "objectId": "trainingChest8",
+      "dialogId": "trainingChest8Dialog",
+      "actions": [
+        "openContainer"
+      ],
+      "branches": [
+        "candlekeep.containers.trainingChest8"
+      ],
+      "sourceStatus": "supporting-base-audited-classic-pending",
+      "sourceEvidence": {
+        "fixture": "tests/fixtures/candlekeep_shop_stock.json:containers.trainingChest8",
+        "area": "AR2643",
+        "container": 8,
+        "areaSha256": "de44f1d8dfdb2cb30eea009d1fdbd18bf323213f247ec5953dc6e238d3175411"
+      },
+      "conditions": [
+        "A distinct fixed container from AR2643 #8",
+        "Source lock difficulty 60; flags 1; script none",
+        "Approved native tiers; source visibility/delay and classic differences remain unresolved"
+      ],
+      "outcomes": [
+        "No items",
+        "0 gold; one saved ownership claim, retained across revisits/reload"
+      ],
+      "nativeChecks": {
+        "lockAgility": 18,
+        "forceStrength": 14,
+        "alwaysDetected": false,
+        "guardCount": 0
+      },
+      "implementation": [
+        "res/maps/candlekeep/config.json:trainingChest8",
+        "res/maps/candlekeep/dialog.json:trainingChest8Dialog",
+        "res/maps/candlekeep/script.py:CandlekeepDialog.takeContents"
+      ],
+      "automatedCoverage": {
+        "source": "tests/test_candlekeep_source.py:SourceAuditTests.testAllSourceContainersRemainSeparateWithFixedContents",
+        "structural": "tests/test_candlekeep_content.py:CandlekeepContentTest.testIndependentSourceLedgerHasImplementationsAndDeclaredWitnesses",
+        "nativeRoutes": [
+          "candlekeep.containers.trainingChest8"
+        ],
+        "nativeReceipts": "pending"
+      },
+      "editionDifferences": [
+        "All 37 supporting EE base containers are mapped separately; original BG1 equivalence and exact guard semantics remain unproven."
+      ]
+    },
+    {
+      "id": "container.trainingChest9",
+      "category": "container",
+      "sourceIds": [
+        "iesdp",
+        "dudleyville",
+        "gamebanshee"
+      ],
+      "objectId": "trainingChest9",
+      "dialogId": "trainingChest9Dialog",
+      "actions": [
+        "openContainer"
+      ],
+      "branches": [
+        "candlekeep.containers.trainingChest9"
+      ],
+      "sourceStatus": "supporting-base-audited-classic-pending",
+      "sourceEvidence": {
+        "fixture": "tests/fixtures/candlekeep_shop_stock.json:containers.trainingChest9",
+        "area": "AR2643",
+        "container": 9,
+        "areaSha256": "de44f1d8dfdb2cb30eea009d1fdbd18bf323213f247ec5953dc6e238d3175411"
+      },
+      "conditions": [
+        "A distinct fixed container from AR2643 #9",
+        "Source lock difficulty 100; flags 0; script none",
+        "Approved native tiers; source visibility/delay and classic differences remain unresolved"
+      ],
+      "outcomes": [
+        "No items",
+        "0 gold; one saved ownership claim, retained across revisits/reload"
+      ],
+      "nativeChecks": {
+        "lockAgility": 12,
+        "forceStrength": 12,
+        "alwaysDetected": false,
+        "guardCount": 0
+      },
+      "implementation": [
+        "res/maps/candlekeep/config.json:trainingChest9",
+        "res/maps/candlekeep/dialog.json:trainingChest9Dialog",
+        "res/maps/candlekeep/script.py:CandlekeepDialog.takeContents"
+      ],
+      "automatedCoverage": {
+        "source": "tests/test_candlekeep_source.py:SourceAuditTests.testAllSourceContainersRemainSeparateWithFixedContents",
+        "structural": "tests/test_candlekeep_content.py:CandlekeepContentTest.testIndependentSourceLedgerHasImplementationsAndDeclaredWitnesses",
+        "nativeRoutes": [
+          "candlekeep.containers.trainingChest9"
+        ],
+        "nativeReceipts": "pending"
+      },
+      "editionDifferences": [
+        "All 37 supporting EE base containers are mapped separately; original BG1 equivalence and exact guard semantics remain unproven."
+      ]
+    },
+    {
+      "id": "container.trainingChest10",
+      "category": "container",
+      "sourceIds": [
+        "iesdp",
+        "dudleyville",
+        "gamebanshee"
+      ],
+      "objectId": "trainingChest10",
+      "dialogId": "trainingChest10Dialog",
+      "actions": [
+        "openContainer"
+      ],
+      "branches": [
+        "candlekeep.containers.trainingChest10"
+      ],
+      "sourceStatus": "supporting-base-audited-classic-pending",
+      "sourceEvidence": {
+        "fixture": "tests/fixtures/candlekeep_shop_stock.json:containers.trainingChest10",
+        "area": "AR2643",
+        "container": 10,
+        "areaSha256": "de44f1d8dfdb2cb30eea009d1fdbd18bf323213f247ec5953dc6e238d3175411"
+      },
+      "conditions": [
+        "A distinct fixed container from AR2643 #10",
+        "Source lock difficulty 50; flags 0; script none",
+        "Approved native tiers; source visibility/delay and classic differences remain unresolved"
+      ],
+      "outcomes": [
+        "No items",
+        "0 gold; one saved ownership claim, retained across revisits/reload"
+      ],
+      "nativeChecks": {
+        "lockAgility": 12,
+        "forceStrength": 12,
+        "alwaysDetected": false,
+        "guardCount": 0
+      },
+      "implementation": [
+        "res/maps/candlekeep/config.json:trainingChest10",
+        "res/maps/candlekeep/dialog.json:trainingChest10Dialog",
+        "res/maps/candlekeep/script.py:CandlekeepDialog.takeContents"
+      ],
+      "automatedCoverage": {
+        "source": "tests/test_candlekeep_source.py:SourceAuditTests.testAllSourceContainersRemainSeparateWithFixedContents",
+        "structural": "tests/test_candlekeep_content.py:CandlekeepContentTest.testIndependentSourceLedgerHasImplementationsAndDeclaredWitnesses",
+        "nativeRoutes": [
+          "candlekeep.containers.trainingChest10"
+        ],
+        "nativeReceipts": "pending"
+      },
+      "editionDifferences": [
+        "All 37 supporting EE base containers are mapped separately; original BG1 equivalence and exact guard semantics remain unproven."
+      ]
+    }
+  ]
+}
