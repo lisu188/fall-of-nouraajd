@@ -131,11 +131,26 @@ class OctobogzRuntimeTest(unittest.TestCase):
                 director = instance.createObject('OctobogzHuntDirector')
                 director.synchronize(game_map)
                 assert game_map.getObjectByName(alpha_name) == alpha
-                game_map.removeObject(alpha)
+                held_synchronizations = []
+                original_post = game.CGame.post
+                def holdSynchronization(owner, callback):
+                    assert owner == instance
+                    held_synchronizations.append(callback)
+                try:
+                    game.CGame.post = holdSynchronization
+                    game_map.removeObject(alpha)
+                finally:
+                    game.CGame.post = original_post
+                assert len(held_synchronizations) == 1
                 assert state()['slots']['alpha']['status'] == 'pending'
+                assert game_map.getObjectByName(alpha_name) is None
                 assert not game_map.getBoolProperty('octobogzHuntCleared')
+                for callback in held_synchronizations:
+                    original_post(instance, callback)
+                held_synchronizations.clear()
                 for _ in range(3): loop.run()
                 restored = game_map.getObjectByName(alpha_name)
+                assert state()['slots']['alpha']['status'] == 'living'
                 assert restored is not None and restored != alpha
                 assert restored.getHp() == 9 and restored.getMana() == 6
                 assert restored.getController().getTarget() == 'cave2' and restored.getController().getDistance() == 10
