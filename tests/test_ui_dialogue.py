@@ -236,6 +236,7 @@ class DialogueContentTest(unittest.TestCase):
                         self.assertEqual(len(numbers), len(set(numbers)))
         self.assertEqual(
             {
+                "candlekeep": 84,
                 "castleGriffinCliff": 2,
                 "castleGuardianAngels": 2,
                 "castleHomecoming": 2,
@@ -425,6 +426,7 @@ class DialogueContentTest(unittest.TestCase):
 
     def testQuestContextReferencesOnlyExistingQuestDefinitions(self):
         conversations = 0
+        candlekeep_contexts = {}
         for map_dir in (ROOT / "res/maps").iterdir():
             if not map_dir.is_dir():
                 continue
@@ -440,11 +442,25 @@ class DialogueContentTest(unittest.TestCase):
                     if "questIds" not in properties:
                         continue
                     conversations += 1
+                    if map_dir.name == "candlekeep":
+                        candlekeep_contexts[identity] = tuple(properties["questIds"].split(","))
                     self.assertIn("states", properties, (map_dir.name, identity))
                     for quest_id in properties["questIds"].split(","):
                         self.assertIn(quest_id, config, (map_dir.name, identity, quest_id))
                         self.assertTrue(config[quest_id]["class"].endswith("Quest"))
-        self.assertEqual(24, conversations)
+        self.assertEqual(
+            {
+                "firebeadDialog": ("firebeadQuest",),
+                "phlydiaDialog": ("phlydiaQuest",),
+                "dreppinDialog": ("dreppinQuest",),
+                "hullDialog": ("hullQuest",),
+                "fullerDialog": ("fullerQuest",),
+                "reevorDialog": ("reevorQuest",),
+            },
+            candlekeep_contexts,
+        )
+        self.assertEqual(24, conversations - len(candlekeep_contexts))
+        self.assertEqual(30, conversations)
 
     def testRitualRecordDescribesActualTurnCadence(self):
         tree = ast.parse((ROOT / "res/maps/ritual/script.py").read_text())

@@ -12,6 +12,7 @@ import quest_state
 from res import campaign as campaign_driver
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
+CANDLEKEEP_QUEST_KEYS = ("firebead", "phlydia", "dreppin", "hull", "fuller", "reevor")
 
 
 class JournalObject:
@@ -346,8 +347,14 @@ class MapQuestJournalTest(unittest.TestCase):
         self.assertEqual(before_destination, destination.properties)
         self.assertEqual([], game.messages)
 
-    def test_authored_quest_matrix_keeps_all_27_journals_and_destination_state(self):
-        count = 0
+    def assertAuthoredQuestRoster(self, roster):
+        candlekeep = {(map_name, quest_name) for map_name, quest_name in roster if map_name == "candlekeep"}
+        self.assertEqual({("candlekeep", actor + "Quest") for actor in CANDLEKEEP_QUEST_KEYS}, candlekeep)
+        self.assertEqual(27, len(roster - candlekeep), "The original 27 authored quests must remain covered")
+        self.assertEqual(33, len(roster))
+
+    def test_authored_quest_matrix_keeps_all_33_journals_and_destination_state(self):
+        roster = set()
         plugin_classes = loadQuestClasses(REPO_ROOT / "res/plugins/castle_campaign.py")
         for map_dir in sorted((REPO_ROOT / "res/maps").iterdir()):
             if not (map_dir / "script.py").is_file():
@@ -358,7 +365,7 @@ class MapQuestJournalTest(unittest.TestCase):
                 cls = classes.get(entry.get("class"))
                 if cls is None or not any(base.__name__ == "CQuest" for base in cls.__mro__):
                     continue
-                count += 1
+                roster.add((map_dir.name, quest_name))
                 with self.subTest(map=map_dir.name, quest=quest_name):
                     game, source, destination, player = self.createSession(map_dir.name)
                     quest = cls(game)
@@ -385,10 +392,10 @@ class MapQuestJournalTest(unittest.TestCase):
                     self.assertFalse(restored.isCompleted())
                     self.assertEqual(before_destination, destination.properties)
                     self.assertEqual([], game.messages)
-        self.assertEqual(27, count)
+        self.assertAuthoredQuestRoster(roster)
 
-    def test_all_27_completed_journals_survive_round_trip_and_fresh_source(self):
-        count = 0
+    def test_all_33_completed_journals_survive_round_trip_and_fresh_source(self):
+        roster = set()
         plugin_classes = loadQuestClasses(REPO_ROOT / "res/plugins/castle_campaign.py")
         for map_dir in sorted((REPO_ROOT / "res/maps").iterdir()):
             if not (map_dir / "script.py").is_file():
@@ -399,7 +406,7 @@ class MapQuestJournalTest(unittest.TestCase):
                 cls = classes.get(entry.get("class"))
                 if cls is None or not any(base.__name__ == "CQuest" for base in cls.__mro__):
                     continue
-                count += 1
+                roster.add((map_dir.name, quest_name))
                 with self.subTest(map=map_dir.name, quest=quest_name):
                     game, source, destination, player = self.createSession(map_dir.name)
                     quest = cls(game)
@@ -432,6 +439,10 @@ class MapQuestJournalTest(unittest.TestCase):
                         quest_state_amulet="returned",
                         quest_state_victor="good_end",
                     )
+                    if map_dir.name == "candlekeep":
+                        actor = quest.getStringProperty("questKey")
+                        self.assertIn(actor, CANDLEKEEP_QUEST_KEYS)
+                        source.setStringProperty("candlekeep_" + actor + "Stage", "completed")
                     for gate in source.objects.values():
                         gate.setBoolProperty("destroyed", True)
                     scenario = quest.getStringProperty("campaign_scenarioId")
@@ -457,7 +468,61 @@ class MapQuestJournalTest(unittest.TestCase):
                     self.assertTrue(restored.isCompleted())
                     self.assertEqual({}, destination.properties)
                     self.assertEqual([], game.messages)
-        self.assertEqual(27, count)
+        self.assertAuthoredQuestRoster(roster)
+
+    def testAllSixCandlekeepJournalsKeepActiveAndCompletedAuthoredTextAcrossPropertyRoundTrips(self):
+        classes = loadQuestClasses(REPO_ROOT / "res/maps/candlekeep/script.py")
+        config = json.loads((REPO_ROOT / "res/maps/candlekeep/config.json").read_text(encoding="utf-8"))
+        for actor in CANDLEKEEP_QUEST_KEYS:
+            with self.subTest(quest=actor):
+                game, source, destination, player = self.createSession("candlekeep")
+                definition = config[actor + "Quest"]
+                quest = classes[definition["class"]](game)
+                quest.properties.update(definition["properties"])
+                quest.properties.update(name=actor + "Quest", typeId=actor + "Quest")
+                player.quests.append(quest)
+                self.prepareSource("candlekeep", source, player)
+                self.assertFalse(quest.isCompleted())
+                if actor == "reevor":
+                    self.assertIn("2 of five rats", quest.getObjective())
+                else:
+                    self.assertEqual(definition["properties"]["objective"], quest.getObjective())
+                quest.captureJournal(False)
+                expected_active = self.journalText(quest)
+                active_copy = classes[definition["class"]](game)
+                active_copy.properties = json.loads(json.dumps(quest.properties))
+                player.quests[:] = [active_copy]
+                destination.setStringProperty("candlekeep_" + actor + "Stage", "completed")
+                destination.setNumericProperty("candlekeepRatsSlain", 999)
+                before_destination = destination.properties.copy()
+                game.map = destination
+                self.assertFalse(active_copy.isCompleted())
+                self.assertEqual(expected_active, self.journalText(active_copy))
+                self.assertEqual(before_destination, destination.properties)
+                game.map = source
+                source.setStringProperty("candlekeep_" + actor + "Stage", "completed")
+                self.assertTrue(active_copy.isCompleted())
+                active_copy.captureJournal(True)
+                expected_completed = (
+                    definition["properties"]["completedText"],
+                    definition["properties"]["rewardText"],
+                    definition["properties"]["hint"],
+                )
+                self.assertEqual(expected_completed, self.journalText(active_copy))
+                completed_copy = classes[definition["class"]](game)
+                completed_copy.properties = json.loads(json.dumps(active_copy.properties))
+                player.quests.clear()
+                player.completed[:] = [completed_copy]
+                game.map = destination
+                self.assertTrue(completed_copy.isCompleted())
+                self.assertEqual(expected_completed, self.journalText(completed_copy))
+                self.assertEqual(before_destination, destination.properties)
+                game.map = source
+                source.properties.clear()
+                completed_copy.captureJournal(True)
+                self.assertTrue(completed_copy.isCompleted())
+                self.assertEqual(expected_completed, self.journalText(completed_copy))
+                self.assertEqual([], game.messages)
 
     def prepareSource(self, map_name, source, player):
         source.properties.update(
@@ -469,6 +534,10 @@ class MapQuestJournalTest(unittest.TestCase):
             sigils_found=2,
             halda_joined=True,
         )
+        if map_name == "candlekeep":
+            for actor in CANDLEKEEP_QUEST_KEYS:
+                source.setStringProperty("candlekeep_" + actor + "Stage", "active")
+            source.setNumericProperty("candlekeepRatsSlain", 2)
         if map_name == "nouraajd":
             source.properties.update(quest_state_amulet="active", quest_state_victor="encounter_active")
         if map_name == "siege":

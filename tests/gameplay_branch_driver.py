@@ -672,6 +672,81 @@ class GameplayBranchDriver:
             ("Unexpected unauthored relocation", origin, arrival),
         )
 
+    def _captureCandlekeepTimeout(self):
+        if self.map_name != "candlekeep" or "candlekeep.training.timedExit" not in self.case.branches:
+            return None
+        if (
+            self.string("candlekeep_trainingStage") != "active"
+            or not self.flag("candlekeepTrainingAccepted")
+            or self.number("candlekeepTrainingTurns") != 119
+            or self.number("candlekeepTrainingTurnLimit") != 120
+            or any(
+                self.flag(name)
+                for name in (
+                    "candlekeepTrainingTimedOut",
+                    "candlekeepTrainingForcedExit",
+                    "candlekeepTrainingDefeatPending",
+                )
+            )
+        ):
+            return None
+        obe, entrance = (self.object(name, required=False) for name in ("obe", "trainingEntrance"))
+        if not obe or not entrance or not self.call(obe, "isAlive"):
+            return None
+        try:
+            inventory = json.loads(self.call(self.player, "getStringProperty", "candlekeepTrainingInventoryNames"))
+            equipment = json.loads(self.call(self.player, "getStringProperty", "candlekeepTrainingEquipment"))
+        except (TypeError, ValueError):
+            return None
+        return {
+            "obe": obe["__handle__"],
+            "entrance": entrance["__handle__"],
+            "destination": self.coords(entrance),
+            "inventory": inventory,
+            "equipment": equipment,
+            "affiliation": self.call(self.player, "getStringProperty", "candlekeepTrainingAffiliation"),
+        }
+
+    def _witnessCandlekeepTimeout(self, before, origin, arrival):
+        if not before or arrival != before["destination"]:
+            return False
+        obe, entrance = (self.object(name, required=False) for name in ("obe", "trainingEntrance"))
+        if (
+            not obe
+            or not entrance
+            or obe["__handle__"] != before["obe"]
+            or entrance["__handle__"] != before["entrance"]
+            or not self.call(obe, "isAlive")
+            or self.coords(entrance) != arrival
+            or origin[2] != self.coords(obe)[2]
+            or self.string("candlekeep_trainingStage") != "abandoned"
+            or self.number("candlekeepTrainingTurns") != 120
+            or self.number("candlekeepTrainingTurnLimit") != 120
+            or not self.flag("candlekeepTrainingTimedOut")
+            or not self.flag("candlekeepTrainingForcedExit")
+            or self.flag("candlekeepTrainingDefeatPending")
+            or self.call(self.player, "getStringProperty", "candlekeepPortalGuard")
+            or self.call(self.player, "getStringProperty", "affiliation") != before["affiliation"]
+        ):
+            return False
+        practice_names = ("arkanis", "canderous", "deder", "mordaine", "osprey") + tuple(
+            "trainingFoe" + str(index) for index in range(1, 7)
+        )
+        if any(self.object(name, required=False) for name in practice_names):
+            return False
+        equipped = self.call(self.player, "getEquipped")
+        items = [*self.call(self.player, "getItems"), *(item for item in equipped.values() if item)]
+        if any(self.call(item, "getBoolProperty", "plugin_candlekeepTemporary") for item in items):
+            return False
+        names = {self.call(item, "getName") for item in items}
+        equipment = {slot: self.call(item, "getName") for slot, item in equipped.items() if item}
+        if not set(before["inventory"]).issubset(names) or equipment != before["equipment"]:
+            return False
+        self.record(
+            {"scriptedMovement": "candlekeepTrainingTimeout", "origin": origin, "arrival": arrival}, replay=True
+        )
+        return True
+
     def tick(self):
         if self.turns >= 20000:
             self.test.fail(("Route turn budget exhausted", self.snapshot()))
@@ -679,6 +754,7 @@ class GameplayBranchDriver:
         self.recover()
         origin, map_name = self.coords(), self.map_name
         turn = self.call(self.game_map, "getTurn")
+        candlekeep_timeout = self._captureCandlekeepTimeout()
         self._captureHuntMovement(origin, origin)
         adapter = self._hunt_adapter
         recovery = getattr(adapter, "recover_before_map_turn", None)
@@ -691,7 +767,9 @@ class GameplayBranchDriver:
         self.turns += 1
         if self.map_name == map_name:
             self.test.assertEqual(turn + 1, self.call(self.game_map, "getTurn"))
-            self._validateMovement(origin, self.coords())
+            arrival = self.coords()
+            if not self._witnessCandlekeepTimeout(candlekeep_timeout, origin, arrival):
+                self._validateMovement(origin, arrival)
         afterAmbientCaveTurn(self)
         self.assertSurvival()
 

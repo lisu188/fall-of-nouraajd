@@ -55,6 +55,16 @@ class TestRunnerPackagingTest(unittest.TestCase):
         source_tests = self.package / "tests"
         source_tests.mkdir()
         (source_tests / "__init__.py").write_text("", encoding="utf-8")
+        # These imports precede the deliberately broken source module in test.py.
+        for module_name, class_names in {
+            "test_candlekeep_content.py": ("CandlekeepContentTest", "CandlekeepModelTest"),
+            "test_candlekeep_source.py": ("BinaryParserTests", "SourceAuditTests"),
+        }.items():
+            (source_tests / module_name).write_text(
+                "import unittest\n\n"
+                + "\n\n".join(f"class {name}(unittest.TestCase):\n    pass\n" for name in class_names),
+                encoding="utf-8",
+            )
         for name in (
             "test_navigation_mcp.py",
             "test_python_callback_lifecycle.py",
