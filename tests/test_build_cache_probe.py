@@ -117,7 +117,7 @@ class CacheProbeReplayTest(unittest.TestCase):
                 side_effect=lambda arguments, **kwargs: f'c++ -c source.cpp -o "{arguments[-1]}"',
             ),
             mock.patch.object(probe, "runCommand", side_effect=replay or hit) as compiler,
-            mock.patch.object(probe.time, "monotonic", side_effect=clock or [0, 1, 2, 3, 4, 5]),
+            mock.patch.object(probe.time, "monotonic", side_effect=clock or list(range(12))),
             mock.patch("builtins.print"),
         ):
             result = probe.runProbe(self.arguments)
@@ -126,31 +126,47 @@ class CacheProbeReplayTest(unittest.TestCase):
     def testThreeRealObjectPathsRequireHitsAndByteIdentity(self):
         result, report, calls = self.runProbe()
         self.assertEqual(0, result)
-        self.assertEqual(3, calls)
+        self.assertEqual(6, calls)
         self.assertEqual("passed", report["status"])
         self.assertEqual(0.01, report["aggregate_observed_ratio"])
         self.assertTrue(report["observed_80_percent_reduction"])
         self.assertIn("whole-build speedup is unproven", report["timing_note"])
+        self.assertEqual(3, report["priming_seconds"])
         for sample in report["samples"]:
             self.assertEqual(sample["sha256_before"], sample["sha256_after"])
             self.assertEqual(1, sample["counter_delta"]["direct_cache_hit"])
             self.assertEqual(0, sample["counter_delta"]["cache_miss"])
+            self.assertEqual(sample["priming"]["sha256_before"], sample["priming"]["sha256_after"])
 
     def testTimingIsSupplementalAndNeverWeakensTheCacheHitGate(self):
-        result, report, calls = self.runProbe(clock=[0, 90, 100, 190, 200, 290])
+        result, report, calls = self.runProbe(clock=[0, 1, 2, 92, 100, 101, 102, 192, 200, 201, 202, 292])
         self.assertEqual(0, result)
-        self.assertEqual(3, calls)
+        self.assertEqual(6, calls)
         self.assertFalse(report["observed_80_percent_reduction"])
         self.assertEqual(0.9, report["aggregate_observed_ratio"])
 
-    def testFirstMissStopsRemainingCompilesAndPreservesDiagnostics(self):
+    def testColdPrimeIsSeparateFromTheVerifiedWarmHit(self):
+        def prime_then_hit(arguments, build, timeout):
+            calls = sum(self.counters.values())
+            self.counters["cache_miss" if calls % 2 == 0 else "direct_cache_hit"] += 1
+            return 0
+
+        result, report, calls = self.runProbe(replay=prime_then_hit)
+        self.assertEqual(0, result)
+        self.assertEqual(6, calls)
+        for sample in report["samples"]:
+            self.assertEqual(1, sample["priming"]["counter_delta"]["cache_miss"])
+            self.assertEqual(1, sample["counter_delta"]["direct_cache_hit"])
+            self.assertEqual(0, sample["counter_delta"]["cache_miss"])
+
+    def testMissAfterPrimingStopsRemainingCompilesAndPreservesDiagnostics(self):
         def miss(arguments, build, timeout):
             self.counters["cache_miss"] += 1
             return 0
 
         result, report, calls = self.runProbe(replay=miss)
         self.assertEqual(1, result)
-        self.assertEqual(1, calls)
+        self.assertEqual(2, calls)
         self.assertEqual("failed", report["status"])
         self.assertIn("not exactly one cache hit", report["error"])
         self.assertIsNone(report["observed_80_percent_reduction"])
@@ -179,8 +195,8 @@ class CacheProbeReplayTest(unittest.TestCase):
         self.assertEqual(1, calls)
         self.assertEqual(1, len(report["samples"]))
         self.assertIn("60-second timeout", report["error"])
-        self.assertIn("sha256_after", report["samples"][0])
-        self.assertIn("counter_delta", report["samples"][0])
+        self.assertIn("sha256_after", report["samples"][0]["priming"])
+        self.assertIn("counter_delta", report["samples"][0]["priming"])
 
     def testSymbolicLinksCannotEscapeTheBuild(self):
         with tempfile.TemporaryDirectory() as directory:

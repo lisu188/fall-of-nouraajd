@@ -113,12 +113,30 @@ def runCommand(arguments, build, timeout):
         raise
 
 
+def replayCompile(command, build, path, configuration, timeout, measurement):
+    measurement["sha256_before"] = hashObject(path)
+    before = cacheCounters(configuration)
+    start = time.monotonic()
+    try:
+        measurement["exit_code"] = runCommand(command, build, timeout)
+    finally:
+        measurement["replay_seconds"] = round(time.monotonic() - start, 6)
+        measurement["sha256_after"] = hashObject(path) if path.is_file() else None
+        after = cacheCounters(configuration)
+        measurement["counter_delta"] = {key: after[key] - before[key] for key in before}
+    if measurement["exit_code"] != 0:
+        raise ValueError("Representative compiler replay failed")
+    if measurement["sha256_before"] != measurement["sha256_after"]:
+        raise ValueError("Representative object bytes changed")
+
+
 def runProbe(arguments):
     report = {
         "kind": "representative-compile-cache-replay",
         "status": "failed",
         "samples": [],
         "timing_note": "Ratios compare earlier parallel build edges with serial replays; whole-build speedup is unproven.",
+        "priming_note": "Each object is primed once before hit verification; priming time is reported separately.",
     }
     try:
         if sys.platform != "linux" or not arguments.replay_objects:
@@ -132,23 +150,14 @@ def runProbe(arguments):
                 ["ninja", "-C", str(build), "-t", "commands", "-s", sample["object"]], text=True, timeout=10
             ).strip()
             command_arguments = compileArguments(command, build, path)
-            sample["sha256_before"] = hashObject(path)
-            before = cacheCounters(configuration)
             report["samples"].append(sample)
-            start = time.monotonic()
-            try:
-                sample["exit_code"] = runCommand(command_arguments, build, arguments.timeout)
-            finally:
-                sample["replay_seconds"] = round(time.monotonic() - start, 6)
-                sample["sha256_after"] = hashObject(path) if path.is_file() else None
-                after = cacheCounters(configuration)
-                sample["counter_delta"] = {key: after[key] - before[key] for key in before}
+            # A cold build can legitimately bypass caching while its PCH is new.
+            # Prime the aged inputs without weakening timestamp safeguards.
+            sample["priming"] = {}
+            replayCompile(command_arguments, build, path, configuration, arguments.timeout, sample["priming"])
+            replayCompile(command_arguments, build, path, configuration, arguments.timeout, sample)
             delta = sample["counter_delta"]
             hits = delta["direct_cache_hit"] + delta["preprocessed_cache_hit"]
-            if sample["exit_code"] != 0:
-                raise ValueError("Representative compiler replay failed")
-            if sample["sha256_before"] != sample["sha256_after"]:
-                raise ValueError("Representative object bytes changed")
             if hits != 1 or delta["cache_miss"] != 0:
                 raise ValueError("Representative compile was not exactly one cache hit; remaining replays stopped")
         report["status"] = "passed"
@@ -159,6 +168,9 @@ def runProbe(arguments):
     finally:
         prior_seconds = sum(sample["prior_edge_seconds"] for sample in report["samples"])
         replay_seconds = sum(sample.get("replay_seconds", 0) for sample in report["samples"])
+        report["priming_seconds"] = round(
+            sum(sample.get("priming", {}).get("replay_seconds", 0) for sample in report["samples"]), 6
+        )
         ratio = replay_seconds / prior_seconds if prior_seconds > 0 else None
         report["aggregate_observed_ratio"] = round(ratio, 6) if ratio is not None else None
         report["observed_80_percent_reduction"] = (
