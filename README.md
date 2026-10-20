@@ -91,6 +91,12 @@ set `CMAKE_CXX_COMPILER` to an absolute clang-cl path when LLVM is installed els
 generator/compiler requires a new build directory. Android support is deferred and is not validated by this desktop
 migration; existing Android checks are retained.
 
+Header-based C++ builds disable module scanning so Release unity builds remain effective. GNU builds use a
+project-local compiler cache under `.cache/ccache`, capped at 1 GB; configure with `-DGAME_CCACHE_DIR=<path>` to
+relocate it or `-DGAME_ENABLE_COMPILER_CACHE=OFF` to disable automatic cache setup. Explicit compiler launchers are
+preserved. GCC precompiled headers are shared only between tests with matching compile settings; Clang 20 keeps
+the existing PCH compatibility restriction. CI uploads compact configure/compile timing and cache diagnostics.
+
 `python3 play.py` opens the main menu with Continue, New adventure, Load game, Settings, Help and Quit.
 New adventure offers a campaign, standalone scenario or random map, followed by character creation.
 

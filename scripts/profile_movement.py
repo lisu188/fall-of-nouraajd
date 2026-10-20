@@ -199,6 +199,11 @@ def main():
         "src/core/CModule.cpp",
         "src/gui/object/CMapGraphicsObject.cpp",
     )
+    source_files += tuple(
+        path.relative_to(root).as_posix()
+        for path in sorted((root / "src/core/bindings").iterdir())
+        if path.suffix in {".cpp", ".h"}
+    )
     source_hashes = {name: hashlib.sha256((root / name).read_bytes()).hexdigest() for name in source_files}
     core_library = loadedCoreLibrary()
     records = []

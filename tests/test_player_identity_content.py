@@ -14,6 +14,8 @@ from unittest.mock import patch
 
 import quest_state
 
+from tests.cpp_bindings import readBindingSources
+
 ROOT = Path(__file__).resolve().parents[1]
 CLASS_PERKS = (
     ("Warrior", "Barrier", "warrior_barricades"),
@@ -145,7 +147,7 @@ class PlayerIdentityContentTest(unittest.TestCase):
             self.assertTrue(callable(getattr(self.types[name], "captureJournal")))
 
     def test_race_mana_service_requires_the_native_absolute_mana_binding(self):
-        module = (ROOT / "src/core/CModule.cpp").read_text(encoding="utf-8")
+        module = readBindingSources(ROOT)
         creature_bindings = set(re.findall(r'\.def\("(\w+)",\s*&CCreature::', module))
         self.assertIn("addMana", creature_bindings)
         for race_id, suffix, _gold, _hp, mana_gain in RACE_SERVICES:

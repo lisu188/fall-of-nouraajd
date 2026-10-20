@@ -13,6 +13,7 @@ import unittest
 from unittest.mock import patch
 
 from tests import mcp_seed_fixture
+from tests.cpp_bindings import readBindingSources
 
 ROOT = Path(__file__).resolve().parents[1]
 
@@ -149,8 +150,7 @@ class McpSeedFixtureTest(unittest.TestCase):
         self.assertIn("friend class CRuntimeBridge", private)
         game = (ROOT / "src/core/CGame.cpp").read_text(encoding="utf-8")
         self.assertIn("CGame::CGame() { CSerialization::markGameSessionStarted(); }", game)
-        for filename in ("mcp.py", "src/core/CModule.cpp"):
-            source = (ROOT / filename).read_text(encoding="utf-8")
+        for source in ((ROOT / "mcp.py").read_text(encoding="utf-8"), readBindingSources(ROOT)):
             self.assertNotIn("seedGeneratedNamesForTests", source)
             self.assertNotIn("NameFixtureScopeForTests", source)
 

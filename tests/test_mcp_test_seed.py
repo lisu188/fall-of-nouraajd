@@ -20,6 +20,8 @@ from unittest.mock import Mock, patch
 
 import mcp
 
+from tests.cpp_bindings import readBindingSources
+
 ROOT = Path(__file__).resolve().parents[1]
 
 
@@ -200,7 +202,7 @@ class McpTestSeedTest(unittest.TestCase):
         self.assertNotIn("_seedRandomForTests", mcp.MCP_ALLOWED_EXPORTS)
 
     def testPrivateSeedHookSeedsBothSharedLibraryScopesThroughAnExportedCoreBridge(self):
-        module = (ROOT / "src/core/CModule.cpp").read_text(encoding="utf-8")
+        module = readBindingSources(ROOT)
         core = (ROOT / "src/core/CRuntimeBridge.cpp").read_text(encoding="utf-8")
         header = (ROOT / "src/core/CRuntimeBridge.h").read_text(encoding="utf-8")
         game = (ROOT / "src/core/CGame.cpp").read_text(encoding="utf-8")

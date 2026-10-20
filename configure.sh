@@ -48,8 +48,7 @@ for build_type in "${build_types[@]}"; do
         -DCMAKE_BUILD_TYPE="${build_type}" \
         -DCMAKE_C_COMPILER="${CC}" \
         -DCMAKE_CXX_COMPILER="${CXX}" \
-        -Dpybind11_DIR="${PYBIND11_DIR}" \
-        -DCMAKE_CXX_COMPILER_LAUNCHER=ccache
+        -Dpybind11_DIR="${PYBIND11_DIR}"
 done
 
 #export SDL_VIDEO_X11_VISUALID=0x022 //TODO: check this, this was used to run in WSL ubuntu with xming

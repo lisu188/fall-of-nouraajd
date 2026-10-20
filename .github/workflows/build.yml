@@ -111,6 +111,7 @@ jobs:
       GAME_CONFIGURE_SKIP_SUBMODULES: "1"
       GAME_TEST_TIMINGS_FILE: test/test-timings-linux.json
       GAME_XVFB_JOBS: "4"
+      CCACHE_DIR: ${{ github.workspace }}/.cache/ccache
     steps:
       - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0
         with:
@@ -145,10 +146,9 @@ jobs:
         id: ccache
         shell: bash
         run: |
-          compiler_id="$("${CXX}" -dumpmachine)-$("${CXX}" -dumpfullversion -dumpversion)"
-          compiler_id="${compiler_id//[^A-Za-z0-9_.-]/-}"
-          echo "dir=$(ccache --get-config cache_dir)" >> "${GITHUB_OUTPUT}"
-          echo "prefix=${{ runner.os }}-ccache-cxx26-release-${compiler_id}-" >> "${GITHUB_OUTPUT}"
+          compiler_id="$(python3 scripts/build_metrics.py cache-key --compiler "${CXX}")"
+          echo "dir=${CCACHE_DIR}" >> "${GITHUB_OUTPUT}"
+          echo "prefix=${{ runner.os }}-ccache-cxx26-release-scoped-v1-${compiler_id}-" >> "${GITHUB_OUTPUT}"
       - name: Restore ccache
         if: needs.linux-fast.outputs.native-needed == 'true'
         uses: actions/cache/restore@27d5ce7f107fe9357f9df03efb73ab90386fccae
@@ -166,10 +166,21 @@ jobs:
           restore-keys: ${{ runner.os }}-test-timings-linux-
       - name: configure
         if: needs.linux-fast.outputs.native-needed == 'true'
-        run: GAME_CONFIGURE_BUILD_TYPES=Release ./configure.sh
+        run: >-
+          GAME_CONFIGURE_BUILD_TYPES=Release python3 scripts/build_metrics.py run --phase configure
+          --build-dir cmake-build-gcc15-release --output test/build-metrics/configure.json -- ./configure.sh
+      - name: Validate generated build graph
+        if: needs.linux-fast.outputs.native-needed == 'true'
+        run: python3 -m unittest tests.test_build_graph
+      - name: Validate native PCH cache invalidation
+        if: needs.linux-fast.outputs.native-needed == 'true'
+        run: python3 -m unittest tests.test_build_cache.NativeCompilerCacheTest
       - name: build test targets
         if: needs.linux-fast.outputs.native-needed == 'true'
-        run: cmake --build cmake-build-gcc15-release --target _game for_unit_tests performance_guard_tests -j"$(nproc)"
+        run: >-
+          python3 scripts/build_metrics.py run --phase compile --cache-tool ccache
+          --build-dir cmake-build-gcc15-release --output test/build-metrics/compile.json --
+          cmake --build cmake-build-gcc15-release --target _game for_unit_tests performance_guard_tests -j"$(nproc)"
       - name: Smoke test game imports
         if: needs.linux-fast.outputs.native-needed == 'true'
         run: PYTHONPATH=cmake-build-gcc15-release:res python3 -c "import _game; import game; print('game imports ok')"
@@ -205,7 +216,7 @@ jobs:
         shell: bash
         run: |
           if command -v ccache >/dev/null 2>&1; then
-            ccache --show-stats
+            ccache --show-stats --verbose
           fi
       - name: test (c++)
         if: needs.linux-fast.outputs.native-needed == 'true'
@@ -271,6 +282,14 @@ jobs:
         with:
           path: ${{ steps.ccache.outputs.dir }}
           key: ${{ steps.ccache.outputs.prefix }}${{ github.run_id }}-${{ github.run_attempt }}
+      - name: Upload compile diagnostics
+        if: always() && needs.linux-fast.outputs.native-needed == 'true'
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a
+        with:
+          name: build-metrics-linux
+          path: test/build-metrics/
+          if-no-files-found: warn
+          retention-days: 7
 
   linux-coverage:
     needs: linux-fast
@@ -286,6 +305,7 @@ jobs:
       COVERAGE_REPORTER: python
       GAME_TEST_TIMINGS_FILE: test/test-timings-linux-coverage.json
       GAME_XVFB_JOBS: "4"
+      CCACHE_DIR: ${{ github.workspace }}/.cache/ccache
     steps:
       - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0
         with:
@@ -314,10 +334,9 @@ jobs:
         id: ccache
         shell: bash
         run: |
-          compiler_id="$("${CXX}" -dumpmachine)-$("${CXX}" -dumpfullversion -dumpversion)"
-          compiler_id="${compiler_id//[^A-Za-z0-9_.-]/-}"
-          echo "dir=$(ccache --get-config cache_dir)" >> "${GITHUB_OUTPUT}"
-          echo "prefix=${{ runner.os }}-ccache-cxx26-coverage-${compiler_id}-" >> "${GITHUB_OUTPUT}"
+          compiler_id="$(python3 scripts/build_metrics.py cache-key --compiler "${CXX}")"
+          echo "dir=${CCACHE_DIR}" >> "${GITHUB_OUTPUT}"
+          echo "prefix=${{ runner.os }}-ccache-cxx26-coverage-scoped-v1-${compiler_id}-" >> "${GITHUB_OUTPUT}"
       - name: Restore ccache
         uses: actions/cache/restore@27d5ce7f107fe9357f9df03efb73ab90386fccae
         with:
@@ -355,7 +374,7 @@ jobs:
         shell: bash
         run: |
           if command -v ccache >/dev/null 2>&1; then
-            ccache --show-stats
+            ccache --show-stats --verbose
           fi
       - name: Save ccache
         if: always()
@@ -848,12 +867,14 @@ jobs:
         shell: cmd
         run: |
           set VCPKG_MANIFEST_MODE=OFF
-          call configure.bat
+          python scripts/build_metrics.py run --phase configure --build-dir cmake-build-clangcl20-release --output test/build-metrics/configure.json -- cmd /d /c configure.bat
           if errorlevel 1 exit /b 1
+      - name: Validate generated build graph
+        run: python -m unittest tests.test_build_graph
       - name: Build test targets
         shell: cmd
         run: |
-          cmake --build cmake-build-clangcl20-release --target _game for_unit_tests performance_guard_tests --parallel %CMAKE_BUILD_PARALLEL_LEVEL%
+          python scripts/build_metrics.py run --phase compile --cache-tool sccache --build-dir cmake-build-clangcl20-release --output test/build-metrics/compile.json -- cmake --build cmake-build-clangcl20-release --target _game for_unit_tests performance_guard_tests --parallel %CMAKE_BUILD_PARALLEL_LEVEL%
           if errorlevel 1 exit /b 1
       - name: Smoke test game imports
         shell: cmd
@@ -943,6 +964,14 @@ jobs:
         with:
           path: ${{ env.SCCACHE_DIR }}
           key: ${{ steps.windows-sccache.outputs.prefix }}${{ github.run_id }}-${{ github.run_attempt }}
+      - name: Upload compile diagnostics
+        if: always()
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a
+        with:
+          name: build-metrics-windows
+          path: test/build-metrics/
+          if-no-files-found: warn
+          retention-days: 7
 
   mcp-branches-linux:
     needs:
