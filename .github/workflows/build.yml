@@ -275,6 +275,11 @@ jobs:
         with:
           name: fall-of-nouraajd-linux
           path: cmake-build-gcc15-release/fall-of-nouraajd-*.tar.gz
+      - name: Verify representative project cache hits
+        if: needs.linux-fast.outputs.native-needed == 'true'
+        run: >-
+          python3 scripts/probe_build_cache.py --build-dir cmake-build-gcc15-release
+          --output test/build-metrics/cache-probe.json --replay-objects
       - name: Save ccache
         if: always() && needs.linux-fast.outputs.native-needed == 'true'
         continue-on-error: true
@@ -303,6 +308,7 @@ jobs:
       BUILD_DIR: cmake-build-gcc15-coverage
       COVERAGE_INCLUDE_PREFIXES: src native_plugins
       COVERAGE_REPORTER: python
+      GAME_CI_CACHE_PROBE: "1"
       GAME_TEST_TIMINGS_FILE: test/test-timings-linux-coverage.json
       GAME_XVFB_JOBS: "4"
       CCACHE_DIR: ${{ github.workspace }}/.cache/ccache

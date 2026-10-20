@@ -113,6 +113,7 @@ fi
 cmake_args=(
     -S . -B "${BUILD_DIR}" -G Ninja
     -DCMAKE_BUILD_TYPE=Debug
+    -DGAME_ENABLE_PCH=ON
     -DCMAKE_C_COMPILER="${CC}"
     -DCMAKE_CXX_COMPILER="${CXX}"
     "${cmake_launcher_args[@]}"
@@ -225,6 +226,10 @@ run_phase "coverage data cleanup" find "${BUILD_DIR}" -name '*.gcda' -delete
 run_phase "ctest" ctest --test-dir "${BUILD_DIR}" --output-on-failure
 run_phase "python test suite" run_python_coverage_tests
 run_phase "report generation" generate_report
+if [[ "${GAME_CI_CACHE_PROBE:-0}" == "1" ]]; then
+    run_phase "representative compile cache verification" python3 scripts/probe_build_cache.py \
+        --build-dir "${BUILD_DIR}" --output "${REPORT_DIR}/build-metrics/cache-probe.json" --replay-objects
+fi
 
 total_elapsed=$((SECONDS - SCRIPT_START))
 echo "Coverage reports written to ${REPORT_DIR}/coverage.txt and ${REPORT_DIR}/coverage.html"
