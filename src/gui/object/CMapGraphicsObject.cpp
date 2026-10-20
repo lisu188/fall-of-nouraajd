@@ -3,7 +3,6 @@
 #include "core/CController.h"
 #include "core/CGameContext.h"
 #include "core/CLoader.h"
-#include "core/CLuaOverrides.h"
 #include "core/CPythonOverrides.h"
 #include "core/CWrapper.h"
 #include "gui/CAnimation.h"
@@ -463,7 +462,7 @@ bool CMapGraphicsObject::stepNeedsSequentialPresentation(const std::shared_ptr<C
     const auto creature = std::dynamic_pointer_cast<CCreature>(actor);
     const auto map = actor ? actor->getMap() : nullptr;
     if (!creature || !map || (typeid(*creature) != typeid(CCreature) && typeid(*creature) != typeid(CPlayer)) ||
-        !hasKnownMovementController(creature->getController()) || CLuaOverrides::find(actor.get()) ||
+        !hasKnownMovementController(creature->getController()) ||
         hasMovementPythonHook(actor.get(), {"beforeMove", "beforeMoveAsync", "afterMove", "afterMoveAsync", "onLeave",
                                             "onLeaveFlow", "onEnter", "onEnterFlow"}) ||
         hasMovementPythonHook(creature->getController().get(), {"onStepCommitted", "onTurnEnded", "interrupt"}))
@@ -476,7 +475,7 @@ bool CMapGraphicsObject::stepNeedsSequentialPresentation(const std::shared_ptr<C
     }
     const auto tile = map->getTile(destination);
     if (!tile || (typeid(*tile) != typeid(CTile) && typeid(*tile) != typeid(CWrapper<CTile>)) ||
-        CLuaOverrides::find(tile.get()) || hasMovementPythonHook(tile.get(), {"onStep", "onStepFlow"}))
+        hasMovementPythonHook(tile.get(), {"onStep", "onStepFlow"}))
         return true;
     for (const auto &trigger : map->getEventHandler()->getTriggers()) {
         if (trigger && trigger->getObject() == actor->getName() &&
