@@ -890,6 +890,11 @@ endfunction()
 
 add_game_unit_test(core_unit_tests tests/unit/test_core.cpp)
 add_game_unit_test(controller_unit_tests tests/unit/test_controller.cpp)
+add_game_unit_test(allied_combat_unit_tests tests/unit/test_allied_combat.cpp)
+add_game_unit_test(simulation_region_unit_tests
+    tests/unit/simulation_region_main.cpp
+    tests/unit/test_simulation_regions.cpp
+)
 add_game_unit_test(monster_balance_unit_tests
     tests/unit/test_monster_balance.cpp
     src/core/CModuleEntry.cpp
@@ -973,6 +978,7 @@ add_executable(performance_guard_tests
     tests/unit/test_engine_hotspot_performance.cpp
     tests/unit/test_serialization_performance.cpp
     tests/unit/test_render_context_performance.cpp
+    tests/unit/test_simulation_regions.cpp
     $<TARGET_OBJECTS:random_map_test_objects>
 )
 if (WIN32)

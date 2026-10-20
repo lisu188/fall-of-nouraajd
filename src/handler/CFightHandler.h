@@ -69,6 +69,26 @@ class CFightHandler {
     static CFightOutcome fightManyOutcome(std::shared_ptr<CCreature> attacker,
                                           const std::vector<std::shared_ptr<CCreature>> &opponents);
 
+    static constexpr std::size_t MaximumAllies = 5;
+
+    // Opt-in hero-side AI actors. Enemy rewards belong to the hero; a fallen ally uses
+    // ordinary creature destruction/loot. Hero defeat ends the encounter immediately.
+    static bool fightManyWithAllies(std::shared_ptr<CCreature> hero,
+                                     const std::vector<std::shared_ptr<CCreature>> &opponents,
+                                     const std::vector<std::shared_ptr<CCreature>> &allies);
+
+    static CFightOutcome fightManyWithAlliesOutcome(std::shared_ptr<CCreature> hero,
+                                                    const std::vector<std::shared_ptr<CCreature>> &opponents,
+                                                    const std::vector<std::shared_ptr<CCreature>> &allies);
+
+    static CFightResult fightManyWithAlliesResult(std::shared_ptr<CCreature> hero,
+                                                  const std::vector<std::shared_ptr<CCreature>> &opponents,
+                                                  const std::vector<std::shared_ptr<CCreature>> &allies);
+
+    static vstd::task<CFightResult> fightManyWithAlliesResultAsync(
+        std::shared_ptr<CCreature> hero, std::vector<std::shared_ptr<CCreature>> opponents,
+        std::vector<std::shared_ptr<CCreature>> allies);
+
     static void defeatedCreature(const std::shared_ptr<CCreature> &a, const std::shared_ptr<CCreature> &b);
 
     static vstd::task<void> defeatedCreatureAsync(std::shared_ptr<CCreature> a, std::shared_ptr<CCreature> b);

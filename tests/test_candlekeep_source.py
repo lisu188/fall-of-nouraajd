@@ -1,12 +1,15 @@
 """Synthetic parser regression fixtures; contains no original game assets or dialogue."""
 
 import importlib.util
+import gzip
+import io
 import json
 from collections import Counter
 from pathlib import Path
 import struct
 import tempfile
 import unittest
+from unittest.mock import patch
 
 MODULE_PATH = Path(__file__).resolve().parents[1] / "scripts" / "audit_candlekeep_source.py"
 SPEC = importlib.util.spec_from_file_location("candlekeep_source", MODULE_PATH)
@@ -114,6 +117,78 @@ def installation(root, resources):
 
 
 class BinaryParserTests(unittest.TestCase):
+    def testAreaAdjacencyAndTravelPolygon(self):
+        data = emptyArea()
+        putText(data, 0x18, "AR0200")
+        putNumber(data, 0x20, 3)
+        putNumber(data, 0x5C, len(data))
+        putNumber(data, 0x5A, 1, "H")
+        region = len(data)
+        data.extend(bytes(0xC4))
+        putText(data, region, "Exit")
+        putText(data, region + 0x38, "AR0101")
+        putNumber(data, region + 0x2A, 3, "H")
+        putNumber(data, 0x7C, len(data))
+        putNumber(data, 0x80, 3, "H")
+        for point in ((4, 5), (7, 5), (7, 9)):
+            data.extend(struct.pack("<HH", *point))
+        parsed, refs, _ = audit.parseArea(data)
+        self.assertEqual(parsed["adjacency"], [{"direction": "north", "area": "AR0200", "flags": 3}])
+        self.assertEqual(parsed["regions"][0]["polygon"], [[4, 5], [7, 5], [7, 9]])
+        self.assertIn("AR0200", [ref["name"] for ref in refs if ref])
+        putNumber(data, region + 0x2A, 4, "H")
+        with self.assertRaisesRegex(audit.AuditError, "polygon vertex range"):
+            audit.parseArea(data)
+
+    def testSearchMapIndexedRowsOrientationPaddingAndBounds(self):
+        for depth, top_down in ((4, False), (8, True)):
+            with self.subTest(depth=depth, top_down=top_down):
+                width, height = 3, 2
+                stride = ((width * depth + 31) // 32) * 4
+                data = bytearray(54 + stride * height)
+                putText(data, 0, "BM")
+                for offset, value in ((10, 54), (14, 40), (18, width)):
+                    putNumber(data, offset, value)
+                putNumber(data, 22, -height if top_down else height, "i")
+                putNumber(data, 26, 1, "H")
+                putNumber(data, 28, depth, "H")
+                rows = [[0, 7, 7], [10, 15, 8]]
+                for source_y, row in enumerate(rows if top_down else reversed(rows)):
+                    values = row if depth == 8 else [(row[0] << 4) | row[1], row[2] << 4]
+                    data[54 + source_y * stride : 54 + source_y * stride + len(values)] = bytes(values)
+                parsed = audit.parseSearchMap(data)
+                self.assertEqual(parsed["terrainRowsRle"], [[1, 0, 2, 7], [1, 10, 1, 15, 1, 8]])
+                self.assertEqual(parsed["sourceCellPixels"], [16, 12])
+                with self.assertRaises(audit.AuditError):
+                    audit.parseSearchMap(data[:-1])
+                putNumber(data, 30, 1)
+                with self.assertRaisesRegex(audit.AuditError, "uncompressed"):
+                    audit.parseSearchMap(data)
+
+    def testWorldMapLinksPreserveEntryFlagsAndRejectInvalidDestination(self):
+        data = bytearray(16 + 0xB8 + 2 * 0xF0 + 0xD8)
+        putText(data, 0, "WMAPV1.0")
+        putNumber(data, 8, 1)
+        putNumber(data, 12, 16)
+        areas = 16 + 0xB8
+        link = areas + 2 * 0xF0
+        for field, value in ((0x20, 2), (0x24, areas), (0x28, link), (0x2C, 1)):
+            putNumber(data, 16 + field, value)
+        putText(data, areas, "AR0100")
+        putText(data, areas + 0xF0, "AR0200")
+        putNumber(data, areas + 0x6C, 1)
+        putNumber(data, link, 1)
+        putText(data, link + 4, "WestEntry")
+        putNumber(data, link + 0x24, 4)
+        putNumber(data, link + 0x28, 8)
+        parsed, refs, _ = audit.parseWorldMap(data)
+        row = parsed["worlds"][0]["areas"][0]["links"][0]
+        self.assertEqual((row["direction"], row["destination"], row["entrance"]), ("east", "AR0200", "WestEntry"))
+        self.assertEqual((row["travel_time_quarters"], row["arrival_flags"]), (4, 8))
+        putNumber(data, link, 2)
+        with self.assertRaisesRegex(audit.AuditError, "destination outside"):
+            audit.parseWorldMap(data)
+
     def testBoundsAndVersionRejection(self):
         for operation in (
             lambda: audit.Binary(b"x").span(2, 0),
@@ -286,6 +361,138 @@ class BinaryParserTests(unittest.TestCase):
 
 
 class SourceAuditTests(unittest.TestCase):
+    def testCityAuditScopeIsBoundedAndUnknownScopesFailClosed(self):
+        with patch(
+            "scripts.build_baldurs_gate_source_fixture.buildCityFixture", return_value={"scope": "city"}
+        ) as build:
+            self.assertEqual(
+                audit.auditInstallation("source-root", language="pl_PL", encoding="cp1250", scope="city"),
+                {"scope": "city"},
+            )
+            build.assert_called_once_with("source-root", "pl_PL", "cp1250")
+        with self.assertRaisesRegex(audit.AuditError, "unsupported audit scope"):
+            audit.auditInstallation("source-root", scope="all-world")
+
+    def testCityAuditCliPreservesHistoricalCandlekeepReport(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            output = root / "audit"
+            output.mkdir()
+            historical = output / "source-audit.json.gz"
+            historical.write_bytes(b"historical retained audit")
+            report = {"counts": {"areas": 212}, "unresolved": [{"resource": "OPTIONAL.BCS"}]}
+            with patch.object(audit, "auditInstallation", return_value=report) as run:
+                with patch("sys.stdout", new_callable=io.StringIO):
+                    result = audit.main(
+                        ["--game-root", str(root / "game"), "--scope", "city", "--output-dir", str(output)]
+                    )
+            self.assertEqual(result, 2)
+            self.assertEqual(run.call_args.args[-1], "city")
+            self.assertEqual(historical.read_bytes(), b"historical retained audit")
+            with gzip.open(output / "city-source-audit.json.gz", "rt", encoding="utf-8") as stream:
+                self.assertEqual(json.load(stream), report)
+
+    def testCityScriptedActorsUseVerifiedCoordinatesAndRetainConditions(self):
+        from scripts.build_baldurs_gate_source_fixture import compiledSpawnFacts
+
+        obj = 'OB\n0 0 0 0 0 0 0 0 0 0 0 0 "TARGET"OB\n'
+        content = (
+            'SC\nCR\nCO\nTR\n1 7 1 0 0 "GLOBALChapter" "" '
+            + obj
+            + "TR\nCO\nRS\nRE\n100AC\n7"
+            + obj * 3
+            + '14 56 78 9 10 "SCAR" "" AC\nRE\nRS\nCR\nSC\n'
+        ).encode("ascii")
+        parsed, _, _ = audit.parseScript(
+            content, {7: "CreateCreature(S:NewObject*,P:Location*,I:Face*DIR)"}, {1: "Global(S:Name*,S:Area*,I:Value*)"}
+        )
+        fact = compiledSpawnFacts(parsed)[0]
+        self.assertEqual(fact["position"], [56, 78])
+        self.assertEqual(fact["block"], 0)
+        self.assertTrue(fact["conditions"][0]["negated"])
+        self.assertEqual(fact["conditions"][0]["strings"][0], "GLOBALChapter")
+        self.assertFalse(fact["conditionSemanticsEvaluated"])
+        fixture = json.loads(
+            (MODULE_PATH.parents[1] / "tests/fixtures/baldurs_gate_city_source.json").read_text(encoding="utf-8")
+        )
+        expected = {
+            "SCAR": ("AR0607", [1515, 1050]),
+            "SLYTHE": ("AR0112", [1278, 969]),
+            "KRYSTI": ("AR0112", [1349, 973]),
+            "BELT": ("AR0108", [735, 371]),
+            "LIIA": ("AR0108", [680, 356]),
+            "GERVIS": ("AR0162", [807, 497]),
+        }
+        for creature, (area, point) in expected.items():
+            matches = [
+                row
+                for row in fixture["scriptedActors"]
+                if row["creature"] == creature and row["areas"] == [area] and row["position"] == point
+            ]
+            self.assertTrue(matches, creature)
+            self.assertIn(creature, fixture["creatures"])
+            self.assertTrue(all(len(row["sourceSha256"]) == 64 for row in matches))
+
+    def testCityFixtureIsExplicitBoundedAndContainsNoDialogueDump(self):
+        path = MODULE_PATH.parents[1] / "tests/fixtures/baldurs_gate_city_source.json"
+        fixture = json.loads(path.read_text(encoding="utf-8"))
+        self.assertEqual(set(fixture["areas"]), audit.CITY_AREA_IDS)
+        self.assertEqual(fixture["counts"]["classifications"], {"interior": 196, "exterior": 9, "underground": 7})
+        self.assertFalse(fixture["originalParityEstablished"])
+        self.assertIn("AR0900", fixture["excludedAreaResources"])
+        self.assertLess(path.stat().st_size, 4 * 1024 * 1024)
+
+        def assertNoDump(value):
+            if isinstance(value, dict):
+                self.assertTrue({"compiled_text", "state_triggers", "transition_triggers", "raw"}.isdisjoint(value))
+                for child in value.values():
+                    assertNoDump(child)
+            elif isinstance(value, list):
+                for child in value:
+                    assertNoDump(child)
+
+        assertNoDump(fixture)
+        for area in fixture["areas"].values():
+            raster = area["searchMap"]
+            self.assertEqual(len(raster["terrainRowsRle"]), raster["height"])
+            for row in raster["terrainRowsRle"]:
+                self.assertEqual(len(row) % 2, 0)
+                self.assertEqual(sum(row[::2]), raster["width"])
+                self.assertTrue(all(length > 0 for length in row[::2]))
+            for region in area["regions"]:
+                if region["destination"]:
+                    self.assertIn(region["destination"], fixture["areas"])
+                    self.assertIsNotNone(region["destinationPosition"])
+        boundary = [row for row in fixture["worldMapLinks"] if row["outsideCity"]]
+        self.assertEqual([(row["source"], row["destination"]) for row in boundary], [("AR0800", "AR0900")])
+        self.assertTrue(all(row["sourcePosition"] is not None for row in fixture["worldMapLinks"]))
+
+    def testCityFixedInventoryAndStoresHaveFactualItemMetadata(self):
+        fixture = json.loads(
+            (MODULE_PATH.parents[1] / "tests/fixtures/baldurs_gate_city_source.json").read_text(encoding="utf-8")
+        )
+        referenced = {
+            row["item"]
+            for area in fixture["areas"].values()
+            for container in area["containers"]
+            for row in container["items"]
+        }
+        referenced.update(row["item"] for creature in fixture["creatures"].values() for row in creature["items"])
+        missing = {row["resource"] for row in fixture["unresolved"]}
+        self.assertTrue(
+            all(name in audit.NONE_REFS or name in fixture["items"] or name + ".ITM" in missing for name in referenced)
+        )
+        for store in fixture["stores"].values():
+            self.assertTrue(all(row["item"] not in {"SW1H43", "SW1H46", "SW1H48"} for row in store["stock"]))
+            self.assertTrue(
+                all(row["item"] in fixture["items"] or row["item"] + ".ITM" in missing for row in store["stock"])
+            )
+        for item in fixture["items"].values():
+            self.assertTrue(
+                {"displayName", "unidentifiedName", "price", "lore", "flags", "stack_size", "item_type"} <= item.keys()
+            )
+            self.assertEqual(len(item["sha256"]), 64)
+
     def testKeyBiffLocatorAndOverridePrecedence(self):
         with tempfile.TemporaryDirectory() as directory:
             root = Path(directory)

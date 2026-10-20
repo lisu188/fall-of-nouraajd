@@ -18,6 +18,7 @@ import struct
 import sys
 
 RESOURCE_TYPES = {
+    1: "BMP",
     1000: "BAM",
     1001: "WED",
     1002: "CHU",
@@ -46,6 +47,48 @@ EXTERNAL_SCRIPTS = {
 MAX_RESOURCE_BYTES = 16 * 1024 * 1024
 MAX_RECORDS = 1000000
 NONE_REFS = {"", "NONE", "*"}
+CITY_EXTERIORS = {
+    "AR0100": "Northwest ward",
+    "AR0200": "North ward",
+    "AR0300": "Northeast ward",
+    "AR0600": "West ward",
+    "AR0700": "Central ward",
+    "AR0800": "East ward",
+    "AR1100": "Southwest ward",
+    "AR1200": "Docks ward",
+    "AR1300": "Southeast ward",
+}
+CITY_UNDERGROUND = {
+    "AR0112": "Undercellar",
+    "AR0123": "Undercity",
+    "AR0125": "Temple finale",
+    "AR0146": "Thieves' Maze",
+    "AR0224": "West sewers",
+    "AR0225": "Central sewers",
+    "AR0226": "East sewers",
+}
+# Explicit membership: checked city ARE-region graph and IESDP's BG1 area catalogue.
+# Prefixes alone do not establish inclusion or authenticate original-edition contents.
+CITY_AREA_IDS = frozenset(
+    """AR0002 AR0004 AR0005 AR0006 AR0007 AR0008 AR0009 AR0010 AR0011 AR0012 AR0013 AR0014 AR0015 AR0016
+    AR0017 AR0018 AR0019 AR0020 AR0021 AR0100 AR0101 AR0102 AR0103 AR0104 AR0105 AR0106 AR0107 AR0108
+    AR0109 AR0110 AR0111 AR0112 AR0114 AR0115 AR0116 AR0117 AR0118 AR0119 AR0120 AR0121 AR0123 AR0125
+    AR0126 AR0127 AR0128 AR0129 AR0130 AR0131 AR0132 AR0133 AR0134 AR0135 AR0136 AR0137 AR0138 AR0139
+    AR0140 AR0141 AR0142 AR0143 AR0144 AR0145 AR0146 AR0148 AR0149 AR0150 AR0151 AR0152 AR0153 AR0154
+    AR0155 AR0156 AR0157 AR0158 AR0159 AR0160 AR0161 AR0162 AR0163 AR0164 AR0165 AR0166 AR0167 AR0168
+    AR0169 AR0170 AR0171 AR0200 AR0224 AR0225 AR0226 AR0300 AR0302 AR0303 AR0304 AR0305 AR0306 AR0307
+    AR0308 AR0600 AR0601 AR0602 AR0603 AR0606 AR0607 AR0608 AR0609 AR0611 AR0612 AR0613 AR0614 AR0615
+    AR0616 AR0617 AR0618 AR0619 AR0620 AR0621 AR0700 AR0702 AR0703 AR0704 AR0705 AR0706 AR0707 AR0708
+    AR0709 AR0710 AR0711 AR0712 AR0713 AR0714 AR0715 AR0716 AR0717 AR0718 AR0719 AR0720 AR0721 AR0722
+    AR0723 AR0724 AR0725 AR0726 AR0800 AR0801 AR0802 AR0803 AR0804 AR0805 AR0806 AR0807 AR0808 AR0809
+    AR0810 AR0811 AR0812 AR0813 AR0814 AR1100 AR1101 AR1102 AR1103 AR1104 AR1105 AR1106 AR1107 AR1108
+    AR1109 AR1110 AR1111 AR1112 AR1113 AR1114 AR1115 AR1116 AR1117 AR1200 AR1201 AR1202 AR1203 AR1204
+    AR1205 AR1206 AR1207 AR1208 AR1209 AR1210 AR1211 AR1212 AR1213 AR1214 AR1215 AR1300 AR1301 AR1302
+    AR1303 AR1304 AR1305 AR1306 AR1307 AR1308 AR1309 AR1310 AR1311 AR1312 AR1313 AR1314 AR1315 AR1316
+    AR1317 AR1320""".split()
+)
+CITY_BOUNDARIES = {"AR0900": "Wyrm's Crossing is outside the selected playable city scope"}
+SEARCH_MAP_BLOCKED = frozenset({0, 8, 10, 12, 13, 14})
 
 
 class AuditError(ValueError):
@@ -280,6 +323,18 @@ def parseArea(data):
     reader = Binary(data)
     reader.signature(b"AREAV1.0", 0x11C)
     refs, embedded = [], []
+    vertex_table = [
+        [reader.number(offset, "H"), reader.number(offset + 2, "H")]
+        for offset in reader.table(reader.number(0x7C), reader.number(0x80, "H"), 4)
+    ]
+
+    def vertices(first, count):
+        if not count:
+            return []
+        if first > len(vertex_table) or count > len(vertex_table) - first:
+            raise AuditError("polygon vertex range outside area vertex table")
+        return vertex_table[first : first + count]
+
     result = {
         "wed": reader.ref(8),
         "flags": reader.number(0x14),
@@ -292,8 +347,14 @@ def parseArea(data):
         "spawns": [],
         "entrances": [],
         "items": [],
+        "adjacency": [
+            {"direction": direction, "area": reader.ref(offset), "flags": reader.number(offset + 8)}
+            for direction, offset in (("north", 0x18), ("east", 0x24), ("south", 0x30), ("west", 0x3C))
+            if reader.ref(offset)
+        ],
     }
     refs.append(reference(result["script"], "BCS", "area script"))
+    refs.extend(reference(row["area"], "ARE", "area header adjacency") for row in result["adjacency"])
     for offset in reader.table(reader.number(0x54), reader.number(0x58, "H"), 0x110):
         actor = {
             "name": reader.text(offset, 32),
@@ -329,6 +390,8 @@ def parseArea(data):
             "trapped": reader.number(offset + 0x6C, "H"),
             "key": reader.ref(offset + 0x74),
             "script": reader.ref(offset + 0x7C),
+            "polygon": vertices(reader.number(offset + 0x2C), reader.number(offset + 0x2A, "H")),
+            "use_point": [reader.number(offset + n, "H") for n in (0x84, 0x86)],
         }
         result["regions"].append(region)
         for field, ext in (("destination", "ARE"), ("key", "ITM"), ("script", "BCS")):
@@ -353,6 +416,7 @@ def parseArea(data):
             "script": reader.ref(offset + 0x48),
             "break_difficulty": reader.number(offset + 0x80),
             "items": result["items"][first : first + count],
+            "polygon": vertices(reader.number(offset + 0x50), reader.number(offset + 0x54, "H")),
         }
         result["containers"].append(container)
         refs.extend(
@@ -372,6 +436,12 @@ def parseArea(data):
             "dialogue": reader.ref(offset + 0xB8),
             "trapped": reader.number(offset + 0x70, "H"),
             "travel_trigger": reader.text(offset + 0x9C, 24),
+            "open_polygon": vertices(reader.number(offset + 0x2C), reader.number(offset + 0x30, "H")),
+            "closed_polygon": vertices(reader.number(offset + 0x34), reader.number(offset + 0x32, "H")),
+            "open_impeded": vertices(reader.number(offset + 0x48), reader.number(offset + 0x4C, "H")),
+            "closed_impeded": vertices(reader.number(offset + 0x50), reader.number(offset + 0x4E, "H")),
+            "trap_detection": reader.number(offset + 0x6C, "H"),
+            "trap_removal": reader.number(offset + 0x6E, "H"),
         }
         result["doors"].append(door)
         for field, ext in (("key", "ITM"), ("script", "BCS"), ("dialogue", "DLG")):
@@ -408,6 +478,73 @@ def parseArea(data):
         }
         refs.extend(reference(name, "CRE", "rest creature or SPAWNGRP.2DA key") for name in creatures)
     return result, refs, embedded
+
+
+def parseSearchMap(data):
+    """Read indexed collision metadata only; no palette or graphics are exported."""
+    reader = Binary(data)
+    if reader.span(0, 2) != b"BM" or reader.number(14) < 40:
+        raise AuditError("unsupported search-map BMP header")
+    width, signed_height = reader.number(18, "i"), reader.number(22, "i")
+    depth = reader.number(28, "H")
+    if reader.number(26, "H") != 1 or reader.number(30) != 0 or depth not in (4, 8):
+        raise AuditError("search map must be an uncompressed 4-bit or 8-bit indexed BMP")
+    height = abs(signed_height)
+    if width <= 0 or not height or width * height > MAX_RECORDS:
+        raise AuditError("invalid or excessive search-map dimensions")
+    stride = ((width * depth + 31) // 32) * 4
+    raster = reader.span(reader.number(10), stride * height)
+    rows = []
+    for y in range(height):
+        source_y = height - y - 1 if signed_height > 0 else y
+        raw = raster[source_y * stride : (source_y + 1) * stride]
+        values = [raw[x] if depth == 8 else (raw[x // 2] >> (4 if x % 2 == 0 else 0)) & 15 for x in range(width)]
+        runs = []
+        for value in values:
+            if runs and runs[-1] == value:
+                runs[-2] += 1
+            else:
+                runs.extend((1, value))
+        rows.append(runs)
+    return {"width": width, "height": height, "sourceCellPixels": [16, 12], "terrainRowsRle": rows}
+
+
+def parseWorldMap(data):
+    reader = Binary(data)
+    reader.signature(b"WMAPV1.0", 16)
+    worlds, refs = [], []
+    for offset in reader.table(reader.number(12), reader.number(8), 0xB8):
+        area_offsets = list(reader.table(reader.number(offset + 0x24), reader.number(offset + 0x20), 0xF0))
+        link_offsets = list(reader.table(reader.number(offset + 0x28), reader.number(offset + 0x2C), 0xD8))
+        names = [reader.ref(position) for position in area_offsets]
+        areas = []
+        for position, name in zip(area_offsets, names):
+            links = []
+            refs.append(reference(name, "ARE", "world map area"))
+            for direction, field in (("north", 0x50), ("west", 0x58), ("south", 0x60), ("east", 0x68)):
+                first, count = reader.number(position + field), reader.number(position + field + 4)
+                if first > len(link_offsets) or count > len(link_offsets) - first:
+                    raise AuditError("world map area link range outside table")
+                for link in link_offsets[first : first + count]:
+                    target = reader.number(link)
+                    if target >= len(names):
+                        raise AuditError("world map destination outside area table")
+                    encounters = [reader.ref(link + field) for field in range(0x2C, 0x54, 8)]
+                    refs.extend(reference(value, "ARE", "world map random encounter") for value in encounters)
+                    links.append(
+                        {
+                            "direction": direction,
+                            "destination": names[target],
+                            "entrance": reader.text(link + 4, 32),
+                            "travel_time_quarters": reader.number(link + 0x24),
+                            "arrival_flags": reader.number(link + 0x28),
+                            "random_encounters": [value for value in encounters if value not in NONE_REFS],
+                            "encounter_chance": reader.number(link + 0x54),
+                        }
+                    )
+            areas.append({"area": name, "flags": reader.number(position + 0x30), "links": links})
+        worlds.append({"areas": areas})
+    return {"worlds": worlds}, refs, []
 
 
 def parseCreature(data):
@@ -727,7 +864,16 @@ def attachText(value, talk):
                 attachText(entry, talk)
 
 
-def auditInstallation(game_root, language="en_US", area="AR2600", encoding=None):
+def auditInstallation(game_root, language="en_US", area="AR2600", encoding=None, scope="candlekeep"):
+    if scope == "city":
+        try:
+            from scripts.build_baldurs_gate_source_fixture import buildCityFixture
+        except ModuleNotFoundError:
+            from build_baldurs_gate_source_fixture import buildCityFixture
+
+        return buildCityFixture(game_root, language, encoding)
+    if scope != "candlekeep":
+        raise AuditError(f"unsupported audit scope: {scope}")
     if area.upper() != "AR2600":
         raise AuditError("only the Candlekeep prologue root AR2600 is supported")
     if not re.fullmatch(r"[A-Za-z]{2}_[A-Za-z]{2}", language):
@@ -872,6 +1018,12 @@ def main(argv=None):
     parser.add_argument("--game-root", type=Path, required=True)
     parser.add_argument("--language", default="en_US")
     parser.add_argument("--area", default="AR2600")
+    parser.add_argument(
+        "--scope",
+        choices=("candlekeep", "city"),
+        default="candlekeep",
+        help="Candlekeep closure or the explicit nine-ward city manifest; --area applies to Candlekeep",
+    )
     parser.add_argument("--encoding", help="classic TLK encoding override; EE defaults to UTF-8")
     parser.add_argument(
         "--output-dir", type=Path, required=True, help="local ignored output; contains copyrighted dialogue"
@@ -882,11 +1034,25 @@ def main(argv=None):
         game_root = args.game_root.resolve()
         if output == game_root or output.is_relative_to(game_root):
             raise AuditError("output must be outside the game installation")
-        report = auditInstallation(game_root, args.language, args.area, args.encoding)
+        report = auditInstallation(game_root, args.language, args.area, args.encoding, args.scope)
         output.mkdir(parents=True, exist_ok=True)
-        destination = output / "source-audit.json.gz"
+        destination = output / ("city-source-audit.json.gz" if args.scope == "city" else "source-audit.json.gz")
         with gzip.open(destination, "wt", encoding="utf-8") as stream:
             json.dump(report, stream, ensure_ascii=False, separators=(",", ":"))
+        if args.scope == "city":
+            print(
+                json.dumps(
+                    {
+                        "scope": "city",
+                        "output": str(destination),
+                        "counts": report["counts"],
+                        "unresolved": len(report["unresolved"]),
+                        "originalParityEstablished": False,
+                    },
+                    indent=2,
+                )
+            )
+            return 2 if report["unresolved"] else 0
         summary = {
             "edition": report["edition"],
             "output": str(destination),
