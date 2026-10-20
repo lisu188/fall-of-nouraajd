@@ -220,10 +220,10 @@ jobs:
             ccache --show-stats --verbose
           fi
       - name: test (c++)
-        if: needs.linux-fast.outputs.native-needed == 'true'
+        if: always() && !cancelled() && needs.linux-fast.outputs.native-needed == 'true' && steps.native-build.outcome == 'success'
         run: ctest --test-dir cmake-build-gcc15-release --output-on-failure -R for_unit_tests
       - name: performance guard (native)
-        if: needs.linux-fast.outputs.native-needed == 'true'
+        if: always() && !cancelled() && needs.linux-fast.outputs.native-needed == 'true' && steps.native-build.outcome == 'success'
         run: ctest --test-dir cmake-build-gcc15-release --output-on-failure --verbose -L performance
       - name: test (python gameplay)
         if: needs.linux-fast.outputs.native-needed == 'true'

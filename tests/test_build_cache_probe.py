@@ -85,27 +85,30 @@ class CacheProbeSelectionTest(unittest.TestCase):
                     probe.compileArguments(command, build, selected)
 
 
-class CacheProbeWorkflowTest(unittest.TestCase):
+class CompileEvidenceWorkflowTest(unittest.TestCase):
     def testCompletedCompilesCanBeCheckedAfterAnUnrelatedFailure(self):
         job = workflowJob("linux")
         build = workflowStep(job, "build test targets")
         self.assertEqual("native-build", workflowScalar(build, "id", 8))
-        step = workflowStep(job, "Verify representative project cache hits")
-        condition = workflowScalar(step, "if", 8)
-        for native in ("true", "false"):
-            for outcome in ("success", "failure", "skipped"):
-                for prior_success in (True, False):
-                    for cancelled in (True, False):
-                        facts = {
-                            "needs.linux-fast.outputs.native-needed": native,
-                            "steps.native-build.outcome": outcome,
-                        }
-                        with self.subTest(**facts, prior_success=prior_success, cancelled=cancelled):
-                            self.assertEqual(
-                                native == "true" and outcome == "success" and not cancelled,
-                                evaluateCondition(condition, facts, prior_success=prior_success, cancelled=cancelled),
-                            )
-        self.assertNotIn("continue-on-error", step)
+        for name in ("test (c++)", "performance guard (native)", "Verify representative project cache hits"):
+            step = workflowStep(job, name)
+            condition = workflowScalar(step, "if", 8)
+            for native in ("true", "false"):
+                for outcome in ("success", "failure", "skipped"):
+                    for prior_success in (True, False):
+                        for cancelled in (True, False):
+                            facts = {
+                                "needs.linux-fast.outputs.native-needed": native,
+                                "steps.native-build.outcome": outcome,
+                            }
+                            with self.subTest(step=name, **facts, prior_success=prior_success, cancelled=cancelled):
+                                self.assertEqual(
+                                    native == "true" and outcome == "success" and not cancelled,
+                                    evaluateCondition(
+                                        condition, facts, prior_success=prior_success, cancelled=cancelled
+                                    ),
+                                )
+            self.assertNotIn("continue-on-error", step)
 
 
 @unittest.skipUnless(sys.platform == "linux", "Object replay is limited to Linux")
