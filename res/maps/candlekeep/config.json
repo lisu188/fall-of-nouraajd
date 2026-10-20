@@ -1,0 +1,3920 @@
+{
+  "candlekeepStart": {
+    "class": "CandlekeepStart",
+    "properties": {
+      "animation": "images/misc/signpost",
+      "canStep": true,
+      "text": "You have spent your youth within Candlekeep, a walled library above the Sea of Swords. Gorion is preparing to leave, and urges you to buy what you need. Before meeting him at the library steps, you may help old friends, explore the grounds, train with the Watch, or learn what the walls have hidden. This scenario ends when you choose to leave with Gorion. Native hero statistics determine social, theft and lock outcomes."
+    }
+  },
+  "firebeadQuest": {
+    "class": "CandlekeepQuest",
+    "properties": {
+      "questKey": "firebead",
+      "description": "Return Firebead's identify scroll.",
+      "objective": "Find Tethtoril in the grounds and return his scroll to Firebead.",
+      "rewardText": "50 experience, a healing potion, and Protection from Evil.",
+      "hint": "Tethtoril walks near the central library.",
+      "completedText": "Return Firebead's identify scroll — completed."
+    }
+  },
+  "phlydiaQuest": {
+    "class": "CandlekeepQuest",
+    "properties": {
+      "questKey": "phlydia",
+      "description": "Recover Phlydia's History of Halruaa.",
+      "objective": "Search Dreppin's hay for Phlydia's lost book.",
+      "rewardText": "50 experience; a lynx-eye gem unless your social reaction is unfavorable.",
+      "hint": "Dreppin saw the book near the hay.",
+      "completedText": "Recover Phlydia's History of Halruaa — completed."
+    }
+  },
+  "dreppinQuest": {
+    "class": "CandlekeepQuest",
+    "properties": {
+      "questKey": "dreppin",
+      "description": "Bring an antidote for Dreppin's cow.",
+      "objective": "Fetch the antidote from Hull's barracks chest for Nessa.",
+      "rewardText": "50 experience and Nessa's recovery.",
+      "hint": "Hull keeps an antidote beside his sword.",
+      "completedText": "Bring an antidote for Dreppin's cow — completed."
+    }
+  },
+  "hullQuest": {
+    "class": "CandlekeepQuest",
+    "properties": {
+      "questKey": "hull",
+      "description": "Return Hull's forgotten sword.",
+      "objective": "Retrieve Hull's sword from his barracks chest.",
+      "rewardText": "50 experience and 10 gold; 20 gold with a high social reaction.",
+      "hint": "The barracks stand on the southwestern wall.",
+      "completedText": "Return Hull's forgotten sword — completed."
+    }
+  },
+  "fullerQuest": {
+    "class": "CandlekeepQuest",
+    "properties": {
+      "questKey": "fuller",
+      "description": "Bring Fuller twenty crossbow bolts.",
+      "objective": "Buy a bundle of twenty bolts from Winthrop and take it to Fuller.",
+      "rewardText": "50 experience and 10 gold, or the shared Dagger +1 with a high social reaction.",
+      "hint": "Winthrop sells a bundle for one gold.",
+      "completedText": "Bring Fuller twenty crossbow bolts — completed."
+    }
+  },
+  "reevorQuest": {
+    "class": "CandlekeepQuest",
+    "properties": {
+      "questKey": "reevor",
+      "description": "Clear five rats from Reevor's storehouse.",
+      "objective": "Defeat the five rats inside the eastern storehouse.",
+      "rewardText": "50 experience and 5 gold, plus one experience per rat.",
+      "hint": "Enter the storehouse beside Reevor.",
+      "completedText": "Clear five rats from Reevor's storehouse — completed."
+    }
+  },
+  "firebead": {
+    "class": "CCreature",
+    "properties": {
+      "label": "Firebead Elvenhair",
+      "animation": "images/npc/elderMaren",
+      "npc": true,
+      "affiliation": "candlekeepResidents",
+      "canStep": true,
+      "sw": -20,
+      "baseStats": {
+        "class": "CStats",
+        "properties": {
+          "strength": 5,
+          "stamina": 5,
+          "agility": 5,
+          "intelligence": 5,
+          "dmgMin": 2,
+          "dmgMax": 3,
+          "hit": 75,
+          "mainStat": "strength"
+        }
+      },
+      "fightController": {
+        "class": "CMonsterFightController"
+      },
+      "actions": [
+        {
+          "ref": "Attack"
+        }
+      ],
+      "plugin_candlekeepPocketItems": "",
+      "plugin_candlekeepTheftThreshold": 16
+    }
+  },
+  "phlydia": {
+    "class": "CCreature",
+    "properties": {
+      "label": "Phlydia",
+      "animation": "images/monsters/cultist",
+      "npc": true,
+      "affiliation": "candlekeepResidents",
+      "canStep": true,
+      "sw": -20,
+      "baseStats": {
+        "class": "CStats",
+        "properties": {
+          "strength": 5,
+          "stamina": 5,
+          "agility": 5,
+          "intelligence": 5,
+          "dmgMin": 2,
+          "dmgMax": 3,
+          "hit": 75,
+          "mainStat": "strength"
+        }
+      },
+      "fightController": {
+        "class": "CMonsterFightController"
+      },
+      "actions": [
+        {
+          "ref": "Attack"
+        }
+      ],
+      "plugin_candlekeepPocketItems": "candlekeepGoldNecklace,candlekeepLynxEyeGem",
+      "plugin_candlekeepTheftThreshold": 16,
+      "items": [
+        {
+          "ref": "candlekeepGoldNecklace"
+        },
+        {
+          "ref": "candlekeepLynxEyeGem"
+        },
+        {
+          "ref": "candlekeepDagger"
+        },
+        {
+          "ref": "candlekeepPhlydiaRobe"
+        }
+      ]
+    }
+  },
+  "dreppin": {
+    "class": "CCreature",
+    "properties": {
+      "label": "Dreppin",
+      "animation": "images/monsters/cultist",
+      "npc": true,
+      "affiliation": "candlekeepResidents",
+      "canStep": true,
+      "sw": -20,
+      "baseStats": {
+        "class": "CStats",
+        "properties": {
+          "strength": 5,
+          "stamina": 5,
+          "agility": 5,
+          "intelligence": 5,
+          "dmgMin": 2,
+          "dmgMax": 3,
+          "hit": 75,
+          "mainStat": "strength"
+        }
+      },
+      "fightController": {
+        "class": "CMonsterFightController"
+      },
+      "actions": [
+        {
+          "ref": "Attack"
+        }
+      ],
+      "plugin_candlekeepPocketItems": "",
+      "plugin_candlekeepTheftThreshold": 16
+    }
+  },
+  "hull": {
+    "class": "CCreature",
+    "properties": {
+      "label": "Hull",
+      "animation": "images/monsters/cultist",
+      "npc": true,
+      "affiliation": "candlekeepResidents",
+      "canStep": true,
+      "sw": -20,
+      "baseStats": {
+        "class": "CStats",
+        "properties": {
+          "strength": 5,
+          "stamina": 5,
+          "agility": 5,
+          "intelligence": 5,
+          "dmgMin": 2,
+          "dmgMax": 3,
+          "hit": 75,
+          "mainStat": "strength"
+        }
+      },
+      "fightController": {
+        "class": "CMonsterFightController"
+      },
+      "actions": [
+        {
+          "ref": "Attack"
+        }
+      ],
+      "plugin_candlekeepPocketItems": "",
+      "plugin_candlekeepTheftThreshold": 16
+    }
+  },
+  "fuller": {
+    "class": "CCreature",
+    "properties": {
+      "label": "Fuller",
+      "animation": "images/monsters/cultist",
+      "npc": true,
+      "affiliation": "candlekeepResidents",
+      "canStep": true,
+      "sw": -20,
+      "baseStats": {
+        "class": "CStats",
+        "properties": {
+          "strength": 5,
+          "stamina": 5,
+          "agility": 5,
+          "intelligence": 5,
+          "dmgMin": 2,
+          "dmgMax": 3,
+          "hit": 75,
+          "mainStat": "strength"
+        }
+      },
+      "fightController": {
+        "class": "CMonsterFightController"
+      },
+      "actions": [
+        {
+          "ref": "Attack"
+        }
+      ],
+      "plugin_candlekeepPocketItems": "candlekeepDaggerPlusOne",
+      "plugin_candlekeepTheftThreshold": 16,
+      "items": [
+        {
+          "ref": "candlekeepDaggerPlusOne"
+        },
+        {
+          "ref": "candlekeepStockStaf01"
+        },
+        {
+          "ref": "candlekeepFullerPlateArmor"
+        }
+      ]
+    }
+  },
+  "reevor": {
+    "class": "CCreature",
+    "properties": {
+      "label": "Reevor",
+      "animation": "images/monsters/cultist",
+      "npc": true,
+      "affiliation": "candlekeepResidents",
+      "canStep": true,
+      "sw": -20,
+      "baseStats": {
+        "class": "CStats",
+        "properties": {
+          "strength": 5,
+          "stamina": 5,
+          "agility": 5,
+          "intelligence": 5,
+          "dmgMin": 2,
+          "dmgMax": 3,
+          "hit": 75,
+          "mainStat": "strength"
+        }
+      },
+      "fightController": {
+        "class": "CMonsterFightController"
+      },
+      "actions": [
+        {
+          "ref": "Attack"
+        }
+      ],
+      "plugin_candlekeepPocketItems": "",
+      "plugin_candlekeepTheftThreshold": 16
+    }
+  },
+  "winthrop": {
+    "class": "CCreature",
+    "properties": {
+      "label": "Winthrop",
+      "animation": "images/monsters/cultist",
+      "npc": true,
+      "affiliation": "candlekeepResidents",
+      "canStep": true,
+      "sw": -20,
+      "baseStats": {
+        "class": "CStats",
+        "properties": {
+          "strength": 5,
+          "stamina": 5,
+          "agility": 5,
+          "intelligence": 5,
+          "dmgMin": 2,
+          "dmgMax": 3,
+          "hit": 75,
+          "mainStat": "strength"
+        }
+      },
+      "fightController": {
+        "class": "CMonsterFightController"
+      },
+      "actions": [
+        {
+          "ref": "Attack"
+        }
+      ],
+      "plugin_candlekeepPocketItems": "",
+      "plugin_candlekeepTheftThreshold": 16
+    }
+  },
+  "tethtoril": {
+    "class": "CCreature",
+    "properties": {
+      "label": "Tethtoril",
+      "animation": "images/npc/elderMaren",
+      "npc": true,
+      "affiliation": "candlekeepResidents",
+      "canStep": true,
+      "sw": -20,
+      "baseStats": {
+        "class": "CStats",
+        "properties": {
+          "strength": 5,
+          "stamina": 5,
+          "agility": 5,
+          "intelligence": 5,
+          "dmgMin": 2,
+          "dmgMax": 3,
+          "hit": 75,
+          "mainStat": "strength"
+        }
+      },
+      "fightController": {
+        "class": "CMonsterFightController"
+      },
+      "actions": [
+        {
+          "ref": "Attack"
+        }
+      ],
+      "plugin_candlekeepPocketItems": "",
+      "plugin_candlekeepTheftThreshold": 16
+    }
+  },
+  "gorion": {
+    "class": "CCreature",
+    "properties": {
+      "label": "Gorion",
+      "animation": "images/npc/elderMaren",
+      "npc": true,
+      "affiliation": "candlekeepResidents",
+      "canStep": true,
+      "sw": -20,
+      "baseStats": {
+        "class": "CStats",
+        "properties": {
+          "strength": 5,
+          "stamina": 5,
+          "agility": 5,
+          "intelligence": 5,
+          "dmgMin": 2,
+          "dmgMax": 3,
+          "hit": 75,
+          "mainStat": "strength"
+        }
+      },
+      "fightController": {
+        "class": "CMonsterFightController"
+      },
+      "actions": [
+        {
+          "ref": "Attack"
+        }
+      ],
+      "plugin_candlekeepPocketItems": "",
+      "plugin_candlekeepTheftThreshold": 16
+    }
+  },
+  "imoen": {
+    "class": "CCreature",
+    "properties": {
+      "label": "Imoen",
+      "animation": "images/monsters/cultist",
+      "npc": true,
+      "affiliation": "candlekeepResidents",
+      "canStep": true,
+      "sw": -20,
+      "baseStats": {
+        "class": "CStats",
+        "properties": {
+          "strength": 5,
+          "stamina": 5,
+          "agility": 5,
+          "intelligence": 5,
+          "dmgMin": 2,
+          "dmgMax": 3,
+          "hit": 75,
+          "mainStat": "strength"
+        }
+      },
+      "fightController": {
+        "class": "CMonsterFightController"
+      },
+      "actions": [
+        {
+          "ref": "Attack"
+        }
+      ],
+      "plugin_candlekeepPocketItems": "",
+      "plugin_candlekeepTheftThreshold": 16
+    }
+  },
+  "gatewarden": {
+    "class": "CCreature",
+    "properties": {
+      "label": "Gatewarden",
+      "animation": "images/monsters/cultist",
+      "npc": true,
+      "affiliation": "candlekeepResidents",
+      "canStep": true,
+      "sw": -20,
+      "baseStats": {
+        "class": "CStats",
+        "properties": {
+          "strength": 5,
+          "stamina": 5,
+          "agility": 5,
+          "intelligence": 5,
+          "dmgMin": 2,
+          "dmgMax": 3,
+          "hit": 75,
+          "mainStat": "strength"
+        }
+      },
+      "fightController": {
+        "class": "CMonsterFightController"
+      },
+      "actions": [
+        {
+          "ref": "Attack"
+        }
+      ],
+      "plugin_candlekeepPocketItems": "",
+      "plugin_candlekeepTheftThreshold": 16
+    }
+  },
+  "obe": {
+    "class": "CCreature",
+    "properties": {
+      "label": "Obe",
+      "animation": "images/npc/elderMaren",
+      "npc": true,
+      "affiliation": "candlekeepResidents",
+      "canStep": true,
+      "sw": -20,
+      "baseStats": {
+        "class": "CStats",
+        "properties": {
+          "strength": 5,
+          "stamina": 5,
+          "agility": 5,
+          "intelligence": 5,
+          "dmgMin": 2,
+          "dmgMax": 3,
+          "hit": 75,
+          "mainStat": "strength"
+        }
+      },
+      "fightController": {
+        "class": "CMonsterFightController"
+      },
+      "actions": [
+        {
+          "ref": "Attack"
+        }
+      ],
+      "plugin_candlekeepPocketItems": "",
+      "plugin_candlekeepTheftThreshold": 16
+    }
+  },
+  "templePriest": {
+    "class": "CCreature",
+    "properties": {
+      "label": "Priest of Oghma",
+      "animation": "images/monsters/cultist",
+      "npc": true,
+      "affiliation": "candlekeepResidents",
+      "canStep": true,
+      "sw": -20,
+      "baseStats": {
+        "class": "CStats",
+        "properties": {
+          "strength": 5,
+          "stamina": 5,
+          "agility": 5,
+          "intelligence": 5,
+          "dmgMin": 2,
+          "dmgMax": 3,
+          "hit": 75,
+          "mainStat": "strength"
+        }
+      },
+      "fightController": {
+        "class": "CMonsterFightController"
+      },
+      "actions": [
+        {
+          "ref": "Attack"
+        }
+      ],
+      "plugin_candlekeepPocketItems": "",
+      "plugin_candlekeepTheftThreshold": 16
+    }
+  },
+  "clinicPriest": {
+    "class": "CCreature",
+    "properties": {
+      "label": "Priest of Oghma — Infirmary",
+      "animation": "images/monsters/cultist",
+      "npc": true,
+      "affiliation": "candlekeepResidents",
+      "canStep": true,
+      "sw": -20,
+      "baseStats": {
+        "class": "CStats",
+        "properties": {
+          "strength": 5,
+          "stamina": 5,
+          "agility": 5,
+          "intelligence": 5,
+          "dmgMin": 2,
+          "dmgMax": 3,
+          "hit": 75,
+          "mainStat": "strength"
+        }
+      },
+      "fightController": {
+        "class": "CMonsterFightController"
+      },
+      "actions": [
+        {
+          "ref": "Attack"
+        }
+      ],
+      "plugin_candlekeepPocketItems": "candlekeepHealingPotion",
+      "plugin_candlekeepTheftThreshold": 16,
+      "items": [
+        {
+          "ref": "candlekeepHealingPotion"
+        },
+        {
+          "ref": "candlekeepHealingPotion"
+        }
+      ]
+    }
+  },
+  "thurston": {
+    "class": "CCreature",
+    "properties": {
+      "label": "Thurston",
+      "animation": "images/monsters/cultist",
+      "npc": true,
+      "affiliation": "candlekeepResidents",
+      "canStep": true,
+      "sw": -20,
+      "baseStats": {
+        "class": "CStats",
+        "properties": {
+          "strength": 5,
+          "stamina": 5,
+          "agility": 5,
+          "intelligence": 5,
+          "dmgMin": 2,
+          "dmgMax": 3,
+          "hit": 75,
+          "mainStat": "strength"
+        }
+      },
+      "fightController": {
+        "class": "CMonsterFightController"
+      },
+      "actions": [
+        {
+          "ref": "Attack"
+        }
+      ],
+      "plugin_candlekeepPocketItems": "",
+      "plugin_candlekeepTheftThreshold": 16
+    }
+  },
+  "lovey": {
+    "class": "CCreature",
+    "properties": {
+      "label": "Lovey",
+      "animation": "images/monsters/cultist",
+      "npc": true,
+      "affiliation": "candlekeepResidents",
+      "canStep": true,
+      "sw": -20,
+      "baseStats": {
+        "class": "CStats",
+        "properties": {
+          "strength": 5,
+          "stamina": 5,
+          "agility": 5,
+          "intelligence": 5,
+          "dmgMin": 2,
+          "dmgMax": 3,
+          "hit": 75,
+          "mainStat": "strength"
+        }
+      },
+      "fightController": {
+        "class": "CMonsterFightController"
+      },
+      "actions": [
+        {
+          "ref": "Attack"
+        }
+      ],
+      "plugin_candlekeepPocketItems": "",
+      "plugin_candlekeepTheftThreshold": 16
+    }
+  },
+  "nessa": {
+    "class": "CCreature",
+    "properties": {
+      "label": "Nessa the Cow",
+      "animation": "images/monsters/cultist",
+      "npc": true,
+      "affiliation": "candlekeepResidents",
+      "canStep": true,
+      "sw": -20,
+      "baseStats": {
+        "class": "CStats",
+        "properties": {
+          "strength": 5,
+          "stamina": 5,
+          "agility": 5,
+          "intelligence": 5,
+          "dmgMin": 2,
+          "dmgMax": 3,
+          "hit": 75,
+          "mainStat": "strength"
+        }
+      },
+      "fightController": {
+        "class": "CMonsterFightController"
+      },
+      "actions": [
+        {
+          "ref": "Attack"
+        }
+      ],
+      "plugin_candlekeepPocketItems": "",
+      "plugin_candlekeepTheftThreshold": 16
+    }
+  },
+  "keeper": {
+    "class": "CCreature",
+    "properties": {
+      "label": "Keeper of the Portal",
+      "animation": "images/monsters/cultist",
+      "npc": true,
+      "affiliation": "candlekeepResidents",
+      "canStep": true,
+      "sw": -20,
+      "baseStats": {
+        "class": "CStats",
+        "properties": {
+          "strength": 5,
+          "stamina": 5,
+          "agility": 5,
+          "intelligence": 5,
+          "dmgMin": 2,
+          "dmgMax": 3,
+          "hit": 75,
+          "mainStat": "strength"
+        }
+      },
+      "fightController": {
+        "class": "CMonsterFightController"
+      },
+      "actions": [
+        {
+          "ref": "Attack"
+        }
+      ],
+      "plugin_candlekeepPocketItems": "",
+      "plugin_candlekeepTheftThreshold": 16
+    }
+  },
+  "watcher": {
+    "class": "CCreature",
+    "properties": {
+      "label": "Watcher",
+      "animation": "images/monsters/cultist",
+      "npc": true,
+      "affiliation": "candlekeepResidents",
+      "canStep": true,
+      "sw": -20,
+      "baseStats": {
+        "class": "CStats",
+        "properties": {
+          "strength": 5,
+          "stamina": 5,
+          "agility": 5,
+          "intelligence": 5,
+          "dmgMin": 2,
+          "dmgMax": 3,
+          "hit": 75,
+          "mainStat": "strength"
+        }
+      },
+      "fightController": {
+        "class": "CMonsterFightController"
+      },
+      "actions": [
+        {
+          "ref": "Attack"
+        }
+      ],
+      "plugin_candlekeepPocketItems": "",
+      "plugin_candlekeepTheftThreshold": 16
+    }
+  },
+  "parda": {
+    "class": "CCreature",
+    "properties": {
+      "label": "Parda",
+      "animation": "images/monsters/cultist",
+      "npc": true,
+      "affiliation": "candlekeepResidents",
+      "canStep": true,
+      "sw": -20,
+      "baseStats": {
+        "class": "CStats",
+        "properties": {
+          "strength": 5,
+          "stamina": 5,
+          "agility": 5,
+          "intelligence": 5,
+          "dmgMin": 2,
+          "dmgMax": 3,
+          "hit": 75,
+          "mainStat": "strength"
+        }
+      },
+      "fightController": {
+        "class": "CMonsterFightController"
+      },
+      "actions": [
+        {
+          "ref": "Attack"
+        }
+      ],
+      "plugin_candlekeepPocketItems": "",
+      "plugin_candlekeepTheftThreshold": 16
+    }
+  },
+  "karan": {
+    "class": "CCreature",
+    "properties": {
+      "label": "Karan",
+      "animation": "images/monsters/cultist",
+      "npc": true,
+      "affiliation": "candlekeepResidents",
+      "canStep": true,
+      "sw": -20,
+      "baseStats": {
+        "class": "CStats",
+        "properties": {
+          "strength": 5,
+          "stamina": 5,
+          "agility": 5,
+          "intelligence": 5,
+          "dmgMin": 2,
+          "dmgMax": 3,
+          "hit": 75,
+          "mainStat": "strength"
+        }
+      },
+      "fightController": {
+        "class": "CMonsterFightController"
+      },
+      "actions": [
+        {
+          "ref": "Attack"
+        }
+      ],
+      "plugin_candlekeepPocketItems": "",
+      "plugin_candlekeepTheftThreshold": 16
+    }
+  },
+  "jondalar": {
+    "class": "CCreature",
+    "properties": {
+      "label": "Jondalar",
+      "animation": "images/monsters/cultist",
+      "npc": true,
+      "affiliation": "candlekeepResidents",
+      "canStep": true,
+      "sw": -20,
+      "baseStats": {
+        "class": "CStats",
+        "properties": {
+          "strength": 5,
+          "stamina": 5,
+          "agility": 5,
+          "intelligence": 5,
+          "dmgMin": 2,
+          "dmgMax": 3,
+          "hit": 75,
+          "mainStat": "strength"
+        }
+      },
+      "fightController": {
+        "class": "CMonsterFightController"
+      },
+      "actions": [
+        {
+          "ref": "Attack"
+        }
+      ],
+      "plugin_candlekeepPocketItems": "",
+      "plugin_candlekeepTheftThreshold": 16
+    }
+  },
+  "erik": {
+    "class": "CCreature",
+    "properties": {
+      "label": "Erik",
+      "animation": "images/monsters/cultist",
+      "npc": true,
+      "affiliation": "candlekeepResidents",
+      "canStep": true,
+      "sw": -20,
+      "baseStats": {
+        "class": "CStats",
+        "properties": {
+          "strength": 5,
+          "stamina": 5,
+          "agility": 5,
+          "intelligence": 5,
+          "dmgMin": 2,
+          "dmgMax": 3,
+          "hit": 75,
+          "mainStat": "strength"
+        }
+      },
+      "fightController": {
+        "class": "CMonsterFightController"
+      },
+      "actions": [
+        {
+          "ref": "Attack"
+        }
+      ],
+      "plugin_candlekeepPocketItems": "",
+      "plugin_candlekeepTheftThreshold": 16
+    }
+  },
+  "chanter": {
+    "class": "CCreature",
+    "properties": {
+      "label": "Chanter",
+      "animation": "images/monsters/cultist",
+      "npc": true,
+      "affiliation": "candlekeepResidents",
+      "canStep": true,
+      "sw": -20,
+      "baseStats": {
+        "class": "CStats",
+        "properties": {
+          "strength": 5,
+          "stamina": 5,
+          "agility": 5,
+          "intelligence": 5,
+          "dmgMin": 2,
+          "dmgMax": 3,
+          "hit": 75,
+          "mainStat": "strength"
+        }
+      },
+      "fightController": {
+        "class": "CMonsterFightController"
+      },
+      "actions": [
+        {
+          "ref": "Attack"
+        }
+      ],
+      "plugin_candlekeepPocketItems": "",
+      "plugin_candlekeepTheftThreshold": 16
+    }
+  },
+  "voiceNorth": {
+    "class": "CCreature",
+    "properties": {
+      "label": "Voice of the North",
+      "animation": "images/monsters/cultist",
+      "npc": true,
+      "affiliation": "candlekeepResidents",
+      "canStep": true,
+      "sw": -20,
+      "baseStats": {
+        "class": "CStats",
+        "properties": {
+          "strength": 5,
+          "stamina": 5,
+          "agility": 5,
+          "intelligence": 5,
+          "dmgMin": 2,
+          "dmgMax": 3,
+          "hit": 75,
+          "mainStat": "strength"
+        }
+      },
+      "fightController": {
+        "class": "CMonsterFightController"
+      },
+      "actions": [
+        {
+          "ref": "Attack"
+        }
+      ],
+      "plugin_candlekeepPocketItems": "",
+      "plugin_candlekeepTheftThreshold": 16
+    }
+  },
+  "voiceSouth": {
+    "class": "CCreature",
+    "properties": {
+      "label": "Voice of the South",
+      "animation": "images/monsters/cultist",
+      "npc": true,
+      "affiliation": "candlekeepResidents",
+      "canStep": true,
+      "sw": -20,
+      "baseStats": {
+        "class": "CStats",
+        "properties": {
+          "strength": 5,
+          "stamina": 5,
+          "agility": 5,
+          "intelligence": 5,
+          "dmgMin": 2,
+          "dmgMax": 3,
+          "hit": 75,
+          "mainStat": "strength"
+        }
+      },
+      "fightController": {
+        "class": "CMonsterFightController"
+      },
+      "actions": [
+        {
+          "ref": "Attack"
+        }
+      ],
+      "plugin_candlekeepPocketItems": "",
+      "plugin_candlekeepTheftThreshold": 16
+    }
+  },
+  "voiceEast": {
+    "class": "CCreature",
+    "properties": {
+      "label": "Voice of the East",
+      "animation": "images/monsters/cultist",
+      "npc": true,
+      "affiliation": "candlekeepResidents",
+      "canStep": true,
+      "sw": -20,
+      "baseStats": {
+        "class": "CStats",
+        "properties": {
+          "strength": 5,
+          "stamina": 5,
+          "agility": 5,
+          "intelligence": 5,
+          "dmgMin": 2,
+          "dmgMax": 3,
+          "hit": 75,
+          "mainStat": "strength"
+        }
+      },
+      "fightController": {
+        "class": "CMonsterFightController"
+      },
+      "actions": [
+        {
+          "ref": "Attack"
+        }
+      ],
+      "plugin_candlekeepPocketItems": "",
+      "plugin_candlekeepTheftThreshold": 16
+    }
+  },
+  "voiceWest": {
+    "class": "CCreature",
+    "properties": {
+      "label": "Voice of the West",
+      "animation": "images/monsters/cultist",
+      "npc": true,
+      "affiliation": "candlekeepResidents",
+      "canStep": true,
+      "sw": -20,
+      "baseStats": {
+        "class": "CStats",
+        "properties": {
+          "strength": 5,
+          "stamina": 5,
+          "agility": 5,
+          "intelligence": 5,
+          "dmgMin": 2,
+          "dmgMax": 3,
+          "hit": 75,
+          "mainStat": "strength"
+        }
+      },
+      "fightController": {
+        "class": "CMonsterFightController"
+      },
+      "actions": [
+        {
+          "ref": "Attack"
+        }
+      ],
+      "plugin_candlekeepPocketItems": "",
+      "plugin_candlekeepTheftThreshold": 16
+    }
+  },
+  "tutor1": {
+    "class": "CCreature",
+    "properties": {
+      "label": "Tutor — intro",
+      "animation": "images/monsters/cultist",
+      "npc": true,
+      "affiliation": "candlekeepResidents",
+      "canStep": true,
+      "sw": -20,
+      "baseStats": {
+        "class": "CStats",
+        "properties": {
+          "strength": 5,
+          "stamina": 5,
+          "agility": 5,
+          "intelligence": 5,
+          "dmgMin": 2,
+          "dmgMax": 3,
+          "hit": 75,
+          "mainStat": "strength"
+        }
+      },
+      "fightController": {
+        "class": "CMonsterFightController"
+      },
+      "actions": [
+        {
+          "ref": "Attack"
+        }
+      ],
+      "plugin_candlekeepPocketItems": "",
+      "plugin_candlekeepTheftThreshold": 16
+    }
+  },
+  "tutor2": {
+    "class": "CCreature",
+    "properties": {
+      "label": "Tutor — allegiance",
+      "animation": "images/monsters/cultist",
+      "npc": true,
+      "affiliation": "candlekeepResidents",
+      "canStep": true,
+      "sw": -20,
+      "baseStats": {
+        "class": "CStats",
+        "properties": {
+          "strength": 5,
+          "stamina": 5,
+          "agility": 5,
+          "intelligence": 5,
+          "dmgMin": 2,
+          "dmgMax": 3,
+          "hit": 75,
+          "mainStat": "strength"
+        }
+      },
+      "fightController": {
+        "class": "CMonsterFightController"
+      },
+      "actions": [
+        {
+          "ref": "Attack"
+        }
+      ],
+      "plugin_candlekeepPocketItems": "",
+      "plugin_candlekeepTheftThreshold": 16
+    }
+  },
+  "tutor3": {
+    "class": "CCreature",
+    "properties": {
+      "label": "Tutor — inventory",
+      "animation": "images/monsters/cultist",
+      "npc": true,
+      "affiliation": "candlekeepResidents",
+      "canStep": true,
+      "sw": -20,
+      "baseStats": {
+        "class": "CStats",
+        "properties": {
+          "strength": 5,
+          "stamina": 5,
+          "agility": 5,
+          "intelligence": 5,
+          "dmgMin": 2,
+          "dmgMax": 3,
+          "hit": 75,
+          "mainStat": "strength"
+        }
+      },
+      "fightController": {
+        "class": "CMonsterFightController"
+      },
+      "actions": [
+        {
+          "ref": "Attack"
+        }
+      ],
+      "plugin_candlekeepPocketItems": "",
+      "plugin_candlekeepTheftThreshold": 16
+    }
+  },
+  "tutor4": {
+    "class": "CCreature",
+    "properties": {
+      "label": "Tutor — status",
+      "animation": "images/monsters/cultist",
+      "npc": true,
+      "affiliation": "candlekeepResidents",
+      "canStep": true,
+      "sw": -20,
+      "baseStats": {
+        "class": "CStats",
+        "properties": {
+          "strength": 5,
+          "stamina": 5,
+          "agility": 5,
+          "intelligence": 5,
+          "dmgMin": 2,
+          "dmgMax": 3,
+          "hit": 75,
+          "mainStat": "strength"
+        }
+      },
+      "fightController": {
+        "class": "CMonsterFightController"
+      },
+      "actions": [
+        {
+          "ref": "Attack"
+        }
+      ],
+      "plugin_candlekeepPocketItems": "",
+      "plugin_candlekeepTheftThreshold": 16
+    }
+  },
+  "tutor5": {
+    "class": "CCreature",
+    "properties": {
+      "label": "Tutor — quickslots",
+      "animation": "images/monsters/cultist",
+      "npc": true,
+      "affiliation": "candlekeepResidents",
+      "canStep": true,
+      "sw": -20,
+      "baseStats": {
+        "class": "CStats",
+        "properties": {
+          "strength": 5,
+          "stamina": 5,
+          "agility": 5,
+          "intelligence": 5,
+          "dmgMin": 2,
+          "dmgMax": 3,
+          "hit": 75,
+          "mainStat": "strength"
+        }
+      },
+      "fightController": {
+        "class": "CMonsterFightController"
+      },
+      "actions": [
+        {
+          "ref": "Attack"
+        }
+      ],
+      "plugin_candlekeepPocketItems": "",
+      "plugin_candlekeepTheftThreshold": 16
+    }
+  },
+  "tutor6": {
+    "class": "CCreature",
+    "properties": {
+      "label": "Tutor — temple",
+      "animation": "images/monsters/cultist",
+      "npc": true,
+      "affiliation": "candlekeepResidents",
+      "canStep": true,
+      "sw": -20,
+      "baseStats": {
+        "class": "CStats",
+        "properties": {
+          "strength": 5,
+          "stamina": 5,
+          "agility": 5,
+          "intelligence": 5,
+          "dmgMin": 2,
+          "dmgMax": 3,
+          "hit": 75,
+          "mainStat": "strength"
+        }
+      },
+      "fightController": {
+        "class": "CMonsterFightController"
+      },
+      "actions": [
+        {
+          "ref": "Attack"
+        }
+      ],
+      "plugin_candlekeepPocketItems": "",
+      "plugin_candlekeepTheftThreshold": 16
+    }
+  },
+  "tutor7": {
+    "class": "CCreature",
+    "properties": {
+      "label": "Tutor — saving",
+      "animation": "images/monsters/cultist",
+      "npc": true,
+      "affiliation": "candlekeepResidents",
+      "canStep": true,
+      "sw": -20,
+      "baseStats": {
+        "class": "CStats",
+        "properties": {
+          "strength": 5,
+          "stamina": 5,
+          "agility": 5,
+          "intelligence": 5,
+          "dmgMin": 2,
+          "dmgMax": 3,
+          "hit": 75,
+          "mainStat": "strength"
+        }
+      },
+      "fightController": {
+        "class": "CMonsterFightController"
+      },
+      "actions": [
+        {
+          "ref": "Attack"
+        }
+      ],
+      "plugin_candlekeepPocketItems": "",
+      "plugin_candlekeepTheftThreshold": 16
+    }
+  },
+  "tutor8": {
+    "class": "CCreature",
+    "properties": {
+      "label": "Tutor — journal",
+      "animation": "images/monsters/cultist",
+      "npc": true,
+      "affiliation": "candlekeepResidents",
+      "canStep": true,
+      "sw": -20,
+      "baseStats": {
+        "class": "CStats",
+        "properties": {
+          "strength": 5,
+          "stamina": 5,
+          "agility": 5,
+          "intelligence": 5,
+          "dmgMin": 2,
+          "dmgMax": 3,
+          "hit": 75,
+          "mainStat": "strength"
+        }
+      },
+      "fightController": {
+        "class": "CMonsterFightController"
+      },
+      "actions": [
+        {
+          "ref": "Attack"
+        }
+      ],
+      "plugin_candlekeepPocketItems": "",
+      "plugin_candlekeepTheftThreshold": 16
+    }
+  },
+  "tutor9": {
+    "class": "CCreature",
+    "properties": {
+      "label": "Tutor — spells",
+      "animation": "images/monsters/cultist",
+      "npc": true,
+      "affiliation": "candlekeepResidents",
+      "canStep": true,
+      "sw": -20,
+      "baseStats": {
+        "class": "CStats",
+        "properties": {
+          "strength": 5,
+          "stamina": 5,
+          "agility": 5,
+          "intelligence": 5,
+          "dmgMin": 2,
+          "dmgMax": 3,
+          "hit": 75,
+          "mainStat": "strength"
+        }
+      },
+      "fightController": {
+        "class": "CMonsterFightController"
+      },
+      "actions": [
+        {
+          "ref": "Attack"
+        }
+      ],
+      "plugin_candlekeepPocketItems": "",
+      "plugin_candlekeepTheftThreshold": 16
+    }
+  },
+  "tutor10": {
+    "class": "CCreature",
+    "properties": {
+      "label": "Tutor — thieving",
+      "animation": "images/monsters/cultist",
+      "npc": true,
+      "affiliation": "candlekeepResidents",
+      "canStep": true,
+      "sw": -20,
+      "baseStats": {
+        "class": "CStats",
+        "properties": {
+          "strength": 5,
+          "stamina": 5,
+          "agility": 5,
+          "intelligence": 5,
+          "dmgMin": 2,
+          "dmgMax": 3,
+          "hit": 75,
+          "mainStat": "strength"
+        }
+      },
+      "fightController": {
+        "class": "CMonsterFightController"
+      },
+      "actions": [
+        {
+          "ref": "Attack"
+        }
+      ],
+      "plugin_candlekeepPocketItems": "",
+      "plugin_candlekeepTheftThreshold": 16
+    }
+  },
+  "tutor11": {
+    "class": "CCreature",
+    "properties": {
+      "label": "Tutor — classabilities",
+      "animation": "images/monsters/cultist",
+      "npc": true,
+      "affiliation": "candlekeepResidents",
+      "canStep": true,
+      "sw": -20,
+      "baseStats": {
+        "class": "CStats",
+        "properties": {
+          "strength": 5,
+          "stamina": 5,
+          "agility": 5,
+          "intelligence": 5,
+          "dmgMin": 2,
+          "dmgMax": 3,
+          "hit": 75,
+          "mainStat": "strength"
+        }
+      },
+      "fightController": {
+        "class": "CMonsterFightController"
+      },
+      "actions": [
+        {
+          "ref": "Attack"
+        }
+      ],
+      "plugin_candlekeepPocketItems": "",
+      "plugin_candlekeepTheftThreshold": 16
+    }
+  },
+  "tutor12": {
+    "class": "CCreature",
+    "properties": {
+      "label": "Tutor — fighting",
+      "animation": "images/monsters/cultist",
+      "npc": true,
+      "affiliation": "candlekeepResidents",
+      "canStep": true,
+      "sw": -20,
+      "baseStats": {
+        "class": "CStats",
+        "properties": {
+          "strength": 5,
+          "stamina": 5,
+          "agility": 5,
+          "intelligence": 5,
+          "dmgMin": 2,
+          "dmgMax": 3,
+          "hit": 75,
+          "mainStat": "strength"
+        }
+      },
+      "fightController": {
+        "class": "CMonsterFightController"
+      },
+      "actions": [
+        {
+          "ref": "Attack"
+        }
+      ],
+      "plugin_candlekeepPocketItems": "",
+      "plugin_candlekeepTheftThreshold": 16
+    }
+  },
+  "tutor13": {
+    "class": "CCreature",
+    "properties": {
+      "label": "Tutor — merchants",
+      "animation": "images/monsters/cultist",
+      "npc": true,
+      "affiliation": "candlekeepResidents",
+      "canStep": true,
+      "sw": -20,
+      "baseStats": {
+        "class": "CStats",
+        "properties": {
+          "strength": 5,
+          "stamina": 5,
+          "agility": 5,
+          "intelligence": 5,
+          "dmgMin": 2,
+          "dmgMax": 3,
+          "hit": 75,
+          "mainStat": "strength"
+        }
+      },
+      "fightController": {
+        "class": "CMonsterFightController"
+      },
+      "actions": [
+        {
+          "ref": "Attack"
+        }
+      ],
+      "plugin_candlekeepPocketItems": "",
+      "plugin_candlekeepTheftThreshold": 16
+    }
+  },
+  "tutor14": {
+    "class": "CCreature",
+    "properties": {
+      "label": "Tutor — doors",
+      "animation": "images/monsters/cultist",
+      "npc": true,
+      "affiliation": "candlekeepResidents",
+      "canStep": true,
+      "sw": -20,
+      "baseStats": {
+        "class": "CStats",
+        "properties": {
+          "strength": 5,
+          "stamina": 5,
+          "agility": 5,
+          "intelligence": 5,
+          "dmgMin": 2,
+          "dmgMax": 3,
+          "hit": 75,
+          "mainStat": "strength"
+        }
+      },
+      "fightController": {
+        "class": "CMonsterFightController"
+      },
+      "actions": [
+        {
+          "ref": "Attack"
+        }
+      ],
+      "plugin_candlekeepPocketItems": "",
+      "plugin_candlekeepTheftThreshold": 16
+    }
+  },
+  "shank": {
+    "class": "CCreature",
+    "properties": {
+      "label": "Shank",
+      "animation": "images/monsters/cultist",
+      "npc": false,
+      "affiliation": "candlekeepAssassins",
+      "sw": -20,
+      "baseStats": {
+        "class": "CStats",
+        "properties": {
+          "strength": 1,
+          "stamina": 1,
+          "agility": 2,
+          "intelligence": 1,
+          "dmgMin": 1,
+          "dmgMax": 2,
+          "hit": 65,
+          "mainStat": "strength"
+        }
+      },
+      "fightController": {
+        "class": "CMonsterFightController"
+      },
+      "actions": [
+        {
+          "ref": "Attack"
+        }
+      ],
+      "items": [
+        {
+          "ref": "candlekeepDagger"
+        }
+      ]
+    }
+  },
+  "carbos": {
+    "class": "CCreature",
+    "properties": {
+      "label": "Carbos",
+      "animation": "images/monsters/cultist",
+      "npc": false,
+      "affiliation": "candlekeepAssassins",
+      "sw": -20,
+      "baseStats": {
+        "class": "CStats",
+        "properties": {
+          "strength": 1,
+          "stamina": 1,
+          "agility": 2,
+          "intelligence": 1,
+          "dmgMin": 1,
+          "dmgMax": 2,
+          "hit": 65,
+          "mainStat": "strength"
+        }
+      },
+      "fightController": {
+        "class": "CMonsterFightController"
+      },
+      "actions": [
+        {
+          "ref": "Attack"
+        }
+      ],
+      "items": [
+        {
+          "ref": "candlekeepDagger"
+        }
+      ]
+    }
+  },
+  "rat1": {
+    "class": "CCreature",
+    "properties": {
+      "label": "Rat1",
+      "animation": "images/monsters/pritz",
+      "npc": false,
+      "affiliation": "candlekeepAssassins",
+      "sw": -20,
+      "baseStats": {
+        "class": "CStats",
+        "properties": {
+          "strength": 1,
+          "stamina": 1,
+          "agility": 2,
+          "intelligence": 1,
+          "dmgMin": 1,
+          "dmgMax": 2,
+          "hit": 65,
+          "mainStat": "strength"
+        }
+      },
+      "fightController": {
+        "class": "CMonsterFightController"
+      },
+      "actions": [
+        {
+          "ref": "Attack"
+        }
+      ],
+      "items": []
+    }
+  },
+  "rat2": {
+    "class": "CCreature",
+    "properties": {
+      "label": "Rat2",
+      "animation": "images/monsters/pritz",
+      "npc": false,
+      "affiliation": "candlekeepAssassins",
+      "sw": -20,
+      "baseStats": {
+        "class": "CStats",
+        "properties": {
+          "strength": 1,
+          "stamina": 1,
+          "agility": 2,
+          "intelligence": 1,
+          "dmgMin": 1,
+          "dmgMax": 2,
+          "hit": 65,
+          "mainStat": "strength"
+        }
+      },
+      "fightController": {
+        "class": "CMonsterFightController"
+      },
+      "actions": [
+        {
+          "ref": "Attack"
+        }
+      ],
+      "items": []
+    }
+  },
+  "rat3": {
+    "class": "CCreature",
+    "properties": {
+      "label": "Rat3",
+      "animation": "images/monsters/pritz",
+      "npc": false,
+      "affiliation": "candlekeepAssassins",
+      "sw": -20,
+      "baseStats": {
+        "class": "CStats",
+        "properties": {
+          "strength": 1,
+          "stamina": 1,
+          "agility": 2,
+          "intelligence": 1,
+          "dmgMin": 1,
+          "dmgMax": 2,
+          "hit": 65,
+          "mainStat": "strength"
+        }
+      },
+      "fightController": {
+        "class": "CMonsterFightController"
+      },
+      "actions": [
+        {
+          "ref": "Attack"
+        }
+      ],
+      "items": []
+    }
+  },
+  "rat4": {
+    "class": "CCreature",
+    "properties": {
+      "label": "Rat4",
+      "animation": "images/monsters/pritz",
+      "npc": false,
+      "affiliation": "candlekeepAssassins",
+      "sw": -20,
+      "baseStats": {
+        "class": "CStats",
+        "properties": {
+          "strength": 1,
+          "stamina": 1,
+          "agility": 2,
+          "intelligence": 1,
+          "dmgMin": 1,
+          "dmgMax": 2,
+          "hit": 65,
+          "mainStat": "strength"
+        }
+      },
+      "fightController": {
+        "class": "CMonsterFightController"
+      },
+      "actions": [
+        {
+          "ref": "Attack"
+        }
+      ],
+      "items": []
+    }
+  },
+  "rat5": {
+    "class": "CCreature",
+    "properties": {
+      "label": "Rat5",
+      "animation": "images/monsters/pritz",
+      "npc": false,
+      "affiliation": "candlekeepAssassins",
+      "sw": -20,
+      "baseStats": {
+        "class": "CStats",
+        "properties": {
+          "strength": 1,
+          "stamina": 1,
+          "agility": 2,
+          "intelligence": 1,
+          "dmgMin": 1,
+          "dmgMax": 2,
+          "hit": 65,
+          "mainStat": "strength"
+        }
+      },
+      "fightController": {
+        "class": "CMonsterFightController"
+      },
+      "actions": [
+        {
+          "ref": "Attack"
+        }
+      ],
+      "items": []
+    }
+  },
+  "candlekeepWatch": {
+    "class": "CCreature",
+    "properties": {
+      "label": "Candlekeep Watcher",
+      "animation": "images/monsters/cultist",
+      "npc": false,
+      "affiliation": "candlekeepWatch",
+      "sw": -20,
+      "baseStats": {
+        "class": "CStats",
+        "properties": {
+          "strength": 6,
+          "stamina": 6,
+          "agility": 5,
+          "intelligence": 5,
+          "dmgMin": 4,
+          "dmgMax": 6,
+          "hit": 75,
+          "mainStat": "strength"
+        }
+      },
+      "fightController": {
+        "class": "CMonsterFightController"
+      },
+      "controller": {
+        "class": "CTargetController",
+        "properties": {
+          "target": "player"
+        }
+      },
+      "actions": [
+        {
+          "ref": "Attack"
+        }
+      ]
+    }
+  },
+  "candlekeepTrainingFoe": {
+    "class": "CCreature",
+    "properties": {
+      "label": "Illusory training opponent",
+      "animation": "images/monsters/pritz",
+      "npc": false,
+      "affiliation": "candlekeepIllusions",
+      "sw": -5,
+      "baseStats": {
+        "class": "CStats",
+        "properties": {
+          "strength": 1,
+          "stamina": 1,
+          "agility": 1,
+          "intelligence": 1,
+          "dmgMin": 0,
+          "dmgMax": 0,
+          "hit": 50,
+          "mainStat": "strength"
+        }
+      },
+      "fightController": {
+        "class": "CMonsterFightController"
+      },
+      "actions": [
+        {
+          "ref": "Attack"
+        }
+      ]
+    }
+  },
+  "candlekeepPracticeFoe": {
+    "ref": "candlekeepTrainingFoe",
+    "properties": {
+      "label": "Jondalar and Erik's practice opponent"
+    }
+  },
+  "candlekeepTrainingArkanis": {
+    "class": "CCreature",
+    "properties": {
+      "label": "Arkanis",
+      "animation": "images/monsters/cultist",
+      "npc": false,
+      "affiliation": "candlekeepTraining",
+      "sw": -5,
+      "baseStats": {
+        "class": "CStats",
+        "properties": {
+          "strength": 6,
+          "stamina": 6,
+          "agility": 5,
+          "intelligence": 8,
+          "dmgMin": 3,
+          "dmgMax": 5,
+          "hit": 85,
+          "mainStat": "intelligence"
+        }
+      },
+      "fightController": {
+        "class": "CMonsterFightController"
+      },
+      "actions": [
+        {
+          "ref": "Attack"
+        },
+        {
+          "ref": "Strike"
+        }
+      ],
+      "items": [
+        {
+          "ref": "candlekeepTrainingPotion"
+        }
+      ]
+    }
+  },
+  "candlekeepTrainingCanderous": {
+    "class": "CCreature",
+    "properties": {
+      "label": "Canderous",
+      "animation": "images/monsters/cultist",
+      "npc": false,
+      "affiliation": "candlekeepTraining",
+      "sw": -5,
+      "baseStats": {
+        "class": "CStats",
+        "properties": {
+          "strength": 6,
+          "stamina": 6,
+          "agility": 5,
+          "intelligence": 8,
+          "dmgMin": 3,
+          "dmgMax": 5,
+          "hit": 85,
+          "mainStat": "intelligence"
+        }
+      },
+      "fightController": {
+        "class": "CMonsterFightController"
+      },
+      "actions": [
+        {
+          "ref": "Attack"
+        },
+        {
+          "ref": "Attack"
+        }
+      ],
+      "items": [
+        {
+          "ref": "candlekeepTrainingPotion"
+        }
+      ]
+    }
+  },
+  "candlekeepTrainingDeder": {
+    "class": "CCreature",
+    "properties": {
+      "label": "Deder",
+      "animation": "images/monsters/cultist",
+      "npc": false,
+      "affiliation": "candlekeepTraining",
+      "sw": -5,
+      "baseStats": {
+        "class": "CStats",
+        "properties": {
+          "strength": 6,
+          "stamina": 6,
+          "agility": 5,
+          "intelligence": 8,
+          "dmgMin": 3,
+          "dmgMax": 5,
+          "hit": 85,
+          "mainStat": "intelligence"
+        }
+      },
+      "fightController": {
+        "class": "CMonsterFightController"
+      },
+      "actions": [
+        {
+          "ref": "Attack"
+        },
+        {
+          "ref": "SneakAttack"
+        }
+      ],
+      "items": [
+        {
+          "ref": "candlekeepTrainingPotion"
+        }
+      ]
+    }
+  },
+  "candlekeepTrainingMordaine": {
+    "class": "CCreature",
+    "properties": {
+      "label": "Mordaine",
+      "animation": "images/monsters/cultist",
+      "npc": false,
+      "affiliation": "candlekeepTraining",
+      "sw": -5,
+      "baseStats": {
+        "class": "CStats",
+        "properties": {
+          "strength": 6,
+          "stamina": 6,
+          "agility": 5,
+          "intelligence": 8,
+          "dmgMin": 3,
+          "dmgMax": 5,
+          "hit": 85,
+          "mainStat": "intelligence"
+        }
+      },
+      "fightController": {
+        "class": "CMonsterFightController"
+      },
+      "actions": [
+        {
+          "ref": "Attack"
+        },
+        {
+          "ref": "MagicMissile"
+        }
+      ],
+      "items": [
+        {
+          "ref": "candlekeepTrainingPotion"
+        }
+      ]
+    }
+  },
+  "candlekeepTrainingOsprey": {
+    "class": "CCreature",
+    "properties": {
+      "label": "Osprey",
+      "animation": "images/monsters/cultist",
+      "npc": false,
+      "affiliation": "candlekeepTraining",
+      "sw": -5,
+      "baseStats": {
+        "class": "CStats",
+        "properties": {
+          "strength": 6,
+          "stamina": 6,
+          "agility": 5,
+          "intelligence": 8,
+          "dmgMin": 3,
+          "dmgMax": 5,
+          "hit": 85,
+          "mainStat": "intelligence"
+        }
+      },
+      "fightController": {
+        "class": "CMonsterFightController"
+      },
+      "actions": [
+        {
+          "ref": "Attack"
+        },
+        {
+          "ref": "MagicMissile"
+        }
+      ],
+      "items": [
+        {
+          "ref": "candlekeepTrainingPotion"
+        }
+      ]
+    }
+  },
+  "hullChest": {
+    "class": "CandlekeepContainer",
+    "properties": {
+      "label": "Hull's chest",
+      "animation": "images/misc/chest",
+      "canStep": true,
+      "contents": "candlekeepHullSword,candlekeepAntidote",
+      "gold": 0,
+      "locked": false,
+      "owned": true,
+      "lockAgility": 12,
+      "forceStrength": 12,
+      "plugin_candlekeepTheftThreshold": 16,
+      "alwaysGuard": false,
+      "plugin_candlekeepGuardCount": 0,
+      "plugin_candlekeepSourceContainer": "AR2618#5"
+    }
+  },
+  "phlydiaHay": {
+    "class": "CandlekeepContainer",
+    "properties": {
+      "label": "Dreppin's haystack",
+      "animation": "images/misc/chest",
+      "canStep": true,
+      "contents": "candlekeepHistoryHalruaa",
+      "gold": 0,
+      "locked": false,
+      "owned": false,
+      "lockAgility": 12,
+      "forceStrength": 12,
+      "plugin_candlekeepTheftThreshold": 16,
+      "alwaysGuard": false,
+      "plugin_candlekeepGuardCount": 0,
+      "plugin_candlekeepSourceContainer": "AR2600#4"
+    }
+  },
+  "innOffice": {
+    "class": "CandlekeepContainer",
+    "properties": {
+      "label": "Inn office cupboard",
+      "animation": "images/misc/chest",
+      "canStep": true,
+      "contents": "candlekeepArmorScroll,candlekeepInfravisionScroll",
+      "gold": 18,
+      "locked": true,
+      "owned": true,
+      "lockAgility": 12,
+      "forceStrength": 12,
+      "plugin_candlekeepTheftThreshold": 16,
+      "alwaysGuard": false,
+      "plugin_candlekeepGuardCount": 2,
+      "plugin_candlekeepSourceContainer": "AR2616#2"
+    }
+  },
+  "innSapphireDrawer": {
+    "class": "CandlekeepContainer",
+    "properties": {
+      "label": "Inn sapphire drawer",
+      "animation": "images/misc/chest",
+      "canStep": true,
+      "contents": "candlekeepStarSapphire",
+      "gold": 0,
+      "locked": true,
+      "owned": true,
+      "lockAgility": 18,
+      "forceStrength": 14,
+      "plugin_candlekeepTheftThreshold": 16,
+      "alwaysGuard": false,
+      "plugin_candlekeepGuardCount": 2,
+      "plugin_candlekeepSourceContainer": "AR2617#5"
+    }
+  },
+  "innClarityDrawer": {
+    "class": "CandlekeepContainer",
+    "properties": {
+      "label": "Inn clarity potion drawer",
+      "animation": "images/misc/chest",
+      "canStep": true,
+      "contents": "candlekeepClarityPotion",
+      "gold": 36,
+      "locked": true,
+      "owned": false,
+      "lockAgility": 16,
+      "forceStrength": 12,
+      "plugin_candlekeepTheftThreshold": 16,
+      "alwaysGuard": false,
+      "plugin_candlekeepGuardCount": 0,
+      "plugin_candlekeepSourceContainer": "AR2617#3"
+    }
+  },
+  "innJewelryDrawer": {
+    "class": "CandlekeepContainer",
+    "properties": {
+      "label": "Inn jewelry drawer",
+      "animation": "images/misc/chest",
+      "canStep": true,
+      "contents": "candlekeepFlamedanceRing",
+      "gold": 86,
+      "locked": true,
+      "owned": true,
+      "lockAgility": 16,
+      "forceStrength": 12,
+      "plugin_candlekeepTheftThreshold": 16,
+      "alwaysGuard": true,
+      "plugin_candlekeepGuardCount": 1,
+      "plugin_candlekeepSourceContainer": "AR2617#4"
+    }
+  },
+  "priestChest": {
+    "class": "CandlekeepContainer",
+    "properties": {
+      "label": "Priests' quarters chest",
+      "animation": "images/misc/chest",
+      "canStep": true,
+      "contents": "candlekeepDagger",
+      "gold": 0,
+      "locked": true,
+      "owned": true,
+      "lockAgility": 16,
+      "forceStrength": 12,
+      "plugin_candlekeepTheftThreshold": 16,
+      "alwaysGuard": true,
+      "plugin_candlekeepGuardCount": 1,
+      "plugin_candlekeepSourceContainer": "AR2602#1"
+    }
+  },
+  "northwestBarrel": {
+    "class": "CandlekeepContainer",
+    "properties": {
+      "label": "Northwest storehouse barrel",
+      "animation": "images/misc/chest",
+      "canStep": true,
+      "contents": "candlekeepSilverRing",
+      "gold": 0,
+      "locked": false,
+      "owned": false,
+      "lockAgility": 12,
+      "forceStrength": 12,
+      "plugin_candlekeepTheftThreshold": 16,
+      "alwaysGuard": false,
+      "plugin_candlekeepGuardCount": 0,
+      "plugin_candlekeepSourceContainer": "AR2606#1"
+    }
+  },
+  "bunkhouseBarrel": {
+    "class": "CandlekeepContainer",
+    "properties": {
+      "label": "Trunk outside the bunkhouse",
+      "animation": "images/misc/chest",
+      "canStep": true,
+      "contents": "",
+      "gold": 15,
+      "locked": false,
+      "owned": false,
+      "lockAgility": 12,
+      "forceStrength": 12,
+      "plugin_candlekeepTheftThreshold": 16,
+      "alwaysGuard": false,
+      "plugin_candlekeepGuardCount": 0,
+      "plugin_candlekeepSourceContainer": "AR2600#3"
+    }
+  },
+  "barracksChest1": {
+    "class": "CandlekeepContainer",
+    "properties": {
+      "label": "Barracks chest 1",
+      "animation": "images/misc/chest",
+      "canStep": true,
+      "contents": "candlekeepDagger,candlekeepLongsword",
+      "gold": 0,
+      "locked": true,
+      "owned": true,
+      "lockAgility": 16,
+      "forceStrength": 12,
+      "plugin_candlekeepTheftThreshold": 16,
+      "alwaysGuard": false,
+      "plugin_candlekeepGuardCount": 2,
+      "plugin_candlekeepSourceContainer": "AR2618#1"
+    }
+  },
+  "barracksChest2": {
+    "class": "CandlekeepContainer",
+    "properties": {
+      "label": "Barracks chest 2",
+      "animation": "images/misc/chest",
+      "canStep": true,
+      "contents": "candlekeepWarhammer,candlekeepDagger",
+      "gold": 0,
+      "locked": true,
+      "owned": true,
+      "lockAgility": 16,
+      "forceStrength": 12,
+      "plugin_candlekeepTheftThreshold": 16,
+      "alwaysGuard": false,
+      "plugin_candlekeepGuardCount": 2,
+      "plugin_candlekeepSourceContainer": "AR2618#2"
+    }
+  },
+  "barracksChest3": {
+    "class": "CandlekeepContainer",
+    "properties": {
+      "label": "Barracks chest 3",
+      "animation": "images/misc/chest",
+      "canStep": true,
+      "contents": "candlekeepBattleAxe",
+      "gold": 0,
+      "locked": true,
+      "owned": true,
+      "lockAgility": 16,
+      "forceStrength": 12,
+      "plugin_candlekeepTheftThreshold": 16,
+      "alwaysGuard": false,
+      "plugin_candlekeepGuardCount": 2,
+      "plugin_candlekeepSourceContainer": "AR2618#3"
+    }
+  },
+  "barracksChest4": {
+    "class": "CandlekeepContainer",
+    "properties": {
+      "label": "Barracks chest 4",
+      "animation": "images/misc/chest",
+      "canStep": true,
+      "contents": "candlekeepLongsword,candlekeepMace",
+      "gold": 0,
+      "locked": true,
+      "owned": true,
+      "lockAgility": 16,
+      "forceStrength": 12,
+      "plugin_candlekeepTheftThreshold": 16,
+      "alwaysGuard": false,
+      "plugin_candlekeepGuardCount": 2,
+      "plugin_candlekeepSourceContainer": "AR2618#4"
+    }
+  },
+  "clinicDesk": {
+    "class": "CandlekeepContainer",
+    "properties": {
+      "label": "Infirmary desk",
+      "animation": "images/misc/chest",
+      "canStep": true,
+      "contents": "candlekeepHealingPotion",
+      "gold": 0,
+      "locked": true,
+      "owned": true,
+      "lockAgility": 16,
+      "forceStrength": 12,
+      "plugin_candlekeepTheftThreshold": 16,
+      "alwaysGuard": true,
+      "plugin_candlekeepGuardCount": 1,
+      "plugin_candlekeepSourceContainer": "AR2605#1"
+    }
+  },
+  "innEntrance": {
+    "class": "CandlekeepPortal",
+    "properties": {
+      "label": "Inn entrance",
+      "animation": "images/buildings/stairs_down",
+      "canStep": true,
+      "targetX": 10,
+      "targetY": 14,
+      "targetZ": 1,
+      "pairedPortal": "innExit",
+      "trainingDoor": false
+    }
+  },
+  "innExit": {
+    "class": "CandlekeepPortal",
+    "properties": {
+      "label": "Inn exit",
+      "animation": "images/buildings/stairs_up",
+      "canStep": true,
+      "targetX": 14,
+      "targetY": 8,
+      "targetZ": 0,
+      "pairedPortal": "innEntrance",
+      "trainingDoor": false
+    }
+  },
+  "clinicEntrance": {
+    "class": "CandlekeepPortal",
+    "properties": {
+      "label": "Clinic entrance",
+      "animation": "images/buildings/stairs_down",
+      "canStep": true,
+      "targetX": 50,
+      "targetY": 14,
+      "targetZ": 1,
+      "pairedPortal": "clinicExit",
+      "trainingDoor": false
+    }
+  },
+  "clinicExit": {
+    "class": "CandlekeepPortal",
+    "properties": {
+      "label": "Clinic exit",
+      "animation": "images/buildings/stairs_up",
+      "canStep": true,
+      "targetX": 44,
+      "targetY": 43,
+      "targetZ": 0,
+      "pairedPortal": "clinicEntrance",
+      "trainingDoor": false
+    }
+  },
+  "storehouseEntrance": {
+    "class": "CandlekeepPortal",
+    "properties": {
+      "label": "Storehouse entrance",
+      "animation": "images/buildings/stairs_down",
+      "canStep": true,
+      "targetX": 10,
+      "targetY": 34,
+      "targetZ": 1,
+      "pairedPortal": "storehouseExit",
+      "trainingDoor": false
+    }
+  },
+  "storehouseExit": {
+    "class": "CandlekeepPortal",
+    "properties": {
+      "label": "Storehouse exit",
+      "animation": "images/buildings/stairs_up",
+      "canStep": true,
+      "targetX": 54,
+      "targetY": 20,
+      "targetZ": 0,
+      "pairedPortal": "storehouseEntrance",
+      "trainingDoor": false
+    }
+  },
+  "barracksEntrance": {
+    "class": "CandlekeepPortal",
+    "properties": {
+      "label": "Barracks entrance",
+      "animation": "images/buildings/stairs_down",
+      "canStep": true,
+      "targetX": 32,
+      "targetY": 34,
+      "targetZ": 1,
+      "pairedPortal": "barracksExit",
+      "trainingDoor": false
+    }
+  },
+  "barracksExit": {
+    "class": "CandlekeepPortal",
+    "properties": {
+      "label": "Barracks exit",
+      "animation": "images/buildings/stairs_up",
+      "canStep": true,
+      "targetX": 20,
+      "targetY": 36,
+      "targetZ": 0,
+      "pairedPortal": "barracksEntrance",
+      "trainingDoor": false
+    }
+  },
+  "priestEntrance": {
+    "class": "CandlekeepPortal",
+    "properties": {
+      "label": "Priest entrance",
+      "animation": "images/buildings/stairs_down",
+      "canStep": true,
+      "targetX": 50,
+      "targetY": 34,
+      "targetZ": 1,
+      "pairedPortal": "priestExit",
+      "trainingDoor": false
+    }
+  },
+  "priestExit": {
+    "class": "CandlekeepPortal",
+    "properties": {
+      "label": "Priest exit",
+      "animation": "images/buildings/stairs_up",
+      "canStep": true,
+      "targetX": 37,
+      "targetY": 7,
+      "targetZ": 0,
+      "pairedPortal": "priestEntrance",
+      "trainingDoor": false
+    }
+  },
+  "bunkhouseEntrance": {
+    "class": "CandlekeepPortal",
+    "properties": {
+      "label": "Bunkhouse entrance",
+      "animation": "images/buildings/stairs_down",
+      "canStep": true,
+      "targetX": 10,
+      "targetY": 52,
+      "targetZ": 1,
+      "pairedPortal": "bunkhouseExit",
+      "trainingDoor": false
+    }
+  },
+  "bunkhouseExit": {
+    "class": "CandlekeepPortal",
+    "properties": {
+      "label": "Bunkhouse exit",
+      "animation": "images/buildings/stairs_up",
+      "canStep": true,
+      "targetX": 26,
+      "targetY": 39,
+      "targetZ": 0,
+      "pairedPortal": "bunkhouseEntrance",
+      "trainingDoor": false
+    }
+  },
+  "trainingEntrance": {
+    "class": "CandlekeepPortal",
+    "properties": {
+      "label": "Training entrance",
+      "animation": "images/buildings/stairs_down",
+      "canStep": true,
+      "targetX": 32,
+      "targetY": 52,
+      "targetZ": 1,
+      "pairedPortal": "trainingExit",
+      "trainingDoor": true
+    }
+  },
+  "trainingExit": {
+    "class": "CandlekeepPortal",
+    "properties": {
+      "label": "Training exit",
+      "animation": "images/buildings/stairs_up",
+      "canStep": true,
+      "targetX": 38,
+      "targetY": 44,
+      "targetZ": 0,
+      "pairedPortal": "trainingEntrance",
+      "trainingDoor": false
+    }
+  },
+  "innStairsUp": {
+    "class": "CandlekeepPortal",
+    "properties": {
+      "animation": "images/buildings/stairs_up",
+      "canStep": true,
+      "targetX": 14,
+      "targetY": 17,
+      "targetZ": 2,
+      "pairedPortal": "innStairsDown"
+    }
+  },
+  "innStairsDown": {
+    "class": "CandlekeepPortal",
+    "properties": {
+      "animation": "images/buildings/stairs_up",
+      "canStep": true,
+      "targetX": 14,
+      "targetY": 6,
+      "targetZ": 1,
+      "pairedPortal": "innStairsUp"
+    }
+  },
+  "candlekeepHistoryHalruaa": {
+    "class": "CScroll",
+    "properties": {
+      "label": "History of Halruaa",
+      "description": "Candlekeep prologue: History of Halruaa.",
+      "animation": "images/misc/chest",
+      "power": 0,
+      "plugin_candlekeepTradeable": false,
+      "plugin_candlekeepSellPrice": 0,
+      "tags": [
+        "quest"
+      ],
+      "text": "A scholar's history of Halruaa. Phlydia has been looking for this volume."
+    }
+  },
+  "candlekeepIdentifyScroll": {
+    "class": "CandlekeepSpellScroll",
+    "properties": {
+      "label": "Identify Scroll",
+      "description": "Candlekeep prologue: Identify Scroll.",
+      "animation": "images/misc/chest",
+      "power": 0,
+      "plugin_candlekeepTradeable": false,
+      "plugin_candlekeepSellPrice": 0,
+      "tags": [
+        "quest"
+      ],
+      "text": "Tethtoril's scroll, entrusted to you for Firebead.",
+      "plugin_candlekeepSpell": "identify"
+    }
+  },
+  "candlekeepAntidote": {
+    "class": "CItem",
+    "properties": {
+      "label": "Antidote",
+      "description": "Antidote. Candlekeep adaptation: native quest antidote inventory item for Nessa; original potion use is unavailable.",
+      "animation": "images/misc/chest",
+      "power": 0,
+      "plugin_candlekeepTradeable": true,
+      "plugin_candlekeepSellPrice": 50,
+      "tags": [],
+      "plugin_candlekeepQuantity": 1,
+      "plugin_candlekeepOriginalResource": "POTN20"
+    }
+  },
+  "candlekeepHullSword": {
+    "class": "CWeapon",
+    "properties": {
+      "label": "Hull's Longsword",
+      "description": "Candlekeep prologue: Hull's Longsword.",
+      "animation": "images/items/weapons/dagger",
+      "power": 0,
+      "plugin_candlekeepTradeable": false,
+      "plugin_candlekeepSellPrice": 0,
+      "tags": [
+        "quest"
+      ],
+      "bonus": {
+        "class": "CStats",
+        "properties": {
+          "dmgMin": 2,
+          "dmgMax": 3,
+          "agility": 0
+        }
+      }
+    }
+  },
+  "candlekeepBolts": {
+    "class": "CItem",
+    "properties": {
+      "label": "Bolt (20)",
+      "description": "Bolt (20). Candlekeep adaptation: inventory item; native slot or original operation is unavailable.",
+      "animation": "images/misc/chest",
+      "power": 0,
+      "plugin_candlekeepTradeable": true,
+      "plugin_candlekeepSellPrice": 0,
+      "tags": [],
+      "plugin_candlekeepQuantity": 20,
+      "plugin_candlekeepOriginalResource": "BOLT01"
+    }
+  },
+  "candlekeepArrows": {
+    "class": "CItem",
+    "properties": {
+      "label": "Arrow (20)",
+      "description": "Arrow (20). Candlekeep adaptation: inventory item; native slot or original operation is unavailable.",
+      "animation": "images/misc/chest",
+      "power": 0,
+      "plugin_candlekeepTradeable": true,
+      "plugin_candlekeepSellPrice": 0,
+      "tags": [],
+      "plugin_candlekeepQuantity": 20,
+      "plugin_candlekeepOriginalResource": "AROW01"
+    }
+  },
+  "candlekeepDaggerPlusOne": {
+    "class": "CWeapon",
+    "properties": {
+      "label": "Dagger +1",
+      "description": "Candlekeep prologue: Dagger +1.",
+      "animation": "images/items/weapons/dagger",
+      "power": 0,
+      "plugin_candlekeepTradeable": true,
+      "plugin_candlekeepSellPrice": 150,
+      "tags": [],
+      "bonus": {
+        "class": "CStats",
+        "properties": {
+          "dmgMin": 2,
+          "dmgMax": 3,
+          "agility": 1
+        }
+      },
+      "plugin_candlekeepUnidentified": true
+    }
+  },
+  "candlekeepLynxEyeGem": {
+    "class": "CItem",
+    "properties": {
+      "label": "Lynx-eye Gem",
+      "description": "Candlekeep prologue: Lynx-eye Gem.",
+      "animation": "images/misc/chest",
+      "power": 0,
+      "plugin_candlekeepTradeable": true,
+      "plugin_candlekeepSellPrice": 7,
+      "tags": []
+    }
+  },
+  "candlekeepGoldNecklace": {
+    "class": "CItem",
+    "properties": {
+      "label": "Gold Necklace",
+      "description": "Candlekeep prologue: Gold Necklace.",
+      "animation": "images/misc/chest",
+      "power": 0,
+      "plugin_candlekeepTradeable": true,
+      "plugin_candlekeepSellPrice": 30,
+      "tags": []
+    }
+  },
+  "candlekeepSilverNecklace": {
+    "class": "CItem",
+    "properties": {
+      "label": "Silver Necklace",
+      "description": "Candlekeep prologue: Silver Necklace.",
+      "animation": "images/misc/chest",
+      "power": 0,
+      "plugin_candlekeepTradeable": true,
+      "plugin_candlekeepSellPrice": 5,
+      "tags": []
+    }
+  },
+  "candlekeepStarSapphire": {
+    "class": "CItem",
+    "properties": {
+      "label": "Star Sapphire",
+      "description": "Candlekeep prologue: Star Sapphire.",
+      "animation": "images/misc/chest",
+      "power": 0,
+      "plugin_candlekeepTradeable": true,
+      "plugin_candlekeepSellPrice": 1000,
+      "tags": []
+    }
+  },
+  "candlekeepFlamedanceRing": {
+    "class": "CItem",
+    "properties": {
+      "label": "Flamedance Ring",
+      "description": "Candlekeep prologue: Flamedance Ring.",
+      "animation": "images/misc/chest",
+      "power": 0,
+      "plugin_candlekeepTradeable": true,
+      "plugin_candlekeepSellPrice": 62,
+      "tags": []
+    }
+  },
+  "candlekeepSilverRing": {
+    "class": "CItem",
+    "properties": {
+      "label": "Silver Ring",
+      "description": "Candlekeep prologue: Silver Ring.",
+      "animation": "images/misc/chest",
+      "power": 0,
+      "plugin_candlekeepTradeable": true,
+      "plugin_candlekeepSellPrice": 2,
+      "tags": []
+    }
+  },
+  "candlekeepDagger": {
+    "class": "CWeapon",
+    "properties": {
+      "label": "Dagger",
+      "description": "Dagger. Candlekeep adaptation: native dagger melee equipment.",
+      "animation": "images/items/weapons/dagger",
+      "power": 0,
+      "plugin_candlekeepTradeable": true,
+      "plugin_candlekeepSellPrice": 1,
+      "tags": [],
+      "bonus": {
+        "class": "CStats",
+        "properties": {
+          "dmgMin": 2,
+          "dmgMax": 3,
+          "agility": 0
+        }
+      },
+      "plugin_candlekeepQuantity": 1,
+      "plugin_candlekeepOriginalResource": "DAGG01"
+    }
+  },
+  "candlekeepLongsword": {
+    "class": "CWeapon",
+    "properties": {
+      "label": "Long Sword",
+      "description": "Long Sword. Candlekeep adaptation: native melee equipment; original weapon category, range and AD&D rules are not implemented.",
+      "animation": "images/items/weapons/dagger",
+      "power": 0,
+      "plugin_candlekeepTradeable": true,
+      "plugin_candlekeepSellPrice": 7,
+      "tags": [],
+      "bonus": {
+        "class": "CStats",
+        "properties": {
+          "dmgMin": 2,
+          "dmgMax": 3,
+          "agility": 0
+        }
+      },
+      "plugin_candlekeepQuantity": 1,
+      "plugin_candlekeepOriginalResource": "SW1H04"
+    }
+  },
+  "candlekeepWarhammer": {
+    "class": "CWeapon",
+    "properties": {
+      "label": "War Hammer",
+      "description": "War Hammer. Candlekeep adaptation: native melee equipment; original weapon category, range and AD&D rules are not implemented.",
+      "animation": "images/items/weapons/dagger",
+      "power": 0,
+      "plugin_candlekeepTradeable": true,
+      "plugin_candlekeepSellPrice": 1,
+      "tags": [],
+      "bonus": {
+        "class": "CStats",
+        "properties": {
+          "dmgMin": 2,
+          "dmgMax": 3,
+          "agility": 0
+        }
+      },
+      "plugin_candlekeepQuantity": 1,
+      "plugin_candlekeepOriginalResource": "HAMM01"
+    }
+  },
+  "candlekeepBattleAxe": {
+    "class": "CWeapon",
+    "properties": {
+      "label": "Battle Axe",
+      "description": "Battle Axe. Candlekeep adaptation: native melee equipment; original weapon category, range and AD&D rules are not implemented.",
+      "animation": "images/items/weapons/dagger",
+      "power": 0,
+      "plugin_candlekeepTradeable": true,
+      "plugin_candlekeepSellPrice": 2,
+      "tags": [],
+      "bonus": {
+        "class": "CStats",
+        "properties": {
+          "dmgMin": 2,
+          "dmgMax": 3,
+          "agility": 0
+        }
+      },
+      "plugin_candlekeepQuantity": 1,
+      "plugin_candlekeepOriginalResource": "AX1H01"
+    }
+  },
+  "candlekeepMace": {
+    "class": "CWeapon",
+    "properties": {
+      "label": "Mace",
+      "description": "Mace. Candlekeep adaptation: native melee equipment; original weapon category, range and AD&D rules are not implemented.",
+      "animation": "images/items/weapons/dagger",
+      "power": 0,
+      "plugin_candlekeepTradeable": true,
+      "plugin_candlekeepSellPrice": 4,
+      "tags": [],
+      "bonus": {
+        "class": "CStats",
+        "properties": {
+          "dmgMin": 2,
+          "dmgMax": 3,
+          "agility": 0
+        }
+      },
+      "plugin_candlekeepQuantity": 1,
+      "plugin_candlekeepOriginalResource": "BLUN04"
+    }
+  },
+  "candlekeepArmorScroll": {
+    "class": "CandlekeepSpellScroll",
+    "properties": {
+      "label": "Armor Scroll",
+      "description": "Candlekeep prologue: Armor Scroll.",
+      "animation": "images/misc/chest",
+      "power": 0,
+      "plugin_candlekeepTradeable": true,
+      "plugin_candlekeepSellPrice": 50,
+      "tags": [],
+      "text": "A copied armor spell. Native adaptation: trade or keep this arcane manuscript.",
+      "plugin_candlekeepSpell": "armor"
+    }
+  },
+  "candlekeepInfravisionScroll": {
+    "class": "CandlekeepSpellScroll",
+    "properties": {
+      "label": "Infravision Scroll",
+      "description": "Candlekeep prologue: Infravision Scroll.",
+      "animation": "images/misc/chest",
+      "power": 0,
+      "plugin_candlekeepTradeable": true,
+      "plugin_candlekeepSellPrice": 50,
+      "tags": [],
+      "text": "A copied night-vision spell. Native adaptation: trade or keep this arcane manuscript.",
+      "plugin_candlekeepSpell": "infravision"
+    }
+  },
+  "candlekeepHealingPotion": {
+    "ref": "LesserLifePotion",
+    "properties": {
+      "label": "Potion of Healing",
+      "description": "Potion of Healing. Candlekeep adaptation: native lesser life potion.",
+      "plugin_candlekeepTradeable": true,
+      "plugin_candlekeepSellPrice": 37,
+      "plugin_candlekeepQuantity": 1,
+      "plugin_candlekeepOriginalResource": "POTN08"
+    }
+  },
+  "candlekeepClarityPotion": {
+    "ref": "LesserManaPotion",
+    "properties": {
+      "label": "Potion of Clarity",
+      "description": "A clarity draught, adapted to restore native mana.",
+      "plugin_candlekeepTradeable": true,
+      "plugin_candlekeepSellPrice": 350
+    }
+  },
+  "candlekeepProtectionEvil": {
+    "class": "CEffect",
+    "properties": {
+      "duration": 20,
+      "tags": [
+        "buff"
+      ],
+      "bonus": {
+        "class": "CStats",
+        "properties": {
+          "armor": 10,
+          "normalResist": 10
+        }
+      }
+    }
+  },
+  "candlekeepStockAx1h04": {
+    "ref": "Sword",
+    "properties": {
+      "label": "Throwing Axe (5)",
+      "description": "Throwing Axe (5). Candlekeep adaptation: native melee equipment; original weapon category, range and AD&D rules are not implemented.",
+      "plugin_candlekeepTradeable": true,
+      "plugin_candlekeepSellPrice": 0,
+      "plugin_candlekeepQuantity": 5,
+      "plugin_candlekeepOriginalResource": "AX1H04"
+    }
+  },
+  "candlekeepStockBlun01": {
+    "ref": "Staff",
+    "properties": {
+      "label": "Club",
+      "description": "Club. Candlekeep adaptation: native melee equipment; original weapon category, range and AD&D rules are not implemented.",
+      "plugin_candlekeepTradeable": true,
+      "plugin_candlekeepSellPrice": 0,
+      "plugin_candlekeepQuantity": 1,
+      "plugin_candlekeepOriginalResource": "BLUN01"
+    }
+  },
+  "candlekeepStockBlun02": {
+    "ref": "Staff",
+    "properties": {
+      "label": "Flail",
+      "description": "Flail. Candlekeep adaptation: native melee equipment; original weapon category, range and AD&D rules are not implemented.",
+      "plugin_candlekeepTradeable": true,
+      "plugin_candlekeepSellPrice": 7,
+      "plugin_candlekeepQuantity": 1,
+      "plugin_candlekeepOriginalResource": "BLUN02"
+    }
+  },
+  "candlekeepStockBlun06": {
+    "ref": "Staff",
+    "properties": {
+      "label": "Morning Star",
+      "description": "Morning Star. Candlekeep adaptation: native melee equipment; original weapon category, range and AD&D rules are not implemented.",
+      "plugin_candlekeepTradeable": true,
+      "plugin_candlekeepSellPrice": 5,
+      "plugin_candlekeepQuantity": 1,
+      "plugin_candlekeepOriginalResource": "BLUN06"
+    }
+  },
+  "candlekeepStockBow01": {
+    "ref": "Staff",
+    "properties": {
+      "label": "Composite Longbow",
+      "description": "Composite Longbow. Candlekeep adaptation: native melee equipment; original weapon category, range and AD&D rules are not implemented.",
+      "plugin_candlekeepTradeable": true,
+      "plugin_candlekeepSellPrice": 50,
+      "plugin_candlekeepQuantity": 1,
+      "plugin_candlekeepOriginalResource": "BOW01"
+    }
+  },
+  "candlekeepStockBow03": {
+    "ref": "Staff",
+    "properties": {
+      "label": "Longbow",
+      "description": "Longbow. Candlekeep adaptation: native melee equipment; original weapon category, range and AD&D rules are not implemented.",
+      "plugin_candlekeepTradeable": true,
+      "plugin_candlekeepSellPrice": 37,
+      "plugin_candlekeepQuantity": 1,
+      "plugin_candlekeepOriginalResource": "BOW03"
+    }
+  },
+  "candlekeepStockBow05": {
+    "ref": "Staff",
+    "properties": {
+      "label": "Shortbow",
+      "description": "Shortbow. Candlekeep adaptation: native melee equipment; original weapon category, range and AD&D rules are not implemented.",
+      "plugin_candlekeepTradeable": true,
+      "plugin_candlekeepSellPrice": 15,
+      "plugin_candlekeepQuantity": 1,
+      "plugin_candlekeepOriginalResource": "BOW05"
+    }
+  },
+  "candlekeepStockDagg05": {
+    "ref": "Dagger",
+    "properties": {
+      "label": "Throwing Dagger (5)",
+      "description": "Throwing Dagger (5). Candlekeep adaptation: native dagger melee equipment.",
+      "plugin_candlekeepTradeable": true,
+      "plugin_candlekeepSellPrice": 0,
+      "plugin_candlekeepQuantity": 5,
+      "plugin_candlekeepOriginalResource": "DAGG05"
+    }
+  },
+  "candlekeepStockDart01": {
+    "ref": "Sword",
+    "properties": {
+      "label": "Dart (10)",
+      "description": "Dart (10). Candlekeep adaptation: native melee equipment; original weapon category, range and AD&D rules are not implemented.",
+      "plugin_candlekeepTradeable": true,
+      "plugin_candlekeepSellPrice": 0,
+      "plugin_candlekeepQuantity": 10,
+      "plugin_candlekeepOriginalResource": "DART01"
+    }
+  },
+  "candlekeepStockHalb01": {
+    "ref": "Staff",
+    "properties": {
+      "label": "Halberd",
+      "description": "Halberd. Candlekeep adaptation: native melee equipment; original weapon category, range and AD&D rules are not implemented.",
+      "plugin_candlekeepTradeable": true,
+      "plugin_candlekeepSellPrice": 5,
+      "plugin_candlekeepQuantity": 1,
+      "plugin_candlekeepOriginalResource": "HALB01"
+    }
+  },
+  "candlekeepStockSlng01": {
+    "ref": "Staff",
+    "properties": {
+      "label": "Sling",
+      "description": "Sling. Candlekeep adaptation: native melee equipment; original weapon category, range and AD&D rules are not implemented.",
+      "plugin_candlekeepTradeable": true,
+      "plugin_candlekeepSellPrice": 0,
+      "plugin_candlekeepQuantity": 1,
+      "plugin_candlekeepOriginalResource": "SLNG01"
+    }
+  },
+  "candlekeepStockSper01": {
+    "ref": "Staff",
+    "properties": {
+      "label": "Spear",
+      "description": "Spear. Candlekeep adaptation: native melee equipment; original weapon category, range and AD&D rules are not implemented.",
+      "plugin_candlekeepTradeable": true,
+      "plugin_candlekeepSellPrice": 0,
+      "plugin_candlekeepQuantity": 1,
+      "plugin_candlekeepOriginalResource": "SPER01"
+    }
+  },
+  "candlekeepStockStaf01": {
+    "ref": "Staff",
+    "properties": {
+      "label": "Quarterstaff",
+      "description": "Quarterstaff. Candlekeep adaptation: native melee equipment; original weapon category, range and AD&D rules are not implemented.",
+      "plugin_candlekeepTradeable": true,
+      "plugin_candlekeepSellPrice": 0,
+      "plugin_candlekeepQuantity": 1,
+      "plugin_candlekeepOriginalResource": "STAF01"
+    }
+  },
+  "candlekeepStockSw1h01": {
+    "ref": "Sword",
+    "properties": {
+      "label": "Bastard Sword",
+      "description": "Bastard Sword. Candlekeep adaptation: native melee equipment; original weapon category, range and AD&D rules are not implemented.",
+      "plugin_candlekeepTradeable": true,
+      "plugin_candlekeepSellPrice": 12,
+      "plugin_candlekeepQuantity": 1,
+      "plugin_candlekeepOriginalResource": "SW1H01"
+    }
+  },
+  "candlekeepStockSw1h07": {
+    "ref": "Sword",
+    "properties": {
+      "label": "Short Sword",
+      "description": "Short Sword. Candlekeep adaptation: native melee equipment; original weapon category, range and AD&D rules are not implemented.",
+      "plugin_candlekeepTradeable": true,
+      "plugin_candlekeepSellPrice": 5,
+      "plugin_candlekeepQuantity": 1,
+      "plugin_candlekeepOriginalResource": "SW1H07"
+    }
+  },
+  "candlekeepStockSw2h01": {
+    "ref": "Sword",
+    "properties": {
+      "label": "Two-handed Sword",
+      "description": "Two-handed Sword. Candlekeep adaptation: native melee equipment; original weapon category, range and AD&D rules are not implemented.",
+      "plugin_candlekeepTradeable": true,
+      "plugin_candlekeepSellPrice": 25,
+      "plugin_candlekeepQuantity": 1,
+      "plugin_candlekeepOriginalResource": "SW2H01"
+    }
+  },
+  "candlekeepStockSw1h20": {
+    "ref": "Sword",
+    "properties": {
+      "label": "Scimitar",
+      "description": "Scimitar. Candlekeep adaptation: native melee equipment; original weapon category, range and AD&D rules are not implemented.",
+      "plugin_candlekeepTradeable": true,
+      "plugin_candlekeepSellPrice": 27,
+      "plugin_candlekeepQuantity": 1,
+      "plugin_candlekeepOriginalResource": "SW1H20"
+    }
+  },
+  "candlekeepStockBull01": {
+    "class": "CItem",
+    "properties": {
+      "animation": "images/misc/chest",
+      "power": 0,
+      "tags": [],
+      "label": "Bullet (20)",
+      "description": "Bullet (20). Candlekeep adaptation: inventory item; native slot or original operation is unavailable.",
+      "plugin_candlekeepTradeable": true,
+      "plugin_candlekeepSellPrice": 0,
+      "plugin_candlekeepQuantity": 20,
+      "plugin_candlekeepOriginalResource": "BULL01"
+    }
+  },
+  "candlekeepStockXbow01": {
+    "ref": "Staff",
+    "properties": {
+      "label": "Heavy Crossbow",
+      "description": "Heavy Crossbow. Candlekeep adaptation: native melee equipment; original weapon category, range and AD&D rules are not implemented.",
+      "plugin_candlekeepTradeable": true,
+      "plugin_candlekeepSellPrice": 25,
+      "plugin_candlekeepQuantity": 1,
+      "plugin_candlekeepOriginalResource": "XBOW01"
+    }
+  },
+  "candlekeepStockXbow04": {
+    "ref": "Staff",
+    "properties": {
+      "label": "Light Crossbow",
+      "description": "Light Crossbow. Candlekeep adaptation: native melee equipment; original weapon category, range and AD&D rules are not implemented.",
+      "plugin_candlekeepTradeable": true,
+      "plugin_candlekeepSellPrice": 17,
+      "plugin_candlekeepQuantity": 1,
+      "plugin_candlekeepOriginalResource": "XBOW04"
+    }
+  },
+  "candlekeepStockChan01": {
+    "ref": "PlateArmor",
+    "properties": {
+      "label": "Chain Mail",
+      "description": "Chain Mail. Candlekeep adaptation: native body armor; original armor class and usability are not implemented.",
+      "plugin_candlekeepTradeable": true,
+      "plugin_candlekeepSellPrice": 37,
+      "plugin_candlekeepQuantity": 1,
+      "plugin_candlekeepOriginalResource": "CHAN01"
+    }
+  },
+  "candlekeepStockChan04": {
+    "ref": "PlateArmor",
+    "properties": {
+      "label": "Splint Mail",
+      "description": "Splint Mail. Candlekeep adaptation: native body armor; original armor class and usability are not implemented.",
+      "plugin_candlekeepTradeable": true,
+      "plugin_candlekeepSellPrice": 40,
+      "plugin_candlekeepQuantity": 1,
+      "plugin_candlekeepOriginalResource": "CHAN04"
+    }
+  },
+  "candlekeepStockLeat01": {
+    "ref": "LeatherArmor",
+    "properties": {
+      "label": "Leather Armor",
+      "description": "Leather Armor. Candlekeep adaptation: native body armor; original armor class and usability are not implemented.",
+      "plugin_candlekeepTradeable": true,
+      "plugin_candlekeepSellPrice": 2,
+      "plugin_candlekeepQuantity": 1,
+      "plugin_candlekeepOriginalResource": "LEAT01"
+    }
+  },
+  "candlekeepStockLeat04": {
+    "ref": "LeatherArmor",
+    "properties": {
+      "label": "Studded Leather Armor",
+      "description": "Studded Leather Armor. Candlekeep adaptation: native body armor; original armor class and usability are not implemented.",
+      "plugin_candlekeepTradeable": true,
+      "plugin_candlekeepSellPrice": 10,
+      "plugin_candlekeepQuantity": 1,
+      "plugin_candlekeepOriginalResource": "LEAT04"
+    }
+  },
+  "candlekeepStockShld01": {
+    "class": "CShield",
+    "properties": {
+      "animation": "images/items/armors/leatherarmor",
+      "power": 0,
+      "tags": [],
+      "label": "Small Shield [SHLD01]",
+      "description": "Small Shield [SHLD01]. Candlekeep adaptation: native left-hand shield using the ordinary LeatherArmor bonus; original AD&D shield and color rules are not replicated.",
+      "plugin_candlekeepTradeable": true,
+      "plugin_candlekeepSellPrice": 1,
+      "plugin_candlekeepQuantity": 1,
+      "plugin_candlekeepOriginalResource": "SHLD01",
+      "bonus": {
+        "class": "CStats",
+        "properties": {
+          "agility": 5,
+          "armor": 10,
+          "block": 5,
+          "crit": 2,
+          "stamina": 2
+        }
+      }
+    }
+  },
+  "candlekeepStockShld03": {
+    "class": "CShield",
+    "properties": {
+      "animation": "images/items/armors/leatherarmor",
+      "power": 0,
+      "tags": [],
+      "label": "Medium Shield [SHLD03]",
+      "description": "Medium Shield [SHLD03]. Candlekeep adaptation: native left-hand shield using the ordinary LeatherArmor bonus; original AD&D shield and color rules are not replicated.",
+      "plugin_candlekeepTradeable": true,
+      "plugin_candlekeepSellPrice": 3,
+      "plugin_candlekeepQuantity": 1,
+      "plugin_candlekeepOriginalResource": "SHLD03",
+      "bonus": {
+        "class": "CStats",
+        "properties": {
+          "agility": 5,
+          "armor": 10,
+          "block": 5,
+          "crit": 2,
+          "stamina": 2
+        }
+      }
+    }
+  },
+  "candlekeepStockShld05": {
+    "class": "CShield",
+    "properties": {
+      "animation": "images/items/armors/leatherarmor",
+      "power": 0,
+      "tags": [],
+      "label": "Large Shield [SHLD05]",
+      "description": "Large Shield [SHLD05]. Candlekeep adaptation: native left-hand shield using the ordinary LeatherArmor bonus; original AD&D shield and color rules are not replicated.",
+      "plugin_candlekeepTradeable": true,
+      "plugin_candlekeepSellPrice": 5,
+      "plugin_candlekeepQuantity": 1,
+      "plugin_candlekeepOriginalResource": "SHLD05",
+      "bonus": {
+        "class": "CStats",
+        "properties": {
+          "agility": 5,
+          "armor": 10,
+          "block": 5,
+          "crit": 2,
+          "stamina": 2
+        }
+      }
+    }
+  },
+  "candlekeepStockShld08": {
+    "class": "CShield",
+    "properties": {
+      "animation": "images/items/armors/leatherarmor",
+      "power": 0,
+      "tags": [],
+      "label": "Buckler [SHLD08]",
+      "description": "Buckler [SHLD08]. Candlekeep adaptation: native left-hand shield using the ordinary LeatherArmor bonus; original AD&D shield and color rules are not replicated.",
+      "plugin_candlekeepTradeable": true,
+      "plugin_candlekeepSellPrice": 0,
+      "plugin_candlekeepQuantity": 1,
+      "plugin_candlekeepOriginalResource": "SHLD08",
+      "bonus": {
+        "class": "CStats",
+        "properties": {
+          "agility": 5,
+          "armor": 10,
+          "block": 5,
+          "crit": 2,
+          "stamina": 2
+        }
+      }
+    }
+  },
+  "candlekeepStockShld09": {
+    "class": "CShield",
+    "properties": {
+      "animation": "images/items/armors/leatherarmor",
+      "power": 0,
+      "tags": [],
+      "label": "Buckler [SHLD09]",
+      "description": "Buckler [SHLD09]. Candlekeep adaptation: native left-hand shield using the ordinary LeatherArmor bonus; original AD&D shield and color rules are not replicated.",
+      "plugin_candlekeepTradeable": true,
+      "plugin_candlekeepSellPrice": 0,
+      "plugin_candlekeepQuantity": 1,
+      "plugin_candlekeepOriginalResource": "SHLD09",
+      "bonus": {
+        "class": "CStats",
+        "properties": {
+          "agility": 5,
+          "armor": 10,
+          "block": 5,
+          "crit": 2,
+          "stamina": 2
+        }
+      }
+    }
+  },
+  "candlekeepStockShld10": {
+    "class": "CShield",
+    "properties": {
+      "animation": "images/items/armors/leatherarmor",
+      "power": 0,
+      "tags": [],
+      "label": "Buckler [SHLD10]",
+      "description": "Buckler [SHLD10]. Candlekeep adaptation: native left-hand shield using the ordinary LeatherArmor bonus; original AD&D shield and color rules are not replicated.",
+      "plugin_candlekeepTradeable": true,
+      "plugin_candlekeepSellPrice": 0,
+      "plugin_candlekeepQuantity": 1,
+      "plugin_candlekeepOriginalResource": "SHLD10",
+      "bonus": {
+        "class": "CStats",
+        "properties": {
+          "agility": 5,
+          "armor": 10,
+          "block": 5,
+          "crit": 2,
+          "stamina": 2
+        }
+      }
+    }
+  },
+  "candlekeepStockShld11": {
+    "class": "CShield",
+    "properties": {
+      "animation": "images/items/armors/leatherarmor",
+      "power": 0,
+      "tags": [],
+      "label": "Small Shield [SHLD11]",
+      "description": "Small Shield [SHLD11]. Candlekeep adaptation: native left-hand shield using the ordinary LeatherArmor bonus; original AD&D shield and color rules are not replicated.",
+      "plugin_candlekeepTradeable": true,
+      "plugin_candlekeepSellPrice": 1,
+      "plugin_candlekeepQuantity": 1,
+      "plugin_candlekeepOriginalResource": "SHLD11",
+      "bonus": {
+        "class": "CStats",
+        "properties": {
+          "agility": 5,
+          "armor": 10,
+          "block": 5,
+          "crit": 2,
+          "stamina": 2
+        }
+      }
+    }
+  },
+  "candlekeepStockShld12": {
+    "class": "CShield",
+    "properties": {
+      "animation": "images/items/armors/leatherarmor",
+      "power": 0,
+      "tags": [],
+      "label": "Small Shield [SHLD12]",
+      "description": "Small Shield [SHLD12]. Candlekeep adaptation: native left-hand shield using the ordinary LeatherArmor bonus; original AD&D shield and color rules are not replicated.",
+      "plugin_candlekeepTradeable": true,
+      "plugin_candlekeepSellPrice": 1,
+      "plugin_candlekeepQuantity": 1,
+      "plugin_candlekeepOriginalResource": "SHLD12",
+      "bonus": {
+        "class": "CStats",
+        "properties": {
+          "agility": 5,
+          "armor": 10,
+          "block": 5,
+          "crit": 2,
+          "stamina": 2
+        }
+      }
+    }
+  },
+  "candlekeepStockShld13": {
+    "class": "CShield",
+    "properties": {
+      "animation": "images/items/armors/leatherarmor",
+      "power": 0,
+      "tags": [],
+      "label": "Medium Shield [SHLD13]",
+      "description": "Medium Shield [SHLD13]. Candlekeep adaptation: native left-hand shield using the ordinary LeatherArmor bonus; original AD&D shield and color rules are not replicated.",
+      "plugin_candlekeepTradeable": true,
+      "plugin_candlekeepSellPrice": 3,
+      "plugin_candlekeepQuantity": 1,
+      "plugin_candlekeepOriginalResource": "SHLD13",
+      "bonus": {
+        "class": "CStats",
+        "properties": {
+          "agility": 5,
+          "armor": 10,
+          "block": 5,
+          "crit": 2,
+          "stamina": 2
+        }
+      }
+    }
+  },
+  "candlekeepStockShld14": {
+    "class": "CShield",
+    "properties": {
+      "animation": "images/items/armors/leatherarmor",
+      "power": 0,
+      "tags": [],
+      "label": "Medium Shield [SHLD14]",
+      "description": "Medium Shield [SHLD14]. Candlekeep adaptation: native left-hand shield using the ordinary LeatherArmor bonus; original AD&D shield and color rules are not replicated.",
+      "plugin_candlekeepTradeable": true,
+      "plugin_candlekeepSellPrice": 3,
+      "plugin_candlekeepQuantity": 1,
+      "plugin_candlekeepOriginalResource": "SHLD14",
+      "bonus": {
+        "class": "CStats",
+        "properties": {
+          "agility": 5,
+          "armor": 10,
+          "block": 5,
+          "crit": 2,
+          "stamina": 2
+        }
+      }
+    }
+  },
+  "candlekeepStockShld15": {
+    "class": "CShield",
+    "properties": {
+      "animation": "images/items/armors/leatherarmor",
+      "power": 0,
+      "tags": [],
+      "label": "Large Shield [SHLD15]",
+      "description": "Large Shield [SHLD15]. Candlekeep adaptation: native left-hand shield using the ordinary LeatherArmor bonus; original AD&D shield and color rules are not replicated.",
+      "plugin_candlekeepTradeable": true,
+      "plugin_candlekeepSellPrice": 5,
+      "plugin_candlekeepQuantity": 1,
+      "plugin_candlekeepOriginalResource": "SHLD15",
+      "bonus": {
+        "class": "CStats",
+        "properties": {
+          "agility": 5,
+          "armor": 10,
+          "block": 5,
+          "crit": 2,
+          "stamina": 2
+        }
+      }
+    }
+  },
+  "candlekeepStockShld16": {
+    "class": "CShield",
+    "properties": {
+      "animation": "images/items/armors/leatherarmor",
+      "power": 0,
+      "tags": [],
+      "label": "Large Shield [SHLD16]",
+      "description": "Large Shield [SHLD16]. Candlekeep adaptation: native left-hand shield using the ordinary LeatherArmor bonus; original AD&D shield and color rules are not replicated.",
+      "plugin_candlekeepTradeable": true,
+      "plugin_candlekeepSellPrice": 5,
+      "plugin_candlekeepQuantity": 1,
+      "plugin_candlekeepOriginalResource": "SHLD16",
+      "bonus": {
+        "class": "CStats",
+        "properties": {
+          "agility": 5,
+          "armor": 10,
+          "block": 5,
+          "crit": 2,
+          "stamina": 2
+        }
+      }
+    }
+  },
+  "candlekeepStockHelm01": {
+    "class": "CHelmet",
+    "properties": {
+      "animation": "images/items/helmets/crownofnightmares",
+      "power": 0,
+      "tags": [],
+      "label": "Helmet",
+      "description": "Helmet. Candlekeep adaptation: native head equipment using the ordinary PlateArmor bonus; original AD&D helmet rules are not replicated.",
+      "plugin_candlekeepTradeable": true,
+      "plugin_candlekeepSellPrice": 0,
+      "plugin_candlekeepQuantity": 1,
+      "plugin_candlekeepOriginalResource": "HELM01",
+      "bonus": {
+        "class": "CStats",
+        "properties": {
+          "armor": 10,
+          "block": 5,
+          "stamina": 3,
+          "strength": 4
+        }
+      }
+    }
+  },
+  "candlekeepStockPotn17": {
+    "ref": "LifePotion",
+    "properties": {
+      "label": "Elixir of Health",
+      "description": "Elixir of Health. Candlekeep adaptation: native life potion; original health and status-clearing effects are not replicated.",
+      "plugin_candlekeepTradeable": true,
+      "plugin_candlekeepSellPrice": 125,
+      "plugin_candlekeepQuantity": 1,
+      "plugin_candlekeepOriginalResource": "POTN17"
+    }
+  },
+  "candlekeepStockScrlpet": {
+    "class": "CItem",
+    "properties": {
+      "animation": "images/misc/chest",
+      "power": 0,
+      "tags": [],
+      "label": "Stone to Flesh Scroll",
+      "description": "Stone to Flesh Scroll. Candlekeep adaptation: stone-to-flesh manuscript inventory item; native petrification reversal is unavailable.",
+      "plugin_candlekeepTradeable": true,
+      "plugin_candlekeepSellPrice": 75,
+      "plugin_candlekeepQuantity": 1,
+      "plugin_candlekeepOriginalResource": "SCRLPET"
+    }
+  },
+  "candlekeepTrainingPotion": {
+    "ref": "candlekeepHealingPotion",
+    "properties": {
+      "plugin_candlekeepTemporary": true
+    }
+  },
+  "candlekeepArmorEffect": {
+    "class": "CEffect",
+    "properties": {
+      "label": "Candlekeep Armor",
+      "description": "A temporary armor ward.",
+      "duration": 12,
+      "bonus": {
+        "class": "CStats",
+        "properties": {
+          "armor": 20
+        }
+      },
+      "tags": [
+        "buff"
+      ]
+    }
+  },
+  "candlekeepFullerPlateArmor": {
+    "ref": "PlateArmor",
+    "properties": {
+      "label": "Fuller's Plate Mail",
+      "description": "Plate mail carried by Fuller, using the existing native Plate Armor rules.",
+      "power": 0,
+      "plugin_candlekeepTradeable": true,
+      "plugin_candlekeepSellPrice": 300,
+      "plugin_candlekeepQuantity": 1,
+      "plugin_candlekeepOriginalResource": "PLAT01"
+    }
+  },
+  "candlekeepPhlydiaRobe": {
+    "ref": "Robe",
+    "properties": {
+      "label": "Phlydia's Mage Robe",
+      "description": "Native Robe equipment. The source robe's fire resistance is not implemented.",
+      "power": 0,
+      "plugin_candlekeepTradeable": true,
+      "plugin_candlekeepSellPrice": 150,
+      "plugin_candlekeepQuantity": 1,
+      "plugin_candlekeepOriginalResource": "CLCK10"
+    }
+  },
+  "barracksBarrel": {
+    "class": "CandlekeepContainer",
+    "properties": {
+      "label": "Barrel outside the barracks",
+      "animation": "images/misc/chest",
+      "canStep": true,
+      "contents": "",
+      "gold": 8,
+      "locked": false,
+      "owned": false,
+      "lockAgility": 12,
+      "forceStrength": 12,
+      "plugin_candlekeepTheftThreshold": 16,
+      "alwaysGuard": false,
+      "plugin_candlekeepGuardCount": 0,
+      "plugin_candlekeepSourceContainer": "AR2600#1"
+    }
+  },
+  "courtyardEmpty1": {
+    "class": "CandlekeepContainer",
+    "properties": {
+      "label": "Empty courtyard container",
+      "animation": "images/misc/chest",
+      "canStep": true,
+      "contents": "",
+      "gold": 0,
+      "locked": false,
+      "owned": false,
+      "lockAgility": 12,
+      "forceStrength": 12,
+      "plugin_candlekeepTheftThreshold": 16,
+      "alwaysGuard": false,
+      "plugin_candlekeepGuardCount": 0,
+      "plugin_candlekeepSourceContainer": "AR2600#2"
+    }
+  },
+  "courtyardEmpty2": {
+    "class": "CandlekeepContainer",
+    "properties": {
+      "label": "Empty courtyard container",
+      "animation": "images/misc/chest",
+      "canStep": true,
+      "contents": "",
+      "gold": 0,
+      "locked": false,
+      "owned": false,
+      "lockAgility": 12,
+      "forceStrength": 12,
+      "plugin_candlekeepTheftThreshold": 16,
+      "alwaysGuard": false,
+      "plugin_candlekeepGuardCount": 0,
+      "plugin_candlekeepSourceContainer": "AR2600#5"
+    }
+  },
+  "priestEmpty1": {
+    "class": "CandlekeepContainer",
+    "properties": {
+      "label": "Priests' quarters empty container",
+      "animation": "images/misc/chest",
+      "canStep": true,
+      "contents": "",
+      "gold": 0,
+      "locked": false,
+      "owned": false,
+      "lockAgility": 12,
+      "forceStrength": 12,
+      "plugin_candlekeepTheftThreshold": 16,
+      "alwaysGuard": false,
+      "plugin_candlekeepGuardCount": 0,
+      "plugin_candlekeepSourceContainer": "AR2602#2"
+    }
+  },
+  "priestTable": {
+    "class": "CandlekeepContainer",
+    "properties": {
+      "label": "Priests' quarters table",
+      "animation": "images/misc/chest",
+      "canStep": true,
+      "contents": "",
+      "gold": 8,
+      "locked": false,
+      "owned": false,
+      "lockAgility": 12,
+      "forceStrength": 12,
+      "plugin_candlekeepTheftThreshold": 16,
+      "alwaysGuard": false,
+      "plugin_candlekeepGuardCount": 0,
+      "plugin_candlekeepSourceContainer": "AR2602#3"
+    }
+  },
+  "priestCrates": {
+    "class": "CandlekeepContainer",
+    "properties": {
+      "label": "Priests' quarters crates",
+      "animation": "images/misc/chest",
+      "canStep": true,
+      "contents": "candlekeepWarhammer",
+      "gold": 0,
+      "locked": false,
+      "owned": false,
+      "lockAgility": 12,
+      "forceStrength": 12,
+      "plugin_candlekeepTheftThreshold": 16,
+      "alwaysGuard": false,
+      "plugin_candlekeepGuardCount": 0,
+      "plugin_candlekeepSourceContainer": "AR2602#4"
+    }
+  },
+  "priestEmpty2": {
+    "class": "CandlekeepContainer",
+    "properties": {
+      "label": "Priests' quarters empty container",
+      "animation": "images/misc/chest",
+      "canStep": true,
+      "contents": "",
+      "gold": 0,
+      "locked": false,
+      "owned": false,
+      "lockAgility": 12,
+      "forceStrength": 12,
+      "plugin_candlekeepTheftThreshold": 16,
+      "alwaysGuard": false,
+      "plugin_candlekeepGuardCount": 0,
+      "plugin_candlekeepSourceContainer": "AR2602#5"
+    }
+  },
+  "storehouseEmpty1": {
+    "class": "CandlekeepContainer",
+    "properties": {
+      "label": "Empty storehouse container",
+      "animation": "images/misc/chest",
+      "canStep": true,
+      "contents": "",
+      "gold": 0,
+      "locked": false,
+      "owned": false,
+      "lockAgility": 12,
+      "forceStrength": 12,
+      "plugin_candlekeepTheftThreshold": 16,
+      "alwaysGuard": false,
+      "plugin_candlekeepGuardCount": 0,
+      "plugin_candlekeepSourceContainer": "AR2606#2"
+    }
+  },
+  "storehouseEmpty2": {
+    "class": "CandlekeepContainer",
+    "properties": {
+      "label": "Empty storehouse container",
+      "animation": "images/misc/chest",
+      "canStep": true,
+      "contents": "",
+      "gold": 0,
+      "locked": false,
+      "owned": false,
+      "lockAgility": 12,
+      "forceStrength": 12,
+      "plugin_candlekeepTheftThreshold": 16,
+      "alwaysGuard": false,
+      "plugin_candlekeepGuardCount": 0,
+      "plugin_candlekeepSourceContainer": "AR2606#3"
+    }
+  },
+  "bunkhouseEmpty": {
+    "class": "CandlekeepContainer",
+    "properties": {
+      "label": "Empty bunkhouse container",
+      "animation": "images/misc/chest",
+      "canStep": true,
+      "contents": "",
+      "gold": 0,
+      "locked": false,
+      "owned": false,
+      "lockAgility": 12,
+      "forceStrength": 12,
+      "plugin_candlekeepTheftThreshold": 16,
+      "alwaysGuard": false,
+      "plugin_candlekeepGuardCount": 0,
+      "plugin_candlekeepSourceContainer": "AR2607#1"
+    }
+  },
+  "innKitchen": {
+    "class": "CandlekeepContainer",
+    "properties": {
+      "label": "Inn kitchen shelves",
+      "animation": "images/misc/chest",
+      "canStep": true,
+      "contents": "candlekeepDagger",
+      "gold": 0,
+      "locked": false,
+      "owned": false,
+      "lockAgility": 12,
+      "forceStrength": 12,
+      "plugin_candlekeepTheftThreshold": 16,
+      "alwaysGuard": false,
+      "plugin_candlekeepGuardCount": 0,
+      "plugin_candlekeepSourceContainer": "AR2616#1"
+    }
+  },
+  "innCoinDrawer": {
+    "class": "CandlekeepContainer",
+    "properties": {
+      "label": "Inn coin drawer",
+      "animation": "images/misc/chest",
+      "canStep": true,
+      "contents": "",
+      "gold": 4,
+      "locked": false,
+      "owned": false,
+      "lockAgility": 12,
+      "forceStrength": 12,
+      "plugin_candlekeepTheftThreshold": 16,
+      "alwaysGuard": false,
+      "plugin_candlekeepGuardCount": 0,
+      "plugin_candlekeepSourceContainer": "AR2617#1"
+    }
+  },
+  "innSilverDrawer": {
+    "class": "CandlekeepContainer",
+    "properties": {
+      "label": "Inn silver necklace drawer",
+      "animation": "images/misc/chest",
+      "canStep": true,
+      "contents": "candlekeepSilverNecklace",
+      "gold": 0,
+      "locked": true,
+      "owned": false,
+      "lockAgility": 12,
+      "forceStrength": 12,
+      "plugin_candlekeepTheftThreshold": 16,
+      "alwaysGuard": false,
+      "plugin_candlekeepGuardCount": 0,
+      "plugin_candlekeepSourceContainer": "AR2617#2"
+    }
+  },
+  "trainingChest1": {
+    "class": "CandlekeepContainer",
+    "properties": {
+      "label": "Empty training chest 1",
+      "animation": "images/misc/chest",
+      "canStep": true,
+      "contents": "",
+      "gold": 0,
+      "locked": false,
+      "owned": false,
+      "lockAgility": 12,
+      "forceStrength": 12,
+      "plugin_candlekeepTheftThreshold": 16,
+      "alwaysGuard": false,
+      "plugin_candlekeepGuardCount": 0,
+      "plugin_candlekeepSourceContainer": "AR2643#1"
+    }
+  },
+  "trainingChest2": {
+    "class": "CandlekeepContainer",
+    "properties": {
+      "label": "Empty training chest 2",
+      "animation": "images/misc/chest",
+      "canStep": true,
+      "contents": "",
+      "gold": 0,
+      "locked": false,
+      "owned": false,
+      "lockAgility": 12,
+      "forceStrength": 12,
+      "plugin_candlekeepTheftThreshold": 16,
+      "alwaysGuard": false,
+      "plugin_candlekeepGuardCount": 0,
+      "plugin_candlekeepSourceContainer": "AR2643#2"
+    }
+  },
+  "trainingChest3": {
+    "class": "CandlekeepContainer",
+    "properties": {
+      "label": "Empty training chest 3",
+      "animation": "images/misc/chest",
+      "canStep": true,
+      "contents": "",
+      "gold": 0,
+      "locked": false,
+      "owned": false,
+      "lockAgility": 12,
+      "forceStrength": 12,
+      "plugin_candlekeepTheftThreshold": 16,
+      "alwaysGuard": false,
+      "plugin_candlekeepGuardCount": 0,
+      "plugin_candlekeepSourceContainer": "AR2643#3"
+    }
+  },
+  "trainingChest4": {
+    "class": "CandlekeepContainer",
+    "properties": {
+      "label": "Empty training chest 4",
+      "animation": "images/misc/chest",
+      "canStep": true,
+      "contents": "",
+      "gold": 0,
+      "locked": false,
+      "owned": false,
+      "lockAgility": 12,
+      "forceStrength": 12,
+      "plugin_candlekeepTheftThreshold": 16,
+      "alwaysGuard": false,
+      "plugin_candlekeepGuardCount": 0,
+      "plugin_candlekeepSourceContainer": "AR2643#4"
+    }
+  },
+  "trainingChest5": {
+    "class": "CandlekeepContainer",
+    "properties": {
+      "label": "Empty training chest 5",
+      "animation": "images/misc/chest",
+      "canStep": true,
+      "contents": "",
+      "gold": 0,
+      "locked": true,
+      "owned": false,
+      "lockAgility": 18,
+      "forceStrength": 14,
+      "plugin_candlekeepTheftThreshold": 16,
+      "alwaysGuard": false,
+      "plugin_candlekeepGuardCount": 0,
+      "plugin_candlekeepSourceContainer": "AR2643#5"
+    }
+  },
+  "trainingChest6": {
+    "class": "CandlekeepContainer",
+    "properties": {
+      "label": "Empty training chest 6",
+      "animation": "images/misc/chest",
+      "canStep": true,
+      "contents": "",
+      "gold": 0,
+      "locked": false,
+      "owned": false,
+      "lockAgility": 12,
+      "forceStrength": 12,
+      "plugin_candlekeepTheftThreshold": 16,
+      "alwaysGuard": false,
+      "plugin_candlekeepGuardCount": 0,
+      "plugin_candlekeepSourceContainer": "AR2643#6"
+    }
+  },
+  "trainingChest7": {
+    "class": "CandlekeepContainer",
+    "properties": {
+      "label": "Empty training chest 7",
+      "animation": "images/misc/chest",
+      "canStep": true,
+      "contents": "",
+      "gold": 0,
+      "locked": false,
+      "owned": false,
+      "lockAgility": 12,
+      "forceStrength": 12,
+      "plugin_candlekeepTheftThreshold": 16,
+      "alwaysGuard": false,
+      "plugin_candlekeepGuardCount": 0,
+      "plugin_candlekeepSourceContainer": "AR2643#7"
+    }
+  },
+  "trainingChest8": {
+    "class": "CandlekeepContainer",
+    "properties": {
+      "label": "Empty training chest 8",
+      "animation": "images/misc/chest",
+      "canStep": true,
+      "contents": "",
+      "gold": 0,
+      "locked": true,
+      "owned": false,
+      "lockAgility": 18,
+      "forceStrength": 14,
+      "plugin_candlekeepTheftThreshold": 16,
+      "alwaysGuard": false,
+      "plugin_candlekeepGuardCount": 0,
+      "plugin_candlekeepSourceContainer": "AR2643#8"
+    }
+  },
+  "trainingChest9": {
+    "class": "CandlekeepContainer",
+    "properties": {
+      "label": "Empty training chest 9",
+      "animation": "images/misc/chest",
+      "canStep": true,
+      "contents": "",
+      "gold": 0,
+      "locked": false,
+      "owned": false,
+      "lockAgility": 12,
+      "forceStrength": 12,
+      "plugin_candlekeepTheftThreshold": 16,
+      "alwaysGuard": false,
+      "plugin_candlekeepGuardCount": 0,
+      "plugin_candlekeepSourceContainer": "AR2643#9"
+    }
+  },
+  "trainingChest10": {
+    "class": "CandlekeepContainer",
+    "properties": {
+      "label": "Empty training chest 10",
+      "animation": "images/misc/chest",
+      "canStep": true,
+      "contents": "",
+      "gold": 0,
+      "locked": false,
+      "owned": false,
+      "lockAgility": 12,
+      "forceStrength": 12,
+      "plugin_candlekeepTheftThreshold": 16,
+      "alwaysGuard": false,
+      "plugin_candlekeepGuardCount": 0,
+      "plugin_candlekeepSourceContainer": "AR2643#10"
+    }
+  }
+}

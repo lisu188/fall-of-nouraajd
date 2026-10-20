@@ -19,6 +19,7 @@ from tests.gameplay_branch_types import PLAYER_CLASSES, testName
 
 ROOT = Path(__file__).resolve().parents[1]
 ROUTE_MODULES = (
+    "tests.gameplay_routes_candlekeep",
     "tests.gameplay_routes_nouraajd",
     "tests.gameplay_routes_ninemarches",
     "tests.gameplay_routes_maps",
@@ -28,6 +29,7 @@ ROUTE_MODULES = (
     "tests.gameplay_routes_consumables",
 )
 AUTHORED_MAPS = (
+    "candlekeep",
     "castleGriffinCliff",
     "castleGuardianAngels",
     "castleHomecoming",
@@ -47,7 +49,7 @@ AUTHORED_MAPS = (
 EVENT_CALLBACKS = frozenset(
     {"trigger", "onEnter", "onTurn", "onCreate", "onDestroy", "onOpen", "onUse", "onComplete", "isCompleted"}
 )
-REVIEWED_GAMEPLAY_DIGEST = "e5da46ac74a0384bfd777936cbad4514a17c4b8f136b774c5ed3d2e07cb3e5b8"
+REVIEWED_GAMEPLAY_DIGEST = "1da1228a472738600c8c284811e845eaf750941d70cc53c93c01e24fbcf748fa"
 
 
 @dataclass(frozen=True)
@@ -60,6 +62,11 @@ class BranchFamily:
 # These are deliberately authored descriptions. Source introspection cannot infer
 # what a gameplay assertion needs to prove, particularly its setup boundary.
 FAMILIES = (
+    BranchFamily(
+        "candlekeep.",
+        "Walk the authored prologue, choose actual dialogue options and resolve real combat with existing player races.",
+        "Individual errands, conversations, services, locks, theft, training and departure record their actual outcomes.",
+    ),
     BranchFamily(
         "nouraajd.gate.",
         "Reach the gate in a fresh campaign and choose cooperation or a threat.",
@@ -732,6 +739,16 @@ def contractEvidence():
     own = "tests/test_gameplay_branch_catalog.py:GameplayBranchCatalogTest."
     native = "test.py:GameTest."
     return {
+        "res/maps/candlekeep/script.py:CandlekeepPortal.onDestroy": (
+            "source-double",
+            "tests/test_candlekeep_content.py:CandlekeepModelTest."
+            "testPortalDestructionUnregistersOnlyItsOwnPublishedNavigationEdge",
+        ),
+        "res/maps/candlekeep/script.py:CandlekeepTrainingDefeatTrigger.trigger": (
+            "source-double",
+            "tests/test_candlekeep_content.py:CandlekeepModelTest."
+            "testNativeHeroDefeatCleanupContractRestoresTrainingStateAndEquipment",
+        ),
         "res/maps/nouraajd/script.py:ChangeMap.onEnter": ("structural", own + "testLegacyTransitionHasNoAuthoredActor"),
         "nouraajd.letter.missingRecovery": (
             "native-direct",

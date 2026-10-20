@@ -142,6 +142,10 @@ XVFB_GAMEPLAY_PARENT_TEST = "XvfbGameplayTest.test_keyboard_gameplay_under_xvfb"
 VALID_TEST_SUITES = ("fast", "gameplay", "gameplay-core", "mcp-branches", "ui", "coverage-safe", "full")
 MCP_BRANCH_TEST_PREFIX = "GameplayBranchMcpTest."
 FAST_TEST_PREFIXES = (
+    "CandlekeepContentTest.",
+    "CandlekeepModelTest.",
+    "CandlekeepSourceParserTest.",
+    "CandlekeepSourceAuditTest.",
     "GameplayBranchCatalogTest.",
     "GameplayBranchDriverTest.",
     "GameplayBranchJournalsTest.",
@@ -26635,6 +26639,10 @@ class TestRunnerSuiteTest(unittest.TestCase):
 SOURCE_UI_TESTS_AVAILABLE = (REPO_ROOT / "tests" / "__init__.py").is_file()
 
 if SOURCE_UI_TESTS_AVAILABLE:
+    from tests.test_candlekeep_content import CandlekeepContentTest as _CandlekeepContentTest
+    from tests.test_candlekeep_content import CandlekeepModelTest as _CandlekeepModelTest
+    from tests.test_candlekeep_source import BinaryParserTests as _CandlekeepSourceParserTest
+    from tests.test_candlekeep_source import SourceAuditTests as _CandlekeepSourceAuditTest
     from tests.test_game_diagnostics import GameDiagnosticsTest as _GameDiagnosticsTest
     from tests.test_mcp_diagnostics import McpDiagnosticsTest as _McpDiagnosticsTest
     from tests.test_mcp_engine_thread import McpEngineThreadTest as _McpEngineThreadTest
@@ -26720,6 +26728,18 @@ if SOURCE_UI_TESTS_AVAILABLE:
     from tests.test_mcp_trade_market import McpTradeMarketContractTest as _McpTradeMarketContractTest
     from tests.test_mcp_trade_market import McpTradeMarketRuntimeTest as _McpTradeMarketRuntimeTest
     from tests.test_waypoint_traversal import WaypointTraversalTest as _WaypointTraversalTest
+
+    class CandlekeepContentTest(_CandlekeepContentTest):
+        pass
+
+    class CandlekeepModelTest(_CandlekeepModelTest):
+        pass
+
+    class CandlekeepSourceParserTest(_CandlekeepSourceParserTest):
+        pass
+
+    class CandlekeepSourceAuditTest(_CandlekeepSourceAuditTest):
+        pass
 
     class GameplayBranchCatalogTest(_GameplayBranchCatalogTest):
         pass
@@ -26967,6 +26987,7 @@ if SOURCE_UI_TESTS_AVAILABLE:
     del _NavigationMcpWalkthroughTest
     del _NavigationCallbackTest
     del _ConsoleUiInteractionTest, _UiMinimapInteractionTest
+    del _CandlekeepContentTest, _CandlekeepModelTest, _CandlekeepSourceParserTest, _CandlekeepSourceAuditTest
     del _GameplayBranchCatalogTest, _GameplayBranchDriverTest, _GameplayBranchJournalsTest, _GameplayBranchMcpTest
     del _WaypointTraversalTest
     del (

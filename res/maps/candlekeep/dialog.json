@@ -1,0 +1,4966 @@
+{
+  "firebeadDialog": {
+    "class": "CandlekeepDialog",
+    "properties": {
+      "actorId": "firebead",
+      "talkText": "Firebead Elvenhair is waiting for an identify scroll. Tethtoril borrowed it and should still be near the library. His grateful blessing protects you when you return it.",
+      "states": [
+        {
+          "class": "CDialogState",
+          "properties": {
+            "stateId": "ENTRY",
+            "text": "Firebead Elvenhair is waiting for an identify scroll. Tethtoril borrowed it and should still be near the library. His grateful blessing protects you when you return it.",
+            "options": [
+              {
+                "class": "CDialogOption",
+                "properties": {
+                  "number": 0,
+                  "text": "Talk.",
+                  "nextStateId": "ENTRY",
+                  "action": "countConversation",
+                  "actionLabel": "Talk."
+                }
+              },
+              {
+                "class": "CDialogOption",
+                "properties": {
+                  "number": 1,
+                  "text": "I will help.",
+                  "nextStateId": "ENTRY",
+                  "action": "acceptQuest",
+                  "actionLabel": "I will help.",
+                  "condition": "canAcceptQuest"
+                }
+              },
+              {
+                "class": "CDialogOption",
+                "properties": {
+                  "number": 2,
+                  "text": "I have finished your errand.",
+                  "nextStateId": "ENTRY",
+                  "action": "returnQuest",
+                  "actionLabel": "I have finished your errand.",
+                  "condition": "canReturnQuest"
+                }
+              },
+              {
+                "class": "CDialogOption",
+                "properties": {
+                  "number": 3,
+                  "text": "Tell me what remains.",
+                  "nextStateId": "ENTRY",
+                  "action": "talk",
+                  "actionLabel": "Tell me what remains.",
+                  "condition": "questActive"
+                }
+              },
+              {
+                "class": "CDialogOption",
+                "properties": {
+                  "number": 4,
+                  "text": "We have already settled this.",
+                  "nextStateId": "ENTRY",
+                  "action": "talk",
+                  "actionLabel": "We have already settled this.",
+                  "condition": "questCompleted"
+                }
+              },
+              {
+                "class": "CDialogOption",
+                "properties": {
+                  "number": 5,
+                  "text": "Threaten and attack.",
+                  "nextStateId": "ENTRY",
+                  "action": "attack",
+                  "actionLabel": "Threaten and attack."
+                }
+              },
+              {
+                "class": "CDialogOption",
+                "properties": {
+                  "number": 6,
+                  "text": "Leave.",
+                  "nextStateId": "EXIT"
+                }
+              }
+            ]
+          }
+        }
+      ],
+      "questIds": "firebeadQuest",
+      "questOffer": "Find Tethtoril in the grounds and return his scroll to Firebead."
+    }
+  },
+  "phlydiaDialog": {
+    "class": "CandlekeepDialog",
+    "properties": {
+      "actorId": "phlydia",
+      "talkText": "Phlydia cannot find her History of Halruaa. Dreppin may have seen it while tending the hay. She would very much like her book back.",
+      "states": [
+        {
+          "class": "CDialogState",
+          "properties": {
+            "stateId": "ENTRY",
+            "text": "Phlydia cannot find her History of Halruaa. Dreppin may have seen it while tending the hay. She would very much like her book back.",
+            "options": [
+              {
+                "class": "CDialogOption",
+                "properties": {
+                  "number": 0,
+                  "text": "Talk.",
+                  "nextStateId": "ENTRY",
+                  "action": "talk",
+                  "actionLabel": "Talk."
+                }
+              },
+              {
+                "class": "CDialogOption",
+                "properties": {
+                  "number": 1,
+                  "text": "I will help.",
+                  "nextStateId": "ENTRY",
+                  "action": "acceptQuest",
+                  "actionLabel": "I will help.",
+                  "condition": "canAcceptQuest"
+                }
+              },
+              {
+                "class": "CDialogOption",
+                "properties": {
+                  "number": 2,
+                  "text": "I have finished your errand.",
+                  "nextStateId": "ENTRY",
+                  "action": "returnQuest",
+                  "actionLabel": "I have finished your errand.",
+                  "condition": "canReturnQuest"
+                }
+              },
+              {
+                "class": "CDialogOption",
+                "properties": {
+                  "number": 3,
+                  "text": "Tell me what remains.",
+                  "nextStateId": "ENTRY",
+                  "action": "talk",
+                  "actionLabel": "Tell me what remains.",
+                  "condition": "questActive"
+                }
+              },
+              {
+                "class": "CDialogOption",
+                "properties": {
+                  "number": 4,
+                  "text": "We have already settled this.",
+                  "nextStateId": "ENTRY",
+                  "action": "talk",
+                  "actionLabel": "We have already settled this.",
+                  "condition": "questCompleted"
+                }
+              },
+              {
+                "class": "CDialogOption",
+                "properties": {
+                  "number": 5,
+                  "text": "Try to pick a pocket.",
+                  "nextStateId": "ENTRY",
+                  "action": "pickPocket",
+                  "actionLabel": "Try to pick a pocket.",
+                  "condition": "canPickpocket"
+                }
+              },
+              {
+                "class": "CDialogOption",
+                "properties": {
+                  "number": 6,
+                  "text": "Threaten and attack.",
+                  "nextStateId": "ENTRY",
+                  "action": "attack",
+                  "actionLabel": "Threaten and attack."
+                }
+              },
+              {
+                "class": "CDialogOption",
+                "properties": {
+                  "number": 7,
+                  "text": "Leave.",
+                  "nextStateId": "EXIT"
+                }
+              }
+            ]
+          }
+        }
+      ],
+      "questIds": "phlydiaQuest",
+      "questOffer": "Search Dreppin's hay for Phlydia's lost book."
+    }
+  },
+  "dreppinDialog": {
+    "class": "CandlekeepDialog",
+    "properties": {
+      "actorId": "dreppin",
+      "talkText": "Dreppin points you toward the hay where Phlydia left her book. On a second matter, Nessa is unwell: Hull keeps an antidote in his barracks chest.",
+      "states": [
+        {
+          "class": "CDialogState",
+          "properties": {
+            "stateId": "ENTRY",
+            "text": "Dreppin points you toward the hay where Phlydia left her book. On a second matter, Nessa is unwell: Hull keeps an antidote in his barracks chest.",
+            "options": [
+              {
+                "class": "CDialogOption",
+                "properties": {
+                  "number": 0,
+                  "text": "Talk.",
+                  "nextStateId": "ENTRY",
+                  "action": "talk",
+                  "actionLabel": "Talk."
+                }
+              },
+              {
+                "class": "CDialogOption",
+                "properties": {
+                  "number": 1,
+                  "text": "I will help.",
+                  "nextStateId": "ENTRY",
+                  "action": "acceptQuest",
+                  "actionLabel": "I will help.",
+                  "condition": "canAcceptQuest"
+                }
+              },
+              {
+                "class": "CDialogOption",
+                "properties": {
+                  "number": 2,
+                  "text": "I have finished your errand.",
+                  "nextStateId": "ENTRY",
+                  "action": "returnQuest",
+                  "actionLabel": "I have finished your errand.",
+                  "condition": "canReturnQuest"
+                }
+              },
+              {
+                "class": "CDialogOption",
+                "properties": {
+                  "number": 3,
+                  "text": "Tell me what remains.",
+                  "nextStateId": "ENTRY",
+                  "action": "talk",
+                  "actionLabel": "Tell me what remains.",
+                  "condition": "questActive"
+                }
+              },
+              {
+                "class": "CDialogOption",
+                "properties": {
+                  "number": 4,
+                  "text": "We have already settled this.",
+                  "nextStateId": "ENTRY",
+                  "action": "talk",
+                  "actionLabel": "We have already settled this.",
+                  "condition": "questCompleted"
+                }
+              },
+              {
+                "class": "CDialogOption",
+                "properties": {
+                  "number": 5,
+                  "text": "Threaten and attack.",
+                  "nextStateId": "ENTRY",
+                  "action": "attack",
+                  "actionLabel": "Threaten and attack."
+                }
+              },
+              {
+                "class": "CDialogOption",
+                "properties": {
+                  "number": 6,
+                  "text": "Leave.",
+                  "nextStateId": "EXIT"
+                }
+              }
+            ]
+          }
+        }
+      ],
+      "questIds": "dreppinQuest",
+      "questOffer": "Fetch the antidote from Hull's barracks chest for Nessa."
+    }
+  },
+  "hullDialog": {
+    "class": "CandlekeepDialog",
+    "properties": {
+      "actorId": "hull",
+      "talkText": "Hull left his sword in a chest in the barracks. He gives you permission to retrieve it, and to take the antidote beside it for Dreppin.",
+      "states": [
+        {
+          "class": "CDialogState",
+          "properties": {
+            "stateId": "ENTRY",
+            "text": "Hull left his sword in a chest in the barracks. He gives you permission to retrieve it, and to take the antidote beside it for Dreppin.",
+            "options": [
+              {
+                "class": "CDialogOption",
+                "properties": {
+                  "number": 0,
+                  "text": "Talk.",
+                  "nextStateId": "ENTRY",
+                  "action": "talk",
+                  "actionLabel": "Talk."
+                }
+              },
+              {
+                "class": "CDialogOption",
+                "properties": {
+                  "number": 1,
+                  "text": "I will help.",
+                  "nextStateId": "ENTRY",
+                  "action": "acceptQuest",
+                  "actionLabel": "I will help.",
+                  "condition": "canAcceptQuest"
+                }
+              },
+              {
+                "class": "CDialogOption",
+                "properties": {
+                  "number": 2,
+                  "text": "I have finished your errand.",
+                  "nextStateId": "ENTRY",
+                  "action": "returnQuest",
+                  "actionLabel": "I have finished your errand.",
+                  "condition": "canReturnQuest"
+                }
+              },
+              {
+                "class": "CDialogOption",
+                "properties": {
+                  "number": 3,
+                  "text": "Tell me what remains.",
+                  "nextStateId": "ENTRY",
+                  "action": "talk",
+                  "actionLabel": "Tell me what remains.",
+                  "condition": "questActive"
+                }
+              },
+              {
+                "class": "CDialogOption",
+                "properties": {
+                  "number": 4,
+                  "text": "We have already settled this.",
+                  "nextStateId": "ENTRY",
+                  "action": "talk",
+                  "actionLabel": "We have already settled this.",
+                  "condition": "questCompleted"
+                }
+              },
+              {
+                "class": "CDialogOption",
+                "properties": {
+                  "number": 5,
+                  "text": "Threaten and attack.",
+                  "nextStateId": "ENTRY",
+                  "action": "attack",
+                  "actionLabel": "Threaten and attack."
+                }
+              },
+              {
+                "class": "CDialogOption",
+                "properties": {
+                  "number": 6,
+                  "text": "Leave.",
+                  "nextStateId": "EXIT"
+                }
+              }
+            ]
+          }
+        }
+      ],
+      "questIds": "hullQuest",
+      "questOffer": "Retrieve Hull's sword from his barracks chest."
+    }
+  },
+  "fullerDialog": {
+    "class": "CandlekeepDialog",
+    "properties": {
+      "actorId": "fuller",
+      "talkText": "Fuller is tired of his shift. If you explicitly ask for an errand, he needs twenty crossbow bolts from Winthrop.",
+      "states": [
+        {
+          "class": "CDialogState",
+          "properties": {
+            "stateId": "ENTRY",
+            "text": "Fuller is tired of his shift. If you explicitly ask for an errand, he needs twenty crossbow bolts from Winthrop.",
+            "options": [
+              {
+                "class": "CDialogOption",
+                "properties": {
+                  "number": 0,
+                  "text": "Talk.",
+                  "nextStateId": "ENTRY",
+                  "action": "talk",
+                  "actionLabel": "Talk."
+                }
+              },
+              {
+                "class": "CDialogOption",
+                "properties": {
+                  "number": 1,
+                  "text": "I will help.",
+                  "nextStateId": "ENTRY",
+                  "action": "acceptQuest",
+                  "actionLabel": "I will help.",
+                  "condition": "canAcceptQuest"
+                }
+              },
+              {
+                "class": "CDialogOption",
+                "properties": {
+                  "number": 2,
+                  "text": "I have finished your errand.",
+                  "nextStateId": "ENTRY",
+                  "action": "returnQuest",
+                  "actionLabel": "I have finished your errand.",
+                  "condition": "canReturnQuest"
+                }
+              },
+              {
+                "class": "CDialogOption",
+                "properties": {
+                  "number": 3,
+                  "text": "Tell me what remains.",
+                  "nextStateId": "ENTRY",
+                  "action": "talk",
+                  "actionLabel": "Tell me what remains.",
+                  "condition": "questActive"
+                }
+              },
+              {
+                "class": "CDialogOption",
+                "properties": {
+                  "number": 4,
+                  "text": "We have already settled this.",
+                  "nextStateId": "ENTRY",
+                  "action": "talk",
+                  "actionLabel": "We have already settled this.",
+                  "condition": "questCompleted"
+                }
+              },
+              {
+                "class": "CDialogOption",
+                "properties": {
+                  "number": 5,
+                  "text": "Try to pick a pocket.",
+                  "nextStateId": "ENTRY",
+                  "action": "pickPocket",
+                  "actionLabel": "Try to pick a pocket.",
+                  "condition": "canPickpocket"
+                }
+              },
+              {
+                "class": "CDialogOption",
+                "properties": {
+                  "number": 6,
+                  "text": "Threaten and attack.",
+                  "nextStateId": "ENTRY",
+                  "action": "attack",
+                  "actionLabel": "Threaten and attack."
+                }
+              },
+              {
+                "class": "CDialogOption",
+                "properties": {
+                  "number": 7,
+                  "text": "Leave.",
+                  "nextStateId": "EXIT"
+                }
+              }
+            ]
+          }
+        }
+      ],
+      "questIds": "fullerQuest",
+      "questOffer": "Buy a bundle of twenty bolts from Winthrop and take it to Fuller."
+    }
+  },
+  "reevorDialog": {
+    "class": "CandlekeepDialog",
+    "properties": {
+      "actorId": "reevor",
+      "talkText": "Five rats have made themselves at home in the storehouse. Reevor offers five gold if you remove the lot.",
+      "states": [
+        {
+          "class": "CDialogState",
+          "properties": {
+            "stateId": "ENTRY",
+            "text": "Five rats have made themselves at home in the storehouse. Reevor offers five gold if you remove the lot.",
+            "options": [
+              {
+                "class": "CDialogOption",
+                "properties": {
+                  "number": 0,
+                  "text": "Talk.",
+                  "nextStateId": "ENTRY",
+                  "action": "talk",
+                  "actionLabel": "Talk."
+                }
+              },
+              {
+                "class": "CDialogOption",
+                "properties": {
+                  "number": 1,
+                  "text": "I will help.",
+                  "nextStateId": "ENTRY",
+                  "action": "acceptQuest",
+                  "actionLabel": "I will help.",
+                  "condition": "canAcceptQuest"
+                }
+              },
+              {
+                "class": "CDialogOption",
+                "properties": {
+                  "number": 2,
+                  "text": "I have finished your errand.",
+                  "nextStateId": "ENTRY",
+                  "action": "returnQuest",
+                  "actionLabel": "I have finished your errand.",
+                  "condition": "canReturnQuest"
+                }
+              },
+              {
+                "class": "CDialogOption",
+                "properties": {
+                  "number": 3,
+                  "text": "Tell me what remains.",
+                  "nextStateId": "ENTRY",
+                  "action": "talk",
+                  "actionLabel": "Tell me what remains.",
+                  "condition": "questActive"
+                }
+              },
+              {
+                "class": "CDialogOption",
+                "properties": {
+                  "number": 4,
+                  "text": "We have already settled this.",
+                  "nextStateId": "ENTRY",
+                  "action": "talk",
+                  "actionLabel": "We have already settled this.",
+                  "condition": "questCompleted"
+                }
+              },
+              {
+                "class": "CDialogOption",
+                "properties": {
+                  "number": 5,
+                  "text": "Threaten and attack.",
+                  "nextStateId": "ENTRY",
+                  "action": "attack",
+                  "actionLabel": "Threaten and attack."
+                }
+              },
+              {
+                "class": "CDialogOption",
+                "properties": {
+                  "number": 6,
+                  "text": "Leave.",
+                  "nextStateId": "EXIT"
+                }
+              }
+            ]
+          }
+        }
+      ],
+      "questIds": "reevorQuest",
+      "questOffer": "Defeat the five rats inside the eastern storehouse."
+    }
+  },
+  "winthropDialog": {
+    "class": "CandlekeepDialog",
+    "properties": {
+      "actorId": "winthrop",
+      "talkText": "Winthrop welcomes you as an old friend. He sells equipment, ammunition and drinks, buys your saleable belongings, and offers four grades of lodging. Purchases use fixed Candlekeep prices; one bolt bundle contains twenty bolts.",
+      "states": [
+        {
+          "class": "CDialogState",
+          "properties": {
+            "stateId": "ENTRY",
+            "text": "Winthrop welcomes you as an old friend. He sells equipment, ammunition and drinks, buys your saleable belongings, and offers four grades of lodging. Purchases use fixed Candlekeep prices; one bolt bundle contains twenty bolts.",
+            "options": [
+              {
+                "class": "CDialogOption",
+                "properties": {
+                  "number": 0,
+                  "text": "Talk.",
+                  "nextStateId": "ENTRY",
+                  "action": "talk",
+                  "actionLabel": "Talk."
+                }
+              },
+              {
+                "class": "CDialogOption",
+                "properties": {
+                  "number": 1,
+                  "text": "Threaten and attack.",
+                  "nextStateId": "ENTRY",
+                  "action": "attack",
+                  "actionLabel": "Threaten and attack."
+                }
+              },
+              {
+                "class": "CDialogOption",
+                "properties": {
+                  "number": 2,
+                  "text": "Browse the complete stock.",
+                  "nextStateId": "ENTRY",
+                  "action": "browseStock",
+                  "actionLabel": "Browse the complete stock."
+                }
+              },
+              {
+                "class": "CDialogOption",
+                "properties": {
+                  "number": 3,
+                  "text": "Book a room.",
+                  "nextStateId": "ROOMS"
+                }
+              },
+              {
+                "class": "CDialogOption",
+                "properties": {
+                  "number": 4,
+                  "text": "See the drinks.",
+                  "nextStateId": "ENTRY",
+                  "action": "browseDrinks",
+                  "actionLabel": "See the drinks."
+                }
+              },
+              {
+                "class": "CDialogOption",
+                "properties": {
+                  "number": 5,
+                  "text": "Sell a saleable item.",
+                  "nextStateId": "ENTRY",
+                  "action": "sellItem",
+                  "actionLabel": "Sell a saleable item."
+                }
+              },
+              {
+                "class": "CDialogOption",
+                "properties": {
+                  "text": "Buy twenty crossbow bolts - 1 gold.",
+                  "nextStateId": "ENTRY",
+                  "action": "buyBolts",
+                  "actionLabel": "Buy twenty crossbow bolts - 1 gold.",
+                  "number": 6
+                }
+              },
+              {
+                "class": "CDialogOption",
+                "properties": {
+                  "text": "Order Firewine - 1 gold.",
+                  "nextStateId": "ENTRY",
+                  "action": "drinkBeer",
+                  "actionLabel": "Order Firewine - 1 gold.",
+                  "number": 7
+                }
+              },
+              {
+                "class": "CDialogOption",
+                "properties": {
+                  "text": "Order Arabellan Dry Wine - 2 gold.",
+                  "nextStateId": "ENTRY",
+                  "action": "drinkWine",
+                  "actionLabel": "Order Arabellan Dry Wine - 2 gold.",
+                  "number": 8
+                }
+              },
+              {
+                "class": "CDialogOption",
+                "properties": {
+                  "text": "Order Bitter Black Ale - 1 gold.",
+                  "nextStateId": "ENTRY",
+                  "action": "drinkAle",
+                  "actionLabel": "Order Bitter Black Ale - 1 gold.",
+                  "number": 9
+                }
+              },
+              {
+                "class": "CDialogOption",
+                "properties": {
+                  "number": 10,
+                  "text": "Leave.",
+                  "nextStateId": "EXIT"
+                }
+              }
+            ]
+          }
+        },
+        {
+          "class": "CDialogState",
+          "properties": {
+            "stateId": "ROOMS",
+            "text": "All four lodgings advance the rest record by eight hours and restore native health and mana.",
+            "options": [
+              {
+                "class": "CDialogOption",
+                "properties": {
+                  "number": 0,
+                  "text": "Peasant - 1 gold",
+                  "nextStateId": "ENTRY",
+                  "action": "restBasic",
+                  "actionLabel": "Peasant - 1 gold"
+                }
+              },
+              {
+                "class": "CDialogOption",
+                "properties": {
+                  "number": 1,
+                  "text": "Merchant - 3 gold",
+                  "nextStateId": "ENTRY",
+                  "action": "restMerchant",
+                  "actionLabel": "Merchant - 3 gold"
+                }
+              },
+              {
+                "class": "CDialogOption",
+                "properties": {
+                  "number": 2,
+                  "text": "Noble - 5 gold",
+                  "nextStateId": "ENTRY",
+                  "action": "restNoble",
+                  "actionLabel": "Noble - 5 gold"
+                }
+              },
+              {
+                "class": "CDialogOption",
+                "properties": {
+                  "number": 3,
+                  "text": "Royal - 8 gold",
+                  "nextStateId": "ENTRY",
+                  "action": "restRoyal",
+                  "actionLabel": "Royal - 8 gold"
+                }
+              },
+              {
+                "class": "CDialogOption",
+                "properties": {
+                  "number": 4,
+                  "text": "Back.",
+                  "nextStateId": "ENTRY"
+                }
+              }
+            ]
+          }
+        }
+      ],
+      "shopEntries": "[{\"id\":\"AX1H01\",\"label\":\"Battle Axe\",\"itemId\":\"candlekeepBattleAxe\",\"price\":7,\"limit\":4,\"quantity\":1},{\"id\":\"AX1H04\",\"label\":\"Throwing Axe (5)\",\"itemId\":\"candlekeepStockAx1h04\",\"price\":1,\"limit\":25,\"quantity\":5},{\"id\":\"BLUN01\",\"label\":\"Club\",\"itemId\":\"candlekeepStockBlun01\",\"price\":1,\"limit\":0,\"quantity\":1},{\"id\":\"BLUN02\",\"label\":\"Flail\",\"itemId\":\"candlekeepStockBlun02\",\"price\":22,\"limit\":5,\"quantity\":1},{\"id\":\"BLUN04\",\"label\":\"Mace\",\"itemId\":\"candlekeepMace\",\"price\":12,\"limit\":5,\"quantity\":1},{\"id\":\"BLUN06\",\"label\":\"Morning Star\",\"itemId\":\"candlekeepStockBlun06\",\"price\":15,\"limit\":5,\"quantity\":1},{\"id\":\"BOW01\",\"label\":\"Composite Longbow\",\"itemId\":\"candlekeepStockBow01\",\"price\":150,\"limit\":1,\"quantity\":1},{\"id\":\"BOW03\",\"label\":\"Longbow\",\"itemId\":\"candlekeepStockBow03\",\"price\":112,\"limit\":4,\"quantity\":1},{\"id\":\"BOW05\",\"label\":\"Shortbow\",\"itemId\":\"candlekeepStockBow05\",\"price\":45,\"limit\":5,\"quantity\":1},{\"id\":\"DAGG01\",\"label\":\"Dagger\",\"itemId\":\"candlekeepDagger\",\"price\":3,\"limit\":0,\"quantity\":1},{\"id\":\"DAGG05\",\"label\":\"Throwing Dagger (5)\",\"itemId\":\"candlekeepStockDagg05\",\"price\":1,\"limit\":0,\"quantity\":5},{\"id\":\"DART01\",\"label\":\"Dart (10)\",\"itemId\":\"candlekeepStockDart01\",\"price\":1,\"limit\":0,\"quantity\":10},{\"id\":\"HALB01\",\"label\":\"Halberd\",\"itemId\":\"candlekeepStockHalb01\",\"price\":15,\"limit\":3,\"quantity\":1},{\"id\":\"HAMM01\",\"label\":\"War Hammer\",\"itemId\":\"candlekeepWarhammer\",\"price\":3,\"limit\":5,\"quantity\":1},{\"id\":\"SLNG01\",\"label\":\"Sling\",\"itemId\":\"candlekeepStockSlng01\",\"price\":1,\"limit\":0,\"quantity\":1},{\"id\":\"SPER01\",\"label\":\"Spear\",\"itemId\":\"candlekeepStockSper01\",\"price\":1,\"limit\":10,\"quantity\":1},{\"id\":\"STAF01\",\"label\":\"Quarterstaff\",\"itemId\":\"candlekeepStockStaf01\",\"price\":1,\"limit\":0,\"quantity\":1},{\"id\":\"SW1H01\",\"label\":\"Bastard Sword\",\"itemId\":\"candlekeepStockSw1h01\",\"price\":37,\"limit\":3,\"quantity\":1},{\"id\":\"SW1H04\",\"label\":\"Long Sword\",\"itemId\":\"candlekeepLongsword\",\"price\":22,\"limit\":7,\"quantity\":1},{\"id\":\"SW1H07\",\"label\":\"Short Sword\",\"itemId\":\"candlekeepStockSw1h07\",\"price\":15,\"limit\":12,\"quantity\":1},{\"id\":\"SW2H01\",\"label\":\"Two-handed Sword\",\"itemId\":\"candlekeepStockSw2h01\",\"price\":75,\"limit\":1,\"quantity\":1},{\"id\":\"SW1H20\",\"label\":\"Scimitar\",\"itemId\":\"candlekeepStockSw1h20\",\"price\":82,\"limit\":0,\"quantity\":1},{\"id\":\"BULL01\",\"label\":\"Bullet (20)\",\"itemId\":\"candlekeepStockBull01\",\"price\":1,\"limit\":0,\"quantity\":20},{\"id\":\"XBOW01\",\"label\":\"Heavy Crossbow\",\"itemId\":\"candlekeepStockXbow01\",\"price\":75,\"limit\":2,\"quantity\":1},{\"id\":\"XBOW04\",\"label\":\"Light Crossbow\",\"itemId\":\"candlekeepStockXbow04\",\"price\":52,\"limit\":5,\"quantity\":1},{\"id\":\"BOLT01\",\"label\":\"Bolt (20)\",\"itemId\":\"candlekeepBolts\",\"price\":1,\"limit\":0,\"quantity\":20},{\"id\":\"AROW01\",\"label\":\"Arrow (20)\",\"itemId\":\"candlekeepArrows\",\"price\":1,\"limit\":0,\"quantity\":20},{\"id\":\"CHAN01\",\"label\":\"Chain Mail\",\"itemId\":\"candlekeepStockChan01\",\"price\":112,\"limit\":2,\"quantity\":1},{\"id\":\"CHAN04\",\"label\":\"Splint Mail\",\"itemId\":\"candlekeepStockChan04\",\"price\":120,\"limit\":1,\"quantity\":1},{\"id\":\"LEAT01\",\"label\":\"Leather Armor\",\"itemId\":\"candlekeepStockLeat01\",\"price\":7,\"limit\":10,\"quantity\":1},{\"id\":\"LEAT04\",\"label\":\"Studded Leather Armor\",\"itemId\":\"candlekeepStockLeat04\",\"price\":30,\"limit\":7,\"quantity\":1},{\"id\":\"SHLD01\",\"label\":\"Small Shield [SHLD01]\",\"itemId\":\"candlekeepStockShld01\",\"price\":4,\"limit\":10,\"quantity\":1},{\"id\":\"SHLD03\",\"label\":\"Medium Shield [SHLD03]\",\"itemId\":\"candlekeepStockShld03\",\"price\":10,\"limit\":6,\"quantity\":1},{\"id\":\"SHLD05\",\"label\":\"Large Shield [SHLD05]\",\"itemId\":\"candlekeepStockShld05\",\"price\":15,\"limit\":3,\"quantity\":1},{\"id\":\"SHLD08\",\"label\":\"Buckler [SHLD08]\",\"itemId\":\"candlekeepStockShld08\",\"price\":1,\"limit\":0,\"quantity\":1},{\"id\":\"SHLD09\",\"label\":\"Buckler [SHLD09]\",\"itemId\":\"candlekeepStockShld09\",\"price\":1,\"limit\":0,\"quantity\":1},{\"id\":\"SHLD10\",\"label\":\"Buckler [SHLD10]\",\"itemId\":\"candlekeepStockShld10\",\"price\":1,\"limit\":0,\"quantity\":1},{\"id\":\"SHLD11\",\"label\":\"Small Shield [SHLD11]\",\"itemId\":\"candlekeepStockShld11\",\"price\":4,\"limit\":4,\"quantity\":1},{\"id\":\"SHLD12\",\"label\":\"Small Shield [SHLD12]\",\"itemId\":\"candlekeepStockShld12\",\"price\":4,\"limit\":4,\"quantity\":1},{\"id\":\"SHLD13\",\"label\":\"Medium Shield [SHLD13]\",\"itemId\":\"candlekeepStockShld13\",\"price\":10,\"limit\":4,\"quantity\":1},{\"id\":\"SHLD14\",\"label\":\"Medium Shield [SHLD14]\",\"itemId\":\"candlekeepStockShld14\",\"price\":10,\"limit\":4,\"quantity\":1},{\"id\":\"SHLD15\",\"label\":\"Large Shield [SHLD15]\",\"itemId\":\"candlekeepStockShld15\",\"price\":15,\"limit\":4,\"quantity\":1},{\"id\":\"SHLD16\",\"label\":\"Large Shield [SHLD16]\",\"itemId\":\"candlekeepStockShld16\",\"price\":15,\"limit\":4,\"quantity\":1},{\"id\":\"HELM01\",\"label\":\"Helmet\",\"itemId\":\"candlekeepStockHelm01\",\"price\":1,\"limit\":0,\"quantity\":1}]",
+      "drinkEntries": "[{\"id\":\"BLOOD_WINE\",\"label\":\"Blood Wine\",\"price\":8,\"strength\":50},{\"id\":\"FIREWINE\",\"label\":\"Firewine\",\"price\":1,\"strength\":25},{\"id\":\"MEAD\",\"label\":\"Mead\",\"price\":4,\"strength\":40},{\"id\":\"BITTER_BLACK_ALE\",\"label\":\"Bitter Black Ale\",\"price\":1,\"strength\":23},{\"id\":\"ARABELLAN_DRY_WINE\",\"label\":\"Arabellan Dry Wine\",\"price\":2,\"strength\":45}]"
+    }
+  },
+  "tethtorilDialog": {
+    "class": "CandlekeepDialog",
+    "properties": {
+      "actorId": "tethtoril",
+      "talkText": "Tethtoril is taking the air near the library. He borrowed Firebead's identify scroll, and gladly hands it to you once you explain the errand.",
+      "states": [
+        {
+          "class": "CDialogState",
+          "properties": {
+            "stateId": "ENTRY",
+            "text": "Tethtoril is taking the air near the library. He borrowed Firebead's identify scroll, and gladly hands it to you once you explain the errand.",
+            "options": [
+              {
+                "class": "CDialogOption",
+                "properties": {
+                  "number": 0,
+                  "text": "Talk.",
+                  "nextStateId": "ENTRY",
+                  "action": "talk",
+                  "actionLabel": "Talk."
+                }
+              },
+              {
+                "class": "CDialogOption",
+                "properties": {
+                  "number": 1,
+                  "text": "May I take Firebead's scroll?",
+                  "nextStateId": "ENTRY",
+                  "action": "deliverScroll",
+                  "actionLabel": "May I take Firebead's scroll?"
+                }
+              },
+              {
+                "class": "CDialogOption",
+                "properties": {
+                  "number": 2,
+                  "text": "I will keep the scroll for now.",
+                  "nextStateId": "ENTRY",
+                  "action": "keepScroll",
+                  "actionLabel": "I will keep the scroll for now."
+                }
+              },
+              {
+                "class": "CDialogOption",
+                "properties": {
+                  "number": 3,
+                  "text": "Threaten and attack.",
+                  "nextStateId": "ENTRY",
+                  "action": "attack",
+                  "actionLabel": "Threaten and attack."
+                }
+              },
+              {
+                "class": "CDialogOption",
+                "properties": {
+                  "number": 4,
+                  "text": "Leave.",
+                  "nextStateId": "EXIT"
+                }
+              }
+            ]
+          }
+        }
+      ]
+    }
+  },
+  "gorionDialog": {
+    "class": "CandlekeepDialog",
+    "properties": {
+      "actorId": "gorion",
+      "talkText": "Gorion heals your hurts and urges you to prepare. If you are separated on the road, find Khalid and Jaheira at the Friendly Arm Inn. He will wait until you explicitly choose to leave.",
+      "states": [
+        {
+          "class": "CDialogState",
+          "properties": {
+            "stateId": "ENTRY",
+            "text": "Gorion heals your hurts and urges you to prepare. If you are separated on the road, find Khalid and Jaheira at the Friendly Arm Inn. He will wait until you explicitly choose to leave.",
+            "options": [
+              {
+                "class": "CDialogOption",
+                "properties": {
+                  "number": 0,
+                  "text": "Talk.",
+                  "nextStateId": "ENTRY",
+                  "action": "talk",
+                  "actionLabel": "Talk."
+                }
+              },
+              {
+                "class": "CDialogOption",
+                "properties": {
+                  "number": 1,
+                  "text": "Threaten and attack.",
+                  "nextStateId": "ENTRY",
+                  "action": "attack",
+                  "actionLabel": "Threaten and attack."
+                }
+              },
+              {
+                "class": "CDialogOption",
+                "properties": {
+                  "number": 2,
+                  "text": "I am not ready to leave.",
+                  "nextStateId": "ENTRY",
+                  "action": "refuseDeparture",
+                  "actionLabel": "I am not ready to leave."
+                }
+              },
+              {
+                "class": "CDialogOption",
+                "properties": {
+                  "number": 3,
+                  "text": "I am ready. Let us leave Candlekeep.",
+                  "nextStateId": "ENTRY",
+                  "action": "leaveCandlekeep",
+                  "actionLabel": "I am ready. Let us leave Candlekeep."
+                }
+              },
+              {
+                "class": "CDialogOption",
+                "properties": {
+                  "number": 4,
+                  "text": "Review my preparations.",
+                  "nextStateId": "ENTRY",
+                  "action": "reviewPreparations",
+                  "actionLabel": "Review my preparations."
+                }
+              },
+              {
+                "class": "CDialogOption",
+                "properties": {
+                  "number": 5,
+                  "text": "Leave.",
+                  "nextStateId": "EXIT"
+                }
+              }
+            ]
+          }
+        }
+      ]
+    }
+  },
+  "imoenDialog": {
+    "class": "CandlekeepDialog",
+    "properties": {
+      "actorId": "imoen",
+      "talkText": "Imoen has heard rumors of Gorion's hurried plans. She teases you, wonders what lies beyond the walls, and stays in Candlekeep for now.",
+      "states": [
+        {
+          "class": "CDialogState",
+          "properties": {
+            "stateId": "ENTRY",
+            "text": "Imoen has heard rumors of Gorion's hurried plans. She teases you, wonders what lies beyond the walls, and stays in Candlekeep for now.",
+            "options": [
+              {
+                "class": "CDialogOption",
+                "properties": {
+                  "number": 0,
+                  "text": "Talk.",
+                  "nextStateId": "ENTRY",
+                  "action": "talk",
+                  "actionLabel": "Talk."
+                }
+              },
+              {
+                "class": "CDialogOption",
+                "properties": {
+                  "number": 1,
+                  "text": "Threaten and attack.",
+                  "nextStateId": "ENTRY",
+                  "action": "attack",
+                  "actionLabel": "Threaten and attack."
+                }
+              },
+              {
+                "class": "CDialogOption",
+                "properties": {
+                  "number": 2,
+                  "text": "Leave.",
+                  "nextStateId": "EXIT"
+                }
+              }
+            ]
+          }
+        }
+      ]
+    }
+  },
+  "gatewardenDialog": {
+    "class": "CandlekeepDialog",
+    "properties": {
+      "actorId": "gatewarden",
+      "talkText": "The Gatewarden offers practical group training in the cellar. You may decline once and reconsider. A second refusal closes the cellar permanently.",
+      "states": [
+        {
+          "class": "CDialogState",
+          "properties": {
+            "stateId": "ENTRY",
+            "text": "The Gatewarden offers practical group training in the cellar. You may decline once and reconsider. A second refusal closes the cellar permanently.",
+            "options": [
+              {
+                "class": "CDialogOption",
+                "properties": {
+                  "number": 0,
+                  "text": "Talk.",
+                  "nextStateId": "ENTRY",
+                  "action": "talk",
+                  "actionLabel": "Talk."
+                }
+              },
+              {
+                "class": "CDialogOption",
+                "properties": {
+                  "number": 1,
+                  "text": "Threaten and attack.",
+                  "nextStateId": "ENTRY",
+                  "action": "attack",
+                  "actionLabel": "Threaten and attack."
+                }
+              },
+              {
+                "class": "CDialogOption",
+                "properties": {
+                  "number": 2,
+                  "text": "Accept the cellar training.",
+                  "nextStateId": "ENTRY",
+                  "action": "acceptTraining",
+                  "actionLabel": "Accept the cellar training.",
+                  "condition": "trainingAvailable"
+                }
+              },
+              {
+                "class": "CDialogOption",
+                "properties": {
+                  "number": 3,
+                  "text": "Decline for now.",
+                  "nextStateId": "ENTRY",
+                  "action": "declineTraining",
+                  "actionLabel": "Decline for now.",
+                  "condition": "trainingAvailable"
+                }
+              },
+              {
+                "class": "CDialogOption",
+                "properties": {
+                  "number": 4,
+                  "text": "Decline the second offer permanently.",
+                  "nextStateId": "ENTRY",
+                  "action": "closeTrainingGate",
+                  "actionLabel": "Decline the second offer permanently.",
+                  "condition": "canDeclineSecond"
+                }
+              },
+              {
+                "class": "CDialogOption",
+                "properties": {
+                  "number": 5,
+                  "text": "Leave.",
+                  "nextStateId": "EXIT"
+                }
+              }
+            ]
+          }
+        }
+      ]
+    }
+  },
+  "obeDialog": {
+    "class": "CandlekeepDialog",
+    "properties": {
+      "actorId": "obe",
+      "talkText": "Obe leads an illusory battle exercise. Arkanis, Canderous, Deder, Mordaine and Osprey fight five opponents while you face a sixth. Native actors and native combat resolve every fight. Two waves are the bounded adaptation; you can stop at any time.",
+      "states": [
+        {
+          "class": "CDialogState",
+          "properties": {
+            "stateId": "ENTRY",
+            "text": "Obe leads an illusory battle exercise. Arkanis, Canderous, Deder, Mordaine and Osprey fight five opponents while you face a sixth. Native actors and native combat resolve every fight. Two waves are the bounded adaptation; you can stop at any time.",
+            "options": [
+              {
+                "class": "CDialogOption",
+                "properties": {
+                  "number": 0,
+                  "text": "Talk.",
+                  "nextStateId": "ENTRY",
+                  "action": "talk",
+                  "actionLabel": "Talk."
+                }
+              },
+              {
+                "class": "CDialogOption",
+                "properties": {
+                  "number": 1,
+                  "text": "Threaten and attack.",
+                  "nextStateId": "ENTRY",
+                  "action": "attack",
+                  "actionLabel": "Threaten and attack."
+                }
+              },
+              {
+                "class": "CDialogOption",
+                "properties": {
+                  "number": 2,
+                  "text": "Begin the group exercise.",
+                  "nextStateId": "ENTRY",
+                  "action": "beginTraining",
+                  "actionLabel": "Begin the group exercise."
+                }
+              },
+              {
+                "class": "CDialogOption",
+                "properties": {
+                  "number": 3,
+                  "text": "Continue after the opponents are defeated.",
+                  "nextStateId": "ENTRY",
+                  "action": "trainingRound",
+                  "actionLabel": "Continue after the opponents are defeated."
+                }
+              },
+              {
+                "class": "CDialogOption",
+                "properties": {
+                  "number": 4,
+                  "text": "Finish the exercise.",
+                  "nextStateId": "ENTRY",
+                  "action": "finishTraining",
+                  "actionLabel": "Finish the exercise."
+                }
+              },
+              {
+                "class": "CDialogOption",
+                "properties": {
+                  "number": 5,
+                  "text": "Stop and return upstairs.",
+                  "nextStateId": "ENTRY",
+                  "action": "forceExitTraining",
+                  "actionLabel": "Stop and return upstairs."
+                }
+              },
+              {
+                "class": "CDialogOption",
+                "properties": {
+                  "number": 6,
+                  "text": "Leave.",
+                  "nextStateId": "EXIT"
+                }
+              }
+            ]
+          }
+        }
+      ]
+    }
+  },
+  "templePriestDialog": {
+    "class": "CandlekeepDialog",
+    "properties": {
+      "actorId": "templePriest",
+      "talkText": "Oghma's priest offers healing, identification, potions, and donations. The temple stands open to the sky. Native healing restores health; identification reveals the marked item's properties.",
+      "states": [
+        {
+          "class": "CDialogState",
+          "properties": {
+            "stateId": "ENTRY",
+            "text": "Oghma's priest offers healing, identification, potions, and donations. The temple stands open to the sky. Native healing restores health; identification reveals the marked item's properties.",
+            "options": [
+              {
+                "class": "CDialogOption",
+                "properties": {
+                  "number": 0,
+                  "text": "Talk.",
+                  "nextStateId": "ENTRY",
+                  "action": "talk",
+                  "actionLabel": "Talk."
+                }
+              },
+              {
+                "class": "CDialogOption",
+                "properties": {
+                  "number": 1,
+                  "text": "Threaten and attack.",
+                  "nextStateId": "ENTRY",
+                  "action": "attack",
+                  "actionLabel": "Threaten and attack."
+                }
+              },
+              {
+                "class": "CDialogOption",
+                "properties": {
+                  "number": 2,
+                  "text": "Donate 10 gold.",
+                  "nextStateId": "ENTRY",
+                  "action": "donate",
+                  "actionLabel": "Donate 10 gold."
+                }
+              },
+              {
+                "class": "CDialogOption",
+                "properties": {
+                  "number": 3,
+                  "text": "See the temple services.",
+                  "nextStateId": "ENTRY",
+                  "action": "browseServices",
+                  "actionLabel": "See the temple services."
+                }
+              },
+              {
+                "class": "CDialogOption",
+                "properties": {
+                  "number": 4,
+                  "text": "Identify an item - 100 gold",
+                  "nextStateId": "ENTRY",
+                  "action": "identifyItem",
+                  "actionLabel": "Identify an item - 100 gold"
+                }
+              },
+              {
+                "class": "CDialogOption",
+                "properties": {
+                  "number": 5,
+                  "text": "Browse the temple supplies.",
+                  "nextStateId": "ENTRY",
+                  "action": "browseStock",
+                  "actionLabel": "Browse the temple supplies."
+                }
+              },
+              {
+                "class": "CDialogOption",
+                "properties": {
+                  "text": "Buy a potion of healing - 112 gold.",
+                  "nextStateId": "ENTRY",
+                  "action": "buyHealingPotion",
+                  "actionLabel": "Buy a potion of healing - 112 gold.",
+                  "number": 6
+                }
+              },
+              {
+                "class": "CDialogOption",
+                "properties": {
+                  "text": "Receive Cure Light Wounds - 50 gold.",
+                  "nextStateId": "ENTRY",
+                  "action": "healAtTemple",
+                  "actionLabel": "Receive Cure Light Wounds - 50 gold.",
+                  "number": 7
+                }
+              },
+              {
+                "class": "CDialogOption",
+                "properties": {
+                  "number": 8,
+                  "text": "Leave.",
+                  "nextStateId": "EXIT"
+                }
+              }
+            ]
+          }
+        }
+      ],
+      "shopEntries": "[{\"id\":\"POTN08\",\"label\":\"Potion of Healing\",\"itemId\":\"candlekeepHealingPotion\",\"price\":112,\"limit\":20,\"quantity\":1},{\"id\":\"POTN17\",\"label\":\"Elixir of Health\",\"itemId\":\"candlekeepStockPotn17\",\"price\":375,\"limit\":4,\"quantity\":1},{\"id\":\"POTN20\",\"label\":\"Antidote\",\"itemId\":\"candlekeepAntidote\",\"price\":150,\"limit\":15,\"quantity\":1},{\"id\":\"SCRLPET\",\"label\":\"Stone to Flesh Scroll\",\"itemId\":\"candlekeepStockScrlpet\",\"price\":225,\"limit\":15,\"quantity\":1}]",
+      "serviceEntries": "[{\"id\":\"SPPR103\",\"label\":\"Cure Light Wounds\",\"price\":50,\"operation\":\"heal\"},{\"id\":\"SPPR303\",\"label\":\"Cure Disease\",\"price\":200,\"operation\":\"cureDisease\"},{\"id\":\"SPPR307\",\"label\":\"Remove Curse\",\"price\":500,\"operation\":\"removeCurse\"},{\"id\":\"SPPR401\",\"label\":\"Neutralize Poison\",\"price\":100,\"operation\":\"curePoison\"},{\"id\":\"SPPR212\",\"label\":\"Slow Poison\",\"price\":150,\"operation\":\"slowPoison\"},{\"id\":\"SPPR504\",\"label\":\"Raise Dead\",\"price\":750,\"operation\":\"resurrect\"}]"
+    }
+  },
+  "clinicPriestDialog": {
+    "class": "CandlekeepDialog",
+    "properties": {
+      "actorId": "clinicPriest",
+      "talkText": "The infirmary priest offers you a potion to help on the road. You can accept or refuse it. His carried second potion and the locked desk's third potion are separate possessions; desk theft always summons the Watch.",
+      "states": [
+        {
+          "class": "CDialogState",
+          "properties": {
+            "stateId": "ENTRY",
+            "text": "The infirmary priest offers you a potion to help on the road. You can accept or refuse it. His carried second potion and the locked desk's third potion are separate possessions; desk theft always summons the Watch.",
+            "options": [
+              {
+                "class": "CDialogOption",
+                "properties": {
+                  "number": 0,
+                  "text": "Talk.",
+                  "nextStateId": "ENTRY",
+                  "action": "talk",
+                  "actionLabel": "Talk."
+                }
+              },
+              {
+                "class": "CDialogOption",
+                "properties": {
+                  "number": 1,
+                  "text": "Try to pick a pocket.",
+                  "nextStateId": "ENTRY",
+                  "action": "pickPocket",
+                  "actionLabel": "Try to pick a pocket.",
+                  "condition": "canPickpocket"
+                }
+              },
+              {
+                "class": "CDialogOption",
+                "properties": {
+                  "number": 2,
+                  "text": "Threaten and attack.",
+                  "nextStateId": "ENTRY",
+                  "action": "attack",
+                  "actionLabel": "Threaten and attack."
+                }
+              },
+              {
+                "class": "CDialogOption",
+                "properties": {
+                  "number": 3,
+                  "text": "Accept the offered potion.",
+                  "nextStateId": "ENTRY",
+                  "action": "acceptPotion",
+                  "actionLabel": "Accept the offered potion."
+                }
+              },
+              {
+                "class": "CDialogOption",
+                "properties": {
+                  "number": 4,
+                  "text": "Decline the offered potion.",
+                  "nextStateId": "ENTRY",
+                  "action": "declinePotion",
+                  "actionLabel": "Decline the offered potion."
+                }
+              },
+              {
+                "class": "CDialogOption",
+                "properties": {
+                  "number": 5,
+                  "text": "Leave.",
+                  "nextStateId": "EXIT"
+                }
+              }
+            ]
+          }
+        }
+      ]
+    }
+  },
+  "thurstonDialog": {
+    "class": "CandlekeepDialog",
+    "properties": {
+      "actorId": "thurston",
+      "talkText": "The visiting nobleman complains that an important man should receive more attention. He keeps his valuables close, and has little patience for impertinence.",
+      "states": [
+        {
+          "class": "CDialogState",
+          "properties": {
+            "stateId": "ENTRY",
+            "text": "The visiting nobleman complains that an important man should receive more attention. He keeps his valuables close, and has little patience for impertinence.",
+            "options": [
+              {
+                "class": "CDialogOption",
+                "properties": {
+                  "number": 0,
+                  "text": "Talk.",
+                  "nextStateId": "ENTRY",
+                  "action": "talk",
+                  "actionLabel": "Talk."
+                }
+              },
+              {
+                "class": "CDialogOption",
+                "properties": {
+                  "number": 1,
+                  "text": "Try to pick a pocket.",
+                  "nextStateId": "ENTRY",
+                  "action": "pickPocket",
+                  "actionLabel": "Try to pick a pocket.",
+                  "condition": "canPickpocket"
+                }
+              },
+              {
+                "class": "CDialogOption",
+                "properties": {
+                  "number": 2,
+                  "text": "Threaten and attack.",
+                  "nextStateId": "ENTRY",
+                  "action": "attack",
+                  "actionLabel": "Threaten and attack."
+                }
+              },
+              {
+                "class": "CDialogOption",
+                "properties": {
+                  "number": 3,
+                  "text": "Leave.",
+                  "nextStateId": "EXIT"
+                }
+              }
+            ]
+          }
+        }
+      ]
+    }
+  },
+  "loveyDialog": {
+    "class": "CandlekeepDialog",
+    "properties": {
+      "actorId": "lovey",
+      "talkText": "The noblewoman is concerned with rooms, belongings, and the proper treatment of guests. She has her own view of Candlekeep's hospitality.",
+      "states": [
+        {
+          "class": "CDialogState",
+          "properties": {
+            "stateId": "ENTRY",
+            "text": "The noblewoman is concerned with rooms, belongings, and the proper treatment of guests. She has her own view of Candlekeep's hospitality.",
+            "options": [
+              {
+                "class": "CDialogOption",
+                "properties": {
+                  "number": 0,
+                  "text": "Talk.",
+                  "nextStateId": "ENTRY",
+                  "action": "talk",
+                  "actionLabel": "Talk."
+                }
+              },
+              {
+                "class": "CDialogOption",
+                "properties": {
+                  "number": 1,
+                  "text": "Try to pick a pocket.",
+                  "nextStateId": "ENTRY",
+                  "action": "pickPocket",
+                  "actionLabel": "Try to pick a pocket.",
+                  "condition": "canPickpocket"
+                }
+              },
+              {
+                "class": "CDialogOption",
+                "properties": {
+                  "number": 2,
+                  "text": "Threaten and attack.",
+                  "nextStateId": "ENTRY",
+                  "action": "attack",
+                  "actionLabel": "Threaten and attack."
+                }
+              },
+              {
+                "class": "CDialogOption",
+                "properties": {
+                  "number": 3,
+                  "text": "Leave.",
+                  "nextStateId": "EXIT"
+                }
+              }
+            ]
+          }
+        }
+      ]
+    }
+  },
+  "nessaDialog": {
+    "class": "CandlekeepDialog",
+    "properties": {
+      "actorId": "nessa",
+      "talkText": "Nessa chews weakly beside Dreppin. Hull's antidote may help her recover.",
+      "states": [
+        {
+          "class": "CDialogState",
+          "properties": {
+            "stateId": "ENTRY",
+            "text": "Nessa chews weakly beside Dreppin. Hull's antidote may help her recover.",
+            "options": [
+              {
+                "class": "CDialogOption",
+                "properties": {
+                  "number": 0,
+                  "text": "Talk.",
+                  "nextStateId": "ENTRY",
+                  "action": "talk",
+                  "actionLabel": "Talk."
+                }
+              },
+              {
+                "class": "CDialogOption",
+                "properties": {
+                  "number": 1,
+                  "text": "Leave.",
+                  "nextStateId": "EXIT"
+                }
+              }
+            ]
+          }
+        }
+      ]
+    }
+  },
+  "keeperDialog": {
+    "class": "CandlekeepDialog",
+    "properties": {
+      "actorId": "keeper",
+      "talkText": "The Keeper guards the great library. Admission requires a book of exceptional value. Today your journey lies with Gorion; the library and later return to Candlekeep are outside this prologue.",
+      "states": [
+        {
+          "class": "CDialogState",
+          "properties": {
+            "stateId": "ENTRY",
+            "text": "The Keeper guards the great library. Admission requires a book of exceptional value. Today your journey lies with Gorion; the library and later return to Candlekeep are outside this prologue.",
+            "options": [
+              {
+                "class": "CDialogOption",
+                "properties": {
+                  "number": 0,
+                  "text": "Talk.",
+                  "nextStateId": "ENTRY",
+                  "action": "talk",
+                  "actionLabel": "Talk."
+                }
+              },
+              {
+                "class": "CDialogOption",
+                "properties": {
+                  "number": 1,
+                  "text": "Threaten and attack.",
+                  "nextStateId": "ENTRY",
+                  "action": "attack",
+                  "actionLabel": "Threaten and attack."
+                }
+              },
+              {
+                "class": "CDialogOption",
+                "properties": {
+                  "number": 2,
+                  "text": "Leave.",
+                  "nextStateId": "EXIT"
+                }
+              }
+            ]
+          }
+        }
+      ]
+    }
+  },
+  "watcherDialog": {
+    "class": "CandlekeepDialog",
+    "properties": {
+      "actorId": "watcher",
+      "talkText": "The Watch keeps Candlekeep peaceful. Property is not yours merely because it lies in an unlocked drawer. Failed theft, forced private locks, and violence can bring armed Watchers.",
+      "states": [
+        {
+          "class": "CDialogState",
+          "properties": {
+            "stateId": "ENTRY",
+            "text": "The Watch keeps Candlekeep peaceful. Property is not yours merely because it lies in an unlocked drawer. Failed theft, forced private locks, and violence can bring armed Watchers.",
+            "options": [
+              {
+                "class": "CDialogOption",
+                "properties": {
+                  "number": 0,
+                  "text": "Talk.",
+                  "nextStateId": "ENTRY",
+                  "action": "talk",
+                  "actionLabel": "Talk."
+                }
+              },
+              {
+                "class": "CDialogOption",
+                "properties": {
+                  "number": 1,
+                  "text": "Try to pick a pocket.",
+                  "nextStateId": "ENTRY",
+                  "action": "pickPocket",
+                  "actionLabel": "Try to pick a pocket.",
+                  "condition": "canPickpocket"
+                }
+              },
+              {
+                "class": "CDialogOption",
+                "properties": {
+                  "number": 2,
+                  "text": "Threaten and attack.",
+                  "nextStateId": "ENTRY",
+                  "action": "attack",
+                  "actionLabel": "Threaten and attack."
+                }
+              },
+              {
+                "class": "CDialogOption",
+                "properties": {
+                  "number": 3,
+                  "text": "Leave.",
+                  "nextStateId": "EXIT"
+                }
+              }
+            ]
+          }
+        }
+      ]
+    }
+  },
+  "pardaDialog": {
+    "class": "CandlekeepDialog",
+    "properties": {
+      "actorId": "parda",
+      "talkText": "Parda waits outside the priests' quarters. Before the attack he offers patient advice; afterward he is shaken by Shank's attempt on your life and asks whether you are hurt.",
+      "states": [
+        {
+          "class": "CDialogState",
+          "properties": {
+            "stateId": "ENTRY",
+            "text": "Parda waits outside the priests' quarters. Before the attack he offers patient advice; afterward he is shaken by Shank's attempt on your life and asks whether you are hurt.",
+            "options": [
+              {
+                "class": "CDialogOption",
+                "properties": {
+                  "number": 0,
+                  "text": "Talk.",
+                  "nextStateId": "ENTRY",
+                  "action": "talk",
+                  "actionLabel": "Talk."
+                }
+              },
+              {
+                "class": "CDialogOption",
+                "properties": {
+                  "number": 1,
+                  "text": "Threaten and attack.",
+                  "nextStateId": "ENTRY",
+                  "action": "attack",
+                  "actionLabel": "Threaten and attack."
+                }
+              },
+              {
+                "class": "CDialogOption",
+                "properties": {
+                  "number": 2,
+                  "text": "Leave.",
+                  "nextStateId": "EXIT"
+                }
+              }
+            ]
+          }
+        }
+      ]
+    }
+  },
+  "karanDialog": {
+    "class": "CandlekeepDialog",
+    "properties": {
+      "actorId": "karan",
+      "talkText": "Karan waits outside the bunkhouse. He speaks calmly before the attack, but after Carbos dies he struggles to understand why someone would hunt a child of Candlekeep.",
+      "states": [
+        {
+          "class": "CDialogState",
+          "properties": {
+            "stateId": "ENTRY",
+            "text": "Karan waits outside the bunkhouse. He speaks calmly before the attack, but after Carbos dies he struggles to understand why someone would hunt a child of Candlekeep.",
+            "options": [
+              {
+                "class": "CDialogOption",
+                "properties": {
+                  "number": 0,
+                  "text": "Talk.",
+                  "nextStateId": "ENTRY",
+                  "action": "talk",
+                  "actionLabel": "Talk."
+                }
+              },
+              {
+                "class": "CDialogOption",
+                "properties": {
+                  "number": 1,
+                  "text": "Threaten and attack.",
+                  "nextStateId": "ENTRY",
+                  "action": "attack",
+                  "actionLabel": "Threaten and attack."
+                }
+              },
+              {
+                "class": "CDialogOption",
+                "properties": {
+                  "number": 2,
+                  "text": "Leave.",
+                  "nextStateId": "EXIT"
+                }
+              }
+            ]
+          }
+        }
+      ]
+    }
+  },
+  "jondalarDialog": {
+    "class": "CandlekeepDialog",
+    "properties": {
+      "actorId": "jondalar",
+      "talkText": "Jondalar offers a practical fighting lesson with Erik. Begin when ready, defeat the native practice opponent, then speak again. This exercise teaches the native combat flow.",
+      "states": [
+        {
+          "class": "CDialogState",
+          "properties": {
+            "stateId": "ENTRY",
+            "text": "Jondalar offers a practical fighting lesson with Erik. Begin when ready, defeat the native practice opponent, then speak again. This exercise teaches the native combat flow.",
+            "options": [
+              {
+                "class": "CDialogOption",
+                "properties": {
+                  "number": 0,
+                  "text": "Talk.",
+                  "nextStateId": "ENTRY",
+                  "action": "talk",
+                  "actionLabel": "Talk."
+                }
+              },
+              {
+                "class": "CDialogOption",
+                "properties": {
+                  "number": 1,
+                  "text": "Threaten and attack.",
+                  "nextStateId": "ENTRY",
+                  "action": "attack",
+                  "actionLabel": "Threaten and attack."
+                }
+              },
+              {
+                "class": "CDialogOption",
+                "properties": {
+                  "number": 2,
+                  "text": "Begin the fighting lesson.",
+                  "nextStateId": "ENTRY",
+                  "action": "beginLesson",
+                  "actionLabel": "Begin the fighting lesson."
+                }
+              },
+              {
+                "class": "CDialogOption",
+                "properties": {
+                  "number": 3,
+                  "text": "Leave.",
+                  "nextStateId": "EXIT"
+                }
+              }
+            ]
+          }
+        }
+      ]
+    }
+  },
+  "erikDialog": {
+    "class": "CandlekeepDialog",
+    "properties": {
+      "actorId": "erik",
+      "talkText": "Erik helps Jondalar demonstrate that danger can come from more than one direction. Prepare your equipment before beginning the lesson.",
+      "states": [
+        {
+          "class": "CDialogState",
+          "properties": {
+            "stateId": "ENTRY",
+            "text": "Erik helps Jondalar demonstrate that danger can come from more than one direction. Prepare your equipment before beginning the lesson.",
+            "options": [
+              {
+                "class": "CDialogOption",
+                "properties": {
+                  "number": 0,
+                  "text": "Talk.",
+                  "nextStateId": "ENTRY",
+                  "action": "talk",
+                  "actionLabel": "Talk."
+                }
+              },
+              {
+                "class": "CDialogOption",
+                "properties": {
+                  "number": 1,
+                  "text": "Threaten and attack.",
+                  "nextStateId": "ENTRY",
+                  "action": "attack",
+                  "actionLabel": "Threaten and attack."
+                }
+              },
+              {
+                "class": "CDialogOption",
+                "properties": {
+                  "number": 2,
+                  "text": "Leave.",
+                  "nextStateId": "EXIT"
+                }
+              }
+            ]
+          }
+        }
+      ]
+    }
+  },
+  "chanterDialog": {
+    "class": "CandlekeepDialog",
+    "properties": {
+      "actorId": "chanter",
+      "talkText": "The Chanter leads the monks in a warning of coming chaos, a dead god's children, and a crisis that will shake the coast.",
+      "states": [
+        {
+          "class": "CDialogState",
+          "properties": {
+            "stateId": "ENTRY",
+            "text": "The Chanter leads the monks in a warning of coming chaos, a dead god's children, and a crisis that will shake the coast.",
+            "options": [
+              {
+                "class": "CDialogOption",
+                "properties": {
+                  "number": 0,
+                  "text": "Talk.",
+                  "nextStateId": "ENTRY",
+                  "action": "talk",
+                  "actionLabel": "Talk."
+                }
+              },
+              {
+                "class": "CDialogOption",
+                "properties": {
+                  "number": 1,
+                  "text": "Threaten and attack.",
+                  "nextStateId": "ENTRY",
+                  "action": "attack",
+                  "actionLabel": "Threaten and attack."
+                }
+              },
+              {
+                "class": "CDialogOption",
+                "properties": {
+                  "number": 2,
+                  "text": "Leave.",
+                  "nextStateId": "EXIT"
+                }
+              }
+            ]
+          }
+        }
+      ]
+    }
+  },
+  "voiceNorthDialog": {
+    "class": "CandlekeepDialog",
+    "properties": {
+      "actorId": "voiceNorth",
+      "talkText": "The northern voice answers: the old powers are fading, and their legacy will not lie quietly.",
+      "states": [
+        {
+          "class": "CDialogState",
+          "properties": {
+            "stateId": "ENTRY",
+            "text": "The northern voice answers: the old powers are fading, and their legacy will not lie quietly.",
+            "options": [
+              {
+                "class": "CDialogOption",
+                "properties": {
+                  "number": 0,
+                  "text": "Talk.",
+                  "nextStateId": "ENTRY",
+                  "action": "talk",
+                  "actionLabel": "Talk."
+                }
+              },
+              {
+                "class": "CDialogOption",
+                "properties": {
+                  "number": 1,
+                  "text": "Threaten and attack.",
+                  "nextStateId": "ENTRY",
+                  "action": "attack",
+                  "actionLabel": "Threaten and attack."
+                }
+              },
+              {
+                "class": "CDialogOption",
+                "properties": {
+                  "number": 2,
+                  "text": "Leave.",
+                  "nextStateId": "EXIT"
+                }
+              }
+            ]
+          }
+        }
+      ]
+    }
+  },
+  "voiceSouthDialog": {
+    "class": "CandlekeepDialog",
+    "properties": {
+      "actorId": "voiceSouth",
+      "talkText": "The southern voice warns that the children of the dead god will walk among ordinary folk.",
+      "states": [
+        {
+          "class": "CDialogState",
+          "properties": {
+            "stateId": "ENTRY",
+            "text": "The southern voice warns that the children of the dead god will walk among ordinary folk.",
+            "options": [
+              {
+                "class": "CDialogOption",
+                "properties": {
+                  "number": 0,
+                  "text": "Talk.",
+                  "nextStateId": "ENTRY",
+                  "action": "talk",
+                  "actionLabel": "Talk."
+                }
+              },
+              {
+                "class": "CDialogOption",
+                "properties": {
+                  "number": 1,
+                  "text": "Threaten and attack.",
+                  "nextStateId": "ENTRY",
+                  "action": "attack",
+                  "actionLabel": "Threaten and attack."
+                }
+              },
+              {
+                "class": "CDialogOption",
+                "properties": {
+                  "number": 2,
+                  "text": "Leave.",
+                  "nextStateId": "EXIT"
+                }
+              }
+            ]
+          }
+        }
+      ]
+    }
+  },
+  "voiceEastDialog": {
+    "class": "CandlekeepDialog",
+    "properties": {
+      "actorId": "voiceEast",
+      "talkText": "The eastern voice speaks of conflict spreading wherever those children gather.",
+      "states": [
+        {
+          "class": "CDialogState",
+          "properties": {
+            "stateId": "ENTRY",
+            "text": "The eastern voice speaks of conflict spreading wherever those children gather.",
+            "options": [
+              {
+                "class": "CDialogOption",
+                "properties": {
+                  "number": 0,
+                  "text": "Talk.",
+                  "nextStateId": "ENTRY",
+                  "action": "talk",
+                  "actionLabel": "Talk."
+                }
+              },
+              {
+                "class": "CDialogOption",
+                "properties": {
+                  "number": 1,
+                  "text": "Threaten and attack.",
+                  "nextStateId": "ENTRY",
+                  "action": "attack",
+                  "actionLabel": "Threaten and attack."
+                }
+              },
+              {
+                "class": "CDialogOption",
+                "properties": {
+                  "number": 2,
+                  "text": "Leave.",
+                  "nextStateId": "EXIT"
+                }
+              }
+            ]
+          }
+        }
+      ]
+    }
+  },
+  "voiceWestDialog": {
+    "class": "CandlekeepDialog",
+    "properties": {
+      "actorId": "voiceWest",
+      "talkText": "The western voice asks who will remain when the prophecy has run its course.",
+      "states": [
+        {
+          "class": "CDialogState",
+          "properties": {
+            "stateId": "ENTRY",
+            "text": "The western voice asks who will remain when the prophecy has run its course.",
+            "options": [
+              {
+                "class": "CDialogOption",
+                "properties": {
+                  "number": 0,
+                  "text": "Talk.",
+                  "nextStateId": "ENTRY",
+                  "action": "talk",
+                  "actionLabel": "Talk."
+                }
+              },
+              {
+                "class": "CDialogOption",
+                "properties": {
+                  "number": 1,
+                  "text": "Threaten and attack.",
+                  "nextStateId": "ENTRY",
+                  "action": "attack",
+                  "actionLabel": "Threaten and attack."
+                }
+              },
+              {
+                "class": "CDialogOption",
+                "properties": {
+                  "number": 2,
+                  "text": "Leave.",
+                  "nextStateId": "EXIT"
+                }
+              }
+            ]
+          }
+        }
+      ]
+    }
+  },
+  "tutor1Dialog": {
+    "class": "CandlekeepDialog",
+    "properties": {
+      "actorId": "tutor1",
+      "talkText": "The tutors explain the local rules and the parts of the game screen. Talk to each green-robed tutor at your own pace.",
+      "states": [
+        {
+          "class": "CDialogState",
+          "properties": {
+            "stateId": "ENTRY",
+            "text": "The tutors explain the local rules and the parts of the game screen. Talk to each green-robed tutor at your own pace.",
+            "options": [
+              {
+                "class": "CDialogOption",
+                "properties": {
+                  "number": 0,
+                  "text": "Talk.",
+                  "nextStateId": "ENTRY",
+                  "action": "talk",
+                  "actionLabel": "Talk."
+                }
+              },
+              {
+                "class": "CDialogOption",
+                "properties": {
+                  "number": 1,
+                  "text": "Leave.",
+                  "nextStateId": "EXIT"
+                }
+              }
+            ]
+          }
+        }
+      ],
+      "topic": "intro"
+    }
+  },
+  "tutor2Dialog": {
+    "class": "CandlekeepDialog",
+    "properties": {
+      "actorId": "tutor2",
+      "talkText": "Residents are friendly until threatened. Red or hostile creatures fight when you enter their cell; shared affiliation marks temporary allies.",
+      "states": [
+        {
+          "class": "CDialogState",
+          "properties": {
+            "stateId": "ENTRY",
+            "text": "Residents are friendly until threatened. Red or hostile creatures fight when you enter their cell; shared affiliation marks temporary allies.",
+            "options": [
+              {
+                "class": "CDialogOption",
+                "properties": {
+                  "number": 0,
+                  "text": "Talk.",
+                  "nextStateId": "ENTRY",
+                  "action": "talk",
+                  "actionLabel": "Talk."
+                }
+              },
+              {
+                "class": "CDialogOption",
+                "properties": {
+                  "number": 1,
+                  "text": "Leave.",
+                  "nextStateId": "EXIT"
+                }
+              }
+            ]
+          }
+        }
+      ],
+      "topic": "allegiance"
+    }
+  },
+  "tutor3Dialog": {
+    "class": "CandlekeepDialog",
+    "properties": {
+      "actorId": "tutor3",
+      "talkText": "Open inventory with i. Equip weapons and armor in matching slots; carried quest items remain in your backpack.",
+      "states": [
+        {
+          "class": "CDialogState",
+          "properties": {
+            "stateId": "ENTRY",
+            "text": "Open inventory with i. Equip weapons and armor in matching slots; carried quest items remain in your backpack.",
+            "options": [
+              {
+                "class": "CDialogOption",
+                "properties": {
+                  "number": 0,
+                  "text": "Talk.",
+                  "nextStateId": "ENTRY",
+                  "action": "talk",
+                  "actionLabel": "Talk."
+                }
+              },
+              {
+                "class": "CDialogOption",
+                "properties": {
+                  "number": 1,
+                  "text": "Leave.",
+                  "nextStateId": "EXIT"
+                }
+              }
+            ]
+          }
+        }
+      ],
+      "topic": "inventory"
+    }
+  },
+  "tutor4Dialog": {
+    "class": "CandlekeepDialog",
+    "properties": {
+      "actorId": "tutor4",
+      "talkText": "Open the character panel with c. Native Strength, Agility, Stamina and Intelligence include equipment and active effects.",
+      "states": [
+        {
+          "class": "CDialogState",
+          "properties": {
+            "stateId": "ENTRY",
+            "text": "Open the character panel with c. Native Strength, Agility, Stamina and Intelligence include equipment and active effects.",
+            "options": [
+              {
+                "class": "CDialogOption",
+                "properties": {
+                  "number": 0,
+                  "text": "Talk.",
+                  "nextStateId": "ENTRY",
+                  "action": "talk",
+                  "actionLabel": "Talk."
+                }
+              },
+              {
+                "class": "CDialogOption",
+                "properties": {
+                  "number": 1,
+                  "text": "Leave.",
+                  "nextStateId": "EXIT"
+                }
+              }
+            ]
+          }
+        }
+      ],
+      "topic": "status"
+    }
+  },
+  "tutor5Dialog": {
+    "class": "CandlekeepDialog",
+    "properties": {
+      "actorId": "tutor5",
+      "talkText": "Keep useful potions and abilities close at hand. Native action selection replaces the original game's quick-slot bar.",
+      "states": [
+        {
+          "class": "CDialogState",
+          "properties": {
+            "stateId": "ENTRY",
+            "text": "Keep useful potions and abilities close at hand. Native action selection replaces the original game's quick-slot bar.",
+            "options": [
+              {
+                "class": "CDialogOption",
+                "properties": {
+                  "number": 0,
+                  "text": "Talk.",
+                  "nextStateId": "ENTRY",
+                  "action": "talk",
+                  "actionLabel": "Talk."
+                }
+              },
+              {
+                "class": "CDialogOption",
+                "properties": {
+                  "number": 1,
+                  "text": "Leave.",
+                  "nextStateId": "EXIT"
+                }
+              }
+            ]
+          }
+        }
+      ],
+      "topic": "quickslots"
+    }
+  },
+  "tutor6Dialog": {
+    "class": "CandlekeepDialog",
+    "properties": {
+      "actorId": "tutor6",
+      "talkText": "The open-air temple identifies marked items, accepts donations and sells healing. The infirmary offers a separate potion gift.",
+      "states": [
+        {
+          "class": "CDialogState",
+          "properties": {
+            "stateId": "ENTRY",
+            "text": "The open-air temple identifies marked items, accepts donations and sells healing. The infirmary offers a separate potion gift.",
+            "options": [
+              {
+                "class": "CDialogOption",
+                "properties": {
+                  "number": 0,
+                  "text": "Talk.",
+                  "nextStateId": "ENTRY",
+                  "action": "talk",
+                  "actionLabel": "Talk."
+                }
+              },
+              {
+                "class": "CDialogOption",
+                "properties": {
+                  "number": 1,
+                  "text": "Leave.",
+                  "nextStateId": "EXIT"
+                }
+              }
+            ]
+          }
+        }
+      ],
+      "topic": "temple"
+    }
+  },
+  "tutor7Dialog": {
+    "class": "CandlekeepDialog",
+    "properties": {
+      "actorId": "tutor7",
+      "talkText": "Press s to save. Quest stages, containers, conversations, the current floor and training state travel with this map.",
+      "states": [
+        {
+          "class": "CDialogState",
+          "properties": {
+            "stateId": "ENTRY",
+            "text": "Press s to save. Quest stages, containers, conversations, the current floor and training state travel with this map.",
+            "options": [
+              {
+                "class": "CDialogOption",
+                "properties": {
+                  "number": 0,
+                  "text": "Talk.",
+                  "nextStateId": "ENTRY",
+                  "action": "talk",
+                  "actionLabel": "Talk."
+                }
+              },
+              {
+                "class": "CDialogOption",
+                "properties": {
+                  "number": 1,
+                  "text": "Leave.",
+                  "nextStateId": "EXIT"
+                }
+              }
+            ]
+          }
+        }
+      ],
+      "topic": "saving"
+    }
+  },
+  "tutor8Dialog": {
+    "class": "CandlekeepDialog",
+    "properties": {
+      "actorId": "tutor8",
+      "talkText": "Press j to review active and completed errands. Each request begins when you explicitly accept it.",
+      "states": [
+        {
+          "class": "CDialogState",
+          "properties": {
+            "stateId": "ENTRY",
+            "text": "Press j to review active and completed errands. Each request begins when you explicitly accept it.",
+            "options": [
+              {
+                "class": "CDialogOption",
+                "properties": {
+                  "number": 0,
+                  "text": "Talk.",
+                  "nextStateId": "ENTRY",
+                  "action": "talk",
+                  "actionLabel": "Talk."
+                }
+              },
+              {
+                "class": "CDialogOption",
+                "properties": {
+                  "number": 1,
+                  "text": "Leave.",
+                  "nextStateId": "EXIT"
+                }
+              }
+            ]
+          }
+        }
+      ],
+      "topic": "journal"
+    }
+  },
+  "tutor9Dialog": {
+    "class": "CandlekeepDialog",
+    "properties": {
+      "actorId": "tutor9",
+      "talkText": "Sorcerers and other heroes use their native actions and mana. Watch costs and targets; some scrolls here are preserved as readable manuscripts.",
+      "states": [
+        {
+          "class": "CDialogState",
+          "properties": {
+            "stateId": "ENTRY",
+            "text": "Sorcerers and other heroes use their native actions and mana. Watch costs and targets; some scrolls here are preserved as readable manuscripts.",
+            "options": [
+              {
+                "class": "CDialogOption",
+                "properties": {
+                  "number": 0,
+                  "text": "Talk.",
+                  "nextStateId": "ENTRY",
+                  "action": "talk",
+                  "actionLabel": "Talk."
+                }
+              },
+              {
+                "class": "CDialogOption",
+                "properties": {
+                  "number": 1,
+                  "text": "Leave.",
+                  "nextStateId": "EXIT"
+                }
+              }
+            ]
+          }
+        }
+      ],
+      "topic": "spells"
+    }
+  },
+  "tutor10Dialog": {
+    "class": "CandlekeepDialog",
+    "properties": {
+      "actorId": "tutor10",
+      "talkText": "Theft checks current Agility against a fixed threshold. Locks use Agility 12, 16 or 18; forcing uses Strength 12 or 14. Ownership still matters.",
+      "states": [
+        {
+          "class": "CDialogState",
+          "properties": {
+            "stateId": "ENTRY",
+            "text": "Theft checks current Agility against a fixed threshold. Locks use Agility 12, 16 or 18; forcing uses Strength 12 or 14. Ownership still matters.",
+            "options": [
+              {
+                "class": "CDialogOption",
+                "properties": {
+                  "number": 0,
+                  "text": "Talk.",
+                  "nextStateId": "ENTRY",
+                  "action": "talk",
+                  "actionLabel": "Talk."
+                }
+              },
+              {
+                "class": "CDialogOption",
+                "properties": {
+                  "number": 1,
+                  "text": "Leave.",
+                  "nextStateId": "EXIT"
+                }
+              }
+            ]
+          }
+        }
+      ],
+      "topic": "thieving"
+    }
+  },
+  "tutor11Dialog": {
+    "class": "CandlekeepDialog",
+    "properties": {
+      "actorId": "tutor11",
+      "talkText": "Your existing hero class determines your native abilities. This scenario adds no extra Baldur's Gate character setup.",
+      "states": [
+        {
+          "class": "CDialogState",
+          "properties": {
+            "stateId": "ENTRY",
+            "text": "Your existing hero class determines your native abilities. This scenario adds no extra Baldur's Gate character setup.",
+            "options": [
+              {
+                "class": "CDialogOption",
+                "properties": {
+                  "number": 0,
+                  "text": "Talk.",
+                  "nextStateId": "ENTRY",
+                  "action": "talk",
+                  "actionLabel": "Talk."
+                }
+              },
+              {
+                "class": "CDialogOption",
+                "properties": {
+                  "number": 1,
+                  "text": "Leave.",
+                  "nextStateId": "EXIT"
+                }
+              }
+            ]
+          }
+        }
+      ],
+      "topic": "classabilities"
+    }
+  },
+  "tutor12Dialog": {
+    "class": "CandlekeepDialog",
+    "properties": {
+      "actorId": "tutor12",
+      "talkText": "Move into a hostile creature's cell to begin native combat. Victories resolve through the engine and return you to the approach cell.",
+      "states": [
+        {
+          "class": "CDialogState",
+          "properties": {
+            "stateId": "ENTRY",
+            "text": "Move into a hostile creature's cell to begin native combat. Victories resolve through the engine and return you to the approach cell.",
+            "options": [
+              {
+                "class": "CDialogOption",
+                "properties": {
+                  "number": 0,
+                  "text": "Talk.",
+                  "nextStateId": "ENTRY",
+                  "action": "talk",
+                  "actionLabel": "Talk."
+                }
+              },
+              {
+                "class": "CDialogOption",
+                "properties": {
+                  "number": 1,
+                  "text": "Leave.",
+                  "nextStateId": "EXIT"
+                }
+              }
+            ]
+          }
+        }
+      ],
+      "topic": "fighting"
+    }
+  },
+  "tutor13Dialog": {
+    "class": "CandlekeepDialog",
+    "properties": {
+      "actorId": "tutor13",
+      "talkText": "Winthrop sells fixed bundles and equipment for gold. Purchases can fail for insufficient money or exhausted stock; nothing is granted on failure.",
+      "states": [
+        {
+          "class": "CDialogState",
+          "properties": {
+            "stateId": "ENTRY",
+            "text": "Winthrop sells fixed bundles and equipment for gold. Purchases can fail for insufficient money or exhausted stock; nothing is granted on failure.",
+            "options": [
+              {
+                "class": "CDialogOption",
+                "properties": {
+                  "number": 0,
+                  "text": "Talk.",
+                  "nextStateId": "ENTRY",
+                  "action": "talk",
+                  "actionLabel": "Talk."
+                }
+              },
+              {
+                "class": "CDialogOption",
+                "properties": {
+                  "number": 1,
+                  "text": "Leave.",
+                  "nextStateId": "EXIT"
+                }
+              }
+            ]
+          }
+        }
+      ],
+      "topic": "merchants"
+    }
+  },
+  "tutor14Dialog": {
+    "class": "CandlekeepDialog",
+    "properties": {
+      "actorId": "tutor14",
+      "talkText": "Step onto a marked entrance or stairway to enter its paired interior. Door navigation edges connect floors, so ordinary click-to-walk can use them.",
+      "states": [
+        {
+          "class": "CDialogState",
+          "properties": {
+            "stateId": "ENTRY",
+            "text": "Step onto a marked entrance or stairway to enter its paired interior. Door navigation edges connect floors, so ordinary click-to-walk can use them.",
+            "options": [
+              {
+                "class": "CDialogOption",
+                "properties": {
+                  "number": 0,
+                  "text": "Talk.",
+                  "nextStateId": "ENTRY",
+                  "action": "talk",
+                  "actionLabel": "Talk."
+                }
+              },
+              {
+                "class": "CDialogOption",
+                "properties": {
+                  "number": 1,
+                  "text": "Leave.",
+                  "nextStateId": "EXIT"
+                }
+              }
+            ]
+          }
+        }
+      ],
+      "topic": "doors"
+    }
+  },
+  "hullChestDialog": {
+    "class": "CandlekeepDialog",
+    "properties": {
+      "actorId": "hullChest",
+      "talkText": "Hull's chest. The container is unlocked. These belongings have an owner. Hull's or Dreppin's accepted errand gives permission to take the sword and antidote.",
+      "states": [
+        {
+          "class": "CDialogState",
+          "properties": {
+            "stateId": "ENTRY",
+            "text": "Hull's chest. The container is unlocked. These belongings have an owner. Hull's or Dreppin's accepted errand gives permission to take the sword and antidote.",
+            "options": [
+              {
+                "class": "CDialogOption",
+                "properties": {
+                  "number": 0,
+                  "text": "Take the contents with permission.",
+                  "nextStateId": "ENTRY",
+                  "action": "openContainer",
+                  "actionLabel": "Take the contents with permission.",
+                  "condition": "canOpen"
+                }
+              },
+              {
+                "class": "CDialogOption",
+                "properties": {
+                  "number": 1,
+                  "text": "Pick the lock.",
+                  "nextStateId": "ENTRY",
+                  "action": "unlockContainer",
+                  "actionLabel": "Pick the lock.",
+                  "condition": "canUnlock"
+                }
+              },
+              {
+                "class": "CDialogOption",
+                "properties": {
+                  "number": 2,
+                  "text": "Force the lock.",
+                  "nextStateId": "ENTRY",
+                  "action": "forceContainer",
+                  "actionLabel": "Force the lock.",
+                  "condition": "canForce"
+                }
+              },
+              {
+                "class": "CDialogOption",
+                "properties": {
+                  "number": 3,
+                  "text": "Take the contents without permission.",
+                  "nextStateId": "ENTRY",
+                  "action": "stealContainer",
+                  "actionLabel": "Take the contents without permission.",
+                  "condition": "canOpen"
+                }
+              },
+              {
+                "class": "CDialogOption",
+                "properties": {
+                  "number": 4,
+                  "text": "Leave.",
+                  "nextStateId": "EXIT"
+                }
+              }
+            ]
+          }
+        }
+      ]
+    }
+  },
+  "phlydiaHayDialog": {
+    "class": "CandlekeepDialog",
+    "properties": {
+      "actorId": "phlydiaHay",
+      "talkText": "Dreppin's haystack. The container is unlocked.",
+      "states": [
+        {
+          "class": "CDialogState",
+          "properties": {
+            "stateId": "ENTRY",
+            "text": "Dreppin's haystack. The container is unlocked.",
+            "options": [
+              {
+                "class": "CDialogOption",
+                "properties": {
+                  "number": 0,
+                  "text": "Take the contents.",
+                  "nextStateId": "ENTRY",
+                  "action": "openContainer",
+                  "actionLabel": "Take the contents.",
+                  "condition": "canOpen"
+                }
+              },
+              {
+                "class": "CDialogOption",
+                "properties": {
+                  "number": 1,
+                  "text": "Pick the lock.",
+                  "nextStateId": "ENTRY",
+                  "action": "unlockContainer",
+                  "actionLabel": "Pick the lock.",
+                  "condition": "canUnlock"
+                }
+              },
+              {
+                "class": "CDialogOption",
+                "properties": {
+                  "number": 2,
+                  "text": "Force the lock.",
+                  "nextStateId": "ENTRY",
+                  "action": "forceContainer",
+                  "actionLabel": "Force the lock.",
+                  "condition": "canForce"
+                }
+              },
+              {
+                "class": "CDialogOption",
+                "properties": {
+                  "number": 3,
+                  "text": "Leave.",
+                  "nextStateId": "EXIT"
+                }
+              }
+            ]
+          }
+        }
+      ]
+    }
+  },
+  "innOfficeDialog": {
+    "class": "CandlekeepDialog",
+    "properties": {
+      "actorId": "innOffice",
+      "talkText": "Inn office cupboard. The lock requires Agility 12 or Strength 12. These belongings have an owner. Detected theft or forced entry brings the Watch.",
+      "states": [
+        {
+          "class": "CDialogState",
+          "properties": {
+            "stateId": "ENTRY",
+            "text": "Inn office cupboard. The lock requires Agility 12 or Strength 12. These belongings have an owner. Detected theft or forced entry brings the Watch.",
+            "options": [
+              {
+                "class": "CDialogOption",
+                "properties": {
+                  "number": 0,
+                  "text": "Pick the lock.",
+                  "nextStateId": "ENTRY",
+                  "action": "unlockContainer",
+                  "actionLabel": "Pick the lock.",
+                  "condition": "canUnlock"
+                }
+              },
+              {
+                "class": "CDialogOption",
+                "properties": {
+                  "number": 1,
+                  "text": "Force the lock.",
+                  "nextStateId": "ENTRY",
+                  "action": "forceContainer",
+                  "actionLabel": "Force the lock.",
+                  "condition": "canForce"
+                }
+              },
+              {
+                "class": "CDialogOption",
+                "properties": {
+                  "number": 2,
+                  "text": "Take the contents without permission.",
+                  "nextStateId": "ENTRY",
+                  "action": "stealContainer",
+                  "actionLabel": "Take the contents without permission.",
+                  "condition": "canOpen"
+                }
+              },
+              {
+                "class": "CDialogOption",
+                "properties": {
+                  "number": 3,
+                  "text": "Leave.",
+                  "nextStateId": "EXIT"
+                }
+              }
+            ]
+          }
+        }
+      ]
+    }
+  },
+  "innSapphireDrawerDialog": {
+    "class": "CandlekeepDialog",
+    "properties": {
+      "actorId": "innSapphireDrawer",
+      "talkText": "Inn sapphire drawer. The lock requires Agility 18 or Strength 14. These belongings have an owner. Detected theft or forced entry brings the Watch.",
+      "states": [
+        {
+          "class": "CDialogState",
+          "properties": {
+            "stateId": "ENTRY",
+            "text": "Inn sapphire drawer. The lock requires Agility 18 or Strength 14. These belongings have an owner. Detected theft or forced entry brings the Watch.",
+            "options": [
+              {
+                "class": "CDialogOption",
+                "properties": {
+                  "number": 0,
+                  "text": "Pick the lock.",
+                  "nextStateId": "ENTRY",
+                  "action": "unlockContainer",
+                  "actionLabel": "Pick the lock.",
+                  "condition": "canUnlock"
+                }
+              },
+              {
+                "class": "CDialogOption",
+                "properties": {
+                  "number": 1,
+                  "text": "Force the lock.",
+                  "nextStateId": "ENTRY",
+                  "action": "forceContainer",
+                  "actionLabel": "Force the lock.",
+                  "condition": "canForce"
+                }
+              },
+              {
+                "class": "CDialogOption",
+                "properties": {
+                  "number": 2,
+                  "text": "Take the contents without permission.",
+                  "nextStateId": "ENTRY",
+                  "action": "stealContainer",
+                  "actionLabel": "Take the contents without permission.",
+                  "condition": "canOpen"
+                }
+              },
+              {
+                "class": "CDialogOption",
+                "properties": {
+                  "number": 3,
+                  "text": "Leave.",
+                  "nextStateId": "EXIT"
+                }
+              }
+            ]
+          }
+        }
+      ]
+    }
+  },
+  "innClarityDrawerDialog": {
+    "class": "CandlekeepDialog",
+    "properties": {
+      "actorId": "innClarityDrawer",
+      "talkText": "Inn clarity potion drawer. The lock requires Agility 16 or Strength 12.",
+      "states": [
+        {
+          "class": "CDialogState",
+          "properties": {
+            "stateId": "ENTRY",
+            "text": "Inn clarity potion drawer. The lock requires Agility 16 or Strength 12.",
+            "options": [
+              {
+                "class": "CDialogOption",
+                "properties": {
+                  "number": 0,
+                  "text": "Take the contents.",
+                  "nextStateId": "ENTRY",
+                  "action": "openContainer",
+                  "actionLabel": "Take the contents.",
+                  "condition": "canOpen"
+                }
+              },
+              {
+                "class": "CDialogOption",
+                "properties": {
+                  "number": 1,
+                  "text": "Pick the lock.",
+                  "nextStateId": "ENTRY",
+                  "action": "unlockContainer",
+                  "actionLabel": "Pick the lock.",
+                  "condition": "canUnlock"
+                }
+              },
+              {
+                "class": "CDialogOption",
+                "properties": {
+                  "number": 2,
+                  "text": "Force the lock.",
+                  "nextStateId": "ENTRY",
+                  "action": "forceContainer",
+                  "actionLabel": "Force the lock.",
+                  "condition": "canForce"
+                }
+              },
+              {
+                "class": "CDialogOption",
+                "properties": {
+                  "number": 3,
+                  "text": "Leave.",
+                  "nextStateId": "EXIT"
+                }
+              }
+            ]
+          }
+        }
+      ]
+    }
+  },
+  "innJewelryDrawerDialog": {
+    "class": "CandlekeepDialog",
+    "properties": {
+      "actorId": "innJewelryDrawer",
+      "talkText": "Inn jewelry drawer. The lock requires Agility 16 or Strength 12. These belongings have an owner. Taking them alerts the Watch.",
+      "states": [
+        {
+          "class": "CDialogState",
+          "properties": {
+            "stateId": "ENTRY",
+            "text": "Inn jewelry drawer. The lock requires Agility 16 or Strength 12. These belongings have an owner. Taking them alerts the Watch.",
+            "options": [
+              {
+                "class": "CDialogOption",
+                "properties": {
+                  "number": 0,
+                  "text": "Pick the lock.",
+                  "nextStateId": "ENTRY",
+                  "action": "unlockContainer",
+                  "actionLabel": "Pick the lock.",
+                  "condition": "canUnlock"
+                }
+              },
+              {
+                "class": "CDialogOption",
+                "properties": {
+                  "number": 1,
+                  "text": "Force the lock.",
+                  "nextStateId": "ENTRY",
+                  "action": "forceContainer",
+                  "actionLabel": "Force the lock.",
+                  "condition": "canForce"
+                }
+              },
+              {
+                "class": "CDialogOption",
+                "properties": {
+                  "number": 2,
+                  "text": "Take the contents without permission.",
+                  "nextStateId": "ENTRY",
+                  "action": "stealContainer",
+                  "actionLabel": "Take the contents without permission.",
+                  "condition": "canOpen"
+                }
+              },
+              {
+                "class": "CDialogOption",
+                "properties": {
+                  "number": 3,
+                  "text": "Leave.",
+                  "nextStateId": "EXIT"
+                }
+              }
+            ]
+          }
+        }
+      ]
+    }
+  },
+  "priestChestDialog": {
+    "class": "CandlekeepDialog",
+    "properties": {
+      "actorId": "priestChest",
+      "talkText": "Priests' quarters chest. The lock requires Agility 16 or Strength 12. These belongings have an owner. Taking them alerts the Watch.",
+      "states": [
+        {
+          "class": "CDialogState",
+          "properties": {
+            "stateId": "ENTRY",
+            "text": "Priests' quarters chest. The lock requires Agility 16 or Strength 12. These belongings have an owner. Taking them alerts the Watch.",
+            "options": [
+              {
+                "class": "CDialogOption",
+                "properties": {
+                  "number": 0,
+                  "text": "Pick the lock.",
+                  "nextStateId": "ENTRY",
+                  "action": "unlockContainer",
+                  "actionLabel": "Pick the lock.",
+                  "condition": "canUnlock"
+                }
+              },
+              {
+                "class": "CDialogOption",
+                "properties": {
+                  "number": 1,
+                  "text": "Force the lock.",
+                  "nextStateId": "ENTRY",
+                  "action": "forceContainer",
+                  "actionLabel": "Force the lock.",
+                  "condition": "canForce"
+                }
+              },
+              {
+                "class": "CDialogOption",
+                "properties": {
+                  "number": 2,
+                  "text": "Take the contents without permission.",
+                  "nextStateId": "ENTRY",
+                  "action": "stealContainer",
+                  "actionLabel": "Take the contents without permission.",
+                  "condition": "canOpen"
+                }
+              },
+              {
+                "class": "CDialogOption",
+                "properties": {
+                  "number": 3,
+                  "text": "Leave.",
+                  "nextStateId": "EXIT"
+                }
+              }
+            ]
+          }
+        }
+      ]
+    }
+  },
+  "northwestBarrelDialog": {
+    "class": "CandlekeepDialog",
+    "properties": {
+      "actorId": "northwestBarrel",
+      "talkText": "Northwest storehouse barrel. The container is unlocked.",
+      "states": [
+        {
+          "class": "CDialogState",
+          "properties": {
+            "stateId": "ENTRY",
+            "text": "Northwest storehouse barrel. The container is unlocked.",
+            "options": [
+              {
+                "class": "CDialogOption",
+                "properties": {
+                  "number": 0,
+                  "text": "Take the contents.",
+                  "nextStateId": "ENTRY",
+                  "action": "openContainer",
+                  "actionLabel": "Take the contents.",
+                  "condition": "canOpen"
+                }
+              },
+              {
+                "class": "CDialogOption",
+                "properties": {
+                  "number": 1,
+                  "text": "Pick the lock.",
+                  "nextStateId": "ENTRY",
+                  "action": "unlockContainer",
+                  "actionLabel": "Pick the lock.",
+                  "condition": "canUnlock"
+                }
+              },
+              {
+                "class": "CDialogOption",
+                "properties": {
+                  "number": 2,
+                  "text": "Force the lock.",
+                  "nextStateId": "ENTRY",
+                  "action": "forceContainer",
+                  "actionLabel": "Force the lock.",
+                  "condition": "canForce"
+                }
+              },
+              {
+                "class": "CDialogOption",
+                "properties": {
+                  "number": 3,
+                  "text": "Leave.",
+                  "nextStateId": "EXIT"
+                }
+              }
+            ]
+          }
+        }
+      ]
+    }
+  },
+  "bunkhouseBarrelDialog": {
+    "class": "CandlekeepDialog",
+    "properties": {
+      "actorId": "bunkhouseBarrel",
+      "talkText": "Trunk outside the bunkhouse. The container is unlocked.",
+      "states": [
+        {
+          "class": "CDialogState",
+          "properties": {
+            "stateId": "ENTRY",
+            "text": "Trunk outside the bunkhouse. The container is unlocked.",
+            "options": [
+              {
+                "class": "CDialogOption",
+                "properties": {
+                  "number": 0,
+                  "text": "Take the contents.",
+                  "nextStateId": "ENTRY",
+                  "action": "openContainer",
+                  "actionLabel": "Take the contents.",
+                  "condition": "canOpen"
+                }
+              },
+              {
+                "class": "CDialogOption",
+                "properties": {
+                  "number": 1,
+                  "text": "Pick the lock.",
+                  "nextStateId": "ENTRY",
+                  "action": "unlockContainer",
+                  "actionLabel": "Pick the lock.",
+                  "condition": "canUnlock"
+                }
+              },
+              {
+                "class": "CDialogOption",
+                "properties": {
+                  "number": 2,
+                  "text": "Force the lock.",
+                  "nextStateId": "ENTRY",
+                  "action": "forceContainer",
+                  "actionLabel": "Force the lock.",
+                  "condition": "canForce"
+                }
+              },
+              {
+                "class": "CDialogOption",
+                "properties": {
+                  "number": 3,
+                  "text": "Leave.",
+                  "nextStateId": "EXIT"
+                }
+              }
+            ]
+          }
+        }
+      ]
+    }
+  },
+  "barracksChest1Dialog": {
+    "class": "CandlekeepDialog",
+    "properties": {
+      "actorId": "barracksChest1",
+      "talkText": "Barracks chest 1. The lock requires Agility 16 or Strength 12. These belongings have an owner. Detected theft or forced entry brings the Watch.",
+      "states": [
+        {
+          "class": "CDialogState",
+          "properties": {
+            "stateId": "ENTRY",
+            "text": "Barracks chest 1. The lock requires Agility 16 or Strength 12. These belongings have an owner. Detected theft or forced entry brings the Watch.",
+            "options": [
+              {
+                "class": "CDialogOption",
+                "properties": {
+                  "number": 0,
+                  "text": "Pick the lock.",
+                  "nextStateId": "ENTRY",
+                  "action": "unlockContainer",
+                  "actionLabel": "Pick the lock.",
+                  "condition": "canUnlock"
+                }
+              },
+              {
+                "class": "CDialogOption",
+                "properties": {
+                  "number": 1,
+                  "text": "Force the lock.",
+                  "nextStateId": "ENTRY",
+                  "action": "forceContainer",
+                  "actionLabel": "Force the lock.",
+                  "condition": "canForce"
+                }
+              },
+              {
+                "class": "CDialogOption",
+                "properties": {
+                  "number": 2,
+                  "text": "Take the contents without permission.",
+                  "nextStateId": "ENTRY",
+                  "action": "stealContainer",
+                  "actionLabel": "Take the contents without permission.",
+                  "condition": "canOpen"
+                }
+              },
+              {
+                "class": "CDialogOption",
+                "properties": {
+                  "number": 3,
+                  "text": "Leave.",
+                  "nextStateId": "EXIT"
+                }
+              }
+            ]
+          }
+        }
+      ]
+    }
+  },
+  "barracksChest2Dialog": {
+    "class": "CandlekeepDialog",
+    "properties": {
+      "actorId": "barracksChest2",
+      "talkText": "Barracks chest 2. The lock requires Agility 16 or Strength 12. These belongings have an owner. Detected theft or forced entry brings the Watch.",
+      "states": [
+        {
+          "class": "CDialogState",
+          "properties": {
+            "stateId": "ENTRY",
+            "text": "Barracks chest 2. The lock requires Agility 16 or Strength 12. These belongings have an owner. Detected theft or forced entry brings the Watch.",
+            "options": [
+              {
+                "class": "CDialogOption",
+                "properties": {
+                  "number": 0,
+                  "text": "Pick the lock.",
+                  "nextStateId": "ENTRY",
+                  "action": "unlockContainer",
+                  "actionLabel": "Pick the lock.",
+                  "condition": "canUnlock"
+                }
+              },
+              {
+                "class": "CDialogOption",
+                "properties": {
+                  "number": 1,
+                  "text": "Force the lock.",
+                  "nextStateId": "ENTRY",
+                  "action": "forceContainer",
+                  "actionLabel": "Force the lock.",
+                  "condition": "canForce"
+                }
+              },
+              {
+                "class": "CDialogOption",
+                "properties": {
+                  "number": 2,
+                  "text": "Take the contents without permission.",
+                  "nextStateId": "ENTRY",
+                  "action": "stealContainer",
+                  "actionLabel": "Take the contents without permission.",
+                  "condition": "canOpen"
+                }
+              },
+              {
+                "class": "CDialogOption",
+                "properties": {
+                  "number": 3,
+                  "text": "Leave.",
+                  "nextStateId": "EXIT"
+                }
+              }
+            ]
+          }
+        }
+      ]
+    }
+  },
+  "barracksChest3Dialog": {
+    "class": "CandlekeepDialog",
+    "properties": {
+      "actorId": "barracksChest3",
+      "talkText": "Barracks chest 3. The lock requires Agility 16 or Strength 12. These belongings have an owner. Detected theft or forced entry brings the Watch.",
+      "states": [
+        {
+          "class": "CDialogState",
+          "properties": {
+            "stateId": "ENTRY",
+            "text": "Barracks chest 3. The lock requires Agility 16 or Strength 12. These belongings have an owner. Detected theft or forced entry brings the Watch.",
+            "options": [
+              {
+                "class": "CDialogOption",
+                "properties": {
+                  "number": 0,
+                  "text": "Pick the lock.",
+                  "nextStateId": "ENTRY",
+                  "action": "unlockContainer",
+                  "actionLabel": "Pick the lock.",
+                  "condition": "canUnlock"
+                }
+              },
+              {
+                "class": "CDialogOption",
+                "properties": {
+                  "number": 1,
+                  "text": "Force the lock.",
+                  "nextStateId": "ENTRY",
+                  "action": "forceContainer",
+                  "actionLabel": "Force the lock.",
+                  "condition": "canForce"
+                }
+              },
+              {
+                "class": "CDialogOption",
+                "properties": {
+                  "number": 2,
+                  "text": "Take the contents without permission.",
+                  "nextStateId": "ENTRY",
+                  "action": "stealContainer",
+                  "actionLabel": "Take the contents without permission.",
+                  "condition": "canOpen"
+                }
+              },
+              {
+                "class": "CDialogOption",
+                "properties": {
+                  "number": 3,
+                  "text": "Leave.",
+                  "nextStateId": "EXIT"
+                }
+              }
+            ]
+          }
+        }
+      ]
+    }
+  },
+  "barracksChest4Dialog": {
+    "class": "CandlekeepDialog",
+    "properties": {
+      "actorId": "barracksChest4",
+      "talkText": "Barracks chest 4. The lock requires Agility 16 or Strength 12. These belongings have an owner. Detected theft or forced entry brings the Watch.",
+      "states": [
+        {
+          "class": "CDialogState",
+          "properties": {
+            "stateId": "ENTRY",
+            "text": "Barracks chest 4. The lock requires Agility 16 or Strength 12. These belongings have an owner. Detected theft or forced entry brings the Watch.",
+            "options": [
+              {
+                "class": "CDialogOption",
+                "properties": {
+                  "number": 0,
+                  "text": "Pick the lock.",
+                  "nextStateId": "ENTRY",
+                  "action": "unlockContainer",
+                  "actionLabel": "Pick the lock.",
+                  "condition": "canUnlock"
+                }
+              },
+              {
+                "class": "CDialogOption",
+                "properties": {
+                  "number": 1,
+                  "text": "Force the lock.",
+                  "nextStateId": "ENTRY",
+                  "action": "forceContainer",
+                  "actionLabel": "Force the lock.",
+                  "condition": "canForce"
+                }
+              },
+              {
+                "class": "CDialogOption",
+                "properties": {
+                  "number": 2,
+                  "text": "Take the contents without permission.",
+                  "nextStateId": "ENTRY",
+                  "action": "stealContainer",
+                  "actionLabel": "Take the contents without permission.",
+                  "condition": "canOpen"
+                }
+              },
+              {
+                "class": "CDialogOption",
+                "properties": {
+                  "number": 3,
+                  "text": "Leave.",
+                  "nextStateId": "EXIT"
+                }
+              }
+            ]
+          }
+        }
+      ]
+    }
+  },
+  "clinicDeskDialog": {
+    "class": "CandlekeepDialog",
+    "properties": {
+      "actorId": "clinicDesk",
+      "talkText": "Infirmary desk. The lock requires Agility 16 or Strength 12. These belongings have an owner. Taking them alerts the Watch.",
+      "states": [
+        {
+          "class": "CDialogState",
+          "properties": {
+            "stateId": "ENTRY",
+            "text": "Infirmary desk. The lock requires Agility 16 or Strength 12. These belongings have an owner. Taking them alerts the Watch.",
+            "options": [
+              {
+                "class": "CDialogOption",
+                "properties": {
+                  "number": 0,
+                  "text": "Pick the lock.",
+                  "nextStateId": "ENTRY",
+                  "action": "unlockContainer",
+                  "actionLabel": "Pick the lock.",
+                  "condition": "canUnlock"
+                }
+              },
+              {
+                "class": "CDialogOption",
+                "properties": {
+                  "number": 1,
+                  "text": "Force the lock.",
+                  "nextStateId": "ENTRY",
+                  "action": "forceContainer",
+                  "actionLabel": "Force the lock.",
+                  "condition": "canForce"
+                }
+              },
+              {
+                "class": "CDialogOption",
+                "properties": {
+                  "number": 2,
+                  "text": "Take the contents without permission.",
+                  "nextStateId": "ENTRY",
+                  "action": "stealContainer",
+                  "actionLabel": "Take the contents without permission.",
+                  "condition": "canOpen"
+                }
+              },
+              {
+                "class": "CDialogOption",
+                "properties": {
+                  "number": 3,
+                  "text": "Leave.",
+                  "nextStateId": "EXIT"
+                }
+              }
+            ]
+          }
+        }
+      ]
+    }
+  },
+  "arkanisDialog": {
+    "class": "CandlekeepDialog",
+    "properties": {
+      "actorId": "arkanis",
+      "talkText": "Arkanis joins Obe's practice encounter. These companions use Nouraajd combat and inventory rules. You can inspect the equipment and abilities they actually have during this exercise.",
+      "states": [
+        {
+          "class": "CDialogState",
+          "properties": {
+            "stateId": "ENTRY",
+            "text": "Arkanis joins Obe's practice encounter. These companions use Nouraajd combat and inventory rules. You can inspect the equipment and abilities they actually have during this exercise.",
+            "options": [
+              {
+                "class": "CDialogOption",
+                "properties": {
+                  "number": 0,
+                  "text": "Talk.",
+                  "nextStateId": "ENTRY",
+                  "action": "talk",
+                  "actionLabel": "Talk."
+                }
+              },
+              {
+                "class": "CDialogOption",
+                "properties": {
+                  "number": 1,
+                  "text": "Inspect your equipment and abilities.",
+                  "nextStateId": "ENTRY",
+                  "action": "inspectCompanion",
+                  "actionLabel": "Inspect your equipment and abilities."
+                }
+              },
+              {
+                "class": "CDialogOption",
+                "properties": {
+                  "number": 2,
+                  "text": "Borrow your practice equipment.",
+                  "nextStateId": "ENTRY",
+                  "action": "borrowEquipment",
+                  "actionLabel": "Borrow your practice equipment."
+                }
+              },
+              {
+                "class": "CDialogOption",
+                "properties": {
+                  "number": 3,
+                  "text": "Back to training.",
+                  "nextStateId": "EXIT"
+                }
+              }
+            ]
+          }
+        }
+      ]
+    }
+  },
+  "canderousDialog": {
+    "class": "CandlekeepDialog",
+    "properties": {
+      "actorId": "canderous",
+      "talkText": "Canderous joins Obe's practice encounter. These companions use Nouraajd combat and inventory rules. You can inspect the equipment and abilities they actually have during this exercise.",
+      "states": [
+        {
+          "class": "CDialogState",
+          "properties": {
+            "stateId": "ENTRY",
+            "text": "Canderous joins Obe's practice encounter. These companions use Nouraajd combat and inventory rules. You can inspect the equipment and abilities they actually have during this exercise.",
+            "options": [
+              {
+                "class": "CDialogOption",
+                "properties": {
+                  "number": 0,
+                  "text": "Talk.",
+                  "nextStateId": "ENTRY",
+                  "action": "talk",
+                  "actionLabel": "Talk."
+                }
+              },
+              {
+                "class": "CDialogOption",
+                "properties": {
+                  "number": 1,
+                  "text": "Inspect your equipment and abilities.",
+                  "nextStateId": "ENTRY",
+                  "action": "inspectCompanion",
+                  "actionLabel": "Inspect your equipment and abilities."
+                }
+              },
+              {
+                "class": "CDialogOption",
+                "properties": {
+                  "number": 2,
+                  "text": "Borrow your practice equipment.",
+                  "nextStateId": "ENTRY",
+                  "action": "borrowEquipment",
+                  "actionLabel": "Borrow your practice equipment."
+                }
+              },
+              {
+                "class": "CDialogOption",
+                "properties": {
+                  "number": 3,
+                  "text": "Back to training.",
+                  "nextStateId": "EXIT"
+                }
+              }
+            ]
+          }
+        }
+      ]
+    }
+  },
+  "dederDialog": {
+    "class": "CandlekeepDialog",
+    "properties": {
+      "actorId": "deder",
+      "talkText": "Deder joins Obe's practice encounter. These companions use Nouraajd combat and inventory rules. You can inspect the equipment and abilities they actually have during this exercise.",
+      "states": [
+        {
+          "class": "CDialogState",
+          "properties": {
+            "stateId": "ENTRY",
+            "text": "Deder joins Obe's practice encounter. These companions use Nouraajd combat and inventory rules. You can inspect the equipment and abilities they actually have during this exercise.",
+            "options": [
+              {
+                "class": "CDialogOption",
+                "properties": {
+                  "number": 0,
+                  "text": "Talk.",
+                  "nextStateId": "ENTRY",
+                  "action": "talk",
+                  "actionLabel": "Talk."
+                }
+              },
+              {
+                "class": "CDialogOption",
+                "properties": {
+                  "number": 1,
+                  "text": "Inspect your equipment and abilities.",
+                  "nextStateId": "ENTRY",
+                  "action": "inspectCompanion",
+                  "actionLabel": "Inspect your equipment and abilities."
+                }
+              },
+              {
+                "class": "CDialogOption",
+                "properties": {
+                  "number": 2,
+                  "text": "Borrow your practice equipment.",
+                  "nextStateId": "ENTRY",
+                  "action": "borrowEquipment",
+                  "actionLabel": "Borrow your practice equipment."
+                }
+              },
+              {
+                "class": "CDialogOption",
+                "properties": {
+                  "number": 3,
+                  "text": "Back to training.",
+                  "nextStateId": "EXIT"
+                }
+              }
+            ]
+          }
+        }
+      ]
+    }
+  },
+  "mordaineDialog": {
+    "class": "CandlekeepDialog",
+    "properties": {
+      "actorId": "mordaine",
+      "talkText": "Mordaine joins Obe's practice encounter. These companions use Nouraajd combat and inventory rules. You can inspect the equipment and abilities they actually have during this exercise.",
+      "states": [
+        {
+          "class": "CDialogState",
+          "properties": {
+            "stateId": "ENTRY",
+            "text": "Mordaine joins Obe's practice encounter. These companions use Nouraajd combat and inventory rules. You can inspect the equipment and abilities they actually have during this exercise.",
+            "options": [
+              {
+                "class": "CDialogOption",
+                "properties": {
+                  "number": 0,
+                  "text": "Talk.",
+                  "nextStateId": "ENTRY",
+                  "action": "talk",
+                  "actionLabel": "Talk."
+                }
+              },
+              {
+                "class": "CDialogOption",
+                "properties": {
+                  "number": 1,
+                  "text": "Inspect your equipment and abilities.",
+                  "nextStateId": "ENTRY",
+                  "action": "inspectCompanion",
+                  "actionLabel": "Inspect your equipment and abilities."
+                }
+              },
+              {
+                "class": "CDialogOption",
+                "properties": {
+                  "number": 2,
+                  "text": "Borrow your practice equipment.",
+                  "nextStateId": "ENTRY",
+                  "action": "borrowEquipment",
+                  "actionLabel": "Borrow your practice equipment."
+                }
+              },
+              {
+                "class": "CDialogOption",
+                "properties": {
+                  "number": 3,
+                  "text": "Back to training.",
+                  "nextStateId": "EXIT"
+                }
+              }
+            ]
+          }
+        }
+      ]
+    }
+  },
+  "ospreyDialog": {
+    "class": "CandlekeepDialog",
+    "properties": {
+      "actorId": "osprey",
+      "talkText": "Osprey joins Obe's practice encounter. These companions use Nouraajd combat and inventory rules. You can inspect the equipment and abilities they actually have during this exercise.",
+      "states": [
+        {
+          "class": "CDialogState",
+          "properties": {
+            "stateId": "ENTRY",
+            "text": "Osprey joins Obe's practice encounter. These companions use Nouraajd combat and inventory rules. You can inspect the equipment and abilities they actually have during this exercise.",
+            "options": [
+              {
+                "class": "CDialogOption",
+                "properties": {
+                  "number": 0,
+                  "text": "Talk.",
+                  "nextStateId": "ENTRY",
+                  "action": "talk",
+                  "actionLabel": "Talk."
+                }
+              },
+              {
+                "class": "CDialogOption",
+                "properties": {
+                  "number": 1,
+                  "text": "Inspect your equipment and abilities.",
+                  "nextStateId": "ENTRY",
+                  "action": "inspectCompanion",
+                  "actionLabel": "Inspect your equipment and abilities."
+                }
+              },
+              {
+                "class": "CDialogOption",
+                "properties": {
+                  "number": 2,
+                  "text": "Borrow your practice equipment.",
+                  "nextStateId": "ENTRY",
+                  "action": "borrowEquipment",
+                  "actionLabel": "Borrow your practice equipment."
+                }
+              },
+              {
+                "class": "CDialogOption",
+                "properties": {
+                  "number": 3,
+                  "text": "Back to training.",
+                  "nextStateId": "EXIT"
+                }
+              }
+            ]
+          }
+        }
+      ]
+    }
+  },
+  "barracksBarrelDialog": {
+    "class": "CandlekeepDialog",
+    "properties": {
+      "actorId": "barracksBarrel",
+      "talkText": "Barrel outside the barracks. The container is unlocked.",
+      "states": [
+        {
+          "class": "CDialogState",
+          "properties": {
+            "stateId": "ENTRY",
+            "text": "Barrel outside the barracks. The container is unlocked.",
+            "options": [
+              {
+                "class": "CDialogOption",
+                "properties": {
+                  "number": 0,
+                  "text": "Take the contents.",
+                  "nextStateId": "ENTRY",
+                  "action": "openContainer",
+                  "actionLabel": "Take the contents.",
+                  "condition": "canOpen"
+                }
+              },
+              {
+                "class": "CDialogOption",
+                "properties": {
+                  "number": 1,
+                  "text": "Pick the lock.",
+                  "nextStateId": "ENTRY",
+                  "action": "unlockContainer",
+                  "actionLabel": "Pick the lock.",
+                  "condition": "canUnlock"
+                }
+              },
+              {
+                "class": "CDialogOption",
+                "properties": {
+                  "number": 2,
+                  "text": "Force the lock.",
+                  "nextStateId": "ENTRY",
+                  "action": "forceContainer",
+                  "actionLabel": "Force the lock.",
+                  "condition": "canForce"
+                }
+              },
+              {
+                "class": "CDialogOption",
+                "properties": {
+                  "number": 3,
+                  "text": "Leave.",
+                  "nextStateId": "EXIT"
+                }
+              }
+            ]
+          }
+        }
+      ]
+    }
+  },
+  "courtyardEmpty1Dialog": {
+    "class": "CandlekeepDialog",
+    "properties": {
+      "actorId": "courtyardEmpty1",
+      "talkText": "Empty courtyard container. The container is unlocked. It is empty.",
+      "states": [
+        {
+          "class": "CDialogState",
+          "properties": {
+            "stateId": "ENTRY",
+            "text": "Empty courtyard container. The container is unlocked. It is empty.",
+            "options": [
+              {
+                "class": "CDialogOption",
+                "properties": {
+                  "number": 0,
+                  "text": "Take the contents.",
+                  "nextStateId": "ENTRY",
+                  "action": "openContainer",
+                  "actionLabel": "Take the contents.",
+                  "condition": "canOpen"
+                }
+              },
+              {
+                "class": "CDialogOption",
+                "properties": {
+                  "number": 1,
+                  "text": "Pick the lock.",
+                  "nextStateId": "ENTRY",
+                  "action": "unlockContainer",
+                  "actionLabel": "Pick the lock.",
+                  "condition": "canUnlock"
+                }
+              },
+              {
+                "class": "CDialogOption",
+                "properties": {
+                  "number": 2,
+                  "text": "Force the lock.",
+                  "nextStateId": "ENTRY",
+                  "action": "forceContainer",
+                  "actionLabel": "Force the lock.",
+                  "condition": "canForce"
+                }
+              },
+              {
+                "class": "CDialogOption",
+                "properties": {
+                  "number": 3,
+                  "text": "Leave.",
+                  "nextStateId": "EXIT"
+                }
+              }
+            ]
+          }
+        }
+      ]
+    }
+  },
+  "courtyardEmpty2Dialog": {
+    "class": "CandlekeepDialog",
+    "properties": {
+      "actorId": "courtyardEmpty2",
+      "talkText": "Empty courtyard container. The container is unlocked. It is empty.",
+      "states": [
+        {
+          "class": "CDialogState",
+          "properties": {
+            "stateId": "ENTRY",
+            "text": "Empty courtyard container. The container is unlocked. It is empty.",
+            "options": [
+              {
+                "class": "CDialogOption",
+                "properties": {
+                  "number": 0,
+                  "text": "Take the contents.",
+                  "nextStateId": "ENTRY",
+                  "action": "openContainer",
+                  "actionLabel": "Take the contents.",
+                  "condition": "canOpen"
+                }
+              },
+              {
+                "class": "CDialogOption",
+                "properties": {
+                  "number": 1,
+                  "text": "Pick the lock.",
+                  "nextStateId": "ENTRY",
+                  "action": "unlockContainer",
+                  "actionLabel": "Pick the lock.",
+                  "condition": "canUnlock"
+                }
+              },
+              {
+                "class": "CDialogOption",
+                "properties": {
+                  "number": 2,
+                  "text": "Force the lock.",
+                  "nextStateId": "ENTRY",
+                  "action": "forceContainer",
+                  "actionLabel": "Force the lock.",
+                  "condition": "canForce"
+                }
+              },
+              {
+                "class": "CDialogOption",
+                "properties": {
+                  "number": 3,
+                  "text": "Leave.",
+                  "nextStateId": "EXIT"
+                }
+              }
+            ]
+          }
+        }
+      ]
+    }
+  },
+  "priestEmpty1Dialog": {
+    "class": "CandlekeepDialog",
+    "properties": {
+      "actorId": "priestEmpty1",
+      "talkText": "Priests' quarters empty container. The container is unlocked. It is empty.",
+      "states": [
+        {
+          "class": "CDialogState",
+          "properties": {
+            "stateId": "ENTRY",
+            "text": "Priests' quarters empty container. The container is unlocked. It is empty.",
+            "options": [
+              {
+                "class": "CDialogOption",
+                "properties": {
+                  "number": 0,
+                  "text": "Take the contents.",
+                  "nextStateId": "ENTRY",
+                  "action": "openContainer",
+                  "actionLabel": "Take the contents.",
+                  "condition": "canOpen"
+                }
+              },
+              {
+                "class": "CDialogOption",
+                "properties": {
+                  "number": 1,
+                  "text": "Pick the lock.",
+                  "nextStateId": "ENTRY",
+                  "action": "unlockContainer",
+                  "actionLabel": "Pick the lock.",
+                  "condition": "canUnlock"
+                }
+              },
+              {
+                "class": "CDialogOption",
+                "properties": {
+                  "number": 2,
+                  "text": "Force the lock.",
+                  "nextStateId": "ENTRY",
+                  "action": "forceContainer",
+                  "actionLabel": "Force the lock.",
+                  "condition": "canForce"
+                }
+              },
+              {
+                "class": "CDialogOption",
+                "properties": {
+                  "number": 3,
+                  "text": "Leave.",
+                  "nextStateId": "EXIT"
+                }
+              }
+            ]
+          }
+        }
+      ]
+    }
+  },
+  "priestTableDialog": {
+    "class": "CandlekeepDialog",
+    "properties": {
+      "actorId": "priestTable",
+      "talkText": "Priests' quarters table. The container is unlocked.",
+      "states": [
+        {
+          "class": "CDialogState",
+          "properties": {
+            "stateId": "ENTRY",
+            "text": "Priests' quarters table. The container is unlocked.",
+            "options": [
+              {
+                "class": "CDialogOption",
+                "properties": {
+                  "number": 0,
+                  "text": "Take the contents.",
+                  "nextStateId": "ENTRY",
+                  "action": "openContainer",
+                  "actionLabel": "Take the contents.",
+                  "condition": "canOpen"
+                }
+              },
+              {
+                "class": "CDialogOption",
+                "properties": {
+                  "number": 1,
+                  "text": "Pick the lock.",
+                  "nextStateId": "ENTRY",
+                  "action": "unlockContainer",
+                  "actionLabel": "Pick the lock.",
+                  "condition": "canUnlock"
+                }
+              },
+              {
+                "class": "CDialogOption",
+                "properties": {
+                  "number": 2,
+                  "text": "Force the lock.",
+                  "nextStateId": "ENTRY",
+                  "action": "forceContainer",
+                  "actionLabel": "Force the lock.",
+                  "condition": "canForce"
+                }
+              },
+              {
+                "class": "CDialogOption",
+                "properties": {
+                  "number": 3,
+                  "text": "Leave.",
+                  "nextStateId": "EXIT"
+                }
+              }
+            ]
+          }
+        }
+      ]
+    }
+  },
+  "priestCratesDialog": {
+    "class": "CandlekeepDialog",
+    "properties": {
+      "actorId": "priestCrates",
+      "talkText": "Priests' quarters crates. The container is unlocked.",
+      "states": [
+        {
+          "class": "CDialogState",
+          "properties": {
+            "stateId": "ENTRY",
+            "text": "Priests' quarters crates. The container is unlocked.",
+            "options": [
+              {
+                "class": "CDialogOption",
+                "properties": {
+                  "number": 0,
+                  "text": "Take the contents.",
+                  "nextStateId": "ENTRY",
+                  "action": "openContainer",
+                  "actionLabel": "Take the contents.",
+                  "condition": "canOpen"
+                }
+              },
+              {
+                "class": "CDialogOption",
+                "properties": {
+                  "number": 1,
+                  "text": "Pick the lock.",
+                  "nextStateId": "ENTRY",
+                  "action": "unlockContainer",
+                  "actionLabel": "Pick the lock.",
+                  "condition": "canUnlock"
+                }
+              },
+              {
+                "class": "CDialogOption",
+                "properties": {
+                  "number": 2,
+                  "text": "Force the lock.",
+                  "nextStateId": "ENTRY",
+                  "action": "forceContainer",
+                  "actionLabel": "Force the lock.",
+                  "condition": "canForce"
+                }
+              },
+              {
+                "class": "CDialogOption",
+                "properties": {
+                  "number": 3,
+                  "text": "Leave.",
+                  "nextStateId": "EXIT"
+                }
+              }
+            ]
+          }
+        }
+      ]
+    }
+  },
+  "priestEmpty2Dialog": {
+    "class": "CandlekeepDialog",
+    "properties": {
+      "actorId": "priestEmpty2",
+      "talkText": "Priests' quarters empty container. The container is unlocked. It is empty.",
+      "states": [
+        {
+          "class": "CDialogState",
+          "properties": {
+            "stateId": "ENTRY",
+            "text": "Priests' quarters empty container. The container is unlocked. It is empty.",
+            "options": [
+              {
+                "class": "CDialogOption",
+                "properties": {
+                  "number": 0,
+                  "text": "Take the contents.",
+                  "nextStateId": "ENTRY",
+                  "action": "openContainer",
+                  "actionLabel": "Take the contents.",
+                  "condition": "canOpen"
+                }
+              },
+              {
+                "class": "CDialogOption",
+                "properties": {
+                  "number": 1,
+                  "text": "Pick the lock.",
+                  "nextStateId": "ENTRY",
+                  "action": "unlockContainer",
+                  "actionLabel": "Pick the lock.",
+                  "condition": "canUnlock"
+                }
+              },
+              {
+                "class": "CDialogOption",
+                "properties": {
+                  "number": 2,
+                  "text": "Force the lock.",
+                  "nextStateId": "ENTRY",
+                  "action": "forceContainer",
+                  "actionLabel": "Force the lock.",
+                  "condition": "canForce"
+                }
+              },
+              {
+                "class": "CDialogOption",
+                "properties": {
+                  "number": 3,
+                  "text": "Leave.",
+                  "nextStateId": "EXIT"
+                }
+              }
+            ]
+          }
+        }
+      ]
+    }
+  },
+  "storehouseEmpty1Dialog": {
+    "class": "CandlekeepDialog",
+    "properties": {
+      "actorId": "storehouseEmpty1",
+      "talkText": "Empty storehouse container. The container is unlocked. It is empty.",
+      "states": [
+        {
+          "class": "CDialogState",
+          "properties": {
+            "stateId": "ENTRY",
+            "text": "Empty storehouse container. The container is unlocked. It is empty.",
+            "options": [
+              {
+                "class": "CDialogOption",
+                "properties": {
+                  "number": 0,
+                  "text": "Take the contents.",
+                  "nextStateId": "ENTRY",
+                  "action": "openContainer",
+                  "actionLabel": "Take the contents.",
+                  "condition": "canOpen"
+                }
+              },
+              {
+                "class": "CDialogOption",
+                "properties": {
+                  "number": 1,
+                  "text": "Pick the lock.",
+                  "nextStateId": "ENTRY",
+                  "action": "unlockContainer",
+                  "actionLabel": "Pick the lock.",
+                  "condition": "canUnlock"
+                }
+              },
+              {
+                "class": "CDialogOption",
+                "properties": {
+                  "number": 2,
+                  "text": "Force the lock.",
+                  "nextStateId": "ENTRY",
+                  "action": "forceContainer",
+                  "actionLabel": "Force the lock.",
+                  "condition": "canForce"
+                }
+              },
+              {
+                "class": "CDialogOption",
+                "properties": {
+                  "number": 3,
+                  "text": "Leave.",
+                  "nextStateId": "EXIT"
+                }
+              }
+            ]
+          }
+        }
+      ]
+    }
+  },
+  "storehouseEmpty2Dialog": {
+    "class": "CandlekeepDialog",
+    "properties": {
+      "actorId": "storehouseEmpty2",
+      "talkText": "Empty storehouse container. The container is unlocked. It is empty.",
+      "states": [
+        {
+          "class": "CDialogState",
+          "properties": {
+            "stateId": "ENTRY",
+            "text": "Empty storehouse container. The container is unlocked. It is empty.",
+            "options": [
+              {
+                "class": "CDialogOption",
+                "properties": {
+                  "number": 0,
+                  "text": "Take the contents.",
+                  "nextStateId": "ENTRY",
+                  "action": "openContainer",
+                  "actionLabel": "Take the contents.",
+                  "condition": "canOpen"
+                }
+              },
+              {
+                "class": "CDialogOption",
+                "properties": {
+                  "number": 1,
+                  "text": "Pick the lock.",
+                  "nextStateId": "ENTRY",
+                  "action": "unlockContainer",
+                  "actionLabel": "Pick the lock.",
+                  "condition": "canUnlock"
+                }
+              },
+              {
+                "class": "CDialogOption",
+                "properties": {
+                  "number": 2,
+                  "text": "Force the lock.",
+                  "nextStateId": "ENTRY",
+                  "action": "forceContainer",
+                  "actionLabel": "Force the lock.",
+                  "condition": "canForce"
+                }
+              },
+              {
+                "class": "CDialogOption",
+                "properties": {
+                  "number": 3,
+                  "text": "Leave.",
+                  "nextStateId": "EXIT"
+                }
+              }
+            ]
+          }
+        }
+      ]
+    }
+  },
+  "bunkhouseEmptyDialog": {
+    "class": "CandlekeepDialog",
+    "properties": {
+      "actorId": "bunkhouseEmpty",
+      "talkText": "Empty bunkhouse container. The container is unlocked. It is empty.",
+      "states": [
+        {
+          "class": "CDialogState",
+          "properties": {
+            "stateId": "ENTRY",
+            "text": "Empty bunkhouse container. The container is unlocked. It is empty.",
+            "options": [
+              {
+                "class": "CDialogOption",
+                "properties": {
+                  "number": 0,
+                  "text": "Take the contents.",
+                  "nextStateId": "ENTRY",
+                  "action": "openContainer",
+                  "actionLabel": "Take the contents.",
+                  "condition": "canOpen"
+                }
+              },
+              {
+                "class": "CDialogOption",
+                "properties": {
+                  "number": 1,
+                  "text": "Pick the lock.",
+                  "nextStateId": "ENTRY",
+                  "action": "unlockContainer",
+                  "actionLabel": "Pick the lock.",
+                  "condition": "canUnlock"
+                }
+              },
+              {
+                "class": "CDialogOption",
+                "properties": {
+                  "number": 2,
+                  "text": "Force the lock.",
+                  "nextStateId": "ENTRY",
+                  "action": "forceContainer",
+                  "actionLabel": "Force the lock.",
+                  "condition": "canForce"
+                }
+              },
+              {
+                "class": "CDialogOption",
+                "properties": {
+                  "number": 3,
+                  "text": "Leave.",
+                  "nextStateId": "EXIT"
+                }
+              }
+            ]
+          }
+        }
+      ]
+    }
+  },
+  "innKitchenDialog": {
+    "class": "CandlekeepDialog",
+    "properties": {
+      "actorId": "innKitchen",
+      "talkText": "Inn kitchen shelves. The container is unlocked.",
+      "states": [
+        {
+          "class": "CDialogState",
+          "properties": {
+            "stateId": "ENTRY",
+            "text": "Inn kitchen shelves. The container is unlocked.",
+            "options": [
+              {
+                "class": "CDialogOption",
+                "properties": {
+                  "number": 0,
+                  "text": "Take the contents.",
+                  "nextStateId": "ENTRY",
+                  "action": "openContainer",
+                  "actionLabel": "Take the contents.",
+                  "condition": "canOpen"
+                }
+              },
+              {
+                "class": "CDialogOption",
+                "properties": {
+                  "number": 1,
+                  "text": "Pick the lock.",
+                  "nextStateId": "ENTRY",
+                  "action": "unlockContainer",
+                  "actionLabel": "Pick the lock.",
+                  "condition": "canUnlock"
+                }
+              },
+              {
+                "class": "CDialogOption",
+                "properties": {
+                  "number": 2,
+                  "text": "Force the lock.",
+                  "nextStateId": "ENTRY",
+                  "action": "forceContainer",
+                  "actionLabel": "Force the lock.",
+                  "condition": "canForce"
+                }
+              },
+              {
+                "class": "CDialogOption",
+                "properties": {
+                  "number": 3,
+                  "text": "Leave.",
+                  "nextStateId": "EXIT"
+                }
+              }
+            ]
+          }
+        }
+      ]
+    }
+  },
+  "innCoinDrawerDialog": {
+    "class": "CandlekeepDialog",
+    "properties": {
+      "actorId": "innCoinDrawer",
+      "talkText": "Inn coin drawer. The container is unlocked.",
+      "states": [
+        {
+          "class": "CDialogState",
+          "properties": {
+            "stateId": "ENTRY",
+            "text": "Inn coin drawer. The container is unlocked.",
+            "options": [
+              {
+                "class": "CDialogOption",
+                "properties": {
+                  "number": 0,
+                  "text": "Take the contents.",
+                  "nextStateId": "ENTRY",
+                  "action": "openContainer",
+                  "actionLabel": "Take the contents.",
+                  "condition": "canOpen"
+                }
+              },
+              {
+                "class": "CDialogOption",
+                "properties": {
+                  "number": 1,
+                  "text": "Pick the lock.",
+                  "nextStateId": "ENTRY",
+                  "action": "unlockContainer",
+                  "actionLabel": "Pick the lock.",
+                  "condition": "canUnlock"
+                }
+              },
+              {
+                "class": "CDialogOption",
+                "properties": {
+                  "number": 2,
+                  "text": "Force the lock.",
+                  "nextStateId": "ENTRY",
+                  "action": "forceContainer",
+                  "actionLabel": "Force the lock.",
+                  "condition": "canForce"
+                }
+              },
+              {
+                "class": "CDialogOption",
+                "properties": {
+                  "number": 3,
+                  "text": "Leave.",
+                  "nextStateId": "EXIT"
+                }
+              }
+            ]
+          }
+        }
+      ]
+    }
+  },
+  "innSilverDrawerDialog": {
+    "class": "CandlekeepDialog",
+    "properties": {
+      "actorId": "innSilverDrawer",
+      "talkText": "Inn silver necklace drawer. The lock requires Agility 12 or Strength 12.",
+      "states": [
+        {
+          "class": "CDialogState",
+          "properties": {
+            "stateId": "ENTRY",
+            "text": "Inn silver necklace drawer. The lock requires Agility 12 or Strength 12.",
+            "options": [
+              {
+                "class": "CDialogOption",
+                "properties": {
+                  "number": 0,
+                  "text": "Take the contents.",
+                  "nextStateId": "ENTRY",
+                  "action": "openContainer",
+                  "actionLabel": "Take the contents.",
+                  "condition": "canOpen"
+                }
+              },
+              {
+                "class": "CDialogOption",
+                "properties": {
+                  "number": 1,
+                  "text": "Pick the lock.",
+                  "nextStateId": "ENTRY",
+                  "action": "unlockContainer",
+                  "actionLabel": "Pick the lock.",
+                  "condition": "canUnlock"
+                }
+              },
+              {
+                "class": "CDialogOption",
+                "properties": {
+                  "number": 2,
+                  "text": "Force the lock.",
+                  "nextStateId": "ENTRY",
+                  "action": "forceContainer",
+                  "actionLabel": "Force the lock.",
+                  "condition": "canForce"
+                }
+              },
+              {
+                "class": "CDialogOption",
+                "properties": {
+                  "number": 3,
+                  "text": "Leave.",
+                  "nextStateId": "EXIT"
+                }
+              }
+            ]
+          }
+        }
+      ]
+    }
+  },
+  "trainingChest1Dialog": {
+    "class": "CandlekeepDialog",
+    "properties": {
+      "actorId": "trainingChest1",
+      "talkText": "Empty training chest 1. The container is unlocked. It is empty.",
+      "states": [
+        {
+          "class": "CDialogState",
+          "properties": {
+            "stateId": "ENTRY",
+            "text": "Empty training chest 1. The container is unlocked. It is empty.",
+            "options": [
+              {
+                "class": "CDialogOption",
+                "properties": {
+                  "number": 0,
+                  "text": "Take the contents.",
+                  "nextStateId": "ENTRY",
+                  "action": "openContainer",
+                  "actionLabel": "Take the contents.",
+                  "condition": "canOpen"
+                }
+              },
+              {
+                "class": "CDialogOption",
+                "properties": {
+                  "number": 1,
+                  "text": "Pick the lock.",
+                  "nextStateId": "ENTRY",
+                  "action": "unlockContainer",
+                  "actionLabel": "Pick the lock.",
+                  "condition": "canUnlock"
+                }
+              },
+              {
+                "class": "CDialogOption",
+                "properties": {
+                  "number": 2,
+                  "text": "Force the lock.",
+                  "nextStateId": "ENTRY",
+                  "action": "forceContainer",
+                  "actionLabel": "Force the lock.",
+                  "condition": "canForce"
+                }
+              },
+              {
+                "class": "CDialogOption",
+                "properties": {
+                  "number": 3,
+                  "text": "Leave.",
+                  "nextStateId": "EXIT"
+                }
+              }
+            ]
+          }
+        }
+      ]
+    }
+  },
+  "trainingChest2Dialog": {
+    "class": "CandlekeepDialog",
+    "properties": {
+      "actorId": "trainingChest2",
+      "talkText": "Empty training chest 2. The container is unlocked. It is empty.",
+      "states": [
+        {
+          "class": "CDialogState",
+          "properties": {
+            "stateId": "ENTRY",
+            "text": "Empty training chest 2. The container is unlocked. It is empty.",
+            "options": [
+              {
+                "class": "CDialogOption",
+                "properties": {
+                  "number": 0,
+                  "text": "Take the contents.",
+                  "nextStateId": "ENTRY",
+                  "action": "openContainer",
+                  "actionLabel": "Take the contents.",
+                  "condition": "canOpen"
+                }
+              },
+              {
+                "class": "CDialogOption",
+                "properties": {
+                  "number": 1,
+                  "text": "Pick the lock.",
+                  "nextStateId": "ENTRY",
+                  "action": "unlockContainer",
+                  "actionLabel": "Pick the lock.",
+                  "condition": "canUnlock"
+                }
+              },
+              {
+                "class": "CDialogOption",
+                "properties": {
+                  "number": 2,
+                  "text": "Force the lock.",
+                  "nextStateId": "ENTRY",
+                  "action": "forceContainer",
+                  "actionLabel": "Force the lock.",
+                  "condition": "canForce"
+                }
+              },
+              {
+                "class": "CDialogOption",
+                "properties": {
+                  "number": 3,
+                  "text": "Leave.",
+                  "nextStateId": "EXIT"
+                }
+              }
+            ]
+          }
+        }
+      ]
+    }
+  },
+  "trainingChest3Dialog": {
+    "class": "CandlekeepDialog",
+    "properties": {
+      "actorId": "trainingChest3",
+      "talkText": "Empty training chest 3. The container is unlocked. It is empty.",
+      "states": [
+        {
+          "class": "CDialogState",
+          "properties": {
+            "stateId": "ENTRY",
+            "text": "Empty training chest 3. The container is unlocked. It is empty.",
+            "options": [
+              {
+                "class": "CDialogOption",
+                "properties": {
+                  "number": 0,
+                  "text": "Take the contents.",
+                  "nextStateId": "ENTRY",
+                  "action": "openContainer",
+                  "actionLabel": "Take the contents.",
+                  "condition": "canOpen"
+                }
+              },
+              {
+                "class": "CDialogOption",
+                "properties": {
+                  "number": 1,
+                  "text": "Pick the lock.",
+                  "nextStateId": "ENTRY",
+                  "action": "unlockContainer",
+                  "actionLabel": "Pick the lock.",
+                  "condition": "canUnlock"
+                }
+              },
+              {
+                "class": "CDialogOption",
+                "properties": {
+                  "number": 2,
+                  "text": "Force the lock.",
+                  "nextStateId": "ENTRY",
+                  "action": "forceContainer",
+                  "actionLabel": "Force the lock.",
+                  "condition": "canForce"
+                }
+              },
+              {
+                "class": "CDialogOption",
+                "properties": {
+                  "number": 3,
+                  "text": "Leave.",
+                  "nextStateId": "EXIT"
+                }
+              }
+            ]
+          }
+        }
+      ]
+    }
+  },
+  "trainingChest4Dialog": {
+    "class": "CandlekeepDialog",
+    "properties": {
+      "actorId": "trainingChest4",
+      "talkText": "Empty training chest 4. The container is unlocked. It is empty.",
+      "states": [
+        {
+          "class": "CDialogState",
+          "properties": {
+            "stateId": "ENTRY",
+            "text": "Empty training chest 4. The container is unlocked. It is empty.",
+            "options": [
+              {
+                "class": "CDialogOption",
+                "properties": {
+                  "number": 0,
+                  "text": "Take the contents.",
+                  "nextStateId": "ENTRY",
+                  "action": "openContainer",
+                  "actionLabel": "Take the contents.",
+                  "condition": "canOpen"
+                }
+              },
+              {
+                "class": "CDialogOption",
+                "properties": {
+                  "number": 1,
+                  "text": "Pick the lock.",
+                  "nextStateId": "ENTRY",
+                  "action": "unlockContainer",
+                  "actionLabel": "Pick the lock.",
+                  "condition": "canUnlock"
+                }
+              },
+              {
+                "class": "CDialogOption",
+                "properties": {
+                  "number": 2,
+                  "text": "Force the lock.",
+                  "nextStateId": "ENTRY",
+                  "action": "forceContainer",
+                  "actionLabel": "Force the lock.",
+                  "condition": "canForce"
+                }
+              },
+              {
+                "class": "CDialogOption",
+                "properties": {
+                  "number": 3,
+                  "text": "Leave.",
+                  "nextStateId": "EXIT"
+                }
+              }
+            ]
+          }
+        }
+      ]
+    }
+  },
+  "trainingChest5Dialog": {
+    "class": "CandlekeepDialog",
+    "properties": {
+      "actorId": "trainingChest5",
+      "talkText": "Empty training chest 5. The lock requires Agility 18 or Strength 14. It is empty.",
+      "states": [
+        {
+          "class": "CDialogState",
+          "properties": {
+            "stateId": "ENTRY",
+            "text": "Empty training chest 5. The lock requires Agility 18 or Strength 14. It is empty.",
+            "options": [
+              {
+                "class": "CDialogOption",
+                "properties": {
+                  "number": 0,
+                  "text": "Take the contents.",
+                  "nextStateId": "ENTRY",
+                  "action": "openContainer",
+                  "actionLabel": "Take the contents.",
+                  "condition": "canOpen"
+                }
+              },
+              {
+                "class": "CDialogOption",
+                "properties": {
+                  "number": 1,
+                  "text": "Pick the lock.",
+                  "nextStateId": "ENTRY",
+                  "action": "unlockContainer",
+                  "actionLabel": "Pick the lock.",
+                  "condition": "canUnlock"
+                }
+              },
+              {
+                "class": "CDialogOption",
+                "properties": {
+                  "number": 2,
+                  "text": "Force the lock.",
+                  "nextStateId": "ENTRY",
+                  "action": "forceContainer",
+                  "actionLabel": "Force the lock.",
+                  "condition": "canForce"
+                }
+              },
+              {
+                "class": "CDialogOption",
+                "properties": {
+                  "number": 3,
+                  "text": "Leave.",
+                  "nextStateId": "EXIT"
+                }
+              }
+            ]
+          }
+        }
+      ]
+    }
+  },
+  "trainingChest6Dialog": {
+    "class": "CandlekeepDialog",
+    "properties": {
+      "actorId": "trainingChest6",
+      "talkText": "Empty training chest 6. The container is unlocked. It is empty.",
+      "states": [
+        {
+          "class": "CDialogState",
+          "properties": {
+            "stateId": "ENTRY",
+            "text": "Empty training chest 6. The container is unlocked. It is empty.",
+            "options": [
+              {
+                "class": "CDialogOption",
+                "properties": {
+                  "number": 0,
+                  "text": "Take the contents.",
+                  "nextStateId": "ENTRY",
+                  "action": "openContainer",
+                  "actionLabel": "Take the contents.",
+                  "condition": "canOpen"
+                }
+              },
+              {
+                "class": "CDialogOption",
+                "properties": {
+                  "number": 1,
+                  "text": "Pick the lock.",
+                  "nextStateId": "ENTRY",
+                  "action": "unlockContainer",
+                  "actionLabel": "Pick the lock.",
+                  "condition": "canUnlock"
+                }
+              },
+              {
+                "class": "CDialogOption",
+                "properties": {
+                  "number": 2,
+                  "text": "Force the lock.",
+                  "nextStateId": "ENTRY",
+                  "action": "forceContainer",
+                  "actionLabel": "Force the lock.",
+                  "condition": "canForce"
+                }
+              },
+              {
+                "class": "CDialogOption",
+                "properties": {
+                  "number": 3,
+                  "text": "Leave.",
+                  "nextStateId": "EXIT"
+                }
+              }
+            ]
+          }
+        }
+      ]
+    }
+  },
+  "trainingChest7Dialog": {
+    "class": "CandlekeepDialog",
+    "properties": {
+      "actorId": "trainingChest7",
+      "talkText": "Empty training chest 7. The container is unlocked. It is empty.",
+      "states": [
+        {
+          "class": "CDialogState",
+          "properties": {
+            "stateId": "ENTRY",
+            "text": "Empty training chest 7. The container is unlocked. It is empty.",
+            "options": [
+              {
+                "class": "CDialogOption",
+                "properties": {
+                  "number": 0,
+                  "text": "Take the contents.",
+                  "nextStateId": "ENTRY",
+                  "action": "openContainer",
+                  "actionLabel": "Take the contents.",
+                  "condition": "canOpen"
+                }
+              },
+              {
+                "class": "CDialogOption",
+                "properties": {
+                  "number": 1,
+                  "text": "Pick the lock.",
+                  "nextStateId": "ENTRY",
+                  "action": "unlockContainer",
+                  "actionLabel": "Pick the lock.",
+                  "condition": "canUnlock"
+                }
+              },
+              {
+                "class": "CDialogOption",
+                "properties": {
+                  "number": 2,
+                  "text": "Force the lock.",
+                  "nextStateId": "ENTRY",
+                  "action": "forceContainer",
+                  "actionLabel": "Force the lock.",
+                  "condition": "canForce"
+                }
+              },
+              {
+                "class": "CDialogOption",
+                "properties": {
+                  "number": 3,
+                  "text": "Leave.",
+                  "nextStateId": "EXIT"
+                }
+              }
+            ]
+          }
+        }
+      ]
+    }
+  },
+  "trainingChest8Dialog": {
+    "class": "CandlekeepDialog",
+    "properties": {
+      "actorId": "trainingChest8",
+      "talkText": "Empty training chest 8. The lock requires Agility 18 or Strength 14. It is empty.",
+      "states": [
+        {
+          "class": "CDialogState",
+          "properties": {
+            "stateId": "ENTRY",
+            "text": "Empty training chest 8. The lock requires Agility 18 or Strength 14. It is empty.",
+            "options": [
+              {
+                "class": "CDialogOption",
+                "properties": {
+                  "number": 0,
+                  "text": "Take the contents.",
+                  "nextStateId": "ENTRY",
+                  "action": "openContainer",
+                  "actionLabel": "Take the contents.",
+                  "condition": "canOpen"
+                }
+              },
+              {
+                "class": "CDialogOption",
+                "properties": {
+                  "number": 1,
+                  "text": "Pick the lock.",
+                  "nextStateId": "ENTRY",
+                  "action": "unlockContainer",
+                  "actionLabel": "Pick the lock.",
+                  "condition": "canUnlock"
+                }
+              },
+              {
+                "class": "CDialogOption",
+                "properties": {
+                  "number": 2,
+                  "text": "Force the lock.",
+                  "nextStateId": "ENTRY",
+                  "action": "forceContainer",
+                  "actionLabel": "Force the lock.",
+                  "condition": "canForce"
+                }
+              },
+              {
+                "class": "CDialogOption",
+                "properties": {
+                  "number": 3,
+                  "text": "Leave.",
+                  "nextStateId": "EXIT"
+                }
+              }
+            ]
+          }
+        }
+      ]
+    }
+  },
+  "trainingChest9Dialog": {
+    "class": "CandlekeepDialog",
+    "properties": {
+      "actorId": "trainingChest9",
+      "talkText": "Empty training chest 9. The container is unlocked. It is empty.",
+      "states": [
+        {
+          "class": "CDialogState",
+          "properties": {
+            "stateId": "ENTRY",
+            "text": "Empty training chest 9. The container is unlocked. It is empty.",
+            "options": [
+              {
+                "class": "CDialogOption",
+                "properties": {
+                  "number": 0,
+                  "text": "Take the contents.",
+                  "nextStateId": "ENTRY",
+                  "action": "openContainer",
+                  "actionLabel": "Take the contents.",
+                  "condition": "canOpen"
+                }
+              },
+              {
+                "class": "CDialogOption",
+                "properties": {
+                  "number": 1,
+                  "text": "Pick the lock.",
+                  "nextStateId": "ENTRY",
+                  "action": "unlockContainer",
+                  "actionLabel": "Pick the lock.",
+                  "condition": "canUnlock"
+                }
+              },
+              {
+                "class": "CDialogOption",
+                "properties": {
+                  "number": 2,
+                  "text": "Force the lock.",
+                  "nextStateId": "ENTRY",
+                  "action": "forceContainer",
+                  "actionLabel": "Force the lock.",
+                  "condition": "canForce"
+                }
+              },
+              {
+                "class": "CDialogOption",
+                "properties": {
+                  "number": 3,
+                  "text": "Leave.",
+                  "nextStateId": "EXIT"
+                }
+              }
+            ]
+          }
+        }
+      ]
+    }
+  },
+  "trainingChest10Dialog": {
+    "class": "CandlekeepDialog",
+    "properties": {
+      "actorId": "trainingChest10",
+      "talkText": "Empty training chest 10. The container is unlocked. It is empty.",
+      "states": [
+        {
+          "class": "CDialogState",
+          "properties": {
+            "stateId": "ENTRY",
+            "text": "Empty training chest 10. The container is unlocked. It is empty.",
+            "options": [
+              {
+                "class": "CDialogOption",
+                "properties": {
+                  "number": 0,
+                  "text": "Take the contents.",
+                  "nextStateId": "ENTRY",
+                  "action": "openContainer",
+                  "actionLabel": "Take the contents.",
+                  "condition": "canOpen"
+                }
+              },
+              {
+                "class": "CDialogOption",
+                "properties": {
+                  "number": 1,
+                  "text": "Pick the lock.",
+                  "nextStateId": "ENTRY",
+                  "action": "unlockContainer",
+                  "actionLabel": "Pick the lock.",
+                  "condition": "canUnlock"
+                }
+              },
+              {
+                "class": "CDialogOption",
+                "properties": {
+                  "number": 2,
+                  "text": "Force the lock.",
+                  "nextStateId": "ENTRY",
+                  "action": "forceContainer",
+                  "actionLabel": "Force the lock.",
+                  "condition": "canForce"
+                }
+              },
+              {
+                "class": "CDialogOption",
+                "properties": {
+                  "number": 3,
+                  "text": "Leave.",
+                  "nextStateId": "EXIT"
+                }
+              }
+            ]
+          }
+        }
+      ]
+    }
+  }
+}
