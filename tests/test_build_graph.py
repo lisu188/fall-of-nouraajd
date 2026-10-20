@@ -293,7 +293,7 @@ class SharedCompilationGraphTest(unittest.TestCase):
                 continue
             command = entry["command"]
             self.assertRegex(command, r"(?:-O3|/O2)(?:\s|$)")
-            self.assertRegex(command, r"(?:-std=c\+\+26|/std:c\+\+latest)(?:\s|$)")
+            self.assertRegex(command, r"(?:-std=c\+\+26|[-/]std:c\+\+latest)(?:\s|$)")
             self.assertNotIn("-fmodules-ts", command)
             self.assertNotIn("-fmodule-mapper", command)
 
@@ -317,6 +317,29 @@ class SharedCompilationGraphTest(unittest.TestCase):
             entry for entry in commands if "game_test_pch.dir" in entry["command"] and "cmake_pch" in entry["file"]
         ]
         self.assertEqual(1, len(pch_commands), "The compatible test cohort must create one PCH")
+
+
+class CompilerCommandGraphTest(unittest.TestCase):
+    def testProductionGraphAcceptsClangClLatestSpellingAndRejectsAnOlderStandard(self):
+        with tempfile.TemporaryDirectory() as directory:
+            graph = SharedCompilationGraphTest("testGeneratedCommandsPreserveOptimizationAndAvoidModuleFlags")
+            graph.build = Path(directory)
+            graph.commands = [
+                {"file": f"Unity/unity_{index}_cxx.cxx", "command": "clang-cl.exe /O2"} for index in range(2)
+            ]
+            # CMake's clang-cl command observed in the Windows build graph.
+            binding = {
+                "file": "src/core/CModule.cpp",
+                "command": "clang-cl.exe /O2 /DNDEBUG -std:c++latest -MD "
+                "/FoCMakeFiles/game_binding_objects.dir/src/core/CModule.cpp.obj -c src/core/CModule.cpp",
+            }
+            graph.commands.append(binding)
+            graph.testGeneratedCommandsPreserveOptimizationAndAvoidModuleFlags()
+            binding["command"] = binding["command"].replace("-std:c++latest", "/std:c++latest")
+            graph.testGeneratedCommandsPreserveOptimizationAndAvoidModuleFlags()
+            binding["command"] = binding["command"].replace("/std:c++latest", "/std:c++20")
+            with self.assertRaises(AssertionError):
+                graph.testGeneratedCommandsPreserveOptimizationAndAvoidModuleFlags()
 
 
 if __name__ == "__main__":
