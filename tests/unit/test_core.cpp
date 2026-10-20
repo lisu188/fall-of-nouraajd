@@ -1613,6 +1613,226 @@ void testFrameBoundaryReleasesGilForOwnedWorkers() {
                 "the owned worker completes its Python access before the boundary returns");
 }
 
+class FastFramePumpScope {
+  public:
+    explicit FastFramePumpScope(std::shared_ptr<vstd::event_loop<>> loop) : loop(std::move(loop)) {
+        previous_fps = this->loop->getFps();
+        this->loop->setFps(1000000);
+    }
+    ~FastFramePumpScope() { loop->setFps(previous_fps); }
+
+  private:
+    std::shared_ptr<vstd::event_loop<>> loop;
+    int previous_fps;
+};
+
+vstd::task<void> framePumpPostedChain(std::shared_ptr<vstd::event_loop<>> loop, int count, int &completed) {
+    for (int index = 0; index < count; ++index) {
+        co_await vstd::post(loop);
+        ++completed;
+    }
+}
+
+vstd::task<void> framePumpFrameWait(std::shared_ptr<vstd::event_loop<>> loop, int &resumed_after_frame,
+                                    const int &frames) {
+    co_await vstd::nextFrame(loop);
+    resumed_after_frame = frames;
+}
+
+vstd::task<void> framePumpFutureDelay(std::shared_ptr<vstd::event_loop<>> loop, bool &resumed) {
+    co_await vstd::sleepFor(loop, std::chrono::hours(24));
+    resumed = true;
+}
+
+void testFramePumpDrainsPostedCoroutineChainBeforeRendering() {
+    auto loop = std::make_shared<vstd::event_loop<>>();
+    FastFramePumpScope fast(loop);
+    vstd::task_group group;
+    int completed = 0;
+    int frames = 0;
+    int completed_at_frame = 0;
+    auto frame = loop->connectFrameCallback([&](int) {
+        ++frames;
+        completed_at_frame = completed;
+    });
+    auto handle = group.spawn(framePumpPostedChain(loop, 256, completed), vstd::loopScheduler(loop));
+
+    expect_true(game_async::runFrame(*loop, {1024, std::nullopt}), "the posted-chain frame should remain active");
+    expect_true(frames == 1 && completed_at_frame == 256 && handle.finished(),
+                "a 256-link posted coroutine chain must finish before its first rendered frame");
+    std::cout << "[frame-pump] posted-links=" << completed_at_frame << " rendered-frames=" << frames << '\n';
+    loop->runUntilIdle();
+    handle.get();
+}
+
+void testFramePumpBoundsRepostedWorkAndServicesInputAndTimers() {
+    for (const bool time_limited : {false, true}) {
+        auto loop = std::make_shared<vstd::event_loop<>>();
+        FastFramePumpScope fast(loop);
+        int callbacks = 0;
+        int frames = 0;
+        int input_events = 0;
+        int due_timers = 0;
+        bool repost = true;
+        std::function<void()> heartbeat;
+        heartbeat = [&] {
+            ++callbacks;
+            if (repost) {
+                loop->invoke(heartbeat);
+            }
+        };
+        auto frame = loop->connectFrameCallback([&](int) { ++frames; });
+        auto input = loop->connectEventCallback([&](SDL_Event *event) {
+            if (event->type == SDL_KEYDOWN && event->key.keysym.sym == SDLK_RIGHT) {
+                ++input_events;
+                return true;
+            }
+            return false;
+        });
+        auto timer = loop->scheduleAfter(0, [&] { ++due_timers; });
+        SDL_Event event{};
+        event.type = SDL_KEYDOWN;
+        event.key.keysym.sym = SDLK_RIGHT;
+        expect_true(SDL_PushEvent(&event) == 1, "the frame-pump input fixture should queue a key event");
+        loop->invoke(heartbeat);
+        game_async::FramePumpBudget budget{8, std::nullopt};
+        if (time_limited) {
+            budget.maxReadyTime = std::chrono::steady_clock::duration::zero();
+        }
+        game_async::runFrame(*loop, budget);
+
+        const int max_callbacks = time_limited ? 2 : 9;
+        expect_true(callbacks > 0 && callbacks <= max_callbacks && frames == 1,
+                    "reposted work must respect the ready budget and still render one frame");
+        expect_true(input_events == 1 && due_timers == 1,
+                    "input and due timers must progress while posted work continuously replenishes");
+        std::cout << "[frame-pump] budget=" << (time_limited ? "time" : "passes") << " posted-callbacks=" << callbacks
+                  << " rendered-frames=" << frames << '\n';
+        repost = false;
+        loop->runUntilIdle();
+    }
+}
+
+void testFramePumpPreservesNextFrameAndFutureDelays() {
+    auto loop = std::make_shared<vstd::event_loop<>>();
+    FastFramePumpScope fast(loop);
+    vstd::task_group group;
+    int frames = 0;
+    int resumed_after_frame = 0;
+    bool delay_resumed = false;
+    auto frame = loop->connectFrameCallback([&](int) { ++frames; });
+    auto next_frame = group.spawn(framePumpFrameWait(loop, resumed_after_frame, frames), vstd::loopScheduler(loop));
+    auto future_delay = group.spawn(framePumpFutureDelay(loop, delay_resumed), vstd::loopScheduler(loop));
+
+    game_async::runFrame(*loop, {1024, std::nullopt});
+    expect_true(frames == 1 && resumed_after_frame == 0 && !next_frame.finished(),
+                "nextFrame cannot resume until a real frame has queued its continuation");
+    loop->runReady();
+    expect_true(next_frame.finished() && resumed_after_frame == 1 && frames == 1,
+                "nextFrame resumes after the first rendered frame without synthesizing another frame");
+    expect_true(!delay_resumed && !future_delay.finished() && loop->getDelayedTaskCount() == 1,
+                "draining ready work must not advance future animation or timer deadlines");
+    next_frame.get();
+    future_delay.requestStop();
+    game_async::runFrame(*loop, {1024, std::nullopt});
+    expect_true(future_delay.finished() && !delay_resumed && loop->getDelayedTaskCount() == 0,
+                "a stopped delayed coroutine must settle and release its timer during the frame pump");
+    expect_runtime_error([&] { future_delay.get(); }, "a stopped delayed coroutine should report cancellation");
+}
+
+void testFramePumpStopsBeforeRenderingAfterQuit() {
+    auto loop = std::make_shared<vstd::event_loop<>>();
+    FastFramePumpScope fast(loop);
+    int frames = 0;
+    auto frame = loop->connectFrameCallback([&](int) { ++frames; });
+    SDL_Event event{};
+    event.type = SDL_QUIT;
+    expect_true(SDL_PushEvent(&event) == 1, "the frame-pump quit fixture should queue a quit event");
+    expect_true(!game_async::runFrame(*loop, {1024, std::nullopt}) && loop->quitRequested() && frames == 0,
+                "quit must stop the frame pump before rendering");
+    int posted_after_quit = 0;
+    loop->invoke([&] { ++posted_after_quit; });
+    expect_true(!game_async::runFrame(*loop, {1024, std::nullopt}) && frames == 0 && posted_after_quit == 0,
+                "an already-quit loop must return without processing work or rendering");
+    loop->resetQuit();
+    loop->runUntilIdle();
+}
+
+void testFramePumpNestedFramesWaitKeepsItsOwnBudget() {
+    auto loop = vstd::event_loop<>::instance();
+    FastFramePumpScope fast(loop);
+    loop->runUntilIdle();
+    int completed = 0;
+    int frames = 0;
+    int modal_frames = 0;
+    int input_events = 0;
+    bool modal_active = false;
+    bool modal_returned = false;
+    bool cancellation_settled = false;
+    auto frame = loop->connectFrameCallback([&](int) {
+        ++frames;
+        if (modal_active) {
+            ++modal_frames;
+        }
+    });
+    auto input = loop->connectEventCallback([&](SDL_Event *event) {
+        if (event->type == SDL_KEYDOWN && event->key.keysym.sym == SDLK_RETURN) {
+            ++input_events;
+            return true;
+        }
+        return false;
+    });
+    loop->invoke([&] {
+        modal_active = true;
+        SDL_Event event{};
+        event.type = SDL_KEYDOWN;
+        event.key.keysym.sym = SDLK_RETURN;
+        expect_true(SDL_PushEvent(&event) == 1, "the nested wait fixture should queue modal input");
+        game_async::run(framePumpPostedChain(loop, 128, completed), game_async::WaitMode::Frames);
+        vstd::task_group group;
+        bool delay_resumed = false;
+        auto cancelled = group.spawn(framePumpFutureDelay(loop, delay_resumed), vstd::loopScheduler(loop));
+        loop->invoke([cancelled] { cancelled.requestStop(); });
+        expect_runtime_error([&] { game_async::wait(cancelled, game_async::WaitMode::Frames); },
+                             "a nested synchronous Frames wait must propagate cancellation");
+        cancellation_settled = cancelled.finished() && !delay_resumed && loop->getDelayedTaskCount() == 0;
+        modal_active = false;
+        modal_returned = true;
+    });
+
+    game_async::runFrame(*loop, {1, std::nullopt});
+    expect_true(
+        modal_returned && completed == 128 && modal_frames > 0 && input_events == 1 && cancellation_settled,
+        "a nested Frames wait must complete ready work, service modal input and frames, and settle cancellation");
+    std::cout << "[frame-pump] nested-links=" << completed << " rendered-frames=" << frames << '\n';
+    loop->runUntilIdle();
+}
+
+void testFramePumpLegacyWaitDrainsReadyWorkAndStopsOnQuit() {
+    auto loop = vstd::event_loop<>::instance();
+    FastFramePumpScope fast(loop);
+    loop->runUntilIdle();
+    vstd::task_group group;
+    int completed = 0;
+    int frames = 0;
+    auto frame = loop->connectFrameCallback([&](int) { ++frames; });
+    auto handle = group.spawn(framePumpPostedChain(loop, 128, completed), vstd::loopScheduler(loop));
+    vstd::wait_until([&] { return handle.finished(); });
+    expect_true(completed == 128 && frames > 0,
+                "the legacy synchronous wait bridge must finish ready work while servicing frames");
+    handle.get();
+
+    const auto frames_before_quit = frames;
+    SDL_Event event{};
+    event.type = SDL_QUIT;
+    expect_true(SDL_PushEvent(&event) == 1, "the legacy wait quit fixture should queue a quit event");
+    int predicate_calls = 0;
+    vstd::wait_until([&] { return ++predicate_calls == 16; });
+    expect_true(loop->quitRequested() && frames == frames_before_quit && predicate_calls < 16,
+                "quit must return from a legacy wait without spinning until a predicate rescue");
+    loop->resetQuit();
+}
+
 void test_game_context_shutdown_is_idempotent_and_preserves_other_game_services() {
     auto closing_game = std::make_shared<CGame>();
     auto survivor_game = std::make_shared<CGame>();
@@ -4246,6 +4466,15 @@ int main() {
     runDiagnosedCase("testPostedBoundaryReleasesGilBetweenBusySnapshots",
                      testPostedBoundaryReleasesGilBetweenBusySnapshots);
     runDiagnosedCase("testFrameBoundaryReleasesGilForOwnedWorkers", testFrameBoundaryReleasesGilForOwnedWorkers);
+    runDiagnosedCase("testFramePumpDrainsPostedCoroutineChainBeforeRendering",
+                     testFramePumpDrainsPostedCoroutineChainBeforeRendering);
+    runDiagnosedCase("testFramePumpBoundsRepostedWorkAndServicesInputAndTimers",
+                     testFramePumpBoundsRepostedWorkAndServicesInputAndTimers);
+    runDiagnosedCase("testFramePumpPreservesNextFrameAndFutureDelays", testFramePumpPreservesNextFrameAndFutureDelays);
+    runDiagnosedCase("testFramePumpStopsBeforeRenderingAfterQuit", testFramePumpStopsBeforeRenderingAfterQuit);
+    runDiagnosedCase("testFramePumpNestedFramesWaitKeepsItsOwnBudget", testFramePumpNestedFramesWaitKeepsItsOwnBudget);
+    runDiagnosedCase("testFramePumpLegacyWaitDrainsReadyWorkAndStopsOnQuit",
+                     testFramePumpLegacyWaitDrainsReadyWorkAndStopsOnQuit);
     runDiagnosedCase("test_game_context_shutdown_is_idempotent_and_preserves_other_game_services",
                      test_game_context_shutdown_is_idempotent_and_preserves_other_game_services);
     runDiagnosedCase("test_effect_cycles_release_with_map_and_context_teardown",
