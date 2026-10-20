@@ -26,6 +26,10 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #include <variant>
 #include <vector>
 
+namespace game::json_detail {
+class Decoder;
+}
+
 class json {
   public:
     using object_t = std::map<std::string, json>;
@@ -158,6 +162,8 @@ class json {
     std::string dump(int indent = -1) const;
 
   private:
+    friend class game::json_detail::Decoder;
+
     using storage_t =
         std::variant<std::nullptr_t, object_t, array_t, std::string, std::int64_t, std::uint64_t, double, bool>;
 
