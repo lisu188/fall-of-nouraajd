@@ -99,19 +99,20 @@ void test_manifest_scopes_control_plugin_auto_discovery() {
     const json manifest = json::parse(R"json({"plugins": [
         {"id": "global", "kind": "python", "path": "plugins/global.py"},
         {"id": "mapPython", "kind": "python", "path": "./plugins/map.py", "scope": {"map": "siege"}},
-        {"id": "mapLua", "kind": "lua", "path": "plugins/map.lua", "scope": {"map": "siege"}},
-        {"id": "otherMap", "kind": "lua", "path": "plugins/other.lua", "scope": {"map": "test"}},
+        {"id": "otherMap", "kind": "python", "path": "plugins/other.py", "scope": {"map": "test"}},
+        {"id": "removedRuntime", "kind": "lua", "path": "plugins/removed.lua"},
         {"id": "wrongKind", "kind": "lua", "path": "plugins/undispatched.py"},
         {"kind": "python", "path": "plugins/missingId.py"}
     ]})json");
     const auto exclusions = getPluginAutoDiscoveryExclusions(manifest);
-    expect_true(exclusions == std::set<std::string>{"plugins/global.py", "plugins/map.py", "plugins/map.lua",
-                                                    "plugins/other.lua"},
+    expect_true(exclusions == std::set<std::string>{"plugins/global.py", "plugins/map.py", "plugins/other.py"},
                 "global discovery must defer all valid manifest paths, including every inactive map scope");
-    expect_true(!exclusions.contains("plugins/unlisted.py") && !exclusions.contains("plugins/unlisted.lua"),
-                "unlisted Python and Lua plugins must remain eligible for auto-discovery");
+    expect_true(!exclusions.contains("plugins/unlisted.py"),
+                "unlisted Python plugins must remain eligible for auto-discovery");
     expect_true(!exclusions.contains("plugins/undispatched.py") && !exclusions.contains("plugins/missingId.py"),
-                "invalid manifest declarations must not suppress valid auto-discovered files");
+                "removed runtime kinds and invalid declarations must not suppress Python auto-discovery");
+    expect_true(!exclusions.contains("plugins/removed.lua"),
+                "the removed runtime must not contribute any manifest discovery exclusions");
     expect_true(getPluginAutoDiscoveryExclusions(json::object()).empty(),
                 "a manifest without declarations must preserve normal auto-discovery");
 }
@@ -121,20 +122,20 @@ void test_manifest_exclusions_require_trusted_script_paths() {
         null, "plugins/plain.py", 7,
         {"id": "missingSource", "kind": "python"},
         {"id": "escape", "kind": "python", "path": "../plugins/escape.py"},
-        {"id": "absolute", "kind": "lua", "path": "/plugins/absolute.lua"},
-        {"id": "wrongRoot", "kind": "lua", "path": "maps/test/helper.lua"},
+        {"id": "absolute", "kind": "python", "path": "/plugins/absolute.py"},
+        {"id": "wrongRoot", "kind": "python", "path": "assets/helper.py"},
         {"id": "wrongMapFile", "kind": "python", "path": "maps/test/helper.py"},
         {"id": "nestedMap", "kind": "python", "path": "maps/test/nested/script.py"},
         {"id": "cpp", "kind": "cpp", "type": "NativeMarkerPlugin"},
         {"id": "native", "kind": "native", "library": "plugins/native_marker_plugin"},
         {"id": "unknown", "kind": "unregistered", "path": "plugins/unknown.py"},
         {"id": "mapScript", "kind": "python", "path": "maps/test/script.py", "scope": {"map": "test"}},
-        {"id": "normalized", "kind": "lua", "path": "plugins/nested/../shared.lua"},
-        {"id": "duplicate", "kind": "lua", "path": "./plugins/shared.lua"}
+        {"id": "normalized", "kind": "python", "path": "plugins/nested/../shared.py"},
+        {"id": "duplicate", "kind": "python", "path": "./plugins/shared.py"}
     ]})json");
     expect_true(getPluginAutoDiscoveryExclusions(manifest) ==
-                    std::set<std::string>{"maps/test/script.py", "plugins/shared.lua"},
-                "only trusted Python/Lua paths may suppress discovery, with normalized duplicates coalesced");
+                    std::set<std::string>{"maps/test/script.py", "plugins/shared.py"},
+                "only trusted Python paths may suppress discovery, with normalized duplicates coalesced");
     expect_true(getPluginAutoDiscoveryExclusions(json::parse(R"({"plugins":{}})")).empty(),
                 "malformed manifest sections must leave fallback discovery available");
 }

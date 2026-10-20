@@ -20,14 +20,12 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #include "core/CAsync.h"
 #include "core/CGameContext.h"
 #include "core/CGame.h"
-#include "core/CLuaOverrides.h"
 #include "core/CMap.h"
 #include "core/CStats.h"
 #include "core/CTypes.h"
 #include "core/CTags.h"
 #include "core/CUtil.h"
 #include "handler/CFightHandler.h"
-#include "handler/CLuaHandler.h"
 #include "gui/CGui.h"
 #include "gui/object/CMinimapGraphicsObject.h"
 #include "object/CCreature.h"
@@ -1260,63 +1258,6 @@ void testMinimapTerrainCacheBuildsOnlyOnRelevantChanges() {
               << " builds=" << minimap->getTerrainTextureBuildCount() << " budget=4\n";
 }
 
-void testLuaObjectDispatchAndSessionOwnershipAreBounded() {
-    constexpr int DISPATCHES = 32;
-    const auto originalEntries = CLuaOverrides::instances().size();
-    auto game = std::make_shared<CGame>();
-    auto context = game->getContext();
-    auto handler = game->getLuaHandler();
-    std::weak_ptr<CGame> gameLifetime = game;
-    std::weak_ptr<CGameObject> objectLifetime;
-    game->getObjectHandler()->registerType("LuaDispatchGuardObject", [&objectLifetime] {
-        auto object = std::make_shared<CGameObject>();
-        objectLifetime = object;
-        return object;
-    });
-    expect_true(handler->loadPlugin(game, "plugins/dispatch_guard.lua", R"lua(
-function load(context)
-    local game = context.game
-    local object = game:createObject("LuaDispatchGuardObject")
-    object:setNumericProperty("calls", 0)
-    context.registerType("LuaDispatchGuardTile", {
-        base = "CTile",
-        onStep = function(self, creature)
-            assert(game == context.game)
-            object:setNumericProperty("calls", object:getNumericProperty("calls") + 1)
-            creature:setNumericProperty("luaCalls", object:getNumericProperty("calls"))
-        end,
-    })
-end
-)lua"),
-                "the Lua work guard must register one persistent hook and ordinary object");
-    auto tile = game->createObject<CTile>("LuaDispatchGuardTile");
-    auto creature = std::make_shared<CCreature>();
-    expect_true(tile && !objectLifetime.expired(), "the Lua work guard must construct its fixed workload");
-    if (!tile || objectLifetime.expired()) {
-        return;
-    }
-    for (int dispatch = 0; dispatch < DISPATCHES; ++dispatch) {
-        tile->onStep(creature);
-        expect_true(game.use_count() == 1 && game->getLuaHandler() == handler,
-                    "each Lua callback must reuse its handler and release its borrowed game before returning");
-        expect_true(CLuaOverrides::instances().size() == originalEntries + 1,
-                    "ordinary Lua API calls must not add override-registry entries");
-    }
-    auto object = objectLifetime.lock();
-    expect_true(object && object->getNumericProperty("calls") == DISPATCHES &&
-                    creature->getNumericProperty("luaCalls") == DISPATCHES,
-                "the fixed Lua workload must dispatch exactly one callback per step on the same owned object");
-    expect_true(object.use_count() == 2, "Lua ordinary-object API calls must not accumulate extra owning userdata");
-    object.reset();
-    game.reset();
-    expect_true(gameLifetime.expired() && !context->isActive() && objectLifetime.expired(),
-                "the bounded Lua workload must release its session and ordinary object without a GC pass");
-    tile.reset();
-    expect_true(CLuaOverrides::instances().size() == originalEntries,
-                "the Lua work guard must return the override registry to its original size");
-    std::cout << "Lua dispatch ownership guard: callbacks=" << DISPATCHES
-              << " budget=32 overrideEntries=1 ordinaryObjectOwners=1 gameOwners=0 afterShutdown\n";
-}
 
 } // namespace
 
@@ -1344,5 +1285,4 @@ void run_engine_hotspot_performance_tests() {
     testOctobogzPhaseCallbackAndStateGrowthAreBounded();
     testEffectTickCallbacksAndExpiryAreBounded();
     testMinimapTerrainCacheBuildsOnlyOnRelevantChanges();
-    testLuaObjectDispatchAndSessionOwnershipAreBounded();
 }

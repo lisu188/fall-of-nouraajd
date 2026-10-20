@@ -34,7 +34,7 @@ import sys
 from pathlib import Path
 
 root, workspace = map(Path, sys.argv[1:])
-for directory in ("src", "vstd", "random-dungeon-generator", "third_party/simdjson", "third_party/lua"):
+for directory in ("src", "vstd", "random-dungeon-generator", "third_party/simdjson"):
     for base, directories, files in os.walk(root / directory):
         directories[:] = [name for name in directories if name not in {".git", "build", "__pycache__"}]
         for name in files:
@@ -55,7 +55,7 @@ current="$workspace/current"
 old="$workspace/baseline/src"
 flags=(-std=c++26 -O2 -g -ffunction-sections -fdata-sections -DBOOST_ALLOW_DEPRECATED_HEADERS
     -DBOOST_BIND_GLOBAL_PLACEHOLDERS -DSDL_MAIN_HANDLED -I"$current/vstd"
-    -I"$current/random-dungeon-generator" -I"$current/third_party/simdjson" -I"$current/third_party/lua"
+    -I"$current/random-dungeon-generator" -I"$current/third_party/simdjson"
     "${python_includes[@]}" "${sdl_flags[@]}")
 
 {

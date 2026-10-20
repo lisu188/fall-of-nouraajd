@@ -318,7 +318,6 @@ std::filesystem::path resolveWritableResourcePath(const std::list<std::string> &
 const std::string CResType::CONFIG = "CONFIG";
 const std::string CResType::MAP = "MAP";
 const std::string CResType::PLUGIN = "PLUGIN";
-const std::string CResType::PLUGIN_LUA = "PLUGIN_LUA";
 const std::string CResType::SAVE = "SAVE";
 
 CConfigurationProvider::CConfigurationProvider(std::shared_ptr<CResourcesProvider> resourcesProvider)
@@ -533,9 +532,6 @@ std::vector<std::string> CResourcesProvider::getFiles(const std::string &type) {
     } else if (type == CResType::PLUGIN) {
         folderName = "plugins";
         suffix = "py";
-    } else if (type == CResType::PLUGIN_LUA) {
-        folderName = "plugins";
-        suffix = "lua";
     } else if (type == CResType::MAP) {
         folderName = "maps";
     } else if (type == CResType::SAVE) {

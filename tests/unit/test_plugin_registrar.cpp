@@ -59,14 +59,14 @@ class CProbePluginRuntime : public IPluginRuntime {
 };
 
 void testBuiltinRuntimesPreserveCustomRegistrations() {
-    for (const char *kind : {"native", "cpp", "python", "lua"}) {
+    for (const char *kind : {"native", "cpp", "python"}) {
         expect_true(plugin_runtime::find(kind) == nullptr,
                     "the custom-first regression needs a fresh runtime registry");
     }
     auto custom = std::make_shared<CProbePluginRuntime>("probe");
-    auto lua = std::make_shared<CProbePluginRuntime>("lua");
+    auto customPython = std::make_shared<CProbePluginRuntime>("python");
     plugin_runtime::registerRuntime(custom);
-    plugin_runtime::registerRuntime(lua);
+    plugin_runtime::registerRuntime(customPython);
     plugin_runtime::registerBuiltinRuntimes();
 
     auto *native = plugin_runtime::find("native");
@@ -75,12 +75,13 @@ void testBuiltinRuntimesPreserveCustomRegistrations() {
     expect_true(native != nullptr && native->kind() == "native", "a custom runtime must not suppress native support");
     expect_true(cpp != nullptr && cpp->kind() == "cpp", "a custom runtime must not suppress C++ support");
     expect_true(python != nullptr && python->kind() == "python", "a custom runtime must not suppress Python support");
-    expect_true(plugin_runtime::find("lua") == lua.get(), "initialization must preserve a custom built-in replacement");
+    expect_true(python == customPython.get(), "initialization must preserve a custom built-in replacement");
+    expect_true(plugin_runtime::find("lua") == nullptr, "the removed scripting runtime must not be registered");
     expect_true(plugin_runtime::find("probe") == custom.get(), "initialization must preserve a custom runtime kind");
 
     plugin_runtime::registerBuiltinRuntimes();
     expect_true(plugin_runtime::find("native") == native && plugin_runtime::find("cpp") == cpp &&
-                    plugin_runtime::find("python") == python && plugin_runtime::find("lua") == lua.get(),
+                    plugin_runtime::find("python") == python && plugin_runtime::find("lua") == nullptr,
                 "repeated initialization must retain the registered runtime instances");
 
     auto replacement = std::make_shared<CProbePluginRuntime>("python");
@@ -89,7 +90,7 @@ void testBuiltinRuntimesPreserveCustomRegistrations() {
     expect_true(plugin_runtime::find("python") == replacement.get(),
                 "initialization must preserve a built-in replacement registered after initialization");
     expect_true(plugin_runtime::find("native") == native && plugin_runtime::find("cpp") == cpp &&
-                    plugin_runtime::find("lua") == lua.get() && plugin_runtime::find("probe") == custom.get(),
+                    plugin_runtime::find("lua") == nullptr && plugin_runtime::find("probe") == custom.get(),
                 "replacing one runtime must leave other registered instances intact");
 }
 

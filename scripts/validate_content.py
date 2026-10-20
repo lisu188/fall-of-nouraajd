@@ -1569,7 +1569,7 @@ class ContentValidator:
         top-level ``version: 2`` plus a ``plugins`` array of uniform entries
         ``{id, kind, <source>, entry?, scope?}``. Kind-specific source fields are
         ``library`` (native, under plugins/native/), ``type`` (cpp), and ``path``
-        (python/lua, an existing res/ resource). Unknown kinds and duplicate ids are
+        (python, an existing res/ resource). Unknown kinds and duplicate ids are
         diagnosed here so a typo fails validation instead of silently skipping the
         plugin at runtime (the loader only warns)."""
         path = self.repo_root / "res" / "plugins" / "manifest.json"
@@ -1587,7 +1587,7 @@ class ContentValidator:
         if not isinstance(entries, list):
             self._issue(path, "plugins", "plugin manifest must contain a plugins array")
             return
-        source_fields = {"native": "library", "cpp": "type", "python": "path", "lua": "path"}
+        source_fields = {"native": "library", "cpp": "type", "python": "path"}
         seen_ids: set[str] = set()
         for index, entry in enumerate(entries):
             location = f"plugins[{index}]"
@@ -1613,8 +1613,8 @@ class ContentValidator:
                 continue
             if kind == "native" and not source.startswith("plugins/native/"):
                 self._issue(path, location, f'native plugin library "{source}" must live under plugins/native/')
-            if kind in ("python", "lua"):
-                expected_suffix = ".py" if kind == "python" else ".lua"
+            if kind == "python":
+                expected_suffix = ".py"
                 if not source.endswith(expected_suffix):
                     self._issue(path, location, f'{kind} plugin path "{source}" must end with {expected_suffix}')
                 elif not (self.repo_root / "res" / source).exists():
@@ -5493,7 +5493,7 @@ def iter_manifest_plugin_entries(data: dict[str, Any]) -> list[dict[str, Any]]:
 
 
 def is_concrete_cpp_class_name(name: str) -> bool:
-    return name not in ("CWrapper", "CLuaWrapper") and re.match(r"^C[A-Za-z_]\w*$", name) is not None
+    return name != "CWrapper" and re.match(r"^C[A-Za-z_]\w*$", name) is not None
 
 
 def append_field(location: str, key: Any) -> str:

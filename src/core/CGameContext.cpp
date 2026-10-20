@@ -26,7 +26,6 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #include "core/CSlotConfig.h"
 #include "gui/CGui.h"
 #include "handler/CGuiHandler.h"
-#include "handler/CLuaHandler.h"
 #include "handler/CObjectHandler.h"
 #include "handler/CRngHandler.h"
 #include "handler/CScriptHandler.h"
@@ -79,15 +78,6 @@ std::shared_ptr<CScriptHandler> CGameContext::getScriptHandler() {
         scriptHandler = std::move(created);
     }
     return scriptHandler;
-}
-
-std::shared_ptr<CLuaHandler> CGameContext::getLuaHandler() {
-    std::lock_guard lock(*resourceMutex);
-    requireActiveService("CLuaHandler");
-    if (!luaHandler) {
-        luaHandler = std::make_shared<CLuaHandler>();
-    }
-    return luaHandler;
 }
 
 std::shared_ptr<CRngHandler> CGameContext::getRngHandler() {
@@ -257,7 +247,6 @@ struct CGameContext::ShutdownState {
     std::shared_ptr<CGuiHandler> guiHandler;
     std::shared_ptr<CObjectHandler> objectHandler;
     std::shared_ptr<CScriptHandler> scriptHandler;
-    std::shared_ptr<CLuaHandler> luaHandler;
     std::shared_ptr<CRngHandler> rngHandler;
     std::shared_ptr<CResourcesProvider> resourcesProvider;
     std::shared_ptr<CConfigurationProvider> configurationProvider;
@@ -291,9 +280,6 @@ struct CGameContext::ShutdownState {
         gui.reset();
         sceneManager.reset();
         map.reset();
-        if (luaHandler) {
-            luaHandler->releaseState();
-        }
         if (scriptHandler) {
             scriptHandler->releaseState();
         }
@@ -304,7 +290,6 @@ struct CGameContext::ShutdownState {
         mapSessionStore.reset();
         configurationProvider.reset();
         resourcesProvider.reset();
-        luaHandler.reset();
         scriptHandler.reset();
         guiHandler.reset();
         rngHandler.reset();
@@ -352,7 +337,6 @@ void CGameContext::shutdown(CGame *owner) {
         state->mapSessionStore = std::move(mapSessionStore);
         state->configurationProvider = std::move(configurationProvider);
         state->resourcesProvider = std::move(resourcesProvider);
-        state->luaHandler = std::move(luaHandler);
         state->scriptHandler = std::move(scriptHandler);
         state->guiHandler = std::move(guiHandler);
         state->rngHandler = std::move(rngHandler);

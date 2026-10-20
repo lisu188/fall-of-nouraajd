@@ -6137,43 +6137,9 @@ class GameTest(unittest.TestCase):
         }
         return True, json.dumps(report, sort_keys=True)
 
-    @game_test
-    def test_lua_plugin_auto_discovery_registers_tile_type(self):
+    def testLuaPluginLoaderApiIsAbsent(self):
         game = load_game_module()
-
-        g = game.CGameLoader.loadGame()
-        tile = g.createObject("LuaRoadTile")
-
-        self.assertIsNotNone(tile)
-        self.assertEqual("LuaRoadTile", tile.getType())
-
-        report = {"lua_tile": tile.getType()}
-        return True, json.dumps(report, sort_keys=True)
-
-    @game_test
-    def test_lua_plugin_loader_rejects_non_resource_paths(self):
-        game = load_game_module()
-        g = game.CGameLoader.loadGame()
-
-        with tempfile.NamedTemporaryFile("w", suffix=".lua", delete=False) as tmp:
-            tmp.write("function load(context)\nend\n")
-            absolute_path = tmp.name
-
-        try:
-            self.assertFalse(game.CPluginLoader.loadLuaPlugin(g, absolute_path))
-            self.assertFalse(game.CPluginLoader.loadLuaPlugin(g, "../res/plugins/tile.lua"))
-            self.assertFalse(game.CPluginLoader.loadLuaPlugin(g, "maps/test/script.lua"))
-            self.assertFalse(game.CPluginLoader.loadLuaPlugin(g, "plugins/definitely_missing.lua"))
-            self.assertTrue(game.CPluginLoader.loadLuaPlugin(g, "plugins/tile.lua"))
-
-            report = {
-                "absolute_path_rejected": absolute_path,
-                "relative_parent_rejected": "../res/plugins/tile.lua",
-                "map_script_rejected": "maps/test/script.lua",
-            }
-            return True, json.dumps(report, sort_keys=True)
-        finally:
-            os.unlink(absolute_path)
+        self.assertFalse(hasattr(game.CPluginLoader, "loadLuaPlugin"))
 
     @game_test
     def test_dynamic_domain_plugins_register_gameplay_classes(self):
@@ -7753,31 +7719,6 @@ class GameTest(unittest.TestCase):
                 "hp_before_step": hp_before_step,
                 "hp_after_step": player.getNumericProperty("hp"),
                 "coords_after_step": [player.getCoords().x, player.getCoords().y, player.getCoords().z],
-            },
-            sort_keys=True,
-        )
-
-    @game_test
-    def test_lua_road_tile_heals_on_step(self):
-        game = load_game_module()
-        g, game_map, player = load_game_map_with_player("test", "Warrior")
-        game_map.removeAll(lambda obj: obj.getName() != "player")
-
-        start = player.getCoords()
-        road = game.Coords(start.x + 1, start.y, start.z)
-        game_map.replaceTile("LuaRoadTile", road)
-
-        player.setHp(max(1, player.getHpMax() - 3))
-        hp_before_step = player.getNumericProperty("hp")
-        set_player_target(player, road)
-        game_map.move()
-        self.assertEqual(player.getNumericProperty("hp"), hp_before_step + 1)
-        self.assertEqual((player.getCoords().x, player.getCoords().y, player.getCoords().z), (road.x, road.y, road.z))
-
-        return True, json.dumps(
-            {
-                "hp_before_step": hp_before_step,
-                "hp_after_step": player.getNumericProperty("hp"),
             },
             sort_keys=True,
         )
@@ -27006,6 +26947,61 @@ class McpServerTest(unittest.TestCase):
         "gravemoor": "_mcp_walkthrough_gravemoor",
         "usurpergate": "_mcp_walkthrough_usurpergate",
     }
+
+    def testPythonRoadTileStepUnderStdioMcp(self):
+        from unittest.mock import patch
+
+        try:
+            import game
+        except ImportError as exc:
+            self.skipTest("The current _game extension is required for the MCP road step: " + str(exc))
+
+        with patch.dict(
+            os.environ,
+            SDL_VIDEODRIVER="dummy",
+            SDL_AUDIODRIVER="dummy",
+            SDL_RENDER_DRIVER="software",
+            LIBGL_ALWAYS_SOFTWARE="1",
+        ):
+            proc = self._start_stdio_mcp_process()
+            try:
+                self._initialize_stdio_mcp(proc)
+                session = {"proc": proc, "next_request_id": 3}
+                game_handle, map_handle, player_handle = self._mcp_load_game_map_with_player(session, "test", "Warrior")
+                self._mcp_pump_event_loop(session)
+                player_name = self._mcp_handle_call(session, player_handle, "getName")
+                for obj in self._mcp_handle_call(session, map_handle, "getObjects"):
+                    name = self._mcp_handle_call(session, obj, "getName")
+                    if name != player_name:
+                        self._mcp_handle_call(session, map_handle, "removeObjectByName", [name])
+
+                def playerCoords():
+                    return [
+                        self._mcp_handle_call(session, player_handle, "getNumericProperty", ["pos" + axis])
+                        for axis in "xyz"
+                    ]
+
+                start = playerCoords()
+                target = [start[0] + 1, start[1], start[2]]
+                coordinate_source = self._mcp_handle_call(session, game_handle, "createObject", ["CMapObject"])
+                self._mcp_handle_call(session, coordinate_source, "moveTo", target)
+                target_coords = self._mcp_handle_call(session, coordinate_source, "getCoords")
+                self._mcp_handle_call(session, map_handle, "replaceTile", ["RoadTile", target_coords])
+                hp_max = self._mcp_handle_call(session, player_handle, "getHpMax")
+                self._mcp_handle_call(session, player_handle, "setNumericProperty", ["hp", max(1, hp_max - 3)])
+                hp_before = self._mcp_handle_call(session, player_handle, "getHp")
+
+                self._mcp_handle_call(session, player_handle, "moveTo", target)
+                self._mcp_pump_event_loop(session)
+                self.assertEqual(target, playerCoords())
+                self.assertEqual(hp_before + 1, self._mcp_handle_call(session, player_handle, "getHp"))
+
+                self._mcp_handle_call(session, map_handle, "move")
+                self._mcp_pump_event_loop(session)
+                self.assertEqual(target, playerCoords())
+                self.assertEqual(hp_before + 1, self._mcp_handle_call(session, player_handle, "getHp"))
+            finally:
+                self._shutdown_process(proc)
 
     def testNativeLogSinkSurvivesGameBootstrap(self):
         from unittest.mock import patch

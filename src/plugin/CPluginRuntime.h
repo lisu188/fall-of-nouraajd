@@ -27,8 +27,8 @@ class CGame;
 // One parsed manifest entry (or auto-discovered plugin), normalized across kinds.
 struct CPluginDescriptor {
     std::string id;
-    std::string kind;   // "native" | "cpp" | "python" | "lua"
-    std::string source; // native: library path; cpp: CPlugin type name; python/lua: resource path
+    std::string kind;   // "native" | "cpp" | "python"
+    std::string source; // native: library path; cpp: CPlugin type name; python: resource path
     std::string entry;  // native entry symbol; empty selects the default
     std::optional<std::string> mapScope;
 };

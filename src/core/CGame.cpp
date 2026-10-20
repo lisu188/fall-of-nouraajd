@@ -131,8 +131,6 @@ std::shared_ptr<CGuiHandler> CGame::getGuiHandler() { return getContext()->getGu
 
 std::shared_ptr<CScriptHandler> CGame::getScriptHandler() { return getContext()->getScriptHandler(); }
 
-std::shared_ptr<CLuaHandler> CGame::getLuaHandler() { return getContext()->getLuaHandler(); }
-
 std::shared_ptr<CObjectHandler> CGame::getObjectHandler() { return getContext()->getObjectHandler(); }
 
 std::shared_ptr<CSceneManager> CGame::getSceneManager() {

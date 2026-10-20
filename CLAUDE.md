@@ -122,11 +122,11 @@ constructible from content.
   `set_state`/`state_in`/`get_state`). Maps: `nouraajd`, `ritual`, `siege`,
   `multilevel`, `ninemarches`, `hearthfall`, `gravemoor`, `usurpergate`,
   `sunderedmarch`, `kadath`, `vhulmarn`, `test`.
-- **`res/plugins/*.py` / `*.lua`** — Python and Lua gameplay plugins (crafting,
-  interactions, effects, potions, tiles, objects). Every `.py` and `.lua` in the
+- **`res/plugins/*.py`** — Python gameplay plugins (crafting,
+  interactions, effects, potions, tiles, objects). Every `.py` in the
   directory is auto-discovered by `CPluginLoader`; `res/plugins/manifest.json`
   (version 2: a `plugins` array of `{id, kind, source…}` entries, kinds
-  `native`/`cpp`/`python`/`lua`, optional `scope: {"map": …}`) declares the
+  `native`/`cpp`/`python`, optional `scope: {"map": …}`) declares the
   native/cpp entries and any explicitly ordered or map-scoped plugins.
 - **`res/game.py`** — the Python-side facade over `_game`; wraps native trace
   helpers and quest-state integration (`quest_state.py`).
@@ -134,20 +134,14 @@ constructible from content.
   is `scripts/validate_content.py`.
 
 ### Plugin runtimes
-Gameplay behavior exists in three forms, all funneled through one host surface
+Gameplay plugins use three built-in runtime kinds, all funneled through one host surface
 (`CPluginRegistrar`: type factories + config JSON + logging) by per-kind
 runtimes (`IPluginRuntime` registry in `src/plugin/CPluginRuntime.cpp`):
 - **native** — C++ in `native_plugins/` (MODULE libs, `extern "C"
   game_plugin_load_v2(const CPluginHostV2*)` handshake, load-only by design);
+- **cpp** — registered `CPlugin` classes loaded by `CPluginLoader::loadCppPlugin`;
 - **python** — `res/plugins/*.py` (sandboxed `load(self, context)`, engine→Python
-  dispatch via `CWrapper<T>` + `CPythonOverrides`);
-- **lua** — `res/plugins/*.lua` (sandboxed per-game `lua_State` in
-  `src/handler/CLuaHandler.cpp`, `load(context)` with
-  `context.registerType(name, {base = "CTile", onStep = …})`, engine→Lua
-  dispatch via `CLuaWrapper<T>` + `CLuaOverrides`; scriptable bases: CTile,
-  CEffect, CPotion, CScroll, CInteraction, CTrigger, CBuilding, CEvent).
-The vendored Lua 5.4 interpreter lives in `third_party/lua` (static
-`lua_vendor` lib).
+  dispatch via `CWrapper<T>` + `CPythonOverrides`).
 
 ## Entry points & tooling
 

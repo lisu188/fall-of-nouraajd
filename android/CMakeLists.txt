@@ -56,13 +56,6 @@ target_include_directories(simdjson_android SYSTEM PUBLIC
 )
 set_target_properties(simdjson_android PROPERTIES POSITION_INDEPENDENT_CODE ON)
 
-file(GLOB LUA_ANDROID_SRC "${GAME_REPOSITORY_ROOT}/third_party/lua/*.c")
-list(FILTER LUA_ANDROID_SRC EXCLUDE REGEX ".*/(lua|luac)\\.c$")
-add_library(lua_android STATIC ${LUA_ANDROID_SRC})
-target_include_directories(lua_android SYSTEM PUBLIC "${GAME_REPOSITORY_ROOT}/third_party/lua")
-target_compile_definitions(lua_android PRIVATE LUA_USE_POSIX)
-set_target_properties(lua_android PROPERTIES POSITION_INDEPENDENT_CODE ON)
-
 file(GLOB_RECURSE GAME_ANDROID_SRC CONFIGURE_DEPENDS
     "${GAME_REPOSITORY_ROOT}/src/*.cpp"
     "${GAME_REPOSITORY_ROOT}/src/*.h"
@@ -126,6 +119,5 @@ target_link_libraries(main PRIVATE
     ${SDL2_IMAGE_ANDROID_LIBS}
     ${SDL2_TTF_ANDROID_LIBS}
     simdjson_android
-    lua_android
     ${CMAKE_DL_LIBS}
 )
