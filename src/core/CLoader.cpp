@@ -417,6 +417,38 @@ void protect_helper_class(pybind11::handle type) {
 }
 
 pybind11::object protect_helper_result(pybind11::object result) {
+    if (PyGen_Check(result.ptr())) {
+        // Preserve yield-from without exposing the trusted generator's frame and globals.
+        pybind11::dict globals;
+        globals["__name__"] = "game";
+        globals["__builtins__"] = build_restricted_plugin_builtins();
+        pybind11::exec(R"(
+class ResourceFlow:
+    __slots__ = ("_send", "_throw", "_close")
+
+    def __init__(self, send, throw, close):
+        self._send, self._throw, self._close = send, throw, close
+
+    def __iter__(self):
+        return self
+
+    def __next__(self):
+        return self._send(None)
+
+    def send(self, answer):
+        return self._send(answer)
+
+    def throw(self, *args):
+        return self._throw(*args)
+
+    def close(self):
+        return self._close()
+)",
+                       globals);
+        return globals["ResourceFlow"](wrap_helper_function(result.attr("send")),
+                                       wrap_helper_function(result.attr("throw")),
+                                       wrap_helper_function(result.attr("close")));
+    }
     if (PyFunction_Check(result.ptr()) || PyMethod_Check(result.ptr())) {
         return wrap_helper_function(std::move(result));
     }
@@ -476,8 +508,14 @@ PyObject *build_safe_proxy_module(const std::string &name) {
         }
     }
 
-    const std::set<std::string> campaignExports = {"state", "active", "complete_scenario", "retryPending",
-                                                   "hasPendingTransition"};
+    const std::set<std::string> campaignExports = {"state",
+                                                   "active",
+                                                   "complete_scenario",
+                                                   "retryPending",
+                                                   "hasPendingTransition",
+                                                   "prepareCompletion",
+                                                   "complete_scenarioFlow",
+                                                   "retryPendingFlow"};
     auto allowedAttribute = [&](const std::string &attrName) {
         return is_safe_proxy_attr(attrName) &&
                (name == "game" || (name == "campaign" && campaignExports.contains(attrName)) ||
