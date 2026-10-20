@@ -197,6 +197,32 @@ void testAlliedBudgetAndRejectedParticipants() {
                 "cross-map, removed, dead, other-level and hostile actors must not receive ally turns");
 }
 
+void testExplicitCandidatesBeyondNaturalDiscoveryBudget() {
+    Fixture fixture;
+    auto ally = fixture.actor("lateExplicitAlly", true, 0, 20);
+    auto enemy = fixture.actor("lateExplicitEnemy");
+    probe(ally)->action = [](auto, auto target) { target->setHp(0); };
+    std::vector<std::shared_ptr<CCreature>> candidates(32, nullptr);
+    candidates.insert(candidates.end(), 32, fixture.hero);
+    candidates.push_back(ally);
+    const auto result = CFightHandler::fightManyWithAlliesResult(fixture.hero, {enemy}, candidates);
+    expect_true(result.outcome == CFightOutcome::AttackerVictory && probe(ally)->actions == 1,
+                "explicit candidates must find a valid ally after invalid entries beyond thirty-two names");
+
+    Fixture natural;
+    auto naturalAlly = natural.actor("lateNaturalAlly", true, 0, 20);
+    auto naturalEnemy = natural.actor("lateNaturalEnemy");
+    probe(naturalAlly)->action = [](auto, auto target) { target->setHp(0); };
+    std::string names;
+    for (int index = 0; index < 32; ++index) {
+        names += "missingAlly,";
+    }
+    natural.enable(names + naturalAlly->getName());
+    expect_true(CFightHandler::fightManyResult(natural.hero, {naturalEnemy}).outcome == CFightOutcome::Stalled &&
+                    probe(naturalAlly)->starts == 0,
+                "natural discovery must still stop after thirty-two configured names");
+}
+
 void testNaturalOptInAndMoverPerspectives() {
     for (int mover = 0; mover < 3; ++mover) {
         Fixture fixture;
@@ -343,6 +369,7 @@ int main() {
     pybind11::scoped_interpreter interpreter{};
     testNativeAllyActsAndHeroOwnsRewards();
     testAlliedBudgetAndRejectedParticipants();
+    testExplicitCandidatesBeyondNaturalDiscoveryBudget();
     testNaturalOptInAndMoverPerspectives();
     testFallenAllyUsesNativeLootAndSurvivorsContinue();
     testHeroDefeatEndsBeforeSurvivingAlliesAct();
