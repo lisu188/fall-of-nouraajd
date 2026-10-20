@@ -87,12 +87,15 @@ The install declares Sorcerer/Monk, Psion and Cipher GemRB class mods. The audit
 119 referenced resources differ between its base and effective views. The adaptation uses the base evidence and
 does not import those class mods.
 
-The final structural graph contains 9 ARE, 113 BCS, 106 CRE, 176 DLG, 332 ITM, 55 SPL and 2 STO resources in each
+The retained pre-review audit graph contains 9 ARE, 113 BCS, 106 CRE, 176 DLG, 332 ITM, 55 SPL and 2 STO resources in each
 view, with 62 unresolved references per view. Shared actor dependencies extend into other chapters even with
 the nine-area allowlist; excluded external areas and scripts remain recorded in the local report. This is an
 overapproximation, not a proof that these references execute during the prologue. The auditor exits nonzero
 while unresolved references remain. Its local gzip report's decompressed SHA-256 is
 `36f545a938bef46acf00fcc759ada01af6351bddca3bc8f5857d223ba0b39e27`.
+This retained report predates the correction for literal `GiveItem` and `UseItem` references whose IDS argument
+is named `Object`. Its counts and hash describe that historical report; regenerate the audit before using
+these numbers as evidence for the corrected parser.
 Per-resource fingerprints cover complete payloads; BIF fingerprints explicitly identify header/table scope.
 The audit does not establish execution reachability, interpret all
 engine hardcoding, or prove that every original interaction is accounted for. Missing references, source

@@ -325,6 +325,7 @@ class CandlekeepModel:
             "CScroll",
         ):
             setattr(api, name, type(name, (ModelObject,), {}))
+        self.native_types = {"CCreature": api.CCreature}
 
         def register(_context):
             def decorate(cls):
@@ -381,7 +382,8 @@ class CandlekeepModel:
 
     def createObject(self, name):
         entry = self.resources.get(name, {})
-        cls = self.types.get(entry.get("class", name), ModelObject)
+        class_name = entry.get("class", name)
+        cls = self.types.get(class_name, self.native_types.get(class_name, ModelObject))
         obj = cls(self, name, typeId=name, **entry.get("properties", {}))
         for value in entry.get("properties", {}).get("items", []):
             obj.items.append(self.createObject(value.get("ref", value.get("class"))))
@@ -1118,6 +1120,40 @@ class CandlekeepModelTest(unittest.TestCase):
                 self.assertEqual(original, model.player.getEquipped()["0"])
                 self.assertIn(bagged, model.player.getItems())
                 self.assertNotIn(temporary, model.player.getItems())
+
+    def testTrainingDefeatReclaimsOriginalPossessionsFromSummonedGuardWithoutDuplicatingThem(self):
+        model = CandlekeepModel()
+        original = model.createObject("candlekeepStarSapphire")
+        original.setStringProperty("name", "originalTrainingPossession")
+        model.player.addItem(original)
+        model.player.setHp(47)
+        model.dialog("gatewarden").acceptTraining()
+        model.dialog("obe").beginTraining()
+        model.dialog("arkanis").attack()
+        guard = next(actor for actor in model.game_map.getObjects() if actor.getName().startswith("candlekeepWatch"))
+        guard_item = model.createObject("candlekeepDagger")
+        guard.items.append(guard_item)
+        noncreature = model.game_map.getObjectByName("innEntrance")
+        same_named_item = model.createObject("candlekeepStarSapphire")
+        same_named_item.setStringProperty("name", original.getName())
+        noncreature.items.append(same_named_item)
+        # Mirror the native winner receiving the hero's nonquest loot before onDestroy.
+        model.player.removeItem(lambda item: item == original, False)
+        guard.items.append(original)
+        model.player.setHp(0)
+        model.types["CandlekeepTrainingDefeatTrigger"](model).trigger(model.player, None)
+        self.assertIn(original, model.player.getItems())
+        self.assertNotIn(original, guard.getItems())
+        model.player.setHp(1)
+        timer = model.types["CandlekeepTrainingTimerTrigger"](model)
+        timer.trigger(model.game_map.getObjectByName("obe"), None)
+        timer.trigger(model.game_map.getObjectByName("obe"), None)
+        self.assertEqual("abandoned", model.game_map.getStringProperty("candlekeep_trainingStage"))
+        self.assertEqual(47, model.player.getHp())
+        self.assertEqual(1, model.player.getItems().count(original))
+        self.assertEqual([guard_item], guard.getItems())
+        self.assertIs(guard, model.game_map.getObjectByName(guard.getName()))
+        self.assertEqual([same_named_item], noncreature.getItems())
 
     def testDepartureRestoresTrainingThenHealsOnceAndShowsOneEpilogue(self):
         model = CandlekeepModel()

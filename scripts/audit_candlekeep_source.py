@@ -602,7 +602,9 @@ def parseIds(data):
 
 def referenceType(function, parameter):
     name = function.lower()
-    parameter = parameter.lower()
+    parameter = parameter.strip().lower().removeprefix("s:")
+    if name in {"giveitem", "useitem"} and parameter.partition("*")[0].strip() == "object":
+        return "ITM"
     if "item" in name and ("item" in parameter or "resref" in parameter):
         return "ITM"
     if "creature" in name and any(label in parameter for label in ("creature", "resref", "newobject")):

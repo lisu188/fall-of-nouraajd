@@ -44,7 +44,7 @@ NPC_IDS = (
 def load(self, context):
     import json
 
-    from game import CBuilding, CDialog, CEvent, CQuest, CScroll, CTrigger, Coords
+    from game import CBuilding, CCreature, CDialog, CEvent, CQuest, CScroll, CTrigger, Coords
     from game import claim_once, flowGame, mapQuest, register, resumableHook, trigger, uiRequest
 
     def gameMap(obj):
@@ -90,9 +90,8 @@ def load(self, context):
     def reclaimTrainingInventory(game_map):
         player = game_map.getPlayer()
         original_names = set(json.loads(player.getStringProperty("candlekeepTrainingInventoryNames") or "[]"))
-        for name in TRAINING_ALLIES + tuple("trainingFoe" + str(i) for i in range(1, 7)):
-            owner = game_map.getObjectByName(name)
-            if not owner:
+        for owner in game_map.getObjects():
+            if not isinstance(owner, CCreature) or owner == player:
                 continue
             for item in tuple(owner.getItems()):
                 if item.getName() not in original_names:

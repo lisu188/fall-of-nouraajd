@@ -105,7 +105,7 @@ def complete(d, actor):
         actor + "Quest" in d.questNames(completed=True) and actor + "Quest" not in d.questNames(),
     )
     before = resources(d)
-    d.choose(actor + "Dialog", "talk")
+    d.choose(actor + "Dialog", "talk", condition="questCompleted")
     d.check("candlekeep.quest." + actor + ".repeat", before == resources(d))
 
 

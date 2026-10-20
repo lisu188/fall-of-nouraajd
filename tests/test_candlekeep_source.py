@@ -222,6 +222,36 @@ class BinaryParserTests(unittest.TestCase):
         )
         self.assertEqual([entry["name"] for entry in refs if entry], ["GUARD"])
 
+    def testCompiledItemObjectArgumentsAreResourceReferences(self):
+        obj = 'OB\n0 0 0 0 0 0 0 0 0 0 0 0 "TARGET"OB\n'
+        content = (
+            "SC\nAC\n7" + obj * 3 + '0 0 0 0 0 "TOKEN" "" AC\nAC\n8' + obj * 3 + '0 0 0 0 0 "POTION" "" AC\nSC\n'
+        ).encode("ascii")
+        parsed, refs, unused = audit.parseScript(
+            content,
+            {7: "GiveItem(S:Object*,O:Target*)", 8: "UseItem(S:Object*,O:Target*)"},
+            {},
+        )
+        self.assertEqual(len(parsed["records"]), 2)
+        self.assertEqual(
+            [(entry["name"], entry["type"]) for entry in refs if entry],
+            [("TOKEN", "ITM"), ("POTION", "ITM")],
+        )
+
+    def testDialogueItemObjectArgumentsAreResourceReferences(self):
+        refs = audit.textReferences(
+            'ActionOverride(Player1,GiveItem("TOKEN",Player1))\n'
+            'UseItem("POTION",LastTalkedToBy())\n'
+            "GiveItem(Player1,Player1)\n"
+            'Name("ACTOR",Player1)',
+            {7: "GiveItem(S:Object*,O:Target*)", 8: "UseItem(S:Object*,O:Target*)"},
+            {9: "Name(S:Name*,O:Object*)"},
+        )
+        self.assertEqual(
+            [(entry["name"], entry["type"]) for entry in refs if entry],
+            [("TOKEN", "ITM"), ("POTION", "ITM")],
+        )
+
     def testStoreReferenceWithNestedObjectArgument(self):
         refs = audit.textReferences(
             'StartStore("SHOP",LastTalkedToBy())\nSetDialogue("NEXT")',
