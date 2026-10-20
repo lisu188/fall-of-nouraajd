@@ -26,8 +26,7 @@ if(NAVIGATION_PROFILE_CURRENT_ONLY)
 endif()
 target_compile_features(navigation_profile PRIVATE cxx_std_26)
 target_include_directories(navigation_profile PRIVATE "${GAME_HEADER_DIR}" "${GAME_SOURCE_DIR}/vstd"
-    "${GAME_SOURCE_DIR}/random-dungeon-generator" "${GAME_SOURCE_DIR}/third_party/simdjson"
-    "${GAME_SOURCE_DIR}/third_party/lua")
+    "${GAME_SOURCE_DIR}/random-dungeon-generator" "${GAME_SOURCE_DIR}/third_party/simdjson")
 target_compile_definitions(navigation_profile PRIVATE BOOST_ALLOW_DEPRECATED_HEADERS BOOST_BIND_GLOBAL_PLACEHOLDERS
     SDL_MAIN_HANDLED _USE_MATH_DEFINES NOMINMAX WIN32_LEAN_AND_MEAN)
 target_compile_options(navigation_profile PRIVATE /W3 /bigobj /permissive- /Zc:preprocessor /EHsc)
@@ -36,4 +35,4 @@ if(NOT EXISTS "${GAME_VENDOR_LIBRARY_DIR}/simdjson_vendor.lib")
     set(GAME_VENDOR_LIBRARY_DIR "${GAME_BUILD_DIR}/Release")
 endif()
 target_link_libraries(navigation_profile PRIVATE Python3::Python pybind11::headers SDL2::SDL2 SDL2_image::SDL2_image
-    SDL2_ttf::SDL2_ttf "${GAME_VENDOR_LIBRARY_DIR}/simdjson_vendor.lib" "${GAME_VENDOR_LIBRARY_DIR}/lua_vendor.lib")
+    SDL2_ttf::SDL2_ttf "${GAME_VENDOR_LIBRARY_DIR}/simdjson_vendor.lib")

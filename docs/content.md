@@ -10,9 +10,9 @@ python3 scripts/validate_content.py --repo-root .
 ## Plugin manifest (`res/plugins/manifest.json`)
 
 Version 2 of the manifest is a top-level object with `"version": 2` and one
-uniform `"plugins"` array. Python (`res/plugins/*.py`) and Lua
-(`res/plugins/*.lua`) plugins are auto-discovered and normally need no entry;
-the manifest declares native/cpp plugins, explicit ordering, and map scoping.
+uniform `"plugins"` array. Python (`res/plugins/*.py`) plugins are auto-discovered
+and normally need no entry; the manifest declares native/cpp plugins, explicit
+ordering, and map scoping.
 
 ```json
 {
@@ -20,7 +20,6 @@ the manifest declares native/cpp plugins, explicit ordering, and map scoping.
   "plugins": [
     { "id": "nativeGameplay", "kind": "native", "library": "plugins/native/native_gameplay" },
     { "id": "nativeContent",  "kind": "cpp",    "type": "CNativeContentPlugin" },
-    { "id": "extraTiles",     "kind": "lua",    "path": "plugins/tile.lua" },
     { "id": "siegeOnly",      "kind": "python", "path": "plugins/siege_extra.py",
       "scope": { "map": "siege" } }
   ]
@@ -30,10 +29,10 @@ the manifest declares native/cpp plugins, explicit ordering, and map scoping.
 | Field     | Required | Description |
 | --------- | -------- | ----------- |
 | `id`      | yes      | Unique entry id; duplicate ids are diagnosed and deduplicated at load. |
-| `kind`    | yes      | One of `native`, `cpp`, `python`, `lua`. |
+| `kind`    | yes      | One of `native`, `cpp`, `python`. |
 | `library` | native   | Shared library under `plugins/native/` (extension optional). |
 | `type`    | cpp      | Registered `CPlugin` subclass name. |
-| `path`    | python/lua | Resource path under the trusted plugin roots. |
+| `path`    | python   | Resource path under the trusted plugin roots. |
 | `entry`   | no (native) | Entry symbol, default `game_plugin_load_v3`. |
 | `scope`   | no       | `{ "map": "<name>" }` loads the entry with that map's plugins instead of globally. |
 
@@ -48,7 +47,7 @@ the native gameplay entry actually loads every class row of
 
 ### Script random integers
 
-Python and Lua plugins share `randint(lower, upper)`: it samples a uniform integer
+Python plugins expose `randint(lower, upper)`: it samples a uniform integer
 with both bounds included. Reversed bounds are normalized, so `randint(3, -2)`
 uses the same interval as `randint(-2, 3)`; equal bounds return that value.
 Bounds must fit the engine's signed 32-bit integer API. For a one-in-ten chance,

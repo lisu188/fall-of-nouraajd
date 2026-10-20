@@ -24,7 +24,6 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #include "core/CTypes.h"
 #include "gui/CGui.h"
 #include "gui/object/CMapGraphicsObject.h"
-#include "handler/CLuaHandler.h"
 #include "handler/CRngHandler.h"
 #include "object/CCreature.h"
 #include "object/CCreatureRace.h"
@@ -129,11 +128,6 @@ std::optional<std::string> normalize_relative_resource_path(const std::string &p
         return std::nullopt;
     }
     return normalized;
-}
-
-bool is_allowed_lua_plugin_path(const std::string &path) {
-    const auto normalized = normalize_relative_resource_path(path);
-    return normalized && normalized->ends_with(".lua") && normalized->starts_with("plugins/");
 }
 
 bool is_allowed_python_plugin_path(const std::string &path) {
@@ -1003,7 +997,7 @@ std::shared_ptr<json> load_plugin_manifest(const std::shared_ptr<CResourcesProvi
 
 // Kinds whose source is a resource path; their paths join the loadedPluginPaths dedupe set that
 // the auto-discovery loops in loadGlobalPlugins/loadMapPlugins consult.
-bool is_path_sourced_plugin_kind(const std::string &kind) { return kind == "python" || kind == "lua"; }
+bool is_path_sourced_plugin_kind(const std::string &kind) { return kind == "python"; }
 
 std::optional<CPluginDescriptor> parse_plugin_descriptor(const json &entry) {
     if (!entry.is_object()) {
@@ -1099,8 +1093,7 @@ std::set<std::string> getPluginAutoDiscoveryExclusions(const json &manifest) {
         if (!descriptor) {
             continue;
         }
-        const bool trustedPath = (descriptor->kind == "python" && is_allowed_python_plugin_path(descriptor->source)) ||
-                                 (descriptor->kind == "lua" && is_allowed_lua_plugin_path(descriptor->source));
+        const bool trustedPath = descriptor->kind == "python" && is_allowed_python_plugin_path(descriptor->source);
         if (trustedPath) {
             paths.insert(*normalize_relative_resource_path(descriptor->source));
         }
@@ -1911,24 +1904,6 @@ void CGameLoader::loadGui(const std::shared_ptr<CGame> &game) {
 
 bool CPluginLoader::isTrustedPluginPath(const std::string &path) { return is_allowed_python_plugin_path(path); }
 
-bool CPluginLoader::isTrustedLuaPluginPath(const std::string &path) { return is_allowed_lua_plugin_path(path); }
-
-bool CPluginLoader::loadLuaPlugin(const std::shared_ptr<CGame> &game, const std::string &path) {
-    if (!isTrustedLuaPluginPath(path)) {
-        vstd::logger::warning("Rejected Lua plugin outside trusted resource plugin paths:", path);
-        return false;
-    }
-    try {
-        std::string code = game->getResourcesProvider()->load(path);
-        return game->getLuaHandler()->loadPlugin(game, path, code);
-    } catch (const std::exception &exception) {
-        vstd::logger::warning("Failed to load Lua plugin:", path, exception.what());
-    } catch (...) {
-        vstd::logger::warning("Failed to load Lua plugin:", path);
-    }
-    return false;
-}
-
 bool CPluginLoader::loadPlugin(const std::shared_ptr<CGame> &game, const std::string &path) {
     if (!isTrustedPluginPath(path)) {
         vstd::logger::warning("Rejected Python plugin outside trusted resource plugin paths:", path);
@@ -1998,12 +1973,6 @@ bool CPluginLoader::loadGlobalPlugins(const std::shared_ptr<CGame> &game) {
     for (const std::string &script : game->getResourcesProvider()->getFiles(CResType::PLUGIN)) {
         if (!manifestPluginPaths.contains(script)) {
             loadedAll = loadPlugin(game, script) && loadedAll;
-        }
-    }
-
-    for (const std::string &script : game->getResourcesProvider()->getFiles(CResType::PLUGIN_LUA)) {
-        if (!manifestPluginPaths.contains(script)) {
-            loadedAll = loadLuaPlugin(game, script) && loadedAll;
         }
     }
 

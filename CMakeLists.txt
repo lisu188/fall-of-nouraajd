@@ -83,17 +83,6 @@ target_compile_features(simdjson_vendor PUBLIC cxx_std_26)
 target_include_directories(simdjson_vendor SYSTEM PUBLIC ${CMAKE_SOURCE_DIR}/third_party/simdjson)
 set_target_properties(simdjson_vendor PROPERTIES POSITION_INDEPENDENT_CODE ON)
 
-# Vendored Lua 5.4 (third_party/lua, MIT): the interpreter library only — the standalone
-# REPL (lua.c) and bytecode compiler (luac.c) are excluded on purpose.
-file(GLOB LUA_VENDOR_SRC ${CMAKE_SOURCE_DIR}/third_party/lua/*.c)
-list(FILTER LUA_VENDOR_SRC EXCLUDE REGEX ".*/(lua|luac)\\.c$")
-add_library(lua_vendor STATIC ${LUA_VENDOR_SRC})
-target_include_directories(lua_vendor SYSTEM PUBLIC ${CMAKE_SOURCE_DIR}/third_party/lua)
-set_target_properties(lua_vendor PROPERTIES POSITION_INDEPENDENT_CODE ON)
-if (UNIX)
-    target_compile_definitions(lua_vendor PRIVATE LUA_USE_POSIX)
-endif ()
-
 function(configure_cpp_target target_name)
     configure_profile_compile_pool(${target_name})
     target_compile_features(${target_name} PRIVATE cxx_std_26)
@@ -178,7 +167,6 @@ set(GAME_CORE_LINK_LIBS
     ${SDL2_IMAGE_LIBS}
     ${SDL2_TTF_LIBS}
     simdjson_vendor
-    lua_vendor
     ${CMAKE_DL_LIBS}
 )
 
@@ -186,10 +174,6 @@ set(GAME_CORE_OBJECT_SRC ${GAME_CORE_SRC})
 if (WIN32)
     list(FILTER GAME_CORE_OBJECT_SRC EXCLUDE REGEX ".*/src/core/CModule\\.cpp$")
 endif ()
-
-# Confine the Lua C headers to their own translation unit so they never join a unity batch.
-set_source_files_properties(${CMAKE_SOURCE_DIR}/src/handler/CLuaHandler.cpp
-    PROPERTIES SKIP_UNITY_BUILD_INCLUSION ON)
 
 add_library(game_core_objects OBJECT ${GAME_CORE_OBJECT_SRC})
 configure_cpp_target(game_core_objects)
@@ -485,7 +469,6 @@ configure_file(res/plugins/crafting.py plugins/crafting.py)
 configure_file(res/plugins/artifact_sets.py plugins/artifact_sets.py)
 configure_file(res/plugins/potion.py plugins/potion.py)
 configure_file(res/plugins/tile.py plugins/tile.py)
-configure_file(res/plugins/tile.lua plugins/tile.lua)
 configure_file(res/plugins/castle_campaign.py plugins/castle_campaign.py)
 configure_file(res/plugins/manifest.json plugins/manifest.json)
 
@@ -921,7 +904,6 @@ target_compile_definitions(handler_unit_tests PRIVATE
     GAME_NATIVE_TEST_PROFILE_DIR="${CMAKE_CURRENT_SOURCE_DIR}/coverage/native-test-profiles")
 add_game_unit_test(object_unit_tests tests/unit/test_object.cpp)
 add_game_unit_test(plugin_registrar_unit_tests tests/unit/test_plugin_registrar.cpp)
-add_game_unit_test(lua_unit_tests tests/unit/test_lua.cpp)
 
 add_executable(native_test_profile_fixture tests/unit/native_test_profile_fixture.cpp)
 configure_cpp_target(native_test_profile_fixture)

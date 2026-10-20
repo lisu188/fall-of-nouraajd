@@ -26,7 +26,6 @@ struct CResType {
     const static std::string CONFIG;
     const static std::string MAP;
     const static std::string PLUGIN;
-    const static std::string PLUGIN_LUA;
     const static std::string SAVE;
 };
 

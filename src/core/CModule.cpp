@@ -1382,7 +1382,6 @@ void init_game_module(py::module_ &m) {
 
     py::class_<CPluginLoader, std::shared_ptr<CPluginLoader>>(m, "CPluginLoader", "Helpers for loading plugins.")
         .def("loadPlugin", &CPluginLoader::loadPlugin, "Load a Python plugin resource into the game.")
-        .def("loadLuaPlugin", &CPluginLoader::loadLuaPlugin, "Load a Lua plugin resource into the game.")
         .def("loadCppPlugin", &CPluginLoader::loadCppPlugin, "Load a compiled C++ plugin type into the game.")
         .def_static("loadDynamicPlugin", &CPluginLoader::loadDynamicPlugin, py::arg("game"), py::arg("library"),
                     py::arg("entry") = "game_plugin_load_v3", "Load a dynamic C++ plugin shared library into the game.")
