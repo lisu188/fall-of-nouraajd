@@ -1,5 +1,5 @@
 {
-  "baselineRevision": "85109f400b196bc8dca20480faab82c25c2c4126",
+  "baselineRevision": "72f3a74d09a9d3fde202cf1800f11849b45c2ca0",
   "description": "Reviewed Python binding registration baseline. Update deliberately when the public binding declarations or behavior change.",
   "groups": [
     {

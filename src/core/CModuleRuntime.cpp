@@ -26,7 +26,7 @@ namespace nouraajd::bindings {
 namespace {
 vstd::task<void> runPostedScriptFlow(std::weak_ptr<CGuiHandler> gui, std::unique_ptr<CScriptFlow> flow) {
     try {
-        co_await vstd::post(vstd::event_loop<>::instance());
+        co_await vstd::post(CRuntimeBridge::event_loop_instance());
         if (auto owner = gui.lock()) {
             co_await owner->runScriptFlowAsync(std::move(flow));
         }
