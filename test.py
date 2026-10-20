@@ -142,6 +142,12 @@ XVFB_GAMEPLAY_PARENT_TEST = "XvfbGameplayTest.test_keyboard_gameplay_under_xvfb"
 VALID_TEST_SUITES = ("fast", "gameplay", "gameplay-core", "mcp-branches", "ui", "coverage-safe", "full")
 MCP_BRANCH_TEST_PREFIX = "GameplayBranchMcpTest."
 FAST_TEST_PREFIXES = (
+    "BaldursGateCityContentTest.",
+    "BaldursGateCityRoutesTest.",
+    "BaldursGateCityLedgerUnitTest.",
+    "BaldursGateCityLedgerFixtureTest.",
+    "BaldursGateCityRegionsTest.",
+    "BaldursGateCityGeometryTest.",
     "CandlekeepContentTest.",
     "CandlekeepModelTest.",
     "CandlekeepSourceParserTest.",
@@ -26581,6 +26587,12 @@ class TestRunnerSuiteTest(unittest.TestCase):
 SOURCE_UI_TESTS_AVAILABLE = (REPO_ROOT / "tests" / "__init__.py").is_file()
 
 if SOURCE_UI_TESTS_AVAILABLE:
+    from tests.test_baldurs_gate_city_content import BaldursGateCityContentTest as _BaldursGateCityContentTest
+    from tests.test_baldurs_gate_city_routes import BaldursGateCityRoutesTest as _BaldursGateCityRoutesTest
+    from tests.test_baldurs_gate_city_ledger import BaldursGateCityLedgerUnitTest as _BaldursGateCityLedgerUnitTest
+    from tests.test_baldurs_gate_city_ledger import BaldursGateCityLedgerFixtureTest as _BaldursGateCityLedgerFixtureTest
+    from tests.test_baldurs_gate_city_regions import BaldursGateCityRegionsTest as _BaldursGateCityRegionsTest
+    from tests.test_baldurs_gate_city_geometry import BaldursGateCityGeometryTest as _BaldursGateCityGeometryTest
     from tests.test_candlekeep_content import CandlekeepContentTest as _CandlekeepContentTest
     from tests.test_candlekeep_content import CandlekeepModelTest as _CandlekeepModelTest
     from tests.test_candlekeep_source import BinaryParserTests as _CandlekeepSourceParserTest
@@ -26670,6 +26682,24 @@ if SOURCE_UI_TESTS_AVAILABLE:
     from tests.test_mcp_trade_market import McpTradeMarketContractTest as _McpTradeMarketContractTest
     from tests.test_mcp_trade_market import McpTradeMarketRuntimeTest as _McpTradeMarketRuntimeTest
     from tests.test_waypoint_traversal import WaypointTraversalTest as _WaypointTraversalTest
+
+    class BaldursGateCityContentTest(_BaldursGateCityContentTest):
+        pass
+
+    class BaldursGateCityRoutesTest(_BaldursGateCityRoutesTest):
+        pass
+
+    class BaldursGateCityLedgerUnitTest(_BaldursGateCityLedgerUnitTest):
+        pass
+
+    class BaldursGateCityLedgerFixtureTest(_BaldursGateCityLedgerFixtureTest):
+        pass
+
+    class BaldursGateCityRegionsTest(_BaldursGateCityRegionsTest):
+        pass
+
+    class BaldursGateCityGeometryTest(_BaldursGateCityGeometryTest):
+        pass
 
     class CandlekeepContentTest(_CandlekeepContentTest):
         pass
@@ -26929,6 +26959,12 @@ if SOURCE_UI_TESTS_AVAILABLE:
     del _NavigationMcpWalkthroughTest
     del _NavigationCallbackTest
     del _ConsoleUiInteractionTest, _UiMinimapInteractionTest
+    del _BaldursGateCityContentTest
+    del _BaldursGateCityRoutesTest
+    del _BaldursGateCityLedgerUnitTest
+    del _BaldursGateCityLedgerFixtureTest
+    del _BaldursGateCityRegionsTest
+    del _BaldursGateCityGeometryTest
     del _CandlekeepContentTest, _CandlekeepModelTest, _CandlekeepSourceParserTest, _CandlekeepSourceAuditTest
     del _GameplayBranchCatalogTest, _GameplayBranchDriverTest, _GameplayBranchJournalsTest, _GameplayBranchMcpTest
     del _WaypointTraversalTest
