@@ -33,6 +33,24 @@ class BindingSourceLayoutTest(unittest.TestCase):
                 digest = hashlib.sha256(registrationTokens(body).encode()).hexdigest()
                 self.assertEqual(group["registrationTokenSha256"], digest)
 
+    def testAlliedCombatBindingsConvertAllThreeParticipantsWithoutChangingLegacyCalls(self):
+        source = (ROOT / "src/core/bindings/CModuleServices.cpp").read_text(encoding="utf-8")
+        for name, native_name in (
+            ("fightManyWithAllies", "fightManyWithAllies"),
+            ("fightManyWithAlliesOutcome", "fightManyWithAlliesOutcome"),
+        ):
+            match = re.search(
+                r'"' + name + r'",\s*\[\]\(std::shared_ptr<CCreature> hero, '
+                r"const py::iterable &opponents, const py::iterable &allies\)\s*\{(.*?)\}",
+                source,
+                re.DOTALL,
+            )
+            self.assertIsNotNone(match, name)
+            self.assertIn("CFightHandler::" + native_name + "(hero, creature_iterable_to_vector(opponents),", match[1])
+            self.assertIn("creature_iterable_to_vector(allies)", match[1])
+        self.assertIn('"fightManyOutcome"', source)
+        self.assertNotIn('"fightManyWithAlliesAsync"', source)
+
     def testCoordinatorRegistersEachGroupOnceAfterMetadataInOriginalOrder(self):
         source = (ROOT / "src/core/CModule.cpp").read_text(encoding="utf-8")
         body = registrationBody(source, "init_game_module")
