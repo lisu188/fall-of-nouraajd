@@ -20,6 +20,7 @@ SOURCES = {
     "areaCatalogue": "https://gibberlings3.github.io/iesdp/appendices/area_lists/bg1aref.htm",
     "areaFormat": "https://gibberlings3.github.io/iesdp/file_formats/ie_formats/are_v1.htm",
     "searchFormat": "https://gibberlings3.github.io/iesdp/appendices/search.html",
+    "gameFormat": "https://gibberlings3.github.io/iesdp/file_formats/ie_formats/gam_v1.1.htm",
     "classicCity": "https://www.forgottenwars.com/bg1/ar0800.htm",
 }
 EDITION_ITEM_CONVERSIONS = {
@@ -192,11 +193,14 @@ def buildCityFixture(game_root, language="en_US", encoding=None):
         "references": {},
         "worldMapLinks": [],
         "scriptedActors": [],
+        "campaignNpcs": [],
+        "numericSourceRules": {},
         "unresolved": [],
         "uncertainties": [
             "No authenticated original BG1 base installation; EE archive bytes do not prove classic parity",
             "Area membership has geographic corroboration, but individual EE-added interactions require reconciliation",
-            "Only placed ARE actors are enumerated; dynamically spawned actors and chapter conditions need a script audit",
+            "Script-spawned actors are structural candidates; chapter and shared-script conditions remain unaudited",
+            "Campaign GAM recruitment and NPC level-variant selection require original-game verification",
             "Search-map indices retain source collision metadata; native aggregation can change corridor topology",
             "Original dialogue text, artwork and binaries are intentionally absent",
             "Dudleyville includes explicitly labelled DudleyFixes branches; those do not establish original behavior",
@@ -307,6 +311,74 @@ def buildCityFixture(game_root, language="en_US", encoding=None):
                     "outsideCity": target not in source.CITY_AREA_IDS,
                 }
             )
+
+    game_data, game_origin = index.read("BALDUR", "GAM", "base")
+    game, _, _ = source.parseGame(game_data)
+    fixture["campaignGame"] = {
+        "resource": "BALDUR.GAM",
+        "sha256": source.sha256(game_data),
+        "origin": game_origin,
+        "version": game["version"],
+        "nonPartyCount": len(game["non_party_members"]),
+        "partyCount": len(game["party_members"]),
+    }
+    if ("BALDUR", "GAM") in index.overrides:
+        effective_game, _ = index.read("BALDUR", "GAM", "effective")
+        fixture["campaignGame"]["overrideDiffers"] = source.sha256(effective_game) != source.sha256(game_data)
+    for actor in game["non_party_members"]:
+        area_id, creature_id = actor["area"], actor["creature"]
+        if area_id not in source.CITY_AREA_IDS and creature_id not in {"QUAYLE", "ELDOTH"}:
+            continue
+        actor = dict(actor)
+        actor["sourceId"] = "BALDUR.GAM#npc" + str(actor["sourceIndex"])
+        actor["sourceSha256"] = fixture["campaignGame"]["sha256"]
+        actor["scopeClassification"] = (
+            "city"
+            if area_id in source.CITY_AREA_IDS
+            else "boundaryHistory" if area_id in source.CITY_BOUNDARIES else "externalHistory"
+        )
+        actor["scopePolicy"] = (
+            "Factual city placement; source recruitment and level checks remain pending."
+            if area_id in source.CITY_AREA_IDS
+            else "Explicit gate excursion/history may recruit a persistent native follower; source area is not playable."
+        )
+        try:
+            if "embedded_creature" in actor:
+                creature_id = actor["sourceId"]
+                actor.pop("embedded_creature")
+                offset, size = actor["embedded_creature_offset"], actor["embedded_creature_size"]
+                creature = creatureMetadata(
+                    game_data[offset : offset + size], area_id if area_id in source.CITY_AREA_IDS else None
+                )
+                creature["sha256"] = actor["embedded_creature_sha256"]
+                fixture["creatures"][creature_id] = creature
+            elif creature_id not in fixture["creatures"]:
+                creature_data, _ = index.read(creature_id, "CRE", "base")
+                fixture["creatures"][creature_id] = {
+                    **creatureMetadata(creature_data, area_id if area_id in source.CITY_AREA_IDS else None),
+                    "sha256": source.sha256(creature_data),
+                }
+            creature = fixture["creatures"][creature_id]
+            actor["creatureMetadata"] = creature_id
+            actor["creatureSha256"] = creature["sha256"]
+            name_text = talk.get(creature["name_strref"])
+            actor["displayName"] = name_text.get("text", "") if name_text else ""
+            if not actor["embedded_creature_size"]:
+                addReferences([source.reference(actor["creature"], "CRE", "GAM recruitment candidate")])
+        except (source.AuditError, OSError) as error:
+            fixture["unresolved"].append({"resource": creature_id + ".CRE", "error": str(error)})
+        fixture["campaignNpcs"].append(actor)
+
+    reputation_data, reputation_origin = index.read("REPUTATI", "2DA", "base")
+    reputation, _, _ = source.parseNumericTwoDa(reputation_data)
+    fixture["numericSourceRules"]["REPUTATI.2DA"] = {
+        **reputation,
+        "sha256": source.sha256(reputation_data),
+        "origin": reputation_origin,
+        "sourceStatus": "Supporting installed EE base table; classic BG1 parity remains unverified.",
+        "donationColumns": {"threshold": "BASE_CHURCH", "modifier": "MONEY_CHURCH"},
+        "interpretation": "Raw numeric cells only; native reputation-unit conversion and donation outcomes require validation.",
+    }
 
     # Follow resource identifiers only. Parsed dialogue/script text never enters the fixture.
     queue = deque(sorted(pending_refs))
@@ -419,6 +491,7 @@ def buildCityFixture(game_root, language="en_US", encoding=None):
         creature["excludedAddition"] = creature_id in EDITION_EXCLUDED_CREATURES
     fixture["counts"] = {
         "areas": len(fixture["areas"]),
+        "campaignNpcs": len(fixture["campaignNpcs"]),
         "classifications": dict(Counter(row["classification"] for row in fixture["areas"].values())),
         **{
             key: sum(len(area[key]) for area in fixture["areas"].values())

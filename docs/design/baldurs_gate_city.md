@@ -33,6 +33,8 @@ Existing combat entry points retain their behavior unless a map enables `plugin_
 
 The hero supplies the player decision controller. Allies use native AI fight controllers and participate in initiative, effects, stalls and bounded rounds. Enemies choose a living hero-side target. Defeated enemies grant native experience and their actual carried possessions to the surviving hero. Fallen allies follow creature destruction and actual loot transfer; the city coordinator must retain companion death state. Hero defeat ends the encounter immediately, even if ordinary player destruction respawns the hero. No six-character selection interface is introduced.
 
+The city additionally enables `plugin_cityFixedLoot`: defeated NPCs transfer only their actual bag/equipped possessions and saved gold, with no unrelated random loot. Source-forbidden drops stay with the removed actor; removing equipped references prevents resurrection from duplicating items. The flag is opt-in and preserves other maps' loot behavior.
+
 `tests/unit/test_allied_combat.cpp` covers native ally actions, exact rewards, invalid candidates, participant limits, mover perspectives, ally death, hero respawn, effects, cancellation and stale map contexts.
 
 ## Content and acceptance contracts

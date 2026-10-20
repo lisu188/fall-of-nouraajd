@@ -292,6 +292,37 @@ void testCancelledAndStaleAlliedEncountersEndControllers() {
                 "an ally removed before its initiative turn must never act through the old snapshot");
 }
 
+void testFixedCityLootTransfersGoldAndEquippedPossessionsOnce() {
+    Fixture fixture;
+    fixture.map->setBoolProperty("plugin_cityFixedLoot", true);
+    auto enemy = fixture.actor("sourceOwner");
+    auto carried = fixture.possession(enemy, "sourceCarriedReward");
+    auto protectedItem = fixture.possession(enemy, "sourceForbiddenDrop");
+    protectedItem->setBoolProperty("plugin_cityUndroppable", true);
+    auto equipped = std::make_shared<CWeapon>();
+    equipped->setGame(fixture.game);
+    equipped->setName("sourceEquippedSword");
+    equipped->setTypeId("sourceEquippedSword");
+    equipped->addTag("cursed");
+    enemy->setEquipped({{"0", equipped}});
+    enemy->setGold(37);
+    enemy->setHp(0);
+    const int before = fixture.hero->getGold();
+    CFightHandler::defeatedCreature(fixture.hero, enemy);
+    expect_true(fixture.hero->getGold() == before + 37 && enemy->getGold() == 0,
+                "fixed city loot must transfer the defeated NPC's actual gold once");
+    expect_true(fixture.hero->getInInventory().size() == 2 && fixture.hero->hasInInventory(carried) &&
+                    fixture.hero->hasInInventory(equipped) && !enemy->hasItem(carried) && !enemy->hasItem(equipped),
+                "fixed city loot must transfer actual bag and equipped objects without random additions or old owners");
+    expect_true(enemy->hasInInventory(protectedItem) && !fixture.hero->hasInInventory(protectedItem),
+                "a source-forbidden drop must remain with the removed actor, including any retained corpse reference");
+    const int afterXp = fixture.hero->getExp();
+    CFightHandler::defeatedCreature(fixture.hero, enemy);
+    expect_true(fixture.hero->getGold() == before + 37 && fixture.hero->getExp() == afterXp &&
+                    fixture.hero->getInInventory().size() == 2,
+                "repeating defeated-creature cleanup must not duplicate source gold, items or experience");
+}
+
 void testAllyEffectsCountAsEncounterProgress() {
     Fixture fixture;
     auto ally = fixture.actor("effectAlly", true);
@@ -317,5 +348,6 @@ int main() {
     testHeroDefeatEndsBeforeSurvivingAlliesAct();
     testCancelledAndStaleAlliedEncountersEndControllers();
     testAllyEffectsCountAsEncounterProgress();
+    testFixedCityLootTransfersGoldAndEquippedPossessionsOnce();
     return finish_tests();
 }
