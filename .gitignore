@@ -17,6 +17,7 @@ test/
 /.idea/*
 !/.idea/misc.xml
 /cmake-build-*
+/.cache/
 /json/
 /vcpkg_installed/
 /windows-tools/

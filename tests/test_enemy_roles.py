@@ -13,6 +13,8 @@ import types
 import unittest
 from unittest.mock import Mock, patch
 
+from tests.cpp_bindings import readBindingSources
+
 ROOT = Path(__file__).resolve().parents[1]
 SIGNATURES = ("EnemyBrace", "EnemyArcaneBolt", "EnemyOpeningStrike", "EnemyRitualHex")
 
@@ -264,7 +266,7 @@ class EnemyRolesTest(unittest.TestCase):
         self.target.hurt.assert_not_called()
 
     def testRolePluginCallsUseThePublishedNativeObjectApi(self):
-        bindings = (ROOT / "src/core/CModule.cpp").read_text(encoding="utf-8")
+        bindings = readBindingSources(ROOT)
         published = set(re.findall(r'\.def(?:_static)?\s*\(\s*"([^"]+)"', bindings))
         source = (ROOT / "res/plugins/enemy_roles.py").read_text(encoding="utf-8")
         tree = ast.parse(source)
@@ -295,7 +297,7 @@ class EnemyRolesTest(unittest.TestCase):
         self.assertEqual(3, source.count("std::abs(median(role"))
 
     def testRuntimeChildCallsUseThePublishedNativeObjectApi(self):
-        bindings = (ROOT / "src/core/CModule.cpp").read_text(encoding="utf-8")
+        bindings = readBindingSources(ROOT)
         published = set(re.findall(r'\.def(?:_static)?\s*\(\s*"([^"]+)"', bindings))
         source = (ROOT / "tests/test_enemy_role_runtime.py").read_text(encoding="utf-8")
         tree = ast.parse(source)

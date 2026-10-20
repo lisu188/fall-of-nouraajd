@@ -108,13 +108,12 @@ list_recent_test_artifacts() {
 cmake_launcher_args=()
 if [[ -v COVERAGE_CXX_COMPILER_LAUNCHER ]]; then
     cmake_launcher_args=(-DCMAKE_CXX_COMPILER_LAUNCHER="${COVERAGE_CXX_COMPILER_LAUNCHER}")
-elif command -v ccache >/dev/null 2>&1; then
-    cmake_launcher_args=(-DCMAKE_CXX_COMPILER_LAUNCHER=ccache)
 fi
 
 cmake_args=(
     -S . -B "${BUILD_DIR}" -G Ninja
     -DCMAKE_BUILD_TYPE=Debug
+    -DGAME_ENABLE_PCH=ON
     -DCMAKE_C_COMPILER="${CC}"
     -DCMAKE_CXX_COMPILER="${CXX}"
     "${cmake_launcher_args[@]}"
@@ -217,13 +216,20 @@ if [[ "${compiler_major}" != "${gcov_major}" ]]; then
 fi
 python3 "${ROOT_DIR}/scripts/check_build_directory.py" \
     --build-dir "${BUILD_DIR}" --generator Ninja --compiler "${CXX}"
-run_phase "configure" cmake "${cmake_args[@]}"
+run_phase "configure" python3 scripts/build_metrics.py run --phase configure \
+    --build-dir "${BUILD_DIR}" --output "${REPORT_DIR}/build-metrics/configure.json" -- cmake "${cmake_args[@]}"
 run_phase "build _game, for_unit_tests, and performance_guard_tests" \
+    python3 scripts/build_metrics.py run --phase compile --cache-tool ccache \
+    --build-dir "${BUILD_DIR}" --output "${REPORT_DIR}/build-metrics/compile.json" -- \
     cmake --build "${BUILD_DIR}" --target _game for_unit_tests performance_guard_tests -j"${COVERAGE_JOBS}"
 run_phase "coverage data cleanup" find "${BUILD_DIR}" -name '*.gcda' -delete
 run_phase "ctest" ctest --test-dir "${BUILD_DIR}" --output-on-failure
 run_phase "python test suite" run_python_coverage_tests
 run_phase "report generation" generate_report
+if [[ "${GAME_CI_CACHE_PROBE:-0}" == "1" ]]; then
+    run_phase "representative compile cache verification" python3 scripts/probe_build_cache.py \
+        --build-dir "${BUILD_DIR}" --output "${REPORT_DIR}/build-metrics/cache-probe.json" --replay-objects
+fi
 
 total_elapsed=$((SECONDS - SCRIPT_START))
 echo "Coverage reports written to ${REPORT_DIR}/coverage.txt and ${REPORT_DIR}/coverage.html"
