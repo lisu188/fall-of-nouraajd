@@ -54,15 +54,6 @@ class CPythonKindRuntime : public IPluginRuntime {
     }
 };
 
-class CLuaKindRuntime : public IPluginRuntime {
-  public:
-    std::string kind() const override { return "lua"; }
-
-    bool load(const std::shared_ptr<CGame> &game, const CPluginDescriptor &descriptor) override {
-        return CPluginLoader::loadLuaPlugin(game, descriptor.source);
-    }
-};
-
 } // namespace
 
 namespace plugin_runtime {
@@ -88,9 +79,6 @@ void registerBuiltinRuntimes() {
     }
     if (!find("python")) {
         registerRuntime(std::make_shared<CPythonKindRuntime>());
-    }
-    if (!find("lua")) {
-        registerRuntime(std::make_shared<CLuaKindRuntime>());
     }
 }
 

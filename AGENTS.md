@@ -435,13 +435,7 @@ Follow this workflow:
 
 Mismatched ids cause runtime loading or spawning failures.
 
-Plugins may also be authored in Lua (`res/plugins/*.lua`, auto-discovered like
-Python): define `load(context)` and call `context.registerType(name, {base =
-"CTile", onStep = function(self, creature) ... end})`. Lua supports the bases
-CTile, CEffect, CPotion, CScroll, CInteraction, CTrigger, CBuilding, and CEvent
-with a curated object API (property get/set, heal/hurt/healProc, getCause,
-createObject, randint, log); prefer Python for anything beyond that surface. A
-brand-new C++ gameplay class instead needs an `FN_TYPE`/`FN_WRAPPED` row in
+A brand-new C++ gameplay class needs an `FN_TYPE`/`FN_WRAPPED` row in
 `src/plugin/CGameplayTypeTable.h`.
 
 ## Adding a creature race, class, or monster archetype

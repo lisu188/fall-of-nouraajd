@@ -24,7 +24,7 @@ class CGame;
 
 // The single host surface every plugin runtime registers through. Native plugins receive it
 // via the CPluginHostV3 handshake (see plugin/CPluginAbi.h), the in-engine CPlugin subclasses
-// via CPlugin::load, and scripted runtimes (Python, Lua) through their language adapters.
+// via CPlugin::load, and Python plugins through their language adapter.
 //
 // registerType<T, Bases...> intentionally performs the same double registration the engine has
 // always relied on: the process-global CTypes tables (builders, serializers, casts) plus the

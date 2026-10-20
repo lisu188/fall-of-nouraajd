@@ -46,7 +46,7 @@ cooperative cancellation. Running work finishes or observes its stop token.
 Shutdown from a task, including a task beneath a synchronous nested boundary,
 defers final teardown rather than joining itself. Independent teardown state
 retains GUI, maps, providers, and scripting owners until execution finishes;
-Python and Lua state are released afterward. Repeated shutdown is harmless.
+Python state is released afterward. Repeated shutdown is harmless.
 
 GUI modal methods expose `*Async` counterparts. Their coroutine frames own
 panels, close them on cancellation or failure, and release text-input state.

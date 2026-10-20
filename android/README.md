@@ -1,6 +1,9 @@
 # Android MVP build
 
-The Android port keeps the existing C++/SDL engine, Python map/quest scripts, Lua support, JSON content, and `_game` pybind11 bindings. The Android host builds them into `libmain.so`, embeds CPython, extracts packaged content into app-private storage, and calls `game.new()`.
+The Android port keeps the existing C++/SDL engine, Python map/quest scripts,
+JSON content, and `_game` pybind11 bindings. The Android host builds them into
+`libmain.so`, embeds CPython, extracts packaged content into app-private storage,
+and calls `game.new()`.
 
 ## Current target
 

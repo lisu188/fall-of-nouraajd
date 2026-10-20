@@ -2873,6 +2873,23 @@ class ContentValidatorTest(unittest.TestCase):
             "native_optional:native_optional_load_v3",
         )
 
+    def testManifestRejectsRemovedLuaRuntime(self):
+        root = self.make_fixture()
+        plugin_path = root / "res/plugins/removed.lua"
+        plugin_path.parent.mkdir(parents=True, exist_ok=True)
+        plugin_path.write_text("function load(context) end\n", encoding="utf-8")
+        write_json(
+            root / "res/plugins/manifest.json",
+            {
+                "version": 2,
+                "plugins": [{"kind": "lua", "id": "removedRuntime", "path": "plugins/removed.lua"}],
+            },
+        )
+
+        issues = validate_repo(root)
+
+        self.assertIssueContains(issues, "res/plugins/manifest.json", "plugins[0]", 'unknown plugin kind "lua"')
+
     def test_plugin_manifest_schema_diagnostics(self):
         root = self.make_fixture()
         write_json(
@@ -2883,7 +2900,7 @@ class ContentValidatorTest(unittest.TestCase):
                     {"kind": "cpp", "id": "missingType"},
                     {"kind": "native", "id": "escapee", "library": "plugins/escapee"},
                     {"kind": "python", "id": "missingPath", "path": "plugins/absent.py"},
-                    {"kind": "lua", "id": "wrongSuffix", "path": "plugins/wrong.py"},
+                    {"kind": "python", "id": "wrongSuffix", "path": "plugins/wrong.txt"},
                     {"kind": "cpp", "id": "missingType", "type": "CPlugin"},
                     {"kind": "cpp", "id": "badScope", "type": "CPlugin", "scope": {"map": "missingmap"}},
                 ]
@@ -2897,7 +2914,7 @@ class ContentValidatorTest(unittest.TestCase):
         self.assertIssueContains(issues, "res/plugins/manifest.json", "plugins[1]", 'non-empty "type" field')
         self.assertIssueContains(issues, "res/plugins/manifest.json", "plugins[2]", "must live under plugins/native/")
         self.assertIssueContains(issues, "res/plugins/manifest.json", "plugins[3]", "does not exist under res/")
-        self.assertIssueContains(issues, "res/plugins/manifest.json", "plugins[4]", "must end with .lua")
+        self.assertIssueContains(issues, "res/plugins/manifest.json", "plugins[4]", "must end with .py")
         self.assertIssueContains(issues, "res/plugins/manifest.json", "plugins[5]", 'duplicate plugin id "missingType"')
         self.assertIssueContains(
             issues, "res/plugins/manifest.json", "plugins[6]", 'references unknown map "missingmap"'
