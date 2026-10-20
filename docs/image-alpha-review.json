@@ -1,6 +1,6 @@
 {
-  "version": 1,
-  "description": "All 192 game PNGs visually reviewed. Preserve authored transparency and rectangular terrain/UI/icon artwork; remove only reviewed sprite backdrops. RGB pixels and dimensions remain unchanged.",
+  "version": 2,
+  "description": "All 192 game PNGs reviewed. Alpha masking preserves original RGB artwork and dimensions; optional separately reviewed Lanczos downsampling makes 50 oversized cutouts 512x512. Original source and alpha-stage provenance remain recorded.",
   "images": [
     {
       "path": "ambient/brazier.png",
@@ -1403,7 +1403,26 @@
       "transparentPixels": 2171343,
       "partialPixels": 702,
       "metadataSha256": "464b07430a3cbe82cfa71420ab05a176e0b1b0ddc217d615ea655953d8dc96d2",
-      "rgbaSha256": "85761d10a30b61a1e6ee0f084bc6a161e44a2e0f7c40a3b2ba296898dfdc6628"
+      "rgbaSha256": "85761d10a30b61a1e6ee0f084bc6a161e44a2e0f7c40a3b2ba296898dfdc6628",
+      "resize": {
+        "size": [
+          512,
+          512
+        ],
+        "resample": "lanczos",
+        "resultSha256": "916ec0b1a7c8a46bec24c9b9cb375956fd8edfac5eb0234aa982875683521853",
+        "rgbSha256": "6f6ce94bcfcff352a8b7f0fdb1fa2c6a18b9ac19558e83d62fd47285354c739a",
+        "rgbaSha256": "c5001c53fd51d840242af508fbf7a5093b5a93859b2fc34777b52620621fef0c",
+        "resultBytes": 159056,
+        "transparentPixels": 132627,
+        "partialPixels": 6215,
+        "encoding": {
+          "python": "3.11.9",
+          "pillow": "12.2.0",
+          "zlib": "1.3.1",
+          "compressLevel": 9
+        }
+      }
     },
     {
       "path": "items/quest/boneKey.png",
@@ -1436,7 +1455,26 @@
       "transparentPixels": 3523875,
       "partialPixels": 495,
       "metadataSha256": "aaf6871068328321be9397ff07a12d2c86335c82eeb6a4b8d712e5e192e2f5a6",
-      "rgbaSha256": "fad8d941fc59bac6f96834cdf89fc28845f01a99c23be02309fd8f63f2ddf5bc"
+      "rgbaSha256": "fad8d941fc59bac6f96834cdf89fc28845f01a99c23be02309fd8f63f2ddf5bc",
+      "resize": {
+        "size": [
+          512,
+          512
+        ],
+        "resample": "lanczos",
+        "resultSha256": "18c39024dbd443dc54ee2f57fe968d076ff7db15446a59d22182cd1d6db0608c",
+        "rgbSha256": "c77d99c1fe8d4223a0d539e96b66e04521f352051642015d6a109a35b78b0ceb",
+        "rgbaSha256": "7f856b74605dc4aa2bc79caffc849086a1e16e7d8d5f58a4b644698beceb649e",
+        "resultBytes": 85951,
+        "transparentPixels": 217993,
+        "partialPixels": 4551,
+        "encoding": {
+          "python": "3.11.9",
+          "pillow": "12.2.0",
+          "zlib": "1.3.1",
+          "compressLevel": 9
+        }
+      }
     },
     {
       "path": "items/quest/brassKey.png",
@@ -1469,7 +1507,26 @@
       "transparentPixels": 3100037,
       "partialPixels": 520,
       "metadataSha256": "faeea617be96c30002ab3858e2d3d97c8b8aab35cf95ae85fc5c765b06bca69f",
-      "rgbaSha256": "d104567718f4313541658cf5d92e98aed1b588b41b481f2e1c34d693e2587878"
+      "rgbaSha256": "d104567718f4313541658cf5d92e98aed1b588b41b481f2e1c34d693e2587878",
+      "resize": {
+        "size": [
+          512,
+          512
+        ],
+        "resample": "lanczos",
+        "resultSha256": "5f0943df1a366b935ef6a33f0c7a52bccfd338344c700da8248923a536d141ce",
+        "rgbSha256": "aeee76cb33841c3c752db9dcca848d0ba8de43179ac475c942db6d3d72a74a98",
+        "rgbaSha256": "6866867b4180973dda826b9c7834814ab296db46993adf4eda84a1c8eea33d18",
+        "resultBytes": 97992,
+        "transparentPixels": 191218,
+        "partialPixels": 5074,
+        "encoding": {
+          "python": "3.11.9",
+          "pillow": "12.2.0",
+          "zlib": "1.3.1",
+          "compressLevel": 9
+        }
+      }
     },
     {
       "path": "items/quest/fenRelic.png",
@@ -1496,7 +1553,26 @@
       "transparentPixels": 2147469,
       "partialPixels": 29393,
       "metadataSha256": "eadb0e16f5de10fe2526f2b0576251d376fac86d496e73af7ee0b25ac628f045",
-      "rgbaSha256": "e856ffccb24f4b5fe17f9caadc25c9cd2a4a4b73f0a2d93ef30418d57e752c9f"
+      "rgbaSha256": "e856ffccb24f4b5fe17f9caadc25c9cd2a4a4b73f0a2d93ef30418d57e752c9f",
+      "resize": {
+        "size": [
+          512,
+          512
+        ],
+        "resample": "lanczos",
+        "resultSha256": "c6748e8e6ffd5be60728dc9e343c27b5683b2ac326c8a2c84a298672e755b4af",
+        "rgbSha256": "ad79708d33f7585303bc409630c0be311a76fb524daf691c32b247390b6d82c1",
+        "rgbaSha256": "c35b3ba3ce4cde914891e2df226aa6c69eacbb48599a2f40817e75378f56edbf",
+        "resultBytes": 207858,
+        "transparentPixels": 130471,
+        "partialPixels": 7862,
+        "encoding": {
+          "python": "3.11.9",
+          "pillow": "12.2.0",
+          "zlib": "1.3.1",
+          "compressLevel": 9
+        }
+      }
     },
     {
       "path": "items/quest/holyRelic.png",
@@ -1523,7 +1599,26 @@
       "transparentPixels": 3576022,
       "partialPixels": 2815,
       "metadataSha256": "abcacf03dfd7011f88b8dbf552c269988faafa49201a096b5ba9db427c3e429b",
-      "rgbaSha256": "f1f403ad51d5787bc05de47c9da2844da9b0ffc9689c32bb8a134ef507461780"
+      "rgbaSha256": "f1f403ad51d5787bc05de47c9da2844da9b0ffc9689c32bb8a134ef507461780",
+      "resize": {
+        "size": [
+          512,
+          512
+        ],
+        "resample": "lanczos",
+        "resultSha256": "b7fb5a0182c20fd679e3674aa16ea3093d605c67ccccd081f0be166f4830764b",
+        "rgbSha256": "896ac325e7bc4d6bb36bf249c77622454d1750340bb16f4dfa05fcb6059e5616",
+        "rgbaSha256": "af1fa797bdeefc3d741361ef28273870b235b0b1db27a5a73a84ee4279748342",
+        "resultBytes": 104196,
+        "transparentPixels": 217091,
+        "partialPixels": 7895,
+        "encoding": {
+          "python": "3.11.9",
+          "pillow": "12.2.0",
+          "zlib": "1.3.1",
+          "compressLevel": 9
+        }
+      }
     },
     {
       "path": "items/quest/ironKey.png",
@@ -1556,7 +1651,26 @@
       "transparentPixels": 3286931,
       "partialPixels": 875,
       "metadataSha256": "8353381727499d18b85d74191d30da7362b4de15f17c3584e4f18f13a158a0e7",
-      "rgbaSha256": "6f504428ae8362f94199bd87d9f99db809ed4edd545217bd61a885fd30445861"
+      "rgbaSha256": "6f504428ae8362f94199bd87d9f99db809ed4edd545217bd61a885fd30445861",
+      "resize": {
+        "size": [
+          512,
+          512
+        ],
+        "resample": "lanczos",
+        "resultSha256": "9f24faf39c5d06be397c4635bf36bdd594eb84ff9959a8a339c7169e6010970f",
+        "rgbSha256": "9b9e832aabc5daa8c37190751baa3a0d722072801059f9dbdb08e2b2eeba04cf",
+        "rgbaSha256": "0036ab5af6574a68959f99b68b5f1b57e9f4e1fb691ff3e644052f745d0f2e41",
+        "resultBytes": 66467,
+        "transparentPixels": 203060,
+        "partialPixels": 5034,
+        "encoding": {
+          "python": "3.11.9",
+          "pillow": "12.2.0",
+          "zlib": "1.3.1",
+          "compressLevel": 9
+        }
+      }
     },
     {
       "path": "items/quest/preciousAmulet.png",
@@ -1583,7 +1697,26 @@
       "transparentPixels": 1999021,
       "partialPixels": 16706,
       "metadataSha256": "61dd135a628375cbc90b39710be260d45dcafb9d1871c3d7a9cb2a11be5d4331",
-      "rgbaSha256": "1869ae4fc8977b4a0497c7211ae9622b4518f35f680f0ec62309b2a9c9d93e8a"
+      "rgbaSha256": "1869ae4fc8977b4a0497c7211ae9622b4518f35f680f0ec62309b2a9c9d93e8a",
+      "resize": {
+        "size": [
+          512,
+          512
+        ],
+        "resample": "lanczos",
+        "resultSha256": "6016370c5af6e44e2cd14fb01a8f064ffa5ad5f3a6dea54d714316bfdecc85cc",
+        "rgbSha256": "30726c06e3d06bdf0bf9ca23062eedf4f5b6dfa725fca199963bea2e20cf1fd1",
+        "rgbaSha256": "f606141956e6193214141a809567ea916a8cde848da73f2d574e95469336b5ce",
+        "resultBytes": 170380,
+        "transparentPixels": 122589,
+        "partialPixels": 6068,
+        "encoding": {
+          "python": "3.11.9",
+          "pillow": "12.2.0",
+          "zlib": "1.3.1",
+          "compressLevel": 9
+        }
+      }
     },
     {
       "path": "items/quest/skullOfRolf.png",
@@ -1610,7 +1743,26 @@
       "transparentPixels": 1930752,
       "partialPixels": 544,
       "metadataSha256": "76598710d0c5581d9ce904448c7fc7f8b92d57e0537697ba60fb14ac22c84572",
-      "rgbaSha256": "598562b9e289ccd457f3103e42f5e7cf042c268b60076462f6ce04bfcbf82246"
+      "rgbaSha256": "598562b9e289ccd457f3103e42f5e7cf042c268b60076462f6ce04bfcbf82246",
+      "resize": {
+        "size": [
+          512,
+          512
+        ],
+        "resample": "lanczos",
+        "resultSha256": "755feb00ace8af0f0c49f333ae6e6bbd800597876416918a0e44f8993ac4bd80",
+        "rgbSha256": "a108ae25a14766ffe2aee0ff5c962818473a2fd7db0c1ea61f5965791337cf96",
+        "rgbaSha256": "07e0673b87085969ed6a6822e8e81d56dd5b7ff99c267aa73c6b4e3ea7a5b293",
+        "resultBytes": 181272,
+        "transparentPixels": 118237,
+        "partialPixels": 4890,
+        "encoding": {
+          "python": "3.11.9",
+          "pillow": "12.2.0",
+          "zlib": "1.3.1",
+          "compressLevel": 9
+        }
+      }
     },
     {
       "path": "items/quest/warBanner.png",
@@ -1643,7 +1795,26 @@
       "transparentPixels": 2574373,
       "partialPixels": 2419,
       "metadataSha256": "087da3b4865dd813efa2f25848cd51e06c8d1b453ff0b40cd9afb106388b25b6",
-      "rgbaSha256": "7d86684f35fe46792d0cc7547a80a2c859ed943bef5cf00b8b6ba3909dd79f47"
+      "rgbaSha256": "7d86684f35fe46792d0cc7547a80a2c859ed943bef5cf00b8b6ba3909dd79f47",
+      "resize": {
+        "size": [
+          512,
+          512
+        ],
+        "resample": "lanczos",
+        "resultSha256": "0910e372368f815da4c768e928c63e49ff542bfaa308ee6802dedfa2dc27cf7c",
+        "rgbSha256": "1da23e98f65f7569af71e7f2fd0d3cca70e78141504d74120862c470269de470",
+        "rgbaSha256": "98ed015c348509837e885bb00ec3486a8aa312f308ca88c66feaaa2148e9a803",
+        "resultBytes": 176834,
+        "transparentPixels": 156136,
+        "partialPixels": 9872,
+        "encoding": {
+          "python": "3.11.9",
+          "pillow": "12.2.0",
+          "zlib": "1.3.1",
+          "compressLevel": 9
+        }
+      }
     },
     {
       "path": "items/scroll.png",
@@ -2135,7 +2306,26 @@
       "transparentPixels": 2612932,
       "partialPixels": 534,
       "metadataSha256": "b3880937721b672e172c900217c56c7fb08ee53e4e7389c25d7b318fba9baba3",
-      "rgbaSha256": "98b75508ede6bf10dba34f08592c22196ff895d84e108f98e84ca68db6644e4c"
+      "rgbaSha256": "98b75508ede6bf10dba34f08592c22196ff895d84e108f98e84ca68db6644e4c",
+      "resize": {
+        "size": [
+          512,
+          512
+        ],
+        "resample": "lanczos",
+        "resultSha256": "9fe6633bcbbd6460d50b54f8b0569d33f424991f5aeb2a6209694b3d132bf17f",
+        "rgbSha256": "be40616bfc7a74f06252c227807d76bb4482fcdea925eb33116b3d93ae57fe92",
+        "rgbaSha256": "1efddbde94cc26a5efa1094d0019ad72d7da8530be38e7e301f5d71c15a896ed",
+        "resultBytes": 126309,
+        "transparentPixels": 160555,
+        "partialPixels": 5506,
+        "encoding": {
+          "python": "3.11.9",
+          "pillow": "12.2.0",
+          "zlib": "1.3.1",
+          "compressLevel": 9
+        }
+      }
     },
     {
       "path": "monsters/citadelPriest.png",
@@ -2162,7 +2352,26 @@
       "transparentPixels": 2524182,
       "partialPixels": 665,
       "metadataSha256": "0dd4a69886f7ded854508e36b0a79dceeab24b3bcd672ed0409c8d89e4167a5e",
-      "rgbaSha256": "7a580797818db8a3a3931447f7a32f2303899b41b8e5f198c4c2f3e28934741b"
+      "rgbaSha256": "7a580797818db8a3a3931447f7a32f2303899b41b8e5f198c4c2f3e28934741b",
+      "resize": {
+        "size": [
+          512,
+          512
+        ],
+        "resample": "lanczos",
+        "resultSha256": "ace969768a9e606ca5689c925e200f86db670bb88d51191ef3da1b29ce46b97c",
+        "rgbSha256": "c235add6b0430d8d0df01532d113b08c4c567038f0b41d28266e6af0517d9b30",
+        "rgbaSha256": "54bdb7011bd104fa3913253dd8ea37d82ce8f509cdbfb8c0ef520cd483b60b30",
+        "resultBytes": 164703,
+        "transparentPixels": 154642,
+        "partialPixels": 6301,
+        "encoding": {
+          "python": "3.11.9",
+          "pillow": "12.2.0",
+          "zlib": "1.3.1",
+          "compressLevel": 9
+        }
+      }
     },
     {
       "path": "monsters/cryptWardenEast.png",
@@ -2189,7 +2398,26 @@
       "transparentPixels": 2349732,
       "partialPixels": 597,
       "metadataSha256": "25806f75dc0f20d685ea5653daf7a4155c3fe0cd0ba1a05ed4c505c4e191e4cf",
-      "rgbaSha256": "f051e9fc9a472a28ac83b5b048b8009c0e792874b9a72a5887e46062f90d732d"
+      "rgbaSha256": "f051e9fc9a472a28ac83b5b048b8009c0e792874b9a72a5887e46062f90d732d",
+      "resize": {
+        "size": [
+          512,
+          512
+        ],
+        "resample": "lanczos",
+        "resultSha256": "a96afd75d8e87baadc51c1b8f62529361a541329f5e4661e14db65b2597e5c52",
+        "rgbSha256": "6c12e5d24f232807f3d5d53843831c7fef406ed177fe66d6c37712ac13c798fb",
+        "rgbaSha256": "9616a0d68f52f34bcde6cd120f2a2afdabdf48d149459772239377f86e12ece7",
+        "resultBytes": 208806,
+        "transparentPixels": 143986,
+        "partialPixels": 5792,
+        "encoding": {
+          "python": "3.11.9",
+          "pillow": "12.2.0",
+          "zlib": "1.3.1",
+          "compressLevel": 9
+        }
+      }
     },
     {
       "path": "monsters/cryptWardenNorth.png",
@@ -2216,7 +2444,26 @@
       "transparentPixels": 2700730,
       "partialPixels": 587,
       "metadataSha256": "64ed67e7bb2b7933d03468fbe501b68f2620540e9f94789c6fc907c01d23dc1b",
-      "rgbaSha256": "afefee1a7e5a31b9a7039244c5e196cc5ed4fe89e1cf559142352b89d1e30bb5"
+      "rgbaSha256": "afefee1a7e5a31b9a7039244c5e196cc5ed4fe89e1cf559142352b89d1e30bb5",
+      "resize": {
+        "size": [
+          512,
+          512
+        ],
+        "resample": "lanczos",
+        "resultSha256": "79aa4679fc7723d589e043a89b17ddc410701934d19b9762d165a9770bfe40e9",
+        "rgbSha256": "2da13ce040400e34d7a850c592c44bc5797500a7ddfb25b76987c184f6bf7d80",
+        "rgbaSha256": "660943f3a411c13d6f0389aa6de735b5d1bd207f718410f70f24bf41b0bd9cf0",
+        "resultBytes": 159426,
+        "transparentPixels": 166188,
+        "partialPixels": 5247,
+        "encoding": {
+          "python": "3.11.9",
+          "pillow": "12.2.0",
+          "zlib": "1.3.1",
+          "compressLevel": 9
+        }
+      }
     },
     {
       "path": "monsters/cryptWardenWest.png",
@@ -2243,7 +2490,26 @@
       "transparentPixels": 2435826,
       "partialPixels": 541,
       "metadataSha256": "cc12e533e05f11d3e441cb643bf3c7c30b5cf4aba066c535899c174e4ddb0419",
-      "rgbaSha256": "cf31a87664a1fd348046d2422fafd73ee68c70efe118a8ae4ede81727bc570fc"
+      "rgbaSha256": "cf31a87664a1fd348046d2422fafd73ee68c70efe118a8ae4ede81727bc570fc",
+      "resize": {
+        "size": [
+          512,
+          512
+        ],
+        "resample": "lanczos",
+        "resultSha256": "83b144c4aa45e42937f5b687202c62a918ed91a6b75d990802151e3b9884e109",
+        "rgbSha256": "1cc8481a12581ac6bbcbef1875f0c932eabd04c2585076c726076cf6e1453907",
+        "rgbaSha256": "47c2a8435a49ca5d0a15e1aba6f23da6a2f8b2dbb3a8fe44864f3ca0593f630f",
+        "resultBytes": 166491,
+        "transparentPixels": 149633,
+        "partialPixels": 5224,
+        "encoding": {
+          "python": "3.11.9",
+          "pillow": "12.2.0",
+          "zlib": "1.3.1",
+          "compressLevel": 9
+        }
+      }
     },
     {
       "path": "monsters/cult_leader.png",
@@ -2300,7 +2566,26 @@
       "transparentPixels": 2294245,
       "partialPixels": 74098,
       "metadataSha256": "798b5ff4fce21d725e52790a5f1ebf2691bfe5b6e4af9938c67a3cfe3eecae72",
-      "rgbaSha256": "0d226d1f8c2eabae50242fcaa1d1c5e497f10a680aae70f98af4b2fc26cad3c8"
+      "rgbaSha256": "0d226d1f8c2eabae50242fcaa1d1c5e497f10a680aae70f98af4b2fc26cad3c8",
+      "resize": {
+        "size": [
+          512,
+          512
+        ],
+        "resample": "lanczos",
+        "resultSha256": "58752b58d6339346b6ef9e58bc0b43fd3cc168eba37cb63ecfdda7875121293c",
+        "rgbSha256": "4ebfd1c006580f6996ed5633421fd5d14402d6350346330522781d6a9c9e8b23",
+        "rgbaSha256": "f8a2c6d8a473558b11087ed064601c44bcad045ca9d5710353d825d43b2f4b6e",
+        "resultBytes": 176882,
+        "transparentPixels": 141446,
+        "partialPixels": 8351,
+        "encoding": {
+          "python": "3.11.9",
+          "pillow": "12.2.0",
+          "zlib": "1.3.1",
+          "compressLevel": 9
+        }
+      }
     },
     {
       "path": "monsters/drownedHybrid.png",
@@ -2327,7 +2612,26 @@
       "transparentPixels": 2433692,
       "partialPixels": 14890,
       "metadataSha256": "5d199dea862589bfc10b456b32f1bce4e01f822bab4ec54dea10d46fa3661aa4",
-      "rgbaSha256": "e7a917b92bd9061db8b9527da728e7ecc57232074c99320592d8f32f41b50e8b"
+      "rgbaSha256": "e7a917b92bd9061db8b9527da728e7ecc57232074c99320592d8f32f41b50e8b",
+      "resize": {
+        "size": [
+          512,
+          512
+        ],
+        "resample": "lanczos",
+        "resultSha256": "98f71bf87923fab97e84b6afff303a3bd3dfab0d49574ad297a992f8c701adaa",
+        "rgbSha256": "be6605e7c4b50fba130014147fd2a03dc3cf1e3e553a6aedcc73329c53eec7bf",
+        "rgbaSha256": "f00e3f19cb394f901c8ae4cf9553f5143bd4f1ba18e702bcd3c05716f940176d",
+        "resultBytes": 205688,
+        "transparentPixels": 145710,
+        "partialPixels": 13859,
+        "encoding": {
+          "python": "3.11.9",
+          "pillow": "12.2.0",
+          "zlib": "1.3.1",
+          "compressLevel": 9
+        }
+      }
     },
     {
       "path": "monsters/elderThing.png",
@@ -2354,7 +2658,26 @@
       "transparentPixels": 2264061,
       "partialPixels": 629,
       "metadataSha256": "503c90c1e60855465d3e9a974147a23d8ad6de7c0a0c2f8f27340951529969e8",
-      "rgbaSha256": "842c5b44e60f1fb8661c6a651050139a4692371fdaee7eae01d70a4eb81796ec"
+      "rgbaSha256": "842c5b44e60f1fb8661c6a651050139a4692371fdaee7eae01d70a4eb81796ec",
+      "resize": {
+        "size": [
+          512,
+          512
+        ],
+        "resample": "lanczos",
+        "resultSha256": "b8ba72560a81d73ed3113bd54be070edee37a9290c54524d0aebff9051f80888",
+        "rgbSha256": "377e06458b5f6e1327d6ee27270500b940455a669e4abfa7de2eef19a3c33220",
+        "rgbaSha256": "9459cc4b52f36fe8856f3df4fd95f5cf15b3b5dc586daa70807acdc52e38e7dc",
+        "resultBytes": 176581,
+        "transparentPixels": 138790,
+        "partialPixels": 5534,
+        "encoding": {
+          "python": "3.11.9",
+          "pillow": "12.2.0",
+          "zlib": "1.3.1",
+          "compressLevel": 9
+        }
+      }
     },
     {
       "path": "monsters/fenGhoul.png",
@@ -2381,7 +2704,26 @@
       "transparentPixels": 2618167,
       "partialPixels": 1238,
       "metadataSha256": "ed793f7ec035501e6f7b2d93d48331aaaf6ebce7f1300b2021c17af9ff7ae4af",
-      "rgbaSha256": "5682d8a455b2a8f404d686a9f23df34e157a6f8f4d041516125fe563e6d707cc"
+      "rgbaSha256": "5682d8a455b2a8f404d686a9f23df34e157a6f8f4d041516125fe563e6d707cc",
+      "resize": {
+        "size": [
+          512,
+          512
+        ],
+        "resample": "lanczos",
+        "resultSha256": "0c722b5b002ff9938548648f8163c7137348fef2d85db8c3273dae91d11a6133",
+        "rgbSha256": "5a10687b14d73845f89230128b9d4cbdea13abf4b998ccd2290967a09f8d6a62",
+        "rgbaSha256": "f64770216f3d4c52c778a2d75c35732f33af11b3456a3d798ac3511110bab343",
+        "resultBytes": 171369,
+        "transparentPixels": 158574,
+        "partialPixels": 10281,
+        "encoding": {
+          "python": "3.11.9",
+          "pillow": "12.2.0",
+          "zlib": "1.3.1",
+          "compressLevel": 9
+        }
+      }
     },
     {
       "path": "monsters/fieldRaider.png",
@@ -2408,7 +2750,26 @@
       "transparentPixels": 2505677,
       "partialPixels": 967,
       "metadataSha256": "04695722db448f6e0e6afe18659c241a520e3266d7631dc2a9ddc6e86044683a",
-      "rgbaSha256": "9441c26b018cf3498d4de33c2f52013df9d5784f1179fa9e8bb3058f8a569af3"
+      "rgbaSha256": "9441c26b018cf3498d4de33c2f52013df9d5784f1179fa9e8bb3058f8a569af3",
+      "resize": {
+        "size": [
+          512,
+          512
+        ],
+        "resample": "lanczos",
+        "resultSha256": "51c7ccc086ef47de85819c8ecb58fcbefeec3e0761e0e6fe8e8515f877d405f8",
+        "rgbSha256": "6a0c8451fa8b10ac59bdfeb05753ae58584fd5a1ddfd6a50db06b805cf37602f",
+        "rgbaSha256": "05d1570f215b865467187370d3895498a965bb3386ae95df012e6d8361e42abd",
+        "resultBytes": 174041,
+        "transparentPixels": 152063,
+        "partialPixels": 9134,
+        "encoding": {
+          "python": "3.11.9",
+          "pillow": "12.2.0",
+          "zlib": "1.3.1",
+          "compressLevel": 9
+        }
+      }
     },
     {
       "path": "monsters/goblin_thief.png",
@@ -2477,7 +2838,26 @@
       "transparentPixels": 2621969,
       "partialPixels": 750,
       "metadataSha256": "274ec47778dacc6b0e9578fa2374e54a134a69a5a564bb454d62b973d4933986",
-      "rgbaSha256": "d6d2b8663de003d9239cde03cc43310d54bd1bc7e08936c2953f0b2ffedc494c"
+      "rgbaSha256": "d6d2b8663de003d9239cde03cc43310d54bd1bc7e08936c2953f0b2ffedc494c",
+      "resize": {
+        "size": [
+          512,
+          512
+        ],
+        "resample": "lanczos",
+        "resultSha256": "3e68f3eb6b8431ade4a5f1c680a6218c75745f2b22b428a3e6f834a542aa29ba",
+        "rgbSha256": "ef5df4505d8a8945a1bc316647a71ee5e3af6699eb2f65f0209f987442df9d18",
+        "rgbaSha256": "a53aa10d71ec82ee2c0a2431a247cbc8573a2bb29b3cfac67a6d7e991b62121d",
+        "resultBytes": 192518,
+        "transparentPixels": 161133,
+        "partialPixels": 5515,
+        "encoding": {
+          "python": "3.11.9",
+          "pillow": "12.2.0",
+          "zlib": "1.3.1",
+          "compressLevel": 9
+        }
+      }
     },
     {
       "path": "monsters/housecarlEast.png",
@@ -2504,7 +2884,26 @@
       "transparentPixels": 2302149,
       "partialPixels": 648,
       "metadataSha256": "4c8258f7a7d5f2a2b387594569a5e01bcaa1d77282b96d235553be79e3ff3649",
-      "rgbaSha256": "5f7601ad241d691111dbc4b9453cda6a7af70a9b6bf52d2faa936472bd963dda"
+      "rgbaSha256": "5f7601ad241d691111dbc4b9453cda6a7af70a9b6bf52d2faa936472bd963dda",
+      "resize": {
+        "size": [
+          512,
+          512
+        ],
+        "resample": "lanczos",
+        "resultSha256": "613848344c791f21746301a19834293da02d896f8e7c112f6f6485e196ca4fa9",
+        "rgbSha256": "aa29aaee103cf40aae75bbf1d2e8dac4ecf4511726578078cc6638bac966a153",
+        "rgbaSha256": "cd22b861798cc547155067eeab547c23f3a3ad4f33f9dc3db5571b52e7403440",
+        "resultBytes": 179622,
+        "transparentPixels": 141375,
+        "partialPixels": 5033,
+        "encoding": {
+          "python": "3.11.9",
+          "pillow": "12.2.0",
+          "zlib": "1.3.1",
+          "compressLevel": 9
+        }
+      }
     },
     {
       "path": "monsters/housecarlWest.png",
@@ -2531,7 +2930,26 @@
       "transparentPixels": 1401525,
       "partialPixels": 857,
       "metadataSha256": "98d58137ac41e50c3757ddd5242dd30aa5796a3ea7f35356bfc09992c8c33f02",
-      "rgbaSha256": "56fc9d8d2e63d612353aafec03ba9fc0374c84e3008b06772dea9396de30db83"
+      "rgbaSha256": "56fc9d8d2e63d612353aafec03ba9fc0374c84e3008b06772dea9396de30db83",
+      "resize": {
+        "size": [
+          512,
+          512
+        ],
+        "resample": "lanczos",
+        "resultSha256": "0e2c5097505f235b72df68eb3bc57e9b445c3706fb9f47c0bcdf57d5b949dd2f",
+        "rgbSha256": "9f28e3d0e7c5cd4de90f740418ce7012a27ea96f1868a17df5c526c71d8e6a44",
+        "rgbaSha256": "234eeaad67ed3459de3e79c69908c3f00d863c8a6a259514b1cd134492cea193",
+        "resultBytes": 262377,
+        "transparentPixels": 83967,
+        "partialPixels": 7588,
+        "encoding": {
+          "python": "3.11.9",
+          "pillow": "12.2.0",
+          "zlib": "1.3.1",
+          "compressLevel": 9
+        }
+      }
     },
     {
       "path": "monsters/lengMan.png",
@@ -2558,7 +2976,26 @@
       "transparentPixels": 2383330,
       "partialPixels": 832,
       "metadataSha256": "482c2c86e4e91655e731e30b2635c3c9b8d55d5d78a8f6142113e71dc09e1a43",
-      "rgbaSha256": "b6ea9455aa9f3979aa1d25e126611483ba29cd859f1362d581ba7b30779cde58"
+      "rgbaSha256": "b6ea9455aa9f3979aa1d25e126611483ba29cd859f1362d581ba7b30779cde58",
+      "resize": {
+        "size": [
+          512,
+          512
+        ],
+        "resample": "lanczos",
+        "resultSha256": "2da6869e6663b0a372d2c6e856203ce802ec93b62467260e43d13cc7371f1ad4",
+        "rgbSha256": "b8b39b4619f7b53bbfa7c2780286edeb394833e2e962a3794793b1070a166470",
+        "rgbaSha256": "455179a67e99260488517e764647eb6bfa48ebe9b62cf1eb28eec09c55588804",
+        "resultBytes": 143087,
+        "transparentPixels": 144861,
+        "partialPixels": 8283,
+        "encoding": {
+          "python": "3.11.9",
+          "pillow": "12.2.0",
+          "zlib": "1.3.1",
+          "compressLevel": 9
+        }
+      }
     },
     {
       "path": "monsters/lengSpider.png",
@@ -2585,7 +3022,26 @@
       "transparentPixels": 2053244,
       "partialPixels": 681,
       "metadataSha256": "b71c92000880c9c6e2a82b51418ad0c2c21e40c092467dd3ddba4d161345096d",
-      "rgbaSha256": "b1fa8925e6b59d47842be699b86f0e4342d6c92bc7ae5bfbb4b47269243bc8a6"
+      "rgbaSha256": "b1fa8925e6b59d47842be699b86f0e4342d6c92bc7ae5bfbb4b47269243bc8a6",
+      "resize": {
+        "size": [
+          512,
+          512
+        ],
+        "resample": "lanczos",
+        "resultSha256": "b2a2f320e20ab9b98070d929a57cd39eec05e7989697019333cd46d6a9d10571",
+        "rgbSha256": "cca6de575f72a845cc3d16ac1ab9e11b01048c930dae3c9b99909929d88d28c3",
+        "rgbaSha256": "a75bcbbd7c4571062c0d3885ae000bb5255b23b568510bc811258ff14d4a5d7d",
+        "resultBytes": 126684,
+        "transparentPixels": 125071,
+        "partialPixels": 6616,
+        "encoding": {
+          "python": "3.11.9",
+          "pillow": "12.2.0",
+          "zlib": "1.3.1",
+          "compressLevel": 9
+        }
+      }
     },
     {
       "path": "monsters/nightGaunt.png",
@@ -2612,7 +3068,26 @@
       "transparentPixels": 3001838,
       "partialPixels": 909,
       "metadataSha256": "afe6b1e7d5b60c049190b030dbc31580e0cc9faadf37b57407e26a2b68af53f7",
-      "rgbaSha256": "10b07a82f464185581823c631364bd0b110ee22b273ac126fe785948fe84b741"
+      "rgbaSha256": "10b07a82f464185581823c631364bd0b110ee22b273ac126fe785948fe84b741",
+      "resize": {
+        "size": [
+          512,
+          512
+        ],
+        "resample": "lanczos",
+        "resultSha256": "c30c04bb01e98d55637d8bdd7b99b66b479b3810da998cb28aacba04031609ce",
+        "rgbSha256": "d5d9a08352200a10d8f52ac141d3ed907c29f7dc24682439c5eb7de9a1c10662",
+        "rgbaSha256": "98bc5266c80d4ea592b22d7d5fab15ac02e7e6cde00d503fcb56ab883819e93c",
+        "resultBytes": 118464,
+        "transparentPixels": 183343,
+        "partialPixels": 8562,
+        "encoding": {
+          "python": "3.11.9",
+          "pillow": "12.2.0",
+          "zlib": "1.3.1",
+          "compressLevel": 9
+        }
+      }
     },
     {
       "path": "monsters/occupierEast.png",
@@ -2639,7 +3114,26 @@
       "transparentPixels": 2432896,
       "partialPixels": 744,
       "metadataSha256": "f6ff484936d81d1ac72fd45800e8d113b2b37ee69f479d83a9d2f22df132e4a2",
-      "rgbaSha256": "bc19028f68b3806695e3fd3d18a93cb7d0f939448d7a03e0a53a0d78a0188a59"
+      "rgbaSha256": "bc19028f68b3806695e3fd3d18a93cb7d0f939448d7a03e0a53a0d78a0188a59",
+      "resize": {
+        "size": [
+          512,
+          512
+        ],
+        "resample": "lanczos",
+        "resultSha256": "328517a5df869c946ff9b6c96b7eb5a12092c09cee7ea8b85c8601a676760f55",
+        "rgbSha256": "59706e722c7e3f868706a40780c81222ed465f25a9c7e5426c3ca2f8121735de",
+        "rgbaSha256": "16d8cef870db2c3d387f3dccb0856e36f59403c351e4cadd6736cb367b8a9b78",
+        "resultBytes": 102507,
+        "transparentPixels": 149483,
+        "partialPixels": 5237,
+        "encoding": {
+          "python": "3.11.9",
+          "pillow": "12.2.0",
+          "zlib": "1.3.1",
+          "compressLevel": 9
+        }
+      }
     },
     {
       "path": "monsters/occupierGate.png",
@@ -2666,7 +3160,26 @@
       "transparentPixels": 2701699,
       "partialPixels": 514,
       "metadataSha256": "81aeb6c6794ad88c5e46d0238bd4176d0eaec1e901785d2558876d60be5ac59a",
-      "rgbaSha256": "b075a479e05901fe26ba136895b6f3854d53a347eca0762f372e17f0956ab08e"
+      "rgbaSha256": "b075a479e05901fe26ba136895b6f3854d53a347eca0762f372e17f0956ab08e",
+      "resize": {
+        "size": [
+          512,
+          512
+        ],
+        "resample": "lanczos",
+        "resultSha256": "1b9007304eb06538c4dec3e44076a9d39b1623dfaf257dad633ca8e41c6eb4f7",
+        "rgbSha256": "7ccb0e88bc261042a31747e130256c13b703a2046550ae8f1976c77285b917d6",
+        "rgbaSha256": "e738a873a471cad9fa3ef48f86d42d681f9cd68f54d1c23deb3fddacf1ce370b",
+        "resultBytes": 124871,
+        "transparentPixels": 166450,
+        "partialPixels": 4879,
+        "encoding": {
+          "python": "3.11.9",
+          "pillow": "12.2.0",
+          "zlib": "1.3.1",
+          "compressLevel": 9
+        }
+      }
     },
     {
       "path": "monsters/occupierWest.png",
@@ -2693,7 +3206,26 @@
       "transparentPixels": 2571206,
       "partialPixels": 531,
       "metadataSha256": "42ff062a6fd213c9e6f08ab8ab55bb08edfb9c1aceab8441ca5ae76a144ad2d2",
-      "rgbaSha256": "e3e70b63d37757d50a420bb5d6db9954d0b9287e4218ad2c7426a2a1a30cb792"
+      "rgbaSha256": "e3e70b63d37757d50a420bb5d6db9954d0b9287e4218ad2c7426a2a1a30cb792",
+      "resize": {
+        "size": [
+          512,
+          512
+        ],
+        "resample": "lanczos",
+        "resultSha256": "929edd511c65659fdeb7e99c9960a349b5989b1991db1424e4f2f0237737b93a",
+        "rgbSha256": "e4fa5680ee45a3ed3def61fa958ea63f846823174a9b2ee9ab14d4560244bc50",
+        "rgbaSha256": "33b9c2982472b9dae4dde4dbde1f9c3a3f5c385b47d472d857c6235b1e5d4089",
+        "resultBytes": 145884,
+        "transparentPixels": 158121,
+        "partialPixels": 5217,
+        "encoding": {
+          "python": "3.11.9",
+          "pillow": "12.2.0",
+          "zlib": "1.3.1",
+          "compressLevel": 9
+        }
+      }
     },
     {
       "path": "monsters/octobogz/0.png",
@@ -2774,7 +3306,26 @@
       "transparentPixels": 2358833,
       "partialPixels": 559,
       "metadataSha256": "7817ec3f53d3cc5f77da923fb357a33c21f0cd83e58258a1974bf0615b693ac1",
-      "rgbaSha256": "63cbcdcb7a9795745d8907ce42538035d403209eadcded199d996272780964de"
+      "rgbaSha256": "63cbcdcb7a9795745d8907ce42538035d403209eadcded199d996272780964de",
+      "resize": {
+        "size": [
+          512,
+          512
+        ],
+        "resample": "lanczos",
+        "resultSha256": "1dbd9e3396f83b5b5271e21837b98bffde5c7fa533ba58bad2f753edf30ceb58",
+        "rgbSha256": "24a96f6044083e5cd3339b6a2a2c4e21593f67d2353d10cb6acc6ff5ae5f8717",
+        "rgbaSha256": "c6a835e0d4b1192b726bcd8a7f44837121f6ddd45c0b5a8a7aa9388913f06fee",
+        "resultBytes": 134745,
+        "transparentPixels": 144717,
+        "partialPixels": 5470,
+        "encoding": {
+          "python": "3.11.9",
+          "pillow": "12.2.0",
+          "zlib": "1.3.1",
+          "compressLevel": 9
+        }
+      }
     },
     {
       "path": "monsters/pritz/0.png",
@@ -2891,7 +3442,26 @@
       "transparentPixels": 2524284,
       "partialPixels": 507,
       "metadataSha256": "0fac5f2fe7b8d6f0ced944bc31dc4433278e2226a1226843bd62313ff881ec78",
-      "rgbaSha256": "b24f04ebf3a57245f6c820ec1cb89c843f6a7abb88b41ec1e214df3303952485"
+      "rgbaSha256": "b24f04ebf3a57245f6c820ec1cb89c843f6a7abb88b41ec1e214df3303952485",
+      "resize": {
+        "size": [
+          512,
+          512
+        ],
+        "resample": "lanczos",
+        "resultSha256": "a21022522da723df839268aac9b3031c223e3a84f13593a821305b22c2390483",
+        "rgbSha256": "97fff05ba31ae71dcac84628bad453b728b6ccb565ce315c2402b6bda3409795",
+        "rgbaSha256": "1d3d6e59d9fbadc14f6ec0d80824275b8c8f149988534b95dbdba9230cc40988",
+        "resultBytes": 161541,
+        "transparentPixels": 155286,
+        "partialPixels": 4997,
+        "encoding": {
+          "python": "3.11.9",
+          "pillow": "12.2.0",
+          "zlib": "1.3.1",
+          "compressLevel": 9
+        }
+      }
     },
     {
       "path": "monsters/ritualLeaderTemplate.png",
@@ -2918,7 +3488,26 @@
       "transparentPixels": 2232664,
       "partialPixels": 635,
       "metadataSha256": "06ba2524ef299493a58709cb9ddb1a334e56783e71b7909935aac0d5a5b55f8c",
-      "rgbaSha256": "38cde217df0d50b93cda2f306e68c7b64fd5cc9b266d113f3762ccd8a520a864"
+      "rgbaSha256": "38cde217df0d50b93cda2f306e68c7b64fd5cc9b266d113f3762ccd8a520a864",
+      "resize": {
+        "size": [
+          512,
+          512
+        ],
+        "resample": "lanczos",
+        "resultSha256": "35fca997121566e08116da98bf5a01feca593b9bc85997b6056d4b93b77eb263",
+        "rgbSha256": "3aa4713e13bd1ece43f5c5df07100e824fbeaea17e3e67fe13ea8d35de4c74cf",
+        "rgbaSha256": "d23002e18498cf21cab9b9e4845863a13016b9c9413040872129179f8e6dec25",
+        "resultBytes": 164128,
+        "transparentPixels": 136635,
+        "partialPixels": 5847,
+        "encoding": {
+          "python": "3.11.9",
+          "pillow": "12.2.0",
+          "zlib": "1.3.1",
+          "compressLevel": 9
+        }
+      }
     },
     {
       "path": "monsters/ritualMage.png",
@@ -2945,7 +3534,26 @@
       "transparentPixels": 1996230,
       "partialPixels": 526,
       "metadataSha256": "e565bad36b5113d2e749f8c9503ff218b1b8860b03a5828898ad0f17e16b6f74",
-      "rgbaSha256": "2d8d227663bea222974ba73e38cd9fe06fd5f901914d61f6f9975bd1d51dfcf6"
+      "rgbaSha256": "2d8d227663bea222974ba73e38cd9fe06fd5f901914d61f6f9975bd1d51dfcf6",
+      "resize": {
+        "size": [
+          512,
+          512
+        ],
+        "resample": "lanczos",
+        "resultSha256": "3224a9059dbca3288ff3f43641646de9379340a58b5bac09c0af595ed54b5655",
+        "rgbSha256": "32b1e194e34d69619bfe0666b0a7541a9996ffd98a70f284691bf3dadde7e307",
+        "rgbaSha256": "a91e00cbbe1069971e8145bbf48dc7256c0ea957e82a9b9f6f8b4c0cc99ab877",
+        "resultBytes": 161983,
+        "transparentPixels": 121889,
+        "partialPixels": 5793,
+        "encoding": {
+          "python": "3.11.9",
+          "pillow": "12.2.0",
+          "zlib": "1.3.1",
+          "compressLevel": 9
+        }
+      }
     },
     {
       "path": "monsters/ritualPritz.png",
@@ -2972,7 +3580,26 @@
       "transparentPixels": 1414875,
       "partialPixels": 3983,
       "metadataSha256": "21edcd850695b109f63d2a202ebc6915907faab32be6c829c872a28ca917704e",
-      "rgbaSha256": "04662f5fe90302b026cdadd7d6ad4533843d0c851c7d9102dc3e2ee7af6b414e"
+      "rgbaSha256": "04662f5fe90302b026cdadd7d6ad4533843d0c851c7d9102dc3e2ee7af6b414e",
+      "resize": {
+        "size": [
+          512,
+          512
+        ],
+        "resample": "lanczos",
+        "resultSha256": "dd7a708052fc23845acc545cc3c48e236f1694fbd9313f69b54f27bc5a3ae450",
+        "rgbSha256": "0f1dbfbafe40e68ac7265f0a75e3434984498dbf75d9387847ebf3fa942ef188",
+        "rgbaSha256": "094c0eef1e2da4d178e907666bd402c5d6c25079e10a247b6ef77dc33abac8c0",
+        "resultBytes": 263927,
+        "transparentPixels": 84607,
+        "partialPixels": 7653,
+        "encoding": {
+          "python": "3.11.9",
+          "pillow": "12.2.0",
+          "zlib": "1.3.1",
+          "compressLevel": 9
+        }
+      }
     },
     {
       "path": "monsters/theBarrowWarlord.png",
@@ -2999,7 +3626,26 @@
       "transparentPixels": 2081390,
       "partialPixels": 949,
       "metadataSha256": "c2acf0b48a687e54f690a5366bd2354cfe5d7bab981d866933d118d2eac4f49c",
-      "rgbaSha256": "40c36bb72526be600a2d9c70bb8be8660d44f928058162cd3687be9b92df6103"
+      "rgbaSha256": "40c36bb72526be600a2d9c70bb8be8660d44f928058162cd3687be9b92df6103",
+      "resize": {
+        "size": [
+          512,
+          512
+        ],
+        "resample": "lanczos",
+        "resultSha256": "3820858abbd54cbda279aab2d798240823f0c280e65a4a41bfee647619c7e2ad",
+        "rgbSha256": "0d4590008ac6c993b8b6742ab72f9f46eb2215b2645abac5bfa3c6b0ee04554b",
+        "rgbaSha256": "56df1944cbed53209d6700e81088ac974bfd32b46d1166c7154c0b8901093f01",
+        "resultBytes": 221376,
+        "transparentPixels": 125624,
+        "partialPixels": 9080,
+        "encoding": {
+          "python": "3.11.9",
+          "pillow": "12.2.0",
+          "zlib": "1.3.1",
+          "compressLevel": 9
+        }
+      }
     },
     {
       "path": "monsters/theCrawlingChaos.png",
@@ -3026,7 +3672,26 @@
       "transparentPixels": 1947344,
       "partialPixels": 2098,
       "metadataSha256": "f70f296826adaddca0c83c3f03245d514aca7216f1bf68f04bfe389309bf5571",
-      "rgbaSha256": "7b87b64c97df6833b94711b50ee3595995f6e3e3767f1dd3f65212e24b6168cd"
+      "rgbaSha256": "7b87b64c97df6833b94711b50ee3595995f6e3e3767f1dd3f65212e24b6168cd",
+      "resize": {
+        "size": [
+          512,
+          512
+        ],
+        "resample": "lanczos",
+        "resultSha256": "21cc443c6af1d31ed2d3b502c792e43fa5ea225c0543dab032d1a04a18a76b47",
+        "rgbSha256": "0dafca4b20dcf9ee277b1d602eac17521940b9c7bdce13688782ab13499b0e19",
+        "rgbaSha256": "f56f6caea82920f3786a198ba8878bc53b3255b5bde5fcc0e57d21d2dbf5a393",
+        "resultBytes": 160448,
+        "transparentPixels": 118120,
+        "partialPixels": 7352,
+        "encoding": {
+          "python": "3.11.9",
+          "pillow": "12.2.0",
+          "zlib": "1.3.1",
+          "compressLevel": 9
+        }
+      }
     },
     {
       "path": "monsters/theNameless.png",
@@ -3053,7 +3718,26 @@
       "transparentPixels": 2653449,
       "partialPixels": 53835,
       "metadataSha256": "9fcb9e2c8c0910808d9ab90d125029e5f57e19c25bbd0bf19cd4271aaa87b04e",
-      "rgbaSha256": "ffde8aeada3ff95f3b84e2b29bf9d8f4cc4a34de6ade57087d23a1f42e79c9e7"
+      "rgbaSha256": "ffde8aeada3ff95f3b84e2b29bf9d8f4cc4a34de6ade57087d23a1f42e79c9e7",
+      "resize": {
+        "size": [
+          512,
+          512
+        ],
+        "resample": "lanczos",
+        "resultSha256": "3bb2d20910a3de2bff37f9f5327d173018d6e1896a98d2403ba3c97ed77e058f",
+        "rgbSha256": "88ecfbe53fee55c255887cc0eeb7aeaa7f935f0328439e12fd0fb3d4d736aca9",
+        "rgbaSha256": "9bb1ef87f7b4b945f69bdb9cd377ceb731a0b8c4d66504883dde5594e0b848ba",
+        "resultBytes": 162447,
+        "transparentPixels": 163691,
+        "partialPixels": 7938,
+        "encoding": {
+          "python": "3.11.9",
+          "pillow": "12.2.0",
+          "zlib": "1.3.1",
+          "compressLevel": 9
+        }
+      }
     },
     {
       "path": "monsters/theNinefoldKing.png",
@@ -3080,7 +3764,26 @@
       "transparentPixels": 1687346,
       "partialPixels": 609,
       "metadataSha256": "91731aaa6c4d17527768882441f0fe07ee1e92e062c5e9f34dbc26959ffbed37",
-      "rgbaSha256": "009816065d20d8799977936e46d35e5b874cf7bb81c66f95ff657fd2dd6b898b"
+      "rgbaSha256": "009816065d20d8799977936e46d35e5b874cf7bb81c66f95ff657fd2dd6b898b",
+      "resize": {
+        "size": [
+          512,
+          512
+        ],
+        "resample": "lanczos",
+        "resultSha256": "db7490d96a3a74d72f183eb6c6d81b143b0cecbc76c70a6defd62208d11a805d",
+        "rgbSha256": "5f01ec95cdc815b99d7f4cf205d09570d244ae53678987d0ada5f46a2477dfe5",
+        "rgbaSha256": "4a62abfe2e54ad497f9b841892e5147d87bb12ac52addecbe9c7bc0c9c469074",
+        "resultBytes": 168399,
+        "transparentPixels": 102489,
+        "partialPixels": 5972,
+        "encoding": {
+          "python": "3.11.9",
+          "pillow": "12.2.0",
+          "zlib": "1.3.1",
+          "compressLevel": 9
+        }
+      }
     },
     {
       "path": "monsters/theUsurper.png",
@@ -3107,7 +3810,26 @@
       "transparentPixels": 1705841,
       "partialPixels": 647,
       "metadataSha256": "4df9daa763e31dd49ed1a45c2f1c2420571a8fc9018711dee2a57ae350ea292d",
-      "rgbaSha256": "23f68994c575c816bd0628abbc7b3e448d1e2d12516e9a77aa9d63c3b8dd5b54"
+      "rgbaSha256": "23f68994c575c816bd0628abbc7b3e448d1e2d12516e9a77aa9d63c3b8dd5b54",
+      "resize": {
+        "size": [
+          512,
+          512
+        ],
+        "resample": "lanczos",
+        "resultSha256": "edcf9dc582776ead8021ca6b3ebf867879867ef23a107a17196308cb9165c8c3",
+        "rgbSha256": "95168d1a707706102bb5837d80276737bf35f88d8aaaf04c2390feca6a14bc17",
+        "rgbaSha256": "2924d426710a928f8848f721948bd15c7bc2de7973e8fb9764f43dd57c048b56",
+        "resultBytes": 211154,
+        "transparentPixels": 103376,
+        "partialPixels": 6501,
+        "encoding": {
+          "python": "3.11.9",
+          "pillow": "12.2.0",
+          "zlib": "1.3.1",
+          "compressLevel": 9
+        }
+      }
     },
     {
       "path": "monsters/tideHierophant.png",
@@ -3134,7 +3856,26 @@
       "transparentPixels": 2356050,
       "partialPixels": 159470,
       "metadataSha256": "55419f794ea356ba462d0e48a48fa322fbdb705204684444665403300f487986",
-      "rgbaSha256": "3d5a04c323dda4f733a6dad63c4d880eeef4386439239c8fe4d7ed4dd4a512b1"
+      "rgbaSha256": "3d5a04c323dda4f733a6dad63c4d880eeef4386439239c8fe4d7ed4dd4a512b1",
+      "resize": {
+        "size": [
+          512,
+          512
+        ],
+        "resample": "lanczos",
+        "resultSha256": "002b0c824f87ad9cf32a749fcd17f3e9109f7dfa076cb09e1df41e7cc0d27b15",
+        "rgbSha256": "5f3617b066ecc8916708bb71f80c4f4146562d4867c2a0813c331cd77cda33a5",
+        "rgbaSha256": "a27eb52094639e861c6dbc6cebabe8e759ee194b2da801c8cd440eced511f669",
+        "resultBytes": 203858,
+        "transparentPixels": 145636,
+        "partialPixels": 13037,
+        "encoding": {
+          "python": "3.11.9",
+          "pillow": "12.2.0",
+          "zlib": "1.3.1",
+          "compressLevel": 9
+        }
+      }
     },
     {
       "path": "monsters/watchCaptain.png",
@@ -3161,7 +3902,26 @@
       "transparentPixels": 2067601,
       "partialPixels": 714,
       "metadataSha256": "3bdeba81631374c6dcd720d30f57ffa895f2b5c79cbc3253008640b87a3e71b8",
-      "rgbaSha256": "094925d3fc107c2fe54023106c1e6022c6ce6b45cf6051cbe789ceab76a125fd"
+      "rgbaSha256": "094925d3fc107c2fe54023106c1e6022c6ce6b45cf6051cbe789ceab76a125fd",
+      "resize": {
+        "size": [
+          512,
+          512
+        ],
+        "resample": "lanczos",
+        "resultSha256": "5fae153cf95afc8b3b79fe66d15a73e84c85fb61bc18121aa7bf3abbdcc0ea91",
+        "rgbSha256": "9bb47dba9a17032fe0bd9796952f18790effe7280c25f42b6c44c06d6b40c778",
+        "rgbaSha256": "1158cc6ed037f0f1d9d6ec2b9397f13436c745bd2aeffa2592a5933535e94779",
+        "resultBytes": 152868,
+        "transparentPixels": 126594,
+        "partialPixels": 5300,
+        "encoding": {
+          "python": "3.11.9",
+          "pillow": "12.2.0",
+          "zlib": "1.3.1",
+          "compressLevel": 9
+        }
+      }
     },
     {
       "path": "npc/banneretHild.png",
@@ -3188,7 +3948,26 @@
       "transparentPixels": 2562870,
       "partialPixels": 516,
       "metadataSha256": "f4560cd847492c5fb195657917f5c0f644f035338e7c023700547c81c395b07a",
-      "rgbaSha256": "42d25fec475c6cf30dbb0b8857374e41c5371db2b04009d1cb20dc608b003ffb"
+      "rgbaSha256": "42d25fec475c6cf30dbb0b8857374e41c5371db2b04009d1cb20dc608b003ffb",
+      "resize": {
+        "size": [
+          512,
+          512
+        ],
+        "resample": "lanczos",
+        "resultSha256": "537285aa64c10205f29b7ab33286514e63c659760eb3a5a643a90973cba0a54a",
+        "rgbSha256": "61d98ea77a4d1af81bc1adba72f4ccc298dc6df4ffaab9d4fcde7612b46e81d1",
+        "rgbaSha256": "44f9d8f904fe8b4cc41e4823e2e70018d90d8d127de78309c398daa50906d42e",
+        "resultBytes": 132895,
+        "transparentPixels": 157471,
+        "partialPixels": 5408,
+        "encoding": {
+          "python": "3.11.9",
+          "pillow": "12.2.0",
+          "zlib": "1.3.1",
+          "compressLevel": 9
+        }
+      }
     },
     {
       "path": "npc/dreamerGuide.png",
@@ -3215,7 +3994,26 @@
       "transparentPixels": 2542275,
       "partialPixels": 504,
       "metadataSha256": "5baf6f5dc84e69da3b3446daa6d530c05b67f12a6d80efd04eaf5333e51393da",
-      "rgbaSha256": "51b5400582a8824dd783bb021a2ad5940d5ac1919394ea0c87b98109ade472df"
+      "rgbaSha256": "51b5400582a8824dd783bb021a2ad5940d5ac1919394ea0c87b98109ade472df",
+      "resize": {
+        "size": [
+          512,
+          512
+        ],
+        "resample": "lanczos",
+        "resultSha256": "1cd4fe7c95eddbc3f611f95d3db5d1e3a83f457f4477a1a69dc5f5421671c599",
+        "rgbSha256": "bd6fb5031e02118b41f965bc9ed712fba376b13275448c5b0cc8236990c867c4",
+        "rgbaSha256": "934466001dedb14f279e8d645fb551584b8178f0ec05d30ad10f090685a262da",
+        "resultBytes": 145366,
+        "transparentPixels": 156500,
+        "partialPixels": 4790,
+        "encoding": {
+          "python": "3.11.9",
+          "pillow": "12.2.0",
+          "zlib": "1.3.1",
+          "compressLevel": 9
+        }
+      }
     },
     {
       "path": "npc/elderMaren.png",
@@ -3242,7 +4040,26 @@
       "transparentPixels": 1658186,
       "partialPixels": 419,
       "metadataSha256": "206f76803d39ce0f173c8ed9a7bd35572bad4892e901c26924da93b72aedfe9e",
-      "rgbaSha256": "b207cfbfcad296a414c2aaee76e9fe6d506a79ebde0cb3e5dcce31d4ec452b9e"
+      "rgbaSha256": "b207cfbfcad296a414c2aaee76e9fe6d506a79ebde0cb3e5dcce31d4ec452b9e",
+      "resize": {
+        "size": [
+          512,
+          512
+        ],
+        "resample": "lanczos",
+        "resultSha256": "df6798355df578e1649785faad80b1bbfc079c45024d6c79eeb95fe2fe044803",
+        "rgbSha256": "fbf5137947ce073059d05819330871a8bf050be2f5b6316376ef9590457bc628",
+        "rgbaSha256": "76cef941034acee9b77af4ab691ebbd7d7f3db96ca6dc7660957dda85ac6bfcb",
+        "resultBytes": 174766,
+        "transparentPixels": 101547,
+        "partialPixels": 4226,
+        "encoding": {
+          "python": "3.11.9",
+          "pillow": "12.2.0",
+          "zlib": "1.3.1",
+          "compressLevel": 9
+        }
+      }
     },
     {
       "path": "npc/lengMerchant.png",
@@ -3269,7 +4086,26 @@
       "transparentPixels": 2688889,
       "partialPixels": 651,
       "metadataSha256": "086b078b9b39aeb316baf5c2ef7d0a79f8a4be3ced01483093f17e6cf98551fb",
-      "rgbaSha256": "cf674563fc157b62abe53c60177cec0245c8efe50cc06938df5d14fc4d9ab39e"
+      "rgbaSha256": "cf674563fc157b62abe53c60177cec0245c8efe50cc06938df5d14fc4d9ab39e",
+      "resize": {
+        "size": [
+          512,
+          512
+        ],
+        "resample": "lanczos",
+        "resultSha256": "7e53574152578faa985912b7d2321d46059cde49542f658df6d3299cf06c0b5f",
+        "rgbSha256": "3fedc82cb8cc00226385b27f34cab6aee8d68890de6ff27e1d8111eeb998261f",
+        "rgbaSha256": "308b67eb1ef585b755209e1656bd58f48e26a3342a86c6cedb0faa81db65c198",
+        "resultBytes": 149197,
+        "transparentPixels": 165017,
+        "partialPixels": 6129,
+        "encoding": {
+          "python": "3.11.9",
+          "pillow": "12.2.0",
+          "zlib": "1.3.1",
+          "compressLevel": 9
+        }
+      }
     },
     {
       "path": "npc/lengPriest.png",
@@ -3296,7 +4132,26 @@
       "transparentPixels": 2714214,
       "partialPixels": 488,
       "metadataSha256": "223fccbc154c0b49d7b59441b9217388cbebf95ee0e884b95d43c14e89b5bd39",
-      "rgbaSha256": "4639aab5835e5258b98bf0cffd649782c3140b3cf0cda5b80a6b1121f9fbe5c5"
+      "rgbaSha256": "4639aab5835e5258b98bf0cffd649782c3140b3cf0cda5b80a6b1121f9fbe5c5",
+      "resize": {
+        "size": [
+          512,
+          512
+        ],
+        "resample": "lanczos",
+        "resultSha256": "73f53f69cb6a04c63d18ee89fda83373185e8c67083980b73a75243c38806be8",
+        "rgbSha256": "adf0be0769a68241ef6f9295f1432d5fa4a456af8c04e13d166289769d8a4cf4",
+        "rgbaSha256": "f91f9bdc412db2d9b50a17a24d7f46f5b2b781fee01b9d917b305e79c0fa5b57",
+        "resultBytes": 149836,
+        "transparentPixels": 167360,
+        "partialPixels": 4586,
+        "encoding": {
+          "python": "3.11.9",
+          "pillow": "12.2.0",
+          "zlib": "1.3.1",
+          "compressLevel": 9
+        }
+      }
     },
     {
       "path": "npc/markedWidow.png",
@@ -3323,7 +4178,26 @@
       "transparentPixels": 2947064,
       "partialPixels": 508,
       "metadataSha256": "5c78a7f4facda4da4c49088beccfaa09b9f5061efdbaf62b06ce0dc9dd517cf1",
-      "rgbaSha256": "9945f814745accae124dee5b8cb45a64e2d5cc8920ddfddaaf99faf8b1b09c1e"
+      "rgbaSha256": "9945f814745accae124dee5b8cb45a64e2d5cc8920ddfddaaf99faf8b1b09c1e",
+      "resize": {
+        "size": [
+          512,
+          512
+        ],
+        "resample": "lanczos",
+        "resultSha256": "4128b0261cc8079987ae9460eb8ca6718da253f5db3341c6788a87e888fec171",
+        "rgbSha256": "74c67da89bd9a4ce71d0c5b674c6d347ff4a6197e3fcade5c51175aedac042a2",
+        "rgbaSha256": "a81907a673056fdd75a920bf9831a28e32132ea548c36c97e43846e41b776739",
+        "resultBytes": 138308,
+        "transparentPixels": 181695,
+        "partialPixels": 5007,
+        "encoding": {
+          "python": "3.11.9",
+          "pillow": "12.2.0",
+          "zlib": "1.3.1",
+          "compressLevel": 9
+        }
+      }
     },
     {
       "path": "npc/oldTollman.png",
@@ -3350,7 +4224,26 @@
       "transparentPixels": 2116836,
       "partialPixels": 831,
       "metadataSha256": "913093ca51a3db65520aa52b46792364b80600e3d3a2898b863eb32883b48534",
-      "rgbaSha256": "f55f42479bac0a477b6dac389205bb7f21fae82da4282abba82436409bd111f6"
+      "rgbaSha256": "f55f42479bac0a477b6dac389205bb7f21fae82da4282abba82436409bd111f6",
+      "resize": {
+        "size": [
+          512,
+          512
+        ],
+        "resample": "lanczos",
+        "resultSha256": "c8c0e65d643b03d6f0aa28e0a5633db854b9abf9b11eccf4fd837b02ee2e2df7",
+        "rgbSha256": "027f98d773d81f254467fcfab666545aa3af0417e735092a83422a9a6ee25ac8",
+        "rgbaSha256": "b7aefa8edff8aa01bc4cf58241327fe5a8eaa1cff13d620616234d9ddaaea635",
+        "resultBytes": 187198,
+        "transparentPixels": 129979,
+        "partialPixels": 4731,
+        "encoding": {
+          "python": "3.11.9",
+          "pillow": "12.2.0",
+          "zlib": "1.3.1",
+          "compressLevel": 9
+        }
+      }
     },
     {
       "path": "npc/oldWoman.png",
@@ -3392,7 +4285,26 @@
       "transparentPixels": 2114976,
       "partialPixels": 606,
       "metadataSha256": "cb6bcafaf9ee68eeb6d1c8321676ce7fcd77660d114d3a9ca0bc68bda6e695f6",
-      "rgbaSha256": "677d4f8d14803679683701b019f6b2118c315b1f5125a7cad3129ddd58fd8864"
+      "rgbaSha256": "677d4f8d14803679683701b019f6b2118c315b1f5125a7cad3129ddd58fd8864",
+      "resize": {
+        "size": [
+          512,
+          512
+        ],
+        "resample": "lanczos",
+        "resultSha256": "79fdde666a22e5450f1e60530f81412b0062322f04492f0eb7de782cf4543a41",
+        "rgbSha256": "2c7bb8c6d0e8cc3d701d70b0dbf65adef927afd1b1359a7587bb247d85f314da",
+        "rgbaSha256": "bd887ba6589ba2be232a8217333a6dc3726b26f8909db5268e6818e5a60d7b1d",
+        "resultBytes": 165974,
+        "transparentPixels": 129673,
+        "partialPixels": 5053,
+        "encoding": {
+          "python": "3.11.9",
+          "pillow": "12.2.0",
+          "zlib": "1.3.1",
+          "compressLevel": 9
+        }
+      }
     },
     {
       "path": "npc/questGiver.png",
@@ -3434,7 +4346,26 @@
       "transparentPixels": 2097035,
       "partialPixels": 565,
       "metadataSha256": "88c629bcf552ce436028954c25f6d8021a7e8c5d9d8e8b2e46ad7c06a0a5db6c",
-      "rgbaSha256": "85a17a83f0501501ea5e557ea8bfd864563083b987a47aa3f92822f206672360"
+      "rgbaSha256": "85a17a83f0501501ea5e557ea8bfd864563083b987a47aa3f92822f206672360",
+      "resize": {
+        "size": [
+          512,
+          512
+        ],
+        "resample": "lanczos",
+        "resultSha256": "aa266ba3248b9b1fa801a62030360a7115e4ca4b46dcea30cbc89a8fb1b45336",
+        "rgbSha256": "dc2713b4a850f92d270964cee0d56db1bba519b1595005a3aaa6e40fb544b227",
+        "rgbaSha256": "27c9d96633b7728be404c86e74d17012ca2a6664222619e9185501269f8e7544",
+        "resultBytes": 196038,
+        "transparentPixels": 128413,
+        "partialPixels": 5341,
+        "encoding": {
+          "python": "3.11.9",
+          "pillow": "12.2.0",
+          "zlib": "1.3.1",
+          "compressLevel": 9
+        }
+      }
     },
     {
       "path": "npc/ritualWitness.png",
@@ -3461,7 +4392,26 @@
       "transparentPixels": 2706926,
       "partialPixels": 515,
       "metadataSha256": "bd3fc4b8fa0688acd2713a050a3d5d415ade6087b54675316110e137cdb9aed1",
-      "rgbaSha256": "3282088a6a49e82686da0c9e3505045fbba45a1b0aa7dbaf977ce53c51d2c7ac"
+      "rgbaSha256": "3282088a6a49e82686da0c9e3505045fbba45a1b0aa7dbaf977ce53c51d2c7ac",
+      "resize": {
+        "size": [
+          512,
+          512
+        ],
+        "resample": "lanczos",
+        "resultSha256": "199f130cc01a8c902bb37f351acf4ec1f649c5cad1926a0fbce6f0b71e9588f5",
+        "rgbSha256": "8984b456ee4d73a81221733aacff4e3a4048b33c34d6b0c05665c27d4fc101ed",
+        "rgbaSha256": "8616625a380da3b74ca17634878627e89b0fff5bc073f604f9fb4d906ac6341a",
+        "resultBytes": 153365,
+        "transparentPixels": 166745,
+        "partialPixels": 4934,
+        "encoding": {
+          "python": "3.11.9",
+          "pillow": "12.2.0",
+          "zlib": "1.3.1",
+          "compressLevel": 9
+        }
+      }
     },
     {
       "path": "panel.png",

@@ -3590,6 +3590,62 @@ void test_texture_cache_without_gui_fails_closed() {
     expect_true(cache->getTexture("images/panel") == nullptr, "texture cache without GUI should return null");
 }
 
+void testShippedSpriteTexturesLoadAndRenderWithinSizeLimit() {
+    SDL_SetHintWithPriority(SDL_HINT_VIDEODRIVER, "dummy", SDL_HINT_OVERRIDE);
+    SDL_SetHintWithPriority(SDL_HINT_RENDER_DRIVER, "software", SDL_HINT_OVERRIDE);
+    if ((SDL_WasInit(SDL_INIT_VIDEO) & SDL_INIT_VIDEO) == 0) {
+        expect_true(SDL_Init(SDL_INIT_VIDEO) == 0, "sprite texture regression must initialize isolated SDL video");
+    }
+    const auto driver = SDL_GetCurrentVideoDriver();
+    const bool isolated = driver && std::string(driver) == "dummy";
+    expect_true(isolated, "sprite texture regression must use SDL's dummy video driver");
+    if (!isolated) {
+        return;
+    }
+
+    auto gui = std::make_shared<CGui>();
+    auto game = create_gui_game(gui);
+    auto cache = gui->getTextureCache();
+    auto renderer = gui->getRenderer();
+    SDL_RendererInfo renderer_info{};
+    expect_true(SDL_GetRendererInfo(renderer, &renderer_info) == 0 &&
+                    (renderer_info.flags & SDL_RENDERER_SOFTWARE) != 0,
+                "sprite texture regression must render in software");
+    const SDL_Rect target{0, 0, 64, 64};
+    constexpr Uint32 background = 0x00ff00ff;
+    for (const auto path : {"images/items/quest/holyRelic", "images/monsters/nightGaunt", "images/npc/elderMaren"}) {
+        const std::string prefix = std::string(path) + ": ";
+        auto texture = cache->getTexture(path);
+        expect_true(texture != nullptr, (prefix + "shipped sprite must load through the real texture cache").c_str());
+        if (!texture) {
+            continue;
+        }
+        int width = 0, height = 0;
+        expect_true(SDL_QueryTexture(texture, nullptr, nullptr, &width, &height) == 0,
+                    (prefix + "loaded texture dimensions must be queryable").c_str());
+        expect_true(width == 512 && height == 512, (prefix + "shipped sprite texture must be 512 by 512").c_str());
+        SDL_SetRenderDrawColor(renderer, 255, 0, 255, 255);
+        expect_true(SDL_RenderClear(renderer) == 0, "sprite texture regression must clear its software target");
+        expect_true(gui->getRenderContext().copy(texture, nullptr, target),
+                    (prefix + "shipped sprite must render successfully").c_str());
+        std::vector<Uint32> pixels(target.w * target.h);
+        const bool read = SDL_RenderReadPixels(renderer, &target, SDL_PIXELFORMAT_ARGB8888, pixels.data(),
+                                               target.w * sizeof(Uint32)) == 0;
+        expect_true(read, (prefix + "rendered sprite must support pixel readback").c_str());
+        if (!read) {
+            continue;
+        }
+        bool visible_artwork = false;
+        for (const auto pixel : pixels) {
+            visible_artwork = visible_artwork || (pixel & 0x00ffffff) != background;
+        }
+        expect_true(visible_artwork, (prefix + "rendered sprite must contain visible artwork").c_str());
+        expect_true((pixels.front() & 0x00ffffff) == background,
+                    (prefix + "the sprite corner must preserve transparent background").c_str());
+    }
+    game->getContext()->shutdown();
+}
+
 void test_render_context_rejects_null_texture_and_copies_valid_texture() {
     SDL_SetHint(SDL_HINT_VIDEODRIVER, "dummy");
     SDL_SetHint(SDL_HINT_RENDER_DRIVER, "software");
@@ -4527,6 +4583,7 @@ int main() {
     test_gui_pointer_capture_clears_when_captured_widget_is_removed();
     test_render_traversal_stops_after_detach();
     test_texture_cache_without_gui_fails_closed();
+    testShippedSpriteTexturesLoadAndRenderWithinSizeLimit();
     test_render_context_rejects_null_texture_and_copies_valid_texture();
     test_render_context_copy_ex_rotates_and_tracks_stats();
     testTextMetricsCacheAndExpiredGuiFallbacks();

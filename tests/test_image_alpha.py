@@ -8,9 +8,11 @@ import io
 import json
 from pathlib import Path
 import random
+import re
 import struct
 import tempfile
 import unittest
+from unittest import mock
 
 ROOT = Path(__file__).resolve().parents[1]
 
@@ -232,6 +234,177 @@ class ImageAlphaTest(unittest.TestCase):
             self.assertEqual(0, self.tool.processImages(root, review, apply=True))
             self.assertEqual(0, self.tool.processImages(root, review))
 
+    def makeResizeFixture(self, root):
+        image = self.Image.new("RGBA", (16, 16), (0, 0, 0, 255))
+        for y in range(4, 12):
+            for x in range(4, 12):
+                image.putpixel((x, y), (180, 60, 20, 255))
+        image.putpixel((8, 8), (180, 60, 20, 128))
+        metadata = self.PngImagePlugin.PngInfo()
+        metadata.add_text("Author", "Andrzej Lis")
+        metadata.add_itxt("XML:com.adobe.xmp", "Zażółć gęślą jaźń", lang="pl-PL", tkey="Metadane XMP")
+        metadata.add(b"gAMA", struct.pack(">I", 45455))
+        metadata.add(b"sRGB", b"\x00")
+        metadata.add(b"cHRM", struct.pack(">8I", 31270, 32900, 64000, 33000, 30000, 60000, 15000, 6000))
+        exif = self.Image.Exif()
+        exif[0x013B] = "Andrzej Lis"
+        output = io.BytesIO()
+        image.save(output, format="PNG", pnginfo=metadata, dpi=(96, 144), exif=exif)
+        original = output.getvalue()
+        policy = self.maskPolicy()
+        with self.Image.open(io.BytesIO(original)) as source:
+            source.load()
+            masked = self.tool.applyMask(source, policy)
+            intermediate = self.tool.encodePng(masked, source)
+            resized = masked.resize((8, 8), self.Image.Resampling.LANCZOS)
+            final = self.tool.encodePng(resized, source)
+            alpha_histogram = masked.getchannel("A").histogram()
+            final_histogram = resized.getchannel("A").histogram()
+            entry = {
+                "path": "sample.png",
+                "policy": policy,
+                "size": list(source.size),
+                "sourceSha256": self.tool.digest(original),
+                "resultSha256": self.tool.digest(intermediate),
+                "rgbSha256": self.tool.digest(source.convert("RGB").tobytes()),
+                "rgbaSha256": self.tool.digest(masked.tobytes()),
+                "metadataSha256": self.tool.metadataDigest(source),
+                "sourceBytes": len(original),
+                "resultBytes": len(intermediate),
+                "transparentPixels": alpha_histogram[0],
+                "partialPixels": sum(alpha_histogram[1:255]),
+                "resize": {
+                    "size": [8, 8],
+                    "resample": "lanczos",
+                    "resultSha256": self.tool.digest(final),
+                    "rgbSha256": self.tool.digest(resized.convert("RGB").tobytes()),
+                    "rgbaSha256": self.tool.digest(resized.tobytes()),
+                    "resultBytes": len(final),
+                    "transparentPixels": final_histogram[0],
+                    "partialPixels": sum(final_histogram[1:255]),
+                    "encoding": {"pillow": self.Image.__version__, "compressLevel": 9},
+                },
+            }
+        path = root / "res/images/sample.png"
+        path.parent.mkdir(parents=True)
+        path.write_bytes(original)
+        return path, original, intermediate, final, {"images": [entry]}
+
+    def testResizeFromOriginalAndReviewedAlphaMatchesTheSameFinalOutput(self):
+        for stage in ("original", "alpha"):
+            with self.subTest(stage=stage), tempfile.TemporaryDirectory(dir=ROOT) as directory:
+                root = Path(directory)
+                path, original, intermediate, final, review = self.makeResizeFixture(root)
+                path.write_bytes(original if stage == "original" else intermediate)
+                original_review = copy.deepcopy(review)
+                self.assertEqual(1, self.tool.processImages(root, review, apply=True))
+                self.assertEqual(final, path.read_bytes())
+                self.assertEqual(original_review, review, "processing must preserve the original alpha review")
+                with mock.patch.object(self.tool.os, "replace") as replace:
+                    self.assertEqual(0, self.tool.processImages(root, review, apply=True))
+                    self.assertEqual(0, self.tool.processImages(root, review))
+                    replace.assert_not_called()
+
+    def testResizeReadOnlyCheckRefusesBothUnpreparedStagesWithoutWriting(self):
+        for stage in ("original", "alpha"):
+            with self.subTest(stage=stage), tempfile.TemporaryDirectory(dir=ROOT) as directory:
+                root = Path(directory)
+                path, original, intermediate, _, review = self.makeResizeFixture(root)
+                current = original if stage == "original" else intermediate
+                path.write_bytes(current)
+                with self.assertRaisesRegex(ValueError, "unreviewed input"):
+                    self.tool.processImages(root, review)
+                self.assertEqual(current, path.read_bytes())
+
+    def testResizeRefusesUnknownInputWithoutWriting(self):
+        with tempfile.TemporaryDirectory(dir=ROOT) as directory:
+            root = Path(directory)
+            path, _, _, _, review = self.makeResizeFixture(root)
+            unknown = self.pngBytes(self.Image.new("RGBA", (16, 16), (20, 40, 60, 255)))
+            path.write_bytes(unknown)
+            with self.assertRaisesRegex(ValueError, "unreviewed input"):
+                self.tool.processImages(root, review, apply=True)
+            self.assertEqual(unknown, path.read_bytes())
+
+    def testResizeStillRequiresTheReviewedAlphaIntermediate(self):
+        with tempfile.TemporaryDirectory(dir=ROOT) as directory:
+            root = Path(directory)
+            path, original, _, _, review = self.makeResizeFixture(root)
+            review["images"][0]["resultSha256"] = "0" * 64
+            with self.assertRaisesRegex(ValueError, "differs from the reviewed preview"):
+                self.tool.processImages(root, review, apply=True)
+            self.assertEqual(original, path.read_bytes())
+
+    def testResizeVerifiesAllFinalReviewFieldsBeforeReplacement(self):
+        for stage in ("original", "alpha"):
+            for field in ("resultSha256", "rgbSha256", "rgbaSha256", "size", "metadataSha256"):
+                with self.subTest(stage=stage, field=field), tempfile.TemporaryDirectory(dir=ROOT) as directory:
+                    root = Path(directory)
+                    path, original, intermediate, _, review = self.makeResizeFixture(root)
+                    current = original if stage == "original" else intermediate
+                    path.write_bytes(current)
+                    entry = review["images"][0]
+                    contract = entry if field == "metadataSha256" else entry["resize"]
+                    contract[field] = [4, 4] if field == "size" else "0" * 64
+                    with mock.patch.object(self.tool.os, "replace") as replace:
+                        with self.assertRaises(ValueError):
+                            self.tool.processImages(root, review, apply=True)
+                        replace.assert_not_called()
+                    self.assertEqual(current, path.read_bytes())
+
+    def testResizeKeepsAuthorshipColorResolutionExifAndReviewedAlpha(self):
+        with tempfile.TemporaryDirectory(dir=ROOT) as directory:
+            root = Path(directory)
+            path, original, _, final, review = self.makeResizeFixture(root)
+            self.assertEqual(1, self.tool.processImages(root, review, apply=True))
+            with self.Image.open(io.BytesIO(original)) as source, self.Image.open(path) as resized:
+                source.load()
+                resized.load()
+                self.assertEqual(source.info, resized.info)
+                self.assertEqual(source.text, resized.text)
+                xmp_key = "XML:com.adobe.xmp"
+                self.assertEqual(source.text[xmp_key].lang, resized.text[xmp_key].lang)
+                self.assertEqual(source.text[xmp_key].tkey, resized.text[xmp_key].tkey)
+                self.assertEqual(dict(source.getexif()), dict(resized.getexif()))
+                self.assertEqual((8, 8), resized.size)
+                self.assertEqual("RGBA", resized.mode)
+                histogram = resized.getchannel("A").histogram()
+                self.assertGreater(histogram[0], 0)
+                self.assertGreater(histogram[255], 0)
+                self.assertGreater(sum(histogram[1:255]), 0)
+                self.assertEqual(review["images"][0]["resize"]["rgbaSha256"], self.tool.digest(resized.tobytes()))
+            self.assertEqual(final, path.read_bytes())
+
+    def testResizeDoesNotBlendInvisibleBackgroundColorsIntoTheForeground(self):
+        source = self.Image.new("RGBA", (12, 4), (0, 255, 0, 0))
+        for y in range(4):
+            for x in range(6, 12):
+                source.putpixel((x, y), (255, 0, 0, 255))
+        before = source.tobytes()
+        resized = self.tool.resizeImage(source, {"size": [6, 2], "resample": "lanczos"})
+        self.assertEqual("RGBA", resized.mode)
+        self.assertEqual((6, 2), resized.size)
+        self.assertEqual(before, source.tobytes())
+        pixels = [resized.getpixel((x, y)) for y in range(resized.height) for x in range(resized.width)]
+        self.assertTrue(any(0 < alpha < 255 for _, _, _, alpha in pixels))
+        self.assertTrue(all((red, green, blue) == (255, 0, 0) for red, green, blue, alpha in pixels if alpha))
+
+    def testResizeRejectsInvalidDimensionsFiltersAndAspectRatios(self):
+        source = self.Image.new("RGBA", (16, 16))
+        for changes in (
+            {"size": [0, 8]},
+            {"size": [-1, 8]},
+            {"size": [8]},
+            {"size": [8, 8, 8]},
+            {"size": [True, True]},
+            {"size": [8.0, 8]},
+            {"size": [32, 32]},
+            {"size": [8, 4]},
+            {"resample": "nearest"},
+        ):
+            with self.subTest(changes=changes), self.assertRaises(ValueError):
+                self.tool.resizeImage(source, {"size": [8, 8], "resample": "lanczos", **changes})
+
     def testMaskApplicationPreservesAuthorshipTextAndInternationalXmp(self):
         metadata = self.PngImagePlugin.PngInfo()
         text_values = {
@@ -350,6 +523,44 @@ class ImageAlphaTest(unittest.TestCase):
                     self.tool.processImages(root, review, apply=True)
                 self.assertEqual(original, path.read_bytes())
 
+    def testEveryRealAssetFitsTheNativeTexturePixelBudget(self):
+        native_source = (ROOT / "src/gui/CTextureCache.cpp").read_text(encoding="utf-8")
+        match = re.search(r"constexpr int MAX_ALPHA_MASK_PIXELS = ([\d']+);", native_source)
+        self.assertIsNotNone(match, "read the pixel budget from the production texture loader")
+        pixel_budget = int(match.group(1).replace("'", ""))
+        oversized = []
+        for path in sorted((ROOT / "res/images").rglob("*.png")):
+            with self.Image.open(path) as image:
+                if image.width * image.height > pixel_budget:
+                    oversized.append(f"{path.relative_to(ROOT / 'res/images').as_posix()}: {image.size}")
+        self.assertEqual([], oversized, f"PNG assets exceed the native {pixel_budget}-pixel texture budget")
+
+    def testOnlyTheFiftyOversizedAssetsHaveReviewed512PixelOutputs(self):
+        review = json.loads((ROOT / "docs/image-alpha-review.json").read_text(encoding="utf-8"))
+        resized = [entry for entry in review["images"] if "resize" in entry]
+        unchanged = [entry for entry in review["images"] if "resize" not in entry]
+        self.assertEqual(50, len(resized))
+        self.assertEqual(142, len(unchanged))
+        for entry in resized:
+            with self.subTest(path=entry["path"]):
+                self.assertEqual([2048, 2048], entry["size"], "retain the original alpha-mask dimensions")
+                self.assertEqual("mask", entry["policy"]["action"])
+                resized_review = entry["resize"]
+                self.assertEqual([512, 512], resized_review["size"])
+                self.assertEqual("lanczos", resized_review["resample"])
+                self.assertNotEqual(entry["resultSha256"], resized_review["resultSha256"])
+                self.assertNotEqual(entry["rgbaSha256"], resized_review["rgbaSha256"])
+                for name in ("resultSha256", "rgbSha256", "rgbaSha256"):
+                    self.assertRegex(resized_review[name], r"^[0-9a-f]{64}$")
+                self.assertEqual(9, resized_review["encoding"]["compressLevel"])
+                path = ROOT / "res/images" / entry["path"]
+                self.assertEqual(resized_review["resultBytes"], path.stat().st_size)
+        for entry in unchanged:
+            with self.subTest(path=entry["path"]):
+                self.assertNotEqual([2048, 2048], entry["size"])
+                path = ROOT / "res/images" / entry["path"]
+                self.assertEqual(entry["resultSha256"], self.tool.digest(path.read_bytes()))
+
     def testEveryRealAssetMatchesItsReviewedDimensionsRgbAndResultHash(self):
         review = json.loads((ROOT / "docs/image-alpha-review.json").read_text(encoding="utf-8"))
         assets = {path.relative_to(ROOT / "res/images").as_posix() for path in (ROOT / "res/images").rglob("*.png")}
@@ -359,6 +570,7 @@ class ImageAlphaTest(unittest.TestCase):
         self.assertEqual(0, self.tool.processImages(ROOT, review))
         for entry in review["images"]:
             with self.subTest(path=entry["path"]):
+                result_review = self.tool.finalReview(entry)
                 self.assertIn(entry["policy"]["action"], ("mask", "preserve"))
                 self.assertTrue(entry["policy"]["reason"].strip())
                 for name in ("sourceSha256", "resultSha256", "rgbSha256"):
@@ -372,8 +584,8 @@ class ImageAlphaTest(unittest.TestCase):
                         histogram = image.getchannel("A").histogram()
                         self.assertGreater(histogram[0], 0, "masked image must contain transparent background")
                         self.assertGreater(histogram[255], 0, "masked image must retain opaque foreground")
-                        self.assertEqual(entry["transparentPixels"], histogram[0])
-                        self.assertEqual(entry["partialPixels"], sum(histogram[1:255]))
+                        self.assertEqual(result_review["transparentPixels"], histogram[0])
+                        self.assertEqual(result_review["partialPixels"], sum(histogram[1:255]))
 
 
 if __name__ == "__main__":
