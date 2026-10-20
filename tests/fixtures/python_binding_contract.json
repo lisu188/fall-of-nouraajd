@@ -20,7 +20,7 @@
     {
       "source": "src/core/bindings/CModuleServices.cpp",
       "registration": "bindServices",
-      "registrationTokenSha256": "47edae1ca9b623c8b409a576901552c2cdfe230aadad29c8a1383a01972a9ba3"
+      "registrationTokenSha256": "910a4e2567f65ad31372496df0466c7302c3e8e0a321f760a52ec7e182ec24ed"
     },
     {
       "source": "src/core/bindings/CModuleCreatures.cpp",
@@ -33,5 +33,6 @@
       "registrationTokenSha256": "9d1b7ad41639523915a0c9a2fa7b29fc6906c1b061929373a48d89ae60699295"
     }
   ],
-  "runtimeAdapterReview": "Only the private seed hook delegates to per-consumer adapters; public registrations, arguments, defaults and docs remain unchanged."
+  "runtimeAdapterReview": "Only the private seed hook delegates to per-consumer adapters; public registrations, arguments, defaults and docs remain unchanged.",
+  "alliedEncounterReview": "Adds fightManyWithAllies(hero, opponents, allies) and fightManyWithAlliesOutcome(hero, opponents, allies); existing signatures, defaults and registration order are retained. Native allied-combat tests cover bounded AI participants, rewards and stale contexts."
 }
