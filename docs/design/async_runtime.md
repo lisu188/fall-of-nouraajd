@@ -40,6 +40,12 @@ after checking origin, identity, map, and transition generation. GUI movement
 uses bounded loops that await turns. Deferred signals and refreshes remain
 batched, and queued work cancelled before execution skips its body.
 
+`CMap::movePresentedAsync` also accepts ordered pre-step barriers and a final
+presentation join. The GUI uses these to overlap independent movement animations
+without running movement or gameplay hooks concurrently. Interaction boundaries
+flush the earlier group before the next commit. The turn stays active through
+the final join; cancellation or stale ownership clears every pending overlay.
+
 Every game context owns its tasks. Shutdown marks it inactive, advances its
 transition generation, rejects new work, disconnects observers, and requests
 cooperative cancellation. Running work finishes or observes its stop token.
