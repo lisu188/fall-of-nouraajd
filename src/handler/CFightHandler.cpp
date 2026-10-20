@@ -295,8 +295,7 @@ encounter_type sanitize_allies(const std::shared_ptr<CMap> &map, const std::shar
         return allies;
     }
     std::unordered_set<const CCreature *> identities;
-    for (std::size_t index = 0; index < std::min<std::size_t>(candidates.size(), 32); ++index) {
-        const auto &ally = candidates[index];
+    for (const auto &ally : candidates) {
         if (!is_active_participant(map, ally) || ally->isPlayer() || ally == hero ||
             ally->getPosZ() != hero->getPosZ() || !hero->isAffiliatedWith(ally) ||
             contains_participant(opponents, ally) || !ally->getFightController() ||
