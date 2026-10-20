@@ -110,5 +110,92 @@ class PythonPluginSandboxTest(unittest.TestCase):
         self.assertIn('game.CResourcesProvider.getInstance().load("config/" + filename)', crafting_source)
 
 
+class PythonPluginSandboxRuntimeTest(unittest.TestCase):
+    def testRestrictedPostedCampaignFlowsPreserveTheImportBoundary(self):
+        from tests.test_python_callback_lifecycle import PythonCallbackLifecycleTest
+
+        child = PythonCallbackLifecycleTest(methodName="runTest")
+        output = child.runChild(
+            r"""
+            from pathlib import Path
+            import tempfile
+
+            plugin_source = "\n".join([
+                "import game",
+                "def rejectPrivateImports():",
+                "    for name in ('ui', 'os'):",
+                "        try:",
+                "            __import__(name)",
+                "        except Exception as error:",
+                "            assert 'may only import' in str(error)",
+                "        else:",
+                "            raise RuntimeError('restricted import unexpectedly succeeded: ' + name)",
+                "def load(_unused, owner):",
+                "    rejectPrivateImports()",
+                "    for name in ('prepareCompletion', 'complete_scenarioFlow', 'retryPendingFlow'):",
+                "        helper = getattr(game.campaign, name)",
+                "        assert callable(helper)",
+                "        assert not hasattr(helper, '__globals__')",
+                "        assert not hasattr(helper, '__wrapped__')",
+                "        try:",
+                "            helper(None)",
+                "        except TypeError:",
+                "            pass",
+                "        else:",
+                "            raise RuntimeError('campaign helper accepted a non-native game')",
+                "    assert game.campaign.prepareCompletion(owner, 'sandbox') is None",
+                "    def callback():",
+                "        rejectPrivateImports()",
+                "        flows = (game.campaign.complete_scenarioFlow(owner, 'sandbox'),",
+                "                 game.campaign.retryPendingFlow(owner))",
+                "        for flow in flows:",
+                "            for attribute in ('gi_frame', 'gi_code', '__globals__', '__wrapped__'):",
+                "                assert not hasattr(flow, attribute)",
+                "            for name in ('send', 'throw', 'close'):",
+                "                method = getattr(flow, name)",
+                "                assert callable(method)",
+                "                namespace = getattr(method, '__globals__', {})",
+                "                assert 'open' not in namespace.get('__builtins__', {})",
+                "            yield from flow",
+                "        rejectPrivateImports()",
+                "        owner.getMap().getPlayer().addGold(7)",
+                "        owner.setBoolProperty('restrictedPostedFlowRan', True)",
+                "    owner.post(callback)",
+                "    owner.setBoolProperty('restrictedPostedFlowQueued', True)",
+            ])
+            owners = []
+            try:
+                for cancel_before_pump in (False, True):
+                    owner = game.CGameLoader.loadGame()
+                    owners.append(owner)
+                    game.CGameLoader.startGameWithPlayer(owner, 'empty', 'Warrior')
+                    player = owner.getMap().getPlayer()
+                    gold_before = player.getGold()
+                    resources = owner.getResourcesProvider()
+                    resource_root = Path(resources.getPath('config/items.json')).parent.parent
+                    with tempfile.TemporaryDirectory(prefix='sandbox-flow-', dir=resource_root / 'maps') as temporary:
+                        plugin = Path(temporary) / 'script.py'
+                        plugin.write_text(plugin_source, encoding='utf-8')
+                        assert game.CPluginLoader.loadPlugin(owner, plugin.relative_to(resource_root).as_posix()), (
+                            'the restricted map callback must create its native-owned flow')
+                        assert owner.getBoolProperty('restrictedPostedFlowQueued')
+                        assert not owner.getBoolProperty('restrictedPostedFlowRan')
+                        if cancel_before_pump:
+                            owner.getContext().shutdown()
+                        for _ in range(8):
+                            loop.run()
+                        assert owner.getBoolProperty('restrictedPostedFlowRan') is (not cancel_before_pump)
+                        assert player.getGold() == gold_before + (0 if cancel_before_pump else 7)
+                        owner.getContext().shutdown()
+                print('restricted posted flows execute or cancel without exposing trusted imports', flush=True)
+            finally:
+                for owner in reversed(owners):
+                    owner.getContext().shutdown()
+            """,
+            timeout_seconds=20,
+        )
+        self.assertIn("restricted posted flows execute or cancel without exposing trusted imports", output)
+
+
 if __name__ == "__main__":
     unittest.main()

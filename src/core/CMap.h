@@ -97,6 +97,8 @@ class CMap : public CGameObject {
 
     vstd::task<void> moveAsync(CMovementPresenter presenter);
 
+    vstd::task<void> movePresentedAsync(CMovementPresentation presentation);
+
     std::shared_ptr<CTile> getTile(int x, int y, int z);
 
     std::shared_ptr<CTile> getTile(Coords coords);
@@ -289,7 +291,8 @@ class CMap : public CGameObject {
     void objectMoved(const std::shared_ptr<CMapObject> &object, Coords _old, Coords _new);
 
   private:
-    static vstd::task<void> moveOwnedAsync(std::shared_ptr<CMap> map, CMovementPresenter presenter);
+    static vstd::task<void> moveOwnedAsync(std::shared_ptr<CMap> map, CMovementPresenter presenter,
+                                           CMovementPresentation presentation = {});
 
     std::unordered_map<std::string, std::shared_ptr<CMapObject>> mapObjects;
     // TODO: cleanup and after load initialization

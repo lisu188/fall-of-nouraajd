@@ -2289,7 +2289,7 @@ class OctobogzHuntTest(unittest.TestCase):
         )
         child = ast.parse(textwrap.dedent(code))
         calls = [node for node in ast.walk(child) if isinstance(node, ast.Call)]
-        self.assertEqual(48, sum(isinstance(node, ast.Assert) for node in ast.walk(child)))
+        self.assertEqual(52, sum(isinstance(node, ast.Assert) for node in ast.walk(child)))
         self.assertEqual(
             2, sum(isinstance(node.func, ast.Attribute) and node.func.attr == "saveWithResult" for node in calls)
         )

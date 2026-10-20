@@ -24,6 +24,20 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #include <pybind11/eval.h>
 #include <stdexcept>
 
+namespace {
+pybind11::module_ initializedUiModule() {
+    const auto name = pybind11::str("ui");
+    auto module = PyImport_GetModule(name.ptr());
+    if (module == nullptr) {
+        if (!PyErr_Occurred()) {
+            PyErr_SetString(PyExc_ImportError, "Native UI flow module is not initialized: ui");
+        }
+        throw pybind11::error_already_set();
+    }
+    return pybind11::reinterpret_steal<pybind11::module_>(module);
+}
+} // namespace
+
 struct CScriptHandler::State {
     pybind11::object mainModule;
     pybind11::dict mainNamespace;
@@ -127,7 +141,7 @@ std::unique_ptr<CScriptFlow> CScriptHandler::createUiFlow(const std::string &ent
         }
         return owner;
     });
-    state->flow = pybind11::module_::import("ui").attr("UiFlow")(entry, getGame);
+    state->flow = initializedUiModule().attr("UiFlow")(entry, getGame);
     return std::unique_ptr<CScriptFlow>(new CScriptFlow(std::move(state)));
 }
 
@@ -137,7 +151,7 @@ std::unique_ptr<CScriptFlow> CScriptHandler::createCallbackFlow(pybind11::functi
     pybind11::gil_scoped_acquire acquire;
     auto state = std::make_unique<CScriptFlow::State>();
     state->game = std::move(game);
-    state->flow = pybind11::module_::import("ui").attr("UiFlow").attr("fromCallback")(std::move(callback));
+    state->flow = initializedUiModule().attr("UiFlow").attr("fromCallback")(std::move(callback));
     return std::unique_ptr<CScriptFlow>(new CScriptFlow(std::move(state)));
 }
 

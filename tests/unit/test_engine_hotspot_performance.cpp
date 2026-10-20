@@ -27,6 +27,7 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #include "core/CUtil.h"
 #include "handler/CFightHandler.h"
 #include "gui/CGui.h"
+#include "gui/CMovementBatch.h"
 #include "gui/object/CMinimapGraphicsObject.h"
 #include "object/CCreature.h"
 #include "object/CCreatureClass.h"
@@ -595,6 +596,79 @@ void testStationaryMapTurnsCompleteBeforeRendering() {
               << " readyPassBudget=" << READY_PASS_BUDGET << "\n";
     context->shutdown();
     loop->runUntilIdle(READY_PASS_BUDGET);
+}
+
+void testMovementBatchInteractionSchedulingIsLinear() {
+    constexpr int STEPS = 64;
+    constexpr int REUSE_PASSES = 4;
+    constexpr std::size_t CELLS_PER_STEP = 10;
+    auto fixture = make_open_map(1, 1);
+    fixture.map->setXBounds({{0, STEPS * 5}});
+    fixture.map->setYBounds({{0, 8}});
+    const auto tiles_before = fixture.map->getTiles().size();
+    const auto revision_before = fixture.map->getNavigationRevision();
+    CMovementBatch distant;
+    std::size_t maximum_cells = 0;
+    int distant_groups = 0;
+    for (int pass = 0; pass < REUSE_PASSES; ++pass) {
+        distant.clear();
+        expect_true(distant.cellCount() == 0, "reusing a movement batch must release the previous interaction cells");
+        int groups = 1;
+        for (int step = 0; step < STEPS; ++step) {
+            const Coords origin(2 + step * 5, 2, 0);
+            const auto cells = CMovementBatch::interactionCells(*fixture.map, origin, origin + EAST);
+            expect_true(!cells.empty() && cells.size() <= CELLS_PER_STEP,
+                        "each movement footprint must contain at most ten normalized endpoint-neighbor cells");
+            const auto probes_before = distant.probeCount();
+            if (distant.conflicts(cells)) {
+                ++groups;
+                distant.clear();
+            }
+            expect_true(distant.probeCount() - probes_before <= CELLS_PER_STEP,
+                        "conflict lookup must probe at most ten cells independently of the batch actor count");
+            distant.add(cells);
+            maximum_cells = std::max(maximum_cells, distant.cellCount());
+        }
+        expect_true(groups == 1, "64 distant moves must share one presentation group on every reuse pass");
+        expect_true(distant.cellCount() <= STEPS * CELLS_PER_STEP,
+                    "batch interaction storage must remain bounded by the current fixed movement workload");
+        distant_groups += groups;
+    }
+    expect_true(distant.probeCount() <= STEPS * REUSE_PASSES * CELLS_PER_STEP &&
+                    distant.insertionCount() <= STEPS * REUSE_PASSES * CELLS_PER_STEP,
+                "repeated distant movement scheduling must stay within linear probe and insertion budgets");
+    distant.clear();
+    expect_true(distant.cellCount() == 0, "a finished movement batch must retain no active interaction cells");
+
+    CMovementBatch contact;
+    int contact_groups = 1;
+    for (int step = 0; step < STEPS; ++step) {
+        const Coords origin(2 + step * 2, 5, 0);
+        const auto cells = CMovementBatch::interactionCells(*fixture.map, origin, origin + EAST);
+        const auto probes_before = contact.probeCount();
+        if (contact.conflicts(cells)) {
+            ++contact_groups;
+            contact.clear();
+        }
+        expect_true(contact.probeCount() - probes_before <= CELLS_PER_STEP,
+                    "nearby interaction checks must keep the same per-step probe budget");
+        contact.add(cells);
+    }
+    expect_true(contact_groups == STEPS, "a chain of contacting movement footprints must remain sequential");
+    expect_true(contact.probeCount() <= STEPS * CELLS_PER_STEP && contact.insertionCount() <= STEPS * CELLS_PER_STEP &&
+                    contact.cellCount() <= CELLS_PER_STEP,
+                "sequential contact groups must release prior cells without quadratic scheduling work");
+    contact.clear();
+    expect_true(contact.cellCount() == 0 && fixture.map->getTiles().size() == tiles_before &&
+                    fixture.map->getNavigationRevision() == revision_before,
+                "presentation grouping must clean its cells without materializing or changing map terrain");
+    std::cout << "movement batch interaction guard: steps=" << STEPS << " reusePasses=" << REUSE_PASSES
+              << " distantGroups=" << distant_groups << " distantGroupBudget=" << REUSE_PASSES
+              << " contactGroups=" << contact_groups << " probes=" << distant.probeCount()
+              << " probeBudget=" << STEPS * REUSE_PASSES * CELLS_PER_STEP << " insertions=" << distant.insertionCount()
+              << " maxCells=" << maximum_cells << " contactProbes=" << contact.probeCount()
+              << " perStepProbeBudget=" << CELLS_PER_STEP << "\n";
+    fixture.game->getContext()->shutdown();
 }
 
 class PlannedMoveWorkProbe : public CController {
@@ -1277,6 +1351,7 @@ void run_engine_hotspot_performance_tests() {
     test_coordinate_cache_lookup_cardinality_and_move_updates();
     test_moderate_actor_map_move_turn_state_and_revision_bounds();
     testStationaryMapTurnsCompleteBeforeRendering();
+    testMovementBatchInteractionSchedulingIsLinear();
     testStalePlannedMapMoveWorkIsBounded();
     test_bulk_inventory_property_notifications_are_count_bounded();
     testHealingItemSelectionWorkAndCallbacksAreBounded();

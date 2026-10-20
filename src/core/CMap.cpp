@@ -35,6 +35,28 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #include <stdexcept>
 
 namespace {
+class MovementPresentationCleanup {
+  public:
+    explicit MovementPresentationCleanup(std::function<void()> cancel) : cancel(std::move(cancel)) {}
+
+    void release() { cancel = {}; }
+
+    ~MovementPresentationCleanup() noexcept {
+        try {
+            if (cancel)
+                cancel();
+        } catch (...) {
+            try {
+                vstd::logger::error("Movement presentation cleanup failed");
+            } catch (...) {
+            }
+        }
+    }
+
+  private:
+    std::function<void()> cancel;
+};
+
 std::atomic_bool mapCoordinateLookupProbeEnabled{false};
 std::atomic_size_t mapCoordinateLookupProbeCounter{0};
 
@@ -953,7 +975,13 @@ vstd::task<void> CMap::moveAsync(CMovementPresenter presenter) {
     return moveOwnedAsync(this->ptr<CMap>(), std::move(presenter));
 }
 
-vstd::task<void> CMap::moveOwnedAsync(std::shared_ptr<CMap> map, CMovementPresenter presenter) {
+vstd::task<void> CMap::movePresentedAsync(CMovementPresentation presentation) {
+    auto presenter = std::move(presentation.presentStep);
+    return moveOwnedAsync(this->ptr<CMap>(), std::move(presenter), std::move(presentation));
+}
+
+vstd::task<void> CMap::moveOwnedAsync(std::shared_ptr<CMap> map, CMovementPresenter presenter,
+                                      CMovementPresentation presentation) {
     auto loop = vstd::event_loop<>::instance();
     if (!loop->isMainThread()) {
         co_await vstd::post(loop);
@@ -973,8 +1001,10 @@ vstd::task<void> CMap::moveOwnedAsync(std::shared_ptr<CMap> map, CMovementPresen
     }
 
     map->moving = true;
+    MovementPresentationCleanup cleanup(std::move(presentation.cancel));
 
     try {
+        const auto stop = co_await vstd::thisTaskStopToken();
         vstd::logger::debug("Turn:", map->turn);
 
         auto transitionContext = game ? game->getContext() : nullptr;
@@ -1085,6 +1115,24 @@ vstd::task<void> CMap::moveOwnedAsync(std::shared_ptr<CMap> map, CMovementPresen
                 continue;
             }
 
+            if (presentation.beforeStep) {
+                co_await presentation.beforeStep(creature, current, target);
+                if (!loop->isMainThread())
+                    co_await vstd::post(loop);
+                if (stop.stop_requested())
+                    throw vstd::task_cancelled();
+                if (loop->quitRequested()) {
+                    map->moving = false;
+                    co_return;
+                }
+                if (!canApplyDeferredMoveWork() || creature->getController() != controller_ptr ||
+                    !is_active_creature(creature) || map->normalizeCoords(creature->getCoords()) != current ||
+                    !map->canStep(target)) {
+                    controller_ptr->interrupt(creature);
+                    continue;
+                }
+            }
+
             const bool interrupt_after_step = should_interrupt_after_step(creature, target);
             if (presenter) {
                 co_await creature->moveToAsync(target, {}, presenter);
@@ -1104,6 +1152,22 @@ vstd::task<void> CMap::moveOwnedAsync(std::shared_ptr<CMap> map, CMovementPresen
             }
         }
 
+        if ((presentation.beforeStep || presentation.finish) && !canApplyDeferredMoveWork()) {
+            map->moving = false;
+            co_return;
+        }
+        if (presentation.finish) {
+            co_await presentation.finish();
+            if (!loop->isMainThread())
+                co_await vstd::post(loop);
+            if (stop.stop_requested())
+                throw vstd::task_cancelled();
+            if (loop->quitRequested() || !canApplyDeferredMoveWork()) {
+                map->moving = false;
+                co_return;
+            }
+        }
+
         map->forObjects(
             [](std::shared_ptr<CMapObject> object) {
                 if (auto creature = vstd::cast<CCreature>(object)) {
@@ -1116,6 +1180,7 @@ vstd::task<void> CMap::moveOwnedAsync(std::shared_ptr<CMap> map, CMovementPresen
         map->turn++;
         map->recordDirectPropertyChanged("turn");
         map->signal("turnPassed");
+        cleanup.release();
     } catch (...) {
         map->moving = false;
         throw;

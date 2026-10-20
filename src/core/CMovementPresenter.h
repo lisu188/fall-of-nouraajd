@@ -25,3 +25,11 @@ class CMapObject;
 // An empty presenter keeps native, Python, and MCP movement immediate.
 using CMovementPresenter =
     std::function<vstd::task<void>(std::shared_ptr<CMapObject>, Coords origin, Coords destination)>;
+
+// A GUI may overlap independent presentations while keeping movement and hooks ordered.
+struct CMovementPresentation {
+    CMovementPresenter beforeStep;
+    CMovementPresenter presentStep;
+    std::function<vstd::task<void>()> finish;
+    std::function<void()> cancel;
+};

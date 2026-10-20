@@ -78,18 +78,36 @@ class PythonCallbackLifecycleTest(unittest.TestCase):
             import gc
             import weakref
             events = []
+            callback_stack = []
+            def nested():
+                assert callback_stack == [], callback_stack
+                assert events == ['first', 'second'], events
+                events.append('nested')
+            def second():
+                assert callback_stack == [], callback_stack
+                assert events == ['first'], events
+                events.append('second')
             class Callback:
                 def __call__(self):
-                    events.append('first')
-                    assert loop.invoke(lambda: events.append('nested'))
+                    callback_stack.append('first')
+                    try:
+                        events.append('first')
+                        assert loop.invoke(nested)
+                        assert events == ['first'], events
+                    finally:
+                        callback_stack.pop()
                     raise RuntimeError('deliberate callback failure')
             callback = Callback()
             reference = weakref.ref(callback)
             assert loop.invoke(callback)
             del callback
-            assert loop.invoke(lambda: events.append('second'))
-            loop.run()
-            assert events == ['first', 'second'], events
+            assert loop.invoke(second)
+            assert events == [], events
+            for _ in range(10):
+                loop.run()
+                if len(events) == 3:
+                    break
+            assert events == ['first', 'second', 'nested'], events
             gc.collect()
             assert reference() is None
             loop.run()

@@ -9,14 +9,17 @@ SPDX-License-Identifier: GPL-3.0-or-later
 #include "core/CGameContext.h"
 #include "core/CMap.h"
 #include "core/CMovementPresenter.h"
+#include "core/CPythonOverrides.h"
 #include "core/CRuntimeBridge.h"
 #include "core/CStats.h"
 #include "core/CTypes.h"
+#include "core/CWrapper.h"
 #include "gui/CAnimation.h"
 #include "gui/CGui.h"
 #include "gui/CLayout.h"
 #include "gui/CMovementAnimation.h"
 #include "gui/object/CMapGraphicsObject.h"
+#include "gui/object/CProxyGraphicsObject.h"
 #include "handler/CObjectHandler.h"
 #include "object/CCreature.h"
 #include "object/CPlayer.h"
@@ -25,8 +28,12 @@ SPDX-License-Identifier: GPL-3.0-or-later
 
 #include <pybind11/embed.h>
 
+#include <algorithm>
+#include <chrono>
+#include <filesystem>
 #include <limits>
 #include <stdexcept>
+#include <string>
 #include <vector>
 
 namespace {
@@ -97,10 +104,13 @@ class ArrivalProbeCreature : public CCreature {
   public:
     vstd::task<void> afterMoveAsync() override {
         ++arrivals;
+        if (trace)
+            trace->push_back("arrival:" + getName());
         co_await CCreature::afterMoveAsync();
     }
 
     int arrivals = 0;
+    std::vector<std::string> *trace = nullptr;
 };
 
 class EastStepController : public CController {
@@ -185,6 +195,529 @@ class HeadlessMovementGui : public CGui {
   public:
     HeadlessMovementGui() : CGui(WithoutWindow{}) {}
 };
+
+struct BatchLifecycleProbe {
+    std::vector<std::string> trace;
+    int beforeCalls = 0;
+    int presented = 0;
+    int finishCalls = 0;
+    int cancelled = 0;
+    bool allowBefore = false;
+    bool allowFinish = false;
+    bool failPresentation = false;
+};
+
+class BatchOrderController : public EastStepController {
+  public:
+    explicit BatchOrderController(std::shared_ptr<BatchLifecycleProbe> probe) : probe(std::move(probe)) {}
+
+    void onStepCommitted(std::shared_ptr<CCreature> actor, const Coords &) override {
+        probe->trace.push_back("committed:" + actor->getName());
+    }
+
+    void onTurnEnded(std::shared_ptr<CCreature> actor) override { probe->trace.push_back("ended:" + actor->getName()); }
+
+  private:
+    std::shared_ptr<BatchLifecycleProbe> probe;
+};
+
+vstd::task<void> batchBeforeStep(std::shared_ptr<BatchLifecycleProbe> probe, std::shared_ptr<CMapObject> actor,
+                                 Coords origin, Coords destination) {
+    ++probe->beforeCalls;
+    probe->trace.push_back("before:" + actor->getName());
+    expect_true(actor->getCoords() == origin && destination == origin + EAST,
+                "the batch dependency barrier must precede the actor's position commit");
+    co_await vstd::until(vstd::event_loop<>::instance(), [probe] { return probe->allowBefore; });
+}
+
+vstd::task<void> batchPresentStep(std::shared_ptr<BatchLifecycleProbe> probe, std::shared_ptr<CMapObject> actor, Coords,
+                                  Coords destination) {
+    ++probe->presented;
+    probe->trace.push_back("present:" + actor->getName());
+    expect_true(actor->getCoords() == destination, "the batch collector must receive the committed actor position");
+    if (probe->failPresentation)
+        throw std::runtime_error("batch presentation failed");
+    co_return;
+}
+
+vstd::task<void> batchFinish(std::shared_ptr<BatchLifecycleProbe> probe) {
+    ++probe->finishCalls;
+    probe->trace.push_back("finish");
+    co_await vstd::until(vstd::event_loop<>::instance(), [probe] { return probe->allowFinish; });
+    probe->trace.push_back("finished");
+}
+
+CMovementPresentation lifecyclePresentation(const std::shared_ptr<BatchLifecycleProbe> &probe) {
+    CMovementPresentation presentation;
+    presentation.beforeStep = [probe](std::shared_ptr<CMapObject> actor, Coords origin, Coords destination) {
+        return batchBeforeStep(probe, std::move(actor), origin, destination);
+    };
+    presentation.presentStep = [probe](std::shared_ptr<CMapObject> actor, Coords origin, Coords destination) {
+        return batchPresentStep(probe, std::move(actor), origin, destination);
+    };
+    presentation.finish = [probe] { return batchFinish(probe); };
+    presentation.cancel = [probe] {
+        ++probe->cancelled;
+        probe->trace.push_back("cancel");
+    };
+    return presentation;
+}
+
+void logBatchTraceMismatch(const std::vector<std::string> &expected, const std::vector<std::string> &actual) {
+    if (expected == actual)
+        return;
+    std::cerr << "[batch-order] expected:";
+    for (const auto &entry : expected)
+        std::cerr << ' ' << entry;
+    std::cerr << "\n[batch-order] actual:";
+    for (const auto &entry : actual)
+        std::cerr << ' ' << entry;
+    std::cerr << '\n';
+}
+
+void testBatchDescriptorPreservesLogicalOrderAndFinishesBeforeTurnCommit() {
+    MovementFixture fixture(3);
+    auto probe = std::make_shared<BatchLifecycleProbe>();
+    for (const auto &actor : fixture.actors) {
+        actor->trace = &probe->trace;
+        actor->setController(std::make_shared<BatchOrderController>(probe));
+    }
+    fixture.map->move();
+    const auto legacy_trace = probe->trace;
+    probe->trace.clear();
+    for (const auto &actor : fixture.actors) {
+        actor->relocateWithoutMoveHooks(Coords(1, actor->getPosY(), 0));
+        actor->arrivals = 0;
+    }
+    const auto turn = fixture.map->getTurn();
+    auto movement =
+        fixture.game->getContext()->spawnTask(fixture.map->movePresentedAsync(lifecyclePresentation(probe)));
+    auto loop = vstd::event_loop<>::instance();
+    loop->runUntilIdle();
+    expect_true(!movement.finished() && probe->beforeCalls == 1 && probe->presented == 0,
+                "the first dependency barrier must suspend before any batch position commit");
+    for (const auto &actor : fixture.actors)
+        expect_true(actor->getPosX() == 1 && actor->arrivals == 0,
+                    "a blocked beforeStep must leave all actor positions and arrival hooks untouched");
+    probe->allowBefore = true;
+    loop->runUntilIdle();
+    std::vector<std::string> expected;
+    for (const auto &entry : legacy_trace) {
+        if (entry.starts_with("arrival:")) {
+            const auto name = entry.substr(std::string("arrival:").size());
+            expected.push_back("before:" + name);
+            expected.push_back("present:" + name);
+            expected.push_back(entry);
+            expected.push_back("committed:" + name);
+        }
+    }
+    expected.push_back("finish");
+    logBatchTraceMismatch(expected, probe->trace);
+    expect_true(probe->trace == expected && !movement.finished() && fixture.map->isMoving() &&
+                    fixture.map->getTurn() == turn && probe->finishCalls == 1,
+                "batch collection must preserve logical actor order and wait before turn-end notifications");
+    probe->allowFinish = true;
+    loop->runUntilIdle();
+    expected.push_back("finished");
+    for (const auto &entry : legacy_trace)
+        if (entry.starts_with("ended:"))
+            expected.push_back(entry);
+    logBatchTraceMismatch(expected, probe->trace);
+    expect_true(movement.finished() && probe->trace == expected && fixture.map->getTurn() == turn + 1 &&
+                    !fixture.map->isMoving() && probe->cancelled == 0,
+                "one successful finish barrier must precede ordered turn-end hooks and exactly one turn commit");
+    if (movement.finished())
+        movement.get();
+}
+
+void testBatchDescriptorCleansFailureCancellationStaleAndQuit() {
+    auto loop = vstd::event_loop<>::instance();
+    for (int failure = 0; failure < 4; ++failure) {
+        MovementFixture fixture;
+        auto probe = std::make_shared<BatchLifecycleProbe>();
+        probe->allowBefore = failure < 2;
+        probe->failPresentation = failure == 0;
+        auto movement =
+            fixture.game->getContext()->spawnTask(fixture.map->movePresentedAsync(lifecyclePresentation(probe)));
+        loop->runUntilIdle();
+        if (failure == 1) {
+            expect_true(probe->finishCalls == 1 && !movement.finished(),
+                        "the cancellation fixture must suspend in the final batch presentation barrier");
+            movement.requestStop();
+        } else if (failure == 2) {
+            fixture.game->getContext()->advanceTransitionGeneration();
+            probe->allowBefore = true;
+        } else if (failure == 3) {
+            SDL_Event event{};
+            event.type = SDL_QUIT;
+            expect_true(SDL_PushEvent(&event) == 1, "the batch quit fixture must queue a quit event");
+            loop->runReady();
+            probe->allowBefore = true;
+        }
+        loop->runUntilIdle();
+        bool expected_failure = failure >= 2;
+        if (movement.finished()) {
+            try {
+                movement.get();
+            } catch (const vstd::task_cancelled &) {
+                expected_failure = failure != 0;
+            } catch (const std::runtime_error &error) {
+                expected_failure = failure == 0 && std::string(error.what()) == "batch presentation failed";
+            }
+        }
+        loop->resetQuit();
+        expect_true(movement.finished() && expected_failure && !fixture.map->isMoving() && probe->cancelled == 1 &&
+                        fixture.map->getTurn() == 0 && !fixture.actors.front()->getPendingMoveOrigin(),
+                    "failed, cancelled, stale and quit batches must settle once and clear movement state");
+        if (failure >= 2)
+            expect_true(fixture.actors.front()->getPosX() == 1 && fixture.actors.front()->arrivals == 0,
+                        "stale or quit beforeStep continuations cannot commit old actor movement");
+    }
+}
+
+struct BatchGuiFixture {
+    MovementFixture core{0};
+    std::shared_ptr<CPlayer> player = std::make_shared<CPlayer>();
+    std::shared_ptr<CGui> gui;
+    std::shared_ptr<CMapGraphicsObject> world;
+    std::vector<std::shared_ptr<CCreature>> actors;
+
+    explicit BatchGuiFixture(const std::vector<Coords> &origins, bool reducedMotion = false, bool wrap = false) {
+        core.map->setXBounds({{0, 15}});
+        if (wrap)
+            core.map->setWrapX({{0, 1}});
+        for (int x = 8; x < 16; ++x) {
+            for (int y = 0; y < 3; ++y) {
+                auto tile = std::make_shared<CTile>();
+                tile->setGame(core.game);
+                tile->setCanStep(true);
+                core.map->addTile(tile, x, y, 0);
+            }
+        }
+        core.game->getObjectHandler()->registerType("CAnimation", [] { return std::make_shared<CAnimation>(); });
+        core.game->getObjectHandler()->registerType("CStaticAnimation",
+                                                    [] { return std::make_shared<CStaticAnimation>(); });
+        core.game->getObjectHandler()->registerType("CGameObject", [] { return std::make_shared<CGameObject>(); });
+        core.game->getObjectHandler()->registerType("CLayout", [] { return std::make_shared<CLayout>(); });
+        core.game->getObjectHandler()->registerType("CPlayerController",
+                                                    [] { return std::make_shared<CPlayerController>(); });
+        core.game->getObjectHandler()->registerType("CPlayerFightController",
+                                                    [] { return std::make_shared<CPlayerFightController>(); });
+        player->setGame(core.game);
+        auto stats = std::make_shared<CStats>();
+        stats->setMainStat("stamina");
+        stats->setStamina(10);
+        player->setBaseStats(stats);
+        player->setHp(player->getHpMax());
+        core.map->setPlayer(player);
+        player->relocateWithoutMoveHooks(Coords(0, 2, 0));
+        for (const auto origin : origins) {
+            auto actor = std::make_shared<CCreature>();
+            actor->setGame(core.game);
+            actor->setName("batchActor" + std::to_string(actors.size()));
+            actor->setNpc(true);
+            auto actor_stats = std::make_shared<CStats>();
+            actor_stats->setMainStat("stamina");
+            actor_stats->setStamina(10);
+            actor->setBaseStats(actor_stats);
+            actor->setHp(actor->getHpMax());
+            actor->setController(std::make_shared<CController>());
+            actor->setPosX(origin.x);
+            actor->setPosY(origin.y);
+            actor->setPosZ(origin.z);
+            core.map->addObject(actor);
+            actors.push_back(actor);
+        }
+        gui = std::make_shared<CGui>();
+        gui->setGame(core.game);
+        core.game->setGui(gui);
+        expect_true(gui->applyUiPreferences(json{{"reducedMotion", reducedMotion}}.dump()),
+                    "the batch GUI fixture must apply isolated motion preferences");
+        gui->setWidth(1280);
+        gui->setHeight(720);
+        gui->setTileSize(64);
+        gui->setLayout(std::make_shared<CLayout>());
+        gui->getLayout()->setRect(0, 0, 1280, 720);
+        world = std::make_shared<CMapGraphicsObject>();
+        world->setType("CMapGraphicsObject");
+        world->setGame(core.game);
+        world->setLayout(std::make_shared<CLayout>());
+        world->getLayout()->setRect(0, 0, 1280, 720);
+        gui->pushChild(world);
+        vstd::event_loop<>::instance()->runUntilIdle();
+    }
+
+    void renderAt(int timestamp) {
+        world->renderObject(gui, CUtil::rect(0, 0, 1280, 720), timestamp);
+        auto loop = vstd::event_loop<>::instance();
+        const auto previous_fps = loop->getFps();
+        loop->setFps(1000000);
+        loop->runFrame();
+        loop->setFps(previous_fps);
+        loop->runUntilIdle();
+    }
+};
+
+vstd::task<void> streamGuiBatch(std::vector<std::shared_ptr<CCreature>> actors, CMovementPresentation presentation,
+                                bool synchronizeRouteOnCommit = false) {
+    try {
+        for (const auto &actor : actors) {
+            const auto origin = actor->getCoords();
+            const auto destination = actor->getMap()->normalizeCoords(origin + EAST);
+            co_await presentation.beforeStep(actor, origin, destination);
+            if (synchronizeRouteOnCommit) {
+                // This direct GUI fixture has no moving map to protect a temporarily stale route cursor.
+                co_await actor->moveToAsync(
+                    destination, [actor, destination] { actor->getController()->onStepCommitted(actor, destination); },
+                    presentation.presentStep);
+            } else {
+                co_await actor->moveToAsync(destination, {}, presentation.presentStep);
+                actor->getController()->onStepCommitted(actor, destination);
+            }
+        }
+        co_await presentation.finish();
+    } catch (...) {
+        presentation.cancel();
+        throw;
+    }
+}
+
+void testDistantGuiActorsShareOneAnimationInterval() {
+    for (const bool reduced_motion : {false, true}) {
+        BatchGuiFixture fixture({Coords(1, 1, 0), Coords(6, 1, 0), Coords(11, 1, 0)}, reduced_motion);
+        const auto baseline_children = fixture.world->getChildren().size();
+        auto movement = fixture.core.game->getContext()->spawnTask(
+            streamGuiBatch(fixture.actors, fixture.world->movementPresentation(fixture.gui)));
+        vstd::event_loop<>::instance()->runUntilIdle();
+        expect_true(!movement.finished() && fixture.world->getChildren().size() == baseline_children + 3,
+                    "three distant actor overlays must coexist before a shared animation interval");
+        fixture.renderAt(1000);
+        for (const auto &actor : fixture.actors)
+            expect_true(pointEquals(fixture.world->getActorOffset(actor, 64), reduced_motion ? 0 : -64, 0) &&
+                            !actor->getPendingMoveOrigin(),
+                        "independent batch actors must share a start timestamp after their logical arrivals");
+        fixture.renderAt(1075);
+        for (const auto &actor : fixture.actors)
+            expect_true(pointEquals(fixture.world->getActorOffset(actor, 64), reduced_motion ? 0 : -32, 0),
+                        "every distant actor must reach the same halfway frame together");
+        fixture.renderAt(1149);
+        expect_true(!movement.finished(), "one shared interval must retain its last incomplete frame");
+        fixture.renderAt(1150);
+        expect_true(movement.finished() && fixture.world->getChildren().size() == baseline_children &&
+                        pointEquals(fixture.world->getCameraOffset(64), 0, 0),
+                    "all distant actor overlays must finish and clean up after one 150 ms interval");
+        if (movement.finished())
+            movement.get();
+    }
+}
+
+void testGuiBatchPlayerOwnsTheSingleCameraMotion() {
+    BatchGuiFixture fixture({Coords(6, 1, 0), Coords(11, 1, 0)});
+    auto actors = fixture.actors;
+    actors.insert(actors.begin(), fixture.player);
+    auto movement = fixture.core.game->getContext()->spawnTask(
+        streamGuiBatch(actors, fixture.world->movementPresentation(fixture.gui)));
+    vstd::event_loop<>::instance()->runUntilIdle();
+    fixture.renderAt(1000);
+    expect_true(pointEquals(fixture.world->getCameraOffset(64), 64, 0),
+                "a batched player step must own exactly one source-preserving camera offset");
+    fixture.renderAt(1075);
+    expect_true(pointEquals(fixture.world->getCameraOffset(64), 32, 0),
+                "other moving actors cannot replace or multiply the player's halfway camera offset");
+    for (const auto &actor : actors)
+        expect_true(pointEquals(fixture.world->getActorOffset(actor, 64), -32, 0),
+                    "the player and distant actors must retain independent halfway sprite offsets");
+    fixture.renderAt(1150);
+    expect_true(movement.finished() && pointEquals(fixture.world->getCameraOffset(64), 0, 0),
+                "the camera must finish with the shared player and actor interval");
+    if (movement.finished())
+        movement.get();
+}
+
+void testNearbyAndWrappedGuiPathsKeepOrderedAnimationIntervals() {
+    for (const bool wrap : {false, true}) {
+        const std::vector<Coords> origins = wrap ? std::vector<Coords>{Coords(0, 1, 0), Coords(14, 1, 0)}
+                                                 : std::vector<Coords>{Coords(1, 1, 0), Coords(3, 1, 0)};
+        BatchGuiFixture fixture(origins, false, wrap);
+        auto movement = fixture.core.game->getContext()->spawnTask(
+            streamGuiBatch(fixture.actors, fixture.world->movementPresentation(fixture.gui)));
+        vstd::event_loop<>::instance()->runUntilIdle();
+        expect_true(fixture.actors[0]->getCoords() == origins[0] + EAST &&
+                        fixture.actors[1]->getCoords() == origins[1] && !movement.finished(),
+                    "nearby swept paths must finish the earlier animation before committing the later actor");
+        fixture.renderAt(1000);
+        fixture.renderAt(1150);
+        expect_true(!movement.finished() &&
+                        fixture.actors[1]->getCoords() == fixture.core.map->normalizeCoords(origins[1] + EAST) &&
+                        pointEquals(fixture.world->getActorOffset(fixture.actors[1], 64), -64, 0),
+                    "normal and wrapped interaction neighborhoods must start a separate second animation interval");
+        fixture.renderAt(2000);
+        fixture.renderAt(2150);
+        expect_true(movement.finished(), "two dependent actors must settle after exactly two animation intervals");
+        if (movement.finished())
+            movement.get();
+    }
+}
+
+void testGuiBatchCancellationAndStaleContextClearEveryOverlay() {
+    for (const bool cancel : {false, true}) {
+        BatchGuiFixture fixture({Coords(1, 1, 0), Coords(6, 1, 0), Coords(11, 1, 0)});
+        const auto baseline_children = fixture.world->getChildren().size();
+        auto movement = fixture.core.game->getContext()->spawnTask(
+            streamGuiBatch(fixture.actors, fixture.world->movementPresentation(fixture.gui)));
+        auto loop = vstd::event_loop<>::instance();
+        loop->runUntilIdle();
+        expect_true(!movement.finished() && fixture.world->getChildren().size() == baseline_children + 3,
+                    "the cleanup fixture must retain three pending actor overlays");
+        if (cancel) {
+            movement.requestStop();
+            loop->runUntilIdle();
+        } else {
+            fixture.core.game->getContext()->advanceTransitionGeneration();
+            fixture.renderAt(1000);
+        }
+        expect_true(movement.finished() && fixture.world->getChildren().size() == baseline_children,
+                    "cancellation and stale context must release every pending actor overlay");
+        for (const auto &actor : fixture.actors)
+            expect_true(!actor->getPendingMoveOrigin() && pointEquals(fixture.world->getActorOffset(actor, 64), 0, 0),
+                        "batch cleanup cannot leave ghost sprite offsets or pending movement origins");
+        if (movement.finished()) {
+            if (cancel) {
+                bool stopped = false;
+                try {
+                    movement.get();
+                } catch (const vstd::task_cancelled &) {
+                    stopped = true;
+                }
+                expect_true(stopped, "cancelling an animated batch must propagate cancellation");
+            } else {
+                movement.get();
+            }
+        }
+    }
+}
+
+bool isFootprintGraphic(const std::shared_ptr<CGameGraphicsObject> &graphic) {
+    const auto animation = std::dynamic_pointer_cast<CAnimation>(graphic);
+    const auto object = animation ? animation->getObject() : nullptr;
+    return object && object->getAnimation() == "images/footprint";
+}
+
+bool currentPlayerCellHasFootprint(BatchGuiFixture &fixture) {
+    const auto graphics = fixture.world->getProxiedObjects(fixture.gui, fixture.gui->getTileCountX() / 2 + 1,
+                                                           fixture.gui->getTileCountY() / 2 + 1);
+    return std::any_of(graphics.begin(), graphics.end(), isFootprintGraphic);
+}
+
+bool cachedProxyHasFootprint(const std::shared_ptr<CProxyGraphicsObject> &proxy) {
+    const auto children = proxy->getChildren();
+    return std::any_of(children.begin(), children.end(), isFootprintGraphic);
+}
+
+void testPlayerArrivalFootprintClearsBeforeLaterActorBatchFinishes() {
+    for (const bool reduced_motion : {false, true}) {
+        BatchGuiFixture fixture({Coords(3, 2, 0)}, reduced_motion);
+        fixture.core.game->getObjectHandler()->registerType("CProxyGraphicsLayout",
+                                                            [] { return std::make_shared<CProxyGraphicsLayout>(); });
+        fixture.world->setProxyLayout("CProxyGraphicsLayout");
+        fixture.world->refresh();
+        std::shared_ptr<CProxyGraphicsObject> player_proxy;
+        for (const auto &child : fixture.world->getChildren()) {
+            const auto proxy = std::dynamic_pointer_cast<CProxyGraphicsObject>(child);
+            if (proxy && proxy->getX() == fixture.gui->getTileCountX() / 2 + 1 &&
+                proxy->getY() == fixture.gui->getTileCountY() / 2 + 1)
+                player_proxy = proxy;
+        }
+        expect_true(player_proxy != nullptr, "the footprint fixture must retain the real player-cell proxy");
+        if (!player_proxy)
+            continue;
+        const auto controller = std::dynamic_pointer_cast<CPlayerController>(fixture.player->getController());
+        controller->setTarget(fixture.player, Coords(1, 2, 0));
+        expect_true(!controller->isCompleted(fixture.player), "the footprint fixture must create a real player route");
+        std::vector<std::shared_ptr<CCreature>> actors{fixture.player, fixture.actors.front()};
+        auto movement = fixture.core.game->getContext()->spawnTask(
+            streamGuiBatch(std::move(actors), fixture.world->movementPresentation(fixture.gui), true));
+        vstd::event_loop<>::instance()->runUntilIdle();
+        expect_true(fixture.player->getCoords() == Coords(1, 2, 0) && !movement.finished(),
+                    "the final route step must commit while its dependent actor still waits");
+        fixture.renderAt(1000);
+        fixture.renderAt(1149);
+        expect_true(
+            cachedProxyHasFootprint(player_proxy) == !reduced_motion,
+            "the current-cell footprint lasts until visual arrival, or disappears immediately for reduced motion");
+        // Observe the retained proxy before queued completion callbacks can refresh the entire batch.
+        fixture.world->renderObject(fixture.gui, CUtil::rect(0, 0, 1280, 720), 1150);
+        expect_true(!movement.finished() && fixture.actors.front()->getCoords() == Coords(3, 2, 0) &&
+                        !cachedProxyHasFootprint(player_proxy),
+                    "the rendered player proxy must lose its footprint on the arrival frame before later turn work");
+        fixture.renderAt(1150);
+        expect_true(!movement.finished() && fixture.actors.front()->getCoords() == Coords(4, 2, 0) &&
+                        !currentPlayerCellHasFootprint(fixture),
+                    "the final route footprint must disappear on player arrival while a later actor still animates");
+        fixture.renderAt(2000);
+        fixture.renderAt(2150);
+        expect_true(movement.finished() && !currentPlayerCellHasFootprint(fixture),
+                    "a completed later batch cannot resurrect the player's cleared arrival footprint");
+        if (movement.finished())
+            movement.get();
+    }
+}
+
+void testDirectPythonTileHookFlushesPreviousBatchAndWaitsForItsOwnStep() {
+    const auto native_module = pybind11::module_::import("_game");
+    pybind11::dict scope;
+    scope["native"] = native_module;
+    scope["__name__"] = "_nouraajd_movement_test";
+    BatchGuiFixture fixture({Coords(1, 1, 0), Coords(11, 1, 0)});
+    pybind11::exec(R"(
+class DirectMovementTile(native.CTile):
+    def __init__(self):
+        super().__init__()
+        self.steps = 0
+
+    def onStep(self, actor):
+        self.steps += 1
+
+tile = DirectMovementTile()
+)",
+                   scope);
+    const auto tile_object = scope["tile"].cast<pybind11::object>();
+    const auto tile = tile_object.cast<std::shared_ptr<CTile>>();
+    expect_true(typeid(*tile) == typeid(CWrapper<CTile>) && CPythonOverrides::find(tile.get()) == nullptr,
+                "the Python tile regression must use a direct trampoline instance outside the override registry");
+    expect_true(static_cast<bool>(pybind11::get_override(tile.get(), "onStep")),
+                "the direct Python tile must expose an actual pybind11 onStep override");
+    tile->setGame(fixture.core.game);
+    tile->setCanStep(true);
+    fixture.core.map->removeTile(12, 1, 0);
+    expect_true(fixture.core.map->addTile(tile, 12, 1, 0) && fixture.core.map->getTile(12, 1, 0) == tile,
+                "the scripted tile must replace the existing fixture destination cell");
+    auto movement = fixture.core.game->getContext()->spawnTask(
+        streamGuiBatch(fixture.actors, fixture.world->movementPresentation(fixture.gui)));
+    vstd::event_loop<>::instance()->runUntilIdle();
+    expect_true(!movement.finished() && fixture.actors[0]->getPosX() == 2 && fixture.actors[1]->getPosX() == 11 &&
+                    tile_object.attr("steps").cast<int>() == 0,
+                "a distant Python tile hook must flush the preceding batch before its actor position commits");
+    fixture.renderAt(1000);
+    fixture.renderAt(1149);
+    expect_true(fixture.actors[1]->getPosX() == 11 && tile_object.attr("steps").cast<int>() == 0,
+                "the scripted step cannot begin while the earlier actor is still visibly moving");
+    fixture.renderAt(1150);
+    expect_true(
+        !movement.finished() && fixture.actors[1]->getPosX() == 12 &&
+            fixture.actors[1]->getPendingMoveOrigin().has_value() && tile_object.attr("steps").cast<int>() == 0,
+        "the scripted actor must retain legacy presentation-before-arrival timing after the dependency barrier");
+    fixture.renderAt(2000);
+    fixture.renderAt(2149);
+    expect_true(tile_object.attr("steps").cast<int>() == 0,
+                "Python onStep must wait for the scripted actor's complete animation interval");
+    fixture.renderAt(2150);
+    expect_true(movement.finished() && tile_object.attr("steps").cast<int>() == 1 &&
+                    !fixture.actors[1]->getPendingMoveOrigin(),
+                "the direct Python tile hook must execute exactly once after its own final animation frame");
+    if (movement.finished())
+        movement.get();
+}
 
 void testMapWaitsForEachActorPresentationBeforeArrivalAndNextActor() {
     MovementFixture fixture(3);
@@ -275,14 +808,15 @@ void testPendingGuiMovementDoesNotRetainTheGameOwner() {
     world->setLayout(std::make_shared<CLayout>());
     world->getLayout()->setRect(0, 0, 1280, 720);
     gui->pushChild(world);
+    const auto baseline_children = world->getChildren().size();
     auto context = fixture.game->getContext();
     std::weak_ptr<CGame> owner = fixture.game;
     auto movement = context->spawnTask(gui->moveMapTurnAsync());
     auto loop = vstd::event_loop<>::instance();
     loop->runUntilIdle();
     expect_true(!movement.finished() && fixture.map->isMoving() && player->getCoords() == Coords(1, 0, 0) &&
-                    player->getPendingMoveOrigin().has_value(),
-                "owner destruction must interrupt an actual committed step waiting for GUI presentation");
+                    !player->getPendingMoveOrigin() && world->getChildren().size() > baseline_children,
+                "owner destruction must interrupt an actual committed batch step waiting for GUI presentation");
     fixture.game.reset();
     expect_true(owner.expired() && !context->isActive() && movement.finished() && !fixture.map->isMoving() &&
                     !player->getPendingMoveOrigin() && !gui->isActive(),
@@ -402,19 +936,41 @@ void testWrappedStepsPresentButRelocationAndUnregisteredObjectsDoNot() {
 }
 } // namespace
 
-int main() {
+int main(int argc, char **argv) {
     SDL_setenv("SDL_VIDEODRIVER", "dummy", 1);
     SDL_setenv("SDL_AUDIODRIVER", "dummy", 1);
     SDL_setenv("SDL_RENDER_DRIVER", "software", 1);
+    const auto *previous_preferences = SDL_getenv("GAME_UI_PREFERENCES_PATH");
+    const std::string previous_preferences_path = previous_preferences ? previous_preferences : "";
+    const auto preferences_path =
+        std::filesystem::temp_directory_path() /
+        ("nouraajd-gui-movement-" + std::to_string(std::chrono::steady_clock::now().time_since_epoch().count()) +
+         ".json");
+    SDL_setenv("GAME_UI_PREFERENCES_PATH", preferences_path.string().c_str(), 1);
     pybind11::scoped_interpreter interpreter;
+    if (argc > 0)
+        pybind11::module_::import("sys").attr("path").attr("insert")(
+            0, std::filesystem::absolute(argv[0]).parent_path().string());
     CRuntimeBridge::set_logger_sink(vstd::logger::sink::disabled, "");
     testMovementSamplesStartMiddleAndFinalFrames();
     testMovementClockWrapBackwardFramesAndReducedMotion();
     testMapWaitsForEachActorPresentationBeforeArrivalAndNextActor();
+    testBatchDescriptorPreservesLogicalOrderAndFinishesBeforeTurnCommit();
+    testBatchDescriptorCleansFailureCancellationStaleAndQuit();
+    testDistantGuiActorsShareOneAnimationInterval();
+    testGuiBatchPlayerOwnsTheSingleCameraMotion();
+    testNearbyAndWrappedGuiPathsKeepOrderedAnimationIntervals();
+    testGuiBatchCancellationAndStaleContextClearEveryOverlay();
+    testPlayerArrivalFootprintClearsBeforeLaterActorBatchFinishes();
     testEmptyPresenterPreservesHeadlessTurnsWithoutFrames();
     testPendingGuiMovementDoesNotRetainTheGameOwner();
     testStalePresentationNeverDispatchesOldArrival();
     testPresentationFailureAndCancellationClearTurnAndMoveState();
     testWrappedStepsPresentButRelocationAndUnregisteredObjectsDoNot();
+    testDirectPythonTileHookFlushesPreviousBatchAndWaitsForItsOwnStep();
+    SDL_setenv("GAME_UI_PREFERENCES_PATH", previous_preferences_path.c_str(), 1);
+    std::error_code cleanup_error;
+    std::filesystem::remove(preferences_path, cleanup_error);
+    std::filesystem::remove(preferences_path.string() + ".tmp", cleanup_error);
     return finish_tests();
 }
