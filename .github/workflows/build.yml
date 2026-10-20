@@ -176,6 +176,7 @@ jobs:
         if: needs.linux-fast.outputs.native-needed == 'true'
         run: python3 -m unittest tests.test_build_cache.NativeCompilerCacheTest
       - name: build test targets
+        id: native-build
         if: needs.linux-fast.outputs.native-needed == 'true'
         run: >-
           python3 scripts/build_metrics.py run --phase compile --cache-tool ccache
@@ -276,7 +277,7 @@ jobs:
           name: fall-of-nouraajd-linux
           path: cmake-build-gcc15-release/fall-of-nouraajd-*.tar.gz
       - name: Verify representative project cache hits
-        if: needs.linux-fast.outputs.native-needed == 'true'
+        if: always() && !cancelled() && needs.linux-fast.outputs.native-needed == 'true' && steps.native-build.outcome == 'success'
         run: >-
           python3 scripts/probe_build_cache.py --build-dir cmake-build-gcc15-release
           --output test/build-metrics/cache-probe.json --replay-objects
