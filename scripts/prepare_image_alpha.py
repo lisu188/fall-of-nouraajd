@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Apply reviewed, border-connected PNG alpha masks without changing RGB artwork.
+"""Apply reviewed PNG alpha masks and optional, separately reviewed downsampling.
 
 Pillow is an authoring/test dependency only. Runtime loading needs no new code.
 The review manifest deliberately lists every image, including preserved artwork.
@@ -141,22 +141,43 @@ def applyMask(source: Image.Image, policy: dict) -> Image.Image:
     return image
 
 
-def verifyImage(path: Path, entry: dict) -> None:
-    data = path.read_bytes()
-    if digest(data) != entry["resultSha256"]:
+def finalReview(entry: dict) -> dict:
+    return entry.get("resize", entry)
+
+
+def resizeImage(source: Image.Image, review: dict) -> Image.Image:
+    size = review["size"]
+    if (
+        review.get("resample") != "lanczos"
+        or len(size) != 2
+        or any(isinstance(value, bool) or not isinstance(value, int) or value <= 0 for value in size)
+        or any(target > original for target, original in zip(size, source.size))
+        or size[0] * source.height != size[1] * source.width
+    ):
+        raise ValueError("resize must use Lanczos and preserve the aspect ratio without enlarging the image")
+    # Pillow resamples RGBA through premultiplied RGBa, avoiding transparent RGB fringes.
+    return source.convert("RGBA").resize(tuple(size), Image.Resampling.LANCZOS)
+
+
+def verifyBytes(data: bytes, entry: dict, result_review: dict) -> None:
+    if digest(data) != result_review["resultSha256"]:
         raise ValueError(f"{entry['path']}: image differs from the reviewed result")
     with Image.open(io.BytesIO(data)) as image:
         image.load()
-        if list(image.size) != entry["size"] or image.format != "PNG":
+        if list(image.size) != result_review["size"] or image.format != "PNG":
             raise ValueError(f"{entry['path']}: PNG format or dimensions changed")
-        if digest(image.convert("RGB").tobytes()) != entry["rgbSha256"]:
+        if digest(image.convert("RGB").tobytes()) != result_review["rgbSha256"]:
             raise ValueError(f"{entry['path']}: RGB artwork changed")
         if "metadataSha256" in entry and metadataDigest(image) != entry["metadataSha256"]:
             raise ValueError(f"{entry['path']}: PNG metadata changed")
-        if "rgbaSha256" in entry and digest(image.convert("RGBA").tobytes()) != entry["rgbaSha256"]:
+        if "rgbaSha256" in result_review and digest(image.convert("RGBA").tobytes()) != result_review["rgbaSha256"]:
             raise ValueError(f"{entry['path']}: reviewed alpha mask changed")
         if entry["policy"]["action"] == "mask" and image.getchannel("A").getextrema()[0] != 0:
             raise ValueError(f"{entry['path']}: cutout has no transparent background")
+
+
+def verifyImage(path: Path, entry: dict) -> None:
+    verifyBytes(path.read_bytes(), entry, finalReview(entry))
 
 
 def processImages(root: Path, review: dict, apply: bool = False) -> int:
@@ -171,17 +192,27 @@ def processImages(root: Path, review: dict, apply: bool = False) -> int:
         if path.is_symlink() or not path.resolve().is_relative_to(images_root):
             raise ValueError("review path escapes the images directory")
         current = path.read_bytes()
-        if digest(current) != entry["resultSha256"]:
-            if not apply or digest(current) != entry["sourceSha256"]:
+        current_hash = digest(current)
+        final_review = finalReview(entry)
+        if current_hash != final_review["resultSha256"]:
+            if not apply or current_hash not in {entry["sourceSha256"], entry["resultSha256"]}:
                 raise ValueError(f"{entry['path']}: unreviewed input; refusing to overwrite")
-            with Image.open(io.BytesIO(current)) as image:
-                result = applyMask(image, entry["policy"])
-                encoded = encodePng(result, image)
-            if digest(encoded) != entry["resultSha256"]:
-                raise ValueError(
-                    f"{entry['path']}: mask output differs from the reviewed preview; "
-                    "check the authoring encoder versions recorded in the review"
-                )
+            encoded = current
+            if current_hash != entry["resultSha256"]:
+                with Image.open(io.BytesIO(current)) as image:
+                    result = applyMask(image, entry["policy"])
+                    encoded = encodePng(result, image)
+                if digest(encoded) != entry["resultSha256"]:
+                    raise ValueError(
+                        f"{entry['path']}: mask output differs from the reviewed preview; "
+                        "check the authoring encoder versions recorded in the review"
+                    )
+            verifyBytes(encoded, entry, entry)
+            if "resize" in entry:
+                with Image.open(io.BytesIO(encoded)) as image:
+                    result = resizeImage(image, final_review)
+                    encoded = encodePng(result, image)
+            verifyBytes(encoded, entry, final_review)
             # Atomic replacement, one image at a time; no duplicate asset tree.
             temporary = None
             try:
@@ -201,11 +232,15 @@ def main() -> None:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--review", type=Path, default=DEFAULT_REVIEW)
     parser.add_argument("--repo-root", type=Path, default=REPO_ROOT)
-    parser.add_argument("--apply", action="store_true", help="apply reviewed masks; otherwise check without writing")
+    parser.add_argument(
+        "--apply", action="store_true", help="apply reviewed masks/resizes; otherwise check without writing"
+    )
     args = parser.parse_args()
     review = json.loads(args.review.read_text(encoding="utf-8"))
     changed = processImages(args.repo_root, review, apply=args.apply)
-    print(f"Reviewed {len(review['images'])} images; changed {changed}; all RGB artwork and dimensions verified.")
+    print(
+        f"Reviewed {len(review['images'])} images; changed {changed}; all final pixels, metadata and dimensions verified."
+    )
 
 
 if __name__ == "__main__":
