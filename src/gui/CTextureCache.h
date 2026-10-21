@@ -22,6 +22,8 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #include "gui/CSdlResources.h"
 #include "object/CGameObject.h"
 
+#include <cstddef>
+
 // TODO: generify all cache classes
 
 class CTextureCache : public CGameObject {
@@ -37,15 +39,35 @@ class CTextureCache : public CGameObject {
 
     SDL_Texture *getTexture(std::string path);
 
+    SDL_Texture *getTileTexture(std::string path, const SDL_Rect &target);
+
+    std::size_t getTextureLoadCountForTesting() const { return textureLoadCount; }
+
+    std::size_t getTileTextureBuildCountForTesting() const { return tileTextureBuildCount; }
+
+    std::size_t getTileTextureEntryCountForTesting() const { return tileTextures.size(); }
+
   private:
-    fn::sdl::TexturePtr loadTexture(std::string path);
+    struct TileTexture {
+        int width = 0;
+        int height = 0;
+        bool scaleSafe = false;
+        fn::sdl::GuiTexturePtr texture;
+    };
+
+    fn::sdl::TexturePtr loadTexture(std::string path, int targetWidth = 0, int targetHeight = 0,
+                                    bool *scaleSafe = nullptr);
 
     std::weak_ptr<CGui> _gui;
+    std::unordered_map<std::string, TileTexture> tileTextures;
+    std::size_t textureLoadCount = 0;
+    std::size_t tileTextureBuildCount = 0;
 };
 
 class CTextureUtil {
   public:
-    static fn::sdl::TexturePtr calculateAlpha(SDL_Renderer *renderer, fn::sdl::SurfacePtr surface);
+    static fn::sdl::TexturePtr calculateAlpha(SDL_Renderer *renderer, fn::sdl::SurfacePtr surface, int targetWidth = 0,
+                                              int targetHeight = 0, bool *scaleSafe = nullptr);
 
     static auto getPixelRgba(SDL_Surface *surface, int x, int y);
 

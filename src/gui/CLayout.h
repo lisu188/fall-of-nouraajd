@@ -20,6 +20,7 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #include "gui/object/CGameGraphicsObject.h"
 #include "object/CGameObject.h"
 
+#include <cstddef>
 #include <optional>
 
 class CLayout : public CGameObject {
@@ -39,7 +40,7 @@ class CLayout : public CGameObject {
 
     int parseValue(std::pair<TYPE, double> value, int parentValue);
 
-    int parseValue(std::string value, int parentValue);
+    int parseValue(const std::string &value, std::optional<std::pair<TYPE, double>> &parsedValue, int parentValue);
 
   protected:
     static std::shared_ptr<SDL_Rect> getParentRect(std::shared_ptr<CGameGraphicsObject> object);
@@ -103,6 +104,8 @@ class CLayout : public CGameObject {
 
     void setHorizontal(std::string horizontal);
 
+    std::size_t getValueParseCountForTesting() const { return valueParseCount; }
+
   private:
     std::string w = "0";
     std::string h = "0";
@@ -116,6 +119,11 @@ class CLayout : public CGameObject {
     std::optional<int> runtimeY;
     std::optional<int> runtimeW;
     std::optional<int> runtimeH;
+    std::optional<std::pair<TYPE, double>> parsedX;
+    std::optional<std::pair<TYPE, double>> parsedY;
+    std::optional<std::pair<TYPE, double>> parsedW;
+    std::optional<std::pair<TYPE, double>> parsedH;
+    std::size_t valueParseCount = 0;
 };
 
 class CCenteredLayout : public CLayout {
