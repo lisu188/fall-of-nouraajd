@@ -110,6 +110,7 @@ class McpBranchShardsTest(unittest.TestCase):
             files = {
                 "Release/_game.cp312-win_amd64.pyd": b"extension",
                 "Release/game_core.dll": b"core",
+                "plugins/effect.py": b"def load(self, context): pass\n",
                 "config/monsters.json": b"{}",
                 "maps/test/map.json": b"{}",
                 "save/precious.json": b"save",
@@ -285,6 +286,7 @@ class McpBranchShardsTest(unittest.TestCase):
                 "SDL2_image.dll": b"image",
                 "SDL2_ttf.dll": b"ttf",
                 "libpng16.dll": b"transitive dependency",
+                "plugins/effect.py": b"def load(self, context): pass\n",
                 "config/monsters.json": b"{}",
                 "maps/test/map.json": b"{}",
             }

@@ -4,7 +4,7 @@ Status: Approved. Scope: Python resource plugins, map scripts, and resource file
 
 ## Trust model
 
-Authored game content under the packaged resource roots is trusted. Content outside those roots
+Authored repository content under the packaged resource roots is trusted. Content outside those roots
 must not be read or executed. The checks are implemented in `src/core/CProvider.cpp` and
 `src/core/CLoader.cpp`. Python resource scripts are still executed with restricted builtins
 and a module-import allow-list as defense in depth.

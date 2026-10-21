@@ -977,7 +977,7 @@ def sharedActorCallbacks(root=ROOT):
         return None
 
     native_classes = set(BUILTIN_CLASSES)
-    native_table = root / "src/plugin/CGameplayTypeTable.h"
+    native_table = root / "src/core/CGameplayTypeTable.h"
     if native_table.is_file():
         native_classes.update(
             re.findall(r"^\s*FN_(?:TYPE|WRAPPED)\((\w+)", native_table.read_text(encoding="utf-8"), re.MULTILINE)
