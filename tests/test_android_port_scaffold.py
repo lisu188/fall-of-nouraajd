@@ -122,6 +122,20 @@ class AndroidPortScaffoldTest(unittest.TestCase):
         self.assertIn("CXX_STANDARD_REQUIRED ON", source)
         self.assertIn("CXX_EXTENSIONS OFF", source)
 
+    def testAndroidGradlePinsCmakeWithCxx26Support(self):
+        gradle = (ROOT / "android/app/build.gradle.kts").read_text(encoding="utf-8")
+        versions = re.findall(r'^\s*version\s*=\s*"([0-9.]+)"', gradle, re.MULTILINE)
+        self.assertEqual(1, len(versions), "Pin Gradles native CMake instead of its pre-C++26 default")
+        version = versions[0]
+        self.assertGreaterEqual(tuple(map(int, version.split("."))), (3, 30))
+        cmake = (ROOT / "android/CMakeLists.txt").read_text(encoding="utf-8")
+        required = re.search(r"cmake_minimum_required\(VERSION ([0-9.]+)\)", cmake)
+        self.assertIsNotNone(required)
+        self.assertGreaterEqual(tuple(map(int, required.group(1).split("."))), (3, 30))
+        for workflow in ("android.yml", "release.yml"):
+            source = (ROOT / ".github/workflows" / workflow).read_text(encoding="utf-8")
+            self.assertIn(f"${{ANDROID_HOME}}/cmake/{version}", source)
+
     def testAndroidToolchainProbePrecedesDependencyBuilds(self):
         for name in ("android.yml", "release.yml"):
             with self.subTest(workflow=name):

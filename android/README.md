@@ -13,6 +13,7 @@ and calls `game.new()`.
 - Android Gradle Plugin: 9.3.1
 - Java: 17
 - Android NDK: 29.0.14206865, shared by dependency bootstrap and the Gradle native build
+- CMake: 3.31.5, explicitly selected by Gradle (C++26 features require 3.30 or newer)
 - game native code: C++26
 
 API 28 matches the API floor used by vcpkg's current tested `arm64-android` triplet. Lower Android versions are not claimed by this MVP until the dependency triplet is explicitly rebuilt/tested for a lower API level.

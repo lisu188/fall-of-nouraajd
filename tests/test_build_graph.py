@@ -234,6 +234,11 @@ class SharedCompilationGraphTest(unittest.TestCase):
             lambda match: "${GAME_GRAPH_SOURCE_ROOT}/" + match[1],
             projected,
         )
+        projected = re.sub(
+            r"add_subdirectory\((tests/[\w./-]+)\)",
+            r'add_subdirectory("${GAME_GRAPH_SOURCE_ROOT}/\1" \1)',
+            projected,
+        )
         projected = f'set(GAME_GRAPH_SOURCE_ROOT "{ROOT.as_posix()}")\n' + projected
         (cls.source / "CMakeLists.txt").write_text(projected, encoding="utf-8")
         cls.build = cls.source / "build"
