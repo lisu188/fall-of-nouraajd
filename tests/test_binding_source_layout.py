@@ -1,6 +1,7 @@
 # Copyright (C) 2026 Andrzej Lis
 # SPDX-License-Identifier: GPL-3.0-or-later
 
+import ast
 import hashlib
 import json
 from pathlib import Path
@@ -19,6 +20,44 @@ ROOT = Path(__file__).resolve().parents[1]
 
 
 class BindingSourceLayoutTest(unittest.TestCase):
+    def testCityRunnerImportsUseExportedClassesAndMatchingFastPrefixes(self):
+        runner = ast.parse((ROOT / "test.py").read_text(encoding="utf-8"))
+        imports = [
+            node
+            for node in ast.walk(runner)
+            if isinstance(node, ast.ImportFrom) and (node.module or "").startswith("tests.test_baldurs_gate_city_")
+        ]
+        self.assertTrue(imports, "City source tests must remain registered in the runner")
+        wrappers = {node.name: node for node in ast.walk(runner) if isinstance(node, ast.ClassDef)}
+        prefixes = next(
+            ast.literal_eval(node.value)
+            for node in runner.body
+            if isinstance(node, ast.Assign)
+            and any(isinstance(target, ast.Name) and target.id == "FAST_TEST_PREFIXES" for target in node.targets)
+        )
+        deleted = {
+            name.id
+            for node in ast.walk(runner)
+            if isinstance(node, ast.Delete)
+            for target in node.targets
+            for name in ast.walk(target)
+            if isinstance(name, ast.Name)
+        }
+        for node in imports:
+            module = ast.parse((ROOT / (node.module.replace(".", "/") + ".py")).read_text(encoding="utf-8"))
+            exports = {item.name for item in module.body if isinstance(item, ast.ClassDef)}
+            for imported in node.names:
+                with self.subTest(module=node.module, imported=imported.name):
+                    self.assertIn(imported.name, exports)
+                    self.assertEqual("_" + imported.name, imported.asname)
+                    self.assertIn(imported.name, wrappers)
+                    self.assertEqual(
+                        [imported.asname],
+                        [base.id for base in wrappers[imported.name].bases if isinstance(base, ast.Name)],
+                    )
+                    self.assertIn(imported.name + ".", prefixes)
+                    self.assertIn(imported.asname, deleted)
+
     def testRegistrationContractPreservesSignaturesDefaultsAliasesAndOrder(self):
         # This is a reviewed compatibility fixture, not a generated expected value from the implementation.
         # Intentional binding API changes must update the fixture alongside their runtime contract tests.
