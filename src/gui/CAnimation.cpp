@@ -26,6 +26,7 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #include "gui/CGuiTasks.h"
 #include "gui/CTextureCache.h"
 #include "gui/CUiTheme.h"
+#include "object/CTile.h"
 
 void CAnimation::setObject(std::shared_ptr<CGameObject> _object) { object = _object; }
 
@@ -41,7 +42,10 @@ void CStaticAnimation::renderObject(std::shared_ptr<CGui> gui, std::shared_ptr<S
     if (!currentObject) {
         return;
     }
-    auto texture = gui->getTextureCache()->getTexture(currentObject->getAnimation());
+    auto cache = gui->getTextureCache();
+    const bool prescaleTile = rect && rotation == 0 && !useColorMod && std::dynamic_pointer_cast<CTile>(currentObject);
+    auto texture = prescaleTile ? cache->getTileTexture(currentObject->getAnimation(), *rect)
+                                : cache->getTexture(currentObject->getAnimation());
     if (!texture) {
         vstd::logger::error("CStaticAnimation: missing texture", currentObject->getAnimation());
         return;
