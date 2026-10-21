@@ -126,6 +126,66 @@ def loadQuestClasses(path):
     return classes
 
 
+CITY_QUEST_KEYS = (
+    "quinnDagger",
+    "rinnieBook",
+    "petrineRing",
+    "bherenCat",
+    "bogeyman",
+    "pheirkasCloak",
+    "degrodelHelm",
+    "balduranCloak",
+    "ramazithNymph",
+    "ragefastNymph",
+    "nymphCloak",
+    "arkionCorpse",
+    "nemphreAmulet",
+    "ordulinianMages",
+    "brevlikTelescope",
+    "areanaBlackmail",
+    "alatosTheft",
+    "narlenLookout",
+    "narlenRogueStone",
+    "brielbaraBook",
+    "ghorakSkull",
+    "noraleeGauntlets",
+    "nadarinBasilisk",
+    "gaxirFortune",
+    "nadineEuric",
+    "fergusRing",
+    "fentenShells",
+    "cordyrSirines",
+    "varciCasson",
+    "larzeAssassin",
+    "taxekBurglary",
+    "forthelBallad",
+    "niklosGuild",
+    "scarSevenSuns",
+    "scarDoppelgangers",
+    "scarSewers",
+    "eltanIronThrone",
+    "cythandriaDiary",
+    "rescueEltan",
+    "ducalAssassins",
+    "ducalPalace",
+    "thievesMaze",
+    "tamokoMercy",
+    "sarevokFinale",
+    "aldethLeague",
+    "marekPoison",
+    "lothanderGeas",
+    "jalanthaBook",
+    "chanthalasTome",
+    "lusselynWager",
+    "shadePantaloons",
+    "silenceFee",
+    "divinerPoison",
+    "voletaMaze",
+    "winskiMaze",
+    "vailClue",
+)
+
+
 class MapQuestJournalTest(unittest.TestCase):
     def createSession(self, map_name="origin"):
         game = types.SimpleNamespace()
@@ -350,8 +410,12 @@ class MapQuestJournalTest(unittest.TestCase):
     def assertAuthoredQuestRoster(self, roster):
         candlekeep = {(map_name, quest_name) for map_name, quest_name in roster if map_name == "candlekeep"}
         self.assertEqual({("candlekeep", actor + "Quest") for actor in CANDLEKEEP_QUEST_KEYS}, candlekeep)
-        self.assertEqual(27, len(roster - candlekeep), "The original 27 authored quests must remain covered")
-        self.assertEqual(33, len(roster))
+        city = {(map_name, quest_name) for map_name, quest_name in roster if map_name == "baldursGate"}
+        expected_city = {("baldursGate", "city" + key[:1].upper() + key[1:] + "Quest") for key in CITY_QUEST_KEYS}
+        self.assertEqual(expected_city, city)
+        self.assertEqual(56, len(city), "All declared city journal definitions must be covered")
+        self.assertEqual(27, len(roster - candlekeep - city), "The original 27 authored quests must remain covered")
+        self.assertEqual(89, len(roster))
 
     def test_authored_quest_matrix_keeps_all_33_journals_and_destination_state(self):
         roster = set()
@@ -443,6 +507,10 @@ class MapQuestJournalTest(unittest.TestCase):
                         actor = quest.getStringProperty("questKey")
                         self.assertIn(actor, CANDLEKEEP_QUEST_KEYS)
                         source.setStringProperty("candlekeep_" + actor + "Stage", "completed")
+                    if map_dir.name == "baldursGate":
+                        key = quest.getStringProperty("questKey")
+                        self.assertIn(key, CITY_QUEST_KEYS)
+                        source.setStringProperty("plugin_cityQuest_" + key, "completed")
                     for gate in source.objects.values():
                         gate.setBoolProperty("destroyed", True)
                     scenario = quest.getStringProperty("campaign_scenarioId")
@@ -525,6 +593,16 @@ class MapQuestJournalTest(unittest.TestCase):
                 self.assertEqual([], game.messages)
 
     def prepareSource(self, map_name, source, player):
+        if map_name == "baldursGate":
+            city_clock = JournalObject(source.game)
+            city_clock.setStringProperty(
+                "questDefinitions",
+                (REPO_ROOT / "tests/fixtures/baldurs_gate_city_quests.json").read_text(encoding="utf-8"),
+            )
+            source.objects["cityClock"] = city_clock
+            for key in CITY_QUEST_KEYS:
+                source.setStringProperty("plugin_cityQuest_" + key, "active")
+
         source.properties.update(
             progress=2,
             loyalists_freed=2,

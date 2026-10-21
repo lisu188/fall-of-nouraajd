@@ -2,6 +2,7 @@
 # Copyright (C) 2026 Andrzej Lis
 # SPDX-License-Identifier: GPL-3.0-or-later
 
+import ast
 import os
 from pathlib import Path
 import shutil
@@ -55,31 +56,43 @@ class TestRunnerPackagingTest(unittest.TestCase):
         source_tests = self.package / "tests"
         source_tests.mkdir()
         (source_tests / "__init__.py").write_text("", encoding="utf-8")
-        # These imports precede the deliberately broken source module in test.py.
-        for module_name, class_names in {
-            "test_candlekeep_content.py": ("CandlekeepContentTest", "CandlekeepModelTest"),
-            "test_candlekeep_source.py": ("BinaryParserTests", "SourceAuditTests"),
-        }.items():
-            (source_tests / module_name).write_text(
-                "import unittest\n\n"
-                + "\n\n".join(f"class {name}(unittest.TestCase):\n    pass\n" for name in class_names),
-                encoding="utf-8",
-            )
-        for name in (
-            "test_navigation_mcp.py",
-            "test_python_callback_lifecycle.py",
-            "test_game_diagnostics.py",
-            "test_mcp_diagnostics.py",
-            "test_mcp_engine_thread.py",
-            "test_native_diagnostics.py",
-        ):
-            shutil.copy2(ROOT / "tests" / name, source_tests / name)
-        (source_tests / "test_ui_mcp_dialogue.py").write_text(
-            'raise ImportError("deliberate source-test import failure")\n', encoding="utf-8"
-        )
-        result = self.runPackaged("test.py", "--help")
-        self.assertNotEqual(0, result.returncode)
-        self.assertIn("deliberate source-test import failure", result.stderr)
+        runner_path = self.package / "test.py"
+        runner_source = runner_path.read_text(encoding="utf-8")
+        for new_registration in (False, True):
+            with self.subTest(new_registration=new_registration):
+                lines = runner_source.splitlines(keepends=True)
+                guard = next(
+                    node
+                    for node in ast.parse(runner_source).body
+                    if isinstance(node, ast.If)
+                    and isinstance(node.test, ast.Name)
+                    and node.test.id == "SOURCE_UI_TESTS_AVAILABLE"
+                )
+                if new_registration:
+                    lines.insert(
+                        guard.lineno,
+                        "    from tests.test_future_source_registration import FutureSourceTest\n",
+                    )
+                source = "".join(lines)
+                runner_path.write_text(source, encoding="utf-8")
+                guard = next(
+                    node
+                    for node in ast.parse(source).body
+                    if isinstance(node, ast.If)
+                    and isinstance(node.test, ast.Name)
+                    and node.test.id == "SOURCE_UI_TESTS_AVAILABLE"
+                )
+                first_module = next(
+                    node.module
+                    for node in guard.body
+                    if isinstance(node, ast.ImportFrom) and (node.module or "").startswith("tests.")
+                )
+                module_path = self.package.joinpath(*first_module.split(".")).with_suffix(".py")
+                module_path.parent.mkdir(parents=True, exist_ok=True)
+                module_path.write_text('raise ImportError("deliberate source-test import failure")\n', encoding="utf-8")
+                result = self.runPackaged("test.py", "--help")
+                self.assertNotEqual(0, result.returncode)
+                self.assertIn("deliberate source-test import failure", result.stderr)
 
     def testInstalledLaunchersHelpWorksWithoutNativeBuild(self):
         for launcher in ("play.py", "mcp.py"):

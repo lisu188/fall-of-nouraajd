@@ -236,6 +236,7 @@ class DialogueContentTest(unittest.TestCase):
                         self.assertEqual(len(numbers), len(set(numbers)))
         self.assertEqual(
             {
+                "baldursGate": 2124,
                 "candlekeep": 84,
                 "castleGriffinCliff": 2,
                 "castleGuardianAngels": 2,
@@ -427,6 +428,7 @@ class DialogueContentTest(unittest.TestCase):
     def testQuestContextReferencesOnlyExistingQuestDefinitions(self):
         conversations = 0
         candlekeep_contexts = {}
+        city_contexts = {}
         for map_dir in (ROOT / "res/maps").iterdir():
             if not map_dir.is_dir():
                 continue
@@ -442,6 +444,8 @@ class DialogueContentTest(unittest.TestCase):
                     if "questIds" not in properties:
                         continue
                     conversations += 1
+                    if map_dir.name == "baldursGate":
+                        city_contexts[identity] = tuple(properties["questIds"].split(","))
                     if map_dir.name == "candlekeep":
                         candlekeep_contexts[identity] = tuple(properties["questIds"].split(","))
                     self.assertIn("states", properties, (map_dir.name, identity))
@@ -459,8 +463,9 @@ class DialogueContentTest(unittest.TestCase):
             },
             candlekeep_contexts,
         )
-        self.assertEqual(24, conversations - len(candlekeep_contexts))
-        self.assertEqual(30, conversations)
+        self.assertEqual(56, len(city_contexts))
+        self.assertEqual(24, conversations - len(candlekeep_contexts) - len(city_contexts))
+        self.assertEqual(86, conversations)
 
     def testRitualRecordDescribesActualTurnCadence(self):
         tree = ast.parse((ROOT / "res/maps/ritual/script.py").read_text())

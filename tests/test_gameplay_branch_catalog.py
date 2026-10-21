@@ -26,6 +26,17 @@ def sourceMethod(source, class_id, method_name, **namespace):
 
 
 class GameplayBranchCatalogTest(unittest.TestCase):
+    def testCityInventoryUiMappingsRequireDeclaredIsolatedCasesWithoutClaimingSourceParity(self):
+        from tests.gameplay_routes_baldurs_gate import CASES, SOURCE_BRANCHES
+
+        ui_branches = {branch for case in CASES if case.isolated_gui for branch in case.branches}
+        for callback in ("showInventory", "pickPocket", "sell", "buyBack", "inspectCompanion", "takeCompanionItem"):
+            identity = "res/maps/baldursGate/script.py:BaldursGateDialog." + callback
+            self.assertIn(identity, catalog.sourceCallbacks())
+            self.assertTrue(set(SOURCE_BRANCHES[identity]) <= ui_branches)
+            self.assertNotIn(identity, catalog.defensiveContracts())
+        self.assertTrue(all(not branch.startswith("baldursGate.source.") for branch in ui_branches))
+
     def testDeferredEncounterCallbacksKeepTheirOriginalOutcomeObligations(self):
         mapping = catalog.sourceBranches()
         callbacks = catalog.sourceCallbacks()
@@ -501,11 +512,14 @@ class TownDialog:
         pending = catalog.pendingGameplayObligations()
         self.assertTrue(pending)
         declared = {branch for case in catalog.getCases() for branch in case.branches}
+        from tests.gameplay_routes_baldurs_gate import PENDING_GAMEPLAY_OBLIGATIONS as CITY_SOURCE_PENDING
         from tests.gameplay_routes_candlekeep import PENDING_GAMEPLAY_OBLIGATIONS
 
         selected_gui_pending = set(PENDING_GAMEPLAY_OBLIGATIONS)
-        self.assertTrue((set(pending) - selected_gui_pending) <= declared)
+        city_source_pending = set(CITY_SOURCE_PENDING)
+        self.assertTrue((set(pending) - selected_gui_pending - city_source_pending) <= declared)
         self.assertFalse(selected_gui_pending & declared)
+        self.assertFalse(city_source_pending & declared)
         self.assertFalse(set(pending) & set(catalog.defensiveContracts()))
         for branch, evidence in pending.items():
             if not branch.startswith("castle."):
@@ -514,6 +528,34 @@ class TownDialog:
             self.assertGreater(evidence["componentCells"], 0)
             self.assertEqual(3, len(evidence["coords"]))
             self.assertIn("disconnected", evidence["reason"])
+
+    def testEveryNonexcludedCityLedgerIdRemainsRequiredWithoutReceivingBranchOrContractCredit(self):
+        ledger_path = "tests/fixtures/baldurs_gate_city_ledger.json"
+        ledger = json.loads((catalog.ROOT / ledger_path).read_text(encoding="utf-8"))
+        expected = {
+            "baldursGate.source." + entry["id"]: (entry["id"], entry["implementation"]["status"], ledger_path)
+            for entry in ledger["entries"]
+            if entry["implementation"]["status"] != "excluded"
+        }
+        self.assertTrue(expected)
+        pending = {
+            branch: evidence
+            for branch, evidence in catalog.pendingGameplayObligations().items()
+            if branch.startswith("baldursGate.source.")
+        }
+        self.assertEqual(
+            expected,
+            {
+                branch: (entry["sourceId"], entry["implementationStatus"], entry["ledger"])
+                for branch, entry in pending.items()
+            },
+        )
+        self.assertTrue(all(entry["reason"] for entry in pending.values()))
+        declared = {branch for case in catalog.getCases() for branch in case.branches}
+        self.assertFalse(set(expected) & declared)
+        self.assertFalse(set(expected) & set(catalog.branchCatalog()))
+        self.assertFalse(set(expected) & set(catalog.defensiveContracts()))
+        self.assertFalse(set(expected) & set(catalog.contractEvidence()))
 
     def testPrematureThroneRemainsMandatoryForEveryWardenRouteAndClass(self):
         branch = "usurpergate.throne.premature"

@@ -52,7 +52,41 @@ def productionConfiguration(root=ROOT, environment=None, windows=None):
     return values
 
 
+def projectBuildGraph(cmake, source_root=ROOT):
+    before_resources, resources_and_tests = cmake.split("configure_file(res/config/adventure.json", 1)
+    _resources, tests = resources_and_tests.split("enable_testing()", 1)
+    # Use the production target definitions without staging any runtime assets.
+    projected = before_resources + "enable_testing()" + tests
+    projected = projected.replace("${CMAKE_SOURCE_DIR}", "${GAME_GRAPH_SOURCE_ROOT}")
+    projected = projected.replace("${CMAKE_CURRENT_SOURCE_DIR}", "${GAME_GRAPH_SOURCE_ROOT}")
+    projected = re.sub(
+        r"include\((cmake/[^)]+)\)", lambda match: f'include("{source_root.as_posix()}/{match[1]}")', projected
+    )
+    projected = re.sub(
+        r"(?<![\w/])((?:src|tests|native_plugins)/[\w./-]+\.(?:cpp|h))",
+        lambda match: "${GAME_GRAPH_SOURCE_ROOT}/" + match[1],
+        projected,
+    )
+    projected = re.sub(
+        r"add_subdirectory\(((?:src|tests|native_plugins)/[\w./-]+)\)",
+        lambda match: f'add_subdirectory("${{GAME_GRAPH_SOURCE_ROOT}}/{match[1]}" '
+        f'"${{CMAKE_CURRENT_BINARY_DIR}}/{match[1]}")',
+        projected,
+    )
+    projected = f'set(GAME_GRAPH_SOURCE_ROOT "{source_root.as_posix()}")\n' + projected
+    return projected
+
+
 class ProductionGraphConfigurationTest(unittest.TestCase):
+    def testProjectedGraphKeepsNestedTestSourcesOutsideTheTemporaryRoot(self):
+        projected = projectBuildGraph((ROOT / "CMakeLists.txt").read_text(encoding="utf-8"))
+        self.assertIn(
+            'add_subdirectory("${GAME_GRAPH_SOURCE_ROOT}/tests/json" ' '"${CMAKE_CURRENT_BINARY_DIR}/tests/json")',
+            re.findall(r"add_subdirectory\([^\n]*\)", projected),
+        )
+        self.assertNotIn("add_subdirectory(tests/json)", projected)
+        self.assertNotIn("configure_file(res/config/adventure.json", projected)
+
     def testWindowsCachePathsAndPythonSdkAreForwardedWithoutPrivateOrInstallSettings(self):
         with tempfile.TemporaryDirectory() as directory:
             root = Path(directory)
@@ -220,25 +254,7 @@ class SharedCompilationGraphTest(unittest.TestCase):
         cls.addClassCleanup(cls.temporary.cleanup)
         cls.source = Path(cls.temporary.name)
         cmake = (ROOT / "CMakeLists.txt").read_text(encoding="utf-8")
-        before_resources, resources_and_tests = cmake.split("configure_file(res/config/adventure.json", 1)
-        _resources, tests = resources_and_tests.split("enable_testing()", 1)
-        # Use the production target definitions without staging any runtime assets.
-        projected = before_resources + "enable_testing()" + tests
-        projected = projected.replace("${CMAKE_SOURCE_DIR}", "${GAME_GRAPH_SOURCE_ROOT}")
-        projected = projected.replace("${CMAKE_CURRENT_SOURCE_DIR}", "${GAME_GRAPH_SOURCE_ROOT}")
-        projected = re.sub(
-            r"include\((cmake/[^)]+)\)", lambda match: f'include("{ROOT.as_posix()}/{match[1]}")', projected
-        )
-        projected = re.sub(
-            r"(?<![\w/])((?:src|tests|native_plugins)/[\w./-]+\.(?:cpp|h))",
-            lambda match: "${GAME_GRAPH_SOURCE_ROOT}/" + match[1],
-            projected,
-        )
-        projected = projected.replace(
-            "add_subdirectory(tests/json)",
-            'add_subdirectory("${GAME_GRAPH_SOURCE_ROOT}/tests/json" tests/json)',
-        )
-        projected = f'set(GAME_GRAPH_SOURCE_ROOT "{ROOT.as_posix()}")\n' + projected
+        projected = projectBuildGraph(cmake)
         (cls.source / "CMakeLists.txt").write_text(projected, encoding="utf-8")
         cls.build = cls.source / "build"
         result = runConfigure(

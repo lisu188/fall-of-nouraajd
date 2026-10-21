@@ -22,6 +22,7 @@ class RouteCase:
     campaign: str | None = None
     sources: tuple[str, ...] = ()
     duration_seconds: float = 200.0
+    isolated_gui: bool = False
 
 
 def testName(case, class_id):
