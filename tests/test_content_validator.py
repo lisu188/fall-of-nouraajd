@@ -2828,49 +2828,32 @@ class ContentValidatorTest(unittest.TestCase):
 
         self.assertEqual([], [str(issue) for issue in issues])
 
-    def test_manifest_native_plugin_registration_makes_class_constructible(self):
+    def test_builtin_gameplay_type_registration_makes_class_constructible(self):
         root = self.make_fixture()
-        self.write_native_registration_fixture(root, "CManifestNative")
-        write_json(
-            root / "res/plugins/manifest.json",
-            {
-                "version": 2,
-                "plugins": [
-                    {
-                        "kind": "native",
-                        "id": "nativeOptional",
-                        "library": "plugins/native/native_optional",
-                        "entry": "native_optional_load_v3",
-                    }
-                ],
-            },
-        )
+        self.write_builtin_registration_fixture(root, "CBuiltinGameplay")
         config_path = root / "res/maps/broken/config.json"
         config = read_json(config_path)
-        config["manifestNative"] = {"class": "CManifestNative"}
+        config["builtinGameplay"] = {"class": "CBuiltinGameplay"}
         write_json(config_path, config)
 
         issues = validate_repo(root)
-
         self.assertEqual([], [str(issue) for issue in issues])
 
-    def test_unloaded_native_plugin_registration_reports_manifest_diagnostic(self):
+    def test_unwired_gameplay_type_table_does_not_register_classes(self):
         root = self.make_fixture()
-        self.write_native_registration_fixture(root, "CUnloadedNative")
-        write_json(root / "res/plugins/manifest.json", {"version": 2, "plugins": []})
+        self.write_builtin_registration_fixture(root, "CUnwiredGameplay")
+        (root / "src/core/CGameplayTypeRegistration.cpp").unlink()
         config_path = root / "res/maps/broken/config.json"
         config = read_json(config_path)
-        config["unloadedNative"] = {"class": "CUnloadedNative"}
+        config["unwiredGameplay"] = {"class": "CUnwiredGameplay"}
         write_json(config_path, config)
 
         issues = validate_repo(root)
-
         self.assertIssueContains(
             issues,
             "res/maps/broken/config.json",
-            "unloadedNative.class",
-            'class "CUnloadedNative" is registered by native plugin code',
-            "native_optional:native_optional_load_v3",
+            "unwiredGameplay.class",
+            'class "CUnwiredGameplay" is declared in metadata but is not registered as constructible content',
         )
 
     def testManifestRejectsRemovedLuaRuntime(self):
@@ -2902,7 +2885,7 @@ class ContentValidatorTest(unittest.TestCase):
                     {"kind": "python", "id": "missingPath", "path": "plugins/absent.py"},
                     {"kind": "python", "id": "wrongSuffix", "path": "plugins/wrong.txt"},
                     {"kind": "cpp", "id": "missingType", "type": "CPlugin"},
-                    {"kind": "cpp", "id": "badScope", "type": "CPlugin", "scope": {"map": "missingmap"}},
+                    {"kind": "python", "id": "badScope", "path": "plugins/absent.py", "scope": {"map": "missingmap"}},
                 ]
             },
         )
@@ -2911,8 +2894,8 @@ class ContentValidatorTest(unittest.TestCase):
 
         self.assertIssueContains(issues, "res/plugins/manifest.json", "version", "must declare version 2")
         self.assertIssueContains(issues, "res/plugins/manifest.json", "plugins[0]", 'unknown plugin kind "mystery"')
-        self.assertIssueContains(issues, "res/plugins/manifest.json", "plugins[1]", 'non-empty "type" field')
-        self.assertIssueContains(issues, "res/plugins/manifest.json", "plugins[2]", "must live under plugins/native/")
+        self.assertIssueContains(issues, "res/plugins/manifest.json", "plugins[1]", 'unknown plugin kind "cpp"')
+        self.assertIssueContains(issues, "res/plugins/manifest.json", "plugins[2]", 'unknown plugin kind "native"')
         self.assertIssueContains(issues, "res/plugins/manifest.json", "plugins[3]", "does not exist under res/")
         self.assertIssueContains(issues, "res/plugins/manifest.json", "plugins[4]", "must end with .py")
         self.assertIssueContains(issues, "res/plugins/manifest.json", "plugins[5]", 'duplicate plugin id "missingType"')
@@ -2922,7 +2905,7 @@ class ContentValidatorTest(unittest.TestCase):
 
     def test_gameplay_type_table_diagnoses_unparseable_rows(self):
         root = self.make_fixture()
-        table = root / "src/plugin/CGameplayTypeTable.h"
+        table = root / "src/core/CGameplayTypeTable.h"
         table.parent.mkdir(parents=True, exist_ok=True)
         table.write_text(
             "#define FN_GAMEPLAY_TYPES(FN_TYPE, FN_WRAPPED)                \\\n"
@@ -2935,7 +2918,7 @@ class ContentValidatorTest(unittest.TestCase):
 
         self.assertIssueContains(
             issues,
-            "src/plugin/CGameplayTypeTable.h",
+            "src/core/CGameplayTypeTable.h",
             "line 3",
             "unparseable gameplay type table row",
         )
@@ -2952,9 +2935,9 @@ class ContentValidatorTest(unittest.TestCase):
             encoding="utf-8",
         )
 
-    def write_native_registration_fixture(self, root, class_name):
+    def write_builtin_registration_fixture(self, root, class_name):
         self.write_declared_cpp_class(root, class_name)
-        type_table = root / "src/plugin/CGameplayTypeTable.h"
+        type_table = root / "src/core/CGameplayTypeTable.h"
         type_table.parent.mkdir(parents=True, exist_ok=True)
         type_table.write_text(
             textwrap.dedent(f"""
@@ -2963,15 +2946,12 @@ class ContentValidatorTest(unittest.TestCase):
             """).lstrip(),
             encoding="utf-8",
         )
-        native_entry = root / "native_plugins/native_optional.cpp"
-        native_entry.parent.mkdir(parents=True, exist_ok=True)
-        native_entry.write_text(
-            textwrap.dedent("""
-                extern "C" NATIVE_PLUGIN_EXPORT bool native_optional_load_v3(const CPluginHostV3 *host) {
-                    auto *registrar = game_plugin_registrar(host);
-                    return registrar != nullptr && native_plugin::register_gameplay_types(*registrar);
-                }
-            """).lstrip(),
+        registrar = root / "src/core/CGameplayTypeRegistration.cpp"
+        registrar.parent.mkdir(parents=True, exist_ok=True)
+        registrar.write_text(
+            "void registerGameplayTypes(const std::shared_ptr<CGame> &game) {\n"
+            "    FN_GAMEPLAY_TYPES(FN_TYPE, FN_WRAPPED)\n"
+            "}\n",
             encoding="utf-8",
         )
 
@@ -5250,7 +5230,6 @@ class TypeRegistrationCoverageAuditTest(unittest.TestCase):
         return (
             validator.fallback_registered_classes
             | validator.static_registered_classes
-            | validator.native_plugin_registered_classes
             | validator.python_registered_classes
         )
 

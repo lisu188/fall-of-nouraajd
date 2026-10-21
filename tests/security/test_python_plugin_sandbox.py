@@ -25,7 +25,6 @@ class PythonPluginSandboxTest(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
         cls.loader_source = (REPO_ROOT / "src" / "core" / "CLoader.cpp").read_text()
-        cls.native_runtime_source = (REPO_ROOT / "src" / "plugin" / "CNativePluginRuntime.cpp").read_text()
         cls.save_format_source = (REPO_ROOT / "src" / "core" / "CSaveFormat.cpp").read_text()
         cls.provider_source = (REPO_ROOT / "src" / "core" / "CProvider.cpp").read_text()
         cls.game_source = (REPO_ROOT / "res" / "game.py").read_text()
@@ -79,14 +78,12 @@ class PythonPluginSandboxTest(unittest.TestCase):
         self.assertIn("Rejected invalid map name while loading plugins", self.loader_source)
         self.assertIn("Rejected invalid map name while resolving map", self.loader_source)
 
-    def test_dynamic_plugins_are_limited_to_packaged_native_resources(self):
-        self.assertIn("is_allowed_dynamic_library_path", self.native_runtime_source)
-        self.assertIn('"plugins/native/"', self.native_runtime_source)
-        self.assertIn("Rejected dynamic C++ plugin outside packaged native plugin paths", self.native_runtime_source)
-        self.assertIn("getPathFromBaseSearchPath(candidate)", self.native_runtime_source)
-        self.assertNotIn("resourcesProvider->getPath(candidate)", self.native_runtime_source)
-        self.assertIn("Trusted resources such as native plugin libraries", self.provider_source)
-        self.assertNotIn("std::filesystem::exists(candidate)", self.native_runtime_source)
+    def test_plugins_are_python_only(self):
+        self.assertNotIn("loadDynamicPlugin", self.loader_source)
+        self.assertNotIn("loadCppPlugin", self.loader_source)
+        self.assertNotIn("dlopen(", self.loader_source)
+        self.assertIn('kind != "python"', self.loader_source)
+        self.assertIn("is_allowed_python_plugin_path", self.loader_source)
 
     def test_resource_provider_rejects_absolute_and_parent_traversal_paths(self):
         self.assertIn("isSafeRelativeResourcePath", self.provider_source)
