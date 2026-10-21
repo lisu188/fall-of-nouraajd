@@ -234,6 +234,10 @@ class SharedCompilationGraphTest(unittest.TestCase):
             lambda match: "${GAME_GRAPH_SOURCE_ROOT}/" + match[1],
             projected,
         )
+        projected = projected.replace(
+            "add_subdirectory(tests/json)",
+            'add_subdirectory("${GAME_GRAPH_SOURCE_ROOT}/tests/json" tests/json)',
+        )
         projected = f'set(GAME_GRAPH_SOURCE_ROOT "{ROOT.as_posix()}")\n' + projected
         (cls.source / "CMakeLists.txt").write_text(projected, encoding="utf-8")
         cls.build = cls.source / "build"
@@ -254,6 +258,13 @@ class SharedCompilationGraphTest(unittest.TestCase):
     def commandsFor(self, relative):
         source = (ROOT / relative).resolve()
         return [entry for entry in self.commands if Path(entry["file"]).resolve() == source]
+
+    def testFocusedJsonChecksRemainInTheProjectedGraph(self):
+        commands = self.commandsFor("tests/json/JsonParseRegression.cpp")
+        self.assertEqual(1, len(commands), "The projected graph must configure the focused JSON regression target")
+        self.assertIn("json_parse_regression.dir", commands[0]["command"])
+        self.assertTrue((self.build / "tests/json/cmake_install.cmake").is_file())
+        self.assertFalse((self.source / "res").exists(), "Graph validation must not stage runtime assets")
 
     def testBindingObjectsCompileOnceForModuleAndEmbeddedInterpreter(self):
         sources = ["src/core/CModule.cpp"]
