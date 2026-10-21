@@ -42,7 +42,9 @@ void CGameGraphicsObject::renderObject(std::shared_ptr<CGui> reneder, std::share
 
 void CGameGraphicsObject::render(std::shared_ptr<CGui> renderer, int frameTime) {
     if (hasRenderableGui(renderer) && isVisible()) {
-        renderBackground(renderer, getRect(), frameTime);
+        if (!background.empty()) {
+            renderBackground(renderer, getRect(), frameTime);
+        }
         if (auto panel = vstd::cast<CGamePanel>(this->ptr<CGameGraphicsObject>())) {
             panel->renderShell(renderer, getRect());
         }

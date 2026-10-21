@@ -20,10 +20,62 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #include "core/CUtil.h"
 
 #include <algorithm>
+#include <cstdint>
 
 namespace {
 constexpr int MAX_ALPHA_MASK_PIXELS = 4'000'000;
+constexpr int MAX_TILE_TEXTURE_EXTENT = 512;
+
+bool containsRect(const SDL_Rect &bounds, const SDL_Rect &target) {
+    return target.x >= bounds.x && target.y >= bounds.y &&
+           static_cast<std::int64_t>(target.x) + target.w <= static_cast<std::int64_t>(bounds.x) + bounds.w &&
+           static_cast<std::int64_t>(target.y) + target.h <= static_cast<std::int64_t>(bounds.y) + bounds.h;
 }
+
+bool canPrescaleTile(SDL_Renderer *renderer, const SDL_Rect &target) {
+    if (target.w <= 0 || target.h <= 0 || target.w > MAX_TILE_TEXTURE_EXTENT || target.h > MAX_TILE_TEXTURE_EXTENT) {
+        return false;
+    }
+    SDL_RendererInfo info{};
+    if (SDL_GetRendererInfo(renderer, &info) != 0 || (info.flags & SDL_RENDERER_SOFTWARE) == 0) {
+        return false;
+    }
+    const auto quality = SDL_GetHint(SDL_HINT_RENDER_SCALE_QUALITY);
+    if (quality && SDL_strcmp(quality, "0") != 0 && SDL_strcasecmp(quality, "nearest") != 0) {
+        return false;
+    }
+    float scaleX = 0;
+    float scaleY = 0;
+    SDL_RenderGetScale(renderer, &scaleX, &scaleY);
+    if (scaleX != 1.0f || scaleY != 1.0f) {
+        return false;
+    }
+    SDL_Rect viewport{};
+    SDL_RenderGetViewport(renderer, &viewport);
+    // Software clipping rescales a cropped source; clipping a prescaled texture samples different pixels.
+    if (viewport.x != 0 || viewport.y != 0) {
+        return false;
+    }
+    int outputWidth = 0;
+    int outputHeight = 0;
+    if (SDL_GetRendererOutputSize(renderer, &outputWidth, &outputHeight) != 0) {
+        return false;
+    }
+    viewport.w = std::min(viewport.w, outputWidth);
+    viewport.h = std::min(viewport.h, outputHeight);
+    if (!containsRect(viewport, target)) {
+        return false;
+    }
+    if (SDL_RenderIsClipEnabled(renderer)) {
+        SDL_Rect clip{};
+        SDL_RenderGetClipRect(renderer, &clip);
+        if (!containsRect(clip, target)) {
+            return false;
+        }
+    }
+    return true;
+}
+} // namespace
 
 Uint32 getpixel(SDL_Surface *surface, int x, int y) {
     int bpp = surface->format->BytesPerPixel;
@@ -91,6 +143,7 @@ SDL_Texture *CTextureCache::getTexture(std::string path) {
     auto gui = _gui.lock();
     if (!gui || !gui->getRenderer()) {
         _textures.clear();
+        tileTextures.clear();
         return nullptr;
     }
     if (vstd::ends_with(path, ".png")) {
@@ -106,7 +159,64 @@ SDL_Texture *CTextureCache::getTexture(std::string path) {
     return getTexture(path + ".png");
 }
 
-fn::sdl::TexturePtr CTextureCache::loadTexture(std::string path) {
+SDL_Texture *CTextureCache::getTileTexture(std::string path, const SDL_Rect &target) {
+    auto gui = _gui.lock();
+    if (!gui || !gui->getRenderer()) {
+        _textures.clear();
+        tileTextures.clear();
+        return nullptr;
+    }
+    if (!vstd::ends_with(path, ".png")) {
+        path += ".png";
+    }
+    if (!canPrescaleTile(gui->getRenderer(), target)) {
+        return getTexture(std::move(path));
+    }
+    auto original = _textures.find(path);
+    if (original != _textures.end() && original->second) {
+        SDL_ScaleMode mode{};
+        SDL_BlendMode blend{};
+        Uint8 red = 0, green = 0, blue = 0, alpha = 0;
+        if (SDL_GetTextureScaleMode(original->second.get(), &mode) != 0 || mode != SDL_ScaleModeNearest ||
+            SDL_GetTextureColorMod(original->second.get(), &red, &green, &blue) != 0 || red != 255 || green != 255 ||
+            blue != 255 || SDL_GetTextureAlphaMod(original->second.get(), &alpha) != 0 || alpha != 255 ||
+            SDL_GetTextureBlendMode(original->second.get(), &blend) != 0 || blend != SDL_BLENDMODE_BLEND) {
+            return original->second.get();
+        }
+    }
+    auto found = tileTextures.find(path);
+    if (found != tileTextures.end()) {
+        if (!found->second.scaleSafe) {
+            return getTexture(std::move(path));
+        }
+        if (found->second.width == target.w && found->second.height == target.h) {
+            return found->second.texture.get();
+        }
+    }
+
+    bool scaleSafe = false;
+    auto texture = loadTexture(path, target.w, target.h, &scaleSafe);
+    auto &entry = tileTextures[path];
+    entry.width = target.w;
+    entry.height = target.h;
+    entry.scaleSafe = scaleSafe && texture != nullptr;
+    if (!entry.scaleSafe) {
+        entry.texture.reset();
+        if (!texture) {
+            return getTexture(std::move(path));
+        }
+        auto [original, inserted] = _textures.try_emplace(path, nullptr, fn::sdl::GuiTextureDeleter{_gui});
+        if (inserted) {
+            original->second.reset(texture.release());
+        }
+        return original->second.get();
+    }
+    entry.texture = fn::sdl::GuiTexturePtr(texture.release(), fn::sdl::GuiTextureDeleter{_gui});
+    ++tileTextureBuildCount;
+    return entry.texture.get();
+}
+
+fn::sdl::TexturePtr CTextureCache::loadTexture(std::string path, int targetWidth, int targetHeight, bool *scaleSafe) {
     auto gui = _gui.lock();
     // Resolve through the owning game's per-session resources provider; fall back to the process
     // singleton only when the cache is detached from a live GUI/game (compatibility path).
@@ -117,12 +227,15 @@ fn::sdl::TexturePtr CTextureCache::loadTexture(std::string path) {
         vstd::logger::error("CTextureCache::loadTexture: cannot resolve", path, "resolved:", resolvedPath);
         return nullptr;
     }
+    ++textureLoadCount;
     auto surface = fn::sdl::SurfacePtr(IMG_Load(resolvedPath.c_str()));
     if (!surface) {
         vstd::logger::error("CTextureCache::loadTexture: cannot load", path, "resolved:", resolvedPath);
         return nullptr;
     }
-    return gui ? CTextureUtil::calculateAlpha(gui->getRenderer(), std::move(surface)) : nullptr;
+    return gui ? CTextureUtil::calculateAlpha(gui->getRenderer(), std::move(surface), targetWidth, targetHeight,
+                                              scaleSafe)
+               : nullptr;
 }
 
 CTextureCache::CTextureCache(std::shared_ptr<CGui> _gui) : _gui(_gui) {}
@@ -145,7 +258,11 @@ auto CTextureUtil::getPixelRgba(SDL_Surface *surface, int x, int y) {
     return std::make_tuple(r, g, b, a);
 }
 
-fn::sdl::TexturePtr CTextureUtil::calculateAlpha(SDL_Renderer *renderer, fn::sdl::SurfacePtr surface) {
+fn::sdl::TexturePtr CTextureUtil::calculateAlpha(SDL_Renderer *renderer, fn::sdl::SurfacePtr surface, int targetWidth,
+                                                 int targetHeight, bool *scaleSafe) {
+    if (scaleSafe) {
+        *scaleSafe = false;
+    }
     if (!surface) {
         vstd::logger::error("CTextureUtil::calculateAlpha: null surface");
         return nullptr;
@@ -179,6 +296,7 @@ fn::sdl::TexturePtr CTextureUtil::calculateAlpha(SDL_Renderer *renderer, fn::sdl
     std::unordered_set<std::pair<int, int>, vstd::pair_hash> mask =
         shouldAddMask ? calculateMask(surface.get()) : std::unordered_set<std::pair<int, int>, vstd::pair_hash>();
 
+    bool binaryAlpha = true;
     for (auto verticalIndex = 0; verticalIndex < h; verticalIndex++) {
         for (auto horizontalIndex = 0; horizontalIndex < w; horizontalIndex++) {
             auto currentPixel = getPixelRgba(surface.get(), horizontalIndex, verticalIndex);
@@ -187,8 +305,26 @@ fn::sdl::TexturePtr CTextureUtil::calculateAlpha(SDL_Renderer *renderer, fn::sdl
             if (vstd::ctn(mask, std::make_pair(horizontalIndex, verticalIndex))) {
                 setPixelColor(secondSurface.get(), horizontalIndex, verticalIndex, {r, g, b, 0});
             } else {
+                binaryAlpha = binaryAlpha && (a == 0 || a == 255);
                 setPixelColor(secondSurface.get(), horizontalIndex, verticalIndex, {r, g, b, a});
             }
+        }
+    }
+
+    // Partial alpha takes different scaled/unscaled SDL blend paths and can change channel rounding.
+    if (binaryAlpha && targetWidth > 0 && targetHeight > 0 && targetWidth <= MAX_TILE_TEXTURE_EXTENT &&
+        targetHeight <= MAX_TILE_TEXTURE_EXTENT) {
+        auto scaled = fn::sdl::SurfacePtr(
+            SDL_SAFE(SDL_CreateRGBSurfaceWithFormat(0, targetWidth, targetHeight, 32, SDL_PIXELFORMAT_RGBA32)));
+        if (scaled && SDL_SetSurfaceBlendMode(secondSurface.get(), SDL_BLENDMODE_NONE) == 0 &&
+            SDL_BlitScaled(secondSurface.get(), nullptr, scaled.get(), nullptr) == 0 &&
+            SDL_SetSurfaceBlendMode(scaled.get(), SDL_BLENDMODE_BLEND) == 0) {
+            secondSurface = std::move(scaled);
+            if (scaleSafe) {
+                *scaleSafe = true;
+            }
+        } else {
+            SDL_SetSurfaceBlendMode(secondSurface.get(), SDL_BLENDMODE_BLEND);
         }
     }
 

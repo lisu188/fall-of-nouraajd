@@ -31,6 +31,7 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #include "gui/CRenderContext.h"
 #include "gui/CSdlResources.h"
 #include "gui/CTextManager.h"
+#include "gui/CTextureCache.h"
 #include "gui/panel/CGameCampaignBrowserPanel.h"
 #include "gui/panel/CGameCharacterPanel.h"
 #include "gui/panel/CGameLootPanel.h"
@@ -70,6 +71,16 @@ class TextureBlitObject : public CGameGraphicsObject {
     SDL_Rect target;
 };
 
+class CountingRenderLayout : public CLayout {
+  public:
+    std::size_t resolutions = 0;
+
+    std::shared_ptr<SDL_Rect> getRect(std::shared_ptr<CGameGraphicsObject>) override {
+        ++resolutions;
+        return CUtil::rect(0, 0, SCENE_TILE_SIZE, SCENE_TILE_SIZE);
+    }
+};
+
 std::shared_ptr<CGui> make_headless_gui() {
     SDL_SetHint(SDL_HINT_VIDEODRIVER, "dummy");
     SDL_SetHint(SDL_HINT_RENDER_DRIVER, "software");
@@ -84,6 +95,101 @@ fn::sdl::TexturePtr make_solid_texture(const std::shared_ptr<CGui> &gui) {
     }
     SDL_SAFE(SDL_FillRect(surface.get(), nullptr, SDL_MapRGBA(surface->format, 32, 96, 160, 255)));
     return fn::sdl::TexturePtr(SDL_SAFE(SDL_CreateTextureFromSurface(gui->getRenderer(), surface.get())));
+}
+
+void testBackgroundFreeObjectsResolveLayoutOnlyForDrawing() {
+    auto gui = make_headless_gui();
+    auto object = std::make_shared<CGameGraphicsObject>();
+    auto layout = std::make_shared<CountingRenderLayout>();
+    object->setLayout(layout);
+    gui->pushChild(object);
+    constexpr std::size_t frames = 64;
+    for (std::size_t frame = 0; frame < frames; ++frame)
+        gui->render(static_cast<int>(frame));
+    expect_true(layout->resolutions == frames,
+                "background-free map objects must resolve their layout only once per rendered frame");
+    const auto emptyBackgroundResolutions = layout->resolutions;
+    object->setBackground("images/panel");
+    gui->getRenderContext().resetStats();
+    gui->render(0);
+    expect_true(layout->resolutions == emptyBackgroundResolutions + 2,
+                "objects with a background must still resolve both background and foreground layouts");
+    expect_true(gui->getRenderContext().getStats().successfulCopies == 1,
+                "a configured background must still render exactly once");
+    std::cout << "[render layout] background-free frames=" << frames << " resolutions=" << emptyBackgroundResolutions
+              << '\n';
+}
+
+void testUnchangedLayoutValuesAreParsedOnlyOnce() {
+    auto parent = std::make_shared<CGameGraphicsObject>();
+    auto parentLayout = std::make_shared<CLayout>();
+    parentLayout->setRect(0, 0, 800, 600);
+    parent->setLayout(parentLayout);
+    auto child = std::make_shared<CGameGraphicsObject>();
+    auto layout = std::make_shared<CLayout>();
+    layout->setX("25%");
+    layout->setY("-10");
+    layout->setW("50%");
+    layout->setH("33.5%");
+    child->setLayout(layout);
+    parent->pushChild(child);
+    const auto first = layout->getRect(child);
+    expect_true(first->x == 200 && first->y == -10 && first->w == 400 && first->h == 201,
+                "layout cache must retain legacy percentage resolution and integer truncation");
+    const auto warmed = layout->getValueParseCountForTesting();
+    expect_true(warmed == 4, "warming a layout must parse at most its four authored values");
+    for (int frame = 0; frame < 256; ++frame) {
+        parentLayout->setRuntimeRect(frame, 2 * frame, 800 + 4 * frame, 600);
+        const auto rect = layout->getRect(child);
+        expect_true(rect->x == 200 + 2 * frame && rect->w == 400 + 2 * frame,
+                    "cached percentages must resolve against the current parent geometry");
+    }
+    expect_true(layout->getValueParseCountForTesting() == warmed,
+                "repeated frames and parent resizing must not reparse unchanged layout strings");
+    layout->setX("25%");
+    layout->getRect(child);
+    expect_true(layout->getValueParseCountForTesting() == warmed,
+                "setting an identical layout value must retain the parsed cache entry");
+    layout->setX("40%");
+    layout->getRect(child);
+    expect_true(layout->getValueParseCountForTesting() == warmed + 1,
+                "changing one layout value must parse exactly one new value");
+    std::cout << "[layout parse cache] warm parses=" << warmed
+              << " repeated-frame parses=0 changed-value parses=" << layout->getValueParseCountForTesting() - warmed
+              << '\n';
+}
+
+void testTerrainTextureScalingIsReusedAndBounded() {
+    auto gui = make_headless_gui();
+    auto cache = gui->getTextureCache();
+    const SDL_Rect target{32, 32, 32, 32};
+    auto texture = cache->getTileTexture("images/tiles/grass", target);
+    expect_true(texture != nullptr, "terrain scaling guard must load the shipped opaque grass texture");
+    if (!texture)
+        return;
+    int width = 0;
+    int height = 0;
+    SDL_QueryTexture(texture, nullptr, nullptr, &width, &height);
+    expect_true(width == target.w && height == target.h,
+                "eligible software terrain must use a texture at the actual tile size");
+    const auto loads = cache->getTextureLoadCountForTesting();
+    const auto builds = cache->getTileTextureBuildCountForTesting();
+    expect_true(builds == 1, "warming one software terrain extent must perform exactly one scale operation");
+    constexpr int lookups = 4096;
+    for (int lookup = 0; lookup < lookups; ++lookup)
+        expect_true(cache->getTileTexture("images/tiles/grass", target) == texture,
+                    "unchanged terrain extents must reuse the warmed renderer texture");
+    expect_true(cache->getTextureLoadCountForTesting() == loads &&
+                    cache->getTileTextureBuildCountForTesting() == builds,
+                "rendering stable terrain must neither decode PNGs nor rescale surfaces on subsequent frames");
+    for (const int size : {50, 64, 32})
+        cache->getTileTexture("images/tiles/grass", SDL_Rect{32, 32, size, size});
+    expect_true(cache->getTileTextureEntryCountForTesting() == 1,
+                "tile size changes must replace the single scaled extent retained for each terrain path");
+    expect_true(cache->getTileTextureBuildCountForTesting() == builds + 3,
+                "each new terrain extent must scale exactly once");
+    std::cout << "[terrain texture cache] repeated lookups=" << lookups << " repeated loads=0 repeated scales=0"
+              << " retained extents=" << cache->getTileTextureEntryCountForTesting() << " extent budget=1\n";
 }
 
 // Operation-count guard (no wall-clock timing): every valid copy request must
@@ -530,8 +636,8 @@ void testActiveTurnOverlayReadsReuseTheCommittedPlayerRoute() {
     auto gate = std::make_shared<ActiveTurnOverlayGate>();
     auto loop = vstd::event_loop<>::instance();
     const int turn = map->getTurn();
-    auto movement = game->getContext()->spawnTask(map->moveAsync(
-        [gate](std::shared_ptr<CMapObject>, Coords, Coords) { return waitForActiveTurnOverlay(gate); }));
+    auto movement = game->getContext()->spawnTask(
+        map->moveAsync([gate](std::shared_ptr<CMapObject>, Coords, Coords) { return waitForActiveTurnOverlay(gate); }));
     loop->runUntilIdle();
     expect_true(gate->entered && !movement.finished() && map->isMoving() && player->getCoords() == Coords(1, 0, 0),
                 "the route-overlay guard must hold a real turn after coordinate commitment and before cursor advance");
@@ -570,13 +676,15 @@ void testActiveTurnOverlayReadsReuseTheCommittedPlayerRoute() {
                 "releasing the fixed presentation gate must finish exactly the original map turn");
     if (movement.finished()) {
         movement.get();
-        expect_true(game_async::run(controller->controlAsync(player), game_async::WaitMode::PostedWork) == Coords(2, 0, 0),
+        expect_true(game_async::run(controller->controlAsync(player), game_async::WaitMode::PostedWork) ==
+                        Coords(2, 0, 0),
                     "the real player route must continue at its next step after the measured overlay reads");
     }
     std::cout << "[active-turn route overlay] route=" << routeLength << " queries=" << queries
               << " index probes=" << indexProbes << " index budget=" << queries
-              << " coordinate lookups=" << coordinateLookups << " coordinate budget=0 retained before=" << retainedBefore
-              << " retained after=" << retainedAfter << " request changes=" << requestAfter - requestBefore
+              << " coordinate lookups=" << coordinateLookups
+              << " coordinate budget=0 retained before=" << retainedBefore << " retained after=" << retainedAfter
+              << " request changes=" << requestAfter - requestBefore
               << " additional searches=" << searchesAfter - searchesBefore << '\n';
     game->getContext()->shutdown();
 }
@@ -584,6 +692,9 @@ void testActiveTurnOverlayReadsReuseTheCommittedPlayerRoute() {
 } // namespace
 
 void run_render_context_performance_tests() {
+    testBackgroundFreeObjectsResolveLayoutOnlyForDrawing();
+    testUnchangedLayoutValuesAreParsedOnlyOnce();
+    testTerrainTextureScalingIsReusedAndBounded();
     test_render_context_bulk_copy_accounting_is_exact();
     test_render_context_stable_scene_frame_copies_do_not_grow();
     test_styled_text_reuses_bounded_cache();

@@ -101,6 +101,7 @@ class CMapGraphicsObject : public CProxyTargetGraphicsObject {
         std::weak_ptr<CMapObject> actor;
         std::weak_ptr<CMap> map;
         std::weak_ptr<CGameContext> context;
+        Coords origin;
         Coords destination;
         Coords delta;
         std::uint64_t generation = 0;

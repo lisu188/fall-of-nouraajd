@@ -960,6 +960,99 @@ void test_layout_fractional_percentages_resolve_exact_design_pixels() {
     expect_true(childLayout->getRect(child)->w == 0, "non-finite percentages should stay invalid");
 }
 
+void test_layout_cached_values_preserve_numeric_contract() {
+    auto parent = std::make_shared<CGameGraphicsObject>();
+    parent->setLayout(fixed_layout(11, -7, 257, 103));
+    auto child = std::make_shared<CGameGraphicsObject>();
+    auto layout = std::make_shared<CLayout>();
+    child->setLayout(layout);
+    parent->addChild(child);
+
+    struct NumericCase {
+        const char *value;
+        int horizontal;
+        int vertical;
+    };
+    const NumericCase cases[] = {{"12", 12, 12},       {"-12", -12, -12},
+                                 {" +12", 12, 12},     {"12.5%", 32, 12},
+                                 {"-12.5%", -32, -12}, {".5%", 1, 0},
+                                 {"1.5e2%", 385, 154}, {"", 0, 0},
+                                 {"12 ", 0, 0},        {"12.5", 0, 0},
+                                 {"nan%", 0, 0},       {"inf%", 0, 0},
+                                 {"1e999%", 0, 0},     {"99999999999999999", 0, 0},
+                                 {"%", 0, 0},          {"25%junk", 0, 0},
+                                 {"1 + 2", 0, 0}};
+    for (const auto &sample : cases) {
+        layout->setX(sample.value);
+        layout->setY(sample.value);
+        layout->setW(sample.value);
+        layout->setH(sample.value);
+        for (int query = 0; query < 3; ++query) {
+            expect_rect(layout->getRect(child), 11 + sample.horizontal, -7 + sample.vertical,
+                        std::max(0, sample.horizontal), std::max(0, sample.vertical),
+                        "cold and cached dimensions must retain numeric parsing and truncation semantics");
+        }
+    }
+}
+
+void test_layout_cached_values_follow_setters_reparenting_and_runtime_overrides() {
+    auto parent = std::make_shared<CGameGraphicsObject>();
+    auto parentLayout = fixed_layout(11, -7, 257, 103);
+    parent->setLayout(parentLayout);
+    auto child = std::make_shared<CGameGraphicsObject>();
+    auto layout = std::make_shared<CLayout>();
+    layout->setX("25%");
+    layout->setY("-12.5%");
+    layout->setW("50.5%");
+    layout->setH("75%");
+    child->setLayout(layout);
+    parent->addChild(child);
+    expect_rect(layout->getRect(child), 75, -19, 129, 77,
+                "fractional percentages must resolve before warming their parsed values");
+
+    parentLayout->setRuntimeRect(11, -7, 503, 199);
+    expect_rect(layout->getRect(child), 136, -31, 254, 149,
+                "cached percentages must use current parent dimensions after a resize");
+
+    layout->setStringProperty("x", "10%");
+    layout->setStringProperty("y", "20%");
+    layout->setStringProperty("w", "25%");
+    layout->setStringProperty("h", "50%");
+    expect_rect(layout->getRect(child), 61, 32, 125, 99,
+                "reflected property setters must invalidate each previously parsed dimension");
+
+    layout->setRuntimeRect(3, 4, 5, 6);
+    layout->setX("40%");
+    layout->setY("30%");
+    layout->setW("80%");
+    layout->setH("60%");
+    expect_rect(layout->getRect(child), 14, -3, 5, 6,
+                "runtime overrides must retain precedence while configured dimensions change");
+    layout->clearRuntimeRect();
+    expect_rect(layout->getRect(child), 212, 52, 402, 119,
+                "clearing runtime overrides must use configured values set during the override");
+
+    auto secondParent = std::make_shared<CGameGraphicsObject>();
+    secondParent->setLayout(fixed_layout(-20, 30, 101, 51));
+    child->setParent(secondParent);
+    expect_rect(layout->getRect(child), 20, 45, 80, 30,
+                "reparenting must evaluate cached percentages against the new parent");
+
+    layout->setRect(8, 9, 10, 11);
+    expect_rect(layout->getRect(child), -12, 39, 10, 11,
+                "setting a complete configured rectangle must invalidate all four parsed values");
+    layout->setHorizontal("PARENT");
+    layout->setVertical("PARENT");
+    expect_rect(layout->getRect(child), -20, 30, 101, 51,
+                "parent alignment must continue to bypass configured size values");
+    layout->setW("22");
+    layout->setH("33");
+    layout->setHorizontal("RIGHT");
+    layout->setVertical("DOWN");
+    expect_rect(layout->getRect(child), 59, 48, 22, 33,
+                "leaving parent alignment must resolve dimensions changed while they were bypassed");
+}
+
 void test_layout_minimum_size_floors_percentage_panels() {
     auto parent = std::make_shared<CGameGraphicsObject>();
     auto parentLayout = std::make_shared<CLayout>();
@@ -2064,6 +2157,18 @@ void testRetainedPopulatedTextureCachesFailClosedAfterGuiExpiry() {
     auto retained_manager = std::make_shared<CTextManager>(gui);
     expect_true(cache->getTexture("images/panel") != nullptr,
                 "retained image-cache regression must populate a real texture");
+    const auto quality = SDL_GetHint(SDL_HINT_RENDER_SCALE_QUALITY);
+    const bool hadQuality = quality != nullptr;
+    const std::string oldQuality = quality ? quality : "";
+    SDL_SetHintWithPriority(SDL_HINT_RENDER_SCALE_QUALITY, "0", SDL_HINT_OVERRIDE);
+    expect_true(cache->getTileTexture("images/tiles/grass", SDL_Rect{0, 0, 32, 32}) != nullptr &&
+                    cache->getTileTextureEntryCountForTesting() == 1,
+                "retained tile-cache regression must populate a scaled terrain texture");
+    if (hadQuality) {
+        SDL_SetHintWithPriority(SDL_HINT_RENDER_SCALE_QUALITY, oldQuality.c_str(), SDL_HINT_OVERRIDE);
+    } else {
+        SDL_ResetHint(SDL_HINT_RENDER_SCALE_QUALITY);
+    }
     expect_true(manager->getTextureSize("cached before GUI expiry").first > 0,
                 "retained text-cache regression must populate a real texture");
     expect_true(retained_manager->getTextureSize("destroyed after GUI expiry").first > 0,
@@ -2075,6 +2180,9 @@ void testRetainedPopulatedTextureCachesFailClosedAfterGuiExpiry() {
     SDL_ClearError();
     expect_true(cache->getTexture("images/panel") == nullptr,
                 "an expired image cache must not return a previously cached renderer texture");
+    expect_true(cache->getTileTexture("images/tiles/grass", SDL_Rect{0, 0, 32, 32}) == nullptr &&
+                    cache->getTileTextureEntryCountForTesting() == 0,
+                "an expired tile cache must clear its renderer-owned variants and eligibility entries");
     expect_true(manager->getTextureSize("cached before GUI expiry") == std::make_pair(0, 0),
                 "an expired text cache must not query a previously cached renderer texture");
     cache.reset();
@@ -3590,6 +3698,225 @@ void test_texture_cache_without_gui_fails_closed() {
     expect_true(cache->getTexture("images/panel") == nullptr, "texture cache without GUI should return null");
 }
 
+struct NearestTileTextureFixture {
+    std::shared_ptr<CGui> gui;
+    std::shared_ptr<CGame> game;
+    std::string oldQuality;
+    bool hadQuality = false;
+
+    NearestTileTextureFixture() {
+        const auto quality = SDL_GetHint(SDL_HINT_RENDER_SCALE_QUALITY);
+        hadQuality = quality != nullptr;
+        oldQuality = quality ? quality : "";
+        SDL_SetHintWithPriority(SDL_HINT_RENDER_SCALE_QUALITY, "0", SDL_HINT_OVERRIDE);
+        SDL_SetHint(SDL_HINT_VIDEODRIVER, "dummy");
+        SDL_SetHint(SDL_HINT_RENDER_DRIVER, "software");
+        gui = std::make_shared<CGui>();
+        game = create_gui_game(gui);
+    }
+
+    ~NearestTileTextureFixture() {
+        game->getContext()->shutdown();
+        if (hadQuality) {
+            SDL_SetHintWithPriority(SDL_HINT_RENDER_SCALE_QUALITY, oldQuality.c_str(), SDL_HINT_OVERRIDE);
+        } else {
+            SDL_ResetHint(SDL_HINT_RENDER_SCALE_QUALITY);
+        }
+    }
+};
+
+std::vector<Uint32> renderTilePixels(const std::shared_ptr<CGui> &gui, SDL_Texture *texture, const SDL_Rect &target) {
+    auto renderer = gui->getRenderer();
+    SDL_SetRenderDrawColor(renderer, 59, 71, 83, 255);
+    expect_true(SDL_RenderClear(renderer) == 0, "tile parity must clear a known nonblack background");
+    expect_true(gui->getRenderContext().copy(texture, nullptr, target), "tile parity must render its texture");
+    const SDL_Rect sample{0, 0, 96, 96};
+    std::vector<Uint32> pixels(sample.w * sample.h);
+    expect_true(SDL_RenderReadPixels(renderer, &sample, SDL_PIXELFORMAT_ARGB8888, pixels.data(),
+                                     sample.w * sizeof(Uint32)) == 0,
+                "tile parity must read all pixels from the isolated software renderer");
+    return pixels;
+}
+
+void testTileTextureCacheReusesOneVariantAndRejectsUnsafeCopies() {
+    NearestTileTextureFixture fixture;
+    auto cache = fixture.gui->getTextureCache();
+    auto renderer = fixture.gui->getRenderer();
+    SDL_Rect target{11, 17, 50, 50};
+    auto scaled = cache->getTileTexture("images/tiles/grass", target);
+    int width = 0, height = 0;
+    expect_true(scaled && SDL_QueryTexture(scaled, nullptr, nullptr, &width, &height) == 0 && width == 50 &&
+                    height == 50,
+                "the first eligible tile must retain only its target-size texture");
+    expect_true(cache->getTextureLoadCountForTesting() == 1 && cache->getTileTextureBuildCountForTesting() == 1,
+                "a scaled-only first request must decode once without loading a full-size fallback texture");
+    for (int frame = 0; frame < 20; ++frame) {
+        expect_true(cache->getTileTexture("images/tiles/grass.png", target) == scaled,
+                    "warm tile frames and extension aliases must reuse the same scaled texture");
+    }
+    expect_true(cache->getTextureLoadCountForTesting() == 1, "warm tile frames must never reload their PNG");
+    for (int extent : {32, 64, 50}) {
+        target.w = target.h = extent;
+        expect_true(cache->getTileTexture("images/tiles/grass", target) != nullptr,
+                    "zooming must replace the retained tile variant");
+        expect_true(cache->getTileTextureEntryCountForTesting() == 1,
+                    "zoom changes must retain exactly one scaled extent per resource path");
+    }
+    expect_true(cache->getTileTextureBuildCountForTesting() == 4, "each changed zoom extent must rebuild exactly once");
+    auto original = cache->getTexture("images/tiles/grass");
+    expect_true(original && SDL_QueryTexture(original, nullptr, nullptr, &width, &height) == 0 && width == 1024,
+                "fallback requests must retain the original terrain resolution");
+    SDL_SetTextureScaleMode(original, SDL_ScaleModeLinear);
+    expect_true(cache->getTileTexture("images/tiles/grass", target) == original,
+                "an original texture's scale mode must override a later nearest global hint");
+    SDL_SetTextureScaleMode(original, SDL_ScaleModeNearest);
+    SDL_SetTextureColorMod(original, 128, 192, 64);
+    expect_true(cache->getTileTexture("images/tiles/grass", target) == original,
+                "a directly modified original texture must preserve its renderer state");
+    SDL_SetTextureColorMod(original, 255, 255, 255);
+    expect_true(cache->getTileTexture("images/tiles/grass", SDL_Rect{-7, -9, 50, 50}) == original,
+                "partially offscreen destinations must use the original scaling and clipping path");
+    const SDL_Rect clip{9, 13, 61, 53};
+    SDL_RenderSetClipRect(renderer, &clip);
+    expect_true(cache->getTileTexture("images/tiles/grass", target) == original,
+                "a clip cutting through a tile must use the original texture");
+    SDL_RenderSetClipRect(renderer, nullptr);
+    SDL_RenderSetScale(renderer, 2, 2);
+    expect_true(cache->getTileTexture("images/tiles/grass", target) == original,
+                "renderer scaling must bypass tile prescaling");
+    SDL_RenderSetScale(renderer, 1, 1);
+    SDL_SetHintWithPriority(SDL_HINT_RENDER_SCALE_QUALITY, "linear", SDL_HINT_OVERRIDE);
+    expect_true(cache->getTileTexture("images/tiles/grass", target) == original,
+                "non-nearest quality must bypass tile prescaling");
+    SDL_SetHintWithPriority(SDL_HINT_RENDER_SCALE_QUALITY, "0", SDL_HINT_OVERRIDE);
+    for (const SDL_Rect unsafe : {SDL_Rect{0, 0, 0, 50}, SDL_Rect{0, 0, 513, 50}, SDL_Rect{0, 0, 50, -1}}) {
+        expect_true(cache->getTileTexture("images/tiles/grass", unsafe) == original,
+                    "invalid or oversized extents must bypass tile prescaling");
+    }
+
+    const auto beforeRejection = cache->getTextureLoadCountForTesting();
+    auto partialAlpha = cache->getTileTexture("images/tiles/swamp", target);
+    expect_true(partialAlpha && SDL_QueryTexture(partialAlpha, nullptr, nullptr, &width, &height) == 0 && width == 1024,
+                "partial-alpha terrain must retain the original renderer blend path");
+    for (int extent : {32, 50, 64, 50}) {
+        expect_true(cache->getTileTexture("images/tiles/swamp", SDL_Rect{11, 17, extent, extent}) == partialAlpha,
+                    "negative alpha eligibility must reuse the original across every zoom");
+    }
+    expect_true(cache->getTextureLoadCountForTesting() == beforeRejection + 1 &&
+                    cache->getTileTextureBuildCountForTesting() == 4 &&
+                    cache->getTileTextureEntryCountForTesting() == 2,
+                "rejected alpha must decode once and occupy one bounded eligibility entry");
+
+    fixture.game->getContext()->shutdown();
+    SDL_ClearError();
+    expect_true(cache->getTileTexture("images/tiles/grass", target) == nullptr &&
+                    cache->getTileTextureEntryCountForTesting() == 0,
+                "renderer shutdown must clear retained tile variants and fail closed");
+    expect_true(std::string(SDL_GetError()).empty(), "expired tile variants must never destroy freed SDL textures");
+}
+
+void testTileTexturePixelsMatchOriginalAcrossZoomClippingAndCameraOffsets() {
+    NearestTileTextureFixture fixture;
+    auto cache = fixture.gui->getTextureCache();
+    auto renderer = fixture.gui->getRenderer();
+    for (const auto path : {"images/tiles/grass", "images/tiles/swamp"}) {
+        auto original = cache->getTexture(path);
+        expect_true(original != nullptr, "tile parity must load the shipped terrain texture");
+        if (!original) {
+            continue;
+        }
+        for (const SDL_Rect viewport : {SDL_Rect{0, 0, 96, 96}, SDL_Rect{7, 9, 88, 87}}) {
+            SDL_RenderSetViewport(renderer, &viewport);
+            for (int extent : {32, 50, 64}) {
+                for (const SDL_Point position : {SDL_Point{11, 17}, SDL_Point{-7, -9}, SDL_Point{79, 81}}) {
+                    const SDL_Rect target{position.x, position.y, extent, extent};
+                    for (bool clipped : {false, true}) {
+                        const SDL_Rect clip{9, 13, 61, 53};
+                        SDL_RenderSetClipRect(renderer, clipped ? &clip : nullptr);
+                        auto tile = cache->getTileTexture(path, target);
+                        expect_true(tile != nullptr, "every tile parity case must retain a valid texture");
+                        if (tile) {
+                            const auto legacyPixels = renderTilePixels(fixture.gui, original, target);
+                            expect_true(renderTilePixels(fixture.gui, tile, target) == legacyPixels,
+                                        "tile prescaling or fallback must match every legacy pixel exactly");
+                        }
+                    }
+                }
+            }
+        }
+    }
+    SDL_RenderSetClipRect(renderer, nullptr);
+    SDL_RenderSetViewport(renderer, nullptr);
+}
+
+fn::sdl::SurfacePtr makeTileAlphaPattern(bool partialAlpha) {
+    auto surface = fn::sdl::SurfacePtr(SDL_CreateRGBSurfaceWithFormat(0, 257, 257, 32, SDL_PIXELFORMAT_RGBA32));
+    if (!surface) {
+        return nullptr;
+    }
+    constexpr Uint8 alphas[] = {0, 1, 127, 128, 254, 255};
+    for (int y = 0; y < surface->h; ++y) {
+        for (int x = 0; x < surface->w; ++x) {
+            const Uint8 alpha = partialAlpha ? alphas[(x + 3 * y) % 6] : ((x + 3 * y) % 2 ? 255 : 0);
+            CTextureUtil::setPixelColor(
+                surface.get(), x, y,
+                {Uint8((x * 29 + y * 13) % 256), Uint8((x * 11 + y * 41) % 256), Uint8((x * 3 + y * 7) % 256), alpha});
+        }
+    }
+    return surface;
+}
+
+void testTileTextureScalingPreservesBinaryAlphaAndRejectsPartialAlpha() {
+    NearestTileTextureFixture fixture;
+    for (bool partialAlpha : {false, true}) {
+        auto original = CTextureUtil::calculateAlpha(fixture.gui->getRenderer(), makeTileAlphaPattern(partialAlpha));
+        for (int extent : {32, 50, 64}) {
+            bool scaleSafe = false;
+            auto candidate = CTextureUtil::calculateAlpha(
+                fixture.gui->getRenderer(), makeTileAlphaPattern(partialAlpha), extent, extent, &scaleSafe);
+            expect_true(original && candidate && scaleSafe == !partialAlpha,
+                        "only processed alpha values zero and 255 may use the prescaled blend path");
+            if (original && candidate) {
+                const SDL_Rect target{11, 17, extent, extent};
+                expect_true(renderTilePixels(fixture.gui, original.get(), target) ==
+                                renderTilePixels(fixture.gui, candidate.get(), target),
+                            "binary alpha and rejected partial alpha must preserve exact nonblack-background pixels");
+            }
+        }
+    }
+}
+
+void testStaticAnimationPrescalesOnlyUnmodifiedTerrain() {
+    NearestTileTextureFixture fixture;
+    auto cache = fixture.gui->getTextureCache();
+    auto actor = std::make_shared<CCreature>();
+    actor->setAnimation("images/tiles/grass");
+    auto tile = std::make_shared<CTile>();
+    tile->setAnimation("images/tiles/grass");
+    auto animation = std::make_shared<CStaticAnimation>();
+    auto target = CUtil::rect(11, 17, 50, 50);
+    animation->setObject(actor);
+    animation->renderObject(fixture.gui, target, 0);
+    expect_true(cache->getTileTextureBuildCountForTesting() == 0,
+                "ordinary actor sprites must retain their original textures");
+    animation->setObject(tile);
+    animation->renderObject(fixture.gui, target, 0);
+    expect_true(cache->getTileTextureBuildCountForTesting() == 1,
+                "an unmodified terrain tile must opt into prescaling");
+    animation->setRotation(90);
+    target->w = target->h = 32;
+    animation->renderObject(fixture.gui, target, 0);
+    animation->setRotation(0);
+    animation->setColorMod(128, 192, 64, 127);
+    animation->renderObject(fixture.gui, target, 0);
+    expect_true(cache->getTileTextureBuildCountForTesting() == 1,
+                "rotated and color-modified terrain must bypass prescaling");
+    animation->clearColorMod();
+    animation->renderObject(fixture.gui, target, 0);
+    expect_true(cache->getTileTextureBuildCountForTesting() == 2,
+                "clearing tile modifiers must restore eligible target-size caching");
+}
+
 void testShippedSpriteTexturesLoadAndRenderWithinSizeLimit() {
     SDL_SetHintWithPriority(SDL_HINT_VIDEODRIVER, "dummy", SDL_HINT_OVERRIDE);
     SDL_SetHintWithPriority(SDL_HINT_RENDER_DRIVER, "software", SDL_HINT_OVERRIDE);
@@ -4513,6 +4840,8 @@ int main() {
     test_campaign_panel_dismisses_via_action_and_keys_but_never_escape();
     test_layout_runtime_overrides_preserve_serialized_percentage_layouts();
     test_layout_fractional_percentages_resolve_exact_design_pixels();
+    test_layout_cached_values_preserve_numeric_contract();
+    test_layout_cached_values_follow_setters_reparenting_and_runtime_overrides();
     test_layout_minimum_size_floors_percentage_panels();
     test_widget_ignores_unarmed_non_left_clicks();
     test_widget_reflective_callbacks_fail_closed_on_bad_config();
@@ -4583,6 +4912,10 @@ int main() {
     test_gui_pointer_capture_clears_when_captured_widget_is_removed();
     test_render_traversal_stops_after_detach();
     test_texture_cache_without_gui_fails_closed();
+    testTileTextureCacheReusesOneVariantAndRejectsUnsafeCopies();
+    testTileTexturePixelsMatchOriginalAcrossZoomClippingAndCameraOffsets();
+    testTileTextureScalingPreservesBinaryAlphaAndRejectsPartialAlpha();
+    testStaticAnimationPrescalesOnlyUnmodifiedTerrain();
     testShippedSpriteTexturesLoadAndRenderWithinSizeLimit();
     test_render_context_rejects_null_texture_and_copies_valid_texture();
     test_render_context_copy_ex_rotates_and_tracks_stats();

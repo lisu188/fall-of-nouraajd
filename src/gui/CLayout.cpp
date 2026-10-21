@@ -71,19 +71,39 @@ std::shared_ptr<SDL_Rect> CLayout::getParentRect(std::shared_ptr<CGameGraphicsOb
 
 std::string CLayout::getW() { return w; }
 
-void CLayout::setW(std::string _width) { this->w = _width; }
+void CLayout::setW(std::string _width) {
+    if (w != _width) {
+        w = std::move(_width);
+        parsedW.reset();
+    }
+}
 
 std::string CLayout::getH() { return h; }
 
-void CLayout::setH(std::string _height) { this->h = _height; }
+void CLayout::setH(std::string _height) {
+    if (h != _height) {
+        h = std::move(_height);
+        parsedH.reset();
+    }
+}
 
 std::string CLayout::getX() { return x; }
 
-void CLayout::setX(std::string x) { CLayout::x = x; }
+void CLayout::setX(std::string x) {
+    if (CLayout::x != x) {
+        CLayout::x = std::move(x);
+        parsedX.reset();
+    }
+}
 
 std::string CLayout::getY() { return y; }
 
-void CLayout::setY(std::string y) { CLayout::y = y; }
+void CLayout::setY(std::string y) {
+    if (CLayout::y != y) {
+        CLayout::y = std::move(y);
+        parsedY.reset();
+    }
+}
 
 void CLayout::setRect(int x, int y, int w, int h) {
     setX(vstd::str(x));
@@ -145,6 +165,7 @@ void CLayout::setVertical(std::string vertical) { CLayout::vertical = vertical; 
 std::string CLayout::getVertical() { return vertical; }
 
 std::pair<CLayout::TYPE, double> CLayout::parseValue(std::string value) {
+    ++valueParseCount;
     if (vstd::ends_with(value, "%")) {
         auto parsed = parseLayoutDouble(value.substr(0, value.length() - 1));
         if (parsed) {
@@ -167,25 +188,31 @@ int CLayout::parseValue(std::pair<TYPE, double> value, int parentValue) {
     return vstd::fail_if(true, "Should not happen!");
 }
 
-int CLayout::parseValue(std::string value, int parentValue) { return parseValue(parseValue(value), parentValue); }
+int CLayout::parseValue(const std::string &value, std::optional<std::pair<TYPE, double>> &parsedValue,
+                        int parentValue) {
+    if (!parsedValue) {
+        parsedValue = parseValue(value);
+    }
+    return parseValue(*parsedValue, parentValue);
+}
 
 std::shared_ptr<SDL_Rect> CLayout::getRect(std::shared_ptr<CGameGraphicsObject> object) {
     auto parent = getParentRect(object);
 
-    int x = parseValue(getX(), parent->w);
-    int y = parseValue(getY(), parent->h);
+    int x = parseValue(CLayout::x, parsedX, parent->w);
+    int y = parseValue(CLayout::y, parsedY, parent->h);
     int w = 0;
     if (runtimeW) {
         w = *runtimeW;
     } else {
-        w = horizontal == "PARENT" ? parent->w : parseValue(getW(), parent->w);
+        w = horizontal == "PARENT" ? parent->w : parseValue(CLayout::w, parsedW, parent->w);
         w = std::max(w, minW);
     }
     int h = 0;
     if (runtimeH) {
         h = *runtimeH;
     } else {
-        h = vertical == "PARENT" ? parent->h : parseValue(getH(), parent->h);
+        h = vertical == "PARENT" ? parent->h : parseValue(CLayout::h, parsedH, parent->h);
         h = std::max(h, minH);
     }
 

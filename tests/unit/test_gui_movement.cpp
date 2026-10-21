@@ -375,11 +375,22 @@ void testBatchDescriptorCleansFailureCancellationStaleAndQuit() {
     }
 }
 
+class CountingMapGraphicsObject : public CMapGraphicsObject {
+  public:
+    std::size_t refreshCalls = 0;
+
+    std::list<std::shared_ptr<CGameGraphicsObject>> getProxiedObjects(std::shared_ptr<CGui> gui, int x,
+                                                                      int y) override {
+        ++refreshCalls;
+        return CMapGraphicsObject::getProxiedObjects(std::move(gui), x, y);
+    }
+};
+
 struct BatchGuiFixture {
     MovementFixture core{0};
     std::shared_ptr<CPlayer> player = std::make_shared<CPlayer>();
     std::shared_ptr<CGui> gui;
-    std::shared_ptr<CMapGraphicsObject> world;
+    std::shared_ptr<CountingMapGraphicsObject> world;
     std::vector<std::shared_ptr<CCreature>> actors;
 
     explicit BatchGuiFixture(const std::vector<Coords> &origins, bool reducedMotion = false, bool wrap = false) {
@@ -438,7 +449,7 @@ struct BatchGuiFixture {
         gui->setTileSize(64);
         gui->setLayout(std::make_shared<CLayout>());
         gui->getLayout()->setRect(0, 0, 1280, 720);
-        world = std::make_shared<CMapGraphicsObject>();
+        world = std::make_shared<CountingMapGraphicsObject>();
         world->setType("CMapGraphicsObject");
         world->setGame(core.game);
         world->setLayout(std::make_shared<CLayout>());
@@ -479,6 +490,52 @@ vstd::task<void> streamGuiBatch(std::vector<std::shared_ptr<CCreature>> actors, 
     } catch (...) {
         presentation.cancel();
         throw;
+    }
+}
+
+void testNpcBatchRefreshesOnlyMotionEndpoints() {
+    for (const bool wrap : {false, true}) {
+        BatchGuiFixture fixture({Coords(1, 1, 0), Coords(6, 1, 0), Coords(11, 1, 0)}, false, wrap);
+        fixture.core.game->getObjectHandler()->registerType("CProxyGraphicsLayout",
+                                                            [] { return std::make_shared<CProxyGraphicsLayout>(); });
+        fixture.world->setProxyLayout("CProxyGraphicsLayout");
+        fixture.world->refresh();
+        const auto proxyCount = fixture.world->getChildren().size();
+        const auto endpointsPerBoundary = fixture.actors.size() * 2 * (wrap ? 2 : 1);
+        expect_true(proxyCount > endpointsPerBoundary * 2,
+                    "the NPC refresh guard must contain more cells than the complete endpoint budget");
+        fixture.world->refreshCalls = 0;
+        auto movement = fixture.core.game->getContext()->spawnTask(
+            streamGuiBatch(fixture.actors, fixture.world->movementPresentation(fixture.gui)));
+        vstd::event_loop<>::instance()->runUntilIdle();
+        expect_true(!movement.finished() && fixture.world->refreshCalls > 0 &&
+                        fixture.world->refreshCalls <= endpointsPerBoundary,
+                    "starting an NPC batch must refresh only its source and destination proxies");
+        fixture.renderAt(1000);
+        fixture.renderAt(1150);
+        expect_true(movement.finished() && fixture.world->refreshCalls <= endpointsPerBoundary * 2 &&
+                        fixture.world->getChildren().size() == proxyCount,
+                    "finishing an NPC batch must restore endpoint proxies without rebuilding the viewport");
+        if (movement.finished())
+            movement.get();
+        const auto playerCoords = fixture.player->getCoords();
+        for (const auto &child : fixture.world->getChildren()) {
+            const auto proxy = std::dynamic_pointer_cast<CProxyGraphicsObject>(child);
+            if (!proxy)
+                continue;
+            const auto actual = fixture.core.map->normalizeCoords(
+                Coords(playerCoords.x - fixture.gui->getTileCountX() / 2 + proxy->getX() - 1,
+                       playerCoords.y - fixture.gui->getTileCountY() / 2 + proxy->getY() - 1, playerCoords.z));
+            const auto graphics = proxy->getChildren();
+            for (const auto &actor : fixture.actors) {
+                const bool represented = std::any_of(graphics.begin(), graphics.end(), [&](const auto &graphic) {
+                    const auto animation = std::dynamic_pointer_cast<CAnimation>(graphic);
+                    return animation && animation->getObject() == actor;
+                });
+                expect_true(represented == (actual == actor->getCoords()),
+                            "every normal or wrapped actor proxy must be restored exactly at its destination");
+            }
+        }
     }
 }
 
@@ -957,6 +1014,7 @@ int main(int argc, char **argv) {
     testMapWaitsForEachActorPresentationBeforeArrivalAndNextActor();
     testBatchDescriptorPreservesLogicalOrderAndFinishesBeforeTurnCommit();
     testBatchDescriptorCleansFailureCancellationStaleAndQuit();
+    testNpcBatchRefreshesOnlyMotionEndpoints();
     testDistantGuiActorsShareOneAnimationInterval();
     testGuiBatchPlayerOwnsTheSingleCameraMotion();
     testNearbyAndWrappedGuiPathsKeepOrderedAnimationIntervals();
