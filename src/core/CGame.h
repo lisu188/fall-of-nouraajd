@@ -19,7 +19,7 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 #include "core/CConcepts.h"
 #include "core/CGlobal.h"
-#include "core/CPlugin.h"
+#include "object/CGameObject.h"
 #include "core/CUtil.h"
 #include "handler/CHandler.h"
 
@@ -88,8 +88,6 @@ class CGame : public CGameObject {
 
     std::shared_ptr<CSceneManager> getSceneManager();
     std::shared_ptr<CNavigationService> getNavigationService();
-
-    void loadPlugin(std::function<std::shared_ptr<CPlugin>()> plugin);
 
     std::shared_ptr<CRngHandler> getRngHandler();
 

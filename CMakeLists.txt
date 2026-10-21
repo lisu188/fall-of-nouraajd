@@ -890,7 +890,7 @@ add_game_unit_test(handler_unit_tests ${GAME_HANDLER_UNIT_TEST_SRC})
 target_compile_definitions(handler_unit_tests PRIVATE
     GAME_NATIVE_TEST_PROFILE_DIR="${CMAKE_CURRENT_SOURCE_DIR}/coverage/native-test-profiles")
 add_game_unit_test(object_unit_tests tests/unit/test_object.cpp)
-add_game_unit_test(plugin_registrar_unit_tests tests/unit/test_plugin_registrar.cpp)
+add_game_unit_test(gameplay_type_registration_unit_tests tests/unit/test_gameplay_type_registration.cpp)
 
 add_executable(native_test_profile_fixture tests/unit/native_test_profile_fixture.cpp)
 configure_cpp_target(native_test_profile_fixture)

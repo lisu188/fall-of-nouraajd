@@ -23,7 +23,6 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #include "core/CSerialization.h"
 #include "core/CMap.h"
 #include "core/CProvider.h"
-#include "plugin/CPluginRegistrar.h"
 #include "gui/CGui.h"
 #include "gui/panel/CGamePanel.h"
 #include "gui/CTooltip.h"
@@ -139,11 +138,6 @@ std::shared_ptr<CSceneManager> CGame::getSceneManager() {
         sceneManager = std::make_shared<CSceneManager>();
     }
     return sceneManager;
-}
-
-void CGame::loadPlugin(std::function<std::shared_ptr<CPlugin>()> plugin) {
-    CPluginRegistrar registrar(this->ptr<CGame>());
-    plugin()->load(registrar);
 }
 
 std::shared_ptr<CGui> CGame::getGui() const {

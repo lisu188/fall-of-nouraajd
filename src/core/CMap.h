@@ -25,7 +25,7 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #include "core/CGlobal.h"
 #include "core/CMovementPresenter.h"
 
-#include "CPlugin.h"
+#include "object/CGameObject.h"
 #include "core/CProvider.h"
 #include "core/CUtil.h"
 #include "handler/CHandler.h"
