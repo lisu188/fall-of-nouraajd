@@ -1830,13 +1830,13 @@ class ContentValidator:
             return
         source = strip_cpp_comments(read_text_lossy(registration)) if registration.exists() else ""
         registered = (
-            re.search(r"\\bvoid\\s+registerGameplayTypes\\s*\\(", source) is not None
+            re.search(r"\bvoid\s+registerGameplayTypes\s*\(", source) is not None
             and "FN_GAMEPLAY_TYPES(FN_TYPE, FN_WRAPPED)" in source
         )
         text = strip_cpp_comments(read_text_lossy(table))
-        row_pattern = re.compile(r"\\bFN_(?:TYPE|WRAPPED)\\(\\s*([A-Za-z_]\\w*)")
+        row_pattern = re.compile(r"\bFN_(?:TYPE|WRAPPED)\(\s*([A-Za-z_]\w*)")
         for line_number, line in enumerate(text.splitlines(), start=1):
-            calls = re.findall(r"\\bFN_(?:TYPE|WRAPPED)\\(", line)
+            calls = re.findall(r"\bFN_(?:TYPE|WRAPPED)\(", line)
             if not calls:
                 continue
             matches = row_pattern.findall(line)
