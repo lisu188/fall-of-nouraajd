@@ -410,7 +410,7 @@ std::shared_ptr<json> CResourcesProvider::loadJson(std::string path) {
     return std::make_shared<json>(std::move(*parsed));
 }
 
-// Trusted resources such as native plugin libraries must resolve only through packaged/base roots.
+// Base resources that cannot be overridden by a map scope must resolve only through packaged/base roots.
 std::string CResourcesProvider::getPathFromBaseSearchPath(std::string path) {
     if (!isSafeRelativeResourcePath(path)) {
         vstd::logger::warning("Rejected unsafe resource path:", path);

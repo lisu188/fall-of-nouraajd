@@ -84,7 +84,7 @@ At first launch `RuntimeAssets` extracts the packaged Python and game payloads i
 6. prepends only the extracted game runtime to `sys.path`;
 7. imports `game` and calls `game.new()`.
 
-The packaged manifest's existing `plugins/native/native_gameplay` and `plugins/native/native_marker_plugin` ids are preserved. On Android they resolve to code linked into `libmain.so`; desktop builds retain the existing `dlopen`/`LoadLibrary` behavior.
+Gameplay object factories are registered directly from C++ code in `libmain.so` during game startup. The same in-engine registration is used by desktop builds; there are no separately packaged native plugin libraries.
 
 ## First device acceptance gate
 
@@ -95,7 +95,7 @@ Before touch-layout work starts, verify on a physical ARM64 device running Andro
 - runtime extraction completes once and survives restart;
 - `_game` imports successfully;
 - `game.new()` reaches the existing start menu;
-- the native gameplay plugin registrations are present;
+- the built-in C++ gameplay factories are registered;
 - Nouraajd loads and renders;
 - a tap reaches the existing SDL mouse-event path and moves the player;
 - a save is written beneath `files/user/save` and remains loadable after force-stop/relaunch.
