@@ -33,8 +33,7 @@ class NativeCallgrindToolTest(unittest.TestCase):
         self.binary.write_text("fixture", encoding="utf-8")
         self.runtime_files = [
             self.build_dir / "_game.fixture.so",
-            self.build_dir / "plugins/native/native_marker_plugin.so",
-            self.build_dir / "plugins/native/native_gameplay.so",
+            self.build_dir / "libgame_core.so",
         ]
         for path in self.runtime_files:
             path.parent.mkdir(parents=True, exist_ok=True)
@@ -322,11 +321,11 @@ class NativeCallgrindToolTest(unittest.TestCase):
         cmake = (ROOT / "CMakeLists.txt").read_text(encoding="utf-8")
         self.assertRegex(cmake, r'LABELS "for_unit_tests;unit;\$\{target_name\}"\s+TIMEOUT 60')
 
-    def testWorkflowBuildsTheRuntimeModuleAndItsNativePluginsBeforeProfiling(self):
+    def testWorkflowBuildsTheRuntimeModuleAndLinkedGameCoreBeforeProfiling(self):
         workflow = (ROOT / ".github/workflows/profile-native.yml").read_text(encoding="utf-8")
         self.assertIn('--target _game "${targets[@]}"', workflow)
         cmake = (ROOT / "CMakeLists.txt").read_text(encoding="utf-8")
-        self.assertIn("add_dependencies(_game ${NATIVE_PLUGIN_TARGETS})", cmake)
+        self.assertIn("target_link_libraries(_game PRIVATE game_core)", cmake)
 
     def testWorkflowCachesOnlyBoundedCompilerEntriesWithContentChecks(self):
         workflow = (ROOT / ".github/workflows/profile-native.yml").read_text(encoding="utf-8")
