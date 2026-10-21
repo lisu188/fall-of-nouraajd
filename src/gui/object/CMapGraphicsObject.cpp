@@ -192,9 +192,8 @@ std::list<std::shared_ptr<CGameGraphicsObject>> CMapGraphicsObject::getProxiedOb
     }
     std::size_t objectIndex = 0;
     for (const auto &ob : objects) {
-        if (std::any_of(motions.begin(), motions.end(), [&](const auto &motion) {
-                return motion.overlay && motion.actor.lock() == ob;
-            })) {
+        if (std::any_of(motions.begin(), motions.end(),
+                        [&](const auto &motion) { return motion.overlay && motion.actor.lock() == ob; })) {
             ++objectIndex;
             continue;
         }
@@ -602,6 +601,7 @@ bool CMapGraphicsObject::enqueueMotion(const std::shared_ptr<CGui> &gui, const s
     motion.actor = actor;
     motion.map = map;
     motion.context = gui->getGame()->getContext();
+    motion.origin = origin;
     motion.destination = destination;
     motion.delta = delta;
     motion.generation = gui->getGame()->getContext()->captureTransitionGeneration();
@@ -655,13 +655,26 @@ vstd::task<void> CMapGraphicsObject::finishMotionBatchAsync(std::shared_ptr<CGui
         if (self->motions.empty())
             co_return;
         ScopeExit clear([self, gui] {
+            const auto map = gui->getGame() ? gui->getGame()->getMap() : nullptr;
+            bool refreshAllCells = false;
+            std::vector<Coords> dirtyCells;
+            dirtyCells.reserve(self->motions.size() * 2);
+            for (const auto &motion : self->motions) {
+                refreshAllCells = refreshAllCells || motion.movesCamera || motion.map.lock() != map;
+                dirtyCells.push_back(motion.origin);
+                dirtyCells.push_back(motion.destination);
+            }
             self->clearMotion();
             if (gui->isActive() && self->isAttachedToGui(gui) && gui->getGame() &&
-                gui->getGame()->getContext()->isActive())
-                self->refreshAll();
+                gui->getGame()->getContext()->isActive()) {
+                if (refreshAllCells)
+                    self->refreshAll();
+                else
+                    for (const auto coords : dirtyCells)
+                        self->refreshObject(coords);
+            }
         });
         self->motionBatchStarted = true;
-        self->refreshAll();
         const auto loop = vstd::event_loop<>::instance();
         while (!loop->quitRequested() && self->isAttachedToGui(gui) &&
                std::any_of(self->motions.begin(), self->motions.end(), [&](const auto &motion) {
