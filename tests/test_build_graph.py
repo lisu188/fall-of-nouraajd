@@ -275,6 +275,13 @@ class SharedCompilationGraphTest(unittest.TestCase):
         source = (ROOT / relative).resolve()
         return [entry for entry in self.commands if Path(entry["file"]).resolve() == source]
 
+    def testFocusedJsonChecksRemainInTheProjectedGraph(self):
+        commands = self.commandsFor("tests/json/JsonParseRegression.cpp")
+        self.assertEqual(1, len(commands), "The projected graph must configure the focused JSON regression target")
+        self.assertIn("json_parse_regression.dir", commands[0]["command"])
+        self.assertTrue((self.build / "tests/json/cmake_install.cmake").is_file())
+        self.assertFalse((self.source / "res").exists(), "Graph validation must not stage runtime assets")
+
     def testBindingObjectsCompileOnceForModuleAndEmbeddedInterpreter(self):
         sources = ["src/core/CModule.cpp"]
         sources.extend(path.relative_to(ROOT).as_posix() for path in sorted((ROOT / "src/core/bindings").glob("*.cpp")))
