@@ -69,6 +69,7 @@ SCRIPT_OBJECT_NAME_CALLS = {"getObjectByName", "removeObjectByName"}
 SCRIPT_PROPERTY_READ_CALLS = {"getBoolProperty", "getNumericProperty", "getStringProperty"}
 SCRIPT_PROPERTY_WRITE_CALLS = {"setBoolProperty", "setNumericProperty", "setStringProperty", "incProperty"}
 SCRIPT_BOOL_PROPERTY_METHODS = {"getBoolProperty", "setBoolProperty"}
+SCRIPT_PROPERTY_CLAIM_CALLS = {"claim_once"}
 SCRIPT_PROPERTY_DEFAULT_WRITE_CALLS = {
     "_set_bool_property_default": "setBoolProperty",
     "_set_numeric_property_default": "setNumericProperty",
@@ -705,6 +706,90 @@ class ScriptPropertyHygieneAllowance:
 
 SCRIPT_PROPERTY_HYGIENE_ALLOWLIST = (
     ScriptPropertyHygieneAllowance(
+        path="res/maps/baldursGate/script.py",
+        owner="map",
+        name="plugin_cityFlag_poisonCured",
+        reason="cityClock.questDefinitions effects.flags writes this cure outcome through applyEffects.",
+    ),
+    ScriptPropertyHygieneAllowance(
+        path="res/maps/baldursGate/script.py",
+        owner="map",
+        name="plugin_cityFlag_palaceCleared",
+        reason="cityClock.questDefinitions effects.flags writes this outcome; actor and relocation JSON consume it.",
+    ),
+    ScriptPropertyHygieneAllowance(
+        path="res/maps/baldursGate/script.py",
+        owner="map",
+        name="plugin_cityFlag_cityInterludeReady",
+        reason="cityClock.questDefinitions effects.flags enables the authored interlude.",
+    ),
+    ScriptPropertyHygieneAllowance(
+        path="res/maps/baldursGate/script.py",
+        owner="map",
+        name="plugin_cityFlag_eltanCarried",
+        reason="cityClock.questDefinitions effects.flags records the carried Eltan outcome.",
+    ),
+    ScriptPropertyHygieneAllowance(
+        path="res/maps/baldursGate/script.py",
+        owner="map",
+        name="plugin_cityFlag_eltanSafe",
+        reason="cityClock.questDefinitions effects.flags records the rescued Eltan outcome.",
+    ),
+    ScriptPropertyHygieneAllowance(
+        path="res/maps/baldursGate/script.py",
+        owner="map",
+        name="plugin_cityFlag_quayleAtGate",
+        reason="cityClock.actorDefinitions requiresFlag consumes this explicit boundary-encounter choice.",
+    ),
+    ScriptPropertyHygieneAllowance(
+        path="res/maps/baldursGate/script.py",
+        owner="map",
+        name="plugin_cityFlag_eldothJoined",
+        reason="cityClock.actorDefinitions requiresFlag consumes the selected outside-history choice.",
+    ),
+    ScriptPropertyHygieneAllowance(
+        path="res/maps/baldursGate/script.py",
+        owner="map",
+        name="plugin_cityFlag_aldethSaved",
+        reason="cityClock.actorDefinitions requiresFlag consumes the selected outside-history choice.",
+    ),
+    ScriptPropertyHygieneAllowance(
+        path="res/maps/baldursGate/script.py",
+        owner="map",
+        name="plugin_cityFlag_narlenWarning",
+        reason="cityClock.relocationDefinitions conditions.flags/absentFlags consumes this warning outcome.",
+    ),
+    ScriptPropertyHygieneAllowance(
+        path="res/maps/baldursGate/script.py",
+        owner="map",
+        name="plugin_cityFlag_fugitive",
+        reason="Serialized interlude state; cityClock.questDefinitions effects.flags clears it after the palace.",
+    ),
+    ScriptPropertyHygieneAllowance(
+        path="res/maps/baldursGate/script.py",
+        owner="map",
+        name="plugin_cityFlag_partyPoisoned",
+        reason="Serialized poison state; cityClock.questDefinitions effects.flags sets it before the cure clears it.",
+    ),
+    ScriptPropertyHygieneAllowance(
+        path="res/maps/baldursGate/script.py",
+        owner="map",
+        name="plugin_cityFlag_guardsAlerted",
+        reason="Saved watch telemetry observed by the failed-theft MCP route outside the map script.",
+    ),
+    ScriptPropertyHygieneAllowance(
+        path="res/maps/baldursGate/script.py",
+        owner="map",
+        name="plugin_cityAlliedCombat",
+        reason="src/handler/CFightHandler.cpp configured_allies reads this map opt-in flag.",
+    ),
+    ScriptPropertyHygieneAllowance(
+        path="res/maps/baldursGate/script.py",
+        owner="map",
+        name="plugin_cityFixedLoot",
+        reason="src/handler/CFightHandler.cpp defeatedCreatureAsync reads this map opt-in flag.",
+    ),
+    ScriptPropertyHygieneAllowance(
         path="res/maps/nouraajd/script.py",
         owner="player",
         name="CAN_CRAFT_SCROLLS",
@@ -816,6 +901,7 @@ class ScriptAnalyzer(ast.NodeVisitor):
         self._string_choices_stack: list[dict[str, list[tuple[str, tuple[tuple[str, bool], ...]]]]] = []
         self._spawn_guards: dict[int, tuple[tuple[str, bool], ...]] = {}
         self._branch_guards: list[tuple[str, bool]] = []
+        self._receiver_helpers_stack: list[dict[str, str]] = [{}]
 
     def visit_ClassDef(self, node: ast.ClassDef) -> Any:
         self.info.classes.add(node.name)
@@ -834,6 +920,14 @@ class ScriptAnalyzer(ast.NodeVisitor):
         self._class_stack.pop()
 
     def visit_FunctionDef(self, node: ast.FunctionDef) -> Any:
+        body = node.body
+        if body and isinstance(body[0], ast.Expr) and isinstance(body[0].value, ast.Constant):
+            body = body[1:]
+        if not self._class_stack and len(body) == 1 and isinstance(body[0], ast.Return):
+            owner = self._receiver_kind(body[0].value)
+            if owner != "unknown":
+                self._receiver_helpers_stack[-1][node.name] = owner
+        self._receiver_helpers_stack.append({})
         if self._class_stack:
             self.info.methods_by_class.setdefault(self._class_stack[-1], set()).add(node.name)
         self._function_stack.append(node.name)
@@ -848,6 +942,7 @@ class ScriptAnalyzer(ast.NodeVisitor):
         self._string_values_stack.pop()
         self._state_alias_stack.pop()
         self._function_stack.pop()
+        self._receiver_helpers_stack.pop()
 
     def visit_AsyncFunctionDef(self, node: ast.AsyncFunctionDef) -> Any:
         self.visit_FunctionDef(node)
@@ -1255,7 +1350,11 @@ class ScriptAnalyzer(ast.NodeVisitor):
             usage.terminal_check_states.update(states)
 
     def _record_property_access(self, name: str, node: ast.Call) -> None:
-        if name in SCRIPT_PROPERTY_READ_CALLS and node.args:
+        if name in SCRIPT_PROPERTY_CLAIM_CALLS and len(node.args) >= 2:
+            owner = self._receiver_kind(node.args[0])
+            self._record_property_accesses("read", "getBoolProperty", owner, node.args[1], node)
+            self._record_property_accesses("write", "setBoolProperty", owner, node.args[1], node)
+        elif name in SCRIPT_PROPERTY_READ_CALLS and node.args:
             self._record_property_accesses("read", name, self._property_receiver(node), node.args[0], node)
         elif name in SCRIPT_PROPERTY_WRITE_CALLS and node.args:
             self._record_property_accesses("write", name, self._property_receiver(node), node.args[0], node)
@@ -1302,6 +1401,10 @@ class ScriptAnalyzer(ast.NodeVisitor):
             return self._receiver_kind(node.value)
         if isinstance(node, ast.Call):
             name = call_name(node.func)
+            if isinstance(node.func, ast.Name):
+                for helpers in reversed(self._receiver_helpers_stack):
+                    if name in helpers:
+                        return helpers[name]
             if name == "getPlayer":
                 return "player"
             if name == "getMap":

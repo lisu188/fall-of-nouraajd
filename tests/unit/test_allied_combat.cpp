@@ -144,7 +144,7 @@ void testNativeAllyActsAndHeroOwnsRewards() {
     for (const auto &line : CPlaytestTrace::drain()) {
         const auto record = json::parse(line);
         if (record.value("event", std::string()) == "combat_ally_acted") {
-            witnessedAction = record.at("actor").at("name") == ally->getName();
+            witnessedAction = record.at("actor").at("name").get<std::string>() == ally->getName();
         }
     }
     CPlaytestTrace::configure(false);

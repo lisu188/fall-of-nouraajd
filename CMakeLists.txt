@@ -467,6 +467,10 @@ configure_file(res/maps/candlekeep/config.json maps/candlekeep/config.json COPYO
 configure_file(res/maps/candlekeep/dialog.json maps/candlekeep/dialog.json COPYONLY)
 configure_file(res/maps/candlekeep/map.json maps/candlekeep/map.json COPYONLY)
 configure_file(res/maps/candlekeep/script.py maps/candlekeep/script.py COPYONLY)
+configure_file(res/maps/baldursGate/config.json maps/baldursGate/config.json COPYONLY)
+configure_file(res/maps/baldursGate/dialog.json maps/baldursGate/dialog.json COPYONLY)
+configure_file(res/maps/baldursGate/map.json maps/baldursGate/map.json COPYONLY)
+configure_file(res/maps/baldursGate/script.py maps/baldursGate/script.py COPYONLY)
 
 configure_file(res/maps/hearthfall/config.json maps/hearthfall/config.json)
 configure_file(res/maps/hearthfall/dialog.json maps/hearthfall/dialog.json)
@@ -488,7 +492,7 @@ configure_file(res/maps/usurpergate/script.py maps/usurpergate/script.py)
 # moment a map adds one.
 set(GAME_STAGED_MAPS
     nouraajd siege ritual vhulmarn kadath ninemarches sunderedmarch gravemoor
-    hearthfall usurpergate test multilevel candlekeep)
+    hearthfall usurpergate test multilevel candlekeep baldursGate)
 foreach (_staged_map ${GAME_STAGED_MAPS})
     stage_map_declared_assets(${_staged_map})
 endforeach ()

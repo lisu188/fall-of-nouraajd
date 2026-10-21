@@ -1,0 +1,3562 @@
+{
+  "schemaVersion": 1,
+  "scope": "classic BG1 city Chapters5 and7; native adaptation",
+  "originalParityEstablished": false,
+  "runtimeSchema": {
+    "questProperty": "cityClock.questDefinitions JSON",
+    "actorSelectors": "label and optional area/creature",
+    "callbackNames": "accept<UpperFirstId>, canAccept<UpperFirstId>, quest<UpperFirstId><UpperFirstOutcome>, canQuest<UpperFirstId><UpperFirstOutcome>"
+  },
+  "standing": {
+    "initial": 0,
+    "reputationInitial": 10,
+    "social": "current native intelligence plus local standing; unfavorable<7,ordinary7-11,favorable>=12",
+    "reputation": "separate saved local1-20 original reputation checks; reward/crime/donation changes apply both local values"
+  },
+  "acceptanceBlockers": [
+    "Original BG1 binaries/dialogue absent; supporting EE base differs from classic.",
+    "Quest source labels, item resrefs, reward totals and script-only actor placement must be verified against classic.",
+    "Native adaptation tests are not exhaustive original interaction parity.",
+    "Jalantha alternate100gold audience and secondary source spawn path remain pending; only source-backed50gold first-audience path is authored."
+  ],
+  "quests": [
+    {
+      "id": "quinnDagger",
+      "title": "Quinn and Nester",
+      "phase": 5,
+      "givers": [
+        {
+          "label": "Quinn",
+          "area": "AR0157"
+        }
+      ],
+      "acceptConditions": {},
+      "acceptEffects": {},
+      "outcomes": [
+        {
+          "id": "complete",
+          "text": "Complete: Quinn and Nester",
+          "conditions": {
+            "items": [
+              {
+                "anyOf": [
+                  "DAGG06"
+                ],
+                "count": 1
+              }
+            ]
+          },
+          "effects": {
+            "xp": 950,
+            "standing": 1,
+            "takeItems": [
+              {
+                "anyOf": [
+                  "DAGG06"
+                ],
+                "count": 1
+              }
+            ],
+            "items": [
+              {
+                "item": "MISC32",
+                "count": 1
+              }
+            ]
+          },
+          "terminal": true
+        }
+      ],
+      "sources": [
+        "https://www.forgottenwars.com/bg1/ar0100.htm"
+      ],
+      "sourceStatus": "classic-guide-supported; original-data parity pending",
+      "acceptanceGaps": [
+        "Nester is outside the playable city; the explicit excursion remains a separate authored choice."
+      ]
+    },
+    {
+      "id": "rinnieBook",
+      "title": "Rinnie's book",
+      "phase": 5,
+      "givers": [
+        {
+          "label": "Rinnie",
+          "area": "AR0006"
+        }
+      ],
+      "acceptConditions": {},
+      "acceptEffects": {},
+      "outcomes": [
+        {
+          "id": "favorable",
+          "text": "Return the book and receive the favorable reward.",
+          "conditions": {
+            "items": [
+              {
+                "anyOf": [
+                  "BOOK55"
+                ],
+                "count": 1
+              }
+            ],
+            "minSocial": 12
+          },
+          "effects": {
+            "xp": 900,
+            "takeItems": [
+              {
+                "anyOf": [
+                  "BOOK55"
+                ],
+                "count": 1
+              }
+            ],
+            "items": [
+              {
+                "item": "SCRL08",
+                "count": 1
+              }
+            ]
+          },
+          "terminal": true
+        },
+        {
+          "id": "complete",
+          "text": "Complete: Rinnie's book",
+          "conditions": {
+            "items": [
+              {
+                "anyOf": [
+                  "BOOK55"
+                ],
+                "count": 1
+              }
+            ],
+            "maxSocial": 11
+          },
+          "effects": {
+            "xp": 400,
+            "gold": 80,
+            "takeItems": [
+              {
+                "anyOf": [
+                  "BOOK55"
+                ],
+                "count": 1
+              }
+            ]
+          },
+          "terminal": true
+        }
+      ],
+      "sources": [
+        "https://www.forgottenwars.com/bg1/ar0200.htm"
+      ],
+      "sourceStatus": "classic-guide-supported; original-data parity pending",
+      "acceptanceGaps": []
+    },
+    {
+      "id": "petrineRing",
+      "title": "Petrine's cat",
+      "phase": 5,
+      "givers": [
+        {
+          "label": "Petrine",
+          "area": "AR0200"
+        }
+      ],
+      "acceptConditions": {},
+      "acceptEffects": {},
+      "outcomes": [
+        {
+          "id": "complete",
+          "text": "Complete: Petrine's cat",
+          "conditions": {
+            "items": [
+              {
+                "anyOf": [
+                  "RING16",
+                  "OHRING16"
+                ],
+                "count": 1
+              }
+            ]
+          },
+          "effects": {
+            "xp": 500,
+            "takeItems": [
+              {
+                "anyOf": [
+                  "RING16",
+                  "OHRING16"
+                ],
+                "count": 1
+              }
+            ]
+          },
+          "terminal": true
+        },
+        {
+          "id": "catKilled",
+          "text": "Report that the cat was killed.",
+          "conditions": {
+            "kills": [
+              {
+                "label": "Angel",
+                "area": "AR0005"
+              }
+            ]
+          },
+          "effects": {
+            "standing": -1
+          },
+          "terminal": true
+        }
+      ],
+      "sources": [
+        "https://www.forgottenwars.com/bg1/ar0200.htm"
+      ],
+      "sourceStatus": "classic-guide-supported; original-data parity pending",
+      "acceptanceGaps": []
+    },
+    {
+      "id": "bherenCat",
+      "title": "Bheren's demand",
+      "phase": 5,
+      "givers": [
+        {
+          "label": "Bheren",
+          "area": "AR0004"
+        }
+      ],
+      "acceptConditions": {},
+      "acceptEffects": {},
+      "outcomes": [
+        {
+          "id": "complete",
+          "text": "Complete: Bheren's demand",
+          "conditions": {
+            "kills": [
+              {
+                "label": "Angel",
+                "area": "AR0005"
+              }
+            ],
+            "minReputation": 8
+          },
+          "effects": {
+            "xp": 400,
+            "standing": -1
+          },
+          "terminal": true
+        },
+        {
+          "id": "lowStanding",
+          "text": "Claim Bheren's cloak.",
+          "conditions": {
+            "kills": [
+              {
+                "label": "Angel",
+                "area": "AR0005"
+              }
+            ],
+            "maxReputation": 7
+          },
+          "effects": {
+            "items": [
+              {
+                "item": "CLCK01",
+                "count": 1
+              }
+            ]
+          },
+          "terminal": true
+        }
+      ],
+      "sources": [
+        "https://www.forgottenwars.com/bg1/ar0200.htm"
+      ],
+      "sourceStatus": "classic-guide-supported; original-data parity pending",
+      "acceptanceGaps": [
+        "Original reputation1-7 cloak reward is retained as a separate branch; local standing starts10."
+      ]
+    },
+    {
+      "id": "bogeyman",
+      "title": "Louise and Laerta's bogeyman",
+      "phase": 5,
+      "givers": [
+        {
+          "label": "Laerta",
+          "area": "AR0162"
+        }
+      ],
+      "acceptConditions": {},
+      "acceptEffects": {},
+      "outcomes": [
+        {
+          "id": "voltine",
+          "text": "Tell Voltine that Gervisse is dead.",
+          "at": [
+            {
+              "label": "Voltine",
+              "area": "AR0162"
+            }
+          ],
+          "conditions": {
+            "kills": [
+              {
+                "creature": "GERVIS",
+                "area": "AR0162"
+              }
+            ]
+          },
+          "effects": {
+            "items": [
+              {
+                "item": "WAND09"
+              }
+            ],
+            "flags": {
+              "voltineHelped": true
+            }
+          },
+          "terminal": false
+        },
+        {
+          "id": "complete",
+          "text": "Tell Laerta that she is safe.",
+          "conditions": {
+            "flags": [
+              "voltineHelped"
+            ]
+          },
+          "effects": {
+            "xp": 1000,
+            "items": [
+              {
+                "item": "SCRL78"
+              }
+            ]
+          },
+          "terminal": true
+        }
+      ],
+      "sources": [
+        "https://www.forgottenwars.com/bg1/ar0100.htm"
+      ],
+      "sourceStatus": "classic-guide-supported; original-data parity pending",
+      "acceptanceGaps": [
+        "Supporting base EE confirms distinct Voltine WAND09 and Laerta1000XP/SCRL78 actions; source original DLG comparison remains pending. Combat XP remains native only."
+      ]
+    },
+    {
+      "id": "pheirkasCloak",
+      "title": "Pheirkas and Algernon",
+      "phase": 5,
+      "givers": [
+        {
+          "label": "Pheirkas",
+          "area": "AR0167"
+        }
+      ],
+      "acceptConditions": {
+        "thiefInParty": true
+      },
+      "acceptEffects": {},
+      "outcomes": [
+        {
+          "id": "favorable",
+          "text": "Return Algernon's cloak with a favorable reaction.",
+          "conditions": {
+            "items": [
+              {
+                "anyOf": [
+                  "CLCK08"
+                ],
+                "count": 1
+              }
+            ],
+            "minSocial": 12
+          },
+          "effects": {
+            "xp": 300,
+            "gold": 200,
+            "takeItems": [
+              {
+                "anyOf": [
+                  "CLCK08"
+                ],
+                "count": 1
+              }
+            ]
+          },
+          "terminal": true
+        },
+        {
+          "id": "complete",
+          "text": "Complete: Pheirkas and Algernon",
+          "conditions": {
+            "items": [
+              {
+                "anyOf": [
+                  "CLCK08"
+                ],
+                "count": 1
+              }
+            ],
+            "maxSocial": 11
+          },
+          "effects": {
+            "xp": 200,
+            "gold": 150,
+            "takeItems": [
+              {
+                "anyOf": [
+                  "CLCK08"
+                ],
+                "count": 1
+              }
+            ]
+          },
+          "terminal": true
+        }
+      ],
+      "sources": [
+        "https://www.forgottenwars.com/bg1/ar0100.htm"
+      ],
+      "sourceStatus": "classic-guide-supported; original-data parity pending",
+      "acceptanceGaps": [
+        "Algernon is outside the playable city; named excursion is pending until resolved by an explicit choice."
+      ]
+    },
+    {
+      "id": "degrodelHelm",
+      "title": "Degrodel and Balduran's helm",
+      "phase": 5,
+      "givers": [
+        {
+          "label": "Degrodel",
+          "area": "AR0161"
+        }
+      ],
+      "acceptConditions": {},
+      "acceptEffects": {
+        "items": [
+          {
+            "item": "SCRLPET",
+            "count": 6
+          }
+        ]
+      },
+      "outcomes": [
+        {
+          "id": "complete",
+          "text": "Complete: Degrodel and Balduran's helm",
+          "conditions": {
+            "items": [
+              {
+                "anyOf": [
+                  "HELM07"
+                ],
+                "count": 1
+              }
+            ]
+          },
+          "effects": {
+            "gold": 5000,
+            "takeItems": [
+              {
+                "anyOf": [
+                  "HELM07"
+                ],
+                "count": 1
+              }
+            ],
+            "hostile": [
+              {
+                "label": "Degrodel",
+                "area": "AR0161"
+              }
+            ],
+            "flags": {
+              "degrodelBetrayal": true
+            }
+          },
+          "terminal": true
+        }
+      ],
+      "sources": [
+        "https://www.forgottenwars.com/bg1/ar0100.htm"
+      ],
+      "sourceStatus": "classic-guide-supported; original-data parity pending",
+      "acceptanceGaps": [
+        "Classic guide reports a2XP script anomaly; original dialogue audit is required before reproducing that exact bug."
+      ]
+    },
+    {
+      "id": "balduranCloak",
+      "title": "Quenash and Vail's cloak",
+      "phase": 5,
+      "givers": [
+        {
+          "label": "Quenash",
+          "area": "AR0112"
+        }
+      ],
+      "acceptConditions": {},
+      "acceptEffects": {},
+      "outcomes": [
+        {
+          "id": "complete",
+          "text": "Complete: Quenash and Vail's cloak",
+          "conditions": {
+            "flags": [
+              "vailClue"
+            ]
+          },
+          "effects": {
+            "items": [
+              {
+                "item": "CLCK05",
+                "count": 1
+              }
+            ]
+          },
+          "terminal": true
+        },
+        {
+          "id": "bluff",
+          "text": "Describe Vail as a blond elf.",
+          "conditions": {},
+          "effects": {
+            "items": [
+              {
+                "item": "CLCK05",
+                "count": 1
+              }
+            ]
+          },
+          "terminal": true
+        }
+      ],
+      "sources": [
+        "https://www.forgottenwars.com/bg1/ar0112.htm"
+      ],
+      "sourceStatus": "classic-guide-supported; original-data parity pending",
+      "acceptanceGaps": [
+        "The original bluff identifying Vail as a blond elf is an explicit alternative choice."
+      ]
+    },
+    {
+      "id": "ramazithNymph",
+      "title": "Ramazith's request",
+      "phase": 5,
+      "givers": [
+        {
+          "label": "Ramazith",
+          "area": "AR0200"
+        }
+      ],
+      "acceptConditions": {},
+      "acceptEffects": {},
+      "outcomes": [
+        {
+          "id": "complete",
+          "text": "Complete: Ramazith's request",
+          "conditions": {
+            "items": [
+              {
+                "anyOf": [
+                  "MISC68"
+                ],
+                "count": 1
+              }
+            ]
+          },
+          "effects": {
+            "takeItems": [
+              {
+                "anyOf": [
+                  "MISC68"
+                ],
+                "count": 1
+              }
+            ],
+            "hostile": [
+              {
+                "label": "Ramazith"
+              }
+            ],
+            "flags": {
+              "ramazithBetrayal": true
+            }
+          },
+          "terminal": true
+        }
+      ],
+      "sources": [
+        "https://www.forgottenwars.com/bg1/ar0200.htm"
+      ],
+      "sourceStatus": "classic-guide-supported; original-data parity pending",
+      "acceptanceGaps": [
+        "The classic intendedbracers reward is blocked by a scripting error; it is not silently awarded."
+      ]
+    },
+    {
+      "id": "ragefastNymph",
+      "title": "Release Abela",
+      "phase": 5,
+      "givers": [
+        {
+          "creature": "RAGEFA",
+          "area": "AR0126"
+        },
+        {
+          "creature": "ABELA",
+          "area": "AR0126"
+        }
+      ],
+      "acceptConditions": {},
+      "acceptEffects": {},
+      "outcomes": [
+        {
+          "id": "persuade",
+          "text": "Persuade Ragefast to release Abela.",
+          "at": [
+            {
+              "creature": "RAGEFA",
+              "area": "AR0126"
+            }
+          ],
+          "conditions": {},
+          "effects": {
+            "flags": {
+              "ragefastPersuaded": true
+            }
+          },
+          "terminal": false
+        },
+        {
+          "id": "complete",
+          "text": "Set Abela free and accept a lock of her hair.",
+          "at": [
+            {
+              "creature": "ABELA",
+              "area": "AR0126"
+            }
+          ],
+          "conditions": {
+            "any": [
+              {
+                "kills": [
+                  {
+                    "creature": "RAGEFA",
+                    "area": "AR0126"
+                  }
+                ]
+              },
+              {
+                "flags": [
+                  "ragefastPersuaded"
+                ]
+              }
+            ]
+          },
+          "effects": {
+            "flags": {
+              "abelaReleased": true
+            },
+            "xp": 2000,
+            "items": [
+              {
+                "item": "MISC51"
+              }
+            ],
+            "departActors": [
+              {
+                "creature": "ABELA",
+                "area": "AR0126"
+              }
+            ]
+          },
+          "terminal": true
+        },
+        {
+          "id": "abduct",
+          "text": "Take Abela to Ramazith.",
+          "at": [
+            {
+              "creature": "ABELA",
+              "area": "AR0126"
+            }
+          ],
+          "conditions": {
+            "all": [
+              {
+                "any": [
+                  {
+                    "kills": [
+                      {
+                        "creature": "RAGEFA",
+                        "area": "AR0126"
+                      }
+                    ]
+                  },
+                  {
+                    "flags": [
+                      "ragefastPersuaded"
+                    ]
+                  }
+                ]
+              },
+              {
+                "questStages": {
+                  "ramazithNymph": "active"
+                }
+              }
+            ]
+          },
+          "effects": {
+            "items": [
+              {
+                "item": "MISC68"
+              }
+            ],
+            "flags": {
+              "abelaAbducted": true
+            },
+            "departActors": [
+              {
+                "creature": "ABELA",
+                "area": "AR0126"
+              }
+            ]
+          },
+          "terminal": true
+        }
+      ],
+      "sources": [
+        "https://www.forgottenwars.com/bg1/ar0600.htm"
+      ],
+      "sourceStatus": "classic-guide-supported; original-data parity pending",
+      "acceptanceGaps": [
+        "Original detailed persuasion responses and dialogue-state checks still require original-data confirmation; the living Abela performs the post-Ragefast choice."
+      ]
+    },
+    {
+      "id": "nymphCloak",
+      "title": "A cloak from nymph hair",
+      "phase": 5,
+      "givers": [
+        {
+          "label": "Halbazzer Drin",
+          "area": "AR0703"
+        }
+      ],
+      "acceptConditions": {},
+      "acceptEffects": {},
+      "outcomes": [
+        {
+          "id": "complete",
+          "text": "Complete: A cloak from nymph hair",
+          "conditions": {
+            "items": [
+              {
+                "anyOf": [
+                  "MISC51"
+                ],
+                "count": 1
+              }
+            ]
+          },
+          "effects": {
+            "gold": -100,
+            "takeItems": [
+              {
+                "anyOf": [
+                  "MISC51"
+                ],
+                "count": 1
+              }
+            ],
+            "items": [
+              {
+                "item": "CLCK07",
+                "count": 1
+              }
+            ]
+          },
+          "terminal": true
+        },
+        {
+          "id": "sellHair",
+          "text": "Sell the hair for500 gold.",
+          "conditions": {
+            "items": [
+              {
+                "anyOf": [
+                  "MISC51"
+                ],
+                "count": 1
+              }
+            ]
+          },
+          "effects": {
+            "gold": 500,
+            "takeItems": [
+              {
+                "anyOf": [
+                  "MISC51"
+                ],
+                "count": 1
+              }
+            ]
+          },
+          "terminal": true
+        }
+      ],
+      "sources": [
+        "https://www.forgottenwars.com/bg1/ar0800.htm"
+      ],
+      "sourceStatus": "classic-guide-supported; original-data parity pending",
+      "acceptanceGaps": []
+    },
+    {
+      "id": "arkionCorpse",
+      "title": "Arkion's corpse",
+      "phase": 5,
+      "givers": [
+        {
+          "label": "Arkion",
+          "area": "AR0805"
+        }
+      ],
+      "acceptConditions": {},
+      "acceptEffects": {},
+      "outcomes": [
+        {
+          "id": "complete",
+          "text": "Complete: Arkion's corpse",
+          "conditions": {
+            "items": [
+              {
+                "anyOf": [
+                  "MISC80"
+                ],
+                "count": 1
+              }
+            ]
+          },
+          "effects": {
+            "xp": 1800,
+            "gold": 250,
+            "takeItems": [
+              {
+                "anyOf": [
+                  "MISC80"
+                ],
+                "count": 1
+              }
+            ]
+          },
+          "terminal": true
+        }
+      ],
+      "sources": [
+        "https://www.forgottenwars.com/bg1/ar0800.htm"
+      ],
+      "sourceStatus": "classic-guide-supported; original-data parity pending",
+      "acceptanceGaps": []
+    },
+    {
+      "id": "nemphreAmulet",
+      "title": "Nemphre's rival",
+      "phase": 5,
+      "givers": [
+        {
+          "label": "Nemphre",
+          "area": "AR0813"
+        }
+      ],
+      "acceptConditions": {},
+      "acceptEffects": {},
+      "outcomes": [
+        {
+          "id": "complete",
+          "text": "Complete: Nemphre's rival",
+          "conditions": {
+            "items": [
+              {
+                "anyOf": [
+                  "AMUL13",
+                  "OHAMUL13"
+                ],
+                "count": 1
+              }
+            ]
+          },
+          "effects": {
+            "xp": 1000,
+            "takeItems": [
+              {
+                "anyOf": [
+                  "AMUL13",
+                  "OHAMUL13"
+                ],
+                "count": 1
+              }
+            ],
+            "items": [
+              {
+                "item": "SCRL1Q",
+                "count": 1
+              }
+            ]
+          },
+          "terminal": true
+        }
+      ],
+      "sources": [
+        "https://www.forgottenwars.com/bg1/ar1300.htm"
+      ],
+      "sourceStatus": "classic-guide-supported; original-data parity pending",
+      "acceptanceGaps": [
+        "Original male-speaker prerequisite maps to explicit saved background because native heroes have no sexstat."
+      ]
+    },
+    {
+      "id": "ordulinianMages",
+      "title": "Ordulinian's warning",
+      "phase": 5,
+      "givers": [
+        {
+          "label": "Ordulinian",
+          "area": "AR0703"
+        }
+      ],
+      "acceptConditions": {},
+      "acceptEffects": {},
+      "outcomes": [
+        {
+          "id": "complete",
+          "text": "Complete: Ordulinian's warning",
+          "conditions": {
+            "items": [
+              {
+                "anyOf": [
+                  "AMUL13",
+                  "OHAMUL13"
+                ],
+                "count": 1
+              },
+              {
+                "anyOf": [
+                  "RING12",
+                  "OHRING12"
+                ],
+                "count": 1
+              }
+            ]
+          },
+          "effects": {
+            "xp": 3500,
+            "takeItems": [
+              {
+                "anyOf": [
+                  "AMUL13",
+                  "OHAMUL13"
+                ],
+                "count": 1
+              },
+              {
+                "anyOf": [
+                  "RING12",
+                  "OHRING12"
+                ],
+                "count": 1
+              }
+            ],
+            "items": [
+              {
+                "item": "CLCK06",
+                "count": 1
+              }
+            ]
+          },
+          "terminal": true
+        }
+      ],
+      "sources": [
+        "https://www.forgottenwars.com/bg1/ar0800.htm"
+      ],
+      "sourceStatus": "classic-guide-supported; original-data parity pending",
+      "acceptanceGaps": []
+    },
+    {
+      "id": "brevlikTelescope",
+      "title": "Brevlik's telescope",
+      "phase": 5,
+      "givers": [
+        {
+          "label": "Brevlik",
+          "area": "AR0705"
+        }
+      ],
+      "acceptConditions": {},
+      "acceptEffects": {},
+      "outcomes": [
+        {
+          "id": "complete",
+          "text": "Complete: Brevlik's telescope",
+          "conditions": {
+            "items": [
+              {
+                "anyOf": [
+                  "MISC64"
+                ],
+                "count": 1
+              }
+            ],
+            "noGuardKills": true
+          },
+          "effects": {
+            "xp": 5500,
+            "gold": 500,
+            "takeItems": [
+              {
+                "anyOf": [
+                  "MISC64"
+                ],
+                "count": 1
+              }
+            ],
+            "items": [
+              {
+                "item": "WAND07",
+                "count": 1
+              }
+            ]
+          },
+          "terminal": true
+        },
+        {
+          "id": "threaten",
+          "text": "Demand payment despite the slain guards.",
+          "conditions": {
+            "items": [
+              {
+                "anyOf": [
+                  "MISC64"
+                ],
+                "count": 1
+              }
+            ],
+            "guardKills": true
+          },
+          "effects": {
+            "gold": 500,
+            "takeItems": [
+              {
+                "anyOf": [
+                  "MISC64"
+                ],
+                "count": 1
+              }
+            ],
+            "items": [
+              {
+                "item": "WAND07",
+                "count": 1
+              }
+            ]
+          },
+          "terminal": true
+        }
+      ],
+      "sources": [
+        "https://www.forgottenwars.com/bg1/ar0800.htm"
+      ],
+      "sourceStatus": "classic-guide-supported; original-data parity pending",
+      "acceptanceGaps": [
+        "Guardkilling refusal/threat branch is authored separately; original dialogue exact reward disputed pending audit."
+      ]
+    },
+    {
+      "id": "areanaBlackmail",
+      "title": "Areana and Cyrdemac",
+      "phase": 5,
+      "givers": [
+        {
+          "label": "Areana",
+          "area": "AR0121"
+        }
+      ],
+      "acceptConditions": {},
+      "acceptEffects": {},
+      "outcomes": [
+        {
+          "id": "complete",
+          "text": "Complete: Areana and Cyrdemac",
+          "conditions": {
+            "kills": [
+              {
+                "label": "Cyrdemac",
+                "area": "AR0706"
+              }
+            ]
+          },
+          "effects": {
+            "gold": 500
+          },
+          "terminal": true
+        }
+      ],
+      "sources": [
+        "https://www.forgottenwars.com/bg1/ar0800.htm"
+      ],
+      "sourceStatus": "classic-guide-supported; original-data parity pending",
+      "acceptanceGaps": [
+        "Repeatedblackmail payments/timer and peaceful Cyrdemac alternatives need originaldialogue audit; no fabricated repeat reward."
+      ]
+    },
+    {
+      "id": "alatosTheft",
+      "title": "Alatos and Shandalar's daughters",
+      "phase": 5,
+      "givers": [
+        {
+          "label": "Alatos \"Ravenscar\" Thuibuld",
+          "area": "AR0153"
+        }
+      ],
+      "acceptConditions": {
+        "flags": [
+          "guildPassword"
+        ]
+      },
+      "acceptEffects": {},
+      "outcomes": [
+        {
+          "id": "complete",
+          "text": "Complete: Alatos and Shandalar's daughters",
+          "conditions": {
+            "items": [
+              {
+                "anyOf": [
+                  "MISC69"
+                ],
+                "count": 1
+              },
+              {
+                "anyOf": [
+                  "MISC70"
+                ],
+                "count": 1
+              },
+              {
+                "anyOf": [
+                  "MISC71"
+                ],
+                "count": 1
+              }
+            ]
+          },
+          "effects": {
+            "xp": 4000,
+            "takeItems": [
+              {
+                "anyOf": [
+                  "MISC69"
+                ],
+                "count": 1
+              },
+              {
+                "anyOf": [
+                  "MISC70"
+                ],
+                "count": 1
+              },
+              {
+                "anyOf": [
+                  "MISC71"
+                ],
+                "count": 1
+              }
+            ],
+            "hostile": [
+              {
+                "label": "Resar"
+              }
+            ],
+            "flags": {
+              "resarBetrayal": true
+            }
+          },
+          "terminal": true
+        }
+      ],
+      "sources": [
+        "https://www.forgottenwars.com/bg1/ar0800.htm"
+      ],
+      "sourceStatus": "classic-guide-supported; original-data parity pending",
+      "acceptanceGaps": [
+        "Exact3questitem resrefs need reconciliation with base dialogue; source labels and items are independently asserted before acceptance."
+      ],
+      "deadlineHours": 240
+    },
+    {
+      "id": "narlenLookout",
+      "title": "Narlen's lookout test",
+      "phase": 5,
+      "givers": [
+        {
+          "label": "Narlen Darkwalk",
+          "area": "AR0153"
+        }
+      ],
+      "acceptConditions": {
+        "thiefInParty": true
+      },
+      "acceptEffects": {},
+      "outcomes": [
+        {
+          "id": "complete",
+          "text": "Complete: Narlen's lookout test",
+          "conditions": {
+            "flags": [
+              "narlenWarning"
+            ],
+            "not": {
+              "kills": [
+                {
+                  "creature": "WATCHM",
+                  "area": "AR0300"
+                }
+              ]
+            }
+          },
+          "effects": {
+            "gold": 100
+          },
+          "terminal": true
+        },
+        {
+          "id": "officerKilled",
+          "text": "Report the officer's death.",
+          "conditions": {
+            "kills": [
+              {
+                "creature": "WATCHM",
+                "area": "AR0300"
+              }
+            ]
+          },
+          "effects": {
+            "gold": 300,
+            "flags": {
+              "narlenDeparted": true
+            },
+            "departActors": [
+              {
+                "creature": "NARLEN"
+              }
+            ]
+          },
+          "terminal": true
+        }
+      ],
+      "sources": [
+        "https://www.forgottenwars.com/bg1/ar0800.htm"
+      ],
+      "sourceStatus": "classic-guide-supported; original-data parity pending",
+      "acceptanceGaps": [
+        "Begin the actual AR0300 night lookout, then await actual WATCHM before warning. Original silence/betrayal/guard-dialogue branches remain pending.",
+        "NARCUT01 source timer20 maps explicitly to20native mapturns; exact source real-time conversion is not established. Offscreen/InMyArea spawn alternatives remain pending."
+      ]
+    },
+    {
+      "id": "narlenRogueStone",
+      "title": "Narlen's second test",
+      "phase": 5,
+      "givers": [
+        {
+          "label": "Narlen Darkwalk",
+          "area": "AR0153"
+        }
+      ],
+      "acceptConditions": {
+        "questStages": {
+          "narlenLookout": "completed"
+        }
+      },
+      "acceptEffects": {},
+      "outcomes": [
+        {
+          "id": "complete",
+          "text": "Complete: Narlen's second test",
+          "conditions": {
+            "items": [
+              {
+                "anyOf": [
+                  "MISC45"
+                ],
+                "count": 1
+              }
+            ]
+          },
+          "effects": {
+            "takeItems": [
+              {
+                "anyOf": [
+                  "MISC45"
+                ],
+                "count": 1
+              }
+            ],
+            "items": [
+              {
+                "item": "MISC36",
+                "count": 3
+              }
+            ],
+            "flags": {
+              "narlenAlly": true
+            }
+          },
+          "terminal": true
+        }
+      ],
+      "sources": [
+        "https://www.forgottenwars.com/bg1/ar1300.htm"
+      ],
+      "sourceStatus": "classic-guide-supported; original-data parity pending",
+      "acceptanceGaps": []
+    },
+    {
+      "id": "brielbaraBook",
+      "title": "Brielbara and Yago",
+      "phase": 5,
+      "givers": [
+        {
+          "label": "Brielbara",
+          "area": "AR0300"
+        }
+      ],
+      "acceptConditions": {},
+      "acceptEffects": {},
+      "outcomes": [
+        {
+          "id": "complete",
+          "text": "Complete: Brielbara and Yago",
+          "conditions": {
+            "items": [
+              {
+                "anyOf": [
+                  "BOOK70"
+                ],
+                "count": 1
+              }
+            ]
+          },
+          "effects": {
+            "xp": 1000,
+            "gold": 200,
+            "standing": 1,
+            "takeItems": [
+              {
+                "anyOf": [
+                  "BOOK70"
+                ],
+                "count": 1
+              }
+            ]
+          },
+          "terminal": true
+        }
+      ],
+      "sources": [
+        "https://www.forgottenwars.com/bg1/ar0300.htm"
+      ],
+      "sourceStatus": "classic-guide-supported; original-data parity pending",
+      "acceptanceGaps": []
+    },
+    {
+      "id": "ghorakSkull",
+      "title": "Ghorak's curse",
+      "phase": 5,
+      "givers": [
+        {
+          "label": "Agnasia",
+          "area": "AR0132"
+        }
+      ],
+      "acceptConditions": {},
+      "acceptEffects": {},
+      "outcomes": [
+        {
+          "id": "complete",
+          "text": "Complete: Ghorak's curse",
+          "conditions": {
+            "items": [
+              {
+                "anyOf": [
+                  "MISC81"
+                ],
+                "count": 1
+              }
+            ],
+            "talked": [
+              {
+                "label": "Ghorak",
+                "area": "AR1211"
+              }
+            ]
+          },
+          "effects": {
+            "xp": 1000,
+            "standing": 1,
+            "takeItems": [
+              {
+                "anyOf": [
+                  "MISC81"
+                ],
+                "count": 1
+              }
+            ],
+            "flags": {
+              "ghorakCured": true
+            }
+          },
+          "terminal": true
+        }
+      ],
+      "sources": [
+        "https://www.forgottenwars.com/bg1/ar0600.htm"
+      ],
+      "sourceStatus": "classic-guide-supported; original-data parity pending",
+      "acceptanceGaps": []
+    },
+    {
+      "id": "noraleeGauntlets",
+      "title": "Noralee's gauntlets",
+      "phase": 5,
+      "givers": [
+        {
+          "label": "Noralee",
+          "area": "AR1208"
+        }
+      ],
+      "acceptConditions": {
+        "minSocial": 7
+      },
+      "acceptEffects": {},
+      "outcomes": [
+        {
+          "id": "favorable",
+          "text": "Return the gauntlets with a favorable reaction.",
+          "conditions": {
+            "items": [
+              {
+                "anyOf": [
+                  "BRAC09"
+                ],
+                "count": 1
+              }
+            ],
+            "minSocial": 12
+          },
+          "effects": {
+            "xp": 1000,
+            "standing": 1,
+            "takeItems": [
+              {
+                "anyOf": [
+                  "BRAC09"
+                ],
+                "count": 1
+              }
+            ],
+            "items": [
+              {
+                "item": "POTN30",
+                "count": 2
+              }
+            ]
+          },
+          "terminal": true
+        },
+        {
+          "id": "complete",
+          "text": "Complete: Noralee's gauntlets",
+          "conditions": {
+            "items": [
+              {
+                "anyOf": [
+                  "BRAC09"
+                ],
+                "count": 1
+              }
+            ],
+            "maxSocial": 11
+          },
+          "effects": {
+            "xp": 1000,
+            "gold": 45,
+            "standing": 1,
+            "takeItems": [
+              {
+                "anyOf": [
+                  "BRAC09"
+                ],
+                "count": 1
+              }
+            ]
+          },
+          "terminal": true
+        }
+      ],
+      "sources": [
+        "https://www.forgottenwars.com/bg1/ar1200.htm"
+      ],
+      "sourceStatus": "classic-guide-supported; original-data parity pending",
+      "acceptanceGaps": []
+    },
+    {
+      "id": "nadarinBasilisk",
+      "title": "Nadarin's warehouse",
+      "phase": 5,
+      "givers": [
+        {
+          "label": "Nadarin",
+          "area": "AR1303"
+        }
+      ],
+      "acceptConditions": {
+        "minSocial": 7
+      },
+      "acceptEffects": {},
+      "outcomes": [
+        {
+          "id": "favorable",
+          "text": "Claim Nadarin's favorable reward.",
+          "conditions": {
+            "kills": [
+              {
+                "label": "Greater Basilisk",
+                "area": "AR1207"
+              }
+            ],
+            "minSocial": 12
+          },
+          "effects": {
+            "xp": 1300,
+            "gold": 1800
+          },
+          "terminal": true
+        },
+        {
+          "id": "complete",
+          "text": "Complete: Nadarin's warehouse",
+          "conditions": {
+            "kills": [
+              {
+                "label": "Greater Basilisk",
+                "area": "AR1207"
+              }
+            ],
+            "maxSocial": 11
+          },
+          "effects": {
+            "xp": 1300,
+            "gold": 500,
+            "items": [
+              {
+                "item": "BOOT02",
+                "count": 1
+              }
+            ]
+          },
+          "terminal": true
+        }
+      ],
+      "sources": [
+        "https://www.forgottenwars.com/bg1/ar1300.htm"
+      ],
+      "sourceStatus": "classic-guide-supported; original-data parity pending",
+      "acceptanceGaps": []
+    },
+    {
+      "id": "gaxirFortune",
+      "title": "G'axir's fortune",
+      "phase": 5,
+      "givers": [
+        {
+          "label": "G'axir the Seer",
+          "area": "AR0105"
+        }
+      ],
+      "acceptConditions": {
+        "minLevel": 4
+      },
+      "acceptEffects": {},
+      "outcomes": [
+        {
+          "id": "complete",
+          "text": "Complete: G'axir's fortune",
+          "conditions": {
+            "items": [
+              {
+                "anyOf": [
+                  "MISC37"
+                ],
+                "count": 1
+              }
+            ]
+          },
+          "effects": {
+            "xp": 1000,
+            "takeItems": [
+              {
+                "anyOf": [
+                  "MISC37"
+                ],
+                "count": 1
+              }
+            ]
+          },
+          "terminal": true
+        }
+      ],
+      "sources": [
+        "https://www.forgottenwars.com/bg1/ar1300.htm"
+      ],
+      "sourceStatus": "classic-guide-supported; original-data parity pending",
+      "acceptanceGaps": []
+    },
+    {
+      "id": "nadineEuric",
+      "title": "Nadine's son",
+      "phase": 5,
+      "givers": [
+        {
+          "label": "Nadine",
+          "area": "AR0715"
+        }
+      ],
+      "acceptConditions": {
+        "minSocial": 7
+      },
+      "acceptEffects": {
+        "items": [
+          {
+            "item": "AMUL14",
+            "count": 1
+          }
+        ]
+      },
+      "outcomes": [
+        {
+          "id": "favorable",
+          "text": "Reassure Nadine with a favorable reaction.",
+          "conditions": {
+            "flags": [
+              "euricAmuletGiven"
+            ],
+            "minSocial": 12
+          },
+          "effects": {
+            "xp": 400,
+            "standing": 1,
+            "items": [
+              {
+                "item": "AMUL01",
+                "count": 1
+              }
+            ]
+          },
+          "terminal": true
+        },
+        {
+          "id": "complete",
+          "text": "Complete: Nadine's son",
+          "conditions": {
+            "flags": [
+              "euricAmuletGiven"
+            ],
+            "maxSocial": 11
+          },
+          "effects": {
+            "xp": 300,
+            "standing": 1,
+            "items": [
+              {
+                "item": "AMUL01",
+                "count": 1
+              }
+            ]
+          },
+          "terminal": true
+        },
+        {
+          "id": "deliver",
+          "text": "Give Euric his mother's amulet.",
+          "at": [
+            {
+              "label": "Euric",
+              "area": "AR1306"
+            }
+          ],
+          "conditions": {
+            "items": [
+              {
+                "anyOf": [
+                  "AMUL14"
+                ],
+                "count": 1
+              }
+            ]
+          },
+          "effects": {
+            "xp": 1100,
+            "takeItems": [
+              {
+                "anyOf": [
+                  "AMUL14"
+                ],
+                "count": 1
+              }
+            ],
+            "flags": {
+              "euricAmuletGiven": true
+            }
+          },
+          "terminal": false
+        }
+      ],
+      "sources": [
+        "https://www.forgottenwars.com/bg1/ar0700.htm"
+      ],
+      "sourceStatus": "classic-guide-supported; original-data parity pending",
+      "acceptanceGaps": []
+    },
+    {
+      "id": "fergusRing",
+      "title": "Fergus's ring",
+      "phase": 5,
+      "givers": [
+        {
+          "label": "Fergus",
+          "area": "AR0607"
+        }
+      ],
+      "acceptConditions": {
+        "minSocial": 7
+      },
+      "acceptEffects": {},
+      "outcomes": [
+        {
+          "id": "complete",
+          "text": "Complete: Fergus's ring",
+          "conditions": {
+            "items": [
+              {
+                "anyOf": [
+                  "RING16",
+                  "OHRING16"
+                ],
+                "count": 1
+              }
+            ]
+          },
+          "effects": {
+            "xp": 800,
+            "standing": 1,
+            "takeItems": [
+              {
+                "anyOf": [
+                  "RING16",
+                  "OHRING16"
+                ],
+                "count": 1
+              }
+            ]
+          },
+          "terminal": true
+        }
+      ],
+      "sources": [
+        "https://www.forgottenwars.com/bg1/ar1100.htm"
+      ],
+      "sourceStatus": "classic-guide-supported; original-data parity pending",
+      "acceptanceGaps": []
+    },
+    {
+      "id": "fentenShells",
+      "title": "Fenten's ankheg trade",
+      "phase": 5,
+      "givers": [
+        {
+          "label": "Fenten",
+          "area": "AR0619"
+        }
+      ],
+      "acceptConditions": {
+        "minSocial": 7
+      },
+      "acceptEffects": {},
+      "outcomes": [
+        {
+          "id": "complete",
+          "text": "Complete: Fenten's ankheg trade",
+          "conditions": {
+            "items": [
+              {
+                "anyOf": [
+                  "MISC12"
+                ],
+                "count": 1
+              }
+            ]
+          },
+          "effects": {
+            "gold": 250,
+            "takeItems": [
+              {
+                "anyOf": [
+                  "MISC12"
+                ],
+                "count": 1
+              }
+            ]
+          },
+          "terminal": true
+        }
+      ],
+      "sources": [
+        "https://www.forgottenwars.com/bg1/ar0600.htm"
+      ],
+      "sourceStatus": "classic-guide-supported; original-data parity pending",
+      "acceptanceGaps": [],
+      "repeatable": true
+    },
+    {
+      "id": "cordyrSirines",
+      "title": "Cordyr and Sil",
+      "phase": 5,
+      "givers": [
+        {
+          "label": "Cordyr",
+          "area": "AR1213"
+        }
+      ],
+      "acceptConditions": {
+        "maxReputation": 14
+      },
+      "acceptEffects": {},
+      "outcomes": [
+        {
+          "id": "complete",
+          "text": "Complete: Cordyr and Sil",
+          "conditions": {
+            "flags": [
+              "excursionSilResolved"
+            ],
+            "maxReputation": 7
+          },
+          "effects": {
+            "xp": 1000,
+            "standing": 1,
+            "items": [
+              {
+                "item": "SCRL1F",
+                "count": 1
+              }
+            ]
+          },
+          "terminal": true
+        },
+        {
+          "id": "ordinary",
+          "text": "Report the sirines with ordinary standing.",
+          "conditions": {
+            "flags": [
+              "excursionSilResolved"
+            ],
+            "minReputation": 8
+          },
+          "effects": {
+            "items": [
+              {
+                "item": "SCRL1H",
+                "count": 1
+              }
+            ]
+          },
+          "terminal": true
+        }
+      ],
+      "sources": [
+        "https://www.forgottenwars.com/bg1/ar1200.htm"
+      ],
+      "sourceStatus": "classic-guide-supported; original-data parity pending",
+      "acceptanceGaps": [
+        "The outside lighthouse encounter must resolve by its explicit excursion choice; no auto-success."
+      ]
+    },
+    {
+      "id": "varciCasson",
+      "title": "Tremain and Casson",
+      "phase": 5,
+      "givers": [
+        {
+          "label": "Tremain Belde'ar",
+          "area": "AR0617"
+        }
+      ],
+      "acceptConditions": {
+        "talked": [
+          {
+            "label": "Varci Roaringhorn"
+          }
+        ]
+      },
+      "acceptEffects": {},
+      "outcomes": [
+        {
+          "id": "complete",
+          "text": "Complete: Tremain and Casson",
+          "conditions": {
+            "items": [
+              {
+                "anyOf": [
+                  "MISC54"
+                ],
+                "count": 1
+              }
+            ]
+          },
+          "effects": {
+            "takeItems": [
+              {
+                "anyOf": [
+                  "MISC54"
+                ],
+                "count": 1
+              }
+            ],
+            "flags": {
+              "cassonRestored": true
+            }
+          },
+          "terminal": false
+        },
+        {
+          "id": "reward",
+          "text": "Receive Varci's thanks.",
+          "at": [
+            {
+              "label": "Varci Roaringhorn"
+            }
+          ],
+          "conditions": {
+            "flags": [
+              "cassonRestored"
+            ]
+          },
+          "effects": {
+            "xp": 5000,
+            "gold": 2000,
+            "items": [
+              {
+                "item": "SHLD06",
+                "count": 1
+              }
+            ]
+          },
+          "terminal": true
+        }
+      ],
+      "sources": [
+        "https://www.forgottenwars.com/bg1/ar0600.htm"
+      ],
+      "sourceStatus": "classic-guide-supported; original-data parity pending",
+      "acceptanceGaps": []
+    },
+    {
+      "id": "larzeAssassin",
+      "title": "Larze's mistaken identity",
+      "phase": 5,
+      "givers": [
+        {
+          "label": "Larze",
+          "area": "AR0114"
+        }
+      ],
+      "acceptConditions": {},
+      "acceptEffects": {},
+      "outcomes": [
+        {
+          "id": "complete",
+          "text": "Explain that Larze has mistaken your identity.",
+          "conditions": {},
+          "effects": {
+            "xp": 900,
+            "flags": {
+              "larzePeaceful": true
+            }
+          },
+          "terminal": true
+        }
+      ],
+      "sources": [
+        "https://www.forgottenwars.com/bg1/ar0300.htm"
+      ],
+      "sourceStatus": "classic-guide-supported; original-data parity pending",
+      "acceptanceGaps": []
+    },
+    {
+      "id": "taxekBurglary",
+      "title": "Taxek and Michael",
+      "phase": 5,
+      "givers": [
+        {
+          "label": "Taxek",
+          "area": "AR1316"
+        }
+      ],
+      "acceptConditions": {},
+      "acceptEffects": {},
+      "outcomes": [
+        {
+          "id": "complete",
+          "text": "Demand the burglars' money.",
+          "conditions": {},
+          "effects": {
+            "gold": 75,
+            "flags": {
+              "taxekExtorted": true
+            }
+          },
+          "terminal": true
+        },
+        {
+          "id": "release",
+          "text": "Let the burglars leave.",
+          "conditions": {},
+          "effects": {
+            "flags": {
+              "taxekReleased": true
+            }
+          },
+          "terminal": true
+        }
+      ],
+      "sources": [
+        "https://www.forgottenwars.com/bg1/ar1300.htm"
+      ],
+      "sourceStatus": "classic-guide-supported; original-data parity pending",
+      "acceptanceGaps": []
+    },
+    {
+      "id": "forthelBallad",
+      "title": "Forthel's ballad",
+      "phase": 5,
+      "givers": [
+        {
+          "label": "Forthel August",
+          "area": "AR0131"
+        }
+      ],
+      "acceptConditions": {},
+      "acceptEffects": {},
+      "outcomes": [
+        {
+          "id": "complete",
+          "text": "Offer a tale of beasts or gold.",
+          "conditions": {},
+          "effects": {
+            "gold": 4
+          },
+          "terminal": true
+        }
+      ],
+      "sources": [
+        "https://www.forgottenwars.com/bg1/ar0600.htm"
+      ],
+      "sourceStatus": "classic-guide-supported; original-data parity pending",
+      "acceptanceGaps": []
+    },
+    {
+      "id": "niklosGuild",
+      "title": "Niklos's invitation",
+      "phase": 5,
+      "givers": [
+        {
+          "label": "Niklos",
+          "area": "AR0800"
+        }
+      ],
+      "acceptConditions": {},
+      "acceptEffects": {},
+      "outcomes": [
+        {
+          "id": "complete",
+          "text": "Complete: Niklos's invitation",
+          "conditions": {},
+          "effects": {
+            "gold": 50,
+            "flags": {
+              "guildPassword": true
+            }
+          },
+          "terminal": true
+        }
+      ],
+      "sources": [
+        "https://www.forgottenwars.com/bg1/ar0800.htm"
+      ],
+      "sourceStatus": "classic-guide-supported; original-data parity pending",
+      "acceptanceGaps": []
+    },
+    {
+      "id": "scarSevenSuns",
+      "title": "Scar: investigate the Seven Suns",
+      "phase": 5,
+      "givers": [
+        {
+          "label": "Scar",
+          "area": "AR0607"
+        }
+      ],
+      "acceptConditions": {},
+      "acceptEffects": {},
+      "outcomes": [
+        {
+          "id": "complete",
+          "text": "Complete: Scar: investigate the Seven Suns",
+          "conditions": {
+            "talked": [
+              {
+                "label": "Merchant",
+                "area": "AR0601"
+              }
+            ]
+          },
+          "effects": {
+            "xp": 5000,
+            "gold": 2000,
+            "flags": {
+              "sevenSunsInvestigated": true
+            }
+          },
+          "terminal": true
+        }
+      ],
+      "sources": [
+        "https://www.forgottenwars.com/bg1/ar1100.htm"
+      ],
+      "sourceStatus": "classic-guide-supported; original-data parity pending",
+      "acceptanceGaps": [
+        "Classic guide/GameBanshee disagree on staged XP/gold totals; implemented guide schedule remains acceptance-blocked pending original script audit."
+      ]
+    },
+    {
+      "id": "scarDoppelgangers",
+      "title": "Scar: free the Seven Suns",
+      "phase": 5,
+      "givers": [
+        {
+          "label": "Scar",
+          "area": "AR0607"
+        }
+      ],
+      "acceptConditions": {
+        "questStages": {
+          "scarSevenSuns": "completed"
+        }
+      },
+      "acceptEffects": {},
+      "outcomes": [
+        {
+          "id": "complete",
+          "text": "Complete: Scar: free the Seven Suns",
+          "conditions": {
+            "clearedAreas": [
+              "AR0601",
+              "AR0602",
+              "AR0603"
+            ],
+            "alive": [
+              {
+                "label": "Jhasso",
+                "area": "AR0603"
+              }
+            ],
+            "talked": [
+              {
+                "label": "Jhasso",
+                "area": "AR0603"
+              }
+            ]
+          },
+          "effects": {
+            "xp": 2000,
+            "gold": 4000,
+            "standing": 2
+          },
+          "terminal": true
+        },
+        {
+          "id": "jhassoDead",
+          "text": "Report the battle and Jhasso's death.",
+          "conditions": {
+            "clearedAreas": [
+              "AR0601",
+              "AR0602",
+              "AR0603"
+            ],
+            "kills": [
+              {
+                "label": "Jhasso",
+                "area": "AR0603"
+              }
+            ]
+          },
+          "effects": {
+            "gold": 2000
+          },
+          "terminal": true
+        }
+      ],
+      "sources": [
+        "https://www.forgottenwars.com/bg1/ar1100.htm"
+      ],
+      "sourceStatus": "classic-guide-supported; original-data parity pending",
+      "acceptanceGaps": []
+    },
+    {
+      "id": "scarSewers",
+      "title": "Scar: missing citizens",
+      "phase": 5,
+      "givers": [
+        {
+          "label": "Scar",
+          "area": "AR0607"
+        }
+      ],
+      "acceptConditions": {
+        "questStages": {
+          "scarDoppelgangers": "completed"
+        }
+      },
+      "acceptEffects": {
+        "gold": 300
+      },
+      "outcomes": [
+        {
+          "id": "complete",
+          "text": "Complete: Scar: missing citizens",
+          "conditions": {
+            "kills": [
+              {
+                "label": "Ogre Mage",
+                "area": "AR0226"
+              }
+            ],
+            "items": [
+              {
+                "anyOf": [
+                  "RING19",
+                  "RING19MA"
+                ],
+                "count": 1
+              }
+            ]
+          },
+          "effects": {
+            "xp": 3000,
+            "gold": 3000,
+            "takeItems": [
+              {
+                "anyOf": [
+                  "RING19",
+                  "RING19MA"
+                ],
+                "count": 1
+              }
+            ]
+          },
+          "terminal": true
+        },
+        {
+          "id": "withoutRing",
+          "text": "Report the ogre mage's motive without his ring.",
+          "conditions": {
+            "kills": [
+              {
+                "label": "Ogre Mage",
+                "area": "AR0226"
+              }
+            ]
+          },
+          "effects": {
+            "xp": 2000,
+            "gold": 1000
+          },
+          "terminal": true
+        }
+      ],
+      "sources": [
+        "https://www.forgottenwars.com/bg1/ar1100.htm"
+      ],
+      "sourceStatus": "classic-guide-supported; original-data parity pending",
+      "acceptanceGaps": [],
+      "deadlineHours": 240
+    },
+    {
+      "id": "eltanIronThrone",
+      "title": "Eltan: investigate the Iron Throne",
+      "phase": 5,
+      "givers": [
+        {
+          "label": "Duke Eltan",
+          "area": "AR0608"
+        }
+      ],
+      "acceptConditions": {
+        "questStages": {
+          "scarSewers": "completed"
+        }
+      },
+      "acceptEffects": {},
+      "outcomes": [
+        {
+          "id": "complete",
+          "text": "Complete: Eltan: investigate the Iron Throne",
+          "conditions": {
+            "items": [
+              {
+                "anyOf": [
+                  "SCRL2O"
+                ],
+                "count": 1
+              },
+              {
+                "anyOf": [
+                  "SCRL2P"
+                ],
+                "count": 1
+              }
+            ]
+          },
+          "effects": {
+            "gold": 2000,
+            "flags": {
+              "cityInterludeReady": true
+            }
+          },
+          "terminal": true
+        }
+      ],
+      "sources": [
+        "https://www.forgottenwars.com/bg1/ar1100.htm"
+      ],
+      "sourceStatus": "classic-guide-supported; original-data parity pending",
+      "acceptanceGaps": [
+        "Exact revealing letter IDs require original-source confirmation before parity approval."
+      ]
+    },
+    {
+      "id": "cythandriaDiary",
+      "title": "Sarevok's conspiracy",
+      "phase": 7,
+      "givers": [
+        {
+          "creature": "TAMOKO",
+          "area": "AR1100"
+        },
+        {
+          "creature": "TAMOKO",
+          "area": "AR0123"
+        }
+      ],
+      "acceptConditions": {
+        "flags": [
+          "tamokoDiscussed"
+        ]
+      },
+      "acceptEffects": {},
+      "outcomes": [
+        {
+          "id": "complete",
+          "text": "Complete: Sarevok's conspiracy",
+          "conditions": {
+            "kills": [
+              {
+                "label": "Cythandria",
+                "area": "AR0615"
+              }
+            ],
+            "items": [
+              {
+                "anyOf": [
+                  "SCRL3F"
+                ],
+                "count": 1
+              }
+            ]
+          },
+          "effects": {
+            "flags": {
+              "sarevokDiarySecured": true
+            }
+          },
+          "terminal": true
+        }
+      ],
+      "sources": [
+        "https://www.forgottenwars.com/bg1/ar1200b.htm"
+      ],
+      "sourceStatus": "classic-guide-supported; original-data parity pending",
+      "acceptanceGaps": [
+        "Diary item identity independently checked against item label; original dialogue/evidence alternatives remain pending."
+      ]
+    },
+    {
+      "id": "rescueEltan",
+      "title": "Rescue Duke Eltan",
+      "phase": 7,
+      "givers": [
+        {
+          "label": "Harbor Master",
+          "area": "AR0702"
+        }
+      ],
+      "acceptConditions": {},
+      "acceptEffects": {},
+      "outcomes": [
+        {
+          "id": "carry",
+          "text": "Carry Eltan to safety.",
+          "at": [
+            {
+              "label": "Duke Eltan",
+              "area": "AR0608"
+            }
+          ],
+          "conditions": {
+            "kills": [
+              {
+                "label": "Rashad",
+                "area": "AR0608"
+              }
+            ]
+          },
+          "effects": {
+            "items": [
+              {
+                "item": "MISC55",
+                "count": 1
+              }
+            ],
+            "flags": {
+              "eltanCarried": true
+            }
+          },
+          "terminal": false
+        },
+        {
+          "id": "complete",
+          "text": "Complete: Rescue Duke Eltan",
+          "conditions": {
+            "items": [
+              {
+                "anyOf": [
+                  "MISC55"
+                ],
+                "count": 1
+              }
+            ]
+          },
+          "effects": {
+            "xp": 2500,
+            "takeItems": [
+              {
+                "anyOf": [
+                  "MISC55"
+                ],
+                "count": 1
+              }
+            ],
+            "flags": {
+              "eltanSafe": true
+            }
+          },
+          "terminal": true
+        }
+      ],
+      "sources": [
+        "https://www.forgottenwars.com/bg1/ar1200b.htm"
+      ],
+      "sourceStatus": "classic-guide-supported; original-data parity pending",
+      "acceptanceGaps": [
+        "Original alternate body access and full Rashad transformation dialogue remain pending."
+      ]
+    },
+    {
+      "id": "ducalAssassins",
+      "title": "Slythe and Krystin",
+      "phase": 7,
+      "givers": [
+        {
+          "label": "Husam"
+        }
+      ],
+      "acceptConditions": {},
+      "acceptEffects": {},
+      "outcomes": [
+        {
+          "id": "complete",
+          "text": "Complete: Slythe and Krystin",
+          "conditions": {
+            "kills": [
+              {
+                "label": "Slythe",
+                "area": "AR0112"
+              },
+              {
+                "label": "Krystin",
+                "area": "AR0112"
+              }
+            ],
+            "items": [
+              {
+                "anyOf": [
+                  "MISC78"
+                ],
+                "count": 1
+              }
+            ]
+          },
+          "effects": {
+            "flags": {
+              "assassinsExposed": true
+            }
+          },
+          "terminal": true
+        }
+      ],
+      "sources": [
+        "https://www.forgottenwars.com/bg1/ar0112b.htm"
+      ],
+      "sourceStatus": "classic-guide-supported; original-data parity pending",
+      "acceptanceGaps": []
+    },
+    {
+      "id": "ducalPalace",
+      "title": "Protect the dukes",
+      "phase": 7,
+      "givers": [
+        {
+          "label": "Belt",
+          "area": "AR0108"
+        },
+        {
+          "label": "Liia Jannath",
+          "area": "AR0108"
+        }
+      ],
+      "acceptConditions": {
+        "items": [
+          {
+            "item": "MISC78"
+          }
+        ]
+      },
+      "acceptEffects": {
+        "hostile": [
+          {
+            "creature": "NOBLPA",
+            "area": "AR0108"
+          }
+        ]
+      },
+      "outcomes": [
+        {
+          "id": "complete",
+          "text": "Present the conspiracy evidence to a surviving duke.",
+          "conditions": {
+            "kills": [
+              {
+                "creature": "NOBLPA",
+                "area": "AR0108",
+                "minimum": 6
+              }
+            ],
+            "all": [
+              {
+                "any": [
+                  {
+                    "alive": [
+                      {
+                        "label": "Belt",
+                        "area": "AR0108"
+                      }
+                    ]
+                  },
+                  {
+                    "alive": [
+                      {
+                        "label": "Liia Jannath",
+                        "area": "AR0108"
+                      }
+                    ]
+                  }
+                ]
+              },
+              {
+                "any": [
+                  {
+                    "items": [
+                      {
+                        "item": "SCRL3F"
+                      }
+                    ]
+                  },
+                  {
+                    "flags": [
+                      "assassinsExposed"
+                    ]
+                  },
+                  {
+                    "flags": [
+                      "eltanSafe"
+                    ]
+                  }
+                ]
+              }
+            ]
+          },
+          "effects": {
+            "flags": {
+              "palaceCleared": true,
+              "fugitive": false
+            }
+          },
+          "terminal": true
+        }
+      ],
+      "sources": [
+        "https://www.forgottenwars.com/bg1/ar0200b.htm",
+        "https://www.gamebanshee.com/baldursgate/walkthrough/ducalpalace.php"
+      ],
+      "sourceStatus": "classic-guide-supported; original-data parity pending",
+      "acceptanceGaps": [
+        "Native protection encounter uses actual six hostile actors; source transformation scripting, Sarevok damage threshold and Winski extraction need original-data confirmation."
+      ]
+    },
+    {
+      "id": "thievesMaze",
+      "title": "Pursue Sarevok",
+      "phase": 7,
+      "givers": [
+        {
+          "label": "Denkod",
+          "area": "AR0153"
+        }
+      ],
+      "acceptConditions": {
+        "questStages": {
+          "ducalPalace": "completed"
+        }
+      },
+      "acceptEffects": {},
+      "outcomes": [
+        {
+          "id": "complete",
+          "text": "Complete: Pursue Sarevok",
+          "conditions": {
+            "visitedAreas": [
+              "AR0146",
+              "AR0123"
+            ]
+          },
+          "effects": {
+            "flags": {
+              "sarevokPursued": true
+            }
+          },
+          "terminal": true
+        }
+      ],
+      "sources": [
+        "https://www.forgottenwars.com/bg1/ar0800b.htm"
+      ],
+      "sourceStatus": "classic-guide-supported; original-data parity pending",
+      "acceptanceGaps": []
+    },
+    {
+      "id": "tamokoMercy",
+      "title": "Tamoko's last appeal",
+      "phase": 7,
+      "givers": [
+        {
+          "label": "Tamoko",
+          "area": "AR0123"
+        }
+      ],
+      "acceptConditions": {
+        "flags": [
+          "tamokoMove2",
+          "palaceCleared"
+        ]
+      },
+      "acceptEffects": {},
+      "outcomes": [
+        {
+          "id": "complete",
+          "text": "Complete: Tamoko's last appeal",
+          "conditions": {
+            "minSocial": 12
+          },
+          "effects": {
+            "flags": {
+              "tamokoSpared": true,
+              "tamokoMove4": true
+            },
+            "departActors": [
+              {
+                "creature": "TAMOKO",
+                "area": "AR0123"
+              }
+            ]
+          },
+          "terminal": true
+        },
+        {
+          "id": "fight",
+          "text": "Refuse Tamoko and fight her.",
+          "conditions": {},
+          "effects": {
+            "hostile": [
+              {
+                "creature": "TAMOKO",
+                "area": "AR0123"
+              }
+            ],
+            "flags": {
+              "tamokoFought": true
+            }
+          },
+          "terminal": true
+        }
+      ],
+      "sources": [
+        "https://www.forgottenwars.com/bg1/ar0123.htm"
+      ],
+      "sourceStatus": "classic-guide-supported; original-data parity pending",
+      "acceptanceGaps": [
+        "Original multi-choice favorable persuasion sequence is condensed into one named native reaction-gated appeal. First and second meetings preserve source move transitions; unparsed admission/refusal dialogue branches remain pending. Native combat XP is awarded only by actual combat."
+      ]
+    },
+    {
+      "id": "sarevokFinale",
+      "title": "The Temple of Bhaal",
+      "phase": 7,
+      "givers": [
+        {
+          "label": "cityStart"
+        }
+      ],
+      "acceptConditions": {
+        "questStages": {
+          "ducalPalace": "completed"
+        }
+      },
+      "acceptEffects": {},
+      "outcomes": [
+        {
+          "id": "complete",
+          "text": "Complete: The Temple of Bhaal",
+          "conditions": {
+            "kills": [
+              {
+                "label": "Sarevok",
+                "area": "AR0125"
+              }
+            ],
+            "flags": [
+              "palaceCleared"
+            ]
+          },
+          "effects": {
+            "flags": {
+              "cityCompleted": true
+            },
+            "finale": true
+          },
+          "terminal": true
+        }
+      ],
+      "sources": [
+        "https://www.forgottenwars.com/bg1/ar0125.htm"
+      ],
+      "sourceStatus": "classic-guide-supported; original-data parity pending",
+      "acceptanceGaps": []
+    },
+    {
+      "id": "aldethLeague",
+      "title": "Aldeth and the Merchants' League",
+      "phase": 5,
+      "givers": [
+        {
+          "label": "Aldeth Sashenstar"
+        }
+      ],
+      "acceptConditions": {
+        "history": {
+          "aldeth": "helped"
+        }
+      },
+      "acceptEffects": {},
+      "outcomes": [
+        {
+          "id": "complete",
+          "text": "Complete: Aldeth and the Merchants' League",
+          "conditions": {
+            "clearedAreas": [
+              "AR0127",
+              "AR0128",
+              "AR0129"
+            ]
+          },
+          "effects": {
+            "xp": 5000,
+            "items": [
+              {
+                "item": "SW1H03",
+                "count": 1
+              }
+            ]
+          },
+          "terminal": true
+        }
+      ],
+      "sources": [
+        "https://www.forgottenwars.com/bg1/ar1100.htm"
+      ],
+      "sourceStatus": "classic-guide-supported; original-data parity pending",
+      "acceptanceGaps": [
+        "Exact letter proof/reveal ordering is acceptance-blocked; battle clearance alone is not original parity."
+      ]
+    },
+    {
+      "id": "marekPoison",
+      "title": "Marek and Lothander's poison",
+      "phase": 5,
+      "givers": [
+        {
+          "label": "Lothander"
+        }
+      ],
+      "acceptConditions": {},
+      "acceptEffects": {
+        "flags": {
+          "partyPoisoned": true
+        }
+      },
+      "outcomes": [
+        {
+          "id": "complete",
+          "text": "Complete: Marek and Lothander's poison",
+          "conditions": {
+            "items": [
+              {
+                "anyOf": [
+                  "LOPOTN20"
+                ],
+                "count": 1
+              },
+              {
+                "anyOf": [
+                  "POTN47"
+                ],
+                "count": 1
+              }
+            ]
+          },
+          "effects": {
+            "takeItems": [
+              {
+                "anyOf": [
+                  "LOPOTN20"
+                ],
+                "count": 1
+              },
+              {
+                "anyOf": [
+                  "POTN47"
+                ],
+                "count": 1
+              }
+            ],
+            "flags": {
+              "poisonCured": true
+            },
+            "clearTimer": true
+          },
+          "terminal": true
+        }
+      ],
+      "sources": [
+        "https://www.forgottenwars.com/bg1/ar0700.htm"
+      ],
+      "sourceStatus": "classic-guide-supported; original-data parity pending",
+      "acceptanceGaps": [
+        "Original auto-cure receipt/10000XP requires dialogue audit; native killXP is never added again as a bundled guide total."
+      ],
+      "deadlineHours": 240
+    },
+    {
+      "id": "lothanderGeas",
+      "title": "Remove Lothander's geas",
+      "phase": 5,
+      "givers": [
+        {
+          "label": "Lothander"
+        }
+      ],
+      "acceptConditions": {
+        "questStages": {
+          "marekPoison": "active"
+        },
+        "flags": [
+          "lothanderDivined"
+        ]
+      },
+      "acceptEffects": {},
+      "outcomes": [
+        {
+          "id": "complete",
+          "text": "Complete: Remove Lothander's geas",
+          "conditions": {
+            "items": [
+              {
+                "anyOf": [
+                  "SCRLJALA"
+                ],
+                "count": 1
+              }
+            ]
+          },
+          "effects": {
+            "takeItems": [
+              {
+                "anyOf": [
+                  "SCRLJALA"
+                ],
+                "count": 1
+              }
+            ],
+            "items": [
+              {
+                "item": "LOPOTN20",
+                "count": 1
+              }
+            ],
+            "xp": 1500
+          },
+          "terminal": true
+        }
+      ],
+      "sources": [
+        "https://www.forgottenwars.com/bg1/ar1200.htm"
+      ],
+      "sourceStatus": "classic-guide-supported; original-data parity pending",
+      "acceptanceGaps": []
+    },
+    {
+      "id": "jalanthaBook",
+      "title": "Jalantha's price",
+      "phase": 5,
+      "givers": [
+        {
+          "label": "Jalantha Mistmyr",
+          "area": "AR0609"
+        }
+      ],
+      "acceptConditions": {
+        "questStages": {
+          "marekPoison": "active"
+        }
+      },
+      "acceptEffects": {},
+      "outcomes": [
+        {
+          "id": "complete",
+          "text": "Complete: Jalantha's price",
+          "conditions": {
+            "items": [
+              {
+                "anyOf": [
+                  "BOOK08"
+                ],
+                "count": 1
+              }
+            ]
+          },
+          "effects": {
+            "takeItems": [
+              {
+                "anyOf": [
+                  "BOOK08"
+                ],
+                "count": 1
+              }
+            ],
+            "items": [
+              {
+                "item": "SCRLJALA",
+                "count": 1
+              }
+            ]
+          },
+          "terminal": true
+        }
+      ],
+      "sources": [
+        "https://www.forgottenwars.com/bg1/ar1200.htm"
+      ],
+      "sourceStatus": "classic-guide-supported; original-data parity pending",
+      "acceptanceGaps": [
+        "Bookresref BOOK08 is audited independently; Jalantha's paid conversation gate needs original DLG confirmation."
+      ]
+    },
+    {
+      "id": "chanthalasTome",
+      "title": "Chanthalas and the tome",
+      "phase": 5,
+      "givers": [
+        {
+          "label": "Chanthalas Ulbright",
+          "area": "AR0132"
+        }
+      ],
+      "acceptConditions": {
+        "questStages": {
+          "marekPoison": "active"
+        }
+      },
+      "acceptEffects": {},
+      "outcomes": [
+        {
+          "id": "complete",
+          "text": "Complete: Chanthalas and the tome",
+          "conditions": {},
+          "effects": {
+            "gold": -500,
+            "items": [
+              {
+                "item": "BOOK08",
+                "count": 1
+              }
+            ]
+          },
+          "terminal": true
+        },
+        {
+          "id": "plead",
+          "text": "Explain that the tome is needed to save a life.",
+          "conditions": {
+            "minSocial": 12
+          },
+          "effects": {
+            "items": [
+              {
+                "item": "BOOK08",
+                "count": 1
+              }
+            ]
+          },
+          "terminal": true
+        }
+      ],
+      "sources": [
+        "https://www.forgottenwars.com/bg1/ar0600.htm"
+      ],
+      "sourceStatus": "classic-guide-supported; original-data parity pending",
+      "acceptanceGaps": []
+    },
+    {
+      "id": "lusselynWager",
+      "title": "Lusselyn's wager",
+      "phase": 5,
+      "givers": [
+        {
+          "label": "Lusselyn",
+          "area": "AR0103"
+        }
+      ],
+      "acceptConditions": {
+        "minTalks": 3
+      },
+      "acceptEffects": {
+        "gold": -100
+      },
+      "outcomes": [
+        {
+          "id": "complete",
+          "text": "Collect the wager after killing the jelly.",
+          "conditions": {
+            "kills": [
+              {
+                "creature": "JELLMUL",
+                "area": "AR0104"
+              }
+            ]
+          },
+          "effects": {
+            "gold": 160
+          },
+          "terminal": true
+        }
+      ],
+      "sources": [
+        "https://www.forgottenwars.com/bg1/ar0300.htm"
+      ],
+      "sourceStatus": "classic-guide-supported; original-data parity pending",
+      "acceptanceGaps": [
+        "The classic conversation requires three talks. Native combat XP is separate from the160gold wager return."
+      ]
+    },
+    {
+      "id": "shadePantaloons",
+      "title": "The helpful stranger",
+      "phase": 5,
+      "givers": [
+        {
+          "label": "Mr. Shade",
+          "area": "AR0104"
+        }
+      ],
+      "acceptConditions": {
+        "items": [
+          {
+            "item": "MISC47"
+          }
+        ]
+      },
+      "acceptEffects": {},
+      "outcomes": [
+        {
+          "id": "deceived",
+          "text": "Listen to the stranger while he takes the pantaloons.",
+          "conditions": {
+            "items": [
+              {
+                "item": "MISC47"
+              }
+            ]
+          },
+          "effects": {
+            "takeItems": [
+              {
+                "item": "MISC47"
+              }
+            ],
+            "flags": {
+              "shadeStolePantaloons": true
+            }
+          },
+          "terminal": true
+        },
+        {
+          "id": "refuse",
+          "text": "Keep your belongings and end the conversation.",
+          "conditions": {},
+          "effects": {
+            "flags": {
+              "shadeRefused": true
+            }
+          },
+          "terminal": true
+        }
+      ],
+      "sources": [
+        "https://www.forgottenwars.com/bg1/ar0300.htm"
+      ],
+      "sourceStatus": "classic-guide-supported; original-data parity pending",
+      "acceptanceGaps": [
+        "The original concealed pickpocket trigger is presented as an explicit authored choice; original bystander hostility still needs branch-specific scripting."
+      ]
+    },
+    {
+      "id": "silenceFee",
+      "title": "Silence's entrance fee",
+      "phase": 5,
+      "givers": [
+        {
+          "label": "Silence",
+          "area": "AR0809"
+        }
+      ],
+      "acceptConditions": {},
+      "acceptEffects": {},
+      "outcomes": [
+        {
+          "id": "pay",
+          "text": "Pay5gold to enter the tavern.",
+          "conditions": {
+            "minSocial": 7,
+            "maxSocial": 11
+          },
+          "effects": {
+            "gold": -5,
+            "flags": {
+              "silenceAdmitted": true
+            }
+          },
+          "terminal": true
+        },
+        {
+          "id": "favorable",
+          "text": "Accept a favorable welcome without a fee.",
+          "conditions": {
+            "minSocial": 12
+          },
+          "effects": {
+            "flags": {
+              "silenceAdmitted": true
+            }
+          },
+          "terminal": true
+        },
+        {
+          "id": "leave",
+          "text": "Leave the tavern without paying.",
+          "conditions": {},
+          "effects": {
+            "flags": {
+              "silenceLeft": true
+            }
+          },
+          "terminal": true
+        }
+      ],
+      "sources": [
+        "https://www.forgottenwars.com/bg1/ar0800.htm"
+      ],
+      "sourceStatus": "classic-guide-supported; original-data parity pending",
+      "acceptanceGaps": [
+        "Exact refusal-to-leave summoned guard and unfavorable hostile branches remain pending; paying never invents a guard."
+      ]
+    },
+    {
+      "id": "divinerPoison",
+      "title": "Consult the Diviner",
+      "phase": 5,
+      "givers": [
+        {
+          "label": "Diviner"
+        }
+      ],
+      "acceptConditions": {
+        "questStages": {
+          "marekPoison": "active"
+        }
+      },
+      "acceptEffects": {},
+      "outcomes": [
+        {
+          "id": "pay",
+          "text": "Pay50gold to learn how to remove the geas.",
+          "conditions": {},
+          "effects": {
+            "gold": -50,
+            "flags": {
+              "lothanderDivined": true
+            }
+          },
+          "terminal": true
+        }
+      ],
+      "sources": [
+        "https://www.forgottenwars.com/bg1/ar0700.htm"
+      ],
+      "sourceStatus": "classic-guide-supported; original-data parity pending",
+      "acceptanceGaps": [
+        "The return conversation with Lothander is preserved as the separate geas acceptance action. Original verbal divination alternatives remain pending."
+      ]
+    },
+    {
+      "id": "voletaMaze",
+      "title": "The wounded thief",
+      "phase": 7,
+      "givers": [
+        {
+          "label": "Voleta Stiletto",
+          "area": "AR0146"
+        }
+      ],
+      "acceptConditions": {
+        "flags": [
+          "palaceCleared"
+        ]
+      },
+      "acceptEffects": {},
+      "outcomes": [
+        {
+          "id": "hear",
+          "text": "Hear Voleta explain the dangerous maze.",
+          "conditions": {},
+          "effects": {
+            "flags": {
+              "voletaWarned": true
+            }
+          },
+          "terminal": true
+        }
+      ],
+      "sources": [
+        "https://www.forgottenwars.com/bg1/ar0146.htm"
+      ],
+      "sourceStatus": "classic-guide-supported; original-data parity pending",
+      "acceptanceGaps": []
+    },
+    {
+      "id": "winskiMaze",
+      "title": "Winski's account",
+      "phase": 7,
+      "givers": [
+        {
+          "label": "Winski Perorate",
+          "area": "AR0146"
+        }
+      ],
+      "acceptConditions": {
+        "flags": [
+          "palaceCleared"
+        ]
+      },
+      "acceptEffects": {},
+      "outcomes": [
+        {
+          "id": "hear",
+          "text": "Hear Winski's account of Sarevok.",
+          "conditions": {},
+          "effects": {
+            "flags": {
+              "winskiHeard": true
+            }
+          },
+          "terminal": true
+        }
+      ],
+      "sources": [
+        "https://www.forgottenwars.com/bg1/ar0146.htm"
+      ],
+      "sourceStatus": "classic-guide-supported; original-data parity pending",
+      "acceptanceGaps": []
+    },
+    {
+      "id": "vailClue",
+      "title": "Vail's hidden treasure",
+      "phase": 5,
+      "givers": [
+        {
+          "creature": "VAIL",
+          "area": "AR0719"
+        }
+      ],
+      "acceptConditions": {},
+      "acceptEffects": {},
+      "outcomes": [
+        {
+          "id": "hear",
+          "text": "Hear Vail's account and accept his written clue.",
+          "conditions": {},
+          "effects": {
+            "xp": 500,
+            "items": [
+              {
+                "item": "SCRLVAIL"
+              }
+            ],
+            "flags": {
+              "vailClue": true
+            }
+          },
+          "terminal": true
+        }
+      ],
+      "sources": [
+        "https://www.forgottenwars.com/bg1/ar0200.htm"
+      ],
+      "sourceStatus": "classic-guide-supported; original-data parity pending",
+      "acceptanceGaps": [
+        "Supporting base VAIL.DLG grants500XP on initial post-restoration branches; the four other statues grant no such XP. Exact original choices and Vail helm-demand combat still pending."
+      ]
+    }
+  ],
+  "excursions": [
+    {
+      "id": "nester",
+      "title": "Nester's lost dagger",
+      "quest": "quinnDagger",
+      "at": [
+        {
+          "label": "Quinn",
+          "area": "AR0157"
+        }
+      ],
+      "hours": 24,
+      "source": "https://www.forgottenwars.com/bg1/ar0100.htm",
+      "choices": [
+        {
+          "id": "recover",
+          "label": "Travel north and recover Nester's dagger",
+          "text": "You travel to the ankheg country north of the city. Among the remains in the nest you recover Nester's dagger, then return to Baldur's Gate. Your journal still requires you to deliver it to Quinn.",
+          "items": [
+            {
+              "item": "DAGG06",
+              "flags": 1
+            }
+          ]
+        },
+        {
+          "id": "later",
+          "label": "Leave the northern journey for later",
+          "text": "The dagger remains outside the city. You return to your other affairs.",
+          "pending": true
+        }
+      ]
+    },
+    {
+      "id": "algernon",
+      "title": "Algernon's cloak",
+      "quest": "pheirkasCloak",
+      "at": [
+        {
+          "label": "Pheirkas",
+          "area": "AR0167"
+        }
+      ],
+      "hours": 48,
+      "source": "https://www.forgottenwars.com/bg1/ar0100.htm",
+      "choices": [
+        {
+          "id": "steal",
+          "label": "Travel to Beregost and steal Algernon's cloak (Agility 16)",
+          "conditions": {
+            "minAgility": 16
+          },
+          "text": "In Beregost you lift Algernon's cloak without taking his life. You return with the cloak; Pheirkas still awaits your answer.",
+          "items": [
+            {
+              "item": "CLCK08",
+              "flags": 5
+            }
+          ]
+        },
+        {
+          "id": "kill",
+          "label": "Travel to Beregost and kill Algernon for the cloak",
+          "text": "You kill Algernon and take his cloak. News of the murder harms your standing. Pheirkas has yet to receive the cloak.",
+          "items": [
+            {
+              "item": "CLCK08",
+              "flags": 1
+            }
+          ],
+          "crime": -2
+        },
+        {
+          "id": "later",
+          "label": "Leave Algernon alone for now",
+          "text": "You postpone the Beregost journey. Pheirkas has received nothing.",
+          "pending": true
+        }
+      ]
+    },
+    {
+      "id": "sil",
+      "title": "The lighthouse sirines",
+      "quest": "cordyrSirines",
+      "at": [
+        {
+          "label": "Cordyr",
+          "area": "AR1213"
+        }
+      ],
+      "hours": 48,
+      "source": "https://www.forgottenwars.com/bg1/ar1200.htm",
+      "choices": [
+        {
+          "id": "kill",
+          "label": "Travel to the lighthouse and kill Sil",
+          "text": "You take the coastal road to the lighthouse and fight Sil and the sirines. On returning to Baldur's Gate you can report their deaths to Cordyr. The city pays no reward until that conversation.",
+          "flags": {
+            "excursionSilResolved": true
+          }
+        },
+        {
+          "id": "spare",
+          "label": "Spare Sil and return without fulfilling the contract",
+          "text": "You leave Sil alive. Cordyr's request remains unfulfilled.",
+          "pending": true
+        }
+      ]
+    }
+  ],
+  "adaptationRules": {
+    "outsideExcursions": "Explicit named text resolutions replace only authorized outside-city scenes. They consume city time, preserve refusal and pending outcomes, grant actual unique quest items once, and grant no bundled outside combat XP. They are not native outside-map combat evidence.",
+    "services": "Native healing, poison/disease effects, curse removal and actual-actor revival are adapted status rules; source spell formulas remain unimplemented. Donation exact reputation table unresolved.",
+    "inventory": "Raw charge words and source flags remain separate from normalized stack counts. Native equipment slots are filled only where source items fit existing gear classes.",
+    "recruitment": "Alora uses three staged talks plus explicit lookout agreement during classic21:30-03:30 window. EE AR0130 script TimeGT20/TimeLT4 is unresolved versus that classic window. Skie requires actual living Eldoth within8native tiles on same level; original Detect line-of-sight semantics remain pending.",
+    "canonicalRelocation": "ALDETH/TAMOKO/NARLEN retain one serialized actor and actual inventory across source-backed scenes. Local named quest/choice stages replace audited original movement globals; raw source conditions remain in scene metadata. Old duplicate scene actors are parked without merging or granting their possessions.",
+    "narlenTimer": {
+      "source": "NARCUT01.BCS",
+      "sha256": "3484a65e32f67f3e7cc83a1083577883adb491564560c4f79b5dfa81731a6583",
+      "sourceDuration": 20,
+      "nativeTurns": 20,
+      "conversion": "Source event timer units map to20bounded native mapturns; original wall-clock/game-time parity remains pending."
+    },
+    "startingHistory": "Explicit finish or first exploration outside start radius1, NPC conversation, accepted quest, trade, theft or recruitment freezes earlier history. Unchosen Aldeth/Tenya/Eldoth entries are explicitly unspecified, never inferred successful or hostile. Entry equipment/gold/XP snapshot is not overwritten.",
+    "storePricing": {
+      "source": "https://github.com/gemrb/gemrb/blob/master/gemrb/GUIScripts/GUISTORE.py",
+      "conversion": "For source stackables, item base price times normalized stack quantity precedes source markup/floor; purchase minimum1. Nonstackable charge words never become quantity. Source store capability bits, purchased categories and fenced-goods restrictions apply.",
+      "sourceGap": "Supporting implementation inference, not original-byte proof. Exact reputation/reaction modifiers, charge-ratio and depreciation formulas remain pending."
+    }
+  },
+  "donations": {
+    "sourceResource": "REPUTATI.2DA",
+    "sourceSha256": "65ab70beb4b455b35545a83e690bc439b092032025ac2a3a9fb71c4ef4ac680d",
+    "source": "https://gibberlings3.github.io/iesdp/files/2da/2da_tob/reputati.htm",
+    "baseChurch": [
+      1500,
+      1200,
+      1000,
+      600,
+      500,
+      300,
+      150,
+      100,
+      200,
+      300,
+      500,
+      800,
+      1000,
+      1500,
+      2000,
+      2500,
+      5000,
+      0,
+      0,
+      0
+    ],
+    "nativeStandingIncrement": 1,
+    "sourceGap": "Supporting EE base only; MONEY_CHURCH source units and exact original donation formula need reconciliation. Native rule charges BASE_CHURCH threshold once for one local reputation/standing point; no gain at18..20."
+  }
+}

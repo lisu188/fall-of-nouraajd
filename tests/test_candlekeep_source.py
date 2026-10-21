@@ -434,6 +434,41 @@ class BinaryParserTests(unittest.TestCase):
 
 
 class SourceAuditTests(unittest.TestCase):
+    def testChapterSevenDepartureRuleRetainsExactConditionsAndAllIronThroneActors(self):
+        from scripts.build_baldurs_gate_source_fixture import chapterDepartureRule
+
+        fixture = json.loads(
+            (MODULE_PATH.parents[1] / "tests/fixtures/baldurs_gate_city_source.json").read_text(encoding="utf-8")
+        )
+        rule = fixture["scriptSourceRules"]["LEAVECH7.BCS"]
+        self.assertEqual("21f4a5886d1d1f6e99acf7f5c213c2cc374eb9737949741b2751acd683570b72", rule["sha256"])
+        self.assertEqual(fixture["references"]["LEAVECH7.BCS"]["sha256"], rule["sha256"])
+        self.assertEqual({"global": "Chapter", "scope": "GLOBAL", "equals": 7}, rule["condition"])
+        self.assertEqual(["DestroySelf"], rule["actions"])
+        actors = fixture["areas"]["AR0615"]["actors"]
+        self.assertEqual(9, len(actors))
+        self.assertTrue(
+            all("LEAVECH7" in fixture["creatures"][actor["creatureMetadata"]]["scripts"] for actor in actors)
+        )
+        self.assertIn("EMITAR2", {actor["creature"] for actor in actors})
+        parsed = {
+            "compiled_text": "SC\nCR\nTR\nAC\nCR\nSC",
+            "records": [
+                {
+                    "kind": "TR",
+                    "signature": "Global(S:Name*,S:Area*,I:Value*)",
+                    "strings": ["GLOBALChapter", ""],
+                    "integer_fields": [7, 0, 0, 0],
+                    "offset": 6,
+                },
+                {"kind": "AC", "signature": "DestroySelf()", "offset": 9},
+            ],
+        }
+        self.assertEqual(rule["condition"], chapterDepartureRule(parsed)["condition"])
+        parsed["records"][0]["integer_fields"][1] = 1
+        with self.assertRaises(ValueError):
+            chapterDepartureRule(parsed)
+
     def testCityDonationThresholdsRetainSourceFingerprintAndReputationRows(self):
         fixture = json.loads(
             (MODULE_PATH.parents[1] / "tests/fixtures/baldurs_gate_city_source.json").read_text(encoding="utf-8")

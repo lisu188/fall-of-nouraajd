@@ -21,6 +21,7 @@ SOURCES = {
     "areaFormat": "https://gibberlings3.github.io/iesdp/file_formats/ie_formats/are_v1.htm",
     "searchFormat": "https://gibberlings3.github.io/iesdp/appendices/search.html",
     "gameFormat": "https://gibberlings3.github.io/iesdp/file_formats/ie_formats/gam_v1.1.htm",
+    "reputationRules": "https://gibberlings3.github.io/iesdp/files/2da/2da_tob/reputati.htm",
     "classicCity": "https://www.forgottenwars.com/bg1/ar0800.htm",
 }
 EDITION_ITEM_CONVERSIONS = {
@@ -48,6 +49,34 @@ EDITION_EXCLUDED_CREATURES = {
     "DORN": "Enhanced Edition companion",
     "BDTARGET": "Siege of Dragonspear helper actor",
 }
+
+
+def chapterDepartureRule(parsed):
+    """Normalize only the verified single-block Chapter7/DestroySelf script, never a general script."""
+    text = parsed["compiled_text"]
+    markers = [match for match in re.finditer(r'"[^"]*"|(?P<block>CR)(?=\s|$)', text) if match.group("block")]
+    records = parsed["records"]
+    triggers = [row for row in records if row["kind"] == "TR"]
+    actions = [row for row in records if row["kind"] == "AC"]
+    if len(markers) != 2 or len(triggers) != 1 or len(actions) != 1:
+        raise source.AuditError("LEAVECH7 departure rule no longer has one condition/action block")
+    trigger, action = triggers[0], actions[0]
+    fields = trigger["integer_fields"]
+    if not (
+        (trigger.get("signature") or "").startswith("Global(")
+        and trigger["strings"] == ["GLOBALChapter", ""]
+        and len(fields) >= 2
+        and fields[0] == 7
+        and not fields[1] & 1
+        and (action.get("signature") or "").startswith("DestroySelf(")
+        and all(markers[0].start() < row["offset"] < markers[1].end() for row in records)
+    ):
+        raise source.AuditError("LEAVECH7 departure condition/action differs from the verified source rule")
+    return {
+        "condition": {"global": "Chapter", "scope": "GLOBAL", "equals": 7},
+        "actions": ["DestroySelf"],
+        "sourceStatus": "Supporting installed EE base script; classic BG1 behavior remains unverified.",
+    }
 
 
 def compiledSpawnFacts(parsed):
@@ -195,6 +224,7 @@ def buildCityFixture(game_root, language="en_US", encoding=None):
         "scriptedActors": [],
         "campaignNpcs": [],
         "numericSourceRules": {},
+        "scriptSourceRules": {},
         "unresolved": [],
         "uncertainties": [
             "No authenticated original BG1 base installation; EE archive bytes do not prove classic parity",
@@ -409,6 +439,11 @@ def buildCityFixture(game_root, language="en_US", encoding=None):
                 queue.extend((ref["name"], ref["type"]) for ref in refs if ref)
             elif ext == "BCS":
                 parsed, refs, _ = source.parseScript(data, ids["ACTION"], ids["TRIGGER"])
+                if name == "LEAVECH7":
+                    fixture["scriptSourceRules"]["LEAVECH7.BCS"] = {
+                        **chapterDepartureRule(parsed),
+                        "sha256": row["sha256"],
+                    }
                 row["storeReferences"] = sorted({ref["name"] for ref in refs if ref and ref["type"] == "STO"})
                 spawn_facts[(name, ext)] = compiledSpawnFacts(parsed)
                 children[(name, ext)] = [(ref["name"], ref["type"]) for ref in refs if ref]

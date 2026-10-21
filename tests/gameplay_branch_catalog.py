@@ -19,6 +19,7 @@ from tests.gameplay_branch_types import PLAYER_CLASSES, testName
 
 ROOT = Path(__file__).resolve().parents[1]
 ROUTE_MODULES = (
+    "tests.gameplay_routes_baldurs_gate",
     "tests.gameplay_routes_candlekeep",
     "tests.gameplay_routes_nouraajd",
     "tests.gameplay_routes_ninemarches",
@@ -29,6 +30,7 @@ ROUTE_MODULES = (
     "tests.gameplay_routes_consumables",
 )
 AUTHORED_MAPS = (
+    "baldursGate",
     "candlekeep",
     "castleGriffinCliff",
     "castleGuardianAngels",
@@ -49,7 +51,7 @@ AUTHORED_MAPS = (
 EVENT_CALLBACKS = frozenset(
     {"trigger", "onEnter", "onTurn", "onCreate", "onDestroy", "onOpen", "onUse", "onComplete", "isCompleted"}
 )
-REVIEWED_GAMEPLAY_DIGEST = "7c47b2714e401d47c1fdad6d6fb1bfd9b7fff58864e1c0e6c7e43e8e8c7f6aea"
+REVIEWED_GAMEPLAY_DIGEST = "09c5f5a1a0389f47b33919136557719893d5ff23b879870d6e88d2d47a8702ad"
 
 
 @dataclass(frozen=True)
@@ -62,6 +64,12 @@ class BranchFamily:
 # These are deliberately authored descriptions. Source introspection cannot infer
 # what a gameplay assertion needs to prove, particularly its setup boundary.
 FAMILIES = (
+    BranchFamily(
+        "baldursGate.",
+        "Enter the persistent city with an existing native hero; walk source connections and choose authored options.",
+        "Observed travel, ownership, history and quest choices retain exact state through real saves and reloads; "
+        "unresolved source outcomes remain separate pending obligations.",
+    ),
     BranchFamily(
         "candlekeep.",
         "Walk the authored prologue, choose actual dialogue options and resolve real combat with existing player races.",
@@ -739,6 +747,11 @@ def contractEvidence():
     own = "tests/test_gameplay_branch_catalog.py:GameplayBranchCatalogTest."
     native = "test.py:GameTest."
     return {
+        "res/maps/baldursGate/script.py:BaldursGatePortal.onDestroy": (
+            "source-double",
+            "tests/test_baldurs_gate_city_content.py:BaldursGateCityContentTest."
+            "testPortalDestroyUnregistersOnlyItsOwnedNavigationEdge",
+        ),
         "res/maps/candlekeep/script.py:CandlekeepPortal.onDestroy": (
             "source-double",
             "tests/test_candlekeep_content.py:CandlekeepModelTest."

@@ -458,7 +458,8 @@ class McpBranchShardsTest(unittest.TestCase):
         stage_source = windows.split(stage, 1)[1].split("      - name:", 1)[0]
         bundle_source = windows.split(bundle, 1)[1].split("      - name:", 1)[0]
         self.assertIn(
-            "cmake --install cmake-build-clangcl20-release --config Release --prefix test/mcp-runtime-windows", stage_source
+            "cmake --install cmake-build-clangcl20-release --config Release --prefix test/mcp-runtime-windows",
+            stage_source,
         )
         self.assertIn("%VCPKG_INSTALLED_DIR%\\%VCPKG_TARGET_TRIPLET%\\bin", stage_source)
         self.assertIn("(SDL2.dll SDL2_image.dll SDL2_ttf.dll)", stage_source)
@@ -473,6 +474,7 @@ class McpBranchShardsTest(unittest.TestCase):
                 "class": class_id,
                 "race": case.race,
                 "initialReputation": case.initial_reputation,
+                "isolatedGui": case.isolated_gui,
                 "head": "current-head",
                 "prHead": "current-pr-head",
                 "platform": platform,
@@ -486,6 +488,39 @@ class McpBranchShardsTest(unittest.TestCase):
             }
             path = directory / f"{case.id}-{class_id}.receipt.json"
             path.write_text(json.dumps(value), encoding="utf-8")
+
+    def testReceiptAuditRejectsMissingAndLegacyHeadlessModeForAnIsolatedGuiCase(self):
+        case = replace(self.cases()[0], classes=PLAYER_CLASSES[:1], isolated_gui=True)
+        with tempfile.TemporaryDirectory(prefix="nouraajd-mcp-ui-receipts-", dir=shards.ROOT) as temporary:
+            root = Path(temporary)
+            self.writeReceipts(root, case)
+            path = next(root.glob("*.receipt.json"))
+            original = json.loads(path.read_text(encoding="utf-8"))
+            self.assertEqual(
+                1, shards.auditReceipts((case,), root, "linux", "current-head", "current-pr-head")["executionCount"]
+            )
+            for value in (None, False, 1, "true"):
+                changed = dict(original)
+                if value is None:
+                    changed.pop("isolatedGui")
+                else:
+                    changed["isolatedGui"] = value
+                path.write_text(json.dumps(changed), encoding="utf-8")
+                with self.subTest(value=value), self.assertRaisesRegex(ValueError, "native GUI mode"):
+                    shards.auditReceipts((case,), root, "linux", "current-head", "current-pr-head")
+            path.write_text(json.dumps(original), encoding="utf-8")
+            with self.assertRaisesRegex(ValueError, "native GUI mode"):
+                shards.auditReceipts(
+                    (replace(case, isolated_gui=False),), root, "linux", "current-head", "current-pr-head"
+                )
+
+    def testPlanningCatalogRetainsExplicitIsolatedGuiMode(self):
+        case = replace(self.cases()[0], isolated_gui=True)
+        with patch("tests.gameplay_branch_catalog.auditCatalog", return_value={}), patch(
+            "tests.gameplay_branch_catalog.branchCatalog", return_value={}
+        ):
+            self.assertTrue(shards.catalogSnapshot((case,))["cases"][0]["isolatedGui"])
+            self.assertFalse(shards.catalogSnapshot((replace(case, isolated_gui=False),))["cases"][0]["isolatedGui"])
 
     def testReceiptAuditRequiresExactPassingUnionAndEmitsMeasuredRouteMaxima(self):
         case = replace(self.cases()[0], classes=PLAYER_CLASSES[:2])
