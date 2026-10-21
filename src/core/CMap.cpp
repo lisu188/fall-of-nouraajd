@@ -1010,32 +1010,51 @@ vstd::task<void> CMap::moveOwnedAsync(std::shared_ptr<CMap> map, CMovementPresen
         auto transitionContext = game ? game->getContext() : nullptr;
         const auto expectedGeneration = transitionContext ? transitionContext->captureTransitionGeneration()
                                                           : CGameContext::TransitionGeneration{0};
-        auto canApplyDeferredMoveWork = [map, transitionContext, expectedGeneration]() {
+        const auto expectedSimulationRegionRevision = map->simulationRegionRevision;
+        auto canApplyDeferredMoveWork = [map, transitionContext, expectedGeneration, expectedSimulationRegionRevision]() {
+            if (map->simulationRegionRevision != expectedSimulationRegionRevision) {
+                return false;
+            }
             if (transitionContext && !transitionContext->isTransitionGenerationCurrent(expectedGeneration)) {
                 return false;
             }
             auto game = map->getGame();
             return !game || game->getMap() == map;
         };
+        auto finishInterruptedRegionTurn = [map, transitionContext, expectedGeneration,
+                                           expectedSimulationRegionRevision]() {
+            map->moving = false;
+            auto owner = map->getGame();
+            if (map->simulationRegionRevision != expectedSimulationRegionRevision &&
+                (!transitionContext || transitionContext->isTransitionGenerationCurrent(expectedGeneration)) &&
+                (!owner || owner->getMap() == map)) {
+                ++map->turn;
+                map->recordDirectPropertyChanged("turn");
+                map->signal("turnPassed");
+            }
+        };
 
         game.reset();
         const auto turnObjects = map->mapObjects;
         for (const auto &object : turnObjects | std::views::values) {
             if (!canApplyDeferredMoveWork()) {
-                map->moving = false;
+                finishInterruptedRegionTurn();
                 co_return;
+            }
+            if (!map->isSimulationActive(object)) {
+                continue;
             }
             auto event = std::make_shared<CGameEvent>(CGameEvent::CType::onTurn);
             co_await map->getEventHandler()->gameEventAsync(object, std::move(event));
         }
         if (!canApplyDeferredMoveWork()) {
-            map->moving = false;
+            finishInterruptedRegionTurn();
             co_return;
         }
 
         auto is_active_creature = [map](const std::shared_ptr<CCreature> &creature) {
             return creature && creature->getMap() == map && map->getObjectByName(creature->getName()) == creature &&
-                   creature->isAlive();
+                   creature->isAlive() && map->isSimulationActive(creature);
         };
 
         auto should_interrupt_after_step = [map](const std::shared_ptr<CCreature> &creature, const Coords &target) {
@@ -1065,6 +1084,9 @@ vstd::task<void> CMap::moveOwnedAsync(std::shared_ptr<CMap> map, CMovementPresen
             actors.push_back(vstd::cast<CCreature>(object));
         }
         for (auto creature : actors) {
+            if (!canApplyDeferredMoveWork()) {
+                break;
+            }
             if (!is_active_creature(creature)) {
                 continue;
             }
@@ -1081,6 +1103,13 @@ vstd::task<void> CMap::moveOwnedAsync(std::shared_ptr<CMap> map, CMovementPresen
         auto plannedCoordinates = co_await vstd::whenAll(std::move(pending));
         if (!loop->isMainThread()) {
             co_await vstd::post(loop);
+        }
+        if (map->simulationRegionRevision != expectedSimulationRegionRevision) {
+            for (const auto &planned : plannedCreatures) {
+                planned.controller->interrupt(planned.creature);
+            }
+            finishInterruptedRegionTurn();
+            co_return;
         }
         std::list<std::pair<PlannedCreature, Coords>> coordinates;
         if (canApplyDeferredMoveWork()) {
@@ -1152,6 +1181,13 @@ vstd::task<void> CMap::moveOwnedAsync(std::shared_ptr<CMap> map, CMovementPresen
             }
         }
 
+        if (map->simulationRegionRevision != expectedSimulationRegionRevision) {
+            for (const auto &planned : plannedCreatures) {
+                planned.controller->interrupt(planned.creature);
+            }
+            finishInterruptedRegionTurn();
+            co_return;
+        }
         if ((presentation.beforeStep || presentation.finish) && !canApplyDeferredMoveWork()) {
             map->moving = false;
             co_return;
@@ -1163,7 +1199,7 @@ vstd::task<void> CMap::moveOwnedAsync(std::shared_ptr<CMap> map, CMovementPresen
             if (stop.stop_requested())
                 throw vstd::task_cancelled();
             if (loop->quitRequested() || !canApplyDeferredMoveWork()) {
-                map->moving = false;
+                finishInterruptedRegionTurn();
                 co_return;
             }
         }
@@ -1174,7 +1210,18 @@ vstd::task<void> CMap::moveOwnedAsync(std::shared_ptr<CMap> map, CMovementPresen
                     creature->getController()->onTurnEnded(creature);
                 }
             },
-            [](std::shared_ptr<CMapObject> object) { return vstd::castable<CCreature>(object); });
+            [map, expectedSimulationRegionRevision](std::shared_ptr<CMapObject> object) {
+                return map->simulationRegionRevision == expectedSimulationRegionRevision &&
+                       vstd::castable<CCreature>(object) && map->isSimulationActive(object);
+            });
+
+        if (map->simulationRegionRevision != expectedSimulationRegionRevision) {
+            for (const auto &planned : plannedCreatures) {
+                planned.controller->interrupt(planned.creature);
+            }
+            finishInterruptedRegionTurn();
+            co_return;
+        }
 
         map->moving = false;
         map->turn++;
@@ -1188,6 +1235,28 @@ vstd::task<void> CMap::moveOwnedAsync(std::shared_ptr<CMap> map, CMovementPresen
 }
 
 int CMap::getTurn() { return turn; }
+
+std::string CMap::getActiveSimulationRegion() const { return activeSimulationRegion; }
+
+void CMap::setActiveSimulationRegion(std::string region) {
+    if (activeSimulationRegion == region) {
+        return;
+    }
+    activeSimulationRegion = std::move(region);
+    ++simulationRegionRevision;
+    recordDirectPropertyChanged("activeSimulationRegion");
+}
+
+bool CMap::isSimulationActive(const std::shared_ptr<CMapObject> &object) const {
+    if (!object) {
+        return false;
+    }
+    if (activeSimulationRegion.empty() || object == player || object->getBoolProperty("alwaysSimulate")) {
+        return true;
+    }
+    const auto region = object->getStringProperty("simulationRegion");
+    return region.empty() || region == activeSimulationRegion;
+}
 
 void CMap::setTurn(int turn) {
     this->turn = turn;
