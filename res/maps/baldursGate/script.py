@@ -403,6 +403,10 @@ def load(self, context):
         actor.setBoolProperty("plugin_cityInventoryInitialized", True)
 
     @register(context)
+    class BaldursGateActor(CCreature):
+        """Persistent source-backed city NPC with map-local inventory and schedule metadata."""
+
+    @register(context)
     @mapQuest("baldursGate")
     class BaldursGateQuest(CQuest):
         def isCompleted(self):

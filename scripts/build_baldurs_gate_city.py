@@ -660,7 +660,7 @@ def compileCity(source, quests=None):
                     locked=False,
                     trapped=False,
                 )
-            config[name] = definition("BaldursGateContainer" if corpse else "CCreature", **props)
+            config[name] = definition("BaldursGateContainer" if corpse else "BaldursGateActor", **props)
             if corpse:
                 continue
             options = [

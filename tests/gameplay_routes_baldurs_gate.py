@@ -1237,6 +1237,7 @@ def inventoryUi(d, *, failed=False):
         d.test.assertEqual(before, resources(d))
         d.test.assertEqual(crimes + 1, d.number("plugin_cityCrimes"))
         d.test.assertEqual(standing - 2, d.number("plugin_cityStanding"))
+        d.test.assertTrue(d.flag("plugin_cityFlag_guardsAlerted"))
         branch = "baldursGate.theft.nativeFailed"
     else:
         d.test.assertEqual(set(before_items) | {selected}, set(after_items))
