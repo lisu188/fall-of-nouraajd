@@ -4,6 +4,7 @@
 """Pure contract regressions for the natural-play MCP driver."""
 
 from copy import deepcopy
+from dataclasses import replace
 from pathlib import Path
 from types import SimpleNamespace
 import json
@@ -24,6 +25,165 @@ from tests.gameplay_branch_types import RouteCase
 
 
 class GameplayBranchDriverTest(unittest.TestCase):
+    def testNativeGuiRequiresAnExplicitCaseAndAnIsolatedSoftwareDisplay(self):
+        driver = self.driver()
+        isolated = {"SDL_VIDEODRIVER": "dummy", "SDL_RENDER_DRIVER": "software", "SDL_AUDIODRIVER": "dummy"}
+        with patch.dict("os.environ", isolated):
+            with self.assertRaisesRegex(AssertionError, "Only declared isolated GUI"):
+                driver.engine("CGameLoader.loadGui", driver.game)
+            driver.case = replace(driver.case, isolated_gui=True)
+            driver.engine("CGameLoader.loadGui", driver.game)
+            for key, value in (
+                ("SDL_VIDEODRIVER", "windows"),
+                ("SDL_VIDEODRIVER", "wayland"),
+                ("SDL_RENDER_DRIVER", "opengl"),
+                ("SDL_AUDIODRIVER", "default"),
+            ):
+                with self.subTest(key=key, value=value), patch.dict("os.environ", {key: value}):
+                    with self.assertRaises(AssertionError):
+                        driver.engine("CGameLoader.loadGui", driver.game)
+        with patch.dict("os.environ", {**isolated, "SDL_VIDEODRIVER": "x11", "GAME_XVFB_GAMEPLAY_CHILD": ""}):
+            with self.assertRaises(AssertionError):
+                driver.engine("CGameLoader.loadGui", driver.game)
+        with self.assertRaisesRegex(AssertionError, "manipulate randomness"):
+            driver.engine("randint", 0, 1)
+
+    def guiDriver(self, *, reader=False, missing=False, wrong_receipt=False, wrong_body=False):
+        driver = self.driver()
+        driver.case = replace(driver.case, isolated_gui=True)
+        driver.trace_path = Path("source-model-only.trace.jsonl")
+        driver.assertNativeCombatOutcomes = Mock()
+        driver.pump = Mock()
+        driver.coords = lambda owner=None: (1, 2, 0)
+        driver.object = lambda name: {"__handle__": name}
+        handles = {key: {"__handle__": key} for key in ("gui", "dialog", "panel", "nested")}
+        action = "showInventory" if reader else "sell"
+        options = [
+            {"properties": {"number": number, "text": str(number), "action": "other"}} for number in range(11)
+        ] + [{"properties": {"number": 11, "action": action}}]
+        driver._dialogStates = Mock(return_value={"ENTRY": {"options": options}})
+        self.enterContext(
+            patch(
+                "tests.gameplay_branch_driver.mapDefinitions",
+                return_value={"nativeDialog": {"class": "CDialog", "properties": {"actorId": "npc"}}},
+            )
+        )
+        self.enterContext(
+            patch.dict(
+                "os.environ",
+                SDL_VIDEODRIVER="dummy",
+                SDL_RENDER_DRIVER="software",
+                SDL_AUDIODRIVER="dummy",
+            )
+        )
+        state = {"children": [], "focus": -1, "index": 0, "confirmed": False, "dismissed": False, "calls": []}
+        receipt = {
+            "seq": 1,
+            "event": "dialog_option_selected",
+            "action": "other" if wrong_receipt else action,
+            "stateId": "ENTRY",
+            "optionNumber": 11,
+            "dialog": {"typeId": "nativeDialog"},
+        }
+        self.enterContext(patch("tests.gameplay_branch_driver.readNewNativeTrace", return_value=(receipt,)))
+
+        def rawCall(owner, method, *args):
+            state["calls"].append((owner["__handle__"], method, args))
+            if method == "getGui":
+                return handles["gui"]
+            if method == "getChildren":
+                return list(state["children"])
+            if method == "createObject":
+                return handles["panel" if args[0] == "dialogPanel" else "dialog"]
+            if method == "getType":
+                return (
+                    "CGameDialogPanel"
+                    if owner == handles["panel"]
+                    else ("CGameCampaignPanel" if reader else "CGameCampaignBrowserPanel")
+                )
+            if method == "setObjectProperty":
+                self.assertEqual(("dialog", handles["dialog"]), args)
+                self.assertEqual(handles["panel"], owner)
+                return
+            if method == "pushChild":
+                state["children"].append(args[0])
+                return
+            if method == "getParent":
+                return handles["gui"] if owner in state["children"] else None
+            if method == "getSelectedId":
+                return ("first", "exact-source-item")[state["index"]]
+            if method == "hasChoice":
+                return state["confirmed"]
+            if method == "getTitle":
+                return "Niklos"
+            if method == "getBody":
+                return "Wrong item x1" if wrong_body else "Potion x1"
+            if method == "isDismissed":
+                return state["dismissed"]
+            if method == "keyboardEvent":
+                _, event, key = args
+                self.assertEqual(768, event)
+                if owner == handles["panel"]:
+                    if key == 1073741905:
+                        state["focus"] += 1
+                    elif key == 13:
+                        self.assertEqual(11, state["focus"])
+                        if not missing:
+                            state["children"].append(handles["nested"])
+                    elif key == 27:
+                        state["children"].remove(owner)
+                else:
+                    if key == 1073741898:
+                        state["index"] = 0
+                    elif key == 1073741905:
+                        state["index"] = min(1, state["index"] + 1)
+                    elif key == 13:
+                        state["confirmed"] = state["dismissed"] = True
+                        state["children"].remove(owner)
+                return True
+            raise AssertionError(("Unexpected GUI route call", method, args))
+
+        driver._rawCall.side_effect = rawCall
+        return driver, state, action
+
+    def testUiRouteSendsRealNativeKeysWithoutInvokingOrAnsweringTheCallbackDirectly(self):
+        driver, state, action = self.guiDriver()
+        witness = driver.chooseUi("nativeDialog", action, selected_id="exact-source-item")
+        self.assertEqual("exact-source-item", witness["selectedId"])
+        self.assertEqual("nativeChoice", witness["kind"])
+        self.assertEqual(1, witness["nativeOptionSeq"])
+        self.assertEqual([], state["children"])
+        self.assertEqual(11, state["focus"], "Options after the first nine must use actual arrow navigation")
+        methods = [row[1] for row in state["calls"]]
+        self.assertNotIn("invokeAction", methods)
+        self.assertNotIn("setStringProperty", methods)
+        self.assertNotIn("setNumericProperty", methods)
+        self.assertEqual(1, methods.count("setObjectProperty"))
+        self.assertTrue(driver.receipt()["isolatedGui"])
+        driver.case = replace(driver.case, isolated_gui=False)
+        self.assertFalse(driver.receipt()["isolatedGui"])
+
+    def testUiReaderRequiresActualContentsAndDismissal(self):
+        driver, state, action = self.guiDriver(reader=True)
+        witness = driver.chooseUi("nativeDialog", action, reader_title="Niklos", reader_lines=["Potion x1"])
+        self.assertEqual(("nativeReader", "Potion x1"), (witness["kind"], witness["body"]))
+        self.assertTrue(state["dismissed"])
+        self.assertEqual([], state["children"])
+        driver, _, action = self.guiDriver(reader=True, wrong_body=True)
+        with self.assertRaisesRegex(AssertionError, "Native inventory reader contents"):
+            driver.chooseUi("nativeDialog", action, reader_title="Niklos", reader_lines=["Potion x1"])
+
+    def testUiRouteRejectsHeadlessCancellationMissingNativeReceiptAndAbsentSelection(self):
+        for mutation in ({"missing": True}, {"wrong_receipt": True}, {}):
+            with self.subTest(mutation=mutation):
+                driver, _, action = self.guiDriver(**mutation)
+                with self.assertRaises(AssertionError):
+                    driver.chooseUi(
+                        "nativeDialog",
+                        action,
+                        selected_id="absent-source-item" if not mutation else "exact-source-item",
+                    )
+
     def testNativeSetComparisonsIgnoreAllocationOrderAndPreserveFullIdentity(self):
         first = {
             "items": [

@@ -467,6 +467,10 @@ configure_file(res/maps/candlekeep/config.json maps/candlekeep/config.json COPYO
 configure_file(res/maps/candlekeep/dialog.json maps/candlekeep/dialog.json COPYONLY)
 configure_file(res/maps/candlekeep/map.json maps/candlekeep/map.json COPYONLY)
 configure_file(res/maps/candlekeep/script.py maps/candlekeep/script.py COPYONLY)
+configure_file(res/maps/baldursGate/config.json maps/baldursGate/config.json COPYONLY)
+configure_file(res/maps/baldursGate/dialog.json maps/baldursGate/dialog.json COPYONLY)
+configure_file(res/maps/baldursGate/map.json maps/baldursGate/map.json COPYONLY)
+configure_file(res/maps/baldursGate/script.py maps/baldursGate/script.py COPYONLY)
 
 configure_file(res/maps/hearthfall/config.json maps/hearthfall/config.json)
 configure_file(res/maps/hearthfall/dialog.json maps/hearthfall/dialog.json)
@@ -488,7 +492,7 @@ configure_file(res/maps/usurpergate/script.py maps/usurpergate/script.py)
 # moment a map adds one.
 set(GAME_STAGED_MAPS
     nouraajd siege ritual vhulmarn kadath ninemarches sunderedmarch gravemoor
-    hearthfall usurpergate test multilevel candlekeep)
+    hearthfall usurpergate test multilevel candlekeep baldursGate)
 foreach (_staged_map ${GAME_STAGED_MAPS})
     stage_map_declared_assets(${_staged_map})
 endforeach ()
@@ -890,6 +894,11 @@ endfunction()
 
 add_game_unit_test(core_unit_tests tests/unit/test_core.cpp)
 add_game_unit_test(controller_unit_tests tests/unit/test_controller.cpp)
+add_game_unit_test(allied_combat_unit_tests tests/unit/test_allied_combat.cpp)
+add_game_unit_test(simulation_region_unit_tests
+    tests/unit/simulation_region_main.cpp
+    tests/unit/test_simulation_regions.cpp
+)
 add_game_unit_test(monster_balance_unit_tests
     tests/unit/test_monster_balance.cpp
     src/core/CModuleEntry.cpp
@@ -973,6 +982,7 @@ add_executable(performance_guard_tests
     tests/unit/test_engine_hotspot_performance.cpp
     tests/unit/test_serialization_performance.cpp
     tests/unit/test_render_context_performance.cpp
+    tests/unit/test_simulation_regions.cpp
     $<TARGET_OBJECTS:random_map_test_objects>
 )
 if (WIN32)

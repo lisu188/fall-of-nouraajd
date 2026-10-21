@@ -58,7 +58,21 @@ void bindServices(py::module_ &m, const std::shared_ptr<CPythonEventCallbacks> &
             [](std::shared_ptr<CCreature> attacker, const py::iterable &opponents) {
                 return CFightHandler::fightManyOutcome(attacker, creature_iterable_to_vector(opponents));
             },
-            "Run a multi-opponent fight and return the detailed C++ outcome.");
+            "Run a multi-opponent fight and return the detailed C++ outcome.")
+        .def_static(
+            "fightManyWithAllies",
+            [](std::shared_ptr<CCreature> hero, const py::iterable &opponents, const py::iterable &allies) {
+                return CFightHandler::fightManyWithAllies(hero, creature_iterable_to_vector(opponents),
+                                                         creature_iterable_to_vector(allies));
+            },
+            "Run a hero encounter with at most five affiliated AI allies; return whether it resolved.")
+        .def_static(
+            "fightManyWithAlliesOutcome",
+            [](std::shared_ptr<CCreature> hero, const py::iterable &opponents, const py::iterable &allies) {
+                return CFightHandler::fightManyWithAlliesOutcome(hero, creature_iterable_to_vector(opponents),
+                                                                creature_iterable_to_vector(allies));
+            },
+            "Run an allied hero encounter and return its outcome; enemy rewards belong to the hero.");
 
     py::class_<CSlot, CGameObject, std::shared_ptr<CSlot>>(m, "CSlot", "Equipment slot configuration entry.")
         .def("getSlotName", &CSlot::getSlotName, "Return slot id.")

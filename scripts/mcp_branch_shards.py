@@ -160,6 +160,7 @@ def catalogSnapshot(cases):
                 "race": case.race,
                 "campaign": case.campaign,
                 "initialReputation": case.initial_reputation,
+                "isolatedGui": case.isolated_gui,
                 "sources": case.sources,
                 "durationSeconds": measured.get(case.id, case.duration_seconds),
                 "durationSource": "reviewed measurement" if case.id in measured else "bootstrap estimate",
@@ -232,6 +233,8 @@ def auditReceipts(cases, receipts_dir, platform, head, pr_head, catalog_audit=No
             raise ValueError(f"Invalid measured receipt duration: {identity}")
         if receipt.get("race") != case.race or receipt.get("initialReputation") != case.initial_reputation:
             raise ValueError(f"Receipt starting context differs from the catalog: {identity}")
+        if type(receipt.get("isolatedGui")) is not bool or receipt["isolatedGui"] != case.isolated_gui:
+            raise ValueError(f"Receipt native GUI mode differs from the catalog: {identity}")
         found[identity] = str(path)
         timings[testName(case, identity[1])] = seconds
         route_maxima[case.id] = max(route_maxima.get(case.id, 0), seconds)

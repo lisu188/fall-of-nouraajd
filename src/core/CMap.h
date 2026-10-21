@@ -75,6 +75,7 @@ class CMap : public CGameObject {
 
     V_META(CMap, CGameObject, V_PROPERTY(CMap, int, turn, getTurn, setTurn),
            V_PROPERTY(CMap, std::string, mapName, getMapName, setMapName),
+           V_PROPERTY(CMap, std::string, activeSimulationRegion, getActiveSimulationRegion, setActiveSimulationRegion),
            V_PROPERTY(CMap, std::string, combatHistory, getCombatHistory, setCombatHistory),
            V_PROPERTY(CMap, std::set<std::shared_ptr<CMapObject>>, objects, getObjects, setObjects),
            V_PROPERTY(CMap, std::set<std::shared_ptr<CTile>>, tiles, getTiles, setTiles),
@@ -239,6 +240,12 @@ class CMap : public CGameObject {
 
     void setTurn(int turn);
 
+    std::string getActiveSimulationRegion() const;
+
+    void setActiveSimulationRegion(std::string region);
+
+    bool isSimulationActive(const std::shared_ptr<CMapObject> &object) const;
+
     std::uint64_t getNavigationRevision() const;
 
     std::uint64_t getRoutingEpoch() const;
@@ -317,6 +324,8 @@ class CMap : public CGameObject {
     bool moving = false;
     bool playerTriggersRegistered = false;
     std::string mapName;
+    std::string activeSimulationRegion;
+    std::uint64_t simulationRegionRevision = 0;
     std::string combatHistory;
     std::uint64_t navigationRevision = 0;
     mutable std::recursive_mutex navigationMutex;
