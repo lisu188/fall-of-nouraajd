@@ -5,6 +5,110 @@
   "level1Blocker": {
     "ref": "brickWall"
   },
+  "multilevelGoalLevel10": {
+    "class": "MultilevelGoal",
+    "properties": {
+      "animation": "images/misc/signpost",
+      "canStep": true,
+      "label": "Level 10: Winter Vault"
+    }
+  },
+  "multilevelGoalLevel11": {
+    "class": "MultilevelGoal",
+    "properties": {
+      "animation": "images/misc/signpost",
+      "canStep": true,
+      "label": "Level 11: Silent Library"
+    }
+  },
+  "multilevelGoalLevel12": {
+    "class": "MultilevelGoal",
+    "properties": {
+      "animation": "images/misc/signpost",
+      "canStep": true,
+      "label": "Level 12: Crownless Hall"
+    }
+  },
+  "multilevelGoalLevel13": {
+    "class": "MultilevelGoal",
+    "properties": {
+      "animation": "images/misc/signpost",
+      "canStep": true,
+      "label": "Level 13: Star Chamber"
+    }
+  },
+  "multilevelGoalLevel14": {
+    "class": "MultilevelGoal",
+    "properties": {
+      "animation": "images/buildings/catacombs",
+      "canStep": true,
+      "label": "Level 14: Summit of the Ruins"
+    }
+  },
+  "multilevelGoalLevel2": {
+    "class": "MultilevelGoal",
+    "properties": {
+      "animation": "images/misc/signpost",
+      "canStep": true,
+      "label": "Level 2: Broken Atrium"
+    }
+  },
+  "multilevelGoalLevel3": {
+    "class": "MultilevelGoal",
+    "properties": {
+      "animation": "images/misc/signpost",
+      "canStep": true,
+      "label": "Level 3: Fallen Gallery"
+    }
+  },
+  "multilevelGoalLevel4": {
+    "class": "MultilevelGoal",
+    "properties": {
+      "animation": "images/misc/signpost",
+      "canStep": true,
+      "label": "Level 4: Overgrown Court"
+    }
+  },
+  "multilevelGoalLevel5": {
+    "class": "MultilevelGoal",
+    "properties": {
+      "animation": "images/misc/signpost",
+      "canStep": true,
+      "label": "Level 5: Ashen Archives"
+    }
+  },
+  "multilevelGoalLevel6": {
+    "class": "MultilevelGoal",
+    "properties": {
+      "animation": "images/misc/signpost",
+      "canStep": true,
+      "label": "Level 6: Pilgrim's Hall"
+    }
+  },
+  "multilevelGoalLevel7": {
+    "class": "MultilevelGoal",
+    "properties": {
+      "animation": "images/misc/signpost",
+      "canStep": true,
+      "label": "Level 7: Shattered Cloister"
+    }
+  },
+  "multilevelGoalLevel8": {
+    "class": "MultilevelGoal",
+    "properties": {
+      "animation": "images/misc/signpost",
+      "canStep": true,
+      "label": "Level 8: Watcher's Gallery"
+    }
+  },
+  "multilevelGoalLevel9": {
+    "class": "MultilevelGoal",
+    "properties": {
+      "animation": "images/misc/signpost",
+      "canStep": true,
+      "label": "Level 9: Buried Chapel"
+    }
+  },
   "multilevelLowerGoal": {
     "class": "MultilevelGoal",
     "properties": {
@@ -37,6 +141,149 @@
       "targetZ": 0
     }
   },
+  "stairsDownLevel10": {
+    "class": "LevelStairs",
+    "properties": {
+      "animation": "images/buildings/stairs_down",
+      "canStep": true,
+      "label": "Stairs Down to Level 9",
+      "targetX": 2,
+      "targetY": 5,
+      "targetZ": 9
+    }
+  },
+  "stairsDownLevel11": {
+    "class": "LevelStairs",
+    "properties": {
+      "animation": "images/buildings/stairs_down",
+      "canStep": true,
+      "label": "Stairs Down to Level 10",
+      "targetX": 2,
+      "targetY": 2,
+      "targetZ": 10
+    }
+  },
+  "stairsDownLevel12": {
+    "class": "LevelStairs",
+    "properties": {
+      "animation": "images/buildings/stairs_down",
+      "canStep": true,
+      "label": "Stairs Down to Level 11",
+      "targetX": 5,
+      "targetY": 2,
+      "targetZ": 11
+    }
+  },
+  "stairsDownLevel13": {
+    "class": "LevelStairs",
+    "properties": {
+      "animation": "images/buildings/stairs_down",
+      "canStep": true,
+      "label": "Stairs Down to Level 12",
+      "targetX": 5,
+      "targetY": 5,
+      "targetZ": 12
+    }
+  },
+  "stairsDownLevel14": {
+    "class": "LevelStairs",
+    "properties": {
+      "animation": "images/buildings/stairs_down",
+      "canStep": true,
+      "label": "Stairs Down to Level 13",
+      "targetX": 2,
+      "targetY": 5,
+      "targetZ": 13
+    }
+  },
+  "stairsDownLevel2": {
+    "class": "LevelStairs",
+    "properties": {
+      "animation": "images/buildings/stairs_down",
+      "canStep": true,
+      "label": "Stairs Down to Level 1",
+      "targetX": 6,
+      "targetY": 5,
+      "targetZ": 1
+    }
+  },
+  "stairsDownLevel3": {
+    "class": "LevelStairs",
+    "properties": {
+      "animation": "images/buildings/stairs_down",
+      "canStep": true,
+      "label": "Stairs Down to Level 2",
+      "targetX": 2,
+      "targetY": 2,
+      "targetZ": 2
+    }
+  },
+  "stairsDownLevel4": {
+    "class": "LevelStairs",
+    "properties": {
+      "animation": "images/buildings/stairs_down",
+      "canStep": true,
+      "label": "Stairs Down to Level 3",
+      "targetX": 5,
+      "targetY": 2,
+      "targetZ": 3
+    }
+  },
+  "stairsDownLevel5": {
+    "class": "LevelStairs",
+    "properties": {
+      "animation": "images/buildings/stairs_down",
+      "canStep": true,
+      "label": "Stairs Down to Level 4",
+      "targetX": 5,
+      "targetY": 5,
+      "targetZ": 4
+    }
+  },
+  "stairsDownLevel6": {
+    "class": "LevelStairs",
+    "properties": {
+      "animation": "images/buildings/stairs_down",
+      "canStep": true,
+      "label": "Stairs Down to Level 5",
+      "targetX": 2,
+      "targetY": 5,
+      "targetZ": 5
+    }
+  },
+  "stairsDownLevel7": {
+    "class": "LevelStairs",
+    "properties": {
+      "animation": "images/buildings/stairs_down",
+      "canStep": true,
+      "label": "Stairs Down to Level 6",
+      "targetX": 2,
+      "targetY": 2,
+      "targetZ": 6
+    }
+  },
+  "stairsDownLevel8": {
+    "class": "LevelStairs",
+    "properties": {
+      "animation": "images/buildings/stairs_down",
+      "canStep": true,
+      "label": "Stairs Down to Level 7",
+      "targetX": 5,
+      "targetY": 2,
+      "targetZ": 7
+    }
+  },
+  "stairsDownLevel9": {
+    "class": "LevelStairs",
+    "properties": {
+      "animation": "images/buildings/stairs_down",
+      "canStep": true,
+      "label": "Stairs Down to Level 8",
+      "targetX": 5,
+      "targetY": 5,
+      "targetZ": 8
+    }
+  },
   "stairsUp": {
     "class": "LevelStairs",
     "properties": {
@@ -46,6 +293,149 @@
       "targetX": 4,
       "targetY": 1,
       "targetZ": 1
+    }
+  },
+  "stairsUpLevel1": {
+    "class": "LevelStairs",
+    "properties": {
+      "animation": "images/buildings/stairs_up",
+      "canStep": true,
+      "label": "Stairs Up to Level 2: Broken Atrium",
+      "targetX": 6,
+      "targetY": 5,
+      "targetZ": 2
+    }
+  },
+  "stairsUpLevel10": {
+    "class": "LevelStairs",
+    "properties": {
+      "animation": "images/buildings/stairs_up",
+      "canStep": true,
+      "label": "Stairs Up to Level 11: Silent Library",
+      "targetX": 2,
+      "targetY": 2,
+      "targetZ": 11
+    }
+  },
+  "stairsUpLevel11": {
+    "class": "LevelStairs",
+    "properties": {
+      "animation": "images/buildings/stairs_up",
+      "canStep": true,
+      "label": "Stairs Up to Level 12: Crownless Hall",
+      "targetX": 5,
+      "targetY": 2,
+      "targetZ": 12
+    }
+  },
+  "stairsUpLevel12": {
+    "class": "LevelStairs",
+    "properties": {
+      "animation": "images/buildings/stairs_up",
+      "canStep": true,
+      "label": "Stairs Up to Level 13: Star Chamber",
+      "targetX": 5,
+      "targetY": 5,
+      "targetZ": 13
+    }
+  },
+  "stairsUpLevel13": {
+    "class": "LevelStairs",
+    "properties": {
+      "animation": "images/buildings/stairs_up",
+      "canStep": true,
+      "label": "Stairs Up to Level 14: Summit of the Ruins",
+      "targetX": 2,
+      "targetY": 5,
+      "targetZ": 14
+    }
+  },
+  "stairsUpLevel2": {
+    "class": "LevelStairs",
+    "properties": {
+      "animation": "images/buildings/stairs_up",
+      "canStep": true,
+      "label": "Stairs Up to Level 3: Fallen Gallery",
+      "targetX": 2,
+      "targetY": 2,
+      "targetZ": 3
+    }
+  },
+  "stairsUpLevel3": {
+    "class": "LevelStairs",
+    "properties": {
+      "animation": "images/buildings/stairs_up",
+      "canStep": true,
+      "label": "Stairs Up to Level 4: Overgrown Court",
+      "targetX": 5,
+      "targetY": 2,
+      "targetZ": 4
+    }
+  },
+  "stairsUpLevel4": {
+    "class": "LevelStairs",
+    "properties": {
+      "animation": "images/buildings/stairs_up",
+      "canStep": true,
+      "label": "Stairs Up to Level 5: Ashen Archives",
+      "targetX": 5,
+      "targetY": 5,
+      "targetZ": 5
+    }
+  },
+  "stairsUpLevel5": {
+    "class": "LevelStairs",
+    "properties": {
+      "animation": "images/buildings/stairs_up",
+      "canStep": true,
+      "label": "Stairs Up to Level 6: Pilgrim's Hall",
+      "targetX": 2,
+      "targetY": 5,
+      "targetZ": 6
+    }
+  },
+  "stairsUpLevel6": {
+    "class": "LevelStairs",
+    "properties": {
+      "animation": "images/buildings/stairs_up",
+      "canStep": true,
+      "label": "Stairs Up to Level 7: Shattered Cloister",
+      "targetX": 2,
+      "targetY": 2,
+      "targetZ": 7
+    }
+  },
+  "stairsUpLevel7": {
+    "class": "LevelStairs",
+    "properties": {
+      "animation": "images/buildings/stairs_up",
+      "canStep": true,
+      "label": "Stairs Up to Level 8: Watcher's Gallery",
+      "targetX": 5,
+      "targetY": 2,
+      "targetZ": 8
+    }
+  },
+  "stairsUpLevel8": {
+    "class": "LevelStairs",
+    "properties": {
+      "animation": "images/buildings/stairs_up",
+      "canStep": true,
+      "label": "Stairs Up to Level 9: Buried Chapel",
+      "targetX": 5,
+      "targetY": 5,
+      "targetZ": 9
+    }
+  },
+  "stairsUpLevel9": {
+    "class": "LevelStairs",
+    "properties": {
+      "animation": "images/buildings/stairs_up",
+      "canStep": true,
+      "label": "Stairs Up to Level 10: Winter Vault",
+      "targetX": 2,
+      "targetY": 5,
+      "targetZ": 10
     }
   }
 }
