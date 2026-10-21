@@ -318,6 +318,35 @@ class BaldursGateCityContentTest(unittest.TestCase):
         model.clock.initializeActor(actor)
         self.assertEqual(2, len(actor.items) + len(actor.equipped))
 
+    def testQuestOutcomeCommitsOnceBeforeYieldingTheNativeJournalCheck(self):
+        model = CityModel(intelligence=12)
+        actor = model.actor("Quinn", "AR0157")
+        model.clock.initializeActor(actor)
+        dialog = model.dialog(actor)
+        self.assertTrue(dialog.acceptQuinnDagger())
+        model.item("DAGG06")
+        before = model.player.getNumericProperty("exp"), model.player.getGold()
+        model.player.checkQuests = Mock(wraps=model.player.checkQuests)
+        flow = dialog.performQuestOutcomeFlow("quinnDagger", "complete")
+        try:
+            pending = next(flow)
+            self.assertEqual("gui.checkQuests", pending["operation"])
+            self.assertEqual((model.player,), pending["args"])
+            model.player.checkQuests.assert_not_called()
+            self.assertEqual("completed", model.game_map.getStringProperty("plugin_cityQuest_quinnDagger"))
+            expected = before[0] + 950, before[1]
+            self.assertEqual(expected, (model.player.getNumericProperty("exp"), model.player.getGold()))
+            self.assertFalse(dialog.questQuinnDaggerComplete(), "A suspended journal check cannot grant twice")
+            pending["args"][0].checkQuests()
+            with self.assertRaises(StopIteration) as completed:
+                flow.send(None)
+            self.assertIs(True, completed.exception.value)
+            model.player.checkQuests.assert_called_once_with()
+            self.assertEqual(expected, (model.player.getNumericProperty("exp"), model.player.getGold()))
+            self.assertEqual(1, len(model.player.getCompletedQuests()))
+        finally:
+            flow.close()
+
     def testRewardStockAndPriorTheftShareOneItemAndDoNotRespawn(self):
         model = CityModel(intelligence=12)
         actor = model.actor("Quinn", "AR0157")

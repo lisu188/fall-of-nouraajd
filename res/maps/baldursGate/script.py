@@ -666,7 +666,7 @@ def load(self, context):
                 world(self).setBoolProperty("plugin_cityOutcome_" + key + "_" + outcome_key, True)
                 if outcome.get("terminal", True):
                     setStage(self, key, "completed")
-            hero(self).checkQuests()
+            yield uiRequest("gui.checkQuests", hero(self))
             clock(self).spawnActors()
             clock(self).applySchedules()
             notify(self, "Your choice is recorded: " + outcome["text"])
@@ -4305,7 +4305,7 @@ def load(self, context):
                     existing = tuple(hero(actor).getQuests()) + tuple(hero(actor).getCompletedQuests())
                     if not any(entry.getTypeId() == questId("sarevokFinale") for entry in existing):
                         hero(actor).addQuest(questId("sarevokFinale"))
-                    hero(actor).checkQuests()
+                    yield uiRequest("gui.checkQuests", hero(actor))
                     yield uiRequest(
                         "showReader",
                         flowGame(actor.getGame()),
