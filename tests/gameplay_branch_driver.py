@@ -3,7 +3,7 @@
 # SPDX-License-Identifier: GPL-3.0-or-later
 """Restricted natural-play client; fixture mutations never pass through its action surface."""
 
-from collections import OrderedDict, deque
+from collections import Counter, OrderedDict, deque
 from functools import lru_cache
 
 from tests.gameplay_branch_journals import verifyJournals
@@ -15,6 +15,7 @@ import hashlib
 import json
 import os
 from pathlib import Path
+import shutil
 import subprocess
 import sys
 import uuid
@@ -213,11 +214,131 @@ class GameplayBranchDriver:
                 output.write(json.dumps(action, ensure_ascii=False) + "\n")
 
     def engine(self, name, *args):
-        self.test.assertNotIn(
-            name, {"randint", "CGameLoader.loadGui"}, "Routes cannot manipulate randomness or open GUI"
-        )
+        self.test.assertNotEqual(name, "randint", "Routes cannot manipulate randomness")
+        if name == "CGameLoader.loadGui":
+            self.requireIsolatedGui()
         self.record({"engine": name, "args": args}, replay=name not in {"jsonify", "event_loop.instance"})
         return self.harness._mcp_engine_call(self.session, name, list(args), timeout=90)
+
+    def requireIsolatedGui(self):
+        self.test.assertTrue(self.case.isolated_gui, "Only declared isolated GUI routes may open native panels")
+        video = os.environ.get("SDL_VIDEODRIVER")
+        if video == "x11":
+            self.test.assertEqual("posix", os.name, "Xvfb routes require POSIX")
+            self.test.assertEqual(
+                "1", os.environ.get("GAME_XVFB_GAMEPLAY_CHILD"), "A repository Xvfb child is required"
+            )
+            self.test.assertTrue(shutil.which("xvfb-run") and shutil.which("xauth"), "Xvfb tools are required")
+            self.test.assertTrue(os.environ.get("DISPLAY"), "The isolated Xvfb display is missing")
+        else:
+            self.test.assertIn(video, {"dummy", "offscreen"}, "Native GUI routes must never open a desktop display")
+        self.test.assertEqual("software", os.environ.get("SDL_RENDER_DRIVER"), "Isolated routes use software rendering")
+        self.test.assertEqual("dummy", os.environ.get("SDL_AUDIODRIVER"), "Isolated routes use dummy audio")
+
+    def enableIsolatedGui(self):
+        self.requireIsolatedGui()
+        gui = self.call(self.game, "getGui")
+        if gui is None:
+            self.engine("CGameLoader.loadGui", self.game)
+            gui = self.call(self.game, "getGui")
+        self.test.assertIsNotNone(gui, "The current native binary could not create an isolated GUI")
+        return gui
+
+    def nativePanel(self, type_name, *, required=True):
+        gui = self.call(self.game, "getGui")
+        self.test.assertIsNotNone(gui, "A real isolated native GUI is required")
+        panels = [child for child in self.call(gui, "getChildren") if self.call(child, "getType") == type_name]
+        self.test.assertLessEqual(len(panels), 1, ("Ambiguous native modal panel", type_name))
+        if required:
+            self.test.assertTrue(panels, ("The authored callback did not open a native panel", type_name))
+        return panels[0] if panels else None
+
+    def chooseUi(self, dialog_id, action, *, selected_id=None, reader_title=None, reader_lines=()):
+        """Use authored dialog keys and the real nested native reader/choice; never inject a selection result."""
+        gui = self.enableIsolatedGui()
+        self.test.assertIsNotNone(self.trace_path, "GUI route credit requires the actual native option trace")
+        self.test.assertEqual(selected_id is None, reader_title is not None, "Select one native presentation kind")
+        definitions = mapDefinitions(self.map_name)
+        definition = resolveDefinition(definitions, dialog_id)["properties"]
+        owner = self.object(definition.get("actorId", ""))
+        here, there = self.coords(), self.coords(owner)
+        self.test.assertEqual(here[2], there[2], "The player must reach the authored dialog actor")
+        self.test.assertLessEqual(max(abs(here[0] - there[0]), abs(here[1] - there[1])), 1)
+        for type_name in ("CGameDialogPanel", "CGameCampaignPanel", "CGameCampaignBrowserPanel"):
+            self.test.assertIsNone(self.nativePanel(type_name, required=False), "An earlier modal is still open")
+        dialog = self.call(self.game, "createObject", dialog_id)
+        state = self._dialogStates(dialog_id)["ENTRY"]
+        visible = [
+            row["properties"]
+            for row in sorted(state.get("options", []), key=lambda row: row["properties"].get("number", 0))
+            if not row["properties"].get("condition")
+            or self.call(dialog, "invokeCondition", row["properties"]["condition"])
+        ]
+        matches = [index for index, row in enumerate(visible) if row.get("action") == action]
+        self.test.assertEqual(1, len(matches), ("Expected one visible authored entry option", dialog_id, action))
+        option = visible[matches[0]]
+        self.assertNativeCombatOutcomes()
+        after_seq = self._combat_trace_seq
+        panel = self.call(self.game, "createObject", "dialogPanel")
+        self.test.assertEqual("CGameDialogPanel", self.call(panel, "getType"))
+        # This native presentation property is the panel's public configuration surface;
+        # it cannot mutate the map, hero, source dialog or its authored options.
+        self._rawCall(panel, "setObjectProperty", "dialog", dialog)
+        self.call(gui, "pushChild", panel)
+        for _ in range(matches[0] + 1):
+            self.call(panel, "keyboardEvent", gui, 768, 1073741905)  # Down focuses the first visible reply.
+        self.call(panel, "keyboardEvent", gui, 768, 13)
+        self.pump()
+        witness = {"dialog": dialog_id, "action": action, "option": option["number"], "state": "ENTRY"}
+        if selected_id is not None:
+            nested = self.nativePanel("CGameCampaignBrowserPanel")
+            self.test.assertFalse(self.call(nested, "hasChoice"), "The real choice must remain unconfirmed")
+            self.call(nested, "keyboardEvent", gui, 768, 1073741898)  # Home selects the first actual row.
+            seen = set()
+            for _ in range(256):
+                highlighted = self.call(nested, "getSelectedId")
+                if highlighted == selected_id:
+                    break
+                self.test.assertNotIn(
+                    highlighted, seen, ("Requested item is absent from the native chooser", selected_id)
+                )
+                seen.add(highlighted)
+                self.call(nested, "keyboardEvent", gui, 768, 1073741905)
+            else:
+                self.test.fail(("Native choice row budget exhausted", selected_id))
+            self.call(nested, "keyboardEvent", gui, 768, 13)
+            self.pump()
+            self.test.assertTrue(self.call(nested, "hasChoice"), "Native confirmation did not settle the chooser")
+            self.test.assertIsNone(self.call(nested, "getParent"), "Confirmed chooser remained attached")
+            witness.update(kind="nativeChoice", selectedId=highlighted)
+        else:
+            nested = self.nativePanel("CGameCampaignPanel")
+            title, body = self.call(nested, "getTitle"), self.call(nested, "getBody")
+            self.test.assertEqual(reader_title, title)
+            self.test.assertEqual(Counter(reader_lines), Counter(body.splitlines()), "Native inventory reader contents")
+            self.test.assertFalse(self.call(nested, "isDismissed"))
+            self.call(nested, "keyboardEvent", gui, 768, 13)
+            self.pump()
+            self.test.assertTrue(self.call(nested, "isDismissed"))
+            self.test.assertIsNone(self.call(nested, "getParent"))
+            witness.update(kind="nativeReader", title=title, body=body)
+        records = readNewNativeTrace(self.trace_path, {}, after_seq)
+        selected = [
+            row
+            for row in records
+            if row.get("event") == "dialog_option_selected"
+            and row.get("action") == action
+            and row.get("stateId") == "ENTRY"
+            and row.get("optionNumber") == option["number"]
+            and row.get("dialog", {}).get("typeId") == dialog_id
+        ]
+        self.test.assertEqual(1, len(selected), "The authored native dialog callback needs one exact input receipt")
+        witness["nativeOptionSeq"] = selected[0]["seq"]
+        self.call(panel, "keyboardEvent", gui, 768, 27)
+        self.pump()
+        self.test.assertIsNone(self.call(panel, "getParent"), "Inventory interaction left its source modal open")
+        self.record({"nativeUiChoice": witness}, replay=True)
+        return witness
 
     def _rawCall(self, handle, method, *args):
         return self.harness._mcp_handle_call(self.session, handle, method, list(args), timeout=90)
@@ -1388,6 +1509,7 @@ class GameplayBranchDriver:
             "combats": self.combats,
             "actions": list(self.actions),
             "initialReputation": self.case.initial_reputation,
+            "isolatedGui": self.case.isolated_gui,
             "journals": getattr(self, "_journal_observations", []),
         }
 

@@ -26,6 +26,17 @@ def sourceMethod(source, class_id, method_name, **namespace):
 
 
 class GameplayBranchCatalogTest(unittest.TestCase):
+    def testCityInventoryUiMappingsRequireDeclaredIsolatedCasesWithoutClaimingSourceParity(self):
+        from tests.gameplay_routes_baldurs_gate import CASES, SOURCE_BRANCHES
+
+        ui_branches = {branch for case in CASES if case.isolated_gui for branch in case.branches}
+        for callback in ("showInventory", "pickPocket", "sell", "buyBack", "inspectCompanion", "takeCompanionItem"):
+            identity = "res/maps/baldursGate/script.py:BaldursGateDialog." + callback
+            self.assertIn(identity, catalog.sourceCallbacks())
+            self.assertTrue(set(SOURCE_BRANCHES[identity]) <= ui_branches)
+            self.assertNotIn(identity, catalog.defensiveContracts())
+        self.assertTrue(all(not branch.startswith("baldursGate.source.") for branch in ui_branches))
+
     def testDeferredEncounterCallbacksKeepTheirOriginalOutcomeObligations(self):
         mapping = catalog.sourceBranches()
         callbacks = catalog.sourceCallbacks()

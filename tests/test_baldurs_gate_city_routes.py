@@ -15,6 +15,112 @@ ROOT = Path(__file__).resolve().parents[1]
 
 
 class BaldursGateCityRoutesTest(unittest.TestCase):
+    def testNativeTradePlanRejectsWrongGoldAndDuplicatedSoldInstances(self):
+        from types import SimpleNamespace
+        from unittest.mock import Mock, patch
+
+        for mutation in (None, "wrongGold", "duplicate"):
+            with self.subTest(mutation=mutation):
+                state = {
+                    "gold": 1000,
+                    "hero": {},
+                    "shop": {},
+                    "checks": [],
+                    "saves": [],
+                    "selections": [],
+                }
+                item = {
+                    "name": "source-dart-instance",
+                    "plugin_citySourceItem": "DART02",
+                    "plugin_cityQuantity": 5,
+                    "plugin_cityValue": 8,
+                    "plugin_citySoldToStore": False,
+                }
+                driver = SimpleNamespace(
+                    test=self,
+                    player="hero",
+                    gold=lambda: state["gold"],
+                    object=lambda name: "clock" if name == "cityClock" else "shop",
+                    saveAndReload=lambda label: state["saves"].append(label),
+                    check=lambda branch, condition, **evidence: state["checks"].append(branch),
+                )
+
+                def call(owner, method, *args):
+                    if method == "getItems":
+                        return list(state[owner].values())
+                    if method == "getName":
+                        return owner["name"]
+                    if method == "getNumericProperty":
+                        return 10000 if owner == "hero" else owner.get(args[0], 0)
+                    if method == "getBoolProperty":
+                        return owner.get(args[0], False)
+                    if method == "getStringProperty":
+                        if owner == "clock":
+                            return json.dumps({"STOBLACK": {"buy_markup": 50, "sell_markup": 200}})
+                        return owner.get(args[0], "")
+                    raise AssertionError((owner, method, args))
+
+                def buy(_dialog, action):
+                    self.assertEqual("buyStoreStoblack1", action)
+                    state["gold"] -= 80
+                    state["hero"][item["name"]] = item
+
+                def choose(_dialog, action, *, selected_id):
+                    self.assertEqual(item["name"], selected_id)
+                    state["selections"].append(action)
+                    if action == "sell":
+                        state["shop"][selected_id] = state["hero"].pop(selected_id)
+                        item["plugin_citySoldToStore"] = True
+                        state["gold"] += 21 if mutation == "wrongGold" else 20
+                    else:
+                        self.assertEqual("buyBack", action)
+                        state["hero"][selected_id] = state["shop"][selected_id]
+                        if mutation != "duplicate":
+                            del state["shop"][selected_id]
+                        item["plugin_citySoldToStore"] = False
+                        state["gold"] -= 80
+                    return {"kind": "sourceModelOnly"}
+
+                driver.call, driver.choose, driver.chooseUi = call, buy, choose
+                with patch.object(routes, "start"), patch.object(
+                    routes, "QuestRoute", return_value=SimpleNamespace(contact=Mock())
+                ):
+                    if mutation:
+                        with self.assertRaises(AssertionError):
+                            routes.tradeUi(driver)
+                    else:
+                        routes.tradeUi(driver)
+                        self.assertEqual(["sell", "buyBack"], state["selections"])
+                        self.assertEqual(3, len(state["saves"]))
+                        self.assertEqual(
+                            ["baldursGate.trade.nativeSell", "baldursGate.trade.nativeBuyBack"], state["checks"]
+                        )
+
+    def testInventorySelectionCallbacksHaveExplicitIsolatedNativePlans(self):
+        cases = {case.id: case for case in routes.CASES if case.isolated_gui}
+        self.assertEqual(
+            {
+                "baldurs-gate-native-inventory",
+                "baldurs-gate-native-failed-theft",
+                "baldurs-gate-native-trading",
+                "baldurs-gate-native-companion-inventory",
+            },
+            set(cases),
+        )
+        covered = {branch for case in cases.values() for branch in case.branches}
+        for callback in ("showInventory", "pickPocket", "sell", "buyBack", "inspectCompanion", "takeCompanionItem"):
+            identity = "res/maps/baldursGate/script.py:BaldursGateDialog." + callback
+            self.assertTrue(set(routes.SOURCE_BRANCHES[identity]) <= covered)
+        tree = ast.parse((ROOT / "tests/gameplay_routes_baldurs_gate.py").read_text(encoding="utf-8"))
+        for method in ("inventoryUi", "tradeUi", "companionInventoryUi"):
+            source = ast.unparse(
+                next(node for node in tree.body if isinstance(node, ast.FunctionDef) and node.name == method)
+            )
+            self.assertIn("d.chooseUi", source)
+            self.assertIn("saveAndReload", source)
+            self.assertIn("itemInstances", source)
+        self.assertFalse(any(case.isolated_gui for case in routes.generatedQuestCases()))
+
     def testCityHasNaturalRoutePlansForAllFiveExistingHeroClasses(self):
         self.assertEqual(set(PLAYER_CLASSES), {hero for case in routes.CASES for hero in case.classes})
         self.assertTrue(all(case.group == "baldursGate" and case.maps == ("baldursGate",) for case in routes.CASES))
@@ -176,7 +282,7 @@ class BaldursGateCityRoutesTest(unittest.TestCase):
         owners = {
             entry["properties"]["sourceStore"]
             for entry in config.values()
-            if entry.get("class") == "CCreature" and entry["properties"].get("sourceStore")
+            if entry.get("class") in routes.ACTOR_CLASSES and entry["properties"].get("sourceStore")
         }
         cases = routes.generatedStoreCases()
         self.assertEqual(owners, {case.id.removeprefix("baldurs-gate-store-") for case in cases})

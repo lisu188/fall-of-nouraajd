@@ -11,6 +11,7 @@ from tests.gameplay_branch_types import RouteCase
 
 ROOT = Path(__file__).resolve().parents[1]
 MAP = "baldursGate"
+ACTOR_CLASSES = frozenset({"CCreature", "BaldursGateActor"})
 SOURCES = tuple(f"res/maps/{MAP}/{name}" for name in ("map.json", "config.json", "dialog.json", "script.py"))
 SOURCES += ("tests/fixtures/baldurs_gate_city_source.json", "tests/fixtures/baldurs_gate_city_quests.json")
 WARDS = ("AR0800", "AR0300", "AR0200", "AR0100", "AR0600", "AR0700", "AR1100", "AR1200", "AR1300")
@@ -359,7 +360,7 @@ class QuestRoute:
             candidates = [
                 name
                 for name, entry in self.data["config"].items()
-                if entry.get("class") == "CCreature"
+                if entry.get("class") in ACTOR_CLASSES
                 and selectorMatches(
                     entry["properties"], {key: value for key, value in selector.items() if key != "area"}, name
                 )
@@ -478,7 +479,7 @@ class QuestRoute:
                 (
                     name
                     for name, entry in self.data["config"].items()
-                    if entry.get("class") == "CCreature" and entry["properties"].get("sourceStore") == store_id
+                    if entry.get("class") in ACTOR_CLASSES and entry["properties"].get("sourceStore") == store_id
                 ),
                 None,
             )
@@ -519,7 +520,7 @@ class QuestRoute:
                         return
         for name, entry in sorted(self.data["config"].items()):
             properties = entry.get("properties", {})
-            if entry.get("class") != "CCreature" or not any(
+            if entry.get("class") not in ACTOR_CLASSES or not any(
                 row["item"] in codes for row in json.loads(properties.get("sourceInventory", "[]"))
             ):
                 continue
@@ -621,7 +622,7 @@ class QuestRoute:
         for area_id in condition.get("clearedAreas", []):
             travel(self.d, area_id)
             for name, entry in sorted(self.data["config"].items()):
-                if entry.get("class") != "CCreature" or entry["properties"].get("sourceArea") != area_id:
+                if entry.get("class") not in ACTOR_CLASSES or entry["properties"].get("sourceArea") != area_id:
                     continue
                 actor = self.d.object(name, required=False)
                 if actor and self.d.call(actor, "isAlive") and not self.d.call(actor, "isNpc"):
@@ -778,7 +779,7 @@ def prepareIdentification(d, planner):
     seller = next(
         name
         for name, entry in config.items()
-        if entry.get("class") == "CCreature" and entry.get("properties", {}).get("sourceStore") == store_id
+        if entry.get("class") in ACTOR_CLASSES and entry.get("properties", {}).get("sourceStore") == store_id
     )
     store = read(d, d.object("cityClock"), "storeDefinitions", {})[store_id]
     index, row = next((index, row) for index, row in enumerate(store["stock"]) if row["item"] == "STAF25")
@@ -918,7 +919,7 @@ def generatedStoreCases():
     owners = {}
     for name, entry in data["config"].items():
         properties = entry.get("properties", {})
-        if entry.get("class") == "CCreature" and properties.get("sourceStore"):
+        if entry.get("class") in ACTOR_CLASSES and properties.get("sourceStore"):
             owners.setdefault(properties["sourceStore"], name)
     return tuple(
         RouteCase(
@@ -1011,7 +1012,7 @@ def companionsRoute(d):
         (
             name
             for name, entry in sorted(documents()["config"].items())
-            if entry.get("class") == "CCreature"
+            if entry.get("class") in ACTOR_CLASSES
             and entry["properties"].get("sourceArea") == "AR0224"
             and entry["properties"].get("affiliation") == "cityHostile"
             and d.object(name, required=False)
@@ -1146,7 +1147,7 @@ def templeUtilities(d):
     owner = next(
         name
         for name, resource in documents()["config"].items()
-        if resource.get("class") == "CCreature" and resource["properties"].get("sourceStore") == "TEM0002"
+        if resource.get("class") in ACTOR_CLASSES and resource["properties"].get("sourceStore") == "TEM0002"
     )
     planner.contact(owner)
     document = read(d, d.object("cityClock"), "questDefinitions", {})
@@ -1176,6 +1177,178 @@ def templeUtilities(d):
         before == (resources(d), d.number("plugin_cityStanding"), d.number("plugin_cityReputation")),
         paidDonations=funded,
     )
+
+
+def itemInstances(d, owner):
+    return {d.call(item, "getName"): item for item in d.call(owner, "getItems")}
+
+
+def inventoryReaderLines(d, owner):
+    owned = itemInstances(d, owner)
+    owned.update((d.call(item, "getName"), item) for item in d.call(owner, "getEquipped").values() if item is not None)
+    return [
+        (d.call(item, "getStringProperty", "label") or d.call(item, "getStringProperty", "plugin_citySourceItem"))
+        + " x"
+        + str(max(1, d.call(item, "getNumericProperty", "plugin_cityQuantity")))
+        for item in owned.values()
+    ] or ["No carried belongings."]
+
+
+def inventoryUi(d, *, failed=False):
+    start(d)
+    name = "cityAr0800Actor73"  # Niklos's authored backpack holds a Potion of Master Thievery.
+    QuestRoute(d).contact(name)
+    owner = d.object(name)
+    before_items, before_owner = itemInstances(d, d.player), itemInstances(d, owner)
+    candidates = [
+        item
+        for item in before_owner.values()
+        if d.call(item, "getStringProperty", "plugin_citySourceItem") == "POTN36"
+        and not d.call(item, "getBoolProperty", "plugin_cityUnstealable")
+        and not d.call(item, "getBoolProperty", "plugin_cityUndroppable")
+    ]
+    d.test.assertEqual(1, len(candidates), "The route requires Niklos's actual source potion")
+    selected = d.call(candidates[0], "getName")
+    agility = d.call(d.call(d.player, "getStats"), "getNumericProperty", "agility")
+    threshold = d.call(owner, "getNumericProperty", "plugin_cityTheftAgility") or 16
+    if failed:
+        d.test.assertLess(agility, threshold)
+    else:
+        d.test.assertGreaterEqual(agility, threshold)
+        d.test.assertFalse(d.call(owner, "getBoolProperty", "plugin_cityUnavoidableDetection"))
+    before, crimes, standing = resources(d), d.number("plugin_cityCrimes"), d.number("plugin_cityStanding")
+    d.saveAndReload("city-before-native-theft")
+    owner = d.object(name)
+    reader = d.chooseUi(
+        name + "Dialog",
+        "showInventory",
+        reader_title=d.call(owner, "getStringProperty", "label"),
+        reader_lines=inventoryReaderLines(d, owner),
+    )
+    d.test.assertEqual(set(before_items), set(itemInstances(d, d.player)))
+    d.test.assertEqual(set(before_owner), set(itemInstances(d, owner)))
+    d.test.assertEqual(before, resources(d))
+    d.check("baldursGate.inventory.nativeReader", True, nativePanel=reader, sourceActor="AR0800#actor73")
+    witness = d.chooseUi(name + "Dialog", "pickPocket", selected_id=selected)
+    after_items, after_owner = itemInstances(d, d.player), itemInstances(d, owner)
+    if failed:
+        d.test.assertEqual(set(before_items), set(after_items))
+        d.test.assertEqual(set(before_owner), set(after_owner))
+        d.test.assertEqual(before, resources(d))
+        d.test.assertEqual(crimes + 1, d.number("plugin_cityCrimes"))
+        d.test.assertEqual(standing - 2, d.number("plugin_cityStanding"))
+        branch = "baldursGate.theft.nativeFailed"
+    else:
+        d.test.assertEqual(set(before_items) | {selected}, set(after_items))
+        d.test.assertEqual(set(before_owner) - {selected}, set(after_owner))
+        d.test.assertTrue(d.call(after_items[selected], "getBoolProperty", "plugin_cityStolen"))
+        d.test.assertEqual(before[0:2], resources(d)[0:2])
+        d.test.assertEqual(before[2] + Counter({"POTN36": 1}), resources(d)[2])
+        d.test.assertEqual(crimes, d.number("plugin_cityCrimes"))
+        d.test.assertEqual(standing, d.number("plugin_cityStanding"))
+        branch = "baldursGate.theft.nativeSucceeded"
+    after, crime_after = resources(d), d.number("plugin_cityCrimes")
+    d.saveAndReload("city-after-native-theft")
+    d.test.assertEqual(after, resources(d))
+    d.test.assertEqual(set(after_items), set(itemInstances(d, d.player)))
+    d.test.assertEqual(set(after_owner), set(itemInstances(d, d.object(name))))
+    d.test.assertEqual(crime_after, d.number("plugin_cityCrimes"))
+    d.check(branch, True, nativePanel=witness, item=selected, agility=agility, requiredAgility=threshold)
+
+
+def tradeUi(d):
+    start(d)
+    name, store_id = "cityAr0153Actor5", "STOBLACK"
+    QuestRoute(d).contact(name)
+    owner = d.object(name)
+    store = read(d, d.object("cityClock"), "storeDefinitions", {})[store_id]
+    before_names = set(itemInstances(d, d.player))
+    d.choose(name + "Dialog", "buyStoreStoblack1")
+    purchased = itemInstances(d, d.player)
+    added = set(purchased) - before_names
+    d.test.assertEqual(1, len(added))
+    selected = added.pop()
+    item = purchased[selected]
+    d.test.assertEqual("DART02", d.call(item, "getStringProperty", "plugin_citySourceItem"))
+    d.test.assertEqual(5, d.call(item, "getNumericProperty", "plugin_cityQuantity"))
+    base = d.call(item, "getNumericProperty", "plugin_cityValue") * 5
+    sale_price, buy_price = base * store["buy_markup"] // 100, max(1, base * store["sell_markup"] // 100)
+    d.test.assertEqual((20, 80), (sale_price, buy_price), "The source five-dart bundle must keep its exact price")
+    before, before_owner = resources(d), set(itemInstances(d, owner))
+    d.saveAndReload("city-before-native-sale")
+    witness = d.chooseUi(name + "Dialog", "sell", selected_id=selected)
+    owner = d.object(name)
+    sold = itemInstances(d, owner)
+    d.test.assertEqual(set(purchased) - {selected}, set(itemInstances(d, d.player)))
+    d.test.assertEqual(before_owner | {selected}, set(sold))
+    d.test.assertTrue(d.call(sold[selected], "getBoolProperty", "plugin_citySoldToStore"))
+    d.test.assertEqual(before[0] + sale_price, d.gold())
+    d.test.assertEqual(before[1], resources(d)[1])
+    d.test.assertEqual(before[2] - Counter({"DART02": 5}), resources(d)[2])
+    after_sale = resources(d)
+    d.saveAndReload("city-after-native-sale")
+    d.test.assertEqual(after_sale, resources(d))
+    d.test.assertIn(selected, itemInstances(d, d.object(name)))
+    d.check("baldursGate.trade.nativeSell", True, nativePanel=witness, item=selected, goldDelta=sale_price)
+    witness = d.chooseUi(name + "Dialog", "buyBack", selected_id=selected)
+    bought = itemInstances(d, d.player)
+    d.test.assertEqual(set(purchased), set(bought))
+    d.test.assertEqual(before_owner, set(itemInstances(d, d.object(name))))
+    d.test.assertFalse(d.call(bought[selected], "getBoolProperty", "plugin_citySoldToStore"))
+    d.test.assertEqual(after_sale[0] - buy_price, d.gold())
+    d.test.assertEqual(before[1:], resources(d)[1:])
+    after_buyback = resources(d)
+    d.saveAndReload("city-after-native-buyback")
+    d.test.assertEqual(after_buyback, resources(d))
+    d.test.assertEqual(set(purchased), set(itemInstances(d, d.player)))
+    d.test.assertNotIn(selected, itemInstances(d, d.object(name)))
+    d.check("baldursGate.trade.nativeBuyBack", True, nativePanel=witness, item=selected, goldDelta=-buy_price)
+
+
+def companionInventoryUi(d):
+    start(d)
+    planner = QuestRoute(d)
+    planner.contact("cityStart")
+    d.choose("cityStartDialog", "encounterQuayle")
+    name = "cityCampaignNpc13"
+    planner.contact(name)
+    d.choose(name + "Dialog", "recruit")
+    owner = d.object(name)
+    d.test.assertIn(name, read(d, d.object("cityClock"), "plugin_cityRoster", []))
+    before, before_items, before_owner = resources(d), itemInstances(d, d.player), itemInstances(d, owner)
+    choices = [item for item in before_owner.values() if not d.call(item, "getBoolProperty", "plugin_cityUndroppable")]
+    d.test.assertTrue(choices, "Quayle must retain an actual transferable source backpack item")
+    item = min(choices, key=lambda item: d.call(item, "getName"))
+    selected, code = d.call(item, "getName"), d.call(item, "getStringProperty", "plugin_citySourceItem")
+    count = max(1, d.call(item, "getNumericProperty", "plugin_cityQuantity"))
+    before_equipped = {slot: d.call(value, "getName") for slot, value in d.call(owner, "getEquipped").items() if value}
+    d.saveAndReload("city-before-companion-inventory")
+    owner = d.object(name)
+    reader = d.chooseUi(
+        name + "Dialog",
+        "inspectCompanion",
+        reader_title=d.call(owner, "getStringProperty", "label"),
+        reader_lines=inventoryReaderLines(d, owner),
+    )
+    d.test.assertEqual(before, resources(d))
+    d.test.assertEqual(set(before_owner), set(itemInstances(d, owner)))
+    d.check("baldursGate.companions.nativeInventory", True, nativePanel=reader, companion=name)
+    witness = d.chooseUi(name + "Dialog", "takeCompanionItem", selected_id=selected)
+    d.test.assertEqual(set(before_items) | {selected}, set(itemInstances(d, d.player)))
+    d.test.assertEqual(set(before_owner) - {selected}, set(itemInstances(d, owner)))
+    d.test.assertEqual(before[0:2], resources(d)[0:2])
+    d.test.assertEqual(before[2] + Counter({code: count}), resources(d)[2])
+    after = resources(d)
+    d.saveAndReload("city-after-companion-item-transfer")
+    d.test.assertEqual(after, resources(d))
+    d.test.assertIn(selected, itemInstances(d, d.player))
+    d.test.assertNotIn(selected, itemInstances(d, d.object(name)))
+    d.test.assertEqual(
+        before_equipped,
+        {slot: d.call(value, "getName") for slot, value in d.call(d.object(name), "getEquipped").items() if value},
+    )
+    d.test.assertIn(name, read(d, d.object("cityClock"), "plugin_cityRoster", []))
+    d.check("baldursGate.companions.nativeItemTransfer", True, nativePanel=witness, companion=name, item=selected)
 
 
 CASES = (
@@ -1345,7 +1518,66 @@ CASES += (
     ),
 )
 
+CASES += (
+    RouteCase(
+        "baldurs-gate-native-inventory",
+        MAP,
+        (MAP,),
+        ("baldursGate.inventory.nativeReader", "baldursGate.theft.nativeSucceeded"),
+        inventoryUi,
+        classes=("Assasin",),
+        race="wandererRace",
+        sources=SOURCES,
+        duration_seconds=300,
+        isolated_gui=True,
+    ),
+    RouteCase(
+        "baldurs-gate-native-failed-theft",
+        MAP,
+        (MAP,),
+        ("baldursGate.inventory.nativeReader", "baldursGate.theft.nativeFailed"),
+        partial(inventoryUi, failed=True),
+        classes=("Warrior",),
+        sources=SOURCES,
+        duration_seconds=300,
+        isolated_gui=True,
+    ),
+    RouteCase(
+        "baldurs-gate-native-trading",
+        MAP,
+        (MAP,),
+        ("baldursGate.trade.nativeSell", "baldursGate.trade.nativeBuyBack"),
+        tradeUi,
+        classes=("Wayfarer",),
+        sources=SOURCES,
+        duration_seconds=600,
+        isolated_gui=True,
+    ),
+    RouteCase(
+        "baldurs-gate-native-companion-inventory",
+        MAP,
+        (MAP,),
+        ("baldursGate.companions.nativeInventory", "baldursGate.companions.nativeItemTransfer"),
+        companionInventoryUi,
+        classes=("Sorcerer",),
+        sources=SOURCES,
+        duration_seconds=300,
+        isolated_gui=True,
+    ),
+)
+
 SOURCE_BRANCHES = {
+    "res/maps/baldursGate/script.py:BaldursGateDialog.showInventory": ("baldursGate.inventory.nativeReader",),
+    "res/maps/baldursGate/script.py:BaldursGateDialog.pickPocket": (
+        "baldursGate.theft.nativeSucceeded",
+        "baldursGate.theft.nativeFailed",
+    ),
+    "res/maps/baldursGate/script.py:BaldursGateDialog.sell": ("baldursGate.trade.nativeSell",),
+    "res/maps/baldursGate/script.py:BaldursGateDialog.buyBack": ("baldursGate.trade.nativeBuyBack",),
+    "res/maps/baldursGate/script.py:BaldursGateDialog.inspectCompanion": ("baldursGate.companions.nativeInventory",),
+    "res/maps/baldursGate/script.py:BaldursGateDialog.takeCompanionItem": (
+        "baldursGate.companions.nativeItemTransfer",
+    ),
     "res/maps/baldursGate/script.py:BaldursGateDialog.declineTamokoFirstMeeting": (
         "baldursGate.quest.tamokoMercy.fight",
     ),
