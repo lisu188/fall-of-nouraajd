@@ -236,7 +236,7 @@ class CGameObject : public vstd::stringable, public std::enable_shared_from_this
     void recordDirectPropertyChanged(const std::string &name);
 
   private:
-    void dispatchDeferred(std::move_only_function<void()> callback);
+    void dispatchDeferred(vstd::move_only_function<void()> callback);
 
     std::list<std::tuple<std::string, std::weak_ptr<CGameObject>, std::string>> connections;
 

@@ -2601,7 +2601,7 @@ void testItemPositionCommitOwnsConsumptionBeforeArrivalCancellation() {
             auto item = add_unit_loot(game, actor, "unitPositionDisposable");
             int commits = 0;
             auto commit =
-                std::make_shared<std::move_only_function<void()>>([actor, item, &commits, settled = false]() mutable {
+                std::make_shared<vstd::move_only_function<void()>>([actor, item, &commits, settled = false]() mutable {
                     if (!std::exchange(settled, true)) {
                         ++commits;
                         actor->removeItem(item);
@@ -2625,7 +2625,7 @@ void testItemPositionCommitOwnsConsumptionBeforeArrivalCancellation() {
             }
             expect_true(wrongQuestCommitRejected && commits == 0 && actor->hasInInventory(item),
                         "a quest marker must not consume an item-use capability");
-            auto positionCommit = flow ? flow->commitCallback() : std::move_only_function<void()>{[] {}};
+            auto positionCommit = flow ? flow->commitCallback() : vstd::move_only_function<void()>{[] {}};
             flow.reset();
             CPythonOverrides::release(item.get());
             commit.reset();
@@ -2678,7 +2678,7 @@ void testItemPositionCommitOwnsConsumptionBeforeArrivalCancellation() {
         auto item = add_unit_loot(game, actor, "unitNormalPositionItem");
         int commits = 0;
         auto commit =
-            std::make_shared<std::move_only_function<void()>>([actor, item, &commits, settled = false]() mutable {
+            std::make_shared<vstd::move_only_function<void()>>([actor, item, &commits, settled = false]() mutable {
                 if (!std::exchange(settled, true)) {
                     ++commits;
                     actor->removeItem(item);
@@ -2692,7 +2692,7 @@ void testItemPositionCommitOwnsConsumptionBeforeArrivalCancellation() {
         CPythonOverrides::retain(item, callbacks);
         auto flow = CScriptHandler::createObjectFlow(item, "onUseFlow", {}, game, {}, commit);
         expect_true(flow != nullptr, "normal-return movement must create its explicit commit flow");
-        auto positionCommit = flow ? flow->commitCallback() : std::move_only_function<void()>{[] {}};
+        auto positionCommit = flow ? flow->commitCallback() : vstd::move_only_function<void()>{[] {}};
         if (mode == 2) {
             actor->beforeReleased = true;
             actor->afterReleased = true;
@@ -2723,7 +2723,7 @@ void testItemPositionCommitOwnsConsumptionBeforeArrivalCancellation() {
         auto item = add_unit_loot(game, actor, "unitOrdinaryItemFlow");
         int commits = 0;
         auto commit =
-            std::make_shared<std::move_only_function<void()>>([actor, item, &commits, settled = false]() mutable {
+            std::make_shared<vstd::move_only_function<void()>>([actor, item, &commits, settled = false]() mutable {
                 if (!std::exchange(settled, true)) {
                     ++commits;
                     actor->removeItem(item);

@@ -351,7 +351,7 @@ class CMap : public CGameObject {
     bool addObjectWithoutEvents(const std::shared_ptr<CMapObject> &mapObject);
 
     vstd::task<void> addObjectWithEventsAsync(std::shared_ptr<CMapObject> mapObject,
-                                              std::move_only_function<vstd::task<void>()> afterCreate);
+                                              vstd::move_only_function<vstd::task<void>()> afterCreate);
 
     static vstd::task<void> moveCreatedObjectAsync(std::shared_ptr<CMap> map, std::shared_ptr<CMapObject> object,
                                                    Coords coords);

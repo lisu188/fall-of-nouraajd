@@ -86,7 +86,7 @@ class CSceneManager : public std::enable_shared_from_this<CSceneManager> {
     bool requestMapChange(const std::shared_ptr<CGame> &game, CMapTransitionRequest request);
 
     bool requestMapChange(const std::shared_ptr<CGame> &game, CMapTransitionRequest request,
-                          std::move_only_function<vstd::task<void>()> beforeEntryAsync);
+                          vstd::move_only_function<vstd::task<void>()> beforeEntryAsync);
 
     bool isTransitionPending() const;
 
@@ -101,12 +101,12 @@ class CSceneManager : public std::enable_shared_from_this<CSceneManager> {
                                                std::weak_ptr<CGameContext> context, std::weak_ptr<CMap> expectedMap,
                                                bool hadExpectedMap, std::uint64_t generation,
                                                CMapTransitionRequest request,
-                                               std::move_only_function<vstd::task<void>()> beforeEntryAsync,
+                                               vstd::move_only_function<vstd::task<void>()> beforeEntryAsync,
                                                std::shared_ptr<scene_detail::CTransitionCompletion> completion);
 
     vstd::task<void> performMapChangeAsync(std::weak_ptr<CGame> game, std::uint64_t generation,
                                            CMapTransitionRequest request,
-                                           std::move_only_function<vstd::task<void>()> beforeEntryAsync,
+                                           vstd::move_only_function<vstd::task<void>()> beforeEntryAsync,
                                            std::shared_ptr<scene_detail::CTransitionCompletion> completion);
 
     void resetTransition();

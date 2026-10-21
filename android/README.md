@@ -13,7 +13,7 @@ and calls `game.new()`.
 - Android Gradle Plugin: 9.3.1
 - Java: 17
 - Android NDK: 29.0.14206865, shared by dependency bootstrap and the Gradle native build
-- game native code: C++23
+- game native code: C++26
 
 API 28 matches the API floor used by vcpkg's current tested `arm64-android` triplet. Lower Android versions are not claimed by this MVP until the dependency triplet is explicitly rebuilt/tested for a lower API level.
 
@@ -29,7 +29,9 @@ bash bootstrap-deps.sh
 
 NDK 29 provides the standard C++ stop-token and `std::jthread` support used by the engine thread pool.
 The bootstrap checks the selected NDK revision before downloading or building dependencies, and Gradle pins the same
-revision for the game build.
+revision for the game build. The engine uses `vstd::move_only_function`, which retains
+`std::move_only_function` on supporting standard libraries and supplies a move-only callback implementation
+on the NDK libc++ toolchain.
 
 The script pins the Android runtime inputs used by this branch:
 
