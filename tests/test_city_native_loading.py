@@ -46,8 +46,11 @@ class CityNativeLoadingRuntimeTest(unittest.TestCase):
                         assert (point.x, point.y, point.z) == (x, y, level), (point.x, point.y, point.z)
                         assert tile.getTypeId() == 'cityWallTile', tile.getTypeId()
                         assert not world.canStep(game.Coords(x, y, level)), (x, y, level)
-                print('native city construction and five-level blocked fallback verified', time.perf_counter()-started,
-                      flush=True)
+                print(
+                    'native city construction and five-level blocked fallback verified',
+                    time.perf_counter() - started,
+                    flush=True,
+                )
             finally:
                 instance.getContext().shutdown()
             """)

@@ -26765,6 +26765,8 @@ class TestRunnerSuiteTest(unittest.TestCase):
         # separate shards so no single shard has to run more than one huge-map
         # walkthrough back-to-back (which is what previously blew the shard timeout).
         huge_maps = {
+            "McpServerTest.test_stdio_map_walkthrough_candlekeep",
+            "McpServerTest.test_stdio_map_walkthrough_baldursGate",
             "McpServerTest.test_stdio_map_walkthrough_ninemarches",
             "McpServerTest.test_stdio_map_walkthrough_kadath",
             "McpServerTest.test_stdio_map_walkthrough_sunderedmarch",
@@ -26772,7 +26774,9 @@ class TestRunnerSuiteTest(unittest.TestCase):
         stdio_walkthroughs = [
             f"McpServerTest.test_stdio_map_walkthrough_{map_name}" for map_name in McpServerTest.MCP_WALKTHROUGHS
         ]
-        groups = shard_test_names(stdio_walkthroughs, jobs=4, timings=DEFAULT_TEST_DURATIONS)
+        groups = shard_test_names(stdio_walkthroughs, jobs=len(huge_maps), timings=DEFAULT_TEST_DURATIONS)
+        self.assertEqual(len(huge_maps), len(groups))
+        self.assertCountEqual(stdio_walkthroughs, [name for group in groups for name in group])
         for group in groups:
             self.assertLessEqual(
                 len(huge_maps.intersection(group)),

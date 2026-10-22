@@ -67,8 +67,10 @@ def nativeHttpChildScript():
             replacement.close()
         print('MCP_HTTP_REOPENED', flush=True)
         print('MCP_HTTP_CLOSED', flush=True)
-        threads = [{'name': t.name, 'ident': t.ident, 'daemon': t.daemon, 'alive': t.is_alive()}
-                   for t in threading.enumerate()[:16]]
+        threads = [
+            {'name': t.name, 'ident': t.ident, 'daemon': t.daemon, 'alive': t.is_alive()}
+            for t in threading.enumerate()[:16]
+        ]
         print('MCP_HTTP_FINAL_THREADS ' + json.dumps(threads), file=sys.stderr, flush=True)
         print('MCP_HTTP_ENTERING_FINALIZATION', file=sys.stderr, flush=True)
         """)
