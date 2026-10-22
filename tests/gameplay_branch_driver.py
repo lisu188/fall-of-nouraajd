@@ -647,7 +647,36 @@ class GameplayBranchDriver:
             arguments += ["--reputation", str(self.case.initial_reputation)]
         environment = os.environ.copy()
         environment["GAME_PLAYTEST_TRACE"] = "0"
-        process = subprocess.run(arguments, cwd=ROOT, env=environment, capture_output=True, text=True, timeout=90)
+        try:
+            process = subprocess.run(arguments, cwd=ROOT, env=environment, capture_output=True, text=True, timeout=90)
+        except subprocess.TimeoutExpired as error:
+
+            def tail(value):
+                if isinstance(value, bytes):
+                    value = value[-4096:].decode("utf-8", errors="replace")
+                return (value or "")[-4096:]
+
+            try:
+                self.record(
+                    {
+                        "startingSaveFailure": {
+                            "type": "TimeoutExpired",
+                            "timeout": error.timeout,
+                            "command": error.cmd,
+                            "stdoutTail": tail(error.stdout),
+                            "stderrTail": tail(error.stderr),
+                        }
+                    },
+                    replay=True,
+                )
+            except OSError as evidence_error:
+                error.add_note(
+                    "Starting-save timeout diagnostics could not be saved: "
+                    + type(evidence_error).__name__
+                    + ": "
+                    + str(evidence_error)[:512]
+                )
+            raise
         self.test.assertEqual(0, process.returncode, process.stdout[-4096:] + process.stderr[-4096:])
         self.test.assertTrue((self.build_dir / "save" / (slot + ".json")).is_file())
         self.record({"startingSave": json.loads(process.stdout.splitlines()[-1])}, replay=True)
