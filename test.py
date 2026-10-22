@@ -184,6 +184,8 @@ FAST_TEST_PREFIXES = (
     "GameDiagnosticsTest.",
     "McpDiagnosticsTest.",
     "McpEngineThreadTest.",
+    "McpNativeUiOwnershipSourceTest.",
+    "UsurpergateEntryDiagnosticsTest.",
     "OctobogzDiagnosticTest.",
     "WindowsPythonConfigurationTest.",
     "EnemyRoleContractTest.",
@@ -18333,6 +18335,16 @@ class GameTest(unittest.TestCase):
         return execute_walkthrough("castleGriffinCliff")
 
     @game_test
+    def test_map_walkthrough_candlekeep(self):
+        return execute_walkthrough("candlekeep")
+
+
+    @game_test
+    def test_map_walkthrough_baldursGate(self):
+        return execute_walkthrough("baldursGate")
+
+
+    @game_test
     def test_all_maps_have_walkthroughs(self):
         discovered_maps = discover_maps()
         walkthrough_maps = sorted(WALKTHROUGHS)
@@ -19770,12 +19782,49 @@ class GameTest(unittest.TestCase):
         self.enterContext(mockNativeUiRequests({"showCampaignScreen": lambda *args: capture_reader(None, *args)}))
 
         def enter_start(g, player):
-            player.moveTo(start_definition["x"] // 32, start_definition["y"] // 32, 0)
+            target = (start_definition["x"] // 32, start_definition["y"] // 32, 0)
+            initial_start = g.getMap().getObjectByName("usurpergateStart")
+
+            def observed(probe):
+                try:
+                    return probe()
+                except Exception as error:
+                    return {"error": type(error).__name__ + ": " + str(error)[:256]}
+
+            def attachedPanelClasses():
+                gui = g.getGui()
+                return [type(panel).__name__[:128] for panel in list(gui.getChildren())[:16]] if gui else []
+
+            def entryState():
+                active_map = g.getMap()
+                current_start = active_map.getObjectByName("usurpergateStart")
+                return {
+                    "playerCoords": observed(lambda: [getattr(player.getCoords(), axis) for axis in ("x", "y", "z")]),
+                    "mapMoving": observed(active_map.isMoving),
+                    "activeMapName": observed(lambda: active_map.mapName),
+                    "targetCanStep": observed(lambda: active_map.canStep(game.Coords(*target))),
+                    "startPresent": current_start is not None,
+                    "sameInitialStart": initial_start is not None and current_start is initial_start,
+                    "intro": observed(lambda: active_map.getBoolProperty("usurpergate_intro")),
+                    "mercyRouteApplied": observed(lambda: active_map.getBoolProperty("mercy_route_applied")),
+                    "messages": [str(message)[:512] for message in messages[-8:]],
+                    "attachedPanelClasses": observed(attachedPanelClasses),
+                }
+
+            before = observed(entryState)
+            player.moveTo(*target)
+            settled = pumpQueuedUntil(
+                lambda: g.getMap().getObjectByName("usurpergateStart") is None,
+                timeout=2.0,
+            )
             self.assertTrue(
-                pumpQueuedUntil(
-                    lambda: g.getMap().getObjectByName("usurpergateStart") is None,
-                    timeout=2.0,
-                )
+                settled,
+                (
+                    ""
+                    if settled
+                    else "Usurpergate start did not settle: "
+                    + json.dumps({"authoredTarget": target, "before": before, "after": observed(entryState)}, sort_keys=True)
+                ),
             )
 
         try:
@@ -26855,6 +26904,8 @@ if SOURCE_UI_TESTS_AVAILABLE:
     from tests.test_game_diagnostics import GameDiagnosticsTest as _GameDiagnosticsTest
     from tests.test_mcp_diagnostics import McpDiagnosticsTest as _McpDiagnosticsTest
     from tests.test_mcp_engine_thread import McpEngineThreadTest as _McpEngineThreadTest
+    from tests.test_mcp_http_native_ui import McpNativeUiOwnershipSourceTest as _McpNativeUiOwnershipSourceTest
+    from tests.test_usurpergate_entry_diagnostics import UsurpergateEntryDiagnosticsTest as _UsurpergateEntryDiagnosticsTest
     from tests.test_mcp_engine_thread import McpHttpNativeRuntimeTest as _McpHttpNativeRuntimeTest
     from tests.test_native_diagnostics import NativeDiagnosticsRuntimeTest as _NativeDiagnosticsRuntimeTest
     from tests.test_navigation_mcp import NavigationCallbackTest as _NavigationCallbackTest
@@ -27086,6 +27137,12 @@ if SOURCE_UI_TESTS_AVAILABLE:
     class McpEngineThreadTest(_McpEngineThreadTest):
         pass
 
+    class McpNativeUiOwnershipSourceTest(_McpNativeUiOwnershipSourceTest):
+        pass
+
+    class UsurpergateEntryDiagnosticsTest(_UsurpergateEntryDiagnosticsTest):
+        pass
+
     class McpHttpNativeRuntimeTest(_McpHttpNativeRuntimeTest):
         pass
 
@@ -27213,6 +27270,7 @@ if SOURCE_UI_TESTS_AVAILABLE:
     del _PaidActionRuntimeTest
     del _GameDiagnosticsTest, _McpDiagnosticsTest, _NativeDiagnosticsRuntimeTest
     del _McpEngineThreadTest, _McpHttpNativeRuntimeTest
+    del _McpNativeUiOwnershipSourceTest, _UsurpergateEntryDiagnosticsTest
     del _NativeTestProfileSourceTest, _NativeTestProfileRuntimeTest
     del _WindowsPythonConfigurationTest
     del _NativeCallgrindToolTest

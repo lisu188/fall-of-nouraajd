@@ -40,6 +40,24 @@ class CityWalkthroughRegistrationTest(unittest.TestCase):
         self.assertEqual(discovered, set(harness.WALKTHROUGHS))
         self.assertEqual(discovered, set(harness.McpServerTest.MCP_WALKTHROUGHS))
 
+    def testEveryCanonicalCityRouteHasAnExecutableGameTestEntry(self):
+        source = ast.parse((ROOT / "test.py").read_text(encoding="utf-8"))
+        game_tests = next(node for node in source.body if isinstance(node, ast.ClassDef) and node.name == "GameTest")
+        for map_name in harness.CITY_WALKTHROUGH_CASES:
+            name = "test_map_walkthrough_" + map_name
+            with self.subTest(map=map_name):
+                self.assertTrue(callable(getattr(harness.GameTest, name, None)), name)
+                method = next(
+                    node for node in game_tests.body if isinstance(node, ast.FunctionDef) and node.name == name
+                )
+                method.decorator_list = []
+                seen, result = [], object()
+                namespace = {"execute_walkthrough": lambda key: seen.append(key) or result}
+                exec(compile(ast.Module(body=[method], type_ignores=[]), "canonical-city-entry", "exec"), namespace)
+                self.assertIs(result, namespace[name](self))
+                self.assertEqual([map_name], seen)
+
+
     def testQueuedWaitPumpsUntilObservedStateAndDoesNotHideErrors(self):
         observed = []
         with patch.object(harness.time, "sleep", side_effect=AssertionError("sleep is not queue progress")):

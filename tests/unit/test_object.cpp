@@ -26,6 +26,7 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #include "core/CTypeRegistration.h"
 #include "core/CTypes.h"
 #include "gui/CAnimation.h"
+#include "handler/CObjectHandler.h"
 #include "handler/CTooltipHandler.h"
 #include "object/CCreature.h"
 #include "object/CCreatureClass.h"
@@ -4149,10 +4150,68 @@ void test_proc_restores_clamp_positive_percentages_away_from_full_restore_sentin
     expect_true(creature->getMana() == 7, "addManaProc(0) must keep the restore-to-full sentinel behavior");
 }
 
+
+void testConfiguredAliasChainsReportTheConstructibleClassAndCurrentSubtypes() {
+    auto game = load_empty_game();
+    auto objects = game->getObjectHandler();
+    const auto configure = [&](const std::string &name, json value) {
+        objects->registerConfig(name, std::make_shared<json>(std::move(value)));
+    };
+    configure("unitAliasBase", {{"class", "CItem"}, {"properties", {{"label", "base"}}}});
+    configure("unitAliasOne", {{"ref", "unitAliasBase"}, {"properties", {{"power", 17}}}});
+    configure("unitAliasTwo", {{"ref", "unitAliasOne"}, {"properties", {{"label", "leaf"}}}});
+    configure("unitAliasThree", {{"ref", "unitAliasTwo"}});
+    auto item = game->createObject<CItem>("unitAliasThree");
+    expect_true(item && item->getTypeId() == "unitAliasThree" && item->getLabel() == "leaf" && item->getPower() == 17,
+                "deep aliases must create the existing concrete item and preserve inherited overrides");
+    const auto itemTypes = objects->getAllSubTypes("CItem");
+    for (const auto *name : {"unitAliasBase", "unitAliasOne", "unitAliasTwo", "unitAliasThree"}) {
+        expect_true(objects->getClass(name) == "CItem", "every alias depth must resolve the constructible class");
+        expect_true(std::count(itemTypes.begin(), itemTypes.end(), name) == 1,
+                    "every constructible alias must appear exactly once in its native subtype inventory");
+    }
+    configure("unitAliasTwo", {{"class", "CEffect"}});
+    expect_true(objects->getClass("unitAliasThree") == "CEffect",
+                "alias class inspection must observe re-registered config without a stale class cache");
+    const auto changedItems = objects->getAllSubTypes("CItem");
+    const auto changedEffects = objects->getAllSubTypes("CEffect");
+    expect_true(std::count(changedItems.begin(), changedItems.end(), "unitAliasThree") == 0 &&
+                    std::count(changedEffects.begin(), changedEffects.end(), "unitAliasThree") == 1,
+                "subtype inspection must reflect a changed alias target immediately");
+}
+
+void testConfiguredAliasInspectionRejectsCyclesMissingAndMalformedDefinitions() {
+    auto game = load_empty_game();
+    auto objects = game->getObjectHandler();
+    const std::map<std::string, json> invalid = {
+        {"unitAliasSelf", {{"ref", "unitAliasSelf"}}},
+        {"unitAliasCycleOne", {{"ref", "unitAliasCycleTwo"}}},
+        {"unitAliasCycleTwo", {{"ref", "unitAliasCycleOne"}}},
+        {"unitAliasMissing", {{"ref", "unitAliasAbsent"}}},
+        {"unitAliasScalar", 5},
+        {"unitAliasBadRef", {{"ref", 7}}},
+        {"unitAliasBadClass", {{"class", 9}}},
+        {"unitAliasEmpty", json::object()},
+    };
+    for (const auto &[name, definition] : invalid) {
+        objects->registerConfig(name, std::make_shared<json>(definition));
+    }
+    const auto items = objects->getAllSubTypes("CItem");
+    expect_true(objects->getClass("unitAliasAbsent").empty(), "missing alias roots have no class");
+    for (const auto &[name, definition] : invalid) {
+        expect_true(objects->getClass(name).empty(),
+                    "malformed or cyclic alias inspection must terminate without a class");
+        expect_true(std::count(items.begin(), items.end(), name) == 0,
+                    "invalid aliases must never become random-loot subtype candidates");
+    }
+}
+
 } // namespace
 
 int main() {
     pybind11::scoped_interpreter guard{};
+    testConfiguredAliasChainsReportTheConstructibleClassAndCurrentSubtypes();
+    testConfiguredAliasInspectionRejectsCyclesMissingAndMalformedDefinitions();
     test_signal_slots_fail_closed_on_bad_config();
     test_dynamic_property_cannot_spoof_typed_engine_signal();
     test_typed_engine_signal_still_fires_directly();

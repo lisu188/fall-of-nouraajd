@@ -763,12 +763,16 @@ class McpHttpNativeRuntimeTest(unittest.TestCase):
                         opened = True
                         break
                 self.assertTrue(opened, "a second HTTP handler must inspect a modal while its boundary is waiting")
+                retained = {gui["__handle__"]}
+                released = handles - retained
                 self.assertEqual(
-                    {"released": len(handles)}, second.tool("engine_release_handles", {"handles": sorted(handles)})
+                    {"released": len(released)}, second.tool("engine_release_handles", {"handles": sorted(released)})
                 )
                 cancelled = modal.result(timeout=10)
-                self.assertTrue(cancelled["isError"], cancelled)
-                self.assertIn("cancel", cancelled["structuredContent"]["error"].lower())
+                self.assertFalse(cancelled["isError"], cancelled)
+                self.assertEqual({"result": None}, cancelled["structuredContent"])
+                self.assertFalse(containsModal(json.loads(call(second, "jsonify", gui))))
+                self.assertEqual({"released": 1}, second.tool("engine_release_handles", {"handles": sorted(retained)}))
             finally:
                 callers.shutdown(wait=False, cancel_futures=True)
             second.delete()

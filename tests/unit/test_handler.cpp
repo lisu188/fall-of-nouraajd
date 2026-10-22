@@ -430,6 +430,48 @@ std::shared_ptr<CGame> makeWindowlessFightGame() {
     return game;
 }
 
+void testSyncGuiWaitReleasesLastGameOwner() {
+    auto loop = vstd::event_loop<>::instance();
+    for (const bool dropFinalOwner : {false, true}) {
+        auto game = makeWindowlessFightGame();
+        auto context = game->getContext();
+        auto gui = game->getGui();
+        auto handler = game->getGuiHandler();
+        game->getObjectHandler()->registerType("CGameTextPanel", [] { return std::make_shared<CGameTextPanel>(); });
+        game->getObjectHandler()->registerConfig("textPanel",
+                                                 std::make_shared<json>(json{{"class", "CGameTextPanel"}}));
+        std::weak_ptr<CGame> lifetime = game;
+        auto retainedOwner = dropFinalOwner ? std::shared_ptr<CGame>{} : game;
+        bool callbackRan = false;
+        bool panelOpened = false;
+        bool ownerExpiredInCallback = false;
+        bool contextActiveInCallback = false;
+        expect_true(loop->invoke([&] {
+            callbackRan = true;
+            auto panel = vstd::cast<CGameTextPanel>(gui->findChild("CGameTextPanel"));
+            panelOpened = panel != nullptr;
+            game.reset();
+            ownerExpiredInCallback = lifetime.expired();
+            contextActiveInCallback = context->isActive();
+            if (dropFinalOwner && !ownerExpiredInCallback) {
+                // Bound the old ownership failure instead of leaving its modal waiting forever.
+                context->shutdown();
+            } else if (!dropFinalOwner && panel) {
+                panel->close();
+            }
+        }),
+                    "a synchronous GUI wait must pump the queued owner-release callback");
+        handler->showMessage("Release the final owner while this native modal waits");
+        expect_true(callbackRan && panelOpened && ownerExpiredInCallback == dropFinalOwner &&
+                        contextActiveInCallback != dropFinalOwner && gui->getChildren().empty(),
+                    "synchronous GUI waits must permit final game destruction without cancelling a retained session");
+        retainedOwner.reset();
+        expect_true(lifetime.expired() && !context->isActive(),
+                    "releasing the final external game owner must shut down and release its native session");
+        context->shutdown();
+    }
+}
+
 void initialize_test_creature_stats(const std::shared_ptr<CCreature> &creature) {
     creature->setBaseStats(std::make_shared<CStats>());
     creature->setLevelStats(std::make_shared<CStats>());
@@ -4284,6 +4326,7 @@ int main() {
 
     nativeTestProfile().run("testScriptFlowBootstrapDoesNotRequireGameplayModule",
                             testScriptFlowBootstrapDoesNotRequireGameplayModule);
+    nativeTestProfile().run("testSyncGuiWaitReleasesLastGameOwner", testSyncGuiWaitReleasesLastGameOwner);
     nativeTestProfile().run("test_script_handler_executes_commands_and_wraps_functions",
                             test_script_handler_executes_commands_and_wraps_functions);
     nativeTestProfile().run("test_handler_constructors_are_covered_by_native_tests",

@@ -21,6 +21,7 @@ BASELINE_CASES = {
 ADDITIONAL_CASES = {
     "handler": (
         "testScriptFlowBootstrapDoesNotRequireGameplayModule",
+        "testSyncGuiWaitReleasesLastGameOwner",
         "testObjectEntryTracePreservesActualCauseAndContactBeforeNpcDeparture",
         "testObjectEntryTraceRequiresOptInAndCanonicalColocatedCause",
         "testAsyncObjectEntryTraceWaitsForHooksAndPreservesContactOnResume",
