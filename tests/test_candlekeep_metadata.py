@@ -47,6 +47,23 @@ def applyStringBoundary(obj, fields):
 
 
 class CandlekeepMetadataSourceTest(TestCase):
+    def testEmbeddedNativeProgramSatisfiesRepositoryIndentationGate(self):
+        from pathlib import Path
+
+        from tests.test_gameplay_route_dialogs import authoredFunction
+
+        indentation_gate = authoredFunction(
+            "test.py",
+            "test_indentation",
+            class_id="GameTest",
+            game_test=lambda method: method,
+            git_tracked_files=lambda pattern: ("tests/test_candlekeep_metadata.py",),
+            REPO_ROOT=Path(__file__).resolve().parents[1],
+            json=json,
+        )
+        success, offenders = indentation_gate(self)
+        self.assertTrue(success, offenders)
+
     def rejectUnavailableNativeSetters(self):
         guard = ExitStack()
         for name in ("setPosX", "setPosY", "setPosZ", "setNpc"):
@@ -255,8 +272,10 @@ class CandlekeepMetadataRuntimeTest(TestCase):
                 assert saved_world.getNumericProperty('candlekeepStockBought_winthrop_BOLT01') == 1
                 assert saved_player.getGold() == before_gold - 1
                 assert saved_player.countItems('candlekeepBolts') == before_count + 1
-                allies = [saved_world.getObjectByName(name) for name in
-                          ('arkanis', 'canderous', 'deder', 'mordaine', 'osprey')]
+                allies = [
+                    saved_world.getObjectByName(name)
+                    for name in ('arkanis', 'canderous', 'deder', 'mordaine', 'osprey')
+                ]
                 assert all(allies)
                 assert any(item.getBoolProperty('plugin_candlekeepTemporary') for item in saved_player.getItems())
                 cleanup = restored.createObject('obeDialog')
@@ -267,8 +286,10 @@ class CandlekeepMetadataRuntimeTest(TestCase):
                 assert equipped(saved_player) == baseline_equipped
                 assert (saved_player.getGold(), saved_player.getNumericProperty('exp')) == baseline_rewards
                 for actor in (saved_player, *allies):
-                    assert not any(item.getBoolProperty('plugin_candlekeepTemporary')
-                                   for item in (*actor.getItems(), *actor.getEquipped().values()) if item)
+                    assert not any(
+                        item.getBoolProperty('plugin_candlekeepTemporary')
+                        for item in (*actor.getItems(), *actor.getEquipped().values()) if item
+                    )
                 assert all(saved_world.getObjectByName(actor.getName()) is None for actor in allies)
                 cleanup.invokeAction('forceExitTraining')
                 loop.run()
