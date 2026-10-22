@@ -140,6 +140,31 @@ REVIEWED_DYNAMIC_PROPERTY_TYPES = {
     # These properties are read through CGameObject's typed dynamic accessors by
     # the common panel layout and dialogue renderer. Keep their scope and types
     # explicit; unrelated objects and misspelled names must still be rejected.
+    # Map turns read simulationRegion on every CMapObject; city actor provenance,
+    # ownership and phase policies use typed CCreature dynamic accessors. These
+    # exact names are reviewed metadata, not an open source-property namespace.
+    "CMapObject": {"simulationRegion": "std::string"},
+    "CCreature": {
+        "sourceActor": "std::string",
+        "sourceArea": "std::string",
+        "sourceCreature": "std::string",
+        "sourceDialogue": "std::string",
+        "sourceInventory": "std::string",
+        "sourceItemSlots": "std::string",
+        "sourceKillXp": "int",
+        "sourceSchedule": "int",
+        "phaseMin": "int",
+        "phaseMax": "int",
+        "sourceSpawnFact": "std::string",
+        "sourceStore": "std::string",
+        "custodyRole": "std::string",
+        "patrolArea": "std::string",
+        "sourceDepartureScript": "std::string",
+        "sourceGameNpc": "std::string",
+        "sourceOriginalArea": "std::string",
+        "sourceOriginalPosition": "std::string",
+        "sourceAdaptation": "std::string",
+    },
     "CGameGraphicsObject": {
         "uiGroup": "std::string",
         "uiHeading": "bool",

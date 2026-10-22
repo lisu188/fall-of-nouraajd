@@ -2509,6 +2509,102 @@ class ContentValidatorTest(unittest.TestCase):
         self.assertIssueContains(issues, "ordinaryItem.properties.speaker", 'unknown property "speaker"')
         self.assertIssueContains(issues, "misspelledControl.properties.uiGrop", 'unknown property "uiGrop"')
 
+    def citySourceMetadata(self):
+        return {
+            "simulationRegion": "AR0300",
+            "sourceActor": "AR0300#actor29",
+            "sourceArea": "AR0300",
+            "sourceCreature": "MAREK",
+            "sourceDialogue": "MAREK",
+            "sourceInventory": "[]",
+            "sourceItemSlots": "[]",
+            "sourceKillXp": 650,
+            "sourceSchedule": 4294967295,
+            "phaseMin": 5,
+            "phaseMax": 7,
+            "sourceSpawnFact": "AR0800.BCS#spawn0",
+            "sourceStore": "INN0704",
+            "custodyRole": "patrol",
+            "patrolArea": "AR0800",
+            "sourceDepartureScript": "LEAVECH7",
+            "sourceGameNpc": "GAM#npc0",
+            "sourceOriginalArea": "AR0800",
+            "sourceOriginalPosition": "[12,34]",
+            "sourceAdaptation": "Explicit outside-history companion arrives at the eastern city gate",
+        }
+
+    def writeCitySourceSchemaFixture(self, root):
+        header = root / "src/object/CCitySourceSchemaFixture.h"
+        header.parent.mkdir(parents=True, exist_ok=True)
+        header.write_text(
+            textwrap.dedent("""
+                class CGameObject {
+                    V_META(CGameObject, vstd::meta::empty())
+                };
+                class CMapObject {
+                    V_META(CMapObject, CGameObject, vstd::meta::empty())
+                };
+                class CCreature {
+                    V_META(CCreature, CMapObject, vstd::meta::empty())
+                };
+                class CPlayer {
+                    V_META(CPlayer, CCreature, vstd::meta::empty())
+                };
+                class CBuilding {
+                    V_META(CBuilding, CMapObject, vstd::meta::empty())
+                };
+                class CItem {
+                    V_META(CItem, CGameObject, vstd::meta::empty())
+                };
+            """).lstrip(),
+            encoding="utf-8",
+        )
+
+    def testReviewedCitySourceMetadataAcceptsNativeCreaturesAndRegionInheritance(self):
+        root = self.make_fixture()
+        self.writeCitySourceSchemaFixture(root)
+        config_path = root / "res/maps/broken/config.json"
+        config = read_json(config_path)
+        for class_name in ("CCreature", "CPlayer"):
+            config["source" + class_name] = {"class": class_name, "properties": self.citySourceMetadata()}
+        for class_name in ("CMapObject", "CBuilding"):
+            config["region" + class_name] = {"class": class_name, "properties": {"simulationRegion": "AR0300"}}
+        write_json(config_path, config)
+        self.assertEqual([], [str(issue) for issue in validate_repo(root)])
+
+    def testReviewedCitySourceMetadataRejectsEveryWrongPrimitiveType(self):
+        root = self.make_fixture()
+        self.writeCitySourceSchemaFixture(root)
+        config_path = root / "res/maps/broken/config.json"
+        config = read_json(config_path)
+        for name, value in self.citySourceMetadata().items():
+            config["invalid" + name] = {
+                "class": "CCreature",
+                "properties": {name: True if isinstance(value, int) else []},
+            }
+        write_json(config_path, config)
+        issues = validate_repo(root)
+        for name, value in self.citySourceMetadata().items():
+            expected = "int; got bool" if isinstance(value, int) else "string; got array"
+            self.assertIssueContains(issues, "invalid" + name + ".properties." + name, "expected " + expected)
+
+    def testReviewedCitySourceMetadataRejectsTyposUnknownFieldsAndUnrelatedObjects(self):
+        root = self.make_fixture()
+        self.writeCitySourceSchemaFixture(root)
+        config_path = root / "res/maps/broken/config.json"
+        config = read_json(config_path)
+        config["ordinaryItem"] = {"class": "CItem", "properties": self.citySourceMetadata()}
+        config["ordinaryMapObject"] = {"class": "CMapObject", "properties": {"sourceActor": "AR0300#actor29"}}
+        misspelled = {"sourceInvetory": "[]", "sourceInvented": "unsupported", "simulationRegoin": "AR0300"}
+        config["misspelledActor"] = {"class": "CCreature", "properties": misspelled}
+        write_json(config_path, config)
+        issues = validate_repo(root)
+        for name in self.citySourceMetadata():
+            self.assertIssueContains(issues, "ordinaryItem.properties." + name, 'unknown property "' + name + '"')
+        self.assertIssueContains(issues, "ordinaryMapObject.properties.sourceActor", 'unknown property "sourceActor"')
+        for name in misspelled:
+            self.assertIssueContains(issues, "misspelledActor.properties." + name, 'unknown property "' + name + '"')
+
     def test_creature_class_main_stat_numeric_stat_passes(self):
         root = self.make_fixture()
         self.write_creature_class_main_stat_fixture(root)

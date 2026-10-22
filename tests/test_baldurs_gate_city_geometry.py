@@ -64,25 +64,33 @@ def propertyValues(document):
 
 
 class BaldursGateCityGeometryTest(unittest.TestCase):
-    def testSourceActorMetadataUsesARegisteredMapLocalCreatureSubclass(self):
+    def testSourceActorsUseConstructibleNativeCreaturesWithoutAnEmptyPythonSubclass(self):
         tree = ast.parse((MAP_ROOT / "script.py").read_text(encoding="utf-8"))
-        actor = next(
-            node for node in ast.walk(tree) if isinstance(node, ast.ClassDef) and node.name == "BaldursGateActor"
-        )
-        self.assertEqual(["CCreature"], [base.id for base in actor.bases if isinstance(base, ast.Name)])
-        self.assertTrue(
-            any(
-                isinstance(decorator, ast.Call)
-                and isinstance(decorator.func, ast.Name)
-                and decorator.func.id == "register"
-                for decorator in actor.decorator_list
-            )
-        )
-        config = readJson(MAP_ROOT / "config.json")
-        self.assertTrue(any(row.get("class") == actor.name for row in config.values()))
-        for name, row in config.items():
-            if row.get("class") == "CCreature":
-                self.assertNotIn("sourceActor", row.get("properties", {}), name)
+        self.assertNotIn("BaldursGateActor", {node.name for node in ast.walk(tree) if isinstance(node, ast.ClassDef)})
+        actors = [
+            (name, row)
+            for name, row in self.config.items()
+            if row.get("properties", {}).get("sourceActor") and not row.get("properties", {}).get("sourceCorpse")
+        ]
+        self.assertTrue(actors)
+        for name, row in actors:
+            self.assertEqual("CCreature", row["class"], name)
+            self.assertTrue(row["properties"].get("sourceCreature"), name)
+            self.assertIn("sourceInventory", row["properties"], name)
+            self.assertIn("sourceItemSlots", row["properties"], name)
+
+    def testTileLayersDeclareNativeBoundsAndBlockedFallback(self):
+        for layer in self.document["layers"]:
+            if layer["type"] != "tilelayer":
+                continue
+            with self.subTest(layer=layer["name"]):
+                self.assertEqual(str(self.width - 1), layer["properties"].get("xBound"))
+                self.assertEqual(str(self.height - 1), layer["properties"].get("yBound"))
+                for key in ("default", "outOfBounds"):
+                    self.assertEqual("cityWallTile", layer["properties"].get(key))
+                for key in ("level", "default", "outOfBounds", "xBound", "yBound"):
+                    self.assertEqual("string", layer["propertytypes"].get(key))
+
 
     maxDiff = 1200
 
@@ -248,7 +256,7 @@ class BaldursGateCityGeometryTest(unittest.TestCase):
                                         field, properties, (name, "A corpse must not fight or pay kill experience")
                                     )
                             else:
-                                self.assertEqual("BaldursGateActor", self.config[name]["class"])
+                                self.assertEqual("CCreature", self.config[name]["class"])
                                 self.assertEqual(source_object["schedule"], properties["sourceSchedule"])
                             native_inventory = json.loads(properties["sourceInventory"])
                             self.assertEqual(self.canonicalInventory(creature.get("items", [])), native_inventory)
@@ -294,7 +302,7 @@ class BaldursGateCityGeometryTest(unittest.TestCase):
             fact = facts[properties["sourceSpawnFact"]]
             with self.subTest(blueprint=name):
                 self.assertNotIn(name, self.objects, "Deferred encounter has an initial actor plus a spawn template")
-                self.assertEqual("BaldursGateActor", self.config[name]["class"])
+                self.assertEqual("CCreature", self.config[name]["class"])
                 self.assertNotIn(properties["sourceCreature"], self.source["editionExcludedCreatures"])
                 self.assertEqual(fact["creature"], properties["sourceCreature"])
                 if fact.get("scopeClassification") in {"boundaryHistory", "externalHistory"}:
@@ -363,7 +371,7 @@ class BaldursGateCityGeometryTest(unittest.TestCase):
         occupied = set(self.objects.values())
         for relocation in relocations:
             actor = self.config[relocation["canonicalActorId"]]
-            self.assertEqual("BaldursGateActor", actor["class"])
+            self.assertEqual("CCreature", actor["class"])
             self.assertEqual(relocation["sourceCreature"], actor["properties"]["sourceCreature"])
             self.assertEqual(len(relocation["scenes"]), len({scene["id"] for scene in relocation["scenes"]}))
             for scene in relocation["scenes"]:
@@ -623,7 +631,7 @@ class BaldursGateCityGeometryTest(unittest.TestCase):
         missing = [
             name
             for name, point in self.objects.items()
-            if self.config[name]["class"] in {"BaldursGateActor", "BaldursGateContainer", "BaldursGateDoor"}
+            if self.config[name]["class"] in {"CCreature", "BaldursGateContainer", "BaldursGateDoor"}
             and labels.get(point) not in reachable
         ]
         missing.extend(

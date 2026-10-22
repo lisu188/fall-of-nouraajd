@@ -142,6 +142,7 @@ XVFB_GAMEPLAY_PARENT_TEST = "XvfbGameplayTest.test_keyboard_gameplay_under_xvfb"
 VALID_TEST_SUITES = ("fast", "gameplay", "gameplay-core", "mcp-branches", "ui", "coverage-safe", "full")
 MCP_BRANCH_TEST_PREFIX = "GameplayBranchMcpTest."
 FAST_TEST_PREFIXES = (
+    "CityWalkthroughRegistrationTest.",
     "BindingSourceLayoutTest.",
     "BaldursGateCityContentTest.",
     "BaldursGateCityRoutesTest.",
@@ -233,6 +234,7 @@ FAST_TEST_NAMES = {
     "PanelLayoutManifestTest.test_reactive_list_views_subscribe_to_model_signals",
 }
 GAMEPLAY_TEST_PREFIXES = (
+    "CityNativeLoadingRuntimeTest.",
     "NativeCoroutineCallbackTest.",
     MCP_BRANCH_TEST_PREFIX,
     "McpTestSeedRuntimeTest.",
@@ -302,6 +304,10 @@ SERIAL_TEST_NAMES = {
 # and size each shard's timeout to its own load.
 SERIAL_TEST_PREFIXES = ()
 DEFAULT_TEST_DURATIONS = {
+    "McpServerTest.test_stdio_map_walkthrough_candlekeep": 480.0,
+    "McpServerTest.test_stdio_map_walkthrough_baldursGate": 900.0,
+    "GameTest.test_map_walkthrough_candlekeep": 80.0,
+    "GameTest.test_map_walkthrough_baldursGate": 150.0,
     # The 607s hint rounds instrumented Linux 57e44f00's 606.6s failed preparation.
     # Completed-route timings remain pending; recorded samples take precedence.
     "OctobogzMcpWalkthroughTest.testWarriorAndSorcererFinishThreeRealEncountersWithPartialReloadAndRewardOnce": 607.0,
@@ -1702,6 +1708,60 @@ def pump_event_loop_until(predicate, *, timeout=1.0, min_iterations=1, pump=None
         if time.monotonic() >= deadline:
             return False
         time.sleep(0.001)
+
+
+def pumpQueuedUntil(predicate, *, timeout=2.0, pump=None):
+    """Observe queued native work from the outer test driver, without timing sleeps."""
+    if pump is None:
+        game = load_game_module()
+        pump = lambda: game.event_loop.instance().run()
+    deadline = time.monotonic() + timeout
+    while True:
+        pump()
+        if predicate():
+            return True
+        if time.monotonic() >= deadline:
+            return False
+
+
+@contextlib.contextmanager
+def mockNativeUiRequests(responses):
+    """Explicit model UI fixture; this is not native UI or MCP acceptance evidence.
+
+    Answer only the named mocked modals and retain native dispatch for every other request.
+    """
+    import ui
+
+    original = ui.UiFlow.advance
+
+    def advance(flow, answer_json, error_message=None):
+        request = original(flow, answer_json, error_message)
+        for _ in range(128):
+            if request is None:
+                return None
+            document = json.loads(request)
+            response = responses.get(document["operation"])
+            if response is None:
+                return request
+
+            def resolve(value):
+                if isinstance(value, dict) and set(value) == {"__nativeObject"}:
+                    return flow.takeObjectArgument(value["__nativeObject"])
+                if isinstance(value, list):
+                    return [resolve(entry) for entry in value]
+                if isinstance(value, dict):
+                    return {key: resolve(entry) for key, entry in value.items()}
+                return value
+
+            answer = response(*resolve(document["args"]))
+            request = original(flow, json.dumps(answer))
+        raise AssertionError("Mock modal fixture exceeded its bounded request budget")
+
+    ui.UiFlow.advance = advance
+    try:
+        yield
+    finally:
+        ui.UiFlow.advance = original
 
 
 def count_player_objects(game_map):
@@ -5630,7 +5690,51 @@ def walkthrough_castle_griffin_cliff_map():
     return walkthrough_castle_map("castleGriffinCliff")
 
 
+CITY_WALKTHROUGH_CASES = {"candlekeep": "candlekeep-prologue", "baldursGate": "baldurs-gate-tour"}
+
+
+def cityWalkthroughCase(map_name):
+    from tests.gameplay_branch_catalog import getCases
+
+    return next(case for case in getCases() if case.id == CITY_WALKTHROUGH_CASES[map_name])
+
+
+def runCityMcpWalkthrough(harness, session, map_name):
+    from tests.gameplay_branch_driver import GameplayBranchDriver
+    from tests.test_gameplay_branches_mcp import verifyCopiedSources
+
+    case = cityWalkthroughCase(map_name)
+    verifyCopiedSources(str(build_dir), build_config, case.sources)
+    driver = GameplayBranchDriver(harness, harness, session, case, case.classes[0], build_dir)
+    driver.trace_path = session["proc"]._playtest_trace_path
+    try:
+        harness.assertIsNotNone(driver.trace_path, "Canonical city walkthroughs require their native trace")
+        case.run(driver)
+        driver.finish()
+        return {"map": map_name, **driver.receipt()}
+    finally:
+        driver.cleanup()
+
+
+def walkthroughCityMap(map_name):
+    harness = McpServerTest(methodName="runTest")
+    success, log = harness._run_mcp_walkthrough(map_name)
+    if not success:
+        raise AssertionError(log)
+    return log
+
+
+def walkthroughCandlekeepMap():
+    return walkthroughCityMap("candlekeep")
+
+
+def walkthroughBaldursGateMap():
+    return walkthroughCityMap("baldursGate")
+
+
 WALKTHROUGHS = {
+    "candlekeep": walkthroughCandlekeepMap,
+    "baldursGate": walkthroughBaldursGateMap,
     "castleHomecoming": walkthrough_castle_homecoming_map,
     "castleGuardianAngels": walkthrough_castle_guardian_angels_map,
     "castleGriffinCliff": walkthrough_castle_griffin_cliff_map,
@@ -7210,6 +7314,7 @@ class GameTest(unittest.TestCase):
             offered_choices.append((title, choices, action_label, back_label))
             return next((choice["id"] for choice in choices if choice.get("enabled", True)), "")
 
+        self.enterContext(mockNativeUiRequests({"showChoice": lambda *args: auto_assemble(None, *args)}))
         try:
             game.CGuiHandler.showChoice = auto_assemble
             game.CGuiHandler.notify = lambda self, message: None
@@ -7219,6 +7324,14 @@ class GameTest(unittest.TestCase):
                 slot = next(iter(g.getSlotConfiguration().getFittingSlots(item)))
                 player.equipItem(slot, item)
                 pump_event_loop(5)
+            self.assertTrue(
+                pumpQueuedUntil(
+                    lambda: any(
+                        item and item.getTypeId() == "ArmorOfTheDamned" for item in player.getEquipped().values()
+                    ),
+                    timeout=2.0,
+                )
+            )
         finally:
             game.CGuiHandler.showChoice = original_choice
             game.CGuiHandler.notify = original_notify
@@ -8313,11 +8426,15 @@ class GameTest(unittest.TestCase):
         game_map.setNumericProperty("turn", 34)
         game_map.setStringProperty("transitionOrigin", "combat")
         combat_actions = []
+        transition_observations = []
 
         class TransitionStrike(game.CInteraction):
             def performAction(self, first, second):
                 combat_actions.append((first.getName(), second.getName()))
                 g.changeMap("ritual")
+                transition_observations.append(
+                    (g.getMap(), scene_manager.getTransitionStateName(), scene_manager.getPendingMapName())
+                )
                 second.hurt(5000)
 
         handler = g.getObjectHandler()
@@ -8357,13 +8474,24 @@ class GameTest(unittest.TestCase):
         defender.moveTo(3, 0, 0)
         game_map.addObject(defender)
 
+        source_before_combat = transition_source_map_snapshot(game_map)
         combat_result = game.CFightHandler.fightMany(attacker, [defender])
 
         self.assertEqual([("unitTransitionAttacker", "unitTransitionDefender")], combat_actions)
-        self.assertIs(g.getMap(), game_map)
-        self.assertEqual("TransitionPending", scene_manager.getTransitionStateName())
-        self.assertEqual("ritual", scene_manager.getPendingMapName())
+        self.assertEqual(1, len(transition_observations))
+        observed_source, observed_state, observed_pending = transition_observations[0]
+        self.assertIs(observed_source, game_map)
+        self.assertEqual("TransitionPending", observed_state)
+        self.assertEqual("ritual", observed_pending)
+        self.assertTrue(combat_result)
+        self.assertTrue(attacker.isAlive())
+        self.assertFalse(defender.isAlive())
+        self.assertIsNone(game_map.getObjectByName("unitTransitionDefender"))
+        self.assertIs(attacker, game_map.getObjectByName("unitTransitionAttacker"))
         source_snapshot = transition_source_map_snapshot(game_map)
+        self.assertEqual(
+            {**source_before_combat, "object_count": source_before_combat["object_count"] - 1}, source_snapshot
+        )
 
         self.assertTrue(
             pump_event_loop_until(
@@ -15104,7 +15232,7 @@ class GameTest(unittest.TestCase):
         game_map = g.getMap()
         observed = [game_map.isMoving()]
 
-        class TurnProgressProbe(game.CMapObject):
+        class TurnProgressProbe(game.CEvent):
             def onTurn(self, event):
                 observed.append(game_map.isMoving())
 
@@ -15235,13 +15363,25 @@ class GameTest(unittest.TestCase):
         gui.pushChild(panel)
         self.assertEqual("not_started", game_map.getStringProperty("quest_state_octobogz_contract"))
 
-        for digit in "121":
+        for digit, expected_state in zip("121", ("ASK_WHY", "OFFER_HELP", "ACCEPT_QUEST")):
             self.assertTrue(panel.keyboardEvent(gui, SDL_KEYDOWN, ord(digit)))
+            self.assertTrue(
+                pumpQueuedUntil(
+                    lambda: any(
+                        entry.get("dialog") == "dialog"
+                        and entry.get("state") == expected_state
+                        and entry.get("kind") == "speech"
+                        for entry in json.loads(player.getStringProperty("uiDialogueHistory") or "[]")
+                    ),
+                    timeout=2.0,
+                )
+            )
 
         self.assertEqual("active", game_map.getStringProperty("quest_state_octobogz_contract"))
         assert_player_quest_state(self, player, "octoBogzQuest", completed=False)
         self.assertTrue(gui_contains_class(g, "CGameDialogPanel"))
         self.assertTrue(panel.keyboardEvent(gui, SDL_KEYDOWN, ord("1")))
+        self.assertTrue(pumpQueuedUntil(lambda: not gui_contains_class(g, "CGameDialogPanel"), timeout=2.0))
         self.assertFalse(gui_contains_class(g, "CGameDialogPanel"))
 
     @game_test
@@ -15477,8 +15617,8 @@ class GameTest(unittest.TestCase):
             "victor_leader": "VICTOR_COURTYARD_LEADER_SPAWN = (45, 100, 0)" in script,
             "victor_cultists": "VICTOR_COURTYARD_SPAWNS = [(44, 100, 0), (46, 100, 0), (45, 99, 0), (45, 101, 0)]"
             in script,
-            "gooby_fixed": "gooby.moveTo(100, 100, 0)" in script,
-            "amulet_goblin_near_old_woman": "goblin.moveTo(195, 8, 0)" in script,
+            "gooby_fixed": 'uiRequest("gui.moveTo", gooby, 100, 100, 0)' in script,
+            "amulet_goblin_near_old_woman": 'uiRequest("gui.moveTo", goblin, 195, 8, 0)' in script,
         }
         for name, ok in script_checks.items():
             if not ok:
@@ -16514,6 +16654,15 @@ class GameTest(unittest.TestCase):
             game.CGuiHandler.showDialog = capture_dialog
             game.CGuiHandler.showTrade = capture_trade
             game.CPlayer.healProc = capture_heal
+            self.enterContext(
+                mockNativeUiRequests(
+                    {
+                        "showDialog": lambda dialog: capture_dialog(None, dialog),
+                        "showTrade": lambda market: capture_trade(None, market),
+                        "showCampaignScreen": lambda *args: game.CGuiHandler.showCampaignScreen(None, *args),
+                    }
+                )
+            )
 
             g, game_map, player = load_game_map_with_player("nouraajd")
             tavern = g.createObject("tavernDialog2")
@@ -16530,6 +16679,14 @@ class GameTest(unittest.TestCase):
             self.assertEqual(game_map.getStringProperty("quest_state_victor"), "encounter_active")
 
             game_map.removeObjectByName(leader.getName())
+            self.assertTrue(
+                pumpQueuedUntil(
+                    lambda: game_map.getBoolProperty("VICTOR_REWARD_GRANTED")
+                    and any(entry[0] == "Victor's daughter is safe" for entry in captured["receipts"])
+                    and "victorMarket" in captured["trades"],
+                    timeout=2.0,
+                )
+            )
 
             self.assertEqual(game_map.getStringProperty("quest_state_victor"), "good_end")
             self.assertEqual(player.getGold() - start_gold, 500)
@@ -17869,6 +18026,7 @@ class GameTest(unittest.TestCase):
         try:
             game.randint = deterministic_randint
             game.CGuiHandler.showConfirm = confirm_seal
+            self.enterContext(mockNativeUiRequests({"showConfirm": lambda *args: confirm_seal(None, *args)}))
             _g, game_map, player = load_game_map_with_player("siege")
             spawn_points = [find_runtime_object(game_map, name) for name in spawn_names]
 
@@ -17907,6 +18065,14 @@ class GameTest(unittest.TestCase):
             self.assertEqual([], siege_creature_names())
 
             player.moveTo(spawn_coords.x, spawn_coords.y, spawn_coords.z)
+            self.assertTrue(
+                pumpQueuedUntil(
+                    lambda: bool(question_calls)
+                    and spawn_point.getBoolProperty("destroyed")
+                    and player.countItems("magicWand") == starting_wands - 1,
+                    timeout=2.0,
+                )
+            )
             after_seal_wands = player.countItems("magicWand")
 
             self.assertEqual(1, len(question_calls))
@@ -18735,7 +18901,7 @@ class GameTest(unittest.TestCase):
                     visit(value, collected, f"{trail}[{index}]")
 
         for path in sorted((REPO_ROOT / "res").rglob("*.json")):
-            data = json.loads(path.read_text())
+            data = json.loads(path.read_text(encoding="utf-8"))
             rel_path = str(path.relative_to(REPO_ROOT))
             collected = {}
             visit(data, collected)
@@ -19601,10 +19767,16 @@ class GameTest(unittest.TestCase):
             messages.append(body)
 
         game.CGuiHandler.showCampaignScreen = capture_reader
+        self.enterContext(mockNativeUiRequests({"showCampaignScreen": lambda *args: capture_reader(None, *args)}))
 
         def enter_start(g, player):
             player.moveTo(start_definition["x"] // 32, start_definition["y"] // 32, 0)
-            pump_event_loop(5)
+            self.assertTrue(
+                pumpQueuedUntil(
+                    lambda: g.getMap().getObjectByName("usurpergateStart") is None,
+                    timeout=2.0,
+                )
+            )
 
         try:
             # --- Standalone: no active campaign -> full assault, standard arrival text.
@@ -19739,13 +19911,26 @@ class GameTest(unittest.TestCase):
 
         game.CGuiHandler.showCampaignScreen = capture_screen
         game.CGuiHandler.showCampaignArtworkScreen = capture_artwork_screen
+        self.enterContext(
+            mockNativeUiRequests(
+                {
+                    "showCampaignScreen": lambda *args: capture_screen(owned_handler, *args),
+                    "showCampaignArtworkScreen": lambda *args: capture_artwork_screen(owned_handler, *args),
+                }
+            )
+        )
         try:
             campaign_module.start(g, "wardensRoad", "Warrior")
             self.assertEqual([("Chapter I - Hearthfall", "Begin chapter")], screens)
 
             self.assertTrue(game.event_loop.instance().invoke(deliver_unrelated_readers))
             campaign_module.complete_scenario(g, "completed")
-            pump_event_loop(10)
+            self.assertTrue(
+                pumpQueuedUntil(
+                    lambda: len(screens) >= 3 and not g.getSceneManager().isTransitionPending(),
+                    timeout=2.0,
+                )
+            )
             self.assertEqual(["reader", "artwork"], unrelated_deliveries)
             self.assertEqual(
                 [
@@ -19758,8 +19943,19 @@ class GameTest(unittest.TestCase):
             self.assertEqual([False], unrelated_artwork_changes, "other sessions must not enter the artwork recorder")
 
             campaign_module.complete_scenario(g, "spared")
-            pump_event_loop(10)
+            self.assertTrue(
+                pumpQueuedUntil(
+                    lambda: len(screens) >= 5 and not g.getSceneManager().isTransitionPending(),
+                    timeout=2.0,
+                )
+            )
             campaign_module.complete_scenario(g, "completed")
+            self.assertTrue(
+                pumpQueuedUntil(
+                    lambda: len(screens) >= 7 and not g.getSceneManager().isTransitionPending(),
+                    timeout=2.0,
+                )
+            )
             self.assertEqual(
                 [
                     ("Chapter I - Hearthfall", "Begin chapter"),
@@ -20568,6 +20764,7 @@ class GameTest(unittest.TestCase):
 
             game.CGuiHandler.showDialog = capture_dialog
             game.CGuiHandler.notify = capture_message
+            self.enterContext(mockNativeUiRequests({"showDialog": lambda dialog: capture_dialog(None, dialog)}))
 
             g, game_map, player = load_game_map_with_player("nouraajd")
 
@@ -20605,7 +20802,13 @@ class GameTest(unittest.TestCase):
                 # onEnter entirely. NPC flag also excludes these two from the fight path.
                 self.assertEqual(coords_tuple(home), coords_tuple(player.getCoords()))
                 self.assertEqual(hp_before, player.getHp())
-                pump_event_loop(2)
+                self.assertTrue(
+                    pumpQueuedUntil(
+                        lambda: bool(shown_dialogs or shown_messages)
+                        or game_map.getObjectByName(npc.getName()) is None,
+                        timeout=2.0,
+                    )
+                )
 
             # Initial old-woman quest dialog reliably opens (amulet not started).
             self.assertEqual("not_started", quest_state(game_map, "amulet"))
@@ -20660,7 +20863,12 @@ class GameTest(unittest.TestCase):
                 start = find_adjacent_walkable_tile(game_map, home)
                 player.moveTo(start.x, start.y, start.z)
                 drive_player_to_target(game_map, player, home)
-                pump_event_loop(2)
+                self.assertTrue(
+                    pumpQueuedUntil(
+                        lambda: game_map.getObjectByName("oldWoman") is None,
+                        timeout=2.0,
+                    )
+                )
                 self.assertEqual([], shown_dialogs)
                 self.assertIsNone(game_map.getObjectByName("oldWoman"))
 
@@ -21015,6 +21223,16 @@ class GameTest(unittest.TestCase):
                 return original_heal_proc(player_self, amount)
 
             game.CPlayer.healProc = capture_heal
+            self.enterContext(
+                mockNativeUiRequests(
+                    {
+                        "showDialog": lambda *args: game.CGuiHandler.showDialog(None, *args),
+                        "showTrade": lambda *args: game.CGuiHandler.showTrade(None, *args),
+                        "showCampaignScreen": lambda *args: game.CGuiHandler.showCampaignScreen(None, *args),
+                        "showMessage": lambda *args: game.CGuiHandler.showMessage(None, *args),
+                    }
+                )
+            )
 
             # --- nouraajd MainQuest (Gooby): 200 gold (MAIN_QUEST_GOLD_REWARD). ---
             def gooby_setup(ctx):
@@ -21221,6 +21439,21 @@ class GameTest(unittest.TestCase):
 
                 path["complete"](ctx)
 
+                def settledReward():
+                    return (
+                        all(game_map.getBoolProperty(flag) for flag in path["claim_flags"])
+                        and all(game_map.getObjectByName(actor) is None for actor in path["absent_actors"])
+                        and (
+                            path["name"] != "nouraajd_victor_courtyard"
+                            or (
+                                any(entry[0] == "Victor's daughter is safe" for entry in gui_log["receipts"])
+                                and "victorMarket" in gui_log["trades"]
+                            )
+                        )
+                    )
+
+                self.assertTrue(pumpQueuedUntil(settledReward, timeout=2.0), path["name"])
+
                 self.assertEqual(
                     path["gold"],
                     player.getGold() - start_gold,
@@ -21246,6 +21479,7 @@ class GameTest(unittest.TestCase):
                     path["first_checks"](ctx)
 
                 path["repeat"](ctx)
+                self.assertTrue(pumpQueuedUntil(settledReward, timeout=2.0), path["name"])
 
                 self.assertEqual(
                     path["gold"],
@@ -26599,6 +26833,8 @@ class TestRunnerSuiteTest(unittest.TestCase):
 SOURCE_UI_TESTS_AVAILABLE = (REPO_ROOT / "tests" / "__init__.py").is_file()
 
 if SOURCE_UI_TESTS_AVAILABLE:
+    from tests.test_city_native_loading import CityNativeLoadingRuntimeTest as _CityNativeLoadingRuntimeTest
+    from tests.test_city_walkthrough_registration import CityWalkthroughRegistrationTest as _CityWalkthroughRegistrationTest
     from tests.test_binding_source_layout import BindingSourceLayoutTest as _BindingSourceLayoutTest
     from tests.test_baldurs_gate_city_content import BaldursGateCityContentTest as _BaldursGateCityContentTest
     from tests.test_baldurs_gate_city_routes import BaldursGateCityRoutesTest as _BaldursGateCityRoutesTest
@@ -26698,8 +26934,18 @@ if SOURCE_UI_TESTS_AVAILABLE:
     from tests.test_mcp_trade_market import McpTradeMarketRuntimeTest as _McpTradeMarketRuntimeTest
     from tests.test_waypoint_traversal import WaypointTraversalTest as _WaypointTraversalTest
 
+
+
+
+
+
+
+
+
+
     class BindingSourceLayoutTest(_BindingSourceLayoutTest):
         pass
+
 
     class BaldursGateCityContentTest(_BaldursGateCityContentTest):
         pass
@@ -26911,6 +27157,12 @@ if SOURCE_UI_TESTS_AVAILABLE:
     class SessionDeferredWorkTest(_SessionDeferredWorkTest):
         pass
 
+    class CityNativeLoadingRuntimeTest(_CityNativeLoadingRuntimeTest):
+        pass
+
+    class CityWalkthroughRegistrationTest(_CityWalkthroughRegistrationTest):
+        pass
+
     class UiCoroutineFlowTest(_UiCoroutineFlowTest):
         pass
 
@@ -26932,6 +27184,7 @@ if SOURCE_UI_TESTS_AVAILABLE:
     class EnemyRoleRuntimeTest(_EnemyRoleRuntimeTest):
         pass
 
+
     class OctobogzMcpWalkthroughTest(_OctobogzMcpWalkthroughTest):
         pass
 
@@ -26952,6 +27205,7 @@ if SOURCE_UI_TESTS_AVAILABLE:
 
     del _DialogueMcpWalkthroughTest, _ManagementMcpWalkthroughTest, _ArtifactPreviewTest, _PythonCallbackLifecycleTest
     del _DialogueTransitionBoundaryTest
+    del _CityWalkthroughRegistrationTest, _CityNativeLoadingRuntimeTest
     del _PaidActionRuntimeTest
     del _GameDiagnosticsTest, _McpDiagnosticsTest, _NativeDiagnosticsRuntimeTest
     del _McpEngineThreadTest, _McpHttpNativeRuntimeTest
@@ -27007,6 +27261,8 @@ if SOURCE_UI_TESTS_AVAILABLE:
 
 class McpServerTest(unittest.TestCase):
     MCP_WALKTHROUGHS = {
+        "candlekeep": "_mcp_walkthrough_candlekeep",
+        "baldursGate": "_mcp_walkthrough_baldursGate",
         "castleHomecoming": "_mcp_walkthrough_castleHomecoming",
         "castleGuardianAngels": "_mcp_walkthrough_castleGuardianAngels",
         "castleGriffinCliff": "_mcp_walkthrough_castleGriffinCliff",
@@ -28576,7 +28832,15 @@ class McpServerTest(unittest.TestCase):
         success = False
         log = {}
         try:
-            proc = self._start_stdio_mcp_process(map_name)
+            options = {}
+            if map_name in CITY_WALKTHROUGH_CASES:
+                import uuid
+                from tests.gameplay_branch_driver import caseSeed
+
+                case = cityWalkthroughCase(map_name)
+                options["test_seed"] = caseSeed(case.id, case.classes[0])
+                options["trace_name"] = map_name + "-" + uuid.uuid4().hex
+            proc = self._start_stdio_mcp_process(map_name, **options)
             self._initialize_stdio_mcp(proc)
             session = {"proc": proc, "next_request_id": 3}
             log = getattr(self, self.MCP_WALKTHROUGHS[map_name])(session)
@@ -28599,7 +28863,7 @@ class McpServerTest(unittest.TestCase):
                     log["shutdown_exception_type"] = type(exc).__name__
                     log["shutdown_traceback"] = traceback.format_exc()
             trace_path = getattr(proc, "_playtest_trace_path", None) if proc is not None else None
-            if map_name == "nouraajd" and trace_path is not None and trace_path.exists():
+            if map_name in {"nouraajd", *CITY_WALKTHROUGH_CASES} and trace_path is not None and trace_path.exists():
                 log["playtest_trace_path"] = str(trace_path)
                 if not success:
                     log["playtest_trace_tail"] = trace_tail_from_file(trace_path)
@@ -28615,9 +28879,9 @@ class McpServerTest(unittest.TestCase):
         self.assertTrue(script.exists(), "MCP entry point is missing")
         trace_path = None
         env = None
-        if map_name == "nouraajd":
+        if map_name in {"nouraajd", *CITY_WALKTHROUGH_CASES}:
             TEST_OUTPUT_DIR.mkdir(parents=True, exist_ok=True)
-            trace_path = TEST_OUTPUT_DIR / f"mcp_walkthrough_{trace_name or 'nouraajd'}_trace.jsonl"
+            trace_path = TEST_OUTPUT_DIR / f"mcp_walkthrough_{trace_name or map_name}_trace.jsonl"
             trace_path.unlink(missing_ok=True)
             env = os.environ.copy()
             env["GAME_PLAYTEST_TRACE"] = "1"
@@ -29113,6 +29377,12 @@ class McpServerTest(unittest.TestCase):
             "captain_defeated": map_bool("captain_defeated"),
             "quests": self._serialized_quest_ids(player_data),
         }
+
+    def _mcp_walkthrough_candlekeep(self, session):
+        return runCityMcpWalkthrough(self, session, "candlekeep")
+
+    def _mcp_walkthrough_baldursGate(self, session):
+        return runCityMcpWalkthrough(self, session, "baldursGate")
 
     def _mcp_castle_driver(self, session, map_name):
         from tests.castle_walkthrough import CastleWalkthrough

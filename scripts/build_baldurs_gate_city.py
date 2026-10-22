@@ -660,7 +660,7 @@ def compileCity(source, quests=None):
                     locked=False,
                     trapped=False,
                 )
-            config[name] = definition("BaldursGateContainer" if corpse else "BaldursGateActor", **props)
+            config[name] = definition("BaldursGateContainer" if corpse else "CCreature", **props)
             if corpse:
                 continue
             options = [
@@ -1022,6 +1022,14 @@ def compileCity(source, quests=None):
             {
                 **common,
                 "type": "tilelayer",
+                "properties": {
+                    "level": str(level),
+                    "default": "cityWallTile",
+                    "outOfBounds": "cityWallTile",
+                    "xBound": str(width - 1),
+                    "yBound": str(height - 1),
+                },
+                "propertytypes": {key: "string" for key in ("level", "default", "outOfBounds", "xBound", "yBound")},
                 "name": "City terrain " + str(level),
                 "width": width,
                 "height": height,
