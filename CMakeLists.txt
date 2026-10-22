@@ -949,6 +949,7 @@ if (NOT WIN32)
 endif ()
 add_game_unit_test(handler_unit_tests ${GAME_HANDLER_UNIT_TEST_SRC})
 target_compile_definitions(handler_unit_tests PRIVATE
+    GAME_HANDLER_TEST_PYTHON_ROOT="${CMAKE_CURRENT_BINARY_DIR}"
     GAME_NATIVE_TEST_PROFILE_DIR="${CMAKE_CURRENT_SOURCE_DIR}/coverage/native-test-profiles")
 add_game_unit_test(object_unit_tests tests/unit/test_object.cpp)
 add_game_unit_test(plugin_registrar_unit_tests tests/unit/test_plugin_registrar.cpp)

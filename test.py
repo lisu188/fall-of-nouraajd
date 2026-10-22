@@ -20480,15 +20480,26 @@ class GameTest(unittest.TestCase):
         completeOctobogzFixture(game_map1)
         assert quest_state(game_map1, "beren_chain") == "ready_to_report"
         assert quest_state(game_map1, "octobogz_contract") == "completed"
-        beren.finish_cleanse()
-        assert quest_state(game_map1, "beren_chain") == "purged"
-
-        # Amulet quest start and completion
+        # Finish the optional town quest before Beren hands off to the ritual chapel.
+        self.assertEqual("nouraajd", g1.getMap().mapName)
         quest_dialog.start_amulet_quest()
         assert quest_state(game_map1, "amulet") == "active"
         player1.addItem("preciousAmulet")
         quest_return_dialog.complete_amulet_quest()
-        assert quest_state(game_map1, "amulet") == "returned"
+        self.assertEqual("returned", quest_state(game_map1, "amulet"))
+
+        beren.finish_cleanse()
+        assert quest_state(game_map1, "beren_chain") == "purged"
+        scene_manager1 = g1.getSceneManager()
+        self.assertTrue(
+            pump_event_loop_until(
+                lambda: g1.getMap().mapName == "ritual" and not scene_manager1.isTransitionPending(),
+                timeout=2.0,
+                min_iterations=2,
+            )
+        )
+        self.assertEqual("ritual", g1.getMap().mapName)
+        self.assertEqual("returned", quest_state(game_map1, "amulet"))
 
         # Scenario B: Victor good-ending
         g2, game_map2, player2 = load_game_map_with_player("nouraajd")

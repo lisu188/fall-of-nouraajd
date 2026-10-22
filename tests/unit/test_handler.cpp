@@ -78,6 +78,17 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 namespace {
 
+void testScriptFlowBootstrapDoesNotRequireGameplayModule() {
+    const auto modules = pybind11::module_::import("sys").attr("modules").cast<pybind11::dict>();
+    expect_true(!modules.contains("_game"), "pure UI startup must not load or register gameplay bindings");
+    auto game = std::make_shared<CGame>();
+    auto callback = pybind11::cpp_function([] { return pybind11::none(); });
+    auto flow = CScriptHandler::createCallbackFlow(callback, game);
+    expect_true(flow && !flow->next(nullptr), "a native callback flow must start in the standalone handler test");
+    flow.reset();
+    game->getContext()->shutdown();
+}
+
 class DiagnosedNativeTestProfile : public CNativeTestProfile {
   public:
     using CNativeTestProfile::CNativeTestProfile;
@@ -4258,6 +4269,8 @@ void test_tooltip_handler_exposes_present_archetypes_without_duplicate_descripti
 
 int main() {
     pybind11::scoped_interpreter guard{};
+    pybind11::module_::import("sys").attr("path").attr("insert")(0, GAME_HANDLER_TEST_PYTHON_ROOT);
+    pybind11::module_::import("ui");
     const auto runTimedGuiCancellationTest = [](const char *name, void (*test)()) {
         const auto started = std::chrono::steady_clock::now();
         std::cout << "[handler-test] ENTER " << name << std::endl;
@@ -4269,6 +4282,8 @@ int main() {
     nativeTestProfile().run("testGameplayMetadataIsAvailableBeforePluginLoading",
                             testGameplayMetadataIsAvailableBeforePluginLoading);
 
+    nativeTestProfile().run("testScriptFlowBootstrapDoesNotRequireGameplayModule",
+                            testScriptFlowBootstrapDoesNotRequireGameplayModule);
     nativeTestProfile().run("test_script_handler_executes_commands_and_wraps_functions",
                             test_script_handler_executes_commands_and_wraps_functions);
     nativeTestProfile().run("test_handler_constructors_are_covered_by_native_tests",

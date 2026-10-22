@@ -47,6 +47,17 @@ class ProbeController : public CFightController {
     }
 };
 
+// This native-only executable does not initialize the configured Python Attack plugin.
+// Exercise interaction selection, dispatch and native damage with an explicit native test action.
+class NativeAttackProbe : public CInteraction {
+  public:
+    int calls = 0;
+    void performAction(std::shared_ptr<CCreature> actor, std::shared_ptr<CCreature> target) override {
+        ++calls;
+        target->hurt(actor->getDmg());
+    }
+};
+
 class CountingMonsterController : public CMonsterFightController {
   public:
     int actions = 0;
@@ -135,7 +146,11 @@ void testNativeAllyActsAndHeroOwnsRewards() {
     item->addTag("quest");
     auto controller = std::make_shared<CountingMonsterController>();
     ally->setFightController(controller);
-    ally->addAction(fixture.game->createObject<CInteraction>("Attack"));
+    auto attack = std::make_shared<NativeAttackProbe>();
+    attack->setGame(fixture.game);
+    attack->setName("nativeTestAttack");
+    attack->setTypeId("Attack");
+    ally->addAction(attack);
     const auto expectedXp = static_cast<int>(250 * std::pow(2.0, enemy->getScale() - fixture.hero->getLevel()));
     const auto initialXp = fixture.hero->getExp();
     CPlaytestTrace::configure(true, "", 128, true);
@@ -150,7 +165,8 @@ void testNativeAllyActsAndHeroOwnsRewards() {
     CPlaytestTrace::configure(false);
     expect_true(result.outcome == CFightOutcome::AttackerVictory && result.survivor == fixture.hero,
                 "an actual native ally attack must resolve the hero-side encounter");
-    expect_true(controller->actions == 1 && witnessedAction && fixture.heroController->actions == 0,
+    expect_true(controller->actions == 1 && attack->calls == 1 && witnessedAction &&
+                    fixture.heroController->actions == 0,
                 "the native ally must act rather than only receiving a participation flag");
     expect_true(fixture.hero->hasInInventory(item) && !ally->hasInInventory(item) &&
                     fixture.hero->getExp() == initialXp + expectedXp,
@@ -171,8 +187,8 @@ void testAlliedBudgetAndRejectedParticipants() {
     auto hostile = fixture.actor("hostileNonAlly");
     auto uiAlly = fixture.actor("uiAlly", true);
     uiAlly->setFightController(std::make_shared<CPlayerFightController>());
-    std::vector<std::shared_ptr<CCreature>> candidates = {nullptr, fixture.hero, foreign, stale, dead, upstairs,
-                                                        hostile, uiAlly, enemy};
+    std::vector<std::shared_ptr<CCreature>> candidates = {nullptr,  fixture.hero, foreign, stale, dead,
+                                                          upstairs, hostile,      uiAlly,  enemy};
     std::vector<std::shared_ptr<ProbeController>> accepted;
     for (int index = 0; index < 6; ++index) {
         auto ally = fixture.actor("budgetAlly" + std::to_string(index), true);
@@ -236,8 +252,9 @@ void testNaturalOptInAndMoverPerspectives() {
         auto initiator = mover == 0 ? std::shared_ptr<CCreature>(fixture.hero) : mover == 1 ? ally : enemy;
         std::vector<std::shared_ptr<CCreature>> targets = {mover == 2 ? ally : enemy};
         const auto result = CFightHandler::fightManyResult(initiator, targets);
-        expect_true(result.outcome == (mover == 2 ? CFightOutcome::AttackerDefeat : CFightOutcome::AttackerVictory),
-                    "configured allies must support hero, follower and enemy initiated encounters in mover perspective");
+        expect_true(
+            result.outcome == (mover == 2 ? CFightOutcome::AttackerDefeat : CFightOutcome::AttackerVictory),
+            "configured allies must support hero, follower and enemy initiated encounters in mover perspective");
         expect_true(probe(ally)->actions == 1 && fixture.map->getObjectByName(enemy->getName()) == nullptr,
                     "each opted-in collision must run the same real allied action");
     }
@@ -280,8 +297,8 @@ void testHeroDefeatEndsBeforeSurvivingAlliesAct() {
     const auto result = CFightHandler::fightManyWithAlliesResult(fixture.hero, {enemy}, {ally});
     expect_true(result.outcome == CFightOutcome::AttackerDefeat && result.rounds == 1 && result.survivor == enemy,
                 "native hero respawn must not turn a defeated party encounter into a later allied victory");
-    expect_true(fixture.hero->isAlive() && fixture.hero->getHp() == 1 && ally->isAlive() &&
-                    probe(ally)->actions == 0 && enemy->hasInInventory(item),
+    expect_true(fixture.hero->isAlive() && fixture.hero->getHp() == 1 && ally->isAlive() && probe(ally)->actions == 0 &&
+                    enemy->hasInInventory(item),
                 "surviving allies must remain actors while native hero defeat/loot semantics complete once");
 }
 
