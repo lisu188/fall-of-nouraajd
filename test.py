@@ -143,6 +143,7 @@ VALID_TEST_SUITES = ("fast", "gameplay", "gameplay-core", "mcp-branches", "ui", 
 MCP_BRANCH_TEST_PREFIX = "GameplayBranchMcpTest."
 FAST_TEST_PREFIXES = (
     "CityNativeLoadingSourceTest.",
+    "CandlekeepMetadataSourceTest.",
     "BaldursGateCityDataTest.",
     "CityWalkthroughRegistrationTest.",
     "BindingSourceLayoutTest.",
@@ -239,6 +240,7 @@ FAST_TEST_NAMES = {
 }
 GAMEPLAY_TEST_PREFIXES = (
     "CityNativeLoadingRuntimeTest.",
+    "CandlekeepMetadataRuntimeTest.",
     "NativeCoroutineCallbackTest.",
     MCP_BRANCH_TEST_PREFIX,
     "McpTestSeedRuntimeTest.",
@@ -26890,6 +26892,8 @@ SOURCE_UI_TESTS_AVAILABLE = (REPO_ROOT / "tests" / "__init__.py").is_file()
 if SOURCE_UI_TESTS_AVAILABLE:
     from tests.test_city_native_loading import CityNativeLoadingRuntimeTest as _CityNativeLoadingRuntimeTest
     from tests.test_city_native_loading import CityNativeLoadingSourceTest as _CityNativeLoadingSourceTest
+    from tests.test_candlekeep_metadata import CandlekeepMetadataSourceTest as _CandlekeepMetadataSourceTest
+    from tests.test_candlekeep_metadata import CandlekeepMetadataRuntimeTest as _CandlekeepMetadataRuntimeTest
     from tests.test_baldurs_gate_city_data import BaldursGateCityDataTest as _BaldursGateCityDataTest
     from tests.test_city_walkthrough_registration import CityWalkthroughRegistrationTest as _CityWalkthroughRegistrationTest
     from tests.test_binding_source_layout import BindingSourceLayoutTest as _BindingSourceLayoutTest
@@ -27228,6 +27232,12 @@ if SOURCE_UI_TESTS_AVAILABLE:
     class CityNativeLoadingSourceTest(_CityNativeLoadingSourceTest):
         pass
 
+    class CandlekeepMetadataSourceTest(_CandlekeepMetadataSourceTest):
+        pass
+
+    class CandlekeepMetadataRuntimeTest(_CandlekeepMetadataRuntimeTest):
+        pass
+
     class CityNativeLoadingRuntimeTest(_CityNativeLoadingRuntimeTest):
         pass
 
@@ -27277,6 +27287,7 @@ if SOURCE_UI_TESTS_AVAILABLE:
     del _DialogueMcpWalkthroughTest, _ManagementMcpWalkthroughTest, _ArtifactPreviewTest, _PythonCallbackLifecycleTest
     del _DialogueTransitionBoundaryTest
     del _CityWalkthroughRegistrationTest, _CityNativeLoadingRuntimeTest, _CityNativeLoadingSourceTest
+    del _CandlekeepMetadataSourceTest, _CandlekeepMetadataRuntimeTest
     del _PaidActionRuntimeTest
     del _GameDiagnosticsTest, _McpDiagnosticsTest, _NativeDiagnosticsRuntimeTest
     del _McpEngineThreadTest, _McpHttpNativeRuntimeTest
@@ -28958,6 +28969,8 @@ class McpServerTest(unittest.TestCase):
             env = os.environ.copy()
             env["GAME_PLAYTEST_TRACE"] = "1"
             env["GAME_PLAYTEST_TRACE_FILE"] = str(trace_path)
+            if map_name in CITY_WALKTHROUGH_CASES:
+                env["GAME_PLAYTEST_TRACE_RETAIN_RECENT"] = "1"
         command = [
             sys.executable,
             str(script),

@@ -844,8 +844,16 @@ class GameplayBranchDriver:
         if not obe or not entrance or not self.call(obe, "isAlive"):
             return None
         try:
-            inventory = json.loads(self.call(self.player, "getStringProperty", "candlekeepTrainingInventoryNames"))
-            equipment = json.loads(self.call(self.player, "getStringProperty", "candlekeepTrainingEquipment"))
+            inventory = json.loads(
+                self.call(self.player, "getStringProperty", "candlekeepTrainingInventoryNames").removeprefix(
+                    "candlekeep-json:"
+                )
+            )
+            equipment = json.loads(
+                self.call(self.player, "getStringProperty", "candlekeepTrainingEquipment").removeprefix(
+                    "candlekeep-json:"
+                )
+            )
         except (TypeError, ValueError):
             return None
         return {

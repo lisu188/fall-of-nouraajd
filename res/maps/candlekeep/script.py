@@ -44,6 +44,12 @@ NPC_IDS = (
 def load(self, context):
     import json
 
+    def decodeData(encoded):
+        return json.loads(encoded.removeprefix("candlekeep-json:"))
+
+    def encodeData(value):
+        return "candlekeep-json:" + json.dumps(value)
+
     from game import CBuilding, CCreature, CDialog, CEvent, CQuest, CScroll, CTrigger, Coords
     from game import claim_once, flowGame, mapQuest, register, resumableHook, trigger, uiRequest
 
@@ -75,9 +81,9 @@ def load(self, context):
     def spawn(game_map, object_id, coords, name=None):
         actor = game_map.getGame().createObject(object_id)
         actor.setStringProperty("name", name or object_id)
-        actor.setPosX(coords[0])
-        actor.setPosY(coords[1])
-        actor.setPosZ(coords[2])
+        actor.setNumericProperty("posx", coords[0])
+        actor.setNumericProperty("posy", coords[1])
+        actor.setNumericProperty("posz", coords[2])
         game_map.addObject(actor)
         return actor
 
@@ -89,7 +95,7 @@ def load(self, context):
 
     def reclaimTrainingInventory(game_map):
         player = game_map.getPlayer()
-        original_names = set(json.loads(player.getStringProperty("candlekeepTrainingInventoryNames") or "[]"))
+        original_names = set(decodeData(player.getStringProperty("candlekeepTrainingInventoryNames") or "[]"))
         for owner in game_map.getObjects():
             if not isinstance(owner, CCreature) or owner == player:
                 continue
@@ -112,7 +118,7 @@ def load(self, context):
         for item in tuple(player.getItems()):
             if item.getBoolProperty("plugin_candlekeepTemporary"):
                 player.removeItem(lambda candidate: candidate == item, False)
-        original_equipment = json.loads(player.getStringProperty("candlekeepTrainingEquipment") or "{}")
+        original_equipment = decodeData(player.getStringProperty("candlekeepTrainingEquipment") or "{}")
         for slot, name in original_equipment.items():
             item = next((item for item in player.getItems() if item.getName() == name), None)
             if item:
@@ -561,7 +567,7 @@ def load(self, context):
             actor = self.actor()
             if not actor:
                 return False
-            actor.setNpc(False)
+            actor.setBoolProperty("npc", False)
             actor.setStringProperty("affiliation", "candlekeepHostile")
             controller = self.getGame().createObject("CTargetController")
             controller.setStringProperty("target", "player")
@@ -676,7 +682,7 @@ def load(self, context):
 
         def _entries(self, property_name):
             try:
-                rows = json.loads(self.getStringProperty(property_name) or "[]")
+                rows = decodeData(self.getStringProperty(property_name) or "[]")
             except (ValueError, TypeError):
                 return []
             return rows if isinstance(rows, list) else []
@@ -1154,7 +1160,7 @@ def load(self, context):
                 game_map.setBoolProperty("candlekeepTrainingDefeatHookRegistered", True)
             player.setStringProperty(
                 "candlekeepTrainingInventoryNames",
-                json.dumps(
+                encodeData(
                     sorted(
                         {item.getName() for item in player.getItems()}
                         | {item.getName() for item in player.getEquipped().values() if item}
@@ -1164,7 +1170,7 @@ def load(self, context):
             player.setStringProperty("candlekeepTrainingAffiliation", player.getStringProperty("affiliation"))
             player.setStringProperty(
                 "candlekeepTrainingEquipment",
-                json.dumps({slot: item.getName() for slot, item in player.getEquipped().items() if item}),
+                encodeData({slot: item.getName() for slot, item in player.getEquipped().items() if item}),
             )
             player.setNumericProperty("candlekeepTrainingHp", player.getHp())
             player.setNumericProperty("candlekeepTrainingMana", player.getNumericProperty("mana"))
@@ -1380,7 +1386,7 @@ def load(self, context):
             for name in creatures:
                 actor = self.getGame().getMap().getObjectByName(name)
                 if actor:
-                    actor.setNpc(True)
+                    actor.setBoolProperty("npc", True)
                     actor.setController(self.getGame().createObject("CController"))
             yield uiRequest(
                 "showReader",

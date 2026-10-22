@@ -3402,7 +3402,7 @@ class OctobogzDiagnosticTest(unittest.TestCase):
             self.assertEqual(count, len(commands), "Conflicting seed paths cannot launch or seed a child")
             self.assertEqual({"candlekeep", "baldursGate"}, set(namespace["CITY_WALKTHROUGH_CASES"]))
             for map_name in namespace["CITY_WALKTHROUGH_CASES"]:
-                with self.subTest(city_trace=map_name):
+                with self.subTest(city_trace=map_name), patch.dict(os.environ, GAME_PLAYTEST_TRACE_RETAIN_RECENT="0"):
                     trace_name = "isolated-" + map_name
                     city = namespace[method.name](fixture, map_name, trace_name=trace_name, test_seed=17)
                     expected_trace = Path(temporary) / f"mcp_walkthrough_{trace_name}_trace.jsonl"
@@ -3412,6 +3412,8 @@ class OctobogzDiagnosticTest(unittest.TestCase):
                     environment = commands[-1][1]["env"]
                     self.assertEqual("1", environment["GAME_PLAYTEST_TRACE"])
                     self.assertEqual(str(expected_trace), environment["GAME_PLAYTEST_TRACE_FILE"])
+                    self.assertEqual("1", environment["GAME_PLAYTEST_TRACE_RETAIN_RECENT"])
+                    self.assertEqual("0", os.environ["GAME_PLAYTEST_TRACE_RETAIN_RECENT"])
                     self.assertEqual(["--test-seed", "17"], commands[-1][0][-2:])
                     self.assertNotIn("--fixture-seed", commands[-1][0])
                     self.assertNotIn("--native-log-file", commands[-1][0])

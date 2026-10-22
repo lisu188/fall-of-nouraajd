@@ -4,6 +4,7 @@
 
 import ast
 import textwrap
+from types import SimpleNamespace
 import unittest
 from unittest.mock import patch
 
@@ -67,8 +68,8 @@ class CityNativeLoadingRuntimeTest(unittest.TestCase):
                 for level in range(5):
                     for x, y in ((223, 191), (-1, 0), (224, 192)):
                         tile = world.getTile(x, y, level)
-                        point = tile.getCoords()
-                        assert (point.x, point.y, point.z) == (x, y, level), (point.x, point.y, point.z)
+                        point = tuple(tile.getNumericProperty(key) for key in ('posx', 'posy', 'posz'))
+                        assert point == (x, y, level), point
                         assert tile.getTypeId() == 'cityWallTile', tile.getTypeId()
                         assert not world.canStep(game.Coords(x, y, level)), (x, y, level)
                 print(
@@ -163,6 +164,52 @@ class CityNativeLoadingSourceTest(unittest.TestCase):
         self.assertIn("*marek.getItems(), *marek.getEquipped().values()", program)
         self.assertIn("clock.getStringProperty('questDefinitions')", program)
         self.assertIn("clone = marek.clone()", program)
+
+    def testFallbackCoordinatesUseTheExposedNativeTileProperties(self):
+        program = self.program(
+            "testCityLoadsNativePlacedAndDeferredActorsWithBlockedLayerFallback",
+            "native city construction and five-level blocked fallback verified",
+        )
+        fallback = next(
+            node
+            for node in ast.walk(ast.parse(textwrap.dedent(program)))
+            if isinstance(node, ast.For) and isinstance(node.target, ast.Name) and node.target.id == "level"
+        )
+        compiled = compile(ast.Module(body=[fallback], type_ignores=[]), "<actual-city-fallback-probe>", "exec")
+
+        class NativeTile:
+            __slots__ = ("properties",)
+
+            def __init__(self, coords, corrupt):
+                x, y, z = coords
+                self.properties = dict(posx=x, posy=y, posz=z + int(corrupt))
+
+            def getNumericProperty(self, name):
+                return self.properties[name]
+
+            def getTypeId(self):
+                return "cityWallTile"
+
+        class NativeWorld:
+            def __init__(self, corrupt):
+                self.corrupt = corrupt
+                self.checked = []
+
+            def getTile(self, x, y, z):
+                return NativeTile((x, y, z), self.corrupt)
+
+            def canStep(self, coords):
+                self.checked.append(coords)
+                return False
+
+        namespace = {"game": SimpleNamespace(Coords=lambda x, y, z: (x, y, z))}
+        world = NativeWorld(False)
+        exec(compiled, {**namespace, "world": world})
+        self.assertEqual(
+            [(x, y, level) for level in range(5) for x, y in ((223, 191), (-1, 0), (224, 192))], world.checked
+        )
+        with self.assertRaises(AssertionError):
+            exec(compiled, {**namespace, "world": NativeWorld(True)})
 
     def testSaveProbeUsesNativePersistenceAndPreservesFailedDiagnostics(self):
         program = self.program(

@@ -734,7 +734,7 @@ class CandlekeepModelTest(unittest.TestCase):
     def testAuditedStockSelectionAndQuickPurchaseShareFiniteCountersAndExactPrices(self):
         model = CandlekeepModel()
         player, dialog = model.player, model.dialog("templePriest")
-        rows = json.loads(dialog.getStringProperty("shopEntries"))
+        rows = json.loads(dialog.getStringProperty("shopEntries").removeprefix("candlekeep-json:"))
         row = next(row for row in rows if row["itemId"] == "candlekeepHealingPotion")
         self.assertEqual((112, 20), (row["price"], row["limit"]))
         player.properties["gold"] = 10000
