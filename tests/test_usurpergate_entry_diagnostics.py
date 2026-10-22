@@ -1,12 +1,13 @@
 # Copyright (C) 2026 Andrzej Lis
 # SPDX-License-Identifier: GPL-3.0-or-later
-"""Source/model coverage of Usurpergate entry failure diagnostics, not native route proof."""
+"""Source/model checks for Usurpergate entry boundaries and diagnostics, not native route proof."""
 
 import ast
 import json
 from pathlib import Path
 from types import SimpleNamespace
 import unittest
+import weakref
 
 ROOT = Path(__file__).resolve().parents[1]
 
@@ -127,6 +128,131 @@ class UsurpergateEntryDiagnosticsTest(unittest.TestCase):
         for state in (receipt["before"], receipt["after"]):
             self.assertEqual({"error": "RuntimeError: position diagnostic sentinel"}, state["playerCoords"])
             self.assertTrue(state["startPresent"])
+
+    def campaignBoundaryFixture(self, mode):
+        from tests.test_castle_campaign import FakeMap, FakeObject
+
+        source = ast.parse((ROOT / "res/maps/usurpergate/script.py").read_text(encoding="utf-8"))
+        load = next(node for node in source.body if isinstance(node, ast.FunctionDef) and node.name == "load")
+        definitions = []
+        for node in load.body:
+            if isinstance(node, ast.Assign) and any(
+                isinstance(target, ast.Name) and target.id in {"MERCY_ROUTE_DEFENDERS", "MERCY_ARRIVAL_TEXT"}
+                for target in node.targets
+            ):
+                definitions.append(node)
+            elif isinstance(node, ast.FunctionDef) and node.name in {
+                "ensure_quest",
+                "usurpergate_flags_default",
+                "mercy_route_active",
+                "applyMercyRouteFlow",
+            }:
+                definitions.append(node)
+            elif isinstance(node, ast.ClassDef) and node.name == "UsurpergateStart":
+                node.decorator_list = []
+                for method in node.body:
+                    if isinstance(method, ast.FunctionDef):
+                        method.decorator_list = []
+                definitions.append(node)
+        world = FakeMap()
+
+        class NativeGame:
+            def getMap(self):
+                return world
+
+        native_game = NativeGame()
+        world.game = native_game
+        boundary_calls = []
+
+        def state(argument):
+            # Model the exact Py_TYPE comparison in CLoader::wrap_helper_function.
+            if type(argument) is not NativeGame:
+                raise TypeError("Resource helpers require the native game instance")
+            boundary_calls.append(argument)
+            return (
+                None
+                if mode == "standalone"
+                else SimpleNamespace(active=lambda: True, campaign_id=lambda: "wardensRoad", scenario=lambda: mode)
+            )
+
+        namespace = {"CEvent": FakeObject, "campaign": SimpleNamespace(state=state), "ref": weakref.ref}
+        ui_tree = ast.parse((ROOT / "res/ui.py").read_text(encoding="utf-8"))
+        ui_helpers = [
+            node
+            for node in ui_tree.body
+            if isinstance(node, (ast.FunctionDef, ast.ClassDef))
+            and node.name in {"UiFlowGame", "flowGame", "uiRequest"}
+        ]
+        helpers = ast.parse((ROOT / "res/game.py").read_text(encoding="utf-8"))
+        removals = [
+            node
+            for node in helpers.body
+            if isinstance(node, ast.FunctionDef) and node.name in {"removeObjectFlow", "removeObjectsFlow"}
+        ]
+        exec(
+            compile(
+                ast.Module(body=ui_helpers + removals + definitions, type_ignores=[]), "authored-usurpergate", "exec"
+            ),
+            namespace,
+        )
+        start = namespace["UsurpergateStart"]("usurpergateStart", world, text="Standard source introduction")
+        world.objects[start.getName()] = start
+        defenders = ("curtainWallWest1", "curtainWallWest2", "housecarlWest")
+        for name in defenders + ("curtainWallEast1", "curtainWallEast2", "housecarlEast", "theUsurper"):
+            world.objects[name] = FakeObject(name, world)
+        event = SimpleNamespace(getCause=lambda: world.player)
+        return namespace, native_game, world, start, event, boundary_calls, defenders
+
+    def testSourceEntryUsesNativeGameAtTheStrictCampaignBoundaryForAllThreeRoutes(self):
+        for mode in ("standalone", "assault_wrath", "assault_mercy"):
+            with self.subTest(mode=mode):
+                namespace, native_game, world, start, event, boundary_calls, defenders = self.campaignBoundaryFixture(
+                    mode
+                )
+                readers, removals = [], []
+                flow = start.onEnter(event)
+                self.addCleanup(flow.close)
+                for request in flow:
+                    if request["operation"] == "gui.removeObject":
+                        target, actor = request["args"]
+                        self.assertIs(world, target)
+                        removals.append(actor.getName())
+                        del world.objects[actor.getName()]
+                    else:
+                        self.assertEqual("showReader", request["operation"])
+                        weak_game, title, body = request["args"]
+                        self.assertIsInstance(weak_game, namespace["UiFlowGame"])
+                        self.assertIs(native_game, weak_game.resolve())
+                        readers.append((title, body))
+                        self.assertEqual(mode == "assault_mercy", all(name not in world.objects for name in defenders))
+                self.assertEqual([native_game], boundary_calls)
+                self.assertEqual(1, len(readers))
+                self.assertEqual(mode == "assault_mercy", "Voss's ledgers named" in readers[0][1])
+                self.assertTrue(world.getBoolProperty("usurpergate_intro"))
+                self.assertEqual(mode == "assault_mercy", world.getBoolProperty("mercy_route_applied"))
+                self.assertNotIn("usurpergateStart", world.objects)
+                self.assertEqual(
+                    [*defenders, "usurpergateStart"] if mode == "assault_mercy" else ["usurpergateStart"], removals
+                )
+                self.assertEqual(["usurpergateQuest"], [quest.getName() for quest in world.player.getQuests()])
+                repeated = start.onEnter(event)
+                self.assertEqual([], list(repeated))
+                self.assertEqual([native_game], boundary_calls)
+                self.assertEqual(1, len(world.player.getQuests()))
+
+    def testCampaignBoundaryRemainsStrictAndNonPlayerEntryDoesNotConsultIt(self):
+        namespace, native_game, world, start, _event, calls, _defenders = self.campaignBoundaryFixture("standalone")
+        source = (ROOT / "src/core/CLoader.cpp").read_text(encoding="utf-8")
+        self.assertIn('owner.is_none() && (moduleName == "campaign" || craftingCall)', source)
+        self.assertIn("reinterpret_cast<PyObject *>(Py_TYPE(gameArg.ptr())) != gameType.ptr()", source)
+        weak_game = namespace["flowGame"](native_game)
+        with self.assertRaisesRegex(TypeError, "require the native game instance"):
+            namespace["campaign"].state(weak_game)
+        other = SimpleNamespace(isPlayer=lambda: False)
+        self.assertEqual([], list(start.onEnter(SimpleNamespace(getCause=lambda: other))))
+        self.assertEqual([], calls)
+        self.assertFalse(world.getBoolProperty("usurpergate_intro"))
+        self.assertIn("usurpergateStart", world.objects)
 
 
 if __name__ == "__main__":
