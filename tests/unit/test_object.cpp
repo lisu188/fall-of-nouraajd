@@ -4152,8 +4152,10 @@ void test_proc_restores_clamp_positive_percentages_away_from_full_restore_sentin
 
 
 void testConfiguredAliasChainsReportTheConstructibleClassAndCurrentSubtypes() {
-    auto game = load_empty_game();
+    auto game = game_with_registered_types();
     auto objects = game->getObjectHandler();
+    objects->registerType("CItem", []() { return std::make_shared<CItem>(); });
+    objects->registerType("CEffect", []() { return std::make_shared<CEffect>(); });
     const auto configure = [&](const std::string &name, json value) {
         objects->registerConfig(name, std::make_shared<json>(std::move(value)));
     };
@@ -4181,7 +4183,7 @@ void testConfiguredAliasChainsReportTheConstructibleClassAndCurrentSubtypes() {
 }
 
 void testConfiguredAliasInspectionRejectsCyclesMissingAndMalformedDefinitions() {
-    auto game = load_empty_game();
+    auto game = game_with_registered_types();
     auto objects = game->getObjectHandler();
     const std::map<std::string, json> invalid = {
         {"unitAliasSelf", {{"ref", "unitAliasSelf"}}},
