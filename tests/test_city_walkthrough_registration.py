@@ -185,7 +185,13 @@ class CityWalkthroughRegistrationTest(unittest.TestCase):
 
     def testRuntimeLoadingAndSourceFixturesKeepSeparateSuiteSelection(self):
         names = harness.discover_unittest_test_names(["test.py", "CityNativeLoadingRuntimeTest"])
-        self.assertEqual(1, len(names))
+        self.assertEqual(
+            {
+                "CityNativeLoadingRuntimeTest.testCityLoadsNativePlacedAndDeferredActorsWithBlockedLayerFallback",
+                "CityNativeLoadingRuntimeTest.testCityStructuredMetadataAndOwnedItemsSurviveSaveReload",
+            },
+            set(names),
+        )
         self.assertEqual([], harness.filter_test_names_by_suite(names, "fast"))
         for suite in ("gameplay", "coverage-safe", "full"):
             self.assertEqual(names, harness.filter_test_names_by_suite(names, suite))

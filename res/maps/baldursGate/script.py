@@ -3,6 +3,15 @@
 """One persistent city; original-resource facts and native adaptation rules remain distinct."""
 
 
+CITY_JSON_PREFIX = "city-json:"
+
+
+def decodeData(encoded):
+    import json
+
+    return json.loads(encoded.removeprefix(CITY_JSON_PREFIX))
+
+
 def itemId(source):
     return "cityItem" + source[:1].upper() + source[1:].lower()
 
@@ -33,10 +42,10 @@ def load(self, context):
         return world(obj).getObjectByName("cityClock")
 
     def read(obj, key, default):
-        return json.loads(obj.getStringProperty(key) or json.dumps(default))
+        return decodeData(obj.getStringProperty(key) or json.dumps(default))
 
     def write(obj, key, value):
-        obj.setStringProperty(key, json.dumps(value, separators=(",", ":")))
+        obj.setStringProperty(key, CITY_JSON_PREFIX + json.dumps(value, separators=(",", ":")))
 
     def notify(obj, text):
         obj.getGame().getGuiHandler().notify(text)
@@ -4316,7 +4325,7 @@ def load(self, context):
         def observeRegions(self):
             definition_text = self.getStringProperty("regionDefinitions")
             if definition_text not in region_indices:
-                document = json.loads(definition_text or "[]")
+                document = decodeData(definition_text or "[]")
                 rows = document.get("regions", []) if isinstance(document, dict) else document
                 region_indices.clear()
                 cell_index = {}

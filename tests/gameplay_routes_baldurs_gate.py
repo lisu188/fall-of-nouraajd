@@ -7,6 +7,7 @@ from functools import lru_cache, partial
 import json
 from pathlib import Path
 
+from scripts.build_baldurs_gate_city import decodeCityData
 from tests.gameplay_branch_types import RouteCase
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -48,7 +49,7 @@ def sourceQuantity(row):
 
 
 def read(d, owner, key, default):
-    return json.loads(d.call(owner, "getStringProperty", key) or json.dumps(default))
+    return decodeCityData(d.call(owner, "getStringProperty", key) or json.dumps(default))
 
 
 def resources(d):
@@ -465,7 +466,7 @@ class QuestRoute:
             properties = entry.get("properties", {})
             if entry.get("class") != "BaldursGateContainer" or "contents" not in properties:
                 continue
-            if any(row["item"] in codes for row in json.loads(properties["contents"])):
+            if any(row["item"] in codes for row in decodeCityData(properties["contents"])):
                 containers.append((bool(properties.get("locked")), bool(properties.get("sourceOwner")), name))
         for _locked, _owned, name in sorted(containers):
             owner = self.d.object(name, required=False)
@@ -496,9 +497,9 @@ class QuestRoute:
                     self.d.choose(owner + "Dialog", "buyStore" + upperFirst(store_id.lower()) + str(index))
                     if sum(resources(self.d)[2][code] for code in codes) >= requirement.get("count", 1):
                         return
-        for excursion in json.loads(self.d.call(self.d.object("cityClock"), "getStringProperty", "questDefinitions"))[
-            "excursions"
-        ]:
+        for excursion in decodeCityData(
+            self.d.call(self.d.object("cityClock"), "getStringProperty", "questDefinitions")
+        )["excursions"]:
             for choice in excursion["choices"]:
                 if any(row["item"] in codes for row in choice.get("items", [])):
                     self.accept(excursion["quest"])
@@ -521,7 +522,7 @@ class QuestRoute:
         for name, entry in sorted(self.data["config"].items()):
             properties = entry.get("properties", {})
             if entry.get("class") not in ACTOR_CLASSES or not any(
-                row["item"] in codes for row in json.loads(properties.get("sourceInventory", "[]"))
+                row["item"] in codes for row in decodeCityData(properties.get("sourceInventory", "[]"))
             ):
                 continue
             if not self.d.object(name, required=False):
@@ -568,7 +569,9 @@ class QuestRoute:
             elif flag == "narlenWarning":
                 self.narlenLookout(warn=True)
             else:
-                document = json.loads(self.d.call(self.d.object("cityClock"), "getStringProperty", "questDefinitions"))
+                document = decodeCityData(
+                    self.d.call(self.d.object("cityClock"), "getStringProperty", "questDefinitions")
+                )
                 found_excursion = next(
                     (
                         (excursion, choice)
@@ -915,7 +918,7 @@ def generatedStoreCases():
     from scripts.build_baldurs_gate_city_dialogs import storeDialogRows
 
     data = documents()
-    stores = json.loads(data["config"]["cityClock"]["properties"]["storeDefinitions"])
+    stores = decodeCityData(data["config"]["cityClock"]["properties"]["storeDefinitions"])
     owners = {}
     for name, entry in data["config"].items():
         properties = entry.get("properties", {})

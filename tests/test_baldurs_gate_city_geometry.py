@@ -12,6 +12,8 @@ from pathlib import Path
 import re
 import unittest
 
+from scripts.build_baldurs_gate_city import decodeCityData
+
 ROOT = Path(__file__).resolve().parents[1]
 MAP_ROOT = ROOT / "res/maps/baldursGate"
 FIXTURES = ROOT / "tests/fixtures"
@@ -226,7 +228,7 @@ class BaldursGateCityGeometryTest(unittest.TestCase):
                         self.assertTrue(self.canStep(self.objects[name]))
                         if kind == "Container":
                             self.assertEqual(
-                                self.canonicalInventory(source_object["items"]), json.loads(properties["contents"])
+                                self.canonicalInventory(source_object["items"]), decodeCityData(properties["contents"])
                             )
                             self.assertEqual(source_object["lock_difficulty"], properties["sourceLockDifficulty"])
                             self.assertEqual(bool(source_object["trapped"]), properties["trapped"])
@@ -242,7 +244,7 @@ class BaldursGateCityGeometryTest(unittest.TestCase):
                                 self.assertTrue(properties["sourceCorpse"])
                                 self.assertEqual(
                                     self.canonicalInventory(creature.get("items", [])),
-                                    json.loads(properties["contents"]),
+                                    decodeCityData(properties["contents"]),
                                 )
                                 for field in (
                                     "npc",
@@ -258,9 +260,11 @@ class BaldursGateCityGeometryTest(unittest.TestCase):
                             else:
                                 self.assertEqual("CCreature", self.config[name]["class"])
                                 self.assertEqual(source_object["schedule"], properties["sourceSchedule"])
-                            native_inventory = json.loads(properties["sourceInventory"])
+                            native_inventory = decodeCityData(properties["sourceInventory"])
                             self.assertEqual(self.canonicalInventory(creature.get("items", [])), native_inventory)
-                            self.assertEqual(creature.get("itemSlots", []), json.loads(properties["sourceItemSlots"]))
+                            self.assertEqual(
+                                creature.get("itemSlots", []), decodeCityData(properties["sourceItemSlots"])
+                            )
                             index_items = {record["sourceIndex"]: record["item"] for record in native_inventory}
                             self.assertEqual(len(index_items), len(native_inventory))
                             for source_index, item in enumerate(creature.get("items", [])):
@@ -286,7 +290,7 @@ class BaldursGateCityGeometryTest(unittest.TestCase):
         facts.update(
             {record["sourceId"]: dict(record, areas=[record["area"]]) for record in self.source["campaignNpcs"]}
         )
-        definitions = json.loads(self.config["cityClock"]["properties"]["actorDefinitions"])
+        definitions = decodeCityData(self.config["cityClock"]["properties"]["actorDefinitions"])
         self.assertEqual(definitions, self.geometry["scriptedActorPlacements"])
         self.assertEqual(len(definitions), len({record["id"] for record in definitions}))
         blueprints = {
@@ -307,7 +311,7 @@ class BaldursGateCityGeometryTest(unittest.TestCase):
                 self.assertEqual(fact["creature"], properties["sourceCreature"])
                 if fact.get("scopeClassification") in {"boundaryHistory", "externalHistory"}:
                     self.assertEqual(fact["area"], properties["sourceOriginalArea"])
-                    self.assertEqual(fact["position"], json.loads(properties["sourceOriginalPosition"]))
+                    self.assertEqual(fact["position"], decodeCityData(properties["sourceOriginalPosition"]))
                     self.assertEqual("AR0800", area_id)
                     self.assertTrue(record["requiresFlag"])
                     self.assertTrue(properties["sourceAdaptation"])
@@ -324,7 +328,7 @@ class BaldursGateCityGeometryTest(unittest.TestCase):
                 cells.add(point)
                 creature = self.source["creatures"][properties["sourceCreature"]]
                 self.assertEqual(
-                    self.canonicalInventory(creature.get("items", [])), json.loads(properties["sourceInventory"])
+                    self.canonicalInventory(creature.get("items", [])), decodeCityData(properties["sourceInventory"])
                 )
 
     def testCampaignNpcsUseTheirAuditedCityPlacementsAndKeepActualInventories(self):
@@ -349,7 +353,7 @@ class BaldursGateCityGeometryTest(unittest.TestCase):
             self.assertTrue(self.canStep(point))
             creature = self.source["creatures"][fact["creatureMetadata"]]
             self.assertEqual(
-                self.canonicalInventory(creature.get("items", [])), json.loads(properties["sourceInventory"])
+                self.canonicalInventory(creature.get("items", [])), decodeCityData(properties["sourceInventory"])
             )
             raw = self.rawPosition(fact["area"], fact["position"])
             if point != raw:
@@ -364,7 +368,7 @@ class BaldursGateCityGeometryTest(unittest.TestCase):
         self.assertEqual(set(facts), set(actual))
 
     def testCanonicalActorRelocationsReserveDistinctReachableSourceScenes(self):
-        relocations = json.loads(self.config["cityClock"]["properties"]["relocationDefinitions"])
+        relocations = decodeCityData(self.config["cityClock"]["properties"]["relocationDefinitions"])
         self.assertEqual(relocations, self.geometry["relocationDefinitions"])
         self.assertEqual(len(relocations), len({record["canonicalActorId"] for record in relocations}))
         facts = {record["sourceId"]: record for record in self.source["scriptedActors"]}
@@ -417,10 +421,10 @@ class BaldursGateCityGeometryTest(unittest.TestCase):
                 self.assertEqual(bool(door["trapped"]), properties["trapped"])
                 self.assertEqual(
                     {key: door[key] for key in ("open_polygon", "closed_polygon", "open_impeded", "closed_impeded")},
-                    json.loads(properties["sourceDoorGeometry"]),
+                    decodeCityData(properties["sourceDoorGeometry"]),
                 )
                 actual[source_id] += 1
-        for record in json.loads(self.config["cityClock"]["properties"]["geometryDoors"]):
+        for record in decodeCityData(self.config["cityClock"]["properties"]["geometryDoors"]):
             source_id = record["sourceDoor"]
             with self.subTest(geometryDoor=source_id):
                 self.assertIn(source_id, expected)
@@ -636,12 +640,12 @@ class BaldursGateCityGeometryTest(unittest.TestCase):
         ]
         missing.extend(
             record["id"]
-            for record in json.loads(self.config["cityClock"]["properties"]["actorDefinitions"])
+            for record in decodeCityData(self.config["cityClock"]["properties"]["actorDefinitions"])
             if labels.get(tuple(record[key] for key in ("x", "y", "z"))) not in reachable
         )
         missing.extend(
             relocation["canonicalActorId"] + ":" + scene["id"]
-            for relocation in json.loads(self.config["cityClock"]["properties"]["relocationDefinitions"])
+            for relocation in decodeCityData(self.config["cityClock"]["properties"]["relocationDefinitions"])
             for scene in relocation["scenes"]
             if labels.get(tuple(scene[key] for key in ("x", "y", "z"))) not in reachable
         )
@@ -700,7 +704,7 @@ class BaldursGateCityGeometryTest(unittest.TestCase):
             for actor in area["actors"]
         )
         source_actor_count += sum(record["scopeClassification"] == "city" for record in self.source["campaignNpcs"])
-        actor_templates = json.loads(restored["config"]["cityClock"]["properties"]["actorDefinitions"])
+        actor_templates = decodeCityData(restored["config"]["cityClock"]["properties"]["actorDefinitions"])
         self.assertEqual(
             source_actor_count + len(actor_templates),
             sum("sourceActor" in obj.get("properties", {}) for obj in restored["config"].values()),

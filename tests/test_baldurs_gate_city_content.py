@@ -10,6 +10,7 @@ from types import ModuleType, SimpleNamespace
 import unittest
 from unittest.mock import Mock, patch
 
+from scripts.build_baldurs_gate_city import decodeCityData
 from scripts.build_baldurs_gate_city_dialogs import prepareStores, questDialogRows, renderCallbacks, storeDialogRows
 from scripts.build_baldurs_gate_city_relocations import buildRelocations
 from tests.hook_flow_support import installHookFlows
@@ -309,7 +310,7 @@ class BaldursGateCityContentTest(unittest.TestCase):
         model.clock.initializeActor(actor)
         sword = actor.getEquipped()["rightHand"]
         self.assertEqual("SW1H01", sword.getStringProperty("plugin_citySourceItem"))
-        self.assertEqual([3, 4, 5], json.loads(sword.getStringProperty("plugin_cityCharges")))
+        self.assertEqual([3, 4, 5], decodeCityData(sword.getStringProperty("plugin_cityCharges")))
         self.assertEqual(1, sword.getNumericProperty("plugin_cityQuantity"))
         self.assertEqual(77, sword.getNumericProperty("plugin_cityExpiration"))
         self.assertTrue(sword.getBoolProperty("plugin_cityUnstealable"))
@@ -873,7 +874,7 @@ class BaldursGateCityContentTest(unittest.TestCase):
         replacement.setStringProperty("name", "cityClock")
         replacement.properties = dict(before.properties)  # Saved object properties retain canonical actor references.
         for key in ("plugin_cityRelocationState", "plugin_cityParkedActors", "relocationDefinitions"):
-            replacement.setStringProperty(key, json.dumps(json.loads(before.getStringProperty(key))))
+            replacement.setStringProperty(key, json.dumps(decodeCityData(before.getStringProperty(key))))
         model.game_map.removeObject(before)
         model.game_map.addObject(replacement)
         model.clock = replacement
@@ -888,7 +889,7 @@ class BaldursGateCityContentTest(unittest.TestCase):
         replacement.applySchedules()
         replacement.advanceTicks(1200)
         self.assertIsNone(model.game_map.getObjectByName(narlen.getName()))
-        self.assertTrue(json.loads(replacement.getStringProperty("plugin_cityRelocationState"))["narlen"]["dead"])
+        self.assertTrue(decodeCityData(replacement.getStringProperty("plugin_cityRelocationState"))["narlen"]["dead"])
 
     def testRelocationSuppressesNewSceneCopiesAndParksOldCopiesWithoutDeathCredit(self):
         model = CityModel()
@@ -971,7 +972,7 @@ class BaldursGateCityContentTest(unittest.TestCase):
         model.game_map.addObject(start)
         item = model.item("RING16", plugin_cityQuantity=2, plugin_cityCharges="[1,2,3]")
         start.onEnter(SimpleNamespace(getCause=lambda: model.player))
-        profile = json.loads(model.game_map.getStringProperty("plugin_cityStartingProfile"))
+        profile = decodeCityData(model.game_map.getStringProperty("plugin_cityStartingProfile"))
         self.assertEqual((1100, 10000), (profile["gold"], profile["experience"]))
         self.assertEqual("Warrior", profile["classId"])
         self.assertEqual(16, profile["stats"]["agility"])
@@ -981,7 +982,7 @@ class BaldursGateCityContentTest(unittest.TestCase):
         self.assertTrue(dialog.finishHistoryChoices())
         frozen = model.game_map.getStringProperty("plugin_cityStartingProfile")
         self.assertEqual(
-            {"aldeth": "helped", "tenya": "unspecified", "eldoth": "unspecified"}, json.loads(frozen)["history"]
+            {"aldeth": "helped", "tenya": "unspecified", "eldoth": "unspecified"}, decodeCityData(frozen)["history"]
         )
         model.player.addGold(25)
         start.onEnter(SimpleNamespace(getCause=lambda: model.player))
@@ -1005,7 +1006,9 @@ class BaldursGateCityContentTest(unittest.TestCase):
         model.clock.observeRegions()
         model.player.moveTo(3, 2, 0)
         model.clock.observeRegions()
-        self.assertEqual({"AR0100#region1": 1}, json.loads(model.game_map.getStringProperty("plugin_cityRegionVisits")))
+        self.assertEqual(
+            {"AR0100#region1": 1}, decodeCityData(model.game_map.getStringProperty("plugin_cityRegionVisits"))
+        )
         self.assertTrue(region.getBoolProperty("trapped"))
         self.assertEqual(100, model.player.getHp())
         self.assertEqual(0, model.player.getNumericProperty("exp"))
@@ -1014,7 +1017,9 @@ class BaldursGateCityContentTest(unittest.TestCase):
         model.clock.observeRegions()
         model.player.moveTo(2, 2, 0)
         region.onEnter(SimpleNamespace(getCause=lambda: model.player))
-        self.assertEqual({"AR0100#region1": 2}, json.loads(model.game_map.getStringProperty("plugin_cityRegionVisits")))
+        self.assertEqual(
+            {"AR0100#region1": 2}, decodeCityData(model.game_map.getStringProperty("plugin_cityRegionVisits"))
+        )
 
     def testPortalDestroyUnregistersOnlyItsOwnedNavigationEdge(self):
         model = CityModel()
@@ -1244,7 +1249,7 @@ class BaldursGateCityContentTest(unittest.TestCase):
                 self.assertFalse(model.dialog(start).historyAldethHelped())
                 self.assertEqual(
                     {"aldeth": "unspecified", "tenya": "unspecified", "eldoth": "unspecified"},
-                    json.loads(model.game_map.getStringProperty("plugin_cityHistory")),
+                    decodeCityData(model.game_map.getStringProperty("plugin_cityHistory")),
                 )
 
     def testSourceCannotCloseDoorKeepsOpenStateAndNavigationEdge(self):
@@ -1284,7 +1289,7 @@ class BaldursGateCityContentTest(unittest.TestCase):
                 item = model.player.items[0]
                 self.assertGreater(item.getNumericProperty("plugin_cityStackSize"), 1)
                 self.assertEqual(count, item.getNumericProperty("plugin_cityQuantity"))
-                self.assertEqual(row["charges"], json.loads(item.getStringProperty("plugin_cityCharges")))
+                self.assertEqual(row["charges"], decodeCityData(item.getStringProperty("plugin_cityCharges")))
                 self.assertFalse(dialog.openContainer())
                 self.assertEqual([item], model.player.items)
 

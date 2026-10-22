@@ -150,8 +150,40 @@ def identity(source_id):
     return "city" + "".join(word[:1].upper() + word[1:].lower() for word in source_id.replace("#", " ").split())
 
 
+CITY_JSON_PREFIX = "city-json:"
+
+
+def decodeCityData(encoded):
+    return json.loads(encoded.removeprefix(CITY_JSON_PREFIX))
+
+
+def protectCityData(value):
+    if not isinstance(value, str):
+        return value
+    try:
+        decoded = json.loads(value)
+    except ValueError:
+        return value
+    return CITY_JSON_PREFIX + value if isinstance(decoded, (list, dict)) else value
+
+
+def protectCityDefinitions(document):
+    pending = [document]
+    while pending:
+        row = pending.pop()
+        if isinstance(row, dict):
+            properties = row.get("properties")
+            if isinstance(properties, dict):
+                for key, value in tuple(properties.items()):
+                    properties[key] = protectCityData(value)
+            pending.extend(row.values())
+        elif isinstance(row, list):
+            pending.extend(row)
+    return document
+
+
 def definition(class_id, **properties):
-    return {"class": class_id, "properties": properties}
+    return {"class": class_id, "properties": {key: protectCityData(value) for key, value in properties.items()}}
 
 
 def nativeItem(source_id, item):
@@ -1068,6 +1100,7 @@ def compileCity(source, quests=None):
         ],
         "sourceParityEstablished": False,
     }
+    protectCityDefinitions(config)
     return document, config, geometry
 
 

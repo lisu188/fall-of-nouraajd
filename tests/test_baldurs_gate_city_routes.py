@@ -8,6 +8,7 @@ import json
 from pathlib import Path
 import unittest
 
+from scripts.build_baldurs_gate_city import decodeCityData
 from tests import gameplay_routes_baldurs_gate as routes
 from tests.gameplay_branch_types import PLAYER_CLASSES
 
@@ -278,7 +279,7 @@ class BaldursGateCityRoutesTest(unittest.TestCase):
         from scripts.build_baldurs_gate_city_dialogs import storeDialogRows
 
         config = routes.documents()["config"]
-        stores = json.loads(config["cityClock"]["properties"]["storeDefinitions"])
+        stores = decodeCityData(config["cityClock"]["properties"]["storeDefinitions"])
         owners = {
             entry["properties"]["sourceStore"]
             for entry in config.values()

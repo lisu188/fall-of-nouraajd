@@ -1228,7 +1228,7 @@ class ContentValidatorTest(unittest.TestCase):
                     collect(child)
 
         for key in ("questDefinitions", "actorDefinitions", "relocationDefinitions"):
-            collect(json.loads(properties[key]))
+            collect(json.loads(properties[key].removeprefix("city-json:")))
         self.assertTrue(data_writes | state_records <= writes)
         self.assertTrue(data_reads <= reads)
         native = (REPO_ROOT / "src/handler/CFightHandler.cpp").read_text(encoding="utf-8")

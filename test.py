@@ -142,6 +142,8 @@ XVFB_GAMEPLAY_PARENT_TEST = "XvfbGameplayTest.test_keyboard_gameplay_under_xvfb"
 VALID_TEST_SUITES = ("fast", "gameplay", "gameplay-core", "mcp-branches", "ui", "coverage-safe", "full")
 MCP_BRANCH_TEST_PREFIX = "GameplayBranchMcpTest."
 FAST_TEST_PREFIXES = (
+    "CityNativeLoadingSourceTest.",
+    "BaldursGateCityDataTest.",
     "CityWalkthroughRegistrationTest.",
     "BindingSourceLayoutTest.",
     "BaldursGateCityContentTest.",
@@ -26887,6 +26889,8 @@ SOURCE_UI_TESTS_AVAILABLE = (REPO_ROOT / "tests" / "__init__.py").is_file()
 
 if SOURCE_UI_TESTS_AVAILABLE:
     from tests.test_city_native_loading import CityNativeLoadingRuntimeTest as _CityNativeLoadingRuntimeTest
+    from tests.test_city_native_loading import CityNativeLoadingSourceTest as _CityNativeLoadingSourceTest
+    from tests.test_baldurs_gate_city_data import BaldursGateCityDataTest as _BaldursGateCityDataTest
     from tests.test_city_walkthrough_registration import CityWalkthroughRegistrationTest as _CityWalkthroughRegistrationTest
     from tests.test_binding_source_layout import BindingSourceLayoutTest as _BindingSourceLayoutTest
     from tests.test_baldurs_gate_city_content import BaldursGateCityContentTest as _BaldursGateCityContentTest
@@ -27001,6 +27005,9 @@ if SOURCE_UI_TESTS_AVAILABLE:
     class BindingSourceLayoutTest(_BindingSourceLayoutTest):
         pass
 
+
+    class BaldursGateCityDataTest(_BaldursGateCityDataTest):
+        pass
 
     class BaldursGateCityContentTest(_BaldursGateCityContentTest):
         pass
@@ -27218,6 +27225,9 @@ if SOURCE_UI_TESTS_AVAILABLE:
     class SessionDeferredWorkTest(_SessionDeferredWorkTest):
         pass
 
+    class CityNativeLoadingSourceTest(_CityNativeLoadingSourceTest):
+        pass
+
     class CityNativeLoadingRuntimeTest(_CityNativeLoadingRuntimeTest):
         pass
 
@@ -27266,7 +27276,7 @@ if SOURCE_UI_TESTS_AVAILABLE:
 
     del _DialogueMcpWalkthroughTest, _ManagementMcpWalkthroughTest, _ArtifactPreviewTest, _PythonCallbackLifecycleTest
     del _DialogueTransitionBoundaryTest
-    del _CityWalkthroughRegistrationTest, _CityNativeLoadingRuntimeTest
+    del _CityWalkthroughRegistrationTest, _CityNativeLoadingRuntimeTest, _CityNativeLoadingSourceTest
     del _PaidActionRuntimeTest
     del _GameDiagnosticsTest, _McpDiagnosticsTest, _NativeDiagnosticsRuntimeTest
     del _McpEngineThreadTest, _McpHttpNativeRuntimeTest
@@ -27294,7 +27304,7 @@ if SOURCE_UI_TESTS_AVAILABLE:
     del _NavigationCallbackTest
     del _ConsoleUiInteractionTest, _UiMinimapInteractionTest
     del _BindingSourceLayoutTest
-    del _BaldursGateCityContentTest
+    del _BaldursGateCityContentTest, _BaldursGateCityDataTest
     del _BaldursGateCityRoutesTest
     del _BaldursGateCityLedgerUnitTest
     del _BaldursGateCityLedgerFixtureTest
