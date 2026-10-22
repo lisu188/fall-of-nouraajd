@@ -83,7 +83,7 @@ void testScriptFlowBootstrapDoesNotRequireGameplayModule() {
     expect_true(!modules.contains("_game"), "pure UI startup must not load or register gameplay bindings");
     auto game = std::make_shared<CGame>();
     auto callback = pybind11::cpp_function([] { return pybind11::none(); });
-    auto flow = CScriptHandler::createCallbackFlow(callback, game);
+    auto flow = game->getScriptHandler()->createCallbackFlow(callback, game);
     expect_true(flow && !flow->next(nullptr), "a native callback flow must start in the standalone handler test");
     flow.reset();
     game->getContext()->shutdown();
