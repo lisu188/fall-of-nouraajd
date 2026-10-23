@@ -1,0 +1,6966 @@
+{
+  "acceptance": {
+    "ledgerCompletionCredit": false,
+    "nativeExecutionVerified": false,
+    "nativeImplementationReady": false,
+    "originalAcceptanceReady": false,
+    "originalParityEstablished": false
+  },
+  "actorDialogues": {
+    "ANGELO": {
+      "AIScriptMutations": [],
+      "BCSReferences": [
+        {
+          "name": "CAPCUT05",
+          "reason": "StartCutScene(S:CutScene*)",
+          "type": "BCS"
+        },
+        {
+          "name": "CAPCUT04",
+          "reason": "StartCutScene(S:CutScene*)",
+          "type": "BCS"
+        }
+      ],
+      "cutsceneReferences": [
+        {
+          "argumentText": "\"Capcut05\"",
+          "field": "action",
+          "operation": "StartCutScene",
+          "sourceId": "ANGELO.DLG#transition18"
+        },
+        {
+          "argumentText": "\"Capcut04\"",
+          "field": "action",
+          "operation": "StartCutScene",
+          "sourceId": "ANGELO.DLG#transition19"
+        }
+      ],
+      "stateCount": 10,
+      "transitionCount": 27
+    },
+    "BELT": {
+      "AIScriptMutations": [],
+      "BCSReferences": [
+        {
+          "name": "CUTBELT",
+          "reason": "StartCutSceneEx(S:CutScene*,I:evaluateConditions*BOOLEAN)",
+          "type": "BCS"
+        },
+        {
+          "name": "CUTBELT",
+          "reason": "StartCutSceneEx(S:CutScene*,I:evaluateConditions*BOOLEAN)",
+          "type": "BCS"
+        }
+      ],
+      "cutsceneReferences": [
+        {
+          "argumentText": "\"cutbelt\",FALSE",
+          "field": "action",
+          "operation": "StartCutSceneEx",
+          "sourceId": "BELT.DLG#transition18"
+        },
+        {
+          "argumentText": "\"cutbelt\",FALSE",
+          "field": "action",
+          "operation": "StartCutSceneEx",
+          "sourceId": "BELT.DLG#transition19"
+        }
+      ],
+      "stateCount": 16,
+      "transitionCount": 23
+    },
+    "FLAM10": {
+      "AIScriptMutations": [],
+      "BCSReferences": [],
+      "cutsceneReferences": [],
+      "stateCount": 10,
+      "transitionCount": 15
+    },
+    "LIIA": {
+      "AIScriptMutations": [],
+      "BCSReferences": [
+        {
+          "name": "CUTBELT",
+          "reason": "StartCutSceneEx(S:CutScene*,I:evaluateConditions*BOOLEAN)",
+          "type": "BCS"
+        },
+        {
+          "name": "CUTBELT",
+          "reason": "StartCutSceneEx(S:CutScene*,I:evaluateConditions*BOOLEAN)",
+          "type": "BCS"
+        }
+      ],
+      "cutsceneReferences": [
+        {
+          "argumentText": "\"cutbelt\",FALSE",
+          "field": "action",
+          "operation": "StartCutSceneEx",
+          "sourceId": "LIIA.DLG#transition17"
+        },
+        {
+          "argumentText": "\"cutbelt\",FALSE",
+          "field": "action",
+          "operation": "StartCutSceneEx",
+          "sourceId": "LIIA.DLG#transition18"
+        }
+      ],
+      "stateCount": 14,
+      "transitionCount": 22
+    },
+    "NOBL12": {
+      "AIScriptMutations": [],
+      "BCSReferences": [],
+      "cutsceneReferences": [],
+      "stateCount": 4,
+      "transitionCount": 4
+    },
+    "NOBLPA1": {
+      "AIScriptMutations": [],
+      "BCSReferences": [],
+      "cutsceneReferences": [],
+      "stateCount": 3,
+      "transitionCount": 3
+    },
+    "NOBLPA2": {
+      "AIScriptMutations": [],
+      "BCSReferences": [],
+      "cutsceneReferences": [],
+      "stateCount": 3,
+      "transitionCount": 3
+    },
+    "NOBLPA3": {
+      "AIScriptMutations": [],
+      "BCSReferences": [],
+      "cutsceneReferences": [],
+      "stateCount": 3,
+      "transitionCount": 3
+    },
+    "NOBW5": {
+      "AIScriptMutations": [],
+      "BCSReferences": [],
+      "cutsceneReferences": [],
+      "stateCount": 4,
+      "transitionCount": 4
+    },
+    "SAREVO": {
+      "AIScriptMutations": [
+        {
+          "argumentText": "\"\",OVERRIDE",
+          "field": "action",
+          "operation": "ChangeAIScript",
+          "sourceId": "SAREVO.DLG#transition12"
+        }
+      ],
+      "BCSReferences": [
+        {
+          "name": "ENDCUT01",
+          "reason": "StartCutSceneEx(S:CutScene*,I:evaluateConditions*BOOLEAN)",
+          "type": "BCS"
+        }
+      ],
+      "cutsceneReferences": [
+        {
+          "argumentText": "\"EndCut01\",FALSE",
+          "field": "action",
+          "operation": "StartCutSceneEx",
+          "sourceId": "SAREVO.DLG#transition12"
+        }
+      ],
+      "stateCount": 26,
+      "transitionCount": 37
+    }
+  },
+  "areaActors": [
+    {
+      "areaScripts": {
+        "class": "",
+        "default": "",
+        "general": "",
+        "override": "",
+        "race": "",
+        "specific": ""
+      },
+      "creature": "FLAM10",
+      "position": [
+        463,
+        332
+      ],
+      "selectedScriptsBySlot": {
+        "class": {
+          "origin": "creature",
+          "resource": "FLAM10"
+        },
+        "default": {
+          "origin": "creature",
+          "resource": "WDASIGHT"
+        },
+        "general": {
+          "origin": "creature",
+          "resource": ""
+        },
+        "override": {
+          "origin": "creature",
+          "resource": "SHOUT"
+        },
+        "race": {
+          "origin": "creature",
+          "resource": "SEEENEMY"
+        },
+        "specific": {
+          "origin": "none",
+          "resource": ""
+        }
+      },
+      "sourceId": "AR0108.ARE#actor0"
+    },
+    {
+      "areaScripts": {
+        "class": "",
+        "default": "",
+        "general": "",
+        "override": "",
+        "race": "",
+        "specific": ""
+      },
+      "creature": "FLAM10",
+      "position": [
+        829,
+        664
+      ],
+      "selectedScriptsBySlot": {
+        "class": {
+          "origin": "creature",
+          "resource": "FLAM10"
+        },
+        "default": {
+          "origin": "creature",
+          "resource": "WDASIGHT"
+        },
+        "general": {
+          "origin": "creature",
+          "resource": ""
+        },
+        "override": {
+          "origin": "creature",
+          "resource": "SHOUT"
+        },
+        "race": {
+          "origin": "creature",
+          "resource": "SEEENEMY"
+        },
+        "specific": {
+          "origin": "none",
+          "resource": ""
+        }
+      },
+      "sourceId": "AR0108.ARE#actor1"
+    },
+    {
+      "areaScripts": {
+        "class": "",
+        "default": "",
+        "general": "",
+        "override": "",
+        "race": "",
+        "specific": ""
+      },
+      "creature": "FLAM10",
+      "position": [
+        625,
+        548
+      ],
+      "selectedScriptsBySlot": {
+        "class": {
+          "origin": "creature",
+          "resource": "FLAM10"
+        },
+        "default": {
+          "origin": "creature",
+          "resource": "WDASIGHT"
+        },
+        "general": {
+          "origin": "creature",
+          "resource": ""
+        },
+        "override": {
+          "origin": "creature",
+          "resource": "SHOUT"
+        },
+        "race": {
+          "origin": "creature",
+          "resource": "SEEENEMY"
+        },
+        "specific": {
+          "origin": "none",
+          "resource": ""
+        }
+      },
+      "sourceId": "AR0108.ARE#actor2"
+    },
+    {
+      "areaScripts": {
+        "class": "FLAM10A",
+        "default": "",
+        "general": "",
+        "override": "",
+        "race": "",
+        "specific": ""
+      },
+      "creature": "FLAM10",
+      "position": [
+        507,
+        768
+      ],
+      "selectedScriptsBySlot": {
+        "class": {
+          "origin": "area",
+          "resource": "FLAM10A"
+        },
+        "default": {
+          "origin": "creature",
+          "resource": "WDASIGHT"
+        },
+        "general": {
+          "origin": "creature",
+          "resource": ""
+        },
+        "override": {
+          "origin": "creature",
+          "resource": "SHOUT"
+        },
+        "race": {
+          "origin": "creature",
+          "resource": "SEEENEMY"
+        },
+        "specific": {
+          "origin": "none",
+          "resource": ""
+        }
+      },
+      "sourceId": "AR0108.ARE#actor3"
+    },
+    {
+      "areaScripts": {
+        "class": "",
+        "default": "",
+        "general": "",
+        "override": "",
+        "race": "",
+        "specific": ""
+      },
+      "creature": "FLAM10",
+      "position": [
+        1019,
+        503
+      ],
+      "selectedScriptsBySlot": {
+        "class": {
+          "origin": "creature",
+          "resource": "FLAM10"
+        },
+        "default": {
+          "origin": "creature",
+          "resource": "WDASIGHT"
+        },
+        "general": {
+          "origin": "creature",
+          "resource": ""
+        },
+        "override": {
+          "origin": "creature",
+          "resource": "SHOUT"
+        },
+        "race": {
+          "origin": "creature",
+          "resource": "SEEENEMY"
+        },
+        "specific": {
+          "origin": "none",
+          "resource": ""
+        }
+      },
+      "sourceId": "AR0108.ARE#actor4"
+    },
+    {
+      "areaScripts": {
+        "class": "",
+        "default": "",
+        "general": "",
+        "override": "",
+        "race": "",
+        "specific": ""
+      },
+      "creature": "FLAM10",
+      "position": [
+        396,
+        668
+      ],
+      "selectedScriptsBySlot": {
+        "class": {
+          "origin": "creature",
+          "resource": "FLAM10"
+        },
+        "default": {
+          "origin": "creature",
+          "resource": "WDASIGHT"
+        },
+        "general": {
+          "origin": "creature",
+          "resource": ""
+        },
+        "override": {
+          "origin": "creature",
+          "resource": "SHOUT"
+        },
+        "race": {
+          "origin": "creature",
+          "resource": "SEEENEMY"
+        },
+        "specific": {
+          "origin": "none",
+          "resource": ""
+        }
+      },
+      "sourceId": "AR0108.ARE#actor5"
+    },
+    {
+      "areaScripts": {
+        "class": "",
+        "default": "",
+        "general": "",
+        "override": "",
+        "race": "",
+        "specific": "SARRUN"
+      },
+      "creature": "NOBW5",
+      "position": [
+        271,
+        555
+      ],
+      "selectedScriptsBySlot": {
+        "class": {
+          "origin": "creature",
+          "resource": "RUNENEMY"
+        },
+        "default": {
+          "origin": "creature",
+          "resource": "WDRUNSGT"
+        },
+        "general": {
+          "origin": "creature",
+          "resource": ""
+        },
+        "override": {
+          "origin": "creature",
+          "resource": "SHOUT"
+        },
+        "race": {
+          "origin": "creature",
+          "resource": ""
+        },
+        "specific": {
+          "origin": "area",
+          "resource": "SARRUN"
+        }
+      },
+      "sourceId": "AR0108.ARE#actor6"
+    },
+    {
+      "areaScripts": {
+        "class": "",
+        "default": "",
+        "general": "",
+        "override": "",
+        "race": "",
+        "specific": "SARRUN"
+      },
+      "creature": "NOBW5",
+      "position": [
+        259,
+        414
+      ],
+      "selectedScriptsBySlot": {
+        "class": {
+          "origin": "creature",
+          "resource": "RUNENEMY"
+        },
+        "default": {
+          "origin": "creature",
+          "resource": "WDRUNSGT"
+        },
+        "general": {
+          "origin": "creature",
+          "resource": ""
+        },
+        "override": {
+          "origin": "creature",
+          "resource": "SHOUT"
+        },
+        "race": {
+          "origin": "creature",
+          "resource": ""
+        },
+        "specific": {
+          "origin": "area",
+          "resource": "SARRUN"
+        }
+      },
+      "sourceId": "AR0108.ARE#actor7"
+    },
+    {
+      "areaScripts": {
+        "class": "",
+        "default": "",
+        "general": "",
+        "override": "",
+        "race": "",
+        "specific": "SARRUN"
+      },
+      "creature": "NOBL12",
+      "position": [
+        274,
+        509
+      ],
+      "selectedScriptsBySlot": {
+        "class": {
+          "origin": "creature",
+          "resource": "RUNENEMY"
+        },
+        "default": {
+          "origin": "creature",
+          "resource": "WTRUNSGT"
+        },
+        "general": {
+          "origin": "creature",
+          "resource": ""
+        },
+        "override": {
+          "origin": "creature",
+          "resource": "SHOUT"
+        },
+        "race": {
+          "origin": "creature",
+          "resource": ""
+        },
+        "specific": {
+          "origin": "area",
+          "resource": "SARRUN"
+        }
+      },
+      "sourceId": "AR0108.ARE#actor8"
+    },
+    {
+      "areaScripts": {
+        "class": "",
+        "default": "",
+        "general": "",
+        "override": "",
+        "race": "",
+        "specific": "SARRUN"
+      },
+      "creature": "NOBL12",
+      "position": [
+        286,
+        471
+      ],
+      "selectedScriptsBySlot": {
+        "class": {
+          "origin": "creature",
+          "resource": "RUNENEMY"
+        },
+        "default": {
+          "origin": "creature",
+          "resource": "WTRUNSGT"
+        },
+        "general": {
+          "origin": "creature",
+          "resource": ""
+        },
+        "override": {
+          "origin": "creature",
+          "resource": "SHOUT"
+        },
+        "race": {
+          "origin": "creature",
+          "resource": ""
+        },
+        "specific": {
+          "origin": "area",
+          "resource": "SARRUN"
+        }
+      },
+      "sourceId": "AR0108.ARE#actor9"
+    },
+    {
+      "areaScripts": {
+        "class": "",
+        "default": "",
+        "general": "",
+        "override": "",
+        "race": "",
+        "specific": "SARRUN"
+      },
+      "creature": "NOBL12",
+      "position": [
+        204,
+        511
+      ],
+      "selectedScriptsBySlot": {
+        "class": {
+          "origin": "creature",
+          "resource": "RUNENEMY"
+        },
+        "default": {
+          "origin": "creature",
+          "resource": "WTRUNSGT"
+        },
+        "general": {
+          "origin": "creature",
+          "resource": ""
+        },
+        "override": {
+          "origin": "creature",
+          "resource": "SHOUT"
+        },
+        "race": {
+          "origin": "creature",
+          "resource": ""
+        },
+        "specific": {
+          "origin": "area",
+          "resource": "SARRUN"
+        }
+      },
+      "sourceId": "AR0108.ARE#actor10"
+    }
+  ],
+  "closureCounts": {
+    "actorCreatureResources": 21,
+    "actorDialogues": 10,
+    "allBCSInventoried": 27,
+    "areaBCS": 1,
+    "dialogueBCSBoundaries": 4,
+    "directActorBCS": 22,
+    "resourceFingerprints": 79,
+    "selectedHeard2And50Blocks": 4
+  },
+  "creatures": {
+    "ANGELO": {
+      "allegiance": 128,
+      "deathVariable": "Angelo",
+      "dialogue": "ANGELO",
+      "intrinsicEffectOpcodeCounts": {
+        "233": 2
+      },
+      "intrinsicOpcode82Count": 0,
+      "scripts": {
+        "class": "MAGE3",
+        "default": "WTASIGHT",
+        "general": "NONE",
+        "override": "NONE",
+        "race": "NONE"
+      }
+    },
+    "BELT": {
+      "allegiance": 128,
+      "deathVariable": "Belt",
+      "dialogue": "BELT",
+      "intrinsicEffectOpcodeCounts": {
+        "233": 4
+      },
+      "intrinsicOpcode82Count": 0,
+      "scripts": {
+        "class": "SHOUT",
+        "default": "WTASIGHT",
+        "general": "NONE",
+        "override": "BELT",
+        "race": "NONE"
+      }
+    },
+    "FLAM10": {
+      "allegiance": 128,
+      "deathVariable": "FlamingFist10",
+      "dialogue": "FLAM10",
+      "intrinsicEffectOpcodeCounts": {},
+      "intrinsicOpcode82Count": 0,
+      "scripts": {
+        "class": "FLAM10",
+        "default": "WDASIGHT",
+        "general": "NONE",
+        "override": "SHOUT",
+        "race": "SEEENEMY"
+      }
+    },
+    "FLAME": {
+      "allegiance": 255,
+      "deathVariable": "None",
+      "dialogue": "NONE",
+      "intrinsicEffectOpcodeCounts": {},
+      "intrinsicOpcode82Count": 0,
+      "scripts": {
+        "class": "NONE",
+        "default": "WTASIGHT",
+        "general": "NONE",
+        "override": "SHOUT",
+        "race": "SEEENEMY"
+      }
+    },
+    "GDOPP7": {
+      "allegiance": 255,
+      "deathVariable": "GDOPP7",
+      "dialogue": "",
+      "intrinsicEffectOpcodeCounts": {},
+      "intrinsicOpcode82Count": 0,
+      "scripts": {
+        "class": "SARDOPP",
+        "default": "WTASIGHT",
+        "general": "NONE",
+        "override": "NONE",
+        "race": "NONE"
+      }
+    },
+    "GDOPP71": {
+      "allegiance": 255,
+      "deathVariable": "GDOPP71",
+      "dialogue": "",
+      "intrinsicEffectOpcodeCounts": {},
+      "intrinsicOpcode82Count": 0,
+      "scripts": {
+        "class": "SARDOPP",
+        "default": "WTASIGHT",
+        "general": "NONE",
+        "override": "NONE",
+        "race": "NONE"
+      }
+    },
+    "GDOPP72": {
+      "allegiance": 255,
+      "deathVariable": "GDOPP72",
+      "dialogue": "",
+      "intrinsicEffectOpcodeCounts": {},
+      "intrinsicOpcode82Count": 0,
+      "scripts": {
+        "class": "SARDOPP",
+        "default": "WTASIGHT",
+        "general": "NONE",
+        "override": "NONE",
+        "race": "NONE"
+      }
+    },
+    "GDOPP73": {
+      "allegiance": 255,
+      "deathVariable": "GDOPP73",
+      "dialogue": "",
+      "intrinsicEffectOpcodeCounts": {},
+      "intrinsicOpcode82Count": 0,
+      "scripts": {
+        "class": "SARDOPP",
+        "default": "WTASIGHT",
+        "general": "NONE",
+        "override": "NONE",
+        "race": "NONE"
+      }
+    },
+    "GDOPP74": {
+      "allegiance": 255,
+      "deathVariable": "GDOPP74",
+      "dialogue": "",
+      "intrinsicEffectOpcodeCounts": {},
+      "intrinsicOpcode82Count": 0,
+      "scripts": {
+        "class": "SARDOPP",
+        "default": "WTASIGHT",
+        "general": "NONE",
+        "override": "NONE",
+        "race": "NONE"
+      }
+    },
+    "GDOPP75": {
+      "allegiance": 255,
+      "deathVariable": "GDOPP75",
+      "dialogue": "",
+      "intrinsicEffectOpcodeCounts": {},
+      "intrinsicOpcode82Count": 0,
+      "scripts": {
+        "class": "SARDOPP",
+        "default": "WTASIGHT",
+        "general": "NONE",
+        "override": "NONE",
+        "race": "NONE"
+      }
+    },
+    "LIIA": {
+      "allegiance": 128,
+      "deathVariable": "Liia",
+      "dialogue": "LIIA",
+      "intrinsicEffectOpcodeCounts": {
+        "233": 1
+      },
+      "intrinsicOpcode82Count": 0,
+      "scripts": {
+        "class": "SHOUT",
+        "default": "WTASIGHT",
+        "general": "NONE",
+        "override": "LIIA",
+        "race": "MAGE5"
+      }
+    },
+    "NOBL12": {
+      "allegiance": 128,
+      "deathVariable": "None",
+      "dialogue": "NOBL12",
+      "intrinsicEffectOpcodeCounts": {},
+      "intrinsicOpcode82Count": 0,
+      "scripts": {
+        "class": "RUNENEMY",
+        "default": "WTRUNSGT",
+        "general": "NONE",
+        "override": "SHOUT",
+        "race": "NONE"
+      }
+    },
+    "NOBLPA": {
+      "allegiance": 128,
+      "deathVariable": "None",
+      "dialogue": "NONE",
+      "intrinsicEffectOpcodeCounts": {},
+      "intrinsicOpcode82Count": 0,
+      "replacementSpellNumber": 2990,
+      "scripts": {
+        "class": "NOBLPA",
+        "default": "WTRUNSGT",
+        "general": "NONE",
+        "override": "SHOUT",
+        "race": "RUNENEMY"
+      }
+    },
+    "NOBLPA1": {
+      "allegiance": 128,
+      "deathVariable": "None",
+      "dialogue": "NOBLPA1",
+      "intrinsicEffectOpcodeCounts": {},
+      "intrinsicOpcode82Count": 0,
+      "replacementSpellNumber": 2961,
+      "scripts": {
+        "class": "NOBLPA1",
+        "default": "WTRUNSGT",
+        "general": "NONE",
+        "override": "SHOUT",
+        "race": "RUNENEMY"
+      }
+    },
+    "NOBLPA2": {
+      "allegiance": 128,
+      "deathVariable": "None",
+      "dialogue": "NOBLPA2",
+      "intrinsicEffectOpcodeCounts": {},
+      "intrinsicOpcode82Count": 0,
+      "replacementSpellNumber": 2962,
+      "scripts": {
+        "class": "NOBLPA2",
+        "default": "WTRUNSGT",
+        "general": "NONE",
+        "override": "SHOUT",
+        "race": "RUNENEMY"
+      }
+    },
+    "NOBLPA3": {
+      "allegiance": 128,
+      "deathVariable": "None",
+      "dialogue": "NOBLPA3",
+      "intrinsicEffectOpcodeCounts": {},
+      "intrinsicOpcode82Count": 0,
+      "replacementSpellNumber": 2963,
+      "scripts": {
+        "class": "NOBLPA3",
+        "default": "WTRUNSGT",
+        "general": "NONE",
+        "override": "SHOUT",
+        "race": "RUNENEMY"
+      }
+    },
+    "NOBLPA4": {
+      "allegiance": 128,
+      "deathVariable": "None",
+      "dialogue": "NONE",
+      "intrinsicEffectOpcodeCounts": {},
+      "intrinsicOpcode82Count": 0,
+      "replacementSpellNumber": 2964,
+      "scripts": {
+        "class": "NOBLPA4",
+        "default": "WTRUNSGT",
+        "general": "NONE",
+        "override": "SHOUT",
+        "race": "RUNENEMY"
+      }
+    },
+    "NOBLPA5": {
+      "allegiance": 128,
+      "deathVariable": "None",
+      "dialogue": "NONE",
+      "intrinsicEffectOpcodeCounts": {},
+      "intrinsicOpcode82Count": 0,
+      "replacementSpellNumber": 2965,
+      "scripts": {
+        "class": "NOBLPA5",
+        "default": "WTRUNSGT",
+        "general": "NONE",
+        "override": "SHOUT",
+        "race": "RUNENEMY"
+      }
+    },
+    "NOBW5": {
+      "allegiance": 128,
+      "deathVariable": "None",
+      "dialogue": "NOBW5",
+      "intrinsicEffectOpcodeCounts": {},
+      "intrinsicOpcode82Count": 0,
+      "scripts": {
+        "class": "RUNENEMY",
+        "default": "WDRUNSGT",
+        "general": "NONE",
+        "override": "SHOUT",
+        "race": "NONE"
+      }
+    },
+    "SAREVO2": {
+      "allegiance": 128,
+      "deathVariable": "Sarevok",
+      "dialogue": "SAREVO",
+      "intrinsicEffectOpcodeCounts": {},
+      "intrinsicOpcode82Count": 0,
+      "scripts": {
+        "class": "",
+        "default": "NONE",
+        "general": "NONE",
+        "override": "SAREVOK",
+        "race": "NONE"
+      }
+    },
+    "WINSKI": {
+      "allegiance": 128,
+      "deathVariable": "WINSKI",
+      "dialogue": "NONE",
+      "intrinsicEffectOpcodeCounts": {},
+      "intrinsicOpcode82Count": 0,
+      "scripts": {
+        "class": "NONE",
+        "default": "NONE",
+        "general": "NONE",
+        "override": "NONE",
+        "race": "NONE"
+      }
+    }
+  },
+  "dynamicAIScriptClosure": [
+    {
+      "argumentText": "\"\",OVERRIDE",
+      "field": "action",
+      "operation": "ChangeAIScript",
+      "sourceId": "SAREVO.DLG#transition12"
+    }
+  ],
+  "effectiveDifferencesOutsideScriptClosure": {
+    "SAREVO.ITM": {
+      "baseEqualsEffective": false,
+      "baseOrigin": {
+        "locator": 26215218,
+        "offset": 295280,
+        "path": "data\\ITEMS.BIF",
+        "size": 170,
+        "source": "key_biff"
+      },
+      "bytes": 170,
+      "effectiveBytes": 506,
+      "effectiveOrigin": {
+        "path": "override\\SAREVO.ITM",
+        "source": "override"
+      },
+      "effectiveSha256": "a9d00e94cbccfda17a5232b88c56e190e050507396f79c63bbd27d34bc889a3e",
+      "overridePresent": true,
+      "sha256": "81b67244db5471b05ecc577b32cf441174692dfdb7819ea22f473314ffb33af1"
+    }
+  },
+  "fixtureCrossBindings": {
+    "baldurs_gate_city_palace_shout.json": {
+      "allPinnedResourcesVerified": 22,
+      "bytes": 51952,
+      "sha256": "f400d2acc70a761df9415ab96422305a41ff336e02aa4fc6a6362b259062c3ef"
+    },
+    "baldurs_gate_palace_scene_audit.json": {
+      "allPinnedResourcesVerified": 43,
+      "bytes": 180717,
+      "sha256": "91d9ddfb7dd7760a6d874f306ce4de09ff653cb72c5fa1b3721cc5b5b36d6207"
+    }
+  },
+  "higherAndFallbackScriptCrossguards": {
+    "blocks": {
+      "RUNENEMY": [
+        {
+          "actions": [
+            {
+              "operation": "PlaySound",
+              "sourceOffset": 256,
+              "strings": [
+                "EDWIN43",
+                ""
+              ]
+            },
+            {
+              "integers": [
+                30,
+                0,
+                0,
+                0,
+                0
+              ],
+              "objects": {
+                "1": {
+                  "7": 1,
+                  "8": 18
+                }
+              },
+              "operation": "RunAwayFromNoLeaveArea",
+              "sourceOffset": 382
+            },
+            {
+              "integers": [
+                30,
+                0,
+                0,
+                0,
+                0
+              ],
+              "objects": {
+                "1": {
+                  "7": 1,
+                  "8": 18
+                }
+              },
+              "operation": "RunAwayFromNoLeaveArea",
+              "sourceOffset": 512
+            }
+          ],
+          "conditions": [
+            {
+              "objects": {
+                "0": {
+                  "0": 255
+                }
+              },
+              "operation": "See",
+              "sourceOffset": 9
+            },
+            {
+              "integers": [
+                1,
+                0,
+                0,
+                0
+              ],
+              "objects": {
+                "0": {
+                  "7": 1
+                }
+              },
+              "operation": "Gender",
+              "sourceOffset": 69
+            },
+            {
+              "integers": [
+                1,
+                0,
+                0,
+                0
+              ],
+              "objects": {
+                "0": {
+                  "7": 1
+                }
+              },
+              "operation": "General",
+              "sourceOffset": 127
+            },
+            {
+              "integers": [
+                255,
+                1,
+                0,
+                0
+              ],
+              "negated": true,
+              "objects": {
+                "0": {
+                  "7": 1
+                }
+              },
+              "operation": "Allegiance",
+              "sourceOffset": 185
+            }
+          ],
+          "sourceId": "RUNENEMY.BCS#block0"
+        },
+        {
+          "actions": [
+            {
+              "operation": "PlaySound",
+              "sourceOffset": 896,
+              "strings": [
+                "FCHIL05",
+                ""
+              ]
+            },
+            {
+              "integers": [
+                30,
+                0,
+                0,
+                0,
+                0
+              ],
+              "objects": {
+                "1": {
+                  "7": 1,
+                  "8": 18
+                }
+              },
+              "operation": "RunAwayFromNoLeaveArea",
+              "sourceOffset": 1022
+            },
+            {
+              "integers": [
+                30,
+                0,
+                0,
+                0,
+                0
+              ],
+              "objects": {
+                "1": {
+                  "7": 1,
+                  "8": 18
+                }
+              },
+              "operation": "RunAwayFromNoLeaveArea",
+              "sourceOffset": 1152
+            }
+          ],
+          "conditions": [
+            {
+              "objects": {
+                "0": {
+                  "0": 255
+                }
+              },
+              "operation": "See",
+              "sourceOffset": 649
+            },
+            {
+              "integers": [
+                2,
+                0,
+                0,
+                0
+              ],
+              "objects": {
+                "0": {
+                  "7": 1
+                }
+              },
+              "operation": "Gender",
+              "sourceOffset": 709
+            },
+            {
+              "integers": [
+                1,
+                0,
+                0,
+                0
+              ],
+              "objects": {
+                "0": {
+                  "7": 1
+                }
+              },
+              "operation": "General",
+              "sourceOffset": 767
+            },
+            {
+              "integers": [
+                255,
+                1,
+                0,
+                0
+              ],
+              "negated": true,
+              "objects": {
+                "0": {
+                  "7": 1
+                }
+              },
+              "operation": "Allegiance",
+              "sourceOffset": 825
+            }
+          ],
+          "sourceId": "RUNENEMY.BCS#block1"
+        }
+      ],
+      "SEEENEMY": [
+        {
+          "actions": [
+            {
+              "operation": "EquipRanged",
+              "sourceOffset": 506
+            },
+            {
+              "integers": [
+                30,
+                0,
+                0,
+                0,
+                0
+              ],
+              "objects": {
+                "1": {
+                  "0": 255
+                }
+              },
+              "operation": "AttackReevaluate",
+              "sourceOffset": 626
+            }
+          ],
+          "conditions": [
+            {
+              "integers": [
+                5,
+                1,
+                0,
+                0
+              ],
+              "negated": true,
+              "objects": {
+                "0": {
+                  "0": 255
+                }
+              },
+              "operation": "Range",
+              "sourceOffset": 9
+            },
+            {
+              "objects": {
+                "0": {
+                  "0": 255
+                }
+              },
+              "operation": "See",
+              "sourceOffset": 69
+            },
+            {
+              "integers": [
+                200,
+                1,
+                0,
+                0
+              ],
+              "negated": true,
+              "objects": {
+                "0": {
+                  "7": 1
+                }
+              },
+              "operation": "Allegiance",
+              "sourceOffset": 129
+            },
+            {
+              "integers": [
+                155,
+                1,
+                0,
+                0
+              ],
+              "negated": true,
+              "objects": {
+                "0": {
+                  "7": 1,
+                  "8": 18
+                }
+              },
+              "operation": "Class",
+              "sourceOffset": 189
+            },
+            {
+              "integers": [
+                156,
+                1,
+                0,
+                0
+              ],
+              "negated": true,
+              "objects": {
+                "0": {
+                  "7": 1,
+                  "8": 18
+                }
+              },
+              "operation": "Class",
+              "sourceOffset": 250
+            },
+            {
+              "integers": [
+                211,
+                1,
+                0,
+                0
+              ],
+              "negated": true,
+              "objects": {
+                "0": {
+                  "7": 1,
+                  "8": 18
+                }
+              },
+              "operation": "Class",
+              "sourceOffset": 311
+            },
+            {
+              "integers": [
+                212,
+                1,
+                0,
+                0
+              ],
+              "negated": true,
+              "objects": {
+                "0": {
+                  "7": 1,
+                  "8": 18
+                }
+              },
+              "operation": "Class",
+              "sourceOffset": 372
+            },
+            {
+              "integers": [
+                213,
+                1,
+                0,
+                0
+              ],
+              "negated": true,
+              "objects": {
+                "0": {
+                  "7": 1,
+                  "8": 18
+                }
+              },
+              "operation": "Class",
+              "sourceOffset": 433
+            }
+          ],
+          "sourceId": "SEEENEMY.BCS#block0"
+        },
+        {
+          "actions": [
+            {
+              "operation": "EquipMostDamagingMelee",
+              "sourceOffset": 1261
+            },
+            {
+              "integers": [
+                30,
+                0,
+                0,
+                0,
+                0
+              ],
+              "objects": {
+                "1": {
+                  "0": 255
+                }
+              },
+              "operation": "AttackReevaluate",
+              "sourceOffset": 1381
+            }
+          ],
+          "conditions": [
+            {
+              "integers": [
+                5,
+                0,
+                0,
+                0
+              ],
+              "objects": {
+                "0": {
+                  "0": 255
+                }
+              },
+              "operation": "Range",
+              "sourceOffset": 764
+            },
+            {
+              "objects": {
+                "0": {
+                  "0": 255
+                }
+              },
+              "operation": "See",
+              "sourceOffset": 824
+            },
+            {
+              "integers": [
+                200,
+                1,
+                0,
+                0
+              ],
+              "negated": true,
+              "objects": {
+                "0": {
+                  "7": 1
+                }
+              },
+              "operation": "Allegiance",
+              "sourceOffset": 884
+            },
+            {
+              "integers": [
+                155,
+                1,
+                0,
+                0
+              ],
+              "negated": true,
+              "objects": {
+                "0": {
+                  "7": 1,
+                  "8": 18
+                }
+              },
+              "operation": "Class",
+              "sourceOffset": 944
+            },
+            {
+              "integers": [
+                156,
+                1,
+                0,
+                0
+              ],
+              "negated": true,
+              "objects": {
+                "0": {
+                  "7": 1,
+                  "8": 18
+                }
+              },
+              "operation": "Class",
+              "sourceOffset": 1005
+            },
+            {
+              "integers": [
+                211,
+                1,
+                0,
+                0
+              ],
+              "negated": true,
+              "objects": {
+                "0": {
+                  "7": 1,
+                  "8": 18
+                }
+              },
+              "operation": "Class",
+              "sourceOffset": 1066
+            },
+            {
+              "integers": [
+                212,
+                1,
+                0,
+                0
+              ],
+              "negated": true,
+              "objects": {
+                "0": {
+                  "7": 1,
+                  "8": 18
+                }
+              },
+              "operation": "Class",
+              "sourceOffset": 1127
+            },
+            {
+              "integers": [
+                213,
+                1,
+                0,
+                0
+              ],
+              "negated": true,
+              "objects": {
+                "0": {
+                  "7": 1,
+                  "8": 18
+                }
+              },
+              "operation": "Class",
+              "sourceOffset": 1188
+            }
+          ],
+          "sourceId": "SEEENEMY.BCS#block1"
+        }
+      ],
+      "SHOUT": [
+        {
+          "actions": [
+            {
+              "integers": [
+                5,
+                0,
+                0,
+                0,
+                0
+              ],
+              "operation": "SmallWait",
+              "sourceOffset": 198
+            }
+          ],
+          "conditions": [
+            {
+              "integers": [
+                2,
+                0,
+                0,
+                0
+              ],
+              "operation": "OR",
+              "sourceOffset": 9
+            },
+            {
+              "integers": [
+                128,
+                0,
+                0,
+                0
+              ],
+              "objects": {
+                "0": {
+                  "7": 1
+                }
+              },
+              "operation": "StateCheck",
+              "sourceOffset": 67
+            },
+            {
+              "integers": [
+                64,
+                0,
+                0,
+                0
+              ],
+              "objects": {
+                "0": {
+                  "7": 1
+                }
+              },
+              "operation": "StateCheck",
+              "sourceOffset": 127
+            }
+          ],
+          "sourceId": "SHOUT.BCS#block0"
+        },
+        {
+          "actions": [
+            {
+              "integers": [
+                99,
+                0,
+                0,
+                0,
+                0
+              ],
+              "operation": "Shout",
+              "sourceOffset": 470
+            },
+            {
+              "integers": [
+                6,
+                0,
+                0,
+                0,
+                0
+              ],
+              "operation": "SetGlobalTimer",
+              "sourceOffset": 591,
+              "strings": [
+                "LOCALSshouted",
+                ""
+              ]
+            },
+            {
+              "integers": [
+                5,
+                0,
+                0,
+                0,
+                0
+              ],
+              "operation": "SmallWait",
+              "sourceOffset": 724
+            },
+            {
+              "operation": "Enemy",
+              "sourceOffset": 843
+            }
+          ],
+          "conditions": [
+            {
+              "objects": {
+                "0": {
+                  "0": 30
+                }
+              },
+              "operation": "AttackedBy",
+              "sourceOffset": 332
+            },
+            {
+              "integers": [
+                0,
+                1,
+                0,
+                0
+              ],
+              "negated": true,
+              "operation": "GlobalTimerNotExpired",
+              "sourceOffset": 387,
+              "strings": [
+                "shouted",
+                "LOCALS"
+              ]
+            }
+          ],
+          "sourceId": "SHOUT.BCS#block1"
+        },
+        {
+          "actions": [
+            {
+              "integers": [
+                99,
+                0,
+                0,
+                0,
+                0
+              ],
+              "operation": "Shout",
+              "sourceOffset": 1116
+            },
+            {
+              "integers": [
+                6,
+                0,
+                0,
+                0,
+                0
+              ],
+              "operation": "SetGlobalTimer",
+              "sourceOffset": 1237,
+              "strings": [
+                "LOCALSshouted",
+                ""
+              ]
+            },
+            {
+              "operation": "Continue",
+              "sourceOffset": 1370
+            }
+          ],
+          "conditions": [
+            {
+              "objects": {
+                "0": {
+                  "0": 30
+                }
+              },
+              "operation": "HitBy",
+              "sourceOffset": 977
+            },
+            {
+              "integers": [
+                0,
+                1,
+                0,
+                0
+              ],
+              "negated": true,
+              "operation": "GlobalTimerNotExpired",
+              "sourceOffset": 1033,
+              "strings": [
+                "shouted",
+                "LOCALS"
+              ]
+            }
+          ],
+          "sourceId": "SHOUT.BCS#block2"
+        },
+        {
+          "actions": [
+            {
+              "operation": "Enemy",
+              "sourceOffset": 2046
+            },
+            {
+              "objects": {
+                "1": {
+                  "7": 1,
+                  "8": 20
+                }
+              },
+              "operation": "MoveToObject",
+              "sourceOffset": 2165
+            }
+          ],
+          "conditions": [
+            {
+              "integers": [
+                155,
+                1,
+                0,
+                0
+              ],
+              "negated": true,
+              "objects": {
+                "0": {
+                  "7": 1
+                }
+              },
+              "operation": "Class",
+              "sourceOffset": 1504
+            },
+            {
+              "integers": [
+                99,
+                0,
+                0,
+                0
+              ],
+              "objects": {
+                "0": {
+                  "0": 199
+                }
+              },
+              "operation": "Heard",
+              "sourceOffset": 1564
+            },
+            {
+              "integers": [
+                6,
+                0,
+                0,
+                0
+              ],
+              "operation": "OR",
+              "sourceOffset": 1622
+            },
+            {
+              "integers": [
+                17,
+                0,
+                0,
+                0
+              ],
+              "objects": {
+                "0": {
+                  "7": 1
+                }
+              },
+              "operation": "Alignment",
+              "sourceOffset": 1680
+            },
+            {
+              "integers": [
+                49,
+                0,
+                0,
+                0
+              ],
+              "objects": {
+                "0": {
+                  "7": 1
+                }
+              },
+              "operation": "Alignment",
+              "sourceOffset": 1739
+            },
+            {
+              "integers": [
+                33,
+                0,
+                0,
+                0
+              ],
+              "objects": {
+                "0": {
+                  "7": 1
+                }
+              },
+              "operation": "Alignment",
+              "sourceOffset": 1798
+            },
+            {
+              "integers": [
+                18,
+                0,
+                0,
+                0
+              ],
+              "objects": {
+                "0": {
+                  "7": 1
+                }
+              },
+              "operation": "Alignment",
+              "sourceOffset": 1857
+            },
+            {
+              "integers": [
+                50,
+                0,
+                0,
+                0
+              ],
+              "objects": {
+                "0": {
+                  "7": 1
+                }
+              },
+              "operation": "Alignment",
+              "sourceOffset": 1916
+            },
+            {
+              "integers": [
+                34,
+                0,
+                0,
+                0
+              ],
+              "objects": {
+                "0": {
+                  "7": 1
+                }
+              },
+              "operation": "Alignment",
+              "sourceOffset": 1975
+            }
+          ],
+          "sourceId": "SHOUT.BCS#block3"
+        },
+        {
+          "actions": [
+            {
+              "operation": "Enemy",
+              "sourceOffset": 2664
+            },
+            {
+              "objects": {
+                "1": {
+                  "7": 1,
+                  "8": 20
+                }
+              },
+              "operation": "MoveToObject",
+              "sourceOffset": 2783
+            }
+          ],
+          "conditions": [
+            {
+              "integers": [
+                155,
+                1,
+                0,
+                0
+              ],
+              "negated": true,
+              "objects": {
+                "0": {
+                  "7": 1
+                }
+              },
+              "operation": "Class",
+              "sourceOffset": 2300
+            },
+            {
+              "integers": [
+                99,
+                0,
+                0,
+                0
+              ],
+              "objects": {
+                "0": {
+                  "0": 31
+                }
+              },
+              "operation": "Heard",
+              "sourceOffset": 2360
+            },
+            {
+              "integers": [
+                3,
+                0,
+                0,
+                0
+              ],
+              "operation": "OR",
+              "sourceOffset": 2417
+            },
+            {
+              "integers": [
+                51,
+                0,
+                0,
+                0
+              ],
+              "objects": {
+                "0": {
+                  "7": 1
+                }
+              },
+              "operation": "Alignment",
+              "sourceOffset": 2475
+            },
+            {
+              "integers": [
+                35,
+                0,
+                0,
+                0
+              ],
+              "objects": {
+                "0": {
+                  "7": 1
+                }
+              },
+              "operation": "Alignment",
+              "sourceOffset": 2534
+            },
+            {
+              "integers": [
+                19,
+                0,
+                0,
+                0
+              ],
+              "objects": {
+                "0": {
+                  "7": 1
+                }
+              },
+              "operation": "Alignment",
+              "sourceOffset": 2593
+            }
+          ],
+          "sourceId": "SHOUT.BCS#block4"
+        },
+        {
+          "actions": [
+            {
+              "integers": [
+                180,
+                0,
+                0,
+                0,
+                0
+              ],
+              "objects": {
+                "1": {
+                  "7": 1,
+                  "8": 20
+                }
+              },
+              "operation": "RunAwayFromNoLeaveArea",
+              "sourceOffset": 3046
+            }
+          ],
+          "conditions": [
+            {
+              "integers": [
+                155,
+                0,
+                0,
+                0
+              ],
+              "objects": {
+                "0": {
+                  "7": 1
+                }
+              },
+              "operation": "Class",
+              "sourceOffset": 2918
+            },
+            {
+              "integers": [
+                99,
+                0,
+                0,
+                0
+              ],
+              "operation": "Heard",
+              "sourceOffset": 2978
+            }
+          ],
+          "sourceId": "SHOUT.BCS#block5"
+        },
+        {
+          "actions": [
+            {
+              "operation": "Enemy",
+              "sourceOffset": 3313
+            }
+          ],
+          "conditions": [
+            {
+              "integers": [
+                99,
+                0,
+                0,
+                0
+              ],
+              "objects": {
+                "0": {
+                  "7": 60
+                }
+              },
+              "operation": "Heard",
+              "sourceOffset": 3184
+            },
+            {
+              "integers": [
+                128,
+                0,
+                0,
+                0
+              ],
+              "objects": {
+                "0": {
+                  "7": 1
+                }
+              },
+              "operation": "Allegiance",
+              "sourceOffset": 3241
+            }
+          ],
+          "sourceId": "SHOUT.BCS#block6"
+        }
+      ],
+      "WDASIGHT": [
+        {
+          "actions": [
+            {
+              "operation": "RandomWalkContinuous",
+              "sourceOffset": 79
+            }
+          ],
+          "conditions": [
+            {
+              "integers": [
+                4,
+                0,
+                0,
+                0
+              ],
+              "objects": {
+                "0": {
+                  "7": 1
+                }
+              },
+              "operation": "StateCheck",
+              "sourceOffset": 9
+            }
+          ],
+          "sourceId": "WDASIGHT.BCS#block0"
+        },
+        {
+          "actions": [
+            {
+              "operation": "Enemy",
+              "sourceOffset": 341
+            }
+          ],
+          "conditions": [
+            {
+              "objects": {
+                "0": {
+                  "0": 30
+                }
+              },
+              "operation": "AttackedBy",
+              "sourceOffset": 214
+            },
+            {
+              "integers": [
+                128,
+                0,
+                0,
+                0
+              ],
+              "objects": {
+                "0": {
+                  "7": 1
+                }
+              },
+              "operation": "Allegiance",
+              "sourceOffset": 269
+            }
+          ],
+          "sourceId": "WDASIGHT.BCS#block1"
+        },
+        {
+          "actions": [
+            {
+              "integers": [
+                30,
+                0,
+                0,
+                0,
+                0
+              ],
+              "objects": {
+                "1": {
+                  "7": 1,
+                  "8": 12
+                }
+              },
+              "operation": "AttackReevaluate",
+              "sourceOffset": 546
+            }
+          ],
+          "conditions": [
+            {
+              "objects": {
+                "0": {
+                  "7": 1,
+                  "8": 12
+                }
+              },
+              "operation": "See",
+              "sourceOffset": 475
+            }
+          ],
+          "sourceId": "WDASIGHT.BCS#block2"
+        },
+        {
+          "actions": [
+            {
+              "objects": {
+                "1": {
+                  "7": 1,
+                  "8": 10
+                }
+              },
+              "operation": "Attack",
+              "sourceOffset": 749
+            }
+          ],
+          "conditions": [
+            {
+              "operation": "AttackedBy",
+              "sourceOffset": 683
+            }
+          ],
+          "sourceId": "WDASIGHT.BCS#block3"
+        },
+        {
+          "actions": [
+            {
+              "operation": "RandomWalk",
+              "sourceOffset": 953
+            }
+          ],
+          "conditions": [
+            {
+              "operation": "True",
+              "sourceOffset": 883
+            }
+          ],
+          "sourceId": "WDASIGHT.BCS#block4"
+        }
+      ],
+      "WDRUNSGT": [
+        {
+          "actions": [
+            {
+              "operation": "Enemy",
+              "sourceOffset": 136
+            }
+          ],
+          "conditions": [
+            {
+              "objects": {
+                "0": {
+                  "0": 30
+                }
+              },
+              "operation": "AttackedBy",
+              "sourceOffset": 9
+            },
+            {
+              "integers": [
+                128,
+                0,
+                0,
+                0
+              ],
+              "objects": {
+                "0": {
+                  "7": 1
+                }
+              },
+              "operation": "Allegiance",
+              "sourceOffset": 64
+            }
+          ],
+          "sourceId": "WDRUNSGT.BCS#block0"
+        },
+        {
+          "actions": [
+            {
+              "integers": [
+                150,
+                0,
+                0,
+                0,
+                0
+              ],
+              "objects": {
+                "1": {
+                  "7": 1,
+                  "8": 12
+                }
+              },
+              "operation": "RunAwayFromNoLeaveArea",
+              "sourceOffset": 341
+            }
+          ],
+          "conditions": [
+            {
+              "objects": {
+                "0": {
+                  "7": 1,
+                  "8": 12
+                }
+              },
+              "operation": "See",
+              "sourceOffset": 270
+            }
+          ],
+          "sourceId": "WDRUNSGT.BCS#block1"
+        },
+        {
+          "actions": [
+            {
+              "integers": [
+                150,
+                0,
+                0,
+                0,
+                0
+              ],
+              "objects": {
+                "1": {
+                  "7": 1,
+                  "8": 10
+                }
+              },
+              "operation": "RunAwayFromNoLeaveArea",
+              "sourceOffset": 545
+            }
+          ],
+          "conditions": [
+            {
+              "operation": "AttackedBy",
+              "sourceOffset": 479
+            }
+          ],
+          "sourceId": "WDRUNSGT.BCS#block2"
+        },
+        {
+          "actions": [
+            {
+              "operation": "RandomWalk",
+              "sourceOffset": 753
+            }
+          ],
+          "conditions": [
+            {
+              "operation": "True",
+              "sourceOffset": 683
+            }
+          ],
+          "sourceId": "WDRUNSGT.BCS#block3"
+        }
+      ],
+      "WTASIGHT": [
+        {
+          "actions": [
+            {
+              "operation": "RandomWalkContinuous",
+              "sourceOffset": 79
+            }
+          ],
+          "conditions": [
+            {
+              "integers": [
+                4,
+                0,
+                0,
+                0
+              ],
+              "objects": {
+                "0": {
+                  "7": 1
+                }
+              },
+              "operation": "StateCheck",
+              "sourceOffset": 9
+            }
+          ],
+          "sourceId": "WTASIGHT.BCS#block0"
+        },
+        {
+          "actions": [
+            {
+              "objects": {
+                "1": {
+                  "7": 1,
+                  "8": 12
+                }
+              },
+              "operation": "MoveToObject",
+              "sourceOffset": 283
+            }
+          ],
+          "conditions": [
+            {
+              "integers": [
+                111,
+                0,
+                0,
+                0
+              ],
+              "operation": "Heard",
+              "sourceOffset": 214
+            }
+          ],
+          "sourceId": "WTASIGHT.BCS#block1"
+        },
+        {
+          "actions": [
+            {
+              "operation": "Enemy",
+              "sourceOffset": 545
+            }
+          ],
+          "conditions": [
+            {
+              "objects": {
+                "0": {
+                  "0": 30
+                }
+              },
+              "operation": "AttackedBy",
+              "sourceOffset": 418
+            },
+            {
+              "integers": [
+                255,
+                1,
+                0,
+                0
+              ],
+              "negated": true,
+              "objects": {
+                "0": {
+                  "7": 1
+                }
+              },
+              "operation": "Allegiance",
+              "sourceOffset": 473
+            }
+          ],
+          "sourceId": "WTASIGHT.BCS#block2"
+        },
+        {
+          "actions": [
+            {
+              "integers": [
+                30,
+                0,
+                0,
+                0,
+                0
+              ],
+              "objects": {
+                "1": {
+                  "7": 1,
+                  "8": 12
+                }
+              },
+              "operation": "AttackReevaluate",
+              "sourceOffset": 809
+            }
+          ],
+          "conditions": [
+            {
+              "objects": {
+                "0": {
+                  "7": 1,
+                  "8": 12
+                }
+              },
+              "operation": "See",
+              "sourceOffset": 679
+            },
+            {
+              "objects": {
+                "0": {
+                  "7": 1,
+                  "8": 18
+                }
+              },
+              "operation": "InWeaponRange",
+              "sourceOffset": 738
+            }
+          ],
+          "sourceId": "WTASIGHT.BCS#block3"
+        },
+        {
+          "actions": [
+            {
+              "objects": {
+                "1": {
+                  "7": 1,
+                  "8": 10
+                }
+              },
+              "operation": "Attack",
+              "sourceOffset": 1071
+            }
+          ],
+          "conditions": [
+            {
+              "operation": "AttackedBy",
+              "sourceOffset": 946
+            },
+            {
+              "objects": {
+                "0": {
+                  "7": 1,
+                  "8": 10
+                }
+              },
+              "operation": "InWeaponRange",
+              "sourceOffset": 1000
+            }
+          ],
+          "sourceId": "WTASIGHT.BCS#block4"
+        },
+        {
+          "actions": [
+            {
+              "objects": {
+                "1": {
+                  "7": 1,
+                  "8": 18
+                }
+              },
+              "operation": "MoveToObject",
+              "sourceOffset": 1276
+            }
+          ],
+          "conditions": [
+            {
+              "objects": {
+                "0": {
+                  "7": 1,
+                  "8": 12
+                }
+              },
+              "operation": "See",
+              "sourceOffset": 1205
+            }
+          ],
+          "sourceId": "WTASIGHT.BCS#block5"
+        }
+      ],
+      "WTRUNSGT": [
+        {
+          "actions": [
+            {
+              "operation": "Enemy",
+              "sourceOffset": 136
+            }
+          ],
+          "conditions": [
+            {
+              "objects": {
+                "0": {
+                  "0": 30
+                }
+              },
+              "operation": "AttackedBy",
+              "sourceOffset": 9
+            },
+            {
+              "integers": [
+                128,
+                0,
+                0,
+                0
+              ],
+              "objects": {
+                "0": {
+                  "7": 1
+                }
+              },
+              "operation": "Allegiance",
+              "sourceOffset": 64
+            }
+          ],
+          "sourceId": "WTRUNSGT.BCS#block0"
+        },
+        {
+          "actions": [
+            {
+              "integers": [
+                150,
+                0,
+                0,
+                0,
+                0
+              ],
+              "objects": {
+                "1": {
+                  "7": 1,
+                  "8": 12
+                }
+              },
+              "operation": "RunAwayFromNoLeaveArea",
+              "sourceOffset": 341
+            }
+          ],
+          "conditions": [
+            {
+              "objects": {
+                "0": {
+                  "7": 1,
+                  "8": 12
+                }
+              },
+              "operation": "See",
+              "sourceOffset": 270
+            }
+          ],
+          "sourceId": "WTRUNSGT.BCS#block1"
+        },
+        {
+          "actions": [
+            {
+              "integers": [
+                150,
+                0,
+                0,
+                0,
+                0
+              ],
+              "objects": {
+                "1": {
+                  "7": 1,
+                  "8": 10
+                }
+              },
+              "operation": "RunAwayFromNoLeaveArea",
+              "sourceOffset": 545
+            }
+          ],
+          "conditions": [
+            {
+              "operation": "AttackedBy",
+              "sourceOffset": 479
+            }
+          ],
+          "sourceId": "WTRUNSGT.BCS#block2"
+        }
+      ]
+    },
+    "format": "12-cell selectors represented sparsely; absent cells zero; absent strings empty"
+  },
+  "keySha256": "728f50c48187f3a095e262fc2cc9e43004b4519ae9b96dd6c2615aeae4f85bce",
+  "preemptionAndBehavior3Facts": {
+    "FLAM10": {
+      "actions": [
+        {
+          "integers": [
+            0,
+            0,
+            0,
+            0,
+            0
+          ],
+          "operation": "Enemy",
+          "selectors": [
+            {
+              "ids": [
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0
+              ],
+              "name": ""
+            },
+            {
+              "ids": [
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0
+              ],
+              "name": ""
+            },
+            {
+              "ids": [
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0
+              ],
+              "name": ""
+            }
+          ],
+          "sourceId": "FLAM10.BCS#offset160",
+          "strings": [
+            "",
+            ""
+          ]
+        }
+      ],
+      "conditions": [
+        {
+          "integers": [
+            128,
+            0,
+            0,
+            0
+          ],
+          "negated": false,
+          "operation": "Allegiance",
+          "selectors": [
+            {
+              "ids": [
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                1,
+                0,
+                0,
+                0,
+                0
+              ],
+              "name": ""
+            }
+          ],
+          "sourceId": "FLAM10.BCS#offset9",
+          "strings": [
+            "",
+            ""
+          ]
+        },
+        {
+          "integers": [
+            3,
+            0,
+            0,
+            0
+          ],
+          "negated": false,
+          "operation": "Global",
+          "selectors": [
+            {
+              "ids": [
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0
+              ],
+              "name": ""
+            }
+          ],
+          "sourceId": "FLAM10.BCS#offset69",
+          "strings": [
+            "GLOBALSarevokBehavior",
+            ""
+          ]
+        }
+      ],
+      "semanticsEvaluated": false,
+      "sourceId": "FLAM10.BCS#block0"
+    },
+    "FLAM10A": {
+      "actions": [
+        {
+          "integers": [
+            0,
+            0,
+            0,
+            0,
+            0
+          ],
+          "operation": "Enemy",
+          "selectors": [
+            {
+              "ids": [
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0
+              ],
+              "name": ""
+            },
+            {
+              "ids": [
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0
+              ],
+              "name": ""
+            },
+            {
+              "ids": [
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0
+              ],
+              "name": ""
+            }
+          ],
+          "sourceId": "FLAM10A.BCS#offset160",
+          "strings": [
+            "",
+            ""
+          ]
+        }
+      ],
+      "conditions": [
+        {
+          "integers": [
+            128,
+            0,
+            0,
+            0
+          ],
+          "negated": false,
+          "operation": "Allegiance",
+          "selectors": [
+            {
+              "ids": [
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                1,
+                0,
+                0,
+                0,
+                0
+              ],
+              "name": ""
+            }
+          ],
+          "sourceId": "FLAM10A.BCS#offset9",
+          "strings": [
+            "",
+            ""
+          ]
+        },
+        {
+          "integers": [
+            3,
+            0,
+            0,
+            0
+          ],
+          "negated": false,
+          "operation": "Global",
+          "selectors": [
+            {
+              "ids": [
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0
+              ],
+              "name": ""
+            }
+          ],
+          "sourceId": "FLAM10A.BCS#offset69",
+          "strings": [
+            "GLOBALSarevokBehavior",
+            ""
+          ]
+        }
+      ],
+      "semanticsEvaluated": false,
+      "sourceId": "FLAM10A.BCS#block0"
+    },
+    "SARDOPP": {
+      "behavior3AllegianceBlock": {
+        "actions": [
+          {
+            "integers": [
+              28,
+              0,
+              0,
+              0,
+              0
+            ],
+            "operation": "ChangeEnemyAlly",
+            "selectors": [
+              {
+                "ids": [
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0
+                ],
+                "name": ""
+              },
+              {
+                "ids": [
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  1,
+                  0,
+                  0,
+                  0,
+                  0
+                ],
+                "name": ""
+              },
+              {
+                "ids": [
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0
+                ],
+                "name": ""
+              }
+            ],
+            "sourceId": "SARDOPP.BCS#offset160",
+            "strings": [
+              "",
+              ""
+            ]
+          }
+        ],
+        "conditions": [
+          {
+            "integers": [
+              255,
+              0,
+              0,
+              0
+            ],
+            "negated": false,
+            "operation": "Allegiance",
+            "selectors": [
+              {
+                "ids": [
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  1,
+                  0,
+                  0,
+                  0,
+                  0
+                ],
+                "name": ""
+              }
+            ],
+            "sourceId": "SARDOPP.BCS#offset9",
+            "strings": [
+              "",
+              ""
+            ]
+          },
+          {
+            "integers": [
+              3,
+              0,
+              0,
+              0
+            ],
+            "negated": false,
+            "operation": "Global",
+            "selectors": [
+              {
+                "ids": [
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0
+                ],
+                "name": ""
+              }
+            ],
+            "sourceId": "SARDOPP.BCS#offset69",
+            "strings": [
+              "GLOBALSarevokBehavior",
+              ""
+            ]
+          }
+        ],
+        "semanticsEvaluated": false,
+        "sourceId": "SARDOPP.BCS#block0"
+      },
+      "behavior3AttackConditions": [
+        {
+          "integers": [
+            3,
+            0,
+            0,
+            0
+          ],
+          "negated": false,
+          "operation": "Global",
+          "selectors": [
+            {
+              "ids": [
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0
+              ],
+              "name": ""
+            }
+          ],
+          "sourceId": "SARDOPP.BCS#offset296",
+          "strings": [
+            "GLOBALSarevokBehavior",
+            ""
+          ]
+        }
+      ],
+      "behavior3WeightedResponses": [
+        {
+          "actions": [
+            {
+              "integers": [
+                30,
+                0,
+                0,
+                0,
+                0
+              ],
+              "operation": "AttackReevaluate",
+              "selectors": [
+                {
+                  "ids": [
+                    0,
+                    0,
+                    0,
+                    0,
+                    0,
+                    0,
+                    0,
+                    0,
+                    0,
+                    0,
+                    0,
+                    0
+                  ],
+                  "name": ""
+                },
+                {
+                  "ids": [
+                    2,
+                    0,
+                    0,
+                    0,
+                    0,
+                    0,
+                    0,
+                    0,
+                    0,
+                    0,
+                    0,
+                    0
+                  ],
+                  "name": ""
+                },
+                {
+                  "ids": [
+                    0,
+                    0,
+                    0,
+                    0,
+                    0,
+                    0,
+                    0,
+                    0,
+                    0,
+                    0,
+                    0,
+                    0
+                  ],
+                  "name": ""
+                }
+              ],
+              "sourceOffset": 386,
+              "strings": [
+                "",
+                ""
+              ]
+            }
+          ],
+          "weight": 15
+        },
+        {
+          "actions": [
+            {
+              "integers": [
+                30,
+                0,
+                0,
+                0,
+                0
+              ],
+              "operation": "AttackReevaluate",
+              "selectors": [
+                {
+                  "ids": [
+                    0,
+                    0,
+                    0,
+                    0,
+                    0,
+                    0,
+                    0,
+                    0,
+                    0,
+                    0,
+                    0,
+                    0
+                  ],
+                  "name": ""
+                },
+                {
+                  "ids": [
+                    0,
+                    0,
+                    0,
+                    0,
+                    0,
+                    0,
+                    0,
+                    1,
+                    12,
+                    0,
+                    0,
+                    0
+                  ],
+                  "name": ""
+                },
+                {
+                  "ids": [
+                    0,
+                    0,
+                    0,
+                    0,
+                    0,
+                    0,
+                    0,
+                    0,
+                    0,
+                    0,
+                    0,
+                    0
+                  ],
+                  "name": ""
+                }
+              ],
+              "sourceOffset": 515,
+              "strings": [
+                "",
+                ""
+              ]
+            }
+          ],
+          "weight": 35
+        },
+        {
+          "actions": [
+            {
+              "integers": [
+                30,
+                0,
+                0,
+                0,
+                0
+              ],
+              "operation": "AttackReevaluate",
+              "selectors": [
+                {
+                  "ids": [
+                    0,
+                    0,
+                    0,
+                    0,
+                    0,
+                    0,
+                    0,
+                    0,
+                    0,
+                    0,
+                    0,
+                    0
+                  ],
+                  "name": ""
+                },
+                {
+                  "ids": [
+                    0,
+                    0,
+                    0,
+                    0,
+                    0,
+                    0,
+                    0,
+                    0,
+                    0,
+                    0,
+                    0,
+                    0
+                  ],
+                  "name": "Liia"
+                },
+                {
+                  "ids": [
+                    0,
+                    0,
+                    0,
+                    0,
+                    0,
+                    0,
+                    0,
+                    0,
+                    0,
+                    0,
+                    0,
+                    0
+                  ],
+                  "name": ""
+                }
+              ],
+              "sourceOffset": 645,
+              "strings": [
+                "",
+                ""
+              ]
+            }
+          ],
+          "weight": 25
+        },
+        {
+          "actions": [
+            {
+              "integers": [
+                30,
+                0,
+                0,
+                0,
+                0
+              ],
+              "operation": "AttackReevaluate",
+              "selectors": [
+                {
+                  "ids": [
+                    0,
+                    0,
+                    0,
+                    0,
+                    0,
+                    0,
+                    0,
+                    0,
+                    0,
+                    0,
+                    0,
+                    0
+                  ],
+                  "name": ""
+                },
+                {
+                  "ids": [
+                    0,
+                    0,
+                    0,
+                    0,
+                    0,
+                    0,
+                    0,
+                    0,
+                    0,
+                    0,
+                    0,
+                    0
+                  ],
+                  "name": "Belt"
+                },
+                {
+                  "ids": [
+                    0,
+                    0,
+                    0,
+                    0,
+                    0,
+                    0,
+                    0,
+                    0,
+                    0,
+                    0,
+                    0,
+                    0
+                  ],
+                  "name": ""
+                }
+              ],
+              "sourceOffset": 778,
+              "strings": [
+                "",
+                ""
+              ]
+            }
+          ],
+          "weight": 25
+        }
+      ]
+    },
+    "SARRUN": {
+      "actions": [
+        {
+          "integers": [
+            0,
+            0,
+            0,
+            0,
+            0
+          ],
+          "operation": "EscapeArea",
+          "selectors": [
+            {
+              "ids": [
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0
+              ],
+              "name": ""
+            },
+            {
+              "ids": [
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0
+              ],
+              "name": ""
+            },
+            {
+              "ids": [
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0
+              ],
+              "name": ""
+            }
+          ],
+          "sourceId": "SARRUN.BCS#offset100",
+          "strings": [
+            "",
+            ""
+          ]
+        }
+      ],
+      "conditions": [
+        {
+          "integers": [
+            3,
+            0,
+            0,
+            0
+          ],
+          "negated": false,
+          "operation": "Global",
+          "selectors": [
+            {
+              "ids": [
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0
+              ],
+              "name": ""
+            }
+          ],
+          "sourceId": "SARRUN.BCS#offset9",
+          "strings": [
+            "GLOBALSarevokBehavior",
+            ""
+          ]
+        }
+      ],
+      "semanticsEvaluated": false,
+      "sourceId": "SARRUN.BCS#block0"
+    }
+  },
+  "resourceFingerprints": {
+    "ACTION.IDS": {
+      "baseEqualsEffective": true,
+      "baseOrigin": {
+        "locator": 24117256,
+        "offset": 17008,
+        "path": "data\\DEFAULT.BIF",
+        "size": 16590,
+        "source": "key_biff"
+      },
+      "bytes": 16590,
+      "effectiveBytes": 16590,
+      "effectiveOrigin": {
+        "locator": 24117256,
+        "offset": 17008,
+        "path": "data\\DEFAULT.BIF",
+        "size": 16590,
+        "source": "key_biff"
+      },
+      "effectiveSha256": "fb4b2c021fc4131d10863420a7bfda0e947bc86766e30edf6c4cabb38ccc2129",
+      "overridePresent": false,
+      "sha256": "fb4b2c021fc4131d10863420a7bfda0e947bc86766e30edf6c4cabb38ccc2129"
+    },
+    "ANGELO.CRE": {
+      "baseEqualsEffective": true,
+      "baseOrigin": {
+        "locator": 46137382,
+        "offset": 48860,
+        "path": "data\\Creature.bif",
+        "size": 1360,
+        "source": "key_biff"
+      },
+      "bytes": 1360,
+      "effectiveBytes": 1360,
+      "effectiveOrigin": {
+        "locator": 46137382,
+        "offset": 48860,
+        "path": "data\\Creature.bif",
+        "size": 1360,
+        "source": "key_biff"
+      },
+      "effectiveSha256": "2ca4c89db6893a66eb42cba097fac8e582266b4f4253bcf5f549bf089ee6bb7f",
+      "overridePresent": false,
+      "sha256": "2ca4c89db6893a66eb42cba097fac8e582266b4f4253bcf5f549bf089ee6bb7f"
+    },
+    "ANGELO.DLG": {
+      "baseEqualsEffective": true,
+      "baseOrigin": {
+        "locator": 57671711,
+        "offset": 31960,
+        "path": "data\\DIALOG.BIF",
+        "size": 8347,
+        "source": "key_biff"
+      },
+      "bytes": 8347,
+      "effectiveBytes": 8347,
+      "effectiveOrigin": {
+        "locator": 57671711,
+        "offset": 31960,
+        "path": "data\\DIALOG.BIF",
+        "size": 8347,
+        "source": "key_biff"
+      },
+      "effectiveSha256": "3ba30f6c68d7b3aa05dac6480859239aeef5493b624852fe59acdc81ff35e5d8",
+      "overridePresent": false,
+      "sha256": "3ba30f6c68d7b3aa05dac6480859239aeef5493b624852fe59acdc81ff35e5d8"
+    },
+    "AR0108.ARE": {
+      "baseEqualsEffective": true,
+      "baseOrigin": {
+        "locator": 3145939,
+        "offset": 31960880,
+        "path": "data\\AR01XX.BIF",
+        "size": 6040,
+        "source": "key_biff"
+      },
+      "bytes": 6040,
+      "effectiveBytes": 6040,
+      "effectiveOrigin": {
+        "locator": 3145939,
+        "offset": 31960880,
+        "path": "data\\AR01XX.BIF",
+        "size": 6040,
+        "source": "key_biff"
+      },
+      "effectiveSha256": "7c2c9e7a615c19370ee4e470bdea35cfeb4d5e9c1d871ed93959e7b4aef4a8d6",
+      "overridePresent": false,
+      "sha256": "7c2c9e7a615c19370ee4e470bdea35cfeb4d5e9c1d871ed93959e7b4aef4a8d6"
+    },
+    "AR0108.BCS": {
+      "baseEqualsEffective": true,
+      "baseOrigin": {
+        "locator": 31457323,
+        "offset": 78900,
+        "path": "data\\SCRIPTS.BIF",
+        "size": 7714,
+        "source": "key_biff"
+      },
+      "bytes": 7714,
+      "effectiveBytes": 7714,
+      "effectiveOrigin": {
+        "locator": 31457323,
+        "offset": 78900,
+        "path": "data\\SCRIPTS.BIF",
+        "size": 7714,
+        "source": "key_biff"
+      },
+      "effectiveSha256": "6cda65c5d7229c23de7058c1dbc728c9385664850bd85ce04fea17da1ba8c4b5",
+      "overridePresent": false,
+      "sha256": "6cda65c5d7229c23de7058c1dbc728c9385664850bd85ce04fea17da1ba8c4b5"
+    },
+    "BELT.BCS": {
+      "baseEqualsEffective": true,
+      "baseOrigin": {
+        "locator": 31457461,
+        "offset": 603076,
+        "path": "data\\SCRIPTS.BIF",
+        "size": 2807,
+        "source": "key_biff"
+      },
+      "bytes": 2807,
+      "effectiveBytes": 2807,
+      "effectiveOrigin": {
+        "locator": 31457461,
+        "offset": 603076,
+        "path": "data\\SCRIPTS.BIF",
+        "size": 2807,
+        "source": "key_biff"
+      },
+      "effectiveSha256": "2a61646f15c7b03d9dbb71bcbdb72bf2a86363cde6ee4e7235fc481ec12f956c",
+      "overridePresent": false,
+      "sha256": "2a61646f15c7b03d9dbb71bcbdb72bf2a86363cde6ee4e7235fc481ec12f956c"
+    },
+    "BELT.CRE": {
+      "baseEqualsEffective": true,
+      "baseOrigin": {
+        "locator": 46137483,
+        "offset": 170964,
+        "path": "data\\Creature.bif",
+        "size": 1348,
+        "source": "key_biff"
+      },
+      "bytes": 1348,
+      "effectiveBytes": 1348,
+      "effectiveOrigin": {
+        "locator": 46137483,
+        "offset": 170964,
+        "path": "data\\Creature.bif",
+        "size": 1348,
+        "source": "key_biff"
+      },
+      "effectiveSha256": "4e240a193b437247b079dc4775e5b8802a6894aaca52e8ba7d27b1a291b01fe6",
+      "overridePresent": false,
+      "sha256": "4e240a193b437247b079dc4775e5b8802a6894aaca52e8ba7d27b1a291b01fe6"
+    },
+    "BELT.DLG": {
+      "baseEqualsEffective": true,
+      "baseOrigin": {
+        "locator": 57671771,
+        "offset": 88236,
+        "path": "data\\DIALOG.BIF",
+        "size": 2370,
+        "source": "key_biff"
+      },
+      "bytes": 2370,
+      "effectiveBytes": 2370,
+      "effectiveOrigin": {
+        "locator": 57671771,
+        "offset": 88236,
+        "path": "data\\DIALOG.BIF",
+        "size": 2370,
+        "source": "key_biff"
+      },
+      "effectiveSha256": "ceb7442d347dd6aefcdef013780128ed6d0ff243fcfdf6c8cba8e5b60227ae53",
+      "overridePresent": false,
+      "sha256": "ceb7442d347dd6aefcdef013780128ed6d0ff243fcfdf6c8cba8e5b60227ae53"
+    },
+    "BILL.DLG": {
+      "baseEqualsEffective": true,
+      "baseOrigin": {
+        "locator": 57671781,
+        "offset": 100548,
+        "path": "data\\DIALOG.BIF",
+        "size": 390,
+        "source": "key_biff"
+      },
+      "bytes": 390,
+      "effectiveBytes": 390,
+      "effectiveOrigin": {
+        "locator": 57671781,
+        "offset": 100548,
+        "path": "data\\DIALOG.BIF",
+        "size": 390,
+        "source": "key_biff"
+      },
+      "effectiveSha256": "7329912ae94ba56eab29b7c1700476c24c4e89fb55a6a707d85bbcf38ab0061d",
+      "overridePresent": false,
+      "sha256": "7329912ae94ba56eab29b7c1700476c24c4e89fb55a6a707d85bbcf38ab0061d"
+    },
+    "CAPCUT04.BCS": {
+      "baseEqualsEffective": true,
+      "baseOrigin": {
+        "locator": 31457516,
+        "offset": 890412,
+        "path": "data\\SCRIPTS.BIF",
+        "size": 4047,
+        "source": "key_biff"
+      },
+      "bytes": 4047,
+      "effectiveBytes": 4047,
+      "effectiveOrigin": {
+        "locator": 31457516,
+        "offset": 890412,
+        "path": "data\\SCRIPTS.BIF",
+        "size": 4047,
+        "source": "key_biff"
+      },
+      "effectiveSha256": "9e98eeb2621a947aa0dd560840034fc98bbaffd4887d12f5dfb68dedb06aef78",
+      "overridePresent": false,
+      "sha256": "9e98eeb2621a947aa0dd560840034fc98bbaffd4887d12f5dfb68dedb06aef78"
+    },
+    "CAPCUT05.BCS": {
+      "baseEqualsEffective": true,
+      "baseOrigin": {
+        "locator": 31457517,
+        "offset": 894460,
+        "path": "data\\SCRIPTS.BIF",
+        "size": 4643,
+        "source": "key_biff"
+      },
+      "bytes": 4643,
+      "effectiveBytes": 4643,
+      "effectiveOrigin": {
+        "locator": 31457517,
+        "offset": 894460,
+        "path": "data\\SCRIPTS.BIF",
+        "size": 4643,
+        "source": "key_biff"
+      },
+      "effectiveSha256": "cdef9e33eaf0b91cafc4e30fa986d6da3f25ad1ee7cad21e1253c254145475e1",
+      "overridePresent": false,
+      "sha256": "cdef9e33eaf0b91cafc4e30fa986d6da3f25ad1ee7cad21e1253c254145475e1"
+    },
+    "CUTBELT.BCS": {
+      "baseEqualsEffective": true,
+      "baseOrigin": {
+        "locator": 31457604,
+        "offset": 1060284,
+        "path": "data\\SCRIPTS.BIF",
+        "size": 3765,
+        "source": "key_biff"
+      },
+      "bytes": 3765,
+      "effectiveBytes": 3765,
+      "effectiveOrigin": {
+        "locator": 31457604,
+        "offset": 1060284,
+        "path": "data\\SCRIPTS.BIF",
+        "size": 3765,
+        "source": "key_biff"
+      },
+      "effectiveSha256": "3e7bc51dce38da54706508d53062eed559f878c79a7e1b2fb507abaaf9c98296",
+      "overridePresent": false,
+      "sha256": "3e7bc51dce38da54706508d53062eed559f878c79a7e1b2fb507abaaf9c98296"
+    },
+    "EA.IDS": {
+      "baseEqualsEffective": true,
+      "baseOrigin": {
+        "locator": 24117363,
+        "offset": 414068,
+        "path": "data\\DEFAULT.BIF",
+        "size": 253,
+        "source": "key_biff"
+      },
+      "bytes": 253,
+      "effectiveBytes": 253,
+      "effectiveOrigin": {
+        "locator": 24117363,
+        "offset": 414068,
+        "path": "data\\DEFAULT.BIF",
+        "size": 253,
+        "source": "key_biff"
+      },
+      "effectiveSha256": "c2720f2931bd01491728483680c2dcb6f478030581dae3fe3579cb8a3b051a6d",
+      "overridePresent": false,
+      "sha256": "c2720f2931bd01491728483680c2dcb6f478030581dae3fe3579cb8a3b051a6d"
+    },
+    "ENDCUT01.BCS": {
+      "baseEqualsEffective": true,
+      "baseOrigin": {
+        "locator": 31457710,
+        "offset": 1422656,
+        "path": "data\\SCRIPTS.BIF",
+        "size": 828,
+        "source": "key_biff"
+      },
+      "bytes": 828,
+      "effectiveBytes": 828,
+      "effectiveOrigin": {
+        "locator": 31457710,
+        "offset": 1422656,
+        "path": "data\\SCRIPTS.BIF",
+        "size": 828,
+        "source": "key_biff"
+      },
+      "effectiveSha256": "71cf8118e9fd1c858fd48ea0f7a8409d7dc8d31b0131e50a0b62f557b970466c",
+      "overridePresent": false,
+      "sha256": "71cf8118e9fd1c858fd48ea0f7a8409d7dc8d31b0131e50a0b62f557b970466c"
+    },
+    "FLAM10.BCS": {
+      "baseEqualsEffective": true,
+      "baseOrigin": {
+        "locator": 31457735,
+        "offset": 1463724,
+        "path": "data\\SCRIPTS.BIF",
+        "size": 916,
+        "source": "key_biff"
+      },
+      "bytes": 916,
+      "effectiveBytes": 916,
+      "effectiveOrigin": {
+        "locator": 31457735,
+        "offset": 1463724,
+        "path": "data\\SCRIPTS.BIF",
+        "size": 916,
+        "source": "key_biff"
+      },
+      "effectiveSha256": "10768b7ff96cc0aa01ab1f521fe1adbb26612bab043622387add0e1c9d5e99aa",
+      "overridePresent": false,
+      "sha256": "10768b7ff96cc0aa01ab1f521fe1adbb26612bab043622387add0e1c9d5e99aa"
+    },
+    "FLAM10.CRE": {
+      "baseEqualsEffective": true,
+      "baseOrigin": {
+        "locator": 46138020,
+        "offset": 894408,
+        "path": "data\\Creature.bif",
+        "size": 1176,
+        "source": "key_biff"
+      },
+      "bytes": 1176,
+      "effectiveBytes": 1176,
+      "effectiveOrigin": {
+        "locator": 46138020,
+        "offset": 894408,
+        "path": "data\\Creature.bif",
+        "size": 1176,
+        "source": "key_biff"
+      },
+      "effectiveSha256": "bd5d06a81669357d6cb9620478d71e17cc9bdb78a96d41b1c6383f678db594c1",
+      "overridePresent": false,
+      "sha256": "bd5d06a81669357d6cb9620478d71e17cc9bdb78a96d41b1c6383f678db594c1"
+    },
+    "FLAM10.DLG": {
+      "baseEqualsEffective": true,
+      "baseOrigin": {
+        "locator": 57672046,
+        "offset": 529252,
+        "path": "data\\DIALOG.BIF",
+        "size": 1006,
+        "source": "key_biff"
+      },
+      "bytes": 1006,
+      "effectiveBytes": 1006,
+      "effectiveOrigin": {
+        "locator": 57672046,
+        "offset": 529252,
+        "path": "data\\DIALOG.BIF",
+        "size": 1006,
+        "source": "key_biff"
+      },
+      "effectiveSha256": "37677dd264a7493dfb63521e63515b5e503f14e21da1708423702f3dcc2808c4",
+      "overridePresent": false,
+      "sha256": "37677dd264a7493dfb63521e63515b5e503f14e21da1708423702f3dcc2808c4"
+    },
+    "FLAM10A.BCS": {
+      "baseEqualsEffective": true,
+      "baseOrigin": {
+        "locator": 31457736,
+        "offset": 1464644,
+        "path": "data\\SCRIPTS.BIF",
+        "size": 1434,
+        "source": "key_biff"
+      },
+      "bytes": 1434,
+      "effectiveBytes": 1434,
+      "effectiveOrigin": {
+        "locator": 31457736,
+        "offset": 1464644,
+        "path": "data\\SCRIPTS.BIF",
+        "size": 1434,
+        "source": "key_biff"
+      },
+      "effectiveSha256": "b76f52a8904eee6777e17af3bb9436220d81b5bf6bca7fd486f322ea2af351a0",
+      "overridePresent": false,
+      "sha256": "b76f52a8904eee6777e17af3bb9436220d81b5bf6bca7fd486f322ea2af351a0"
+    },
+    "FLAM7.DLG": {
+      "baseEqualsEffective": true,
+      "baseOrigin": {
+        "locator": 57672052,
+        "offset": 535488,
+        "path": "data\\DIALOG.BIF",
+        "size": 686,
+        "source": "key_biff"
+      },
+      "bytes": 686,
+      "effectiveBytes": 686,
+      "effectiveOrigin": {
+        "locator": 57672052,
+        "offset": 535488,
+        "path": "data\\DIALOG.BIF",
+        "size": 686,
+        "source": "key_biff"
+      },
+      "effectiveSha256": "1f3f7d50d30a912f3e9b857ab41e4ef1509e62aa2245b8646f3c5579765ebaaa",
+      "overridePresent": false,
+      "sha256": "1f3f7d50d30a912f3e9b857ab41e4ef1509e62aa2245b8646f3c5579765ebaaa"
+    },
+    "FLAM9.DLG": {
+      "baseEqualsEffective": true,
+      "baseOrigin": {
+        "locator": 57672054,
+        "offset": 536456,
+        "path": "data\\DIALOG.BIF",
+        "size": 535,
+        "source": "key_biff"
+      },
+      "bytes": 535,
+      "effectiveBytes": 535,
+      "effectiveOrigin": {
+        "locator": 57672054,
+        "offset": 536456,
+        "path": "data\\DIALOG.BIF",
+        "size": 535,
+        "source": "key_biff"
+      },
+      "effectiveSha256": "7f34d272e356eae0976193f9af521b9cab5e1ad96c434b7ba3f4b67c8196a4aa",
+      "overridePresent": false,
+      "sha256": "7f34d272e356eae0976193f9af521b9cab5e1ad96c434b7ba3f4b67c8196a4aa"
+    },
+    "FLAME.CRE": {
+      "baseEqualsEffective": true,
+      "baseOrigin": {
+        "locator": 46138034,
+        "offset": 911436,
+        "path": "data\\Creature.bif",
+        "size": 1176,
+        "source": "key_biff"
+      },
+      "bytes": 1176,
+      "effectiveBytes": 1176,
+      "effectiveOrigin": {
+        "locator": 46138034,
+        "offset": 911436,
+        "path": "data\\Creature.bif",
+        "size": 1176,
+        "source": "key_biff"
+      },
+      "effectiveSha256": "533a37b690b03a3fc6abc811b32483e884c670268a5176d685268511f7706e52",
+      "overridePresent": false,
+      "sha256": "533a37b690b03a3fc6abc811b32483e884c670268a5176d685268511f7706e52"
+    },
+    "GDOPP7.CRE": {
+      "baseEqualsEffective": true,
+      "baseOrigin": {
+        "locator": 46138165,
+        "offset": 1060496,
+        "path": "data\\Creature.bif",
+        "size": 1156,
+        "source": "key_biff"
+      },
+      "bytes": 1156,
+      "effectiveBytes": 1156,
+      "effectiveOrigin": {
+        "locator": 46138165,
+        "offset": 1060496,
+        "path": "data\\Creature.bif",
+        "size": 1156,
+        "source": "key_biff"
+      },
+      "effectiveSha256": "0aab9ac4be5f45e6754c4cb4cb4c6d19a870958c165c2d13fbe7938b50b1c391",
+      "overridePresent": false,
+      "sha256": "0aab9ac4be5f45e6754c4cb4cb4c6d19a870958c165c2d13fbe7938b50b1c391"
+    },
+    "GDOPP71.CRE": {
+      "baseEqualsEffective": true,
+      "baseOrigin": {
+        "locator": 46138166,
+        "offset": 1061656,
+        "path": "data\\Creature.bif",
+        "size": 1156,
+        "source": "key_biff"
+      },
+      "bytes": 1156,
+      "effectiveBytes": 1156,
+      "effectiveOrigin": {
+        "locator": 46138166,
+        "offset": 1061656,
+        "path": "data\\Creature.bif",
+        "size": 1156,
+        "source": "key_biff"
+      },
+      "effectiveSha256": "811acfe9732106216b45525818b81957183d9a2e276a4d148083d67fbd224404",
+      "overridePresent": false,
+      "sha256": "811acfe9732106216b45525818b81957183d9a2e276a4d148083d67fbd224404"
+    },
+    "GDOPP72.CRE": {
+      "baseEqualsEffective": true,
+      "baseOrigin": {
+        "locator": 46138167,
+        "offset": 1062816,
+        "path": "data\\Creature.bif",
+        "size": 1156,
+        "source": "key_biff"
+      },
+      "bytes": 1156,
+      "effectiveBytes": 1156,
+      "effectiveOrigin": {
+        "locator": 46138167,
+        "offset": 1062816,
+        "path": "data\\Creature.bif",
+        "size": 1156,
+        "source": "key_biff"
+      },
+      "effectiveSha256": "b0a1047de97d7ab9f2d14dd2132c3d3a83dd3a476b048deed8b1369afdf899e6",
+      "overridePresent": false,
+      "sha256": "b0a1047de97d7ab9f2d14dd2132c3d3a83dd3a476b048deed8b1369afdf899e6"
+    },
+    "GDOPP73.CRE": {
+      "baseEqualsEffective": true,
+      "baseOrigin": {
+        "locator": 46138168,
+        "offset": 1063976,
+        "path": "data\\Creature.bif",
+        "size": 1156,
+        "source": "key_biff"
+      },
+      "bytes": 1156,
+      "effectiveBytes": 1156,
+      "effectiveOrigin": {
+        "locator": 46138168,
+        "offset": 1063976,
+        "path": "data\\Creature.bif",
+        "size": 1156,
+        "source": "key_biff"
+      },
+      "effectiveSha256": "3f9fbd689acbdfbf4bf99bf5adb5b8976057776a0b2f9a5acaac5c0b16ab8f0e",
+      "overridePresent": false,
+      "sha256": "3f9fbd689acbdfbf4bf99bf5adb5b8976057776a0b2f9a5acaac5c0b16ab8f0e"
+    },
+    "GDOPP74.CRE": {
+      "baseEqualsEffective": true,
+      "baseOrigin": {
+        "locator": 46138169,
+        "offset": 1065136,
+        "path": "data\\Creature.bif",
+        "size": 1156,
+        "source": "key_biff"
+      },
+      "bytes": 1156,
+      "effectiveBytes": 1156,
+      "effectiveOrigin": {
+        "locator": 46138169,
+        "offset": 1065136,
+        "path": "data\\Creature.bif",
+        "size": 1156,
+        "source": "key_biff"
+      },
+      "effectiveSha256": "acabc295d525ba793c45ab5d2d0d061ebf9c3b0efa7c24757cacf08085bd35be",
+      "overridePresent": false,
+      "sha256": "acabc295d525ba793c45ab5d2d0d061ebf9c3b0efa7c24757cacf08085bd35be"
+    },
+    "GDOPP75.CRE": {
+      "baseEqualsEffective": true,
+      "baseOrigin": {
+        "locator": 46138170,
+        "offset": 1066296,
+        "path": "data\\Creature.bif",
+        "size": 1156,
+        "source": "key_biff"
+      },
+      "bytes": 1156,
+      "effectiveBytes": 1156,
+      "effectiveOrigin": {
+        "locator": 46138170,
+        "offset": 1066296,
+        "path": "data\\Creature.bif",
+        "size": 1156,
+        "source": "key_biff"
+      },
+      "effectiveSha256": "75a6a73f682b722db3c63042e9d6f1fbe85ba7bb1cee6b2a403b64584ae94618",
+      "overridePresent": false,
+      "sha256": "75a6a73f682b722db3c63042e9d6f1fbe85ba7bb1cee6b2a403b64584ae94618"
+    },
+    "GTIMES.IDS": {
+      "baseEqualsEffective": true,
+      "baseOrigin": {
+        "locator": 24117373,
+        "offset": 418628,
+        "path": "data\\DEFAULT.BIF",
+        "size": 1795,
+        "source": "key_biff"
+      },
+      "bytes": 1795,
+      "effectiveBytes": 1795,
+      "effectiveOrigin": {
+        "locator": 24117373,
+        "offset": 418628,
+        "path": "data\\DEFAULT.BIF",
+        "size": 1795,
+        "source": "key_biff"
+      },
+      "effectiveSha256": "d0fef0f123b4f7cdf7bf093dcd6359fdffcbeb159082c7f40404779ddc85b41c",
+      "overridePresent": false,
+      "sha256": "d0fef0f123b4f7cdf7bf093dcd6359fdffcbeb159082c7f40404779ddc85b41c"
+    },
+    "LIIA.BCS": {
+      "baseEqualsEffective": true,
+      "baseOrigin": {
+        "locator": 31457912,
+        "offset": 1751000,
+        "path": "data\\SCRIPTS.BIF",
+        "size": 3444,
+        "source": "key_biff"
+      },
+      "bytes": 3444,
+      "effectiveBytes": 3444,
+      "effectiveOrigin": {
+        "locator": 31457912,
+        "offset": 1751000,
+        "path": "data\\SCRIPTS.BIF",
+        "size": 3444,
+        "source": "key_biff"
+      },
+      "effectiveSha256": "814c85e6dc9429d457e6399f83dde560964df857487ede8823b59d860b401f4d",
+      "overridePresent": false,
+      "sha256": "814c85e6dc9429d457e6399f83dde560964df857487ede8823b59d860b401f4d"
+    },
+    "LIIA.CRE": {
+      "baseEqualsEffective": true,
+      "baseOrigin": {
+        "locator": 46138531,
+        "offset": 1493440,
+        "path": "data\\Creature.bif",
+        "size": 1712,
+        "source": "key_biff"
+      },
+      "bytes": 1712,
+      "effectiveBytes": 1712,
+      "effectiveOrigin": {
+        "locator": 46138531,
+        "offset": 1493440,
+        "path": "data\\Creature.bif",
+        "size": 1712,
+        "source": "key_biff"
+      },
+      "effectiveSha256": "03f21ae79255f7c797bd1dd107c83ce6f694a30256c7817f0a14a3df0eafb26a",
+      "overridePresent": false,
+      "sha256": "03f21ae79255f7c797bd1dd107c83ce6f694a30256c7817f0a14a3df0eafb26a"
+    },
+    "LIIA.DLG": {
+      "baseEqualsEffective": true,
+      "baseOrigin": {
+        "locator": 57672331,
+        "offset": 787056,
+        "path": "data\\DIALOG.BIF",
+        "size": 2275,
+        "source": "key_biff"
+      },
+      "bytes": 2275,
+      "effectiveBytes": 2275,
+      "effectiveOrigin": {
+        "locator": 57672331,
+        "offset": 787056,
+        "path": "data\\DIALOG.BIF",
+        "size": 2275,
+        "source": "key_biff"
+      },
+      "effectiveSha256": "6fff2489574dc52aa0070fb2a25a0c0c4a483a00b4328ce00400807143cd7692",
+      "overridePresent": false,
+      "sha256": "6fff2489574dc52aa0070fb2a25a0c0c4a483a00b4328ce00400807143cd7692"
+    },
+    "MAGE3.BCS": {
+      "baseEqualsEffective": true,
+      "baseOrigin": {
+        "locator": 31457918,
+        "offset": 1766744,
+        "path": "data\\SCRIPTS.BIF",
+        "size": 2210,
+        "source": "key_biff"
+      },
+      "bytes": 2210,
+      "effectiveBytes": 2210,
+      "effectiveOrigin": {
+        "locator": 31457918,
+        "offset": 1766744,
+        "path": "data\\SCRIPTS.BIF",
+        "size": 2210,
+        "source": "key_biff"
+      },
+      "effectiveSha256": "a2d6f1361c33e6017d14fde61f615eaedb5be964b64f04685938fb189cbd038a",
+      "overridePresent": false,
+      "sha256": "a2d6f1361c33e6017d14fde61f615eaedb5be964b64f04685938fb189cbd038a"
+    },
+    "MAGE5.BCS": {
+      "baseEqualsEffective": true,
+      "baseOrigin": {
+        "locator": 31457920,
+        "offset": 1771296,
+        "path": "data\\SCRIPTS.BIF",
+        "size": 2371,
+        "source": "key_biff"
+      },
+      "bytes": 2371,
+      "effectiveBytes": 2371,
+      "effectiveOrigin": {
+        "locator": 31457920,
+        "offset": 1771296,
+        "path": "data\\SCRIPTS.BIF",
+        "size": 2371,
+        "source": "key_biff"
+      },
+      "effectiveSha256": "7a220ba198d977dd0e75c0b9007c54cc36c74fd020a11475505b3ca3736c372c",
+      "overridePresent": false,
+      "sha256": "7a220ba198d977dd0e75c0b9007c54cc36c74fd020a11475505b3ca3736c372c"
+    },
+    "MINHP1.ITM": {
+      "baseEqualsEffective": true,
+      "baseOrigin": {
+        "locator": 26214910,
+        "offset": 172536,
+        "path": "data\\ITEMS.BIF",
+        "size": 4290,
+        "source": "key_biff"
+      },
+      "bytes": 4290,
+      "effectiveBytes": 4290,
+      "effectiveOrigin": {
+        "locator": 26214910,
+        "offset": 172536,
+        "path": "data\\ITEMS.BIF",
+        "size": 4290,
+        "source": "key_biff"
+      },
+      "effectiveSha256": "6c20586e23d025624e616039c1de4ca9721578700cdf80bd9a92f05746e94a6e",
+      "overridePresent": false,
+      "sha256": "6c20586e23d025624e616039c1de4ca9721578700cdf80bd9a92f05746e94a6e"
+    },
+    "MISC78.ITM": {
+      "baseEqualsEffective": true,
+      "baseOrigin": {
+        "locator": 26215004,
+        "offset": 190640,
+        "path": "data\\ITEMS.BIF",
+        "size": 114,
+        "source": "key_biff"
+      },
+      "bytes": 114,
+      "effectiveBytes": 114,
+      "effectiveOrigin": {
+        "locator": 26215004,
+        "offset": 190640,
+        "path": "data\\ITEMS.BIF",
+        "size": 114,
+        "source": "key_biff"
+      },
+      "effectiveSha256": "fdef8926aa56807c9627079067be225bf521ee6735734968638a7a399e81bd08",
+      "overridePresent": false,
+      "sha256": "fdef8926aa56807c9627079067be225bf521ee6735734968638a7a399e81bd08"
+    },
+    "NOBL12.CRE": {
+      "baseEqualsEffective": true,
+      "baseOrigin": {
+        "locator": 46138798,
+        "offset": 1830676,
+        "path": "data\\Creature.bif",
+        "size": 1076,
+        "source": "key_biff"
+      },
+      "bytes": 1076,
+      "effectiveBytes": 1076,
+      "effectiveOrigin": {
+        "locator": 46138798,
+        "offset": 1830676,
+        "path": "data\\Creature.bif",
+        "size": 1076,
+        "source": "key_biff"
+      },
+      "effectiveSha256": "6c96b7b5c9f17ad87060aa92428931bc8e26e82fd78932bb9c4807da292e0385",
+      "overridePresent": false,
+      "sha256": "6c96b7b5c9f17ad87060aa92428931bc8e26e82fd78932bb9c4807da292e0385"
+    },
+    "NOBL12.DLG": {
+      "baseEqualsEffective": true,
+      "baseOrigin": {
+        "locator": 57672511,
+        "offset": 983832,
+        "path": "data\\DIALOG.BIF",
+        "size": 360,
+        "source": "key_biff"
+      },
+      "bytes": 360,
+      "effectiveBytes": 360,
+      "effectiveOrigin": {
+        "locator": 57672511,
+        "offset": 983832,
+        "path": "data\\DIALOG.BIF",
+        "size": 360,
+        "source": "key_biff"
+      },
+      "effectiveSha256": "59670b72d76ede2c9bf096e457a395b086f1110cfbde688ff3f0819b2d7ccc80",
+      "overridePresent": false,
+      "sha256": "59670b72d76ede2c9bf096e457a395b086f1110cfbde688ff3f0819b2d7ccc80"
+    },
+    "NOBLPA.BCS": {
+      "baseEqualsEffective": true,
+      "baseOrigin": {
+        "locator": 31457981,
+        "offset": 1899936,
+        "path": "data\\SCRIPTS.BIF",
+        "size": 492,
+        "source": "key_biff"
+      },
+      "bytes": 492,
+      "effectiveBytes": 492,
+      "effectiveOrigin": {
+        "locator": 31457981,
+        "offset": 1899936,
+        "path": "data\\SCRIPTS.BIF",
+        "size": 492,
+        "source": "key_biff"
+      },
+      "effectiveSha256": "1f0a6e6d9fab5fbfb07b1ad43c234918bdedb4b70ba86fe669ec3e53fd266a5c",
+      "overridePresent": false,
+      "sha256": "1f0a6e6d9fab5fbfb07b1ad43c234918bdedb4b70ba86fe669ec3e53fd266a5c"
+    },
+    "NOBLPA.CRE": {
+      "baseEqualsEffective": true,
+      "baseOrigin": {
+        "locator": 46138818,
+        "offset": 1852268,
+        "path": "data\\Creature.bif",
+        "size": 1076,
+        "source": "key_biff"
+      },
+      "bytes": 1076,
+      "effectiveBytes": 1076,
+      "effectiveOrigin": {
+        "locator": 46138818,
+        "offset": 1852268,
+        "path": "data\\Creature.bif",
+        "size": 1076,
+        "source": "key_biff"
+      },
+      "effectiveSha256": "ef06ba76e48a4497ed77daadd7d662eb699b4011771a97192335876b4cefa6e9",
+      "overridePresent": false,
+      "sha256": "ef06ba76e48a4497ed77daadd7d662eb699b4011771a97192335876b4cefa6e9"
+    },
+    "NOBLPA1.BCS": {
+      "baseEqualsEffective": true,
+      "baseOrigin": {
+        "locator": 31457982,
+        "offset": 1900432,
+        "path": "data\\SCRIPTS.BIF",
+        "size": 492,
+        "source": "key_biff"
+      },
+      "bytes": 492,
+      "effectiveBytes": 492,
+      "effectiveOrigin": {
+        "locator": 31457982,
+        "offset": 1900432,
+        "path": "data\\SCRIPTS.BIF",
+        "size": 492,
+        "source": "key_biff"
+      },
+      "effectiveSha256": "968e45b83be2efad992767dbf1a442ef8ee40c6be731f14d22db04f068dbc04d",
+      "overridePresent": false,
+      "sha256": "968e45b83be2efad992767dbf1a442ef8ee40c6be731f14d22db04f068dbc04d"
+    },
+    "NOBLPA1.CRE": {
+      "baseEqualsEffective": true,
+      "baseOrigin": {
+        "locator": 46138819,
+        "offset": 1853348,
+        "path": "data\\Creature.bif",
+        "size": 1076,
+        "source": "key_biff"
+      },
+      "bytes": 1076,
+      "effectiveBytes": 1076,
+      "effectiveOrigin": {
+        "locator": 46138819,
+        "offset": 1853348,
+        "path": "data\\Creature.bif",
+        "size": 1076,
+        "source": "key_biff"
+      },
+      "effectiveSha256": "d86b1d976e72f5ac2df3d91a4e365a64a2b69d5e0a8b5c37b2dd8df20ccd27c7",
+      "overridePresent": false,
+      "sha256": "d86b1d976e72f5ac2df3d91a4e365a64a2b69d5e0a8b5c37b2dd8df20ccd27c7"
+    },
+    "NOBLPA1.DLG": {
+      "baseEqualsEffective": true,
+      "baseOrigin": {
+        "locator": 57672528,
+        "offset": 994624,
+        "path": "data\\DIALOG.BIF",
+        "size": 196,
+        "source": "key_biff"
+      },
+      "bytes": 196,
+      "effectiveBytes": 196,
+      "effectiveOrigin": {
+        "locator": 57672528,
+        "offset": 994624,
+        "path": "data\\DIALOG.BIF",
+        "size": 196,
+        "source": "key_biff"
+      },
+      "effectiveSha256": "003b7b12392fa2ea724df20322281ec522213813ba8492df46593f16c2afaf20",
+      "overridePresent": false,
+      "sha256": "003b7b12392fa2ea724df20322281ec522213813ba8492df46593f16c2afaf20"
+    },
+    "NOBLPA2.BCS": {
+      "baseEqualsEffective": true,
+      "baseOrigin": {
+        "locator": 31457983,
+        "offset": 1900928,
+        "path": "data\\SCRIPTS.BIF",
+        "size": 492,
+        "source": "key_biff"
+      },
+      "bytes": 492,
+      "effectiveBytes": 492,
+      "effectiveOrigin": {
+        "locator": 31457983,
+        "offset": 1900928,
+        "path": "data\\SCRIPTS.BIF",
+        "size": 492,
+        "source": "key_biff"
+      },
+      "effectiveSha256": "0f63ea511cdea84907040a7bdcf9c4683cae874754fd17a5f2fb274c2782507e",
+      "overridePresent": false,
+      "sha256": "0f63ea511cdea84907040a7bdcf9c4683cae874754fd17a5f2fb274c2782507e"
+    },
+    "NOBLPA2.CRE": {
+      "baseEqualsEffective": true,
+      "baseOrigin": {
+        "locator": 46138820,
+        "offset": 1854428,
+        "path": "data\\Creature.bif",
+        "size": 1076,
+        "source": "key_biff"
+      },
+      "bytes": 1076,
+      "effectiveBytes": 1076,
+      "effectiveOrigin": {
+        "locator": 46138820,
+        "offset": 1854428,
+        "path": "data\\Creature.bif",
+        "size": 1076,
+        "source": "key_biff"
+      },
+      "effectiveSha256": "5fe5695eab011f639b084837e4ba09c9944f31a8f32ea3aa6928369e8253e09b",
+      "overridePresent": false,
+      "sha256": "5fe5695eab011f639b084837e4ba09c9944f31a8f32ea3aa6928369e8253e09b"
+    },
+    "NOBLPA2.DLG": {
+      "baseEqualsEffective": true,
+      "baseOrigin": {
+        "locator": 57672529,
+        "offset": 994824,
+        "path": "data\\DIALOG.BIF",
+        "size": 196,
+        "source": "key_biff"
+      },
+      "bytes": 196,
+      "effectiveBytes": 196,
+      "effectiveOrigin": {
+        "locator": 57672529,
+        "offset": 994824,
+        "path": "data\\DIALOG.BIF",
+        "size": 196,
+        "source": "key_biff"
+      },
+      "effectiveSha256": "a8ab7bfbef6c92b11342ee15d8ec88dbb7e9f2459e4b17c877c03ff2c8beffd8",
+      "overridePresent": false,
+      "sha256": "a8ab7bfbef6c92b11342ee15d8ec88dbb7e9f2459e4b17c877c03ff2c8beffd8"
+    },
+    "NOBLPA3.BCS": {
+      "baseEqualsEffective": true,
+      "baseOrigin": {
+        "locator": 31457984,
+        "offset": 1901424,
+        "path": "data\\SCRIPTS.BIF",
+        "size": 492,
+        "source": "key_biff"
+      },
+      "bytes": 492,
+      "effectiveBytes": 492,
+      "effectiveOrigin": {
+        "locator": 31457984,
+        "offset": 1901424,
+        "path": "data\\SCRIPTS.BIF",
+        "size": 492,
+        "source": "key_biff"
+      },
+      "effectiveSha256": "07ecb17963e7324a8694600256bcfe8cf9712f1efcc91bc10f9111b750fc7b5b",
+      "overridePresent": false,
+      "sha256": "07ecb17963e7324a8694600256bcfe8cf9712f1efcc91bc10f9111b750fc7b5b"
+    },
+    "NOBLPA3.CRE": {
+      "baseEqualsEffective": true,
+      "baseOrigin": {
+        "locator": 46138821,
+        "offset": 1855508,
+        "path": "data\\Creature.bif",
+        "size": 1076,
+        "source": "key_biff"
+      },
+      "bytes": 1076,
+      "effectiveBytes": 1076,
+      "effectiveOrigin": {
+        "locator": 46138821,
+        "offset": 1855508,
+        "path": "data\\Creature.bif",
+        "size": 1076,
+        "source": "key_biff"
+      },
+      "effectiveSha256": "292ed3a457a3ea99319dcd570e862527072807853d9b46cd9665b9d272d983ff",
+      "overridePresent": false,
+      "sha256": "292ed3a457a3ea99319dcd570e862527072807853d9b46cd9665b9d272d983ff"
+    },
+    "NOBLPA3.DLG": {
+      "baseEqualsEffective": true,
+      "baseOrigin": {
+        "locator": 57672530,
+        "offset": 995024,
+        "path": "data\\DIALOG.BIF",
+        "size": 196,
+        "source": "key_biff"
+      },
+      "bytes": 196,
+      "effectiveBytes": 196,
+      "effectiveOrigin": {
+        "locator": 57672530,
+        "offset": 995024,
+        "path": "data\\DIALOG.BIF",
+        "size": 196,
+        "source": "key_biff"
+      },
+      "effectiveSha256": "3882eec5dd94733c22183b6bcb2c7d2b518172782510990733a7884e3f41aadf",
+      "overridePresent": false,
+      "sha256": "3882eec5dd94733c22183b6bcb2c7d2b518172782510990733a7884e3f41aadf"
+    },
+    "NOBLPA4.BCS": {
+      "baseEqualsEffective": true,
+      "baseOrigin": {
+        "locator": 31457985,
+        "offset": 1901920,
+        "path": "data\\SCRIPTS.BIF",
+        "size": 492,
+        "source": "key_biff"
+      },
+      "bytes": 492,
+      "effectiveBytes": 492,
+      "effectiveOrigin": {
+        "locator": 31457985,
+        "offset": 1901920,
+        "path": "data\\SCRIPTS.BIF",
+        "size": 492,
+        "source": "key_biff"
+      },
+      "effectiveSha256": "828e7710a225c975e4ad54b5ec726936c0391fb37747b9cb3ae46dc820c5ce38",
+      "overridePresent": false,
+      "sha256": "828e7710a225c975e4ad54b5ec726936c0391fb37747b9cb3ae46dc820c5ce38"
+    },
+    "NOBLPA4.CRE": {
+      "baseEqualsEffective": true,
+      "baseOrigin": {
+        "locator": 46138822,
+        "offset": 1856588,
+        "path": "data\\Creature.bif",
+        "size": 1076,
+        "source": "key_biff"
+      },
+      "bytes": 1076,
+      "effectiveBytes": 1076,
+      "effectiveOrigin": {
+        "locator": 46138822,
+        "offset": 1856588,
+        "path": "data\\Creature.bif",
+        "size": 1076,
+        "source": "key_biff"
+      },
+      "effectiveSha256": "23906591f97e00204cce9870d4ed8af5f0c527fe3bb6e33233c6c1f7b251e7df",
+      "overridePresent": false,
+      "sha256": "23906591f97e00204cce9870d4ed8af5f0c527fe3bb6e33233c6c1f7b251e7df"
+    },
+    "NOBLPA5.BCS": {
+      "baseEqualsEffective": true,
+      "baseOrigin": {
+        "locator": 31457986,
+        "offset": 1902416,
+        "path": "data\\SCRIPTS.BIF",
+        "size": 492,
+        "source": "key_biff"
+      },
+      "bytes": 492,
+      "effectiveBytes": 492,
+      "effectiveOrigin": {
+        "locator": 31457986,
+        "offset": 1902416,
+        "path": "data\\SCRIPTS.BIF",
+        "size": 492,
+        "source": "key_biff"
+      },
+      "effectiveSha256": "7a90ea8dbbfc9dfa1f01e9875734be72f27f9dea0a20b9054263d0b8b427f73e",
+      "overridePresent": false,
+      "sha256": "7a90ea8dbbfc9dfa1f01e9875734be72f27f9dea0a20b9054263d0b8b427f73e"
+    },
+    "NOBLPA5.CRE": {
+      "baseEqualsEffective": true,
+      "baseOrigin": {
+        "locator": 46138823,
+        "offset": 1857668,
+        "path": "data\\Creature.bif",
+        "size": 1076,
+        "source": "key_biff"
+      },
+      "bytes": 1076,
+      "effectiveBytes": 1076,
+      "effectiveOrigin": {
+        "locator": 46138823,
+        "offset": 1857668,
+        "path": "data\\Creature.bif",
+        "size": 1076,
+        "source": "key_biff"
+      },
+      "effectiveSha256": "78f1b08826d55cf7c75ace79ca42ba4a035fa4f9ef34089000595023bf387006",
+      "overridePresent": false,
+      "sha256": "78f1b08826d55cf7c75ace79ca42ba4a035fa4f9ef34089000595023bf387006"
+    },
+    "NOBW5.CRE": {
+      "baseEqualsEffective": true,
+      "baseOrigin": {
+        "locator": 46138829,
+        "offset": 1864148,
+        "path": "data\\Creature.bif",
+        "size": 1076,
+        "source": "key_biff"
+      },
+      "bytes": 1076,
+      "effectiveBytes": 1076,
+      "effectiveOrigin": {
+        "locator": 46138829,
+        "offset": 1864148,
+        "path": "data\\Creature.bif",
+        "size": 1076,
+        "source": "key_biff"
+      },
+      "effectiveSha256": "da6e787d713634fee34b21f1c17975cb3a16c281af547079ef088063c58ce9fa",
+      "overridePresent": false,
+      "sha256": "da6e787d713634fee34b21f1c17975cb3a16c281af547079ef088063c58ce9fa"
+    },
+    "NOBW5.DLG": {
+      "baseEqualsEffective": true,
+      "baseOrigin": {
+        "locator": 57672534,
+        "offset": 996560,
+        "path": "data\\DIALOG.BIF",
+        "size": 360,
+        "source": "key_biff"
+      },
+      "bytes": 360,
+      "effectiveBytes": 360,
+      "effectiveOrigin": {
+        "locator": 57672534,
+        "offset": 996560,
+        "path": "data\\DIALOG.BIF",
+        "size": 360,
+        "source": "key_biff"
+      },
+      "effectiveSha256": "8997fca619da0a3063e2ea45ab1386ddba166d7ea2258e0ca121d7304e9ec9dd",
+      "overridePresent": false,
+      "sha256": "8997fca619da0a3063e2ea45ab1386ddba166d7ea2258e0ca121d7304e9ec9dd"
+    },
+    "OBJECT.IDS": {
+      "baseEqualsEffective": true,
+      "baseOrigin": {
+        "locator": 24117628,
+        "offset": 838588,
+        "path": "data\\DEFAULT.BIF",
+        "size": 2437,
+        "source": "key_biff"
+      },
+      "bytes": 2437,
+      "effectiveBytes": 2437,
+      "effectiveOrigin": {
+        "locator": 24117628,
+        "offset": 838588,
+        "path": "data\\DEFAULT.BIF",
+        "size": 2437,
+        "source": "key_biff"
+      },
+      "effectiveSha256": "c5b9fdea886dd39cacdc2948dd6eec3490c7c230a5ea4df2daf7b66c98f3ba44",
+      "overridePresent": false,
+      "sha256": "c5b9fdea886dd39cacdc2948dd6eec3490c7c230a5ea4df2daf7b66c98f3ba44"
+    },
+    "RUNENEMY.BCS": {
+      "baseEqualsEffective": true,
+      "baseOrigin": {
+        "locator": 31458104,
+        "offset": 5620000,
+        "path": "data\\SCRIPTS.BIF",
+        "size": 1286,
+        "source": "key_biff"
+      },
+      "bytes": 1286,
+      "effectiveBytes": 1286,
+      "effectiveOrigin": {
+        "locator": 31458104,
+        "offset": 5620000,
+        "path": "data\\SCRIPTS.BIF",
+        "size": 1286,
+        "source": "key_biff"
+      },
+      "effectiveSha256": "8971d33989063802078052afed64f9ecc4779f7287f3b60cc6886fdb95680247",
+      "overridePresent": false,
+      "sha256": "8971d33989063802078052afed64f9ecc4779f7287f3b60cc6886fdb95680247"
+    },
+    "SARDOPP.BCS": {
+      "baseEqualsEffective": true,
+      "baseOrigin": {
+        "locator": 31458106,
+        "offset": 5630160,
+        "path": "data\\SCRIPTS.BIF",
+        "size": 1458,
+        "source": "key_biff"
+      },
+      "bytes": 1458,
+      "effectiveBytes": 1458,
+      "effectiveOrigin": {
+        "locator": 31458106,
+        "offset": 5630160,
+        "path": "data\\SCRIPTS.BIF",
+        "size": 1458,
+        "source": "key_biff"
+      },
+      "effectiveSha256": "d0724d34510821d0e98dd656b0f23b186528c475e039e3ca096f6ad9fc250cb4",
+      "overridePresent": false,
+      "sha256": "d0724d34510821d0e98dd656b0f23b186528c475e039e3ca096f6ad9fc250cb4"
+    },
+    "SAREVO.CRE": {
+      "baseEqualsEffective": true,
+      "baseOrigin": {
+        "locator": 46139092,
+        "offset": 2218992,
+        "path": "data\\Creature.bif",
+        "size": 1176,
+        "source": "key_biff"
+      },
+      "bytes": 1176,
+      "effectiveBytes": 1176,
+      "effectiveOrigin": {
+        "locator": 46139092,
+        "offset": 2218992,
+        "path": "data\\Creature.bif",
+        "size": 1176,
+        "source": "key_biff"
+      },
+      "effectiveSha256": "02c3a8a6af340029f461fd62afae42aba03a25dc1c7531f3411df9dcc5e4c6f5",
+      "overridePresent": false,
+      "sha256": "02c3a8a6af340029f461fd62afae42aba03a25dc1c7531f3411df9dcc5e4c6f5"
+    },
+    "SAREVO.DLG": {
+      "baseEqualsEffective": true,
+      "baseOrigin": {
+        "locator": 57672693,
+        "offset": 1165764,
+        "path": "data\\DIALOG.BIF",
+        "size": 4885,
+        "source": "key_biff"
+      },
+      "bytes": 4885,
+      "effectiveBytes": 4885,
+      "effectiveOrigin": {
+        "locator": 57672693,
+        "offset": 1165764,
+        "path": "data\\DIALOG.BIF",
+        "size": 4885,
+        "source": "key_biff"
+      },
+      "effectiveSha256": "5c12f41a181ebf902e59ee12f937f9b27ebc557c47bf87d5883a854e150dbea6",
+      "overridePresent": false,
+      "sha256": "5c12f41a181ebf902e59ee12f937f9b27ebc557c47bf87d5883a854e150dbea6"
+    },
+    "SAREVO.ITM": {
+      "baseEqualsEffective": false,
+      "baseOrigin": {
+        "locator": 26215218,
+        "offset": 295280,
+        "path": "data\\ITEMS.BIF",
+        "size": 170,
+        "source": "key_biff"
+      },
+      "bytes": 170,
+      "effectiveBytes": 506,
+      "effectiveOrigin": {
+        "path": "override\\SAREVO.ITM",
+        "source": "override"
+      },
+      "effectiveSha256": "a9d00e94cbccfda17a5232b88c56e190e050507396f79c63bbd27d34bc889a3e",
+      "overridePresent": true,
+      "sha256": "81b67244db5471b05ecc577b32cf441174692dfdb7819ea22f473314ffb33af1"
+    },
+    "SAREVO2.CRE": {
+      "baseEqualsEffective": true,
+      "baseOrigin": {
+        "locator": 46139093,
+        "offset": 2220172,
+        "path": "data\\Creature.bif",
+        "size": 1156,
+        "source": "key_biff"
+      },
+      "bytes": 1156,
+      "effectiveBytes": 1156,
+      "effectiveOrigin": {
+        "locator": 46139093,
+        "offset": 2220172,
+        "path": "data\\Creature.bif",
+        "size": 1156,
+        "source": "key_biff"
+      },
+      "effectiveSha256": "e1590f035ba225d2d4f9a63235c49024951643b11449f006e79b6d893368dee3",
+      "overridePresent": false,
+      "sha256": "e1590f035ba225d2d4f9a63235c49024951643b11449f006e79b6d893368dee3"
+    },
+    "SAREVOK.BCS": {
+      "baseEqualsEffective": true,
+      "baseOrigin": {
+        "locator": 31458109,
+        "offset": 5632044,
+        "path": "data\\SCRIPTS.BIF",
+        "size": 2270,
+        "source": "key_biff"
+      },
+      "bytes": 2270,
+      "effectiveBytes": 2270,
+      "effectiveOrigin": {
+        "locator": 31458109,
+        "offset": 5632044,
+        "path": "data\\SCRIPTS.BIF",
+        "size": 2270,
+        "source": "key_biff"
+      },
+      "effectiveSha256": "934dee237051b6fe127f4c536ec01babfb57c5be9c5ff30ba58ef5357dc5ea0a",
+      "overridePresent": false,
+      "sha256": "934dee237051b6fe127f4c536ec01babfb57c5be9c5ff30ba58ef5357dc5ea0a"
+    },
+    "SARRUN.BCS": {
+      "baseEqualsEffective": true,
+      "baseOrigin": {
+        "locator": 31458112,
+        "offset": 5634740,
+        "path": "data\\SCRIPTS.BIF",
+        "size": 765,
+        "source": "key_biff"
+      },
+      "bytes": 765,
+      "effectiveBytes": 765,
+      "effectiveOrigin": {
+        "locator": 31458112,
+        "offset": 5634740,
+        "path": "data\\SCRIPTS.BIF",
+        "size": 765,
+        "source": "key_biff"
+      },
+      "effectiveSha256": "d2a3e12fad37c092f3f19becc248f7e78a560abf0f0063d69b011eb9ab393fc7",
+      "overridePresent": false,
+      "sha256": "d2a3e12fad37c092f3f19becc248f7e78a560abf0f0063d69b011eb9ab393fc7"
+    },
+    "SCRL2K.ITM": {
+      "baseEqualsEffective": true,
+      "baseOrigin": {
+        "locator": 26215272,
+        "offset": 318784,
+        "path": "data\\ITEMS.BIF",
+        "size": 114,
+        "source": "key_biff"
+      },
+      "bytes": 114,
+      "effectiveBytes": 114,
+      "effectiveOrigin": {
+        "locator": 26215272,
+        "offset": 318784,
+        "path": "data\\ITEMS.BIF",
+        "size": 114,
+        "source": "key_biff"
+      },
+      "effectiveSha256": "b145a23c43fb94a0663928ed69c937d7dd3be4f207654d820ed704e003875397",
+      "overridePresent": false,
+      "sha256": "b145a23c43fb94a0663928ed69c937d7dd3be4f207654d820ed704e003875397"
+    },
+    "SCRL3F.ITM": {
+      "baseEqualsEffective": true,
+      "baseOrigin": {
+        "locator": 26215293,
+        "offset": 321220,
+        "path": "data\\ITEMS.BIF",
+        "size": 114,
+        "source": "key_biff"
+      },
+      "bytes": 114,
+      "effectiveBytes": 114,
+      "effectiveOrigin": {
+        "locator": 26215293,
+        "offset": 321220,
+        "path": "data\\ITEMS.BIF",
+        "size": 114,
+        "source": "key_biff"
+      },
+      "effectiveSha256": "ae127af85b37fa622783e16f515fc7c09c34479a456bf9b949b9e1829cc939f6",
+      "overridePresent": false,
+      "sha256": "ae127af85b37fa622783e16f515fc7c09c34479a456bf9b949b9e1829cc939f6"
+    },
+    "SEEENEMY.BCS": {
+      "baseEqualsEffective": true,
+      "baseOrigin": {
+        "locator": 31458117,
+        "offset": 5642704,
+        "path": "data\\SCRIPTS.BIF",
+        "size": 1516,
+        "source": "key_biff"
+      },
+      "bytes": 1516,
+      "effectiveBytes": 1516,
+      "effectiveOrigin": {
+        "locator": 31458117,
+        "offset": 5642704,
+        "path": "data\\SCRIPTS.BIF",
+        "size": 1516,
+        "source": "key_biff"
+      },
+      "effectiveSha256": "7d53d86305819b2d6aa30b2970855829dba1650c95fb10b55450c9787d5c5996",
+      "overridePresent": false,
+      "sha256": "7d53d86305819b2d6aa30b2970855829dba1650c95fb10b55450c9787d5c5996"
+    },
+    "SHOUT.BCS": {
+      "baseEqualsEffective": true,
+      "baseOrigin": {
+        "locator": 31458146,
+        "offset": 5700500,
+        "path": "data\\SCRIPTS.BIF",
+        "size": 3444,
+        "source": "key_biff"
+      },
+      "bytes": 3444,
+      "effectiveBytes": 3444,
+      "effectiveOrigin": {
+        "locator": 31458146,
+        "offset": 5700500,
+        "path": "data\\SCRIPTS.BIF",
+        "size": 3444,
+        "source": "key_biff"
+      },
+      "effectiveSha256": "3fc5e3096603c4aaf339e1d346529b3a736a0231aa5dbb7b0a9d6ca923e52605",
+      "overridePresent": false,
+      "sha256": "3fc5e3096603c4aaf339e1d346529b3a736a0231aa5dbb7b0a9d6ca923e52605"
+    },
+    "SPWI961.SPL": {
+      "baseEqualsEffective": true,
+      "baseOrigin": {
+        "locator": 44041278,
+        "offset": 2620564,
+        "path": "data\\Spells.bif",
+        "size": 346,
+        "source": "key_biff"
+      },
+      "bytes": 346,
+      "effectiveBytes": 346,
+      "effectiveOrigin": {
+        "locator": 44041278,
+        "offset": 2620564,
+        "path": "data\\Spells.bif",
+        "size": 346,
+        "source": "key_biff"
+      },
+      "effectiveSha256": "339d9fc383f119752de4a2be7d6d6a714d03363fd87ed93d5121e350d0422d43",
+      "overridePresent": false,
+      "sha256": "339d9fc383f119752de4a2be7d6d6a714d03363fd87ed93d5121e350d0422d43"
+    },
+    "SPWI962.SPL": {
+      "baseEqualsEffective": true,
+      "baseOrigin": {
+        "locator": 44041279,
+        "offset": 2620912,
+        "path": "data\\Spells.bif",
+        "size": 346,
+        "source": "key_biff"
+      },
+      "bytes": 346,
+      "effectiveBytes": 346,
+      "effectiveOrigin": {
+        "locator": 44041279,
+        "offset": 2620912,
+        "path": "data\\Spells.bif",
+        "size": 346,
+        "source": "key_biff"
+      },
+      "effectiveSha256": "38812cd3a71ba1af858bdee921e46fd48813990d8813da80a74a956b9b265d81",
+      "overridePresent": false,
+      "sha256": "38812cd3a71ba1af858bdee921e46fd48813990d8813da80a74a956b9b265d81"
+    },
+    "SPWI963.SPL": {
+      "baseEqualsEffective": true,
+      "baseOrigin": {
+        "locator": 44041280,
+        "offset": 2621260,
+        "path": "data\\Spells.bif",
+        "size": 346,
+        "source": "key_biff"
+      },
+      "bytes": 346,
+      "effectiveBytes": 346,
+      "effectiveOrigin": {
+        "locator": 44041280,
+        "offset": 2621260,
+        "path": "data\\Spells.bif",
+        "size": 346,
+        "source": "key_biff"
+      },
+      "effectiveSha256": "7b5a5e03ba08e5373b915c784a4d489f92e14a99cd4689652f365b7271ec2627",
+      "overridePresent": false,
+      "sha256": "7b5a5e03ba08e5373b915c784a4d489f92e14a99cd4689652f365b7271ec2627"
+    },
+    "SPWI964.SPL": {
+      "baseEqualsEffective": true,
+      "baseOrigin": {
+        "locator": 44041281,
+        "offset": 2621608,
+        "path": "data\\Spells.bif",
+        "size": 346,
+        "source": "key_biff"
+      },
+      "bytes": 346,
+      "effectiveBytes": 346,
+      "effectiveOrigin": {
+        "locator": 44041281,
+        "offset": 2621608,
+        "path": "data\\Spells.bif",
+        "size": 346,
+        "source": "key_biff"
+      },
+      "effectiveSha256": "deb93010fbf7fde4de460e7477ff759824844d96537b50c66f5c7f8b5de54992",
+      "overridePresent": false,
+      "sha256": "deb93010fbf7fde4de460e7477ff759824844d96537b50c66f5c7f8b5de54992"
+    },
+    "SPWI965.SPL": {
+      "baseEqualsEffective": true,
+      "baseOrigin": {
+        "locator": 44041282,
+        "offset": 2621956,
+        "path": "data\\Spells.bif",
+        "size": 346,
+        "source": "key_biff"
+      },
+      "bytes": 346,
+      "effectiveBytes": 346,
+      "effectiveOrigin": {
+        "locator": 44041282,
+        "offset": 2621956,
+        "path": "data\\Spells.bif",
+        "size": 346,
+        "source": "key_biff"
+      },
+      "effectiveSha256": "a790c96ab24f1126b75a7a4401c4499dcaa1bb51302b68651ca4ebc8d9a18fe1",
+      "overridePresent": false,
+      "sha256": "a790c96ab24f1126b75a7a4401c4499dcaa1bb51302b68651ca4ebc8d9a18fe1"
+    },
+    "SPWI990.SPL": {
+      "baseEqualsEffective": true,
+      "baseOrigin": {
+        "locator": 44041294,
+        "offset": 2625748,
+        "path": "data\\Spells.bif",
+        "size": 346,
+        "source": "key_biff"
+      },
+      "bytes": 346,
+      "effectiveBytes": 346,
+      "effectiveOrigin": {
+        "locator": 44041294,
+        "offset": 2625748,
+        "path": "data\\Spells.bif",
+        "size": 346,
+        "source": "key_biff"
+      },
+      "effectiveSha256": "deefe6b2eb5f00ee639d3f712291d37f93415be06ea114ae41186765bf14878a",
+      "overridePresent": false,
+      "sha256": "deefe6b2eb5f00ee639d3f712291d37f93415be06ea114ae41186765bf14878a"
+    },
+    "TRIGGER.IDS": {
+      "baseEqualsEffective": true,
+      "baseOrigin": {
+        "locator": 24117758,
+        "offset": 6121252,
+        "path": "data\\DEFAULT.BIF",
+        "size": 9859,
+        "source": "key_biff"
+      },
+      "bytes": 9859,
+      "effectiveBytes": 9859,
+      "effectiveOrigin": {
+        "locator": 24117758,
+        "offset": 6121252,
+        "path": "data\\DEFAULT.BIF",
+        "size": 9859,
+        "source": "key_biff"
+      },
+      "effectiveSha256": "74072a62b4d27259759a81ce465226a67bc673a100c7a4aa8b0b7d89f7d44d30",
+      "overridePresent": false,
+      "sha256": "74072a62b4d27259759a81ce465226a67bc673a100c7a4aa8b0b7d89f7d44d30"
+    },
+    "WDASIGHT.BCS": {
+      "baseEqualsEffective": true,
+      "baseOrigin": {
+        "locator": 31458244,
+        "offset": 5897092,
+        "path": "data\\SCRIPTS.BIF",
+        "size": 1084,
+        "source": "key_biff"
+      },
+      "bytes": 1084,
+      "effectiveBytes": 1084,
+      "effectiveOrigin": {
+        "locator": 31458244,
+        "offset": 5897092,
+        "path": "data\\SCRIPTS.BIF",
+        "size": 1084,
+        "source": "key_biff"
+      },
+      "effectiveSha256": "c95e58a9e950914d7f0d0d046f22fa86bc56f9d82b7e8e8d4debf8804f29d267",
+      "overridePresent": false,
+      "sha256": "c95e58a9e950914d7f0d0d046f22fa86bc56f9d82b7e8e8d4debf8804f29d267"
+    },
+    "WDRUNSGT.BCS": {
+      "baseEqualsEffective": true,
+      "baseOrigin": {
+        "locator": 31458250,
+        "offset": 5904736,
+        "path": "data\\SCRIPTS.BIF",
+        "size": 884,
+        "source": "key_biff"
+      },
+      "bytes": 884,
+      "effectiveBytes": 884,
+      "effectiveOrigin": {
+        "locator": 31458250,
+        "offset": 5904736,
+        "path": "data\\SCRIPTS.BIF",
+        "size": 884,
+        "source": "key_biff"
+      },
+      "effectiveSha256": "96013f1d7a3efc9312240c7b6caa2c0b345354b1c36ab143e196cb3849fea7d7",
+      "overridePresent": false,
+      "sha256": "96013f1d7a3efc9312240c7b6caa2c0b345354b1c36ab143e196cb3849fea7d7"
+    },
+    "WINSKI.CRE": {
+      "baseEqualsEffective": true,
+      "baseOrigin": {
+        "locator": 46139437,
+        "offset": 2662620,
+        "path": "data\\Creature.bif",
+        "size": 1504,
+        "source": "key_biff"
+      },
+      "bytes": 1504,
+      "effectiveBytes": 1504,
+      "effectiveOrigin": {
+        "locator": 46139437,
+        "offset": 2662620,
+        "path": "data\\Creature.bif",
+        "size": 1504,
+        "source": "key_biff"
+      },
+      "effectiveSha256": "5ea4ce973a33bb5ac00ca06ade80600606fe78e2fe49e1bf607190c627a5c4b4",
+      "overridePresent": false,
+      "sha256": "5ea4ce973a33bb5ac00ca06ade80600606fe78e2fe49e1bf607190c627a5c4b4"
+    },
+    "WTASIGHT.BCS": {
+      "baseEqualsEffective": true,
+      "baseOrigin": {
+        "locator": 31458265,
+        "offset": 5919592,
+        "path": "data\\SCRIPTS.BIF",
+        "size": 1408,
+        "source": "key_biff"
+      },
+      "bytes": 1408,
+      "effectiveBytes": 1408,
+      "effectiveOrigin": {
+        "locator": 31458265,
+        "offset": 5919592,
+        "path": "data\\SCRIPTS.BIF",
+        "size": 1408,
+        "source": "key_biff"
+      },
+      "effectiveSha256": "8abcceeb3cff075568496f696930c30dda499b5d22f146e6eb8cc385719bd6a3",
+      "overridePresent": false,
+      "sha256": "8abcceeb3cff075568496f696930c30dda499b5d22f146e6eb8cc385719bd6a3"
+    },
+    "WTRUNSGT.BCS": {
+      "baseEqualsEffective": true,
+      "baseOrigin": {
+        "locator": 31458271,
+        "offset": 5926576,
+        "path": "data\\SCRIPTS.BIF",
+        "size": 680,
+        "source": "key_biff"
+      },
+      "bytes": 680,
+      "effectiveBytes": 680,
+      "effectiveOrigin": {
+        "locator": 31458271,
+        "offset": 5926576,
+        "path": "data\\SCRIPTS.BIF",
+        "size": 680,
+        "source": "key_biff"
+      },
+      "effectiveSha256": "e19e5aaf81f2f86349bba57b0cdf40bccd5c7702ee4d8cc8f2df03a87d6aafc4",
+      "overridePresent": false,
+      "sha256": "e19e5aaf81f2f86349bba57b0cdf40bccd5c7702ee4d8cc8f2df03a87d6aafc4"
+    }
+  },
+  "resourceOriginPathPolicy": "Backslash separators in relative source-origin metadata",
+  "schemaVersion": 2,
+  "scope": "boundedAR0108ActorScriptReferenceClosure",
+  "scripts": {
+    "AR0108": {
+      "BCSReferences": [],
+      "areaDepartureResources": [],
+      "blockCount": 6,
+      "heard": [],
+      "operationCounts": {
+        "AddJournalEntry": 1,
+        "CreateCreature": 11,
+        "CreateVisualEffect": 2,
+        "Dead": 1,
+        "Enemy": 3,
+        "EraseJournalEntry": 4,
+        "Exists": 4,
+        "FadeToColor": 2,
+        "FillSlot": 1,
+        "ForceSpell": 2,
+        "GiveItemCreate": 1,
+        "Global": 6,
+        "GlobalTimerExpired": 3,
+        "Kill": 2,
+        "NextTriggerObject": 1,
+        "See": 1,
+        "SetGlobal": 2,
+        "SetGlobalTimerRandom": 3,
+        "SetInterrupt": 5,
+        "SmallWait": 4,
+        "StartDialog": 1,
+        "StartMovie": 1,
+        "TriggerActivation": 4,
+        "Wait": 2
+      },
+      "recordCount": 67,
+      "role": "directActorOrArea",
+      "shout": []
+    },
+    "BELT": {
+      "BCSReferences": [],
+      "areaDepartureResources": [],
+      "blockCount": 6,
+      "heard": [],
+      "operationCounts": {
+        "Attack": 1,
+        "AttackReevaluate": 1,
+        "AttackedBy": 1,
+        "CombatCounter": 2,
+        "Dead": 6,
+        "Dialogue": 2,
+        "Global": 6,
+        "NumberOfTimesTalkedTo": 1,
+        "Range": 1,
+        "See": 4,
+        "SetGlobal": 1,
+        "StartDialog": 1,
+        "TriggerActivation": 4
+      },
+      "recordCount": 31,
+      "role": "directActorOrArea",
+      "shout": []
+    },
+    "CAPCUT04": {
+      "BCSReferences": [],
+      "areaDepartureResources": [
+        "AR1100"
+      ],
+      "blockCount": 6,
+      "heard": [],
+      "operationCounts": {
+        "CutSceneId": 6,
+        "DestroySelf": 2,
+        "EndCutSceneMode": 1,
+        "FadeFromColor": 1,
+        "FadeToColor": 1,
+        "LeaveAreaLUA": 6,
+        "LeaveAreaLUAPanic": 1,
+        "MoveViewPoint": 1,
+        "MultiPlayerSync": 1,
+        "SetMasterArea": 1,
+        "True": 6,
+        "Wait": 7
+      },
+      "recordCount": 34,
+      "role": "actorDialogueCutsceneBoundary",
+      "shout": []
+    },
+    "CAPCUT05": {
+      "BCSReferences": [],
+      "areaDepartureResources": [],
+      "blockCount": 1,
+      "heard": [],
+      "operationCounts": {
+        "ApplyDamage": 2,
+        "CutSceneId": 1,
+        "DisplayStringHead": 1,
+        "DisplayStringWait": 1,
+        "EndCutSceneMode": 1,
+        "EscapeArea": 3,
+        "FaceObject": 4,
+        "FadeFromColor": 1,
+        "JumpToPoint": 3,
+        "Kill": 2,
+        "MoveToPointNoInterrupt": 4,
+        "SetSequence": 2,
+        "SmallWait": 2,
+        "StartDialogueNoSet": 1,
+        "True": 1,
+        "Wait": 8
+      },
+      "recordCount": 37,
+      "role": "actorDialogueCutsceneBoundary",
+      "shout": []
+    },
+    "CUTBELT": {
+      "BCSReferences": [],
+      "areaDepartureResources": [
+        "AR0153"
+      ],
+      "blockCount": 1,
+      "heard": [],
+      "operationCounts": {
+        "CreateVisualEffectObject": 6,
+        "CutSceneId": 1,
+        "FadeFromColor": 1,
+        "FadeToColor": 1,
+        "ForceSpell": 6,
+        "LeaveAreaLUA": 6,
+        "LeaveAreaLUAPanic": 1,
+        "SetCursorState": 1,
+        "SetMasterArea": 1,
+        "True": 1,
+        "Wait": 4,
+        "ZoomLock": 1
+      },
+      "recordCount": 30,
+      "role": "actorDialogueCutsceneBoundary",
+      "shout": []
+    },
+    "ENDCUT01": {
+      "BCSReferences": [],
+      "areaDepartureResources": [],
+      "blockCount": 1,
+      "heard": [],
+      "operationCounts": {
+        "CutSceneId": 1,
+        "EndCutSceneMode": 1,
+        "Enemy": 1,
+        "ForceSpell": 2,
+        "True": 1,
+        "Wait": 1
+      },
+      "recordCount": 7,
+      "role": "actorDialogueCutsceneBoundary",
+      "shout": []
+    },
+    "FLAM10": {
+      "BCSReferences": [],
+      "areaDepartureResources": [],
+      "blockCount": 3,
+      "heard": [
+        {
+          "blockSourceId": "FLAM10.BCS#block1",
+          "integers": [
+            1,
+            0,
+            0,
+            0
+          ],
+          "negated": false,
+          "operation": "Heard",
+          "selectors": [
+            {
+              "ids": [
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0
+              ],
+              "name": "FlamingFist10"
+            }
+          ],
+          "sourceId": "FLAM10.BCS#offset491",
+          "strings": [
+            "",
+            ""
+          ]
+        },
+        {
+          "blockSourceId": "FLAM10.BCS#block2",
+          "integers": [
+            2,
+            0,
+            0,
+            0
+          ],
+          "negated": false,
+          "operation": "Heard",
+          "selectors": [
+            {
+              "ids": [
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0
+              ],
+              "name": "Sarevok"
+            }
+          ],
+          "sourceId": "FLAM10.BCS#offset705",
+          "strings": [
+            "",
+            ""
+          ]
+        }
+      ],
+      "operationCounts": {
+        "Allegiance": 1,
+        "Attack": 1,
+        "CombatCounter": 1,
+        "Enemy": 2,
+        "Global": 2,
+        "Heard": 2,
+        "See": 1
+      },
+      "recordCount": 10,
+      "role": "directActorOrArea",
+      "shout": []
+    },
+    "FLAM10A": {
+      "BCSReferences": [],
+      "areaDepartureResources": [],
+      "blockCount": 4,
+      "heard": [
+        {
+          "blockSourceId": "FLAM10A.BCS#block2",
+          "integers": [
+            1,
+            0,
+            0,
+            0
+          ],
+          "negated": false,
+          "operation": "Heard",
+          "selectors": [
+            {
+              "ids": [
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0
+              ],
+              "name": "FlamingFist10"
+            }
+          ],
+          "sourceId": "FLAM10A.BCS#offset1009",
+          "strings": [
+            "",
+            ""
+          ]
+        },
+        {
+          "blockSourceId": "FLAM10A.BCS#block3",
+          "integers": [
+            2,
+            0,
+            0,
+            0
+          ],
+          "negated": false,
+          "operation": "Heard",
+          "selectors": [
+            {
+              "ids": [
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0
+              ],
+              "name": "Sarevok"
+            }
+          ],
+          "sourceId": "FLAM10A.BCS#offset1223",
+          "strings": [
+            "",
+            ""
+          ]
+        }
+      ],
+      "operationCounts": {
+        "Allegiance": 2,
+        "Attack": 1,
+        "CombatCounter": 2,
+        "Dialogue": 1,
+        "Enemy": 2,
+        "Global": 3,
+        "Heard": 2,
+        "NumberOfTimesTalkedTo": 1,
+        "See": 3
+      },
+      "recordCount": 17,
+      "role": "directActorOrArea",
+      "shout": []
+    },
+    "LIIA": {
+      "BCSReferences": [],
+      "areaDepartureResources": [],
+      "blockCount": 9,
+      "heard": [],
+      "operationCounts": {
+        "Attack": 1,
+        "AttackReevaluate": 1,
+        "AttackedBy": 1,
+        "Dead": 8,
+        "Dialogue": 2,
+        "Global": 10,
+        "HaveSpell": 4,
+        "See": 6,
+        "SetGlobal": 1,
+        "Spell": 4,
+        "StateCheck": 2
+      },
+      "recordCount": 40,
+      "role": "directActorOrArea",
+      "shout": []
+    },
+    "MAGE3": {
+      "BCSReferences": [],
+      "areaDepartureResources": [],
+      "blockCount": 8,
+      "heard": [],
+      "operationCounts": {
+        "Attack": 1,
+        "CheckStatGT": 1,
+        "HaveSpell": 6,
+        "RandomWalkContinuous": 1,
+        "Range": 1,
+        "See": 8,
+        "Spell": 6,
+        "StateCheck": 1
+      },
+      "recordCount": 25,
+      "role": "directActorOrArea",
+      "shout": []
+    },
+    "MAGE5": {
+      "BCSReferences": [],
+      "areaDepartureResources": [],
+      "blockCount": 9,
+      "heard": [],
+      "operationCounts": {
+        "Attack": 1,
+        "HaveSpell": 7,
+        "RandomWalkContinuous": 1,
+        "See": 8,
+        "Spell": 7,
+        "StateCheck": 2
+      },
+      "recordCount": 26,
+      "role": "directActorOrArea",
+      "shout": []
+    },
+    "NOBLPA": {
+      "BCSReferences": [],
+      "areaDepartureResources": [],
+      "blockCount": 2,
+      "heard": [],
+      "operationCounts": {
+        "Allegiance": 1,
+        "Face": 1,
+        "ForceSpell": 1,
+        "Global": 1,
+        "OnCreation": 1
+      },
+      "recordCount": 5,
+      "role": "directActorOrArea",
+      "shout": []
+    },
+    "NOBLPA1": {
+      "BCSReferences": [],
+      "areaDepartureResources": [],
+      "blockCount": 2,
+      "heard": [],
+      "operationCounts": {
+        "Allegiance": 1,
+        "Face": 1,
+        "ForceSpell": 1,
+        "Global": 1,
+        "OnCreation": 1
+      },
+      "recordCount": 5,
+      "role": "directActorOrArea",
+      "shout": []
+    },
+    "NOBLPA2": {
+      "BCSReferences": [],
+      "areaDepartureResources": [],
+      "blockCount": 2,
+      "heard": [],
+      "operationCounts": {
+        "Allegiance": 1,
+        "Face": 1,
+        "ForceSpell": 1,
+        "Global": 1,
+        "OnCreation": 1
+      },
+      "recordCount": 5,
+      "role": "directActorOrArea",
+      "shout": []
+    },
+    "NOBLPA3": {
+      "BCSReferences": [],
+      "areaDepartureResources": [],
+      "blockCount": 2,
+      "heard": [],
+      "operationCounts": {
+        "Allegiance": 1,
+        "Face": 1,
+        "ForceSpell": 1,
+        "Global": 1,
+        "OnCreation": 1
+      },
+      "recordCount": 5,
+      "role": "directActorOrArea",
+      "shout": []
+    },
+    "NOBLPA4": {
+      "BCSReferences": [],
+      "areaDepartureResources": [],
+      "blockCount": 2,
+      "heard": [],
+      "operationCounts": {
+        "Allegiance": 1,
+        "Face": 1,
+        "ForceSpell": 1,
+        "Global": 1,
+        "OnCreation": 1
+      },
+      "recordCount": 5,
+      "role": "directActorOrArea",
+      "shout": []
+    },
+    "NOBLPA5": {
+      "BCSReferences": [],
+      "areaDepartureResources": [],
+      "blockCount": 2,
+      "heard": [],
+      "operationCounts": {
+        "Allegiance": 1,
+        "Face": 1,
+        "ForceSpell": 1,
+        "Global": 1,
+        "OnCreation": 1
+      },
+      "recordCount": 5,
+      "role": "directActorOrArea",
+      "shout": []
+    },
+    "RUNENEMY": {
+      "BCSReferences": [],
+      "areaDepartureResources": [],
+      "blockCount": 2,
+      "heard": [],
+      "operationCounts": {
+        "Allegiance": 2,
+        "Gender": 2,
+        "General": 2,
+        "PlaySound": 2,
+        "RunAwayFromNoLeaveArea": 4,
+        "See": 2
+      },
+      "recordCount": 14,
+      "role": "directActorOrArea",
+      "shout": []
+    },
+    "SARDOPP": {
+      "BCSReferences": [],
+      "areaDepartureResources": [],
+      "blockCount": 3,
+      "heard": [],
+      "operationCounts": {
+        "Allegiance": 1,
+        "Attack": 3,
+        "AttackReevaluate": 4,
+        "ChangeEnemyAlly": 1,
+        "Global": 3,
+        "See": 1
+      },
+      "recordCount": 13,
+      "role": "directActorOrArea",
+      "shout": []
+    },
+    "SAREVOK": {
+      "BCSReferences": [],
+      "areaDepartureResources": [],
+      "blockCount": 7,
+      "heard": [],
+      "operationCounts": {
+        "Allegiance": 1,
+        "AreaCheck": 2,
+        "AttackReevaluate": 3,
+        "AttackedBy": 2,
+        "Dead": 2,
+        "DestroyItem": 1,
+        "Detect": 1,
+        "Global": 3,
+        "HasItem": 1,
+        "Range": 4,
+        "See": 3,
+        "SetGlobal": 1,
+        "StartDialog": 2
+      },
+      "recordCount": 26,
+      "role": "directActorOrArea",
+      "shout": []
+    },
+    "SARRUN": {
+      "BCSReferences": [],
+      "areaDepartureResources": [],
+      "blockCount": 3,
+      "heard": [
+        {
+          "blockSourceId": "SARRUN.BCS#block1",
+          "integers": [
+            2,
+            0,
+            0,
+            0
+          ],
+          "negated": false,
+          "operation": "Heard",
+          "selectors": [
+            {
+              "ids": [
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0
+              ],
+              "name": "Sarevok"
+            }
+          ],
+          "sourceId": "SARRUN.BCS#offset235",
+          "strings": [
+            "",
+            ""
+          ]
+        },
+        {
+          "blockSourceId": "SARRUN.BCS#block2",
+          "integers": [
+            50,
+            0,
+            0,
+            0
+          ],
+          "negated": false,
+          "operation": "Heard",
+          "selectors": [
+            {
+              "ids": [
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0
+              ],
+              "name": ""
+            }
+          ],
+          "sourceId": "SARRUN.BCS#offset565",
+          "strings": [
+            "",
+            ""
+          ]
+        }
+      ],
+      "operationCounts": {
+        "EscapeArea": 3,
+        "Global": 1,
+        "Heard": 2,
+        "Shout": 1
+      },
+      "recordCount": 7,
+      "role": "directActorOrArea",
+      "shout": [
+        {
+          "integers": [
+            50,
+            0,
+            0,
+            0,
+            0
+          ],
+          "operation": "Shout",
+          "selectors": [
+            {
+              "ids": [
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0
+              ],
+              "name": ""
+            },
+            {
+              "ids": [
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0
+              ],
+              "name": ""
+            },
+            {
+              "ids": [
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0
+              ],
+              "name": ""
+            }
+          ],
+          "sourceOffset": 309,
+          "strings": [
+            "",
+            ""
+          ]
+        }
+      ]
+    },
+    "SEEENEMY": {
+      "BCSReferences": [],
+      "areaDepartureResources": [],
+      "blockCount": 2,
+      "heard": [],
+      "operationCounts": {
+        "Allegiance": 2,
+        "AttackReevaluate": 2,
+        "Class": 10,
+        "EquipMostDamagingMelee": 1,
+        "EquipRanged": 1,
+        "Range": 2,
+        "See": 2
+      },
+      "recordCount": 20,
+      "role": "directActorOrArea",
+      "shout": []
+    },
+    "SHOUT": {
+      "BCSReferences": [],
+      "areaDepartureResources": [],
+      "blockCount": 7,
+      "heard": [
+        {
+          "blockSourceId": "SHOUT.BCS#block3",
+          "integers": [
+            99,
+            0,
+            0,
+            0
+          ],
+          "negated": false,
+          "operation": "Heard",
+          "selectors": [
+            {
+              "ids": [
+                199,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0
+              ],
+              "name": ""
+            }
+          ],
+          "sourceId": "SHOUT.BCS#offset1564",
+          "strings": [
+            "",
+            ""
+          ]
+        },
+        {
+          "blockSourceId": "SHOUT.BCS#block4",
+          "integers": [
+            99,
+            0,
+            0,
+            0
+          ],
+          "negated": false,
+          "operation": "Heard",
+          "selectors": [
+            {
+              "ids": [
+                31,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0
+              ],
+              "name": ""
+            }
+          ],
+          "sourceId": "SHOUT.BCS#offset2360",
+          "strings": [
+            "",
+            ""
+          ]
+        },
+        {
+          "blockSourceId": "SHOUT.BCS#block5",
+          "integers": [
+            99,
+            0,
+            0,
+            0
+          ],
+          "negated": false,
+          "operation": "Heard",
+          "selectors": [
+            {
+              "ids": [
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0
+              ],
+              "name": ""
+            }
+          ],
+          "sourceId": "SHOUT.BCS#offset2978",
+          "strings": [
+            "",
+            ""
+          ]
+        },
+        {
+          "blockSourceId": "SHOUT.BCS#block6",
+          "integers": [
+            99,
+            0,
+            0,
+            0
+          ],
+          "negated": false,
+          "operation": "Heard",
+          "selectors": [
+            {
+              "ids": [
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                60,
+                0,
+                0,
+                0,
+                0
+              ],
+              "name": ""
+            }
+          ],
+          "sourceId": "SHOUT.BCS#offset3184",
+          "strings": [
+            "",
+            ""
+          ]
+        }
+      ],
+      "operationCounts": {
+        "Alignment": 9,
+        "Allegiance": 1,
+        "AttackedBy": 1,
+        "Class": 3,
+        "Continue": 1,
+        "Enemy": 4,
+        "GlobalTimerNotExpired": 2,
+        "Heard": 4,
+        "HitBy": 1,
+        "MoveToObject": 2,
+        "OR": 3,
+        "RunAwayFromNoLeaveArea": 1,
+        "SetGlobalTimer": 2,
+        "Shout": 2,
+        "SmallWait": 2,
+        "StateCheck": 2
+      },
+      "recordCount": 40,
+      "role": "directActorOrArea",
+      "shout": [
+        {
+          "integers": [
+            99,
+            0,
+            0,
+            0,
+            0
+          ],
+          "operation": "Shout",
+          "selectors": [
+            {
+              "ids": [
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0
+              ],
+              "name": ""
+            },
+            {
+              "ids": [
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0
+              ],
+              "name": ""
+            },
+            {
+              "ids": [
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0
+              ],
+              "name": ""
+            }
+          ],
+          "sourceOffset": 470,
+          "strings": [
+            "",
+            ""
+          ]
+        },
+        {
+          "integers": [
+            99,
+            0,
+            0,
+            0,
+            0
+          ],
+          "operation": "Shout",
+          "selectors": [
+            {
+              "ids": [
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0
+              ],
+              "name": ""
+            },
+            {
+              "ids": [
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0
+              ],
+              "name": ""
+            },
+            {
+              "ids": [
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0
+              ],
+              "name": ""
+            }
+          ],
+          "sourceOffset": 1116,
+          "strings": [
+            "",
+            ""
+          ]
+        }
+      ]
+    },
+    "WDASIGHT": {
+      "BCSReferences": [],
+      "areaDepartureResources": [],
+      "blockCount": 5,
+      "heard": [],
+      "operationCounts": {
+        "Allegiance": 1,
+        "Attack": 1,
+        "AttackReevaluate": 1,
+        "AttackedBy": 2,
+        "Enemy": 1,
+        "RandomWalk": 1,
+        "RandomWalkContinuous": 1,
+        "See": 1,
+        "StateCheck": 1,
+        "True": 1
+      },
+      "recordCount": 11,
+      "role": "directActorOrArea",
+      "shout": []
+    },
+    "WDRUNSGT": {
+      "BCSReferences": [],
+      "areaDepartureResources": [],
+      "blockCount": 4,
+      "heard": [],
+      "operationCounts": {
+        "Allegiance": 1,
+        "AttackedBy": 2,
+        "Enemy": 1,
+        "RandomWalk": 1,
+        "RunAwayFromNoLeaveArea": 2,
+        "See": 1,
+        "True": 1
+      },
+      "recordCount": 9,
+      "role": "directActorOrArea",
+      "shout": []
+    },
+    "WTASIGHT": {
+      "BCSReferences": [],
+      "areaDepartureResources": [],
+      "blockCount": 6,
+      "heard": [
+        {
+          "blockSourceId": "WTASIGHT.BCS#block1",
+          "integers": [
+            111,
+            0,
+            0,
+            0
+          ],
+          "negated": false,
+          "operation": "Heard",
+          "selectors": [
+            {
+              "ids": [
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0
+              ],
+              "name": ""
+            }
+          ],
+          "sourceId": "WTASIGHT.BCS#offset214",
+          "strings": [
+            "",
+            ""
+          ]
+        }
+      ],
+      "operationCounts": {
+        "Allegiance": 1,
+        "Attack": 1,
+        "AttackReevaluate": 1,
+        "AttackedBy": 2,
+        "Enemy": 1,
+        "Heard": 1,
+        "InWeaponRange": 2,
+        "MoveToObject": 2,
+        "RandomWalkContinuous": 1,
+        "See": 2,
+        "StateCheck": 1
+      },
+      "recordCount": 15,
+      "role": "directActorOrArea",
+      "shout": []
+    },
+    "WTRUNSGT": {
+      "BCSReferences": [],
+      "areaDepartureResources": [],
+      "blockCount": 3,
+      "heard": [],
+      "operationCounts": {
+        "Allegiance": 1,
+        "AttackedBy": 2,
+        "Enemy": 1,
+        "RunAwayFromNoLeaveArea": 2,
+        "See": 1
+      },
+      "recordCount": 7,
+      "role": "directActorOrArea",
+      "shout": []
+    }
+  },
+  "selectedHeard2And50Blocks": {
+    "FLAM10.BCS#block2": {
+      "actions": [
+        {
+          "integers": [
+            0,
+            0,
+            0,
+            0,
+            0
+          ],
+          "operation": "Attack",
+          "selectors": [
+            {
+              "ids": [
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0
+              ],
+              "name": ""
+            },
+            {
+              "ids": [
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0
+              ],
+              "name": "Sarevok"
+            },
+            {
+              "ids": [
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0
+              ],
+              "name": ""
+            }
+          ],
+          "sourceId": "FLAM10.BCS#offset779",
+          "strings": [
+            "",
+            ""
+          ]
+        }
+      ],
+      "conditions": [
+        {
+          "integers": [
+            2,
+            0,
+            0,
+            0
+          ],
+          "negated": false,
+          "operation": "Heard",
+          "selectors": [
+            {
+              "ids": [
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0
+              ],
+              "name": "Sarevok"
+            }
+          ],
+          "sourceId": "FLAM10.BCS#offset705",
+          "strings": [
+            "",
+            ""
+          ]
+        }
+      ],
+      "semanticsEvaluated": false,
+      "sourceId": "FLAM10.BCS#block2"
+    },
+    "FLAM10A.BCS#block3": {
+      "actions": [
+        {
+          "integers": [
+            0,
+            0,
+            0,
+            0,
+            0
+          ],
+          "operation": "Attack",
+          "selectors": [
+            {
+              "ids": [
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0
+              ],
+              "name": ""
+            },
+            {
+              "ids": [
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0
+              ],
+              "name": "Sarevok"
+            },
+            {
+              "ids": [
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0
+              ],
+              "name": ""
+            }
+          ],
+          "sourceId": "FLAM10A.BCS#offset1297",
+          "strings": [
+            "",
+            ""
+          ]
+        }
+      ],
+      "conditions": [
+        {
+          "integers": [
+            2,
+            0,
+            0,
+            0
+          ],
+          "negated": false,
+          "operation": "Heard",
+          "selectors": [
+            {
+              "ids": [
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0
+              ],
+              "name": "Sarevok"
+            }
+          ],
+          "sourceId": "FLAM10A.BCS#offset1223",
+          "strings": [
+            "",
+            ""
+          ]
+        }
+      ],
+      "semanticsEvaluated": false,
+      "sourceId": "FLAM10A.BCS#block3"
+    },
+    "SARRUN.BCS#block1": {
+      "actions": [
+        {
+          "integers": [
+            50,
+            0,
+            0,
+            0,
+            0
+          ],
+          "operation": "Shout",
+          "selectors": [
+            {
+              "ids": [
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0
+              ],
+              "name": ""
+            },
+            {
+              "ids": [
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0
+              ],
+              "name": ""
+            },
+            {
+              "ids": [
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0
+              ],
+              "name": ""
+            }
+          ],
+          "sourceId": "SARRUN.BCS#offset309",
+          "strings": [
+            "",
+            ""
+          ]
+        },
+        {
+          "integers": [
+            0,
+            0,
+            0,
+            0,
+            0
+          ],
+          "operation": "EscapeArea",
+          "selectors": [
+            {
+              "ids": [
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0
+              ],
+              "name": ""
+            },
+            {
+              "ids": [
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0
+              ],
+              "name": ""
+            },
+            {
+              "ids": [
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0
+              ],
+              "name": ""
+            }
+          ],
+          "sourceId": "SARRUN.BCS#offset430",
+          "strings": [
+            "",
+            ""
+          ]
+        }
+      ],
+      "conditions": [
+        {
+          "integers": [
+            2,
+            0,
+            0,
+            0
+          ],
+          "negated": false,
+          "operation": "Heard",
+          "selectors": [
+            {
+              "ids": [
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0
+              ],
+              "name": "Sarevok"
+            }
+          ],
+          "sourceId": "SARRUN.BCS#offset235",
+          "strings": [
+            "",
+            ""
+          ]
+        }
+      ],
+      "semanticsEvaluated": false,
+      "sourceId": "SARRUN.BCS#block1"
+    },
+    "SARRUN.BCS#block2": {
+      "actions": [
+        {
+          "integers": [
+            0,
+            0,
+            0,
+            0,
+            0
+          ],
+          "operation": "EscapeArea",
+          "selectors": [
+            {
+              "ids": [
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0
+              ],
+              "name": ""
+            },
+            {
+              "ids": [
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0
+              ],
+              "name": ""
+            },
+            {
+              "ids": [
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0
+              ],
+              "name": ""
+            }
+          ],
+          "sourceId": "SARRUN.BCS#offset633",
+          "strings": [
+            "",
+            ""
+          ]
+        }
+      ],
+      "conditions": [
+        {
+          "integers": [
+            50,
+            0,
+            0,
+            0
+          ],
+          "negated": false,
+          "operation": "Heard",
+          "selectors": [
+            {
+              "ids": [
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0
+              ],
+              "name": ""
+            }
+          ],
+          "sourceId": "SARRUN.BCS#offset565",
+          "strings": [
+            "",
+            ""
+          ]
+        }
+      ],
+      "semanticsEvaluated": false,
+      "sourceId": "SARRUN.BCS#block2"
+    }
+  },
+  "selectedIDS": {
+    "EA": {
+      "128": "NEUTRAL",
+      "2": "PC",
+      "200": "EVILCUTOFF",
+      "255": "ENEMY",
+      "28": "GOODBUTRED",
+      "29": "GOODBUTBLUE",
+      "30": "GOODCUTOFF"
+    },
+    "OBJECT": {
+      "1": "Myself",
+      "12": "NearestEnemyOf",
+      "20": "LastHeardBy"
+    }
+  },
+  "sourceEdition": "BG1EE installed data; supporting evidence for original BG1 only",
+  "sourceHelperFingerprintPolicy": "CRLF-to-LF bytes; all other bytes preserved",
+  "sourceHelpers": {
+    "audit_baldurs_gate_palace.py": {
+      "bytes": 19188,
+      "sha256": "63e5b20d86792f5babc46624959a46cc8c77425a31beda6d8fbf9647758b3c9d"
+    },
+    "audit_baldurs_gate_palace_shout.py": {
+      "bytes": 14620,
+      "sha256": "d196e1f7724f2ce026788e0a410b159cd4670f6cbd61e116efc7f172b40db51e"
+    },
+    "audit_candlekeep_source.py": {
+      "bytes": 53445,
+      "sha256": "fba6f98547f88f11fd62e533fb0f30fc5a6b44f9e7daf65ec96bea06aa84c3cb"
+    },
+    "build_baldurs_gate_prison_source_fixture.py": {
+      "bytes": 21800,
+      "sha256": "dc76786e1384539fb108ecd3016b4cc3737f72c29035749acd292d04be96d648"
+    },
+    "build_baldurs_gate_source_fixture.py": {
+      "bytes": 28784,
+      "sha256": "0e547d53553fd0a4e2755652bb776dc4592e37c4fde928dc38e27db0359f20cb"
+    }
+  },
+  "sourceView": "base and effective compared",
+  "spellReplacements": {
+    "SPWI961": [
+      {
+        "creature": "GDOPP71",
+        "featureIndex": 0,
+        "mode": 0,
+        "opcode": 151
+      }
+    ],
+    "SPWI962": [
+      {
+        "creature": "GDOPP72",
+        "featureIndex": 0,
+        "mode": 0,
+        "opcode": 151
+      }
+    ],
+    "SPWI963": [
+      {
+        "creature": "GDOPP73",
+        "featureIndex": 0,
+        "mode": 0,
+        "opcode": 151
+      }
+    ],
+    "SPWI964": [
+      {
+        "creature": "GDOPP74",
+        "featureIndex": 0,
+        "mode": 0,
+        "opcode": 151
+      }
+    ],
+    "SPWI965": [
+      {
+        "creature": "GDOPP75",
+        "featureIndex": 0,
+        "mode": 0,
+        "opcode": 151
+      }
+    ],
+    "SPWI990": [
+      {
+        "creature": "GDOPP7",
+        "featureIndex": 0,
+        "mode": 0,
+        "opcode": 151
+      }
+    ]
+  },
+  "unresolvedBoundaries": [
+    "Original patched BG1 resources and original engine scheduling are not authenticated by EE archives.",
+    "The retained 43-base manifest includes SAREVO.ITM whose installed effective override differs; item/effect behavior is outside this script-reference closure.",
+    "Syntactic closure is complete for ARE/CRE script refs, audited script references, ten CRE-dialogue script refs, six selected replacement spells and direct CRE effect82 absence; it is not a general effect/spell/equipment or every-dialogue-target closure.",
+    "Script-slot execution priority, queued action preemption, event expiry/retention, Continue, response selection and inter-actor ordering need engine evidence.",
+    "Higher SHOUT override scripts can execute status/attack/Heard99 branches before class/specific listeners; actual state must be evaluated.",
+    "No guarantee that behavior3 guards reach Heard2 before independent Enemy, or that SARRUN reaches Heard2 before Global3 EscapeArea.",
+    "Retired noble ownership and replacement liveness, all actor death/corpse states, distances, EscapeArea path/destination and task-native conversion remain unverified.",
+    "Cutscene boundary scripts were checked for Heard and AI-script refs, but out-of-area ARE resources and unrelated dialogue target chains were not followed.",
+    "NearestEnemyOf cannot be reduced to Player1; living SARDOPP actors can change to GOODBUTRED28 before target resolution."
+  ]
+}

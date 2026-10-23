@@ -80,3 +80,38 @@ python test.py --suite mcp-branches --branch-group baldursGate
 The first command uses source checks and native-shaped model doubles. The second requires a current staged native binary and real movement/dialogue/combat. Planned routes cover all five existing hero classes, but an unexecuted route is not a passing receipt. Shop chooser cancellation never proves an item was sold, stolen or transferred.
 
 Current acceptance blockers include original BG1-versus-EE reconciliation, unsupported source scripts and item effects, crime/arrest/escape outcomes, remaining conversation and recruitment branches, exact shop/temple formulas, and complete native save/reload and visual evidence. The owner confirmed that neither an original installation nor an alternate build volume is available. After bounded verified cleanup, C: remains above 95 percent used. No local native build or capture is authorized by that cleanup result; the 90 percent guard remains in force.
+
+
+## Bounded palace source audits
+
+The palace audit fixtures are factual development metadata from installed BG1EE
+resources, supporting an original-BG1 target. They contain fingerprints, selected
+operation/selector facts and actor script-slot bindings, without original binary
+payloads, compiled script bodies or dialogue prose. The initial manifest of 43
+resources and supplemental manifest of 22 remain unchanged. The expanded listener
+closure fingerprints 79 resources, 21 CRE, 22 actor BCS plus the area script and four
+cutscene boundaries. Shout 50's escape-only receiver, earlier behavior 3 guard/noble
+branches and surviving doppelgangers' source EA 28 are recorded facts, not an
+implemented script scheduler.
+
+Run only the pure source contracts for focused feedback:
+
+```powershell
+python -B -m unittest tests.test_baldurs_gate_palace_audit tests.test_baldurs_gate_palace_shout tests.test_baldurs_gate_palace_listener_closure -q
+```
+
+The optional installed-resource reader is bounded to the fixed 79-resource closure:
+
+```powershell
+python -B scripts/audit_baldurs_gate_palace_listener_closure.py --game-root <installed-game-root> --project-root .
+```
+
+The reader compares base/effective bytes and reproduces the reviewed metadata with
+an explicit 192 KiB output cap. Helper fingerprints normalize CRLF to LF; source-origin
+paths use declared archive-style separators. Optional CLI outputs use exclusive
+creation after serialization and size checks, preserving existing evidence and
+targets created by another writer immediately before the final open. The installed SAREVO.ITM
+override remains an item/effect boundary. Script scheduling, event consumption,
+geometry, live actor ownership and original-versus-EE reconciliation remain pending.
+These tests/audits grant no native execution, gameplay, original parity, acceptance
+or ledger credit; all corresponding closure acceptance flags remain false.
