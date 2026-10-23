@@ -247,6 +247,8 @@ void bindGraphicsAndWorld(py::module_ &m) {
         .def("removeObject", &CMap::removeObject, "Remove a map object instance.")
         .def("replaceTile", &CMap::replaceTile, "Replace a tile at coordinates with a tile type id.")
         .def("getPlayer", &CMap::getPlayer, "Return the player object assigned to this map.")
+        .def("getAssignedPlayer", &CMap::getAssignedPlayer,
+             "Observe the assigned player cache without recovery or mutation; engine owner thread only.")
         .def("detachPlayer", &CMap::detachPlayer, "Detach and return the active player without destroy events.")
         .def("attachPlayer", attachPlayerAtEntry,
              "Attach a player at the map entry and run destination movement hooks.")

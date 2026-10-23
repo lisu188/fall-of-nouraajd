@@ -1534,6 +1534,66 @@ void testMapBindingEpochQueriesAndPublicationsAreBounded() {
     context->shutdown();
 }
 
+void testAssignedPlayerQueriesAreMutationAndCallbackBounded() {
+    constexpr int READS_PER_PHASE = 256;
+    CTypes::register_type<CPlayerController>();
+    CTypes::register_type<CPlayerFightController>();
+    auto fixture = make_open_map(2, 1);
+    auto player = std::make_shared<CPlayer>();
+    player->setGame(fixture.game);
+    player->setName("player");
+    player->setBaseStats(make_actor_stats());
+    player->setLevel(1);
+    player->setHp(1);
+    auto movement = std::make_shared<CController>();
+    auto fight = std::make_shared<CFightController>();
+    player->setController(movement);
+    player->setFightController(fight);
+    fixture.map->addObject(player);
+    auto observer = std::make_shared<NotificationCountProbe>();
+    observer->setGame(fixture.game);
+    fixture.map->connect("propertyChanged", observer, "onPropertyChanged");
+    fixture.map->connect("propertiesChanged", observer, "onPropertiesChanged");
+    auto loop = vstd::event_loop<>::instance();
+    int reads = 0;
+    const CMap &observed = *fixture.map;
+    for (const bool assigned : {false, true}) {
+        if (assigned) {
+            fixture.map->attachPlayer(player, Coords(0, 0, 0));
+        }
+        const auto current_movement = player->getController();
+        const auto current_fight = player->getFightController();
+        const auto revision = fixture.map->getNavigationRevision();
+        const auto turn = fixture.map->getTurn();
+        const auto objects = fixture.map->getObjects();
+        const auto triggers = fixture.map->getEventHandler()->getTriggers();
+        const auto pending = loop->getPendingTaskCount();
+        const auto delayed = loop->getDelayedTaskCount();
+        const auto callbacks = observer->property_changed_calls + observer->properties_changed_calls;
+        for (int read = 0; read < READS_PER_PHASE; ++read) {
+            expect_true(observed.getAssignedPlayer() == (assigned ? player : nullptr),
+                        "fixed queries must expose assignment without adopting the registered actor");
+            ++reads;
+        }
+        expect_true(fixture.map->getObjects() == objects && fixture.map->getEventHandler()->getTriggers() == triggers &&
+                        fixture.map->getNavigationRevision() == revision && fixture.map->getTurn() == turn &&
+                        player->getController() == current_movement && player->getFightController() == current_fight &&
+                        loop->getPendingTaskCount() == pending && loop->getDelayedTaskCount() == delayed &&
+                        observer->property_changed_calls + observer->properties_changed_calls == callbacks,
+                    "256 queries per phase must add zero registry/controller/hook/turn/queue/callback work");
+        if (!assigned) {
+            expect_true(current_movement == movement && current_fight == fight,
+                        "unassigned observation must preserve even non-player controller identities");
+        }
+    }
+    expect_true(reads == 2 * READS_PER_PHASE, "the assigned-player query guard must perform exactly 512 reads");
+    std::cout << "assigned player query guard: reads=" << reads << " phases=2 budget-reads=" << 2 * READS_PER_PHASE
+              << " registry/controller/hook/turn/queue/callback-deltas=0\n";
+    fixture.map->disconnect("propertyChanged", observer, "onPropertyChanged");
+    fixture.map->disconnect("propertiesChanged", observer, "onPropertiesChanged");
+    fixture.game->getContext()->shutdown();
+}
+
 void testMinimapTerrainCacheBuildsOnlyOnRelevantChanges() {
     constexpr int CACHED_FRAMES = 32;
     SDL_SetHint(SDL_HINT_VIDEODRIVER, "dummy");
@@ -1612,5 +1672,6 @@ void run_engine_hotspot_performance_tests() {
     testEffectTickCallbacksAndExpiryAreBounded();
     testDefeatResolutionRejectionsAndParticipantClaimsAreBounded();
     testMapBindingEpochQueriesAndPublicationsAreBounded();
+    testAssignedPlayerQueriesAreMutationAndCallbackBounded();
     testMinimapTerrainCacheBuildsOnlyOnRelevantChanges();
 }

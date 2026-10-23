@@ -177,6 +177,9 @@ class CMap : public CGameObject {
 
     std::shared_ptr<CPlayer> getPlayer();
 
+    // Engine owner thread only; observes the cache without adoption or restoration.
+    std::shared_ptr<CPlayer> getAssignedPlayer() const;
+
     void setPlayer(std::shared_ptr<CPlayer> player);
 
     vstd::task<void> setPlayerAsync(std::shared_ptr<CPlayer> player);

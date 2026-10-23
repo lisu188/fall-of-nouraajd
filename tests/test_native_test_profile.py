@@ -76,6 +76,8 @@ ADDITIONAL_CASES = {
         "testMapMoveSnapshotsActorsBeforeInlinePlans",
         "testCancelledAsyncCombatRestoresPlayerOrigin",
         "testMapMoveRejectsPlayerPlanCapturedBeforeSynchronousRespawn",
+        "testMapAssignedPlayerQueryDoesNotAdoptOrRepairRegisteredPlayer",
+        "testMapAssignedPlayerQueryExposesMismatchAndTracksExplicitTransfers",
         "testMapPlayerCacheMissPreservesValidControllerIdentity",
         "testMapMoveRejectsPlayerPlanSuspendedBeforeCommit",
         "testMapMoveRejectsPlayerPlanSuspendedDuringLeaveHook",

@@ -1826,6 +1826,86 @@ void test_map_owned_objects_and_tiles_remember_owner_when_active_map_changes() {
                 "removed objects should fall back to the active game map after destroy callbacks finish");
 }
 
+void testMapAssignedPlayerQueryDoesNotAdoptOrRepairRegisteredPlayer() {
+    auto game = CGameLoader::loadGame();
+    auto map = std::make_shared<CMap>();
+    map->setGame(game);
+    game->setMap(map);
+    const CMap &observed = *map;
+    expect_true(!observed.getAssignedPlayer(), "an empty assignment cache must be observable without creation");
+    auto player = std::make_shared<CPlayer>();
+    player->setGame(game);
+    player->setName("player");
+    player->setBaseStats(creature_stats());
+    player->setLevel(1);
+    player->setHp(1);
+    auto movement = game->createObject<CController>();
+    auto fight = game->createObject<CFightController>();
+    player->setController(movement);
+    player->setFightController(fight);
+    map->addObject(player);
+    const auto revision = map->getNavigationRevision();
+    const auto turn = map->getTurn();
+    const auto triggers = count_player_event_triggers(map);
+    for (int read = 0; read < 128; ++read) {
+        expect_true(!observed.getAssignedPlayer(), "a read-only query must not adopt a registered player");
+    }
+    expect_true(map->getObjectByName("player") == player && player->getController() == movement &&
+                    player->getFightController() == fight && count_player_event_triggers(map) == triggers &&
+                    map->getNavigationRevision() == revision && map->getTurn() == turn,
+                "128 cache reads must not repair controllers, register hooks, move or mutate the registry");
+    map->removeObject(player);
+    expect_true(!observed.getAssignedPlayer() && !map->getObjectByName("player"),
+                "ordinary removal of an unassigned player must not create an assignment");
+    map->addObject(player);
+    expect_true(map->getPlayer() == player && observed.getAssignedPlayer() == player &&
+                    player->getController() != movement && player->getFightController() != fight &&
+                    count_player_event_triggers(map) == 2,
+                "the existing explicit lazy getter remains responsible for adoption, repair and hook registration");
+    game->getContext()->shutdown();
+}
+
+void testMapAssignedPlayerQueryExposesMismatchAndTracksExplicitTransfers() {
+    auto game = CGameLoader::loadGame();
+    auto map = std::make_shared<CMap>();
+    map->setGame(game);
+    game->setMap(map);
+    auto make_player = [&] {
+        auto player = std::make_shared<CPlayer>();
+        player->setGame(game);
+        player->setBaseStats(creature_stats());
+        player->setLevel(1);
+        player->setHp(1);
+        return player;
+    };
+    auto canonical = make_player();
+    auto assigned = make_player();
+    map->setPlayer(canonical);
+    map->setPlayer(assigned);
+    const CMap &observed = *map;
+    expect_true(map->getObjectByName("player") == canonical && observed.getAssignedPlayer() == assigned,
+                "public duplicate-name assignments must expose the actual cache/registry mismatch without repair");
+    const auto movement = assigned->getController();
+    const auto fight = assigned->getFightController();
+    const auto revision = map->getNavigationRevision();
+    const auto triggers = count_player_event_triggers(map);
+    for (int read = 0; read < 128; ++read) {
+        expect_true(observed.getAssignedPlayer() == assigned, "the observer must return the cached identity as-is");
+    }
+    expect_true(map->getObjectByName("player") == canonical && assigned->getController() == movement &&
+                    assigned->getFightController() == fight && map->getNavigationRevision() == revision &&
+                    count_player_event_triggers(map) == triggers,
+                "read-only mismatch observation must not repair either public ownership path");
+    expect_true(map->detachPlayer() == assigned && !observed.getAssignedPlayer() && !map->getObjectByName("player"),
+                "explicit detachment must clear the assignment and both mismatched registry candidates");
+    map->attachPlayer(canonical, Coords(0, 0, 0));
+    expect_true(observed.getAssignedPlayer() == canonical && map->getObjectByName("player") == canonical,
+                "explicit attachment must publish the actual new assigned player");
+    map->detachPlayer();
+    expect_true(!observed.getAssignedPlayer(), "a detached cache must stay empty when observed");
+    game->getContext()->shutdown();
+}
+
 void testMapPlayerCacheMissPreservesValidControllerIdentity() {
     auto game = CGameLoader::loadGame();
     for (int fixture = 0; fixture < 6; ++fixture) {
@@ -4574,6 +4654,10 @@ int main() {
                             test_map_object_relocate_without_move_hooks_updates_spatial_state_once);
     nativeTestProfile().run("test_map_owned_objects_and_tiles_remember_owner_when_active_map_changes",
                             test_map_owned_objects_and_tiles_remember_owner_when_active_map_changes);
+    nativeTestProfile().run("testMapAssignedPlayerQueryDoesNotAdoptOrRepairRegisteredPlayer",
+                            testMapAssignedPlayerQueryDoesNotAdoptOrRepairRegisteredPlayer);
+    nativeTestProfile().run("testMapAssignedPlayerQueryExposesMismatchAndTracksExplicitTransfers",
+                            testMapAssignedPlayerQueryExposesMismatchAndTracksExplicitTransfers);
     nativeTestProfile().run("testMapPlayerCacheMissPreservesValidControllerIdentity",
                             testMapPlayerCacheMissPreservesValidControllerIdentity);
     nativeTestProfile().run("testMapMoveRejectsPlayerPlanSuspendedBeforeCommit",

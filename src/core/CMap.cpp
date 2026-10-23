@@ -216,6 +216,8 @@ Coords CMap::getLocationByName(std::string name) {
     return object ? object->getCoords() : ZERO;
 }
 
+std::shared_ptr<CPlayer> CMap::getAssignedPlayer() const { return player; }
+
 std::shared_ptr<CPlayer> CMap::getPlayer() {
     // TODO: think of better solution after save
     if (!player && permanentPlayerDeath && defeatedPlayer) {

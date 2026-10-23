@@ -182,6 +182,7 @@ FAST_TEST_PREFIXES = (
     "OctobogzEarlyTraceTest.",
     "PlayerControllerSuspensionSourceTest.",
     "GameMapBindingEpochSourceTest.",
+    "MapAssignedPlayerSourceTest.",
     "GameplayWaypointPublicationTest.",
     "GameplayCaveObservationTest.",
     "NineMarchesRecoveryTest.",
@@ -250,6 +251,7 @@ GAMEPLAY_TEST_PREFIXES = (
     "CityNativeLoadingRuntimeTest.",
     "CandlekeepMetadataRuntimeTest.",
     "NativeCoroutineCallbackTest.",
+    "MapAssignedPlayerRuntimeTest.",
     MCP_BRANCH_TEST_PREFIX,
     "McpTestSeedRuntimeTest.",
     "McpEquipmentRuntimeTest.",
@@ -27115,6 +27117,10 @@ if SOURCE_UI_TESTS_AVAILABLE:
         pass
 
     from tests.test_octobogz_early_trace import OctobogzEarlyTraceTest as _OctobogzEarlyTraceTest
+    from tests.test_map_assigned_player import (
+        MapAssignedPlayerSourceTest as _MapAssignedPlayerSourceTest,
+        MapAssignedPlayerRuntimeTest as _MapAssignedPlayerRuntimeTest,
+    )
     from tests.test_game_map_binding_epoch import (
         GameMapBindingEpochSourceTest as _GameMapBindingEpochSourceTest,
         GameMapBindingEpochRuntimeTest as _GameMapBindingEpochRuntimeTest,
@@ -27127,6 +27133,12 @@ if SOURCE_UI_TESTS_AVAILABLE:
         pass
 
     class OctobogzEarlyTraceTest(_OctobogzEarlyTraceTest):
+        pass
+
+    class MapAssignedPlayerSourceTest(_MapAssignedPlayerSourceTest):
+        pass
+
+    class MapAssignedPlayerRuntimeTest(_MapAssignedPlayerRuntimeTest):
         pass
 
     class GameMapBindingEpochSourceTest(_GameMapBindingEpochSourceTest):
@@ -27414,6 +27426,7 @@ if SOURCE_UI_TESTS_AVAILABLE:
     del _GameplayCandlekeepRoutesTest
     del _OctobogzEarlyTraceTest
     del _PlayerControllerSuspensionSourceTest
+    del _MapAssignedPlayerSourceTest, _MapAssignedPlayerRuntimeTest
     del _GameMapBindingEpochSourceTest, _GameMapBindingEpochRuntimeTest
     del _GameplayPotionConsumptionTest, _GameplayRecipeGoldRoutesTest, _GameplayCallbackMarketRoutesTest
     del _GameplayStartingSaveTest, _GameplayCampaignRouteTest, _GameplayRouteDialogTest
