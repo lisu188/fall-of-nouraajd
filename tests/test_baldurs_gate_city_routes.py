@@ -16,6 +16,94 @@ ROOT = Path(__file__).resolve().parents[1]
 
 
 class BaldursGateCityRoutesTest(unittest.TestCase):
+    def testNortheastArrivalCannotReachItsWestExitEvenWithOtherPortalCellsAllowed(self):
+        walkable, portals = routes.cityMovementCells()
+        bounds = routes.documents()["geometry"]["atlas"]["AR0300"]["bounds"]
+        origin, target = (186, 51, 0), (157, 35, 0)
+        self.assertIn(origin, walkable)
+        self.assertIn(target, walkable)
+        for forbidden in (portals, frozenset()):
+            with self.subTest(portal_safety=bool(forbidden)), self.assertRaisesRegex(
+                AssertionError, "No portal-safe city approach"
+            ):
+                routes.cityApproachPath(origin, target, bounds, walkable, forbidden)
+
+    def testCityTravelFromActualNortheastArrivalUsesReachableSourceBoundaries(self):
+        driver, _optional_path = self.boundaryTravelDriver()
+        driver.position = (186, 51, 0)
+        geometry = routes.documents()["geometry"]
+        old_route = routes.pathBetween("AR0300", "AR0200", geometry["connections"], lambda _link: True)
+        self.assertEqual(["cityAr0300Boundary6"], [row["object"] for row in old_route])
+        traversed = routes.travel(driver, "AR0200")
+        self.assertEqual("cityAr0300Boundary7", driver.transitions[0])
+        self.assertEqual("AR0200", routes.currentArea(driver))
+        self.assertEqual(len(driver.transitions), len(traversed))
+        self.assertGreater(len(driver.transitions), 1)
+        self.assertTrue(all(name.startswith("cityAr") for name in driver.transitions))
+        for name in driver.transitions:
+            self.assertIn(name, {row["object"] for row in geometry["connections"]})
+
+    def testComponentRouteCanReturnToAnotherStreetComponentButCannotInventAccessOrArrival(self):
+        atlas = {
+            "A": {"bounds": [0, 0, 0, 4, 2]},
+            "B": {"bounds": [6, 0, 0, 2, 1]},
+            "C": {"bounds": [10, 0, 0, 2, 1]},
+        }
+        walkable = frozenset({(0, 0, 0), (1, 0, 0), (3, 0, 0), (3, 1, 0), (6, 0, 0), (7, 0, 0), (10, 0, 0)})
+        portals = frozenset({(1, 0, 0), (7, 0, 0), (3, 0, 0)})
+        links = [
+            {"object": "aToC", "from": "A", "to": "C", "origin": [3, 0, 0], "target": [10, 0, 0]},
+            {"object": "aToB", "from": "A", "to": "B", "origin": [1, 0, 0], "target": [6, 0, 0]},
+            {"object": "bToA", "from": "B", "to": "A", "origin": [7, 0, 0], "target": [3, 1, 0]},
+        ]
+        route = routes.cityTravelPath((0, 0, 0), "A", "C", links, lambda _link: True, atlas, walkable, portals)
+        self.assertEqual(["aToB", "bToA", "aToC"], [row["object"] for row in route])
+        for denied in ("aToB", "bToA", "aToC"):
+            with self.subTest(denied=denied), self.assertRaisesRegex(
+                AssertionError, "No currently permitted source route"
+            ):
+                routes.cityTravelPath(
+                    (0, 0, 0), "A", "C", links, lambda link: link["object"] != denied, atlas, walkable, portals
+                )
+        wrong_arrival = [dict(row, target=[0, 0, 0]) if row["object"] == "bToA" else row for row in links]
+        with self.assertRaisesRegex(AssertionError, "No currently permitted source route"):
+            routes.cityTravelPath((0, 0, 0), "A", "C", wrong_arrival, lambda _link: True, atlas, walkable, portals)
+
+    def testTravelRejectsChangedActualPortalDestinationsAndWrongArrivalCoordinates(self):
+        for mutation in ("destination", "arrival"):
+            with self.subTest(mutation=mutation):
+                driver, _ = self.boundaryTravelDriver()
+                if mutation == "destination":
+                    original_call = driver.call
+                    driver.call = lambda owner, method, key: original_call(owner, method, key) + int(key == "targetX")
+                else:
+                    original_move = driver.navigateCoords
+
+                    def move(point, *, limit):
+                        before = len(driver.transitions)
+                        original_move(point, limit=limit)
+                        if len(driver.transitions) > before:
+                            driver.position = (driver.position[0] + 1, driver.position[1], driver.position[2])
+
+                    driver.navigateCoords = move
+                with self.assertRaisesRegex(
+                    AssertionError, "Actual source destination|Actual source arrival coordinates"
+                ):
+                    routes.travel(driver, "AR0100")
+                if mutation == "destination":
+                    self.assertEqual([], driver.moves)
+
+    def testNineWardTravelUsesRealArrivalComponentsAndCompulsoryPortalEntries(self):
+        driver, _ = self.boundaryTravelDriver()
+        driver.position = (186, 66, 0)
+        for area_id in routes.WARDS:
+            with self.subTest(destination=area_id):
+                before = len(driver.transitions)
+                traversed = routes.travel(driver, area_id)
+                self.assertEqual(area_id, routes.currentArea(driver))
+                self.assertEqual(len(traversed), len(driver.transitions) - before)
+        self.assertLess(driver.turns, 20000)
+
     def testPortalApproachAvoidsUnselectedForcedEdgesButAllowsItsActualDestination(self):
         walkable, portals = routes.cityMovementCells()
         geometry = routes.documents()["geometry"]
@@ -35,7 +123,6 @@ class BaldursGateCityRoutesTest(unittest.TestCase):
             self.assertEqual(1, sum(abs(a - b) for a, b in zip(before, after)))
             self.assertIn(after, walkable)
 
-
     def testPortalApproachAllowsTheSelectedPortalAndRejectsRoutesThroughAnotherOne(self):
         cells = frozenset((x, 0, 0) for x in range(3))
         portals = frozenset({(1, 0, 0), (2, 0, 0)})
@@ -43,7 +130,6 @@ class BaldursGateCityRoutesTest(unittest.TestCase):
         with self.assertRaisesRegex(AssertionError, "No portal-safe city approach"):
             routes.cityApproachPath((0, 0, 0), (2, 0, 0), [0, 0, 0, 3, 1], cells, portals)
         self.assertEqual(((0, 0, 0),), routes.cityApproachPath((1, 0, 0), (0, 0, 0), [0, 0, 0, 3, 1], cells, portals))
-
 
     def testOrdinaryCityApproachStaysInsideItsAreaAndFailsClosedWithoutWalkableAccess(self):
         cells = frozenset({(0, 0, 0), (0, 1, 0), (1, 1, 0), (2, 1, 0), (2, 0, 0)})
@@ -55,7 +141,6 @@ class BaldursGateCityRoutesTest(unittest.TestCase):
                 AssertionError, "No portal-safe city approach"
             ):
                 routes.cityApproachPath((0, 0, 0), target, bounds, cells, frozenset())
-
 
     def boundaryTravelDriver(self):
         """Model optional navigation edges plus mandatory portal entry, without native gameplay credit."""
@@ -115,6 +200,14 @@ class BaldursGateCityRoutesTest(unittest.TestCase):
             def object(self, name):
                 return name
 
+            def call(self, owner, method, key):
+                if method == "getNumericProperty" and key in ("targetX", "targetY", "targetZ"):
+                    link = next(row for row in geometry["connections"] if row["object"] == owner)
+                    return link["target"]["XYZ".index(key[-1])]
+                if method == "getBoolProperty" and key == "locked":
+                    return False
+                raise AssertionError((owner, method, key))
+
             def number(self, _key):
                 return 5
 
@@ -152,7 +245,6 @@ class BaldursGateCityRoutesTest(unittest.TestCase):
 
         return Driver(), optionalPath
 
-
     def testCityTravelAvoidsTheActualEastBoundaryOscillationWithAdjacentNativeTargets(self):
         driver, optional_path = self.boundaryTravelDriver()
         self.assertEqual((143, 35, 0), optional_path((144, 35, 0), (80, 30, 0))[0])
@@ -164,7 +256,6 @@ class BaldursGateCityRoutesTest(unittest.TestCase):
         self.assertEqual("AR0100", routes.currentArea(driver))
         self.assertLessEqual(driver.turns, 404)
         self.assertEqual(list(range(404, 404 - driver.turns, -1)), driver.limits)
-
 
     def testOrdinaryCityApproachRequiresActualArrivalsAndKeepsTheOriginalTurnBudget(self):
         from types import SimpleNamespace
@@ -197,7 +288,6 @@ class BaldursGateCityRoutesTest(unittest.TestCase):
                         self.assertEqual((2, 0, 0), driver.position)
                         self.assertEqual([136, 135], driver.limits)
                         self.assertEqual(2, driver.turns)
-
 
     def testAuthoredEastToNortheastPortalRunsWithExactNativePluginBuiltins(self):
         from types import SimpleNamespace

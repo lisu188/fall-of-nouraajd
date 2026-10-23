@@ -253,6 +253,33 @@ class CandlekeepMetadataSourceTest(TestCase):
         self.assertNotIn("setBoolProperty(", program)
         self.assertNotIn("setNumericProperty(", program)
 
+    def testPendingOriginBindingCopiesItsOptionalValueAndNativeProbeExercisesActualEdges(self):
+        source = (Path(__file__).resolve().parents[1] / "src/core/bindings/CModuleCreatures.cpp").read_text(
+            encoding="utf-8"
+        )
+        self.assertRegex(
+            source,
+            r'\.def\("getPendingMoveOrigin", &CCreature::getPendingMoveOrigin, py::return_value_policy::copy',
+        )
+        self.assertNotIn('.def("setPendingMoveOrigin"', source)
+        programs = []
+        marker = "native Candlekeep edges preserve copied origins and training ownership"
+        case = CandlekeepMetadataRuntimeTest()
+        with patch.object(case, "runChild", side_effect=lambda program: programs.append(program) or marker):
+            case.testNativePairedPortalEdgesRetainArrivalAndCleanUpTraining()
+        self.assertEqual(1, len(programs))
+        program = textwrap.dedent(programs[0])
+        ast.parse(program)
+        self.assertIn("world.move()", program)
+        self.assertIn("controller.setTarget(player, target.getCoords())", program)
+        self.assertIn("first is not second", program)
+        self.assertIn("player.getPendingMoveOrigin() is None", program)
+        self.assertIn("instance.createObject('obeDialog').invokeAction('beginTraining')", program)
+        self.assertIn("assert bag(player) == baseline_bag", program)
+        self.assertIn("assert equipped(player) == baseline_equipped", program)
+        self.assertNotIn("setNumericProperty(", program)
+        self.assertNotIn("setBoolProperty(", program)
+
 
 class CandlekeepMetadataRuntimeTest(TestCase):
     runChild = callback_lifecycle.PythonCallbackLifecycleTest.runChild
@@ -357,3 +384,87 @@ class CandlekeepMetadataRuntimeTest(TestCase):
                         (Path('save') / (slot + suffix)).unlink(missing_ok=True)
             """)
         self.assertIn("native Candlekeep purchase and training metadata saved as exact text", output)
+
+    def testNativePairedPortalEdgesRetainArrivalAndCleanUpTraining(self):
+        output = self.runChild("""
+            instance = game.CGameLoader.loadGame()
+            try:
+                game.CGameLoader.startGameWithPlayer(instance, 'candlekeep', 'Warrior')
+                loop.run()
+                world, player = instance.getMap(), instance.getMap().getPlayer()
+                def coords(value):
+                    return value.x, value.y, value.z
+                def bag(actor):
+                    return sorted((item.getName(), item.getTypeId()) for item in actor.getItems())
+                def equipped(actor):
+                    return {
+                        slot: (item.getName(), item.getTypeId())
+                        for slot, item in actor.getEquipped().items() if item
+                    }
+                copies = []
+                class OriginProbe(game.CEvent):
+                    def onLeave(self, event):
+                        mover = event.getCause()
+                        first, second = mover.getPendingMoveOrigin(), mover.getPendingMoveOrigin()
+                        assert isinstance(first, game.Coords) and first == mover.getCoords()
+                        assert first == second and first is not second
+                        copies.append(first)
+                probe = OriginProbe()
+                probe.setStringProperty('name', 'candlekeepPendingOriginProbe')
+                source = world.getObjectByName('storehouseExit')
+                target = world.getObjectByName('storehouseEntrance')
+                first_origin = coords(source.getCoords())
+                probe.relocateWithoutMoveHooks(source.getCoords())
+                world.addObject(probe)
+                # Fixture placement isolates a standing-on-door native edge; this is not MCP route acceptance.
+                player.relocateWithoutMoveHooks(source.getCoords())
+                assert player.getPendingMoveOrigin() is None
+                for index in range(2):
+                    controller = player.getController()
+                    controller.setTarget(player, target.getCoords())
+                    world.move()
+                    loop.run()
+                    assert player.getCoords() == target.getCoords(), (index, coords(player.getCoords()))
+                    assert player.getStringProperty('candlekeepPortalGuard') == ''
+                    assert player.getPendingMoveOrigin() is None
+                    assert len(copies) == index + 1
+                    assert coords(copies[0]) == first_origin
+                    source, target = target, source
+                    probe.relocateWithoutMoveHooks(source.getCoords())
+                assert coords(copies[0]) != coords(copies[1])
+                world.removeObject(probe)
+                baseline_bag, baseline_equipped = bag(player), equipped(player)
+                baseline_rewards = player.getGold(), player.getNumericProperty('exp')
+                instance.createObject('gatewardenDialog').invokeAction('acceptTraining')
+                instance.createObject('obeDialog').invokeAction('beginTraining')
+                loop.run()
+                assert world.getStringProperty('candlekeep_trainingStage') == 'active'
+                allies = [
+                    world.getObjectByName(name)
+                    for name in ('arkanis', 'canderous', 'deder', 'mordaine', 'osprey')
+                ]
+                assert all(allies)
+                source = world.getObjectByName('trainingExit')
+                target = world.getObjectByName('trainingEntrance')
+                player.relocateWithoutMoveHooks(source.getCoords())
+                controller = player.getController()
+                controller.setTarget(player, target.getCoords())
+                world.move()
+                loop.run()
+                assert player.getCoords() == target.getCoords()
+                assert player.getPendingMoveOrigin() is None
+                assert world.getStringProperty('candlekeep_trainingStage') == 'abandoned'
+                assert bag(player) == baseline_bag
+                assert equipped(player) == baseline_equipped
+                assert (player.getGold(), player.getNumericProperty('exp')) == baseline_rewards
+                assert all(world.getObjectByName(actor.getName()) is None for actor in allies)
+                for actor in (player, *allies):
+                    assert not any(
+                        item.getBoolProperty('plugin_candlekeepTemporary')
+                        for item in (*actor.getItems(), *actor.getEquipped().values()) if item
+                    )
+                print('native Candlekeep edges preserve copied origins and training ownership', flush=True)
+            finally:
+                instance.getContext().shutdown()
+            """)
+        self.assertIn("native Candlekeep edges preserve copied origins and training ownership", output)

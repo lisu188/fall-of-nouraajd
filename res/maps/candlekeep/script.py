@@ -258,6 +258,19 @@ def load(self, context):
             if player.getStringProperty("candlekeepPortalGuard") == self.getName():
                 player.setStringProperty("candlekeepPortalGuard", "")
                 return
+            origin = player.getPendingMoveOrigin()
+            paired = self.getMap().getObjectByName(self.getStringProperty("pairedPortal"))
+            if (
+                origin is not None
+                and isinstance(paired, CandlekeepPortal)
+                and paired.getCoords() == origin
+                and paired.target() == self.getCoords()
+                and player.getCoords() == self.getCoords()
+                and self.getMap().hasNavigationEdge(origin, self.getCoords(), paired.getName())
+            ):
+                if paired.getName() == "trainingExit":
+                    restoreTraining(self.getMap(), "abandoned")
+                return
             if self.getBoolProperty("trainingDoor") and (
                 self.getMap().getBoolProperty("candlekeepTrainingClosed")
                 or not self.getMap().getBoolProperty("candlekeepTrainingAccepted")

@@ -130,36 +130,63 @@ def cityMovementCells():
     return frozenset(walkable), frozenset(portals)
 
 
-def cityApproachPath(origin, destination, bounds, walkable, portals):
-    """Plan cardinal cells within one source area; entering any other portal would force a different trip."""
-    origin, destination = tuple(origin), tuple(destination)
+def cityApproachParents(origin, bounds, walkable, portals):
+    """Reach street cells and portal endpoints without continuing through a compulsory entrance."""
+    origin = tuple(origin)
     x, y, z, width, height = bounds
 
     def permitted(point):
-        return (
-            point in walkable
-            and point[2] == z
-            and x <= point[0] < x + width
-            and y <= point[1] < y + height
-            and (point in {origin, destination} or point not in portals)
-        )
+        return point in walkable and point[2] == z and x <= point[0] < x + width and y <= point[1] < y + height
 
-    if permitted(origin) and permitted(destination):
+    previous = {}
+    if permitted(origin):
         pending, previous = deque([origin]), {origin: None}
         while pending:
             point = pending.popleft()
-            if point == destination:
-                result = []
-                while previous[point] is not None:
-                    result.append(point)
-                    point = previous[point]
-                return tuple(reversed(result))
             px, py, pz = point
             for candidate in ((px - 1, py, pz), (px + 1, py, pz), (px, py - 1, pz), (px, py + 1, pz)):
                 if candidate not in previous and permitted(candidate):
                     previous[candidate] = point
-                    pending.append(candidate)
+                    if candidate not in portals:
+                        pending.append(candidate)
+    return previous
+
+
+def cityApproachPath(origin, destination, bounds, walkable, portals):
+    """Plan cardinal cells within one source area; entering any other portal would force a different trip."""
+    destination = tuple(destination)
+    previous = cityApproachParents(origin, bounds, walkable, portals)
+    if destination in previous:
+        result, point = [], destination
+        while previous[point] is not None:
+            result.append(point)
+            point = previous[point]
+        return tuple(reversed(result))
     raise AssertionError(("No portal-safe city approach", origin, destination, bounds))
+
+
+def cityTravelPath(origin, start_area, destination, connections, allowed, atlas, walkable, portals):
+    edges = defaultdict(list)
+    for link in connections:
+        if allowed(link):
+            edges[link["from"]].append(link)
+    pending = deque([(start_area, tuple(origin), ())])
+    visited = {(start_area, tuple(origin))}
+    while pending:
+        area_id, point, route = pending.popleft()
+        if area_id not in atlas:
+            continue
+        reachable = cityApproachParents(point, atlas[area_id]["bounds"], walkable, portals)
+        if not reachable:
+            continue
+        if area_id == destination:
+            return route
+        for link in sorted(edges[area_id], key=lambda entry: entry["object"]):
+            arrival = (link["to"], tuple(link["target"]))
+            if tuple(link["origin"]) in reachable and arrival not in visited:
+                visited.add(arrival)
+                pending.append((*arrival, route + (link,)))
+    raise AssertionError(f"No currently permitted source route from {start_area} at {origin} to {destination}")
 
 
 def approachCityObject(d, name, *, reenter=False):
@@ -212,10 +239,25 @@ def travel(d, destination):
                 return False
         return True
 
-    route = pathBetween(currentArea(d), destination, geometry["connections"], allowed)
+    route = cityTravelPath(
+        d.coords(),
+        currentArea(d),
+        destination,
+        geometry["connections"],
+        allowed,
+        geometry["atlas"],
+        *cityMovementCells(),
+    )
     traversed = []
     for link in route:
         name = link["object"]
+        portal = d.object(name)
+        d.test.assertEqual(tuple(link["origin"]), d.coords(portal), (name, "Actual source entrance"))
+        d.test.assertEqual(
+            tuple(link["target"]),
+            tuple(d.call(portal, "getNumericProperty", "target" + axis) for axis in "XYZ"),
+            (name, "Actual source destination"),
+        )
         approachCityObject(d, name)
         if currentArea(d) != link["to"]:
             portal = d.object(name)
@@ -229,6 +271,7 @@ def travel(d, destination):
                     d.choose(dialog, method)
             approachCityObject(d, name, reenter=True)
         d.test.assertEqual(link["to"], currentArea(d), (name, "Actual portal arrival"))
+        d.test.assertEqual(tuple(link["target"]), d.coords(), (name, "Actual source arrival coordinates"))
         d.test.assertEqual(link["to"], d.string("activeSimulationRegion"))
         properties = config[name]["properties"]
         source_id = properties.get("sourceRegion")

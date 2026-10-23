@@ -90,6 +90,7 @@ class CityNativeLoadingRuntimeTest(unittest.TestCase):
             import json
             def decodeCityData(encoded):
                 return json.loads(encoded.removeprefix('city-json:'))
+            os.environ['GAME_SAVE_STAGE_DIAGNOSTICS'] = '1'
             slot = 'city-metadata-' + str(os.getpid()) + '-' + str(time.time_ns())
             started = time.monotonic()
             def phase(name):
@@ -159,6 +160,80 @@ class CityNativeLoadingRuntimeTest(unittest.TestCase):
             """)
         self.assertIn("native city metadata and item ownership survived save reload", output)
 
+    def testNativeSaveDiagnosticsAreSilentByDefaultAndPreserveTheSavedDocument(self):
+        import json
+
+        output, errors = self.runChild(
+            """
+            import json
+            import os
+            from pathlib import Path
+            import time
+            os.environ.pop('GAME_SAVE_STAGE_DIAGNOSTICS', None)
+            prefix = 'save-stage-' + str(os.getpid()) + '-' + str(time.time_ns())
+            slots = (prefix + '-disabled', prefix + '-enabled')
+            instance = game.CGameLoader.loadGame()
+            completed = False
+            try:
+                game.CGameLoader.startGameWithPlayer(instance, 'multilevel', 'Warrior')
+                loop.run()
+                world = instance.getMap()
+                assert game.CMapLoader.saveWithResult(world, slots[0])
+                os.environ['GAME_SAVE_STAGE_DIAGNOSTICS'] = '1'
+                assert game.CMapLoader.saveWithResult(world, slots[1])
+                documents = [json.loads((Path('save') / (slot + '.json')).read_text(encoding='utf-8')) for slot in slots]
+                assert documents[0] == documents[1], 'Diagnostics must preserve the actual saved document'
+                completed = True
+                print('native save diagnostics preserve default silence and saved document', flush=True)
+            finally:
+                instance.getContext().shutdown()
+                if completed:
+                    for slot in slots:
+                        for suffix in ('.json', '.json.bak'):
+                            (Path('save') / (slot + suffix)).unlink(missing_ok=True)
+            """,
+            return_stderr=True,
+        )
+        self.assertIn("native save diagnostics preserve default silence and saved document", output)
+        records = [json.loads(line) for line in errors.splitlines() if line.startswith('{"diagnostic":"save-stage"')]
+        stages = [row["stage"] for row in records]
+        self.assertEqual(
+            [
+                "journal.begin",
+                "journal.end",
+                "graph.begin",
+                "graph.end",
+                "envelope.begin",
+                "envelope.end",
+                "json.begin",
+                "json.end",
+                "write.begin",
+                "write.end",
+            ],
+            stages,
+            errors,
+        )
+        elapsed = [row["elapsedMicroseconds"] for row in records]
+        self.assertTrue(all(type(value) is int and value >= 0 for value in elapsed), records)
+        self.assertEqual(sorted(elapsed), elapsed)
+        self.assertTrue(all(row["success"] is True for row in records), records)
+        graph = records[stages.index("graph.end")]
+        self.assertGreater(graph["objects"], 0)
+        self.assertGreater(graph["tiles"], 0)
+        self.assertTrue(
+            all((row["objects"], row["tiles"]) == (graph["objects"], graph["tiles"]) for row in records[3:])
+        )
+        encoded = records[stages.index("json.end")]["bytes"]
+        self.assertGreater(encoded, 0)
+        self.assertEqual([encoded, encoded], [row["bytes"] for row in records[-2:]])
+        self.assertLessEqual(len(records), 10, "The default-disabled first save must emit no diagnostic records")
+        self.assertTrue(
+            all(
+                set(row) == {"diagnostic", "stage", "elapsedMicroseconds", "objects", "tiles", "bytes", "success"}
+                for row in records
+            )
+        )
+
 
 class CityNativeLoadingSourceTest(unittest.TestCase):
     def program(self, method_name, marker):
@@ -173,6 +248,79 @@ class CityNativeLoadingSourceTest(unittest.TestCase):
         ast.parse(textwrap.dedent(program))
         self.assertEqual({}, kwargs, "Keep the shared bounded child timeout")
         return program
+
+    def testChildCanReturnDiagnosticStderrWithoutChangingItsDefaultResultOrDeadline(self):
+        import subprocess
+
+        case = CityNativeLoadingRuntimeTest("testCityStructuredMetadataAndOwnedItemsSurviveSaveReload")
+        completed = subprocess.CompletedProcess(["python", "-c", "pass"], 0, "child stdout", "child diagnostics")
+        with patch("tests.test_python_callback_lifecycle.subprocess.run", return_value=completed) as run:
+            self.assertEqual("child stdout", case.runChild("pass"))
+            self.assertEqual(("child stdout", "child diagnostics"), case.runChild("pass", return_stderr=True))
+        self.assertEqual([30, 30], [call.kwargs["timeout"] for call in run.call_args_list])
+        self.assertTrue(all(call.kwargs["capture_output"] for call in run.call_args_list))
+
+    def testSaveDiagnosticsAreOptInAndBracketExistingSaveStagesWithoutExtraGraphWork(self):
+        from pathlib import Path
+
+        source = (Path(__file__).resolve().parents[1] / "src/core/CLoader.cpp").read_text(encoding="utf-8")
+        self.assertIn("class SaveStageDiagnostics", source)
+        helper = source.split("class SaveStageDiagnostics", 1)[1].split("build_save_envelope", 1)[0]
+        self.assertIn('std::getenv("GAME_SAVE_STAGE_DIAGNOSTICS")', helper)
+        self.assertIn("if (!enabled)", helper)
+        self.assertIn("noexcept", helper)
+        self.assertIn("std::fprintf(stderr", helper)
+        self.assertIn("std::fflush(stderr)", helper)
+        for forbidden in ("getTiles(", "getObjects(", "serializeExpected(", "to_string(", "map->", "slot"):
+            self.assertNotIn(forbidden, helper)
+        build = source.split("build_save_envelope(", 1)[1].split("void apply_authored_map_metadata", 1)[0]
+        self.assertEqual(1, build.count("CSerialization::serializeExpected("))
+        for before, operation, after in (
+            ('mark("journal.begin")', "player->captureQuestJournal()", 'mark("journal.end")'),
+            ('mark("graph.begin")', "CSerialization::serializeExpected(", "diagnostics.graphFinished(*snapshot)"),
+            ('mark("envelope.begin")', "CSaveFormat::buildEnvelope(", 'mark("envelope.end"'),
+        ):
+            self.assertLess(build.index(before), build.index(operation))
+            self.assertLess(build.index(operation), build.index(after))
+        save = source.split("bool CMapLoader::saveWithResult(", 1)[1].split("void CMapLoader::handleTileLayer", 1)[0]
+        self.assertEqual(1, save.count("CJsonUtil::to_string("))
+        self.assertEqual(1, save.count("resources->save("))
+        self.assertLess(save.index('mark("json.begin")'), save.index("CJsonUtil::to_string("))
+        self.assertLess(save.index("CJsonUtil::to_string("), save.index('mark("json.end"'))
+        self.assertLess(save.index('mark("write.begin"'), save.index("resources->save("))
+        self.assertLess(save.index("resources->save("), save.index('mark("write.end"'))
+        program = self.program(
+            "testCityStructuredMetadataAndOwnedItemsSurviveSaveReload",
+            "native city metadata and item ownership survived save reload",
+        )
+        self.assertIn("os.environ['GAME_SAVE_STAGE_DIAGNOSTICS'] = '1'", program)
+
+    def testDeferredDiagnosticProbeUsesRealSavesAndKeepsTheExistingChildDeadline(self):
+        from pathlib import Path
+
+        tree = ast.parse(Path(__file__).read_text(encoding="utf-8"))
+        method = next(
+            node
+            for node in ast.walk(tree)
+            if isinstance(node, ast.FunctionDef)
+            and node.name == "testNativeSaveDiagnosticsAreSilentByDefaultAndPreserveTheSavedDocument"
+        )
+        call = next(
+            node
+            for node in ast.walk(method)
+            if isinstance(node, ast.Call) and isinstance(node.func, ast.Attribute) and node.func.attr == "runChild"
+        )
+        self.assertEqual(
+            {"return_stderr": True}, {keyword.arg: ast.literal_eval(keyword.value) for keyword in call.keywords}
+        )
+        program = ast.literal_eval(call.args[0])
+        child = ast.parse(textwrap.dedent(program))
+        operations = [ast.unparse(node.func) for node in ast.walk(child) if isinstance(node, ast.Call)]
+        self.assertEqual(2, operations.count("game.CMapLoader.saveWithResult"))
+        self.assertIn("os.environ.pop('GAME_SAVE_STAGE_DIAGNOSTICS', None)", program)
+        self.assertIn("os.environ['GAME_SAVE_STAGE_DIAGNOSTICS'] = '1'", program)
+        self.assertIn("assert documents[0] == documents[1]", program)
+        self.assertIn("if completed:", program)
 
     def testConstructionProbeChecksActualInitializedItemsAndTextMetadata(self):
         program = self.program(
