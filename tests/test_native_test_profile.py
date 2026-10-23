@@ -122,13 +122,33 @@ class NativeTestProfileSourceTest(unittest.TestCase):
         self.assertIn("if (providedMap)", fixture)
         self.assertLess(fixture.index("game->setMap(providedMap)"), fixture.index("hero = std::make_shared<CPlayer>"))
         work = source.split("struct EncounterAdmissionWork", 1)[1].split("class EncounterAdmissionEffect", 1)[0]
-        self.assertIn("std::dynamic_pointer_cast<EncounterAdmissionSnapshotMap>(map)", work)
-        self.assertIn("owner->stopNextGraph = true;", work)
-        self.assertIn("~SnapshotGraphStop()", work)
-        self.assertIn("owner->stopNextGraph = false;", work)
-        self.assertLess(work.index("} graphStop(map);"), work.index("CMapLoader::saveWithResult(map,"))
-        self.assertEqual(1, work.count("CMapLoader::saveWithResult(map,"))
-        self.assertIn("an encounter save must reject or hit the intentional graph stop without writing", work)
+        self.assertIn("    void attempt() {", work)
+        attempt = work.split("    void attempt() {", 1)[1].split("\n    }\n", 1)[0]
+        self.assertIn("struct SnapshotGraphStop {", attempt)
+        self.assertIn("} graphStop(map, armedAttempts);", attempt)
+        guard = attempt.split("struct SnapshotGraphStop {", 1)[1].split("} graphStop(map, armedAttempts);", 1)[0]
+        self.assertIn("~SnapshotGraphStop()", guard)
+        constructor, destructor = guard.split("~SnapshotGraphStop()", 1)
+        self.assertIn("std::dynamic_pointer_cast<EncounterAdmissionSnapshotMap>(map)", constructor)
+        self.assertIn("if (owner) {", constructor)
+        owned_start = constructor.split("if (owner) {", 1)[1].split("}", 1)[0]
+        self.assertIn("owner->stopNextGraph = true;", owned_start)
+        self.assertIn("++armedAttempts;", owned_start)
+        self.assertEqual(1, constructor.count("++armedAttempts;"))
+        self.assertLess(owned_start.index("owner->stopNextGraph = true;"), owned_start.index("++armedAttempts;"))
+        self.assertIn("if (owner) {", destructor)
+        owned_end = destructor.split("if (owner) {", 1)[1].split("}", 1)[0]
+        self.assertIn("owner->stopNextGraph = false;", owned_end)
+        self.assertIn("CMapLoader::saveWithResult(map,", attempt)
+        self.assertLess(
+            attempt.index("} graphStop(map, armedAttempts);"), attempt.index("CMapLoader::saveWithResult(map,")
+        )
+        self.assertEqual(1, attempt.count("CMapLoader::saveWithResult(map,"))
+        self.assertTrue(
+            attempt.rstrip().endswith(
+                '"an encounter save must reject or hit the intentional graph stop without writing");'
+            )
+        )
 
     def testDirectEncounterAdmissionKeepsFiveBoundariesAndExactWorkBudgets(self):
         source = (ROOT / "tests/unit/test_allied_combat.cpp").read_text(encoding="utf-8")
