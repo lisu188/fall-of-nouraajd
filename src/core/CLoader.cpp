@@ -24,7 +24,9 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #include "core/CTypes.h"
 #include "gui/CGui.h"
 #include "gui/object/CMapGraphicsObject.h"
+#include "handler/CGuiHandler.h"
 #include "handler/CRngHandler.h"
+#include "handler/CScriptHandler.h"
 #include "object/CCreature.h"
 #include "object/CCreatureRace.h"
 #include "object/CPlayer.h"
@@ -661,6 +663,97 @@ bool readNativeEncounterSavePolicy(const json &properties) {
     return policy.get<bool>();
 }
 
+std::string readVerifiedLoadResumeReceiver(const json &properties) {
+    if (!properties.contains("verifiedLoadResumeReceiver")) {
+        return {};
+    }
+    const auto &value = properties.at("verifiedLoadResumeReceiver");
+    if (!value.is_string()) {
+        throw std::runtime_error("Authored map property verifiedLoadResumeReceiver must be a string");
+    }
+    const auto name = value.get<std::string>();
+    if (name.size() > 256 || std::any_of(name.begin(), name.end(),
+                                         [](unsigned char character) { return character < 32 || character == 127; })) {
+        throw std::runtime_error("Authored map property verifiedLoadResumeReceiver contains an invalid receiver name");
+    }
+    return name;
+}
+
+std::string authoredVerifiedLoadResumeReceiver(const std::shared_ptr<CGame> &game, const std::shared_ptr<CMap> &map) {
+    const auto authored = game->getConfigurationProvider()->getConfiguration(getMapPath(map->getMapName()));
+    if (!authored) {
+        return {};
+    }
+    const json emptyObject = json::object();
+    const auto &properties = authored->contains("properties") && authored->at("properties").is_object()
+                                 ? authored->at("properties")
+                                 : emptyObject;
+    return readVerifiedLoadResumeReceiver(properties);
+}
+
+bool verifiedLoadResumeBindingIsCurrent(const std::shared_ptr<CGame> &game,
+                                        const std::shared_ptr<CGameContext> &context, const std::shared_ptr<CMap> &map,
+                                        const std::shared_ptr<CMapObject> &receiver, const std::string &receiverName,
+                                        CGameContext::TransitionGeneration generation) {
+    const auto ownsBinding = [&] {
+        return game && context && map && receiver && game->getContext() == context &&
+               context->isTransitionGenerationCurrent(generation) && game->getMap() == map && map->getGame() == game &&
+               receiver->getGame() == game && receiver->getMap() == map;
+    };
+    if (!ownsBinding()) {
+        return false;
+    }
+    const auto configured = map->getStringProperty("verifiedLoadResumeReceiver");
+    return ownsBinding() && configured == receiverName && map->getObjectByName(receiverName) == receiver;
+}
+
+vstd::task<void> resumeVerifiedLoadFlowAsync(std::weak_ptr<CGame> weakGame, std::weak_ptr<CGameContext> weakContext,
+                                             std::weak_ptr<CMap> weakMap, std::weak_ptr<CMapObject> weakReceiver,
+                                             std::string receiverName, CGameContext::TransitionGeneration generation) {
+    co_await vstd::post(vstd::event_loop<>::instance());
+    try {
+        auto game = weakGame.lock();
+        auto context = weakContext.lock();
+        auto map = weakMap.lock();
+        auto receiver = weakReceiver.lock();
+        if (!verifiedLoadResumeBindingIsCurrent(game, context, map, receiver, receiverName, generation)) {
+            co_return;
+        }
+        auto handler = context->getGuiHandler();
+        auto flow = CScriptHandler::createObjectFlow(receiver, "resumeAfterVerifiedLoadFlow", {}, weakGame);
+        if (!flow || !verifiedLoadResumeBindingIsCurrent(game, context, map, receiver, receiverName, generation)) {
+            co_return;
+        }
+        game.reset();
+        context.reset();
+        map.reset();
+        receiver.reset();
+        co_await handler->runScriptFlowAsync(std::move(flow));
+    } catch (const vstd::task_cancelled &) {
+        co_return;
+    } catch (const std::exception &error) {
+        vstd::logger::warning("Verified save resume flow was not completed:", error.what());
+    }
+}
+
+void queueVerifiedLoadResume(const std::shared_ptr<CGame> &game, const std::shared_ptr<CGameContext> &context,
+                             const std::shared_ptr<CMap> &map, const std::shared_ptr<CMapObject> &receiver,
+                             const std::string &receiverName, CGameContext::TransitionGeneration generation) {
+    try {
+        if (receiverName.empty()) {
+            return;
+        }
+        if (!verifiedLoadResumeBindingIsCurrent(game, context, map, receiver, receiverName, generation)) {
+            vstd::logger::warning("Verified save resume receiver is unavailable or superseded:", receiverName);
+            return;
+        }
+        context->spawnTask(resumeVerifiedLoadFlowAsync(game, context, map, receiver, receiverName, generation));
+    } catch (const vstd::task_cancelled &) {
+    } catch (const std::exception &error) {
+        vstd::logger::warning("Verified save resume flow was not queued:", error.what());
+    }
+}
+
 std::optional<int> parse_int_text(const std::string &text) {
     if (text.empty()) {
         return std::nullopt;
@@ -857,6 +950,7 @@ void apply_authored_map_metadata(const std::shared_ptr<CGame> &game, const std::
         return;
     }
     bool nativeEncounterPolicy = false;
+    std::string verifiedLoadReceiver;
     if (auto mapc = game->getConfigurationProvider()->getConfiguration(getMapPath(mapName))) {
         map->setDefaultTiles({});
         map->setOutOfBoundsTiles({});
@@ -869,6 +963,7 @@ void apply_authored_map_metadata(const std::shared_ptr<CGame> &game, const std::
         const json &mapProperties =
             mapc->contains("properties") && (*mapc)["properties"].is_object() ? (*mapc)["properties"] : emptyObject;
         nativeEncounterPolicy = readNativeEncounterSavePolicy(mapProperties);
+        verifiedLoadReceiver = readVerifiedLoadResumeReceiver(mapProperties);
         map->setEntryX(read_int_property(mapProperties, "x", 0));
         map->setEntryY(read_int_property(mapProperties, "y", 0));
         map->setEntryZ(read_int_property(mapProperties, "z", 0));
@@ -881,6 +976,7 @@ void apply_authored_map_metadata(const std::shared_ptr<CGame> &game, const std::
         }
     }
     map->setBoolProperty("guardNativeEncounterSaves", nativeEncounterPolicy);
+    map->setStringProperty("verifiedLoadResumeReceiver", verifiedLoadReceiver);
 }
 
 class CScopedObjectConfig {
@@ -1219,6 +1315,7 @@ void CMapLoader::loadFromTmx(const std::shared_ptr<CMap> &map, const std::shared
         const json &mapProperties =
             mapc->contains("properties") && (*mapc)["properties"].is_object() ? (*mapc)["properties"] : emptyObject;
         map->setBoolProperty("guardNativeEncounterSaves", readNativeEncounterSavePolicy(mapProperties));
+        map->setStringProperty("verifiedLoadResumeReceiver", readVerifiedLoadResumeReceiver(mapProperties));
         const json &mapLayers =
             mapc->contains("layers") && (*mapc)["layers"].is_array() ? (*mapc)["layers"] : emptyArray;
         map->setDefaultTiles({});
@@ -1956,18 +2053,25 @@ void CGameLoader::loadSavedGame(const std::shared_ptr<CGame> &game, const std::s
     if (!game) {
         return;
     }
-    auto admission = game->getContext()->tryBeginVerifiedRestore();
+    const auto context = game->getContext();
+    const auto generation = context->captureTransitionGeneration();
+    auto admission = context->tryBeginVerifiedRestore();
     if (!admission) {
         vstd::logger::warning("Rejected save load while a native operation or snapshot owns the session:", save);
         return;
     }
     if (auto loaded = try_load_saved_map(game, save)) {
+        const auto receiverName = authoredVerifiedLoadResumeReceiver(game, loaded->map);
+        const auto receiver = loaded->map->getObjectByName(receiverName);
         vstd::event_loop<>::instance()->resetQuit();
         game->setMap(loaded->map);
         repair_recovered_backup(game, *loaded, save);
         if (!admission->commit(loaded->map)) {
             vstd::logger::warning("Verified save installation was superseded; save quarantine was retained:", save);
+            return;
         }
+        admission.reset();
+        queueVerifiedLoadResume(game, context, loaded->map, receiver, receiverName, generation);
         return;
     }
     vstd::logger::warning("Saved game was not loaded; keeping the active map unchanged:", save);

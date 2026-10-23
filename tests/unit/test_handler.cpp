@@ -62,6 +62,7 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #include <algorithm>
 #include <atomic>
 #include <chrono>
+#include <cstdio>
 #include <cstdlib>
 #include <filesystem>
 #include <fstream>
@@ -4635,6 +4636,291 @@ void testVerifiedRestoreReappliesAuthoritativeNativeSavePolicy() {
     }
 }
 
+class VerifiedResumePolicyProbe : public CMapObject {
+  public:
+    int creates = 0;
+    std::string observed;
+    void onCreate(std::shared_ptr<CGameEvent>) override {
+        ++creates;
+        observed = getMap()->getStringProperty("verifiedLoadResumeReceiver");
+    }
+};
+
+void testVerifiedLoadResumePolicyIsStrictAndPrecedesObjects() {
+    const std::vector<std::optional<json>> declarations{std::nullopt,
+                                                        json(""),
+                                                        json("resumeReceiver"),
+                                                        json(nullptr),
+                                                        json(true),
+                                                        json(1),
+                                                        json::array(),
+                                                        json::object(),
+                                                        json(std::string(257, 'x')),
+                                                        json(std::string("bad\0name", 8))};
+    for (std::size_t index = 0; index < declarations.size(); ++index) {
+        auto game = makeWindowlessFightGame();
+        auto map = game->getMap();
+        map->setStringProperty("verifiedLoadResumeReceiver", "savedAdHocReceiver");
+        auto probe = std::make_shared<VerifiedResumePolicyProbe>();
+        game->getObjectHandler()->registerType("VerifiedResumePolicyProbe", [probe] { return probe; });
+        json properties = json::object();
+        if (declarations[index]) {
+            properties["verifiedLoadResumeReceiver"] = *declarations[index];
+        }
+        json object = {{"type", "VerifiedResumePolicyProbe"},
+                       {"name", "resumePolicyProbe"},
+                       {"x", 0},
+                       {"y", 0},
+                       {"width", 32},
+                       {"height", 32}};
+        json layer = {{"type", "objectgroup"}, {"objects", json::array({object})}};
+        bool rejected = false;
+        try {
+            CMapLoader::loadFromTmx(
+                map, std::make_shared<json>(json{{"properties", properties}, {"layers", json::array({layer})}}));
+        } catch (const std::runtime_error &error) {
+            rejected = std::string(error.what()).find("verifiedLoadResumeReceiver") != std::string::npos;
+        }
+        const bool valid = index < 3;
+        const auto expected = index == 2 ? "resumeReceiver" : "";
+        expect_true(valid ? (!rejected && probe->creates == 1 && probe->observed == expected)
+                          : (rejected && probe->creates == 0 && map->getObjects().empty()),
+                    "resume policy must be an authored bounded string before object hooks; absent/empty disables it");
+        game->getContext()->shutdown();
+    }
+}
+
+struct VerifiedResumeState {
+    std::weak_ptr<CGame> game;
+    int calls = 0;
+    bool snapshotAvailable = false;
+    bool unsafeAvailable = false;
+};
+
+struct VerifiedResumeFixture {
+    std::shared_ptr<CGame> game = load_empty_game();
+    std::shared_ptr<VerifiedResumeState> state = std::make_shared<VerifiedResumeState>();
+    std::shared_ptr<CResourcesProvider> resources = game->getResourcesProvider();
+    std::string slot;
+
+    VerifiedResumeFixture() {
+        state->game = game;
+        auto gui = std::make_shared<WindowlessFightTestGui>();
+        gui->setGame(game);
+        game->setGui(gui);
+        add_test_player(game);
+        pybind11::dict scope;
+        scope["__name__"] = "verified_resume_probe";
+        scope["observe"] = pybind11::cpp_function([shared = state] {
+            ++shared->calls;
+            if (auto owner = shared->game.lock()) {
+                auto map = owner->getMap();
+                shared->snapshotAvailable = map->tryBeginSaveSnapshot().has_value();
+                auto unsafe = map->tryBeginUnsafeOperation();
+                shared->unsafeAvailable = unsafe.has_value();
+                if (unsafe) {
+                    unsafe->finish();
+                }
+            }
+        });
+        pybind11::exec(R"(
+class Receiver:
+    def resumeAfterVerifiedLoadFlow(self):
+        observe()
+        if False:
+            yield None
+)",
+                       scope);
+        const pybind11::object receiverType = scope["Receiver"];
+        game->getObjectHandler()->registerType("VerifiedLoadReceiverProbe", [receiverType] {
+            auto receiver = std::make_shared<CMapObject>();
+            CPythonOverrides::retain(receiver, receiverType());
+            return receiver;
+        });
+        auto receiver = game->createObject<CMapObject>("VerifiedLoadReceiverProbe");
+        receiver->setName("resumeReceiver");
+        game->getMap()->addObject(receiver);
+        // Change only this fixture context's parsed configuration cache, never resource files.
+        auto authored =
+            std::const_pointer_cast<json>(game->getConfigurationProvider()->getConfiguration("maps/empty/map.json"));
+        expect_true(authored && authored->is_object(), "resume fixture needs the authored empty-map configuration");
+        if (!authored || !authored->is_object()) {
+            return;
+        }
+        if (!(*authored)["properties"].is_object()) {
+            (*authored)["properties"] = json::object();
+        }
+        (*authored)["properties"]["verifiedLoadResumeReceiver"] = "resumeReceiver";
+        game->getMap()->setStringProperty("verifiedLoadResumeReceiver", "savedAdHocReceiver");
+        slot = "native-verified-resume-" + std::to_string(std::chrono::steady_clock::now().time_since_epoch().count());
+        expect_true(CMapLoader::saveWithResult(game->getMap(), slot), "resume fixture must use an actual native save");
+    }
+
+    void cleanup(bool successful) {
+        if (successful && !slot.empty()) {
+            for (const auto &relative : {CSaveFormat::primaryPath(slot), CSaveFormat::backupPath(slot)}) {
+                const auto path = resources->getPath(relative);
+                if (!path.empty()) {
+                    std::filesystem::remove(path);
+                }
+            }
+        }
+        if (game) {
+            game->getContext()->shutdown();
+        }
+    }
+};
+
+void testVerifiedLoadResumesActualFlowOnlyAfterPostedLeaseRelease() {
+    VerifiedResumeFixture fixture;
+    constexpr int INSTALLATIONS = 8;
+    bool successful = true;
+    for (int index = 0; index < INSTALLATIONS; ++index) {
+        auto original = fixture.game->getMap();
+        auto unsafe = original->tryBeginUnsafeOperation();
+        expect_true(unsafe.has_value(), "resume fixture must own the quarantine it recovers");
+        if (!unsafe) {
+            fixture.cleanup(false);
+            return;
+        }
+        unsafe->quarantine();
+        fixture.state->snapshotAvailable = false;
+        fixture.state->unsafeAvailable = false;
+        const bool backup_recovery = index == INSTALLATIONS / 2;
+        if (backup_recovery) {
+            fixture.resources->save(CSaveFormat::primaryPath(fixture.slot), "{ invalid");
+        }
+        CGameLoader::loadSavedGame(fixture.game, fixture.slot);
+        const bool installed = fixture.game->getMap() != original;
+        const bool queued = installed && fixture.state->calls == index &&
+                            fixture.game->getMap()->getStringProperty("verifiedLoadResumeReceiver") == "resumeReceiver";
+        expect_true(queued,
+                    "verified load must reapply authored receiver and return before its posted real UiFlow runs");
+        const bool repaired =
+            !backup_recovery ||
+            CSaveFormat::decodeDocument(fixture.resources->loadJson(CSaveFormat::primaryPath(fixture.slot)))
+                .has_value();
+        expect_true(repaired, "backup repair must complete before the verified resume task can dispatch");
+        vstd::event_loop<>::instance()->run();
+        const bool resumed =
+            fixture.state->calls == index + 1 && fixture.state->snapshotAvailable && fixture.state->unsafeAvailable;
+        expect_true(resumed, "each verified installation must resume once after restore exclusivity is released");
+        successful = successful && queued && repaired && resumed;
+    }
+    std::printf("verified-load-resume installations=%d dispatches=%d expected=%d\n", INSTALLATIONS,
+                fixture.state->calls, INSTALLATIONS);
+    fixture.cleanup(successful);
+}
+
+void testVerifiedLoadResumeRejectsSupersededWeakBindings() {
+    for (int mode = 0; mode < 6; ++mode) {
+        VerifiedResumeFixture fixture;
+        auto original = fixture.game->getMap();
+        CGameLoader::loadSavedGame(fixture.game, fixture.slot);
+        auto installed = fixture.game->getMap();
+        const bool queued = installed != original && fixture.state->calls == 0;
+        if (mode == 0) {
+            fixture.game->getContext()->advanceTransitionGeneration();
+        } else if (mode == 1) {
+            auto replacement = std::make_shared<CMap>();
+            replacement->setGame(fixture.game);
+            fixture.game->setMap(replacement);
+        } else if (mode == 2) {
+            installed->setStringProperty("verifiedLoadResumeReceiver", "anotherReceiver");
+        } else if (mode == 3) {
+            installed->removeObject(installed->getObjectByName("resumeReceiver"));
+            auto replacement = fixture.game->createObject<CMapObject>("VerifiedLoadReceiverProbe");
+            replacement->setName("resumeReceiver");
+            installed->addObject(replacement);
+        } else if (mode == 4) {
+            fixture.game->getContext()->shutdown();
+        } else {
+            fixture.game.reset();
+            expect_true(fixture.state->game.expired(), "queued resume must not retain the game's final owner");
+        }
+        vstd::event_loop<>::instance()->run();
+        const bool suppressed = fixture.state->calls == 0;
+        expect_true(queued && suppressed,
+                    "stale generation/map/policy/receiver/context/game must suppress posted resume");
+        fixture.cleanup(queued && suppressed);
+    }
+}
+
+void testUnverifiedOrRejectedLoadsNeverDispatchResume() {
+    int rejected_dispatches = 0;
+    for (int mode = 0; mode < 7; ++mode) {
+        VerifiedResumeFixture fixture;
+        auto original = fixture.game->getMap();
+        std::optional<CGameContext::UnsafeOperationLease> unsafe;
+        std::optional<CGameContext::SaveSnapshotLease> snapshot;
+        bool expected_outcome = true;
+        if (mode == 0) {
+            CGameLoader::loadSavedGame(fixture.game, fixture.slot + "-missing");
+        } else if (mode == 1) {
+            unsafe = original->tryBeginUnsafeOperation();
+            expected_outcome = unsafe.has_value();
+            CGameLoader::loadSavedGame(fixture.game, fixture.slot);
+        } else if (mode == 2) {
+            snapshot = original->tryBeginSaveSnapshot();
+            expected_outcome = snapshot.has_value();
+            CGameLoader::loadSavedGame(fixture.game, fixture.slot);
+        } else if (mode == 3) {
+            auto candidate = CMapLoader::loadSavedMap(fixture.game, fixture.slot);
+            fixture.game->setMap(candidate);
+            expected_outcome = candidate != original && candidate->getObjectByName("resumeReceiver") != nullptr &&
+                               candidate->getStringProperty("verifiedLoadResumeReceiver") == "resumeReceiver";
+        } else if (mode == 4) {
+            auto authored = std::const_pointer_cast<json>(
+                fixture.game->getConfigurationProvider()->getConfiguration("maps/empty/map.json"));
+            (*authored)["properties"]["verifiedLoadResumeReceiver"] = true;
+            CGameLoader::loadSavedGame(fixture.game, fixture.slot);
+        } else if (mode == 5) {
+            unsafe = original->tryBeginUnsafeOperation();
+            expected_outcome = unsafe.has_value();
+            if (unsafe) {
+                unsafe->quarantine();
+            }
+            auto panel = std::make_shared<SaveAdmissionClosingPanel>();
+            panel->setGame(fixture.game);
+            auto supersessions = std::make_shared<int>(0);
+            panel->callback = [supersessions, weakGame = fixture.state->game] {
+                ++*supersessions;
+                if (auto owner = weakGame.lock()) {
+                    owner->getContext()->advanceTransitionGeneration();
+                }
+            };
+            fixture.game->getGui()->addChild(panel);
+            CGameLoader::loadSavedGame(fixture.game, fixture.slot);
+            expected_outcome =
+                expected_outcome && *supersessions == 1 && !fixture.game->getMap()->tryBeginSaveSnapshot();
+        } else {
+            auto authored = std::const_pointer_cast<json>(
+                fixture.game->getConfigurationProvider()->getConfiguration("maps/empty/map.json"));
+            (*authored)["properties"].erase("verifiedLoadResumeReceiver");
+            CGameLoader::loadSavedGame(fixture.game, fixture.slot);
+            expected_outcome = fixture.game->getMap() != original &&
+                               fixture.game->getMap()->getStringProperty("verifiedLoadResumeReceiver").empty() &&
+                               fixture.game->getMap()->tryBeginSaveSnapshot().has_value();
+        }
+        if (mode == 0 || mode == 1 || mode == 2 || mode == 4) {
+            expected_outcome = expected_outcome && fixture.game->getMap() == original;
+        }
+        vstd::event_loop<>::instance()->run();
+        const bool suppressed = fixture.state->calls == 0;
+        rejected_dispatches += fixture.state->calls;
+        expect_true(expected_outcome && suppressed,
+                    "failed/admission-rejected/candidate-only/malformed/superseded loads must not dispatch resume");
+        if (unsafe) {
+            unsafe->finish();
+        }
+        snapshot.reset();
+        fixture.cleanup(expected_outcome && suppressed);
+    }
+    expect_true(rejected_dispatches == 0,
+                "seven rejected, unverified or disabled load paths have a zero authored-dispatch budget");
+    std::printf("verified-load-resume rejected-or-disabled-paths=7 dispatches=%d expected=0\n", rejected_dispatches);
+}
+
 int main() {
     pybind11::scoped_interpreter guard{};
     pybind11::module_::import("sys").attr("path").attr("insert")(0, GAME_HANDLER_TEST_PYTHON_ROOT);
@@ -4779,5 +5065,9 @@ int main() {
                             testAuthoredNativeSavePolicyIsStrictAndPrecedesObjects);
     nativeTestProfile().run("testVerifiedRestoreReappliesAuthoritativeNativeSavePolicy",
                             testVerifiedRestoreReappliesAuthoritativeNativeSavePolicy);
+    nativeTestProfile().run("testVerifiedLoadResumePolicyIsStrictAndPrecedesObjects", testVerifiedLoadResumePolicyIsStrictAndPrecedesObjects);
+    nativeTestProfile().run("testVerifiedLoadResumesActualFlowOnlyAfterPostedLeaseRelease", testVerifiedLoadResumesActualFlowOnlyAfterPostedLeaseRelease);
+    nativeTestProfile().run("testVerifiedLoadResumeRejectsSupersededWeakBindings", testVerifiedLoadResumeRejectsSupersededWeakBindings);
+    nativeTestProfile().run("testUnverifiedOrRejectedLoadsNeverDispatchResume", testUnverifiedOrRejectedLoadsNeverDispatchResume);
     return finish_tests();
 }

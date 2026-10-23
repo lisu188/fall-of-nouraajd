@@ -47,6 +47,10 @@ ADDITIONAL_CASES = {
         "testSaveAdmissionQuarantineRequiresVerifiedInstall",
         "testAuthoredNativeSavePolicyIsStrictAndPrecedesObjects",
         "testVerifiedRestoreReappliesAuthoritativeNativeSavePolicy",
+        "testVerifiedLoadResumePolicyIsStrictAndPrecedesObjects",
+        "testVerifiedLoadResumesActualFlowOnlyAfterPostedLeaseRelease",
+        "testVerifiedLoadResumeRejectsSupersededWeakBindings",
+        "testUnverifiedOrRejectedLoadsNeverDispatchResume",
     ),
     "map": (
         "testNewSessionClearsQuitLatch",
