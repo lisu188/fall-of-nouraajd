@@ -198,6 +198,245 @@ class McpEngineThreadTest(unittest.TestCase):
                     self.assertTrue(runner.test_name_matches_suite(name, suite), (name, suite))
                 self.assertFalse(runner.test_name_matches_suite(name, excluded), (name, excluded))
 
+    def runFinalizerReentryProbe(self, modes):
+        script = textwrap.dedent("""
+            import faulthandler, gc, sys, threading, weakref
+            from pathlib import Path
+            from unittest.mock import patch
+            import mcp
+            faulthandler.enable(file=sys.stderr, all_threads=True)
+            faulthandler.dump_traceback_later(3, repeat=False, file=sys.stderr)
+            gc.disable()
+            for mode in sys.argv[1:]:
+                order, released = [], []
+                owners, constructed = [], []
+                original_thread = threading.Thread
+                original_start = original_thread.start
+                original_bootstrap = original_thread._bootstrap_inner
+                original_pump = mcp.EnginePump
+                def construct(*args, **kwargs):
+                    if owners and mode == 'construction':
+                        gc.collect()
+                    value = original_thread(*args, **kwargs)
+                    constructed.append(value)
+                    return value
+                def start(value):
+                    if mode == 'start':
+                        gc.collect()
+                    return original_start(value)
+                def bootstrap(value):
+                    if mode == 'bootstrap':
+                        gc.collect()
+                    return original_bootstrap(value)
+                class CollectingPump(original_pump):
+                    def __init__(self, owner):
+                        gc.collect()
+                        super().__init__(owner)
+                class Loop:
+                    def invoke(self, callback):
+                        return True
+                class Possession:
+                    def __del__(self):
+                        order.append('cleanup')
+                        released.append(threading.get_ident())
+                with patch.object(mcp.threading, 'Thread', side_effect=construct), patch.object(
+                    original_thread, 'start', start
+                ), patch.object(original_thread, '_bootstrap_inner', bootstrap):
+                    owner = mcp.EngineOwner()
+                    owners.append(owner)
+                    mcp._PROCESS_ENGINE_OWNER = owner
+                    server = mcp.EngineMcpServer(Path('.'), Path('.'))
+                    resources = server._resources
+                    resources.stdio_handles.handles['owned'] = Possession()
+                    server.reference_cycle = server
+                    reference = weakref.ref(server)
+                    del server
+                    print('finalizer-probe', mode, flush=True)
+                    if mode == 'locked':
+                        owner.submit(lambda: order.append('before'))
+                        with owner._lock:
+                            gc.collect()
+                    elif mode == 'pump':
+                        owner.attachNativeLoop(Loop())
+                        with patch.object(mcp, 'EnginePump', CollectingPump):
+                            owner.run(threading.get_ident)
+                    else:
+                        owner.run(threading.get_ident)
+                    gc.collect()
+                    owner.submit(lambda: order.append('after')).result(timeout=3)
+                    owner_id = owner.run(threading.get_ident)
+                    assert reference() is None
+                    assert resources.closed and resources not in owner.resources
+                    assert released == [owner_id], (mode, released, owner_id)
+                    if mode == 'locked':
+                        assert order == ['before', 'cleanup', 'after'], order
+                    assert len(constructed) == 1, (mode, len(constructed))
+                    assert owner._thread is constructed[0]
+                    assert {owner.run(threading.get_ident) for _ in range(8)} == {owner_id}
+                    owner.close(lambda: order.append('closed'))
+                    assert order[-1] == 'closed' and not owner._thread.is_alive()
+            faulthandler.cancel_dump_traceback_later()
+            print('finalizer reentry preserves one FIFO owner and releases actual resources', flush=True)
+            """)
+        environment = os.environ.copy()
+        environment["PYTHONDONTWRITEBYTECODE"] = "1"
+        try:
+            result = subprocess.run(
+                [sys.executable, "-B", "-c", script, *modes],
+                cwd=ROOT,
+                env=environment,
+                capture_output=True,
+                text=True,
+                timeout=8,
+            )
+        except subprocess.TimeoutExpired as error:
+            output = error.stderr or ""
+            if isinstance(output, bytes):
+                output = output.decode("utf-8", errors="replace")
+            raise AssertionError("Pure finalizer probe timed out:\n" + output[-8192:]) from None
+        self.assertEqual(0, result.returncode, result.stdout + result.stderr)
+        self.assertIn("finalizer reentry preserves one FIFO owner and releases actual resources", result.stdout)
+
+    def testCollectedServerCleanupCanReenterTheOwnerLockAndKeepsFifo(self):
+        self.runFinalizerReentryProbe(["locked"])
+
+    def testCollectionDuringOwnerConstructionStartAndPumpKeepsExactlyOneOwnerThread(self):
+        self.runFinalizerReentryProbe(["construction", "start", "bootstrap", "pump"])
+
+    def runOwnerStartupProbe(self, mode):
+        script = textwrap.dedent("""
+            import faulthandler, sys, threading, weakref
+            from unittest.mock import patch
+            import mcp
+            faulthandler.enable(file=sys.stderr, all_threads=True)
+            faulthandler.dump_traceback_later(3, repeat=False, file=sys.stderr)
+            owner = mcp.EngineOwner()
+            mcp._PROCESS_ENGINE_OWNER = owner
+            prepared = owner._prepared_thread
+            callbacks, errors = [], {}
+            original_start_new = threading._start_new_thread
+            original_bootstrap = threading.Thread._bootstrap_inner
+            if sys.argv[1] == 'failure':
+                entered, fail, close_queued = threading.Event(), threading.Event(), threading.Event()
+                original_queue = owner._queue
+                class ObservedQueue:
+                    def put(self, job):
+                        original_queue.put(job)
+                        if job is None:
+                            close_queued.set()
+                    def get_nowait(self):
+                        return original_queue.get_nowait()
+                owner._queue = ObservedQueue()
+                original_error = RuntimeError('actual prelaunch failure')
+                def start_new(callback, args):
+                    if getattr(callback, '__self__', None) is prepared:
+                        entered.set()
+                        assert fail.wait(3)
+                        raise original_error
+                    return original_start_new(callback, args)
+                def starter():
+                    try:
+                        owner.run(lambda: callbacks.append('starter'))
+                    except BaseException as error:
+                        errors['starter'] = error
+                def closer():
+                    try:
+                        owner.close(lambda: callbacks.append('cleanup'))
+                    except BaseException as error:
+                        errors['closer'] = error
+                class Payload:
+                    pass
+                with patch.object(threading, '_start_new_thread', start_new):
+                    submitting = threading.Thread(target=starter, daemon=True)
+                    submitting.start()
+                    assert entered.wait(3)
+                    payload = Payload()
+                    reference = weakref.ref(payload)
+                    pending = owner.submit(lambda captured=payload: callbacks.append(captured))
+                    del payload
+                    closing = threading.Thread(target=closer, daemon=True)
+                    closing.start()
+                    assert close_queued.wait(3)
+                    completions = []
+                    for future in (pending, owner._closing_future):
+                        future.add_done_callback(lambda done: completions.append(
+                            (reference() is None, done.exception().__traceback__ is None)
+                        ))
+                    fail.set()
+                    submitting.join(3)
+                    closing.join(3)
+                assert not submitting.is_alive() and not closing.is_alive()
+                assert errors['starter'] is original_error
+                failure = pending.exception(timeout=3)
+                close_failure = owner._closing_future.exception(timeout=3)
+                assert type(failure) is RuntimeError and str(failure) == 'MCP engine owner thread could not start'
+                assert errors['closer'] is close_failure and close_failure is not failure
+                assert completions == [(True, True), (True, True)], completions
+                assert callbacks == [] and reference() is None
+                assert owner._closed and owner._thread is None and original_queue.empty()
+                try:
+                    owner.submit(lambda: None)
+                except RuntimeError as error:
+                    assert str(error) == 'MCP engine owner has closed'
+                else:
+                    raise AssertionError('failed owner accepted another job')
+                mcp._closeProcessEngine()
+            else:
+                gate, entered, executed = threading.Event(), threading.Event(), threading.Event()
+                exception_type = MemoryError if sys.argv[1] == 'exception' else KeyboardInterrupt
+                original_error = exception_type('interrupted after launch')
+                def bootstrap(thread):
+                    if thread is prepared:
+                        entered.set()
+                        assert gate.wait(3)
+                    return original_bootstrap(thread)
+                with patch.object(threading.Thread, '_bootstrap_inner', bootstrap), patch.object(
+                    prepared._started, 'wait', side_effect=original_error
+                ):
+                    try:
+                        owner.submit(executed.set)
+                    except BaseException as error:
+                        assert error is original_error
+                    else:
+                        raise AssertionError('injected startup interruption was lost')
+                    assert entered.wait(3)
+                    assert prepared.ident is None
+                    assert owner._thread is prepared and not owner._closed
+                    gate.set()
+                assert executed.wait(3)
+                assert owner.run(threading.get_ident) == prepared.ident
+                owner.close(lambda: callbacks.append('cleanup'))
+                assert callbacks == ['cleanup'] and not prepared.is_alive()
+            faulthandler.cancel_dump_traceback_later()
+            print('owner startup failure and launch ownership verified', flush=True)
+            """)
+        environment = os.environ.copy()
+        environment["PYTHONDONTWRITEBYTECODE"] = "1"
+        try:
+            result = subprocess.run(
+                [sys.executable, "-B", "-c", script, mode],
+                cwd=ROOT,
+                env=environment,
+                capture_output=True,
+                text=True,
+                timeout=8,
+            )
+        except subprocess.TimeoutExpired as error:
+            output = error.stderr or ""
+            if isinstance(output, bytes):
+                output = output.decode("utf-8", errors="replace")
+            raise AssertionError("Pure startup probe timed out:\n" + output[-8192:]) from None
+        self.assertEqual(0, result.returncode, result.stdout + result.stderr)
+        self.assertIn("owner startup failure and launch ownership verified", result.stdout)
+
+    def testPrelaunchFailureSettlesConcurrentSubmitAndCloseWithoutKeepingQueuedCallbacks(self):
+        self.runOwnerStartupProbe("failure")
+
+    def testInterruptedLaunchRetainsItsWorkerBeforeIdentifierPublication(self):
+        for mode in ("exception", "interrupt"):
+            with self.subTest(mode=mode):
+                self.runOwnerStartupProbe(mode)
+
     def testDifferentLiveHttpHandlersShareInvocationSerializationAndReleaseThread(self):
         events = []
         handlers = set()
