@@ -9,7 +9,7 @@ import json
 from pathlib import Path
 
 REVIEWED_FILENAME = "baldurs_gate_city_palace_listener_closure.json"
-REVIEWED_EVIDENCE_SHA256 = "2d4a060c1ad9b1dc39f0cc994eb4d5689ff39bb19a43076050ac39b8f9f70f21"
+REVIEWED_EVIDENCE_SHA256 = "5a2f17d26238e595ed3530b2db4ad5f9253a45e43db971ee67098348940f9797"
 EXPECTED_COUNTS = {
     "actorCreatureResources": 21,
     "directActorBCS": 22,

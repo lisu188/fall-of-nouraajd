@@ -296,23 +296,36 @@ def sceneFacts(scripts, dialogues, fingerprints):
     return facts
 
 
+def readFingerprintedResource(index, name, extension):
+    data, _ = index.read(name, extension, "base")
+    fingerprint = {"bytes": len(data), "sha256": hashlib.sha256(data).hexdigest(), "source": "baseArchive"}
+    if (name, extension) in index.overrides:
+        effective = index.read(name, extension, "effective")[0]
+        fingerprint["overrideSha256"] = hashlib.sha256(effective).hexdigest()
+        fingerprint["overrideDiffers"] = data != effective
+    return data, fingerprint
+
+
 def auditPalace(game_root):
     index = source.ResourceIndex(Path(game_root))
-    actions = source.parseIds(index.read("ACTION", "IDS", "base")[0])
-    triggers = source.parseIds(index.read("TRIGGER", "IDS", "base")[0])
+    decoder_payloads, decoder_fingerprints = {}, {}
+    for name in ("ACTION", "TRIGGER"):
+        decoder_payloads[name], decoder_fingerprints[name + ".IDS"] = readFingerprintedResource(index, name, "IDS")
+    actions = source.parseIds(decoder_payloads["ACTION"])
+    triggers = source.parseIds(decoder_payloads["TRIGGER"])
     fingerprints = {}
     payloads = {}
     for extension, names in RESOURCES.items():
         for name in names:
-            data, origin = index.read(name, extension, "base")
+            data, fingerprint = readFingerprintedResource(index, name, extension)
             payloads[name, extension] = data
-            fingerprint = {"bytes": len(data), "sha256": hashlib.sha256(data).hexdigest(), "source": "baseArchive"}
-            if (name, extension) in index.overrides:
-                effective = index.read(name, extension, "effective")[0]
-                fingerprint["overrideSha256"] = hashlib.sha256(effective).hexdigest()
-                fingerprint["overrideDiffers"] = data != effective
             fingerprints[name + "." + extension] = fingerprint
-    scripts = {name: source.parseScript(payloads[name, "BCS"], actions, triggers)[0] for name in RESOURCES["BCS"]}
+    scripts = {}
+    for name in RESOURCES["BCS"]:
+        parsed, _, warnings = source.parseScript(payloads[name, "BCS"], actions, triggers)
+        if warnings or parsed["warnings"]:
+            raise source.AuditError("Unresolved BCS decoder warnings in " + name + ".BCS")
+        scripts[name] = parsed
     dialogues = {name: source.parseDialogue(payloads[name, "DLG"])[0] for name in RESOURCES["DLG"]}
     creatures = {name: source.parseCreature(payloads[name, "CRE"])[0] for name in RESOURCES["CRE"]}
     spawns = [
@@ -363,6 +376,7 @@ def auditPalace(game_root):
             "replacementOpcode": "https://gibberlings3.github.io/iesdp/opcodes/bgee.htm#op151",
         },
         "resourceFingerprints": fingerprints,
+        "decoderResourceFingerprints": decoder_fingerprints,
         "palaceSpawns": spawns,
         "creatureMetadata": {
             name: creatureMetadata(payloads[name, "CRE"]) for name in RESOURCES["CRE"] if name.startswith("GDOPP7")

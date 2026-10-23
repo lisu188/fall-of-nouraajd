@@ -6881,8 +6881,8 @@
   "sourceHelperFingerprintPolicy": "CRLF-to-LF bytes; all other bytes preserved",
   "sourceHelpers": {
     "audit_baldurs_gate_palace.py": {
-      "bytes": 19188,
-      "sha256": "63e5b20d86792f5babc46624959a46cc8c77425a31beda6d8fbf9647758b3c9d"
+      "bytes": 19739,
+      "sha256": "e0cd0bc69cf784ad3f6702c6188ef132906bf46e3181a5c84a55c4ef3b629103"
     },
     "audit_baldurs_gate_palace_shout.py": {
       "bytes": 14620,

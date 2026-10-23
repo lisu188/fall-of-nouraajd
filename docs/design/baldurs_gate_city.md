@@ -88,8 +88,15 @@ The palace audit fixtures are factual development metadata from installed BG1EE
 resources, supporting an original-BG1 target. They contain fingerprints, selected
 operation/selector facts and actor script-slot bindings, without original binary
 payloads, compiled script bodies or dialogue prose. The initial manifest of 43
-resources and supplemental manifest of 22 remain unchanged. The expanded listener
-closure fingerprints 79 resources, 21 CRE, 22 actor BCS plus the area script and four
+resources and supplemental manifest of 22 remain unchanged as historical evidence.
+The initial 43-resource snapshot predates `decoderResourceFingerprints`; new standalone
+reports use that separate field to fingerprint ACTION.IDS and TRIGGER.IDS without
+changing the historical inventory. A fresh installed-source report reproduces the
+initial snapshot bytes after removing only that field, and its decoder sizes and
+SHA-256 values match the expanded closure's ACTION.IDS and TRIGGER.IDS entries.
+Every compiled script must decode without warnings before the report derives negative
+inventories such as trigger absence. The expanded listener closure fingerprints
+79 resources, 21 CRE, 22 actor BCS plus the area script and four
 cutscene boundaries. Shout 50's escape-only receiver, earlier behavior 3 guard/noble
 branches and surviving doppelgangers' source EA 28 are recorded facts, not an
 implemented script scheduler.

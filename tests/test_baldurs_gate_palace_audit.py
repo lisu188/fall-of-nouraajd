@@ -1,5 +1,6 @@
 """Synthetic parser and factual contract checks; no native game or original assets required."""
 
+from contextlib import ExitStack, contextmanager
 import hashlib
 import json
 from pathlib import Path
@@ -55,6 +56,120 @@ def syntheticCreature(effect_version=0):
 
 
 class PalaceAuditParserTest(unittest.TestCase):
+    @contextmanager
+    def standaloneAuditSources(self, changed_payloads=None, effective_overrides=None, record_warning=None):
+        payloads = {
+            (name, extension): (name + "." + extension).encode("ascii")
+            for extension, names in audit.RESOURCES.items()
+            for name in names
+        }
+        for name in audit.RESOURCES["BCS"]:
+            payloads[name, "BCS"] = b"SC\n" + name.encode("ascii") + b"\nSC\n"
+        payloads["ACTION", "IDS"] = b"2000 NoAction()\n"
+        payloads["TRIGGER", "IDS"] = b"1000 True()\n"
+        payloads["GTIMES", "IDS"] = (
+            b"IDS V1.0\n5 ONE_MINUTE\n10 TWO_MINUTES\n15 THREE_MINUTES\n"
+            b"300 ONE_HOUR\n7200 ONE_DAY\n72000 TEN_DAYS\n"
+        )
+        payloads.update(changed_payloads or {})
+        effective_overrides = effective_overrides or {}
+
+        class SyntheticIndex:
+            key_hash = "unchanged-synthetic-key"
+            overrides = set(effective_overrides)
+
+            def read(self, name, extension, view="base"):
+                key = name, extension
+                if view == "base":
+                    return payloads[key], "synthetic-base"
+                if view == "effective":
+                    return effective_overrides.get(key, payloads[key]), "synthetic-effective"
+                raise AssertionError("Unexpected resource view: " + view)
+
+        index = SyntheticIndex()
+        parse_script = audit.source.parseScript
+
+        def decode(data, actions, triggers):
+            parsed, references, warnings = parse_script(data, actions, triggers)
+            if record_warning and data == payloads[record_warning, "BCS"]:
+                warnings = [*warnings, "unsupported compiled record"]
+            return parsed, references, warnings
+
+        creature = {"death_variable": "synthetic", "hit_points": 70, "kill_xp": 0, "items": []}
+        with ExitStack() as stack:
+            stack.enter_context(patch.object(audit.source, "ResourceIndex", return_value=index))
+            ids = stack.enter_context(patch.object(audit.source, "parseIds", wraps=audit.source.parseIds))
+            stack.enter_context(patch.object(audit.source, "parseScript", side_effect=decode))
+            dialogues = stack.enter_context(
+                patch.object(audit.source, "parseDialogue", return_value=({"states": [], "transitions": []}, [], []))
+            )
+            stack.enter_context(patch.object(audit.source, "parseCreature", return_value=(creature, [], [])))
+            stack.enter_context(patch.object(audit, "creatureMetadata", return_value={}))
+            stack.enter_context(patch.object(audit, "spellReplacements", return_value=[]))
+            scenes = stack.enter_context(patch.object(audit, "sceneFacts", return_value={}))
+            yield {"index": index, "payloads": payloads, "ids": ids, "dialogues": dialogues, "scenes": scenes}
+
+    def testStandaloneAuditPinsChangedDecoderBytesWithTheSameKeyAndHistoricalResources(self):
+        with self.standaloneAuditSources() as source:
+            baseline = audit.auditPalace("unused")
+            original_payloads = dict(source["payloads"])
+        self.assertIn("decoderResourceFingerprints", baseline)
+        self.assertEqual({"ACTION.IDS", "TRIGGER.IDS"}, set(baseline["decoderResourceFingerprints"]))
+        self.assertEqual(43, len(baseline["resourceFingerprints"]))
+        for name in ("ACTION", "TRIGGER"):
+            with self.subTest(decoder=name):
+                changed = original_payloads[name, "IDS"] + b"\n"
+                with self.standaloneAuditSources({(name, "IDS"): changed}) as source:
+                    report = audit.auditPalace("unused")
+                    decoded_bytes = [call.args[0] for call in source["ids"].call_args_list[:2]]
+                    self.assertEqual(
+                        [source["payloads"]["ACTION", "IDS"], source["payloads"]["TRIGGER", "IDS"]], decoded_bytes
+                    )
+                self.assertEqual(baseline["keySha256"], report["keySha256"])
+                self.assertEqual(baseline["resourceFingerprints"], report["resourceFingerprints"])
+                pin = report["decoderResourceFingerprints"][name + ".IDS"]
+                self.assertEqual(len(changed), pin["bytes"])
+                self.assertEqual(hashlib.sha256(changed).hexdigest(), pin["sha256"])
+                self.assertNotEqual(baseline["decoderResourceFingerprints"][name + ".IDS"], pin)
+
+    def testStandaloneDecoderOverridePinsDescribeTheBaseBytesActuallyParsed(self):
+        for name in ("ACTION", "TRIGGER"):
+            for different in (False, True):
+                with self.subTest(decoder=name, different=different):
+                    base = b"2000 NoAction()\n" if name == "ACTION" else b"1000 True()\n"
+                    effective = base + b"\n" if different else base
+                    with self.standaloneAuditSources(effective_overrides={(name, "IDS"): effective}) as source:
+                        report = audit.auditPalace("unused")
+                        self.assertEqual(
+                            [source["payloads"]["ACTION", "IDS"], source["payloads"]["TRIGGER", "IDS"]],
+                            [call.args[0] for call in source["ids"].call_args_list[:2]],
+                        )
+                    self.assertIn("decoderResourceFingerprints", report)
+                    pin = report["decoderResourceFingerprints"][name + ".IDS"]
+                    self.assertEqual(len(base), pin["bytes"])
+                    self.assertEqual(hashlib.sha256(base).hexdigest(), pin["sha256"])
+                    self.assertEqual("baseArchive", pin["source"])
+                    self.assertEqual(hashlib.sha256(effective).hexdigest(), pin["overrideSha256"])
+                    self.assertEqual(different, pin["overrideDiffers"])
+
+    def testStandaloneAuditRejectsUnknownTriggerAndActionWarningsBeforeFacts(self):
+        cases = [(name, "TR") for name in audit.RESOURCES["BCS"]] + [("SAREVOK", "AC")]
+        for name, kind in cases:
+            with self.subTest(resource=name, kind=kind):
+                raw = ("SC\nCR\n" + kind + '\n99999 0 0 0 0 0 "" ""\n' + kind + "\nCR\nSC\n").encode("ascii")
+                with self.standaloneAuditSources({(name, "BCS"): raw}) as source:
+                    with self.assertRaisesRegex(audit.source.AuditError, name):
+                        audit.auditPalace("unused")
+                    source["dialogues"].assert_not_called()
+                    source["scenes"].assert_not_called()
+
+    def testStandaloneAuditRejectsTupleRecordWarningsForEveryScriptBeforeFacts(self):
+        for name in audit.RESOURCES["BCS"]:
+            with self.subTest(resource=name), self.standaloneAuditSources(record_warning=name) as source:
+                with self.assertRaisesRegex(audit.source.AuditError, name):
+                    audit.auditPalace("unused")
+                source["dialogues"].assert_not_called()
+                source["scenes"].assert_not_called()
 
     def testRawCompiledSourceKeepsHeardNegationSelectorsAndWeightedAlternatives(self):
         from scripts import audit_baldurs_gate_palace_shout as shout
