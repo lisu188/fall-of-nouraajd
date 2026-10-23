@@ -107,21 +107,138 @@ class GameMapBindingEpochSourceTest(unittest.TestCase):
             self.assertIn(name + " as _" + name, runner)
             self.assertIn("del _GameMapBindingEpochSourceTest, _GameMapBindingEpochRuntimeTest", runner)
 
+    def epochRuntimeWithoutNative(self, environment=None, *, required=False, returncode=77):
+        import builtins
+        import os
+        from types import SimpleNamespace
+        from unittest import mock
+
+        from tests import test_python_callback_lifecycle as lifecycle
+
+        native_imports = []
+        original_import = builtins.__import__
+
+        def deny_native(name, *args, **kwargs):
+            if name in {"game", "_game"}:
+                native_imports.append(name)
+                raise ModuleNotFoundError("native import denied", name=name)
+            return original_import(name, *args, **kwargs)
+
+        case = GameMapBindingEpochRuntimeTest(
+            "testNativePythonGetterReturnsStableIntegerWithoutAdvancingSceneGeneration"
+        )
+        if required:
+            self.assertTrue(
+                callable(getattr(case, "runChild", None)), "The runtime fixture must use the isolated harness"
+            )
+            run_child = case.runChild
+            case.runChild = lambda code: run_child(code, required=True)
+        result = unittest.TestResult()
+        with mock.patch.dict(os.environ, environment or {}, clear=True), mock.patch.object(
+            lifecycle.subprocess, "run", return_value=SimpleNamespace(returncode=returncode, stdout="", stderr="")
+        ) as child, mock.patch("builtins.__import__", deny_native):
+            case.run(result)
+        self.assertEqual([], native_imports)
+        self.assertEqual([], result.errors)
+        self.assertEqual(1, child.call_count)
+        return result, child.call_args
+
+    def testEpochRuntimeDirectDiscoverySkipsMissingNativeWithoutParentImport(self):
+        result, call = self.epochRuntimeWithoutNative()
+        self.assertEqual(1, result.testsRun)
+        self.assertEqual([], result.failures)
+        self.assertEqual(1, len(result.skipped))
+        self.assertIn("compiled _game module is unavailable", result.skipped[0][1])
+        settings = call.kwargs["env"]
+        self.assertEqual("dummy", settings["SDL_VIDEODRIVER"])
+        self.assertEqual("dummy", settings["SDL_AUDIODRIVER"])
+        self.assertEqual("software", settings["SDL_RENDER_DRIVER"])
+        self.assertEqual(30, call.kwargs["timeout"])
+
+    def testEpochRuntimeConfiguredOrRequiredMissingNativeFailsInsteadOfSkipping(self):
+        for environment, required in (
+            ({"GAME_BUILD_DIR": "missing-build"}, False),
+            ({"GAME_BUILD_CONFIG": "Release"}, False),
+            ({"GAME_MCP_BRANCH_REQUIRED": "1"}, False),
+            ({}, True),
+        ):
+            with self.subTest(environment=environment, required=required):
+                result, _call = self.epochRuntimeWithoutNative(environment, required=required)
+                self.assertEqual(1, result.testsRun)
+                self.assertEqual(1, len(result.failures))
+                self.assertEqual([], result.skipped)
+                self.assertIn("Configured native epoch runtime is unavailable", result.failures[0][1])
+
+    def testEpochRuntimeChildRetainsAllNativeAssertionsAndReportsChildFailure(self):
+        import ast
+        import textwrap
+
+        result, call = self.epochRuntimeWithoutNative(returncode=0)
+        self.assertTrue(result.wasSuccessful())
+        self.assertEqual([], result.skipped)
+        child = ast.parse(call.args[0][2])
+        owner = next(
+            node
+            for node in child.body
+            if isinstance(node, ast.Assign) and isinstance(node.targets[0], ast.Name) and node.targets[0].id == "owner"
+        )
+        native = child.body[child.body.index(owner) :]
+        expected = ast.parse(textwrap.dedent("""
+            owner = game.CGameLoader.loadGame()
+            try:
+                first = owner.getMapBindingEpoch()
+                self.assertIs(type(first), int)
+                self.assertEqual(0, first)
+                context = owner.getContext()
+                generation = context.getTransitionGeneration()
+                for _ in range(128):
+                    self.assertEqual(first, game.CGame.getMapBindingEpoch(owner))
+                self.assertTrue(context.isTransitionGenerationCurrent(generation))
+                self.assertFalse(hasattr(game.CGame, "setMapBindingEpoch"))
+            finally:
+                owner.getContext().shutdown()
+            """)).body
+        self.assertEqual(
+            ast.dump(ast.Module(body=expected, type_ignores=[])), ast.dump(ast.Module(body=native, type_ignores=[]))
+        )
+        result, _call = self.epochRuntimeWithoutNative(returncode=1)
+        self.assertEqual(1, len(result.failures))
+        self.assertEqual([], result.skipped)
+
 
 class GameMapBindingEpochRuntimeTest(unittest.TestCase):
-    def testNativePythonGetterReturnsStableIntegerWithoutAdvancingSceneGeneration(self):
-        import game
+    def runChild(self, code, *, required=False):
+        import os
 
-        owner = game.CGameLoader.loadGame()
+        from tests.test_python_callback_lifecycle import PythonCallbackLifecycleTest
+
         try:
-            first = owner.getMapBindingEpoch()
-            self.assertIs(type(first), int)
-            self.assertEqual(0, first)
-            context = owner.getContext()
-            generation = context.getTransitionGeneration()
-            for _ in range(128):
-                self.assertEqual(first, game.CGame.getMapBindingEpoch(owner))
-            self.assertTrue(context.isTransitionGenerationCurrent(generation))
-            self.assertFalse(hasattr(game.CGame, "setMapBindingEpoch"))
-        finally:
-            owner.getContext().shutdown()
+            return PythonCallbackLifecycleTest.runChild(self, code)
+        except unittest.SkipTest as error:
+            if (
+                required
+                or os.environ.get("GAME_BUILD_DIR")
+                or os.environ.get("GAME_BUILD_CONFIG")
+                or os.environ.get("GAME_MCP_BRANCH_REQUIRED") == "1"
+            ):
+                self.fail("Configured native epoch runtime is unavailable: " + str(error))
+            raise
+
+    def testNativePythonGetterReturnsStableIntegerWithoutAdvancingSceneGeneration(self):
+        self.runChild("""
+            import unittest
+            self = unittest.TestCase()
+            owner = game.CGameLoader.loadGame()
+            try:
+                first = owner.getMapBindingEpoch()
+                self.assertIs(type(first), int)
+                self.assertEqual(0, first)
+                context = owner.getContext()
+                generation = context.getTransitionGeneration()
+                for _ in range(128):
+                    self.assertEqual(first, game.CGame.getMapBindingEpoch(owner))
+                self.assertTrue(context.isTransitionGenerationCurrent(generation))
+                self.assertFalse(hasattr(game.CGame, "setMapBindingEpoch"))
+            finally:
+                owner.getContext().shutdown()
+            """)
