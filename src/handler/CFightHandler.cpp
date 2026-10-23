@@ -35,6 +35,7 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #include "object/CPlayer.h"
 #include "gui/CGui.h"
 #include "handler/CGuiHandler.h"
+#include "handler/CRngHandler.h"
 
 struct CCombatOwnership {
     CCombatOwnership() = default;
@@ -1330,14 +1331,30 @@ vstd::task<void> CFightHandler::resolveOwnedDefeatAsync(std::shared_ptr<CCreatur
     auto initialGame = b->getGame();
     auto initialContext = initialGame ? initialGame->getContext() : nullptr;
     const auto initialGeneration = initialContext ? initialContext->captureTransitionGeneration() : 0;
+    const auto initialEpoch = initialGame ? initialGame->getMapBindingEpoch() : 0;
     std::weak_ptr<CGame> expectedGame = initialGame;
     initialGame.reset();
-    const auto ownerIsCurrent = [&] {
+    const auto ownerIsCurrent = [expectedGame, initialContext, initialGeneration, initialEpoch, encounterMap, a, b,
+                                 winnerClaim, loserClaim] {
         auto game = expectedGame.lock();
-        return game && initialContext && initialContext->isTransitionGenerationCurrent(initialGeneration) &&
+        return game && initialContext && initialContext->isActive() &&
+               initialContext->isTransitionGenerationCurrent(initialGeneration) &&
+               game->getMapBindingEpoch() == initialEpoch && encounterMap->getGame() == game &&
+               b->defeatResolutionInProgress && a->activeDefeatRecipientCount != 0 &&
                game->getContext() == initialContext && game->getMap() == encounterMap && a->getGame() == game &&
                b->getGame() == game && a->getMap() == encounterMap && b->getMap() == encounterMap &&
                a->activeCombatOwner.lock() == winnerClaim && b->activeCombatOwner.lock() == loserClaim;
+    };
+    const auto requireOwnerCurrent = [ownerIsCurrent] {
+        if (!ownerIsCurrent()) {
+            throw vstd::task_cancelled();
+        }
+    };
+    const auto requireDefeatCurrent = [ownerIsCurrent, encounterMap, a, b] {
+        if (!ownerIsCurrent() || !a->isAlive() || b->isAlive() || !is_registered_on_map(encounterMap, a) ||
+            !is_registered_on_map(encounterMap, b)) {
+            throw vstd::task_cancelled();
+        }
     };
     auto admission = encounterMap->tryBeginUnsafeOperation();
     if (!admission) {
@@ -1354,32 +1371,58 @@ vstd::task<void> CFightHandler::resolveOwnedDefeatAsync(std::shared_ptr<CCreatur
             admission->finish();
         }
     });
-    if (!ownerIsCurrent()) {
+    if (!admission->isCurrent()) {
         throw vstd::task_cancelled();
     }
+    requireDefeatCurrent();
     workStarted = true;
     b->defeatResolutionUncertain = true;
-    vstd::logger::debug(a->to_string(), a->getName(), "defeated", b->to_string());
-    a->addExpScaled(b->getScale());
+    const auto winnerDescription = a->to_string();
+    requireDefeatCurrent();
+    const auto loserDescription = b->to_string();
+    requireDefeatCurrent();
+    vstd::logger::debug(winnerDescription, a->getName(), "defeated", loserDescription);
+    requireDefeatCurrent();
+    const auto rewardScale = b->getScale();
+    requireDefeatCurrent();
+    a->addExpScaled(rewardScale);
+    requireDefeatCurrent();
     const bool fixedLoot = encounterMap->getBoolProperty("plugin_cityFixedLoot");
-    std::set<std::shared_ptr<CItem>> items =
-        fixedLoot ? std::set<std::shared_ptr<CItem>>{} : b->getGame()->getRngHandler()->getRandomLoot(b->getScale());
+    requireDefeatCurrent();
+    std::set<std::shared_ptr<CItem>> items;
+    if (!fixedLoot) {
+        const auto randomLootScale = b->getScale();
+        requireDefeatCurrent();
+        auto lootRng = initialContext->getDefeatRngHandler(requireDefeatCurrent);
+        requireDefeatCurrent();
+        items = lootRng->calculateDefeatLoot(randomLootScale, requireDefeatCurrent);
+    }
+    requireDefeatCurrent();
     auto equipment = b->getEquipped();
     const int ownedGold = fixedLoot && !playerDefeat ? std::max(0, b->getGold()) : 0;
     if (ownedGold) {
         b->setGold(0);
+        requireDefeatCurrent();
         a->addGold(ownedGold);
+        requireDefeatCurrent();
     }
     std::map<std::string, std::pair<std::string, int>> lostItems;
     auto game = b->getGame();
     const bool showDefeat = playerDefeat && game->getGui() && game->getGui()->findChild("CGameFightPanel");
+    requireDefeatCurrent();
     const auto possessions = fixedLoot && !playerDefeat ? b->getAllItems() : b->getInInventory();
+    requireDefeatCurrent();
     for (const std::shared_ptr<CItem> &item : possessions) {
-        if (fixedLoot && item->getBoolProperty("plugin_cityUndroppable")) {
+        const bool undroppable = fixedLoot && item->getBoolProperty("plugin_cityUndroppable");
+        requireDefeatCurrent();
+        if (undroppable) {
             continue;
         }
-        if (!playerDefeat || !item->hasTag(CTag::Quest)) {
+        const bool retainedQuestItem = playerDefeat && item->hasTag(CTag::Quest);
+        requireDefeatCurrent();
+        if (!retainedQuestItem) {
             b->removeItem(item);
+            requireDefeatCurrent();
             if (fixedLoot && !playerDefeat) {
                 std::erase_if(equipment, [&item](const auto &slot) { return slot.second == item; });
             }
@@ -1394,6 +1437,7 @@ vstd::task<void> CFightHandler::resolveOwnedDefeatAsync(std::shared_ptr<CCreatur
     if (fixedLoot && !playerDefeat && equipment != b->getEquipped()) {
         b->setEquipped(std::move(equipment));
     }
+    requireDefeatCurrent();
     if (CPlaytestTrace::enabled()) {
         json fields = {
             {"defeated", CPlaytestTrace::objectRef(b)},
@@ -1406,17 +1450,17 @@ vstd::task<void> CFightHandler::resolveOwnedDefeatAsync(std::shared_ptr<CCreatur
         CPlaytestTrace::addMapContext(fields, encounterMap);
         CPlaytestTrace::record("reward_granted", fields);
     }
-    if (!ownerIsCurrent()) {
-        throw vstd::task_cancelled();
-    }
-    auto rng = a->getGame()->getRngHandler();
+    requireDefeatCurrent();
+    auto rng = initialContext->getDefeatRngHandler(requireDefeatCurrent);
+    requireDefeatCurrent();
     auto context = game->getContext();
     game.reset();
     std::exception_ptr cancellation;
     try {
-        co_await rng->addRandomLootAsync(a, items);
+        co_await rng->addDefeatLootAsync(a, items, requireDefeatCurrent);
     } catch (const vstd::task_cancelled &) {
         cancellation = std::current_exception();
+        requireDefeatCurrent();
         // A child cancelled before it starts cannot grant items already removed from the loser.
         std::set<std::shared_ptr<CItem>> pendingItems;
         for (const auto &item : items) {
@@ -1424,17 +1468,18 @@ vstd::task<void> CFightHandler::resolveOwnedDefeatAsync(std::shared_ptr<CCreatur
                 pendingItems.insert(item);
             }
         }
+        requireDefeatCurrent();
         a->addItems(std::move(pendingItems));
+        requireDefeatCurrent();
         if (!context->isActive()) {
             std::rethrow_exception(cancellation);
         }
     }
-    if (!ownerIsCurrent() || !is_registered_on_map(encounterMap, a) || !is_registered_on_map(encounterMap, b)) {
-        throw vstd::task_cancelled();
-    }
+    requireDefeatCurrent();
     if (cancellation) {
         auto removal = context->spawnTask(encounterMap->removeObjectAsync(b));
         co_await removal.waitFinished();
+        requireOwnerCurrent();
         try {
             removal.get();
         } catch (const vstd::task_cancelled &) {
@@ -1442,6 +1487,7 @@ vstd::task<void> CFightHandler::resolveOwnedDefeatAsync(std::shared_ptr<CCreatur
     } else {
         co_await encounterMap->removeObjectAsync(b);
     }
+    requireOwnerCurrent();
     const auto recoveryIsComplete = [&] {
         if (!ownerIsCurrent() || !a->isAlive() || !is_registered_on_map(encounterMap, a)) {
             return false;
@@ -1476,6 +1522,7 @@ vstd::task<void> CFightHandler::resolveOwnedDefeatAsync(std::shared_ptr<CCreatur
             count += entry.second;
         }
         receipt["lostItemCount"] = count;
+        requireOwnerCurrent();
         b->setStringProperty("uiDefeatReceipt", receipt.dump());
         if (!recoveryIsComplete()) {
             throw vstd::task_cancelled();
@@ -1490,6 +1537,7 @@ vstd::task<void> CFightHandler::resolveOwnedDefeatAsync(std::shared_ptr<CCreatur
             context->spawnTask(showDefeatOwnedAsync(weakGame, weakMap, weakPlayer, generation));
         }
     }
+    requireOwnerCurrent();
     if (encounterOwner && !encounterOwner->defeatAdmission) {
         encounterOwner->defeatAdmission.emplace(std::move(*admission));
     }

@@ -39,6 +39,15 @@ ADDITIONAL_CASES = {
         "testEncounterOwnershipIgnoresSanitizedIneligibleCandidates",
         "testDefeatRecoveryCertificationRejectsReplacedOrUnfinishedOwners",
         "testInternalDefeatLeaseSurvivesParentControllerCleanup",
+        "testOwnedDefeatStopsAfterCallbackPublicationBeforeFurtherRewards",
+        "testOwnedDefeatLootContinuationRejectsStalePublicationAndCancellation",
+        "testOwnedDefeatRemovalCannotCertifyAnAwayBackPublication",
+        "testOwnedDefeatGuardsLazyRngFactoryEnumeration",
+        "testOwnedDefeatStopsBeforeSecondRandomLootFactory",
+        "testOwnedDefeatNestedFactoryStopsBeforeNextPropertyAndConstructor",
+        "testOwnedDefeatFirstMetadataCallbackStopsBeforeSecondMetadataAndSetter",
+        "testOwnedDefeatCodecBoundaryPreservesOriginalFailureAndStopsContinuation",
+        "testOwnedDefeatGraphActorBindingPreservesPrimaryBeforeRootAndProperties",
         "testAsyncCombatAwaitsLootWithoutPumpingOrGrantingRewardsEarly",
         "testWorkerStartedCombatDefersControllerAndPanelCreationToMain",
         "testCancelledLootSettlesStartedRewardsOnceAndSkipsQueuedCombat",
@@ -324,8 +333,10 @@ class NativeTestProfileSourceTest(unittest.TestCase):
             owned.index("recoverySettled = true;"),
         )
         self.assertLess(owned.index("recoverySettled = true;"), owned.index("b->defeatResolutionUncertain = false;"))
-        after_loot = owned.split("co_await rng->addRandomLootAsync(a, items);", 1)[1]
-        self.assertLess(after_loot.index("!ownerIsCurrent()"), after_loot.index("encounterMap->removeObjectAsync(b)"))
+        after_loot = owned.split("co_await rng->addDefeatLootAsync(a, items, requireDefeatCurrent);", 1)[1]
+        self.assertLess(
+            after_loot.index("requireDefeatCurrent();"), after_loot.index("encounterMap->removeObjectAsync(b)")
+        )
         after_removal = after_loot.split("co_await encounterMap->removeObjectAsync(b);", 1)[1]
         self.assertIn("const auto recoveryIsComplete = [&]", after_removal)
         self.assertIn("!a->isAlive() || !is_registered_on_map(encounterMap, a)", after_removal)

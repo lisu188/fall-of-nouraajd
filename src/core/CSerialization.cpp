@@ -23,6 +23,7 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #include "core/CList.h"
 #include "core/CMap.h"
 #include "core/CTypes.h"
+#include "handler/CObjectHandler.h"
 #include "object/CCreature.h"
 #include "object/CEffect.h"
 
@@ -49,6 +50,46 @@ std::shared_ptr<json> map_serialize(const std::map<std::string, std::shared_ptr<
                                     CSerializationWriteContext &);
 std::map<std::string, std::shared_ptr<CGameObject>> map_deserialize(const std::shared_ptr<CGame> &, const json *,
                                                                     CSerializationReadContext &);
+
+class CSerializationConstructionGuard {
+  public:
+    static void check() { CObjectHandler::checkDefeatConstruction(); }
+    static void rethrowFailure() { CObjectHandler::rethrowDefeatConstructionFailure(); }
+    static void preserveCallbackFailure(std::exception_ptr primary) {
+        CObjectHandler::preserveDefeatConstructionCallbackFailure(std::move(primary));
+    }
+
+    template <typename Callback> static void initialize(Callback &&callback) {
+        check();
+        try {
+            callback();
+        } catch (...) {
+            CObjectHandler::rememberDefeatConstructionFailure(std::current_exception());
+            rethrowFailure();
+            throw;
+        }
+        check();
+    }
+
+    template <typename Callback> static void callback(Callback &&callback) {
+        check();
+        try {
+            callback();
+        } catch (...) {
+            CObjectHandler::preserveDefeatConstructionCallbackFailure(std::current_exception());
+            throw;
+        }
+        check();
+    }
+
+    static std::shared_ptr<vstd::meta> metadata(const std::shared_ptr<CGameObject> &object) {
+        std::shared_ptr<vstd::meta> result;
+        callback([&] { result = object->meta(); });
+        return result;
+    }
+
+    static std::string typeName(const std::shared_ptr<CGameObject> &object) { return metadata(object)->name(); }
+};
 
 namespace {
 
@@ -259,7 +300,7 @@ class EffectReadContext {
                     if (!actor) {
                         fail("actor definition does not construct a creature: " + type);
                     }
-                    actor->setGame(game);
+                    CSerializationConstructionGuard::initialize([&] { actor->setGame(game); });
                     actors.emplace(id, std::move(actor));
                     definitions.emplace(id, node);
                 }
@@ -305,7 +346,8 @@ class EffectReadContext {
             fail("cyclic creature ownership through ordinary properties");
         }
         const auto actor = actors.at(id);
-        const auto type = actor->getType().empty() ? actor->meta()->name() : actor->getType();
+        const auto type =
+            actor->getType().empty() ? CSerializationConstructionGuard::typeName(actor) : actor->getType();
         if ((*config)["class"].get<std::string>() != type) {
             fail("actor alias class does not match its definition");
         }
@@ -326,7 +368,14 @@ class EffectReadContext {
     }
 
     void initialize(const std::shared_ptr<CGameObject> &object) {
-        if (!object || !object->meta()->has_method("initialize", object)) {
+        CSerializationConstructionGuard::check();
+        if (!object) {
+            return;
+        }
+        auto metadata = CSerializationConstructionGuard::metadata(object);
+        const bool hasInitialize = metadata->has_method("initialize", object);
+        CSerializationConstructionGuard::check();
+        if (!hasInitialize) {
             return;
         }
         if (graph && needsFixup) {
@@ -334,7 +383,8 @@ class EffectReadContext {
                 initializations.push_back(object);
             }
         } else {
-            object->meta()->invoke_method<void>("initialize", object);
+            metadata = CSerializationConstructionGuard::metadata(object);
+            CSerializationConstructionGuard::initialize([&] { metadata->invoke_method<void>("initialize", object); });
         }
     }
 
@@ -345,6 +395,7 @@ class EffectReadContext {
     }
 
     void finish(const std::shared_ptr<CGame> &game, CSerializationReadContext &context) {
+        CSerializationConstructionGuard::check();
         if (failure)
             throw CSerializationException(*failure);
         if (graph) {
@@ -369,13 +420,16 @@ class EffectReadContext {
             }
         }
         // Validate all links before creating the existing strong actor/effect ownership relationships.
+        CSerializationConstructionGuard::check();
         for (const auto &entry : effects) {
+            CSerializationConstructionGuard::check();
             entry.effect->setCaster(entry.caster ? actors.at(entry.caster) : nullptr);
             entry.effect->setVictim(entry.victim ? actors.at(entry.victim) : nullptr);
         }
         for (std::size_t index = 0; index < initializations.size(); ++index) {
             auto object = initializations[index];
-            object->meta()->invoke_method<void>("initialize", object);
+            auto metadata = CSerializationConstructionGuard::metadata(object);
+            CSerializationConstructionGuard::initialize([&] { metadata->invoke_method<void>("initialize", object); });
         }
     }
 
@@ -574,7 +628,7 @@ template <typename T> bool isCompatiblePrimitiveObjectConfig(const std::shared_p
         return false;
     }
     auto type = game && game->getObjectHandler() ? game->getObjectHandler()->getType(class_name) : nullptr;
-    return type && type->meta()->inherits(T::static_meta()->name());
+    return type && CSerializationConstructionGuard::metadata(type)->inherits(T::static_meta()->name());
 }
 
 template <typename T> bool shouldKeepPrimitiveObjectConfig(const std::shared_ptr<CGame> &game, const json *value) {
@@ -736,9 +790,11 @@ void CSerialization::setProperty(const std::shared_ptr<CGameObject> &object, con
                                  const json &document, CSerializationReadContext &context) {
     if (!object)
         return;
+    CSerializationConstructionGuard::check();
     CSerializationOperation operation(context);
     const auto &value = operation.isRoot() ? context.prepare(object->getGame(), document) : document;
-    CSerializationReadContext::PropertyScope propertyScope(context, key, object->meta()->name());
+    CSerializationReadContext::PropertyScope propertyScope(context, key,
+                                                           CSerializationConstructionGuard::typeName(object));
     if (value.is_boolean()) {
         setBooleanProperty(object, key, value.get<bool>(), context);
     } else if (value.is_number()) {
@@ -752,10 +808,14 @@ void CSerialization::setProperty(const std::shared_ptr<CGameObject> &object, con
     }
     if (operation.isRoot())
         context.finish(object->getGame());
+    CSerializationConstructionGuard::check();
 }
 
 std::type_index CSerialization::getProperty(const std::shared_ptr<CGameObject> &object, const std::string &name) {
-    return object->meta()->get_property_type(object, name);
+    auto metadata = CSerializationConstructionGuard::metadata(object);
+    auto type = std::type_index(typeid(void));
+    CSerializationConstructionGuard::callback([&] { type = metadata->get_property_type(object, name); });
+    return type;
 }
 
 void CSerialization::setArrayProperty(const std::shared_ptr<CGameObject> &object, std::type_index property,
@@ -783,18 +843,18 @@ void CSerialization::setNumericProperty(const std::shared_ptr<CGameObject> &obje
                                         CSerializationReadContext &context) {
     const auto property = getProperty(object, key);
     if (property == std::type_index(typeid(std::string)))
-        object->setStringProperty(key, vstd::str(value));
+        CSerializationConstructionGuard::callback([&] { object->setStringProperty(key, vstd::str(value)); });
     else if (!rejectScalarForPrimitiveCollection(property, key, context))
-        object->setNumericProperty(key, value);
+        CSerializationConstructionGuard::callback([&] { object->setNumericProperty(key, value); });
 }
 
 void CSerialization::setBooleanProperty(const std::shared_ptr<CGameObject> &object, const std::string &key, bool value,
                                         CSerializationReadContext &context) {
     const auto property = getProperty(object, key);
     if (property == std::type_index(typeid(std::string)))
-        object->setStringProperty(key, vstd::str(value));
+        CSerializationConstructionGuard::callback([&] { object->setStringProperty(key, vstd::str(value)); });
     else if (!rejectScalarForPrimitiveCollection(property, key, context))
-        object->setBoolProperty(key, value);
+        CSerializationConstructionGuard::callback([&] { object->setBoolProperty(key, value); });
 }
 
 void CSerialization::setStringProperty(const std::shared_ptr<CGameObject> &object, const std::string &key,
@@ -803,7 +863,8 @@ void CSerialization::setStringProperty(const std::shared_ptr<CGameObject> &objec
     auto coerced = coerceStringProperty(property, value);
     if (std::holds_alternative<std::string>(coerced)) {
         if (!rejectScalarForPrimitiveCollection(property, key, context))
-            object->setStringProperty(key, std::get<std::string>(coerced));
+            CSerializationConstructionGuard::callback(
+                [&] { object->setStringProperty(key, std::get<std::string>(coerced)); });
     } else if (std::holds_alternative<int>(coerced)) {
         setNumericProperty(object, key, std::get<int>(coerced), context);
     } else if (std::holds_alternative<bool>(coerced)) {
@@ -832,36 +893,47 @@ void CSerialization::setOtherProperty(std::type_index deserializedId, const std:
     auto codec = CTypes::findCodec(deserializedId);
     if (!codec) {
         throw CSerializationException({CSerializationErrorCode::MissingCodec, context.source(), context.path(),
-                                       object->meta()->name(), "No JSON codec registered for property '" + key + "'"});
+                                       CSerializationConstructionGuard::typeName(object),
+                                       "No JSON codec registered for property '" + key + "'"});
     }
     std::any result;
     try {
         const auto &payload = context.prepare(object->getGame(), value);
+        CSerializationConstructionGuard::check();
         result = serializationValueOrThrow(codec->deserialize(object->getGame(), payload, context));
+        CSerializationConstructionGuard::check();
     } catch (const CSerializationException &exception) {
+        CSerializationConstructionGuard::preserveCallbackFailure(std::current_exception());
+        CSerializationConstructionGuard::rethrowFailure();
+        CSerializationConstructionGuard::check();
         auto error = exception.getError();
-        completeError(error, context, object->meta()->name());
+        completeError(error, context, CSerializationConstructionGuard::typeName(object));
         throw CSerializationException(std::move(error));
     } catch (const std::exception &exception) {
+        CSerializationConstructionGuard::preserveCallbackFailure(std::current_exception());
+        CSerializationConstructionGuard::rethrowFailure();
+        CSerializationConstructionGuard::check();
         throw CSerializationException({CSerializationErrorCode::CodecFailure, context.source(), context.path(),
-                                       object->meta()->name(), exception.what()});
+                                       CSerializationConstructionGuard::typeName(object), exception.what()});
     }
-    const auto resultType = std::type_index(result.type());
-    if (CTypes::is_pointer_type(resultType)) {
-        object->setProperty(key, vstd::any_cast<std::shared_ptr<CGameObject>>(result));
-    } else if (CTypes::is_array_type(resultType)) {
-        if (context.isStrict() && key == "objects") {
-            if (auto map = std::dynamic_pointer_cast<CMap>(object)) {
-                map->setObjectsChecked(vstd::any_cast<std::set<std::shared_ptr<CMapObject>>>(result));
-                return;
+    CSerializationConstructionGuard::callback([&] {
+        const auto resultType = std::type_index(result.type());
+        if (CTypes::is_pointer_type(resultType)) {
+            object->setProperty(key, vstd::any_cast<std::shared_ptr<CGameObject>>(result));
+        } else if (CTypes::is_array_type(resultType)) {
+            if (context.isStrict() && key == "objects") {
+                if (auto map = std::dynamic_pointer_cast<CMap>(object)) {
+                    map->setObjectsChecked(vstd::any_cast<std::set<std::shared_ptr<CMapObject>>>(result));
+                    return;
+                }
             }
+            object->setProperty(key, vstd::any_cast<std::set<std::shared_ptr<CGameObject>>>(result));
+        } else if (CTypes::is_map_type(resultType)) {
+            object->setProperty(key, vstd::any_cast<std::map<std::string, std::shared_ptr<CGameObject>>>(result));
+        } else {
+            CTypes::set_custom_property(object, key, result);
         }
-        object->setProperty(key, vstd::any_cast<std::set<std::shared_ptr<CGameObject>>>(result));
-    } else if (CTypes::is_map_type(resultType)) {
-        object->setProperty(key, vstd::any_cast<std::map<std::string, std::shared_ptr<CGameObject>>>(result));
-    } else {
-        CTypes::set_custom_property(object, key, result);
-    }
+    });
 }
 
 void add_member(const std::shared_ptr<json> &object, const std::string &key, const std::string &value) {
@@ -981,6 +1053,7 @@ std::shared_ptr<CGameObject> object_deserialize(const std::shared_ptr<CGame> &ga
 
 std::shared_ptr<CGameObject> object_deserialize(const std::shared_ptr<CGame> &game, const json *config,
                                                 CSerializationReadContext &context) {
+    CSerializationConstructionGuard::check();
     if (!game || !config || !config->is_object()) {
         if (context.isStrict())
             throw CSerializationException({CSerializationErrorCode::InvalidInput, context.source(), context.path(),
@@ -992,6 +1065,7 @@ std::shared_ptr<CGameObject> object_deserialize(const std::shared_ptr<CGame> &ga
     ObjectDepthScope depth(state.objectDepth);
     auto &effects = state.effects;
     effects.prepare(game, config);
+    CSerializationConstructionGuard::check();
     if (config->contains("effectActorReference"))
         return effects.reference(game, config, context);
     if (effects.alreadyLoading(config))
@@ -1004,10 +1078,13 @@ std::shared_ptr<CGameObject> object_deserialize(const std::shared_ptr<CGame> &ga
         if (!object)
             object = game->getObjectHandler()->getType((*config)["class"].get<std::string>());
         if (object) {
-            object->setGame(game);
-            if (object->getName().empty())
-                object->setName(CSerialization::generateName(object));
-            object->setType((*config)["class"].get<std::string>());
+            CSerializationConstructionGuard::initialize([&] { object->setGame(game); });
+            if (object->getName().empty()) {
+                const auto name = CSerialization::generateName(object);
+                CSerializationConstructionGuard::check();
+                CSerializationConstructionGuard::callback([&] { object->setName(name); });
+            }
+            CSerializationConstructionGuard::callback([&] { object->setType((*config)["class"].get<std::string>()); });
         }
     }
     effects.readRecord(object, config);
@@ -1024,9 +1101,13 @@ std::shared_ptr<CGameObject> object_deserialize(const std::shared_ptr<CGame> &ga
         CGameObject::PropertyNotificationBatch notificationBatch(*object);
         if (!game->getObjectHandler()->applyTileRecipe(object, *config)) {
             for (const auto &[key, value] : (*config)["properties"].items()) {
+                CSerializationConstructionGuard::check();
                 try {
                     CSerialization::setProperty(object, key, value, context);
+                    CSerializationConstructionGuard::check();
                 } catch (const std::exception &exception) {
+                    CSerializationConstructionGuard::rethrowFailure();
+                    CSerializationConstructionGuard::check();
                     if (context.isStrict())
                         throw;
                     vstd::logger::warning("Skipping malformed property:", key, exception.what());
@@ -1034,7 +1115,9 @@ std::shared_ptr<CGameObject> object_deserialize(const std::shared_ptr<CGame> &ga
             }
         }
     }
+    CSerializationConstructionGuard::check();
     effects.initialize(object);
+    CSerializationConstructionGuard::check();
     effects.complete(config);
     return object;
 }

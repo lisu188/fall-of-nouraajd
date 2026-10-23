@@ -1572,6 +1572,891 @@ void testAsyncEventHooksStopAfterContextShutdown() {
     }
 }
 
+class DefeatContinuationCreature : public CCreature {
+  public:
+    std::function<void()> formatting;
+    std::function<void()> gathering;
+
+    std::string to_string() override {
+        if (formatting) {
+            auto callback = std::move(formatting);
+            formatting = {};
+            callback();
+        }
+        return CCreature::to_string();
+    }
+
+    std::set<std::shared_ptr<CItem>> getAllItems() override {
+        if (gathering) {
+            auto callback = std::move(gathering);
+            gathering = {};
+            callback();
+        }
+        return CCreature::getAllItems();
+    }
+};
+
+void testOwnedDefeatStopsAfterCallbackPublicationBeforeFurtherRewards() {
+    for (const bool atGathering : {false, true}) {
+        for (const int publication : {0, 1, 2, 3}) {
+            auto game = makeWindowlessFightGame();
+            auto context = game->getContext();
+            auto map = game->getMap();
+            map->setBoolProperty("plugin_cityFixedLoot", true);
+            auto winner = add_test_creature(game, "unitEpochRewardWinner");
+            auto loser = std::make_shared<DefeatContinuationCreature>();
+            loser->setGame(game);
+            loser->setName("unitEpochRewardLoser");
+            initialize_test_creature_stats(loser);
+            map->addObject(loser);
+            loser->setHp(0);
+            auto item = add_unit_loot(game, loser, "unitEpochRewardItem");
+            const auto experience = winner->getExp();
+            const auto generation = context->captureTransitionGeneration();
+            const auto epoch = game->getMapBindingEpoch();
+            int calls = 0;
+            int experienceAtCallback = -1;
+            auto callback = [&] {
+                ++calls;
+                experienceAtCallback = winner->getExp();
+                if (publication == 0) {
+                    game->setMap(map);
+                } else {
+                    auto replacement = std::make_shared<CMap>();
+                    replacement->setGame(game);
+                    game->setMap(replacement);
+                    if (publication != 2) {
+                        game->setMap(map);
+                    }
+                }
+                if (publication == 3) {
+                    throw std::runtime_error("unit defeat callback primary failure");
+                }
+            };
+            if (atGathering) {
+                loser->gathering = callback;
+            } else {
+                loser->formatting = callback;
+            }
+            auto owner = context->spawnTask(CFightHandler::defeatedCreatureAsync(winner, loser));
+            bool cancelled = false;
+            bool primary = false;
+            expect_true(pumpHandlerUntil([&] { return owner.finished(); }),
+                        "callback publication controls must finish without a modal or nested event pump");
+            if (owner.finished()) {
+                try {
+                    owner.get();
+                } catch (const vstd::task_cancelled &) {
+                    cancelled = true;
+                } catch (const std::runtime_error &error) {
+                    primary = std::string(error.what()) == "unit defeat callback primary failure";
+                }
+            }
+            expect_true(calls == 1 && context->isTransitionGenerationCurrent(generation) &&
+                            game->getMapBindingEpoch() == epoch + (publication == 0   ? 0
+                                                                   : publication == 2 ? 1
+                                                                                      : 2),
+                        "actual public map publication must distinguish no-op, replacement and away/back epochs");
+            if (publication == 0) {
+                expect_true(!cancelled && !primary && winner->hasInInventory(item) &&
+                                !map->getObjectByName(loser->getName()) && map->tryBeginSaveSnapshot().has_value(),
+                            "same-pointer publication must preserve ordinary complete defeat rewards and admission");
+            } else {
+                expect_true(cancelled == (publication != 3) && primary == (publication == 3) &&
+                                winner->getExp() == experienceAtCallback &&
+                                (atGathering || winner->getExp() == experience) && loser->hasInInventory(item) &&
+                                !winner->hasInInventory(item) && map->getObjectByName(loser->getName()) == loser &&
+                                !map->tryBeginSaveSnapshot(),
+                            "a callback must stop subsequent XP/item/removal effects and retain uncertain admission");
+            }
+            context->shutdown();
+        }
+    }
+}
+
+void testOwnedDefeatLootContinuationRejectsStalePublicationAndCancellation() {
+    for (const bool stale : {false, true}) {
+        for (const bool stop : {false, true}) {
+            auto game = makeWindowlessFightGame();
+            auto context = game->getContext();
+            auto map = game->getMap();
+            map->setBoolProperty("plugin_cityFixedLoot", true);
+            auto winner = add_test_player(game);
+            auto loser = add_test_creature(game, "unitEpochLootLoser", 1, 0);
+            auto item = add_unit_loot(game, loser, "unitEpochLootItem");
+            loser->setHp(0);
+            auto owner = context->spawnTask(CFightHandler::defeatedCreatureAsync(winner, loser));
+            expect_true(
+                pumpHandlerUntil([&] { return game->getGui()->findChild("CGameLootPanel") || owner.finished(); }),
+                "the continuation fixture must enter the actual native loot await");
+            auto panel = vstd::cast<CGameLootPanel>(game->getGui()->findChild("CGameLootPanel"));
+            expect_true(panel && !owner.finished() && !winner->hasInInventory(item) && !loser->hasInInventory(item) &&
+                            !map->tryBeginSaveSnapshot(),
+                        "the real pending loot receipt must own removed items and admission before continuation");
+            if (!panel) {
+                context->shutdown();
+                continue;
+            }
+            const auto experience = winner->getExp();
+            const auto epoch = game->getMapBindingEpoch();
+            if (stale) {
+                auto replacement = std::make_shared<CMap>();
+                replacement->setGame(game);
+                game->setMap(replacement);
+                game->setMap(map);
+            }
+            if (stop) {
+                owner.requestStop();
+            } else {
+                panel->close();
+            }
+            bool cancelled = false;
+            expect_true(pumpHandlerUntil([&] { return owner.finished(); }),
+                        "actual loot continuation or cancellation must drain the owned task");
+            if (owner.finished()) {
+                try {
+                    owner.get();
+                } catch (const vstd::task_cancelled &) {
+                    cancelled = true;
+                }
+            }
+            expect_true(game->getMapBindingEpoch() == epoch + (stale ? 2 : 0) && cancelled == (stale || stop) &&
+                            winner->getExp() == experience,
+                        "publication cancellation must remain distinct from a live requested cancellation");
+            if (stale) {
+                expect_true(!winner->hasInInventory(item) && !loser->hasInInventory(item) &&
+                                map->getObjectByName(loser->getName()) == loser && !map->tryBeginSaveSnapshot(),
+                            "neither child grant nor parent compensation may mutate after an away/back loot await");
+            } else {
+                expect_true(
+                    winner->hasInInventory(item) && winner->countItems("unitEpochLootItem") == 1 &&
+                        !map->getObjectByName(loser->getName()) && map->tryBeginSaveSnapshot().has_value(),
+                    "live cancellation must retain existing exactly-once grant/removal/certification semantics");
+            }
+            context->shutdown();
+        }
+    }
+}
+
+void testOwnedDefeatRemovalCannotCertifyAnAwayBackPublication() {
+    for (const bool stale : {false, true}) {
+        auto game = makeWindowlessFightGame();
+        auto context = game->getContext();
+        auto map = game->getMap();
+        map->setBoolProperty("plugin_cityFixedLoot", true);
+        auto winner = add_test_creature(game, "unitEpochRecoveryWinner", 1, 0);
+        auto player = add_test_player(game);
+        auto item = add_unit_loot(game, player, "unitEpochRecoveryItem");
+        std::shared_ptr<CCustomTrigger> restart;
+        for (const auto &trigger : map->getEventHandler()->getTriggers()) {
+            if (trigger->getObject() == "player" && trigger->getEvent() == "onDestroy") {
+                restart = std::dynamic_pointer_cast<CCustomTrigger>(trigger);
+            }
+        }
+        expect_true(restart != nullptr, "the epoch fixture must wrap the actual canonical player's restart slot");
+        if (!restart) {
+            context->shutdown();
+            continue;
+        }
+        auto nativeRestart = std::make_shared<CCustomTrigger>(*restart);
+        auto gate = std::make_shared<AsyncTriggerProbe>();
+        *restart =
+            CCustomTrigger("player", "onDestroy", [gate, nativeRestart](auto object, auto event) -> vstd::task<void> {
+                co_await awaitTriggerProbe(gate, "epochRecovery");
+                co_await nativeRestart->triggerAsync(object, event);
+            });
+        restart->setName("unitEpochRecoveryRestartWrapper");
+        player->setHp(0);
+        auto owner = context->spawnTask(CFightHandler::defeatedCreatureAsync(winner, player));
+        expect_true(pumpHandlerUntil([&] { return !gate->entered.empty() || owner.finished(); }) &&
+                        gate->entered.size() == 1 && !owner.finished(),
+                    "the epoch witness must suspend the actual removal before native restart");
+        const auto experience = winner->getExp();
+        const auto generation = context->captureTransitionGeneration();
+        const auto epoch = game->getMapBindingEpoch();
+        if (stale) {
+            auto replacement = std::make_shared<CMap>();
+            replacement->setGame(game);
+            game->setMap(replacement);
+            game->setMap(map);
+        }
+        gate->released.insert("epochRecovery");
+        bool cancelled = false;
+        expect_true(pumpHandlerUntil([&] { return owner.finished(); }),
+                    "the one wrapped restart must drain exactly once");
+        if (owner.finished()) {
+            try {
+                owner.get();
+            } catch (const vstd::task_cancelled &) {
+                cancelled = true;
+            }
+        }
+        expect_true(context->isTransitionGenerationCurrent(generation) &&
+                        game->getMapBindingEpoch() == epoch + (stale ? 2 : 0) && cancelled == stale &&
+                        winner->getExp() == experience && winner->hasInInventory(item) &&
+                        winner->countItems("unitEpochRecoveryItem") == 1 && gate->entered.size() == 1 &&
+                        map->getAssignedPlayer() == player && map->getObjectByName("player") == player &&
+                        player->getHp() == 1,
+                    "real restart effects may complete, but an epoch change cannot inherit the old certificate");
+        expect_true(player->getStringProperty("uiDefeatReceipt").empty() == stale &&
+                        map->tryBeginSaveSnapshot().has_value() == !stale,
+                    "only the unchanged publication may store the recovered receipt and release admission");
+        context->shutdown();
+    }
+}
+
+void testOwnedDefeatGuardsLazyRngFactoryEnumeration() {
+    const auto previousRng = vstd::rng();
+    for (const int phase : {0, 1, 2, 3}) {
+        for (const int publication : {0, 1, 2, 3}) {
+            auto game = makeWindowlessFightGame();
+            auto context = game->getContext();
+            auto map = game->getMap();
+            auto winner = add_test_creature(game, "unitLazyFactoryWinner");
+            auto loser = add_test_creature(game, "unitLazyFactoryLoser");
+            loser->setHp(0);
+            auto objects = game->getObjectHandler();
+            int firstItem = 0;
+            int sentinelItem = 0;
+            int firstCreature = 0;
+            int sentinelCreature = 0;
+            int calls = 0;
+            int sentinelAtCallback = -1;
+            int experienceAtCallback = -1;
+            const auto epoch = game->getMapBindingEpoch();
+            auto callback = [&] {
+                ++calls;
+                sentinelAtCallback = phase == 3 ? sentinelCreature : sentinelItem;
+                experienceAtCallback = winner->getExp();
+                if (publication == 0) {
+                    game->setMap(map);
+                } else {
+                    auto replacement = std::make_shared<CMap>();
+                    replacement->setGame(game);
+                    game->setMap(replacement);
+                    if (publication != 2) {
+                        game->setMap(map);
+                    }
+                }
+                if (publication == 3) {
+                    throw std::runtime_error("unit lazy RNG factory primary failure");
+                }
+            };
+            objects->registerType("AUnitDefeatItemFactory", [&] {
+                ++firstItem;
+                if (phase < 3 && firstItem == phase + 1) {
+                    callback();
+                }
+                auto item = std::make_shared<CItem>();
+                item->setPower(1);
+                return item;
+            });
+            objects->registerType("ZUnitDefeatItemSentinel", [&] {
+                ++sentinelItem;
+                auto item = std::make_shared<CItem>();
+                item->setPower(1);
+                return item;
+            });
+            objects->registerType("BUnitDefeatCreatureFactory", [&] {
+                ++firstCreature;
+                if (phase == 3 && firstCreature == 4) {
+                    callback();
+                }
+                auto creature = std::make_shared<CCreature>();
+                creature->setNpc(true);
+                return creature;
+            });
+            objects->registerType("ZUnitDefeatCreatureSentinel", [&] {
+                ++sentinelCreature;
+                auto creature = std::make_shared<CCreature>();
+                creature->setNpc(true);
+                return creature;
+            });
+            for (const std::string name : {"AUnitDefeatItemFactory", "ZUnitDefeatItemSentinel",
+                                           "BUnitDefeatCreatureFactory", "ZUnitDefeatCreatureSentinel"}) {
+                objects->registerConfig(name, std::make_shared<json>(json{{"class", name}}));
+                expect_true(objects->getConfig(name) && objects->getClass(name) == name,
+                            "the lazy fixture must bind every registered constructor through actual class metadata");
+            }
+            expect_true(firstItem == 0 && sentinelItem == 0 && firstCreature == 0 && sentinelCreature == 0,
+                        "the lazy factory fixture must begin with no constructor or RNG-service warmup");
+            auto owner = context->spawnTask(CFightHandler::defeatedCreatureAsync(winner, loser));
+            bool cancelled = false;
+            bool primary = false;
+            expect_true(pumpHandlerUntil([&] { return owner.finished(); }),
+                        "guarded lazy RNG initialization must finish without a modal or nested pump");
+            if (owner.finished()) {
+                try {
+                    owner.get();
+                } catch (const vstd::task_cancelled &) {
+                    cancelled = true;
+                } catch (const std::runtime_error &error) {
+                    primary = std::string(error.what()) == "unit lazy RNG factory primary failure";
+                }
+            }
+            expect_true(calls == 1 && game->getMapBindingEpoch() == epoch + (publication == 0   ? 0
+                                                                             : publication == 2 ? 1
+                                                                                                : 2),
+                        "actual prototype/item/creature factory callbacks must publish the expected native epoch");
+            if (publication == 0) {
+                expect_true(!cancelled && !primary && !map->getObjectByName(loser->getName()) &&
+                                map->tryBeginSaveSnapshot().has_value(),
+                            "same-pointer factory callbacks must preserve normal initialization and defeat settlement");
+            } else {
+                const int sentinelAfter = phase == 3 ? sentinelCreature : sentinelItem;
+                expect_true(sentinelAfter == sentinelAtCallback && cancelled == (publication != 3) &&
+                                primary == (publication == 3) && winner->getExp() == experienceAtCallback &&
+                                map->getObjectByName(loser->getName()) == loser && !map->tryBeginSaveSnapshot(),
+                            "a stale or throwing factory must stop before the next constructor and retain uncertainty");
+            }
+            context->shutdown();
+        }
+    }
+    vstd::rng() = previousRng;
+}
+
+void testOwnedDefeatStopsBeforeSecondRandomLootFactory() {
+    const auto previousRng = vstd::rng();
+    for (const int publication : {0, 1, 2, 3}) {
+        auto game = makeWindowlessFightGame();
+        auto context = game->getContext();
+        auto map = game->getMap();
+        auto winner = add_test_creature(game, "unitTwoFactoryWinner");
+        auto loser = add_test_creature(game, "unitTwoFactoryLoser");
+        loser->setLevel(0);
+        loser->setSw(2);
+        loser->setHp(0);
+        bool armed = false;
+        int factories = 0;
+        int secondConstructor = 0;
+        int experienceAtCallback = -1;
+        game->getObjectHandler()->registerType("AUnitTwoFactoryItem", [&] {
+            if (armed) {
+                ++factories;
+                if (factories == 1) {
+                    experienceAtCallback = winner->getExp();
+                    if (publication == 0) {
+                        game->setMap(map);
+                    } else {
+                        auto replacement = std::make_shared<CMap>();
+                        replacement->setGame(game);
+                        game->setMap(replacement);
+                        if (publication != 2) {
+                            game->setMap(map);
+                        }
+                    }
+                    if (publication == 3) {
+                        throw std::runtime_error("unit generated loot factory primary failure");
+                    }
+                } else {
+                    ++secondConstructor;
+                }
+            }
+            auto item = std::make_shared<CItem>();
+            item->setPower(1);
+            return item;
+        });
+        game->getObjectHandler()->registerConfig(
+            "AUnitTwoFactoryItem", std::make_shared<json>(json{{"class", "AUnitTwoFactoryItem"}}));
+        expect_true(game->getObjectHandler()->getConfig("AUnitTwoFactoryItem") &&
+                        game->getObjectHandler()->getClass("AUnitTwoFactoryItem") == "AUnitTwoFactoryItem",
+                    "the two-constructor fixture must populate the actual configured item table before arming");
+        auto rng = game->getRngHandler();
+        expect_true(rng && loser->getScale() == 2 && factories == 0,
+                    "warm only the public RNG cache before arming an exact two-unit/power-one loot workload");
+        armed = true;
+        auto owner = context->spawnTask(CFightHandler::defeatedCreatureAsync(winner, loser));
+        bool cancelled = false;
+        bool primary = false;
+        expect_true(pumpHandlerUntil([&] { return owner.finished(); }),
+                    "the two-constructor loot sentinel must finish without a modal or nested pump");
+        if (owner.finished()) {
+            try {
+                owner.get();
+            } catch (const vstd::task_cancelled &) {
+                cancelled = true;
+            } catch (const std::runtime_error &error) {
+                primary = std::string(error.what()) == "unit generated loot factory primary failure";
+            }
+        }
+        if (publication == 0) {
+            expect_true(!cancelled && !primary && factories == 2 && secondConstructor == 1 &&
+                            winner->getItems().size() == 2 && !map->getObjectByName(loser->getName()) &&
+                            map->tryBeginSaveSnapshot().has_value(),
+                        "the unchanged random policy must create and grant both legitimate power-one items");
+        } else {
+            expect_true(factories == 1 && secondConstructor == 0 && cancelled == (publication != 3) &&
+                            primary == (publication == 3) && winner->getItems().empty() &&
+                            winner->getExp() == experienceAtCallback &&
+                            map->getObjectByName(loser->getName()) == loser && !map->tryBeginSaveSnapshot(),
+                        "publication in the first generated constructor must block the second and every later grant");
+        }
+        context->shutdown();
+    }
+    vstd::rng() = previousRng;
+}
+
+class DefeatMetaBarrierItem : public CItem {
+  public:
+    int metadataCalls = 0;
+    std::function<void()> metadataCallback;
+
+    std::shared_ptr<vstd::meta> meta() override {
+        ++metadataCalls;
+        if (metadataCallback) {
+            auto callback = std::move(metadataCallback);
+            metadataCallback = {};
+            callback();
+        }
+        return CItem::meta();
+    }
+};
+
+class DefeatCodecBoundaryProbe : public CSerializerBase {
+  public:
+    std::shared_ptr<const CSerializerBase> original;
+    std::function<void()> callback;
+
+    CSerializationResult<json> serialize(const std::any &value, CSerializationWriteContext &context) const override {
+        return original->serialize(value, context);
+    }
+
+    CSerializationResult<std::any> deserialize(const std::shared_ptr<CGame> &game, const json &value,
+                                               CSerializationReadContext &context) const override {
+        if (value.is_object() && value.contains("unitCodecProbe")) {
+            callback();
+            return std::any(1);
+        }
+        return original->deserialize(game, value, context);
+    }
+};
+
+void testOwnedDefeatCodecBoundaryPreservesOriginalFailureAndStopsContinuation() {
+    const auto previousRng = vstd::rng();
+    for (const int publication : {0, 1, 2, 3}) {
+        auto game = makeWindowlessFightGame();
+        auto context = game->getContext();
+        auto map = game->getMap();
+        auto winner = add_test_creature(game, "unitCodecBoundaryWinner");
+        auto loser = add_test_creature(game, "unitCodecBoundaryLoser");
+        loser->setLevel(0);
+        loser->setSw(1);
+        loser->setHp(0);
+        bool armed = false;
+        int calls = 0;
+        int experienceAtCallback = -1;
+        std::shared_ptr<CItem> constructed;
+        auto objects = game->getObjectHandler();
+        objects->registerType("AUnitCodecBoundaryItem", [&] {
+            auto item = std::make_shared<CItem>();
+            item->setPower(1);
+            if (armed) {
+                constructed = item;
+            }
+            return item;
+        });
+        objects->registerConfig(
+            "AUnitCodecBoundaryItem",
+            std::make_shared<json>(
+                json{{"class", "AUnitCodecBoundaryItem"},
+                     {"properties", json{{"power", json{{"unitCodecProbe", true}}}, {"zAfterCodec", 123}}}}));
+        expect_true(objects->getConfig("AUnitCodecBoundaryItem") &&
+                        objects->getClass("AUnitCodecBoundaryItem") == "AUnitCodecBoundaryItem",
+                    "the codec callback must come from the actual configured item table");
+        auto rng = game->getRngHandler();
+        auto original = CTypes::findCodec(typeid(int));
+        expect_true(rng && original && calls == 0, "warm ordinary malformed-property handling before arming the codec");
+        if (!original) {
+            context->shutdown();
+            continue;
+        }
+        struct RestoreCodec {
+            std::shared_ptr<const CSerializerBase> original;
+            ~RestoreCodec() { CTypes::registerCodec(typeid(int), original); }
+        } restore{original};
+        auto probe = std::make_shared<DefeatCodecBoundaryProbe>();
+        probe->original = original;
+        probe->callback = [&] {
+            ++calls;
+            experienceAtCallback = winner->getExp();
+            if (publication == 0) {
+                game->setMap(map);
+            } else {
+                auto replacement = std::make_shared<CMap>();
+                replacement->setGame(game);
+                game->setMap(replacement);
+                if (publication != 2) {
+                    game->setMap(map);
+                }
+            }
+            if (publication == 3) {
+                throw std::runtime_error("unit codec boundary primary failure");
+            }
+        };
+        CTypes::registerCodec(typeid(int), probe);
+        armed = true;
+        auto owner = context->spawnTask(CFightHandler::defeatedCreatureAsync(winner, loser));
+        bool cancelled = false;
+        bool primary = false;
+        expect_true(pumpHandlerUntil([&] { return owner.finished(); }),
+                    "codec boundary controls must finish without a modal or a nested event pump");
+        if (owner.finished()) {
+            try {
+                owner.get();
+            } catch (const vstd::task_cancelled &) {
+                cancelled = true;
+            } catch (const std::runtime_error &error) {
+                primary = std::string(error.what()) == "unit codec boundary primary failure";
+            }
+        }
+        expect_true(constructed && calls == 1, "the actual codec callback must execute exactly once");
+        if (publication == 0) {
+            expect_true(!cancelled && !primary && constructed->getNumericProperty("zAfterCodec") == 123 &&
+                            winner->hasInInventory(constructed) && map->tryBeginSaveSnapshot().has_value(),
+                        "a current codec callback must retain ordinary assignment and defeat completion");
+        } else {
+            expect_true(cancelled == (publication != 3) && primary == (publication == 3) && constructed &&
+                            constructed->getNumericProperty("zAfterCodec") == 0 && winner->getItems().empty() &&
+                            winner->getExp() == experienceAtCallback &&
+                            map->getObjectByName(loser->getName()) == loser && !map->tryBeginSaveSnapshot(),
+                        "a throwing stale codec must preserve its original primary and block every later setter");
+        }
+        CTypes::registerCodec(typeid(int), original);
+        context->shutdown();
+    }
+    vstd::rng() = previousRng;
+}
+
+void testOwnedDefeatNestedFactoryStopsBeforeNextPropertyAndConstructor() {
+    const auto previousRng = vstd::rng();
+    for (const int publication : {0, 1, 2, 3}) {
+        auto game = makeWindowlessFightGame();
+        auto context = game->getContext();
+        auto map = game->getMap();
+        auto winner = add_test_creature(game, "unitNestedFactoryWinner");
+        auto loser = add_test_creature(game, "unitNestedFactoryLoser");
+        loser->setLevel(0);
+        loser->setSw(1);
+        loser->setHp(0);
+        auto objects = game->getObjectHandler();
+        bool armed = false;
+        int firstConstructor = 0;
+        int secondConstructor = 0;
+        int experienceAtCallback = -1;
+        std::shared_ptr<CItem> constructed;
+        objects->registerType("AUnitNestedRootItem", [&] {
+            auto item = std::make_shared<CItem>();
+            item->setPower(1);
+            if (armed) {
+                constructed = item;
+            }
+            return item;
+        });
+        objects->registerType("BUnitNestedFirstChild", [&] {
+            if (armed) {
+                ++firstConstructor;
+                experienceAtCallback = winner->getExp();
+                if (publication == 0) {
+                    game->setMap(map);
+                } else {
+                    auto replacement = std::make_shared<CMap>();
+                    replacement->setGame(game);
+                    game->setMap(replacement);
+                    if (publication != 2) {
+                        game->setMap(map);
+                    }
+                }
+                if (publication == 3) {
+                    throw std::runtime_error("unit nested factory primary failure");
+                }
+            }
+            return std::make_shared<CGameObject>();
+        });
+        objects->registerType("ZUnitNestedSecondChild", [&] {
+            if (armed) {
+                ++secondConstructor;
+            }
+            return std::make_shared<CGameObject>();
+        });
+        const json properties{{"aFirstChild", json{{"class", "BUnitNestedFirstChild"}}},
+                              {"mAfterFirstScalar", 123},
+                              {"power", json{{"class", "BUnitNestedFirstChild"}}},
+                              {"zSecondChild", json{{"class", "ZUnitNestedSecondChild"}}}};
+        std::vector<std::string> propertyOrder;
+        for (auto [key, value] : properties.items()) {
+            propertyOrder.push_back(key);
+        }
+        expect_true(propertyOrder ==
+                        std::vector<std::string>{"aFirstChild", "mAfterFirstScalar", "power", "zSecondChild"},
+                    "the actual configured property iteration must place the scalar between the two child factories");
+        objects->registerConfig("AUnitNestedRootItem", std::make_shared<json>(json{{"class", "AUnitNestedRootItem"},
+                                                                                   {"properties", properties}}));
+        for (const std::string name : {"BUnitNestedFirstChild", "ZUnitNestedSecondChild"}) {
+            objects->registerConfig(name, std::make_shared<json>(json{{"class", name}}));
+        }
+        for (const std::string name : {"AUnitNestedRootItem", "BUnitNestedFirstChild", "ZUnitNestedSecondChild"}) {
+            expect_true(objects->getConfig(name) && objects->getClass(name) == name,
+                        "each nested sentinel must have an actual native constructor and matching class configuration");
+        }
+        auto rng = game->getRngHandler();
+        expect_true(rng && loser->getScale() == 1 && firstConstructor == 0 && secondConstructor == 0,
+                    "public warmup must finish before the measured one-component nested factory workload is armed");
+        armed = true;
+        auto owner = context->spawnTask(CFightHandler::defeatedCreatureAsync(winner, loser));
+        bool cancelled = false;
+        bool primary = false;
+        expect_true(pumpHandlerUntil([&] { return owner.finished(); }),
+                    "nested factory controls must finish without a modal or a nested event pump");
+        if (owner.finished()) {
+            try {
+                owner.get();
+            } catch (const vstd::task_cancelled &) {
+                cancelled = true;
+            } catch (const std::runtime_error &error) {
+                primary = std::string(error.what()) == "unit nested factory primary failure";
+            }
+        }
+        expect_true(constructed && firstConstructor == 1,
+                    "the first actual nested constructor must run once so the blocked sentinel cannot pass vacuously");
+        if (publication == 0) {
+            expect_true(!cancelled && !primary && secondConstructor == 1 &&
+                            constructed->getNumericProperty("mAfterFirstScalar") == 123 &&
+                            constructed->getPower() == 1 && winner->hasInInventory(constructed) &&
+                            !map->getObjectByName(loser->getName()) && map->tryBeginSaveSnapshot().has_value(),
+                        "same-pointer control must retain ordinary non-strict malformed-property skip and full defeat");
+        } else {
+            expect_true(
+                cancelled == (publication != 3) && primary == (publication == 3) && secondConstructor == 0 &&
+                    constructed && constructed->getNumericProperty("mAfterFirstScalar") == 0 &&
+                    winner->getItems().empty() && winner->getExp() == experienceAtCallback &&
+                    map->getObjectByName(loser->getName()) == loser && !map->tryBeginSaveSnapshot(),
+                "nested publication or original failure must stop both the intermediate scalar and second factory");
+        }
+        expect_true(objects->getType("AUnitNestedRootItem") != nullptr,
+                    "the private synchronous construction scope must expire after the owned task unwinds");
+        context->shutdown();
+    }
+    vstd::rng() = previousRng;
+}
+
+void testOwnedDefeatFirstMetadataCallbackStopsBeforeSecondMetadataAndSetter() {
+    const auto previousRng = vstd::rng();
+    for (const int publication : {0, 1, 2, 3}) {
+        auto game = makeWindowlessFightGame();
+        auto context = game->getContext();
+        auto map = game->getMap();
+        auto winner = add_test_creature(game, "unitMetaFactoryWinner");
+        auto loser = add_test_creature(game, "unitMetaFactoryLoser");
+        loser->setLevel(0);
+        loser->setSw(1);
+        loser->setHp(0);
+        bool armed = false;
+        bool callbackUsed = false;
+        int callbacks = 0;
+        int metadataCallsAtSetterExit = -1;
+        int experienceAtCallback = -1;
+        std::shared_ptr<DefeatMetaBarrierItem> constructed;
+        auto objects = game->getObjectHandler();
+        objects->registerType("AUnitMetadataBarrierItem", [&] {
+            auto item = std::make_shared<DefeatMetaBarrierItem>();
+            item->setPower(1);
+            if (armed && !callbackUsed) {
+                callbackUsed = true;
+                constructed = item;
+                item->metadataCalls = 0;
+                item->metadataCallback = [&] {
+                    ++callbacks;
+                    experienceAtCallback = winner->getExp();
+                    if (publication == 0) {
+                        game->setMap(map);
+                    } else {
+                        auto replacement = std::make_shared<CMap>();
+                        replacement->setGame(game);
+                        game->setMap(replacement);
+                        if (publication != 2) {
+                            game->setMap(map);
+                        }
+                    }
+                    if (publication == 3) {
+                        throw std::runtime_error("unit metadata callback primary failure");
+                    }
+                };
+                try {
+                    item->setNumericProperty("unitMetaTarget", 123);
+                    metadataCallsAtSetterExit = item->metadataCalls;
+                } catch (...) {
+                    metadataCallsAtSetterExit = item->metadataCalls;
+                    throw;
+                }
+            }
+            return item;
+        });
+        objects->registerConfig("AUnitMetadataBarrierItem",
+                                std::make_shared<json>(json{{"class", "AUnitMetadataBarrierItem"}}));
+        expect_true(objects->getConfig("AUnitMetadataBarrierItem") &&
+                        objects->getClass("AUnitMetadataBarrierItem") == "AUnitMetadataBarrierItem",
+                    "the measured meta callback must be reachable from the actual configured random item table");
+        auto rng = game->getRngHandler();
+        expect_true(rng && !callbackUsed && callbacks == 0,
+                    "warm public prototype enumeration before arming the actual reflected setter callback");
+        armed = true;
+        auto owner = context->spawnTask(CFightHandler::defeatedCreatureAsync(winner, loser));
+        bool cancelled = false;
+        bool primary = false;
+        expect_true(pumpHandlerUntil([&] { return owner.finished(); }),
+                    "first-meta controls must finish without a modal or nested event pump");
+        if (owner.finished()) {
+            try {
+                owner.get();
+            } catch (const vstd::task_cancelled &) {
+                cancelled = true;
+            } catch (const std::runtime_error &error) {
+                primary = std::string(error.what()) == "unit metadata callback primary failure";
+            }
+        }
+        expect_true(constructed && callbacks == 1,
+                    "the first real virtual metadata callback must execute once before testing its continuation");
+        if (publication == 0) {
+            expect_true(!cancelled && !primary && metadataCallsAtSetterExit == 2 &&
+                            constructed->getNumericProperty("unitMetaTarget") == 123 &&
+                            winner->hasInInventory(constructed) && !map->getObjectByName(loser->getName()) &&
+                            map->tryBeginSaveSnapshot().has_value(),
+                        "same-pointer metadata callback must preserve the original two-meta setter path and grant");
+        } else {
+            expect_true(
+                cancelled == (publication != 3) && primary == (publication == 3) && metadataCallsAtSetterExit == 1 &&
+                    constructed && constructed->getNumericProperty("unitMetaTarget") == 0 &&
+                    winner->getItems().empty() && winner->getExp() == experienceAtCallback &&
+                    map->getObjectByName(loser->getName()) == loser && !map->tryBeginSaveSnapshot(),
+                "first-meta publication must block the second metadata callback and the actual property setter");
+        }
+        context->shutdown();
+    }
+    vstd::rng() = previousRng;
+}
+
+class DefeatGraphActorCallback : public CCreature {
+  public:
+    std::function<void()> bindingCallback;
+    void setGame(std::shared_ptr<CGame> game) override {
+        CGameObject::setGame(std::move(game));
+        if (bindingCallback) {
+            auto callback = std::move(bindingCallback);
+            bindingCallback = {};
+            callback();
+        }
+    }
+};
+
+void testOwnedDefeatGraphActorBindingPreservesPrimaryBeforeRootAndProperties() {
+    const auto previousRng = vstd::rng();
+    for (const int publication : {0, 1, 2, 3}) {
+        auto game = makeWindowlessFightGame();
+        auto context = game->getContext();
+        auto map = game->getMap();
+        auto winner = add_test_creature(game, "unitGraphCallbackWinner");
+        auto loser = add_test_creature(game, "unitGraphCallbackLoser");
+        loser->setLevel(0);
+        loser->setSw(1);
+        loser->setHp(0);
+        bool armed = false;
+        bool used = false;
+        int callbacks = 0;
+        int rootFactories = 0;
+        int experienceAtCallback = -1;
+        std::shared_ptr<DefeatGraphActorCallback> graphActor;
+        auto objects = game->getObjectHandler();
+        objects->registerType("AUnitGraphRootItem", [&] {
+            if (armed) {
+                ++rootFactories;
+            }
+            auto item = std::make_shared<CItem>();
+            item->setPower(1);
+            return item;
+        });
+        objects->registerType("BUnitGraphActorCallback", [&] {
+            auto actor = std::make_shared<DefeatGraphActorCallback>();
+            if (armed && !used) {
+                used = true;
+                graphActor = actor;
+                actor->bindingCallback = [&] {
+                    ++callbacks;
+                    experienceAtCallback = winner->getExp();
+                    if (publication == 0) {
+                        game->setMap(map);
+                    } else {
+                        auto replacement = std::make_shared<CMap>();
+                        replacement->setGame(game);
+                        game->setMap(replacement);
+                        if (publication != 2) {
+                            game->setMap(map);
+                        }
+                    }
+                    if (publication == 3) {
+                        throw std::runtime_error("unit graph actor binding primary failure");
+                    }
+                };
+            }
+            return actor;
+        });
+        auto actors = json::array();
+        actors[actors.size()] = json{{"class", "BUnitGraphActorCallback"},
+                                     {"effectActorId", 1},
+                                     {"properties", json{{"unitAfterBinding", 123}}}};
+        objects->registerConfig("AUnitGraphRootItem", std::make_shared<json>(json{
+                                                          {"class", "AUnitGraphRootItem"},
+                                                          {"effectGraph", json{{"version", 1}, {"actors", actors}}}}));
+        objects->registerConfig("BUnitGraphActorCallback",
+                                std::make_shared<json>(json{{"class", "BUnitGraphActorCallback"}}));
+        expect_true(
+            objects->getConfig("AUnitGraphRootItem") &&
+                objects->getClass("AUnitGraphRootItem") == "AUnitGraphRootItem" &&
+                objects->getConfig("BUnitGraphActorCallback") &&
+                objects->getClass("BUnitGraphActorCallback") == "BUnitGraphActorCallback",
+            "the actual item config must carry a real effectGraph actor definition with a matching constructor");
+        auto rng = game->getRngHandler();
+        expect_true(rng && !used && callbacks == 0 && rootFactories == 0,
+                    "warm public graph/prototype paths before arming the actual detached-actor setGame callback");
+        armed = true;
+        auto owner = context->spawnTask(CFightHandler::defeatedCreatureAsync(winner, loser));
+        bool cancelled = false;
+        bool primary = false;
+        expect_true(pumpHandlerUntil([&] { return owner.finished(); }),
+                    "the effectGraph binding controls must finish without a modal or nested pump");
+        if (owner.finished()) {
+            try {
+                owner.get();
+            } catch (const vstd::task_cancelled &) {
+                cancelled = true;
+            } catch (const std::runtime_error &error) {
+                primary = std::string(error.what()) == "unit graph actor binding primary failure";
+            }
+        }
+        expect_true(graphActor && callbacks == 1,
+                    "the real preallocated actor setGame callback must run once before checking its continuation");
+        if (!graphActor) {
+            context->shutdown();
+            continue;
+        }
+        if (publication == 0) {
+            expect_true(!cancelled && !primary && rootFactories == 1 &&
+                            graphActor->getNumericProperty("unitAfterBinding") == 123 &&
+                            winner->getItems().size() == 1 && !map->getObjectByName(loser->getName()) &&
+                            map->tryBeginSaveSnapshot().has_value(),
+                        "same-pointer graph actor setup must retain ordinary graph finalization and defeat completion");
+        } else {
+            expect_true(
+                cancelled == (publication != 3) && primary == (publication == 3) && rootFactories == 0 &&
+                    graphActor->getNumericProperty("unitAfterBinding") == 0 && winner->getItems().empty() &&
+                    winner->getExp() == experienceAtCallback && map->getObjectByName(loser->getName()) == loser &&
+                    !map->tryBeginSaveSnapshot(),
+                "graph actor rebind/error must latch before the root constructor, properties and later rewards");
+        }
+        context->shutdown();
+    }
+    vstd::rng() = previousRng;
+}
+
 bool rejectedDefeat(const vstd::task_handle<void> &call) {
     if (!pumpHandlerUntil([&] { return call.finished(); })) {
         return false;
@@ -6133,6 +7018,24 @@ int main() {
                             testDefeatRecoveryCertificationRejectsReplacedOrUnfinishedOwners);
     nativeTestProfile().run("testInternalDefeatLeaseSurvivesParentControllerCleanup",
                             testInternalDefeatLeaseSurvivesParentControllerCleanup);
+    nativeTestProfile().run("testOwnedDefeatStopsAfterCallbackPublicationBeforeFurtherRewards",
+                            testOwnedDefeatStopsAfterCallbackPublicationBeforeFurtherRewards);
+    nativeTestProfile().run("testOwnedDefeatLootContinuationRejectsStalePublicationAndCancellation",
+                            testOwnedDefeatLootContinuationRejectsStalePublicationAndCancellation);
+    nativeTestProfile().run("testOwnedDefeatRemovalCannotCertifyAnAwayBackPublication",
+                            testOwnedDefeatRemovalCannotCertifyAnAwayBackPublication);
+    nativeTestProfile().run("testOwnedDefeatGuardsLazyRngFactoryEnumeration",
+                            testOwnedDefeatGuardsLazyRngFactoryEnumeration);
+    nativeTestProfile().run("testOwnedDefeatStopsBeforeSecondRandomLootFactory",
+                            testOwnedDefeatStopsBeforeSecondRandomLootFactory);
+    nativeTestProfile().run("testOwnedDefeatNestedFactoryStopsBeforeNextPropertyAndConstructor",
+                            testOwnedDefeatNestedFactoryStopsBeforeNextPropertyAndConstructor);
+    nativeTestProfile().run("testOwnedDefeatFirstMetadataCallbackStopsBeforeSecondMetadataAndSetter",
+                            testOwnedDefeatFirstMetadataCallbackStopsBeforeSecondMetadataAndSetter);
+    nativeTestProfile().run("testOwnedDefeatCodecBoundaryPreservesOriginalFailureAndStopsContinuation",
+                            testOwnedDefeatCodecBoundaryPreservesOriginalFailureAndStopsContinuation);
+    nativeTestProfile().run("testOwnedDefeatGraphActorBindingPreservesPrimaryBeforeRootAndProperties",
+                            testOwnedDefeatGraphActorBindingPreservesPrimaryBeforeRootAndProperties);
     nativeTestProfile().run("testAsyncCombatAwaitsLootWithoutPumpingOrGrantingRewardsEarly",
                             testAsyncCombatAwaitsLootWithoutPumpingOrGrantingRewardsEarly);
     nativeTestProfile().run("testWorkerStartedCombatDefersControllerAndPanelCreationToMain",

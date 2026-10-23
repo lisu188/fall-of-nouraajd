@@ -22,6 +22,7 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #include "object/CGameObject.h"
 
 #include <cstdint>
+#include <functional>
 
 class CItem;
 
@@ -65,6 +66,15 @@ class CRngHandler : public CGameObject {
     void addRandomEncounter(const std::shared_ptr<CMap> &map, int x, int y, int z, int value);
 
   private:
+    friend class CFightHandler;
+    friend class CGameContext;
+
+    CRngHandler(const std::shared_ptr<CGame> &game, std::function<void()> requireCurrent);
+    std::set<std::shared_ptr<CItem>> calculateDefeatLoot(int value, std::function<void()> requireCurrent) const;
+
+    vstd::task<void> addDefeatLootAsync(std::shared_ptr<CCreature> creature, std::set<std::shared_ptr<CItem>> items,
+                                        std::function<void()> requireCurrent);
+
     std::set<std::shared_ptr<CItem>> calculateRandomLoot(int value) const;
 
     std::set<std::shared_ptr<CCreature>> calculateRandomEncounter(int value) const;
