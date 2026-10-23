@@ -23,13 +23,15 @@ void CMapObject::move(int x, int y, int z) {
 vstd::task<void> CMapObject::moveAsync(Coords delta) { return moveOwnedAsync(this->ptr<CMapObject>(), delta, false); }
 
 vstd::task<void> CMapObject::moveToAsync(Coords coords, std::move_only_function<void()> positionCommit,
-                                         CMovementPresenter presenter) {
-    return moveOwnedAsync(this->ptr<CMapObject>(), coords, true, std::move(positionCommit), std::move(presenter));
+                                         CMovementPresenter presenter, std::move_only_function<bool()> commitAllowed) {
+    return moveOwnedAsync(this->ptr<CMapObject>(), coords, true, std::move(positionCommit), std::move(presenter),
+                          std::move(commitAllowed));
 }
 
 vstd::task<void> CMapObject::moveOwnedAsync(std::shared_ptr<CMapObject> object, Coords coords, bool absolute,
                                             std::move_only_function<void()> positionCommit,
-                                            CMovementPresenter presenter) {
+                                            CMovementPresenter presenter,
+                                            std::move_only_function<bool()> commitAllowed) {
     auto loop = vstd::event_loop<>::instance();
     if (!loop->isMainThread()) {
         co_await vstd::post(loop);
@@ -107,6 +109,16 @@ vstd::task<void> CMapObject::moveOwnedAsync(std::shared_ptr<CMapObject> object, 
                 co_return;
             }
         }
+    }
+
+    if (commitAllowed && !commitAllowed()) {
+        if (navigationLock.owns_lock()) {
+            navigationLock.unlock();
+        }
+        if (moveable) {
+            moveable->cancelMove();
+        }
+        co_return;
     }
 
     Coords oldCoords = object->getCoords();
