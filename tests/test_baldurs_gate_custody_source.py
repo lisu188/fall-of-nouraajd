@@ -1796,5 +1796,91 @@ class BaldursGateCustodySourceTest(unittest.TestCase):
         self.assertEqual([], calls)
 
 
+    def testFirstCityStartDefaultsCustodyHearingWithoutResettingRevisits(self):
+        namespace = {}
+        selectedSupport(ROOT / "res/game.py", {"claim_once"}, namespace)
+        source = SCRIPT.read_text(encoding="utf-8")
+        start = next(
+            node
+            for node in ast.walk(ast.parse(source))
+            if isinstance(node, ast.ClassDef) and node.name == "BaldursGateStart"
+        )
+        method = next(node for node in start.body if isinstance(node, ast.FunctionDef) and node.name == "onEnter")
+        method = deepcopy(method)
+        method.decorator_list = []
+        method.body = [
+            next(
+                node
+                for node in ast.walk(method)
+                if isinstance(node, ast.If)
+                and isinstance(node.test, ast.Call)
+                and isinstance(node.test.func, ast.Name)
+                and node.test.func.id == "claim_once"
+                and any(
+                    isinstance(arg, ast.Constant) and arg.value == "plugin_cityInitialized" for arg in node.test.args
+                )
+            )
+        ]
+        flags, numbers, writes, profile = {}, {}, [], {}
+        game_map = SimpleNamespace(
+            getBoolProperty=lambda key: flags.get(key, False),
+            setBoolProperty=lambda key, value: (flags.update({key: value}), writes.append((key, value))),
+            setNumericProperty=lambda key, value: numbers.update({key: value}),
+        )
+        player = SimpleNamespace(
+            addExp=lambda value: None,
+            addGold=lambda value: None,
+            getStats=lambda: SimpleNamespace(getNumericProperty=lambda key: 10),
+            getName=lambda: "player",
+            getTypeId=lambda: "Warrior",
+            getPlayerClassId=lambda: "warriorClass",
+            getNumericProperty=lambda key: 1,
+            getGold=lambda: 1000,
+            getEquipped=lambda: {},
+            getStringProperty=lambda key: "cityParty",
+        )
+        game = SimpleNamespace(createObject=lambda key: key)
+        clock_object = SimpleNamespace(initializeActors=lambda: None, applySchedules=lambda: None)
+        namespace.update(
+            game_map=game_map,
+            player=player,
+            world=lambda obj: game_map,
+            hero=lambda obj: player,
+            possessions=lambda obj: [],
+            write=lambda obj, key, value: profile.update({key: value}),
+            clock=lambda obj: clock_object,
+            observeArea=lambda obj, area: None,
+            currentArea=lambda obj: "AR0800",
+            flowGame=lambda value: value,
+            uiRequest=lambda operation, *args: (operation, args),
+        )
+        exec(
+            compile(ast.fix_missing_locations(ast.Module(body=[method], type_ignores=[])), str(SCRIPT), "exec"),
+            namespace,
+        )
+        fixture = SimpleNamespace(getGame=lambda: game)
+        event = SimpleNamespace(getCause=lambda: SimpleNamespace(isPlayer=lambda: True))
+        list(namespace["onEnter"](fixture, event))
+        key = "plugin_cityFlag_custodyHearing"
+        self.assertIn(key, flags, "The first city start must declare the initial non-hearing state")
+        self.assertIs(False, flags[key])
+        self.assertEqual([(key, False)], [row for row in writes if row[0] == key])
+        flags[key] = True
+        list(namespace["onEnter"](fixture, event))
+        self.assertIs(True, flags[key], "A revisit or initialized save must retain an active hearing")
+        self.assertEqual([(key, False)], [row for row in writes if row[0] == key])
+
+    def testCustodyHearingHasAnActualMapBoolDefaultDeclaration(self):
+        from scripts.validate_content import ContentValidator, MapContext, ScriptAnalyzer
+
+        analyzer = ScriptAnalyzer(SCRIPT)
+        analyzer.visit(ast.parse(SCRIPT.read_text(encoding="utf-8"), filename=str(SCRIPT)))
+        context = MapContext("baldursGate", SCRIPT.parent, SCRIPT.parent / "map.json", {}, {}, {}, analyzer.info)
+        validator = ContentValidator(ROOT)
+        validator._validate_script_property_hygiene(context)
+        issues = [issue for issue in validator.issues if "plugin_cityFlag_custodyHearing" in issue.message]
+        self.assertEqual([], issues)
+
+
 if __name__ == "__main__":
     unittest.main()

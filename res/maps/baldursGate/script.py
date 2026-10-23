@@ -1620,6 +1620,7 @@ def load(self, context):
             if not event or not event.getCause() or not event.getCause().isPlayer():
                 return
             if claim_once(world(self), "plugin_cityInitialized"):
+                world(self).setBoolProperty("plugin_cityFlag_custodyHearing", False)
                 player = hero(self)
                 player.addExp(10000)
                 player.addGold(1000)
