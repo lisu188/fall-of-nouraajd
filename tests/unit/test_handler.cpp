@@ -81,6 +81,17 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 namespace {
 
+void testScriptFlowBootstrapDoesNotRequireGameplayModule() {
+    const auto modules = pybind11::module_::import("sys").attr("modules").cast<pybind11::dict>();
+    expect_true(!modules.contains("_game"), "pure UI startup must not load or register gameplay bindings");
+    auto game = std::make_shared<CGame>();
+    auto callback = pybind11::cpp_function([] { return pybind11::none(); });
+    auto flow = game->getScriptHandler()->createCallbackFlow(callback, game);
+    expect_true(flow && !flow->next(nullptr), "a native callback flow must start in the standalone handler test");
+    flow.reset();
+    game->getContext()->shutdown();
+}
+
 class DiagnosedNativeTestProfile : public CNativeTestProfile {
   public:
     using CNativeTestProfile::CNativeTestProfile;
@@ -420,6 +431,48 @@ std::shared_ptr<CGame> makeWindowlessFightGame() {
     objects->registerConfig("lootPanel", std::make_shared<json>(json{{"class", "CGameLootPanel"}}));
     objects->registerConfig("fightPanel", std::make_shared<json>(json{{"class", "CGameFightPanel"}}));
     return game;
+}
+
+void testSyncGuiWaitReleasesLastGameOwner() {
+    auto loop = vstd::event_loop<>::instance();
+    for (const bool dropFinalOwner : {false, true}) {
+        auto game = makeWindowlessFightGame();
+        auto context = game->getContext();
+        auto gui = game->getGui();
+        auto handler = game->getGuiHandler();
+        game->getObjectHandler()->registerType("CGameTextPanel", [] { return std::make_shared<CGameTextPanel>(); });
+        game->getObjectHandler()->registerConfig("textPanel",
+                                                 std::make_shared<json>(json{{"class", "CGameTextPanel"}}));
+        std::weak_ptr<CGame> lifetime = game;
+        auto retainedOwner = dropFinalOwner ? std::shared_ptr<CGame>{} : game;
+        bool callbackRan = false;
+        bool panelOpened = false;
+        bool ownerExpiredInCallback = false;
+        bool contextActiveInCallback = false;
+        expect_true(loop->invoke([&] {
+            callbackRan = true;
+            auto panel = vstd::cast<CGameTextPanel>(gui->findChild("CGameTextPanel"));
+            panelOpened = panel != nullptr;
+            game.reset();
+            ownerExpiredInCallback = lifetime.expired();
+            contextActiveInCallback = context->isActive();
+            if (dropFinalOwner && !ownerExpiredInCallback) {
+                // Bound the old ownership failure instead of leaving its modal waiting forever.
+                context->shutdown();
+            } else if (!dropFinalOwner && panel) {
+                panel->close();
+            }
+        }),
+                    "a synchronous GUI wait must pump the queued owner-release callback");
+        handler->showMessage("Release the final owner while this native modal waits");
+        expect_true(callbackRan && panelOpened && ownerExpiredInCallback == dropFinalOwner &&
+                        contextActiveInCallback != dropFinalOwner && gui->getChildren().empty(),
+                    "synchronous GUI waits must permit final game destruction without cancelling a retained session");
+        retainedOwner.reset();
+        expect_true(lifetime.expired() && !context->isActive(),
+                    "releasing the final external game owner must shut down and release its native session");
+        context->shutdown();
+    }
 }
 
 void initialize_test_creature_stats(const std::shared_ptr<CCreature> &creature) {
@@ -4480,6 +4533,7 @@ void testSaveAdmissionQuarantineRequiresVerifiedInstall() {
 
 int main() {
     pybind11::scoped_interpreter guard{};
+    pybind11::module_::import("sys").attr("path").attr("insert")(0, GAME_HANDLER_TEST_PYTHON_ROOT);
     pybind11::module_::import("ui");
     const auto runTimedGuiCancellationTest = [](const char *name, void (*test)()) {
         const auto started = std::chrono::steady_clock::now();
@@ -4492,6 +4546,9 @@ int main() {
     nativeTestProfile().run("testGameplayMetadataIsAvailableBeforePluginLoading",
                             testGameplayMetadataIsAvailableBeforePluginLoading);
 
+    nativeTestProfile().run("testScriptFlowBootstrapDoesNotRequireGameplayModule",
+                            testScriptFlowBootstrapDoesNotRequireGameplayModule);
+    nativeTestProfile().run("testSyncGuiWaitReleasesLastGameOwner", testSyncGuiWaitReleasesLastGameOwner);
     nativeTestProfile().run("test_script_handler_executes_commands_and_wraps_functions",
                             test_script_handler_executes_commands_and_wraps_functions);
     nativeTestProfile().run("test_handler_constructors_are_covered_by_native_tests",

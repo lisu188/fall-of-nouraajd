@@ -44,9 +44,14 @@ class CController : public CGameObject {
 };
 
 class CPlayerController : public CController {
-    V_META(CPlayerController, CController, vstd::meta::empty())
+    V_META(CPlayerController, CController,
+           V_PROPERTY(CPlayerController, bool, movementSuspended, getMovementSuspended, setMovementSuspended))
 
   public:
+    bool getMovementSuspended() const;
+
+    void setMovementSuspended(bool value);
+
     void setTarget(std::shared_ptr<CPlayer> player, Coords target);
 
     virtual vstd::task<Coords> controlAsync(std::shared_ptr<CCreature> c);
@@ -66,6 +71,7 @@ class CPlayerController : public CController {
 
   private:
     struct PlayerRoute;
+    bool movementSuspended = false;
     std::optional<Coords> target;
     std::shared_ptr<PlayerRoute> route;
     std::size_t currentStep = 0;

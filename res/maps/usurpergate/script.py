@@ -90,7 +90,7 @@ def load(self, context):
             # the standard assault text. Wrath/standalone keep the full assault.
             ensure_quest(event.getCause(), "usurpergateQuest")
             game_map.setBoolProperty("usurpergate_intro", True)
-            if mercy_route_active(game):
+            if mercy_route_active(game_map.getGame()):
                 (yield from applyMercyRouteFlow(game_map))
                 (yield uiRequest("showReader", flowGame(game), "Voss keeps his word", MERCY_ARRIVAL_TEXT))
             else:

@@ -2,6 +2,7 @@
 
 import json
 from pathlib import Path
+from time import monotonic
 
 from tests.castle_walkthrough import TransitRoutes, shortestRoute
 
@@ -62,6 +63,20 @@ class NarrativeWalkthrough:
     def pump(self):
         self.call(self.loop, "run")
         self.assertSurvival("after event_loop.run")
+
+    def waitForMap(self, map_name, *, timeout=5):
+        deadline = monotonic() + timeout
+        scene = self.call(self.game, "getSceneManager")
+        while True:
+            self.pump()
+            destination = self.call(self.game, "getMap")
+            observed = self.call(destination, "getStringProperty", ["mapName"])
+            pending = self.call(scene, "isTransitionPending")
+            if observed == map_name and not pending:
+                self.gameMap = destination
+                return
+            if monotonic() >= deadline:
+                raise AssertionError({"expectedMap": map_name, "observedMap": observed, "transitionPending": pending})
 
     def properties(self, handle):
         return json.loads(self.engineCall("jsonify", [handle]))["properties"]
@@ -266,8 +281,7 @@ class NarrativeWalkthrough:
         source_map = self.gameMap
         progression_before = self.progression()
         self.call(dialog, "invokeAction", ["free_captive" if outcome == "good" else "continueAfterLoss"])
-        self.pump()
-        self.gameMap = self.call(self.game, "getMap")
+        self.waitForMap("siege")
         assert self.call(self.gameMap, "getStringProperty", ["mapName"]) == "siege"
         assert self.call(self.gameMap, "getPlayer") == self.player
         assert self.progression() == progression_before

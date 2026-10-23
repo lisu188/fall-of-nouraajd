@@ -20,6 +20,8 @@ BASELINE_CASES = {
 }
 ADDITIONAL_CASES = {
     "handler": (
+        "testScriptFlowBootstrapDoesNotRequireGameplayModule",
+        "testSyncGuiWaitReleasesLastGameOwner",
         "testObjectEntryTracePreservesActualCauseAndContactBeforeNpcDeparture",
         "testObjectEntryTraceRequiresOptInAndCanonicalColocatedCause",
         "testAsyncObjectEntryTraceWaitsForHooksAndPreservesContactOnResume",
@@ -50,6 +52,10 @@ ADDITIONAL_CASES = {
         "testMapMoveSnapshotsActorsBeforeInlinePlans",
         "testCancelledAsyncCombatRestoresPlayerOrigin",
         "testMapMoveRejectsPlayerPlanCapturedBeforeSynchronousRespawn",
+        "testMapPlayerCacheMissPreservesValidControllerIdentity",
+        "testMapMoveRejectsPlayerPlanSuspendedBeforeCommit",
+        "testMapMoveRejectsPlayerPlanSuspendedDuringLeaveHook",
+        "testMapPausedPlayerControllerRoundTripsWithoutReset",
         "test_scene_manager_awaits_preparation_and_rolls_back_errors",
         "testSceneCompletionOwnsSkippedLazyChildren",
         "testSceneCommitRunsAfterPreparationAndBeforeQueuedObservers",

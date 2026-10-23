@@ -80,3 +80,9 @@ python test.py --suite mcp-branches --branch-group baldursGate
 The first command uses source checks and native-shaped model doubles. The second requires a current staged native binary and real movement/dialogue/combat. Planned routes cover all five existing hero classes, but an unexecuted route is not a passing receipt. Shop chooser cancellation never proves an item was sold, stolen or transferred.
 
 Current acceptance blockers include original BG1-versus-EE reconciliation, unsupported source scripts and item effects, crime/arrest/escape outcomes, remaining conversation and recruitment branches, exact shop/temple formulas, and complete native save/reload and visual evidence. The owner confirmed that neither an original installation nor an alternate build volume is available. After bounded verified cleanup, C: remains above 95 percent used. No local native build or capture is authorized by that cleanup result; the 90 percent guard remains in force.
+
+City structured metadata uses a `city-json:` text prefix to preserve its string type through native loading,
+cloning and saves. The runtime accepts protected and legacy plain JSON text and protects subsequent state writes.
+The encoding changes only structured text, leaving native references and typed properties intact. An older save
+whose metadata was already coerced into native object collections cannot be reconstructed or safely reseeded by
+this repair. Focused source/model checks and deferred native loading/save probes remain separate evidence classes.

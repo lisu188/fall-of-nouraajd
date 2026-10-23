@@ -51,6 +51,82 @@ def objectClasses():
 
 
 class FirstPartyHookFlowTest(unittest.TestCase):
+    def nouraajdTransitionFixture(self):
+        tree = ast.parse((ROOT / "res/maps/nouraajd/script.py").read_text(encoding="utf-8"))
+        transition = next(
+            node for node in ast.walk(tree) if isinstance(node, ast.ClassDef) and node.name == "ChangeMap"
+        )
+        callback = next(
+            node for node in transition.body if isinstance(node, ast.FunctionDef) and node.name == "onEnter"
+        )
+        callback.decorator_list = []
+        player = object()
+        world = SimpleNamespace(getPlayer=lambda: player)
+
+        class NativeGame:
+            def getMap(self):
+                return world
+
+        native_game = NativeGame()
+        reference = weakref.ref(native_game)
+        world.getGame = reference
+        calls, snapshots = [], []
+
+        def boundary(name, argument, outcome, fallback_map):
+            if type(argument) is not NativeGame:
+                raise TypeError("Resource helpers require the native game instance")
+            self.assertIs(reference(), argument)
+            calls.append((name, outcome, fallback_map))
+
+        def prepare(argument, outcome, fallback_map):
+            boundary("prepare", argument, outcome, fallback_map)
+
+        def complete(argument, outcome, fallback_map):
+            boundary("complete", argument, outcome, fallback_map)
+
+            def presentation():
+                yield ui.uiRequest("gui.showMessage", "Campaign transition prepared")
+
+            return presentation()
+
+        namespace = {
+            "flowGame": ui.flowGame,
+            "uiRequest": ui.uiRequest,
+            "narrative": SimpleNamespace(snapshotTown=lambda game, state: snapshots.append((game, state))),
+            "_quest_system_from": lambda _owner: SimpleNamespace(get_state=lambda _key: "courtyard_known"),
+            "campaign": SimpleNamespace(prepareCompletion=prepare, complete_scenarioFlow=complete),
+        }
+        exec(compile(ast.Module(body=[callback], type_ignores=[]), "authored-nouraajd-transition", "exec"), namespace)
+        owner = SimpleNamespace(getMap=lambda: world, getGame=reference)
+        flow = namespace["onEnter"](owner, SimpleNamespace())
+        self.addCleanup(flow.close)
+        return flow, native_game, reference, calls, player, snapshots
+
+    def testNouraajdTransitionUsesNativeGameAtBothCampaignBoundaries(self):
+        flow, native_game, _reference, calls, player, snapshots = self.nouraajdTransitionFixture()
+        request = next(flow)
+        self.assertEqual([("prepare", "completed", "ritual")], calls)
+        self.assertEqual("gui.checkQuests", request["operation"])
+        self.assertEqual((player,), request["args"])
+        self.assertEqual("courtyard_known", snapshots[0][1])
+        self.assertIsInstance(snapshots[0][0], ui.UiFlowGame)
+        self.assertIs(native_game, snapshots[0][0].resolve())
+        request = flow.send(None)
+        self.assertEqual([("prepare", "completed", "ritual"), ("complete", "completed", "ritual")], calls)
+        self.assertEqual("gui.showMessage", request["operation"])
+        with self.assertRaises(StopIteration):
+            flow.send(None)
+
+    def testSuspendedNouraajdTransitionDoesNotRetainTheNativeGame(self):
+        flow, native_game, reference, calls, _player, _snapshots = self.nouraajdTransitionFixture()
+        self.assertEqual("gui.checkQuests", next(flow)["operation"])
+        self.assertEqual([("prepare", "completed", "ritual")], calls)
+        del native_game
+        gc.collect()
+        self.assertIsNone(reference())
+        flow.close()
+        self.assertEqual([("prepare", "completed", "ritual")], calls)
+
     def testDialogActionFlowValidatesBothNamesAndDefersItsTraceUntilExecution(self):
         tree = ast.parse((ROOT / "res/game.py").read_text(encoding="utf-8"))
         dialog = next(node for node in tree.body if isinstance(node, ast.ClassDef) and node.name == "CDialog")
