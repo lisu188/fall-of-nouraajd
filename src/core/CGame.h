@@ -70,7 +70,8 @@ class CGame : public CGameObject {
     // request was accepted by the scene manager.
     bool requestMapTransition(CMapTransitionRequest request);
 
-    bool changeMapWithPreparationFlow(std::string mapName, std::move_only_function<vstd::task<void>()> beforeEntryAsync,
+    bool changeMapWithPreparationFlow(std::string mapName,
+                                      vstd::move_only_function<vstd::task<void>()> beforeEntryAsync,
                                       std::function<void(bool)> completion,
                                       std::function<void()> commitBeforeEntry = {});
 

@@ -39,7 +39,7 @@ std::shared_ptr<vstd::thread_pool<16>> workerPool() {
     return pool;
 }
 
-vstd::task<void> dispatch(std::move_only_function<void()> callback) {
+vstd::task<void> dispatch(vstd::move_only_function<void()> callback) {
     co_await vstd::post(vstd::event_loop<>::instance());
     callback();
 }

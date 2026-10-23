@@ -1,4 +1,4 @@
-cmake_minimum_required(VERSION 3.20)
+cmake_minimum_required(VERSION 3.30)
 
 project(fall_of_nouraajd_android LANGUAGES C CXX)
 
@@ -85,7 +85,7 @@ if (TARGET SDL2_ttf::SDL2_ttf)
 endif ()
 
 add_library(main SHARED ${GAME_ANDROID_SRC})
-target_compile_features(main PRIVATE cxx_std_23)
+target_compile_features(main PRIVATE cxx_std_26)
 set_target_properties(main PROPERTIES
     CXX_STANDARD_REQUIRED ON
     CXX_EXTENSIONS OFF

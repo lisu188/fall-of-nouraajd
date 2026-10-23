@@ -34,7 +34,15 @@ def buildStartingSave(args):
     server = mcp.EngineMcpServer(
         ROOT, directory, build_config=args.build_config, native_log_sink="disabled", test_seed=args.seed
     )
-    server.import_modules()
+    try:
+        server.import_modules()
+        receipt = server._engine_owner.run(createStartingSave, server, args)
+    finally:
+        server.close()
+    print(json.dumps(receipt))
+
+
+def createStartingSave(server, args):
     native = server._game_module
     game = native.CGameLoader.loadGame()
     if args.campaign:
@@ -59,19 +67,15 @@ def buildStartingSave(args):
         raise AssertionError(f"Starting fixture changed more than initial reputation: {sorted(changed)}")
     if not native.CMapLoader.saveWithResult(world, args.slot):
         raise RuntimeError("The engine refused to save its initial state")
-    print(
-        json.dumps(
-            {
-                "slot": args.slot,
-                "map": world.getStringProperty("mapName"),
-                "class": args.class_id,
-                "campaign": args.campaign,
-                "initialReputation": args.reputation,
-                "seed": args.seed,
-                "changedPlayerProperties": sorted(changed),
-            }
-        )
-    )
+    return {
+        "slot": args.slot,
+        "map": world.getStringProperty("mapName"),
+        "class": args.class_id,
+        "campaign": args.campaign,
+        "initialReputation": args.reputation,
+        "seed": args.seed,
+        "changedPlayerProperties": sorted(changed),
+    }
 
 
 def main(argv=None):

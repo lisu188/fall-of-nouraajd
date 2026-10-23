@@ -65,7 +65,7 @@ bool CSceneManager::requestMapChange(const std::shared_ptr<CGame> &game, CMapTra
 }
 
 bool CSceneManager::requestMapChange(const std::shared_ptr<CGame> &game, CMapTransitionRequest request,
-                                     std::move_only_function<vstd::task<void>()> beforeEntryAsync) {
+                                     vstd::move_only_function<vstd::task<void>()> beforeEntryAsync) {
     const std::string mapName = request.targetMap;
     if (!game) {
         if (CPlaytestTrace::enabled()) {
@@ -149,7 +149,7 @@ vstd::task<void> CSceneManager::runTransitionAsync(std::shared_ptr<CSceneManager
                                                    std::weak_ptr<CGameContext> weakContext,
                                                    std::weak_ptr<CMap> weakExpectedMap, bool hadExpectedMap,
                                                    std::uint64_t expectedGeneration, CMapTransitionRequest request,
-                                                   std::move_only_function<vstd::task<void>()> beforeEntryAsync,
+                                                   vstd::move_only_function<vstd::task<void>()> beforeEntryAsync,
                                                    std::shared_ptr<scene_detail::CTransitionCompletion> completion) {
     const auto targetMap = request.targetMap;
     auto reject = [&] {
@@ -218,7 +218,7 @@ std::string CSceneManager::getPendingMapName() const { return pendingMapName; }
 
 vstd::task<void> CSceneManager::performMapChangeAsync(std::weak_ptr<CGame> weakGame, std::uint64_t expectedGeneration,
                                                       CMapTransitionRequest request,
-                                                      std::move_only_function<vstd::task<void>()> beforeEntryAsync,
+                                                      vstd::move_only_function<vstd::task<void>()> beforeEntryAsync,
                                                       std::shared_ptr<scene_detail::CTransitionCompletion> completion) {
     auto game = weakGame.lock();
     if (!game || !game->getContext()->isTransitionGenerationCurrent(expectedGeneration)) {

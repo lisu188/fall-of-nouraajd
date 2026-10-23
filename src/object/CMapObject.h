@@ -76,7 +76,7 @@ class CMapObject : public CGameObject, public CCreatable, public CTurnable {
 
     vstd::task<void> moveAsync(Coords delta);
 
-    vstd::task<void> moveToAsync(Coords coords, std::move_only_function<void()> positionCommit = {},
+    vstd::task<void> moveToAsync(Coords coords, vstd::move_only_function<void()> positionCommit = {},
                                  CMovementPresenter presenter = {});
 
     void relocateWithoutMoveHooks(Coords coords);
@@ -89,7 +89,7 @@ class CMapObject : public CGameObject, public CCreatable, public CTurnable {
 
   private:
     static vstd::task<void> moveOwnedAsync(std::shared_ptr<CMapObject> object, Coords coords, bool absolute,
-                                           std::move_only_function<void()> positionCommit = {},
+                                           vstd::move_only_function<void()> positionCommit = {},
                                            CMovementPresenter presenter = {});
 
     int posx = 0;

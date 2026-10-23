@@ -114,6 +114,101 @@ class AndroidPortScaffoldTest(unittest.TestCase):
             self.assertEqual(0, completed.returncode, completed.stdout + completed.stderr)
             self.assertIn("Android target packages resolved without host fallback", completed.stdout)
 
+    def testAndroidCmakeRequiresTheGameCxx26Standard(self):
+        source = (ROOT / "android/CMakeLists.txt").read_text(encoding="utf-8")
+        standard = re.search(r"target_compile_features\(main\s+PRIVATE\s+cxx_std_(\d+)\)", source)
+        self.assertIsNotNone(standard, "The game must explicitly select its C++ standard")
+        self.assertEqual("26", standard.group(1), "Android must accept the C++26 syntax used by game headers")
+        self.assertIn("CXX_STANDARD_REQUIRED ON", source)
+        self.assertIn("CXX_EXTENSIONS OFF", source)
+
+    def testAndroidGradlePinsCmakeWithCxx26Support(self):
+        gradle = (ROOT / "android/app/build.gradle.kts").read_text(encoding="utf-8")
+        versions = re.findall(r'^\s*version\s*=\s*"([0-9.]+)"', gradle, re.MULTILINE)
+        self.assertEqual(1, len(versions), "Pin Gradles native CMake instead of its pre-C++26 default")
+        version = versions[0]
+        self.assertGreaterEqual(tuple(map(int, version.split("."))), (3, 30))
+        cmake = (ROOT / "android/CMakeLists.txt").read_text(encoding="utf-8")
+        required = re.search(r"cmake_minimum_required\(VERSION ([0-9.]+)\)", cmake)
+        self.assertIsNotNone(required)
+        self.assertGreaterEqual(tuple(map(int, required.group(1).split("."))), (3, 30))
+        for workflow in ("android.yml", "release.yml"):
+            source = (ROOT / ".github/workflows" / workflow).read_text(encoding="utf-8")
+            self.assertIn(f"${{ANDROID_HOME}}/cmake/{version}", source)
+
+    def testAndroidToolchainProbePrecedesDependencyBuilds(self):
+        for name in ("android.yml", "release.yml"):
+            with self.subTest(workflow=name):
+                source = (ROOT / ".github/workflows" / name).read_text(encoding="utf-8")
+                self.assertLess(
+                    source.index("bash android/check-toolchain.sh"),
+                    source.index("sudo apt-get update", source.index("Verify preinstalled Android toolchain")),
+                )
+                self.assertLess(
+                    source.index("bash android/check-toolchain.sh"), source.index("bash android/bootstrap-deps.sh")
+                )
+
+    def testAndroidNativeToolchainProbeExecutesMoveOwnedCallbacks(self):
+        if not (ROOT / "vstd/vtask.h").is_file():
+            self.skipTest("The vstd submodule is required for the native Android callback probe")
+        features = """
+            #include <coroutine>
+            #include <expected>
+            #include <type_traits>
+            #if __cplusplus <= 202302L
+            #error C++26 is required
+            #endif
+            template <typename... Types> using SelectedType = Types...[1];
+            static_assert(std::is_same_v<SelectedType<int, long>, long>);
+            void unsafe() = delete("compile probe");
+            int main() { std::expected<int, int> result = 7; return *result - 7; }
+        """
+        candidates = (
+            os.environ.get("CXX", ""),
+            "g++-15",
+            "g++-16",
+            "clang++-21",
+            "clang++-22",
+            "clang++",
+            "g++",
+            "c++",
+        )
+        compiler = None
+        checked = set()
+        for candidate in candidates:
+            executable = shutil.which(candidate) if candidate else None
+            if executable is None or executable in checked:
+                continue
+            checked.add(executable)
+            supported = subprocess.run(
+                [executable, "-std=c++26", "-pedantic-errors", "-fsyntax-only", "-x", "c++", "-"],
+                input=features,
+                capture_output=True,
+                text=True,
+                timeout=30,
+            )
+            if supported.returncode == 0:
+                compiler = executable
+                break
+        if compiler is None:
+            self.skipTest("A host compiler with C++26 pack indexing, deletion reasons, and expected is required")
+        with tempfile.TemporaryDirectory(prefix="nouraajd-android-callbacks-") as temporary:
+            binary = Path(temporary) / ("toolchain.exe" if os.name == "nt" else "toolchain")
+            for mode in ("automatic", "portable"):
+                with self.subTest(mode=mode):
+                    command = [compiler, "-std=c++26", "-pedantic-errors", "-pthread", "-I", str(ROOT / "vstd")]
+                    if mode == "portable":
+                        command.append("-DVSTD_FORCE_PORTABLE_MOVE_ONLY_FUNCTION")
+                    compiled = subprocess.run(
+                        command + [str(ROOT / "android/tests/toolchain.cpp"), "-o", str(binary)],
+                        capture_output=True,
+                        text=True,
+                        timeout=60,
+                    )
+                    self.assertEqual(0, compiled.returncode, compiled.stdout + compiled.stderr)
+                    completed = subprocess.run([str(binary)], capture_output=True, text=True, timeout=15)
+                    self.assertEqual(0, completed.returncode, completed.stdout + completed.stderr)
+
     def test_gradle_stages_game_and_cpython_payloads(self):
         gradle = (ROOT / "android/app/build.gradle.kts").read_text(encoding="utf-8")
         self.assertIn('File(repositoryRoot, "res")', gradle)

@@ -30,7 +30,7 @@ bool runFrame(vstd::event_loop<> &loop, FramePumpBudget budget = {});
 
 std::shared_ptr<vstd::thread_pool<16>> workerPool();
 
-vstd::task<void> dispatch(std::move_only_function<void()> callback);
+vstd::task<void> dispatch(vstd::move_only_function<void()> callback);
 
 inline void waitForProgress(bool readyWork = false) {
     const auto yield = [readyWork] {

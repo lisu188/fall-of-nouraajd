@@ -30,7 +30,7 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #include <typeindex>
 #include <utility>
 
-void CGameObject::dispatchDeferred(std::move_only_function<void()> callback) {
+void CGameObject::dispatchDeferred(vstd::move_only_function<void()> callback) {
     if (auto owner = getGame()) {
         auto context = owner->getContext();
         if (context->isActive()) {

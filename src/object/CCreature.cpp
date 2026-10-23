@@ -1177,7 +1177,7 @@ vstd::task<void> CCreature::useItemAsync(std::shared_ptr<CItem> item) {
         };
         auto policy = std::make_shared<DisposalPolicy>();
         const auto stop = co_await vstd::thisTaskStopToken();
-        auto prepareCommit = std::make_shared<std::move_only_function<void()>>(
+        auto prepareCommit = std::make_shared<vstd::move_only_function<void()>>(
             [self, item, context, policy, stop, restoresHp, restoresMana] {
                 if (stop.stop_requested() || (context && !context->isActive())) {
                     throw vstd::task_cancelled();
@@ -1208,46 +1208,45 @@ vstd::task<void> CCreature::useItemAsync(std::shared_ptr<CItem> item) {
                     CPlaytestTrace::addMapContext(policy->traceFields, self->getMap());
                 }
             });
-        auto commit =
-            std::make_shared<std::move_only_function<void()>>([self, item, context, policy, settled = false]() mutable {
-                if (std::exchange(settled, true)) {
-                    return;
-                }
-                if (policy->disposable && !policy->protectedQuestItem) {
-                    if (context && !context->isActive()) {
-                        auto found =
-                            std::find_if(self->items.begin(), self->items.end(), [&item](const auto &candidate) {
-                                return CGameObject::sameInstance(candidate, item);
-                            });
-                        if (found != self->items.end()) {
-                            self->items.erase(found);
-                        }
-                    } else if (self->hasInInventory(item)) {
-                        self->removeItem(item);
+        auto commit = std::make_shared<vstd::move_only_function<void()>>([self, item, context, policy,
+                                                                          settled = false]() mutable {
+            if (std::exchange(settled, true)) {
+                return;
+            }
+            if (policy->disposable && !policy->protectedQuestItem) {
+                if (context && !context->isActive()) {
+                    auto found = std::find_if(self->items.begin(), self->items.end(), [&item](const auto &candidate) {
+                        return CGameObject::sameInstance(candidate, item);
+                    });
+                    if (found != self->items.end()) {
+                        self->items.erase(found);
                     }
+                } else if (self->hasInInventory(item)) {
+                    self->removeItem(item);
                 }
-                if (!policy->traceFields.is_null()) {
-                    std::size_t removed = 0, added = 0;
-                    for (const auto &owned : policy->ownedBefore) {
-                        removed += !self->items.contains(owned);
-                    }
-                    for (const auto &owned : self->items) {
-                        added += !policy->ownedBefore.contains(owned);
-                    }
-                    auto fields = std::move(policy->traceFields);
-                    fields["hpAfter"] = self->getHp();
-                    fields["hpMaxAfter"] = self->getHpMax();
-                    fields["manaAfter"] = self->getMana();
-                    fields["manaMaxAfter"] = self->getManaMax();
-                    fields["ownedAfter"] = self->hasInInventory(item);
-                    fields["inventoryAfterCount"] = static_cast<unsigned long long>(self->items.size());
-                    fields["removedCount"] = static_cast<unsigned long long>(removed);
-                    fields["addedCount"] = static_cast<unsigned long long>(added);
-                    fields["onlyUsedItemRemoved"] = removed == 1 && added == 0 && !self->hasInInventory(item);
-                    fields["equipmentUnchanged"] = policy->equippedBefore == self->getEquipped();
-                    CPlaytestTrace::record("item_used", std::move(fields));
+            }
+            if (!policy->traceFields.is_null()) {
+                std::size_t removed = 0, added = 0;
+                for (const auto &owned : policy->ownedBefore) {
+                    removed += !self->items.contains(owned);
                 }
-            });
+                for (const auto &owned : self->items) {
+                    added += !policy->ownedBefore.contains(owned);
+                }
+                auto fields = std::move(policy->traceFields);
+                fields["hpAfter"] = self->getHp();
+                fields["hpMaxAfter"] = self->getHpMax();
+                fields["manaAfter"] = self->getMana();
+                fields["manaMaxAfter"] = self->getManaMax();
+                fields["ownedAfter"] = self->hasInInventory(item);
+                fields["inventoryAfterCount"] = static_cast<unsigned long long>(self->items.size());
+                fields["removedCount"] = static_cast<unsigned long long>(removed);
+                fields["addedCount"] = static_cast<unsigned long long>(added);
+                fields["onlyUsedItemRemoved"] = removed == 1 && added == 0 && !self->hasInInventory(item);
+                fields["equipmentUnchanged"] = policy->equippedBefore == self->getEquipped();
+                CPlaytestTrace::record("item_used", std::move(fields));
+            }
+        });
         auto event = std::make_shared<CGameEventCaused>(CGameEvent::CType::onUse, self);
         co_await map->getEventHandler()->gameEventAsync(item, std::move(event), std::move(commit),
                                                         std::move(prepareCommit));

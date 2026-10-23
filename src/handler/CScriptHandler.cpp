@@ -47,8 +47,8 @@ struct CScriptFlow::State {
     pybind11::object flow;
     std::weak_ptr<CGame> game;
     std::shared_ptr<bool> committed;
-    std::shared_ptr<std::move_only_function<void()>> commit;
-    std::shared_ptr<std::move_only_function<void()>> prepareCommit;
+    std::shared_ptr<vstd::move_only_function<void()>> commit;
+    std::shared_ptr<vstd::move_only_function<void()>> prepareCommit;
     bool explicitCommit = false;
 };
 
@@ -84,7 +84,7 @@ void CScriptFlow::markCommitted() {
 
 void CScriptFlow::markItemCommitted() { commitCallback()(); }
 
-std::move_only_function<void()> CScriptFlow::commitCallback() const {
+vstd::move_only_function<void()> CScriptFlow::commitCallback() const {
     if (!state->commit) {
         throw std::invalid_argument("An item commit requires an active item-use operation.");
     }
@@ -159,8 +159,8 @@ std::unique_ptr<CScriptFlow>
 CScriptHandler::createObjectFlow(const std::shared_ptr<CGameObject> &object, const std::string &method,
                                  const std::vector<std::shared_ptr<CGameObject>> &arguments, std::weak_ptr<CGame> game,
                                  std::shared_ptr<bool> committed,
-                                 std::shared_ptr<std::move_only_function<void()>> commit,
-                                 std::shared_ptr<std::move_only_function<void()>> prepareCommit) {
+                                 std::shared_ptr<vstd::move_only_function<void()>> commit,
+                                 std::shared_ptr<vstd::move_only_function<void()>> prepareCommit) {
     if (!object || !Py_IsInitialized()) {
         return nullptr;
     }
