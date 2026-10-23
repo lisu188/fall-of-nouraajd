@@ -2564,6 +2564,19 @@ void testDisposableItemCommitConsumesBeforeReceiptsAndCancellation() {
     loop->runReady();
 }
 
+void testScriptCallbackFlowUsesInitializedUiModule() {
+    auto game = makeWindowlessFightGame();
+    int callbacks = 0;
+    auto flow =
+        game->getScriptHandler()->createCallbackFlow(pybind11::cpp_function([&callbacks] { ++callbacks; }), game);
+    expect_true(callbacks == 0, "creating an owned callback flow must preserve its lazy execution");
+    expect_true(!flow->next() && callbacks == 1,
+                "the trusted UI module must advance and complete the native-owned callback");
+    expect_true(!flow->next() && callbacks == 1, "completed callback flows must not invoke their body twice");
+    flow.reset();
+    game->getContext()->shutdown();
+}
+
 class ItemPositionCommitProbe : public CCreature {
   public:
     bool beforeReleased = false;
@@ -4258,6 +4271,7 @@ void test_tooltip_handler_exposes_present_archetypes_without_duplicate_descripti
 
 int main() {
     pybind11::scoped_interpreter guard{};
+    pybind11::module_::import("ui");
     const auto runTimedGuiCancellationTest = [](const char *name, void (*test)()) {
         const auto started = std::chrono::steady_clock::now();
         std::cout << "[handler-test] ENTER " << name << std::endl;
@@ -4349,6 +4363,8 @@ int main() {
                             testAsyncNamedSpawnsAwaitEntryWithoutPumping);
     nativeTestProfile().run("testDisposableItemCommitConsumesBeforeReceiptsAndCancellation",
                             testDisposableItemCommitConsumesBeforeReceiptsAndCancellation);
+    nativeTestProfile().run("testScriptCallbackFlowUsesInitializedUiModule",
+                            testScriptCallbackFlowUsesInitializedUiModule);
     nativeTestProfile().run("testItemPositionCommitOwnsConsumptionBeforeArrivalCancellation",
                             testItemPositionCommitOwnsConsumptionBeforeArrivalCancellation);
     nativeTestProfile().run("testIndividualQuestCancellationHonorsExplicitRewardCommit",

@@ -9,6 +9,7 @@ SPDX-License-Identifier: GPL-3.0-or-later
 #include "core/CLoader.h"
 #include "core/CMap.h"
 #include "core/CPlaytestTrace.h"
+#include "core/CPythonOverrides.h"
 #include "core/CStats.h"
 #include "handler/CFightHandler.h"
 #include "object/CCreature.h"
@@ -26,7 +27,17 @@ SPDX-License-Identifier: GPL-3.0-or-later
 #include <string>
 #include <vector>
 
+extern "C" PyObject *PyInit__game();
+
 namespace {
+void initializeAlliedCombatPythonContent() {
+    auto sys = pybind11::module_::import("sys");
+    sys.attr("path").attr("insert")(0, GAME_ALLIED_COMBAT_TEST_RESOURCE_ROOT);
+    pybind11::module_::import("_game");
+    pybind11::module_::import("game");
+    pybind11::module_::import("json");
+}
+
 class ProbeController : public CFightController {
   public:
     int starts = 0;
@@ -135,7 +146,10 @@ void testNativeAllyActsAndHeroOwnsRewards() {
     item->addTag("quest");
     auto controller = std::make_shared<CountingMonsterController>();
     ally->setFightController(controller);
-    ally->addAction(fixture.game->createObject<CInteraction>("Attack"));
+    auto attack = fixture.game->createObject<CInteraction>("Attack");
+    expect_true(attack && !CPythonOverrides::find_override(attack.get(), "performAction").is_none(),
+                "the native ally must execute the real registered Python Attack action");
+    ally->addAction(attack);
     const auto expectedXp = static_cast<int>(250 * std::pow(2.0, enemy->getScale() - fixture.hero->getLevel()));
     const auto initialXp = fixture.hero->getExp();
     CPlaytestTrace::configure(true, "", 128, true);
@@ -366,7 +380,12 @@ void testAllyEffectsCountAsEncounterProgress() {
 } // namespace
 
 int main() {
+    if (PyImport_AppendInittab("_game", PyInit__game) != 0) {
+        std::cerr << "Cannot register the real embedded _game module\n";
+        return 1;
+    }
     pybind11::scoped_interpreter interpreter{};
+    initializeAlliedCombatPythonContent();
     testNativeAllyActsAndHeroOwnsRewards();
     testAlliedBudgetAndRejectedParticipants();
     testExplicitCandidatesBeyondNaturalDiscoveryBudget();
