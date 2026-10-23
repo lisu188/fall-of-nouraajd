@@ -681,11 +681,11 @@ void testSavedWaitSnapshotsHaveBoundedClockWorkAndOneAliasDefinition() {
     CTypes::register_type<EffectSerializationProbe, CCreature, CMapObject, CGameObject>();
     CTypes::register_type<CWaitState, CGameObject>();
     auto game = std::make_shared<CGame>();
+    game->getObjectHandler()->registerType("CWaitState", [&] { return std::make_shared<CWaitState>(timeSource); });
     for (const auto &[name, builder] : *CTypes::builders()) {
         game->getObjectHandler()->registerType(name, builder);
     }
     game->getObjectHandler()->registerType("CGameObject", [] { return std::make_shared<CGameObject>(); });
-    game->getObjectHandler()->registerType("CWaitState", [&] { return std::make_shared<CWaitState>(timeSource); });
     auto state = game->createObject<CWaitState>("CWaitState");
     auto owner = game->createObject<CGameObject>("CGameObject");
     auto coordinator = game->createObject<EffectSerializationProbe>("EffectSerializationProbe");
@@ -699,6 +699,7 @@ void testSavedWaitSnapshotsHaveBoundedClockWorkAndOneAliasDefinition() {
     owner->setObjectProperty("waitOwnerAlias", coordinator);
     state->setRemainingMilliseconds(4000);
     const auto lease = state->tryStart();
+    expect_true(clockReads == 1, "the fixed workload must construct its native wait with the injected clock");
     expect_true(lease.has_value(), "the bounded snapshot workload must acquire a real native wait lease");
     if (!lease) {
         game->getContext()->shutdown();
