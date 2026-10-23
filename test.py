@@ -143,6 +143,7 @@ VALID_TEST_SUITES = ("fast", "gameplay", "gameplay-core", "mcp-branches", "ui", 
 MCP_BRANCH_TEST_PREFIX = "GameplayBranchMcpTest."
 FAST_TEST_PREFIXES = (
     "CityNativeLoadingSourceTest.",
+    "SaveStageJsonApiSourceTest.",
     "CandlekeepMetadataSourceTest.",
     "BaldursGateCityDataTest.",
     "CityWalkthroughRegistrationTest.",
@@ -18345,11 +18346,9 @@ class GameTest(unittest.TestCase):
     def test_map_walkthrough_candlekeep(self):
         return execute_walkthrough("candlekeep")
 
-
     @game_test
     def test_map_walkthrough_baldursGate(self):
         return execute_walkthrough("baldursGate")
-
 
     @game_test
     def test_all_maps_have_walkthroughs(self):
@@ -19830,7 +19829,9 @@ class GameTest(unittest.TestCase):
                     ""
                     if settled
                     else "Usurpergate start did not settle: "
-                    + json.dumps({"authoredTarget": target, "before": before, "after": observed(entryState)}, sort_keys=True)
+                    + json.dumps(
+                        {"authoredTarget": target, "before": before, "after": observed(entryState)}, sort_keys=True
+                    )
                 ),
             )
 
@@ -26898,10 +26899,16 @@ SOURCE_UI_TESTS_AVAILABLE = (REPO_ROOT / "tests" / "__init__.py").is_file()
 if SOURCE_UI_TESTS_AVAILABLE:
     from tests.test_city_native_loading import CityNativeLoadingRuntimeTest as _CityNativeLoadingRuntimeTest
     from tests.test_city_native_loading import CityNativeLoadingSourceTest as _CityNativeLoadingSourceTest
+    from tests.test_save_stage_json_api import (
+        SaveStageJsonApiSourceTest as _SaveStageJsonApiSourceTest,
+        SaveStageJsonApiNativeProbeTest as _SaveStageJsonApiNativeProbeTest,
+    )
     from tests.test_candlekeep_metadata import CandlekeepMetadataSourceTest as _CandlekeepMetadataSourceTest
     from tests.test_candlekeep_metadata import CandlekeepMetadataRuntimeTest as _CandlekeepMetadataRuntimeTest
     from tests.test_baldurs_gate_city_data import BaldursGateCityDataTest as _BaldursGateCityDataTest
-    from tests.test_city_walkthrough_registration import CityWalkthroughRegistrationTest as _CityWalkthroughRegistrationTest
+    from tests.test_city_walkthrough_registration import (
+        CityWalkthroughRegistrationTest as _CityWalkthroughRegistrationTest,
+    )
     from tests.test_binding_source_layout import BindingSourceLayoutTest as _BindingSourceLayoutTest
     from tests.test_baldurs_gate_city_content import BaldursGateCityContentTest as _BaldursGateCityContentTest
     from tests.test_baldurs_gate_city_routes import BaldursGateCityRoutesTest as _BaldursGateCityRoutesTest
@@ -26919,7 +26926,9 @@ if SOURCE_UI_TESTS_AVAILABLE:
     from tests.test_mcp_diagnostics import McpDiagnosticsTest as _McpDiagnosticsTest
     from tests.test_mcp_engine_thread import McpEngineThreadTest as _McpEngineThreadTest
     from tests.test_mcp_http_native_ui import McpNativeUiOwnershipSourceTest as _McpNativeUiOwnershipSourceTest
-    from tests.test_usurpergate_entry_diagnostics import UsurpergateEntryDiagnosticsTest as _UsurpergateEntryDiagnosticsTest
+    from tests.test_usurpergate_entry_diagnostics import (
+        UsurpergateEntryDiagnosticsTest as _UsurpergateEntryDiagnosticsTest,
+    )
     from tests.test_mcp_engine_thread import McpHttpNativeRuntimeTest as _McpHttpNativeRuntimeTest
     from tests.test_native_diagnostics import NativeDiagnosticsRuntimeTest as _NativeDiagnosticsRuntimeTest
     from tests.test_navigation_mcp import NavigationCallbackTest as _NavigationCallbackTest
@@ -27004,18 +27013,8 @@ if SOURCE_UI_TESTS_AVAILABLE:
     from tests.test_mcp_trade_market import McpTradeMarketRuntimeTest as _McpTradeMarketRuntimeTest
     from tests.test_waypoint_traversal import WaypointTraversalTest as _WaypointTraversalTest
 
-
-
-
-
-
-
-
-
-
     class BindingSourceLayoutTest(_BindingSourceLayoutTest):
         pass
-
 
     class BaldursGateCityDataTest(_BaldursGateCityDataTest):
         pass
@@ -27250,6 +27249,12 @@ if SOURCE_UI_TESTS_AVAILABLE:
     class SessionDeferredWorkTest(_SessionDeferredWorkTest):
         pass
 
+    class SaveStageJsonApiSourceTest(_SaveStageJsonApiSourceTest):
+        pass
+
+    class SaveStageJsonApiNativeProbeTest(_SaveStageJsonApiNativeProbeTest):
+        pass
+
     class CityNativeLoadingSourceTest(_CityNativeLoadingSourceTest):
         pass
 
@@ -27286,7 +27291,6 @@ if SOURCE_UI_TESTS_AVAILABLE:
     class EnemyRoleRuntimeTest(_EnemyRoleRuntimeTest):
         pass
 
-
     class OctobogzMcpWalkthroughTest(_OctobogzMcpWalkthroughTest):
         pass
 
@@ -27308,6 +27312,7 @@ if SOURCE_UI_TESTS_AVAILABLE:
     del _DialogueMcpWalkthroughTest, _ManagementMcpWalkthroughTest, _ArtifactPreviewTest, _PythonCallbackLifecycleTest
     del _DialogueTransitionBoundaryTest
     del _CityWalkthroughRegistrationTest, _CityNativeLoadingRuntimeTest, _CityNativeLoadingSourceTest
+    del _SaveStageJsonApiSourceTest, _SaveStageJsonApiNativeProbeTest
     del _CandlekeepMetadataSourceTest, _CandlekeepMetadataRuntimeTest
     del _PaidActionRuntimeTest
     del _GameDiagnosticsTest, _McpDiagnosticsTest, _NativeDiagnosticsRuntimeTest

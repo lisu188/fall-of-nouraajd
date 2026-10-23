@@ -793,12 +793,16 @@ class SaveStageDiagnostics {
         if (!enabled)
             return;
         try {
-            const auto properties = snapshot.find("properties");
-            if (properties != snapshot.end() && properties->is_object()) {
-                const auto objectRows = properties->find("objects");
-                const auto tileRows = properties->find("tiles");
-                objects = objectRows != properties->end() && objectRows->is_array() ? objectRows->size() : 0;
-                tiles = tileRows != properties->end() && tileRows->is_array() ? tileRows->size() : 0;
+            if (snapshot.is_object() && snapshot.contains("properties")) {
+                const auto &properties = snapshot.at("properties");
+                if (properties.is_object()) {
+                    objects = properties.contains("objects") && properties.at("objects").is_array()
+                                  ? properties.at("objects").size()
+                                  : 0;
+                    tiles = properties.contains("tiles") && properties.at("tiles").is_array()
+                                ? properties.at("tiles").size()
+                                : 0;
+                }
             }
         } catch (...) {
             objects = tiles = 0;
