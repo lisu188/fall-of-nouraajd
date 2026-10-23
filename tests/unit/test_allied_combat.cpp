@@ -3,6 +3,7 @@ fall-of-nouraajd c++ dark fantasy game
 Copyright (C) 2026 Andrzej Lis
 SPDX-License-Identifier: GPL-3.0-or-later
 */
+#include "core/CAsync.h"
 #include "core/CController.h"
 #include "core/CGame.h"
 #include "core/CGameContext.h"
@@ -24,7 +25,9 @@ SPDX-License-Identifier: GPL-3.0-or-later
 #include <cmath>
 #include <functional>
 #include <memory>
+#include <stdexcept>
 #include <string>
+#include <utility>
 #include <vector>
 
 extern "C" PyObject *PyInit__game();
@@ -46,8 +49,21 @@ class ProbeController : public CFightController {
     bool cancelled = false;
     std::function<void(std::shared_ptr<CCreature>, std::shared_ptr<CCreature>)> action;
 
-    void start(std::shared_ptr<CCreature>, std::shared_ptr<CCreature>) override { ++starts; }
-    void end(std::shared_ptr<CCreature>, std::shared_ptr<CCreature>) override { ++ends; }
+    std::function<void()> starting;
+    std::function<void()> ending;
+
+    void start(std::shared_ptr<CCreature>, std::shared_ptr<CCreature>) override {
+        ++starts;
+        if (starting) {
+            starting();
+        }
+    }
+    void end(std::shared_ptr<CCreature>, std::shared_ptr<CCreature>) override {
+        ++ends;
+        if (ending) {
+            ending();
+        }
+    }
     bool isCancelled(std::shared_ptr<CCreature>, std::shared_ptr<CCreature>) override { return cancelled; }
     bool control(std::shared_ptr<CCreature> actor, std::shared_ptr<CCreature> target) override {
         ++actions;
@@ -426,6 +442,113 @@ void testAllyEffectsCountAsEncounterProgress() {
                     ally->getEffects().empty(),
                 "real allied effect ticks must count as progress without removing bounded encounter termination");
 }
+
+void testCombatCleanupExceptionsEndEveryControllerOnce() {
+    Fixture fixture;
+    fixture.hero->getBaseStats()->setAgility(30);
+    auto enemy = fixture.actor("cleanupEnemy");
+    auto ally = fixture.actor("cleanupAlly", true);
+    const auto enemyController = probe(enemy);
+    const auto allyController = probe(ally);
+    fixture.heroController->action = [&](auto, auto) { fixture.heroController->cancelled = true; };
+    fixture.heroController->ending = [] { throw std::runtime_error("first cleanup failure"); };
+    enemyController->ending = [] { throw std::runtime_error("second cleanup failure"); };
+    bool firstFailure = false;
+    try {
+        CFightHandler::fightManyWithAlliesResult(fixture.hero, {enemy}, {ally});
+    } catch (const std::runtime_error &failure) {
+        firstFailure = std::string(failure.what()) == "first cleanup failure";
+    }
+    expect_true(firstFailure && fixture.heroController->actions == 1 && enemyController->actions == 0 &&
+                    allyController->actions == 0,
+                "explicit finish must report its first cleanup failure after an ordinary encounter is cancelled");
+    expect_true(fixture.heroController->starts == 1 && enemyController->starts == 1 && allyController->starts == 1 &&
+                    fixture.heroController->ends == 1 && enemyController->ends == 1 && allyController->ends == 1,
+                "every owned controller must end once even when multiple cleanup hooks throw");
+}
+
+void testCombatCleanupPreservesPrimaryFailureAndCancellation() {
+    for (const bool cancelled : {false, true}) {
+        Fixture fixture;
+        fixture.hero->getBaseStats()->setAgility(30);
+        auto enemy = fixture.actor("primaryFailureEnemy");
+        auto ally = fixture.actor("primaryFailureAlly", true);
+        const auto enemyController = probe(enemy);
+        const auto allyController = probe(ally);
+        fixture.heroController->action = [cancelled](auto, auto) {
+            if (cancelled) {
+                throw vstd::task_cancelled();
+            }
+            throw std::runtime_error("primary combat failure");
+        };
+        fixture.heroController->ending = [] { throw std::runtime_error("first cleanup failure"); };
+        enemyController->ending = [] { throw std::runtime_error("second cleanup failure"); };
+        bool originalFailure = false;
+        try {
+            auto task = CFightHandler::fightManyWithAlliesResultAsync(fixture.hero, {enemy}, {ally});
+            game_async::wait(fixture.game->getContext()->spawnTask(std::move(task)), game_async::WaitMode::PostedWork);
+        } catch (const vstd::task_cancelled &) {
+            originalFailure = cancelled;
+        } catch (const std::runtime_error &failure) {
+            originalFailure = !cancelled && std::string(failure.what()) == "primary combat failure";
+        }
+        expect_true(originalFailure && fixture.heroController->actions == 1 && enemyController->actions == 0 &&
+                        allyController->actions == 0,
+                    "cleanup must preserve the original native combat or cancellation exception");
+        expect_true(fixture.heroController->ends == 1 && enemyController->ends == 1 && allyController->ends == 1,
+                    "unwinding must attempt every original controller end exactly once");
+    }
+}
+
+void testCombatOwnsPartialControllerStartsAndPreservesTheirFailure() {
+    for (const bool firstFails : {false, true}) {
+        Fixture fixture;
+        auto enemy = fixture.actor("partialStartEnemy");
+        auto ally = fixture.actor("neverStartedAlly", true);
+        const auto enemyController = probe(enemy);
+        const auto allyController = probe(ally);
+        bool resourceAcquired = false;
+        const auto failingController = firstFails ? fixture.heroController : enemyController;
+        failingController->starting = [&] {
+            resourceAcquired = true;
+            throw std::runtime_error("primary start failure");
+        };
+        fixture.heroController->ending = [&] {
+            if (firstFails) {
+                resourceAcquired = false;
+            }
+            throw std::runtime_error("hero cleanup failure");
+        };
+        enemyController->ending = [&] {
+            if (!firstFails) {
+                resourceAcquired = false;
+            }
+            throw std::runtime_error("enemy cleanup failure");
+        };
+        bool originalFailure = false;
+        try {
+            CFightHandler::fightManyWithAlliesResult(fixture.hero, {enemy}, {ally});
+        } catch (const std::runtime_error &failure) {
+            originalFailure = std::string(failure.what()) == "primary start failure";
+        }
+        expect_true(originalFailure && !resourceAcquired && fixture.heroController->starts == 1 &&
+                        fixture.heroController->ends == 1 && enemyController->starts == (firstFails ? 0 : 1) &&
+                        enemyController->ends == (firstFails ? 0 : 1),
+                    "partial initialization must be owned for cleanup without masking its start failure");
+        expect_true(allyController->starts == 0 && allyController->ends == 0 && fixture.heroController->actions == 0 &&
+                        enemyController->actions == 0 && allyController->actions == 0,
+                    "admission must neither end unstarted controllers nor dispatch combat actions");
+    }
+}
+
+void testRejectedCombatAdmissionDoesNotStartOrEndControllers() {
+    Fixture fixture;
+    auto ally = fixture.actor("unadmittedAlly", true);
+    const auto result = CFightHandler::fightManyWithAlliesResult(fixture.hero, {}, {ally});
+    expect_true(result.outcome == CFightOutcome::Invalid && fixture.heroController->starts == 0 &&
+                    fixture.heroController->ends == 0 && probe(ally)->starts == 0 && probe(ally)->ends == 0,
+                "an encounter rejected before controller startup must own no controller cleanup");
+}
 } // namespace
 
 int main() {
@@ -445,5 +568,9 @@ int main() {
     testCancelledAndStaleAlliedEncountersEndControllers();
     testAllyEffectsCountAsEncounterProgress();
     testFixedCityLootTransfersGoldAndEquippedPossessionsOnce();
+    testCombatCleanupExceptionsEndEveryControllerOnce();
+    testCombatCleanupPreservesPrimaryFailureAndCancellation();
+    testCombatOwnsPartialControllerStartsAndPreservesTheirFailure();
+    testRejectedCombatAdmissionDoesNotStartOrEndControllers();
     return finish_tests();
 }

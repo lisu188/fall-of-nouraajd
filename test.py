@@ -144,6 +144,7 @@ MCP_BRANCH_TEST_PREFIX = "GameplayBranchMcpTest."
 FAST_TEST_PREFIXES = (
     "CityNativeLoadingSourceTest.",
     "SaveStageJsonApiSourceTest.",
+    "CombatCleanupGuardSourceTest.",
     "CandlekeepMetadataSourceTest.",
     "BaldursGateCityDataTest.",
     "CityWalkthroughRegistrationTest.",
@@ -26901,6 +26902,10 @@ SOURCE_UI_TESTS_AVAILABLE = (REPO_ROOT / "tests" / "__init__.py").is_file()
 if SOURCE_UI_TESTS_AVAILABLE:
     from tests.test_city_native_loading import CityNativeLoadingRuntimeTest as _CityNativeLoadingRuntimeTest
     from tests.test_city_native_loading import CityNativeLoadingSourceTest as _CityNativeLoadingSourceTest
+    from tests.test_combat_cleanup_guard import (
+        CombatCleanupGuardSourceTest as _CombatCleanupGuardSourceTest,
+        CombatCleanupGuardNativeProbeTest as _CombatCleanupGuardNativeProbeTest,
+    )
     from tests.test_save_stage_json_api import (
         SaveStageJsonApiSourceTest as _SaveStageJsonApiSourceTest,
         SaveStageJsonApiNativeProbeTest as _SaveStageJsonApiNativeProbeTest,
@@ -27251,6 +27256,12 @@ if SOURCE_UI_TESTS_AVAILABLE:
     class SessionDeferredWorkTest(_SessionDeferredWorkTest):
         pass
 
+    class CombatCleanupGuardSourceTest(_CombatCleanupGuardSourceTest):
+        pass
+
+    class CombatCleanupGuardNativeProbeTest(_CombatCleanupGuardNativeProbeTest):
+        pass
+
     class SaveStageJsonApiSourceTest(_SaveStageJsonApiSourceTest):
         pass
 
@@ -27314,6 +27325,7 @@ if SOURCE_UI_TESTS_AVAILABLE:
     del _DialogueMcpWalkthroughTest, _ManagementMcpWalkthroughTest, _ArtifactPreviewTest, _PythonCallbackLifecycleTest
     del _DialogueTransitionBoundaryTest
     del _CityWalkthroughRegistrationTest, _CityNativeLoadingRuntimeTest, _CityNativeLoadingSourceTest
+    del _CombatCleanupGuardSourceTest, _CombatCleanupGuardNativeProbeTest
     del _SaveStageJsonApiSourceTest, _SaveStageJsonApiNativeProbeTest
     del _CandlekeepMetadataSourceTest, _CandlekeepMetadataRuntimeTest
     del _PaidActionRuntimeTest
