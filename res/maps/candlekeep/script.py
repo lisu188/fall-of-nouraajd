@@ -96,6 +96,13 @@ def load(self, context):
         for name in TRAINING_ALLIES + tuple("trainingFoe" + str(i) for i in range(1, 7)):
             actor = game_map.getObjectByName(name)
             if actor:
+                for slot, item in tuple(actor.getEquipped().items()):
+                    if item and item.getBoolProperty("plugin_candlekeepTemporary"):
+                        item.removeTag("cursed")
+                        actor.equipItem(slot, None)
+                for item in tuple(actor.getItems()):
+                    if item.getBoolProperty("plugin_candlekeepTemporary"):
+                        actor.removeItem(lambda candidate: candidate == item, False)
                 game_map.removeObject(actor)
 
     def reclaimTrainingInventory(game_map):

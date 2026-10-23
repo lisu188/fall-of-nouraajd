@@ -175,6 +175,7 @@ FAST_TEST_PREFIXES = (
     "GameplayPotionTraceContractTest.",
     "GameplayNouraajdServiceRoutesTest.",
     "GameplayNouraajdHuntPreparationTest.",
+    "GameplayCandlekeepRoutesTest.",
     "GameplayWaypointPublicationTest.",
     "GameplayCaveObservationTest.",
     "NineMarchesRecoveryTest.",
@@ -26190,6 +26191,7 @@ class TestRunnerSuiteTest(unittest.TestCase):
             WindowsPythonConfigurationTest,
             GameplayPotionTraceContractTest,
             GameplayNouraajdHuntPreparationTest,
+            GameplayCandlekeepRoutesTest,
             GameplayCastleTownRestTest,
             GameplayVictorSettlementTest,
             NarrativeRouteTest,
@@ -26978,6 +26980,7 @@ if SOURCE_UI_TESTS_AVAILABLE:
     from tests.test_gameplay_nouraajd_hunt_preparation import (
         GameplayNouraajdHuntPreparationTest as _GameplayNouraajdHuntPreparationTest,
     )
+    from tests.test_gameplay_routes_candlekeep import GameplayCandlekeepRoutesTest as _GameplayCandlekeepRoutesTest
     from tests.test_gameplay_routes_waypoints import GameplayWaypointPublicationTest as _GameplayWaypointPublicationTest
     from tests.test_gameplay_routes_caves import GameplayCaveObservationTest as _GameplayCaveObservationTest
     from tests.test_gameplay_routes_campaigns import GameplayCampaignRouteTest as _GameplayCampaignRouteTest
@@ -27080,6 +27083,9 @@ if SOURCE_UI_TESTS_AVAILABLE:
         pass
 
     class GameplayNouraajdHuntPreparationTest(_GameplayNouraajdHuntPreparationTest):
+        pass
+
+    class GameplayCandlekeepRoutesTest(_GameplayCandlekeepRoutesTest):
         pass
 
     class GameplayCaveObservationTest(_GameplayCaveObservationTest):
@@ -27333,6 +27339,7 @@ if SOURCE_UI_TESTS_AVAILABLE:
     )
     del _GameplayNouraajdServiceRoutesTest, _GameplayWaypointPublicationTest, _GameplayCaveObservationTest
     del _GameplayNouraajdHuntPreparationTest
+    del _GameplayCandlekeepRoutesTest
     del _GameplayPotionConsumptionTest, _GameplayRecipeGoldRoutesTest, _GameplayCallbackMarketRoutesTest
     del _GameplayStartingSaveTest, _GameplayCampaignRouteTest, _GameplayRouteDialogTest
     del _GameplayCastleTownRestTest, _GameplayVictorSettlementTest, _NarrativeRouteTest

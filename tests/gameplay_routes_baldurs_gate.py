@@ -101,6 +101,100 @@ def pathBetween(start_area, destination, connections, allowed):
     raise AssertionError(f"No currently permitted source route from {start_area} to {destination}")
 
 
+@lru_cache(maxsize=1)
+def cityMovementCells():
+    document = json.loads((ROOT / "res/maps/baldursGate/map.json").read_text(encoding="utf-8"))
+    definitions = json.loads((ROOT / "res/config/tiles.json").read_text(encoding="utf-8"))
+    definitions.update(documents()["config"])
+    walkable_ids = {
+        tileset["firstgid"] + int(index)
+        for tileset in document["tilesets"]
+        for index, row in tileset.get("tileproperties", {}).items()
+        if definitions[row["type"]]["properties"].get("canStep", False)
+    }
+    walkable, portals = set(), set()
+    for layer in document["layers"]:
+        level = int(layer["properties"]["level"])
+        if layer["type"] == "tilelayer":
+            walkable.update(
+                (index % document["width"], index // document["width"], level)
+                for index, gid in enumerate(layer["data"])
+                if gid in walkable_ids
+            )
+        elif layer["type"] == "objectgroup":
+            portals.update(
+                (int(row["x"] // document["tilewidth"]), int(row["y"] // document["tileheight"]), level)
+                for row in layer["objects"]
+                if definitions[row["name"]].get("class") == "BaldursGatePortal"
+            )
+    return frozenset(walkable), frozenset(portals)
+
+
+def cityApproachPath(origin, destination, bounds, walkable, portals):
+    """Plan cardinal cells within one source area; entering any other portal would force a different trip."""
+    origin, destination = tuple(origin), tuple(destination)
+    x, y, z, width, height = bounds
+
+    def permitted(point):
+        return (
+            point in walkable
+            and point[2] == z
+            and x <= point[0] < x + width
+            and y <= point[1] < y + height
+            and (point in {origin, destination} or point not in portals)
+        )
+
+    if permitted(origin) and permitted(destination):
+        pending, previous = deque([origin]), {origin: None}
+        while pending:
+            point = pending.popleft()
+            if point == destination:
+                result = []
+                while previous[point] is not None:
+                    result.append(point)
+                    point = previous[point]
+                return tuple(reversed(result))
+            px, py, pz = point
+            for candidate in ((px - 1, py, pz), (px + 1, py, pz), (px, py - 1, pz), (px, py + 1, pz)):
+                if candidate not in previous and permitted(candidate):
+                    previous[candidate] = point
+                    pending.append(candidate)
+    raise AssertionError(("No portal-safe city approach", origin, destination, bounds))
+
+
+def approachCityObject(d, name, *, reenter=False):
+    area_id, origin = currentArea(d), d.coords()
+    target = d.coords(d.object(name))
+    walkable, portals = cityMovementCells()
+    bounds = documents()["geometry"]["atlas"][area_id]["bounds"]
+    initial_turns = d.turns
+    budget = max(128, 4 * sum(abs(a - b) for a, b in zip(origin, target)) + 128)
+
+    def advance(point, *, final=False):
+        remaining = budget - (d.turns - initial_turns)
+        d.test.assertGreater(remaining, 0, ("City approach turn budget exhausted", name, budget))
+        d.navigateCoords(point, limit=remaining)
+        d.test.assertLessEqual(d.turns - initial_turns, budget, ("City approach turn budget exhausted", name, budget))
+        if not final or point not in portals:
+            d.test.assertEqual(point, d.coords(), ("City waypoint was not actually reached", name, point))
+            d.test.assertEqual(area_id, currentArea(d), ("Unselected city transition during approach", name, point))
+
+    if reenter and origin == target:
+        for dx, dy in ((-1, 0), (1, 0), (0, -1), (0, 1)):
+            candidate = (origin[0] + dx, origin[1] + dy, origin[2])
+            if candidate in walkable and candidate not in portals and d.canStep(candidate):
+                x, y, z, width, height = bounds
+                if not (candidate[2] == z and x <= candidate[0] < x + width and y <= candidate[1] < y + height):
+                    continue
+                advance(candidate)
+                origin = candidate
+                break
+        else:
+            d.test.fail(("No portal-safe city re-entry departure", name, target))
+    for point in cityApproachPath(origin, target, bounds, walkable, portals):
+        advance(point, final=point == target)
+
+
 def travel(d, destination):
     config, geometry = documents()["config"], documents()["geometry"]
     phase = d.number("plugin_cityPhase") or 5
@@ -122,7 +216,7 @@ def travel(d, destination):
     traversed = []
     for link in route:
         name = link["object"]
-        d.navigateTo(name)
+        approachCityObject(d, name)
         if currentArea(d) != link["to"]:
             portal = d.object(name)
             if d.call(portal, "getBoolProperty", "locked"):
@@ -133,7 +227,7 @@ def travel(d, destination):
                     condition = "canUnlock" if method == "unlock" else "canForce"
                     d.test.assertTrue(d.condition(dialog, condition), ("Source entrance remains locked", name))
                     d.choose(dialog, method)
-            d.revisit(name)
+            approachCityObject(d, name, reenter=True)
         d.test.assertEqual(link["to"], currentArea(d), (name, "Actual portal arrival"))
         d.test.assertEqual(link["to"], d.string("activeSimulationRegion"))
         properties = config[name]["properties"]

@@ -90,13 +90,12 @@ def accept(d, actor):
 def complete(d, actor):
     d.navigateTo(actor)
     before_gold, before_exp, _items = resources(d)
-    stats = d.call(d.player, "getStats")
-    score = d.call(stats, "getNumericProperty", "intelligence") + d.number("candlekeepStanding")
+    high_reaction = d.condition(actor + "Dialog", "highReaction")
     d.choose(actor + "Dialog", "returnQuest")
     expected_gold = (
-        (20 if score >= 12 else 10)
+        (20 if high_reaction else 10)
         if actor == "hull"
-        else 10 if actor == "fuller" and score < 12 else 5 if actor == "reevor" else 0
+        else 10 if actor == "fuller" and not high_reaction else 5 if actor == "reevor" else 0
     )
     d.test.assertEqual(before_gold + expected_gold, d.gold())
     d.test.assertEqual(before_exp + 50, d.call(d.player, "getNumericProperty", "exp"))
