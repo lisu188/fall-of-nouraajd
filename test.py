@@ -181,6 +181,7 @@ FAST_TEST_PREFIXES = (
     "GameplayCandlekeepRoutesTest.",
     "OctobogzEarlyTraceTest.",
     "PlayerControllerSuspensionSourceTest.",
+    "GameMapBindingEpochSourceTest.",
     "GameplayWaypointPublicationTest.",
     "GameplayCaveObservationTest.",
     "NineMarchesRecoveryTest.",
@@ -27114,6 +27115,10 @@ if SOURCE_UI_TESTS_AVAILABLE:
         pass
 
     from tests.test_octobogz_early_trace import OctobogzEarlyTraceTest as _OctobogzEarlyTraceTest
+    from tests.test_game_map_binding_epoch import (
+        GameMapBindingEpochSourceTest as _GameMapBindingEpochSourceTest,
+        GameMapBindingEpochRuntimeTest as _GameMapBindingEpochRuntimeTest,
+    )
     from tests.test_player_controller_suspension import (
         PlayerControllerSuspensionSourceTest as _PlayerControllerSuspensionSourceTest,
     )
@@ -27122,6 +27127,12 @@ if SOURCE_UI_TESTS_AVAILABLE:
         pass
 
     class OctobogzEarlyTraceTest(_OctobogzEarlyTraceTest):
+        pass
+
+    class GameMapBindingEpochSourceTest(_GameMapBindingEpochSourceTest):
+        pass
+
+    class GameMapBindingEpochRuntimeTest(_GameMapBindingEpochRuntimeTest):
         pass
 
     class PlayerControllerSuspensionSourceTest(_PlayerControllerSuspensionSourceTest):
@@ -27403,6 +27414,7 @@ if SOURCE_UI_TESTS_AVAILABLE:
     del _GameplayCandlekeepRoutesTest
     del _OctobogzEarlyTraceTest
     del _PlayerControllerSuspensionSourceTest
+    del _GameMapBindingEpochSourceTest, _GameMapBindingEpochRuntimeTest
     del _GameplayPotionConsumptionTest, _GameplayRecipeGoldRoutesTest, _GameplayCallbackMarketRoutesTest
     del _GameplayStartingSaveTest, _GameplayCampaignRouteTest, _GameplayRouteDialogTest
     del _GameplayCastleTownRestTest, _GameplayVictorSettlementTest, _NarrativeRouteTest

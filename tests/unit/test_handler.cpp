@@ -5264,6 +5264,7 @@ void testScriptWaitSurvivesFailedSaveResourceBindingWithoutDispatchingMapChanges
     auto map = game->getMap();
     auto context = game->getContext();
     const auto generation = context->captureTransitionGeneration();
+    const auto publishedEpoch = game->getMapBindingEpoch();
     game->getObjectHandler()->registerType("CMap", [] { return std::make_shared<CMap>(); });
     int candidateWaits = 0;
     game->getObjectHandler()->registerType("CWaitState", [&candidateWaits] {
@@ -5280,9 +5281,11 @@ void testScriptWaitSurvivesFailedSaveResourceBindingWithoutDispatchingMapChanges
         game->setMap(other);
         game->setMap(map);
     }
-    expect_true(loop->getPendingTaskCount() == pending && loop->getDelayedTaskCount() == delayed &&
+    expect_true(game->getMapBindingEpoch() == publishedEpoch + 256 &&
+                    loop->getPendingTaskCount() == pending && loop->getDelayedTaskCount() == delayed &&
                     context->isTransitionGenerationCurrent(generation),
                 "maps without wait observers must add no queued callbacks, delays, or transition generations");
+    const auto resourceEpoch = game->getMapBindingEpoch();
     auto now = std::make_shared<CWaitState::Clock::time_point>();
     auto state = std::make_shared<CWaitState>([now] { return *now; });
     state->setGame(game);
@@ -5309,6 +5312,7 @@ void testScriptWaitSurvivesFailedSaveResourceBindingWithoutDispatchingMapChanges
     }
     *now += std::chrono::milliseconds(1000);
     const auto unchanged = lease && candidateWaits == 1 && game->getMap() == map &&
+                           game->getMapBindingEpoch() == resourceEpoch &&
                            context->isTransitionGenerationCurrent(generation) && state->isRunning() &&
                            !state->isInvalidated(*lease) && state->getRemainingMilliseconds() == 2000;
     expect_true(unchanged,

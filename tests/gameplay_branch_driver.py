@@ -1041,7 +1041,9 @@ class GameplayBranchDriver:
         unchanged = 0
         committed = None
         departure_origin = departure_target = None
+        overlap_hold = None
         for _ in range(budget):
+            holding_overlap = False
             target = self.object(name, required=False)
             if target is None:
                 return
@@ -1049,6 +1051,8 @@ class GameplayBranchDriver:
                 self.test.fail(("NPC identity changed during authored approach", name, self.snapshot()))
             if departure_origin is not None and self.coords() != departure_origin:
                 departure_origin = departure_target = committed = None
+            if overlap_hold is not None and self.coords() != overlap_hold:
+                overlap_hold = None
             destination = self.coords(target)
             distance = sum(abs(a - b) for a, b in zip(self.coords(), destination))
             if distance <= int(adjacent):
@@ -1063,10 +1067,16 @@ class GameplayBranchDriver:
                     else:
                         self.test.fail(("NPC overlap lacks a completed player entry", name, self.snapshot()))
                     if departure_origin is None:
-                        # NPC-caused overlap cannot fire the player's dialogue callback.
-                        # Leave through the native controller before attempting a new entry.
-                        departure_origin = self.coords()
-                        committed = None
+                        if overlap_hold != self.coords():
+                            # Hold once so an NPC moving later in this turn can leave.
+                            overlap_hold = self.coords()
+                            controller = self.call(self.player, "getController")
+                            self.call(controller, "setTarget", self.player, self._coordinateHandle(overlap_hold))
+                            committed, holding_overlap = overlap_hold, True
+                        else:
+                            # A stationary NPC still requires native departure followed by a player entry.
+                            departure_origin = self.coords()
+                            committed = None
                 else:
                     return
             if departure_origin is not None:
@@ -1090,7 +1100,7 @@ class GameplayBranchDriver:
                     controller = self.call(self.player, "getController")
                     self.call(controller, "setTarget", self.player, self._coordinateHandle(departure_target))
                     committed = departure_target
-            elif (
+            elif not holding_overlap and (
                 committed is None
                 or self.coords() == committed
                 or unchanged
@@ -1109,7 +1119,7 @@ class GameplayBranchDriver:
             if arrival != before:
                 self.steps += 1
             if self.map_name != world:
-                if departure_origin is not None:
+                if departure_origin is not None or overlap_hold is not None:
                     self.test.fail(("NPC re-entry departure changed map", name, self.snapshot()))
                 return
             if arrival != before and not (moving_npc and not adjacent) and self._traversedTarget(committed, arrival):

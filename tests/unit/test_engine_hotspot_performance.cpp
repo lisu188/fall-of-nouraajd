@@ -1482,6 +1482,58 @@ void testDefeatResolutionRejectionsAndParticipantClaimsAreBounded() {
     context->shutdown();
 }
 
+class MapBindingEpochBudgetProbe : public CGameObject {
+    V_META(MapBindingEpochBudgetProbe, CGameObject, V_METHOD(MapBindingEpochBudgetProbe, onBindingChanged, void))
+
+  public:
+    int callbacks = 0;
+    void onBindingChanged() { ++callbacks; }
+};
+
+void testMapBindingEpochQueriesAndPublicationsAreBounded() {
+    constexpr int CYCLES = 128;
+    constexpr int READS_PER_CYCLE = 4;
+    CTypes::register_type_metadata<MapBindingEpochBudgetProbe, CGameObject>();
+    auto game = std::make_shared<CGame>();
+    auto first = std::make_shared<CMap>();
+    auto second = std::make_shared<CMap>();
+    first->setGame(game);
+    second->setGame(game);
+    game->setMap(first);
+    auto context = game->getContext();
+    const auto generation = context->getTransitionGeneration();
+    auto probe = std::make_shared<MapBindingEpochBudgetProbe>();
+    probe->setGame(game);
+    game->connect("mapBindingChanged", probe, "onBindingChanged");
+    auto loop = vstd::event_loop<>::instance();
+    const auto pending = loop->getPendingTaskCount();
+    const auto delayed = loop->getDelayedTaskCount();
+    const auto initial = game->getMapBindingEpoch();
+    int reads = 0;
+    for (int cycle = 0; cycle < CYCLES; ++cycle) {
+        for (int read = 0; read < READS_PER_CYCLE; ++read) {
+            expect_true(game->getMapBindingEpoch() == initial + 2 * cycle,
+                        "read-only epoch queries must not publish another map");
+            ++reads;
+        }
+        game->setMap(first);
+        game->setMap(second);
+        game->setMap(second);
+        game->setMap(first);
+    }
+    expect_true(
+        reads == CYCLES * READS_PER_CYCLE && probe->callbacks == 2 * CYCLES &&
+            game->getMapBindingEpoch() == initial + 2 * CYCLES && game->getMap() == first &&
+            context->isTransitionGenerationCurrent(generation) && loop->getPendingTaskCount() == pending &&
+            loop->getDelayedTaskCount() == delayed && first->getObjects().empty() && second->getObjects().empty(),
+        "fixed epoch queries and publications must retain exact callback, queue, generation and object budgets");
+    std::cout << "map binding epoch guard: cycles=" << CYCLES << " reads=" << reads
+              << " publications=" << game->getMapBindingEpoch() - initial << " callbacks=" << probe->callbacks
+              << " budget-publications=" << 2 * CYCLES << " budget-callbacks=" << 2 * CYCLES << '\n';
+    game->disconnect("mapBindingChanged", probe, "onBindingChanged");
+    context->shutdown();
+}
+
 void testMinimapTerrainCacheBuildsOnlyOnRelevantChanges() {
     constexpr int CACHED_FRAMES = 32;
     SDL_SetHint(SDL_HINT_VIDEODRIVER, "dummy");
@@ -1559,5 +1611,6 @@ void run_engine_hotspot_performance_tests() {
     testOctobogzPhaseCallbackAndStateGrowthAreBounded();
     testEffectTickCallbacksAndExpiryAreBounded();
     testDefeatResolutionRejectionsAndParticipantClaimsAreBounded();
+    testMapBindingEpochQueriesAndPublicationsAreBounded();
     testMinimapTerrainCacheBuildsOnlyOnRelevantChanges();
 }

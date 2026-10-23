@@ -171,6 +171,7 @@ MCP_ALLOWED_HANDLE_METHODS = {
         "getLevel",
         "getMana",
         "getManaMax",
+        "getStats",
         "heal",
         "healProc",
         "isAlive",

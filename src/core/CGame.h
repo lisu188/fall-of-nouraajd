@@ -23,6 +23,8 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #include "core/CUtil.h"
 #include "handler/CHandler.h"
 
+#include <cstdint>
+
 class CGameView;
 
 class CPlayer;
@@ -79,6 +81,8 @@ class CGame : public CGameObject {
 
     void setMap(std::shared_ptr<CMap> map);
 
+    std::uint64_t getMapBindingEpoch() const;
+
     std::shared_ptr<CGameContext> getContext();
 
     std::shared_ptr<CGuiHandler> getGuiHandler();
@@ -115,6 +119,7 @@ class CGame : public CGameObject {
     std::shared_ptr<CGameContext> context;
     std::shared_ptr<CSceneManager> sceneManager;
     std::shared_ptr<CMap> map;
+    std::uint64_t mapBindingEpoch = 0;
     std::shared_ptr<CGui> _gui;
     std::shared_ptr<CNavigationService> navigationService;
     std::mutex navigationServiceMutex;

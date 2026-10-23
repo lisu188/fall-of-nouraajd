@@ -5,7 +5,7 @@
     {
       "source": "src/core/bindings/CModuleFoundation.cpp",
       "registration": "bindFoundationAndSession",
-      "registrationTokenSha256": "dcf50968aa83d735e36eea0e9b2708c1a8a5f5511fd688f1c069925938ab8bed"
+      "registrationTokenSha256": "19b6725b3e9e72d4be7e93e00dfefe264d805ac637843d949d1b65a6ee718bbc"
     },
     {
       "source": "src/core/bindings/CModuleWorld.cpp",
@@ -36,5 +36,6 @@
   "runtimeAdapterReview": "Only the private seed hook delegates to per-consumer adapters; public registrations, arguments, defaults and docs remain unchanged.",
   "alliedEncounterReview": "Adds fightManyWithAllies(hero, opponents, allies) and fightManyWithAlliesOutcome(hero, opponents, allies); existing signatures, defaults and registration order are retained. Native allied-combat tests cover bounded AI participants, rewards and stale contexts.",
   "pendingMoveOriginReview": "Adds a readonly copied optional move origin during existing movement hooks; no setter or movement behavior changes. Native doorway and copy-lifetime regression is authored for CI.",
-  "savedWaitReview": "Adds CWaitState with exact Python integer durations0..60000 and waitMilliseconds(state); existing registrations/order/defaults remain. Native snapshot/cancellation and real-extension save tests are authored for CI, not executed locally."
+  "savedWaitReview": "Adds CWaitState with exact Python integer durations0..60000 and waitMilliseconds(state); existing registrations/order/defaults remain. Native snapshot/cancellation and real-extension save tests are authored for CI, not executed locally.",
+  "mapBindingEpochReview": "Adds only CGame.getMapBindingEpoch(), a readonly nonserialized uint64 public map publication identity; existing signatures/defaults/order remain. Native reentrant/quiet-resource and extension tests are authored for CI, not executed locally."
 }
