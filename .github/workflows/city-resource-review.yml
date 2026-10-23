@@ -1,0 +1,263 @@
+name: city resource review
+
+on:
+  pull_request:
+    branches: [main]
+    types: [opened, synchronize, reopened, ready_for_review]
+    paths:
+      - .github/workflows/city-resource-review.yml
+      - scripts/build_baldurs_gate_city*.py
+      - tests/fixtures/baldurs_gate_city*.json
+      - res/maps/baldursGate/**
+      - res/maps/candlekeep/map.json
+
+permissions:
+  contents: read
+
+jobs:
+  generated-resource-review:
+    name: generated city resources (development only)
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    env:
+      EXPECTED_HEAD: ${{ github.event.pull_request.head.sha }}
+      PR_BASE: ${{ github.event.pull_request.base.sha }}
+      PR_NUMBER: ${{ github.event.pull_request.number }}
+      WORKFLOW_REF: ${{ github.workflow_ref }}
+      WORKFLOW_SHA: ${{ github.workflow_sha }}
+    steps:
+      - name: Check hosted capacity before checkout and Python setup
+        shell: bash
+        run: |
+          python3 -B - <<'PY'
+          import json
+          import os
+          from pathlib import Path
+          import shutil
+
+          snapshots = {}
+          for name, variable in (("checkout", "GITHUB_WORKSPACE"), ("runnerTemp", "RUNNER_TEMP")):
+              location = Path(os.environ[variable])
+              while not location.exists():
+                  location = location.parent
+              usage = shutil.disk_usage(location)
+              snapshots[name] = {"total": usage.total, "used": usage.used, "free": usage.free}
+          print(json.dumps({"preCheckoutCapacity": snapshots, "checkoutAndSetupWriteBudgetProven": False}))
+          for name, usage in snapshots.items():
+              assert usage["total"] > 0 and usage["used"] * 10 < usage["total"] * 9, (
+                  name + " reached 90% disk guard before checkout"
+              )
+          PY
+      - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+          persist-credentials: false
+          fetch-depth: 1
+          submodules: false
+      - uses: actions/setup-python@a309ff8b426b58ec0e2a45f0f869d46889d02405
+        with:
+          python-version: '3.12'
+      - name: Generate source-only review artifact
+        id: generation
+        continue-on-error: true
+        shell: bash
+        run: |
+          python -B - <<'PY'
+          from hashlib import sha256
+          import json
+          import os
+          from pathlib import Path
+          import shutil
+          import subprocess
+          import sys
+
+          assert os.environ.get("GITHUB_ACTIONS") == "true", "CI-only generation"
+          root = Path.cwd().resolve()
+          output = Path(os.environ["RUNNER_TEMP"]) / "city-resource-review"
+          output.mkdir(exist_ok=False)
+          env = dict(os.environ, GIT_OPTIONAL_LOCKS="0", PYTHONDONTWRITEBYTECODE="1")
+          allowed = (
+              "res/maps/baldursGate/map.json",
+              "res/maps/baldursGate/config.json",
+              "res/maps/baldursGate/dialog.json",
+              "tests/fixtures/baldurs_gate_city_geometry.json",
+          )
+          selected_inputs = (
+              "scripts/build_baldurs_gate_city.py",
+              "scripts/build_baldurs_gate_city_dialogs.py",
+              "scripts/build_baldurs_gate_city_relocations.py",
+              "scripts/build_baldurs_gate_city_regions.py",
+              "scripts/build_baldurs_gate_city_custody.py",
+              "tests/fixtures/baldurs_gate_city_source.json",
+              "tests/fixtures/baldurs_gate_city_quests.json",
+              "tests/fixtures/baldurs_gate_city_prison_source.json",
+              "res/maps/candlekeep/map.json",
+          )
+
+
+          def git(*args):
+              return subprocess.check_output(["git", *args], env=env, timeout=30).decode().strip()
+
+
+          def pin(relative):
+              path = root / relative
+              if not path.exists():
+                  return {"exists": False}
+              assert path.resolve().is_relative_to(root) and not path.is_symlink()
+              assert path.stat().st_size <= 64 * 1024 * 1024, "Input/output file budget exceeded"
+              digest = sha256()
+              with path.open("rb") as stream:
+                  for chunk in iter(lambda: stream.read(65536), b""):
+                      digest.update(chunk)
+              return {"exists": True, "bytes": path.stat().st_size, "sha256": digest.hexdigest()}
+
+
+          def requireCapacity(phase):
+              snapshots = {}
+              for name, location in (("checkout", root), ("runnerTemp", output.parent)):
+                  usage = shutil.disk_usage(location)
+                  snapshots[name] = {
+                      "volume": os.stat(location).st_dev,
+                      "total": usage.total,
+                      "used": usage.used,
+                      "free": usage.free,
+                  }
+              receipt.setdefault("capacity", {})[phase] = snapshots
+              for name, usage in snapshots.items():
+                  assert usage["total"] > 0 and usage["used"] * 10 < usage["total"] * 9, name + " reached 90% disk guard"
+              volumes = {}
+              for name, usage in snapshots.items():
+                  group = volumes.setdefault(usage["volume"], {"names": [], "total": usage["total"], "free": usage["free"]})
+                  group["names"].append(name)
+                  assert group["total"] == usage["total"], "Inconsistent capacity for one backing volume"
+                  group["free"] = min(group["free"], usage["free"])
+              for usage in volumes.values():
+                  name = ",".join(usage["names"])
+                  reserve = 128 * 1024 * 1024
+                  assert usage["free"] >= reserve, name + " lacks the 128 MiB bounded write reserve"
+                  assert (usage["free"] - reserve) * 10 > usage["total"], (
+                      name + " would cross 90% disk guard after bounded writes"
+                  )
+
+
+          receipt = {
+              "kind": "DevelopmentOnlyCityResourceReview",
+              "requestedHead": os.environ["EXPECTED_HEAD"],
+              "prBase": os.environ["PR_BASE"],
+              "prNumber": os.environ["PR_NUMBER"],
+              "workflowRef": os.environ["WORKFLOW_REF"],
+              "workflowSha": os.environ["WORKFLOW_SHA"],
+              "pythonVersion": sys.version,
+              "platform": sys.platform,
+              "nativeExecuted": False,
+              "mcpExecuted": False,
+              "sourceOrOriginalAcceptance": False,
+              "resourceDiffAccepted": False,
+              "postCheckPassed": False,
+          }
+          try:
+              receipt["checkedOutHead"] = git("rev-parse", "HEAD")
+              assert receipt["checkedOutHead"] == receipt["requestedHead"]
+              receipt["checkedOutTree"] = git("rev-parse", "HEAD^{tree}")
+              assert not git("status", "--porcelain=v1", "--untracked-files=all"), "Checkout must start clean"
+              requireCapacity("beforeGeneration")
+              receipt["selectedInputs"] = {path: pin(path) for path in selected_inputs}
+              receipt["selectedInputListExhaustive"] = False
+              receipt["before"] = {path: pin(path) for path in allowed}
+              assert sum(row.get("bytes", 0) for row in receipt["before"].values()) <= 32 * 1024 * 1024
+              for suffix, arguments in (("generate", []), ("post-check", ["--check"])):
+                  with (output / (suffix + ".log")).open("xb") as log:
+                      try:
+                          result = subprocess.run(
+                              [sys.executable, "-B", "scripts/build_baldurs_gate_city.py", *arguments],
+                              env=env,
+                              stdout=subprocess.PIPE,
+                              stderr=subprocess.STDOUT,
+                              timeout=240,
+                              check=False,
+                          )
+                      except subprocess.TimeoutExpired as error:
+                          log.write((error.stdout or b"")[: 2 * 1024 * 1024])
+                          raise
+                      captured = result.stdout or b""
+                      log.write(captured[: 2 * 1024 * 1024])
+                      assert len(captured) <= 2 * 1024 * 1024, suffix + " exceeded the 2 MiB retained log budget"
+                  receipt[suffix + "Exit"] = result.returncode
+                  assert result.returncode == 0, suffix + " failed; retained log is diagnostic only"
+              receipt["postCheckPassed"] = True
+              assert git("rev-parse", "HEAD") == receipt["requestedHead"]
+              assert not git(
+                  "diff", "--no-ext-diff", "--no-textconv", "--cached", "--name-only"
+              ), "Generation must not stage files"
+              changed = git("diff", "--no-ext-diff", "--no-textconv", "HEAD", "--name-only").splitlines()
+              receipt["changedFiles"] = changed
+              assert set(changed) <= set(allowed), "Generator changed an unexpected tracked path"
+              assert not git("ls-files", "--others", "--exclude-standard"), "Generator created unexpected untracked files"
+              receipt["resourcesWereStale"] = bool(changed)
+          except BaseException as error:
+              receipt["error"] = {"type": type(error).__name__, "message": str(error)}
+              raise
+          finally:
+              try:
+                  # Retain selected outputs even when generation or the post-check fails.
+                  requireCapacity("beforeRetention")
+                  receipt["after"] = {path: pin(path) for path in allowed}
+                  after_bytes = sum(row.get("bytes", 0) for row in receipt["after"].values())
+                  before_bytes = sum(row.get("bytes", 0) for row in receipt.get("before", {}).values())
+                  assert after_bytes <= 32 * 1024 * 1024 and before_bytes + after_bytes <= 48 * 1024 * 1024
+                  subprocess.run(
+                      [
+                          "git",
+                          "diff",
+                          "--no-ext-diff",
+                          "--no-textconv",
+                          "--binary",
+                          "--output=" + str(output / "generated.patch"),
+                          "HEAD",
+                          "--",
+                          *allowed,
+                      ],
+                      env=env,
+                      timeout=30,
+                      check=True,
+                  )
+                  for relative in allowed:
+                      if not (root / relative).exists():
+                          continue
+                      destination = output / "generated" / relative
+                      destination.parent.mkdir(parents=True, exist_ok=True)
+                      shutil.copyfile(root / relative, destination)
+                  assert sum(path.stat().st_size for path in output.rglob("*") if path.is_file()) <= 128 * 1024 * 1024
+              except BaseException as error:
+                  receipt["retentionError"] = {"type": type(error).__name__, "message": str(error)}
+              (output / "receipt.json").write_text(json.dumps(receipt, indent=2) + "\n", encoding="utf-8")
+          PY
+      - name: Retain generated diff, outputs and exact-head receipt
+        id: upload
+        if: always()
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a
+        with:
+          name: city-resource-review-${{ github.event.pull_request.number }}-${{ github.event.pull_request.head.sha }}
+          path: ${{ runner.temp }}/city-resource-review
+          if-no-files-found: error
+          retention-days: 7
+      - name: Preserve stale-resource failure until reviewed outputs are committed
+        if: always()
+        env:
+          UPLOAD_OUTCOME: ${{ steps.upload.outcome }}
+        shell: bash
+        run: |
+          python -B - <<'PY'
+          import json
+          import os
+          from pathlib import Path
+
+          assert os.environ.get("UPLOAD_OUTCOME") == "success", "Review artifact upload failed or was skipped"
+          receipt = json.loads((Path(os.environ["RUNNER_TEMP"]) / "city-resource-review/receipt.json").read_text())
+          assert "error" not in receipt, receipt.get("error")
+          assert "retentionError" not in receipt, receipt.get("retentionError")
+          assert receipt["postCheckPassed"]
+          assert not receipt[
+              "resourcesWereStale"
+          ], "Review generated.patch and outputs; commit only reviewed resources, then rerun"
+          PY
