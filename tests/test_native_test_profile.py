@@ -73,6 +73,60 @@ ADDITIONAL_CASES = {
 
 
 class NativeTestProfileSourceTest(unittest.TestCase):
+
+    def testVerifiedResumeFixtureUsesAnAuthoredConfiguration(self):
+        handler = (ROOT / "tests/unit/test_handler.cpp").read_text(encoding="utf-8")
+        resume = handler.split("struct VerifiedResumeFixture {", 1)[1].split("\nint main() {", 1)[0]
+        constructor = resume.split("    VerifiedResumeFixture() {", 1)[1].split("    void cleanup(", 1)[0]
+        map_name = re.findall(r'game->getMap\(\)->setMapName\("([^"]+)"\);', constructor)
+        self.assertEqual(["test"], map_name)
+        configuration = f"maps/{map_name[0]}/map.json"
+        self.assertTrue((ROOT / "res" / configuration).is_file(), configuration)
+        self.assertEqual([configuration] * 3, re.findall(r'getConfiguration\("([^"]+)"\)', resume))
+        self.assertLess(constructor.index("setMapName("), constructor.index("getConfiguration("))
+        self.assertLess(constructor.index("getConfiguration("), constructor.index("CMapLoader::saveWithResult("))
+
+    def testVerifiedResumeConsumersStopWhenNativeFixtureSetupFails(self):
+        handler = (ROOT / "tests/unit/test_handler.cpp").read_text(encoding="utf-8")
+        resume = handler.split("struct VerifiedResumeFixture {", 1)[1].split("\nint main() {", 1)[0]
+        constructor = resume.split("    VerifiedResumeFixture() {", 1)[1].split("    void cleanup(", 1)[0]
+        self.assertIn("bool ready = false;", resume.split("VerifiedResumeFixture()", 1)[0])
+        self.assertIn("if (!authored || !authored->is_object()) {\n            return;\n        }", constructor)
+        self.assertEqual(1, constructor.count("ready = CMapLoader::saveWithResult(game->getMap(), slot);"))
+        self.assertIn('expect_true(ready, "resume fixture must use an actual native save");', constructor)
+        for name in (
+            "testVerifiedLoadResumesActualFlowOnlyAfterPostedLeaseRelease",
+            "testVerifiedLoadResumeRejectsSupersededWeakBindings",
+            "testUnverifiedOrRejectedLoadsNeverDispatchResume",
+        ):
+            body = resume.split(f"void {name}() {{", 1)[1].split("\n}\n", 1)[0]
+            self.assertRegex(
+                body,
+                r"VerifiedResumeFixture fixture;\s+if \(!fixture\.ready\) \{\s+"
+                r"fixture\.cleanup\(false\);\s+return;\s+\}",
+                name,
+            )
+            self.assertLess(body.index("if (!fixture.ready)"), body.index("fixture.game"), name)
+        self.assertEqual(3, resume.count("if (!fixture.ready)"))
+
+    def testVerifiedResumeFixtureKeepsAllInstallationAndRejectionCases(self):
+        handler = (ROOT / "tests/unit/test_handler.cpp").read_text(encoding="utf-8")
+        resume = handler.split("struct VerifiedResumeFixture {", 1)[1].split("\nint main() {", 1)[0]
+        self.assertIn("constexpr int INSTALLATIONS = 8;", resume)
+        self.assertIn("for (int index = 0; index < INSTALLATIONS; ++index)", resume)
+        self.assertIn("const bool backup_recovery = index == INSTALLATIONS / 2;", resume)
+        self.assertIn("for (int mode = 0; mode < 6; ++mode)", resume)
+        self.assertIn("for (int mode = 0; mode < 7; ++mode)", resume)
+        self.assertIn("seven rejected, unverified or disabled load paths have a zero authored-dispatch budget", resume)
+        main = handler[handler.rindex("int main() {") :]
+        for name in (
+            "testVerifiedLoadResumePolicyIsStrictAndPrecedesObjects",
+            "testVerifiedLoadResumesActualFlowOnlyAfterPostedLeaseRelease",
+            "testVerifiedLoadResumeRejectsSupersededWeakBindings",
+            "testUnverifiedOrRejectedLoadsNeverDispatchResume",
+        ):
+            self.assertEqual(1, len(re.findall(rf'nativeTestProfile\(\)\.run\("{name}",', main)), name)
+
     def testConfiguredFixtureIsRequiredByNativeAndGameplayValidation(self):
         import test as runner
 

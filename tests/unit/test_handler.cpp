@@ -4702,8 +4702,10 @@ struct VerifiedResumeFixture {
     std::shared_ptr<VerifiedResumeState> state = std::make_shared<VerifiedResumeState>();
     std::shared_ptr<CResourcesProvider> resources = game->getResourcesProvider();
     std::string slot;
+    bool ready = false;
 
     VerifiedResumeFixture() {
+        game->getMap()->setMapName("test");
         state->game = game;
         auto gui = std::make_shared<WindowlessFightTestGui>();
         gui->setGame(game);
@@ -4742,8 +4744,8 @@ class Receiver:
         game->getMap()->addObject(receiver);
         // Change only this fixture context's parsed configuration cache, never resource files.
         auto authored =
-            std::const_pointer_cast<json>(game->getConfigurationProvider()->getConfiguration("maps/empty/map.json"));
-        expect_true(authored && authored->is_object(), "resume fixture needs the authored empty-map configuration");
+            std::const_pointer_cast<json>(game->getConfigurationProvider()->getConfiguration("maps/test/map.json"));
+        expect_true(authored && authored->is_object(), "resume fixture needs the authored test-map configuration");
         if (!authored || !authored->is_object()) {
             return;
         }
@@ -4753,7 +4755,8 @@ class Receiver:
         (*authored)["properties"]["verifiedLoadResumeReceiver"] = "resumeReceiver";
         game->getMap()->setStringProperty("verifiedLoadResumeReceiver", "savedAdHocReceiver");
         slot = "native-verified-resume-" + std::to_string(std::chrono::steady_clock::now().time_since_epoch().count());
-        expect_true(CMapLoader::saveWithResult(game->getMap(), slot), "resume fixture must use an actual native save");
+        ready = CMapLoader::saveWithResult(game->getMap(), slot);
+        expect_true(ready, "resume fixture must use an actual native save");
     }
 
     void cleanup(bool successful) {
@@ -4773,6 +4776,10 @@ class Receiver:
 
 void testVerifiedLoadResumesActualFlowOnlyAfterPostedLeaseRelease() {
     VerifiedResumeFixture fixture;
+    if (!fixture.ready) {
+        fixture.cleanup(false);
+        return;
+    }
     constexpr int INSTALLATIONS = 8;
     bool successful = true;
     for (int index = 0; index < INSTALLATIONS; ++index) {
@@ -4815,6 +4822,10 @@ void testVerifiedLoadResumesActualFlowOnlyAfterPostedLeaseRelease() {
 void testVerifiedLoadResumeRejectsSupersededWeakBindings() {
     for (int mode = 0; mode < 6; ++mode) {
         VerifiedResumeFixture fixture;
+        if (!fixture.ready) {
+            fixture.cleanup(false);
+            return;
+        }
         auto original = fixture.game->getMap();
         CGameLoader::loadSavedGame(fixture.game, fixture.slot);
         auto installed = fixture.game->getMap();
@@ -4850,6 +4861,10 @@ void testUnverifiedOrRejectedLoadsNeverDispatchResume() {
     int rejected_dispatches = 0;
     for (int mode = 0; mode < 7; ++mode) {
         VerifiedResumeFixture fixture;
+        if (!fixture.ready) {
+            fixture.cleanup(false);
+            return;
+        }
         auto original = fixture.game->getMap();
         std::optional<CGameContext::UnsafeOperationLease> unsafe;
         std::optional<CGameContext::SaveSnapshotLease> snapshot;
@@ -4871,7 +4886,7 @@ void testUnverifiedOrRejectedLoadsNeverDispatchResume() {
                                candidate->getStringProperty("verifiedLoadResumeReceiver") == "resumeReceiver";
         } else if (mode == 4) {
             auto authored = std::const_pointer_cast<json>(
-                fixture.game->getConfigurationProvider()->getConfiguration("maps/empty/map.json"));
+                fixture.game->getConfigurationProvider()->getConfiguration("maps/test/map.json"));
             (*authored)["properties"]["verifiedLoadResumeReceiver"] = true;
             CGameLoader::loadSavedGame(fixture.game, fixture.slot);
         } else if (mode == 5) {
@@ -4895,7 +4910,7 @@ void testUnverifiedOrRejectedLoadsNeverDispatchResume() {
                 expected_outcome && *supersessions == 1 && !fixture.game->getMap()->tryBeginSaveSnapshot();
         } else {
             auto authored = std::const_pointer_cast<json>(
-                fixture.game->getConfigurationProvider()->getConfiguration("maps/empty/map.json"));
+                fixture.game->getConfigurationProvider()->getConfiguration("maps/test/map.json"));
             (*authored)["properties"].erase("verifiedLoadResumeReceiver");
             CGameLoader::loadSavedGame(fixture.game, fixture.slot);
             expected_outcome = fixture.game->getMap() != original &&
