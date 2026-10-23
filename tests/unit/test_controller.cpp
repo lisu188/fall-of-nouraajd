@@ -442,7 +442,8 @@ void testPlayerControllerMovementSuspensionRoundTripsWithLegacyDefault() {
         auto controller = game->createObject<CPlayerController>();
         controller->setMovementSuspended(suspended);
         auto document = ObjectJson::serialize(controller);
-        expect_true(document->at("properties").at("movementSuspended") == suspended,
+        const auto &serialized_pause = document->at("properties").at("movementSuspended");
+        expect_true(serialized_pause.is_boolean() && serialized_pause.get<bool>() == suspended,
                     "native controller snapshots must encode suspension as a typed boolean");
         auto restored = std::dynamic_pointer_cast<CPlayerController>(ObjectJson::deserialize(game, document));
         expect_true(restored && restored != controller && restored->getMovementSuspended() == suspended &&
