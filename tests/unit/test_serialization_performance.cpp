@@ -32,9 +32,12 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #include "object/CPlayer.h"
 #include "object/CQuest.h"
 #include "handler/CFightHandler.h"
+#include "handler/CEventHandler.h"
+#include "object/CTrigger.h"
 #include "test_harness.h"
 #include "veventloop.h"
 
+#include <algorithm>
 #include <chrono>
 #include <cstddef>
 #include <iostream>
@@ -514,6 +517,138 @@ void testMutualEffectGraphSerializationHasBoundedActorDefinitions() {
     }
 }
 
+class TerminalSerializationProbe : public CPlayer {
+    V_META(TerminalSerializationProbe, CPlayer,
+           V_PROPERTY(TerminalSerializationProbe, int, serializationVisit, getSerializationVisit,
+                      setSerializationVisit))
+
+  public:
+    int getSerializationVisit() {
+        ++serializationVisits;
+        return 1;
+    }
+    void setSerializationVisit(int) {}
+    static inline std::size_t serializationVisits = 0;
+};
+
+std::size_t countTerminalActorDefinitions(const json &value) {
+    std::size_t count = 0;
+    if (value.is_object() && value.value("class", std::string()) == "TerminalSerializationProbe" &&
+        value.contains("properties")) {
+        ++count;
+    }
+    if (value.is_object()) {
+        for (const auto &[key, child] : value.items()) {
+            count += countTerminalActorDefinitions(child);
+        }
+    } else if (value.is_array()) {
+        for (const auto &child : value) {
+            count += countTerminalActorDefinitions(child);
+        }
+    }
+    return count;
+}
+
+std::size_t countTerminalPlayerTriggers(const std::shared_ptr<CMap> &map) {
+    std::size_t count = 0;
+    for (const auto &trigger : map->getEventHandler()->getTriggers()) {
+        if (trigger && trigger->getObject() == "player") {
+            ++count;
+        }
+    }
+    return count;
+}
+
+void testRetainedTerminalPlayerWorkIsBounded() {
+    constexpr int LOOKUPS = 128;
+    constexpr int SNAPSHOTS = 4;
+    constexpr std::size_t ACTOR_DEFINITIONS = 1;
+    // Reuse the existing per-owner graph budget for one map and one retained player.
+    constexpr std::size_t BYTE_BUDGET = EFFECT_GRAPH_BYTES_PER_ACTOR * 2;
+    CTypes::register_type<CGameObject>();
+    CTypes::register_type<CMapObject, CGameObject>();
+    CTypes::register_type<CMap, CGameObject>();
+    CTypes::register_type<CCreature, CMapObject, CGameObject>();
+    CTypes::register_type<CPlayer, CCreature, CMapObject, CGameObject>();
+    CTypes::register_type<TerminalSerializationProbe, CPlayer, CCreature, CMapObject, CGameObject>();
+    CTypes::register_type<CStats, CGameObject>();
+    CTypes::register_type<CController, CGameObject>();
+    CTypes::register_type<CPlayerController, CController, CGameObject>();
+    CTypes::register_type<CFightController, CGameObject>();
+    CTypes::register_type<CPlayerFightController, CFightController, CGameObject>();
+    auto game = std::make_shared<CGame>();
+    for (const auto &[name, builder] : *CTypes::builders()) {
+        game->getObjectHandler()->registerType(name, builder);
+    }
+    auto map = std::make_shared<CMap>();
+    map->setGame(game);
+    game->setMap(map);
+    map->setPermanentPlayerDeath(true);
+    auto player = std::make_shared<TerminalSerializationProbe>();
+    player->setGame(game);
+    player->setName("player");
+    player->setLevel(1);
+    player->setHp(0);
+    map->setDefeatedPlayer(player);
+    map->setObjectProperty<CGameObject>("terminalPlayerAlias", player);
+    std::string error;
+    expect_true(map->restorePlayerAfterLoad(error),
+                "the terminal budget must begin with one valid retained dead player");
+    const auto revision = map->getNavigationRevision();
+    const auto objects = map->getObjects().size();
+    const auto triggers = countTerminalPlayerTriggers(map);
+    TerminalSerializationProbe::serializationVisits = 0;
+    for (int repeat = 0; repeat < LOOKUPS; ++repeat) {
+        expect_true(map->getPlayer() == player, "terminal lookups must reuse the exact retained identity");
+    }
+    expect_true(!player->isAlive() && !map->getObjectByName("player") && objects == 0 &&
+                    map->getObjects().size() == objects && map->getNavigationRevision() == revision &&
+                    countTerminalPlayerTriggers(map) == triggers &&
+                    TerminalSerializationProbe::serializationVisits == 0,
+                "128 cached terminal lookups must add no registry, navigation, trigger or serialization work");
+    using ObjectJson = CSerializerFunction<std::shared_ptr<json>, std::shared_ptr<CGameObject>>;
+    std::size_t max_bytes = 0;
+    for (int snapshot = 0; snapshot < SNAPSHOTS; ++snapshot) {
+        const auto visits_before = TerminalSerializationProbe::serializationVisits;
+        auto document = ObjectJson::serialize(map);
+        const auto definitions = countTerminalActorDefinitions(*document);
+        const auto bytes = document->dump().size();
+        max_bytes = std::max(max_bytes, bytes);
+        expect_true(definitions == ACTOR_DEFINITIONS &&
+                        TerminalSerializationProbe::serializationVisits == visits_before + ACTOR_DEFINITIONS &&
+                        bytes <= BYTE_BUDGET,
+                    "each terminal snapshot must visit and define one retained actor within the fixed graph budget");
+        CSerialization::StrictScope strict;
+        auto restored = std::dynamic_pointer_cast<CMap>(ObjectJson::deserialize(game, document, strict));
+        std::string restore_error;
+        const bool valid = restored && restored->restorePlayerAfterLoad(restore_error);
+        expect_true(valid, "every bounded terminal snapshot must restore without resurrection");
+        if (!valid) {
+            continue;
+        }
+        auto actual = restored->getPlayer();
+        const auto restored_revision = restored->getNavigationRevision();
+        const auto restored_triggers = countTerminalPlayerTriggers(restored);
+        for (int repeat = 0; repeat < LOOKUPS; ++repeat) {
+            expect_true(restored->getPlayer() == actual,
+                        "restored terminal lookups must reuse their captured identity");
+        }
+        expect_true(actual && !actual->isAlive() && restored->getDefeatedPlayer() == actual &&
+                        restored->getObjectProperty<CGameObject>("terminalPlayerAlias") == actual &&
+                        !restored->getObjectByName("player") && restored->getObjects().empty() &&
+                        restored->getNavigationRevision() == restored_revision &&
+                        countTerminalPlayerTriggers(restored) == restored_triggers,
+                    "restored terminal lookup must preserve alias, empty registry, navigation and trigger counts");
+    }
+    expect_true(TerminalSerializationProbe::serializationVisits == SNAPSHOTS * ACTOR_DEFINITIONS,
+                "the four snapshots must perform exactly four retained-player property visits");
+    std::cout << "[performance] terminal player: lookups=" << LOOKUPS << " snapshots=" << SNAPSHOTS
+              << " restoredLookups=" << LOOKUPS * SNAPSHOTS << " actorDefinitions=" << ACTOR_DEFINITIONS
+              << " visits=" << TerminalSerializationProbe::serializationVisits << " maxBytes=" << max_bytes
+              << " byteBudget=" << BYTE_BUDGET << " objects=" << objects << " triggers=" << triggers << '\n';
+    game->getContext()->shutdown();
+}
+
 } // namespace
 
 void run_serialization_performance_tests() {
@@ -523,4 +658,5 @@ void run_serialization_performance_tests() {
     testScalarPropertyMetadataWorkIsBounded();
     testRejectedSaveAdmissionHasZeroSnapshotWork();
     testSnapshotAdmissionRejectsEncountersBeforeMutation();
+    testRetainedTerminalPlayerWorkIsBounded();
 }

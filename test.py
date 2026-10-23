@@ -203,6 +203,7 @@ FAST_TEST_PREFIXES = (
     "ScriptFlowExportTest.",
     "WindowsNativeCrashDiagnosticsTest.",
     "NativeTestProfileSourceTest.",
+    "PermanentPlayerDefeatSourceTest.",
     "PlayerIdentityContentTest.",
     "EffectContractTest.",
     "SessionDeferredWorkTest.",
@@ -26948,6 +26949,10 @@ if SOURCE_UI_TESTS_AVAILABLE:
     from tests.test_windows_native_crash_diagnostics import (
         WindowsNativeCrashDiagnosticsTest as _WindowsNativeCrashDiagnosticsTest,
     )
+    from tests.test_permanent_player_defeat import (
+        PermanentPlayerDefeatSourceTest as _PermanentPlayerDefeatSourceTest,
+        PermanentDefeatJsonSyntaxTest as _PermanentDefeatJsonSyntaxTest,
+    )
     from tests.test_native_test_profile import NativeTestProfileSourceTest as _NativeTestProfileSourceTest
     from tests.test_native_test_profile import NativeTestProfileRuntimeTest as _NativeTestProfileRuntimeTest
     from tests.test_windows_python_configuration import (
@@ -27190,6 +27195,12 @@ if SOURCE_UI_TESTS_AVAILABLE:
     class PaidActionRuntimeTest(_PaidActionRuntimeTest):
         pass
 
+    class PermanentPlayerDefeatSourceTest(_PermanentPlayerDefeatSourceTest):
+        pass
+
+    class PermanentDefeatJsonSyntaxTest(_PermanentDefeatJsonSyntaxTest):
+        pass
+
     class NativeTestProfileSourceTest(_NativeTestProfileSourceTest):
         pass
 
@@ -27332,6 +27343,7 @@ if SOURCE_UI_TESTS_AVAILABLE:
     del _GameDiagnosticsTest, _McpDiagnosticsTest, _NativeDiagnosticsRuntimeTest
     del _McpEngineThreadTest, _McpHttpNativeRuntimeTest
     del _McpNativeUiOwnershipSourceTest, _UsurpergateEntryDiagnosticsTest
+    del _PermanentPlayerDefeatSourceTest, _PermanentDefeatJsonSyntaxTest
     del _NativeTestProfileSourceTest, _NativeTestProfileRuntimeTest
     del _WindowsPythonConfigurationTest
     del _NativeCallgrindToolTest

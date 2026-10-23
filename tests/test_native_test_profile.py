@@ -62,6 +62,12 @@ ADDITIONAL_CASES = {
         "testMapMoveRejectsPlayerPlanSuspendedBeforeCommit",
         "testMapMoveRejectsPlayerPlanSuspendedDuringLeaveHook",
         "testMapPausedPlayerControllerRoundTripsWithoutReset",
+        "testMapPermanentPlayerDeathPreservesOptInNativeDefeat",
+        "testMapPermanentPlayerDeathRoundTripsThroughNativeSerialization",
+        "testDefeatedPlayerSurvivesNativeSavedMapRestorationWithoutResurrection",
+        "testDefeatedPlayerRestorationRejectsInvalidAliasesWithoutChangingTheActiveMap",
+        "testMapTerminalPlayerSettersPreserveInstalledSnapshot",
+        "testExplicitPlayerReplacementReleasesRetainedTerminalOwnership",
         "test_scene_manager_awaits_preparation_and_rolls_back_errors",
         "testSceneCompletionOwnsSkippedLazyChildren",
         "testSceneCommitRunsAfterPreparationAndBeforeQueuedObservers",
@@ -73,6 +79,78 @@ ADDITIONAL_CASES = {
 
 
 class NativeTestProfileSourceTest(unittest.TestCase):
+
+    def testDirectEncounterAdmissionUsesAnArmedTopLevelSnapshotProbe(self):
+        source = (ROOT / "tests/unit/test_allied_combat.cpp").read_text(encoding="utf-8")
+        self.assertIn("class EncounterAdmissionSnapshotMap : public CMap", source)
+        probe = source.split("class EncounterAdmissionSnapshotMap : public CMap", 1)[1].split("struct Fixture", 1)[0]
+        self.assertEqual(2, probe.count("stopArmedGraph();"))
+        self.assertEqual(2, probe.count("return CMap::meta();"))
+        self.assertIn("if (std::exchange(stopNextGraph, false))", probe)
+        self.assertIn("++graphVisits;", probe)
+        self.assertIn("intentional top-level encounter snapshot stop before resource writes", probe)
+        direct = source.split("void testDirectEncounterSaveAdmissionAndLegacyDefault() {", 1)[1].split("\n}\n", 1)[0]
+        self.assertIn("auto observedMap = std::make_shared<EncounterAdmissionSnapshotMap>();", direct)
+        self.assertIn("Fixture fixture(observedMap);", direct)
+        self.assertEqual(2, direct.count("observedMap->meta() == observedMap->CMap::meta()"))
+        self.assertIn("work.graph->visits == 0", direct)
+
+    def testDirectEncounterAdmissionProbeIsScopedToTheRealSaveAttempt(self):
+        source = (ROOT / "tests/unit/test_allied_combat.cpp").read_text(encoding="utf-8")
+        self.assertIn("explicit Fixture(std::shared_ptr<CMap> providedMap = {})", source)
+        fixture = source.split("struct Fixture", 1)[1].split("std::shared_ptr<ProbeController> probe(", 1)[0]
+        self.assertIn("if (providedMap)", fixture)
+        self.assertLess(fixture.index("game->setMap(providedMap)"), fixture.index("hero = std::make_shared<CPlayer>"))
+        work = source.split("struct EncounterAdmissionWork", 1)[1].split("class EncounterAdmissionEffect", 1)[0]
+        self.assertIn("std::dynamic_pointer_cast<EncounterAdmissionSnapshotMap>(map)", work)
+        self.assertIn("owner->stopNextGraph = true;", work)
+        self.assertIn("~SnapshotGraphStop()", work)
+        self.assertIn("owner->stopNextGraph = false;", work)
+        self.assertLess(work.index("} graphStop(map);"), work.index("CMapLoader::saveWithResult(map,"))
+        self.assertEqual(1, work.count("CMapLoader::saveWithResult(map,"))
+        self.assertIn("an encounter save must reject or hit the intentional graph stop without writing", work)
+
+    def testDirectEncounterAdmissionKeepsFiveBoundariesAndExactWorkBudgets(self):
+        source = (ROOT / "tests/unit/test_allied_combat.cpp").read_text(encoding="utf-8")
+        direct = source.split("void testDirectEncounterSaveAdmissionAndLegacyDefault() {", 1)[1].split("\n}\n", 1)[0]
+        self.assertIn("for (const bool optedIn : {false, true})", direct)
+        self.assertEqual(5, direct.count("work.attempt();"))
+        self.assertRegex(
+            direct, r"work\.quest->captures == expectedWork\s*&&\s*observedMap->graphVisits == expectedWork"
+        )
+        for callback in (
+            "fixture.heroController->starting",
+            "probe(enemy)->starting",
+            "fixture.heroController->action",
+            "fixture.heroController->ending",
+            "probe(enemy)->ending",
+        ):
+            self.assertIn(callback, direct)
+        for obligation in (
+            "const int expectedWork = optedIn ? 0 : 5;",
+            "result.outcome == CFightOutcome::Cancelled",
+            "work.attempts == 5",
+            "work.quest->captures == expectedWork",
+            "observedMap->graphVisits == expectedWork",
+            "fixture.heroController->ends == 1",
+            "probe(enemy)->ends == 1",
+            "fixture.map->tryBeginSaveSnapshot().has_value()",
+        ):
+            self.assertIn(obligation, direct)
+        for diagnostic in (
+            "optedIn=%d",
+            "outcome=%d",
+            "attempts=%d",
+            "journal=%d",
+            "graph=%d",
+            "nestedGraph=%d",
+            "starts=%d/%d",
+            "actions=%d/%d",
+            "ends=%d/%d",
+            "expectedWork=%d",
+            "armed=%d",
+        ):
+            self.assertIn(diagnostic, direct)
 
     def testVerifiedResumeFixtureUsesAnAuthoredConfiguration(self):
         handler = (ROOT / "tests/unit/test_handler.cpp").read_text(encoding="utf-8")

@@ -26,6 +26,7 @@ SPDX-License-Identifier: GPL-3.0-or-later
 #include <SDL.h>
 #include <pybind11/embed.h>
 #include <cmath>
+#include <cstdio>
 #include <functional>
 #include <memory>
 #include <stdexcept>
@@ -115,14 +116,41 @@ void initializeStats(const std::shared_ptr<CCreature> &actor, int agility = 10) 
     actor->setMana(70);
 }
 
+class EncounterAdmissionSnapshotMap : public CMap {
+  public:
+    std::shared_ptr<vstd::meta> meta() override {
+        stopArmedGraph();
+        return CMap::meta();
+    }
+    std::shared_ptr<const vstd::meta> meta() const override {
+        stopArmedGraph();
+        return CMap::meta();
+    }
+    mutable bool stopNextGraph = false;
+    mutable int graphVisits = 0;
+
+  private:
+    void stopArmedGraph() const {
+        if (std::exchange(stopNextGraph, false)) {
+            ++graphVisits;
+            throw std::runtime_error("intentional top-level encounter snapshot stop before resource writes");
+        }
+    }
+};
+
 struct Fixture {
     std::shared_ptr<CGame> game = CGameLoader::loadGame();
     std::shared_ptr<CMap> map;
     std::shared_ptr<CPlayer> hero;
     std::shared_ptr<ProbeController> heroController = std::make_shared<ProbeController>();
 
-    Fixture() {
+    explicit Fixture(std::shared_ptr<CMap> providedMap = {}) {
         CGameLoader::startGame(game, "empty");
+        if (providedMap) {
+            providedMap->setGame(game);
+            providedMap->setMapName("empty");
+            game->setMap(providedMap);
+        }
         map = game->getMap();
         hero = std::make_shared<CPlayer>();
         hero->setGame(game);
@@ -586,6 +614,20 @@ struct EncounterAdmissionWork {
     }
     void attempt() {
         ++attempts;
+        struct SnapshotGraphStop {
+            std::shared_ptr<EncounterAdmissionSnapshotMap> owner;
+            explicit SnapshotGraphStop(const std::shared_ptr<CMap> &map)
+                : owner(std::dynamic_pointer_cast<EncounterAdmissionSnapshotMap>(map)) {
+                if (owner) {
+                    owner->stopNextGraph = true;
+                }
+            }
+            ~SnapshotGraphStop() {
+                if (owner) {
+                    owner->stopNextGraph = false;
+                }
+            }
+        } graphStop(map);
         expect_true(!CMapLoader::saveWithResult(map, "unit-encounter-admission-no-write"),
                     "an encounter save must reject or hit the intentional graph stop without writing");
     }
@@ -624,7 +666,10 @@ class EncounterAdmissionCreature : public CCreature {
 
 void testDirectEncounterSaveAdmissionAndLegacyDefault() {
     for (const bool optedIn : {false, true}) {
-        Fixture fixture;
+        auto observedMap = std::make_shared<EncounterAdmissionSnapshotMap>();
+        Fixture fixture(observedMap);
+        expect_true(observedMap->meta() == observedMap->CMap::meta() && observedMap->graphVisits == 0,
+                    "the direct-save probe must preserve ordinary unarmed map metadata");
         fixture.map->setBoolProperty("guardNativeEncounterSaves", optedIn);
         fixture.hero->getBaseStats()->setAgility(30);
         auto enemy = fixture.actor("saveBoundaryEnemy");
@@ -639,9 +684,19 @@ void testDirectEncounterSaveAdmissionAndLegacyDefault() {
         probe(enemy)->ending = [&] { work.attempt(); };
         const auto result = CFightHandler::fightManyResult(fixture.hero, {enemy});
         const int expectedWork = optedIn ? 0 : 5;
+        std::printf("[encounter admission] optedIn=%d outcome=%d attempts=%d journal=%d graph=%d nestedGraph=%d "
+                    "starts=%d/%d actions=%d/%d ends=%d/%d expectedWork=%d armed=%d\n",
+                    optedIn, static_cast<int>(result.outcome), work.attempts, work.quest->captures,
+                    observedMap->graphVisits, work.graph->visits, fixture.heroController->starts, probe(enemy)->starts,
+                    fixture.heroController->actions, probe(enemy)->actions, fixture.heroController->ends,
+                    probe(enemy)->ends, expectedWork, observedMap->stopNextGraph);
         expect_true(result.outcome == CFightOutcome::Cancelled && work.attempts == 5 &&
-                        work.quest->captures == expectedWork && work.graph->visits == expectedWork,
+                        work.quest->captures == expectedWork && observedMap->graphVisits == expectedWork &&
+                        work.graph->visits == 0,
                     "direct ordinary combat must gate starts/action/ends only on explicitly opted-in maps");
+        expect_true(!observedMap->stopNextGraph && observedMap->meta() == observedMap->CMap::meta() &&
+                        observedMap->graphVisits == expectedWork,
+                    "every save attempt must disarm its one-shot probe before ordinary map metadata resumes");
         expect_true(fixture.heroController->ends == 1 && probe(enemy)->ends == 1 &&
                         fixture.map->tryBeginSaveSnapshot().has_value(),
                     "a normal returned outcome must finish admission only after every controller end succeeded");
