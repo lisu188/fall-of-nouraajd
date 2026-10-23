@@ -1492,6 +1492,116 @@ def companionInventoryUi(d):
     d.check("baldursGate.companions.nativeItemTransfer", True, nativePanel=witness, companion=name, item=selected)
 
 
+def custodyInventory(d, owner):
+    bag = itemInstances(d, owner)
+    d.test.assertEqual(len(bag), len(d.call(owner, "getItems")), "Custody ownership needs unique actual item names")
+    equipped = {
+        slot: d.call(item, "getName") for slot, item in d.call(owner, "getEquipped").items() if item is not None
+    }
+    identities = {
+        name: (
+            d.call(item, "getTypeId"),
+            d.call(item, "getStringProperty", "plugin_citySourceItem"),
+            d.call(item, "getNumericProperty", "plugin_cityQuantity"),
+        )
+        for name, item in bag.items()
+    }
+    return identities, equipped
+
+
+def custodyUi(d):
+    start(d)
+    planner = QuestRoute(d)
+    planner.ensurePhase(7)
+    travel(d, "AR0800")
+    d.call(d.game_map, "move")
+    d.pump()
+    patrol = "cityCustodyPatrolAr0800One"
+    d.test.assertIsNotNone(d.object(patrol))
+    planner.contact(patrol)
+    before, inventory = resources(d), custodyInventory(d, d.player)
+    surrender = d.chooseUi(patrol + "Dialog", "talk", dialogue_choices=["0", "5"])
+    d.test.assertEqual("jailed", d.string("plugin_cityCustodyState"))
+    d.test.assertEqual("AR0607", currentArea(d))
+    custody_data = read(d, d.object("cityCustody"), "custodyDefinitions", {})
+    d.test.assertEqual(tuple(custody_data["jail"]["partyPositions"][0]), d.coords())
+    d.test.assertEqual(1, read(d, d.game_map, "plugin_cityCustodyGlobals", {})["GLOBAL:Captured"])
+    d.test.assertEqual({26844, 26842, 26841}, set(read(d, d.game_map, "plugin_cityCustodyJournal", [])))
+    d.test.assertEqual(before, resources(d), "Arrest must not grant rewards or confiscate possessions")
+    d.test.assertEqual(inventory, custodyInventory(d, d.player))
+    d.test.assertIn("cityCustodyQuest", d.questNames())
+    jail_trace = read(d, d.game_map, "plugin_cityCustodyTrace", [])
+    d.test.assertEqual(
+        [("FFHUNT", 0), ("FFHUNT", 5), ("FLAMC7", 13), ("ANGELO", 5), ("ANGELO", 15)],
+        [(row["dialogue"], row["edge"]) for row in jail_trace],
+    )
+    d.check("baldursGate.custody.surrender", True, nativePanel=surrender, nativeCustodyTrace=jail_trace)
+
+    def retainedAngelo():
+        owner = d.call(d.object("cityCustody"), "getObjectProperty", "plugin_cityActor_cityCustodyAngelo")
+        d.test.assertIsNotNone(owner, "Plot cleanup must retain the actual custody actor")
+        d.test.assertTrue(d.call(owner, "isAlive"), "The peaceful jail branch must not create an execution corpse")
+        d.test.assertTrue(d.call(owner, "getBoolProperty", "plugin_cityDeparted"))
+        d.test.assertIsNone(d.object("cityCustodyAngelo", required=False))
+        return custodyInventory(d, owner)
+
+    angelo_inventory = retainedAngelo()
+    jail_journal = read(d, d.game_map, "plugin_cityCustodyJournal", [])
+    jail_position = d.coords()
+    d.saveAndReload("city-custody-jailed")
+    d.test.assertEqual("jailed", d.string("plugin_cityCustodyState"))
+    d.test.assertEqual(jail_position, d.coords())
+    d.test.assertEqual(jail_trace, read(d, d.game_map, "plugin_cityCustodyTrace", []))
+    d.test.assertEqual(jail_journal, read(d, d.game_map, "plugin_cityCustodyJournal", []))
+    d.test.assertEqual(angelo_inventory, retainedAngelo())
+    d.test.assertEqual(before, resources(d))
+    d.test.assertEqual(inventory, custodyInventory(d, d.player))
+
+    neb = "cityAr0607Actor2"
+    planner.contact(neb)
+    d.chooseUi(neb + "Dialog", "talk", dialogue_choices=["2", "5"])
+    d.test.assertIn(26846, read(d, d.game_map, "plugin_cityCustodyJournal", []))
+    for expected_talks in (2, 3):
+        d.chooseUi(neb + "Dialog", "talk", dialogue_choices=[])
+        d.test.assertEqual(expected_talks, d.call(d.object(neb), "getNumericProperty", "plugin_cityTalkCount"))
+    escape = d.chooseUi(neb + "Dialog", "talk", dialogue_choices=["9", "15"])
+    d.test.assertEqual("escaped", d.string("plugin_cityCustodyState"))
+    d.test.assertEqual("AR1100", currentArea(d))
+    d.test.assertEqual(tuple(custody_data["escape"]["partyPositions"][0]), d.coords())
+    d.test.assertEqual([27317], read(d, d.game_map, "plugin_cityCustodyJournal", []))
+    d.test.assertIsNone(d.object(neb, required=False))
+    retired_neb = d.call(d.object("cityCustody"), "getObjectProperty", "plugin_cityActor_" + neb)
+    d.test.assertIsNotNone(retired_neb)
+    d.test.assertTrue(d.call(retired_neb, "isAlive"))
+    d.test.assertTrue(d.call(retired_neb, "getBoolProperty", "plugin_cityDeparted"))
+    d.test.assertEqual(before, resources(d), "Neb's escape must grant exactly zero gold, XP or source items")
+    d.test.assertEqual(inventory, custodyInventory(d, d.player), "Neb's spoken key must not create an item")
+    d.test.assertIn("cityCustodyQuest", d.questNames(completed=True))
+    d.test.assertNotIn("cityCustodyQuest", d.questNames())
+    trace = read(d, d.game_map, "plugin_cityCustodyTrace", [])
+    d.test.assertEqual([2, 5, 6, 7, 8, 9, 15, 19], [row["edge"] for row in trace if row["dialogue"] == "NEB"])
+    d.check(
+        "baldursGate.custody.escapeNoReward",
+        True,
+        nativePanel=escape,
+        nativeCustodyTrace=trace,
+        goldDelta=resources(d)[0] - before[0],
+        experienceDelta=resources(d)[1] - before[1],
+    )
+    escaped_position = d.coords()
+    d.saveAndReload("city-custody-escaped")
+    d.test.assertEqual("escaped", d.string("plugin_cityCustodyState"))
+    d.test.assertEqual(escaped_position, d.coords())
+    d.test.assertEqual(trace, read(d, d.game_map, "plugin_cityCustodyTrace", []))
+    d.test.assertEqual([27317], read(d, d.game_map, "plugin_cityCustodyJournal", []))
+    d.test.assertEqual(before, resources(d))
+    d.test.assertEqual(inventory, custodyInventory(d, d.player))
+    d.test.assertEqual(angelo_inventory, retainedAngelo())
+    d.test.assertIsNone(d.object(neb, required=False))
+    d.test.assertIn("cityCustodyQuest", d.questNames(completed=True))
+    d.check("baldursGate.custody.saveReload", True, completedQuest="cityCustodyQuest", checkpoints=2)
+
+
 CASES = (
     (
         RouteCase(
@@ -1707,7 +1817,23 @@ CASES += (
     ),
 )
 
+CASES += (
+    RouteCase(
+        "baldurs-gate-native-custody",
+        MAP,
+        (MAP,),
+        ("baldursGate.custody.surrender", "baldursGate.custody.escapeNoReward", "baldursGate.custody.saveReload"),
+        custodyUi,
+        classes=("Warrior",),
+        race="highlanderRace",
+        sources=SOURCES + ("tests/fixtures/baldurs_gate_city_prison_source.json",),
+        duration_seconds=1200,
+        isolated_gui=True,
+    ),
+)
+
 SOURCE_BRANCHES = {
+    "res/maps/baldursGate/script.py:BaldursGateCustodyQuest.isCompleted": ("baldursGate.custody.escapeNoReward",),
     "res/maps/baldursGate/script.py:BaldursGateDialog.showInventory": ("baldursGate.inventory.nativeReader",),
     "res/maps/baldursGate/script.py:BaldursGateDialog.pickPocket": (
         "baldursGate.theft.nativeSucceeded",
