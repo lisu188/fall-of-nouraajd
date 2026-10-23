@@ -147,6 +147,9 @@ FAST_TEST_PREFIXES = (
     "CombatCleanupGuardSourceTest.",
     "CandlekeepMetadataSourceTest.",
     "BaldursGateCityDataTest.",
+    "BaldursGateCustodySourceTest.",
+    "BaldursGateCustodyPatrolSourceTest.",
+    "BaldursGateCustodyRoleSourceTest.",
     "CityWalkthroughRegistrationTest.",
     "BindingSourceLayoutTest.",
     "SavedWaitSourceTest.",
@@ -26922,6 +26925,9 @@ if SOURCE_UI_TESTS_AVAILABLE:
     from tests.test_candlekeep_metadata import CandlekeepMetadataSourceTest as _CandlekeepMetadataSourceTest
     from tests.test_candlekeep_metadata import CandlekeepMetadataRuntimeTest as _CandlekeepMetadataRuntimeTest
     from tests.test_baldurs_gate_city_data import BaldursGateCityDataTest as _BaldursGateCityDataTest
+    from tests.test_baldurs_gate_custody_source import BaldursGateCustodySourceTest as _BaldursGateCustodySourceTest
+    from tests.test_baldurs_gate_custody_patrol import BaldursGateCustodyPatrolSourceTest as _BaldursGateCustodyPatrolSourceTest
+    from tests.test_baldurs_gate_custody_projection import BaldursGateCustodyRoleSourceTest as _BaldursGateCustodyRoleSourceTest
     from tests.test_city_walkthrough_registration import (
         CityWalkthroughRegistrationTest as _CityWalkthroughRegistrationTest,
     )
@@ -27045,6 +27051,15 @@ if SOURCE_UI_TESTS_AVAILABLE:
         pass
 
     class BaldursGateCityDataTest(_BaldursGateCityDataTest):
+        pass
+
+    class BaldursGateCustodySourceTest(_BaldursGateCustodySourceTest):
+        pass
+
+    class BaldursGateCustodyPatrolSourceTest(_BaldursGateCustodyPatrolSourceTest):
+        pass
+
+    class BaldursGateCustodyRoleSourceTest(_BaldursGateCustodyRoleSourceTest):
         pass
 
     class BaldursGateCityContentTest(_BaldursGateCityContentTest):
@@ -27406,6 +27421,9 @@ if SOURCE_UI_TESTS_AVAILABLE:
     del _SavedWaitSourceTest
     del _WaitStateRuntimeTest
     del _BaldursGateCityContentTest, _BaldursGateCityDataTest
+    del _BaldursGateCustodySourceTest
+    del _BaldursGateCustodyPatrolSourceTest
+    del _BaldursGateCustodyRoleSourceTest
     del _BaldursGateCityRoutesTest
     del _BaldursGateCityLedgerUnitTest
     del _BaldursGateCityLedgerFixtureTest

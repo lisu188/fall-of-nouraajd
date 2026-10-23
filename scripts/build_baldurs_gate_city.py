@@ -13,14 +13,17 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parents[1]
 SOURCE = ROOT / "tests/fixtures/baldurs_gate_city_source.json"
 QUESTS = ROOT / "tests/fixtures/baldurs_gate_city_quests.json"
+CUSTODY_SOURCE = ROOT / "tests/fixtures/baldurs_gate_city_prison_source.json"
 try:
     from scripts.build_baldurs_gate_city_dialogs import prepareStores, questDialogRows, storeDialogRows
     from scripts.build_baldurs_gate_city_relocations import buildRelocations
     from scripts.build_baldurs_gate_city_regions import buildRegions
+    from scripts.build_baldurs_gate_city_custody import custodyDefinitions, prepareCustodyActors
 except ModuleNotFoundError:
     from build_baldurs_gate_city_dialogs import prepareStores, questDialogRows, storeDialogRows
     from build_baldurs_gate_city_relocations import buildRelocations
     from build_baldurs_gate_city_regions import buildRegions
+    from build_baldurs_gate_city_custody import custodyDefinitions, prepareCustodyActors
 
 LANDMARKS = {
     "AR0002": "Temple of Helm",
@@ -304,6 +307,8 @@ def layoutAreas(areas):
 def compileCity(source, quests=None):
     quests = quests or json.loads(QUESTS.read_text(encoding="utf-8"))
     source = copy.deepcopy(source)
+    custody_source = json.loads(CUSTODY_SOURCE.read_text(encoding="utf-8"))
+    prepareCustodyActors(source, custody_source)
     departure_rule = source.get("scriptSourceRules", {}).get("LEAVECH7.BCS", {})
     if (
         departure_rule.get("condition") != {"global": "Chapter", "scope": "GLOBAL", "equals": 7}
@@ -647,6 +652,9 @@ def compileCity(source, quests=None):
                 )
                 if actor["sourceOriginalArea"] != area_id:
                     props["sourceAdaptation"] = "Explicit outside-history companion arrives at the eastern city gate"
+            for key in ("custodyRole", "patrolArea"):
+                if actor.get(key):
+                    props[key] = actor[key]
             position = usablePosition(area_id, actor["position"], reserve=True)
             policy = actor.get("scriptedPolicy")
             if policy:
@@ -660,6 +668,7 @@ def compileCity(source, quests=None):
                         "id": name,
                         "sourceCreature": actor["creature"],
                         "sourceArea": area_id,
+                        **({"custodyRole": actor["custodyRole"]} if actor.get("custodyRole") else {}),
                         "x": position[0],
                         "y": position[1],
                         "z": position[2],
@@ -977,6 +986,15 @@ def compileCity(source, quests=None):
         )
         place(name, usablePosition("AR0200", point, reserve=True))
 
+    custody_data = custodyDefinitions(custody_source, usablePosition)
+    config["cityCustody"] = definition(
+        "BaldursGateCustody",
+        canStep=True,
+        animation="images/ambient/street_lantern",
+        custodyDefinitions=json.dumps(custody_data, separators=(",", ":")),
+    )
+    place("cityCustody", usablePosition("AR0800", [3560, 1380], reserve=True))
+    config["cityCustodyQuest"] = definition("BaldursGateCustodyQuest", description="The Flaming Fist pursuit")
     entry = usablePosition("AR0800", [3500, 1350], reserve=True)
     config["cityStart"] = definition(
         "BaldursGateStart", canStep=True, animation="images/misc/signpost", alwaysSimulate=True
