@@ -1320,6 +1320,9 @@ vstd::task<void> CFightHandler::resolveOwnedDefeatAsync(std::shared_ptr<CCreatur
         throw std::logic_error("defeat finalization requires its private encounter owner");
     }
     auto encounterMap = b->getMap();
+    const auto defeatedPlayer = std::dynamic_pointer_cast<CPlayer>(b);
+    const auto capturedPlayer = encounterMap ? encounterMap->getAssignedPlayer() : nullptr;
+    const bool playerDefeat = defeatedPlayer != nullptr;
     if (!a->isAlive() || b->isAlive() || !is_registered_on_map(encounterMap, a) ||
         !is_registered_on_map(encounterMap, b)) {
         co_return;
@@ -1362,33 +1365,33 @@ vstd::task<void> CFightHandler::resolveOwnedDefeatAsync(std::shared_ptr<CCreatur
     std::set<std::shared_ptr<CItem>> items =
         fixedLoot ? std::set<std::shared_ptr<CItem>>{} : b->getGame()->getRngHandler()->getRandomLoot(b->getScale());
     auto equipment = b->getEquipped();
-    const int ownedGold = fixedLoot && !b->isPlayer() ? std::max(0, b->getGold()) : 0;
+    const int ownedGold = fixedLoot && !playerDefeat ? std::max(0, b->getGold()) : 0;
     if (ownedGold) {
         b->setGold(0);
         a->addGold(ownedGold);
     }
     std::map<std::string, std::pair<std::string, int>> lostItems;
     auto game = b->getGame();
-    const bool showDefeat = b->isPlayer() && game->getGui() && game->getGui()->findChild("CGameFightPanel");
-    const auto possessions = fixedLoot && !b->isPlayer() ? b->getAllItems() : b->getInInventory();
+    const bool showDefeat = playerDefeat && game->getGui() && game->getGui()->findChild("CGameFightPanel");
+    const auto possessions = fixedLoot && !playerDefeat ? b->getAllItems() : b->getInInventory();
     for (const std::shared_ptr<CItem> &item : possessions) {
         if (fixedLoot && item->getBoolProperty("plugin_cityUndroppable")) {
             continue;
         }
-        if (!b->isPlayer() || !item->hasTag(CTag::Quest)) {
+        if (!playerDefeat || !item->hasTag(CTag::Quest)) {
             b->removeItem(item);
-            if (fixedLoot && !b->isPlayer()) {
+            if (fixedLoot && !playerDefeat) {
                 std::erase_if(equipment, [&item](const auto &slot) { return slot.second == item; });
             }
             items.insert(item);
-            if (b->isPlayer() && !b->hasInInventory(item)) {
+            if (playerDefeat && !b->hasInInventory(item)) {
                 auto &entry = lostItems[item->getTypeId().empty() ? item->getName() : item->getTypeId()];
                 entry.first = item->getLabel();
                 ++entry.second;
             }
         }
     }
-    if (fixedLoot && !b->isPlayer() && equipment != b->getEquipped()) {
+    if (fixedLoot && !playerDefeat && equipment != b->getEquipped()) {
         b->setEquipped(std::move(equipment));
     }
     if (CPlaytestTrace::enabled()) {
@@ -1443,7 +1446,10 @@ vstd::task<void> CFightHandler::resolveOwnedDefeatAsync(std::shared_ptr<CCreatur
         if (!ownerIsCurrent() || !a->isAlive() || !is_registered_on_map(encounterMap, a)) {
             return false;
         }
-        if (b->isPlayer()) {
+        if (playerDefeat) {
+            if (capturedPlayer != defeatedPlayer || encounterMap->getAssignedPlayer() != defeatedPlayer) {
+                return false;
+            }
             if (encounterMap->getPermanentPlayerDeath()) {
                 return encounterMap->getDefeatedPlayer() == b && encounterMap->hasRetainedTerminalPlayer();
             }
@@ -1454,7 +1460,7 @@ vstd::task<void> CFightHandler::resolveOwnedDefeatAsync(std::shared_ptr<CCreatur
     if (!recoveryIsComplete()) {
         throw vstd::task_cancelled();
     }
-    if (b->isPlayer()) {
+    if (playerDefeat) {
         json receipt = {
             {"map", encounterMap->getLabel().empty() ? encounterMap->getMapName() : encounterMap->getLabel()},
             {"hp", b->getHp()},
