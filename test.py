@@ -176,6 +176,7 @@ FAST_TEST_PREFIXES = (
     "GameplayNouraajdServiceRoutesTest.",
     "GameplayNouraajdHuntPreparationTest.",
     "GameplayCandlekeepRoutesTest.",
+    "OctobogzEarlyTraceTest.",
     "GameplayWaypointPublicationTest.",
     "GameplayCaveObservationTest.",
     "NineMarchesRecoveryTest.",
@@ -26192,6 +26193,7 @@ class TestRunnerSuiteTest(unittest.TestCase):
             GameplayPotionTraceContractTest,
             GameplayNouraajdHuntPreparationTest,
             GameplayCandlekeepRoutesTest,
+            OctobogzEarlyTraceTest,
             GameplayCastleTownRestTest,
             GameplayVictorSettlementTest,
             NarrativeRouteTest,
@@ -27085,7 +27087,12 @@ if SOURCE_UI_TESTS_AVAILABLE:
     class GameplayNouraajdHuntPreparationTest(_GameplayNouraajdHuntPreparationTest):
         pass
 
+    from tests.test_octobogz_early_trace import OctobogzEarlyTraceTest as _OctobogzEarlyTraceTest
+
     class GameplayCandlekeepRoutesTest(_GameplayCandlekeepRoutesTest):
+        pass
+
+    class OctobogzEarlyTraceTest(_OctobogzEarlyTraceTest):
         pass
 
     class GameplayCaveObservationTest(_GameplayCaveObservationTest):
@@ -27340,6 +27347,7 @@ if SOURCE_UI_TESTS_AVAILABLE:
     del _GameplayNouraajdServiceRoutesTest, _GameplayWaypointPublicationTest, _GameplayCaveObservationTest
     del _GameplayNouraajdHuntPreparationTest
     del _GameplayCandlekeepRoutesTest
+    del _OctobogzEarlyTraceTest
     del _GameplayPotionConsumptionTest, _GameplayRecipeGoldRoutesTest, _GameplayCallbackMarketRoutesTest
     del _GameplayStartingSaveTest, _GameplayCampaignRouteTest, _GameplayRouteDialogTest
     del _GameplayCastleTownRestTest, _GameplayVictorSettlementTest, _NarrativeRouteTest

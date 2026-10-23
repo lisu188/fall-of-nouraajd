@@ -20,6 +20,207 @@ from tests.castle_walkthrough import TransitRoutes, shortestRoute
 from tests.narrative_walkthrough import authoredRegion
 
 
+class EarlyNativeTraceDiagnostics:
+    """Summarize already-written early trace records without touching the engine or accepting gameplay."""
+
+    def __init__(self, *, read_limit=4 * 1024 * 1024, output_limit=32768):
+        if read_limit < 512 or output_limit < 512:
+            raise ValueError("Early trace diagnostic limits must be at least 512 bytes")
+        self.read_limit, self.output_limit = read_limit, output_limit
+        self.read_bytes, self.emitted_bytes, self.seq = 0, 0, 0
+        self.files, self.movements, self.player_events, self.turns = {}, [], [], {}
+        self.issues, self.complete, self.details_truncated, self.pending_bytes = [], False, False, 0
+        self.reported_movement_seq, self.reported_player_seq, self.reported_turns, self.reported_status = 0, 0, {}, None
+
+    def issue(self, name):
+        if name not in self.issues:
+            self.issues.append(name)
+
+    def capture(self, path):
+        if self.complete or self.read_bytes >= self.read_limit:
+            return
+        if path is None:
+            self.issue("traceUnavailable")
+            return
+        capture_start = self.read_bytes
+        found, self.pending_bytes = False, 0
+        for candidate in (Path(str(path) + ".1"), Path(path)):
+            try:
+                stat = candidate.stat()
+                found = True
+                signature = (stat.st_ino, stat.st_mtime_ns, stat.st_size)
+                previous = self.files.get(str(candidate))
+                if previous and previous[0] == signature and previous[2] >= stat.st_size:
+                    continue
+                remaining = min(self.read_limit - self.read_bytes, 65536 - (self.read_bytes - capture_start))
+                if remaining <= 0:
+                    if self.read_bytes >= self.read_limit:
+                        self.issue("readLimit")
+                    break
+                with candidate.open("rb") as stream:
+                    marker = stream.readline(min(1024, remaining))
+                    self.read_bytes += len(marker)
+                    offset = previous[2] if previous and previous[1] == sha256(marker).hexdigest() else 0
+                    offset = offset if offset <= stat.st_size else 0
+                    stream.seek(offset)
+                    raw = stream.read(min(self.read_limit - self.read_bytes, 65536 - (self.read_bytes - capture_start)))
+                    self.read_bytes += len(raw)
+                end = raw.rfind(b"\n") + 1
+                if raw and not end:
+                    self.issue("incompleteOrOversizedRecord")
+                self.files[str(candidate)] = (signature, sha256(marker).hexdigest(), offset + end)
+                self.pending_bytes += max(0, stat.st_size - offset - end)
+                for line in raw[:end].splitlines():
+                    if len(line) > 16384:
+                        self.issue("oversizedRecord")
+                        continue
+                    try:
+                        self.accept(json.loads(line))
+                    except (ValueError, TypeError, KeyError):
+                        self.issue("malformedRecord")
+                    if self.complete:
+                        break
+            except FileNotFoundError:
+                continue
+            except (OSError, UnicodeError):
+                self.issue("traceReadError")
+            if self.complete or self.pending_bytes:
+                break
+        if not found:
+            self.issue("traceUnavailable")
+        if self.read_bytes >= self.read_limit:
+            self.issue("readLimit")
+
+    def accept(self, record):
+        if not isinstance(record, dict):
+            raise ValueError("Native trace record must be an object")
+        seq = record.get("seq")
+        if type(seq) is not int or seq <= 0:
+            raise ValueError("Invalid native sequence")
+        if seq <= self.seq:
+            return
+        if not self.seq and seq != 1:
+            self.issue("missingPrefix")
+        elif self.seq and seq != self.seq + 1:
+            self.issue("sequenceGap")
+        self.seq = seq
+        turn = record.get("turn")
+        if record.get("map") != "nouraajd" or type(turn) is not int or turn < 0:
+            return
+        if turn > 95:
+            self.complete = True
+            return
+        event = record.get("event")
+        references = {}
+        for key in (
+            "object",
+            "actor",
+            "owner",
+            "item",
+            "attacker",
+            "survivor",
+            "winner",
+            "loser",
+            "recipient",
+            "defeated",
+        ):
+            value = record.get(key)
+            if isinstance(value, dict):
+                references[key] = {
+                    name: value[name][:96] if isinstance(value[name], str) else value[name]
+                    for name in ("name", "typeId", "isPlayer")
+                    if name in value and isinstance(value[name], (str, bool))
+                }
+        opponents = [
+            {
+                key: value[key][:96] if isinstance(value[key], str) else value[key]
+                for key in ("name", "typeId", "isPlayer")
+                if key in value and isinstance(value[key], (str, bool))
+            }
+            for value in record.get("opponents", [])[:8]
+            if isinstance(value, dict)
+        ]
+        player_event = event in {
+            "combat_started",
+            "combat_finished",
+            "experience_changed",
+            "reward_granted",
+            "inventory_added",
+            "inventory_removed",
+            "item_used",
+            "gold_changed",
+        } and any(value.get("isPlayer") is True for value in (*references.values(), *opponents))
+        if event != "movement" and not player_event:
+            return
+        row = {"seq": seq, "turn": turn, "event": event, **references}
+        for key in ("before", "after", "delta", "outcome", "scale", "ownedGold"):
+            if type(record.get(key)) is int:
+                row[key] = record[key]
+        for key in ("from", "to"):
+            value = record.get(key)
+            if isinstance(value, dict) and all(type(value.get(axis)) is int for axis in "xyz"):
+                row[key] = {axis: value[axis] for axis in "xyz"}
+        if opponents:
+            row["opponents"] = opponents
+        if isinstance(record.get("items"), list):
+            row["items"] = [
+                {key: item[key][:96] for key in ("name", "typeId") if isinstance(item.get(key), str)}
+                for item in record["items"][:8]
+                if isinstance(item, dict)
+            ]
+            self.details_truncated |= len(record["items"]) > 8
+        digest, count = self.turns.setdefault(turn, (sha256(), 0))
+        digest.update(json.dumps(row, sort_keys=True, separators=(",", ":")).encode())
+        self.turns[turn] = (digest, count + 1)
+        target, limit = (self.movements, 64) if event == "movement" else (self.player_events, 32)
+        if len(target) < limit:
+            target.append(row)
+        else:
+            self.details_truncated = True
+
+    def report(self, stage, player_class):
+        available = min(8192, self.output_limit - self.emitted_bytes)
+        if available < 512:
+            return None
+        status = (self.seq, tuple(self.issues), self.pending_bytes, self.complete)
+        result = {
+            "stage": stage[:96],
+            "class": player_class[:96],
+            "turnLimit": 95,
+            "coverage": "observedTracePrefix" if self.complete and not self.issues else "partialTraceOnly",
+            "issues": list(self.issues),
+            "readBytes": self.read_bytes,
+            "readLimit": self.read_limit,
+            "pendingBytes": self.pending_bytes,
+            "lastSeq": self.seq,
+            "nativeAcceptance": False,
+            "detailsTruncated": self.details_truncated,
+            "movements": [row for row in self.movements if row["seq"] > self.reported_movement_seq],
+            "playerEvents": [row for row in self.player_events if row["seq"] > self.reported_player_seq],
+            "turns": [
+                {"turn": turn, "count": count, "sha256": digest.hexdigest()}
+                for turn, (digest, count) in sorted(self.turns.items())
+                if self.reported_turns.get(turn) != digest.hexdigest()
+            ],
+        }
+        if status == self.reported_status and not any(result[key] for key in ("movements", "playerEvents", "turns")):
+            return None
+        while len(json.dumps(result, sort_keys=True, separators=(",", ":")).encode()) > available:
+            result["detailsTruncated"] = True
+            key = next((name for name in ("movements", "turns", "playerEvents") if result[name]), None)
+            if key is None:
+                return None
+            result[key].pop()
+        self.emitted_bytes += len(json.dumps(result, sort_keys=True, separators=(",", ":")).encode())
+        if result["movements"]:
+            self.reported_movement_seq = result["movements"][-1]["seq"]
+        if result["playerEvents"]:
+            self.reported_player_seq = result["playerEvents"][-1]["seq"]
+        self.reported_turns.update({row["turn"]: row["sha256"] for row in result["turns"]})
+        self.reported_status = status
+        return result
+
+
 def readNativeLogTail(path, *, max_bytes=65536, max_lines=256):
     if max_bytes <= 0 or max_lines <= 0:
         raise ValueError("Native diagnostic tail limits must be positive")
@@ -310,6 +511,27 @@ class OctobogzMcpWalkthroughTest(unittest.TestCase):
             self.call(loop, "run")
             if validator is not None:
                 GameplayBranchDriver.assertNativeCombatOutcomes(validator)
+        self.captureEarlyNativeTrace()
+
+    def captureEarlyNativeTrace(self, stage=None):
+        try:
+            collector = getattr(self, "_early_native_trace", None)
+            if collector is None:
+                collector = self._early_native_trace = EarlyNativeTraceDiagnostics()
+            collector.capture(self.nativeHuntTracePath())
+            if stage is not None:
+                report = collector.report(stage, getattr(self, "mcp_profile_class", "unassigned"))
+                if report is not None:
+                    print(
+                        "MCP hunt early native trace",
+                        json.dumps(report, sort_keys=True, separators=(",", ":")),
+                        flush=True,
+                    )
+        except Exception as error:
+            try:
+                print("MCP hunt early native trace unavailable", type(error).__name__, flush=True)
+            except Exception:
+                pass
 
     def restartMcpSession(self):
         self.assertTrue(self.doCleanups(), "The previous MCP process and environment must close before class restart")
@@ -324,6 +546,7 @@ class OctobogzMcpWalkthroughTest(unittest.TestCase):
         self.mcp_profile_class = player_class
         self.mcp_profile_started = perf_counter()
         self.mcp_method_profile = {}
+        self._early_native_trace = None
 
     def startFreshHuntGame(self, player_class):
         from tests.gameplay_branch_driver import GameplayBranchDriver
@@ -472,6 +695,7 @@ class OctobogzMcpWalkthroughTest(unittest.TestCase):
             "defeat": self.call(self.player, "getStringProperty", "uiDefeatReceipt"),
         }
         print("MCP hunt journey", result, flush=True)
+        self.captureEarlyNativeTrace(stage)
         self.reportMcpProfile(stage)
         return result
 

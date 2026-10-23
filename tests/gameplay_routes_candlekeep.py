@@ -90,7 +90,7 @@ def accept(d, actor):
 def complete(d, actor):
     d.navigateTo(actor)
     before_gold, before_exp, _items = resources(d)
-    high_reaction = d.condition(actor + "Dialog", "highReaction")
+    high_reaction = actor in ("hull", "fuller") and d.condition(actor + "Dialog", "highReaction")
     d.choose(actor + "Dialog", "returnQuest")
     expected_gold = (
         (20 if high_reaction else 10)

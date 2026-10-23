@@ -126,7 +126,7 @@ class GameplayCandlekeepRoutesTest(unittest.TestCase):
     def testEveryErrandRetainsExactExperienceItemConsumptionCompletionAndRepeatChecks(self):
         for actor in routes.QUESTS:
             with self.subTest(actor=actor):
-                driver, model, _calls, _checked = self.driver(actor, intelligence=12)
+                driver, model, calls, _checked = self.driver(actor, intelligence=12)
                 before = model.player.getGold(), model.player.getNumericProperty("exp")
                 routes.complete(driver, actor)
                 self.assertEqual(
@@ -138,6 +138,10 @@ class GameplayCandlekeepRoutesTest(unittest.TestCase):
                 if actor != "reevor":
                     self.assertEqual(0, model.player.countItems(model.namespace["QUEST_ITEMS"][actor]))
                 self.assertEqual("completed", model.game_map.getStringProperty("candlekeep_" + actor + "Stage"))
+                self.assertEqual(
+                    [("condition", actor + "Dialog", "highReaction")] if actor in ("hull", "fuller") else [],
+                    [row for row in calls if row[0] == "condition"],
+                )
 
     def testIncorrectGoldOrExperienceStillFailsTheExactRouteAssertions(self):
         for actor, corrupt in (
