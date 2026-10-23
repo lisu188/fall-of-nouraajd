@@ -2030,15 +2030,15 @@ void testMapPausedPlayerControllerRoundTripsWithoutReset() {
         const auto node = pending.back();
         pending.pop_back();
         if (node->is_object()) {
-            if (node->contains("class") && node->at("class").is_string() && node->at("class") == "CPlayerController" &&
-                node->contains("properties")) {
+            if (node->contains("class") && node->at("class").is_string() &&
+                node->at("class").get<std::string>() == "CPlayerController" && node->contains("properties")) {
                 const auto &properties = node->at("properties");
                 const auto name = properties.value("name", std::string());
                 paused_definitions += name == paused->getName();
                 original_definitions += name == original->getName();
             }
             for (const auto &child : node->items())
-                pending.push_back(&child.value());
+                pending.push_back(&child.second);
         } else if (node->is_array()) {
             for (const auto &child : *node)
                 pending.push_back(&child);
