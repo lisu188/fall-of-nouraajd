@@ -1172,7 +1172,7 @@ vstd::task<void> CMap::moveOwnedAsync(std::shared_ptr<CMap> map, CMovementPresen
             }
 
             const bool interrupt_after_step = should_interrupt_after_step(creature, target);
-            std::move_only_function<bool()> commitAllowed;
+            vstd::move_only_function<bool()> commitAllowed;
             if (player_controller) {
                 commitAllowed = [creature, controller_ptr, player_controller] {
                     return creature->getController() == controller_ptr && !player_controller->getMovementSuspended();
@@ -1467,9 +1467,9 @@ void CMap::addObject(const std::shared_ptr<CMapObject> &mapObject, Coords coords
 }
 
 vstd::task<void> CMap::addObjectWithEventsAsync(std::shared_ptr<CMapObject> mapObject,
-                                                std::move_only_function<vstd::task<void>()> afterCreate) {
+                                                vstd::move_only_function<vstd::task<void>()> afterCreate) {
     return [](std::shared_ptr<CMap> map, std::shared_ptr<CMapObject> object,
-              std::move_only_function<vstd::task<void>()> afterCreate) -> vstd::task<void> {
+              vstd::move_only_function<vstd::task<void>()> afterCreate) -> vstd::task<void> {
         auto loop = vstd::event_loop<>::instance();
         if (!loop->isMainThread()) {
             co_await vstd::post(loop);

@@ -2617,6 +2617,19 @@ void testDisposableItemCommitConsumesBeforeReceiptsAndCancellation() {
     loop->runReady();
 }
 
+void testScriptCallbackFlowUsesInitializedUiModule() {
+    auto game = makeWindowlessFightGame();
+    int callbacks = 0;
+    auto flow =
+        game->getScriptHandler()->createCallbackFlow(pybind11::cpp_function([&callbacks] { ++callbacks; }), game);
+    expect_true(callbacks == 0, "creating an owned callback flow must preserve its lazy execution");
+    expect_true(!flow->next() && callbacks == 1,
+                "the trusted UI module must advance and complete the native-owned callback");
+    expect_true(!flow->next() && callbacks == 1, "completed callback flows must not invoke their body twice");
+    flow.reset();
+    game->getContext()->shutdown();
+}
+
 class ItemPositionCommitProbe : public CCreature {
   public:
     bool beforeReleased = false;
@@ -2654,7 +2667,7 @@ void testItemPositionCommitOwnsConsumptionBeforeArrivalCancellation() {
             auto item = add_unit_loot(game, actor, "unitPositionDisposable");
             int commits = 0;
             auto commit =
-                std::make_shared<std::move_only_function<void()>>([actor, item, &commits, settled = false]() mutable {
+                std::make_shared<vstd::move_only_function<void()>>([actor, item, &commits, settled = false]() mutable {
                     if (!std::exchange(settled, true)) {
                         ++commits;
                         actor->removeItem(item);
@@ -2678,7 +2691,7 @@ void testItemPositionCommitOwnsConsumptionBeforeArrivalCancellation() {
             }
             expect_true(wrongQuestCommitRejected && commits == 0 && actor->hasInInventory(item),
                         "a quest marker must not consume an item-use capability");
-            auto positionCommit = flow ? flow->commitCallback() : std::move_only_function<void()>{[] {}};
+            auto positionCommit = flow ? flow->commitCallback() : vstd::move_only_function<void()>{[] {}};
             flow.reset();
             CPythonOverrides::release(item.get());
             commit.reset();
@@ -2731,7 +2744,7 @@ void testItemPositionCommitOwnsConsumptionBeforeArrivalCancellation() {
         auto item = add_unit_loot(game, actor, "unitNormalPositionItem");
         int commits = 0;
         auto commit =
-            std::make_shared<std::move_only_function<void()>>([actor, item, &commits, settled = false]() mutable {
+            std::make_shared<vstd::move_only_function<void()>>([actor, item, &commits, settled = false]() mutable {
                 if (!std::exchange(settled, true)) {
                     ++commits;
                     actor->removeItem(item);
@@ -2745,7 +2758,7 @@ void testItemPositionCommitOwnsConsumptionBeforeArrivalCancellation() {
         CPythonOverrides::retain(item, callbacks);
         auto flow = CScriptHandler::createObjectFlow(item, "onUseFlow", {}, game, {}, commit);
         expect_true(flow != nullptr, "normal-return movement must create its explicit commit flow");
-        auto positionCommit = flow ? flow->commitCallback() : std::move_only_function<void()>{[] {}};
+        auto positionCommit = flow ? flow->commitCallback() : vstd::move_only_function<void()>{[] {}};
         if (mode == 2) {
             actor->beforeReleased = true;
             actor->afterReleased = true;
@@ -2776,7 +2789,7 @@ void testItemPositionCommitOwnsConsumptionBeforeArrivalCancellation() {
         auto item = add_unit_loot(game, actor, "unitOrdinaryItemFlow");
         int commits = 0;
         auto commit =
-            std::make_shared<std::move_only_function<void()>>([actor, item, &commits, settled = false]() mutable {
+            std::make_shared<vstd::move_only_function<void()>>([actor, item, &commits, settled = false]() mutable {
                 if (!std::exchange(settled, true)) {
                     ++commits;
                     actor->removeItem(item);
@@ -4407,6 +4420,8 @@ int main() {
                             testAsyncNamedSpawnsAwaitEntryWithoutPumping);
     nativeTestProfile().run("testDisposableItemCommitConsumesBeforeReceiptsAndCancellation",
                             testDisposableItemCommitConsumesBeforeReceiptsAndCancellation);
+    nativeTestProfile().run("testScriptCallbackFlowUsesInitializedUiModule",
+                            testScriptCallbackFlowUsesInitializedUiModule);
     nativeTestProfile().run("testItemPositionCommitOwnsConsumptionBeforeArrivalCancellation",
                             testItemPositionCommitOwnsConsumptionBeforeArrivalCancellation);
     nativeTestProfile().run("testIndividualQuestCancellationHonorsExplicitRewardCommit",

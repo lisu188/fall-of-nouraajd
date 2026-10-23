@@ -75,8 +75,8 @@ class CEventHandler : public CGameObject {
     void gameEvent(std::shared_ptr<CMapObject> mapObject, std::shared_ptr<CGameEvent> event) const;
 
     vstd::task<void> gameEventAsync(std::shared_ptr<CMapObject> mapObject, std::shared_ptr<CGameEvent> event,
-                                    std::shared_ptr<std::move_only_function<void()>> commit = {},
-                                    std::shared_ptr<std::move_only_function<void()>> prepareCommit = {});
+                                    std::shared_ptr<vstd::move_only_function<void()>> commit = {},
+                                    std::shared_ptr<vstd::move_only_function<void()>> prepareCommit = {});
 
     static vstd::task<void> tileStepAsync(std::shared_ptr<CTile> tile, std::shared_ptr<CCreature> creature);
 

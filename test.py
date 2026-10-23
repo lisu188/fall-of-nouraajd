@@ -20741,6 +20741,8 @@ class GameTest(unittest.TestCase):
         quest_return_dialog.complete_amulet_quest()
         self.assertEqual("returned", quest_state(game_map1, "amulet"))
 
+        # Finish the town's side quests before reporting its outcome queues the ritual transition.
+        assert g1.getMap() == game_map1
         beren.finish_cleanse()
         assert quest_state(game_map1, "beren_chain") == "purged"
         scene_manager1 = g1.getSceneManager()

@@ -130,3 +130,18 @@ class PlayerControllerSuspensionSourceTest(unittest.TestCase):
         cmake = (ROOT / "CMakeLists.txt").read_text(encoding="utf-8")
         self.assertIn("tests/unit/test_engine_hotspot_performance.cpp", cmake)
         self.assertIn('NAME "performance.performance_guard_tests" COMMAND performance_guard_tests', cmake)
+
+    def testMovementCommitGuardUsesThePortableCallbackType(self):
+        import re
+
+        map_source = (ROOT / "src/core/CMap.cpp").read_text(encoding="utf-8")
+        header = (ROOT / "src/object/CMapObject.h").read_text(encoding="utf-8")
+        declarations = [line.strip() for line in map_source.splitlines() if "commitAllowed;" in line]
+        self.assertIn("vstd::move_only_function<bool()> commitAllowed;", declarations)
+        self.assertFalse(
+            re.search(r"\bstd::move_only_function", map_source), "Map callbacks must use the portable type"
+        )
+        self.assertTrue(
+            "vstd::move_only_function<bool()> commitAllowed" in header,
+            "The caller and movement API must use the same portable callback type",
+        )

@@ -901,13 +901,20 @@ add_game_unit_test(simulation_region_unit_tests
 )
 add_game_unit_test(monster_balance_unit_tests
     tests/unit/test_monster_balance.cpp
-    src/core/CModuleEntry.cpp
-    src/core/CModuleRuntime.cpp
-    $<TARGET_OBJECTS:game_binding_objects>
 )
-if (WIN32)
-    target_compile_definitions(monster_balance_unit_tests PRIVATE GAME_CORE_BUILD)
-endif ()
+foreach (target_name allied_combat_unit_tests monster_balance_unit_tests)
+    target_sources(${target_name} PRIVATE
+        src/core/CModuleEntry.cpp
+        src/core/CModuleRuntime.cpp
+        $<TARGET_OBJECTS:game_binding_objects>
+    )
+    if (WIN32)
+        target_compile_definitions(${target_name} PRIVATE GAME_CORE_BUILD)
+    endif ()
+endforeach ()
+target_compile_definitions(allied_combat_unit_tests PRIVATE
+    GAME_ALLIED_COMBAT_TEST_RESOURCE_ROOT="${CMAKE_CURRENT_BINARY_DIR}"
+)
 target_compile_definitions(monster_balance_unit_tests PRIVATE
     GAME_MONSTER_BALANCE_TEST_RESOURCE_ROOT="${CMAKE_CURRENT_BINARY_DIR}"
 )

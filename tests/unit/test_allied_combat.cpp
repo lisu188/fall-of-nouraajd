@@ -9,6 +9,7 @@ SPDX-License-Identifier: GPL-3.0-or-later
 #include "core/CLoader.h"
 #include "core/CMap.h"
 #include "core/CPlaytestTrace.h"
+#include "core/CPythonOverrides.h"
 #include "core/CStats.h"
 #include "handler/CFightHandler.h"
 #include "object/CCreature.h"
@@ -26,7 +27,17 @@ SPDX-License-Identifier: GPL-3.0-or-later
 #include <string>
 #include <vector>
 
+extern "C" PyObject *PyInit__game();
+
 namespace {
+void initializeAlliedCombatPythonContent() {
+    auto sys = pybind11::module_::import("sys");
+    sys.attr("path").attr("insert")(0, GAME_ALLIED_COMBAT_TEST_RESOURCE_ROOT);
+    pybind11::module_::import("_game");
+    pybind11::module_::import("game");
+    pybind11::module_::import("json");
+}
+
 class ProbeController : public CFightController {
   public:
     int starts = 0;
@@ -168,6 +179,41 @@ void testNativeAllyActsAndHeroOwnsRewards() {
     expect_true(controller->actions == 1 && attack->calls == 1 && witnessedAction &&
                     fixture.heroController->actions == 0,
                 "the native ally must act rather than only receiving a participation flag");
+    expect_true(fixture.hero->hasInInventory(item) && !ally->hasInInventory(item) &&
+                    fixture.hero->getExp() == initialXp + expectedXp,
+                "allied enemy kills must give the hero the actual unique item and exact native XP");
+}
+
+void testRegisteredPythonAllyActsAndHeroOwnsRewards() {
+    Fixture fixture;
+    auto ally = fixture.actor("nativeAlly", true, 0, 20);
+    auto enemy = fixture.actor("nativeEnemy");
+    enemy->setHp(1);
+    auto item = fixture.possession(enemy, "uniqueCityQuestReward");
+    item->addTag("quest");
+    auto controller = std::make_shared<CountingMonsterController>();
+    ally->setFightController(controller);
+    auto attack = fixture.game->createObject<CInteraction>("Attack");
+    expect_true(attack && !CPythonOverrides::find_override(attack.get(), "performAction").is_none(),
+                "the native ally must execute the real registered Python Attack action");
+    ally->addAction(attack);
+    const auto expectedXp = static_cast<int>(250 * std::pow(2.0, enemy->getScale() - fixture.hero->getLevel()));
+    const auto initialXp = fixture.hero->getExp();
+    CPlaytestTrace::configure(true, "", 128, true);
+    const auto result = CFightHandler::fightManyWithAlliesResult(fixture.hero, {enemy}, {ally});
+    bool witnessedAction = false;
+    for (const auto &line : CPlaytestTrace::drain()) {
+        const auto record = json::parse(line);
+        if (record.value("event", std::string()) == "combat_ally_acted") {
+            witnessedAction = record.at("actor").at("name").get<std::string>() == ally->getName();
+        }
+    }
+    CPlaytestTrace::configure(false);
+    expect_true(result.outcome == CFightOutcome::AttackerVictory && result.survivor == fixture.hero,
+                "the registered Python ally attack must resolve the hero-side encounter");
+    expect_true(controller->actions == 1 && witnessedAction &&
+                    fixture.heroController->actions == 0,
+                "the registered Python ally must act rather than only receiving a participation flag");
     expect_true(fixture.hero->hasInInventory(item) && !ally->hasInInventory(item) &&
                     fixture.hero->getExp() == initialXp + expectedXp,
                 "allied enemy kills must give the hero the actual unique item and exact native XP");
@@ -383,8 +429,14 @@ void testAllyEffectsCountAsEncounterProgress() {
 } // namespace
 
 int main() {
+    if (PyImport_AppendInittab("_game", PyInit__game) != 0) {
+        std::cerr << "Cannot register the real embedded _game module\n";
+        return 1;
+    }
     pybind11::scoped_interpreter interpreter{};
+    initializeAlliedCombatPythonContent();
     testNativeAllyActsAndHeroOwnsRewards();
+    testRegisteredPythonAllyActsAndHeroOwnsRewards();
     testAlliedBudgetAndRejectedParticipants();
     testExplicitCandidatesBeyondNaturalDiscoveryBudget();
     testNaturalOptInAndMoverPerspectives();

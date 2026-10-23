@@ -293,16 +293,20 @@ class SharedCompilationGraphTest(unittest.TestCase):
                 self.assertIn("game_binding_objects.dir", commands[0]["command"])
         ninja = (self.build / "build.ninja").read_text(encoding="utf-8")
         targets = (
-            ("game_core", "monster_balance_unit_tests") if os.name == "nt" else ("_game", "monster_balance_unit_tests")
+            ("game_core", "allied_combat_unit_tests", "monster_balance_unit_tests")
+            if os.name == "nt"
+            else ("_game", "allied_combat_unit_tests", "monster_balance_unit_tests")
         )
         for target in targets:
             self.assertRegex(ninja, rf"build {target}[^\n]*: [^\n]*game_binding_objects\.dir")
 
     def testRuntimeAdaptersCompileInEachConsumerWithItsOwnVisibility(self):
         commands = self.commandsFor("src/core/CModuleRuntime.cpp")
-        self.assertEqual(2, len(commands), "Module and embedded interpreter need separate runtime adapters")
+        self.assertEqual(3, len(commands), "Module and embedded interpreters need separate runtime adapters")
         owners = (
-            ("game_core", "monster_balance_unit_tests") if os.name == "nt" else ("_game", "monster_balance_unit_tests")
+            ("game_core", "allied_combat_unit_tests", "monster_balance_unit_tests")
+            if os.name == "nt"
+            else ("_game", "allied_combat_unit_tests", "monster_balance_unit_tests")
         )
         for owner in owners:
             with self.subTest(owner=owner):

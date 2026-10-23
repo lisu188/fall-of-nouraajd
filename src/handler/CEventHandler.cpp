@@ -35,8 +35,8 @@ namespace {
 vstd::task<bool> invokeObjectFlowAsync(std::shared_ptr<CGameObject> object, std::string method,
                                        std::vector<std::shared_ptr<CGameObject>> arguments,
                                        std::weak_ptr<CGame> weakGame,
-                                       std::shared_ptr<std::move_only_function<void()>> commit = {},
-                                       std::shared_ptr<std::move_only_function<void()>> prepareCommit = {}) {
+                                       std::shared_ptr<vstd::move_only_function<void()>> commit = {},
+                                       std::shared_ptr<vstd::move_only_function<void()>> prepareCommit = {}) {
     try {
         auto flow = CScriptHandler::createObjectFlow(object, method, arguments, weakGame, {}, commit, prepareCommit);
         if (!flow) {
@@ -135,11 +135,11 @@ void CEventHandler::gameEvent(std::shared_ptr<CMapObject> object, std::shared_pt
 }
 
 vstd::task<void> CEventHandler::gameEventAsync(std::shared_ptr<CMapObject> object, std::shared_ptr<CGameEvent> event,
-                                               std::shared_ptr<std::move_only_function<void()>> commit,
-                                               std::shared_ptr<std::move_only_function<void()>> prepareCommit) {
+                                               std::shared_ptr<vstd::move_only_function<void()>> commit,
+                                               std::shared_ptr<vstd::move_only_function<void()>> prepareCommit) {
     return [](std::shared_ptr<CEventHandler> self, std::shared_ptr<CMapObject> object,
-              std::shared_ptr<CGameEvent> event, std::shared_ptr<std::move_only_function<void()>> commit,
-              std::shared_ptr<std::move_only_function<void()>> prepareCommit) -> vstd::task<void> {
+              std::shared_ptr<CGameEvent> event, std::shared_ptr<vstd::move_only_function<void()>> commit,
+              std::shared_ptr<vstd::move_only_function<void()>> prepareCommit) -> vstd::task<void> {
         auto loop = vstd::event_loop<>::instance();
         if (!loop->isMainThread()) {
             co_await vstd::post(loop);

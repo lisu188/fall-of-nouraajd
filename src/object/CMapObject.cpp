@@ -22,16 +22,16 @@ void CMapObject::move(int x, int y, int z) {
 
 vstd::task<void> CMapObject::moveAsync(Coords delta) { return moveOwnedAsync(this->ptr<CMapObject>(), delta, false); }
 
-vstd::task<void> CMapObject::moveToAsync(Coords coords, std::move_only_function<void()> positionCommit,
-                                         CMovementPresenter presenter, std::move_only_function<bool()> commitAllowed) {
+vstd::task<void> CMapObject::moveToAsync(Coords coords, vstd::move_only_function<void()> positionCommit,
+                                         CMovementPresenter presenter, vstd::move_only_function<bool()> commitAllowed) {
     return moveOwnedAsync(this->ptr<CMapObject>(), coords, true, std::move(positionCommit), std::move(presenter),
                           std::move(commitAllowed));
 }
 
 vstd::task<void> CMapObject::moveOwnedAsync(std::shared_ptr<CMapObject> object, Coords coords, bool absolute,
-                                            std::move_only_function<void()> positionCommit,
+                                            vstd::move_only_function<void()> positionCommit,
                                             CMovementPresenter presenter,
-                                            std::move_only_function<bool()> commitAllowed) {
+                                            vstd::move_only_function<bool()> commitAllowed) {
     auto loop = vstd::event_loop<>::instance();
     if (!loop->isMainThread()) {
         co_await vstd::post(loop);

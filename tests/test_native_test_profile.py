@@ -35,6 +35,7 @@ ADDITIONAL_CASES = {
         "testArrivalHooksRejectChangedMapAndGeneration",
         "testAsyncNamedSpawnsAwaitEntryWithoutPumping",
         "testDisposableItemCommitConsumesBeforeReceiptsAndCancellation",
+        "testScriptCallbackFlowUsesInitializedUiModule",
         "testItemPositionCommitOwnsConsumptionBeforeArrivalCancellation",
         "testIndividualQuestCancellationHonorsExplicitRewardCommit",
         "testAsyncRemovalAwaitsDestroyHooksAndFinalizesCancellation",
