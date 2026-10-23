@@ -70,6 +70,7 @@ class CMap : public CGameObject {
 
     friend class CMapLoader;
     friend class CGameContext;
+    friend class CFightHandler;
     friend class CSceneManager;
 
     friend class CRandomMapGenerator;

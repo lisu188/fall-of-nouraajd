@@ -22,6 +22,8 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #include "core/CGlobal.h"
 
 class CCreature;
+class CCombatParticipantGuard;
+struct CCombatOwnership;
 class CMap;
 
 enum class CFightOutcome {
@@ -49,6 +51,8 @@ struct CFightResult {
 };
 
 class CFightHandler {
+    friend class CCombatParticipantGuard;
+
   public:
     static constexpr std::size_t CombatHistoryLimit = 64;
     static void recordCombatStatus(const std::shared_ptr<CMap> &map, const std::string &status);
@@ -94,4 +98,8 @@ class CFightHandler {
     static vstd::task<void> defeatedCreatureAsync(std::shared_ptr<CCreature> a, std::shared_ptr<CCreature> b);
 
     static void applyEffects(const std::shared_ptr<CCreature> &cr);
+
+  private:
+    static vstd::task<void> resolveOwnedDefeatAsync(std::shared_ptr<CCreature> a, std::shared_ptr<CCreature> b,
+                                                    std::shared_ptr<CCombatOwnership> encounterOwner);
 };
