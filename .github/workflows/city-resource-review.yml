@@ -16,10 +16,15 @@ permissions:
 
 jobs:
   generated-resource-review:
-    name: generated city resources (development only)
+    name: generated city ${{ matrix.review }} review (development only)
+    strategy:
+      fail-fast: false
+      matrix:
+        review: [resource, ledger]
     runs-on: ubuntu-latest
     timeout-minutes: 15
     env:
+      REVIEW_KIND: ${{ matrix.review }}
       EXPECTED_HEAD: ${{ github.event.pull_request.head.sha }}
       PR_BASE: ${{ github.event.pull_request.base.sha }}
       PR_NUMBER: ${{ github.event.pull_request.number }}
@@ -73,7 +78,9 @@ jobs:
 
           assert os.environ.get("GITHUB_ACTIONS") == "true", "CI-only generation"
           root = Path.cwd().resolve()
-          output = Path(os.environ["RUNNER_TEMP"]) / "city-resource-review"
+          review_kind = os.environ.get("REVIEW_KIND", "resource")
+          assert review_kind in {"resource", "ledger"}, "Unsupported review kind"
+          output = Path(os.environ["RUNNER_TEMP"]) / ("city-" + review_kind + "-review")
           output.mkdir(exist_ok=False)
           env = dict(os.environ, GIT_OPTIONAL_LOCKS="0", PYTHONDONTWRITEBYTECODE="1")
           allowed = (
@@ -93,6 +100,11 @@ jobs:
               "tests/fixtures/baldurs_gate_city_prison_source.json",
               "res/maps/candlekeep/map.json",
           )
+          program = "scripts/build_baldurs_gate_city.py"
+          if review_kind == "ledger":
+              allowed = ("tests/fixtures/baldurs_gate_city_ledger.json",)
+              program = "scripts/build_baldurs_gate_city_ledger.py"
+              selected_inputs += (program, "res/maps/baldursGate/config.json", "res/maps/baldursGate/script.py")
 
 
           def git(*args):
@@ -142,6 +154,8 @@ jobs:
 
           receipt = {
               "kind": "DevelopmentOnlyCityResourceReview",
+              "reviewKind": review_kind,
+              "generatorProgram": program,
               "requestedHead": os.environ["EXPECTED_HEAD"],
               "prBase": os.environ["PR_BASE"],
               "prNumber": os.environ["PR_NUMBER"],
@@ -169,7 +183,7 @@ jobs:
                   with (output / (suffix + ".log")).open("xb") as log:
                       try:
                           result = subprocess.run(
-                              [sys.executable, "-B", "scripts/build_baldurs_gate_city.py", *arguments],
+                              [sys.executable, "-B", program, *arguments],
                               env=env,
                               stdout=subprocess.PIPE,
                               stderr=subprocess.STDOUT,
@@ -237,8 +251,8 @@ jobs:
         if: always()
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a
         with:
-          name: city-resource-review-${{ github.event.pull_request.number }}-${{ github.event.pull_request.head.sha }}
-          path: ${{ runner.temp }}/city-resource-review
+          name: city-${{ matrix.review }}-review-${{ github.event.pull_request.number }}-${{ github.event.pull_request.head.sha }}
+          path: ${{ runner.temp }}/city-${{ matrix.review }}-review
           if-no-files-found: error
           retention-days: 7
       - name: Preserve stale-resource failure until reviewed outputs are committed
@@ -253,7 +267,12 @@ jobs:
           from pathlib import Path
 
           assert os.environ.get("UPLOAD_OUTCOME") == "success", "Review artifact upload failed or was skipped"
-          receipt = json.loads((Path(os.environ["RUNNER_TEMP"]) / "city-resource-review/receipt.json").read_text())
+          review_kind = os.environ.get("REVIEW_KIND", "resource")
+          assert review_kind in {"resource", "ledger"}, "Unsupported review kind"
+          receipt = json.loads(
+              (Path(os.environ["RUNNER_TEMP"]) / ("city-" + review_kind + "-review/receipt.json")).read_text()
+          )
+          assert receipt["reviewKind"] == review_kind
           assert "error" not in receipt, receipt.get("error")
           assert "retentionError" not in receipt, receipt.get("retentionError")
           assert receipt["postCheckPassed"]

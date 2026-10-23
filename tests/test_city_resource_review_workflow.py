@@ -47,13 +47,17 @@ def pythonBlocks():
 
 
 @contextmanager
-def syntheticRun(mode):
+def syntheticRun(mode, review_kind="resource"):
+    assert review_kind in {"resource", "ledger"}
+    allowed = ALLOWED if review_kind == "resource" else ("tests/fixtures/baldurs_gate_city_ledger.json",)
+    program = "scripts/build_baldurs_gate_city" + ("_ledger" if review_kind == "ledger" else "") + ".py"
+    changed_target = allowed[1] if review_kind == "resource" else allowed[0]
     with tempfile.TemporaryDirectory(prefix="city-resource-review-") as directory:
         root = Path(directory).resolve()
         workspace, runner = root / "workspace", root / "runner"
         workspace.mkdir()
         runner.mkdir()
-        for relative in ALLOWED:
+        for relative in allowed:
             destination = workspace / relative
             destination.parent.mkdir(parents=True, exist_ok=True)
             destination.write_text('{"synthetic":0}\n')
@@ -73,7 +77,7 @@ def syntheticRun(mode):
                 return (
                     b"unexpected.py\n"
                     if mode == "unexpected"
-                    else (b"res/maps/baldursGate/config.json\n" if mode in {"stale", "failed-post-check"} else b"")
+                    else ((changed_target + "\n").encode() if mode in {"stale", "failed-post-check"} else b"")
                 )
             if command == ["git", "ls-files", "--others", "--exclude-standard"]:
                 return b""
@@ -81,10 +85,10 @@ def syntheticRun(mode):
 
         def fakeRun(command, **kwargs):
             calls.append(command)
-            if len(command) >= 3 and command[2] == "scripts/build_baldurs_gate_city.py":
+            if len(command) >= 3 and command[2] == program:
                 self_check = command[3:] == ["--check"]
                 if not self_check and mode != "clean":
-                    (workspace / ALLOWED[1]).write_text('{"synthetic":1}\n')
+                    (workspace / changed_target).write_text('{"synthetic":1}\n')
                 return subprocess.CompletedProcess(
                     command,
                     1 if self_check and mode == "failed-post-check" else 0,
@@ -97,7 +101,7 @@ def syntheticRun(mode):
             raise AssertionError("Unplanned executable: " + repr(command))
 
         def fakeDiskUsage(location):
-            generator_calls = sum(len(call) > 2 and call[2] == "scripts/build_baldurs_gate_city.py" for call in calls)
+            generator_calls = sum(len(call) > 2 and call[2] == program for call in calls)
             is_checkout = Path(location) == workspace
             at_fault = ("checkout" in mode and is_checkout) or ("runner" in mode and not is_checkout)
             if mode.startswith("retention-") and generator_calls < 2:
@@ -132,6 +136,7 @@ def syntheticRun(mode):
             with patch.dict(
                 os.environ,
                 GITHUB_ACTIONS="true",
+                REVIEW_KIND=review_kind,
                 RUNNER_TEMP=str(runner),
                 EXPECTED_HEAD="a" * 40,
                 PR_BASE="c" * 40,
@@ -146,12 +151,63 @@ def syntheticRun(mode):
                 with patch.object(shutil, "disk_usage", side_effect=fakeDiskUsage), patch.object(
                     os, "stat", side_effect=fakeStat
                 ):
-                    yield runner / "city-resource-review", calls
+                    yield runner / ("city-" + review_kind + "-review"), calls
         finally:
             os.chdir(previous)
 
 
 class CityResourceReviewWorkflowTest(unittest.TestCase):
+    def testLedgerReviewIsAnIndependentFailClosedMatrixEntry(self):
+        source = WORKFLOW.read_text()
+        self.assertIn("review: [resource, ledger]", source)
+        self.assertIn("fail-fast: false", source)
+        self.assertIn("REVIEW_KIND: ${{ matrix.review }}", source)
+        self.assertIn("city-${{ matrix.review }}-review-", source)
+
+    def testLedgerModeRetainsOnlyItsOutputAndUsesTheActualLedgerProgram(self):
+        generate, gate = pythonBlocks()
+        with syntheticRun("clean", "ledger") as (output, calls):
+            exec(compile(generate, "synthetic_ledger_review", "exec"), {})
+            exec(compile(gate, "synthetic_ledger_gate", "exec"), {})
+            programs = [call for call in calls if len(call) > 2 and call[1] == "-B"]
+            self.assertEqual(2, len(programs))
+            self.assertTrue(all(call[2] == "scripts/build_baldurs_gate_city_ledger.py" for call in programs))
+            self.assertEqual([], programs[0][3:])
+            self.assertEqual(["--check"], programs[1][3:])
+            self.assertEqual(
+                ["tests/fixtures/baldurs_gate_city_ledger.json"],
+                [path.relative_to(output / "generated").as_posix() for path in (output / "generated").rglob("*.json")],
+            )
+            receipt = json.loads((output / "receipt.json").read_text())
+            self.assertEqual("ledger", receipt["reviewKind"])
+            self.assertFalse(receipt["nativeExecuted"])
+            self.assertFalse(receipt["mcpExecuted"])
+            self.assertFalse(receipt["sourceOrOriginalAcceptance"])
+            self.assertFalse(receipt["resourceDiffAccepted"])
+
+    def testLedgerModePreservesFailuresAndNeverAcceptsStaleOrWrongHeadOutputs(self):
+        generate, gate = pythonBlocks()
+        for mode in (
+            "stale",
+            "failed-post-check",
+            "wrong-head",
+            "unexpected",
+            "checkout-threshold",
+            "runner-threshold",
+        ):
+            with self.subTest(mode=mode), syntheticRun(mode, "ledger") as (output, calls):
+                if mode == "stale":
+                    exec(compile(generate, "synthetic_ledger_review", "exec"), {})
+                    self.assertTrue((output / "generated.patch").read_text())
+                    self.assertTrue((output / "generated/tests/fixtures/baldurs_gate_city_ledger.json").exists())
+                else:
+                    with self.assertRaises(AssertionError):
+                        exec(compile(generate, "synthetic_ledger_review", "exec"), {})
+                with self.assertRaises(AssertionError):
+                    exec(compile(gate, "synthetic_ledger_gate", "exec"), {})
+                if mode in {"wrong-head", "checkout-threshold", "runner-threshold"}:
+                    self.assertFalse(any(len(call) > 2 and call[1] == "-B" for call in calls))
+
     def testSourceHasAdditivePullRequestHeadAndReadOnlyTokenContract(self):
         source = WORKFLOW.read_text()
         self.assertIn("  pull_request:", source)
