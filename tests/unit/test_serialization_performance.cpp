@@ -31,6 +31,7 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #include "object/CMapObject.h"
 #include "object/CPlayer.h"
 #include "object/CQuest.h"
+#include "object/CWaitState.h"
 #include "handler/CFightHandler.h"
 #include "handler/CEventHandler.h"
 #include "object/CTrigger.h"
@@ -42,6 +43,7 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #include <cstddef>
 #include <iostream>
 #include <memory>
+#include <optional>
 #include <set>
 #include <stdexcept>
 #include <string>
@@ -649,6 +651,126 @@ void testRetainedTerminalPlayerWorkIsBounded() {
     game->getContext()->shutdown();
 }
 
+std::size_t countSavedWaitDefinitions(const json &value) {
+    std::size_t count = 0;
+    if (value.is_object()) {
+        if (value.contains("class") && value.at("class").is_string() &&
+            value.at("class").get<std::string>() == "CWaitState" && value.contains("properties")) {
+            ++count;
+        }
+        for (const auto &[key, child] : value.items()) {
+            count += countSavedWaitDefinitions(child);
+        }
+    } else if (value.is_array()) {
+        for (const auto &child : value) {
+            count += countSavedWaitDefinitions(child);
+        }
+    }
+    return count;
+}
+
+void testSavedWaitSnapshotsHaveBoundedClockWorkAndOneAliasDefinition() {
+    constexpr std::size_t snapshotCount = 64;
+    auto now = CWaitState::Clock::time_point();
+    std::size_t clockReads = 0;
+    const auto timeSource = [&] {
+        ++clockReads;
+        return now;
+    };
+    CTypes::register_type<CGameObject>();
+    CTypes::register_type<EffectSerializationProbe, CCreature, CMapObject, CGameObject>();
+    CTypes::register_type<CWaitState, CGameObject>();
+    auto game = std::make_shared<CGame>();
+    for (const auto &[name, builder] : *CTypes::builders()) {
+        game->getObjectHandler()->registerType(name, builder);
+    }
+    game->getObjectHandler()->registerType("CGameObject", [] { return std::make_shared<CGameObject>(); });
+    game->getObjectHandler()->registerType("CWaitState", [&] { return std::make_shared<CWaitState>(timeSource); });
+    auto state = game->createObject<CWaitState>("CWaitState");
+    auto owner = game->createObject<CGameObject>("CGameObject");
+    auto coordinator = game->createObject<EffectSerializationProbe>("EffectSerializationProbe");
+    owner->setName("savedWaitBudgetOwner");
+    coordinator->setName("savedWaitBudgetCoordinator");
+    coordinator->setLevel(1);
+    coordinator->setHp(10);
+    state->setName("savedWaitBudgetState");
+    coordinator->setObjectProperty("pendingWait", state);
+    owner->setObjectProperty("pendingWaitOwner", coordinator);
+    owner->setObjectProperty("waitOwnerAlias", coordinator);
+    state->setRemainingMilliseconds(4000);
+    const auto lease = state->tryStart();
+    expect_true(lease.has_value(), "the bounded snapshot workload must acquire a real native wait lease");
+    if (!lease) {
+        game->getContext()->shutdown();
+        return;
+    }
+    now += std::chrono::microseconds(1500001);
+    const auto initialClockReads = clockReads;
+    EffectSerializationProbe::serializationVisits = 0;
+    std::optional<json> firstSnapshot;
+    std::size_t definitions = 0;
+    std::size_t firstBytes = 0;
+    for (std::size_t index = 0; index < snapshotCount; ++index) {
+        const auto before = clockReads;
+        auto snapshot = CSerialization::serializeExpected(owner);
+        expect_true(snapshot.has_value(), "every fixed wait snapshot must use real reflected serialization");
+        if (!snapshot) {
+            break;
+        }
+        const auto count = countSavedWaitDefinitions(*snapshot);
+        definitions += count;
+        expect_true(count == 1 && countSerializedCreatures(*snapshot) == 1 && clockReads == before + 1,
+                    "two supported actor-owner aliases must serialize one child wait and sample its clock once");
+        const auto bytes = snapshot->dump().size();
+        if (!firstSnapshot) {
+            firstSnapshot = *snapshot;
+            firstBytes = bytes;
+        }
+        expect_true(bytes == firstBytes, "repeated fixed snapshots must not grow object identities or transient state");
+    }
+    expect_true(definitions == snapshotCount && clockReads == initialClockReads + snapshotCount &&
+                    EffectSerializationProbe::serializationVisits == snapshotCount,
+                "the finite snapshot count must require exactly one native clock sample per serialized definition");
+    now += std::chrono::milliseconds(1000);
+    expect_true(state->isRunning() && state->getRemainingMilliseconds() == 1500,
+                "snapshot getters must not pause or rebase the live deadline");
+    if (firstSnapshot) {
+        now += std::chrono::hours(48);
+        const auto beforeRestore = clockReads;
+        auto decoded = CSerialization::deserializeExpected<std::shared_ptr<CGameObject>>(game, *firstSnapshot);
+        expect_true(decoded.has_value(), "the first bounded snapshot must restore through the real native codec");
+        if (decoded) {
+            auto restoredOwner =
+                std::dynamic_pointer_cast<EffectSerializationProbe>((*decoded)->getObjectProperty("pendingWaitOwner"));
+            auto ownerAlias = (*decoded)->getObjectProperty("waitOwnerAlias");
+            auto loaded = restoredOwner
+                              ? std::dynamic_pointer_cast<CWaitState>(restoredOwner->getObjectProperty("pendingWait"))
+                              : nullptr;
+            expect_true(restoredOwner && restoredOwner == ownerAlias && loaded && loaded != state &&
+                            !loaded->isRunning() && loaded->getRemainingMilliseconds() == 2500 &&
+                            clockReads == beforeRestore,
+                        "a restored alias must share one paused wait and ignore time spent offline without clock work");
+            if (loaded) {
+                now += std::chrono::hours(24);
+                expect_true(loaded->getRemainingMilliseconds() == 2500 && clockReads == beforeRestore,
+                            "reading a paused restored wait must neither catch up nor sample a deadline");
+                const auto resumed = loaded->tryStart();
+                now += std::chrono::milliseconds(2499);
+                expect_true(resumed && loaded->getRemainingMilliseconds() == 1 && !loaded->complete(*resumed),
+                            "the saved duration must not finish one millisecond early");
+                now += std::chrono::milliseconds(1);
+                expect_true(resumed && loaded->complete(*resumed) && !loaded->isRunning(),
+                            "the actual saved remainder must complete at its resumed deadline");
+            }
+        }
+    }
+    state->pause(*lease);
+    std::cout << "[performance] saved-wait snapshots=" << snapshotCount << " definitions=" << definitions
+              << " clockBudget=" << snapshotCount << " ownerVisits=" << EffectSerializationProbe::serializationVisits
+              << " fixedBytes=" << firstBytes << '\n';
+    game->getContext()->shutdown();
+}
+
 } // namespace
 
 void run_serialization_performance_tests() {
@@ -659,4 +781,5 @@ void run_serialization_performance_tests() {
     testRejectedSaveAdmissionHasZeroSnapshotWork();
     testSnapshotAdmissionRejectsEncountersBeforeMutation();
     testRetainedTerminalPlayerWorkIsBounded();
+    testSavedWaitSnapshotsHaveBoundedClockWorkAndOneAliasDefinition();
 }

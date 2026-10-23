@@ -51,6 +51,7 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #include "object/CEvent.h"
 #include "object/CItem.h"
 #include "object/CPlayer.h"
+#include "object/CWaitState.h"
 #include "object/CQuest.h"
 #include "object/CTrigger.h"
 #include "object/CTile.h"
@@ -4324,6 +4325,377 @@ void test_tooltip_handler_exposes_present_archetypes_without_duplicate_descripti
                 "creatures without archetypes should not gain any archetype lines");
 }
 
+class ScriptFlowNativeObjectTypes {
+  public:
+    ScriptFlowNativeObjectTypes() : modules(pybind11::module_::import("sys").attr("modules")) {
+        hadGameModule = modules.contains("_game");
+        if (hadGameModule) {
+            previous = modules["_game"];
+        }
+        auto module = pybind11::reinterpret_borrow<pybind11::module_>(PyImport_AddModule("_handlerFlowNativeObjects"));
+        if (!pybind11::hasattr(module, "CGameObject")) {
+            pybind11::class_<CGameObject, std::shared_ptr<CGameObject>>(module, "CGameObject");
+        }
+        modules["_game"] = module;
+    }
+
+    ~ScriptFlowNativeObjectTypes() {
+        if (hadGameModule) {
+            modules["_game"] = previous;
+        } else {
+            modules.attr("pop")("_game", pybind11::none());
+        }
+    }
+
+  private:
+    pybind11::dict modules;
+    pybind11::object previous;
+    bool hadGameModule = false;
+};
+
+pybind11::object nativeFlowObject(const std::shared_ptr<CGameObject> &object) { return pybind11::cast(object); }
+
+std::unique_ptr<CScriptFlow> waitCallbackFlow(const std::shared_ptr<CGame> &game, pybind11::dict &scope,
+                                              pybind11::tuple arguments) {
+    scope["arguments"] = std::move(arguments);
+    pybind11::exec(R"(
+events = []
+
+def nativeWait():
+    events.append('entered')
+    try:
+        answer = yield {'operation': 'gui.waitMilliseconds', 'args': arguments, 'kwargs': {}}
+        events.append(answer)
+    except RuntimeError as failure:
+        events.append(str(failure))
+    finally:
+        events.append('closed')
+)",
+                   scope);
+    return game->getScriptHandler()->createCallbackFlow(scope["nativeWait"].cast<pybind11::function>(), game);
+}
+
+void testWaitStateSnapshotsPreserveRemainingDurationWithoutRebasingLiveTime() {
+    auto now = std::make_shared<CWaitState::Clock::time_point>();
+    auto game = makeWindowlessFightGame();
+    game->getObjectHandler()->registerType("CGameObject", [] { return std::make_shared<CGameObject>(); });
+    game->getObjectHandler()->registerType("CWaitState",
+                                           [now] { return std::make_shared<CWaitState>([now] { return *now; }); });
+    auto state = game->createObject<CWaitState>("CWaitState");
+    state->setRemainingMilliseconds(4000);
+    auto coordinator = game->createObject<CGameObject>("CGameObject");
+    coordinator->setObjectProperty("pendingWait", state);
+    const auto lease = state->tryStart();
+    expect_true(lease.has_value(), "a fresh wait state must acquire its native lease");
+    if (!lease) {
+        game->getContext()->shutdown();
+        return;
+    }
+    *now += std::chrono::microseconds(1500001);
+    auto snapshot = CSerialization::serializeExpected(coordinator);
+    expect_true(snapshot.has_value(), "a coordinator-owned running wait must serialize through object properties");
+    if (snapshot) {
+        const auto &properties = snapshot->at("properties").at("pendingWait").at("properties");
+        expect_true(properties.at("remainingMilliseconds").is_number_integer() &&
+                        properties.at("remainingMilliseconds").get<int>() == 2500 && !properties.contains("deadline") &&
+                        !properties.contains("running") && !properties.contains("activeLease"),
+                    "a save must ceil the remaining millisecond without recording a deadline or active lease");
+        *now += std::chrono::hours(48);
+        auto decoded = CSerialization::deserializeExpected<std::shared_ptr<CGameObject>>(game, *snapshot);
+        expect_true(decoded.has_value(), "a paused wait snapshot must deserialize through its registered native type");
+        if (decoded) {
+            auto restored = std::dynamic_pointer_cast<CWaitState>((*decoded)->getObjectProperty("pendingWait"));
+            expect_true(restored && restored != state && !restored->isRunning() &&
+                            restored->getRemainingMilliseconds() == 2500,
+                        "restoration must retain saved remaining time without catching up for time spent offline");
+            if (restored) {
+                const auto resumed = restored->tryStart();
+                *now += std::chrono::milliseconds(2499);
+                expect_true(resumed && restored->getRemainingMilliseconds() == 1 && !restored->complete(*resumed),
+                            "a resumed wait must use the saved remainder and never complete one millisecond early");
+                *now += std::chrono::milliseconds(1);
+                expect_true(resumed && restored->complete(*resumed) && !restored->isRunning(),
+                            "the resumed wait must complete only when its actual remaining duration elapses");
+            }
+        }
+    }
+    state->pause(*lease);
+    state->setRemainingMilliseconds(4000);
+    const auto saving = state->tryStart();
+    *now += std::chrono::milliseconds(1000);
+    auto map = game->getMap();
+    map->setObjectProperty("pendingWait", state);
+    map->setProperty("unitUnserializableWaitProbe", std::function<void()>([] {}));
+    expect_true(!CMapLoader::saveWithResult(map, "unit-wait-unserializable"),
+                "an unsupported snapshot property must fail before writing a save");
+    *now += std::chrono::milliseconds(1000);
+    expect_true(saving && state->isRunning() && state->getRemainingMilliseconds() == 2000,
+                "a failed save must not pause, extend, or restart the live wait deadline");
+    if (saving) {
+        state->pause(*saving);
+    }
+    game->getContext()->shutdown();
+}
+
+void testWaitStateRejectsInvalidDurationsMutationsAndDuplicateLeases() {
+    auto now = std::make_shared<CWaitState::Clock::time_point>();
+    auto state = std::make_shared<CWaitState>([now] { return *now; });
+    for (int invalid : {-1, 60001}) {
+        bool rejected = false;
+        try {
+            state->setRemainingMilliseconds(invalid);
+        } catch (const std::invalid_argument &) {
+            rejected = true;
+        }
+        expect_true(rejected && state->getRemainingMilliseconds() == 0,
+                    "wait durations outside the closed native range must be rejected without mutation");
+    }
+    state->setRemainingMilliseconds(60000);
+    const auto lease = state->tryStart();
+    expect_true(lease && !state->tryStart(), "a native wait holder must admit only one active waiter");
+    bool mutationRejected = false;
+    try {
+        state->setRemainingMilliseconds(5);
+    } catch (const std::logic_error &) {
+        mutationRejected = true;
+    }
+    *now += std::chrono::microseconds(1);
+    expect_true(mutationRejected && state->getRemainingMilliseconds() == 60000,
+                "running waits must reject mutation and ceil partial milliseconds");
+    state->invalidateForMapBindingChange();
+    *now += std::chrono::seconds(20);
+    expect_true(lease && state->isInvalidated(*lease) && !state->isRunning() &&
+                    state->getRemainingMilliseconds() == 60000 && !state->tryStart() && !state->complete(*lease),
+                "an invalidated wait must freeze immediately and retain its lease until the old waiter unwinds");
+    if (lease) {
+        state->pause(*lease);
+    }
+    const auto next = state->tryStart();
+    if (lease) {
+        state->pause(*lease);
+    }
+    expect_true(next && state->isRunning(), "cleanup from an old lease must not pause a newer wait");
+    if (next) {
+        state->pause(*next);
+    }
+    state->setRemainingMilliseconds(0);
+    const auto zero = state->tryStart();
+    expect_true(zero && state->complete(*zero), "a zero-duration wait must complete without adding time");
+}
+
+void testScriptWaitFlowCompletesAndRejectsInvalidObjectArguments() {
+    ScriptFlowNativeObjectTypes types;
+    auto game = makeWindowlessFightGame();
+    auto foreign = makeWindowlessFightGame();
+    for (int variant = 0; variant < 9; ++variant) {
+        auto state = std::make_shared<CWaitState>();
+        state->setGame(variant == 1 ? foreign : game);
+        auto arguments = pybind11::make_tuple(nativeFlowObject(state));
+        if (variant == 2) {
+            auto item = std::make_shared<CItem>();
+            item->setGame(game);
+            arguments = pybind11::make_tuple(nativeFlowObject(item));
+        } else if (variant == 3) {
+            arguments = pybind11::make_tuple(0);
+        } else if (variant == 4) {
+            arguments = pybind11::tuple();
+        } else if (variant == 5) {
+            arguments = pybind11::make_tuple(nativeFlowObject(state), 0);
+        }
+        if (variant >= 6) {
+            vstd::event_loop<>::instance()->invoke([game, foreign, state, variant] {
+                if (variant == 6) {
+                    auto original = game->getMap();
+                    auto replacement = std::make_shared<CMap>();
+                    replacement->setGame(game);
+                    game->setMap(replacement);
+                    game->setMap(original);
+                } else if (variant == 7) {
+                    game->getContext()->advanceTransitionGeneration();
+                } else {
+                    state->setGame(foreign);
+                }
+            });
+        }
+        pybind11::dict scope;
+        auto pending = game->getContext()->spawnTask(
+            game->getGuiHandler()->runScriptFlowAsync(waitCallbackFlow(game, scope, std::move(arguments))));
+        expect_true(pumpHandlerUntil([&] { return pending.finished(); }), "a native wait flow must settle");
+        bool cancelled = false;
+        if (pending.finished()) {
+            try {
+                pending.get();
+            } catch (const vstd::task_cancelled &) {
+                cancelled = true;
+            }
+        }
+        auto events = scope["events"].cast<pybind11::list>();
+        const auto validEvents =
+            variant >= 6
+                ? cancelled && events.size() == 2 && events[1].cast<std::string>() == "closed"
+                : !cancelled && events.size() == 3 && events[2].cast<std::string>() == "closed" &&
+                      (variant == 0 ? (pybind11::isinstance<pybind11::bool_>(events[1]) && events[1].cast<bool>())
+                                    : pybind11::isinstance<pybind11::str>(events[1]));
+        expect_true(validEvents && !state->isRunning(),
+                    "only a same-session wait-state token may complete the native UI wait operation");
+        scope.clear();
+    }
+    game->getContext()->shutdown();
+    foreign->getContext()->shutdown();
+}
+
+void testScriptWaitSurvivesFailedSaveResourceBindingWithoutDispatchingMapChanges() {
+    auto game = makeWindowlessFightGame();
+    auto map = game->getMap();
+    auto context = game->getContext();
+    const auto generation = context->captureTransitionGeneration();
+    game->getObjectHandler()->registerType("CMap", [] { return std::make_shared<CMap>(); });
+    int candidateWaits = 0;
+    game->getObjectHandler()->registerType("CWaitState", [&candidateWaits] {
+        ++candidateWaits;
+        return std::make_shared<CWaitState>();
+    });
+    auto loop = vstd::event_loop<>::instance();
+    const auto pending = loop->getPendingTaskCount();
+    const auto delayed = loop->getDelayedTaskCount();
+    auto other = std::make_shared<CMap>();
+    other->setGame(game);
+    for (int repeat = 0; repeat < 128; ++repeat) {
+        game->setMap(other);
+        game->setMap(other);
+        game->setMap(map);
+    }
+    expect_true(loop->getPendingTaskCount() == pending && loop->getDelayedTaskCount() == delayed &&
+                    context->isTransitionGenerationCurrent(generation),
+                "maps without wait observers must add no queued callbacks, delays, or transition generations");
+    auto now = std::make_shared<CWaitState::Clock::time_point>();
+    auto state = std::make_shared<CWaitState>([now] { return *now; });
+    state->setGame(game);
+    state->setRemainingMilliseconds(4000);
+    const auto lease = state->tryStart();
+    game->connect("mapBindingChanged", state, "invalidateForMapBindingChange");
+    *now += std::chrono::milliseconds(1000);
+    const auto document = std::make_shared<json>();
+    (*document)["class"] = "CMap";
+    auto &properties = (*document)["properties"];
+    properties["mapName"] = "";
+    properties["objects"] = json::array();
+    properties["tiles"] = json::array();
+    properties["triggers"] = json::array();
+    properties["invalidWait"] = {{"class", "CWaitState"}, {"properties", {{"remainingMilliseconds", 60001}}}};
+    const auto envelope = CSaveFormat::buildEnvelope(document, "");
+    const auto slot =
+        "native-wait-invalid-load-" + std::to_string(std::chrono::steady_clock::now().time_since_epoch().count());
+    const auto resources = game->getResourcesProvider();
+    bool persisted = envelope && resources->save(CSaveFormat::primaryPath(slot), CJsonUtil::to_string(*envelope, -1));
+    expect_true(persisted, "the invalid candidate must reach the real saved-map resource loading transaction");
+    if (persisted) {
+        CGameLoader::loadSavedGame(game, slot);
+    }
+    *now += std::chrono::milliseconds(1000);
+    const auto unchanged = lease && candidateWaits == 1 && game->getMap() == map &&
+                           context->isTransitionGenerationCurrent(generation) && state->isRunning() &&
+                           !state->isInvalidated(*lease) && state->getRemainingMilliseconds() == 2000;
+    expect_true(unchanged,
+                "failed-load temporary map bindings must preserve the live wait and published scene generation");
+    game->disconnect("mapBindingChanged", state, "invalidateForMapBindingChange");
+    if (lease) {
+        state->pause(*lease);
+    }
+    if (persisted && unchanged) {
+        std::error_code ignored;
+        std::filesystem::remove(resources->getPath(CSaveFormat::primaryPath(slot)), ignored);
+    }
+    context->shutdown();
+}
+
+void testScriptWaitCancellationAndMapBindingLossFreezeRemainingTime() {
+    ScriptFlowNativeObjectTypes types;
+    auto loop = vstd::event_loop<>::instance();
+    for (int variant = 0; variant < 4; ++variant) {
+        auto game = makeWindowlessFightGame();
+        auto context = game->getContext();
+        auto original = game->getMap();
+        auto now = std::make_shared<CWaitState::Clock::time_point>();
+        auto state = std::make_shared<CWaitState>([now] { return *now; });
+        state->setGame(game);
+        state->setRemainingMilliseconds(60000);
+        const auto delayed = loop->getDelayedTaskCount();
+        pybind11::dict scope;
+        auto pending = context->spawnTask(game->getGuiHandler()->runScriptFlowAsync(
+            waitCallbackFlow(game, scope, pybind11::make_tuple(nativeFlowObject(state)))));
+        expect_true(state->isRunning() && !pending.finished() && loop->getDelayedTaskCount() == delayed + 1,
+                    "one native wait must schedule exactly one cancellable delay without pumping work");
+        *now += std::chrono::milliseconds(1234);
+        game->setMap(original);
+        expect_true(state->isRunning() && state->getRemainingMilliseconds() == 58766,
+                    "a no-op map binding must not pause an active wait");
+        if (variant >= 2) {
+            auto replacement = std::make_shared<CMap>();
+            replacement->setGame(game);
+            game->setMap(replacement);
+            if (variant == 3) {
+                game->setMap(original);
+            }
+            *now += std::chrono::milliseconds(2000);
+            expect_true(!state->isRunning() && state->getRemainingMilliseconds() == 58766 && !state->tryStart(),
+                        "map loss and an away/back round trip must synchronously freeze and invalidate the lease");
+        }
+        if (variant == 1) {
+            context->shutdown();
+        } else {
+            pending.requestStop();
+        }
+        expect_true(pumpHandlerUntil([&] { return pending.finished(); }), "a cancelled wait must settle promptly");
+        bool cancelled = false;
+        if (pending.finished()) {
+            try {
+                pending.get();
+            } catch (const vstd::task_cancelled &) {
+                cancelled = true;
+            }
+        }
+        auto events = scope["events"].cast<pybind11::list>();
+        const auto available = state->tryStart();
+        expect_true(cancelled && events.size() == 2 && events[1].cast<std::string>() == "closed" && available &&
+                        loop->getDelayedTaskCount() == delayed,
+                    "cancellation must close the flow, release its lease and timer, and never report success");
+        if (available) {
+            state->pause(*available);
+        }
+        scope.clear();
+        context->shutdown();
+    }
+}
+
+void testSyncScriptWaitReleasesTheFinalGameOwner() {
+    auto loop = vstd::event_loop<>::instance();
+    auto game = makeWindowlessFightGame();
+    auto context = game->getContext();
+    auto handler = game->getGuiHandler();
+    auto state = std::make_shared<CWaitState>();
+    state->setGame(game);
+    state->setRemainingMilliseconds(60000);
+    std::weak_ptr<CGame> lifetime = game;
+    bool callbackRan = false;
+    bool released = false;
+    bool waitingWhenReleased = false;
+    loop->invoke([&] {
+        callbackRan = true;
+        waitingWhenReleased = state->isRunning();
+        game.reset();
+        released = lifetime.expired();
+        if (!released) {
+            context->shutdown();
+        }
+    });
+    const auto completed = handler->waitMilliseconds(state);
+    expect_true(callbackRan && waitingWhenReleased && released && lifetime.expired() && !completed &&
+                    !context->isActive() && !state->isRunning(),
+                "a native wait must release its final game owner before awaiting and pause during shutdown");
+    context->shutdown();
+}
+
 } // namespace
 
 class SaveAdmissionVisitProbe : public CGameObject {
@@ -5084,5 +5456,16 @@ int main() {
     nativeTestProfile().run("testVerifiedLoadResumesActualFlowOnlyAfterPostedLeaseRelease", testVerifiedLoadResumesActualFlowOnlyAfterPostedLeaseRelease);
     nativeTestProfile().run("testVerifiedLoadResumeRejectsSupersededWeakBindings", testVerifiedLoadResumeRejectsSupersededWeakBindings);
     nativeTestProfile().run("testUnverifiedOrRejectedLoadsNeverDispatchResume", testUnverifiedOrRejectedLoadsNeverDispatchResume);
+    nativeTestProfile().run("testWaitStateSnapshotsPreserveRemainingDurationWithoutRebasingLiveTime",
+                            testWaitStateSnapshotsPreserveRemainingDurationWithoutRebasingLiveTime);
+    nativeTestProfile().run("testWaitStateRejectsInvalidDurationsMutationsAndDuplicateLeases",
+                            testWaitStateRejectsInvalidDurationsMutationsAndDuplicateLeases);
+    nativeTestProfile().run("testScriptWaitFlowCompletesAndRejectsInvalidObjectArguments",
+                            testScriptWaitFlowCompletesAndRejectsInvalidObjectArguments);
+    nativeTestProfile().run("testScriptWaitSurvivesFailedSaveResourceBindingWithoutDispatchingMapChanges",
+                            testScriptWaitSurvivesFailedSaveResourceBindingWithoutDispatchingMapChanges);
+    nativeTestProfile().run("testScriptWaitCancellationAndMapBindingLossFreezeRemainingTime",
+                            testScriptWaitCancellationAndMapBindingLossFreezeRemainingTime);
+    nativeTestProfile().run("testSyncScriptWaitReleasesTheFinalGameOwner", testSyncScriptWaitReleasesTheFinalGameOwner);
     return finish_tests();
 }

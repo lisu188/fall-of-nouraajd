@@ -149,6 +149,7 @@ FAST_TEST_PREFIXES = (
     "BaldursGateCityDataTest.",
     "CityWalkthroughRegistrationTest.",
     "BindingSourceLayoutTest.",
+    "SavedWaitSourceTest.",
     "BaldursGateCityContentTest.",
     "BaldursGateCityRoutesTest.",
     "BaldursGateCityLedgerUnitTest.",
@@ -273,6 +274,7 @@ GAMEPLAY_TEST_PREFIXES = (
     "NavigationCallbackTest.",
     "ArtifactPreviewTest.",
     "PythonCallbackLifecycleTest.",
+    "WaitStateRuntimeTest.",
     "ConsoleUiInteractionTest.",
     "UiMinimapInteractionTest.",
 )
@@ -26201,6 +26203,7 @@ class TestRunnerSuiteTest(unittest.TestCase):
             GameplayCandlekeepRoutesTest,
             OctobogzEarlyTraceTest,
             PlayerControllerSuspensionSourceTest,
+            SavedWaitSourceTest,
             GameplayCastleTownRestTest,
             GameplayVictorSettlementTest,
             NarrativeRouteTest,
@@ -26229,6 +26232,7 @@ class TestRunnerSuiteTest(unittest.TestCase):
             NavigationCallbackTest,
             ArtifactPreviewTest,
             PythonCallbackLifecycleTest,
+            WaitStateRuntimeTest,
             ConsoleUiInteractionTest,
             UiMinimapInteractionTest,
             EnemyRoleRuntimeTest,
@@ -26253,6 +26257,7 @@ class TestRunnerSuiteTest(unittest.TestCase):
         self.assertNotIn("_NavigationCallbackTest", globals())
         self.assertNotIn("_ArtifactPreviewTest", globals())
         self.assertNotIn("_PythonCallbackLifecycleTest", globals())
+        self.assertNotIn("_WaitStateRuntimeTest", globals())
         self.assertNotIn("_ConsoleUiInteractionTest", globals())
         self.assertNotIn("_UiMinimapInteractionTest", globals())
         self.assertNotIn("_EnemyRoleRuntimeTest", globals())
@@ -26917,7 +26922,9 @@ if SOURCE_UI_TESTS_AVAILABLE:
     from tests.test_city_walkthrough_registration import (
         CityWalkthroughRegistrationTest as _CityWalkthroughRegistrationTest,
     )
+    from tests.test_wait_state import WaitStateRuntimeTest as _WaitStateRuntimeTest
     from tests.test_binding_source_layout import BindingSourceLayoutTest as _BindingSourceLayoutTest
+    from tests.test_saved_wait_source import SavedWaitSourceTest as _SavedWaitSourceTest
     from tests.test_baldurs_gate_city_content import BaldursGateCityContentTest as _BaldursGateCityContentTest
     from tests.test_baldurs_gate_city_routes import BaldursGateCityRoutesTest as _BaldursGateCityRoutesTest
     from tests.test_baldurs_gate_city_ledger import BaldursGateCityLedgerUnitTest as _BaldursGateCityLedgerUnitTest
@@ -27026,6 +27033,12 @@ if SOURCE_UI_TESTS_AVAILABLE:
     from tests.test_waypoint_traversal import WaypointTraversalTest as _WaypointTraversalTest
 
     class BindingSourceLayoutTest(_BindingSourceLayoutTest):
+        pass
+
+    class SavedWaitSourceTest(_SavedWaitSourceTest):
+        pass
+
+    class WaitStateRuntimeTest(_WaitStateRuntimeTest):
         pass
 
     class BaldursGateCityDataTest(_BaldursGateCityDataTest):
@@ -27367,6 +27380,8 @@ if SOURCE_UI_TESTS_AVAILABLE:
     del _NavigationCallbackTest
     del _ConsoleUiInteractionTest, _UiMinimapInteractionTest
     del _BindingSourceLayoutTest
+    del _SavedWaitSourceTest
+    del _WaitStateRuntimeTest
     del _BaldursGateCityContentTest, _BaldursGateCityDataTest
     del _BaldursGateCityRoutesTest
     del _BaldursGateCityLedgerUnitTest

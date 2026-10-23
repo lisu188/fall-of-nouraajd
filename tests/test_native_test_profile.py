@@ -51,6 +51,12 @@ ADDITIONAL_CASES = {
         "testVerifiedLoadResumesActualFlowOnlyAfterPostedLeaseRelease",
         "testVerifiedLoadResumeRejectsSupersededWeakBindings",
         "testUnverifiedOrRejectedLoadsNeverDispatchResume",
+        "testWaitStateSnapshotsPreserveRemainingDurationWithoutRebasingLiveTime",
+        "testWaitStateRejectsInvalidDurationsMutationsAndDuplicateLeases",
+        "testScriptWaitFlowCompletesAndRejectsInvalidObjectArguments",
+        "testScriptWaitSurvivesFailedSaveResourceBindingWithoutDispatchingMapChanges",
+        "testScriptWaitCancellationAndMapBindingLossFreezeRemainingTime",
+        "testSyncScriptWaitReleasesTheFinalGameOwner",
     ),
     "map": (
         "testNewSessionClearsQuitLatch",

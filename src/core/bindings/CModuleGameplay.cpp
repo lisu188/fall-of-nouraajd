@@ -26,6 +26,21 @@ namespace py = pybind11;
 
 namespace nouraajd::bindings {
 void bindGameplayObjects(py::module_ &m) {
+    py::class_<CWaitState, CGameObject, std::shared_ptr<CWaitState>>(m, "CWaitState",
+                                                                     "Serializable paused or running native wait.")
+        .def(py::init<>())
+        .def("getRemainingMilliseconds", &CWaitState::getRemainingMilliseconds)
+        .def("setRemainingMilliseconds", [](CWaitState &state, const py::object &value) {
+            if (!PyLong_CheckExact(value.ptr())) {
+                throw py::type_error("Wait duration must be an integer number of milliseconds.");
+            }
+            const auto milliseconds = value.cast<long long>();
+            if (milliseconds < 0 || milliseconds > CWaitState::MAX_MILLISECONDS) {
+                throw py::value_error("Wait duration must be between 0 and 60000 milliseconds.");
+            }
+            state.setRemainingMilliseconds(static_cast<int>(milliseconds));
+        });
+
     void (CMapObject::*moveTo)(int, int, int) = &CMapObject::moveTo;
     void (CMapObject::*move)(int, int, int) = &CMapObject::move;
     py::class_<CMapObject, CGameObject, std::shared_ptr<CMapObject>>(m, "CMapObject",

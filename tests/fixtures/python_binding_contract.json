@@ -10,12 +10,12 @@
     {
       "source": "src/core/bindings/CModuleWorld.cpp",
       "registration": "bindGraphicsAndWorld",
-      "registrationTokenSha256": "f3bd05a19ab981dc9ea4841d864c8196796c7f80e3d28f86bee43dc6f659afc2"
+      "registrationTokenSha256": "47e92c08c38ef0a34614cfa6c14801697762ac39c4e6b4dc5a099b8c3df54560"
     },
     {
       "source": "src/core/bindings/CModuleGameplay.cpp",
       "registration": "bindGameplayObjects",
-      "registrationTokenSha256": "1d6c92829acd769e20ce30b4a34d5d94212c71c6b179ac2937557ddc2abf0304"
+      "registrationTokenSha256": "9be88d2fa1de23eca9718cae8114fcff990928ec569ee64df5c8ea4d5cc6ff72"
     },
     {
       "source": "src/core/bindings/CModuleServices.cpp",
@@ -35,5 +35,6 @@
   ],
   "runtimeAdapterReview": "Only the private seed hook delegates to per-consumer adapters; public registrations, arguments, defaults and docs remain unchanged.",
   "alliedEncounterReview": "Adds fightManyWithAllies(hero, opponents, allies) and fightManyWithAlliesOutcome(hero, opponents, allies); existing signatures, defaults and registration order are retained. Native allied-combat tests cover bounded AI participants, rewards and stale contexts.",
-  "pendingMoveOriginReview": "Adds a readonly copied optional move origin during existing movement hooks; no setter or movement behavior changes. Native doorway and copy-lifetime regression is authored for CI."
+  "pendingMoveOriginReview": "Adds a readonly copied optional move origin during existing movement hooks; no setter or movement behavior changes. Native doorway and copy-lifetime regression is authored for CI.",
+  "savedWaitReview": "Adds CWaitState with exact Python integer durations0..60000 and waitMilliseconds(state); existing registrations/order/defaults remain. Native snapshot/cancellation and real-extension save tests are authored for CI, not executed locally."
 }

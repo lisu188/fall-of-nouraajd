@@ -76,6 +76,7 @@ std::shared_ptr<CMap> CGame::getMap() const {
 void CGame::setMap(std::shared_ptr<CMap> map) {
     std::shared_ptr<CGui> gui;
     std::shared_ptr<CGameContext> current_context;
+    bool bindingChanged = false;
     {
         std::lock_guard lock(*resourceMutex);
         current_context = context;
@@ -103,10 +104,14 @@ void CGame::setMap(std::shared_ptr<CMap> map) {
         if (current_context && !current_context->isActive() && map) {
             throw std::runtime_error("Cannot set an active map after the game session has closed");
         }
+        bindingChanged = this->map != map;
         this->map = map;
     }
     if (current_context && current_context->isActive()) {
         current_context->getResourcesProvider()->setActiveScope(map ? map->getMapName() : std::string());
+    }
+    if (bindingChanged) {
+        signal<true>("mapBindingChanged");
     }
 }
 
