@@ -2197,8 +2197,12 @@ void testMapPermanentPlayerDeathPreservesOptInNativeDefeat() {
         map->setBoolProperty("permanentPlayerDeath", permanent_death);
         auto enemy = add_post_combat_hostile(game, "permanentDeathEnemy", Coords(2, 0, 0));
         int destroyed = 0;
-        map->getEventHandler()->registerTrigger(
-            std::make_shared<CCustomTrigger>("player", "onDestroy", [&destroyed](auto, auto) { ++destroyed; }));
+        auto destructionObserver =
+            std::make_shared<CCustomTrigger>("player", "onDestroy", [&destroyed](auto, auto) { ++destroyed; });
+        destructionObserver->setName("permanentDeathDestructionObserver");
+        map->getEventHandler()->registerTrigger(destructionObserver);
+        expect_true(map->getEventHandler()->getTriggers().contains(destructionObserver),
+                    "the distinct named destruction observer must be registered beside native recovery");
 
         const auto result = CFightHandler::fightManyResult(player, {enemy});
         expect_true(result.outcome == CFightOutcome::AttackerDefeat && !result.attackerSucceeded() && enemy->isAlive(),
@@ -2274,8 +2278,12 @@ void testDefeatedPlayerSurvivesNativeSavedMapRestorationWithoutResurrection() {
     player->setFightController(std::make_shared<PostCombatSelfDefeatFightController>());
     auto enemy = add_post_combat_hostile(game, "defeatedPlayerWitness", Coords(2, 0, 0));
     int destroyed = 0;
-    map->getEventHandler()->registerTrigger(
-        std::make_shared<CCustomTrigger>("player", "onDestroy", [&destroyed](auto, auto) { ++destroyed; }));
+    auto destructionObserver =
+        std::make_shared<CCustomTrigger>("player", "onDestroy", [&destroyed](auto, auto) { ++destroyed; });
+    destructionObserver->setName("retainedDefeatDestructionObserver");
+    map->getEventHandler()->registerTrigger(destructionObserver);
+    expect_true(map->getEventHandler()->getTriggers().contains(destructionObserver),
+                "the distinct named destruction observer must be registered beside native recovery");
     const auto defeat = CFightHandler::fightManyResult(player, {enemy});
     expect_true(defeat.outcome == CFightOutcome::AttackerDefeat && !player->isAlive() &&
                     map->getDefeatedPlayer() == player && !map->getObjectByName("player"),
