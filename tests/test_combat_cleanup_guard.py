@@ -43,7 +43,7 @@ void operator delete(void *allocation) noexcept { std::free(allocation); }
 void operator delete(void *allocation, std::size_t) noexcept { std::free(allocation); }
 class CCreature {};
 class CFightController {
-  public:
+    public:
     virtual ~CFightController() = default;
     virtual void start(std::shared_ptr<CCreature>, std::shared_ptr<CCreature>) {}
     virtual void end(std::shared_ptr<CCreature>, std::shared_ptr<CCreature>) {}
@@ -52,7 +52,7 @@ class CFightController {
         + guard
         + r"""
 class CleanupProbe : public CFightController {
-  public:
+    public:
     const char *failure = nullptr;
     const char *startFailure = nullptr;
     bool resourceAcquired = false;
@@ -119,10 +119,10 @@ int main(int argc, char **argv) {
             originalStartPreserved = std::string(failure.what()) == "primary start failure";
         }
         return originalStartPreserved && first->starts == 1 && first->ends == 1 &&
-                       second->starts == (firstFails ? 0 : 1) && second->ends == (firstFails ? 0 : 1) &&
-                       third->starts == 0 && third->ends == 0 && !first->resourceAcquired && !second->resourceAcquired
-                   ? 0
-                   : 5;
+                        second->starts == (firstFails ? 0 : 1) && second->ends == (firstFails ? 0 : 1) &&
+                        third->starts == 0 && third->ends == 0 && !first->resourceAcquired && !second->resourceAcquired
+                    ? 0
+                    : 5;
     }
     auto start = [&](FightControllerEndGuard &guard) {
         guard.start(first, actor, &currentOpponent);
