@@ -10,8 +10,11 @@ import json
 from pathlib import Path
 import tempfile
 from types import SimpleNamespace
+import threading
 import unittest
 from unittest.mock import Mock, patch
+
+import mcp
 
 from tests.gameplay_starting_save import buildStartingSave
 
@@ -45,7 +48,9 @@ class GameplayStartingSaveTest(unittest.TestCase):
             event_loop=SimpleNamespace(instance=lambda: loop),
             jsonify=lambda object: json.dumps({"properties": object.properties}),
         )
-        server = SimpleNamespace(_game_module=native, import_modules=Mock())
+        owner = mcp.EngineOwner()
+        self.addCleanup(owner.close, lambda: None)
+        server = SimpleNamespace(_game_module=native, import_modules=Mock(), _engine_owner=owner, close=Mock())
         module = SimpleNamespace(EngineMcpServer=Mock(return_value=server))
         return player, world, game, native, loop, module
 
@@ -81,6 +86,39 @@ class GameplayStartingSaveTest(unittest.TestCase):
         campaign.start.assert_called_once_with(game, "wardensRoad", "Warrior", "humanRace")
         native.CGameLoader.startGameWithPlayer.assert_not_called()
 
+    def testNativeStartupAndSavingRunOnTheEngineOwner(self):
+        for campaign_id in (None, "wardensRoad"):
+            player, world, game, native, loop, module = self.fixture()
+            server = module.EngineMcpServer.return_value
+            owner_thread = server._engine_owner.run(threading.get_ident)
+            calls = []
+
+            def onOwner(label, result=None):
+                def call(*args):
+                    self.assertEqual(owner_thread, threading.get_ident(), label)
+                    calls.append(label)
+                    return result(*args) if callable(result) else result
+
+                return call
+
+            native.CGameLoader.loadGame.side_effect = onOwner("load", game)
+            native.CGameLoader.startGameWithPlayer.side_effect = onOwner("start")
+            native.CMapLoader.saveWithResult.side_effect = onOwner("save", True)
+            native.jsonify = onOwner("serialize", native.jsonify)
+            native.event_loop.instance = onOwner("loop", lambda: loop)
+            loop.run.side_effect = onOwner("pump")
+            world.getStringProperty = onOwner("map", world.getStringProperty)
+            campaign = SimpleNamespace(start=onOwner("campaign"))
+            with self.subTest(campaign=campaign_id), tempfile.TemporaryDirectory() as directory:
+                with patch.dict("sys.modules", mcp=module, campaign=campaign):
+                    with contextlib.redirect_stdout(io.StringIO()):
+                        buildStartingSave(self.arguments(directory, campaign=campaign_id))
+                self.assertEqual("load", calls[0])
+                self.assertIn("campaign" if campaign_id else "start", calls)
+                self.assertEqual(3, calls.count("pump"))
+                self.assertEqual(["save", "map"], calls[-2:])
+                server.close.assert_called_once_with()
+
     def testUnownedSlotsAndUnapprovedReputationAreRejectedBeforeNativeStartup(self):
         for changes in ({"slot": "player-save"}, {"reputation": -8}, {"reputation": -3, "map": "test"}):
             player, world, game, native, loop, module = self.fixture()
@@ -98,3 +136,4 @@ class GameplayStartingSaveTest(unittest.TestCase):
             with self.subTest(failure=failure), tempfile.TemporaryDirectory() as directory:
                 with patch.dict("sys.modules", mcp=module), self.assertRaises(RuntimeError):
                     buildStartingSave(self.arguments(directory))
+            module.EngineMcpServer.return_value.close.assert_called_once_with()
