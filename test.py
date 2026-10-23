@@ -20480,8 +20480,6 @@ class GameTest(unittest.TestCase):
         completeOctobogzFixture(game_map1)
         assert quest_state(game_map1, "beren_chain") == "ready_to_report"
         assert quest_state(game_map1, "octobogz_contract") == "completed"
-        beren.finish_cleanse()
-        assert quest_state(game_map1, "beren_chain") == "purged"
 
         # Amulet quest start and completion
         quest_dialog.start_amulet_quest()
@@ -20489,6 +20487,11 @@ class GameTest(unittest.TestCase):
         player1.addItem("preciousAmulet")
         quest_return_dialog.complete_amulet_quest()
         assert quest_state(game_map1, "amulet") == "returned"
+
+        # Finish the town's side quests before reporting its outcome queues the ritual transition.
+        assert g1.getMap() == game_map1
+        beren.finish_cleanse()
+        assert quest_state(game_map1, "beren_chain") == "purged"
 
         # Scenario B: Victor good-ending
         g2, game_map2, player2 = load_game_map_with_player("nouraajd")
