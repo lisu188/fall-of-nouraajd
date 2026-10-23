@@ -20,6 +20,24 @@ def diagnosticsSource():
     return source[start : source.index("\n};", start) + len("\n};")]
 
 
+def controllerSnapshotProbeSource():
+    source = (ROOT / "tests/unit/test_map.cpp").read_text(encoding="utf-8")
+    start = source.index("void testMapPausedPlayerControllerRoundTripsWithoutReset()")
+    begin = source.index("    int paused_definitions = 0;", start)
+    end = source.index("    expect_true(paused_definitions", begin)
+    walk = source[begin:end]
+    return (
+        '#include "core/CJson.h"\n#include <memory>\n'
+        + "struct Named { std::string name; const std::string &getName() const { return name; } };\n"
+        + "int main() {\n"
+        + '    auto original = std::make_shared<Named>(Named{"original"});\n'
+        + '    auto paused = std::make_shared<Named>(Named{"paused"});\n'
+        + "    auto document = std::make_shared<json>(json::object());\n"
+        + walk
+        + "    return paused_definitions + original_definitions;\n}\n"
+    )
+
+
 def nativeProbeSource():
     return (
         '#include "core/CJson.h"\n#include <chrono>\n#include <cstdio>\n#include <cstdlib>\n'
@@ -69,6 +87,21 @@ class SaveStageJsonApiSourceTest(unittest.TestCase):
         calls = set(re.findall(r"(?:\.|->)\s*(\w+)\s*\(", graph))
         self.assertTrue({"contains", "at", "is_object", "is_array", "size"}.issubset(methods))
         self.assertEqual(set(), calls - methods, "Save diagnostics must use the actual repository JSON API")
+
+    def testControllerSnapshotWalkCompilesAgainstActualJsonHeader(self):
+        if os.name != "posix":
+            self.skipTest("Header-only syntax regression requires a POSIX C++ compiler")
+        compiler = shutil.which("c++") or shutil.which("g++") or shutil.which("clang++")
+        if not compiler:
+            self.skipTest("No C++ compiler is available for the header-only syntax regression")
+        result = subprocess.run(
+            [compiler, "-std=c++23", "-fsyntax-only", "-x", "c++", "-", "-I" + str(ROOT / "src")],
+            input=controllerSnapshotProbeSource(),
+            text=True,
+            capture_output=True,
+            timeout=30,
+        )
+        self.assertEqual(0, result.returncode, result.stderr[-1800:])
 
 
 @unittest.skipUnless(os.environ.get("GAME_RUN_SAVE_JSON_API_PROBE") == "1", "Tiny native JSON probe is opt-in")
