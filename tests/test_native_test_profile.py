@@ -39,6 +39,10 @@ ADDITIONAL_CASES = {
         "testAsyncRemovalAwaitsDestroyHooksAndFinalizesCancellation",
         "testAsyncEventHooksStopAfterContextShutdown",
         "testAsyncCombatTraceCapturesResourcesBeforeControllerSuspension",
+        "testSaveAdmissionRejectsBeforeQuestAndGraphWork",
+        "testSaveAdmissionOwnersMovesAndSnapshots",
+        "testSaveAdmissionSurvivesMapAndGameOwnerChanges",
+        "testSaveAdmissionQuarantineRequiresVerifiedInstall",
     ),
     "map": (
         "testNewSessionClearsQuitLatch",
