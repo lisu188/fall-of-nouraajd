@@ -465,7 +465,8 @@ vstd::task<void> defeat_attacker_async(std::shared_ptr<CMap> encounterMap, std::
     co_await resolve_defeat_async(encounterMap, attacker, opponents, attacker, winner);
 }
 
-effect_application_result apply_effects_with_result(const std::shared_ptr<CCreature> &cr) {
+effect_application_result apply_effects_with_result(const std::shared_ptr<CCreature> &cr,
+                                                    const std::function<bool()> &canApply = {}) {
     effect_application_result result;
     if (!cr) {
         vstd::logger::warning("Skipping effect application for null creature");
@@ -474,12 +475,18 @@ effect_application_result apply_effects_with_result(const std::shared_ptr<CCreat
 
     auto effects = cr->getEffects();
     for (const auto &effect : effects) {
+        if (canApply && !canApply()) {
+            return result;
+        }
         if (!effect) {
             vstd::logger::warning("Skipping null effect while expiring effects for", cr->to_string());
             continue;
         }
         if (effect->getTimeLeft() == 0) {
             vstd::logger::debug(cr->to_string(), "is now free from", effect->to_string());
+            if (canApply && !canApply()) {
+                return result;
+            }
             cr->removeEffect(effect);
         }
     }
@@ -503,9 +510,15 @@ effect_application_result apply_effects_with_result(const std::shared_ptr<CCreat
     std::sort(orderedEffects.begin(), orderedEffects.end(),
               [](const auto &left, const auto &right) { return left.first < right.first; });
     for (const auto &entry : orderedEffects) {
+        if (canApply && !canApply()) {
+            return result;
+        }
         const auto &effect = entry.second;
         const bool was_alive = cr->isAlive();
         vstd::logger::debug(cr->to_string(), "suffers from", effect->to_string());
+        if (canApply && !canApply()) {
+            break;
+        }
         effect->apply(cr);
         if (was_alive && !cr->isAlive()) {
             result.died = true;
@@ -548,20 +561,48 @@ vstd::task<CFightResult> resolveFightManyAsync(std::shared_ptr<CCreature> attack
         co_return result;
     }
     auto encounterMap = attacker->getMap();
+    std::optional<CGameContext::UnsafeOperationLease> nativeAdmission;
+    if (encounterMap && encounterMap->getBoolProperty("guardNativeEncounterSaves")) {
+        nativeAdmission = encounterMap->tryBeginUnsafeOperation();
+        if (!nativeAdmission) {
+            co_return result;
+        }
+    }
+    FightControllerEndGuard *ownedControllers = nullptr;
+    bool controllersSettled = false;
+    const auto certifyCleanup = [&] {
+        if (ownedControllers && !controllersSettled) {
+            ownedControllers->endAll();
+            controllersSettled = true;
+        }
+    };
+    const auto settle_result = [&](CFightResult value) {
+        certifyCleanup();
+        if (nativeAdmission) {
+            if (nativeAdmission->isCurrent()) {
+                nativeAdmission->finish();
+            } else {
+                nativeAdmission->quarantine();
+            }
+        }
+        return value;
+    };
+
     if (useConfiguredAllies && encounterMap && encounterMap->getBoolProperty("plugin_cityAlliedCombat")) {
-        co_return co_await resolveConfiguredFightAsync(std::move(attacker), std::move(encounterOpponents));
+        result = co_await resolveConfiguredFightAsync(std::move(attacker), std::move(encounterOpponents));
+        co_return settle_result(result);
     }
     CFightHandler::resetCombatHistory(encounterMap);
     const auto attackerName = combat_name(attacker);
     if (!is_active_participant(encounterMap, attacker)) {
         clear_combat_status(encounterMap);
-        co_return result;
+        co_return settle_result(result);
     }
 
     auto opponents = sanitize_opponents(encounterMap, attacker, encounterOpponents);
     if (opponents.empty()) {
         clear_combat_status(encounterMap);
-        co_return result;
+        co_return settle_result(result);
     }
 
     auto allies = sanitize_allies(encounterMap, attacker, encounterAllies, opponents);
@@ -573,6 +614,9 @@ vstd::task<CFightResult> resolveFightManyAsync(std::shared_ptr<CCreature> attack
     const auto generation = game ? game->getContext()->captureTransitionGeneration() : 0;
     game.reset();
     const auto contextIsCurrent = [&] {
+        if (nativeAdmission && !nativeAdmission->isCurrent()) {
+            return false;
+        }
         if (!alliedEncounter) {
             return true;
         }
@@ -580,6 +624,10 @@ vstd::task<CFightResult> resolveFightManyAsync(std::shared_ptr<CCreature> attack
         auto context = encounterContext.lock();
         return owner && context && context->isTransitionGenerationCurrent(generation) && owner->getMap() == encounterMap;
     };
+    std::function<bool()> effectContext;
+    if (nativeAdmission) {
+        effectContext = contextIsCurrent;
+    }
     const auto status = [&](const std::string &message, bool initiative = true) {
         update_combat_status(encounterMap, attacker, opponents, message, initiative, allies);
     };
@@ -589,13 +637,19 @@ vstd::task<CFightResult> resolveFightManyAsync(std::shared_ptr<CCreature> attack
     auto attackerController = attacker->getFightController();
     if (!attackerController) {
         clear_combat_status(encounterMap);
-        co_return result;
+        co_return settle_result(result);
     }
     attackerController->setOpponents(attacker, opponents);
+    if (nativeAdmission && !nativeAdmission->isCurrent()) {
+        cancel_fight(result, attacker, current);
+        co_return settle_result(result);
+    }
     FightControllerEndGuard controllerEndGuard;
+    ownedControllers = &controllerEndGuard;
     controllerEndGuard.start(attackerController, attacker, &current);
     for (const auto &opponent : allOpponents) {
-        if (alliedEncounter && (!contextIsCurrent() || !is_active_participant(encounterMap, opponent))) {
+        if ((alliedEncounter || nativeAdmission.has_value()) &&
+            (!contextIsCurrent() || !is_active_participant(encounterMap, opponent))) {
             continue;
         }
         if (auto controller = opponent->getFightController()) {
@@ -608,6 +662,10 @@ vstd::task<CFightResult> resolveFightManyAsync(std::shared_ptr<CCreature> attack
         }
         if (auto controller = ally->getFightController()) {
             controller->setOpponents(ally, opponents);
+            if (nativeAdmission && !contextIsCurrent()) {
+                cancel_fight(result, attacker, current);
+                co_return settle_result(result);
+            }
             controllerEndGuard.start(controller, ally, current);
         }
     }
@@ -644,7 +702,7 @@ vstd::task<CFightResult> resolveFightManyAsync(std::shared_ptr<CCreature> attack
     }
 
     auto finish_result = [&]() -> CFightResult {
-        controllerEndGuard.endAll();
+        certifyCleanup();
 
         if (result.outcome != CFightOutcome::Invalid) {
             const bool include_initiative = result.outcome != CFightOutcome::AttackerDefeat;
@@ -667,7 +725,7 @@ vstd::task<CFightResult> resolveFightManyAsync(std::shared_ptr<CCreature> attack
             CPlaytestTrace::record("combat_finished", fields);
         }
 
-        return result;
+        return settle_result(result);
     };
 
     int stale_turns = 0;
@@ -702,7 +760,15 @@ vstd::task<CFightResult> resolveFightManyAsync(std::shared_ptr<CCreature> attack
                 }
                 status(combat_name(attacker) + " acts against " + combat_name(current) + ".");
 
-                auto effect_result = apply_effects_with_result(attacker);
+                if (nativeAdmission && !contextIsCurrent()) {
+                    cancel_fight(result, attacker, current);
+                    co_return finish_result();
+                }
+                auto effect_result = apply_effects_with_result(attacker, effectContext);
+                if (nativeAdmission && !contextIsCurrent()) {
+                    cancel_fight(result, attacker, current);
+                    co_return finish_result();
+                }
                 if (!attacker->isAlive()) {
                     result.outcome = CFightOutcome::AttackerDefeat;
                     result.survivor = effect_result.caster;
@@ -712,6 +778,10 @@ vstd::task<CFightResult> resolveFightManyAsync(std::shared_ptr<CCreature> attack
                 }
 
                 if (!CTags::isTagPresent(attacker->getEffects(), CTag::Stun)) {
+                    if (nativeAdmission && !contextIsCurrent()) {
+                        cancel_fight(result, attacker, current);
+                        co_return finish_result();
+                    }
                     co_await attackerController->controlAsync(attacker, current);
                     if (!contextIsCurrent() || attackerController->isCancelled(attacker, current)) {
                         cancel_fight(result, attacker, current);
@@ -755,7 +825,15 @@ vstd::task<CFightResult> resolveFightManyAsync(std::shared_ptr<CCreature> attack
                     std::erase(allies, actor);
                     continue;
                 }
-                const auto effects = apply_effects_with_result(actor);
+                if (nativeAdmission && !contextIsCurrent()) {
+                    cancel_fight(result, attacker, current);
+                    co_return finish_result();
+                }
+                const auto effects = apply_effects_with_result(actor, effectContext);
+                if (nativeAdmission && !contextIsCurrent()) {
+                    cancel_fight(result, attacker, current);
+                    co_return finish_result();
+                }
                 if (!actor->isAlive()) {
                     co_await remove_dead_allies_async(encounterMap, attacker, allies, opponents, effects.caster);
                     continue;
@@ -777,6 +855,10 @@ vstd::task<CFightResult> resolveFightManyAsync(std::shared_ptr<CCreature> attack
                     continue;
                 }
                 status(combat_name(actor) + " assists against " + combat_name(target) + ".");
+                if (nativeAdmission && !contextIsCurrent()) {
+                    cancel_fight(result, attacker, target);
+                    co_return finish_result();
+                }
                 co_await controller->controlAsync(actor, target);
                 if (!contextIsCurrent() || controller->isCancelled(actor, target)) {
                     cancel_fight(result, attacker, target);
@@ -833,7 +915,15 @@ vstd::task<CFightResult> resolveFightManyAsync(std::shared_ptr<CCreature> attack
                 }
             }
             status(combat_name(actor) + " acts against " + combat_name(target) + ".");
-            auto effect_result = apply_effects_with_result(actor);
+            if (nativeAdmission && !contextIsCurrent()) {
+                cancel_fight(result, attacker, actor);
+                co_return finish_result();
+            }
+            auto effect_result = apply_effects_with_result(actor, effectContext);
+            if (nativeAdmission && !contextIsCurrent()) {
+                cancel_fight(result, attacker, actor);
+                co_return finish_result();
+            }
             if (!actor->isAlive()) {
                 auto recipient = alliedEncounter ? attacker : effect_result.caster;
                 if (co_await remove_dead_opponents_async(encounterMap, attacker, opponents, recipient)) {
@@ -849,6 +939,10 @@ vstd::task<CFightResult> resolveFightManyAsync(std::shared_ptr<CCreature> attack
             }
             if (!CTags::isTagPresent(actor->getEffects(), CTag::Stun)) {
                 if (auto controller = actor->getFightController()) {
+                    if (nativeAdmission && !contextIsCurrent()) {
+                        cancel_fight(result, attacker, target);
+                        co_return finish_result();
+                    }
                     co_await controller->controlAsync(actor, target);
                     if (!contextIsCurrent() || controller->isCancelled(actor, target)) {
                         cancel_fight(result, attacker, actor);

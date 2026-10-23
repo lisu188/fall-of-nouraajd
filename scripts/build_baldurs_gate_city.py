@@ -1082,8 +1082,17 @@ def compileCity(source, quests=None):
         "type": "map",
         "version": 1.2,
         "nextobjectid": sum(map(len, objects.values())) + 1,
-        "properties": {"x": str(entry[0]), "y": str(entry[1]), "z": "0", "label": "Baldur's Gate"},
-        "propertytypes": {key: "string" for key in ("x", "y", "z", "label")},
+        "properties": {
+            "x": str(entry[0]),
+            "y": str(entry[1]),
+            "z": "0",
+            "label": "Baldur's Gate",
+            "guardNativeEncounterSaves": True,
+        },
+        "propertytypes": {
+            **{key: "string" for key in ("x", "y", "z", "label")},
+            "guardNativeEncounterSaves": "bool",
+        },
         "layers": layers,
         "tilesets": tile_set,
     }

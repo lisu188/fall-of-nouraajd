@@ -4531,6 +4531,110 @@ void testSaveAdmissionQuarantineRequiresVerifiedInstall() {
     game->getContext()->shutdown();
 }
 
+class NativeSavePolicyObjectProbe : public CMapObject {
+  public:
+    int creates = 0;
+    bool observed = false;
+    void onCreate(std::shared_ptr<CGameEvent>) override {
+        ++creates;
+        observed = getMap()->getBoolProperty("guardNativeEncounterSaves");
+    }
+};
+
+void testAuthoredNativeSavePolicyIsStrictAndPrecedesObjects() {
+    const std::vector<std::optional<json>> declarations{std::nullopt, json(false),  json(true),    json(nullptr),
+                                                        json(1),      json("true"), json::array(), json::object()};
+    for (std::size_t index = 0; index < declarations.size(); ++index) {
+        auto game = makeWindowlessFightGame();
+        auto map = game->getMap();
+        map->setBoolProperty("guardNativeEncounterSaves", true);
+        auto probe = std::make_shared<NativeSavePolicyObjectProbe>();
+        game->getObjectHandler()->registerType("NativeSavePolicyObjectProbe", [probe] { return probe; });
+        json properties = json::object();
+        if (declarations[index]) {
+            properties["guardNativeEncounterSaves"] = *declarations[index];
+        }
+        json object = {{"type", "NativeSavePolicyObjectProbe"},
+                       {"name", "nativePolicyObject"},
+                       {"x", 0},
+                       {"y", 0},
+                       {"width", 32},
+                       {"height", 32}};
+        json layer = {{"type", "objectgroup"}, {"properties", {{"level", "0"}}}, {"objects", json::array({object})}};
+        auto document = std::make_shared<json>(json{{"properties", properties}, {"layers", json::array({layer})}});
+        bool rejected = false;
+        try {
+            CMapLoader::loadFromTmx(map, document);
+        } catch (const std::runtime_error &error) {
+            rejected =
+                std::string(error.what()).find("guardNativeEncounterSaves must be a boolean") != std::string::npos;
+        }
+        const bool valid = index < 3;
+        const bool expected = index == 2;
+        expect_true(
+            valid ? (!rejected && probe->creates == 1 && probe->observed == expected &&
+                     map->getBoolProperty("guardNativeEncounterSaves") == expected)
+                  : (rejected && probe->creates == 0 && map->getObjects().empty()),
+            "absent/false/true authored policy must precede object hooks; explicit non-booleans reject loading");
+        game->getContext()->shutdown();
+    }
+}
+
+void testVerifiedRestoreReappliesAuthoritativeNativeSavePolicy() {
+    for (int mode = 0; mode < 4; ++mode) {
+        auto game = load_empty_game();
+        auto original = game->getMap();
+        original->setMapName("test");
+        add_test_player(game);
+        auto authored =
+            std::const_pointer_cast<json>(game->getConfigurationProvider()->getConfiguration("maps/test/map.json"));
+        expect_true(authored && authored->is_object(), "the native restore fixture requires the authored test map");
+        if (!authored || !authored->is_object()) {
+            game->getContext()->shutdown();
+            continue;
+        }
+        // The provider owns mutable parsed JSON in this context's private cache; resource files stay untouched.
+        auto &properties = (*authored)["properties"];
+        if (!properties.is_object()) {
+            properties = json::object();
+        }
+        properties.erase("guardNativeEncounterSaves");
+        if (mode != 0) {
+            properties["guardNativeEncounterSaves"] = mode == 3 ? json("false") : json(mode == 2);
+        }
+        original->setBoolProperty("guardNativeEncounterSaves", mode != 2);
+        const auto slot = "native-authored-save-policy-" + std::to_string(mode) + "-" +
+                          std::to_string(std::chrono::steady_clock::now().time_since_epoch().count());
+        const bool saved = CMapLoader::saveWithResult(original, slot);
+        expect_true(saved, "authoritative policy restore must use an actual native checkpoint");
+        auto unsafe = original->tryBeginUnsafeOperation();
+        expect_true(saved && unsafe.has_value(), "the restore fixture must own the quarantine it attempts to recover");
+        if (!saved || !unsafe) {
+            game->getContext()->shutdown();
+            continue;
+        }
+        unsafe->quarantine();
+        CGameLoader::loadSavedGame(game, slot);
+        const bool restored = game->getMap() != original;
+        const bool policyRestored =
+            mode == 3 ? (!restored && !original->tryBeginSaveSnapshot())
+                      : (restored && game->getMap()->getBoolProperty("guardNativeEncounterSaves") == (mode == 2) &&
+                         game->getMap()->tryBeginSaveSnapshot().has_value());
+        expect_true(policyRestored, "restore must override saved ad-hoc values from authored absent/false/true policy "
+                                    "and reject malformed policy");
+        if (policyRestored) {
+            auto resources = game->getResourcesProvider();
+            for (const auto &relative : {CSaveFormat::primaryPath(slot), CSaveFormat::backupPath(slot)}) {
+                const auto path = resources->getPath(relative);
+                if (!path.empty()) {
+                    std::filesystem::remove(path);
+                }
+            }
+        }
+        game->getContext()->shutdown();
+    }
+}
+
 int main() {
     pybind11::scoped_interpreter guard{};
     pybind11::module_::import("sys").attr("path").attr("insert")(0, GAME_HANDLER_TEST_PYTHON_ROOT);
@@ -4671,5 +4775,9 @@ int main() {
                             testSaveAdmissionSurvivesMapAndGameOwnerChanges);
     nativeTestProfile().run("testSaveAdmissionQuarantineRequiresVerifiedInstall",
                             testSaveAdmissionQuarantineRequiresVerifiedInstall);
+    nativeTestProfile().run("testAuthoredNativeSavePolicyIsStrictAndPrecedesObjects",
+                            testAuthoredNativeSavePolicyIsStrictAndPrecedesObjects);
+    nativeTestProfile().run("testVerifiedRestoreReappliesAuthoritativeNativeSavePolicy",
+                            testVerifiedRestoreReappliesAuthoritativeNativeSavePolicy);
     return finish_tests();
 }

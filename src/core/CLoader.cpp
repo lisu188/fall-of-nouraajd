@@ -650,6 +650,17 @@ bool read_bool_property(const json &properties, const std::string &key) {
     return false;
 }
 
+bool readNativeEncounterSavePolicy(const json &properties) {
+    if (!properties.contains("guardNativeEncounterSaves")) {
+        return false;
+    }
+    const auto &policy = properties.at("guardNativeEncounterSaves");
+    if (!policy.is_boolean()) {
+        throw std::runtime_error("Authored map property guardNativeEncounterSaves must be a boolean");
+    }
+    return policy.get<bool>();
+}
+
 std::optional<int> parse_int_text(const std::string &text) {
     if (text.empty()) {
         return std::nullopt;
@@ -845,6 +856,7 @@ void apply_authored_map_metadata(const std::shared_ptr<CGame> &game, const std::
     if (!game || !map) {
         return;
     }
+    bool nativeEncounterPolicy = false;
     if (auto mapc = game->getConfigurationProvider()->getConfiguration(getMapPath(mapName))) {
         map->setDefaultTiles({});
         map->setOutOfBoundsTiles({});
@@ -856,6 +868,7 @@ void apply_authored_map_metadata(const std::shared_ptr<CGame> &game, const std::
         const json emptyArray = json::array();
         const json &mapProperties =
             mapc->contains("properties") && (*mapc)["properties"].is_object() ? (*mapc)["properties"] : emptyObject;
+        nativeEncounterPolicy = readNativeEncounterSavePolicy(mapProperties);
         map->setEntryX(read_int_property(mapProperties, "x", 0));
         map->setEntryY(read_int_property(mapProperties, "y", 0));
         map->setEntryZ(read_int_property(mapProperties, "z", 0));
@@ -867,6 +880,7 @@ void apply_authored_map_metadata(const std::shared_ptr<CGame> &game, const std::
             }
         }
     }
+    map->setBoolProperty("guardNativeEncounterSaves", nativeEncounterPolicy);
 }
 
 class CScopedObjectConfig {
@@ -1204,6 +1218,7 @@ void CMapLoader::loadFromTmx(const std::shared_ptr<CMap> &map, const std::shared
         const json emptyArray = json::array();
         const json &mapProperties =
             mapc->contains("properties") && (*mapc)["properties"].is_object() ? (*mapc)["properties"] : emptyObject;
+        map->setBoolProperty("guardNativeEncounterSaves", readNativeEncounterSavePolicy(mapProperties));
         const json &mapLayers =
             mapc->contains("layers") && (*mapc)["layers"].is_array() ? (*mapc)["layers"] : emptyArray;
         map->setDefaultTiles({});

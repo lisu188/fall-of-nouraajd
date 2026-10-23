@@ -45,6 +45,8 @@ ADDITIONAL_CASES = {
         "testSaveAdmissionOwnersMovesAndSnapshots",
         "testSaveAdmissionSurvivesMapAndGameOwnerChanges",
         "testSaveAdmissionQuarantineRequiresVerifiedInstall",
+        "testAuthoredNativeSavePolicyIsStrictAndPrecedesObjects",
+        "testVerifiedRestoreReappliesAuthoritativeNativeSavePolicy",
     ),
     "map": (
         "testNewSessionClearsQuitLatch",

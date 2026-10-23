@@ -31,6 +31,7 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #include "object/CMapObject.h"
 #include "object/CPlayer.h"
 #include "object/CQuest.h"
+#include "handler/CFightHandler.h"
 #include "test_harness.h"
 #include "veventloop.h"
 
@@ -139,6 +140,66 @@ void testRejectedSaveAdmissionHasZeroSnapshotWork() {
     std::cout << "[performance] rejected save admission: attempts=" << ATTEMPTS << " rejected=" << rejected
               << " journal=" << captures << " graph=" << graphVisits << " providerOutputs=" << providerOutputs
               << " workBudget=0 controlJournal=" << quest->captures << " controlGraph=" << map->graphVisits << '\n';
+    game->getContext()->shutdown();
+}
+class RejectedEncounterController : public CFightController {
+  public:
+    int starts = 0;
+    int actions = 0;
+    int ends = 0;
+    void start(std::shared_ptr<CCreature>, std::shared_ptr<CCreature>) override { ++starts; }
+    bool control(std::shared_ptr<CCreature>, std::shared_ptr<CCreature>) override {
+        ++actions;
+        return true;
+    }
+    bool isCancelled(std::shared_ptr<CCreature>, std::shared_ptr<CCreature>) override { return true; }
+    void end(std::shared_ptr<CCreature>, std::shared_ptr<CCreature>) override { ++ends; }
+};
+
+void testSnapshotAdmissionRejectsEncountersBeforeMutation() {
+    constexpr int ATTEMPTS = 64;
+    auto game = std::make_shared<CGame>();
+    auto map = std::make_shared<CMap>();
+    map->setGame(game);
+    game->setMap(map);
+    map->setBoolProperty("guardNativeEncounterSaves", true);
+    auto attacker = std::make_shared<CCreature>();
+    auto enemy = std::make_shared<CCreature>();
+    auto attackerController = std::make_shared<RejectedEncounterController>();
+    auto enemyController = std::make_shared<RejectedEncounterController>();
+    for (const auto &actor : {attacker, enemy}) {
+        actor->setGame(game);
+        actor->setBaseStats(std::make_shared<CStats>());
+        actor->setLevelStats(std::make_shared<CStats>());
+        actor->getBaseStats()->setMainStat("strength");
+        actor->getBaseStats()->setStamina(10);
+        actor->getBaseStats()->setAgility(10);
+        actor->setLevel(1);
+        actor->setHp(10);
+    }
+    attacker->setName("rejectedEncounterAttacker");
+    enemy->setName("rejectedEncounterEnemy");
+    attacker->setAffiliation("admissionSideA");
+    enemy->setAffiliation("admissionSideB");
+    attacker->setFightController(attackerController);
+    enemy->setFightController(enemyController);
+    map->setObjects({attacker, enemy});
+    map->setStringProperty("combatHistory", "bounded admission sentinel");
+    auto snapshot = map->tryBeginSaveSnapshot();
+    expect_true(snapshot.has_value(), "the rejection work budget must own real snapshot admission");
+    int rejected = 0;
+    for (int index = 0; index < ATTEMPTS; ++index) {
+        rejected += CFightHandler::fightManyResult(attacker, {enemy}).outcome == CFightOutcome::Invalid;
+    }
+    const int starts = attackerController->starts + enemyController->starts;
+    const int actions = attackerController->actions + enemyController->actions;
+    const int ends = attackerController->ends + enemyController->ends;
+    expect_true(rejected == ATTEMPTS && starts == 0 && actions == 0 && ends == 0 &&
+                    map->getStringProperty("combatHistory") == "bounded admission sentinel",
+                "rejected encounters must perform zero controller callbacks and no combat-history writes");
+    std::cout << "[performance] snapshot-rejected encounters: attempts=" << ATTEMPTS << " rejected=" << rejected
+              << " starts=" << starts << " actions=" << actions << " ends=" << ends << " callbackBudget=0\n";
+    snapshot.reset();
     game->getContext()->shutdown();
 }
 void testScalarPropertyMetadataWorkIsBounded() {
@@ -461,4 +522,5 @@ void run_serialization_performance_tests() {
     testMutualEffectGraphSerializationHasBoundedActorDefinitions();
     testScalarPropertyMetadataWorkIsBounded();
     testRejectedSaveAdmissionHasZeroSnapshotWork();
+    testSnapshotAdmissionRejectsEncountersBeforeMutation();
 }
