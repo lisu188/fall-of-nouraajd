@@ -1574,6 +1574,16 @@ bool CMapLoader::saveWithResult(const std::shared_ptr<CMap> &map, const std::str
         return false;
     }
 
+    if (!map) {
+        vstd::logger::warning("Rejected invalid save snapshot:", name, "reason:", "map is null");
+        return false;
+    }
+    auto admission = map->tryBeginSaveSnapshot();
+    if (!admission) {
+        vstd::logger::warning("Rejected save while a native operation or recovery owns the session:", name);
+        return false;
+    }
+
     auto envelope = build_save_envelope(map);
     if (!envelope) {
         vstd::logger::warning("Rejected invalid save snapshot:", name, "reason:", envelope.error());
@@ -1862,10 +1872,21 @@ vstd::task<void> CGameLoader::startRandomGameWithPlayerAsync(std::weak_ptr<CGame
 }
 
 void CGameLoader::loadSavedGame(const std::shared_ptr<CGame> &game, const std::string &save) {
+    if (!game) {
+        return;
+    }
+    auto admission = game->getContext()->tryBeginVerifiedRestore();
+    if (!admission) {
+        vstd::logger::warning("Rejected save load while a native operation or snapshot owns the session:", save);
+        return;
+    }
     if (auto loaded = try_load_saved_map(game, save)) {
         vstd::event_loop<>::instance()->resetQuit();
         game->setMap(loaded->map);
         repair_recovered_backup(game, *loaded, save);
+        if (!admission->commit(loaded->map)) {
+            vstd::logger::warning("Verified save installation was superseded; save quarantine was retained:", save);
+        }
         return;
     }
     vstd::logger::warning("Saved game was not loaded; keeping the active map unchanged:", save);

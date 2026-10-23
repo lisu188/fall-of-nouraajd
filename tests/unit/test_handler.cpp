@@ -32,13 +32,16 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #include "core/CLoader.h"
 #include "core/CMap.h"
 #include "core/CPlaytestTrace.h"
+#include "core/CProvider.h"
 #include "core/CPythonOverrides.h"
+#include "core/CSaveFormat.h"
 #include "core/CStats.h"
 #include "core/CTypes.h"
 #include "core/CWrapper.h"
 #include "gui/CGui.h"
 #include "gui/panel/CGameFightPanel.h"
 #include "gui/panel/CGameLootPanel.h"
+#include "gui/panel/CGamePanel.h"
 #include "gui/panel/CGameTextPanel.h"
 #include "object/CCreature.h"
 #include "object/CCreatureClass.h"
@@ -4269,6 +4272,212 @@ void test_tooltip_handler_exposes_present_archetypes_without_duplicate_descripti
 
 } // namespace
 
+class SaveAdmissionVisitProbe : public CGameObject {
+    V_META(SaveAdmissionVisitProbe, CGameObject,
+           V_PROPERTY(SaveAdmissionVisitProbe, int, serializationVisit, getSerializationVisit, setSerializationVisit))
+  public:
+    int visits = 0;
+    int getSerializationVisit() {
+        ++visits;
+        throw std::runtime_error("intentional admission graph stop before resource writes");
+    }
+    void setSerializationVisit(int) {}
+};
+
+class SaveAdmissionClosingPanel : public CGamePanel {
+  public:
+    std::function<void()> callback;
+    void close() override {
+        if (auto current = std::exchange(callback, {})) {
+            current();
+        }
+    }
+};
+
+void testSaveAdmissionRejectsBeforeQuestAndGraphWork() {
+    auto game = makeWindowlessFightGame();
+    auto map = game->getMap();
+    map->setMapName("empty");
+    auto player = add_test_player(game);
+    auto quest = std::make_shared<QuestLifecycleProbe>();
+    quest->setGame(game);
+    player->setQuests({quest});
+    CTypes::register_type<SaveAdmissionVisitProbe, CGameObject>();
+    auto probe = std::make_shared<SaveAdmissionVisitProbe>();
+    probe->setGame(game);
+    map->setObjectProperty("saveAdmissionProbe", probe);
+    auto operation = map->tryBeginUnsafeOperation();
+    expect_true(operation.has_value(), "an explicit native operation must acquire inactive admission");
+    if (operation) {
+        expect_true(!CMapLoader::saveWithResult(map, "unit-save-admission-no-write") && quest->captures.empty() &&
+                        probe->visits == 0,
+                    "busy save admission must reject before quest capture or any reflected graph getter");
+        operation->finish();
+        expect_true(!CMapLoader::saveWithResult(map, "unit-save-admission-no-write") && quest->captures.size() == 1 &&
+                        probe->visits == 1,
+                    "released admission must reach real capture/serialization; the test getter then prevents a write");
+        auto afterFailure = map->tryBeginUnsafeOperation();
+        expect_true(afterFailure.has_value(), "failed serialization must release its snapshot capability");
+        if (afterFailure) {
+            afterFailure->finish();
+        }
+    }
+    game->getContext()->shutdown();
+}
+
+void testSaveAdmissionOwnersMovesAndSnapshots() {
+    auto game = makeWindowlessFightGame();
+    auto map = game->getMap();
+    auto first = map->tryBeginUnsafeOperation();
+    auto second = map->tryBeginUnsafeOperation();
+    expect_true(first && second && !map->tryBeginSaveSnapshot(),
+                "every independent unsafe owner must exclude snapshots");
+    if (first && second) {
+        auto moved = std::move(*first);
+        first.reset();
+        second->finish();
+        expect_true(moved.isCurrent() && !map->tryBeginSaveSnapshot(),
+                    "moving an owner must transfer exactly one admission hold without quarantining its source");
+        moved.finish();
+        moved.finish();
+        auto snapshot = map->tryBeginSaveSnapshot();
+        expect_true(snapshot.has_value() && !map->tryBeginUnsafeOperation() && !map->tryBeginSaveSnapshot(),
+                    "a live snapshot must exclude reentrant mutation and another snapshot without holding callbacks");
+        snapshot.reset();
+        auto resumed = map->tryBeginUnsafeOperation();
+        expect_true(resumed.has_value(), "snapshot teardown must permit later opted-in work");
+        if (resumed) {
+            resumed->finish();
+        }
+    }
+    {
+        auto abandoned = map->tryBeginUnsafeOperation();
+        expect_true(abandoned.has_value(), "an unsettled owner fixture must acquire admission");
+    }
+    expect_true(!map->tryBeginSaveSnapshot() && !map->tryBeginUnsafeOperation(),
+                "an owner destroyed without a receipt settlement must quarantine rather than silently permit saves");
+    game->getContext()->shutdown();
+}
+
+void testSaveAdmissionSurvivesMapAndGameOwnerChanges() {
+    auto game = makeWindowlessFightGame();
+    auto oldMap = game->getMap();
+    auto operation = oldMap->tryBeginUnsafeOperation();
+    auto replacement = std::make_shared<CMap>();
+    replacement->setGame(game);
+    game->setMap(replacement);
+    expect_true(operation && !operation->isCurrent() && !oldMap->tryBeginSaveSnapshot() &&
+                    !replacement->tryBeginSaveSnapshot(),
+                "map binding changes must invalidate ownership while keeping old and replacement snapshots blocked");
+    if (operation) {
+        operation->finish();
+    }
+    expect_true(replacement->tryBeginSaveSnapshot().has_value(),
+                "known-complete interruption settlement must release session admission for the replacement map");
+    auto detachedOperation = replacement->tryBeginUnsafeOperation();
+    std::weak_ptr<CGame> weakGame = game;
+    game.reset();
+    expect_true(
+        weakGame.expired() && detachedOperation && !detachedOperation->isCurrent() &&
+            !replacement->tryBeginSaveSnapshot(),
+        "a lease must retain its map marker without keeping the final game owner alive or allowing fallback saves");
+    if (detachedOperation) {
+        detachedOperation->finish();
+    }
+    expect_true(replacement->tryBeginSaveSnapshot().has_value(),
+                "a detached map with no unsafe owner must retain compatibility snapshot admission");
+}
+
+void testSaveAdmissionQuarantineRequiresVerifiedInstall() {
+    auto game = load_empty_game();
+    auto original = game->getMap();
+    add_test_player(game);
+    const auto resources = game->getResourcesProvider();
+    const auto slot =
+        "native-save-admission-" + std::to_string(std::chrono::steady_clock::now().time_since_epoch().count());
+    const bool saved = CMapLoader::saveWithResult(original, slot);
+    expect_true(saved, "the recovery fixture must create an actual quiescent native checkpoint");
+    if (!saved) {
+        game->getContext()->shutdown();
+        return;
+    }
+    auto operation = original->tryBeginUnsafeOperation();
+    expect_true(operation.has_value(), "the recovery fixture must acquire the operation it quarantines");
+    if (!operation) {
+        game->getContext()->shutdown();
+        return;
+    }
+    if (operation) {
+        operation->quarantine();
+    }
+    CGameLoader::loadSavedGame(game, slot + "-missing");
+    expect_true(game->getMap() == original && !original->tryBeginSaveSnapshot(),
+                "a failed primary/backup load must preserve quarantine and the active map");
+    auto candidate = CMapLoader::loadSavedMap(game, slot);
+    expect_true(candidate && candidate != original && game->getMap() == original,
+                "candidate-only restore must not install or settle admission");
+    if (!candidate) {
+        game->getContext()->shutdown();
+        return;
+    }
+    game->setMap(candidate);
+    expect_true(!candidate->tryBeginSaveSnapshot(), "manual candidate installation must not clear session quarantine");
+
+    auto gui = std::make_shared<WindowlessFightTestGui>();
+    gui->setGame(game);
+    game->setGui(gui);
+    auto panel = std::make_shared<SaveAdmissionClosingPanel>();
+    panel->setGame(game);
+    gui->addChild(panel);
+    bool reentrantSaveRejected = false;
+    bool reentrantOperationRejected = false;
+    std::weak_ptr<CGame> weakGame = game;
+    panel->callback = [&, weakGame] {
+        if (auto owner = weakGame.lock()) {
+            reentrantSaveRejected = !owner->getMap()->tryBeginSaveSnapshot();
+            reentrantOperationRejected = !owner->getMap()->tryBeginUnsafeOperation();
+            owner->getContext()->advanceTransitionGeneration();
+        }
+    };
+    CGameLoader::loadSavedGame(game, slot);
+    expect_true(
+        reentrantSaveRejected && reentrantOperationRejected && !game->getMap()->tryBeginSaveSnapshot(),
+        "verified installation callbacks must stay excluded and generation supersession must retain quarantine");
+
+    CGameLoader::loadSavedGame(game, slot);
+    auto restored = game->getMap();
+    const bool recovered =
+        restored != original && restored != candidate && restored->tryBeginSaveSnapshot().has_value();
+    expect_true(
+        recovered && !original->tryBeginSaveSnapshot(),
+        "only verified installation may clear session quarantine; the old partially mutated map stays quarantined");
+    auto active = restored->tryBeginUnsafeOperation();
+    CGameLoader::loadSavedGame(game, slot);
+    expect_true(active && game->getMap() == restored && !restored->tryBeginSaveSnapshot(),
+                "verified recovery must not load through or clear another active unsafe owner");
+    if (active) {
+        active->finish();
+    }
+    const bool corruptedPrimary = resources->save(CSaveFormat::primaryPath(slot), std::string("{}"));
+    auto backupOperation = restored->tryBeginUnsafeOperation();
+    if (backupOperation) {
+        backupOperation->quarantine();
+    }
+    CGameLoader::loadSavedGame(game, slot);
+    const bool backupRecovered =
+        corruptedPrimary && game->getMap() != restored && game->getMap()->tryBeginSaveSnapshot().has_value();
+    expect_true(backupRecovered, "a verified backup installation must be an eligible quarantine recovery checkpoint");
+    if (recovered && backupRecovered && reentrantSaveRejected && reentrantOperationRejected) {
+        for (const auto &relative : {CSaveFormat::primaryPath(slot), CSaveFormat::backupPath(slot)}) {
+            const auto path = resources->getPath(relative);
+            if (!path.empty()) {
+                std::filesystem::remove(path);
+            }
+        }
+    }
+    game->getContext()->shutdown();
+}
+
 int main() {
     pybind11::scoped_interpreter guard{};
     pybind11::module_::import("ui");
@@ -4397,5 +4606,13 @@ int main() {
     nativeTestProfile().run("test_player_respawn_normalizes_wrapped_entry_coords",
                             test_player_respawn_normalizes_wrapped_entry_coords);
 
+    nativeTestProfile().run("testSaveAdmissionRejectsBeforeQuestAndGraphWork",
+                            testSaveAdmissionRejectsBeforeQuestAndGraphWork);
+    nativeTestProfile().run("testSaveAdmissionOwnersMovesAndSnapshots",
+                            testSaveAdmissionOwnersMovesAndSnapshots);
+    nativeTestProfile().run("testSaveAdmissionSurvivesMapAndGameOwnerChanges",
+                            testSaveAdmissionSurvivesMapAndGameOwnerChanges);
+    nativeTestProfile().run("testSaveAdmissionQuarantineRequiresVerifiedInstall",
+                            testSaveAdmissionQuarantineRequiresVerifiedInstall);
     return finish_tests();
 }

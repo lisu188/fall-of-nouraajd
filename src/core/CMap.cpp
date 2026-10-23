@@ -79,6 +79,17 @@ int normalize_wrapped_axis(int value, int max_value) {
 }
 } // namespace
 
+CMap::CMap() : saveAdmissionState(CGameContext::makeSaveAdmissionState()) {}
+
+std::optional<CGameContext::UnsafeOperationLease> CMap::tryBeginUnsafeOperation() {
+    auto owner = getGame();
+    return owner ? owner->getContext()->tryBeginUnsafeOperation(ptr<CMap>()) : std::nullopt;
+}
+
+std::optional<CGameContext::SaveSnapshotLease> CMap::tryBeginSaveSnapshot() {
+    return CGameContext::tryBeginMapSnapshot(ptr<CMap>());
+}
+
 CMap::~CMap() {
     const auto dyingMap = weak_from_this();
     for (const auto &[name, object] : mapObjects) {

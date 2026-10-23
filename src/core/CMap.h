@@ -22,6 +22,7 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #include <mutex>
 #include <span>
 
+#include "core/CGameContext.h"
 #include "core/CGlobal.h"
 #include "core/CMovementPresenter.h"
 
@@ -68,6 +69,7 @@ class CMap : public CGameObject {
     using BoundsMap = std::map<int, std::pair<int, int>>;
 
     friend class CMapLoader;
+    friend class CGameContext;
     friend class CSceneManager;
 
     friend class CRandomMapGenerator;
@@ -81,7 +83,11 @@ class CMap : public CGameObject {
            V_PROPERTY(CMap, std::set<std::shared_ptr<CTile>>, tiles, getTiles, setTiles),
            V_PROPERTY(CMap, std::set<std::shared_ptr<CTrigger>>, triggers, getTriggers, setTriggers))
   public:
-    CMap() = default;
+    CMap();
+
+    // Native opt-in capability; intentionally absent from reflection and Python bindings.
+    std::optional<CGameContext::UnsafeOperationLease> tryBeginUnsafeOperation();
+    std::optional<CGameContext::SaveSnapshotLease> tryBeginSaveSnapshot();
 
     ~CMap() override;
 
@@ -322,6 +328,7 @@ class CMap : public CGameObject {
     vstd::lazy<CEventHandler> eventHandler;
     int turn = 0;
     bool moving = false;
+    const std::shared_ptr<CSaveAdmissionState> saveAdmissionState;
     bool playerTriggersRegistered = false;
     std::string mapName;
     std::string activeSimulationRegion;

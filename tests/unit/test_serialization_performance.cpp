@@ -17,6 +17,10 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 
 #include "core/CGame.h"
+#include "core/CGameContext.h"
+#include "core/CMap.h"
+#include "core/CProvider.h"
+#include "core/CSaveFormat.h"
 #include "core/CSerialization.h"
 #include "core/CController.h"
 #include "core/CLoader.h"
@@ -25,13 +29,17 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #include "object/CEffect.h"
 #include "object/CTile.h"
 #include "object/CMapObject.h"
+#include "object/CPlayer.h"
+#include "object/CQuest.h"
 #include "test_harness.h"
 #include "veventloop.h"
 
+#include <chrono>
 #include <cstddef>
 #include <iostream>
 #include <memory>
 #include <set>
+#include <stdexcept>
 #include <string>
 #include <utility>
 #include <vector>
@@ -57,6 +65,82 @@ class ScalarMetadataTile : public CTile {
     }
 };
 
+class SaveAdmissionBudgetMap : public CMap {
+  public:
+    std::shared_ptr<vstd::meta> meta() override {
+        if (observeGraph) {
+            ++graphVisits;
+            throw std::runtime_error("intentional save admission graph stop before resource writes");
+        }
+        return CMap::meta();
+    }
+    std::shared_ptr<const vstd::meta> meta() const override {
+        if (observeGraph) {
+            ++graphVisits;
+            throw std::runtime_error("intentional save admission graph stop before resource writes");
+        }
+        return CMap::meta();
+    }
+    bool observeGraph = false;
+    mutable std::size_t graphVisits = 0;
+};
+
+class SaveAdmissionBudgetQuest : public CQuest {
+  public:
+    void captureJournal(bool) override { ++captures; }
+    std::size_t captures = 0;
+};
+
+void testRejectedSaveAdmissionHasZeroSnapshotWork() {
+    constexpr int ATTEMPTS = 256;
+    CTypes::register_type<CMap, CGameObject>();
+    auto game = std::make_shared<CGame>();
+    game->getObjectHandler()->registerType("CPlayerController", [] { return std::make_shared<CPlayerController>(); });
+    game->getObjectHandler()->registerType("CPlayerFightController",
+                                           [] { return std::make_shared<CPlayerFightController>(); });
+    auto map = std::make_shared<SaveAdmissionBudgetMap>();
+    map->setGame(game);
+    map->setMapName("empty");
+    game->setMap(map);
+    auto player = std::make_shared<CPlayer>();
+    player->setGame(game);
+    player->setName("player");
+    player->setController(std::make_shared<CPlayerController>());
+    player->setFightController(std::make_shared<CPlayerFightController>());
+    auto quest = std::make_shared<SaveAdmissionBudgetQuest>();
+    quest->setGame(game);
+    player->setQuests({quest});
+    map->setObjects({player});
+    expect_true(map->getPlayer() == player, "the rejection budget must include an actual journal owner");
+    const auto resources = game->getResourcesProvider();
+    const auto slot =
+        "performance-save-admission-" + std::to_string(std::chrono::steady_clock::now().time_since_epoch().count());
+    auto operation = map->tryBeginUnsafeOperation();
+    expect_true(operation.has_value(), "the zero-work budget must hold real unsafe admission");
+    if (!operation) {
+        game->getContext()->shutdown();
+        return;
+    }
+    map->observeGraph = true;
+    int rejected = 0;
+    for (int index = 0; index < ATTEMPTS; ++index) {
+        rejected += !CMapLoader::saveWithResult(map, slot);
+    }
+    const auto captures = quest->captures;
+    const auto graphVisits = map->graphVisits;
+    const int providerOutputs = !resources->getPath(CSaveFormat::primaryPath(slot)).empty() +
+                                !resources->getPath(CSaveFormat::backupPath(slot)).empty();
+    expect_true(rejected == ATTEMPTS && captures == 0 && graphVisits == 0 && providerOutputs == 0,
+                "each rejected save must have zero journal/graph work and create no primary or backup output");
+    operation->finish();
+    expect_true(!CMapLoader::saveWithResult(map, slot) && quest->captures == 1 && map->graphVisits == 1,
+                "the released positive control must reach journal capture and the intentional graph stop once");
+    map->observeGraph = false;
+    std::cout << "[performance] rejected save admission: attempts=" << ATTEMPTS << " rejected=" << rejected
+              << " journal=" << captures << " graph=" << graphVisits << " providerOutputs=" << providerOutputs
+              << " workBudget=0 controlJournal=" << quest->captures << " controlGraph=" << map->graphVisits << '\n';
+    game->getContext()->shutdown();
+}
 void testScalarPropertyMetadataWorkIsBounded() {
     constexpr std::size_t tileCount = 32;
     constexpr std::size_t propertyCount = 5;
@@ -376,4 +460,5 @@ void run_serialization_performance_tests() {
     test_map_load_property_notifications_are_bounded_per_object();
     testMutualEffectGraphSerializationHasBoundedActorDefinitions();
     testScalarPropertyMetadataWorkIsBounded();
+    testRejectedSaveAdmissionHasZeroSnapshotWork();
 }
