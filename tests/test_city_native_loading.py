@@ -91,12 +91,23 @@ class CityNativeLoadingRuntimeTest(unittest.TestCase):
             def decodeCityData(encoded):
                 return json.loads(encoded.removeprefix('city-json:'))
             slot = 'city-metadata-' + str(os.getpid()) + '-' + str(time.time_ns())
+            started = time.monotonic()
+            def phase(name):
+                print(
+                    'city-metadata-phase', name,
+                    'elapsedSeconds=' + format(time.monotonic() - started, '.3f'),
+                    flush=True,
+                )
+            phase('loadGame')
             instance = game.CGameLoader.loadGame()
+            phase('gameLoaded')
             restored = None
             completed = False
             try:
+                phase('startMap')
                 game.CGameLoader.startGameWithPlayer(instance, 'baldursGate', 'Warrior')
                 loop.run()
+                phase('mapReady')
                 world = instance.getMap()
                 marek = world.getObjectByName('cityAr0300Actor29')
                 clock = world.getObjectByName('cityClock')
@@ -112,10 +123,15 @@ class CityNativeLoadingRuntimeTest(unittest.TestCase):
                 definitions = clock.getStringProperty('questDefinitions')
                 profile = world.getStringProperty('plugin_cityStartingProfile')
                 assert all(value.startswith('city-json:') for value in (inventory, definitions, profile))
+                phase('save')
                 assert game.CMapLoader.saveWithResult(world, slot)
+                phase('saved')
+                phase('restoreGame')
                 restored = game.CGameLoader.loadGame()
+                phase('loadSavedGame')
                 game.CGameLoader.loadSavedGame(restored, slot)
                 loop.run()
+                phase('savedMapLoaded')
                 saved_world = restored.getMap()
                 assert saved_world.getStringProperty('mapName') == 'baldursGate'
                 saved_actor = saved_world.getObjectByName('cityAr0300Actor29')
@@ -127,15 +143,19 @@ class CityNativeLoadingRuntimeTest(unittest.TestCase):
                 assert decodeCityData(saved_clock.getStringProperty('questDefinitions'))['quests']
                 assert saved_actor.getBoolProperty('plugin_cityInventoryInitialized')
                 assert snapshot(saved_actor) == before
+                phase('verified')
                 completed = True
                 print('native city metadata and item ownership survived save reload', flush=True)
             finally:
                 if restored is not None:
+                    phase('restoredShutdown')
                     restored.getContext().shutdown()
+                phase('primaryShutdown')
                 instance.getContext().shutdown()
                 if completed:
                     for suffix in ('.json', '.json.bak'):
                         (Path('save') / (slot + suffix)).unlink(missing_ok=True)
+                phase('finished')
             """)
         self.assertIn("native city metadata and item ownership survived save reload", output)
 
@@ -210,6 +230,58 @@ class CityNativeLoadingSourceTest(unittest.TestCase):
         )
         with self.assertRaises(AssertionError):
             exec(compiled, {**namespace, "world": NativeWorld(True)})
+
+    def testChildTimeoutPreservesTheSameExceptionAndBoundedPartialOutput(self):
+        import subprocess
+
+        case = CityNativeLoadingRuntimeTest("testCityStructuredMetadataAndOwnedItemsSurviveSaveReload")
+        for output, errors, expected in (
+            (b"discarded-prefix" + b"x" * 9000 + b"city-metadata-phase saved", b"y" * 9000 + b"stderr-latest", "saved"),
+            ("city-metadata-phase restore", "stderr-text", "restore"),
+            (None, None, "unavailable"),
+        ):
+            timeout = subprocess.TimeoutExpired(["python", "-c", "native-child"], 30, output=output, stderr=errors)
+            with self.subTest(output_type=type(output).__name__):
+                with patch("tests.test_python_callback_lifecycle.subprocess.run", side_effect=timeout) as run:
+                    with self.assertRaises(subprocess.TimeoutExpired) as caught:
+                        case.runChild("pass")
+                self.assertIs(timeout, caught.exception)
+                self.assertEqual(30, run.call_args.kwargs["timeout"])
+                notes = "\n".join(getattr(timeout, "__notes__", ()))
+                self.assertIn("stdout tail", notes)
+                self.assertIn("stderr tail", notes)
+                self.assertIn(expected, notes)
+                if errors is not None:
+                    decoded_errors = errors.decode("utf-8", errors="replace") if isinstance(errors, bytes) else errors
+                    self.assertIn(decoded_errors[-4096:], notes)
+                self.assertNotIn("discarded-prefix", notes)
+                self.assertLessEqual(len(notes), 8400)
+                self.assertIs(output, timeout.stdout)
+                self.assertIs(errors, timeout.stderr)
+
+    def testSaveProbeHasFlushedElapsedBreadcrumbsAroundNativePersistence(self):
+        from unittest.mock import Mock
+
+        program = self.program(
+            "testCityStructuredMetadataAndOwnedItemsSurviveSaveReload",
+            "native city metadata and item ownership survived save reload",
+        )
+        tree = ast.parse(textwrap.dedent(program))
+        phase = next(node for node in tree.body if isinstance(node, ast.FunctionDef) and node.name == "phase")
+        output = Mock()
+        namespace = {"print": output, "started": 100.0, "time": SimpleNamespace(monotonic=lambda: 100.125)}
+        exec(compile(ast.Module(body=[phase], type_ignores=[]), "<actual-city-phase-breadcrumb>", "exec"), namespace)
+        namespace["phase"]("save")
+        output.assert_called_once_with("city-metadata-phase", "save", "elapsedSeconds=0.125", flush=True)
+        for before, operation, after in (
+            ("startMap", "game.CGameLoader.startGameWithPlayer", "mapReady"),
+            ("save", "assert game.CMapLoader.saveWithResult(world, slot)", "saved"),
+            ("loadSavedGame", "game.CGameLoader.loadSavedGame(restored, slot)", "savedMapLoaded"),
+            ("savedMapLoaded", "saved_world = restored.getMap()", "verified"),
+        ):
+            with self.subTest(phase=before):
+                self.assertLess(program.index("phase('" + before + "')"), program.index(operation))
+                self.assertLess(program.index(operation), program.index("phase('" + after + "')"))
 
     def testSaveProbeUsesNativePersistenceAndPreservesFailedDiagnostics(self):
         program = self.program(

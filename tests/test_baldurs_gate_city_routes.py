@@ -16,6 +16,35 @@ ROOT = Path(__file__).resolve().parents[1]
 
 
 class BaldursGateCityRoutesTest(unittest.TestCase):
+    def testAuthoredEastToNortheastPortalRunsWithExactNativePluginBuiltins(self):
+        from types import SimpleNamespace
+        from unittest.mock import Mock
+
+        from tests.test_baldurs_gate_city_content import CityModel
+
+        model = CityModel()
+        self.assertNotIn("next", model.namespace["__builtins__"])
+        link = next(
+            row for row in routes.documents()["geometry"]["connections"] if row["object"] == "cityAr0800Boundary15"
+        )
+        self.assertEqual(("AR0800", "AR0300"), (link["from"], link["to"]))
+        portal = model.createObject("BaldursGatePortal")
+        portal.setStringProperty("name", link["object"])
+        portal.properties.update(routes.documents()["config"][link["object"]]["properties"])
+        portal.moveTo(*link["origin"])
+        model.game_map.addObject(portal)
+        model.player.moveTo(*link["origin"])
+        model.game_map.setStringProperty("activeSimulationRegion", link["from"])
+        model.clock.applySchedules = Mock()
+        self.assertTrue(portal.usable())
+        self.assertEqual(tuple(link["target"]), tuple(vars(portal.target()).values()))
+        portal.onEnter(SimpleNamespace(getCause=lambda: model.player))
+        self.assertEqual(tuple(link["target"]), tuple(vars(model.player.getCoords()).values()))
+        self.assertEqual(link["to"], model.game_map.getStringProperty("activeSimulationRegion"))
+        self.assertIn(link["to"], routes.decodeCityData(model.game_map.getStringProperty("plugin_cityVisitedAreas")))
+        self.assertEqual("", model.player.getStringProperty("plugin_cityPortalGuard"))
+        model.clock.applySchedules.assert_called_once_with()
+
     def testNativeTradePlanRejectsWrongGoldAndDuplicatedSoldInstances(self):
         from types import SimpleNamespace
         from unittest.mock import Mock, patch

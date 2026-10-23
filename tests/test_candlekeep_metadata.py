@@ -3,8 +3,11 @@
 """Metadata coercion models and deferred real-extension checks; no original-parity credit."""
 
 import ast
+import builtins
 from contextlib import ExitStack
 import json
+from pathlib import Path
+import re
 import textwrap
 from unittest import TestCase
 from unittest.mock import patch
@@ -47,6 +50,53 @@ def applyStringBoundary(obj, fields):
 
 
 class CandlekeepMetadataSourceTest(TestCase):
+    def nativePluginBuiltins(self):
+        root = Path(__file__).resolve().parents[1]
+        loader = (root / "src/core/CLoader.cpp").read_text(encoding="utf-8")
+        declaration = loader.split("const std::vector<std::string> allowedNames =", 1)[1].split("};", 1)[0]
+        allowed = set(re.findall(r'"([^\"]+)"', declaration))
+        self.assertNotIn("next", allowed)
+        # The model supplies the authored module stubs; import policy itself is covered by the sandbox tests.
+        return {name: getattr(builtins, name) for name in allowed} | {"__import__": builtins.__import__}
+
+    def testConfiguredPurchaseCallbackRunsWithTheActualNativeBuiltinAllowlist(self):
+        from tests.test_gameplay_route_dialogs import authoredFunction
+
+        model = CandlekeepModel(plugin_builtins=self.nativePluginBuiltins())
+        failures = []
+        dispatch = authoredFunction(
+            "res/game.py",
+            "invokeAction",
+            class_id="CDialog",
+            record_playtest_trace=lambda *_args, **_kwargs: None,
+            playtest_object_ref=lambda obj: {"name": obj.getName()},
+            logger=lambda *_args: None,
+            _reportDialogFailure=lambda _kind, _callback, _dialog, error: failures.append(error),
+        )
+        lookup = authoredFunction("res/game.py", "_get_public_callback", class_id="CDialog")
+        dialog_type = model.types["CandlekeepDialog"]
+        dialog_type.invokeAction = dispatch
+        dialog_type._get_public_callback = lookup
+        dialog = model.dialog("winthrop")
+        before = model.player.getGold(), model.player.countItems("candlekeepBolts")
+        self.assertTrue(dialog.invokeAction("buyBolts"), [str(error) for error in failures])
+        self.assertEqual([], failures)
+        self.assertEqual(before[0] - 1, model.player.getGold())
+        self.assertEqual(before[1] + 1, model.player.countItems("candlekeepBolts"))
+        self.assertEqual(1, model.game_map.getNumericProperty("candlekeepStockBought_winthrop_BOLT01"))
+        item = [item for item in model.player.getItems() if item.getTypeId() == "candlekeepBolts"][0]
+        self.assertEqual(20, item.getNumericProperty("plugin_candlekeepQuantity"))
+
+    def testAuthoredCallsUseOnlyBuiltinsAvailableInsideNativeResourcePlugins(self):
+        allowed = self.nativePluginBuiltins()
+        source = Path(__file__).resolve().parents[1] / "res/maps/candlekeep/script.py"
+        calls = {
+            node.func.id
+            for node in ast.walk(ast.parse(source.read_text(encoding="utf-8")))
+            if isinstance(node, ast.Call) and isinstance(node.func, ast.Name) and node.func.id in vars(builtins)
+        }
+        self.assertEqual(set(), calls - allowed.keys())
+
     def testEmbeddedNativeProgramSatisfiesRepositoryIndentationGate(self):
         from pathlib import Path
 

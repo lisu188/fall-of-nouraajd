@@ -50,6 +50,11 @@ def load(self, context):
     def encodeData(value):
         return "candlekeep-json:" + json.dumps(value)
 
+    def firstMatch(values, default=None):
+        for value in values:
+            return value
+        return default
+
     from game import CBuilding, CCreature, CDialog, CEvent, CQuest, CScroll, CTrigger, Coords
     from game import claim_once, flowGame, mapQuest, register, resumableHook, trigger, uiRequest
 
@@ -120,7 +125,7 @@ def load(self, context):
                 player.removeItem(lambda candidate: candidate == item, False)
         original_equipment = decodeData(player.getStringProperty("candlekeepTrainingEquipment") or "{}")
         for slot, name in original_equipment.items():
-            item = next((item for item in player.getItems() if item.getName() == name), None)
+            item = firstMatch((item for item in player.getItems() if item.getName() == name), None)
             if item:
                 player.equipItem(slot, item)
         player.setStringProperty("affiliation", player.getStringProperty("candlekeepTrainingAffiliation"))
@@ -275,7 +280,7 @@ def load(self, context):
                 return False
             spell = self.getStringProperty("plugin_candlekeepSpell")
             if spell == "identify":
-                target = next(
+                target = firstMatch(
                     (
                         item
                         for item in player.getItems()
@@ -431,7 +436,7 @@ def load(self, context):
             actor = self.actor()
             if not actor:
                 return False
-            item = next((item for item in actor.getItems() if item.getTypeId() == item_id), None)
+            item = firstMatch((item for item in actor.getItems() if item.getTypeId() == item_id), None)
             if not item:
                 return False
             actor.removeQuestItem(lambda candidate: candidate == item)
@@ -517,7 +522,7 @@ def load(self, context):
                     "candlekeepPhlydiaLynxEyeClaimed"
                 ):
                     continue
-                item = next(
+                item = firstMatch(
                     (item for item in actor.getItems() if item.getTypeId() == item_id and item not in remaining), None
                 )
                 if item:
@@ -718,7 +723,7 @@ def load(self, context):
             if not self._progressAllowed():
                 return False
             selected = self.getStringProperty("selectedStock")
-            row = next((row for row in self._entries("shopEntries") if row.get("id") == selected), None)
+            row = firstMatch((row for row in self._entries("shopEntries") if row.get("id") == selected), None)
             return self._purchase(row) if row else False
 
         @resumableHook
@@ -764,7 +769,7 @@ def load(self, context):
                 "candlekeepArrows": "AROW01",
                 "candlekeepAntidote": "POTN20",
             }
-            row = next(
+            row = firstMatch(
                 (
                     entry
                     for entry in rows
@@ -824,7 +829,7 @@ def load(self, context):
             if self.actorId() != "winthrop":
                 return False
             selected = self.getStringProperty("selectedSale")
-            item = next((item for item in self._saleableItems() if item.getName() == selected), None)
+            item = firstMatch((item for item in self._saleableItems() if item.getName() == selected), None)
             if not item:
                 return False
             player = playerFor(self)
@@ -902,7 +907,7 @@ def load(self, context):
             if not self._progressAllowed():
                 return False
             selected = self.getStringProperty("selectedDrink")
-            row = next((row for row in self._entries("drinkEntries") if row.get("id") == selected), None)
+            row = firstMatch((row for row in self._entries("drinkEntries") if row.get("id") == selected), None)
             if not row:
                 return False
             result = self.drink(int(row["price"]), row["label"])
@@ -930,7 +935,7 @@ def load(self, context):
                 self.buyDrink()
 
         def _quickDrink(self, source_id):
-            row = next((row for row in self._entries("drinkEntries") if row.get("id") == source_id), None)
+            row = firstMatch((row for row in self._entries("drinkEntries") if row.get("id") == source_id), None)
             if not row:
                 return False
             self.setStringProperty("selectedDrink", source_id)
@@ -964,7 +969,7 @@ def load(self, context):
             if self.actorId() != "templePriest":
                 return False
             selected = self.getStringProperty("selectedService")
-            row = next((row for row in self._entries("serviceEntries") if row.get("id") == selected), None)
+            row = firstMatch((row for row in self._entries("serviceEntries") if row.get("id") == selected), None)
             if not row:
                 return False
             cost = int(row.get("price", -1))
@@ -1036,7 +1041,7 @@ def load(self, context):
             if self.actorId() != "templePriest":
                 return False
             rows = self._entries("serviceEntries")
-            row = next((entry for entry in rows if entry.get("operation") == "heal"), None)
+            row = firstMatch((entry for entry in rows if entry.get("operation") == "heal"), None)
             if row:
                 self.setStringProperty("selectedService", row["id"])
                 return self.buyService()
@@ -1068,7 +1073,7 @@ def load(self, context):
                 return False
             if self.actorId() != "templePriest":
                 return False
-            row = next(
+            row = firstMatch(
                 (entry for entry in self._entries("serviceEntries") if entry.get("operation") == "identify"), None
             )
             return self._identifyFor(int(row["price"]) if row else 100)
@@ -1284,7 +1289,7 @@ def load(self, context):
             if not actor:
                 return False
             selected = self.getStringProperty("selectedBorrow")
-            item = next((item for item in actor.getItems() if item.getName() == selected), None)
+            item = firstMatch((item for item in actor.getItems() if item.getName() == selected), None)
             if not item:
                 return False
             actor.removeItem(lambda candidate: candidate == item, False)

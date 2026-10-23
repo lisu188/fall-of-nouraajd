@@ -304,7 +304,7 @@ class ModelMap(ModelObject):
 class CandlekeepModel:
     """Small native-shaped doubles executing the complete authored load function."""
 
-    def __init__(self, **stats):
+    def __init__(self, plugin_builtins=None, **stats):
         self.types = {}
         self.trigger_types = {}
         self.gui = Mock()
@@ -361,7 +361,11 @@ class CandlekeepModel:
             return answer if any(row["id"] == answer and row.get("enabled", True) for row in rows) else ""
 
         api.choose = choose
-        namespace = {}
+        namespace = (
+            {"__builtins__": plugin_builtins, "__name__": "candlekeep_native_builtins_model"}
+            if plugin_builtins is not None
+            else {}
+        )
         with patch.dict(sys.modules, game=api):
             exec(
                 compile((MAP_ROOT / "script.py").read_text(encoding="utf-8"), "candlekeep/script.py", "exec"), namespace

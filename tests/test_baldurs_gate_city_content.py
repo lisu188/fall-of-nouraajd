@@ -3,8 +3,10 @@
 """Execute authored city callbacks with native-shaped doubles; no native gameplay credit."""
 
 import ast
+import builtins
 import json
 from pathlib import Path
+import re
 import sys
 from types import ModuleType, SimpleNamespace
 import unittest
@@ -19,6 +21,22 @@ from tests.test_candlekeep_content import ModelMap, ModelObject, ModelPlayer
 ROOT = Path(__file__).resolve().parents[1]
 SCRIPT = ROOT / "res/maps/baldursGate/script.py"
 DOCUMENT = json.loads((ROOT / "tests/fixtures/baldurs_gate_city_quests.json").read_text(encoding="utf-8"))
+
+
+def nativePluginBuiltins():
+    source = (ROOT / "src/core/CLoader.cpp").read_text(encoding="utf-8")
+    declaration = re.search(r"const std::vector<std::string> allowedNames = \{(.*?)\};", source, re.S)
+    if not declaration:
+        raise ValueError("Cannot locate native resource builtin contract")
+    result = {name: getattr(builtins, name) for name in re.findall(r'"([^"\\]+)"', declaration.group(1))}
+
+    def resourceImport(name, globals=None, locals=None, fromlist=(), level=0):
+        if level or name not in ("game", "json"):
+            raise ImportError("Native resource plugins may only import game and json")
+        return builtins.__import__(name, globals, locals, fromlist, level)
+
+    result["__import__"] = resourceImport
+    return result
 
 
 def relocationFixture():
@@ -157,7 +175,7 @@ class CityModel:
         installHookFlows(api)
         api.showReader = lambda *_args: self.readers.append(_args)
         api.choose = lambda *_args: getattr(self, "choice", "")
-        namespace = {}
+        namespace = {"__builtins__": nativePluginBuiltins(), "__name__": "baldursGateResource"}
         with patch.dict(sys.modules, game=api):
             exec(compile(SCRIPT.read_text(encoding="utf-8"), str(SCRIPT), "exec"), namespace)
             namespace["load"](None, self)
@@ -276,6 +294,40 @@ class CityModel:
 
 
 class BaldursGateCityContentTest(unittest.TestCase):
+    def testResourceCallbacksUseOnlyNativeAllowedBuiltins(self):
+        allowed = nativePluginBuiltins()
+        unsupported = sorted(
+            {
+                node.id
+                for node in ast.walk(ast.parse(SCRIPT.read_text(encoding="utf-8")))
+                if isinstance(node, ast.Name)
+                and isinstance(node.ctx, ast.Load)
+                and node.id in vars(builtins)
+                and node.id not in allowed
+            }
+        )
+        self.assertEqual([], unsupported)
+        model = CityModel()
+        self.assertEqual(set(allowed), set(model.namespace["__builtins__"]))
+        for missing in ("next", "zip", "id", "KeyError"):
+            self.assertNotIn(missing, model.namespace["__builtins__"])
+
+    def testNativeIterationHelpersKeepFirstMatchAndShortestPairSemantics(self):
+        model = CityModel()
+        observed = []
+
+        def values():
+            for value in (7, 8, 9):
+                observed.append(value)
+                yield value
+
+        self.assertEqual(7, model.namespace["firstMatch"](values(), -1))
+        self.assertEqual([7], observed)
+        self.assertEqual(-1, model.namespace["firstMatch"]([], -1))
+        self.assertIsNone(model.namespace["firstMatch"]([]))
+        self.assertEqual([(1, "a"), (2, "b")], list(model.namespace["pairedValues"]([1, 2, 3], ("a", "b"))))
+        self.assertEqual([], list(model.namespace["pairedValues"]([], [1])))
+
     def testEveryAuthoredQuestAndExcursionHasRealConcreteCallbacks(self):
         model = CityModel()
         dialog = model.createObject("BaldursGateDialog")

@@ -36,14 +36,27 @@ class PythonCallbackLifecycleTest(unittest.TestCase):
                 LIBGL_ALWAYS_SOFTWARE="1",
                 GAME_UI_PREFERENCES_PATH=str(Path(temporary) / "preferences.json"),
             )
-            result = subprocess.run(
-                [sys.executable, "-c", BOOTSTRAP + textwrap.dedent(code)],
-                cwd=ROOT,
-                env=environment,
-                capture_output=True,
-                text=True,
-                timeout=timeout_seconds,
-            )
+            try:
+                result = subprocess.run(
+                    [sys.executable, "-c", BOOTSTRAP + textwrap.dedent(code)],
+                    cwd=ROOT,
+                    env=environment,
+                    capture_output=True,
+                    text=True,
+                    timeout=timeout_seconds,
+                )
+            except subprocess.TimeoutExpired as error:
+
+                def tail(value):
+                    if value is None:
+                        return "<unavailable>"
+                    if isinstance(value, bytes):
+                        value = value.decode("utf-8", errors="replace")
+                    return value[-4096:]
+
+                error.add_note("Child stdout tail (last 4096 characters):\n" + tail(error.stdout))
+                error.add_note("Child stderr tail (last 4096 characters):\n" + tail(error.stderr))
+                raise
         if result.returncode == 77:
             self.skipTest("The compiled _game module is unavailable.")
         self.assertEqual(0, result.returncode, result.stdout + result.stderr)
