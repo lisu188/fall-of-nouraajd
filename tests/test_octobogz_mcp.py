@@ -3296,7 +3296,14 @@ class OctobogzDiagnosticTest(unittest.TestCase):
             earned_ward_scroll_name="native-ward",
             marketTransactionState=lambda: {"context": "unchanged"},
         )
-        for name in ("assertEqual", "assertTrue", "assertFalse", "assertNotIn", "assertIsNotNone"):
+        for name in (
+            "assertEqual",
+            "assertTrue",
+            "assertFalse",
+            "assertNotIn",
+            "assertIsNotNone",
+            "assertGreaterEqual",
+        ):
             setattr(fixture, name, getattr(self, name))
         self.assertEqual(handles["life"], OctobogzMcpWalkthroughTest.purchaseVictorLifePotionWithEarnedWard(fixture))
         self.assertEqual(60, state["gold"])

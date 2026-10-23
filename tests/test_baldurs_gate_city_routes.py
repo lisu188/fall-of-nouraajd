@@ -407,6 +407,7 @@ class BaldursGateCityRoutesTest(unittest.TestCase):
                 "baldurs-gate-native-failed-theft",
                 "baldurs-gate-native-trading",
                 "baldurs-gate-native-companion-inventory",
+                "baldurs-gate-native-custody",
             },
             set(cases),
         )
