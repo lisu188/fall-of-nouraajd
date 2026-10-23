@@ -131,6 +131,25 @@ class PlayerControllerSuspensionSourceTest(unittest.TestCase):
         self.assertIn("tests/unit/test_engine_hotspot_performance.cpp", cmake)
         self.assertIn('NAME "performance.performance_guard_tests" COMMAND performance_guard_tests', cmake)
 
+    def testPerformanceFixtureRegistersTheNativeFactoriesUsedByPlayerAssignment(self):
+        import re
+
+        source = (ROOT / "tests/unit/test_engine_hotspot_performance.cpp").read_text(encoding="utf-8")
+        fixture = functionBody(source, "void testSuspendedPlayerNavigationWorkIsBounded(")
+        assignment = functionBody((ROOT / "src/core/CMap.cpp").read_text(encoding="utf-8"), "void CMap::setPlayer(")
+        for class_name in ("CPlayerController", "CPlayerFightController"):
+            self.assertIn("getGame()->createObject<" + class_name + ">()", assignment)
+            registration = re.search(
+                r'fixture\.game->getObjectHandler\(\)->registerType\(\s*"'
+                + class_name
+                + r'"\s*,\s*\[\]\s*\{\s*return std::make_shared<'
+                + class_name
+                + r">\(\);\s*\}\s*\)",
+                fixture,
+            )
+            self.assertIsNotNone(registration, "The isolated fixture must supply the actual " + class_name + " factory")
+            self.assertLess(registration.end(), fixture.index("fixture.map->setPlayer(player)"))
+
     def testMovementCommitGuardUsesThePortableCallbackType(self):
         import re
 

@@ -27,6 +27,7 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #include "core/CTags.h"
 #include "core/CUtil.h"
 #include "handler/CFightHandler.h"
+#include "handler/CObjectHandler.h"
 #include "gui/CGui.h"
 #include "gui/CMovementBatch.h"
 #include "gui/object/CMinimapGraphicsObject.h"
@@ -198,6 +199,10 @@ void add_navigation_edge(const MapFixture &fixture, Coords source, Coords target
 void testSuspendedPlayerNavigationWorkIsBounded() {
     constexpr int ATTEMPTS = 128;
     auto fixture = make_open_map(9, 3);
+    fixture.game->getObjectHandler()->registerType("CPlayerController",
+                                                   [] { return std::make_shared<CPlayerController>(); });
+    fixture.game->getObjectHandler()->registerType("CPlayerFightController",
+                                                   [] { return std::make_shared<CPlayerFightController>(); });
     auto player = std::make_shared<CPlayer>();
     player->setGame(fixture.game);
     player->setBaseStats(make_actor_stats());
