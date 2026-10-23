@@ -22,13 +22,13 @@ void CMapObject::move(int x, int y, int z) {
 
 vstd::task<void> CMapObject::moveAsync(Coords delta) { return moveOwnedAsync(this->ptr<CMapObject>(), delta, false); }
 
-vstd::task<void> CMapObject::moveToAsync(Coords coords, std::move_only_function<void()> positionCommit,
+vstd::task<void> CMapObject::moveToAsync(Coords coords, vstd::move_only_function<void()> positionCommit,
                                          CMovementPresenter presenter) {
     return moveOwnedAsync(this->ptr<CMapObject>(), coords, true, std::move(positionCommit), std::move(presenter));
 }
 
 vstd::task<void> CMapObject::moveOwnedAsync(std::shared_ptr<CMapObject> object, Coords coords, bool absolute,
-                                            std::move_only_function<void()> positionCommit,
+                                            vstd::move_only_function<void()> positionCommit,
                                             CMovementPresenter presenter) {
     auto loop = vstd::event_loop<>::instance();
     if (!loop->isMainThread()) {

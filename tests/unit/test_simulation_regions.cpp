@@ -95,7 +95,7 @@ struct RegionFixture {
         actor->getBaseStats()->setStamina(10);
         actor->setLevel(1);
         actor->setHp(70);
-        actor->setCoords(coords);
+        actor->relocateWithoutMoveHooks(coords);
         actor->setStringProperty("simulationRegion", region);
         actor->setController(std::make_shared<RegionController>());
         map->addObject(actor);
@@ -281,6 +281,8 @@ void testSyntheticCityRegionCallbackAndControlBudget() {
     constexpr int INTERIOR_ACTORS = 724;
     constexpr int ACTIVE_WARD_ACTORS = 61;
     RegionFixture fixture;
+    std::cout << "synthetic city simulation region setup: actors=" << WARD_ACTORS + GLOBAL_ACTORS << std::endl;
+    performance_guard::resetMapCoordinateLookupProbe();
     for (int index = 0; index < WARD_ACTORS; ++index) {
         fixture.actor("wardResident" + std::to_string(index), "ward" + std::to_string(index % 9));
     }
@@ -288,6 +290,11 @@ void testSyntheticCityRegionCallbackAndControlBudget() {
         auto global = fixture.actor("globalCoordinator" + std::to_string(index), "outside");
         global->setBoolProperty("alwaysSimulate", true);
     }
+    const auto initialSetupProbes = performance_guard::mapCoordinateLookupProbeCount();
+    performance_guard::disableMapCoordinateLookupProbe();
+    expect_true(initialSetupProbes == 0, "unregistered fixture placement must not inspect existing coordinate entries");
+    std::cout << "synthetic city simulation region setup: coordinateProbes=" << initialSetupProbes << " budget=0"
+              << std::endl;
     auto totals = [&fixture] {
         std::pair<int, int> counts;
         for (const auto &actor : fixture.actors) {
@@ -306,9 +313,16 @@ void testSyntheticCityRegionCallbackAndControlBudget() {
     const int budget = ACTIVE_WARD_ACTORS + GLOBAL_ACTORS;
     expect_true(firstActive.first - legacy.first == budget && firstActive.second - legacy.second == budget,
                 "active ward work must stay at exactly its 61 residents plus three global actors");
+    std::cout << "synthetic city simulation region setup: addedInteriorActors=" << INTERIOR_ACTORS << std::endl;
+    performance_guard::resetMapCoordinateLookupProbe();
     for (int index = 0; index < INTERIOR_ACTORS; ++index) {
         fixture.actor("interiorResident" + std::to_string(index), "interior" + std::to_string(index % 100));
     }
+    const auto interiorSetupProbes = performance_guard::mapCoordinateLookupProbeCount();
+    performance_guard::disableMapCoordinateLookupProbe();
+    expect_true(interiorSetupProbes == 0, "dormant fixture placement must not inspect existing coordinate entries");
+    std::cout << "synthetic city simulation region setup: interiorCoordinateProbes=" << interiorSetupProbes
+              << " budget=0" << std::endl;
     fixture.map->move();
     const auto expanded = totals();
     expect_true(expanded.first - firstActive.first == budget && expanded.second - firstActive.second == budget &&

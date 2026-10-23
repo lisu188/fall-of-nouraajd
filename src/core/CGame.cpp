@@ -58,7 +58,7 @@ bool CGame::requestMapTransition(CMapTransitionRequest request) {
 }
 
 bool CGame::changeMapWithPreparationFlow(std::string mapName,
-                                         std::move_only_function<vstd::task<void>()> beforeEntryAsync,
+                                         vstd::move_only_function<vstd::task<void>()> beforeEntryAsync,
                                          std::function<void(bool)> completion,
                                          std::function<void()> commitBeforeEntry) {
     CMapTransitionRequest request;
