@@ -34,48 +34,57 @@ def buildStartingSave(args):
     server = mcp.EngineMcpServer(
         ROOT, directory, build_config=args.build_config, native_log_sink="disabled", test_seed=args.seed
     )
+
+    def createStartingSave():
+        native = server._game_module
+        game = world = player = loop = None
+        try:
+            game = native.CGameLoader.loadGame()
+            if args.campaign:
+                import campaign
+
+                campaign.start(game, args.campaign, args.class_id, args.race_id)
+            else:
+                native.CGameLoader.startGameWithPlayer(game, args.map, args.class_id, args.race_id)
+            loop = native.event_loop.instance()
+            for _ in range(3):
+                loop.run()
+            world = game.getMap()
+            if world is None or world.getPlayer() is None or game.getGui() is not None:
+                raise RuntimeError("Ordinary initial state could not be created offscreen")
+            player = world.getPlayer()
+            before = json.loads(native.jsonify(player))["properties"]
+            if args.reputation is not None:
+                player.setNumericProperty("reputation", args.reputation)
+            after = json.loads(native.jsonify(player))["properties"]
+            changed = {key for key in set(before) | set(after) if before.get(key) != after.get(key)}
+            if changed - {"reputation"}:
+                raise AssertionError(f"Starting fixture changed more than initial reputation: {sorted(changed)}")
+            if not native.CMapLoader.saveWithResult(world, args.slot):
+                raise RuntimeError("The engine refused to save its initial state")
+            return {
+                "slot": args.slot,
+                "map": world.getStringProperty("mapName"),
+                "class": args.class_id,
+                "campaign": args.campaign,
+                "initialReputation": args.reputation,
+                "seed": args.seed,
+                "changedPlayerProperties": sorted(changed),
+            }
+        finally:
+            try:
+                if game is not None:
+                    game.getContext().shutdown()
+            finally:
+                # Keep final native releases on the thread which initialized the event loop.
+                player = world = loop = game = None
+
     try:
         server.import_modules()
-        receipt = server._engine_owner.run(createStartingSave, server, args)
+        receipt = server._engine_owner.run(createStartingSave)
     finally:
         server.close()
-    print(json.dumps(receipt))
-
-
-def createStartingSave(server, args):
-    native = server._game_module
-    game = native.CGameLoader.loadGame()
-    if args.campaign:
-        import campaign
-
-        campaign.start(game, args.campaign, args.class_id, args.race_id)
-    else:
-        native.CGameLoader.startGameWithPlayer(game, args.map, args.class_id, args.race_id)
-    loop = native.event_loop.instance()
-    for _ in range(3):
-        loop.run()
-    world = game.getMap()
-    if world is None or world.getPlayer() is None or game.getGui() is not None:
-        raise RuntimeError("Ordinary initial state could not be created offscreen")
-    player = world.getPlayer()
-    before = json.loads(native.jsonify(player))["properties"]
-    if args.reputation is not None:
-        player.setNumericProperty("reputation", args.reputation)
-    after = json.loads(native.jsonify(player))["properties"]
-    changed = {key for key in set(before) | set(after) if before.get(key) != after.get(key)}
-    if changed - {"reputation"}:
-        raise AssertionError(f"Starting fixture changed more than initial reputation: {sorted(changed)}")
-    if not native.CMapLoader.saveWithResult(world, args.slot):
-        raise RuntimeError("The engine refused to save its initial state")
-    return {
-        "slot": args.slot,
-        "map": world.getStringProperty("mapName"),
-        "class": args.class_id,
-        "campaign": args.campaign,
-        "initialReputation": args.reputation,
-        "seed": args.seed,
-        "changedPlayerProperties": sorted(changed),
-    }
+    print(json.dumps(receipt), flush=True)
 
 
 def main(argv=None):

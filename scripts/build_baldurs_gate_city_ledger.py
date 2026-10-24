@@ -73,8 +73,12 @@ def buildLedger(source, quests, config, script):
             if key.startswith("source") and isinstance(value, str):
                 indexed[(key, value)].append(name)
     clock = config.get("cityClock", {}).get("properties", {})
-    actor_definitions = {row["id"]: row for row in json.loads(clock.get("actorDefinitions", "[]"))}
-    geometry_doors = {row["sourceDoor"] for row in json.loads(clock.get("geometryDoors", "[]"))}
+    actor_definitions = {
+        row["id"]: row for row in json.loads(clock.get("actorDefinitions", "[]").removeprefix("city-json:"))
+    }
+    geometry_doors = {
+        row["sourceDoor"] for row in json.loads(clock.get("geometryDoors", "[]").removeprefix("city-json:"))
+    }
     actor_configs = {
         name: record["properties"]
         for name, record in config.items()
@@ -502,7 +506,7 @@ def buildLedger(source, quests, config, script):
             ],
         )
 
-    loaded_stores = json.loads(clock.get("storeDefinitions", "{}"))
+    loaded_stores = json.loads(clock.get("storeDefinitions", "{}").removeprefix("city-json:"))
     for store_id, store in sorted(source.get("stores", {}).items()):
         targets = indexed[("sourceStore", store_id)]
         proof = [evidence("/stores/" + store_id, store["sha256"], store_id + ".STO")]
@@ -554,7 +558,7 @@ def buildLedger(source, quests, config, script):
                 ],
             )
 
-    loaded_rules = json.loads(clock.get("numericSourceRules", "{}"))
+    loaded_rules = json.loads(clock.get("numericSourceRules", "{}").removeprefix("city-json:"))
     for resource, rule in sorted(source.get("numericSourceRules", {}).items()):
         targets = ["cityClock.numericSourceRules"] if loaded_rules.get(resource) == rule else []
         available = targets and "donate" in methods.get("BaldursGateDialog", set())

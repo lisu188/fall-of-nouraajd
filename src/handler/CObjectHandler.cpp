@@ -23,6 +23,7 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #include "object/CTile.h"
 
 #include <algorithm>
+#include <unordered_set>
 
 CObjectHandler::CObjectHandler() {}
 
@@ -337,15 +338,8 @@ std::shared_ptr<CGameObject> CObjectHandler::_clone(const std::shared_ptr<CGameO
 std::vector<std::string> CObjectHandler::getAllSubTypes(const std::string &claz) {
     std::vector<std::string> ret;
     for (const auto &type : getAllTypes()) {
-        auto conf = getConfig(type);
-        if (CJsonUtil::isRef(conf)) {
-            conf = getConfig((*conf)["ref"].get<std::string>());
-        }
-        if (!conf || !conf->is_object() || !conf->contains("class") || !(*conf)["class"].is_string()) {
-            continue;
-        }
-        auto clas = (*conf)["class"].get<std::string>();
-        if (getType(clas) && getType(clas)->meta()->inherits(claz)) {
+        auto prototype = getType(getClass(type));
+        if (prototype && prototype->meta()->inherits(claz)) {
             ret.push_back(type);
         }
     }
@@ -353,16 +347,21 @@ std::vector<std::string> CObjectHandler::getAllSubTypes(const std::string &claz)
 }
 
 std::string CObjectHandler::getClass(const std::string &type) {
-    auto conf = getConfig(type);
-    if (CJsonUtil::isRef(conf)) {
-        conf = getConfig((*conf)["ref"].get<std::string>());
-    }
-    if (!conf || !conf->is_object() || !conf->contains("class") || !(*conf)["class"].is_string()) {
+    std::unordered_set<std::string> visited;
+    auto current = type;
+    while (visited.insert(current).second) {
+        auto conf = getConfig(current);
+        if (CJsonUtil::isRef(conf)) {
+            current = (*conf)["ref"].get<std::string>();
+            continue;
+        }
+        if (conf && conf->is_object() && conf->contains("class") && (*conf)["class"].is_string()) {
+            return (*conf)["class"].get<std::string>();
+        }
         return "";
     }
-    return (*conf)["class"].get<std::string>();
+    return "";
 }
-
 void CObjectHandler::registerConfig(const std::set<std::string> &paths) {
     for (const auto &path : paths) {
         registerConfig(path);

@@ -107,13 +107,13 @@ std::shared_ptr<T> flowObjectArgument(CScriptFlow &flow, const json &arguments, 
     return result;
 }
 
-template <typename T> T runGuiTask(const std::shared_ptr<CGame> &game, vstd::task<T> task) {
+template <typename T> T runGuiTask(std::shared_ptr<CGame> game, vstd::task<T> task) {
     try {
         if (game) {
+            const auto mode = game->getGui() ? game_async::WaitMode::Frames : game_async::WaitMode::PostedWork;
             auto handle = game->getContext()->spawnTask(std::move(task));
-            return handle.finished() ? handle.get()
-                                     : game_async::wait(handle, game->getGui() ? game_async::WaitMode::Frames
-                                                                               : game_async::WaitMode::PostedWork);
+            game.reset();
+            return handle.finished() ? handle.get() : game_async::wait(handle, mode);
         }
         vstd::task_group group;
         return group.spawn(std::move(task)).get();

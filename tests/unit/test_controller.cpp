@@ -392,6 +392,72 @@ void testCatacombsControllerCanLeaveItsAuthoredGrassSpawn() {
     expect_true(moved, "The fixed native RNG sequence must move the configured Catacombs enemy away from its spawn");
 }
 
+void testPlayerControllerMovementSuspensionBlocksRequestsAndResumes() {
+    auto game = std::make_shared<CGame>();
+    open_tile_map(game, 4, 1);
+    auto player = player_at(game, Coords(0, 0, 0));
+    auto controller = std::make_shared<CPlayerController>();
+    controller->setGame(game);
+    player->setController(controller);
+    expect_true(!controller->getMovementSuspended(), "player movement must remain enabled by default");
+    controller->setTarget(player, Coords(3, 0, 0));
+    expect_true(resolve_coords(controller->controlAsync(player)) == Coords(1, 0, 0),
+                "ordinary controllers must still plan the first native step");
+    expect_true(controller->isOnPath(player, Coords(2, 0, 0)).first,
+                "ordinary queued routes must retain their path overlay");
+    const auto before_suspend = controller->getRequestSerial();
+    controller->setBoolProperty("movementSuspended", true);
+    expect_true(controller->getMovementSuspended() && controller->getBoolProperty("movementSuspended") &&
+                    controller->getRequestSerial() == before_suspend + 1,
+                "the reflected pause must discard the old route exactly once");
+    const auto suspended_serial = controller->getRequestSerial();
+    const auto overlay_lookups = controller->getOverlayLookupCount();
+    for (int repeat = 0; repeat < 128; ++repeat) {
+        controller->setTarget(player, Coords(3, 0, 0));
+        controller->setMovementSuspended(true);
+        expect_true(resolve_coords(controller->controlAsync(player)) == player->getCoords(),
+                    "suspended movement must never propose a step");
+        expect_true(!controller->isOnPath(player, Coords(2, 0, 0)).first && controller->isCompleted(player),
+                    "suspended movement must reject overlays and pending-route claims");
+        controller->onStepCommitted(player, Coords(1, 0, 0));
+        controller->interrupt(player);
+    }
+    expect_true(controller->getRequestSerial() == suspended_serial &&
+                    controller->getOverlayLookupCount() == overlay_lookups,
+                "128 paused input/control/overlay probes must perform no route requests or overlay lookups");
+    controller->setMovementSuspended(false);
+    expect_true(controller->isCompleted(player), "re-enabling must not revive the discarded pre-pause route");
+    controller->setTarget(player, Coords(2, 0, 0));
+    expect_true(!controller->isCompleted(player) && resolve_coords(controller->controlAsync(player)) == Coords(1, 0, 0),
+                "re-enabled movement must accept a fresh native target");
+    expect_true(controller->isOnPath(player, Coords(2, 0, 0)).first,
+                "re-enabled movement must restore ordinary path overlays");
+    game->getContext()->shutdown();
+}
+
+void testPlayerControllerMovementSuspensionRoundTripsWithLegacyDefault() {
+    auto game = CGameLoader::loadGame();
+    using ObjectJson = CSerializerFunction<std::shared_ptr<json>, std::shared_ptr<CGameObject>>;
+    for (const bool suspended : {false, true}) {
+        auto controller = game->createObject<CPlayerController>();
+        controller->setMovementSuspended(suspended);
+        auto document = ObjectJson::serialize(controller);
+        const auto &serialized_pause = document->at("properties").at("movementSuspended");
+        expect_true(serialized_pause.is_boolean() && serialized_pause.get<bool>() == suspended,
+                    "native controller snapshots must encode suspension as a typed boolean");
+        auto restored = std::dynamic_pointer_cast<CPlayerController>(ObjectJson::deserialize(game, document));
+        expect_true(restored && restored != controller && restored->getMovementSuspended() == suspended &&
+                        restored->getGame() == game,
+                    "native controller reload must retain either suspension state and its owner");
+        auto legacy_document = std::make_shared<json>(*document);
+        legacy_document->at("properties").erase("movementSuspended");
+        auto legacy = std::dynamic_pointer_cast<CPlayerController>(ObjectJson::deserialize(game, legacy_document));
+        expect_true(legacy && !legacy->getMovementSuspended(),
+                    "older controller snapshots must retain ordinary enabled movement");
+    }
+    game->getContext()->shutdown();
+}
+
 void test_player_controller_prefers_longer_lower_cost_route() {
     auto game = std::make_shared<CGame>();
     weighted_detour_map(game);
@@ -1927,6 +1993,8 @@ int main() {
     test_npc_random_controller_clears_stale_blocked_path();
     testGroundControllerReturnsReadyStepBeforeTransition();
     testCatacombsControllerCanLeaveItsAuthoredGrassSpawn();
+    testPlayerControllerMovementSuspensionBlocksRequestsAndResumes();
+    testPlayerControllerMovementSuspensionRoundTripsWithLegacyDefault();
     test_player_controller_prefers_longer_lower_cost_route();
     test_player_controller_stops_and_clears_path_when_obstacle_appears();
     test_npc_random_controller_prefers_longer_lower_cost_route();

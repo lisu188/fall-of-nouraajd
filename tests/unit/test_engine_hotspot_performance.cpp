@@ -21,11 +21,13 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #include "core/CGameContext.h"
 #include "core/CGame.h"
 #include "core/CMap.h"
+#include "core/CNavigation.h"
 #include "core/CStats.h"
 #include "core/CTypes.h"
 #include "core/CTags.h"
 #include "core/CUtil.h"
 #include "handler/CFightHandler.h"
+#include "handler/CObjectHandler.h"
 #include "gui/CGui.h"
 #include "gui/CMovementBatch.h"
 #include "gui/object/CMinimapGraphicsObject.h"
@@ -192,6 +194,82 @@ void add_navigation_edge(const MapFixture &fixture, Coords source, Coords target
     edge.enabled = true;
     edge.sourceObjectName = std::move(source_object_name);
     fixture.map->registerNavigationEdge(std::move(edge));
+}
+
+void testSuspendedPlayerNavigationWorkIsBounded() {
+    constexpr int ATTEMPTS = 128;
+    auto fixture = make_open_map(9, 3);
+    fixture.game->getObjectHandler()->registerType("CPlayerController",
+                                                   [] { return std::make_shared<CPlayerController>(); });
+    fixture.game->getObjectHandler()->registerType("CPlayerFightController",
+                                                   [] { return std::make_shared<CPlayerFightController>(); });
+    auto player = std::make_shared<CPlayer>();
+    player->setGame(fixture.game);
+    player->setBaseStats(make_actor_stats());
+    player->setLevelStats(std::make_shared<CStats>());
+    player->setHp(20);
+    fixture.map->setPlayer(player);
+    const Coords origin(0, 1, 0), goal(8, 1, 0);
+    player->relocateWithoutMoveHooks(origin);
+    auto controller = std::dynamic_pointer_cast<CPlayerController>(player->getController());
+    expect_true(controller != nullptr, "the suspension guard requires the native player movement controller");
+    if (!controller) {
+        fixture.game->getContext()->shutdown();
+        return;
+    }
+    auto navigation = fixture.map->getNavigationService();
+    const auto cold_searches = navigation->searchCount();
+    controller->setTarget(player, goal);
+    expect_true(navigation->searchCount() == cold_searches + 1 && !controller->isCompleted(player),
+                "the fixed open map must produce one real native route before suspension");
+    controller->setMovementSuspended(true);
+    const auto serial = controller->getRequestSerial();
+    const auto overlays = controller->getOverlayLookupCount();
+    const auto searches = navigation->searchCount();
+    const auto used = navigation->budget()->used();
+    const auto peak = navigation->budget()->peak();
+    const auto flows = performance_guard::targetFlowCacheSize();
+    const auto revision = fixture.map->getNavigationRevision();
+    const auto objects = fixture.map->getObjects().size();
+    const auto cache_entries = fixture.map->getObjectCacheEntryCountForTesting();
+    const auto tiles = fixture.map->getTiles().size();
+    const auto turn = fixture.map->getTurn();
+    int idle_steps = 0, hidden_overlays = 0, completed_routes = 0;
+    for (int attempt = 0; attempt < ATTEMPTS; ++attempt) {
+        controller->setTarget(player, Coords(8, attempt % 3, 0));
+        idle_steps += resolve_step(player) == origin;
+        hidden_overlays += !controller->isOnPath(player, goal).first;
+        controller->onStepCommitted(player, goal);
+        controller->interrupt(player);
+        completed_routes += controller->isCompleted(player);
+    }
+    fixture.map->move();
+    const auto disabled_searches = navigation->searchCount() - searches;
+    const auto disabled_serial_delta = controller->getRequestSerial() - serial;
+    expect_true(idle_steps == ATTEMPTS && hidden_overlays == ATTEMPTS && completed_routes == ATTEMPTS &&
+                    player->getCoords() == origin && fixture.map->getTurn() == turn + 1,
+                "128 disabled native requests, plans and overlay probes must remain idle without suppressing turns");
+    expect_true(
+        controller->getRequestSerial() == serial && controller->getOverlayLookupCount() == overlays &&
+            navigation->searchCount() == searches && navigation->budget()->used() == used &&
+            navigation->budget()->peak() == peak && performance_guard::targetFlowCacheSize() == flows,
+        "disabled movement must not churn route serials or grow path searches, live bytes, peak bytes or flows");
+    expect_true(fixture.map->getNavigationRevision() == revision && fixture.map->getObjects().size() == objects &&
+                    fixture.map->getObjectCacheEntryCountForTesting() == cache_entries &&
+                    fixture.map->getTiles().size() == tiles,
+                "disabled movement must preserve navigation revision and map/cache cardinality");
+    controller->setMovementSuspended(false);
+    controller->setTarget(player, goal);
+    fixture.map->move();
+    expect_true(navigation->searchCount() == searches + 1 && controller->getRequestSerial() == serial + 1 &&
+                    player->getCoords() == Coords(1, 1, 0) && fixture.map->getTurn() == turn + 2 &&
+                    fixture.map->getNavigationRevision() == revision + 1,
+                "one enabled request must restore exactly one ordinary path search, committed step and turn");
+    std::cout << "player suspension guard: disabledRequests=" << ATTEMPTS << " idlePlans=" << idle_steps
+              << " hiddenOverlays=" << hidden_overlays << " disabledSearches=" << disabled_searches
+              << " disabledRouteSerialDelta=" << disabled_serial_delta
+              << " enabledSearches=" << navigation->searchCount() - searches << " enabledMoves=1\n";
+    fixture.game->getContext()->shutdown();
 }
 
 void test_many_target_controllers_share_one_goal_without_mutating_navigation() {
@@ -1402,6 +1480,7 @@ void run_engine_hotspot_performance_tests() {
     }
 
     test_stat_composition_eliminates_repeated_reflective_increments();
+    testSuspendedPlayerNavigationWorkIsBounded();
     test_many_target_controllers_share_one_goal_without_mutating_navigation();
     test_weighted_target_flow_field_is_single_build_and_materialization_bounded();
     test_relevant_object_move_invalidates_target_navigation();

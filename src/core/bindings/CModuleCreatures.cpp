@@ -90,6 +90,8 @@ void bindCreatures(py::module_ &m) {
              "Restore an absolute amount of mana, clamped to maximum; zero restores mana fully.")
         .def("isPlayer", &CCreature::isPlayer, "Return whether this creature is the active player.")
         .def("isNpc", &CCreature::isNpc, "Return whether this creature is marked as NPC.")
+        .def("getPendingMoveOrigin", &CCreature::getPendingMoveOrigin, py::return_value_policy::copy,
+             "Return a copied move origin while movement hooks are active, or None outside a move.")
         .def("getController", &CCreature::getController, "Return the movement controller.")
         .def("setController", &CCreature::setController, "Set the movement controller.")
         .def("getFightController", &CCreature::getFightController, "Return the fight controller.")

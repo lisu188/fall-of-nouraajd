@@ -24,6 +24,82 @@ import mcp
 ROOT = Path(__file__).resolve().parents[1]
 
 
+def nativeHttpChildScript():
+    return textwrap.dedent("""
+
+        import faulthandler, json, sys, threading
+        from pathlib import Path
+        faulthandler.enable(file=sys.stderr, all_threads=True)
+        import mcp
+        server = mcp.EngineMcpServer(Path(sys.argv[1]), Path(sys.argv[2]),
+                                    build_config=sys.argv[3] or None, native_log_sink='disabled')
+        try:
+            server.import_modules()
+            server.inspect_and_export()
+            httpd = mcp.EngineHttpServer(('127.0.0.1', 0), mcp.EngineHttpRequestHandler, server)
+            serving = threading.Thread(target=httpd.serve_forever, daemon=True)
+            serving.start()
+            print('MCP_HTTP_READY ' + str(httpd.server_port), flush=True)
+            sys.stdin.readline()
+            # Leave the one-shot armed through native and interpreter finalization.
+            faulthandler.dump_traceback_later(20, repeat=False, file=sys.stderr)
+            print('MCP_HTTP_TEARDOWN_BEGIN', file=sys.stderr, flush=True)
+            httpd.shutdown()
+            httpd.server_close()
+            serving.join()
+            print('MCP_HTTP_HTTP_CLOSED', file=sys.stderr, flush=True)
+        finally:
+            server.close()
+            print('MCP_HTTP_FIRST_SERVER_CLOSED', file=sys.stderr, flush=True)
+        replacement = mcp.EngineMcpServer(Path(sys.argv[1]), Path(sys.argv[2]),
+                                        build_config=sys.argv[3] or None, native_log_sink='disabled')
+        try:
+            replacement.import_modules()
+            replacement.inspect_and_export()
+            assert replacement._engine_owner is server._engine_owner
+            def secondSession():
+                game = replacement.game_module.CGameLoader.loadGame()
+                replacement.game_module.CGameLoader.startGameWithPlayer(game, 'multilevel', 'Warrior')
+                game.getMap().move()
+                game.getContext().shutdown()
+            replacement._engine_owner.run(secondSession)
+        finally:
+            replacement.close()
+        print('MCP_HTTP_REOPENED', flush=True)
+        print('MCP_HTTP_CLOSED', flush=True)
+        threads = [
+            {'name': t.name, 'ident': t.ident, 'daemon': t.daemon, 'alive': t.is_alive()}
+            for t in threading.enumerate()[:16]
+        ]
+        print('MCP_HTTP_FINAL_THREADS ' + json.dumps(threads), file=sys.stderr, flush=True)
+        print('MCP_HTTP_ENTERING_FINALIZATION', file=sys.stderr, flush=True)
+        """)
+
+
+def closeNativeHttpChild(proc, readers, stdout, stderr):
+    timeout_error = None
+    try:
+        if proc.poll() is None:
+            try:
+                proc.stdin.write("close\n")
+                proc.stdin.flush()
+            except BrokenPipeError:
+                pass
+            try:
+                proc.wait(timeout=30)
+            except subprocess.TimeoutExpired as error:
+                timeout_error = error
+                proc.kill()
+                proc.wait(timeout=5)
+    finally:
+        for reader in readers:
+            reader.join(timeout=5)
+        for stream in (proc.stdin, proc.stdout, proc.stderr):
+            stream.close()
+    if timeout_error is not None:
+        raise AssertionError("native HTTP shutdown timed out:\n" + "".join(stdout) + "".join(stderr)) from timeout_error
+
+
 def nativeBuildDirectory():
     default_build = "cmake-build-clangcl20-release" if os.name == "nt" else "cmake-build-gcc15-release"
     path = Path(os.environ.get("GAME_BUILD_DIR") or default_build)
@@ -121,6 +197,245 @@ class McpEngineThreadTest(unittest.TestCase):
                 for suite in (selected, "full", "coverage-safe"):
                     self.assertTrue(runner.test_name_matches_suite(name, suite), (name, suite))
                 self.assertFalse(runner.test_name_matches_suite(name, excluded), (name, excluded))
+
+    def runFinalizerReentryProbe(self, modes):
+        script = textwrap.dedent("""
+            import faulthandler, gc, sys, threading, weakref
+            from pathlib import Path
+            from unittest.mock import patch
+            import mcp
+            faulthandler.enable(file=sys.stderr, all_threads=True)
+            faulthandler.dump_traceback_later(3, repeat=False, file=sys.stderr)
+            gc.disable()
+            for mode in sys.argv[1:]:
+                order, released = [], []
+                owners, constructed = [], []
+                original_thread = threading.Thread
+                original_start = original_thread.start
+                original_bootstrap = original_thread._bootstrap_inner
+                original_pump = mcp.EnginePump
+                def construct(*args, **kwargs):
+                    if owners and mode == 'construction':
+                        gc.collect()
+                    value = original_thread(*args, **kwargs)
+                    constructed.append(value)
+                    return value
+                def start(value):
+                    if mode == 'start':
+                        gc.collect()
+                    return original_start(value)
+                def bootstrap(value):
+                    if mode == 'bootstrap':
+                        gc.collect()
+                    return original_bootstrap(value)
+                class CollectingPump(original_pump):
+                    def __init__(self, owner):
+                        gc.collect()
+                        super().__init__(owner)
+                class Loop:
+                    def invoke(self, callback):
+                        return True
+                class Possession:
+                    def __del__(self):
+                        order.append('cleanup')
+                        released.append(threading.get_ident())
+                with patch.object(mcp.threading, 'Thread', side_effect=construct), patch.object(
+                    original_thread, 'start', start
+                ), patch.object(original_thread, '_bootstrap_inner', bootstrap):
+                    owner = mcp.EngineOwner()
+                    owners.append(owner)
+                    mcp._PROCESS_ENGINE_OWNER = owner
+                    server = mcp.EngineMcpServer(Path('.'), Path('.'))
+                    resources = server._resources
+                    resources.stdio_handles.handles['owned'] = Possession()
+                    server.reference_cycle = server
+                    reference = weakref.ref(server)
+                    del server
+                    print('finalizer-probe', mode, flush=True)
+                    if mode == 'locked':
+                        owner.submit(lambda: order.append('before'))
+                        with owner._lock:
+                            gc.collect()
+                    elif mode == 'pump':
+                        owner.attachNativeLoop(Loop())
+                        with patch.object(mcp, 'EnginePump', CollectingPump):
+                            owner.run(threading.get_ident)
+                    else:
+                        owner.run(threading.get_ident)
+                    gc.collect()
+                    owner.submit(lambda: order.append('after')).result(timeout=3)
+                    owner_id = owner.run(threading.get_ident)
+                    assert reference() is None
+                    assert resources.closed and resources not in owner.resources
+                    assert released == [owner_id], (mode, released, owner_id)
+                    if mode == 'locked':
+                        assert order == ['before', 'cleanup', 'after'], order
+                    assert len(constructed) == 1, (mode, len(constructed))
+                    assert owner._thread is constructed[0]
+                    assert {owner.run(threading.get_ident) for _ in range(8)} == {owner_id}
+                    owner.close(lambda: order.append('closed'))
+                    assert order[-1] == 'closed' and not owner._thread.is_alive()
+            faulthandler.cancel_dump_traceback_later()
+            print('finalizer reentry preserves one FIFO owner and releases actual resources', flush=True)
+            """)
+        environment = os.environ.copy()
+        environment["PYTHONDONTWRITEBYTECODE"] = "1"
+        try:
+            result = subprocess.run(
+                [sys.executable, "-B", "-c", script, *modes],
+                cwd=ROOT,
+                env=environment,
+                capture_output=True,
+                text=True,
+                timeout=8,
+            )
+        except subprocess.TimeoutExpired as error:
+            output = error.stderr or ""
+            if isinstance(output, bytes):
+                output = output.decode("utf-8", errors="replace")
+            raise AssertionError("Pure finalizer probe timed out:\n" + output[-8192:]) from None
+        self.assertEqual(0, result.returncode, result.stdout + result.stderr)
+        self.assertIn("finalizer reentry preserves one FIFO owner and releases actual resources", result.stdout)
+
+    def testCollectedServerCleanupCanReenterTheOwnerLockAndKeepsFifo(self):
+        self.runFinalizerReentryProbe(["locked"])
+
+    def testCollectionDuringOwnerConstructionStartAndPumpKeepsExactlyOneOwnerThread(self):
+        self.runFinalizerReentryProbe(["construction", "start", "bootstrap", "pump"])
+
+    def runOwnerStartupProbe(self, mode):
+        script = textwrap.dedent("""
+            import faulthandler, sys, threading, weakref
+            from unittest.mock import patch
+            import mcp
+            faulthandler.enable(file=sys.stderr, all_threads=True)
+            faulthandler.dump_traceback_later(3, repeat=False, file=sys.stderr)
+            owner = mcp.EngineOwner()
+            mcp._PROCESS_ENGINE_OWNER = owner
+            prepared = owner._prepared_thread
+            callbacks, errors = [], {}
+            original_start_new = threading._start_new_thread
+            original_bootstrap = threading.Thread._bootstrap_inner
+            if sys.argv[1] == 'failure':
+                entered, fail, close_queued = threading.Event(), threading.Event(), threading.Event()
+                original_queue = owner._queue
+                class ObservedQueue:
+                    def put(self, job):
+                        original_queue.put(job)
+                        if job is None:
+                            close_queued.set()
+                    def get_nowait(self):
+                        return original_queue.get_nowait()
+                owner._queue = ObservedQueue()
+                original_error = RuntimeError('actual prelaunch failure')
+                def start_new(callback, args):
+                    if getattr(callback, '__self__', None) is prepared:
+                        entered.set()
+                        assert fail.wait(3)
+                        raise original_error
+                    return original_start_new(callback, args)
+                def starter():
+                    try:
+                        owner.run(lambda: callbacks.append('starter'))
+                    except BaseException as error:
+                        errors['starter'] = error
+                def closer():
+                    try:
+                        owner.close(lambda: callbacks.append('cleanup'))
+                    except BaseException as error:
+                        errors['closer'] = error
+                class Payload:
+                    pass
+                with patch.object(threading, '_start_new_thread', start_new):
+                    submitting = threading.Thread(target=starter, daemon=True)
+                    submitting.start()
+                    assert entered.wait(3)
+                    payload = Payload()
+                    reference = weakref.ref(payload)
+                    pending = owner.submit(lambda captured=payload: callbacks.append(captured))
+                    del payload
+                    closing = threading.Thread(target=closer, daemon=True)
+                    closing.start()
+                    assert close_queued.wait(3)
+                    completions = []
+                    for future in (pending, owner._closing_future):
+                        future.add_done_callback(lambda done: completions.append(
+                            (reference() is None, done.exception().__traceback__ is None)
+                        ))
+                    fail.set()
+                    submitting.join(3)
+                    closing.join(3)
+                assert not submitting.is_alive() and not closing.is_alive()
+                assert errors['starter'] is original_error
+                failure = pending.exception(timeout=3)
+                close_failure = owner._closing_future.exception(timeout=3)
+                assert type(failure) is RuntimeError and str(failure) == 'MCP engine owner thread could not start'
+                assert errors['closer'] is close_failure and close_failure is not failure
+                assert completions == [(True, True), (True, True)], completions
+                assert callbacks == [] and reference() is None
+                assert owner._closed and owner._thread is None and original_queue.empty()
+                try:
+                    owner.submit(lambda: None)
+                except RuntimeError as error:
+                    assert str(error) == 'MCP engine owner has closed'
+                else:
+                    raise AssertionError('failed owner accepted another job')
+                mcp._closeProcessEngine()
+            else:
+                gate, entered, executed = threading.Event(), threading.Event(), threading.Event()
+                exception_type = MemoryError if sys.argv[1] == 'exception' else KeyboardInterrupt
+                original_error = exception_type('interrupted after launch')
+                def bootstrap(thread):
+                    if thread is prepared:
+                        entered.set()
+                        assert gate.wait(3)
+                    return original_bootstrap(thread)
+                with patch.object(threading.Thread, '_bootstrap_inner', bootstrap), patch.object(
+                    prepared._started, 'wait', side_effect=original_error
+                ):
+                    try:
+                        owner.submit(executed.set)
+                    except BaseException as error:
+                        assert error is original_error
+                    else:
+                        raise AssertionError('injected startup interruption was lost')
+                    assert entered.wait(3)
+                    assert prepared.ident is None
+                    assert owner._thread is prepared and not owner._closed
+                    gate.set()
+                assert executed.wait(3)
+                assert owner.run(threading.get_ident) == prepared.ident
+                owner.close(lambda: callbacks.append('cleanup'))
+                assert callbacks == ['cleanup'] and not prepared.is_alive()
+            faulthandler.cancel_dump_traceback_later()
+            print('owner startup failure and launch ownership verified', flush=True)
+            """)
+        environment = os.environ.copy()
+        environment["PYTHONDONTWRITEBYTECODE"] = "1"
+        try:
+            result = subprocess.run(
+                [sys.executable, "-B", "-c", script, mode],
+                cwd=ROOT,
+                env=environment,
+                capture_output=True,
+                text=True,
+                timeout=8,
+            )
+        except subprocess.TimeoutExpired as error:
+            output = error.stderr or ""
+            if isinstance(output, bytes):
+                output = output.decode("utf-8", errors="replace")
+            raise AssertionError("Pure startup probe timed out:\n" + output[-8192:]) from None
+        self.assertEqual(0, result.returncode, result.stdout + result.stderr)
+        self.assertIn("owner startup failure and launch ownership verified", result.stdout)
+
+    def testPrelaunchFailureSettlesConcurrentSubmitAndCloseWithoutKeepingQueuedCallbacks(self):
+        self.runOwnerStartupProbe("failure")
+
+    def testInterruptedLaunchRetainsItsWorkerBeforeIdentifierPublication(self):
+        for mode in ("exception", "interrupt"):
+            with self.subTest(mode=mode):
+                self.runOwnerStartupProbe(mode)
 
     def testDifferentLiveHttpHandlersShareInvocationSerializationAndReleaseThread(self):
         events = []
@@ -428,6 +743,100 @@ class McpEngineThreadTest(unittest.TestCase):
             owner.run(fail)
         self.assertEqual([owner._thread.ident], released)
 
+    def testNativeHttpChildKeepsDeferredThreadDumpArmedUntilFinalization(self):
+        from types import SimpleNamespace
+        from unittest.mock import Mock
+
+        fault = SimpleNamespace(enable=Mock(), dump_traceback_later=Mock(), cancel_dump_traceback_later=Mock())
+        context = SimpleNamespace(shutdown=Mock())
+        game_map = SimpleNamespace(move=Mock())
+        game = SimpleNamespace(getMap=lambda: game_map, getContext=lambda: context)
+        loader = SimpleNamespace(loadGame=lambda: game, startGameWithPlayer=Mock())
+        owner = SimpleNamespace(run=lambda callback: callback())
+        servers = []
+
+        class Server:
+            def __init__(self, *args, **kwargs):
+                self._engine_owner = owner
+                self.game_module = SimpleNamespace(CGameLoader=loader)
+                self.import_modules = Mock()
+                self.inspect_and_export = Mock()
+                self.close = Mock()
+                servers.append(self)
+
+        httpd = SimpleNamespace(server_port=12345, serve_forever=lambda: None, shutdown=Mock(), server_close=Mock())
+        fake_mcp = SimpleNamespace(
+            EngineMcpServer=Server, EngineHttpServer=lambda *args: httpd, EngineHttpRequestHandler=object
+        )
+        stdout, stderr = io.StringIO(), io.StringIO()
+        with (
+            patch.dict(sys.modules, {"mcp": fake_mcp, "faulthandler": fault}),
+            patch.object(sys, "argv", ["child", str(ROOT), str(ROOT), ""]),
+            patch.object(sys, "stdin", io.StringIO("close\n")),
+            patch.object(sys, "stdout", stdout),
+            patch.object(sys, "stderr", stderr),
+        ):
+            exec(nativeHttpChildScript(), {})
+        fault.enable.assert_called_once_with(file=stderr, all_threads=True)
+        fault.dump_traceback_later.assert_called_once_with(20, repeat=False, file=stderr)
+        fault.cancel_dump_traceback_later.assert_not_called()
+        self.assertTrue(all(server.close.call_count == 1 for server in servers))
+        self.assertEqual(context.shutdown.call_count, 1)
+        self.assertIn("MCP_HTTP_CLOSED", stdout.getvalue())
+        self.assertIn("MCP_HTTP_TEARDOWN_BEGIN", stderr.getvalue())
+        self.assertIn("MCP_HTTP_ENTERING_FINALIZATION", stderr.getvalue())
+        threads_line = next(
+            line for line in stderr.getvalue().splitlines() if line.startswith("MCP_HTTP_FINAL_THREADS ")
+        )
+        self.assertLessEqual(len(json.loads(threads_line.partition(" ")[2])), 16)
+
+    def testNativeHttpShutdownTimeoutPreservesFailureAndClosesStreamsAfterDiagnosticsDrain(self):
+        from types import SimpleNamespace
+        from unittest.mock import Mock
+
+        timeout = subprocess.TimeoutExpired(["native-child"], 30)
+        proc = SimpleNamespace(
+            poll=lambda: None,
+            stdin=io.StringIO(),
+            stdout=io.StringIO(),
+            stderr=io.StringIO(),
+            wait=Mock(side_effect=[timeout, -9]),
+            kill=Mock(),
+        )
+        stdout, stderr = deque(["MCP_HTTP_CLOSED\n"], maxlen=80), deque(maxlen=80)
+        reader = SimpleNamespace(join=Mock(side_effect=lambda **kwargs: stderr.append("native teardown stack\n")))
+        original = TimeoutError("original modal response timed out")
+        with self.assertRaisesRegex(AssertionError, "native HTTP shutdown timed out") as caught:
+            try:
+                raise original
+            finally:
+                closeNativeHttpChild(proc, [reader], stdout, stderr)
+        self.assertIs(caught.exception.__cause__, timeout)
+        self.assertIs(timeout.__context__, original)
+        self.assertIn("native teardown stack", str(caught.exception))
+        self.assertIn("MCP_HTTP_CLOSED", str(caught.exception))
+        self.assertEqual([entry.kwargs for entry in proc.wait.call_args_list], [{"timeout": 30}, {"timeout": 5}])
+        proc.kill.assert_called_once_with()
+        reader.join.assert_called_once_with(timeout=5)
+        self.assertTrue(all(stream.closed for stream in (proc.stdin, proc.stdout, proc.stderr)))
+
+    def testNativeHttpSuccessfulShutdownKeepsThirtySecondBoundWithoutKilling(self):
+        from types import SimpleNamespace
+        from unittest.mock import Mock
+
+        proc = SimpleNamespace(
+            poll=lambda: None,
+            stdin=io.StringIO(),
+            stdout=io.StringIO(),
+            stderr=io.StringIO(),
+            wait=Mock(return_value=0),
+            kill=Mock(),
+        )
+        closeNativeHttpChild(proc, [], deque(maxlen=80), deque(maxlen=80))
+        proc.wait.assert_called_once_with(timeout=30)
+        proc.kill.assert_not_called()
+        self.assertTrue(all(stream.closed for stream in (proc.stdin, proc.stdout, proc.stderr)))
+
     def testCloseDrainsAcceptedCallsAndRejectsNewCalls(self):
         owner = mcp.EngineOwner()
         entered = threading.Event()
@@ -477,42 +886,7 @@ class McpHttpNativeRuntimeTest(unittest.TestCase):
             if os.environ.get("GAME_BUILD_DIR") and os.environ.get("CI"):
                 self.fail(f"Required native HTTP binary is missing from {build_dir}")
             self.skipTest("The current compiled _game module is unavailable for native HTTP validation.")
-        child = textwrap.dedent("""
-            import json, sys, threading
-            from pathlib import Path
-            import mcp
-            server = mcp.EngineMcpServer(Path(sys.argv[1]), Path(sys.argv[2]),
-                                        build_config=sys.argv[3] or None, native_log_sink='disabled')
-            try:
-                server.import_modules()
-                server.inspect_and_export()
-                httpd = mcp.EngineHttpServer(('127.0.0.1', 0), mcp.EngineHttpRequestHandler, server)
-                serving = threading.Thread(target=httpd.serve_forever, daemon=True)
-                serving.start()
-                print('MCP_HTTP_READY ' + str(httpd.server_port), flush=True)
-                sys.stdin.readline()
-                httpd.shutdown()
-                httpd.server_close()
-                serving.join()
-            finally:
-                server.close()
-            replacement = mcp.EngineMcpServer(Path(sys.argv[1]), Path(sys.argv[2]),
-                                            build_config=sys.argv[3] or None, native_log_sink='disabled')
-            try:
-                replacement.import_modules()
-                replacement.inspect_and_export()
-                assert replacement._engine_owner is server._engine_owner
-                def secondSession():
-                    game = replacement.game_module.CGameLoader.loadGame()
-                    replacement.game_module.CGameLoader.startGameWithPlayer(game, 'multilevel', 'Warrior')
-                    game.getMap().move()
-                    game.getContext().shutdown()
-                replacement._engine_owner.run(secondSession)
-            finally:
-                replacement.close()
-            print('MCP_HTTP_REOPENED', flush=True)
-            print('MCP_HTTP_CLOSED', flush=True)
-            """)
+        child = nativeHttpChildScript()
         environment = os.environ.copy()
         environment.update(
             SDL_VIDEODRIVER="dummy", SDL_AUDIODRIVER="dummy", SDL_RENDER_DRIVER="software", LIBGL_ALWAYS_SOFTWARE="1"
@@ -628,12 +1002,16 @@ class McpHttpNativeRuntimeTest(unittest.TestCase):
                         opened = True
                         break
                 self.assertTrue(opened, "a second HTTP handler must inspect a modal while its boundary is waiting")
+                retained = {gui["__handle__"]}
+                released = handles - retained
                 self.assertEqual(
-                    {"released": len(handles)}, second.tool("engine_release_handles", {"handles": sorted(handles)})
+                    {"released": len(released)}, second.tool("engine_release_handles", {"handles": sorted(released)})
                 )
                 cancelled = modal.result(timeout=10)
-                self.assertTrue(cancelled["isError"], cancelled)
-                self.assertIn("cancel", cancelled["structuredContent"]["error"].lower())
+                self.assertFalse(cancelled["isError"], cancelled)
+                self.assertEqual({"result": None}, cancelled["structuredContent"])
+                self.assertFalse(containsModal(json.loads(call(second, "jsonify", gui))))
+                self.assertEqual({"released": 1}, second.tool("engine_release_handles", {"handles": sorted(retained)}))
             finally:
                 callers.shutdown(wait=False, cancel_futures=True)
             second.delete()
@@ -641,19 +1019,7 @@ class McpHttpNativeRuntimeTest(unittest.TestCase):
             for client in (first, second):
                 if client is not None:
                     client.close()
-            if proc.poll() is None:
-                proc.stdin.write("close\n")
-                proc.stdin.flush()
-                try:
-                    proc.wait(timeout=30)
-                except subprocess.TimeoutExpired:
-                    proc.kill()
-                    proc.wait(timeout=5)
-                    self.fail("native HTTP shutdown timed out:\n" + "".join(stdout) + "".join(stderr))
-            for reader in readers:
-                reader.join(timeout=5)
-            for stream in (proc.stdin, proc.stdout, proc.stderr):
-                stream.close()
+            closeNativeHttpChild(proc, readers, stdout, stderr)
         self.assertEqual(0, proc.returncode, "".join(stdout) + "".join(stderr))
         self.assertIn("MCP_HTTP_CLOSED", "".join(stdout))
         self.assertIn("MCP_HTTP_REOPENED", "".join(stdout))

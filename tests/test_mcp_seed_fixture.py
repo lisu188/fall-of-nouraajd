@@ -204,11 +204,18 @@ class McpSeedFixtureTest(unittest.TestCase):
 
     def testRunnerOnlySelectsTheTestLauncherForAnExplicitFixtureSeed(self):
         tree = ast.parse((ROOT / "test.py").read_text(encoding="utf-8"))
+        city_cases = next(
+            node.value
+            for node in tree.body
+            if isinstance(node, ast.Assign)
+            and any(isinstance(target, ast.Name) and target.id == "CITY_WALKTHROUGH_CASES" for target in node.targets)
+        )
         owner = next(node for node in tree.body if isinstance(node, ast.ClassDef) and node.name == "McpServerTest")
         method = next(
             node for node in owner.body if isinstance(node, ast.FunctionDef) and node.name == "_start_stdio_mcp_process"
         )
         namespace = {
+            "CITY_WALKTHROUGH_CASES": ast.literal_eval(city_cases),
             "REPO_ROOT": ROOT,
             "build_dir": ROOT / "cmake-build-gcc15-release",
             "build_config": "Release",

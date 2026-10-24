@@ -1824,6 +1824,256 @@ void test_map_owned_objects_and_tiles_remember_owner_when_active_map_changes() {
                 "removed objects should fall back to the active game map after destroy callbacks finish");
 }
 
+void testMapPlayerCacheMissPreservesValidControllerIdentity() {
+    auto game = CGameLoader::loadGame();
+    for (int fixture = 0; fixture < 6; ++fixture) {
+        auto map = std::make_shared<CMap>();
+        map->setGame(game);
+        game->setMap(map);
+        auto player = std::make_shared<CPlayer>();
+        player->setGame(game);
+        player->setName("player");
+        player->setBaseStats(creature_stats());
+        player->setHp(1);
+        const bool valid_movement = fixture == 0 || fixture == 1 || fixture == 4;
+        const bool valid_fight = fixture == 0 || fixture == 1 || fixture == 5;
+        std::shared_ptr<CController> movement;
+        std::shared_ptr<CFightController> fight;
+        if (valid_movement) {
+            auto actual = game->createObject<CPlayerController>();
+            actual->setMovementSuspended(fixture != 1);
+            movement = actual;
+        } else if (fixture != 3) {
+            movement = game->createObject<CController>();
+        }
+        if (valid_fight) {
+            fight = game->createObject<CPlayerFightController>();
+        } else if (fixture != 3) {
+            fight = game->createObject<CFightController>();
+        }
+        player->setController(movement);
+        player->setFightController(fight);
+        map->addObject(player);
+        expect_true(map->getPlayer() == player, "cache-miss restoration must adopt the actual registered player");
+        const auto actual_movement = std::dynamic_pointer_cast<CPlayerController>(player->getController());
+        const auto actual_fight = std::dynamic_pointer_cast<CPlayerFightController>(player->getFightController());
+        expect_true(actual_movement && actual_fight,
+                    "missing or malformed movement/fight controllers must independently receive native defaults");
+        expect_true((valid_movement ? player->getController() == movement : player->getController() != movement) &&
+                        (valid_fight ? player->getFightController() == fight : player->getFightController() != fight),
+                    "valid actual controller identities must survive even when the other controller is invalid");
+        if (valid_movement && actual_movement) {
+            expect_true(actual_movement->getMovementSuspended() == (fixture != 1),
+                        "cache restoration must preserve the exact actual controller suspension state");
+        }
+        const auto triggers = count_player_event_triggers(map);
+        const auto count = map->getObjects().size();
+        for (int repeat = 0; repeat < 128; ++repeat) {
+            expect_true(map->getPlayer() == player && player->getController() == actual_movement &&
+                            player->getFightController() == actual_fight,
+                        "cached player lookups must not replace either validated controller");
+        }
+        expect_true(triggers == 2 && count_player_event_triggers(map) == triggers && map->getObjects().size() == count,
+                    "128 cached lookups must preserve the two native player hooks and registry size");
+    }
+    game->getContext()->shutdown();
+}
+
+class SuspendAfterPlanningPlayerController : public CPlayerController {
+  public:
+    vstd::task<Coords> controlAsync(std::shared_ptr<CCreature> creature) override {
+        ++planned;
+        auto target = co_await CPlayerController::controlAsync(creature);
+        if (suspendNext) {
+            suspendNext = false;
+            setMovementSuspended(true);
+        }
+        co_return target;
+    }
+
+    void onStepCommitted(std::shared_ptr<CCreature> creature, const Coords &coords) override {
+        ++committed;
+        CPlayerController::onStepCommitted(std::move(creature), coords);
+    }
+
+    int planned = 0;
+    int committed = 0;
+    bool suspendNext = true;
+};
+
+void testMapMoveRejectsPlayerPlanSuspendedBeforeCommit() {
+    auto game = CGameLoader::loadGame();
+    auto map = std::make_shared<CMap>();
+    map->setGame(game);
+    game->setMap(map);
+    map->setXBounds({{0, 2}});
+    map->setYBounds({{0, 0}});
+    for (int x = 0; x < 3; ++x) {
+        auto tile = std::make_shared<CTile>();
+        tile->setCanStep(true);
+        map->addTile(tile, x, 0, 0);
+    }
+    auto player = std::make_shared<CPlayer>();
+    player->setGame(game);
+    player->setBaseStats(creature_stats());
+    player->setHp(1);
+    map->setPlayer(player);
+    player->relocateWithoutMoveHooks(Coords(0, 0, 0));
+    auto controller = std::make_shared<SuspendAfterPlanningPlayerController>();
+    controller->setGame(game);
+    player->setController(controller);
+    controller->setTarget(player, Coords(2, 0, 0));
+    const auto before_turn = map->getTurn();
+    map->move();
+    expect_true(controller->planned == 1 && controller->committed == 0 && controller->getMovementSuspended() &&
+                    player->getCoords() == Coords(0, 0, 0) && map->getTurn() == before_turn + 1,
+                "a route resolved before suspension must not commit movement after suspension");
+    controller->setMovementSuspended(false);
+    controller->setTarget(player, Coords(2, 0, 0));
+    map->move();
+    expect_true(controller->planned == 2 && controller->committed == 1 && player->getCoords() == Coords(1, 0, 0) &&
+                    map->getTurn() == before_turn + 2,
+                "a fresh enabled request must retain exactly one ordinary movement step and turn");
+    game->getContext()->shutdown();
+}
+
+void testMapMoveRejectsPlayerPlanSuspendedDuringLeaveHook() {
+    auto game = CGameLoader::loadGame();
+    auto map = std::make_shared<CMap>();
+    map->setGame(game);
+    game->setMap(map);
+    map->setXBounds({{0, 2}});
+    map->setYBounds({{0, 0}});
+    for (int x = 0; x < 3; ++x) {
+        auto tile = std::make_shared<CTile>();
+        tile->setCanStep(true);
+        map->addTile(tile, x, 0, 0);
+    }
+    auto player = std::make_shared<CPlayer>();
+    player->setGame(game);
+    player->setBaseStats(creature_stats());
+    player->setHp(1);
+    map->setPlayer(player);
+    const Coords origin(0, 0, 0), target(1, 0, 0);
+    player->relocateWithoutMoveHooks(origin);
+    auto controller = std::make_shared<SuspendAfterPlanningPlayerController>();
+    controller->setGame(game);
+    controller->suspendNext = false;
+    player->setController(controller);
+    auto leave = add_visit_event_probe(game, "suspendingLeaveHook", origin);
+    auto arrival = add_visit_event_probe(game, "suspendingLeaveArrival", target);
+    int leave_count = 0;
+    bool resumed_at_origin = false;
+    map->getEventHandler()->registerTrigger(std::make_shared<CCustomTrigger>(
+        leave->getName(), CGameEvent::CType::onLeave,
+        [controller, player, origin, &leave_count, &resumed_at_origin](auto, auto) -> vstd::task<void> {
+            ++leave_count;
+            co_await vstd::post(vstd::event_loop<>::instance());
+            resumed_at_origin = player->getCoords() == origin;
+            if (leave_count == 1) {
+                controller->setMovementSuspended(true);
+            }
+        }));
+    controller->setTarget(player, Coords(2, 0, 0));
+    const auto turn = map->getTurn();
+    map->move();
+    expect_true(resumed_at_origin && leave_count == 1 && leave->leaveCauses.size() == 1 && controller->planned == 1 &&
+                    controller->committed == 0 && controller->getMovementSuspended() && player->getCoords() == origin &&
+                    !player->getPendingMoveOrigin() && arrival->enterCauses.empty() && map->getTurn() == turn + 1 &&
+                    !map->isMoving(),
+                "an awaited native leave hook can suspend a planned step before position and arrival commit");
+
+    game_async::run(player->moveToAsync(target), game_async::WaitMode::PostedWork);
+    expect_true(
+        player->getCoords() == target && controller->getMovementSuspended() && leave_count == 2 &&
+            arrival->enterCauses.size() == 1 && !player->getPendingMoveOrigin(),
+        "an explicit scripted move without a controller commit guard retains its existing relocation semantics");
+    player->relocateWithoutMoveHooks(origin);
+    expect_true(player->getCoords() == origin && leave_count == 2 && arrival->enterCauses.size() == 1,
+                "forced hook-free relocation is not blocked by the player controller suspension");
+    controller->setMovementSuspended(false);
+    controller->setTarget(player, Coords(2, 0, 0));
+    map->move();
+    expect_true(player->getCoords() == target && controller->planned == 2 && controller->committed == 1 &&
+                    leave_count == 3 && arrival->enterCauses.size() == 2 && map->getTurn() == turn + 2,
+                "re-enabling accepts exactly one fresh native controller step with normal leave and arrival hooks");
+    game->getContext()->shutdown();
+}
+
+void testMapPausedPlayerControllerRoundTripsWithoutReset() {
+    auto game = CGameLoader::loadGame();
+    CGameLoader::startGameWithPlayer(game, "empty", "Warrior");
+    auto map = game->getMap();
+    auto player = map->getPlayer();
+    auto original = std::dynamic_pointer_cast<CPlayerController>(player->getController());
+    expect_true(original != nullptr, "the native loaded hero must own an actual player controller");
+    if (!original) {
+        game->getContext()->shutdown();
+        return;
+    }
+    original->setName("unitOriginalPlayerController");
+    auto paused = game->createObject<CPlayerController>();
+    paused->setName("unitPausedPlayerController");
+    paused->setMovementSuspended(true);
+    player->setController(paused);
+    auto owner = game->createObject<CEvent>();
+    owner->setName("unitPausedSequenceOwner");
+    owner->setObjectProperty<CGameObject>("plugin_cityPalaceSequenceOriginalController", original);
+    owner->setStringProperty("plugin_cityPalaceSequencePauseControllerName", paused->getName());
+    map->addObject(owner);
+    using ObjectJson = CSerializerFunction<std::shared_ptr<json>, std::shared_ptr<CGameObject>>;
+    auto document = ObjectJson::serialize(map);
+    int paused_definitions = 0;
+    int original_definitions = 0;
+    std::vector<const json *> pending{document.get()};
+    while (!pending.empty()) {
+        const auto node = pending.back();
+        pending.pop_back();
+        if (node->is_object()) {
+            if (node->contains("class") && node->at("class").is_string() &&
+                node->at("class").get<std::string>() == "CPlayerController" && node->contains("properties")) {
+                const auto &properties = node->at("properties");
+                const auto name = properties.value("name", std::string());
+                paused_definitions += name == paused->getName();
+                original_definitions += name == original->getName();
+            }
+            for (const auto &child : node->items())
+                pending.push_back(&child.second);
+        } else if (node->is_array()) {
+            for (const auto &child : *node)
+                pending.push_back(&child);
+        }
+    }
+    expect_true(paused_definitions == 1 && original_definitions == 1,
+                "the native snapshot must contain one paused current controller and one detached original");
+    auto restored = std::dynamic_pointer_cast<CMap>(ObjectJson::deserialize(game, document));
+    expect_true(restored != nullptr, "the actual native paused map snapshot must deserialize");
+    if (!restored) {
+        game->getContext()->shutdown();
+        return;
+    }
+    game->setMap(restored);
+    std::string error;
+    expect_true(restored->restorePlayerAfterLoad(error), "native saved-map player restoration must accept suspension");
+    auto loaded_player = restored->getPlayer();
+    auto loaded_owner = restored->getObjectByName(owner->getName());
+    auto loaded_pause =
+        loaded_player ? std::dynamic_pointer_cast<CPlayerController>(loaded_player->getController()) : nullptr;
+    auto loaded_original =
+        loaded_owner ? std::dynamic_pointer_cast<CPlayerController>(
+                           loaded_owner->getObjectProperty<CGameObject>("plugin_cityPalaceSequenceOriginalController"))
+                     : nullptr;
+    expect_true(
+        loaded_pause && loaded_original && loaded_pause != loaded_original && loaded_pause != paused &&
+            loaded_original != original && loaded_pause->getGame() == game && loaded_original->getGame() == game &&
+            loaded_pause->getMovementSuspended() && !loaded_original->getMovementSuspended() &&
+            loaded_owner->getStringProperty("plugin_cityPalaceSequencePauseControllerName") == loaded_pause->getName(),
+        "native load must preserve the sole current paused owner and distinct original by a name-only lease");
+    expect_true(loaded_pause && restored->getPlayer()->getController() == loaded_pause,
+                "cached native lookup must retain the loaded paused controller identity");
+    game->getContext()->shutdown();
+}
+
 void test_map_player_trigger_registration_is_idempotent() {
     auto game = nativeTestProfile().run("CGameLoader::loadGame", [] { return CGameLoader::loadGame(); });
     auto map = std::make_shared<CMap>();
@@ -3816,6 +4066,14 @@ int main() {
                             test_map_object_relocate_without_move_hooks_updates_spatial_state_once);
     nativeTestProfile().run("test_map_owned_objects_and_tiles_remember_owner_when_active_map_changes",
                             test_map_owned_objects_and_tiles_remember_owner_when_active_map_changes);
+    nativeTestProfile().run("testMapPlayerCacheMissPreservesValidControllerIdentity",
+                            testMapPlayerCacheMissPreservesValidControllerIdentity);
+    nativeTestProfile().run("testMapMoveRejectsPlayerPlanSuspendedBeforeCommit",
+                            testMapMoveRejectsPlayerPlanSuspendedBeforeCommit);
+    nativeTestProfile().run("testMapMoveRejectsPlayerPlanSuspendedDuringLeaveHook",
+                            testMapMoveRejectsPlayerPlanSuspendedDuringLeaveHook);
+    nativeTestProfile().run("testMapPausedPlayerControllerRoundTripsWithoutReset",
+                            testMapPausedPlayerControllerRoundTripsWithoutReset);
     nativeTestProfile().run("test_map_player_trigger_registration_is_idempotent",
                             test_map_player_trigger_registration_is_idempotent);
     nativeTestProfile().run("test_map_player_detach_attach_transfer_api", test_map_player_detach_attach_transfer_api);

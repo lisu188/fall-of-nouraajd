@@ -476,9 +476,9 @@ def load(self, context):
         def onEnter(self, event):
             game = flowGame(self.getMap().getGame())
             narrative.snapshotTown(game, _quest_system_from(self).get_state("victor"))
-            campaign.prepareCompletion(game, "completed", fallback_map="ritual")
+            campaign.prepareCompletion(self.getGame(), "completed", fallback_map="ritual")
             (yield uiRequest("gui.checkQuests", game.getMap().getPlayer()))
-            (yield from campaign.complete_scenarioFlow(game, "completed", fallback_map="ritual"))
+            (yield from campaign.complete_scenarioFlow(self.getGame(), "completed", fallback_map="ritual"))
 
     @register(context)
     @mapQuest("nouraajd")

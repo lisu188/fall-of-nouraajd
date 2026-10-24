@@ -44,6 +44,17 @@ NPC_IDS = (
 def load(self, context):
     import json
 
+    def decodeData(encoded):
+        return json.loads(encoded.removeprefix("candlekeep-json:"))
+
+    def encodeData(value):
+        return "candlekeep-json:" + json.dumps(value)
+
+    def firstMatch(values, default=None):
+        for value in values:
+            return value
+        return default
+
     from game import CBuilding, CCreature, CDialog, CEvent, CQuest, CScroll, CTrigger, Coords
     from game import claim_once, flowGame, mapQuest, register, resumableHook, trigger, uiRequest
 
@@ -75,9 +86,9 @@ def load(self, context):
     def spawn(game_map, object_id, coords, name=None):
         actor = game_map.getGame().createObject(object_id)
         actor.setStringProperty("name", name or object_id)
-        actor.setPosX(coords[0])
-        actor.setPosY(coords[1])
-        actor.setPosZ(coords[2])
+        actor.setNumericProperty("posx", coords[0])
+        actor.setNumericProperty("posy", coords[1])
+        actor.setNumericProperty("posz", coords[2])
         game_map.addObject(actor)
         return actor
 
@@ -85,11 +96,18 @@ def load(self, context):
         for name in TRAINING_ALLIES + tuple("trainingFoe" + str(i) for i in range(1, 7)):
             actor = game_map.getObjectByName(name)
             if actor:
+                for slot, item in tuple(actor.getEquipped().items()):
+                    if item and item.getBoolProperty("plugin_candlekeepTemporary"):
+                        item.removeTag("cursed")
+                        actor.equipItem(slot, None)
+                for item in tuple(actor.getItems()):
+                    if item.getBoolProperty("plugin_candlekeepTemporary"):
+                        actor.removeItem(lambda candidate: candidate == item, False)
                 game_map.removeObject(actor)
 
     def reclaimTrainingInventory(game_map):
         player = game_map.getPlayer()
-        original_names = set(json.loads(player.getStringProperty("candlekeepTrainingInventoryNames") or "[]"))
+        original_names = set(decodeData(player.getStringProperty("candlekeepTrainingInventoryNames") or "[]"))
         for owner in game_map.getObjects():
             if not isinstance(owner, CCreature) or owner == player:
                 continue
@@ -112,9 +130,9 @@ def load(self, context):
         for item in tuple(player.getItems()):
             if item.getBoolProperty("plugin_candlekeepTemporary"):
                 player.removeItem(lambda candidate: candidate == item, False)
-        original_equipment = json.loads(player.getStringProperty("candlekeepTrainingEquipment") or "{}")
+        original_equipment = decodeData(player.getStringProperty("candlekeepTrainingEquipment") or "{}")
         for slot, name in original_equipment.items():
-            item = next((item for item in player.getItems() if item.getName() == name), None)
+            item = firstMatch((item for item in player.getItems() if item.getName() == name), None)
             if item:
                 player.equipItem(slot, item)
         player.setStringProperty("affiliation", player.getStringProperty("candlekeepTrainingAffiliation"))
@@ -240,6 +258,19 @@ def load(self, context):
             if player.getStringProperty("candlekeepPortalGuard") == self.getName():
                 player.setStringProperty("candlekeepPortalGuard", "")
                 return
+            origin = player.getPendingMoveOrigin()
+            paired = self.getMap().getObjectByName(self.getStringProperty("pairedPortal"))
+            if (
+                origin is not None
+                and isinstance(paired, CandlekeepPortal)
+                and paired.getCoords() == origin
+                and paired.target() == self.getCoords()
+                and player.getCoords() == self.getCoords()
+                and self.getMap().hasNavigationEdge(origin, self.getCoords(), paired.getName())
+            ):
+                if paired.getName() == "trainingExit":
+                    restoreTraining(self.getMap(), "abandoned")
+                return
             if self.getBoolProperty("trainingDoor") and (
                 self.getMap().getBoolProperty("candlekeepTrainingClosed")
                 or not self.getMap().getBoolProperty("candlekeepTrainingAccepted")
@@ -269,7 +300,7 @@ def load(self, context):
                 return False
             spell = self.getStringProperty("plugin_candlekeepSpell")
             if spell == "identify":
-                target = next(
+                target = firstMatch(
                     (
                         item
                         for item in player.getItems()
@@ -425,7 +456,7 @@ def load(self, context):
             actor = self.actor()
             if not actor:
                 return False
-            item = next((item for item in actor.getItems() if item.getTypeId() == item_id), None)
+            item = firstMatch((item for item in actor.getItems() if item.getTypeId() == item_id), None)
             if not item:
                 return False
             actor.removeQuestItem(lambda candidate: candidate == item)
@@ -511,7 +542,7 @@ def load(self, context):
                     "candlekeepPhlydiaLynxEyeClaimed"
                 ):
                     continue
-                item = next(
+                item = firstMatch(
                     (item for item in actor.getItems() if item.getTypeId() == item_id and item not in remaining), None
                 )
                 if item:
@@ -561,7 +592,7 @@ def load(self, context):
             actor = self.actor()
             if not actor:
                 return False
-            actor.setNpc(False)
+            actor.setBoolProperty("npc", False)
             actor.setStringProperty("affiliation", "candlekeepHostile")
             controller = self.getGame().createObject("CTargetController")
             controller.setStringProperty("target", "player")
@@ -676,7 +707,7 @@ def load(self, context):
 
         def _entries(self, property_name):
             try:
-                rows = json.loads(self.getStringProperty(property_name) or "[]")
+                rows = decodeData(self.getStringProperty(property_name) or "[]")
             except (ValueError, TypeError):
                 return []
             return rows if isinstance(rows, list) else []
@@ -712,7 +743,7 @@ def load(self, context):
             if not self._progressAllowed():
                 return False
             selected = self.getStringProperty("selectedStock")
-            row = next((row for row in self._entries("shopEntries") if row.get("id") == selected), None)
+            row = firstMatch((row for row in self._entries("shopEntries") if row.get("id") == selected), None)
             return self._purchase(row) if row else False
 
         @resumableHook
@@ -758,7 +789,7 @@ def load(self, context):
                 "candlekeepArrows": "AROW01",
                 "candlekeepAntidote": "POTN20",
             }
-            row = next(
+            row = firstMatch(
                 (
                     entry
                     for entry in rows
@@ -818,7 +849,7 @@ def load(self, context):
             if self.actorId() != "winthrop":
                 return False
             selected = self.getStringProperty("selectedSale")
-            item = next((item for item in self._saleableItems() if item.getName() == selected), None)
+            item = firstMatch((item for item in self._saleableItems() if item.getName() == selected), None)
             if not item:
                 return False
             player = playerFor(self)
@@ -896,7 +927,7 @@ def load(self, context):
             if not self._progressAllowed():
                 return False
             selected = self.getStringProperty("selectedDrink")
-            row = next((row for row in self._entries("drinkEntries") if row.get("id") == selected), None)
+            row = firstMatch((row for row in self._entries("drinkEntries") if row.get("id") == selected), None)
             if not row:
                 return False
             result = self.drink(int(row["price"]), row["label"])
@@ -924,7 +955,7 @@ def load(self, context):
                 self.buyDrink()
 
         def _quickDrink(self, source_id):
-            row = next((row for row in self._entries("drinkEntries") if row.get("id") == source_id), None)
+            row = firstMatch((row for row in self._entries("drinkEntries") if row.get("id") == source_id), None)
             if not row:
                 return False
             self.setStringProperty("selectedDrink", source_id)
@@ -958,7 +989,7 @@ def load(self, context):
             if self.actorId() != "templePriest":
                 return False
             selected = self.getStringProperty("selectedService")
-            row = next((row for row in self._entries("serviceEntries") if row.get("id") == selected), None)
+            row = firstMatch((row for row in self._entries("serviceEntries") if row.get("id") == selected), None)
             if not row:
                 return False
             cost = int(row.get("price", -1))
@@ -1030,7 +1061,7 @@ def load(self, context):
             if self.actorId() != "templePriest":
                 return False
             rows = self._entries("serviceEntries")
-            row = next((entry for entry in rows if entry.get("operation") == "heal"), None)
+            row = firstMatch((entry for entry in rows if entry.get("operation") == "heal"), None)
             if row:
                 self.setStringProperty("selectedService", row["id"])
                 return self.buyService()
@@ -1062,7 +1093,7 @@ def load(self, context):
                 return False
             if self.actorId() != "templePriest":
                 return False
-            row = next(
+            row = firstMatch(
                 (entry for entry in self._entries("serviceEntries") if entry.get("operation") == "identify"), None
             )
             return self._identifyFor(int(row["price"]) if row else 100)
@@ -1154,7 +1185,7 @@ def load(self, context):
                 game_map.setBoolProperty("candlekeepTrainingDefeatHookRegistered", True)
             player.setStringProperty(
                 "candlekeepTrainingInventoryNames",
-                json.dumps(
+                encodeData(
                     sorted(
                         {item.getName() for item in player.getItems()}
                         | {item.getName() for item in player.getEquipped().values() if item}
@@ -1164,7 +1195,7 @@ def load(self, context):
             player.setStringProperty("candlekeepTrainingAffiliation", player.getStringProperty("affiliation"))
             player.setStringProperty(
                 "candlekeepTrainingEquipment",
-                json.dumps({slot: item.getName() for slot, item in player.getEquipped().items() if item}),
+                encodeData({slot: item.getName() for slot, item in player.getEquipped().items() if item}),
             )
             player.setNumericProperty("candlekeepTrainingHp", player.getHp())
             player.setNumericProperty("candlekeepTrainingMana", player.getNumericProperty("mana"))
@@ -1278,7 +1309,7 @@ def load(self, context):
             if not actor:
                 return False
             selected = self.getStringProperty("selectedBorrow")
-            item = next((item for item in actor.getItems() if item.getName() == selected), None)
+            item = firstMatch((item for item in actor.getItems() if item.getName() == selected), None)
             if not item:
                 return False
             actor.removeItem(lambda candidate: candidate == item, False)
@@ -1380,7 +1411,7 @@ def load(self, context):
             for name in creatures:
                 actor = self.getGame().getMap().getObjectByName(name)
                 if actor:
-                    actor.setNpc(True)
+                    actor.setBoolProperty("npc", True)
                     actor.setController(self.getGame().createObject("CController"))
             yield uiRequest(
                 "showReader",

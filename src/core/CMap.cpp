@@ -212,8 +212,12 @@ std::shared_ptr<CPlayer> CMap::getPlayer() {
             if (object && object->getName() == "player") {
                 player = vstd::cast<CPlayer>(object);
                 if (player) {
-                    player->setController(getGame()->createObject<CPlayerController>());
-                    player->setFightController(getGame()->createObject<CPlayerFightController>());
+                    if (!std::dynamic_pointer_cast<CPlayerController>(player->getController())) {
+                        player->setController(getGame()->createObject<CPlayerController>());
+                    }
+                    if (!std::dynamic_pointer_cast<CPlayerFightController>(player->getFightController())) {
+                        player->setFightController(getGame()->createObject<CPlayerFightController>());
+                    }
                     registerPlayerTriggers();
                 }
                 break;
@@ -1132,6 +1136,11 @@ vstd::task<void> CMap::moveOwnedAsync(std::shared_ptr<CMap> map, CMovementPresen
                 continue;
             }
 
+            const auto player_controller = std::dynamic_pointer_cast<CPlayerController>(controller_ptr);
+            if (player_controller && player_controller->getMovementSuspended()) {
+                controller_ptr->interrupt(creature);
+                continue;
+            }
             auto current = map->normalizeCoords(creature->getCoords());
             if (current != planned.origin) {
                 controller_ptr->interrupt(creature);
@@ -1159,18 +1168,20 @@ vstd::task<void> CMap::moveOwnedAsync(std::shared_ptr<CMap> map, CMovementPresen
                 }
                 if (!canApplyDeferredMoveWork() || creature->getController() != controller_ptr ||
                     !is_active_creature(creature) || map->normalizeCoords(creature->getCoords()) != current ||
-                    !map->canStep(target)) {
+                    !map->canStep(target) || (player_controller && player_controller->getMovementSuspended())) {
                     controller_ptr->interrupt(creature);
                     continue;
                 }
             }
 
             const bool interrupt_after_step = should_interrupt_after_step(creature, target);
-            if (presenter) {
-                co_await creature->moveToAsync(target, {}, presenter);
-            } else {
-                co_await creature->moveToAsync(target);
+            vstd::move_only_function<bool()> commitAllowed;
+            if (player_controller) {
+                commitAllowed = [creature, controller_ptr, player_controller] {
+                    return creature->getController() == controller_ptr && !player_controller->getMovementSuspended();
+                };
             }
+            co_await creature->moveToAsync(target, {}, presenter, std::move(commitAllowed));
 
             if (!canApplyDeferredMoveWork() || creature->getController() != controller_ptr ||
                 !is_active_creature(creature) || map->normalizeCoords(creature->getCoords()) != target) {

@@ -3,6 +3,15 @@
 """One persistent city; original-resource facts and native adaptation rules remain distinct."""
 
 
+CITY_JSON_PREFIX = "city-json:"
+
+
+def decodeData(encoded):
+    import json
+
+    return json.loads(encoded.removeprefix(CITY_JSON_PREFIX))
+
+
 def itemId(source):
     return "cityItem" + source[:1].upper() + source[1:].lower()
 
@@ -13,6 +22,17 @@ def questId(key):
 
 def scheduleSlot(ticks):
     return ((480 + ticks * 6 // 5 - 30) // 60) % 24
+
+
+def firstMatch(values, default=None):
+    for value in values:
+        return value
+    return default
+
+
+def pairedValues(left, right):
+    for index in range(min(len(left), len(right))):
+        yield left[index], right[index]
 
 
 def load(self, context):
@@ -33,10 +53,10 @@ def load(self, context):
         return world(obj).getObjectByName("cityClock")
 
     def read(obj, key, default):
-        return json.loads(obj.getStringProperty(key) or json.dumps(default))
+        return decodeData(obj.getStringProperty(key) or json.dumps(default))
 
     def write(obj, key, value):
-        obj.setStringProperty(key, json.dumps(value, separators=(",", ":")))
+        obj.setStringProperty(key, CITY_JSON_PREFIX + json.dumps(value, separators=(",", ":")))
 
     def notify(obj, text):
         obj.getGame().getGuiHandler().notify(text)
@@ -59,7 +79,7 @@ def load(self, context):
         return document.get("quests", []) if isinstance(document, dict) else document
 
     def quest(obj, key):
-        return next((entry for entry in definitions(obj) if entry["id"] == key), None)
+        return firstMatch((entry for entry in definitions(obj) if entry["id"] == key), None)
 
     def stage(obj, key):
         return world(obj).getStringProperty("plugin_cityQuest_" + key) or "notStarted"
@@ -403,10 +423,6 @@ def load(self, context):
         actor.setBoolProperty("plugin_cityInventoryInitialized", True)
 
     @register(context)
-    class BaldursGateActor(CCreature):
-        """Persistent source-backed city NPC with map-local inventory and schedule metadata."""
-
-    @register(context)
     @mapQuest("baldursGate")
     class BaldursGateQuest(CQuest):
         def isCompleted(self):
@@ -549,7 +565,7 @@ def load(self, context):
                     notify(self, "This route leaves the selected city. Its excursion must be chosen explicitly.")
                 return
             target = self.target()
-            arrival = next(
+            arrival = firstMatch(
                 (
                     obj
                     for obj in world(self).getObjects()
@@ -647,7 +663,7 @@ def load(self, context):
                 return False
             if self.actor().getBoolProperty("plugin_cityPetrified"):
                 return False
-            outcome = next((entry for entry in row["outcomes"] if entry["id"] == outcome_key), None)
+            outcome = firstMatch((entry for entry in row["outcomes"] if entry["id"] == outcome_key), None)
             if not outcome or not any(matches(self.actor(), selector) for selector in outcome.get("at", row["givers"])):
                 return False
             return applyCondition(self, outcome.get("conditions", {})) and not world(self).getBoolProperty(
@@ -659,7 +675,7 @@ def load(self, context):
             if not self.canQuestOutcome(key, outcome_key):
                 return False
             row = quest(self, key)
-            outcome = next(entry for entry in row["outcomes"] if entry["id"] == outcome_key)
+            outcome = firstMatch(entry for entry in row["outcomes"] if entry["id"] == outcome_key)
             if not applyEffects(self, outcome.get("effects", {}), self.actor()):
                 return False
             if not row.get("repeatable"):
@@ -766,7 +782,7 @@ def load(self, context):
                 for item in available
             ]
             selected = yield uiRequest("choose", flowGame(self.getGame()), "Pick a pocket", rows, "Attempt theft")
-            item = next((item for item in available if item.getName() == selected), None)
+            item = firstMatch((item for item in available if item.getName() == selected), None)
             if not item or not self.canInteract() or item not in owner.getItems():
                 return False
             freezeHistory(self)
@@ -1154,7 +1170,7 @@ def load(self, context):
                 for item in available
             ]
             selected = yield uiRequest("choose", flowGame(self.getGame()), "Companion belongings", rows, "Take")
-            item = next((item for item in available if item.getName() == selected), None)
+            item = firstMatch((item for item in available if item.getName() == selected), None)
             if not item or item not in owner.getItems():
                 return False
             owner.removeQuestItem(lambda candidate: candidate == item)
@@ -1208,7 +1224,7 @@ def load(self, context):
                 return False
             world(self).setBoolProperty("plugin_cityFlag_eldothJoined", True)
             clock(self).spawnActors()
-            actor = next(
+            actor = firstMatch(
                 (actor for actor in world(self).getObjects() if actor.getStringProperty("sourceCreature") == "ELDOTH"),
                 None,
             )
@@ -1234,7 +1250,7 @@ def load(self, context):
 
         def canExcursion(self, key):
             document = read(clock(self), "questDefinitions", {})
-            row = next((entry for entry in document.get("excursions", []) if entry["id"] == key), None)
+            row = firstMatch((entry for entry in document.get("excursions", []) if entry["id"] == key), None)
             return bool(
                 row
                 and self.canInteract()
@@ -1248,8 +1264,8 @@ def load(self, context):
             if not self.canExcursion(key):
                 return False
             document = read(clock(self), "questDefinitions", {})
-            row = next(entry for entry in document["excursions"] if entry["id"] == key)
-            outcome = next((entry for entry in row["choices"] if entry["id"] == choice), None)
+            row = firstMatch(entry for entry in document["excursions"] if entry["id"] == key)
+            outcome = firstMatch((entry for entry in row["choices"] if entry["id"] == choice), None)
             if not outcome:
                 return False
             if outcome.get("pending"):
@@ -1449,7 +1465,7 @@ def load(self, context):
             if not self.canStoreAction(store_id, 4):
                 return False
             price = self.store(store_id).get("identify_price", 100)
-            unknown = next(
+            unknown = firstMatch(
                 (item for item in possessions(hero(self)) if item.getBoolProperty("plugin_cityUnidentified")), None
             )
             if not unknown or hero(self).getGold() < price:
@@ -1495,7 +1511,7 @@ def load(self, context):
                     return False
                 player.setEffects(set(player.getEffects()) - effects)
             elif spell == "SPPR504":
-                fallen = next((actor for actor in companions(self) if not actor.isAlive()), None)
+                fallen = firstMatch((actor for actor in companions(self) if not actor.isAlive()), None)
                 if not fallen:
                     return False
                 # Revive the same actor. Native fixed-loot defeat already transferred its droppable belongings.
@@ -1541,7 +1557,7 @@ def load(self, context):
                 for item in available
             ]
             selected = yield uiRequest("choose", flowGame(self.getGame()), "Sell a possession", rows, "Sell")
-            item = next((item for item in available if item.getName() == selected), None)
+            item = firstMatch((item for item in available if item.getName() == selected), None)
             if not item or item not in player.getItems():
                 return False
             value = max(0, item.getNumericProperty("plugin_cityValue"))
@@ -1596,7 +1612,7 @@ def load(self, context):
                 for item in available
             ]
             selected = yield uiRequest("choose", flowGame(self.getGame()), "Buy back belongings", rows, "Buy back")
-            item = next((item for item in available if item.getName() == selected), None)
+            item = firstMatch((item for item in available if item.getName() == selected), None)
             if not item or item not in owner.getItems():
                 return False
             value = max(0, item.getNumericProperty("plugin_cityValue"))
@@ -4320,7 +4336,7 @@ def load(self, context):
         def observeRegions(self):
             definition_text = self.getStringProperty("regionDefinitions")
             if definition_text not in region_indices:
-                document = json.loads(definition_text or "[]")
+                document = decodeData(definition_text or "[]")
                 rows = document.get("regions", []) if isinstance(document, dict) else document
                 region_indices.clear()
                 cell_index = {}
@@ -4515,7 +4531,7 @@ def load(self, context):
                     if name in parked:
                         parked.remove(name)
                     continue
-                scene = next((entry for entry in row["scenes"] if self.sceneEligible(entry)), None)
+                scene = firstMatch((entry for entry in row["scenes"] if self.sceneEligible(entry)), None)
                 if actor.getBoolProperty("plugin_cityDeparted"):
                     scene = None
                 if not scene:

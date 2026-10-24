@@ -737,7 +737,7 @@ class SourceAuditTests(unittest.TestCase):
             ("TEM2601", "templePriestDialog", 4),
         ):
             store = fixture["stores"][store_id]
-            rows = json.loads(dialogs[dialog_id]["properties"]["shopEntries"])
+            rows = json.loads(dialogs[dialog_id]["properties"]["shopEntries"].removeprefix("candlekeep-json:"))
             self.assertEqual(len(rows), expected_count)
             self.assertEqual(len({row["id"] for row in rows}), len(rows))
             source = {row["id"]: row for row in store["stock"] if not row["excludedEnhancedEditionAddition"]}
@@ -752,7 +752,7 @@ class SourceAuditTests(unittest.TestCase):
                 self.assertEqual(properties["plugin_candlekeepOriginalResource"], row["id"])
                 self.assertEqual(properties["plugin_candlekeepSellPrice"], item["basePrice"] * 50 // 100)
                 self.assertEqual(properties["plugin_candlekeepQuantity"], row["quantity"])
-        inn = json.loads(dialogs["winthropDialog"]["properties"]["shopEntries"])
+        inn = json.loads(dialogs["winthropDialog"]["properties"]["shopEntries"].removeprefix("candlekeep-json:"))
         self.assertEqual(next(row for row in inn if row["id"] == "BOLT01")["itemId"], "candlekeepBolts")
         self.assertTrue({"SW1H48", "SW1H43", "SW1H46"}.isdisjoint(row["id"] for row in inn))
         self.assertEqual(sum(row["id"].startswith("SHLD") for row in inn), 12)
@@ -760,12 +760,14 @@ class SourceAuditTests(unittest.TestCase):
     def testAuditedDrinksAndTempleServices(self):
         root = MODULE_PATH.parents[1]
         dialogs = json.loads((root / "res/maps/candlekeep/dialog.json").read_text(encoding="utf-8"))
-        drinks = json.loads(dialogs["winthropDialog"]["properties"]["drinkEntries"])
+        drinks = json.loads(dialogs["winthropDialog"]["properties"]["drinkEntries"].removeprefix("candlekeep-json:"))
         self.assertEqual(
             [(row["label"], row["price"]) for row in drinks],
             [("Blood Wine", 8), ("Firewine", 1), ("Mead", 4), ("Bitter Black Ale", 1), ("Arabellan Dry Wine", 2)],
         )
-        services = json.loads(dialogs["templePriestDialog"]["properties"]["serviceEntries"])
+        services = json.loads(
+            dialogs["templePriestDialog"]["properties"]["serviceEntries"].removeprefix("candlekeep-json:")
+        )
         self.assertEqual(
             [(row["id"], row["price"]) for row in services],
             [("SPPR103", 50), ("SPPR303", 200), ("SPPR307", 500), ("SPPR401", 100), ("SPPR212", 150), ("SPPR504", 750)],

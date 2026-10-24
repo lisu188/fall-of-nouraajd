@@ -25,7 +25,7 @@
     {
       "source": "src/core/bindings/CModuleCreatures.cpp",
       "registration": "bindCreatures",
-      "registrationTokenSha256": "70cca8f71ee11190fd408c0720f265f1042f15574dca25827ebecfd892df860f"
+      "registrationTokenSha256": "65258021df8f67cc5ffb72e1131a5d59209e323b6e62aefb9016d1f113f8b1e0"
     },
     {
       "source": "src/core/bindings/CModulePanels.cpp",
@@ -34,5 +34,6 @@
     }
   ],
   "runtimeAdapterReview": "Only the private seed hook delegates to per-consumer adapters; public registrations, arguments, defaults and docs remain unchanged.",
-  "alliedEncounterReview": "Adds fightManyWithAllies(hero, opponents, allies) and fightManyWithAlliesOutcome(hero, opponents, allies); existing signatures, defaults and registration order are retained. Native allied-combat tests cover bounded AI participants, rewards and stale contexts."
+  "alliedEncounterReview": "Adds fightManyWithAllies(hero, opponents, allies) and fightManyWithAlliesOutcome(hero, opponents, allies); existing signatures, defaults and registration order are retained. Native allied-combat tests cover bounded AI participants, rewards and stale contexts.",
+  "pendingMoveOriginReview": "Adds a readonly copied optional move origin during existing movement hooks; no setter or movement behavior changes. Native doorway and copy-lifetime regression is authored for CI."
 }

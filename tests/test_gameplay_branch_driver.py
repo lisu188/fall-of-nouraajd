@@ -22,6 +22,7 @@ from tests.gameplay_branch_driver import (
     readNewNativeTrace,
 )
 from tests.gameplay_branch_types import RouteCase
+import subprocess
 
 
 class GameplayBranchDriverTest(unittest.TestCase):
@@ -2622,6 +2623,61 @@ class GameplayBranchDriverTest(unittest.TestCase):
                 self.assertLess(
                     methods.index(("invokeAction", "banter")), methods.index(("invokeCondition", "has_left"))
                 )
+
+    def testStartingSaveTimeoutRetainsBoundedChildStreamsAndOriginalFailure(self):
+        for stdout, stderr in (
+            (b"discarded-prefix" + b"x" * 5000 + b"startup output", b"native failure \xff"),
+            ("discarded-prefix" + "y" * 5000 + "startup output", "native failure text"),
+            (None, None),
+        ):
+            with self.subTest(stream_type=type(stdout).__name__), tempfile.TemporaryDirectory() as directory:
+                driver = self.driver()
+                driver.build_dir = Path(directory)
+                driver.action_path = Path(directory) / "starting-save.actions.jsonl"
+                failure = subprocess.TimeoutExpired(["starting-fixture"], 90, output=stdout, stderr=stderr)
+                with patch("tests.gameplay_branch_driver.subprocess.run", side_effect=failure) as child:
+                    with self.assertRaises(subprocess.TimeoutExpired) as caught:
+                        driver.loadStartingSave(map_id="ninemarches")
+                self.assertIs(failure, caught.exception)
+                self.assertEqual((stdout, stderr), (failure.stdout, failure.stderr))
+                self.assertEqual(90, child.call_args.kwargs["timeout"])
+                self.assertTrue(child.call_args.kwargs["capture_output"])
+                self.assertTrue(child.call_args.kwargs["text"])
+                diagnostic = driver.actions[-1]["startingSaveFailure"]
+                self.assertEqual("TimeoutExpired", diagnostic["type"])
+                self.assertEqual(90, diagnostic["timeout"])
+                self.assertEqual(failure.cmd, diagnostic["command"])
+                expected = []
+                for value in (stdout, stderr):
+                    if isinstance(value, bytes):
+                        value = value.decode("utf-8", errors="replace")
+                    expected.append((value or "")[-4096:])
+                self.assertEqual(expected, [diagnostic["stdoutTail"], diagnostic["stderrTail"]])
+                self.assertTrue(all(len(diagnostic[key]) <= 4096 for key in ("stdoutTail", "stderrTail")))
+                saved = [json.loads(line) for line in driver.action_path.read_text(encoding="utf-8").splitlines()]
+                self.assertEqual(diagnostic, saved[-1]["startingSaveFailure"])
+                self.assertNotIn("discarded-prefix", json.dumps(diagnostic))
+                driver.harness._mcp_engine_call.assert_not_called()
+
+    def testStartingSaveTimeoutSurvivesUnavailableEvidenceWriter(self):
+        driver = self.driver()
+        driver._slot = Mock(return_value="mcp-branch-" + "b" * 32)
+        driver.record = Mock(side_effect=OSError("disk full " + "x" * 5000))
+        failure = subprocess.TimeoutExpired(
+            ["starting-fixture"], 90, output=b"startup output", stderr=b"native failure"
+        )
+        with patch("tests.gameplay_branch_driver.subprocess.run", side_effect=failure) as child:
+            with self.assertRaises(subprocess.TimeoutExpired) as caught:
+                driver.loadStartingSave(map_id="ninemarches")
+        self.assertIs(failure, caught.exception)
+        self.assertEqual((b"startup output", b"native failure"), (failure.stdout, failure.stderr))
+        self.assertEqual(90, child.call_args.kwargs["timeout"])
+        driver.record.assert_called_once()
+        self.assertEqual(1, len(failure.__notes__))
+        self.assertIn("timeout diagnostics could not be saved", failure.__notes__[0])
+        self.assertIn("OSError: disk full", failure.__notes__[0])
+        self.assertLessEqual(len(failure.__notes__[0]), 640)
+        driver.harness._mcp_engine_call.assert_not_called()
 
 
 if __name__ == "__main__":

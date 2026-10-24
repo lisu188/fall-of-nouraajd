@@ -85,7 +85,19 @@ finally:
 
 LIFETIME_PROGRAM = """
 from pathlib import Path
+from time import monotonic
 import uuid
+
+
+def waitForTransition(instance, loop):
+    deadline = monotonic() + 5
+    scene = instance.getSceneManager()
+    while True:
+        loop.run()
+        if not scene.isTransitionPending():
+            return
+        assert monotonic() < deadline, ('Trade map transition did not settle', scene.getTransitionStateName())
+
 
 instance = game.CGameLoader.loadGame()
 save_path = None
@@ -111,13 +123,13 @@ try:
     away.targetMap = 'test'
     away.retainSourceMap = True
     assert instance.requestMapTransition(away)
-    loop.run()
+    waitForTransition(instance, loop)
     assert instance.getMap() is not original
     back = game.CMapTransitionRequest()
     back.targetMap = 'test'
     back.reuseLoadedMap = True
     assert instance.requestMapTransition(back)
-    loop.run()
+    waitForTransition(instance, loop)
     assert instance.getMap() is original
     # No getter ran while away: generation must invalidate the retained same-map instance.
     assert handler.getRequestedTradeMarket() is None
@@ -219,6 +231,50 @@ class McpTradeMarketContractTest(unittest.TestCase):
     def testNativeContractProgramsHaveValidSyntaxWithoutExecutingNativeCode(self):
         for program in (CALLBACK_PROGRAM, LIFETIME_PROGRAM, GUI_PROGRAM):
             compile(program, "<native trade market contract>", "exec")
+
+    def testRetainedTradeFixtureWaitsForIdleAfterBothTransitionRequests(self):
+        import ast
+
+        tree = ast.parse(LIFETIME_PROGRAM)
+        function = next(
+            (node for node in tree.body if isinstance(node, ast.FunctionDef) and node.name == "waitForTransition"), None
+        )
+        self.assertIsNotNone(function, "The native fixture needs a bounded settled-transition wait")
+        namespace = {"monotonic": lambda: 0}
+        exec(compile(ast.Module(body=[function], type_ignores=[]), "<trade transition wait>", "exec"), namespace)
+        steps = []
+        # The destination map can already be current while entry work still holds Transitioning.
+        scene = SimpleNamespace(isTransitionPending=lambda: len(steps) < 3)
+        instance = SimpleNamespace(getSceneManager=lambda: scene)
+        loop = SimpleNamespace(run=lambda: steps.append("pump"))
+        namespace["waitForTransition"](instance, loop)
+        self.assertEqual(["pump"] * 3, steps)
+        waits = [
+            node
+            for node in ast.walk(tree)
+            if isinstance(node, ast.Call) and isinstance(node.func, ast.Name) and node.func.id == "waitForTransition"
+        ]
+        self.assertEqual(2, len(waits), "Both outward and return transitions must settle before final assertions")
+        self.assertIn("assert instance.requestMapTransition(back)", LIFETIME_PROGRAM)
+        self.assertIn("assert instance.getMap() is original", LIFETIME_PROGRAM)
+        self.assertIn("assert handler.getRequestedTradeMarket() is None", LIFETIME_PROGRAM)
+
+    def testRetainedTradeFixtureStillFailsWhenTransitionNeverSettles(self):
+        import ast
+
+        tree = ast.parse(LIFETIME_PROGRAM)
+        function = next(
+            (node for node in tree.body if isinstance(node, ast.FunctionDef) and node.name == "waitForTransition"), None
+        )
+        self.assertIsNotNone(function)
+        times = iter((0, 6))
+        namespace = {"monotonic": lambda: next(times)}
+        exec(compile(ast.Module(body=[function], type_ignores=[]), "<trade transition wait>", "exec"), namespace)
+        scene = SimpleNamespace(isTransitionPending=lambda: True, getTransitionStateName=lambda: "Transitioning")
+        instance = SimpleNamespace(getSceneManager=lambda: scene)
+        loop = SimpleNamespace(run=lambda: None)
+        with self.assertRaisesRegex(AssertionError, "Trade map transition did not settle"):
+            namespace["waitForTransition"](instance, loop)
 
     def testMissingOwnerFixtureUsesARealContextHandlerAfterOwnerRelease(self):
         owners = []

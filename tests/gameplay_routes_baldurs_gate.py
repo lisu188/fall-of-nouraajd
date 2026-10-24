@@ -7,6 +7,7 @@ from functools import lru_cache, partial
 import json
 from pathlib import Path
 
+from scripts.build_baldurs_gate_city import decodeCityData
 from tests.gameplay_branch_types import RouteCase
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -48,7 +49,7 @@ def sourceQuantity(row):
 
 
 def read(d, owner, key, default):
-    return json.loads(d.call(owner, "getStringProperty", key) or json.dumps(default))
+    return decodeCityData(d.call(owner, "getStringProperty", key) or json.dumps(default))
 
 
 def resources(d):
@@ -100,6 +101,127 @@ def pathBetween(start_area, destination, connections, allowed):
     raise AssertionError(f"No currently permitted source route from {start_area} to {destination}")
 
 
+@lru_cache(maxsize=1)
+def cityMovementCells():
+    document = json.loads((ROOT / "res/maps/baldursGate/map.json").read_text(encoding="utf-8"))
+    definitions = json.loads((ROOT / "res/config/tiles.json").read_text(encoding="utf-8"))
+    definitions.update(documents()["config"])
+    walkable_ids = {
+        tileset["firstgid"] + int(index)
+        for tileset in document["tilesets"]
+        for index, row in tileset.get("tileproperties", {}).items()
+        if definitions[row["type"]]["properties"].get("canStep", False)
+    }
+    walkable, portals = set(), set()
+    for layer in document["layers"]:
+        level = int(layer["properties"]["level"])
+        if layer["type"] == "tilelayer":
+            walkable.update(
+                (index % document["width"], index // document["width"], level)
+                for index, gid in enumerate(layer["data"])
+                if gid in walkable_ids
+            )
+        elif layer["type"] == "objectgroup":
+            portals.update(
+                (int(row["x"] // document["tilewidth"]), int(row["y"] // document["tileheight"]), level)
+                for row in layer["objects"]
+                if definitions[row["name"]].get("class") == "BaldursGatePortal"
+            )
+    return frozenset(walkable), frozenset(portals)
+
+
+def cityApproachParents(origin, bounds, walkable, portals):
+    """Reach street cells and portal endpoints without continuing through a compulsory entrance."""
+    origin = tuple(origin)
+    x, y, z, width, height = bounds
+
+    def permitted(point):
+        return point in walkable and point[2] == z and x <= point[0] < x + width and y <= point[1] < y + height
+
+    previous = {}
+    if permitted(origin):
+        pending, previous = deque([origin]), {origin: None}
+        while pending:
+            point = pending.popleft()
+            px, py, pz = point
+            for candidate in ((px - 1, py, pz), (px + 1, py, pz), (px, py - 1, pz), (px, py + 1, pz)):
+                if candidate not in previous and permitted(candidate):
+                    previous[candidate] = point
+                    if candidate not in portals:
+                        pending.append(candidate)
+    return previous
+
+
+def cityApproachPath(origin, destination, bounds, walkable, portals):
+    """Plan cardinal cells within one source area; entering any other portal would force a different trip."""
+    destination = tuple(destination)
+    previous = cityApproachParents(origin, bounds, walkable, portals)
+    if destination in previous:
+        result, point = [], destination
+        while previous[point] is not None:
+            result.append(point)
+            point = previous[point]
+        return tuple(reversed(result))
+    raise AssertionError(("No portal-safe city approach", origin, destination, bounds))
+
+
+def cityTravelPath(origin, start_area, destination, connections, allowed, atlas, walkable, portals):
+    edges = defaultdict(list)
+    for link in connections:
+        if allowed(link):
+            edges[link["from"]].append(link)
+    pending = deque([(start_area, tuple(origin), ())])
+    visited = {(start_area, tuple(origin))}
+    while pending:
+        area_id, point, route = pending.popleft()
+        if area_id not in atlas:
+            continue
+        reachable = cityApproachParents(point, atlas[area_id]["bounds"], walkable, portals)
+        if not reachable:
+            continue
+        if area_id == destination:
+            return route
+        for link in sorted(edges[area_id], key=lambda entry: entry["object"]):
+            arrival = (link["to"], tuple(link["target"]))
+            if tuple(link["origin"]) in reachable and arrival not in visited:
+                visited.add(arrival)
+                pending.append((*arrival, route + (link,)))
+    raise AssertionError(f"No currently permitted source route from {start_area} at {origin} to {destination}")
+
+
+def approachCityObject(d, name, *, reenter=False):
+    area_id, origin = currentArea(d), d.coords()
+    target = d.coords(d.object(name))
+    walkable, portals = cityMovementCells()
+    bounds = documents()["geometry"]["atlas"][area_id]["bounds"]
+    initial_turns = d.turns
+    budget = max(128, 4 * sum(abs(a - b) for a, b in zip(origin, target)) + 128)
+
+    def advance(point, *, final=False):
+        remaining = budget - (d.turns - initial_turns)
+        d.test.assertGreater(remaining, 0, ("City approach turn budget exhausted", name, budget))
+        d.navigateCoords(point, limit=remaining)
+        d.test.assertLessEqual(d.turns - initial_turns, budget, ("City approach turn budget exhausted", name, budget))
+        if not final or point not in portals:
+            d.test.assertEqual(point, d.coords(), ("City waypoint was not actually reached", name, point))
+            d.test.assertEqual(area_id, currentArea(d), ("Unselected city transition during approach", name, point))
+
+    if reenter and origin == target:
+        for dx, dy in ((-1, 0), (1, 0), (0, -1), (0, 1)):
+            candidate = (origin[0] + dx, origin[1] + dy, origin[2])
+            if candidate in walkable and candidate not in portals and d.canStep(candidate):
+                x, y, z, width, height = bounds
+                if not (candidate[2] == z and x <= candidate[0] < x + width and y <= candidate[1] < y + height):
+                    continue
+                advance(candidate)
+                origin = candidate
+                break
+        else:
+            d.test.fail(("No portal-safe city re-entry departure", name, target))
+    for point in cityApproachPath(origin, target, bounds, walkable, portals):
+        advance(point, final=point == target)
+
+
 def travel(d, destination):
     config, geometry = documents()["config"], documents()["geometry"]
     phase = d.number("plugin_cityPhase") or 5
@@ -117,11 +239,26 @@ def travel(d, destination):
                 return False
         return True
 
-    route = pathBetween(currentArea(d), destination, geometry["connections"], allowed)
+    route = cityTravelPath(
+        d.coords(),
+        currentArea(d),
+        destination,
+        geometry["connections"],
+        allowed,
+        geometry["atlas"],
+        *cityMovementCells(),
+    )
     traversed = []
     for link in route:
         name = link["object"]
-        d.navigateTo(name)
+        portal = d.object(name)
+        d.test.assertEqual(tuple(link["origin"]), d.coords(portal), (name, "Actual source entrance"))
+        d.test.assertEqual(
+            tuple(link["target"]),
+            tuple(d.call(portal, "getNumericProperty", "target" + axis) for axis in "XYZ"),
+            (name, "Actual source destination"),
+        )
+        approachCityObject(d, name)
         if currentArea(d) != link["to"]:
             portal = d.object(name)
             if d.call(portal, "getBoolProperty", "locked"):
@@ -132,8 +269,9 @@ def travel(d, destination):
                     condition = "canUnlock" if method == "unlock" else "canForce"
                     d.test.assertTrue(d.condition(dialog, condition), ("Source entrance remains locked", name))
                     d.choose(dialog, method)
-            d.revisit(name)
+            approachCityObject(d, name, reenter=True)
         d.test.assertEqual(link["to"], currentArea(d), (name, "Actual portal arrival"))
+        d.test.assertEqual(tuple(link["target"]), d.coords(), (name, "Actual source arrival coordinates"))
         d.test.assertEqual(link["to"], d.string("activeSimulationRegion"))
         properties = config[name]["properties"]
         source_id = properties.get("sourceRegion")
@@ -465,7 +603,7 @@ class QuestRoute:
             properties = entry.get("properties", {})
             if entry.get("class") != "BaldursGateContainer" or "contents" not in properties:
                 continue
-            if any(row["item"] in codes for row in json.loads(properties["contents"])):
+            if any(row["item"] in codes for row in decodeCityData(properties["contents"])):
                 containers.append((bool(properties.get("locked")), bool(properties.get("sourceOwner")), name))
         for _locked, _owned, name in sorted(containers):
             owner = self.d.object(name, required=False)
@@ -496,9 +634,9 @@ class QuestRoute:
                     self.d.choose(owner + "Dialog", "buyStore" + upperFirst(store_id.lower()) + str(index))
                     if sum(resources(self.d)[2][code] for code in codes) >= requirement.get("count", 1):
                         return
-        for excursion in json.loads(self.d.call(self.d.object("cityClock"), "getStringProperty", "questDefinitions"))[
-            "excursions"
-        ]:
+        for excursion in decodeCityData(
+            self.d.call(self.d.object("cityClock"), "getStringProperty", "questDefinitions")
+        )["excursions"]:
             for choice in excursion["choices"]:
                 if any(row["item"] in codes for row in choice.get("items", [])):
                     self.accept(excursion["quest"])
@@ -521,7 +659,7 @@ class QuestRoute:
         for name, entry in sorted(self.data["config"].items()):
             properties = entry.get("properties", {})
             if entry.get("class") not in ACTOR_CLASSES or not any(
-                row["item"] in codes for row in json.loads(properties.get("sourceInventory", "[]"))
+                row["item"] in codes for row in decodeCityData(properties.get("sourceInventory", "[]"))
             ):
                 continue
             if not self.d.object(name, required=False):
@@ -568,7 +706,9 @@ class QuestRoute:
             elif flag == "narlenWarning":
                 self.narlenLookout(warn=True)
             else:
-                document = json.loads(self.d.call(self.d.object("cityClock"), "getStringProperty", "questDefinitions"))
+                document = decodeCityData(
+                    self.d.call(self.d.object("cityClock"), "getStringProperty", "questDefinitions")
+                )
                 found_excursion = next(
                     (
                         (excursion, choice)
@@ -915,7 +1055,7 @@ def generatedStoreCases():
     from scripts.build_baldurs_gate_city_dialogs import storeDialogRows
 
     data = documents()
-    stores = json.loads(data["config"]["cityClock"]["properties"]["storeDefinitions"])
+    stores = decodeCityData(data["config"]["cityClock"]["properties"]["storeDefinitions"])
     owners = {}
     for name, entry in data["config"].items():
         properties = entry.get("properties", {})
