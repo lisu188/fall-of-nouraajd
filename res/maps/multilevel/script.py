@@ -99,5 +99,9 @@ def load(self, context):
         def onEnter(self, event):
             cause = event.getCause() if event else None
             if cause and cause.isPlayer():
-                goal_id = "upper" if self.getCoords().z == 1 else "lower"
-                self.getMap().setBoolProperty(f"visited_{goal_id}_goal", True)
+                level = self.getCoords().z
+                game_map = self.getMap()
+                game_map.setBoolProperty(f"visited_level_{level}_goal", True)
+                if level in (0, 1):
+                    goal_id = "upper" if level == 1 else "lower"
+                    game_map.setBoolProperty(f"visited_{goal_id}_goal", True)
