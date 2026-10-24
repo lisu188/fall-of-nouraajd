@@ -77,7 +77,7 @@ class WaitStateRuntimeTest(unittest.TestCase):
                 game.CGameLoader.startGameWithPlayer(instance, 'empty', 'Warrior')
                 world = instance.getMap()
                 coordinator = instance.createObject('CBuilding')
-                coordinator.setName('unitWaitCoordinator')
+                coordinator.setStringProperty('name', 'unitWaitCoordinator')
                 world.addObject(coordinator)
                 state = instance.createObject('CWaitState')
                 state.setRemainingMilliseconds(60000)
