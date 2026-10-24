@@ -222,6 +222,39 @@ def approachCityObject(d, name, *, reenter=False):
         advance(point, final=point == target)
 
 
+def contactCityObject(d, name):
+    """Approach through this ward's streets, then require the ordinary native contact witness."""
+    actor = d.object(name)
+    identity = actor["__handle__"]
+    origin, target = d.coords(), d.coords(actor)
+    area_id = currentArea(d)
+    d.test.assertEqual(area_id, currentArea(d, actor), ("City contact target left its area", name))
+    bounds = documents()["geometry"]["atlas"][area_id]["bounds"]
+    walkable, portals = cityMovementCells()
+    budget = max(128, 4 * sum(abs(a - b) for a, b in zip(origin, target)) + 128)
+    initial_turns = d.turns
+
+    def requireCurrent(*, pending=False):
+        current = d.object(name, required=False)
+        d.test.assertIsNotNone(current, ("City contact target disappeared", name))
+        d.test.assertEqual(identity, current["__handle__"], ("City contact identity changed", name))
+        d.test.assertEqual(area_id, currentArea(d), ("Unselected city transition during contact", name))
+        d.test.assertEqual(area_id, currentArea(d, current), ("City contact target left its area", name))
+        used = d.turns - initial_turns
+        d.test.assertLessEqual(used, budget, ("City contact turn budget exhausted", name, budget))
+        if pending:
+            d.test.assertLess(used, budget, ("City contact turn budget exhausted", name, budget))
+
+    for point in cityApproachPath(origin, target, bounds, walkable, portals)[:-1]:
+        requireCurrent(pending=True)
+        d.navigateCoords(point, limit=budget - (d.turns - initial_turns))
+        requireCurrent()
+        d.test.assertEqual(point, d.coords(), ("City contact waypoint was not actually reached", name, point))
+    requireCurrent()
+    d.navigateTo(name, after_tick=requireCurrent)
+    requireCurrent()
+
+
 def travel(d, destination):
     config, geometry = documents()["config"], documents()["geometry"]
     phase = d.number("plugin_cityPhase") or 5
@@ -521,7 +554,7 @@ class QuestRoute:
         area_id = currentArea(self.d, actor) if actor else ""
         area_id = area_id or self.data["config"][name]["properties"].get("sourceArea", "AR0800")
         travel(self.d, area_id)
-        self.d.navigateTo(name)
+        contactCityObject(self.d, name)
 
     def ensurePhase(self, minimum):
         if self.d.number("plugin_cityPhase") >= minimum:
