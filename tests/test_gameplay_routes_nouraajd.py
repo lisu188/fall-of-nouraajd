@@ -17,6 +17,99 @@ from tests.hook_flow_support import installHookFlows
 
 
 class GameplayNouraajdServiceRoutesTest(unittest.TestCase):
+    def testAmuletHandInSettlesTheNativeJournalBeforeItsRewardReceipt(self):
+        tree = ast.parse(
+            (Path(__file__).resolve().parents[1] / "res/maps/nouraajd/script.py").read_text(encoding="utf-8")
+        )
+        classes = {node.name: node for node in ast.walk(tree) if isinstance(node, ast.ClassDef)}
+        selected = []
+        for class_id, method_name in (
+            ("QuestReturnDialog", "complete_amulet_quest"),
+            ("QuestSystem", "finish_amulet"),
+            ("QuestSystem", "is_amulet_returned"),
+            ("AmuletQuest", "isCompleted"),
+        ):
+            method = next(
+                node
+                for node in classes[class_id].body
+                if isinstance(node, ast.FunctionDef) and node.name == method_name
+            )
+            method.decorator_list = []
+            selected.append(method)
+        state = SimpleNamespace(
+            stage="active", gold=200, claimed=False, requests=[], actors={"amuletGoblin", "oldWoman"}
+        )
+        amulet = SimpleNamespace(getName=lambda: "preciousAmulet")
+        other = SimpleNamespace(getName=lambda: "otherItem")
+        items = [amulet, other]
+        player = SimpleNamespace(
+            hasItem=lambda predicate: any(predicate(item) for item in items),
+            removeItem=lambda predicate, quest: items.remove(next(item for item in items if predicate(item))),
+            addGold=lambda amount: setattr(state, "gold", state.gold + amount),
+        )
+        game_map = SimpleNamespace(getPlayer=lambda: player)
+        game = SimpleNamespace(getMap=lambda: game_map)
+        dialog = SimpleNamespace(getGame=lambda: game)
+        quest = SimpleNamespace()
+        active, completed = [quest], []
+        quest_system = SimpleNamespace(
+            get_state=lambda name: state.stage,
+            set_state=lambda name, value: setattr(state, "stage", value),
+        )
+
+        def claim(owner, key):
+            self.assertIs(game_map, owner)
+            self.assertEqual("AMULET_REWARD_CLAIMED", key)
+            if state.claimed:
+                return False
+            state.claimed = True
+            return True
+
+        def removeActors(owner, *, names):
+            self.assertIs(game_map, owner)
+            self.assertEqual(("amuletGoblin", "oldWoman"), names)
+            state.actors.difference_update(names)
+            yield from ()
+
+        def receipt(owner, title, before, message):
+            self.assertIs(game, owner)
+            self.assertEqual("Amulet returned", title)
+            self.assertEqual(200, before)
+            self.assertIn("50 gold", message)
+            yield "receipt", ()
+
+        scope = {
+            "flowGame": lambda owner: owner,
+            "_quest_system_from": lambda owner: quest_system,
+            "claim_once": claim,
+            "rewardSnapshot": lambda owner: state.gold,
+            "removeRuntimeActorsFlow": removeActors,
+            "showRewardReceiptFlow": receipt,
+            "uiRequest": lambda operation, *args: (operation, args),
+        }
+        exec(compile(ast.Module(body=selected, type_ignores=[]), "<selected-amulet-hand-in>", "exec"), scope)
+        quest_system.finish_amulet = lambda: scope["finish_amulet"](quest_system)
+        quest_system.is_amulet_returned = lambda: scope["is_amulet_returned"](quest_system)
+        flow = scope["complete_amulet_quest"](dialog)
+        self.addCleanup(flow.close)
+        operation, args = next(flow)
+        self.assertEqual("gui.checkQuests", operation)
+        self.assertEqual((player,), args)
+        self.assertTrue(scope["isCompleted"](quest))
+        self.assertEqual((250, "returned", True), (state.gold, state.stage, state.claimed))
+        self.assertEqual([other], items)
+        self.assertEqual(set(), state.actors)
+        self.assertEqual([quest], active)
+        # Model the existing native checkQuestsAsync membership move after this request is acknowledged.
+        active.remove(quest)
+        completed.append(quest)
+        self.assertEqual(("receipt", ()), flow.send(None))
+        self.assertEqual(([quest], []), (completed, active))
+        with self.assertRaises(StopIteration):
+            flow.send(None)
+        self.assertEqual([], list(scope["complete_amulet_quest"](dialog)))
+        self.assertEqual((250, [other], [quest]), (state.gold, items, completed))
+
     def victorScrollFixture(self):
         source = json.loads(
             (Path(__file__).resolve().parents[1] / "res/maps/nouraajd/map.json").read_text(encoding="utf-8")
