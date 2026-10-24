@@ -50,6 +50,8 @@ ADDITIONAL_CASES = {
         "testOwnedDefeatGraphActorBindingPreservesPrimaryBeforeRootAndProperties",
         "testQueuedSceneTransitionWaitsForOwnedDefeatAndControllerCleanup",
         "testQueuedSceneCombatDeferralReleasesAfterThrowAndKeepsDirectReplacementCancellation",
+        "testOwnedDefeatPresentationFollowsSuccessfulControllerCleanup",
+        "testPublicDefeatPreservesItsIndependentPostedPresentation",
         "testAsyncCombatAwaitsLootWithoutPumpingOrGrantingRewardsEarly",
         "testWorkerStartedCombatDefersControllerAndPanelCreationToMain",
         "testOwnedLootCancellationCompensationRetainsExactItemsAndRejectsUncertainReplay",

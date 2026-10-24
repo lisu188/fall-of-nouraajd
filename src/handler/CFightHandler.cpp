@@ -20,6 +20,7 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #include "core/CAsync.h"
 #include <algorithm>
 #include <exception>
+#include <functional>
 #include <sstream>
 #include <tuple>
 #include <unordered_set>
@@ -45,6 +46,7 @@ struct CCombatOwnership {
     CCombatOwnership(CCombatOwnership &&) = delete;
     CCombatOwnership &operator=(CCombatOwnership &&) = delete;
     std::optional<CGameContext::UnsafeOperationLease> defeatAdmission;
+    std::function<void()> defeatPresentation;
 };
 
 class CCombatParticipantGuard {
@@ -100,12 +102,20 @@ class CCombatParticipantGuard {
     std::shared_ptr<CCombatOwnership> getIdentity() const { return admitted ? identity : nullptr; }
 
     void settleDefeatAdmission() {
-        if (admitted && identity->defeatAdmission) {
-            if (identity->defeatAdmission->isCurrent()) {
-                identity->defeatAdmission->finish();
-            } else {
-                identity->defeatAdmission->quarantine();
-            }
+        if (!admitted) {
+            return;
+        }
+        if (identity->defeatAdmission && !identity->defeatAdmission->isCurrent()) {
+            identity->defeatPresentation = {};
+            identity->defeatAdmission->quarantine();
+            return;
+        }
+        auto present = std::exchange(identity->defeatPresentation, {});
+        if (present) {
+            present();
+        }
+        if (identity->defeatAdmission) {
+            identity->defeatAdmission->finish();
         }
     }
 
@@ -1618,8 +1628,22 @@ vstd::task<void> CFightHandler::resolveOwnedDefeatAsync(std::shared_ptr<CCreatur
             std::weak_ptr<CMap> weakMap = encounterMap;
             std::weak_ptr<CCreature> weakPlayer = b;
             auto context = game->getContext();
+            std::weak_ptr<CGameContext> weakContext = context;
             const auto generation = context->captureTransitionGeneration();
-            context->spawnTask(showDefeatOwnedAsync(weakGame, weakMap, weakPlayer, generation));
+            auto present = [weakGame, weakMap, weakPlayer, weakContext, generation] {
+                auto context = weakContext.lock();
+                if (context && context->isTransitionGenerationCurrent(generation)) {
+                    context->spawnTask(showDefeatOwnedAsync(weakGame, weakMap, weakPlayer, generation));
+                }
+            };
+            if (encounterOwner) {
+                if (encounterOwner->defeatPresentation) {
+                    throw std::logic_error("An encounter already owns a defeat presentation.");
+                }
+                encounterOwner->defeatPresentation = std::move(present);
+            } else {
+                present();
+            }
         }
     }
     requireOwnerCurrent();

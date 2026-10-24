@@ -266,6 +266,187 @@ class CityWalkthroughRegistrationTest(unittest.TestCase):
         self.assertEqual(["utf-8"], encodings)
         self.assertEqual(set(), tags)
 
+    def runDefeatPresentationQueue(self, *, encounter_owned=True, cleanup_error=None, owner_current=True):
+        native = (ROOT / "src/handler/CFightHandler.cpp").read_text(encoding="utf-8")
+        deferred = "encounterOwner->defeatPresentation = std::move(present);" in native
+        ui_tree = ast.parse((ROOT / "res/ui.py").read_text(encoding="utf-8"))
+        runner_tree = ast.parse((ROOT / "test.py").read_text(encoding="utf-8"))
+        ui_entry = next(
+            node for node in ui_tree.body if isinstance(node, ast.FunctionDef) and node.name == "showDefeatFlow"
+        )
+        runtime_case = next(
+            node
+            for node in ast.walk(runner_tree)
+            if isinstance(node, ast.FunctionDef) and node.name == "test_cave_loss_does_not_reopen_fight_panel"
+        )
+        selected = [
+            next(
+                node
+                for node in runner_tree.body
+                if isinstance(node, ast.FunctionDef) and node.name == "gui_contains_class"
+            )
+        ] + [
+            node
+            for node in runtime_case.body
+            if isinstance(node, ast.FunctionDef) and node.name in ("recovered_state", "acknowledge_defeat")
+        ]
+        events, queue, observations = [], [], []
+
+        class Node:
+            def __init__(self, kind):
+                self.kind, self.children = kind, []
+
+            def getType(self):
+                return self.kind
+
+            def getChildren(self):
+                return list(self.children)
+
+        gui = Node("CGui")
+        fight = Node("CGameFightPanel")
+        if encounter_owned:
+            gui.children.append(fight)
+        coords = SimpleNamespace(x=4, y=5, z=0)
+        stored = {"uiDefeatReceipt": json.dumps({"map": "Training", "hp": 1, "lostItems": []})}
+        player = SimpleNamespace(
+            getCoords=lambda: coords,
+            getHp=lambda: 1,
+            getGold=lambda: 37,
+            getItems=lambda: [],
+            getStringProperty=lambda name: stored.get(name, ""),
+            setStringProperty=lambda name, value: stored.__setitem__(name, value),
+        )
+        game_map = SimpleNamespace(
+            getPlayer=lambda: player,
+            getTurn=lambda: 9,
+            getStringProperty=lambda name: "training",
+        )
+        context = SimpleNamespace(isActive=lambda: True)
+        game = SimpleNamespace(getMap=lambda: game_map, getContext=lambda: context)
+        g = SimpleNamespace(getGui=lambda: gui)
+        namespace = {
+            "json": json,
+            "uiRequest": lambda operation, *args, **kwargs: {"operation": operation, "args": args},
+            "displayName": lambda name: name,
+            "self": self,
+            "player": player,
+            "game_map": game_map,
+            "g": g,
+            "entry_coords": (4, 5, 0),
+            "coords_tuple": lambda value: (value.x, value.y, value.z),
+            "SDL_KEYDOWN": 1,
+            "SDLK_RETURN": 13,
+        }
+        exec(
+            compile(ast.Module(body=[ui_entry] + selected, type_ignores=[]), "actual-defeat-ui-and-ack", "exec"),
+            namespace,
+        )
+
+        def present():
+            events.append("presentation")
+            flow = namespace["showDefeatFlow"](game)
+            request = next(flow)
+            self.assertEqual("choose", request["operation"])
+            _, title, choices, *_ = request["args"]
+            panel = Node("CGameCampaignBrowserPanel")
+            panel.getStringProperty = lambda name: title if name == "title" else ""
+            panel.getSelectedId = lambda: choices[0]["id"]
+            panel.getDetailText = lambda: choices[0]["detail"]
+            panel.keyboardEvent = lambda *args: gui.children.remove(panel)
+            gui.children.append(panel)
+            before = namespace["recovered_state"]()
+            observations.append(namespace["acknowledge_defeat"](panel))
+            with self.assertRaises(StopIteration):
+                flow.send("continue")
+            self.assertEqual(before, namespace["recovered_state"]())
+
+        def postPresentation():
+            queue.append(present)
+
+        pending = postPresentation if encounter_owned and deferred else None
+        if pending is None:
+            postPresentation()
+
+        def cleanup():
+            events.append("controller-end")
+            if cleanup_error is not None:
+                raise cleanup_error
+            if fight in gui.children:
+                gui.children.remove(fight)
+            if pending is not None and owner_current:
+                pending()
+
+        # Each awaited native child dispatches its parent continuation onto the loop.
+        queue.append(lambda: queue.append(lambda: queue.append(cleanup)))
+        while queue:
+            queue.pop(0)()
+        return SimpleNamespace(events=events, observations=observations, receipt=stored["uiDefeatReceipt"])
+
+    def testOwnedDefeatPresentationRunsAfterCapturedControllerCleanup(self):
+        observed = self.runDefeatPresentationQueue()
+        self.assertEqual(["controller-end", "presentation"], observed.events)
+        self.assertEqual([((4, 5, 0), 1, 37, (), 9)], observed.observations)
+        self.assertEqual("", observed.receipt)
+
+    def testFailedOwnedCleanupPreservesPrimaryAndDoesNotPresent(self):
+        primary = RuntimeError("controller cleanup primary")
+        with self.assertRaises(RuntimeError) as error:
+            self.runDefeatPresentationQueue(cleanup_error=primary)
+        self.assertIs(primary, error.exception)
+
+    def testStaleOwnedCleanupRetainsReceiptWithoutPresenting(self):
+        observed = self.runDefeatPresentationQueue(owner_current=False)
+        self.assertEqual(["controller-end"], observed.events)
+        self.assertFalse(observed.observations)
+        self.assertTrue(observed.receipt)
+
+    def testPublicDefeatKeepsPostedPresentationWithoutEncounterCleanup(self):
+        observed = self.runDefeatPresentationQueue(encounter_owned=False)
+        self.assertEqual(["presentation", "controller-end"], observed.events)
+        self.assertEqual(1, len(observed.observations))
+
+    def testDefeatPresentationSettlementIsOnceAfterCertifiedCleanupBeforeLeaseRelease(self):
+        source = (ROOT / "src/handler/CFightHandler.cpp").read_text(encoding="utf-8")
+        owner = source.split("struct CCombatOwnership {", 1)[1].split("class CCombatParticipantGuard", 1)[0]
+        self.assertIn("std::function<void()> defeatPresentation;", owner)
+        settle = source.split("    void settleDefeatAdmission() {", 1)[1].split("  private:", 1)[0]
+        self.assertLess(settle.index("!identity->defeatAdmission->isCurrent()"), settle.index("std::exchange"))
+        self.assertLess(settle.index("std::exchange(identity->defeatPresentation, {})"), settle.index("present();"))
+        self.assertLess(settle.index("present();"), settle.index("identity->defeatAdmission->finish();"))
+        destructor = source.split("    ~CCombatParticipantGuard() {", 1)[1].split("    explicit operator bool", 1)[0]
+        self.assertNotIn("defeatPresentation", destructor)
+        cleanup = source.split("    const auto settle_result =", 1)[1].split("    if (useConfiguredAllies", 1)[0]
+        self.assertLess(cleanup.index("certifyCleanup();"), cleanup.index("settleDefeatAdmission();"))
+        request = source.split("        if (showDefeat) {", 1)[1].split("    requireOwnerCurrent();", 1)[0]
+        self.assertIn("[weakGame, weakMap, weakPlayer, weakContext, generation]", request)
+        self.assertIn("encounterOwner->defeatPresentation = std::move(present);", request)
+        self.assertIn("} else {\n                present();", request)
+        self.assertIn("An encounter already owns a defeat presentation.", request)
+
+    def testDefeatPresentationNativeControlsAreRegisteredForLegacyAndGuardedEncounters(self):
+        source = (ROOT / "tests/unit/test_handler.cpp").read_text(encoding="utf-8")
+        names = (
+            "testOwnedDefeatPresentationFollowsSuccessfulControllerCleanup",
+            "testPublicDefeatPreservesItsIndependentPostedPresentation",
+        )
+        for name in names:
+            self.assertTrue("void " + name + "()" in source, name)
+            self.assertEqual(1, source.count('nativeTestProfile().run("' + name + '"'))
+        self.assertIn('map->setBoolProperty("guardNativeEncounterSaves", mode == 3);', source)
+        self.assertIn("probe->browserSawCleanup && probe->browserSawSaveAdmission", source)
+        self.assertIn("primary == (mode == 1)", source)
+        self.assertIn("probe->ends == 0 && probe->browserSawFightPanel", source)
+        tree = ast.parse((ROOT / "tests/test_native_test_profile.py").read_text(encoding="utf-8"))
+        assignment = next(
+            node
+            for node in tree.body
+            if isinstance(node, ast.Assign)
+            and any(isinstance(target, ast.Name) and target.id == "ADDITIONAL_CASES" for target in node.targets)
+        )
+        cases = ast.literal_eval(assignment.value)["handler"]
+        for name in names:
+            self.assertEqual(1, cases.count(name))
+
     def runCombatTransitionModel(
         self, *, commit_during_fight, pending_state="TransitionPending", owned_defeat_continuation=False
     ):

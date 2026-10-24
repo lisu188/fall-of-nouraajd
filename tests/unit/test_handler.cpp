@@ -41,6 +41,7 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #include "core/CWrapper.h"
 #include "gui/CGui.h"
 #include "gui/panel/CGameFightPanel.h"
+#include "gui/panel/CGameCampaignBrowserPanel.h"
 #include "gui/panel/CGameLootPanel.h"
 #include "gui/panel/CGamePanel.h"
 #include "gui/panel/CGameTextPanel.h"
@@ -3776,6 +3777,187 @@ void testQueuedSceneCombatDeferralReleasesAfterThrowAndKeepsDirectReplacementCan
     }
 }
 
+struct DefeatPresentationOrderProbe {
+    int starts = 0;
+    int controls = 0;
+    int ends = 0;
+    int browsers = 0;
+    bool browserSawCleanup = false;
+    bool browserSawFightPanel = false;
+    bool browserSawSaveAdmission = false;
+};
+
+class PresentationSelfDefeatController : public CPlayerFightController {
+  public:
+    PresentationSelfDefeatController(std::shared_ptr<DefeatPresentationOrderProbe> probe, int mode)
+        : probe(std::move(probe)), mode(mode) {}
+
+    void start(std::shared_ptr<CCreature> me, std::shared_ptr<CCreature> opponent) override {
+        ++probe->starts;
+        CPlayerFightController::start(std::move(me), std::move(opponent));
+    }
+
+    vstd::task<bool> controlAsync(std::shared_ptr<CCreature> me, std::shared_ptr<CCreature>) override {
+        ++probe->controls;
+        me->setHp(0);
+        co_return true;
+    }
+
+    void end(std::shared_ptr<CCreature> me, std::shared_ptr<CCreature> opponent) override {
+        ++probe->ends;
+        CPlayerFightController::end(me, std::move(opponent));
+        if (mode == 1) {
+            throw std::runtime_error("unit defeat presentation cleanup primary");
+        }
+        if (mode == 2) {
+            me->getGame()->getContext()->advanceTransitionGeneration();
+        }
+    }
+
+  private:
+    std::shared_ptr<DefeatPresentationOrderProbe> probe;
+    int mode;
+};
+
+class NativeDefeatChoiceFixture {
+  public:
+    NativeDefeatChoiceFixture() : ui(pybind11::module_::import("ui")), previous(ui.attr("showDefeatFlow")) {
+        pybind11::dict scope;
+        // Only the presentation entry is replaced. The real UiFlow, dispatcher, native panel,
+        // and keyboard acknowledgement run without requiring the _game extension in this unit binary.
+        pybind11::exec(R"(
+def unitDefeatFlow(game):
+    yield {"operation": "gui.showChoice", "args": ["Defeated", '[{"id":"continue","label":"Continue adventure"}]', "Continue", "Back"], "kwargs": {}}
+)",
+                       scope);
+        ui.attr("showDefeatFlow") = scope["unitDefeatFlow"];
+    }
+
+    NativeDefeatChoiceFixture(const NativeDefeatChoiceFixture &) = delete;
+    NativeDefeatChoiceFixture &operator=(const NativeDefeatChoiceFixture &) = delete;
+    ~NativeDefeatChoiceFixture() { ui.attr("showDefeatFlow") = previous; }
+
+  private:
+    pybind11::object ui;
+    pybind11::object previous;
+};
+
+void installDefeatBrowserObserver(const std::shared_ptr<CGame> &game,
+                                  const std::shared_ptr<DefeatPresentationOrderProbe> &probe) {
+    std::weak_ptr<CGame> weakGame = game;
+    game->getObjectHandler()->registerType("CGameCampaignBrowserPanel", [weakGame, probe] {
+        auto game = weakGame.lock();
+        ++probe->browsers;
+        probe->browserSawFightPanel = game && game->getGui()->findChild("CGameFightPanel") != nullptr;
+        probe->browserSawCleanup = probe->ends == 1 && !probe->browserSawFightPanel;
+        probe->browserSawSaveAdmission = game && game->getMap()->tryBeginSaveSnapshot().has_value();
+        return std::make_shared<CGameCampaignBrowserPanel>();
+    });
+    game->getObjectHandler()->registerConfig("campaignBrowserPanel",
+                                             std::make_shared<json>(json{{"class", "CGameCampaignBrowserPanel"}}));
+    expect_true(game->getObjectHandler()->getClass("campaignBrowserPanel") == "CGameCampaignBrowserPanel",
+                "the dispatcher ordering fixture must resolve its real native browser factory");
+}
+
+void testOwnedDefeatPresentationFollowsSuccessfulControllerCleanup() {
+    NativeDefeatChoiceFixture uiFixture;
+    auto loop = vstd::event_loop<>::instance();
+    for (int mode = 0; mode != 4; ++mode) {
+        auto game = makeWindowlessFightGame();
+        auto map = game->getMap();
+        auto context = game->getContext();
+        map->setBoolProperty("plugin_cityFixedLoot", true);
+        map->setBoolProperty("guardNativeEncounterSaves", mode == 3);
+        auto probe = std::make_shared<DefeatPresentationOrderProbe>();
+        installDefeatBrowserObserver(game, probe);
+        auto player = add_test_player(game);
+        auto controller = std::make_shared<PresentationSelfDefeatController>(probe, mode);
+        player->setFightController(controller);
+        player->getBaseStats()->setAgility(100);
+        auto winner = add_test_creature(game, "unitPresentationWinner", 1, 0);
+        const auto gold = player->getGold();
+        const auto turn = map->getTurn();
+        auto combat = context->spawnTask(CFightHandler::fightManyResultAsync(player, {winner}));
+        const bool finished =
+            pumpHandlerUntil([&] { return combat.finished() && (mode == 1 || mode == 2 || probe->browsers != 0); });
+        expect_true(finished && probe->starts == 1 && probe->controls == 1 && probe->ends == 1,
+                    "the real player controller must start, self-defeat and finish cleanup exactly once");
+        bool primary = false;
+        if (combat.finished()) {
+            try {
+                const auto result = combat.get();
+                expect_true(mode != 1 && result.outcome == CFightOutcome::AttackerDefeat,
+                            "successful cleanup must preserve the recovered player's actual defeat result");
+            } catch (const std::runtime_error &error) {
+                primary = std::string(error.what()) == "unit defeat presentation cleanup primary";
+            }
+        }
+        expect_true(primary == (mode == 1), "failed cleanup must retain its original exception identity");
+        const bool presented = mode == 0 || mode == 3;
+        expect_true(probe->browsers == (presented ? 1 : 0),
+                    "only certified current cleanup may create one defeat browser, with or without save opt-in");
+        expect_true(!presented || (probe->browserSawCleanup && probe->browserSawSaveAdmission),
+                    "the native browser constructor must observe detached fight UI and released admission");
+        expect_true(player->getHp() == 1 && map->getObjectByName("player") == player && player->getGold() == gold &&
+                        map->getTurn() == turn,
+                    "presentation ordering must not replay recovery, grant gold or advance the map");
+        auto panel = std::dynamic_pointer_cast<CGameCampaignBrowserPanel>(
+            game->getGui()->findChild("CGameCampaignBrowserPanel"));
+        if (presented) {
+            expect_true(panel && panel->getSelectedId() == "continue",
+                        "the real dispatcher must attach its actual native stable-choice panel");
+            if (panel) {
+                panel->keyboardEvent(game->getGui(), SDL_KEYDOWN, SDLK_RETURN);
+                expect_true(pumpHandlerUntil([&] { return !game->getGui()->findChild("CGameCampaignBrowserPanel"); }),
+                            "real keyboard acknowledgement must detach the browser");
+            }
+        } else {
+            loop->runReady();
+            expect_true(!map->tryBeginSaveSnapshot(), "failed or stale owned cleanup must stay quarantined");
+        }
+        loop->runReady();
+        expect_true(!game->getGui()->findChild("CGameFightPanel") && probe->browsers == (presented ? 1 : 0),
+                    "queue draining must not reopen the ended fight or duplicate its browser");
+        context->shutdown();
+    }
+}
+
+void testPublicDefeatPreservesItsIndependentPostedPresentation() {
+    NativeDefeatChoiceFixture uiFixture;
+    auto game = makeWindowlessFightGame();
+    auto map = game->getMap();
+    auto context = game->getContext();
+    map->setBoolProperty("plugin_cityFixedLoot", true);
+    auto probe = std::make_shared<DefeatPresentationOrderProbe>();
+    installDefeatBrowserObserver(game, probe);
+    auto player = add_test_player(game);
+    auto winner = add_test_creature(game, "unitPublicPresentationWinner", 1, 0);
+    auto controller = std::make_shared<PresentationSelfDefeatController>(probe, 0);
+    player->setFightController(controller);
+    controller->start(player, winner);
+    expect_true(game->getGui()->findChild("CGameFightPanel") != nullptr,
+                "the public-path control must actually have an externally owned native fight panel");
+    player->setHp(0);
+    auto recovery = context->spawnTask(CFightHandler::defeatedCreatureAsync(winner, player));
+    expect_true(pumpHandlerUntil([&] { return recovery.finished() && probe->browsers == 1; }),
+                "public defeat must still post its presentation without a combat participant guard");
+    if (recovery.finished()) {
+        recovery.get();
+    }
+    expect_true(probe->ends == 0 && probe->browserSawFightPanel,
+                "public defeat must not silently end an independently owned controller");
+    auto panel =
+        std::dynamic_pointer_cast<CGameCampaignBrowserPanel>(game->getGui()->findChild("CGameCampaignBrowserPanel"));
+    if (panel) {
+        panel->keyboardEvent(game->getGui(), SDL_KEYDOWN, SDLK_RETURN);
+    }
+    controller->end(player, winner);
+    vstd::event_loop<>::instance()->runReady();
+    expect_true(probe->browsers == 1 && probe->ends == 1 && !game->getGui()->findChild("CGameFightPanel"),
+                "independent public caller cleanup must remain exactly once");
+    context->shutdown();
+}
+
 void test_fight_handler_reports_invalid_result_metadata() {
     const auto null_result = CFightHandler::fightManyResult(std::shared_ptr<CCreature>(), {});
     expect_true(null_result.outcome == CFightOutcome::Invalid && null_result.rounds == 0,
@@ -7408,6 +7590,10 @@ int main() {
                             testQueuedSceneTransitionWaitsForOwnedDefeatAndControllerCleanup);
     nativeTestProfile().run("testQueuedSceneCombatDeferralReleasesAfterThrowAndKeepsDirectReplacementCancellation",
                             testQueuedSceneCombatDeferralReleasesAfterThrowAndKeepsDirectReplacementCancellation);
+    nativeTestProfile().run("testOwnedDefeatPresentationFollowsSuccessfulControllerCleanup",
+                            testOwnedDefeatPresentationFollowsSuccessfulControllerCleanup);
+    nativeTestProfile().run("testPublicDefeatPreservesItsIndependentPostedPresentation",
+                            testPublicDefeatPreservesItsIndependentPostedPresentation);
     nativeTestProfile().run("testAsyncCombatAwaitsLootWithoutPumpingOrGrantingRewardsEarly",
                             testAsyncCombatAwaitsLootWithoutPumpingOrGrantingRewardsEarly);
     nativeTestProfile().run("testWorkerStartedCombatDefersControllerAndPanelCreationToMain",
