@@ -523,7 +523,7 @@ conditional `linux-coverage` job. Run local coverage only when CI cannot cover t
 unavailable, or a focused local coverage reproduction is necessary. Coverage is required when a change touches tests,
 for example
 `test.py` or `tests/unit/**`), `src/core/**`, `src/handler/**`,
-`src/object/**`, `native_plugins/**`, or the coverage tooling:
+`src/object/**`, or the coverage tooling:
 
 ```bash
 ./scripts/run_coverage.sh
@@ -563,10 +563,10 @@ roughly 141 seconds less than the observed longest parallel group. This is an es
 not a native rerun or proof that a later head will finish within the cap.
 
 ## Coverage scope
-The canonical coverage report is scoped to production/native plugin code by default:
+The canonical coverage report is scoped to production C++ engine code by default:
 
 ```bash
-COVERAGE_INCLUDE_PREFIXES="src native_plugins" ./scripts/run_coverage.sh
+COVERAGE_INCLUDE_PREFIXES="src" ./scripts/run_coverage.sh
 ```
 
 `scripts/run_coverage.sh` uses that scope unless `COVERAGE_INCLUDE_PREFIXES` is overridden. Coverage line exclusions are

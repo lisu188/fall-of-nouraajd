@@ -195,7 +195,7 @@ then set `GAME_BUILD_DIR=cmake-build-clangcl20-release` and `GAME_BUILD_CONFIG=R
 steps.
 Also run `./scripts/run_coverage.sh` when a change touches tests (for example
 `test.py` or `tests/unit/**`), `src/core/**`, `src/handler/**`, `src/object/**`,
-`src/gui/**`, `native_plugins/**`, or the coverage tooling (the authoritative
+`src/gui/**`, or the coverage tooling (the authoritative
 path list is `COVERAGE_PATH_PATTERNS` in `scripts/ci_change_classifier.py`). The default coverage run uses the Python reporter without line exclusions,
 runs the bounded `coverage-safe` Python suite, and enforces a 90% eligible-line gate; see `docs/testing.md` for details,
 including recommended branch-protection checks.

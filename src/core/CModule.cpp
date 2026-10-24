@@ -29,7 +29,7 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #include "object/CCreatureClassTrack.h"
 #include "object/CCreatureRace.h"
 #include "object/CCreatureTemplate.h"
-#include "plugin/CGameplayTypeTable.h"
+#include "core/CGameplayTypeTable.h"
 
 namespace py = pybind11;
 
@@ -204,7 +204,6 @@ std::shared_ptr<CGameObject> cast_registered_python_object(const py::object &ins
         return result;                                                                                                 \
     }
     FN_GAMEPLAY_TYPES(FN_IGNORE, FN_DOWNCAST)
-    FN_DOWNCAST(CPlugin)
 #undef FN_DOWNCAST
 #undef FN_IGNORE
     return instance.cast<std::shared_ptr<CGameObject>>();

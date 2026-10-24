@@ -17,8 +17,14 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 #pragma once
 
+#include <memory>
+
+class CGame;
+
 namespace type_registration {
 void registerObjectTypes();
+void registerGameplayTypeMetadata();
+void registerGameplayTypes(const std::shared_ptr<CGame> &game);
 void registerCoreTypes();
 void registerHandlerTypes();
 void registerGuiTypes();

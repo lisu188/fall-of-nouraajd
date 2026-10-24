@@ -15,7 +15,9 @@ GNU General Public License for more details.
 You should have received a copy of the GNU General Public License
 along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
-#include "plugin/NativePlugin.h"
+#include "core/CTypeRegistration.h"
+#include "core/CTypes.h"
+#include "core/CGame.h"
 #include "core/CController.h"
 #include "core/CWrapper.h"
 #include "handler/CEventHandler.h"
@@ -27,10 +29,20 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #include "object/CMarket.h"
 #include "object/CObject.h"
 #include "object/CPlayer.h"
-#include "plugin/CGameplayTypeTable.h"
-#include "plugin/CPluginRegistrar.h"
+#include "core/CGameplayTypeTable.h"
+#include "handler/CObjectHandler.h"
 
-namespace native_plugin {
+namespace {
+
+template <fn::MetaRegisteredGameObject T, fn::GameObjectDerived... Bases>
+void registerGameplayType(const std::shared_ptr<CObjectHandler> &handler) {
+    CTypes::register_type<T, Bases...>();
+    handler->registerNativeType(T::static_meta()->name(), [] { return std::make_shared<T>(); });
+}
+
+} // namespace
+
+namespace type_registration {
 
 void registerGameplayTypeMetadata() {
 #define FN_TYPE(T, ...) CTypes::register_type_metadata<T, __VA_ARGS__>();
@@ -42,19 +54,15 @@ void registerGameplayTypeMetadata() {
 #undef FN_TYPE
 }
 
-bool register_gameplay_types(CPluginRegistrar &registrar) {
-    bool registered = true;
-#define FN_TYPE(T, ...) registered = registrar.registerType<T, __VA_ARGS__>() && registered;
+void registerGameplayTypes(const std::shared_ptr<CGame> &game) {
+    const auto handler = game->getObjectHandler();
+#define FN_TYPE(T, ...) registerGameplayType<T, __VA_ARGS__>(handler);
 #define FN_WRAPPED(T, ...)                                                                                             \
-    registered = registrar.registerType<T, __VA_ARGS__>() && registered;                                               \
-    registered = registrar.registerType<CWrapper<T>, T, __VA_ARGS__>() && registered;
+    registerGameplayType<T, __VA_ARGS__>(handler);                                                                      \
+    registerGameplayType<CWrapper<T>, T, __VA_ARGS__>(handler);
     FN_GAMEPLAY_TYPES(FN_TYPE, FN_WRAPPED)
 #undef FN_WRAPPED
 #undef FN_TYPE
-    if (registered) {
-        registrar.log("registered native gameplay classes");
-    }
-    return registered;
 }
 
-} // namespace native_plugin
+} // namespace type_registration

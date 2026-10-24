@@ -261,58 +261,6 @@ if (CMAKE_CXX_COMPILER_ID MATCHES "GNU|Clang|AppleClang"
     target_compile_options(_game PRIVATE -fvisibility=hidden -fvisibility-inlines-hidden)
 endif ()
 
-set(NATIVE_PLUGIN_TARGETS)
-
-function(add_native_plugin target_name source_file)
-    add_library(${target_name} MODULE ${source_file})
-    configure_cpp_target(${target_name})
-    set_target_properties(${target_name} PROPERTIES
-        PREFIX ""
-        OUTPUT_NAME "${target_name}"
-        LIBRARY_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/plugins/native"
-        RUNTIME_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/plugins/native"
-        ARCHIVE_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/plugins/native"
-    )
-    if (APPLE)
-        set_target_properties(${target_name} PROPERTIES
-            BUILD_RPATH "@loader_path/../.."
-            INSTALL_RPATH "@loader_path/../.."
-        )
-    elseif (UNIX)
-        set_target_properties(${target_name} PROPERTIES
-            BUILD_RPATH "$ORIGIN/../.."
-            INSTALL_RPATH "$ORIGIN/../.."
-        )
-    endif ()
-    if (CMAKE_CONFIGURATION_TYPES)
-        foreach (config IN LISTS CMAKE_CONFIGURATION_TYPES)
-            string(TOUPPER "${config}" config_upper)
-            set_target_properties(${target_name} PROPERTIES
-                LIBRARY_OUTPUT_DIRECTORY_${config_upper} "${CMAKE_BINARY_DIR}/plugins/native"
-                RUNTIME_OUTPUT_DIRECTORY_${config_upper} "${CMAKE_BINARY_DIR}/plugins/native"
-                ARCHIVE_OUTPUT_DIRECTORY_${config_upper} "${CMAKE_BINARY_DIR}/plugins/native"
-            )
-        endforeach ()
-    endif ()
-    if (CMAKE_CXX_COMPILER_ID MATCHES "GNU|Clang|AppleClang"
-            AND NOT CMAKE_CXX_COMPILER_FRONTEND_VARIANT STREQUAL "MSVC")
-        target_compile_options(${target_name} PRIVATE -fvisibility=hidden -fvisibility-inlines-hidden)
-    endif ()
-    # Plugins consume the CPluginRegistrar host surface, whose headers reach engine headers
-    # (pybind11 included); they still link only against game_core for symbols.
-    target_link_libraries(${target_name} PRIVATE game_core pybind11::headers Python3::Python)
-    set(NATIVE_PLUGIN_TARGETS ${NATIVE_PLUGIN_TARGETS} ${target_name} PARENT_SCOPE)
-endfunction()
-
-add_native_plugin(native_marker_plugin native_plugins/native_marker_plugin.cpp)
-add_native_plugin(native_gameplay native_plugins/native_gameplay.cpp)
-set(NATIVE_PLUGIN_INSTALL_TARGETS ${NATIVE_PLUGIN_TARGETS})
-add_native_plugin(native_legacy_probe native_plugins/native_marker_plugin.cpp)
-target_compile_definitions(native_legacy_probe PRIVATE GAME_PLUGIN_TEST_LEGACY_VERSION)
-add_native_plugin(native_missing_version_probe native_plugins/native_marker_plugin.cpp)
-target_compile_definitions(native_missing_version_probe PRIVATE GAME_PLUGIN_TEST_MISSING_VERSION)
-add_dependencies(_game ${NATIVE_PLUGIN_TARGETS})
-
 configure_file(res/config/adventure.json config/adventure.json)
 configure_file(res/config/armors.json config/armors.json)
 configure_file(res/config/classes.json config/classes.json)
@@ -764,11 +712,6 @@ configure_file(game_simulation.py game_simulation.py)
 configure_file(quest_state.py quest_state.py)
 
 install(TARGETS game_core _game DESTINATION fall-of-nouraajd)
-install(TARGETS ${NATIVE_PLUGIN_INSTALL_TARGETS}
-    LIBRARY DESTINATION fall-of-nouraajd/plugins/native
-    RUNTIME DESTINATION fall-of-nouraajd/plugins/native
-    BUNDLE DESTINATION fall-of-nouraajd/plugins/native
-)
 install(DIRECTORY res/campaigns DESTINATION fall-of-nouraajd)
 install(DIRECTORY res/config DESTINATION fall-of-nouraajd)
 install(DIRECTORY res/fonts DESTINATION fall-of-nouraajd)
@@ -962,7 +905,7 @@ target_compile_definitions(handler_unit_tests PRIVATE
 target_compile_definitions(handler_unit_tests PRIVATE
     GAME_NATIVE_TEST_PROFILE_DIR="${CMAKE_CURRENT_SOURCE_DIR}/coverage/native-test-profiles")
 add_game_unit_test(object_unit_tests tests/unit/test_object.cpp)
-add_game_unit_test(plugin_registrar_unit_tests tests/unit/test_plugin_registrar.cpp)
+add_game_unit_test(gameplay_type_registration_unit_tests tests/unit/test_gameplay_type_registration.cpp)
 
 add_executable(native_test_profile_fixture tests/unit/native_test_profile_fixture.cpp)
 configure_cpp_target(native_test_profile_fixture)

@@ -444,15 +444,14 @@ class AndroidPortScaffoldTest(unittest.TestCase):
         self.assertEqual("landscape", activity.attrib[ANDROID_NS + "screenOrientation"])
         self.assertEqual("true", activity.attrib[ANDROID_NS + "exported"])
 
-    def test_android_native_plugins_keep_manifest_ids(self):
-        manifest = (ROOT / "res/plugins/manifest.json").read_text(encoding="utf-8")
-        runtime = (ROOT / "src/plugin/CNativePluginRuntime.cpp").read_text(encoding="utf-8")
-        self.assertIn('"library": "plugins/native/native_marker_plugin"', manifest)
-        self.assertIn('"library": "plugins/native/native_gameplay"', manifest)
-        self.assertIn('library == "plugins/native/native_marker_plugin"', runtime)
-        self.assertIn('library == "plugins/native/native_gameplay"', runtime)
-        self.assertIn("native_plugin::register_dynamic_marker", runtime)
-        self.assertIn("native_plugin::register_gameplay_types", runtime)
+    def test_android_registers_gameplay_types_without_dynamic_plugins(self):
+        loader = (ROOT / "src/core/CLoader.cpp").read_text(encoding="utf-8")
+        registrar = (ROOT / "src/core/CGameplayTypeRegistration.cpp").read_text(encoding="utf-8")
+        build = (ROOT / "android/CMakeLists.txt").read_text(encoding="utf-8")
+        self.assertIn("type_registration::registerGameplayTypes(game)", loader)
+        self.assertIn("FN_GAMEPLAY_TYPES(FN_TYPE, FN_WRAPPED)", registrar)
+        self.assertIn("file(GLOB_RECURSE GAME_ANDROID_SRC CONFIGURE_DEPENDS", build)
+        self.assertFalse((ROOT / "src/plugin/CNativePluginRuntime.cpp").exists())
 
     def test_platform_resource_roots_are_explicit_and_reversible(self):
         header = (ROOT / "src/core/CProvider.h").read_text(encoding="utf-8")

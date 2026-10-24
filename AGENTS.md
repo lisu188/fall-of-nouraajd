@@ -283,7 +283,6 @@ For PR delivery, use the PR `linux` GitHub Actions job with `--require-step cove
 - `tests/unit/**`
 - `scripts/run_coverage.sh`
 - coverage tooling
-- `native_plugins/**`
 - `src/core/**`
 - `src/handler/**`
 - `src/object/**`
@@ -436,7 +435,7 @@ Follow this workflow:
 Mismatched ids cause runtime loading or spawning failures.
 
 A brand-new C++ gameplay class needs an `FN_TYPE`/`FN_WRAPPED` row in
-`src/plugin/CGameplayTypeTable.h`.
+`src/core/CGameplayTypeTable.h`.
 
 ## Adding a creature race, class, or monster archetype
 
@@ -449,7 +448,7 @@ archetype content. Key rules:
   `res/config/creature_classes.json` (`CCreatureClass`), and assign them on
   concrete templates in `res/config/monsters.json` via `{"ref": "..."}`. Both
   archetype objects are already registered through
-  `src/plugin/CGameplayTypeTable.h`; new *ids* need only JSON.
+  `src/core/CGameplayTypeTable.h`; new *ids* need only JSON.
 - Follow the naming policy (suffix `Race` / `Class`, lowerCamelCase) and never let
   a class id duplicate a concrete template id.
 - **Do not rename** concrete monster/player template ids, or any quest/dialog id.
@@ -495,7 +494,7 @@ When exposing a new C++ class to Python:
 1. Add or update a `CWrapper<YourClass>` specialization in `src/core/CWrapper.h` if Python subclasses need to override virtual behavior.
 2. Add the pybind11 binding in `src/core/CModule.cpp` inside `PYBIND11_MODULE(_game, m)`.
 3. Use `py::class_<...>` with the correct base class, wrapper class when needed, and `std::shared_ptr<...>`.
-4. For gameplay object types, add the `FN_TYPE` row (or `FN_WRAPPED` when a `CWrapper<T>` trampoline exists) to `src/plugin/CGameplayTypeTable.h` — it feeds native registration, pybind metadata, and the Python downcast dispatch from one list. Core/GUI framework types register in the owning `C*TypeRegistration.cpp` unit with `CTypes::register_type<...>()`.
+4. For gameplay object types, add the `FN_TYPE` row (or `FN_WRAPPED` when a `CWrapper<T>` trampoline exists) to `src/core/CGameplayTypeTable.h` — it feeds native registration, pybind metadata, and the Python downcast dispatch from one list. Core/GUI framework types register in the owning `C*TypeRegistration.cpp` unit with `CTypes::register_type<...>()`.
 5. Add or update Python plugin classes under `res/plugins/` when the new type is intended to be instantiated from scripts or config.
 6. Build `_game`, run C++ tests, and run `python3 test.py`.
 

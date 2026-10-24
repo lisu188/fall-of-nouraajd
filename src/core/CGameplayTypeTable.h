@@ -20,7 +20,7 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 // The single source of truth for content-constructible gameplay types.
 //
 // Every consumer expands this table instead of maintaining its own list:
-//   - native_plugin::register_gameplay_types (src/plugin/NativePlugin.cpp): builders + factories
+//   - type_registration::registerGameplayTypes (src/core/CGameplayTypeRegistration.cpp): builders + factories
 //   - register_python_binding_type_metadata (src/core/CModule.cpp): serializer/cast metadata
 //   - cast_registered_python_object (src/core/CModule.cpp): Python downcast dispatch
 //   - scripts/validate_content.py: parses the rows textually to cross-check config class refs

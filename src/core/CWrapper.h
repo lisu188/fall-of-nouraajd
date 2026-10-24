@@ -19,10 +19,8 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 #include "core/CConcepts.h"
 #include "core/CGlobal.h"
-#include "core/CPlugin.h"
 #include "object/CDialog.h"
 #include "object/CObject.h"
-#include "plugin/CPluginRegistrar.h"
 
 namespace py = pybind11;
 
@@ -265,22 +263,6 @@ template <> class CWrapper<CQuest> : public CQuest {
             PYTHON_LOG;
             PyErr_Clear();
             return CQuest::getHint();
-        }
-    }
-};
-
-template <> class CWrapper<CPlugin> : public CPlugin {
-    V_META(CWrapper<CPlugin>, CPlugin, vstd::meta::empty())
-
-  public:
-    using CPlugin::CPlugin;
-
-    void load(CPluginRegistrar &registrar) override final {
-        try {
-            PYBIND11_OVERRIDE(void, CPlugin, load, registrar);
-        } catch (const py::error_already_set &) {
-            PYTHON_LOG;
-            PyErr_Clear();
         }
     }
 };

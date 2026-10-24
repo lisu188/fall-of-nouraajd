@@ -744,13 +744,13 @@ void test_scoped_search_roots_resolve_active_map_assets() {
 
 void test_base_search_path_resolution_bypasses_active_map_scope() {
     const auto nonce = std::to_string(std::chrono::steady_clock::now().time_since_epoch().count());
-    const auto tempRoot = std::filesystem::temp_directory_path() / ("scoped-native-plugin-root-" + nonce);
-    const auto logicalPlugin = "plugins/native/scoped_payload_" + nonce + ".so";
+    const auto tempRoot = std::filesystem::temp_directory_path() / ("scoped-resource-root-" + nonce);
+    const auto logicalPlugin = "plugins/scoped_payload_" + nonce + ".py";
     const auto scopedPlugin = tempRoot / logicalPlugin;
     std::error_code errorCode;
     std::filesystem::create_directories(scopedPlugin.parent_path(), errorCode);
-    expect_true(write_text_file(scopedPlugin, "map-local native plugin"),
-                "map-local native plugin fixture should be written");
+    expect_true(write_text_file(scopedPlugin, "map-local Python resource"),
+                "map-local scoped resource fixture should be written");
     std::filesystem::create_directories(tempRoot / "config", errorCode);
     expect_true(write_text_file(tempRoot / "config" / "items.json", "map-local config"),
                 "scoped config shadow fixture should be written");
@@ -762,11 +762,11 @@ void test_base_search_path_resolution_bypasses_active_map_scope() {
     expect_true(!provider->getPath(logicalPlugin).empty(),
                 "ordinary scoped lookup should still resolve map-local plugin-shaped assets");
     expect_true(provider->getPathFromBaseSearchPath(logicalPlugin).empty(),
-                "trusted native plugin lookup must bypass active map scopes");
+                "base resource lookup must bypass active map scopes");
     expect_true(provider->getPathFromBaseSearchPath("../" + logicalPlugin).empty(),
-                "trusted native plugin lookup must still reject traversal paths");
+                "base resource lookup must reject traversal paths");
     expect_true(provider->getPathFromBaseSearchPath(scopedPlugin.string()).empty(),
-                "trusted native plugin lookup must still reject absolute paths");
+                "base resource lookup must reject absolute paths");
 
     const auto packagedResource = provider->getPathFromBaseSearchPath("config/items.json");
     expect_true(!packagedResource.empty(), "trusted lookup must still resolve packaged resources");

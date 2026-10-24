@@ -57,11 +57,11 @@ class CiChangeClassifierTest(unittest.TestCase):
                 self.assertTrue(classification.nativeNeeded)
                 self.assertTrue(classification.coverageNeeded)
 
-    def test_plugin_infrastructure_requires_native_and_coverage_validation(self) -> None:
+    def test_builtin_type_registration_requires_native_and_coverage_validation(self) -> None:
         for path in (
-            "src/plugin/CPluginRegistrar.cpp",
-            "src/plugin/CNativePluginRuntime.cpp",
-            "src/plugin/CPluginAbi.h",
+            "src/core/CGameplayTypeRegistration.cpp",
+            "src/core/CGameplayTypeTable.h",
+            "src/core/CLoader.cpp",
         ):
             with self.subTest(path=path):
                 classification = self.classify(path)
