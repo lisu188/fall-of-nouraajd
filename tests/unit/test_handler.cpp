@@ -3781,6 +3781,7 @@ struct DefeatPresentationOrderProbe {
     int starts = 0;
     int controls = 0;
     int ends = 0;
+    int browserFactories = 0;
     int browsers = 0;
     bool browserSawCleanup = false;
     bool browserSawFightPanel = false;
@@ -3842,6 +3843,26 @@ def unitDefeatFlow(game):
     pybind11::object previous;
 };
 
+class ObservedDefeatBrowserPanel : public CGameCampaignBrowserPanel {
+  public:
+    explicit ObservedDefeatBrowserPanel(std::shared_ptr<DefeatPresentationOrderProbe> probe)
+        : probe(std::move(probe)) {}
+
+    void setGame(std::shared_ptr<CGame> game) override {
+        CGameCampaignBrowserPanel::setGame(game);
+        if (!game) {
+            return;
+        }
+        ++probe->browsers;
+        probe->browserSawFightPanel = game->getGui()->findChild("CGameFightPanel") != nullptr;
+        probe->browserSawCleanup = probe->ends == 1 && !probe->browserSawFightPanel;
+        probe->browserSawSaveAdmission = game->getMap()->tryBeginSaveSnapshot().has_value();
+    }
+
+  private:
+    std::shared_ptr<DefeatPresentationOrderProbe> probe;
+};
+
 void installDefeatBrowserObserver(const std::shared_ptr<CGame> &game,
                                   const std::shared_ptr<DefeatPresentationOrderProbe> &probe) {
     auto objects = game->getObjectHandler();
@@ -3852,15 +3873,19 @@ void installDefeatBrowserObserver(const std::shared_ptr<CGame> &game,
     }
     expect_true(!game->getGui()->findChild("CGameFightPanel"),
                 "the fixture factory preflight must not attach a fight panel before controller start");
-    std::weak_ptr<CGame> weakGame = game;
-    objects->registerType("CGameCampaignBrowserPanel", [weakGame, probe] {
-        auto game = weakGame.lock();
-        ++probe->browsers;
-        probe->browserSawFightPanel = game && game->getGui()->findChild("CGameFightPanel") != nullptr;
-        probe->browserSawCleanup = probe->ends == 1 && !probe->browserSawFightPanel;
-        probe->browserSawSaveAdmission = game && game->getMap()->tryBeginSaveSnapshot().has_value();
-        return std::make_shared<CGameCampaignBrowserPanel>();
+    objects->registerType("CGameCampaignBrowserPanel", [probe] {
+        ++probe->browserFactories;
+        return std::make_shared<ObservedDefeatBrowserPanel>(probe);
     });
+    auto prototype = objects->getType("CGameCampaignBrowserPanel");
+    if (!std::dynamic_pointer_cast<ObservedDefeatBrowserPanel>(prototype) || prototype->getGame()) {
+        throw std::runtime_error("Native defeat presentation fixture needs an unbound observed browser prototype.");
+    }
+    expect_true(probe->browserFactories == 1 && probe->browsers == 0 && !probe->browserSawCleanup &&
+                    !probe->browserSawFightPanel && !probe->browserSawSaveAdmission,
+                "a real subtype-probe construction must not observe or count a presented browser");
+    expect_true(!game->getGui()->findChild("CGameCampaignBrowserPanel"),
+                "raw browser construction must not attach a presentation panel");
     game->getObjectHandler()->registerConfig("campaignBrowserPanel",
                                              std::make_shared<json>(json{{"class", "CGameCampaignBrowserPanel"}}));
     expect_true(game->getObjectHandler()->getClass("campaignBrowserPanel") == "CGameCampaignBrowserPanel",

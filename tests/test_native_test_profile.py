@@ -113,6 +113,33 @@ ADDITIONAL_CASES = {
 
 
 class NativeTestProfileSourceTest(unittest.TestCase):
+    def testPresentationBrowserObserverCountsBoundInstancesInsteadOfSubtypePrototypes(self):
+        handler = (ROOT / "tests/unit/test_handler.cpp").read_text()
+        self.assertIn("class ObservedDefeatBrowserPanel : public CGameCampaignBrowserPanel", handler)
+        observer = handler.split("class ObservedDefeatBrowserPanel : public CGameCampaignBrowserPanel", 1)[1].split(
+            "\n};", 1
+        )[0]
+        self.assertIn("void setGame(std::shared_ptr<CGame> game) override", observer)
+        self.assertIn("CGameCampaignBrowserPanel::setGame(game);", observer)
+        self.assertLess(
+            observer.index("CGameCampaignBrowserPanel::setGame(game);"), observer.index("++probe->browsers;")
+        )
+        self.assertIn("if (!game)", observer)
+        installer = handler.split("void installDefeatBrowserObserver(", 1)[1].split("\n}\n", 1)[0]
+        factory = installer.split('objects->registerType("CGameCampaignBrowserPanel", [probe] {', 1)[1].split(
+            "\n    });", 1
+        )[0]
+        self.assertNotIn("++probe->browsers", factory)
+        self.assertNotIn("getMap", factory)
+        self.assertNotIn("getGui", factory)
+        self.assertIn("std::make_shared<ObservedDefeatBrowserPanel>(probe)", factory)
+        self.assertIn('objects->getType("CGameCampaignBrowserPanel")', installer)
+        self.assertIn("std::dynamic_pointer_cast<ObservedDefeatBrowserPanel>(prototype)", installer)
+        self.assertIn("probe->browserFactories == 1 && probe->browsers == 0", installer)
+        self.assertIn(
+            "virtual void setGame(std::shared_ptr<CGame> game);", (ROOT / "src/object/CGameObject.h").read_text()
+        )
+
 
     def testBindingModuleRegistersTypedMapConversionMetadataWithoutBuilders(self):
         source = (ROOT / "src/core/CModule.cpp").read_text(encoding="utf-8")
