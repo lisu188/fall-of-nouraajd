@@ -316,7 +316,17 @@ class CityWalkthroughRegistrationTest(unittest.TestCase):
             if isinstance(node, (ast.FunctionDef, ast.ClassDef))
             and node.name in ("UiFlow", "UiFlowGame", "uiTarget", "showDefeatFlow", "uiGame")
         ]
-        namespace = {"json": json}
+        from contextvars import ContextVar
+
+        selected += [
+            node
+            for node in ui_tree.body
+            if isinstance(node, ast.Assign)
+            and any(
+                isinstance(target, ast.Name) and target.id == "_nativeMapOperationCleanup" for target in node.targets
+            )
+        ]
+        namespace = {"json": json, "ContextVar": ContextVar}
         exec(compile(ast.Module(body=selected, type_ignores=[]), "actual-ui-proxy-dispatch", "exec"), namespace)
         actual_entry = namespace["showDefeatFlow"]
         exec(compile(payload, "actual-native-unit-presentation-stand-in", "exec"), namespace)
