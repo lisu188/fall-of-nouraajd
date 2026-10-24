@@ -1122,7 +1122,10 @@ vstd::task<void> CMap::moveOwnedAsync(std::shared_ptr<CMap> map, CMovementPresen
             }
         }
 
-        for (auto [planned, coords] : coordinates) {
+        // Avoid owning structured-binding copies across suspension; GCC 15 retains their references.
+        for (const auto &coordinate : coordinates) {
+            const auto &planned = coordinate.first;
+            const auto coords = coordinate.second;
             if (!canApplyDeferredMoveWork()) {
                 break;
             }
