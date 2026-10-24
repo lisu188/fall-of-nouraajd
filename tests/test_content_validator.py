@@ -1196,6 +1196,101 @@ class ContentValidatorTest(unittest.TestCase):
         gooby_issues = [str(issue) for issue in issues if "gooby" in str(issue).lower()]
         self.assertEqual([], gooby_issues)
 
+    def testCityPropertyAllowancesHaveExactDataAndNativeConsumers(self):
+        from scripts.validate_content import SCRIPT_PROPERTY_HYGIENE_ALLOWLIST
+
+        path = "res/maps/baldursGate/script.py"
+        allowances = {row.name: row for row in SCRIPT_PROPERTY_HYGIENE_ALLOWLIST if row.path == path}
+        data_writes = {"poisonCured", "palaceCleared", "cityInterludeReady", "eltanCarried", "eltanSafe"}
+        data_reads = {"quayleAtGate", "eldothJoined", "aldethSaved", "narlenWarning"}
+        state_records = {"fugitive", "partyPoisoned"}
+        native_flags = {"plugin_cityAlliedCombat", "plugin_cityFixedLoot"}
+        expected = {"plugin_cityFlag_" + name for name in data_writes | data_reads | state_records}
+        expected |= native_flags | {"plugin_cityFlag_guardsAlerted"}
+        self.assertEqual(expected, set(allowances))
+        self.assertTrue(all(row.owner == "map" and row.reason for row in allowances.values()))
+        config = read_json(REPO_ROOT / "res/maps/baldursGate/config.json")
+        properties = config["cityClock"]["properties"]
+        reads, writes = set(), set()
+
+        def collect(value):
+            if isinstance(value, dict):
+                for key, child in value.items():
+                    if key == "flags" and isinstance(child, dict):
+                        writes.update(child)
+                    elif key in {"flags", "absentFlags"} and isinstance(child, list):
+                        reads.update(child)
+                    elif key == "requiresFlag":
+                        reads.add(child)
+                    collect(child)
+            elif isinstance(value, list):
+                for child in value:
+                    collect(child)
+
+        for key in ("questDefinitions", "actorDefinitions", "relocationDefinitions"):
+            collect(json.loads(properties[key].removeprefix("city-json:")))
+        self.assertTrue(data_writes | state_records <= writes)
+        self.assertTrue(data_reads <= reads)
+        native = (REPO_ROOT / "src/handler/CFightHandler.cpp").read_text(encoding="utf-8")
+        for name in native_flags:
+            self.assertIn('getBoolProperty("' + name + '")', native)
+        routes = (REPO_ROOT / "tests/gameplay_routes_baldurs_gate.py").read_text(encoding="utf-8")
+        self.assertIn('d.flag("plugin_cityFlag_guardsAlerted")', routes)
+
+    def testCityAllowanceCannotHideTheSameFlagInAnotherMap(self):
+        root = self.make_fixture()
+        write_property_hygiene_script(
+            root / "res/maps/broken/script.py",
+            """
+            @register(context)
+            class StartEvent(CEvent):
+                def onEnter(self, event):
+                    self.getMap().getBoolProperty("plugin_cityFlag_poisonCured")
+            """,
+        )
+        self.assertIssueContains(
+            validate_repo(root), "res/maps/broken/script.py", "plugin_cityFlag_poisonCured", "read without"
+        )
+
+    def testLocalMapReceiverHelperAndClaimOnceHaveKnownOwnership(self):
+        root = self.make_fixture()
+        write_property_hygiene_script(
+            root / "res/maps/broken/script.py",
+            """
+            def world(actor):
+                return actor.getGame().getMap()
+
+            @register(context)
+            class StartEvent(CEvent):
+                def onEnter(self, event):
+                    if claim_once(world(self), "entry_claimed"):
+                        world(self).setBoolProperty("helper_flag", True)
+                    if world(self).getBoolProperty("helper_flag"):
+                        self.getMap().getPlayer().addGold(1)
+                    if self.getMap().getBoolProperty("entry_claimed"):
+                        self.getMap().getPlayer().addGold(1)
+            """,
+        )
+        self.assertEqual([], [str(issue) for issue in validate_repo(root)])
+
+    def testExternalReceiverHelperStillRequiresOwnershipReview(self):
+        root = self.make_fixture()
+        write_property_hygiene_script(
+            root / "res/maps/broken/script.py",
+            """
+            from external_module import world
+
+            @register(context)
+            class StartEvent(CEvent):
+                def onEnter(self, event):
+                    game_map = self.getMap()
+                    game_map.setBoolProperty("reviewed_flag", True)
+                    game_map.getBoolProperty("reviewed_flag")
+                    world(self).getBoolProperty("reviewed_flag")
+            """,
+        )
+        self.assertIssueContains(validate_repo(root), "res/maps/broken/script.py", "reviewed_flag", "unknown receiver")
+
     def test_given_player_bool_read_without_default_when_validating_then_reports_uninitialized_property(self):
         root = self.make_fixture()
         write_property_hygiene_script(
@@ -2413,6 +2508,102 @@ class ContentValidatorTest(unittest.TestCase):
         self.assertIssueContains(issues, "ordinaryItem.properties.uiGroup", 'unknown property "uiGroup"')
         self.assertIssueContains(issues, "ordinaryItem.properties.speaker", 'unknown property "speaker"')
         self.assertIssueContains(issues, "misspelledControl.properties.uiGrop", 'unknown property "uiGrop"')
+
+    def citySourceMetadata(self):
+        return {
+            "simulationRegion": "AR0300",
+            "sourceActor": "AR0300#actor29",
+            "sourceArea": "AR0300",
+            "sourceCreature": "MAREK",
+            "sourceDialogue": "MAREK",
+            "sourceInventory": "[]",
+            "sourceItemSlots": "[]",
+            "sourceKillXp": 650,
+            "sourceSchedule": 4294967295,
+            "phaseMin": 5,
+            "phaseMax": 7,
+            "sourceSpawnFact": "AR0800.BCS#spawn0",
+            "sourceStore": "INN0704",
+            "custodyRole": "patrol",
+            "patrolArea": "AR0800",
+            "sourceDepartureScript": "LEAVECH7",
+            "sourceGameNpc": "GAM#npc0",
+            "sourceOriginalArea": "AR0800",
+            "sourceOriginalPosition": "[12,34]",
+            "sourceAdaptation": "Explicit outside-history companion arrives at the eastern city gate",
+        }
+
+    def writeCitySourceSchemaFixture(self, root):
+        header = root / "src/object/CCitySourceSchemaFixture.h"
+        header.parent.mkdir(parents=True, exist_ok=True)
+        header.write_text(
+            textwrap.dedent("""
+                class CGameObject {
+                    V_META(CGameObject, vstd::meta::empty())
+                };
+                class CMapObject {
+                    V_META(CMapObject, CGameObject, vstd::meta::empty())
+                };
+                class CCreature {
+                    V_META(CCreature, CMapObject, vstd::meta::empty())
+                };
+                class CPlayer {
+                    V_META(CPlayer, CCreature, vstd::meta::empty())
+                };
+                class CBuilding {
+                    V_META(CBuilding, CMapObject, vstd::meta::empty())
+                };
+                class CItem {
+                    V_META(CItem, CGameObject, vstd::meta::empty())
+                };
+            """).lstrip(),
+            encoding="utf-8",
+        )
+
+    def testReviewedCitySourceMetadataAcceptsNativeCreaturesAndRegionInheritance(self):
+        root = self.make_fixture()
+        self.writeCitySourceSchemaFixture(root)
+        config_path = root / "res/maps/broken/config.json"
+        config = read_json(config_path)
+        for class_name in ("CCreature", "CPlayer"):
+            config["source" + class_name] = {"class": class_name, "properties": self.citySourceMetadata()}
+        for class_name in ("CMapObject", "CBuilding"):
+            config["region" + class_name] = {"class": class_name, "properties": {"simulationRegion": "AR0300"}}
+        write_json(config_path, config)
+        self.assertEqual([], [str(issue) for issue in validate_repo(root)])
+
+    def testReviewedCitySourceMetadataRejectsEveryWrongPrimitiveType(self):
+        root = self.make_fixture()
+        self.writeCitySourceSchemaFixture(root)
+        config_path = root / "res/maps/broken/config.json"
+        config = read_json(config_path)
+        for name, value in self.citySourceMetadata().items():
+            config["invalid" + name] = {
+                "class": "CCreature",
+                "properties": {name: True if isinstance(value, int) else []},
+            }
+        write_json(config_path, config)
+        issues = validate_repo(root)
+        for name, value in self.citySourceMetadata().items():
+            expected = "int; got bool" if isinstance(value, int) else "string; got array"
+            self.assertIssueContains(issues, "invalid" + name + ".properties." + name, "expected " + expected)
+
+    def testReviewedCitySourceMetadataRejectsTyposUnknownFieldsAndUnrelatedObjects(self):
+        root = self.make_fixture()
+        self.writeCitySourceSchemaFixture(root)
+        config_path = root / "res/maps/broken/config.json"
+        config = read_json(config_path)
+        config["ordinaryItem"] = {"class": "CItem", "properties": self.citySourceMetadata()}
+        config["ordinaryMapObject"] = {"class": "CMapObject", "properties": {"sourceActor": "AR0300#actor29"}}
+        misspelled = {"sourceInvetory": "[]", "sourceInvented": "unsupported", "simulationRegoin": "AR0300"}
+        config["misspelledActor"] = {"class": "CCreature", "properties": misspelled}
+        write_json(config_path, config)
+        issues = validate_repo(root)
+        for name in self.citySourceMetadata():
+            self.assertIssueContains(issues, "ordinaryItem.properties." + name, 'unknown property "' + name + '"')
+        self.assertIssueContains(issues, "ordinaryMapObject.properties.sourceActor", 'unknown property "sourceActor"')
+        for name in misspelled:
+            self.assertIssueContains(issues, "misspelledActor.properties." + name, 'unknown property "' + name + '"')
 
     def test_creature_class_main_stat_numeric_stat_passes(self):
         root = self.make_fixture()

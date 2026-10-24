@@ -24,7 +24,9 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #include "core/CTypes.h"
 #include "gui/CGui.h"
 #include "gui/object/CMapGraphicsObject.h"
+#include "handler/CGuiHandler.h"
 #include "handler/CRngHandler.h"
+#include "handler/CScriptHandler.h"
 #include "object/CCreature.h"
 #include "object/CCreatureRace.h"
 #include "object/CPlayer.h"
@@ -34,6 +36,9 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 #include <algorithm>
 #include <cctype>
+#include <chrono>
+#include <cstdio>
+#include <cstdlib>
 #include <optional>
 #include <utility>
 
@@ -646,6 +651,108 @@ bool read_bool_property(const json &properties, const std::string &key) {
     return false;
 }
 
+bool readNativeEncounterSavePolicy(const json &properties) {
+    if (!properties.contains("guardNativeEncounterSaves")) {
+        return false;
+    }
+    const auto &policy = properties.at("guardNativeEncounterSaves");
+    if (!policy.is_boolean()) {
+        throw std::runtime_error("Authored map property guardNativeEncounterSaves must be a boolean");
+    }
+    return policy.get<bool>();
+}
+
+std::string readVerifiedLoadResumeReceiver(const json &properties) {
+    if (!properties.contains("verifiedLoadResumeReceiver")) {
+        return {};
+    }
+    const auto &value = properties.at("verifiedLoadResumeReceiver");
+    if (!value.is_string()) {
+        throw std::runtime_error("Authored map property verifiedLoadResumeReceiver must be a string");
+    }
+    const auto name = value.get<std::string>();
+    if (name.size() > 256 || std::any_of(name.begin(), name.end(),
+                                         [](unsigned char character) { return character < 32 || character == 127; })) {
+        throw std::runtime_error("Authored map property verifiedLoadResumeReceiver contains an invalid receiver name");
+    }
+    return name;
+}
+
+std::string authoredVerifiedLoadResumeReceiver(const std::shared_ptr<CGame> &game, const std::shared_ptr<CMap> &map) {
+    const auto authored = game->getConfigurationProvider()->getConfiguration(getMapPath(map->getMapName()));
+    if (!authored) {
+        return {};
+    }
+    const json emptyObject = json::object();
+    const auto &properties = authored->contains("properties") && authored->at("properties").is_object()
+                                 ? authored->at("properties")
+                                 : emptyObject;
+    return readVerifiedLoadResumeReceiver(properties);
+}
+
+bool verifiedLoadResumeBindingIsCurrent(const std::shared_ptr<CGame> &game,
+                                        const std::shared_ptr<CGameContext> &context, const std::shared_ptr<CMap> &map,
+                                        const std::shared_ptr<CMapObject> &receiver, const std::string &receiverName,
+                                        CGameContext::TransitionGeneration generation) {
+    const auto ownsBinding = [&] {
+        return game && context && map && receiver && game->getContext() == context &&
+               context->isTransitionGenerationCurrent(generation) && game->getMap() == map && map->getGame() == game &&
+               receiver->getGame() == game && receiver->getMap() == map;
+    };
+    if (!ownsBinding()) {
+        return false;
+    }
+    const auto configured = map->getStringProperty("verifiedLoadResumeReceiver");
+    return ownsBinding() && configured == receiverName && map->getObjectByName(receiverName) == receiver;
+}
+
+vstd::task<void> resumeVerifiedLoadFlowAsync(std::weak_ptr<CGame> weakGame, std::weak_ptr<CGameContext> weakContext,
+                                             std::weak_ptr<CMap> weakMap, std::weak_ptr<CMapObject> weakReceiver,
+                                             std::string receiverName, CGameContext::TransitionGeneration generation) {
+    co_await vstd::post(vstd::event_loop<>::instance());
+    try {
+        auto game = weakGame.lock();
+        auto context = weakContext.lock();
+        auto map = weakMap.lock();
+        auto receiver = weakReceiver.lock();
+        if (!verifiedLoadResumeBindingIsCurrent(game, context, map, receiver, receiverName, generation)) {
+            co_return;
+        }
+        auto handler = context->getGuiHandler();
+        auto flow = CScriptHandler::createObjectFlow(receiver, "resumeAfterVerifiedLoadFlow", {}, weakGame);
+        if (!flow || !verifiedLoadResumeBindingIsCurrent(game, context, map, receiver, receiverName, generation)) {
+            co_return;
+        }
+        game.reset();
+        context.reset();
+        map.reset();
+        receiver.reset();
+        co_await handler->runScriptFlowAsync(std::move(flow));
+    } catch (const vstd::task_cancelled &) {
+        co_return;
+    } catch (const std::exception &error) {
+        vstd::logger::warning("Verified save resume flow was not completed:", error.what());
+    }
+}
+
+void queueVerifiedLoadResume(const std::shared_ptr<CGame> &game, const std::shared_ptr<CGameContext> &context,
+                             const std::shared_ptr<CMap> &map, const std::shared_ptr<CMapObject> &receiver,
+                             const std::string &receiverName, CGameContext::TransitionGeneration generation) {
+    try {
+        if (receiverName.empty()) {
+            return;
+        }
+        if (!verifiedLoadResumeBindingIsCurrent(game, context, map, receiver, receiverName, generation)) {
+            vstd::logger::warning("Verified save resume receiver is unavailable or superseded:", receiverName);
+            return;
+        }
+        context->spawnTask(resumeVerifiedLoadFlowAsync(game, context, map, receiver, receiverName, generation));
+    } catch (const vstd::task_cancelled &) {
+    } catch (const std::exception &error) {
+        vstd::logger::warning("Verified save resume flow was not queued:", error.what());
+    }
+}
+
 std::optional<int> parse_int_text(const std::string &text) {
     if (text.empty()) {
         return std::nullopt;
@@ -764,26 +871,85 @@ std::vector<std::string> build_tile_types(const json &tileset) {
     return tileTypes;
 }
 
-std::expected<std::shared_ptr<json>, std::string> build_save_envelope(const std::shared_ptr<CMap> &map) {
+class SaveStageDiagnostics {
+  public:
+    SaveStageDiagnostics() noexcept {
+        const char *flag = std::getenv("GAME_SAVE_STAGE_DIAGNOSTICS");
+        enabled = flag && flag[0] == '1' && flag[1] == '\0';
+        if (enabled)
+            started = std::chrono::steady_clock::now();
+    }
+
+    void mark(const char *stage, std::size_t bytes = 0, bool success = true) const noexcept {
+        if (!enabled)
+            return;
+        const auto elapsed =
+            std::chrono::duration_cast<std::chrono::microseconds>(std::chrono::steady_clock::now() - started).count();
+        std::fprintf(stderr,
+                     "{\"diagnostic\":\"save-stage\",\"stage\":\"%s\",\"elapsedMicroseconds\":%lld,"
+                     "\"objects\":%zu,\"tiles\":%zu,\"bytes\":%zu,\"success\":%s}\n",
+                     stage, static_cast<long long>(elapsed), objects, tiles, bytes, success ? "true" : "false");
+        std::fflush(stderr);
+    }
+
+    void graphFinished(const json &snapshot) noexcept {
+        if (!enabled)
+            return;
+        try {
+            if (snapshot.is_object() && snapshot.contains("properties")) {
+                const auto &properties = snapshot.at("properties");
+                if (properties.is_object()) {
+                    objects = properties.contains("objects") && properties.at("objects").is_array()
+                                  ? properties.at("objects").size()
+                                  : 0;
+                    tiles = properties.contains("tiles") && properties.at("tiles").is_array()
+                                ? properties.at("tiles").size()
+                                : 0;
+                }
+            }
+        } catch (...) {
+            objects = tiles = 0;
+        }
+        mark("graph.end");
+    }
+
+  private:
+    bool enabled = false;
+    std::chrono::steady_clock::time_point started{};
+    std::size_t objects = 0;
+    std::size_t tiles = 0;
+};
+
+std::expected<std::shared_ptr<json>, std::string> build_save_envelope(const std::shared_ptr<CMap> &map,
+                                                                      SaveStageDiagnostics &diagnostics) {
     if (!map) {
         return std::unexpected("map is null");
     }
 
+    diagnostics.mark("journal.begin");
     if (auto player = map->getPlayer()) {
         player->captureQuestJournal();
     }
+    diagnostics.mark("journal.end");
+    diagnostics.mark("graph.begin");
     auto snapshot = CSerialization::serializeExpected(map, map->getMapName());
     if (!snapshot) {
+        diagnostics.mark("graph.error", 0, false);
         return std::unexpected(snapshot.error().message);
     }
-    return CSaveFormat::buildEnvelope(std::make_shared<json>(std::move(*snapshot)), map->getMapName());
+    diagnostics.graphFinished(*snapshot);
+    diagnostics.mark("envelope.begin");
+    auto envelope = CSaveFormat::buildEnvelope(std::make_shared<json>(std::move(*snapshot)), map->getMapName());
+    diagnostics.mark("envelope.end", 0, envelope.has_value());
+    return envelope;
 }
-
 void apply_authored_map_metadata(const std::shared_ptr<CGame> &game, const std::shared_ptr<CMap> &map,
                                  const std::string &mapName) {
     if (!game || !map) {
         return;
     }
+    bool nativeEncounterPolicy = false;
+    std::string verifiedLoadReceiver;
     if (auto mapc = game->getConfigurationProvider()->getConfiguration(getMapPath(mapName))) {
         map->setDefaultTiles({});
         map->setOutOfBoundsTiles({});
@@ -795,6 +961,8 @@ void apply_authored_map_metadata(const std::shared_ptr<CGame> &game, const std::
         const json emptyArray = json::array();
         const json &mapProperties =
             mapc->contains("properties") && (*mapc)["properties"].is_object() ? (*mapc)["properties"] : emptyObject;
+        nativeEncounterPolicy = readNativeEncounterSavePolicy(mapProperties);
+        verifiedLoadReceiver = readVerifiedLoadResumeReceiver(mapProperties);
         map->setEntryX(read_int_property(mapProperties, "x", 0));
         map->setEntryY(read_int_property(mapProperties, "y", 0));
         map->setEntryZ(read_int_property(mapProperties, "z", 0));
@@ -806,6 +974,8 @@ void apply_authored_map_metadata(const std::shared_ptr<CGame> &game, const std::
             }
         }
     }
+    map->setBoolProperty("guardNativeEncounterSaves", nativeEncounterPolicy);
+    map->setStringProperty("verifiedLoadResumeReceiver", verifiedLoadReceiver);
 }
 
 class CScopedObjectConfig {
@@ -1135,6 +1305,8 @@ void CMapLoader::loadFromTmx(const std::shared_ptr<CMap> &map, const std::shared
         const json emptyArray = json::array();
         const json &mapProperties =
             mapc->contains("properties") && (*mapc)["properties"].is_object() ? (*mapc)["properties"] : emptyObject;
+        map->setBoolProperty("guardNativeEncounterSaves", readNativeEncounterSavePolicy(mapProperties));
+        map->setStringProperty("verifiedLoadResumeReceiver", readVerifiedLoadResumeReceiver(mapProperties));
         const json &mapLayers =
             mapc->contains("layers") && (*mapc)["layers"].is_array() ? (*mapc)["layers"] : emptyArray;
         map->setDefaultTiles({});
@@ -1565,7 +1737,18 @@ bool CMapLoader::saveWithResult(const std::shared_ptr<CMap> &map, const std::str
         return false;
     }
 
-    auto envelope = build_save_envelope(map);
+    if (!map) {
+        vstd::logger::warning("Rejected invalid save snapshot:", name, "reason:", "map is null");
+        return false;
+    }
+    auto admission = map->tryBeginSaveSnapshot();
+    if (!admission) {
+        vstd::logger::warning("Rejected save while a native operation or recovery owns the session:", name);
+        return false;
+    }
+
+    SaveStageDiagnostics diagnostics;
+    auto envelope = build_save_envelope(map, diagnostics);
     if (!envelope) {
         vstd::logger::warning("Rejected invalid save snapshot:", name, "reason:", envelope.error());
         return false;
@@ -1575,9 +1758,14 @@ bool CMapLoader::saveWithResult(const std::shared_ptr<CMap> &map, const std::str
     // singleton only when the map has already been detached from its game (compatibility path).
     auto game = map->getGame();
     auto resources = game ? game->getResourcesProvider() : CResourcesProvider::getInstance();
-    return resources->save(CSaveFormat::primaryPath(name), CJsonUtil::to_string(*envelope, -1));
+    diagnostics.mark("json.begin");
+    auto encoded = CJsonUtil::to_string(*envelope, -1);
+    diagnostics.mark("json.end", encoded.size());
+    diagnostics.mark("write.begin", encoded.size());
+    const bool saved = resources->save(CSaveFormat::primaryPath(name), encoded);
+    diagnostics.mark("write.end", encoded.size(), saved);
+    return saved;
 }
-
 void CMapLoader::handleTileLayer(const std::shared_ptr<CMap> &map, const std::vector<std::string> &tileTypes,
                                  const json &layer) {
     if (!layer.is_object() || !layer.contains("properties") || !layer["properties"].is_object() ||
@@ -1854,10 +2042,28 @@ vstd::task<void> CGameLoader::startRandomGameWithPlayerAsync(std::weak_ptr<CGame
 }
 
 void CGameLoader::loadSavedGame(const std::shared_ptr<CGame> &game, const std::string &save) {
+    if (!game) {
+        return;
+    }
+    const auto context = game->getContext();
+    const auto generation = context->captureTransitionGeneration();
+    auto admission = context->tryBeginVerifiedRestore();
+    if (!admission) {
+        vstd::logger::warning("Rejected save load while a native operation or snapshot owns the session:", save);
+        return;
+    }
     if (auto loaded = try_load_saved_map(game, save)) {
+        const auto receiverName = authoredVerifiedLoadResumeReceiver(game, loaded->map);
+        const auto receiver = loaded->map->getObjectByName(receiverName);
         vstd::event_loop<>::instance()->resetQuit();
         game->setMap(loaded->map);
         repair_recovered_backup(game, *loaded, save);
+        if (!admission->commit(loaded->map)) {
+            vstd::logger::warning("Verified save installation was superseded; save quarantine was retained:", save);
+            return;
+        }
+        admission.reset();
+        queueVerifiedLoadResume(game, context, loaded->map, receiver, receiverName, generation);
         return;
     }
     vstd::logger::warning("Saved game was not loaded; keeping the active map unchanged:", save);

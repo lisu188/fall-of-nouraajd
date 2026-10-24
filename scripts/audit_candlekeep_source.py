@@ -777,6 +777,7 @@ def parseItem(data):
             "enchantment": reader.number(0x60),
             "replacement": replacement,
             "ability_count": len(abilities),
+            "equipped_effect_count": reader.number(0x70, "H"),
             "effects_interpreted": False,
         },
         [reference(replacement, "ITM", "replacement item")],

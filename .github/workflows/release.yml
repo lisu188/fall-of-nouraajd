@@ -124,6 +124,9 @@ jobs:
             test -d "${ANDROID_HOME}/platforms/android-37.1"
           echo "ANDROID_NDK_HOME=${ANDROID_HOME}/ndk/29.0.14206865" >> "${GITHUB_ENV}"
 
+      - name: Validate Android C++26 toolchain
+        run: bash android/check-toolchain.sh
+
       - name: Install host build tools
         run: |
           sudo apt-get update

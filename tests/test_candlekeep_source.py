@@ -432,8 +432,115 @@ class BinaryParserTests(unittest.TestCase):
         with self.assertRaisesRegex(audit.AuditError, "ten creature slots"):
             audit.parseArea(data)
 
+    def testItemParserRetainsEquippedEffectCountWithoutDecodingEffects(self):
+        for name, count in (("LEAT04", 8), ("HELM01", 5), ("MIHP1", 1), ("PLAIN", 0)):
+            with self.subTest(item=name):
+                item = bytearray(0x72 + 0x30 * count)
+                putText(item, 0, "ITM V1  ")
+                putNumber(item, 0x6A, 0x72)
+                putNumber(item, 0x70, count, "H")
+                parsed, refs, warnings = audit.parseItem(item)
+                self.assertEqual(parsed.get("equipped_effect_count"), count)
+                self.assertIs(type(parsed["equipped_effect_count"]), int)
+                self.assertFalse(parsed["effects_interpreted"])
+                self.assertFalse(any(ref for ref in refs))
+                self.assertEqual(warnings, [])
+
+    def testNativeItemMarksEquippedEffectsPendingWithoutImplementingThem(self):
+        import ast
+
+        source = MODULE_PATH.with_name("build_baldurs_gate_city.py").read_text(encoding="utf-8")
+        tree = ast.parse(source)
+        names = {"protectCityData", "definition", "nativeItem"}
+        selected = [node for node in tree.body if isinstance(node, ast.FunctionDef) and node.name in names]
+        self.assertEqual(len(selected), 3)
+        scope = {"json": json, "CITY_JSON_PREFIX": "city-json:"}
+        exec(compile(ast.Module(body=selected, type_ignores=[]), "<isolated-city-item-conversion>", "exec"), scope)
+        records = (
+            ("LEAT04", {"item_type": 2, "flags": 44, "ability_count": 0, "equipped_effect_count": 8}, True),
+            ("HELM01", {"item_type": 7, "flags": 44, "ability_count": 0, "equipped_effect_count": 5}, True),
+            ("MIHP1", {"item_type": 1, "flags": 40, "ability_count": 0, "equipped_effect_count": 1}, True),
+            ("SW1H04", {"item_type": 20, "flags": 44, "ability_count": 1, "equipped_effect_count": 3}, True),
+            ("DAGG01", {"item_type": 16, "flags": 44, "ability_count": 1, "equipped_effect_count": 3}, True),
+            ("ABILITY_ONLY", {"ability_count": 1, "equipped_effect_count": 0}, True),
+            ("FLAG_ONLY", {"flags": 64, "equipped_effect_count": 0}, True),
+            ("PLAIN", {"ability_count": 0, "equipped_effect_count": 0}, False),
+            ("LEGACY_PLAIN", {}, True),
+            ("MAX_COUNT", {"equipped_effect_count": 65535}, True),
+            ("MISSING_COUNT", {"ability_count": 0}, True),
+            *(
+                ("MALFORMED_" + str(index), {"equipped_effect_count": value}, True)
+                for index, value in enumerate((None, False, True, "0", "1", -1, 65536, {}, []))
+            ),
+        )
+        expected_classes = {
+            "LEAT04": "CArmor",
+            "HELM01": "CHelmet",
+            "MIHP1": "CItem",
+            "SW1H04": "CWeapon",
+            "DAGG01": "CSmallWeapon",
+        }
+        for name, record, expected in records:
+            with self.subTest(item=name):
+                before = json.dumps(record, sort_keys=True)
+                result = scope["nativeItem"](name, record)
+                props = result["properties"]
+                self.assertEqual(props["plugin_cityAbilitiesPending"], expected)
+                expected_status = (
+                    "zero"
+                    if name in {"PLAIN", "ABILITY_ONLY", "FLAG_ONLY"}
+                    else (
+                        "positive"
+                        if name in {"LEAT04", "HELM01", "MIHP1", "SW1H04", "DAGG01", "MAX_COUNT"}
+                        else "unknown"
+                    )
+                )
+                self.assertEqual(props.get("plugin_cityEquippedEffectsStatus"), expected_status)
+                self.assertEqual(props["plugin_citySourceItem"], name)
+                self.assertEqual(json.dumps(record, sort_keys=True), before)
+                self.assertNotIn("effects", props)
+                if name in expected_classes:
+                    self.assertEqual(result["class"], expected_classes[name])
+                if name == "MIHP1":
+                    self.assertNotIn("bonus", props)
+
 
 class SourceAuditTests(unittest.TestCase):
+    def testChapterSevenDepartureRuleRetainsExactConditionsAndAllIronThroneActors(self):
+        from scripts.build_baldurs_gate_source_fixture import chapterDepartureRule
+
+        fixture = json.loads(
+            (MODULE_PATH.parents[1] / "tests/fixtures/baldurs_gate_city_source.json").read_text(encoding="utf-8")
+        )
+        rule = fixture["scriptSourceRules"]["LEAVECH7.BCS"]
+        self.assertEqual("21f4a5886d1d1f6e99acf7f5c213c2cc374eb9737949741b2751acd683570b72", rule["sha256"])
+        self.assertEqual(fixture["references"]["LEAVECH7.BCS"]["sha256"], rule["sha256"])
+        self.assertEqual({"global": "Chapter", "scope": "GLOBAL", "equals": 7}, rule["condition"])
+        self.assertEqual(["DestroySelf"], rule["actions"])
+        actors = fixture["areas"]["AR0615"]["actors"]
+        self.assertEqual(9, len(actors))
+        self.assertTrue(
+            all("LEAVECH7" in fixture["creatures"][actor["creatureMetadata"]]["scripts"] for actor in actors)
+        )
+        self.assertIn("EMITAR2", {actor["creature"] for actor in actors})
+        parsed = {
+            "compiled_text": "SC\nCR\nTR\nAC\nCR\nSC",
+            "records": [
+                {
+                    "kind": "TR",
+                    "signature": "Global(S:Name*,S:Area*,I:Value*)",
+                    "strings": ["GLOBALChapter", ""],
+                    "integer_fields": [7, 0, 0, 0],
+                    "offset": 6,
+                },
+                {"kind": "AC", "signature": "DestroySelf()", "offset": 9},
+            ],
+        }
+        self.assertEqual(rule["condition"], chapterDepartureRule(parsed)["condition"])
+        parsed["records"][0]["integer_fields"][1] = 1
+        with self.assertRaises(ValueError):
+            chapterDepartureRule(parsed)
+
     def testCityDonationThresholdsRetainSourceFingerprintAndReputationRows(self):
         fixture = json.loads(
             (MODULE_PATH.parents[1] / "tests/fixtures/baldurs_gate_city_source.json").read_text(encoding="utf-8")
@@ -702,7 +809,7 @@ class SourceAuditTests(unittest.TestCase):
             ("TEM2601", "templePriestDialog", 4),
         ):
             store = fixture["stores"][store_id]
-            rows = json.loads(dialogs[dialog_id]["properties"]["shopEntries"])
+            rows = json.loads(dialogs[dialog_id]["properties"]["shopEntries"].removeprefix("candlekeep-json:"))
             self.assertEqual(len(rows), expected_count)
             self.assertEqual(len({row["id"] for row in rows}), len(rows))
             source = {row["id"]: row for row in store["stock"] if not row["excludedEnhancedEditionAddition"]}
@@ -717,7 +824,7 @@ class SourceAuditTests(unittest.TestCase):
                 self.assertEqual(properties["plugin_candlekeepOriginalResource"], row["id"])
                 self.assertEqual(properties["plugin_candlekeepSellPrice"], item["basePrice"] * 50 // 100)
                 self.assertEqual(properties["plugin_candlekeepQuantity"], row["quantity"])
-        inn = json.loads(dialogs["winthropDialog"]["properties"]["shopEntries"])
+        inn = json.loads(dialogs["winthropDialog"]["properties"]["shopEntries"].removeprefix("candlekeep-json:"))
         self.assertEqual(next(row for row in inn if row["id"] == "BOLT01")["itemId"], "candlekeepBolts")
         self.assertTrue({"SW1H48", "SW1H43", "SW1H46"}.isdisjoint(row["id"] for row in inn))
         self.assertEqual(sum(row["id"].startswith("SHLD") for row in inn), 12)
@@ -725,12 +832,14 @@ class SourceAuditTests(unittest.TestCase):
     def testAuditedDrinksAndTempleServices(self):
         root = MODULE_PATH.parents[1]
         dialogs = json.loads((root / "res/maps/candlekeep/dialog.json").read_text(encoding="utf-8"))
-        drinks = json.loads(dialogs["winthropDialog"]["properties"]["drinkEntries"])
+        drinks = json.loads(dialogs["winthropDialog"]["properties"]["drinkEntries"].removeprefix("candlekeep-json:"))
         self.assertEqual(
             [(row["label"], row["price"]) for row in drinks],
             [("Blood Wine", 8), ("Firewine", 1), ("Mead", 4), ("Bitter Black Ale", 1), ("Arabellan Dry Wine", 2)],
         )
-        services = json.loads(dialogs["templePriestDialog"]["properties"]["serviceEntries"])
+        services = json.loads(
+            dialogs["templePriestDialog"]["properties"]["serviceEntries"].removeprefix("candlekeep-json:")
+        )
         self.assertEqual(
             [(row["id"], row["price"]) for row in services],
             [("SPPR103", 50), ("SPPR303", 200), ("SPPR307", 500), ("SPPR401", 100), ("SPPR212", 150), ("SPPR504", 750)],

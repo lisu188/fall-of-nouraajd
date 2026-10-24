@@ -17,6 +17,7 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 #include "CModuleBindings.h"
 #include "gui/panel/CGamePanel.h"
+#include "gui/panel/CGameDialogPanel.h"
 #include "object/CDialog.h"
 #include "core/CController.h"
 #include "core/CGame.h"
@@ -247,6 +248,8 @@ void bindGraphicsAndWorld(py::module_ &m) {
         .def("removeObject", &CMap::removeObject, "Remove a map object instance.")
         .def("replaceTile", &CMap::replaceTile, "Replace a tile at coordinates with a tile type id.")
         .def("getPlayer", &CMap::getPlayer, "Return the player object assigned to this map.")
+        .def("getAssignedPlayer", &CMap::getAssignedPlayer,
+             "Observe the assigned player cache without recovery or mutation; engine owner thread only.")
         .def("detachPlayer", &CMap::detachPlayer, "Detach and return the active player without destroy events.")
         .def("attachPlayer", attachPlayerAtEntry,
              "Attach a player at the map entry and run destination movement hooks.")
@@ -331,6 +334,8 @@ void bindGraphicsAndWorld(py::module_ &m) {
                                                                        "High-level helper for opening UI panels.")
         .def("showMessage", &CGuiHandler::showMessage, "Show a message panel.")
         .def("showMessageLater", &CGuiHandler::showMessageLater, "Queue a session-owned message without waiting.")
+        .def("waitMilliseconds", &CGuiHandler::waitMilliseconds, py::arg("state"),
+             "Await a same-session serializable wait state; return true only after its duration elapses.")
         .def("getSessionSaveStatus", &CGuiHandler::getSessionSaveStatus)
         .def("setSessionSaveStatus", &CGuiHandler::setSessionSaveStatus)
         .def("notify", &CGuiHandler::notify, "Record nonblocking feedback in History.")
@@ -350,6 +355,8 @@ void bindGraphicsAndWorld(py::module_ &m) {
         .def("getRequestedTradeMarket", &CGuiHandler::getRequestedTradeMarket,
              "Return the last actual traced headless trade request in the active map and transition generation; "
              "return None after observing disabled tracing or an invalidated session.")
+        .def("openDialog", &CGuiHandler::openDialog, py::arg("dialog"),
+             "Open a dialog on the main thread without waiting; return the attached panel or None.")
         .def("showDialog", &CGuiHandler::showDialog, "Open a dialog panel.")
         .def("showQuestion", &CGuiHandler::showQuestion, "Open a question/choice panel.")
         .def("showSelection", &CGuiHandler::showSelection, "Open a selection panel.")

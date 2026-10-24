@@ -31,6 +31,8 @@ class CMapStringInt;
 
 class CGamePanel;
 
+class CGameDialogPanel;
+
 class CMap;
 
 class CDialog;
@@ -42,6 +44,7 @@ class CCreature;
 class CItem;
 
 class CScriptFlow;
+class CWaitState;
 
 class CGuiHandler : public CGameObject {
     V_META(CGuiHandler, CGameObject, vstd::meta::empty())
@@ -83,6 +86,8 @@ class CGuiHandler : public CGameObject {
 
     std::shared_ptr<CMarket> getRequestedTradeMarket();
 
+    std::shared_ptr<CGameDialogPanel> openDialog(std::shared_ptr<CDialog> dialog);
+
     void showDialog(std::shared_ptr<CDialog> dialog);
 
     vstd::task<void> showDialogAsync(std::shared_ptr<CDialog> dialog);
@@ -117,6 +122,10 @@ class CGuiHandler : public CGameObject {
     vstd::task<void> showDefeatAsync();
 
     vstd::task<void> runScriptFlowAsync(std::unique_ptr<CScriptFlow> flow);
+
+    bool waitMilliseconds(std::shared_ptr<CWaitState> state);
+
+    vstd::task<bool> waitMillisecondsAsync(std::shared_ptr<CWaitState> state);
 
     std::string showTextInput(std::string title, std::string prompt, std::string initialValue = "");
 
@@ -174,6 +183,8 @@ class CGuiHandler : public CGameObject {
     vstd::task<void> flipPanelAsync(std::string panel, std::string hotkey);
 
   private:
+    std::shared_ptr<CGameDialogPanel> createDialogPanel(std::shared_ptr<CDialog> dialog, bool blocking);
+
     vstd::task<void> runUiFlowAsync(std::string entry);
 
     std::weak_ptr<CGame> _game;

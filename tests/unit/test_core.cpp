@@ -35,6 +35,7 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #include "core/CTypes.h"
 #include "core/CUtil.h"
 #include "gui/CGui.h"
+#include "gui/panel/CGamePanel.h"
 #include "gui/CSdlResources.h"
 #include "gui/object/CConsoleGraphicsObject.h"
 #include "object/CCreature.h"
@@ -60,6 +61,7 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #include <cmath>
 #include <filesystem>
 #include <fstream>
+#include <functional>
 #include <future>
 #include <limits>
 #include <map>
@@ -71,6 +73,7 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #include <string>
 #include <thread>
 #include <type_traits>
+#include <utility>
 #include <vector>
 
 namespace {
@@ -1268,6 +1271,116 @@ void test_object_clone_batches_property_notifications() {
                 "clone property batch should include all cloned fields changed by the test");
     expect_true(probe->label_changed_calls == 0, "clone batches should suppress field-specific signals");
     expect_true(probe->threat_changed_calls == 0, "clone batches should suppress dynamic field signals");
+}
+
+class MapBindingEpochProbe : public CGameObject {
+    V_META(MapBindingEpochProbe, CGameObject, V_METHOD(MapBindingEpochProbe, onBindingChanged, void))
+
+  public:
+    std::vector<std::uint64_t> epochs;
+    std::vector<std::shared_ptr<CMap>> maps;
+    std::function<void()> callback;
+
+    void onBindingChanged() {
+        const auto game = getGame();
+        epochs.push_back(game->getMapBindingEpoch());
+        maps.push_back(game->getMap());
+        if (auto current = std::exchange(callback, {})) {
+            current();
+        }
+    }
+};
+
+class MapBindingEpochClosingPanel : public CGamePanel {
+  public:
+    std::function<void()> callback;
+
+    void close() override {
+        if (auto current = std::exchange(callback, {})) {
+            current();
+        }
+    }
+};
+
+void testGameMapBindingEpochTracksPublicPointerChanges() {
+    auto game = std::make_shared<CGame>();
+    expect_true(game->getMapBindingEpoch() == 0, "a new game starts with no public map publication");
+    auto first = std::make_shared<CMap>();
+    auto second = std::make_shared<CMap>();
+    first->setGame(game);
+    second->setGame(game);
+    const auto context = game->getContext();
+    const auto generation = context->getTransitionGeneration();
+    game->setMap(first);
+    const auto captured = game->getMapBindingEpoch();
+    expect_true(captured == 1, "the first non-null public map publication advances the epoch once");
+    game->setMap(first);
+    expect_true(game->getMapBindingEpoch() == captured, "same-pointer map installation is not a new publication");
+    game->setMap(second);
+    game->setMap(first);
+    expect_true(game->getMap() == first && game->getMapBindingEpoch() == captured + 2 &&
+                    context->isTransitionGenerationCurrent(generation),
+                "raw away-and-back must change the binding epoch without changing transition generation");
+    game->setMap(nullptr);
+    expect_true(!game->getMap() && game->getMapBindingEpoch() == captured + 3,
+                "publishing a null map counts as one actual public pointer change");
+    game->setMap(nullptr);
+    expect_true(game->getMapBindingEpoch() == captured + 3, "repeated null installation leaves the epoch unchanged");
+    context->shutdown();
+}
+
+void testGameMapBindingEpochPrecedesReentrantSignals() {
+    CTypes::register_type_metadata<MapBindingEpochProbe, CGameObject>();
+    auto game = std::make_shared<CGame>();
+    auto first = std::make_shared<CMap>();
+    auto second = std::make_shared<CMap>();
+    first->setGame(game);
+    second->setGame(game);
+    game->setMap(first);
+    const auto captured = game->getMapBindingEpoch();
+    auto probe = std::make_shared<MapBindingEpochProbe>();
+    probe->setGame(game);
+    game->connect("mapBindingChanged", probe, "onBindingChanged");
+    probe->callback = [&] {
+        game->setMap(second);
+        game->setMap(first);
+    };
+    game->setMap(second);
+    expect_true(probe->epochs == std::vector<std::uint64_t>{captured + 1, captured + 2} &&
+                    probe->maps == std::vector<std::shared_ptr<CMap>>{second, first} && game->getMap() == first &&
+                    game->getMapBindingEpoch() == captured + 2,
+                "nested binding observers must see each published epoch, with no epoch for their no-op install");
+    probe->callback = [] { throw std::runtime_error("intentional binding observer failure"); };
+    game->setMap(second);
+    expect_true(game->getMap() == second && game->getMapBindingEpoch() == captured + 3,
+                "an existing logged-and-suppressed observer failure cannot undo an already published pointer epoch");
+    game->disconnect("mapBindingChanged", probe, "onBindingChanged");
+}
+
+void testGameMapBindingEpochCountsActualPublicationAfterPanelReentry() {
+    CTypes::register_type_metadata<MapBindingEpochProbe, CGameObject>();
+    auto game = std::make_shared<CGame>();
+    auto first = std::make_shared<CMap>();
+    auto second = std::make_shared<CMap>();
+    first->setGame(game);
+    second->setGame(game);
+    game->setMap(first);
+    auto gui = std::make_shared<CGui>();
+    gui->setGame(game);
+    game->setGui(gui);
+    auto panel = std::make_shared<MapBindingEpochClosingPanel>();
+    gui->addChild(panel);
+    auto probe = std::make_shared<MapBindingEpochProbe>();
+    probe->setGame(game);
+    game->connect("mapBindingChanged", probe, "onBindingChanged");
+    const auto captured = game->getMapBindingEpoch();
+    panel->callback = [&] { game->setMap(second); };
+    game->setMap(second);
+    expect_true(game->getMap() == second && game->getMapBindingEpoch() == captured + 1 &&
+                    probe->epochs == std::vector<std::uint64_t>{captured + 1},
+                "a reentrant close that publishes the requested pointer leaves the outer install a no-op");
+    game->disconnect("mapBindingChanged", probe, "onBindingChanged");
+    game->getContext()->shutdown();
 }
 
 void test_game_context_owns_distinct_gui_handlers_per_game() {
@@ -4448,6 +4561,12 @@ int main() {
                      test_bulk_object_deserialization_notifications_stay_batched);
     runDiagnosedCase("test_object_clone_batches_property_notifications",
                      test_object_clone_batches_property_notifications);
+    runDiagnosedCase("testGameMapBindingEpochTracksPublicPointerChanges",
+                     testGameMapBindingEpochTracksPublicPointerChanges);
+    runDiagnosedCase("testGameMapBindingEpochPrecedesReentrantSignals",
+                     testGameMapBindingEpochPrecedesReentrantSignals);
+    runDiagnosedCase("testGameMapBindingEpochCountsActualPublicationAfterPanelReentry",
+                     testGameMapBindingEpochCountsActualPublicationAfterPanelReentry);
     runDiagnosedCase("test_game_context_owns_distinct_gui_handlers_per_game",
                      test_game_context_owns_distinct_gui_handlers_per_game);
     runDiagnosedCase("test_game_context_rejects_services_without_owner_game",

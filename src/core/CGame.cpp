@@ -27,6 +27,8 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #include "gui/panel/CGamePanel.h"
 #include "gui/CTooltip.h"
 
+#include <limits>
+
 CGame::CGame() { CSerialization::markGameSessionStarted(); }
 
 std::shared_ptr<CNavigationService> CGame::getNavigationService() {
@@ -57,7 +59,7 @@ bool CGame::requestMapTransition(CMapTransitionRequest request) {
 }
 
 bool CGame::changeMapWithPreparationFlow(std::string mapName,
-                                         std::move_only_function<vstd::task<void>()> beforeEntryAsync,
+                                         vstd::move_only_function<vstd::task<void>()> beforeEntryAsync,
                                          std::function<void(bool)> completion,
                                          std::function<void()> commitBeforeEntry) {
     CMapTransitionRequest request;
@@ -72,9 +74,15 @@ std::shared_ptr<CMap> CGame::getMap() const {
     return map;
 }
 
+std::uint64_t CGame::getMapBindingEpoch() const {
+    std::lock_guard lock(*resourceMutex);
+    return mapBindingEpoch;
+}
+
 void CGame::setMap(std::shared_ptr<CMap> map) {
     std::shared_ptr<CGui> gui;
     std::shared_ptr<CGameContext> current_context;
+    bool bindingChanged = false;
     {
         std::lock_guard lock(*resourceMutex);
         current_context = context;
@@ -102,10 +110,20 @@ void CGame::setMap(std::shared_ptr<CMap> map) {
         if (current_context && !current_context->isActive() && map) {
             throw std::runtime_error("Cannot set an active map after the game session has closed");
         }
+        bindingChanged = this->map != map;
+        if (bindingChanged) {
+            if (mapBindingEpoch == std::numeric_limits<std::uint64_t>::max()) {
+                throw std::overflow_error("Public map binding epoch exhausted");
+            }
+            ++mapBindingEpoch;
+        }
         this->map = map;
     }
     if (current_context && current_context->isActive()) {
         current_context->getResourcesProvider()->setActiveScope(map ? map->getMapName() : std::string());
+    }
+    if (bindingChanged) {
+        signal<true>("mapBindingChanged");
     }
 }
 

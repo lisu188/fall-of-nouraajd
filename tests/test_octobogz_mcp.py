@@ -20,6 +20,207 @@ from tests.castle_walkthrough import TransitRoutes, shortestRoute
 from tests.narrative_walkthrough import authoredRegion
 
 
+class EarlyNativeTraceDiagnostics:
+    """Summarize already-written early trace records without touching the engine or accepting gameplay."""
+
+    def __init__(self, *, read_limit=4 * 1024 * 1024, output_limit=32768):
+        if read_limit < 512 or output_limit < 512:
+            raise ValueError("Early trace diagnostic limits must be at least 512 bytes")
+        self.read_limit, self.output_limit = read_limit, output_limit
+        self.read_bytes, self.emitted_bytes, self.seq = 0, 0, 0
+        self.files, self.movements, self.player_events, self.turns = {}, [], [], {}
+        self.issues, self.complete, self.details_truncated, self.pending_bytes = [], False, False, 0
+        self.reported_movement_seq, self.reported_player_seq, self.reported_turns, self.reported_status = 0, 0, {}, None
+
+    def issue(self, name):
+        if name not in self.issues:
+            self.issues.append(name)
+
+    def capture(self, path):
+        if self.complete or self.read_bytes >= self.read_limit:
+            return
+        if path is None:
+            self.issue("traceUnavailable")
+            return
+        capture_start = self.read_bytes
+        found, self.pending_bytes = False, 0
+        for candidate in (Path(str(path) + ".1"), Path(path)):
+            try:
+                stat = candidate.stat()
+                found = True
+                signature = (stat.st_ino, stat.st_mtime_ns, stat.st_size)
+                previous = self.files.get(str(candidate))
+                if previous and previous[0] == signature and previous[2] >= stat.st_size:
+                    continue
+                remaining = min(self.read_limit - self.read_bytes, 65536 - (self.read_bytes - capture_start))
+                if remaining <= 0:
+                    if self.read_bytes >= self.read_limit:
+                        self.issue("readLimit")
+                    break
+                with candidate.open("rb") as stream:
+                    marker = stream.readline(min(1024, remaining))
+                    self.read_bytes += len(marker)
+                    offset = previous[2] if previous and previous[1] == sha256(marker).hexdigest() else 0
+                    offset = offset if offset <= stat.st_size else 0
+                    stream.seek(offset)
+                    raw = stream.read(min(self.read_limit - self.read_bytes, 65536 - (self.read_bytes - capture_start)))
+                    self.read_bytes += len(raw)
+                end = raw.rfind(b"\n") + 1
+                if raw and not end:
+                    self.issue("incompleteOrOversizedRecord")
+                self.files[str(candidate)] = (signature, sha256(marker).hexdigest(), offset + end)
+                self.pending_bytes += max(0, stat.st_size - offset - end)
+                for line in raw[:end].splitlines():
+                    if len(line) > 16384:
+                        self.issue("oversizedRecord")
+                        continue
+                    try:
+                        self.accept(json.loads(line))
+                    except (ValueError, TypeError, KeyError):
+                        self.issue("malformedRecord")
+                    if self.complete:
+                        break
+            except FileNotFoundError:
+                continue
+            except (OSError, UnicodeError):
+                self.issue("traceReadError")
+            if self.complete or self.pending_bytes:
+                break
+        if not found:
+            self.issue("traceUnavailable")
+        if self.read_bytes >= self.read_limit:
+            self.issue("readLimit")
+
+    def accept(self, record):
+        if not isinstance(record, dict):
+            raise ValueError("Native trace record must be an object")
+        seq = record.get("seq")
+        if type(seq) is not int or seq <= 0:
+            raise ValueError("Invalid native sequence")
+        if seq <= self.seq:
+            return
+        if not self.seq and seq != 1:
+            self.issue("missingPrefix")
+        elif self.seq and seq != self.seq + 1:
+            self.issue("sequenceGap")
+        self.seq = seq
+        turn = record.get("turn")
+        if record.get("map") != "nouraajd" or type(turn) is not int or turn < 0:
+            return
+        if turn > 95:
+            self.complete = True
+            return
+        event = record.get("event")
+        references = {}
+        for key in (
+            "object",
+            "actor",
+            "owner",
+            "item",
+            "attacker",
+            "survivor",
+            "winner",
+            "loser",
+            "recipient",
+            "defeated",
+        ):
+            value = record.get(key)
+            if isinstance(value, dict):
+                references[key] = {
+                    name: value[name][:96] if isinstance(value[name], str) else value[name]
+                    for name in ("name", "typeId", "isPlayer")
+                    if name in value and isinstance(value[name], (str, bool))
+                }
+        opponents = [
+            {
+                key: value[key][:96] if isinstance(value[key], str) else value[key]
+                for key in ("name", "typeId", "isPlayer")
+                if key in value and isinstance(value[key], (str, bool))
+            }
+            for value in record.get("opponents", [])[:8]
+            if isinstance(value, dict)
+        ]
+        player_event = event in {
+            "combat_started",
+            "combat_finished",
+            "experience_changed",
+            "reward_granted",
+            "inventory_added",
+            "inventory_removed",
+            "item_used",
+            "gold_changed",
+        } and any(value.get("isPlayer") is True for value in (*references.values(), *opponents))
+        if event != "movement" and not player_event:
+            return
+        row = {"seq": seq, "turn": turn, "event": event, **references}
+        for key in ("before", "after", "delta", "outcome", "scale", "ownedGold"):
+            if type(record.get(key)) is int:
+                row[key] = record[key]
+        for key in ("from", "to"):
+            value = record.get(key)
+            if isinstance(value, dict) and all(type(value.get(axis)) is int for axis in "xyz"):
+                row[key] = {axis: value[axis] for axis in "xyz"}
+        if opponents:
+            row["opponents"] = opponents
+        if isinstance(record.get("items"), list):
+            row["items"] = [
+                {key: item[key][:96] for key in ("name", "typeId") if isinstance(item.get(key), str)}
+                for item in record["items"][:8]
+                if isinstance(item, dict)
+            ]
+            self.details_truncated |= len(record["items"]) > 8
+        digest, count = self.turns.setdefault(turn, (sha256(), 0))
+        digest.update(json.dumps(row, sort_keys=True, separators=(",", ":")).encode())
+        self.turns[turn] = (digest, count + 1)
+        target, limit = (self.movements, 64) if event == "movement" else (self.player_events, 32)
+        if len(target) < limit:
+            target.append(row)
+        else:
+            self.details_truncated = True
+
+    def report(self, stage, player_class):
+        available = min(8192, self.output_limit - self.emitted_bytes)
+        if available < 512:
+            return None
+        status = (self.seq, tuple(self.issues), self.pending_bytes, self.complete)
+        result = {
+            "stage": stage[:96],
+            "class": player_class[:96],
+            "turnLimit": 95,
+            "coverage": "observedTracePrefix" if self.complete and not self.issues else "partialTraceOnly",
+            "issues": list(self.issues),
+            "readBytes": self.read_bytes,
+            "readLimit": self.read_limit,
+            "pendingBytes": self.pending_bytes,
+            "lastSeq": self.seq,
+            "nativeAcceptance": False,
+            "detailsTruncated": self.details_truncated,
+            "movements": [row for row in self.movements if row["seq"] > self.reported_movement_seq],
+            "playerEvents": [row for row in self.player_events if row["seq"] > self.reported_player_seq],
+            "turns": [
+                {"turn": turn, "count": count, "sha256": digest.hexdigest()}
+                for turn, (digest, count) in sorted(self.turns.items())
+                if self.reported_turns.get(turn) != digest.hexdigest()
+            ],
+        }
+        if status == self.reported_status and not any(result[key] for key in ("movements", "playerEvents", "turns")):
+            return None
+        while len(json.dumps(result, sort_keys=True, separators=(",", ":")).encode()) > available:
+            result["detailsTruncated"] = True
+            key = next((name for name in ("movements", "turns", "playerEvents") if result[name]), None)
+            if key is None:
+                return None
+            result[key].pop()
+        self.emitted_bytes += len(json.dumps(result, sort_keys=True, separators=(",", ":")).encode())
+        if result["movements"]:
+            self.reported_movement_seq = result["movements"][-1]["seq"]
+        if result["playerEvents"]:
+            self.reported_player_seq = result["playerEvents"][-1]["seq"]
+        self.reported_turns.update({row["turn"]: row["sha256"] for row in result["turns"]})
+        self.reported_status = status
+        return result
+
+
 def readNativeLogTail(path, *, max_bytes=65536, max_lines=256):
     if max_bytes <= 0 or max_lines <= 0:
         raise ValueError("Native diagnostic tail limits must be positive")
@@ -310,6 +511,27 @@ class OctobogzMcpWalkthroughTest(unittest.TestCase):
             self.call(loop, "run")
             if validator is not None:
                 GameplayBranchDriver.assertNativeCombatOutcomes(validator)
+        self.captureEarlyNativeTrace()
+
+    def captureEarlyNativeTrace(self, stage=None):
+        try:
+            collector = getattr(self, "_early_native_trace", None)
+            if collector is None:
+                collector = self._early_native_trace = EarlyNativeTraceDiagnostics()
+            collector.capture(self.nativeHuntTracePath())
+            if stage is not None:
+                report = collector.report(stage, getattr(self, "mcp_profile_class", "unassigned"))
+                if report is not None:
+                    print(
+                        "MCP hunt early native trace",
+                        json.dumps(report, sort_keys=True, separators=(",", ":")),
+                        flush=True,
+                    )
+        except Exception as error:
+            try:
+                print("MCP hunt early native trace unavailable", type(error).__name__, flush=True)
+            except Exception:
+                pass
 
     def restartMcpSession(self):
         self.assertTrue(self.doCleanups(), "The previous MCP process and environment must close before class restart")
@@ -324,6 +546,7 @@ class OctobogzMcpWalkthroughTest(unittest.TestCase):
         self.mcp_profile_class = player_class
         self.mcp_profile_started = perf_counter()
         self.mcp_method_profile = {}
+        self._early_native_trace = None
 
     def startFreshHuntGame(self, player_class):
         from tests.gameplay_branch_driver import GameplayBranchDriver
@@ -472,6 +695,7 @@ class OctobogzMcpWalkthroughTest(unittest.TestCase):
             "defeat": self.call(self.player, "getStringProperty", "uiDefeatReceipt"),
         }
         print("MCP hunt journey", result, flush=True)
+        self.captureEarlyNativeTrace(stage)
         self.reportMcpProfile(stage)
         return result
 
@@ -1231,10 +1455,16 @@ class OctobogzMcpWalkthroughTest(unittest.TestCase):
         owned = {item["__handle__"] for item in inventory}
         portals = {item["__handle__"] for item in inventory if self.call(item, "getTypeId") == "TownPortalScroll"}
         self.assertEqual(1, len(portals), "The later actual retreat still needs its collected scroll")
-        self.assertEqual(700, self.call(self.player, "getGold"), "Only Gooby's 200 and Victor's 500 fund this step")
-        self.assertEqual(160, self.call(market, "getBuyCost", parchment))
+        gold_before = self.call(self.player, "getGold")
+        sale_price = self.call(market, "getBuyCost", parchment)
+        purchase_price = self.call(market, "getSellCost", life)
+        self.assertEqual(160, sale_price)
+        self.assertEqual(800, purchase_price)
+        self.assertGreaterEqual(
+            gold_before + sale_price, purchase_price, "Earned gold and the ward must fund this trade"
+        )
         self.call(market, "buyItem", self.player, parchment)
-        self.assertEqual(860, self.call(self.player, "getGold"))
+        self.assertEqual(gold_before + sale_price, self.call(self.player, "getGold"))
         self.assertEqual(
             owned - {parchment["__handle__"]}, {item["__handle__"] for item in self.call(self.player, "getItems")}
         )
@@ -1242,9 +1472,9 @@ class OctobogzMcpWalkthroughTest(unittest.TestCase):
             {item["__handle__"] for item in stock} | {parchment["__handle__"]},
             {item["__handle__"] for item in self.call(market, "getItems")},
         )
-        self.assertEqual(800, self.call(market, "getSellCost", life))
         self.assertTrue(self.call(market, "sellItem", self.player, life))
-        self.assertEqual(60, self.call(self.player, "getGold"))
+        gold_after = gold_before + sale_price - purchase_price
+        self.assertEqual(gold_after, self.call(self.player, "getGold"))
         self.assertEqual(
             (owned - {parchment["__handle__"]}) | {life["__handle__"]},
             {item["__handle__"] for item in self.call(self.player, "getItems")},
@@ -1258,11 +1488,11 @@ class OctobogzMcpWalkthroughTest(unittest.TestCase):
         )
         self.assertEqual(market, self.call(handler, "getRequestedTradeMarket"))
         self.assertFalse(self.call(market, "sellItem", self.player, life))
-        self.assertEqual(60, self.call(self.player, "getGold"))
+        self.assertEqual(gold_after, self.call(self.player, "getGold"))
         self.assertEqual(remaining, {item["__handle__"] for item in self.call(market, "getItems")})
         print(
             "MCP hunt actual Victor merchant preparation",
-            {"life": life, "soldEarnedWard": parchment, "gold": 60},
+            {"life": life, "soldEarnedWard": parchment, "gold": gold_after},
             flush=True,
         )
         return life
@@ -1271,7 +1501,6 @@ class OctobogzMcpWalkthroughTest(unittest.TestCase):
         from tests.gameplay_branch_driver import GameplayBranchDriver
 
         self.finishOriginalMainQuest()
-        self.assertEqual(200, self.call(self.player, "getGold"))
         walkthrough = self
 
         class PreparationDialogue:
@@ -2080,6 +2309,7 @@ class OctobogzMcpWalkthroughTest(unittest.TestCase):
                 self.probeCoordinateReadCosts()
                 self.prepareThroughCatacombs()
                 if player_class == "Sorcerer":
+                    self.prepareSorcererForHunt()
                     self.ensureAuthoredHealingReadiness()
                     self.prepareHealingStockAtAuthoredMarket()
                 self.walkTo("questGiver")
@@ -3066,7 +3296,14 @@ class OctobogzDiagnosticTest(unittest.TestCase):
             earned_ward_scroll_name="native-ward",
             marketTransactionState=lambda: {"context": "unchanged"},
         )
-        for name in ("assertEqual", "assertTrue", "assertFalse", "assertNotIn", "assertIsNotNone"):
+        for name in (
+            "assertEqual",
+            "assertTrue",
+            "assertFalse",
+            "assertNotIn",
+            "assertIsNotNone",
+            "assertGreaterEqual",
+        ):
             setattr(fixture, name, getattr(self, name))
         self.assertEqual(handles["life"], OctobogzMcpWalkthroughTest.purchaseVictorLifePotionWithEarnedWard(fixture))
         self.assertEqual(60, state["gold"])
@@ -3081,15 +3318,95 @@ class OctobogzDiagnosticTest(unittest.TestCase):
         gui.showTrade.assert_called_once()
 
     def testSorcererEarnsVictorSuppliesBeforeInitialHuntPreparation(self):
-        from types import SimpleNamespace
+        import ast
+        import inspect
+        import textwrap
 
         calls = []
-        fixture = SimpleNamespace(
-            prepareVictorHealingStock=lambda: calls.append("actual-Victor-rescue-and-purchase"),
-            prepareHealingStockAtAuthoredMarket=lambda: calls.append("finite-basic-preparation"),
+
+        class PreparationRecorder(unittest.TestCase):
+            game, game_map, player = "recorded-game", "recorded-map", "recorded-player"
+            player_class = None
+            prepareSorcererForHunt = OctobogzMcpWalkthroughTest.prepareSorcererForHunt
+
+            def requireDecisionReplayExecutable(self):
+                return "not-executed-by-this-source-regression"
+
+            def resetMcpProfile(self, player_class):
+                self.player_class = player_class
+
+            def call(self, target, method, *args):
+                if (target, method) == (self.game, "getGui"):
+                    return None
+                if (target, method) == (self.player, "countItems"):
+                    return 0
+                raise AssertionError((target, method, args))
+
+            def dialog(self, name):
+                return name
+
+            def __getattr__(self, name):
+                allowed = {
+                    "restartMcpSession",
+                    "startFreshHuntGame",
+                    "snapshot",
+                    "useOrdinaryCombatController",
+                    "collectAuthoredRetreatScroll",
+                    "walkTo",
+                    "action",
+                    "earnSorcererWardScroll",
+                    "prepareThroughRolf",
+                    "probeCoordinateReadCosts",
+                    "prepareThroughCatacombs",
+                    "ensureAuthoredHealingReadiness",
+                    "prepareVictorHealingStock",
+                    "prepareHealingStockAtAuthoredMarket",
+                }
+                if name not in allowed:
+                    raise AttributeError(name)
+                return lambda *args, **kwargs: calls.append((self.player_class, name))
+
+        canonical = (
+            OctobogzMcpWalkthroughTest.testWarriorAndSorcererFinishThreeRealEncountersWithPartialReloadAndRewardOnce
         )
-        OctobogzMcpWalkthroughTest.prepareSorcererForHunt(fixture)
-        self.assertEqual(["actual-Victor-rescue-and-purchase", "finite-basic-preparation"], calls)
+        method = ast.parse(textwrap.dedent(inspect.getsource(canonical))).body[0]
+        method.decorator_list = []
+        loop = next(statement for statement in method.body if isinstance(statement, ast.For))
+        context = next(statement for statement in loop.body if isinstance(statement, ast.With))
+        preparation = next(
+            index
+            for index, statement in enumerate(context.body)
+            if isinstance(statement, ast.If)
+            and any(
+                isinstance(child, ast.Call)
+                and isinstance(child.func, ast.Attribute)
+                and child.func.attr == "ensureAuthoredHealingReadiness"
+                for child in ast.walk(statement)
+            )
+        )
+        context.body = context.body[: preparation + 1]
+        method.body = method.body[: method.body.index(loop) + 1]
+        namespace = {"authoredRegion": lambda name: (None, set())}
+        exec(
+            compile(
+                ast.fix_missing_locations(ast.Module(body=[method], type_ignores=[])), "canonical-source-prefix", "exec"
+            ),
+            namespace,
+        )
+        namespace[method.name](PreparationRecorder())
+        sorcerer = [name for player_class, name in calls if player_class == "Sorcerer"]
+        self.assertEqual(1, sorcerer.count("prepareVictorHealingStock"))
+        self.assertLess(sorcerer.index("prepareThroughCatacombs"), sorcerer.index("prepareVictorHealingStock"))
+        self.assertLess(sorcerer.index("prepareVictorHealingStock"), sorcerer.index("ensureAuthoredHealingReadiness"))
+        preparation_indices = [
+            index for index, name in enumerate(sorcerer) if name == "prepareHealingStockAtAuthoredMarket"
+        ]
+        self.assertEqual(2, len(preparation_indices))
+        self.assertLess(preparation_indices[0], sorcerer.index("ensureAuthoredHealingReadiness"))
+        self.assertGreater(preparation_indices[1], sorcerer.index("ensureAuthoredHealingReadiness"))
+        self.assertNotIn(
+            "prepareVictorHealingStock", [name for player_class, name in calls if player_class == "Warrior"]
+        )
 
     def victorPreparationSequence(self, mode="success"):
         from types import SimpleNamespace
@@ -3344,12 +3661,19 @@ class OctobogzDiagnosticTest(unittest.TestCase):
 
         root = Path(__file__).resolve().parents[1]
         tree = ast.parse((root / "test.py").read_text(encoding="utf-8"))
+        city_cases = next(
+            node.value
+            for node in tree.body
+            if isinstance(node, ast.Assign)
+            and any(isinstance(target, ast.Name) and target.id == "CITY_WALKTHROUGH_CASES" for target in node.targets)
+        )
         owner = next(node for node in tree.body if isinstance(node, ast.ClassDef) and node.name == "McpServerTest")
         method = next(
             node for node in owner.body if isinstance(node, ast.FunctionDef) and node.name == "_start_stdio_mcp_process"
         )
         with tempfile.TemporaryDirectory() as temporary:
             namespace = {
+                "CITY_WALKTHROUGH_CASES": ast.literal_eval(city_cases),
                 "REPO_ROOT": Path(dialogue_mcp.__file__).resolve().parents[1],
                 "TEST_OUTPUT_DIR": Path(temporary),
                 "build_dir": root / "cmake-build-release",
@@ -3393,6 +3717,23 @@ class OctobogzDiagnosticTest(unittest.TestCase):
             with self.assertRaisesRegex(ValueError, "fixture_seed or test_seed"):
                 namespace[method.name](fixture, fixture_seed=100, test_seed=17)
             self.assertEqual(count, len(commands), "Conflicting seed paths cannot launch or seed a child")
+            self.assertEqual({"candlekeep", "baldursGate"}, set(namespace["CITY_WALKTHROUGH_CASES"]))
+            for map_name in namespace["CITY_WALKTHROUGH_CASES"]:
+                with self.subTest(city_trace=map_name), patch.dict(os.environ, GAME_PLAYTEST_TRACE_RETAIN_RECENT="0"):
+                    trace_name = "isolated-" + map_name
+                    city = namespace[method.name](fixture, map_name, trace_name=trace_name, test_seed=17)
+                    expected_trace = Path(temporary) / f"mcp_walkthrough_{trace_name}_trace.jsonl"
+                    self.assertEqual(expected_trace, city._playtest_trace_path)
+                    self.assertIsNone(city._native_log_file)
+                    self.assertEqual(map_name, commands[-1][1]["map_name"])
+                    environment = commands[-1][1]["env"]
+                    self.assertEqual("1", environment["GAME_PLAYTEST_TRACE"])
+                    self.assertEqual(str(expected_trace), environment["GAME_PLAYTEST_TRACE_FILE"])
+                    self.assertEqual("1", environment["GAME_PLAYTEST_TRACE_RETAIN_RECENT"])
+                    self.assertEqual("0", os.environ["GAME_PLAYTEST_TRACE_RETAIN_RECENT"])
+                    self.assertEqual(["--test-seed", "17"], commands[-1][0][-2:])
+                    self.assertNotIn("--fixture-seed", commands[-1][0])
+                    self.assertNotIn("--native-log-file", commands[-1][0])
 
     def testNativeTailBoundsBothReadsAndPrintedBytesAndLines(self):
         with tempfile.TemporaryDirectory() as temporary:
@@ -3733,6 +4074,172 @@ class OctobogzDiagnosticTest(unittest.TestCase):
                 if diagnostic_failure in (None, "rpc"):
                     self.assertIn("actual native road combat sentinel", output.getvalue())
                 self.assertEqual("actual native road combat sentinel\n", path.read_text(encoding="utf-8"))
+
+    def victorNaturalMerchantFixture(self, gold, *, sale_price=160, purchase_price=800, credited_sale=160):
+        from types import SimpleNamespace
+
+        names = (
+            "game",
+            "map",
+            "player",
+            "handler",
+            "market",
+            "life",
+            "mana",
+            "ward",
+            "portal",
+            "staff",
+            "other-scroll",
+        )
+        handles = {name: {"__handle__": name} for name in names}
+        types = {
+            "life": "LifePotion",
+            "mana": "ManaPotion",
+            "ward": "Scroll",
+            "portal": "TownPortalScroll",
+            "staff": "Staff",
+            "other-scroll": "Scroll",
+        }
+        state = {
+            "gold": gold,
+            "owned": {"ward", "portal", "staff", "other-scroll"},
+            "stock": {"life", "mana"},
+            "equipped": {"0": handles["staff"]},
+            "operations": [],
+        }
+
+        def call(handle, method, *args):
+            identity = handle["__handle__"]
+            if method == "getStringProperty":
+                return "good_end"
+            if method == "getBoolProperty":
+                return args[0] in {"VICTOR_REWARD_GRANTED", "decoded_stained_glass_ward"}
+            if method == "getGuiHandler":
+                return handles["handler"]
+            if method == "getRequestedTradeMarket":
+                return handles["market"]
+            if method == "getTypeId":
+                return "victorMarket" if identity == "market" else types[identity]
+            if method == "getName":
+                return "recorded-" + identity
+            if method == "getItems":
+                return [handles[key] for key in sorted(state["owned"] if identity == "player" else state["stock"])]
+            if method == "getEquipped":
+                return dict(state["equipped"])
+            if method == "hasTag":
+                return False
+            if method == "getGold":
+                return state["gold"]
+            if method == "getBuyCost":
+                self.assertEqual(handles["ward"], args[0])
+                return sale_price
+            if method == "getSellCost":
+                self.assertEqual(handles["life"], args[0])
+                return purchase_price
+            if method == "buyItem":
+                self.assertEqual((handles["player"], handles["ward"]), args)
+                state["owned"].remove("ward")
+                state["stock"].add("ward")
+                state["gold"] += credited_sale
+                state["operations"].append("sell-earned-ward")
+                return
+            if method == "sellItem":
+                self.assertEqual((handles["player"], handles["life"]), args)
+                if "life" not in state["stock"]:
+                    return False
+                self.assertGreaterEqual(state["gold"], purchase_price)
+                state["stock"].remove("life")
+                state["owned"].add("life")
+                state["gold"] -= purchase_price
+                state["operations"].append("buy-original-life")
+                return True
+            raise AssertionError((identity, method, args))
+
+        fixture = SimpleNamespace(
+            game=handles["game"],
+            game_map=handles["map"],
+            player=handles["player"],
+            call=call,
+            earned_ward_scroll_name="recorded-ward",
+            marketTransactionState=lambda: ("unchanged",),
+        )
+        for name in (
+            "assertEqual",
+            "assertTrue",
+            "assertFalse",
+            "assertIsNotNone",
+            "assertNotIn",
+            "assertGreaterEqual",
+        ):
+            setattr(fixture, name, getattr(self, name))
+        return fixture, state, handles
+
+    def testVictorTradePreservesEarlierEarningsAndOriginalFiniteStock(self):
+        for gold in (700, 701, 2640, 640):
+            with self.subTest(gold=gold):
+                fixture, state, handles = self.victorNaturalMerchantFixture(gold)
+                life = OctobogzMcpWalkthroughTest.purchaseVictorLifePotionWithEarnedWard(fixture)
+                self.assertEqual(handles["life"], life)
+                self.assertEqual(gold - 640, state["gold"])
+                self.assertEqual({"life", "portal", "staff", "other-scroll"}, state["owned"])
+                self.assertEqual({"mana", "ward"}, state["stock"])
+                self.assertEqual({"0": handles["staff"]}, state["equipped"])
+                self.assertEqual(["sell-earned-ward", "buy-original-life"], state["operations"])
+                with self.assertRaises(AssertionError):
+                    OctobogzMcpWalkthroughTest.purchaseVictorLifePotionWithEarnedWard(fixture)
+                self.assertEqual(gold - 640, state["gold"])
+                self.assertEqual(["sell-earned-ward", "buy-original-life"], state["operations"])
+
+    def testVictorTradeRejectsChangedPricesAndPartialTransactions(self):
+        for options in ({"sale_price": 159}, {"purchase_price": 799}, {"gold": 639}):
+            with self.subTest(options=options):
+                fixture, state, _ = self.victorNaturalMerchantFixture(**({"gold": 700} | options))
+                before = (state["gold"], set(state["owned"]), set(state["stock"]))
+                with self.assertRaises(AssertionError):
+                    OctobogzMcpWalkthroughTest.purchaseVictorLifePotionWithEarnedWard(fixture)
+                self.assertEqual(before, (state["gold"], state["owned"], state["stock"]))
+                self.assertEqual([], state["operations"])
+        fixture, state, _ = self.victorNaturalMerchantFixture(701, credited_sale=159)
+        with self.assertRaises(AssertionError):
+            OctobogzMcpWalkthroughTest.purchaseVictorLifePotionWithEarnedWard(fixture)
+        self.assertEqual(["sell-earned-ward"], state["operations"])
+        self.assertNotIn("life", state["owned"])
+
+    def testVictorPreparationAcceptsEarlierEarningsAfterTheActualMainQuestStep(self):
+        import ast
+        import inspect
+        import textwrap
+        from types import SimpleNamespace
+
+        method = ast.parse(
+            textwrap.dedent(inspect.getsource(OctobogzMcpWalkthroughTest.prepareVictorHealingStock))
+        ).body[0]
+        boundary = next(index for index, statement in enumerate(method.body) if isinstance(statement, ast.ClassDef))
+        method.body = [statement for statement in method.body[:boundary] if not isinstance(statement, ast.ImportFrom)]
+        namespace = {}
+        exec(
+            compile(
+                ast.fix_missing_locations(ast.Module(body=[method], type_ignores=[])), "victor-source-prefix", "exec"
+            ),
+            namespace,
+        )
+        for earlier_gold in (0, 1, 1940):
+            with self.subTest(earlier_gold=earlier_gold):
+                state = {"gold": earlier_gold, "calls": 0}
+
+                def finish():
+                    state["gold"] += 200
+                    state["calls"] += 1
+
+                fixture = SimpleNamespace(
+                    finishOriginalMainQuest=finish,
+                    player="player",
+                    call=lambda *args: state["gold"],
+                    assertEqual=self.assertEqual,
+                )
+                namespace[method.name](fixture)
+                self.assertEqual(1, state["calls"])
+                self.assertEqual(earlier_gold + 200, state["gold"])
 
 
 if __name__ == "__main__":

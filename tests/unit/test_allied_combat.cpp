@@ -3,30 +3,49 @@ fall-of-nouraajd c++ dark fantasy game
 Copyright (C) 2026 Andrzej Lis
 SPDX-License-Identifier: GPL-3.0-or-later
 */
+#include "core/CAsync.h"
 #include "core/CController.h"
 #include "core/CGame.h"
 #include "core/CGameContext.h"
 #include "core/CLoader.h"
 #include "core/CMap.h"
 #include "core/CPlaytestTrace.h"
+#include "core/CPythonOverrides.h"
+#include "core/CSerialization.h"
 #include "core/CStats.h"
+#include "core/CTypes.h"
 #include "handler/CFightHandler.h"
 #include "object/CCreature.h"
 #include "object/CEffect.h"
 #include "object/CInteraction.h"
 #include "object/CItem.h"
 #include "object/CPlayer.h"
+#include "object/CQuest.h"
+#include "object/CTile.h"
 #include "test_harness.h"
 
 #include <SDL.h>
 #include <pybind11/embed.h>
 #include <cmath>
+#include <cstdio>
 #include <functional>
 #include <memory>
+#include <stdexcept>
 #include <string>
+#include <utility>
 #include <vector>
 
+extern "C" PyObject *PyInit__game();
+
 namespace {
+void initializeAlliedCombatPythonContent() {
+    auto sys = pybind11::module_::import("sys");
+    sys.attr("path").attr("insert")(0, GAME_ALLIED_COMBAT_TEST_RESOURCE_ROOT);
+    pybind11::module_::import("_game");
+    pybind11::module_::import("game");
+    pybind11::module_::import("json");
+}
+
 class ProbeController : public CFightController {
   public:
     int starts = 0;
@@ -35,8 +54,21 @@ class ProbeController : public CFightController {
     bool cancelled = false;
     std::function<void(std::shared_ptr<CCreature>, std::shared_ptr<CCreature>)> action;
 
-    void start(std::shared_ptr<CCreature>, std::shared_ptr<CCreature>) override { ++starts; }
-    void end(std::shared_ptr<CCreature>, std::shared_ptr<CCreature>) override { ++ends; }
+    std::function<void()> starting;
+    std::function<void()> ending;
+
+    void start(std::shared_ptr<CCreature>, std::shared_ptr<CCreature>) override {
+        ++starts;
+        if (starting) {
+            starting();
+        }
+    }
+    void end(std::shared_ptr<CCreature>, std::shared_ptr<CCreature>) override {
+        ++ends;
+        if (ending) {
+            ending();
+        }
+    }
     bool isCancelled(std::shared_ptr<CCreature>, std::shared_ptr<CCreature>) override { return cancelled; }
     bool control(std::shared_ptr<CCreature> actor, std::shared_ptr<CCreature> target) override {
         ++actions;
@@ -44,6 +76,17 @@ class ProbeController : public CFightController {
             action(actor, target);
         }
         return true;
+    }
+};
+
+// This native-only executable does not initialize the configured Python Attack plugin.
+// Exercise interaction selection, dispatch and native damage with an explicit native test action.
+class NativeAttackProbe : public CInteraction {
+  public:
+    int calls = 0;
+    void performAction(std::shared_ptr<CCreature> actor, std::shared_ptr<CCreature> target) override {
+        ++calls;
+        target->hurt(actor->getDmg());
     }
 };
 
@@ -74,14 +117,41 @@ void initializeStats(const std::shared_ptr<CCreature> &actor, int agility = 10) 
     actor->setMana(70);
 }
 
+class EncounterAdmissionSnapshotMap : public CMap {
+  public:
+    std::shared_ptr<vstd::meta> meta() override {
+        stopArmedGraph();
+        return CMap::meta();
+    }
+    std::shared_ptr<const vstd::meta> meta() const override {
+        stopArmedGraph();
+        return CMap::meta();
+    }
+    mutable bool stopNextGraph = false;
+    mutable int graphVisits = 0;
+
+  private:
+    void stopArmedGraph() const {
+        if (std::exchange(stopNextGraph, false)) {
+            ++graphVisits;
+            throw std::runtime_error("intentional top-level encounter snapshot stop before resource writes");
+        }
+    }
+};
+
 struct Fixture {
     std::shared_ptr<CGame> game = CGameLoader::loadGame();
     std::shared_ptr<CMap> map;
     std::shared_ptr<CPlayer> hero;
     std::shared_ptr<ProbeController> heroController = std::make_shared<ProbeController>();
 
-    Fixture() {
+    explicit Fixture(std::shared_ptr<CMap> providedMap = {}) {
         CGameLoader::startGame(game, "empty");
+        if (providedMap) {
+            providedMap->setGame(game);
+            providedMap->setMapName("empty");
+            game->setMap(providedMap);
+        }
         map = game->getMap();
         hero = std::make_shared<CPlayer>();
         hero->setGame(game);
@@ -135,7 +205,11 @@ void testNativeAllyActsAndHeroOwnsRewards() {
     item->addTag("quest");
     auto controller = std::make_shared<CountingMonsterController>();
     ally->setFightController(controller);
-    ally->addAction(fixture.game->createObject<CInteraction>("Attack"));
+    auto attack = std::make_shared<NativeAttackProbe>();
+    attack->setGame(fixture.game);
+    attack->setName("nativeTestAttack");
+    attack->setTypeId("Attack");
+    ally->addAction(attack);
     const auto expectedXp = static_cast<int>(250 * std::pow(2.0, enemy->getScale() - fixture.hero->getLevel()));
     const auto initialXp = fixture.hero->getExp();
     CPlaytestTrace::configure(true, "", 128, true);
@@ -144,14 +218,50 @@ void testNativeAllyActsAndHeroOwnsRewards() {
     for (const auto &line : CPlaytestTrace::drain()) {
         const auto record = json::parse(line);
         if (record.value("event", std::string()) == "combat_ally_acted") {
-            witnessedAction = record.at("actor").at("name") == ally->getName();
+            witnessedAction = record.at("actor").at("name").get<std::string>() == ally->getName();
         }
     }
     CPlaytestTrace::configure(false);
     expect_true(result.outcome == CFightOutcome::AttackerVictory && result.survivor == fixture.hero,
                 "an actual native ally attack must resolve the hero-side encounter");
-    expect_true(controller->actions == 1 && witnessedAction && fixture.heroController->actions == 0,
+    expect_true(controller->actions == 1 && attack->calls == 1 && witnessedAction &&
+                    fixture.heroController->actions == 0,
                 "the native ally must act rather than only receiving a participation flag");
+    expect_true(fixture.hero->hasInInventory(item) && !ally->hasInInventory(item) &&
+                    fixture.hero->getExp() == initialXp + expectedXp,
+                "allied enemy kills must give the hero the actual unique item and exact native XP");
+}
+
+void testRegisteredPythonAllyActsAndHeroOwnsRewards() {
+    Fixture fixture;
+    auto ally = fixture.actor("nativeAlly", true, 0, 20);
+    auto enemy = fixture.actor("nativeEnemy");
+    enemy->setHp(1);
+    auto item = fixture.possession(enemy, "uniqueCityQuestReward");
+    item->addTag("quest");
+    auto controller = std::make_shared<CountingMonsterController>();
+    ally->setFightController(controller);
+    auto attack = fixture.game->createObject<CInteraction>("Attack");
+    expect_true(attack && !CPythonOverrides::find_override(attack.get(), "performAction").is_none(),
+                "the native ally must execute the real registered Python Attack action");
+    ally->addAction(attack);
+    const auto expectedXp = static_cast<int>(250 * std::pow(2.0, enemy->getScale() - fixture.hero->getLevel()));
+    const auto initialXp = fixture.hero->getExp();
+    CPlaytestTrace::configure(true, "", 128, true);
+    const auto result = CFightHandler::fightManyWithAlliesResult(fixture.hero, {enemy}, {ally});
+    bool witnessedAction = false;
+    for (const auto &line : CPlaytestTrace::drain()) {
+        const auto record = json::parse(line);
+        if (record.value("event", std::string()) == "combat_ally_acted") {
+            witnessedAction = record.at("actor").at("name").get<std::string>() == ally->getName();
+        }
+    }
+    CPlaytestTrace::configure(false);
+    expect_true(result.outcome == CFightOutcome::AttackerVictory && result.survivor == fixture.hero,
+                "the registered Python ally attack must resolve the hero-side encounter");
+    expect_true(controller->actions == 1 && witnessedAction &&
+                    fixture.heroController->actions == 0,
+                "the registered Python ally must act rather than only receiving a participation flag");
     expect_true(fixture.hero->hasInInventory(item) && !ally->hasInInventory(item) &&
                     fixture.hero->getExp() == initialXp + expectedXp,
                 "allied enemy kills must give the hero the actual unique item and exact native XP");
@@ -171,8 +281,8 @@ void testAlliedBudgetAndRejectedParticipants() {
     auto hostile = fixture.actor("hostileNonAlly");
     auto uiAlly = fixture.actor("uiAlly", true);
     uiAlly->setFightController(std::make_shared<CPlayerFightController>());
-    std::vector<std::shared_ptr<CCreature>> candidates = {nullptr, fixture.hero, foreign, stale, dead, upstairs,
-                                                        hostile, uiAlly, enemy};
+    std::vector<std::shared_ptr<CCreature>> candidates = {nullptr,  fixture.hero, foreign, stale, dead,
+                                                          upstairs, hostile,      uiAlly,  enemy};
     std::vector<std::shared_ptr<ProbeController>> accepted;
     for (int index = 0; index < 6; ++index) {
         auto ally = fixture.actor("budgetAlly" + std::to_string(index), true);
@@ -236,8 +346,9 @@ void testNaturalOptInAndMoverPerspectives() {
         auto initiator = mover == 0 ? std::shared_ptr<CCreature>(fixture.hero) : mover == 1 ? ally : enemy;
         std::vector<std::shared_ptr<CCreature>> targets = {mover == 2 ? ally : enemy};
         const auto result = CFightHandler::fightManyResult(initiator, targets);
-        expect_true(result.outcome == (mover == 2 ? CFightOutcome::AttackerDefeat : CFightOutcome::AttackerVictory),
-                    "configured allies must support hero, follower and enemy initiated encounters in mover perspective");
+        expect_true(
+            result.outcome == (mover == 2 ? CFightOutcome::AttackerDefeat : CFightOutcome::AttackerVictory),
+            "configured allies must support hero, follower and enemy initiated encounters in mover perspective");
         expect_true(probe(ally)->actions == 1 && fixture.map->getObjectByName(enemy->getName()) == nullptr,
                     "each opted-in collision must run the same real allied action");
     }
@@ -280,8 +391,8 @@ void testHeroDefeatEndsBeforeSurvivingAlliesAct() {
     const auto result = CFightHandler::fightManyWithAlliesResult(fixture.hero, {enemy}, {ally});
     expect_true(result.outcome == CFightOutcome::AttackerDefeat && result.rounds == 1 && result.survivor == enemy,
                 "native hero respawn must not turn a defeated party encounter into a later allied victory");
-    expect_true(fixture.hero->isAlive() && fixture.hero->getHp() == 1 && ally->isAlive() &&
-                    probe(ally)->actions == 0 && enemy->hasInInventory(item),
+    expect_true(fixture.hero->isAlive() && fixture.hero->getHp() == 1 && ally->isAlive() && probe(ally)->actions == 0 &&
+                    enemy->hasInInventory(item),
                 "surviving allies must remain actors while native hero defeat/loot semantics complete once");
 }
 
@@ -363,11 +474,589 @@ void testAllyEffectsCountAsEncounterProgress() {
                     ally->getEffects().empty(),
                 "real allied effect ticks must count as progress without removing bounded encounter termination");
 }
+
+void testCombatCleanupExceptionsEndEveryControllerOnce() {
+    Fixture fixture;
+    fixture.hero->getBaseStats()->setAgility(30);
+    auto enemy = fixture.actor("cleanupEnemy");
+    auto ally = fixture.actor("cleanupAlly", true);
+    const auto enemyController = probe(enemy);
+    const auto allyController = probe(ally);
+    fixture.heroController->action = [&](auto, auto) { fixture.heroController->cancelled = true; };
+    fixture.heroController->ending = [] { throw std::runtime_error("first cleanup failure"); };
+    enemyController->ending = [] { throw std::runtime_error("second cleanup failure"); };
+    bool firstFailure = false;
+    try {
+        CFightHandler::fightManyWithAlliesResult(fixture.hero, {enemy}, {ally});
+    } catch (const std::runtime_error &failure) {
+        firstFailure = std::string(failure.what()) == "first cleanup failure";
+    }
+    expect_true(firstFailure && fixture.heroController->actions == 1 && enemyController->actions == 0 &&
+                    allyController->actions == 0,
+                "explicit finish must report its first cleanup failure after an ordinary encounter is cancelled");
+    expect_true(fixture.heroController->starts == 1 && enemyController->starts == 1 && allyController->starts == 1 &&
+                    fixture.heroController->ends == 1 && enemyController->ends == 1 && allyController->ends == 1,
+                "every owned controller must end once even when multiple cleanup hooks throw");
+}
+
+void testCombatCleanupPreservesPrimaryFailureAndCancellation() {
+    for (const bool cancelled : {false, true}) {
+        Fixture fixture;
+        fixture.hero->getBaseStats()->setAgility(30);
+        auto enemy = fixture.actor("primaryFailureEnemy");
+        auto ally = fixture.actor("primaryFailureAlly", true);
+        const auto enemyController = probe(enemy);
+        const auto allyController = probe(ally);
+        fixture.heroController->action = [cancelled](auto, auto) {
+            if (cancelled) {
+                throw vstd::task_cancelled();
+            }
+            throw std::runtime_error("primary combat failure");
+        };
+        fixture.heroController->ending = [] { throw std::runtime_error("first cleanup failure"); };
+        enemyController->ending = [] { throw std::runtime_error("second cleanup failure"); };
+        bool originalFailure = false;
+        try {
+            auto task = CFightHandler::fightManyWithAlliesResultAsync(fixture.hero, {enemy}, {ally});
+            game_async::wait(fixture.game->getContext()->spawnTask(std::move(task)), game_async::WaitMode::PostedWork);
+        } catch (const vstd::task_cancelled &) {
+            originalFailure = cancelled;
+        } catch (const std::runtime_error &failure) {
+            originalFailure = !cancelled && std::string(failure.what()) == "primary combat failure";
+        }
+        expect_true(originalFailure && fixture.heroController->actions == 1 && enemyController->actions == 0 &&
+                        allyController->actions == 0,
+                    "cleanup must preserve the original native combat or cancellation exception");
+        expect_true(fixture.heroController->ends == 1 && enemyController->ends == 1 && allyController->ends == 1,
+                    "unwinding must attempt every original controller end exactly once");
+    }
+}
+
+void testCombatOwnsPartialControllerStartsAndPreservesTheirFailure() {
+    for (const bool firstFails : {false, true}) {
+        Fixture fixture;
+        auto enemy = fixture.actor("partialStartEnemy");
+        auto ally = fixture.actor("neverStartedAlly", true);
+        const auto enemyController = probe(enemy);
+        const auto allyController = probe(ally);
+        bool resourceAcquired = false;
+        const auto failingController = firstFails ? fixture.heroController : enemyController;
+        failingController->starting = [&] {
+            resourceAcquired = true;
+            throw std::runtime_error("primary start failure");
+        };
+        fixture.heroController->ending = [&] {
+            if (firstFails) {
+                resourceAcquired = false;
+            }
+            throw std::runtime_error("hero cleanup failure");
+        };
+        enemyController->ending = [&] {
+            if (!firstFails) {
+                resourceAcquired = false;
+            }
+            throw std::runtime_error("enemy cleanup failure");
+        };
+        bool originalFailure = false;
+        try {
+            CFightHandler::fightManyWithAlliesResult(fixture.hero, {enemy}, {ally});
+        } catch (const std::runtime_error &failure) {
+            originalFailure = std::string(failure.what()) == "primary start failure";
+        }
+        expect_true(originalFailure && !resourceAcquired && fixture.heroController->starts == 1 &&
+                        fixture.heroController->ends == 1 && enemyController->starts == (firstFails ? 0 : 1) &&
+                        enemyController->ends == (firstFails ? 0 : 1),
+                    "partial initialization must be owned for cleanup without masking its start failure");
+        expect_true(allyController->starts == 0 && allyController->ends == 0 && fixture.heroController->actions == 0 &&
+                        enemyController->actions == 0 && allyController->actions == 0,
+                    "admission must neither end unstarted controllers nor dispatch combat actions");
+    }
+}
+
+void testRejectedCombatAdmissionDoesNotStartOrEndControllers() {
+    Fixture fixture;
+    auto ally = fixture.actor("unadmittedAlly", true);
+    const auto result = CFightHandler::fightManyWithAlliesResult(fixture.hero, {}, {ally});
+    expect_true(result.outcome == CFightOutcome::Invalid && fixture.heroController->starts == 0 &&
+                    fixture.heroController->ends == 0 && probe(ally)->starts == 0 && probe(ally)->ends == 0,
+                "an encounter rejected before controller startup must own no controller cleanup");
+}
+
+class EncounterAdmissionQuest : public CQuest {
+  public:
+    int captures = 0;
+    void captureJournal(bool) override { ++captures; }
+};
+
+class EncounterAdmissionGraphProbe : public CGameObject {
+    V_META(EncounterAdmissionGraphProbe, CGameObject,
+           V_PROPERTY(EncounterAdmissionGraphProbe, int, graphVisit, getGraphVisit, setGraphVisit))
+  public:
+    int visits = 0;
+    int getGraphVisit() {
+        ++visits;
+        throw std::runtime_error("intentional encounter snapshot stop before resource writes");
+    }
+    void setGraphVisit(int) {}
+};
+
+struct EncounterAdmissionWork {
+    std::shared_ptr<CMap> map;
+    std::shared_ptr<EncounterAdmissionQuest> quest = std::make_shared<EncounterAdmissionQuest>();
+    std::shared_ptr<EncounterAdmissionGraphProbe> graph = std::make_shared<EncounterAdmissionGraphProbe>();
+    int attempts = 0;
+    int armedAttempts = 0;
+    int calibrations = 0;
+
+    explicit EncounterAdmissionWork(Fixture &fixture) : map(fixture.map) {
+        CTypes::register_type<EncounterAdmissionGraphProbe, CGameObject>();
+        quest->setGame(fixture.game);
+        graph->setGame(fixture.game);
+        fixture.hero->setQuests({quest});
+        map->setObjectProperty("encounterAdmissionGraphProbe", graph);
+    }
+    void calibrate(const std::shared_ptr<EncounterAdmissionSnapshotMap> &expectedMap) {
+        ++calibrations;
+        const bool actualOwner =
+            map == expectedMap && std::dynamic_pointer_cast<EncounterAdmissionSnapshotMap>(map) == expectedMap;
+        const bool hasCodec = CTypes::findCodec(typeid(std::shared_ptr<CMap>)) != nullptr;
+        expect_true(actualOwner, "the measured fixture and armed probe must be the exact provided map");
+        expect_true(hasCodec, "the actual native CMap codec must already exist without injecting a replacement");
+        struct CalibrationReset {
+            EncounterAdmissionWork &work;
+            std::shared_ptr<EncounterAdmissionSnapshotMap> owner;
+            const bool armed;
+            const int topVisits;
+            const int nestedVisits;
+            const int journalCaptures;
+            const int attempts;
+            const int armedAttempts;
+            ~CalibrationReset() {
+                owner->stopNextGraph = armed;
+                owner->graphVisits = topVisits;
+                work.graph->visits = nestedVisits;
+                work.quest->captures = journalCaptures;
+                work.attempts = attempts;
+                work.armedAttempts = armedAttempts;
+            }
+        } reset{
+            *this,    expectedMap,  expectedMap->stopNextGraph, expectedMap->graphVisits, graph->visits, quest->captures,
+            attempts, armedAttempts};
+        expectedMap->stopNextGraph = true;
+        const auto snapshot = CSerialization::serializeExpected(map, "unit-encounter-probe-calibration");
+        const auto message = snapshot ? std::string("unexpected serialization success") : snapshot.error().message;
+        const auto errorCode = snapshot ? -1 : static_cast<int>(snapshot.error().code);
+        std::printf("[encounter calibration] count=%d sameMap=%d codec=%d success=%d code=%d graph=%d nestedGraph=%d "
+                    "armed=%d error=%s\n",
+                    calibrations, actualOwner, hasCodec, snapshot.has_value(), errorCode, expectedMap->graphVisits,
+                    graph->visits, expectedMap->stopNextGraph, message.substr(0, 400).c_str());
+        expect_true(!snapshot && expectedMap->graphVisits == 1 && graph->visits == 0 && !expectedMap->stopNextGraph &&
+                        message == "intentional top-level encounter snapshot stop before resource writes",
+                    "one separate typed-map calibration must reach and consume the actual top-level metadata probe");
+        expect_true(quest->captures == 0 && attempts == 0 && armedAttempts == 0,
+                    "calibration must not spend the five measured journal or save-attempt budgets");
+    }
+    void attempt() {
+        ++attempts;
+        struct SnapshotGraphStop {
+            std::shared_ptr<EncounterAdmissionSnapshotMap> owner;
+            explicit SnapshotGraphStop(const std::shared_ptr<CMap> &map, int &armedAttempts)
+                : owner(std::dynamic_pointer_cast<EncounterAdmissionSnapshotMap>(map)) {
+                if (owner) {
+                    owner->stopNextGraph = true;
+                    ++armedAttempts;
+                }
+            }
+            ~SnapshotGraphStop() {
+                if (owner) {
+                    owner->stopNextGraph = false;
+                }
+            }
+        } graphStop(map, armedAttempts);
+        expect_true(!CMapLoader::saveWithResult(map, "unit-encounter-admission-no-write"),
+                    "an encounter save must reject or hit the intentional graph stop without writing");
+    }
+};
+
+class EncounterAdmissionEffect : public CEffect {
+  public:
+    std::function<void()> callback;
+    std::function<void()> formatting;
+    void onEffect() override { callback(); }
+    std::string to_string() override {
+        if (formatting) {
+            formatting();
+        }
+        return CEffect::to_string();
+    }
+};
+
+class EncounterAdmissionCreature : public CCreature {
+  public:
+    std::function<void()> looting;
+    std::function<void()> destroying;
+    std::set<std::shared_ptr<CItem>> getAllItems() override {
+        if (looting) {
+            looting();
+        }
+        return CCreature::getAllItems();
+    }
+    void onDestroy(std::shared_ptr<CGameEvent> event) override {
+        if (destroying) {
+            destroying();
+        }
+        CCreature::onDestroy(std::move(event));
+    }
+};
+
+void testDirectEncounterSaveAdmissionAndLegacyDefault() {
+    for (const bool optedIn : {false, true}) {
+        auto observedMap = std::make_shared<EncounterAdmissionSnapshotMap>();
+        Fixture fixture(observedMap);
+        expect_true(observedMap->meta() == observedMap->CMap::meta() && observedMap->graphVisits == 0,
+                    "the direct-save probe must preserve ordinary unarmed map metadata");
+        fixture.map->setBoolProperty("guardNativeEncounterSaves", optedIn);
+        fixture.hero->getBaseStats()->setAgility(30);
+        auto enemy = fixture.actor("saveBoundaryEnemy");
+        EncounterAdmissionWork work(fixture);
+        if (!optedIn) {
+            expect_true(fixture.map == observedMap && work.map == observedMap,
+                        "calibration must use the actual fixture map and retained probe owner");
+            work.calibrate(observedMap);
+        }
+        fixture.heroController->starting = [&] { work.attempt(); };
+        probe(enemy)->starting = [&] { work.attempt(); };
+        fixture.heroController->action = [&](auto, auto) {
+            work.attempt();
+            fixture.heroController->cancelled = true;
+        };
+        fixture.heroController->ending = [&] { work.attempt(); };
+        probe(enemy)->ending = [&] { work.attempt(); };
+        const auto result = CFightHandler::fightManyResult(fixture.hero, {enemy});
+        const int expectedWork = optedIn ? 0 : 5;
+        std::printf("[encounter admission] optedIn=%d outcome=%d attempts=%d journal=%d graph=%d nestedGraph=%d "
+                    "starts=%d/%d actions=%d/%d ends=%d/%d expectedWork=%d armed=%d\n",
+                    optedIn, static_cast<int>(result.outcome), work.attempts, work.quest->captures,
+                    observedMap->graphVisits, work.graph->visits, fixture.heroController->starts, probe(enemy)->starts,
+                    fixture.heroController->actions, probe(enemy)->actions, fixture.heroController->ends,
+                    probe(enemy)->ends, expectedWork, observedMap->stopNextGraph);
+        expect_true(result.outcome == CFightOutcome::Cancelled && work.attempts == 5 &&
+                        work.quest->captures == expectedWork && observedMap->graphVisits == expectedWork &&
+                        work.graph->visits == 0,
+                    "direct ordinary combat must gate starts/action/ends only on explicitly opted-in maps");
+        expect_true(work.armedAttempts == 5 && work.calibrations == (optedIn ? 0 : 1),
+                    "all five measured attempts must retain the probe owner after the independent calibration");
+        expect_true(!observedMap->stopNextGraph && observedMap->meta() == observedMap->CMap::meta() &&
+                        observedMap->graphVisits == expectedWork,
+                    "every save attempt must disarm its one-shot probe before ordinary map metadata resumes");
+        expect_true(fixture.heroController->ends == 1 && probe(enemy)->ends == 1 &&
+                        fixture.map->tryBeginSaveSnapshot().has_value(),
+                    "a normal returned outcome must finish admission only after every controller end succeeded");
+    }
+}
+
+void testEncounterAdmissionSpansEffectsLootAndRemoval() {
+    Fixture fixture;
+    fixture.map->setBoolProperty("guardNativeEncounterSaves", true);
+    fixture.map->setBoolProperty("plugin_cityFixedLoot", true);
+    fixture.hero->getBaseStats()->setAgility(30);
+    auto enemy = std::make_shared<EncounterAdmissionCreature>();
+    enemy->setGame(fixture.game);
+    enemy->setName("admittedTerminalEnemy");
+    initializeStats(enemy);
+    enemy->setAffiliation("cityHostiles");
+    enemy->setFightController(std::make_shared<ProbeController>());
+    fixture.map->addObject(enemy);
+    enemy->setHp(1);
+    auto item = fixture.possession(enemy, "admittedTerminalReward");
+    EncounterAdmissionWork work(fixture);
+    int effectCalls = 0;
+    int lootCalls = 0;
+    int removalCalls = 0;
+    auto effect = std::make_shared<EncounterAdmissionEffect>();
+    effect->setGame(fixture.game);
+    effect->setDuration(2);
+    effect->callback = [&] {
+        ++effectCalls;
+        work.attempt();
+    };
+    fixture.hero->addEffect(effect);
+    enemy->looting = [&] {
+        ++lootCalls;
+        work.attempt();
+    };
+    enemy->destroying = [&] {
+        ++removalCalls;
+        work.attempt();
+    };
+    fixture.heroController->action = [](auto, auto target) { target->setHp(0); };
+    fixture.heroController->ending = [&] { work.attempt(); };
+    probe(enemy)->ending = [&] { work.attempt(); };
+    const auto result = CFightHandler::fightManyResult(fixture.hero, {enemy});
+    expect_true(result.outcome == CFightOutcome::AttackerVictory && effectCalls == 1 && lootCalls == 1 &&
+                    removalCalls == 1 && work.attempts == 5 && work.quest->captures == 0 && work.graph->visits == 0,
+                "actual effect/loot/removal and controller-end hooks must remain inside native admission");
+    expect_true(fixture.hero->hasInInventory(item) && !fixture.map->getObjectByName(enemy->getName()) &&
+                    fixture.map->tryBeginSaveSnapshot().has_value(),
+                "admission must finish only after actual terminal loot/removal and successful ends have settled");
+}
+
+void testEncounterAdmissionQuarantinesPrimaryCleanupAndBindingFailures() {
+    for (int mode = 0; mode < 5; ++mode) {
+        Fixture fixture;
+        fixture.map->setBoolProperty("guardNativeEncounterSaves", true);
+        fixture.hero->getBaseStats()->setAgility(30);
+        auto enemy = fixture.actor("quarantinedEncounterEnemy");
+        EncounterAdmissionWork work(fixture);
+        if (mode == 3) {
+            fixture.heroController->starting = [&] {
+                work.attempt();
+                throw std::runtime_error("primary start failure");
+            };
+        }
+        fixture.heroController->action = [&](auto, auto) {
+            work.attempt();
+            if (mode == 0) {
+                throw std::runtime_error("primary action failure");
+            }
+            if (mode == 1) {
+                throw vstd::task_cancelled();
+            }
+            if (mode == 4) {
+                auto next = std::make_shared<CMap>();
+                next->setGame(fixture.game);
+                fixture.game->setMap(next);
+            }
+            fixture.heroController->cancelled = true;
+        };
+        fixture.heroController->ending = [&] {
+            work.attempt();
+            if (mode == 1 || mode == 2 || mode == 3) {
+                throw std::runtime_error("first cleanup failure");
+            }
+        };
+        probe(enemy)->ending = [&] {
+            work.attempt();
+            if (mode == 1 || mode == 2) {
+                throw std::runtime_error("second cleanup failure");
+            }
+        };
+        bool expectedFailure = false;
+        try {
+            auto task = CFightHandler::fightManyResultAsync(fixture.hero, {enemy});
+            const auto result = game_async::wait(fixture.game->getContext()->spawnTask(std::move(task)),
+                                                 game_async::WaitMode::PostedWork);
+            expectedFailure = mode == 4 && result.outcome == CFightOutcome::Cancelled;
+        } catch (const vstd::task_cancelled &) {
+            expectedFailure = mode == 1;
+        } catch (const std::runtime_error &error) {
+            const auto expected = mode == 0   ? "primary action failure"
+                                  : mode == 3 ? "primary start failure"
+                                              : "first cleanup failure";
+            expectedFailure = mode != 1 && mode != 4 && std::string(error.what()) == expected;
+        }
+        expect_true(expectedFailure && fixture.heroController->ends == 1 && probe(enemy)->ends == (mode == 3 ? 0 : 1),
+                    "quarantine must preserve the primary failure and end each actually started controller once");
+        expect_true(work.quest->captures == 0 && work.graph->visits == 0 && !fixture.map->tryBeginSaveSnapshot() &&
+                        !fixture.game->getMap()->tryBeginSaveSnapshot() && !fixture.map->tryBeginUnsafeOperation(),
+                    "uncaught errors and superseded bindings must quarantine even after successful controller ends");
+    }
+}
+
+void testEncounterEarlyOutcomesAndOuterOwnerRemainIndependent() {
+    Fixture fixture;
+    fixture.map->setBoolProperty("guardNativeEncounterSaves", true);
+    auto enemy = fixture.actor("earlyAdmissionEnemy");
+    fixture.map->setStringProperty("combatHistory", "admission sentinel");
+    auto snapshot = fixture.map->tryBeginSaveSnapshot();
+    const auto rejected = CFightHandler::fightManyResult(fixture.hero, {enemy});
+    expect_true(snapshot && rejected.outcome == CFightOutcome::Invalid && fixture.heroController->starts == 0 &&
+                    probe(enemy)->starts == 0 &&
+                    fixture.map->getStringProperty("combatHistory") == "admission sentinel",
+                "snapshot rejection must precede even combat-history mutation and every controller start");
+    snapshot.reset();
+    expect_true(CFightHandler::fightManyResult(fixture.hero, {}).outcome == CFightOutcome::Invalid &&
+                    fixture.map->tryBeginSaveSnapshot().has_value(),
+                "an empty-opponent normal early result must settle its empty cleanup ownership");
+    fixture.hero->setFightController(nullptr);
+    expect_true(CFightHandler::fightManyResult(fixture.hero, {enemy}).outcome == CFightOutcome::Invalid &&
+                    fixture.map->tryBeginSaveSnapshot().has_value(),
+                "a missing-controller normal early result must release admission without quarantining");
+    fixture.hero->setFightController(fixture.heroController);
+    auto outer = fixture.map->tryBeginUnsafeOperation();
+    fixture.heroController->cancelled = true;
+    const auto cancelled = CFightHandler::fightManyResult(fixture.hero, {enemy});
+    expect_true(outer && cancelled.outcome == CFightOutcome::Cancelled && !fixture.map->tryBeginSaveSnapshot(),
+                "normal native cleanup must not release the independent outer receipt owner");
+    if (outer) {
+        outer->finish();
+    }
+    expect_true(fixture.map->tryBeginSaveSnapshot().has_value(),
+                "explicit outer settlement must release the final independent hold");
+}
+
+void testNaturalMovementEncounterOwnsAdmission() {
+    Fixture fixture;
+    fixture.map->setBoolProperty("guardNativeEncounterSaves", true);
+    fixture.hero->setNpc(false);
+    fixture.hero->getBaseStats()->setAgility(30);
+    auto enemy = fixture.actor("naturalAdmissionEnemy", false, 1);
+    enemy->setNpc(false);
+    enemy->setCanStep(true);
+    auto ally = fixture.actor("naturalAdmissionAlly", true, 0, 1);
+    ally->setCanStep(true);
+    fixture.enable("naturalAdmissionAlly");
+    for (const int x : {0, 1}) {
+        auto tile = std::make_shared<CTile>();
+        tile->setGame(fixture.game);
+        tile->setCanStep(true);
+        fixture.map->addTile(tile, x, 0, 0);
+    }
+    EncounterAdmissionWork work(fixture);
+    fixture.heroController->action = [&](auto, auto) {
+        work.attempt();
+        fixture.heroController->cancelled = true;
+    };
+    fixture.hero->moveTo(1, 0, 0);
+    expect_true(fixture.heroController->actions == 1 && work.attempts == 1 && work.quest->captures == 0 &&
+                    work.graph->visits == 0 && fixture.heroController->ends == 1 && probe(enemy)->ends == 1 &&
+                    probe(ally)->ends == 1,
+                "actual native movement collision must own encounter admission without a scripted flow begin");
+    expect_true(fixture.map->tryBeginSaveSnapshot().has_value(),
+                "a normally cancelled movement encounter must release only its native admission hold");
+}
+
+void testEncounterEffectSupersessionStopsEveryActorRole() {
+    for (int role = 0; role < 3; ++role) {
+        Fixture fixture;
+        fixture.map->setBoolProperty("guardNativeEncounterSaves", true);
+        fixture.hero->getBaseStats()->setAgility(role == 0 ? 30 : 10);
+        auto enemy = fixture.actor("supersedingEffectEnemy", false, 1, role == 2 ? 30 : 10);
+        auto ally = role == 1 ? fixture.actor("supersedingEffectAlly", true, 0, 30) : nullptr;
+        auto affected = role == 0 ? std::shared_ptr<CCreature>(fixture.hero) : role == 1 ? ally : enemy;
+        auto replacement = std::make_shared<CMap>();
+        replacement->setGame(fixture.game);
+        auto effect = std::make_shared<EncounterAdmissionEffect>();
+        effect->setGame(fixture.game);
+        effect->setTypeId("aRebindingEffect");
+        effect->setDuration(2);
+        int ticks = 0;
+        int stale_ticks = 0;
+        int stale_formats = 0;
+        effect->callback = [&] {
+            ++ticks;
+            fixture.game->setMap(replacement);
+        };
+        affected->addEffect(effect);
+        auto stale_effect = std::make_shared<EncounterAdmissionEffect>();
+        stale_effect->setGame(fixture.game);
+        stale_effect->setTypeId("zMustNotTickEffect");
+        stale_effect->setDuration(2);
+        stale_effect->callback = [&] { ++stale_ticks; };
+        affected->addEffect(stale_effect);
+        stale_effect->formatting = [&] { ++stale_formats; };
+        const auto result = ally ? CFightHandler::fightManyWithAlliesResult(fixture.hero, {enemy}, {ally})
+                                 : CFightHandler::fightManyResult(fixture.hero, {enemy});
+        expect_true(result.outcome == CFightOutcome::Cancelled && ticks == 1 && stale_ticks == 0 &&
+                        stale_formats == 0 && affected->isAlive() && fixture.heroController->actions == 0 &&
+                        probe(enemy)->actions == 0 && (!ally || probe(ally)->actions == 0),
+                    "an alive actor's superseding effect must stop before the next effect or any native action");
+        expect_true(fixture.heroController->ends == 1 && probe(enemy)->ends == 1 && (!ally || probe(ally)->ends == 1) &&
+                        !fixture.map->tryBeginSaveSnapshot() && !replacement->tryBeginSaveSnapshot(),
+                    "effect supersession must clean every entered controller once and quarantine both bindings");
+    }
+}
+
+class EncounterExpiredFormattingEffect : public CEffect {
+  public:
+    std::function<void()> formatting;
+    std::string to_string() override {
+        if (formatting) {
+            formatting();
+        }
+        return CEffect::to_string();
+    }
+};
+
+void testExpiredEffectFormattingSupersessionDoesNotRemoveEffect() {
+    Fixture fixture;
+    fixture.map->setBoolProperty("guardNativeEncounterSaves", true);
+    auto enemy = fixture.actor("expiredEffectSupersessionEnemy");
+    auto replacement = std::make_shared<CMap>();
+    replacement->setGame(fixture.game);
+    auto expired = std::make_shared<EncounterExpiredFormattingEffect>();
+    expired->setGame(fixture.game);
+    expired->setDuration(0);
+    fixture.hero->addEffect(expired);
+    int formatting_callbacks = 0;
+    expired->formatting = [&] {
+        if (++formatting_callbacks == 1) {
+            fixture.game->setMap(replacement);
+        }
+    };
+    const auto result = CFightHandler::fightManyResult(fixture.hero, {enemy});
+    expect_true(result.outcome == CFightOutcome::Cancelled && formatting_callbacks == 1 &&
+                    fixture.hero->getEffects().count(expired) == 1 && fixture.heroController->actions == 0 &&
+                    probe(enemy)->actions == 0,
+                "expired effect formatting that replaces the map must stop before stale removal or native action");
+    expect_true(fixture.heroController->ends == 1 && probe(enemy)->ends == 1 && !fixture.map->tryBeginSaveSnapshot() &&
+                    !replacement->tryBeginSaveSnapshot(),
+                "expiration supersession must clean entered controllers once and quarantine the changed binding");
+}
+
+class EncounterSetupReplacingController : public ProbeController {
+  public:
+    int setups = 0;
+    std::function<void()> setup;
+    void setOpponents(std::shared_ptr<CCreature>, const std::vector<std::shared_ptr<CCreature>> &) override {
+        ++setups;
+        setup();
+    }
+};
+
+void testEncounterControllerSetupSupersessionDoesNotEnterAnotherStart() {
+    for (int role = 0; role < 3; ++role) {
+        Fixture fixture;
+        fixture.map->setBoolProperty("guardNativeEncounterSaves", true);
+        auto enemy = fixture.actor("setupSupersessionEnemy");
+        auto ally = fixture.actor("setupSupersessionAlly", true);
+        auto replacing = std::make_shared<EncounterSetupReplacingController>();
+        auto replacement = std::make_shared<CMap>();
+        replacement->setGame(fixture.game);
+        const auto supersede = [&] { fixture.game->setMap(replacement); };
+        replacing->setup = supersede;
+        if (role == 0) {
+            fixture.heroController = replacing;
+            fixture.hero->setFightController(replacing);
+        } else if (role == 1) {
+            ally->setFightController(replacing);
+        } else {
+            probe(enemy)->starting = supersede;
+        }
+        const auto result = CFightHandler::fightManyWithAlliesResult(fixture.hero, {enemy}, {ally});
+        expect_true(result.outcome == CFightOutcome::Cancelled && fixture.heroController->actions == 0 &&
+                        probe(enemy)->actions == 0 && probe(ally)->actions == 0,
+                    "controller setup/start supersession must stop before another stale start or action");
+        expect_true(
+            fixture.heroController->starts == (role == 0 ? 0 : 1) &&
+                fixture.heroController->ends == (role == 0 ? 0 : 1) && probe(enemy)->starts == (role == 0 ? 0 : 1) &&
+                probe(enemy)->ends == (role == 0 ? 0 : 1) && probe(ally)->starts == 0 && probe(ally)->ends == 0 &&
+                (role == 2 || replacing->setups == 1) && !fixture.map->tryBeginSaveSnapshot() &&
+                !replacement->tryBeginSaveSnapshot(),
+            "setters whose start was never entered own no end; already entered controllers end once under quarantine");
+    }
+}
 } // namespace
 
 int main() {
+    if (PyImport_AppendInittab("_game", PyInit__game) != 0) {
+        std::cerr << "Cannot register the real embedded _game module\n";
+        return 1;
+    }
     pybind11::scoped_interpreter interpreter{};
+    initializeAlliedCombatPythonContent();
     testNativeAllyActsAndHeroOwnsRewards();
+    testRegisteredPythonAllyActsAndHeroOwnsRewards();
     testAlliedBudgetAndRejectedParticipants();
     testExplicitCandidatesBeyondNaturalDiscoveryBudget();
     testNaturalOptInAndMoverPerspectives();
@@ -376,5 +1065,17 @@ int main() {
     testCancelledAndStaleAlliedEncountersEndControllers();
     testAllyEffectsCountAsEncounterProgress();
     testFixedCityLootTransfersGoldAndEquippedPossessionsOnce();
+    testCombatCleanupExceptionsEndEveryControllerOnce();
+    testCombatCleanupPreservesPrimaryFailureAndCancellation();
+    testCombatOwnsPartialControllerStartsAndPreservesTheirFailure();
+    testRejectedCombatAdmissionDoesNotStartOrEndControllers();
+    testDirectEncounterSaveAdmissionAndLegacyDefault();
+    testEncounterAdmissionSpansEffectsLootAndRemoval();
+    testEncounterAdmissionQuarantinesPrimaryCleanupAndBindingFailures();
+    testEncounterEarlyOutcomesAndOuterOwnerRemainIndependent();
+    testNaturalMovementEncounterOwnsAdmission();
+    testEncounterEffectSupersessionStopsEveryActorRole();
+    testExpiredEffectFormattingSupersessionDoesNotRemoveEffect();
+    testEncounterControllerSetupSupersessionDoesNotEnterAnotherStart();
     return finish_tests();
 }

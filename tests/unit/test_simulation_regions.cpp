@@ -58,8 +58,11 @@ class RegionActor : public CCreature {
         }
     }
 
+    void onLeave(std::shared_ptr<CGameEvent>) override { ++departures; }
+
     std::function<void()> onTick;
     int callbacks = 0;
+    int departures = 0;
 };
 
 class RegionPortal : public CBuilding {
@@ -80,10 +83,10 @@ struct RegionFixture {
     RegionFixture() {
         game->setMap(map);
         map->setGame(game);
-        game->getObjectHandler()->registerType("CPlayerController", [] { return std::make_shared<CPlayerController>(); });
-        game->getObjectHandler()->registerType("CPlayerFightController", [] {
-            return std::make_shared<CPlayerFightController>();
-        });
+        game->getObjectHandler()->registerType("CPlayerController",
+                                               [] { return std::make_shared<CPlayerController>(); });
+        game->getObjectHandler()->registerType("CPlayerFightController",
+                                               [] { return std::make_shared<CPlayerFightController>(); });
     }
 
     std::shared_ptr<RegionActor> actor(const std::string &name, const std::string &region, Coords coords = ZERO) {
@@ -95,7 +98,7 @@ struct RegionFixture {
         actor->getBaseStats()->setStamina(10);
         actor->setLevel(1);
         actor->setHp(70);
-        actor->setCoords(coords);
+        actor->relocateWithoutMoveHooks(coords);
         actor->setStringProperty("simulationRegion", region);
         actor->setController(std::make_shared<RegionController>());
         map->addObject(actor);
@@ -116,6 +119,17 @@ struct RegionFixture {
 
     ~RegionFixture() { game->getContext()->shutdown(); }
 };
+
+void testRegionFixtureSetupDoesNotRunMovementHooks() {
+    RegionFixture fixture;
+    performance_guard::resetMapCoordinateLookupProbe();
+    auto first = fixture.actor("firstResident", "north");
+    auto second = fixture.actor("secondResident", "north");
+    const auto setupProbes = performance_guard::mapCoordinateLookupProbeCount();
+    performance_guard::disableMapCoordinateLookupProbe();
+    expect_true(first->departures == 0 && second->departures == 0 && setupProbes == 0,
+                "initial resident placement must not run leave/contact hooks against previously inserted residents");
+}
 
 void testDefaultAndOptInRegionTurns() {
     RegionFixture fixture;
@@ -182,9 +196,10 @@ void testRegionActivationDuringCallbacksConsumesOneTurnWithoutMixingRegions() {
     };
     fixture.map->setActiveSimulationRegion("north");
     fixture.map->move();
-    expect_true(coordinator->callbacks == 1 && south->callbacks == 0 && fixture.controller(north)->controls == 0 &&
-                    fixture.controller(south)->controls == 0 && fixture.map->getTurn() == 1 && !fixture.map->isMoving(),
-                "a region change during onTurn must consume one turn without planning either stale or newly active actors");
+    expect_true(
+        coordinator->callbacks == 1 && south->callbacks == 0 && fixture.controller(north)->controls == 0 &&
+            fixture.controller(south)->controls == 0 && fixture.map->getTurn() == 1 && !fixture.map->isMoving(),
+        "a region change during onTurn must consume one turn without planning either stale or newly active actors");
     fixture.map->move();
     expect_true(south->callbacks == 1 && fixture.controller(south)->controls == 1 && fixture.map->getTurn() == 2,
                 "the next complete turn must simulate the newly active region");
@@ -265,7 +280,8 @@ void testSimulationPropertiesRoundTripWithoutChangingLegacyDefaults() {
     expect_true(restored && restored->getActiveSimulationRegion() == "east" && resident &&
                     resident->getStringProperty("simulationRegion") == "interior:elvsongUpper" &&
                     resident->getBoolProperty("alwaysSimulate") &&
-                    resident->getNumericProperty("plugin_cityConversationCount") == 7 && restored->isSimulationActive(resident),
+                    resident->getNumericProperty("plugin_cityConversationCount") == 7 &&
+                    restored->isSimulationActive(resident),
                 "the existing serializer must preserve region, global override and resident state together");
     (*serialized)["properties"].erase("activeSimulationRegion");
     CSerialization::StrictScope legacyStrict("simulation-region-legacy");
@@ -281,6 +297,8 @@ void testSyntheticCityRegionCallbackAndControlBudget() {
     constexpr int INTERIOR_ACTORS = 724;
     constexpr int ACTIVE_WARD_ACTORS = 61;
     RegionFixture fixture;
+    std::cout << "synthetic city simulation region setup: actors=" << WARD_ACTORS + GLOBAL_ACTORS << std::endl;
+    performance_guard::resetMapCoordinateLookupProbe();
     for (int index = 0; index < WARD_ACTORS; ++index) {
         fixture.actor("wardResident" + std::to_string(index), "ward" + std::to_string(index % 9));
     }
@@ -288,6 +306,12 @@ void testSyntheticCityRegionCallbackAndControlBudget() {
         auto global = fixture.actor("globalCoordinator" + std::to_string(index), "outside");
         global->setBoolProperty("alwaysSimulate", true);
     }
+    const auto wardSetupProbes = performance_guard::mapCoordinateLookupProbeCount();
+    performance_guard::disableMapCoordinateLookupProbe();
+    expect_true(wardSetupProbes == 0,
+                "city fixture setup must not scan colocated residents or dispatch movement before its first turn");
+    std::cout << "synthetic city simulation region setup: coordinateProbes=" << wardSetupProbes << " budget=0"
+              << std::endl;
     auto totals = [&fixture] {
         std::pair<int, int> counts;
         for (const auto &actor : fixture.actors) {
@@ -306,26 +330,37 @@ void testSyntheticCityRegionCallbackAndControlBudget() {
     const int budget = ACTIVE_WARD_ACTORS + GLOBAL_ACTORS;
     expect_true(firstActive.first - legacy.first == budget && firstActive.second - legacy.second == budget,
                 "active ward work must stay at exactly its 61 residents plus three global actors");
+    std::cout << "synthetic city simulation region setup: addedInteriorActors=" << INTERIOR_ACTORS << std::endl;
+    performance_guard::resetMapCoordinateLookupProbe();
     for (int index = 0; index < INTERIOR_ACTORS; ++index) {
         fixture.actor("interiorResident" + std::to_string(index), "interior" + std::to_string(index % 100));
     }
+    const auto interiorSetupProbes = performance_guard::mapCoordinateLookupProbeCount();
+    performance_guard::disableMapCoordinateLookupProbe();
+    expect_true(interiorSetupProbes == 0,
+                "adding dormant interiors must not perform quadratic contact work during fixture setup");
+    std::cout << "synthetic city simulation region setup: interiorCoordinateProbes=" << interiorSetupProbes
+              << " budget=0" << std::endl;
     fixture.map->move();
     const auto expanded = totals();
-    expect_true(expanded.first - firstActive.first == budget && expanded.second - firstActive.second == budget &&
-                    fixture.map->getObjects().size() == WARD_ACTORS + GLOBAL_ACTORS + INTERIOR_ACTORS,
-                "adding 724 dormant interior actors must not increase active callback or controller work or discard state");
-    std::cout << "synthetic city simulation region guard: wardActors=" << WARD_ACTORS
-              << " globals=" << GLOBAL_ACTORS << " addedInteriorActors=" << INTERIOR_ACTORS
-              << " legacyCallbacks=" << legacy.first << " legacyControls=" << legacy.second
-              << " activeCallbacks=" << firstActive.first - legacy.first
+    expect_true(
+        expanded.first - firstActive.first == budget && expanded.second - firstActive.second == budget &&
+            fixture.map->getObjects().size() == WARD_ACTORS + GLOBAL_ACTORS + INTERIOR_ACTORS,
+        "adding 724 dormant interior actors must not increase active callback or controller work or discard state");
+    std::cout << "synthetic city simulation region guard: wardActors=" << WARD_ACTORS << " globals=" << GLOBAL_ACTORS
+              << " addedInteriorActors=" << INTERIOR_ACTORS << " legacyCallbacks=" << legacy.first
+              << " legacyControls=" << legacy.second << " activeCallbacks=" << firstActive.first - legacy.first
               << " activeControls=" << firstActive.second - legacy.second
               << " expandedCallbacks=" << expanded.first - firstActive.first
-              << " expandedControls=" << expanded.second - firstActive.second << " callbackAndControlBudget=" << budget
+              << " expandedControls=" << expanded.second - firstActive.second
+              << " wardSetupCoordinateProbes=" << wardSetupProbes
+              << " interiorSetupCoordinateProbes=" << interiorSetupProbes << " callbackAndControlBudget=" << budget
               << " (synthetic fixture, not a measured source city run)\n";
 }
 } // namespace
 
 void run_simulation_region_tests() {
+    testRegionFixtureSetupDoesNotRunMovementHooks();
     testDefaultAndOptInRegionTurns();
     testInactiveMovementAndPlayerExemption();
     testRegionActivationDuringCallbacksConsumesOneTurnWithoutMixingRegions();

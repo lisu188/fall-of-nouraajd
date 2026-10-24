@@ -736,6 +736,16 @@ def courtyardExitDistances():
     return door, distances
 
 
+def courtyardPursuitLowerBound(first, second, door, exit_distances):
+    """Lower-bound cardinal pursuit through the verified sole exit.
+
+    Door legs ignore other obstacles and assume an open door, so the bound stays conservative even when it is closed.
+    """
+    if (first in exit_distances) != (second in exit_distances):
+        return sum(abs(a - b) for a, b in zip(first, door)) + sum(abs(a - b) for a, b in zip(door, second))
+    return sum(abs(a - b) for a, b in zip(first, second))
+
+
 def fleeHostileCoords(d, type_cache, *, level=None):
     """Snapshot current combat-capable actors once; path lookahead never repeats their RPCs."""
     roster = d.call(d.game_map, "getObjects")
@@ -797,7 +807,7 @@ def fleeCourtyardUntil(d, elapsed, allow_timeout=False):
         rejected = []
 
         def clearance(target):
-            return min(sum(abs(a - b) for a, b in zip(target, enemy)) for enemy in opponents)
+            return min(courtyardPursuitLowerBound(target, enemy, door, exit_distances) for enemy in opponents)
 
         def can_step(target):
             if target not in probes:
@@ -1035,6 +1045,71 @@ def aidSnapshot(d):
     return tuple(d.call(d.player, name) for name in ("getGold", "getHp", "getMana"))
 
 
+def prepareHighlanderAidDeficit(d):
+    """Use up to four remaining authored hostiles before Victor's reward can heal the player."""
+    d.test.assertFalse(d.flag("TALKED_TO_VICTOR"), "Highlander aid preparation must precede Victor")
+    d.test.assertFalse(d.flag("VICTOR_REWARD_GRANTED"), "Victor's healing cannot supply this aid checkpoint")
+    hall = d.object("nouraajdTownHall")
+    clinic = d.coords(hall)
+    candidates = []
+    for actor in d.call(d.game_map, "getObjects"):
+        if d.call(actor, "getTypeId") != "Pritz" or not d.call(actor, "isAlive"):
+            continue
+        if d.call(actor, "isNpc") or d.call(actor, "getStringProperty", "affiliation") != "gooby":
+            continue
+        coords = d.coords(actor)
+        if coords[2] == clinic[2]:
+            name = d.call(actor, "getName")
+            candidates.append((sum(abs(a - b) for a, b in zip(coords, clinic)), name, actor))
+    selected = sorted(candidates, key=lambda row: row[:2])[:4]
+    d.test.assertTrue(selected, "Pre-Victor aid needs a remaining living authored Pritz")
+    previous_recovery = d.recoveryEnabled
+    d.recoveryEnabled = False
+    try:
+        for _distance, name, captured in selected:
+            actor = d.object(name, required=False)
+            if actor is None or not d.call(actor, "isAlive"):
+                continue
+            d.test.assertEqual(captured["__handle__"], actor["__handle__"], "Authored aid opponent identity changed")
+            d.test.assertEqual("Pritz", d.call(actor, "getTypeId"))
+            d.test.assertEqual("gooby", d.call(actor, "getStringProperty", "affiliation"))
+            d.test.assertFalse(d.call(actor, "isNpc"), "Aid preparation must not attack an authored NPC")
+            d.assertNativeCombatOutcomes()
+            after_seq = d._combat_trace_seq
+            before = aidSnapshot(d)
+            d.fight(name)
+            d.test.assertIsNotNone(
+                d.playerVictoryAgainst("nouraajd", name, after_seq=after_seq),
+                "Aid preparation requires the actual player's native victory against its approached hostile",
+            )
+            after_combat = aidSnapshot(d)
+            d.navigateTo("nouraajdTownHall")
+            after_return = aidSnapshot(d)
+            d.record(
+                {
+                    "highlanderAidPreparation": {
+                        "opponent": name,
+                        "before": before,
+                        "afterCombat": after_combat,
+                        "afterReturn": after_return,
+                    }
+                },
+                replay=True,
+            )
+            d.test.assertFalse(d.flag("TALKED_TO_VICTOR"))
+            d.test.assertFalse(d.flag("VICTOR_REWARD_GRANTED"))
+            if 0 < d.call(d.player, "getHp") < d.call(d.player, "getHpMax"):
+                return
+        d.test.fail(
+            (
+                "Four authored opponents left no usable Highlander deficit after native healing and clinic return",
+                aidSnapshot(d),
+            )
+        )
+    finally:
+        d.recoveryEnabled = previous_recovery
+
+
 def raceAid(d):
     start(d)
     suffix, gold_delta, hp_gain, mana_gain = RACES[d.race_id]
@@ -1064,27 +1139,8 @@ def raceAid(d):
             "nouraajd.aid." + d.race_id + ".unneeded",
             aidSnapshot(d) == before and not d.call(d.player, "getBoolProperty", "nouraajdRaceServiceClaimed"),
         )
-        # Actual courtyard opponents supply damage; an owned paid action supplies mana expenditure.
-        d.recoveryEnabled = False
-        try:
-            meetVictor(d, "deescalated", False)
-            actions = [
-                action
-                for action in d.call(d.player, "getEffectiveInteractions")
-                if 0 < d.call(action, "getNumericProperty", "manaCost") <= d.call(d.player, "getMana")
-            ]
-            d.test.assertTrue(actions, "Paid aid route needs an actual affordable owned class ability")
-            enemy = d.object("victorCultist1")
-            action = actions[0]
-            target = d.player if d.call(action, "getBoolProperty", "selfTarget") else enemy
-            d.call(d.player, "useAction", action, target)
-            d.pump()
-            for name in ("victorCultist1", "victorCultist2", "victorCultist3", "victorCultist4"):
-                if hp_gain and d.call(d.player, "getHp") == d.call(d.player, "getHpMax"):
-                    actor = d.object(name, required=False)
-                    if actor is not None and d.call(actor, "isAlive"):
-                        d.fight(name)
-            d.navigateTo("nouraajdTownHall")
+        if d.race_id == "highlanderRace":
+            prepareHighlanderAidDeficit(d)
             before = aidSnapshot(d)
             hp_max = d.call(d.player, "getHpMax")
             mana_max = d.call(d.player, "getManaMax")
@@ -1092,8 +1148,45 @@ def raceAid(d):
             d.test.assertNotEqual(before[1:], expected[1:], "Real combat/casting must leave a recoverable deficit")
             d.choose("townHallDialog", "claim" + suffix, condition="canOffer" + suffix)
             d.test.assertEqual(expected, aidSnapshot(d))
-        finally:
-            d.recoveryEnabled = True
+        else:
+            # Actual courtyard opponents supply damage; an owned paid action supplies mana expenditure.
+            d.recoveryEnabled = False
+            try:
+                meetVictor(d, "deescalated", False)
+                actions = [
+                    action
+                    for action in d.call(d.player, "getEffectiveInteractions")
+                    if 0 < d.call(action, "getNumericProperty", "manaCost") <= d.call(d.player, "getMana")
+                ]
+                d.test.assertTrue(actions, "Paid aid route needs an actual affordable owned class ability")
+                enemy = d.object("victorCultist1")
+                action = actions[0]
+                target = d.player if d.call(action, "getBoolProperty", "selfTarget") else enemy
+                d.call(d.player, "useAction", action, target)
+                d.pump()
+                for name in ("victorCultist1", "victorCultist2", "victorCultist3", "victorCultist4"):
+                    if (hp_gain and d.call(d.player, "getHp") < d.call(d.player, "getHpMax")) or (
+                        mana_gain and d.call(d.player, "getMana") < d.call(d.player, "getManaMax")
+                    ):
+                        break
+                    if hp_gain:
+                        actor = d.object(name, required=False)
+                        if actor is not None and d.call(actor, "isAlive"):
+                            d.fight(name)
+                d.navigateTo("nouraajdTownHall")
+                before = aidSnapshot(d)
+                hp_max = d.call(d.player, "getHpMax")
+                mana_max = d.call(d.player, "getManaMax")
+                expected = (
+                    before[0] + gold_delta,
+                    min(hp_max, before[1] + hp_gain),
+                    min(mana_max, before[2] + mana_gain),
+                )
+                d.test.assertNotEqual(before[1:], expected[1:], "Real combat/casting must leave a recoverable deficit")
+                d.choose("townHallDialog", "claim" + suffix, condition="canOffer" + suffix)
+                d.test.assertEqual(expected, aidSnapshot(d))
+            finally:
+                d.recoveryEnabled = True
     else:
         before = aidSnapshot(d)
         d.choose("townHallDialog", "claimHumanRation", condition="canOfferHumanRation")
@@ -1216,7 +1309,14 @@ def earnedCrafting(d):
 
 def case(case_id, branches, run, **kwargs):
     return RouteCase(
-        case_id, "nouraajd", ("nouraajd",), tuple(branches), run, campaign="fallOfNouraajd", sources=SOURCES, **kwargs
+        case_id,
+        "nouraajd",
+        ("nouraajd",),
+        tuple(branches),
+        run,
+        campaign="fallOfNouraajd",
+        sources=kwargs.pop("sources", SOURCES),
+        **kwargs
     )
 
 
@@ -1374,6 +1474,9 @@ CASES = (
             + ("nouraajd.aid." + race_id + ".claimed", "nouraajd.aid." + race_id + ".persisted"),
             raceAid,
             race=race_id,
+            sources=SOURCES + ("res/config/monsters.json", "res/plugins/tile.py")
+            if race_id == "highlanderRace"
+            else SOURCES,
             duration_seconds=600.0,
         )
         for race_id in RACES

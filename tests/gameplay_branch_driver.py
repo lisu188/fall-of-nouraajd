@@ -3,7 +3,7 @@
 # SPDX-License-Identifier: GPL-3.0-or-later
 """Restricted natural-play client; fixture mutations never pass through its action surface."""
 
-from collections import OrderedDict, deque
+from collections import Counter, OrderedDict, deque
 from functools import lru_cache
 
 from tests.gameplay_branch_journals import verifyJournals
@@ -15,6 +15,7 @@ import hashlib
 import json
 import os
 from pathlib import Path
+import shutil
 import subprocess
 import sys
 import uuid
@@ -213,11 +214,161 @@ class GameplayBranchDriver:
                 output.write(json.dumps(action, ensure_ascii=False) + "\n")
 
     def engine(self, name, *args):
-        self.test.assertNotIn(
-            name, {"randint", "CGameLoader.loadGui"}, "Routes cannot manipulate randomness or open GUI"
-        )
+        self.test.assertNotEqual(name, "randint", "Routes cannot manipulate randomness")
+        if name == "CGameLoader.loadGui":
+            self.requireIsolatedGui()
         self.record({"engine": name, "args": args}, replay=name not in {"jsonify", "event_loop.instance"})
         return self.harness._mcp_engine_call(self.session, name, list(args), timeout=90)
+
+    def requireIsolatedGui(self):
+        self.test.assertTrue(self.case.isolated_gui, "Only declared isolated GUI routes may open native panels")
+        video = os.environ.get("SDL_VIDEODRIVER")
+        if video == "x11":
+            self.test.assertEqual("posix", os.name, "Xvfb routes require POSIX")
+            self.test.assertEqual(
+                "1", os.environ.get("GAME_XVFB_GAMEPLAY_CHILD"), "A repository Xvfb child is required"
+            )
+            self.test.assertTrue(shutil.which("xvfb-run") and shutil.which("xauth"), "Xvfb tools are required")
+            self.test.assertTrue(os.environ.get("DISPLAY"), "The isolated Xvfb display is missing")
+        else:
+            self.test.assertIn(video, {"dummy", "offscreen"}, "Native GUI routes must never open a desktop display")
+        self.test.assertEqual("software", os.environ.get("SDL_RENDER_DRIVER"), "Isolated routes use software rendering")
+        self.test.assertEqual("dummy", os.environ.get("SDL_AUDIODRIVER"), "Isolated routes use dummy audio")
+
+    def enableIsolatedGui(self):
+        self.requireIsolatedGui()
+        gui = self.call(self.game, "getGui")
+        if gui is None:
+            self.engine("CGameLoader.loadGui", self.game)
+            gui = self.call(self.game, "getGui")
+        self.test.assertIsNotNone(gui, "The current native binary could not create an isolated GUI")
+        return gui
+
+    def nativePanel(self, type_name, *, required=True):
+        gui = self.call(self.game, "getGui")
+        self.test.assertIsNotNone(gui, "A real isolated native GUI is required")
+        panels = [child for child in self.call(gui, "getChildren") if self.call(child, "getType") == type_name]
+        self.test.assertLessEqual(len(panels), 1, ("Ambiguous native modal panel", type_name))
+        if required:
+            self.test.assertTrue(panels, ("The authored callback did not open a native panel", type_name))
+        return panels[0] if panels else None
+
+    def chooseUi(
+        self,
+        dialog_id,
+        action,
+        *,
+        selected_id=None,
+        reader_title=None,
+        reader_lines=(),
+        dialogue_choices=None,
+        dialogue_dialog_ids=None,
+        cancel_choice=False,
+        forbidden_choice_ids=(),
+    ):
+        """Use authored dialog keys and the real nested native reader/choice; never inject a selection result."""
+        gui = self.enableIsolatedGui()
+        self.test.assertIsNotNone(self.trace_path, "GUI route credit requires the actual native option trace")
+        self.test.assertIsInstance(cancel_choice, bool)
+        if cancel_choice:
+            self.test.assertIsNone(selected_id, "Cancellation cannot confirm an inventory row")
+            self.test.assertIsNone(reader_title, "Cancellation requires the actual native chooser")
+            self.test.assertIsNone(dialogue_choices, "Cancellation cannot replace a dialogue sequence")
+            self.test.assertFalse(reader_lines, "Cancellation cannot replace a reader")
+            self.test.assertIsInstance(forbidden_choice_ids, (tuple, list))
+            self.test.assertLessEqual(len(forbidden_choice_ids), 256)
+            self.test.assertTrue(all(isinstance(value, str) and value for value in forbidden_choice_ids))
+        elif dialogue_choices is None:
+            self.test.assertFalse(forbidden_choice_ids, "Forbidden row inspection requires cancellation")
+            self.test.assertEqual(selected_id is None, reader_title is not None, "Select one native presentation kind")
+        else:
+            self.test.assertFalse(forbidden_choice_ids, "Forbidden row inspection requires cancellation")
+            self.test.assertIsNone(selected_id, "Dialogue sequences cannot also select an inventory row")
+            self.test.assertIsNone(reader_title, "Dialogue sequences use their actual authored reader titles")
+            self.test.assertFalse(reader_lines, "Dialogue sequences must not replace the authored reader body")
+            self.test.assertIsInstance(dialogue_choices, (tuple, list))
+            self.test.assertLessEqual(len(dialogue_choices), 32, "Native dialogue choice budget exceeded")
+            self.test.assertTrue(all(isinstance(value, str) and value for value in dialogue_choices))
+        if dialogue_dialog_ids is not None:
+            self.test.assertIsNotNone(dialogue_choices, "A dialog dismissal plan requires dialogue_choices")
+            self.test.assertIsInstance(dialogue_dialog_ids, (tuple, list))
+            self.test.assertLessEqual(len(dialogue_dialog_ids), 1, "Nested native dialog budget exceeded")
+            self.test.assertTrue(all(isinstance(value, str) and value for value in dialogue_dialog_ids))
+        definitions = mapDefinitions(self.map_name)
+        definition = resolveDefinition(definitions, dialog_id)["properties"]
+        owner = self.object(definition.get("actorId", ""))
+        here, there = self.coords(), self.coords(owner)
+        self.test.assertEqual(here[2], there[2], "The player must reach the authored dialog actor")
+        self.test.assertLessEqual(max(abs(here[0] - there[0]), abs(here[1] - there[1])), 1)
+        for type_name in ("CGameDialogPanel", "CGameCampaignPanel", "CGameCampaignBrowserPanel"):
+            self.test.assertIsNone(self.nativePanel(type_name, required=False), "An earlier modal is still open")
+        dialog = self.call(self.game, "createObject", dialog_id)
+        state = self._dialogStates(dialog_id)["ENTRY"]
+        visible = [
+            row["properties"]
+            for row in sorted(state.get("options", []), key=lambda row: row["properties"].get("number", 0))
+            if not row["properties"].get("condition")
+            or self.call(dialog, "invokeCondition", row["properties"]["condition"])
+        ]
+        matches = [index for index, row in enumerate(visible) if row.get("action") == action]
+        self.test.assertEqual(1, len(matches), ("Expected one visible authored entry option", dialog_id, action))
+        option = visible[matches[0]]
+        self.assertNativeCombatOutcomes()
+        after_seq = self._combat_trace_seq
+        handler = self.call(self.game, "getGuiHandler")
+        panel = self.call(handler, "openDialog", dialog)
+        self.test.assertIsNotNone(panel, "The native dialog opener must return its attached panel")
+        self.test.assertEqual(
+            panel, self.nativePanel("CGameDialogPanel"), "The returned dialog must be the unique actual native panel"
+        )
+        for _ in range(matches[0] + 1):
+            self.call(panel, "keyboardEvent", gui, 768, 1073741905)  # Down focuses the first visible reply.
+        self.call(panel, "keyboardEvent", gui, 768, 13)
+        self.pump()
+        witness = {"dialog": dialog_id, "action": action, "option": option["number"], "state": "ENTRY"}
+        if cancel_choice:
+            nested = self.nativePanel("CGameCampaignBrowserPanel")
+            witness.update(self._cancelUiChoice(gui, nested, forbidden_choice_ids))
+        elif dialogue_choices is not None:
+            witness.update(
+                self._chooseUiDialogue(gui, dialogue_choices, source_panel=panel, dialog_ids=dialogue_dialog_ids)
+            )
+        elif selected_id is not None:
+            nested = self.nativePanel("CGameCampaignBrowserPanel")
+            highlighted = self._chooseUiRow(gui, nested, selected_id)
+            witness.update(kind="nativeChoice", selectedId=highlighted)
+        else:
+            nested = self.nativePanel("CGameCampaignPanel")
+            title, body = self.call(nested, "getTitle"), self.call(nested, "getBody")
+            self.test.assertEqual(reader_title, title)
+            self.test.assertEqual(Counter(reader_lines), Counter(body.splitlines()), "Native inventory reader contents")
+            self.test.assertFalse(self.call(nested, "isDismissed"))
+            self.call(nested, "keyboardEvent", gui, 768, 13)
+            self.pump()
+            self.test.assertTrue(self.call(nested, "isDismissed"))
+            self.test.assertIsNone(self.call(nested, "getParent"))
+            witness.update(kind="nativeReader", title=title, body=body)
+        records = readNewNativeTrace(self.trace_path, {}, after_seq)
+        selected = [
+            row
+            for row in records
+            if row.get("event") == "dialog_option_selected"
+            and row.get("action") == action
+            and row.get("stateId") == "ENTRY"
+            and row.get("optionNumber") == option["number"]
+            and row.get("dialog", {}).get("typeId") == dialog_id
+        ]
+        self.test.assertEqual(1, len(selected), "The authored native dialog callback needs one exact input receipt")
+        witness["nativeOptionSeq"] = selected[0]["seq"]
+        self.call(panel, "keyboardEvent", gui, 768, 27)
+        self.pump()
+        self.test.assertIsNone(self.call(panel, "getParent"), "Native interaction left its source modal open")
+        for type_name in ("CGameDialogPanel", "CGameCampaignPanel", "CGameCampaignBrowserPanel"):
+            self.test.assertIsNone(
+                self.nativePanel(type_name, required=False), "An unexpected modal remains after source close"
+            )
+        self.record({"nativeUiChoice": witness}, replay=True)
+        return witness
 
     def _rawCall(self, handle, method, *args):
         return self.harness._mcp_handle_call(self.session, handle, method, list(args), timeout=90)
@@ -526,7 +677,36 @@ class GameplayBranchDriver:
             arguments += ["--reputation", str(self.case.initial_reputation)]
         environment = os.environ.copy()
         environment["GAME_PLAYTEST_TRACE"] = "0"
-        process = subprocess.run(arguments, cwd=ROOT, env=environment, capture_output=True, text=True, timeout=90)
+        try:
+            process = subprocess.run(arguments, cwd=ROOT, env=environment, capture_output=True, text=True, timeout=90)
+        except subprocess.TimeoutExpired as error:
+
+            def tail(value):
+                if isinstance(value, bytes):
+                    value = value[-4096:].decode("utf-8", errors="replace")
+                return (value or "")[-4096:]
+
+            try:
+                self.record(
+                    {
+                        "startingSaveFailure": {
+                            "type": "TimeoutExpired",
+                            "timeout": error.timeout,
+                            "command": error.cmd,
+                            "stdoutTail": tail(error.stdout),
+                            "stderrTail": tail(error.stderr),
+                        }
+                    },
+                    replay=True,
+                )
+            except OSError as evidence_error:
+                error.add_note(
+                    "Starting-save timeout diagnostics could not be saved: "
+                    + type(evidence_error).__name__
+                    + ": "
+                    + str(evidence_error)[:512]
+                )
+            raise
         self.test.assertEqual(0, process.returncode, process.stdout[-4096:] + process.stderr[-4096:])
         self.test.assertTrue((self.build_dir / "save" / (slot + ".json")).is_file())
         self.record({"startingSave": json.loads(process.stdout.splitlines()[-1])}, replay=True)
@@ -694,8 +874,16 @@ class GameplayBranchDriver:
         if not obe or not entrance or not self.call(obe, "isAlive"):
             return None
         try:
-            inventory = json.loads(self.call(self.player, "getStringProperty", "candlekeepTrainingInventoryNames"))
-            equipment = json.loads(self.call(self.player, "getStringProperty", "candlekeepTrainingEquipment"))
+            inventory = json.loads(
+                self.call(self.player, "getStringProperty", "candlekeepTrainingInventoryNames").removeprefix(
+                    "candlekeep-json:"
+                )
+            )
+            equipment = json.loads(
+                self.call(self.player, "getStringProperty", "candlekeepTrainingEquipment").removeprefix(
+                    "candlekeep-json:"
+                )
+            )
         except (TypeError, ValueError):
             return None
         return {
@@ -853,7 +1041,9 @@ class GameplayBranchDriver:
         unchanged = 0
         committed = None
         departure_origin = departure_target = None
+        overlap_hold = None
         for _ in range(budget):
+            holding_overlap = False
             target = self.object(name, required=False)
             if target is None:
                 return
@@ -861,6 +1051,8 @@ class GameplayBranchDriver:
                 self.test.fail(("NPC identity changed during authored approach", name, self.snapshot()))
             if departure_origin is not None and self.coords() != departure_origin:
                 departure_origin = departure_target = committed = None
+            if overlap_hold is not None and self.coords() != overlap_hold:
+                overlap_hold = None
             destination = self.coords(target)
             distance = sum(abs(a - b) for a, b in zip(self.coords(), destination))
             if distance <= int(adjacent):
@@ -875,10 +1067,16 @@ class GameplayBranchDriver:
                     else:
                         self.test.fail(("NPC overlap lacks a completed player entry", name, self.snapshot()))
                     if departure_origin is None:
-                        # NPC-caused overlap cannot fire the player's dialogue callback.
-                        # Leave through the native controller before attempting a new entry.
-                        departure_origin = self.coords()
-                        committed = None
+                        if overlap_hold != self.coords():
+                            # Hold once so an NPC moving later in this turn can leave.
+                            overlap_hold = self.coords()
+                            controller = self.call(self.player, "getController")
+                            self.call(controller, "setTarget", self.player, self._coordinateHandle(overlap_hold))
+                            committed, holding_overlap = overlap_hold, True
+                        else:
+                            # A stationary NPC still requires native departure followed by a player entry.
+                            departure_origin = self.coords()
+                            committed = None
                 else:
                     return
             if departure_origin is not None:
@@ -902,7 +1100,7 @@ class GameplayBranchDriver:
                     controller = self.call(self.player, "getController")
                     self.call(controller, "setTarget", self.player, self._coordinateHandle(departure_target))
                     committed = departure_target
-            elif (
+            elif not holding_overlap and (
                 committed is None
                 or self.coords() == committed
                 or unchanged
@@ -921,7 +1119,7 @@ class GameplayBranchDriver:
             if arrival != before:
                 self.steps += 1
             if self.map_name != world:
-                if departure_origin is not None:
+                if departure_origin is not None or overlap_hold is not None:
                     self.test.fail(("NPC re-entry departure changed map", name, self.snapshot()))
                 return
             if arrival != before and not (moving_npc and not adjacent) and self._traversedTarget(committed, arrival):
@@ -1388,9 +1586,199 @@ class GameplayBranchDriver:
             "combats": self.combats,
             "actions": list(self.actions),
             "initialReputation": self.case.initial_reputation,
+            "isolatedGui": self.case.isolated_gui,
             "journals": getattr(self, "_journal_observations", []),
         }
 
     def cleanup(self):
         for path in self._save_paths:
             path.unlink(missing_ok=True)
+
+    def _chooseUiRow(self, gui, nested, selected_id):
+        self.test.assertFalse(self.call(nested, "hasChoice"), "The real choice must remain unconfirmed")
+        self.call(nested, "keyboardEvent", gui, 768, 1073741898)  # Home highlights the first actual row.
+        seen = set()
+        for _ in range(256):
+            highlighted = self.call(nested, "getSelectedId")
+            if highlighted == selected_id:
+                break
+            self.test.assertNotIn(highlighted, seen, ("Requested item is absent from the native chooser", selected_id))
+            seen.add(highlighted)
+            self.call(nested, "keyboardEvent", gui, 768, 1073741905)
+        else:
+            self.test.fail(("Native choice row budget exhausted", selected_id))
+        self.call(nested, "keyboardEvent", gui, 768, 13)
+        self.pump()
+        self.test.assertTrue(self.call(nested, "hasChoice"), "Native confirmation did not settle the chooser")
+        self.test.assertIsNone(self.call(nested, "getParent"), "Confirmed chooser remained attached")
+        return highlighted
+
+    def _cancelUiChoice(self, gui, nested, forbidden_choice_ids):
+        self.test.assertFalse(self.call(nested, "hasChoice"), "The real choice must remain unconfirmed")
+        self.call(nested, "keyboardEvent", gui, 768, 1073741898)
+        choices = []
+        for _ in range(257):
+            highlighted = self.call(nested, "getSelectedId")
+            self.test.assertTrue(highlighted, "Native chooser has no navigable row")
+            if highlighted in choices:
+                self.test.assertIn(highlighted, (choices[0], choices[-1]), "Unexpected native chooser cycle")
+                break
+            self.test.assertLess(len(choices), 256, "Native chooser enumeration budget exhausted")
+            self.test.assertNotIn(highlighted, forbidden_choice_ids, "Forbidden native chooser row")
+            choices.append(highlighted)
+            self.call(nested, "keyboardEvent", gui, 768, 1073741905)
+        else:
+            self.test.fail("Native chooser enumeration budget exhausted")
+        self.call(nested, "keyboardEvent", gui, 768, 1073741901)
+        self.test.assertEqual(choices[-1], self.call(nested, "getSelectedId"), "Native chooser end was not inspected")
+        self.test.assertFalse(self.call(nested, "hasChoice"), "Inspecting rows must not confirm a choice")
+        self.call(nested, "keyboardEvent", gui, 768, 27)
+        self.pump()
+        self.test.assertTrue(self.call(nested, "hasChoice"), "Native cancellation did not settle the chooser")
+        self.test.assertIsNone(self.call(nested, "getParent"), "Cancelled chooser remained attached")
+        return {"kind": "nativeChoiceCancelled", "choiceIds": choices, "selectedId": "", "cancelled": True}
+
+    def _chooseUiDialogue(self, gui, choices, *, source_panel, dialog_ids=None):
+        """Drive a finite modal chain; dismiss only explicitly planned nested source dialogs."""
+        expected, used, panels = tuple(choices), [], []
+        expected_dialogs = tuple(dialog_ids or ())
+        dismissed_dialogs = []
+
+        def currentPanels():
+            children = self.call(gui, "getChildren")
+            self.test.assertIn(source_panel, children, "The retained source dialog disappeared during its callback")
+            dialogs = [
+                child
+                for child in children
+                if child != source_panel and self.call(child, "getType") == "CGameDialogPanel"
+            ]
+            self.test.assertLessEqual(len(dialogs), 1, "Unexpected extra nested native dialogs")
+            reader = self.nativePanel("CGameCampaignPanel", required=False)
+            chooser = self.nativePanel("CGameCampaignBrowserPanel", required=False)
+            self.test.assertLessEqual(
+                sum(value is not None for value in (reader, chooser)) + len(dialogs),
+                1,
+                "Ambiguous native dialogue panels",
+            )
+            return reader, chooser, dialogs[0] if dialogs else None
+
+        for _ in range(128):
+            reader, chooser, nested_dialog = currentPanels()
+            if dialog_ids is not None and not expected and not expected_dialogs:
+                self.test.assertEqual(
+                    (None, None, None),
+                    (reader, chooser, nested_dialog),
+                    "Unexpected modal during explicitly empty dialogue",
+                )
+            if reader is not None:
+                title, body = self.call(reader, "getTitle"), self.call(reader, "getBody")
+                self.test.assertTrue(title and body, "The authored native dialogue reader must contain text")
+                self.test.assertFalse(self.call(reader, "isDismissed"))
+                self.call(reader, "keyboardEvent", gui, 768, 13)
+                self.pump()
+                self.test.assertTrue(self.call(reader, "isDismissed"))
+                self.test.assertIsNone(self.call(reader, "getParent"), "Dismissed dialogue reader remained attached")
+                panels.append({"kind": "nativeReader", "title": title, "body": body})
+            elif chooser is not None:
+                self.test.assertLess(
+                    len(used), len(expected), "Unexpected native dialogue choice after planned answers"
+                )
+                selected = self._chooseUiRow(gui, chooser, expected[len(used)])
+                used.append(selected)
+                panels.append({"kind": "nativeChoice", "selectedId": selected})
+            elif nested_dialog is not None:
+                self.test.assertIsNotNone(dialog_ids, "Nested native dialog needs an explicit dismissal plan")
+                self.test.assertLess(
+                    len(dismissed_dialogs),
+                    len(expected_dialogs),
+                    "Unexpected nested native dialog after planned dismissals",
+                )
+                dialog = self.call(nested_dialog, "getObjectProperty", "dialog")
+                self.test.assertIsNotNone(dialog, "Nested native dialog has no source object")
+                dialog_id = self.call(dialog, "getTypeId")
+                self.test.assertEqual(expected_dialogs[len(dismissed_dialogs)], dialog_id)
+                self.call(nested_dialog, "keyboardEvent", gui, 768, 27)
+                self.pump()
+                self.test.assertIsNone(
+                    self.call(nested_dialog, "getParent"), "Dismissed nested dialog remained attached"
+                )
+                self.test.assertNotIn(nested_dialog, self.call(gui, "getChildren"))
+                self.test.assertIn(
+                    source_panel, self.call(gui, "getChildren"), "Nested dismissal also closed its source"
+                )
+                dismissed_dialogs.append(dialog_id)
+                panels.append({"kind": "nativeDialogDismissed", "dialog": dialog_id})
+            else:
+                break
+        else:
+            self.test.assertEqual((None, None, None), currentPanels(), "Native dialogue panel budget exhausted")
+        self.test.assertEqual(expected, tuple(used), "The native dialogue did not present all planned answers")
+        self.test.assertEqual(
+            expected_dialogs, tuple(dismissed_dialogs), "The native dialogue did not present planned dialogs"
+        )
+        self.test.assertEqual((None, None, None), currentPanels(), "Unexpected native dialogue remains open")
+        if dialog_ids is None:
+            self.test.assertTrue(panels, "The authored callback did not present a native dialogue")
+        return {"kind": "nativeDialogue", "selectedIds": used, "panels": panels}
+
+    def stringProperties(self, handles, property_name):
+        """Read every live handle using bounded ordinary JSON-RPC requests, preserving input order."""
+        self.test.assertIsInstance(handles, (tuple, list))
+        self.test.assertLessEqual(len(handles), 10000, "String-property read exceeds the MCP handle budget")
+        self.test.assertTrue(isinstance(property_name, str) and property_name, "Expected a nonempty string property")
+        self.test.assertTrue(
+            all(
+                isinstance(handle, dict) and isinstance(handle.get("__handle__"), str) and handle["__handle__"]
+                for handle in handles
+            ),
+            "Expected live MCP object handles",
+        )
+        identities = [handle["__handle__"] for handle in handles]
+        self.test.assertEqual(len(identities), len(set(identities)), "Repeated object handles in property read")
+        values = []
+        for offset in range(0, len(identities), 128):
+            chunk = identities[offset : offset + 128]
+            first_id = self.session["next_request_id"]
+            self.test.assertTrue(type(first_id) is int and first_id >= 0, "Expected a valid next RPC request ID")
+            self.session["next_request_id"] += len(chunk)
+            requests = []
+            for index, identity in enumerate(chunk, first_id):
+                self.record({"method": "getStringProperty", "handle": identity, "args": [property_name]}, replay=False)
+                requests.append(
+                    {
+                        "jsonrpc": "2.0",
+                        "id": index,
+                        "method": "tools/call",
+                        "params": {
+                            "name": "engine_handle_call",
+                            "arguments": {"handle": identity, "method": "getStringProperty", "args": [property_name]},
+                        },
+                    }
+                )
+            self.harness._send_rpc(self.session["proc"], requests)
+            responses = self.harness._read_rpc(self.session["proc"], timeout=90)
+            self.test.assertIsInstance(responses, list, "Expected a JSON-RPC batch response")
+            self.test.assertEqual(len(chunk), len(responses), "Missing or extra string-property batch responses")
+            by_id = {}
+            for response in responses:
+                self.test.assertIsInstance(response, dict, "Expected a JSON-RPC response object")
+                self.test.assertEqual("2.0", response.get("jsonrpc"))
+                response_id = response.get("id")
+                self.test.assertTrue(
+                    type(response_id) is int and first_id <= response_id < first_id + len(chunk),
+                    "Unexpected RPC response ID",
+                )
+                self.test.assertNotIn(response_id, by_id, "Duplicate RPC response ID")
+                self.test.assertNotIn("error", response, "String-property RPC failed")
+                result = response.get("result")
+                self.test.assertIsInstance(result, dict, "Missing MCP tool result")
+                is_error = result.get("isError", False)
+                self.test.assertIs(type(is_error), bool, "Malformed MCP tool error flag")
+                self.test.assertFalse(is_error, result)
+                content = result.get("structuredContent")
+                self.test.assertIsInstance(content, dict, "Missing structured property result")
+                value = content.get("result")
+                self.test.assertIsInstance(value, str, "String-property result must be a string")
+                by_id[response_id] = value
+            values.extend(by_id[index] for index in range(first_id, first_id + len(chunk)))
+        return values

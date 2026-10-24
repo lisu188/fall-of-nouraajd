@@ -415,6 +415,10 @@ configure_file(res/maps/candlekeep/config.json maps/candlekeep/config.json COPYO
 configure_file(res/maps/candlekeep/dialog.json maps/candlekeep/dialog.json COPYONLY)
 configure_file(res/maps/candlekeep/map.json maps/candlekeep/map.json COPYONLY)
 configure_file(res/maps/candlekeep/script.py maps/candlekeep/script.py COPYONLY)
+configure_file(res/maps/baldursGate/config.json maps/baldursGate/config.json COPYONLY)
+configure_file(res/maps/baldursGate/dialog.json maps/baldursGate/dialog.json COPYONLY)
+configure_file(res/maps/baldursGate/map.json maps/baldursGate/map.json COPYONLY)
+configure_file(res/maps/baldursGate/script.py maps/baldursGate/script.py COPYONLY)
 
 configure_file(res/maps/hearthfall/config.json maps/hearthfall/config.json)
 configure_file(res/maps/hearthfall/dialog.json maps/hearthfall/dialog.json)
@@ -436,7 +440,7 @@ configure_file(res/maps/usurpergate/script.py maps/usurpergate/script.py)
 # moment a map adds one.
 set(GAME_STAGED_MAPS
     nouraajd siege ritual vhulmarn kadath ninemarches sunderedmarch gravemoor
-    hearthfall usurpergate test multilevel candlekeep)
+    hearthfall usurpergate test multilevel candlekeep baldursGate)
 foreach (_staged_map ${GAME_STAGED_MAPS})
     stage_map_declared_assets(${_staged_map})
 endforeach ()
@@ -796,6 +800,8 @@ function(add_game_unit_test target_name)
             COMMAND ${Python3_EXECUTABLE} "${CMAKE_CURRENT_SOURCE_DIR}/scripts/run_monster_balance.py"
                 $<TARGET_FILE:${target_name}>
                 --diagnostic-output-dir "${CMAKE_CURRENT_SOURCE_DIR}/coverage/test-output/native-role-diagnostics")
+    elseif (target_name STREQUAL "map_unit_tests")
+        add_test(NAME "${test_name}" COMMAND ${target_name} --without-loader-race)
     else ()
         add_test(NAME "${test_name}" COMMAND ${target_name})
     endif ()
@@ -840,13 +846,20 @@ add_game_unit_test(simulation_region_unit_tests
 )
 add_game_unit_test(monster_balance_unit_tests
     tests/unit/test_monster_balance.cpp
-    src/core/CModuleEntry.cpp
-    src/core/CModuleRuntime.cpp
-    $<TARGET_OBJECTS:game_binding_objects>
 )
-if (WIN32)
-    target_compile_definitions(monster_balance_unit_tests PRIVATE GAME_CORE_BUILD)
-endif ()
+foreach (target_name allied_combat_unit_tests monster_balance_unit_tests)
+    target_sources(${target_name} PRIVATE
+        src/core/CModuleEntry.cpp
+        src/core/CModuleRuntime.cpp
+        $<TARGET_OBJECTS:game_binding_objects>
+    )
+    if (WIN32)
+        target_compile_definitions(${target_name} PRIVATE GAME_CORE_BUILD)
+    endif ()
+endforeach ()
+target_compile_definitions(allied_combat_unit_tests PRIVATE
+    GAME_ALLIED_COMBAT_TEST_RESOURCE_ROOT="${CMAKE_CURRENT_BINARY_DIR}"
+)
 target_compile_definitions(monster_balance_unit_tests PRIVATE
     GAME_MONSTER_BALANCE_TEST_RESOURCE_ROOT="${CMAKE_CURRENT_BINARY_DIR}"
 )
@@ -887,6 +900,8 @@ if (NOT WIN32)
     list(APPEND GAME_HANDLER_UNIT_TEST_SRC src/handler/CScriptHandler.cpp)
 endif ()
 add_game_unit_test(handler_unit_tests ${GAME_HANDLER_UNIT_TEST_SRC})
+target_compile_definitions(handler_unit_tests PRIVATE
+    GAME_HANDLER_TEST_PYTHON_ROOT="${CMAKE_CURRENT_BINARY_DIR}")
 target_compile_definitions(handler_unit_tests PRIVATE
     GAME_NATIVE_TEST_PROFILE_DIR="${CMAKE_CURRENT_SOURCE_DIR}/coverage/native-test-profiles")
 add_game_unit_test(object_unit_tests tests/unit/test_object.cpp)
@@ -972,6 +987,11 @@ add_game_unit_test(random_map_optimization_tests
 )
 if (CMAKE_SYSTEM_NAME STREQUAL "Linux")
     add_game_unit_test(map_unit_tests tests/unit/test_map.cpp)
+    add_test(NAME for_unit_tests.map_loader_race_unit_tests
+        COMMAND map_unit_tests --loader-race-only)
+    set_tests_properties(for_unit_tests.map_loader_race_unit_tests PROPERTIES
+        LABELS "for_unit_tests;unit;map_unit_tests"
+        TIMEOUT 60)
     target_compile_definitions(map_unit_tests PRIVATE
         GAME_NATIVE_TEST_PROFILE_DIR="${CMAKE_CURRENT_SOURCE_DIR}/coverage/native-test-profiles")
     add_game_unit_test(resource_unit_tests tests/unit/test_resource.cpp)

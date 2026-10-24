@@ -476,9 +476,9 @@ def load(self, context):
         def onEnter(self, event):
             game = flowGame(self.getMap().getGame())
             narrative.snapshotTown(game, _quest_system_from(self).get_state("victor"))
-            campaign.prepareCompletion(game, "completed", fallback_map="ritual")
+            campaign.prepareCompletion(self.getGame(), "completed", fallback_map="ritual")
             (yield uiRequest("gui.checkQuests", game.getMap().getPlayer()))
-            (yield from campaign.complete_scenarioFlow(game, "completed", fallback_map="ritual"))
+            (yield from campaign.complete_scenarioFlow(self.getGame(), "completed", fallback_map="ritual"))
 
     @register(context)
     @mapQuest("nouraajd")
@@ -1399,6 +1399,7 @@ def load(self, context):
                 player.addGold(50)
                 quest_system.finish_amulet()
                 yield from removeRuntimeActorsFlow(game_map, names=("amuletGoblin", "oldWoman"))
+                (yield uiRequest("gui.checkQuests", player))
                 (
                     yield from showRewardReceiptFlow(
                         flowGame(game),

@@ -46,3 +46,84 @@ The city starts with an explicit native level-five profile and a recorded histor
 First-visit and later-return states share one serialized map. Deaths, actual possessions, containers, locks, followers, stock, clocks and optional quests must survive transitions and reloads. Outside errands are labelled text-choice excursions; the city interlude applies only after its prerequisites. Completing the finale records the city storyline without completing unrelated optional quests.
 
 Acceptance requires the complete declared source/interaction manifest, focused regressions, real MCP routes using natural movement and dialogue choices, all five hero classes collectively, save/reload checks, isolated visual inspection, selected Linux/Windows builds, applicable coverage of at least 90 percent, and review resolution. Record these evidence classes separately. The local C: disk guard currently blocks large native builds and captures; CI can provide compilation and automated checks, but cannot substitute for missing original-source reconciliation or owner acceptance.
+
+## Generated district content
+
+`python scripts/build_baldurs_gate_city.py` compiles the factual fixture into the standalone `baldursGate` resources. `--check` verifies deterministic output without rewriting it. The nine exterior wards occupy the ground level; the other 203 source areas occupy disconnected regions on four additional levels. Each source travel trigger or world-map link retains its identity, direction and target entrance. Collision adjustments and safe arrival positions are recorded in `tests/fixtures/baldurs_gate_city_geometry.json`.
+
+The current adaptation contains 56 authored quest/interaction definitions and three labelled outside-city excursions. Ordinary actors, containers, shops and minor interiors are included in the atlas, but their presence does not imply that every original conversation or script has been implemented. Static source corpses remain noncombat containers. Chapter-seven departure scripts park surviving first-visit actors without awarding death rewards. Aldeth, Tamoko and Narlen share one persistent actor and one inventory across their source scenes.
+
+The first entry adds 10,000 native experience and 1,000 gold to the selected existing hero. The serialized starting profile records actual composed stats, resources, carried and equipped items, and the explicitly selected history. History finalization freezes those choices; it grants no outside campaign completion. Source item identities, charges, item-slot indices and drop restrictions remain separate from native gear conversions.
+
+Shop actions respect source store capability flags, accepted item categories and fenced-goods rules. Native stack valuation multiplies the raw source value by actual stack quantity before markup and the one-gold purchase minimum; this follows the [GemRB pricing implementation](https://github.com/gemrb/gemrb/blob/master/gemrb/GUIScripts/GUISTORE.py#L1609-L1616) as supporting evidence. Nonstackable charges are not stack quantity. Exact reaction, depreciation and charge-ratio valuation remain source acceptance gaps.
+
+Narlen's verified source timer value20 is represented as20 native turns after the explicit lookout start. The actual source Watchman must be present for a warning, and only that officer's death can satisfy the violent alternative. Exact original timer units, class restrictions and all silence/betrayal branches remain pending; the conversion is not an original timing-equivalence claim.
+
+All 188 nontravel regions retain their polygons and native cell projections. Entering a region can record a visit without granting source trap, spell or quest effects. Unsupported effects remain pending in the ledger. Whole-polygon observations occur on coordinator ticks; exact original trap timing has not been established. The source region projection has a deterministic bounded-work regression.
+
+The factual ledger is generated outside runtime configuration:
+
+```powershell
+python scripts/build_baldurs_gate_city_ledger.py
+python scripts/build_baldurs_gate_city_ledger.py --check
+```
+
+Its strict `--require-mapped` and `--require-acceptance` modes are expected to fail until all declared obligations and evidence are complete. No generated row has accepted native gameplay status. The ledger rejects invented receipts, missing source fingerprints and stale input mappings.
+
+Focused development checks are separate from native acceptance:
+
+```powershell
+python -B -m unittest tests.test_candlekeep_source tests.test_binding_source_layout tests.test_baldurs_gate_city_content tests.test_baldurs_gate_city_geometry tests.test_baldurs_gate_city_regions tests.test_baldurs_gate_city_routes tests.test_baldurs_gate_city_ledger tests.test_quest_journal tests.test_ui_dialogue -q
+python test.py --suite mcp-branches --branch-group baldursGate
+```
+
+The first command uses source checks and native-shaped model doubles. The second requires a current staged native binary and real movement/dialogue/combat. Planned routes cover all five existing hero classes, but an unexecuted route is not a passing receipt. Shop chooser cancellation never proves an item was sold, stolen or transferred.
+
+Current acceptance blockers include original BG1-versus-EE reconciliation, unsupported source scripts and item effects, crime/arrest/escape outcomes, remaining conversation and recruitment branches, exact shop/temple formulas, and complete native save/reload and visual evidence. The owner confirmed that neither an original installation nor an alternate build volume is available. After bounded verified cleanup, C: remains above 95 percent used. No local native build or capture is authorized by that cleanup result; the 90 percent guard remains in force.
+
+City structured metadata uses a `city-json:` text prefix to preserve its string type through native loading,
+cloning and saves. The runtime accepts protected and legacy plain JSON text and protects subsequent state writes.
+The encoding changes only structured text, leaving native references and typed properties intact. An older save
+whose metadata was already coerced into native object collections cannot be reconstructed or safely reseeded by
+this repair. Focused source/model checks and deferred native loading/save probes remain separate evidence classes.
+
+## Bounded palace source audits
+
+The palace audit fixtures are factual development metadata from installed BG1EE
+resources, supporting an original-BG1 target. They contain fingerprints, selected
+operation/selector facts and actor script-slot bindings, without original binary
+payloads, compiled script bodies or dialogue prose. The initial manifest of 43
+resources and supplemental manifest of 22 remain unchanged as historical evidence.
+The initial 43-resource snapshot predates `decoderResourceFingerprints`; new standalone
+reports use that separate field to fingerprint ACTION.IDS and TRIGGER.IDS without
+changing the historical inventory. A fresh installed-source report reproduces the
+initial snapshot bytes after removing only that field, and its decoder sizes and
+SHA-256 values match the expanded closure's ACTION.IDS and TRIGGER.IDS entries.
+Every compiled script must decode without warnings before the report derives negative
+inventories such as trigger absence. The expanded listener closure fingerprints
+79 resources, 21 CRE, 22 actor BCS plus the area script and four
+cutscene boundaries. Shout 50's escape-only receiver, earlier behavior 3 guard/noble
+branches and surviving doppelgangers' source EA 28 are recorded facts, not an
+implemented script scheduler.
+
+Run only the pure source contracts for focused feedback:
+
+```powershell
+python -B -m unittest tests.test_baldurs_gate_palace_audit tests.test_baldurs_gate_palace_shout tests.test_baldurs_gate_palace_listener_closure -q
+```
+
+The optional installed-resource reader is bounded to the fixed 79-resource closure:
+
+```powershell
+python -B scripts/audit_baldurs_gate_palace_listener_closure.py --game-root <installed-game-root> --project-root .
+```
+
+The reader compares base/effective bytes and reproduces the reviewed metadata with
+an explicit 192 KiB output cap. Helper fingerprints normalize CRLF to LF; source-origin
+paths use declared archive-style separators. Optional CLI outputs use exclusive
+creation after serialization and size checks, preserving existing evidence and
+targets created by another writer immediately before the final open. The installed SAREVO.ITM
+override remains an item/effect boundary. Script scheduling, event consumption,
+geometry, live actor ownership and original-versus-EE reconciliation remain pending.
+These tests/audits grant no native execution, gameplay, original parity, acceptance
+or ledger credit; all corresponding closure acceptance flags remain false.

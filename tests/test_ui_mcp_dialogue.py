@@ -34,6 +34,23 @@ def waitForRemoteTransition(game, expected_map_name, engine, call, wait_until):
 
 
 class DialogueMcpWalkthroughTest(unittest.TestCase):
+    def testNonblockingDialogReturnsTheUniqueNativePanelBeforeKeyboardInput(self):
+        self.startMap("nouraajd")
+        dialog = self.dialog("tavernDialog1")
+        handler = self.call(self.game, "getGuiHandler")
+        self.assertIsNone(self.call(handler, "openDialog", dialog))
+        self.engine("CGameLoader.loadGui", self.game)
+        gui = self.call(self.game, "getGui")
+        self.assertIsNotNone(gui)
+        panel = self.call(handler, "openDialog", dialog)
+        self.assertIsNotNone(panel, "opening must return before the next keyboard RPC")
+        panels = [child for child in self.call(gui, "getChildren") if self.call(child, "getType") == "CGameDialogPanel"]
+        self.assertEqual([panel], panels, "the returned handle must be the unique actual attached dialog panel")
+        self.assertEqual(gui, self.call(panel, "getParent"))
+        self.assertTrue(self.call(panel, "keyboardEvent", gui, 768, 27))
+        self.assertNotIn(panel, self.call(gui, "getChildren"))
+        self.assertIsNone(self.call(panel, "getParent"))
+
     def setUp(self):
         # Import the existing stream-draining harness only for native integration tests.
         import test as harness

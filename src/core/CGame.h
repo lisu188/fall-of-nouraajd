@@ -23,6 +23,8 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #include "core/CUtil.h"
 #include "handler/CHandler.h"
 
+#include <cstdint>
+
 class CGameView;
 
 class CPlayer;
@@ -70,13 +72,16 @@ class CGame : public CGameObject {
     // request was accepted by the scene manager.
     bool requestMapTransition(CMapTransitionRequest request);
 
-    bool changeMapWithPreparationFlow(std::string mapName, std::move_only_function<vstd::task<void>()> beforeEntryAsync,
+    bool changeMapWithPreparationFlow(std::string mapName,
+                                      vstd::move_only_function<vstd::task<void>()> beforeEntryAsync,
                                       std::function<void(bool)> completion,
                                       std::function<void()> commitBeforeEntry = {});
 
     std::shared_ptr<CMap> getMap() const;
 
     void setMap(std::shared_ptr<CMap> map);
+
+    std::uint64_t getMapBindingEpoch() const;
 
     std::shared_ptr<CGameContext> getContext();
 
@@ -112,6 +117,7 @@ class CGame : public CGameObject {
     std::shared_ptr<CGameContext> context;
     std::shared_ptr<CSceneManager> sceneManager;
     std::shared_ptr<CMap> map;
+    std::uint64_t mapBindingEpoch = 0;
     std::shared_ptr<CGui> _gui;
     std::shared_ptr<CNavigationService> navigationService;
     std::mutex navigationServiceMutex;

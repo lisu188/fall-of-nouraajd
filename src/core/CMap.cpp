@@ -79,6 +79,17 @@ int normalize_wrapped_axis(int value, int max_value) {
 }
 } // namespace
 
+CMap::CMap() : saveAdmissionState(CGameContext::makeSaveAdmissionState()) {}
+
+std::optional<CGameContext::UnsafeOperationLease> CMap::tryBeginUnsafeOperation() {
+    auto owner = getGame();
+    return owner ? owner->getContext()->tryBeginUnsafeOperation(ptr<CMap>()) : std::nullopt;
+}
+
+std::optional<CGameContext::SaveSnapshotLease> CMap::tryBeginSaveSnapshot() {
+    return CGameContext::tryBeginMapSnapshot(ptr<CMap>());
+}
+
 CMap::~CMap() {
     const auto dyingMap = weak_from_this();
     for (const auto &[name, object] : mapObjects) {
@@ -205,15 +216,28 @@ Coords CMap::getLocationByName(std::string name) {
     return object ? object->getCoords() : ZERO;
 }
 
+std::shared_ptr<CPlayer> CMap::getAssignedPlayer() const { return player; }
+
 std::shared_ptr<CPlayer> CMap::getPlayer() {
     // TODO: think of better solution after save
+    if (!player && permanentPlayerDeath && defeatedPlayer) {
+        std::string error;
+        if (!restorePlayerAfterLoad(error)) {
+            vstd::logger::warning("Cannot restore defeated player:", error);
+        }
+        return player;
+    }
     if (!player) {
         for (auto object : getObjects()) {
             if (object && object->getName() == "player") {
                 player = vstd::cast<CPlayer>(object);
                 if (player) {
-                    player->setController(getGame()->createObject<CPlayerController>());
-                    player->setFightController(getGame()->createObject<CPlayerFightController>());
+                    if (!std::dynamic_pointer_cast<CPlayerController>(player->getController())) {
+                        player->setController(getGame()->createObject<CPlayerController>());
+                    }
+                    if (!std::dynamic_pointer_cast<CPlayerFightController>(player->getFightController())) {
+                        player->setFightController(getGame()->createObject<CPlayerFightController>());
+                    }
                     registerPlayerTriggers();
                 }
                 break;
@@ -232,6 +256,7 @@ void CMap::setPlayer(std::shared_ptr<CPlayer> player) {
     player->setName("player");
     player->setController(getGame()->createObject<CPlayerController>());
     player->setFightController(getGame()->createObject<CPlayerFightController>());
+    resetDefeatedPlayerForAssignment(player);
     this->player = player;
     registerPlayerTriggers();
     addObject(player);
@@ -252,6 +277,7 @@ vstd::task<void> CMap::setPlayerAsync(std::shared_ptr<CPlayer> player) {
         player->setName("player");
         player->setController(map->getGame()->createObject<CPlayerController>());
         player->setFightController(map->getGame()->createObject<CPlayerFightController>());
+        map->resetDefeatedPlayerForAssignment(player);
         map->player = player;
         map->registerPlayerTriggers();
         if (map->getObjectByName("player") == player) {
@@ -266,7 +292,14 @@ vstd::task<void> CMap::setPlayerAsync(std::shared_ptr<CPlayer> player) {
 std::shared_ptr<CPlayer> CMap::detachPlayer() {
     auto detachedPlayer = player ? player : vstd::cast<CPlayer>(getObjectByName("player"));
     auto canonicalPlayer = vstd::cast<CPlayer>(getObjectByName("player"));
+    if (!detachedPlayer && !canonicalPlayer && permanentPlayerDeath && defeatedPlayer) {
+        std::string error;
+        if (restorePlayerAfterLoad(error)) {
+            detachedPlayer = player;
+        }
+    }
     if (!detachedPlayer && !canonicalPlayer) {
+        resetDefeatedPlayerForAssignment(nullptr);
         return nullptr;
     }
 
@@ -279,6 +312,7 @@ std::shared_ptr<CPlayer> CMap::detachPlayer() {
     if (detachedPlayer) {
         detachedPlayer->clearOwningMap(this->ptr<CMap>());
     }
+    resetDefeatedPlayerForAssignment(nullptr);
     player.reset();
     return detachedPlayer ? detachedPlayer : canonicalPlayer;
 }
@@ -304,6 +338,7 @@ void CMap::attachPlayer(std::shared_ptr<CPlayer> player, Coords coords) {
     player->setName("player");
     player->setController(getGame()->createObject<CPlayerController>());
     player->setFightController(getGame()->createObject<CPlayerFightController>());
+    resetDefeatedPlayerForAssignment(player);
     this->player = player;
     registerPlayerTriggers();
 
@@ -343,6 +378,7 @@ vstd::task<void> CMap::attachPlayerAsync(std::shared_ptr<CPlayer> player, Coords
         player->setName("player");
         player->setController(map->getGame()->createObject<CPlayerController>());
         player->setFightController(map->getGame()->createObject<CPlayerFightController>());
+        map->resetDefeatedPlayerForAssignment(player);
         map->player = player;
         player->cancelMove();
         player->relocateWithoutMoveHooks(map->normalizeCoords(coords));
@@ -374,8 +410,36 @@ bool CMap::restorePlayerAfterLoad(std::string &error) {
         }
     }
 
+    if (defeatedPlayer) {
+        if (!permanentPlayerDeath) {
+            error = "saved defeated player requires permanent player death";
+            return false;
+        }
+        if (restoredPlayerCount != 0 || getObjectByName("player")) {
+            error = "saved map contains both registered and defeated player objects";
+            return false;
+        }
+        if (defeatedPlayer->getName() != "player" || defeatedPlayer->isAlive() ||
+            defeatedPlayer->getGame() != getGame() || !getGame() || (player && player != defeatedPlayer)) {
+            error = "saved defeated player identity is invalid";
+            return false;
+        }
+        if (auto owner = defeatedPlayer->owningMap.lock(); owner && owner.get() != this) {
+            error = "saved defeated player belongs to another map";
+            return false;
+        }
+        defeatedPlayer->setOwningMap(this->ptr<CMap>());
+        player = defeatedPlayer;
+        registerPlayerTriggers();
+        return true;
+    }
+
     if (!restoredPlayer) {
         error = restoredPlayerCount == 0 ? "saved map does not contain a player object" : "saved player is invalid";
+        return false;
+    }
+    if (permanentPlayerDeath && !restoredPlayer->isAlive()) {
+        error = "saved permanently defeated player must be retained outside the map registry";
         return false;
     }
 
@@ -849,6 +913,9 @@ vstd::task<void> CMap::removeObjectAsync(std::shared_ptr<CMapObject> mapObject) 
             ~RemovalOwner() {
                 if (!finished) {
                     std::unique_lock lock(map->navigationMutex);
+                    if (map->keepsDefeatedPlayerOwner(object)) {
+                        return;
+                    }
                     for (const auto &current : map->mapObjects | std::views::values) {
                         if (current == object) {
                             return;
@@ -863,7 +930,8 @@ vstd::task<void> CMap::removeObjectAsync(std::shared_ptr<CMapObject> mapObject) 
                 }
                 std::unique_lock lock(map->navigationMutex);
                 auto current = map->mapObjects.find(object->getName());
-                if (current == map->mapObjects.end() || current->second != object) {
+                if ((current == map->mapObjects.end() || current->second != object) &&
+                    !map->keepsDefeatedPlayerOwner(object)) {
                     object->clearOwningMap(map);
                 }
                 finished = true;
@@ -1118,7 +1186,10 @@ vstd::task<void> CMap::moveOwnedAsync(std::shared_ptr<CMap> map, CMovementPresen
             }
         }
 
-        for (auto [planned, coords] : coordinates) {
+        // Avoid owning structured-binding copies across suspension; GCC 15 retains their references.
+        for (const auto &coordinate : coordinates) {
+            const auto &planned = coordinate.first;
+            const auto coords = coordinate.second;
             if (!canApplyDeferredMoveWork()) {
                 break;
             }
@@ -1129,6 +1200,11 @@ vstd::task<void> CMap::moveOwnedAsync(std::shared_ptr<CMap> map, CMovementPresen
                 continue;
             }
 
+            const auto player_controller = std::dynamic_pointer_cast<CPlayerController>(controller_ptr);
+            if (player_controller && player_controller->getMovementSuspended()) {
+                controller_ptr->interrupt(creature);
+                continue;
+            }
             auto current = map->normalizeCoords(creature->getCoords());
             if (current != planned.origin) {
                 controller_ptr->interrupt(creature);
@@ -1156,18 +1232,20 @@ vstd::task<void> CMap::moveOwnedAsync(std::shared_ptr<CMap> map, CMovementPresen
                 }
                 if (!canApplyDeferredMoveWork() || creature->getController() != controller_ptr ||
                     !is_active_creature(creature) || map->normalizeCoords(creature->getCoords()) != current ||
-                    !map->canStep(target)) {
+                    !map->canStep(target) || (player_controller && player_controller->getMovementSuspended())) {
                     controller_ptr->interrupt(creature);
                     continue;
                 }
             }
 
             const bool interrupt_after_step = should_interrupt_after_step(creature, target);
-            if (presenter) {
-                co_await creature->moveToAsync(target, {}, presenter);
-            } else {
-                co_await creature->moveToAsync(target);
+            vstd::move_only_function<bool()> commitAllowed;
+            if (player_controller) {
+                commitAllowed = [creature, controller_ptr, player_controller] {
+                    return creature->getController() == controller_ptr && !player_controller->getMovementSuspended();
+                };
             }
+            co_await creature->moveToAsync(target, {}, presenter, std::move(commitAllowed));
 
             if (!canApplyDeferredMoveWork() || creature->getController() != controller_ptr ||
                 !is_active_creature(creature) || map->normalizeCoords(creature->getCoords()) != target) {
@@ -1235,6 +1313,53 @@ vstd::task<void> CMap::moveOwnedAsync(std::shared_ptr<CMap> map, CMovementPresen
 }
 
 int CMap::getTurn() { return turn; }
+
+bool CMap::getPermanentPlayerDeath() const { return permanentPlayerDeath; }
+
+void CMap::setPermanentPlayerDeath(bool permanent) {
+    if (permanentPlayerDeath == permanent) {
+        return;
+    }
+    if (!permanent && hasRetainedTerminalPlayer()) {
+        throw std::logic_error("Cannot disable permanent death while the terminal player is retained.");
+    }
+    permanentPlayerDeath = permanent;
+    recordDirectPropertyChanged("permanentPlayerDeath");
+}
+
+std::shared_ptr<CPlayer> CMap::getDefeatedPlayer() const { return defeatedPlayer; }
+
+void CMap::setDefeatedPlayer(std::shared_ptr<CPlayer> defeated) {
+    if (defeatedPlayer == defeated) {
+        return;
+    }
+    if (hasRetainedTerminalPlayer()) {
+        throw std::logic_error("Cannot replace the retained terminal player through its public property.");
+    }
+    defeatedPlayer = std::move(defeated);
+    recordDirectPropertyChanged("defeatedPlayer");
+}
+
+bool CMap::hasRetainedTerminalPlayer() {
+    return keepsDefeatedPlayerOwner(defeatedPlayer) && !getObjectByName("player");
+}
+
+void CMap::resetDefeatedPlayerForAssignment(const std::shared_ptr<CPlayer> &replacement) {
+    if (!defeatedPlayer) {
+        return;
+    }
+    if (defeatedPlayer != replacement) {
+        defeatedPlayer->clearOwningMap(this->ptr<CMap>());
+    }
+    defeatedPlayer.reset();
+    recordDirectPropertyChanged("defeatedPlayer");
+}
+
+bool CMap::keepsDefeatedPlayerOwner(const std::shared_ptr<CMapObject> &object) {
+    return permanentPlayerDeath && defeatedPlayer && defeatedPlayer == object && player == defeatedPlayer &&
+           !defeatedPlayer->isAlive() && defeatedPlayer->getName() == "player" && getGame() &&
+           defeatedPlayer->getGame() == getGame() && defeatedPlayer->owningMap.lock().get() == this;
+}
 
 std::string CMap::getActiveSimulationRegion() const { return activeSimulationRegion; }
 
@@ -1456,9 +1581,9 @@ void CMap::addObject(const std::shared_ptr<CMapObject> &mapObject, Coords coords
 }
 
 vstd::task<void> CMap::addObjectWithEventsAsync(std::shared_ptr<CMapObject> mapObject,
-                                                std::move_only_function<vstd::task<void>()> afterCreate) {
+                                                vstd::move_only_function<vstd::task<void>()> afterCreate) {
     return [](std::shared_ptr<CMap> map, std::shared_ptr<CMapObject> object,
-              std::move_only_function<vstd::task<void>()> afterCreate) -> vstd::task<void> {
+              vstd::move_only_function<vstd::task<void>()> afterCreate) -> vstd::task<void> {
         auto loop = vstd::event_loop<>::instance();
         if (!loop->isMainThread()) {
             co_await vstd::post(loop);
@@ -1665,6 +1790,14 @@ void CMap::registerPlayerTriggers() {
     auto restartTrigger = std::make_shared<CCustomTrigger>("player", "onDestroy", [](auto object, auto event) {
         auto _player = vstd::cast<CPlayer>(object);
         auto map = _player->getMap();
+        if (map->getPermanentPlayerDeath()) {
+            if (!_player->isAlive() && _player == map->player && _player->getName() == "player" &&
+                _player->getGame() == map->getGame() && _player->owningMap.lock() == map &&
+                !map->getObjectByName("player")) {
+                map->setDefeatedPlayer(_player);
+            }
+            return;
+        }
         map->addObject(_player);
         _player->relocateWithoutMoveHooks(map->getEntry());
         _player->setHp(1);

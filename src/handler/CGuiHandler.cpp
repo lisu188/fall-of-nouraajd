@@ -37,10 +37,12 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #include "object/CDialog.h"
 #include "object/CMarket.h"
 #include "object/CPlayer.h"
+#include "object/CWaitState.h"
 #include "handler/CScriptHandler.h"
 #include "handler/CRngHandler.h"
 
 #include <algorithm>
+#include <exception>
 
 namespace {
 std::string boundedPresentationText(const std::string &value, std::size_t limit) {
@@ -107,13 +109,40 @@ std::shared_ptr<T> flowObjectArgument(CScriptFlow &flow, const json &arguments, 
     return result;
 }
 
-template <typename T> T runGuiTask(const std::shared_ptr<CGame> &game, vstd::task<T> task) {
+struct ScriptWaitOwner {
+    ScriptWaitOwner(std::weak_ptr<CGame> game, std::shared_ptr<CWaitState> state, CWaitState::Lease lease)
+        : game(std::move(game)), state(std::move(state)), lease(lease) {}
+    ScriptWaitOwner(const ScriptWaitOwner &) = delete;
+    ScriptWaitOwner &operator=(const ScriptWaitOwner &) = delete;
+    ScriptWaitOwner(ScriptWaitOwner &&) = delete;
+    ScriptWaitOwner &operator=(ScriptWaitOwner &&) = delete;
+
+    std::weak_ptr<CGame> game;
+    std::shared_ptr<CWaitState> state;
+    CWaitState::Lease lease;
+    bool connected = false;
+
+    ~ScriptWaitOwner() {
+        try {
+            if (connected) {
+                if (auto owner = game.lock()) {
+                    owner->disconnect("mapBindingChanged", state, "invalidateForMapBindingChange");
+                }
+            }
+            state->pause(lease);
+        } catch (const std::exception &error) {
+            vstd::logger::warning("Native wait cleanup failed:", error.what());
+        }
+    }
+};
+
+template <typename T> T runGuiTask(std::shared_ptr<CGame> game, vstd::task<T> task) {
     try {
         if (game) {
+            const auto mode = game->getGui() ? game_async::WaitMode::Frames : game_async::WaitMode::PostedWork;
             auto handle = game->getContext()->spawnTask(std::move(task));
-            return handle.finished() ? handle.get()
-                                     : game_async::wait(handle, game->getGui() ? game_async::WaitMode::Frames
-                                                                               : game_async::WaitMode::PostedWork);
+            game.reset();
+            return handle.finished() ? handle.get() : game_async::wait(handle, mode);
         }
         vstd::task_group group;
         return group.spawn(std::move(task)).get();
@@ -346,31 +375,60 @@ void CGuiHandler::showDialog(std::shared_ptr<CDialog> dialog) {
     return runGuiTask(_game.lock(), showDialogAsync(std::move(dialog)));
 }
 
+std::shared_ptr<CGameDialogPanel> CGuiHandler::openDialog(std::shared_ptr<CDialog> dialog) {
+    return createDialogPanel(std::move(dialog), false);
+}
+
+std::shared_ptr<CGameDialogPanel> CGuiHandler::createDialogPanel(std::shared_ptr<CDialog> dialog, bool blocking) {
+    if (!vstd::event_loop<>::instance()->isMainThread()) {
+        throw std::logic_error("Dialog panels must be opened on the main thread.");
+    }
+    auto game = _game.lock();
+    const auto gui = game ? game->getGui() : nullptr;
+    if (!game || !gui || !dialog) {
+        return nullptr;
+    }
+    if (CPlaytestTrace::enabled()) {
+        json fields = {{"blocking", blocking},
+                       {"dialog", CPlaytestTrace::objectRef(dialog)},
+                       {"panel", "dialogPanel"},
+                       {"panelKind", "dialog"}};
+        CPlaytestTrace::addMapContext(fields, game->getMap());
+        CPlaytestTrace::record("dialog_opened", fields);
+        CPlaytestTrace::record("gui_panel_opened", fields);
+    }
+    auto panel = game->createObject<CGameDialogPanel>("dialogPanel");
+    try {
+        panel->setDialog(dialog);
+        gui->pushChild(panel);
+        panel->reload();
+    } catch (...) {
+        const auto primary = std::current_exception();
+        try {
+            panel->close();
+        } catch (...) {
+            vstd::logger::error("Dialog setup cleanup failed.");
+        }
+        std::rethrow_exception(primary);
+    }
+    if (panel->getParent() != gui) {
+        panel->close();
+        return nullptr;
+    }
+    return panel;
+}
+
 vstd::task<void> CGuiHandler::showDialogAsync(std::shared_ptr<CDialog> dialog) {
     return [](std::shared_ptr<CGuiHandler> self, std::shared_ptr<CDialog> dialog) -> vstd::task<void> {
         auto loop = vstd::event_loop<>::instance();
         if (!loop->isMainThread()) {
             co_await vstd::post(loop);
         }
-        auto game = self->_game.lock();
-        if (!game || !game->getGui() || !dialog) {
+        auto panel = self->createDialogPanel(std::move(dialog), true);
+        if (!panel) {
             co_return;
         }
-        if (CPlaytestTrace::enabled()) {
-            json fields = {{"blocking", true},
-                           {"dialog", CPlaytestTrace::objectRef(dialog)},
-                           {"panel", "dialogPanel"},
-                           {"panelKind", "dialog"}};
-            CPlaytestTrace::addMapContext(fields, game->getMap());
-            CPlaytestTrace::record("dialog_opened", fields);
-            CPlaytestTrace::record("gui_panel_opened", fields);
-        }
-        std::shared_ptr<CGameDialogPanel> panel = game->createObject<CGameDialogPanel>("dialogPanel");
-        panel->setDialog(dialog);
         ModalPanelOwner panelOwner{panel};
-        game->getGui()->pushChild(panel);
-        panel->reload();
-        game.reset();
         co_await panel->awaitClosingAsync();
     }(this->ptr<CGuiHandler>(), std::move(dialog));
 }
@@ -582,6 +640,13 @@ vstd::task<void> CGuiHandler::runScriptFlowAsync(std::unique_ptr<CScriptFlow> fl
                 } else if (operation == "showDialog") {
                     co_await self->showDialogAsync(flowObjectArgument<CDialog>(*flow, arguments, 0));
                     answer = nullptr;
+                } else if (operation == "waitMilliseconds") {
+                    if (!arguments.is_array() || arguments.size() != 1 || !arguments.at(0).is_object() ||
+                        arguments.at(0).size() != 1 || !arguments.at(0).contains("__nativeObject") ||
+                        !arguments.at(0).at("__nativeObject").is_string()) {
+                        throw std::invalid_argument("A native wait requires exactly one wait-state object token.");
+                    }
+                    answer = co_await self->waitMillisecondsAsync(flowObjectArgument<CWaitState>(*flow, arguments, 0));
                 } else if (operation == "addRandomLoot") {
                     auto creature = flowObjectArgument<CCreature>(*flow, arguments, 0);
                     auto game = self->_game.lock();
@@ -642,6 +707,48 @@ vstd::task<void> CGuiHandler::runScriptFlowAsync(std::unique_ptr<CScriptFlow> fl
             request = failure ? flow->fail(*failure) : flow->next(answer);
         }
     }(this->ptr<CGuiHandler>(), std::move(flow));
+}
+
+bool CGuiHandler::waitMilliseconds(std::shared_ptr<CWaitState> state) {
+    return runGuiTask(_game.lock(), waitMillisecondsAsync(std::move(state)));
+}
+
+vstd::task<bool> CGuiHandler::waitMillisecondsAsync(std::shared_ptr<CWaitState> state) {
+    return [](std::shared_ptr<CGuiHandler> self, std::shared_ptr<CWaitState> state) -> vstd::task<bool> {
+        auto loop = vstd::event_loop<>::instance();
+        if (!loop->isMainThread()) {
+            co_await vstd::post(loop);
+        }
+        const auto stop = co_await vstd::thisTaskStopToken();
+        auto game = self->_game.lock();
+        if (!game || !game->getContext()->isActive() || !game->getMap() || stop.stop_requested()) {
+            throw vstd::task_cancelled();
+        }
+        if (!state || state->getGame() != game) {
+            throw std::invalid_argument("A wait state must belong to the UI handler's game session.");
+        }
+        const auto context = game->getContext();
+        const auto map = game->getMap();
+        const auto generation = context->captureTransitionGeneration();
+        const auto lease = state->tryStart();
+        if (!lease) {
+            throw std::logic_error("A wait state already has an active waiter.");
+        }
+        ScriptWaitOwner owner{game, state, *lease};
+        game->connect("mapBindingChanged", state, "invalidateForMapBindingChange");
+        owner.connected = true;
+        game.reset();
+        do {
+            co_await vstd::sleepFor(loop, std::chrono::milliseconds(state->getRemainingMilliseconds()));
+            game = self->_game.lock();
+            if (!game || stop.stop_requested() || !context->isTransitionGenerationCurrent(generation) ||
+                game->getMap() != map || state->getGame() != game || state->isInvalidated(*lease)) {
+                throw vstd::task_cancelled();
+            }
+            game.reset();
+        } while (!state->complete(*lease));
+        co_return true;
+    }(this->ptr<CGuiHandler>(), std::move(state));
 }
 
 std::string CGuiHandler::showTextInput(std::string title, std::string prompt, std::string initialValue) {

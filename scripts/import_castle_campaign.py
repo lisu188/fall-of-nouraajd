@@ -657,16 +657,20 @@ def buildDiagonalRoutes(source: dict, blocked: set[tuple]) -> list[dict]:
             join(first, second)
     components = {point: find(point) for point in walkable}
     reserved = {tuple(record["visit"]) for record in source["objects"] if record["visitable"]}
-    required = {tuple(source["spawn"])}
+    legacy_required = {tuple(source["spawn"])}
     for record in source["objects"]:
         if record["type"] in (9, 10, 17, 34, 62, 70, 77, 83, 98, 214):
-            required.add(tuple(record["visit"]))
+            legacy_required.add(tuple(record["visit"]))
     for route in transit:
         if route["kind"] != "whirlpool":
-            required.update((tuple(route["from"]), tuple(route["to"])))
+            legacy_required.update((tuple(route["from"]), tuple(route["to"])))
+    required = legacy_required | {
+        tuple(record["visit"]) for record in source["objects"] if record["type"] in MONSTER_TYPES
+    }
     if not required <= walkable:
         raise ImportError("A required source landmark is outside traversable land")
     required_components = {components[point] for point in required}
+    legacy_components = {components[point] for point in legacy_required}
     candidates = []
     for first in sorted(walkable):
         x, y, z = first
@@ -677,27 +681,36 @@ def buildDiagonalRoutes(source: dict, blocked: set[tuple]) -> list[dict]:
     chosen = [(first, second) for _, first, second in sorted(candidates) if join(first, second)]
     if len({find(point) for point in required}) != 1:
         raise ImportError("Original diagonal routes cannot connect the required campaign landmarks")
-    graph = defaultdict(dict)
-    for index, (first, second) in enumerate(chosen):
-        graph[components[first]][components[second]] = index
-        graph[components[second]][components[first]] = index
-    removed = set()
-    leaves = deque(point for point in graph if len(graph[point]) == 1 and point not in required_components)
-    while leaves:
-        leaf = leaves.popleft()
-        if not graph[leaf]:
-            continue
-        neighbor, index = next(iter(graph[leaf].items()))
-        removed.add(index)
-        graph[leaf].clear()
-        del graph[neighbor][leaf]
-        if len(graph[neighbor]) == 1 and neighbor not in required_components:
-            leaves.append(neighbor)
-    routes = [
-        {"kind": "diagonalPassage", "from": list(first), "to": list(second)}
-        for index, (first, second) in enumerate(chosen)
-        if index not in removed
-    ]
+
+    def retainedIndices(needed):
+        graph = defaultdict(dict)
+        for index, (first, second) in enumerate(chosen):
+            graph[components[first]][components[second]] = index
+            graph[components[second]][components[first]] = index
+        removed = set()
+        leaves = deque(point for point in graph if len(graph[point]) == 1 and point not in needed)
+        while leaves:
+            leaf = leaves.popleft()
+            if not graph[leaf]:
+                continue
+            neighbor, index = next(iter(graph[leaf].items()))
+            removed.add(index)
+            graph[leaf].clear()
+            del graph[neighbor][leaf]
+            if len(graph[neighbor]) == 1 and neighbor not in needed:
+                leaves.append(neighbor)
+        return [index for index in range(len(chosen)) if index not in removed]
+
+    legacy_indices = retainedIndices(legacy_components)
+    expanded_indices = retainedIndices(required_components)
+    legacy_set = set(legacy_indices)
+    routes = []
+    for index in legacy_indices + [index for index in expanded_indices if index not in legacy_set]:
+        first, second = chosen[index]
+        route = {"kind": "diagonalPassage", "from": list(first), "to": list(second)}
+        if index not in legacy_set:
+            route["adaptation"] = "requiredActorAccess"
+        routes.append(route)
     if len(routes) > 64:
         raise ImportError("Castle diagonal navigation exceeds the reviewed 64-edge authoring budget")
     return routes
