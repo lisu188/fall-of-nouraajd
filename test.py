@@ -159,6 +159,7 @@ FAST_TEST_PREFIXES = (
     "BaldursGateCityLedgerFixtureTest.",
     "BaldursGateCityRegionTest.",
     "BaldursGateCityGeometryTest.",
+    "MultilevelRuinsContentTest.",
     "CandlekeepContentTest.",
     "CandlekeepModelTest.",
     "CandlekeepSourceParserTest.",
@@ -254,6 +255,8 @@ FAST_TEST_NAMES = {
 GAMEPLAY_TEST_PREFIXES = (
     "CityNativeLoadingRuntimeTest.",
     "CandlekeepMetadataRuntimeTest.",
+    "MultilevelRuinsRuntimeTest.",
+    "MultilevelRuinsMcpTest.",
     "NativeCoroutineCallbackTest.",
     "MapAssignedPlayerRuntimeTest.",
     MCP_BRANCH_TEST_PREFIX,
@@ -26215,6 +26218,7 @@ class TestRunnerSuiteTest(unittest.TestCase):
             GameplayVictorSettlementTest,
             NarrativeRouteTest,
             DialogueTransitionBoundaryTest,
+            MultilevelRuinsContentTest,
         ):
             methods = unittest.defaultTestLoader.getTestCaseNames(test_class)
             self.assertTrue(methods)
@@ -26237,6 +26241,8 @@ class TestRunnerSuiteTest(unittest.TestCase):
             ManagementMcpWalkthroughTest,
             NavigationMcpWalkthroughTest,
             NavigationCallbackTest,
+            MultilevelRuinsRuntimeTest,
+            MultilevelRuinsMcpTest,
             ArtifactPreviewTest,
             PythonCallbackLifecycleTest,
             WaitStateRuntimeTest,
@@ -26262,6 +26268,8 @@ class TestRunnerSuiteTest(unittest.TestCase):
         self.assertNotIn("_ManagementMcpWalkthroughTest", globals())
         self.assertNotIn("_NavigationMcpWalkthroughTest", globals())
         self.assertNotIn("_NavigationCallbackTest", globals())
+        self.assertNotIn("_MultilevelRuinsRuntimeTest", globals())
+        self.assertNotIn("_MultilevelRuinsMcpTest", globals())
         self.assertNotIn("_ArtifactPreviewTest", globals())
         self.assertNotIn("_PythonCallbackLifecycleTest", globals())
         self.assertNotIn("_WaitStateRuntimeTest", globals())
@@ -26958,6 +26966,9 @@ if SOURCE_UI_TESTS_AVAILABLE:
     from tests.test_native_diagnostics import NativeDiagnosticsRuntimeTest as _NativeDiagnosticsRuntimeTest
     from tests.test_navigation_mcp import NavigationCallbackTest as _NavigationCallbackTest
     from tests.test_navigation_mcp import NavigationMcpWalkthroughTest as _NavigationMcpWalkthroughTest
+    from tests.test_multilevel_ruins import MultilevelRuinsContentTest as _MultilevelRuinsContentTest
+    from tests.test_multilevel_ruins import MultilevelRuinsRuntimeTest as _MultilevelRuinsRuntimeTest
+    from tests.test_multilevel_ruins import MultilevelRuinsMcpTest as _MultilevelRuinsMcpTest
     from tests.test_python_callback_lifecycle import PythonCallbackLifecycleTest as _PythonCallbackLifecycleTest
     from tests.test_ui_mcp_dialogue import DialogueMcpWalkthroughTest as _DialogueMcpWalkthroughTest
     from tests.test_ui_mcp_dialogue import DialogueTransitionBoundaryTest as _DialogueTransitionBoundaryTest
@@ -27308,6 +27319,15 @@ if SOURCE_UI_TESTS_AVAILABLE:
     class NavigationCallbackTest(_NavigationCallbackTest):
         pass
 
+    class MultilevelRuinsContentTest(_MultilevelRuinsContentTest):
+        pass
+
+    class MultilevelRuinsRuntimeTest(_MultilevelRuinsRuntimeTest):
+        pass
+
+    class MultilevelRuinsMcpTest(_MultilevelRuinsMcpTest):
+        pass
+
     class ArtifactPreviewTest(_ArtifactPreviewTest):
         pass
 
@@ -27422,6 +27442,7 @@ if SOURCE_UI_TESTS_AVAILABLE:
     del _PlayerIdentityMcpTest
     del _NavigationMcpWalkthroughTest
     del _NavigationCallbackTest
+    del _MultilevelRuinsContentTest, _MultilevelRuinsRuntimeTest, _MultilevelRuinsMcpTest
     del _ConsoleUiInteractionTest, _UiMinimapInteractionTest
     del _BindingSourceLayoutTest
     del _SavedWaitSourceTest
