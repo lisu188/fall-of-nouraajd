@@ -3422,7 +3422,9 @@ void testOwnedLootCancellationCompensationRetainsExactItemsAndRejectsUncertainRe
                 terminalAlias->setHp(0);
                 map->setPermanentPlayerDeath(true);
                 map->setDefeatedPlayer(terminalAlias);
-                expect_true(!map->hasRetainedTerminalPlayer() && map->getDefeatedPlayer() == terminalAlias,
+                expect_true(map->getPermanentPlayerDeath() && !map->getAssignedPlayer() &&
+                                map->getObjectByName("player") == player && terminalAlias != player &&
+                                map->getDefeatedPlayer() == terminalAlias,
                             "the second null-cache control is a malformed public terminal alias, not a valid save");
             }
         }

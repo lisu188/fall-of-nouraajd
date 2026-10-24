@@ -605,6 +605,7 @@ class DefeatContinuationSourceTest(unittest.TestCase):
     def testNativeCompensationUsesQueuedObserverAndExactCacheControls(self):
         name = "testOwnedLootCancellationCompensationRetainsExactItemsAndRejectsUncertainReplay"
         native = self.requiredBlock(self.native, "void " + name + "()")
+        self.assertNotIn("hasRetainedTerminalPlayer(", native)
         for required in (
             "mode != 12",
             "CGameLootPanel",
@@ -621,6 +622,10 @@ class DefeatContinuationSourceTest(unittest.TestCase):
             "map->detachPlayer()",
             "!map->getAssignedPlayer()",
             "unitMalformedTerminalAlias",
+            "map->getPermanentPlayerDeath()",
+            'map->getObjectByName("player") == player',
+            "terminalAlias != player",
+            "map->getDefeatedPlayer() == terminalAlias",
             'player->connect("inventoryChanged", observer, "onInventoryChanged")',
             "player->getFightController() != originalFight",
             "map->getAssignedPlayer() == player",
