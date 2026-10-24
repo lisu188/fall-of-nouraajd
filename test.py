@@ -164,6 +164,10 @@ FAST_TEST_PREFIXES = (
     "CandlekeepModelTest.",
     "CandlekeepSourceParserTest.",
     "CandlekeepSourceAuditTest.",
+    "PalaceAuditParserTest.",
+    "PalaceSceneSourceContractTest.",
+    "PalaceShoutEvidenceTest.",
+    "PalaceListenerClosureEvidenceTest.",
     "GameplayBranchCatalogTest.",
     "GameplayBranchDriverTest.",
     "GameplayBranchJournalsTest.",
@@ -26218,6 +26222,10 @@ class TestRunnerSuiteTest(unittest.TestCase):
             GameplayVictorSettlementTest,
             NarrativeRouteTest,
             DialogueTransitionBoundaryTest,
+            PalaceAuditParserTest,
+            PalaceSceneSourceContractTest,
+            PalaceShoutEvidenceTest,
+            PalaceListenerClosureEvidenceTest,
             MultilevelRuinsContentTest,
         ):
             methods = unittest.defaultTestLoader.getTestCaseNames(test_class)
@@ -26955,6 +26963,14 @@ if SOURCE_UI_TESTS_AVAILABLE:
     from tests.test_candlekeep_content import CandlekeepModelTest as _CandlekeepModelTest
     from tests.test_candlekeep_source import BinaryParserTests as _CandlekeepSourceParserTest
     from tests.test_candlekeep_source import SourceAuditTests as _CandlekeepSourceAuditTest
+    from tests.test_baldurs_gate_palace_audit import (
+        PalaceAuditParserTest as _PalaceAuditParserTest,
+        PalaceSceneSourceContractTest as _PalaceSceneSourceContractTest,
+    )
+    from tests.test_baldurs_gate_palace_shout import PalaceShoutEvidenceTest as _PalaceShoutEvidenceTest
+    from tests.test_baldurs_gate_palace_listener_closure import (
+        PalaceListenerClosureEvidenceTest as _PalaceListenerClosureEvidenceTest,
+    )
     from tests.test_game_diagnostics import GameDiagnosticsTest as _GameDiagnosticsTest
     from tests.test_mcp_diagnostics import McpDiagnosticsTest as _McpDiagnosticsTest
     from tests.test_mcp_engine_thread import McpEngineThreadTest as _McpEngineThreadTest
@@ -27103,6 +27119,18 @@ if SOURCE_UI_TESTS_AVAILABLE:
         pass
 
     class CandlekeepSourceAuditTest(_CandlekeepSourceAuditTest):
+        pass
+
+    class PalaceAuditParserTest(_PalaceAuditParserTest):
+        pass
+
+    class PalaceSceneSourceContractTest(_PalaceSceneSourceContractTest):
+        pass
+
+    class PalaceShoutEvidenceTest(_PalaceShoutEvidenceTest):
+        pass
+
+    class PalaceListenerClosureEvidenceTest(_PalaceListenerClosureEvidenceTest):
         pass
 
     class GameplayBranchCatalogTest(_GameplayBranchCatalogTest):
@@ -27457,6 +27485,12 @@ if SOURCE_UI_TESTS_AVAILABLE:
     del _BaldursGateCityRegionTest
     del _BaldursGateCityGeometryTest
     del _CandlekeepContentTest, _CandlekeepModelTest, _CandlekeepSourceParserTest, _CandlekeepSourceAuditTest
+    del (
+        _PalaceAuditParserTest,
+        _PalaceSceneSourceContractTest,
+        _PalaceShoutEvidenceTest,
+        _PalaceListenerClosureEvidenceTest,
+    )
     del _GameplayBranchCatalogTest, _GameplayBranchDriverTest, _GameplayBranchJournalsTest, _GameplayBranchMcpTest
     del _WaypointTraversalTest
     del (

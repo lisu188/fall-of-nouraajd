@@ -1,0 +1,8284 @@
+{
+  "schemaVersion": 1,
+  "scope": "AR0108 coronation and palace entrance/supporting guard branches",
+  "sourceEdition": "Installed BG1EE base archives; overrides fingerprinted separately",
+  "originalParityEstablished": false,
+  "keySha256": "728f50c48187f3a095e262fc2cc9e43004b4519ae9b96dd6c2615aeae4f85bce",
+  "sources": {
+    "classicWalkthrough": "https://www.forgottenwars.com/bg1/ar0200b.htm",
+    "mixedEditionWalkthrough": "https://www.gamebanshee.com/baldursgate/walkthrough/ducalpalace.php",
+    "spellFormat": "https://gibberlings3.github.io/iesdp/file_formats/ie_formats/spl_v1.htm",
+    "replacementOpcode": "https://gibberlings3.github.io/iesdp/opcodes/bgee.htm#op151"
+  },
+  "resourceFingerprints": {
+    "AR0108.ARE": {
+      "bytes": 6040,
+      "sha256": "7c2c9e7a615c19370ee4e470bdea35cfeb4d5e9c1d871ed93959e7b4aef4a8d6",
+      "source": "baseArchive"
+    },
+    "GTIMES.IDS": {
+      "bytes": 1795,
+      "sha256": "d0fef0f123b4f7cdf7bf093dcd6359fdffcbeb159082c7f40404779ddc85b41c",
+      "source": "baseArchive"
+    },
+    "AR0108.BCS": {
+      "bytes": 7714,
+      "sha256": "6cda65c5d7229c23de7058c1dbc728c9385664850bd85ce04fea17da1ba8c4b5",
+      "source": "baseArchive"
+    },
+    "BELT.BCS": {
+      "bytes": 2807,
+      "sha256": "2a61646f15c7b03d9dbb71bcbdb72bf2a86363cde6ee4e7235fc481ec12f956c",
+      "source": "baseArchive"
+    },
+    "LIIA.BCS": {
+      "bytes": 3444,
+      "sha256": "814c85e6dc9429d457e6399f83dde560964df857487ede8823b59d860b401f4d",
+      "source": "baseArchive"
+    },
+    "SAREVOK.BCS": {
+      "bytes": 2270,
+      "sha256": "934dee237051b6fe127f4c536ec01babfb57c5be9c5ff30ba58ef5357dc5ea0a",
+      "source": "baseArchive"
+    },
+    "SARDOPP.BCS": {
+      "bytes": 1458,
+      "sha256": "d0724d34510821d0e98dd656b0f23b186528c475e039e3ca096f6ad9fc250cb4",
+      "source": "baseArchive"
+    },
+    "ENDCUT01.BCS": {
+      "bytes": 828,
+      "sha256": "71cf8118e9fd1c858fd48ea0f7a8409d7dc8d31b0131e50a0b62f557b970466c",
+      "source": "baseArchive"
+    },
+    "CUTBELT.BCS": {
+      "bytes": 3765,
+      "sha256": "3e7bc51dce38da54706508d53062eed559f878c79a7e1b2fb507abaaf9c98296",
+      "source": "baseArchive"
+    },
+    "FLAM10.BCS": {
+      "bytes": 916,
+      "sha256": "10768b7ff96cc0aa01ab1f521fe1adbb26612bab043622387add0e1c9d5e99aa",
+      "source": "baseArchive"
+    },
+    "FLAM10A.BCS": {
+      "bytes": 1434,
+      "sha256": "b76f52a8904eee6777e17af3bb9436220d81b5bf6bca7fd486f322ea2af351a0",
+      "source": "baseArchive"
+    },
+    "BELT.CRE": {
+      "bytes": 1348,
+      "sha256": "4e240a193b437247b079dc4775e5b8802a6894aaca52e8ba7d27b1a291b01fe6",
+      "source": "baseArchive"
+    },
+    "LIIA.CRE": {
+      "bytes": 1712,
+      "sha256": "03f21ae79255f7c797bd1dd107c83ce6f694a30256c7817f0a14a3df0eafb26a",
+      "source": "baseArchive"
+    },
+    "SAREVO2.CRE": {
+      "bytes": 1156,
+      "sha256": "e1590f035ba225d2d4f9a63235c49024951643b11449f006e79b6d893368dee3",
+      "source": "baseArchive"
+    },
+    "SAREVO.CRE": {
+      "bytes": 1176,
+      "sha256": "02c3a8a6af340029f461fd62afae42aba03a25dc1c7531f3411df9dcc5e4c6f5",
+      "source": "baseArchive"
+    },
+    "WINSKI.CRE": {
+      "bytes": 1504,
+      "sha256": "5ea4ce973a33bb5ac00ca06ade80600606fe78e2fe49e1bf607190c627a5c4b4",
+      "source": "baseArchive"
+    },
+    "GDOPP7.CRE": {
+      "bytes": 1156,
+      "sha256": "0aab9ac4be5f45e6754c4cb4cb4c6d19a870958c165c2d13fbe7938b50b1c391",
+      "source": "baseArchive"
+    },
+    "GDOPP71.CRE": {
+      "bytes": 1156,
+      "sha256": "811acfe9732106216b45525818b81957183d9a2e276a4d148083d67fbd224404",
+      "source": "baseArchive"
+    },
+    "GDOPP72.CRE": {
+      "bytes": 1156,
+      "sha256": "b0a1047de97d7ab9f2d14dd2132c3d3a83dd3a476b048deed8b1369afdf899e6",
+      "source": "baseArchive"
+    },
+    "GDOPP73.CRE": {
+      "bytes": 1156,
+      "sha256": "3f9fbd689acbdfbf4bf99bf5adb5b8976057776a0b2f9a5acaac5c0b16ab8f0e",
+      "source": "baseArchive"
+    },
+    "GDOPP74.CRE": {
+      "bytes": 1156,
+      "sha256": "acabc295d525ba793c45ab5d2d0d061ebf9c3b0efa7c24757cacf08085bd35be",
+      "source": "baseArchive"
+    },
+    "GDOPP75.CRE": {
+      "bytes": 1156,
+      "sha256": "75a6a73f682b722db3c63042e9d6f1fbe85ba7bb1cee6b2a403b64584ae94618",
+      "source": "baseArchive"
+    },
+    "BILL.DLG": {
+      "bytes": 390,
+      "sha256": "7329912ae94ba56eab29b7c1700476c24c4e89fb55a6a707d85bbcf38ab0061d",
+      "source": "baseArchive"
+    },
+    "FLAM10.DLG": {
+      "bytes": 1006,
+      "sha256": "37677dd264a7493dfb63521e63515b5e503f14e21da1708423702f3dcc2808c4",
+      "source": "baseArchive"
+    },
+    "BELT.DLG": {
+      "bytes": 2370,
+      "sha256": "ceb7442d347dd6aefcdef013780128ed6d0ff243fcfdf6c8cba8e5b60227ae53",
+      "source": "baseArchive"
+    },
+    "LIIA.DLG": {
+      "bytes": 2275,
+      "sha256": "6fff2489574dc52aa0070fb2a25a0c0c4a483a00b4328ce00400807143cd7692",
+      "source": "baseArchive"
+    },
+    "SAREVO.DLG": {
+      "bytes": 4885,
+      "sha256": "5c12f41a181ebf902e59ee12f937f9b27ebc557c47bf87d5883a854e150dbea6",
+      "source": "baseArchive"
+    },
+    "FLAM7.DLG": {
+      "bytes": 686,
+      "sha256": "1f3f7d50d30a912f3e9b857ab41e4ef1509e62aa2245b8646f3c5579765ebaaa",
+      "source": "baseArchive"
+    },
+    "FLAM9.DLG": {
+      "bytes": 535,
+      "sha256": "7f34d272e356eae0976193f9af521b9cab5e1ad96c434b7ba3f4b67c8196a4aa",
+      "source": "baseArchive"
+    },
+    "NOBLPA1.DLG": {
+      "bytes": 196,
+      "sha256": "003b7b12392fa2ea724df20322281ec522213813ba8492df46593f16c2afaf20",
+      "source": "baseArchive"
+    },
+    "NOBLPA2.DLG": {
+      "bytes": 196,
+      "sha256": "a8ab7bfbef6c92b11342ee15d8ec88dbb7e9f2459e4b17c877c03ff2c8beffd8",
+      "source": "baseArchive"
+    },
+    "NOBLPA3.DLG": {
+      "bytes": 196,
+      "sha256": "3882eec5dd94733c22183b6bcb2c7d2b518172782510990733a7884e3f41aadf",
+      "source": "baseArchive"
+    },
+    "SPWI990.SPL": {
+      "bytes": 346,
+      "sha256": "deefe6b2eb5f00ee639d3f712291d37f93415be06ea114ae41186765bf14878a",
+      "source": "baseArchive"
+    },
+    "SPWI961.SPL": {
+      "bytes": 346,
+      "sha256": "339d9fc383f119752de4a2be7d6d6a714d03363fd87ed93d5121e350d0422d43",
+      "source": "baseArchive"
+    },
+    "SPWI962.SPL": {
+      "bytes": 346,
+      "sha256": "38812cd3a71ba1af858bdee921e46fd48813990d8813da80a74a956b9b265d81",
+      "source": "baseArchive"
+    },
+    "SPWI963.SPL": {
+      "bytes": 346,
+      "sha256": "7b5a5e03ba08e5373b915c784a4d489f92e14a99cd4689652f365b7271ec2627",
+      "source": "baseArchive"
+    },
+    "SPWI964.SPL": {
+      "bytes": 346,
+      "sha256": "deb93010fbf7fde4de460e7477ff759824844d96537b50c66f5c7f8b5de54992",
+      "source": "baseArchive"
+    },
+    "SPWI965.SPL": {
+      "bytes": 346,
+      "sha256": "a790c96ab24f1126b75a7a4401c4499dcaa1bb51302b68651ca4ebc8d9a18fe1",
+      "source": "baseArchive"
+    },
+    "MISC78.ITM": {
+      "bytes": 114,
+      "sha256": "fdef8926aa56807c9627079067be225bf521ee6735734968638a7a399e81bd08",
+      "source": "baseArchive"
+    },
+    "SCRL2K.ITM": {
+      "bytes": 114,
+      "sha256": "b145a23c43fb94a0663928ed69c937d7dd3be4f207654d820ed704e003875397",
+      "source": "baseArchive"
+    },
+    "SCRL3F.ITM": {
+      "bytes": 114,
+      "sha256": "ae127af85b37fa622783e16f515fc7c09c34479a456bf9b949b9e1829cc939f6",
+      "source": "baseArchive"
+    },
+    "SAREVO.ITM": {
+      "bytes": 170,
+      "sha256": "81b67244db5471b05ecc577b32cf441174692dfdb7819ea22f473314ffb33af1",
+      "source": "baseArchive",
+      "overrideSha256": "a9d00e94cbccfda17a5232b88c56e190e050507396f79c63bbd27d34bc889a3e",
+      "overrideDiffers": true
+    },
+    "MINHP1.ITM": {
+      "bytes": 4290,
+      "sha256": "6c20586e23d025624e616039c1de4ca9721578700cdf80bd9a92f05746e94a6e",
+      "source": "baseArchive"
+    }
+  },
+  "palaceSpawns": [
+    {
+      "recordOffset": 2104,
+      "creature": "SAREVO2",
+      "position": [
+        581,
+        344
+      ]
+    },
+    {
+      "recordOffset": 2494,
+      "creature": "LIIA",
+      "position": [
+        680,
+        356
+      ]
+    },
+    {
+      "recordOffset": 2620,
+      "creature": "BELT",
+      "position": [
+        735,
+        371
+      ]
+    },
+    {
+      "recordOffset": 2746,
+      "creature": "NOBLPA1",
+      "position": [
+        702,
+        485
+      ]
+    },
+    {
+      "recordOffset": 2875,
+      "creature": "NOBLPA2",
+      "position": [
+        773,
+        466
+      ]
+    },
+    {
+      "recordOffset": 3004,
+      "creature": "NOBLPA3",
+      "position": [
+        823,
+        407
+      ]
+    },
+    {
+      "recordOffset": 3133,
+      "creature": "NOBLPA4",
+      "position": [
+        867,
+        462
+      ]
+    },
+    {
+      "recordOffset": 3262,
+      "creature": "NOBLPA5",
+      "position": [
+        839,
+        518
+      ]
+    },
+    {
+      "recordOffset": 3391,
+      "creature": "NOBLPA",
+      "position": [
+        769,
+        571
+      ]
+    },
+    {
+      "recordOffset": 4185,
+      "creature": "WINSKI",
+      "position": [
+        693,
+        578
+      ]
+    },
+    {
+      "recordOffset": 6927,
+      "creature": "WINSKI",
+      "position": [
+        693,
+        578
+      ]
+    }
+  ],
+  "creatureMetadata": {
+    "GDOPP7": {
+      "death_variable": "GDOPP7",
+      "hit_points": 58,
+      "kill_xp": 4000,
+      "items": [
+        {
+          "item": "S1-12",
+          "expiration": 0,
+          "charges": [
+            0,
+            0,
+            0
+          ],
+          "flags": 0
+        },
+        {
+          "item": "RNDTRE05",
+          "expiration": 0,
+          "charges": [
+            0,
+            0,
+            0
+          ],
+          "flags": 0
+        },
+        {
+          "item": "MAGE04",
+          "expiration": 0,
+          "charges": [
+            0,
+            0,
+            0
+          ],
+          "flags": 0
+        },
+        {
+          "item": "MAGE06",
+          "expiration": 0,
+          "charges": [
+            0,
+            0,
+            0
+          ],
+          "flags": 0
+        }
+      ],
+      "gold": 0,
+      "known_spells": [],
+      "memorized_spells": [],
+      "effect_count": 0,
+      "effects_interpreted": false,
+      "sha256": "0aab9ac4be5f45e6754c4cb4cb4c6d19a870958c165c2d13fbe7938b50b1c391",
+      "itemSlots": [
+        65535,
+        65535,
+        65535,
+        65535,
+        3,
+        2,
+        65535,
+        65535,
+        65535,
+        0,
+        65535,
+        65535,
+        65535,
+        65535,
+        65535,
+        65535,
+        65535,
+        65535,
+        1,
+        65535,
+        65535,
+        65535,
+        65535,
+        65535,
+        65535,
+        65535,
+        65535,
+        65535,
+        65535,
+        65535,
+        65535,
+        65535,
+        65535,
+        65535,
+        65535,
+        65535,
+        65535,
+        65535,
+        0,
+        0
+      ]
+    },
+    "GDOPP71": {
+      "death_variable": "GDOPP71",
+      "hit_points": 58,
+      "kill_xp": 4000,
+      "items": [
+        {
+          "item": "S1-12",
+          "expiration": 0,
+          "charges": [
+            0,
+            0,
+            0
+          ],
+          "flags": 0
+        },
+        {
+          "item": "RNDTRE05",
+          "expiration": 0,
+          "charges": [
+            0,
+            0,
+            0
+          ],
+          "flags": 0
+        },
+        {
+          "item": "MAGE04",
+          "expiration": 0,
+          "charges": [
+            0,
+            0,
+            0
+          ],
+          "flags": 0
+        },
+        {
+          "item": "MAGE06",
+          "expiration": 0,
+          "charges": [
+            0,
+            0,
+            0
+          ],
+          "flags": 0
+        }
+      ],
+      "gold": 0,
+      "known_spells": [],
+      "memorized_spells": [],
+      "effect_count": 0,
+      "effects_interpreted": false,
+      "sha256": "811acfe9732106216b45525818b81957183d9a2e276a4d148083d67fbd224404",
+      "itemSlots": [
+        65535,
+        65535,
+        65535,
+        65535,
+        3,
+        2,
+        65535,
+        65535,
+        65535,
+        0,
+        65535,
+        65535,
+        65535,
+        65535,
+        65535,
+        65535,
+        65535,
+        65535,
+        1,
+        65535,
+        65535,
+        65535,
+        65535,
+        65535,
+        65535,
+        65535,
+        65535,
+        65535,
+        65535,
+        65535,
+        65535,
+        65535,
+        65535,
+        65535,
+        65535,
+        65535,
+        65535,
+        65535,
+        0,
+        0
+      ]
+    },
+    "GDOPP72": {
+      "death_variable": "GDOPP72",
+      "hit_points": 58,
+      "kill_xp": 4000,
+      "items": [
+        {
+          "item": "S1-12",
+          "expiration": 0,
+          "charges": [
+            0,
+            0,
+            0
+          ],
+          "flags": 0
+        },
+        {
+          "item": "RNDTRE05",
+          "expiration": 0,
+          "charges": [
+            0,
+            0,
+            0
+          ],
+          "flags": 0
+        },
+        {
+          "item": "MAGE04",
+          "expiration": 0,
+          "charges": [
+            0,
+            0,
+            0
+          ],
+          "flags": 0
+        },
+        {
+          "item": "MAGE06",
+          "expiration": 0,
+          "charges": [
+            0,
+            0,
+            0
+          ],
+          "flags": 0
+        }
+      ],
+      "gold": 0,
+      "known_spells": [],
+      "memorized_spells": [],
+      "effect_count": 0,
+      "effects_interpreted": false,
+      "sha256": "b0a1047de97d7ab9f2d14dd2132c3d3a83dd3a476b048deed8b1369afdf899e6",
+      "itemSlots": [
+        65535,
+        65535,
+        65535,
+        65535,
+        3,
+        2,
+        65535,
+        65535,
+        65535,
+        0,
+        65535,
+        65535,
+        65535,
+        65535,
+        65535,
+        65535,
+        65535,
+        65535,
+        1,
+        65535,
+        65535,
+        65535,
+        65535,
+        65535,
+        65535,
+        65535,
+        65535,
+        65535,
+        65535,
+        65535,
+        65535,
+        65535,
+        65535,
+        65535,
+        65535,
+        65535,
+        65535,
+        65535,
+        0,
+        0
+      ]
+    },
+    "GDOPP73": {
+      "death_variable": "GDOPP73",
+      "hit_points": 58,
+      "kill_xp": 4000,
+      "items": [
+        {
+          "item": "S1-12",
+          "expiration": 0,
+          "charges": [
+            0,
+            0,
+            0
+          ],
+          "flags": 0
+        },
+        {
+          "item": "RNDTRE05",
+          "expiration": 0,
+          "charges": [
+            0,
+            0,
+            0
+          ],
+          "flags": 0
+        },
+        {
+          "item": "MAGE04",
+          "expiration": 0,
+          "charges": [
+            0,
+            0,
+            0
+          ],
+          "flags": 0
+        },
+        {
+          "item": "MAGE06",
+          "expiration": 0,
+          "charges": [
+            0,
+            0,
+            0
+          ],
+          "flags": 0
+        }
+      ],
+      "gold": 0,
+      "known_spells": [],
+      "memorized_spells": [],
+      "effect_count": 0,
+      "effects_interpreted": false,
+      "sha256": "3f9fbd689acbdfbf4bf99bf5adb5b8976057776a0b2f9a5acaac5c0b16ab8f0e",
+      "itemSlots": [
+        65535,
+        65535,
+        65535,
+        65535,
+        3,
+        2,
+        65535,
+        65535,
+        65535,
+        0,
+        65535,
+        65535,
+        65535,
+        65535,
+        65535,
+        65535,
+        65535,
+        65535,
+        1,
+        65535,
+        65535,
+        65535,
+        65535,
+        65535,
+        65535,
+        65535,
+        65535,
+        65535,
+        65535,
+        65535,
+        65535,
+        65535,
+        65535,
+        65535,
+        65535,
+        65535,
+        65535,
+        65535,
+        0,
+        0
+      ]
+    },
+    "GDOPP74": {
+      "death_variable": "GDOPP74",
+      "hit_points": 58,
+      "kill_xp": 4000,
+      "items": [
+        {
+          "item": "S1-12",
+          "expiration": 0,
+          "charges": [
+            0,
+            0,
+            0
+          ],
+          "flags": 0
+        },
+        {
+          "item": "RNDTRE05",
+          "expiration": 0,
+          "charges": [
+            0,
+            0,
+            0
+          ],
+          "flags": 0
+        },
+        {
+          "item": "MAGE04",
+          "expiration": 0,
+          "charges": [
+            0,
+            0,
+            0
+          ],
+          "flags": 0
+        },
+        {
+          "item": "MAGE06",
+          "expiration": 0,
+          "charges": [
+            0,
+            0,
+            0
+          ],
+          "flags": 0
+        }
+      ],
+      "gold": 0,
+      "known_spells": [],
+      "memorized_spells": [],
+      "effect_count": 0,
+      "effects_interpreted": false,
+      "sha256": "acabc295d525ba793c45ab5d2d0d061ebf9c3b0efa7c24757cacf08085bd35be",
+      "itemSlots": [
+        65535,
+        65535,
+        65535,
+        65535,
+        3,
+        2,
+        65535,
+        65535,
+        65535,
+        0,
+        65535,
+        65535,
+        65535,
+        65535,
+        65535,
+        65535,
+        65535,
+        65535,
+        1,
+        65535,
+        65535,
+        65535,
+        65535,
+        65535,
+        65535,
+        65535,
+        65535,
+        65535,
+        65535,
+        65535,
+        65535,
+        65535,
+        65535,
+        65535,
+        65535,
+        65535,
+        65535,
+        65535,
+        0,
+        0
+      ]
+    },
+    "GDOPP75": {
+      "death_variable": "GDOPP75",
+      "hit_points": 58,
+      "kill_xp": 4000,
+      "items": [
+        {
+          "item": "S1-12",
+          "expiration": 0,
+          "charges": [
+            0,
+            0,
+            0
+          ],
+          "flags": 0
+        },
+        {
+          "item": "RNDTRE05",
+          "expiration": 0,
+          "charges": [
+            0,
+            0,
+            0
+          ],
+          "flags": 0
+        },
+        {
+          "item": "MAGE04",
+          "expiration": 0,
+          "charges": [
+            0,
+            0,
+            0
+          ],
+          "flags": 0
+        },
+        {
+          "item": "MAGE06",
+          "expiration": 0,
+          "charges": [
+            0,
+            0,
+            0
+          ],
+          "flags": 0
+        }
+      ],
+      "gold": 0,
+      "known_spells": [],
+      "memorized_spells": [],
+      "effect_count": 0,
+      "effects_interpreted": false,
+      "sha256": "75a6a73f682b722db3c63042e9d6f1fbe85ba7bb1cee6b2a403b64584ae94618",
+      "itemSlots": [
+        65535,
+        65535,
+        65535,
+        65535,
+        3,
+        2,
+        65535,
+        65535,
+        65535,
+        0,
+        65535,
+        65535,
+        65535,
+        65535,
+        65535,
+        65535,
+        65535,
+        65535,
+        1,
+        65535,
+        65535,
+        65535,
+        65535,
+        65535,
+        65535,
+        65535,
+        65535,
+        65535,
+        65535,
+        65535,
+        65535,
+        65535,
+        65535,
+        65535,
+        65535,
+        65535,
+        65535,
+        65535,
+        0,
+        0
+      ]
+    }
+  },
+  "identities": {
+    "BELT": {
+      "deathVariable": "Belt",
+      "hitPoints": 102,
+      "killXp": 6000,
+      "items": [
+        "RING19",
+        "CHAN02",
+        "SW1H02",
+        "SHLD04"
+      ]
+    },
+    "LIIA": {
+      "deathVariable": "Liia",
+      "hitPoints": 46,
+      "killXp": 6000,
+      "items": [
+        "RING19",
+        "DAGG01",
+        "CLCK14"
+      ]
+    },
+    "SAREVO2": {
+      "deathVariable": "Sarevok",
+      "hitPoints": 999,
+      "killXp": 15000,
+      "items": [
+        "PLAT05",
+        "SAREVO",
+        "SW2H05",
+        "RING07"
+      ]
+    },
+    "SAREVO": {
+      "deathVariable": "Sarevok",
+      "hitPoints": 135,
+      "killXp": 15000,
+      "items": [
+        "MAGE06",
+        "HELM15",
+        "RING07",
+        "SW2H05",
+        "SAREVO"
+      ]
+    },
+    "WINSKI": {
+      "deathVariable": "WINSKI",
+      "hitPoints": 335,
+      "killXp": 2000,
+      "items": [
+        "STAF01",
+        "DART01",
+        "POTN08",
+        "POTN08",
+        "SCRL1G",
+        "SCRL1Q",
+        "MAGE04",
+        "MAGE05",
+        "CLCK11",
+        "RING08"
+      ]
+    },
+    "GDOPP7": {
+      "deathVariable": "GDOPP7",
+      "hitPoints": 58,
+      "killXp": 4000,
+      "items": [
+        "S1-12",
+        "RNDTRE05",
+        "MAGE04",
+        "MAGE06"
+      ]
+    },
+    "GDOPP71": {
+      "deathVariable": "GDOPP71",
+      "hitPoints": 58,
+      "killXp": 4000,
+      "items": [
+        "S1-12",
+        "RNDTRE05",
+        "MAGE04",
+        "MAGE06"
+      ]
+    },
+    "GDOPP72": {
+      "deathVariable": "GDOPP72",
+      "hitPoints": 58,
+      "killXp": 4000,
+      "items": [
+        "S1-12",
+        "RNDTRE05",
+        "MAGE04",
+        "MAGE06"
+      ]
+    },
+    "GDOPP73": {
+      "deathVariable": "GDOPP73",
+      "hitPoints": 58,
+      "killXp": 4000,
+      "items": [
+        "S1-12",
+        "RNDTRE05",
+        "MAGE04",
+        "MAGE06"
+      ]
+    },
+    "GDOPP74": {
+      "deathVariable": "GDOPP74",
+      "hitPoints": 58,
+      "killXp": 4000,
+      "items": [
+        "S1-12",
+        "RNDTRE05",
+        "MAGE04",
+        "MAGE06"
+      ]
+    },
+    "GDOPP75": {
+      "deathVariable": "GDOPP75",
+      "hitPoints": 58,
+      "killXp": 4000,
+      "items": [
+        "S1-12",
+        "RNDTRE05",
+        "MAGE04",
+        "MAGE06"
+      ]
+    }
+  },
+  "invitationGates": {
+    "BILL": [
+      "MISC78"
+    ],
+    "FLAM10": [
+      "MISC78"
+    ]
+  },
+  "evidenceGates": {
+    "BELT": [
+      "SCRL2K",
+      "SCRL3F"
+    ],
+    "LIIA": [
+      "SCRL2K",
+      "SCRL3F"
+    ]
+  },
+  "dukeDialogueActionNames": {
+    "BELT": [
+      "AddJournalEntry",
+      "ClearAllActions",
+      "EraseJournalEntry",
+      "SetCutSceneLite",
+      "SetGlobal",
+      "StartCutSceneEx",
+      "Wait"
+    ],
+    "LIIA": [
+      "AddJournalEntry",
+      "ClearAllActions",
+      "EraseJournalEntry",
+      "SetCutSceneLite",
+      "SetGlobal",
+      "StartCutSceneEx",
+      "Wait"
+    ]
+  },
+  "transformations": [
+    {
+      "disguise": "NOBLPA",
+      "spell": "SPWI990",
+      "replacements": [
+        {
+          "featureIndex": 0,
+          "opcode": 151,
+          "mode": 0,
+          "creature": "GDOPP7"
+        }
+      ]
+    },
+    {
+      "disguise": "NOBLPA1",
+      "spell": "SPWI961",
+      "replacements": [
+        {
+          "featureIndex": 0,
+          "opcode": 151,
+          "mode": 0,
+          "creature": "GDOPP71"
+        }
+      ]
+    },
+    {
+      "disguise": "NOBLPA2",
+      "spell": "SPWI962",
+      "replacements": [
+        {
+          "featureIndex": 0,
+          "opcode": 151,
+          "mode": 0,
+          "creature": "GDOPP72"
+        }
+      ]
+    },
+    {
+      "disguise": "NOBLPA3",
+      "spell": "SPWI963",
+      "replacements": [
+        {
+          "featureIndex": 0,
+          "opcode": 151,
+          "mode": 0,
+          "creature": "GDOPP73"
+        }
+      ]
+    },
+    {
+      "disguise": "NOBLPA4",
+      "spell": "SPWI964",
+      "replacements": [
+        {
+          "featureIndex": 0,
+          "opcode": 151,
+          "mode": 0,
+          "creature": "GDOPP74"
+        }
+      ]
+    },
+    {
+      "disguise": "NOBLPA5",
+      "spell": "SPWI965",
+      "replacements": [
+        {
+          "featureIndex": 0,
+          "opcode": 151,
+          "mode": 0,
+          "creature": "GDOPP75"
+        }
+      ]
+    }
+  ],
+  "doppelgangerAttackResponses": [
+    {
+      "recordOffset": 386,
+      "weight": 15,
+      "action": "AttackReevaluate",
+      "target": {
+        "ids": [
+          2,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0
+        ],
+        "name": ""
+      }
+    },
+    {
+      "recordOffset": 515,
+      "weight": 35,
+      "action": "AttackReevaluate",
+      "target": {
+        "ids": [
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          1,
+          12,
+          0,
+          0,
+          0
+        ],
+        "name": ""
+      }
+    },
+    {
+      "recordOffset": 645,
+      "weight": 25,
+      "action": "AttackReevaluate",
+      "target": {
+        "ids": [
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0
+        ],
+        "name": "Liia"
+      }
+    },
+    {
+      "recordOffset": 778,
+      "weight": 25,
+      "action": "AttackReevaluate",
+      "target": {
+        "ids": [
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0
+        ],
+        "name": "Belt"
+      }
+    },
+    {
+      "recordOffset": 1067,
+      "weight": 30,
+      "action": "Attack",
+      "target": {
+        "ids": [
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          1,
+          12,
+          0,
+          0,
+          0
+        ],
+        "name": ""
+      }
+    },
+    {
+      "recordOffset": 1194,
+      "weight": 30,
+      "action": "Attack",
+      "target": {
+        "ids": [
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0
+        ],
+        "name": "Liia"
+      }
+    },
+    {
+      "recordOffset": 1324,
+      "weight": 30,
+      "action": "Attack",
+      "target": {
+        "ids": [
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0
+        ],
+        "name": "Belt"
+      }
+    }
+  ],
+  "sarevokTimers": [
+    {
+      "transition": 11,
+      "timer": "SarevokRun",
+      "units": "TWO_MINUTES"
+    }
+  ],
+  "timerConstants": {
+    "sourceId": "GTIMES.IDS",
+    "values": {
+      "ONE_MINUTE": 5,
+      "TWO_MINUTES": 10,
+      "THREE_MINUTES": 15,
+      "ONE_HOUR": 300,
+      "ONE_DAY": 7200,
+      "TEN_DAYS": 72000
+    }
+  },
+  "sceneFacts": {
+    "ceremony": {
+      "start": {
+        "sourceId": "BELT.BCS#block1",
+        "conditions": [
+          {
+            "sourceId": "BELT.BCS#offset310",
+            "operation": "Range",
+            "integers": [
+              15,
+              0,
+              0,
+              0
+            ],
+            "strings": [
+              "",
+              ""
+            ],
+            "selectors": [
+              {
+                "ids": [
+                  2,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0
+                ],
+                "name": ""
+              }
+            ],
+            "negated": false
+          },
+          {
+            "sourceId": "BELT.BCS#offset369",
+            "operation": "NumberOfTimesTalkedTo",
+            "integers": [
+              0,
+              0,
+              0,
+              0
+            ],
+            "strings": [
+              "",
+              ""
+            ],
+            "selectors": [
+              {
+                "ids": [
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0
+                ],
+                "name": ""
+              }
+            ],
+            "negated": false
+          }
+        ],
+        "actions": [
+          {
+            "sourceId": "BELT.BCS#offset439",
+            "operation": "StartDialog",
+            "integers": [
+              0,
+              0,
+              0,
+              0,
+              0
+            ],
+            "strings": [
+              "belt",
+              ""
+            ],
+            "selectors": [
+              {
+                "ids": [
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0
+                ],
+                "name": ""
+              },
+              {
+                "ids": [
+                  2,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0
+                ],
+                "name": ""
+              },
+              {
+                "ids": [
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0
+                ],
+                "name": ""
+              }
+            ]
+          }
+        ],
+        "semanticsEvaluated": false
+      },
+      "steps": [
+        {
+          "sourceId": "BELT.DLG#state0",
+          "speaker": "BELT",
+          "state": 0,
+          "entryConditions": [
+            {
+              "op": "NumTimesTalkedTo",
+              "args": [
+                0
+              ]
+            }
+          ],
+          "edges": [
+            {
+              "sourceId": "BELT.DLG#state0/transition0",
+              "index": 0,
+              "flags": 0,
+              "replyStrref": null,
+              "journalStrref": null,
+              "conditions": [],
+              "actions": [],
+              "target": {
+                "dialogue": "LIIA",
+                "state": 0
+              }
+            }
+          ]
+        },
+        {
+          "sourceId": "LIIA.DLG#state0",
+          "speaker": "LIIA",
+          "state": 0,
+          "entryConditions": [],
+          "edges": [
+            {
+              "sourceId": "LIIA.DLG#state0/transition0",
+              "index": 0,
+              "flags": 0,
+              "replyStrref": null,
+              "journalStrref": null,
+              "conditions": [],
+              "actions": [],
+              "target": {
+                "dialogue": "BELT",
+                "state": 1
+              }
+            }
+          ]
+        },
+        {
+          "sourceId": "BELT.DLG#state1",
+          "speaker": "BELT",
+          "state": 1,
+          "entryConditions": [],
+          "edges": [
+            {
+              "sourceId": "BELT.DLG#state1/transition1",
+              "index": 1,
+              "flags": 0,
+              "replyStrref": null,
+              "journalStrref": null,
+              "conditions": [],
+              "actions": [],
+              "target": {
+                "dialogue": "NOBLPA1",
+                "state": 0
+              }
+            }
+          ]
+        },
+        {
+          "sourceId": "NOBLPA1.DLG#state0",
+          "speaker": "NOBLPA1",
+          "state": 0,
+          "entryConditions": [],
+          "edges": [
+            {
+              "sourceId": "NOBLPA1.DLG#state0/transition0",
+              "index": 0,
+              "flags": 0,
+              "replyStrref": null,
+              "journalStrref": null,
+              "conditions": [],
+              "actions": [],
+              "target": {
+                "dialogue": "NOBLPA2",
+                "state": 0
+              }
+            }
+          ]
+        },
+        {
+          "sourceId": "NOBLPA2.DLG#state0",
+          "speaker": "NOBLPA2",
+          "state": 0,
+          "entryConditions": [],
+          "edges": [
+            {
+              "sourceId": "NOBLPA2.DLG#state0/transition0",
+              "index": 0,
+              "flags": 0,
+              "replyStrref": null,
+              "journalStrref": null,
+              "conditions": [],
+              "actions": [],
+              "target": {
+                "dialogue": "NOBLPA3",
+                "state": 0
+              }
+            }
+          ]
+        },
+        {
+          "sourceId": "NOBLPA3.DLG#state0",
+          "speaker": "NOBLPA3",
+          "state": 0,
+          "entryConditions": [],
+          "edges": [
+            {
+              "sourceId": "NOBLPA3.DLG#state0/transition0",
+              "index": 0,
+              "flags": 0,
+              "replyStrref": null,
+              "journalStrref": null,
+              "conditions": [],
+              "actions": [],
+              "target": {
+                "dialogue": "NOBLPA2",
+                "state": 2
+              }
+            }
+          ]
+        },
+        {
+          "sourceId": "NOBLPA2.DLG#state2",
+          "speaker": "NOBLPA2",
+          "state": 2,
+          "entryConditions": [],
+          "edges": [
+            {
+              "sourceId": "NOBLPA2.DLG#state2/transition2",
+              "index": 2,
+              "flags": 0,
+              "replyStrref": null,
+              "journalStrref": null,
+              "conditions": [],
+              "actions": [],
+              "target": {
+                "dialogue": "NOBLPA2",
+                "state": 1
+              }
+            }
+          ]
+        },
+        {
+          "sourceId": "NOBLPA2.DLG#state1",
+          "speaker": "NOBLPA2",
+          "state": 1,
+          "entryConditions": [],
+          "edges": [
+            {
+              "sourceId": "NOBLPA2.DLG#state1/transition1",
+              "index": 1,
+              "flags": 0,
+              "replyStrref": null,
+              "journalStrref": null,
+              "conditions": [],
+              "actions": [],
+              "target": {
+                "dialogue": "BELT",
+                "state": 2
+              }
+            }
+          ]
+        },
+        {
+          "sourceId": "BELT.DLG#state2",
+          "speaker": "BELT",
+          "state": 2,
+          "entryConditions": [],
+          "edges": [
+            {
+              "sourceId": "BELT.DLG#state2/transition2",
+              "index": 2,
+              "flags": 0,
+              "replyStrref": null,
+              "journalStrref": null,
+              "conditions": [],
+              "actions": [],
+              "target": {
+                "dialogue": "NOBLPA1",
+                "state": 1
+              }
+            }
+          ]
+        },
+        {
+          "sourceId": "NOBLPA1.DLG#state1",
+          "speaker": "NOBLPA1",
+          "state": 1,
+          "entryConditions": [],
+          "edges": [
+            {
+              "sourceId": "NOBLPA1.DLG#state1/transition1",
+              "index": 1,
+              "flags": 0,
+              "replyStrref": null,
+              "journalStrref": null,
+              "conditions": [],
+              "actions": [],
+              "target": {
+                "dialogue": "LIIA",
+                "state": 1
+              }
+            }
+          ]
+        },
+        {
+          "sourceId": "LIIA.DLG#state1",
+          "speaker": "LIIA",
+          "state": 1,
+          "entryConditions": [],
+          "edges": [
+            {
+              "sourceId": "LIIA.DLG#state1/transition1",
+              "index": 1,
+              "flags": 0,
+              "replyStrref": null,
+              "journalStrref": null,
+              "conditions": [],
+              "actions": [],
+              "target": {
+                "dialogue": "NOBLPA3",
+                "state": 1
+              }
+            }
+          ]
+        },
+        {
+          "sourceId": "NOBLPA3.DLG#state1",
+          "speaker": "NOBLPA3",
+          "state": 1,
+          "entryConditions": [],
+          "edges": [
+            {
+              "sourceId": "NOBLPA3.DLG#state1/transition1",
+              "index": 1,
+              "flags": 0,
+              "replyStrref": null,
+              "journalStrref": null,
+              "conditions": [],
+              "actions": [],
+              "target": {
+                "dialogue": "LIIA",
+                "state": 2
+              }
+            }
+          ]
+        },
+        {
+          "sourceId": "LIIA.DLG#state2",
+          "speaker": "LIIA",
+          "state": 2,
+          "entryConditions": [],
+          "edges": [
+            {
+              "sourceId": "LIIA.DLG#state2/transition2",
+              "index": 2,
+              "flags": 0,
+              "replyStrref": null,
+              "journalStrref": null,
+              "conditions": [],
+              "actions": [],
+              "target": {
+                "dialogue": "NOBLPA1",
+                "state": 2
+              }
+            }
+          ]
+        },
+        {
+          "sourceId": "NOBLPA1.DLG#state2",
+          "speaker": "NOBLPA1",
+          "state": 2,
+          "entryConditions": [],
+          "edges": [
+            {
+              "sourceId": "NOBLPA1.DLG#state2/transition2",
+              "index": 2,
+              "flags": 0,
+              "replyStrref": null,
+              "journalStrref": null,
+              "conditions": [],
+              "actions": [],
+              "target": {
+                "dialogue": "BELT",
+                "state": 3
+              }
+            }
+          ]
+        },
+        {
+          "sourceId": "BELT.DLG#state3",
+          "speaker": "BELT",
+          "state": 3,
+          "entryConditions": [],
+          "edges": [
+            {
+              "sourceId": "BELT.DLG#state3/transition3",
+              "index": 3,
+              "flags": 0,
+              "replyStrref": null,
+              "journalStrref": null,
+              "conditions": [],
+              "actions": [],
+              "target": {
+                "dialogue": "BELT",
+                "state": 4
+              }
+            }
+          ]
+        },
+        {
+          "sourceId": "BELT.DLG#state4",
+          "speaker": "BELT",
+          "state": 4,
+          "entryConditions": [],
+          "edges": [
+            {
+              "sourceId": "BELT.DLG#state4/transition4",
+              "index": 4,
+              "flags": 80,
+              "replyStrref": null,
+              "journalStrref": 26871,
+              "conditions": [],
+              "actions": [],
+              "target": {
+                "dialogue": "SAREVO",
+                "state": 5
+              }
+            }
+          ]
+        },
+        {
+          "sourceId": "SAREVO.DLG#state5",
+          "speaker": "SAREVO",
+          "state": 5,
+          "entryConditions": [],
+          "edges": [
+            {
+              "sourceId": "SAREVO.DLG#state5/transition6",
+              "index": 6,
+              "flags": 0,
+              "replyStrref": null,
+              "journalStrref": null,
+              "conditions": [],
+              "actions": [],
+              "target": {
+                "dialogue": "SAREVO",
+                "state": 6
+              }
+            }
+          ]
+        },
+        {
+          "sourceId": "SAREVO.DLG#state6",
+          "speaker": "SAREVO",
+          "state": 6,
+          "entryConditions": [],
+          "edges": [
+            {
+              "sourceId": "SAREVO.DLG#state6/transition7",
+              "index": 7,
+              "flags": 0,
+              "replyStrref": null,
+              "journalStrref": null,
+              "conditions": [],
+              "actions": [],
+              "target": {
+                "dialogue": "BELT",
+                "state": 5
+              }
+            }
+          ]
+        },
+        {
+          "sourceId": "BELT.DLG#state5",
+          "speaker": "BELT",
+          "state": 5,
+          "entryConditions": [],
+          "edges": [
+            {
+              "sourceId": "BELT.DLG#state5/transition5",
+              "index": 5,
+              "flags": 0,
+              "replyStrref": null,
+              "journalStrref": null,
+              "conditions": [],
+              "actions": [],
+              "target": {
+                "dialogue": "NOBLPA3",
+                "state": 2
+              }
+            }
+          ]
+        },
+        {
+          "sourceId": "NOBLPA3.DLG#state2",
+          "speaker": "NOBLPA3",
+          "state": 2,
+          "entryConditions": [],
+          "edges": [
+            {
+              "sourceId": "NOBLPA3.DLG#state2/transition2",
+              "index": 2,
+              "flags": 0,
+              "replyStrref": null,
+              "journalStrref": null,
+              "conditions": [],
+              "actions": [],
+              "target": {
+                "dialogue": "SAREVO",
+                "state": 7
+              }
+            }
+          ]
+        },
+        {
+          "sourceId": "SAREVO.DLG#state7",
+          "speaker": "SAREVO",
+          "state": 7,
+          "entryConditions": [],
+          "edges": [
+            {
+              "sourceId": "SAREVO.DLG#state7/transition8",
+              "index": 8,
+              "flags": 12,
+              "replyStrref": null,
+              "journalStrref": null,
+              "conditions": [],
+              "actions": [
+                {
+                  "op": "EraseJournalEntry",
+                  "args": [
+                    26843
+                  ]
+                },
+                {
+                  "op": "EraseJournalEntry",
+                  "args": [
+                    26845
+                  ]
+                },
+                {
+                  "op": "SetGlobal",
+                  "args": [
+                    "NobleDopple",
+                    "GLOBAL",
+                    1
+                  ]
+                },
+                {
+                  "op": "TriggerActivation",
+                  "args": [
+                    "Door0200",
+                    {
+                      "symbol": "FALSE"
+                    }
+                  ]
+                },
+                {
+                  "op": "TriggerActivation",
+                  "args": [
+                    "Door0109a",
+                    {
+                      "symbol": "FALSE"
+                    }
+                  ]
+                },
+                {
+                  "op": "TriggerActivation",
+                  "args": [
+                    "Door0109b",
+                    {
+                      "symbol": "FALSE"
+                    }
+                  ]
+                },
+                {
+                  "op": "TriggerActivation",
+                  "args": [
+                    "Door0111",
+                    {
+                      "symbol": "FALSE"
+                    }
+                  ]
+                }
+              ],
+              "target": {
+                "dialogue": "",
+                "state": null
+              }
+            }
+          ]
+        }
+      ]
+    },
+    "spawn": {
+      "sourceId": "AR0108.BCS#block2",
+      "conditions": [
+        {
+          "sourceId": "AR0108.BCS#offset1192",
+          "operation": "Global",
+          "integers": [
+            7,
+            0,
+            0,
+            0
+          ],
+          "strings": [
+            "GLOBALChapter",
+            ""
+          ],
+          "selectors": [
+            {
+              "ids": [
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0
+              ],
+              "name": ""
+            }
+          ],
+          "negated": false
+        },
+        {
+          "sourceId": "AR0108.BCS#offset1263",
+          "operation": "Global",
+          "integers": [
+            0,
+            0,
+            0,
+            0
+          ],
+          "strings": [
+            "GLOBALSarevokBehavior",
+            ""
+          ],
+          "selectors": [
+            {
+              "ids": [
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0
+              ],
+              "name": ""
+            }
+          ],
+          "negated": false
+        },
+        {
+          "sourceId": "AR0108.BCS#offset1342",
+          "operation": "Exists",
+          "integers": [
+            0,
+            1,
+            0,
+            0
+          ],
+          "strings": [
+            "",
+            ""
+          ],
+          "selectors": [
+            {
+              "ids": [
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0
+              ],
+              "name": "Sarevok"
+            }
+          ],
+          "negated": true
+        },
+        {
+          "sourceId": "AR0108.BCS#offset1407",
+          "operation": "Dead",
+          "integers": [
+            0,
+            1,
+            0,
+            0
+          ],
+          "strings": [
+            "Sarevok",
+            ""
+          ],
+          "selectors": [
+            {
+              "ids": [
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0
+              ],
+              "name": ""
+            }
+          ],
+          "negated": true
+        }
+      ],
+      "actions": [
+        {
+          "sourceId": "AR0108.BCS#offset1484",
+          "operation": "EraseJournalEntry",
+          "integers": [
+            26925,
+            0,
+            0,
+            0,
+            0
+          ],
+          "strings": [
+            "",
+            ""
+          ],
+          "selectors": [
+            {
+              "ids": [
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0
+              ],
+              "name": ""
+            },
+            {
+              "ids": [
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0
+              ],
+              "name": ""
+            },
+            {
+              "ids": [
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0
+              ],
+              "name": ""
+            }
+          ]
+        },
+        {
+          "sourceId": "AR0108.BCS#offset1608",
+          "operation": "EraseJournalEntry",
+          "integers": [
+            31468,
+            0,
+            0,
+            0,
+            0
+          ],
+          "strings": [
+            "",
+            ""
+          ],
+          "selectors": [
+            {
+              "ids": [
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0
+              ],
+              "name": ""
+            },
+            {
+              "ids": [
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0
+              ],
+              "name": ""
+            },
+            {
+              "ids": [
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0
+              ],
+              "name": ""
+            }
+          ]
+        },
+        {
+          "sourceId": "AR0108.BCS#offset1732",
+          "operation": "EraseJournalEntry",
+          "integers": [
+            31469,
+            0,
+            0,
+            0,
+            0
+          ],
+          "strings": [
+            "",
+            ""
+          ],
+          "selectors": [
+            {
+              "ids": [
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0
+              ],
+              "name": ""
+            },
+            {
+              "ids": [
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0
+              ],
+              "name": ""
+            },
+            {
+              "ids": [
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0
+              ],
+              "name": ""
+            }
+          ]
+        },
+        {
+          "sourceId": "AR0108.BCS#offset1856",
+          "operation": "EraseJournalEntry",
+          "integers": [
+            31470,
+            0,
+            0,
+            0,
+            0
+          ],
+          "strings": [
+            "",
+            ""
+          ],
+          "selectors": [
+            {
+              "ids": [
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0
+              ],
+              "name": ""
+            },
+            {
+              "ids": [
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0
+              ],
+              "name": ""
+            },
+            {
+              "ids": [
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0
+              ],
+              "name": ""
+            }
+          ]
+        },
+        {
+          "sourceId": "AR0108.BCS#offset1980",
+          "operation": "AddJournalEntry",
+          "integers": [
+            31471,
+            0,
+            0,
+            1,
+            0
+          ],
+          "strings": [
+            "",
+            ""
+          ],
+          "selectors": [
+            {
+              "ids": [
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0
+              ],
+              "name": ""
+            },
+            {
+              "ids": [
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0
+              ],
+              "name": ""
+            },
+            {
+              "ids": [
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0
+              ],
+              "name": ""
+            }
+          ]
+        },
+        {
+          "sourceId": "AR0108.BCS#offset2104",
+          "operation": "CreateCreature",
+          "integers": [
+            14,
+            581,
+            344,
+            0,
+            0
+          ],
+          "strings": [
+            "SAREVO2",
+            ""
+          ],
+          "selectors": [
+            {
+              "ids": [
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0
+              ],
+              "name": ""
+            },
+            {
+              "ids": [
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0
+              ],
+              "name": ""
+            },
+            {
+              "ids": [
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0
+              ],
+              "name": ""
+            }
+          ]
+        },
+        {
+          "sourceId": "AR0108.BCS#offset2234",
+          "operation": "GiveItemCreate",
+          "integers": [
+            0,
+            0,
+            0,
+            0,
+            0
+          ],
+          "strings": [
+            "minhp1",
+            ""
+          ],
+          "selectors": [
+            {
+              "ids": [
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0
+              ],
+              "name": ""
+            },
+            {
+              "ids": [
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0
+              ],
+              "name": "Sarevok"
+            },
+            {
+              "ids": [
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0
+              ],
+              "name": ""
+            }
+          ]
+        },
+        {
+          "sourceId": "AR0108.BCS#offset2367",
+          "operation": "FillSlot",
+          "integers": [
+            0,
+            0,
+            0,
+            0,
+            0
+          ],
+          "strings": [
+            "",
+            ""
+          ],
+          "selectors": [
+            {
+              "ids": [
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0
+              ],
+              "name": "Sarevok"
+            },
+            {
+              "ids": [
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0
+              ],
+              "name": ""
+            },
+            {
+              "ids": [
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0
+              ],
+              "name": ""
+            }
+          ]
+        },
+        {
+          "sourceId": "AR0108.BCS#offset2494",
+          "operation": "CreateCreature",
+          "integers": [
+            0,
+            680,
+            356,
+            0,
+            0
+          ],
+          "strings": [
+            "LIIA",
+            ""
+          ],
+          "selectors": [
+            {
+              "ids": [
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0
+              ],
+              "name": ""
+            },
+            {
+              "ids": [
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0
+              ],
+              "name": ""
+            },
+            {
+              "ids": [
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0
+              ],
+              "name": ""
+            }
+          ]
+        },
+        {
+          "sourceId": "AR0108.BCS#offset2620",
+          "operation": "CreateCreature",
+          "integers": [
+            0,
+            735,
+            371,
+            0,
+            0
+          ],
+          "strings": [
+            "BELT",
+            ""
+          ],
+          "selectors": [
+            {
+              "ids": [
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0
+              ],
+              "name": ""
+            },
+            {
+              "ids": [
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0
+              ],
+              "name": ""
+            },
+            {
+              "ids": [
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0
+              ],
+              "name": ""
+            }
+          ]
+        },
+        {
+          "sourceId": "AR0108.BCS#offset2746",
+          "operation": "CreateCreature",
+          "integers": [
+            0,
+            702,
+            485,
+            0,
+            0
+          ],
+          "strings": [
+            "NOBLPA1",
+            ""
+          ],
+          "selectors": [
+            {
+              "ids": [
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0
+              ],
+              "name": ""
+            },
+            {
+              "ids": [
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0
+              ],
+              "name": ""
+            },
+            {
+              "ids": [
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0
+              ],
+              "name": ""
+            }
+          ]
+        },
+        {
+          "sourceId": "AR0108.BCS#offset2875",
+          "operation": "CreateCreature",
+          "integers": [
+            0,
+            773,
+            466,
+            0,
+            0
+          ],
+          "strings": [
+            "NOBLPA2",
+            ""
+          ],
+          "selectors": [
+            {
+              "ids": [
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0
+              ],
+              "name": ""
+            },
+            {
+              "ids": [
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0
+              ],
+              "name": ""
+            },
+            {
+              "ids": [
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0
+              ],
+              "name": ""
+            }
+          ]
+        },
+        {
+          "sourceId": "AR0108.BCS#offset3004",
+          "operation": "CreateCreature",
+          "integers": [
+            0,
+            823,
+            407,
+            0,
+            0
+          ],
+          "strings": [
+            "NOBLPA3",
+            ""
+          ],
+          "selectors": [
+            {
+              "ids": [
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0
+              ],
+              "name": ""
+            },
+            {
+              "ids": [
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0
+              ],
+              "name": ""
+            },
+            {
+              "ids": [
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0
+              ],
+              "name": ""
+            }
+          ]
+        },
+        {
+          "sourceId": "AR0108.BCS#offset3133",
+          "operation": "CreateCreature",
+          "integers": [
+            0,
+            867,
+            462,
+            0,
+            0
+          ],
+          "strings": [
+            "NOBLPA4",
+            ""
+          ],
+          "selectors": [
+            {
+              "ids": [
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0
+              ],
+              "name": ""
+            },
+            {
+              "ids": [
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0
+              ],
+              "name": ""
+            },
+            {
+              "ids": [
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0
+              ],
+              "name": ""
+            }
+          ]
+        },
+        {
+          "sourceId": "AR0108.BCS#offset3262",
+          "operation": "CreateCreature",
+          "integers": [
+            0,
+            839,
+            518,
+            0,
+            0
+          ],
+          "strings": [
+            "NOBLPA5",
+            ""
+          ],
+          "selectors": [
+            {
+              "ids": [
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0
+              ],
+              "name": ""
+            },
+            {
+              "ids": [
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0
+              ],
+              "name": ""
+            },
+            {
+              "ids": [
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0
+              ],
+              "name": ""
+            }
+          ]
+        },
+        {
+          "sourceId": "AR0108.BCS#offset3391",
+          "operation": "CreateCreature",
+          "integers": [
+            0,
+            769,
+            571,
+            0,
+            0
+          ],
+          "strings": [
+            "NOBLPA",
+            ""
+          ],
+          "selectors": [
+            {
+              "ids": [
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0
+              ],
+              "name": ""
+            },
+            {
+              "ids": [
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0
+              ],
+              "name": ""
+            },
+            {
+              "ids": [
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0
+              ],
+              "name": ""
+            }
+          ]
+        }
+      ],
+      "semanticsEvaluated": false
+    },
+    "postBattle": {
+      "belt": {
+        "sourceId": "BELT.BCS#block2",
+        "conditions": [
+          {
+            "sourceId": "BELT.BCS#offset578",
+            "operation": "Dead",
+            "integers": [
+              0,
+              0,
+              0,
+              0
+            ],
+            "strings": [
+              "GDOPP7",
+              ""
+            ],
+            "selectors": [
+              {
+                "ids": [
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0
+                ],
+                "name": ""
+              }
+            ],
+            "negated": false
+          },
+          {
+            "sourceId": "BELT.BCS#offset642",
+            "operation": "Dead",
+            "integers": [
+              0,
+              0,
+              0,
+              0
+            ],
+            "strings": [
+              "GDOPP71",
+              ""
+            ],
+            "selectors": [
+              {
+                "ids": [
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0
+                ],
+                "name": ""
+              }
+            ],
+            "negated": false
+          },
+          {
+            "sourceId": "BELT.BCS#offset707",
+            "operation": "Dead",
+            "integers": [
+              0,
+              0,
+              0,
+              0
+            ],
+            "strings": [
+              "GDOPP72",
+              ""
+            ],
+            "selectors": [
+              {
+                "ids": [
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0
+                ],
+                "name": ""
+              }
+            ],
+            "negated": false
+          },
+          {
+            "sourceId": "BELT.BCS#offset772",
+            "operation": "Dead",
+            "integers": [
+              0,
+              0,
+              0,
+              0
+            ],
+            "strings": [
+              "GDOPP73",
+              ""
+            ],
+            "selectors": [
+              {
+                "ids": [
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0
+                ],
+                "name": ""
+              }
+            ],
+            "negated": false
+          },
+          {
+            "sourceId": "BELT.BCS#offset837",
+            "operation": "Dead",
+            "integers": [
+              0,
+              0,
+              0,
+              0
+            ],
+            "strings": [
+              "GDOPP74",
+              ""
+            ],
+            "selectors": [
+              {
+                "ids": [
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0
+                ],
+                "name": ""
+              }
+            ],
+            "negated": false
+          },
+          {
+            "sourceId": "BELT.BCS#offset902",
+            "operation": "Dead",
+            "integers": [
+              0,
+              0,
+              0,
+              0
+            ],
+            "strings": [
+              "GDOPP75",
+              ""
+            ],
+            "selectors": [
+              {
+                "ids": [
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0
+                ],
+                "name": ""
+              }
+            ],
+            "negated": false
+          },
+          {
+            "sourceId": "BELT.BCS#offset967",
+            "operation": "See",
+            "integers": [
+              0,
+              1,
+              0,
+              0
+            ],
+            "strings": [
+              "",
+              ""
+            ],
+            "selectors": [
+              {
+                "ids": [
+                  255,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0
+                ],
+                "name": ""
+              }
+            ],
+            "negated": true
+          },
+          {
+            "sourceId": "BELT.BCS#offset1027",
+            "operation": "CombatCounter",
+            "integers": [
+              0,
+              0,
+              0,
+              0
+            ],
+            "strings": [
+              "",
+              ""
+            ],
+            "selectors": [
+              {
+                "ids": [
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0
+                ],
+                "name": ""
+              }
+            ],
+            "negated": false
+          },
+          {
+            "sourceId": "BELT.BCS#offset1085",
+            "operation": "Global",
+            "integers": [
+              0,
+              0,
+              0,
+              0
+            ],
+            "strings": [
+              "GLOBALSarevokBehavior",
+              ""
+            ],
+            "selectors": [
+              {
+                "ids": [
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0
+                ],
+                "name": ""
+              }
+            ],
+            "negated": false
+          }
+        ],
+        "actions": [
+          {
+            "sourceId": "BELT.BCS#offset1176",
+            "operation": "Dialogue",
+            "integers": [
+              0,
+              0,
+              0,
+              0,
+              0
+            ],
+            "strings": [
+              "",
+              ""
+            ],
+            "selectors": [
+              {
+                "ids": [
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0
+                ],
+                "name": ""
+              },
+              {
+                "ids": [
+                  2,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0
+                ],
+                "name": ""
+              },
+              {
+                "ids": [
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0
+                ],
+                "name": ""
+              }
+            ]
+          },
+          {
+            "sourceId": "BELT.BCS#offset1294",
+            "operation": "TriggerActivation",
+            "integers": [
+              1,
+              0,
+              0,
+              0,
+              0
+            ],
+            "strings": [
+              "",
+              ""
+            ],
+            "selectors": [
+              {
+                "ids": [
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0
+                ],
+                "name": ""
+              },
+              {
+                "ids": [
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0
+                ],
+                "name": "Door0200"
+              },
+              {
+                "ids": [
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0
+                ],
+                "name": ""
+              }
+            ]
+          },
+          {
+            "sourceId": "BELT.BCS#offset1422",
+            "operation": "TriggerActivation",
+            "integers": [
+              1,
+              0,
+              0,
+              0,
+              0
+            ],
+            "strings": [
+              "",
+              ""
+            ],
+            "selectors": [
+              {
+                "ids": [
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0
+                ],
+                "name": ""
+              },
+              {
+                "ids": [
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0
+                ],
+                "name": "Door0109a"
+              },
+              {
+                "ids": [
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0
+                ],
+                "name": ""
+              }
+            ]
+          },
+          {
+            "sourceId": "BELT.BCS#offset1551",
+            "operation": "TriggerActivation",
+            "integers": [
+              1,
+              0,
+              0,
+              0,
+              0
+            ],
+            "strings": [
+              "",
+              ""
+            ],
+            "selectors": [
+              {
+                "ids": [
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0
+                ],
+                "name": ""
+              },
+              {
+                "ids": [
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0
+                ],
+                "name": "Door0109b"
+              },
+              {
+                "ids": [
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0
+                ],
+                "name": ""
+              }
+            ]
+          },
+          {
+            "sourceId": "BELT.BCS#offset1680",
+            "operation": "TriggerActivation",
+            "integers": [
+              1,
+              0,
+              0,
+              0,
+              0
+            ],
+            "strings": [
+              "",
+              ""
+            ],
+            "selectors": [
+              {
+                "ids": [
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0
+                ],
+                "name": ""
+              },
+              {
+                "ids": [
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0
+                ],
+                "name": "Door0111"
+              },
+              {
+                "ids": [
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0
+                ],
+                "name": ""
+              }
+            ]
+          }
+        ],
+        "semanticsEvaluated": false
+      },
+      "liia": {
+        "sourceId": "LIIA.BCS#block1",
+        "conditions": [
+          {
+            "sourceId": "LIIA.BCS#offset310",
+            "operation": "Dead",
+            "integers": [
+              0,
+              0,
+              0,
+              0
+            ],
+            "strings": [
+              "GDOPP7",
+              ""
+            ],
+            "selectors": [
+              {
+                "ids": [
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0
+                ],
+                "name": ""
+              }
+            ],
+            "negated": false
+          },
+          {
+            "sourceId": "LIIA.BCS#offset374",
+            "operation": "Dead",
+            "integers": [
+              0,
+              0,
+              0,
+              0
+            ],
+            "strings": [
+              "GDOPP71",
+              ""
+            ],
+            "selectors": [
+              {
+                "ids": [
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0
+                ],
+                "name": ""
+              }
+            ],
+            "negated": false
+          },
+          {
+            "sourceId": "LIIA.BCS#offset439",
+            "operation": "Dead",
+            "integers": [
+              0,
+              0,
+              0,
+              0
+            ],
+            "strings": [
+              "GDOPP72",
+              ""
+            ],
+            "selectors": [
+              {
+                "ids": [
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0
+                ],
+                "name": ""
+              }
+            ],
+            "negated": false
+          },
+          {
+            "sourceId": "LIIA.BCS#offset504",
+            "operation": "Dead",
+            "integers": [
+              0,
+              0,
+              0,
+              0
+            ],
+            "strings": [
+              "GDOPP73",
+              ""
+            ],
+            "selectors": [
+              {
+                "ids": [
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0
+                ],
+                "name": ""
+              }
+            ],
+            "negated": false
+          },
+          {
+            "sourceId": "LIIA.BCS#offset569",
+            "operation": "Dead",
+            "integers": [
+              0,
+              0,
+              0,
+              0
+            ],
+            "strings": [
+              "GDOPP74",
+              ""
+            ],
+            "selectors": [
+              {
+                "ids": [
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0
+                ],
+                "name": ""
+              }
+            ],
+            "negated": false
+          },
+          {
+            "sourceId": "LIIA.BCS#offset634",
+            "operation": "Dead",
+            "integers": [
+              0,
+              0,
+              0,
+              0
+            ],
+            "strings": [
+              "GDOPP75",
+              ""
+            ],
+            "selectors": [
+              {
+                "ids": [
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0
+                ],
+                "name": ""
+              }
+            ],
+            "negated": false
+          },
+          {
+            "sourceId": "LIIA.BCS#offset699",
+            "operation": "Global",
+            "integers": [
+              0,
+              0,
+              0,
+              0
+            ],
+            "strings": [
+              "GLOBALSarevokBehavior",
+              ""
+            ],
+            "selectors": [
+              {
+                "ids": [
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0
+                ],
+                "name": ""
+              }
+            ],
+            "negated": false
+          },
+          {
+            "sourceId": "LIIA.BCS#offset778",
+            "operation": "Dead",
+            "integers": [
+              0,
+              0,
+              0,
+              0
+            ],
+            "strings": [
+              "Belt",
+              ""
+            ],
+            "selectors": [
+              {
+                "ids": [
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0
+                ],
+                "name": ""
+              }
+            ],
+            "negated": false
+          }
+        ],
+        "actions": [
+          {
+            "sourceId": "LIIA.BCS#offset852",
+            "operation": "Dialogue",
+            "integers": [
+              0,
+              0,
+              0,
+              0,
+              0
+            ],
+            "strings": [
+              "",
+              ""
+            ],
+            "selectors": [
+              {
+                "ids": [
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0
+                ],
+                "name": ""
+              },
+              {
+                "ids": [
+                  2,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0
+                ],
+                "name": ""
+              },
+              {
+                "ids": [
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0
+                ],
+                "name": ""
+              }
+            ]
+          }
+        ],
+        "semanticsEvaluated": false
+      }
+    },
+    "proofTransitions": [
+      {
+        "sourceId": "BELT.DLG#state6",
+        "speaker": "BELT",
+        "state": 6,
+        "entryConditions": [
+          {
+            "op": "Dead",
+            "args": [
+              "GDOPP7"
+            ]
+          },
+          {
+            "op": "Dead",
+            "args": [
+              "GDOPP71"
+            ]
+          },
+          {
+            "op": "Dead",
+            "args": [
+              "GDOPP72"
+            ]
+          },
+          {
+            "op": "Dead",
+            "args": [
+              "GDOPP73"
+            ]
+          },
+          {
+            "op": "Dead",
+            "args": [
+              "GDOPP74"
+            ]
+          },
+          {
+            "op": "Dead",
+            "args": [
+              "GDOPP75"
+            ]
+          },
+          {
+            "op": "Global",
+            "args": [
+              "SarevokBehavior",
+              "GLOBAL",
+              0
+            ]
+          }
+        ],
+        "edges": [
+          {
+            "sourceId": "BELT.DLG#state6/transition6",
+            "index": 6,
+            "flags": 3,
+            "replyStrref": 2295,
+            "journalStrref": null,
+            "conditions": [
+              {
+                "op": "PartyHasItem",
+                "args": [
+                  "SCRL2K"
+                ]
+              }
+            ],
+            "actions": [],
+            "target": {
+              "dialogue": "BELT",
+              "state": 7
+            }
+          },
+          {
+            "sourceId": "BELT.DLG#state6/transition7",
+            "index": 7,
+            "flags": 1,
+            "replyStrref": 2297,
+            "journalStrref": null,
+            "conditions": [],
+            "actions": [],
+            "target": {
+              "dialogue": "BELT",
+              "state": 9
+            }
+          },
+          {
+            "sourceId": "BELT.DLG#state6/transition8",
+            "index": 8,
+            "flags": 3,
+            "replyStrref": 20705,
+            "journalStrref": null,
+            "conditions": [
+              {
+                "op": "PartyHasItem",
+                "args": [
+                  "SCRL3F"
+                ]
+              }
+            ],
+            "actions": [],
+            "target": {
+              "dialogue": "BELT",
+              "state": 7
+            }
+          }
+        ]
+      },
+      {
+        "sourceId": "BELT.DLG#state7",
+        "speaker": "BELT",
+        "state": 7,
+        "entryConditions": [],
+        "edges": [
+          {
+            "sourceId": "BELT.DLG#state7/transition9",
+            "index": 9,
+            "flags": 0,
+            "replyStrref": null,
+            "journalStrref": null,
+            "conditions": [],
+            "actions": [],
+            "target": {
+              "dialogue": "SAREVO",
+              "state": 24
+            }
+          }
+        ]
+      },
+      {
+        "sourceId": "BELT.DLG#state9",
+        "speaker": "BELT",
+        "state": 9,
+        "entryConditions": [],
+        "edges": [
+          {
+            "sourceId": "BELT.DLG#state9/transition11",
+            "index": 11,
+            "flags": 3,
+            "replyStrref": 2298,
+            "journalStrref": null,
+            "conditions": [
+              {
+                "op": "PartyHasItem",
+                "args": [
+                  "SCRL2K"
+                ]
+              }
+            ],
+            "actions": [],
+            "target": {
+              "dialogue": "BELT",
+              "state": 7
+            }
+          },
+          {
+            "sourceId": "BELT.DLG#state9/transition12",
+            "index": 12,
+            "flags": 1,
+            "replyStrref": 2299,
+            "journalStrref": null,
+            "conditions": [],
+            "actions": [],
+            "target": {
+              "dialogue": "SAREVO",
+              "state": 25
+            }
+          },
+          {
+            "sourceId": "BELT.DLG#state9/transition13",
+            "index": 13,
+            "flags": 3,
+            "replyStrref": 20706,
+            "journalStrref": null,
+            "conditions": [
+              {
+                "op": "PartyHasItem",
+                "args": [
+                  "SCRL3F"
+                ]
+              }
+            ],
+            "actions": [],
+            "target": {
+              "dialogue": "BELT",
+              "state": 7
+            }
+          }
+        ]
+      },
+      {
+        "sourceId": "BELT.DLG#state10",
+        "speaker": "BELT",
+        "state": 10,
+        "entryConditions": [],
+        "edges": [
+          {
+            "sourceId": "BELT.DLG#state10/transition14",
+            "index": 14,
+            "flags": 0,
+            "replyStrref": null,
+            "journalStrref": null,
+            "conditions": [],
+            "actions": [],
+            "target": {
+              "dialogue": "SAREVO",
+              "state": 10
+            }
+          }
+        ]
+      },
+      {
+        "sourceId": "LIIA.DLG#state3",
+        "speaker": "LIIA",
+        "state": 3,
+        "entryConditions": [
+          {
+            "op": "Dead",
+            "args": [
+              "GDOPP7"
+            ]
+          },
+          {
+            "op": "Dead",
+            "args": [
+              "GDOPP71"
+            ]
+          },
+          {
+            "op": "Dead",
+            "args": [
+              "GDOPP72"
+            ]
+          },
+          {
+            "op": "Dead",
+            "args": [
+              "GDOPP73"
+            ]
+          },
+          {
+            "op": "Dead",
+            "args": [
+              "GDOPP74"
+            ]
+          },
+          {
+            "op": "Dead",
+            "args": [
+              "GDOPP75"
+            ]
+          },
+          {
+            "op": "Global",
+            "args": [
+              "SarevokBehavior",
+              "GLOBAL",
+              0
+            ]
+          }
+        ],
+        "edges": [
+          {
+            "sourceId": "LIIA.DLG#state3/transition3",
+            "index": 3,
+            "flags": 3,
+            "replyStrref": 2273,
+            "journalStrref": null,
+            "conditions": [
+              {
+                "op": "PartyHasItem",
+                "args": [
+                  "SCRL2K"
+                ]
+              }
+            ],
+            "actions": [],
+            "target": {
+              "dialogue": "LIIA",
+              "state": 4
+            }
+          },
+          {
+            "sourceId": "LIIA.DLG#state3/transition4",
+            "index": 4,
+            "flags": 1,
+            "replyStrref": 2275,
+            "journalStrref": null,
+            "conditions": [],
+            "actions": [],
+            "target": {
+              "dialogue": "LIIA",
+              "state": 6
+            }
+          },
+          {
+            "sourceId": "LIIA.DLG#state3/transition5",
+            "index": 5,
+            "flags": 3,
+            "replyStrref": 20707,
+            "journalStrref": null,
+            "conditions": [
+              {
+                "op": "PartyHasItem",
+                "args": [
+                  "SCRL3F"
+                ]
+              }
+            ],
+            "actions": [],
+            "target": {
+              "dialogue": "LIIA",
+              "state": 4
+            }
+          }
+        ]
+      },
+      {
+        "sourceId": "LIIA.DLG#state4",
+        "speaker": "LIIA",
+        "state": 4,
+        "entryConditions": [],
+        "edges": [
+          {
+            "sourceId": "LIIA.DLG#state4/transition6",
+            "index": 6,
+            "flags": 0,
+            "replyStrref": null,
+            "journalStrref": null,
+            "conditions": [],
+            "actions": [],
+            "target": {
+              "dialogue": "SAREVO",
+              "state": 9
+            }
+          }
+        ]
+      },
+      {
+        "sourceId": "LIIA.DLG#state6",
+        "speaker": "LIIA",
+        "state": 6,
+        "entryConditions": [],
+        "edges": [
+          {
+            "sourceId": "LIIA.DLG#state6/transition8",
+            "index": 8,
+            "flags": 1,
+            "replyStrref": 2276,
+            "journalStrref": null,
+            "conditions": [],
+            "actions": [],
+            "target": {
+              "dialogue": "SAREVO",
+              "state": 25
+            }
+          },
+          {
+            "sourceId": "LIIA.DLG#state6/transition9",
+            "index": 9,
+            "flags": 3,
+            "replyStrref": 2277,
+            "journalStrref": null,
+            "conditions": [
+              {
+                "op": "PartyHasItem",
+                "args": [
+                  "SCRL2K"
+                ]
+              }
+            ],
+            "actions": [],
+            "target": {
+              "dialogue": "SAREVO",
+              "state": 9
+            }
+          },
+          {
+            "sourceId": "LIIA.DLG#state6/transition10",
+            "index": 10,
+            "flags": 3,
+            "replyStrref": 20708,
+            "journalStrref": null,
+            "conditions": [
+              {
+                "op": "PartyHasItem",
+                "args": [
+                  "SCRL3F"
+                ]
+              }
+            ],
+            "actions": [],
+            "target": {
+              "dialogue": "LIIA",
+              "state": 4
+            }
+          }
+        ]
+      },
+      {
+        "sourceId": "LIIA.DLG#state7",
+        "speaker": "LIIA",
+        "state": 7,
+        "entryConditions": [],
+        "edges": [
+          {
+            "sourceId": "LIIA.DLG#state7/transition11",
+            "index": 11,
+            "flags": 0,
+            "replyStrref": null,
+            "journalStrref": null,
+            "conditions": [],
+            "actions": [],
+            "target": {
+              "dialogue": "SAREVO",
+              "state": 10
+            }
+          }
+        ]
+      },
+      {
+        "sourceId": "SAREVO.DLG#state9",
+        "speaker": "SAREVO",
+        "state": 9,
+        "entryConditions": [],
+        "edges": [
+          {
+            "sourceId": "SAREVO.DLG#state9/transition10",
+            "index": 10,
+            "flags": 0,
+            "replyStrref": null,
+            "journalStrref": null,
+            "conditions": [],
+            "actions": [],
+            "target": {
+              "dialogue": "LIIA",
+              "state": 7
+            }
+          }
+        ]
+      },
+      {
+        "sourceId": "SAREVO.DLG#state24",
+        "speaker": "SAREVO",
+        "state": 24,
+        "entryConditions": [],
+        "edges": [
+          {
+            "sourceId": "SAREVO.DLG#state24/transition35",
+            "index": 35,
+            "flags": 0,
+            "replyStrref": null,
+            "journalStrref": null,
+            "conditions": [],
+            "actions": [],
+            "target": {
+              "dialogue": "BELT",
+              "state": 10
+            }
+          }
+        ]
+      },
+      {
+        "sourceId": "SAREVO.DLG#state25",
+        "speaker": "SAREVO",
+        "state": 25,
+        "entryConditions": [],
+        "edges": [
+          {
+            "sourceId": "SAREVO.DLG#state25/transition36",
+            "index": 36,
+            "flags": 12,
+            "replyStrref": null,
+            "journalStrref": null,
+            "conditions": [],
+            "actions": [
+              {
+                "op": "SetGlobal",
+                "args": [
+                  "SarevokBehavior",
+                  "GLOBAL",
+                  10
+                ]
+              },
+              {
+                "op": "Wait",
+                "args": [
+                  1
+                ]
+              },
+              {
+                "op": "ActionOverride",
+                "args": [
+                  "Belt",
+                  {
+                    "op": "ForceSpell",
+                    "args": [
+                      {
+                        "symbol": "Player1"
+                      },
+                      {
+                        "symbol": "SAREVOK_STRIKE"
+                      }
+                    ]
+                  }
+                ]
+              },
+              {
+                "op": "ActionOverride",
+                "args": [
+                  "Liia",
+                  {
+                    "op": "ForceSpell",
+                    "args": [
+                      {
+                        "symbol": "Player1"
+                      },
+                      {
+                        "symbol": "SAREVOK_STRIKE"
+                      }
+                    ]
+                  }
+                ]
+              },
+              {
+                "op": "Wait",
+                "args": [
+                  2
+                ]
+              },
+              {
+                "op": "Kill",
+                "args": [
+                  {
+                    "symbol": "Player1"
+                  }
+                ]
+              }
+            ],
+            "target": {
+              "dialogue": "",
+              "state": null
+            }
+          }
+        ]
+      }
+    ],
+    "extraction": {
+      "confrontation": {
+        "sourceId": "SAREVO.DLG#state10",
+        "speaker": "SAREVO",
+        "state": 10,
+        "entryConditions": [],
+        "edges": [
+          {
+            "sourceId": "SAREVO.DLG#state10/transition11",
+            "index": 11,
+            "flags": 12,
+            "replyStrref": null,
+            "journalStrref": null,
+            "conditions": [],
+            "actions": [
+              {
+                "op": "SetGlobal",
+                "args": [
+                  "SarevokBehavior",
+                  "GLOBAL",
+                  4
+                ]
+              },
+              {
+                "op": "TriggerActivation",
+                "args": [
+                  "Door0200",
+                  {
+                    "symbol": "FALSE"
+                  }
+                ]
+              },
+              {
+                "op": "TriggerActivation",
+                "args": [
+                  "Door0109a",
+                  {
+                    "symbol": "FALSE"
+                  }
+                ]
+              },
+              {
+                "op": "TriggerActivation",
+                "args": [
+                  "Door0109b",
+                  {
+                    "symbol": "FALSE"
+                  }
+                ]
+              },
+              {
+                "op": "TriggerActivation",
+                "args": [
+                  "Door0111",
+                  {
+                    "symbol": "FALSE"
+                  }
+                ]
+              },
+              {
+                "op": "SetGlobalTimer",
+                "args": [
+                  "SarevokRun",
+                  "GLOBAL",
+                  {
+                    "symbol": "TWO_MINUTES"
+                  }
+                ]
+              },
+              {
+                "op": "Shout",
+                "args": [
+                  2
+                ]
+              },
+              {
+                "op": "Enemy",
+                "args": []
+              },
+              {
+                "op": "AttackOneRound",
+                "args": [
+                  {
+                    "op": "NearestEnemyOf",
+                    "args": [
+                      {
+                        "symbol": "Myself"
+                      }
+                    ]
+                  }
+                ]
+              }
+            ],
+            "target": {
+              "dialogue": "",
+              "state": null
+            }
+          }
+        ]
+      },
+      "gate": {
+        "sourceId": "AR0108.BCS#block5",
+        "conditions": [
+          {
+            "sourceId": "AR0108.BCS#offset6205",
+            "operation": "NextTriggerObject",
+            "integers": [
+              0,
+              0,
+              0,
+              0
+            ],
+            "strings": [
+              "",
+              ""
+            ],
+            "selectors": [
+              {
+                "ids": [
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0
+                ],
+                "name": "sarevok"
+              }
+            ],
+            "negated": false
+          },
+          {
+            "sourceId": "AR0108.BCS#offset6270",
+            "operation": "See",
+            "integers": [
+              0,
+              0,
+              0,
+              0
+            ],
+            "strings": [
+              "",
+              ""
+            ],
+            "selectors": [
+              {
+                "ids": [
+                  2,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0
+                ],
+                "name": ""
+              }
+            ],
+            "negated": false
+          },
+          {
+            "sourceId": "AR0108.BCS#offset6328",
+            "operation": "GlobalTimerExpired",
+            "integers": [
+              0,
+              0,
+              0,
+              0
+            ],
+            "strings": [
+              "SarevokRun",
+              "GLOBAL"
+            ],
+            "selectors": [
+              {
+                "ids": [
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0
+                ],
+                "name": ""
+              }
+            ],
+            "negated": false
+          },
+          {
+            "sourceId": "AR0108.BCS#offset6402",
+            "operation": "Global",
+            "integers": [
+              4,
+              0,
+              0,
+              0
+            ],
+            "strings": [
+              "GLOBALSarevokBehavior",
+              ""
+            ],
+            "selectors": [
+              {
+                "ids": [
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0
+                ],
+                "name": ""
+              }
+            ],
+            "negated": false
+          },
+          {
+            "sourceId": "AR0108.BCS#offset6481",
+            "operation": "Exists",
+            "integers": [
+              0,
+              1,
+              0,
+              0
+            ],
+            "strings": [
+              "",
+              ""
+            ],
+            "selectors": [
+              {
+                "ids": [
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0
+                ],
+                "name": "Winski"
+              }
+            ],
+            "negated": true
+          }
+        ],
+        "actions": [
+          {
+            "sourceId": "AR0108.BCS#offset6557",
+            "operation": "SetInterrupt",
+            "integers": [
+              0,
+              0,
+              0,
+              0,
+              0
+            ],
+            "strings": [
+              "",
+              ""
+            ],
+            "selectors": [
+              {
+                "ids": [
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0
+                ],
+                "name": ""
+              },
+              {
+                "ids": [
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0
+                ],
+                "name": ""
+              },
+              {
+                "ids": [
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0
+                ],
+                "name": ""
+              }
+            ]
+          },
+          {
+            "sourceId": "AR0108.BCS#offset6676",
+            "operation": "CreateVisualEffect",
+            "integers": [
+              0,
+              693,
+              578,
+              0,
+              0
+            ],
+            "strings": [
+              "spdimndr",
+              ""
+            ],
+            "selectors": [
+              {
+                "ids": [
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0
+                ],
+                "name": ""
+              },
+              {
+                "ids": [
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0
+                ],
+                "name": ""
+              },
+              {
+                "ids": [
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0
+                ],
+                "name": ""
+              }
+            ]
+          },
+          {
+            "sourceId": "AR0108.BCS#offset6808",
+            "operation": "Wait",
+            "integers": [
+              4,
+              0,
+              0,
+              0,
+              0
+            ],
+            "strings": [
+              "",
+              ""
+            ],
+            "selectors": [
+              {
+                "ids": [
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0
+                ],
+                "name": ""
+              },
+              {
+                "ids": [
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0
+                ],
+                "name": ""
+              },
+              {
+                "ids": [
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0
+                ],
+                "name": ""
+              }
+            ]
+          },
+          {
+            "sourceId": "AR0108.BCS#offset6927",
+            "operation": "CreateCreature",
+            "integers": [
+              0,
+              693,
+              578,
+              0,
+              0
+            ],
+            "strings": [
+              "WINSKI",
+              ""
+            ],
+            "selectors": [
+              {
+                "ids": [
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0
+                ],
+                "name": ""
+              },
+              {
+                "ids": [
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0
+                ],
+                "name": ""
+              },
+              {
+                "ids": [
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0
+                ],
+                "name": ""
+              }
+            ]
+          },
+          {
+            "sourceId": "AR0108.BCS#offset7055",
+            "operation": "TriggerActivation",
+            "integers": [
+              1,
+              0,
+              0,
+              0,
+              0
+            ],
+            "strings": [
+              "",
+              ""
+            ],
+            "selectors": [
+              {
+                "ids": [
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0
+                ],
+                "name": ""
+              },
+              {
+                "ids": [
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0
+                ],
+                "name": "Door0200"
+              },
+              {
+                "ids": [
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0
+                ],
+                "name": ""
+              }
+            ]
+          },
+          {
+            "sourceId": "AR0108.BCS#offset7183",
+            "operation": "TriggerActivation",
+            "integers": [
+              1,
+              0,
+              0,
+              0,
+              0
+            ],
+            "strings": [
+              "",
+              ""
+            ],
+            "selectors": [
+              {
+                "ids": [
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0
+                ],
+                "name": ""
+              },
+              {
+                "ids": [
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0
+                ],
+                "name": "Door0109a"
+              },
+              {
+                "ids": [
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0
+                ],
+                "name": ""
+              }
+            ]
+          },
+          {
+            "sourceId": "AR0108.BCS#offset7312",
+            "operation": "TriggerActivation",
+            "integers": [
+              1,
+              0,
+              0,
+              0,
+              0
+            ],
+            "strings": [
+              "",
+              ""
+            ],
+            "selectors": [
+              {
+                "ids": [
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0
+                ],
+                "name": ""
+              },
+              {
+                "ids": [
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0
+                ],
+                "name": "Door0109b"
+              },
+              {
+                "ids": [
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0
+                ],
+                "name": ""
+              }
+            ]
+          },
+          {
+            "sourceId": "AR0108.BCS#offset7441",
+            "operation": "TriggerActivation",
+            "integers": [
+              1,
+              0,
+              0,
+              0,
+              0
+            ],
+            "strings": [
+              "",
+              ""
+            ],
+            "selectors": [
+              {
+                "ids": [
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0
+                ],
+                "name": ""
+              },
+              {
+                "ids": [
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0
+                ],
+                "name": "Door0111"
+              },
+              {
+                "ids": [
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0
+                ],
+                "name": ""
+              }
+            ]
+          },
+          {
+            "sourceId": "AR0108.BCS#offset7569",
+            "operation": "StartDialog",
+            "integers": [
+              0,
+              0,
+              0,
+              0,
+              0
+            ],
+            "strings": [
+              "sarevo",
+              ""
+            ],
+            "selectors": [
+              {
+                "ids": [
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0
+                ],
+                "name": "Sarevok"
+              },
+              {
+                "ids": [
+                  2,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0
+                ],
+                "name": ""
+              },
+              {
+                "ids": [
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0
+                ],
+                "name": ""
+              }
+            ]
+          }
+        ],
+        "semanticsEvaluated": false
+      },
+      "dialogue": {
+        "sourceId": "SAREVO.DLG#state11",
+        "speaker": "SAREVO",
+        "state": 11,
+        "entryConditions": [
+          {
+            "op": "GlobalTimerExpired",
+            "args": [
+              "SarevokRun",
+              "GLOBAL"
+            ]
+          },
+          {
+            "op": "Global",
+            "args": [
+              "SarevokBehavior",
+              "GLOBAL",
+              4
+            ]
+          }
+        ],
+        "edges": [
+          {
+            "sourceId": "SAREVO.DLG#state11/transition12",
+            "index": 12,
+            "flags": 12,
+            "replyStrref": null,
+            "journalStrref": null,
+            "conditions": [],
+            "actions": [
+              {
+                "op": "SetGlobal",
+                "args": [
+                  "SarevokBehavior",
+                  "GLOBAL",
+                  1
+                ]
+              },
+              {
+                "op": "ChangeAIScript",
+                "args": [
+                  "",
+                  {
+                    "symbol": "OVERRIDE"
+                  }
+                ]
+              },
+              {
+                "op": "ClearAllActions",
+                "args": []
+              },
+              {
+                "op": "StartCutSceneMode",
+                "args": []
+              },
+              {
+                "op": "StartCutSceneEx",
+                "args": [
+                  "EndCut01",
+                  {
+                    "symbol": "FALSE"
+                  }
+                ]
+              }
+            ],
+            "target": {
+              "dialogue": "",
+              "state": null
+            }
+          }
+        ]
+      },
+      "cutscene": {
+        "sourceId": "ENDCUT01.BCS#block0",
+        "conditions": [
+          {
+            "sourceId": "ENDCUT01.BCS#offset9",
+            "operation": "True",
+            "integers": [
+              0,
+              0,
+              0,
+              0
+            ],
+            "strings": [
+              "",
+              ""
+            ],
+            "selectors": [
+              {
+                "ids": [
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0
+                ],
+                "name": ""
+              }
+            ],
+            "negated": false
+          }
+        ],
+        "actions": [
+          {
+            "sourceId": "ENDCUT01.BCS#offset79",
+            "operation": "CutSceneId",
+            "integers": [
+              0,
+              0,
+              0,
+              0,
+              0
+            ],
+            "strings": [
+              "",
+              ""
+            ],
+            "selectors": [
+              {
+                "ids": [
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0
+                ],
+                "name": ""
+              },
+              {
+                "ids": [
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0
+                ],
+                "name": "Winski"
+              },
+              {
+                "ids": [
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0
+                ],
+                "name": ""
+              }
+            ]
+          },
+          {
+            "sourceId": "ENDCUT01.BCS#offset205",
+            "operation": "Enemy",
+            "integers": [
+              0,
+              0,
+              0,
+              0,
+              0
+            ],
+            "strings": [
+              "",
+              ""
+            ],
+            "selectors": [
+              {
+                "ids": [
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0
+                ],
+                "name": ""
+              },
+              {
+                "ids": [
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0
+                ],
+                "name": ""
+              },
+              {
+                "ids": [
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0
+                ],
+                "name": ""
+              }
+            ]
+          },
+          {
+            "sourceId": "ENDCUT01.BCS#offset324",
+            "operation": "ForceSpell",
+            "integers": [
+              2995,
+              0,
+              0,
+              0,
+              0
+            ],
+            "strings": [
+              "",
+              ""
+            ],
+            "selectors": [
+              {
+                "ids": [
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0
+                ],
+                "name": ""
+              },
+              {
+                "ids": [
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0
+                ],
+                "name": "Sarevok"
+              },
+              {
+                "ids": [
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0
+                ],
+                "name": ""
+              }
+            ]
+          },
+          {
+            "sourceId": "ENDCUT01.BCS#offset454",
+            "operation": "Wait",
+            "integers": [
+              2,
+              0,
+              0,
+              0,
+              0
+            ],
+            "strings": [
+              "",
+              ""
+            ],
+            "selectors": [
+              {
+                "ids": [
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0
+                ],
+                "name": ""
+              },
+              {
+                "ids": [
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0
+                ],
+                "name": ""
+              },
+              {
+                "ids": [
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0
+                ],
+                "name": ""
+              }
+            ]
+          },
+          {
+            "sourceId": "ENDCUT01.BCS#offset573",
+            "operation": "EndCutSceneMode",
+            "integers": [
+              0,
+              0,
+              0,
+              0,
+              0
+            ],
+            "strings": [
+              "",
+              ""
+            ],
+            "selectors": [
+              {
+                "ids": [
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0
+                ],
+                "name": ""
+              },
+              {
+                "ids": [
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0
+                ],
+                "name": ""
+              },
+              {
+                "ids": [
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0
+                ],
+                "name": ""
+              }
+            ]
+          },
+          {
+            "sourceId": "ENDCUT01.BCS#offset693",
+            "operation": "ForceSpell",
+            "integers": [
+              2995,
+              0,
+              0,
+              0,
+              0
+            ],
+            "strings": [
+              "",
+              ""
+            ],
+            "selectors": [
+              {
+                "ids": [
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0
+                ],
+                "name": ""
+              },
+              {
+                "ids": [
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  1,
+                  0,
+                  0,
+                  0,
+                  0
+                ],
+                "name": ""
+              },
+              {
+                "ids": [
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0
+                ],
+                "name": ""
+              }
+            ]
+          }
+        ],
+        "semanticsEvaluated": false
+      }
+    },
+    "failureTransitions": {
+      "bothDukesDead": {
+        "sourceId": "SAREVO.DLG#state8",
+        "speaker": "SAREVO",
+        "state": 8,
+        "entryConditions": [
+          {
+            "op": "Dead",
+            "args": [
+              "Liia"
+            ]
+          },
+          {
+            "op": "Dead",
+            "args": [
+              "Belt"
+            ]
+          },
+          {
+            "op": "AreaCheck",
+            "args": [
+              "AR0108"
+            ]
+          },
+          {
+            "not": {
+              "op": "Global",
+              "args": [
+                "SarevokBehavior",
+                "GLOBAL",
+                3
+              ]
+            }
+          }
+        ],
+        "edges": [
+          {
+            "sourceId": "SAREVO.DLG#state8/transition9",
+            "index": 9,
+            "flags": 12,
+            "replyStrref": null,
+            "journalStrref": null,
+            "conditions": [],
+            "actions": [
+              {
+                "op": "SetGlobalTimerRandom",
+                "args": [
+                  "EndGame",
+                  "GLOBAL",
+                  {
+                    "symbol": "ONE_MINUTE"
+                  },
+                  {
+                    "symbol": "THREE_MINUTES"
+                  }
+                ]
+              },
+              {
+                "op": "SetGlobal",
+                "args": [
+                  "SarevokBehavior",
+                  "GLOBAL",
+                  3
+                ]
+              },
+              {
+                "op": "EraseJournalEntry",
+                "args": [
+                  31462
+                ]
+              },
+              {
+                "op": "EraseJournalEntry",
+                "args": [
+                  31464
+                ]
+              },
+              {
+                "op": "TriggerActivation",
+                "args": [
+                  "Door0200",
+                  {
+                    "symbol": "FALSE"
+                  }
+                ]
+              },
+              {
+                "op": "TriggerActivation",
+                "args": [
+                  "Door0109a",
+                  {
+                    "symbol": "FALSE"
+                  }
+                ]
+              },
+              {
+                "op": "TriggerActivation",
+                "args": [
+                  "Door0109b",
+                  {
+                    "symbol": "FALSE"
+                  }
+                ]
+              },
+              {
+                "op": "TriggerActivation",
+                "args": [
+                  "Door0111",
+                  {
+                    "symbol": "FALSE"
+                  }
+                ]
+              },
+              {
+                "op": "CreateCreature",
+                "args": [
+                  "ANGELO",
+                  {
+                    "symbol": "[468.665]"
+                  },
+                  {
+                    "symbol": "NE"
+                  }
+                ]
+              },
+              {
+                "op": "ActionOverride",
+                "args": [
+                  "Angelo",
+                  {
+                    "op": "Enemy",
+                    "args": []
+                  }
+                ]
+              },
+              {
+                "op": "CreateCreature",
+                "args": [
+                  "FLAME",
+                  {
+                    "symbol": "[941.714]"
+                  },
+                  {
+                    "symbol": "NW"
+                  }
+                ]
+              },
+              {
+                "op": "CreateCreature",
+                "args": [
+                  "FLAME",
+                  {
+                    "symbol": "[890.756]"
+                  },
+                  {
+                    "symbol": "NW"
+                  }
+                ]
+              },
+              {
+                "op": "CreateCreature",
+                "args": [
+                  "FLAME",
+                  {
+                    "symbol": "[606.185]"
+                  },
+                  {
+                    "symbol": "S"
+                  }
+                ]
+              },
+              {
+                "op": "CreateCreature",
+                "args": [
+                  "FLAME",
+                  {
+                    "symbol": "[576.199]"
+                  },
+                  {
+                    "symbol": "S"
+                  }
+                ]
+              },
+              {
+                "op": "CreateCreature",
+                "args": [
+                  "FLAME",
+                  {
+                    "symbol": "[411.675]"
+                  },
+                  {
+                    "symbol": "NE"
+                  }
+                ]
+              },
+              {
+                "op": "CreateCreature",
+                "args": [
+                  "FLAME",
+                  {
+                    "symbol": "[454.709]"
+                  },
+                  {
+                    "symbol": "NE"
+                  }
+                ]
+              },
+              {
+                "op": "Shout",
+                "args": [
+                  2
+                ]
+              },
+              {
+                "op": "Enemy",
+                "args": []
+              },
+              {
+                "op": "AttackOneRound",
+                "args": [
+                  {
+                    "op": "NearestEnemyOf",
+                    "args": [
+                      {
+                        "symbol": "Myself"
+                      }
+                    ]
+                  }
+                ]
+              }
+            ],
+            "target": {
+              "dialogue": "",
+              "state": null
+            }
+          }
+        ]
+      },
+      "areaFailure": {
+        "sourceId": "AR0108.BCS#block0",
+        "conditions": [
+          {
+            "sourceId": "AR0108.BCS#offset9",
+            "operation": "Global",
+            "integers": [
+              3,
+              0,
+              0,
+              0
+            ],
+            "strings": [
+              "GLOBALSarevokBehavior",
+              ""
+            ],
+            "selectors": [
+              {
+                "ids": [
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0
+                ],
+                "name": ""
+              }
+            ],
+            "negated": false
+          },
+          {
+            "sourceId": "AR0108.BCS#offset88",
+            "operation": "Global",
+            "integers": [
+              0,
+              0,
+              0,
+              0
+            ],
+            "strings": [
+              "ar0108bd_once",
+              ""
+            ],
+            "selectors": [
+              {
+                "ids": [
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0
+                ],
+                "name": ""
+              }
+            ],
+            "negated": false
+          }
+        ],
+        "actions": [
+          {
+            "sourceId": "AR0108.BCS#offset171",
+            "operation": "SetGlobalTimerRandom",
+            "integers": [
+              5,
+              0,
+              0,
+              15,
+              0
+            ],
+            "strings": [
+              "GLOBALEndGame",
+              ""
+            ],
+            "selectors": [
+              {
+                "ids": [
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0
+                ],
+                "name": ""
+              },
+              {
+                "ids": [
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0
+                ],
+                "name": ""
+              },
+              {
+                "ids": [
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0
+                ],
+                "name": ""
+              }
+            ]
+          },
+          {
+            "sourceId": "AR0108.BCS#offset305",
+            "operation": "Enemy",
+            "integers": [
+              0,
+              0,
+              0,
+              0,
+              0
+            ],
+            "strings": [
+              "",
+              ""
+            ],
+            "selectors": [
+              {
+                "ids": [
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0
+                ],
+                "name": "liia"
+              },
+              {
+                "ids": [
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0
+                ],
+                "name": ""
+              },
+              {
+                "ids": [
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0
+                ],
+                "name": ""
+              }
+            ]
+          },
+          {
+            "sourceId": "AR0108.BCS#offset428",
+            "operation": "Enemy",
+            "integers": [
+              0,
+              0,
+              0,
+              0,
+              0
+            ],
+            "strings": [
+              "",
+              ""
+            ],
+            "selectors": [
+              {
+                "ids": [
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0
+                ],
+                "name": "belt"
+              },
+              {
+                "ids": [
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0
+                ],
+                "name": ""
+              },
+              {
+                "ids": [
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0
+                ],
+                "name": ""
+              }
+            ]
+          },
+          {
+            "sourceId": "AR0108.BCS#offset551",
+            "operation": "Enemy",
+            "integers": [
+              0,
+              0,
+              0,
+              0,
+              0
+            ],
+            "strings": [
+              "",
+              ""
+            ],
+            "selectors": [
+              {
+                "ids": [
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0
+                ],
+                "name": "sarevok"
+              },
+              {
+                "ids": [
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0
+                ],
+                "name": ""
+              },
+              {
+                "ids": [
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0
+                ],
+                "name": ""
+              }
+            ]
+          },
+          {
+            "sourceId": "AR0108.BCS#offset677",
+            "operation": "SetGlobal",
+            "integers": [
+              1,
+              0,
+              0,
+              0,
+              0
+            ],
+            "strings": [
+              "ar0108bd_once",
+              ""
+            ],
+            "selectors": [
+              {
+                "ids": [
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0
+                ],
+                "name": ""
+              },
+              {
+                "ids": [
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0
+                ],
+                "name": ""
+              },
+              {
+                "ids": [
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0
+                ],
+                "name": ""
+              }
+            ]
+          }
+        ],
+        "semanticsEvaluated": false
+      },
+      "timerExecutions": [
+        {
+          "sourceId": "AR0108.BCS#block3",
+          "conditions": [
+            {
+              "sourceId": "AR0108.BCS#offset3534",
+              "operation": "GlobalTimerExpired",
+              "integers": [
+                0,
+                0,
+                0,
+                0
+              ],
+              "strings": [
+                "EndGame",
+                "GLOBAL"
+              ],
+              "selectors": [
+                {
+                  "ids": [
+                    0,
+                    0,
+                    0,
+                    0,
+                    0,
+                    0,
+                    0,
+                    0,
+                    0,
+                    0,
+                    0,
+                    0
+                  ],
+                  "name": ""
+                }
+              ],
+              "negated": false
+            },
+            {
+              "sourceId": "AR0108.BCS#offset3605",
+              "operation": "Exists",
+              "integers": [
+                0,
+                1,
+                0,
+                0
+              ],
+              "strings": [
+                "",
+                ""
+              ],
+              "selectors": [
+                {
+                  "ids": [
+                    0,
+                    0,
+                    0,
+                    0,
+                    0,
+                    0,
+                    0,
+                    0,
+                    0,
+                    0,
+                    0,
+                    0
+                  ],
+                  "name": "WINSKI"
+                }
+              ],
+              "negated": true
+            }
+          ],
+          "actions": [
+            {
+              "sourceId": "AR0108.BCS#offset3681",
+              "operation": "SetInterrupt",
+              "integers": [
+                0,
+                0,
+                0,
+                0,
+                0
+              ],
+              "strings": [
+                "",
+                ""
+              ],
+              "selectors": [
+                {
+                  "ids": [
+                    0,
+                    0,
+                    0,
+                    0,
+                    0,
+                    0,
+                    0,
+                    0,
+                    0,
+                    0,
+                    0,
+                    0
+                  ],
+                  "name": ""
+                },
+                {
+                  "ids": [
+                    0,
+                    0,
+                    0,
+                    0,
+                    0,
+                    0,
+                    0,
+                    0,
+                    0,
+                    0,
+                    0,
+                    0
+                  ],
+                  "name": ""
+                },
+                {
+                  "ids": [
+                    0,
+                    0,
+                    0,
+                    0,
+                    0,
+                    0,
+                    0,
+                    0,
+                    0,
+                    0,
+                    0,
+                    0
+                  ],
+                  "name": ""
+                }
+              ]
+            },
+            {
+              "sourceId": "AR0108.BCS#offset3800",
+              "operation": "SetGlobalTimerRandom",
+              "integers": [
+                5,
+                0,
+                0,
+                15,
+                0
+              ],
+              "strings": [
+                "GLOBALEndGame",
+                ""
+              ],
+              "selectors": [
+                {
+                  "ids": [
+                    0,
+                    0,
+                    0,
+                    0,
+                    0,
+                    0,
+                    0,
+                    0,
+                    0,
+                    0,
+                    0,
+                    0
+                  ],
+                  "name": ""
+                },
+                {
+                  "ids": [
+                    0,
+                    0,
+                    0,
+                    0,
+                    0,
+                    0,
+                    0,
+                    0,
+                    0,
+                    0,
+                    0,
+                    0
+                  ],
+                  "name": ""
+                },
+                {
+                  "ids": [
+                    0,
+                    0,
+                    0,
+                    0,
+                    0,
+                    0,
+                    0,
+                    0,
+                    0,
+                    0,
+                    0,
+                    0
+                  ],
+                  "name": ""
+                }
+              ]
+            },
+            {
+              "sourceId": "AR0108.BCS#offset3934",
+              "operation": "CreateVisualEffect",
+              "integers": [
+                0,
+                693,
+                578,
+                0,
+                0
+              ],
+              "strings": [
+                "spdimndr",
+                ""
+              ],
+              "selectors": [
+                {
+                  "ids": [
+                    0,
+                    0,
+                    0,
+                    0,
+                    0,
+                    0,
+                    0,
+                    0,
+                    0,
+                    0,
+                    0,
+                    0
+                  ],
+                  "name": ""
+                },
+                {
+                  "ids": [
+                    0,
+                    0,
+                    0,
+                    0,
+                    0,
+                    0,
+                    0,
+                    0,
+                    0,
+                    0,
+                    0,
+                    0
+                  ],
+                  "name": ""
+                },
+                {
+                  "ids": [
+                    0,
+                    0,
+                    0,
+                    0,
+                    0,
+                    0,
+                    0,
+                    0,
+                    0,
+                    0,
+                    0,
+                    0
+                  ],
+                  "name": ""
+                }
+              ]
+            },
+            {
+              "sourceId": "AR0108.BCS#offset4066",
+              "operation": "Wait",
+              "integers": [
+                4,
+                0,
+                0,
+                0,
+                0
+              ],
+              "strings": [
+                "",
+                ""
+              ],
+              "selectors": [
+                {
+                  "ids": [
+                    0,
+                    0,
+                    0,
+                    0,
+                    0,
+                    0,
+                    0,
+                    0,
+                    0,
+                    0,
+                    0,
+                    0
+                  ],
+                  "name": ""
+                },
+                {
+                  "ids": [
+                    0,
+                    0,
+                    0,
+                    0,
+                    0,
+                    0,
+                    0,
+                    0,
+                    0,
+                    0,
+                    0,
+                    0
+                  ],
+                  "name": ""
+                },
+                {
+                  "ids": [
+                    0,
+                    0,
+                    0,
+                    0,
+                    0,
+                    0,
+                    0,
+                    0,
+                    0,
+                    0,
+                    0,
+                    0
+                  ],
+                  "name": ""
+                }
+              ]
+            },
+            {
+              "sourceId": "AR0108.BCS#offset4185",
+              "operation": "CreateCreature",
+              "integers": [
+                0,
+                693,
+                578,
+                0,
+                0
+              ],
+              "strings": [
+                "WINSKI",
+                ""
+              ],
+              "selectors": [
+                {
+                  "ids": [
+                    0,
+                    0,
+                    0,
+                    0,
+                    0,
+                    0,
+                    0,
+                    0,
+                    0,
+                    0,
+                    0,
+                    0
+                  ],
+                  "name": ""
+                },
+                {
+                  "ids": [
+                    0,
+                    0,
+                    0,
+                    0,
+                    0,
+                    0,
+                    0,
+                    0,
+                    0,
+                    0,
+                    0,
+                    0
+                  ],
+                  "name": ""
+                },
+                {
+                  "ids": [
+                    0,
+                    0,
+                    0,
+                    0,
+                    0,
+                    0,
+                    0,
+                    0,
+                    0,
+                    0,
+                    0,
+                    0
+                  ],
+                  "name": ""
+                }
+              ]
+            },
+            {
+              "sourceId": "AR0108.BCS#offset4313",
+              "operation": "ForceSpell",
+              "integers": [
+                2979,
+                0,
+                0,
+                0,
+                0
+              ],
+              "strings": [
+                "",
+                ""
+              ],
+              "selectors": [
+                {
+                  "ids": [
+                    0,
+                    0,
+                    0,
+                    0,
+                    0,
+                    0,
+                    0,
+                    0,
+                    0,
+                    0,
+                    0,
+                    0
+                  ],
+                  "name": "WINSKI"
+                },
+                {
+                  "ids": [
+                    0,
+                    0,
+                    0,
+                    0,
+                    0,
+                    0,
+                    0,
+                    21,
+                    0,
+                    0,
+                    0,
+                    0
+                  ],
+                  "name": ""
+                },
+                {
+                  "ids": [
+                    0,
+                    0,
+                    0,
+                    0,
+                    0,
+                    0,
+                    0,
+                    0,
+                    0,
+                    0,
+                    0,
+                    0
+                  ],
+                  "name": ""
+                }
+              ]
+            },
+            {
+              "sourceId": "AR0108.BCS#offset4443",
+              "operation": "SmallWait",
+              "integers": [
+                15,
+                0,
+                0,
+                0,
+                0
+              ],
+              "strings": [
+                "",
+                ""
+              ],
+              "selectors": [
+                {
+                  "ids": [
+                    0,
+                    0,
+                    0,
+                    0,
+                    0,
+                    0,
+                    0,
+                    0,
+                    0,
+                    0,
+                    0,
+                    0
+                  ],
+                  "name": ""
+                },
+                {
+                  "ids": [
+                    0,
+                    0,
+                    0,
+                    0,
+                    0,
+                    0,
+                    0,
+                    0,
+                    0,
+                    0,
+                    0,
+                    0
+                  ],
+                  "name": ""
+                },
+                {
+                  "ids": [
+                    0,
+                    0,
+                    0,
+                    0,
+                    0,
+                    0,
+                    0,
+                    0,
+                    0,
+                    0,
+                    0,
+                    0
+                  ],
+                  "name": ""
+                }
+              ]
+            },
+            {
+              "sourceId": "AR0108.BCS#offset4563",
+              "operation": "FadeToColor",
+              "integers": [
+                0,
+                30,
+                0,
+                0,
+                0
+              ],
+              "strings": [
+                "",
+                ""
+              ],
+              "selectors": [
+                {
+                  "ids": [
+                    0,
+                    0,
+                    0,
+                    0,
+                    0,
+                    0,
+                    0,
+                    0,
+                    0,
+                    0,
+                    0,
+                    0
+                  ],
+                  "name": ""
+                },
+                {
+                  "ids": [
+                    0,
+                    0,
+                    0,
+                    0,
+                    0,
+                    0,
+                    0,
+                    0,
+                    0,
+                    0,
+                    0,
+                    0
+                  ],
+                  "name": ""
+                },
+                {
+                  "ids": [
+                    0,
+                    0,
+                    0,
+                    0,
+                    0,
+                    0,
+                    0,
+                    0,
+                    0,
+                    0,
+                    0,
+                    0
+                  ],
+                  "name": ""
+                }
+              ]
+            },
+            {
+              "sourceId": "AR0108.BCS#offset4684",
+              "operation": "SmallWait",
+              "integers": [
+                15,
+                0,
+                0,
+                0,
+                0
+              ],
+              "strings": [
+                "",
+                ""
+              ],
+              "selectors": [
+                {
+                  "ids": [
+                    0,
+                    0,
+                    0,
+                    0,
+                    0,
+                    0,
+                    0,
+                    0,
+                    0,
+                    0,
+                    0,
+                    0
+                  ],
+                  "name": ""
+                },
+                {
+                  "ids": [
+                    0,
+                    0,
+                    0,
+                    0,
+                    0,
+                    0,
+                    0,
+                    0,
+                    0,
+                    0,
+                    0,
+                    0
+                  ],
+                  "name": ""
+                },
+                {
+                  "ids": [
+                    0,
+                    0,
+                    0,
+                    0,
+                    0,
+                    0,
+                    0,
+                    0,
+                    0,
+                    0,
+                    0,
+                    0
+                  ],
+                  "name": ""
+                }
+              ]
+            },
+            {
+              "sourceId": "AR0108.BCS#offset4804",
+              "operation": "Kill",
+              "integers": [
+                0,
+                0,
+                0,
+                0,
+                0
+              ],
+              "strings": [
+                "",
+                ""
+              ],
+              "selectors": [
+                {
+                  "ids": [
+                    0,
+                    0,
+                    0,
+                    0,
+                    0,
+                    0,
+                    0,
+                    0,
+                    0,
+                    0,
+                    0,
+                    0
+                  ],
+                  "name": ""
+                },
+                {
+                  "ids": [
+                    0,
+                    0,
+                    0,
+                    0,
+                    0,
+                    0,
+                    0,
+                    21,
+                    0,
+                    0,
+                    0,
+                    0
+                  ],
+                  "name": ""
+                },
+                {
+                  "ids": [
+                    0,
+                    0,
+                    0,
+                    0,
+                    0,
+                    0,
+                    0,
+                    0,
+                    0,
+                    0,
+                    0,
+                    0
+                  ],
+                  "name": ""
+                }
+              ]
+            },
+            {
+              "sourceId": "AR0108.BCS#offset4925",
+              "operation": "SetInterrupt",
+              "integers": [
+                1,
+                0,
+                0,
+                0,
+                0
+              ],
+              "strings": [
+                "",
+                ""
+              ],
+              "selectors": [
+                {
+                  "ids": [
+                    0,
+                    0,
+                    0,
+                    0,
+                    0,
+                    0,
+                    0,
+                    0,
+                    0,
+                    0,
+                    0,
+                    0
+                  ],
+                  "name": ""
+                },
+                {
+                  "ids": [
+                    0,
+                    0,
+                    0,
+                    0,
+                    0,
+                    0,
+                    0,
+                    0,
+                    0,
+                    0,
+                    0,
+                    0
+                  ],
+                  "name": ""
+                },
+                {
+                  "ids": [
+                    0,
+                    0,
+                    0,
+                    0,
+                    0,
+                    0,
+                    0,
+                    0,
+                    0,
+                    0,
+                    0,
+                    0
+                  ],
+                  "name": ""
+                }
+              ]
+            }
+          ],
+          "semanticsEvaluated": false
+        },
+        {
+          "sourceId": "AR0108.BCS#block4",
+          "conditions": [
+            {
+              "sourceId": "AR0108.BCS#offset5059",
+              "operation": "GlobalTimerExpired",
+              "integers": [
+                0,
+                0,
+                0,
+                0
+              ],
+              "strings": [
+                "EndGame",
+                "GLOBAL"
+              ],
+              "selectors": [
+                {
+                  "ids": [
+                    0,
+                    0,
+                    0,
+                    0,
+                    0,
+                    0,
+                    0,
+                    0,
+                    0,
+                    0,
+                    0,
+                    0
+                  ],
+                  "name": ""
+                }
+              ],
+              "negated": false
+            },
+            {
+              "sourceId": "AR0108.BCS#offset5130",
+              "operation": "Exists",
+              "integers": [
+                0,
+                0,
+                0,
+                0
+              ],
+              "strings": [
+                "",
+                ""
+              ],
+              "selectors": [
+                {
+                  "ids": [
+                    0,
+                    0,
+                    0,
+                    0,
+                    0,
+                    0,
+                    0,
+                    0,
+                    0,
+                    0,
+                    0,
+                    0
+                  ],
+                  "name": "WINSKI"
+                }
+              ],
+              "negated": false
+            }
+          ],
+          "actions": [
+            {
+              "sourceId": "AR0108.BCS#offset5206",
+              "operation": "SetInterrupt",
+              "integers": [
+                0,
+                0,
+                0,
+                0,
+                0
+              ],
+              "strings": [
+                "",
+                ""
+              ],
+              "selectors": [
+                {
+                  "ids": [
+                    0,
+                    0,
+                    0,
+                    0,
+                    0,
+                    0,
+                    0,
+                    0,
+                    0,
+                    0,
+                    0,
+                    0
+                  ],
+                  "name": ""
+                },
+                {
+                  "ids": [
+                    0,
+                    0,
+                    0,
+                    0,
+                    0,
+                    0,
+                    0,
+                    0,
+                    0,
+                    0,
+                    0,
+                    0
+                  ],
+                  "name": ""
+                },
+                {
+                  "ids": [
+                    0,
+                    0,
+                    0,
+                    0,
+                    0,
+                    0,
+                    0,
+                    0,
+                    0,
+                    0,
+                    0,
+                    0
+                  ],
+                  "name": ""
+                }
+              ]
+            },
+            {
+              "sourceId": "AR0108.BCS#offset5325",
+              "operation": "SetGlobalTimerRandom",
+              "integers": [
+                5,
+                0,
+                0,
+                15,
+                0
+              ],
+              "strings": [
+                "GLOBALEndGame",
+                ""
+              ],
+              "selectors": [
+                {
+                  "ids": [
+                    0,
+                    0,
+                    0,
+                    0,
+                    0,
+                    0,
+                    0,
+                    0,
+                    0,
+                    0,
+                    0,
+                    0
+                  ],
+                  "name": ""
+                },
+                {
+                  "ids": [
+                    0,
+                    0,
+                    0,
+                    0,
+                    0,
+                    0,
+                    0,
+                    0,
+                    0,
+                    0,
+                    0,
+                    0
+                  ],
+                  "name": ""
+                },
+                {
+                  "ids": [
+                    0,
+                    0,
+                    0,
+                    0,
+                    0,
+                    0,
+                    0,
+                    0,
+                    0,
+                    0,
+                    0,
+                    0
+                  ],
+                  "name": ""
+                }
+              ]
+            },
+            {
+              "sourceId": "AR0108.BCS#offset5459",
+              "operation": "ForceSpell",
+              "integers": [
+                2979,
+                0,
+                0,
+                0,
+                0
+              ],
+              "strings": [
+                "",
+                ""
+              ],
+              "selectors": [
+                {
+                  "ids": [
+                    0,
+                    0,
+                    0,
+                    0,
+                    0,
+                    0,
+                    0,
+                    0,
+                    0,
+                    0,
+                    0,
+                    0
+                  ],
+                  "name": "WINSKI"
+                },
+                {
+                  "ids": [
+                    0,
+                    0,
+                    0,
+                    0,
+                    0,
+                    0,
+                    0,
+                    21,
+                    0,
+                    0,
+                    0,
+                    0
+                  ],
+                  "name": ""
+                },
+                {
+                  "ids": [
+                    0,
+                    0,
+                    0,
+                    0,
+                    0,
+                    0,
+                    0,
+                    0,
+                    0,
+                    0,
+                    0,
+                    0
+                  ],
+                  "name": ""
+                }
+              ]
+            },
+            {
+              "sourceId": "AR0108.BCS#offset5589",
+              "operation": "SmallWait",
+              "integers": [
+                15,
+                0,
+                0,
+                0,
+                0
+              ],
+              "strings": [
+                "",
+                ""
+              ],
+              "selectors": [
+                {
+                  "ids": [
+                    0,
+                    0,
+                    0,
+                    0,
+                    0,
+                    0,
+                    0,
+                    0,
+                    0,
+                    0,
+                    0,
+                    0
+                  ],
+                  "name": ""
+                },
+                {
+                  "ids": [
+                    0,
+                    0,
+                    0,
+                    0,
+                    0,
+                    0,
+                    0,
+                    0,
+                    0,
+                    0,
+                    0,
+                    0
+                  ],
+                  "name": ""
+                },
+                {
+                  "ids": [
+                    0,
+                    0,
+                    0,
+                    0,
+                    0,
+                    0,
+                    0,
+                    0,
+                    0,
+                    0,
+                    0,
+                    0
+                  ],
+                  "name": ""
+                }
+              ]
+            },
+            {
+              "sourceId": "AR0108.BCS#offset5709",
+              "operation": "FadeToColor",
+              "integers": [
+                0,
+                30,
+                0,
+                0,
+                0
+              ],
+              "strings": [
+                "",
+                ""
+              ],
+              "selectors": [
+                {
+                  "ids": [
+                    0,
+                    0,
+                    0,
+                    0,
+                    0,
+                    0,
+                    0,
+                    0,
+                    0,
+                    0,
+                    0,
+                    0
+                  ],
+                  "name": ""
+                },
+                {
+                  "ids": [
+                    0,
+                    0,
+                    0,
+                    0,
+                    0,
+                    0,
+                    0,
+                    0,
+                    0,
+                    0,
+                    0,
+                    0
+                  ],
+                  "name": ""
+                },
+                {
+                  "ids": [
+                    0,
+                    0,
+                    0,
+                    0,
+                    0,
+                    0,
+                    0,
+                    0,
+                    0,
+                    0,
+                    0,
+                    0
+                  ],
+                  "name": ""
+                }
+              ]
+            },
+            {
+              "sourceId": "AR0108.BCS#offset5830",
+              "operation": "SmallWait",
+              "integers": [
+                15,
+                0,
+                0,
+                0,
+                0
+              ],
+              "strings": [
+                "",
+                ""
+              ],
+              "selectors": [
+                {
+                  "ids": [
+                    0,
+                    0,
+                    0,
+                    0,
+                    0,
+                    0,
+                    0,
+                    0,
+                    0,
+                    0,
+                    0,
+                    0
+                  ],
+                  "name": ""
+                },
+                {
+                  "ids": [
+                    0,
+                    0,
+                    0,
+                    0,
+                    0,
+                    0,
+                    0,
+                    0,
+                    0,
+                    0,
+                    0,
+                    0
+                  ],
+                  "name": ""
+                },
+                {
+                  "ids": [
+                    0,
+                    0,
+                    0,
+                    0,
+                    0,
+                    0,
+                    0,
+                    0,
+                    0,
+                    0,
+                    0,
+                    0
+                  ],
+                  "name": ""
+                }
+              ]
+            },
+            {
+              "sourceId": "AR0108.BCS#offset5950",
+              "operation": "Kill",
+              "integers": [
+                0,
+                0,
+                0,
+                0,
+                0
+              ],
+              "strings": [
+                "",
+                ""
+              ],
+              "selectors": [
+                {
+                  "ids": [
+                    0,
+                    0,
+                    0,
+                    0,
+                    0,
+                    0,
+                    0,
+                    0,
+                    0,
+                    0,
+                    0,
+                    0
+                  ],
+                  "name": ""
+                },
+                {
+                  "ids": [
+                    0,
+                    0,
+                    0,
+                    0,
+                    0,
+                    0,
+                    0,
+                    21,
+                    0,
+                    0,
+                    0,
+                    0
+                  ],
+                  "name": ""
+                },
+                {
+                  "ids": [
+                    0,
+                    0,
+                    0,
+                    0,
+                    0,
+                    0,
+                    0,
+                    0,
+                    0,
+                    0,
+                    0,
+                    0
+                  ],
+                  "name": ""
+                }
+              ]
+            },
+            {
+              "sourceId": "AR0108.BCS#offset6071",
+              "operation": "SetInterrupt",
+              "integers": [
+                1,
+                0,
+                0,
+                0,
+                0
+              ],
+              "strings": [
+                "",
+                ""
+              ],
+              "selectors": [
+                {
+                  "ids": [
+                    0,
+                    0,
+                    0,
+                    0,
+                    0,
+                    0,
+                    0,
+                    0,
+                    0,
+                    0,
+                    0,
+                    0
+                  ],
+                  "name": ""
+                },
+                {
+                  "ids": [
+                    0,
+                    0,
+                    0,
+                    0,
+                    0,
+                    0,
+                    0,
+                    0,
+                    0,
+                    0,
+                    0,
+                    0
+                  ],
+                  "name": ""
+                },
+                {
+                  "ids": [
+                    0,
+                    0,
+                    0,
+                    0,
+                    0,
+                    0,
+                    0,
+                    0,
+                    0,
+                    0,
+                    0,
+                    0
+                  ],
+                  "name": ""
+                }
+              ]
+            }
+          ],
+          "semanticsEvaluated": false
+        }
+      ]
+    },
+    "sourceResources": {
+      "AR0108.BCS": "6cda65c5d7229c23de7058c1dbc728c9385664850bd85ce04fea17da1ba8c4b5",
+      "BELT.BCS": "2a61646f15c7b03d9dbb71bcbdb72bf2a86363cde6ee4e7235fc481ec12f956c",
+      "BELT.DLG": "ceb7442d347dd6aefcdef013780128ed6d0ff243fcfdf6c8cba8e5b60227ae53",
+      "ENDCUT01.BCS": "71cf8118e9fd1c858fd48ea0f7a8409d7dc8d31b0131e50a0b62f557b970466c",
+      "LIIA.BCS": "814c85e6dc9429d457e6399f83dde560964df857487ede8823b59d860b401f4d",
+      "LIIA.DLG": "6fff2489574dc52aa0070fb2a25a0c0c4a483a00b4328ce00400807143cd7692",
+      "NOBLPA1.DLG": "003b7b12392fa2ea724df20322281ec522213813ba8492df46593f16c2afaf20",
+      "NOBLPA2.DLG": "a8ab7bfbef6c92b11342ee15d8ec88dbb7e9f2459e4b17c877c03ff2c8beffd8",
+      "NOBLPA3.DLG": "3882eec5dd94733c22183b6bcb2c7d2b518172782510990733a7884e3f41aadf",
+      "SAREVO.DLG": "5c12f41a181ebf902e59ee12f937f9b27ebc557c47bf87d5883a854e150dbea6"
+    }
+  },
+  "hpTriggersInPalaceAndSarevokScripts": [],
+  "limitations": [
+    "Authenticated patched original BG1 bytes are unavailable; these facts do not establish classic parity.",
+    "GameBanshee describes damage-triggered escape; audited EE records gate extraction on SarevokRun timer expiry and visibility, with no HP trigger in AR0108/SAREVOK.",
+    "Beamdog-named ar0108bd_once and bd_belt_liia globals are present in installed base scripts/dialogues; original behavior requires separate corroboration.",
+    "A replacement audit does not interpret other spell or creature effects, source AI execution, engine hardcoding, random treasure, or reward scaling.",
+    "Resource hashes identify archive bytes, not proof of runtime or complete source parity.",
+    "Ordered source actions do not prove engine queue timing: Belt dialogue is followed by four exit activations, while Liia has no such actions.",
+    "GTIMES constants are source units; map/encounter clock conversion, queued waits and expiry ordering remain unimplemented and unverified.",
+    "GDOPP7 through GDOPP75 retain RNDTRE05 as an unresolved item reference; random-treasure table expansion and resulting loot are not established.",
+    "Opcode 151 mode-zero replacement targets are factual, but transfer or removal of the disguise's inventory, gold, spells and effects remains unestablished."
+  ]
+}
