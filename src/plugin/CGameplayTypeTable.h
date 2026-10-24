@@ -41,6 +41,7 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #define FN_GAMEPLAY_TYPES(FN_TYPE, FN_WRAPPED)                                                     \
     FN_WRAPPED(CEffect, CGameObject)                                                               \
     FN_WRAPPED(CInteraction, CGameObject)                                                          \
+    FN_TYPE(CWaitState, CGameObject)                                                               \
     FN_TYPE(CItem, CMapObject, CGameObject)                                                        \
     FN_TYPE(CWeapon, CItem, CMapObject, CGameObject)                                               \
     FN_TYPE(CSmallWeapon, CWeapon, CItem, CMapObject, CGameObject)                                 \

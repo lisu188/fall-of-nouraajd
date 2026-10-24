@@ -27,6 +27,8 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #include "core/CTags.h"
 #include "core/CUtil.h"
 #include "handler/CFightHandler.h"
+#include "handler/CEventHandler.h"
+#include "object/CTrigger.h"
 #include "handler/CObjectHandler.h"
 #include "gui/CGui.h"
 #include "gui/CMovementBatch.h"
@@ -1422,6 +1424,176 @@ void testEffectTickCallbacksAndExpiryAreBounded() {
               << " callbackBudget=" << EFFECTS * TICKS << "\n";
 }
 
+class DefeatOwnershipBudgetController : public CFightController {
+  public:
+    int starts = 0;
+    int actions = 0;
+    int ends = 0;
+    void start(std::shared_ptr<CCreature>, std::shared_ptr<CCreature>) override { ++starts; }
+    bool control(std::shared_ptr<CCreature>, std::shared_ptr<CCreature>) override {
+        ++actions;
+        return false;
+    }
+    bool isCancelled(std::shared_ptr<CCreature>, std::shared_ptr<CCreature>) override { return true; }
+    void end(std::shared_ptr<CCreature>, std::shared_ptr<CCreature>) override { ++ends; }
+};
+
+void testDefeatResolutionRejectionsAndParticipantClaimsAreBounded() {
+    constexpr int RECOVERIES = 4;
+    constexpr int DUPLICATES_PER_RECOVERY = 32;
+    constexpr int OVERLAPS_PER_RECOVERY = 32;
+    auto fixture = make_open_map(5, 1);
+    auto context = fixture.game->getContext();
+    auto loop = vstd::event_loop<>::instance();
+    fixture.map->setBoolProperty("plugin_cityFixedLoot", true);
+    auto winner = make_actor(fixture, "boundedDefeatWinner", Coords(0, 0, 0), "");
+    auto loser = make_actor(fixture, "boundedDefeatLoser", Coords(1, 0, 0), "");
+    auto opponent = make_actor(fixture, "boundedDefeatOpponent", Coords(2, 0, 0), "");
+    auto independent = make_actor(fixture, "boundedIndependentActor", Coords(3, 0, 0), "");
+    auto independentOpponent = make_actor(fixture, "boundedIndependentOpponent", Coords(4, 0, 0), "");
+    for (const auto &actor : {winner, loser, opponent, independent, independentOpponent}) {
+        fixture.map->addObject(actor);
+    }
+    auto blockedController = std::make_shared<DefeatOwnershipBudgetController>();
+    auto independentController = std::make_shared<DefeatOwnershipBudgetController>();
+    winner->setFightController(blockedController);
+    opponent->setFightController(std::make_shared<DefeatOwnershipBudgetController>());
+    independent->setFightController(independentController);
+    independentOpponent->setFightController(std::make_shared<DefeatOwnershipBudgetController>());
+    bool released = false;
+    int destructions = 0;
+    fixture.map->getEventHandler()->registerTrigger(std::make_shared<CCustomTrigger>(
+        loser->getName(), "onDestroy", [&released, &destructions, loop](auto, auto) -> vstd::task<void> {
+            ++destructions;
+            co_await vstd::until(loop, [&released] { return released; });
+        }));
+    const auto pump = [&](const auto &ready) {
+        const auto deadline = std::chrono::steady_clock::now() + std::chrono::seconds(2);
+        while (!ready() && std::chrono::steady_clock::now() < deadline) {
+            loop->runReady();
+            game_async::waitForProgress();
+        }
+        return ready();
+    };
+    const auto turn = fixture.map->getTurn();
+    int duplicateRejections = 0;
+    int rejected = 0;
+    for (int recovery = 0; recovery < RECOVERIES; ++recovery) {
+        if (recovery != 0) {
+            fixture.map->addObject(loser);
+        }
+        loser->setHp(0);
+        released = false;
+        auto owner = context->spawnTask(CFightHandler::defeatedCreatureAsync(winner, loser));
+        expect_true(pump([&] { return destructions == recovery + 1 || owner.finished(); }) && !owner.finished(),
+                    "the bounded defeat owner must suspend in the real removal path");
+        const auto experience = winner->getExp();
+        const auto hp = winner->getHp();
+        const auto mana = winner->getMana();
+        const auto level = winner->getLevel();
+        for (int duplicate = 0; duplicate < DUPLICATES_PER_RECOVERY; ++duplicate) {
+            auto attempt = context->spawnTask(CFightHandler::defeatedCreatureAsync(winner, loser));
+            bool rejectedDuplicate = false;
+            if (attempt.finished()) {
+                try {
+                    attempt.get();
+                } catch (const std::logic_error &) {
+                    rejectedDuplicate = true;
+                }
+            }
+            expect_true(rejectedDuplicate && !owner.finished() && !fixture.map->tryBeginSaveSnapshot(),
+                        "a duplicate must reject without displacing the inline recovery or its lease");
+            duplicateRejections += rejectedDuplicate;
+        }
+        for (int overlap = 0; overlap < OVERLAPS_PER_RECOVERY; ++overlap) {
+            auto attempt = context->spawnTask(CFightHandler::fightManyResultAsync(winner, {opponent}));
+            expect_true(attempt.finished() && attempt.get().outcome == CFightOutcome::Cancelled,
+                        "an overlap must reject before starting any shared participant controller");
+            ++rejected;
+        }
+        expect_true(blockedController->starts == 0 && blockedController->actions == 0 && blockedController->ends == 0,
+                    "128 rejected overlaps have a deterministic zero controller-work budget");
+        const auto disjoint = CFightHandler::fightManyResult(independent, {independentOpponent});
+        expect_true(disjoint.outcome == CFightOutcome::Cancelled && independentController->starts == recovery + 1 &&
+                        independentController->actions == recovery + 1 && independentController->ends == recovery + 1,
+                    "participant ownership must allow bounded independent encounters during suspended recovery");
+        released = true;
+        expect_true(pump([&] { return owner.finished(); }), "the sole owner must drain its completed recovery");
+        if (owner.finished()) {
+            owner.get();
+        }
+        expect_true(destructions == recovery + 1 && winner->getExp() == experience && winner->getHp() == hp &&
+                        winner->getMana() == mana && winner->getLevel() == level && opponent->getHp() == 100 &&
+                        fixture.map->getObjects().size() == 4 && fixture.map->getTurn() == turn &&
+                        fixture.map->tryBeginSaveSnapshot().has_value(),
+                    "duplicate admission must add no rewards, recovery callbacks, actor state, objects or turns");
+    }
+    const auto reopened = CFightHandler::fightManyResult(winner, {opponent});
+    expect_true(duplicateRejections == RECOVERIES * DUPLICATES_PER_RECOVERY &&
+                    rejected == RECOVERIES * OVERLAPS_PER_RECOVERY && reopened.outcome == CFightOutcome::Cancelled &&
+                    blockedController->starts == 1 && blockedController->actions == 1 && blockedController->ends == 1,
+                "the last owner must release participant admission for a later ordinary encounter");
+    std::cout << "defeat ownership guard: recoveries=" << destructions << " budget=" << RECOVERIES
+              << " duplicateRejections=" << duplicateRejections
+              << " duplicateBudget=" << RECOVERIES * DUPLICATES_PER_RECOVERY << " overlaps=" << rejected
+              << " overlapBudget=" << RECOVERIES * OVERLAPS_PER_RECOVERY
+              << " rejectedControllerWork=0 disjoint=" << independentController->actions
+              << " disjointBudget=" << RECOVERIES << " actors=" << fixture.map->getObjects().size() << "\n";
+    context->shutdown();
+}
+
+class MapBindingEpochBudgetProbe : public CGameObject {
+    V_META(MapBindingEpochBudgetProbe, CGameObject, V_METHOD(MapBindingEpochBudgetProbe, onBindingChanged, void))
+
+  public:
+    int callbacks = 0;
+    void onBindingChanged() { ++callbacks; }
+};
+
+void testMapBindingEpochQueriesAndPublicationsAreBounded() {
+    constexpr int CYCLES = 128;
+    constexpr int READS_PER_CYCLE = 4;
+    CTypes::register_type_metadata<MapBindingEpochBudgetProbe, CGameObject>();
+    auto game = std::make_shared<CGame>();
+    auto first = std::make_shared<CMap>();
+    auto second = std::make_shared<CMap>();
+    first->setGame(game);
+    second->setGame(game);
+    game->setMap(first);
+    auto context = game->getContext();
+    const auto generation = context->getTransitionGeneration();
+    auto probe = std::make_shared<MapBindingEpochBudgetProbe>();
+    probe->setGame(game);
+    game->connect("mapBindingChanged", probe, "onBindingChanged");
+    auto loop = vstd::event_loop<>::instance();
+    const auto pending = loop->getPendingTaskCount();
+    const auto delayed = loop->getDelayedTaskCount();
+    const auto initial = game->getMapBindingEpoch();
+    int reads = 0;
+    for (int cycle = 0; cycle < CYCLES; ++cycle) {
+        for (int read = 0; read < READS_PER_CYCLE; ++read) {
+            expect_true(game->getMapBindingEpoch() == initial + 2 * cycle,
+                        "read-only epoch queries must not publish another map");
+            ++reads;
+        }
+        game->setMap(first);
+        game->setMap(second);
+        game->setMap(second);
+        game->setMap(first);
+    }
+    expect_true(
+        reads == CYCLES * READS_PER_CYCLE && probe->callbacks == 2 * CYCLES &&
+            game->getMapBindingEpoch() == initial + 2 * CYCLES && game->getMap() == first &&
+            context->isTransitionGenerationCurrent(generation) && loop->getPendingTaskCount() == pending &&
+            loop->getDelayedTaskCount() == delayed && first->getObjects().empty() && second->getObjects().empty(),
+        "fixed epoch queries and publications must retain exact callback, queue, generation and object budgets");
+    std::cout << "map binding epoch guard: cycles=" << CYCLES << " reads=" << reads
+              << " publications=" << game->getMapBindingEpoch() - initial << " callbacks=" << probe->callbacks
+              << " budget-publications=" << 2 * CYCLES << " budget-callbacks=" << 2 * CYCLES << '\n';
+    game->disconnect("mapBindingChanged", probe, "onBindingChanged");
+    context->shutdown();
+}
+
 void testMinimapTerrainCacheBuildsOnlyOnRelevantChanges() {
     constexpr int CACHED_FRAMES = 32;
     SDL_SetHint(SDL_HINT_VIDEODRIVER, "dummy");
@@ -1499,5 +1671,7 @@ void run_engine_hotspot_performance_tests() {
     testMonsterRoleCallbackAndStateGrowthAreBounded();
     testOctobogzPhaseCallbackAndStateGrowthAreBounded();
     testEffectTickCallbacksAndExpiryAreBounded();
+    testDefeatResolutionRejectionsAndParticipantClaimsAreBounded();
+    testMapBindingEpochQueriesAndPublicationsAreBounded();
     testMinimapTerrainCacheBuildsOnlyOnRelevantChanges();
 }

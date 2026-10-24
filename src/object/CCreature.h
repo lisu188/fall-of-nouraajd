@@ -24,6 +24,10 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #include "core/CStats.h"
 #include "object/CMapObject.h"
 
+class CFightHandler;
+class CCombatParticipantGuard;
+struct CCombatOwnership;
+
 class CInteraction;
 
 class CGameContext;
@@ -60,6 +64,8 @@ typedef std::map<std::string, std::shared_ptr<CItem>> CItemMap;
 class CCreature : public CMapObject, public CMoveable, public CVisitable {
     friend class CGameContext;
     friend class CMap;
+    friend class CFightHandler;
+    friend class CCombatParticipantGuard;
 
     V_META(CCreature, CMapObject, V_PROPERTY(CCreature, int, exp, getExp, setExp),
            V_PROPERTY(CCreature, int, gold, getGold, setGold), V_PROPERTY(CCreature, int, level, getLevel, setLevel),
@@ -354,6 +360,12 @@ class CCreature : public CMapObject, public CMoveable, public CVisitable {
     void releaseEffectReferences();
 
     void releaseEffectReferences(const std::shared_ptr<const int> &expectedOwner);
+
+    // Transient owner-thread state; absent from reflection and save data.
+    std::weak_ptr<CCombatOwnership> activeCombatOwner;
+    bool defeatResolutionInProgress = false;
+    bool defeatResolutionUncertain = false;
+    std::size_t activeDefeatRecipientCount = 0;
 
     mutable std::recursive_mutex effectOwnershipMutex;
     std::weak_ptr<CGameContext> effectOwnerContext;

@@ -27,6 +27,18 @@ ADDITIONAL_CASES = {
         "testAsyncObjectEntryTraceWaitsForHooksAndPreservesContactOnResume",
         "testEffectTickCappingAndExpiryIgnoreAllocationOrder",
         "testEffectTickLethalityTimingAndCasterIgnoreAllocationOrder",
+        "testDuplicateDefeatRejectsDuringRealLootAndRemoval",
+        "testConcurrentPlayerDefeatPublishesOnlyRecoveredReceipt",
+        "testDefeatCancellationAndFailureDrainOwnedRecovery",
+        "testRecursiveDefeatRejectsBeforeItsOwnRecovery",
+        "testOverlappingEncounterCannotStartSharedControllers",
+        "testDefeatAdmissionRefusalAndAbandonedOwnersPreserveBoundaries",
+        "testFailedOrdinaryDefeatRequiresVerifiedRestore",
+        "testDefeatCallbackShutdownKeepsContextTaskAncestry",
+        "testEncounterParticipantClaimsReleaseAfterThrowAndCancel",
+        "testEncounterOwnershipIgnoresSanitizedIneligibleCandidates",
+        "testDefeatRecoveryCertificationRejectsReplacedOrUnfinishedOwners",
+        "testInternalDefeatLeaseSurvivesParentControllerCleanup",
         "testAsyncCombatAwaitsLootWithoutPumpingOrGrantingRewardsEarly",
         "testWorkerStartedCombatDefersControllerAndPanelCreationToMain",
         "testCancelledLootSettlesStartedRewardsOnceAndSkipsQueuedCombat",
@@ -41,6 +53,22 @@ ADDITIONAL_CASES = {
         "testAsyncRemovalAwaitsDestroyHooksAndFinalizesCancellation",
         "testAsyncEventHooksStopAfterContextShutdown",
         "testAsyncCombatTraceCapturesResourcesBeforeControllerSuspension",
+        "testSaveAdmissionRejectsBeforeQuestAndGraphWork",
+        "testSaveAdmissionOwnersMovesAndSnapshots",
+        "testSaveAdmissionSurvivesMapAndGameOwnerChanges",
+        "testSaveAdmissionQuarantineRequiresVerifiedInstall",
+        "testAuthoredNativeSavePolicyIsStrictAndPrecedesObjects",
+        "testVerifiedRestoreReappliesAuthoritativeNativeSavePolicy",
+        "testVerifiedLoadResumePolicyIsStrictAndPrecedesObjects",
+        "testVerifiedLoadResumesActualFlowOnlyAfterPostedLeaseRelease",
+        "testVerifiedLoadResumeRejectsSupersededWeakBindings",
+        "testUnverifiedOrRejectedLoadsNeverDispatchResume",
+        "testWaitStateSnapshotsPreserveRemainingDurationWithoutRebasingLiveTime",
+        "testWaitStateRejectsInvalidDurationsMutationsAndDuplicateLeases",
+        "testScriptWaitFlowCompletesAndRejectsInvalidObjectArguments",
+        "testScriptWaitSurvivesFailedSaveResourceBindingWithoutDispatchingMapChanges",
+        "testScriptWaitCancellationAndMapBindingLossFreezeRemainingTime",
+        "testSyncScriptWaitReleasesTheFinalGameOwner",
     ),
     "map": (
         "testNewSessionClearsQuitLatch",
@@ -52,6 +80,12 @@ ADDITIONAL_CASES = {
         "testMapMoveRejectsPlayerPlanSuspendedBeforeCommit",
         "testMapMoveRejectsPlayerPlanSuspendedDuringLeaveHook",
         "testMapPausedPlayerControllerRoundTripsWithoutReset",
+        "testMapPermanentPlayerDeathPreservesOptInNativeDefeat",
+        "testMapPermanentPlayerDeathRoundTripsThroughNativeSerialization",
+        "testDefeatedPlayerSurvivesNativeSavedMapRestorationWithoutResurrection",
+        "testDefeatedPlayerRestorationRejectsInvalidAliasesWithoutChangingTheActiveMap",
+        "testMapTerminalPlayerSettersPreserveInstalledSnapshot",
+        "testExplicitPlayerReplacementReleasesRetainedTerminalOwnership",
         "test_scene_manager_awaits_preparation_and_rolls_back_errors",
         "testSceneCompletionOwnsSkippedLazyChildren",
         "testSceneCommitRunsAfterPreparationAndBeforeQueuedObservers",
@@ -63,6 +97,286 @@ ADDITIONAL_CASES = {
 
 
 class NativeTestProfileSourceTest(unittest.TestCase):
+
+    def testDirectEncounterAdmissionUsesAnArmedTopLevelSnapshotProbe(self):
+        source = (ROOT / "tests/unit/test_allied_combat.cpp").read_text(encoding="utf-8")
+        self.assertIn("class EncounterAdmissionSnapshotMap : public CMap", source)
+        probe = source.split("class EncounterAdmissionSnapshotMap : public CMap", 1)[1].split("struct Fixture", 1)[0]
+        self.assertEqual(2, probe.count("stopArmedGraph();"))
+        self.assertEqual(2, probe.count("return CMap::meta();"))
+        self.assertIn("if (std::exchange(stopNextGraph, false))", probe)
+        self.assertIn("++graphVisits;", probe)
+        self.assertIn("intentional top-level encounter snapshot stop before resource writes", probe)
+        direct = source.split("void testDirectEncounterSaveAdmissionAndLegacyDefault() {", 1)[1].split("\n}\n", 1)[0]
+        self.assertIn("auto observedMap = std::make_shared<EncounterAdmissionSnapshotMap>();", direct)
+        self.assertIn("Fixture fixture(observedMap);", direct)
+        self.assertEqual(2, direct.count("observedMap->meta() == observedMap->CMap::meta()"))
+        self.assertIn("work.graph->visits == 0", direct)
+
+    def testDirectEncounterAdmissionProbeIsScopedToTheRealSaveAttempt(self):
+        source = (ROOT / "tests/unit/test_allied_combat.cpp").read_text(encoding="utf-8")
+        self.assertIn("explicit Fixture(std::shared_ptr<CMap> providedMap = {})", source)
+        fixture = source.split("struct Fixture", 1)[1].split("std::shared_ptr<ProbeController> probe(", 1)[0]
+        self.assertIn("if (providedMap)", fixture)
+        self.assertLess(fixture.index("game->setMap(providedMap)"), fixture.index("hero = std::make_shared<CPlayer>"))
+        work = source.split("struct EncounterAdmissionWork", 1)[1].split("class EncounterAdmissionEffect", 1)[0]
+        self.assertIn("std::dynamic_pointer_cast<EncounterAdmissionSnapshotMap>(map)", work)
+        self.assertIn("owner->stopNextGraph = true;", work)
+        self.assertIn("~SnapshotGraphStop()", work)
+        self.assertIn("owner->stopNextGraph = false;", work)
+        self.assertLess(work.index("} graphStop(map);"), work.index("CMapLoader::saveWithResult(map,"))
+        self.assertEqual(1, work.count("CMapLoader::saveWithResult(map,"))
+        self.assertIn("an encounter save must reject or hit the intentional graph stop without writing", work)
+
+    def testDirectEncounterAdmissionKeepsFiveBoundariesAndExactWorkBudgets(self):
+        source = (ROOT / "tests/unit/test_allied_combat.cpp").read_text(encoding="utf-8")
+        direct = source.split("void testDirectEncounterSaveAdmissionAndLegacyDefault() {", 1)[1].split("\n}\n", 1)[0]
+        self.assertIn("for (const bool optedIn : {false, true})", direct)
+        self.assertEqual(5, direct.count("work.attempt();"))
+        self.assertRegex(
+            direct, r"work\.quest->captures == expectedWork\s*&&\s*observedMap->graphVisits == expectedWork"
+        )
+        for callback in (
+            "fixture.heroController->starting",
+            "probe(enemy)->starting",
+            "fixture.heroController->action",
+            "fixture.heroController->ending",
+            "probe(enemy)->ending",
+        ):
+            self.assertIn(callback, direct)
+        for obligation in (
+            "const int expectedWork = optedIn ? 0 : 5;",
+            "result.outcome == CFightOutcome::Cancelled",
+            "work.attempts == 5",
+            "work.quest->captures == expectedWork",
+            "observedMap->graphVisits == expectedWork",
+            "fixture.heroController->ends == 1",
+            "probe(enemy)->ends == 1",
+            "fixture.map->tryBeginSaveSnapshot().has_value()",
+        ):
+            self.assertIn(obligation, direct)
+        for diagnostic in (
+            "optedIn=%d",
+            "outcome=%d",
+            "attempts=%d",
+            "journal=%d",
+            "graph=%d",
+            "nestedGraph=%d",
+            "starts=%d/%d",
+            "actions=%d/%d",
+            "ends=%d/%d",
+            "expectedWork=%d",
+            "armed=%d",
+        ):
+            self.assertIn(diagnostic, direct)
+
+    def testVerifiedResumeFixtureUsesAnAuthoredConfiguration(self):
+        handler = (ROOT / "tests/unit/test_handler.cpp").read_text(encoding="utf-8")
+        resume = handler.split("struct VerifiedResumeFixture {", 1)[1].split("\nint main() {", 1)[0]
+        constructor = resume.split("    VerifiedResumeFixture() {", 1)[1].split("    void cleanup(", 1)[0]
+        map_name = re.findall(r'game->getMap\(\)->setMapName\("([^"]+)"\);', constructor)
+        self.assertEqual(["test"], map_name)
+        configuration = f"maps/{map_name[0]}/map.json"
+        self.assertTrue((ROOT / "res" / configuration).is_file(), configuration)
+        self.assertEqual([configuration] * 3, re.findall(r'getConfiguration\("([^"]+)"\)', resume))
+        self.assertLess(constructor.index("setMapName("), constructor.index("getConfiguration("))
+        self.assertLess(constructor.index("getConfiguration("), constructor.index("CMapLoader::saveWithResult("))
+
+    def testVerifiedResumeConsumersStopWhenNativeFixtureSetupFails(self):
+        handler = (ROOT / "tests/unit/test_handler.cpp").read_text(encoding="utf-8")
+        resume = handler.split("struct VerifiedResumeFixture {", 1)[1].split("\nint main() {", 1)[0]
+        constructor = resume.split("    VerifiedResumeFixture() {", 1)[1].split("    void cleanup(", 1)[0]
+        self.assertIn("bool ready = false;", resume.split("VerifiedResumeFixture()", 1)[0])
+        self.assertIn("if (!authored || !authored->is_object()) {\n            return;\n        }", constructor)
+        self.assertEqual(1, constructor.count("ready = CMapLoader::saveWithResult(game->getMap(), slot);"))
+        self.assertIn('expect_true(ready, "resume fixture must use an actual native save");', constructor)
+        for name in (
+            "testVerifiedLoadResumesActualFlowOnlyAfterPostedLeaseRelease",
+            "testVerifiedLoadResumeRejectsSupersededWeakBindings",
+            "testUnverifiedOrRejectedLoadsNeverDispatchResume",
+        ):
+            body = resume.split(f"void {name}() {{", 1)[1].split("\n}\n", 1)[0]
+            self.assertRegex(
+                body,
+                r"VerifiedResumeFixture fixture;\s+if \(!fixture\.ready\) \{\s+"
+                r"fixture\.cleanup\(false\);\s+return;\s+\}",
+                name,
+            )
+            self.assertLess(body.index("if (!fixture.ready)"), body.index("fixture.game"), name)
+        self.assertEqual(3, resume.count("if (!fixture.ready)"))
+
+    def testVerifiedResumeFixtureKeepsAllInstallationAndRejectionCases(self):
+        handler = (ROOT / "tests/unit/test_handler.cpp").read_text(encoding="utf-8")
+        resume = handler.split("struct VerifiedResumeFixture {", 1)[1].split("\nint main() {", 1)[0]
+        self.assertIn("constexpr int INSTALLATIONS = 8;", resume)
+        self.assertIn("for (int index = 0; index < INSTALLATIONS; ++index)", resume)
+        self.assertIn("const bool backup_recovery = index == INSTALLATIONS / 2;", resume)
+        self.assertIn("for (int mode = 0; mode < 6; ++mode)", resume)
+        self.assertIn("for (int mode = 0; mode < 7; ++mode)", resume)
+        self.assertIn("seven rejected, unverified or disabled load paths have a zero authored-dispatch budget", resume)
+        main = handler[handler.rindex("int main() {") :]
+        for name in (
+            "testVerifiedLoadResumePolicyIsStrictAndPrecedesObjects",
+            "testVerifiedLoadResumesActualFlowOnlyAfterPostedLeaseRelease",
+            "testVerifiedLoadResumeRejectsSupersededWeakBindings",
+            "testUnverifiedOrRejectedLoadsNeverDispatchResume",
+        ):
+            self.assertEqual(1, len(re.findall(rf'nativeTestProfile\(\)\.run\("{name}",', main)), name)
+
+    def testDefeatOwnershipStaysInlineAndRejectsDuplicatesBeforeEffects(self):
+        source = (ROOT / "src/handler/CFightHandler.cpp").read_text(encoding="utf-8")
+        self.assertIn("vstd::task<void> CFightHandler::resolveOwnedDefeatAsync(", source)
+        public = source.split("vstd::task<void> CFightHandler::defeatedCreatureAsync(", 1)[1]
+        public = public.split("vstd::task<void> CFightHandler::resolveOwnedDefeatAsync(", 1)[0]
+        self.assertIn("return resolveOwnedDefeatAsync(std::move(a), std::move(b), {});", public)
+        owned = source.split("vstd::task<void> CFightHandler::resolveOwnedDefeatAsync(", 1)[1]
+        self.assertNotIn("task_group", source)
+        self.assertNotIn("task_detail", source)
+        self.assertIn("defeat recovery already owns a participant", owned)
+        self.assertLess(owned.index("b->defeatResolutionInProgress"), owned.index("a->addExpScaled("))
+        self.assertLess(owned.index("b->defeatResolutionInProgress = true;"), owned.index("a->addExpScaled("))
+        self.assertIn("b->defeatResolutionInProgress = false;", owned)
+
+    def testPrivateEncounterFinalizerRequiresBothParticipantClaims(self):
+        source = (ROOT / "src/handler/CFightHandler.cpp").read_text(encoding="utf-8")
+        header = (ROOT / "src/handler/CFightHandler.h").read_text(encoding="utf-8")
+        self.assertIn("  private:", header)
+        private = header.split("  private:", 1)[1]
+        self.assertIn("resolveOwnedDefeatAsync", private)
+        self.assertNotIn("encounterOwner", header.split("  private:", 1)[0])
+        self.assertIn("winnerClaim != encounterOwner || loserClaim != encounterOwner", source)
+        self.assertEqual(2, source.count("co_await CCombatParticipantGuard::resolveDefeat("))
+        self.assertEqual(
+            15,
+            len(
+                re.findall(
+                    r"co_await (?:resolve_defeat_async|defeat_attacker_async|remove_dead_allies_async|remove_dead_opponents_async)\([^;]*?encounterOwner\)",
+                    source,
+                )
+            ),
+        )
+        creature = (ROOT / "src/object/CCreature.h").read_text(encoding="utf-8")
+        reflected = creature.split("V_META(CCreature,", 1)[1].split("  public:", 1)[0]
+        for name in (
+            "activeCombatOwner",
+            "defeatResolutionInProgress",
+            "defeatResolutionUncertain",
+            "activeDefeatRecipientCount",
+        ):
+            self.assertNotIn(name, reflected)
+            self.assertIn(name, creature.split("  private:", 1)[1])
+
+    def testParticipantClaimsPrecedeStatusAndControllerCallbacks(self):
+        source = (ROOT / "src/handler/CFightHandler.cpp").read_text(encoding="utf-8")
+        body = source.split("vstd::task<CFightResult> resolveFightManyAsync(", 1)[1]
+        body = body.split("vstd::task<CFightResult> resolveConfiguredFightAsync(", 1)[0]
+        self.assertIn("CCombatParticipantGuard participantGuard(", body)
+        claim = body.index("CCombatParticipantGuard participantGuard(")
+        early = body.split("{", 1)[1].split("auto encounterMap =", 1)[0]
+        self.assertNotIn("encounterOpponents", early)
+        self.assertNotIn("encounterAllies", early)
+        for boundary in (
+            "clear_combat_status(encounterMap)",
+            "CFightHandler::resetCombatHistory(encounterMap)",
+            "attackerController->setOpponents(",
+            "FightControllerEndGuard controllerEndGuard;",
+        ):
+            self.assertLess(claim, body.index(boundary), boundary)
+        self.assertIn("participants.insert(participants.end(), allies.begin(), allies.end());", body)
+        self.assertIn("participant->activeCombatOwner.lock() == identity", source)
+        self.assertIn("participant->activeDefeatRecipientCount != 0", source)
+
+    def testActualDefeatLeaseAndUncertaintyCoverEveryMapThroughRecovery(self):
+        source = (ROOT / "src/handler/CFightHandler.cpp").read_text(encoding="utf-8")
+        self.assertIn("vstd::task<void> CFightHandler::resolveOwnedDefeatAsync(", source)
+        owned = source.split("vstd::task<void> CFightHandler::resolveOwnedDefeatAsync(", 1)[1]
+        self.assertIn("auto admission = encounterMap->tryBeginUnsafeOperation();", owned)
+        self.assertLess(
+            owned.index("auto admission = encounterMap->tryBeginUnsafeOperation();"), owned.index("a->addExpScaled(")
+        )
+        self.assertNotIn('getBoolProperty("guardNativeEncounterSaves")', owned)
+        self.assertIn("if (!workStarted || (recoverySettled && admission->isCurrent()))", owned)
+        self.assertLess(owned.index("b->defeatResolutionUncertain = true;"), owned.index("a->addExpScaled("))
+        self.assertLess(
+            owned.index('b->setStringProperty("uiDefeatReceipt", receipt.dump());'),
+            owned.index("recoverySettled = true;"),
+        )
+        self.assertLess(owned.index("recoverySettled = true;"), owned.index("b->defeatResolutionUncertain = false;"))
+        after_loot = owned.split("co_await rng->addRandomLootAsync(a, items);", 1)[1]
+        self.assertLess(after_loot.index("!ownerIsCurrent()"), after_loot.index("encounterMap->removeObjectAsync(b)"))
+        after_removal = after_loot.split("co_await encounterMap->removeObjectAsync(b);", 1)[1]
+        self.assertIn("const auto recoveryIsComplete = [&]", after_removal)
+        self.assertIn("!a->isAlive() || !is_registered_on_map(encounterMap, a)", after_removal)
+        self.assertIn(
+            "encounterMap->player == b && b->isAlive() && is_registered_on_map(encounterMap, b)", after_removal
+        )
+        self.assertIn(
+            "encounterMap->getDefeatedPlayer() == b && encounterMap->hasRetainedTerminalPlayer()", after_removal
+        )
+        self.assertIn("std::ranges::none_of(encounterMap->getObjects()", after_removal)
+        self.assertLess(after_removal.index("if (!recoveryIsComplete())"), after_removal.index("json receipt = {"))
+        after_receipt = after_removal.split('b->setStringProperty("uiDefeatReceipt", receipt.dump());', 1)[1]
+        self.assertLess(after_receipt.index("!recoveryIsComplete()"), after_receipt.index("if (showDefeat)"))
+        self.assertIn("encounterOwner->defeatAdmission.emplace(std::move(*admission));", owned)
+        settle = source.split("const auto settle_result = [&](CFightResult value) {", 1)[1].split("return value;", 1)[0]
+        self.assertLess(settle.index("certifyCleanup();"), settle.index("ownedParticipants->settleDefeatAdmission();"))
+        self.assertIn("std::optional<CGameContext::UnsafeOperationLease> defeatAdmission;", source)
+        self.assertIn("DefeatScopeExit(const DefeatScopeExit &) = delete;", source)
+        self.assertIn("DefeatScopeExit(DefeatScopeExit &&) = delete;", source)
+
+    def testDefeatRacesExerciseRealRewardRemovalAndShutdownCallbacks(self):
+        source = (ROOT / "tests/unit/test_handler.cpp").read_text(encoding="utf-8")
+        for name in (
+            "testDuplicateDefeatRejectsDuringRealLootAndRemoval",
+            "testConcurrentPlayerDefeatPublishesOnlyRecoveredReceipt",
+            "testDefeatCancellationAndFailureDrainOwnedRecovery",
+            "testRecursiveDefeatRejectsBeforeItsOwnRecovery",
+            "testOverlappingEncounterCannotStartSharedControllers",
+            "testDefeatAdmissionRefusalAndAbandonedOwnersPreserveBoundaries",
+            "testFailedOrdinaryDefeatRequiresVerifiedRestore",
+            "testDefeatCallbackShutdownKeepsContextTaskAncestry",
+            "testEncounterParticipantClaimsReleaseAfterThrowAndCancel",
+            "testEncounterOwnershipIgnoresSanitizedIneligibleCandidates",
+            "testDefeatRecoveryCertificationRejectsReplacedOrUnfinishedOwners",
+            "testInternalDefeatLeaseSurvivesParentControllerCleanup",
+        ):
+            self.assertIn(f"void {name}() {{", source)
+            self.assertEqual(1, source.count(f'nativeTestProfile().run("{name}",'))
+        self.assertIn("co_await nativeRestart->triggerAsync(object, event);", source)
+        self.assertIn('receipt.at("hp").get<int>() == 1', source)
+        self.assertIn("for (const bool optedIn : {false, true})", source)
+        self.assertIn("for (const int mode : {0, 1, 2, 3})", source)
+        self.assertIn("owner->end_count == 1 && rejected->start_count == 0 && rejected->end_count == 0", source)
+        self.assertIn("context->shutdown();\n            callbackReturned = true;", source)
+        self.assertIn("weakLoser.expired()", source)
+        self.assertIn("for (int mode = 0; mode < 7; ++mode)", source)
+        self.assertIn("auto nativeRestart = std::make_shared<CCustomTrigger>(*registeredRestart);", source)
+        self.assertRegex(source, r"\*registeredRestart\s*=\s*CCustomTrigger\(")
+        recovery = source.split("void testConcurrentPlayerDefeatPublishesOnlyRecoveredReceipt() {", 1)[1]
+        recovery = recovery.split("void testDefeatCancellationAndFailureDrainOwnedRecovery()", 1)[0]
+        self.assertLess(recovery.index("auto player = add_test_player(game);"), recovery.index("player->setHp(-500);"))
+        self.assertNotIn("getPlayer()", recovery.split("co_await nativeRestart->triggerAsync(object, event);", 1)[1])
+        self.assertIn("startSaveAllowed == !optedIn && !endSaveAllowed", source)
+
+    def testDefeatRejectionGuardKeepsFixedDeterministicWorkBudgets(self):
+        source = (ROOT / "tests/unit/test_engine_hotspot_performance.cpp").read_text(encoding="utf-8")
+        self.assertIn("void testDefeatResolutionRejectionsAndParticipantClaimsAreBounded() {", source)
+        body = source.split("void testDefeatResolutionRejectionsAndParticipantClaimsAreBounded() {", 1)[1]
+        body = body.split("void testMinimapTerrainCacheBuildsOnlyOnRelevantChanges()", 1)[0]
+        for literal in (
+            "constexpr int RECOVERIES = 4;",
+            "constexpr int DUPLICATES_PER_RECOVERY = 32;",
+            "constexpr int OVERLAPS_PER_RECOVERY = 32;",
+            "duplicateRejections += rejectedDuplicate;",
+            "duplicateRejections == RECOVERIES * DUPLICATES_PER_RECOVERY",
+            "blockedController->starts == 0 && blockedController->actions == 0 && blockedController->ends == 0",
+            "winner->getExp() == experience && winner->getHp() == hp",
+            "fixture.map->getObjects().size() == 4 && fixture.map->getTurn() == turn",
+            "independentController->actions == recovery + 1",
+        ):
+            self.assertIn(literal, body)
+        self.assertEqual(1, source.count("    testDefeatResolutionRejectionsAndParticipantClaimsAreBounded();"))
+
     def testConfiguredFixtureIsRequiredByNativeAndGameplayValidation(self):
         import test as runner
 

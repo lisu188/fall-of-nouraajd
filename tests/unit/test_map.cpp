@@ -25,8 +25,10 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #include "core/CPlaytestTrace.h"
 #include "core/CProvider.h"
 #include "core/CSceneManager.h"
+#include "core/CSaveFormat.h"
 #include "core/CSerialization.h"
 #include "core/CStats.h"
+#include "core/CTags.h"
 #include "core/CTypes.h"
 #include "handler/CEventHandler.h"
 #include "handler/CObjectHandler.h"
@@ -2091,6 +2093,512 @@ void test_map_player_trigger_registration_is_idempotent() {
     expect_true(map->getPlayer() == second_player, "setPlayer should still replace the active player");
 }
 
+void testMapPermanentPlayerDeathPreservesOptInNativeDefeat() {
+    auto game = nativeTestProfile().run("CGameLoader::loadGame", [] { return CGameLoader::loadGame(); });
+    for (const bool permanent_death : {false, true}) {
+        auto map = std::make_shared<CMap>();
+        map->setGame(game);
+        game->setMap(map);
+        map->setXBounds({{0, 2}});
+        map->setYBounds({{0, 0}});
+        expect_true(!map->getPermanentPlayerDeath() && !map->getBoolProperty("permanentPlayerDeath"),
+                    "ordinary maps must retain player recovery by default");
+
+        auto player = std::make_shared<CPlayer>();
+        player->setGame(game);
+        player->setBaseStats(creature_stats());
+        player->getBaseStats()->setAgility(30);
+        player->setLevel(1);
+        player->setHp(player->getHpMax());
+        map->setPlayer(player);
+        player->relocateWithoutMoveHooks(Coords(1, 0, 0));
+        player->setFightController(std::make_shared<PostCombatSelfDefeatFightController>());
+        // Read the live map policy when destruction occurs, including changes after trigger registration.
+        map->setBoolProperty("permanentPlayerDeath", permanent_death);
+        auto enemy = add_post_combat_hostile(game, "permanentDeathEnemy", Coords(2, 0, 0));
+        int destroyed = 0;
+        map->getEventHandler()->registerTrigger(
+            std::make_shared<CCustomTrigger>("player", "onDestroy", [&destroyed](auto, auto) { ++destroyed; }));
+
+        const auto result = CFightHandler::fightManyResult(player, {enemy});
+        expect_true(result.outcome == CFightOutcome::AttackerDefeat && !result.attackerSucceeded() && enemy->isAlive(),
+                    "both death policies must preserve the real native attacker-defeat result");
+        expect_true(destroyed == 1 && map->getPlayer() == player,
+                    "player destruction must still dispatch once and retain its exact cached identity");
+        if (permanent_death) {
+            expect_true(!player->isAlive() && player->getHp() == 0 && !map->getObjectByName("player") &&
+                            player->getCoords() == Coords(1, 0, 0) && map->getDefeatedPlayer() == player,
+                        "opted-in native defeat must leave the real hero dead, removed and at the death location");
+        } else {
+            expect_true(player->isAlive() && player->getHp() == 1 && !map->getDefeatedPlayer() &&
+                            map->getObjectByName("player") == player && player->getCoords() == map->getEntry(),
+                        "the default death policy must recover the same player at its entry with one HP");
+        }
+    }
+    game->getContext()->shutdown();
+}
+
+void testMapPermanentPlayerDeathRoundTripsThroughNativeSerialization() {
+    auto game = nativeTestProfile().run("CGameLoader::loadGame", [] { return CGameLoader::loadGame(); });
+    using MapJson = CSerializerFunction<std::shared_ptr<json>, std::shared_ptr<CGameObject>>;
+    for (const bool permanent_death : {false, true}) {
+        auto map = std::make_shared<CMap>();
+        map->setGame(game);
+        map->setBoolProperty("permanentPlayerDeath", permanent_death);
+        auto document = MapJson::serialize(map);
+        const auto &stored_policy = document->at("properties").at("permanentPlayerDeath");
+        expect_true(stored_policy.is_boolean() && stored_policy.get<bool>() == permanent_death,
+                    "map snapshots must persist the opt-in death policy as a typed boolean");
+        auto restored = std::dynamic_pointer_cast<CMap>(MapJson::deserialize(game, document));
+        expect_true(restored && restored->getPermanentPlayerDeath() == permanent_death &&
+                        restored->getBoolProperty("permanentPlayerDeath") == permanent_death,
+                    "loading a map snapshot must preserve either player-death policy");
+
+        auto legacy_document = std::make_shared<json>(*document);
+        legacy_document->at("properties").erase("permanentPlayerDeath");
+        auto legacy = std::dynamic_pointer_cast<CMap>(MapJson::deserialize(game, legacy_document));
+        expect_true(legacy && !legacy->getPermanentPlayerDeath(),
+                    "older map snapshots without a death policy must keep ordinary player recovery");
+    }
+    game->getContext()->shutdown();
+}
+
+void testDefeatedPlayerSurvivesNativeSavedMapRestorationWithoutResurrection() {
+    auto game = CGameLoader::loadGame();
+    CGameLoader::startGameWithPlayer(game, "empty", "Warrior");
+    auto map = game->getMap();
+    auto player = map->getPlayer();
+    map->setPermanentPlayerDeath(true);
+    player->setItems({});
+    player->setEquipped({});
+    const auto make_item = [&](const std::string &name) {
+        auto item = std::make_shared<CItem>();
+        item->setGame(game);
+        item->setName(name);
+        item->setTypeId(name);
+        return item;
+    };
+    auto carried = make_item("defeatedCarriedItem");
+    carried->addTag(CTag::Quest);
+    auto transferred = make_item("defeatedTransferredItem");
+    auto equipped = std::make_shared<CWeapon>();
+    equipped->setGame(game);
+    equipped->setName("defeatedEquippedItem");
+    equipped->setTypeId("defeatedEquippedItem");
+    player->setItems({carried, transferred});
+    player->setEquipped({{"0", equipped}});
+    player->setGold(37);
+    player->setNumericProperty("exp", 43);
+    player->getBaseStats()->setAgility(30);
+    player->relocateWithoutMoveHooks(Coords(1, 0, 0));
+    player->setFightController(std::make_shared<PostCombatSelfDefeatFightController>());
+    auto enemy = add_post_combat_hostile(game, "defeatedPlayerWitness", Coords(2, 0, 0));
+    int destroyed = 0;
+    map->getEventHandler()->registerTrigger(
+        std::make_shared<CCustomTrigger>("player", "onDestroy", [&destroyed](auto, auto) { ++destroyed; }));
+    const auto defeat = CFightHandler::fightManyResult(player, {enemy});
+    expect_true(defeat.outcome == CFightOutcome::AttackerDefeat && !player->isAlive() &&
+                    map->getDefeatedPlayer() == player && !map->getObjectByName("player"),
+                "the saved fixture must begin with the actual dead hero removed by native combat");
+    expect_true(player->getItems() == std::set<std::shared_ptr<CItem>>{carried} && enemy->hasInInventory(transferred),
+                "permanent death must retain protected quest possessions and preserve ordinary defeat transfer");
+    auto other_map = std::make_shared<CMap>();
+    other_map->setGame(game);
+    const auto after_defeat_revision = map->getNavigationRevision();
+    game->setMap(other_map);
+    expect_true(map->getPlayer() == player && map->getDefeatedPlayer() == player && player->getMap() == map &&
+                    !player->isAlive() && !map->getObjectByName("player") && destroyed == 1 &&
+                    map->getNavigationRevision() == after_defeat_revision,
+                "an active-map switch must preserve the exact terminal owner without recovery or repeated events");
+    game->setMap(map);
+    map->setObjectProperty<CGameObject>("terminalPlayerAlias", player);
+    const auto slot =
+        "native-defeated-player-" + std::to_string(std::chrono::steady_clock::now().time_since_epoch().count());
+    const bool saved = CMapLoader::saveWithResult(map, slot);
+    expect_true(saved, "the existing save envelope must accept the retained dead player graph");
+    if (!saved) {
+        game->getContext()->shutdown();
+        return;
+    }
+    auto restored_game = CGameLoader::loadGame();
+    CGameLoader::startGameWithPlayer(restored_game, "empty", "Warrior");
+    auto previous = restored_game->getMap();
+    CGameLoader::loadSavedGame(restored_game, slot);
+    auto restored = restored_game->getMap();
+    auto actual = restored->getPlayer();
+    const bool valid_player =
+        restored != previous && actual && actual != player && restored->getPermanentPlayerDeath() &&
+        !actual->isAlive() && actual->getHp() == 0 && actual->getName() == "player" &&
+        actual->getGame() == restored_game && actual->getMap() == restored && !restored->getObjectByName("player") &&
+        restored->getDefeatedPlayer() == actual &&
+        restored->getObjectProperty<CGameObject>("terminalPlayerAlias") == actual &&
+        actual->getCoords() == Coords(1, 0, 0) && actual->getGold() == 37 && actual->getNumericProperty("exp") == 43;
+    expect_true(valid_player, "native saved-map restoration must adopt one dead hero without insertion or recovery");
+    bool valid_items = false;
+    if (valid_player) {
+        const auto bag = actual->getItems();
+        const auto worn = actual->getEquipped();
+        valid_items = bag.size() == 1 && worn.size() == 1 && worn.contains("0") && worn.at("0") &&
+                      (*bag.begin())->getName() == carried->getName() &&
+                      worn.at("0")->getName() == equipped->getName() && *bag.begin() != worn.at("0") &&
+                      !std::dynamic_pointer_cast<CPlayerFightController>(actual->getFightController());
+        const auto revision = restored->getNavigationRevision();
+        const auto count = restored->getObjects().size();
+        const auto trigger_count = count_player_event_triggers(restored);
+        for (int repeat = 0; repeat < 128; ++repeat) {
+            valid_items = valid_items && restored->getPlayer() == actual;
+        }
+        valid_items = valid_items && restored->getNavigationRevision() == revision &&
+                      restored->getObjects().size() == count && count == 1 && actual->getGold() == 37 &&
+                      actual->getNumericProperty("exp") == 43 && count_player_event_triggers(restored) == trigger_count;
+    }
+    expect_true(valid_items, "repeated terminal-player lookup must preserve ownership, equipment and registry counts");
+    const auto resources = game->getResourcesProvider();
+    using MapJson = CSerializerFunction<std::shared_ptr<json>, std::shared_ptr<CGameObject>>;
+    auto snapshot = MapJson::serialize(map);
+    const auto &retained = snapshot->at("properties").at("defeatedPlayer");
+    expect_true(retained.is_object() &&
+                    (retained.contains("effectActorId") || retained.contains("effectActorReference")),
+                "the actual dead hero must be present in the existing actor graph before invalid-save checks");
+    if (!retained.is_object() || (!retained.contains("effectActorId") && !retained.contains("effectActorReference"))) {
+        restored_game->getContext()->shutdown();
+        game->getContext()->shutdown();
+        return;
+    }
+    const int player_id =
+        retained.at(retained.contains("effectActorId") ? "effectActorId" : "effectActorReference").get<int>();
+    const auto find_definition = [player_id](json &document) {
+        json *found = nullptr;
+        std::vector<json *> pending{&document};
+        while (!pending.empty()) {
+            auto node = pending.back();
+            pending.pop_back();
+            if (node->is_object()) {
+                if (node->contains("effectActorId") && node->at("effectActorId").is_number_integer() &&
+                    node->at("effectActorId").get<int>() == player_id) {
+                    if (found) {
+                        return static_cast<json *>(nullptr);
+                    }
+                    found = node;
+                }
+                for (auto &entry : node->items()) {
+                    pending.push_back(&entry.second);
+                }
+            } else if (node->is_array()) {
+                for (auto &entry : *node) {
+                    pending.push_back(&entry);
+                }
+            }
+        }
+        return found;
+    };
+    bool rejected_all = valid_player;
+    std::vector<std::string> owned_slots{slot};
+    if (valid_player) {
+        for (const std::string invalid : {"disabled", "alive", "name", "registered", "registeredOnly", "malformed"}) {
+            auto document = std::make_shared<json>(*snapshot);
+            auto &properties = document->at("properties");
+            auto definition = find_definition(*document);
+            expect_true(definition != nullptr, "the saved graph must define the exact retained player once");
+            if (!definition) {
+                rejected_all = false;
+                continue;
+            }
+            const json reference{{"class", definition->at("class")}, {"effectActorReference", player_id}};
+            if (invalid == "disabled") {
+                properties["permanentPlayerDeath"] = false;
+            } else if (invalid == "alive") {
+                (*definition)["properties"]["hp"] = 1;
+            } else if (invalid == "name") {
+                (*definition)["properties"]["name"] = "notPlayer";
+            } else if (invalid == "registered") {
+                properties["objects"][properties["objects"].size()] = reference;
+            } else if (invalid == "registeredOnly") {
+                const auto actor_definition = *definition;
+                *definition = reference;
+                properties["defeatedPlayer"] = nullptr;
+                properties["objects"][properties["objects"].size()] = actor_definition;
+            } else {
+                properties["defeatedPlayer"] = 42;
+            }
+            const auto invalid_slot = slot + "-" + invalid;
+            owned_slots.push_back(invalid_slot);
+            auto envelope = CSaveFormat::buildEnvelope(document, map->getMapName());
+            const bool written = envelope && resources->save(CSaveFormat::primaryPath(invalid_slot), *envelope);
+            expect_true(written, "the malformed-player regression must reach actual saved-map loading");
+            if (!written) {
+                rejected_all = false;
+                continue;
+            }
+            CGameLoader::loadSavedGame(restored_game, invalid_slot);
+            const bool rejected = restored_game->getMap() == restored && restored->getPlayer() == actual &&
+                                  restored->getDefeatedPlayer() == actual && !actual->isAlive() &&
+                                  !restored->getObjectByName("player");
+            expect_true(rejected, "invalid defeated-player saves must preserve the exact active terminal map and hero");
+            rejected_all = rejected_all && rejected;
+        }
+    }
+    if (valid_player && valid_items && rejected_all) {
+        for (const auto &owned_slot : owned_slots) {
+            for (const auto &path : {CSaveFormat::primaryPath(owned_slot), CSaveFormat::backupPath(owned_slot)}) {
+                const auto actual_path = resources->getPath(path);
+                if (!actual_path.empty()) {
+                    std::filesystem::remove(actual_path);
+                }
+            }
+        }
+    }
+    restored_game->getContext()->shutdown();
+    game->getContext()->shutdown();
+}
+
+void testDefeatedPlayerRestorationRejectsInvalidAliasesWithoutChangingTheActiveMap() {
+    auto game = CGameLoader::loadGame();
+    CGameLoader::startGameWithPlayer(game, "empty", "Warrior");
+    auto active = game->getMap();
+    auto active_player = active->getPlayer();
+    auto foreign_game = CGameLoader::loadGame();
+    auto foreign_map = std::make_shared<CMap>();
+    foreign_map->setGame(game);
+    auto owned_player = std::make_shared<CPlayer>();
+    owned_player->setGame(game);
+    owned_player->setBaseStats(creature_stats());
+    foreign_map->setPlayer(owned_player);
+    owned_player->setHp(0);
+    for (const std::string invalid : {"disabled", "alive", "name", "foreignGame", "foreignMap", "registered"}) {
+        auto candidate = std::make_shared<CMap>();
+        candidate->setGame(game);
+        candidate->setPermanentPlayerDeath(invalid != "disabled");
+        auto alias = std::make_shared<CPlayer>();
+        alias->setGame(invalid == "foreignGame" ? foreign_game : game);
+        alias->setName(invalid == "name" ? "otherPlayer" : "player");
+        alias->setBaseStats(creature_stats());
+        alias->setHp(invalid == "alive" ? 1 : 0);
+        if (invalid == "foreignMap") {
+            alias = owned_player;
+        }
+        if (invalid == "registered") {
+            auto conflict = std::make_shared<CPlayer>();
+            conflict->setGame(game);
+            conflict->setBaseStats(creature_stats());
+            candidate->setPlayer(conflict);
+        }
+        candidate->setDefeatedPlayer(alias);
+        std::string error;
+        expect_true(!candidate->restorePlayerAfterLoad(error) && !error.empty() && game->getMap() == active &&
+                        active->getPlayer() == active_player && !candidate->getObjectByName("otherPlayer"),
+                    "invalid defeated-player aliases must fail restoration without publishing or moving a player");
+        if (invalid != "registered") {
+            expect_true(!candidate->detachPlayer() && !candidate->getDefeatedPlayer() && game->getMap() == active &&
+                            owned_player->getMap() == foreign_map,
+                        "detaching an invalid uncached alias must clear it without adopting a foreign player");
+        }
+    }
+    auto candidate = std::make_shared<CMap>();
+    candidate->setGame(game);
+    candidate->setPermanentPlayerDeath(true);
+    auto dead = std::make_shared<CPlayer>();
+    dead->setGame(game);
+    dead->setName("player");
+    dead->setBaseStats(creature_stats());
+    dead->setHp(0);
+    candidate->setDefeatedPlayer(dead);
+    using MapJson = CSerializerFunction<std::shared_ptr<json>, std::shared_ptr<CGameObject>>;
+    auto decoded = std::dynamic_pointer_cast<CMap>(MapJson::deserialize(game, MapJson::serialize(candidate)));
+    expect_true(decoded != nullptr, "the raw terminal map must deserialize before its uncached detach is tested");
+    if (!decoded) {
+        foreign_game->getContext()->shutdown();
+        game->getContext()->shutdown();
+        return;
+    }
+    auto decoded_alias = decoded->getDefeatedPlayer();
+    expect_true(decoded_alias && decoded->detachPlayer() == decoded_alias && !decoded->getDefeatedPlayer() &&
+                    !decoded->getPlayer() && !decoded_alias->isAlive() && decoded->getObjects().empty(),
+                "detaching a raw deserialized terminal map must return and clear its uncached exact alias");
+    expect_true(candidate->getPlayer() == dead && candidate->getDefeatedPlayer() == dead &&
+                    dead->getMap() == candidate && !candidate->getObjectByName("player") && game->getMap() == active,
+                "opt-in getPlayer must bind the retained dead identity to its actual inactive map");
+    expect_true(candidate->detachPlayer() == dead && !candidate->getDefeatedPlayer(),
+                "an explicit detach must release retained state without destruction or resurrection");
+    auto replacement = std::make_shared<CPlayer>();
+    replacement->setGame(game);
+    replacement->setBaseStats(creature_stats());
+    candidate->setDefeatedPlayer(dead);
+    candidate->attachPlayer(replacement);
+    expect_true(candidate->getPlayer() == replacement && !candidate->getDefeatedPlayer(),
+                "an explicit player attachment must clear stale terminal-player state");
+    foreign_game->getContext()->shutdown();
+    game->getContext()->shutdown();
+}
+
+class TerminalPolicyChangeProbe : public CGameObject {
+    V_META(TerminalPolicyChangeProbe, CGameObject,
+           V_METHOD(TerminalPolicyChangeProbe, onPropertyChanged, void, std::string))
+
+  public:
+    void onPropertyChanged(std::string name) {
+        if (name == "defeatedPlayer") {
+            ++retainedNotifications;
+        } else if (name == "permanentPlayerDeath") {
+            ++policyNotifications;
+        }
+    }
+    int retainedNotifications = 0;
+    int policyNotifications = 0;
+};
+
+struct TerminalPlayerFixture {
+    std::shared_ptr<CGame> game;
+    std::shared_ptr<CMap> map;
+    std::shared_ptr<CPlayer> player;
+};
+
+TerminalPlayerFixture makeTerminalPlayerFixture() {
+    auto game = CGameLoader::loadGame();
+    auto map = std::make_shared<CMap>();
+    map->setGame(game);
+    game->setMap(map);
+    map->setXBounds({{0, 2}});
+    map->setYBounds({{0, 0}});
+    auto player = std::make_shared<CPlayer>();
+    player->setGame(game);
+    player->setBaseStats(creature_stats());
+    player->getBaseStats()->setAgility(30);
+    player->setHp(player->getHpMax());
+    map->setPlayer(player);
+    player->relocateWithoutMoveHooks(Coords(1, 0, 0));
+    player->setFightController(std::make_shared<PostCombatSelfDefeatFightController>());
+    map->setPermanentPlayerDeath(true);
+    auto enemy = add_post_combat_hostile(game, "terminalPolicyEnemy", Coords(2, 0, 0));
+    const auto result = CFightHandler::fightManyResult(player, {enemy});
+    expect_true(result.outcome == CFightOutcome::AttackerDefeat && !player->isAlive() &&
+                    map->getDefeatedPlayer() == player && !map->getObjectByName("player"),
+                "terminal setter and reset checks must begin with actual bound native defeat");
+    return {game, map, player};
+}
+
+bool terminalSnapshotRestores(const TerminalPlayerFixture &fixture) {
+    using MapJson = CSerializerFunction<std::shared_ptr<json>, std::shared_ptr<CGameObject>>;
+    auto snapshot = MapJson::serialize(fixture.map);
+    const auto &policy = snapshot->at("properties").at("permanentPlayerDeath");
+    auto restored = std::dynamic_pointer_cast<CMap>(MapJson::deserialize(fixture.game, snapshot));
+    std::string error;
+    return policy.is_boolean() && policy.get<bool>() && restored && restored->restorePlayerAfterLoad(error) &&
+           restored->getPlayer() && restored->getPlayer() == restored->getDefeatedPlayer() &&
+           !restored->getPlayer()->isAlive() && !restored->getObjectByName("player");
+}
+
+void testMapTerminalPlayerSettersPreserveInstalledSnapshot() {
+    CTypes::register_type_metadata<TerminalPolicyChangeProbe, CGameObject>();
+    auto fixture = makeTerminalPlayerFixture();
+    const auto &[game, map, player] = fixture;
+    auto probe = std::make_shared<TerminalPolicyChangeProbe>();
+    map->connect("propertyChanged", probe, "onPropertyChanged");
+    pump_event_loop_iterations();
+    const auto retained_notifications = probe->retainedNotifications;
+    const auto policy_notifications = probe->policyNotifications;
+    const auto revision = map->getNavigationRevision();
+    const auto objects = map->getObjects().size();
+    auto replacement = std::make_shared<CPlayer>();
+    replacement->setGame(game);
+    replacement->setName("player");
+    replacement->setBaseStats(creature_stats());
+    replacement->setHp(0);
+    for (const bool reflective : {false, true}) {
+        for (const std::string mutation : {"disable", "clear", "replace"}) {
+            bool rejected = false;
+            try {
+                if (mutation == "disable") {
+                    if (reflective) {
+                        map->setBoolProperty("permanentPlayerDeath", false);
+                    } else {
+                        map->setPermanentPlayerDeath(false);
+                    }
+                } else {
+                    const auto value = mutation == "clear" ? std::shared_ptr<CPlayer>{} : replacement;
+                    if (reflective) {
+                        map->setObjectProperty<CPlayer>("defeatedPlayer", value);
+                    } else {
+                        map->setDefeatedPlayer(value);
+                    }
+                }
+            } catch (const std::logic_error &) {
+                rejected = true;
+            }
+            pump_event_loop_iterations();
+            expect_true(rejected && map->getPermanentPlayerDeath() && map->getBoolProperty("permanentPlayerDeath") &&
+                            map->getPlayer() == player && map->getDefeatedPlayer() == player && !player->isAlive() &&
+                            !map->getObjectByName("player") && player->getMap() == map &&
+                            map->getNavigationRevision() == revision && map->getObjects().size() == objects &&
+                            probe->retainedNotifications == retained_notifications &&
+                            probe->policyNotifications == policy_notifications && terminalSnapshotRestores(fixture),
+                        "typed and reflected destructive setters must fail before changing a restorable terminal map");
+        }
+        if (reflective) {
+            map->setBoolProperty("permanentPlayerDeath", true);
+            map->setObjectProperty<CPlayer>("defeatedPlayer", player);
+        } else {
+            map->setPermanentPlayerDeath(true);
+            map->setDefeatedPlayer(player);
+        }
+        pump_event_loop_iterations();
+        expect_true(probe->retainedNotifications == retained_notifications + (reflective ? 1 : 0) &&
+                        probe->policyNotifications == policy_notifications + (reflective ? 1 : 0) &&
+                        terminalSnapshotRestores(fixture),
+                    "same-value setters preserve state and the existing reflected-write notification contract");
+    }
+    game->getContext()->shutdown();
+}
+
+void testExplicitPlayerReplacementReleasesRetainedTerminalOwnership() {
+    CTypes::register_type_metadata<TerminalPolicyChangeProbe, CGameObject>();
+    for (const std::string operation : {"set", "setAsync", "attach", "attachAsync", "detach"}) {
+        auto fixture = makeTerminalPlayerFixture();
+        const auto &[game, map, player] = fixture;
+        auto probe = std::make_shared<TerminalPolicyChangeProbe>();
+        map->connect("propertyChanged", probe, "onPropertyChanged");
+        pump_event_loop_iterations();
+        const auto retained_notifications = probe->retainedNotifications;
+        const auto policy_notifications = probe->policyNotifications;
+        auto replacement = std::make_shared<CPlayer>();
+        replacement->setGame(game);
+        replacement->setBaseStats(creature_stats());
+        replacement->setHp(replacement->getHpMax());
+        if (operation == "set") {
+            map->setPlayer(replacement);
+        } else if (operation == "setAsync") {
+            game_async::wait(game->getContext()->spawnTask(map->setPlayerAsync(replacement)),
+                             game_async::WaitMode::PostedWork);
+        } else if (operation == "attach") {
+            map->attachPlayer(replacement, Coords(0, 0, 0));
+        } else if (operation == "attachAsync") {
+            game_async::wait(game->getContext()->spawnTask(map->attachPlayerAsync(replacement, Coords(0, 0, 0))),
+                             game_async::WaitMode::PostedWork);
+        } else {
+            expect_true(map->detachPlayer() == player, "explicit detach must return the exact retained dead owner");
+            map->attachPlayer(replacement, Coords(0, 0, 0));
+        }
+        pump_event_loop_iterations();
+        auto sentinel = std::make_shared<CMap>();
+        sentinel->setGame(game);
+        game->setMap(sentinel);
+        expect_true(player->getMap() == sentinel && !player->isAlive() && map->getPlayer() == replacement &&
+                        replacement->getMap() == map && map->getObjectByName("player") == replacement &&
+                        !map->getDefeatedPlayer() && map->getPermanentPlayerDeath() &&
+                        probe->retainedNotifications == retained_notifications + 1 &&
+                        probe->policyNotifications == policy_notifications,
+                    "deliberate reset must release the old terminal owningMap and notify exactly once");
+        using MapJson = CSerializerFunction<std::shared_ptr<json>, std::shared_ptr<CGameObject>>;
+        auto restored = std::dynamic_pointer_cast<CMap>(MapJson::deserialize(game, MapJson::serialize(map)));
+        std::string error;
+        expect_true(restored && restored->restorePlayerAfterLoad(error) && restored->getPlayer() &&
+                        restored->getPlayer()->isAlive() && !restored->getDefeatedPlayer() &&
+                        restored->getObjectByName("player") == restored->getPlayer(),
+                    "deliberate player replacement must leave a valid live-player snapshot");
+        game->getContext()->shutdown();
+    }
+}
+
 void test_map_player_detach_attach_transfer_api() {
     auto game = nativeTestProfile().run("CGameLoader::loadGame", [] { return CGameLoader::loadGame(); });
     CGameLoader::startGameWithPlayer(game, "test", "Warrior");
@@ -4076,6 +4584,18 @@ int main() {
                             testMapPausedPlayerControllerRoundTripsWithoutReset);
     nativeTestProfile().run("test_map_player_trigger_registration_is_idempotent",
                             test_map_player_trigger_registration_is_idempotent);
+    nativeTestProfile().run("testMapPermanentPlayerDeathPreservesOptInNativeDefeat",
+                            testMapPermanentPlayerDeathPreservesOptInNativeDefeat);
+    nativeTestProfile().run("testMapPermanentPlayerDeathRoundTripsThroughNativeSerialization",
+                            testMapPermanentPlayerDeathRoundTripsThroughNativeSerialization);
+    nativeTestProfile().run("testDefeatedPlayerSurvivesNativeSavedMapRestorationWithoutResurrection",
+                            testDefeatedPlayerSurvivesNativeSavedMapRestorationWithoutResurrection);
+    nativeTestProfile().run("testDefeatedPlayerRestorationRejectsInvalidAliasesWithoutChangingTheActiveMap",
+                            testDefeatedPlayerRestorationRejectsInvalidAliasesWithoutChangingTheActiveMap);
+    nativeTestProfile().run("testMapTerminalPlayerSettersPreserveInstalledSnapshot",
+                            testMapTerminalPlayerSettersPreserveInstalledSnapshot);
+    nativeTestProfile().run("testExplicitPlayerReplacementReleasesRetainedTerminalOwnership",
+                            testExplicitPlayerReplacementReleasesRetainedTerminalOwnership);
     nativeTestProfile().run("test_map_player_detach_attach_transfer_api", test_map_player_detach_attach_transfer_api);
     nativeTestProfile().run("test_map_keeps_tiles_and_objects_separate_by_z",
                             test_map_keeps_tiles_and_objects_separate_by_z);

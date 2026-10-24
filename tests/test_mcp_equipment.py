@@ -240,6 +240,103 @@ class McpEquipmentContractTest(unittest.TestCase):
         configuration.canFit.assert_called_once_with("3", item)
         item.hasTag.assert_not_called()
 
+    def creatureStatsServer(self, player_type="creature"):
+        import threading
+
+        calls = []
+
+        class CGameObject:
+            def getNumericProperty(self, name):
+                calls.append(("property", threading.get_ident(), name))
+                return {"intelligence": 18}[name]
+
+        class CStats(CGameObject):
+            pass
+
+        stats = CStats()
+
+        class CCreature(CGameObject):
+            def getStats(self):
+                calls.append(("stats", threading.get_ident()))
+                return stats
+
+        class CPlayer(CCreature):
+            pass
+
+        class AuthoredPlayer(CPlayer):
+            pass
+
+        creature = {"creature": CCreature, "player": CPlayer, "authored": AuthoredPlayer}[player_type]()
+        server = mcp.EngineMcpServer(ROOT, ROOT / "unused-native-build")
+        self.addCleanup(server.close)
+        server.handles["creature"] = creature
+        return server, creature, stats, calls
+
+    def testGetStatsDispatchReturnsComposedStatHandleForCreatureAndPlayerSubtypes(self):
+        for kind in ("creature", "player", "authored"):
+            with self.subTest(kind=kind):
+                server, creature, stats, calls = self.creatureStatsServer(kind)
+                response = server._engine_handle_call({"handle": "creature", "method": "getStats"})
+                self.assertFalse(response["isError"], response)
+                result = response["structuredContent"]["result"]
+                self.assertEqual("CStats", result["__type__"])
+                self.assertIs(stats, server.handles[result["__handle__"]])
+                self.assertIs(creature, server.handles["creature"])
+                value = server._engine_handle_call(
+                    {"handle": result["__handle__"], "method": "getNumericProperty", "args": ["intelligence"]}
+                )
+                self.assertFalse(value["isError"], value)
+                self.assertEqual(18, value["structuredContent"]["result"])
+                self.assertEqual(["stats", "property"], [entry[0] for entry in calls])
+
+    def testGetStatsAndReturnedPropertiesRunOnEngineOwnerThread(self):
+        import threading
+
+        server, _creature, _stats, calls = self.creatureStatsServer("authored")
+        caller = threading.get_ident()
+        response = server._engine_handle_call({"handle": "creature", "method": "getStats"})
+        self.assertFalse(response["isError"], response)
+        handle = response["structuredContent"]["result"]["__handle__"]
+        value = server._engine_handle_call({"handle": handle, "method": "getNumericProperty", "args": ["intelligence"]})
+        self.assertFalse(value["isError"], value)
+        owner = server._engine_owner.run(threading.get_ident)
+        self.assertNotEqual(caller, owner)
+        self.assertEqual([owner, owner], [entry[1] for entry in calls])
+
+    def testGetStatsIsDeniedBeforeDescriptorsForUnsupportedHandles(self):
+        server, _creature, _stats, calls = self.creatureStatsServer()
+        descriptors = []
+
+        class CGameObject:
+            @property
+            def getStats(self):
+                descriptors.append("getStats")
+                return lambda: "unauthorized descriptor result"
+
+        class CBuilding(CGameObject):
+            pass
+
+        for index, target in enumerate((CGameObject(), CBuilding())):
+            with self.subTest(target=type(target).__name__):
+                handle = "unsupported" + str(index)
+                server.handles[handle] = target
+                response = server._engine_handle_call({"handle": handle, "method": "getStats"})
+                self.assertTrue(response["isError"], response)
+                self.assertEqual(
+                    "Method `getStats` is not exported for handle calls", response["structuredContent"]["error"]
+                )
+        self.assertEqual([], descriptors)
+        self.assertEqual([], calls)
+        self.assertNotIn("getStats", mcp.MCP_ALLOWED_HANDLE_METHODS["CGameObject"])
+
+    def testGetStatsRejectsUnexpectedArgumentsWithoutReadingStats(self):
+        server, _creature, _stats, calls = self.creatureStatsServer()
+        for arguments in ({"args": [1]}, {"kwargs": {"baseOnly": True}}):
+            with self.subTest(arguments=arguments):
+                response = server._engine_handle_call({"handle": "creature", "method": "getStats", **arguments})
+                self.assertTrue(response["isError"], response)
+        self.assertEqual([], calls)
+
 
 class McpEquipmentRuntimeTest(unittest.TestCase):
     def runChild(self, code):

@@ -294,6 +294,46 @@ class GameplayBranchCatalogTest(unittest.TestCase):
                 with patch.object(Path, "read_text", changed_read):
                     self.assertNotEqual(before, catalog.sourceReviewDigest())
 
+    def testSaveAdmissionMetadataChangesDigestWithoutInventingCallbackBranches(self):
+        with tempfile.TemporaryDirectory(prefix="gameplay-digest-metadata-") as directory:
+            root = Path(directory)
+            sources = {
+                "res/maps/example/script.py": "class Actor:\n    def onEnter(self, cause):\n        return None\n",
+                "res/narrative.py": "pass\n",
+                "res/plugins/castle_campaign.py": "pass\n",
+                "res/plugins/object.py": "pass\n",
+                "res/plugins/octobogz_hunt.py": "pass\n",
+                "res/config/crafting.json": "{}",
+            }
+            for relative, source in sources.items():
+                path = root / relative
+                path.parent.mkdir(parents=True, exist_ok=True)
+                path.write_text(source, encoding="utf-8")
+            map_path = root / "res/maps/example/map.json"
+            document = {"properties": {}, "propertytypes": {}, "layers": []}
+            map_path.write_text(json.dumps(document), encoding="utf-8")
+            before_callbacks = catalog.classDefinitions(root)[1]
+            mapping = {"res/maps/example/script.py:Actor.onEnter": ("example.entry",)}
+            self.assertEqual((), catalog.auditMappings(before_callbacks, mapping, (), {"example.entry"}))
+            with patch.object(catalog, "sharedActorCallbacks", return_value={}):
+                before = catalog.sourceReviewDigest(root)
+                document["properties"]["guardNativeEncounterSaves"] = True
+                document["propertytypes"]["guardNativeEncounterSaves"] = "bool"
+                map_path.write_text(json.dumps(document), encoding="utf-8")
+                after = catalog.sourceReviewDigest(root)
+                self.assertNotEqual(before, after, "Authored admission metadata must remain inside the digest")
+                after_callbacks = catalog.classDefinitions(root)[1]
+                self.assertEqual(before_callbacks, after_callbacks)
+                self.assertEqual((), catalog.auditMappings(after_callbacks, mapping, (), {"example.entry"}))
+                source = root / "res/maps/example/script.py"
+                source.write_text(
+                    "class Actor:\n    def onEnter(self, cause):\n        if cause:\n            return None\n",
+                    encoding="utf-8",
+                )
+                self.assertNotEqual(
+                    after, catalog.sourceReviewDigest(root), "A new internal branch still requires review"
+                )
+
     def testReviewedSourceDigestRequiresReviewForNewInternalBranches(self):
         self.assertEqual(
             catalog.REVIEWED_GAMEPLAY_DIGEST,

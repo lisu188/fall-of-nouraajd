@@ -176,7 +176,9 @@ bool CGameObject::isReservedTypedSignalName(const std::string &signalName) {
                                                    // CMarket typed signal
                                                    "itemsChanged",
                                                    // CMap typed signals
-                                                   "tileChanged", "objectChanged", "turnPassed"};
+                                                   "tileChanged", "objectChanged", "turnPassed",
+                                                   // CGame published map binding
+                                                   "mapBindingChanged"};
     return reserved.contains(signalName);
 }
 

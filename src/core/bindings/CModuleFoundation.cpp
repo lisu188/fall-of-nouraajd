@@ -216,6 +216,8 @@ void bindFoundationAndSession(py::module_ &m, const std::shared_ptr<CPythonEvent
     py::class_<CGame, CGameObject, std::shared_ptr<CGame>>(
         m, "CGame", "Top-level game container holding the active map, handlers, and GUI.")
         .def("getMap", &CGame::getMap, "Return the currently loaded map.")
+        .def("getMapBindingEpoch", &CGame::getMapBindingEpoch,
+             "Return the read-only epoch of actual public map pointer publications.")
         .def("changeMap", &CGame::changeMap, "Load and switch to another map.")
         .def("post", &postScriptFlow, "Post a callback owned and cancelled by this game session.")
         .def("runUiFlowLater", &postScriptFlow,
