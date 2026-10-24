@@ -225,6 +225,7 @@ MCP_ALLOWED_HANDLE_METHODS = {
         "getAllTypes",
     },
     "CGuiHandler": {
+        "openDialog",
         "getRequestedTradeMarket",
         "openPanel",
         "showDialog",

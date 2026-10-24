@@ -17,6 +17,7 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 #include "CModuleBindings.h"
 #include "gui/panel/CGamePanel.h"
+#include "gui/panel/CGameDialogPanel.h"
 #include "object/CDialog.h"
 #include "core/CController.h"
 #include "core/CGame.h"
@@ -354,6 +355,8 @@ void bindGraphicsAndWorld(py::module_ &m) {
         .def("getRequestedTradeMarket", &CGuiHandler::getRequestedTradeMarket,
              "Return the last actual traced headless trade request in the active map and transition generation; "
              "return None after observing disabled tracing or an invalidated session.")
+        .def("openDialog", &CGuiHandler::openDialog, py::arg("dialog"),
+             "Open a dialog on the main thread without waiting; return the attached panel or None.")
         .def("showDialog", &CGuiHandler::showDialog, "Open a dialog panel.")
         .def("showQuestion", &CGuiHandler::showQuestion, "Open a question/choice panel.")
         .def("showSelection", &CGuiHandler::showSelection, "Open a selection panel.")

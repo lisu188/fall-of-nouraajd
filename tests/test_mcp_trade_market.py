@@ -178,6 +178,91 @@ finally:
 
 
 class McpTradeMarketContractTest(unittest.TestCase):
+    def testNonblockingDialogMcpReturnsTheSameNativePanelAndNullWithoutGeneralMutation(self):
+        calls = []
+
+        class CGameObject:
+            pass
+
+        class CDialog(CGameObject):
+            pass
+
+        class CGameGraphicsObject(CGameObject):
+            pass
+
+        class CGameDialogPanel(CGameGraphicsObject):
+            pass
+
+        class CGuiHandler(CGameObject):
+            def openDialog(self, dialog):
+                calls.append(dialog)
+                return panel if dialog else None
+
+        server = mcp.EngineMcpServer(ROOT, ROOT / "unused-native-build")
+        panel, dialog, handler = CGameDialogPanel(), CDialog(), CGuiHandler()
+        server.handles.update(handler=handler, dialog=dialog)
+        for _ in range(2):
+            result = server._engine_handle_call(
+                {"handle": "handler", "method": "openDialog", "args": [{"__handle__": "dialog"}]}
+            )
+            self.assertFalse(result["isError"], result)
+            handle = result["structuredContent"]["result"]["__handle__"]
+            self.assertIs(panel, server.handles[handle])
+        self.assertEqual([dialog, dialog], calls)
+        result = server._engine_handle_call({"handle": "handler", "method": "openDialog", "args": [None]})
+        self.assertFalse(result["isError"], result)
+        self.assertIsNone(result["structuredContent"]["result"])
+        self.assertEqual([dialog, dialog, None], calls)
+        self.assertNotIn("openDialog", mcp.MCP_ALLOWED_EXPORTS)
+        self.assertEqual(
+            {"openDialog"},
+            mcp.MCP_ALLOWED_HANDLE_METHODS["CGuiHandler"]
+            & {"openDialog", "setDialog", "pushChild", "addChild", "removeChild"},
+        )
+
+    def testNonblockingDialogNativeSetupAndBindingRetainBlockingOwnership(self):
+        source = (ROOT / "src/handler/CGuiHandler.cpp").read_text(encoding="utf-8")
+        declaration = (ROOT / "src/handler/CGuiHandler.h").read_text(encoding="utf-8")
+        binding = (ROOT / "src/core/bindings/CModuleWorld.cpp").read_text(encoding="utf-8")
+        opening = "std::shared_ptr<CGameDialogPanel> CGuiHandler::openDialog(std::shared_ptr<CDialog> dialog) {"
+        self.assertTrue(opening in source, "The typed nonblocking dialog API must exist")
+        opener = source.split(opening, 1)[1].split("\n}\n", 1)[0]
+        self.assertIn("return createDialogPanel(std::move(dialog), false);", opener)
+        self.assertNotIn("runGuiTask", opener)
+        self.assertNotIn("co_await", opener)
+        setup = source.split("CGuiHandler::createDialogPanel(std::shared_ptr<CDialog> dialog, bool blocking) {", 1)[1]
+        setup = setup.split("\n}\n", 1)[0]
+        self.assertLess(setup.index("isMainThread()"), setup.index("_game.lock()"))
+        for statement in ("panel->setDialog(dialog);", "gui->pushChild(panel);", "panel->reload();"):
+            self.assertEqual(1, setup.count(statement))
+        self.assertIn("std::current_exception()", setup)
+        self.assertIn("std::rethrow_exception(primary)", setup)
+        self.assertIn("panel->close();", setup)
+        waiting = source.split("vstd::task<void> CGuiHandler::showDialogAsync", 1)[1].split(
+            "\nvoid CGuiHandler::showLoot", 1
+        )[0]
+        for statement in (
+            "co_await vstd::post(loop);",
+            "createDialogPanel(std::move(dialog), true)",
+            "ModalPanelOwner panelOwner{panel};",
+            "co_await panel->awaitClosingAsync();",
+        ):
+            self.assertIn(statement, waiting)
+        self.assertLess(waiting.index("ModalPanelOwner"), waiting.index("awaitClosingAsync"))
+        self.assertNotIn("_game.lock()", waiting, "no strong game owner may survive the panel wait")
+        self.assertIn("std::shared_ptr<CGameDialogPanel> openDialog(std::shared_ptr<CDialog> dialog);", declaration)
+        self.assertIn('.def("openDialog", &CGuiHandler::openDialog', binding)
+        native = (ROOT / "tests/unit/test_gui.cpp").read_text(encoding="utf-8")
+        for name in (
+            "testNonblockingDialogReturnsExactAttachedPanelWithoutPumping",
+            "testDialogSetupFailureClosesItsPanelAndBlockingCancellationStillOwnsCleanup",
+        ):
+            self.assertEqual(1, native.count("void " + name + "()"))
+            self.assertEqual(1, native.count("    " + name + "();"))
+        self.assertTrue("constexpr int iterations = 64;" in native, "The fixed 64-open work guard must remain")
+        self.assertTrue("factories == index + 1 && callbacks == 0" in native, "Factory and queue counts must be exact")
+        self.assertTrue('"dialog-attach-primary"' in native, "The actual attachment-failure seam must remain")
+
     def testNativeUiReadAndKeyboardCallsCrossTheActualServerBoundary(self):
         calls = []
 

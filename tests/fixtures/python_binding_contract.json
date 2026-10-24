@@ -10,7 +10,7 @@
     {
       "source": "src/core/bindings/CModuleWorld.cpp",
       "registration": "bindGraphicsAndWorld",
-      "registrationTokenSha256": "003db15acb0fe0049287117617290f467f9546d2707777f599040d745d371d99"
+      "registrationTokenSha256": "5c190326f54396e39986ba851333338d27b7c03c4f908a3e018a837d0cbb1596"
     },
     {
       "source": "src/core/bindings/CModuleGameplay.cpp",
