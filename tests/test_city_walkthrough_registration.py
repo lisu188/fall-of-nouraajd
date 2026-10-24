@@ -266,6 +266,81 @@ class CityWalkthroughRegistrationTest(unittest.TestCase):
         self.assertEqual(["utf-8"], encodings)
         self.assertEqual(set(), tags)
 
+    def testDefeatPresentationFixtureResolvesItsNativeFightPanelBeforeControllerStart(self):
+        import re
+
+        source = (ROOT / "tests/unit/test_handler.cpp").read_text(encoding="utf-8")
+        base = source.split("std::shared_ptr<CGame> makeWindowlessFightGame() {", 1)[1].split("\n}\n", 1)[0]
+        helper = source.split("void installDefeatBrowserObserver(", 1)[1].split(
+            "\nvoid testOwnedDefeatPresentationFollowsSuccessfulControllerCleanup", 1
+        )[0]
+        factories = set(re.findall(r'registerType\("([^\"]+)"', base + helper))
+        configurations = dict(
+            re.findall(
+                r'registerConfig\("([^\"]+)",\s*std::make_shared<json>\(json\{\{"class", "([^\"]+)"', base + helper
+            )
+        )
+        self.assertEqual("CGameFightPanel", configurations.get("fightPanel"))
+        self.assertIn(configurations["fightPanel"], factories, "a config alone does not install a native factory")
+        self.assertIn(
+            'objects->registerType("CGameFightPanel", [] { return std::make_shared<CGameFightPanel>(); });', helper
+        )
+        self.assertLess(
+            helper.index('registerType("CGameFightPanel"'), helper.index('createObject<CGameFightPanel>("fightPanel")')
+        )
+        self.assertIn("if (!fight_panel) {", helper)
+        self.assertIn(
+            'throw std::runtime_error("Native defeat presentation fixture has no fight panel factory.");', helper
+        )
+        self.assertIn('!game->getGui()->findChild("CGameFightPanel")', helper)
+        for name in (
+            "testOwnedDefeatPresentationFollowsSuccessfulControllerCleanup",
+            "testPublicDefeatPreservesItsIndependentPostedPresentation",
+        ):
+            body = source.split("void " + name + "() {", 1)[1].split("\n}\n", 1)[0]
+            self.assertLess(
+                body.index("installDefeatBrowserObserver(game, probe);"), body.index("add_test_player(game)")
+            )
+
+    def testDefeatPresentationUnitStandInDoesNotResolveUnboundNativeGame(self):
+        source = (ROOT / "tests/unit/test_handler.cpp").read_text(encoding="utf-8")
+        fixture = source.split("class NativeDefeatChoiceFixture {", 1)[1].split(
+            "\nvoid installDefeatBrowserObserver", 1
+        )[0]
+        payload = fixture.split('pybind11::exec(R"(', 1)[1].split('\n)"', 1)[0]
+        self.assertIn('ui.attr("showDefeatFlow") = scope["unitDefeatFlow"];', fixture)
+        ui_tree = ast.parse((ROOT / "res/ui.py").read_text(encoding="utf-8"))
+        selected = [
+            node
+            for node in ui_tree.body
+            if isinstance(node, (ast.FunctionDef, ast.ClassDef))
+            and node.name in ("UiFlow", "UiFlowGame", "uiTarget", "showDefeatFlow", "uiGame")
+        ]
+        namespace = {"json": json}
+        exec(compile(ast.Module(body=selected, type_ignores=[]), "actual-ui-proxy-dispatch", "exec"), namespace)
+        actual_entry = namespace["showDefeatFlow"]
+        exec(compile(payload, "actual-native-unit-presentation-stand-in", "exec"), namespace)
+        namespace["showDefeatFlow"] = namespace["unitDefeatFlow"]
+        resolved = []
+
+        def resolve():
+            resolved.append("attempted native CGame conversion")
+            raise RuntimeError("unbound native game resolver reached")
+
+        flow = namespace["UiFlow"]("showDefeat", resolve)
+        request = json.loads(flow.advance("null"))
+        self.assertEqual("showChoice", request["operation"])
+        self.assertEqual("Defeated", request["args"][0])
+        self.assertEqual([{"id": "continue", "label": "Continue adventure"}], json.loads(request["args"][1]))
+        self.assertNotIn("__nativeObject", json.dumps(request))
+        self.assertIsNone(flow.advance(json.dumps("continue")))
+        self.assertEqual([], resolved)
+        namespace["showDefeatFlow"] = actual_entry
+        flow = namespace["UiFlow"]("showDefeat", resolve)
+        with self.assertRaisesRegex(RuntimeError, "unbound native game resolver reached"):
+            flow.advance("null")
+        self.assertEqual(["attempted native CGame conversion"], resolved)
+
     def runDefeatPresentationQueue(self, *, encounter_owned=True, cleanup_error=None, owner_current=True):
         native = (ROOT / "src/handler/CFightHandler.cpp").read_text(encoding="utf-8")
         deferred = "encounterOwner->defeatPresentation = std::move(present);" in native

@@ -3844,8 +3844,16 @@ def unitDefeatFlow(game):
 
 void installDefeatBrowserObserver(const std::shared_ptr<CGame> &game,
                                   const std::shared_ptr<DefeatPresentationOrderProbe> &probe) {
+    auto objects = game->getObjectHandler();
+    objects->registerType("CGameFightPanel", [] { return std::make_shared<CGameFightPanel>(); });
+    auto fight_panel = game->createObject<CGameFightPanel>("fightPanel");
+    if (!fight_panel) {
+        throw std::runtime_error("Native defeat presentation fixture has no fight panel factory.");
+    }
+    expect_true(!game->getGui()->findChild("CGameFightPanel"),
+                "the fixture factory preflight must not attach a fight panel before controller start");
     std::weak_ptr<CGame> weakGame = game;
-    game->getObjectHandler()->registerType("CGameCampaignBrowserPanel", [weakGame, probe] {
+    objects->registerType("CGameCampaignBrowserPanel", [weakGame, probe] {
         auto game = weakGame.lock();
         ++probe->browsers;
         probe->browserSawFightPanel = game && game->getGui()->findChild("CGameFightPanel") != nullptr;
