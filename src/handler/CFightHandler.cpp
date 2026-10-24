@@ -16,6 +16,7 @@ You should have received a copy of the GNU General Public License
 along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 #include "CFightHandler.h"
+#include <limits>
 #include "core/CAsync.h"
 #include <algorithm>
 #include <exception>
@@ -1356,6 +1357,27 @@ vstd::task<void> CFightHandler::resolveOwnedDefeatAsync(std::shared_ptr<CCreatur
             throw vstd::task_cancelled();
         }
     };
+    const auto requireCompensationCurrent = [requireDefeatCurrent, ownerIsCurrent, expectedGame, initialContext,
+                                             initialGeneration, initialEpoch, encounterMap, capturedPlayer, a, b,
+                                             winnerClaim, loserClaim] {
+        if (ownerIsCurrent()) {
+            requireDefeatCurrent();
+            return;
+        }
+        auto capturedGame = expectedGame.lock();
+        if (!capturedGame || !initialContext || initialContext->isActive() ||
+            initialGeneration == std::numeric_limits<CGameContext::TransitionGeneration>::max() ||
+            initialContext->getTransitionGeneration() != initialGeneration + 1 ||
+            capturedGame->getContext() != initialContext || capturedGame->getMap() || !capturedPlayer ||
+            encounterMap->getAssignedPlayer() != capturedPlayer || capturedGame->getMapBindingEpoch() != initialEpoch ||
+            encounterMap->getGame() != capturedGame || a->getGame() != capturedGame || b->getGame() != capturedGame ||
+            a->getMap() != encounterMap || b->getMap() != encounterMap || !a->isAlive() || b->isAlive() ||
+            !is_registered_on_map(encounterMap, a) || !is_registered_on_map(encounterMap, b) ||
+            !b->defeatResolutionInProgress || a->activeDefeatRecipientCount == 0 ||
+            a->activeCombatOwner.lock() != winnerClaim || b->activeCombatOwner.lock() != loserClaim) {
+            throw vstd::task_cancelled();
+        }
+    };
     auto admission = encounterMap->tryBeginUnsafeOperation();
     if (!admission) {
         throw vstd::task_cancelled();
@@ -1455,22 +1477,75 @@ vstd::task<void> CFightHandler::resolveOwnedDefeatAsync(std::shared_ptr<CCreatur
     requireDefeatCurrent();
     auto context = game->getContext();
     game.reset();
+    struct DefeatLootSettlement {
+        const std::set<std::shared_ptr<CItem>> owned;
+        std::set<std::shared_ptr<CItem>> attempted;
+        std::set<std::shared_ptr<CItem>> committed;
+        bool uncertain = false;
+
+        explicit DefeatLootSettlement(std::set<std::shared_ptr<CItem>> items) : owned(std::move(items)) {}
+        DefeatLootSettlement(const DefeatLootSettlement &) = delete;
+        DefeatLootSettlement &operator=(const DefeatLootSettlement &) = delete;
+        DefeatLootSettlement(DefeatLootSettlement &&) = delete;
+        DefeatLootSettlement &operator=(DefeatLootSettlement &&) = delete;
+    };
+    auto settlement = std::make_shared<DefeatLootSettlement>(items);
+    const auto settleItems = [a, settlement](const std::function<void()> &requireCurrent) {
+        if (settlement->uncertain) {
+            throw std::logic_error("Defeat loot settlement is uncertain");
+        }
+        try {
+            requireCurrent();
+            for (const auto &item : settlement->owned) {
+                requireCurrent();
+                if (!item || item->getGame() != a->getGame()) {
+                    throw std::logic_error("Defeat loot item ownership changed");
+                }
+                if (settlement->attempted.contains(item)) {
+                    if (!settlement->committed.contains(item)) {
+                        throw std::logic_error("An attempted defeat loot grant cannot be retried");
+                    }
+                    if (!a->items.contains(item)) {
+                        throw std::logic_error("A committed defeat loot grant was removed");
+                    }
+                    continue;
+                }
+                settlement->attempted.insert(item);
+                if (!a->items.contains(item)) {
+                    a->addItem(item);
+                }
+                requireCurrent();
+                if (!a->items.contains(item)) {
+                    throw std::logic_error("Defeat loot was removed during its grant");
+                }
+                settlement->committed.insert(item);
+            }
+            for (const auto &item : settlement->owned) {
+                requireCurrent();
+                if (!settlement->committed.contains(item) || item->getGame() != a->getGame() ||
+                    !a->items.contains(item)) {
+                    throw std::logic_error("Defeat loot settlement lost an earlier committed item");
+                }
+            }
+            requireCurrent();
+        } catch (...) {
+            settlement->uncertain = true;
+            throw;
+        }
+    };
+    const auto settleCurrent = [settleItems, requireDefeatCurrent] { settleItems(requireDefeatCurrent); };
+    const auto compensate = [settleItems, requireCompensationCurrent] { settleItems(requireCompensationCurrent); };
+
     std::exception_ptr cancellation;
     try {
-        co_await rng->addDefeatLootAsync(a, items, requireDefeatCurrent);
+        co_await rng->addDefeatLootAsync(a, items, requireDefeatCurrent, settleCurrent, compensate);
     } catch (const vstd::task_cancelled &) {
         cancellation = std::current_exception();
-        requireDefeatCurrent();
-        // A child cancelled before it starts cannot grant items already removed from the loser.
-        std::set<std::shared_ptr<CItem>> pendingItems;
-        for (const auto &item : items) {
-            if (!a->hasInInventory(item)) {
-                pendingItems.insert(item);
-            }
+        try {
+            compensate();
+        } catch (...) {
+            std::rethrow_exception(cancellation);
         }
-        requireDefeatCurrent();
-        a->addItems(std::move(pendingItems));
-        requireDefeatCurrent();
         if (!context->isActive()) {
             std::rethrow_exception(cancellation);
         }

@@ -3285,6 +3285,206 @@ void testWorkerStartedCombatDefersControllerAndPanelCreationToMain() {
     game->getContext()->shutdown();
 }
 
+class OwnedLootCompensationObserver : public CGameObject {
+    V_META(OwnedLootCompensationObserver, CGameObject, V_METHOD(OwnedLootCompensationObserver, onInventoryChanged))
+
+  public:
+    std::function<void()> callback;
+    void onInventoryChanged() {
+        if (callback) {
+            auto action = std::move(callback);
+            callback = {};
+            action();
+        }
+    }
+};
+
+void testOwnedLootCancellationCompensationRetainsExactItemsAndRejectsUncertainReplay() {
+    CTypes::register_type_metadata<OwnedLootCompensationObserver, CGameObject>();
+    auto loop = vstd::event_loop<>::instance();
+    {
+        auto game = makeWindowlessFightGame();
+        auto map = game->getMap();
+        auto player = add_test_player(game);
+        auto originalFight = std::make_shared<KillingFightController>();
+        player->setFightController(originalFight);
+        const auto detached = map->detachPlayer();
+        map->addObject(player);
+        expect_true(detached == player && !map->getAssignedPlayer() && map->getObjectByName("player") == player,
+                    "the positive cache-repair control must begin with a genuinely registered uncached player");
+        const auto restored = map->getPlayer();
+        expect_true(restored == player && map->getAssignedPlayer() == player &&
+                        player->getFightController() != originalFight &&
+                        std::dynamic_pointer_cast<CPlayerFightController>(player->getFightController()) != nullptr,
+                    "an explicit active getPlayer must demonstrate actual native controller and cache restoration");
+        game->getContext()->shutdown();
+    }
+    for (int mode = 0; mode != 12; ++mode) {
+        auto game = makeWindowlessFightGame();
+        auto map = game->getMap();
+        auto context = game->getContext();
+        map->setBoolProperty("plugin_cityFixedLoot", true);
+        auto player = add_test_player(game);
+        player->setFightController(std::make_shared<KillingFightController>());
+        auto loser = add_test_creature(game, "unitCompensatedLoser", 1, 0);
+        std::set<std::shared_ptr<CItem>> owned;
+        for (int index = 0; index != 2; ++index) {
+            auto item = std::make_shared<CItem>();
+            item->setGame(game);
+            item->setName("unitCompensatedItem" + std::to_string(index));
+            item->setTypeId(item->getName());
+            loser->addItem(item);
+            owned.insert(item);
+        }
+        auto first = *owned.begin();
+        auto second = *owned.rbegin();
+        auto destroyed = std::make_shared<int>(0);
+        map->getEventHandler()->registerTrigger(
+            std::make_shared<CCustomTrigger>(loser->getName(), "onDestroy", [destroyed](auto, auto) { ++*destroyed; }));
+        auto waiting = context->spawnTask(CFightHandler::fightManyResultAsync(player, {loser}));
+        const bool pending =
+            pumpHandlerUntil([&] { return game->getGui()->findChild("CGameLootPanel") || waiting.finished(); }) &&
+            game->getGui()->findChild("CGameLootPanel");
+        expect_true(pending && !waiting.finished() && !player->hasInInventory(first) && !player->hasInInventory(second),
+                    "compensation controls must suspend after exact possession removal and before any grant");
+        if (!pending || waiting.finished()) {
+            context->shutdown();
+            continue;
+        }
+        const auto experience = player->getExp();
+        const auto epoch = game->getMapBindingEpoch();
+        const auto generation = context->getTransitionGeneration();
+        auto callbackCount = std::make_shared<int>(0);
+        auto callbackSawBothItems = std::make_shared<bool>(false);
+        auto observer = std::make_shared<OwnedLootCompensationObserver>();
+        observer->setGame(game);
+        std::shared_ptr<CGame> otherGame;
+        if (mode >= 7 && mode <= 9) {
+            otherGame = std::make_shared<CGame>();
+            observer->callback = [mode, callbackCount, callbackSawBothItems, otherGame, destroyed,
+                                  weakGame = std::weak_ptr<CGame>(game), weakMap = std::weak_ptr<CMap>(map),
+                                  weakPlayer = std::weak_ptr<CPlayer>(player),
+                                  weakLoser = std::weak_ptr<CCreature>(loser), weakFirst = std::weak_ptr<CItem>(first),
+                                  weakSecond = std::weak_ptr<CItem>(second)] {
+                ++*callbackCount;
+                auto game = weakGame.lock();
+                auto map = weakMap.lock();
+                auto player = weakPlayer.lock();
+                auto loser = weakLoser.lock();
+                auto first = weakFirst.lock();
+                auto second = weakSecond.lock();
+                if (!game || !map || !player || !loser || !first || !second) {
+                    throw std::runtime_error("unit compensation observer lost its captured objects");
+                }
+                *callbackSawBothItems = player->hasInInventory(first) && player->hasInInventory(second) &&
+                                        map->getObjectByName(loser->getName()) == loser && *destroyed == 0;
+                if (mode == 7) {
+                    player->removeItem(first);
+                    throw std::runtime_error("unit deferred inventory observer failure after removal");
+                } else if (mode == 8) {
+                    player->setGame(otherGame);
+                } else {
+                    auto replacement = std::make_shared<CMap>();
+                    replacement->setGame(game);
+                    game->setMap(replacement);
+                    game->setMap(map);
+                }
+            };
+            player->connect("inventoryChanged", observer, "onInventoryChanged");
+        }
+        const auto movement = player->getController();
+        const auto fight = player->getFightController();
+        const auto triggers = map->getEventHandler()->getTriggers();
+        const auto objects = map->getObjects();
+        if (mode == 2) {
+            game->setMap(map);
+        } else if (mode == 3 || mode == 4) {
+            auto replacement = std::make_shared<CMap>();
+            replacement->setGame(game);
+            game->setMap(replacement);
+            if (mode == 3) {
+                game->setMap(map);
+            }
+        } else if (mode == 5) {
+            context->advanceTransitionGeneration();
+        } else if (mode == 6) {
+            otherGame = std::make_shared<CGame>();
+            player->setGame(otherGame);
+        } else if (mode >= 10) {
+            const auto detached = map->detachPlayer();
+            map->addObject(player);
+            expect_true(detached == player && !map->getAssignedPlayer() && map->getObjectByName("player") == player,
+                        "the closed cache control must retain the exact registered recipient with no assigned cache");
+            if (mode == 11) {
+                auto terminalAlias = std::make_shared<CPlayer>();
+                terminalAlias->setGame(game);
+                terminalAlias->setName("unitMalformedTerminalAlias");
+                terminalAlias->setHp(0);
+                map->setPermanentPlayerDeath(true);
+                map->setDefeatedPlayer(terminalAlias);
+                expect_true(!map->hasRetainedTerminalPlayer() && map->getDefeatedPlayer() == terminalAlias,
+                            "the second null-cache control is a malformed public terminal alias, not a valid save");
+            }
+        }
+        if (mode >= 10) {
+            CPlaytestTrace::configure(true, "", 100, true);
+        }
+        if ((mode >= 1 && mode <= 6) || mode >= 10) {
+            context->shutdown();
+        } else {
+            waiting.requestStop();
+        }
+        const bool finished = pumpHandlerUntil([&] { return waiting.finished(); });
+        bool cancelled = false;
+        bool unexpected = false;
+        if (finished) {
+            try {
+                waiting.get();
+            } catch (const vstd::task_cancelled &) {
+                cancelled = true;
+            } catch (...) {
+                unexpected = true;
+            }
+        }
+        CPlaytestTrace::configure(false);
+        const bool ownsFirst = player->hasInInventory(first);
+        const bool ownsSecond = player->hasInInventory(second);
+        const bool healthy = mode <= 2;
+        std::cout << "owned loot compensation: mode=" << mode << " finished=" << finished << " cancelled=" << cancelled
+                  << " unexpected=" << unexpected << " first=" << ownsFirst << " second=" << ownsSecond
+                  << " callbacks=" << *callbackCount << " destroyed=" << *destroyed
+                  << " epochDelta=" << game->getMapBindingEpoch() - epoch
+                  << " generationDelta=" << context->getTransitionGeneration() - generation << '\n';
+        expect_true(finished && cancelled && !unexpected && player->getExp() == experience,
+                    "all compensation paths must retain the original cancellation and never repeat experience");
+        expect_true(ownsFirst == (healthy || mode == 8 || mode == 9) &&
+                        ownsSecond == (healthy || (mode >= 7 && mode <= 9)),
+                    "only certified owners may settle exact items; an uncertain grant must never be replayed");
+        const bool callbackMode = mode >= 7 && mode <= 9;
+        expect_true(*callbackCount == (callbackMode ? 1 : 0) && (!callbackMode || *callbackSawBothItems),
+                    "the queued observer must execute once after both exact grants but before loser removal");
+        expect_true(*destroyed == (mode == 0 ? 1 : 0),
+                    "shutdown, invalid ownership and failed grant compensation must not continue loser cleanup");
+        if (mode >= 10) {
+            expect_true(!map->getAssignedPlayer() && player->getController() == movement &&
+                            player->getFightController() == fight && map->getObjects() == objects &&
+                            map->getEventHandler()->getTriggers() == triggers,
+                        "closed compensation must preserve the absent cache and exact controllers, registry and hooks");
+        }
+        if (!healthy || mode == 1 || mode == 2) {
+            expect_true(!map->tryBeginSaveSnapshot(),
+                        "started uncertain or inactive recovery must not admit an unverified snapshot");
+        }
+        waiting.requestStop();
+        loop->runReady();
+        expect_true(player->hasInInventory(first) == ownsFirst && player->hasInInventory(second) == ownsSecond &&
+                        player->getExp() == experience && *destroyed == (mode == 0 ? 1 : 0),
+                    "a repeated stop must not regrant a removed item or replay recovery effects");
+        player->disconnect("inventoryChanged", observer, "onInventoryChanged");
+        context->shutdown();
+    }
+}
+
 void testCancelledLootSettlesStartedRewardsOnceAndSkipsQueuedCombat() {
     auto loop = vstd::event_loop<>::instance();
     for (const bool shutdown : {false, true}) {
@@ -7040,6 +7240,8 @@ int main() {
                             testAsyncCombatAwaitsLootWithoutPumpingOrGrantingRewardsEarly);
     nativeTestProfile().run("testWorkerStartedCombatDefersControllerAndPanelCreationToMain",
                             testWorkerStartedCombatDefersControllerAndPanelCreationToMain);
+    nativeTestProfile().run("testOwnedLootCancellationCompensationRetainsExactItemsAndRejectsUncertainReplay",
+                            testOwnedLootCancellationCompensationRetainsExactItemsAndRejectsUncertainReplay);
     nativeTestProfile().run("testCancelledLootSettlesStartedRewardsOnceAndSkipsQueuedCombat",
                             testCancelledLootSettlesStartedRewardsOnceAndSkipsQueuedCombat);
     nativeTestProfile().run("testAsyncEventsAwaitOrderedTriggerSnapshotsAfterObjectHooks",

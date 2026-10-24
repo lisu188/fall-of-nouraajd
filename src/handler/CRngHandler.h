@@ -73,7 +73,9 @@ class CRngHandler : public CGameObject {
     std::set<std::shared_ptr<CItem>> calculateDefeatLoot(int value, std::function<void()> requireCurrent) const;
 
     vstd::task<void> addDefeatLootAsync(std::shared_ptr<CCreature> creature, std::set<std::shared_ptr<CItem>> items,
-                                        std::function<void()> requireCurrent);
+                                        std::function<void()> requireCurrent,
+                                        std::function<void()> settleCurrent = {},
+                                        std::function<void()> compensate = {});
 
     std::set<std::shared_ptr<CItem>> calculateRandomLoot(int value) const;
 

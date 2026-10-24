@@ -50,6 +50,7 @@ ADDITIONAL_CASES = {
         "testOwnedDefeatGraphActorBindingPreservesPrimaryBeforeRootAndProperties",
         "testAsyncCombatAwaitsLootWithoutPumpingOrGrantingRewardsEarly",
         "testWorkerStartedCombatDefersControllerAndPanelCreationToMain",
+        "testOwnedLootCancellationCompensationRetainsExactItemsAndRejectsUncertainReplay",
         "testCancelledLootSettlesStartedRewardsOnceAndSkipsQueuedCombat",
         "testAsyncEventsAwaitOrderedTriggerSnapshotsAfterObjectHooks",
         "testAsyncLeaveHooksRejectStaleMovesAndCleanCancellation",

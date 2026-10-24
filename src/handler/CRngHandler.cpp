@@ -16,6 +16,7 @@ You should have received a copy of the GNU General Public License
 along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 #include "CRngHandler.h"
+#include <exception>
 #include "handler/CGuiHandler.h"
 #include "core/CController.h"
 #include "core/CGame.h"
@@ -227,9 +228,12 @@ vstd::task<void> CRngHandler::addRandomLootAsync(std::shared_ptr<CCreature> crea
 
 vstd::task<void> CRngHandler::addDefeatLootAsync(std::shared_ptr<CCreature> creature,
                                                  std::set<std::shared_ptr<CItem>> items,
-                                                 std::function<void()> requireCurrent) {
+                                                 std::function<void()> requireCurrent,
+                                                 std::function<void()> settleCurrent,
+                                                 std::function<void()> compensate) {
     return [](std::shared_ptr<CCreature> creature, std::set<std::shared_ptr<CItem>> items,
-              std::function<void()> requireCurrent) -> vstd::task<void> {
+              std::function<void()> requireCurrent, std::function<void()> settleCurrent,
+              std::function<void()> compensate) -> vstd::task<void> {
         auto loop = vstd::event_loop<>::instance();
         if (!loop->isMainThread()) {
             co_await vstd::post(loop);
@@ -254,18 +258,31 @@ vstd::task<void> CRngHandler::addDefeatLootAsync(std::shared_ptr<CCreature> crea
             try {
                 co_await gui->showLootAsync(creature, items);
             } catch (const vstd::task_cancelled &) {
-                if (requireCurrent) {
-                    requireCurrent();
+                if (!compensate) {
+                    if (requireCurrent) {
+                        requireCurrent();
+                    }
+                    creature->addItems(items);
+                    throw;
                 }
-                creature->addItems(items);
-                throw;
+                const auto primary = std::current_exception();
+                try {
+                    compensate();
+                } catch (...) {
+                }
+                std::rethrow_exception(primary);
             }
         }
-        if (requireCurrent) {
-            requireCurrent();
+        if (settleCurrent) {
+            settleCurrent();
+        } else {
+            if (requireCurrent) {
+                requireCurrent();
+            }
+            creature->addItems(items);
         }
-        creature->addItems(items);
-    }(std::move(creature), std::move(items), std::move(requireCurrent));
+    }(std::move(creature), std::move(items), std::move(requireCurrent), std::move(settleCurrent),
+                                                std::move(compensate));
 }
 
 std::set<std::shared_ptr<CCreature>> CRngHandler::calculateRandomEncounter(int value) const {

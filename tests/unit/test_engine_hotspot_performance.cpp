@@ -1380,6 +1380,7 @@ class DefeatOwnershipBudgetController : public CFightController {
 
 void testDefeatResolutionRejectionsAndParticipantClaimsAreBounded() {
     constexpr int RECOVERIES = 4;
+    constexpr int OWNED_ITEMS_PER_RECOVERY = 32;
     constexpr int DUPLICATES_PER_RECOVERY = 32;
     constexpr int OVERLAPS_PER_RECOVERY = 32;
     auto fixture = make_open_map(5, 1);
@@ -1400,6 +1401,10 @@ void testDefeatResolutionRejectionsAndParticipantClaimsAreBounded() {
     opponent->setFightController(std::make_shared<DefeatOwnershipBudgetController>());
     independent->setFightController(independentController);
     independentOpponent->setFightController(std::make_shared<DefeatOwnershipBudgetController>());
+    CTypes::register_type_metadata<NotificationCountProbe, CGameObject>();
+    auto observer = std::make_shared<NotificationCountProbe>();
+    observer->setGame(fixture.game);
+    winner->connect("inventoryChanged", observer, "onInventoryChanged");
     bool released = false;
     int destructions = 0;
     fixture.map->getEventHandler()->registerTrigger(std::make_shared<CCustomTrigger>(
@@ -1422,11 +1427,26 @@ void testDefeatResolutionRejectionsAndParticipantClaimsAreBounded() {
         if (recovery != 0) {
             fixture.map->addObject(loser);
         }
+        std::set<std::shared_ptr<CItem>> owned;
+        for (int index = 0; index < OWNED_ITEMS_PER_RECOVERY; ++index) {
+            auto item = std::make_shared<CItem>();
+            item->setGame(fixture.game);
+            item->setName("boundedOwnedLoot" + std::to_string(recovery) + "_" + std::to_string(index));
+            loser->addItem(item);
+            owned.insert(item);
+        }
         loser->setHp(0);
         released = false;
         auto owner = context->spawnTask(CFightHandler::defeatedCreatureAsync(winner, loser));
         expect_true(pump([&] { return destructions == recovery + 1 || owner.finished(); }) && !owner.finished(),
                     "the bounded defeat owner must suspend in the real removal path");
+        loop->runReady();
+        expect_true(winner->getItems().size() == (recovery + 1) * OWNED_ITEMS_PER_RECOVERY &&
+                        observer->inventory_changed_calls == (recovery + 1) * OWNED_ITEMS_PER_RECOVERY,
+                    "the sole worker must grant exactly 32 identities and inventory callbacks before removal");
+        for (const auto &item : owned) {
+            expect_true(winner->hasInInventory(item), "bounded settlement must retain each exact owned item");
+        }
         const auto experience = winner->getExp();
         const auto hp = winner->getHp();
         const auto mana = winner->getMana();
@@ -1457,6 +1477,9 @@ void testDefeatResolutionRejectionsAndParticipantClaimsAreBounded() {
         expect_true(disjoint.outcome == CFightOutcome::Cancelled && independentController->starts == recovery + 1 &&
                         independentController->actions == recovery + 1 && independentController->ends == recovery + 1,
                     "participant ownership must allow bounded independent encounters during suspended recovery");
+        expect_true(winner->getItems().size() == (recovery + 1) * OWNED_ITEMS_PER_RECOVERY &&
+                        observer->inventory_changed_calls == (recovery + 1) * OWNED_ITEMS_PER_RECOVERY,
+                    "rejected duplicate and overlap calls must not repeat any owned grant or callback");
         released = true;
         expect_true(pump([&] { return owner.finished(); }), "the sole owner must drain its completed recovery");
         if (owner.finished()) {
@@ -1477,8 +1500,11 @@ void testDefeatResolutionRejectionsAndParticipantClaimsAreBounded() {
               << " duplicateRejections=" << duplicateRejections
               << " duplicateBudget=" << RECOVERIES * DUPLICATES_PER_RECOVERY << " overlaps=" << rejected
               << " overlapBudget=" << RECOVERIES * OVERLAPS_PER_RECOVERY
+              << " ownedLootBudget=" << RECOVERIES * OWNED_ITEMS_PER_RECOVERY
+              << " grantCallbackBudget=" << RECOVERIES * OWNED_ITEMS_PER_RECOVERY
               << " rejectedControllerWork=0 disjoint=" << independentController->actions
               << " disjointBudget=" << RECOVERIES << " actors=" << fixture.map->getObjects().size() << "\n";
+    winner->disconnect("inventoryChanged", observer, "onInventoryChanged");
     context->shutdown();
 }
 

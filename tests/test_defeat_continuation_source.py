@@ -105,16 +105,13 @@ class DefeatContinuationSourceTest(unittest.TestCase):
 
     def testCancellationCompensationRequiresCurrentOwnerBeforeAnyGrant(self):
         body = self.body
-        self.assertIn("cancellation = std::current_exception();\n        requireDefeatCurrent();", body)
         catch = body[body.index("cancellation = std::current_exception();") : body.index("if (cancellation) {")]
-        self.assertLess(
-            catch.index("requireDefeatCurrent();"), catch.index("std::set<std::shared_ptr<CItem>> pendingItems")
-        )
-        self.assertIn(
-            "requireDefeatCurrent(); a->addItems(std::move(pendingItems)); requireDefeatCurrent();",
-            " ".join(catch.split()),
-        )
-        self.assertIn("std::rethrow_exception(cancellation);", body)
+        self.assertIn("compensate();", catch)
+        self.assertNotIn("addItems", catch)
+        self.assertNotIn("pendingItems", catch)
+        self.assertLess(catch.index("compensate();"), catch.index("if (!context->isActive())"))
+        self.assertIn("std::rethrow_exception(cancellation);", catch)
+        self.assertIn("requireDefeatCurrent();", body[body.index("if (!context->isActive())") :])
 
     def testOnlyPrivateFriendDefeatRngCanReceiveTheGuard(self):
         public = cppBlock(self.rng, "vstd::task<void> CRngHandler::addRandomLootAsync(")
@@ -125,7 +122,7 @@ class DefeatContinuationSourceTest(unittest.TestCase):
         self.assertIn("addDefeatLootAsync", private)
         self.assertIn("std::function<void()> requireCurrent", private)
         self.assertNotIn("addDefeatLootAsync", self.header[: self.header.index("  private:")])
-        self.assertIn("rng->addDefeatLootAsync(a, items, requireDefeatCurrent)", self.body)
+        self.assertIn("rng->addDefeatLootAsync(a, items, requireDefeatCurrent, settleCurrent, compensate)", self.body)
 
     def testChildChecksBothNormalAndCancelledGrantsAndLazyPlayerClassification(self):
         child = self.requiredBlock(self.rng, "vstd::task<void> CRngHandler::addDefeatLootAsync(")
@@ -135,12 +132,14 @@ class DefeatContinuationSourceTest(unittest.TestCase):
             text,
         )
         self.assertIn(
-            "catch (const vstd::task_cancelled &) { if (requireCurrent) { requireCurrent(); } creature->addItems(items); throw;",
+            "if (!compensate) { if (requireCurrent) { requireCurrent(); } creature->addItems(items); throw;", text
+        )
+        self.assertIn(
+            "if (settleCurrent) { settleCurrent(); } else { if (requireCurrent) { requireCurrent(); } creature->addItems(items); }",
             text,
         )
-        self.assertIn("} if (requireCurrent) { requireCurrent(); } creature->addItems(items);", text)
         self.assertEqual(child.count("creature->addItems(items)"), 2)
-        self.assertIn("std::function<void()> requireCurrent) -> vstd::task<void>", child)
+        self.assertIn("std::function<void()> compensate) -> vstd::task<void>", child)
         self.assertIn("std::move(requireCurrent)", child)
 
     def testGuardCopiesNoStrongGameOrStackReferenceAcrossTheAwait(self):
@@ -518,6 +517,148 @@ class DefeatContinuationSourceTest(unittest.TestCase):
             "!map->tryBeginSaveSnapshot()",
         ):
             self.assertIn(token, native)
+
+    def testShutdownCompensationUsesAnExactInactiveOwnerCertificate(self):
+        guard = self.requiredBlock(self.body, "const auto requireCompensationCurrent =")
+        for required in (
+            "if (ownerIsCurrent())",
+            "requireDefeatCurrent();",
+            "initialContext->isActive()",
+            "std::numeric_limits<CGameContext::TransitionGeneration>::max()",
+            "initialContext->getTransitionGeneration() != initialGeneration + 1",
+            "capturedGame->getContext() != initialContext",
+            "capturedGame->getMap()",
+            "capturedGame->getMapBindingEpoch() != initialEpoch",
+            "!capturedPlayer",
+            "encounterMap->getAssignedPlayer() != capturedPlayer",
+            "encounterMap->getGame() != capturedGame",
+            "a->getGame() != capturedGame",
+            "b->getGame() != capturedGame",
+            "a->getMap() != encounterMap",
+            "b->getMap() != encounterMap",
+            "!a->isAlive()",
+            "b->isAlive()",
+            "!is_registered_on_map(encounterMap, a)",
+            "!is_registered_on_map(encounterMap, b)",
+            "!b->defeatResolutionInProgress",
+            "a->activeDefeatRecipientCount == 0",
+            "a->activeCombatOwner.lock() != winnerClaim",
+            "b->activeCombatOwner.lock() != loserClaim",
+        ):
+            self.assertIn(required, guard)
+        for forbidden in ("getPlayer(", "getRngHandler(", "getGuiHandler(", "createObject", "setMap(", "[&]"):
+            self.assertNotIn(forbidden, guard)
+        self.assertLess(guard.index("expectedGame.lock()"), guard.index("initialContext->isActive()"))
+
+    def testSettlementOwnsAttemptAndCommitBeforeCallbacksAndNeverRegrants(self):
+        receipt = self.requiredBlock(self.body, "struct DefeatLootSettlement")
+        self.assertIn("const std::set<std::shared_ptr<CItem>> owned", receipt)
+        self.assertEqual(4, receipt.count("= delete;"))
+        settle = self.requiredBlock(self.body, "const auto settleItems =")
+        self.assertIn("[a, settlement]", settle)
+        self.assertNotIn("co_await", settle)
+        self.assertNotIn("hasInInventory", settle)
+        self.assertEqual(1, settle.count("a->addItem(item);"))
+        self.assertIn("settlement->attempted.insert(item);", settle)
+        self.assertLess(settle.index("settlement->attempted.insert(item);"), settle.index("a->addItem(item);"))
+        replay = settle[settle.index("if (settlement->attempted.contains(item))") :]
+        replay = replay[: replay.index("settlement->attempted.insert(item);")]
+        self.assertIn("!settlement->committed.contains(item)", replay)
+        self.assertIn("!a->items.contains(item)", replay)
+        self.assertNotIn("addItem", replay)
+        self.assertIn("settlement->uncertain = true;", settle)
+        self.assertLess(settle.index("if (settlement->uncertain)"), settle.index("a->addItem(item);"))
+        self.assertEqual(2, settle.count("for (const auto &item : settlement->owned)"))
+        final = settle[settle.rindex("for (const auto &item : settlement->owned)") :]
+        for required in (
+            "requireCurrent();",
+            "!settlement->committed.contains(item)",
+            "item->getGame() != a->getGame()",
+            "!a->items.contains(item)",
+        ):
+            self.assertIn(required, final)
+        self.assertIn('throw std::logic_error("Defeat loot settlement lost an earlier committed item");', final)
+        self.assertNotIn("addItem", final)
+
+    def testChildAndParentShareOnlyValueOwnedPrivateSettlementCallbacks(self):
+        child = self.requiredBlock(self.rng, "vstd::task<void> CRngHandler::addDefeatLootAsync(")
+        self.assertIn("std::function<void()> settleCurrent", child)
+        self.assertIn("std::function<void()> compensate", child)
+        self.assertIn("std::move(settleCurrent)", child)
+        self.assertIn("std::move(compensate)", child)
+        self.assertIn("const auto primary = std::current_exception();", child)
+        self.assertIn("std::rethrow_exception(primary);", child)
+        self.assertIn("if (settleCurrent)", child)
+        self.assertNotIn("[&]", child)
+        self.assertIn("[settleItems, requireDefeatCurrent]", self.body)
+        self.assertIn("[settleItems, requireCompensationCurrent]", self.body)
+        self.assertIn("requireDefeatCurrent, settleCurrent, compensate)", self.body)
+        parent = self.body[self.body.index("cancellation = std::current_exception();") :]
+        self.assertLess(parent.index("compensate();"), parent.index("if (!context->isActive())"))
+        self.assertLess(parent.index("if (!context->isActive())"), parent.index("removeObjectAsync(b)"))
+        self.assertNotIn("pendingItems", parent)
+        private = self.header[self.header.index("  private:") :]
+        self.assertIn("std::function<void()> settleCurrent = {}", private)
+        self.assertIn("std::function<void()> compensate = {}", private)
+        self.assertNotIn("DefeatLootSettlement", self.header)
+
+    def testNativeCompensationUsesQueuedObserverAndExactCacheControls(self):
+        name = "testOwnedLootCancellationCompensationRetainsExactItemsAndRejectsUncertainReplay"
+        native = self.requiredBlock(self.native, "void " + name + "()")
+        for required in (
+            "mode != 12",
+            "CGameLootPanel",
+            "waiting.requestStop()",
+            "context->shutdown()",
+            "game->setMap(map)",
+            "game->setMap(replacement)",
+            "context->advanceTransitionGeneration()",
+            "player->setGame(otherGame)",
+            "callbackSawBothItems",
+            "player->removeItem(first)",
+            "player->getExp() == experience",
+            "!map->tryBeginSaveSnapshot()",
+            "map->detachPlayer()",
+            "!map->getAssignedPlayer()",
+            "unitMalformedTerminalAlias",
+            'player->connect("inventoryChanged", observer, "onInventoryChanged")',
+            "player->getFightController() != originalFight",
+            "map->getAssignedPlayer() == player",
+        ):
+            self.assertIn(required, native)
+        observer = self.requiredBlock(self.native, "class OwnedLootCompensationObserver")
+        self.assertIn("auto action = std::move(callback);", observer)
+        self.assertIn("callback = {};", observer)
+        self.assertNotIn("metadataCallback", native)
+        self.assertNotIn('registerType("CPlayerController"', native)
+        self.assertEqual(1, self.native.count('nativeTestProfile().run("' + name + '",'))
+        tree = ast.parse(self.profile)
+        additional = next(
+            n
+            for n in tree.body
+            if isinstance(n, ast.Assign)
+            and any(isinstance(t, ast.Name) and t.id == "ADDITIONAL_CASES" for t in n.targets)
+        )
+        self.assertEqual(1, ast.literal_eval(additional.value)["handler"].count(name))
+
+    def testFixedOwnedLootWorkPreservesExistingRejectionBudgets(self):
+        source = (ROOT / "tests/unit/test_engine_hotspot_performance.cpp").read_text()
+        body = self.requiredBlock(source, "void testDefeatResolutionRejectionsAndParticipantClaimsAreBounded()")
+        for required in (
+            "RECOVERIES = 4",
+            "DUPLICATES_PER_RECOVERY = 32",
+            "OVERLAPS_PER_RECOVERY = 32",
+            "OWNED_ITEMS_PER_RECOVERY = 32",
+            'winner->connect("inventoryChanged"',
+            "observer->inventory_changed_calls == (recovery + 1) * OWNED_ITEMS_PER_RECOVERY",
+            "winner->getItems().size() == (recovery + 1) * OWNED_ITEMS_PER_RECOVERY",
+            "blockedController->starts == 0",
+            "blockedController->actions == 0",
+            "blockedController->ends == 0",
+            "ownedLootBudget=",
+            "grantCallbackBudget=",
+        ):
+            self.assertIn(required, body)
 
 
 if __name__ == "__main__":
