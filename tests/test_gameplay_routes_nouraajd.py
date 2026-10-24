@@ -1001,6 +1001,45 @@ class GameplayNouraajdServiceRoutesTest(unittest.TestCase):
                 self.assertIn(("brew_life_potion", "success"), state["order"])
                 self.assertEqual(has_mana, ("craft_town_portal_scroll", "success") in state["order"])
 
+    def testVictorCapturedInquisitorEscapeTakesTheSoleDoorInsteadOfTheEasternPocket(self):
+        # PR 1597 / 886ac290, job 120725962470, seed 2808043864: native pre-turn-1002 positions.
+        opponents = [
+            (34, 86, 0),
+            (43, 102, 0),
+            (43, 103, 0),
+            (46, 112, 0),
+            (54, 77, 0),
+            (58, 92, 0),
+            (59, 79, 0),
+            (59, 114, 0),
+            (60, 87, 0),
+            (67, 111, 0),
+            (77, 108, 0),
+            (82, 93, 0),
+        ]
+        driver, state = self.courtyardFleeFixture()
+        origin = state["position"] = (44, 105, 0)
+
+        class ObservedFirstStep(Exception):
+            pass
+
+        driver.step = Mock(side_effect=ObservedFirstStep)
+        with patch.object(nouraajd, "fleeHostileCoords", return_value=opponents):
+            with self.assertRaises(ObservedFirstStep):
+                nouraajd.fleeCourtyardUntil(driver, 1)
+        driver.step.assert_called_once_with((44, 106, 0))
+        self.assertEqual(10, state["turn"], "This projects the captured native decision; it does not run movement")
+        self.assertLessEqual(len(state["probes"][10]), 64)
+        self.assertEqual(len(state["probes"][10]), len(set(state["probes"][10])))
+        door, enclosed = nouraajd.courtyardExitDistances()
+        self.assertEqual((44, 106, 0), door)
+        path = [(44, 106, 0), (44, 107, 0), (43, 107, 0), (42, 107, 0), (41, 107, 0), (40, 107, 0)]
+        for hop, (previous, target) in enumerate(zip([origin] + path, path), 1):
+            self.assertEqual(1, sum(abs(a - b) for a, b in zip(previous, target)))
+            self.assertIn(target, state["walkable"])
+            clearance = min(nouraajd.courtyardPursuitLowerBound(target, actor, door, enclosed) for actor in opponents)
+            self.assertGreater(clearance - hop, 1, "The existing pursuit margin must hold at all six authored hops")
+
 
 if __name__ == "__main__":
     unittest.main()

@@ -736,6 +736,16 @@ def courtyardExitDistances():
     return door, distances
 
 
+def courtyardPursuitLowerBound(first, second, door, exit_distances):
+    """Lower-bound cardinal pursuit through the verified sole exit.
+
+    Door legs ignore other obstacles and assume an open door, so the bound stays conservative even when it is closed.
+    """
+    if (first in exit_distances) != (second in exit_distances):
+        return sum(abs(a - b) for a, b in zip(first, door)) + sum(abs(a - b) for a, b in zip(door, second))
+    return sum(abs(a - b) for a, b in zip(first, second))
+
+
 def fleeHostileCoords(d, type_cache, *, level=None):
     """Snapshot current combat-capable actors once; path lookahead never repeats their RPCs."""
     roster = d.call(d.game_map, "getObjects")
@@ -797,7 +807,7 @@ def fleeCourtyardUntil(d, elapsed, allow_timeout=False):
         rejected = []
 
         def clearance(target):
-            return min(sum(abs(a - b) for a, b in zip(target, enemy)) for enemy in opponents)
+            return min(courtyardPursuitLowerBound(target, enemy, door, exit_distances) for enemy in opponents)
 
         def can_step(target):
             if target not in probes:
