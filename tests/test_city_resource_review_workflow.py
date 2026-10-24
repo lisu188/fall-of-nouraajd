@@ -22,6 +22,15 @@ ALLOWED = (
     "tests/fixtures/baldurs_gate_city_geometry.json",
 )
 
+CASTLE_ALLOWED = (
+    "res/campaigns/longLiveTheQueen/sources/castleHomecoming.json",
+    "res/campaigns/longLiveTheQueen/sources/castleGuardianAngels.json",
+    "res/campaigns/longLiveTheQueen/sources/castleGriffinCliff.json",
+    "res/maps/castleHomecoming/map.json",
+    "res/maps/castleGuardianAngels/map.json",
+    "res/maps/castleGriffinCliff/map.json",
+)
+
 
 def allPythonBlocks():
     result, selected = [], None
@@ -48,9 +57,12 @@ def pythonBlocks():
 
 @contextmanager
 def syntheticRun(mode, review_kind="resource"):
-    assert review_kind in {"resource", "ledger"}
+    assert review_kind in {"resource", "ledger", "castle"}
     allowed = ALLOWED if review_kind == "resource" else ("tests/fixtures/baldurs_gate_city_ledger.json",)
     program = "scripts/build_baldurs_gate_city" + ("_ledger" if review_kind == "ledger" else "") + ".py"
+    if review_kind == "castle":
+        allowed = CASTLE_ALLOWED
+        program = "scripts/rebuild_stored_castle_campaign.py"
     changed_target = allowed[1] if review_kind == "resource" else allowed[0]
     with tempfile.TemporaryDirectory(prefix="city-resource-review-") as directory:
         root = Path(directory).resolve()
@@ -92,7 +104,21 @@ def syntheticRun(mode, review_kind="resource"):
                 return subprocess.CompletedProcess(
                     command,
                     1 if self_check and mode == "failed-post-check" else 0,
-                    stdout=b"synthetic subprocess; actual generator never executed\n",
+                    stdout=(
+                        json.dumps(
+                            {
+                                "kind": "StoredCastleResourceReview",
+                                "scenarios": [{}, {}, {}],
+                                "originalArchivesRead": False,
+                                "nativeExecuted": False,
+                                "mcpExecuted": False,
+                                "sourceOrOriginalAcceptance": False,
+                                "resourceDiffAccepted": False,
+                            }
+                        ).encode()
+                        if review_kind == "castle"
+                        else b"synthetic subprocess; actual generator never executed\n"
+                    ),
                 )
             if command[:5] == ["git", "diff", "--no-ext-diff", "--no-textconv", "--binary"]:
                 target = Path(next(part.removeprefix("--output=") for part in command if part.startswith("--output=")))
@@ -157,9 +183,66 @@ def syntheticRun(mode, review_kind="resource"):
 
 
 class CityResourceReviewWorkflowTest(unittest.TestCase):
+    def testCastleModeRetainsExactlySixOutputsAndStructuredReports(self):
+        generate, gate = pythonBlocks()
+        with syntheticRun("clean", "castle") as (output, calls):
+            exec(compile(generate, "actual_castle_inline", "exec"), {})
+            exec(compile(gate, "actual_castle_gate", "exec"), {})
+            programs = [call for call in calls if len(call) > 2 and call[1] == "-B"]
+            self.assertEqual([[], ["--check"]], [call[3:] for call in programs])
+            self.assertTrue(all(call[2] == "scripts/rebuild_stored_castle_campaign.py" for call in programs))
+            exported = {
+                path.relative_to(output / "generated").as_posix() for path in (output / "generated").rglob("*.json")
+            }
+            self.assertEqual(set(CASTLE_ALLOWED), exported)
+            for phase in ("generate", "post-check"):
+                report = json.loads((output / (phase + "-report.json")).read_text())
+                self.assertFalse(report["originalArchivesRead"])
+                self.assertFalse(report["resourceDiffAccepted"])
+
+    def testCastleModeRetainsEveryExistingFailureAndCapacityGate(self):
+        generate, gate = pythonBlocks()
+        for mode in (
+            "stale",
+            "failed-post-check",
+            "unexpected",
+            "wrong-head",
+            "checkout-threshold",
+            "runner-reserve",
+            "checkout-would-cross",
+            "retention-runner-reserve",
+        ):
+            with self.subTest(mode=mode), syntheticRun(mode, "castle") as (output, calls):
+                if mode in ("stale", "retention-runner-reserve"):
+                    exec(compile(generate, "actual_castle_inline", "exec"), {})
+                else:
+                    with self.assertRaises(AssertionError):
+                        exec(compile(generate, "actual_castle_inline", "exec"), {})
+                with self.assertRaises(AssertionError):
+                    exec(compile(gate, "actual_castle_gate", "exec"), {})
+                if mode in ("wrong-head", "checkout-threshold", "runner-reserve", "checkout-would-cross"):
+                    self.assertFalse(any(len(call) > 2 and call[1] == "-B" for call in calls))
+        with syntheticRun("clean", "castle"):
+            exec(compile(generate, "actual_castle_inline", "exec"), {})
+            with patch.dict(os.environ, UPLOAD_OUTCOME="failure"), self.assertRaisesRegex(
+                AssertionError, "artifact upload failed"
+            ):
+                exec(compile(gate, "actual_castle_gate", "exec"), {})
+
+    def testCastleModeIsAdditiveAndUsesSixLiteralOutputPolicy(self):
+        source = WORKFLOW.read_text()
+        self.assertIn("review: [resource, ledger, castle]", source)
+        for path in CASTLE_ALLOWED:
+            self.assertIn('"' + path + '"', pythonBlocks()[0])
+        self.assertIn('output_budget = (16 if review_kind == "castle" else 32) * 1024 * 1024', pythonBlocks()[0])
+        self.assertIn('combined_budget = (32 if review_kind == "castle" else 48) * 1024 * 1024', pythonBlocks()[0])
+        self.assertIn("reserve = 128 * 1024 * 1024", pythonBlocks()[0])
+        self.assertNotIn("--heroes-dir", pythonBlocks()[0])
+        self.assertNotIn("--source", pythonBlocks()[0])
+
     def testLedgerReviewIsAnIndependentFailClosedMatrixEntry(self):
         source = WORKFLOW.read_text()
-        self.assertIn("review: [resource, ledger]", source)
+        self.assertIn("review: [resource, ledger, castle]", source)
         self.assertIn("fail-fast: false", source)
         self.assertIn("REVIEW_KIND: ${{ matrix.review }}", source)
         self.assertIn("city-${{ matrix.review }}-review-", source)
