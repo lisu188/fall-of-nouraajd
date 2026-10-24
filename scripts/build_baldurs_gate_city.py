@@ -193,6 +193,8 @@ def nativeItem(source_id, item):
     """Native gear conversion; source-specific abilities remain explicit, unaudited obligations."""
     item_type = item.get("item_type", 0)
     enchantment = min(5, max(0, item.get("enchantment", 0)))
+    equipped_effect_count = item.get("equipped_effect_count")
+    equipped_effects_known = type(equipped_effect_count) is int and 0 <= equipped_effect_count <= 65535
     class_id, animation, bonus = "CItem", "images/items/scroll", {}
     if item_type in range(15, 31):
         class_id = "CSmallWeapon" if item_type in {16, 19} else "CWeapon"
@@ -231,7 +233,15 @@ def nativeItem(source_id, item):
         "plugin_citySourceFlags": item.get("flags", 0),
         "plugin_cityLore": item.get("lore", 0),
         "plugin_cityStackSize": item.get("stack_size", 1),
-        "plugin_cityAbilitiesPending": bool(item.get("ability_count", 0) or item.get("flags", 0) & 64),
+        "plugin_cityEquippedEffectsStatus": (
+            ("positive" if equipped_effect_count else "zero") if equipped_effects_known else "unknown"
+        ),
+        "plugin_cityAbilitiesPending": bool(
+            item.get("ability_count", 0)
+            or not equipped_effects_known
+            or equipped_effect_count
+            or item.get("flags", 0) & 64
+        ),
         "tags": ["cursed"] if item.get("flags", 0) & 16 else [],
     }
     if bonus:

@@ -432,6 +432,78 @@ class BinaryParserTests(unittest.TestCase):
         with self.assertRaisesRegex(audit.AuditError, "ten creature slots"):
             audit.parseArea(data)
 
+    def testItemParserRetainsEquippedEffectCountWithoutDecodingEffects(self):
+        for name, count in (("LEAT04", 8), ("HELM01", 5), ("MIHP1", 1), ("PLAIN", 0)):
+            with self.subTest(item=name):
+                item = bytearray(0x72 + 0x30 * count)
+                putText(item, 0, "ITM V1  ")
+                putNumber(item, 0x6A, 0x72)
+                putNumber(item, 0x70, count, "H")
+                parsed, refs, warnings = audit.parseItem(item)
+                self.assertEqual(parsed.get("equipped_effect_count"), count)
+                self.assertIs(type(parsed["equipped_effect_count"]), int)
+                self.assertFalse(parsed["effects_interpreted"])
+                self.assertFalse(any(ref for ref in refs))
+                self.assertEqual(warnings, [])
+
+    def testNativeItemMarksEquippedEffectsPendingWithoutImplementingThem(self):
+        import ast
+
+        source = MODULE_PATH.with_name("build_baldurs_gate_city.py").read_text(encoding="utf-8")
+        tree = ast.parse(source)
+        names = {"protectCityData", "definition", "nativeItem"}
+        selected = [node for node in tree.body if isinstance(node, ast.FunctionDef) and node.name in names]
+        self.assertEqual(len(selected), 3)
+        scope = {"json": json, "CITY_JSON_PREFIX": "city-json:"}
+        exec(compile(ast.Module(body=selected, type_ignores=[]), "<isolated-city-item-conversion>", "exec"), scope)
+        records = (
+            ("LEAT04", {"item_type": 2, "flags": 44, "ability_count": 0, "equipped_effect_count": 8}, True),
+            ("HELM01", {"item_type": 7, "flags": 44, "ability_count": 0, "equipped_effect_count": 5}, True),
+            ("MIHP1", {"item_type": 1, "flags": 40, "ability_count": 0, "equipped_effect_count": 1}, True),
+            ("SW1H04", {"item_type": 20, "flags": 44, "ability_count": 1, "equipped_effect_count": 3}, True),
+            ("DAGG01", {"item_type": 16, "flags": 44, "ability_count": 1, "equipped_effect_count": 3}, True),
+            ("ABILITY_ONLY", {"ability_count": 1, "equipped_effect_count": 0}, True),
+            ("FLAG_ONLY", {"flags": 64, "equipped_effect_count": 0}, True),
+            ("PLAIN", {"ability_count": 0, "equipped_effect_count": 0}, False),
+            ("LEGACY_PLAIN", {}, True),
+            ("MAX_COUNT", {"equipped_effect_count": 65535}, True),
+            ("MISSING_COUNT", {"ability_count": 0}, True),
+            *(
+                ("MALFORMED_" + str(index), {"equipped_effect_count": value}, True)
+                for index, value in enumerate((None, False, True, "0", "1", -1, 65536, {}, []))
+            ),
+        )
+        expected_classes = {
+            "LEAT04": "CArmor",
+            "HELM01": "CHelmet",
+            "MIHP1": "CItem",
+            "SW1H04": "CWeapon",
+            "DAGG01": "CSmallWeapon",
+        }
+        for name, record, expected in records:
+            with self.subTest(item=name):
+                before = json.dumps(record, sort_keys=True)
+                result = scope["nativeItem"](name, record)
+                props = result["properties"]
+                self.assertEqual(props["plugin_cityAbilitiesPending"], expected)
+                expected_status = (
+                    "zero"
+                    if name in {"PLAIN", "ABILITY_ONLY", "FLAG_ONLY"}
+                    else (
+                        "positive"
+                        if name in {"LEAT04", "HELM01", "MIHP1", "SW1H04", "DAGG01", "MAX_COUNT"}
+                        else "unknown"
+                    )
+                )
+                self.assertEqual(props.get("plugin_cityEquippedEffectsStatus"), expected_status)
+                self.assertEqual(props["plugin_citySourceItem"], name)
+                self.assertEqual(json.dumps(record, sort_keys=True), before)
+                self.assertNotIn("effects", props)
+                if name in expected_classes:
+                    self.assertEqual(result["class"], expected_classes[name])
+                if name == "MIHP1":
+                    self.assertNotIn("bonus", props)
+
 
 class SourceAuditTests(unittest.TestCase):
     def testChapterSevenDepartureRuleRetainsExactConditionsAndAllIronThroneActors(self):
