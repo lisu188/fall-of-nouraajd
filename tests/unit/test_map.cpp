@@ -70,8 +70,8 @@ struct CRandomMapGeneratorTestAccess {
 
 namespace {
 
-CNativeTestProfile &nativeTestProfile() {
-    static CNativeTestProfile profile("map");
+CNativeTestProfile &nativeTestProfile(const char *suite = "map") {
+    static CNativeTestProfile profile(suite);
     return profile;
 }
 
@@ -4603,17 +4603,31 @@ void test_playtest_trace_objectref_distinguishes_creature_spawn_from_archetype_i
                 "legacy creature trace should leave the class id empty when no archetype is present");
 }
 
-int main() {
+int main(int argc, char **argv) {
+    const bool loaderOnly = argc == 2 && std::string(argv[1]) == "--loader-race-only";
+    const bool withoutLoader = argc == 2 && std::string(argv[1]) == "--without-loader-race";
+    if (argc != 1 && !loaderOnly && !withoutLoader) {
+        std::cerr << "Expected no arguments, --loader-race-only or --without-loader-race\n";
+        return 2;
+    }
     pybind11::scoped_interpreter guard{};
+    nativeTestProfile(loaderOnly ? "map-loader-race" : "map");
 
-    nativeTestProfile().run("testNewSessionClearsQuitLatch", testNewSessionClearsQuitLatch);
-    nativeTestProfile().run("testMapMoveDiscardsReplacedControllerPlan", testMapMoveDiscardsReplacedControllerPlan);
-    nativeTestProfile().run("testMapMoveSnapshotsActorsBeforeInlinePlans", testMapMoveSnapshotsActorsBeforeInlinePlans);
-    nativeTestProfile().run("testCancelledAsyncCombatRestoresPlayerOrigin",
-                            testCancelledAsyncCombatRestoresPlayerOrigin);
-
-    nativeTestProfile().run("test_loader_race_overloads_preserve_default_and_attach_race",
-                            test_loader_race_overloads_preserve_default_and_attach_race);
+    if (!loaderOnly) {
+        nativeTestProfile().run("testNewSessionClearsQuitLatch", testNewSessionClearsQuitLatch);
+        nativeTestProfile().run("testMapMoveDiscardsReplacedControllerPlan", testMapMoveDiscardsReplacedControllerPlan);
+        nativeTestProfile().run("testMapMoveSnapshotsActorsBeforeInlinePlans",
+                                testMapMoveSnapshotsActorsBeforeInlinePlans);
+        nativeTestProfile().run("testCancelledAsyncCombatRestoresPlayerOrigin",
+                                testCancelledAsyncCombatRestoresPlayerOrigin);
+    }
+    if (!withoutLoader) {
+        nativeTestProfile().run("test_loader_race_overloads_preserve_default_and_attach_race",
+                                test_loader_race_overloads_preserve_default_and_attach_race);
+        if (loaderOnly) {
+            return finish_tests();
+        }
+    }
     nativeTestProfile().run("test_loader_invalid_race_leaves_active_map_unchanged",
                             test_loader_invalid_race_leaves_active_map_unchanged);
     nativeTestProfile().run("test_scene_manager_state_duplicate_and_player_transfer",

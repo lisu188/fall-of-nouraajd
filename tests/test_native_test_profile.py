@@ -109,6 +109,52 @@ ADDITIONAL_CASES = {
 
 class NativeTestProfileSourceTest(unittest.TestCase):
 
+    def testBindingModuleRegistersTypedMapConversionMetadataWithoutBuilders(self):
+        source = (ROOT / "src/core/CModule.cpp").read_text(encoding="utf-8")
+        signature = "void register_python_binding_type_metadata() {"
+        self.assertEqual(1, source.count(signature))
+        body = source.split(signature, 1)[1].split("\n}\n", 1)[0]
+        for native_type in ("CMap", "CStats", "CDamage"):
+            registration = "CTypes::register_type_metadata<" + native_type + ", CGameObject>();"
+            self.assertEqual(
+                1, body.count(registration), "the binding module needs metadata for each core pointer type"
+            )
+        self.assertIn('#include "core/CMap.h"', source)
+        self.assertNotRegex(body, r"\bregister_type\s*<")
+        self.assertNotRegex(body, r"\bregister_builder\s*<")
+        self.assertIn("FN_GAMEPLAY_TYPES(FN_TYPE, FN_WRAPPED)", body)
+        self.assertIn("CTypes::register_type_metadata<T, __VA_ARGS__>()", body)
+        self.assertIn("CTypes::register_type_metadata<CWrapper<T>, T, __VA_ARGS__>()", body)
+        init = source.split("void init_game_module(py::module_ &m) {", 1)[1]
+        self.assertLess(init.index("register_python_binding_type_metadata();"), init.index("bindGraphicsAndWorld(m);"))
+
+    def testMeasuredRandomLoaderCaseHasSeparateBoundedCTestInvocation(self):
+        source = (ROOT / "tests/unit/test_map.cpp").read_text()
+        cmake = (ROOT / "CMakeLists.txt").read_text()
+        self.assertTrue(
+            "int main(int argc, char **argv) {" in source, "map test entry must accept bounded case selection"
+        )
+        main = source.split("int main(int argc, char **argv) {", 1)[1]
+        self.assertIn('argc == 2 && std::string(argv[1]) == "--loader-race-only"', main)
+        self.assertIn('argc == 2 && std::string(argv[1]) == "--without-loader-race"', main)
+        self.assertIn("if (argc != 1 && !loaderOnly && !withoutLoader)", main)
+        self.assertIn('nativeTestProfile(loaderOnly ? "map-loader-race" : "map");', main)
+        self.assertIn("if (!withoutLoader) {", main)
+        selected = main.split("if (!withoutLoader) {", 1)[1].split("\n    }", 1)[0]
+        self.assertEqual(1, selected.count("nativeTestProfile().run("))
+        self.assertIn('"test_loader_race_overloads_preserve_default_and_attach_race"', selected)
+        self.assertIn("return finish_tests();", selected)
+        self.assertIn("if (loaderOnly) {", selected)
+        self.assertIn("if (!loaderOnly) {", main)
+        self.assertEqual(1, main.count("test_loader_race_overloads_preserve_default_and_attach_race);"))
+        self.assertIn("COMMAND map_unit_tests --loader-race-only", cmake)
+        self.assertIn('elseif (target_name STREQUAL "map_unit_tests")', cmake)
+        self.assertIn("COMMAND ${target_name} --without-loader-race", cmake)
+        entry = cmake.split("set_tests_properties(for_unit_tests.map_loader_race_unit_tests PROPERTIES", 1)[1]
+        entry = entry.split(")", 1)[0]
+        self.assertIn('LABELS "for_unit_tests;unit;map_unit_tests"', entry)
+        self.assertIn("TIMEOUT 60", entry)
+
     def testDirectEncounterAdmissionUsesAnArmedTopLevelSnapshotProbe(self):
         source = (ROOT / "tests/unit/test_allied_combat.cpp").read_text(encoding="utf-8")
         self.assertIn("class EncounterAdmissionSnapshotMap : public CMap", source)
@@ -445,7 +491,8 @@ class NativeTestProfileSourceTest(unittest.TestCase):
     def testEveryExistingCaseKeepsItsOrderAndMetadataComesFirst(self):
         for suite, (count, digest) in BASELINE_CASES.items():
             source = (ROOT / f"tests/unit/test_{suite}.cpp").read_text(encoding="utf-8")
-            main = source[source.rindex("int main() {") :]
+            signature = "int main(int argc, char **argv) {" if suite == "map" else "int main() {"
+            main = source[source.rindex(signature) :]
             calls = re.findall(
                 r'nativeTestProfile\(\)\.run\("(test\w+)",\s*'
                 r'(?:(test\w+)\);|\[&\] \{\s*runTimedGuiCancellationTest\("(test\w+)",\s*(test\w+)\);\s*\}\);)',

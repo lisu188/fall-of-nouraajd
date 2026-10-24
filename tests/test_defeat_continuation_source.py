@@ -470,9 +470,9 @@ class DefeatContinuationSourceTest(unittest.TestCase):
             self.native, "void testOwnedDefeatCodecBoundaryPreservesOriginalFailureAndStopsContinuation("
         )
         for token in (
-            "CTypes::findCodec(typeid(int))",
-            "CTypes::registerCodec(typeid(int), probe)",
-            "CTypes::registerCodec(typeid(int), original)",
+            "CTypes::findCodec(typeid(std::shared_ptr<CStats>))",
+            "CTypes::registerCodec(typeid(std::shared_ptr<CStats>), probe)",
+            "CTypes::registerCodec(typeid(std::shared_ptr<CStats>), original)",
             "~RestoreCodec()",
             "constructed && calls == 1",
             'getNumericProperty("zAfterCodec") == 0',
@@ -480,6 +480,18 @@ class DefeatContinuationSourceTest(unittest.TestCase):
             "unit codec boundary primary failure",
         ):
             self.assertIn(token, native)
+
+        item = (ROOT / "src/object/CItem.h").read_text()
+        core = (ROOT / "src/core/CCoreTypeRegistration.cpp").read_text()
+        types = (ROOT / "src/core/CTypes.h").read_text()
+        self.assertIn("V_PROPERTY(CItem, std::shared_ptr<CStats>, bonus", item)
+        self.assertIn("CTypes::register_type<CStats, CGameObject>();", core)
+        self.assertIn("registerCodec(typeid(std::shared_ptr<T>), game_object_pointer_serializer());", types)
+        self.assertIn('{"bonus", json{{"unitCodecProbe", true}}}', native)
+        probe = self.requiredBlock(self.native, "class DefeatCodecBoundaryProbe")
+        self.assertIn("return std::any(std::make_shared<CStats>());", probe)
+        self.assertIn("return original->deserialize(game, value, context);", probe)
+        self.assertIn("return original->serialize(value, context);", probe)
 
     def testPreallocatedGraphActorBindingAndRemainingReadMetadataUseTheSameLatch(self):
         source = (ROOT / "src/core/CSerialization.cpp").read_text()

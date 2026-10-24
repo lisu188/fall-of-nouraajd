@@ -2025,7 +2025,7 @@ class DefeatCodecBoundaryProbe : public CSerializerBase {
                                                CSerializationReadContext &context) const override {
         if (value.is_object() && value.contains("unitCodecProbe")) {
             callback();
-            return std::any(1);
+            return std::any(std::make_shared<CStats>());
         }
         return original->deserialize(game, value, context);
     }
@@ -2059,12 +2059,12 @@ void testOwnedDefeatCodecBoundaryPreservesOriginalFailureAndStopsContinuation() 
             "AUnitCodecBoundaryItem",
             std::make_shared<json>(
                 json{{"class", "AUnitCodecBoundaryItem"},
-                     {"properties", json{{"power", json{{"unitCodecProbe", true}}}, {"zAfterCodec", 123}}}}));
+                     {"properties", json{{"bonus", json{{"unitCodecProbe", true}}}, {"zAfterCodec", 123}}}}));
         expect_true(objects->getConfig("AUnitCodecBoundaryItem") &&
                         objects->getClass("AUnitCodecBoundaryItem") == "AUnitCodecBoundaryItem",
                     "the codec callback must come from the actual configured item table");
         auto rng = game->getRngHandler();
-        auto original = CTypes::findCodec(typeid(int));
+        auto original = CTypes::findCodec(typeid(std::shared_ptr<CStats>));
         expect_true(rng && original && calls == 0, "warm ordinary malformed-property handling before arming the codec");
         if (!original) {
             context->shutdown();
@@ -2072,7 +2072,7 @@ void testOwnedDefeatCodecBoundaryPreservesOriginalFailureAndStopsContinuation() 
         }
         struct RestoreCodec {
             std::shared_ptr<const CSerializerBase> original;
-            ~RestoreCodec() { CTypes::registerCodec(typeid(int), original); }
+            ~RestoreCodec() { CTypes::registerCodec(typeid(std::shared_ptr<CStats>), original); }
         } restore{original};
         auto probe = std::make_shared<DefeatCodecBoundaryProbe>();
         probe->original = original;
@@ -2093,7 +2093,7 @@ void testOwnedDefeatCodecBoundaryPreservesOriginalFailureAndStopsContinuation() 
                 throw std::runtime_error("unit codec boundary primary failure");
             }
         };
-        CTypes::registerCodec(typeid(int), probe);
+        CTypes::registerCodec(typeid(std::shared_ptr<CStats>), probe);
         armed = true;
         auto owner = context->spawnTask(CFightHandler::defeatedCreatureAsync(winner, loser));
         bool cancelled = false;
@@ -2121,7 +2121,7 @@ void testOwnedDefeatCodecBoundaryPreservesOriginalFailureAndStopsContinuation() 
                             map->getObjectByName(loser->getName()) == loser && !map->tryBeginSaveSnapshot(),
                         "a throwing stale codec must preserve its original primary and block every later setter");
         }
-        CTypes::registerCodec(typeid(int), original);
+        CTypes::registerCodec(typeid(std::shared_ptr<CStats>), original);
         context->shutdown();
     }
     vstd::rng() = previousRng;

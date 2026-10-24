@@ -107,6 +107,58 @@ class MapAssignedPlayerSourceTest(unittest.TestCase):
             self.assertIn(guard, body)
         self.assertEqual(1, source.count("    " + name + "();"))
 
+    def testQueryGuardRegistersSessionFactoriesBeforeAttachmentAndSnapshot(self):
+        source = (ROOT / "tests/unit/test_engine_hotspot_performance.cpp").read_text(encoding="utf-8")
+        body = functionBody(source, "void testAssignedPlayerQueriesAreMutationAndCallbackBounded()")
+        attachment = body.index("fixture.map->attachPlayer(player, Coords(0, 0, 0))")
+        snapshot = body.index("const auto current_movement = player->getController()")
+        query = body.index("for (int read = 0; read < READS_PER_PHASE; ++read)")
+        for native_type, counter, variable in (
+            ("CPlayerController", "movement_constructions", "current_movement"),
+            ("CPlayerFightController", "fight_constructions", "current_fight"),
+        ):
+            registration = 'fixture.game->getObjectHandler()->registerType("' + native_type + '"'
+            self.assertIn(registration, body, "global CTypes metadata does not populate a fresh session's constructors")
+            factory = body.index(registration)
+            self.assertLess(factory, attachment)
+            self.assertLess(attachment, snapshot)
+            self.assertIn("[" + counter + "]", body[factory:attachment])
+            self.assertIn("++*" + counter + ";", body[factory:attachment])
+            self.assertIn("return std::make_shared<" + native_type + ">();", body[factory:attachment])
+            self.assertIn("*" + counter + " == (assigned ? 1 : 0)", body[:query])
+            native_controller = "std::dynamic_pointer_cast<" + native_type + ">(" + variable + ") != nullptr"
+            self.assertIn(native_controller, body[snapshot:query])
+            self.assertIn("const auto " + counter + "_before = *" + counter + ";", body[:query])
+            self.assertIn("*" + counter + " == " + counter + "_before", body[query:])
+        self.assertEqual(1, body.count("observed.getAssignedPlayer()"))
+
+    def testQueryGuardReportsActualPerPhaseValuesWithoutReplacingZeroWorkAssertions(self):
+        source = (ROOT / "tests/unit/test_engine_hotspot_performance.cpp").read_text(encoding="utf-8")
+        body = functionBody(source, "void testAssignedPlayerQueriesAreMutationAndCallbackBounded()")
+        query = body.index("for (int read = 0; read < READS_PER_PHASE; ++read)")
+        self.assertIn('"assigned player query phase: assigned="', body)
+        diagnostics = body.index('"assigned player query phase: assigned="')
+        assertion = body.index("expect_true(fixture.map->getObjects() == objects")
+        self.assertLess(query, diagnostics)
+        self.assertLess(diagnostics, assertion)
+        observed_samples = " ".join(body[diagnostics:assertion].split())
+        for sample in (
+            "after_objects == objects",
+            "after_triggers == triggers",
+            "revision << '/' << after_revision",
+            "turn << '/' << after_turn",
+            "after_movement == current_movement",
+            "after_fight == current_fight",
+            "pending << '/' << after_pending",
+            "delayed << '/' << after_delayed",
+            "callbacks << '/' << after_callbacks",
+            "movement_constructions_before << '/' << *movement_constructions",
+            "fight_constructions_before << '/' << *fight_constructions",
+        ):
+            self.assertIn(sample, observed_samples)
+        self.assertIn("budget-registry/controller/hook/turn/queue/callback-deltas=0; observations above", body)
+        self.assertIn("256 queries per phase must add zero registry/controller/hook/turn/queue/callback work", body)
+
     def testGetterOnlyWorldBindingMatchesReviewedContract(self):
         source = (ROOT / "src/core/bindings/CModuleWorld.cpp").read_text(encoding="utf-8")
         self.assertIn('.def("getAssignedPlayer", &CMap::getAssignedPlayer,', source)

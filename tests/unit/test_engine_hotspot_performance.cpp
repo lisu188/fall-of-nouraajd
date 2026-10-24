@@ -1539,6 +1539,16 @@ void testAssignedPlayerQueriesAreMutationAndCallbackBounded() {
     CTypes::register_type<CPlayerController>();
     CTypes::register_type<CPlayerFightController>();
     auto fixture = make_open_map(2, 1);
+    auto movement_constructions = std::make_shared<int>(0);
+    auto fight_constructions = std::make_shared<int>(0);
+    fixture.game->getObjectHandler()->registerType("CPlayerController", [movement_constructions] {
+        ++*movement_constructions;
+        return std::make_shared<CPlayerController>();
+    });
+    fixture.game->getObjectHandler()->registerType("CPlayerFightController", [fight_constructions] {
+        ++*fight_constructions;
+        return std::make_shared<CPlayerFightController>();
+    });
     auto player = std::make_shared<CPlayer>();
     player->setGame(fixture.game);
     player->setName("player");
@@ -1563,6 +1573,13 @@ void testAssignedPlayerQueriesAreMutationAndCallbackBounded() {
         }
         const auto current_movement = player->getController();
         const auto current_fight = player->getFightController();
+        expect_true(*movement_constructions == (assigned ? 1 : 0) && *fight_constructions == (assigned ? 1 : 0),
+                    "only actual attachment must construct each session-owned player controller once");
+        if (assigned) {
+            expect_true(std::dynamic_pointer_cast<CPlayerController>(current_movement) != nullptr &&
+                            std::dynamic_pointer_cast<CPlayerFightController>(current_fight) != nullptr,
+                        "the assigned query phase requires actual native player controllers, not null fallbacks");
+        }
         const auto revision = fixture.map->getNavigationRevision();
         const auto turn = fixture.map->getTurn();
         const auto objects = fixture.map->getObjects();
@@ -1570,17 +1587,42 @@ void testAssignedPlayerQueriesAreMutationAndCallbackBounded() {
         const auto pending = loop->getPendingTaskCount();
         const auto delayed = loop->getDelayedTaskCount();
         const auto callbacks = observer->property_changed_calls + observer->properties_changed_calls;
+        const auto movement_constructions_before = *movement_constructions;
+        const auto fight_constructions_before = *fight_constructions;
         for (int read = 0; read < READS_PER_PHASE; ++read) {
             expect_true(observed.getAssignedPlayer() == (assigned ? player : nullptr),
                         "fixed queries must expose assignment without adopting the registered actor");
             ++reads;
         }
+        const auto after_objects = fixture.map->getObjects();
+        const auto after_triggers = fixture.map->getEventHandler()->getTriggers();
+        const auto after_revision = fixture.map->getNavigationRevision();
+        const auto after_turn = fixture.map->getTurn();
+        const auto after_movement = player->getController();
+        const auto after_fight = player->getFightController();
+        const auto after_pending = loop->getPendingTaskCount();
+        const auto after_delayed = loop->getDelayedTaskCount();
+        const auto after_callbacks = observer->property_changed_calls + observer->properties_changed_calls;
+        std::cout << "assigned player query phase: assigned=" << assigned << " reads=" << READS_PER_PHASE
+                  << " objects=" << objects.size() << '/' << after_objects.size()
+                  << " same-objects=" << (after_objects == objects) << " triggers=" << triggers.size() << '/'
+                  << after_triggers.size() << " same-triggers=" << (after_triggers == triggers)
+                  << " revision=" << revision << '/' << after_revision << " turn=" << turn << '/' << after_turn
+                  << " same-movement=" << (after_movement == current_movement)
+                  << " same-fight=" << (after_fight == current_fight) << " pending=" << pending << '/' << after_pending
+                  << " delayed=" << delayed << '/' << after_delayed << " callbacks=" << callbacks << '/'
+                  << after_callbacks << " movement-constructions=" << movement_constructions_before << '/'
+                  << *movement_constructions << " fight-constructions=" << fight_constructions_before << '/'
+                  << *fight_constructions << '\n';
         expect_true(fixture.map->getObjects() == objects && fixture.map->getEventHandler()->getTriggers() == triggers &&
                         fixture.map->getNavigationRevision() == revision && fixture.map->getTurn() == turn &&
                         player->getController() == current_movement && player->getFightController() == current_fight &&
                         loop->getPendingTaskCount() == pending && loop->getDelayedTaskCount() == delayed &&
                         observer->property_changed_calls + observer->properties_changed_calls == callbacks,
                     "256 queries per phase must add zero registry/controller/hook/turn/queue/callback work");
+        expect_true(*movement_constructions == movement_constructions_before &&
+                        *fight_constructions == fight_constructions_before,
+                    "assigned-player queries must add zero session controller constructions");
         if (!assigned) {
             expect_true(current_movement == movement && current_fight == fight,
                         "unassigned observation must preserve even non-player controller identities");
@@ -1588,7 +1630,7 @@ void testAssignedPlayerQueriesAreMutationAndCallbackBounded() {
     }
     expect_true(reads == 2 * READS_PER_PHASE, "the assigned-player query guard must perform exactly 512 reads");
     std::cout << "assigned player query guard: reads=" << reads << " phases=2 budget-reads=" << 2 * READS_PER_PHASE
-              << " registry/controller/hook/turn/queue/callback-deltas=0\n";
+              << " budget-registry/controller/hook/turn/queue/callback-deltas=0; observations above\n";
     fixture.map->disconnect("propertyChanged", observer, "onPropertyChanged");
     fixture.map->disconnect("propertiesChanged", observer, "onPropertiesChanged");
     fixture.game->getContext()->shutdown();
