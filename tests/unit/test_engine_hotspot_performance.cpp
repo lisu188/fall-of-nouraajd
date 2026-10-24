@@ -501,6 +501,66 @@ void test_moderate_actor_map_move_turn_state_and_revision_bounds() {
                 "moderate actor turn should not add or remove map objects");
 }
 
+void testCommittedMapMovesReleaseActorReferences() {
+    constexpr int ACTORS = 4;
+    constexpr int TURNS = 4;
+    std::weak_ptr<CGame> game_lifetime;
+    std::weak_ptr<CMap> map_lifetime;
+    {
+        auto fixture = make_open_map(12, ACTORS);
+        game_lifetime = fixture.game;
+        map_lifetime = fixture.map;
+        std::vector<std::shared_ptr<CCreature>> actors;
+        std::vector<std::weak_ptr<CCreature>> actor_lifetimes;
+        std::vector<std::weak_ptr<CController>> controller_lifetimes;
+        std::vector<long> actor_references;
+        std::vector<long> controller_references;
+        for (int index = 0; index < ACTORS; ++index) {
+            const auto goal_name = "actorLifetimeGoal" + std::to_string(index);
+            add_object(fixture, make_object(fixture, goal_name, Coords(TURNS + 1, index, 0)));
+            auto actor =
+                make_actor(fixture, "actorLifetimeProbe" + std::to_string(index), Coords(0, index, 0), goal_name);
+            add_object(fixture, actor);
+            actor_lifetimes.push_back(actor);
+            controller_lifetimes.push_back(actor->getController());
+            actors.push_back(actor);
+        }
+        drain_event_loop();
+        for (const auto &actor : actors) {
+            actor_references.push_back(actor.use_count());
+            controller_references.push_back(actor->getController().use_count());
+        }
+        const auto initial_turn = fixture.map->getTurn();
+        for (int turn = 0; turn < TURNS; ++turn) {
+            fixture.map->move();
+            drain_event_loop();
+            expect_true(fixture.map->getTurn() == initial_turn + turn + 1 && !fixture.map->isMoving(),
+                        "each actor lifetime turn must finish before checking retained references");
+            for (int index = 0; index < ACTORS; ++index) {
+                const auto &actor = actors[index];
+                expect_true(actor->getCoords() == Coords(turn + 1, index, 0),
+                            "every actor lifetime probe must commit one real movement on each turn");
+                expect_true(actor.use_count() == actor_references[index] &&
+                                actor->getController().use_count() == controller_references[index],
+                            "completed map movement must not retain actor or controller references");
+            }
+        }
+        fixture.map->removeObjects(
+            [](std::shared_ptr<CMapObject> object) { return std::dynamic_pointer_cast<CCreature>(object) != nullptr; });
+        actors.clear();
+        drain_event_loop();
+        for (int index = 0; index < ACTORS; ++index) {
+            expect_true(actor_lifetimes[index].expired() && controller_lifetimes[index].expired(),
+                        "removed movement actors and their controllers must expire while their map is still alive");
+        }
+    }
+    drain_event_loop();
+    expect_true(game_lifetime.expired() && map_lifetime.expired(),
+                "completed map movement must not retain its game or map after fixture destruction");
+    std::cout << "actor movement lifetime guard: actors=" << ACTORS << " turns=" << TURNS
+              << " commits=" << ACTORS * TURNS << " retainedReferenceGrowthBudget=0\n";
+}
+
 class StationaryTurnFrameProbe : public CMapObject {
   public:
     explicit StationaryTurnFrameProbe(int &callbacks) : callbacks(callbacks) {}
@@ -1350,6 +1410,7 @@ void run_engine_hotspot_performance_tests() {
     test_irrelevant_metadata_activity_does_not_invalidate_navigation();
     test_coordinate_cache_lookup_cardinality_and_move_updates();
     test_moderate_actor_map_move_turn_state_and_revision_bounds();
+    testCommittedMapMovesReleaseActorReferences();
     testStationaryMapTurnsCompleteBeforeRendering();
     testMovementBatchInteractionSchedulingIsLinear();
     testStalePlannedMapMoveWorkIsBounded();
