@@ -380,7 +380,9 @@ class NativeTestProfileSourceTest(unittest.TestCase):
             owned.index("recoverySettled = true;"),
         )
         self.assertLess(owned.index("recoverySettled = true;"), owned.index("b->defeatResolutionUncertain = false;"))
-        after_loot = owned.split("co_await rng->addDefeatLootAsync(a, items, requireDefeatCurrent);", 1)[1]
+        loot_call = "co_await rng->addDefeatLootAsync(a, items, requireDefeatCurrent, settleCurrent, compensate);"
+        self.assertIn(loot_call, owned)
+        after_loot = owned.split(loot_call, 1)[1]
         self.assertLess(
             after_loot.index("requireDefeatCurrent();"), after_loot.index("encounterMap->removeObjectAsync(b)")
         )
