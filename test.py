@@ -147,6 +147,9 @@ FAST_TEST_PREFIXES = (
     "CombatCleanupGuardSourceTest.",
     "CandlekeepMetadataSourceTest.",
     "BaldursGateCityDataTest.",
+    "BaldursGateCustodySourceTest.",
+    "BaldursGateCustodyPatrolSourceTest.",
+    "BaldursGateCustodyRoleSourceTest.",
     "CityWalkthroughRegistrationTest.",
     "BindingSourceLayoutTest.",
     "SavedWaitSourceTest.",
@@ -183,6 +186,7 @@ FAST_TEST_PREFIXES = (
     "OctobogzEarlyTraceTest.",
     "PlayerControllerSuspensionSourceTest.",
     "GameMapBindingEpochSourceTest.",
+    "MapAssignedPlayerSourceTest.",
     "GameplayWaypointPublicationTest.",
     "GameplayCaveObservationTest.",
     "NineMarchesRecoveryTest.",
@@ -205,6 +209,7 @@ FAST_TEST_PREFIXES = (
     "NativeCallgrindToolTest.",
     "ScriptFlowExportTest.",
     "WindowsNativeCrashDiagnosticsTest.",
+    "DefeatContinuationSourceTest.",
     "NativeTestProfileSourceTest.",
     "PermanentPlayerDefeatSourceTest.",
     "PlayerIdentityContentTest.",
@@ -253,6 +258,7 @@ GAMEPLAY_TEST_PREFIXES = (
     "MultilevelRuinsRuntimeTest.",
     "MultilevelRuinsMcpTest.",
     "NativeCoroutineCallbackTest.",
+    "MapAssignedPlayerRuntimeTest.",
     MCP_BRANCH_TEST_PREFIX,
     "McpTestSeedRuntimeTest.",
     "McpEquipmentRuntimeTest.",
@@ -26928,6 +26934,9 @@ if SOURCE_UI_TESTS_AVAILABLE:
     from tests.test_candlekeep_metadata import CandlekeepMetadataSourceTest as _CandlekeepMetadataSourceTest
     from tests.test_candlekeep_metadata import CandlekeepMetadataRuntimeTest as _CandlekeepMetadataRuntimeTest
     from tests.test_baldurs_gate_city_data import BaldursGateCityDataTest as _BaldursGateCityDataTest
+    from tests.test_baldurs_gate_custody_source import BaldursGateCustodySourceTest as _BaldursGateCustodySourceTest
+    from tests.test_baldurs_gate_custody_patrol import BaldursGateCustodyPatrolSourceTest as _BaldursGateCustodyPatrolSourceTest
+    from tests.test_baldurs_gate_custody_projection import BaldursGateCustodyRoleSourceTest as _BaldursGateCustodyRoleSourceTest
     from tests.test_city_walkthrough_registration import (
         CityWalkthroughRegistrationTest as _CityWalkthroughRegistrationTest,
     )
@@ -26972,6 +26981,7 @@ if SOURCE_UI_TESTS_AVAILABLE:
         PermanentPlayerDefeatSourceTest as _PermanentPlayerDefeatSourceTest,
         PermanentDefeatJsonSyntaxTest as _PermanentDefeatJsonSyntaxTest,
     )
+    from tests.test_defeat_continuation_source import DefeatContinuationSourceTest as _DefeatContinuationSourceTest
     from tests.test_native_test_profile import NativeTestProfileSourceTest as _NativeTestProfileSourceTest
     from tests.test_native_test_profile import NativeTestProfileRuntimeTest as _NativeTestProfileRuntimeTest
     from tests.test_windows_python_configuration import (
@@ -27056,6 +27066,15 @@ if SOURCE_UI_TESTS_AVAILABLE:
     class BaldursGateCityDataTest(_BaldursGateCityDataTest):
         pass
 
+    class BaldursGateCustodySourceTest(_BaldursGateCustodySourceTest):
+        pass
+
+    class BaldursGateCustodyPatrolSourceTest(_BaldursGateCustodyPatrolSourceTest):
+        pass
+
+    class BaldursGateCustodyRoleSourceTest(_BaldursGateCustodyRoleSourceTest):
+        pass
+
     class BaldursGateCityContentTest(_BaldursGateCityContentTest):
         pass
 
@@ -27126,6 +27145,10 @@ if SOURCE_UI_TESTS_AVAILABLE:
         pass
 
     from tests.test_octobogz_early_trace import OctobogzEarlyTraceTest as _OctobogzEarlyTraceTest
+    from tests.test_map_assigned_player import (
+        MapAssignedPlayerSourceTest as _MapAssignedPlayerSourceTest,
+        MapAssignedPlayerRuntimeTest as _MapAssignedPlayerRuntimeTest,
+    )
     from tests.test_game_map_binding_epoch import (
         GameMapBindingEpochSourceTest as _GameMapBindingEpochSourceTest,
         GameMapBindingEpochRuntimeTest as _GameMapBindingEpochRuntimeTest,
@@ -27138,6 +27161,12 @@ if SOURCE_UI_TESTS_AVAILABLE:
         pass
 
     class OctobogzEarlyTraceTest(_OctobogzEarlyTraceTest):
+        pass
+
+    class MapAssignedPlayerSourceTest(_MapAssignedPlayerSourceTest):
+        pass
+
+    class MapAssignedPlayerRuntimeTest(_MapAssignedPlayerRuntimeTest):
         pass
 
     class GameMapBindingEpochSourceTest(_GameMapBindingEpochSourceTest):
@@ -27234,6 +27263,9 @@ if SOURCE_UI_TESTS_AVAILABLE:
         pass
 
     class PermanentDefeatJsonSyntaxTest(_PermanentDefeatJsonSyntaxTest):
+        pass
+
+    class DefeatContinuationSourceTest(_DefeatContinuationSourceTest):
         pass
 
     class NativeTestProfileSourceTest(_NativeTestProfileSourceTest):
@@ -27388,6 +27420,7 @@ if SOURCE_UI_TESTS_AVAILABLE:
     del _McpEngineThreadTest, _McpHttpNativeRuntimeTest
     del _McpNativeUiOwnershipSourceTest, _UsurpergateEntryDiagnosticsTest
     del _PermanentPlayerDefeatSourceTest, _PermanentDefeatJsonSyntaxTest
+    del _DefeatContinuationSourceTest
     del _NativeTestProfileSourceTest, _NativeTestProfileRuntimeTest
     del _WindowsPythonConfigurationTest
     del _NativeCallgrindToolTest
@@ -27415,6 +27448,9 @@ if SOURCE_UI_TESTS_AVAILABLE:
     del _SavedWaitSourceTest
     del _WaitStateRuntimeTest
     del _BaldursGateCityContentTest, _BaldursGateCityDataTest
+    del _BaldursGateCustodySourceTest
+    del _BaldursGateCustodyPatrolSourceTest
+    del _BaldursGateCustodyRoleSourceTest
     del _BaldursGateCityRoutesTest
     del _BaldursGateCityLedgerUnitTest
     del _BaldursGateCityLedgerFixtureTest
@@ -27435,6 +27471,7 @@ if SOURCE_UI_TESTS_AVAILABLE:
     del _GameplayCandlekeepRoutesTest
     del _OctobogzEarlyTraceTest
     del _PlayerControllerSuspensionSourceTest
+    del _MapAssignedPlayerSourceTest, _MapAssignedPlayerRuntimeTest
     del _GameMapBindingEpochSourceTest, _GameMapBindingEpochRuntimeTest
     del _GameplayPotionConsumptionTest, _GameplayRecipeGoldRoutesTest, _GameplayCallbackMarketRoutesTest
     del _GameplayStartingSaveTest, _GameplayCampaignRouteTest, _GameplayRouteDialogTest
@@ -30184,7 +30221,31 @@ def selectBranchTestNames(test_names, options):
     return [name for name in selected if name in test_names]
 
 
+def expandWorkerTestArgs(argv):
+    flag = "--worker-test-names-file"
+    if flag not in argv[1:]:
+        return argv
+    if not GAME_TEST_WORKER or len(argv) != 3 or argv[1] != flag:
+        raise ValueError("Worker test manifest requires an isolated worker and no other arguments")
+    try:
+        with Path(argv[2]).open("rb") as stream:
+            raw = stream.read(1024 * 1024 + 1)
+        if len(raw) > 1024 * 1024:
+            raise ValueError("Worker test manifest exceeds 1 MiB")
+        names = json.loads(raw)
+    except (OSError, UnicodeError, json.JSONDecodeError) as error:
+        raise ValueError("Worker test manifest cannot be read") from error
+    if (
+        not isinstance(names, list)
+        or not 1 <= len(names) <= 25000
+        or any(not isinstance(name, str) or not name or name.startswith("-") or "\x00" in name for name in names)
+    ):
+        raise ValueError("Worker test manifest must contain the selected test names")
+    return [argv[0], *names]
+
+
 def parse_runner_args(argv):
+    argv = expandWorkerTestArgs(argv)
     jobs = None
     suite_name = "full"
     unittest_argv = [argv[0]]
@@ -30408,7 +30469,13 @@ def run_test_subprocess(test_names, shard_name, extra_env=None):
     )
     if extra_env:
         env.update(extra_env)
-    command = [sys.executable, str(REPO_ROOT / "test.py"), *test_names]
+    selection = json.dumps(list(test_names)).encode("utf-8")
+    if len(selection) > 1024 * 1024:
+        raise ValueError("Worker test manifest exceeds 1 MiB")
+    output_dir.mkdir(parents=True, exist_ok=True)
+    names_file = output_dir / "test-names.json"
+    names_file.write_bytes(selection)
+    command = [sys.executable, str(REPO_ROOT / "test.py"), "--worker-test-names-file", str(names_file)]
     print(f"[test shard {shard_name}] running {len(test_names)} test(s)", flush=True)
     return subprocess.Popen(command, cwd=REPO_ROOT, env=env, start_new_session=(os.name == "posix"))
 

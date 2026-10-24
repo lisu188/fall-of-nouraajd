@@ -694,6 +694,95 @@ class WindowlessModalTestGui : public CGui {
     WindowlessModalTestGui() : CGui(WithoutWindow{}) {}
 };
 
+class DialogAttachFaultGui : public WindowlessModalTestGui {
+  public:
+    bool failAttach = false;
+    void addChild(const std::shared_ptr<CGameGraphicsObject> &child) override {
+        CGui::addChild(child);
+        if (failAttach) {
+            throw std::runtime_error("dialog-attach-primary");
+        }
+    }
+};
+
+std::shared_ptr<CDialog> makeNonblockingDialog() {
+    auto state = std::make_shared<CDialogState>();
+    state->setStateId("ENTRY");
+    auto dialog = std::make_shared<CDialog>();
+    dialog->setStates({state});
+    return dialog;
+}
+
+void testNonblockingDialogReturnsExactAttachedPanelWithoutPumping() {
+    auto loop = vstd::event_loop<>::instance();
+    auto gui = std::make_shared<WindowlessModalTestGui>();
+    auto game = create_gui_game(gui);
+    int factories = 0;
+    game->getObjectHandler()->registerType(CGameDialogPanel::static_meta()->name(), [&factories]() {
+        ++factories;
+        return std::make_shared<CGameDialogPanel>();
+    });
+    game->getObjectHandler()->registerConfig("dialogPanel",
+                                             std::make_shared<json>(json{{"class", "CGameDialogPanel"}}));
+    auto dialog = makeNonblockingDialog();
+    int callbacks = 0;
+    loop->invoke([&callbacks]() { ++callbacks; });
+    constexpr int iterations = 64;
+    for (int index = 0; index < iterations; ++index) {
+        auto panel = game->getGuiHandler()->openDialog(dialog);
+        expect_true(panel && panel->getDialog() == dialog && panel->getParent() == gui &&
+                        gui->getChildren().size() == 1 && *gui->getChildren().begin() == panel,
+                    "openDialog must return the exact attached native panel with the exact dialog");
+        expect_true(factories == index + 1 && callbacks == 0,
+                    "each nonblocking open must perform one factory and no queued callback work");
+        if (panel) {
+            panel->keyboardEvent(gui, SDL_KEYDOWN, SDLK_ESCAPE);
+        }
+        expect_true(gui->getChildren().empty(), "native escape must detach each returned panel");
+    }
+    loop->runReady();
+    expect_true(factories == iterations && callbacks == 1,
+                "64 opens must leave unrelated posted work for the caller to pump exactly once");
+    game->getContext()->shutdown();
+}
+
+void testDialogSetupFailureClosesItsPanelAndBlockingCancellationStillOwnsCleanup() {
+    auto loop = vstd::event_loop<>::instance();
+    auto gui = std::make_shared<DialogAttachFaultGui>();
+    auto game = create_gui_game(gui);
+    game->getObjectHandler()->registerType(CGameDialogPanel::static_meta()->name(),
+                                           []() { return std::make_shared<CGameDialogPanel>(); });
+    game->getObjectHandler()->registerConfig("dialogPanel",
+                                             std::make_shared<json>(json{{"class", "CGameDialogPanel"}}));
+    auto dialog = makeNonblockingDialog();
+    gui->failAttach = true;
+    bool primary = false;
+    try {
+        game->getGuiHandler()->openDialog(dialog);
+    } catch (const std::runtime_error &error) {
+        primary = std::string(error.what()) == "dialog-attach-primary";
+    }
+    expect_true(primary && gui->getChildren().empty(),
+                "a setup failure after actual attachment must preserve its primary error and remove its panel");
+    gui->failAttach = false;
+    expect_true(!game->getGuiHandler()->openDialog(nullptr) && gui->getChildren().empty(),
+                "a null dialog must create no panel");
+    auto waiting = game->getContext()->spawnTask(game->getGuiHandler()->showDialogAsync(dialog));
+    expect_true(!waiting.finished() && gui->getChildren().size() == 1,
+                "the existing asynchronous dialog must still wait while its native panel is attached");
+    waiting.requestStop();
+    for (int iteration = 0; iteration < 16 && !waiting.finished(); ++iteration) {
+        loop->runReady();
+    }
+    expect_true(waiting.finished() && gui->getChildren().empty() && game->getContext()->isActive(),
+                "cancellation must still close the blocking dialog without shutting down its context");
+    game->setGui(nullptr);
+    expect_true(!game->getGuiHandler()->openDialog(dialog), "headless dialog opens must return null without waiting");
+    auto headless = game->getContext()->spawnTask(game->getGuiHandler()->showDialogAsync(dialog));
+    expect_true(headless.finished(), "the existing headless asynchronous dialog must still complete inline");
+    game->getContext()->shutdown();
+}
+
 struct ModalThreadProbe {
     std::thread::id createdOn;
     std::thread::id destroyedOn;
@@ -4830,6 +4919,8 @@ int main() {
     testAsyncModalWaitsOwnLazyInputsAndNeverPumpTheLoop();
     testPendingGuiInitializationDoesNotRetainDetachedWidgets();
     testRejectedGuiRefreshDoesNotLeaveItsBatchQueued();
+    testNonblockingDialogReturnsExactAttachedPanelWithoutPumping();
+    testDialogSetupFailureClosesItsPanelAndBlockingCancellationStillOwnsCleanup();
     testWorkerStartedModalConstructsAndCleansUpOnlyOnMainThread();
     testCancellingModalTaskClosesItsPanelWithoutShuttingDownTheSession();
     testConcurrentTextModalsShareInputUntilTheLastLeaseAndPreserveExternalInput();

@@ -412,10 +412,11 @@ class MapQuestJournalTest(unittest.TestCase):
         self.assertEqual({("candlekeep", actor + "Quest") for actor in CANDLEKEEP_QUEST_KEYS}, candlekeep)
         city = {(map_name, quest_name) for map_name, quest_name in roster if map_name == "baldursGate"}
         expected_city = {("baldursGate", "city" + key[:1].upper() + key[1:] + "Quest") for key in CITY_QUEST_KEYS}
+        expected_city.add(("baldursGate", "cityCustodyQuest"))
         self.assertEqual(expected_city, city)
-        self.assertEqual(56, len(city), "All declared city journal definitions must be covered")
+        self.assertEqual(57, len(city), "All declared city journal definitions must be covered")
         self.assertEqual(27, len(roster - candlekeep - city), "The original 27 authored quests must remain covered")
-        self.assertEqual(89, len(roster))
+        self.assertEqual(90, len(roster))
 
     def test_authored_quest_matrix_keeps_all_33_journals_and_destination_state(self):
         roster = set()
@@ -508,9 +509,14 @@ class MapQuestJournalTest(unittest.TestCase):
                         self.assertIn(actor, CANDLEKEEP_QUEST_KEYS)
                         source.setStringProperty("candlekeep_" + actor + "Stage", "completed")
                     if map_dir.name == "baldursGate":
-                        key = quest.getStringProperty("questKey")
-                        self.assertIn(key, CITY_QUEST_KEYS)
-                        source.setStringProperty("plugin_cityQuest_" + key, "completed")
+                        if quest_name == "cityCustodyQuest":
+                            self.assertEqual("BaldursGateCustodyQuest", cls.__name__)
+                            self.assertEqual("", quest.getStringProperty("questKey"))
+                            source.setStringProperty("plugin_cityCustodyState", "escaped")
+                        else:
+                            key = quest.getStringProperty("questKey")
+                            self.assertIn(key, CITY_QUEST_KEYS)
+                            source.setStringProperty("plugin_cityQuest_" + key, "completed")
                     for gate in source.objects.values():
                         gate.setBoolProperty("destroyed", True)
                     scenario = quest.getStringProperty("campaign_scenarioId")
@@ -637,6 +643,49 @@ class MapQuestJournalTest(unittest.TestCase):
                 objective.setStringProperty("label", name.title())
                 source.objects[name] = objective
             source.setBoolProperty("campaign_castleCaptured_first", True)
+
+    def testCustodyTerminalJournalsSurviveDepartureRoundTripAndFreshSource(self):
+        classes = loadQuestClasses(REPO_ROOT / "res/maps/baldursGate/script.py")
+        for terminal in ("escaped", "released"):
+            with self.subTest(terminal=terminal):
+                game, source, destination, player = self.createSession("baldursGate")
+                quest = classes["BaldursGateCustodyQuest"](game)
+                quest.properties.update(
+                    name="cityCustodyQuest", typeId="cityCustodyQuest", description="Answer the arrest."
+                )
+                self.assertEqual("", quest.getStringProperty("questKey"))
+                player.quests[:] = [quest]
+                for active in ("", "hearing", "jailed", "fought"):
+                    source.setStringProperty("plugin_cityCustodyState", active)
+                    source.setStringProperty("plugin_cityQuest_custody", "completed")
+                    self.assertFalse(quest.isCompleted(), "Only the custody state can finish this standalone journal")
+                source.setStringProperty("plugin_cityCustodyState", terminal)
+                self.assertTrue(quest.isCompleted())
+                quest.captureJournal(True)
+                expected = self.journalText(quest)
+                self.assertIn("escaped" if terminal == "escaped" else "released", expected[0].lower())
+                self.assertIn("no gold, experience, or equipment", expected[1])
+                saved = json.loads(json.dumps(quest.properties))
+                player.quests.clear()
+                player.completed[:] = [quest]
+                destination.setStringProperty("plugin_cityCustodyState", "jailed")
+                destination_before = destination.properties.copy()
+                game.map = destination
+                self.assertTrue(quest.isCompleted())
+                self.assertEqual(expected, self.journalText(quest))
+                restored = classes["BaldursGateCustodyQuest"](game)
+                restored.properties = saved
+                player.completed[:] = [restored]
+                self.assertTrue(restored.isCompleted())
+                self.assertEqual(expected, self.journalText(restored))
+                game.map = source
+                source.properties.clear()
+                restored.captureJournal(True)
+                self.assertTrue(restored.isCompleted())
+                self.assertEqual(expected, self.journalText(restored))
+                self.assertEqual(destination_before, destination.properties)
+                self.assertEqual([], player.items)
+                self.assertEqual([], game.messages)
 
 
 if __name__ == "__main__":

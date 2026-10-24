@@ -1,0 +1,8342 @@
+{
+  "schemaVersion": 1,
+  "edition": "Installed BGEE base archives; supporting evidence only",
+  "originalParityVerified": false,
+  "language": "en_US",
+  "keySha256": "728f50c48187f3a095e262fc2cc9e43004b4519ae9b96dd6c2615aeae4f85bce",
+  "sourceFingerprints": {
+    "ACTION.IDS": {
+      "sha256": "fb4b2c021fc4131d10863420a7bfda0e947bc86766e30edf6c4cabb38ccc2129",
+      "size": 16590,
+      "origin": {
+        "source": "key_biff",
+        "path": "data\\DEFAULT.BIF",
+        "offset": 17008,
+        "size": 16590,
+        "locator": 24117256
+      },
+      "effectiveDiffers": false,
+      "effectiveOrigin": {
+        "source": "key_biff",
+        "path": "data\\DEFAULT.BIF",
+        "offset": 17008,
+        "size": 16590,
+        "locator": 24117256
+      },
+      "effectiveSha256": "fb4b2c021fc4131d10863420a7bfda0e947bc86766e30edf6c4cabb38ccc2129"
+    },
+    "TRIGGER.IDS": {
+      "sha256": "74072a62b4d27259759a81ce465226a67bc673a100c7a4aa8b0b7d89f7d44d30",
+      "size": 9859,
+      "origin": {
+        "source": "key_biff",
+        "path": "data\\DEFAULT.BIF",
+        "offset": 6121252,
+        "size": 9859,
+        "locator": 24117758
+      },
+      "effectiveDiffers": false,
+      "effectiveOrigin": {
+        "source": "key_biff",
+        "path": "data\\DEFAULT.BIF",
+        "offset": 6121252,
+        "size": 9859,
+        "locator": 24117758
+      },
+      "effectiveSha256": "74072a62b4d27259759a81ce465226a67bc673a100c7a4aa8b0b7d89f7d44d30"
+    },
+    "GTIMES.IDS": {
+      "sha256": "d0fef0f123b4f7cdf7bf093dcd6359fdffcbeb159082c7f40404779ddc85b41c",
+      "size": 1795,
+      "origin": {
+        "source": "key_biff",
+        "path": "data\\DEFAULT.BIF",
+        "offset": 418628,
+        "size": 1795,
+        "locator": 24117373
+      },
+      "effectiveDiffers": false,
+      "effectiveOrigin": {
+        "source": "key_biff",
+        "path": "data\\DEFAULT.BIF",
+        "offset": 418628,
+        "size": 1795,
+        "locator": 24117373
+      },
+      "effectiveSha256": "d0fef0f123b4f7cdf7bf093dcd6359fdffcbeb159082c7f40404779ddc85b41c"
+    },
+    "FFHUNT.DLG": {
+      "sha256": "303dbef89fae44e0169a70d804cb2bf76f32cdfc6eade9586af4869c521a3f8b",
+      "size": 808,
+      "origin": {
+        "source": "key_biff",
+        "path": "data\\DIALOG.BIF",
+        "offset": 525688,
+        "size": 808,
+        "locator": 57672042
+      },
+      "effectiveDiffers": false,
+      "effectiveOrigin": {
+        "source": "key_biff",
+        "path": "data\\DIALOG.BIF",
+        "offset": 525688,
+        "size": 808,
+        "locator": 57672042
+      },
+      "effectiveSha256": "303dbef89fae44e0169a70d804cb2bf76f32cdfc6eade9586af4869c521a3f8b"
+    },
+    "FLAMC7.DLG": {
+      "sha256": "6ab97d87d5ebfa0313d722eabb7b8fe25141564cd8e0a80c4ede611e39e25c15",
+      "size": 1583,
+      "origin": {
+        "source": "key_biff",
+        "path": "data\\DIALOG.BIF",
+        "offset": 538508,
+        "size": 1583,
+        "locator": 57672058
+      },
+      "effectiveDiffers": false,
+      "effectiveOrigin": {
+        "source": "key_biff",
+        "path": "data\\DIALOG.BIF",
+        "offset": 538508,
+        "size": 1583,
+        "locator": 57672058
+      },
+      "effectiveSha256": "6ab97d87d5ebfa0313d722eabb7b8fe25141564cd8e0a80c4ede611e39e25c15"
+    },
+    "ANGELO.DLG": {
+      "sha256": "3ba30f6c68d7b3aa05dac6480859239aeef5493b624852fe59acdc81ff35e5d8",
+      "size": 8347,
+      "origin": {
+        "source": "key_biff",
+        "path": "data\\DIALOG.BIF",
+        "offset": 31960,
+        "size": 8347,
+        "locator": 57671711
+      },
+      "effectiveDiffers": false,
+      "effectiveOrigin": {
+        "source": "key_biff",
+        "path": "data\\DIALOG.BIF",
+        "offset": 31960,
+        "size": 8347,
+        "locator": 57671711
+      },
+      "effectiveSha256": "3ba30f6c68d7b3aa05dac6480859239aeef5493b624852fe59acdc81ff35e5d8"
+    },
+    "NEB.DLG": {
+      "sha256": "761f314509e95d730dc9c26fe07e94ecf3398551137ff361341d8375c5e0c2aa",
+      "size": 2867,
+      "origin": {
+        "source": "key_biff",
+        "path": "data\\DIALOG.BIF",
+        "offset": 927728,
+        "size": 2867,
+        "locator": 57672480
+      },
+      "effectiveDiffers": false,
+      "effectiveOrigin": {
+        "source": "key_biff",
+        "path": "data\\DIALOG.BIF",
+        "offset": 927728,
+        "size": 2867,
+        "locator": 57672480
+      },
+      "effectiveSha256": "761f314509e95d730dc9c26fe07e94ecf3398551137ff361341d8375c5e0c2aa"
+    },
+    "SHARTJ.DLG": {
+      "sha256": "96a8661391f5fbcd49bc13c70cde2571962b9caebbf0a8d2216cf12707d0f4e8",
+      "size": 1181,
+      "origin": {
+        "source": "key_biff",
+        "path": "data\\DIALOG.BIF",
+        "offset": 1203732,
+        "size": 1181,
+        "locator": 57672719
+      },
+      "effectiveDiffers": false,
+      "effectiveOrigin": {
+        "source": "key_biff",
+        "path": "data\\DIALOG.BIF",
+        "offset": 1203732,
+        "size": 1181,
+        "locator": 57672719
+      },
+      "effectiveSha256": "96a8661391f5fbcd49bc13c70cde2571962b9caebbf0a8d2216cf12707d0f4e8"
+    },
+    "FFHUNT.BCS": {
+      "sha256": "50e0311f9c1ec2f4b91a008882617d2a07daf532d9f7455b97d17fba5079599b",
+      "size": 1047,
+      "origin": {
+        "source": "key_biff",
+        "path": "data\\SCRIPTS.BIF",
+        "offset": 1446788,
+        "size": 1047,
+        "locator": 31457726
+      },
+      "effectiveDiffers": false,
+      "effectiveOrigin": {
+        "source": "key_biff",
+        "path": "data\\SCRIPTS.BIF",
+        "offset": 1446788,
+        "size": 1047,
+        "locator": 31457726
+      },
+      "effectiveSha256": "50e0311f9c1ec2f4b91a008882617d2a07daf532d9f7455b97d17fba5079599b"
+    },
+    "INITNEB.BCS": {
+      "sha256": "1552a2a28b74bc30c01aacf3972089fcc19ebac02a5983e92ae76149aa1c5e0a",
+      "size": 974,
+      "origin": {
+        "source": "key_biff",
+        "path": "data\\SCRIPTS.BIF",
+        "offset": 1601776,
+        "size": 974,
+        "locator": 31457857
+      },
+      "effectiveDiffers": false,
+      "effectiveOrigin": {
+        "source": "key_biff",
+        "path": "data\\SCRIPTS.BIF",
+        "offset": 1601776,
+        "size": 974,
+        "locator": 31457857
+      },
+      "effectiveSha256": "1552a2a28b74bc30c01aacf3972089fcc19ebac02a5983e92ae76149aa1c5e0a"
+    },
+    "CAPCUT01.BCS": {
+      "sha256": "72b378c804e8d87eeae4ec0b2f78333c8f8024f4dbe8a5c674a5077c58f3b984",
+      "size": 4516,
+      "origin": {
+        "source": "key_biff",
+        "path": "data\\SCRIPTS.BIF",
+        "offset": 879124,
+        "size": 4516,
+        "locator": 31457513
+      },
+      "effectiveDiffers": false,
+      "effectiveOrigin": {
+        "source": "key_biff",
+        "path": "data\\SCRIPTS.BIF",
+        "offset": 879124,
+        "size": 4516,
+        "locator": 31457513
+      },
+      "effectiveSha256": "72b378c804e8d87eeae4ec0b2f78333c8f8024f4dbe8a5c674a5077c58f3b984"
+    },
+    "CAPCUT02.BCS": {
+      "sha256": "30fcdfbcc129217aa6456fc4e2ee22ab9d302e349c513136dedb858e744ff0af",
+      "size": 3791,
+      "origin": {
+        "source": "key_biff",
+        "path": "data\\SCRIPTS.BIF",
+        "offset": 883644,
+        "size": 3791,
+        "locator": 31457514
+      },
+      "effectiveDiffers": false,
+      "effectiveOrigin": {
+        "source": "key_biff",
+        "path": "data\\SCRIPTS.BIF",
+        "offset": 883644,
+        "size": 3791,
+        "locator": 31457514
+      },
+      "effectiveSha256": "30fcdfbcc129217aa6456fc4e2ee22ab9d302e349c513136dedb858e744ff0af"
+    },
+    "CAPCUT03.BCS": {
+      "sha256": "926b069387e5932a322155dd42abf401939972047af82f52755544eeb1a69ca2",
+      "size": 2972,
+      "origin": {
+        "source": "key_biff",
+        "path": "data\\SCRIPTS.BIF",
+        "offset": 887436,
+        "size": 2972,
+        "locator": 31457515
+      },
+      "effectiveDiffers": false,
+      "effectiveOrigin": {
+        "source": "key_biff",
+        "path": "data\\SCRIPTS.BIF",
+        "offset": 887436,
+        "size": 2972,
+        "locator": 31457515
+      },
+      "effectiveSha256": "926b069387e5932a322155dd42abf401939972047af82f52755544eeb1a69ca2"
+    },
+    "CAPCUT04.BCS": {
+      "sha256": "9e98eeb2621a947aa0dd560840034fc98bbaffd4887d12f5dfb68dedb06aef78",
+      "size": 4047,
+      "origin": {
+        "source": "key_biff",
+        "path": "data\\SCRIPTS.BIF",
+        "offset": 890412,
+        "size": 4047,
+        "locator": 31457516
+      },
+      "effectiveDiffers": false,
+      "effectiveOrigin": {
+        "source": "key_biff",
+        "path": "data\\SCRIPTS.BIF",
+        "offset": 890412,
+        "size": 4047,
+        "locator": 31457516
+      },
+      "effectiveSha256": "9e98eeb2621a947aa0dd560840034fc98bbaffd4887d12f5dfb68dedb06aef78"
+    },
+    "CAPCUT05.BCS": {
+      "sha256": "cdef9e33eaf0b91cafc4e30fa986d6da3f25ad1ee7cad21e1253c254145475e1",
+      "size": 4643,
+      "origin": {
+        "source": "key_biff",
+        "path": "data\\SCRIPTS.BIF",
+        "offset": 894460,
+        "size": 4643,
+        "locator": 31457517
+      },
+      "effectiveDiffers": false,
+      "effectiveOrigin": {
+        "source": "key_biff",
+        "path": "data\\SCRIPTS.BIF",
+        "offset": 894460,
+        "size": 4643,
+        "locator": 31457517
+      },
+      "effectiveSha256": "cdef9e33eaf0b91cafc4e30fa986d6da3f25ad1ee7cad21e1253c254145475e1"
+    },
+    "AR0100.BCS": {
+      "sha256": "25777e6f6498b99984c8fcf789618e6d20b5407d936b4c2f4325d2514c3c9d69",
+      "size": 1814,
+      "origin": {
+        "source": "key_biff",
+        "path": "data\\SCRIPTS.BIF",
+        "offset": 72636,
+        "size": 1814,
+        "locator": 31457319
+      },
+      "effectiveDiffers": false,
+      "effectiveOrigin": {
+        "source": "key_biff",
+        "path": "data\\SCRIPTS.BIF",
+        "offset": 72636,
+        "size": 1814,
+        "locator": 31457319
+      },
+      "effectiveSha256": "25777e6f6498b99984c8fcf789618e6d20b5407d936b4c2f4325d2514c3c9d69"
+    },
+    "AR0200.BCS": {
+      "sha256": "7d9f4d80a486162b4d21e0f17e4611e1a50a0f9e4232339a1fa3a12d6c047651",
+      "size": 2918,
+      "origin": {
+        "source": "key_biff",
+        "path": "data\\SCRIPTS.BIF",
+        "offset": 116048,
+        "size": 2918,
+        "locator": 31457340
+      },
+      "effectiveDiffers": false,
+      "effectiveOrigin": {
+        "source": "key_biff",
+        "path": "data\\SCRIPTS.BIF",
+        "offset": 116048,
+        "size": 2918,
+        "locator": 31457340
+      },
+      "effectiveSha256": "7d9f4d80a486162b4d21e0f17e4611e1a50a0f9e4232339a1fa3a12d6c047651"
+    },
+    "AR0300.BCS": {
+      "sha256": "1b644989e4d11d24cf242e27585783dd0e42f91529dc0dce2967232cf081a182",
+      "size": 7373,
+      "origin": {
+        "source": "key_biff",
+        "path": "data\\SCRIPTS.BIF",
+        "offset": 120084,
+        "size": 7373,
+        "locator": 31457344
+      },
+      "effectiveDiffers": false,
+      "effectiveOrigin": {
+        "source": "key_biff",
+        "path": "data\\SCRIPTS.BIF",
+        "offset": 120084,
+        "size": 7373,
+        "locator": 31457344
+      },
+      "effectiveSha256": "1b644989e4d11d24cf242e27585783dd0e42f91529dc0dce2967232cf081a182"
+    },
+    "AR0600.BCS": {
+      "sha256": "ec1d815c88232ba5bdfd4d7c8bfe102cb9d790a7c8383ce4b1b640bc38ae1bd1",
+      "size": 2508,
+      "origin": {
+        "source": "key_biff",
+        "path": "data\\SCRIPTS.BIF",
+        "offset": 154796,
+        "size": 2508,
+        "locator": 31457354
+      },
+      "effectiveDiffers": false,
+      "effectiveOrigin": {
+        "source": "key_biff",
+        "path": "data\\SCRIPTS.BIF",
+        "offset": 154796,
+        "size": 2508,
+        "locator": 31457354
+      },
+      "effectiveSha256": "ec1d815c88232ba5bdfd4d7c8bfe102cb9d790a7c8383ce4b1b640bc38ae1bd1"
+    },
+    "AR0700.BCS": {
+      "sha256": "f31121870a7d672531a7c82f65f221bb9a391aa552b3fd2a0f4bcfa66084f3a4",
+      "size": 3158,
+      "origin": {
+        "source": "key_biff",
+        "path": "data\\SCRIPTS.BIF",
+        "offset": 171952,
+        "size": 3158,
+        "locator": 31457365
+      },
+      "effectiveDiffers": false,
+      "effectiveOrigin": {
+        "source": "key_biff",
+        "path": "data\\SCRIPTS.BIF",
+        "offset": 171952,
+        "size": 3158,
+        "locator": 31457365
+      },
+      "effectiveSha256": "f31121870a7d672531a7c82f65f221bb9a391aa552b3fd2a0f4bcfa66084f3a4"
+    },
+    "AR0800.BCS": {
+      "sha256": "6c6f686322587c0ff05f2a5222d067b342f798b3d61524e24ed82a83d8991544",
+      "size": 5664,
+      "origin": {
+        "source": "key_biff",
+        "path": "data\\SCRIPTS.BIF",
+        "offset": 185296,
+        "size": 5664,
+        "locator": 31457368
+      },
+      "effectiveDiffers": false,
+      "effectiveOrigin": {
+        "source": "key_biff",
+        "path": "data\\SCRIPTS.BIF",
+        "offset": 185296,
+        "size": 5664,
+        "locator": 31457368
+      },
+      "effectiveSha256": "6c6f686322587c0ff05f2a5222d067b342f798b3d61524e24ed82a83d8991544"
+    },
+    "AR1100.BCS": {
+      "sha256": "8bb9117c29d489f9f49f5e7bf962ed41ed1a9d6a174e98fef00f259c516053bd",
+      "size": 6793,
+      "origin": {
+        "source": "key_biff",
+        "path": "data\\SCRIPTS.BIF",
+        "offset": 212908,
+        "size": 6793,
+        "locator": 31457375
+      },
+      "effectiveDiffers": false,
+      "effectiveOrigin": {
+        "source": "key_biff",
+        "path": "data\\SCRIPTS.BIF",
+        "offset": 212908,
+        "size": 6793,
+        "locator": 31457375
+      },
+      "effectiveSha256": "8bb9117c29d489f9f49f5e7bf962ed41ed1a9d6a174e98fef00f259c516053bd"
+    },
+    "AR1200.BCS": {
+      "sha256": "45fe81ee975b436beeb543782c48934b20b8104ebd6f73b01f51178ced387aa0",
+      "size": 3459,
+      "origin": {
+        "source": "key_biff",
+        "path": "data\\SCRIPTS.BIF",
+        "offset": 225672,
+        "size": 3459,
+        "locator": 31457378
+      },
+      "effectiveDiffers": false,
+      "effectiveOrigin": {
+        "source": "key_biff",
+        "path": "data\\SCRIPTS.BIF",
+        "offset": 225672,
+        "size": 3459,
+        "locator": 31457378
+      },
+      "effectiveSha256": "45fe81ee975b436beeb543782c48934b20b8104ebd6f73b01f51178ced387aa0"
+    },
+    "AR1300.BCS": {
+      "sha256": "649a97474fff94f259642ffaabd3c4bf3ba1d76744802938dba84b5aed11e0cf",
+      "size": 3606,
+      "origin": {
+        "source": "key_biff",
+        "path": "data\\SCRIPTS.BIF",
+        "offset": 229132,
+        "size": 3606,
+        "locator": 31457379
+      },
+      "effectiveDiffers": false,
+      "effectiveOrigin": {
+        "source": "key_biff",
+        "path": "data\\SCRIPTS.BIF",
+        "offset": 229132,
+        "size": 3606,
+        "locator": 31457379
+      },
+      "effectiveSha256": "649a97474fff94f259642ffaabd3c4bf3ba1d76744802938dba84b5aed11e0cf"
+    },
+    "FFHUNT.CRE": {
+      "sha256": "7a2124b6de6c879b7c5dee158416e28e3972d5422a9b1f48d8f39af06256f791",
+      "size": 1176,
+      "origin": {
+        "source": "key_biff",
+        "path": "data\\Creature.bif",
+        "offset": 884348,
+        "size": 1176,
+        "locator": 46138012
+      },
+      "effectiveDiffers": false,
+      "effectiveOrigin": {
+        "source": "key_biff",
+        "path": "data\\Creature.bif",
+        "offset": 884348,
+        "size": 1176,
+        "locator": 46138012
+      },
+      "effectiveSha256": "7a2124b6de6c879b7c5dee158416e28e3972d5422a9b1f48d8f39af06256f791"
+    },
+    "ANGELO.CRE": {
+      "sha256": "2ca4c89db6893a66eb42cba097fac8e582266b4f4253bcf5f549bf089ee6bb7f",
+      "size": 1360,
+      "origin": {
+        "source": "key_biff",
+        "path": "data\\Creature.bif",
+        "offset": 48860,
+        "size": 1360,
+        "locator": 46137382
+      },
+      "effectiveDiffers": false,
+      "effectiveOrigin": {
+        "source": "key_biff",
+        "path": "data\\Creature.bif",
+        "offset": 48860,
+        "size": 1360,
+        "locator": 46137382
+      },
+      "effectiveSha256": "2ca4c89db6893a66eb42cba097fac8e582266b4f4253bcf5f549bf089ee6bb7f"
+    },
+    "NEB.CRE": {
+      "sha256": "5dfaee0c88eb90db5ce4f942d7e1e56c399f1d5fa03f2b4bc2604ecb18688fbd",
+      "size": 1096,
+      "origin": {
+        "source": "key_biff",
+        "path": "data\\Creature.bif",
+        "offset": 1763312,
+        "size": 1096,
+        "locator": 46138747
+      },
+      "effectiveDiffers": false,
+      "effectiveOrigin": {
+        "source": "key_biff",
+        "path": "data\\Creature.bif",
+        "offset": 1763312,
+        "size": 1096,
+        "locator": 46138747
+      },
+      "effectiveSha256": "5dfaee0c88eb90db5ce4f942d7e1e56c399f1d5fa03f2b4bc2604ecb18688fbd"
+    },
+    "FLAME1.CRE": {
+      "sha256": "97b4111ee67967dabfb019bc97f8b9d14c258e7635f54ae5e2126c8872985eb2",
+      "size": 1176,
+      "origin": {
+        "source": "key_biff",
+        "path": "data\\Creature.bif",
+        "offset": 912616,
+        "size": 1176,
+        "locator": 46138035
+      },
+      "effectiveDiffers": false,
+      "effectiveOrigin": {
+        "source": "key_biff",
+        "path": "data\\Creature.bif",
+        "offset": 912616,
+        "size": 1176,
+        "locator": 46138035
+      },
+      "effectiveSha256": "97b4111ee67967dabfb019bc97f8b9d14c258e7635f54ae5e2126c8872985eb2"
+    },
+    "FLAME2.CRE": {
+      "sha256": "e0fb05ffa4b98771d015ae7dead2ae69d0e7491adf52f80cf10c0b874fe0c51f",
+      "size": 1176,
+      "origin": {
+        "source": "key_biff",
+        "path": "data\\Creature.bif",
+        "offset": 913796,
+        "size": 1176,
+        "locator": 46138036
+      },
+      "effectiveDiffers": false,
+      "effectiveOrigin": {
+        "source": "key_biff",
+        "path": "data\\Creature.bif",
+        "offset": 913796,
+        "size": 1176,
+        "locator": 46138036
+      },
+      "effectiveSha256": "e0fb05ffa4b98771d015ae7dead2ae69d0e7491adf52f80cf10c0b874fe0c51f"
+    },
+    "FLAME3.CRE": {
+      "sha256": "837c9dbdabaeac70e2f4bd941e8f3fd4e058774eda4de6ec0d21aa934a9d1251",
+      "size": 1176,
+      "origin": {
+        "source": "key_biff",
+        "path": "data\\Creature.bif",
+        "offset": 914976,
+        "size": 1176,
+        "locator": 46138037
+      },
+      "effectiveDiffers": false,
+      "effectiveOrigin": {
+        "source": "key_biff",
+        "path": "data\\Creature.bif",
+        "offset": 914976,
+        "size": 1176,
+        "locator": 46138037
+      },
+      "effectiveSha256": "837c9dbdabaeac70e2f4bd941e8f3fd4e058774eda4de6ec0d21aa934a9d1251"
+    },
+    "FLAME4.CRE": {
+      "sha256": "1a2ab0c4db6f4502b2b761c2f9490dbe0f09fe91c719e331afe7efdfedb54a06",
+      "size": 1176,
+      "origin": {
+        "source": "key_biff",
+        "path": "data\\Creature.bif",
+        "offset": 916156,
+        "size": 1176,
+        "locator": 46138038
+      },
+      "effectiveDiffers": false,
+      "effectiveOrigin": {
+        "source": "key_biff",
+        "path": "data\\Creature.bif",
+        "offset": 916156,
+        "size": 1176,
+        "locator": 46138038
+      },
+      "effectiveSha256": "1a2ab0c4db6f4502b2b761c2f9490dbe0f09fe91c719e331afe7efdfedb54a06"
+    },
+    "FLAM13.CRE": {
+      "sha256": "754f32025a50cb8314bc016a38902b903e5d113bdd7087cdf572cc13d3e0570b",
+      "size": 1156,
+      "origin": {
+        "source": "key_biff",
+        "path": "data\\Creature.bif",
+        "offset": 897948,
+        "size": 1156,
+        "locator": 46138023
+      },
+      "effectiveDiffers": false,
+      "effectiveOrigin": {
+        "source": "key_biff",
+        "path": "data\\Creature.bif",
+        "offset": 897948,
+        "size": 1156,
+        "locator": 46138023
+      },
+      "effectiveSha256": "754f32025a50cb8314bc016a38902b903e5d113bdd7087cdf572cc13d3e0570b"
+    },
+    "GALDOR.CRE": {
+      "sha256": "358c333e738d00a286b0914189a0a98b695c2b99013a96994af7b692a4efb080",
+      "size": 1560,
+      "origin": {
+        "source": "key_biff",
+        "path": "data\\Creature.bif",
+        "offset": 1025276,
+        "size": 1560,
+        "locator": 46138136
+      },
+      "effectiveDiffers": false,
+      "effectiveOrigin": {
+        "source": "key_biff",
+        "path": "data\\Creature.bif",
+        "offset": 1025276,
+        "size": 1560,
+        "locator": 46138136
+      },
+      "effectiveSha256": "358c333e738d00a286b0914189a0a98b695c2b99013a96994af7b692a4efb080"
+    },
+    "AR0607.ARE": {
+      "sha256": "47e8d03bae271ecc60878ae960e5f551239fb5e5ddf99fd1331bf043f64024d1",
+      "size": 5620,
+      "origin": {
+        "source": "key_biff",
+        "path": "data\\AR06XX.BIF",
+        "offset": 19620164,
+        "size": 5620,
+        "locator": 11534436
+      },
+      "effectiveDiffers": false,
+      "effectiveOrigin": {
+        "source": "key_biff",
+        "path": "data\\AR06XX.BIF",
+        "offset": 19620164,
+        "size": 5620,
+        "locator": 11534436
+      },
+      "effectiveSha256": "47e8d03bae271ecc60878ae960e5f551239fb5e5ddf99fd1331bf043f64024d1"
+    }
+  },
+  "dialogues": {
+    "FFHUNT": [
+      {
+        "id": 0,
+        "strref": 15194,
+        "conditions": [
+          {
+            "op": "NumberOfTimesTalkedTo",
+            "args": [
+              0
+            ]
+          },
+          {
+            "op": "Global",
+            "args": [
+              "Captured",
+              "GLOBAL",
+              0
+            ]
+          }
+        ],
+        "entryWeight": 2,
+        "transitions": [
+          {
+            "id": 0,
+            "replyStrref": 15204,
+            "conditions": [],
+            "journalStrref": null,
+            "flags": 1,
+            "effects": [],
+            "actionSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+            "next": [
+              "FFHUNT",
+              2
+            ]
+          },
+          {
+            "id": 1,
+            "replyStrref": 15205,
+            "conditions": [],
+            "journalStrref": null,
+            "flags": 1,
+            "effects": [],
+            "actionSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+            "next": [
+              "FFHUNT",
+              3
+            ]
+          },
+          {
+            "id": 2,
+            "replyStrref": 15206,
+            "conditions": [],
+            "journalStrref": null,
+            "flags": 1,
+            "effects": [],
+            "actionSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+            "next": [
+              "FFHUNT",
+              4
+            ]
+          }
+        ]
+      },
+      {
+        "id": 1,
+        "strref": 15207,
+        "conditions": [
+          {
+            "op": "StateCheck",
+            "args": [
+              {
+                "symbol": "Myself"
+              },
+              {
+                "symbol": "STATE_CHARMED"
+              }
+            ]
+          }
+        ],
+        "entryWeight": 0,
+        "transitions": [
+          {
+            "id": 3,
+            "replyStrref": null,
+            "conditions": [],
+            "journalStrref": 26843,
+            "flags": 88,
+            "effects": [],
+            "actionSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+            "next": null
+          },
+          {
+            "id": 4,
+            "replyStrref": null,
+            "conditions": [
+              {
+                "not": {
+                  "op": "Global",
+                  "args": [
+                    "Captured",
+                    "GLOBAL",
+                    0
+                  ]
+                }
+              }
+            ],
+            "journalStrref": null,
+            "flags": 10,
+            "effects": [],
+            "actionSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+            "next": null
+          }
+        ]
+      },
+      {
+        "id": 2,
+        "strref": 15211,
+        "conditions": [],
+        "entryWeight": null,
+        "transitions": [
+          {
+            "id": 5,
+            "replyStrref": null,
+            "conditions": [],
+            "journalStrref": 26844,
+            "flags": 92,
+            "effects": [
+              {
+                "op": "SetGlobal",
+                "args": [
+                  "Captured",
+                  "GLOBAL",
+                  1
+                ]
+              },
+              {
+                "op": "StartCutScene",
+                "args": [
+                  "Capcut01"
+                ]
+              }
+            ],
+            "actionSha256": "f00b5e644d27b998a69db51474653ee56e5335ed8d0b63472139e9171538d8be",
+            "next": null
+          }
+        ]
+      },
+      {
+        "id": 3,
+        "strref": 15213,
+        "conditions": [],
+        "entryWeight": null,
+        "transitions": [
+          {
+            "id": 6,
+            "replyStrref": 11751,
+            "conditions": [],
+            "journalStrref": null,
+            "flags": 1,
+            "effects": [],
+            "actionSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+            "next": [
+              "FFHUNT",
+              2
+            ]
+          },
+          {
+            "id": 7,
+            "replyStrref": 11752,
+            "conditions": [],
+            "journalStrref": null,
+            "flags": 1,
+            "effects": [],
+            "actionSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+            "next": [
+              "FFHUNT",
+              5
+            ]
+          }
+        ]
+      },
+      {
+        "id": 4,
+        "strref": 15215,
+        "conditions": [],
+        "entryWeight": null,
+        "transitions": [
+          {
+            "id": 8,
+            "replyStrref": 15218,
+            "conditions": [],
+            "journalStrref": null,
+            "flags": 1,
+            "effects": [],
+            "actionSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+            "next": [
+              "FFHUNT",
+              2
+            ]
+          },
+          {
+            "id": 9,
+            "replyStrref": 15219,
+            "conditions": [],
+            "journalStrref": null,
+            "flags": 1,
+            "effects": [],
+            "actionSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+            "next": [
+              "FFHUNT",
+              3
+            ]
+          }
+        ]
+      },
+      {
+        "id": 5,
+        "strref": 15220,
+        "conditions": [
+          {
+            "op": "False",
+            "args": []
+          }
+        ],
+        "entryWeight": 1,
+        "transitions": [
+          {
+            "id": 10,
+            "replyStrref": null,
+            "conditions": [],
+            "journalStrref": 26845,
+            "flags": 92,
+            "effects": [
+              {
+                "op": "Shout",
+                "args": [
+                  1
+                ]
+              },
+              {
+                "op": "Enemy",
+                "args": []
+              }
+            ],
+            "actionSha256": "1138534ef665722b77c6a2b6d387735db2a926f70004b842e815cb3ecdbccef5",
+            "next": null
+          }
+        ]
+      }
+    ],
+    "FLAMC7": [
+      {
+        "id": 6,
+        "strref": 2241,
+        "conditions": [
+          {
+            "op": "Global",
+            "args": [
+              "SmugglerMove",
+              "GLOBAL",
+              3
+            ]
+          }
+        ],
+        "entryWeight": 3,
+        "transitions": [
+          {
+            "id": 9,
+            "replyStrref": 2250,
+            "conditions": [],
+            "journalStrref": null,
+            "flags": 1,
+            "effects": [],
+            "actionSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+            "next": [
+              "FLAMC7",
+              7
+            ]
+          },
+          {
+            "id": 10,
+            "replyStrref": 2251,
+            "conditions": [],
+            "journalStrref": 26845,
+            "flags": 93,
+            "effects": [
+              {
+                "op": "Shout",
+                "args": [
+                  99
+                ]
+              },
+              {
+                "op": "Enemy",
+                "args": []
+              }
+            ],
+            "actionSha256": "4b2fbd4ac5a51b2732c52170aa1fe661bd6c0de0c6d092d4264f6d0d2e73a536",
+            "next": null
+          }
+        ]
+      },
+      {
+        "id": 7,
+        "strref": 2242,
+        "conditions": [],
+        "entryWeight": null,
+        "transitions": [
+          {
+            "id": 11,
+            "replyStrref": 2252,
+            "conditions": [],
+            "journalStrref": 26845,
+            "flags": 93,
+            "effects": [
+              {
+                "op": "Shout",
+                "args": [
+                  99
+                ]
+              },
+              {
+                "op": "Enemy",
+                "args": []
+              }
+            ],
+            "actionSha256": "4b2fbd4ac5a51b2732c52170aa1fe661bd6c0de0c6d092d4264f6d0d2e73a536",
+            "next": null
+          },
+          {
+            "id": 12,
+            "replyStrref": 2253,
+            "conditions": [],
+            "journalStrref": 26844,
+            "flags": 93,
+            "effects": [
+              {
+                "op": "SetGlobal",
+                "args": [
+                  "Captured",
+                  "GLOBAL",
+                  1
+                ]
+              },
+              {
+                "op": "ActionOverride",
+                "args": [
+                  "smuggler",
+                  {
+                    "op": "MoveBetweenAreas",
+                    "args": [
+                      "ar0607",
+                      {
+                        "symbol": "[1401.809]"
+                      },
+                      {
+                        "symbol": "SW"
+                      }
+                    ]
+                  }
+                ]
+              },
+              {
+                "op": "StartCutScene",
+                "args": [
+                  "Capcut01"
+                ]
+              }
+            ],
+            "actionSha256": "daee646646f49365d48210b7f6ab9f544b034f4f73f0df2f8a3f87815e519d91",
+            "next": null
+          }
+        ]
+      },
+      {
+        "id": 8,
+        "strref": 2243,
+        "conditions": [
+          {
+            "op": "Global",
+            "args": [
+              "Captured",
+              "GLOBAL",
+              1
+            ]
+          }
+        ],
+        "entryWeight": 1,
+        "transitions": [
+          {
+            "id": 13,
+            "replyStrref": null,
+            "conditions": [],
+            "journalStrref": null,
+            "flags": 0,
+            "effects": [],
+            "actionSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+            "next": [
+              "ANGELO",
+              0
+            ]
+          }
+        ]
+      }
+    ],
+    "ANGELO": [
+      {
+        "id": 0,
+        "strref": 2135,
+        "conditions": [],
+        "entryWeight": null,
+        "transitions": [
+          {
+            "id": 0,
+            "replyStrref": 2144,
+            "conditions": [
+              {
+                "op": "NumInPartyAliveGT",
+                "args": [
+                  1
+                ]
+              },
+              {
+                "op": "NumInPartyAliveLT",
+                "args": [
+                  6
+                ]
+              }
+            ],
+            "journalStrref": null,
+            "flags": 3,
+            "effects": [],
+            "actionSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+            "next": [
+              "ANGELO",
+              1
+            ]
+          },
+          {
+            "id": 1,
+            "replyStrref": 2144,
+            "conditions": [
+              {
+                "op": "NumInPartyAlive",
+                "args": [
+                  6
+                ]
+              }
+            ],
+            "journalStrref": null,
+            "flags": 3,
+            "effects": [],
+            "actionSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+            "next": [
+              "ANGELO",
+              9
+            ]
+          },
+          {
+            "id": 2,
+            "replyStrref": 2144,
+            "conditions": [
+              {
+                "op": "NumInPartyAlive",
+                "args": [
+                  1
+                ]
+              }
+            ],
+            "journalStrref": null,
+            "flags": 3,
+            "effects": [],
+            "actionSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+            "next": [
+              "ANGELO",
+              4
+            ]
+          },
+          {
+            "id": 3,
+            "replyStrref": 2145,
+            "conditions": [],
+            "journalStrref": null,
+            "flags": 1,
+            "effects": [],
+            "actionSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+            "next": [
+              "ANGELO",
+              2
+            ]
+          },
+          {
+            "id": 4,
+            "replyStrref": 2146,
+            "conditions": [],
+            "journalStrref": null,
+            "flags": 1,
+            "effects": [],
+            "actionSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+            "next": [
+              "ANGELO",
+              3
+            ]
+          },
+          {
+            "id": 5,
+            "replyStrref": 11281,
+            "conditions": [],
+            "journalStrref": null,
+            "flags": 1,
+            "effects": [],
+            "actionSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+            "next": [
+              "ANGELO",
+              4
+            ]
+          }
+        ]
+      },
+      {
+        "id": 1,
+        "strref": 2136,
+        "conditions": [],
+        "entryWeight": null,
+        "transitions": [
+          {
+            "id": 6,
+            "replyStrref": null,
+            "conditions": [],
+            "journalStrref": null,
+            "flags": 12,
+            "effects": [
+              {
+                "op": "SetGlobal",
+                "args": [
+                  "KillPC",
+                  "GLOBAL",
+                  7
+                ]
+              },
+              {
+                "op": "ActionOverride",
+                "args": [
+                  "FLAME4",
+                  {
+                    "op": "MoveToPoint",
+                    "args": [
+                      {
+                        "symbol": "[1011.757]"
+                      }
+                    ]
+                  }
+                ]
+              },
+              {
+                "op": "ActionOverride",
+                "args": [
+                  "FLAME4",
+                  {
+                    "op": "ApplyDamagePercent",
+                    "args": [
+                      {
+                        "symbol": "Player2"
+                      },
+                      100,
+                      {
+                        "symbol": "PIERCING"
+                      }
+                    ]
+                  }
+                ]
+              },
+              {
+                "op": "Kill",
+                "args": [
+                  {
+                    "symbol": "Player2"
+                  }
+                ]
+              },
+              {
+                "op": "StartDialogNoSet",
+                "args": [
+                  {
+                    "symbol": "[PC]"
+                  }
+                ]
+              }
+            ],
+            "actionSha256": "cf35642c6834146b2b7fc5eeb0375b1b5196dcac4e4c0df6867836985a6096af",
+            "next": null
+          },
+          {
+            "id": 7,
+            "replyStrref": null,
+            "conditions": [
+              {
+                "op": "InParty",
+                "args": [
+                  {
+                    "symbol": "Player3"
+                  }
+                ]
+              }
+            ],
+            "journalStrref": null,
+            "flags": 14,
+            "effects": [
+              {
+                "op": "SetGlobal",
+                "args": [
+                  "KillPC",
+                  "GLOBAL",
+                  7
+                ]
+              },
+              {
+                "op": "ActionOverride",
+                "args": [
+                  "FLAME4",
+                  {
+                    "op": "MoveToPoint",
+                    "args": [
+                      {
+                        "symbol": "[905.709]"
+                      }
+                    ]
+                  }
+                ]
+              },
+              {
+                "op": "ActionOverride",
+                "args": [
+                  "FLAME4",
+                  {
+                    "op": "ApplyDamagePercent",
+                    "args": [
+                      {
+                        "symbol": "Player3"
+                      },
+                      100,
+                      {
+                        "symbol": "PIERCING"
+                      }
+                    ]
+                  }
+                ]
+              },
+              {
+                "op": "Kill",
+                "args": [
+                  {
+                    "symbol": "Player3"
+                  }
+                ]
+              },
+              {
+                "op": "StartDialogNoSet",
+                "args": [
+                  {
+                    "symbol": "[PC]"
+                  }
+                ]
+              }
+            ],
+            "actionSha256": "689534164012644c289b55215b95efcddf2d5fc69bb4c0ec9d13dec233003ac5",
+            "next": null
+          },
+          {
+            "id": 8,
+            "replyStrref": null,
+            "conditions": [
+              {
+                "op": "InParty",
+                "args": [
+                  {
+                    "symbol": "Player4"
+                  }
+                ]
+              }
+            ],
+            "journalStrref": null,
+            "flags": 14,
+            "effects": [
+              {
+                "op": "SetGlobal",
+                "args": [
+                  "KillPC",
+                  "GLOBAL",
+                  7
+                ]
+              },
+              {
+                "op": "ActionOverride",
+                "args": [
+                  "FLAME4",
+                  {
+                    "op": "MoveToPoint",
+                    "args": [
+                      {
+                        "symbol": "[877.681]"
+                      }
+                    ]
+                  }
+                ]
+              },
+              {
+                "op": "ActionOverride",
+                "args": [
+                  "FLAME4",
+                  {
+                    "op": "ApplyDamagePercent",
+                    "args": [
+                      {
+                        "symbol": "Player4"
+                      },
+                      100,
+                      {
+                        "symbol": "PIERCING"
+                      }
+                    ]
+                  }
+                ]
+              },
+              {
+                "op": "Kill",
+                "args": [
+                  {
+                    "symbol": "Player4"
+                  }
+                ]
+              },
+              {
+                "op": "StartDialogNoSet",
+                "args": [
+                  {
+                    "symbol": "[PC]"
+                  }
+                ]
+              }
+            ],
+            "actionSha256": "3f471804dec7e306e74f90647e639088a150262fdfa9ebbefcfbd0bfb2150ec6",
+            "next": null
+          },
+          {
+            "id": 9,
+            "replyStrref": null,
+            "conditions": [
+              {
+                "op": "InParty",
+                "args": [
+                  {
+                    "symbol": "Player5"
+                  }
+                ]
+              }
+            ],
+            "journalStrref": null,
+            "flags": 14,
+            "effects": [
+              {
+                "op": "SetGlobal",
+                "args": [
+                  "KillPC",
+                  "GLOBAL",
+                  7
+                ]
+              },
+              {
+                "op": "ActionOverride",
+                "args": [
+                  "FLAME4",
+                  {
+                    "op": "MoveToPoint",
+                    "args": [
+                      {
+                        "symbol": "[1080.779]"
+                      }
+                    ]
+                  }
+                ]
+              },
+              {
+                "op": "ActionOverride",
+                "args": [
+                  "FLAME4",
+                  {
+                    "op": "ApplyDamagePercent",
+                    "args": [
+                      {
+                        "symbol": "Player5"
+                      },
+                      100,
+                      {
+                        "symbol": "PIERCING"
+                      }
+                    ]
+                  }
+                ]
+              },
+              {
+                "op": "Kill",
+                "args": [
+                  {
+                    "symbol": "Player5"
+                  }
+                ]
+              },
+              {
+                "op": "StartDialogNoSet",
+                "args": [
+                  {
+                    "symbol": "[PC]"
+                  }
+                ]
+              }
+            ],
+            "actionSha256": "829ffaef294c4803ec495ef41158b06d3e5e280c112bdcadb34a564881c5511d",
+            "next": null
+          },
+          {
+            "id": 10,
+            "replyStrref": null,
+            "conditions": [
+              {
+                "op": "InParty",
+                "args": [
+                  {
+                    "symbol": "Player6"
+                  }
+                ]
+              }
+            ],
+            "journalStrref": null,
+            "flags": 14,
+            "effects": [
+              {
+                "op": "SetGlobal",
+                "args": [
+                  "KillPC",
+                  "GLOBAL",
+                  7
+                ]
+              },
+              {
+                "op": "ActionOverride",
+                "args": [
+                  "FLAME4",
+                  {
+                    "op": "MoveToPoint",
+                    "args": [
+                      {
+                        "symbol": "[1080.779]"
+                      }
+                    ]
+                  }
+                ]
+              },
+              {
+                "op": "ActionOverride",
+                "args": [
+                  "FLAME4",
+                  {
+                    "op": "ApplyDamagePercent",
+                    "args": [
+                      {
+                        "symbol": "Player6"
+                      },
+                      100,
+                      {
+                        "symbol": "PIERCING"
+                      }
+                    ]
+                  }
+                ]
+              },
+              {
+                "op": "Kill",
+                "args": [
+                  {
+                    "symbol": "Player6"
+                  }
+                ]
+              },
+              {
+                "op": "StartDialogNoSet",
+                "args": [
+                  {
+                    "symbol": "[PC]"
+                  }
+                ]
+              }
+            ],
+            "actionSha256": "3d15e5c204dc7ee5860782964e1c804e2dc0713eaf6cc80467e65f0cd784383b",
+            "next": null
+          },
+          {
+            "id": 11,
+            "replyStrref": null,
+            "conditions": [
+              {
+                "op": "InParty",
+                "args": [
+                  "Sharteel"
+                ]
+              }
+            ],
+            "journalStrref": null,
+            "flags": 6,
+            "effects": [
+              {
+                "op": "SetGlobal",
+                "args": [
+                  "KillPC",
+                  "GLOBAL",
+                  7
+                ]
+              }
+            ],
+            "actionSha256": "da6b999309e21860a736ca8d080e9a91a6aa1d06acffa9625abb6643c46b52c2",
+            "next": [
+              "SHARTJ",
+              0
+            ]
+          }
+        ]
+      },
+      {
+        "id": 2,
+        "strref": 2137,
+        "conditions": [],
+        "entryWeight": null,
+        "transitions": [
+          {
+            "id": 12,
+            "replyStrref": null,
+            "conditions": [],
+            "journalStrref": null,
+            "flags": 0,
+            "effects": [],
+            "actionSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+            "next": [
+              "ANGELO",
+              4
+            ]
+          }
+        ]
+      },
+      {
+        "id": 3,
+        "strref": 2138,
+        "conditions": [],
+        "entryWeight": null,
+        "transitions": [
+          {
+            "id": 13,
+            "replyStrref": null,
+            "conditions": [],
+            "journalStrref": null,
+            "flags": 12,
+            "effects": [
+              {
+                "op": "AddJournalEntry",
+                "args": [
+                  26841,
+                  {
+                    "symbol": "QUEST"
+                  }
+                ]
+              },
+              {
+                "op": "ActionOverride",
+                "args": [
+                  {
+                    "symbol": "Player1"
+                  },
+                  {
+                    "op": "JumpToPoint",
+                    "args": [
+                      {
+                        "symbol": "[1298.216]"
+                      }
+                    ]
+                  }
+                ]
+              },
+              {
+                "op": "ActionOverride",
+                "args": [
+                  {
+                    "symbol": "Player2"
+                  },
+                  {
+                    "op": "JumpToPoint",
+                    "args": [
+                      {
+                        "symbol": "[1222.304]"
+                      }
+                    ]
+                  }
+                ]
+              },
+              {
+                "op": "ActionOverride",
+                "args": [
+                  {
+                    "symbol": "Player3"
+                  },
+                  {
+                    "op": "JumpToPoint",
+                    "args": [
+                      {
+                        "symbol": "[1134.397]"
+                      }
+                    ]
+                  }
+                ]
+              },
+              {
+                "op": "ActionOverride",
+                "args": [
+                  {
+                    "symbol": "Player4"
+                  },
+                  {
+                    "op": "JumpToPoint",
+                    "args": [
+                      {
+                        "symbol": "[1610.375]"
+                      }
+                    ]
+                  }
+                ]
+              },
+              {
+                "op": "ActionOverride",
+                "args": [
+                  {
+                    "symbol": "Player5"
+                  },
+                  {
+                    "op": "JumpToPoint",
+                    "args": [
+                      {
+                        "symbol": "[1519.458]"
+                      }
+                    ]
+                  }
+                ]
+              },
+              {
+                "op": "ActionOverride",
+                "args": [
+                  {
+                    "symbol": "Player6"
+                  },
+                  {
+                    "op": "JumpToPoint",
+                    "args": [
+                      {
+                        "symbol": "[1441.544]"
+                      }
+                    ]
+                  }
+                ]
+              },
+              {
+                "op": "ActionOverride",
+                "args": [
+                  "FLAME1",
+                  {
+                    "op": "DestroySelf",
+                    "args": []
+                  }
+                ]
+              },
+              {
+                "op": "ActionOverride",
+                "args": [
+                  "FLAME2",
+                  {
+                    "op": "DestroySelf",
+                    "args": []
+                  }
+                ]
+              },
+              {
+                "op": "ActionOverride",
+                "args": [
+                  "FLAME3",
+                  {
+                    "op": "DestroySelf",
+                    "args": []
+                  }
+                ]
+              },
+              {
+                "op": "ActionOverride",
+                "args": [
+                  "FLAME4",
+                  {
+                    "op": "DestroySelf",
+                    "args": []
+                  }
+                ]
+              },
+              {
+                "op": "DestroySelf",
+                "args": []
+              }
+            ],
+            "actionSha256": "5a8fb37c86e4636454f2f331f937cd13b4a8b20dc74dac3c9f9c91dbd53891c4",
+            "next": null
+          },
+          {
+            "id": 14,
+            "replyStrref": null,
+            "conditions": [
+              {
+                "op": "InParty",
+                "args": [
+                  "Sharteel"
+                ]
+              }
+            ],
+            "journalStrref": null,
+            "flags": 6,
+            "effects": [
+              {
+                "op": "AddJournalEntry",
+                "args": [
+                  26841,
+                  {
+                    "symbol": "QUEST"
+                  }
+                ]
+              }
+            ],
+            "actionSha256": "1e510ed139c9966e2be3bbdba380aef0c78e608faa3756d486f54427549e43a0",
+            "next": [
+              "SHARTJ",
+              0
+            ]
+          }
+        ]
+      },
+      {
+        "id": 4,
+        "strref": 2139,
+        "conditions": [
+          {
+            "op": "Global",
+            "args": [
+              "KillPC",
+              "GLOBAL",
+              7
+            ]
+          }
+        ],
+        "entryWeight": 0,
+        "transitions": [
+          {
+            "id": 15,
+            "replyStrref": null,
+            "conditions": [],
+            "journalStrref": null,
+            "flags": 12,
+            "effects": [
+              {
+                "op": "AddJournalEntry",
+                "args": [
+                  26842,
+                  {
+                    "symbol": "QUEST"
+                  }
+                ]
+              },
+              {
+                "op": "AddJournalEntry",
+                "args": [
+                  26841,
+                  {
+                    "symbol": "QUEST"
+                  }
+                ]
+              },
+              {
+                "op": "ActionOverride",
+                "args": [
+                  {
+                    "symbol": "Player1"
+                  },
+                  {
+                    "op": "JumpToPoint",
+                    "args": [
+                      {
+                        "symbol": "[1298.216]"
+                      }
+                    ]
+                  }
+                ]
+              },
+              {
+                "op": "ActionOverride",
+                "args": [
+                  {
+                    "symbol": "Player2"
+                  },
+                  {
+                    "op": "JumpToPoint",
+                    "args": [
+                      {
+                        "symbol": "[1222.304]"
+                      }
+                    ]
+                  }
+                ]
+              },
+              {
+                "op": "ActionOverride",
+                "args": [
+                  {
+                    "symbol": "Player3"
+                  },
+                  {
+                    "op": "JumpToPoint",
+                    "args": [
+                      {
+                        "symbol": "[1134.397]"
+                      }
+                    ]
+                  }
+                ]
+              },
+              {
+                "op": "ActionOverride",
+                "args": [
+                  {
+                    "symbol": "Player4"
+                  },
+                  {
+                    "op": "JumpToPoint",
+                    "args": [
+                      {
+                        "symbol": "[1610.375]"
+                      }
+                    ]
+                  }
+                ]
+              },
+              {
+                "op": "ActionOverride",
+                "args": [
+                  {
+                    "symbol": "Player5"
+                  },
+                  {
+                    "op": "JumpToPoint",
+                    "args": [
+                      {
+                        "symbol": "[1519.458]"
+                      }
+                    ]
+                  }
+                ]
+              },
+              {
+                "op": "ActionOverride",
+                "args": [
+                  {
+                    "symbol": "Player6"
+                  },
+                  {
+                    "op": "JumpToPoint",
+                    "args": [
+                      {
+                        "symbol": "[1441.544]"
+                      }
+                    ]
+                  }
+                ]
+              },
+              {
+                "op": "ActionOverride",
+                "args": [
+                  "FLAME1",
+                  {
+                    "op": "DestroySelf",
+                    "args": []
+                  }
+                ]
+              },
+              {
+                "op": "ActionOverride",
+                "args": [
+                  "FLAME2",
+                  {
+                    "op": "DestroySelf",
+                    "args": []
+                  }
+                ]
+              },
+              {
+                "op": "ActionOverride",
+                "args": [
+                  "FLAME3",
+                  {
+                    "op": "DestroySelf",
+                    "args": []
+                  }
+                ]
+              },
+              {
+                "op": "ActionOverride",
+                "args": [
+                  "FLAME4",
+                  {
+                    "op": "DestroySelf",
+                    "args": []
+                  }
+                ]
+              },
+              {
+                "op": "DestroySelf",
+                "args": []
+              }
+            ],
+            "actionSha256": "021cf960127b5db859d5d0b82f89198b1b60ad7f5a06e430637eaed77e1dd8a1",
+            "next": null
+          },
+          {
+            "id": 16,
+            "replyStrref": null,
+            "conditions": [
+              {
+                "op": "InParty",
+                "args": [
+                  "Sharteel"
+                ]
+              }
+            ],
+            "journalStrref": null,
+            "flags": 6,
+            "effects": [
+              {
+                "op": "AddJournalEntry",
+                "args": [
+                  26842,
+                  {
+                    "symbol": "QUEST"
+                  }
+                ]
+              },
+              {
+                "op": "AddJournalEntry",
+                "args": [
+                  26841,
+                  {
+                    "symbol": "QUEST"
+                  }
+                ]
+              }
+            ],
+            "actionSha256": "b7de1ccb09cb99b6382e3c7e81ab8a16948531cac8ca98ef81e7206387ec0c6f",
+            "next": [
+              "SHARTJ",
+              0
+            ]
+          }
+        ]
+      },
+      {
+        "id": 5,
+        "strref": 2140,
+        "conditions": [],
+        "entryWeight": null,
+        "transitions": [
+          {
+            "id": 17,
+            "replyStrref": null,
+            "conditions": [],
+            "journalStrref": null,
+            "flags": 0,
+            "effects": [],
+            "actionSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+            "next": [
+              "SHARTJ",
+              1
+            ]
+          }
+        ]
+      },
+      {
+        "id": 6,
+        "strref": 2141,
+        "conditions": [],
+        "entryWeight": null,
+        "transitions": [
+          {
+            "id": 18,
+            "replyStrref": null,
+            "conditions": [],
+            "journalStrref": null,
+            "flags": 12,
+            "effects": [
+              {
+                "op": "SetGlobal",
+                "args": [
+                  "KillPC",
+                  "GLOBAL",
+                  8
+                ]
+              },
+              {
+                "op": "CreateCreature",
+                "args": [
+                  "cutspy",
+                  {
+                    "symbol": "[584.1190]"
+                  },
+                  {
+                    "symbol": "S"
+                  }
+                ]
+              },
+              {
+                "op": "ActionOverride",
+                "args": [
+                  {
+                    "symbol": "Player1"
+                  },
+                  {
+                    "op": "JumpToPoint",
+                    "args": [
+                      {
+                        "symbol": "[641.914]"
+                      }
+                    ]
+                  }
+                ]
+              },
+              {
+                "op": "ActionOverride",
+                "args": [
+                  {
+                    "symbol": "Player2"
+                  },
+                  {
+                    "op": "JumpToPoint",
+                    "args": [
+                      {
+                        "symbol": "[538.1010]"
+                      }
+                    ]
+                  }
+                ]
+              },
+              {
+                "op": "ActionOverride",
+                "args": [
+                  {
+                    "symbol": "Player3"
+                  },
+                  {
+                    "op": "JumpToPoint",
+                    "args": [
+                      {
+                        "symbol": "[910.1082]"
+                      }
+                    ]
+                  }
+                ]
+              },
+              {
+                "op": "ActionOverride",
+                "args": [
+                  {
+                    "symbol": "Player4"
+                  },
+                  {
+                    "op": "JumpToPoint",
+                    "args": [
+                      {
+                        "symbol": "[817.1169]"
+                      }
+                    ]
+                  }
+                ]
+              },
+              {
+                "op": "ActionOverride",
+                "args": [
+                  {
+                    "symbol": "Player5"
+                  },
+                  {
+                    "op": "JumpToPoint",
+                    "args": [
+                      {
+                        "symbol": "[732.1258]"
+                      }
+                    ]
+                  }
+                ]
+              },
+              {
+                "op": "ActionOverride",
+                "args": [
+                  {
+                    "symbol": "Player6"
+                  },
+                  {
+                    "op": "JumpToPoint",
+                    "args": [
+                      {
+                        "symbol": "[641.1340]"
+                      }
+                    ]
+                  }
+                ]
+              },
+              {
+                "op": "ActionOverride",
+                "args": [
+                  "sharteel",
+                  {
+                    "op": "JumpToPoint",
+                    "args": [
+                      {
+                        "symbol": "[457.1137]"
+                      }
+                    ]
+                  }
+                ]
+              },
+              {
+                "op": "StartCutScene",
+                "args": [
+                  "Capcut05"
+                ]
+              }
+            ],
+            "actionSha256": "2722c2860a039067588cfba7f66acf2404cc83ff9106fc96b33b895a9b6fee76",
+            "next": null
+          }
+        ]
+      },
+      {
+        "id": 7,
+        "strref": 2142,
+        "conditions": [
+          {
+            "op": "Global",
+            "args": [
+              "KillPC",
+              "GLOBAL",
+              8
+            ]
+          }
+        ],
+        "entryWeight": 1,
+        "transitions": [
+          {
+            "id": 19,
+            "replyStrref": null,
+            "conditions": [],
+            "journalStrref": 26847,
+            "flags": 284,
+            "effects": [
+              {
+                "op": "EraseJournalEntry",
+                "args": [
+                  26843
+                ]
+              },
+              {
+                "op": "EraseJournalEntry",
+                "args": [
+                  26844
+                ]
+              },
+              {
+                "op": "EraseJournalEntry",
+                "args": [
+                  26845
+                ]
+              },
+              {
+                "op": "EraseJournalEntry",
+                "args": [
+                  26841
+                ]
+              },
+              {
+                "op": "EraseJournalEntry",
+                "args": [
+                  26842
+                ]
+              },
+              {
+                "op": "EraseJournalEntry",
+                "args": [
+                  26846
+                ]
+              },
+              {
+                "op": "StartCutScene",
+                "args": [
+                  "Capcut04"
+                ]
+              }
+            ],
+            "actionSha256": "f4da56f34e0f6b67b9b8145befc8ae8059714fcd276ca8a11a4ad57be46916c3",
+            "next": null
+          }
+        ]
+      },
+      {
+        "id": 8,
+        "strref": 2143,
+        "conditions": [
+          {
+            "op": "False",
+            "args": []
+          }
+        ],
+        "entryWeight": 2,
+        "transitions": [
+          {
+            "id": 20,
+            "replyStrref": null,
+            "conditions": [],
+            "journalStrref": null,
+            "flags": 8,
+            "effects": [],
+            "actionSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+            "next": null
+          }
+        ]
+      },
+      {
+        "id": 9,
+        "strref": 2136,
+        "conditions": [],
+        "entryWeight": null,
+        "transitions": [
+          {
+            "id": 21,
+            "replyStrref": null,
+            "conditions": [
+              {
+                "op": "RandomNum",
+                "args": [
+                  5,
+                  5
+                ]
+              }
+            ],
+            "journalStrref": null,
+            "flags": 14,
+            "effects": [
+              {
+                "op": "SetGlobal",
+                "args": [
+                  "KillPC",
+                  "GLOBAL",
+                  7
+                ]
+              },
+              {
+                "op": "ActionOverride",
+                "args": [
+                  "FLAME4",
+                  {
+                    "op": "MoveToPoint",
+                    "args": [
+                      {
+                        "symbol": "[1011.757]"
+                      }
+                    ]
+                  }
+                ]
+              },
+              {
+                "op": "ActionOverride",
+                "args": [
+                  "FLAME4",
+                  {
+                    "op": "ApplyDamagePercent",
+                    "args": [
+                      {
+                        "symbol": "Player2"
+                      },
+                      100,
+                      {
+                        "symbol": "PIERCING"
+                      }
+                    ]
+                  }
+                ]
+              },
+              {
+                "op": "Kill",
+                "args": [
+                  {
+                    "symbol": "Player2"
+                  }
+                ]
+              },
+              {
+                "op": "StartDialogNoSet",
+                "args": [
+                  {
+                    "symbol": "[PC]"
+                  }
+                ]
+              }
+            ],
+            "actionSha256": "cf35642c6834146b2b7fc5eeb0375b1b5196dcac4e4c0df6867836985a6096af",
+            "next": null
+          },
+          {
+            "id": 22,
+            "replyStrref": null,
+            "conditions": [
+              {
+                "op": "RandomNum",
+                "args": [
+                  5,
+                  4
+                ]
+              }
+            ],
+            "journalStrref": null,
+            "flags": 14,
+            "effects": [
+              {
+                "op": "SetGlobal",
+                "args": [
+                  "KillPC",
+                  "GLOBAL",
+                  7
+                ]
+              },
+              {
+                "op": "ActionOverride",
+                "args": [
+                  "FLAME4",
+                  {
+                    "op": "MoveToPoint",
+                    "args": [
+                      {
+                        "symbol": "[905.709]"
+                      }
+                    ]
+                  }
+                ]
+              },
+              {
+                "op": "ActionOverride",
+                "args": [
+                  "FLAME4",
+                  {
+                    "op": "ApplyDamagePercent",
+                    "args": [
+                      {
+                        "symbol": "Player3"
+                      },
+                      100,
+                      {
+                        "symbol": "PIERCING"
+                      }
+                    ]
+                  }
+                ]
+              },
+              {
+                "op": "Kill",
+                "args": [
+                  {
+                    "symbol": "Player3"
+                  }
+                ]
+              },
+              {
+                "op": "StartDialogNoSet",
+                "args": [
+                  {
+                    "symbol": "[PC]"
+                  }
+                ]
+              }
+            ],
+            "actionSha256": "689534164012644c289b55215b95efcddf2d5fc69bb4c0ec9d13dec233003ac5",
+            "next": null
+          },
+          {
+            "id": 23,
+            "replyStrref": null,
+            "conditions": [
+              {
+                "op": "RandomNum",
+                "args": [
+                  5,
+                  3
+                ]
+              }
+            ],
+            "journalStrref": null,
+            "flags": 14,
+            "effects": [
+              {
+                "op": "SetGlobal",
+                "args": [
+                  "KillPC",
+                  "GLOBAL",
+                  7
+                ]
+              },
+              {
+                "op": "ActionOverride",
+                "args": [
+                  "FLAME4",
+                  {
+                    "op": "MoveToPoint",
+                    "args": [
+                      {
+                        "symbol": "[877.681]"
+                      }
+                    ]
+                  }
+                ]
+              },
+              {
+                "op": "ActionOverride",
+                "args": [
+                  "FLAME4",
+                  {
+                    "op": "ApplyDamagePercent",
+                    "args": [
+                      {
+                        "symbol": "Player4"
+                      },
+                      100,
+                      {
+                        "symbol": "PIERCING"
+                      }
+                    ]
+                  }
+                ]
+              },
+              {
+                "op": "Kill",
+                "args": [
+                  {
+                    "symbol": "Player4"
+                  }
+                ]
+              },
+              {
+                "op": "StartDialogNoSet",
+                "args": [
+                  {
+                    "symbol": "[PC]"
+                  }
+                ]
+              }
+            ],
+            "actionSha256": "3f471804dec7e306e74f90647e639088a150262fdfa9ebbefcfbd0bfb2150ec6",
+            "next": null
+          },
+          {
+            "id": 24,
+            "replyStrref": null,
+            "conditions": [
+              {
+                "op": "RandomNum",
+                "args": [
+                  5,
+                  2
+                ]
+              }
+            ],
+            "journalStrref": null,
+            "flags": 14,
+            "effects": [
+              {
+                "op": "SetGlobal",
+                "args": [
+                  "KillPC",
+                  "GLOBAL",
+                  7
+                ]
+              },
+              {
+                "op": "ActionOverride",
+                "args": [
+                  "FLAME4",
+                  {
+                    "op": "MoveToPoint",
+                    "args": [
+                      {
+                        "symbol": "[1080.779]"
+                      }
+                    ]
+                  }
+                ]
+              },
+              {
+                "op": "ActionOverride",
+                "args": [
+                  "FLAME4",
+                  {
+                    "op": "ApplyDamagePercent",
+                    "args": [
+                      {
+                        "symbol": "Player5"
+                      },
+                      100,
+                      {
+                        "symbol": "PIERCING"
+                      }
+                    ]
+                  }
+                ]
+              },
+              {
+                "op": "Kill",
+                "args": [
+                  {
+                    "symbol": "Player5"
+                  }
+                ]
+              },
+              {
+                "op": "StartDialogNoSet",
+                "args": [
+                  {
+                    "symbol": "[PC]"
+                  }
+                ]
+              }
+            ],
+            "actionSha256": "829ffaef294c4803ec495ef41158b06d3e5e280c112bdcadb34a564881c5511d",
+            "next": null
+          },
+          {
+            "id": 25,
+            "replyStrref": null,
+            "conditions": [
+              {
+                "op": "RandomNum",
+                "args": [
+                  5,
+                  1
+                ]
+              }
+            ],
+            "journalStrref": null,
+            "flags": 14,
+            "effects": [
+              {
+                "op": "SetGlobal",
+                "args": [
+                  "KillPC",
+                  "GLOBAL",
+                  7
+                ]
+              },
+              {
+                "op": "ActionOverride",
+                "args": [
+                  "FLAME4",
+                  {
+                    "op": "MoveToPoint",
+                    "args": [
+                      {
+                        "symbol": "[1080.779]"
+                      }
+                    ]
+                  }
+                ]
+              },
+              {
+                "op": "ActionOverride",
+                "args": [
+                  "FLAME4",
+                  {
+                    "op": "ApplyDamagePercent",
+                    "args": [
+                      {
+                        "symbol": "Player6"
+                      },
+                      100,
+                      {
+                        "symbol": "PIERCING"
+                      }
+                    ]
+                  }
+                ]
+              },
+              {
+                "op": "Kill",
+                "args": [
+                  {
+                    "symbol": "Player6"
+                  }
+                ]
+              },
+              {
+                "op": "StartDialogNoSet",
+                "args": [
+                  {
+                    "symbol": "[PC]"
+                  }
+                ]
+              }
+            ],
+            "actionSha256": "3d15e5c204dc7ee5860782964e1c804e2dc0713eaf6cc80467e65f0cd784383b",
+            "next": null
+          },
+          {
+            "id": 26,
+            "replyStrref": null,
+            "conditions": [
+              {
+                "op": "InParty",
+                "args": [
+                  "Sharteel"
+                ]
+              }
+            ],
+            "journalStrref": null,
+            "flags": 6,
+            "effects": [
+              {
+                "op": "SetGlobal",
+                "args": [
+                  "KillPC",
+                  "GLOBAL",
+                  7
+                ]
+              }
+            ],
+            "actionSha256": "da6b999309e21860a736ca8d080e9a91a6aa1d06acffa9625abb6643c46b52c2",
+            "next": [
+              "SHARTJ",
+              0
+            ]
+          }
+        ]
+      }
+    ],
+    "NEB": [
+      {
+        "id": 0,
+        "strref": 2149,
+        "conditions": [
+          {
+            "op": "NumberOfTimesTalkedTo",
+            "args": [
+              0
+            ]
+          }
+        ],
+        "entryWeight": 1,
+        "transitions": [
+          {
+            "id": 0,
+            "replyStrref": 2153,
+            "conditions": [],
+            "journalStrref": null,
+            "flags": 1,
+            "effects": [],
+            "actionSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+            "next": [
+              "NEB",
+              1
+            ]
+          },
+          {
+            "id": 1,
+            "replyStrref": 2154,
+            "conditions": [],
+            "journalStrref": null,
+            "flags": 1,
+            "effects": [],
+            "actionSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+            "next": [
+              "NEB",
+              3
+            ]
+          },
+          {
+            "id": 2,
+            "replyStrref": 2155,
+            "conditions": [],
+            "journalStrref": null,
+            "flags": 1,
+            "effects": [],
+            "actionSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+            "next": [
+              "NEB",
+              2
+            ]
+          }
+        ]
+      },
+      {
+        "id": 1,
+        "strref": 2150,
+        "conditions": [],
+        "entryWeight": null,
+        "transitions": [
+          {
+            "id": 3,
+            "replyStrref": null,
+            "conditions": [],
+            "journalStrref": null,
+            "flags": 8,
+            "effects": [],
+            "actionSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+            "next": null
+          }
+        ]
+      },
+      {
+        "id": 2,
+        "strref": 2151,
+        "conditions": [],
+        "entryWeight": null,
+        "transitions": [
+          {
+            "id": 4,
+            "replyStrref": 2156,
+            "conditions": [],
+            "journalStrref": null,
+            "flags": 1,
+            "effects": [],
+            "actionSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+            "next": [
+              "NEB",
+              1
+            ]
+          },
+          {
+            "id": 5,
+            "replyStrref": 2157,
+            "conditions": [],
+            "journalStrref": null,
+            "flags": 1,
+            "effects": [],
+            "actionSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+            "next": [
+              "NEB",
+              3
+            ]
+          }
+        ]
+      },
+      {
+        "id": 3,
+        "strref": 2152,
+        "conditions": [],
+        "entryWeight": null,
+        "transitions": [
+          {
+            "id": 6,
+            "replyStrref": null,
+            "conditions": [],
+            "journalStrref": 26846,
+            "flags": 88,
+            "effects": [],
+            "actionSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+            "next": null
+          }
+        ]
+      },
+      {
+        "id": 4,
+        "strref": 6310,
+        "conditions": [
+          {
+            "op": "NumberOfTimesTalkedTo",
+            "args": [
+              1
+            ]
+          }
+        ],
+        "entryWeight": 2,
+        "transitions": [
+          {
+            "id": 7,
+            "replyStrref": null,
+            "conditions": [],
+            "journalStrref": null,
+            "flags": 8,
+            "effects": [],
+            "actionSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+            "next": null
+          }
+        ]
+      },
+      {
+        "id": 5,
+        "strref": 16951,
+        "conditions": [
+          {
+            "op": "NumberOfTimesTalkedTo",
+            "args": [
+              2
+            ]
+          }
+        ],
+        "entryWeight": 3,
+        "transitions": [
+          {
+            "id": 8,
+            "replyStrref": null,
+            "conditions": [],
+            "journalStrref": null,
+            "flags": 8,
+            "effects": [],
+            "actionSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+            "next": null
+          }
+        ]
+      },
+      {
+        "id": 6,
+        "strref": 16952,
+        "conditions": [
+          {
+            "op": "NumberOfTimesTalkedTo",
+            "args": [
+              3
+            ]
+          }
+        ],
+        "entryWeight": 4,
+        "transitions": [
+          {
+            "id": 9,
+            "replyStrref": 16953,
+            "conditions": [],
+            "journalStrref": null,
+            "flags": 1,
+            "effects": [],
+            "actionSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+            "next": [
+              "NEB",
+              7
+            ]
+          },
+          {
+            "id": 10,
+            "replyStrref": 16954,
+            "conditions": [],
+            "journalStrref": null,
+            "flags": 1,
+            "effects": [],
+            "actionSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+            "next": [
+              "NEB",
+              10
+            ]
+          }
+        ]
+      },
+      {
+        "id": 7,
+        "strref": 16955,
+        "conditions": [],
+        "entryWeight": null,
+        "transitions": [
+          {
+            "id": 11,
+            "replyStrref": 16957,
+            "conditions": [],
+            "journalStrref": null,
+            "flags": 1,
+            "effects": [],
+            "actionSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+            "next": [
+              "NEB",
+              9
+            ]
+          },
+          {
+            "id": 12,
+            "replyStrref": 16956,
+            "conditions": [],
+            "journalStrref": null,
+            "flags": 1,
+            "effects": [],
+            "actionSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+            "next": [
+              "NEB",
+              9
+            ]
+          },
+          {
+            "id": 13,
+            "replyStrref": 16958,
+            "conditions": [],
+            "journalStrref": null,
+            "flags": 1,
+            "effects": [],
+            "actionSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+            "next": [
+              "NEB",
+              9
+            ]
+          },
+          {
+            "id": 14,
+            "replyStrref": 16959,
+            "conditions": [],
+            "journalStrref": null,
+            "flags": 1,
+            "effects": [],
+            "actionSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+            "next": [
+              "NEB",
+              9
+            ]
+          },
+          {
+            "id": 15,
+            "replyStrref": 16960,
+            "conditions": [],
+            "journalStrref": null,
+            "flags": 1,
+            "effects": [],
+            "actionSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+            "next": [
+              "NEB",
+              8
+            ]
+          },
+          {
+            "id": 16,
+            "replyStrref": 16961,
+            "conditions": [],
+            "journalStrref": null,
+            "flags": 1,
+            "effects": [],
+            "actionSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+            "next": [
+              "NEB",
+              9
+            ]
+          },
+          {
+            "id": 17,
+            "replyStrref": 16962,
+            "conditions": [],
+            "journalStrref": null,
+            "flags": 1,
+            "effects": [],
+            "actionSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+            "next": [
+              "NEB",
+              9
+            ]
+          },
+          {
+            "id": 18,
+            "replyStrref": 16963,
+            "conditions": [],
+            "journalStrref": null,
+            "flags": 1,
+            "effects": [],
+            "actionSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+            "next": [
+              "NEB",
+              9
+            ]
+          }
+        ]
+      },
+      {
+        "id": 8,
+        "strref": 16964,
+        "conditions": [],
+        "entryWeight": null,
+        "transitions": [
+          {
+            "id": 19,
+            "replyStrref": null,
+            "conditions": [],
+            "journalStrref": 27317,
+            "flags": 284,
+            "effects": [
+              {
+                "op": "EraseJournalEntry",
+                "args": [
+                  26843
+                ]
+              },
+              {
+                "op": "EraseJournalEntry",
+                "args": [
+                  26844
+                ]
+              },
+              {
+                "op": "EraseJournalEntry",
+                "args": [
+                  26845
+                ]
+              },
+              {
+                "op": "EraseJournalEntry",
+                "args": [
+                  26841
+                ]
+              },
+              {
+                "op": "EraseJournalEntry",
+                "args": [
+                  26842
+                ]
+              },
+              {
+                "op": "EraseJournalEntry",
+                "args": [
+                  26846
+                ]
+              },
+              {
+                "op": "StartCutScene",
+                "args": [
+                  "CAPCUT02"
+                ]
+              }
+            ],
+            "actionSha256": "fde557c379b78cb7406b63a48df7e133bbe0c0703457dd73622348ccd6fd0376",
+            "next": null
+          }
+        ]
+      },
+      {
+        "id": 9,
+        "strref": 16965,
+        "conditions": [],
+        "entryWeight": null,
+        "transitions": [
+          {
+            "id": 20,
+            "replyStrref": null,
+            "conditions": [],
+            "journalStrref": null,
+            "flags": 8,
+            "effects": [],
+            "actionSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+            "next": null
+          }
+        ]
+      },
+      {
+        "id": 10,
+        "strref": 16967,
+        "conditions": [],
+        "entryWeight": null,
+        "transitions": [
+          {
+            "id": 21,
+            "replyStrref": null,
+            "conditions": [],
+            "journalStrref": null,
+            "flags": 8,
+            "effects": [],
+            "actionSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+            "next": null
+          }
+        ]
+      },
+      {
+        "id": 11,
+        "strref": 16968,
+        "conditions": [
+          {
+            "op": "NumberOfTimesTalkedTo",
+            "args": [
+              4
+            ]
+          }
+        ],
+        "entryWeight": 5,
+        "transitions": [
+          {
+            "id": 22,
+            "replyStrref": 16969,
+            "conditions": [],
+            "journalStrref": null,
+            "flags": 1,
+            "effects": [],
+            "actionSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+            "next": [
+              "NEB",
+              12
+            ]
+          },
+          {
+            "id": 23,
+            "replyStrref": 16970,
+            "conditions": [],
+            "journalStrref": null,
+            "flags": 1,
+            "effects": [],
+            "actionSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+            "next": [
+              "NEB",
+              12
+            ]
+          },
+          {
+            "id": 24,
+            "replyStrref": 16971,
+            "conditions": [],
+            "journalStrref": null,
+            "flags": 1,
+            "effects": [],
+            "actionSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+            "next": [
+              "NEB",
+              12
+            ]
+          },
+          {
+            "id": 25,
+            "replyStrref": 16972,
+            "conditions": [],
+            "journalStrref": null,
+            "flags": 1,
+            "effects": [],
+            "actionSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+            "next": [
+              "NEB",
+              12
+            ]
+          },
+          {
+            "id": 26,
+            "replyStrref": 16973,
+            "conditions": [],
+            "journalStrref": null,
+            "flags": 1,
+            "effects": [],
+            "actionSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+            "next": [
+              "NEB",
+              12
+            ]
+          },
+          {
+            "id": 27,
+            "replyStrref": 16974,
+            "conditions": [],
+            "journalStrref": null,
+            "flags": 1,
+            "effects": [],
+            "actionSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+            "next": [
+              "NEB",
+              12
+            ]
+          },
+          {
+            "id": 28,
+            "replyStrref": 16975,
+            "conditions": [],
+            "journalStrref": null,
+            "flags": 1,
+            "effects": [],
+            "actionSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+            "next": [
+              "NEB",
+              13
+            ]
+          },
+          {
+            "id": 29,
+            "replyStrref": 16976,
+            "conditions": [],
+            "journalStrref": null,
+            "flags": 1,
+            "effects": [],
+            "actionSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+            "next": [
+              "NEB",
+              12
+            ]
+          }
+        ]
+      },
+      {
+        "id": 12,
+        "strref": 16978,
+        "conditions": [],
+        "entryWeight": null,
+        "transitions": [
+          {
+            "id": 30,
+            "replyStrref": null,
+            "conditions": [],
+            "journalStrref": null,
+            "flags": 8,
+            "effects": [],
+            "actionSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+            "next": null
+          }
+        ]
+      },
+      {
+        "id": 13,
+        "strref": 16979,
+        "conditions": [],
+        "entryWeight": null,
+        "transitions": [
+          {
+            "id": 31,
+            "replyStrref": null,
+            "conditions": [],
+            "journalStrref": 27317,
+            "flags": 284,
+            "effects": [
+              {
+                "op": "EraseJournalEntry",
+                "args": [
+                  26843
+                ]
+              },
+              {
+                "op": "EraseJournalEntry",
+                "args": [
+                  26844
+                ]
+              },
+              {
+                "op": "EraseJournalEntry",
+                "args": [
+                  26845
+                ]
+              },
+              {
+                "op": "EraseJournalEntry",
+                "args": [
+                  26841
+                ]
+              },
+              {
+                "op": "EraseJournalEntry",
+                "args": [
+                  26842
+                ]
+              },
+              {
+                "op": "EraseJournalEntry",
+                "args": [
+                  26846
+                ]
+              },
+              {
+                "op": "StartCutScene",
+                "args": [
+                  "CAPCUT02"
+                ]
+              }
+            ],
+            "actionSha256": "fde557c379b78cb7406b63a48df7e133bbe0c0703457dd73622348ccd6fd0376",
+            "next": null
+          }
+        ]
+      },
+      {
+        "id": 14,
+        "strref": 16980,
+        "conditions": [
+          {
+            "op": "True",
+            "args": []
+          }
+        ],
+        "entryWeight": 6,
+        "transitions": [
+          {
+            "id": 32,
+            "replyStrref": 16981,
+            "conditions": [],
+            "journalStrref": null,
+            "flags": 1,
+            "effects": [],
+            "actionSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+            "next": [
+              "NEB",
+              16
+            ]
+          },
+          {
+            "id": 33,
+            "replyStrref": 16982,
+            "conditions": [],
+            "journalStrref": null,
+            "flags": 1,
+            "effects": [],
+            "actionSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+            "next": [
+              "NEB",
+              15
+            ]
+          },
+          {
+            "id": 34,
+            "replyStrref": 16983,
+            "conditions": [],
+            "journalStrref": null,
+            "flags": 1,
+            "effects": [],
+            "actionSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+            "next": [
+              "NEB",
+              16
+            ]
+          },
+          {
+            "id": 35,
+            "replyStrref": 16984,
+            "conditions": [],
+            "journalStrref": null,
+            "flags": 1,
+            "effects": [],
+            "actionSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+            "next": [
+              "NEB",
+              16
+            ]
+          },
+          {
+            "id": 36,
+            "replyStrref": 16985,
+            "conditions": [],
+            "journalStrref": null,
+            "flags": 1,
+            "effects": [],
+            "actionSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+            "next": [
+              "NEB",
+              16
+            ]
+          },
+          {
+            "id": 37,
+            "replyStrref": 16986,
+            "conditions": [],
+            "journalStrref": null,
+            "flags": 1,
+            "effects": [],
+            "actionSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+            "next": [
+              "NEB",
+              16
+            ]
+          },
+          {
+            "id": 38,
+            "replyStrref": 16987,
+            "conditions": [],
+            "journalStrref": null,
+            "flags": 1,
+            "effects": [],
+            "actionSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+            "next": [
+              "NEB",
+              16
+            ]
+          }
+        ]
+      },
+      {
+        "id": 15,
+        "strref": 16988,
+        "conditions": [],
+        "entryWeight": null,
+        "transitions": [
+          {
+            "id": 39,
+            "replyStrref": null,
+            "conditions": [],
+            "journalStrref": 27317,
+            "flags": 284,
+            "effects": [
+              {
+                "op": "EraseJournalEntry",
+                "args": [
+                  26843
+                ]
+              },
+              {
+                "op": "EraseJournalEntry",
+                "args": [
+                  26844
+                ]
+              },
+              {
+                "op": "EraseJournalEntry",
+                "args": [
+                  26845
+                ]
+              },
+              {
+                "op": "EraseJournalEntry",
+                "args": [
+                  26841
+                ]
+              },
+              {
+                "op": "EraseJournalEntry",
+                "args": [
+                  26842
+                ]
+              },
+              {
+                "op": "EraseJournalEntry",
+                "args": [
+                  26846
+                ]
+              },
+              {
+                "op": "StartCutScene",
+                "args": [
+                  "CAPCUT02"
+                ]
+              }
+            ],
+            "actionSha256": "fde557c379b78cb7406b63a48df7e133bbe0c0703457dd73622348ccd6fd0376",
+            "next": null
+          }
+        ]
+      },
+      {
+        "id": 16,
+        "strref": 16989,
+        "conditions": [
+          {
+            "op": "False",
+            "args": []
+          }
+        ],
+        "entryWeight": 7,
+        "transitions": [
+          {
+            "id": 40,
+            "replyStrref": null,
+            "conditions": [],
+            "journalStrref": null,
+            "flags": 8,
+            "effects": [],
+            "actionSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+            "next": null
+          }
+        ]
+      },
+      {
+        "id": 17,
+        "strref": 16990,
+        "conditions": [
+          {
+            "op": "Global",
+            "args": [
+              "AttackNEB",
+              "AR0607",
+              1
+            ]
+          }
+        ],
+        "entryWeight": 0,
+        "transitions": [
+          {
+            "id": 41,
+            "replyStrref": null,
+            "conditions": [],
+            "journalStrref": 32175,
+            "flags": 284,
+            "effects": [
+              {
+                "op": "EraseJournalEntry",
+                "args": [
+                  26843
+                ]
+              },
+              {
+                "op": "EraseJournalEntry",
+                "args": [
+                  26844
+                ]
+              },
+              {
+                "op": "EraseJournalEntry",
+                "args": [
+                  26845
+                ]
+              },
+              {
+                "op": "EraseJournalEntry",
+                "args": [
+                  26841
+                ]
+              },
+              {
+                "op": "EraseJournalEntry",
+                "args": [
+                  26842
+                ]
+              },
+              {
+                "op": "EraseJournalEntry",
+                "args": [
+                  26846
+                ]
+              },
+              {
+                "op": "StartCutScene",
+                "args": [
+                  "CAPCUT02"
+                ]
+              }
+            ],
+            "actionSha256": "fde557c379b78cb7406b63a48df7e133bbe0c0703457dd73622348ccd6fd0376",
+            "next": null
+          }
+        ]
+      }
+    ],
+    "SHARTJ": [
+      {
+        "id": 0,
+        "strref": 16778,
+        "conditions": [],
+        "entryWeight": null,
+        "transitions": [
+          {
+            "id": 0,
+            "replyStrref": null,
+            "conditions": [],
+            "journalStrref": null,
+            "flags": 0,
+            "effects": [],
+            "actionSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+            "next": [
+              "ANGELO",
+              5
+            ]
+          }
+        ]
+      },
+      {
+        "id": 1,
+        "strref": 16779,
+        "conditions": [],
+        "entryWeight": null,
+        "transitions": [
+          {
+            "id": 1,
+            "replyStrref": null,
+            "conditions": [],
+            "journalStrref": null,
+            "flags": 0,
+            "effects": [],
+            "actionSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+            "next": [
+              "ANGELO",
+              6
+            ]
+          }
+        ]
+      }
+    ]
+  },
+  "scenes": {
+    "FFHUNT": [
+      {
+        "kind": "TR",
+        "op": "Global",
+        "integers": [
+          1,
+          0,
+          0,
+          0
+        ],
+        "strings": [
+          "GLOBALDukeThanks",
+          ""
+        ],
+        "objects": [],
+        "offset": 9,
+        "block": 0
+      },
+      {
+        "kind": "AC",
+        "op": "DestroySelf",
+        "integers": [
+          0,
+          0,
+          0,
+          0,
+          0
+        ],
+        "strings": [
+          "",
+          ""
+        ],
+        "objects": [],
+        "offset": 95,
+        "block": 0
+      },
+      {
+        "kind": "TR",
+        "op": "Heard",
+        "integers": [
+          1,
+          0,
+          0,
+          0
+        ],
+        "strings": [
+          "",
+          ""
+        ],
+        "objects": [
+          {
+            "name": "FFHUNT"
+          }
+        ],
+        "offset": 230,
+        "block": 1
+      },
+      {
+        "kind": "AC",
+        "op": "Enemy",
+        "integers": [
+          0,
+          0,
+          0,
+          0,
+          0
+        ],
+        "strings": [
+          "",
+          ""
+        ],
+        "objects": [],
+        "offset": 303,
+        "block": 1
+      },
+      {
+        "kind": "TR",
+        "op": "See",
+        "integers": [
+          0,
+          0,
+          0,
+          0
+        ],
+        "strings": [
+          "",
+          ""
+        ],
+        "objects": [
+          {
+            "fields": [
+              [
+                0,
+                2
+              ]
+            ]
+          }
+        ],
+        "offset": 437,
+        "block": 2
+      },
+      {
+        "kind": "TR",
+        "op": "Global",
+        "integers": [
+          0,
+          0,
+          0,
+          0
+        ],
+        "strings": [
+          "GLOBALCaptured",
+          ""
+        ],
+        "objects": [],
+        "offset": 495,
+        "block": 2
+      },
+      {
+        "kind": "TR",
+        "op": "Allegiance",
+        "integers": [
+          128,
+          0,
+          0,
+          0
+        ],
+        "strings": [
+          "",
+          ""
+        ],
+        "objects": [
+          {
+            "fields": [
+              [
+                7,
+                1
+              ]
+            ]
+          }
+        ],
+        "offset": 567,
+        "block": 2
+      },
+      {
+        "kind": "AC",
+        "op": "Dialogue",
+        "integers": [
+          0,
+          0,
+          0,
+          0,
+          0
+        ],
+        "strings": [
+          "",
+          ""
+        ],
+        "objects": [
+          null,
+          {
+            "fields": [
+              [
+                0,
+                2
+              ]
+            ]
+          },
+          null
+        ],
+        "offset": 639,
+        "block": 2
+      },
+      {
+        "kind": "TR",
+        "op": "Global",
+        "integers": [
+          1,
+          0,
+          0,
+          0
+        ],
+        "strings": [
+          "GLOBALCaptured",
+          ""
+        ],
+        "objects": [],
+        "offset": 772,
+        "block": 3
+      },
+      {
+        "kind": "TR",
+        "op": "Allegiance",
+        "integers": [
+          128,
+          0,
+          0,
+          0
+        ],
+        "strings": [
+          "",
+          ""
+        ],
+        "objects": [
+          {
+            "fields": [
+              [
+                7,
+                1
+              ]
+            ]
+          }
+        ],
+        "offset": 844,
+        "block": 3
+      },
+      {
+        "kind": "AC",
+        "op": "Enemy",
+        "integers": [
+          0,
+          0,
+          0,
+          0,
+          0
+        ],
+        "strings": [
+          "",
+          ""
+        ],
+        "objects": [],
+        "offset": 916,
+        "block": 3
+      }
+    ],
+    "INITNEB": [
+      {
+        "kind": "TR",
+        "op": "See",
+        "integers": [
+          0,
+          0,
+          0,
+          0
+        ],
+        "strings": [
+          "",
+          ""
+        ],
+        "objects": [
+          {
+            "fields": [
+              [
+                0,
+                2
+              ]
+            ]
+          }
+        ],
+        "offset": 9,
+        "block": 0
+      },
+      {
+        "kind": "TR",
+        "op": "Global",
+        "integers": [
+          0,
+          0,
+          0,
+          0
+        ],
+        "strings": [
+          "AR0607AttackNEB",
+          ""
+        ],
+        "objects": [],
+        "offset": 67,
+        "block": 0
+      },
+      {
+        "kind": "TR",
+        "op": "AttackedBy",
+        "integers": [
+          0,
+          0,
+          0,
+          0
+        ],
+        "strings": [
+          "",
+          ""
+        ],
+        "objects": [
+          {
+            "fields": [
+              [
+                0,
+                30
+              ]
+            ]
+          }
+        ],
+        "offset": 140,
+        "block": 0
+      },
+      {
+        "kind": "TR",
+        "op": "Allegiance",
+        "integers": [
+          128,
+          0,
+          0,
+          0
+        ],
+        "strings": [
+          "",
+          ""
+        ],
+        "objects": [
+          {
+            "fields": [
+              [
+                7,
+                1
+              ]
+            ]
+          }
+        ],
+        "offset": 195,
+        "block": 0
+      },
+      {
+        "kind": "AC",
+        "op": "SetGlobal",
+        "integers": [
+          1,
+          0,
+          0,
+          0,
+          0
+        ],
+        "strings": [
+          "AR0607AttackNEB",
+          ""
+        ],
+        "objects": [],
+        "offset": 267,
+        "block": 0
+      },
+      {
+        "kind": "AC",
+        "op": "StartDialogueNoSet",
+        "integers": [
+          0,
+          0,
+          0,
+          0,
+          0
+        ],
+        "strings": [
+          "",
+          ""
+        ],
+        "objects": [
+          null,
+          {
+            "fields": [
+              [
+                0,
+                2
+              ]
+            ]
+          },
+          null
+        ],
+        "offset": 520,
+        "block": 0
+      },
+      {
+        "kind": "TR",
+        "op": "See",
+        "integers": [
+          0,
+          0,
+          0,
+          0
+        ],
+        "strings": [
+          "",
+          ""
+        ],
+        "objects": [
+          {
+            "fields": [
+              [
+                0,
+                2
+              ]
+            ]
+          }
+        ],
+        "offset": 655,
+        "block": 1
+      },
+      {
+        "kind": "TR",
+        "op": "Allegiance",
+        "integers": [
+          255,
+          1,
+          0,
+          0
+        ],
+        "strings": [
+          "",
+          ""
+        ],
+        "objects": [
+          {
+            "fields": [
+              [
+                7,
+                1
+              ]
+            ]
+          }
+        ],
+        "offset": 713,
+        "block": 1
+      },
+      {
+        "kind": "TR",
+        "op": "Delay",
+        "integers": [
+          20,
+          0,
+          0,
+          0
+        ],
+        "strings": [
+          "",
+          ""
+        ],
+        "objects": [],
+        "offset": 773,
+        "block": 1
+      },
+      {
+        "kind": "AC",
+        "op": "Dialogue",
+        "integers": [
+          0,
+          0,
+          0,
+          0,
+          0
+        ],
+        "strings": [
+          "",
+          ""
+        ],
+        "objects": [
+          null,
+          {
+            "fields": [
+              [
+                0,
+                2
+              ]
+            ]
+          },
+          null
+        ],
+        "offset": 844,
+        "block": 1
+      }
+    ],
+    "CAPCUT01": [
+      {
+        "kind": "TR",
+        "op": "True",
+        "integers": [
+          0,
+          0,
+          0,
+          0
+        ],
+        "strings": [
+          "",
+          ""
+        ],
+        "objects": [],
+        "offset": 9,
+        "block": 0
+      },
+      {
+        "kind": "AC",
+        "op": "CutSceneId",
+        "integers": [
+          0,
+          0,
+          0,
+          0,
+          0
+        ],
+        "strings": [
+          "",
+          ""
+        ],
+        "objects": [
+          null,
+          {
+            "fields": [
+              [
+                7,
+                21
+              ]
+            ]
+          },
+          null
+        ],
+        "offset": 79,
+        "block": 0
+      },
+      {
+        "kind": "AC",
+        "op": "LeaveAreaLUAPanic",
+        "integers": [
+          10,
+          951,
+          774,
+          0,
+          0
+        ],
+        "strings": [
+          "AR0607",
+          ""
+        ],
+        "objects": [],
+        "offset": 440,
+        "block": 0
+      },
+      {
+        "kind": "AC",
+        "op": "LeaveAreaLUA",
+        "integers": [
+          10,
+          951,
+          774,
+          0,
+          0
+        ],
+        "strings": [
+          "AR0607",
+          ""
+        ],
+        "objects": [],
+        "offset": 571,
+        "block": 0
+      },
+      {
+        "kind": "AC",
+        "op": "CreateCreature",
+        "integers": [
+          8,
+          1143,
+          891,
+          0,
+          0
+        ],
+        "strings": [
+          "FLAME3",
+          ""
+        ],
+        "objects": [],
+        "offset": 948,
+        "block": 0
+      },
+      {
+        "kind": "AC",
+        "op": "CreateCreature",
+        "integers": [
+          12,
+          800,
+          742,
+          0,
+          0
+        ],
+        "strings": [
+          "FLAME1",
+          ""
+        ],
+        "objects": [],
+        "offset": 1077,
+        "block": 0
+      },
+      {
+        "kind": "AC",
+        "op": "CreateCreature",
+        "integers": [
+          10,
+          932,
+          831,
+          0,
+          0
+        ],
+        "strings": [
+          "FLAME2",
+          ""
+        ],
+        "objects": [],
+        "offset": 1206,
+        "block": 0
+      },
+      {
+        "kind": "AC",
+        "op": "CreateCreature",
+        "integers": [
+          2,
+          1060,
+          668,
+          0,
+          0
+        ],
+        "strings": [
+          "FLAME4",
+          ""
+        ],
+        "objects": [],
+        "offset": 1335,
+        "block": 0
+      },
+      {
+        "kind": "AC",
+        "op": "SetDialog",
+        "integers": [
+          0,
+          0,
+          0,
+          0,
+          0
+        ],
+        "strings": [
+          "flamc7",
+          ""
+        ],
+        "objects": [
+          {
+            "name": "FLAME4"
+          },
+          null,
+          null
+        ],
+        "offset": 1464,
+        "block": 0
+      },
+      {
+        "kind": "AC",
+        "op": "DestroySelf",
+        "integers": [
+          0,
+          0,
+          0,
+          0,
+          0
+        ],
+        "strings": [
+          "",
+          ""
+        ],
+        "objects": [
+          {
+            "name": "Chimp5"
+          },
+          null,
+          null
+        ],
+        "offset": 1596,
+        "block": 0
+      },
+      {
+        "kind": "AC",
+        "op": "DestroySelf",
+        "integers": [
+          0,
+          0,
+          0,
+          0,
+          0
+        ],
+        "strings": [
+          "",
+          ""
+        ],
+        "objects": [
+          {
+            "name": "Fergus"
+          },
+          null,
+          null
+        ],
+        "offset": 1722,
+        "block": 0
+      },
+      {
+        "kind": "AC",
+        "op": "SetNumTimesTalkedTo",
+        "integers": [
+          1,
+          0,
+          0,
+          0,
+          0
+        ],
+        "strings": [
+          "",
+          ""
+        ],
+        "objects": [
+          {
+            "name": "DICKSMOK"
+          },
+          null,
+          null
+        ],
+        "offset": 1848,
+        "block": 0
+      },
+      {
+        "kind": "AC",
+        "op": "StartCutScene",
+        "integers": [
+          1,
+          0,
+          0,
+          0,
+          0
+        ],
+        "strings": [
+          "Capcut03",
+          ""
+        ],
+        "objects": [],
+        "offset": 2096,
+        "block": 0
+      },
+      {
+        "kind": "TR",
+        "op": "True",
+        "integers": [
+          0,
+          0,
+          0,
+          0
+        ],
+        "strings": [
+          "",
+          ""
+        ],
+        "objects": [],
+        "offset": 2239,
+        "block": 1
+      },
+      {
+        "kind": "AC",
+        "op": "CutSceneId",
+        "integers": [
+          0,
+          0,
+          0,
+          0,
+          0
+        ],
+        "strings": [
+          "",
+          ""
+        ],
+        "objects": [
+          null,
+          {
+            "fields": [
+              [
+                7,
+                22
+              ]
+            ]
+          },
+          null
+        ],
+        "offset": 2309,
+        "block": 1
+      },
+      {
+        "kind": "AC",
+        "op": "LeaveAreaLUA",
+        "integers": [
+          10,
+          986,
+          794,
+          0,
+          0
+        ],
+        "strings": [
+          "AR0607",
+          ""
+        ],
+        "objects": [],
+        "offset": 2549,
+        "block": 1
+      },
+      {
+        "kind": "TR",
+        "op": "True",
+        "integers": [
+          0,
+          0,
+          0,
+          0
+        ],
+        "strings": [
+          "",
+          ""
+        ],
+        "objects": [],
+        "offset": 2695,
+        "block": 2
+      },
+      {
+        "kind": "AC",
+        "op": "CutSceneId",
+        "integers": [
+          0,
+          0,
+          0,
+          0,
+          0
+        ],
+        "strings": [
+          "",
+          ""
+        ],
+        "objects": [
+          null,
+          {
+            "fields": [
+              [
+                7,
+                23
+              ]
+            ]
+          },
+          null
+        ],
+        "offset": 2765,
+        "block": 2
+      },
+      {
+        "kind": "AC",
+        "op": "LeaveAreaLUA",
+        "integers": [
+          12,
+          857,
+          734,
+          0,
+          0
+        ],
+        "strings": [
+          "AR0607",
+          ""
+        ],
+        "objects": [],
+        "offset": 3005,
+        "block": 2
+      },
+      {
+        "kind": "TR",
+        "op": "True",
+        "integers": [
+          0,
+          0,
+          0,
+          0
+        ],
+        "strings": [
+          "",
+          ""
+        ],
+        "objects": [],
+        "offset": 3151,
+        "block": 3
+      },
+      {
+        "kind": "AC",
+        "op": "CutSceneId",
+        "integers": [
+          0,
+          0,
+          0,
+          0,
+          0
+        ],
+        "strings": [
+          "",
+          ""
+        ],
+        "objects": [
+          null,
+          {
+            "fields": [
+              [
+                7,
+                24
+              ]
+            ]
+          },
+          null
+        ],
+        "offset": 3221,
+        "block": 3
+      },
+      {
+        "kind": "AC",
+        "op": "LeaveAreaLUA",
+        "integers": [
+          10,
+          841,
+          702,
+          0,
+          0
+        ],
+        "strings": [
+          "AR0607",
+          ""
+        ],
+        "objects": [],
+        "offset": 3461,
+        "block": 3
+      },
+      {
+        "kind": "TR",
+        "op": "True",
+        "integers": [
+          0,
+          0,
+          0,
+          0
+        ],
+        "strings": [
+          "",
+          ""
+        ],
+        "objects": [],
+        "offset": 3607,
+        "block": 4
+      },
+      {
+        "kind": "AC",
+        "op": "CutSceneId",
+        "integers": [
+          0,
+          0,
+          0,
+          0,
+          0
+        ],
+        "strings": [
+          "",
+          ""
+        ],
+        "objects": [
+          null,
+          {
+            "fields": [
+              [
+                7,
+                25
+              ]
+            ]
+          },
+          null
+        ],
+        "offset": 3677,
+        "block": 4
+      },
+      {
+        "kind": "AC",
+        "op": "LeaveAreaLUA",
+        "integers": [
+          8,
+          1089,
+          837,
+          0,
+          0
+        ],
+        "strings": [
+          "AR0607",
+          ""
+        ],
+        "objects": [],
+        "offset": 3917,
+        "block": 4
+      },
+      {
+        "kind": "TR",
+        "op": "True",
+        "integers": [
+          0,
+          0,
+          0,
+          0
+        ],
+        "strings": [
+          "",
+          ""
+        ],
+        "objects": [],
+        "offset": 4063,
+        "block": 5
+      },
+      {
+        "kind": "AC",
+        "op": "CutSceneId",
+        "integers": [
+          0,
+          0,
+          0,
+          0,
+          0
+        ],
+        "strings": [
+          "",
+          ""
+        ],
+        "objects": [
+          null,
+          {
+            "fields": [
+              [
+                7,
+                26
+              ]
+            ]
+          },
+          null
+        ],
+        "offset": 4133,
+        "block": 5
+      },
+      {
+        "kind": "AC",
+        "op": "LeaveAreaLUA",
+        "integers": [
+          7,
+          1128,
+          804,
+          0,
+          0
+        ],
+        "strings": [
+          "AR0607",
+          ""
+        ],
+        "objects": [],
+        "offset": 4373,
+        "block": 5
+      }
+    ],
+    "CAPCUT02": [
+      {
+        "kind": "TR",
+        "op": "True",
+        "integers": [
+          0,
+          0,
+          0,
+          0
+        ],
+        "strings": [
+          "",
+          ""
+        ],
+        "objects": [],
+        "offset": 9,
+        "block": 0
+      },
+      {
+        "kind": "AC",
+        "op": "CutSceneId",
+        "integers": [
+          0,
+          0,
+          0,
+          0,
+          0
+        ],
+        "strings": [
+          "",
+          ""
+        ],
+        "objects": [
+          null,
+          {
+            "fields": [
+              [
+                7,
+                21
+              ]
+            ]
+          },
+          null
+        ],
+        "offset": 79,
+        "block": 0
+      },
+      {
+        "kind": "AC",
+        "op": "EscapeArea",
+        "integers": [
+          0,
+          0,
+          0,
+          0,
+          0
+        ],
+        "strings": [
+          "",
+          ""
+        ],
+        "objects": [
+          {
+            "name": "Neb"
+          },
+          null,
+          null
+        ],
+        "offset": 200,
+        "block": 0
+      },
+      {
+        "kind": "AC",
+        "op": "LeaveAreaLUAPanic",
+        "integers": [
+          12,
+          1768,
+          635,
+          0,
+          0
+        ],
+        "strings": [
+          "AR1100",
+          "TRCDJAIL"
+        ],
+        "objects": [],
+        "offset": 563,
+        "block": 0
+      },
+      {
+        "kind": "AC",
+        "op": "LeaveAreaLUA",
+        "integers": [
+          12,
+          1768,
+          635,
+          0,
+          0
+        ],
+        "strings": [
+          "AR1100",
+          "TRCDJAIL"
+        ],
+        "objects": [],
+        "offset": 703,
+        "block": 0
+      },
+      {
+        "kind": "TR",
+        "op": "True",
+        "integers": [
+          0,
+          0,
+          0,
+          0
+        ],
+        "strings": [
+          "",
+          ""
+        ],
+        "objects": [],
+        "offset": 1469,
+        "block": 1
+      },
+      {
+        "kind": "AC",
+        "op": "CutSceneId",
+        "integers": [
+          0,
+          0,
+          0,
+          0,
+          0
+        ],
+        "strings": [
+          "",
+          ""
+        ],
+        "objects": [
+          null,
+          {
+            "fields": [
+              [
+                7,
+                22
+              ]
+            ]
+          },
+          null
+        ],
+        "offset": 1539,
+        "block": 1
+      },
+      {
+        "kind": "AC",
+        "op": "LeaveAreaLUA",
+        "integers": [
+          12,
+          1732,
+          581,
+          0,
+          0
+        ],
+        "strings": [
+          "AR1100",
+          "TRCDJAIL"
+        ],
+        "objects": [],
+        "offset": 1779,
+        "block": 1
+      },
+      {
+        "kind": "TR",
+        "op": "True",
+        "integers": [
+          0,
+          0,
+          0,
+          0
+        ],
+        "strings": [
+          "",
+          ""
+        ],
+        "objects": [],
+        "offset": 1934,
+        "block": 2
+      },
+      {
+        "kind": "AC",
+        "op": "CutSceneId",
+        "integers": [
+          0,
+          0,
+          0,
+          0,
+          0
+        ],
+        "strings": [
+          "",
+          ""
+        ],
+        "objects": [
+          null,
+          {
+            "fields": [
+              [
+                7,
+                23
+              ]
+            ]
+          },
+          null
+        ],
+        "offset": 2004,
+        "block": 2
+      },
+      {
+        "kind": "AC",
+        "op": "LeaveAreaLUA",
+        "integers": [
+          12,
+          1706,
+          530,
+          0,
+          0
+        ],
+        "strings": [
+          "AR1100",
+          "TRCDJAIL"
+        ],
+        "objects": [],
+        "offset": 2244,
+        "block": 2
+      },
+      {
+        "kind": "TR",
+        "op": "True",
+        "integers": [
+          0,
+          0,
+          0,
+          0
+        ],
+        "strings": [
+          "",
+          ""
+        ],
+        "objects": [],
+        "offset": 2399,
+        "block": 3
+      },
+      {
+        "kind": "AC",
+        "op": "CutSceneId",
+        "integers": [
+          0,
+          0,
+          0,
+          0,
+          0
+        ],
+        "strings": [
+          "",
+          ""
+        ],
+        "objects": [
+          null,
+          {
+            "fields": [
+              [
+                7,
+                24
+              ]
+            ]
+          },
+          null
+        ],
+        "offset": 2469,
+        "block": 3
+      },
+      {
+        "kind": "AC",
+        "op": "LeaveAreaLUA",
+        "integers": [
+          12,
+          1721,
+          478,
+          0,
+          0
+        ],
+        "strings": [
+          "AR1100",
+          "TRCDJAIL"
+        ],
+        "objects": [],
+        "offset": 2709,
+        "block": 3
+      },
+      {
+        "kind": "TR",
+        "op": "True",
+        "integers": [
+          0,
+          0,
+          0,
+          0
+        ],
+        "strings": [
+          "",
+          ""
+        ],
+        "objects": [],
+        "offset": 2864,
+        "block": 4
+      },
+      {
+        "kind": "AC",
+        "op": "CutSceneId",
+        "integers": [
+          0,
+          0,
+          0,
+          0,
+          0
+        ],
+        "strings": [
+          "",
+          ""
+        ],
+        "objects": [
+          null,
+          {
+            "fields": [
+              [
+                7,
+                25
+              ]
+            ]
+          },
+          null
+        ],
+        "offset": 2934,
+        "block": 4
+      },
+      {
+        "kind": "AC",
+        "op": "LeaveAreaLUA",
+        "integers": [
+          12,
+          1754,
+          533,
+          0,
+          0
+        ],
+        "strings": [
+          "AR1100",
+          "TRCDJAIL"
+        ],
+        "objects": [],
+        "offset": 3174,
+        "block": 4
+      },
+      {
+        "kind": "TR",
+        "op": "True",
+        "integers": [
+          0,
+          0,
+          0,
+          0
+        ],
+        "strings": [
+          "",
+          ""
+        ],
+        "objects": [],
+        "offset": 3329,
+        "block": 5
+      },
+      {
+        "kind": "AC",
+        "op": "CutSceneId",
+        "integers": [
+          0,
+          0,
+          0,
+          0,
+          0
+        ],
+        "strings": [
+          "",
+          ""
+        ],
+        "objects": [
+          null,
+          {
+            "fields": [
+              [
+                7,
+                26
+              ]
+            ]
+          },
+          null
+        ],
+        "offset": 3399,
+        "block": 5
+      },
+      {
+        "kind": "AC",
+        "op": "LeaveAreaLUA",
+        "integers": [
+          12,
+          1789,
+          566,
+          0,
+          0
+        ],
+        "strings": [
+          "AR1100",
+          "TRCDJAIL"
+        ],
+        "objects": [],
+        "offset": 3639,
+        "block": 5
+      }
+    ],
+    "CAPCUT03": [
+      {
+        "kind": "TR",
+        "op": "InMyArea",
+        "integers": [
+          0,
+          1,
+          0,
+          0
+        ],
+        "strings": [
+          "",
+          ""
+        ],
+        "objects": [
+          {
+            "fields": [
+              [
+                7,
+                23
+              ]
+            ]
+          }
+        ],
+        "offset": 9,
+        "block": 0
+      },
+      {
+        "kind": "TR",
+        "op": "InMyArea",
+        "integers": [
+          0,
+          1,
+          0,
+          0
+        ],
+        "strings": [
+          "",
+          ""
+        ],
+        "objects": [
+          {
+            "fields": [
+              [
+                7,
+                24
+              ]
+            ]
+          }
+        ],
+        "offset": 68,
+        "block": 0
+      },
+      {
+        "kind": "AC",
+        "op": "CutSceneId",
+        "integers": [
+          0,
+          0,
+          0,
+          0,
+          0
+        ],
+        "strings": [
+          "",
+          ""
+        ],
+        "objects": [
+          null,
+          {
+            "name": "FLAME1"
+          },
+          null
+        ],
+        "offset": 139,
+        "block": 0
+      },
+      {
+        "kind": "AC",
+        "op": "JumpToPoint",
+        "integers": [
+          0,
+          678,
+          857,
+          0,
+          0
+        ],
+        "strings": [
+          "",
+          ""
+        ],
+        "objects": [],
+        "offset": 265,
+        "block": 0
+      },
+      {
+        "kind": "TR",
+        "op": "InMyArea",
+        "integers": [
+          0,
+          1,
+          0,
+          0
+        ],
+        "strings": [
+          "",
+          ""
+        ],
+        "objects": [
+          {
+            "fields": [
+              [
+                7,
+                22
+              ]
+            ]
+          }
+        ],
+        "offset": 523,
+        "block": 1
+      },
+      {
+        "kind": "TR",
+        "op": "InMyArea",
+        "integers": [
+          0,
+          1,
+          0,
+          0
+        ],
+        "strings": [
+          "",
+          ""
+        ],
+        "objects": [
+          {
+            "fields": [
+              [
+                7,
+                26
+              ]
+            ]
+          }
+        ],
+        "offset": 582,
+        "block": 1
+      },
+      {
+        "kind": "AC",
+        "op": "CutSceneId",
+        "integers": [
+          0,
+          0,
+          0,
+          0,
+          0
+        ],
+        "strings": [
+          "",
+          ""
+        ],
+        "objects": [
+          null,
+          {
+            "name": "FLAME3"
+          },
+          null
+        ],
+        "offset": 653,
+        "block": 1
+      },
+      {
+        "kind": "AC",
+        "op": "JumpToPoint",
+        "integers": [
+          0,
+          1096,
+          1001,
+          0,
+          0
+        ],
+        "strings": [
+          "",
+          ""
+        ],
+        "objects": [],
+        "offset": 779,
+        "block": 1
+      },
+      {
+        "kind": "TR",
+        "op": "True",
+        "integers": [
+          0,
+          0,
+          0,
+          0
+        ],
+        "strings": [
+          "",
+          ""
+        ],
+        "objects": [],
+        "offset": 1038,
+        "block": 2
+      },
+      {
+        "kind": "AC",
+        "op": "CutSceneId",
+        "integers": [
+          0,
+          0,
+          0,
+          0,
+          0
+        ],
+        "strings": [
+          "",
+          ""
+        ],
+        "objects": [
+          null,
+          {
+            "fields": [
+              [
+                7,
+                21
+              ]
+            ]
+          },
+          null
+        ],
+        "offset": 1108,
+        "block": 2
+      },
+      {
+        "kind": "AC",
+        "op": "AdvanceTime",
+        "integers": [
+          600,
+          0,
+          0,
+          0,
+          0
+        ],
+        "strings": [
+          "",
+          ""
+        ],
+        "objects": [],
+        "offset": 1348,
+        "block": 2
+      },
+      {
+        "kind": "AC",
+        "op": "CreateCreature",
+        "integers": [
+          0,
+          924,
+          598,
+          0,
+          0
+        ],
+        "strings": [
+          "ANGELO",
+          ""
+        ],
+        "objects": [],
+        "offset": 1710,
+        "block": 2
+      },
+      {
+        "kind": "AC",
+        "op": "MoveToPoint",
+        "integers": [
+          0,
+          1018,
+          638,
+          0,
+          0
+        ],
+        "strings": [
+          "",
+          ""
+        ],
+        "objects": [
+          {
+            "name": "Angelo"
+          },
+          null,
+          null
+        ],
+        "offset": 1957,
+        "block": 2
+      },
+      {
+        "kind": "AC",
+        "op": "MoveToPoint",
+        "integers": [
+          0,
+          1238,
+          723,
+          0,
+          0
+        ],
+        "strings": [
+          "",
+          ""
+        ],
+        "objects": [
+          {
+            "name": "DICKSMOK"
+          },
+          null,
+          null
+        ],
+        "offset": 2333,
+        "block": 2
+      },
+      {
+        "kind": "AC",
+        "op": "StartDialogueNoSet",
+        "integers": [
+          0,
+          0,
+          0,
+          0,
+          0
+        ],
+        "strings": [
+          "",
+          ""
+        ],
+        "objects": [
+          {
+            "name": "Flame4"
+          },
+          {
+            "fields": [
+              [
+                7,
+                21
+              ]
+            ]
+          },
+          null
+        ],
+        "offset": 2833,
+        "block": 2
+      }
+    ],
+    "CAPCUT04": [
+      {
+        "kind": "TR",
+        "op": "True",
+        "integers": [
+          0,
+          0,
+          0,
+          0
+        ],
+        "strings": [
+          "",
+          ""
+        ],
+        "objects": [],
+        "offset": 9,
+        "block": 0
+      },
+      {
+        "kind": "AC",
+        "op": "CutSceneId",
+        "integers": [
+          0,
+          0,
+          0,
+          0,
+          0
+        ],
+        "strings": [
+          "",
+          ""
+        ],
+        "objects": [
+          null,
+          {
+            "fields": [
+              [
+                7,
+                21
+              ]
+            ]
+          },
+          null
+        ],
+        "offset": 79,
+        "block": 0
+      },
+      {
+        "kind": "AC",
+        "op": "DestroySelf",
+        "integers": [
+          0,
+          0,
+          0,
+          0,
+          0
+        ],
+        "strings": [
+          "",
+          ""
+        ],
+        "objects": [
+          {
+            "name": "Angelo"
+          },
+          null,
+          null
+        ],
+        "offset": 440,
+        "block": 0
+      },
+      {
+        "kind": "AC",
+        "op": "DestroySelf",
+        "integers": [
+          0,
+          0,
+          0,
+          0,
+          0
+        ],
+        "strings": [
+          "",
+          ""
+        ],
+        "objects": [
+          {
+            "name": "cutspy"
+          },
+          null,
+          null
+        ],
+        "offset": 566,
+        "block": 0
+      },
+      {
+        "kind": "AC",
+        "op": "LeaveAreaLUAPanic",
+        "integers": [
+          15,
+          1511,
+          1407,
+          0,
+          0
+        ],
+        "strings": [
+          "AR1100",
+          "TRCDJAIL"
+        ],
+        "objects": [],
+        "offset": 811,
+        "block": 0
+      },
+      {
+        "kind": "AC",
+        "op": "LeaveAreaLUA",
+        "integers": [
+          15,
+          1511,
+          1407,
+          0,
+          0
+        ],
+        "strings": [
+          "AR1100",
+          "TRCDJAIL"
+        ],
+        "objects": [],
+        "offset": 952,
+        "block": 0
+      },
+      {
+        "kind": "TR",
+        "op": "True",
+        "integers": [
+          0,
+          0,
+          0,
+          0
+        ],
+        "strings": [
+          "",
+          ""
+        ],
+        "objects": [],
+        "offset": 1720,
+        "block": 1
+      },
+      {
+        "kind": "AC",
+        "op": "CutSceneId",
+        "integers": [
+          0,
+          0,
+          0,
+          0,
+          0
+        ],
+        "strings": [
+          "",
+          ""
+        ],
+        "objects": [
+          null,
+          {
+            "fields": [
+              [
+                7,
+                22
+              ]
+            ]
+          },
+          null
+        ],
+        "offset": 1790,
+        "block": 1
+      },
+      {
+        "kind": "AC",
+        "op": "LeaveAreaLUA",
+        "integers": [
+          15,
+          1559,
+          1396,
+          0,
+          0
+        ],
+        "strings": [
+          "AR1100",
+          "TRCDJAIL"
+        ],
+        "objects": [],
+        "offset": 2030,
+        "block": 1
+      },
+      {
+        "kind": "TR",
+        "op": "True",
+        "integers": [
+          0,
+          0,
+          0,
+          0
+        ],
+        "strings": [
+          "",
+          ""
+        ],
+        "objects": [],
+        "offset": 2186,
+        "block": 2
+      },
+      {
+        "kind": "AC",
+        "op": "CutSceneId",
+        "integers": [
+          0,
+          0,
+          0,
+          0,
+          0
+        ],
+        "strings": [
+          "",
+          ""
+        ],
+        "objects": [
+          null,
+          {
+            "fields": [
+              [
+                7,
+                23
+              ]
+            ]
+          },
+          null
+        ],
+        "offset": 2256,
+        "block": 2
+      },
+      {
+        "kind": "AC",
+        "op": "LeaveAreaLUA",
+        "integers": [
+          15,
+          1608,
+          1385,
+          0,
+          0
+        ],
+        "strings": [
+          "AR1100",
+          "TRCDJAIL"
+        ],
+        "objects": [],
+        "offset": 2496,
+        "block": 2
+      },
+      {
+        "kind": "TR",
+        "op": "True",
+        "integers": [
+          0,
+          0,
+          0,
+          0
+        ],
+        "strings": [
+          "",
+          ""
+        ],
+        "objects": [],
+        "offset": 2652,
+        "block": 3
+      },
+      {
+        "kind": "AC",
+        "op": "CutSceneId",
+        "integers": [
+          0,
+          0,
+          0,
+          0,
+          0
+        ],
+        "strings": [
+          "",
+          ""
+        ],
+        "objects": [
+          null,
+          {
+            "fields": [
+              [
+                7,
+                24
+              ]
+            ]
+          },
+          null
+        ],
+        "offset": 2722,
+        "block": 3
+      },
+      {
+        "kind": "AC",
+        "op": "LeaveAreaLUA",
+        "integers": [
+          15,
+          1542,
+          1435,
+          0,
+          0
+        ],
+        "strings": [
+          "AR1100",
+          "TRCDJAIL"
+        ],
+        "objects": [],
+        "offset": 2962,
+        "block": 3
+      },
+      {
+        "kind": "TR",
+        "op": "True",
+        "integers": [
+          0,
+          0,
+          0,
+          0
+        ],
+        "strings": [
+          "",
+          ""
+        ],
+        "objects": [],
+        "offset": 3118,
+        "block": 4
+      },
+      {
+        "kind": "AC",
+        "op": "CutSceneId",
+        "integers": [
+          0,
+          0,
+          0,
+          0,
+          0
+        ],
+        "strings": [
+          "",
+          ""
+        ],
+        "objects": [
+          null,
+          {
+            "fields": [
+              [
+                7,
+                25
+              ]
+            ]
+          },
+          null
+        ],
+        "offset": 3188,
+        "block": 4
+      },
+      {
+        "kind": "AC",
+        "op": "LeaveAreaLUA",
+        "integers": [
+          15,
+          1593,
+          1423,
+          0,
+          0
+        ],
+        "strings": [
+          "AR1100",
+          "TRCDJAIL"
+        ],
+        "objects": [],
+        "offset": 3428,
+        "block": 4
+      },
+      {
+        "kind": "TR",
+        "op": "True",
+        "integers": [
+          0,
+          0,
+          0,
+          0
+        ],
+        "strings": [
+          "",
+          ""
+        ],
+        "objects": [],
+        "offset": 3584,
+        "block": 5
+      },
+      {
+        "kind": "AC",
+        "op": "CutSceneId",
+        "integers": [
+          0,
+          0,
+          0,
+          0,
+          0
+        ],
+        "strings": [
+          "",
+          ""
+        ],
+        "objects": [
+          null,
+          {
+            "fields": [
+              [
+                7,
+                26
+              ]
+            ]
+          },
+          null
+        ],
+        "offset": 3654,
+        "block": 5
+      },
+      {
+        "kind": "AC",
+        "op": "LeaveAreaLUA",
+        "integers": [
+          15,
+          1641,
+          1411,
+          0,
+          0
+        ],
+        "strings": [
+          "AR1100",
+          "TRCDJAIL"
+        ],
+        "objects": [],
+        "offset": 3894,
+        "block": 5
+      }
+    ],
+    "CAPCUT05": [
+      {
+        "kind": "TR",
+        "op": "True",
+        "integers": [
+          0,
+          0,
+          0,
+          0
+        ],
+        "strings": [
+          "",
+          ""
+        ],
+        "objects": [],
+        "offset": 9,
+        "block": 0
+      },
+      {
+        "kind": "AC",
+        "op": "CutSceneId",
+        "integers": [
+          0,
+          0,
+          0,
+          0,
+          0
+        ],
+        "strings": [
+          "",
+          ""
+        ],
+        "objects": [
+          null,
+          {
+            "fields": [
+              [
+                7,
+                21
+              ]
+            ]
+          },
+          null
+        ],
+        "offset": 79,
+        "block": 0
+      },
+      {
+        "kind": "AC",
+        "op": "EscapeArea",
+        "integers": [
+          0,
+          0,
+          0,
+          0,
+          0
+        ],
+        "strings": [
+          "",
+          ""
+        ],
+        "objects": [
+          {
+            "name": "FLAME3"
+          },
+          null,
+          null
+        ],
+        "offset": 200,
+        "block": 0
+      },
+      {
+        "kind": "AC",
+        "op": "EscapeArea",
+        "integers": [
+          0,
+          0,
+          0,
+          0,
+          0
+        ],
+        "strings": [
+          "",
+          ""
+        ],
+        "objects": [
+          {
+            "name": "FLAME4"
+          },
+          null,
+          null
+        ],
+        "offset": 326,
+        "block": 0
+      },
+      {
+        "kind": "AC",
+        "op": "EscapeArea",
+        "integers": [
+          0,
+          0,
+          0,
+          0,
+          0
+        ],
+        "strings": [
+          "",
+          ""
+        ],
+        "objects": [
+          {
+            "name": "DICKSMOK"
+          },
+          null,
+          null
+        ],
+        "offset": 452,
+        "block": 0
+      },
+      {
+        "kind": "AC",
+        "op": "JumpToPoint",
+        "integers": [
+          0,
+          817,
+          924,
+          0,
+          0
+        ],
+        "strings": [
+          "",
+          ""
+        ],
+        "objects": [
+          {
+            "name": "FLAME1"
+          },
+          null,
+          null
+        ],
+        "offset": 580,
+        "block": 0
+      },
+      {
+        "kind": "AC",
+        "op": "JumpToPoint",
+        "integers": [
+          0,
+          887,
+          938,
+          0,
+          0
+        ],
+        "strings": [
+          "",
+          ""
+        ],
+        "objects": [
+          {
+            "name": "FLAME2"
+          },
+          null,
+          null
+        ],
+        "offset": 709,
+        "block": 0
+      },
+      {
+        "kind": "AC",
+        "op": "MoveToPointNoInterrupt",
+        "integers": [
+          0,
+          718,
+          1027,
+          0,
+          0
+        ],
+        "strings": [
+          "",
+          ""
+        ],
+        "objects": [
+          {
+            "name": "FLAME1"
+          },
+          null,
+          null
+        ],
+        "offset": 1197,
+        "block": 0
+      },
+      {
+        "kind": "AC",
+        "op": "MoveToPointNoInterrupt",
+        "integers": [
+          0,
+          773,
+          1047,
+          0,
+          0
+        ],
+        "strings": [
+          "",
+          ""
+        ],
+        "objects": [
+          {
+            "name": "FLAME2"
+          },
+          null,
+          null
+        ],
+        "offset": 1447,
+        "block": 0
+      },
+      {
+        "kind": "AC",
+        "op": "JumpToPoint",
+        "integers": [
+          0,
+          882,
+          946,
+          0,
+          0
+        ],
+        "strings": [
+          "",
+          ""
+        ],
+        "objects": [
+          {
+            "name": "Angelo"
+          },
+          null,
+          null
+        ],
+        "offset": 1697,
+        "block": 0
+      },
+      {
+        "kind": "AC",
+        "op": "MoveToPointNoInterrupt",
+        "integers": [
+          0,
+          765,
+          1010,
+          0,
+          0
+        ],
+        "strings": [
+          "",
+          ""
+        ],
+        "objects": [
+          {
+            "name": "Angelo"
+          },
+          null,
+          null
+        ],
+        "offset": 1826,
+        "block": 0
+      },
+      {
+        "kind": "AC",
+        "op": "ApplyDamage",
+        "integers": [
+          37,
+          0,
+          0,
+          16777216,
+          0
+        ],
+        "strings": [
+          "",
+          ""
+        ],
+        "objects": [
+          {
+            "name": "Angelo"
+          },
+          {
+            "name": "FLAME1"
+          },
+          null
+        ],
+        "offset": 2584,
+        "block": 0
+      },
+      {
+        "kind": "AC",
+        "op": "Kill",
+        "integers": [
+          0,
+          0,
+          0,
+          0,
+          0
+        ],
+        "strings": [
+          "",
+          ""
+        ],
+        "objects": [
+          null,
+          {
+            "name": "FLAME1"
+          },
+          null
+        ],
+        "offset": 2843,
+        "block": 0
+      },
+      {
+        "kind": "AC",
+        "op": "ApplyDamage",
+        "integers": [
+          34,
+          0,
+          0,
+          16777216,
+          0
+        ],
+        "strings": [
+          "",
+          ""
+        ],
+        "objects": [
+          {
+            "name": "Angelo"
+          },
+          {
+            "name": "FLAME2"
+          },
+          null
+        ],
+        "offset": 3608,
+        "block": 0
+      },
+      {
+        "kind": "AC",
+        "op": "Kill",
+        "integers": [
+          0,
+          0,
+          0,
+          0,
+          0
+        ],
+        "strings": [
+          "",
+          ""
+        ],
+        "objects": [
+          null,
+          {
+            "name": "FLAME2"
+          },
+          null
+        ],
+        "offset": 3867,
+        "block": 0
+      },
+      {
+        "kind": "AC",
+        "op": "MoveToPointNoInterrupt",
+        "integers": [
+          0,
+          543,
+          1173,
+          0,
+          0
+        ],
+        "strings": [
+          "",
+          ""
+        ],
+        "objects": [
+          {
+            "name": "Angelo"
+          },
+          null,
+          null
+        ],
+        "offset": 3993,
+        "block": 0
+      },
+      {
+        "kind": "AC",
+        "op": "StartDialogueNoSet",
+        "integers": [
+          0,
+          0,
+          0,
+          0,
+          0
+        ],
+        "strings": [
+          "",
+          ""
+        ],
+        "objects": [
+          {
+            "name": "Angelo"
+          },
+          {
+            "name": "sharteel"
+          },
+          null
+        ],
+        "offset": 4497,
+        "block": 0
+      }
+    ]
+  },
+  "patrols": {
+    "AR0100": {
+      "count": 2,
+      "position": [
+        2532,
+        1555
+      ],
+      "conditions": [
+        {
+          "opcode": 16399,
+          "signature": "Global(S:Name*,S:Area*,I:Value*)",
+          "strings": [
+            "GLOBALChapter",
+            ""
+          ],
+          "integerFields": [
+            7,
+            0,
+            0,
+            0
+          ],
+          "negated": false
+        },
+        {
+          "opcode": 16399,
+          "signature": "Global(S:Name*,S:Area*,I:Value*)",
+          "strings": [
+            "GLOBALCapture100",
+            ""
+          ],
+          "integerFields": [
+            0,
+            0,
+            0,
+            0
+          ],
+          "negated": false
+        },
+        {
+          "opcode": 16399,
+          "signature": "Global(S:Name*,S:Area*,I:Value*)",
+          "strings": [
+            "GLOBALDukeThanks",
+            ""
+          ],
+          "integerFields": [
+            0,
+            0,
+            0,
+            0
+          ],
+          "negated": false
+        }
+      ],
+      "block": 1,
+      "spawnRecordOffsets": [
+        1048,
+        1178
+      ],
+      "oneShotGlobal": "Capture100",
+      "oneShotValue": 1
+    },
+    "AR0200": {
+      "count": 2,
+      "position": [
+        2189,
+        1318
+      ],
+      "conditions": [
+        {
+          "opcode": 16399,
+          "signature": "Global(S:Name*,S:Area*,I:Value*)",
+          "strings": [
+            "GLOBALChapter",
+            ""
+          ],
+          "integerFields": [
+            7,
+            0,
+            0,
+            0
+          ],
+          "negated": false
+        },
+        {
+          "opcode": 16399,
+          "signature": "Global(S:Name*,S:Area*,I:Value*)",
+          "strings": [
+            "GLOBALCapture200",
+            ""
+          ],
+          "integerFields": [
+            0,
+            0,
+            0,
+            0
+          ],
+          "negated": false
+        },
+        {
+          "opcode": 16399,
+          "signature": "Global(S:Name*,S:Area*,I:Value*)",
+          "strings": [
+            "GLOBALDukeThanks",
+            ""
+          ],
+          "integerFields": [
+            0,
+            0,
+            0,
+            0
+          ],
+          "negated": false
+        }
+      ],
+      "block": 4,
+      "spawnRecordOffsets": [
+        2646,
+        2776
+      ],
+      "oneShotGlobal": "Capture200",
+      "oneShotValue": 1
+    },
+    "AR0300": {
+      "count": 2,
+      "position": [
+        2023,
+        2190
+      ],
+      "conditions": [
+        {
+          "opcode": 16399,
+          "signature": "Global(S:Name*,S:Area*,I:Value*)",
+          "strings": [
+            "GLOBALChapter",
+            ""
+          ],
+          "integerFields": [
+            7,
+            0,
+            0,
+            0
+          ],
+          "negated": false
+        },
+        {
+          "opcode": 16399,
+          "signature": "Global(S:Name*,S:Area*,I:Value*)",
+          "strings": [
+            "GLOBALCapture300",
+            ""
+          ],
+          "integerFields": [
+            0,
+            0,
+            0,
+            0
+          ],
+          "negated": false
+        },
+        {
+          "opcode": 16399,
+          "signature": "Global(S:Name*,S:Area*,I:Value*)",
+          "strings": [
+            "GLOBALDukeThanks",
+            ""
+          ],
+          "integerFields": [
+            0,
+            0,
+            0,
+            0
+          ],
+          "negated": false
+        }
+      ],
+      "block": 0,
+      "spawnRecordOffsets": [
+        375,
+        505
+      ],
+      "oneShotGlobal": "Capture300",
+      "oneShotValue": 1
+    },
+    "AR0600": {
+      "count": 2,
+      "position": [
+        1710,
+        1284
+      ],
+      "conditions": [
+        {
+          "opcode": 16399,
+          "signature": "Global(S:Name*,S:Area*,I:Value*)",
+          "strings": [
+            "GLOBALChapter",
+            ""
+          ],
+          "integerFields": [
+            7,
+            0,
+            0,
+            0
+          ],
+          "negated": false
+        },
+        {
+          "opcode": 16399,
+          "signature": "Global(S:Name*,S:Area*,I:Value*)",
+          "strings": [
+            "GLOBALCapture600",
+            ""
+          ],
+          "integerFields": [
+            0,
+            0,
+            0,
+            0
+          ],
+          "negated": false
+        },
+        {
+          "opcode": 16399,
+          "signature": "Global(S:Name*,S:Area*,I:Value*)",
+          "strings": [
+            "GLOBALDukeThanks",
+            ""
+          ],
+          "integerFields": [
+            0,
+            0,
+            0,
+            0
+          ],
+          "negated": false
+        }
+      ],
+      "block": 1,
+      "spawnRecordOffsets": [
+        1053,
+        1183
+      ],
+      "oneShotGlobal": "Capture600",
+      "oneShotValue": 1
+    },
+    "AR0700": {
+      "count": 2,
+      "position": [
+        1786,
+        1437
+      ],
+      "conditions": [
+        {
+          "opcode": 16399,
+          "signature": "Global(S:Name*,S:Area*,I:Value*)",
+          "strings": [
+            "GLOBALChapter",
+            ""
+          ],
+          "integerFields": [
+            7,
+            0,
+            0,
+            0
+          ],
+          "negated": false
+        },
+        {
+          "opcode": 16399,
+          "signature": "Global(S:Name*,S:Area*,I:Value*)",
+          "strings": [
+            "GLOBALCapture700",
+            ""
+          ],
+          "integerFields": [
+            0,
+            0,
+            0,
+            0
+          ],
+          "negated": false
+        },
+        {
+          "opcode": 16399,
+          "signature": "Global(S:Name*,S:Area*,I:Value*)",
+          "strings": [
+            "GLOBALDukeThanks",
+            ""
+          ],
+          "integerFields": [
+            0,
+            0,
+            0,
+            0
+          ],
+          "negated": false
+        }
+      ],
+      "block": 1,
+      "spawnRecordOffsets": [
+        1044,
+        1174
+      ],
+      "oneShotGlobal": "Capture700",
+      "oneShotValue": 1
+    },
+    "AR0800": {
+      "count": 2,
+      "position": [
+        2312,
+        1520
+      ],
+      "conditions": [
+        {
+          "opcode": 16399,
+          "signature": "Global(S:Name*,S:Area*,I:Value*)",
+          "strings": [
+            "GLOBALChapter",
+            ""
+          ],
+          "integerFields": [
+            7,
+            0,
+            0,
+            0
+          ],
+          "negated": false
+        },
+        {
+          "opcode": 16399,
+          "signature": "Global(S:Name*,S:Area*,I:Value*)",
+          "strings": [
+            "GLOBALCapture800",
+            ""
+          ],
+          "integerFields": [
+            0,
+            0,
+            0,
+            0
+          ],
+          "negated": false
+        },
+        {
+          "opcode": 16399,
+          "signature": "Global(S:Name*,S:Area*,I:Value*)",
+          "strings": [
+            "GLOBALDukeThanks",
+            ""
+          ],
+          "integerFields": [
+            0,
+            0,
+            0,
+            0
+          ],
+          "negated": false
+        }
+      ],
+      "block": 3,
+      "spawnRecordOffsets": [
+        1930,
+        2060
+      ],
+      "oneShotGlobal": "Capture800",
+      "oneShotValue": 1
+    },
+    "AR1100": {
+      "count": 2,
+      "position": [
+        2049,
+        1289
+      ],
+      "conditions": [
+        {
+          "opcode": 16399,
+          "signature": "Global(S:Name*,S:Area*,I:Value*)",
+          "strings": [
+            "GLOBALChapter",
+            ""
+          ],
+          "integerFields": [
+            7,
+            0,
+            0,
+            0
+          ],
+          "negated": false
+        },
+        {
+          "opcode": 16399,
+          "signature": "Global(S:Name*,S:Area*,I:Value*)",
+          "strings": [
+            "GLOBALCapture1100",
+            ""
+          ],
+          "integerFields": [
+            0,
+            0,
+            0,
+            0
+          ],
+          "negated": false
+        },
+        {
+          "opcode": 16399,
+          "signature": "Global(S:Name*,S:Area*,I:Value*)",
+          "strings": [
+            "GLOBALDukeThanks",
+            ""
+          ],
+          "integerFields": [
+            0,
+            0,
+            0,
+            0
+          ],
+          "negated": false
+        }
+      ],
+      "block": 2,
+      "spawnRecordOffsets": [
+        1689,
+        1819
+      ],
+      "oneShotGlobal": "Capture1100",
+      "oneShotValue": 1
+    },
+    "AR1200": {
+      "count": 2,
+      "position": [
+        1538,
+        1248
+      ],
+      "conditions": [
+        {
+          "opcode": 16399,
+          "signature": "Global(S:Name*,S:Area*,I:Value*)",
+          "strings": [
+            "GLOBALChapter",
+            ""
+          ],
+          "integerFields": [
+            7,
+            0,
+            0,
+            0
+          ],
+          "negated": false
+        },
+        {
+          "opcode": 16399,
+          "signature": "Global(S:Name*,S:Area*,I:Value*)",
+          "strings": [
+            "GLOBALCapture1200",
+            ""
+          ],
+          "integerFields": [
+            0,
+            0,
+            0,
+            0
+          ],
+          "negated": false
+        },
+        {
+          "opcode": 16399,
+          "signature": "Global(S:Name*,S:Area*,I:Value*)",
+          "strings": [
+            "GLOBALDukeThanks",
+            ""
+          ],
+          "integerFields": [
+            0,
+            0,
+            0,
+            0
+          ],
+          "negated": false
+        }
+      ],
+      "block": 3,
+      "spawnRecordOffsets": [
+        2410,
+        2540
+      ],
+      "oneShotGlobal": "Capture1200",
+      "oneShotValue": 1
+    },
+    "AR1300": {
+      "count": 2,
+      "position": [
+        1616,
+        1547
+      ],
+      "conditions": [
+        {
+          "opcode": 16399,
+          "signature": "Global(S:Name*,S:Area*,I:Value*)",
+          "strings": [
+            "GLOBALChapter",
+            ""
+          ],
+          "integerFields": [
+            7,
+            0,
+            0,
+            0
+          ],
+          "negated": false
+        },
+        {
+          "opcode": 16399,
+          "signature": "Global(S:Name*,S:Area*,I:Value*)",
+          "strings": [
+            "GLOBALCapture1300",
+            ""
+          ],
+          "integerFields": [
+            0,
+            0,
+            0,
+            0
+          ],
+          "negated": false
+        },
+        {
+          "opcode": 16399,
+          "signature": "Global(S:Name*,S:Area*,I:Value*)",
+          "strings": [
+            "GLOBALDukeThanks",
+            ""
+          ],
+          "integerFields": [
+            0,
+            0,
+            0,
+            0
+          ],
+          "negated": false
+        }
+      ],
+      "block": 1,
+      "spawnRecordOffsets": [
+        1047,
+        1177
+      ],
+      "oneShotGlobal": "Capture1300",
+      "oneShotValue": 1
+    }
+  },
+  "gameTimeConstants": {
+    "300": "ONE_HOUR",
+    "600": "TWO_HOURS",
+    "7200": "ONE_DAY"
+  },
+  "creatures": {
+    "FFHUNT": {
+      "dialogue": "FFHUNT",
+      "scripts": [
+        "SHOUT",
+        "FFHUNT",
+        "NONE",
+        "NONE",
+        "WDASIGHT"
+      ],
+      "death_variable": "FFHUNT",
+      "items": [
+        {
+          "item": "SHLD01",
+          "expiration": 0,
+          "charges": [
+            0,
+            0,
+            0
+          ],
+          "flags": 0
+        },
+        {
+          "item": "PLAT01",
+          "expiration": 0,
+          "charges": [
+            0,
+            0,
+            0
+          ],
+          "flags": 0
+        },
+        {
+          "item": "HELM09",
+          "expiration": 0,
+          "charges": [
+            0,
+            0,
+            0
+          ],
+          "flags": 0
+        },
+        {
+          "item": "SW1H04",
+          "expiration": 0,
+          "charges": [
+            0,
+            0,
+            0
+          ],
+          "flags": 0
+        },
+        {
+          "item": "UNIFLAM",
+          "expiration": 0,
+          "charges": [
+            0,
+            0,
+            0
+          ],
+          "flags": 10
+        }
+      ],
+      "gold": 0,
+      "kill_xp": 15
+    },
+    "ANGELO": {
+      "dialogue": "ANGELO",
+      "scripts": [
+        "NONE",
+        "MAGE3",
+        "NONE",
+        "NONE",
+        "WTASIGHT"
+      ],
+      "death_variable": "Angelo",
+      "items": [
+        {
+          "item": "SW1H05",
+          "expiration": 0,
+          "charges": [
+            0,
+            0,
+            0
+          ],
+          "flags": 0
+        }
+      ],
+      "gold": 230,
+      "kill_xp": 10000
+    },
+    "NEB": {
+      "dialogue": "NEB",
+      "scripts": [
+        "INITNEB",
+        "NONE",
+        "NONE",
+        "NONE",
+        "NONE"
+      ],
+      "death_variable": "neb",
+      "items": [
+        {
+          "item": "MINHP1",
+          "expiration": 0,
+          "charges": [
+            0,
+            0,
+            0
+          ],
+          "flags": 1
+        }
+      ],
+      "gold": 0,
+      "kill_xp": 175
+    },
+    "FLAME1": {
+      "dialogue": "",
+      "scripts": [
+        "SHOUT",
+        "",
+        "NONE",
+        "NONE",
+        "WTASIGHT"
+      ],
+      "death_variable": "flame1",
+      "items": [
+        {
+          "item": "SW1H04",
+          "expiration": 0,
+          "charges": [
+            0,
+            0,
+            0
+          ],
+          "flags": 0
+        },
+        {
+          "item": "SHLD01",
+          "expiration": 0,
+          "charges": [
+            0,
+            0,
+            0
+          ],
+          "flags": 0
+        },
+        {
+          "item": "PLAT01",
+          "expiration": 0,
+          "charges": [
+            0,
+            0,
+            0
+          ],
+          "flags": 0
+        },
+        {
+          "item": "HELM09",
+          "expiration": 0,
+          "charges": [
+            0,
+            0,
+            0
+          ],
+          "flags": 0
+        },
+        {
+          "item": "UNIFLAM",
+          "expiration": 0,
+          "charges": [
+            0,
+            0,
+            0
+          ],
+          "flags": 10
+        }
+      ],
+      "gold": 0,
+      "kill_xp": 15
+    },
+    "FLAME2": {
+      "dialogue": "",
+      "scripts": [
+        "SHOUT",
+        "",
+        "NONE",
+        "NONE",
+        "WTASIGHT"
+      ],
+      "death_variable": "flame2",
+      "items": [
+        {
+          "item": "SW1H04",
+          "expiration": 0,
+          "charges": [
+            0,
+            0,
+            0
+          ],
+          "flags": 0
+        },
+        {
+          "item": "SHLD01",
+          "expiration": 0,
+          "charges": [
+            0,
+            0,
+            0
+          ],
+          "flags": 0
+        },
+        {
+          "item": "PLAT01",
+          "expiration": 0,
+          "charges": [
+            0,
+            0,
+            0
+          ],
+          "flags": 0
+        },
+        {
+          "item": "HELM09",
+          "expiration": 0,
+          "charges": [
+            0,
+            0,
+            0
+          ],
+          "flags": 0
+        },
+        {
+          "item": "UNIFLAM",
+          "expiration": 0,
+          "charges": [
+            0,
+            0,
+            0
+          ],
+          "flags": 10
+        }
+      ],
+      "gold": 0,
+      "kill_xp": 15
+    },
+    "FLAME3": {
+      "dialogue": "",
+      "scripts": [
+        "SHOUT",
+        "",
+        "NONE",
+        "NONE",
+        "WTASIGHT"
+      ],
+      "death_variable": "flame3",
+      "items": [
+        {
+          "item": "SW1H04",
+          "expiration": 0,
+          "charges": [
+            0,
+            0,
+            0
+          ],
+          "flags": 0
+        },
+        {
+          "item": "SHLD01",
+          "expiration": 0,
+          "charges": [
+            0,
+            0,
+            0
+          ],
+          "flags": 0
+        },
+        {
+          "item": "PLAT01",
+          "expiration": 0,
+          "charges": [
+            0,
+            0,
+            0
+          ],
+          "flags": 0
+        },
+        {
+          "item": "HELM09",
+          "expiration": 0,
+          "charges": [
+            0,
+            0,
+            0
+          ],
+          "flags": 0
+        },
+        {
+          "item": "UNIFLAM",
+          "expiration": 0,
+          "charges": [
+            0,
+            0,
+            0
+          ],
+          "flags": 10
+        }
+      ],
+      "gold": 0,
+      "kill_xp": 15
+    },
+    "FLAME4": {
+      "dialogue": "",
+      "scripts": [
+        "SHOUT",
+        "",
+        "NONE",
+        "NONE",
+        "WTASIGHT"
+      ],
+      "death_variable": "flame4",
+      "items": [
+        {
+          "item": "SW1H04",
+          "expiration": 0,
+          "charges": [
+            0,
+            0,
+            0
+          ],
+          "flags": 0
+        },
+        {
+          "item": "SHLD01",
+          "expiration": 0,
+          "charges": [
+            0,
+            0,
+            0
+          ],
+          "flags": 0
+        },
+        {
+          "item": "PLAT01",
+          "expiration": 0,
+          "charges": [
+            0,
+            0,
+            0
+          ],
+          "flags": 0
+        },
+        {
+          "item": "HELM09",
+          "expiration": 0,
+          "charges": [
+            0,
+            0,
+            0
+          ],
+          "flags": 0
+        },
+        {
+          "item": "UNIFLAM",
+          "expiration": 0,
+          "charges": [
+            0,
+            0,
+            0
+          ],
+          "flags": 10
+        }
+      ],
+      "gold": 0,
+      "kill_xp": 15
+    },
+    "FLAM13": {
+      "dialogue": "FLAMBG",
+      "scripts": [
+        "SHOUT",
+        "INITDLG",
+        "NONE",
+        "NONE",
+        "WTASIGHT"
+      ],
+      "death_variable": "DICKSMOK",
+      "items": [
+        {
+          "item": "SW1H04",
+          "expiration": 0,
+          "charges": [
+            0,
+            0,
+            0
+          ],
+          "flags": 0
+        },
+        {
+          "item": "SHLD01",
+          "expiration": 0,
+          "charges": [
+            0,
+            0,
+            0
+          ],
+          "flags": 0
+        },
+        {
+          "item": "PLAT01",
+          "expiration": 0,
+          "charges": [
+            0,
+            0,
+            0
+          ],
+          "flags": 0
+        },
+        {
+          "item": "UNIFLAM",
+          "expiration": 0,
+          "charges": [
+            0,
+            0,
+            0
+          ],
+          "flags": 10
+        }
+      ],
+      "gold": 0,
+      "kill_xp": 15
+    },
+    "GALDOR": {
+      "dialogue": "NONE",
+      "scripts": [
+        "SHOUT",
+        "ANGELO",
+        "NONE",
+        "NONE",
+        "WTARSGT"
+      ],
+      "death_variable": "GALDOR",
+      "items": [
+        {
+          "item": "WAND07",
+          "expiration": 0,
+          "charges": [
+            9,
+            0,
+            0
+          ],
+          "flags": 0
+        },
+        {
+          "item": "MAGEBRAC",
+          "expiration": 0,
+          "charges": [
+            0,
+            0,
+            0
+          ],
+          "flags": 0
+        },
+        {
+          "item": "MAGEAMUL",
+          "expiration": 0,
+          "charges": [
+            0,
+            0,
+            0
+          ],
+          "flags": 0
+        },
+        {
+          "item": "MAGE01",
+          "expiration": 0,
+          "charges": [
+            0,
+            0,
+            0
+          ],
+          "flags": 0
+        },
+        {
+          "item": "MAGE06",
+          "expiration": 0,
+          "charges": [
+            0,
+            0,
+            0
+          ],
+          "flags": 0
+        },
+        {
+          "item": "BOW04",
+          "expiration": 0,
+          "charges": [
+            0,
+            0,
+            0
+          ],
+          "flags": 0
+        },
+        {
+          "item": "AROW07",
+          "expiration": 0,
+          "charges": [
+            4,
+            0,
+            0
+          ],
+          "flags": 0
+        },
+        {
+          "item": "AROW06",
+          "expiration": 0,
+          "charges": [
+            4,
+            0,
+            0
+          ],
+          "flags": 0
+        },
+        {
+          "item": "AROW05",
+          "expiration": 0,
+          "charges": [
+            40,
+            0,
+            0
+          ],
+          "flags": 0
+        },
+        {
+          "item": "SW1H04",
+          "expiration": 0,
+          "charges": [
+            0,
+            0,
+            0
+          ],
+          "flags": 0
+        },
+        {
+          "item": "AROW16",
+          "expiration": 0,
+          "charges": [
+            20,
+            0,
+            0
+          ],
+          "flags": 0
+        }
+      ],
+      "gold": 66,
+      "kill_xp": 9800
+    }
+  },
+  "prison": {
+    "actors": [
+      {
+        "name": "Flaming Fist Mercena",
+        "position": [
+          1094,
+          688
+        ],
+        "flags": 1,
+        "schedule": 4294967295,
+        "dialogue": "",
+        "creature": "FLAM13",
+        "scripts": [
+          "",
+          "",
+          "",
+          "",
+          "",
+          ""
+        ]
+      },
+      {
+        "name": "Neb",
+        "position": [
+          1042,
+          489
+        ],
+        "flags": 1,
+        "schedule": 4294967295,
+        "dialogue": "",
+        "creature": "NEB",
+        "scripts": [
+          "",
+          "",
+          "",
+          "",
+          "",
+          ""
+        ]
+      },
+      {
+        "name": "Fergus",
+        "position": [
+          744,
+          788
+        ],
+        "flags": 1,
+        "schedule": 4294967295,
+        "dialogue": "",
+        "creature": "FERGUS",
+        "scripts": [
+          "",
+          "",
+          "",
+          "",
+          "",
+          ""
+        ]
+      },
+      {
+        "name": "Prisoner",
+        "position": [
+          659,
+          456
+        ],
+        "flags": 1,
+        "schedule": 4294967295,
+        "dialogue": "",
+        "creature": "PRISON",
+        "scripts": [
+          "",
+          "",
+          "",
+          "",
+          "",
+          ""
+        ]
+      },
+      {
+        "name": "Prisoner",
+        "position": [
+          568,
+          757
+        ],
+        "flags": 1,
+        "schedule": 4294967295,
+        "dialogue": "",
+        "creature": "PRISON",
+        "scripts": [
+          "",
+          "",
+          "",
+          "",
+          "",
+          ""
+        ]
+      },
+      {
+        "name": "Prisoner",
+        "position": [
+          1419,
+          1163
+        ],
+        "flags": 1,
+        "schedule": 4294967295,
+        "dialogue": "",
+        "creature": "PRISON",
+        "scripts": [
+          "",
+          "",
+          "",
+          "",
+          "",
+          ""
+        ]
+      },
+      {
+        "name": "Flaming Fist Mercena",
+        "position": [
+          985,
+          606
+        ],
+        "flags": 1,
+        "schedule": 4294967295,
+        "dialogue": "",
+        "creature": "CHIMP5",
+        "scripts": [
+          "",
+          "",
+          "",
+          "",
+          "",
+          ""
+        ]
+      }
+    ],
+    "doors": [
+      {
+        "name": "Door0606",
+        "flags": 64,
+        "lock_difficulty": 0,
+        "key": "",
+        "script": "",
+        "dialogue": "",
+        "travel_trigger": "Door0606"
+      }
+    ],
+    "travelRegions": [
+      {
+        "name": "Door1100",
+        "destination": "AR1100",
+        "entrance": "Exit0607",
+        "flags": 0
+      },
+      {
+        "name": "Door0606",
+        "destination": "AR0606",
+        "entrance": "Exit0607",
+        "flags": 2048
+      },
+      {
+        "name": "Door0608",
+        "destination": "AR0608",
+        "entrance": "Exit0607",
+        "flags": 0
+      }
+    ],
+    "cellDoorRegions": [
+      {
+        "name": "CELLDOOR",
+        "type": 1,
+        "text_strref": 32176,
+        "flags": 0,
+        "script": ""
+      }
+    ]
+  },
+  "strings": [
+    {
+      "strref": 2135,
+      "textSha256": "ae364c7e9cc4070f8bbf7a9bb6e040ea1363e815248f3d62b1fc2be27ea98f12"
+    },
+    {
+      "strref": 2136,
+      "textSha256": "d098f2c927643029c6e11f2c803d790e227743505fb4f1e5d10b1f89bb6e09c7"
+    },
+    {
+      "strref": 2137,
+      "textSha256": "058527b3bad5be0b593c17c138ba78215cef34a14a119a77f14117a849dc225c"
+    },
+    {
+      "strref": 2138,
+      "textSha256": "2280be2e8b517d513b1a4720ca14e07d2c879cf54d8026f53c407e90bf72d3e8"
+    },
+    {
+      "strref": 2139,
+      "textSha256": "4926f187399c6cbb8a34b6734c609c003127ac5a37a6fbdb6ae0521e7157afe9"
+    },
+    {
+      "strref": 2140,
+      "textSha256": "77a1e18c15054d9775508ec2ebbe421a81a9b360e4839f56ab511084327bf29c"
+    },
+    {
+      "strref": 2141,
+      "textSha256": "a0a9df8931be1ce20678a9d0757df3c565e8d9272a19525f9b6ad53056c070d3"
+    },
+    {
+      "strref": 2142,
+      "textSha256": "34c452d797f68c32f00d3599c9b2da9c83a6ff258459139340b3c0944ba77bf4"
+    },
+    {
+      "strref": 2143,
+      "textSha256": "5cb7563f4ca07164647121acb7b540d139c566a7c76ead8af37f2e23c79eaf02"
+    },
+    {
+      "strref": 2144,
+      "textSha256": "d6e00ad9359e206a468320e3d5554ee55aaa4432c6f91384c0f9e2782aa047df"
+    },
+    {
+      "strref": 2145,
+      "textSha256": "663217aff416782669c06d377dec4e83a5f8e08a37c3af97b072c514dcd54880"
+    },
+    {
+      "strref": 2146,
+      "textSha256": "96432c0da7692a6aafe5d1a25533916906d71f1677b38e9de8108144cbdf9120"
+    },
+    {
+      "strref": 2149,
+      "textSha256": "fbfb51638b3e948602541f872ca2849db09c133b1bed8b547cac4bea368467db"
+    },
+    {
+      "strref": 2150,
+      "textSha256": "43b58927ac39d788ef4790969f48058e97d5750ecdad083d476bb5a2fa3bc923"
+    },
+    {
+      "strref": 2151,
+      "textSha256": "14fa529e3c5f8c5945197d46cdb2a5cf33f723c8b3b6114118ebaca9ec084a07"
+    },
+    {
+      "strref": 2152,
+      "textSha256": "90d9b0953ee76f9256dfe18b4fed9cbdbd2dd1c5f720db6d441461a55322e763"
+    },
+    {
+      "strref": 2153,
+      "textSha256": "3e0e8c7dae84118c81452518d18def3cd98075d1293819f05fb97dfda17e1bd3"
+    },
+    {
+      "strref": 2154,
+      "textSha256": "f2d847b38e08d3774e9f3e4eef0f030cdbc31967630c55c7e177460a5271bfa6"
+    },
+    {
+      "strref": 2155,
+      "textSha256": "9181ecd99b64175dbc6622dfcee3fcda10f85cf775198fed5b82091a679f7e85"
+    },
+    {
+      "strref": 2156,
+      "textSha256": "5d43006a1dce69532b8cdec189b4e54f48db3249098d5db556f8c786ef2dc438"
+    },
+    {
+      "strref": 2157,
+      "textSha256": "df9e1daa5ae07309b98e83042e940f8c976231c93f222ec246db837a0ccecbcd"
+    },
+    {
+      "strref": 2241,
+      "textSha256": "368840c41cb7a2ea1126f112cacce67b8b7ce81cab2381f86fb0d956a6e6b90e"
+    },
+    {
+      "strref": 2242,
+      "textSha256": "637edffa5027b062a0f4842faa8de4088478276da99c38c7c440f42306f1fbf5"
+    },
+    {
+      "strref": 2243,
+      "textSha256": "34a5869019c5d1658d5dfd31dea2417db4c8767790e571480ae61314096e4d9a"
+    },
+    {
+      "strref": 2250,
+      "textSha256": "6b5acb2cc51e079e3391d986bf9cbb6a223f298f5f90518ac5cb1122f516b0a7"
+    },
+    {
+      "strref": 2251,
+      "textSha256": "4f90990995c720d1a6def61900543ae733d18af54ae3eca377318f48e76e806f"
+    },
+    {
+      "strref": 2252,
+      "textSha256": "c3007ad1db6545edf73345cbc2833684fc493018f74b2041472f5bbbb903e077"
+    },
+    {
+      "strref": 2253,
+      "textSha256": "af26ede6623815dfd97f0141300d88f7f74854977b46391d68a625e0fba92b6c"
+    },
+    {
+      "strref": 6310,
+      "textSha256": "d3c03ac369b93772f839435b126c827f2c26cfecedba8d300be8d1e12bf61eb1"
+    },
+    {
+      "strref": 11281,
+      "textSha256": "f611bb8262a77cfcf0ebe51ade51ccc5b56c0ca93dd8f326fa011df5bcae903f"
+    },
+    {
+      "strref": 11751,
+      "textSha256": "9eadb6dbd38d18248f16e85957c8703285b3e3099776be5dc324a01b871a8817"
+    },
+    {
+      "strref": 11752,
+      "textSha256": "c96d674d04d050037eae95b5b8150aef920dfabf472e0c6728415e25b8d01d55"
+    },
+    {
+      "strref": 15194,
+      "textSha256": "b3ae5a29c0817b8e9a7ae785f3f02ac3cf8fde394919a3bb0c80a415ae623540"
+    },
+    {
+      "strref": 15204,
+      "textSha256": "9eadb6dbd38d18248f16e85957c8703285b3e3099776be5dc324a01b871a8817"
+    },
+    {
+      "strref": 15205,
+      "textSha256": "189c8d8b87b04d720d43797ce919165f2d08cb4cdef3c17cc9220ae511be573c"
+    },
+    {
+      "strref": 15206,
+      "textSha256": "bfec75aa97c034a2ab89c31d3c23cc01654d01fdc081605e8f0f4828cd16585a"
+    },
+    {
+      "strref": 15207,
+      "textSha256": "7cb97f9895aa0251524841f7ad0cf9baf49de4d11cbd610285880975b0f74a07"
+    },
+    {
+      "strref": 15211,
+      "textSha256": "abddede1b23f126c3175ee24aedcb8e84d4f2675e3e6874d7b4019dce16ea208"
+    },
+    {
+      "strref": 15213,
+      "textSha256": "d7fef305f8c77318b2f1c57cfb87e196fc82d7887bd5ce3e02290c963bf5dd3e"
+    },
+    {
+      "strref": 15215,
+      "textSha256": "5caf0fca92785d0470ede2b483de6a856d905c69ab946f5c9b5828004ad166f9"
+    },
+    {
+      "strref": 15218,
+      "textSha256": "9eadb6dbd38d18248f16e85957c8703285b3e3099776be5dc324a01b871a8817"
+    },
+    {
+      "strref": 15219,
+      "textSha256": "189c8d8b87b04d720d43797ce919165f2d08cb4cdef3c17cc9220ae511be573c"
+    },
+    {
+      "strref": 15220,
+      "textSha256": "e1824e90ad7e04ddbd5a1dbc1b32d56854b9e4f87939e1f14cf6686c31d45773"
+    },
+    {
+      "strref": 16778,
+      "textSha256": "a6b95cc2decd232dd2f2638557cb2d364cb40e288b1131948bc7b393056ab05d"
+    },
+    {
+      "strref": 16779,
+      "textSha256": "401291411f0c39c5b23e13880c3a92b15fadaea87dd4fa641492116e21ee0c03"
+    },
+    {
+      "strref": 16951,
+      "textSha256": "d33145eb95da12c1ea3760882affc3d53a50d7f35511c075254ef36e261c6ad5"
+    },
+    {
+      "strref": 16952,
+      "textSha256": "56e7e4c79c645449fb0eb5ff0efedf7d5006271c507972d0b9e91f94cc249622"
+    },
+    {
+      "strref": 16953,
+      "textSha256": "d8626dadb941e14628c3ba55ef87de6fdecde8fc27e6fe638a5143a7ef4e2352"
+    },
+    {
+      "strref": 16954,
+      "textSha256": "5d66fbd25fd9f2299e6add59d9bd175f588c776250ed13ee2014ce426fd62a77"
+    },
+    {
+      "strref": 16955,
+      "textSha256": "5b45e02e397a39dedf59fdcd8d7b2508ca7e10e4546715742066e87b27691098"
+    },
+    {
+      "strref": 16956,
+      "textSha256": "8c3e6f3667a5327decfab82741cbdc9c06e826bb9a389158960ade54a96dc65f"
+    },
+    {
+      "strref": 16957,
+      "textSha256": "ab7c070c807eb6a2cfbb37157a02ba0570cb667802da72238220017bed8df87e"
+    },
+    {
+      "strref": 16958,
+      "textSha256": "23d71e37e6aeb20ed5cfc693e099b7bec1aec330bec62ebd59deabf8e5948f6d"
+    },
+    {
+      "strref": 16959,
+      "textSha256": "2e683dcb72f6afe9a9b5ade3b9f6f5aa6a646ac91861dd3a2534a4fb49422100"
+    },
+    {
+      "strref": 16960,
+      "textSha256": "9b11317977b549a0012d4cd1d898a1e791029e5efe8741f16ef59742a71e8404"
+    },
+    {
+      "strref": 16961,
+      "textSha256": "247fe7c10de5100d78030b35422a40b3f51f6e01a6aa06ca558bcb57867f26fb"
+    },
+    {
+      "strref": 16962,
+      "textSha256": "b5010715a3d8fb564e5cbbf79d163024f4b2a1aa77e8655a3c8e27b06c2b834f"
+    },
+    {
+      "strref": 16963,
+      "textSha256": "f4209e8c83163b1600890d181d00b72ef3fc0c662fa194394c1f08e250db0d93"
+    },
+    {
+      "strref": 16964,
+      "textSha256": "8d24e09e624db5fd011b5ea31790b21c75801e424dfe6d7dddccb7e586a7380c"
+    },
+    {
+      "strref": 16965,
+      "textSha256": "e6cc52f0d48c34bd7f1242507866e9cce699ad840c0ab46c7c6e33905680b16f"
+    },
+    {
+      "strref": 16967,
+      "textSha256": "71f54dcce848ca424de03c0eff68846b776622b6e6ff7d6474c6186c6bd131cf"
+    },
+    {
+      "strref": 16968,
+      "textSha256": "88d1ed17987a998faa0cad59ec4e4a1838eff974965b81a213411e50951c4f02"
+    },
+    {
+      "strref": 16969,
+      "textSha256": "a1a966e12bb674e04f3ca0df4ddd643df457ef77727be063269271355657569c"
+    },
+    {
+      "strref": 16970,
+      "textSha256": "580411376cd95b27f78f72d42c78d5fd9d85085d8d42161a199b257f7be3f341"
+    },
+    {
+      "strref": 16971,
+      "textSha256": "e442e6a662998ffff66f84a56afc5ae310ebd4381162f227dd542011998652c5"
+    },
+    {
+      "strref": 16972,
+      "textSha256": "6a6008cdef5e5bc8d67435a2abcbd67bf7d77d0743b3e78124e5395364528dca"
+    },
+    {
+      "strref": 16973,
+      "textSha256": "d819072a72531ddf33aa3a8f951c169106ff91f6049843bffc0055bfc657713f"
+    },
+    {
+      "strref": 16974,
+      "textSha256": "5453d2224996b618e57e3b410012297b24fb3b59da0637d8f660a75f3007ed0c"
+    },
+    {
+      "strref": 16975,
+      "textSha256": "e564691f67148c34cbf5bdc17e87b756a79abd15f0e64707ac4ae2b085266b4a"
+    },
+    {
+      "strref": 16976,
+      "textSha256": "f340c916315f0d52fd32c56c7c831763da0612d1cdd980d787b1c604f5687e45"
+    },
+    {
+      "strref": 16978,
+      "textSha256": "2aa1696b62914bf2cf0c1daadd6cddaa588b1967b6d87fb35a1a940a54f9a690"
+    },
+    {
+      "strref": 16979,
+      "textSha256": "9bc4575ca27da5a2a14f29d01ee67e9a5ff9c68c5344f01ebfdb44e975686cb0"
+    },
+    {
+      "strref": 16980,
+      "textSha256": "f369ae18ba97519d517d383b68ee7f07fbf85b191c291cf2dfda8dd29c913a76"
+    },
+    {
+      "strref": 16981,
+      "textSha256": "db2d9d29fbd8a8ac4ac7cfec0f0ac1a36d9f2148dd2564c5d661910df9c6280b"
+    },
+    {
+      "strref": 16982,
+      "textSha256": "7efc3195687bec9d2f42ceb272091c7fc00718fc89299dc6fb6f926ae75edb96"
+    },
+    {
+      "strref": 16983,
+      "textSha256": "bc124e2760bf520b079f9b63a1f869d9441500637d8a489a23d1dd6477f3e762"
+    },
+    {
+      "strref": 16984,
+      "textSha256": "6822cba1df2330dac09ad6381d16f3c68fe9b26f1902552d54bed9668506ebfa"
+    },
+    {
+      "strref": 16985,
+      "textSha256": "cdbb3ebe2facf64c7b6d4b605202ab3f5031ba76417d8bda453428c0d91651d8"
+    },
+    {
+      "strref": 16986,
+      "textSha256": "85c7b0afd349bf79e272a3fd63b28af2d7f405221c3c239cd6d854793eedb7b0"
+    },
+    {
+      "strref": 16987,
+      "textSha256": "4c0a743712754f856878f090103147ac021879b8af7ebf5edf462e1706063e15"
+    },
+    {
+      "strref": 16988,
+      "textSha256": "8c7a448df7d19e9823c02992339a2dd4b7410cfa3ee3417234090615333c7b67"
+    },
+    {
+      "strref": 16989,
+      "textSha256": "7d220e5e13a96d9c3f18ef91b888eec5911c30489c14c5c78dbea3811134354f"
+    },
+    {
+      "strref": 16990,
+      "textSha256": "398fc2413e39ef956c7d27da722567cde7e6d7ee8fb9b526ae3d45f40a464bc3"
+    },
+    {
+      "strref": 26841,
+      "textSha256": "07593082804e95165f75d8e6b6e1cf4a209913fa125dd5baa69357e70f4b7c39"
+    },
+    {
+      "strref": 26842,
+      "textSha256": "29d7ff2edf1957f35163d96ca220d200a1bc0153f29f126ba059111edfa19e33"
+    },
+    {
+      "strref": 26843,
+      "textSha256": "91b106bc3f52b4bf6c102f36c9dfb54ee141987d687695fc4fd84459a077397f"
+    },
+    {
+      "strref": 26844,
+      "textSha256": "2f6192e1ec71c97f1a50b3ba2fb640b5b7a0fef7c82c594be811967742dd6dbb"
+    },
+    {
+      "strref": 26845,
+      "textSha256": "85f6b2cd3329021990e3666b3d0bca7cf96c8d1d884d27a73bd302c44dc8ea86"
+    },
+    {
+      "strref": 26846,
+      "textSha256": "2106b3f32b45133fc0ad012148742a7cf8e4471113a345e2ce96794516aaefb4"
+    },
+    {
+      "strref": 26847,
+      "textSha256": "cc875b6188daa55c410578b88c6138c95a82134dfb7c83630611995cc01427a1"
+    },
+    {
+      "strref": 27317,
+      "textSha256": "e8e03e7e12ce195b746d4e871992608f205602ebbf5dc7adf5f1f8eb93827855"
+    },
+    {
+      "strref": 32175,
+      "textSha256": "07c6b02655abefbe0c8c761cc0f118d8f37e02bacdccc211cc82526c7fdf2dd4"
+    },
+    {
+      "strref": 32176,
+      "textSha256": "41774e0954397f4b83920a708e01cbc999b88f64010fe7a6f6834c74e1fe4c05"
+    }
+  ],
+  "textExported": false,
+  "scriptTextExported": false,
+  "interpretation": {
+    "sources": {
+      "classicGuide": "https://www.forgottenwars.com/bg1/ar1100b.htm",
+      "mixedEditionGuide": "https://www.gamebanshee.com/baldursgate/walkthrough/baldursgatechapter7.php",
+      "dlgFormat": "https://gibberlings3.github.io/iesdp/file_formats/ie_formats/dlg_v1.htm",
+      "automaticPriority": "https://weidu.org/WeiDU/README-WeiDU.html",
+      "timeAction": "https://gibberlings3.github.io/iesdp/scripting/actions/bgeeactions.htm#353"
+    },
+    "arrest": {
+      "dialogue": "FFHUNT",
+      "initialState": 0,
+      "surrenderState": 2,
+      "surrenderEdge": 5,
+      "conditions": {
+        "Captured": 0,
+        "timesTalkedTo": 0
+      },
+      "bribeDeductsGold": false,
+      "repeatCapturedBehavior": "FFHUNT script makes a neutral patrol hostile when Captured=1",
+      "plotCleanup": "DukeThanks=1 destroys patrols; this is not a combat kill"
+    },
+    "angelo": {
+      "soloInsultState": 4,
+      "twoToFiveAliveInsultState": 1,
+      "sixAliveInsultState": 9,
+      "automaticTransitionOrder": "highest transition index first",
+      "sharteelPriorityEdges": [
+        11,
+        14,
+        16,
+        26
+      ],
+      "twoToFiveVictimPriority": [
+        "Player6",
+        "Player5",
+        "Player4",
+        "Player3",
+        "Player2"
+      ],
+      "victimCondition": "InParty(slot), except unconditional Player2 fallback; not a living-slot filter",
+      "finalTempleCreature": "GALDOR",
+      "custodyCreature": "ANGELO",
+      "sixAliveRandomEdges": {
+        "21": [
+          5,
+          5,
+          "Player2"
+        ],
+        "22": [
+          5,
+          4,
+          "Player3"
+        ],
+        "23": [
+          5,
+          3,
+          "Player4"
+        ],
+        "24": [
+          5,
+          2,
+          "Player5"
+        ],
+        "25": [
+          5,
+          1,
+          "Player6"
+        ]
+      },
+      "jailPlayer1": [
+        1298,
+        216
+      ],
+      "threatJournals": [
+        26841
+      ],
+      "sentenceJournals": [
+        26842,
+        26841
+      ],
+      "sharteelPath": [
+        [
+          "SHARTJ",
+          0
+        ],
+        [
+          "ANGELO",
+          5
+        ],
+        [
+          "SHARTJ",
+          1
+        ],
+        [
+          "ANGELO",
+          6
+        ],
+        "CAPCUT05",
+        [
+          "ANGELO",
+          7
+        ],
+        "CAPCUT04"
+      ]
+    },
+    "custody": {
+      "area": "AR0607",
+      "hearingPlayer1": [
+        951,
+        774
+      ],
+      "hearingAdvanceTime": 600,
+      "hearingAdvanceWorldMinutes": 120,
+      "gameTimeConversion": "GTIMES.IDS maps600 to TWO_HOURS; native city clock conversion must be documented",
+      "hearingPartyPositions": [
+        [
+          951,
+          774
+        ],
+        [
+          986,
+          794
+        ],
+        [
+          857,
+          734
+        ],
+        [
+          841,
+          702
+        ],
+        [
+          1089,
+          837
+        ],
+        [
+          1128,
+          804
+        ]
+      ],
+      "jailPartyPositions": [
+        [
+          1298,
+          216
+        ],
+        [
+          1222,
+          304
+        ],
+        [
+          1134,
+          397
+        ],
+        [
+          1610,
+          375
+        ],
+        [
+          1519,
+          458
+        ],
+        [
+          1441,
+          544
+        ]
+      ],
+      "equipmentConfiscatedByAuditedActions": false,
+      "goldOrXpReward": 0,
+      "cellDoor": "CELLDOOR is an information region, not a door actor; guide says the cell starts open",
+      "ordinaryExitRegionsRemainInArea": true
+    },
+    "neb": {
+      "initialTalkStates": [
+        0,
+        4,
+        5,
+        6,
+        11,
+        14
+      ],
+      "correctAnswerEdges": {
+        "33": 15,
+        "mirror": 28,
+        "tomorrow": 33
+      },
+      "wrongAnswerStates": [
+        9,
+        12,
+        16
+      ],
+      "refusalState": 10,
+      "repeatedRiddleState": 14,
+      "escapeEdges": [
+        19,
+        31,
+        39,
+        41
+      ],
+      "attackState": 17,
+      "attackFlag": [
+        "AR0607",
+        "AttackNEB",
+        1
+      ],
+      "normalEscapeJournal": 27317,
+      "attackEscapeJournal": 32175,
+      "erasedJournals": [
+        26843,
+        26844,
+        26845,
+        26841,
+        26842,
+        26846
+      ],
+      "escapeArea": "AR1100",
+      "escapePlayer1": [
+        1768,
+        635
+      ],
+      "sharteelEscapePlayer1": [
+        1511,
+        1407
+      ],
+      "escapePartyPositions": [
+        [
+          1768,
+          635
+        ],
+        [
+          1732,
+          581
+        ],
+        [
+          1706,
+          530
+        ],
+        [
+          1721,
+          478
+        ],
+        [
+          1754,
+          533
+        ],
+        [
+          1789,
+          566
+        ]
+      ],
+      "sharteelEscapePartyPositions": [
+        [
+          1511,
+          1407
+        ],
+        [
+          1559,
+          1396
+        ],
+        [
+          1608,
+          1385
+        ],
+        [
+          1542,
+          1435
+        ],
+        [
+          1593,
+          1423
+        ],
+        [
+          1641,
+          1411
+        ]
+      ],
+      "itemCreatedOrGranted": false,
+      "goldOrXpReward": 0,
+      "hostileHandling": "INITNEB reacts to AttackedBy([GOODCUTOFF],DEFAULT) while neutral, sets flag then starts dialogue"
+    },
+    "classicCorroboration": [
+      "Classic guide describes Angelo execution and Shar-Teel release",
+      "Both guides describe repeat Neb conversations and three correct answers",
+      "Mixed-edition guide says later patrols attack and the cell door starts open"
+    ],
+    "acceptanceBlockers": [
+      "No unmodded patched original BG1 resource fingerprints available",
+      "Classic guard, cell, script and journal equivalence remains unverified",
+      "AdvanceTime353 is documented EE-only, so custody two-hour advancement may differ from classic BG1",
+      "Original-engine random trigger scheduling and victim distribution unverified",
+      "Native clock and persistent follower-slot conversions require runtime acceptance"
+    ]
+  }
+}

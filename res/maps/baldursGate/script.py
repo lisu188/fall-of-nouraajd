@@ -42,6 +42,7 @@ def load(self, context):
     from game import claim_once, flowGame, mapQuest, register, resumableHook, uiRequest
 
     region_indices = {}
+    custody_definitions = {}
 
     def world(obj):
         return obj.getGame().getMap()
@@ -421,6 +422,1177 @@ def load(self, context):
                     actor.equipItem(native_slot, item)
                     break
         actor.setBoolProperty("plugin_cityInventoryInitialized", True)
+    def custody(obj):
+        return world(obj).getObjectByName("cityCustody")
+
+    @register(context)
+    @mapQuest("baldursGate")
+    class BaldursGateCustodyQuest(CQuest):
+        def isCompleted(self):
+            return world(self).getStringProperty("plugin_cityCustodyState") in ("escaped", "released")
+
+        def getObjective(self):
+            state = world(self).getStringProperty("plugin_cityCustodyState")
+            return {
+                "hearing": "The Flaming Fist has arrested you; answer Angelo's accusations.",
+                "jailed": "Angelo has imprisoned you; find a way out of the headquarters.",
+                "escaped": "You escaped with Neb through a hidden route.",
+                "released": "Angelo released your company after Shar-Teel intervened.",
+                "fought": "You resisted the arrest patrol; the Flaming Fist is hostile.",
+            }.get(state, "The Flaming Fist is hunting your company.")
+
+        def getReward(self):
+            return "Arrest and escape grant no gold, experience, or equipment."
+
+        def getHint(self):
+            return "Speak to the people in the headquarters; the cell door starts open."
+
+        def onComplete(self):
+            pass
+
+    @register(context)
+    class BaldursGateCustody(CBuilding):
+        """Bounded, saved coordinator for the audited arrest dialogue and cutscenes."""
+
+        def data(self):
+            encoded = self.getStringProperty("custodyDefinitions")
+            if encoded not in custody_definitions:
+                custody_definitions.clear()
+                custody_definitions[encoded] = decodeData(encoded or "{}")
+            return custody_definitions[encoded]
+
+        def participant(self, name, binding=None):
+            binding = binding if binding is not None else self.captureCustodyBinding()
+            if isinstance(name, dict):
+                name = name.get("symbol", "")
+            if name == "Player1":
+                return binding["player"]
+            if name.startswith("Player") and self.custodyCall(binding, name[6:], "isdigit"):
+                party = self.custodyParty(binding)
+                slot = int(name[6:]) - 2
+                return party[slot] if 0 <= slot < len(party) else None
+            if name.casefold() == "sharteel":
+                return firstMatch(
+                    (
+                        actor
+                        for actor in self.custodyParty(binding)
+                        if actor
+                        and self.custodyCall(binding, actor, "getStringProperty", "sourceCreature").startswith("SHARTE")
+                    ),
+                    None,
+                )
+            native_id = firstMatch(
+                (
+                    value
+                    for key, value in binding["data"].get("namedActors", {}).items()
+                    if key.casefold() == name.casefold()
+                ),
+                name,
+            )
+            return self.custodyCall(binding, binding["map"], "getObjectByName", native_id) or self.custodyCall(
+                binding, self, "getObjectProperty", "plugin_cityActor_" + native_id
+            )
+
+        def globalValue(self, name, scope, binding=None):
+            binding = binding if binding is not None else self.captureCustodyBinding()
+            if scope == "GLOBAL" and name == "Chapter":
+                return self.custodyCall(binding, binding["map"], "getNumericProperty", "plugin_cityPhase") or 5
+            return self.custodyRead(binding, binding["map"], "plugin_cityCustodyGlobals", {}).get(scope + ":" + name, 0)
+
+        def setGlobal(self, name, scope, value, binding=None):
+            binding = binding if binding is not None else self.captureCustodyBinding()
+            values = self.custodyRead(binding, binding["map"], "plugin_cityCustodyGlobals", {})
+            values[scope + ":" + name] = value
+            self.custodyWrite(binding, binding["map"], "plugin_cityCustodyGlobals", values)
+
+        def condition(self, row, actor, roll=None, binding=None):
+            binding = binding if binding is not None else self.captureCustodyBinding()
+            if "not" in row:
+                return not self.custodyCall(binding, self, "condition", row["not"], actor, roll, binding=binding)
+            op, args = (row["op"], row.get("args", []))
+            alive = sum(
+                (
+                    self.custodyCall(binding, member, "isAlive")
+                    for member in [binding["player"], *self.custodyParty(binding)]
+                    if member
+                )
+            )
+            if op == "True":
+                return True
+            if op == "False":
+                return False
+            if op == "Global":
+                return self.custodyCall(binding, self, "globalValue", *args[:2], binding=binding) == args[2]
+            if op == "NumberOfTimesTalkedTo":
+                return self.custodyCall(binding, actor, "getNumericProperty", "plugin_cityTalkCount") == args[0]
+            if op == "InParty":
+                return self.custodyCall(binding, self, "participant", args[0], binding=binding) is not None
+            if op == "NumInPartyAlive":
+                return alive == args[0]
+            if op == "NumInPartyAliveGT":
+                return alive > args[0]
+            if op == "NumInPartyAliveLT":
+                return alive < args[0]
+            if op == "RandomNum":
+                return roll == args[1]
+            if op == "StateCheck":
+                return self.custodyCall(binding, actor, "getBoolProperty", "plugin_cityCharmed")
+            raise ValueError("Unaudited custody condition: " + op)
+
+        def spawnActor(self, native_id, binding=None):
+            binding = binding if binding is not None else self.captureCustodyBinding()
+            existing = self.custodyCall(binding, self, "participant", native_id, binding=binding)
+            if existing:
+                self.custodyCall(binding, existing, "getName")
+                return existing
+            rows = self.custodyRead(binding, binding["clock"], "actorDefinitions", [])
+            matches = [row for row in rows if row["id"] == native_id]
+            if len(matches) != 1:
+                raise self.CustodyBindingChanged("Custody requires one authored construction row")
+            row = matches[0]
+            actor = self.custodyCall(binding, binding["game"].resolve(), "createObject", native_id)
+            self.stageCustodyActor(binding, actor, row)
+            self.placeCustodyActor(binding, actor, "setStringProperty", "name", native_id)
+            for key, axis in (("posx", "x"), ("posy", "y"), ("posz", "z")):
+                self.placeCustodyActor(binding, actor, "setNumericProperty", key, row[axis])
+            add_object = getattr(binding["map"], "addObject")
+            self.requireCustodyStage(binding, actor)
+            add_object(actor)
+            self.requireCustodyStage(binding, actor, registered=True)
+            self.custodyCall(binding, binding["clock"], "initializeActor", actor)
+            self.requireCustodyStage(binding, actor, registered=True)
+            self.custodyCall(binding, self, "setObjectProperty", "plugin_cityActor_" + native_id, actor)
+            self.requireCustodyStage(binding, actor, registered=True)
+            del binding["stagedActors"][actor]
+            return actor
+
+        def retire(self, actor, binding=None):
+            binding = binding if binding is not None else self.captureCustodyBinding()
+            if actor:
+                self.allowCustodyDetach(binding, actor)
+                self.custodyCall(binding, actor, "setBoolProperty", "plugin_cityDeparted", True)
+                self.custodyCall(
+                    binding,
+                    self,
+                    "setObjectProperty",
+                    "plugin_cityActor_" + self.custodyCall(binding, actor, "getName"),
+                    actor,
+                )
+                if self.custodyCall(
+                    binding, binding["map"], "getObjectByName", self.custodyCall(binding, actor, "getName")
+                ):
+                    self.custodyCall(binding, binding["map"], "removeObject", actor)
+
+        def relocateParty(self, stage_name, binding=None):
+            binding = binding if binding is not None else self.captureCustodyBinding()
+            target = binding["data"][stage_name]
+            party = [binding["player"], *self.custodyParty(binding)]
+            for member, point in pairedValues(party, target["partyPositions"]):
+                if member and self.custodyCall(binding, member, "isAlive"):
+                    self.custodyCall(binding, member, "relocateWithoutMoveHooks", self.custodyPoint(binding, *point))
+                    if not member is binding["player"]:
+                        self.custodyCall(binding, member, "setStringProperty", "simulationRegion", target["area"])
+            self.custodyObserveArea(binding, target["area"])
+
+        def journal(self, number, erase=False, binding=None):
+            binding = binding if binding is not None else self.captureCustodyBinding()
+            entries = self.custodyRead(binding, binding["map"], "plugin_cityCustodyJournal", [])
+            if erase:
+                entries = [value for value in entries if value != number]
+            elif number not in entries:
+                entries.append(number)
+            self.custodyWrite(binding, binding["map"], "plugin_cityCustodyJournal", entries)
+
+        def ensureQuest(self, binding=None):
+            binding = binding if binding is not None else self.captureCustodyBinding()
+            player = binding["player"]
+            if not any(
+                (
+                    self.custodyCall(binding, entry, "getTypeId") == "cityCustodyQuest"
+                    for entry in (
+                        *self.custodyCall(binding, player, "getQuests"),
+                        *self.custodyCall(binding, player, "getCompletedQuests"),
+                    )
+                )
+            ):
+                self.custodyCall(binding, player, "addQuest", "cityCustodyQuest")
+
+        def makeHostile(self, actor, binding=None):
+            binding = binding if binding is not None else self.captureCustodyBinding()
+            if actor and self.custodyCall(binding, actor, "isAlive"):
+                self.custodyCall(binding, actor, "setBoolProperty", "npc", False)
+                self.custodyCall(binding, actor, "setStringProperty", "affiliation", "cityWatch")
+                controller = self.custodyCall(binding, actor, "getController")
+                if (
+                    not controller
+                    or self.custodyCall(binding, controller, "getTypeId") != "CTargetController"
+                    or self.custodyCall(binding, controller, "getStringProperty", "target") != "player"
+                ):
+                    controller = self.custodyCall(
+                        binding, binding["game"].resolve(), "createObject", "CTargetController"
+                    )
+                    self.custodyCall(binding, controller, "setStringProperty", "target", "player")
+                    self.custodyCall(binding, actor, "setController", controller)
+
+        def updatePatrols(self):
+            from game import CGame, CMap, CPlayer
+
+            game = self.getGame()
+            if not game:
+                raise ValueError("Custody patrol ownership changed")
+            map_epoch = CGame.getMapBindingEpoch(game)
+            game_map = game.getMap()
+            if not isinstance(game_map, CMap):
+                raise ValueError("Custody patrol ownership changed")
+            player = CMap.getAssignedPlayer(game_map)
+            if not isinstance(player, CPlayer) or CMap.getObjectByName(game_map, "player") is not player:
+                raise ValueError("Custody patrol ownership changed")
+            context = game.getContext()
+            if not game_map or not context:
+                raise ValueError("Custody patrol ownership changed")
+            generation = context.getTransitionGeneration()
+            owner_name = self.getName()
+            owner = game_map.getObjectByName("cityClock")
+            actor_areas = {}
+
+            def requireCurrent():
+                if (
+                    CGame.getMapBindingEpoch(game) != map_epoch
+                    or CMap.getAssignedPlayer(game_map) is not player
+                    or self.getGame() is not game
+                    or game.getContext() is not context
+                    or game.getMap() is not game_map
+                    or not context.isTransitionGenerationCurrent(generation)
+                    or game_map.getObjectByName(owner_name) is not self
+                    or not isinstance(owner, BaldursGateClock)
+                    or owner.getGame() is not game
+                    or owner.getName() != "cityClock"
+                    or game_map.getObjectByName("cityClock") is not owner
+                    or not isinstance(player, CPlayer)
+                    or not player.isAlive()
+                    or player.getGame() is not game
+                    or player.getName() != "player"
+                    or game_map.getObjectByName("player") is not player
+                    or game_map.getObjectByName(owner_name) is not self
+                    or game_map.getObjectByName("cityClock") is not owner
+                    or game.getMap() is not game_map
+                    or not context.isTransitionGenerationCurrent(generation)
+                    or CGame.getMapBindingEpoch(game) != map_epoch
+                    or CMap.getAssignedPlayer(game_map) is not player
+                ):
+                    raise ValueError("Custody patrol ownership changed")
+
+            def requirePatrol(actor, native_id, staged=False, registered=False):
+                requireCurrent()
+                if not isinstance(actor, CCreature) or isinstance(actor, CPlayer):
+                    raise ValueError("Invalid custody patrol creature binding")
+                actor_game = actor.getGame()
+                requireCurrent()
+                actor_name = actor.getName()
+                requireCurrent()
+                creature = actor.getStringProperty("sourceCreature")
+                requireCurrent()
+                area = actor.getStringProperty("sourceArea")
+                requireCurrent()
+                current = game_map.getObjectByName(native_id)
+                requireCurrent()
+                cached = self.getObjectProperty("plugin_cityActor_" + native_id)
+                requireCurrent()
+                if (
+                    actor_game is not game
+                    or actor_name != native_id
+                    or creature != "FFHUNT"
+                    or area != actor_areas[native_id]
+                    or current is not None
+                    and current is not actor
+                    or registered
+                    and current is not actor
+                    or not staged
+                    and current is None
+                    and cached is not actor
+                    or actor.getGame() is not game
+                    or game_map.getObjectByName(native_id) is not current
+                ):
+                    raise ValueError("Custody patrol actor ownership changed")
+                requireCurrent()
+
+            def globalsNow():
+                values = read(game_map, "plugin_cityCustodyGlobals", {})
+                requireCurrent()
+                if not isinstance(values, dict):
+                    raise ValueError("Invalid custody patrol globals")
+                return values
+
+            def globalValue(name):
+                if name == "Chapter":
+                    value = game_map.getNumericProperty("plugin_cityPhase") or 5
+                else:
+                    value = globalsNow().get("GLOBAL:" + name, 0)
+                requireCurrent()
+                if type(value) is not int:
+                    raise ValueError("Invalid custody patrol global value: " + name)
+                return value
+
+            def retained(native_id):
+                actor = game_map.getObjectByName(native_id)
+                requireCurrent()
+                if not actor:
+                    actor = self.getObjectProperty("plugin_cityActor_" + native_id)
+                    requireCurrent()
+                if actor:
+                    requirePatrol(actor, native_id)
+                return actor
+
+            def retire(actor):
+                if not actor:
+                    return
+                name = actor.getName()
+                requirePatrol(actor, name)
+                actor.setBoolProperty("plugin_cityDeparted", True)
+                requirePatrol(actor, name)
+                self.setObjectProperty("plugin_cityActor_" + name, actor)
+                requireCurrent()
+                registered = game_map.getObjectByName(name)
+                requireCurrent()
+                if registered is actor:
+                    game_map.removeObject(actor)
+                    requireCurrent()
+                elif registered:
+                    raise ValueError("Custody patrol was replaced during retirement")
+
+            def spawn(native_id):
+                existing = retained(native_id)
+                if existing:
+                    return existing
+                rows = read(owner, "actorDefinitions", [])
+                requireCurrent()
+                matches = [row for row in rows if row.get("id") == native_id]
+                if len(matches) != 1 or any(type(matches[0].get(axis)) is not int for axis in ("x", "y", "z")):
+                    raise ValueError("Missing audited custody patrol actor row")
+                actor = game.createObject(native_id)
+                requireCurrent()
+                if not isinstance(actor, CCreature) or actor.getGame() is not game:
+                    raise ValueError("Invalid native custody patrol constructor")
+                requireCurrent()
+                actor.setStringProperty("name", native_id)
+                requireCurrent()
+                for axis in ("x", "y", "z"):
+                    actor.setNumericProperty("pos" + axis, matches[0][axis])
+                    requireCurrent()
+                requirePatrol(actor, native_id, staged=True)
+                self.setObjectProperty("plugin_cityActor_" + native_id, actor)
+                requireCurrent()
+                game_map.addObject(actor)
+                requireCurrent()
+                if game_map.getObjectByName(native_id) is not actor:
+                    raise ValueError("Custody patrol was replaced during creation")
+                requireCurrent()
+                owner.initializeActor(actor)
+                requirePatrol(actor, native_id, registered=True)
+                return actor
+
+            def makeHostile(actor):
+                if not actor:
+                    return
+                name = actor.getName()
+                requirePatrol(actor, name)
+                if game_map.getObjectByName(name) is not actor:
+                    requireCurrent()
+                    return
+                requirePatrol(actor, name, registered=True)
+                alive = actor.isAlive()
+                requirePatrol(actor, name, registered=True)
+                if not alive:
+                    return
+                actor.setBoolProperty("npc", False)
+                requirePatrol(actor, name, registered=True)
+                actor.setStringProperty("affiliation", "cityWatch")
+                requirePatrol(actor, name, registered=True)
+                controller = actor.getController()
+                requirePatrol(actor, name, registered=True)
+                type_id = controller.getTypeId() if controller else ""
+                requirePatrol(actor, name, registered=True)
+                target = controller.getStringProperty("target") if controller else ""
+                requirePatrol(actor, name, registered=True)
+                if type_id != "CTargetController" or target != "player":
+                    controller = game.createObject("CTargetController")
+                    requirePatrol(actor, name, registered=True)
+                    controller.setStringProperty("target", "player")
+                    requirePatrol(actor, name, registered=True)
+                    actor.setController(controller)
+                    requirePatrol(actor, name, registered=True)
+
+            requireCurrent()
+            data = self.data()
+            requireCurrent()
+            if not data:
+                return
+            patrols = data.get("patrols")
+            if not isinstance(patrols, dict) or len(patrols) > 9:
+                raise ValueError("Invalid bounded custody patrol definitions")
+            validated = []
+            audited_areas = ("AR0100", "AR0200", "AR0300", "AR0600", "AR0700", "AR0800", "AR1100", "AR1200", "AR1300")
+            if tuple(sorted(patrols)) != audited_areas:
+                raise ValueError("Unsupported custody patrol source area")
+            for area, row in patrols.items():
+                if not isinstance(row, dict):
+                    raise ValueError("Invalid audited custody patrol response")
+                conditions = row.get("conditions")
+                one_shot = row.get("oneShotGlobal")
+                actors = row.get("actors")
+                if (
+                    not isinstance(area, str)
+                    or not area.startswith("AR")
+                    or not area[2:].isdigit()
+                    or one_shot != "Capture" + str(int(area[2:]))
+                    or type(row.get("oneShotValue")) is not int
+                    or row["oneShotValue"] != 1
+                    or not isinstance(actors, list)
+                    or len(actors) != 2
+                    or any(not isinstance(name, str) or not name for name in actors)
+                    or len(set(actors)) != 2
+                    or not isinstance(conditions, list)
+                    or len(conditions) != 3
+                ):
+                    raise ValueError("Invalid audited custody patrol response")
+                if actors != ["cityCustodyPatrol" + area.title() + suffix for suffix in ("One", "Two")]:
+                    raise ValueError("Unsupported custody patrol source actor")
+                actor_areas.update((native_id, area) for native_id in actors)
+                expected = (("Chapter", 7), (one_shot, 0), ("DukeThanks", 0))
+                for condition, (name, value) in pairedValues(conditions, expected):
+                    if (
+                        not isinstance(condition, dict)
+                        or type(condition.get("opcode")) is not int
+                        or condition.get("opcode") != 16399
+                        or condition.get("signature") != "Global(S:Name*,S:Area*,I:Value*)"
+                        or condition.get("strings") != ["GLOBAL" + name, ""]
+                        or condition.get("integerFields") != [value, 0, 0, 0]
+                        or any(type(number) is not int for number in condition["integerFields"])
+                        or condition.get("negated") is not False
+                    ):
+                        raise ValueError("Unsupported custody patrol source condition")
+                validated.append((area, tuple(actors), one_shot, row["oneShotValue"], expected))
+
+            phase = globalValue("Chapter")
+            thanks = globalValue("DukeThanks") == 1
+            palace_cleared = game_map.getBoolProperty("plugin_cityFlag_palaceCleared")
+            requireCurrent()
+            thanks = thanks or palace_cleared
+            point = player.getCoords()
+            requireCurrent()
+            atlas = read(owner, "areaAtlas", {})
+            requireCurrent()
+            active_area = None
+            for area, entry in atlas.items():
+                x, y, z, width, height = entry["bounds"]
+                if point.z == z and x <= point.x < x + width and y <= point.y < y + height:
+                    active_area = area
+                    break
+            if active_area is None:
+                active_area = game_map.getStringProperty("activeSimulationRegion")
+            requireCurrent()
+            captured = globalValue("Captured") == 1
+            for area, actor_ids, one_shot, assigned_value, conditions in validated:
+                if thanks:
+                    for native_id in actor_ids:
+                        retire(retained(native_id))
+                    continue
+                if active_area != area:
+                    continue
+                if not palace_cleared and all(globalValue(name) == value for name, value in conditions):
+                    values = globalsNow()
+                    values["GLOBAL:" + one_shot] = assigned_value
+                    write(game_map, "plugin_cityCustodyGlobals", values)
+                    requireCurrent()
+                    if globalValue(one_shot) != assigned_value:
+                        raise ValueError("Custody patrol one-shot assignment did not persist")
+                    # The audited SetGlobal precedes both CreateCreature actions. Failure must not replay them.
+                    for native_id in actor_ids:
+                        spawn(native_id)
+                if captured:
+                    for native_id in actor_ids:
+                        makeHostile(retained(native_id))
+            requireCurrent()
+            hearing = game_map.getBoolProperty("plugin_cityFlag_custodyHearing")
+            requireCurrent()
+            if phase == 7 and hearing:
+                binding = self.captureCustodyBinding()
+                requireCurrent()
+                if (
+                    binding["game"].resolve() is not game
+                    or binding["map"] is not game_map
+                    or binding["context"] is not context
+                    or binding["generation"] != generation
+                    or binding["mapEpoch"] != map_epoch
+                    or binding["player"] is not player
+                    or binding["clock"] is not owner
+                    or binding["data"] != data
+                ):
+                    raise ValueError("Custody patrol hearing ownership changed")
+                self.requireCustodyBinding(binding)
+                requireCurrent()
+                self.relocateParty("hearing", binding=binding)
+                requireCurrent()
+
+        def beginCustody(self, binding=None):
+            binding = binding if binding is not None else self.captureCustodyBinding()
+            game_map = binding["map"]
+            if self.custodyCall(binding, game_map, "getStringProperty", "plugin_cityCustodyState") == "hearing":
+                return
+            self.custodyCall(binding, self, "ensureQuest", binding=binding)
+            self.custodyCall(binding, game_map, "setStringProperty", "plugin_cityCustodyState", "hearing")
+            self.custodyCall(binding, game_map, "setBoolProperty", "plugin_cityFlag_custodyHearing", True)
+            self.custodyCall(binding, self, "relocateParty", "hearing", binding=binding)
+            for key in ("CHIMP5", "FERGUS"):
+                self.custodyCall(
+                    binding,
+                    self,
+                    "retire",
+                    self.custodyCall(binding, self, "participant", key, binding=binding),
+                    binding=binding,
+                )
+            old_guard = self.custodyCall(binding, self, "participant", "DICKSMOK", binding=binding)
+            if old_guard:
+                self.custodyCall(binding, old_guard, "setNumericProperty", "plugin_cityTalkCount", 1)
+            for native_id in [*binding["data"]["actorIds"]["escorts"], binding["data"]["actorIds"]["angelo"]]:
+                self.custodyCall(binding, self, "spawnActor", native_id, binding=binding)
+            self.custodyCall(
+                binding, binding["clock"], "advanceTicks", binding["data"]["hearing"].get("advanceMinutes", 0) * 5 // 6
+            )
+            self.custodyCall(binding, self, "updatePatrols")
+
+        def finishCustody(self, stage_name, binding=None):
+            binding = binding if binding is not None else self.captureCustodyBinding()
+            self.custodyCall(binding, self, "ensureQuest", binding=binding)
+            state = {"jail": "jailed", "escape": "escaped", "release": "released"}[stage_name]
+            self.custodyCall(binding, binding["map"], "setStringProperty", "plugin_cityCustodyState", state)
+            self.custodyCall(binding, binding["map"], "setBoolProperty", "plugin_cityFlag_custodyHearing", False)
+            self.custodyCall(binding, self, "relocateParty", stage_name, binding=binding)
+            for native_id in [*binding["data"]["actorIds"]["escorts"], binding["data"]["actorIds"]["angelo"]]:
+                self.custodyCall(
+                    binding,
+                    self,
+                    "retire",
+                    self.custodyCall(binding, self, "participant", native_id, binding=binding),
+                    binding=binding,
+                )
+            if stage_name == "escape":
+                self.custodyCall(
+                    binding,
+                    self,
+                    "journal",
+                    (
+                        32175
+                        if self.custodyCall(binding, self, "globalValue", "AttackNEB", "AR0607", binding=binding)
+                        else 27317
+                    ),
+                    binding=binding,
+                )
+                self.custodyCall(
+                    binding,
+                    self,
+                    "retire",
+                    self.custodyCall(binding, self, "participant", "NEB", binding=binding),
+                    binding=binding,
+                )
+            self.custodyCall(binding, binding["clock"], "applySchedules")
+
+        def killByAngelo(self, victim, binding=None):
+            binding = binding if binding is not None else self.captureCustodyBinding()
+            if victim and self.custodyCall(binding, victim, "isAlive"):
+                self.allowCustodyDetach(binding, victim)
+                self.custodyCall(binding, victim, "setBoolProperty", "plugin_cityPlotExecution", True)
+                self.custodyCall(binding, victim, "setStringProperty", "plugin_cityDeathCause", "Angelo")
+                self.custodyCall(binding, victim, "setHp", 0)
+                self.custodyCall(
+                    binding,
+                    self,
+                    "setObjectProperty",
+                    "plugin_cityExecuted_" + self.custodyCall(binding, victim, "getName"),
+                    victim,
+                )
+                if victim in self.custodyParty(binding):
+                    self.custodyCall(binding, self, "setObjectProperty", "plugin_cityExecutedCompanion", victim)
+                if self.custodyCall(
+                    binding, binding["map"], "getObjectByName", self.custodyCall(binding, victim, "getName")
+                ):
+                    self.custodyCall(binding, binding["map"], "removeObject", victim)
+
+        def releaseScene(self, binding=None):
+            binding = binding if binding is not None else self.captureCustodyBinding()
+            for name in ("FLAME3", "FLAME4", "DICKSMOK"):
+                self.custodyCall(
+                    binding,
+                    self,
+                    "retire",
+                    self.custodyCall(binding, self, "participant", name, binding=binding),
+                    binding=binding,
+                )
+            for name, symbol in (("FLAME1", "[718.1027]"), ("FLAME2", "[773.1047]"), ("ANGELO", "[765.1010]")):
+                actor = self.custodyCall(binding, self, "participant", name, binding=binding)
+                if actor:
+                    self.custodyCall(
+                        binding,
+                        actor,
+                        "relocateWithoutMoveHooks",
+                        self.custodyPoint(binding, *binding["data"]["points"][symbol]),
+                    )
+            for name in ("FLAME1", "FLAME2"):
+                self.custodyCall(
+                    binding,
+                    self,
+                    "killByAngelo",
+                    self.custodyCall(binding, self, "participant", name, binding=binding),
+                    binding=binding,
+                )
+            angelo = self.custodyCall(binding, self, "participant", "ANGELO", binding=binding)
+            if angelo:
+                self.custodyCall(
+                    binding,
+                    angelo,
+                    "relocateWithoutMoveHooks",
+                    self.custodyPoint(binding, *binding["data"]["points"]["[543.1173]"]),
+                )
+
+        def applyAction(self, row, actor, binding=None):
+            binding = binding if binding is not None else self.captureCustodyBinding()
+            op, args = (row["op"], row.get("args", []))
+            if op == "SetGlobal":
+                self.custodyCall(binding, self, "setGlobal", *args, binding=binding)
+            elif op in ("AddJournalEntry", "EraseJournalEntry"):
+                self.custodyCall(binding, self, "journal", args[0], op == "EraseJournalEntry", binding=binding)
+            elif op == "ActionOverride":
+                target = self.custodyCall(binding, self, "participant", args[0], binding=binding)
+                if target:
+                    self.custodyCall(binding, self, "applyAction", args[1], target, binding=binding)
+            elif op in ("JumpToPoint", "MoveToPoint"):
+                point = binding["data"]["points"][args[0]["symbol"]]
+                self.custodyCall(binding, actor, "relocateWithoutMoveHooks", self.custodyPoint(binding, *point))
+            elif op == "Kill":
+                self.custodyCall(
+                    binding,
+                    self,
+                    "killByAngelo",
+                    self.custodyCall(binding, self, "participant", args[0], binding=binding),
+                    binding=binding,
+                )
+            elif op == "DestroySelf":
+                self.custodyCall(binding, self, "retire", actor, binding=binding)
+            elif op == "Enemy":
+                self.custodyCall(binding, self, "makeHostile", actor, binding=binding)
+            elif op == "Shout":
+                area = self.custodyCall(binding, actor, "getStringProperty", "sourceArea")
+                for native_id in binding["data"]["patrols"].get(area, {}).get("actors", []):
+                    self.custodyCall(
+                        binding,
+                        self,
+                        "makeHostile",
+                        self.custodyCall(binding, self, "participant", native_id, binding=binding),
+                        binding=binding,
+                    )
+                self.custodyCall(binding, binding["map"], "setStringProperty", "plugin_cityCustodyState", "fought")
+                self.custodyCall(binding, self, "ensureQuest", binding=binding)
+            elif op in ("ApplyDamagePercent", "CreateCreature"):
+                pass
+            elif op not in ("StartCutScene", "StartDialogNoSet"):
+                raise ValueError("Unaudited custody action: " + op)
+
+        @resumableHook
+        def conversation(self, actor, forced_code="", forced_state=None):
+            try:
+                binding = self.captureCustodyBinding(actor)
+                data = binding["data"]
+                cursor = self.custodyRead(binding, binding["map"], "plugin_cityCustodyDialogue", {})
+                if cursor and cursor["actorId"] != binding["actorName"] and not forced_code:
+                    return
+                if forced_code:
+                    code, state_id = forced_code, forced_state
+                elif cursor:
+                    code, state_id = cursor["code"], cursor["state"]
+                else:
+                    code = binding["sourceDialogue"]
+                    if code not in data.get("dialogues", {}):
+                        return
+                    entries = sorted(
+                        (row for row in data["dialogues"][code] if row.get("entryWeight") is not None),
+                        key=lambda row: row["entryWeight"],
+                    )
+                    entry = firstMatch(
+                        (
+                            row
+                            for row in entries
+                            if all(
+                                self.custodyCall(binding, self, "condition", test, actor, binding=binding)
+                                for test in row["conditions"]
+                            )
+                        ),
+                        None,
+                    )
+                    if not entry:
+                        return
+                    state_id = entry["id"]
+                    self.custodyCall(
+                        binding, actor, "setNumericProperty", "plugin_cityTalkCount", binding["talkCount"] + 1
+                    )
+                for _step in range(64):
+                    state = firstMatch(row for row in data["dialogues"][code] if row["id"] == state_id)
+                    self.custodyWrite(
+                        binding,
+                        binding["map"],
+                        "plugin_cityCustodyDialogue",
+                        {"actorId": binding["actorName"], "code": code, "state": state_id},
+                    )
+                    request = self.custodyRequest(binding, "showReader", state.get("speaker", code), state["text"])
+                    yield request
+                    self.requireCustodyBinding(binding)
+                    roll = None
+                    if any(
+                        test.get("op") == "RandomNum" for edge in state["transitions"] for test in edge["conditions"]
+                    ):
+                        from game import randint
+
+                        roll = randint(1, 5)
+                        self.requireCustodyBinding(binding)
+                    eligible = [
+                        edge
+                        for edge in state["transitions"]
+                        if all(
+                            self.custodyCall(binding, self, "condition", test, actor, roll, binding=binding)
+                            for test in edge["conditions"]
+                        )
+                    ]
+                    automatic = [edge for edge in eligible if edge.get("replyStrref") is None]
+                    if automatic:
+                        edge = max(automatic, key=lambda row: row["id"])
+                    else:
+                        request = self.custodyRequest(
+                            binding,
+                            "choose",
+                            state["text"],
+                            [{"id": str(edge["id"]), "label": edge["reply"]} for edge in eligible],
+                            "Answer",
+                            "Continue later",
+                        )
+                        choice = yield request
+                        self.requireCustodyBinding(binding)
+                        edge = firstMatch(
+                            (edge for edge in eligible if type(choice) is str and str(edge["id"]) == choice), None
+                        )
+                        if edge is None:
+                            return
+                    if not all(
+                        self.custodyCall(binding, self, "condition", test, actor, roll, binding=binding)
+                        for test in edge["conditions"]
+                    ):
+                        return
+                    self.requireCustodyBinding(binding)
+                    trace = self.custodyRead(binding, binding["map"], "plugin_cityCustodyTrace", [])
+                    trace.append({"dialogue": code, "state": state_id, "edge": edge["id"], "roll": roll})
+                    self.custodyWrite(binding, binding["map"], "plugin_cityCustodyTrace", trace[-256:])
+                    self.custodyCall(
+                        binding,
+                        binding["map"],
+                        "setNumericProperty",
+                        "plugin_cityCustodyTransitionCount",
+                        binding["counter"] + 1,
+                    )
+                    if edge.get("journalStrref") is not None:
+                        self.journal(edge["journalStrref"], binding=binding)
+                    for action in edge["effects"]:
+                        self.applyAction(action, actor, binding=binding)
+                    target = edge.get("next")
+                    cutscene = firstMatch(
+                        (action["args"][0].upper() for action in edge["effects"] if action["op"] == "StartCutScene"), ""
+                    )
+                    if cutscene == "CAPCUT01":
+                        self.beginCustody(binding=binding)
+                        actor = self.custodyCall(binding, self, "participant", "FLAME4")
+                        self.bindCustodyActor(binding, actor)
+                        self.custodyCall(
+                            binding, actor, "setNumericProperty", "plugin_cityTalkCount", binding["talkCount"] + 1
+                        )
+                        target = ["FLAMC7", 8]
+                    elif cutscene in ("CAPCUT02", "CAPCUT04"):
+                        self.finishCustody("escape" if cutscene == "CAPCUT02" else "release", binding=binding)
+                    elif cutscene == "CAPCUT05":
+                        self.releaseScene(binding=binding)
+                        target = ["ANGELO", 7]
+                    if not target and code == "ANGELO" and state_id in (1, 9):
+                        target = ["ANGELO", 4]
+                    if not target and code == "ANGELO" and state_id in (3, 4):
+                        self.finishCustody("jail", binding=binding)
+                    if not target:
+                        self.custodyWrite(binding, binding["map"], "plugin_cityCustodyDialogue", {})
+                        yield self.custodyRequest(binding, "gui.checkQuests")
+                        self.requireCustodyBinding(binding)
+                        return True
+                    code, state_id = target
+                    if code == "ANGELO":
+                        actor = self.custodyCall(binding, self, "participant", "ANGELO")
+                        self.bindCustodyActor(binding, actor)
+                        if state_id == 0:
+                            self.custodyCall(
+                                binding, actor, "setNumericProperty", "plugin_cityTalkCount", binding["talkCount"] + 1
+                            )
+                    elif code == "SHARTJ":
+                        actor = self.custodyCall(binding, self, "participant", "Sharteel")
+                        self.bindCustodyActor(binding, actor)
+                    self.requireCustodyBinding(binding)
+                raise ValueError("Custody dialogue exceeded its audited bounded transition budget")
+            except self.CustodyBindingChanged:
+                return
+
+        class CustodyBindingChanged(RuntimeError):
+            pass
+
+        def captureCustodyBinding(self, actor=None):
+            from game import CGame, CGameObject, CMap, CPlayer
+
+            game = self.getGame()
+            map_epoch = CGame.getMapBindingEpoch(game) if game else None
+            game_map = game.getMap() if game else None
+            if not isinstance(game_map, CMap):
+                raise self.CustodyBindingChanged("Custody has no current map")
+            player = CMap.getAssignedPlayer(game_map)
+            if not isinstance(player, CPlayer) or CMap.getObjectByName(game_map, "player") is not player:
+                raise self.CustodyBindingChanged("Custody assigned player changed")
+            native_context = game.getContext()
+            generation = native_context.getTransitionGeneration()
+            registry = game_map.getObjectByName("cityClock")
+            encoded = self.getStringProperty("custodyDefinitions")
+            binding = {
+                "game": flowGame(game),
+                "gameClass": CGame,
+                "mapEpoch": map_epoch,
+                "context": native_context,
+                "generation": generation,
+                "map": game_map,
+                "player": player,
+                "playerName": player.getName() if player else "",
+                "playerClass": CPlayer,
+                "objectClass": CGameObject,
+                "mapClass": CMap,
+                "clock": registry,
+                "encoded": encoded,
+                "actorDefinitions": registry.getStringProperty("actorDefinitions") if registry else "",
+                "questDefinitions": registry.getStringProperty("questDefinitions") if registry else "",
+                "phase": game_map.getNumericProperty("plugin_cityPhase"),
+                "cursor": game_map.getStringProperty("plugin_cityCustodyDialogue"),
+                "counter": game_map.getNumericProperty("plugin_cityCustodyTransitionCount"),
+                "actor": None,
+                "detached": set(),
+                "stagedActors": {},
+                "data": decodeData(encoded or "{}"),
+            }
+            self.requireCustodyBinding(binding)
+            if actor is not None:
+                self.bindCustodyActor(binding, actor)
+            return binding
+
+        def custodyBindingCurrent(self, binding):
+            game, game_map = binding["game"].resolve(), binding["map"]
+            player, registry = binding["player"], binding["clock"]
+            native_context, generation = binding["context"], binding["generation"]
+            if (
+                not game
+                or not isinstance(player, binding["playerClass"])
+                or not isinstance(registry, BaldursGateClock)
+                or type(generation) is not int
+            ):
+                return False
+            if (
+                type(binding["mapEpoch"]) is not int
+                or binding["gameClass"].getMapBindingEpoch(game) != binding["mapEpoch"]
+                or binding["mapClass"].getAssignedPlayer(game_map) is not player
+            ):
+                return False
+            for _pass in range(2):
+                if (
+                    binding["mapClass"].getAssignedPlayer(game_map) is not player
+                    or self.getGame() is not game
+                    or game.getMap() is not game_map
+                    or game.getContext() is not native_context
+                    or not native_context.isTransitionGenerationCurrent(generation)
+                    or self.getMap() is not game_map
+                    or game_map.getObjectByName(binding["playerName"]) is not player
+                    or binding["playerName"] != "player"
+                    or player.getName() != "player"
+                    or game_map.getObjectByName("cityCustody") is not self
+                    or game_map.getObjectByName("cityClock") is not registry
+                    or player.getGame() is not game
+                    or player.getMap() is not game_map
+                    or not player.isAlive()
+                    or registry.getGame() is not game
+                    or registry.getMap() is not game_map
+                    or self.getStringProperty("custodyDefinitions") != binding["encoded"]
+                    or registry.getStringProperty("actorDefinitions") != binding["actorDefinitions"]
+                    or registry.getStringProperty("questDefinitions") != binding["questDefinitions"]
+                    or game_map.getNumericProperty("plugin_cityPhase") != binding["phase"]
+                    or game_map.getStringProperty("plugin_cityCustodyDialogue") != binding["cursor"]
+                    or game_map.getNumericProperty("plugin_cityCustodyTransitionCount") != binding["counter"]
+                ):
+                    return False
+                actor = binding["actor"]
+                if actor is not None:
+                    registered = game_map.getObjectByName(binding["actorName"])
+                    if (
+                        actor.getGame() is not game
+                        or actor.getMap() is not game_map
+                        or actor.getName() != binding["actorName"]
+                        or actor.getStringProperty("sourceCreature") != binding["sourceCreature"]
+                        or actor.getStringProperty("sourceArea") != binding["sourceArea"]
+                        or actor.getStringProperty("sourceDialogue") != binding["sourceDialogue"]
+                        or actor.getNumericProperty("plugin_cityTalkCount") != binding["talkCount"]
+                        or registered is not actor
+                        and not (registered is None and actor in binding["detached"])
+                        or not actor.isAlive()
+                        and actor not in binding["detached"]
+                    ):
+                        return False
+                if (
+                    binding["gameClass"].getMapBindingEpoch(game) != binding["mapEpoch"]
+                    or binding["mapClass"].getAssignedPlayer(game_map) is not player
+                ):
+                    return False
+            return self.custodyNativeSnapshotCurrent(binding)
+
+        def requireCustodyBinding(self, binding):
+            if not self.custodyBindingCurrent(binding):
+                raise self.CustodyBindingChanged("Custody conversation binding changed")
+
+        def bindCustodyActor(self, binding, actor):
+            self.requireCustodyBinding(binding)
+            if not isinstance(actor, CCreature):
+                raise self.CustodyBindingChanged("Custody needs an actual creature")
+            name = actor.getName()
+            properties = {
+                key: actor.getStringProperty(key) for key in ("sourceCreature", "sourceArea", "sourceDialogue")
+            }
+            talk_count, alive = actor.getNumericProperty("plugin_cityTalkCount"), actor.isAlive()
+            self.requireCustodyBinding(binding)
+            if (
+                not alive
+                or actor.getGame() is not binding["game"].resolve()
+                or binding["map"].getObjectByName(name) is not actor
+            ):
+                raise self.CustodyBindingChanged("Custody speaker is no longer registered")
+            binding.update(actor=actor, actorName=name, talkCount=talk_count, **properties)
+            self.requireCustodyBinding(binding)
+
+        def custodyCall(self, scope, target, method, *args, **kwargs):
+            self.requireCustodyBinding(scope)
+            bound = getattr(target, method)
+            self.requireCustodyBinding(scope)
+            if isinstance(target, CCreature):
+                name = target.getName()
+                registered = scope["map"].getObjectByName(name)
+                if (
+                    target.getGame() is not scope["game"].resolve()
+                    or registered is not target
+                    and not (registered is None and target in scope["detached"])
+                ):
+                    raise self.CustodyBindingChanged("Custody action target was replaced")
+                self.requireCustodyBinding(scope)
+            result = bound(*args, **kwargs)
+            if target is scope["actor"] and method == "setNumericProperty" and args[0] == "plugin_cityTalkCount":
+                scope["talkCount"] = args[1]
+            if target is scope["map"] and method == "setStringProperty" and args[0] == "plugin_cityCustodyDialogue":
+                scope["cursor"] = args[1]
+            if (
+                target is scope["map"]
+                and method == "setNumericProperty"
+                and args[0] == "plugin_cityCustodyTransitionCount"
+            ):
+                scope["counter"] = args[1]
+            self.requireCustodyBinding(scope)
+            return result
+
+        def custodyRead(self, binding, target, key, default):
+            encoded = self.custodyCall(binding, target, "getStringProperty", key)
+            result = decodeData(encoded or json.dumps(default))
+            self.requireCustodyBinding(binding)
+            return result
+
+        def custodyWrite(self, binding, target, key, value):
+            encoded = CITY_JSON_PREFIX + json.dumps(value, separators=(",", ":"))
+            self.requireCustodyBinding(binding)
+            self.custodyCall(binding, target, "setStringProperty", key, encoded)
+
+        def custodyParty(self, binding):
+            roster = self.custodyRead(binding, binding["clock"], "plugin_cityRoster", [])
+            party = [
+                self.custodyCall(binding, binding["clock"], "getObjectProperty", "plugin_cityCompanion_" + name)
+                for name in roster
+            ]
+            self.requireCustodyBinding(binding)
+            return party
+
+        def allowCustodyDetach(self, binding, actor):
+            self.requireCustodyBinding(binding)
+            name = actor.getName()
+            registered = binding["map"].getObjectByName(name)
+            retained = self.getObjectProperty("plugin_cityActor_" + name)
+            departed = actor.getBoolProperty("plugin_cityDeparted")
+            self.requireCustodyBinding(binding)
+            if registered is not actor and not (registered is None and retained is actor and departed):
+                raise self.CustodyBindingChanged("Custody cannot retire a replaced actor")
+            binding["detached"].add(actor)
+            self.requireCustodyBinding(binding)
+
+        def custodyPoint(self, binding, *point):
+            self.requireCustodyBinding(binding)
+            result = Coords(*point)
+            self.requireCustodyBinding(binding)
+            return result
+
+        def custodyObserveArea(self, binding, area):
+            game_map = binding["map"]
+            visited = self.custodyRead(binding, game_map, "plugin_cityVisitedAreas", [])
+            if area and area not in visited:
+                visited.append(area)
+                self.custodyWrite(binding, game_map, "plugin_cityVisitedAreas", visited)
+            self.custodyCall(binding, game_map, "setStringProperty", "activeSimulationRegion", area)
+
+        def custodyRequest(self, binding, operation, *args):
+            self.requireCustodyBinding(binding)
+            request = uiRequest(
+                operation, binding["player"] if operation == "gui.checkQuests" else binding["game"], *args
+            )
+            self.requireCustodyBinding(binding)
+            return request
+
+        def custodyNativeSnapshotCurrent(self, binding):
+            """Only audited dynamic values and concrete identities bypass instance getter overrides."""
+            native, native_map = binding["objectClass"], binding["mapClass"]
+            game, game_map = binding["game"].resolve(), binding["map"]
+            player, registry, actor = binding["player"], binding["clock"], binding["actor"]
+            if (
+                not game
+                or binding["gameClass"].getMapBindingEpoch(game) != binding["mapEpoch"]
+                or native_map.getAssignedPlayer(game_map) is not player
+            ):
+                return False
+            strings = [
+                (self, "custodyDefinitions", binding["encoded"]),
+                (registry, "actorDefinitions", binding["actorDefinitions"]),
+                (registry, "questDefinitions", binding["questDefinitions"]),
+                (game_map, "plugin_cityCustodyDialogue", binding["cursor"]),
+            ]
+            numbers = [
+                (game_map, "plugin_cityPhase", binding["phase"]),
+                (game_map, "plugin_cityCustodyTransitionCount", binding["counter"]),
+            ]
+            if actor is not None:
+                strings.extend((actor, key, binding[key]) for key in ("sourceCreature", "sourceArea", "sourceDialogue"))
+                numbers.append((actor, "plugin_cityTalkCount", binding["talkCount"]))
+            if any(native.getStringProperty(target, key) != value for target, key, value in strings):
+                return False
+            if any(native.getNumericProperty(target, key) != value for target, key, value in numbers):
+                return False
+            if (
+                not game
+                or game.getMap() is not game_map
+                or game.getContext() is not binding["context"]
+                or not binding["context"].isTransitionGenerationCurrent(binding["generation"])
+                or native.getGame(self) is not game
+                or native.getMap(self) is not game_map
+                or native.getName(self) != "cityCustody"
+                or native_map.getObjectByName(game_map, "cityCustody") is not self
+                or native.getGame(registry) is not game
+                or native.getMap(registry) is not game_map
+                or native.getName(registry) != "cityClock"
+                or native_map.getObjectByName(game_map, "cityClock") is not registry
+                or native.getGame(player) is not game
+                or native.getMap(player) is not game_map
+                or native.getName(player) != "player"
+                or native_map.getObjectByName(game_map, "player") is not player
+                or native_map.getAssignedPlayer(game_map) is not player
+                or not CCreature.isAlive(player)
+            ):
+                return False
+            if actor is not None:
+                registered = native_map.getObjectByName(game_map, binding["actorName"])
+                if (
+                    native.getGame(actor) is not game
+                    or native.getMap(actor) is not game_map
+                    or native.getName(actor) != binding["actorName"]
+                    or registered is not actor
+                    and not (registered is None and actor in binding["detached"])
+                    or not CCreature.isAlive(actor)
+                    and actor not in binding["detached"]
+                ):
+                    return False
+            return (
+                binding["gameClass"].getMapBindingEpoch(game) == binding["mapEpoch"]
+                and native_map.getAssignedPlayer(game_map) is player
+            )
+
+        def stageCustodyActor(self, binding, actor, row):
+            self.requireCustodyBinding(binding)
+            native = binding["objectClass"]
+            if (
+                not isinstance(actor, CCreature)
+                or isinstance(actor, binding["playerClass"])
+                or actor in binding["stagedActors"]
+                or native.getTypeId(actor) != row["id"]
+                or not row.get("custodyRole")
+            ):
+                raise self.CustodyBindingChanged("Custody factory returned an unexpected actor")
+            staged = {
+                "id": row["id"],
+                "name": native.getName(actor),
+                "row": dict(row),
+                "source": {
+                    key: native.getStringProperty(actor, key)
+                    for key in ("sourceCreature", "sourceArea", "sourceDialogue")
+                },
+            }
+            if not staged["source"]["sourceCreature"] or not staged["source"]["sourceArea"]:
+                raise self.CustodyBindingChanged("Custody factory actor has no source identity")
+            binding["stagedActors"][actor] = staged
+            self.requireCustodyStage(binding, actor)
+
+        def requireCustodyStage(self, binding, actor, registered=False):
+            self.requireCustodyBinding(binding)
+            native, native_map = binding["objectClass"], binding["mapClass"]
+            staged = binding["stagedActors"].get(actor)
+            if staged is None:
+                raise self.CustodyBindingChanged("Custody actor has no construction authority")
+            rows = decodeData(binding["actorDefinitions"] or "[]")
+            matching = [row for row in rows if row.get("id") == staged["id"]]
+            expected = actor if registered else None
+            if (
+                matching != [staged["row"]]
+                or native.getGame(actor) is not binding["game"].resolve()
+                or native.getTypeId(actor) != staged["id"]
+                or native.getName(actor) != staged["name"]
+                or native.getMap(actor) is not binding["map"]
+                or not CCreature.isAlive(actor)
+                or native_map.getObjectByName(binding["map"], staged["id"]) is not expected
+                or native_map.getObjectByName(binding["map"], staged["name"]) is not expected
+                or any(native.getStringProperty(actor, key) != value for key, value in staged["source"].items())
+            ):
+                raise self.CustodyBindingChanged("Custody construction binding changed")
+
+        def placeCustodyActor(self, binding, actor, method, key, value):
+            self.requireCustodyStage(binding, actor)
+            staged = binding["stagedActors"][actor]
+            allowed = {("setStringProperty", "name"): staged["id"]}
+            allowed.update(
+                {
+                    ("setNumericProperty", key): staged["row"][axis]
+                    for key, axis in (("posx", "x"), ("posy", "y"), ("posz", "z"))
+                }
+            )
+            if (method, key) not in allowed or value != allowed[(method, key)]:
+                raise self.CustodyBindingChanged("Custody construction permits only authored placement")
+            bound = getattr(actor, method)
+            self.requireCustodyStage(binding, actor)
+            bound(key, value)
+            if key == "name":
+                staged["name"] = value
+            self.requireCustodyStage(binding, actor)
+
 
     @register(context)
     @mapQuest("baldursGate")
@@ -448,6 +1620,7 @@ def load(self, context):
             if not event or not event.getCause() or not event.getCause().isPlayer():
                 return
             if claim_once(world(self), "plugin_cityInitialized"):
+                world(self).setBoolProperty("plugin_cityFlag_custodyHearing", False)
                 player = hero(self)
                 player.addExp(10000)
                 player.addGold(1000)
@@ -515,6 +1688,8 @@ def load(self, context):
             )
 
         def usable(self):
+            if world(self).getStringProperty("plugin_cityCustodyState") == "hearing":
+                return False
             if not self.getStringProperty("destinationArea") or not hasattr(self, "targetX"):
                 return False
             phase = world(self).getNumericProperty("plugin_cityPhase") or 5
@@ -609,7 +1784,7 @@ def load(self, context):
         def actor(self):
             return world(self).getObjectByName(self.getStringProperty("actorId"))
 
-        def canInteract(self):
+        def canInteract(self, resume_custody=False):
             actor, player = self.actor(), hero(self)
             if (
                 not actor
@@ -619,6 +1794,11 @@ def load(self, context):
                 return False
             if isinstance(actor, CCreature) and not actor.isAlive():
                 return False
+            if world(self).getStringProperty("plugin_cityCustodyState") == "hearing":
+                cursor = read(world(self), "plugin_cityCustodyDialogue", {})
+                return bool(
+                    resume_custody and cursor.get("actorId") == actor.getName() and currentArea(self) == "AR0607"
+                )
             phase = world(self).getNumericProperty("plugin_cityPhase") or 5
             if not (actor.getNumericProperty("phaseMin") or 5) <= phase <= (actor.getNumericProperty("phaseMax") or 7):
                 return False
@@ -698,9 +1878,13 @@ def load(self, context):
 
         @resumableHook
         def talk(self):
-            if not self.canInteract():
+            if not self.canInteract(resume_custody=True):
                 return
             actor = self.actor()
+            coordinator = custody(self)
+            if coordinator and actor.getStringProperty("sourceDialogue") in coordinator.data().get("dialogues", {}):
+                yield from coordinator.conversationFlow(actor)
+                return
             if actor.getName() != "cityStart":
                 freezeHistory(self)
             if actor.getBoolProperty("plugin_cityPetrified"):
@@ -720,9 +1904,14 @@ def load(self, context):
                 "the Flaming Fist keeps watch, and the Iron Throne's business troubles the streets.",
             )
 
+        @resumableHook
         def attack(self):
             if not self.canInteract() or not isinstance(self.actor(), CCreature):
                 return False
+            if custody(self) and self.actor().getStringProperty("sourceCreature") == "NEB":
+                custody(self).setGlobal("AttackNEB", "AR0607", 1)
+                yield from custody(self).conversationFlow(self.actor(), "NEB", 17)
+                return True
             freezeHistory(self)
             self.actor().setBoolProperty("npc", False)
             self.actor().setStringProperty("affiliation", "cityHostile")
@@ -4305,8 +5494,10 @@ def load(self, context):
             records[actor.getName()] = actorRecord(actor)
             write(game_map, "plugin_cityDeaths", records)
             owner.setObjectProperty("plugin_cityCorpse_" + actor.getName(), actor)
-            game_map.setBoolProperty("plugin_cityCombatObserved_" + actor.getStringProperty("sourceArea"), True)
-            if "flaming fist" in actor.getStringProperty("label").casefold():
+            plot_execution = actor.getBoolProperty("plugin_cityPlotExecution")
+            if not plot_execution:
+                game_map.setBoolProperty("plugin_cityCombatObserved_" + actor.getStringProperty("sourceArea"), True)
+            if not plot_execution and "flaming fist" in actor.getStringProperty("label").casefold():
                 game_map.setNumericProperty(
                     "plugin_cityGuardKills", game_map.getNumericProperty("plugin_cityGuardKills") + 1
                 )
@@ -4425,6 +5616,8 @@ def load(self, context):
                 row["sourceCreature"]: row["canonicalActorId"] for row in read(self, "relocationDefinitions", [])
             }
             for row in read(self, "actorDefinitions", []):
+                if row.get("custodyRole"):
+                    continue
                 if row.get("sourceCreature") in canonical and row["id"] != canonical[row["sourceCreature"]]:
                     continue
                 minimum = row.get("phase", phase)
@@ -4623,6 +5816,9 @@ def load(self, context):
                     freezeHistory(self)
             was_fatal = game_map.getBoolProperty("plugin_cityFlag_poisonFatal")
             self.advanceTicks(1)
+            coordinator = custody(self)
+            if coordinator:
+                coordinator.updatePatrols()
             yield from self.observeRegionsFlow()
             if not was_fatal and game_map.getBoolProperty("plugin_cityFlag_poisonFatal"):
                 yield uiRequest(

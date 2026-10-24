@@ -42,6 +42,108 @@ class TestRunnerPackagingTest(unittest.TestCase):
             timeout=20,
         )
 
+    def runnerTransportNamespace(self):
+        import json
+        from types import SimpleNamespace
+
+        source = (ROOT / "test.py").read_bytes()
+        tree = ast.parse(source)
+        selected = [
+            node
+            for node in tree.body
+            if isinstance(node, ast.FunctionDef) and node.name in ("expandWorkerTestArgs", "run_test_subprocess")
+        ]
+        namespace = {
+            "Path": Path,
+            "json": json,
+            "os": SimpleNamespace(environ={"EXISTING": "kept"}, name="nt"),
+            "sys": sys,
+            "REPO_ROOT": self.package,
+            "TEST_OUTPUT_DIR": self.package / "test-output",
+            "GAME_TEST_WORKER": True,
+        }
+        exec(compile(ast.Module(body=selected, type_ignores=[]), "selected-worker-transport", "exec"), namespace)
+        return namespace
+
+    def testLongWorkerSelectionUsesBoundedCommandAndPreservesOrderAndDuplicates(self):
+        import json
+        from types import SimpleNamespace
+
+        namespace = self.runnerTransportNamespace()
+        names = ["TestRunnerSuiteTest.testImportedHarnessUsesExecutingModule"] * 1500
+        names.insert(750, "TestRunnerSuiteTest.test_parse_runner_args_accepts_suite_names")
+        self.assertGreater(len(subprocess.list2cmdline([sys.executable, "test.py", *names])), 32767)
+        calls = []
+
+        def launch(command, **options):
+            self.assertLess(len(subprocess.list2cmdline(command)), 4096)
+            calls.append((command, options))
+            return SimpleNamespace(returncode=0)
+
+        namespace["subprocess"] = SimpleNamespace(Popen=launch)
+        namespace["run_test_subprocess"](names, "long", extra_env={"KEEP": "yes"})
+        self.assertEqual(1, len(calls))
+        command, options = calls[0]
+        self.assertEqual("--worker-test-names-file", command[2])
+        self.assertEqual(names, json.loads(Path(command[3]).read_bytes()))
+        self.assertEqual(["test.py", *names], namespace["expandWorkerTestArgs"](["test.py", *command[2:]]))
+        self.assertEqual("1", options["env"]["GAME_TEST_WORKER"])
+        self.assertEqual("1", options["env"]["GAME_TEST_JOBS"])
+        self.assertEqual("kept", options["env"]["EXISTING"])
+        self.assertEqual("yes", options["env"]["KEEP"])
+        self.assertEqual(self.package, options["cwd"])
+        self.assertFalse(options["start_new_session"])
+
+    def testWorkerManifestRunsTheExactSelectionInThePackagedChild(self):
+        import json
+
+        manifest = self.package / "selected-tests.json"
+        manifest.write_text(json.dumps(["TestRunnerSuiteTest.testImportedHarnessUsesExecutingModule"] * 3))
+        program = (
+            "import os,runpy,sys; os.environ['GAME_TEST_WORKER']='1'; "
+            f"sys.argv=['test.py','--worker-test-names-file',{str(manifest)!r}]; "
+            "runpy.run_path('test.py',run_name='__main__')"
+        )
+        result = self.runPackaged("-c", program)
+        self.assertEqual(0, result.returncode, result.stdout + result.stderr)
+        self.assertIn("Ran 3 tests", result.stdout + result.stderr)
+        self.assertNotIn("skipped", result.stdout + result.stderr)
+
+    def testMalformedOrMissingWorkerManifestNeverFallsBackToFullDiscovery(self):
+        import io
+        from unittest.mock import patch
+
+        namespace = self.runnerTransportNamespace()
+        self.assertIn("expandWorkerTestArgs", namespace)
+        expand = namespace["expandWorkerTestArgs"]
+        manifest = self.package / "bad-selection.json"
+        for raw in (b"[]", b"{}", b"[1]", b'["--help"]', b"not-json", b'["Case.test"]' + b" " * (1024 * 1024)):
+            with self.subTest(size=len(raw)), patch.object(Path, "open", return_value=io.BytesIO(raw)):
+                with self.assertRaises(ValueError):
+                    expand(["test.py", "--worker-test-names-file", str(manifest)])
+        with self.assertRaises(ValueError):
+            expand(["test.py", "--worker-test-names-file", str(manifest)])
+        with self.assertRaises(ValueError):
+            expand(["test.py", "--worker-test-names-file", str(manifest), "Another.test"])
+        namespace["GAME_TEST_WORKER"] = False
+        with self.assertRaises(ValueError):
+            expand(["test.py", "--worker-test-names-file", str(manifest)])
+        ordinary = ["test.py", "--suite", "fast"]
+        self.assertEqual(ordinary, expand(ordinary))
+
+    def testOversizedWorkerSelectionFailsBeforeWritingOrLaunch(self):
+        from types import SimpleNamespace
+
+        namespace = self.runnerTransportNamespace()
+
+        def launch(*args, **kwargs):
+            self.fail("An oversized selection must fail before process creation")
+
+        namespace["subprocess"] = SimpleNamespace(Popen=launch)
+        with self.assertRaisesRegex(ValueError, "1 MiB"):
+            namespace["run_test_subprocess"](["Case." + "x" * 1024] * 1024, "oversized")
+        self.assertFalse((namespace["TEST_OUTPUT_DIR"] / "workers" / "oversized").exists())
+
     def testInstalledRunnerHelpAndImportWorkWithoutSourceTests(self):
         for arguments, expected in (
             (("test.py", "--help"), "usage:"),

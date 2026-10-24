@@ -216,6 +216,72 @@ class CastleImporterTest(unittest.TestCase):
         self.assertNotIn([9, 10, 0], source["blockedCells"])
         self.assertIn([13, 20, 1], source["blockedCells"])
 
+    def requiredActorDiagonalFixture(self, kind=54):
+        land = {(0, 0), (1, 1), (2, 2), (3, 3), (0, 2)}
+        return {
+            "width": 4,
+            "terrain": [[[2 if (x, y) in land else 9, 0, 0, 0, 0, 0, 0] for y in range(4) for x in range(4)]],
+            "objects": [
+                {"type": 17, "visit": [3, 3, 0], "visitable": True},
+                {"type": kind, "visit": [0, 2, 0], "visitable": True},
+            ],
+            "portals": [],
+            "boatRoutes": [],
+            "spawn": [0, 0, 0],
+        }
+
+    def testRequiredActorPassagesPreserveLegacyRoutePrefixForEveryMonsterKind(self):
+        legacy = [
+            {"kind": "diagonalPassage", "from": [0, 0, 0], "to": [1, 1, 0]},
+            {"kind": "diagonalPassage", "from": [1, 1, 0], "to": [2, 2, 0]},
+            {"kind": "diagonalPassage", "from": [2, 2, 0], "to": [3, 3, 0]},
+        ]
+        for kind in sorted(importer.MONSTER_TYPES):
+            with self.subTest(kind=kind):
+                source = self.requiredActorDiagonalFixture(kind)
+                before = copy.deepcopy(source)
+                routes = importer.buildDiagonalRoutes(source, set())
+                self.assertEqual(legacy, routes[:3])
+                self.assertEqual(
+                    [
+                        {
+                            "kind": "diagonalPassage",
+                            "from": [1, 1, 0],
+                            "to": [0, 2, 0],
+                            "adaptation": "requiredActorAccess",
+                        }
+                    ],
+                    routes[3:],
+                )
+                self.assertEqual(before, source)
+                self.assertEqual(routes, importer.buildDiagonalRoutes(source, set()))
+
+    def testRequiredActorCannotCreatePassagesOnBlockedOrNonlandVisits(self):
+        source = self.requiredActorDiagonalFixture()
+        for blocked in ({(0, 2, 0)},):
+            with self.assertRaisesRegex(importer.ImportError, "outside traversable land"):
+                importer.buildDiagonalRoutes(source, blocked)
+        source["terrain"][0][8][0] = 8
+        with self.assertRaisesRegex(importer.ImportError, "outside traversable land"):
+            importer.buildDiagonalRoutes(source, set())
+
+    def testRequiredActorPassageBudgetRemainsExactlySixtyFour(self):
+        width = 66
+        source = {
+            "width": width,
+            "terrain": [[[2 if x == y else 9, 0, 0, 0, 0, 0, 0] for y in range(width) for x in range(width)]],
+            "objects": [{"type": 17, "visit": [64, 64, 0], "visitable": True}],
+            "portals": [],
+            "boatRoutes": [],
+            "spawn": [0, 0, 0],
+        }
+        legacy = importer.buildDiagonalRoutes(source, set())
+        self.assertEqual(64, len(legacy))
+        self.assertEqual(legacy, importer.buildDiagonalRoutes(source, set()))
+        source["objects"].append({"type": 54, "visit": [65, 65, 0], "visitable": True})
+        with self.assertRaisesRegex(importer.ImportError, "reviewed 64-edge authoring budget"):
+            importer.buildDiagonalRoutes(source, set())
+
     def testDiagonalAdaptationConnectsRequiredCorridorAndPrunesOptionalBranch(self):
         land = {(0, 0), (1, 1), (2, 2), (3, 3), (0, 2)}
         source = {

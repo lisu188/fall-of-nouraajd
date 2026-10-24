@@ -106,6 +106,20 @@ MCP_ALLOWED_HANDLE_METHODS = {
         "setNumericProperty",
         "setStringProperty",
     },
+    "CGameGraphicsObject": {
+        "getChildren",
+        "getParent",
+        "keyboardEvent",
+    },
+    "CGameCampaignPanel": {
+        "getBody",
+        "getTitle",
+        "isDismissed",
+    },
+    "CGameCampaignBrowserPanel": {
+        "getSelectedId",
+        "hasChoice",
+    },
     "CGame": {
         "changeMap",
         "createObject",
@@ -211,6 +225,7 @@ MCP_ALLOWED_HANDLE_METHODS = {
         "getAllTypes",
     },
     "CGuiHandler": {
+        "openDialog",
         "getRequestedTradeMarket",
         "openPanel",
         "showDialog",

@@ -23,6 +23,7 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #include "object/CTile.h"
 
 #include <algorithm>
+#include <utility>
 #include <unordered_set>
 
 CObjectHandler::CObjectHandler() {}
@@ -258,11 +259,155 @@ std::vector<std::string> CObjectHandler::getAllTypes() {
     return types;
 }
 
-std::shared_ptr<CGameObject> CObjectHandler::getType(const std::string &name) {
-    if (vstd::ctn(constructors, name)) {
-        return constructors[name]();
+struct CObjectHandler::DefeatConstructionState {
+    std::shared_ptr<DefeatConstructionState> parent;
+    std::function<void()> requireCurrent;
+    std::exception_ptr failure;
+
+    void remember(std::exception_ptr primary) noexcept {
+        if (parent) {
+            parent->remember(primary);
+        }
+        if (!failure) {
+            failure = std::move(primary);
+        }
     }
-    return std::shared_ptr<CGameObject>();
+
+    void rethrowFailure() const {
+        if (parent) {
+            parent->rethrowFailure();
+        }
+        if (failure) {
+            std::rethrow_exception(failure);
+        }
+    }
+
+    void currentWithoutLatching() const {
+        if (parent) {
+            parent->currentWithoutLatching();
+        }
+        if (failure) {
+            std::rethrow_exception(failure);
+        }
+        if (requireCurrent) {
+            requireCurrent();
+        }
+    }
+
+    void check() {
+        rethrowFailure();
+        try {
+            currentWithoutLatching();
+        } catch (...) {
+            remember(std::current_exception());
+            rethrowFailure();
+        }
+    }
+
+    void preserveIfStale(std::exception_ptr primary) {
+        rethrowFailure();
+        try {
+            currentWithoutLatching();
+        } catch (...) {
+            remember(std::move(primary));
+            rethrowFailure();
+        }
+    }
+};
+
+thread_local std::shared_ptr<CObjectHandler::DefeatConstructionState> CObjectHandler::defeatConstructionState;
+
+CObjectHandler::DefeatConstructionScope::DefeatConstructionScope(std::function<void()> requireCurrent)
+    : previous(defeatConstructionState), state(previous) {
+    if (requireCurrent) {
+        state = std::make_shared<DefeatConstructionState>();
+        state->parent = previous;
+        state->requireCurrent = std::move(requireCurrent);
+    }
+    if (state) {
+        state->check();
+    }
+    defeatConstructionState = state;
+}
+
+CObjectHandler::DefeatConstructionScope::DefeatConstructionScope(DefeatConstructionScope &&other) noexcept
+    : previous(std::move(other.previous)), state(std::move(other.state)), owned(std::exchange(other.owned, false)) {}
+
+CObjectHandler::DefeatConstructionScope::~DefeatConstructionScope() noexcept {
+    if (owned) {
+        defeatConstructionState = std::move(previous);
+    }
+}
+
+void CObjectHandler::DefeatConstructionScope::check() const {
+    if (state) {
+        state->check();
+    }
+}
+
+void CObjectHandler::DefeatConstructionScope::rethrowFailure() const {
+    if (state) {
+        state->rethrowFailure();
+    }
+}
+
+CObjectHandler::DefeatConstructionScope CObjectHandler::beginDefeatConstruction(std::function<void()> requireCurrent) {
+    return DefeatConstructionScope(std::move(requireCurrent));
+}
+
+void CObjectHandler::checkDefeatConstruction() {
+    if (auto state = defeatConstructionState) {
+        state->check();
+    }
+}
+
+void CObjectHandler::rethrowDefeatConstructionFailure() {
+    if (auto state = defeatConstructionState) {
+        state->rethrowFailure();
+    }
+}
+
+void CObjectHandler::rememberDefeatConstructionFailure(std::exception_ptr primary) noexcept {
+    if (auto state = defeatConstructionState) {
+        state->remember(std::move(primary));
+    }
+}
+
+void CObjectHandler::preserveDefeatConstructionCallbackFailure(std::exception_ptr primary) {
+    if (auto state = defeatConstructionState) {
+        state->preserveIfStale(std::move(primary));
+    }
+}
+
+namespace game_detail {
+void requireCurrentDefeatConstruction() { CObjectHandler::checkDefeatConstruction(); }
+
+void preserveDefeatCallbackFailure(std::exception_ptr primary) {
+    CObjectHandler::preserveDefeatConstructionCallbackFailure(std::move(primary));
+}
+} // namespace game_detail
+
+std::shared_ptr<CGameObject> CObjectHandler::getType(const std::string &name) {
+    auto construction = defeatConstructionState;
+    if (construction) {
+        construction->check();
+    }
+    try {
+        if (vstd::ctn(constructors, name)) {
+            auto object = constructors[name]();
+            if (construction) {
+                construction->check();
+            }
+            return object;
+        }
+        return std::shared_ptr<CGameObject>();
+    } catch (...) {
+        if (construction) {
+            construction->remember(std::current_exception());
+            construction->rethrowFailure();
+        }
+        throw;
+    }
 }
 
 void CObjectHandler::registerType(std::string name, std::function<std::shared_ptr<CGameObject>()> constructor) {
@@ -339,6 +484,25 @@ std::vector<std::string> CObjectHandler::getAllSubTypes(const std::string &claz)
     std::vector<std::string> ret;
     for (const auto &type : getAllTypes()) {
         auto prototype = getType(getClass(type));
+        if (prototype && prototype->meta()->inherits(claz)) {
+            ret.push_back(type);
+        }
+    }
+    return ret;
+}
+
+std::vector<std::string> CObjectHandler::getDefeatSubTypes(const std::string &claz,
+                                                           const std::function<void()> &requireCurrent) {
+    std::vector<std::string> ret;
+    for (const auto &type : getAllTypes()) {
+        if (requireCurrent) {
+            requireCurrent();
+        }
+        auto prototype = getType(getClass(type));
+        if (requireCurrent) {
+            requireCurrent();
+        }
+
         if (prototype && prototype->meta()->inherits(claz)) {
             ret.push_back(type);
         }

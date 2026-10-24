@@ -2915,11 +2915,16 @@ class OctobogzHuntTest(unittest.TestCase):
         )
         self.assertLess(route.index("self.ensureAuthoredHealingReadiness()"), route.index("self.enterHunt()"))
         self.assertIn(
-            'if player_class == "Sorcerer":\n                    self.ensureAuthoredHealingReadiness()\n'
+            'if player_class == "Sorcerer":\n                    self.prepareSorcererForHunt()\n'
+            "                    self.ensureAuthoredHealingReadiness()\n"
             "                    self.prepareHealingStockAtAuthoredMarket()",
             route,
         )
-        self.assertNotIn("self.prepareSorcererForHunt()", route)
+        self.assertEqual(1, route.count("self.prepareSorcererForHunt()"))
+        self.assertLess(route.index("self.prepareThroughCatacombs()"), route.index("self.prepareSorcererForHunt()"))
+        self.assertLess(
+            route.index("self.prepareSorcererForHunt()"), route.index("self.ensureAuthoredHealingReadiness()")
+        )
         self.assertLess(route.index("self.enterHunt()"), route.index("self.finishOriginalMainQuest()"))
         preparation = methods["prepareSorcererForHunt"]
         self.assertEqual(
@@ -2938,7 +2943,8 @@ class OctobogzHuntTest(unittest.TestCase):
         )
         self.assertLess(route.index("self.prepareHealingStockAtAuthoredMarket()"), route.index("self.enterHunt()"))
         self.assertIn(
-            'if player_class == "Sorcerer":\n                    self.ensureAuthoredHealingReadiness()\n'
+            'if player_class == "Sorcerer":\n                    self.prepareSorcererForHunt()\n'
+            "                    self.ensureAuthoredHealingReadiness()\n"
             "                    self.prepareHealingStockAtAuthoredMarket()",
             route,
         )

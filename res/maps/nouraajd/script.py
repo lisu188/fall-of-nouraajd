@@ -1399,6 +1399,7 @@ def load(self, context):
                 player.addGold(50)
                 quest_system.finish_amulet()
                 yield from removeRuntimeActorsFlow(game_map, names=("amuletGoblin", "oldWoman"))
+                (yield uiRequest("gui.checkQuests", player))
                 (
                     yield from showRewardReceiptFlow(
                         flowGame(game),

@@ -3,7 +3,7 @@
   "height": 72,
   "tilewidth": 32,
   "tileheight": 32,
-  "nextobjectid": 562,
+  "nextobjectid": 588,
   "orientation": "orthogonal",
   "renderorder": "right-down",
   "tiledversion": "1.2.0",
@@ -20740,6 +20740,82 @@
               }
             ]
           }
+        },
+        {
+          "id": 562,
+          "name": "castleGriffinCliffPortal7A",
+          "type": "castlePortal",
+          "x": 160,
+          "y": 1920,
+          "width": 32,
+          "height": 32,
+          "visible": true,
+          "rotation": 0,
+          "properties": {
+            "label": "Narrow passage",
+            "animation": "images/footprint",
+            "campaign_portalKind": "diagonalPassage",
+            "campaign_targetX": 4,
+            "campaign_targetY": 61,
+            "campaign_targetZ": 0
+          }
+        },
+        {
+          "id": 563,
+          "name": "castleGriffinCliffPortal7B",
+          "type": "castlePortal",
+          "x": 128,
+          "y": 1952,
+          "width": 32,
+          "height": 32,
+          "visible": true,
+          "rotation": 0,
+          "properties": {
+            "label": "Narrow passage",
+            "animation": "images/footprint",
+            "campaign_portalKind": "diagonalPassage",
+            "campaign_targetX": 5,
+            "campaign_targetY": 60,
+            "campaign_targetZ": 0
+          }
+        },
+        {
+          "id": 582,
+          "name": "castleGriffinCliffPortal17A",
+          "type": "castlePortal",
+          "x": 2016,
+          "y": 2144,
+          "width": 32,
+          "height": 32,
+          "visible": true,
+          "rotation": 0,
+          "properties": {
+            "label": "Narrow passage",
+            "animation": "images/footprint",
+            "campaign_portalKind": "diagonalPassage",
+            "campaign_targetX": 64,
+            "campaign_targetY": 68,
+            "campaign_targetZ": 0
+          }
+        },
+        {
+          "id": 583,
+          "name": "castleGriffinCliffPortal17B",
+          "type": "castlePortal",
+          "x": 2048,
+          "y": 2176,
+          "width": 32,
+          "height": 32,
+          "visible": true,
+          "rotation": 0,
+          "properties": {
+            "label": "Narrow passage",
+            "animation": "images/footprint",
+            "campaign_portalKind": "diagonalPassage",
+            "campaign_targetX": 63,
+            "campaign_targetY": 67,
+            "campaign_targetZ": 0
+          }
         }
       ]
     },
@@ -23910,6 +23986,424 @@
             "campaign_sourceIndex": 2328,
             "campaign_sourceType": 101,
             "campaign_sourceSubtype": 0
+          }
+        },
+        {
+          "id": 564,
+          "name": "castleGriffinCliffPortal8A",
+          "type": "castlePortal",
+          "x": 640,
+          "y": 1632,
+          "width": 32,
+          "height": 32,
+          "visible": true,
+          "rotation": 0,
+          "properties": {
+            "label": "Narrow passage",
+            "animation": "images/footprint",
+            "campaign_portalKind": "diagonalPassage",
+            "campaign_targetX": 19,
+            "campaign_targetY": 52,
+            "campaign_targetZ": 1
+          }
+        },
+        {
+          "id": 565,
+          "name": "castleGriffinCliffPortal8B",
+          "type": "castlePortal",
+          "x": 608,
+          "y": 1664,
+          "width": 32,
+          "height": 32,
+          "visible": true,
+          "rotation": 0,
+          "properties": {
+            "label": "Narrow passage",
+            "animation": "images/footprint",
+            "campaign_portalKind": "diagonalPassage",
+            "campaign_targetX": 20,
+            "campaign_targetY": 51,
+            "campaign_targetZ": 1
+          }
+        },
+        {
+          "id": 566,
+          "name": "castleGriffinCliffPortal9A",
+          "type": "castlePortal",
+          "x": 736,
+          "y": 1600,
+          "width": 32,
+          "height": 32,
+          "visible": true,
+          "rotation": 0,
+          "properties": {
+            "label": "Narrow passage",
+            "animation": "images/footprint",
+            "campaign_portalKind": "diagonalPassage",
+            "campaign_targetX": 22,
+            "campaign_targetY": 51,
+            "campaign_targetZ": 1
+          }
+        },
+        {
+          "id": 567,
+          "name": "castleGriffinCliffPortal9B",
+          "type": "castlePortal",
+          "x": 704,
+          "y": 1632,
+          "width": 32,
+          "height": 32,
+          "visible": true,
+          "rotation": 0,
+          "properties": {
+            "label": "Narrow passage",
+            "animation": "images/footprint",
+            "campaign_portalKind": "diagonalPassage",
+            "campaign_targetX": 23,
+            "campaign_targetY": 50,
+            "campaign_targetZ": 1
+          }
+        },
+        {
+          "id": 568,
+          "name": "castleGriffinCliffPortal10A",
+          "type": "castlePortal",
+          "x": 1120,
+          "y": 704,
+          "width": 32,
+          "height": 32,
+          "visible": true,
+          "rotation": 0,
+          "properties": {
+            "label": "Narrow passage",
+            "animation": "images/footprint",
+            "campaign_portalKind": "diagonalPassage",
+            "campaign_targetX": 36,
+            "campaign_targetY": 23,
+            "campaign_targetZ": 1
+          }
+        },
+        {
+          "id": 569,
+          "name": "castleGriffinCliffPortal10B",
+          "type": "castlePortal",
+          "x": 1152,
+          "y": 736,
+          "width": 32,
+          "height": 32,
+          "visible": true,
+          "rotation": 0,
+          "properties": {
+            "label": "Narrow passage",
+            "animation": "images/footprint",
+            "campaign_portalKind": "diagonalPassage",
+            "campaign_targetX": 35,
+            "campaign_targetY": 22,
+            "campaign_targetZ": 1
+          }
+        },
+        {
+          "id": 570,
+          "name": "castleGriffinCliffPortal11A",
+          "type": "castlePortal",
+          "x": 1152,
+          "y": 672,
+          "width": 32,
+          "height": 32,
+          "visible": true,
+          "rotation": 0,
+          "properties": {
+            "label": "Narrow passage",
+            "animation": "images/footprint",
+            "campaign_portalKind": "diagonalPassage",
+            "campaign_targetX": 35,
+            "campaign_targetY": 22,
+            "campaign_targetZ": 1
+          }
+        },
+        {
+          "id": 571,
+          "name": "castleGriffinCliffPortal11B",
+          "type": "castlePortal",
+          "x": 1120,
+          "y": 704,
+          "width": 32,
+          "height": 32,
+          "visible": true,
+          "rotation": 0,
+          "properties": {
+            "label": "Narrow passage",
+            "animation": "images/footprint",
+            "campaign_portalKind": "diagonalPassage",
+            "campaign_targetX": 36,
+            "campaign_targetY": 21,
+            "campaign_targetZ": 1
+          }
+        },
+        {
+          "id": 572,
+          "name": "castleGriffinCliffPortal12A",
+          "type": "castlePortal",
+          "x": 1248,
+          "y": 256,
+          "width": 32,
+          "height": 32,
+          "visible": true,
+          "rotation": 0,
+          "properties": {
+            "label": "Narrow passage",
+            "animation": "images/footprint",
+            "campaign_portalKind": "diagonalPassage",
+            "campaign_targetX": 38,
+            "campaign_targetY": 9,
+            "campaign_targetZ": 1
+          }
+        },
+        {
+          "id": 573,
+          "name": "castleGriffinCliffPortal12B",
+          "type": "castlePortal",
+          "x": 1216,
+          "y": 288,
+          "width": 32,
+          "height": 32,
+          "visible": true,
+          "rotation": 0,
+          "properties": {
+            "label": "Narrow passage",
+            "animation": "images/footprint",
+            "campaign_portalKind": "diagonalPassage",
+            "campaign_targetX": 39,
+            "campaign_targetY": 8,
+            "campaign_targetZ": 1
+          }
+        },
+        {
+          "id": 574,
+          "name": "castleGriffinCliffPortal13A",
+          "type": "castlePortal",
+          "x": 1312,
+          "y": 192,
+          "width": 32,
+          "height": 32,
+          "visible": true,
+          "rotation": 0,
+          "properties": {
+            "label": "Narrow passage",
+            "animation": "images/footprint",
+            "campaign_portalKind": "diagonalPassage",
+            "campaign_targetX": 42,
+            "campaign_targetY": 7,
+            "campaign_targetZ": 1
+          }
+        },
+        {
+          "id": 575,
+          "name": "castleGriffinCliffPortal13B",
+          "type": "castlePortal",
+          "x": 1344,
+          "y": 224,
+          "width": 32,
+          "height": 32,
+          "visible": true,
+          "rotation": 0,
+          "properties": {
+            "label": "Narrow passage",
+            "animation": "images/footprint",
+            "campaign_portalKind": "diagonalPassage",
+            "campaign_targetX": 41,
+            "campaign_targetY": 6,
+            "campaign_targetZ": 1
+          }
+        },
+        {
+          "id": 576,
+          "name": "castleGriffinCliffPortal14A",
+          "type": "castlePortal",
+          "x": 1344,
+          "y": 224,
+          "width": 32,
+          "height": 32,
+          "visible": true,
+          "rotation": 0,
+          "properties": {
+            "label": "Narrow passage",
+            "animation": "images/footprint",
+            "campaign_portalKind": "diagonalPassage",
+            "campaign_targetX": 43,
+            "campaign_targetY": 8,
+            "campaign_targetZ": 1
+          }
+        },
+        {
+          "id": 577,
+          "name": "castleGriffinCliffPortal14B",
+          "type": "castlePortal",
+          "x": 1376,
+          "y": 256,
+          "width": 32,
+          "height": 32,
+          "visible": true,
+          "rotation": 0,
+          "properties": {
+            "label": "Narrow passage",
+            "animation": "images/footprint",
+            "campaign_portalKind": "diagonalPassage",
+            "campaign_targetX": 42,
+            "campaign_targetY": 7,
+            "campaign_targetZ": 1
+          }
+        },
+        {
+          "id": 578,
+          "name": "castleGriffinCliffPortal15A",
+          "type": "castlePortal",
+          "x": 1344,
+          "y": 1568,
+          "width": 32,
+          "height": 32,
+          "visible": true,
+          "rotation": 0,
+          "properties": {
+            "label": "Narrow passage",
+            "animation": "images/footprint",
+            "campaign_portalKind": "diagonalPassage",
+            "campaign_targetX": 43,
+            "campaign_targetY": 50,
+            "campaign_targetZ": 1
+          }
+        },
+        {
+          "id": 579,
+          "name": "castleGriffinCliffPortal15B",
+          "type": "castlePortal",
+          "x": 1376,
+          "y": 1600,
+          "width": 32,
+          "height": 32,
+          "visible": true,
+          "rotation": 0,
+          "properties": {
+            "label": "Narrow passage",
+            "animation": "images/footprint",
+            "campaign_portalKind": "diagonalPassage",
+            "campaign_targetX": 42,
+            "campaign_targetY": 49,
+            "campaign_targetZ": 1
+          }
+        },
+        {
+          "id": 580,
+          "name": "castleGriffinCliffPortal16A",
+          "type": "castlePortal",
+          "x": 1568,
+          "y": 1600,
+          "width": 32,
+          "height": 32,
+          "visible": true,
+          "rotation": 0,
+          "properties": {
+            "label": "Narrow passage",
+            "animation": "images/footprint",
+            "campaign_portalKind": "diagonalPassage",
+            "campaign_targetX": 50,
+            "campaign_targetY": 51,
+            "campaign_targetZ": 1
+          }
+        },
+        {
+          "id": 581,
+          "name": "castleGriffinCliffPortal16B",
+          "type": "castlePortal",
+          "x": 1600,
+          "y": 1632,
+          "width": 32,
+          "height": 32,
+          "visible": true,
+          "rotation": 0,
+          "properties": {
+            "label": "Narrow passage",
+            "animation": "images/footprint",
+            "campaign_portalKind": "diagonalPassage",
+            "campaign_targetX": 49,
+            "campaign_targetY": 50,
+            "campaign_targetZ": 1
+          }
+        },
+        {
+          "id": 584,
+          "name": "castleGriffinCliffPortal18A",
+          "type": "castlePortal",
+          "x": 1088,
+          "y": 128,
+          "width": 32,
+          "height": 32,
+          "visible": true,
+          "rotation": 0,
+          "properties": {
+            "label": "Narrow passage",
+            "animation": "images/footprint",
+            "campaign_portalKind": "diagonalPassage",
+            "campaign_targetX": 35,
+            "campaign_targetY": 5,
+            "campaign_targetZ": 1
+          }
+        },
+        {
+          "id": 585,
+          "name": "castleGriffinCliffPortal18B",
+          "type": "castlePortal",
+          "x": 1120,
+          "y": 160,
+          "width": 32,
+          "height": 32,
+          "visible": true,
+          "rotation": 0,
+          "properties": {
+            "label": "Narrow passage",
+            "animation": "images/footprint",
+            "campaign_portalKind": "diagonalPassage",
+            "campaign_targetX": 34,
+            "campaign_targetY": 4,
+            "campaign_targetZ": 1
+          }
+        },
+        {
+          "id": 586,
+          "name": "castleGriffinCliffPortal19A",
+          "type": "castlePortal",
+          "x": 576,
+          "y": 1664,
+          "width": 32,
+          "height": 32,
+          "visible": true,
+          "rotation": 0,
+          "properties": {
+            "label": "Narrow passage",
+            "animation": "images/footprint",
+            "campaign_portalKind": "diagonalPassage",
+            "campaign_targetX": 17,
+            "campaign_targetY": 53,
+            "campaign_targetZ": 1
+          }
+        },
+        {
+          "id": 587,
+          "name": "castleGriffinCliffPortal19B",
+          "type": "castlePortal",
+          "x": 544,
+          "y": 1696,
+          "width": 32,
+          "height": 32,
+          "visible": true,
+          "rotation": 0,
+          "properties": {
+            "label": "Narrow passage",
+            "animation": "images/footprint",
+            "campaign_portalKind": "diagonalPassage",
+            "campaign_targetX": 18,
+            "campaign_targetY": 52,
+            "campaign_targetZ": 1
           }
         }
       ]

@@ -176,7 +176,8 @@ vstd::task<void> CSceneManager::runTransitionAsync(std::shared_ptr<CSceneManager
         }
         co_await vstd::until(vstd::event_loop<>::instance(), [&] {
             auto game = weakGame.lock();
-            return !valid() || !game || !game->getMap() || !game->getMap()->isMoving();
+            auto map = game ? game->getMap() : nullptr;
+            return !valid() || !game || !map || (!map->isMoving() && map->activeCombatTransitionDeferrals == 0);
         });
         if (!valid()) {
             reject();

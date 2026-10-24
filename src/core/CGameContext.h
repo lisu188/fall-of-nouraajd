@@ -20,6 +20,7 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #include <atomic>
 #include <cstddef>
 #include <cstdint>
+#include <functional>
 #include <memory>
 #include <optional>
 #include <string>
@@ -200,6 +201,9 @@ class CGameContext {
     static vstd::task<void> finishShutdownAsync(std::shared_ptr<ShutdownState> state);
 
     void shutdown(CGame *owner);
+
+    friend class CFightHandler;
+    std::shared_ptr<CRngHandler> getDefeatRngHandler(std::function<void()> requireCurrent);
 
     void requireActiveService(const char *serviceName) const;
 

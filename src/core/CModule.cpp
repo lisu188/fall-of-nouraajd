@@ -20,6 +20,7 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #include "bindings/CModuleCallbacks.h"
 #include "core/CGame.h"
 #include "core/CGameContext.h"
+#include "core/CMap.h"
 #include "core/CModuleInit.h"
 #include "core/CPlaytestTrace.h"
 #include "core/CSceneManager.h"
@@ -214,7 +215,7 @@ void register_python_binding_type_metadata() {
     // non-constructible until the native gameplay plugin actually loads. The gameplay row list is
     // the shared plugin/CGameplayTypeTable.h.
     //
-    // CStats/CDamage are NOT gameplay table rows (they are core value types registered by
+    // CMap/CStats/CDamage are NOT gameplay table rows (they are core types registered by
     // registerCoreTypes), but their metadata must also be registered from this translation unit.
     // On Linux this file is compiled into the _game extension rather than game_core (see
     // the binding object target in CMakeLists.txt), so registering here populates the conversion tables the
@@ -222,6 +223,9 @@ void register_python_binding_type_metadata() {
     // the shared_ptr<CDamage>/shared_ptr<CStats> properties carried by items and creatures
     // ("bad any_cast" while loading saved maps) on Linux only, while Windows kept working because
     // there CModule.cpp is part of game_core.
+    // Typed map snapshots also cross the CMap/CGameObject pointer-conversion boundary.
+    // Register that metadata here alongside the core value types, without adding builders.
+    CTypes::register_type_metadata<CMap, CGameObject>();
     CTypes::register_type_metadata<CStats, CGameObject>();
     CTypes::register_type_metadata<CDamage, CGameObject>();
 

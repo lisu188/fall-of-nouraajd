@@ -363,9 +363,9 @@ def authorMap(map_data, source_data):
         raise ValueError("Guardian Angels must retain its four invading commanders")
 
     routes = source_data.get("portals", []) + source_data.get("boatRoutes", []) + source_data.get("diagonalRoutes", [])
-    for index, portal in enumerate(routes):
-        if portal.get("kind") == "whirlpool":
-            continue
+    deferred_routes = []
+
+    def addPortalObjects(index, portal):
         for direction, origin, target in (("A", portal["from"], portal["to"]), ("B", portal["to"], portal["from"])):
             kind = portal.get("kind", "boat")
             addObject(
@@ -389,6 +389,14 @@ def authorMap(map_data, source_data):
                     "campaign_targetZ": target[2],
                 },
             )
+
+    for index, portal in enumerate(routes):
+        if portal.get("adaptation") == "requiredActorAccess":
+            if portal.get("kind") != "diagonalPassage":
+                raise ValueError("Required actor access must use an ordinary diagonal passage")
+            deferred_routes.append((index, portal))
+        elif portal.get("kind") != "whirlpool":
+            addPortalObjects(index, portal)
 
     tile_layers = {
         int(layer["properties"]["level"]): layer for layer in result["layers"] if layer["type"] == "tilelayer"
@@ -537,6 +545,19 @@ def authorMap(map_data, source_data):
         "eventGuardArmies": "optionalCombat",
     }
     mission_object["properties"]["campaign_mission"] = "castleMission:" + json.dumps(mission, separators=(",", ":"))
+    for index, portal in deferred_routes:
+        first, second = portal["from"], portal["to"]
+        if (
+            len(first) != 3
+            or len(second) != 3
+            or first[2] != second[2]
+            or abs(first[0] - second[0]) != 1
+            or abs(first[1] - second[1]) != 1
+            or not passable(first)
+            or not passable(second)
+        ):
+            raise ValueError("Required actor passage must join adjacent traversable land on one floor")
+        addPortalObjects(index, portal)
     result["layers"].extend(generated_layers[level] for level in sorted(generated_layers))
     result["nextobjectid"] = next_id
     return result

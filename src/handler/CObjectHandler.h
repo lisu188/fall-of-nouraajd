@@ -17,6 +17,8 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 #pragma once
 
+#include <exception>
+
 #include "core/CConcepts.h"
 #include "core/CGlobal.h"
 #include "core/CUtil.h"
@@ -126,6 +128,37 @@ class CObjectHandler : public CGameObject {
     bool applyTileRecipe(const std::shared_ptr<CGameObject> &object, const json &config);
 
   private:
+    friend class CRngHandler;
+    friend class CSerializationConstructionGuard;
+    friend void game_detail::requireCurrentDefeatConstruction();
+    friend void game_detail::preserveDefeatCallbackFailure(std::exception_ptr primary);
+
+    struct DefeatConstructionState;
+    class DefeatConstructionScope {
+      public:
+        ~DefeatConstructionScope() noexcept;
+        DefeatConstructionScope(const DefeatConstructionScope &) = delete;
+        DefeatConstructionScope &operator=(const DefeatConstructionScope &) = delete;
+        DefeatConstructionScope(DefeatConstructionScope &&other) noexcept;
+        DefeatConstructionScope &operator=(DefeatConstructionScope &&) = delete;
+        void check() const;
+        void rethrowFailure() const;
+
+      private:
+        friend class CObjectHandler;
+        explicit DefeatConstructionScope(std::function<void()> requireCurrent);
+        std::shared_ptr<DefeatConstructionState> previous;
+        std::shared_ptr<DefeatConstructionState> state;
+        bool owned = true;
+    };
+    DefeatConstructionScope beginDefeatConstruction(std::function<void()> requireCurrent);
+    static void checkDefeatConstruction();
+    static void rethrowDefeatConstructionFailure();
+    static void rememberDefeatConstructionFailure(std::exception_ptr primary) noexcept;
+    static void preserveDefeatConstructionCallbackFailure(std::exception_ptr primary);
+    static thread_local std::shared_ptr<DefeatConstructionState> defeatConstructionState;
+    std::vector<std::string> getDefeatSubTypes(const std::string &claz, const std::function<void()> &requireCurrent);
+
     struct TileRecipe {
         struct Property {
             std::string key;

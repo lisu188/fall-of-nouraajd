@@ -13,14 +13,17 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parents[1]
 SOURCE = ROOT / "tests/fixtures/baldurs_gate_city_source.json"
 QUESTS = ROOT / "tests/fixtures/baldurs_gate_city_quests.json"
+CUSTODY_SOURCE = ROOT / "tests/fixtures/baldurs_gate_city_prison_source.json"
 try:
     from scripts.build_baldurs_gate_city_dialogs import prepareStores, questDialogRows, storeDialogRows
     from scripts.build_baldurs_gate_city_relocations import buildRelocations
     from scripts.build_baldurs_gate_city_regions import buildRegions
+    from scripts.build_baldurs_gate_city_custody import custodyDefinitions, prepareCustodyActors
 except ModuleNotFoundError:
     from build_baldurs_gate_city_dialogs import prepareStores, questDialogRows, storeDialogRows
     from build_baldurs_gate_city_relocations import buildRelocations
     from build_baldurs_gate_city_regions import buildRegions
+    from build_baldurs_gate_city_custody import custodyDefinitions, prepareCustodyActors
 
 LANDMARKS = {
     "AR0002": "Temple of Helm",
@@ -190,6 +193,8 @@ def nativeItem(source_id, item):
     """Native gear conversion; source-specific abilities remain explicit, unaudited obligations."""
     item_type = item.get("item_type", 0)
     enchantment = min(5, max(0, item.get("enchantment", 0)))
+    equipped_effect_count = item.get("equipped_effect_count")
+    equipped_effects_known = type(equipped_effect_count) is int and 0 <= equipped_effect_count <= 65535
     class_id, animation, bonus = "CItem", "images/items/scroll", {}
     if item_type in range(15, 31):
         class_id = "CSmallWeapon" if item_type in {16, 19} else "CWeapon"
@@ -228,7 +233,15 @@ def nativeItem(source_id, item):
         "plugin_citySourceFlags": item.get("flags", 0),
         "plugin_cityLore": item.get("lore", 0),
         "plugin_cityStackSize": item.get("stack_size", 1),
-        "plugin_cityAbilitiesPending": bool(item.get("ability_count", 0) or item.get("flags", 0) & 64),
+        "plugin_cityEquippedEffectsStatus": (
+            ("positive" if equipped_effect_count else "zero") if equipped_effects_known else "unknown"
+        ),
+        "plugin_cityAbilitiesPending": bool(
+            item.get("ability_count", 0)
+            or not equipped_effects_known
+            or equipped_effect_count
+            or item.get("flags", 0) & 64
+        ),
         "tags": ["cursed"] if item.get("flags", 0) & 16 else [],
     }
     if bonus:
@@ -304,6 +317,8 @@ def layoutAreas(areas):
 def compileCity(source, quests=None):
     quests = quests or json.loads(QUESTS.read_text(encoding="utf-8"))
     source = copy.deepcopy(source)
+    custody_source = json.loads(CUSTODY_SOURCE.read_text(encoding="utf-8"))
+    prepareCustodyActors(source, custody_source)
     departure_rule = source.get("scriptSourceRules", {}).get("LEAVECH7.BCS", {})
     if (
         departure_rule.get("condition") != {"global": "Chapter", "scope": "GLOBAL", "equals": 7}
@@ -647,6 +662,9 @@ def compileCity(source, quests=None):
                 )
                 if actor["sourceOriginalArea"] != area_id:
                     props["sourceAdaptation"] = "Explicit outside-history companion arrives at the eastern city gate"
+            for key in ("custodyRole", "patrolArea"):
+                if actor.get(key):
+                    props[key] = actor[key]
             position = usablePosition(area_id, actor["position"], reserve=True)
             policy = actor.get("scriptedPolicy")
             if policy:
@@ -660,6 +678,7 @@ def compileCity(source, quests=None):
                         "id": name,
                         "sourceCreature": actor["creature"],
                         "sourceArea": area_id,
+                        **({"custodyRole": actor["custodyRole"]} if actor.get("custodyRole") else {}),
                         "x": position[0],
                         "y": position[1],
                         "z": position[2],
@@ -977,6 +996,15 @@ def compileCity(source, quests=None):
         )
         place(name, usablePosition("AR0200", point, reserve=True))
 
+    custody_data = custodyDefinitions(custody_source, usablePosition)
+    config["cityCustody"] = definition(
+        "BaldursGateCustody",
+        canStep=True,
+        animation="images/ambient/street_lantern",
+        custodyDefinitions=json.dumps(custody_data, separators=(",", ":")),
+    )
+    place("cityCustody", usablePosition("AR0800", [3560, 1380], reserve=True))
+    config["cityCustodyQuest"] = definition("BaldursGateCustodyQuest", description="The Flaming Fist pursuit")
     entry = usablePosition("AR0800", [3500, 1350], reserve=True)
     config["cityStart"] = definition(
         "BaldursGateStart", canStep=True, animation="images/misc/signpost", alwaysSimulate=True

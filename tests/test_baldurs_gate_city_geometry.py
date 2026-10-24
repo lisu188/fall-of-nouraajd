@@ -13,6 +13,7 @@ import re
 import unittest
 
 from scripts.build_baldurs_gate_city import decodeCityData
+from tests.test_ui_dialogue import custodyScriptedActorFacts
 
 ROOT = Path(__file__).resolve().parents[1]
 MAP_ROOT = ROOT / "res/maps/baldursGate"
@@ -290,6 +291,9 @@ class BaldursGateCityGeometryTest(unittest.TestCase):
         facts.update(
             {record["sourceId"]: dict(record, areas=[record["area"]]) for record in self.source["campaignNpcs"]}
         )
+        custody_facts = custodyScriptedActorFacts(readJson(FIXTURES / "baldurs_gate_city_prison_source.json"))
+        self.assertFalse(set(facts) & set(custody_facts), "Custody facts must not shadow existing source facts")
+        facts.update(custody_facts)
         definitions = decodeCityData(self.config["cityClock"]["properties"]["actorDefinitions"])
         self.assertEqual(definitions, self.geometry["scriptedActorPlacements"])
         self.assertEqual(len(definitions), len({record["id"] for record in definitions}))
@@ -303,12 +307,22 @@ class BaldursGateCityGeometryTest(unittest.TestCase):
         for record in definitions:
             name, area_id = record["id"], record["sourceArea"]
             properties = blueprints[name]
+            self.assertIn(properties["sourceSpawnFact"], facts)
             fact = facts[properties["sourceSpawnFact"]]
             with self.subTest(blueprint=name):
                 self.assertNotIn(name, self.objects, "Deferred encounter has an initial actor plus a spawn template")
                 self.assertEqual("CCreature", self.config[name]["class"])
                 self.assertNotIn(properties["sourceCreature"], self.source["editionExcludedCreatures"])
                 self.assertEqual(fact["creature"], properties["sourceCreature"])
+                if fact.get("custodyRole"):
+                    self.assertEqual(fact["nativeId"], name)
+                    self.assertEqual(fact["sourceId"], properties["sourceActor"])
+                    self.assertEqual(fact["custodyRole"], properties["custodyRole"])
+                    self.assertEqual(fact["custodyRole"], record["custodyRole"])
+                    self.assertEqual((7, 7), (properties["phaseMin"], properties["phaseMax"]))
+                    self.assertEqual(7, record["phase"])
+                    self.assertEqual(fact["requiresFlag"], record.get("requiresFlag", ""))
+                    self.assertEqual(fact["dialogue"], properties["sourceDialogue"])
                 if fact.get("scopeClassification") in {"boundaryHistory", "externalHistory"}:
                     self.assertEqual(fact["area"], properties["sourceOriginalArea"])
                     self.assertEqual(fact["position"], decodeCityData(properties["sourceOriginalPosition"]))

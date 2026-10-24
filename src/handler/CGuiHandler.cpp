@@ -42,6 +42,7 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #include "handler/CRngHandler.h"
 
 #include <algorithm>
+#include <exception>
 
 namespace {
 std::string boundedPresentationText(const std::string &value, std::size_t limit) {
@@ -374,31 +375,60 @@ void CGuiHandler::showDialog(std::shared_ptr<CDialog> dialog) {
     return runGuiTask(_game.lock(), showDialogAsync(std::move(dialog)));
 }
 
+std::shared_ptr<CGameDialogPanel> CGuiHandler::openDialog(std::shared_ptr<CDialog> dialog) {
+    return createDialogPanel(std::move(dialog), false);
+}
+
+std::shared_ptr<CGameDialogPanel> CGuiHandler::createDialogPanel(std::shared_ptr<CDialog> dialog, bool blocking) {
+    if (!vstd::event_loop<>::instance()->isMainThread()) {
+        throw std::logic_error("Dialog panels must be opened on the main thread.");
+    }
+    auto game = _game.lock();
+    const auto gui = game ? game->getGui() : nullptr;
+    if (!game || !gui || !dialog) {
+        return nullptr;
+    }
+    if (CPlaytestTrace::enabled()) {
+        json fields = {{"blocking", blocking},
+                       {"dialog", CPlaytestTrace::objectRef(dialog)},
+                       {"panel", "dialogPanel"},
+                       {"panelKind", "dialog"}};
+        CPlaytestTrace::addMapContext(fields, game->getMap());
+        CPlaytestTrace::record("dialog_opened", fields);
+        CPlaytestTrace::record("gui_panel_opened", fields);
+    }
+    auto panel = game->createObject<CGameDialogPanel>("dialogPanel");
+    try {
+        panel->setDialog(dialog);
+        gui->pushChild(panel);
+        panel->reload();
+    } catch (...) {
+        const auto primary = std::current_exception();
+        try {
+            panel->close();
+        } catch (...) {
+            vstd::logger::error("Dialog setup cleanup failed.");
+        }
+        std::rethrow_exception(primary);
+    }
+    if (panel->getParent() != gui) {
+        panel->close();
+        return nullptr;
+    }
+    return panel;
+}
+
 vstd::task<void> CGuiHandler::showDialogAsync(std::shared_ptr<CDialog> dialog) {
     return [](std::shared_ptr<CGuiHandler> self, std::shared_ptr<CDialog> dialog) -> vstd::task<void> {
         auto loop = vstd::event_loop<>::instance();
         if (!loop->isMainThread()) {
             co_await vstd::post(loop);
         }
-        auto game = self->_game.lock();
-        if (!game || !game->getGui() || !dialog) {
+        auto panel = self->createDialogPanel(std::move(dialog), true);
+        if (!panel) {
             co_return;
         }
-        if (CPlaytestTrace::enabled()) {
-            json fields = {{"blocking", true},
-                           {"dialog", CPlaytestTrace::objectRef(dialog)},
-                           {"panel", "dialogPanel"},
-                           {"panelKind", "dialog"}};
-            CPlaytestTrace::addMapContext(fields, game->getMap());
-            CPlaytestTrace::record("dialog_opened", fields);
-            CPlaytestTrace::record("gui_panel_opened", fields);
-        }
-        std::shared_ptr<CGameDialogPanel> panel = game->createObject<CGameDialogPanel>("dialogPanel");
-        panel->setDialog(dialog);
         ModalPanelOwner panelOwner{panel};
-        game->getGui()->pushChild(panel);
-        panel->reload();
-        game.reset();
         co_await panel->awaitClosingAsync();
     }(this->ptr<CGuiHandler>(), std::move(dialog));
 }

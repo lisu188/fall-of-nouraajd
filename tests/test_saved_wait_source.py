@@ -205,6 +205,26 @@ class SavedWaitSourceTest(unittest.TestCase):
         cmake = self.read("CMakeLists.txt")
         self.assertIn("tests/unit/test_serialization_performance.cpp", cmake)
 
+    def testSnapshotFixtureInstallsInjectedClockBeforeDefaultBuilders(self):
+        fixture = functionBody(
+            self.read("tests/unit/test_serialization_performance.cpp"),
+            "void testSavedWaitSnapshotsHaveBoundedClockWorkAndOneAliasDefinition()",
+        )
+        registration = functionBody(
+            self.read("src/handler/CObjectHandler.cpp"), "void CObjectHandler::registerType("
+        ).split("// Persistent registration path:", 1)[1]
+        self.assertIn("constructors.insert(", registration)
+        self.assertNotIn("insert_or_assign", registration)
+        injected = fixture.index('registerType("CWaitState"')
+        bulk = fixture.index("for (const auto &[name, builder] : *CTypes::builders())")
+        self.assertLess(injected, bulk, "First-registration-wins must retain the injected native clock.")
+        self.assertLess(bulk, fixture.index('createObject<CWaitState>("CWaitState")'))
+        self.assertEqual(1, fixture.count('registerType("CWaitState"'))
+        self.assertIn("std::make_shared<CWaitState>(timeSource)", fixture)
+        self.assertIn("clockReads == 1", fixture)
+        self.assertLess(fixture.index("state->tryStart()"), fixture.index("clockReads == 1"))
+        self.assertLess(fixture.index("clockReads == 1"), fixture.index("const auto initialClockReads"))
+
     def testRunnerRegistersSourceAndRuntimeExactlyOnceWithSeparateSuites(self):
         runner = ast.parse(self.read("test.py"))
         classes = [node for node in ast.walk(runner) if isinstance(node, ast.ClassDef)]
