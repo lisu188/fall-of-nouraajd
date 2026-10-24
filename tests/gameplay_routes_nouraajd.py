@@ -1090,7 +1090,11 @@ def raceAid(d):
             d.call(d.player, "useAction", action, target)
             d.pump()
             for name in ("victorCultist1", "victorCultist2", "victorCultist3", "victorCultist4"):
-                if hp_gain and d.call(d.player, "getHp") == d.call(d.player, "getHpMax"):
+                if (hp_gain and d.call(d.player, "getHp") < d.call(d.player, "getHpMax")) or (
+                    mana_gain and d.call(d.player, "getMana") < d.call(d.player, "getManaMax")
+                ):
+                    break
+                if hp_gain:
                     actor = d.object(name, required=False)
                     if actor is not None and d.call(actor, "isAlive"):
                         d.fight(name)

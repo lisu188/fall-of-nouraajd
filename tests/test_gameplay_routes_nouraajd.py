@@ -852,6 +852,67 @@ class GameplayNouraajdServiceRoutesTest(unittest.TestCase):
         self.assertTrue(driver.recoveryEnabled)
         driver.saveAndReload.assert_not_called()
 
+    def outlanderApplicableAidFixture(self):
+        driver, state, creatures = self.highlanderMutilationFixture(combat_damage=0)
+        driver.race_id = "outlanderRace"
+        player = driver.player
+        game = SimpleNamespace(
+            getMap=lambda: SimpleNamespace(getPlayer=lambda: player),
+            getGuiHandler=lambda: SimpleNamespace(notify=Mock()),
+        )
+        apply_aid = authoredFunction(
+            "res/maps/nouraajd/script.py", "_applyRaceService", class_id="TownHallDialog", showReader=Mock()
+        )
+        dialog = SimpleNamespace(
+            getGame=lambda: game,
+            _canOfferRaceService=lambda identity: identity == "outlanderRace" and not state["claimed"],
+        )
+
+        def choose(dialog_id, name, **kwargs):
+            self.assertEqual(("townHallDialog", "claimOutlanderRations"), (dialog_id, name))
+            state["choices"].append(apply_aid(dialog, "outlanderRace", 5, 5, 5, "aid"))
+
+        driver.condition = lambda dialog_id, name: name == "canOfferOutlanderRations" and not state["claimed"]
+        driver.choose = choose
+        driver.fight = Mock(side_effect=AssertionError("An applicable mana deficit needs no courtyard injury detour"))
+        return driver, state, creatures
+
+    def testOutlanderAidClaimsActualApplicableManaDeficitWithoutCourtyardDetour(self):
+        driver, state, creatures = self.outlanderApplicableAidFixture()
+        with (
+            patch.object(nouraajd, "start"),
+            patch.object(nouraajd, "prepareRolf"),
+            patch.object(nouraajd, "meetVictor"),
+        ):
+            nouraajd.raceAid(driver)
+        self.assertFalse(creatures["victorCultist1"].isAlive(), "The existing owned action still executes")
+        driver.fight.assert_not_called()
+        self.assertEqual([False, False, True], state["choices"])
+        self.assertEqual((195, 100, 90), nouraajd.aidSnapshot(driver))
+        self.assertEqual("outlanderRace", state["kind"])
+        self.assertEqual(("starter", "original-portal", "quest-item"), state["inventory"])
+        self.assertTrue(driver.recoveryEnabled)
+        driver.saveAndReload.assert_called_once_with("racial-aid-outlanderRace")
+        self.assertEqual(
+            ["nouraajd.aid.outlanderRace." + outcome for outcome in ("unfunded", "unneeded", "claimed", "persisted")],
+            state["branches"],
+        )
+
+    def testOutlanderApplicableAidStillRestoresRecoveryStateAfterOwnedActionFailure(self):
+        driver, state, _creatures = self.outlanderApplicableAidFixture()
+        driver.player.useAction = Mock(side_effect=RuntimeError("actual owned action failure"))
+        with (
+            patch.object(nouraajd, "start"),
+            patch.object(nouraajd, "prepareRolf"),
+            patch.object(nouraajd, "meetVictor"),
+            self.assertRaisesRegex(RuntimeError, "actual owned action failure"),
+        ):
+            nouraajd.raceAid(driver)
+        self.assertTrue(driver.recoveryEnabled)
+        self.assertFalse(state["claimed"])
+        self.assertEqual([False, False], state["choices"])
+        driver.saveAndReload.assert_not_called()
+
     def testLetterAndRelicJournalAssertionsFollowTheNextOrdinaryNativeTurn(self):
         for route, quest_class, quest_id, predicate in (
             (nouraajd.letter, "DeliverLetterQuest", "deliverLetterQuest", "is_letter_delivered"),
