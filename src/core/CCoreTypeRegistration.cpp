@@ -19,7 +19,6 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #include "core/CGame.h"
 #include "core/CList.h"
 #include "core/CMap.h"
-#include "core/CPlugin.h"
 #include "core/CSerialization.h"
 #include "core/CSlotConfig.h"
 #include "core/CScript.h"
@@ -194,9 +193,6 @@ void registerCoreTypes() {
     CTypes::register_type<CGameObject>();
     CTypes::register_type<CGame, CGameObject>();
     CTypes::register_type<CMap, CGameObject>();
-    CTypes::register_type<CPlugin, CGameObject>();
-    CTypes::register_type<CNativeContentPlugin, CPlugin, CGameObject>();
-    CTypes::register_type<CWrapper<CPlugin>, CPlugin, CGameObject>();
 
     CTypes::register_type<CStats, CGameObject>();
     CTypes::register_type<CDamage, CGameObject>();

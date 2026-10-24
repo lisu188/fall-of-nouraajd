@@ -127,7 +127,7 @@ class CResourcesProvider {
     std::string getPath(std::string path);
 
     // Resolve only through packaged/base resource roots. This deliberately bypasses any active
-    // map scope and is intended for trusted resources such as native plugin libraries.
+    // map scope and is intended for resources that must resolve from a base resource root.
     std::string getPathFromBaseSearchPath(std::string path);
 
     std::vector<std::string> getFiles(const std::string &type);

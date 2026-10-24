@@ -101,11 +101,10 @@ def profileCommand(binary, profile_path, valgrind_log, tools):
 def requiredRuntimeFiles(repo_root, build_dir):
     modules = sorted(build_dir.glob("_game*.so"))
     if not modules:
-        raise RuntimeError("Build _game and its native plugin dependencies before profiling")
+        raise RuntimeError("Build _game and game_core before profiling")
     paths = {
         "module": projectPath(repo_root, modules[0]),
-        "nativeMarkerPlugin": projectPath(repo_root, build_dir / "plugins/native/native_marker_plugin.so"),
-        "nativeGameplay": projectPath(repo_root, build_dir / "plugins/native/native_gameplay.so"),
+        "gameCore": projectPath(repo_root, build_dir / "libgame_core.so"),
     }
     for path in paths.values():
         if not path.is_file() or path.stat().st_size == 0:

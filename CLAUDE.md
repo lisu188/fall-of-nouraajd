@@ -31,7 +31,7 @@ Key CMake targets (see `CMakeLists.txt`):
   engine is compiled once as objects, linked into a shared lib, then wrapped by pybind.
 - `for_unit_tests` — aggregate of the C++ unit-test executables (run via ctest).
 - `performance_guard_tests` — perf-labeled C++ tests.
-- Native gameplay plugins under `native_plugins/` build as separate `MODULE` libraries.
+- Gameplay type factories are built directly into `game_core`; there are no separately loaded C++ plugins.
 
 Windows builds add `--config Release` / `-C Release` and require
 `GAME_BUILD_DIR=cmake-build-release` + `GAME_BUILD_CONFIG=Release` in the env
@@ -59,7 +59,7 @@ python3 test.py                                            # main Python/gamepla
   map's quest state machine against the keys declared in its `script.py`.
 - **Coverage:** run `./scripts/run_coverage.sh` when a change touches `test.py`,
   `tests/unit/**`, `src/core/**`, `src/handler/**`, `src/object/**`, `src/gui/**`,
-  `native_plugins/**`, or coverage tooling (the authoritative path list is
+  coverage tooling (the authoritative path list is
   `COVERAGE_PATH_PATTERNS` in `scripts/ci_change_classifier.py`). It enforces a
   90% eligible-line gate.
 - **Playtest trace** (debugging gameplay flows):
@@ -70,7 +70,7 @@ C++ formatting uses `.clang-format` (LLVM base, 4-space indent, 120 col, no incl
 ## Architecture
 
 ### Engine layers (`src/`)
-- **`src/core/`** — game loop, loader, serialization, plugin host, RNG, scene
+- **`src/core/`** — game loop, loader, serialization, Python script loader, RNG, scene
   management. `CGame` is the root context; `CLoader` reads JSON content;
   `CProvider`/`CResource*` abstract resource loading (config/map/plugin/save).
   `CModuleEntry.cpp` / `CModule.cpp` is the pybind entry point that builds the
@@ -83,11 +83,8 @@ C++ formatting uses `.clang-format` (LLVM base, 4-space indent, 120 col, no incl
   `CScriptHandler`, `CRngHandler`, `CTooltipHandler`.
 - **`src/gui/`** — SDL rendering, layout, animation, texture/text caching, and
   panel/widget objects under `src/gui/object/`.
-- **`src/plugin/`** — the unified plugin model: the native entry ABI
-  (`CPluginAbi.h`, `CPluginHostV2`/`game_plugin_load_v2`), the host surface every
-  plugin kind registers through (`CPluginRegistrar`), the per-kind loading
-  backends (`CPluginRuntime.h`, `CNativePluginRuntime.cpp`), and the gameplay
-  type table (`CGameplayTypeTable.h`) expanded by `NativePlugin.cpp`.
+- **`src/core/CGameplayTypeRegistration.cpp`** — registers the built-in gameplay factories
+  for each game session using the single `CGameplayTypeTable.h` registry.
 
 ### Reflection & type registration
 The engine uses a reflection macro from the **`vstd`** submodule: `V_META(Class,
@@ -100,16 +97,16 @@ through the meta system. Registration is split across two mechanisms:
   files).
 - **Gameplay object types** (`src/object/`: creatures, items, effects,
   interactions, tiles, dialogs, quests, controllers, …) are listed once in the
-  X-macro table `src/plugin/CGameplayTypeTable.h` — the single source of truth
-  consumed by `native_plugin::register_gameplay_types`
-  (`src/plugin/NativePlugin.cpp`, invoked through the `native_gameplay` plugin's
-  `game_plugin_load_v2` entry), by the pybind metadata/downcast registration in
-  `src/core/CModule.cpp`, and by `scripts/validate_content.py`.
-  `registerObjectTypes()` registers only the `CGameObject` base.
+  X-macro table `src/core/CGameplayTypeTable.h` — the single source of truth
+  consumed by `type_registration::registerGameplayTypes` in
+  `src/core/CGameplayTypeRegistration.cpp`, by pybind metadata/downcast
+  registration in `src/core/CModule.cpp`, and by
+  `scripts/validate_content.py`. `registerObjectTypes()` registers only the
+  `CGameObject` base.
 
 When adding a new gameplay object type, add one `FN_TYPE` row (or `FN_WRAPPED`,
 if Python scripting needs a `CWrapper<T>` trampoline) to
-`src/plugin/CGameplayTypeTable.h`; core/GUI types go into the matching
+`src/core/CGameplayTypeTable.h`; core/GUI types go into the matching
 `C*TypeRegistration.cpp` file. Either way, an unregistered type won't be
 constructible from content.
 
@@ -123,25 +120,19 @@ constructible from content.
   `multilevel`, `ninemarches`, `hearthfall`, `gravemoor`, `usurpergate`,
   `sunderedmarch`, `kadath`, `vhulmarn`, `test`.
 - **`res/plugins/*.py`** — Python gameplay plugins (crafting,
-  interactions, effects, potions, tiles, objects). Every `.py` in the
-  directory is auto-discovered by `CPluginLoader`; `res/plugins/manifest.json`
-  (version 2: a `plugins` array of `{id, kind, source…}` entries, kinds
-  `native`/`cpp`/`python`, optional `scope: {"map": …}`) declares the
-  native/cpp entries and any explicitly ordered or map-scoped plugins.
+  interactions, effects, potions, tiles, objects). Files are auto-discovered by
+  `CPluginLoader`; an optional Python-only `res/plugins/manifest.json`
+  can define ordering and map-scoped scripts.
 - **`res/game.py`** — the Python-side facade over `_game`; wraps native trace
   helpers and quest-state integration (`quest_state.py`).
 - Content schemas are documented in `docs/content.md`; the authoritative checker
   is `scripts/validate_content.py`.
 
-### Plugin runtimes
-Gameplay plugins use three built-in runtime kinds, all funneled through one host surface
-(`CPluginRegistrar`: type factories + config JSON + logging) by per-kind
-runtimes (`IPluginRuntime` registry in `src/plugin/CPluginRuntime.cpp`):
-- **native** — C++ in `native_plugins/` (MODULE libs, `extern "C"
-  game_plugin_load_v2(const CPluginHostV2*)` handshake, load-only by design);
-- **cpp** — registered `CPlugin` classes loaded by `CPluginLoader::loadCppPlugin`;
-- **python** — `res/plugins/*.py` (sandboxed `load(self, context)`, engine→Python
-  dispatch via `CWrapper<T>` + `CPythonOverrides`).
+### Plugin runtime
+Only resource Python scripts are plugins. `CPluginLoader` executes
+`res/plugins/*.py` and map scripts with restricted builtins and imports.
+Built-in gameplay objects live in C++ and are registered before Python plugins
+run. Python overrides continue to use `CWrapper<T>` and `CPythonOverrides`.
 
 ## Entry points & tooling
 

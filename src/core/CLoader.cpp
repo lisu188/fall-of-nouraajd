@@ -30,8 +30,7 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #include "object/CCreature.h"
 #include "object/CCreatureRace.h"
 #include "object/CPlayer.h"
-#include "plugin/CPluginRegistrar.h"
-#include "plugin/CPluginRuntime.h"
+#include "core/CTypeRegistration.h"
 #include <pybind11/eval.h>
 #include <rdg.h>
 
@@ -1202,9 +1201,11 @@ std::shared_ptr<json> load_plugin_manifest(const std::shared_ptr<CResourcesProvi
     return resourcesProvider->loadJson(PLUGIN_MANIFEST_PATH);
 }
 
-// Kinds whose source is a resource path; their paths join the loadedPluginPaths dedupe set that
-// the auto-discovery loops in loadGlobalPlugins/loadMapPlugins consult.
-bool is_path_sourced_plugin_kind(const std::string &kind) { return kind == "python"; }
+struct CPluginDescriptor {
+    std::string id;
+    std::string source;
+    std::optional<std::string> mapScope;
+};
 
 std::optional<CPluginDescriptor> parse_plugin_descriptor(const json &entry) {
     if (!entry.is_object()) {
@@ -1214,23 +1215,19 @@ std::optional<CPluginDescriptor> parse_plugin_descriptor(const json &entry) {
 
     CPluginDescriptor descriptor;
     descriptor.id = entry.value("id", std::string());
-    descriptor.kind = entry.value("kind", std::string());
-    if (descriptor.kind == "native") {
-        descriptor.source = entry.value("library", std::string());
-    } else if (descriptor.kind == "cpp") {
-        descriptor.source = entry.value("type", std::string());
-    } else {
-        descriptor.source = entry.value("path", std::string());
+    const auto kind = entry.value("kind", std::string());
+    if (kind != "python") {
+        vstd::logger::warning("Ignoring unsupported plugin kind:", kind);
+        return std::nullopt;
     }
-    descriptor.entry = entry.value("entry", std::string());
+    descriptor.source = entry.value("path", std::string());
     if (entry.contains("scope") && entry["scope"].is_object() && entry["scope"].contains("map") &&
         entry["scope"]["map"].is_string()) {
         descriptor.mapScope = entry["scope"]["map"].get<std::string>();
     }
 
-    if (descriptor.kind.empty() || descriptor.id.empty() || descriptor.source.empty()) {
-        vstd::logger::warning("Ignoring plugin manifest entry without kind, id, or source:", descriptor.kind,
-                              descriptor.id);
+    if (descriptor.id.empty() || descriptor.source.empty()) {
+        vstd::logger::warning("Ignoring Python plugin manifest entry without id or path:", descriptor.id);
         return std::nullopt;
     }
     return descriptor;
@@ -1238,19 +1235,13 @@ std::optional<CPluginDescriptor> parse_plugin_descriptor(const json &entry) {
 
 bool load_plugin_descriptor(const std::shared_ptr<CGame> &game, const CPluginDescriptor &descriptor,
                             std::set<std::string> &loadedPluginIds, std::set<std::string> &loadedPluginPaths) {
-    plugin_runtime::registerBuiltinRuntimes();
-    auto *runtime = plugin_runtime::find(descriptor.kind);
-    if (runtime == nullptr) {
-        vstd::logger::warning("Ignoring plugin manifest entry with unknown kind:", descriptor.kind);
-        return false;
-    }
     if (!loadedPluginIds.insert(descriptor.id).second) {
         return true;
     }
-    if (is_path_sourced_plugin_kind(descriptor.kind) && !loadedPluginPaths.insert(descriptor.source).second) {
+    if (!loadedPluginPaths.insert(descriptor.source).second) {
         return true;
     }
-    return runtime->load(game, descriptor);
+    return CPluginLoader::loadPlugin(game, descriptor.source);
 }
 
 bool load_plugin_entries(const std::shared_ptr<CGame> &game, const json &manifest,
@@ -1300,7 +1291,7 @@ std::set<std::string> getPluginAutoDiscoveryExclusions(const json &manifest) {
         if (!descriptor) {
             continue;
         }
-        const bool trustedPath = descriptor->kind == "python" && is_allowed_python_plugin_path(descriptor->source);
+        const bool trustedPath = is_allowed_python_plugin_path(descriptor->source);
         if (trustedPath) {
             paths.insert(*normalize_relative_resource_path(descriptor->source));
         }
@@ -1995,6 +1986,7 @@ std::shared_ptr<CGame> CGameLoader::loadGame() {
     game->getConfigurationProvider();
     initObjectHandler(game->getObjectHandler());
     initConfigurations(game);
+    type_registration::registerGameplayTypes(game);
     initScriptHandler(game->getScriptHandler(), game);
     return game;
 }
@@ -2170,35 +2162,6 @@ bool CPluginLoader::loadPlugin(const std::shared_ptr<CGame> &game, const std::st
     }
     PyErr_Clear();
     return false;
-}
-
-bool CPluginLoader::loadCppPlugin(const std::shared_ptr<CGame> &game, const std::string &type) {
-    if (!game || type.empty()) {
-        vstd::logger::warning("Cannot load C++ plugin without a game and type id");
-        return false;
-    }
-
-    auto plugin = game->createObject<CPlugin>(type);
-    if (!plugin) {
-        vstd::logger::warning("Failed to create C++ plugin:", type);
-        return false;
-    }
-
-    try {
-        CPluginRegistrar registrar(game);
-        plugin->load(registrar);
-        return true;
-    } catch (const std::exception &exception) {
-        vstd::logger::warning("Failed to load C++ plugin:", type, exception.what());
-    } catch (...) {
-        vstd::logger::warning("Failed to load C++ plugin:", type);
-    }
-    return false;
-}
-
-bool CPluginLoader::loadDynamicPlugin(const std::shared_ptr<CGame> &game, const std::string &library,
-                                      const std::string &entry) {
-    return plugin_runtime::loadNativePlugin(game, library, entry);
 }
 
 bool CPluginLoader::loadGlobalPlugins(const std::shared_ptr<CGame> &game) {

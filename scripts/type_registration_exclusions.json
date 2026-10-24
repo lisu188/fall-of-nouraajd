@@ -46,19 +46,9 @@
       "ownerModule": "src/core/CMap"
     },
     {
-      "className": "CNativeContentPlugin",
-      "reason": "Plugin loader abstraction created by the native plugin host, not content config.",
-      "ownerModule": "src/core/CPlugin"
-    },
-    {
       "className": "CObjectHandler",
       "reason": "Runtime factory and registry owned by CGame; content should reference constructible game types.",
       "ownerModule": "src/handler/CObjectHandler"
-    },
-    {
-      "className": "CPlugin",
-      "reason": "Plugin loader abstraction created by plugin initialization, not content config.",
-      "ownerModule": "src/core/CPlugin"
     },
     {
       "className": "CResource",

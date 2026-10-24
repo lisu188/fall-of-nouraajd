@@ -20,7 +20,7 @@
     {
       "source": "src/core/bindings/CModuleServices.cpp",
       "registration": "bindServices",
-      "registrationTokenSha256": "910a4e2567f65ad31372496df0466c7302c3e8e0a321f760a52ec7e182ec24ed"
+      "registrationTokenSha256": "2189c8fe21ac2a38b6a212a61279c1d5ad7f8f3eceedb6442477ed9b979e2b6f"
     },
     {
       "source": "src/core/bindings/CModuleCreatures.cpp",

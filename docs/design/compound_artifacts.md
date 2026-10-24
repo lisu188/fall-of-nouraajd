@@ -195,7 +195,7 @@ scrolls are never equipped.
 
 ### 4. Assembly flow — `res/plugins/artifact_sets.py`
 
-New Python plugin (add to `res/plugins/manifest.json`), structured like
+Python plugin (automatically discovered under `res/plugins/`), structured like
 `crafting.py` (a runtime singleton that loads its config via
 `CResourcesProvider`).
 

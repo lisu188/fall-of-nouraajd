@@ -1659,8 +1659,6 @@ class ContentValidator:
         self.metadata_properties: dict[str, dict[str, CppMetadataProperty]] = {}
         self._metadata_property_schema_cache: dict[str, dict[str, CppMetadataProperty] | None] = {}
         self.static_registered_classes: set[str] = set()
-        self.native_plugin_registered_classes: set[str] = set()
-        self.native_plugin_declared_class_sources: dict[str, set[str]] = {}
         self.python_registered_classes: set[str] = set()
         self.python_class_bases: dict[str, set[str]] = {}
         self.registration_exclusions: dict[str, RegistrationExclusion] = {}
@@ -1693,13 +1691,7 @@ class ContentValidator:
         return sorted(self.issues, key=lambda issue: (issue.path, issue.location, issue.message))
 
     def _validate_plugin_manifest(self) -> None:
-        """Schema-check the version 2 plugin manifest (res/plugins/manifest.json): a
-        top-level ``version: 2`` plus a ``plugins`` array of uniform entries
-        ``{id, kind, <source>, entry?, scope?}``. Kind-specific source fields are
-        ``library`` (native, under plugins/native/), ``type`` (cpp), and ``path``
-        (python, an existing res/ resource). Unknown kinds and duplicate ids are
-        diagnosed here so a typo fails validation instead of silently skipping the
-        plugin at runtime (the loader only warns)."""
+        """Validate optional Python-only plugin ordering and map scopes."""
         path = self.repo_root / "res" / "plugins" / "manifest.json"
         if not path.exists():
             return
@@ -1715,7 +1707,7 @@ class ContentValidator:
         if not isinstance(entries, list):
             self._issue(path, "plugins", "plugin manifest must contain a plugins array")
             return
-        source_fields = {"native": "library", "cpp": "type", "python": "path"}
+        source_fields = {"python": "path"}
         seen_ids: set[str] = set()
         for index, entry in enumerate(entries):
             location = f"plugins[{index}]"
@@ -1739,8 +1731,6 @@ class ContentValidator:
             if not isinstance(source, str) or not source:
                 self._issue(path, location, f'{kind} plugin entry requires a non-empty "{source_field}" field')
                 continue
-            if kind == "native" and not source.startswith("plugins/native/"):
-                self._issue(path, location, f'native plugin library "{source}" must live under plugins/native/')
             if kind == "python":
                 expected_suffix = ".py"
                 if not source.endswith(expected_suffix):
@@ -1948,8 +1938,6 @@ class ContentValidator:
                 for class_name in iter_cpp_template_type_names(text, "register_type_metadata"):
                     self.metadata_declared_classes.add(class_name)
                 for class_name in iter_cpp_template_type_names(text, "register_type"):
-                    if path.name == "NativePlugin.cpp":
-                        continue
                     if path.name.endswith("TypeRegistration.cpp"):
                         self.static_registered_classes.add(class_name)
                 for class_name, base_class, properties in iter_cpp_metadata_declarations(text):
@@ -1960,28 +1948,21 @@ class ContentValidator:
                     class_properties = self.metadata_properties.setdefault(class_name, {})
                     for cpp_property in properties:
                         class_properties[cpp_property.name] = cpp_property
-        self._collect_native_plugin_classes()
+        self._collect_builtin_gameplay_classes()
 
-    def _collect_native_plugin_classes(self) -> None:
-        helper_classes = self._native_plugin_helper_classes()
-        entry_helpers = self._native_plugin_entry_helpers(helper_classes)
-        loaded_entries = self._manifest_native_plugin_entries()
-        for library, entry in loaded_entries:
-            for class_name in entry_helpers.get((library, entry), set()):
-                self.native_plugin_registered_classes.add(class_name)
-
-    def _native_plugin_helper_classes(self) -> dict[str, set[str]]:
-        """Parse the single-source-of-truth gameplay type table consumed by
-        ``native_plugin::register_gameplay_types`` (src/plugin/NativePlugin.cpp expands
-        src/plugin/CGameplayTypeTable.h). Rows are one-per-line by contract; a row that
-        contains an FN_TYPE/FN_WRAPPED call this parser cannot read is diagnosed instead
-        of silently dropped."""
-        path = self.repo_root / "src" / "plugin" / "CGameplayTypeTable.h"
-        if not path.exists():
-            return {}
-        text = strip_cpp_comments(read_text_lossy(path))
+    def _collect_builtin_gameplay_classes(self) -> None:
+        """Require the core registrar to consume the table before accepting its types."""
+        table = self.repo_root / "src" / "core" / "CGameplayTypeTable.h"
+        registration = self.repo_root / "src" / "core" / "CGameplayTypeRegistration.cpp"
+        if not table.exists():
+            return
+        source = strip_cpp_comments(read_text_lossy(registration)) if registration.exists() else ""
+        registered = (
+            re.search(r"\bvoid\s+registerGameplayTypes\s*\(", source) is not None
+            and "FN_GAMEPLAY_TYPES(FN_TYPE, FN_WRAPPED)" in source
+        )
+        text = strip_cpp_comments(read_text_lossy(table))
         row_pattern = re.compile(r"\bFN_(?:TYPE|WRAPPED)\(\s*([A-Za-z_]\w*)")
-        classes: set[str] = set()
         for line_number, line in enumerate(text.splitlines(), start=1):
             calls = re.findall(r"\bFN_(?:TYPE|WRAPPED)\(", line)
             if not calls:
@@ -1990,61 +1971,14 @@ class ContentValidator:
             row_classes = {name for name in matches if is_concrete_cpp_class_name(name)}
             if len(calls) != len(row_classes):
                 self._issue(
-                    path,
+                    table,
                     f"line {line_number}",
                     "unparseable gameplay type table row; rows must be one per line as "
                     "FN_TYPE(Class, Bases...) or FN_WRAPPED(Class, Bases...)",
                 )
                 continue
-            classes.update(row_classes)
-        if not classes:
-            return {}
-        for class_name in classes:
-            self.native_plugin_declared_class_sources.setdefault(class_name, set()).add(
-                "native_plugin::register_gameplay_types"
-            )
-        return {"register_gameplay_types": classes}
-
-    def _native_plugin_entry_helpers(self, helper_classes: dict[str, set[str]]) -> dict[tuple[str, str], set[str]]:
-        native_dir = self.repo_root / "native_plugins"
-        entry_helpers: dict[tuple[str, str], set[str]] = {}
-        if not native_dir.exists():
-            return entry_helpers
-        for path in sorted(native_dir.glob("*.cpp")):
-            text = read_text_lossy(path)
-            library = path.stem
-            for entry, body in iter_cpp_function_bodies(text):
-                classes = iter_cpp_template_type_names(body, "register_type")
-                for helper_name in re.findall(
-                    r"\bnative_plugin::(register_[A-Za-z_]\w*)\s*\(", strip_cpp_comments(body)
-                ):
-                    classes.update(helper_classes.get(helper_name, set()))
-                if classes:
-                    entry_helpers[(library, entry)] = classes
-                    for class_name in classes:
-                        self.native_plugin_declared_class_sources.setdefault(class_name, set()).add(
-                            f"{library}:{entry}"
-                        )
-        return entry_helpers
-
-    def _manifest_native_plugin_entries(self) -> set[tuple[str, str]]:
-        manifest_path = self.repo_root / "res" / "plugins" / "manifest.json"
-        if not manifest_path.exists():
-            return set()
-        data = self._load_json(manifest_path)
-        loaded_entries: set[tuple[str, str]] = set()
-        if not isinstance(data, dict):
-            return loaded_entries
-        for entry in iter_manifest_plugin_entries(data):
-            if entry.get("kind") != "native":
-                continue
-            library = entry.get("library")
-            if not isinstance(library, str) or not library:
-                continue
-            function_name = entry.get("entry", "game_plugin_load_v3")
-            if isinstance(function_name, str) and function_name:
-                loaded_entries.add((Path(library).name, function_name))
-        return loaded_entries
+            if registered:
+                self.static_registered_classes.update(row_classes)
 
     def _collect_plugin_classes(self) -> None:
         plugin_dir = self.repo_root / "res" / "plugins"
@@ -2247,13 +2181,12 @@ class ContentValidator:
             self.fallback_registered_classes
             | self.metadata_declared_classes
             | self.static_registered_classes
-            | self.native_plugin_registered_classes
             | self.python_registered_classes
         )
 
     def _validate_type_registration_coverage(self) -> None:
         """Exhaustively assert that every metadata-declared (``V_META``) engine type is
-        accounted for -- either registered as constructible content (static, native, or
+        accounted for -- either registered as constructible content (static engine types or
         Python plugin registration) or explicitly listed as an intentional exclusion in
         ``scripts/type_registration_exclusions.json``.
 
@@ -2264,7 +2197,7 @@ class ContentValidator:
         choice -- wire it into a ``register*Types`` call / plugin, or document why it is
         constructed only from C++ -- rather than leaving it unreachable by accident.
 
-        Registration is the raw union of the fallback/static/native/Python registered sets
+        Registration is the raw union of the fallback/static/Python registered sets
         (exclusions are NOT subtracted here, unlike ``_constructible_classes``): a type may
         legitimately be both registered for serialization and excluded from content
         instantiation, and either fact is enough to make it "accounted for".
@@ -2272,7 +2205,6 @@ class ContentValidator:
         registered = (
             self.fallback_registered_classes
             | self.static_registered_classes
-            | self.native_plugin_registered_classes
             | self.python_registered_classes
         )
         manifest_path = self.repo_root / TYPE_REGISTRATION_EXCLUSIONS_PATH
@@ -2286,7 +2218,7 @@ class ContentValidator:
                 "exclusions",
                 f'metadata-declared type "{class_name}"{base_hint} is neither registered as '
                 "constructible content nor listed as an intentional exclusion; register it "
-                "through CTypes (static/native/Python) or add an exclusion entry with a reason",
+                "through CTypes (static/Python) or add an exclusion entry with a reason",
             )
 
     def _parse_script(self, path: Path) -> ScriptInfo | None:
@@ -2640,7 +2572,6 @@ class ContentValidator:
         classes = (
             self.fallback_registered_classes
             | self.static_registered_classes
-            | self.native_plugin_registered_classes
             | self.python_registered_classes
             | set(extra_registered_classes or set())
         )
@@ -5252,9 +5183,6 @@ class ContentValidator:
                 f'{label} "{class_name}" is excluded from content instantiation: '
                 f"{exclusion.reason} (owner/module: {exclusion.owner_module})"
             )
-        if class_name in self.native_plugin_declared_class_sources:
-            owners = ", ".join(sorted(self.native_plugin_declared_class_sources[class_name]))
-            return f'{label} "{class_name}" is registered by native plugin code but no manifest entry loads {owners}'
         if class_name in self.metadata_declared_classes:
             return f'{label} "{class_name}" is declared in metadata but is not registered as constructible content'
         return self._unresolvable_config_message(label, class_name)
@@ -5610,14 +5538,6 @@ def python_base_class_name(base: ast.expr) -> str | None:
     if isinstance(base, ast.Attribute):
         return base.attr
     return None
-
-
-def iter_manifest_plugin_entries(data: dict[str, Any]) -> list[dict[str, Any]]:
-    entries: list[dict[str, Any]] = []
-    plugin_entries = data.get("plugins")
-    if isinstance(plugin_entries, list):
-        entries.extend(entry for entry in plugin_entries if isinstance(entry, dict))
-    return entries
 
 
 def is_concrete_cpp_class_name(name: str) -> bool:

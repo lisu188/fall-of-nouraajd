@@ -146,7 +146,7 @@ class NotificationProbe : public CGameObject {
     std::size_t individualChanges = 0;
 };
 
-void testNativeGameplayRegistrationActuallyReusesRecipes() {
+void testBuiltinGameplayRegistrationActuallyReusesRecipes() {
     auto game = CGameLoader::loadGame();
     auto handler = game->getObjectHandler();
     const auto before = handler->getTileRecipeDiagnostics();
@@ -158,7 +158,7 @@ void testNativeGameplayRegistrationActuallyReusesRecipes() {
                     ground->getTileType() == "ground" && mountain->getTileType() == "mountain" &&
                     ground != second_ground && after.applications - before.applications == 3 &&
                     after.compilations - before.compilations <= 2,
-                "the actual loader and native gameplay registry must reuse ground and mountain recipes");
+                "the actual loader and built-in gameplay registry must reuse ground and mountain recipes");
 }
 
 void testNativeWrapperPreservesPythonFallback() {
@@ -434,7 +434,7 @@ void testRecipeCompilationWorkIsBounded() {
 
 void run_tile_recipe_tests() {
     testRecipePropertiesIdentityAndRngMatchRegularCodec();
-    testNativeGameplayRegistrationActuallyReusesRecipes();
+    testBuiltinGameplayRegistrationActuallyReusesRecipes();
     testNativeWrapperPreservesPythonFallback();
     testRecipeRetainsPropertyNotificationBatch();
     testRecipeInvalidationAndRegistrationRollback();

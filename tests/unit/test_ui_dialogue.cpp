@@ -37,8 +37,7 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #include "object/CDialog.h"
 #include "object/CPlayer.h"
 #include "object/CQuest.h"
-#include "plugin/CPluginRegistrar.h"
-#include "plugin/NativePlugin.h"
+#include "core/CTypeRegistration.h"
 #include "test_harness.h"
 #include <cstdio>
 
@@ -67,8 +66,7 @@ struct DialogueHarness {
         game->setGui(gui);
         map->setGame(game);
         gui->setGame(game);
-        CPluginRegistrar registrar(game);
-        native_plugin::register_gameplay_types(registrar);
+        type_registration::registerGameplayTypes(game);
         for (const auto &[name, builder] : *CTypes::builders()) {
             game->getObjectHandler()->registerType(name, builder);
         }

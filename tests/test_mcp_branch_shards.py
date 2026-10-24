@@ -110,7 +110,7 @@ class McpBranchShardsTest(unittest.TestCase):
             files = {
                 "Release/_game.cp312-win_amd64.pyd": b"extension",
                 "Release/game_core.dll": b"core",
-                "plugins/native/native_gameplay.dll": b"plugin",
+                "plugins/effect.py": b"def load(self, context): pass\n",
                 "config/monsters.json": b"{}",
                 "maps/test/map.json": b"{}",
                 "save/precious.json": b"save",
@@ -127,7 +127,6 @@ class McpBranchShardsTest(unittest.TestCase):
             destination = root / "runtime"
             shards.unpackRuntime(archive_path, destination, "same-head")
             self.assertEqual(b"core", (destination / "Release/game_core.dll").read_bytes())
-            self.assertEqual(b"plugin", (destination / "plugins/native/native_gameplay.dll").read_bytes())
             manifest = json.loads((destination / shards.MANIFEST_NAME).read_text())
             self.assertEqual("same-head", manifest["head"])
             self.assertFalse((destination / "save").exists())
@@ -287,7 +286,7 @@ class McpBranchShardsTest(unittest.TestCase):
                 "SDL2_image.dll": b"image",
                 "SDL2_ttf.dll": b"ttf",
                 "libpng16.dll": b"transitive dependency",
-                "plugins/native/native_gameplay.dll": b"plugin",
+                "plugins/effect.py": b"def load(self, context): pass\n",
                 "config/monsters.json": b"{}",
                 "maps/test/map.json": b"{}",
             }

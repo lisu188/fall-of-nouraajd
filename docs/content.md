@@ -7,43 +7,39 @@ Reference for author-facing content declarations validated by
 python3 scripts/validate_content.py --repo-root .
 ```
 
-## Plugin manifest (`res/plugins/manifest.json`)
+## Python gameplay plugins
 
-Version 2 of the manifest is a top-level object with `"version": 2` and one
-uniform `"plugins"` array. Python (`res/plugins/*.py`) plugins are auto-discovered
-and normally need no entry; the manifest declares native/cpp plugins, explicit
-ordering, and map scoping.
+The C++ engine registers its gameplay factories directly during `CGameLoader::loadGame()` through
+`type_registration::registerGameplayTypes`. The single source of truth for those types is
+`src/core/CGameplayTypeTable.h`; these are built-in engine types, not dynamically loaded plugins.
+
+Python resource plugins under `res/plugins/*.py` are automatically discovered and executed by
+`CPluginLoader`. Individual map scripts are loaded from `res/maps/<map>/script.py`.
+Python subclasses and callbacks continue to call into native C++ through pybind11.
+
+### Optional Python manifest (`res/plugins/manifest.json`)
+
+The version-2 manifest is optional and may be empty. It declares explicit Python plugin ordering
+and map-scoped Python scripts. No compiled `native` or `cpp` plugin kinds are supported.
 
 ```json
 {
   "version": 2,
   "plugins": [
-    { "id": "nativeGameplay", "kind": "native", "library": "plugins/native/native_gameplay" },
-    { "id": "nativeContent",  "kind": "cpp",    "type": "CNativeContentPlugin" },
-    { "id": "siegeOnly",      "kind": "python", "path": "plugins/siege_extra.py",
-      "scope": { "map": "siege" } }
+    {
+      "id": "siegeOnly",
+      "kind": "python",
+      "path": "plugins/siege_extra.py",
+      "scope": { "map": "siege" }
+    }
   ]
 }
 ```
 
-| Field     | Required | Description |
-| --------- | -------- | ----------- |
-| `id`      | yes      | Unique entry id; duplicate ids are diagnosed and deduplicated at load. |
-| `kind`    | yes      | One of `native`, `cpp`, `python`. |
-| `library` | native   | Shared library under `plugins/native/` (extension optional). |
-| `type`    | cpp      | Registered `CPlugin` subclass name. |
-| `path`    | python   | Resource path under the trusted plugin roots. |
-| `entry`   | no (native) | Entry symbol, default `game_plugin_load_v3`. |
-| `scope`   | no       | `{ "map": "<name>" }` loads the entry with that map's plugins instead of globally. |
-
-Native modules must export `uint32_t game_plugin_api_version()` returning `3` and a version-3 entry accepting
-`const CPluginHostV3 *`. Rebuild older modules against the current headers. The loader checks the version before
-calling an entry, including custom entries, and explicitly rejects version-2 entry names.
-
-The validator schema-checks the manifest (unknown kinds, missing source fields,
-duplicate ids, unknown scope maps, missing plugin files) and cross-checks that
-the native gameplay entry actually loads every class row of
-`src/plugin/CGameplayTypeTable.h`.
+Each entry requires a unique `id`, `kind: "python"`, and a `path` to an allowed Python resource
+under `res/`. The optional `scope.map` loads the script only for that map. A missing manifest
+does not prevent normal discovery; a valid explicitly listed script is excluded from duplicate
+auto-discovery. Content validation rejects unknown plugin kinds and missing script paths.
 
 ### Script random integers
 

@@ -145,23 +145,8 @@ void bindServices(py::module_ &m, const std::shared_ptr<CPythonEventCallbacks> &
 
     py::class_<CPluginLoader, std::shared_ptr<CPluginLoader>>(m, "CPluginLoader", "Helpers for loading plugins.")
         .def("loadPlugin", &CPluginLoader::loadPlugin, "Load a Python plugin resource into the game.")
-        .def("loadCppPlugin", &CPluginLoader::loadCppPlugin, "Load a compiled C++ plugin type into the game.")
-        .def_static("loadDynamicPlugin", &CPluginLoader::loadDynamicPlugin, py::arg("game"), py::arg("library"),
-                    py::arg("entry") = "game_plugin_load_v3", "Load a dynamic C++ plugin shared library into the game.")
         .def("loadGlobalPlugins", &CPluginLoader::loadGlobalPlugins, "Load configured global plugins.")
         .def("loadMapPlugins", &CPluginLoader::loadMapPlugins, "Load configured plugins for a map.");
-
-    py::class_<CPluginRegistrar>(m, "CPluginRegistrar", "The unified host surface plugins register content through.")
-        .def(py::init<std::shared_ptr<CGame>>(), py::arg("game"))
-        .def("log", &CPluginRegistrar::log, "Log a plugin message.")
-        .def("registerConfigJson", &CPluginRegistrar::registerConfigJson, py::arg("id"), py::arg("jsonText"),
-             "Register an object config from JSON text.")
-        .def("game", &CPluginRegistrar::game, "Return the game this registrar loads plugins into.");
-
-    auto cplugin = py::class_<CPlugin, CWrapper<CPlugin>, std::shared_ptr<CPlugin>, CGameObject>(m, "CPlugin",
-                                                                                                 "Base plugin class.");
-    cplugin.def(py::init_alias<>()).def("load", &CPlugin::load, "Load plugin content through a registrar.");
-    m.attr("CPluginBase") = cplugin;
 
     py::class_<vstd::event_loop<>, std::shared_ptr<vstd::event_loop<>>>(m, "event_loop",
                                                                         "Global async event loop utility.")

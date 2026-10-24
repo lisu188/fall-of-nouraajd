@@ -64,9 +64,9 @@ jobs:
         uses: actions/cache/restore@27d5ce7f107fe9357f9df03efb73ab90386fccae
         with:
           path: ${{ env.CCACHE_DIR }}
-          key: ${{ steps.ccache.outputs.prefix }}${{ hashFiles('CMakeLists.txt', 'cmake/**', 'src/**', 'tests/unit/**', 'native_plugins/**', 'vstd/*.h', 'random-dungeon-generator/**') }}-${{ github.run_id }}-${{ github.run_attempt }}
+          key: ${{ steps.ccache.outputs.prefix }}${{ hashFiles('CMakeLists.txt', 'cmake/**', 'src/**', 'tests/unit/**', 'vstd/*.h', 'random-dungeon-generator/**') }}-${{ github.run_id }}-${{ github.run_attempt }}
           restore-keys: |
-            ${{ steps.ccache.outputs.prefix }}${{ hashFiles('CMakeLists.txt', 'cmake/**', 'src/**', 'tests/unit/**', 'native_plugins/**', 'vstd/*.h', 'random-dungeon-generator/**') }}-
+            ${{ steps.ccache.outputs.prefix }}${{ hashFiles('CMakeLists.txt', 'cmake/**', 'src/**', 'tests/unit/**', 'vstd/*.h', 'random-dungeon-generator/**') }}-
             ${{ steps.ccache.outputs.prefix }}
       - name: Configure diagnostic build with optimization and symbols
         run: GAME_CONFIGURE_BUILD_TYPES=RelWithDebInfo ./configure.sh
@@ -106,4 +106,4 @@ jobs:
         uses: actions/cache/save@27d5ce7f107fe9357f9df03efb73ab90386fccae
         with:
           path: ${{ env.CCACHE_DIR }}
-          key: ${{ steps.ccache.outputs.prefix }}${{ hashFiles('CMakeLists.txt', 'cmake/**', 'src/**', 'tests/unit/**', 'native_plugins/**', 'vstd/*.h', 'random-dungeon-generator/**') }}-${{ github.run_id }}-${{ github.run_attempt }}
+          key: ${{ steps.ccache.outputs.prefix }}${{ hashFiles('CMakeLists.txt', 'cmake/**', 'src/**', 'tests/unit/**', 'vstd/*.h', 'random-dungeon-generator/**') }}-${{ github.run_id }}-${{ github.run_attempt }}

@@ -17,7 +17,6 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 #include "core/CTypes.h"
 #include "core/CTypeRegistration.h"
-#include "plugin/NativePlugin.h"
 #include <mutex>
 
 std::unordered_map<std::string, std::function<std::shared_ptr<CGameObject>()>> *CTypes::builders() {
@@ -106,7 +105,7 @@ struct register_all_types {
     register_all_types() {
         type_registration::registerObjectTypes();
         type_registration::registerCoreTypes();
-        native_plugin::registerGameplayTypeMetadata();
+        type_registration::registerGameplayTypeMetadata();
         type_registration::registerHandlerTypes();
         type_registration::registerGuiTypes();
         type_registration::registerGuiPanelTypes();
