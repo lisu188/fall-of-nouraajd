@@ -30200,7 +30200,31 @@ def selectBranchTestNames(test_names, options):
     return [name for name in selected if name in test_names]
 
 
+def expandWorkerTestArgs(argv):
+    flag = "--worker-test-names-file"
+    if flag not in argv[1:]:
+        return argv
+    if not GAME_TEST_WORKER or len(argv) != 3 or argv[1] != flag:
+        raise ValueError("Worker test manifest requires an isolated worker and no other arguments")
+    try:
+        with Path(argv[2]).open("rb") as stream:
+            raw = stream.read(1024 * 1024 + 1)
+        if len(raw) > 1024 * 1024:
+            raise ValueError("Worker test manifest exceeds 1 MiB")
+        names = json.loads(raw)
+    except (OSError, UnicodeError, json.JSONDecodeError) as error:
+        raise ValueError("Worker test manifest cannot be read") from error
+    if (
+        not isinstance(names, list)
+        or not 1 <= len(names) <= 25000
+        or any(not isinstance(name, str) or not name or name.startswith("-") or "\x00" in name for name in names)
+    ):
+        raise ValueError("Worker test manifest must contain the selected test names")
+    return [argv[0], *names]
+
+
 def parse_runner_args(argv):
+    argv = expandWorkerTestArgs(argv)
     jobs = None
     suite_name = "full"
     unittest_argv = [argv[0]]
@@ -30424,7 +30448,13 @@ def run_test_subprocess(test_names, shard_name, extra_env=None):
     )
     if extra_env:
         env.update(extra_env)
-    command = [sys.executable, str(REPO_ROOT / "test.py"), *test_names]
+    selection = json.dumps(list(test_names)).encode("utf-8")
+    if len(selection) > 1024 * 1024:
+        raise ValueError("Worker test manifest exceeds 1 MiB")
+    output_dir.mkdir(parents=True, exist_ok=True)
+    names_file = output_dir / "test-names.json"
+    names_file.write_bytes(selection)
+    command = [sys.executable, str(REPO_ROOT / "test.py"), "--worker-test-names-file", str(names_file)]
     print(f"[test shard {shard_name}] running {len(test_names)} test(s)", flush=True)
     return subprocess.Popen(command, cwd=REPO_ROOT, env=env, start_new_session=(os.name == "posix"))
 
