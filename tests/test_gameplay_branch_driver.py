@@ -14,6 +14,7 @@ from unittest.mock import Mock, patch
 
 from tests.castle_walkthrough import TransitRoutes, shortestRoute
 from tests.gameplay_branch_driver import (
+    ROOT as MCP_SOURCE_ROOT,
     FORBIDDEN_METHODS,
     GameplayBranchDriver,
     authoredRoadCells,
@@ -138,7 +139,9 @@ class GameplayBranchDriverTest(unittest.TestCase):
                         state["index"] = 0
                     elif key == 1073741905:
                         state["index"] = min(1, state["index"] + 1)
-                    elif key == 13:
+                    elif key == 1073741901:
+                        state["index"] = 1
+                    elif key in (13, 27):
                         state["confirmed"] = state["dismissed"] = True
                         state["children"].remove(owner)
                 return True
@@ -1725,7 +1728,8 @@ class GameplayBranchDriverTest(unittest.TestCase):
         def advance():
             before = state["position"]
             state["turns"] += 1
-            state["position"] = state["path"].pop(0)
+            if state["path"]:
+                state["position"] = state["path"].pop(0)
             contact = dict(zip("xyz", state["position"]))
             records = [
                 {
@@ -1776,7 +1780,8 @@ class GameplayBranchDriverTest(unittest.TestCase):
             state["turns"] += 1
             if not initial and state["turns"] == 1:
                 before = state["position"]
-                state["position"] = state["path"].pop(0)
+                if state["path"]:
+                    state["position"] = state["path"].pop(0)
                 self.assertEqual((1, 0, 0), state["position"])
                 state["npcPosition"] = (1, 0, 0)
                 self.appendNpcRecords(
@@ -1802,7 +1807,8 @@ class GameplayBranchDriverTest(unittest.TestCase):
                 )
                 return
             before = state["position"]
-            state["position"] = state["path"].pop(0)
+            if state["path"]:
+                state["position"] = state["path"].pop(0)
             records = [
                 {
                     "event": "movement",
@@ -1834,7 +1840,7 @@ class GameplayBranchDriverTest(unittest.TestCase):
                 driver, state, actor, _ = self.npcOverlapDriver(directory, initial=initial)
                 after_tick = Mock()
                 driver.navigateTo("ritualWitness", after_tick=after_tick)
-                self.assertEqual(2 + int(not initial), state["turns"])
+                self.assertEqual(3 + int(not initial), state["turns"])
                 self.assertEqual(2 + int(not initial), driver.steps)
                 self.assertEqual((1, 0, 0), driver.coords())
                 self.assertEqual(driver.coords(actor), driver.coords())
@@ -1843,7 +1849,7 @@ class GameplayBranchDriverTest(unittest.TestCase):
                     1, len(driver._player_entries), "NPC-caused overlap cannot become player-entry evidence"
                 )
                 self.assertTrue(driver._player_entries[0]["cause"]["isPlayer"])
-                self.assertEqual(1 + int(not initial), after_tick.call_count)
+                self.assertEqual(2 + int(not initial), after_tick.call_count)
                 driver.step.assert_not_called()
 
     def testNpcDepartureReplansARealBlockedTargetWithoutCountingTheStationaryAttempt(self):
@@ -1852,7 +1858,7 @@ class GameplayBranchDriverTest(unittest.TestCase):
             advance = driver.tick.side_effect
 
             def blockFirstTarget():
-                if not state["turns"]:
+                if state["path"] and not state["blocked"]:
                     state["turns"] += 1
                     state["blocked"].add(state["path"][0])
                     state["path"].clear()
@@ -1861,8 +1867,10 @@ class GameplayBranchDriverTest(unittest.TestCase):
 
             driver.tick.side_effect = blockFirstTarget
             driver.navigateTo("ritualWitness")
-            self.assertEqual((3, 2), (state["turns"], driver.steps))
-            self.assertEqual([(2, 0, 0), (0, 0, 0), (1, 0, 0)], [target for _turn, _origin, target in state["targets"]])
+            self.assertEqual((4, 2), (state["turns"], driver.steps))
+            self.assertEqual(
+                [(1, 0, 0), (2, 0, 0), (0, 0, 0), (1, 0, 0)], [target for _turn, _origin, target in state["targets"]]
+            )
             self.assertEqual(1, len(driver._player_entries))
             driver.step.assert_not_called()
 
@@ -1876,7 +1884,7 @@ class GameplayBranchDriverTest(unittest.TestCase):
                 message = "No authored NPC re-entry departure" if blocked else "Could not approach authored object"
                 with self.assertRaisesRegex(AssertionError, message):
                     driver.navigateTo("ritualWitness")
-                self.assertEqual(0 if blocked else 24, state["turns"])
+                self.assertEqual(1 if blocked else 24, state["turns"])
                 self.assertEqual(0, driver.steps)
                 self.assertEqual([], list(driver._player_entries))
                 driver.step.assert_not_called()
@@ -1888,7 +1896,8 @@ class GameplayBranchDriverTest(unittest.TestCase):
             def followPlayer():
                 before, npc_before = state["position"], state["npcPosition"]
                 state["turns"] += 1
-                state["position"] = state["path"].pop(0)
+                if state["path"]:
+                    state["position"] = state["path"].pop(0)
                 state["npcPosition"] = state["position"]
                 contact = dict(zip("xyz", state["position"]))
                 self.appendNpcRecords(
@@ -1924,7 +1933,7 @@ class GameplayBranchDriverTest(unittest.TestCase):
             after_tick = Mock()
             with self.assertRaisesRegex(AssertionError, "Authored route budget exhausted"):
                 driver.navigateTo("ritualWitness", after_tick=after_tick)
-            self.assertEqual((128, 128, 128), (state["turns"], driver.steps, after_tick.call_count))
+            self.assertEqual((128, 64, 128), (state["turns"], driver.steps, after_tick.call_count))
             self.assertEqual([], list(driver._player_entries))
             driver.step.assert_not_called()
 
@@ -1986,7 +1995,7 @@ class GameplayBranchDriverTest(unittest.TestCase):
             driver.tick.side_effect = replaceTargetAfterDeparture
             with self.assertRaisesRegex(AssertionError, "NPC identity changed during authored approach"):
                 driver.navigateTo("ritualWitness")
-            self.assertEqual((1, 1), (state["turns"], driver.steps))
+            self.assertEqual((1, 0), (state["turns"], driver.steps))
             self.assertEqual([], list(driver._player_entries))
 
     def testCompletedNpcContactCanContinueWithoutAnotherPlayerMovement(self):
@@ -2021,7 +2030,7 @@ class GameplayBranchDriverTest(unittest.TestCase):
                 else:
                     before_seq = driver._combat_trace_seq
                     driver.navigateTo("ritualWitness")
-                    self.assertEqual((3, 3), (driver.tick.call_count, driver.steps))
+                    self.assertEqual((4, 3), (driver.tick.call_count, driver.steps))
                     self.assertGreater(driver._npc_contact["seq"], before_seq)
                     self.assertGreater(driver._player_entries[-1]["seq"], before_seq)
 
@@ -2056,7 +2065,7 @@ class GameplayBranchDriverTest(unittest.TestCase):
                 if changed != "trace":
                     before_seq = driver._combat_trace_seq
                     driver.navigateTo("ritualWitness")
-                    self.assertEqual(3, driver.tick.call_count)
+                    self.assertEqual(4, driver.tick.call_count)
                     self.assertGreater(driver._player_entries[-1]["seq"], before_seq)
                     self.assertGreater(driver._npc_contact["seq"], before_seq)
                 else:
@@ -2678,6 +2687,664 @@ class GameplayBranchDriverTest(unittest.TestCase):
         self.assertIn("OSError: disk full", failure.__notes__[0])
         self.assertLessEqual(len(failure.__notes__[0]), 640)
         driver.harness._mcp_engine_call.assert_not_called()
+
+    def dialogueUiDriver(self, presentations):
+        driver, state, action = self.guiDriver()
+        original = driver._rawCall.side_effect
+        nested = {"__handle__": "nested"}
+        modals = [{"__handle__": "sequence" + str(i)} for i in range(len(presentations))]
+        index, highlighted, settled = {"step": 0}, {}, set()
+
+        def rawCall(owner, method, *args):
+            if owner in modals:
+                position = modals.index(owner)
+                entry = presentations[position]
+                if method == "getType":
+                    return {
+                        "reader": "CGameCampaignPanel",
+                        "choice": "CGameCampaignBrowserPanel",
+                        "dialog": "CGameDialogPanel",
+                    }[entry[0]]
+                if method == "getObjectProperty":
+                    self.assertEqual(("dialog",), args)
+                    return {"__handle__": "dialogSource" + str(position)}
+                if method in ("getTitle", "getBody"):
+                    return "Authored speaker" if method == "getTitle" else "Authored dialogue state " + str(position)
+                if method in ("isDismissed", "hasChoice"):
+                    return position in settled
+                if method == "getParent":
+                    return None if position in settled else {"__handle__": "gui"}
+                if method == "getSelectedId":
+                    return entry[1][highlighted.get(position, 0)]
+                if method == "keyboardEvent":
+                    key = args[-1]
+                    state["calls"].append((owner["__handle__"], method, args))
+                    if key == 1073741898:
+                        highlighted[position] = 0
+                    elif key == 1073741905:
+                        highlighted[position] = min(len(entry[1]) - 1, highlighted.get(position, 0) + 1)
+                    elif key == (27 if entry[0] == "dialog" else 13):
+                        settled.add(position)
+                        state["children"].remove(owner)
+                        index["step"] += 1
+                        if index["step"] < len(modals):
+                            state["children"].append(modals[index["step"]])
+                    return True
+                raise AssertionError((owner, method, args))
+            if owner["__handle__"].startswith("dialogSource") and method == "getTypeId":
+                return presentations[int(owner["__handle__"].removeprefix("dialogSource"))][1]
+            result = original(owner, method, *args)
+            if method == "keyboardEvent" and owner["__handle__"] == "panel" and args[-1] == 13:
+                state["children"].remove(nested)
+                if modals:
+                    state["children"].append(modals[0])
+            return result
+
+        driver._rawCall.side_effect = rawCall
+        return driver, state, action
+
+    def propertyBatchDriver(self, *, mutation=None):
+        driver = self.driver()
+        driver.session = {"proc": object(), "next_request_id": 41}
+        driver.record = Mock()
+        batches = []
+
+        def send(proc, requests):
+            self.assertIs(driver.session["proc"], proc)
+            self.assertIsInstance(requests, list)
+            self.assertTrue(1 <= len(requests) <= 128)
+            for request in requests:
+                self.assertEqual({"jsonrpc", "id", "method", "params"}, set(request))
+                self.assertEqual("2.0", request["jsonrpc"])
+                self.assertEqual("tools/call", request["method"])
+                self.assertEqual("engine_handle_call", request["params"]["name"])
+                self.assertEqual({"handle", "method", "args"}, set(request["params"]["arguments"]))
+                self.assertEqual("getStringProperty", request["params"]["arguments"]["method"])
+                self.assertEqual(["sourceCreature"], request["params"]["arguments"]["args"])
+            batches.append(deepcopy(requests))
+
+        def receive(proc, *, timeout):
+            self.assertIs(driver.session["proc"], proc)
+            self.assertEqual(90, timeout)
+            responses = [
+                {
+                    "jsonrpc": "2.0",
+                    "id": request["id"],
+                    "result": {
+                        "isError": False,
+                        "structuredContent": {"result": "source-" + request["params"]["arguments"]["handle"]},
+                    },
+                }
+                for request in reversed(batches[-1])
+            ]
+            return mutation(responses) if mutation else responses
+
+        driver.harness._send_rpc.side_effect = send
+        driver.harness._read_rpc.side_effect = receive
+        return driver, batches
+
+    def testNativeChooserCancellationEnumeratesActualRowsAndSendsOnlyEscape(self):
+        driver, state, action = self.guiDriver()
+        witness = driver.chooseUi(
+            "nativeDialog", action, cancel_choice=True, forbidden_choice_ids=("internal-source-item",)
+        )
+        self.assertEqual("nativeChoiceCancelled", witness["kind"])
+        self.assertEqual(["first", "exact-source-item"], witness["choiceIds"])
+        self.assertEqual("", witness["selectedId"])
+        self.assertTrue(witness["cancelled"])
+        self.assertEqual(1, witness["nativeOptionSeq"])
+        self.assertEqual([], state["children"])
+        keys = [args[2] for owner, method, args in state["calls"] if owner == "nested" and method == "keyboardEvent"]
+        self.assertNotIn(13, keys)
+        self.assertEqual(27, keys[-1])
+        for forbidden in ("invokeAction", "setStringProperty", "setNumericProperty"):
+            self.assertNotIn(forbidden, [row[1] for row in state["calls"]])
+
+    def testNativeChooserCancellationRejectsForbiddenRowsAndUnsettledEscape(self):
+        driver, state, action = self.guiDriver()
+        with self.assertRaisesRegex(AssertionError, "Forbidden native chooser row"):
+            driver.chooseUi("nativeDialog", action, cancel_choice=True, forbidden_choice_ids=("exact-source-item",))
+        self.assertFalse(state["confirmed"])
+        driver, state, action = self.guiDriver()
+        original = driver._rawCall.side_effect
+
+        def ignoreEscape(owner, method, *args):
+            if owner["__handle__"] == "nested" and method == "keyboardEvent" and args[-1] == 27:
+                return True
+            return original(owner, method, *args)
+
+        driver._rawCall.side_effect = ignoreEscape
+        with self.assertRaisesRegex(AssertionError, "Native cancellation did not settle"):
+            driver.chooseUi("nativeDialog", action, cancel_choice=True)
+
+    def testNativeChooserCancellationInspectsAll256RowsAndRequiresTheActualEnd(self):
+        for wrong_end in (False, True):
+            with self.subTest(wrong_end=wrong_end):
+                driver, state, action = self.guiDriver()
+                original = driver._rawCall.side_effect
+
+                def rows(owner, method, *args):
+                    if owner["__handle__"] == "nested":
+                        if method == "getSelectedId":
+                            return "row" + str(state["index"])
+                        if method == "keyboardEvent" and args[-1] == 1073741905:
+                            state["index"] = min(255, state["index"] + 1)
+                            return True
+                        if method == "keyboardEvent" and args[-1] == 1073741901:
+                            state["index"] = 256 if wrong_end else 255
+                            return True
+                    return original(owner, method, *args)
+
+                driver._rawCall.side_effect = rows
+                if wrong_end:
+                    with self.assertRaisesRegex(AssertionError, "Native chooser end was not inspected"):
+                        driver.chooseUi("nativeDialog", action, cancel_choice=True)
+                    self.assertFalse(state["confirmed"])
+                else:
+                    witness = driver.chooseUi("nativeDialog", action, cancel_choice=True)
+                    self.assertEqual(["row" + str(index) for index in range(256)], witness["choiceIds"])
+                    self.assertTrue(witness["cancelled"])
+
+    def testNativeChooserCancellationRejectsMixedModesAndUnboundedRows(self):
+        for kwargs in (
+            {"selected_id": "first"},
+            {"reader_title": "Title"},
+            {"reader_lines": ["replacement"]},
+            {"dialogue_choices": []},
+        ):
+            with self.subTest(kwargs=kwargs):
+                driver, _, action = self.guiDriver()
+                with self.assertRaises(AssertionError):
+                    driver.chooseUi("nativeDialog", action, cancel_choice=True, **kwargs)
+        driver, _, action = self.guiDriver()
+        with self.assertRaises(AssertionError):
+            driver.chooseUi("nativeDialog", action, selected_id="first", forbidden_choice_ids=("hidden",))
+        driver, state, action = self.guiDriver()
+        original = driver._rawCall.side_effect
+
+        def uniqueRows(owner, method, *args):
+            if owner["__handle__"] == "nested":
+                if method == "getSelectedId":
+                    return "row" + str(state["index"])
+                if method == "keyboardEvent" and args[-1] == 1073741905:
+                    state["index"] += 1
+                    return True
+            return original(owner, method, *args)
+
+        driver._rawCall.side_effect = uniqueRows
+        with self.assertRaisesRegex(AssertionError, "Native chooser enumeration budget exhausted"):
+            driver.chooseUi("nativeDialog", action, cancel_choice=True)
+        self.assertFalse(state["confirmed"])
+
+    def testUiDialogueSequenceDrivesSuccessiveNativeReadersAndVisibleChoiceIds(self):
+        presentations = [
+            ("reader",),
+            ("choice", ["other", "0"]),
+            ("reader",),
+            ("reader",),
+            ("choice", ["5", "6"]),
+            ("reader",),
+        ]
+        driver, state, action = self.dialogueUiDriver(presentations)
+        receipt = driver.chooseUi("nativeDialog", action, dialogue_choices=["0", "5"])
+        self.assertEqual("nativeDialogue", receipt["kind"])
+        self.assertEqual(["0", "5"], receipt["selectedIds"])
+        self.assertEqual(6, len(receipt["panels"]))
+        self.assertEqual(1, receipt["nativeOptionSeq"])
+        self.assertEqual([], state["children"])
+        methods = [row[1] for row in state["calls"]]
+        self.assertNotIn("invokeAction", methods)
+        self.assertNotIn("setStringProperty", methods)
+        self.assertNotIn("setNumericProperty", methods)
+        self.assertEqual(1, methods.count("setObjectProperty"))
+
+    def testUiDialogueSequenceSupportsReaderOnlyRepeatConversation(self):
+        driver, state, action = self.dialogueUiDriver([("reader",), ("reader",)])
+        receipt = driver.chooseUi("nativeDialog", action, dialogue_choices=[])
+        self.assertEqual([], receipt["selectedIds"])
+        self.assertEqual(["nativeReader", "nativeReader"], [row["kind"] for row in receipt["panels"]])
+        self.assertEqual([], state["children"])
+
+    def testUiDialogueSequenceRejectsUnusedMissingAndUnexpectedChoiceIds(self):
+        for presentations, choices in [
+            ([("reader",)], ["0"]),
+            ([("choice", ["0"])], []),
+            ([("choice", ["0"])], ["missing"]),
+            ([], []),
+        ]:
+            with self.subTest(presentations=presentations, choices=choices):
+                driver, _, action = self.dialogueUiDriver(presentations)
+                with self.assertRaises(AssertionError):
+                    driver.chooseUi("nativeDialog", action, dialogue_choices=choices)
+
+    def testUiDialogueSequenceRejectsMixedModesAndBoundsModalWork(self):
+        for kwargs in ({"selected_id": "0"}, {"reader_title": "Title"}, {"reader_lines": ["replacement"]}):
+            driver, _, action = self.dialogueUiDriver([("reader",)])
+            with self.subTest(kwargs=kwargs), self.assertRaises(AssertionError):
+                driver.chooseUi("nativeDialog", action, dialogue_choices=[], **kwargs)
+        driver, _, action = self.dialogueUiDriver([("reader",)] * 128)
+        receipt = driver.chooseUi("nativeDialog", action, dialogue_choices=[])
+        self.assertEqual(128, len(receipt["panels"]))
+        driver, _, action = self.dialogueUiDriver([("reader",)] * 129)
+        with self.assertRaisesRegex(AssertionError, "panel budget"):
+            driver.chooseUi("nativeDialog", action, dialogue_choices=[])
+        driver, _, action = self.dialogueUiDriver([("reader",)])
+        with self.assertRaisesRegex(AssertionError, "choice budget"):
+            driver.chooseUi("nativeDialog", action, dialogue_choices=["0"] * 33)
+
+    def testUiDialogueDismissesOnlyThePlannedSourceDialogBeforeItsOuterPanel(self):
+        driver, state, action = self.dialogueUiDriver(
+            [("choice", ["offer25", "pay50"]), ("dialog", "cityAr0609ScriptActorJalantDialog")]
+        )
+        receipt = driver.chooseUi(
+            "nativeDialog",
+            action,
+            dialogue_choices=["pay50"],
+            dialogue_dialog_ids=["cityAr0609ScriptActorJalantDialog"],
+        )
+        self.assertEqual(["pay50"], receipt["selectedIds"])
+        self.assertEqual("cityAr0609ScriptActorJalantDialog", receipt["panels"][-1]["dialog"])
+        self.assertEqual(1, receipt["nativeOptionSeq"])
+        keys = [(owner, args[-1]) for owner, method, args in state["calls"] if method == "keyboardEvent"]
+        self.assertLess(keys.index(("sequence1", 27)), keys.index(("panel", 27)))
+        self.assertNotIn(("sequence1", 13), keys)
+        self.assertEqual([], state["children"])
+        for forbidden in ("invokeAction", "setStringProperty", "setNumericProperty"):
+            self.assertNotIn(forbidden, [row[1] for row in state["calls"]])
+
+    def testUiDialogueExplicitEmptyRepeatStillRequiresTheExactNativeOptionReceipt(self):
+        driver, state, action = self.dialogueUiDriver([])
+        receipt = driver.chooseUi("nativeDialog", action, dialogue_choices=[], dialogue_dialog_ids=[])
+        self.assertEqual([], receipt["panels"])
+        self.assertEqual(1, receipt["nativeOptionSeq"])
+        self.assertEqual([], state["children"])
+        driver, _, action = self.dialogueUiDriver([])
+        with patch("tests.gameplay_branch_driver.readNewNativeTrace", return_value=()):
+            with self.assertRaisesRegex(AssertionError, "exact input receipt"):
+                driver.chooseUi("nativeDialog", action, dialogue_choices=[], dialogue_dialog_ids=[])
+        driver, _, action = self.dialogueUiDriver([])
+        with self.assertRaisesRegex(AssertionError, "did not present a native dialogue"):
+            driver.chooseUi("nativeDialog", action, dialogue_choices=[])
+        driver, _, action = self.dialogueUiDriver([("reader",)])
+        with self.assertRaisesRegex(AssertionError, "explicitly empty"):
+            driver.chooseUi("nativeDialog", action, dialogue_choices=[], dialogue_dialog_ids=[])
+
+    def testUiDialogueRejectsUnexpectedWrongMissingAndUnboundedDialogPlans(self):
+        for presentations, plan in (
+            ([("dialog", "wrongDialog")], ["expectedDialog"]),
+            ([("dialog", "expectedDialog")], []),
+            ([("dialog", "expectedDialog")], None),
+            ([], ["expectedDialog"]),
+            ([("dialog", "expectedDialog")], ["expectedDialog", "extraDialog"]),
+        ):
+            with self.subTest(presentations=presentations, plan=plan):
+                driver, _, action = self.dialogueUiDriver(presentations)
+                with self.assertRaises(AssertionError):
+                    driver.chooseUi("nativeDialog", action, dialogue_choices=[], dialogue_dialog_ids=plan)
+        for plan in ("dialog", [""], [None]):
+            driver, _, action = self.dialogueUiDriver([])
+            with self.subTest(plan=plan), self.assertRaises(AssertionError):
+                driver.chooseUi("nativeDialog", action, dialogue_choices=[], dialogue_dialog_ids=plan)
+        driver, _, action = self.guiDriver()
+        with self.assertRaisesRegex(AssertionError, "requires dialogue_choices"):
+            driver.chooseUi("nativeDialog", action, selected_id="first", dialogue_dialog_ids=[])
+
+    def testUiDialogueRejectsUnsettledNestedEscapeAndSourceDisappearance(self):
+        for mutation in ("ignoreEscape", "removeSource"):
+            driver, state, action = self.dialogueUiDriver([("dialog", "expectedDialog")])
+            original = driver._rawCall.side_effect
+
+            def alterEscape(owner, method, *args):
+                if owner["__handle__"] == "sequence0" and method == "keyboardEvent" and args[-1] == 27:
+                    if mutation == "ignoreEscape":
+                        return True
+                    result = original(owner, method, *args)
+                    state["children"].remove({"__handle__": "panel"})
+                    return result
+                return original(owner, method, *args)
+
+            driver._rawCall.side_effect = alterEscape
+            with self.subTest(mutation=mutation), self.assertRaises(AssertionError):
+                driver.chooseUi("nativeDialog", action, dialogue_choices=[], dialogue_dialog_ids=["expectedDialog"])
+
+    def testUiDialogueRejectsStrayDialogsDuringAnExplicitEmptyRepeat(self):
+        for extra in ("dialog", "reader"):
+            driver, state, action = self.dialogueUiDriver([("dialog", "expectedDialog")])
+            original = driver._rawCall.side_effect
+            extra_handle = {"__handle__": "extra"}
+
+            def extraPanel(owner, method, *args):
+                if owner == extra_handle and method == "getType":
+                    return "CGameDialogPanel" if extra == "dialog" else "CGameCampaignPanel"
+                result = original(owner, method, *args)
+                if owner["__handle__"] == "panel" and method == "keyboardEvent" and args[-1] == 13:
+                    state["children"].append(extra_handle)
+                return result
+
+            driver._rawCall.side_effect = extraPanel
+            with self.subTest(extra=extra), self.assertRaisesRegex(AssertionError, "extra|Ambiguous"):
+                driver.chooseUi("nativeDialog", action, dialogue_choices=[], dialogue_dialog_ids=[])
+
+    def testUiDialogueDefaultPlanRejectsAnUnplannedNestedDialogBeforeClosingItsSource(self):
+        driver, state, action = self.dialogueUiDriver(
+            [("choice", ["pay50"]), ("dialog", "cityAr0609ScriptActorJalantDialog")]
+        )
+        with self.assertRaisesRegex(AssertionError, "explicit dismissal plan"):
+            driver.chooseUi("nativeDialog", action, dialogue_choices=["pay50"])
+        self.assertIn({"__handle__": "panel"}, state["children"])
+        self.assertIn({"__handle__": "sequence1"}, state["children"])
+
+    def testStringPropertiesBatchUses128ReadsReordersResponsesAndTracesEveryLiveHandle(self):
+        driver, batches = self.propertyBatchDriver()
+        handles = [{"__handle__": "actor" + str(index)} for index in range(1025)]
+        self.assertEqual(
+            ["source-" + handle["__handle__"] for handle in handles], driver.stringProperties(handles, "sourceCreature")
+        )
+        self.assertEqual([128] * 8 + [1], [len(batch) for batch in batches])
+        self.assertEqual(list(range(41, 1066)), [request["id"] for batch in batches for request in batch])
+        self.assertEqual(1066, driver.session["next_request_id"])
+        self.assertEqual(1025, driver.record.call_count)
+        self.assertEqual(
+            [
+                ({"method": "getStringProperty", "handle": handle["__handle__"], "args": ["sourceCreature"]},)
+                for handle in handles
+            ],
+            [call.args for call in driver.record.call_args_list],
+        )
+        self.assertTrue(all(call.kwargs == {"replay": False} for call in driver.record.call_args_list))
+        driver._rawCall.assert_not_called()
+        driver.harness._mcp_engine_call.assert_not_called()
+
+    def testStringPropertiesBatchRejectsMissingDuplicateUnexpectedAndMalformedResponseIds(self):
+        mutations = {
+            "missing": lambda rows: rows[:-1],
+            "extra": lambda rows: rows + [deepcopy(rows[0])],
+            "duplicate": lambda rows: [rows[0], deepcopy(rows[0])],
+            "unexpected": lambda rows: [dict(rows[0], id=999), rows[1]],
+            "boolId": lambda rows: [dict(rows[0], id=True), rows[1]],
+            "stringId": lambda rows: [dict(rows[0], id="42"), rows[1]],
+        }
+        for name, mutation in mutations.items():
+            driver, _ = self.propertyBatchDriver(mutation=mutation)
+            with self.subTest(name=name), self.assertRaises(AssertionError):
+                driver.stringProperties([{"__handle__": "first"}, {"__handle__": "second"}], "sourceCreature")
+            self.assertEqual(43, driver.session["next_request_id"])
+
+    def testStringPropertiesBatchRejectsRpcToolAndResultErrors(self):
+        mutations = {
+            "notBatch": lambda rows: {},
+            "notObject": lambda rows: [None],
+            "version": lambda rows: [dict(rows[0], jsonrpc="1.0")],
+            "rpcError": lambda rows: [dict(rows[0], error={"code": -32603, "message": "failed"})],
+            "missingTool": lambda rows: [dict(rows[0], result=None)],
+            "toolError": lambda rows: [dict(rows[0], result={"isError": True})],
+            "badErrorFlag": lambda rows: [dict(rows[0], result={"isError": "false"})],
+            "missingStructured": lambda rows: [dict(rows[0], result={})],
+            "missingValue": lambda rows: [dict(rows[0], result={"structuredContent": {}})],
+            "numberValue": lambda rows: [dict(rows[0], result={"structuredContent": {"result": 1}})],
+            "nullValue": lambda rows: [dict(rows[0], result={"structuredContent": {"result": None}})],
+        }
+        for name, mutation in mutations.items():
+            driver, _ = self.propertyBatchDriver(mutation=mutation)
+            with self.subTest(name=name), self.assertRaises(AssertionError):
+                driver.stringProperties([{"__handle__": "first"}], "sourceCreature")
+
+    def testStringPropertiesBatchKeepsEmptyReadsFreeAndRejectsUnsafeInputBeforeTransport(self):
+        driver, batches = self.propertyBatchDriver()
+        self.assertEqual([], driver.stringProperties([], "sourceCreature"))
+        self.assertEqual([], batches)
+        self.assertEqual(41, driver.session["next_request_id"])
+        invalid = (
+            ("actor", "sourceCreature"),
+            ([{}], "sourceCreature"),
+            ([{"__handle__": ""}], "sourceCreature"),
+            ([{"__handle__": 7}], "sourceCreature"),
+            ([{"__handle__": "same"}] * 2, "sourceCreature"),
+            ([{"__handle__": str(index)} for index in range(10001)], "sourceCreature"),
+            ([{"__handle__": "actor"}], ""),
+            ([{"__handle__": "actor"}], None),
+        )
+        for handles, key in invalid:
+            with self.subTest(handles=len(handles), key=key), self.assertRaises(AssertionError):
+                driver.stringProperties(handles, key)
+        self.assertEqual([], batches)
+        self.assertEqual(41, driver.session["next_request_id"])
+        driver.record.assert_not_called()
+
+    def testStringPropertiesBatchUsesActualStdioSendReadAndServerArrayHandler(self):
+        import ast
+        import io
+
+        client_tree = ast.parse((MCP_SOURCE_ROOT / "test.py").read_text(encoding="utf-8"))
+        server_tree = ast.parse((MCP_SOURCE_ROOT / "mcp.py").read_text(encoding="utf-8"))
+        client_names = {"_send_rpc", "_read_rpc"}
+        server_names = {"_handle_stdio_payload", "_is_jsonrpc_response", "_is_notification"}
+        selected = [
+            deepcopy(node)
+            for tree, names in ((client_tree, client_names), (server_tree, server_names))
+            for node in ast.walk(tree)
+            if isinstance(node, ast.FunctionDef) and node.name in names
+        ]
+        self.assertEqual(client_names | server_names, {node.name for node in selected})
+        self.assertEqual(5, len(selected))
+        for node in selected:
+            node.decorator_list = []
+        selected.insert(
+            0,
+            next(node for node in server_tree.body if isinstance(node, ast.ClassDef) and node.name == "ProtocolError"),
+        )
+        selected.insert(0, ast.ImportFrom(module="__future__", names=[ast.alias(name="annotations")], level=0))
+        namespace = {"json": json, "logger": Mock(), "time": SimpleNamespace(monotonic=lambda: 0)}
+        exec(
+            compile(
+                ast.fix_missing_locations(ast.Module(body=selected, type_ignores=[])),
+                "actual_stdio_transport_fragments",
+                "exec",
+            ),
+            namespace,
+        )
+        source_values = {"first": "JALANT", "second": ""}
+        server_calls, sent = [], []
+
+        def handleMessage(request, *, transport, session_id):
+            self.assertEqual(("stdio", None), (transport, session_id))
+            self.assertEqual("tools/call", request["method"])
+            self.assertEqual("engine_handle_call", request["params"]["name"])
+            arguments = request["params"]["arguments"]
+            self.assertEqual(("getStringProperty", ["sourceCreature"]), (arguments["method"], arguments["args"]))
+            server_calls.append(arguments["handle"])
+            return SimpleNamespace(
+                response={
+                    "jsonrpc": "2.0",
+                    "id": request["id"],
+                    "result": {"isError": False, "structuredContent": {"result": source_values[arguments["handle"]]}},
+                }
+            )
+
+        server = SimpleNamespace(
+            handle_message=handleMessage,
+            _is_jsonrpc_response=namespace["_is_jsonrpc_response"],
+            _is_notification=namespace["_is_notification"],
+        )
+        server._handle_stdio_payload = namespace["_handle_stdio_payload"].__get__(server)
+        proc = SimpleNamespace(stdout=None)
+
+        def write(data):
+            sent.append(data)
+            requests = json.loads(data)
+            self.assertIsInstance(requests, list)
+            responses = server._handle_stdio_payload(requests)
+            self.assertIsInstance(responses, list)
+            notice = {"jsonrpc": "2.0", "method": "notifications/message", "params": {"message": "model-only"}}
+            proc.stdout = io.BytesIO((json.dumps(notice) + "\n" + json.dumps(responses) + "\n").encode("utf-8"))
+            return len(data)
+
+        proc.stdin = SimpleNamespace(write=write, flush=lambda: None)
+        harness = SimpleNamespace(
+            fail=self.fail,
+            _record_mcp_request=Mock(),
+            _readline=lambda source, deadline, **kwargs: source.stdout.readline(),
+        )
+        harness._send_rpc = namespace["_send_rpc"].__get__(harness)
+        harness._read_rpc = namespace["_read_rpc"].__get__(harness)
+        driver = self.driver()
+        driver.harness, driver.session = harness, {"proc": proc, "next_request_id": 41}
+        self.assertEqual(
+            ["JALANT", ""],
+            driver.stringProperties([{"__handle__": "first"}, {"__handle__": "second"}], "sourceCreature"),
+        )
+        self.assertEqual(["first", "second"], server_calls)
+        self.assertEqual(1, len(sent))
+        self.assertEqual(43, driver.session["next_request_id"])
+        harness._record_mcp_request.assert_called_once()
+
+    def playerFirstNpcOverlapDriver(self, directory, *, change=None):
+        driver, state, actor, identities = self.nativeNpcEntryDriver(directory)
+        state.update(position=(1, 0, 0), actorIndex=0, playerPositions=[], npcPositions=[])
+        cycle = ((1, 0, 0), (2, 0, 0))
+        contact = {"x": 1, "y": 0, "z": 0}
+        self.appendNpcRecords(
+            driver,
+            state,
+            [
+                {
+                    "event": "object_entered",
+                    "map": driver.map_name,
+                    "target": {**identities["player"], "isPlayer": True},
+                    "cause": {**identities["moving-actor"], "isPlayer": False},
+                    "targetCoords": contact,
+                    "causeCoords": contact,
+                }
+            ],
+        )
+
+        def advance():
+            before, npc_before = state["position"], cycle[state["actorIndex"]]
+            state["turns"] += 1
+            if state["path"]:
+                state["position"] = state["path"].pop(0)
+            point = dict(zip("xyz", state["position"]))
+            records = [
+                {
+                    "event": "movement",
+                    "map": driver.map_name,
+                    "object": {**identities["player"], "isPlayer": True},
+                    "from": dict(zip("xyz", before)),
+                    "to": point,
+                }
+            ]
+            if state["position"] != before and state["position"] == npc_before:
+                state["visits"].append(state["turns"])
+                entry = {
+                    "event": "object_entered",
+                    "map": driver.map_name,
+                    "target": {**identities["moving-actor"], "isPlayer": False},
+                    "cause": {**identities["player"], "isPlayer": True},
+                    "targetCoords": point,
+                    "causeCoords": point,
+                }
+                if change:
+                    change(entry)
+                records.append(entry)
+            state["actorIndex"] = 1 - state["actorIndex"]
+            npc_point = dict(zip("xyz", cycle[state["actorIndex"]]))
+            records.append(
+                {
+                    "event": "movement",
+                    "map": driver.map_name,
+                    "object": {**identities["moving-actor"], "isPlayer": False},
+                    "from": dict(zip("xyz", npc_before)),
+                    "to": npc_point,
+                }
+            )
+            if cycle[state["actorIndex"]] == state["position"]:
+                records.append(
+                    {
+                        "event": "object_entered",
+                        "map": driver.map_name,
+                        "target": {**identities["player"], "isPlayer": True},
+                        "cause": {**identities["moving-actor"], "isPlayer": False},
+                        "targetCoords": point,
+                        "causeCoords": point,
+                    }
+                )
+            state["playerPositions"].append(state["position"])
+            state["npcPositions"].append(cycle[state["actorIndex"]])
+            self.appendNpcRecords(driver, state, records)
+
+        driver.tick = Mock(side_effect=advance)
+        return driver, state, actor, identities
+
+    def testNpcCausedOverlapHoldsOnceBeforePlayerFirstWandererDeparture(self):
+        with tempfile.TemporaryDirectory() as directory:
+            driver, state, actor, _ = self.playerFirstNpcOverlapDriver(directory)
+            after_tick, failure = Mock(), None
+            try:
+                driver.navigateTo("ritualWitness", after_tick=after_tick)
+            except AssertionError as error:
+                failure = error
+            self.assertIsNone(failure, "Player-first wandering must permit a real entry within the unchanged budget")
+            self.assertEqual((2, 1, 1), (state["turns"], driver.steps, after_tick.call_count))
+            self.assertEqual([2], state["visits"])
+            self.assertEqual([(1, 0, 0), (2, 0, 0)], state["playerPositions"])
+            self.assertEqual([(2, 0, 0), (1, 0, 0)], state["npcPositions"])
+            self.assertNotEqual(driver.coords(), driver.coords(actor))
+            self.assertEqual([(1, 0, 0), (2, 0, 0)], [target for _turn, _origin, target in state["targets"]])
+            self.assertEqual(1, len(driver._player_entries))
+            driver.step.assert_not_called()
+
+    def testNpcOverlapHoldUsesOrdinaryCurrentCellTargetOnceBeforeStaticFallback(self):
+        with tempfile.TemporaryDirectory() as directory:
+            driver, state, _actor, _ = self.npcOverlapDriver(directory)
+            driver.navigateTo("ritualWitness")
+            self.assertEqual([(1, 0, 0), (2, 0, 0), (1, 0, 0)], [target for _turn, _origin, target in state["targets"]])
+            self.assertEqual((3, 2), (state["turns"], driver.steps))
+            self.assertEqual(1, len(driver._player_entries))
+            self.assertTrue(driver._player_entries[0]["cause"]["isPlayer"])
+
+    def testNpcOverlapHoldStillRejectsForgedEntryAtUnchangedBudget(self):
+        for changed in ("cause", "identity", "map", "coordinates"):
+            with self.subTest(changed=changed), tempfile.TemporaryDirectory() as directory:
+
+                def change(record):
+                    if changed == "cause":
+                        record["cause"]["isPlayer"] = False
+                    elif changed == "identity":
+                        record["target"]["typeId"] = "anotherWitness"
+                    elif changed == "map":
+                        record["map"] = "anotherMap"
+                    else:
+                        record["causeCoords"] = {"x": 99, "y": 0, "z": 0}
+
+                driver, state, _actor, _ = self.playerFirstNpcOverlapDriver(directory, change=change)
+                with self.assertRaisesRegex(AssertionError, "Authored route budget exhausted"):
+                    driver.navigateTo("ritualWitness")
+                self.assertEqual(128, state["turns"])
+                self.assertEqual(
+                    (1, 0, 0), state["targets"][0][2], "Rejected evidence must still use the ordinary initial hold"
+                )
+                driver.step.assert_not_called()
+
+    def testNpcOverlapHoldRequiresNativeTraceAcknowledgmentAndNeverRunsForAdjacentVisit(self):
+        with tempfile.TemporaryDirectory() as directory:
+            driver, state, _actor, _ = self.playerFirstNpcOverlapDriver(directory)
+            driver.harness._mcp_engine_call.return_value = False
+            with self.assertRaisesRegex(AssertionError, "Native trace output unavailable"):
+                driver.navigateTo("ritualWitness")
+            self.assertEqual(0, state["turns"])
+            self.assertEqual([], state["targets"])
+        with tempfile.TemporaryDirectory() as directory:
+            driver, state, _actor, _ = self.playerFirstNpcOverlapDriver(directory)
+            driver.navigateTo("ritualWitness", adjacent=True)
+            self.assertEqual(0, state["turns"])
+            self.assertEqual([], state["targets"])
+        with tempfile.TemporaryDirectory() as directory:
+            driver, state, _actor, _ = self.npcOverlapDriver(directory)
+            state["path"] = [(0, 0, 0)]
+            observed = []
+            driver.navigateTo("ritualWitness", after_tick=lambda: observed.append(driver.coords()))
+            self.assertEqual((1, 0, 0), observed[0], "Ordinary current-cell target must clear a previously queued path")
+            self.assertEqual((3, 2), (state["turns"], driver.steps))
 
 
 if __name__ == "__main__":

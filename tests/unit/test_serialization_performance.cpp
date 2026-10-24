@@ -17,6 +17,10 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 
 #include "core/CGame.h"
+#include "core/CGameContext.h"
+#include "core/CMap.h"
+#include "core/CProvider.h"
+#include "core/CSaveFormat.h"
 #include "core/CSerialization.h"
 #include "core/CController.h"
 #include "core/CLoader.h"
@@ -25,13 +29,23 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #include "object/CEffect.h"
 #include "object/CTile.h"
 #include "object/CMapObject.h"
+#include "object/CPlayer.h"
+#include "object/CQuest.h"
+#include "object/CWaitState.h"
+#include "handler/CFightHandler.h"
+#include "handler/CEventHandler.h"
+#include "object/CTrigger.h"
 #include "test_harness.h"
 #include "veventloop.h"
 
+#include <algorithm>
+#include <chrono>
 #include <cstddef>
 #include <iostream>
 #include <memory>
+#include <optional>
 #include <set>
+#include <stdexcept>
 #include <string>
 #include <utility>
 #include <vector>
@@ -57,6 +71,142 @@ class ScalarMetadataTile : public CTile {
     }
 };
 
+class SaveAdmissionBudgetMap : public CMap {
+  public:
+    std::shared_ptr<vstd::meta> meta() override {
+        if (observeGraph) {
+            ++graphVisits;
+            throw std::runtime_error("intentional save admission graph stop before resource writes");
+        }
+        return CMap::meta();
+    }
+    std::shared_ptr<const vstd::meta> meta() const override {
+        if (observeGraph) {
+            ++graphVisits;
+            throw std::runtime_error("intentional save admission graph stop before resource writes");
+        }
+        return CMap::meta();
+    }
+    bool observeGraph = false;
+    mutable std::size_t graphVisits = 0;
+};
+
+class SaveAdmissionBudgetQuest : public CQuest {
+  public:
+    void captureJournal(bool) override { ++captures; }
+    std::size_t captures = 0;
+};
+
+void testRejectedSaveAdmissionHasZeroSnapshotWork() {
+    constexpr int ATTEMPTS = 256;
+    CTypes::register_type<CMap, CGameObject>();
+    auto game = std::make_shared<CGame>();
+    game->getObjectHandler()->registerType("CPlayerController", [] { return std::make_shared<CPlayerController>(); });
+    game->getObjectHandler()->registerType("CPlayerFightController",
+                                           [] { return std::make_shared<CPlayerFightController>(); });
+    auto map = std::make_shared<SaveAdmissionBudgetMap>();
+    map->setGame(game);
+    map->setMapName("empty");
+    game->setMap(map);
+    auto player = std::make_shared<CPlayer>();
+    player->setGame(game);
+    player->setName("player");
+    player->setController(std::make_shared<CPlayerController>());
+    player->setFightController(std::make_shared<CPlayerFightController>());
+    auto quest = std::make_shared<SaveAdmissionBudgetQuest>();
+    quest->setGame(game);
+    player->setQuests({quest});
+    map->setObjects({player});
+    expect_true(map->getPlayer() == player, "the rejection budget must include an actual journal owner");
+    const auto resources = game->getResourcesProvider();
+    const auto slot =
+        "performance-save-admission-" + std::to_string(std::chrono::steady_clock::now().time_since_epoch().count());
+    auto operation = map->tryBeginUnsafeOperation();
+    expect_true(operation.has_value(), "the zero-work budget must hold real unsafe admission");
+    if (!operation) {
+        game->getContext()->shutdown();
+        return;
+    }
+    map->observeGraph = true;
+    int rejected = 0;
+    for (int index = 0; index < ATTEMPTS; ++index) {
+        rejected += !CMapLoader::saveWithResult(map, slot);
+    }
+    const auto captures = quest->captures;
+    const auto graphVisits = map->graphVisits;
+    const int providerOutputs = !resources->getPath(CSaveFormat::primaryPath(slot)).empty() +
+                                !resources->getPath(CSaveFormat::backupPath(slot)).empty();
+    expect_true(rejected == ATTEMPTS && captures == 0 && graphVisits == 0 && providerOutputs == 0,
+                "each rejected save must have zero journal/graph work and create no primary or backup output");
+    operation->finish();
+    expect_true(!CMapLoader::saveWithResult(map, slot) && quest->captures == 1 && map->graphVisits == 1,
+                "the released positive control must reach journal capture and the intentional graph stop once");
+    map->observeGraph = false;
+    std::cout << "[performance] rejected save admission: attempts=" << ATTEMPTS << " rejected=" << rejected
+              << " journal=" << captures << " graph=" << graphVisits << " providerOutputs=" << providerOutputs
+              << " workBudget=0 controlJournal=" << quest->captures << " controlGraph=" << map->graphVisits << '\n';
+    game->getContext()->shutdown();
+}
+class RejectedEncounterController : public CFightController {
+  public:
+    int starts = 0;
+    int actions = 0;
+    int ends = 0;
+    void start(std::shared_ptr<CCreature>, std::shared_ptr<CCreature>) override { ++starts; }
+    bool control(std::shared_ptr<CCreature>, std::shared_ptr<CCreature>) override {
+        ++actions;
+        return true;
+    }
+    bool isCancelled(std::shared_ptr<CCreature>, std::shared_ptr<CCreature>) override { return true; }
+    void end(std::shared_ptr<CCreature>, std::shared_ptr<CCreature>) override { ++ends; }
+};
+
+void testSnapshotAdmissionRejectsEncountersBeforeMutation() {
+    constexpr int ATTEMPTS = 64;
+    auto game = std::make_shared<CGame>();
+    auto map = std::make_shared<CMap>();
+    map->setGame(game);
+    game->setMap(map);
+    map->setBoolProperty("guardNativeEncounterSaves", true);
+    auto attacker = std::make_shared<CCreature>();
+    auto enemy = std::make_shared<CCreature>();
+    auto attackerController = std::make_shared<RejectedEncounterController>();
+    auto enemyController = std::make_shared<RejectedEncounterController>();
+    for (const auto &actor : {attacker, enemy}) {
+        actor->setGame(game);
+        actor->setBaseStats(std::make_shared<CStats>());
+        actor->setLevelStats(std::make_shared<CStats>());
+        actor->getBaseStats()->setMainStat("strength");
+        actor->getBaseStats()->setStamina(10);
+        actor->getBaseStats()->setAgility(10);
+        actor->setLevel(1);
+        actor->setHp(10);
+    }
+    attacker->setName("rejectedEncounterAttacker");
+    enemy->setName("rejectedEncounterEnemy");
+    attacker->setAffiliation("admissionSideA");
+    enemy->setAffiliation("admissionSideB");
+    attacker->setFightController(attackerController);
+    enemy->setFightController(enemyController);
+    map->setObjects({attacker, enemy});
+    map->setStringProperty("combatHistory", "bounded admission sentinel");
+    auto snapshot = map->tryBeginSaveSnapshot();
+    expect_true(snapshot.has_value(), "the rejection work budget must own real snapshot admission");
+    int rejected = 0;
+    for (int index = 0; index < ATTEMPTS; ++index) {
+        rejected += CFightHandler::fightManyResult(attacker, {enemy}).outcome == CFightOutcome::Invalid;
+    }
+    const int starts = attackerController->starts + enemyController->starts;
+    const int actions = attackerController->actions + enemyController->actions;
+    const int ends = attackerController->ends + enemyController->ends;
+    expect_true(rejected == ATTEMPTS && starts == 0 && actions == 0 && ends == 0 &&
+                    map->getStringProperty("combatHistory") == "bounded admission sentinel",
+                "rejected encounters must perform zero controller callbacks and no combat-history writes");
+    std::cout << "[performance] snapshot-rejected encounters: attempts=" << ATTEMPTS << " rejected=" << rejected
+              << " starts=" << starts << " actions=" << actions << " ends=" << ends << " callbackBudget=0\n";
+    snapshot.reset();
+    game->getContext()->shutdown();
+}
 void testScalarPropertyMetadataWorkIsBounded() {
     constexpr std::size_t tileCount = 32;
     constexpr std::size_t propertyCount = 5;
@@ -369,6 +519,258 @@ void testMutualEffectGraphSerializationHasBoundedActorDefinitions() {
     }
 }
 
+class TerminalSerializationProbe : public CPlayer {
+    V_META(TerminalSerializationProbe, CPlayer,
+           V_PROPERTY(TerminalSerializationProbe, int, serializationVisit, getSerializationVisit,
+                      setSerializationVisit))
+
+  public:
+    int getSerializationVisit() {
+        ++serializationVisits;
+        return 1;
+    }
+    void setSerializationVisit(int) {}
+    static inline std::size_t serializationVisits = 0;
+};
+
+std::size_t countTerminalActorDefinitions(const json &value) {
+    std::size_t count = 0;
+    if (value.is_object() && value.value("class", std::string()) == "TerminalSerializationProbe" &&
+        value.contains("properties")) {
+        ++count;
+    }
+    if (value.is_object()) {
+        for (const auto &[key, child] : value.items()) {
+            count += countTerminalActorDefinitions(child);
+        }
+    } else if (value.is_array()) {
+        for (const auto &child : value) {
+            count += countTerminalActorDefinitions(child);
+        }
+    }
+    return count;
+}
+
+std::size_t countTerminalPlayerTriggers(const std::shared_ptr<CMap> &map) {
+    std::size_t count = 0;
+    for (const auto &trigger : map->getEventHandler()->getTriggers()) {
+        if (trigger && trigger->getObject() == "player") {
+            ++count;
+        }
+    }
+    return count;
+}
+
+void testRetainedTerminalPlayerWorkIsBounded() {
+    constexpr int LOOKUPS = 128;
+    constexpr int SNAPSHOTS = 4;
+    constexpr std::size_t ACTOR_DEFINITIONS = 1;
+    // Reuse the existing per-owner graph budget for one map and one retained player.
+    constexpr std::size_t BYTE_BUDGET = EFFECT_GRAPH_BYTES_PER_ACTOR * 2;
+    CTypes::register_type<CGameObject>();
+    CTypes::register_type<CMapObject, CGameObject>();
+    CTypes::register_type<CMap, CGameObject>();
+    CTypes::register_type<CCreature, CMapObject, CGameObject>();
+    CTypes::register_type<CPlayer, CCreature, CMapObject, CGameObject>();
+    CTypes::register_type<TerminalSerializationProbe, CPlayer, CCreature, CMapObject, CGameObject>();
+    CTypes::register_type<CStats, CGameObject>();
+    CTypes::register_type<CController, CGameObject>();
+    CTypes::register_type<CPlayerController, CController, CGameObject>();
+    CTypes::register_type<CFightController, CGameObject>();
+    CTypes::register_type<CPlayerFightController, CFightController, CGameObject>();
+    auto game = std::make_shared<CGame>();
+    for (const auto &[name, builder] : *CTypes::builders()) {
+        game->getObjectHandler()->registerType(name, builder);
+    }
+    auto map = std::make_shared<CMap>();
+    map->setGame(game);
+    game->setMap(map);
+    map->setPermanentPlayerDeath(true);
+    auto player = std::make_shared<TerminalSerializationProbe>();
+    player->setGame(game);
+    player->setName("player");
+    player->setLevel(1);
+    player->setHp(0);
+    map->setDefeatedPlayer(player);
+    map->setObjectProperty<CGameObject>("terminalPlayerAlias", player);
+    std::string error;
+    expect_true(map->restorePlayerAfterLoad(error),
+                "the terminal budget must begin with one valid retained dead player");
+    const auto revision = map->getNavigationRevision();
+    const auto objects = map->getObjects().size();
+    const auto triggers = countTerminalPlayerTriggers(map);
+    TerminalSerializationProbe::serializationVisits = 0;
+    for (int repeat = 0; repeat < LOOKUPS; ++repeat) {
+        expect_true(map->getPlayer() == player, "terminal lookups must reuse the exact retained identity");
+    }
+    expect_true(!player->isAlive() && !map->getObjectByName("player") && objects == 0 &&
+                    map->getObjects().size() == objects && map->getNavigationRevision() == revision &&
+                    countTerminalPlayerTriggers(map) == triggers &&
+                    TerminalSerializationProbe::serializationVisits == 0,
+                "128 cached terminal lookups must add no registry, navigation, trigger or serialization work");
+    using ObjectJson = CSerializerFunction<std::shared_ptr<json>, std::shared_ptr<CGameObject>>;
+    std::size_t max_bytes = 0;
+    for (int snapshot = 0; snapshot < SNAPSHOTS; ++snapshot) {
+        const auto visits_before = TerminalSerializationProbe::serializationVisits;
+        auto document = ObjectJson::serialize(map);
+        const auto definitions = countTerminalActorDefinitions(*document);
+        const auto bytes = document->dump().size();
+        max_bytes = std::max(max_bytes, bytes);
+        expect_true(definitions == ACTOR_DEFINITIONS &&
+                        TerminalSerializationProbe::serializationVisits == visits_before + ACTOR_DEFINITIONS &&
+                        bytes <= BYTE_BUDGET,
+                    "each terminal snapshot must visit and define one retained actor within the fixed graph budget");
+        CSerialization::StrictScope strict;
+        auto restored = std::dynamic_pointer_cast<CMap>(ObjectJson::deserialize(game, document, strict));
+        std::string restore_error;
+        const bool valid = restored && restored->restorePlayerAfterLoad(restore_error);
+        expect_true(valid, "every bounded terminal snapshot must restore without resurrection");
+        if (!valid) {
+            continue;
+        }
+        auto actual = restored->getPlayer();
+        const auto restored_revision = restored->getNavigationRevision();
+        const auto restored_triggers = countTerminalPlayerTriggers(restored);
+        for (int repeat = 0; repeat < LOOKUPS; ++repeat) {
+            expect_true(restored->getPlayer() == actual,
+                        "restored terminal lookups must reuse their captured identity");
+        }
+        expect_true(actual && !actual->isAlive() && restored->getDefeatedPlayer() == actual &&
+                        restored->getObjectProperty<CGameObject>("terminalPlayerAlias") == actual &&
+                        !restored->getObjectByName("player") && restored->getObjects().empty() &&
+                        restored->getNavigationRevision() == restored_revision &&
+                        countTerminalPlayerTriggers(restored) == restored_triggers,
+                    "restored terminal lookup must preserve alias, empty registry, navigation and trigger counts");
+    }
+    expect_true(TerminalSerializationProbe::serializationVisits == SNAPSHOTS * ACTOR_DEFINITIONS,
+                "the four snapshots must perform exactly four retained-player property visits");
+    std::cout << "[performance] terminal player: lookups=" << LOOKUPS << " snapshots=" << SNAPSHOTS
+              << " restoredLookups=" << LOOKUPS * SNAPSHOTS << " actorDefinitions=" << ACTOR_DEFINITIONS
+              << " visits=" << TerminalSerializationProbe::serializationVisits << " maxBytes=" << max_bytes
+              << " byteBudget=" << BYTE_BUDGET << " objects=" << objects << " triggers=" << triggers << '\n';
+    game->getContext()->shutdown();
+}
+
+std::size_t countSavedWaitDefinitions(const json &value) {
+    std::size_t count = 0;
+    if (value.is_object()) {
+        if (value.contains("class") && value.at("class").is_string() &&
+            value.at("class").get<std::string>() == "CWaitState" && value.contains("properties")) {
+            ++count;
+        }
+        for (const auto &[key, child] : value.items()) {
+            count += countSavedWaitDefinitions(child);
+        }
+    } else if (value.is_array()) {
+        for (const auto &child : value) {
+            count += countSavedWaitDefinitions(child);
+        }
+    }
+    return count;
+}
+
+void testSavedWaitSnapshotsHaveBoundedClockWorkAndOneAliasDefinition() {
+    constexpr std::size_t snapshotCount = 64;
+    auto now = CWaitState::Clock::time_point();
+    std::size_t clockReads = 0;
+    const auto timeSource = [&] {
+        ++clockReads;
+        return now;
+    };
+    CTypes::register_type<CGameObject>();
+    CTypes::register_type<EffectSerializationProbe, CCreature, CMapObject, CGameObject>();
+    CTypes::register_type<CWaitState, CGameObject>();
+    auto game = std::make_shared<CGame>();
+    for (const auto &[name, builder] : *CTypes::builders()) {
+        game->getObjectHandler()->registerType(name, builder);
+    }
+    game->getObjectHandler()->registerType("CGameObject", [] { return std::make_shared<CGameObject>(); });
+    game->getObjectHandler()->registerType("CWaitState", [&] { return std::make_shared<CWaitState>(timeSource); });
+    auto state = game->createObject<CWaitState>("CWaitState");
+    auto owner = game->createObject<CGameObject>("CGameObject");
+    auto coordinator = game->createObject<EffectSerializationProbe>("EffectSerializationProbe");
+    owner->setName("savedWaitBudgetOwner");
+    coordinator->setName("savedWaitBudgetCoordinator");
+    coordinator->setLevel(1);
+    coordinator->setHp(10);
+    state->setName("savedWaitBudgetState");
+    coordinator->setObjectProperty("pendingWait", state);
+    owner->setObjectProperty("pendingWaitOwner", coordinator);
+    owner->setObjectProperty("waitOwnerAlias", coordinator);
+    state->setRemainingMilliseconds(4000);
+    const auto lease = state->tryStart();
+    expect_true(lease.has_value(), "the bounded snapshot workload must acquire a real native wait lease");
+    if (!lease) {
+        game->getContext()->shutdown();
+        return;
+    }
+    now += std::chrono::microseconds(1500001);
+    const auto initialClockReads = clockReads;
+    EffectSerializationProbe::serializationVisits = 0;
+    std::optional<json> firstSnapshot;
+    std::size_t definitions = 0;
+    std::size_t firstBytes = 0;
+    for (std::size_t index = 0; index < snapshotCount; ++index) {
+        const auto before = clockReads;
+        auto snapshot = CSerialization::serializeExpected(owner);
+        expect_true(snapshot.has_value(), "every fixed wait snapshot must use real reflected serialization");
+        if (!snapshot) {
+            break;
+        }
+        const auto count = countSavedWaitDefinitions(*snapshot);
+        definitions += count;
+        expect_true(count == 1 && countSerializedCreatures(*snapshot) == 1 && clockReads == before + 1,
+                    "two supported actor-owner aliases must serialize one child wait and sample its clock once");
+        const auto bytes = snapshot->dump().size();
+        if (!firstSnapshot) {
+            firstSnapshot = *snapshot;
+            firstBytes = bytes;
+        }
+        expect_true(bytes == firstBytes, "repeated fixed snapshots must not grow object identities or transient state");
+    }
+    expect_true(definitions == snapshotCount && clockReads == initialClockReads + snapshotCount &&
+                    EffectSerializationProbe::serializationVisits == snapshotCount,
+                "the finite snapshot count must require exactly one native clock sample per serialized definition");
+    now += std::chrono::milliseconds(1000);
+    expect_true(state->isRunning() && state->getRemainingMilliseconds() == 1500,
+                "snapshot getters must not pause or rebase the live deadline");
+    if (firstSnapshot) {
+        now += std::chrono::hours(48);
+        const auto beforeRestore = clockReads;
+        auto decoded = CSerialization::deserializeExpected<std::shared_ptr<CGameObject>>(game, *firstSnapshot);
+        expect_true(decoded.has_value(), "the first bounded snapshot must restore through the real native codec");
+        if (decoded) {
+            auto restoredOwner =
+                std::dynamic_pointer_cast<EffectSerializationProbe>((*decoded)->getObjectProperty("pendingWaitOwner"));
+            auto ownerAlias = (*decoded)->getObjectProperty("waitOwnerAlias");
+            auto loaded = restoredOwner
+                              ? std::dynamic_pointer_cast<CWaitState>(restoredOwner->getObjectProperty("pendingWait"))
+                              : nullptr;
+            expect_true(restoredOwner && restoredOwner == ownerAlias && loaded && loaded != state &&
+                            !loaded->isRunning() && loaded->getRemainingMilliseconds() == 2500 &&
+                            clockReads == beforeRestore,
+                        "a restored alias must share one paused wait and ignore time spent offline without clock work");
+            if (loaded) {
+                now += std::chrono::hours(24);
+                expect_true(loaded->getRemainingMilliseconds() == 2500 && clockReads == beforeRestore,
+                            "reading a paused restored wait must neither catch up nor sample a deadline");
+                const auto resumed = loaded->tryStart();
+                now += std::chrono::milliseconds(2499);
+                expect_true(resumed && loaded->getRemainingMilliseconds() == 1 && !loaded->complete(*resumed),
+                            "the saved duration must not finish one millisecond early");
+                now += std::chrono::milliseconds(1);
+                expect_true(resumed && loaded->complete(*resumed) && !loaded->isRunning(),
+                            "the actual saved remainder must complete at its resumed deadline");
+            }
+        }
+    }
+    state->pause(*lease);
+    std::cout << "[performance] saved-wait snapshots=" << snapshotCount << " definitions=" << definitions
+              << " clockBudget=" << snapshotCount << " ownerVisits=" << EffectSerializationProbe::serializationVisits
+              << " fixedBytes=" << firstBytes << '\n';
+    game->getContext()->shutdown();
+}
+
 } // namespace
 
 void run_serialization_performance_tests() {
@@ -376,4 +778,8 @@ void run_serialization_performance_tests() {
     test_map_load_property_notifications_are_bounded_per_object();
     testMutualEffectGraphSerializationHasBoundedActorDefinitions();
     testScalarPropertyMetadataWorkIsBounded();
+    testRejectedSaveAdmissionHasZeroSnapshotWork();
+    testSnapshotAdmissionRejectsEncountersBeforeMutation();
+    testRetainedTerminalPlayerWorkIsBounded();
+    testSavedWaitSnapshotsHaveBoundedClockWorkAndOneAliasDefinition();
 }

@@ -331,6 +331,8 @@ void bindGraphicsAndWorld(py::module_ &m) {
                                                                        "High-level helper for opening UI panels.")
         .def("showMessage", &CGuiHandler::showMessage, "Show a message panel.")
         .def("showMessageLater", &CGuiHandler::showMessageLater, "Queue a session-owned message without waiting.")
+        .def("waitMilliseconds", &CGuiHandler::waitMilliseconds, py::arg("state"),
+             "Await a same-session serializable wait state; return true only after its duration elapses.")
         .def("getSessionSaveStatus", &CGuiHandler::getSessionSaveStatus)
         .def("setSessionSaveStatus", &CGuiHandler::setSessionSaveStatus)
         .def("notify", &CGuiHandler::notify, "Record nonblocking feedback in History.")

@@ -32,11 +32,231 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #include "object/CCreature.h"
 
 #include <atomic>
+#include <mutex>
 #include <stdexcept>
 #include <utility>
 
+struct CSaveAdmissionState {
+    enum class Exclusive { None, Snapshot, Restore };
+    std::mutex mutex;
+    std::size_t unsafeOwners = 0;
+    Exclusive exclusive = Exclusive::None;
+    bool quarantined = false;
+    std::uint64_t quarantineRevision = 0;
+};
+
+namespace {
+class SaveAdmissionLocks {
+  public:
+    SaveAdmissionLocks(const std::shared_ptr<CSaveAdmissionState> &first,
+                       const std::shared_ptr<CSaveAdmissionState> &second)
+        : firstLock(first->mutex, std::defer_lock) {
+        if (second && second != first) {
+            secondLock = std::unique_lock(second->mutex, std::defer_lock);
+            std::lock(firstLock, secondLock);
+        } else {
+            firstLock.lock();
+        }
+    }
+
+  private:
+    std::unique_lock<std::mutex> firstLock;
+    std::unique_lock<std::mutex> secondLock;
+};
+
+bool acceptsSnapshot(const std::shared_ptr<CSaveAdmissionState> &state) {
+    return state->unsafeOwners == 0 && state->exclusive == CSaveAdmissionState::Exclusive::None && !state->quarantined;
+}
+} // namespace
+
+std::shared_ptr<CSaveAdmissionState> CGameContext::makeSaveAdmissionState() {
+    return std::make_shared<CSaveAdmissionState>();
+}
+
+CGameContext::UnsafeOperationLease::UnsafeOperationLease(std::shared_ptr<CSaveAdmissionState> state,
+                                                         std::shared_ptr<CSaveAdmissionState> local,
+                                                         std::shared_ptr<CMap> map, std::weak_ptr<CGame> game,
+                                                         std::weak_ptr<CGameContext> context,
+                                                         TransitionGeneration generation) noexcept
+    : state(std::move(state)), local(std::move(local)), map(std::move(map)), game(std::move(game)),
+      context(std::move(context)), generation(generation) {}
+
+CGameContext::UnsafeOperationLease &
+CGameContext::UnsafeOperationLease::operator=(UnsafeOperationLease &&other) noexcept {
+    if (this != &other) {
+        quarantine();
+        state = std::move(other.state);
+        local = std::move(other.local);
+        map = std::move(other.map);
+        game = std::move(other.game);
+        context = std::move(other.context);
+        generation = other.generation;
+    }
+    return *this;
+}
+
+CGameContext::UnsafeOperationLease::~UnsafeOperationLease() noexcept { quarantine(); }
+
+bool CGameContext::UnsafeOperationLease::isCurrent() const {
+    auto owner = game.lock();
+    auto capturedContext = context.lock();
+    return state && owner && capturedContext && owner->getContext() == capturedContext &&
+           capturedContext->isTransitionGenerationCurrent(generation) && owner->getMap() == map &&
+           map->getGame() == owner;
+}
+
+void CGameContext::UnsafeOperationLease::release(bool quarantineSave) noexcept {
+    auto ownedState = std::move(state);
+    auto ownedLocal = std::move(local);
+    auto ownedMap = std::move(map);
+    if (!ownedState) {
+        return;
+    }
+    SaveAdmissionLocks lock(ownedState, ownedLocal);
+    if (quarantineSave) {
+        ownedState->quarantined = true;
+        ++ownedState->quarantineRevision;
+        ownedLocal->quarantined = true;
+        ++ownedLocal->quarantineRevision;
+    }
+    --ownedState->unsafeOwners;
+    --ownedLocal->unsafeOwners;
+}
+
+void CGameContext::UnsafeOperationLease::finish() noexcept { release(false); }
+void CGameContext::UnsafeOperationLease::quarantine() noexcept { release(true); }
+
+CGameContext::SaveSnapshotLease::SaveSnapshotLease(std::shared_ptr<CSaveAdmissionState> first,
+                                                   std::shared_ptr<CSaveAdmissionState> second) noexcept
+    : first(std::move(first)), second(std::move(second)) {}
+
+CGameContext::SaveSnapshotLease &CGameContext::SaveSnapshotLease::operator=(SaveSnapshotLease &&other) noexcept {
+    if (this != &other) {
+        release();
+        first = std::move(other.first);
+        second = std::move(other.second);
+    }
+    return *this;
+}
+
+CGameContext::SaveSnapshotLease::~SaveSnapshotLease() noexcept { release(); }
+
+void CGameContext::SaveSnapshotLease::release() noexcept {
+    auto ownedFirst = std::move(first);
+    auto ownedSecond = std::move(second);
+    if (ownedFirst) {
+        SaveAdmissionLocks lock(ownedFirst, ownedSecond);
+        ownedFirst->exclusive = CSaveAdmissionState::Exclusive::None;
+        if (ownedSecond) {
+            ownedSecond->exclusive = CSaveAdmissionState::Exclusive::None;
+        }
+    }
+}
+
+std::optional<CGameContext::UnsafeOperationLease>
+CGameContext::tryBeginUnsafeOperation(const std::shared_ptr<CMap> &map) {
+    auto owner = game.lock();
+    if (!owner || !isActive() || !map || owner->getContext().get() != this || owner->getMap() != map ||
+        map->getGame() != owner) {
+        return std::nullopt;
+    }
+    auto capturedContext = owner->getContext();
+    const auto generation = captureTransitionGeneration();
+    auto local = map->saveAdmissionState;
+    {
+        SaveAdmissionLocks lock(saveAdmission, local);
+        if (saveAdmission->exclusive != CSaveAdmissionState::Exclusive::None || saveAdmission->quarantined ||
+            local->exclusive != CSaveAdmissionState::Exclusive::None || local->quarantined) {
+            return std::nullopt;
+        }
+        ++saveAdmission->unsafeOwners;
+        ++local->unsafeOwners;
+    }
+    UnsafeOperationLease lease(saveAdmission, local, map, owner, capturedContext, generation);
+    if (!lease.isCurrent()) {
+        lease.finish();
+        return std::nullopt;
+    }
+    return lease;
+}
+
+std::optional<CGameContext::SaveSnapshotLease> CGameContext::tryBeginMapSnapshot(const std::shared_ptr<CMap> &map) {
+    auto owner = map->getGame();
+    auto capturedContext = owner ? owner->getContext() : nullptr;
+    auto local = map->saveAdmissionState;
+    auto session = capturedContext ? capturedContext->saveAdmission : local;
+    SaveAdmissionLocks lock(session, local);
+    if ((capturedContext && !capturedContext->isActive()) || !acceptsSnapshot(session) ||
+        (local != session && !acceptsSnapshot(local))) {
+        return std::nullopt;
+    }
+    session->exclusive = CSaveAdmissionState::Exclusive::Snapshot;
+    if (local != session) {
+        local->exclusive = CSaveAdmissionState::Exclusive::Snapshot;
+    }
+    return SaveSnapshotLease(session, local != session ? local : nullptr);
+}
+
+CGameContext::VerifiedRestoreLease::VerifiedRestoreLease(std::shared_ptr<CSaveAdmissionState> state,
+                                                         std::weak_ptr<CGameContext> context,
+                                                         TransitionGeneration generation, std::uint64_t revision,
+                                                         std::shared_ptr<CMap> previousMap) noexcept
+    : state(std::move(state)), context(std::move(context)), generation(generation), revision(revision),
+      previousMap(std::move(previousMap)) {}
+
+CGameContext::VerifiedRestoreLease::~VerifiedRestoreLease() noexcept {
+    if (state) {
+        std::lock_guard lock(state->mutex);
+        state->exclusive = CSaveAdmissionState::Exclusive::None;
+    }
+}
+
+bool CGameContext::VerifiedRestoreLease::commit(const std::shared_ptr<CMap> &installedMap) {
+    auto capturedContext = context.lock();
+    return state && capturedContext &&
+           capturedContext->completeVerifiedRestore(state, generation, revision, previousMap, installedMap);
+}
+
+std::optional<CGameContext::VerifiedRestoreLease> CGameContext::tryBeginVerifiedRestore() {
+    auto owner = game.lock();
+    if (!owner || !isActive()) {
+        return std::nullopt;
+    }
+    auto capturedContext = owner->getContext();
+    auto previousMap = owner->getMap();
+    const auto generation = captureTransitionGeneration();
+    std::lock_guard lock(saveAdmission->mutex);
+    if (saveAdmission->unsafeOwners != 0 || saveAdmission->exclusive != CSaveAdmissionState::Exclusive::None) {
+        return std::nullopt;
+    }
+    saveAdmission->exclusive = CSaveAdmissionState::Exclusive::Restore;
+    return VerifiedRestoreLease(saveAdmission, capturedContext, generation, saveAdmission->quarantineRevision,
+                                std::move(previousMap));
+}
+
+bool CGameContext::completeVerifiedRestore(const std::shared_ptr<CSaveAdmissionState> &state,
+                                           TransitionGeneration generation, std::uint64_t revision,
+                                           const std::shared_ptr<CMap> &previousMap,
+                                           const std::shared_ptr<CMap> &installedMap) {
+    auto owner = game.lock();
+    if (!owner || !installedMap || installedMap == previousMap) {
+        return false;
+    }
+    const auto local = installedMap->saveAdmissionState;
+    std::scoped_lock lock(*resourceMutex, state->mutex, local->mutex);
+    if (owner->context.get() != this || owner->map != installedMap || installedMap->getGame() != owner ||
+        !isTransitionGenerationCurrent(generation) || state != saveAdmission || state->unsafeOwners != 0 ||
+        state->exclusive != CSaveAdmissionState::Exclusive::Restore || state->quarantineRevision != revision ||
+        !acceptsSnapshot(local)) {
+        return false;
+    }
+    state->quarantined = false;
+    return true;
+}
+
 CGameContext::CGameContext(std::shared_ptr<CGame> game)
-    : resourceMutex(game ? game->resourceMutex : std::make_shared<std::recursive_mutex>()), game(std::move(game)) {
+    : resourceMutex(game ? game->resourceMutex : std::make_shared<std::recursive_mutex>()),
+      saveAdmission(makeSaveAdmissionState()), game(std::move(game)) {
     // Establish the loop thread at session creation, including sessions that only attach a GUI.
     vstd::event_loop<>::instance();
 }

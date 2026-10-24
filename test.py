@@ -149,6 +149,7 @@ FAST_TEST_PREFIXES = (
     "BaldursGateCityDataTest.",
     "CityWalkthroughRegistrationTest.",
     "BindingSourceLayoutTest.",
+    "SavedWaitSourceTest.",
     "BaldursGateCityContentTest.",
     "BaldursGateCityRoutesTest.",
     "BaldursGateCityLedgerUnitTest.",
@@ -181,6 +182,7 @@ FAST_TEST_PREFIXES = (
     "GameplayCandlekeepRoutesTest.",
     "OctobogzEarlyTraceTest.",
     "PlayerControllerSuspensionSourceTest.",
+    "GameMapBindingEpochSourceTest.",
     "GameplayWaypointPublicationTest.",
     "GameplayCaveObservationTest.",
     "NineMarchesRecoveryTest.",
@@ -204,6 +206,7 @@ FAST_TEST_PREFIXES = (
     "ScriptFlowExportTest.",
     "WindowsNativeCrashDiagnosticsTest.",
     "NativeTestProfileSourceTest.",
+    "PermanentPlayerDefeatSourceTest.",
     "PlayerIdentityContentTest.",
     "EffectContractTest.",
     "SessionDeferredWorkTest.",
@@ -275,6 +278,7 @@ GAMEPLAY_TEST_PREFIXES = (
     "NavigationCallbackTest.",
     "ArtifactPreviewTest.",
     "PythonCallbackLifecycleTest.",
+    "WaitStateRuntimeTest.",
     "ConsoleUiInteractionTest.",
     "UiMinimapInteractionTest.",
 )
@@ -26203,6 +26207,7 @@ class TestRunnerSuiteTest(unittest.TestCase):
             GameplayCandlekeepRoutesTest,
             OctobogzEarlyTraceTest,
             PlayerControllerSuspensionSourceTest,
+            SavedWaitSourceTest,
             GameplayCastleTownRestTest,
             GameplayVictorSettlementTest,
             NarrativeRouteTest,
@@ -26234,6 +26239,7 @@ class TestRunnerSuiteTest(unittest.TestCase):
             MultilevelRuinsMcpTest,
             ArtifactPreviewTest,
             PythonCallbackLifecycleTest,
+            WaitStateRuntimeTest,
             ConsoleUiInteractionTest,
             UiMinimapInteractionTest,
             EnemyRoleRuntimeTest,
@@ -26260,6 +26266,7 @@ class TestRunnerSuiteTest(unittest.TestCase):
         self.assertNotIn("_MultilevelRuinsMcpTest", globals())
         self.assertNotIn("_ArtifactPreviewTest", globals())
         self.assertNotIn("_PythonCallbackLifecycleTest", globals())
+        self.assertNotIn("_WaitStateRuntimeTest", globals())
         self.assertNotIn("_ConsoleUiInteractionTest", globals())
         self.assertNotIn("_UiMinimapInteractionTest", globals())
         self.assertNotIn("_EnemyRoleRuntimeTest", globals())
@@ -26924,7 +26931,9 @@ if SOURCE_UI_TESTS_AVAILABLE:
     from tests.test_city_walkthrough_registration import (
         CityWalkthroughRegistrationTest as _CityWalkthroughRegistrationTest,
     )
+    from tests.test_wait_state import WaitStateRuntimeTest as _WaitStateRuntimeTest
     from tests.test_binding_source_layout import BindingSourceLayoutTest as _BindingSourceLayoutTest
+    from tests.test_saved_wait_source import SavedWaitSourceTest as _SavedWaitSourceTest
     from tests.test_baldurs_gate_city_content import BaldursGateCityContentTest as _BaldursGateCityContentTest
     from tests.test_baldurs_gate_city_routes import BaldursGateCityRoutesTest as _BaldursGateCityRoutesTest
     from tests.test_baldurs_gate_city_ledger import BaldursGateCityLedgerUnitTest as _BaldursGateCityLedgerUnitTest
@@ -26958,6 +26967,10 @@ if SOURCE_UI_TESTS_AVAILABLE:
     from tests.test_script_flow_exports import ScriptFlowExportTest as _ScriptFlowExportTest
     from tests.test_windows_native_crash_diagnostics import (
         WindowsNativeCrashDiagnosticsTest as _WindowsNativeCrashDiagnosticsTest,
+    )
+    from tests.test_permanent_player_defeat import (
+        PermanentPlayerDefeatSourceTest as _PermanentPlayerDefeatSourceTest,
+        PermanentDefeatJsonSyntaxTest as _PermanentDefeatJsonSyntaxTest,
     )
     from tests.test_native_test_profile import NativeTestProfileSourceTest as _NativeTestProfileSourceTest
     from tests.test_native_test_profile import NativeTestProfileRuntimeTest as _NativeTestProfileRuntimeTest
@@ -27034,6 +27047,12 @@ if SOURCE_UI_TESTS_AVAILABLE:
     class BindingSourceLayoutTest(_BindingSourceLayoutTest):
         pass
 
+    class SavedWaitSourceTest(_SavedWaitSourceTest):
+        pass
+
+    class WaitStateRuntimeTest(_WaitStateRuntimeTest):
+        pass
+
     class BaldursGateCityDataTest(_BaldursGateCityDataTest):
         pass
 
@@ -27107,6 +27126,10 @@ if SOURCE_UI_TESTS_AVAILABLE:
         pass
 
     from tests.test_octobogz_early_trace import OctobogzEarlyTraceTest as _OctobogzEarlyTraceTest
+    from tests.test_game_map_binding_epoch import (
+        GameMapBindingEpochSourceTest as _GameMapBindingEpochSourceTest,
+        GameMapBindingEpochRuntimeTest as _GameMapBindingEpochRuntimeTest,
+    )
     from tests.test_player_controller_suspension import (
         PlayerControllerSuspensionSourceTest as _PlayerControllerSuspensionSourceTest,
     )
@@ -27115,6 +27138,12 @@ if SOURCE_UI_TESTS_AVAILABLE:
         pass
 
     class OctobogzEarlyTraceTest(_OctobogzEarlyTraceTest):
+        pass
+
+    class GameMapBindingEpochSourceTest(_GameMapBindingEpochSourceTest):
+        pass
+
+    class GameMapBindingEpochRuntimeTest(_GameMapBindingEpochRuntimeTest):
         pass
 
     class PlayerControllerSuspensionSourceTest(_PlayerControllerSuspensionSourceTest):
@@ -27199,6 +27228,12 @@ if SOURCE_UI_TESTS_AVAILABLE:
         pass
 
     class PaidActionRuntimeTest(_PaidActionRuntimeTest):
+        pass
+
+    class PermanentPlayerDefeatSourceTest(_PermanentPlayerDefeatSourceTest):
+        pass
+
+    class PermanentDefeatJsonSyntaxTest(_PermanentDefeatJsonSyntaxTest):
         pass
 
     class NativeTestProfileSourceTest(_NativeTestProfileSourceTest):
@@ -27352,6 +27387,7 @@ if SOURCE_UI_TESTS_AVAILABLE:
     del _GameDiagnosticsTest, _McpDiagnosticsTest, _NativeDiagnosticsRuntimeTest
     del _McpEngineThreadTest, _McpHttpNativeRuntimeTest
     del _McpNativeUiOwnershipSourceTest, _UsurpergateEntryDiagnosticsTest
+    del _PermanentPlayerDefeatSourceTest, _PermanentDefeatJsonSyntaxTest
     del _NativeTestProfileSourceTest, _NativeTestProfileRuntimeTest
     del _WindowsPythonConfigurationTest
     del _NativeCallgrindToolTest
@@ -27376,6 +27412,8 @@ if SOURCE_UI_TESTS_AVAILABLE:
     del _MultilevelRuinsContentTest, _MultilevelRuinsRuntimeTest, _MultilevelRuinsMcpTest
     del _ConsoleUiInteractionTest, _UiMinimapInteractionTest
     del _BindingSourceLayoutTest
+    del _SavedWaitSourceTest
+    del _WaitStateRuntimeTest
     del _BaldursGateCityContentTest, _BaldursGateCityDataTest
     del _BaldursGateCityRoutesTest
     del _BaldursGateCityLedgerUnitTest
@@ -27397,6 +27435,7 @@ if SOURCE_UI_TESTS_AVAILABLE:
     del _GameplayCandlekeepRoutesTest
     del _OctobogzEarlyTraceTest
     del _PlayerControllerSuspensionSourceTest
+    del _GameMapBindingEpochSourceTest, _GameMapBindingEpochRuntimeTest
     del _GameplayPotionConsumptionTest, _GameplayRecipeGoldRoutesTest, _GameplayCallbackMarketRoutesTest
     del _GameplayStartingSaveTest, _GameplayCampaignRouteTest, _GameplayRouteDialogTest
     del _GameplayCastleTownRestTest, _GameplayVictorSettlementTest, _NarrativeRouteTest

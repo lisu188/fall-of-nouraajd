@@ -42,6 +42,7 @@ class CCreature;
 class CItem;
 
 class CScriptFlow;
+class CWaitState;
 
 class CGuiHandler : public CGameObject {
     V_META(CGuiHandler, CGameObject, vstd::meta::empty())
@@ -117,6 +118,10 @@ class CGuiHandler : public CGameObject {
     vstd::task<void> showDefeatAsync();
 
     vstd::task<void> runScriptFlowAsync(std::unique_ptr<CScriptFlow> flow);
+
+    bool waitMilliseconds(std::shared_ptr<CWaitState> state);
+
+    vstd::task<bool> waitMillisecondsAsync(std::shared_ptr<CWaitState> state);
 
     std::string showTextInput(std::string title, std::string prompt, std::string initialValue = "");
 
