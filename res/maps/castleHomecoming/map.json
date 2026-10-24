@@ -3,7 +3,7 @@
   "height": 72,
   "tilewidth": 32,
   "tileheight": 32,
-  "nextobjectid": 337,
+  "nextobjectid": 347,
   "orientation": "orthogonal",
   "renderorder": "right-down",
   "tiledversion": "1.2.0",
@@ -17273,6 +17273,196 @@
             "campaign_sourceIndex": 1447,
             "campaign_sourceType": 66,
             "campaign_sourceSubtype": 0
+          }
+        },
+        {
+          "id": 337,
+          "name": "castleHomecomingPortal28A",
+          "type": "castlePortal",
+          "x": 192,
+          "y": 1568,
+          "width": 32,
+          "height": 32,
+          "visible": true,
+          "rotation": 0,
+          "properties": {
+            "label": "Narrow passage",
+            "animation": "images/footprint",
+            "campaign_portalKind": "diagonalPassage",
+            "campaign_targetX": 5,
+            "campaign_targetY": 50,
+            "campaign_targetZ": 0
+          }
+        },
+        {
+          "id": 338,
+          "name": "castleHomecomingPortal28B",
+          "type": "castlePortal",
+          "x": 160,
+          "y": 1600,
+          "width": 32,
+          "height": 32,
+          "visible": true,
+          "rotation": 0,
+          "properties": {
+            "label": "Narrow passage",
+            "animation": "images/footprint",
+            "campaign_portalKind": "diagonalPassage",
+            "campaign_targetX": 6,
+            "campaign_targetY": 49,
+            "campaign_targetZ": 0
+          }
+        },
+        {
+          "id": 339,
+          "name": "castleHomecomingPortal29A",
+          "type": "castlePortal",
+          "x": 1536,
+          "y": 1504,
+          "width": 32,
+          "height": 32,
+          "visible": true,
+          "rotation": 0,
+          "properties": {
+            "label": "Narrow passage",
+            "animation": "images/footprint",
+            "campaign_portalKind": "diagonalPassage",
+            "campaign_targetX": 47,
+            "campaign_targetY": 48,
+            "campaign_targetZ": 0
+          }
+        },
+        {
+          "id": 340,
+          "name": "castleHomecomingPortal29B",
+          "type": "castlePortal",
+          "x": 1504,
+          "y": 1536,
+          "width": 32,
+          "height": 32,
+          "visible": true,
+          "rotation": 0,
+          "properties": {
+            "label": "Narrow passage",
+            "animation": "images/footprint",
+            "campaign_portalKind": "diagonalPassage",
+            "campaign_targetX": 48,
+            "campaign_targetY": 47,
+            "campaign_targetZ": 0
+          }
+        },
+        {
+          "id": 341,
+          "name": "castleHomecomingPortal30A",
+          "type": "castlePortal",
+          "x": 1568,
+          "y": 1472,
+          "width": 32,
+          "height": 32,
+          "visible": true,
+          "rotation": 0,
+          "properties": {
+            "label": "Narrow passage",
+            "animation": "images/footprint",
+            "campaign_portalKind": "diagonalPassage",
+            "campaign_targetX": 48,
+            "campaign_targetY": 47,
+            "campaign_targetZ": 0
+          }
+        },
+        {
+          "id": 342,
+          "name": "castleHomecomingPortal30B",
+          "type": "castlePortal",
+          "x": 1536,
+          "y": 1504,
+          "width": 32,
+          "height": 32,
+          "visible": true,
+          "rotation": 0,
+          "properties": {
+            "label": "Narrow passage",
+            "animation": "images/footprint",
+            "campaign_portalKind": "diagonalPassage",
+            "campaign_targetX": 49,
+            "campaign_targetY": 46,
+            "campaign_targetZ": 0
+          }
+        },
+        {
+          "id": 343,
+          "name": "castleHomecomingPortal31A",
+          "type": "castlePortal",
+          "x": 2144,
+          "y": 896,
+          "width": 32,
+          "height": 32,
+          "visible": true,
+          "rotation": 0,
+          "properties": {
+            "label": "Narrow passage",
+            "animation": "images/footprint",
+            "campaign_portalKind": "diagonalPassage",
+            "campaign_targetX": 68,
+            "campaign_targetY": 29,
+            "campaign_targetZ": 0
+          }
+        },
+        {
+          "id": 344,
+          "name": "castleHomecomingPortal31B",
+          "type": "castlePortal",
+          "x": 2176,
+          "y": 928,
+          "width": 32,
+          "height": 32,
+          "visible": true,
+          "rotation": 0,
+          "properties": {
+            "label": "Narrow passage",
+            "animation": "images/footprint",
+            "campaign_portalKind": "diagonalPassage",
+            "campaign_targetX": 67,
+            "campaign_targetY": 28,
+            "campaign_targetZ": 0
+          }
+        },
+        {
+          "id": 345,
+          "name": "castleHomecomingPortal32A",
+          "type": "castlePortal",
+          "x": 2176,
+          "y": 928,
+          "width": 32,
+          "height": 32,
+          "visible": true,
+          "rotation": 0,
+          "properties": {
+            "label": "Narrow passage",
+            "animation": "images/footprint",
+            "campaign_portalKind": "diagonalPassage",
+            "campaign_targetX": 69,
+            "campaign_targetY": 30,
+            "campaign_targetZ": 0
+          }
+        },
+        {
+          "id": 346,
+          "name": "castleHomecomingPortal32B",
+          "type": "castlePortal",
+          "x": 2208,
+          "y": 960,
+          "width": 32,
+          "height": 32,
+          "visible": true,
+          "rotation": 0,
+          "properties": {
+            "label": "Narrow passage",
+            "animation": "images/footprint",
+            "campaign_portalKind": "diagonalPassage",
+            "campaign_targetX": 68,
+            "campaign_targetY": 29,
+            "campaign_targetZ": 0
           }
         }
       ]

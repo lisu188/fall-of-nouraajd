@@ -2057,7 +2057,8 @@ class OctobogzHuntTest(unittest.TestCase):
         native = (ROOT / "src/core/CMap.cpp").read_text(encoding="utf-8")
         native_move = native.split("vstd::task<void> CMap::moveAsync()", 1)[1].split("void CMap::", 1)[0]
         self.assertLess(
-            native_move.index("CGameEvent::CType::onTurn"), native_move.index("co_await creature->moveToAsync(target)")
+            native_move.index("CGameEvent::CType::onTurn"),
+            native_move.index("co_await creature->moveToAsync(target, {}, presenter, std::move(commitAllowed))"),
         )
         self.assertIn(
             "co_await _player->checkQuestsAsync();", native.split("void CMap::registerPlayerTriggers()", 1)[1]
@@ -2914,11 +2915,16 @@ class OctobogzHuntTest(unittest.TestCase):
         )
         self.assertLess(route.index("self.ensureAuthoredHealingReadiness()"), route.index("self.enterHunt()"))
         self.assertIn(
-            'if player_class == "Sorcerer":\n                    self.ensureAuthoredHealingReadiness()\n'
+            'if player_class == "Sorcerer":\n                    self.prepareSorcererForHunt()\n'
+            "                    self.ensureAuthoredHealingReadiness()\n"
             "                    self.prepareHealingStockAtAuthoredMarket()",
             route,
         )
-        self.assertNotIn("self.prepareSorcererForHunt()", route)
+        self.assertEqual(1, route.count("self.prepareSorcererForHunt()"))
+        self.assertLess(route.index("self.prepareThroughCatacombs()"), route.index("self.prepareSorcererForHunt()"))
+        self.assertLess(
+            route.index("self.prepareSorcererForHunt()"), route.index("self.ensureAuthoredHealingReadiness()")
+        )
         self.assertLess(route.index("self.enterHunt()"), route.index("self.finishOriginalMainQuest()"))
         preparation = methods["prepareSorcererForHunt"]
         self.assertEqual(
@@ -2937,7 +2943,8 @@ class OctobogzHuntTest(unittest.TestCase):
         )
         self.assertLess(route.index("self.prepareHealingStockAtAuthoredMarket()"), route.index("self.enterHunt()"))
         self.assertIn(
-            'if player_class == "Sorcerer":\n                    self.ensureAuthoredHealingReadiness()\n'
+            'if player_class == "Sorcerer":\n                    self.prepareSorcererForHunt()\n'
+            "                    self.ensureAuthoredHealingReadiness()\n"
             "                    self.prepareHealingStockAtAuthoredMarket()",
             route,
         )

@@ -21,11 +21,15 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #include "core/CGameContext.h"
 #include "core/CGame.h"
 #include "core/CMap.h"
+#include "core/CNavigation.h"
 #include "core/CStats.h"
 #include "core/CTypes.h"
 #include "core/CTags.h"
 #include "core/CUtil.h"
 #include "handler/CFightHandler.h"
+#include "handler/CEventHandler.h"
+#include "object/CTrigger.h"
+#include "handler/CObjectHandler.h"
 #include "gui/CGui.h"
 #include "gui/CMovementBatch.h"
 #include "gui/object/CMinimapGraphicsObject.h"
@@ -192,6 +196,82 @@ void add_navigation_edge(const MapFixture &fixture, Coords source, Coords target
     edge.enabled = true;
     edge.sourceObjectName = std::move(source_object_name);
     fixture.map->registerNavigationEdge(std::move(edge));
+}
+
+void testSuspendedPlayerNavigationWorkIsBounded() {
+    constexpr int ATTEMPTS = 128;
+    auto fixture = make_open_map(9, 3);
+    fixture.game->getObjectHandler()->registerType("CPlayerController",
+                                                   [] { return std::make_shared<CPlayerController>(); });
+    fixture.game->getObjectHandler()->registerType("CPlayerFightController",
+                                                   [] { return std::make_shared<CPlayerFightController>(); });
+    auto player = std::make_shared<CPlayer>();
+    player->setGame(fixture.game);
+    player->setBaseStats(make_actor_stats());
+    player->setLevelStats(std::make_shared<CStats>());
+    player->setHp(20);
+    fixture.map->setPlayer(player);
+    const Coords origin(0, 1, 0), goal(8, 1, 0);
+    player->relocateWithoutMoveHooks(origin);
+    auto controller = std::dynamic_pointer_cast<CPlayerController>(player->getController());
+    expect_true(controller != nullptr, "the suspension guard requires the native player movement controller");
+    if (!controller) {
+        fixture.game->getContext()->shutdown();
+        return;
+    }
+    auto navigation = fixture.map->getNavigationService();
+    const auto cold_searches = navigation->searchCount();
+    controller->setTarget(player, goal);
+    expect_true(navigation->searchCount() == cold_searches + 1 && !controller->isCompleted(player),
+                "the fixed open map must produce one real native route before suspension");
+    controller->setMovementSuspended(true);
+    const auto serial = controller->getRequestSerial();
+    const auto overlays = controller->getOverlayLookupCount();
+    const auto searches = navigation->searchCount();
+    const auto used = navigation->budget()->used();
+    const auto peak = navigation->budget()->peak();
+    const auto flows = performance_guard::targetFlowCacheSize();
+    const auto revision = fixture.map->getNavigationRevision();
+    const auto objects = fixture.map->getObjects().size();
+    const auto cache_entries = fixture.map->getObjectCacheEntryCountForTesting();
+    const auto tiles = fixture.map->getTiles().size();
+    const auto turn = fixture.map->getTurn();
+    int idle_steps = 0, hidden_overlays = 0, completed_routes = 0;
+    for (int attempt = 0; attempt < ATTEMPTS; ++attempt) {
+        controller->setTarget(player, Coords(8, attempt % 3, 0));
+        idle_steps += resolve_step(player) == origin;
+        hidden_overlays += !controller->isOnPath(player, goal).first;
+        controller->onStepCommitted(player, goal);
+        controller->interrupt(player);
+        completed_routes += controller->isCompleted(player);
+    }
+    fixture.map->move();
+    const auto disabled_searches = navigation->searchCount() - searches;
+    const auto disabled_serial_delta = controller->getRequestSerial() - serial;
+    expect_true(idle_steps == ATTEMPTS && hidden_overlays == ATTEMPTS && completed_routes == ATTEMPTS &&
+                    player->getCoords() == origin && fixture.map->getTurn() == turn + 1,
+                "128 disabled native requests, plans and overlay probes must remain idle without suppressing turns");
+    expect_true(
+        controller->getRequestSerial() == serial && controller->getOverlayLookupCount() == overlays &&
+            navigation->searchCount() == searches && navigation->budget()->used() == used &&
+            navigation->budget()->peak() == peak && performance_guard::targetFlowCacheSize() == flows,
+        "disabled movement must not churn route serials or grow path searches, live bytes, peak bytes or flows");
+    expect_true(fixture.map->getNavigationRevision() == revision && fixture.map->getObjects().size() == objects &&
+                    fixture.map->getObjectCacheEntryCountForTesting() == cache_entries &&
+                    fixture.map->getTiles().size() == tiles,
+                "disabled movement must preserve navigation revision and map/cache cardinality");
+    controller->setMovementSuspended(false);
+    controller->setTarget(player, goal);
+    fixture.map->move();
+    expect_true(navigation->searchCount() == searches + 1 && controller->getRequestSerial() == serial + 1 &&
+                    player->getCoords() == Coords(1, 1, 0) && fixture.map->getTurn() == turn + 2 &&
+                    fixture.map->getNavigationRevision() == revision + 1,
+                "one enabled request must restore exactly one ordinary path search, committed step and turn");
+    std::cout << "player suspension guard: disabledRequests=" << ATTEMPTS << " idlePlans=" << idle_steps
+              << " hiddenOverlays=" << hidden_overlays << " disabledSearches=" << disabled_searches
+              << " disabledRouteSerialDelta=" << disabled_serial_delta
+              << " enabledSearches=" << navigation->searchCount() - searches << " enabledMoves=1\n";
+    fixture.game->getContext()->shutdown();
 }
 
 void test_many_target_controllers_share_one_goal_without_mutating_navigation() {
@@ -499,6 +579,66 @@ void test_moderate_actor_map_move_turn_state_and_revision_bounds() {
     expect_true(!fixture.map->isMoving(), "moderate actor turn should clear the moving flag after completion");
     expect_true(fixture.map->getObjects().size() == object_count_before_move,
                 "moderate actor turn should not add or remove map objects");
+}
+
+void testCommittedMapMovesReleaseActorReferences() {
+    constexpr int ACTORS = 4;
+    constexpr int TURNS = 4;
+    std::weak_ptr<CGame> game_lifetime;
+    std::weak_ptr<CMap> map_lifetime;
+    {
+        auto fixture = make_open_map(12, ACTORS);
+        game_lifetime = fixture.game;
+        map_lifetime = fixture.map;
+        std::vector<std::shared_ptr<CCreature>> actors;
+        std::vector<std::weak_ptr<CCreature>> actor_lifetimes;
+        std::vector<std::weak_ptr<CController>> controller_lifetimes;
+        std::vector<long> actor_references;
+        std::vector<long> controller_references;
+        for (int index = 0; index < ACTORS; ++index) {
+            const auto goal_name = "actorLifetimeGoal" + std::to_string(index);
+            add_object(fixture, make_object(fixture, goal_name, Coords(TURNS + 1, index, 0)));
+            auto actor =
+                make_actor(fixture, "actorLifetimeProbe" + std::to_string(index), Coords(0, index, 0), goal_name);
+            add_object(fixture, actor);
+            actor_lifetimes.push_back(actor);
+            controller_lifetimes.push_back(actor->getController());
+            actors.push_back(actor);
+        }
+        drain_event_loop();
+        for (const auto &actor : actors) {
+            actor_references.push_back(actor.use_count());
+            controller_references.push_back(actor->getController().use_count());
+        }
+        const auto initial_turn = fixture.map->getTurn();
+        for (int turn = 0; turn < TURNS; ++turn) {
+            fixture.map->move();
+            drain_event_loop();
+            expect_true(fixture.map->getTurn() == initial_turn + turn + 1 && !fixture.map->isMoving(),
+                        "each actor lifetime turn must finish before checking retained references");
+            for (int index = 0; index < ACTORS; ++index) {
+                const auto &actor = actors[index];
+                expect_true(actor->getCoords() == Coords(turn + 1, index, 0),
+                            "every actor lifetime probe must commit one real movement on each turn");
+                expect_true(actor.use_count() == actor_references[index] &&
+                                actor->getController().use_count() == controller_references[index],
+                            "completed map movement must not retain actor or controller references");
+            }
+        }
+        fixture.map->removeObjects(
+            [](std::shared_ptr<CMapObject> object) { return std::dynamic_pointer_cast<CCreature>(object) != nullptr; });
+        actors.clear();
+        drain_event_loop();
+        for (int index = 0; index < ACTORS; ++index) {
+            expect_true(actor_lifetimes[index].expired() && controller_lifetimes[index].expired(),
+                        "removed movement actors and their controllers must expire while their map is still alive");
+        }
+    }
+    drain_event_loop();
+    expect_true(game_lifetime.expired() && map_lifetime.expired(),
+                "completed map movement must not retain its game or map after fixture destruction");
+    std::cout << "actor movement lifetime guard: actors=" << ACTORS << " turns=" << TURNS
+              << " commits=" << ACTORS * TURNS << " retainedReferenceGrowthBudget=0\n";
 }
 
 class StationaryTurnFrameProbe : public CMapObject {
@@ -1284,6 +1424,304 @@ void testEffectTickCallbacksAndExpiryAreBounded() {
               << " callbackBudget=" << EFFECTS * TICKS << "\n";
 }
 
+class DefeatOwnershipBudgetController : public CFightController {
+  public:
+    int starts = 0;
+    int actions = 0;
+    int ends = 0;
+    void start(std::shared_ptr<CCreature>, std::shared_ptr<CCreature>) override { ++starts; }
+    bool control(std::shared_ptr<CCreature>, std::shared_ptr<CCreature>) override {
+        ++actions;
+        return false;
+    }
+    bool isCancelled(std::shared_ptr<CCreature>, std::shared_ptr<CCreature>) override { return true; }
+    void end(std::shared_ptr<CCreature>, std::shared_ptr<CCreature>) override { ++ends; }
+};
+
+void testDefeatResolutionRejectionsAndParticipantClaimsAreBounded() {
+    constexpr int RECOVERIES = 4;
+    constexpr int OWNED_ITEMS_PER_RECOVERY = 32;
+    constexpr int DUPLICATES_PER_RECOVERY = 32;
+    constexpr int OVERLAPS_PER_RECOVERY = 32;
+    auto fixture = make_open_map(5, 1);
+    auto context = fixture.game->getContext();
+    auto loop = vstd::event_loop<>::instance();
+    fixture.map->setBoolProperty("plugin_cityFixedLoot", true);
+    auto winner = make_actor(fixture, "boundedDefeatWinner", Coords(0, 0, 0), "");
+    auto loser = make_actor(fixture, "boundedDefeatLoser", Coords(1, 0, 0), "");
+    auto opponent = make_actor(fixture, "boundedDefeatOpponent", Coords(2, 0, 0), "");
+    auto independent = make_actor(fixture, "boundedIndependentActor", Coords(3, 0, 0), "");
+    auto independentOpponent = make_actor(fixture, "boundedIndependentOpponent", Coords(4, 0, 0), "");
+    for (const auto &actor : {winner, loser, opponent, independent, independentOpponent}) {
+        fixture.map->addObject(actor);
+    }
+    auto blockedController = std::make_shared<DefeatOwnershipBudgetController>();
+    auto independentController = std::make_shared<DefeatOwnershipBudgetController>();
+    winner->setFightController(blockedController);
+    opponent->setFightController(std::make_shared<DefeatOwnershipBudgetController>());
+    independent->setFightController(independentController);
+    independentOpponent->setFightController(std::make_shared<DefeatOwnershipBudgetController>());
+    CTypes::register_type_metadata<NotificationCountProbe, CGameObject>();
+    auto observer = std::make_shared<NotificationCountProbe>();
+    observer->setGame(fixture.game);
+    winner->connect("inventoryChanged", observer, "onInventoryChanged");
+    bool released = false;
+    int destructions = 0;
+    fixture.map->getEventHandler()->registerTrigger(std::make_shared<CCustomTrigger>(
+        loser->getName(), "onDestroy", [&released, &destructions, loop](auto, auto) -> vstd::task<void> {
+            ++destructions;
+            co_await vstd::until(loop, [&released] { return released; });
+        }));
+    const auto pump = [&](const auto &ready) {
+        const auto deadline = std::chrono::steady_clock::now() + std::chrono::seconds(2);
+        while (!ready() && std::chrono::steady_clock::now() < deadline) {
+            loop->runReady();
+            game_async::waitForProgress();
+        }
+        return ready();
+    };
+    const auto turn = fixture.map->getTurn();
+    int duplicateRejections = 0;
+    int rejected = 0;
+    for (int recovery = 0; recovery < RECOVERIES; ++recovery) {
+        if (recovery != 0) {
+            fixture.map->addObject(loser);
+        }
+        std::set<std::shared_ptr<CItem>> owned;
+        for (int index = 0; index < OWNED_ITEMS_PER_RECOVERY; ++index) {
+            auto item = std::make_shared<CItem>();
+            item->setGame(fixture.game);
+            item->setName("boundedOwnedLoot" + std::to_string(recovery) + "_" + std::to_string(index));
+            loser->addItem(item);
+            owned.insert(item);
+        }
+        loser->setHp(0);
+        released = false;
+        auto owner = context->spawnTask(CFightHandler::defeatedCreatureAsync(winner, loser));
+        expect_true(pump([&] { return destructions == recovery + 1 || owner.finished(); }) && !owner.finished(),
+                    "the bounded defeat owner must suspend in the real removal path");
+        loop->runReady();
+        expect_true(winner->getItems().size() == (recovery + 1) * OWNED_ITEMS_PER_RECOVERY &&
+                        observer->inventory_changed_calls == (recovery + 1) * OWNED_ITEMS_PER_RECOVERY,
+                    "the sole worker must grant exactly 32 identities and inventory callbacks before removal");
+        for (const auto &item : owned) {
+            expect_true(winner->hasInInventory(item), "bounded settlement must retain each exact owned item");
+        }
+        const auto experience = winner->getExp();
+        const auto hp = winner->getHp();
+        const auto mana = winner->getMana();
+        const auto level = winner->getLevel();
+        for (int duplicate = 0; duplicate < DUPLICATES_PER_RECOVERY; ++duplicate) {
+            auto attempt = context->spawnTask(CFightHandler::defeatedCreatureAsync(winner, loser));
+            bool rejectedDuplicate = false;
+            if (attempt.finished()) {
+                try {
+                    attempt.get();
+                } catch (const std::logic_error &) {
+                    rejectedDuplicate = true;
+                }
+            }
+            expect_true(rejectedDuplicate && !owner.finished() && !fixture.map->tryBeginSaveSnapshot(),
+                        "a duplicate must reject without displacing the inline recovery or its lease");
+            duplicateRejections += rejectedDuplicate;
+        }
+        for (int overlap = 0; overlap < OVERLAPS_PER_RECOVERY; ++overlap) {
+            auto attempt = context->spawnTask(CFightHandler::fightManyResultAsync(winner, {opponent}));
+            expect_true(attempt.finished() && attempt.get().outcome == CFightOutcome::Cancelled,
+                        "an overlap must reject before starting any shared participant controller");
+            ++rejected;
+        }
+        expect_true(blockedController->starts == 0 && blockedController->actions == 0 && blockedController->ends == 0,
+                    "128 rejected overlaps have a deterministic zero controller-work budget");
+        const auto disjoint = CFightHandler::fightManyResult(independent, {independentOpponent});
+        expect_true(disjoint.outcome == CFightOutcome::Cancelled && independentController->starts == recovery + 1 &&
+                        independentController->actions == recovery + 1 && independentController->ends == recovery + 1,
+                    "participant ownership must allow bounded independent encounters during suspended recovery");
+        expect_true(winner->getItems().size() == (recovery + 1) * OWNED_ITEMS_PER_RECOVERY &&
+                        observer->inventory_changed_calls == (recovery + 1) * OWNED_ITEMS_PER_RECOVERY,
+                    "rejected duplicate and overlap calls must not repeat any owned grant or callback");
+        released = true;
+        expect_true(pump([&] { return owner.finished(); }), "the sole owner must drain its completed recovery");
+        if (owner.finished()) {
+            owner.get();
+        }
+        expect_true(destructions == recovery + 1 && winner->getExp() == experience && winner->getHp() == hp &&
+                        winner->getMana() == mana && winner->getLevel() == level && opponent->getHp() == 100 &&
+                        fixture.map->getObjects().size() == 4 && fixture.map->getTurn() == turn &&
+                        fixture.map->tryBeginSaveSnapshot().has_value(),
+                    "duplicate admission must add no rewards, recovery callbacks, actor state, objects or turns");
+    }
+    const auto reopened = CFightHandler::fightManyResult(winner, {opponent});
+    expect_true(duplicateRejections == RECOVERIES * DUPLICATES_PER_RECOVERY &&
+                    rejected == RECOVERIES * OVERLAPS_PER_RECOVERY && reopened.outcome == CFightOutcome::Cancelled &&
+                    blockedController->starts == 1 && blockedController->actions == 1 && blockedController->ends == 1,
+                "the last owner must release participant admission for a later ordinary encounter");
+    std::cout << "defeat ownership guard: recoveries=" << destructions << " budget=" << RECOVERIES
+              << " duplicateRejections=" << duplicateRejections
+              << " duplicateBudget=" << RECOVERIES * DUPLICATES_PER_RECOVERY << " overlaps=" << rejected
+              << " overlapBudget=" << RECOVERIES * OVERLAPS_PER_RECOVERY
+              << " ownedLootBudget=" << RECOVERIES * OWNED_ITEMS_PER_RECOVERY
+              << " grantCallbackBudget=" << RECOVERIES * OWNED_ITEMS_PER_RECOVERY
+              << " rejectedControllerWork=0 disjoint=" << independentController->actions
+              << " disjointBudget=" << RECOVERIES << " actors=" << fixture.map->getObjects().size() << "\n";
+    winner->disconnect("inventoryChanged", observer, "onInventoryChanged");
+    context->shutdown();
+}
+
+class MapBindingEpochBudgetProbe : public CGameObject {
+    V_META(MapBindingEpochBudgetProbe, CGameObject, V_METHOD(MapBindingEpochBudgetProbe, onBindingChanged, void))
+
+  public:
+    int callbacks = 0;
+    void onBindingChanged() { ++callbacks; }
+};
+
+void testMapBindingEpochQueriesAndPublicationsAreBounded() {
+    constexpr int CYCLES = 128;
+    constexpr int READS_PER_CYCLE = 4;
+    CTypes::register_type_metadata<MapBindingEpochBudgetProbe, CGameObject>();
+    auto game = std::make_shared<CGame>();
+    auto first = std::make_shared<CMap>();
+    auto second = std::make_shared<CMap>();
+    first->setGame(game);
+    second->setGame(game);
+    game->setMap(first);
+    auto context = game->getContext();
+    const auto generation = context->getTransitionGeneration();
+    auto probe = std::make_shared<MapBindingEpochBudgetProbe>();
+    probe->setGame(game);
+    game->connect("mapBindingChanged", probe, "onBindingChanged");
+    auto loop = vstd::event_loop<>::instance();
+    const auto pending = loop->getPendingTaskCount();
+    const auto delayed = loop->getDelayedTaskCount();
+    const auto initial = game->getMapBindingEpoch();
+    int reads = 0;
+    for (int cycle = 0; cycle < CYCLES; ++cycle) {
+        for (int read = 0; read < READS_PER_CYCLE; ++read) {
+            expect_true(game->getMapBindingEpoch() == initial + 2 * cycle,
+                        "read-only epoch queries must not publish another map");
+            ++reads;
+        }
+        game->setMap(first);
+        game->setMap(second);
+        game->setMap(second);
+        game->setMap(first);
+    }
+    expect_true(
+        reads == CYCLES * READS_PER_CYCLE && probe->callbacks == 2 * CYCLES &&
+            game->getMapBindingEpoch() == initial + 2 * CYCLES && game->getMap() == first &&
+            context->isTransitionGenerationCurrent(generation) && loop->getPendingTaskCount() == pending &&
+            loop->getDelayedTaskCount() == delayed && first->getObjects().empty() && second->getObjects().empty(),
+        "fixed epoch queries and publications must retain exact callback, queue, generation and object budgets");
+    std::cout << "map binding epoch guard: cycles=" << CYCLES << " reads=" << reads
+              << " publications=" << game->getMapBindingEpoch() - initial << " callbacks=" << probe->callbacks
+              << " budget-publications=" << 2 * CYCLES << " budget-callbacks=" << 2 * CYCLES << '\n';
+    game->disconnect("mapBindingChanged", probe, "onBindingChanged");
+    context->shutdown();
+}
+
+void testAssignedPlayerQueriesAreMutationAndCallbackBounded() {
+    constexpr int READS_PER_PHASE = 256;
+    CTypes::register_type<CPlayerController>();
+    CTypes::register_type<CPlayerFightController>();
+    auto fixture = make_open_map(2, 1);
+    auto movement_constructions = std::make_shared<int>(0);
+    auto fight_constructions = std::make_shared<int>(0);
+    fixture.game->getObjectHandler()->registerType("CPlayerController", [movement_constructions] {
+        ++*movement_constructions;
+        return std::make_shared<CPlayerController>();
+    });
+    fixture.game->getObjectHandler()->registerType("CPlayerFightController", [fight_constructions] {
+        ++*fight_constructions;
+        return std::make_shared<CPlayerFightController>();
+    });
+    auto player = std::make_shared<CPlayer>();
+    player->setGame(fixture.game);
+    player->setName("player");
+    player->setBaseStats(make_actor_stats());
+    player->setLevel(1);
+    player->setHp(1);
+    auto movement = std::make_shared<CController>();
+    auto fight = std::make_shared<CFightController>();
+    player->setController(movement);
+    player->setFightController(fight);
+    fixture.map->addObject(player);
+    auto observer = std::make_shared<NotificationCountProbe>();
+    observer->setGame(fixture.game);
+    fixture.map->connect("propertyChanged", observer, "onPropertyChanged");
+    fixture.map->connect("propertiesChanged", observer, "onPropertiesChanged");
+    auto loop = vstd::event_loop<>::instance();
+    int reads = 0;
+    const CMap &observed = *fixture.map;
+    for (const bool assigned : {false, true}) {
+        if (assigned) {
+            fixture.map->attachPlayer(player, Coords(0, 0, 0));
+        }
+        const auto current_movement = player->getController();
+        const auto current_fight = player->getFightController();
+        expect_true(*movement_constructions == (assigned ? 1 : 0) && *fight_constructions == (assigned ? 1 : 0),
+                    "only actual attachment must construct each session-owned player controller once");
+        if (assigned) {
+            expect_true(std::dynamic_pointer_cast<CPlayerController>(current_movement) != nullptr &&
+                            std::dynamic_pointer_cast<CPlayerFightController>(current_fight) != nullptr,
+                        "the assigned query phase requires actual native player controllers, not null fallbacks");
+        }
+        const auto revision = fixture.map->getNavigationRevision();
+        const auto turn = fixture.map->getTurn();
+        const auto objects = fixture.map->getObjects();
+        const auto triggers = fixture.map->getEventHandler()->getTriggers();
+        const auto pending = loop->getPendingTaskCount();
+        const auto delayed = loop->getDelayedTaskCount();
+        const auto callbacks = observer->property_changed_calls + observer->properties_changed_calls;
+        const auto movement_constructions_before = *movement_constructions;
+        const auto fight_constructions_before = *fight_constructions;
+        for (int read = 0; read < READS_PER_PHASE; ++read) {
+            expect_true(observed.getAssignedPlayer() == (assigned ? player : nullptr),
+                        "fixed queries must expose assignment without adopting the registered actor");
+            ++reads;
+        }
+        const auto after_objects = fixture.map->getObjects();
+        const auto after_triggers = fixture.map->getEventHandler()->getTriggers();
+        const auto after_revision = fixture.map->getNavigationRevision();
+        const auto after_turn = fixture.map->getTurn();
+        const auto after_movement = player->getController();
+        const auto after_fight = player->getFightController();
+        const auto after_pending = loop->getPendingTaskCount();
+        const auto after_delayed = loop->getDelayedTaskCount();
+        const auto after_callbacks = observer->property_changed_calls + observer->properties_changed_calls;
+        std::cout << "assigned player query phase: assigned=" << assigned << " reads=" << READS_PER_PHASE
+                  << " objects=" << objects.size() << '/' << after_objects.size()
+                  << " same-objects=" << (after_objects == objects) << " triggers=" << triggers.size() << '/'
+                  << after_triggers.size() << " same-triggers=" << (after_triggers == triggers)
+                  << " revision=" << revision << '/' << after_revision << " turn=" << turn << '/' << after_turn
+                  << " same-movement=" << (after_movement == current_movement)
+                  << " same-fight=" << (after_fight == current_fight) << " pending=" << pending << '/' << after_pending
+                  << " delayed=" << delayed << '/' << after_delayed << " callbacks=" << callbacks << '/'
+                  << after_callbacks << " movement-constructions=" << movement_constructions_before << '/'
+                  << *movement_constructions << " fight-constructions=" << fight_constructions_before << '/'
+                  << *fight_constructions << '\n';
+        expect_true(fixture.map->getObjects() == objects && fixture.map->getEventHandler()->getTriggers() == triggers &&
+                        fixture.map->getNavigationRevision() == revision && fixture.map->getTurn() == turn &&
+                        player->getController() == current_movement && player->getFightController() == current_fight &&
+                        loop->getPendingTaskCount() == pending && loop->getDelayedTaskCount() == delayed &&
+                        observer->property_changed_calls + observer->properties_changed_calls == callbacks,
+                    "256 queries per phase must add zero registry/controller/hook/turn/queue/callback work");
+        expect_true(*movement_constructions == movement_constructions_before &&
+                        *fight_constructions == fight_constructions_before,
+                    "assigned-player queries must add zero session controller constructions");
+        if (!assigned) {
+            expect_true(current_movement == movement && current_fight == fight,
+                        "unassigned observation must preserve even non-player controller identities");
+        }
+    }
+    expect_true(reads == 2 * READS_PER_PHASE, "the assigned-player query guard must perform exactly 512 reads");
+    std::cout << "assigned player query guard: reads=" << reads << " phases=2 budget-reads=" << 2 * READS_PER_PHASE
+              << " budget-registry/controller/hook/turn/queue/callback-deltas=0; observations above\n";
+    fixture.map->disconnect("propertyChanged", observer, "onPropertyChanged");
+    fixture.map->disconnect("propertiesChanged", observer, "onPropertiesChanged");
+    fixture.game->getContext()->shutdown();
+}
+
 void testMinimapTerrainCacheBuildsOnlyOnRelevantChanges() {
     constexpr int CACHED_FRAMES = 32;
     SDL_SetHint(SDL_HINT_VIDEODRIVER, "dummy");
@@ -1342,6 +1780,7 @@ void run_engine_hotspot_performance_tests() {
     }
 
     test_stat_composition_eliminates_repeated_reflective_increments();
+    testSuspendedPlayerNavigationWorkIsBounded();
     test_many_target_controllers_share_one_goal_without_mutating_navigation();
     test_weighted_target_flow_field_is_single_build_and_materialization_bounded();
     test_relevant_object_move_invalidates_target_navigation();
@@ -1350,6 +1789,7 @@ void run_engine_hotspot_performance_tests() {
     test_irrelevant_metadata_activity_does_not_invalidate_navigation();
     test_coordinate_cache_lookup_cardinality_and_move_updates();
     test_moderate_actor_map_move_turn_state_and_revision_bounds();
+    testCommittedMapMovesReleaseActorReferences();
     testStationaryMapTurnsCompleteBeforeRendering();
     testMovementBatchInteractionSchedulingIsLinear();
     testStalePlannedMapMoveWorkIsBounded();
@@ -1359,5 +1799,8 @@ void run_engine_hotspot_performance_tests() {
     testMonsterRoleCallbackAndStateGrowthAreBounded();
     testOctobogzPhaseCallbackAndStateGrowthAreBounded();
     testEffectTickCallbacksAndExpiryAreBounded();
+    testDefeatResolutionRejectionsAndParticipantClaimsAreBounded();
+    testMapBindingEpochQueriesAndPublicationsAreBounded();
+    testAssignedPlayerQueriesAreMutationAndCallbackBounded();
     testMinimapTerrainCacheBuildsOnlyOnRelevantChanges();
 }

@@ -20,6 +20,7 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #include <atomic>
 #include <cstddef>
 #include <cstdint>
+#include <functional>
 #include <memory>
 #include <optional>
 #include <string>
@@ -29,6 +30,8 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #include "core/CUtil.h"
 
 class CGame;
+class CGameLoader;
+struct CSaveAdmissionState;
 class CCreature;
 class CGuiHandler;
 class CConfigurationProvider;
@@ -77,6 +80,48 @@ class CGameContext {
   public:
     using TransitionGeneration = std::uint64_t;
 
+    class UnsafeOperationLease {
+      public:
+        UnsafeOperationLease(UnsafeOperationLease &&) noexcept = default;
+        UnsafeOperationLease &operator=(UnsafeOperationLease &&other) noexcept;
+        UnsafeOperationLease(const UnsafeOperationLease &) = delete;
+        UnsafeOperationLease &operator=(const UnsafeOperationLease &) = delete;
+        ~UnsafeOperationLease() noexcept;
+        bool isCurrent() const;
+        void finish() noexcept;
+        void quarantine() noexcept;
+
+      private:
+        friend class CGameContext;
+        UnsafeOperationLease(std::shared_ptr<CSaveAdmissionState> state, std::shared_ptr<CSaveAdmissionState> local,
+                             std::shared_ptr<CMap> map, std::weak_ptr<CGame> game, std::weak_ptr<CGameContext> context,
+                             TransitionGeneration generation) noexcept;
+        void release(bool quarantine) noexcept;
+        std::shared_ptr<CSaveAdmissionState> state;
+        std::shared_ptr<CSaveAdmissionState> local;
+        std::shared_ptr<CMap> map;
+        std::weak_ptr<CGame> game;
+        std::weak_ptr<CGameContext> context;
+        TransitionGeneration generation;
+    };
+
+    class SaveSnapshotLease {
+      public:
+        SaveSnapshotLease(SaveSnapshotLease &&) noexcept = default;
+        SaveSnapshotLease &operator=(SaveSnapshotLease &&other) noexcept;
+        SaveSnapshotLease(const SaveSnapshotLease &) = delete;
+        SaveSnapshotLease &operator=(const SaveSnapshotLease &) = delete;
+        ~SaveSnapshotLease() noexcept;
+
+      private:
+        friend class CGameContext;
+        SaveSnapshotLease(std::shared_ptr<CSaveAdmissionState> first,
+                          std::shared_ptr<CSaveAdmissionState> second) noexcept;
+        void release() noexcept;
+        std::shared_ptr<CSaveAdmissionState> first;
+        std::shared_ptr<CSaveAdmissionState> second;
+    };
+
     explicit CGameContext(std::shared_ptr<CGame> game);
 
     std::shared_ptr<CObjectHandler> getObjectHandler();
@@ -121,14 +166,49 @@ class CGameContext {
     TransitionGeneration advanceTransitionGeneration();
 
   private:
+    friend class CMap;
+    friend class CGameLoader;
+    class VerifiedRestoreLease {
+      public:
+        VerifiedRestoreLease(VerifiedRestoreLease &&) noexcept = default;
+        VerifiedRestoreLease(const VerifiedRestoreLease &) = delete;
+        VerifiedRestoreLease &operator=(const VerifiedRestoreLease &) = delete;
+        ~VerifiedRestoreLease() noexcept;
+
+      private:
+        friend class CGameContext;
+        friend class CGameLoader;
+        VerifiedRestoreLease(std::shared_ptr<CSaveAdmissionState> state, std::weak_ptr<CGameContext> context,
+                             TransitionGeneration generation, std::uint64_t revision,
+                             std::shared_ptr<CMap> previousMap) noexcept;
+        bool commit(const std::shared_ptr<CMap> &installedMap);
+        std::shared_ptr<CSaveAdmissionState> state;
+        std::weak_ptr<CGameContext> context;
+        TransitionGeneration generation;
+        std::uint64_t revision;
+        std::shared_ptr<CMap> previousMap;
+    };
+
+    static std::shared_ptr<CSaveAdmissionState> makeSaveAdmissionState();
+    static std::optional<SaveSnapshotLease> tryBeginMapSnapshot(const std::shared_ptr<CMap> &map);
+    std::optional<UnsafeOperationLease> tryBeginUnsafeOperation(const std::shared_ptr<CMap> &map);
+    std::optional<VerifiedRestoreLease> tryBeginVerifiedRestore();
+    bool completeVerifiedRestore(const std::shared_ptr<CSaveAdmissionState> &state, TransitionGeneration generation,
+                                 std::uint64_t revision, const std::shared_ptr<CMap> &previousMap,
+                                 const std::shared_ptr<CMap> &installedMap);
+
     struct ShutdownState;
     static vstd::task<void> finishShutdownAsync(std::shared_ptr<ShutdownState> state);
 
     void shutdown(CGame *owner);
 
+    friend class CFightHandler;
+    std::shared_ptr<CRngHandler> getDefeatRngHandler(std::function<void()> requireCurrent);
+
     void requireActiveService(const char *serviceName) const;
 
     std::shared_ptr<std::recursive_mutex> resourceMutex;
+    std::shared_ptr<CSaveAdmissionState> saveAdmission;
     std::weak_ptr<CGame> game;
     std::shared_ptr<CGuiHandler> guiHandler;
     std::shared_ptr<CObjectHandler> objectHandler;

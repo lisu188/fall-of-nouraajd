@@ -22,6 +22,7 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #include <mutex>
 #include <span>
 
+#include "core/CGameContext.h"
 #include "core/CGlobal.h"
 #include "core/CMovementPresenter.h"
 
@@ -68,6 +69,9 @@ class CMap : public CGameObject {
     using BoundsMap = std::map<int, std::pair<int, int>>;
 
     friend class CMapLoader;
+    friend class CGameContext;
+    friend class CFightHandler;
+    friend class CCombatParticipantGuard;
     friend class CSceneManager;
 
     friend class CRandomMapGenerator;
@@ -75,13 +79,19 @@ class CMap : public CGameObject {
 
     V_META(CMap, CGameObject, V_PROPERTY(CMap, int, turn, getTurn, setTurn),
            V_PROPERTY(CMap, std::string, mapName, getMapName, setMapName),
+           V_PROPERTY(CMap, bool, permanentPlayerDeath, getPermanentPlayerDeath, setPermanentPlayerDeath),
+           V_PROPERTY(CMap, std::shared_ptr<CPlayer>, defeatedPlayer, getDefeatedPlayer, setDefeatedPlayer),
            V_PROPERTY(CMap, std::string, activeSimulationRegion, getActiveSimulationRegion, setActiveSimulationRegion),
            V_PROPERTY(CMap, std::string, combatHistory, getCombatHistory, setCombatHistory),
            V_PROPERTY(CMap, std::set<std::shared_ptr<CMapObject>>, objects, getObjects, setObjects),
            V_PROPERTY(CMap, std::set<std::shared_ptr<CTile>>, tiles, getTiles, setTiles),
            V_PROPERTY(CMap, std::set<std::shared_ptr<CTrigger>>, triggers, getTriggers, setTriggers))
   public:
-    CMap() = default;
+    CMap();
+
+    // Native opt-in capability; intentionally absent from reflection and Python bindings.
+    std::optional<CGameContext::UnsafeOperationLease> tryBeginUnsafeOperation();
+    std::optional<CGameContext::SaveSnapshotLease> tryBeginSaveSnapshot();
 
     ~CMap() override;
 
@@ -168,6 +178,9 @@ class CMap : public CGameObject {
 
     std::shared_ptr<CPlayer> getPlayer();
 
+    // Engine owner thread only; observes the cache without adoption or restoration.
+    std::shared_ptr<CPlayer> getAssignedPlayer() const;
+
     void setPlayer(std::shared_ptr<CPlayer> player);
 
     vstd::task<void> setPlayerAsync(std::shared_ptr<CPlayer> player);
@@ -239,6 +252,14 @@ class CMap : public CGameObject {
     int getTurn();
 
     void setTurn(int turn);
+
+    bool getPermanentPlayerDeath() const;
+
+    void setPermanentPlayerDeath(bool permanent);
+
+    std::shared_ptr<CPlayer> getDefeatedPlayer() const;
+
+    void setDefeatedPlayer(std::shared_ptr<CPlayer> defeated);
 
     std::string getActiveSimulationRegion() const;
 
@@ -322,7 +343,11 @@ class CMap : public CGameObject {
     vstd::lazy<CEventHandler> eventHandler;
     int turn = 0;
     bool moving = false;
+    std::size_t activeCombatTransitionDeferrals = 0;
+    const std::shared_ptr<CSaveAdmissionState> saveAdmissionState;
     bool playerTriggersRegistered = false;
+    bool permanentPlayerDeath = false;
+    std::shared_ptr<CPlayer> defeatedPlayer;
     std::string mapName;
     std::string activeSimulationRegion;
     std::uint64_t simulationRegionRevision = 0;
@@ -373,6 +398,12 @@ class CMap : public CGameObject {
     void bumpNavigationRevision();
 
     void registerPlayerTriggers();
+
+    bool hasRetainedTerminalPlayer();
+
+    void resetDefeatedPlayerForAssignment(const std::shared_ptr<CPlayer> &replacement);
+
+    bool keepsDefeatedPlayerOwner(const std::shared_ptr<CMapObject> &object);
 };
 
 namespace performance_guard {

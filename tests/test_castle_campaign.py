@@ -747,6 +747,185 @@ class CastleCampaignPackagingTest(unittest.TestCase):
 
 
 class CastleCampaignContentTest(unittest.TestCase):
+    def requiredActorPassageAuthoringFixture(self):
+        size = 12
+        source = {
+            "width": size,
+            "height": size,
+            "layers": 1,
+            "scenarioId": "homecoming",
+            "spawn": [5, 5, 0],
+            "terrain": [[[2, 0, 0, 0, 0, 0, 0] for _ in range(size * size)]],
+            "victory": {"target": [10, 10, 0]},
+            "objects": [
+                {"index": 1, "type": 98, "subtype": 0, "owner": 1, "visit": [10, 10, 0], "visitable": True},
+                {"index": 958, "type": 54, "subtype": 54, "disposition": 1, "visit": [8, 8, 0], "visitable": True},
+                {"index": 3, "type": 2, "subtype": 0, "visit": [3, 3, 0], "visitable": True},
+                {
+                    "index": 4,
+                    "type": 26,
+                    "subtype": 0,
+                    "visit": [2, 2, 0],
+                    "visitable": True,
+                    "army": [{"creature": 0, "count": 1}],
+                },
+            ],
+            "portals": [{"kind": "monolith", "from": [1, 1, 0], "to": [2, 1, 0]}],
+            "boatRoutes": [],
+            "diagonalRoutes": [{"kind": "diagonalPassage", "from": [1, 2, 0], "to": [2, 3, 0]}],
+        }
+        native = {
+            "width": size,
+            "height": size,
+            "properties": {"x": "5", "y": "5", "z": "0"},
+            "tilesets": [{"tileproperties": {"0": {"type": "GrassTile"}}}],
+            "layers": [
+                {
+                    "type": "tilelayer",
+                    "width": size,
+                    "height": size,
+                    "properties": {"level": "0"},
+                    "data": [1] * (size * size),
+                },
+                {
+                    "type": "objectgroup",
+                    "name": "Original",
+                    "objects": [
+                        {
+                            "id": 7,
+                            "name": "originalMarker",
+                            "type": "original",
+                            "x": 0,
+                            "y": 0,
+                            "properties": {"retained": True},
+                        }
+                    ],
+                },
+            ],
+            "nextobjectid": 8,
+        }
+        return native, source
+
+    def testRequiredActorPortalPairsAppendAfterEveryLegacyObjectWithoutRenumbering(self):
+        from scripts import author_castle_campaign as author
+
+        native, source = self.requiredActorPassageAuthoringFixture()
+        original_native = copy.deepcopy(native)
+        before = author.authorMap(native, copy.deepcopy(source))
+        source["diagonalRoutes"].append(
+            {"kind": "diagonalPassage", "from": [7, 7, 0], "to": [8, 8, 0], "adaptation": "requiredActorAccess"}
+        )
+        after = author.authorMap(native, copy.deepcopy(source))
+        before_objects = [obj for layer in before["layers"] for obj in layer.get("objects", [])]
+        after_objects = [obj for layer in after["layers"] for obj in layer.get("objects", [])]
+        old_by_name = {obj["name"]: obj for obj in before_objects}
+        new_by_name = {obj["name"]: obj for obj in after_objects}
+        self.assertEqual(len(before_objects), len(old_by_name))
+        self.assertEqual(len(after_objects), len(new_by_name))
+        self.assertEqual(set(old_by_name) | {"castleHomecomingPortal2A", "castleHomecomingPortal2B"}, set(new_by_name))
+        for name, obj in old_by_name.items():
+            self.assertEqual(obj, new_by_name[name], name)
+        additions = [obj for obj in after_objects if obj["name"] not in old_by_name]
+        self.assertEqual([before["nextobjectid"], before["nextobjectid"] + 1], [obj["id"] for obj in additions])
+        self.assertEqual(before["nextobjectid"] + 2, after["nextobjectid"])
+        self.assertEqual(before_objects, [obj for obj in after_objects if obj["name"] in old_by_name])
+        self.assertEqual(after_objects[-2:], additions)
+        self.assertEqual(
+            (256, 256),
+            (new_by_name["castleHomecomingEncounter958"]["x"], new_by_name["castleHomecomingEncounter958"]["y"]),
+        )
+        self.assertEqual(
+            (256, 256), (new_by_name["castleHomecomingPortal2B"]["x"], new_by_name["castleHomecomingPortal2B"]["y"])
+        )
+        self.assertEqual("diagonalPassage", additions[0]["properties"]["campaign_portalKind"])
+        self.assertEqual(
+            [layer for layer in before["layers"] if layer["type"] == "tilelayer"],
+            [layer for layer in after["layers"] if layer["type"] == "tilelayer"],
+        )
+        self.assertEqual(original_native, native)
+
+    def testRequiredActorPortalAllocationRejectsNonlandNonadjacentAndWrongKind(self):
+        from scripts import author_castle_campaign as author
+
+        for mode in ("water", "nonadjacent", "wrongKind"):
+            with self.subTest(mode=mode):
+                native, source = self.requiredActorPassageAuthoringFixture()
+                route = {
+                    "kind": "diagonalPassage",
+                    "from": [7, 7, 0],
+                    "to": [8, 8, 0],
+                    "adaptation": "requiredActorAccess",
+                }
+                if mode == "water":
+                    native["tilesets"][0]["tileproperties"]["1"] = {"type": "WaterTile"}
+                    native["layers"][0]["data"][8 + 8 * 12] = 2
+                elif mode == "nonadjacent":
+                    route["to"] = [9, 9, 0]
+                else:
+                    route["kind"] = "boat"
+                source["diagonalRoutes"].append(route)
+                with self.assertRaisesRegex(ValueError, "Required actor"):
+                    author.authorMap(native, source)
+
+    def testRequiredActorDeferredPairsPreserveBothFloorObjectIdentitiesAndMission(self):
+        from scripts import author_castle_campaign as author
+
+        native, source = self.requiredActorPassageAuthoringFixture()
+        source["layers"] = 2
+        source["terrain"].append(copy.deepcopy(source["terrain"][0]))
+        source["objects"].append(
+            {"index": 960, "type": 54, "subtype": 54, "disposition": 1, "visit": [6, 6, 1], "visitable": True}
+        )
+        floor = copy.deepcopy(native["layers"][0])
+        floor["properties"]["level"] = "1"
+        native["layers"].append(floor)
+        native["layers"].append(
+            {
+                "type": "objectgroup",
+                "name": "Original upstairs",
+                "objects": [
+                    {
+                        "id": 9,
+                        "name": "upstairsMarker",
+                        "type": "original",
+                        "x": 32,
+                        "y": 64,
+                        "properties": {"retained": "upstairs"},
+                    }
+                ],
+            }
+        )
+        native["nextobjectid"] = 10
+        before = author.authorMap(native, copy.deepcopy(source))
+        source["diagonalRoutes"] += [
+            {"kind": "diagonalPassage", "from": [7, 7, 0], "to": [8, 8, 0], "adaptation": "requiredActorAccess"},
+            {"kind": "diagonalPassage", "from": [5, 5, 1], "to": [6, 6, 1], "adaptation": "requiredActorAccess"},
+        ]
+        after = author.authorMap(native, copy.deepcopy(source))
+        old_objects = [obj for layer in before["layers"] for obj in layer.get("objects", [])]
+        new_objects = [obj for layer in after["layers"] for obj in layer.get("objects", [])]
+        old_names = {obj["name"] for obj in old_objects}
+        self.assertEqual(old_objects, [obj for obj in new_objects if obj["name"] in old_names])
+        additions = [obj for obj in new_objects if obj["name"] not in old_names]
+        self.assertEqual(
+            {
+                "castleHomecomingPortal2A",
+                "castleHomecomingPortal2B",
+                "castleHomecomingPortal3A",
+                "castleHomecomingPortal3B",
+            },
+            {obj["name"] for obj in additions},
+        )
+        self.assertEqual(
+            set(range(before["nextobjectid"], before["nextobjectid"] + 4)), {obj["id"] for obj in additions}
+        )
+        self.assertEqual(before["nextobjectid"] + 4, after["nextobjectid"])
+        self.assertEqual(before["properties"], after["properties"])
+        self.assertEqual(
+            [layer for layer in before["layers"] if layer["type"] == "tilelayer"],
+            [layer for layer in after["layers"] if layer["type"] == "tilelayer"],
+        )
+
     def test_random_level_six_army_keeps_source_identity_and_minotaur_art(self):
         from tests.castle_walkthrough import authoredMap
 

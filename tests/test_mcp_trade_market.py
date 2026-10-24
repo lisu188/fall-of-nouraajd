@@ -85,7 +85,19 @@ finally:
 
 LIFETIME_PROGRAM = """
 from pathlib import Path
+from time import monotonic
 import uuid
+
+
+def waitForTransition(instance, loop):
+    deadline = monotonic() + 5
+    scene = instance.getSceneManager()
+    while True:
+        loop.run()
+        if not scene.isTransitionPending():
+            return
+        assert monotonic() < deadline, ('Trade map transition did not settle', scene.getTransitionStateName())
+
 
 instance = game.CGameLoader.loadGame()
 save_path = None
@@ -111,13 +123,13 @@ try:
     away.targetMap = 'test'
     away.retainSourceMap = True
     assert instance.requestMapTransition(away)
-    loop.run()
+    waitForTransition(instance, loop)
     assert instance.getMap() is not original
     back = game.CMapTransitionRequest()
     back.targetMap = 'test'
     back.reuseLoadedMap = True
     assert instance.requestMapTransition(back)
-    loop.run()
+    waitForTransition(instance, loop)
     assert instance.getMap() is original
     # No getter ran while away: generation must invalidate the retained same-map instance.
     assert handler.getRequestedTradeMarket() is None
@@ -166,6 +178,198 @@ finally:
 
 
 class McpTradeMarketContractTest(unittest.TestCase):
+    def testNonblockingDialogMcpReturnsTheSameNativePanelAndNullWithoutGeneralMutation(self):
+        calls = []
+
+        class CGameObject:
+            pass
+
+        class CDialog(CGameObject):
+            pass
+
+        class CGameGraphicsObject(CGameObject):
+            pass
+
+        class CGameDialogPanel(CGameGraphicsObject):
+            pass
+
+        class CGuiHandler(CGameObject):
+            def openDialog(self, dialog):
+                calls.append(dialog)
+                return panel if dialog else None
+
+        server = mcp.EngineMcpServer(ROOT, ROOT / "unused-native-build")
+        panel, dialog, handler = CGameDialogPanel(), CDialog(), CGuiHandler()
+        server.handles.update(handler=handler, dialog=dialog)
+        for _ in range(2):
+            result = server._engine_handle_call(
+                {"handle": "handler", "method": "openDialog", "args": [{"__handle__": "dialog"}]}
+            )
+            self.assertFalse(result["isError"], result)
+            handle = result["structuredContent"]["result"]["__handle__"]
+            self.assertIs(panel, server.handles[handle])
+        self.assertEqual([dialog, dialog], calls)
+        result = server._engine_handle_call({"handle": "handler", "method": "openDialog", "args": [None]})
+        self.assertFalse(result["isError"], result)
+        self.assertIsNone(result["structuredContent"]["result"])
+        self.assertEqual([dialog, dialog, None], calls)
+        self.assertNotIn("openDialog", mcp.MCP_ALLOWED_EXPORTS)
+        self.assertEqual(
+            {"openDialog"},
+            mcp.MCP_ALLOWED_HANDLE_METHODS["CGuiHandler"]
+            & {"openDialog", "setDialog", "pushChild", "addChild", "removeChild"},
+        )
+
+    def testNonblockingDialogNativeSetupAndBindingRetainBlockingOwnership(self):
+        source = (ROOT / "src/handler/CGuiHandler.cpp").read_text(encoding="utf-8")
+        declaration = (ROOT / "src/handler/CGuiHandler.h").read_text(encoding="utf-8")
+        binding = (ROOT / "src/core/bindings/CModuleWorld.cpp").read_text(encoding="utf-8")
+        opening = "std::shared_ptr<CGameDialogPanel> CGuiHandler::openDialog(std::shared_ptr<CDialog> dialog) {"
+        self.assertTrue(opening in source, "The typed nonblocking dialog API must exist")
+        opener = source.split(opening, 1)[1].split("\n}\n", 1)[0]
+        self.assertIn("return createDialogPanel(std::move(dialog), false);", opener)
+        self.assertNotIn("runGuiTask", opener)
+        self.assertNotIn("co_await", opener)
+        setup = source.split("CGuiHandler::createDialogPanel(std::shared_ptr<CDialog> dialog, bool blocking) {", 1)[1]
+        setup = setup.split("\n}\n", 1)[0]
+        self.assertLess(setup.index("isMainThread()"), setup.index("_game.lock()"))
+        for statement in ("panel->setDialog(dialog);", "gui->pushChild(panel);", "panel->reload();"):
+            self.assertEqual(1, setup.count(statement))
+        self.assertIn("std::current_exception()", setup)
+        self.assertIn("std::rethrow_exception(primary)", setup)
+        self.assertIn("panel->close();", setup)
+        waiting = source.split("vstd::task<void> CGuiHandler::showDialogAsync", 1)[1].split(
+            "\nvoid CGuiHandler::showLoot", 1
+        )[0]
+        for statement in (
+            "co_await vstd::post(loop);",
+            "createDialogPanel(std::move(dialog), true)",
+            "ModalPanelOwner panelOwner{panel};",
+            "co_await panel->awaitClosingAsync();",
+        ):
+            self.assertIn(statement, waiting)
+        self.assertLess(waiting.index("ModalPanelOwner"), waiting.index("awaitClosingAsync"))
+        self.assertNotIn("_game.lock()", waiting, "no strong game owner may survive the panel wait")
+        self.assertIn("std::shared_ptr<CGameDialogPanel> openDialog(std::shared_ptr<CDialog> dialog);", declaration)
+        self.assertIn('.def("openDialog", &CGuiHandler::openDialog', binding)
+        native = (ROOT / "tests/unit/test_gui.cpp").read_text(encoding="utf-8")
+        for name in (
+            "testNonblockingDialogReturnsExactAttachedPanelWithoutPumping",
+            "testDialogSetupFailureClosesItsPanelAndBlockingCancellationStillOwnsCleanup",
+        ):
+            self.assertEqual(1, native.count("void " + name + "()"))
+            self.assertEqual(1, native.count("    " + name + "();"))
+        self.assertTrue("constexpr int iterations = 64;" in native, "The fixed 64-open work guard must remain")
+        self.assertTrue("factories == index + 1 && callbacks == 0" in native, "Factory and queue counts must be exact")
+        self.assertTrue('"dialog-attach-primary"' in native, "The actual attachment-failure seam must remain")
+
+    def testNativeUiReadAndKeyboardCallsCrossTheActualServerBoundary(self):
+        calls = []
+
+        class CGameObject:
+            pass
+
+        class CGameGraphicsObject(CGameObject):
+            def getChildren(self):
+                return []
+
+            def getParent(self):
+                return None
+
+            def keyboardEvent(self, gui, event_type, key):
+                calls.append((gui, event_type, key))
+                return True
+
+        class CGameCampaignPanel(CGameGraphicsObject):
+            def getTitle(self):
+                return "Actual source title"
+
+            def getBody(self):
+                return "Actual source body"
+
+            def isDismissed(self):
+                return False
+
+        class CGameCampaignBrowserPanel(CGameGraphicsObject):
+            def getSelectedId(self):
+                return "source-item-instance"
+
+            def hasChoice(self):
+                return False
+
+        server = mcp.EngineMcpServer(ROOT, ROOT / "unused-native-build")
+        gui, reader, browser = CGameGraphicsObject(), CGameCampaignPanel(), CGameCampaignBrowserPanel()
+        server.handles.update(gui=gui, reader=reader, browser=browser)
+        expected = (
+            ("gui", "getChildren", [], []),
+            ("reader", "getParent", [], None),
+            ("reader", "getTitle", [], "Actual source title"),
+            ("reader", "getBody", [], "Actual source body"),
+            ("reader", "isDismissed", [], False),
+            ("browser", "getSelectedId", [], "source-item-instance"),
+            ("browser", "hasChoice", [], False),
+            ("browser", "keyboardEvent", [{"__handle__": "gui"}, 768, 13], True),
+        )
+        for handle, method, args, value in expected:
+            with self.subTest(handle=handle, method=method):
+                response = server._engine_handle_call({"handle": handle, "method": method, "args": args})
+                self.assertFalse(response["isError"], response)
+                self.assertEqual(value, response["structuredContent"]["result"])
+        self.assertEqual([(gui, 768, 13)], calls)
+
+    def testNativeUiSurfaceKeepsGeneralMutationAndWorldLookalikesDeniedBeforeGetattr(self):
+        touched = []
+
+        class CGameObject:
+            def __getattribute__(self, name):
+                if name in {
+                    "getChildren",
+                    "pushChild",
+                    "addChild",
+                    "removeChild",
+                    "setObjectProperty",
+                    "setDialog",
+                    "mouseEvent",
+                    "close",
+                }:
+                    touched.append(name)
+                    raise AssertionError("Denied method must not be dereferenced")
+                return object.__getattribute__(self, name)
+
+        class CGameGraphicsObject(CGameObject):
+            pass
+
+        class CGameCampaignPanel(CGameGraphicsObject):
+            pass
+
+        server = mcp.EngineMcpServer(ROOT, ROOT / "unused-native-build")
+        server.handles.update(world=CGameObject(), panel=CGameCampaignPanel())
+        denied = ("pushChild", "addChild", "removeChild", "setObjectProperty", "setDialog", "mouseEvent", "close")
+        for method in denied:
+            with self.subTest(method=method):
+                response = server._engine_handle_call({"handle": "panel", "method": method})
+                self.assertTrue(response["isError"])
+                self.assertIn("not exported", response["structuredContent"]["error"])
+        response = server._engine_handle_call({"handle": "world", "method": "getChildren"})
+        self.assertTrue(response["isError"])
+        self.assertIn("not exported", response["structuredContent"]["error"])
+        self.assertEqual([], touched)
+
+    def testNativeUiAllowlistAddsOnlyTheExistingTypedInspectionAndKeyboardSurface(self):
+        self.assertEqual(
+            {"getChildren", "getParent", "keyboardEvent"},
+            mcp.MCP_ALLOWED_HANDLE_METHODS.get("CGameGraphicsObject", set()),
+        )
+        self.assertEqual(
+            {"getTitle", "getBody", "isDismissed"}, mcp.MCP_ALLOWED_HANDLE_METHODS.get("CGameCampaignPanel", set())
+        )
+        self.assertEqual(
+            {"getSelectedId", "hasChoice"}, mcp.MCP_ALLOWED_HANDLE_METHODS.get("CGameCampaignBrowserPanel", set())
+        )
+        self.assertNotIn("getChildren", mcp.MCP_ALLOWED_HANDLE_METHODS["CGameObject"])
+        for method in ("pushChild", "addChild", "removeChild", "setObjectProperty", "mouseEvent", "close"):
+            self.assertFalse(any(method in methods for methods in mcp.MCP_ALLOWED_HANDLE_METHODS.values()))
+
     def testOnlyTheReadOnlyGetterIsAddedToTheExistingHandlerSurface(self):
         self.assertIn("getRequestedTradeMarket", mcp.MCP_ALLOWED_HANDLE_METHODS["CGuiHandler"])
         self.assertNotIn("setRequestedTradeMarket", mcp.MCP_ALLOWED_HANDLE_METHODS["CGuiHandler"])
@@ -219,6 +423,50 @@ class McpTradeMarketContractTest(unittest.TestCase):
     def testNativeContractProgramsHaveValidSyntaxWithoutExecutingNativeCode(self):
         for program in (CALLBACK_PROGRAM, LIFETIME_PROGRAM, GUI_PROGRAM):
             compile(program, "<native trade market contract>", "exec")
+
+    def testRetainedTradeFixtureWaitsForIdleAfterBothTransitionRequests(self):
+        import ast
+
+        tree = ast.parse(LIFETIME_PROGRAM)
+        function = next(
+            (node for node in tree.body if isinstance(node, ast.FunctionDef) and node.name == "waitForTransition"), None
+        )
+        self.assertIsNotNone(function, "The native fixture needs a bounded settled-transition wait")
+        namespace = {"monotonic": lambda: 0}
+        exec(compile(ast.Module(body=[function], type_ignores=[]), "<trade transition wait>", "exec"), namespace)
+        steps = []
+        # The destination map can already be current while entry work still holds Transitioning.
+        scene = SimpleNamespace(isTransitionPending=lambda: len(steps) < 3)
+        instance = SimpleNamespace(getSceneManager=lambda: scene)
+        loop = SimpleNamespace(run=lambda: steps.append("pump"))
+        namespace["waitForTransition"](instance, loop)
+        self.assertEqual(["pump"] * 3, steps)
+        waits = [
+            node
+            for node in ast.walk(tree)
+            if isinstance(node, ast.Call) and isinstance(node.func, ast.Name) and node.func.id == "waitForTransition"
+        ]
+        self.assertEqual(2, len(waits), "Both outward and return transitions must settle before final assertions")
+        self.assertIn("assert instance.requestMapTransition(back)", LIFETIME_PROGRAM)
+        self.assertIn("assert instance.getMap() is original", LIFETIME_PROGRAM)
+        self.assertIn("assert handler.getRequestedTradeMarket() is None", LIFETIME_PROGRAM)
+
+    def testRetainedTradeFixtureStillFailsWhenTransitionNeverSettles(self):
+        import ast
+
+        tree = ast.parse(LIFETIME_PROGRAM)
+        function = next(
+            (node for node in tree.body if isinstance(node, ast.FunctionDef) and node.name == "waitForTransition"), None
+        )
+        self.assertIsNotNone(function)
+        times = iter((0, 6))
+        namespace = {"monotonic": lambda: next(times)}
+        exec(compile(ast.Module(body=[function], type_ignores=[]), "<trade transition wait>", "exec"), namespace)
+        scene = SimpleNamespace(isTransitionPending=lambda: True, getTransitionStateName=lambda: "Transitioning")
+        instance = SimpleNamespace(getSceneManager=lambda: scene)
+        loop = SimpleNamespace(run=lambda: None)
+        with self.assertRaisesRegex(AssertionError, "Trade map transition did not settle"):
+            namespace["waitForTransition"](instance, loop)
 
     def testMissingOwnerFixtureUsesARealContextHandlerAfterOwnerRelease(self):
         owners = []

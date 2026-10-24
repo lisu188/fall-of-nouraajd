@@ -5,17 +5,17 @@
     {
       "source": "src/core/bindings/CModuleFoundation.cpp",
       "registration": "bindFoundationAndSession",
-      "registrationTokenSha256": "dcf50968aa83d735e36eea0e9b2708c1a8a5f5511fd688f1c069925938ab8bed"
+      "registrationTokenSha256": "19b6725b3e9e72d4be7e93e00dfefe264d805ac637843d949d1b65a6ee718bbc"
     },
     {
       "source": "src/core/bindings/CModuleWorld.cpp",
       "registration": "bindGraphicsAndWorld",
-      "registrationTokenSha256": "f3bd05a19ab981dc9ea4841d864c8196796c7f80e3d28f86bee43dc6f659afc2"
+      "registrationTokenSha256": "5c190326f54396e39986ba851333338d27b7c03c4f908a3e018a837d0cbb1596"
     },
     {
       "source": "src/core/bindings/CModuleGameplay.cpp",
       "registration": "bindGameplayObjects",
-      "registrationTokenSha256": "1d6c92829acd769e20ce30b4a34d5d94212c71c6b179ac2937557ddc2abf0304"
+      "registrationTokenSha256": "9be88d2fa1de23eca9718cae8114fcff990928ec569ee64df5c8ea4d5cc6ff72"
     },
     {
       "source": "src/core/bindings/CModuleServices.cpp",
@@ -25,7 +25,7 @@
     {
       "source": "src/core/bindings/CModuleCreatures.cpp",
       "registration": "bindCreatures",
-      "registrationTokenSha256": "70cca8f71ee11190fd408c0720f265f1042f15574dca25827ebecfd892df860f"
+      "registrationTokenSha256": "65258021df8f67cc5ffb72e1131a5d59209e323b6e62aefb9016d1f113f8b1e0"
     },
     {
       "source": "src/core/bindings/CModulePanels.cpp",
@@ -34,5 +34,9 @@
     }
   ],
   "runtimeAdapterReview": "Only the private seed hook delegates to per-consumer adapters; public registrations, arguments, defaults and docs remain unchanged.",
-  "alliedEncounterReview": "Adds fightManyWithAllies(hero, opponents, allies) and fightManyWithAlliesOutcome(hero, opponents, allies); existing signatures, defaults and registration order are retained. Native allied-combat tests cover bounded AI participants, rewards and stale contexts."
+  "alliedEncounterReview": "Adds fightManyWithAllies(hero, opponents, allies) and fightManyWithAlliesOutcome(hero, opponents, allies); existing signatures, defaults and registration order are retained. Native allied-combat tests cover bounded AI participants, rewards and stale contexts.",
+  "pendingMoveOriginReview": "Adds a readonly copied optional move origin during existing movement hooks; no setter or movement behavior changes. Native doorway and copy-lifetime regression is authored for CI.",
+  "savedWaitReview": "Adds CWaitState with exact Python integer durations0..60000 and waitMilliseconds(state); existing registrations/order/defaults remain. Native snapshot/cancellation and real-extension save tests are authored for CI, not executed locally.",
+  "mapBindingEpochReview": "Adds only CGame.getMapBindingEpoch(), a readonly nonserialized uint64 public map publication identity; existing signatures/defaults/order remain. Native reentrant/quiet-resource and extension tests are authored for CI, not executed locally.",
+  "assignedPlayerQueryReview": "Adds only CMap.getAssignedPlayer(), a const cache observation without lazy adoption, restoration, controller repair or hook registration; engine owner thread semantics, no new synchronization promise. Native and extension/performance fixtures are authored for CI, not executed locally."
 }
