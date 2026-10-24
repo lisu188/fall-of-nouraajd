@@ -71,6 +71,7 @@ class CMap : public CGameObject {
     friend class CMapLoader;
     friend class CGameContext;
     friend class CFightHandler;
+    friend class CCombatParticipantGuard;
     friend class CSceneManager;
 
     friend class CRandomMapGenerator;
@@ -342,6 +343,7 @@ class CMap : public CGameObject {
     vstd::lazy<CEventHandler> eventHandler;
     int turn = 0;
     bool moving = false;
+    std::size_t activeCombatTransitionDeferrals = 0;
     const std::shared_ptr<CSaveAdmissionState> saveAdmissionState;
     bool playerTriggersRegistered = false;
     bool permanentPlayerDeath = false;

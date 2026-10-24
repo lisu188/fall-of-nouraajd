@@ -266,7 +266,9 @@ class CityWalkthroughRegistrationTest(unittest.TestCase):
         self.assertEqual(["utf-8"], encodings)
         self.assertEqual(set(), tags)
 
-    def runCombatTransitionModel(self, *, commit_during_fight, pending_state="TransitionPending"):
+    def runCombatTransitionModel(
+        self, *, commit_during_fight, pending_state="TransitionPending", owned_defeat_continuation=False
+    ):
         """Run the real test contract against explicit scheduling models, without native credit."""
         tree = ast.parse((ROOT / "test.py").read_text(encoding="utf-8"))
         function = next(
@@ -308,6 +310,7 @@ class CityWalkthroughRegistrationTest(unittest.TestCase):
         class World:
             def __init__(self, name):
                 self.mapName = name
+                self.activeCombatTransitionDeferrals = 0
                 self.properties, self.objects = {"turn": 0}, {player.name: player}
 
             def getPlayer(self):
@@ -349,13 +352,14 @@ class CityWalkthroughRegistrationTest(unittest.TestCase):
                 return self.state != "Idle"
 
             def commit(self):
-                if self.pending:
+                if self.pending and (not owned_defeat_continuation or selfCase.sceneCommitReady(source)):
                     calls.append("commit")
                     instance.active = World(self.pending)
                     instance.active.properties["turn"] = source.getTurn()
                     source.objects.pop(player.name)
                     self.state, self.pending = "Idle", ""
 
+        selfCase = self
         scene = Scene()
 
         class Game:
@@ -388,13 +392,21 @@ class CityWalkthroughRegistrationTest(unittest.TestCase):
         def fightMany(attacker, defenders):
             self.assertEqual(1, len(defenders))
             defender = defenders[0]
+            source.activeCombatTransitionDeferrals += 1
             self.assertEqual("TransitionStrike", configs["CombatTransitionStrike"]["class"])
             try:
                 registered["TransitionStrike"]().performAction(attacker, defender)
             except AssertionError:
                 calls.append("callback assertion swallowed by native wrapper model")
             self.assertFalse(defender.isAlive())
+            if owned_defeat_continuation:
+                calls.append("owned defeat post")
+                scene.commit()
+                if instance.getMap() is not source:
+                    source.activeCombatTransitionDeferrals -= 1
+                    return False
             source.objects.pop(defender.name)
+            source.activeCombatTransitionDeferrals -= 1
             if commit_during_fight:
                 scene.commit()
             calls.append("fight returned")
@@ -469,6 +481,143 @@ class CityWalkthroughRegistrationTest(unittest.TestCase):
             with self.assertRaisesRegex(AssertionError, "siege"):
                 driver.waitForMap("siege", timeout=1)
         self.assertEqual(["pump"], calls)
+
+
+    def sceneCommitReady(self, source, *, valid=True, game=True, map_present=True, moving=False):
+        """Evaluate only the actual native until predicate against a scheduling double."""
+        import re
+
+        native = (ROOT / "src/core/CSceneManager.cpp").read_text(encoding="utf-8")
+        block = native.split("co_await vstd::until(vstd::event_loop<>::instance(), [&] {", 1)[1].split("});", 1)[0]
+        expression = block.split("return ", 1)[1].split(";", 1)[0]
+        for before, after in (
+            ("game->getMap()->isMoving()", "moving"),
+            ("game->getMap()", "map_present"),
+            ("map->isMoving()", "moving"),
+            ("map->activeCombatTransitionDeferrals", "owners"),
+            ("valid()", "valid"),
+            ("&&", " and "),
+            ("||", " or "),
+        ):
+            expression = expression.replace(before, after)
+        expression = re.sub(r"!map\b", "!map_present", expression)
+        expression = re.sub(r"!(?!=)", " not ", expression)
+        self.assertRegex(expression, r"^[a-z_0-9 ()=]+$")
+        return bool(
+            eval(
+                expression.strip(),
+                {"__builtins__": {}},
+                {
+                    "valid": valid,
+                    "game": game,
+                    "map_present": map_present,
+                    "moving": moving,
+                    "owners": source.activeCombatTransitionDeferrals,
+                },
+            )
+        )
+
+    def testQueuedSceneCannotPublishDuringTheActualOwnedDefeatTestContinuation(self):
+        calls = self.runCombatTransitionModel(commit_during_fight=True, owned_defeat_continuation=True)
+        self.assertLess(calls.index("owned defeat post"), calls.index("commit"))
+        self.assertEqual(1, calls.count("fight returned"))
+
+    def testSceneWaitUsesBothNativeMovementAndCombatOwnership(self):
+        for owners in (0, 1, 2, 64):
+            for moving in (False, True):
+                with self.subTest(owners=owners, moving=moving):
+                    world = SimpleNamespace(activeCombatTransitionDeferrals=owners)
+                    self.assertEqual(owners == 0 and not moving, self.sceneCommitReady(world, moving=moving))
+        for valid, game, present in ((False, True, True), (True, False, True), (True, True, False)):
+            self.assertTrue(
+                self.sceneCommitReady(
+                    SimpleNamespace(activeCombatTransitionDeferrals=2),
+                    valid=valid,
+                    game=game,
+                    map_present=present,
+                    moving=True,
+                )
+            )
+
+    def testCombatDeferralIsPrivateUnserializedAndStartsAtZero(self):
+        source = (ROOT / "src/core/CMap.h").read_text(encoding="utf-8")
+        self.assertIn("friend class CCombatParticipantGuard;", source)
+        self.assertIn("std::size_t activeCombatTransitionDeferrals = 0;", source.split("  private:", 1)[1])
+        self.assertNotIn("activeCombatTransitionDeferrals", source.split("V_META(", 1)[1].split("  public:", 1)[0])
+        self.assertEqual(1, source.count("activeCombatTransitionDeferrals"))
+
+    def testEncounterGuardBalancesOnlyAdmittedMapsAndCannotMove(self):
+        source = (ROOT / "src/handler/CFightHandler.cpp").read_text(encoding="utf-8")
+        guard = source.split("class CCombatParticipantGuard {", 1)[1].split("template <typename Callback>", 1)[0]
+        self.assertIn("std::shared_ptr<CMap> map;", guard)
+        self.assertEqual(1, guard.count("++this->map->activeCombatTransitionDeferrals"))
+        self.assertEqual(1, guard.count("--map->activeCombatTransitionDeferrals"))
+        self.assertLess(
+            guard.index("isOwned(participant)"), guard.index("++this->map->activeCombatTransitionDeferrals")
+        )
+        self.assertLess(
+            guard.index("std::numeric_limits<std::size_t>::max()"),
+            guard.index("participant->activeCombatOwner = identity"),
+        )
+        destructor = guard.split("~CCombatParticipantGuard()", 1)[1].split("explicit operator bool", 1)[0]
+        self.assertIn("if (admitted)", destructor)
+        self.assertLess(
+            destructor.index("participant->activeCombatOwner.reset()"),
+            destructor.index("--map->activeCombatTransitionDeferrals"),
+        )
+        self.assertIn("CCombatParticipantGuard(CCombatParticipantGuard &&) = delete", guard)
+        self.assertIn("CCombatParticipantGuard &operator=(CCombatParticipantGuard &&) = delete", guard)
+        self.assertEqual(
+            1, source.count("CCombatParticipantGuard participantGuard(encounterMap, std::move(participants))")
+        )
+
+    def testTransitionRequestStillInvalidatesGenerationBeforePosting(self):
+        scene = (ROOT / "src/core/CSceneManager.cpp").read_text(encoding="utf-8")
+        request = scene.split("transitionState = TransitionState::TransitionPending;", 1)[1]
+        self.assertLess(request.index("context->advanceTransitionGeneration();"), request.index("context->spawnTask("))
+        self.assertIn("context->isTransitionGenerationCurrent(expectedGeneration)", scene)
+        self.assertIn("game->getMap() == expected_map", scene)
+        fight = (ROOT / "src/handler/CFightHandler.cpp").read_text(encoding="utf-8")
+        self.assertIn("game->getMapBindingEpoch() == initialEpoch", fight)
+
+    def testNativeSceneFixtureUsesRealRemovalCleanupAndFixedRepeatBudget(self):
+        source = (ROOT / "tests/unit/test_handler.cpp").read_text(encoding="utf-8")
+        self.assertIn("void testQueuedSceneTransitionWaitsForOwnedDefeatAndControllerCleanup()", source)
+        case = source.split("void testQueuedSceneTransitionWaitsForOwnedDefeatAndControllerCleanup()", 1)[1].split(
+            "void testQueuedSceneCombatDeferralReleasesAfterThrowAndKeepsDirectReplacementCancellation()", 1
+        )[0]
+        for token in (
+            "repetition < 8",
+            "pump < 16",
+            'awaitTriggerProbe(probe, "destroy")',
+            "CFightHandler::fightManyResultAsync(attacker, {defender})",
+            "request.reuseLoadedMap = true",
+            "controller->end_count == 1",
+            "result.outcome == CFightOutcome::AttackerVictory",
+            'probe->released.insert("destroy")',
+            "preparation == 1 && finished == 1 && committed",
+        ):
+            self.assertIn(token, case)
+        self.assertNotIn("activeCombatTransitionDeferrals", case)
+
+    def testNativeCaseCatalogIsAnOrderedDelta(self):
+        tree = ast.parse((ROOT / "tests/test_native_test_profile.py").read_text(encoding="utf-8"))
+        additional = next(
+            n
+            for n in tree.body
+            if isinstance(n, ast.Assign)
+            and any(isinstance(t, ast.Name) and t.id == "ADDITIONAL_CASES" for t in n.targets)
+        )
+        names = ast.literal_eval(additional.value)["handler"]
+        expected = (
+            "testQueuedSceneTransitionWaitsForOwnedDefeatAndControllerCleanup",
+            "testQueuedSceneCombatDeferralReleasesAfterThrowAndKeepsDirectReplacementCancellation",
+        )
+        self.assertEqual(expected, tuple(n for n in names if n in expected))
+        source = (ROOT / "tests/unit/test_handler.cpp").read_text(encoding="utf-8")
+        for name in expected:
+            self.assertEqual(1, names.count(name))
+            self.assertEqual(1, source.count('nativeTestProfile().run("' + name + '"'))
 
 
 if __name__ == "__main__":

@@ -48,6 +48,8 @@ ADDITIONAL_CASES = {
         "testOwnedDefeatFirstMetadataCallbackStopsBeforeSecondMetadataAndSetter",
         "testOwnedDefeatCodecBoundaryPreservesOriginalFailureAndStopsContinuation",
         "testOwnedDefeatGraphActorBindingPreservesPrimaryBeforeRootAndProperties",
+        "testQueuedSceneTransitionWaitsForOwnedDefeatAndControllerCleanup",
+        "testQueuedSceneCombatDeferralReleasesAfterThrowAndKeepsDirectReplacementCancellation",
         "testAsyncCombatAwaitsLootWithoutPumpingOrGrantingRewardsEarly",
         "testWorkerStartedCombatDefersControllerAndPanelCreationToMain",
         "testOwnedLootCancellationCompensationRetainsExactItemsAndRejectsUncertainReplay",

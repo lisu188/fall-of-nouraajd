@@ -59,8 +59,11 @@ class CCombatParticipantGuard {
         return CFightHandler::resolveOwnedDefeatAsync(std::move(winner), std::move(loser), std::move(identity));
     }
 
-    explicit CCombatParticipantGuard(std::vector<std::shared_ptr<CCreature>> participants)
-        : participants(std::move(participants)), identity(std::make_shared<CCombatOwnership>()) {
+    CCombatParticipantGuard(std::shared_ptr<CMap> map, std::vector<std::shared_ptr<CCreature>> participants)
+        : map(std::move(map)), participants(std::move(participants)), identity(std::make_shared<CCombatOwnership>()) {
+        if (this->map && this->map->activeCombatTransitionDeferrals == std::numeric_limits<std::size_t>::max()) {
+            return;
+        }
         for (const auto &participant : this->participants) {
             if (!participant || isOwned(participant)) {
                 return;
@@ -68,6 +71,9 @@ class CCombatParticipantGuard {
         }
         for (const auto &participant : this->participants) {
             participant->activeCombatOwner = identity;
+        }
+        if (this->map) {
+            ++this->map->activeCombatTransitionDeferrals;
         }
         admitted = true;
     }
@@ -83,6 +89,9 @@ class CCombatParticipantGuard {
                 if (participant->activeCombatOwner.lock() == identity) {
                     participant->activeCombatOwner.reset();
                 }
+            }
+            if (map) {
+                --map->activeCombatTransitionDeferrals;
             }
         }
     }
@@ -101,6 +110,7 @@ class CCombatParticipantGuard {
     }
 
   private:
+    std::shared_ptr<CMap> map;
     std::vector<std::shared_ptr<CCreature>> participants;
     std::shared_ptr<CCombatOwnership> identity;
     bool admitted = false;
@@ -695,7 +705,7 @@ vstd::task<CFightResult> resolveFightManyAsync(std::shared_ptr<CCreature> attack
     auto participants = opponents;
     participants.push_back(attacker);
     participants.insert(participants.end(), allies.begin(), allies.end());
-    CCombatParticipantGuard participantGuard(std::move(participants));
+    CCombatParticipantGuard participantGuard(encounterMap, std::move(participants));
     if (!participantGuard) {
         result.outcome = CFightOutcome::Cancelled;
         co_return settle_result(result);

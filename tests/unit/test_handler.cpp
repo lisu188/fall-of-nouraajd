@@ -31,6 +31,7 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #include "core/CJsonUtil.h"
 #include "core/CLoader.h"
 #include "core/CMap.h"
+#include "core/CSceneManager.h"
 #include "core/CPlaytestTrace.h"
 #include "core/CProvider.h"
 #include "core/CPythonOverrides.h"
@@ -3608,6 +3609,171 @@ void testCancelledLootSettlesStartedRewardsOnceAndSkipsQueuedCombat() {
                     !player->hasInInventory(item) && game->getGui()->getChildren().empty(),
                 "cancelling queued combat must skip all controller, defeat, reward, and GUI work");
     game->getContext()->shutdown();
+}
+
+class SceneRequestFightController : public NoProgressFightController {
+  public:
+    std::function<void()> action;
+    std::function<void()> cleanup;
+    int actions = 0;
+
+    bool control(std::shared_ptr<CCreature>, std::shared_ptr<CCreature> opponent) override {
+        ++actions;
+        action();
+        opponent->setHp(0);
+        return true;
+    }
+
+    void end(std::shared_ptr<CCreature> first, std::shared_ptr<CCreature> second) override {
+        NoProgressFightController::end(first, second);
+        if (cleanup) {
+            cleanup();
+        }
+    }
+};
+
+void testQueuedSceneTransitionWaitsForOwnedDefeatAndControllerCleanup() {
+    auto loop = vstd::event_loop<>::instance();
+    for (int repetition = 0; repetition < 8; ++repetition) {
+        auto game = makeWindowlessFightGame();
+        const auto source = game->getMap();
+        source->setMapName("unitCombatTransitionSource");
+        source->setTurn(34);
+        source->setBoolProperty("plugin_cityFixedLoot", true);
+        const auto player = add_test_player(game);
+        const auto destination = std::make_shared<CMap>();
+        destination->setGame(game);
+        destination->setMapName("unitCombatTransitionDestination");
+        game->getContext()->getMapSessionStore()->put(destination);
+        const auto scene = game->getSceneManager();
+        auto attacker = add_test_creature(game, "unitSceneCombatAttacker", 2, 0);
+        auto defender = add_test_creature(game, "unitSceneCombatDefender", 3, 0);
+        auto outsider = add_test_creature(game, "unitSceneCombatOutsider", 4, 0);
+        auto outsiderController = std::dynamic_pointer_cast<NoProgressFightController>(outsider->getFightController());
+        attacker->getBaseStats()->setAgility(50);
+        defender->getBaseStats()->setAgility(1);
+        auto controller = std::make_shared<SceneRequestFightController>();
+        attacker->setFightController(controller);
+        auto probe = std::make_shared<AsyncTriggerProbe>();
+        auto trigger = std::make_shared<CCustomTrigger>(
+            defender->getName(), "onDestroy", [probe](auto, auto) { return awaitTriggerProbe(probe, "destroy"); });
+        trigger->setName("unitSceneCombatDestroyGate");
+        source->getEventHandler()->registerTrigger(trigger);
+        int preparation = 0;
+        int finished = 0;
+        bool committed = false;
+        controller->action = [&] {
+            CMapTransitionRequest request;
+            request.targetMap = destination->getMapName();
+            request.reuseLoadedMap = true;
+            request.beforePlayerEntry = [&] {
+                ++preparation;
+                expect_true(controller->end_count == 1 && probe->released.contains("destroy") &&
+                                !source->getObjectByName(defender->getName()),
+                            "queued commit must follow actual destruction and controller cleanup");
+            };
+            request.onFinished = [&](bool success) {
+                ++finished;
+                committed = success;
+            };
+            expect_true(scene->requestMapChange(game, std::move(request)) && game->getMap() == source &&
+                            scene->getTransitionStateName() == "TransitionPending",
+                        "controller transition request must remain queued on the source");
+            auto overlap = game->getContext()->spawnTask(CFightHandler::fightManyResultAsync(outsider, {defender}));
+            expect_true(overlap.finished() && overlap.get().outcome == CFightOutcome::Cancelled &&
+                            controller->actions == 1 && outsiderController->start_count == 0 &&
+                            outsiderController->end_count == 0,
+                        "rejected shared-participant reentry must not retain another map deferral");
+        };
+        controller->cleanup = [&] {
+            for (int pump = 0; pump < 4; ++pump) {
+                loop->runReady();
+            }
+            expect_true(game->getMap() == source && preparation == 0 && finished == 0,
+                        "controller end callbacks must retain the encounter's map deferral");
+        };
+        auto fight = game->getContext()->spawnTask(CFightHandler::fightManyResultAsync(attacker, {defender}));
+        expect_true(pumpHandlerUntil([&] { return !probe->entered.empty() || fight.finished(); }) &&
+                        probe->entered.size() == 1 && !fight.finished(),
+                    "the native regression must reach a real suspended destruction hook");
+        for (int pump = 0; pump < 16; ++pump) {
+            loop->runReady();
+        }
+        expect_true(game->getMap() == source && preparation == 0 && finished == 0 && !defender->isAlive(),
+                    "queued scene work must not interrupt the unfinished owned defeat");
+        probe->released.insert("destroy");
+        expect_true(pumpHandlerUntil([&] { return fight.finished(); }), "the owned defeat must settle boundedly");
+        if (fight.finished()) {
+            const auto result = fight.get();
+            expect_true(result.outcome == CFightOutcome::AttackerVictory && controller->actions == 1 &&
+                            controller->start_count == 1 && controller->end_count == 1 &&
+                            source->getObjectByName(attacker->getName()) == attacker &&
+                            !source->getObjectByName(defender->getName()),
+                        "the unchanged combat victory and exact removal must survive the queued transition");
+        }
+        expect_true(pumpHandlerUntil([&] { return !scene->isTransitionPending(); }) && game->getMap() == destination &&
+                        destination->getAssignedPlayer() == player && destination->getTurn() == 34 &&
+                        preparation == 1 && finished == 1 && committed &&
+                        source->getObjectByName(attacker->getName()) == attacker,
+                    "each settled encounter must release exactly one queued commit without retained counter growth");
+        game->getContext()->shutdown();
+    }
+}
+
+void testQueuedSceneCombatDeferralReleasesAfterThrowAndKeepsDirectReplacementCancellation() {
+    for (const bool directReplacement : {false, true}) {
+        auto game = makeWindowlessFightGame();
+        auto source = game->getMap();
+        source->setMapName("unitInterruptedCombatSource");
+        add_test_player(game);
+        auto destination = std::make_shared<CMap>();
+        destination->setGame(game);
+        destination->setMapName("unitInterruptedCombatDestination");
+        game->getContext()->getMapSessionStore()->put(destination);
+        auto scene = game->getSceneManager();
+        auto attacker = add_test_creature(game, "unitInterruptedCombatAttacker", 2, 0);
+        auto defender = add_test_creature(game, "unitInterruptedCombatDefender", 3, 0);
+        attacker->getBaseStats()->setAgility(50);
+        auto controller = std::make_shared<SceneRequestFightController>();
+        attacker->setFightController(controller);
+        controller->action = [&] {
+            if (directReplacement) {
+                game->setMap(destination);
+                return;
+            }
+            CMapTransitionRequest request;
+            request.targetMap = destination->getMapName();
+            request.reuseLoadedMap = true;
+            expect_true(scene->requestMapChange(game, std::move(request)),
+                        "the throwing controller must queue a scene");
+            throw std::runtime_error("unit scene controller primary");
+        };
+        auto fight = game->getContext()->spawnTask(CFightHandler::fightManyResultAsync(attacker, {defender}));
+        expect_true(pumpHandlerUntil([&] { return fight.finished(); }), "interrupted combat must unwind boundedly");
+        bool originalError = false;
+        bool cancelled = false;
+        if (fight.finished()) {
+            try {
+                const auto result = fight.get();
+                cancelled = result.outcome == CFightOutcome::Cancelled;
+                expect_true(directReplacement && result.outcome == CFightOutcome::Cancelled,
+                            "direct map replacement must still cancel owned defeat");
+            } catch (const vstd::task_cancelled &) {
+                cancelled = true;
+            } catch (const std::runtime_error &error) {
+                originalError = std::string(error.what()) == "unit scene controller primary";
+            }
+        }
+        expect_true((directReplacement ? cancelled : originalError) && controller->end_count == 1,
+                    "RAII deferral must preserve the original controller failure and one cleanup");
+        if (!directReplacement) {
+            expect_true(pumpHandlerUntil([&] { return !scene->isTransitionPending(); }) &&
+                            game->getMap() == destination && defender->isAlive() &&
+                            source->getObjectByName(defender->getName()) == defender,
+                        "exception unwind must release the queued transition without defeating a living actor");
+        }
+        game->getContext()->shutdown();
+    }
 }
 
 void test_fight_handler_reports_invalid_result_metadata() {
@@ -7238,6 +7404,10 @@ int main() {
                             testOwnedDefeatCodecBoundaryPreservesOriginalFailureAndStopsContinuation);
     nativeTestProfile().run("testOwnedDefeatGraphActorBindingPreservesPrimaryBeforeRootAndProperties",
                             testOwnedDefeatGraphActorBindingPreservesPrimaryBeforeRootAndProperties);
+    nativeTestProfile().run("testQueuedSceneTransitionWaitsForOwnedDefeatAndControllerCleanup",
+                            testQueuedSceneTransitionWaitsForOwnedDefeatAndControllerCleanup);
+    nativeTestProfile().run("testQueuedSceneCombatDeferralReleasesAfterThrowAndKeepsDirectReplacementCancellation",
+                            testQueuedSceneCombatDeferralReleasesAfterThrowAndKeepsDirectReplacementCancellation);
     nativeTestProfile().run("testAsyncCombatAwaitsLootWithoutPumpingOrGrantingRewardsEarly",
                             testAsyncCombatAwaitsLootWithoutPumpingOrGrantingRewardsEarly);
     nativeTestProfile().run("testWorkerStartedCombatDefersControllerAndPanelCreationToMain",
