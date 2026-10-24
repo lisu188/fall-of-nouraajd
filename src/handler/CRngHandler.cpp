@@ -16,6 +16,7 @@ You should have received a copy of the GNU General Public License
 along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 #include "CRngHandler.h"
+#include <exception>
 #include "handler/CGuiHandler.h"
 #include "core/CController.h"
 #include "core/CGame.h"
@@ -93,63 +94,115 @@ std::set<std::shared_ptr<CCreature>> CRngHandler::getRandomEncounter(int value) 
     return randomEncounter;
 }
 
-CRngHandler::CRngHandler(const std::shared_ptr<CGame> &game) : game(game) {
-    for (const std::string &type : game->getObjectHandler()->getAllSubTypes("CItem")) {
-        std::shared_ptr<CItem> item = game->createObject<CItem>(type);
-        if (item) {
-            int power = item->getPower();
-            // Compound artifacts are assembled from set pieces, never dropped or sold
-            // directly (docs/design/compound_artifacts.md); exclude them from random loot
-            // the same way quest items are excluded.
-            if (power > 0 && !item->hasTag(CTag::Quest) && !item->hasTag(CTag::Compound)) {
-                itemPowerTable.insert(std::make_pair(power, type));
-            }
-        }
-    }
+CRngHandler::CRngHandler(const std::shared_ptr<CGame> &game) : CRngHandler(game, {}) {}
 
-    for (const std::string &type : game->getObjectHandler()->getAllSubTypes("CCreature")) {
-        // getAllSubTypes("CCreature") also returns player templates because CPlayer inherits
-        // CCreature (src/object/CPlayer.h:24, registered via NativePlugin.cpp). Random encounters
-        // must never spawn a player template, so skip any candidate whose resolved class inherits
-        // CPlayer -- the same meta()->inherits(...) test getAllSubTypes itself applies for the
-        // CCreature gate (src/handler/CObjectHandler.cpp:115). Genuine monster candidates and their
-        // sw power buckets are untouched.
-        auto candidateClass = game->getObjectHandler()->getType(game->getObjectHandler()->getClass(type));
-        if (candidateClass && candidateClass->meta()->inherits("CPlayer")) {
-            continue;
-        }
-        std::shared_ptr<CCreature> creature = game->createObject<CCreature>(type);
-        if (creature && !creature->isNpc() && creature->getFightController()) {
-            // The associated-class hook is neutral today (multipliers pinned to 1), so
-            // this key equals the raw getSw() for every candidate; it only becomes a
-            // real CR weight once the associated-class balance design is approved.
-            int power = scaleEncounterPower(creature->getSw(), classifyClassAssociation(creature));
-            if (power > 0) {
-                creaturePowerTable.insert(std::make_pair(power, type));
+CRngHandler::CRngHandler(const std::shared_ptr<CGame> &game, std::function<void()> requireCurrent) : game(game) {
+    auto objects = game->getObjectHandler();
+    auto factories = objects->beginDefeatConstruction(requireCurrent);
+    const auto checkCurrent = [&] { factories.check(); };
+    try {
+        checkCurrent();
+        for (const std::string &type : game->getObjectHandler()->getDefeatSubTypes("CItem", requireCurrent)) {
+            checkCurrent();
+            std::shared_ptr<CItem> item = game->createObject<CItem>(type);
+            checkCurrent();
+            if (item) {
+                int power = item->getPower();
+                checkCurrent();
+                // Compound artifacts are assembled from set pieces, never dropped or sold
+                // directly (docs/design/compound_artifacts.md); exclude them from random loot
+                // the same way quest items are excluded.
+                const bool quest = power > 0 && item->hasTag(CTag::Quest);
+                checkCurrent();
+                const bool compound = power > 0 && !quest && item->hasTag(CTag::Compound);
+                checkCurrent();
+                if (power > 0 && !quest && !compound) {
+                    itemPowerTable.insert(std::make_pair(power, type));
+                }
             }
         }
+
+        for (const std::string &type : game->getObjectHandler()->getDefeatSubTypes("CCreature", requireCurrent)) {
+            // getAllSubTypes("CCreature") also returns player templates because CPlayer inherits
+            // CCreature (src/object/CPlayer.h:24, registered via NativePlugin.cpp). Random encounters
+            // must never spawn a player template, so skip any candidate whose resolved class inherits
+            // CPlayer -- the same meta()->inherits(...) test getAllSubTypes itself applies for the
+            // CCreature gate (src/handler/CObjectHandler.cpp:115). Genuine monster candidates and their
+            // sw power buckets are untouched.
+            checkCurrent();
+            auto candidateClass = game->getObjectHandler()->getType(game->getObjectHandler()->getClass(type));
+            checkCurrent();
+            if (candidateClass && candidateClass->meta()->inherits("CPlayer")) {
+                continue;
+            }
+            checkCurrent();
+            std::shared_ptr<CCreature> creature = game->createObject<CCreature>(type);
+            checkCurrent();
+            const bool npc = creature && creature->isNpc();
+            checkCurrent();
+            const bool hasController = creature && !npc && static_cast<bool>(creature->getFightController());
+            checkCurrent();
+            if (creature && !npc && hasController) {
+                // The associated-class hook is neutral today (multipliers pinned to 1), so
+                // this key equals the raw getSw() for every candidate; it only becomes a
+                // real CR weight once the associated-class balance design is approved.
+                const auto sw = creature->getSw();
+                checkCurrent();
+                const auto association = classifyClassAssociation(creature);
+                checkCurrent();
+                int power = scaleEncounterPower(sw, association);
+                if (power > 0) {
+                    creaturePowerTable.insert(std::make_pair(power, type));
+                }
+            }
+        }
+        checkCurrent();
+    } catch (...) {
+        factories.rethrowFailure();
+        throw;
     }
 }
 
 std::set<std::shared_ptr<CItem>> CRngHandler::calculateRandomLoot(int value) const {
-    std::set<std::shared_ptr<CItem>> loot;
+    return calculateDefeatLoot(value, {});
+}
+
+std::set<std::shared_ptr<CItem>> CRngHandler::calculateDefeatLoot(int value,
+                                                                  std::function<void()> requireCurrent) const {
+    if (requireCurrent) {
+        requireCurrent();
+    }
     auto currentGame = game.lock();
     if (!currentGame) {
+        return {};
+    }
+    auto factories = currentGame->getObjectHandler()->beginDefeatConstruction(requireCurrent);
+    std::set<std::shared_ptr<CItem>> loot;
+    try {
+        value = clampRandomValue(value);
+        for (auto pow : vstd::random_components(value, itemPowerTable | std::views::keys)) {
+            std::set<std::string> possible_names;
+            auto range = itemPowerTable.equal_range(pow);
+            for (auto it = range.first; it != range.second; it++) {
+                possible_names.insert(it->second);
+            }
+            if (!possible_names.empty()) {
+                if (requireCurrent) {
+                    requireCurrent();
+                }
+                auto item = currentGame->createObject<CItem>(*vstd::random_element(possible_names));
+                if (requireCurrent) {
+                    requireCurrent();
+                }
+                loot.insert(std::move(item));
+            }
+            value -= pow;
+        }
         return loot;
+    } catch (...) {
+        factories.rethrowFailure();
+        throw;
     }
-    value = clampRandomValue(value);
-    for (auto pow : vstd::random_components(value, itemPowerTable | std::views::keys)) {
-        std::set<std::string> possible_names;
-        auto range = itemPowerTable.equal_range(pow);
-        for (auto it = range.first; it != range.second; it++) {
-            possible_names.insert(it->second);
-        }
-        if (!possible_names.empty()) {
-            loot.insert(currentGame->createObject<CItem>(*vstd::random_element(possible_names)));
-        }
-        value -= pow;
-    }
-    return loot;
 }
 
 void CRngHandler::addRandomLoot(const std::shared_ptr<CCreature> &creature,
@@ -170,7 +223,17 @@ void CRngHandler::addRandomLoot(const std::shared_ptr<CCreature> &creature, int 
 
 vstd::task<void> CRngHandler::addRandomLootAsync(std::shared_ptr<CCreature> creature,
                                                  std::set<std::shared_ptr<CItem>> items) {
-    return [](std::shared_ptr<CCreature> creature, std::set<std::shared_ptr<CItem>> items) -> vstd::task<void> {
+    return addDefeatLootAsync(std::move(creature), std::move(items), {});
+}
+
+vstd::task<void> CRngHandler::addDefeatLootAsync(std::shared_ptr<CCreature> creature,
+                                                 std::set<std::shared_ptr<CItem>> items,
+                                                 std::function<void()> requireCurrent,
+                                                 std::function<void()> settleCurrent,
+                                                 std::function<void()> compensate) {
+    return [](std::shared_ptr<CCreature> creature, std::set<std::shared_ptr<CItem>> items,
+              std::function<void()> requireCurrent, std::function<void()> settleCurrent,
+              std::function<void()> compensate) -> vstd::task<void> {
         auto loop = vstd::event_loop<>::instance();
         if (!loop->isMainThread()) {
             co_await vstd::post(loop);
@@ -178,19 +241,48 @@ vstd::task<void> CRngHandler::addRandomLootAsync(std::shared_ptr<CCreature> crea
         if (!creature) {
             co_return;
         }
-        if (creature->isPlayer()) {
+        if (requireCurrent) {
+            requireCurrent();
+        }
+        const bool player = creature->isPlayer();
+        if (requireCurrent) {
+            requireCurrent();
+        }
+        if (player) {
             auto game = creature->getGame();
             auto gui = game->getGuiHandler();
             game.reset();
+            if (requireCurrent) {
+                requireCurrent();
+            }
             try {
                 co_await gui->showLootAsync(creature, items);
             } catch (const vstd::task_cancelled &) {
-                creature->addItems(items);
-                throw;
+                if (!compensate) {
+                    if (requireCurrent) {
+                        requireCurrent();
+                    }
+                    creature->addItems(items);
+                    throw;
+                }
+                const auto primary = std::current_exception();
+                try {
+                    compensate();
+                } catch (...) {
+                }
+                std::rethrow_exception(primary);
             }
         }
-        creature->addItems(items);
-    }(std::move(creature), std::move(items));
+        if (settleCurrent) {
+            settleCurrent();
+        } else {
+            if (requireCurrent) {
+                requireCurrent();
+            }
+            creature->addItems(items);
+        }
+    }(std::move(creature), std::move(items), std::move(requireCurrent), std::move(settleCurrent),
+                                                std::move(compensate));
 }
 
 std::set<std::shared_ptr<CCreature>> CRngHandler::calculateRandomEncounter(int value) const {

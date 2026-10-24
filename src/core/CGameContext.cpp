@@ -321,6 +321,37 @@ std::shared_ptr<CRngHandler> CGameContext::getRngHandler() {
     return rngHandler;
 }
 
+std::shared_ptr<CRngHandler> CGameContext::getDefeatRngHandler(std::function<void()> requireCurrent) {
+    requireCurrent();
+    std::shared_ptr<CRngHandler> cached;
+    {
+        std::lock_guard lock(*resourceMutex);
+        requireActiveService("CRngHandler");
+        cached = rngHandler;
+    }
+    if (cached) {
+        requireCurrent();
+        return cached;
+    }
+    auto owner = game.lock();
+    if (!owner) {
+        throw std::runtime_error("Cannot create CRngHandler without an active CGame.");
+    }
+    requireCurrent();
+    auto created = std::shared_ptr<CRngHandler>(new CRngHandler(owner, requireCurrent));
+    requireCurrent();
+    {
+        std::lock_guard lock(*resourceMutex);
+        requireActiveService("CRngHandler");
+        if (!rngHandler) {
+            rngHandler = std::move(created);
+        }
+        cached = rngHandler;
+    }
+    requireCurrent();
+    return cached;
+}
+
 std::shared_ptr<CSlotConfig> CGameContext::getSlotConfiguration() {
     {
         std::lock_guard lock(*resourceMutex);

@@ -742,6 +742,113 @@ class TownDialog:
         self.assertIn(objects["altarThreshold"], reachable(None))
         self.assertNotIn(objects["altarThreshold"], reachable(objects["tideBell"]))
 
+    def testCityCustodyNativeCaseAndCompletionMappingAreExplicit(self):
+        source = (catalog.ROOT / "tests/gameplay_routes_baldurs_gate.py").read_text(encoding="utf-8")
+        module = ast.parse(source)
+        cases = [
+            node
+            for node in ast.walk(module)
+            if isinstance(node, ast.Call)
+            and isinstance(node.func, ast.Name)
+            and node.func.id == "RouteCase"
+            and node.args
+            and isinstance(node.args[0], ast.Constant)
+            and node.args[0].value == "baldurs-gate-native-custody"
+        ]
+        self.assertEqual(1, len(cases), "The real custody route must be declared exactly once")
+        case = cases[0]
+        self.assertEqual("custodyUi", case.args[4].id)
+        self.assertEqual(
+            ("baldursGate.custody.surrender", "baldursGate.custody.escapeNoReward", "baldursGate.custody.saveReload"),
+            ast.literal_eval(case.args[3]),
+        )
+        options = {keyword.arg: keyword.value for keyword in case.keywords}
+        for key, value in (
+            ("classes", ("Warrior",)),
+            ("race", "highlanderRace"),
+            ("duration_seconds", 1200),
+            ("isolated_gui", True),
+        ):
+            self.assertEqual(value, ast.literal_eval(options[key]), key)
+        self.assertIsInstance(options["sources"], ast.BinOp)
+        self.assertEqual("SOURCES", options["sources"].left.id)
+        self.assertEqual(
+            ("tests/fixtures/baldurs_gate_city_prison_source.json",), ast.literal_eval(options["sources"].right)
+        )
+        mappings = [
+            node.value
+            for node in module.body
+            if isinstance(node, ast.Assign)
+            and any(isinstance(target, ast.Name) and target.id == "SOURCE_BRANCHES" for target in node.targets)
+        ]
+        self.assertEqual(1, len(mappings))
+        found = [
+            ast.literal_eval(value)
+            for key, value in zip(mappings[0].keys, mappings[0].values)
+            if isinstance(key, ast.Constant)
+            and key.value == "res/maps/baldursGate/script.py:BaldursGateCustodyQuest.isCompleted"
+        ]
+        self.assertEqual([("baldursGate.custody.escapeNoReward",)], found)
+
+    def testCityCustodyRouteUsesNaturalUiAndTwoRealSaveCheckpoints(self):
+        source = (catalog.ROOT / "tests/gameplay_routes_baldurs_gate.py").read_text(encoding="utf-8")
+        module = ast.parse(source)
+        functions = {node.name: node for node in module.body if isinstance(node, ast.FunctionDef)}
+        self.assertIn("custodyInventory", functions)
+        self.assertIn("custodyUi", functions)
+        route = functions["custodyUi"]
+        calls = sorted((node for node in ast.walk(route) if isinstance(node, ast.Call)), key=lambda node: node.lineno)
+        names = [node for node in calls if isinstance(node.func, ast.Name)]
+        self.assertTrue(any(node.func.id == "start" for node in names))
+        self.assertTrue(any(node.func.id == "travel" and ast.literal_eval(node.args[1]) == "AR0800" for node in names))
+        members = [node for node in calls if isinstance(node.func, ast.Attribute)]
+        phase = [node for node in members if node.func.attr == "ensurePhase"]
+        self.assertEqual([7], [ast.literal_eval(node.args[0]) for node in phase])
+        choices = [node for node in members if node.func.attr == "chooseUi"]
+        self.assertEqual(
+            [["0", "5"], ["2", "5"], [], ["9", "15"]],
+            [
+                ast.literal_eval(next(keyword.value for keyword in node.keywords if keyword.arg == "dialogue_choices"))
+                for node in choices
+            ],
+        )
+        contacts = [node for node in members if node.func.attr == "contact"]
+        self.assertEqual(2, len(contacts))
+        self.assertLess(contacts[0].lineno, choices[0].lineno)
+        self.assertLess(contacts[1].lineno, choices[1].lineno)
+        saves = [node for node in members if node.func.attr == "saveAndReload"]
+        self.assertEqual(
+            ["city-custody-jailed", "city-custody-escaped"], [ast.literal_eval(node.args[0]) for node in saves]
+        )
+        self.assertLess(choices[0].lineno, saves[0].lineno)
+        self.assertLess(saves[0].lineno, choices[1].lineno)
+        self.assertLess(choices[-1].lineno, saves[-1].lineno)
+        forbidden = {
+            "setBoolProperty",
+            "setNumericProperty",
+            "setStringProperty",
+            "addGold",
+            "addExp",
+            "addItem",
+            "relocateWithoutMoveHooks",
+            "invokeAction",
+        }
+        for node in members:
+            self.assertNotIn(node.func.attr, forbidden)
+            if node.func.attr == "call" and len(node.args) >= 2 and isinstance(node.args[1], ast.Constant):
+                self.assertNotIn(node.args[1].value, forbidden)
+        text = ast.get_source_segment(source, route)
+        for witness in (
+            "nativePanel=surrender",
+            "nativePanel=escape",
+            "nativeCustodyTrace=trace",
+            "custodyInventory(d, d.player)",
+            "retainedAngelo()",
+            "d.questNames(completed=True)",
+        ):
+            self.assertIn(witness, text)
+        self.assertNotIn('"baldursGate.source.', text)
+
 
 if __name__ == "__main__":
     unittest.main()

@@ -10,7 +10,7 @@
     {
       "source": "src/core/bindings/CModuleWorld.cpp",
       "registration": "bindGraphicsAndWorld",
-      "registrationTokenSha256": "47e92c08c38ef0a34614cfa6c14801697762ac39c4e6b4dc5a099b8c3df54560"
+      "registrationTokenSha256": "5c190326f54396e39986ba851333338d27b7c03c4f908a3e018a837d0cbb1596"
     },
     {
       "source": "src/core/bindings/CModuleGameplay.cpp",
@@ -37,5 +37,6 @@
   "alliedEncounterReview": "Adds fightManyWithAllies(hero, opponents, allies) and fightManyWithAlliesOutcome(hero, opponents, allies); existing signatures, defaults and registration order are retained. Native allied-combat tests cover bounded AI participants, rewards and stale contexts.",
   "pendingMoveOriginReview": "Adds a readonly copied optional move origin during existing movement hooks; no setter or movement behavior changes. Native doorway and copy-lifetime regression is authored for CI.",
   "savedWaitReview": "Adds CWaitState with exact Python integer durations0..60000 and waitMilliseconds(state); existing registrations/order/defaults remain. Native snapshot/cancellation and real-extension save tests are authored for CI, not executed locally.",
-  "mapBindingEpochReview": "Adds only CGame.getMapBindingEpoch(), a readonly nonserialized uint64 public map publication identity; existing signatures/defaults/order remain. Native reentrant/quiet-resource and extension tests are authored for CI, not executed locally."
+  "mapBindingEpochReview": "Adds only CGame.getMapBindingEpoch(), a readonly nonserialized uint64 public map publication identity; existing signatures/defaults/order remain. Native reentrant/quiet-resource and extension tests are authored for CI, not executed locally.",
+  "assignedPlayerQueryReview": "Adds only CMap.getAssignedPlayer(), a const cache observation without lazy adoption, restoration, controller repair or hook registration; engine owner thread semantics, no new synchronization promise. Native and extension/performance fixtures are authored for CI, not executed locally."
 }

@@ -71,6 +71,7 @@ class CMap : public CGameObject {
     friend class CMapLoader;
     friend class CGameContext;
     friend class CFightHandler;
+    friend class CCombatParticipantGuard;
     friend class CSceneManager;
 
     friend class CRandomMapGenerator;
@@ -176,6 +177,9 @@ class CMap : public CGameObject {
     Coords getLocationByName(std::string name);
 
     std::shared_ptr<CPlayer> getPlayer();
+
+    // Engine owner thread only; observes the cache without adoption or restoration.
+    std::shared_ptr<CPlayer> getAssignedPlayer() const;
 
     void setPlayer(std::shared_ptr<CPlayer> player);
 
@@ -339,6 +343,7 @@ class CMap : public CGameObject {
     vstd::lazy<CEventHandler> eventHandler;
     int turn = 0;
     bool moving = false;
+    std::size_t activeCombatTransitionDeferrals = 0;
     const std::shared_ptr<CSaveAdmissionState> saveAdmissionState;
     bool playerTriggersRegistered = false;
     bool permanentPlayerDeath = false;

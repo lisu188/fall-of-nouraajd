@@ -31,6 +31,8 @@ class CMapStringInt;
 
 class CGamePanel;
 
+class CGameDialogPanel;
+
 class CMap;
 
 class CDialog;
@@ -83,6 +85,8 @@ class CGuiHandler : public CGameObject {
     vstd::task<void> showTradeAsync(std::shared_ptr<CMarket> market);
 
     std::shared_ptr<CMarket> getRequestedTradeMarket();
+
+    std::shared_ptr<CGameDialogPanel> openDialog(std::shared_ptr<CDialog> dialog);
 
     void showDialog(std::shared_ptr<CDialog> dialog);
 
@@ -179,6 +183,8 @@ class CGuiHandler : public CGameObject {
     vstd::task<void> flipPanelAsync(std::string panel, std::string hotkey);
 
   private:
+    std::shared_ptr<CGameDialogPanel> createDialogPanel(std::shared_ptr<CDialog> dialog, bool blocking);
+
     vstd::task<void> runUiFlowAsync(std::string entry);
 
     std::weak_ptr<CGame> _game;

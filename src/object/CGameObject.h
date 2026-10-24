@@ -18,6 +18,7 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #pragma once
 
 #include "core/CConcepts.h"
+#include "core/CExport.h"
 #include "core/CTags.h"
 #include "core/CGlobal.h"
 #include "core/CUtil.h"
@@ -25,6 +26,11 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #include <exception>
 #include <set>
 #include <vector>
+
+namespace game_detail {
+GAME_CORE_EXPORT void requireCurrentDefeatConstruction();
+GAME_CORE_EXPORT void preserveDefeatCallbackFailure(std::exception_ptr primary);
+} // namespace game_detail
 
 class CGameEvent;
 
@@ -97,17 +103,27 @@ class CGameObject : public vstd::stringable, public std::enable_shared_from_this
     }
 
     template <typename T> void setProperty(std::string name, T property) {
+        game_detail::requireCurrentDefeatConstruction();
         auto object = this->ptr();
         directPropertyNotificationSuppressedNames.push_back(name);
         try {
-            if (this->meta()->has_property(name, object)) {
-                this->meta()->set_property<CGameObject, T>(name, object, property);
+            auto metadata = this->meta();
+            game_detail::requireCurrentDefeatConstruction();
+            const bool registered = metadata->has_property(name, object);
+            game_detail::requireCurrentDefeatConstruction();
+            auto setterMetadata = this->meta();
+            game_detail::requireCurrentDefeatConstruction();
+            if (registered) {
+                setterMetadata->set_property<CGameObject, T>(name, object, property);
             } else {
-                this->meta()->set_dynamic_property<CGameObject, T>(name, object, property);
+                setterMetadata->set_dynamic_property<CGameObject, T>(name, object, property);
             }
+            game_detail::requireCurrentDefeatConstruction();
         } catch (...) {
+            auto primary = std::current_exception();
             directPropertyNotificationSuppressedNames.pop_back();
-            throw;
+            game_detail::preserveDefeatCallbackFailure(primary);
+            std::rethrow_exception(primary);
         }
         directPropertyNotificationSuppressedNames.pop_back();
         recordPropertyChanged(name);

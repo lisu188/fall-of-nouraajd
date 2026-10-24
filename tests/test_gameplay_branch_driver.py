@@ -58,7 +58,7 @@ class GameplayBranchDriverTest(unittest.TestCase):
         driver.pump = Mock()
         driver.coords = lambda owner=None: (1, 2, 0)
         driver.object = lambda name: {"__handle__": name}
-        handles = {key: {"__handle__": key} for key in ("gui", "dialog", "panel", "nested")}
+        handles = {key: {"__handle__": key} for key in ("gui", "dialog", "panel", "nested", "handler")}
         action = "showInventory" if reader else "sell"
         options = [
             {"properties": {"number": number, "text": str(number), "action": "other"}} for number in range(11)
@@ -93,6 +93,13 @@ class GameplayBranchDriverTest(unittest.TestCase):
             state["calls"].append((owner["__handle__"], method, args))
             if method == "getGui":
                 return handles["gui"]
+            if method == "getGuiHandler":
+                return handles["handler"]
+            if method == "openDialog":
+                self.assertEqual(handles["handler"], owner)
+                self.assertEqual((handles["dialog"],), args)
+                state["children"].append(handles["panel"])
+                return handles["panel"]
             if method == "getChildren":
                 return list(state["children"])
             if method == "createObject":
@@ -103,13 +110,8 @@ class GameplayBranchDriverTest(unittest.TestCase):
                     if owner == handles["panel"]
                     else ("CGameCampaignPanel" if reader else "CGameCampaignBrowserPanel")
                 )
-            if method == "setObjectProperty":
-                self.assertEqual(("dialog", handles["dialog"]), args)
-                self.assertEqual(handles["panel"], owner)
-                return
-            if method == "pushChild":
-                state["children"].append(args[0])
-                return
+            if method in {"setObjectProperty", "pushChild", "addChild", "removeChild", "setDialog"}:
+                raise AssertionError("The driver must use the typed native dialog opener")
             if method == "getParent":
                 return handles["gui"] if owner in state["children"] else None
             if method == "getSelectedId":
@@ -162,10 +164,43 @@ class GameplayBranchDriverTest(unittest.TestCase):
         self.assertNotIn("invokeAction", methods)
         self.assertNotIn("setStringProperty", methods)
         self.assertNotIn("setNumericProperty", methods)
-        self.assertEqual(1, methods.count("setObjectProperty"))
+        self.assertEqual(1, methods.count("openDialog"))
+        for forbidden in ("setObjectProperty", "pushChild", "addChild", "removeChild", "setDialog"):
+            self.assertNotIn(forbidden, methods)
         self.assertTrue(driver.receipt()["isolatedGui"])
         driver.case = replace(driver.case, isolated_gui=False)
         self.assertFalse(driver.receipt()["isolatedGui"])
+
+    def testUiRouteRejectsANullDifferentDetachedOrAmbiguousNativeOpenedPanel(self):
+        for mode in ("null", "different", "detached", "ambiguous"):
+            with self.subTest(mode=mode):
+                driver, state, action = self.guiDriver()
+                original = driver._rawCall.side_effect
+
+                def rawCall(owner, method, *args):
+                    if method == "keyboardEvent":
+                        state["calls"].append((owner["__handle__"], method, args))
+                        self.fail("An invalid opened panel must be rejected before any native input")
+                    if method == "openDialog":
+                        opened = original(owner, method, *args)
+                        if mode == "null":
+                            return None
+                        if mode == "different":
+                            return {"__handle__": "other-returned-panel"}
+                        if mode == "detached":
+                            state["children"].clear()
+                        else:
+                            state["children"].append({"__handle__": "second-panel"})
+                        return opened
+                    if method == "getType" and owner["__handle__"] == "second-panel":
+                        return "CGameDialogPanel"
+                    return original(owner, method, *args)
+
+                driver._rawCall.side_effect = rawCall
+                with self.assertRaises(AssertionError):
+                    driver.chooseUi("nativeDialog", action, selected_id="exact-source-item")
+                self.assertEqual(1, sum(method == "openDialog" for _, method, _ in state["calls"]))
+                self.assertFalse(any(method == "keyboardEvent" for _, method, _ in state["calls"]))
 
     def testUiReaderRequiresActualContentsAndDismissal(self):
         driver, state, action = self.guiDriver(reader=True)
@@ -2896,7 +2931,9 @@ class GameplayBranchDriverTest(unittest.TestCase):
         self.assertNotIn("invokeAction", methods)
         self.assertNotIn("setStringProperty", methods)
         self.assertNotIn("setNumericProperty", methods)
-        self.assertEqual(1, methods.count("setObjectProperty"))
+        self.assertEqual(1, methods.count("openDialog"))
+        for forbidden in ("setObjectProperty", "pushChild", "addChild", "removeChild", "setDialog"):
+            self.assertNotIn(forbidden, methods)
 
     def testUiDialogueSequenceSupportsReaderOnlyRepeatConversation(self):
         driver, state, action = self.dialogueUiDriver([("reader",), ("reader",)])

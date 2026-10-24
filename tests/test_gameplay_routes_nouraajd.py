@@ -17,6 +17,99 @@ from tests.hook_flow_support import installHookFlows
 
 
 class GameplayNouraajdServiceRoutesTest(unittest.TestCase):
+    def testAmuletHandInSettlesTheNativeJournalBeforeItsRewardReceipt(self):
+        tree = ast.parse(
+            (Path(__file__).resolve().parents[1] / "res/maps/nouraajd/script.py").read_text(encoding="utf-8")
+        )
+        classes = {node.name: node for node in ast.walk(tree) if isinstance(node, ast.ClassDef)}
+        selected = []
+        for class_id, method_name in (
+            ("QuestReturnDialog", "complete_amulet_quest"),
+            ("QuestSystem", "finish_amulet"),
+            ("QuestSystem", "is_amulet_returned"),
+            ("AmuletQuest", "isCompleted"),
+        ):
+            method = next(
+                node
+                for node in classes[class_id].body
+                if isinstance(node, ast.FunctionDef) and node.name == method_name
+            )
+            method.decorator_list = []
+            selected.append(method)
+        state = SimpleNamespace(
+            stage="active", gold=200, claimed=False, requests=[], actors={"amuletGoblin", "oldWoman"}
+        )
+        amulet = SimpleNamespace(getName=lambda: "preciousAmulet")
+        other = SimpleNamespace(getName=lambda: "otherItem")
+        items = [amulet, other]
+        player = SimpleNamespace(
+            hasItem=lambda predicate: any(predicate(item) for item in items),
+            removeItem=lambda predicate, quest: items.remove(next(item for item in items if predicate(item))),
+            addGold=lambda amount: setattr(state, "gold", state.gold + amount),
+        )
+        game_map = SimpleNamespace(getPlayer=lambda: player)
+        game = SimpleNamespace(getMap=lambda: game_map)
+        dialog = SimpleNamespace(getGame=lambda: game)
+        quest = SimpleNamespace()
+        active, completed = [quest], []
+        quest_system = SimpleNamespace(
+            get_state=lambda name: state.stage,
+            set_state=lambda name, value: setattr(state, "stage", value),
+        )
+
+        def claim(owner, key):
+            self.assertIs(game_map, owner)
+            self.assertEqual("AMULET_REWARD_CLAIMED", key)
+            if state.claimed:
+                return False
+            state.claimed = True
+            return True
+
+        def removeActors(owner, *, names):
+            self.assertIs(game_map, owner)
+            self.assertEqual(("amuletGoblin", "oldWoman"), names)
+            state.actors.difference_update(names)
+            yield from ()
+
+        def receipt(owner, title, before, message):
+            self.assertIs(game, owner)
+            self.assertEqual("Amulet returned", title)
+            self.assertEqual(200, before)
+            self.assertIn("50 gold", message)
+            yield "receipt", ()
+
+        scope = {
+            "flowGame": lambda owner: owner,
+            "_quest_system_from": lambda owner: quest_system,
+            "claim_once": claim,
+            "rewardSnapshot": lambda owner: state.gold,
+            "removeRuntimeActorsFlow": removeActors,
+            "showRewardReceiptFlow": receipt,
+            "uiRequest": lambda operation, *args: (operation, args),
+        }
+        exec(compile(ast.Module(body=selected, type_ignores=[]), "<selected-amulet-hand-in>", "exec"), scope)
+        quest_system.finish_amulet = lambda: scope["finish_amulet"](quest_system)
+        quest_system.is_amulet_returned = lambda: scope["is_amulet_returned"](quest_system)
+        flow = scope["complete_amulet_quest"](dialog)
+        self.addCleanup(flow.close)
+        operation, args = next(flow)
+        self.assertEqual("gui.checkQuests", operation)
+        self.assertEqual((player,), args)
+        self.assertTrue(scope["isCompleted"](quest))
+        self.assertEqual((250, "returned", True), (state.gold, state.stage, state.claimed))
+        self.assertEqual([other], items)
+        self.assertEqual(set(), state.actors)
+        self.assertEqual([quest], active)
+        # Model the existing native checkQuestsAsync membership move after this request is acknowledged.
+        active.remove(quest)
+        completed.append(quest)
+        self.assertEqual(("receipt", ()), flow.send(None))
+        self.assertEqual(([quest], []), (completed, active))
+        with self.assertRaises(StopIteration):
+            flow.send(None)
+        self.assertEqual([], list(scope["complete_amulet_quest"](dialog)))
+        self.assertEqual((250, [other], [quest]), (state.gold, items, completed))
+
     def victorScrollFixture(self):
         source = json.loads(
             (Path(__file__).resolve().parents[1] / "res/maps/nouraajd/map.json").read_text(encoding="utf-8")
@@ -721,42 +814,322 @@ class GameplayNouraajdServiceRoutesTest(unittest.TestCase):
         )
         return driver, state, creatures
 
-    def testHighlanderAidSkipsTheRegisteredCultistKilledByActualMutilation(self):
-        case = next(case for case in nouraajd.CASES if case.id == "nouraajd_aid_highlanderRace")
-        self.assertTrue({"res/plugins/interaction.py", "res/config/interactions.json"}.issubset(case.sources))
-        driver, state, creatures = self.highlanderMutilationFixture()
+    def highlanderPreVictorFixture(
+        self, *, combat_damage=22, road_healing=4, native_full_heal=False, missing_victory=False
+    ):
+        driver, state, victor_creatures = self.highlanderMutilationFixture(combat_damage=combat_damage)
+        state.update(hp=77, victor=False, route_order=[], records=[], native_proofs=[], registry={})
+        player = driver.player
+        player.heal = lambda amount: state.update(hp=100 if amount == 0 else min(100, state["hp"] + amount))
+        road_step = authoredFunction("res/plugins/tile.py", "onStep", class_id="RoadTile")
+        actors = {}
+        for index in range(1, 6):
+            name = "aidPritz" + str(index)
+            actors[name] = {
+                "__handle__": name,
+                "name": name,
+                "typeId": "Pritz",
+                "affiliation": "gooby",
+                "alive": True,
+                "npc": False,
+                "coords": (43 + index, 101, 0),
+            }
+        actors["neutral"] = {
+            "__handle__": "neutral",
+            "name": "neutral",
+            "typeId": "Pritz",
+            "affiliation": "cityResidents",
+            "alive": True,
+            "npc": False,
+            "coords": (43, 101, 0),
+        }
+        actors["dead"] = {
+            "__handle__": "dead",
+            "name": "dead",
+            "typeId": "Pritz",
+            "affiliation": "gooby",
+            "alive": False,
+            "npc": False,
+            "coords": (43, 101, 0),
+        }
+        actors["npc"] = {
+            "__handle__": "npc",
+            "name": "npc",
+            "typeId": "Pritz",
+            "affiliation": "gooby",
+            "alive": True,
+            "npc": True,
+            "coords": (43, 101, 0),
+        }
+        state["registry"].update(actors)
+        hall = {"__handle__": "townHall", "coords": (43, 101, 0)}
+        original_call, original_hunt, original_fight = driver.call, driver.hunt, driver.fight
+        game_map = SimpleNamespace(getObjects=lambda: list(actors.values()))
+
+        def call(handle, method, *args):
+            if isinstance(handle, dict):
+                if method == "getTypeId":
+                    return handle["typeId"]
+                if method == "isAlive":
+                    return handle["alive"]
+                if method == "isNpc":
+                    return handle["npc"]
+                if method == "getStringProperty":
+                    return handle[args[0]]
+                if method == "getName":
+                    return handle["name"]
+            return original_call(handle, method, *args)
+
+        def hunt(method, *args):
+            original_hunt(method, *args)
+            if method == "finishOriginalMainQuest":
+                state["route_order"].append("actual-gooby-reward")
+            if method == "recoverOnRoadPair":
+                state["route_order"].append("funded-road-recovery")
+
+        def object_by_name(name, required=True):
+            if name == "nouraajdTownHall":
+                return hall
+            if name in victor_creatures:
+                return victor_creatures[name]
+            return state["registry"].get(name)
+
+        def fight(name):
+            if name in victor_creatures:
+                original_fight(name)
+                player.heal(0)  # Retained CI counterexample: authored Victor reward restores full HP.
+                return
+            self.assertEqual("Pritz", actors[name]["typeId"])
+            self.assertEqual("gooby", actors[name]["affiliation"])
+            self.assertTrue(actors[name]["alive"])
+            self.assertFalse(actors[name]["npc"], "The model must never fight the authored NPC control")
+            state["combat"].append(name)
+            state["route_order"].append("native-hostile-victory")
+            actors[name]["alive"] = False
+            state["registry"].pop(name, None)
+            state["hp"] -= combat_damage
+            if native_full_heal:
+                player.heal(0)
+            state["native_proofs"].append(name)
+
+        def navigate(name):
+            self.assertEqual("nouraajdTownHall", name)
+            if state["native_proofs"]:
+                heal = (
+                    road_healing[len(state["native_proofs"]) - 1] if isinstance(road_healing, tuple) else road_healing
+                )
+                for _ in range(heal):
+                    road_step(None, player)
+                state["route_order"].append("actual-road-healing-return")
+
+        original_check = driver.check
+
+        def check(branch, condition, **evidence):
+            original_check(branch, condition, **evidence)
+            if branch.endswith(".unneeded"):
+                state["route_order"].append("funded-unneeded")
+            if branch.endswith(".claimed"):
+                state["route_order"].append("paid-claim")
+
+        driver.call, driver.hunt, driver.object, driver.fight = call, hunt, object_by_name, fight
+        driver.game_map, driver.coords = game_map, lambda actor: actor["coords"]
+        driver.navigateTo = Mock(side_effect=navigate)
+        driver.flag = lambda key: (
+            state["victor"] if key in ("TALKED_TO_VICTOR", "VICTOR_REWARD_GRANTED") else self.fail(key)
+        )
+        driver.assertNativeCombatOutcomes = Mock()
+        driver._combat_trace_seq = 4
+        driver.playerVictoryAgainst = Mock(
+            side_effect=lambda world, name, **kwargs: (
+                None if missing_victory else ({"seq": 5} if name in state["native_proofs"] else None)
+            )
+        )
+        driver.record = lambda value, **kwargs: state["records"].append(value)
+        driver.check = check
+        return driver, state, actors
+
+    def testHighlanderAidUsesFundedAuthoredPritzInjuryBeforeVictor(self):
+        driver, state, actors = self.highlanderPreVictorFixture()
+        with patch.object(nouraajd, "start"), patch.object(nouraajd, "prepareRolf"), patch.object(
+            nouraajd, "meetVictor", side_effect=lambda *args: state.update(victor=True)
+        ) as victor:
+            nouraajd.raceAid(driver)
+        victor.assert_not_called()
+        self.assertEqual(["aidPritz1"], state["combat"])
+        self.assertEqual([False, False, True], state["choices"])
+        self.assertEqual((195, 92, 100), nouraajd.aidSnapshot(driver))
+        self.assertEqual(("starter", "original-portal", "quest-item"), state["inventory"])
+        self.assertTrue(actors["neutral"]["alive"])
+        self.assertTrue(actors["npc"]["alive"])
+        self.assertTrue(driver.recoveryEnabled)
+        self.assertEqual(
+            ["nouraajd.aid.highlanderRace." + ending for ending in ("unfunded", "unneeded", "claimed", "persisted")],
+            state["branches"],
+        )
+        self.assertEqual(
+            [
+                "actual-gooby-reward",
+                "funded-road-recovery",
+                "funded-unneeded",
+                "native-hostile-victory",
+                "actual-road-healing-return",
+                "paid-claim",
+            ],
+            state["route_order"],
+        )
+        driver.playerVictoryAgainst.assert_called_once_with("nouraajd", "aidPritz1", after_seq=4)
+        driver.saveAndReload.assert_called_once_with("racial-aid-highlanderRace")
+
+    def testHighlanderAidStillRequiresRealDeficitAfterNativeHealingAndRoadReturn(self):
+        for options in ({"combat_damage": 0}, {"road_healing": 22}, {"native_full_heal": True}):
+            with self.subTest(options=options):
+                driver, state, _actors = self.highlanderPreVictorFixture(**options)
+                with patch.object(nouraajd, "start"), patch.object(nouraajd, "prepareRolf"), patch.object(
+                    nouraajd, "meetVictor", side_effect=lambda *args: state.update(victor=True)
+                ), self.assertRaisesRegex(AssertionError, "Four authored opponents left no usable Highlander deficit"):
+                    nouraajd.raceAid(driver)
+                self.assertEqual((200, 100, 100), nouraajd.aidSnapshot(driver))
+                self.assertEqual(4, len(state["combat"]))
+                self.assertTrue(
+                    _actors["aidPritz5"]["alive"], "The fifth eligible hostile exceeds the fixed work budget"
+                )
+                self.assertEqual([False, False], state["choices"])
+                self.assertFalse(state["claimed"])
+                self.assertTrue(driver.recoveryEnabled)
+                driver.saveAndReload.assert_not_called()
+
+    def testHighlanderAidRechecksAfterEachReturnWithoutChangingNativeHealing(self):
+        driver, state, _actors = self.highlanderPreVictorFixture(road_healing=(22, 4, 4, 4))
+        with patch.object(nouraajd, "start"), patch.object(nouraajd, "prepareRolf"), patch.object(
+            nouraajd, "meetVictor", side_effect=lambda *args: state.update(victor=True)
+        ):
+            nouraajd.raceAid(driver)
+        self.assertEqual(["aidPritz1", "aidPritz2"], state["combat"])
+        self.assertEqual(100, state["records"][0]["highlanderAidPreparation"]["afterReturn"][1])
+        self.assertEqual(82, state["records"][1]["highlanderAidPreparation"]["afterReturn"][1])
+        self.assertEqual([False, False, True], state["choices"])
+
+    def testHighlanderAidRequiresExactCapturedOpponentAndNativeVictory(self):
+        driver, state, actors = self.highlanderPreVictorFixture()
+        changed = dict(actors["aidPritz1"], __handle__="replacement")
+        state["registry"]["aidPritz1"] = changed
+        with patch.object(nouraajd, "start"), patch.object(nouraajd, "prepareRolf"), patch.object(
+            nouraajd, "meetVictor", side_effect=lambda *args: state.update(victor=True)
+        ), self.assertRaisesRegex(AssertionError, "opponent identity changed"):
+            nouraajd.raceAid(driver)
+        self.assertEqual([], state["combat"])
+        self.assertFalse(state["claimed"])
+        self.assertTrue(driver.recoveryEnabled)
+        driver, state, _actors = self.highlanderPreVictorFixture(missing_victory=True)
+        with patch.object(nouraajd, "start"), patch.object(nouraajd, "prepareRolf"), patch.object(
+            nouraajd, "meetVictor", side_effect=lambda *args: state.update(victor=True)
+        ), self.assertRaisesRegex(AssertionError, "actual player's native victory"):
+            nouraajd.raceAid(driver)
+        self.assertEqual([False, False], state["choices"])
+        self.assertFalse(state["claimed"])
+        self.assertTrue(driver.recoveryEnabled)
+
+    def testHighlanderAidKeepsPriorDriverRecoveryPolicyOnFailure(self):
+        driver, state, _actors = self.highlanderPreVictorFixture()
+        driver.recoveryEnabled = False
+        driver.fight = Mock(side_effect=RuntimeError("native encounter failed"))
+        with patch.object(nouraajd, "start"), patch.object(nouraajd, "prepareRolf"), patch.object(
+            nouraajd, "meetVictor", side_effect=lambda *args: state.update(victor=True)
+        ), self.assertRaisesRegex(RuntimeError, "native encounter failed"):
+            nouraajd.raceAid(driver)
+        self.assertFalse(driver.recoveryEnabled)
+        self.assertFalse(state["claimed"])
+        self.assertEqual([False, False], state["choices"])
+        driver.saveAndReload.assert_not_called()
+
+    def testHighlanderAidRejectsExhaustedAuthoredHostilesWithoutAttackingAnNpc(self):
+        driver, state, actors = self.highlanderPreVictorFixture()
+        for name, actor in actors.items():
+            if name.startswith("aidPritz"):
+                actor["alive"] = False
+        with patch.object(nouraajd, "start"), patch.object(nouraajd, "prepareRolf"), patch.object(
+            nouraajd, "meetVictor", side_effect=lambda *args: state.update(victor=True)
+        ), self.assertRaisesRegex(AssertionError, "remaining living authored Pritz"):
+            nouraajd.raceAid(driver)
+        self.assertEqual([], state["combat"])
+        self.assertEqual([False, False], state["choices"])
+        self.assertTrue(actors["npc"]["alive"])
+        self.assertTrue(actors["neutral"]["alive"])
+        self.assertTrue(driver.recoveryEnabled)
+        driver.saveAndReload.assert_not_called()
+
+    def testHighlanderAidDeclaresItsTwoAdditionalSourcesWithoutDuplicatingDefaultSources(self):
+        aid = next(case for case in nouraajd.CASES if case.id == "nouraajd_aid_highlanderRace")
+        self.assertEqual(nouraajd.SOURCES + ("res/config/monsters.json", "res/plugins/tile.py"), aid.sources)
+        self.assertEqual(len(aid.sources), len(set(aid.sources)))
+        for race_id in nouraajd.RACES:
+            case = next(case for case in nouraajd.CASES if case.id == "nouraajd_aid_" + race_id)
+            self.assertEqual(600.0, case.duration_seconds)
+            self.assertEqual(race_id, case.race)
+            if race_id != "highlanderRace":
+                self.assertEqual(nouraajd.SOURCES, case.sources)
+        sentinel = ("res/plugins/tile.py",)
+        self.assertEqual(sentinel, nouraajd.case("aid-source-override", (), nouraajd.raceAid, sources=sentinel).sources)
+
+    def outlanderApplicableAidFixture(self):
+        driver, state, creatures = self.highlanderMutilationFixture(combat_damage=0)
+        driver.race_id = "outlanderRace"
+        player = driver.player
+        game = SimpleNamespace(
+            getMap=lambda: SimpleNamespace(getPlayer=lambda: player),
+            getGuiHandler=lambda: SimpleNamespace(notify=Mock()),
+        )
+        apply_aid = authoredFunction(
+            "res/maps/nouraajd/script.py", "_applyRaceService", class_id="TownHallDialog", showReader=Mock()
+        )
+        dialog = SimpleNamespace(
+            getGame=lambda: game,
+            _canOfferRaceService=lambda identity: identity == "outlanderRace" and not state["claimed"],
+        )
+
+        def choose(dialog_id, name, **kwargs):
+            self.assertEqual(("townHallDialog", "claimOutlanderRations"), (dialog_id, name))
+            state["choices"].append(apply_aid(dialog, "outlanderRace", 5, 5, 5, "aid"))
+
+        driver.condition = lambda dialog_id, name: name == "canOfferOutlanderRations" and not state["claimed"]
+        driver.choose = choose
+        driver.fight = Mock(side_effect=AssertionError("An applicable mana deficit needs no courtyard injury detour"))
+        return driver, state, creatures
+
+    def testOutlanderAidClaimsActualApplicableManaDeficitWithoutCourtyardDetour(self):
+        driver, state, creatures = self.outlanderApplicableAidFixture()
         with (
             patch.object(nouraajd, "start"),
             patch.object(nouraajd, "prepareRolf"),
             patch.object(nouraajd, "meetVictor"),
         ):
             nouraajd.raceAid(driver)
-        self.assertFalse(creatures["victorCultist1"].isAlive())
-        self.assertIs(creatures["victorCultist1"], driver.object("victorCultist1"))
-        self.assertEqual(["victorCultist2"], state["combat"])
+        self.assertFalse(creatures["victorCultist1"].isAlive(), "The existing owned action still executes")
+        driver.fight.assert_not_called()
         self.assertEqual([False, False, True], state["choices"])
-        self.assertEqual((195, 98, 85), nouraajd.aidSnapshot(driver))
+        self.assertEqual((195, 100, 90), nouraajd.aidSnapshot(driver))
+        self.assertEqual("outlanderRace", state["kind"])
         self.assertEqual(("starter", "original-portal", "quest-item"), state["inventory"])
         self.assertTrue(driver.recoveryEnabled)
+        driver.saveAndReload.assert_called_once_with("racial-aid-outlanderRace")
         self.assertEqual(
-            ["nouraajd.aid.highlanderRace." + outcome for outcome in ("unfunded", "unneeded", "claimed", "persisted")],
+            ["nouraajd.aid.outlanderRace." + outcome for outcome in ("unfunded", "unneeded", "claimed", "persisted")],
             state["branches"],
         )
-        driver.saveAndReload.assert_called_once_with("racial-aid-highlanderRace")
 
-    def testHighlanderAidStillRequiresAnActualHealthDeficitAfterTheAbilityKill(self):
-        driver, state, _creatures = self.highlanderMutilationFixture(combat_damage=0)
+    def testOutlanderApplicableAidStillRestoresRecoveryStateAfterOwnedActionFailure(self):
+        driver, state, _creatures = self.outlanderApplicableAidFixture()
+        driver.player.useAction = Mock(side_effect=RuntimeError("actual owned action failure"))
         with (
             patch.object(nouraajd, "start"),
             patch.object(nouraajd, "prepareRolf"),
             patch.object(nouraajd, "meetVictor"),
+            self.assertRaisesRegex(RuntimeError, "actual owned action failure"),
         ):
-            with self.assertRaisesRegex(AssertionError, "Real combat/casting must leave a recoverable deficit"):
-                nouraajd.raceAid(driver)
-        self.assertEqual((200, 100, 85), nouraajd.aidSnapshot(driver))
+            nouraajd.raceAid(driver)
+        self.assertTrue(driver.recoveryEnabled)
         self.assertFalse(state["claimed"])
         self.assertEqual([False, False], state["choices"])
-        self.assertTrue(driver.recoveryEnabled)
         driver.saveAndReload.assert_not_called()
 
     def testLetterAndRelicJournalAssertionsFollowTheNextOrdinaryNativeTurn(self):
@@ -1000,6 +1373,45 @@ class GameplayNouraajdServiceRoutesTest(unittest.TestCase):
                 )
                 self.assertIn(("brew_life_potion", "success"), state["order"])
                 self.assertEqual(has_mana, ("craft_town_portal_scroll", "success") in state["order"])
+
+    def testVictorCapturedInquisitorEscapeTakesTheSoleDoorInsteadOfTheEasternPocket(self):
+        # PR 1597 / 886ac290, job 120725962470, seed 2808043864: native pre-turn-1002 positions.
+        opponents = [
+            (34, 86, 0),
+            (43, 102, 0),
+            (43, 103, 0),
+            (46, 112, 0),
+            (54, 77, 0),
+            (58, 92, 0),
+            (59, 79, 0),
+            (59, 114, 0),
+            (60, 87, 0),
+            (67, 111, 0),
+            (77, 108, 0),
+            (82, 93, 0),
+        ]
+        driver, state = self.courtyardFleeFixture()
+        origin = state["position"] = (44, 105, 0)
+
+        class ObservedFirstStep(Exception):
+            pass
+
+        driver.step = Mock(side_effect=ObservedFirstStep)
+        with patch.object(nouraajd, "fleeHostileCoords", return_value=opponents):
+            with self.assertRaises(ObservedFirstStep):
+                nouraajd.fleeCourtyardUntil(driver, 1)
+        driver.step.assert_called_once_with((44, 106, 0))
+        self.assertEqual(10, state["turn"], "This projects the captured native decision; it does not run movement")
+        self.assertLessEqual(len(state["probes"][10]), 64)
+        self.assertEqual(len(state["probes"][10]), len(set(state["probes"][10])))
+        door, enclosed = nouraajd.courtyardExitDistances()
+        self.assertEqual((44, 106, 0), door)
+        path = [(44, 106, 0), (44, 107, 0), (43, 107, 0), (42, 107, 0), (41, 107, 0), (40, 107, 0)]
+        for hop, (previous, target) in enumerate(zip([origin] + path, path), 1):
+            self.assertEqual(1, sum(abs(a - b) for a, b in zip(previous, target)))
+            self.assertIn(target, state["walkable"])
+            clearance = min(nouraajd.courtyardPursuitLowerBound(target, actor, door, enclosed) for actor in opponents)
+            self.assertGreater(clearance - hop, 1, "The existing pursuit margin must hold at all six authored hops")
 
 
 if __name__ == "__main__":

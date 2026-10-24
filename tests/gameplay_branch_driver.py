@@ -315,12 +315,12 @@ class GameplayBranchDriver:
         option = visible[matches[0]]
         self.assertNativeCombatOutcomes()
         after_seq = self._combat_trace_seq
-        panel = self.call(self.game, "createObject", "dialogPanel")
-        self.test.assertEqual("CGameDialogPanel", self.call(panel, "getType"))
-        # This native presentation property is the panel's public configuration surface;
-        # it cannot mutate the map, hero, source dialog or its authored options.
-        self._rawCall(panel, "setObjectProperty", "dialog", dialog)
-        self.call(gui, "pushChild", panel)
+        handler = self.call(self.game, "getGuiHandler")
+        panel = self.call(handler, "openDialog", dialog)
+        self.test.assertIsNotNone(panel, "The native dialog opener must return its attached panel")
+        self.test.assertEqual(
+            panel, self.nativePanel("CGameDialogPanel"), "The returned dialog must be the unique actual native panel"
+        )
         for _ in range(matches[0] + 1):
             self.call(panel, "keyboardEvent", gui, 768, 1073741905)  # Down focuses the first visible reply.
         self.call(panel, "keyboardEvent", gui, 768, 13)

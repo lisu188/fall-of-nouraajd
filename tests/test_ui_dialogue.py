@@ -130,6 +130,112 @@ class FakeDialog:
         return self.game
 
 
+def custodyScriptedActorFacts(prison):
+    """The 23 deferred source spawns; existing prison actors such as Neb are not additions."""
+    districts = ("AR0100", "AR0200", "AR0300", "AR0600", "AR0700", "AR0800", "AR1100", "AR1200", "AR1300")
+    if set(prison["patrols"]) != set(districts):
+        raise ValueError("The audited nine custody patrol wards must remain explicit")
+    facts = {}
+
+    def add(source_id, native_id, area, creature, position, role):
+        if source_id in facts or any(row["nativeId"] == native_id for row in facts.values()):
+            raise ValueError("Duplicate custody source or native identity")
+        facts[source_id] = {
+            "sourceId": source_id,
+            "nativeId": native_id,
+            "areas": [area],
+            "creature": creature,
+            "position": list(position),
+            "custodyRole": role,
+            "phase": 7,
+            "requiresFlag": "" if role == "patrol" else "custodyHearing",
+            "dialogue": "FLAMC7" if creature == "FLAME4" else prison["creatures"][creature]["dialogue"],
+        }
+
+    for area in districts:
+        patrol = prison["patrols"][area]
+        offsets = patrol["spawnRecordOffsets"]
+        if patrol["count"] != 2 or len(offsets) != 2 or len(set(offsets)) != 2:
+            raise ValueError("Each source patrol must retain its two distinct CreateCreature offsets")
+        chapter = [condition for condition in patrol["conditions"] if condition["strings"][0] == "GLOBALChapter"]
+        if (
+            len(chapter) != 1
+            or chapter[0]["opcode"] != 16399
+            or chapter[0]["signature"] != "Global(S:Name*,S:Area*,I:Value*)"
+            or chapter[0]["negated"]
+            or chapter[0]["integerFields"][0] != 7
+        ):
+            raise ValueError("Custody patrols require the audited chapter-seven condition")
+        for offset, suffix in zip(offsets, ("One", "Two")):
+            if type(offset) is not int or offset < 0:
+                raise ValueError("A custody spawn requires an actual record offset")
+            add(
+                f"{area}.BCS#offset{offset}",
+                "cityCustodyPatrol" + area.title() + suffix,
+                area,
+                "FFHUNT",
+                patrol["position"],
+                "patrol",
+            )
+    for creature, native_id, scene in [
+        ("ANGELO", "cityCustodyAngelo", "CAPCUT03"),
+        *(("FLAME" + str(index), "cityCustodyEscortFlame" + str(index), "CAPCUT01") for index in range(1, 5)),
+    ]:
+        matches = [
+            row
+            for row in prison["scenes"][scene]
+            if row["op"] == "CreateCreature" and row["strings"][0].upper() == creature
+        ]
+        if len(matches) != 1:
+            raise ValueError("Custody cutscene actor evidence must resolve exactly once: " + creature)
+        row = matches[0]
+        if row["kind"] != "AC" or type(row["offset"]) is not int or row["offset"] < 0:
+            raise ValueError("A custody cutscene actor requires an actual action record")
+        add(
+            f"{scene}.BCS#offset{row['offset']}",
+            native_id,
+            "AR0607",
+            creature,
+            row["integers"][1:3],
+            "angelo" if creature == "ANGELO" else "escort",
+        )
+    if len(facts) != 23:
+        raise ValueError("The reviewed custody addition is exactly 18 patrol and five hearing actors")
+    return facts
+
+
+def assertCustodyDialogueProvenance(test, definitions, prison):
+    facts = custodyScriptedActorFacts(prison)
+    expected = {row["nativeId"] for row in facts.values()}
+    actual = {
+        name
+        for name, entry in definitions.items()
+        if isinstance(entry, dict) and entry.get("properties", {}).get("custodyRole") in {"patrol", "angelo", "escort"}
+    }
+    test.assertEqual(expected, actual)
+    for fact in facts.values():
+        name = fact["nativeId"]
+        actor = definitions[name]
+        properties = actor["properties"]
+        test.assertEqual("CCreature", actor["class"])
+        test.assertEqual(fact["sourceId"], properties["sourceSpawnFact"])
+        test.assertEqual(fact["sourceId"], properties["sourceActor"])
+        test.assertEqual(fact["creature"], properties["sourceCreature"])
+        test.assertEqual(fact["areas"], [properties["sourceArea"]])
+        test.assertEqual(fact["custodyRole"], properties["custodyRole"])
+        test.assertEqual((7, 7), (properties["phaseMin"], properties["phaseMax"]))
+        test.assertEqual(fact["dialogue"], properties["sourceDialogue"])
+        dialog = definitions[name + "Dialog"]
+        test.assertEqual("BaldursGateDialog", dialog["class"])
+        test.assertEqual(name, dialog["properties"]["actorId"])
+        test.assertEqual(properties["label"], dialog["properties"]["speaker"])
+        test.assertTrue(dialog["properties"]["states"])
+    quest = definitions["cityCustodyQuest"]
+    test.assertEqual("BaldursGateCustodyQuest", quest["class"])
+    test.assertNotIn("questKey", quest["properties"])
+    return facts
+
+
 class DialogueContentTest(unittest.TestCase):
     def testDialoguePunctuationHasValidUnicodeInsteadOfMojibake(self):
         text = (ROOT / "res/maps/nouraajd/dialog.json").read_text(encoding="utf-8")
@@ -172,6 +278,7 @@ class DialogueContentTest(unittest.TestCase):
 
     def testEveryAuthoredDialogueHasASpeakerAndValidRoutes(self):
         counts = {}
+        custody_facts = {}
         base = {}
         for path in (ROOT / "res/config").glob("*.json"):
             value = json.loads(path.read_text(encoding="utf-8"))
@@ -197,6 +304,11 @@ class DialogueContentTest(unittest.TestCase):
                 if isinstance(value, dict):
                     definitions.update(value)
                     documents.append(value)
+
+            if map_dir.name == "baldursGate":
+                custody_facts = assertCustodyDialogueProvenance(
+                    self, definitions, readJson("tests/fixtures/baldurs_gate_city_prison_source.json")
+                )
 
             def resolve(option, seen=()):
                 ref = option.get("ref")
@@ -236,7 +348,7 @@ class DialogueContentTest(unittest.TestCase):
                         self.assertEqual(len(numbers), len(set(numbers)))
         self.assertEqual(
             {
-                "baldursGate": 2124,
+                "baldursGate": 2124 + len(custody_facts),
                 "candlekeep": 84,
                 "castleGriffinCliff": 2,
                 "castleGuardianAngels": 2,
@@ -483,6 +595,38 @@ class DialogueContentTest(unittest.TestCase):
         number_words = {4: "four", 5: "five"}
         self.assertIn(f"every {number_words[cadence['last_wave']]} turns", records)
         self.assertIn(f"every {number_words[cadence['last_tick']]} turns", records)
+
+    def testCustodyDialogueCountComesFromDistinctAuditedSpawnRecords(self):
+        from copy import deepcopy
+
+        prison = readJson("tests/fixtures/baldurs_gate_city_prison_source.json")
+        facts = custodyScriptedActorFacts(prison)
+        self.assertEqual(23, len(facts))
+        self.assertEqual(18, sum(row["custodyRole"] == "patrol" for row in facts.values()))
+        self.assertEqual(1, sum(row["creature"] == "ANGELO" for row in facts.values()))
+        self.assertEqual(4, sum(row["custodyRole"] == "escort" for row in facts.values()))
+        self.assertNotIn("NEB", {row["creature"] for row in facts.values()})
+        for mutation in ("duplicateOffset", "wrongChapter", "unsupportedChapterOpcode", "missingEscort"):
+            with self.subTest(mutation=mutation):
+                changed = deepcopy(prison)
+                if mutation == "duplicateOffset":
+                    offsets = changed["patrols"]["AR0100"]["spawnRecordOffsets"]
+                    offsets[1] = offsets[0]
+                elif mutation in ("wrongChapter", "unsupportedChapterOpcode"):
+                    for condition in changed["patrols"]["AR0100"]["conditions"]:
+                        if condition["strings"][0] == "GLOBALChapter":
+                            if mutation == "wrongChapter":
+                                condition["integerFields"][0] = 6
+                            else:
+                                condition["opcode"] = 1
+                else:
+                    changed["scenes"]["CAPCUT01"] = [
+                        row
+                        for row in changed["scenes"]["CAPCUT01"]
+                        if not (row["op"] == "CreateCreature" and row["strings"][0] == "FLAME4")
+                    ]
+                with self.assertRaises(ValueError):
+                    custodyScriptedActorFacts(changed)
 
 
 def loadCrafting():

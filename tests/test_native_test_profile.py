@@ -39,8 +39,22 @@ ADDITIONAL_CASES = {
         "testEncounterOwnershipIgnoresSanitizedIneligibleCandidates",
         "testDefeatRecoveryCertificationRejectsReplacedOrUnfinishedOwners",
         "testInternalDefeatLeaseSurvivesParentControllerCleanup",
+        "testOwnedDefeatStopsAfterCallbackPublicationBeforeFurtherRewards",
+        "testOwnedDefeatLootContinuationRejectsStalePublicationAndCancellation",
+        "testOwnedDefeatRemovalCannotCertifyAnAwayBackPublication",
+        "testOwnedDefeatGuardsLazyRngFactoryEnumeration",
+        "testOwnedDefeatStopsBeforeSecondRandomLootFactory",
+        "testOwnedDefeatNestedFactoryStopsBeforeNextPropertyAndConstructor",
+        "testOwnedDefeatFirstMetadataCallbackStopsBeforeSecondMetadataAndSetter",
+        "testOwnedDefeatCodecBoundaryPreservesOriginalFailureAndStopsContinuation",
+        "testOwnedDefeatGraphActorBindingPreservesPrimaryBeforeRootAndProperties",
+        "testQueuedSceneTransitionWaitsForOwnedDefeatAndControllerCleanup",
+        "testQueuedSceneCombatDeferralReleasesAfterThrowAndKeepsDirectReplacementCancellation",
+        "testOwnedDefeatPresentationFollowsSuccessfulControllerCleanup",
+        "testPublicDefeatPreservesItsIndependentPostedPresentation",
         "testAsyncCombatAwaitsLootWithoutPumpingOrGrantingRewardsEarly",
         "testWorkerStartedCombatDefersControllerAndPanelCreationToMain",
+        "testOwnedLootCancellationCompensationRetainsExactItemsAndRejectsUncertainReplay",
         "testCancelledLootSettlesStartedRewardsOnceAndSkipsQueuedCombat",
         "testAsyncEventsAwaitOrderedTriggerSnapshotsAfterObjectHooks",
         "testAsyncLeaveHooksRejectStaleMovesAndCleanCancellation",
@@ -76,6 +90,8 @@ ADDITIONAL_CASES = {
         "testMapMoveSnapshotsActorsBeforeInlinePlans",
         "testCancelledAsyncCombatRestoresPlayerOrigin",
         "testMapMoveRejectsPlayerPlanCapturedBeforeSynchronousRespawn",
+        "testMapAssignedPlayerQueryDoesNotAdoptOrRepairRegisteredPlayer",
+        "testMapAssignedPlayerQueryExposesMismatchAndTracksExplicitTransfers",
         "testMapPlayerCacheMissPreservesValidControllerIdentity",
         "testMapMoveRejectsPlayerPlanSuspendedBeforeCommit",
         "testMapMoveRejectsPlayerPlanSuspendedDuringLeaveHook",
@@ -97,6 +113,79 @@ ADDITIONAL_CASES = {
 
 
 class NativeTestProfileSourceTest(unittest.TestCase):
+    def testPresentationBrowserObserverCountsBoundInstancesInsteadOfSubtypePrototypes(self):
+        handler = (ROOT / "tests/unit/test_handler.cpp").read_text()
+        self.assertIn("class ObservedDefeatBrowserPanel : public CGameCampaignBrowserPanel", handler)
+        observer = handler.split("class ObservedDefeatBrowserPanel : public CGameCampaignBrowserPanel", 1)[1].split(
+            "\n};", 1
+        )[0]
+        self.assertIn("void setGame(std::shared_ptr<CGame> game) override", observer)
+        self.assertIn("CGameCampaignBrowserPanel::setGame(game);", observer)
+        self.assertLess(
+            observer.index("CGameCampaignBrowserPanel::setGame(game);"), observer.index("++probe->browsers;")
+        )
+        self.assertIn("if (!game)", observer)
+        installer = handler.split("void installDefeatBrowserObserver(", 1)[1].split("\n}\n", 1)[0]
+        factory = installer.split('objects->registerType("CGameCampaignBrowserPanel", [probe] {', 1)[1].split(
+            "\n    });", 1
+        )[0]
+        self.assertNotIn("++probe->browsers", factory)
+        self.assertNotIn("getMap", factory)
+        self.assertNotIn("getGui", factory)
+        self.assertIn("std::make_shared<ObservedDefeatBrowserPanel>(probe)", factory)
+        self.assertIn('objects->getType("CGameCampaignBrowserPanel")', installer)
+        self.assertIn("std::dynamic_pointer_cast<ObservedDefeatBrowserPanel>(prototype)", installer)
+        self.assertIn("probe->browserFactories == 1 && probe->browsers == 0", installer)
+        self.assertIn(
+            "virtual void setGame(std::shared_ptr<CGame> game);", (ROOT / "src/object/CGameObject.h").read_text()
+        )
+
+
+    def testBindingModuleRegistersTypedMapConversionMetadataWithoutBuilders(self):
+        source = (ROOT / "src/core/CModule.cpp").read_text(encoding="utf-8")
+        signature = "void register_python_binding_type_metadata() {"
+        self.assertEqual(1, source.count(signature))
+        body = source.split(signature, 1)[1].split("\n}\n", 1)[0]
+        for native_type in ("CMap", "CStats", "CDamage"):
+            registration = "CTypes::register_type_metadata<" + native_type + ", CGameObject>();"
+            self.assertEqual(
+                1, body.count(registration), "the binding module needs metadata for each core pointer type"
+            )
+        self.assertIn('#include "core/CMap.h"', source)
+        self.assertNotRegex(body, r"\bregister_type\s*<")
+        self.assertNotRegex(body, r"\bregister_builder\s*<")
+        self.assertIn("FN_GAMEPLAY_TYPES(FN_TYPE, FN_WRAPPED)", body)
+        self.assertIn("CTypes::register_type_metadata<T, __VA_ARGS__>()", body)
+        self.assertIn("CTypes::register_type_metadata<CWrapper<T>, T, __VA_ARGS__>()", body)
+        init = source.split("void init_game_module(py::module_ &m) {", 1)[1]
+        self.assertLess(init.index("register_python_binding_type_metadata();"), init.index("bindGraphicsAndWorld(m);"))
+
+    def testMeasuredRandomLoaderCaseHasSeparateBoundedCTestInvocation(self):
+        source = (ROOT / "tests/unit/test_map.cpp").read_text()
+        cmake = (ROOT / "CMakeLists.txt").read_text()
+        self.assertTrue(
+            "int main(int argc, char **argv) {" in source, "map test entry must accept bounded case selection"
+        )
+        main = source.split("int main(int argc, char **argv) {", 1)[1]
+        self.assertIn('argc == 2 && std::string(argv[1]) == "--loader-race-only"', main)
+        self.assertIn('argc == 2 && std::string(argv[1]) == "--without-loader-race"', main)
+        self.assertIn("if (argc != 1 && !loaderOnly && !withoutLoader)", main)
+        self.assertIn('nativeTestProfile(loaderOnly ? "map-loader-race" : "map");', main)
+        self.assertIn("if (!withoutLoader) {", main)
+        selected = main.split("if (!withoutLoader) {", 1)[1].split("\n    }", 1)[0]
+        self.assertEqual(1, selected.count("nativeTestProfile().run("))
+        self.assertIn('"test_loader_race_overloads_preserve_default_and_attach_race"', selected)
+        self.assertIn("return finish_tests();", selected)
+        self.assertIn("if (loaderOnly) {", selected)
+        self.assertIn("if (!loaderOnly) {", main)
+        self.assertEqual(1, main.count("test_loader_race_overloads_preserve_default_and_attach_race);"))
+        self.assertIn("COMMAND map_unit_tests --loader-race-only", cmake)
+        self.assertIn('elseif (target_name STREQUAL "map_unit_tests")', cmake)
+        self.assertIn("COMMAND ${target_name} --without-loader-race", cmake)
+        entry = cmake.split("set_tests_properties(for_unit_tests.map_loader_race_unit_tests PROPERTIES", 1)[1]
+        entry = entry.split(")", 1)[0]
+        self.assertIn('LABELS "for_unit_tests;unit;map_unit_tests"', entry)
+        self.assertIn("TIMEOUT 60", entry)
 
     def testDirectEncounterAdmissionUsesAnArmedTopLevelSnapshotProbe(self):
         source = (ROOT / "tests/unit/test_allied_combat.cpp").read_text(encoding="utf-8")
@@ -120,13 +209,33 @@ class NativeTestProfileSourceTest(unittest.TestCase):
         self.assertIn("if (providedMap)", fixture)
         self.assertLess(fixture.index("game->setMap(providedMap)"), fixture.index("hero = std::make_shared<CPlayer>"))
         work = source.split("struct EncounterAdmissionWork", 1)[1].split("class EncounterAdmissionEffect", 1)[0]
-        self.assertIn("std::dynamic_pointer_cast<EncounterAdmissionSnapshotMap>(map)", work)
-        self.assertIn("owner->stopNextGraph = true;", work)
-        self.assertIn("~SnapshotGraphStop()", work)
-        self.assertIn("owner->stopNextGraph = false;", work)
-        self.assertLess(work.index("} graphStop(map);"), work.index("CMapLoader::saveWithResult(map,"))
-        self.assertEqual(1, work.count("CMapLoader::saveWithResult(map,"))
-        self.assertIn("an encounter save must reject or hit the intentional graph stop without writing", work)
+        self.assertIn("    void attempt() {", work)
+        attempt = work.split("    void attempt() {", 1)[1].split("\n    }\n", 1)[0]
+        self.assertIn("struct SnapshotGraphStop {", attempt)
+        self.assertIn("} graphStop(map, armedAttempts);", attempt)
+        guard = attempt.split("struct SnapshotGraphStop {", 1)[1].split("} graphStop(map, armedAttempts);", 1)[0]
+        self.assertIn("~SnapshotGraphStop()", guard)
+        constructor, destructor = guard.split("~SnapshotGraphStop()", 1)
+        self.assertIn("std::dynamic_pointer_cast<EncounterAdmissionSnapshotMap>(map)", constructor)
+        self.assertIn("if (owner) {", constructor)
+        owned_start = constructor.split("if (owner) {", 1)[1].split("}", 1)[0]
+        self.assertIn("owner->stopNextGraph = true;", owned_start)
+        self.assertIn("++armedAttempts;", owned_start)
+        self.assertEqual(1, constructor.count("++armedAttempts;"))
+        self.assertLess(owned_start.index("owner->stopNextGraph = true;"), owned_start.index("++armedAttempts;"))
+        self.assertIn("if (owner) {", destructor)
+        owned_end = destructor.split("if (owner) {", 1)[1].split("}", 1)[0]
+        self.assertIn("owner->stopNextGraph = false;", owned_end)
+        self.assertIn("CMapLoader::saveWithResult(map,", attempt)
+        self.assertLess(
+            attempt.index("} graphStop(map, armedAttempts);"), attempt.index("CMapLoader::saveWithResult(map,")
+        )
+        self.assertEqual(1, attempt.count("CMapLoader::saveWithResult(map,"))
+        self.assertTrue(
+            attempt.rstrip().endswith(
+                '"an encounter save must reject or hit the intentional graph stop without writing");'
+            )
+        )
 
     def testDirectEncounterAdmissionKeepsFiveBoundariesAndExactWorkBudgets(self):
         source = (ROOT / "tests/unit/test_allied_combat.cpp").read_text(encoding="utf-8")
@@ -302,8 +411,12 @@ class NativeTestProfileSourceTest(unittest.TestCase):
             owned.index("recoverySettled = true;"),
         )
         self.assertLess(owned.index("recoverySettled = true;"), owned.index("b->defeatResolutionUncertain = false;"))
-        after_loot = owned.split("co_await rng->addRandomLootAsync(a, items);", 1)[1]
-        self.assertLess(after_loot.index("!ownerIsCurrent()"), after_loot.index("encounterMap->removeObjectAsync(b)"))
+        loot_call = "co_await rng->addDefeatLootAsync(a, items, requireDefeatCurrent, settleCurrent, compensate);"
+        self.assertIn(loot_call, owned)
+        after_loot = owned.split(loot_call, 1)[1]
+        self.assertLess(
+            after_loot.index("requireDefeatCurrent();"), after_loot.index("encounterMap->removeObjectAsync(b)")
+        )
         after_removal = after_loot.split("co_await encounterMap->removeObjectAsync(b);", 1)[1]
         self.assertIn("const auto recoveryIsComplete = [&]", after_removal)
         self.assertIn("!a->isAlive() || !is_registered_on_map(encounterMap, a)", after_removal)
@@ -412,7 +525,8 @@ class NativeTestProfileSourceTest(unittest.TestCase):
     def testEveryExistingCaseKeepsItsOrderAndMetadataComesFirst(self):
         for suite, (count, digest) in BASELINE_CASES.items():
             source = (ROOT / f"tests/unit/test_{suite}.cpp").read_text(encoding="utf-8")
-            main = source[source.rindex("int main() {") :]
+            signature = "int main(int argc, char **argv) {" if suite == "map" else "int main() {"
+            main = source[source.rindex(signature) :]
             calls = re.findall(
                 r'nativeTestProfile\(\)\.run\("(test\w+)",\s*'
                 r'(?:(test\w+)\);|\[&\] \{\s*runTimedGuiCancellationTest\("(test\w+)",\s*(test\w+)\);\s*\}\);)',

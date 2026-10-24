@@ -857,6 +857,8 @@ function(add_game_unit_test target_name)
             COMMAND ${Python3_EXECUTABLE} "${CMAKE_CURRENT_SOURCE_DIR}/scripts/run_monster_balance.py"
                 $<TARGET_FILE:${target_name}>
                 --diagnostic-output-dir "${CMAKE_CURRENT_SOURCE_DIR}/coverage/test-output/native-role-diagnostics")
+    elseif (target_name STREQUAL "map_unit_tests")
+        add_test(NAME "${test_name}" COMMAND ${target_name} --without-loader-race)
     else ()
         add_test(NAME "${test_name}" COMMAND ${target_name})
     endif ()
@@ -1042,6 +1044,11 @@ add_game_unit_test(random_map_optimization_tests
 )
 if (CMAKE_SYSTEM_NAME STREQUAL "Linux")
     add_game_unit_test(map_unit_tests tests/unit/test_map.cpp)
+    add_test(NAME for_unit_tests.map_loader_race_unit_tests
+        COMMAND map_unit_tests --loader-race-only)
+    set_tests_properties(for_unit_tests.map_loader_race_unit_tests PROPERTIES
+        LABELS "for_unit_tests;unit;map_unit_tests"
+        TIMEOUT 60)
     target_compile_definitions(map_unit_tests PRIVATE
         GAME_NATIVE_TEST_PROFILE_DIR="${CMAKE_CURRENT_SOURCE_DIR}/coverage/native-test-profiles")
     add_game_unit_test(resource_unit_tests tests/unit/test_resource.cpp)

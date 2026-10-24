@@ -407,6 +407,7 @@ class BaldursGateCityRoutesTest(unittest.TestCase):
                 "baldurs-gate-native-failed-theft",
                 "baldurs-gate-native-trading",
                 "baldurs-gate-native-companion-inventory",
+                "baldurs-gate-native-custody",
             },
             set(cases),
         )
@@ -793,6 +794,246 @@ class BaldursGateCityRoutesTest(unittest.TestCase):
             routes.nativeVictory(driver, "opponent")
         self.assertEqual(["opponent"], revisits)
         self.assertEqual(1, driver.combats)
+
+    def cityContactModel(self, mutation=None):
+        from contextlib import ExitStack
+        from types import SimpleNamespace
+        from unittest.mock import patch
+
+        from tests.gameplay_branch_driver import GameplayBranchDriver
+
+        target_name = "cityCampaignNpc19"
+        origin, target = (69, 143, 0), (26, 151, 0)
+        portals = {(68, 143, 0): (81, 143, 0), (80, 143, 0): (69, 143, 0)}
+        cells = frozenset((x, y, 0) for x in range(26, 82) for y in range(143, 153))
+        interior = mutation in {"interior", "interiorMissingArrival"}
+        building = mutation in {"lastAllowed", "oneOver"}
+        if building:
+            target_name = "ordinaryBuilding"
+        if interior:
+            target_name = "interiorSpeaker"
+            origin, target = (33, 40, 2), (26, 44, 2)
+            portals = {}
+            cells = frozenset((x, y, 2) for x in range(26, 34) for y in range(40, 45))
+        driver = SimpleNamespace(
+            test=self,
+            player={"__handle__": "player"},
+            actor={"__handle__": "tiax"},
+            position=target if mutation in {"zeroTick", "zeroTickReplacement"} else origin,
+            target_position=target,
+            turns=0,
+            steps=0,
+            map_name="baldursGate",
+            trace_path="modeled-native-trace",
+            _combat_trace_seq=0,
+            entry=None,
+            planned=None,
+            waypoints=[],
+            moves=[],
+            final_calls=0,
+            contact_acknowledged=False,
+            initial_distance=51,
+            contact_entries=0,
+            travel_calls=[],
+        )
+        if interior:
+            driver.position = (69, 143, 0)
+        self._lastCityContactDriver = driver
+
+        def objectByName(name, required=True):
+            self.assertEqual(target_name, name)
+            if required:
+                self.assertIsNotNone(driver.actor)
+            return driver.actor
+
+        def coords(owner=None):
+            return driver.target_position if owner and owner is not driver.player else driver.position
+
+        def call(owner, method, *args):
+            if method == "getBoolProperty":
+                self.assertEqual("npc", args[0])
+                return not building
+            if method == "getController":
+                return "controller"
+            if method == "getCoords":
+                return {"__handle__": "target-coordinates"}
+            if method == "setTarget":
+                value = args[-1]
+                driver.planned = driver.target_position if isinstance(value, dict) else tuple(value)
+                return None
+            if method == "getNavigationNeighbors":
+                point = tuple(args[0])
+                return [(point[0] + dx, point[1] + dy, point[2]) for dx, dy in ((-1, 0), (1, 0), (0, -1), (0, 1))]
+            self.fail(("Unexpected modeled call", method))
+
+        def tick():
+            before = driver.position
+            destination = driver.planned
+            self.assertIsNotNone(destination)
+            x, y, z = before
+            # West-first ordinary native planning reproduces the retained two-portal cycle.
+            after = (x + (destination[0] > x) - (destination[0] < x), y, z)
+            if x == destination[0]:
+                after = (x, y + (destination[1] > y) - (destination[1] < y), z)
+            self.assertIn(after, cells)
+            driver.moves.append((before, after))
+            driver.position = portals.get(after, after)
+            if building and driver.turns == 0:
+                driver.turns += 282
+            elif mutation == "oneOver" and before == (26, 150, 0):
+                driver.turns += 2
+            else:
+                driver.turns += 333 if mutation == "budget" else 1
+            if mutation == "moving" and driver.turns == 3:
+                driver.target_position = (27, 151, 0)
+            if mutation == "areaHop" and driver.turns == 1:
+                driver.position = (81, 143, 0)
+            if mutation == "streetReplacement" and driver.turns == 1:
+                driver.actor = {"__handle__": "replacement"}
+            if mutation == "missing" and driver.turns == 1:
+                driver.actor = None
+            if driver.position == driver.target_position:
+                if mutation == "finalReplacement":
+                    driver.actor = {"__handle__": "replacement"}
+                driver.entry = {"seq": driver.turns, "target": driver.actor}
+
+        def remember(actor, identities, entry):
+            self.assertIs(actor, driver.actor)
+            self.assertEqual(driver.target_position, driver.position)
+            self.assertIs(entry, driver.entry)
+            driver.contact_acknowledged = True
+            driver.contact_entries += 1
+
+        def nativeVisit(name, **kwargs):
+            driver.final_calls += 1
+            GameplayBranchDriver.navigateTo(driver, name, **kwargs)
+            if mutation == "zeroTickReplacement":
+                driver.actor = {"__handle__": "replacement"}
+
+        def navigate(point, *, limit):
+            driver.waypoints.append((tuple(point), limit))
+            if mutation == "falseArrival":
+                driver.turns += 1
+                return
+            GameplayBranchDriver.navigateCoords(driver, point, limit=limit)
+
+        driver.object, driver.coords, driver.call, driver.tick = objectByName, coords, call, tick
+        driver.assertNativeCombatOutcomes = lambda: None
+        driver._nativeObjectIdentity = lambda owner: {"name": owner["__handle__"]}
+        driver._playerEntryForTarget = lambda identities, after_seq: (
+            driver.entry
+            if driver.entry and driver.entry["target"] and driver.entry["target"]["__handle__"] == identities[0]["name"]
+            else None
+        )
+        driver._continuedNpcContact = lambda actor, identities: mutation in {"zeroTick", "zeroTickReplacement"}
+        driver._rememberNpcContact = remember
+        driver._coordinateHandle = tuple
+        driver._coordinate_values = {}
+        driver._traversedTarget = lambda target, arrival: mutation == "areaHop" and arrival == (81, 143, 0)
+        driver.snapshot = lambda: {"coords": driver.position, "turn": driver.turns}
+        driver.canStep = lambda point: tuple(point) in cells
+        driver.navigateCoords, driver.navigateTo = navigate, nativeVisit
+        planner = object.__new__(routes.QuestRoute)
+        planner.d = driver
+        area_id = "AR0162" if interior else "AR1100"
+        planner.data = {"config": {target_name: {"properties": {"sourceArea": area_id}}}}
+
+        def area(owner, actor=None):
+            if interior:
+                return "AR0162" if coords(actor)[2] == 2 else "AR0800"
+            return "AR1100" if coords(actor)[0] < 71 else "AR1200"
+
+        def travel(owner, destination):
+            self.assertEqual(area_id, destination)
+            driver.travel_calls.append((driver.position, destination))
+            if interior and mutation != "interiorMissingArrival":
+                driver.position = origin
+
+        with ExitStack() as stack:
+            stack.enter_context(patch.object(routes, "currentArea", side_effect=area))
+            stack.enter_context(patch.object(routes, "travel", side_effect=travel))
+            bounds = [26, 40, 2, 8, 5] if interior else [4, 126, 0, 67, 54]
+            stack.enter_context(
+                patch.object(routes, "documents", return_value={"geometry": {"atlas": {area_id: {"bounds": bounds}}}})
+            )
+            stack.enter_context(patch.object(routes, "cityMovementCells", return_value=(cells, frozenset(portals))))
+            planner.contact(target_name)
+            if mutation == "returnVisit":
+                driver.position, driver.entry = origin, None
+                driver.contact_acknowledged = False
+                planner.contact(target_name)
+        return driver
+
+    def testCityContactAvoidsTheRetainedCompanionPortalLoopAtTheOriginalBudget(self):
+        driver = self.cityContactModel()
+        self.assertEqual((26, 151, 0), driver.position)
+        self.assertEqual(332, max(128, 4 * driver.initial_distance + 128))
+        self.assertLessEqual(driver.turns, 332)
+        self.assertTrue(driver.contact_acknowledged, "The ordinary native-entry witness remains required")
+        self.assertEqual(1, driver.final_calls)
+        self.assertTrue(driver.waypoints)
+        self.assertFalse({point for point, _ in driver.waypoints} & {(68, 143, 0), (80, 143, 0)})
+        self.assertTrue(all(sum(abs(a - b) for a, b in zip(before, after)) == 1 for before, after in driver.moves))
+
+    def testCityContactKeepsMovingNpcEntryAndZeroTickContinuationSemantics(self):
+        moving = self.cityContactModel("moving")
+        self.assertEqual((27, 151, 0), moving.position)
+        self.assertTrue(moving.contact_acknowledged)
+        zero = self.cityContactModel("zeroTick")
+        self.assertEqual(0, zero.turns)
+        self.assertEqual(1, zero.final_calls, "A zero-length street plan must still call the native contact verifier")
+
+    def testCityContactRejectsUnselectedAreaHopsAndFalseWaypointArrivals(self):
+        for mutation, message in (
+            ("areaHop", "Unselected city transition"),
+            ("falseArrival", "waypoint was not actually reached"),
+        ):
+            with self.subTest(mutation=mutation), self.assertRaisesRegex(AssertionError, message):
+                self.cityContactModel(mutation)
+
+    def testCityContactRejectsIdentityReplacementDuringStreetAndFinalEntry(self):
+        for mutation in ("streetReplacement", "finalReplacement"):
+            with self.subTest(mutation=mutation), self.assertRaisesRegex(
+                AssertionError, "identity changed|NPC identity changed"
+            ):
+                self.cityContactModel(mutation)
+
+    def testCityContactRejectsMissingTargetsAndTheOriginalAggregateBudgetOverrun(self):
+        allowed = self.cityContactModel("lastAllowed")
+        self.assertEqual(332, allowed.turns)
+        self.assertEqual((26, 151, 0), allowed.position)
+        self.assertEqual(1, allowed.final_calls)
+        with self.assertRaisesRegex(AssertionError, "City contact turn budget exhausted"):
+            self.cityContactModel("oneOver")
+        self.assertEqual(333, self._lastCityContactDriver.turns)
+        for mutation, message in (("missing", "target disappeared"), ("budget", "City contact turn budget exhausted")):
+            with self.subTest(mutation=mutation), self.assertRaisesRegex(AssertionError, message):
+                self.cityContactModel(mutation)
+        self.assertEqual(
+            333, self._lastCityContactDriver.turns, "Reject the first over-budget arrival without more work"
+        )
+
+    def testCityContactRechecksIdentityAfterAnAlreadyCompletedNativeVisit(self):
+        with self.assertRaisesRegex(AssertionError, "City contact identity changed"):
+            self.cityContactModel("zeroTickReplacement")
+
+    def testCityContactRequiresActualInteriorArrivalBeforePlanningOrNativeVisit(self):
+        driver = self.cityContactModel("interior")
+        self.assertEqual([((69, 143, 0), "AR0162")], driver.travel_calls)
+        self.assertEqual((26, 44, 2), driver.position)
+        self.assertTrue(driver.contact_acknowledged)
+        with self.assertRaisesRegex(AssertionError, "City contact target left its area"):
+            self.cityContactModel("interiorMissingArrival")
+        self.assertEqual([], self._lastCityContactDriver.waypoints)
+        self.assertEqual(0, self._lastCityContactDriver.final_calls)
+
+    def testCityContactRequiresAnotherActualEntryAfterReturningToASpeaker(self):
+        driver = self.cityContactModel("returnVisit")
+        self.assertEqual(2, driver.contact_entries)
+        self.assertEqual(2, driver.final_calls)
+        self.assertEqual(2, len(driver.travel_calls))
+        self.assertTrue(driver.contact_acknowledged)
+        self.assertEqual((26, 151, 0), driver.position)
 
 
 if __name__ == "__main__":

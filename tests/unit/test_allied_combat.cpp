@@ -11,6 +11,7 @@ SPDX-License-Identifier: GPL-3.0-or-later
 #include "core/CMap.h"
 #include "core/CPlaytestTrace.h"
 #include "core/CPythonOverrides.h"
+#include "core/CSerialization.h"
 #include "core/CStats.h"
 #include "core/CTypes.h"
 #include "handler/CFightHandler.h"
@@ -604,6 +605,8 @@ struct EncounterAdmissionWork {
     std::shared_ptr<EncounterAdmissionQuest> quest = std::make_shared<EncounterAdmissionQuest>();
     std::shared_ptr<EncounterAdmissionGraphProbe> graph = std::make_shared<EncounterAdmissionGraphProbe>();
     int attempts = 0;
+    int armedAttempts = 0;
+    int calibrations = 0;
 
     explicit EncounterAdmissionWork(Fixture &fixture) : map(fixture.map) {
         CTypes::register_type<EncounterAdmissionGraphProbe, CGameObject>();
@@ -612,14 +615,56 @@ struct EncounterAdmissionWork {
         fixture.hero->setQuests({quest});
         map->setObjectProperty("encounterAdmissionGraphProbe", graph);
     }
+    void calibrate(const std::shared_ptr<EncounterAdmissionSnapshotMap> &expectedMap) {
+        ++calibrations;
+        const bool actualOwner =
+            map == expectedMap && std::dynamic_pointer_cast<EncounterAdmissionSnapshotMap>(map) == expectedMap;
+        const bool hasCodec = CTypes::findCodec(typeid(std::shared_ptr<CMap>)) != nullptr;
+        expect_true(actualOwner, "the measured fixture and armed probe must be the exact provided map");
+        expect_true(hasCodec, "the actual native CMap codec must already exist without injecting a replacement");
+        struct CalibrationReset {
+            EncounterAdmissionWork &work;
+            std::shared_ptr<EncounterAdmissionSnapshotMap> owner;
+            const bool armed;
+            const int topVisits;
+            const int nestedVisits;
+            const int journalCaptures;
+            const int attempts;
+            const int armedAttempts;
+            ~CalibrationReset() {
+                owner->stopNextGraph = armed;
+                owner->graphVisits = topVisits;
+                work.graph->visits = nestedVisits;
+                work.quest->captures = journalCaptures;
+                work.attempts = attempts;
+                work.armedAttempts = armedAttempts;
+            }
+        } reset{
+            *this,    expectedMap,  expectedMap->stopNextGraph, expectedMap->graphVisits, graph->visits, quest->captures,
+            attempts, armedAttempts};
+        expectedMap->stopNextGraph = true;
+        const auto snapshot = CSerialization::serializeExpected(map, "unit-encounter-probe-calibration");
+        const auto message = snapshot ? std::string("unexpected serialization success") : snapshot.error().message;
+        const auto errorCode = snapshot ? -1 : static_cast<int>(snapshot.error().code);
+        std::printf("[encounter calibration] count=%d sameMap=%d codec=%d success=%d code=%d graph=%d nestedGraph=%d "
+                    "armed=%d error=%s\n",
+                    calibrations, actualOwner, hasCodec, snapshot.has_value(), errorCode, expectedMap->graphVisits,
+                    graph->visits, expectedMap->stopNextGraph, message.substr(0, 400).c_str());
+        expect_true(!snapshot && expectedMap->graphVisits == 1 && graph->visits == 0 && !expectedMap->stopNextGraph &&
+                        message == "intentional top-level encounter snapshot stop before resource writes",
+                    "one separate typed-map calibration must reach and consume the actual top-level metadata probe");
+        expect_true(quest->captures == 0 && attempts == 0 && armedAttempts == 0,
+                    "calibration must not spend the five measured journal or save-attempt budgets");
+    }
     void attempt() {
         ++attempts;
         struct SnapshotGraphStop {
             std::shared_ptr<EncounterAdmissionSnapshotMap> owner;
-            explicit SnapshotGraphStop(const std::shared_ptr<CMap> &map)
+            explicit SnapshotGraphStop(const std::shared_ptr<CMap> &map, int &armedAttempts)
                 : owner(std::dynamic_pointer_cast<EncounterAdmissionSnapshotMap>(map)) {
                 if (owner) {
                     owner->stopNextGraph = true;
+                    ++armedAttempts;
                 }
             }
             ~SnapshotGraphStop() {
@@ -627,7 +672,7 @@ struct EncounterAdmissionWork {
                     owner->stopNextGraph = false;
                 }
             }
-        } graphStop(map);
+        } graphStop(map, armedAttempts);
         expect_true(!CMapLoader::saveWithResult(map, "unit-encounter-admission-no-write"),
                     "an encounter save must reject or hit the intentional graph stop without writing");
     }
@@ -674,6 +719,11 @@ void testDirectEncounterSaveAdmissionAndLegacyDefault() {
         fixture.hero->getBaseStats()->setAgility(30);
         auto enemy = fixture.actor("saveBoundaryEnemy");
         EncounterAdmissionWork work(fixture);
+        if (!optedIn) {
+            expect_true(fixture.map == observedMap && work.map == observedMap,
+                        "calibration must use the actual fixture map and retained probe owner");
+            work.calibrate(observedMap);
+        }
         fixture.heroController->starting = [&] { work.attempt(); };
         probe(enemy)->starting = [&] { work.attempt(); };
         fixture.heroController->action = [&](auto, auto) {
@@ -694,6 +744,8 @@ void testDirectEncounterSaveAdmissionAndLegacyDefault() {
                         work.quest->captures == expectedWork && observedMap->graphVisits == expectedWork &&
                         work.graph->visits == 0,
                     "direct ordinary combat must gate starts/action/ends only on explicitly opted-in maps");
+        expect_true(work.armedAttempts == 5 && work.calibrations == (optedIn ? 0 : 1),
+                    "all five measured attempts must retain the probe owner after the independent calibration");
         expect_true(!observedMap->stopNextGraph && observedMap->meta() == observedMap->CMap::meta() &&
                         observedMap->graphVisits == expectedWork,
                     "every save attempt must disarm its one-shot probe before ordinary map metadata resumes");
