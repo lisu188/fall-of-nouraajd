@@ -716,10 +716,26 @@ struct CPlayerController::PlayerRoute {
     Coords origin;
 };
 
+bool CPlayerController::getMovementSuspended() const { return movementSuspended; }
+
+void CPlayerController::setMovementSuspended(bool value) {
+    if (movementSuspended == value) {
+        return;
+    }
+    movementSuspended = value;
+    if (value) {
+        clearPath();
+    }
+    recordDirectPropertyChanged("movementSuspended");
+}
+
 vstd::task<Coords> CPlayerController::controlAsync(std::shared_ptr<CCreature> c) {
     auto player = vstd::cast<CPlayer>(c);
     if (!player) {
         co_return ZERO;
+    }
+    if (movementSuspended) {
+        co_return player->getCoords();
     }
     if (!canContinue(player)) {
         clearPath();
@@ -729,6 +745,9 @@ vstd::task<Coords> CPlayerController::controlAsync(std::shared_ptr<CCreature> c)
 }
 
 void CPlayerController::setTarget(std::shared_ptr<CPlayer> player, Coords _target) {
+    if (movementSuspended) {
+        return;
+    }
     clearPath();
     if (!player || !player->getMap()) {
         return;
@@ -773,6 +792,9 @@ void CPlayerController::setTarget(std::shared_ptr<CPlayer> player, Coords _targe
 }
 
 void CPlayerController::onStepCommitted(std::shared_ptr<CCreature>, const Coords &coords) {
+    if (movementSuspended) {
+        return;
+    }
     if (route && currentStep < route->steps.size() && route->steps[currentStep] == coords) {
         currentStep++;
         if (currentStep == route->steps.size()) {
@@ -790,11 +812,18 @@ void CPlayerController::onStepCommitted(std::shared_ptr<CCreature>, const Coords
     }
 }
 
-void CPlayerController::interrupt(std::shared_ptr<CCreature>) { clearPath(); }
+void CPlayerController::interrupt(std::shared_ptr<CCreature>) {
+    if (!movementSuspended) {
+        clearPath();
+    }
+}
 
 void CPlayerController::onTurnEnded(std::shared_ptr<CCreature>) {}
 
 std::pair<bool, Coords::Direction> CPlayerController::isOnPath(std::shared_ptr<CPlayer> player, Coords coords) {
+    if (movementSuspended) {
+        return std::make_pair(false, Coords::Direction::ZERO);
+    }
     const auto map = player ? player->getMap() : nullptr;
     // The committed position precedes the route cursor while a turn awaits presentation or arrival hooks.
     const bool current = map && map->isMoving() ? hasCurrentRoute(player) : !isCompleted(player);
@@ -812,6 +841,9 @@ std::pair<bool, Coords::Direction> CPlayerController::isOnPath(std::shared_ptr<C
 }
 
 bool CPlayerController::isCompleted(std::shared_ptr<CPlayer> player) {
+    if (movementSuspended) {
+        return true;
+    }
     if (hasPendingPath(player))
         return false;
     if (route || target)

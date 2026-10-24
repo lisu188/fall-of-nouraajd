@@ -406,8 +406,9 @@ class EngineOwner:
     """Keep native initialization, calls, and final releases on one persistent thread."""
 
     def __init__(self) -> None:
-        self._queue = queue.Queue()
-        self._lock = threading.Lock()
+        # Allocations can run finalizers which submit cleanup on this owner again.
+        self._queue = queue.SimpleQueue()
+        self._lock = threading.RLock()
         self._thread: threading.Thread | None = None
         self._closed = False
         self._closing_future = None
@@ -416,13 +417,44 @@ class EngineOwner:
         self._pump_pending = False
         self.resources = set()
         self._finalizer = weakref.finalize(self, self._queue.put, None)
+        self._prepared_thread = threading.Thread(
+            target=EngineOwner._serve, args=(self._queue, weakref.ref(self)), name="mcp-engine-owner", daemon=True
+        )
 
-    def _start(self) -> None:
+    def _start(self):
         if self._thread is None:
-            self._thread = threading.Thread(
-                target=EngineOwner._serve, args=(self._queue, weakref.ref(self)), name="mcp-engine-owner", daemon=True
-            )
-            self._thread.start()
+            self._thread = self._prepared_thread
+            self._prepared_thread = None
+            return self._thread
+        return None
+
+    def _startReservedThread(self, thread):
+        if thread is None:
+            return
+        try:
+            thread.start()
+        except Exception:
+            # CPython keeps a launched worker in limbo until it publishes its identifier.
+            with threading._active_limbo_lock:
+                launched = thread.ident is not None or thread in threading._limbo
+            if launched:
+                raise
+            futures = []
+            with self._lock:
+                self._closed = True
+                self._thread = None
+                while True:
+                    try:
+                        job = self._queue.get_nowait()
+                    except queue.Empty:
+                        break
+                    if job is not None:
+                        futures.append(job[0])
+                        job.clear()
+            for future in futures:
+                if future.set_running_or_notify_cancel():
+                    future.set_exception(RuntimeError("MCP engine owner thread could not start"))
+            raise
 
     @staticmethod
     def _serve(work_queue, reference) -> None:
@@ -538,9 +570,10 @@ class EngineOwner:
         with self._lock:
             if self._closed:
                 raise RuntimeError("MCP engine owner has closed")
-            self._start()
+            starter = self._start()
             self._queue.put([future, callback, args, kwargs])
             pump = self._active_pump
+        self._startReservedThread(starter)
         if pump:
             try:
                 pump.schedule()
@@ -561,18 +594,21 @@ class EngineOwner:
                 return
             self._closed = True
             self._closing_future = future
-            self._start()
+            starter = self._start()
+            closing_thread = self._thread
             self._queue.put([future, cleanup, (), {}])
             self._queue.put(None)
             self._finalizer.detach()
             pump = self._active_pump
+        self._startReservedThread(starter)
         if pump:
             pump.schedule()
-        if threading.current_thread() is not self._thread:
+        if threading.current_thread() is not closing_thread:
             try:
                 future.result()
             finally:
-                self._thread.join()
+                if closing_thread.ident is not None:
+                    closing_thread.join()
 
 
 _PROCESS_ENGINE_OWNER = EngineOwner()

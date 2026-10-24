@@ -35,6 +35,9 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 #include <algorithm>
 #include <cctype>
+#include <chrono>
+#include <cstdio>
+#include <cstdlib>
 #include <optional>
 #include <utility>
 
@@ -765,21 +768,78 @@ std::vector<std::string> build_tile_types(const json &tileset) {
     return tileTypes;
 }
 
-std::expected<std::shared_ptr<json>, std::string> build_save_envelope(const std::shared_ptr<CMap> &map) {
+class SaveStageDiagnostics {
+  public:
+    SaveStageDiagnostics() noexcept {
+        const char *flag = std::getenv("GAME_SAVE_STAGE_DIAGNOSTICS");
+        enabled = flag && flag[0] == '1' && flag[1] == '\0';
+        if (enabled)
+            started = std::chrono::steady_clock::now();
+    }
+
+    void mark(const char *stage, std::size_t bytes = 0, bool success = true) const noexcept {
+        if (!enabled)
+            return;
+        const auto elapsed =
+            std::chrono::duration_cast<std::chrono::microseconds>(std::chrono::steady_clock::now() - started).count();
+        std::fprintf(stderr,
+                     "{\"diagnostic\":\"save-stage\",\"stage\":\"%s\",\"elapsedMicroseconds\":%lld,"
+                     "\"objects\":%zu,\"tiles\":%zu,\"bytes\":%zu,\"success\":%s}\n",
+                     stage, static_cast<long long>(elapsed), objects, tiles, bytes, success ? "true" : "false");
+        std::fflush(stderr);
+    }
+
+    void graphFinished(const json &snapshot) noexcept {
+        if (!enabled)
+            return;
+        try {
+            if (snapshot.is_object() && snapshot.contains("properties")) {
+                const auto &properties = snapshot.at("properties");
+                if (properties.is_object()) {
+                    objects = properties.contains("objects") && properties.at("objects").is_array()
+                                  ? properties.at("objects").size()
+                                  : 0;
+                    tiles = properties.contains("tiles") && properties.at("tiles").is_array()
+                                ? properties.at("tiles").size()
+                                : 0;
+                }
+            }
+        } catch (...) {
+            objects = tiles = 0;
+        }
+        mark("graph.end");
+    }
+
+  private:
+    bool enabled = false;
+    std::chrono::steady_clock::time_point started{};
+    std::size_t objects = 0;
+    std::size_t tiles = 0;
+};
+
+std::expected<std::shared_ptr<json>, std::string> build_save_envelope(const std::shared_ptr<CMap> &map,
+                                                                      SaveStageDiagnostics &diagnostics) {
     if (!map) {
         return std::unexpected("map is null");
     }
 
+    diagnostics.mark("journal.begin");
     if (auto player = map->getPlayer()) {
         player->captureQuestJournal();
     }
+    diagnostics.mark("journal.end");
+    diagnostics.mark("graph.begin");
     auto snapshot = CSerialization::serializeExpected(map, map->getMapName());
     if (!snapshot) {
+        diagnostics.mark("graph.error", 0, false);
         return std::unexpected(snapshot.error().message);
     }
-    return CSaveFormat::buildEnvelope(std::make_shared<json>(std::move(*snapshot)), map->getMapName());
+    diagnostics.graphFinished(*snapshot);
+    diagnostics.mark("envelope.begin");
+    auto envelope = CSaveFormat::buildEnvelope(std::make_shared<json>(std::move(*snapshot)), map->getMapName());
+    diagnostics.mark("envelope.end", 0, envelope.has_value());
+    return envelope;
 }
-
 void apply_authored_map_metadata(const std::shared_ptr<CGame> &game, const std::shared_ptr<CMap> &map,
                                  const std::string &mapName) {
     if (!game || !map) {
@@ -1574,7 +1634,8 @@ bool CMapLoader::saveWithResult(const std::shared_ptr<CMap> &map, const std::str
         return false;
     }
 
-    auto envelope = build_save_envelope(map);
+    SaveStageDiagnostics diagnostics;
+    auto envelope = build_save_envelope(map, diagnostics);
     if (!envelope) {
         vstd::logger::warning("Rejected invalid save snapshot:", name, "reason:", envelope.error());
         return false;
@@ -1584,9 +1645,14 @@ bool CMapLoader::saveWithResult(const std::shared_ptr<CMap> &map, const std::str
     // singleton only when the map has already been detached from its game (compatibility path).
     auto game = map->getGame();
     auto resources = game ? game->getResourcesProvider() : CResourcesProvider::getInstance();
-    return resources->save(CSaveFormat::primaryPath(name), CJsonUtil::to_string(*envelope, -1));
+    diagnostics.mark("json.begin");
+    auto encoded = CJsonUtil::to_string(*envelope, -1);
+    diagnostics.mark("json.end", encoded.size());
+    diagnostics.mark("write.begin", encoded.size());
+    const bool saved = resources->save(CSaveFormat::primaryPath(name), encoded);
+    diagnostics.mark("write.end", encoded.size(), saved);
+    return saved;
 }
-
 void CMapLoader::handleTileLayer(const std::shared_ptr<CMap> &map, const std::vector<std::string> &tileTypes,
                                  const json &layer) {
     if (!layer.is_object() || !layer.contains("properties") || !layer["properties"].is_object() ||

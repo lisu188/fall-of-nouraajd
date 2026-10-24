@@ -264,6 +264,14 @@ class UiMinimapInteractionTest(unittest.TestCase):
         target = self.browse(
             inspect, lambda panel: panel.keyboardEvent(self.gui, self.harness.SDL_KEYDOWN, self.harness.SDLK_RETURN)
         )
+        self.assertTrue(
+            self.harness.pump_event_loop_until(
+                lambda: self.harness.coords_tuple(self.player.getCoords()) == target
+                and self.game_map.getTurn() > before[1]
+                and not self.game_map.isMoving()
+            ),
+            "Landmark travel must finish its map turn before inspecting the settled state.",
+        )
         self.assertEqual(target, self.harness.coords_tuple(self.player.getCoords()))
         self.assertGreater(self.game_map.getTurn(), before[1])
         self.assertEqual(before[2], self.player.getGold())

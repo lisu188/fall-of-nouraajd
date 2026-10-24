@@ -162,6 +162,10 @@ class ModelPlayer(ModelObject):
         self.base_stats = ModelObject(game, strength=99, agility=99, intelligence=99)
         self.items, self.quests, self.completed = [], [], []
         self.effects = []
+        self.pending_move_origin = None
+
+    def getPendingMoveOrigin(self):
+        return self.pending_move_origin
 
     def isPlayer(self):
         return True
@@ -304,7 +308,7 @@ class ModelMap(ModelObject):
 class CandlekeepModel:
     """Small native-shaped doubles executing the complete authored load function."""
 
-    def __init__(self, **stats):
+    def __init__(self, plugin_builtins=None, **stats):
         self.types = {}
         self.trigger_types = {}
         self.gui = Mock()
@@ -361,7 +365,11 @@ class CandlekeepModel:
             return answer if any(row["id"] == answer and row.get("enabled", True) for row in rows) else ""
 
         api.choose = choose
-        namespace = {}
+        namespace = (
+            {"__builtins__": plugin_builtins, "__name__": "candlekeep_native_builtins_model"}
+            if plugin_builtins is not None
+            else {}
+        )
         with patch.dict(sys.modules, game=api):
             exec(
                 compile((MAP_ROOT / "script.py").read_text(encoding="utf-8"), "candlekeep/script.py", "exec"), namespace
@@ -734,7 +742,7 @@ class CandlekeepModelTest(unittest.TestCase):
     def testAuditedStockSelectionAndQuickPurchaseShareFiniteCountersAndExactPrices(self):
         model = CandlekeepModel()
         player, dialog = model.player, model.dialog("templePriest")
-        rows = json.loads(dialog.getStringProperty("shopEntries"))
+        rows = json.loads(dialog.getStringProperty("shopEntries").removeprefix("candlekeep-json:"))
         row = next(row for row in rows if row["itemId"] == "candlekeepHealingPotion")
         self.assertEqual((112, 20), (row["price"], row["limit"]))
         player.properties["gold"] = 10000
@@ -1048,6 +1056,119 @@ class CandlekeepModelTest(unittest.TestCase):
                 self.assertEqual([], model.player.getCompletedQuests())
                 self.assertFalse(any(name.startswith("trainingFoe") for name in model.game_map.objects))
 
+    def testTrainingCleanupPurgesTemporaryItemsFromRetainedAlliesBeforeMapRemoval(self):
+        for outcome in ("abandoned", "timedOut", "departed", "completed", "nextRound"):
+            with self.subTest(outcome=outcome):
+                model = CandlekeepModel()
+                model.player.setHp(47)
+                model.player.setMana(33)
+                baseline_items = tuple(model.player.getItems())
+                baseline_equipped = model.player.getEquipped()
+                baseline_rewards = model.player.getGold(), model.player.getExp()
+                model.dialog("gatewarden").acceptTraining()
+                obe = model.dialog("obe")
+                self.assertTrue(obe.beginTraining())
+                allies = [model.game_map.getObjectByName(name) for name in model.namespace["TRAINING_ALLIES"]]
+                originals = {}
+                for actor in allies:
+                    carried = model.createObject("candlekeepStarSapphire")
+                    carried.properties["tags"] = ["quest"]
+                    worn = model.createObject("candlekeepDagger")
+                    worn.properties["tags"] = ["cursed"]
+                    temporary = model.createObject("candlekeepDagger")
+                    temporary.setBoolProperty("plugin_candlekeepTemporary", True)
+                    temporary.properties["tags"] = ["cursed", "quest"]
+                    actor.items.append(carried)
+                    actor.equipped.update({"0": worn, "1": temporary})
+                    originals[actor] = carried, worn
+
+                    def equip(slot, item, owner=actor):
+                        # Native equipItem(None) refuses curses and returns the old item to inventory.
+                        self.assertIsNone(item)
+                        old = owner.equipped.get(slot)
+                        if old and old.hasTag("cursed"):
+                            return
+                        if old:
+                            owner.items.append(old)
+                            owner.equipped.pop(slot)
+
+                    def remove(predicate, allow_quest, owner=actor):
+                        # Native removeItem removes only the first matching item; quest protection is player-only.
+                        self.assertTrue(callable(predicate))
+                        self.assertIs(type(allow_quest), bool)
+                        for item in owner.getItems():
+                            if predicate(item):
+                                self.assertFalse(owner.isPlayer() and not allow_quest and item.hasTag("quest"))
+                                owner.items.remove(item)
+                                return
+
+                    actor.equipItem = Mock(side_effect=equip)
+                    actor.removeItem = Mock(side_effect=remove)
+
+                borrower = model.dialog("arkanis")
+                loan = allies[0].getItems()[0]
+                self.assertTrue(loan.getBoolProperty("plugin_candlekeepTemporary"))
+                borrower.setStringProperty("selectedBorrow", loan.getName())
+                self.assertTrue(borrower.borrowSelectedEquipment())
+                self.assertIn(loan, model.player.getItems())
+
+                def finish():
+                    if outcome in ("completed", "nextRound"):
+                        for number in range(1, 7):
+                            model.game_map.objects.pop("trainingFoe" + str(number), None)
+                        if outcome == "completed":
+                            model.game_map.setNumericProperty("candlekeepTrainingRound", 2)
+                            return obe.finishTraining()
+                        return obe.trainingRound()
+                    if outcome == "departed":
+                        return model.dialog("gorion").leaveCandlekeep()
+                    if outcome == "timedOut":
+                        model.game_map.setNumericProperty("candlekeepTrainingTurns", 119)
+                        return model.types["CandlekeepTrainingTimerTrigger"](model).trigger(
+                            model.game_map.getObjectByName("obe"), None
+                        )
+                    return obe.forceExitTraining()
+
+                observed = []
+                remove_actor = model.game_map.removeObject
+
+                def remove_after_cleanup(actor):
+                    if actor in originals:
+                        self.assertFalse(
+                            any(
+                                item.getBoolProperty("plugin_candlekeepTemporary")
+                                for item in (*actor.getItems(), *actor.getEquipped().values())
+                                if item
+                            ),
+                            "Temporary possessions must be cleared while the ally still belongs to the map",
+                        )
+                        observed.append(actor)
+                    remove_actor(actor)
+
+                model.game_map.removeObject = remove_after_cleanup
+                finish()
+                self.assertCountEqual(allies, observed)
+                for actor, (carried, worn) in originals.items():
+                    self.assertEqual([carried], actor.getItems())
+                    self.assertEqual({"0": worn}, actor.getEquipped())
+                    self.assertTrue(carried.hasTag("quest"))
+                    self.assertTrue(worn.hasTag("cursed"))
+                    self.assertIsNot(actor, model.game_map.getObjectByName(actor.getName()))
+                    actor.equipItem.assert_called_once_with("1", None)
+                self.assertEqual(baseline_rewards, (model.player.getGold(), model.player.getExp()))
+                if outcome == "nextRound":
+                    self.assertEqual("active", model.game_map.getStringProperty("candlekeep_trainingStage"))
+                    self.assertEqual(2, model.game_map.getNumericProperty("candlekeepTrainingRound"))
+                else:
+                    self.assertEqual(baseline_items, tuple(model.player.getItems()))
+                    self.assertEqual(baseline_equipped, model.player.getEquipped())
+                    self.assertEqual((100 if outcome == "departed" else 47), model.player.getHp())
+                    self.assertEqual(33, model.player.getNumericProperty("mana"))
+                    before = [(tuple(actor.getItems()), actor.getEquipped()) for actor in allies]
+                    finish()
+                    self.assertEqual(before, [(tuple(actor.getItems()), actor.getEquipped()) for actor in allies])
+                    self.assertEqual(baseline_rewards, (model.player.getGold(), model.player.getExp()))
+
     def testTrainingTimerRetainsItsSavedBudgetAndForcesCleanupAtExactly120Turns(self):
         model = CandlekeepModel()
         model.dialog("gatewarden").acceptTraining()
@@ -1065,6 +1186,127 @@ class CandlekeepModelTest(unittest.TestCase):
         self.assertFalse(any(name.startswith("trainingFoe") for name in model.game_map.objects))
         callback.trigger(obe, None)
         self.assertEqual(120, model.game_map.getNumericProperty("candlekeepTrainingTurns"))
+
+    @staticmethod
+    def placePortals(model):
+        for name, (obj, level) in authoredObjects().items():
+            portal = model.game_map.getObjectByName(name)
+            if portal and isinstance(portal, model.types["CandlekeepPortal"]):
+                portal.moveTo(int(obj["x"] // 32), int(obj["y"] // 32), level)
+        return SimpleNamespace(getCause=lambda: model.player)
+
+    def testPairedNativeEdgeArrivalDoesNotBounceOrLeaveAStaleGuard(self):
+        from tests import test_candlekeep_metadata as metadata_support
+
+        builtins = metadata_support.CandlekeepMetadataSourceTest().nativePluginBuiltins()
+        for source_name, target_name in (
+            ("storehouseExit", "storehouseEntrance"),
+            ("storehouseEntrance", "storehouseExit"),
+            ("innStairsUp", "innStairsDown"),
+            ("innStairsDown", "innStairsUp"),
+        ):
+            with self.subTest(source=source_name):
+                model = CandlekeepModel(plugin_builtins=builtins)
+                event = self.placePortals(model)
+                source, target = (model.game_map.getObjectByName(name) for name in (source_name, target_name))
+                source.publishEdge()
+                model.player.pending_move_origin = source.getCoords()
+                landing = target.getCoords()
+                model.player.moveTo(landing.x, landing.y, landing.z)
+                before = model.rewardSnapshot()
+                target.onEnter(event)
+                self.assertEqual(landing, model.player.getCoords())
+                self.assertEqual("", model.player.getStringProperty("candlekeepPortalGuard"))
+                self.assertEqual(before, model.rewardSnapshot())
+                model.player.pending_move_origin = None
+                self.assertTrue(model.game_map.hasNavigationEdge(source.getCoords(), landing, source_name))
+
+    def testPendingOriginRequiresTheActualPairedPortalAndPublishedEdge(self):
+        for mutation in ("unrelatedOrigin", "missingPair", "wrongTarget", "unpublishedEdge"):
+            with self.subTest(mutation=mutation):
+                model = CandlekeepModel()
+                event = self.placePortals(model)
+                source = model.game_map.getObjectByName("storehouseExit")
+                target = model.game_map.getObjectByName("storehouseEntrance")
+                source.publishEdge()
+                model.player.pending_move_origin = source.getCoords()
+                expected = source.getCoords()
+                if mutation == "unrelatedOrigin":
+                    model.player.pending_move_origin = SimpleNamespace(x=11, y=34, z=1)
+                elif mutation == "missingPair":
+                    model.game_map.removeObject(source)
+                elif mutation == "wrongTarget":
+                    source.setNumericProperty("targetX", 53)
+                else:
+                    model.game_map.unregisterNavigationEdgesForObject(source.getName())
+                landing = target.getCoords()
+                model.player.moveTo(landing.x, landing.y, landing.z)
+                target.onEnter(event)
+                self.assertEqual(expected, model.player.getCoords())
+                self.assertEqual("storehouseExit", model.player.getStringProperty("candlekeepPortalGuard"))
+
+    def testOrdinaryPortalEntryStillSetsAndConsumesItsPairedGuard(self):
+        model = CandlekeepModel()
+        event = self.placePortals(model)
+        source = model.game_map.getObjectByName("storehouseEntrance")
+        target = model.game_map.getObjectByName("storehouseExit")
+        source.publishEdge()
+        target.publishEdge()
+        origin = source.getCoords()
+        model.player.pending_move_origin = SimpleNamespace(x=origin.x - 1, y=origin.y, z=origin.z)
+        model.player.moveTo(origin.x, origin.y, origin.z)
+        flow = source.onEnterFlow(event)
+        try:
+            request = next(flow)
+            self.assertEqual("gui.moveTo", request["operation"])
+            self.assertEqual("storehouseExit", model.player.getStringProperty("candlekeepPortalGuard"))
+            model.player.pending_move_origin = origin
+            model.player.moveTo(*request["args"][1:])
+            target.onEnter(event)
+            self.assertEqual(target.getCoords(), model.player.getCoords())
+            self.assertEqual("", model.player.getStringProperty("candlekeepPortalGuard"))
+            with self.assertRaises(StopIteration):
+                flow.send(None)
+        finally:
+            flow.close()
+
+    def testNativeTrainingExitEdgeRestoresOwnedPossessionsWithoutRewards(self):
+        model = CandlekeepModel()
+        event = self.placePortals(model)
+        original = model.createObject("candlekeepDagger")
+        original.setStringProperty("name", "originalPortalTrainingBlade")
+
+        def nativeEquip(slot, item):
+            previous = model.player.equipped.pop(slot, None)
+            if previous and previous not in model.player.items:
+                model.player.items.append(previous)
+            if item:
+                if item in model.player.items:
+                    model.player.items.remove(item)
+                model.player.equipped[slot] = item
+
+        model.player.equipItem = nativeEquip
+        model.player.addItem(original)
+        model.player.equipItem("0", original)
+        before = model.rewardSnapshot(), model.player.getEquipped()
+        model.dialog("gatewarden").acceptTraining()
+        model.dialog("obe").beginTraining()
+        allies = [model.game_map.getObjectByName(name) for name in model.namespace["TRAINING_ALLIES"]]
+        source = model.game_map.getObjectByName("trainingExit")
+        target = model.game_map.getObjectByName("trainingEntrance")
+        source.publishEdge()
+        model.player.pending_move_origin = source.getCoords()
+        landing = target.getCoords()
+        model.player.moveTo(landing.x, landing.y, landing.z)
+        target.onEnter(event)
+        self.assertEqual(landing, model.player.getCoords())
+        self.assertEqual("abandoned", model.game_map.getStringProperty("candlekeep_trainingStage"))
+        self.assertEqual(before, (model.rewardSnapshot(), model.player.getEquipped()))
+        self.assertIs(original, model.player.getEquipped()["0"])
+        self.assertTrue(all(model.game_map.getObjectByName(actor.getName()) is None for actor in allies))
+        for actor in (model.player, *allies):
+            self.assertFalse(any(item.getBoolProperty("plugin_candlekeepTemporary") for item in actor.getItems()))
+        self.assertEqual("", model.player.getStringProperty("candlekeepPortalGuard"))
 
     def testPortalDestructionUnregistersOnlyItsOwnPublishedNavigationEdge(self):
         model = CandlekeepModel()

@@ -18,6 +18,7 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #include "CFightHandler.h"
 #include "core/CAsync.h"
 #include <algorithm>
+#include <exception>
 #include <sstream>
 #include <tuple>
 #include <unordered_set>
@@ -73,15 +74,20 @@ struct effect_application_result {
 
 class FightControllerEndGuard {
   public:
-    ~FightControllerEndGuard() { endAll(); }
+    ~FightControllerEndGuard() noexcept {
+        try {
+            endAll();
+        } catch (...) {
+        }
+    }
 
     void start(const std::shared_ptr<CFightController> &controller, const std::shared_ptr<CCreature> &creature,
                const std::shared_ptr<CCreature> &opponent) {
         if (!controller) {
             return;
         }
-        controller->start(creature, opponent);
         startedControllers.push_back({controller, creature, opponent, nullptr, false});
+        controller->start(creature, opponent);
     }
 
     void start(const std::shared_ptr<CFightController> &controller, const std::shared_ptr<CCreature> &creature,
@@ -89,18 +95,28 @@ class FightControllerEndGuard {
         if (!controller) {
             return;
         }
-        controller->start(creature, opponent ? *opponent : std::shared_ptr<CCreature>());
         startedControllers.push_back({controller, creature, std::shared_ptr<CCreature>(), opponent, false});
+        controller->start(creature, opponent ? *opponent : std::shared_ptr<CCreature>());
     }
 
     void endAll() {
+        std::exception_ptr failure;
         for (auto &started : startedControllers) {
             if (started.ended || !started.controller) {
                 continue;
             }
             started.ended = true;
-            started.controller->end(started.creature,
-                                    started.currentOpponent ? *started.currentOpponent : started.startedOpponent);
+            try {
+                started.controller->end(started.creature,
+                                        started.currentOpponent ? *started.currentOpponent : started.startedOpponent);
+            } catch (...) {
+                if (!failure) {
+                    failure = std::current_exception();
+                }
+            }
+        }
+        if (failure) {
+            std::rethrow_exception(failure);
         }
     }
 
