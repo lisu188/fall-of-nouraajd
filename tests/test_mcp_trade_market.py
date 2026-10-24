@@ -178,6 +178,113 @@ finally:
 
 
 class McpTradeMarketContractTest(unittest.TestCase):
+    def testNativeUiReadAndKeyboardCallsCrossTheActualServerBoundary(self):
+        calls = []
+
+        class CGameObject:
+            pass
+
+        class CGameGraphicsObject(CGameObject):
+            def getChildren(self):
+                return []
+
+            def getParent(self):
+                return None
+
+            def keyboardEvent(self, gui, event_type, key):
+                calls.append((gui, event_type, key))
+                return True
+
+        class CGameCampaignPanel(CGameGraphicsObject):
+            def getTitle(self):
+                return "Actual source title"
+
+            def getBody(self):
+                return "Actual source body"
+
+            def isDismissed(self):
+                return False
+
+        class CGameCampaignBrowserPanel(CGameGraphicsObject):
+            def getSelectedId(self):
+                return "source-item-instance"
+
+            def hasChoice(self):
+                return False
+
+        server = mcp.EngineMcpServer(ROOT, ROOT / "unused-native-build")
+        gui, reader, browser = CGameGraphicsObject(), CGameCampaignPanel(), CGameCampaignBrowserPanel()
+        server.handles.update(gui=gui, reader=reader, browser=browser)
+        expected = (
+            ("gui", "getChildren", [], []),
+            ("reader", "getParent", [], None),
+            ("reader", "getTitle", [], "Actual source title"),
+            ("reader", "getBody", [], "Actual source body"),
+            ("reader", "isDismissed", [], False),
+            ("browser", "getSelectedId", [], "source-item-instance"),
+            ("browser", "hasChoice", [], False),
+            ("browser", "keyboardEvent", [{"__handle__": "gui"}, 768, 13], True),
+        )
+        for handle, method, args, value in expected:
+            with self.subTest(handle=handle, method=method):
+                response = server._engine_handle_call({"handle": handle, "method": method, "args": args})
+                self.assertFalse(response["isError"], response)
+                self.assertEqual(value, response["structuredContent"]["result"])
+        self.assertEqual([(gui, 768, 13)], calls)
+
+    def testNativeUiSurfaceKeepsGeneralMutationAndWorldLookalikesDeniedBeforeGetattr(self):
+        touched = []
+
+        class CGameObject:
+            def __getattribute__(self, name):
+                if name in {
+                    "getChildren",
+                    "pushChild",
+                    "addChild",
+                    "removeChild",
+                    "setObjectProperty",
+                    "setDialog",
+                    "mouseEvent",
+                    "close",
+                }:
+                    touched.append(name)
+                    raise AssertionError("Denied method must not be dereferenced")
+                return object.__getattribute__(self, name)
+
+        class CGameGraphicsObject(CGameObject):
+            pass
+
+        class CGameCampaignPanel(CGameGraphicsObject):
+            pass
+
+        server = mcp.EngineMcpServer(ROOT, ROOT / "unused-native-build")
+        server.handles.update(world=CGameObject(), panel=CGameCampaignPanel())
+        denied = ("pushChild", "addChild", "removeChild", "setObjectProperty", "setDialog", "mouseEvent", "close")
+        for method in denied:
+            with self.subTest(method=method):
+                response = server._engine_handle_call({"handle": "panel", "method": method})
+                self.assertTrue(response["isError"])
+                self.assertIn("not exported", response["structuredContent"]["error"])
+        response = server._engine_handle_call({"handle": "world", "method": "getChildren"})
+        self.assertTrue(response["isError"])
+        self.assertIn("not exported", response["structuredContent"]["error"])
+        self.assertEqual([], touched)
+
+    def testNativeUiAllowlistAddsOnlyTheExistingTypedInspectionAndKeyboardSurface(self):
+        self.assertEqual(
+            {"getChildren", "getParent", "keyboardEvent"},
+            mcp.MCP_ALLOWED_HANDLE_METHODS.get("CGameGraphicsObject", set()),
+        )
+        self.assertEqual(
+            {"getTitle", "getBody", "isDismissed"}, mcp.MCP_ALLOWED_HANDLE_METHODS.get("CGameCampaignPanel", set())
+        )
+        self.assertEqual(
+            {"getSelectedId", "hasChoice"}, mcp.MCP_ALLOWED_HANDLE_METHODS.get("CGameCampaignBrowserPanel", set())
+        )
+        self.assertNotIn("getChildren", mcp.MCP_ALLOWED_HANDLE_METHODS["CGameObject"])
+        for method in ("pushChild", "addChild", "removeChild", "setObjectProperty", "mouseEvent", "close"):
+            self.assertFalse(any(method in methods for methods in mcp.MCP_ALLOWED_HANDLE_METHODS.values()))
+
     def testOnlyTheReadOnlyGetterIsAddedToTheExistingHandlerSurface(self):
         self.assertIn("getRequestedTradeMarket", mcp.MCP_ALLOWED_HANDLE_METHODS["CGuiHandler"])
         self.assertNotIn("setRequestedTradeMarket", mcp.MCP_ALLOWED_HANDLE_METHODS["CGuiHandler"])
