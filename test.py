@@ -22243,10 +22243,11 @@ class XvfbGameplayTest(unittest.TestCase):
                 "GAME_TEST_OUTPUT_DIR": str(TEST_OUTPUT_DIR / "xvfb" / group_name),
                 "GAME_TEST_SHARD": f"xvfb-{group_name}",
             }
-            child_env_args = [f"{key}={value}" for key, value in sorted(child_env.items())]
             child_test_args = [f"XvfbGameplayProcessTest.{child_test}" for child_test in child_tests]
             duration_hint = sum(XVFB_GAMEPLAY_CHILD_DURATION_HINTS.get(child_test, 1) for child_test in child_tests)
             timeout = max(XVFB_GAMEPLAY_CHILD_TIMEOUT * max(1, len(child_tests)), duration_hint * 3)
+            child_env.update(guiChildTracebackEnv(timeout))
+            child_env_args = [f"{key}={value}" for key, value in sorted(child_env.items())]
             proc = None
             try:
                 proc = subprocess.Popen(
@@ -22761,6 +22762,76 @@ def captureStoryReaders(test_case, game, g):
     test_case.addCleanup(replacement.close)
     return observed
 
+
+def guiChildTracebackEnv(timeout):
+    import math
+
+    if isinstance(timeout, bool) or not isinstance(timeout, (int, float)) or not math.isfinite(timeout) or timeout <= 1:
+        raise ValueError("GUI diagnostic parent timeout must be finite and greater than one second")
+    delay = timeout - min(5.0, timeout / 2)
+    deadline = time.monotonic() + delay
+    if not math.isfinite(deadline):
+        raise ValueError("GUI diagnostic deadline must be finite")
+    return {
+        "GAME_GUI_PARENT_TIMEOUT_SECONDS": str(timeout),
+        "GAME_GUI_TRACEBACK_DELAY_SECONDS": str(delay),
+        "GAME_GUI_TRACEBACK_DEADLINE": str(deadline),
+    }
+
+
+@contextlib.contextmanager
+def isolatedGuiTracebackDiagnostics():
+    import math
+
+    isolated = (
+        os.name == "posix"
+        and os.environ.get("GAME_XVFB_GAMEPLAY_CHILD") == "1"
+        and os.environ.get("SDL_VIDEODRIVER") == "x11"
+        and bool(os.environ.get("DISPLAY"))
+    ) or isOffscreenGameplayChild()
+    keys = ("GAME_GUI_PARENT_TIMEOUT_SECONDS", "GAME_GUI_TRACEBACK_DELAY_SECONDS", "GAME_GUI_TRACEBACK_DEADLINE")
+    if not isolated or not any(key in os.environ for key in keys):
+        yield
+        return
+    try:
+        parent_timeout, delay, deadline = (float(os.environ[key]) for key in keys)
+    except (KeyError, ValueError) as failure:
+        raise ValueError("GUI diagnostic child requires the complete numeric parent envelope") from failure
+    if (
+        not all(math.isfinite(value) for value in (parent_timeout, delay, deadline))
+        or parent_timeout <= 1
+        or delay != parent_timeout - min(5.0, parent_timeout / 2)
+    ):
+        raise ValueError("GUI diagnostic delay must precede its existing parent timeout")
+    remaining = deadline - time.monotonic()
+    if remaining > delay:
+        raise ValueError("GUI diagnostic deadline must use the parent's monotonic clock")
+
+    import faulthandler
+
+    diagnostic_stream = sys.stderr
+    armed = False
+    try:
+        if remaining <= 0:
+            print("[isolated GUI traceback diagnostic already due]", file=diagnostic_stream, flush=True)
+            faulthandler.dump_traceback(file=diagnostic_stream, all_threads=True)
+        else:
+            print(f"[isolated GUI traceback diagnostic in {remaining:.3f}s]", file=diagnostic_stream, flush=True)
+            faulthandler.dump_traceback_later(remaining, repeat=False, file=diagnostic_stream, exit=False)
+            armed = True
+        yield
+    finally:
+        primary_failure = sys.exc_info()[0] is not None
+        if armed:
+            try:
+                faulthandler.cancel_dump_traceback_later()
+            except BaseException as failure:
+                if not primary_failure:
+                    raise
+                try:
+                    print(f"[isolated GUI diagnostic cleanup failed: {failure}]", file=diagnostic_stream, flush=True)
+                except BaseException:
+                    pass
 
 def make_ui_layout_quest(g, index, completed=False):
     quest = g.createObject("CQuest")
@@ -25838,6 +25909,233 @@ class QuestStateHelperTest(unittest.TestCase):
 
 
 class TestRunnerSuiteTest(unittest.TestCase):
+
+    def testGuiDiagnosticEnvironmentUsesTheExistingTimeoutAndMonotonicDeadline(self):
+        from unittest.mock import patch
+
+        self.assertTrue(callable(globals().get("guiChildTracebackEnv")))
+        with patch.object(time, "monotonic", return_value=100.0):
+            for timeout in (90, 270, 300):
+                envelope = guiChildTracebackEnv(timeout)
+                delay = timeout - 5.0
+                self.assertEqual(timeout, float(envelope["GAME_GUI_PARENT_TIMEOUT_SECONDS"]))
+                self.assertEqual(delay, float(envelope["GAME_GUI_TRACEBACK_DELAY_SECONDS"]))
+                self.assertEqual(100.0 + delay, float(envelope["GAME_GUI_TRACEBACK_DEADLINE"]))
+            for timeout in (True, 0, 1, -1, float("inf"), float("nan"), "270"):
+                with self.subTest(timeout=timeout), self.assertRaises(ValueError):
+                    guiChildTracebackEnv(timeout)
+
+    def testGuiDiagnosticContextDoesNotArmOrdinaryRuns(self):
+        from unittest.mock import patch
+
+        self.assertTrue(callable(globals().get("isolatedGuiTracebackDiagnostics")))
+        with (
+            patch("faulthandler.dump_traceback_later") as arm,
+            patch("faulthandler.dump_traceback") as immediate,
+            patch("faulthandler.cancel_dump_traceback_later") as cancel,
+        ):
+            for environment in ({}, {"GAME_GUI_TRACEBACK_DELAY_SECONDS": "invalid"}, {"GAME_XVFB_GAMEPLAY_CHILD": "1"}):
+                with patch.dict(os.environ, environment, clear=True):
+                    with isolatedGuiTracebackDiagnostics():
+                        pass
+            arm.assert_not_called()
+            immediate.assert_not_called()
+            cancel.assert_not_called()
+
+    def testGuiDiagnosticContextCoversXvfbAndWindowsOffscreenWithStartupTimeDeducted(self):
+        from unittest.mock import patch
+
+        self.assertTrue(callable(globals().get("isolatedGuiTracebackDiagnostics")))
+        with patch.object(time, "monotonic", return_value=100.0):
+            envelope = guiChildTracebackEnv(270)
+        for system, environment in (
+            ("posix", {"GAME_XVFB_GAMEPLAY_CHILD": "1", "SDL_VIDEODRIVER": "x11", "DISPLAY": ":1"}),
+            ("nt", {"GAME_OFFSCREEN_GAMEPLAY_CHILD": "1", "SDL_VIDEODRIVER": "dummy", "SDL_RENDER_DRIVER": "software"}),
+        ):
+            with (
+                self.subTest(system=system),
+                patch.object(os, "name", system),
+                patch.dict(os.environ, environment | envelope, clear=True),
+                patch.object(time, "monotonic", return_value=103.0),
+                patch("faulthandler.dump_traceback_later") as arm,
+                patch("faulthandler.dump_traceback") as immediate,
+                patch("faulthandler.cancel_dump_traceback_later") as cancel,
+                patch.object(sys, "stderr", io.StringIO()) as stream,
+            ):
+                with isolatedGuiTracebackDiagnostics():
+                    arm.assert_called_once_with(262.0, repeat=False, file=stream, exit=False)
+                    cancel.assert_not_called()
+                cancel.assert_called_once_with()
+                immediate.assert_not_called()
+
+    def testGuiDiagnosticBoundsAndCleanupKeepTheOriginalFailure(self):
+        from unittest.mock import patch
+
+        self.assertTrue(callable(globals().get("isolatedGuiTracebackDiagnostics")))
+        with patch.object(time, "monotonic", return_value=100.0):
+            envelope = guiChildTracebackEnv(270)
+        isolated = {"GAME_XVFB_GAMEPLAY_CHILD": "1", "SDL_VIDEODRIVER": "x11", "DISPLAY": ":1"}
+        for changed in (
+            {"GAME_GUI_TRACEBACK_DEADLINE": "inf"},
+            {"GAME_GUI_TRACEBACK_DEADLINE": "900"},
+            {"GAME_GUI_TRACEBACK_DELAY_SECONDS": "270"},
+            {"GAME_GUI_PARENT_TIMEOUT_SECONDS": "nan"},
+            {"GAME_GUI_PARENT_TIMEOUT_SECONDS": "bad"},
+        ):
+            with (
+                self.subTest(changed=changed),
+                patch.object(os, "name", "posix"),
+                patch.dict(os.environ, isolated | envelope | changed, clear=True),
+                patch.object(time, "monotonic", return_value=103.0),
+                patch("faulthandler.dump_traceback_later") as arm,
+                patch("faulthandler.cancel_dump_traceback_later") as cancel,
+                self.assertRaises(ValueError),
+            ):
+                with isolatedGuiTracebackDiagnostics():
+                    self.fail("invalid diagnostic envelope must not run the body")
+            arm.assert_not_called()
+            cancel.assert_not_called()
+        primary = RuntimeError("original UI assertion")
+        with (
+            patch.object(os, "name", "posix"),
+            patch.dict(os.environ, isolated | envelope, clear=True),
+            patch.object(time, "monotonic", return_value=103.0),
+            patch("faulthandler.dump_traceback_later") as arm,
+            patch("faulthandler.cancel_dump_traceback_later", side_effect=OSError("cleanup probe")) as cancel,
+            patch.object(sys, "stderr", io.StringIO()) as stream,
+            self.assertRaises(RuntimeError) as caught,
+        ):
+            with isolatedGuiTracebackDiagnostics():
+                raise primary
+        self.assertIs(primary, caught.exception)
+        cancel.assert_called_once_with()
+        self.assertIn("cleanup probe", stream.getvalue())
+        cleanup_failure = OSError("normal cleanup probe")
+        with (
+            patch.object(os, "name", "posix"),
+            patch.dict(os.environ, isolated | envelope, clear=True),
+            patch.object(time, "monotonic", return_value=103.0),
+            patch("faulthandler.dump_traceback_later"),
+            patch("faulthandler.cancel_dump_traceback_later", side_effect=cleanup_failure),
+            patch.object(sys, "stderr", io.StringIO()),
+            self.assertRaises(OSError) as caught,
+        ):
+            with isolatedGuiTracebackDiagnostics():
+                pass
+        self.assertIs(cleanup_failure, caught.exception)
+        arm_failure = OSError("arm probe")
+        with (
+            patch.object(os, "name", "posix"),
+            patch.dict(os.environ, isolated | envelope, clear=True),
+            patch.object(time, "monotonic", return_value=103.0),
+            patch("faulthandler.dump_traceback_later", side_effect=arm_failure),
+            patch("faulthandler.cancel_dump_traceback_later") as cancel,
+            patch.object(sys, "stderr", io.StringIO()),
+            self.assertRaises(OSError) as caught,
+        ):
+            with isolatedGuiTracebackDiagnostics():
+                self.fail("failed arming must not run the body")
+        self.assertIs(arm_failure, caught.exception)
+        cancel.assert_not_called()
+
+    def testGuiDiagnosticAlreadyDueDumpsOnceWithoutOwningATimer(self):
+        from unittest.mock import patch
+
+        self.assertTrue(callable(globals().get("isolatedGuiTracebackDiagnostics")))
+        with patch.object(time, "monotonic", return_value=100.0):
+            envelope = guiChildTracebackEnv(270)
+        isolated = {"GAME_XVFB_GAMEPLAY_CHILD": "1", "SDL_VIDEODRIVER": "x11", "DISPLAY": ":1"}
+        with (
+            patch.object(os, "name", "posix"),
+            patch.dict(os.environ, isolated | envelope, clear=True),
+            patch.object(time, "monotonic", return_value=400.0),
+            patch("faulthandler.dump_traceback_later") as arm,
+            patch("faulthandler.dump_traceback") as immediate,
+            patch("faulthandler.cancel_dump_traceback_later") as cancel,
+            patch.object(sys, "stderr", io.StringIO()) as stream,
+        ):
+            with isolatedGuiTracebackDiagnostics():
+                immediate.assert_called_once_with(file=stream, all_threads=True)
+        arm.assert_not_called()
+        cancel.assert_not_called()
+
+    def testGuiDiagnosticParentPassesEnvelopeWithoutChangingItsTimeout(self):
+        from unittest.mock import patch
+
+        self.assertTrue(callable(globals().get("guiChildTracebackEnv")))
+        child = "test_full_nouraajd_quest_walkthrough_ui"
+        captured = []
+        worker_counts = []
+        expected_timeout = max(XVFB_GAMEPLAY_CHILD_TIMEOUT, XVFB_GAMEPLAY_CHILD_DURATION_HINTS[child] * 3)
+
+        class Process:
+            returncode = 0
+
+            def communicate(self, timeout=None):
+                captured[-1]["timeout"] = timeout
+                return "", ""
+
+        def popen(command, **kwargs):
+            captured.append({"command": command, "kwargs": kwargs})
+            return Process()
+
+        class Executor:
+            def __init__(self, max_workers):
+                worker_counts.append(max_workers)
+
+            def __enter__(self):
+                return self
+
+            def __exit__(self, *args):
+                return False
+
+            def submit(self, callback, *args):
+                future = concurrent.futures.Future()
+                try:
+                    future.set_result(callback(*args))
+                except BaseException as failure:
+                    future.set_exception(failure)
+                return future
+
+        with (
+            patch.object(os, "name", "posix"),
+            patch.dict(
+                os.environ,
+                {"GAME_XVFB_ONLY_CHILD_TESTS": child, "GAME_XVFB_ISOLATE": "1", "GAME_XVFB_JOBS": "1"},
+                clear=True,
+            ),
+            patch.object(shutil, "which", return_value="/mock/xvfb-tool"),
+            patch(__name__ + ".sdl_x11_video_driver_available", return_value=(True, "")),
+            patch.object(subprocess, "Popen", side_effect=popen),
+            patch.object(concurrent.futures, "ThreadPoolExecutor", Executor),
+            patch.object(time, "monotonic", return_value=100.0),
+        ):
+            XvfbGameplayTest("test_keyboard_gameplay_under_xvfb").test_keyboard_gameplay_under_xvfb()
+        self.assertEqual(1, len(captured))
+        self.assertEqual([1], worker_counts)
+        self.assertEqual(expected_timeout, captured[0]["timeout"])
+        arguments = captured[0]["command"]
+        self.assertIn(f"XvfbGameplayProcessTest.{child}", arguments)
+        environment = dict(value.split("=", 1) for value in arguments if value.startswith("GAME_GUI_"))
+        self.assertIn("GAME_GUI_PARENT_TIMEOUT_SECONDS", environment)
+        self.assertIn("GAME_GUI_TRACEBACK_DELAY_SECONDS", environment)
+        self.assertIn("GAME_GUI_TRACEBACK_DEADLINE", environment)
+        self.assertEqual(expected_timeout, float(environment["GAME_GUI_PARENT_TIMEOUT_SECONDS"]))
+        self.assertEqual(expected_timeout - 5.0, float(environment["GAME_GUI_TRACEBACK_DELAY_SECONDS"]))
+        self.assertEqual(100.0 + expected_timeout - 5.0, float(environment["GAME_GUI_TRACEBACK_DEADLINE"]))
+
+    def testGuiDiagnosticMainEntryIsScopedAndLeavesMainBodyUntouched(self):
+        self.assertTrue(callable(globals().get("isolatedGuiTracebackDiagnostics")))
+        tree = ast.parse(Path(__file__).read_text(encoding="utf-8"))
+        guard = tree.body[-1]
+        self.assertIsInstance(guard, ast.If)
+        self.assertEqual(1, len(guard.body))
+        scoped = guard.body[0]
+        self.assertIsInstance(scoped, ast.With)
+        self.assertEqual(1, len(scoped.items))
+        self.assertEqual("isolatedGuiTracebackDiagnostics", scoped.items[0].context_expr.func.id)
+        self.assertEqual(1, len(scoped.body))
+        self.assertEqual("main", scoped.body[0].value.func.id)
 
     def testProgressRecordsSubtestFailuresAndErrorsAfterCleanup(self):
         from unittest.mock import patch
@@ -30843,4 +31141,5 @@ def main():
 
 
 if __name__ == "__main__":
-    main()
+    with isolatedGuiTracebackDiagnostics():
+        main()
