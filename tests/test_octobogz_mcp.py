@@ -552,6 +552,7 @@ class OctobogzMcpWalkthroughTest(unittest.TestCase):
         from tests.gameplay_branch_driver import GameplayBranchDriver
         from tests.gameplay_branch_rewards import resetMainQuestRewardSession
 
+        self.healing_conservation = {}
         validator = self._native_combat_validator
         GameplayBranchDriver.assertNativeCombatOutcomes(validator)
         resetMainQuestRewardSession(validator)
@@ -694,6 +695,10 @@ class OctobogzMcpWalkthroughTest(unittest.TestCase):
             "turn": self.call(self.game_map, "getTurn"),
             "defeat": self.call(self.player, "getStringProperty", "uiDefeatReceipt"),
         }
+        try:
+            self.rememberHealingConservation(stage, items)
+        except BaseException:
+            pass
         print("MCP hunt journey", result, flush=True)
         self.captureEarlyNativeTrace(stage)
         self.reportMcpProfile(stage)
@@ -1039,6 +1044,10 @@ class OctobogzMcpWalkthroughTest(unittest.TestCase):
 
     def marketTransactionState(self):
         player = json.loads(self.engine("jsonify", self.player))["properties"]
+        try:
+            self.rememberHealingConservation("market", player.get("items") or [])
+        except BaseException:
+            pass
         return {
             "player": {key: value for key, value in player.items() if key not in ("items", "gold")},
             "turn": self.call(self.game_map, "getTurn"),
@@ -1089,6 +1098,10 @@ class OctobogzMcpWalkthroughTest(unittest.TestCase):
             sold.append({"name": self.call(item, "getName"), "typeId": self.call(item, "getTypeId"), "price": price})
         for item in strong:
             self.assertIn(item["__handle__"], [owned["__handle__"] for owned in self.call(self.player, "getItems")])
+        try:
+            self.recordHealingConservationEffect("weak sold", rows=sold)
+        except BaseException:
+            pass
         print("MCP hunt ordinary authored market preparation", {"sold": sold, "strongStock": len(strong)}, flush=True)
 
     def basicLesserIngredients(self, items):
@@ -1130,6 +1143,10 @@ class OctobogzMcpWalkthroughTest(unittest.TestCase):
             self.assertEqual("LifePotion", self.call(output, "getTypeId"))
             self.assertEqual(2, self.call(output, "getNumericProperty", "power"))
             self.assertEqual(before, self.marketTransactionState())
+            try:
+                self.recordHealingConservationEffect("basic craft verified")
+            except BaseException:
+                pass
             crafted += 1
         print(
             "MCP hunt ordinary basic brewing",
@@ -1195,6 +1212,10 @@ class OctobogzMcpWalkthroughTest(unittest.TestCase):
             self.assertEqual(before, self.marketTransactionState())
             sold.append({"name": name, "typeId": type_id, "price": price})
         self.assertGreaterEqual(self.call(self.player, "getGold"), required_gold)
+        try:
+            self.recordHealingConservationEffect("mana sold", rows=sold)
+        except BaseException:
+            pass
         print(
             "MCP hunt owned mana funding",
             {"sold": sold, "requiredGold": required_gold, "gold": self.call(self.player, "getGold")},
@@ -1263,6 +1284,10 @@ class OctobogzMcpWalkthroughTest(unittest.TestCase):
             name = self.call(item, "getName")
             self.purchased_lesser_shop_names.add(name)
             purchases.append({"name": name, "price": price})
+        try:
+            self.recordHealingConservationEffect("Lesser bought", rows=purchases)
+        except BaseException:
+            pass
         print("MCP hunt finite authored ingredient purchase", {"initial": initial, "items": purchases}, flush=True)
         return len(purchases)
 
@@ -1285,6 +1310,10 @@ class OctobogzMcpWalkthroughTest(unittest.TestCase):
         lesser = sum(item["typeId"] == "LesserLifePotion" for item in items.values())
         gold = self.call(self.player, "getGold")
         self.healing_preparation_gold = gold
+        try:
+            self.rememberHealingConservation("readiness inventory", properties.get("items") or [])
+        except BaseException:
+            pass
         return {"items": items, "strong": strong, "brewable": min(lesser // 2, gold // 20)}
 
     def ensureAuthoredHealingReadiness(self, initial=True):
@@ -1294,6 +1323,10 @@ class OctobogzMcpWalkthroughTest(unittest.TestCase):
         self.convertOwnedHealingAtAuthoredMarket(initial)
         inventory = self.healingPreparationInventory()
         if inventory["strong"] >= target:
+            try:
+                self.rememberHealingConservation("ready13" if initial else "ready10", None)
+            except BaseException:
+                pass
             print(
                 "MCP hunt measured healing readiness",
                 {"initial": initial, "target": target, "strongStock": inventory["strong"], "fights": 0},
@@ -1357,12 +1390,16 @@ class OctobogzMcpWalkthroughTest(unittest.TestCase):
                         candidates,
                         ("Finite living authored Pritz exhausted before healing readiness", target, inventory),
                     )
-                except AssertionError:
+                except AssertionError as error:
                     try:
                         self.reportAuthoredHealingReadinessFailure(
                             initial, target, inventory, fights, conversions, original, candidates
                         )
-                    except Exception:
+                    except BaseException:
+                        pass
+                    try:
+                        self.addHealingConservationNote(error, initial)
+                    except BaseException:
                         pass
                     raise
                 _, name, anchor_index = candidates[0]
@@ -1385,6 +1422,10 @@ class OctobogzMcpWalkthroughTest(unittest.TestCase):
                     self.assertEqual(before["items"][retained], inventory["items"][retained])
                 consumed.update(removed)
                 fights += 1
+                try:
+                    self.recordHealingConservationEffect("Pritz observed", removed=removed, added=added, actor=name)
+                except BaseException:
+                    pass
                 print(
                     "MCP hunt earned healing combat receipt",
                     {
@@ -1404,6 +1445,10 @@ class OctobogzMcpWalkthroughTest(unittest.TestCase):
             self.convertOwnedHealingAtAuthoredMarket(initial)
             conversions += 1
             inventory = self.healingPreparationInventory()
+        try:
+            self.rememberHealingConservation("ready13" if initial else "ready10", None)
+        except BaseException:
+            pass
         print(
             "MCP hunt measured healing readiness",
             {"initial": initial, "target": target, "strongStock": inventory["strong"], "fights": fights},
@@ -1509,6 +1554,10 @@ class OctobogzMcpWalkthroughTest(unittest.TestCase):
             {"life": life, "soldEarnedWard": parchment, "gold": gold_after},
             flush=True,
         )
+        try:
+            self.recordHealingConservationEffect("Victor purchase verified")
+        except BaseException:
+            pass
         return life
 
     def prepareVictorHealingStock(self):
@@ -2396,6 +2445,191 @@ class OctobogzMcpWalkthroughTest(unittest.TestCase):
                     save_path.with_suffix(".json.bak").unlink(missing_ok=True)
         self.assertMeaningfulPulseWitness()
 
+    def rememberHealingConservation(self, stage, serialized_items=None):
+        try:
+            if getattr(self, "mcp_profile_class", None) != "Sorcerer":
+                return
+            state = getattr(self, "healing_conservation", None)
+            if not state:
+                state = {"ids": [], "events": [], "effects": [], "anchors": {}, "last": None, "gaps": []}
+                self.healing_conservation = state
+
+            def gap(reason):
+                if reason not in state["gaps"] and len(state["gaps"]) < 8:
+                    state["gaps"].append(reason)
+
+            if serialized_items is not None:
+                rows = []
+                if len(serialized_items) > 128:
+                    gap("inventory-cap")
+                for item in serialized_items[:128]:
+                    values = item.get("properties", item)
+                    tags = values.get("tags") or []
+                    name, type_id, power = values.get("name"), values.get("typeId"), values.get("power", 0)
+                    if "heal" not in tags and "mana" not in tags and type_id != "LesserLifePotion":
+                        continue
+                    if not isinstance(name, str) or not name or not isinstance(type_id, str):
+                        gap("missing-descriptor")
+                        continue
+                    if len(name) > 160 or len(type_id) > 80 or type(power) not in (int, float):
+                        gap("descriptor-cap")
+                        continue
+                    rows.append([name, type_id, power, int("heal" in tags) | (2 * int("mana" in tags))])
+                rows.sort(key=lambda row: row[0])
+                current = []
+                by_name = {row[0]: index for index, row in enumerate(state["ids"])}
+                for row in rows:
+                    if row[0] in by_name:
+                        index = by_name[row[0]]
+                        if state["ids"][index] != row:
+                            gap("descriptor-changed")
+                    elif len(state["ids"]) < 64:
+                        index = len(state["ids"])
+                        by_name[row[0]] = index
+                        state["ids"].append(row)
+                    else:
+                        gap("identity-cap")
+                        continue
+                    if index in current:
+                        gap("duplicate-name")
+                    else:
+                        current.append(index)
+                previous = state["last"]
+                removed = sorted(set(previous or ()) - set(current))
+                added = sorted(set(current) - set(previous or ()))
+                state["marketDelta"] = [removed, added] if stage == "market" and previous is not None else None
+                if previous is None or removed or added:
+                    event = {"s": stage[:64], "r": removed, "a": added}
+                    if previous is None:
+                        event["baseline"] = True
+                    if len(state["events"]) >= 24:
+                        state["events"].pop(0)
+                        gap("event-cap")
+                    state["events"].append(event)
+                state["last"] = current
+                state["observedRelevantCount"] = len(rows)
+            anchors = {
+                "ready13": "ready13",
+                "ready10": "ready10",
+                "before entering the hunt lair": "hunt",
+                "after scout": "scout",
+                "partial reload": "reload",
+                "before owned town portal retreat": "retreatBefore",
+                "owned town portal retreat complete": "retreatAfter",
+            }
+            if stage in anchors and state["last"] is not None:
+                state["anchors"].setdefault(anchors[stage], list(state["last"]))
+        except BaseException:
+            try:
+                state = getattr(self, "healing_conservation", None)
+                if state is not None and "observation-error" not in state["gaps"]:
+                    state["gaps"].append("observation-error")
+            except BaseException:
+                pass
+
+    def recordHealingConservationEffect(self, kind, rows=None, removed=None, added=None, actor=None):
+        try:
+            state = getattr(self, "healing_conservation", None)
+            if not state:
+                return
+            by_name = {row[0]: index for index, row in enumerate(state["ids"])}
+            effect = {"k": kind}
+            if rows is not None:
+                effect["i"] = [[by_name.get(row["name"]), row["price"]] for row in rows[:16]]
+                if len(rows) > 16 or any(row[0] is None for row in effect["i"]):
+                    if "effect-cap-or-unseen-name" not in state["gaps"]:
+                        state["gaps"].append("effect-cap-or-unseen-name")
+            elif removed is not None:
+                effect["r"] = [by_name.get(name) for name in sorted(removed)[:64]]
+                effect["a"] = [by_name.get(name) for name in sorted(added)[:64]]
+                if len(removed) > 64 or len(added) > 64 or any(index is None for index in effect["r"] + effect["a"]):
+                    if "effect-unseen-name" not in state["gaps"]:
+                        state["gaps"].append("effect-unseen-name")
+                effect["actor"] = actor[:160]
+            else:
+                effect["delta"] = state.get("marketDelta")
+                if effect["delta"] is None and "effect-boundary-unavailable" not in state["gaps"]:
+                    state["gaps"].append("effect-boundary-unavailable")
+            if len(state["effects"]) >= 16:
+                state["effects"].pop(0)
+                if "effect-cap" not in state["gaps"]:
+                    state["gaps"].append("effect-cap")
+            state["effects"].append(effect)
+        except BaseException:
+            try:
+                if state is not None and "effect-error" not in state["gaps"]:
+                    state["gaps"].append("effect-error")
+            except BaseException:
+                pass
+
+    def healingConservationNote(self, initial):
+        state = getattr(self, "healing_conservation", None) or {}
+        names = [row[0] for row in state.get("ids", ())]
+        prefix = os.path.commonprefix(names) if names else ""
+        types = sorted({row[1] for row in state.get("ids", ())})
+        gaps = list(state.get("gaps", ()))
+        if state.get("last") is None:
+            gaps.append("observations-unavailable")
+        anchors = state.get("anchors", {})
+        if not initial and "ready13" not in anchors:
+            gaps.append("initial13-unobserved")
+        if not initial:
+            for name in ("hunt", "reload", "retreatBefore", "retreatAfter"):
+                if name not in anchors:
+                    gaps.append("missing-" + name)
+        if "reload" in anchors and "scout" not in anchors:
+            gaps.append("Scout/equipment/reload-boundary-unavailable")
+        payload = {
+            "v": 1,
+            "complete": not gaps,
+            "gaps": gaps,
+            "prefix": prefix,
+            "types": types,
+            "ids": [[row[0][len(prefix) :], types.index(row[1]), row[2], row[3]] for row in state.get("ids", ())],
+            "anchors": anchors,
+            "events": list(state.get("events", ())),
+            "effects": list(state.get("effects", ())),
+            "last": state.get("last"),
+            "observedRelevantCount": state.get("observedRelevantCount"),
+        }
+
+        def encode():
+            return "HEALING_CONSERVATION " + json.dumps(
+                payload, ensure_ascii=True, separators=(",", ":"), allow_nan=False
+            )
+
+        def fits(note):
+            escaped = note.replace("%", "%25").replace("\r", "%0D").replace("\n", "%0A")
+            return len(note.encode("utf-8")) + 2 <= 1400 and len(escaped.encode("utf-8")) + 2 <= 1400
+
+        note = encode()
+        while not fits(note) and (payload["events"] or payload["effects"]):
+            payload["complete"] = False
+            if "note-byte-cap" not in payload["gaps"]:
+                payload["gaps"].append("note-byte-cap")
+            if payload["events"]:
+                payload["events"].pop(0)
+            else:
+                payload["effects"].pop(0)
+            note = encode()
+        if not fits(note):
+            payload = {
+                "v": 1,
+                "complete": False,
+                "gaps": ["note-byte-cap"],
+                "identityCount": len(names),
+                "anchorCounts": {key: len(value) for key, value in anchors.items()},
+                "observedRelevantCount": state.get("observedRelevantCount"),
+            }
+            note = encode()
+        return note
+
+    def addHealingConservationNote(self, error, initial):
+        try:
+            error.add_note(self.healingConservationNote(initial))
+        except BaseException:
+            pass
+
     def rememberFiniteOriginalHealingStock(self, receipt, quotes, skip):
         row = {key: receipt[key] for key in ("initial", "needed", "gold")}
         for key in ("originalNames", "purchasedNames", "availableOriginalNames"):
@@ -2446,6 +2680,310 @@ class OctobogzMcpWalkthroughTest(unittest.TestCase):
 
 
 class OctobogzDiagnosticTest(unittest.TestCase):
+    def healingConservationData(self, walker, initial=False):
+        method = getattr(walker, "healingConservationNote", None)
+        self.assertTrue(callable(method), "Readiness must retain pure cached conservation data at failure")
+        note = method(initial)
+        self.assertTrue(note.startswith("HEALING_CONSERVATION "))
+        return json.loads(note.removeprefix("HEALING_CONSERVATION "))
+
+    def healingConservationNames(self, data, indices):
+        return [data["prefix"] + data["ids"][index][0] for index in indices]
+
+    def testHealingConservationKeepsInitialThirteenAndActualFailureIdentityWithoutQueries(self):
+        from unittest.mock import Mock
+
+        walker, state, items, *_ = self.authoredReadinessFixture(strong=13, foes=0)
+        walker.mcp_profile_class = "Sorcerer"
+        walker.engine = Mock(wraps=walker.engine)
+        with patch("builtins.print"):
+            walker.ensureAuthoredHealingReadiness()
+        initial_names = set(items)
+        for name in sorted(items)[:4]:
+            del items[name]
+        failures = []
+        original_assert = walker.assertTrue
+
+        def assert_true(value, message=None):
+            try:
+                original_assert(value, message)
+            except AssertionError as error:
+                failures.append((error, error.args))
+                raise
+
+        walker.assertTrue = assert_true
+        with patch("builtins.print"), self.assertRaises(AssertionError) as raised:
+            walker.ensureAuthoredHealingReadiness(initial=False)
+        self.assertIs(raised.exception, failures[-1][0])
+        self.assertIs(raised.exception.args, failures[-1][1])
+        notes = getattr(raised.exception, "__notes__", [])
+        self.assertEqual(1, len(notes), "The same primary assertion needs a bounded cached end note")
+        data = self.healingConservationData(walker)
+        self.assertIn("ready13", data["anchors"])
+        self.assertEqual(initial_names, set(self.healingConservationNames(data, data["anchors"]["ready13"])))
+        self.assertEqual(set(items), set(self.healingConservationNames(data, data["last"])))
+        self.assertEqual(4, len(data["events"][-1]["r"]))
+        self.assertNotIn("consumed", notes[0])
+        self.assertEqual(3, walker.engine.call_count, "Observe the original one plus two serialized inventories only")
+        self.assertEqual(0, state["fights"])
+        walker.walkTo.assert_not_called()
+
+    def testHealingConservationUsesRealSnapshotRowsAcrossScoutReloadAndOwnedRetreat(self):
+        from unittest.mock import Mock
+
+        walker, _, items, *_ = self.authoredReadinessFixture(strong=13, foes=0)
+        walker.mcp_profile_class = "Sorcerer"
+        calls = []
+
+        def engine(method, player):
+            calls.append(("engine", method))
+            self.assertEqual(("jsonify", walker.player), (method, player))
+            return json.dumps(
+                {
+                    "properties": {
+                        "items": [{"properties": row, "__handle__": walker.player} for row in items.values()],
+                        "posx": 57,
+                        "posy": 115,
+                        "posz": 0,
+                        "hp": 91,
+                    }
+                }
+            )
+
+        def call(handle, method, *args):
+            calls.append(("call", method))
+            return {
+                "getGold": 1600,
+                "getLevel": 4,
+                "getNumericProperty": 6250,
+                "getMana": 140,
+                "getTurn": 300,
+                "getStringProperty": "",
+            }[method]
+
+        walker.call, walker.engine = call, engine
+        walker.captureEarlyNativeTrace, walker.reportMcpProfile = Mock(), Mock()
+        with patch("builtins.print"):
+            walker.ensureAuthoredHealingReadiness()
+            walker.snapshot("before entering the hunt lair")
+            del items["earnedStrong0"]
+            walker.snapshot("after scout")
+            walker.player = "new-native-handle-after-reload"
+            walker.snapshot("partial reload")
+            walker.snapshot("before owned town portal retreat")
+            del items["earnedStrong1"]
+            walker.snapshot("owned town portal retreat complete")
+        data = self.healingConservationData(walker)
+        anchors = data["anchors"]
+        self.assertEqual(anchors["scout"], anchors["reload"], "New native handles cannot invent item loss")
+        self.assertEqual(13, len(anchors["hunt"]))
+        self.assertEqual(11, len(anchors["retreatAfter"]))
+        self.assertTrue(data["complete"])
+        self.assertEqual(6, sum(row[0] == "engine" for row in calls))
+        self.assertEqual(31, sum(row[0] == "call" for row in calls))
+        before_note = list(calls)
+        self.healingConservationData(walker)
+        self.assertEqual(before_note, calls, "Rendering the trail cannot query a game")
+
+    def testHealingConservationQualifiesMissingScoutBoundaryAndEqualCountReplacement(self):
+        walker, _, items, *_ = self.authoredReadinessFixture(strong=13, foes=0)
+        walker.mcp_profile_class = "Sorcerer"
+        with patch("builtins.print"):
+            walker.ensureAuthoredHealingReadiness()
+            old = items.pop("earnedStrong0")
+            items["differentEarnedItem"] = {**old, "name": "differentEarnedItem"}
+            walker.healingPreparationInventory()
+        remember = getattr(walker, "rememberHealingConservation", None)
+        self.assertTrue(callable(remember))
+        remember("partial reload")
+        data = self.healingConservationData(walker)
+        self.assertFalse(data["complete"])
+        self.assertIn("Scout/equipment/reload-boundary-unavailable", data["gaps"])
+        last = data["events"][-1]
+        self.assertEqual(["earnedStrong0"], self.healingConservationNames(data, last["r"]))
+        self.assertEqual(["differentEarnedItem"], self.healingConservationNames(data, last["a"]))
+        self.assertEqual(13, len(data["last"]))
+
+    def testHealingConservationRecordsVerifiedCraftAndSaleWithoutCallingUnknownLossConsumption(self):
+        walker, owned, _, state, transactions = self.healingIngredientConservationFixture(
+            lesser_count=2, remaining_originals=()
+        )
+        walker.mcp_profile_class = "Sorcerer"
+        with patch("builtins.print"):
+            walker.prepareHealingStockAtAuthoredMarket()
+        data = self.healingConservationData(walker, initial=True)
+        kinds = [row["k"] for row in data["effects"]]
+        self.assertIn("basic craft verified", kinds)
+        self.assertIn("weak sold", kinds)
+        craft = next(row for row in data["effects"] if row["k"] == "basic craft verified")
+        self.assertEqual(
+            {"earnedLesser0", "earnedLesser1"}, set(self.healingConservationNames(data, craft["delta"][0]))
+        )
+        self.assertEqual(["craftedLife1"], self.healingConservationNames(data, craft["delta"][1]))
+        sold = next(row for row in data["effects"] if row["k"] == "weak sold" and row["i"])
+        self.assertEqual(["earnedBeer"], self.healingConservationNames(data, [row[0] for row in sold["i"]]))
+        self.assertEqual(1, state["crafted"])
+        self.assertEqual(2, len(transactions))
+        owned[:] = [row for row in owned if row["__handle__"] != "retainedStrong"]
+        walker.healingPreparationInventory()
+        data = self.healingConservationData(walker, initial=True)
+        self.assertEqual(["retainedStrong"], self.healingConservationNames(data, data["events"][-1]["r"]))
+        self.assertNotIn("consumed", walker.healingConservationNote(True))
+
+    def testHealingConservationBoundedNoteIsAsciiExplicitAboutDroppedDataAndDescriptorChanges(self):
+        walker = OctobogzMcpWalkthroughTest("runTest")
+        walker.mcp_profile_class = "Sorcerer"
+        remember = getattr(walker, "rememberHealingConservation", None)
+        self.assertTrue(callable(remember))
+        for index in range(40):
+            remember(
+                "ordinary observed interval",
+                [
+                    {
+                        "properties": {
+                            "name": f"native-{index}-" + "%界\ud800\r\n::error" * 4,
+                            "typeId": "LifePotion",
+                            "power": 2,
+                            "tags": ["heal"],
+                        }
+                    }
+                ],
+            )
+        remember("ready13")
+        for index in range(100):
+            remember(
+                "overflow interval",
+                [{"properties": {"name": f"overflow{index}", "typeId": "LifePotion", "power": 2, "tags": ["heal"]}}],
+            )
+        note = walker.healingConservationNote(False)
+        self.assertTrue(note.isascii())
+        self.assertLessEqual(len(note.encode("utf-8")) + 2, 1400)
+        self.assertLessEqual(len(note.replace("%", "%25").encode("utf-8")) + 2, 1400)
+        data = self.healingConservationData(walker)
+        self.assertFalse(data["complete"])
+        self.assertTrue(data["gaps"])
+        self.assertNotIn("\r", note)
+        self.assertNotIn("\n", note)
+        clean = OctobogzMcpWalkthroughTest("runTest")
+        clean.mcp_profile_class = "Sorcerer"
+        clean.rememberHealingConservation(
+            "first", [{"name": "same", "typeId": "LifePotion", "power": 2, "tags": ["heal"]}]
+        )
+        clean.rememberHealingConservation(
+            "next", [{"name": "same", "typeId": "ManaPotion", "power": 2, "tags": ["mana"]}]
+        )
+        self.assertIn("descriptor-changed", self.healingConservationData(clean, initial=True)["gaps"])
+
+    def testHealingConservationReportAndNoteFailuresCannotReplaceThePrimaryAssertion(self):
+        from unittest.mock import Mock
+
+        for broken in ("report", "note", "note-builder"):
+            for error_type in (OSError, KeyboardInterrupt):
+                with self.subTest(broken=broken, error_type=error_type.__name__):
+                    walker, *_ = self.authoredReadinessFixture(strong=9, foes=0)
+                    walker.mcp_profile_class = "Sorcerer"
+                    primary = AssertionError("same native readiness failure")
+                    original_assert = walker.assertTrue
+
+                    def assert_true(value, message=None):
+                        if (
+                            isinstance(message, tuple)
+                            and message[0] == "Finite living authored Pritz exhausted before healing readiness"
+                        ):
+                            raise primary
+                        return original_assert(value, message)
+
+                    walker.assertTrue = assert_true
+                    target = {
+                        "report": "reportAuthoredHealingReadinessFailure",
+                        "note": "addHealingConservationNote",
+                        "note-builder": "healingConservationNote",
+                    }[broken]
+                    setattr(walker, target, Mock(side_effect=error_type("report unavailable")))
+                    caught = None
+                    with patch("builtins.print"):
+                        try:
+                            walker.ensureAuthoredHealingReadiness(initial=False)
+                        except BaseException as error:
+                            caught = error
+                    self.assertIs(primary, caught)
+                    self.assertEqual(("same native readiness failure",), caught.args)
+
+    def testHealingConservationPritzEffectsRemainObservedIntervalsAndDoNotAddRpcCalls(self):
+        from unittest.mock import Mock
+
+        walker, state, _, *_ = self.authoredReadinessFixture(strong=9, foes=1)
+        walker.mcp_profile_class = "Sorcerer"
+        walker.engine = Mock(wraps=walker.engine)
+        with patch("builtins.print"):
+            walker.ensureAuthoredHealingReadiness(initial=False)
+        data = self.healingConservationData(walker)
+        effect_row = next((row for row in data["effects"] if row["k"] == "Pritz observed"), None)
+        self.assertIsNotNone(effect_row)
+        self.assertEqual("existingPritz0", effect_row["actor"])
+        self.assertEqual([], effect_row["r"])
+        self.assertEqual(["actualLoot1-0"], self.healingConservationNames(data, effect_row["a"]))
+        self.assertEqual(1, state["fights"])
+        self.assertEqual(4, walker.engine.call_count)
+        self.assertNotIn("consumed", walker.healingConservationNote(False))
+
+    def testHealingConservationRetainsVerifiedFundingNamesUsingExistingMarketObservations(self):
+        from tests.test_octobogz_hunt import OctobogzHuntTest
+        from unittest.mock import Mock
+
+        walker, handles, inventory, stock, sold, gold = OctobogzHuntTest("runTest").authoredMarketFixture()
+        walker.mcp_profile_class = "Sorcerer"
+        original_engine = walker.engine
+
+        def serialized_engine(method, player):
+            data = json.loads(original_engine(method, player))
+            data["properties"]["items"] = []
+            for handle in inventory:
+                row = walker.fixture_metadata[handle["__handle__"]]
+                data["properties"]["items"].append(
+                    {"properties": {**row, "tags": [tag for tag in ("heal", "mana") if row[tag]]}}
+                )
+            return json.dumps(data)
+
+        walker.engine = Mock(side_effect=serialized_engine)
+        market = walker.call(walker.object("market1"), "getObjectProperty", "market")
+        projection = json.dumps({"SpicedBeer": {"class": "ManaPotion", "properties": {"singleUse": True}}})
+        with patch("pathlib.Path.read_text", return_value=projection), patch("builtins.print"):
+            self.assertEqual(1, walker.fundBasicIngredientsWithOwnedMana(market, 300))
+        data = self.healingConservationData(walker, initial=True)
+        row = next((row for row in data["effects"] if row["k"] == "mana sold"), None)
+        self.assertIsNotNone(row)
+        self.assertEqual(["manaBeer"], self.healingConservationNames(data, [item[0] for item in row["i"]]))
+        self.assertEqual([[row["i"][0][0], 320]], row["i"])
+        self.assertEqual([handles["mana"]], sold)
+        self.assertEqual([handles["mana"]], stock)
+        self.assertEqual(520, gold[0])
+        self.assertEqual(2, walker.engine.call_count, "Only the existing transaction snapshots serialize inventory")
+
+    def testHealingConservationFreshClassResetUsesTheOriginalNativeCallSequence(self):
+        import sys
+        import types
+        from unittest.mock import Mock
+
+        driver = types.ModuleType("tests.gameplay_branch_driver")
+        driver.GameplayBranchDriver = types.SimpleNamespace(assertNativeCombatOutcomes=Mock())
+        rewards = types.ModuleType("tests.gameplay_branch_rewards")
+        rewards.resetMainQuestRewardSession = Mock()
+        walker = OctobogzMcpWalkthroughTest("runTest")
+        walker.healing_conservation = {"stale": "previous class data"}
+        walker._native_combat_validator = object()
+        walker.engine = Mock(return_value="fresh game")
+        walker.refresh, walker.pump = Mock(), Mock()
+        with patch.dict(sys.modules, {driver.__name__: driver, rewards.__name__: rewards}):
+            walker.startFreshHuntGame("Sorcerer")
+        self.assertEqual({}, walker.healing_conservation)
+        self.assertEqual(
+            [("CGameLoader.loadGame",), ("CGameLoader.startGameWithPlayer", "fresh game", "nouraajd", "Sorcerer")],
+            [row.args for row in walker.engine.call_args_list],
+        )
+        walker.refresh.assert_called_once_with()
+        walker.pump.assert_called_once_with()
+
     def healingIngredientConservationFixture(
         self, *, lesser_count=1, remaining_originals=("reservedThird",), untracked_lesser=False, strong=True
     ):
