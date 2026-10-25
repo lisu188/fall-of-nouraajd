@@ -25542,26 +25542,32 @@ class XvfbGameplayProcessTest(unittest.TestCase):
         transitions = []
         transition_phases = []
         original_prepared_change_map = game.CGame.changeMapWithPreparation
+        original_prepared_change_map_flow = game.CGame.changeMapWithPreparationFlow
         try:
 
-            def capturePreparedChangeMap(game_instance, map_name, beforeEntry, completion):
+            def capturePreparedChangeMap(game_instance, map_name, beforeEntry, completion, commitBeforeEntry=None):
                 transitions.append(map_name)
                 self_map = game_instance.getMap()
                 pending = json.loads(player.getStringProperty("campaign_pendingTransition"))
                 self.assertEqual(game_map, self_map)
                 self.assertEqual(map_name, pending["targetMap"])
                 self.assertEqual("", pending["targetScenario"], "this walkthrough starts a standalone map")
-                beforeEntry()
+                self.assertIsNone(beforeEntry(), "standalone ritual preparation must not discard a presentation")
                 transition_phases.append("prepared")
+                if commitBeforeEntry is not None:
+                    commitBeforeEntry()
                 completion(True)
                 transition_phases.append("completed")
                 return True
 
             game.CGame.changeMapWithPreparation = capturePreparedChangeMap
+            if callable(original_prepared_change_map_flow):
+                game.CGame.changeMapWithPreparationFlow = capturePreparedChangeMap
             show_dialog_with_keyboard(self, game, g, beren, [2])
             run_blocking_gui_action(game, beren.finish_cleanse)
         finally:
             game.CGame.changeMapWithPreparation = original_prepared_change_map
+            game.CGame.changeMapWithPreparationFlow = original_prepared_change_map_flow
 
         player.checkQuests()
         pump_event_loop(5)

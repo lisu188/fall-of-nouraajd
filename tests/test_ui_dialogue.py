@@ -1557,6 +1557,280 @@ class DialogueContentTest(unittest.TestCase):
                     fixture.frame()
                     self.assertEqual([], fixture.state["tasks"])
 
+    def ritualPreparedTransitionFixture(self, mode="flow", fault=None, dispatch_only=False):
+        selected_source = getattr(type(self), "_ritualPreparedSource", None)
+        if selected_source is None:
+            runner = ast.parse((ROOT / "test.py").read_text(encoding="utf-8"))
+            owner = next(
+                node
+                for node in runner.body
+                if isinstance(node, ast.ClassDef) and node.name == "XvfbGameplayProcessTest"
+            )
+            method = next(
+                node
+                for node in owner.body
+                if isinstance(node, ast.FunctionDef) and node.name == "test_full_nouraajd_quest_walkthrough_ui"
+            )
+            start = next(
+                index
+                for index, node in enumerate(method.body)
+                if isinstance(node, ast.Assign)
+                and any(isinstance(target, ast.Name) and target.id == "transitions" for target in node.targets)
+            )
+            stop = next(index for index in range(start, len(method.body)) if isinstance(method.body[index], ast.Try))
+            fixture_nodes = copy.deepcopy(method.body[start : stop + 1])
+            campaign_tree = ast.parse((ROOT / "res/campaign.py").read_text(encoding="utf-8"))
+            campaign_nodes = [
+                copy.deepcopy(node)
+                for node in campaign_tree.body
+                if isinstance(node, ast.FunctionDef)
+                and node.name in ("_requestPendingTransition", "_supportsCommitCallback")
+            ]
+            selected_source = (fixture_nodes, campaign_nodes)
+            type(self)._ritualPreparedSource = selected_source
+        fixture_nodes, campaign_nodes = copy.deepcopy(selected_source)
+        self.assertEqual(2, len(campaign_nodes))
+        primary = ValueError("controlled ritual " + str(fault))
+        pending = {"campaignId": "", "scenario": "", "outcome": "cleanse", "targetScenario": "", "targetMap": "ritual"}
+        pending_text = json.dumps(pending, sort_keys=True)
+        writes, calls, events = [], [], []
+        shared = {"transitions": [], "transition_phases": [], "faulted": False}
+
+        class Player:
+            def __init__(self):
+                self.properties = {"campaign_pendingTransition": pending_text, "campaign_history": "[]"}
+                self.gold = 25
+                self.items = {"retained-item"}
+
+            def getStringProperty(self, name):
+                return self.properties.get(name, "")
+
+            def setStringProperty(self, name, value):
+                if name == "campaign_pendingTransition":
+                    stage = json.loads(value).get("stage", "pending") if value else "cleared"
+                    if fault == stage and not shared["faulted"]:
+                        shared["faulted"] = True
+                        raise primary
+                    writes.append((stage, tuple(shared["transition_phases"])))
+                self.properties[name] = value
+
+            def getGold(self):
+                if fault == "prepare" and not shared["faulted"]:
+                    shared["faulted"] = True
+                    raise primary
+                events.append("beforeEntry")
+                return self.gold
+
+            def addGold(self, amount):
+                self.gold += amount
+
+            def getItems(self):
+                return set(self.items)
+
+            def addItem(self, item):
+                self.items.add(item)
+
+        player = Player()
+        game_map = types.SimpleNamespace(mapName="nouraajd", getPlayer=lambda: player)
+        foreign_map = types.SimpleNamespace(mapName="foreign", getPlayer=lambda: player)
+
+        class Game:
+            def getMap(self):
+                if fault == "wrong-owner":
+                    return foreign_map
+                if fault in ("wrong-target", "campaign-target") and not shared["faulted"]:
+                    shared["faulted"] = True
+                    changed = dict(pending)
+                    changed["targetMap" if fault == "wrong-target" else "targetScenario"] = "unexpected"
+                    player.properties["campaign_pendingTransition"] = json.dumps(changed, sort_keys=True)
+                return game_map
+
+            def getContext(self):
+                return types.SimpleNamespace(isActive=lambda: True)
+
+            def getGuiHandler(self):
+                return types.SimpleNamespace(showMessageLater=lambda message: events.append("rollback-message"))
+
+            def changeMapWithPreparation(self, map_name, beforeEntry, completion):
+                calls.append("native-sync")
+                beforeEntry()
+                completion(True)
+                return True
+
+            def changeMapWithPreparationFlow(self, map_name, beforeEntry, completion, commitBeforeEntry=None):
+                calls.append("native-flow")
+                self_test.assertIsNone(beforeEntry())
+                if commitBeforeEntry is not None:
+                    commitBeforeEntry()
+                completion(True)
+                return True
+
+        self_test = self
+        if mode == "sync":
+            Game.changeMapWithPreparationFlow = None
+        elif mode == "legacy-flow":
+
+            def legacyFlow(game_instance, map_name, beforeEntry, completion):
+                calls.append("legacy-flow")
+                self.assertEqual([], list(beforeEntry()))
+                completion(True)
+                return True
+
+            Game.changeMapWithPreparationFlow = legacyFlow
+        game_instance = Game()
+        original_sync, original_flow = Game.changeMapWithPreparation, Game.changeMapWithPreparationFlow
+        store = types.SimpleNamespace(
+            player=player, scenario=lambda: "", campaign_id=lambda: "", history=lambda: [], advance=lambda value: None
+        )
+
+        class CompletionOwner:
+            def __init__(self, game_instance, current_store):
+                self.pending = player.getStringProperty("campaign_pendingTransition")
+                self.map = game_map
+                self.context = None
+
+            def isCurrent(self, **kwargs):
+                return True
+
+        namespace = {
+            "json": json,
+            "state": lambda value: store,
+            "_transitionInFlight": lambda value: False,
+            "_pendingTransition": lambda value: json.loads(player.getStringProperty("campaign_pendingTransition")),
+            "_CompletionOwner": CompletionOwner,
+            "_callbackGame": lambda value: value,
+            "_TransitionGuard": lambda value: value,
+            "_INFLIGHT_TRANSITIONS": {},
+            "CAMPAIGN_PENDING_PROPERTY": "campaign_pendingTransition",
+            "CAMPAIGN_HISTORY_PROPERTY": "campaign_history",
+            "_require": lambda condition, message: self.assertTrue(condition, message),
+            "_show_message": lambda *args: events.append("rollback-message"),
+            "_remove_inventory_items": lambda current, predicate: None,
+        }
+        exec(
+            compile(
+                ast.fix_missing_locations(ast.Module(body=campaign_nodes, type_ignores=[])), "res/campaign.py", "exec"
+            ),
+            namespace,
+        )
+
+        def finishCleanse():
+            if fault == "finish":
+                raise primary
+            if fault == "presentation":
+                return game_instance.changeMapWithPreparationFlow(
+                    "ritual", lambda: iter(("unexpected briefing",)), lambda success: None, lambda: None
+                )
+            return namespace["_requestPendingTransition"](game_instance, dict(pending))
+
+        beren = types.SimpleNamespace(finish_cleanse=finishCleanse)
+
+        def showDialog(test, game, current, dialog, inputs):
+            self.assertIs(current, game_instance)
+            self.assertIs(dialog, beren)
+            self.assertEqual([2], inputs)
+            if fault == "dialog":
+                raise primary
+            events.append("dialog")
+
+        shared.update(
+            self=self,
+            game=types.SimpleNamespace(CGame=Game),
+            g=game_instance,
+            game_map=game_map,
+            player=player,
+            json=json,
+            beren=beren,
+            show_dialog_with_keyboard=showDialog,
+            run_blocking_gui_action=lambda game, action: action(),
+        )
+        error = None
+        with patch.dict(
+            sys.modules, {"ui": types.SimpleNamespace(runUiFlow=lambda *args: self.fail("unexpected briefing"))}
+        ):
+            try:
+                if dispatch_only:
+                    namespace["_requestPendingTransition"](game_instance, dict(pending))
+                else:
+                    exec(
+                        compile(
+                            ast.fix_missing_locations(ast.Module(body=fixture_nodes, type_ignores=[])),
+                            "test.py",
+                            "exec",
+                        ),
+                        shared,
+                    )
+            except BaseException as caught:
+                error = caught
+        return types.SimpleNamespace(
+            transitions=shared["transitions"],
+            phases=shared["transition_phases"],
+            writes=writes,
+            calls=calls,
+            events=events,
+            player=player,
+            game=game_instance,
+            game_map=game_map,
+            error=error,
+            primary=primary,
+            inflight=namespace["_INFLIGHT_TRANSITIONS"],
+            sync_restored=Game.changeMapWithPreparation is original_sync,
+            flow_restored=Game.changeMapWithPreparationFlow is original_flow,
+        )
+
+    def testRitualFixtureCapturesActualFourCallbackFlowAndCommitsBeforeCompletion(self):
+        result = self.ritualPreparedTransitionFixture()
+        self.assertIsNone(result.error)
+        self.assertEqual(["ritual"], result.transitions)
+        self.assertEqual(["prepared", "completed"], result.phases)
+        self.assertEqual([("entry", ("prepared",)), ("cleared", ("prepared",))], result.writes)
+        self.assertEqual([], result.calls, "the fixture must intercept the preferred flow without a map transfer")
+        self.assertEqual("", result.player.getStringProperty("campaign_pendingTransition"))
+        self.assertIs(result.game_map, result.game.getMap())
+        self.assertEqual("nouraajd", result.game_map.mapName)
+        self.assertEqual((25, {"retained-item"}), (result.player.gold, result.player.items))
+        self.assertEqual({}, result.inflight)
+        self.assertTrue(result.sync_restored and result.flow_restored)
+
+    def testRitualFixtureRetainsActualSynchronousFallbackAndRestoresBothHooks(self):
+        result = self.ritualPreparedTransitionFixture(mode="sync")
+        self.assertIsNone(result.error)
+        self.assertEqual(["ritual"], result.transitions)
+        self.assertEqual(["prepared", "completed"], result.phases)
+        self.assertEqual([("entry", ()), ("cleared", ("prepared",))], result.writes)
+        self.assertEqual([], result.calls)
+        self.assertEqual("", result.player.getStringProperty("campaign_pendingTransition"))
+        self.assertTrue(result.sync_restored and result.flow_restored)
+
+    def testRitualActualLegacyThreeCallbackFlowCommitsDuringPreparation(self):
+        result = self.ritualPreparedTransitionFixture(mode="legacy-flow", dispatch_only=True)
+        self.assertIsNone(result.error)
+        self.assertEqual(["legacy-flow"], result.calls)
+        self.assertEqual([("entry", ()), ("cleared", ())], result.writes)
+        self.assertEqual("", result.player.getStringProperty("campaign_pendingTransition"))
+        self.assertTrue(result.sync_restored and result.flow_restored)
+        self.assertIs(result.game_map, result.game.getMap())
+
+    def testRitualFixturePreservesCallbackErrorsAndRestoresBothHooks(self):
+        for mode in ("flow", "sync"):
+            for fault in ("prepare", "entry", "cleared", "dialog", "finish"):
+                with self.subTest(mode=mode, fault=fault):
+                    result = self.ritualPreparedTransitionFixture(mode=mode, fault=fault)
+                    self.assertIs(result.primary, result.error)
+                    self.assertNotIn("completed", result.phases)
+                    self.assertTrue(result.sync_restored and result.flow_restored)
+                    self.assertEqual({}, result.inflight)
+                    self.assertIs(result.game_map, result.game.getMap())
+
+    def testRitualFixtureKeepsOwnerAndStandaloneTargetRefusalsBeforePreparation(self):
+        for fault in ("wrong-owner", "wrong-target", "campaign-target", "presentation"):
+            with self.subTest(fault=fault):
+                result = self.ritualPreparedTransitionFixture(fault=fault)
+                self.assertIsInstance(result.error, AssertionError)
+                self.assertEqual([], result.phases)
+                self.assertEqual([], result.writes)
+                self.assertTrue(result.sync_restored and result.flow_restored)
+
 
 def loadCrafting():
     fake_game = types.ModuleType("game")
