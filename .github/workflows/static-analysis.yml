@@ -1,0 +1,212 @@
+name: static-analysis
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - ".github/workflows/**"
+      - ".clang-tidy"
+      - ".semgrep/**"
+      - "ruff.toml"
+      - "mypy.ini"
+      - "requirements-static-analysis.txt"
+      - "src/**"
+      - "native_plugins/**"
+      - "res/**"
+      - "scripts/**"
+      - "tests/**"
+      - "*.py"
+      - "CMakeLists.txt"
+      - "cmake/**"
+  pull_request:
+    branches: [main]
+    paths:
+      - ".github/workflows/**"
+      - ".clang-tidy"
+      - ".semgrep/**"
+      - "ruff.toml"
+      - "mypy.ini"
+      - "requirements-static-analysis.txt"
+      - "src/**"
+      - "native_plugins/**"
+      - "res/**"
+      - "scripts/**"
+      - "tests/**"
+      - "*.py"
+      - "CMakeLists.txt"
+      - "cmake/**"
+  schedule:
+    - cron: "19 3 * * 0"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  python-static:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 45
+    env:
+      SEMGREP_SEND_METRICS: "off"
+    steps:
+      - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0
+      - name: Set up Python
+        uses: actions/setup-python@a309ff8b426b58ec0e2a45f0f869d46889d02405
+        with:
+          python-version: "3.12"
+          cache: pip
+          cache-dependency-path: requirements-static-analysis.txt
+      - name: Install analysis tools
+        run: python3 -m pip install -r requirements-static-analysis.txt
+      - name: Reject Python syntax and critical name errors
+        run: ruff check . --select E9,F63,F7 --output-format github
+      - name: Type-check analyzer utilities
+        run: mypy --config-file mypy.ini
+      - name: Inspect MCP and gameplay Python typing (advisory)
+        run: |
+          mkdir -p analysis-reports
+          mypy --no-incremental --follow-imports=skip --ignore-missing-imports \
+            mcp.py game_simulation.py game_diagnostics.py quest_state.py \
+            > analysis-reports/mypy-runtime.txt || test "$?" -eq 1
+      - name: Extended Ruff report
+        run: |
+          mkdir -p analysis-reports
+          ruff check . --output-format json > analysis-reports/ruff.json || test "$?" -eq 1
+          test -s analysis-reports/ruff.json
+      - name: Bandit security report
+        run: |
+          bandit -r -q -ll -ii -f json -o analysis-reports/bandit.json mcp.py play.py scripts res || test "$?" -eq 1
+          test -s analysis-reports/bandit.json
+      - name: Validate custom Semgrep rules
+        run: semgrep scan --validate --config .semgrep/engine-security.yml
+      - name: Custom Semgrep security report
+        run: |
+          targets=(mcp.py scripts res src)
+          if [[ -d native_plugins ]]; then
+            targets+=(native_plugins)
+          fi
+          semgrep scan --error --config .semgrep/engine-security.yml --json \
+            --output analysis-reports/semgrep.json "${targets[@]}" || test "$?" -eq 1
+          test -s analysis-reports/semgrep.json
+      - name: Upload Python and security reports
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        with:
+          name: static-analysis-python
+          path: analysis-reports/
+          if-no-files-found: warn
+          retention-days: 14
+
+  workflow-static:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0
+      - name: Install ShellCheck
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y shellcheck
+      - name: Actionlint (GitHub Actions workflows)
+        run: |
+          mkdir -p analysis-reports
+          go run github.com/rhysd/actionlint/cmd/actionlint@v1.7.12 \
+            -shellcheck="$(command -v shellcheck)" > analysis-reports/actionlint.txt 2>&1 || test "$?" -eq 1
+      - name: ShellCheck (first-party shell scripts)
+        run: |
+          : > analysis-reports/shellcheck.txt
+          while IFS= read -r -d '' script; do
+            case "$script" in
+              vstd/*|random-dungeon-generator/*) continue ;;
+            esac
+            if shellcheck --severity=warning "$script" >> analysis-reports/shellcheck.txt 2>&1; then
+              continue
+            else
+              status=$?
+              if [[ "$status" -ne 1 ]]; then
+                exit "$status"
+              fi
+            fi
+          done < <(git ls-files -z '*.sh')
+      - name: Upload workflow and shell reports
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        with:
+          name: static-analysis-workflows
+          path: analysis-reports/
+          if-no-files-found: warn
+          retention-days: 14
+
+  native-static:
+    runs-on: ubuntu-26.04
+    timeout-minutes: 120
+    env:
+      CC: gcc-15
+      CXX: g++-15
+      GAME_CONFIGURE_SKIP_APT: "1"
+      GAME_CONFIGURE_SKIP_SUBMODULES: "1"
+      GAME_CONFIGURE_BUILD_PREFIX: cmake-build-gcc15-static
+      GAME_CONFIGURE_BUILD_TYPES: Release
+    steps:
+      - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0
+        with:
+          submodules: recursive
+          fetch-depth: 0
+      - name: Set up Python
+        uses: actions/setup-python@a309ff8b426b58ec0e2a45f0f869d46889d02405
+        with:
+          python-version: "3.12"
+      - name: Install CMake 4.3.1
+        run: python3 -m pip install cmake==4.3.1
+      - name: Install native analysis dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y build-essential gcc-15 g++-15 ninja-build ccache \
+            clang-20 clang-tidy-20 clang-tools-20 cppcheck \
+            python3-dev pybind11-dev libboost-dev libsdl2-dev \
+            libsdl2-ttf-dev libsdl2-image-dev xvfb xauth
+      - name: Configure independent non-unity compilation database
+        run: |
+          ./configure.sh
+          cmake -S . -B cmake-build-gcc15-static-release \
+            -DCMAKE_EXPORT_COMPILE_COMMANDS=ON \
+            -DGAME_ENABLE_UNITY_BUILD=OFF \
+            -DGAME_ENABLE_PCH=OFF
+          test -s cmake-build-gcc15-static-release/compile_commands.json
+      - name: clang-tidy (advisory until baseline review)
+        continue-on-error: true
+        shell: bash
+        run: |
+          if [[ "$GITHUB_EVENT_NAME" == "pull_request" ]]; then
+            python3 scripts/run_clang_tidy.py --build-dir cmake-build-gcc15-static-release \
+              --changed-base "origin/$GITHUB_BASE_REF" --jobs 2
+          else
+            python3 scripts/run_clang_tidy.py --build-dir cmake-build-gcc15-static-release --jobs 2
+          fi
+      - name: Cppcheck (advisory until baseline review)
+        continue-on-error: true
+        run: |
+          mkdir -p analysis-reports
+          cppcheck --project=cmake-build-gcc15-static-release/compile_commands.json \
+            --enable=warning,performance,portability --inline-suppr \
+            -ivstd -irandom-dungeon-generator \
+            --suppress=missingIncludeSystem --error-exitcode=1 \
+            --xml --xml-version=2 2> analysis-reports/cppcheck.xml
+      - name: Clang Static Analyzer (scheduled and manual, advisory)
+        if: github.event_name == 'schedule' || github.event_name == 'workflow_dispatch'
+        continue-on-error: true
+        run: |
+          CC=clang-20 CXX=clang++-20 scan-build-20 --use-cc clang-20 --use-c++ clang++-20 \
+            -o analysis-reports/scan-build cmake -S . -B cmake-build-clang-static \
+            -G Ninja -DCMAKE_BUILD_TYPE=Debug \
+            -DGAME_ENABLE_UNITY_BUILD=OFF -DGAME_ENABLE_PCH=OFF
+          scan-build-20 --use-cc clang-20 --use-c++ clang++-20 --status-bugs \
+            -o analysis-reports/scan-build cmake --build cmake-build-clang-static \
+            --target game_core -j2
+      - name: Upload C++ analysis reports
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        with:
+          name: static-analysis-native
+          path: analysis-reports/
+          if-no-files-found: warn
+          retention-days: 14

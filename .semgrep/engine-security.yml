@@ -1,0 +1,61 @@
+rules:
+  - id: nouraajd-python-shell-command
+    languages: [python]
+    severity: ERROR
+    message: Avoid shell interpretation in the MCP server or game scripts; use argument lists.
+    paths:
+      include:
+        - mcp.py
+        - scripts/**
+        - res/**
+    pattern-either:
+      - pattern: subprocess.run(..., shell=True, ...)
+      - pattern: subprocess.Popen(..., shell=True, ...)
+      - pattern: subprocess.call(..., shell=True, ...)
+      - pattern: os.system(...)
+
+  - id: nouraajd-python-dynamic-execution
+    languages: [python]
+    severity: WARNING
+    message: Dynamic code execution in runtime game content must be explicitly reviewed.
+    paths:
+      include:
+        - res/**
+    pattern-either:
+      - pattern: eval(...)
+      - pattern: exec(...)
+
+  - id: nouraajd-unsafe-deserialization
+    languages: [python]
+    severity: ERROR
+    message: Unsafe deserialization can execute arbitrary Python code.
+    pattern-either:
+      - pattern: pickle.loads(...)
+      - pattern: pickle.load(...)
+      - pattern: yaml.unsafe_load(...)
+      - pattern: yaml.load(..., Loader=yaml.UnsafeLoader)
+
+  - id: nouraajd-mcp-public-listener
+    languages: [python]
+    severity: ERROR
+    message: The MCP server must not bind publicly without a reviewed authentication and exposure policy.
+    paths:
+      include:
+        - mcp.py
+    pattern-either:
+      - pattern: ThreadingHTTPServer(("0.0.0.0", $PORT), ...)
+      - pattern: ThreadingHTTPServer(("", $PORT), ...)
+
+  - id: nouraajd-cpp-unsafe-c-string
+    languages: [cpp]
+    severity: WARNING
+    message: Prefer a bounded or type-safe alternative to an unbounded C string operation.
+    paths:
+      include:
+        - src/**
+        - native_plugins/**
+    pattern-either:
+      - pattern: strcpy(...)
+      - pattern: strcat(...)
+      - pattern: sprintf(...)
+      - pattern: gets(...)

@@ -93,6 +93,23 @@ jobs:
         working-directory: android
         run: gradle :app:assembleDebug --no-daemon --stacktrace
 
+      - name: Run Android Lint (advisory until baseline review)
+        continue-on-error: true
+        working-directory: android
+        run: gradle :app:lintDebug --no-daemon --stacktrace
+
+      - name: Upload Android Lint reports
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        with:
+          name: fall-of-nouraajd-android-lint
+          path: |
+            android/app/build/reports/lint-results-*.html
+            android/app/build/reports/lint-results-*.xml
+            android/app/build/reports/lint-results-*.txt
+          if-no-files-found: warn
+          retention-days: 14
+
       - name: Upload debug APK
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
         with:
