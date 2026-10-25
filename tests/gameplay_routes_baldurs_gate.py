@@ -398,7 +398,7 @@ def history(d, outcome):
 
 def openContainer(d, name, *, forced=False):
     travel(d, documents()["config"][name]["properties"]["sourceArea"])
-    d.navigateTo(name)
+    contactCityObject(d, name)
     owner, dialog = d.object(name), name + "Dialog"
     if d.call(owner, "getBoolProperty", "locked"):
         condition, action = ("canForce", "force") if forced else ("canUnlock", "unlock")
