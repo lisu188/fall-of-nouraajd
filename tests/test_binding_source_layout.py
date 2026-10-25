@@ -90,6 +90,26 @@ class BindingSourceLayoutTest(unittest.TestCase):
         self.assertIn('"fightManyOutcome"', source)
         self.assertNotIn('"fightManyWithAlliesAsync"', source)
 
+    def testNativeMetadataCoordinatorIncludesTheOwningTypeRegistryHeader(self):
+        source = (ROOT / "src/core/CModule.cpp").read_text(encoding="utf-8")
+        include = '#include "core/CTypes.h"'
+        self.assertIn(include, source, "Metadata registration needs its declaring header, independently of PCH order")
+        self.assertLess(source.index(include), source.index("CTypes::register_type_metadata<"))
+        owner = (ROOT / "src/core/CTypes.h").read_text(encoding="utf-8")
+        self.assertIn("class CTypes {", owner)
+        self.assertIn("static void register_type_metadata()", owner)
+
+    def testObjectConfigRegistrationIncludesTheCompleteConfigurationProvider(self):
+        source = (ROOT / "src/handler/CObjectHandler.cpp").read_text(encoding="utf-8")
+        include = '#include "core/CProvider.h"'
+        self.assertIn(include, source, "Both provider calls require the complete owner declaration")
+        self.assertLess(source.index(include), source.index("CConfigurationProvider::getConfig(path)"))
+        self.assertLess(source.index(include), source.index("provider.getConfiguration(path)"))
+        owner = (ROOT / "src/core/CProvider.h").read_text(encoding="utf-8")
+        self.assertIn("class CConfigurationProvider {", owner)
+        self.assertIn("static std::shared_ptr<const json> getConfig(const std::string &path);", owner)
+        self.assertIn("std::shared_ptr<const json> getConfiguration(const std::string &path);", owner)
+
     def testCoordinatorRegistersEachGroupOnceAfterMetadataInOriginalOrder(self):
         source = (ROOT / "src/core/CModule.cpp").read_text(encoding="utf-8")
         body = registrationBody(source, "init_game_module")

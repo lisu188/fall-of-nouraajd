@@ -24,6 +24,7 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #include "core/CModuleInit.h"
 #include "core/CPlaytestTrace.h"
 #include "core/CSceneManager.h"
+#include "core/CTypes.h"
 #include "core/CWrapper.h"
 #include "object/CCreatureClass.h"
 #include "object/CCreatureClassTrack.h"

@@ -18,6 +18,7 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #include "CHandler.h"
 #include "core/CGame.h"
 #include "core/CJsonUtil.h"
+#include "core/CProvider.h"
 #include "core/CPythonOverrides.h"
 #include "core/CWrapper.h"
 #include "object/CTile.h"
