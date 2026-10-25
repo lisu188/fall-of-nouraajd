@@ -1047,7 +1047,7 @@ class OctobogzMcpWalkthroughTest(unittest.TestCase):
             "completed": self.questNames("getCompletedQuests"),
         }
 
-    def sellWeakHealingStockAtAuthoredMarket(self, preserve_ingredients=False):
+    def sellWeakHealingStockAtAuthoredMarket(self, preserve_ingredients=False, require_strong=False):
         self.walkTo("market1")
         market_actor = self.object("market1")
         self.assertEqual((106, 111, 0), self.coords(market_actor))
@@ -1060,7 +1060,7 @@ class OctobogzMcpWalkthroughTest(unittest.TestCase):
             for item in inventory
             if self.call(item, "hasTag", "heal") and self.call(item, "getNumericProperty", "power") > 1
         ]
-        if not preserve_ingredients:
+        if require_strong or not preserve_ingredients:
             self.assertTrue(strong, "Ordinary preparation must retain genuinely earned stronger healing stock")
         weak = [
             item
@@ -1403,7 +1403,7 @@ class OctobogzMcpWalkthroughTest(unittest.TestCase):
             self.brewOwnedBasicLifePotions()
             self.buyFiniteBasicIngredientsAtAuthoredMarket(initial)
             self.brewOwnedBasicLifePotions()
-            self.sellWeakHealingStockAtAuthoredMarket()
+            self.sellWeakHealingStockAtAuthoredMarket(preserve_ingredients=True, require_strong=True)
             self.snapshot("initial basic healing preparation" if initial else "new loot healing preparation")
         except Exception:
             try:
@@ -2384,6 +2384,183 @@ class OctobogzMcpWalkthroughTest(unittest.TestCase):
 
 
 class OctobogzDiagnosticTest(unittest.TestCase):
+    def healingIngredientConservationFixture(
+        self, *, lesser_count=1, remaining_originals=("reservedThird",), untracked_lesser=False, strong=True
+    ):
+        from unittest.mock import Mock
+
+        walker = OctobogzMcpWalkthroughTest("runTest")
+        walker.player, walker.game, walker.game_map = "player", "game", "map"
+        records, owned, stocked, transactions = {}, [], [], []
+        state = {"gold": 1000, "position": None, "crafted": 0}
+
+        def item(name, type_id, power, buy_cost, sell_cost):
+            handle = {"__handle__": name}
+            records[name] = {
+                "name": name,
+                "typeId": type_id,
+                "power": power,
+                "tags": ["heal"],
+                "singleUse": True,
+                "buyCost": buy_cost,
+                "sellCost": sell_cost,
+            }
+            return handle
+
+        # These are controlled transport quotes, not an additional native price/loot claim.
+        if strong:
+            owned.append(item("retainedStrong", "LifePotion", 2, 0, 0))
+        owned.append(item("earnedBeer", "DarkBeer", 1, 320, 0))
+        for index in range(lesser_count):
+            owned.append(item(f"earnedLesser{index}", "LesserLifePotion", 1, 160, 400))
+        for name in remaining_originals:
+            stocked.append(item(name, "LesserLifePotion", 1, 160, 400))
+        if untracked_lesser:
+            stocked.append(item("untrackedLesser", "LesserLifePotion", 1, 160, 400))
+        original_names = ("originalOne", "originalTwo", "reservedThird")
+        walker.original_lesser_shop_names = original_names
+        walker.purchased_lesser_shop_names = set(original_names) - set(remaining_originals)
+        walker.retained_lesser_shop_name = "reservedThird"
+
+        def call(handle, method, *args):
+            if handle == "player":
+                return {"getItems": lambda: list(owned), "getGold": lambda: state["gold"]}[method]()
+            if handle == "map":
+                self.assertIn((method, args), (("getTurn", ()), ("getStringProperty", ("octobogzHuntRegistry",))))
+                return 12 if method == "getTurn" else "unchanged registry"
+            if handle == "market1":
+                self.assertEqual((method, args), ("getObjectProperty", ("market",)))
+                return "market"
+            if handle == "alchemyTable1":
+                return {
+                    ("getType", ()): "CraftingStation",
+                    ("getTypeId", ()): "alchemyTable1",
+                    ("getStringProperty", ("craftingStationId",)): "alchemyTable",
+                    ("getBoolProperty", ("enabled",)): True,
+                }[(method, args)]
+            if handle == "market":
+                if method == "getItems":
+                    return list(stocked)
+                if method in ("getBuyCost", "getSellCost"):
+                    return records[args[0]["__handle__"]]["buyCost" if method == "getBuyCost" else "sellCost"]
+                self.assertIn(method, ("buyItem", "sellItem"))
+                self.assertEqual("player", args[0])
+                selected = args[1]
+                source, destination = (owned, stocked) if method == "buyItem" else (stocked, owned)
+                self.assertIn(selected, source)
+                self.assertNotIn(selected, destination)
+                source.remove(selected)
+                destination.append(selected)
+                quote = records[selected["__handle__"]]["buyCost" if method == "buyItem" else "sellCost"]
+                state["gold"] += quote if method == "buyItem" else -quote
+                transactions.append((method, selected["__handle__"], quote))
+                return True
+            values = records[handle["__handle__"]]
+            if method == "hasTag":
+                return args[0] in values["tags"]
+            if method in ("getNumericProperty", "getBoolProperty"):
+                return values[args[0]]
+            return {"getTypeId": values["typeId"], "getName": values["name"]}[method]
+
+        def engine(method, *args):
+            if method == "jsonify":
+                self.assertEqual(("player",), args)
+                return json.dumps(
+                    {
+                        "properties": {
+                            "items": [{"properties": records[x["__handle__"]]} for x in owned],
+                            "gold": state["gold"],
+                            "exp": 6250,
+                            "hp": 91,
+                        }
+                    }
+                )
+            self.assertEqual((method, args), ("craftRecipe", ("game", "alchemyTable1", "brew_life_potion")))
+            ingredients = walker.basicLesserIngredients(owned)[:2]
+            self.assertEqual(2, len(ingredients))
+            self.assertGreaterEqual(state["gold"], 20)
+            for ingredient in ingredients:
+                owned.remove(ingredient)
+            state["gold"] -= 20
+            state["crafted"] += 1
+            name = f"craftedLife{state['crafted']}"
+            self.assertNotIn(name, records)
+            owned.append(item(name, "LifePotion", 2, 0, 0))
+            transactions.append(("craft", tuple(x["__handle__"] for x in ingredients), name, 20))
+            return {"ok": True, "reason": ""}
+
+        positions = {"market1": (106, 111, 0), "alchemyTable1": (105, 110, 0)}
+        walker.call, walker.engine = call, engine
+        walker.walkTo = lambda name: state.update(position=positions[name])
+        walker.object = lambda name: name
+        walker.coords = lambda actor=None: positions[actor] if actor else state["position"]
+        walker.pump, walker.snapshot, walker.reportCombatFailure = Mock(), Mock(), Mock()
+        walker.questNames = lambda method="getQuests": [method]
+        walker.fundBasicIngredientsWithOwnedMana = Mock(
+            side_effect=AssertionError("Fixture supply is already affordable")
+        )
+        return walker, owned, stocked, state, transactions
+
+    def testInitialHealingPreparationRetainsEarnedLesserForThePostScoutOriginalPartner(self):
+        walker, owned, stocked, state, transactions = self.healingIngredientConservationFixture()
+        with patch("builtins.print"):
+            walker.prepareHealingStockAtAuthoredMarket(initial=True)
+            self.assertIn({"__handle__": "earnedLesser0"}, owned)
+            self.assertEqual(["reservedThird", "earnedBeer"], [item["__handle__"] for item in stocked])
+            self.assertEqual([("buyItem", "earnedBeer", 320)], transactions)
+            self.assertEqual({"originalOne", "originalTwo"}, walker.purchased_lesser_shop_names)
+            walker.prepareHealingStockAtAuthoredMarket(initial=False)
+            self.assertEqual(900, state["gold"])
+            self.assertEqual({"retainedStrong", "craftedLife1"}, {item["__handle__"] for item in owned})
+            self.assertEqual(["earnedBeer"], [item["__handle__"] for item in stocked])
+            self.assertEqual(
+                [
+                    ("buyItem", "earnedBeer", 320),
+                    ("sellItem", "reservedThird", 400),
+                    ("craft", ("earnedLesser0", "reservedThird"), "craftedLife1", 20),
+                ],
+                transactions,
+            )
+            self.assertEqual({"originalOne", "originalTwo", "reservedThird"}, walker.purchased_lesser_shop_names)
+            before = (list(owned), list(stocked), state["gold"], list(transactions))
+            walker.prepareHealingStockAtAuthoredMarket(initial=False)
+            self.assertEqual(before, (owned, stocked, state["gold"], transactions))
+        walker.fundBasicIngredientsWithOwnedMana.assert_not_called()
+        self.assertEqual(("originalOne", "originalTwo", "reservedThird"), walker.original_lesser_shop_names)
+
+    def testHealingPreparationPreservesEvenPairsAndUnmatchedPostScoutIngredients(self):
+        for initial in (True, False):
+            for lesser_count in (1, 2):
+                with self.subTest(initial=initial, lesser_count=lesser_count):
+                    # No original supply remains; sold earned ingredients must never become new original stock.
+                    walker, owned, stocked, state, transactions = self.healingIngredientConservationFixture(
+                        lesser_count=lesser_count, remaining_originals=(), untracked_lesser=True
+                    )
+                    with patch("builtins.print"):
+                        walker.prepareHealingStockAtAuthoredMarket(initial=initial)
+                        self.assertEqual(lesser_count % 2, len(walker.basicLesserIngredients(owned)))
+                        self.assertEqual(lesser_count // 2, state["crafted"])
+                        self.assertEqual(1320 - (lesser_count // 2) * 20, state["gold"])
+                        self.assertEqual(["untrackedLesser", "earnedBeer"], [item["__handle__"] for item in stocked])
+                        self.assertIn({"__handle__": "retainedStrong"}, owned)
+                        before = (list(owned), list(stocked), state["gold"], list(transactions))
+                        walker.prepareHealingStockAtAuthoredMarket(initial=False)
+                        self.assertEqual(before, (owned, stocked, state["gold"], transactions))
+                    self.assertFalse(any(entry[0] == "sellItem" for entry in transactions))
+                    walker.fundBasicIngredientsWithOwnedMana.assert_not_called()
+
+    def testFinalHealingPreparationStillRequiresEarnedStrongerStock(self):
+        walker, owned, stocked, state, transactions = self.healingIngredientConservationFixture(
+            remaining_originals=(), strong=False
+        )
+        with patch("builtins.print"):
+            with self.assertRaisesRegex(AssertionError, "retain genuinely earned stronger healing stock"):
+                walker.prepareHealingStockAtAuthoredMarket(initial=False)
+        self.assertEqual([{"__handle__": "earnedLesser0"}], owned)
+        self.assertEqual(["earnedBeer"], [item["__handle__"] for item in stocked])
+        self.assertEqual([("buyItem", "earnedBeer", 320)], transactions)
+        self.assertEqual(1320, state["gold"])
+
     def testPostAlphaRecoveryDoesNotReapplyThePostScoutStockThreshold(self):
         from types import SimpleNamespace
         from unittest.mock import Mock
