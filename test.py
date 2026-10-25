@@ -25437,26 +25437,41 @@ class XvfbGameplayProcessTest(unittest.TestCase):
 
         captured_reward_ui = {"trades": []}
         heal_amounts = []
-        original_show_trade = game.CGuiHandler.showTrade
         original_heal_proc = game.CPlayer.healProc
         victor_gold = player.getGold()
+        trade_inspection = None
         try:
 
-            def capture_show_trade(self, market):
+            def inspectTrade(panel):
+                self.assertIsInstance(panel, game.CGameTradePanel)
+                self.assertEqual(g.getGui(), panel.getParent())
+                market = panel.getObjectProperty("market")
+                self.assertIsInstance(market, game.CMarket)
+                self.assertEqual(g, market.getGame())
+                self.assertEqual("victorMarket", market.getTypeId())
                 captured_reward_ui["trades"].append(market.getTypeId())
-                queue_sdl_inputs(game, lambda: push_sdl_key_event(27, 41, SDL_KEYDOWN))
-                return original_show_trade(self, market)
+                return market
 
             def capture_heal_proc(self, amount):
                 heal_amounts.append(amount)
                 return original_heal_proc(self, amount)
 
-            game.CGuiHandler.showTrade = capture_show_trade
             game.CPlayer.healProc = capture_heal_proc
+            trade_inspection = queuePanelInspection(
+                self,
+                game,
+                g,
+                "CGameTradePanel",
+                inspectTrade,
+                lambda _panel: push_sdl_key_event(27, 41, SDL_KEYDOWN),
+            )
             game_map.removeObjectByName(leader.getName())
             pump_event_loop(5)
+            market = finishPanelInspection(self, trade_inspection, "CGameTradePanel")
+            self.assertEqual("victorMarket", market.getTypeId())
         finally:
-            game.CGuiHandler.showTrade = original_show_trade
+            if trade_inspection is not None:
+                trade_inspection["active"] = False
             game.CPlayer.healProc = original_heal_proc
 
         player.checkQuests()

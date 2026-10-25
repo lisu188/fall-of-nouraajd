@@ -1302,6 +1302,261 @@ class DialogueContentTest(unittest.TestCase):
         self.assertEqual(fixture.state["cleanupCalls"], 0)
         self.assertIn(fixture.unrelated, fixture.state["children"])
 
+    def victorNativeTradeFixture(self, mode="native"):
+        import traceback
+
+        source = (ROOT / "test.py").read_text(encoding="utf-8")
+        tree = ast.parse(source)
+        names = {"queuePanelInspection", "finishPanelInspection", "find_top_level_panel", "gui_child_sort_key"}
+        helpers = [
+            copy.deepcopy(node) for node in tree.body if isinstance(node, ast.FunctionDef) and node.name in names
+        ]
+        self.assertEqual(names, {node.name for node in helpers})
+        owner = next(
+            node for node in tree.body if isinstance(node, ast.ClassDef) and node.name == "XvfbGameplayProcessTest"
+        )
+        method = next(
+            node
+            for node in owner.body
+            if isinstance(node, ast.FunctionDef) and node.name == "test_full_nouraajd_quest_walkthrough_ui"
+        )
+        start = next(
+            index
+            for index, node in enumerate(method.body)
+            if isinstance(node, ast.Assign)
+            and any(isinstance(target, ast.Name) and target.id == "captured_reward_ui" for target in node.targets)
+        )
+        stop = next(index for index in range(start, len(method.body)) if isinstance(method.body[index], ast.Try))
+        block = [copy.deepcopy(node) for node in method.body[start : stop + 1]]
+        state = {
+            "tasks": [],
+            "children": [],
+            "keys": [],
+            "events": [],
+            "closed": False,
+            "shutdown": False,
+            "healed": [],
+            "classCalls": 0,
+        }
+        primary = RuntimeError("leader removal failed")
+        input_error = RuntimeError("SDL Escape dispatch failed")
+        g = types.SimpleNamespace()
+        gui = types.SimpleNamespace(getChildren=lambda: list(state["children"]))
+        g.getGui = lambda: gui
+        g.getContext = lambda: types.SimpleNamespace(shutdown=lambda: state.update(shutdown=True))
+
+        class Market:
+            def getGame(self):
+                return object() if mode == "foreignMarket" else g
+
+            def getTypeId(self):
+                return "wrongMarket" if mode == "wrongMarket" else "victorMarket"
+
+        market = Market()
+
+        class TradePanel:
+            def getType(self):
+                return "CGameTradePanel"
+
+            def getParent(self):
+                return gui
+
+            def getObjectProperty(self, name):
+                self_name = "market"
+                assert name == self_name
+                return market
+
+            def close(self):
+                state["events"].append("close-trade")
+                state["closed"] = True
+                state["children"] = []
+
+        panel = TradePanel()
+        reader = types.SimpleNamespace(getType=lambda: "CGameTextPanel")
+
+        def invoke(callback):
+            state["events"].append("queue")
+            if mode == "queueRejected":
+                return False
+            state["tasks"].append(callback)
+            return True
+
+        def runFrame():
+            # Match the audited native snapshot fence: newly posted work waits for the next drain.
+            posted, state["tasks"] = state["tasks"], []
+            for callback in posted:
+                callback()
+            for key in state["keys"]:
+                self.assertEqual((27, 41, 768, "trade"), key)
+                panel.close()
+            state["keys"] = []
+
+        def pushKey(key, scancode, event_type):
+            if mode == "inputError":
+                raise input_error
+            phase = "trade" if panel in state["children"] else "reader"
+            state["events"].append("escape-" + phase)
+            state["keys"].append((key, scancode, event_type, phase))
+
+        class Player:
+            def getGold(self):
+                return 123
+
+            def healProc(self, amount):
+                state["healed"].append(amount)
+
+        player = Player()
+        original_heal = Player.healProc
+
+        class GuiHandler:
+            def showTrade(self, actual_market):
+                state["classCalls"] += 1
+                self_test.assertIs(actual_market, market)
+                modalTrade()
+
+        self_test = self
+        original_trade = GuiHandler.showTrade
+        game = types.SimpleNamespace(
+            CGuiHandler=GuiHandler,
+            CPlayer=Player,
+            CMarket=Market,
+            CGameTradePanel=TradePanel,
+            event_loop=types.SimpleNamespace(instance=lambda: types.SimpleNamespace(invoke=invoke)),
+        )
+
+        def modalTrade():
+            state["children"] = [reader]
+            if not state["tasks"]:
+                self.fail("Native trade dispatch bypassed the class hook and no panel observation was armed")
+            runFrame()
+            self.assertNotIn("escape-reader", state["events"])
+            state["children"] = [panel]
+            for _ in range(1002):
+                runFrame()
+                if state["closed"] or state["shutdown"]:
+                    state["events"].append("native-continuation")
+                    return
+            self.fail("The finite native-panel model never received closure")
+
+        def remove(name):
+            self.assertEqual("cultLeaderQuest", name)
+            state["events"].append("remove")
+            if mode == "removeError":
+                raise primary
+            player.healProc(100)
+            if mode == "unobserved":
+                return
+            if mode == "synchronous":
+                GuiHandler().showTrade(market)
+            else:
+                # Native runScriptFlowAsync dispatches showTradeAsync directly, not this Python class attribute.
+                modalTrade()
+
+        namespace = {
+            "self": self,
+            "game": game,
+            "g": g,
+            "game_map": types.SimpleNamespace(removeObjectByName=remove),
+            "player": player,
+            "leader": types.SimpleNamespace(getName=lambda: "cultLeaderQuest"),
+            "traceback": traceback,
+            "push_sdl_key_event": pushKey,
+            "SDL_KEYDOWN": 768,
+            "queue_sdl_inputs": lambda *_args: self.fail("The obsolete class trade hook must not be used"),
+            "pump_event_loop": lambda count: [runFrame() for _ in range(count)],
+        }
+        exec(
+            compile(
+                ast.fix_missing_locations(ast.Module(body=helpers, type_ignores=[])),
+                "actual-panel-inspection-helpers",
+                "exec",
+            ),
+            namespace,
+        )
+        failure = None
+        try:
+            exec(
+                compile(
+                    ast.fix_missing_locations(ast.Module(body=block, type_ignores=[])),
+                    "actual-victor-reward-fixture-block",
+                    "exec",
+                ),
+                namespace,
+            )
+        except Exception as error:
+            failure = error
+        self.assertIs(original_heal, Player.healProc)
+        self.assertIs(original_trade, GuiHandler.showTrade)
+        return types.SimpleNamespace(
+            state=state,
+            failure=failure,
+            namespace=namespace,
+            primary=primary,
+            market=market,
+            frame=runFrame,
+            input_error=input_error,
+        )
+
+    def testVictorNativeTradeInspectionPrecedesRemovalAndAcknowledgesOnlyTrade(self):
+        fixture = self.victorNativeTradeFixture()
+        self.assertIsNone(fixture.failure)
+        self.assertEqual([100], fixture.state["healed"])
+        self.assertEqual([100], fixture.namespace["heal_amounts"])
+        self.assertEqual(["victorMarket"], fixture.namespace["captured_reward_ui"]["trades"])
+        self.assertIs(fixture.market, fixture.namespace["trade_inspection"]["result"])
+        self.assertEqual(0, fixture.state["classCalls"])
+        self.assertLess(fixture.state["events"].index("queue"), fixture.state["events"].index("remove"))
+        self.assertEqual(1, fixture.state["events"].count("escape-trade"))
+        self.assertNotIn("escape-reader", fixture.state["events"])
+        self.assertIn("native-continuation", fixture.state["events"])
+        self.assertFalse(fixture.namespace["trade_inspection"]["active"])
+
+    def testVictorTradeObserverAlsoHandlesTheActualSynchronousPanelControl(self):
+        fixture = self.victorNativeTradeFixture("synchronous")
+        self.assertIsNone(fixture.failure)
+        self.assertEqual(1, fixture.state["classCalls"])
+        self.assertEqual(["victorMarket"], fixture.namespace["captured_reward_ui"]["trades"])
+        self.assertEqual(1, fixture.state["events"].count("escape-trade"))
+
+    def testVictorTradeRejectsWrongOrForeignMarketBeforeSendingEscape(self):
+        for mode in ("wrongMarket", "foreignMarket"):
+            with self.subTest(mode=mode):
+                fixture = self.victorNativeTradeFixture(mode)
+                self.assertIsInstance(fixture.failure, AssertionError)
+                self.assertEqual([], fixture.namespace["captured_reward_ui"]["trades"])
+                self.assertNotIn("escape-trade", fixture.state["events"])
+                self.assertTrue(fixture.state["closed"])
+                self.assertFalse(fixture.namespace["trade_inspection"]["active"])
+
+    def testVictorRemovalFailureExpiresTheObserverAndKeepsThePrimaryException(self):
+        fixture = self.victorNativeTradeFixture("removeError")
+        self.assertIs(fixture.primary, fixture.failure)
+        pending = fixture.namespace.get("trade_inspection")
+        self.assertIsNotNone(pending)
+        self.assertFalse(pending["active"])
+        before = list(fixture.state["events"])
+        fixture.frame()
+        self.assertEqual(before, fixture.state["events"])
+        self.assertEqual([], fixture.state["tasks"])
+
+    def testVictorInspectionAndInputFailuresFinishWithoutAnActiveObserver(self):
+        for mode in ("queueRejected", "inputError", "unobserved"):
+            with self.subTest(mode=mode):
+                fixture = self.victorNativeTradeFixture(mode)
+                self.assertIsInstance(fixture.failure, AssertionError)
+                if mode == "queueRejected":
+                    self.assertIn("Panel inspection was not queued", str(fixture.failure))
+                else:
+                    pending = fixture.namespace.get("trade_inspection")
+                    self.assertIsNotNone(pending)
+                    self.assertFalse(pending["active"])
+                    self.assertIn(
+                        "SDL Escape dispatch failed" if mode == "inputError" else "inspection did not run",
+                        str(fixture.failure),
+                    )
+                    fixture.frame()
+                    self.assertEqual([], fixture.state["tasks"])
+
 
 def loadCrafting():
     fake_game = types.ModuleType("game")
