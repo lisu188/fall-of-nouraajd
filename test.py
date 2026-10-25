@@ -1266,6 +1266,7 @@ class ProgressTextTestResult(unittest.TextTestResult):
         exception_name = exception_type[:64].replace("\r", "\\r").replace("\n", "\\n")
         label = f"{status} {case_name} ({exception_name})".encode("utf-8", errors="replace").decode("utf-8")
         header = f"{prefix}{label}\n"
+        trace_head = formatted[:8192].encode("utf-8", errors="replace").decode("utf-8")
         trace_tail = formatted[-8192:].encode("utf-8", errors="replace").decode("utf-8")
 
         def byteCount(value):
@@ -1273,14 +1274,22 @@ class ProgressTextTestResult(unittest.TextTestResult):
             return len(value.encode("utf-8")) + value.count("\n")
 
         def boundedTail(render, limit):
-            low, high = 0, len(trace_tail)
+            if len(formatted) <= 8192 and byteCount(render(trace_head)) <= limit:
+                return render(trace_head)
+
+            def excerpt(size):
+                head_size, tail_size = (size + 1) // 2, size // 2
+                tail = trace_tail[-tail_size:] if tail_size else ""
+                return trace_head[:head_size] + "\n[... cached traceback omitted ...]\n" + tail
+
+            low, high = 0, min(len(formatted) - 1, 8192)
             while low < high:
-                middle = (low + high) // 2
-                if byteCount(render(trace_tail[middle:])) > limit:
-                    low = middle + 1
+                middle = (low + high + 1) // 2
+                if byteCount(render(excerpt(middle))) <= limit:
+                    low = middle
                 else:
-                    high = middle
-            return render(trace_tail[low:])
+                    high = middle - 1
+            return render(excerpt(low))
 
         def plain(tail):
             return header + "".join(f"{prefix}{line}\n" for line in tail.splitlines())
@@ -26235,7 +26244,7 @@ class TestRunnerSuiteTest(unittest.TestCase):
                 self.assertEqual(formatted.call_count, 1)
                 self.assertEqual(result.errors, [(case, cached)])
                 self.assertIn("END", output)
-                self.assertNotIn("discarded-prefix", output)
+                self.assertIn("discarded-prefix", output)
                 commands = [line for line in output.splitlines() if line.startswith("::")]
                 ordinary = [line for line in output.splitlines() if not line.startswith("::")]
                 self.assertTrue(ordinary)
@@ -28032,6 +28041,132 @@ class TestRunnerSuiteTest(unittest.TestCase):
 
         for suite_name in VALID_TEST_SUITES:
             self.assertIn(f"--suite {suite_name}", testing_docs)
+
+    def testProgressDetailsKeepHugeCachedCauseCallsiteAndTrailingNote(self):
+        from unittest.mock import patch
+
+        for github_actions in ("false", "true"):
+            with self.subTest(github_actions=github_actions), patch.dict(
+                os.environ, {"GITHUB_ACTIONS": github_actions}
+            ):
+                stream, result, case, formatter = self.progressDetailsFixture()
+                primary = AssertionError("CAUSENEARHEAD: actual assertion\n" + "large-state " * 30000)
+                primary.add_note("NOTEATEND: bounded contextual note")
+                try:
+                    raise primary
+                except AssertionError:
+                    original_error = sys.exc_info()
+                    with formatter as formatted:
+                        result.addFailure(case, original_error)
+                text = stream.getvalue()
+                cached = result.failures[-1][1]
+                self.assertEqual(formatted.call_count, 1)
+                self.assertIs(formatted.call_args.args[0], original_error)
+                self.assertIs(original_error[1], primary)
+                self.assertIs(result.failures[-1][0], case)
+                self.assertIn("CAUSENEARHEAD", cached)
+                self.assertIn("NOTEATEND", cached)
+                self.assertIn("testProgressDetailsKeepHugeCachedCauseCallsiteAndTrailingNote", cached)
+                self.assertIn("AssertionError: CAUSENEARHEAD", text)
+                self.assertIn("testProgressDetailsKeepHugeCachedCauseCallsiteAndTrailingNote", text)
+                self.assertIn("NOTEATEND", text)
+                self.assertIn("[... cached traceback omitted ...]", text)
+                self.assertLessEqual(len(text.encode("utf-8")) + text.count("\n"), 8192)
+                annotations = [line for line in text.splitlines() if line.startswith("::error ")]
+                self.assertEqual(len(annotations), int(github_actions == "true"))
+                if annotations:
+                    self.assertIn("AssertionError: CAUSENEARHEAD", annotations[0])
+                    self.assertIn("testProgressDetailsKeepHugeCachedCauseCallsiteAndTrailingNote", annotations[0])
+                    self.assertIn("NOTEATEND", annotations[0])
+                    self.assertIn("[... cached traceback omitted ...]", annotations[0])
+                self.assertEqual(cached.count("large-state "), 30000)
+                self.assertTrue(cached.endswith("NOTEATEND: bounded contextual note\n"))
+                self.assertGreater(len(cached), 300000)
+                self.assertEqual((result.testsRun, len(result.failures), len(result.errors)), (1, 1, 0))
+                result.stopTest(case)
+                self.assertEqual(result._testOutcomes, {})
+                self.assertEqual(result._test_start_times, {})
+
+    def testProgressDetailsHeadTailRespectActualUtf8LfAndCrlfByteLimits(self):
+        from unittest.mock import patch
+
+        for github_actions in ("false", "true"):
+            for newline in ("\n", "\r\n"):
+                with self.subTest(github_actions=github_actions, newline=newline), patch.dict(
+                    os.environ, {"GITHUB_ACTIONS": github_actions}
+                ):
+                    cached = (
+                        "Traceback: CALLSITEHEAD\nAssertionError: CAUSENEARHEAD %\n"
+                        + "\ud800" * 10000
+                        + "\n::error forged-middle\n"
+                        + "\u754c" * 10000
+                        + "\nNOTEATEND %\n::warning trailing-data"
+                    )
+                    raw_stream = io.BytesIO()
+                    stream = io.TextIOWrapper(raw_stream, encoding="utf-8", errors="backslashreplace", newline=newline)
+                    result = ProgressTextTestResult(unittest.runner._WritelnDecorator(stream), True, 2)
+                    case = unittest.FunctionTestCase(lambda: None)
+                    result.total_tests = 1
+                    result.startTest(case)
+                    stream.flush()
+                    raw_stream.seek(0)
+                    raw_stream.truncate()
+                    primary = AssertionError("original owned exception")
+                    try:
+                        raise primary
+                    except AssertionError:
+                        original_error = sys.exc_info()
+                        with patch.object(result, "_exc_info_to_string", return_value=cached) as formatted:
+                            result.addFailure(case, original_error)
+                    stream.flush()
+                    emitted = raw_stream.getvalue()
+                    text = emitted.decode("utf-8")
+                    self.assertLessEqual(len(emitted), 8192)
+                    self.assertIn("CALLSITEHEAD", text)
+                    self.assertIn("CAUSENEARHEAD", text)
+                    self.assertIn("NOTEATEND", text)
+                    self.assertIn("[... cached traceback omitted ...]", text)
+                    self.assertEqual(formatted.call_count, 1)
+                    self.assertIs(formatted.call_args.args[0], original_error)
+                    self.assertIs(original_error[1], primary)
+                    self.assertIs(result.failures[-1][1], cached)
+                    directives = [line for line in text.splitlines() if line.startswith("::")]
+                    self.assertEqual(len(directives), int(github_actions == "true"))
+                    if directives:
+                        self.assertTrue(directives[0].startswith("::error title="))
+                        self.assertIn("CALLSITEHEAD", directives[0])
+                        self.assertIn("CAUSENEARHEAD %25", directives[0])
+                        self.assertIn("NOTEATEND %25", directives[0])
+                        self.assertIn("%0A::warning trailing-data", directives[0])
+                    stream.detach()
+
+    def testProgressDetailsShortCachedErrorRemainsCompleteWithoutOmission(self):
+        from unittest.mock import patch
+
+        cached = "Traceback: short-callsite\nValueError: short-cause\nshort-note\n"
+        for github_actions in ("false", "true"):
+            with self.subTest(github_actions=github_actions), patch.dict(
+                os.environ, {"GITHUB_ACTIONS": github_actions}
+            ):
+                stream, result, case, formatter = self.progressDetailsFixture(cached)
+                primary = ValueError("actual error identity")
+                try:
+                    raise primary
+                except ValueError:
+                    original_error = sys.exc_info()
+                    with formatter as formatted:
+                        result.addError(case, original_error)
+                text = stream.getvalue()
+                self.assertNotIn("cached traceback omitted", text)
+                for line in cached.splitlines():
+                    self.assertIn("[test detail] " + line + "\n", text)
+                self.assertEqual(formatted.call_count, 1)
+                self.assertIs(formatted.call_args.args[0], original_error)
+                self.assertIs(original_error[1], primary)
+                self.assertIs(result.errors[-1][1], cached)
+                if github_actions == "true":
+                    escaped = cached.replace("%", "%25").replace("\r", "%0D").replace("\n", "%0A")
+                    self.assertIn("::" + escaped + "\n", text)
 
 
 SOURCE_UI_TESTS_AVAILABLE = (REPO_ROOT / "tests" / "__init__.py").is_file()
