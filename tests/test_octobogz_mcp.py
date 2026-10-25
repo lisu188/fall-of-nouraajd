@@ -1142,7 +1142,7 @@ class OctobogzMcpWalkthroughTest(unittest.TestCase):
         self.assertEqual((106, 111, 0), self.coords())
         self.assertEqual(market, self.call(self.object("market1"), "getObjectProperty", "market"))
         shortfall = required_gold - self.call(self.player, "getGold")
-        if shortfall <= 0 or self.call(self.player, "getMana") != self.call(self.player, "getManaMax"):
+        if shortfall <= 0 or self.call(self.player, "getMana") < self.call(self.player, "getManaMax"):
             return 0
         potions = json.loads(
             (Path(__file__).resolve().parents[1] / "res/config/potions.json").read_text(encoding="utf-8")
@@ -4696,6 +4696,39 @@ class OctobogzDiagnosticTest(unittest.TestCase):
                     all(len(row["originalNames"]) == 16 and row["originalNamesCount"] == 30 for row in rows)
                 )
                 self.assertTrue(all(len(name) == 160 for row in rows for name in row["originalNames"]))
+
+    def testOwnedManaFundingAcceptsFullOrValidExcessButNeverBelowMaximum(self):
+        from tests.test_octobogz_hunt import OctobogzHuntTest
+
+        projection = json.dumps({"SpicedBeer": {"class": "ManaPotion", "properties": {"singleUse": True}}})
+        for mana, required_gold, expected_sales in ((174, 300, 0), (175, 300, 1), (176, 300, 1), (176, 200, 0)):
+            with self.subTest(mana=mana, required_gold=required_gold):
+                fixture = OctobogzHuntTest("runTest")
+                walker, handles, inventory, stock, sold, gold = fixture.authoredMarketFixture()
+                walker.fixture_properties["mana"] = mana
+                market = walker.call(walker.object("market1"), "getObjectProperty", "market")
+                original_inventory = list(inventory)
+                original_state = walker.marketTransactionState()
+                with patch("pathlib.Path.read_text", return_value=projection) as read_projection, patch(
+                    "builtins.print"
+                ):
+                    result = walker.fundBasicIngredientsWithOwnedMana(market, required_gold)
+                self.assertEqual(expected_sales, result)
+                self.assertEqual([handles["mana"]] if expected_sales else [], sold)
+                self.assertEqual(
+                    200 + expected_sales * 320, gold[0], "Only the actual quoted owned item may fund the shortfall"
+                )
+                self.assertEqual([handles["mana"]] if expected_sales else [], stock)
+                self.assertEqual(
+                    [item for item in original_inventory if not expected_sales or item != handles["mana"]], inventory
+                )
+                self.assertEqual(
+                    original_state,
+                    walker.marketTransactionState(),
+                    "Funding must not restore or consume native resources",
+                )
+                self.assertEqual(expected_sales, read_projection.call_count)
+                self.assertEqual(mana, walker.fixture_properties["mana"])
 
 
 if __name__ == "__main__":
