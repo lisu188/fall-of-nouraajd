@@ -1,0 +1,13 @@
+Checks: >-
+  -*,
+  clang-analyzer-core.*,
+  clang-analyzer-cplusplus.*,
+  clang-analyzer-unix.*,
+  bugprone-*,
+  performance-*,
+  modernize-use-nullptr,
+  modernize-use-override,
+  modernize-use-emplace
+WarningsAsErrors: ''
+HeaderFilterRegex: '^.*/(src|native_plugins)/'
+FormatStyle: file

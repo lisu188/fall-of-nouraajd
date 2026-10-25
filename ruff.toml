@@ -1,0 +1,11 @@
+target-version = "py312"
+line-length = 120
+extend-exclude = ["cmake-build-*", "coverage", "vstd", "random-dungeon-generator", "android/.gradle", "android/app/build"]
+
+[lint]
+select = ["E4", "E7", "E9", "F", "B", "SIM", "C4", "PIE", "PERF"]
+ignore = ["E501", "B008"]
+
+[lint.per-file-ignores]
+"res/maps/**/script.py" = ["F821"]
+"res/plugins/*.py" = ["F821"]
