@@ -6226,71 +6226,159 @@ class GameTest(unittest.TestCase):
 
         return True, json.dumps({"hp_max": creature.getHpMax(), "is_player": creature.isPlayer()}, sort_keys=True)
 
+    @contextlib.contextmanager
+    def pythonPluginResource(self, owner, source):
+        import stat
+
+        resources = owner.getResourcesProvider()
+        config_path = resources.getPath("config/items.json")
+        self.assertTrue(config_path, "plugin fixtures require the actual game's copied resources")
+        resource_root = Path(config_path).resolve().parent.parent
+        self.assertNotEqual((REPO_ROOT / "res").resolve(), resource_root)
+        maps_root = resource_root / "maps"
+        self.assertEqual(maps_root, maps_root.resolve())
+        self.assertFalse(maps_root.is_symlink())
+        self.assertFalse(getattr(os.lstat(maps_root), "st_file_attributes", 0) & stat.FILE_ATTRIBUTE_REPARSE_POINT)
+        directory = Path(tempfile.mkdtemp(prefix="python_loader_probe_", dir=maps_root))
+        plugin_path = directory / "script.py"
+        created_file = False
+        try:
+            self.assertEqual(maps_root, directory.resolve().parent)
+            self.assertFalse(directory.is_symlink())
+            self.assertFalse(getattr(os.lstat(directory), "st_file_attributes", 0) & stat.FILE_ATTRIBUTE_REPARSE_POINT)
+            with plugin_path.open("x", encoding="utf-8") as plugin_file:
+                created_file = True
+                plugin_file.write(source)
+            self.assertEqual(directory, plugin_path.resolve().parent)
+            self.assertFalse(plugin_path.is_symlink())
+            self.assertFalse(
+                getattr(os.lstat(plugin_path), "st_file_attributes", 0) & stat.FILE_ATTRIBUTE_REPARSE_POINT
+            )
+            logical_path = plugin_path.relative_to(resource_root).as_posix()
+            resolved_path = resources.getPath(logical_path)
+            self.assertTrue(resolved_path)
+            self.assertEqual(plugin_path.resolve(), Path(resolved_path).resolve())
+            yield logical_path
+        finally:
+            primary_failure = sys.exc_info()[0] is not None
+            try:
+                if created_file:
+                    plugin_path.unlink(missing_ok=True)
+                directory.rmdir()
+            except OSError:
+                if not primary_failure:
+                    raise
+
+    def assertFreshPythonResourcePlugin(self, game, owner):
+        handler = owner.getObjectHandler()
+        before_types = set(handler.getAllTypes())
+        class_name = f"PythonLoaderProbe_{os.getpid()}_{time.time_ns()}"
+        self.assertNotIn(class_name, before_types)
+        source = (
+            "def load(_unused, owner):\n"
+            "    from game import CTile, register\n"
+            "    @register(owner)\n"
+            f"    class {class_name}(CTile):\n"
+            "        def onStep(self, creature):\n"
+            f"            self.setStringProperty('pythonLoaderCallback', '{class_name}')\n"
+        )
+        with self.pythonPluginResource(owner, source) as logical_path:
+            self.assertTrue(game.CPluginLoader.loadPlugin(owner, logical_path))
+            self.assertEqual(before_types | {class_name}, set(handler.getAllTypes()))
+            probe = handler.createObject(owner, class_name)
+            self.assertIsNotNone(probe)
+            self.assertIsInstance(probe, game.CTile)
+            self.assertEqual(owner, probe.getGame())
+            self.assertEqual("", probe.getStringProperty("pythonLoaderCallback"))
+            game.CTile.onStep(probe, None)
+            self.assertEqual(class_name, probe.getStringProperty("pythonLoaderCallback"))
+        return {"class": class_name, "callback": probe.getStringProperty("pythonLoaderCallback")}
+
     @game_test
     def test_cpp_plugin_manifest_registers_native_content(self):
         game = load_game_module()
-
         g = game.CGameLoader.loadGame()
-        marker = g.createObject("nativePluginMarker")
-
-        self.assertIsNotNone(marker)
-        self.assertEqual("Native plugin marker", marker.getStringProperty("label"))
-        self.assertEqual("Registered by a compiled C++ plugin.", marker.getStringProperty("description"))
-        self.assertTrue(marker.getBoolProperty("nativePluginLoaded"))
-        self.assertTrue(game.CPluginLoader.loadCppPlugin(g, "CNativeContentPlugin"))
-        self.assertFalse(game.CPluginLoader.loadCppPlugin(g, "DefinitelyMissingPlugin"))
-
-        report = {
-            "marker": marker.getStringProperty("label"),
-            "native": marker.getBoolProperty("nativePluginLoaded"),
+        retired = {
+            "CPlugin": game,
+            "CPluginRegistrar": game,
+            "loadCppPlugin": game.CPluginLoader,
+            "loadDynamicPlugin": game.CPluginLoader,
+            "loadPlugin": g,
         }
-        return True, json.dumps(report, sort_keys=True)
+        for name, owner in retired.items():
+            with self.subTest(retired_api=name):
+                self.assertFalse(hasattr(owner, name))
+        self.assertTrue(callable(game.CPluginLoader.loadPlugin))
+        return True, json.dumps({"retired_apis_absent": sorted(retired)}, sort_keys=True)
 
     @game_test
     def test_dynamic_plugin_manifest_registers_native_content(self):
         game = load_game_module()
-
-        g = game.CGameLoader.loadGame()
-        marker = g.createObject("dynamicNativePluginMarker")
-
-        self.assertIsNotNone(marker)
-        self.assertEqual("Dynamic native plugin marker", marker.getStringProperty("label"))
-        self.assertEqual("Registered by a dynamic C++ plugin.", marker.getStringProperty("description"))
-        self.assertTrue(marker.getBoolProperty("nativePluginLoaded"))
-        self.assertTrue(marker.getBoolProperty("dynamicPluginLoaded"))
-
-        report = {
-            "dynamic": marker.getBoolProperty("dynamicPluginLoaded"),
-            "marker": marker.getStringProperty("label"),
-        }
-        return True, json.dumps(report, sort_keys=True)
+        first = game.CGameLoader.loadGame()
+        second = game.CGameLoader.loadGame()
+        first_handler = first.getObjectHandler()
+        second_handler = second.getObjectHandler()
+        self.assertNotEqual(first_handler, second_handler)
+        first_types = set(first_handler.getAllTypes())
+        second_types = set(second_handler.getAllTypes())
+        for class_name in ("CTile", "CItem", "CEffect"):
+            with self.subTest(class_name=class_name):
+                self.assertIn(class_name, first_types)
+                self.assertIn(class_name, second_types)
+                first_object = first.createObject(class_name)
+                second_object = second.createObject(class_name)
+                self.assertEqual(class_name, first_object.getType())
+                self.assertEqual(class_name, second_object.getType())
+                self.assertEqual(first, first_object.getGame())
+                self.assertEqual(second, second_object.getGame())
+                first_object.setStringProperty("perGameFactoryProbe", "first")
+                self.assertEqual("", second_object.getStringProperty("perGameFactoryProbe"))
+        first_probe = self.assertFreshPythonResourcePlugin(game, first)
+        self.assertEqual(second_types, set(second_handler.getAllTypes()))
+        second_probe = self.assertFreshPythonResourcePlugin(game, second)
+        self.assertEqual(first_types | {first_probe["class"]}, set(first_handler.getAllTypes()))
+        self.assertEqual(second_types | {second_probe["class"]}, set(second_handler.getAllTypes()))
+        self.assertNotEqual(first_probe["class"], second_probe["class"])
+        return True, json.dumps({"first": first_probe, "second": second_probe}, sort_keys=True)
 
     @game_test
     def test_dynamic_plugin_direct_load_and_failures(self):
         game = load_game_module()
-
         g = game.CGameLoader.loadGame()
-        sample_library = "plugins/native/native_marker_plugin"
-
-        self.assertTrue(game.CPluginLoader.loadDynamicPlugin(g, sample_library, "game_plugin_load_direct_v3"))
-        marker = g.createObject("directDynamicPluginMarker")
-        self.assertIsNotNone(marker)
-        self.assertEqual("Direct dynamic plugin marker", marker.getStringProperty("label"))
-        self.assertTrue(marker.getBoolProperty("directDynamicPluginLoaded"))
-
-        self.assertFalse(game.CPluginLoader.loadDynamicPlugin(g, "plugins/native/definitely_missing_plugin"))
-        self.assertFalse(game.CPluginLoader.loadDynamicPlugin(g, sample_library, "game_plugin_load_missing_v3"))
-        self.assertFalse(game.CPluginLoader.loadDynamicPlugin(g, sample_library, "game_plugin_load_bad_api_v3"))
-        self.assertFalse(game.CPluginLoader.loadDynamicPlugin(g, sample_library, "game_plugin_load_false_v3"))
-        self.assertFalse(game.CPluginLoader.loadDynamicPlugin(g, sample_library, "game_plugin_load_v2"))
-        self.assertFalse(game.CPluginLoader.loadDynamicPlugin(g, "plugins/native/native_legacy_probe"))
-        self.assertFalse(game.CPluginLoader.loadDynamicPlugin(g, "plugins/native/native_missing_version_probe"))
-
-        report = {
-            "direct": marker.getBoolProperty("directDynamicPluginLoaded"),
-            "marker": marker.getStringProperty("label"),
+        handler = g.getObjectHandler()
+        fresh = self.assertFreshPythonResourcePlugin(game, g)
+        # Each failure body stops before registration; a false result does not roll back a plugin.
+        failure_sources = {
+            "syntax": "def load(:\n    pass\n",
+            "missing_load": "not_a_loader = True\n",
+            "wrong_signature": "def load(owner):\n    pass\n",
+            "raised": "def load(_unused, owner):\n    raise RuntimeError('before registration')\n",
+            "forbidden_import": "def load(_unused, owner):\n    import os\n",
         }
-        return True, json.dumps(report, sort_keys=True)
+        for label, source in failure_sources.items():
+            with self.subTest(failure=label):
+                before_types = set(handler.getAllTypes())
+                with self.pythonPluginResource(g, source) as logical_path:
+                    self.assertFalse(game.CPluginLoader.loadPlugin(g, logical_path))
+                self.assertEqual(before_types, set(handler.getAllTypes()))
+        with self.pythonPluginResource(g, "def load(_unused, owner):\n    pass\n") as logical_path:
+            plugin_path = Path(g.getResourcesProvider().getPath(logical_path))
+            rejected_paths = (
+                str(plugin_path.resolve()),
+                "../" + logical_path,
+                "maps/empty/not_script.py",
+                "plugins/not_a_plugin.txt",
+            )
+            for path in rejected_paths:
+                with self.subTest(rejected_path=path):
+                    before_types = set(handler.getAllTypes())
+                    self.assertFalse(game.CPluginLoader.loadPlugin(g, path))
+                    self.assertEqual(before_types, set(handler.getAllTypes()))
+            plugin_path.unlink()
+            before_types = set(handler.getAllTypes())
+            self.assertFalse(game.CPluginLoader.loadPlugin(g, logical_path))
+            self.assertEqual(before_types, set(handler.getAllTypes()))
+        return True, json.dumps({"fresh": fresh, "failure_bodies": sorted(failure_sources)}, sort_keys=True)
 
     def testLuaPluginLoaderApiIsAbsent(self):
         game = load_game_module()
@@ -13523,10 +13611,6 @@ class GameTest(unittest.TestCase):
             def getObjective(self):
                 return "Python registered objective"
 
-        class PyPlugin(game.CPlugin):
-            def load(self, registrar):
-                calls.append(("plugin_load", registrar.game().getType()))
-
         class PyDialog(game.CDialog):
             def invokeAction(self, action):
                 calls.append(("dialog_action", action))
@@ -13545,7 +13629,6 @@ class GameTest(unittest.TestCase):
             "PyScroll": PyScroll,
             "PyTrigger": PyTrigger,
             "PyQuest": PyQuest,
-            "PyPlugin": PyPlugin,
             "PyDialog": PyDialog,
         }
         for name, cls in registered_classes.items():
@@ -13571,7 +13654,6 @@ class GameTest(unittest.TestCase):
         game.CTrigger.trigger(created["PyTrigger"], None, None)
         self.assertTrue(game.CQuest.isCompleted(created["PyQuest"]))
         self.assertEqual("Python registered objective", game.CQuest.getObjective(created["PyQuest"]))
-        game.CPlugin.load(created["PyPlugin"], game.CPluginRegistrar(g))
         game.CDialogBase2.invokeAction(created["PyDialog"], "open")
         self.assertTrue(game.CDialogBase2.invokeCondition(created["PyDialog"], "ready"))
 
@@ -14121,10 +14203,6 @@ class GameTest(unittest.TestCase):
             def onComplete(self):
                 fail("quest_complete")
 
-        class RaisingPlugin(game.CPlugin):
-            def load(self, registrar):
-                fail("plugin")
-
         class RaisingDialog(game.CDialogBase):
             def invokeAction(self, action):
                 fail(f"dialog_action_{action}")
@@ -14160,8 +14238,6 @@ class GameTest(unittest.TestCase):
         self.assertFalse(game.CQuest.isCompleted(quest))
         game.CQuest.onComplete(quest)
 
-        game.CPlugin.load(RaisingPlugin(), game.CPluginRegistrar(g))
-
         dialog = RaisingDialog()
         game.CDialogBase.invokeAction(dialog, "open")
         self.assertTrue(game.CDialogBase.invokeCondition(dialog, "ready"))
@@ -14187,7 +14263,6 @@ class GameTest(unittest.TestCase):
             "trigger",
             "quest_completed",
             "quest_complete",
-            "plugin",
             "dialog_action_open",
             "dialog_condition_ready",
         }
@@ -14328,7 +14403,7 @@ class GameTest(unittest.TestCase):
 
         rng_handler = g.getRngHandler()
         object_handler = g.getObjectHandler()
-        g.loadPlugin(lambda: g.createObject("CPlugin"))
+        self.assertFreshPythonResourcePlugin(game, g)
 
         provider = game.CResourcesProvider.getInstance()
         (Path.cwd() / "save").mkdir(exist_ok=True)
