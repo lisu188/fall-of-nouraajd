@@ -152,6 +152,7 @@ FAST_TEST_PREFIXES = (
     "BaldursGateCustodyRoleSourceTest.",
     "CityWalkthroughRegistrationTest.",
     "BindingSourceLayoutTest.",
+    "BuiltinGameplayRegistrationTest.",
     "SavedWaitSourceTest.",
     "BaldursGateCityContentTest.",
     "BaldursGateCityRoutesTest.",
@@ -1649,7 +1650,6 @@ def load_registered_class_categories():
         "animation-registration": REPO_ROOT / "src" / "gui" / "CAnimationTypeRegistration.cpp",
         "widget-registration": REPO_ROOT / "src" / "gui" / "object" / "CGuiWidgetTypeRegistration.cpp",
         "panel-registration": REPO_ROOT / "src" / "gui" / "panel" / "CGuiPanelTypeRegistration.cpp",
-        "native-plugin-registration": REPO_ROOT / "src" / "plugin" / "NativePlugin.cpp",
     }
     categories = {}
     pattern = re.compile(r"register_type(?:_metadata)?<([^>;]+?)>")
@@ -1659,13 +1659,25 @@ def load_registered_class_categories():
         text = path.read_text(encoding="utf-8")
         for match in pattern.finditer(text):
             class_name = match.group(1).split(",", 1)[0].strip()
-            if class_name.startswith("CWrapper<") or not class_name:
+            if not re.fullmatch(r"C[A-Za-z0-9_]+", class_name):
                 continue
             categories.setdefault(
                 class_name,
                 {
                     "category": category,
                     "owner": path.relative_to(REPO_ROOT).as_posix(),
+                    "className": class_name,
+                },
+            )
+    gameplay_table = REPO_ROOT / "src" / "core" / "CGameplayTypeTable.h"
+    if gameplay_table.exists():
+        row_pattern = re.compile(r"^\s+FN_(?:TYPE|WRAPPED)\(\s*(C[A-Za-z0-9_]+)\s*,", re.MULTILINE)
+        for class_name in row_pattern.findall(gameplay_table.read_text(encoding="utf-8")):
+            categories.setdefault(
+                class_name,
+                {
+                    "category": "gameplay-registration",
+                    "owner": gameplay_table.relative_to(REPO_ROOT).as_posix(),
                     "className": class_name,
                 },
             )
@@ -27025,6 +27037,9 @@ if SOURCE_UI_TESTS_AVAILABLE:
     )
     from tests.test_wait_state import WaitStateRuntimeTest as _WaitStateRuntimeTest
     from tests.test_binding_source_layout import BindingSourceLayoutTest as _BindingSourceLayoutTest
+    from tests.test_builtin_gameplay_registration import (
+        BuiltinGameplayRegistrationTest as _BuiltinGameplayRegistrationTest,
+    )
     from tests.test_saved_wait_source import SavedWaitSourceTest as _SavedWaitSourceTest
     from tests.test_baldurs_gate_city_content import BaldursGateCityContentTest as _BaldursGateCityContentTest
     from tests.test_baldurs_gate_city_routes import BaldursGateCityRoutesTest as _BaldursGateCityRoutesTest
@@ -27146,6 +27161,9 @@ if SOURCE_UI_TESTS_AVAILABLE:
     from tests.test_waypoint_traversal import WaypointTraversalTest as _WaypointTraversalTest
 
     class BindingSourceLayoutTest(_BindingSourceLayoutTest):
+        pass
+
+    class BuiltinGameplayRegistrationTest(_BuiltinGameplayRegistrationTest):
         pass
 
     class SavedWaitSourceTest(_SavedWaitSourceTest):
@@ -27548,6 +27566,7 @@ if SOURCE_UI_TESTS_AVAILABLE:
     del _MultilevelRuinsContentTest, _MultilevelRuinsRuntimeTest, _MultilevelRuinsMcpTest
     del _ConsoleUiInteractionTest, _UiMinimapInteractionTest
     del _BindingSourceLayoutTest
+    del _BuiltinGameplayRegistrationTest
     del _SavedWaitSourceTest
     del _WaitStateRuntimeTest
     del _BaldursGateCityContentTest, _BaldursGateCityDataTest
