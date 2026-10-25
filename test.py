@@ -23446,9 +23446,8 @@ class XvfbGameplayProcessTest(unittest.TestCase):
         player.relocateWithoutMoveHooks(staging)
 
         player.setStringProperty("affiliation", "gooby")
-        run_blocking_gui_action(
-            game, lambda: player.moveTo(cave_coords.x, cave_coords.y, cave_coords.z), push_space_key
-        )
+        # Opening the lair has no reader to acknowledge; Space would request an unrelated world turn.
+        player.moveTo(cave_coords.x, cave_coords.y, cave_coords.z)
         pump_event_loop(5)
         player.setStringProperty("affiliation", "")
         self.assertIsNone(game_map.getObjectByName("cave1"))
