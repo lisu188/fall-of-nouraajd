@@ -1233,6 +1233,7 @@ class OctobogzMcpWalkthroughTest(unittest.TestCase):
         }
         candidates = candidates[:needed]
         if len(candidates) < needed:
+            self.rememberFiniteOriginalHealingStock(receipt, None, "incomplete original pair")
             print("MCP hunt finite original stock", {**receipt, "skip": "incomplete original pair"}, flush=True)
             return 0
         quotes = [self.call(market, "getSellCost", item) for item in candidates]
@@ -1242,8 +1243,10 @@ class OctobogzMcpWalkthroughTest(unittest.TestCase):
             self.fundBasicIngredientsWithOwnedMana(market, required_gold)
             receipt["gold"] = self.call(self.player, "getGold")
         if required_gold > self.call(self.player, "getGold"):
+            self.rememberFiniteOriginalHealingStock(receipt, quotes, "unaffordable")
             print("MCP hunt finite original stock", {**receipt, "quotes": quotes, "skip": "unaffordable"}, flush=True)
             return 0
+        self.rememberFiniteOriginalHealingStock(receipt, quotes, "")
         print("MCP hunt finite original stock", {**receipt, "quotes": quotes, "skip": ""}, flush=True)
         before = self.marketTransactionState()
         purchases = []
@@ -1281,6 +1284,7 @@ class OctobogzMcpWalkthroughTest(unittest.TestCase):
         strong = sum(item["heal"] and item["power"] > 1 for item in items.values())
         lesser = sum(item["typeId"] == "LesserLifePotion" for item in items.values())
         gold = self.call(self.player, "getGold")
+        self.healing_preparation_gold = gold
         return {"items": items, "strong": strong, "brewable": min(lesser // 2, gold // 20)}
 
     def ensureAuthoredHealingReadiness(self, initial=True):
@@ -1345,12 +1349,22 @@ class OctobogzMcpWalkthroughTest(unittest.TestCase):
                     inventory = self.healingPreparationInventory()
                     if inventory["strong"] >= target:
                         break
-                self.assertLess(
-                    fights, 18, ("Bounded authored healing preparation exhausted", target, inventory, fights)
-                )
-                self.assertTrue(
-                    candidates, ("Finite living authored Pritz exhausted before healing readiness", target, inventory)
-                )
+                try:
+                    self.assertLess(
+                        fights, 18, ("Bounded authored healing preparation exhausted", target, inventory, fights)
+                    )
+                    self.assertTrue(
+                        candidates,
+                        ("Finite living authored Pritz exhausted before healing readiness", target, inventory),
+                    )
+                except AssertionError:
+                    try:
+                        self.reportAuthoredHealingReadinessFailure(
+                            initial, target, inventory, fights, conversions, original, candidates
+                        )
+                    except Exception:
+                        pass
+                    raise
                 _, name, anchor_index = candidates[0]
                 actor = self.call(self.game_map, "getObjectByName", name)
                 self.assertEqual(original[name][0], actor, "Preparation must fight the existing authored actor")
@@ -2381,6 +2395,54 @@ class OctobogzMcpWalkthroughTest(unittest.TestCase):
                     save_path.unlink(missing_ok=True)
                     save_path.with_suffix(".json.bak").unlink(missing_ok=True)
         self.assertMeaningfulPulseWitness()
+
+    def rememberFiniteOriginalHealingStock(self, receipt, quotes, skip):
+        row = {key: receipt[key] for key in ("initial", "needed", "gold")}
+        for key in ("originalNames", "purchasedNames", "availableOriginalNames"):
+            row[key] = [name[:160] for name in receipt[key][:16]]
+            row[key + "Count"] = len(receipt[key])
+        reserved = getattr(self, "retained_lesser_shop_name", None)
+        row["reservedName"] = reserved[:160] if reserved else None
+        row["quotes"] = list(quotes) if quotes is not None else None
+        row["skip"] = skip
+        row["quotedPurchaseAttempt"] = not skip
+        self.healing_original_stock_receipts = [*getattr(self, "healing_original_stock_receipts", ())[-3:], row]
+
+    def reportAuthoredHealingReadinessFailure(
+        self, initial, target, inventory, fights, conversions, original, candidates
+    ):
+        owned = [
+            {key: item[key][:160] if isinstance(item[key], str) else item[key] for key in ("name", "typeId", "power")}
+            for item in inventory["items"].values()
+            if (item.get("heal") and item["power"] > 1) or item["typeId"] == "LesserLifePotion"
+        ]
+        receipt = {
+            "initial": initial,
+            "target": target,
+            "strong": inventory["strong"],
+            "brewable": inventory["brewable"],
+            "goldAtInventoryRead": getattr(self, "healing_preparation_gold", None),
+            "fights": fights,
+            "fightBudget": 18,
+            "conversions": conversions,
+            "conversionLimit": 20,
+            "frozenActorCount": len(original),
+            "livingCandidateCount": len(candidates),
+            "ownedHealing": owned[:128],
+            "ownedHealingCount": len(owned),
+            "originalStockReceipts": list(getattr(self, "healing_original_stock_receipts", ())),
+            "purchasedOriginalNames": [
+                name[:160] for name in sorted(getattr(self, "purchased_lesser_shop_names", ()))[:16]
+            ],
+            "class": getattr(self, "mcp_profile_class", "")[:80],
+        }
+        # Scalar observations only on failure; the owned inventory is the existing readiness snapshot.
+        for method in ("getMana", "getManaMax", "getHp", "getHpMax"):
+            try:
+                receipt[method] = self.call(self.player, method)
+            except Exception as error:
+                receipt[method] = {"errorType": type(error).__name__}
+        print("MCP hunt healing readiness failure", receipt, flush=True)
 
 
 class OctobogzDiagnosticTest(unittest.TestCase):
@@ -4482,6 +4544,158 @@ class OctobogzDiagnosticTest(unittest.TestCase):
                 namespace[method.name](fixture)
                 self.assertEqual(1, state["calls"])
                 self.assertEqual(earlier_gold + 200, state["gold"])
+
+    def testExhaustedReadinessReportsExistingOwnedStockAndContextWithoutExtraInventoryReads(self):
+        from unittest.mock import Mock
+
+        walker, state, items, *_ = self.authoredReadinessFixture(strong=8, foes=0)
+        walker.mcp_profile_class = "Sorcerer"
+        original_call = walker.call
+        scalar_calls = []
+
+        def call(handle, method, *args):
+            if handle == "player" and method in ("getMana", "getManaMax", "getHp", "getHpMax"):
+                scalar_calls.append(method)
+                return {"getMana": 17, "getManaMax": 16, "getHp": 91, "getHpMax": 91}[method]
+            return original_call(handle, method, *args)
+
+        walker.call = call
+        walker.engine = Mock(wraps=walker.engine)
+        original_assert = walker.assertTrue
+        original_failures = []
+
+        def assert_true(value, message=None):
+            try:
+                original_assert(value, message)
+            except AssertionError as error:
+                original_failures.append(error)
+                raise
+
+        walker.assertTrue = assert_true
+        with patch("builtins.print") as output, self.assertRaises(AssertionError) as raised:
+            walker.ensureAuthoredHealingReadiness(initial=False)
+        self.assertIs(original_failures[-1], raised.exception)
+        reports = [
+            call.args[1] for call in output.call_args_list if call.args[0] == "MCP hunt healing readiness failure"
+        ]
+        self.assertEqual(1, len(reports), "The exhausted readiness assertion must retain failure-only accounting")
+        report = reports[0]
+        self.assertEqual(
+            (False, 10, 8, 0, 1600),
+            tuple(report[key] for key in ("initial", "target", "strong", "brewable", "goldAtInventoryRead")),
+        )
+        self.assertEqual(
+            (0, 18, 2, 20, 0, 0),
+            tuple(
+                report[key]
+                for key in (
+                    "fights",
+                    "fightBudget",
+                    "conversions",
+                    "conversionLimit",
+                    "frozenActorCount",
+                    "livingCandidateCount",
+                )
+            ),
+        )
+        self.assertEqual(set(items), {item["name"] for item in report["ownedHealing"]})
+        self.assertEqual(8, report["ownedHealingCount"])
+        self.assertEqual((17, 16), (report["getMana"], report["getManaMax"]))
+        self.assertEqual(["getMana", "getManaMax", "getHp", "getHpMax"], scalar_calls)
+        self.assertEqual(2, walker.engine.call_count, "Diagnostics must reuse the two existing inventory snapshots")
+        self.assertEqual(0, state["fights"])
+        walker.walkTo.assert_not_called()
+
+    def testReadinessDiagnosticErrorsPreserveTheOriginalFailureAndSuccessDoesNotDiagnose(self):
+        from unittest.mock import Mock
+
+        for mode in ("scalar", "print", "helper"):
+            with self.subTest(mode=mode):
+                walker, *_ = self.authoredReadinessFixture(strong=8, foes=0)
+                failure = AssertionError("original exhausted authored readiness assertion")
+                original_assert = walker.assertTrue
+
+                def assert_true(value, message=None):
+                    if (
+                        isinstance(message, tuple)
+                        and message[0] == "Finite living authored Pritz exhausted before healing readiness"
+                    ):
+                        raise failure
+                    return original_assert(value, message)
+
+                walker.assertTrue = assert_true
+                original_call = walker.call
+
+                def call(handle, method, *args):
+                    if method in ("getMana", "getManaMax", "getHp", "getHpMax"):
+                        if mode == "scalar":
+                            raise OSError("diagnostic scalar unavailable")
+                        return 91
+                    return original_call(handle, method, *args)
+
+                walker.call = call
+                if mode == "helper":
+                    walker.reportAuthoredHealingReadinessFailure = Mock(side_effect=OSError("diagnostic unavailable"))
+
+                def print_report(*args, **kwargs):
+                    if args[0] == "MCP hunt healing readiness failure" and mode == "print":
+                        raise OSError("diagnostic output unavailable")
+
+                with patch("builtins.print", side_effect=print_report), self.assertRaises(AssertionError) as raised:
+                    walker.ensureAuthoredHealingReadiness(initial=False)
+                self.assertIs(failure, raised.exception)
+                if mode == "helper":
+                    walker.reportAuthoredHealingReadinessFailure.assert_called_once()
+        for initial, strong in ((True, 13), (False, 10)):
+            walker, *_ = self.authoredReadinessFixture(strong=strong, foes=0)
+            walker.reportAuthoredHealingReadinessFailure = Mock(side_effect=AssertionError("success must not diagnose"))
+            with patch("builtins.print"):
+                walker.ensureAuthoredHealingReadiness(initial=initial)
+            walker.reportAuthoredHealingReadinessFailure.assert_not_called()
+
+    def testFiniteOriginalHealingStockDiagnosticsRetainObservedQuotesAndBoundHistory(self):
+        for lesser_count, gold, expected_skip, quotes in (
+            (0, 1000, "incomplete original pair", None),
+            (1, 100, "unaffordable", [400]),
+            (1, 1000, "", [400]),
+        ):
+            with self.subTest(expected_skip=expected_skip):
+                walker, owned, stocked, state, transactions = self.healingIngredientConservationFixture(
+                    lesser_count=lesser_count
+                )
+                state["gold"] = gold
+                walker.fundBasicIngredientsWithOwnedMana = lambda market, required_gold: 0
+                with patch("builtins.print"):
+                    bought = walker.buyFiniteBasicIngredientsAtAuthoredMarket(False)
+                rows = getattr(walker, "healing_original_stock_receipts", [])
+                self.assertEqual(1, len(rows), "Every finite-shop decision must retain its already-observed accounting")
+                row = rows[0]
+                self.assertEqual((expected_skip, quotes, gold), (row["skip"], row["quotes"], row["gold"]))
+                self.assertEqual(["reservedThird"], row["availableOriginalNames"])
+                self.assertEqual(["originalOne", "originalTwo"], row["purchasedNames"])
+                self.assertEqual("reservedThird", row["reservedName"])
+                self.assertEqual(not expected_skip, row["quotedPurchaseAttempt"])
+                self.assertEqual(int(not expected_skip), bought)
+                self.assertEqual(0 if expected_skip else 1, len(transactions))
+                for index in range(6):
+                    walker.rememberFiniteOriginalHealingStock(
+                        {
+                            "initial": False,
+                            "needed": 2,
+                            "gold": index,
+                            "originalNames": ["x" * 300] * 30,
+                            "purchasedNames": [],
+                            "availableOriginalNames": [],
+                        },
+                        None,
+                        "incomplete original pair",
+                    )
+                rows = walker.healing_original_stock_receipts
+                self.assertEqual([2, 3, 4, 5], [row["gold"] for row in rows])
+                self.assertTrue(
+                    all(len(row["originalNames"]) == 16 and row["originalNamesCount"] == 30 for row in rows)
+                )
+                self.assertTrue(all(len(name) == 160 for row in rows for name in row["originalNames"]))
 
 
 if __name__ == "__main__":
