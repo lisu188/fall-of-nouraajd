@@ -151,7 +151,7 @@ class SavedWaitSourceTest(unittest.TestCase):
         self.assertNotIn("advanceTransitionGeneration", temporary)
         reserved = self.read("src/object/CGameObject.cpp")
         self.assertIn('"mapBindingChanged"', reserved)
-        self.assertIn("FN_TYPE(CWaitState, CGameObject)", self.read("src/plugin/CGameplayTypeTable.h"))
+        self.assertIn("FN_TYPE(CWaitState, CGameObject)", self.read("src/core/CGameplayTypeTable.h"))
 
     def testSixNativeCasesAreRegisteredOnceAndSnapshotUsesTypedJson(self):
         source = self.read("tests/unit/test_handler.cpp")
