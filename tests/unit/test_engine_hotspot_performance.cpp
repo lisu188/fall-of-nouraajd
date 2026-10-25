@@ -1804,7 +1804,9 @@ void testEquipmentTailChecksKeepFixedWork() {
     auto controller = std::make_shared<CController>();
     controller->setGame(fixture.game);
     actor->setController(controller);
-    fixture.map->addObjectWithoutEvents(actor);
+    add_object(fixture, actor);
+    expect_true(fixture.map->getObjectByName(actor->getName()) == actor && factories == 0,
+                "the cold equipment fixture must register its actor without warming the slot service");
     auto item = std::make_shared<EquipmentTailWorkItem>();
     item->setGame(fixture.game);
     item->setName("boundedEquipmentItem");

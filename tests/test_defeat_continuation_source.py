@@ -106,6 +106,8 @@ class DefeatContinuationSourceTest(unittest.TestCase):
         guard = self.requiredBlock(performance, "void testEquipmentTailChecksKeepFixedWork()")
         for required in ("constexpr int PHASES = 2", "constexpr int PASSES = 64", "PASSES * 3", "factories == 1"):
             self.assertIn(required, guard)
+        self.assertIn("fixture.map->getObjectByName(actor->getName()) == actor && factories == 0", guard)
+        self.assertLess(guard.index("factories == 0"), guard.index("for (int phase"))
 
     def testPublicEpochAndActiveContextAreCapturedBeforeWork(self):
         body = self.body
