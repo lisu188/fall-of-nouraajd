@@ -295,6 +295,37 @@ class CityNativeLoadingSourceTest(unittest.TestCase):
         )
         self.assertIn("os.environ['GAME_SAVE_STAGE_DIAGNOSTICS'] = '1'", program)
 
+    def testScopedSaveConfigBorrowsThePrivateParsedSnapshotAndRetainsRollbackGuards(self):
+        from pathlib import Path
+
+        root = Path(__file__).resolve().parents[1]
+        loader = (root / "src/core/CLoader.cpp").read_text(encoding="utf-8")
+        scoped = loader.split("class CScopedObjectConfig {", 1)[1].split("bool rehydrate_loaded_map(", 1)[0]
+        constructor = scoped.split("~CScopedObjectConfig()", 1)[0]
+        self.assertIn("std::shared_ptr<const json> value)", constructor)
+        self.assertIn("this->handler->registerConfig(this->name, std::move(value));", constructor)
+        for forbidden in ("make_shared", "const_pointer_cast", "shared_ptr<json> value"):
+            self.assertNotIn(forbidden, constructor)
+        self.assertIn("handler->getConfig(name) != installed", scoped)
+        self.assertIn("handler->registerConfig(name, previous);", scoped)
+        self.assertIn("handler->unregisterConfig(name);", scoped)
+        self.assertIn("CScopedObjectConfig scopedSaveConfig(handler, saveConfigKey, saveDocument.snapshot);", loader)
+        handler = (root / "src/handler/CObjectHandler.cpp").read_text(encoding="utf-8")
+        mutable = handler.split(
+            "void CObjectHandler::registerConfig(const std::string &name, std::shared_ptr<json> value)", 1
+        )
+        self.assertEqual(2, len(mutable))
+        self.assertIn("std::make_shared<const json>(*value)", mutable[1].split("\n}", 1)[0])
+        immutable = handler.split(
+            "void CObjectHandler::registerConfig(const std::string &name, std::shared_ptr<const json> value)", 1
+        )[1].split("\n}", 1)[0]
+        self.assertIn("objectConfig.insert_or_assign(name, std::move(value));", immutable)
+        self.assertNotIn("make_shared", immutable)
+        codec = (root / "src/core/CSaveFormat.cpp").read_text(encoding="utf-8")
+        self.assertIn('CJsonUtil::alias(document, (*document)["snapshot"])', codec)
+        legacy = codec.split("migrateLegacySchema(", 1)[1].split("\n}", 1)[0]
+        self.assertIn("std::make_shared<json>(*source.snapshot)", legacy)
+
     def testDeferredDiagnosticProbeUsesRealSavesAndKeepsTheExistingChildDeadline(self):
         from pathlib import Path
 
