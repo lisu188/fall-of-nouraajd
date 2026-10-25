@@ -2808,8 +2808,62 @@ class OctobogzDiagnosticTest(unittest.TestCase):
                 self.assertFalse(node.func.attr.startswith("set"))
         self.assertIn("fights, 18", readiness)
         self.assertNotIn("getLevel", readiness)
-        preparation = ast.get_source_segment(source, methods["prepareHealingStockAtAuthoredMarket"])
-        self.assertIn("self.sellWeakHealingStockAtAuthoredMarket()", preparation)
+        preparation = methods["prepareHealingStockAtAuthoredMarket"]
+        sales = sorted(
+            (
+                node
+                for node in ast.walk(preparation)
+                if isinstance(node, ast.Call)
+                and isinstance(node.func, ast.Attribute)
+                and node.func.attr == "sellWeakHealingStockAtAuthoredMarket"
+            ),
+            key=lambda node: node.lineno,
+        )
+        self.assertEqual(2, len(sales))
+        self.assertEqual([], sales[-1].args)
+        self.assertEqual(
+            {"preserve_ingredients": True, "require_strong": True},
+            {keyword.arg: ast.literal_eval(keyword.value) for keyword in sales[-1].keywords},
+        )
+        seller = methods["sellWeakHealingStockAtAuthoredMarket"]
+        self.assertEqual(
+            [("preserve_ingredients", False), ("require_strong", False)],
+            list(
+                zip((argument.arg for argument in seller.args.args[-2:]), map(ast.literal_eval, seller.args.defaults))
+            ),
+        )
+        strong_guard = next(
+            (
+                node
+                for node in ast.walk(seller)
+                if isinstance(node, ast.If)
+                and isinstance(node.test, ast.BoolOp)
+                and isinstance(node.test.op, ast.Or)
+                and any(isinstance(value, ast.Name) and value.id == "require_strong" for value in node.test.values)
+                and any(
+                    isinstance(value, ast.UnaryOp)
+                    and isinstance(value.op, ast.Not)
+                    and isinstance(value.operand, ast.Name)
+                    and value.operand.id == "preserve_ingredients"
+                    for value in node.test.values
+                )
+            ),
+            None,
+        )
+        self.assertIsNotNone(strong_guard)
+        self.assertEqual(
+            1,
+            sum(
+                isinstance(node, ast.Call)
+                and isinstance(node.func, ast.Attribute)
+                and node.func.attr == "assertTrue"
+                and bool(node.args)
+                and isinstance(node.args[0], ast.Name)
+                and node.args[0].id == "strong"
+                for statement in strong_guard.body
+                for node in ast.walk(statement)
+            ),
+        )
         route = ast.get_source_segment(
             source, methods["testWarriorAndSorcererFinishThreeRealEncountersWithPartialReloadAndRewardOnce"]
         )
@@ -4138,9 +4192,11 @@ class OctobogzDiagnosticTest(unittest.TestCase):
                 def brew():
                     actions.append("brew")
 
-                def sell(preserve_ingredients=False):
-                    actions.append(("sell", preserve_ingredients))
-                    if not preserve_ingredients:
+                def sell(preserve_ingredients=False, require_strong=False):
+                    self.assertIs(True, preserve_ingredients)
+                    self.assertIsInstance(require_strong, bool)
+                    actions.append(("sell", preserve_ingredients, require_strong))
+                    if require_strong or not preserve_ingredients:
                         raise failure
 
                 def handle(*args, **kwargs):
@@ -4181,7 +4237,9 @@ class OctobogzDiagnosticTest(unittest.TestCase):
                     with self.assertRaises(AssertionError) as raised:
                         OctobogzMcpWalkthroughTest.prepareHealingStockAtAuthoredMarket(fixture, initial=False)
                 self.assertIs(failure, raised.exception)
-                self.assertEqual(["brew", ("sell", True), "brew", ("buy", False), "brew", ("sell", False)], actions)
+                self.assertEqual(
+                    ["brew", ("sell", True, False), "brew", ("buy", False), "brew", ("sell", True, True)], actions
+                )
                 self.assertEqual([("healing preparation", fixture.hunt_actors)], diagnostics)
                 if diagnostic_failure in (None, "rpc"):
                     self.assertIn("last actual Alpha combat action", output.getvalue())
@@ -4196,6 +4254,13 @@ class OctobogzDiagnosticTest(unittest.TestCase):
         OctobogzMcpWalkthroughTest.prepareHealingStockAtAuthoredMarket(fixture, initial=False)
         fixture.reportCombatFailure.assert_not_called()
         self.assertEqual(7, len(actions))
+        self.assertEqual(
+            [
+                ("sell", {"preserve_ingredients": True}),
+                ("sell", {"preserve_ingredients": True, "require_strong": True}),
+            ],
+            [action for action in actions if isinstance(action, tuple) and action[0] == "sell"],
+        )
 
     def testRoadRecoveryFailureRetainsNativeTailAndPreservesItsOriginalTravelException(self):
         import contextlib
