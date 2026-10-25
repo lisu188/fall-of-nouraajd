@@ -237,8 +237,168 @@ def assertCustodyDialogueProvenance(test, definitions, prison):
 
 
 class DialogueContentTest(unittest.TestCase):
+    def synchronousStoryReaderFixture(self):
+        fixture = self.storyReaderFixture()
+        fixture.state.update(syncCalls=0, syncError=None, syncTitle=None)
+
+        def synchronous_screen(_handler, title, body, action_label):
+            fixture.state["syncCalls"] += 1
+            fixture.installPanel(fixture.state["syncTitle"] or title, body, action_label)
+            try:
+                if fixture.state["syncError"] is not None:
+                    raise fixture.state["syncError"]
+                for _ in range(4):
+                    if fixture.state["panel"] is None:
+                        return
+                    fixture.pump()
+                self.fail("The synchronous native reader was not acknowledged")
+            finally:
+                fixture.close()
+
+        self.enterContext(patch.object(type(fixture.owner.getGuiHandler()), "showCampaignScreen", synchronous_screen))
+        return fixture
+
+    def testStoryReaderDirectJournalCallbackAcknowledgesActualSynchronousReceipt(self):
+        fixture = self.synchronousStoryReaderFixture()
+        bridge = sys.modules["game"]
+        state = {"gold": 1000, "events": [], "flags": {"captain_defeated": True}}
+
+        def addGold(amount):
+            state["gold"] += amount
+            state["events"].append(("gold", amount))
+
+        player = types.SimpleNamespace(
+            getGold=lambda: state["gold"],
+            addGold=addGold,
+            getItems=lambda: set(),
+            getEquipped=lambda: {},
+            getNumericProperty=lambda _key: 0,
+            checkQuests=lambda: state["events"].append(("checkQuests",)),
+        )
+        game_map = types.SimpleNamespace(
+            getBoolProperty=lambda key: state["flags"].get(key, False),
+            setBoolProperty=lambda key, value: state["flags"].__setitem__(key, value),
+            getPlayer=lambda: player,
+        )
+        fixture.owner.getMap = lambda: game_map
+        fixture.owner.createWeakResolver = lambda: lambda: fixture.owner
+
+        def complete_scenarioFlow(owner, outcome, *, fallback_map):
+            self.assertIs(fixture.owner, owner)
+            state["events"].append(("complete", outcome, fallback_map))
+            yield from ()
+
+        campaign = types.SimpleNamespace(
+            prepareCompletion=lambda owner, outcome, **kwargs: state["events"].append(("prepare", outcome, kwargs)),
+            complete_scenarioFlow=complete_scenarioFlow,
+        )
+        source = ast.parse((ROOT / "res/maps/hearthfall/script.py").read_text(encoding="utf-8"))
+        dialog = copy.deepcopy(
+            next(node for node in ast.walk(source) if isinstance(node, ast.ClassDef) and node.name == "ElderDialog")
+        )
+        dialog.decorator_list = []
+        dialog.body = [
+            node
+            for node in dialog.body
+            if isinstance(node, ast.FunctionDef) and node.name in {"captain_down", "report_victory"}
+        ]
+        namespace = dict(
+            CDialog=type("DialogBase", (), {"getGame": lambda _self: fixture.owner}),
+            resumableHook=fixture.ui.resumableHook,
+            flowGame=fixture.ui.flowGame,
+            uiRequest=fixture.ui.uiRequest,
+            claim_once=bridge.claim_once,
+            rewardSnapshot=bridge.rewardSnapshot,
+            showRewardReceiptFlow=bridge.showRewardReceiptFlow,
+            campaign=campaign,
+            VICTORY_GOLD_REWARD=150,
+        )
+        exec(compile(ast.Module(body=[dialog], type_ignores=[]), "actual_elder_report_callback", "exec"), namespace)
+        receiver = namespace["ElderDialog"]()
+        fixture.owner.createObject = lambda name: receiver if name == "elderDialog" else None
+        runner = ast.parse(fixture.source)
+        journal = next(
+            node
+            for node in ast.walk(runner)
+            if isinstance(node, ast.FunctionDef)
+            and node.name == "test_quest_journal_keeps_active_and_completed_entries_after_travel"
+        )
+        direct = next(
+            node
+            for node in journal.body
+            if isinstance(node, ast.Expr)
+            and isinstance(node.value, ast.Call)
+            and isinstance(node.value.func, ast.Name)
+            and node.value.func.id == "run_blocking_gui_action"
+            and any(
+                isinstance(argument, ast.Attribute) and argument.attr == "report_victory"
+                for argument in node.value.args
+            )
+        )
+        scope = dict(fixture.namespace, game=fixture.api, g=fixture.owner)
+        action = compile(ast.Module(body=[direct], type_ignores=[]), "actual_direct_journal_action", "exec")
+        exec(action, scope)
+        self.assertEqual(1150, state["gold"])
+        self.assertTrue(state["flags"]["victory_reported"])
+        self.assertEqual(1, fixture.state["syncCalls"])
+        self.assertEqual(1, fixture.state["clicks"])
+        self.assertEqual("Hearthfall liberated", fixture.observed[0][0])
+        self.assertIn("Gold: +150", fixture.observed[0][1])
+        self.assertEqual(("complete", "completed", "gravemoor"), state["events"][-1])
+        self.assertEqual(1, state["events"].count(("checkQuests",)))
+        exec(action, scope)
+        self.assertEqual(1150, state["gold"])
+        self.assertEqual(1, fixture.state["clicks"])
+        self.assertEqual([], fixture.queue)
+        fixture.cleanups[0]()
+
+    def testStoryReaderSynchronousPrimaryFailureCancelsInspectionAndRestoresBothPatches(self):
+        fixture = self.synchronousStoryReaderFixture()
+        primary = RuntimeError("original synchronous reader failed")
+        fixture.state["syncError"] = primary
+        with self.assertRaises(RuntimeError) as caught:
+            fixture.ui.showReader(fixture.owner, "Title", "Body")
+        self.assertIs(primary, caught.exception)
+        self.assertEqual(1, len(fixture.queue))
+        fixture.pump()
+        self.assertEqual(0, fixture.state["reads"])
+        self.assertIsNone(fixture.state["panel"])
+        with self.assertRaisesRegex(AssertionError, "original synchronous reader failed"):
+            fixture.cleanups[0]()
+        fixture.cleanups[-1]()
+        self.assertEqual(
+            ("showReader", "showReaderFlow"), (fixture.ui.showReader.__name__, fixture.ui.showReaderFlow.__name__)
+        )
+
+    def testStoryReaderSynchronousRepeatedCallsCaptureRealTextAndRejectForeignPanel(self):
+        fixture = self.synchronousStoryReaderFixture()
+        fixture.ui.showReader(fixture.owner, "First", "First body")
+        fixture.ui.uiTarget("showReader")(fixture.owner, "Second", "Second body")
+        self.assertEqual([("First", "First body"), ("Second", "Second body")], fixture.observed)
+        self.assertEqual(2, fixture.state["clicks"])
+        self.assertEqual([], fixture.queue)
+        fixture.state["syncTitle"] = "Foreign panel"
+        with self.assertRaises(AssertionError) as caught:
+            fixture.ui.showReader(fixture.owner, "Expected", "Third body")
+        self.assertIn("Foreign panel", str(caught.exception))
+        self.assertEqual(2, fixture.state["clicks"])
+        self.assertIsNone(fixture.state["panel"])
+        with self.assertRaises(AssertionError):
+            fixture.cleanups[0]()
+
+    def testStoryReaderSynchronousRejectedQueueStopsBeforeNativeScreen(self):
+        fixture = self.synchronousStoryReaderFixture()
+        fixture.state["acceptQueue"] = False
+        with self.assertRaises(AssertionError):
+            fixture.ui.showReader(fixture.owner, "Title", "Body")
+        self.assertEqual(0, fixture.state["syncCalls"])
+        self.assertEqual(0, fixture.state["clicks"])
+        self.assertEqual([], fixture.queue)
+
     def storyReaderFixture(self):
         import traceback
+        from functools import wraps
+        from weakref import ref
 
         source = (ROOT / "test.py").read_text(encoding="utf-8")
         names = {
@@ -291,15 +451,38 @@ class DialogueContentTest(unittest.TestCase):
             event_loop=types.SimpleNamespace(instance=lambda: types.SimpleNamespace(invoke=invoke)),
         )
         ui = types.ModuleType("ui")
-        ui.__dict__["uiRequest"] = lambda operation, *args: {"operation": operation, "args": args, "kwargs": {}}
+        ui.__dict__.update(wraps=wraps, ref=ref)
         ui_source = ast.parse((ROOT / "res/ui.py").read_text(encoding="utf-8"))
         ui_nodes = [
             node
             for node in ui_source.body
-            if isinstance(node, ast.FunctionDef) and node.name in {"showReaderFlow", "uiTarget"}
+            if isinstance(node, (ast.FunctionDef, ast.ClassDef))
+            and node.name
+            in {
+                "uiRequest",
+                "uiGame",
+                "UiFlowGame",
+                "flowGame",
+                "ResumableHook",
+                "resumableHook",
+                "showReader",
+                "showReaderFlow",
+                "uiTarget",
+                "runUiFlow",
+            }
         ]
         exec(compile(ast.Module(body=ui_nodes, type_ignores=[]), "actual_reader_flow", "exec"), ui.__dict__)
-        self.enterContext(patch.dict(sys.modules, {"ui": ui}))
+        game_nodes = [
+            node
+            for node in ast.parse((ROOT / "res/game.py").read_text(encoding="utf-8")).body
+            if isinstance(node, ast.FunctionDef)
+            and node.name
+            in {"showReader", "rewardSnapshot", "rewardReceiptText", "showRewardReceiptFlow", "claim_once"}
+        ]
+        bridge = types.ModuleType("game")
+        bridge.__dict__.update(flowGame=ui.flowGame, uiRequest=ui.uiRequest)
+        exec(compile(ast.Module(body=game_nodes, type_ignores=[]), "actual_reader_bridge", "exec"), bridge.__dict__)
+        self.enterContext(patch.dict(sys.modules, {"ui": ui, "game": bridge}))
 
         def activate(button, actual_gui):
             self.assertIs(gui, actual_gui)

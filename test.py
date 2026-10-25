@@ -22617,15 +22617,17 @@ def finishPanelInspection(test_case, pending, class_name):
 
 
 def captureStoryReaders(test_case, game, g):
+    from contextlib import ExitStack, contextmanager
     from unittest.mock import patch
     import ui
 
-    original = ui.showReaderFlow
+    original_sync, original_flow = ui.showReader, ui.showReaderFlow
     observed = []
     errors = []
     test_case.addCleanup(lambda: test_case.assertFalse(errors, "\n".join(errors)))
 
-    def show_and_acknowledge(flow_game, title, body):
+    @contextmanager
+    def inspect_reader(title, body):
         def inspect(panel):
             actual = (panel.getStringProperty("title"), panel.getStringProperty("body"))
             test_case.assertEqual((title, body), actual)
@@ -22644,9 +22646,8 @@ def captureStoryReaders(test_case, game, g):
         pending = None
         try:
             pending = queuePanelInspection(test_case, game, g, "CGameCampaignPanel", inspect, acknowledge, errors)
-            result = yield from original(flow_game, title, body)
+            yield
             finishPanelInspection(test_case, pending, "CGameCampaignPanel")
-            return result
         except Exception:
             if pending is None or "error" not in pending:
                 errors.append(traceback.format_exc())
@@ -22655,9 +22656,22 @@ def captureStoryReaders(test_case, game, g):
             if pending is not None:
                 pending["active"] = False
 
-    replacement = patch.object(ui, "showReaderFlow", show_and_acknowledge)
-    replacement.start()
-    test_case.addCleanup(replacement.stop)
+    def show_synchronous(flow_game, title, body):
+        with inspect_reader(title, body):
+            return original_sync(flow_game, title, body)
+
+    def show_resumable(flow_game, title, body):
+        with inspect_reader(title, body):
+            return (yield from original_flow(flow_game, title, body))
+
+    replacement = ExitStack()
+    try:
+        replacement.enter_context(patch.object(ui, "showReader", show_synchronous))
+        replacement.enter_context(patch.object(ui, "showReaderFlow", show_resumable))
+    except BaseException:
+        replacement.close()
+        raise
+    test_case.addCleanup(replacement.close)
     return observed
 
 
