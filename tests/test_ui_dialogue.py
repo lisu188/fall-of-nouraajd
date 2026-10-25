@@ -237,6 +237,274 @@ def assertCustodyDialogueProvenance(test, definitions, prison):
 
 
 class DialogueContentTest(unittest.TestCase):
+    def storyReaderFixture(self):
+        import traceback
+
+        source = (ROOT / "test.py").read_text(encoding="utf-8")
+        names = {
+            "captureStoryReaders",
+            "queuePanelInspection",
+            "finishPanelInspection",
+            "run_blocking_panel_inspection",
+            "run_blocking_gui_action",
+            "queue_sdl_inputs",
+        }
+        selected = [node for node in ast.parse(source).body if isinstance(node, ast.FunctionDef) and node.name in names]
+        queue, cleanups = [], []
+        state = {"panel": None, "reads": 0, "clicks": 0, "shutdown": False, "acceptQueue": True}
+
+        def invoke(callback):
+            if not state["acceptQueue"]:
+                return False
+            queue.append(callback)
+            return True
+
+        def pump():
+            self.assertTrue(queue, "The native request is still pending without a staged panel acknowledgment")
+            queue.pop(0)()
+
+        class NativeHandler:
+            def showCampaignScreen(self, *_args):
+                raise AssertionError("The native async dispatcher must not call the patched synchronous method")
+
+        def findPanel(_owner, class_name):
+            state["reads"] += 1
+            panel = state["panel"]
+            return panel if panel is not None and panel.kind == class_name else None
+
+        def close():
+            state["panel"] = None
+
+        def shutdown():
+            state["shutdown"] = True
+            close()
+
+        gui = types.SimpleNamespace(notify=lambda _text: None, removeChild=lambda _panel: close())
+        handler = NativeHandler()
+        owner = types.SimpleNamespace(
+            getGuiHandler=lambda: handler,
+            getGui=lambda: gui,
+            getContext=lambda: types.SimpleNamespace(shutdown=shutdown),
+        )
+        api = types.SimpleNamespace(
+            CGuiHandler=NativeHandler,
+            event_loop=types.SimpleNamespace(instance=lambda: types.SimpleNamespace(invoke=invoke)),
+        )
+        ui = types.ModuleType("ui")
+        ui.__dict__["uiRequest"] = lambda operation, *args: {"operation": operation, "args": args, "kwargs": {}}
+        ui_source = ast.parse((ROOT / "res/ui.py").read_text(encoding="utf-8"))
+        ui_nodes = [
+            node
+            for node in ui_source.body
+            if isinstance(node, ast.FunctionDef) and node.name in {"showReaderFlow", "uiTarget"}
+        ]
+        exec(compile(ast.Module(body=ui_nodes, type_ignores=[]), "actual_reader_flow", "exec"), ui.__dict__)
+        self.enterContext(patch.dict(sys.modules, {"ui": ui}))
+
+        def activate(button, actual_gui):
+            self.assertIs(gui, actual_gui)
+            self.assertIs(state["panel"].button, button)
+            state["clicks"] += 1
+            close()
+
+        namespace = {
+            "traceback": traceback,
+            "find_top_level_panel": findPanel,
+            "find_descendants_by_type": lambda panel, _kind: [panel.button],
+            "activate_widget": activate,
+            "pump_event_loop": lambda _count: None,
+        }
+        exec(compile(ast.Module(body=selected, type_ignores=[]), "actual_story_reader_helpers", "exec"), namespace)
+        receiver = types.SimpleNamespace(addCleanup=lambda callback: cleanups.append(callback))
+        for name in ("assertFalse", "assertEqual", "assertTrue", "assertIn", "assertLessEqual"):
+            setattr(receiver, name, getattr(self, name))
+        observed = namespace["captureStoryReaders"](receiver, api, owner)
+        self.addCleanup(lambda: [callback() for callback in reversed(cleanups[1:])])
+
+        def installPanel(title, body, action="Continue"):
+            properties = {"title": title, "body": body, "actionLabel": action}
+            button = types.SimpleNamespace(getStringProperty=lambda key: "clickAction" if key == "click" else "")
+            state["panel"] = types.SimpleNamespace(
+                kind="CGameCampaignPanel",
+                getStringProperty=lambda key: properties[key],
+                button=button,
+                close=close,
+            )
+
+        def begin(title="Actual title", body="Actual story body"):
+            flow = ui.uiTarget("showReader", resumable=True)(owner, title, body)
+            request = next(flow)
+            self.assertEqual(
+                {"operation": "gui.showCampaignScreen", "args": (title, body, "Continue"), "kwargs": {}}, request
+            )
+            return flow
+
+        return types.SimpleNamespace(
+            source=source,
+            namespace=namespace,
+            queue=queue,
+            state=state,
+            pump=pump,
+            ui=ui,
+            owner=owner,
+            api=api,
+            observed=observed,
+            installPanel=installPanel,
+            begin=begin,
+            cleanups=cleanups,
+            close=close,
+            gui=gui,
+        )
+
+    def testStoryReaderCaptureAcknowledgesActualResumablePanel(self):
+        fixture = self.storyReaderFixture()
+        flow = fixture.begin()
+        fixture.installPanel("Actual title", "Actual story body")
+        fixture.pump()
+        self.assertIsNone(fixture.state["panel"])
+        with self.assertRaises(StopIteration):
+            flow.send(None)
+        self.assertEqual([("Actual title", "Actual story body")], fixture.observed)
+        self.assertEqual(1, fixture.state["clicks"])
+        self.assertEqual([], fixture.queue)
+        fixture.cleanups[0]()
+
+    def testStoryReaderCaptureChecksActualPanelTextAndSurfacesFailure(self):
+        fixture = self.storyReaderFixture()
+        flow = fixture.begin()
+        fixture.installPanel("Foreign title", "Actual story body")
+        fixture.pump()
+        failure = None
+        try:
+            flow.send(None)
+        except AssertionError as error:
+            failure = error
+        except StopIteration:
+            pass
+        self.assertIsNotNone(failure, "A foreign reader must fail its actual panel proof")
+        self.assertEqual([], fixture.observed)
+        self.assertEqual(0, fixture.state["clicks"])
+        self.assertIsNone(fixture.state["panel"])
+        with self.assertRaises(AssertionError):
+            fixture.cleanups[0]()
+
+    def testStoryReaderCaptureCancelsQueuedInspectorWhenFlowCloses(self):
+        fixture = self.storyReaderFixture()
+        flow = fixture.begin()
+        self.assertEqual(1, len(fixture.queue))
+        flow.close()
+        fixture.pump()
+        self.assertEqual(0, fixture.state["reads"])
+        self.assertEqual(0, fixture.state["clicks"])
+        fixture.cleanups[0]()
+
+    def testStoryReaderCapturePreservesPrimaryFlowErrorAndRestoresPatch(self):
+        fixture = self.storyReaderFixture()
+        flow = fixture.begin()
+        primary = RuntimeError("original reader failed")
+        with self.assertRaises(RuntimeError) as caught:
+            flow.throw(primary)
+        self.assertIs(primary, caught.exception)
+        fixture.pump()
+        self.assertEqual(0, fixture.state["reads"])
+        with self.assertRaisesRegex(AssertionError, "original reader failed"):
+            fixture.cleanups[0]()
+        fixture.cleanups[-1]()
+        self.assertEqual("showReaderFlow", fixture.ui.showReaderFlow.__name__)
+
+    def testStoryReaderCaptureRefusesRejectedQueueAndBoundsMissingPanel(self):
+        fixture = self.storyReaderFixture()
+        fixture.state["acceptQueue"] = False
+        with self.assertRaises(AssertionError):
+            fixture.begin()
+        self.assertEqual([], fixture.queue)
+        fixture.state["acceptQueue"] = True
+        flow = fixture.begin()
+        for _ in range(1001):
+            fixture.pump()
+        self.assertTrue(fixture.state["shutdown"])
+        self.assertEqual([], fixture.queue)
+        with self.assertRaisesRegex(AssertionError, "not visible"):
+            flow.send(None)
+
+    def testJournalTravelStagesNumericInputAfterActualElderDialog(self):
+        fixture = self.storyReaderFixture()
+        method = next(
+            node
+            for node in ast.walk(ast.parse(fixture.source))
+            if isinstance(node, ast.FunctionDef)
+            and node.name == "test_quest_journal_keeps_active_and_completed_entries_after_travel"
+        )
+        move = next(node for node in method.body if isinstance(node, ast.FunctionDef) and node.name == "moveToObject")
+        state = {"position": None, "premature": 0, "selected": 0}
+
+        def choose():
+            if fixture.state["panel"] is None:
+                state["premature"] += 1
+                return
+            state["selected"] += 1
+            fixture.close()
+
+        def moveTo(*target):
+            for _ in range(3):
+                if fixture.queue:
+                    fixture.pump()
+            fixture.state["panel"] = types.SimpleNamespace(
+                kind="CGameDialogPanel",
+                close=fixture.close,
+                getObjectProperty=lambda key: (
+                    types.SimpleNamespace(getTypeId=lambda: "elderDialog") if key == "dialog" else None
+                ),
+            )
+            for _ in range(6):
+                if fixture.state["panel"] is None:
+                    state["position"] = target
+                    return
+                if fixture.queue:
+                    fixture.pump()
+            self.fail("The real dialog was left pending after movement")
+
+        namespace = dict(fixture.namespace)
+        namespace.update(
+            self=self,
+            game=fixture.api,
+            g=fixture.owner,
+            player=types.SimpleNamespace(moveTo=moveTo, getCoords=lambda: state["position"]),
+            find_map_object_definition=lambda *_args: {"x": 96, "y": 64},
+            coords_tuple=lambda value: value,
+        )
+        exec(compile(ast.Module(body=[move], type_ignores=[]), "actual_journal_travel_move", "exec"), namespace)
+        namespace["moveToObject"]("hearthfall", "elderMaren", choose)
+        self.assertEqual({"position": (3, 2, 0), "premature": 0, "selected": 1}, state)
+
+    def testJournalTravelUsesFlowReadersWithoutPrequeuedSpace(self):
+        source = (ROOT / "test.py").read_text(encoding="utf-8")
+        method = next(
+            node
+            for node in ast.walk(ast.parse(source))
+            if isinstance(node, ast.FunctionDef)
+            and node.name == "test_quest_journal_keeps_active_and_completed_entries_after_travel"
+        )
+        calls = [node for node in ast.walk(method) if isinstance(node, ast.Call)]
+        self.assertEqual(
+            1, sum(isinstance(node.func, ast.Name) and node.func.id == "captureStoryReaders" for node in calls)
+        )
+        self.assertFalse(any(isinstance(node, ast.Name) and node.id == "push_space_key" for node in ast.walk(method)))
+        self.assertIn("push_digit_key(2)", ast.unparse(method))
+
+    def testStoryReaderNativeDispatchBypassesSynchronousPythonPatch(self):
+        cpp = (ROOT / "src/handler/CGuiHandler.cpp").read_text(encoding="utf-8")
+        start = cpp.index('operation == "showCampaignScreen"')
+        branch = cpp[start : cpp.index("} else if", start)]
+        self.assertIn("co_await self->showCampaignScreenAsync", branch)
+        self.assertNotIn('attr("showCampaignScreen")', branch)
+        ui_source = (ROOT / "res/ui.py").read_text(encoding="utf-8")
+        tree = ast.parse(ui_source)
+        target = next(node for node in tree.body if isinstance(node, ast.FunctionDef) and node.name == "uiTarget")
+        self.assertIn("globals()", ast.unparse(target))
+        flow = next(node for node in tree.body if isinstance(node, ast.FunctionDef) and node.name == "showReaderFlow")
+        self.assertIn("gui.showCampaignScreen", ast.unparse(flow))
+
     def testDialoguePunctuationHasValidUnicodeInsteadOfMojibake(self):
         text = (ROOT / "res/maps/nouraajd/dialog.json").read_text(encoding="utf-8")
         self.assertIn("Matulog\u2019s", text)

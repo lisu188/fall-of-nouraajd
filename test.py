@@ -22572,22 +22572,65 @@ def run_blocking_panel_inspection(test_case, game, g, class_name, action, inspec
     return return_value, observed["result"]
 
 
+def queuePanelInspection(test_case, game, g, class_name, inspect, close_input, errors=None):
+    pending = {"active": True, "attempts": 0}
+
+    def inspect_then_close():
+        if not pending["active"]:
+            return
+        panel = None
+        try:
+            panel = find_top_level_panel(g, class_name)
+            if panel is None:
+                pending["attempts"] += 1
+                test_case.assertLessEqual(
+                    pending["attempts"], 1000, f"{class_name} was not visible during blocking inspection."
+                )
+                test_case.assertTrue(game.event_loop.instance().invoke(inspect_then_close))
+                return
+            pending["result"] = inspect(panel)
+            close_input(panel)
+            pending["active"] = False
+        except Exception:
+            pending["error"] = traceback.format_exc()
+            pending["active"] = False
+            if errors is not None:
+                errors.append(pending["error"])
+            try:
+                if panel is not None:
+                    panel.close()
+                else:
+                    g.getContext().shutdown()
+            except Exception:
+                pending["error"] += "\nInspection cleanup failed:\n" + traceback.format_exc()
+
+    test_case.assertTrue(game.event_loop.instance().invoke(inspect_then_close), "Panel inspection was not queued.")
+    return pending
+
+
+def finishPanelInspection(test_case, pending, class_name):
+    pending["active"] = False
+    if "error" in pending:
+        raise AssertionError(pending["error"])
+    test_case.assertIn("result", pending, f"{class_name} inspection did not run.")
+    return pending["result"]
+
+
 def captureStoryReaders(test_case, game, g):
     from unittest.mock import patch
+    import ui
 
-    original = game.CGuiHandler.showCampaignScreen
+    original = ui.showReaderFlow
     observed = []
     errors = []
     test_case.addCleanup(lambda: test_case.assertFalse(errors, "\n".join(errors)))
 
-    def show_and_acknowledge(handler, title, body, action_label):
-        observed.append((title, body))
-        test_case.assertEqual("Continue", action_label)
-
+    def show_and_acknowledge(flow_game, title, body):
         def inspect(panel):
-            test_case.assertEqual(title, panel.getStringProperty("title"))
-            test_case.assertEqual(body, panel.getStringProperty("body"))
+            actual = (panel.getStringProperty("title"), panel.getStringProperty("body"))
+            test_case.assertEqual((title, body), actual)
             test_case.assertEqual("Continue", panel.getStringProperty("actionLabel"))
+            observed.append(actual)
 
         def acknowledge(panel):
             controls = [
@@ -22598,21 +22641,21 @@ def captureStoryReaders(test_case, game, g):
             test_case.assertEqual(1, len(controls), "A story reader must offer one explicit Continue control.")
             activate_widget(controls[0], g.getGui())
 
+        pending = None
         try:
-            run_blocking_panel_inspection(
-                test_case,
-                game,
-                g,
-                "CGameCampaignPanel",
-                lambda: original(handler, title, body, action_label),
-                inspect,
-                acknowledge,
-            )
+            pending = queuePanelInspection(test_case, game, g, "CGameCampaignPanel", inspect, acknowledge, errors)
+            result = yield from original(flow_game, title, body)
+            finishPanelInspection(test_case, pending, "CGameCampaignPanel")
+            return result
         except Exception:
-            errors.append(traceback.format_exc())
+            if pending is None or "error" not in pending:
+                errors.append(traceback.format_exc())
             raise
+        finally:
+            if pending is not None:
+                pending["active"] = False
 
-    replacement = patch.object(game.CGuiHandler, "showCampaignScreen", show_and_acknowledge)
+    replacement = patch.object(ui, "showReaderFlow", show_and_acknowledge)
     replacement.start()
     test_case.addCleanup(replacement.stop)
     return observed
@@ -23555,11 +23598,30 @@ class XvfbGameplayProcessTest(unittest.TestCase):
 
     def test_quest_journal_keeps_active_and_completed_entries_after_travel(self):
         game, g, source_map, player = create_xvfb_gameplay_session(self, map_name="hearthfall")
+        captureStoryReaders(self, game, g)
 
         def moveToObject(map_name, object_name, *inputs):
             definition = find_map_object_definition(map_name, object_name)
             target = (definition["x"] // 32, definition["y"] // 32, 0)
-            run_blocking_gui_action(game, lambda: player.moveTo(*target), *inputs)
+            if inputs:
+
+                def inspect_dialog(panel):
+                    self.assertEqual("elderMaren", object_name)
+                    dialog = panel.getObjectProperty("dialog")
+                    self.assertIsNotNone(dialog)
+                    self.assertEqual("elderDialog", dialog.getTypeId())
+
+                run_blocking_panel_inspection(
+                    self,
+                    game,
+                    g,
+                    "CGameDialogPanel",
+                    lambda: player.moveTo(*target),
+                    inspect_dialog,
+                    lambda _panel: queue_sdl_inputs(game, *inputs),
+                )
+            else:
+                run_blocking_gui_action(game, lambda: player.moveTo(*target))
             self.assertEqual(target, coords_tuple(player.getCoords()))
 
         def captureJournal(name, active_ids, completed_ids):
@@ -23602,14 +23664,14 @@ class XvfbGameplayProcessTest(unittest.TestCase):
                     self.assertIn(quest.getObjective(), text)
             return text
 
-        moveToObject("hearthfall", "hearthfallStart", push_space_key)
+        moveToObject("hearthfall", "hearthfallStart")
         self.assertIn("hearthfallQuest", quest_names(player))
         captureJournal("xvfb_quest_journal_hearthfall_active", ("hearthfallQuest",), ())
-        run_blocking_gui_action(game, lambda: source_map.removeObjectByName("watchCaptain"), push_space_key)
+        run_blocking_gui_action(game, lambda: source_map.removeObjectByName("watchCaptain"))
         moveToObject("hearthfall", "elderMaren", lambda: push_digit_key(2))
-        run_blocking_gui_action(game, g.createObject("elderDialog").report_victory, push_space_key)
+        run_blocking_gui_action(game, g.createObject("elderDialog").report_victory)
         self.assertEqual("gravemoor", g.getMap().mapName)
-        moveToObject("gravemoor", "gravemoorStart", push_space_key)
+        moveToObject("gravemoor", "gravemoorStart")
         self.assertTrue(find_player_quest(player, "hearthfallQuest").isCompleted())
         text = captureJournal("xvfb_quest_journal_gravemoor_history", ("gravemoorQuest",), ("hearthfallQuest",))
         self.assertIn("Hearthfall is free. The road leads north into the Gravemoor.", text)
