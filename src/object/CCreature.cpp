@@ -721,11 +721,13 @@ void CCreature::equipItem(std::string i, std::shared_ptr<CItem> newItem) {
 
         getMap()->getEventHandler()->gameEvent(
             oldItem, std::make_shared<CGameEventCaused>(CGameEvent::CType::onUnequip, this->ptr<CCreature>()));
+        game_detail::requireCurrentDefeatConstruction();
         this->addItem(oldItem);
     }
     if (newItem) {
         getMap()->getEventHandler()->gameEvent(
             newItem, std::make_shared<CGameEventCaused>(CGameEvent::CType::onEquip, this->ptr<CCreature>()));
+        game_detail::requireCurrentDefeatConstruction();
         removeItem(newItem);
         equipped[i] = newItem;
         recordDirectPropertyChanged("equipped");

@@ -23,6 +23,7 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #include "core/CMap.h"
 #include "core/CNavigation.h"
 #include "core/CStats.h"
+#include "core/CSlotConfig.h"
 #include "core/CTypes.h"
 #include "core/CTags.h"
 #include "core/CUtil.h"
@@ -1770,7 +1771,81 @@ void testMinimapTerrainCacheBuildsOnlyOnRelevantChanges() {
               << " builds=" << minimap->getTerrainTextureBuildCount() << " budget=4\n";
 }
 
+class EquipmentTailWorkItem : public CItem {
+  public:
+    int metadataCalls = 0;
+    int equipCalls = 0;
+    int unequipCalls = 0;
+    std::shared_ptr<vstd::meta> meta() override {
+        ++metadataCalls;
+        return CItem::meta();
+    }
+    void onEquip(std::shared_ptr<CGameEvent>) override { ++equipCalls; }
+    void onUnequip(std::shared_ptr<CGameEvent>) override { ++unequipCalls; }
+};
 
+void testEquipmentTailChecksKeepFixedWork() {
+    constexpr int PHASES = 2;
+    constexpr int PASSES = 64;
+    auto fixture = make_open_map(1, 1);
+    auto context = fixture.game->getContext();
+    auto objects = fixture.game->getObjectHandler();
+    auto slots = std::make_shared<CSlotConfig>();
+    auto slot = std::make_shared<CSlot>();
+    slot->setTypes({"CItem"});
+    slots->setConfiguration({{"0", slot}});
+    int factories = 0;
+    objects->registerType("UnitBoundedEquipmentSlots", [&] {
+        ++factories;
+        return slots;
+    });
+    objects->registerConfig("slotConfiguration", std::make_shared<json>(json{{"class", "UnitBoundedEquipmentSlots"}}));
+    auto actor = make_actor(fixture, "boundedEquipmentActor", Coords(0, 0, 0), "");
+    auto controller = std::make_shared<CController>();
+    controller->setGame(fixture.game);
+    actor->setController(controller);
+    fixture.map->addObjectWithoutEvents(actor);
+    auto item = std::make_shared<EquipmentTailWorkItem>();
+    item->setGame(fixture.game);
+    item->setName("boundedEquipmentItem");
+    actor->addItem(item);
+    int callbacks = 0;
+    fixture.map->getEventHandler()->registerTrigger(
+        std::make_shared<CCustomTrigger>(item->getName(), "onEquip", [&](auto, auto) { ++callbacks; }));
+    const auto turn = fixture.map->getTurn();
+    const auto registry = fixture.map->getObjects();
+    const auto assigned = fixture.map->getAssignedPlayer();
+    const auto epoch = fixture.game->getMapBindingEpoch();
+    const auto generation = context->captureTransitionGeneration();
+    for (int phase = 0; phase < PHASES; ++phase) {
+        const auto metadata = item->metadataCalls;
+        const auto equip = item->equipCalls;
+        const auto unequip = item->unequipCalls;
+        const auto triggers = callbacks;
+        for (int pass = 0; pass < PASSES; ++pass) {
+            expect_true(fixture.game->getSlotConfiguration() == slots && slots->canFit("0", item) &&
+                            slots->getFittingSlots(item) == std::set<std::string>{"0"},
+                        "the fixed one-slot workload must use the actual cold-then-warm native service");
+            actor->equipItem("0", item);
+            actor->equipItem("0", nullptr);
+        }
+        expect_true(item->metadataCalls - metadata == PASSES * 3 && item->equipCalls - equip == PASSES &&
+                        item->unequipCalls - unequip == PASSES && callbacks - triggers == PASSES,
+                    "each pass must perform three metadata reads, one equip, one unequip and one matching trigger");
+        expect_true(
+            factories == 1 && actor->getItems() == std::set<std::shared_ptr<CItem>>{item} &&
+                actor->getEquipped().empty() && actor->getController() == controller &&
+                fixture.map->getObjects() == registry && fixture.map->getAssignedPlayer() == assigned &&
+                fixture.map->getTurn() == turn && fixture.game->getMapBindingEpoch() == epoch &&
+                context->isTransitionGenerationCurrent(generation),
+            "cold/warm equipment work must retain exact ownership and add no registry/controller/map-turn work");
+    }
+    std::cout << "equipment continuation guard: phases=" << PHASES << " passes=" << PASSES
+              << " metadata=" << item->metadataCalls << " budget=" << PHASES * PASSES * 3
+              << " equip=" << item->equipCalls << " unequip=" << item->unequipCalls << " triggers=" << callbacks
+              << " factories=" << factories << "\n";
+    context->shutdown();
+}
 } // namespace
 
 void run_engine_hotspot_performance_tests() {
@@ -1790,6 +1865,7 @@ void run_engine_hotspot_performance_tests() {
     test_coordinate_cache_lookup_cardinality_and_move_updates();
     test_moderate_actor_map_move_turn_state_and_revision_bounds();
     testCommittedMapMovesReleaseActorReferences();
+    testEquipmentTailChecksKeepFixedWork();
     testStationaryMapTurnsCompleteBeforeRendering();
     testMovementBatchInteractionSchedulingIsLinear();
     testStalePlannedMapMoveWorkIsBounded();
