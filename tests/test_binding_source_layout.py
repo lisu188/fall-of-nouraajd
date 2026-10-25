@@ -20,6 +20,35 @@ ROOT = Path(__file__).resolve().parents[1]
 
 
 class BindingSourceLayoutTest(unittest.TestCase):
+    def testPythonPluginLoadingRoutesThroughTheDeclaredLoaderService(self):
+        foundation = (ROOT / "src/core/bindings/CModuleFoundation.cpp").read_text(encoding="utf-8")
+        self.assertNotRegex(foundation, r"&CGame::loadPlugin\b")
+        game_header = (ROOT / "src/core/CGame.h").read_text(encoding="utf-8")
+        self.assertNotRegex(game_header, r"\bloadPlugin\s*\(")
+        services = (ROOT / "src/core/bindings/CModuleServices.cpp").read_text(encoding="utf-8")
+        loader_class = services.split("py::class_<CPluginLoader,", 1)[1].split("py::class_<", 1)[0]
+        self.assertIn('m, "CPluginLoader"', loader_class)
+        self.assertEqual(1, len(re.findall(r'\.def\(\s*"loadPlugin"\s*,\s*&CPluginLoader::loadPlugin\b', loader_class)))
+        header = (ROOT / "src/core/CLoader.h").read_text(encoding="utf-8")
+        self.assertRegex(
+            header,
+            r"class CPluginLoader\s*\{[\s\S]*?static bool loadPlugin\(const std::shared_ptr<CGame> &game, "
+            r"const std::string &path\);",
+        )
+        implementation = (ROOT / "src/core/CLoader.cpp").read_text(encoding="utf-8")
+        start = implementation.index("bool CPluginLoader::loadPlugin(")
+        body = registrationBody(implementation[start:], "CPluginLoader::loadPlugin")
+        self.assertIn("if (!isTrustedPluginPath(path))", body)
+        self.assertIn("game->getResourcesProvider()->load(path)", body)
+        self.assertIn('plugin_namespace["__builtins__"] = build_restricted_plugin_builtins();', body)
+        self.assertIn('pybind11::exec(code + "\\n", plugin_namespace, plugin_namespace);', body)
+        self.assertIn('plugin_namespace["load"](pybind11::none(), pybind11::cast(game));', body)
+        self.assertIn("return true;", body)
+        self.assertIn("PyErr_Clear();", body)
+        self.assertIn("return false;", body)
+        cmake = (ROOT / "CMakeLists.txt").read_text(encoding="utf-8")
+        self.assertIn("src/core/bindings/CModuleFoundation.cpp", cmake)
+
     def testCityRunnerImportsUseExportedClassesAndMatchingFastPrefixes(self):
         runner = ast.parse((ROOT / "test.py").read_text(encoding="utf-8"))
         imports = [
