@@ -33,7 +33,7 @@ rules:
       - pattern: pickle.loads(...)
       - pattern: pickle.load(...)
       - pattern: yaml.unsafe_load(...)
-      - pattern: yaml.load(..., Loader=yaml.UnsafeLoader, ...)
+      - pattern: yaml.load(..., Loader=yaml.UnsafeLoader)
 
   - id: nouraajd-mcp-public-listener
     languages: [python]
