@@ -506,6 +506,117 @@ class BaldursGateCityRoutesTest(unittest.TestCase):
         self.assertIn("d.navigateTo", ast.unparse(tree))
         self.assertIn("d.choose", ast.unparse(tree))
 
+    def containerApproachModel(self, mutation=None):
+        from contextlib import ExitStack
+        from unittest.mock import patch
+
+        name = "cityAr0145Container3"
+        driver = self.ownershipDriver(duplicate=mutation == "duplicate", wrong_gold=mutation == "wrongGold")
+        driver.position, driver.target_position, driver.turns = (85, 40, 2), (88, 40, 2), 0
+        driver.waypoints, driver.moves, driver.limits = [], [], []
+        driver.identity = {"__handle__": "chest"}
+        original_call = driver.call
+        driver.call = lambda owner, method, *args: original_call(
+            "chest" if isinstance(owner, dict) else owner, method, *args
+        )
+        self._lastContainerApproachDriver = driver
+        portal = (86, 40, 2)
+        cells = frozenset((x, y, 2) for x in range(85, 89) for y in (39, 40))
+        if mutation == "blocked":
+            cells = frozenset(point for point in cells if point[1] == 40)
+
+        def objectByName(actual, required=True):
+            self.assertEqual(name, actual)
+            return driver.identity
+
+        def coords(owner=None):
+            return driver.target_position if owner else driver.position
+
+        def area(owner, actor=None):
+            point = coords(actor)
+            return "AR0145" if 83 <= point[0] < 98 and 33 <= point[1] < 45 and point[2] == 2 else "outside"
+
+        def navigate(point, *, limit):
+            self.assertEqual(1, sum(abs(a - b) for a, b in zip(driver.position, point)))
+            self.assertIn(tuple(point), cells)
+            driver.waypoints.append(tuple(point))
+            driver.limits.append(limit)
+            driver.moves.append((driver.position, tuple(point)))
+            driver.position = tuple(point)
+            driver.turns += 141 if mutation == "budget" else 1
+            if mutation == "areaHop":
+                driver.position = (69, 40, 2)
+            elif mutation == "replacement":
+                driver.identity = {"__handle__": "replacement"}
+            elif mutation == "missing":
+                driver.identity = None
+
+        def visit(actual, *, after_tick=None):
+            self.assertEqual(name, actual)
+            driver.actions.append(("navigate", actual))
+            budget = max(128, 4 * sum(abs(a - b) for a, b in zip(driver.position, driver.target_position)) + 128)
+            for _ in range(budget):
+                if driver.position == driver.target_position:
+                    return
+                x, y, z = driver.position
+                tx, ty, _ = driver.target_position
+                point = (x + (tx > x) - (tx < x), y, z) if x != tx else (x, y + (ty > y) - (ty < y), z)
+                driver.moves.append((driver.position, point))
+                # The transport model exposes a compulsory portal, not a native route replay.
+                if point == portal:
+                    driver.position = (69, 40, 2)
+                elif x < 83:
+                    driver.position = (85, 40, 2)
+                else:
+                    self.assertIn(point, cells)
+                    driver.position = point
+                driver.turns += 1
+                if after_tick:
+                    after_tick()
+            raise AssertionError(("Authored route budget exhausted", actual, budget, driver.position))
+
+        driver.object, driver.coords = objectByName, coords
+        driver.navigateCoords, driver.navigateTo = navigate, visit
+        data = {
+            "config": {name: {"properties": {"sourceArea": "AR0145"}}},
+            "geometry": {"atlas": {"AR0145": {"bounds": [83, 33, 2, 15, 12]}}},
+            "source": {"items": {}},
+        }
+        with ExitStack() as stack:
+            travel = stack.enter_context(patch.object(routes, "travel"))
+            stack.enter_context(patch.object(routes, "documents", return_value=data))
+            stack.enter_context(patch.object(routes, "currentArea", side_effect=area))
+            stack.enter_context(patch.object(routes, "cityMovementCells", return_value=(cells, frozenset({portal}))))
+            result = routes.openContainer(driver, name)
+            travel.assert_called_once_with(driver, "AR0145")
+        return driver, result
+
+    def testContainerContactAvoidsCompulsoryPortalsWithoutChangingRewardsOrBudget(self):
+        driver, result = self.containerApproachModel()
+        self.assertEqual((88, 40, 2), driver.position)
+        self.assertEqual((1017, 10000, Counter({"RING10": 2})), result)
+        self.assertEqual(140, max(128, 4 * 3 + 128), "The original three-cell approach budget is unchanged")
+        self.assertLessEqual(driver.turns, 140)
+        self.assertTrue(driver.waypoints)
+        self.assertNotIn((86, 40, 2), driver.waypoints)
+        self.assertTrue(all(sum(abs(a - b) for a, b in zip(before, after)) == 1 for before, after in driver.moves))
+        self.assertEqual(2, sum(action[0] == "choice" for action in driver.actions))
+        self.assertTrue(driver.looted)
+        self.assertEqual([], driver.contents)
+
+    def testContainerContactRejectsStaleIdentityAreaBudgetAndIncompleteAccessBeforeOpening(self):
+        for mutation in ("replacement", "missing", "areaHop", "budget", "blocked"):
+            with self.subTest(mutation=mutation), self.assertRaises(AssertionError):
+                self.containerApproachModel(mutation)
+            driver = self._lastContainerApproachDriver
+            self.assertFalse(any(action[0] == "choice" for action in driver.actions))
+            self.assertEqual(1000, driver.gold_value)
+            self.assertEqual({}, driver.items)
+            self.assertFalse(driver.looted)
+        for mutation in ("wrongGold", "duplicate"):
+            with self.subTest(mutation=mutation), self.assertRaises(AssertionError):
+                self.containerApproachModel(mutation)
+
     def ownershipDriver(self, *, duplicate=False, wrong_gold=False):
         test = self
 
@@ -557,14 +668,19 @@ class BaldursGateCityRoutesTest(unittest.TestCase):
         from unittest.mock import patch
 
         driver = self.ownershipDriver()
-        with patch.object(routes, "travel") as travel:
+        with patch.object(routes, "travel") as travel, patch.object(
+            routes, "contactCityObject", side_effect=lambda owner, name: owner.navigateTo(name)
+        ) as contact:
             after = routes.openContainer(driver, "cityAr0800Container1")
         travel.assert_called_once_with(driver, "AR0800")
+        contact.assert_called_once_with(driver, "cityAr0800Container1")
         self.assertEqual((1017, 10000, Counter({"RING10": 2})), after)
         self.assertEqual(("navigate", "cityAr0800Container1"), driver.actions[0])
         self.assertEqual(2, sum(action[0] == "choice" for action in driver.actions))
         for mutations in ({"duplicate": True}, {"wrong_gold": True}):
-            with self.subTest(mutations=mutations), patch.object(routes, "travel"):
+            with self.subTest(mutations=mutations), patch.object(routes, "travel"), patch.object(
+                routes, "contactCityObject", side_effect=lambda owner, name: owner.navigateTo(name)
+            ):
                 with self.assertRaises(AssertionError):
                     routes.openContainer(self.ownershipDriver(**mutations), "cityAr0800Container1")
 

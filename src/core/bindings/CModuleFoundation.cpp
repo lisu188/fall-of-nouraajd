@@ -255,7 +255,6 @@ void bindFoundationAndSession(py::module_ &m, const std::shared_ptr<CPythonEvent
             "Queue a transition, preparing the player after loading and before entry; report success or failure.")
         .def("requestMapTransition", &CGame::requestMapTransition,
              "Queue an explicit map transition request (opt-in persistent map sessions).")
-        .def("loadPlugin", &CGame::loadPlugin, "Load a plugin object into the game.")
         .def("getContext", &CGame::getContext, "Return the runtime service context.")
         .def("getGuiHandler", &CGame::getGuiHandler, "Return the GUI handler service.")
         .def("getObjectHandler", &CGame::getObjectHandler, "Return the object factory/registry handler.")

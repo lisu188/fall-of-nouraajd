@@ -772,6 +772,50 @@ void testSavedWaitSnapshotsHaveBoundedClockWorkAndOneAliasDefinition() {
     game->getContext()->shutdown();
 }
 
+void testOwnedSaveEnvelopesHaveZeroNestedGraphCopies() {
+    constexpr int records = 1024;
+    constexpr int samples = 8;
+    std::size_t transferred = 0;
+    std::size_t copied = 0;
+    for (int sample = 0; sample < samples; ++sample) {
+        auto snapshot = std::make_shared<json>();
+        (*snapshot)["class"] = "CMap";
+        (*snapshot)["properties"]["mapName"] = "test";
+        auto &tiles = (*snapshot)["properties"]["tiles"];
+        tiles = json::array();
+        for (int index = 0; index < records; ++index) {
+            tiles[index] = json{{"name", "tile-" + std::to_string(index)}, {"x", index}, {"sample", sample}};
+        }
+        std::vector<const json *> original;
+        for (const auto &tile : tiles) {
+            original.push_back(&tile);
+        }
+        auto envelope = CSaveFormat::buildEnvelope(std::move(snapshot), "test");
+        expect_true(envelope.has_value(), "the fixed owned-envelope workload must be valid");
+        if (!envelope) {
+            continue;
+        }
+        const auto &retained = (*envelope)->at("snapshot").at("properties").at("tiles");
+        expect_true(retained.size() == records, "moving an envelope must retain every fixed-workload record");
+        for (std::size_t index = 0; index < original.size(); ++index) {
+            transferred += &retained.at(index) == original[index];
+            copied += &retained.at(index) != original[index];
+        }
+        snapshot.reset();
+        bool valuesPreserved = true;
+        for (std::size_t index = 0; index < original.size(); ++index) {
+            valuesPreserved = valuesPreserved && retained.at(index).at("x").get<int>() == static_cast<int>(index) &&
+                              retained.at(index).at("sample").get<int>() == sample &&
+                              retained.at(index).at("name").get<std::string>() == "tile-" + std::to_string(index);
+        }
+        expect_true(valuesPreserved, "owned-envelope storage must remain intact after the original owner resets");
+    }
+    expect_true(transferred == records * samples && copied == 0,
+                "owned save envelopes must transfer every nested record with a zero graph-copy budget");
+    std::cout << "[performance] owned-save-envelope records=" << records << " samples=" << samples
+              << " transferred=" << transferred << " copied=" << copied << " copyBudget=0\n";
+}
+
 } // namespace
 
 void run_serialization_performance_tests() {
@@ -783,4 +827,5 @@ void run_serialization_performance_tests() {
     testSnapshotAdmissionRejectsEncountersBeforeMutation();
     testRetainedTerminalPlayerWorkIsBounded();
     testSavedWaitSnapshotsHaveBoundedClockWorkAndOneAliasDefinition();
+    testOwnedSaveEnvelopesHaveZeroNestedGraphCopies();
 }

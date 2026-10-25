@@ -6889,8 +6889,8 @@
       "sha256": "d196e1f7724f2ce026788e0a410b159cd4670f6cbd61e116efc7f172b40db51e"
     },
     "audit_candlekeep_source.py": {
-      "bytes": 53445,
-      "sha256": "fba6f98547f88f11fd62e533fb0f30fc5a6b44f9e7daf65ec96bea06aa84c3cb"
+      "bytes": 53508,
+      "sha256": "dcf88b69918312e1684474588a3d2a85ae04eb3a2dc62f79e68ee08468c6e5d8"
     },
     "build_baldurs_gate_prison_source_fixture.py": {
       "bytes": 21800,

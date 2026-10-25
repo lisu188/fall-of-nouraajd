@@ -237,6 +237,457 @@ def assertCustodyDialogueProvenance(test, definitions, prison):
 
 
 class DialogueContentTest(unittest.TestCase):
+    def synchronousStoryReaderFixture(self):
+        fixture = self.storyReaderFixture()
+        fixture.state.update(syncCalls=0, syncError=None, syncTitle=None)
+
+        def synchronous_screen(_handler, title, body, action_label):
+            fixture.state["syncCalls"] += 1
+            fixture.installPanel(fixture.state["syncTitle"] or title, body, action_label)
+            try:
+                if fixture.state["syncError"] is not None:
+                    raise fixture.state["syncError"]
+                for _ in range(4):
+                    if fixture.state["panel"] is None:
+                        return
+                    fixture.pump()
+                self.fail("The synchronous native reader was not acknowledged")
+            finally:
+                fixture.close()
+
+        self.enterContext(patch.object(type(fixture.owner.getGuiHandler()), "showCampaignScreen", synchronous_screen))
+        return fixture
+
+    def testStoryReaderDirectJournalCallbackAcknowledgesActualSynchronousReceipt(self):
+        fixture = self.synchronousStoryReaderFixture()
+        bridge = sys.modules["game"]
+        state = {"gold": 1000, "events": [], "flags": {"captain_defeated": True}}
+
+        def addGold(amount):
+            state["gold"] += amount
+            state["events"].append(("gold", amount))
+
+        player = types.SimpleNamespace(
+            getGold=lambda: state["gold"],
+            addGold=addGold,
+            getItems=lambda: set(),
+            getEquipped=lambda: {},
+            getNumericProperty=lambda _key: 0,
+            checkQuests=lambda: state["events"].append(("checkQuests",)),
+        )
+        game_map = types.SimpleNamespace(
+            getBoolProperty=lambda key: state["flags"].get(key, False),
+            setBoolProperty=lambda key, value: state["flags"].__setitem__(key, value),
+            getPlayer=lambda: player,
+        )
+        fixture.owner.getMap = lambda: game_map
+        fixture.owner.createWeakResolver = lambda: lambda: fixture.owner
+
+        def complete_scenarioFlow(owner, outcome, *, fallback_map):
+            self.assertIs(fixture.owner, owner)
+            state["events"].append(("complete", outcome, fallback_map))
+            yield from ()
+
+        campaign = types.SimpleNamespace(
+            prepareCompletion=lambda owner, outcome, **kwargs: state["events"].append(("prepare", outcome, kwargs)),
+            complete_scenarioFlow=complete_scenarioFlow,
+        )
+        source = ast.parse((ROOT / "res/maps/hearthfall/script.py").read_text(encoding="utf-8"))
+        dialog = copy.deepcopy(
+            next(node for node in ast.walk(source) if isinstance(node, ast.ClassDef) and node.name == "ElderDialog")
+        )
+        dialog.decorator_list = []
+        dialog.body = [
+            node
+            for node in dialog.body
+            if isinstance(node, ast.FunctionDef) and node.name in {"captain_down", "report_victory"}
+        ]
+        namespace = dict(
+            CDialog=type("DialogBase", (), {"getGame": lambda _self: fixture.owner}),
+            resumableHook=fixture.ui.resumableHook,
+            flowGame=fixture.ui.flowGame,
+            uiRequest=fixture.ui.uiRequest,
+            claim_once=bridge.claim_once,
+            rewardSnapshot=bridge.rewardSnapshot,
+            showRewardReceiptFlow=bridge.showRewardReceiptFlow,
+            campaign=campaign,
+            VICTORY_GOLD_REWARD=150,
+        )
+        exec(compile(ast.Module(body=[dialog], type_ignores=[]), "actual_elder_report_callback", "exec"), namespace)
+        receiver = namespace["ElderDialog"]()
+        fixture.owner.createObject = lambda name: receiver if name == "elderDialog" else None
+        runner = ast.parse(fixture.source)
+        journal = next(
+            node
+            for node in ast.walk(runner)
+            if isinstance(node, ast.FunctionDef)
+            and node.name == "test_quest_journal_keeps_active_and_completed_entries_after_travel"
+        )
+        direct = next(
+            node
+            for node in journal.body
+            if isinstance(node, ast.Expr)
+            and isinstance(node.value, ast.Call)
+            and isinstance(node.value.func, ast.Name)
+            and node.value.func.id == "run_blocking_gui_action"
+            and any(
+                isinstance(argument, ast.Attribute) and argument.attr == "report_victory"
+                for argument in node.value.args
+            )
+        )
+        scope = dict(fixture.namespace, game=fixture.api, g=fixture.owner)
+        action = compile(ast.Module(body=[direct], type_ignores=[]), "actual_direct_journal_action", "exec")
+        exec(action, scope)
+        self.assertEqual(1150, state["gold"])
+        self.assertTrue(state["flags"]["victory_reported"])
+        self.assertEqual(1, fixture.state["syncCalls"])
+        self.assertEqual(1, fixture.state["clicks"])
+        self.assertEqual("Hearthfall liberated", fixture.observed[0][0])
+        self.assertIn("Gold: +150", fixture.observed[0][1])
+        self.assertEqual(("complete", "completed", "gravemoor"), state["events"][-1])
+        self.assertEqual(1, state["events"].count(("checkQuests",)))
+        exec(action, scope)
+        self.assertEqual(1150, state["gold"])
+        self.assertEqual(1, fixture.state["clicks"])
+        self.assertEqual([], fixture.queue)
+        fixture.cleanups[0]()
+
+    def testStoryReaderSynchronousPrimaryFailureCancelsInspectionAndRestoresBothPatches(self):
+        fixture = self.synchronousStoryReaderFixture()
+        primary = RuntimeError("original synchronous reader failed")
+        fixture.state["syncError"] = primary
+        with self.assertRaises(RuntimeError) as caught:
+            fixture.ui.showReader(fixture.owner, "Title", "Body")
+        self.assertIs(primary, caught.exception)
+        self.assertEqual(1, len(fixture.queue))
+        fixture.pump()
+        self.assertEqual(0, fixture.state["reads"])
+        self.assertIsNone(fixture.state["panel"])
+        with self.assertRaisesRegex(AssertionError, "original synchronous reader failed"):
+            fixture.cleanups[0]()
+        fixture.cleanups[-1]()
+        self.assertEqual(
+            ("showReader", "showReaderFlow"), (fixture.ui.showReader.__name__, fixture.ui.showReaderFlow.__name__)
+        )
+
+    def testStoryReaderSynchronousRepeatedCallsCaptureRealTextAndRejectForeignPanel(self):
+        fixture = self.synchronousStoryReaderFixture()
+        fixture.ui.showReader(fixture.owner, "First", "First body")
+        fixture.ui.uiTarget("showReader")(fixture.owner, "Second", "Second body")
+        self.assertEqual([("First", "First body"), ("Second", "Second body")], fixture.observed)
+        self.assertEqual(2, fixture.state["clicks"])
+        self.assertEqual([], fixture.queue)
+        fixture.state["syncTitle"] = "Foreign panel"
+        with self.assertRaises(AssertionError) as caught:
+            fixture.ui.showReader(fixture.owner, "Expected", "Third body")
+        self.assertIn("Foreign panel", str(caught.exception))
+        self.assertEqual(2, fixture.state["clicks"])
+        self.assertIsNone(fixture.state["panel"])
+        with self.assertRaises(AssertionError):
+            fixture.cleanups[0]()
+
+    def testStoryReaderSynchronousRejectedQueueStopsBeforeNativeScreen(self):
+        fixture = self.synchronousStoryReaderFixture()
+        fixture.state["acceptQueue"] = False
+        with self.assertRaises(AssertionError):
+            fixture.ui.showReader(fixture.owner, "Title", "Body")
+        self.assertEqual(0, fixture.state["syncCalls"])
+        self.assertEqual(0, fixture.state["clicks"])
+        self.assertEqual([], fixture.queue)
+
+    def storyReaderFixture(self):
+        import traceback
+        from functools import wraps
+        from weakref import ref
+
+        source = (ROOT / "test.py").read_text(encoding="utf-8")
+        names = {
+            "captureStoryReaders",
+            "queuePanelInspection",
+            "finishPanelInspection",
+            "run_blocking_panel_inspection",
+            "run_blocking_gui_action",
+            "queue_sdl_inputs",
+        }
+        selected = [node for node in ast.parse(source).body if isinstance(node, ast.FunctionDef) and node.name in names]
+        queue, cleanups = [], []
+        state = {"panel": None, "reads": 0, "clicks": 0, "shutdown": False, "acceptQueue": True}
+
+        def invoke(callback):
+            if not state["acceptQueue"]:
+                return False
+            queue.append(callback)
+            return True
+
+        def pump():
+            self.assertTrue(queue, "The native request is still pending without a staged panel acknowledgment")
+            queue.pop(0)()
+
+        class NativeHandler:
+            def showCampaignScreen(self, *_args):
+                raise AssertionError("The native async dispatcher must not call the patched synchronous method")
+
+        def findPanel(_owner, class_name):
+            state["reads"] += 1
+            panel = state["panel"]
+            return panel if panel is not None and panel.kind == class_name else None
+
+        def close():
+            state["panel"] = None
+
+        def shutdown():
+            state["shutdown"] = True
+            close()
+
+        gui = types.SimpleNamespace(notify=lambda _text: None, removeChild=lambda _panel: close())
+        handler = NativeHandler()
+        owner = types.SimpleNamespace(
+            getGuiHandler=lambda: handler,
+            getGui=lambda: gui,
+            getContext=lambda: types.SimpleNamespace(shutdown=shutdown),
+        )
+        api = types.SimpleNamespace(
+            CGuiHandler=NativeHandler,
+            event_loop=types.SimpleNamespace(instance=lambda: types.SimpleNamespace(invoke=invoke)),
+        )
+        ui = types.ModuleType("ui")
+        ui.__dict__.update(wraps=wraps, ref=ref)
+        ui_source = ast.parse((ROOT / "res/ui.py").read_text(encoding="utf-8"))
+        ui_nodes = [
+            node
+            for node in ui_source.body
+            if isinstance(node, (ast.FunctionDef, ast.ClassDef))
+            and node.name
+            in {
+                "uiRequest",
+                "uiGame",
+                "UiFlowGame",
+                "flowGame",
+                "ResumableHook",
+                "resumableHook",
+                "showReader",
+                "showReaderFlow",
+                "uiTarget",
+                "runUiFlow",
+            }
+        ]
+        exec(compile(ast.Module(body=ui_nodes, type_ignores=[]), "actual_reader_flow", "exec"), ui.__dict__)
+        game_nodes = [
+            node
+            for node in ast.parse((ROOT / "res/game.py").read_text(encoding="utf-8")).body
+            if isinstance(node, ast.FunctionDef)
+            and node.name
+            in {"showReader", "rewardSnapshot", "rewardReceiptText", "showRewardReceiptFlow", "claim_once"}
+        ]
+        bridge = types.ModuleType("game")
+        bridge.__dict__.update(flowGame=ui.flowGame, uiRequest=ui.uiRequest)
+        exec(compile(ast.Module(body=game_nodes, type_ignores=[]), "actual_reader_bridge", "exec"), bridge.__dict__)
+        self.enterContext(patch.dict(sys.modules, {"ui": ui, "game": bridge}))
+
+        def activate(button, actual_gui):
+            self.assertIs(gui, actual_gui)
+            self.assertIs(state["panel"].button, button)
+            state["clicks"] += 1
+            close()
+
+        namespace = {
+            "traceback": traceback,
+            "find_top_level_panel": findPanel,
+            "find_descendants_by_type": lambda panel, _kind: [panel.button],
+            "activate_widget": activate,
+            "pump_event_loop": lambda _count: None,
+        }
+        exec(compile(ast.Module(body=selected, type_ignores=[]), "actual_story_reader_helpers", "exec"), namespace)
+        receiver = types.SimpleNamespace(addCleanup=lambda callback: cleanups.append(callback))
+        for name in ("assertFalse", "assertEqual", "assertTrue", "assertIn", "assertLessEqual"):
+            setattr(receiver, name, getattr(self, name))
+        observed = namespace["captureStoryReaders"](receiver, api, owner)
+        self.addCleanup(lambda: [callback() for callback in reversed(cleanups[1:])])
+
+        def installPanel(title, body, action="Continue"):
+            properties = {"title": title, "body": body, "actionLabel": action}
+            button = types.SimpleNamespace(getStringProperty=lambda key: "clickAction" if key == "click" else "")
+            state["panel"] = types.SimpleNamespace(
+                kind="CGameCampaignPanel",
+                getStringProperty=lambda key: properties[key],
+                button=button,
+                close=close,
+            )
+
+        def begin(title="Actual title", body="Actual story body"):
+            flow = ui.uiTarget("showReader", resumable=True)(owner, title, body)
+            request = next(flow)
+            self.assertEqual(
+                {"operation": "gui.showCampaignScreen", "args": (title, body, "Continue"), "kwargs": {}}, request
+            )
+            return flow
+
+        return types.SimpleNamespace(
+            source=source,
+            namespace=namespace,
+            queue=queue,
+            state=state,
+            pump=pump,
+            ui=ui,
+            owner=owner,
+            api=api,
+            observed=observed,
+            installPanel=installPanel,
+            begin=begin,
+            cleanups=cleanups,
+            close=close,
+            gui=gui,
+        )
+
+    def testStoryReaderCaptureAcknowledgesActualResumablePanel(self):
+        fixture = self.storyReaderFixture()
+        flow = fixture.begin()
+        fixture.installPanel("Actual title", "Actual story body")
+        fixture.pump()
+        self.assertIsNone(fixture.state["panel"])
+        with self.assertRaises(StopIteration):
+            flow.send(None)
+        self.assertEqual([("Actual title", "Actual story body")], fixture.observed)
+        self.assertEqual(1, fixture.state["clicks"])
+        self.assertEqual([], fixture.queue)
+        fixture.cleanups[0]()
+
+    def testStoryReaderCaptureChecksActualPanelTextAndSurfacesFailure(self):
+        fixture = self.storyReaderFixture()
+        flow = fixture.begin()
+        fixture.installPanel("Foreign title", "Actual story body")
+        fixture.pump()
+        failure = None
+        try:
+            flow.send(None)
+        except AssertionError as error:
+            failure = error
+        except StopIteration:
+            pass
+        self.assertIsNotNone(failure, "A foreign reader must fail its actual panel proof")
+        self.assertEqual([], fixture.observed)
+        self.assertEqual(0, fixture.state["clicks"])
+        self.assertIsNone(fixture.state["panel"])
+        with self.assertRaises(AssertionError):
+            fixture.cleanups[0]()
+
+    def testStoryReaderCaptureCancelsQueuedInspectorWhenFlowCloses(self):
+        fixture = self.storyReaderFixture()
+        flow = fixture.begin()
+        self.assertEqual(1, len(fixture.queue))
+        flow.close()
+        fixture.pump()
+        self.assertEqual(0, fixture.state["reads"])
+        self.assertEqual(0, fixture.state["clicks"])
+        fixture.cleanups[0]()
+
+    def testStoryReaderCapturePreservesPrimaryFlowErrorAndRestoresPatch(self):
+        fixture = self.storyReaderFixture()
+        flow = fixture.begin()
+        primary = RuntimeError("original reader failed")
+        with self.assertRaises(RuntimeError) as caught:
+            flow.throw(primary)
+        self.assertIs(primary, caught.exception)
+        fixture.pump()
+        self.assertEqual(0, fixture.state["reads"])
+        with self.assertRaisesRegex(AssertionError, "original reader failed"):
+            fixture.cleanups[0]()
+        fixture.cleanups[-1]()
+        self.assertEqual("showReaderFlow", fixture.ui.showReaderFlow.__name__)
+
+    def testStoryReaderCaptureRefusesRejectedQueueAndBoundsMissingPanel(self):
+        fixture = self.storyReaderFixture()
+        fixture.state["acceptQueue"] = False
+        with self.assertRaises(AssertionError):
+            fixture.begin()
+        self.assertEqual([], fixture.queue)
+        fixture.state["acceptQueue"] = True
+        flow = fixture.begin()
+        for _ in range(1001):
+            fixture.pump()
+        self.assertTrue(fixture.state["shutdown"])
+        self.assertEqual([], fixture.queue)
+        with self.assertRaisesRegex(AssertionError, "not visible"):
+            flow.send(None)
+
+    def testJournalTravelStagesNumericInputAfterActualElderDialog(self):
+        fixture = self.storyReaderFixture()
+        method = next(
+            node
+            for node in ast.walk(ast.parse(fixture.source))
+            if isinstance(node, ast.FunctionDef)
+            and node.name == "test_quest_journal_keeps_active_and_completed_entries_after_travel"
+        )
+        move = next(node for node in method.body if isinstance(node, ast.FunctionDef) and node.name == "moveToObject")
+        state = {"position": None, "premature": 0, "selected": 0}
+
+        def choose():
+            if fixture.state["panel"] is None:
+                state["premature"] += 1
+                return
+            state["selected"] += 1
+            fixture.close()
+
+        def moveTo(*target):
+            for _ in range(3):
+                if fixture.queue:
+                    fixture.pump()
+            fixture.state["panel"] = types.SimpleNamespace(
+                kind="CGameDialogPanel",
+                close=fixture.close,
+                getObjectProperty=lambda key: (
+                    types.SimpleNamespace(getTypeId=lambda: "elderDialog") if key == "dialog" else None
+                ),
+            )
+            for _ in range(6):
+                if fixture.state["panel"] is None:
+                    state["position"] = target
+                    return
+                if fixture.queue:
+                    fixture.pump()
+            self.fail("The real dialog was left pending after movement")
+
+        namespace = dict(fixture.namespace)
+        namespace.update(
+            self=self,
+            game=fixture.api,
+            g=fixture.owner,
+            player=types.SimpleNamespace(moveTo=moveTo, getCoords=lambda: state["position"]),
+            find_map_object_definition=lambda *_args: {"x": 96, "y": 64},
+            coords_tuple=lambda value: value,
+        )
+        exec(compile(ast.Module(body=[move], type_ignores=[]), "actual_journal_travel_move", "exec"), namespace)
+        namespace["moveToObject"]("hearthfall", "elderMaren", choose)
+        self.assertEqual({"position": (3, 2, 0), "premature": 0, "selected": 1}, state)
+
+    def testJournalTravelUsesFlowReadersWithoutPrequeuedSpace(self):
+        source = (ROOT / "test.py").read_text(encoding="utf-8")
+        method = next(
+            node
+            for node in ast.walk(ast.parse(source))
+            if isinstance(node, ast.FunctionDef)
+            and node.name == "test_quest_journal_keeps_active_and_completed_entries_after_travel"
+        )
+        calls = [node for node in ast.walk(method) if isinstance(node, ast.Call)]
+        self.assertEqual(
+            1, sum(isinstance(node.func, ast.Name) and node.func.id == "captureStoryReaders" for node in calls)
+        )
+        self.assertFalse(any(isinstance(node, ast.Name) and node.id == "push_space_key" for node in ast.walk(method)))
+        self.assertIn("push_digit_key(2)", ast.unparse(method))
+
+    def testStoryReaderNativeDispatchBypassesSynchronousPythonPatch(self):
+        cpp = (ROOT / "src/handler/CGuiHandler.cpp").read_text(encoding="utf-8")
+        start = cpp.index('operation == "showCampaignScreen"')
+        branch = cpp[start : cpp.index("} else if", start)]
+        self.assertIn("co_await self->showCampaignScreenAsync", branch)
+        self.assertNotIn('attr("showCampaignScreen")', branch)
+        ui_source = (ROOT / "res/ui.py").read_text(encoding="utf-8")
+        tree = ast.parse(ui_source)
+        target = next(node for node in tree.body if isinstance(node, ast.FunctionDef) and node.name == "uiTarget")
+        self.assertIn("globals()", ast.unparse(target))
+        flow = next(node for node in tree.body if isinstance(node, ast.FunctionDef) and node.name == "showReaderFlow")
+        self.assertIn("gui.showCampaignScreen", ast.unparse(flow))
+
     def testDialoguePunctuationHasValidUnicodeInsteadOfMojibake(self):
         text = (ROOT / "res/maps/nouraajd/dialog.json").read_text(encoding="utf-8")
         self.assertIn("Matulog\u2019s", text)
@@ -627,6 +1078,896 @@ class DialogueContentTest(unittest.TestCase):
                     ]
                 with self.assertRaises(ValueError):
                     custodyScriptedActorFacts(changed)
+
+    def dialogKeyboardFixture(self, mode="normal", choices=(1, 2, 1, 1)):
+        source = (ROOT / "test.py").read_text(encoding="utf-8")
+        names = {
+            "show_dialog_with_keyboard",
+            "pump_event_loop_until",
+            "queue_panel_observer",
+            "queue_sdl_inputs",
+            "dialog_input_callbacks",
+            "push_digit_key",
+            "push_space_key",
+        }
+        selected = [node for node in ast.parse(source).body if isinstance(node, ast.FunctionDef) and node.name in names]
+        self.assertEqual({node.name for node in selected}, names)
+        state = {
+            "tasks": [],
+            "events": [],
+            "keys": [],
+            "accepted": [],
+            "dropped": [],
+            "ticks": 0,
+            "clock": 0.0,
+            "closed": False,
+            "selecting": False,
+            "openCalls": 0,
+            "blockingCalls": 0,
+            "cleanupCalls": 0,
+        }
+        primary = RuntimeError("native history observation failed")
+        cleanup_error = RuntimeError("owned panel cleanup failed")
+        owner = types.SimpleNamespace()
+        dialog = types.SimpleNamespace(getTypeId=lambda: "actualDialog")
+        gui = types.SimpleNamespace(getChildren=lambda: list(state.get("children", [])))
+        unrelated = types.SimpleNamespace(getType=lambda: "UnrelatedPanel")
+        state["children"] = [unrelated]
+        rows = []
+
+        def append(kind, text):
+            rows.append({"dialog": "actualDialog", "state": text, "kind": kind, "speaker": "NPC", "text": text})
+            del rows[:-80]
+
+        append("speech", "ENTRY")
+        if mode in {"capped", "ambiguous"}:
+            rows[:] = [dict(rows[0]) for _ in range(80)]
+        initial_history = json.dumps(rows)
+        state["initialHistory"] = initial_history
+
+        def readHistory(_key):
+            if mode == "historyError" and state["accepted"]:
+                raise primary
+            return json.dumps(rows)
+
+        player = types.SimpleNamespace(getStringProperty=readHistory)
+        current_map = types.SimpleNamespace(getPlayer=lambda: player)
+        owner.getGui = lambda: gui
+        owner.getMap = lambda: current_map
+        panel = types.SimpleNamespace(
+            getType=lambda: "CGameDialogPanel",
+            getObjectProperty=lambda _key: dialog,
+            getParent=lambda: state.get("foreignParent", gui if panel in state["children"] else None),
+        )
+
+        def close():
+            state["cleanupCalls"] += 1
+            if mode == "historyError":
+                raise cleanup_error
+            if panel in state["children"]:
+                state["children"].remove(panel)
+            state["closed"] = True
+
+        panel.close = close
+
+        def finish():
+            if mode == "replyOnly":
+                state["selecting"] = False
+                return
+            if mode == "reparent":
+                state["foreignParent"] = unrelated
+                state["selecting"] = False
+                return
+            if len(state["accepted"]) == len(choices) or mode == "earlyClose":
+                close()
+            elif mode in {"capped", "ambiguous"}:
+                rows[:] = json.loads(initial_history)
+            else:
+                append("speech", "STATE" + str(len(state["accepted"])))
+            state["selecting"] = False
+
+        def key(code, _scan, kind):
+            state["keys"].append((code, kind))
+            state["events"].append((code, kind))
+
+        def poll():
+            events, state["events"] = state["events"], []
+            for code, kind in events:
+                if kind != 768 or panel not in state["children"]:
+                    continue
+                if state["selecting"]:
+                    state["dropped"].append(code - ord("0"))
+                    continue
+                state["selecting"] = True
+                state["accepted"].append(code - ord("0"))
+                append("reply", "reply")
+                if mode == "replyOnly" or (mode == "normal" and len(state["accepted"]) == 3) or mode == "capped":
+                    state["tasks"].append(finish)
+                else:
+                    finish()
+
+        def run():
+            state["ticks"] += 1
+            state["clock"] += 0.05
+            # Native drainPostedTasks snapshots the last task ID before SDL polling.
+            tasks, state["tasks"] = state["tasks"], []
+            for task in tasks:
+                task()
+            poll()
+
+        loop = types.SimpleNamespace(run=run, invoke=lambda callback: state["tasks"].append(callback))
+        api = types.SimpleNamespace(event_loop=types.SimpleNamespace(instance=lambda: loop))
+
+        def openDialog(_dialog):
+            state["openCalls"] += 1
+            state["children"].append(panel)
+            return panel
+
+        def showDialog(_dialog):
+            state["blockingCalls"] += 1
+            openDialog(_dialog)
+            for _ in range(6):
+                run()
+
+        owner.getGuiHandler = lambda: types.SimpleNamespace(openDialog=openDialog, showDialog=showDialog)
+        clock = types.SimpleNamespace(
+            monotonic=lambda: state["clock"],
+            sleep=lambda delay: state.__setitem__("clock", state["clock"] + delay),
+        )
+        namespace = {
+            "json": json,
+            "time": clock,
+            "load_game_module": lambda: api,
+            "push_sdl_key_event": key,
+            "SDL_KEYDOWN": 768,
+            "SDL_KEYUP": 769,
+            "gui_contains_class": lambda _owner, kind: any(child.getType() == kind for child in state["children"]),
+        }
+        exec(compile(ast.Module(body=selected, type_ignores=[]), "actual_dialog_keyboard_helpers", "exec"), namespace)
+        return types.SimpleNamespace(
+            invoke=lambda: namespace["show_dialog_with_keyboard"](self, api, owner, dialog, choices),
+            state=state,
+            primary=primary,
+            unrelated=unrelated,
+        )
+
+    def testDialogKeyboardStagesRealKeysAfterCommittedSpeech(self):
+        fixture = self.dialogKeyboardFixture()
+        fixture.invoke()
+        self.assertTrue(fixture.state["closed"])
+        self.assertEqual(fixture.state["accepted"], [1, 2, 1, 1])
+        self.assertEqual(fixture.state["dropped"], [])
+        self.assertEqual(fixture.state["blockingCalls"], 0)
+        self.assertEqual(fixture.state["openCalls"], 1)
+        self.assertEqual(
+            fixture.state["keys"],
+            [(ord(str(choice)), kind) for choice in (1, 2, 1, 1) for kind in (768, 769)],
+        )
+        self.assertIn(fixture.unrelated, fixture.state["children"])
+
+    def testDialogKeyboardReplyAloneDoesNotAuthorizeNextKey(self):
+        fixture = self.dialogKeyboardFixture("replyOnly")
+        with self.assertRaisesRegex(AssertionError, "no observable native completion"):
+            fixture.invoke()
+        self.assertEqual(fixture.state["accepted"], [1])
+        self.assertEqual(fixture.state["dropped"], [])
+        self.assertEqual(fixture.state["cleanupCalls"], 1)
+        self.assertLess(fixture.state["ticks"], 25)
+        self.assertIn(fixture.unrelated, fixture.state["children"])
+
+    def testDialogKeyboardPreservesObservationErrorOverCleanupError(self):
+        fixture = self.dialogKeyboardFixture("historyError")
+        with self.assertRaises(RuntimeError) as caught:
+            fixture.invoke()
+        self.assertIs(caught.exception, fixture.primary)
+        self.assertEqual(fixture.state["accepted"], [1])
+        self.assertEqual(fixture.state["cleanupCalls"], 1)
+        self.assertIn(fixture.unrelated, fixture.state["children"])
+
+    def testDialogKeyboardHandlesCappedIdenticalSpeechAfterObservedReply(self):
+        fixture = self.dialogKeyboardFixture("capped", choices=(1, 1))
+        fixture.invoke()
+        self.assertTrue(fixture.state["closed"])
+        self.assertEqual(fixture.state["accepted"], [1, 1])
+        self.assertEqual(fixture.state["dropped"], [])
+
+    def testDialogKeyboardRejectsUnobservableIdenticalTransition(self):
+        fixture = self.dialogKeyboardFixture("ambiguous", choices=(1, 1))
+        with self.assertRaisesRegex(AssertionError, "no observable native completion"):
+            fixture.invoke()
+        self.assertEqual(fixture.state["accepted"], [1])
+        self.assertEqual(fixture.state["cleanupCalls"], 1)
+
+    def testDialogKeyboardRefusesUnsupportedAcknowledgementBeforeOpen(self):
+        fixture = self.dialogKeyboardFixture(choices=("space",))
+        with self.assertRaisesRegex(AssertionError, "numeric reply choices"):
+            fixture.invoke()
+        self.assertEqual(fixture.state["openCalls"], 0)
+        self.assertEqual(fixture.state["keys"], [])
+
+    def testDialogKeyboardEarlyClosureDoesNotConsumeRemainingInputs(self):
+        fixture = self.dialogKeyboardFixture("earlyClose")
+        with self.assertRaisesRegex(AssertionError, "before every requested reply"):
+            fixture.invoke()
+        self.assertEqual(fixture.state["accepted"], [1])
+        self.assertEqual(len(fixture.state["keys"]), 2)
+        self.assertIn(fixture.unrelated, fixture.state["children"])
+
+    def testDialogKeyboardRejectsReparentingAsClosure(self):
+        fixture = self.dialogKeyboardFixture("reparent", choices=(1,))
+        with self.assertRaisesRegex(AssertionError, "reparented instead of closed"):
+            fixture.invoke()
+        self.assertEqual(fixture.state["accepted"], [1])
+        self.assertFalse(fixture.state["closed"])
+        self.assertEqual(fixture.state["cleanupCalls"], 0)
+        self.assertIn(fixture.unrelated, fixture.state["children"])
+
+    def victorNativeTradeFixture(self, mode="native"):
+        import traceback
+
+        source = (ROOT / "test.py").read_text(encoding="utf-8")
+        tree = ast.parse(source)
+        names = {"queuePanelInspection", "finishPanelInspection", "find_top_level_panel", "gui_child_sort_key"}
+        helpers = [
+            copy.deepcopy(node) for node in tree.body if isinstance(node, ast.FunctionDef) and node.name in names
+        ]
+        self.assertEqual(names, {node.name for node in helpers})
+        owner = next(
+            node for node in tree.body if isinstance(node, ast.ClassDef) and node.name == "XvfbGameplayProcessTest"
+        )
+        method = next(
+            node
+            for node in owner.body
+            if isinstance(node, ast.FunctionDef) and node.name == "test_full_nouraajd_quest_walkthrough_ui"
+        )
+        start = next(
+            index
+            for index, node in enumerate(method.body)
+            if isinstance(node, ast.Assign)
+            and any(isinstance(target, ast.Name) and target.id == "captured_reward_ui" for target in node.targets)
+        )
+        stop = next(index for index in range(start, len(method.body)) if isinstance(method.body[index], ast.Try))
+        block = [copy.deepcopy(node) for node in method.body[start : stop + 1]]
+        state = {
+            "tasks": [],
+            "children": [],
+            "keys": [],
+            "events": [],
+            "closed": False,
+            "shutdown": False,
+            "healed": [],
+            "classCalls": 0,
+        }
+        primary = RuntimeError("leader removal failed")
+        input_error = RuntimeError("SDL Escape dispatch failed")
+        g = types.SimpleNamespace()
+        gui = types.SimpleNamespace(getChildren=lambda: list(state["children"]))
+        g.getGui = lambda: gui
+        g.getContext = lambda: types.SimpleNamespace(shutdown=lambda: state.update(shutdown=True))
+
+        class Market:
+            def getGame(self):
+                return object() if mode == "foreignMarket" else g
+
+            def getTypeId(self):
+                return "wrongMarket" if mode == "wrongMarket" else "victorMarket"
+
+        market = Market()
+
+        class TradePanel:
+            def getType(self):
+                return "CGameTradePanel"
+
+            def getParent(self):
+                return gui
+
+            def getObjectProperty(self, name):
+                self_name = "market"
+                assert name == self_name
+                return market
+
+            def close(self):
+                state["events"].append("close-trade")
+                state["closed"] = True
+                state["children"] = []
+
+        panel = TradePanel()
+        reader = types.SimpleNamespace(getType=lambda: "CGameTextPanel")
+
+        def invoke(callback):
+            state["events"].append("queue")
+            if mode == "queueRejected":
+                return False
+            state["tasks"].append(callback)
+            return True
+
+        def runFrame():
+            # Match the audited native snapshot fence: newly posted work waits for the next drain.
+            posted, state["tasks"] = state["tasks"], []
+            for callback in posted:
+                callback()
+            for key in state["keys"]:
+                self.assertEqual((27, 41, 768, "trade"), key)
+                panel.close()
+            state["keys"] = []
+
+        def pushKey(key, scancode, event_type):
+            if mode == "inputError":
+                raise input_error
+            phase = "trade" if panel in state["children"] else "reader"
+            state["events"].append("escape-" + phase)
+            state["keys"].append((key, scancode, event_type, phase))
+
+        class Player:
+            def getGold(self):
+                return 123
+
+            def healProc(self, amount):
+                state["healed"].append(amount)
+
+        player = Player()
+        original_heal = Player.healProc
+
+        class GuiHandler:
+            def showTrade(self, actual_market):
+                state["classCalls"] += 1
+                self_test.assertIs(actual_market, market)
+                modalTrade()
+
+        self_test = self
+        original_trade = GuiHandler.showTrade
+        game = types.SimpleNamespace(
+            CGuiHandler=GuiHandler,
+            CPlayer=Player,
+            CMarket=Market,
+            CGameTradePanel=TradePanel,
+            event_loop=types.SimpleNamespace(instance=lambda: types.SimpleNamespace(invoke=invoke)),
+        )
+
+        def modalTrade():
+            state["children"] = [reader]
+            if not state["tasks"]:
+                self.fail("Native trade dispatch bypassed the class hook and no panel observation was armed")
+            runFrame()
+            self.assertNotIn("escape-reader", state["events"])
+            state["children"] = [panel]
+            for _ in range(1002):
+                runFrame()
+                if state["closed"] or state["shutdown"]:
+                    state["events"].append("native-continuation")
+                    return
+            self.fail("The finite native-panel model never received closure")
+
+        def remove(name):
+            self.assertEqual("cultLeaderQuest", name)
+            state["events"].append("remove")
+            if mode == "removeError":
+                raise primary
+            player.healProc(100)
+            if mode == "unobserved":
+                return
+            if mode == "synchronous":
+                GuiHandler().showTrade(market)
+            else:
+                # Native runScriptFlowAsync dispatches showTradeAsync directly, not this Python class attribute.
+                modalTrade()
+
+        namespace = {
+            "self": self,
+            "game": game,
+            "g": g,
+            "game_map": types.SimpleNamespace(removeObjectByName=remove),
+            "player": player,
+            "leader": types.SimpleNamespace(getName=lambda: "cultLeaderQuest"),
+            "traceback": traceback,
+            "push_sdl_key_event": pushKey,
+            "SDL_KEYDOWN": 768,
+            "queue_sdl_inputs": lambda *_args: self.fail("The obsolete class trade hook must not be used"),
+            "pump_event_loop": lambda count: [runFrame() for _ in range(count)],
+        }
+        exec(
+            compile(
+                ast.fix_missing_locations(ast.Module(body=helpers, type_ignores=[])),
+                "actual-panel-inspection-helpers",
+                "exec",
+            ),
+            namespace,
+        )
+        failure = None
+        try:
+            exec(
+                compile(
+                    ast.fix_missing_locations(ast.Module(body=block, type_ignores=[])),
+                    "actual-victor-reward-fixture-block",
+                    "exec",
+                ),
+                namespace,
+            )
+        except Exception as error:
+            failure = error
+        self.assertIs(original_heal, Player.healProc)
+        self.assertIs(original_trade, GuiHandler.showTrade)
+        return types.SimpleNamespace(
+            state=state,
+            failure=failure,
+            namespace=namespace,
+            primary=primary,
+            market=market,
+            frame=runFrame,
+            input_error=input_error,
+        )
+
+    def testVictorNativeTradeInspectionPrecedesRemovalAndAcknowledgesOnlyTrade(self):
+        fixture = self.victorNativeTradeFixture()
+        self.assertIsNone(fixture.failure)
+        self.assertEqual([100], fixture.state["healed"])
+        self.assertEqual([100], fixture.namespace["heal_amounts"])
+        self.assertEqual(["victorMarket"], fixture.namespace["captured_reward_ui"]["trades"])
+        self.assertIs(fixture.market, fixture.namespace["trade_inspection"]["result"])
+        self.assertEqual(0, fixture.state["classCalls"])
+        self.assertLess(fixture.state["events"].index("queue"), fixture.state["events"].index("remove"))
+        self.assertEqual(1, fixture.state["events"].count("escape-trade"))
+        self.assertNotIn("escape-reader", fixture.state["events"])
+        self.assertIn("native-continuation", fixture.state["events"])
+        self.assertFalse(fixture.namespace["trade_inspection"]["active"])
+
+    def testVictorTradeObserverAlsoHandlesTheActualSynchronousPanelControl(self):
+        fixture = self.victorNativeTradeFixture("synchronous")
+        self.assertIsNone(fixture.failure)
+        self.assertEqual(1, fixture.state["classCalls"])
+        self.assertEqual(["victorMarket"], fixture.namespace["captured_reward_ui"]["trades"])
+        self.assertEqual(1, fixture.state["events"].count("escape-trade"))
+
+    def testVictorTradeRejectsWrongOrForeignMarketBeforeSendingEscape(self):
+        for mode in ("wrongMarket", "foreignMarket"):
+            with self.subTest(mode=mode):
+                fixture = self.victorNativeTradeFixture(mode)
+                self.assertIsInstance(fixture.failure, AssertionError)
+                self.assertEqual([], fixture.namespace["captured_reward_ui"]["trades"])
+                self.assertNotIn("escape-trade", fixture.state["events"])
+                self.assertTrue(fixture.state["closed"])
+                self.assertFalse(fixture.namespace["trade_inspection"]["active"])
+
+    def testVictorRemovalFailureExpiresTheObserverAndKeepsThePrimaryException(self):
+        fixture = self.victorNativeTradeFixture("removeError")
+        self.assertIs(fixture.primary, fixture.failure)
+        pending = fixture.namespace.get("trade_inspection")
+        self.assertIsNotNone(pending)
+        self.assertFalse(pending["active"])
+        before = list(fixture.state["events"])
+        fixture.frame()
+        self.assertEqual(before, fixture.state["events"])
+        self.assertEqual([], fixture.state["tasks"])
+
+    def testVictorInspectionAndInputFailuresFinishWithoutAnActiveObserver(self):
+        for mode in ("queueRejected", "inputError", "unobserved"):
+            with self.subTest(mode=mode):
+                fixture = self.victorNativeTradeFixture(mode)
+                self.assertIsInstance(fixture.failure, AssertionError)
+                if mode == "queueRejected":
+                    self.assertIn("Panel inspection was not queued", str(fixture.failure))
+                else:
+                    pending = fixture.namespace.get("trade_inspection")
+                    self.assertIsNotNone(pending)
+                    self.assertFalse(pending["active"])
+                    self.assertIn(
+                        "SDL Escape dispatch failed" if mode == "inputError" else "inspection did not run",
+                        str(fixture.failure),
+                    )
+                    fixture.frame()
+                    self.assertEqual([], fixture.state["tasks"])
+
+    def ritualPreparedTransitionFixture(self, mode="flow", fault=None, dispatch_only=False):
+        selected_source = getattr(type(self), "_ritualPreparedSource", None)
+        if selected_source is None:
+            runner = ast.parse((ROOT / "test.py").read_text(encoding="utf-8"))
+            owner = next(
+                node
+                for node in runner.body
+                if isinstance(node, ast.ClassDef) and node.name == "XvfbGameplayProcessTest"
+            )
+            method = next(
+                node
+                for node in owner.body
+                if isinstance(node, ast.FunctionDef) and node.name == "test_full_nouraajd_quest_walkthrough_ui"
+            )
+            start = next(
+                index
+                for index, node in enumerate(method.body)
+                if isinstance(node, ast.Assign)
+                and any(isinstance(target, ast.Name) and target.id == "transitions" for target in node.targets)
+            )
+            stop = next(index for index in range(start, len(method.body)) if isinstance(method.body[index], ast.Try))
+            fixture_nodes = copy.deepcopy(method.body[start : stop + 1])
+            campaign_tree = ast.parse((ROOT / "res/campaign.py").read_text(encoding="utf-8"))
+            campaign_nodes = [
+                copy.deepcopy(node)
+                for node in campaign_tree.body
+                if isinstance(node, ast.FunctionDef)
+                and node.name in ("_requestPendingTransition", "_supportsCommitCallback")
+            ]
+            selected_source = (fixture_nodes, campaign_nodes)
+            type(self)._ritualPreparedSource = selected_source
+        fixture_nodes, campaign_nodes = copy.deepcopy(selected_source)
+        self.assertEqual(2, len(campaign_nodes))
+        primary = ValueError("controlled ritual " + str(fault))
+        pending = {"campaignId": "", "scenario": "", "outcome": "cleanse", "targetScenario": "", "targetMap": "ritual"}
+        pending_text = json.dumps(pending, sort_keys=True)
+        writes, calls, events = [], [], []
+        shared = {"transitions": [], "transition_phases": [], "faulted": False}
+
+        class Player:
+            def __init__(self):
+                self.properties = {"campaign_pendingTransition": pending_text, "campaign_history": "[]"}
+                self.gold = 25
+                self.items = {"retained-item"}
+
+            def getStringProperty(self, name):
+                return self.properties.get(name, "")
+
+            def setStringProperty(self, name, value):
+                if name == "campaign_pendingTransition":
+                    stage = json.loads(value).get("stage", "pending") if value else "cleared"
+                    if fault == stage and not shared["faulted"]:
+                        shared["faulted"] = True
+                        raise primary
+                    writes.append((stage, tuple(shared["transition_phases"])))
+                self.properties[name] = value
+
+            def getGold(self):
+                if fault == "prepare" and not shared["faulted"]:
+                    shared["faulted"] = True
+                    raise primary
+                events.append("beforeEntry")
+                return self.gold
+
+            def addGold(self, amount):
+                self.gold += amount
+
+            def getItems(self):
+                return set(self.items)
+
+            def addItem(self, item):
+                self.items.add(item)
+
+        player = Player()
+        game_map = types.SimpleNamespace(mapName="nouraajd", getPlayer=lambda: player)
+        foreign_map = types.SimpleNamespace(mapName="foreign", getPlayer=lambda: player)
+
+        class Game:
+            def getMap(self):
+                if fault == "wrong-owner":
+                    return foreign_map
+                if fault in ("wrong-target", "campaign-target") and not shared["faulted"]:
+                    shared["faulted"] = True
+                    changed = dict(pending)
+                    changed["targetMap" if fault == "wrong-target" else "targetScenario"] = "unexpected"
+                    player.properties["campaign_pendingTransition"] = json.dumps(changed, sort_keys=True)
+                return game_map
+
+            def getContext(self):
+                return types.SimpleNamespace(isActive=lambda: True)
+
+            def getGuiHandler(self):
+                return types.SimpleNamespace(showMessageLater=lambda message: events.append("rollback-message"))
+
+            def changeMapWithPreparation(self, map_name, beforeEntry, completion):
+                calls.append("native-sync")
+                beforeEntry()
+                completion(True)
+                return True
+
+            def changeMapWithPreparationFlow(self, map_name, beforeEntry, completion, commitBeforeEntry=None):
+                calls.append("native-flow")
+                self_test.assertIsNone(beforeEntry())
+                if commitBeforeEntry is not None:
+                    commitBeforeEntry()
+                completion(True)
+                return True
+
+        self_test = self
+        if mode == "sync":
+            Game.changeMapWithPreparationFlow = None
+        elif mode == "legacy-flow":
+
+            def legacyFlow(game_instance, map_name, beforeEntry, completion):
+                calls.append("legacy-flow")
+                self.assertEqual([], list(beforeEntry()))
+                completion(True)
+                return True
+
+            Game.changeMapWithPreparationFlow = legacyFlow
+        game_instance = Game()
+        original_sync, original_flow = Game.changeMapWithPreparation, Game.changeMapWithPreparationFlow
+        store = types.SimpleNamespace(
+            player=player, scenario=lambda: "", campaign_id=lambda: "", history=lambda: [], advance=lambda value: None
+        )
+
+        class CompletionOwner:
+            def __init__(self, game_instance, current_store):
+                self.pending = player.getStringProperty("campaign_pendingTransition")
+                self.map = game_map
+                self.context = None
+
+            def isCurrent(self, **kwargs):
+                return True
+
+        namespace = {
+            "json": json,
+            "state": lambda value: store,
+            "_transitionInFlight": lambda value: False,
+            "_pendingTransition": lambda value: json.loads(player.getStringProperty("campaign_pendingTransition")),
+            "_CompletionOwner": CompletionOwner,
+            "_callbackGame": lambda value: value,
+            "_TransitionGuard": lambda value: value,
+            "_INFLIGHT_TRANSITIONS": {},
+            "CAMPAIGN_PENDING_PROPERTY": "campaign_pendingTransition",
+            "CAMPAIGN_HISTORY_PROPERTY": "campaign_history",
+            "_require": lambda condition, message: self.assertTrue(condition, message),
+            "_show_message": lambda *args: events.append("rollback-message"),
+            "_remove_inventory_items": lambda current, predicate: None,
+        }
+        exec(
+            compile(
+                ast.fix_missing_locations(ast.Module(body=campaign_nodes, type_ignores=[])), "res/campaign.py", "exec"
+            ),
+            namespace,
+        )
+
+        def finishCleanse():
+            if fault == "finish":
+                raise primary
+            if fault == "presentation":
+                return game_instance.changeMapWithPreparationFlow(
+                    "ritual", lambda: iter(("unexpected briefing",)), lambda success: None, lambda: None
+                )
+            return namespace["_requestPendingTransition"](game_instance, dict(pending))
+
+        beren = types.SimpleNamespace(finish_cleanse=finishCleanse)
+
+        def showDialog(test, game, current, dialog, inputs):
+            self.assertIs(current, game_instance)
+            self.assertIs(dialog, beren)
+            self.assertEqual([2], inputs)
+            if fault == "dialog":
+                raise primary
+            events.append("dialog")
+
+        shared.update(
+            self=self,
+            game=types.SimpleNamespace(CGame=Game),
+            g=game_instance,
+            game_map=game_map,
+            player=player,
+            json=json,
+            beren=beren,
+            show_dialog_with_keyboard=showDialog,
+            run_blocking_gui_action=lambda game, action: action(),
+        )
+        error = None
+        with patch.dict(
+            sys.modules, {"ui": types.SimpleNamespace(runUiFlow=lambda *args: self.fail("unexpected briefing"))}
+        ):
+            try:
+                if dispatch_only:
+                    namespace["_requestPendingTransition"](game_instance, dict(pending))
+                else:
+                    exec(
+                        compile(
+                            ast.fix_missing_locations(ast.Module(body=fixture_nodes, type_ignores=[])),
+                            "test.py",
+                            "exec",
+                        ),
+                        shared,
+                    )
+            except BaseException as caught:
+                error = caught
+        return types.SimpleNamespace(
+            transitions=shared["transitions"],
+            phases=shared["transition_phases"],
+            writes=writes,
+            calls=calls,
+            events=events,
+            player=player,
+            game=game_instance,
+            game_map=game_map,
+            error=error,
+            primary=primary,
+            inflight=namespace["_INFLIGHT_TRANSITIONS"],
+            sync_restored=Game.changeMapWithPreparation is original_sync,
+            flow_restored=Game.changeMapWithPreparationFlow is original_flow,
+        )
+
+    def testRitualFixtureCapturesActualFourCallbackFlowAndCommitsBeforeCompletion(self):
+        result = self.ritualPreparedTransitionFixture()
+        self.assertIsNone(result.error)
+        self.assertEqual(["ritual"], result.transitions)
+        self.assertEqual(["prepared", "completed"], result.phases)
+        self.assertEqual([("entry", ("prepared",)), ("cleared", ("prepared",))], result.writes)
+        self.assertEqual([], result.calls, "the fixture must intercept the preferred flow without a map transfer")
+        self.assertEqual("", result.player.getStringProperty("campaign_pendingTransition"))
+        self.assertIs(result.game_map, result.game.getMap())
+        self.assertEqual("nouraajd", result.game_map.mapName)
+        self.assertEqual((25, {"retained-item"}), (result.player.gold, result.player.items))
+        self.assertEqual({}, result.inflight)
+        self.assertTrue(result.sync_restored and result.flow_restored)
+
+    def testRitualFixtureRetainsActualSynchronousFallbackAndRestoresBothHooks(self):
+        result = self.ritualPreparedTransitionFixture(mode="sync")
+        self.assertIsNone(result.error)
+        self.assertEqual(["ritual"], result.transitions)
+        self.assertEqual(["prepared", "completed"], result.phases)
+        self.assertEqual([("entry", ()), ("cleared", ("prepared",))], result.writes)
+        self.assertEqual([], result.calls)
+        self.assertEqual("", result.player.getStringProperty("campaign_pendingTransition"))
+        self.assertTrue(result.sync_restored and result.flow_restored)
+
+    def testRitualActualLegacyThreeCallbackFlowCommitsDuringPreparation(self):
+        result = self.ritualPreparedTransitionFixture(mode="legacy-flow", dispatch_only=True)
+        self.assertIsNone(result.error)
+        self.assertEqual(["legacy-flow"], result.calls)
+        self.assertEqual([("entry", ()), ("cleared", ())], result.writes)
+        self.assertEqual("", result.player.getStringProperty("campaign_pendingTransition"))
+        self.assertTrue(result.sync_restored and result.flow_restored)
+        self.assertIs(result.game_map, result.game.getMap())
+
+    def testRitualFixturePreservesCallbackErrorsAndRestoresBothHooks(self):
+        for mode in ("flow", "sync"):
+            for fault in ("prepare", "entry", "cleared", "dialog", "finish"):
+                with self.subTest(mode=mode, fault=fault):
+                    result = self.ritualPreparedTransitionFixture(mode=mode, fault=fault)
+                    self.assertIs(result.primary, result.error)
+                    self.assertNotIn("completed", result.phases)
+                    self.assertTrue(result.sync_restored and result.flow_restored)
+                    self.assertEqual({}, result.inflight)
+                    self.assertIs(result.game_map, result.game.getMap())
+
+    def testRitualFixtureKeepsOwnerAndStandaloneTargetRefusalsBeforePreparation(self):
+        for fault in ("wrong-owner", "wrong-target", "campaign-target", "presentation"):
+            with self.subTest(fault=fault):
+                result = self.ritualPreparedTransitionFixture(fault=fault)
+                self.assertIsInstance(result.error, AssertionError)
+                self.assertEqual([], result.phases)
+                self.assertEqual([], result.writes)
+                self.assertTrue(result.sync_restored and result.flow_restored)
+
+    def questLogCaptureFixture(self, *, active=(), completed=(), captured=True, fault=None):
+        source = (ROOT / "test.py").read_text(encoding="utf-8")
+        tree = ast.parse(source)
+        names = {
+            "readJournalTabs",
+            "nouraajd_quest_status_line",
+            "assert_nouraajd_quest_log",
+            "capture_nouraajd_quest_log",
+        }
+        constants = {"NOURAAJD_QUEST_LOG_SCREENSHOT_CHECKPOINTS", "NOURAAJD_QUEST_DESCRIPTIONS"}
+        selected = [
+            copy.deepcopy(node)
+            for node in tree.body
+            if (isinstance(node, ast.FunctionDef) and node.name in names)
+            or (
+                isinstance(node, ast.Assign)
+                and any(isinstance(target, ast.Name) and target.id in constants for target in node.targets)
+            )
+        ]
+        self.assertEqual(names, {node.name for node in selected if isinstance(node, ast.FunctionDef)})
+        events = []
+        state = {"tab": "showActive", "rendered": None, "closed": False}
+        primary = RuntimeError("native screenshot readback failed")
+        namespace = {}
+
+        def currentView():
+            status, quest_ids = ("Active", active) if state["tab"] == "showActive" else ("Completed", completed)
+            rows = tuple(namespace["NOURAAJD_QUEST_DESCRIPTIONS"][quest_id] for quest_id in quest_ids)
+            text = "\n".join(namespace["nouraajd_quest_status_line"](status, quest_id) for quest_id in quest_ids)
+            return state["tab"], rows, text
+
+        class Panel:
+            def getText(self, gui):
+                events.append(("text", state["tab"]))
+                return "missing quest" if fault == "quest" else currentView()[2]
+
+            def close(self):
+                events.append(("close",))
+                state["closed"] = True
+
+        panel = Panel()
+        buttons = [
+            types.SimpleNamespace(getStringProperty=lambda key, name=name: name)
+            for name in ("showActive", "showCompleted")
+        ]
+
+        def activate(button, gui):
+            state["tab"] = button.getStringProperty("click")
+            events.append(("select", state["tab"]))
+
+        def openPanel(name):
+            self.assertEqual("questPanel", name)
+            events.append(("reopen",))
+            return panel
+
+        def openQuestPanel(test, owner):
+            events.append(("open",))
+            return panel
+
+        def pump(frames):
+            events.append(("frame", frames))
+            if not state["closed"]:
+                state["rendered"] = currentView()
+
+        def capture(test, owner, name):
+            events.append(("capture", name))
+            self.assertEqual(currentView(), state["rendered"], "quest screenshot read stale renderer pixels")
+            if fault == "capture":
+                raise primary
+
+        owner = types.SimpleNamespace(
+            getGui=lambda: object(), getGuiHandler=lambda: types.SimpleNamespace(openPanel=openPanel)
+        )
+        namespace.update(
+            find_descendants_by_type=lambda root, kind: buttons,
+            activate_widget=activate,
+            open_quest_log_panel=openQuestPanel,
+            pump_event_loop=pump,
+            assert_screenshot_has_rendered_pixels=capture,
+        )
+        exec(compile(ast.Module(body=selected, type_ignores=[]), "actual_quest_log_capture_helpers", "exec"), namespace)
+        name = "xvfb_nouraajd_quest_log_all_quests_completed" if captured else "uncaptured_quest_checkpoint"
+        return types.SimpleNamespace(
+            invoke=lambda: namespace["capture_nouraajd_quest_log"](
+                self, owner, name, active=active, completed=completed
+            ),
+            events=events,
+            state=state,
+            primary=primary,
+            name=name,
+            expected=currentView,
+            statusLine=namespace["nouraajd_quest_status_line"],
+        )
+
+    def testQuestLogCaptureRendersCurrentTabBeforeReadingPixels(self):
+        for active, completed, final_tab, reads in (
+            (("mainQuest",), (), "showActive", 1),
+            (("mainQuest",), ("rolfQuest",), "showActive", 2),
+            ((), ("mainQuest", "rolfQuest"), "showCompleted", 1),
+        ):
+            with self.subTest(active=active, completed=completed):
+                fixture = self.questLogCaptureFixture(active=active, completed=completed)
+                text = fixture.invoke()
+                self.assertEqual(fixture.expected(), fixture.state["rendered"])
+                self.assertEqual(final_tab, fixture.state["rendered"][0])
+                self.assertEqual(reads, sum(event[0] == "text" for event in fixture.events))
+                self.assertEqual(1, fixture.events.count(("frame", 1)))
+                capture_index = fixture.events.index(("capture", fixture.name))
+                self.assertEqual(("frame", 1), fixture.events[capture_index - 1])
+                self.assertEqual([("reopen",), ("close",), ("frame", 2)], fixture.events[capture_index + 1 :])
+                self.assertTrue(fixture.state["closed"])
+                for quest_id in active:
+                    self.assertIn(fixture.statusLine("Active", quest_id), text)
+                for quest_id in completed:
+                    self.assertIn(fixture.statusLine("Completed", quest_id), text)
+
+    def testQuestLogUncapturedCheckpointKeepsExistingFrameCount(self):
+        fixture = self.questLogCaptureFixture(active=("mainQuest",), captured=False)
+        fixture.invoke()
+        self.assertEqual([("frame", 2)], [event for event in fixture.events if event[0] == "frame"])
+        self.assertFalse(any(event[0] == "capture" for event in fixture.events))
+        self.assertTrue(fixture.state["closed"])
+
+    def testQuestLogCaptureKeepsQuestAssertionsBeforeFramesAndPixels(self):
+        fixture = self.questLogCaptureFixture(active=("mainQuest",), fault="quest")
+        with self.assertRaises(AssertionError):
+            fixture.invoke()
+        self.assertFalse(any(event[0] in ("frame", "capture", "close") for event in fixture.events))
+
+    def testQuestLogCapturePreservesReadbackError(self):
+        fixture = self.questLogCaptureFixture(active=("mainQuest",), fault="capture")
+        with self.assertRaises(RuntimeError) as caught:
+            fixture.invoke()
+        self.assertIs(fixture.primary, caught.exception)
+        self.assertEqual(("frame", 1), fixture.events[-2])
+        self.assertEqual(("capture", fixture.name), fixture.events[-1])
+        self.assertFalse(fixture.state["closed"])
 
 
 def loadCrafting():

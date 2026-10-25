@@ -26,6 +26,179 @@ def sourceMethod(source, class_id, method_name, **namespace):
 
 
 class GameplayBranchCatalogTest(unittest.TestCase):
+    def multilevelAllFloorsModel(self, mutation=None):
+        from tests import gameplay_routes_maps as maps
+
+        source = (catalog.ROOT / "res/maps/multilevel/script.py").read_text(encoding="utf-8")
+        tree = ast.parse(source)
+        owner = next(n for n in ast.walk(tree) if isinstance(n, ast.ClassDef) and n.name == "MultilevelGoal")
+        method = next(n for n in owner.body if isinstance(n, ast.FunctionDef) and n.name == "onEnter")
+        scope = {}
+        exec(
+            compile(ast.fix_missing_locations(ast.Module(body=[method], type_ignores=[])), "actual-goal-hook", "exec"),
+            scope,
+        )
+        test = self
+        flags = {}
+        world = types.SimpleNamespace(setBoolProperty=lambda name, value: flags.__setitem__(name, value))
+
+        class Driver:
+            def __init__(self):
+                self.test, self.turns, self.transitions = test, 0, 0
+                self.player, self.game_map = {"__handle__": "beforePlayer"}, {"__handle__": "beforeMap"}
+                self.position, self.receipts, self.saves, self.moves = (1, 1, 0), {}, [], []
+
+            def startMap(self, name):
+                test.assertEqual("multilevel", name)
+
+            def object(self, name, required=True):
+                return {"__handle__": name}
+
+            def objectPosition(self, name):
+                if name == "multilevelStart":
+                    return 1, 1, 0
+                if name in {"multilevelLowerGoal", "multilevelUpperGoal"}:
+                    return 2, 0, int(name == "multilevelUpperGoal")
+                if name.startswith("multilevelGoalLevel"):
+                    return 2, 0, int(name.removeprefix("multilevelGoalLevel"))
+                if name in {"stairsUp", "stairsDown"}:
+                    return 0, 0, int(name == "stairsDown")
+                return 0, 0, int(name.split("Level")[1])
+
+            def coords(self, owner=None):
+                return self.objectPosition(owner["__handle__"]) if owner else self.position
+
+            def call(self, owner, method, *args):
+                name = owner["__handle__"]
+                if method in {"getName", "getTypeId"}:
+                    return (
+                        "different"
+                        if mutation == "reloadIdentity" and self.saves
+                        else ("unitPlayer" if method == "getName" else "Warrior")
+                    )
+                if method == "getTurn":
+                    return self.turns
+                if method == "getBoolProperty":
+                    test.assertEqual(("waypoint",), args)
+                    return True
+                if method == "getNumericProperty":
+                    point = self.objectPosition(name)
+                    target = (point[0], point[1], point[2] + (1 if name.startswith("stairsUp") else -1))
+                    return target["XYZ".index(args[0].removeprefix("target"))]
+                raise AssertionError(("Unexpected modeled native getter", method))
+
+            def number(self, name):
+                test.assertEqual("levelTransitionCount", name)
+                return self.transitions
+
+            def flag(self, name):
+                return flags.get(name, False)
+
+            def _hasNavigationEdge(self, origin, destination):
+                return mutation != "missingEdge" and abs(origin[2] - destination[2]) == 1
+
+            def navigateTo(self, name, *, after_tick=None):
+                origin = self.position
+                destination = self.objectPosition(name)
+                if name.startswith("stairs"):
+                    test.assertEqual(destination[2], origin[2])
+                    destination = (
+                        destination[0],
+                        destination[1],
+                        destination[2] + (1 if name.startswith("stairsUp") else -1),
+                    )
+                    self.transitions += 2 if mutation == "extraTransition" else 1
+                    flags["used_stairs_up" if name.startswith("stairsUp") else "used_stairs_down"] = True
+                self.position = destination
+                self.turns += 33 if mutation == "budget" else 1
+                if mutation == "wrongLanding" and name.startswith("stairs"):
+                    self.position = (7, 7, destination[2])
+                if name.startswith("multilevel") and name != "multilevelStart":
+                    goal = types.SimpleNamespace(
+                        getCoords=lambda: types.SimpleNamespace(z=self.position[2]), getMap=lambda: world
+                    )
+                    event = types.SimpleNamespace(getCause=lambda: types.SimpleNamespace(isPlayer=lambda: True))
+                    scope["onEnter"](goal, event)
+                    if mutation == "missedGoal":
+                        flags.pop(f"visited_level_{self.position[2]}_goal", None)
+                if name == "multilevelStart":
+                    flags["visited_multilevel_start"] = True
+                self.moves.append((name, origin, self.position))
+                if after_tick:
+                    after_tick()
+
+            def revisit(self, name):
+                self.navigateTo(name)
+
+            def check(self, branch, condition, **evidence):
+                test.assertTrue(condition, (branch, evidence))
+                test.assertNotIn(branch, self.receipts)
+                self.receipts[branch] = evidence
+
+            def saveAndReload(self, label):
+                self.saves.append((label, self.position, self.transitions, self.turns))
+                self.player, self.game_map = {"__handle__": "afterPlayer"}, {"__handle__": "afterMap"}
+                if mutation == "reloadFlags":
+                    flags.pop("visited_level_7_goal", None)
+
+        driver = Driver()
+        self._lastMultilevelDriver = driver
+        getattr(maps, "multilevelAllFloors", maps.multilevel)(driver)
+        return driver, flags
+
+    def testMultilevelAllFloorsNaturallyCreditsEveryDeclaredGoalStairAndSummitCheckpoint(self):
+        driver, flags = self.multilevelAllFloorsModel()
+        expected = {f"multilevel.all.goal.{level}" for level in range(15)}
+        expected |= {f"multilevel.all.stairs.up.{level}" for level in range(1, 15)}
+        expected |= {f"multilevel.all.stairs.down.{level}" for level in range(14, 0, -1)}
+        expected |= {"multilevel.all.summit.reloaded", "multilevel.all.return"}
+        self.assertEqual(45, len(expected))
+        self.assertEqual(expected, set(driver.receipts))
+        self.assertEqual(28, driver.transitions)
+        self.assertEqual(0, driver.position[2])
+        self.assertEqual(1, len(driver.saves))
+        self.assertEqual((14, 14), (driver.saves[0][1][2], driver.saves[0][2]))
+        self.assertTrue(all(flags[f"visited_level_{level}_goal"] for level in range(15)))
+
+    def testMultilevelAllFloorsRejectsFalseLandingsMissingEdgesGoalsBudgetsAndReloadState(self):
+        for mutation in (
+            "missingEdge",
+            "wrongLanding",
+            "missedGoal",
+            "extraTransition",
+            "budget",
+            "reloadFlags",
+            "reloadIdentity",
+        ):
+            with self.subTest(mutation=mutation), self.assertRaises(AssertionError):
+                self.multilevelAllFloorsModel(mutation)
+            self.assertNotIn("multilevel.all.return", self._lastMultilevelDriver.receipts)
+
+    def testMultilevelAllFloorsCatalogPreservesTheOldCaseAndMapsOnlyRealCallbackOutcomes(self):
+        from tests import gameplay_routes_maps as maps
+
+        old = next(case for case in maps.CASES if case.id == "multilevel-return")
+        new = next((case for case in maps.CASES if case.id == "multilevel-all-floors"), None)
+        self.assertIsNotNone(new, "The added floors require their own natural route obligations")
+        self.assertEqual(6, len(old.branches))
+        self.assertEqual(45, len(new.branches))
+        self.assertEqual(45, len(set(new.branches)))
+        self.assertEqual(old.classes, new.classes)
+        self.assertEqual(old.duration_seconds, new.duration_seconds)
+        self.assertEqual(old.sources, new.sources)
+        self.assertEqual(old.maps, new.maps)
+        self.assertEqual(PLAYER_CLASSES, new.classes)
+        self.assertEqual(200.0, new.duration_seconds)
+        self.assertFalse(new.isolated_gui)
+        self.assertIsNone(new.initial_reputation)
+        prefix = "res/maps/multilevel/script.py:"
+        goals = {branch for branch in new.branches if ".goal." in branch}
+        stairs = {branch for branch in new.branches if ".stairs." in branch}
+        self.assertEqual(15, len(goals))
+        self.assertEqual(28, len(stairs))
+        self.assertTrue(goals <= set(maps.SOURCE_BRANCHES[prefix + "MultilevelGoal.onEnter"]))
+        self.assertTrue(stairs <= set(maps.SOURCE_BRANCHES[prefix + "LevelStairs.onEnter"]))
+
     def testCityInventoryUiMappingsRequireDeclaredIsolatedCasesWithoutClaimingSourceParity(self):
         from tests.gameplay_routes_baldurs_gate import CASES, SOURCE_BRANCHES
 

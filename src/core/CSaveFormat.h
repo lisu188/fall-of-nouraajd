@@ -71,4 +71,9 @@ std::expected<DecodedDocument, std::string> decodeDocument(const std::shared_ptr
 std::expected<std::shared_ptr<json>, std::string> buildEnvelope(const std::shared_ptr<json> &snapshot,
                                                                 const std::string &expectedMapName);
 
+// A fresh, unpublished snapshot may transfer its storage after validation. Shared snapshots retain
+// copy semantics; the caller must exclude concurrent access to a snapshot offered for consumption.
+std::expected<std::shared_ptr<json>, std::string> buildEnvelope(std::shared_ptr<json> &&snapshot,
+                                                                const std::string &expectedMapName);
+
 } // namespace CSaveFormat
