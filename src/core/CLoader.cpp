@@ -980,7 +980,7 @@ void apply_authored_map_metadata(const std::shared_ptr<CGame> &game, const std::
 
 class CScopedObjectConfig {
   public:
-    CScopedObjectConfig(std::shared_ptr<CObjectHandler> handler, std::string name, std::shared_ptr<json> value)
+    CScopedObjectConfig(std::shared_ptr<CObjectHandler> handler, std::string name, std::shared_ptr<const json> value)
         : handler(std::move(handler)), name(std::move(name)) {
         if (this->handler) {
             previous = this->handler->getConfig(this->name);

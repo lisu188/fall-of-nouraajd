@@ -129,6 +129,18 @@ class NativeCoroutineCallbackTest(unittest.TestCase):
         self.pumpUntil(lambda: self.panel(type_name) is not None, "Native flow did not open " + type_name)
         return self.panel(type_name)
 
+    def awaitFailedDialogSelectionCompletion(self, action_flow):
+        def released():
+            gc.collect()
+            return action_flow() is None
+
+        self.pumpUntil(released, "Native dialog action flow was not released")
+        # Owner release precedes CDialog's completion, which then queues the panel's guard cleanup.
+        for _ in range(2):
+            completed = []
+            self.assertTrue(self.loop.invoke(lambda: completed.append(True)), "Native completion barrier was rejected")
+            self.pumpUntil(lambda: bool(completed), "Native dialog selection completion barrier did not run")
+
     def assertFlowsReleased(self):
         self.settle()
         self.assertTrue(self.flow_refs, "The test must drive a real native-owned UiFlow")
@@ -906,11 +918,17 @@ class NativeCoroutineCallbackTest(unittest.TestCase):
     def testNativeDialogCallbackErrorsKeepStateClosedToProgressAndPermitRetry(self):
         dialog, option, events, state = self.installActionDialog(error=True)
         panel = self.openDialogLater(dialog, [])
+        flow_count = len(self.flow_refs)
         panel.keyboardEvent(self.gui, 768, ord("1"))
-        self.awaitPanel("CGameCampaignPanel").clickAction(self.gui)
+        action_panel = self.awaitPanel("CGameCampaignPanel")
+        self.assertEqual(flow_count + 1, len(self.flow_refs), "One native action flow must own this selection")
+        action_flow = self.flow_refs[flow_count]
+        self.assertIsNotNone(action_flow(), "The pending native action must retain its flow")
+        action_panel.clickAction(self.gui)
         self.pumpUntil(lambda: "action closed" in events, "Failing dialog callback did not settle")
         self.assertIs(panel.getParent(), self.gui)
         self.assertNotIn("AFTER", self.historyStates())
+        self.awaitFailedDialogSelectionCompletion(action_flow)
         state["error"] = False
         panel.keyboardEvent(self.gui, 768, ord("1"))
         self.awaitPanel("CGameCampaignPanel").clickAction(self.gui)
@@ -1120,6 +1138,131 @@ class NativeCoroutineCallbackSelectionTest(unittest.TestCase):
         exec(compile(ast.Module(body=[helper], type_ignores=[]), "actual_wait_helper", "exec"), namespace)
         self.assertTrue(namespace["pump_event_loop_until"](lambda: True, min_iterations=5, pump=pump))
         self.assertEqual(5, state["steps"])
+
+    def dialogRetryMethods(self):
+        tree = ast.parse(Path(__file__).read_text(encoding="utf-8"))
+        owner = next(
+            node for node in tree.body if isinstance(node, ast.ClassDef) and node.name == "NativeCoroutineCallbackTest"
+        )
+        selected = [
+            node
+            for node in owner.body
+            if isinstance(node, ast.FunctionDef)
+            and node.name
+            in {
+                "awaitFailedDialogSelectionCompletion",
+                "testNativeDialogCallbackErrorsKeepStateClosedToProgressAndPermitRetry",
+            }
+        ]
+        namespace = {"gc": gc}
+        exec(compile(ast.Module(body=selected, type_ignores=[]), "actual_dialog_retry_fixture", "exec"), namespace)
+        return namespace
+
+    def testNativeDialogErrorRetryWaitsForOwnerReleaseAndBothPostedCompletions(self):
+        methods = self.dialogRetryMethods()
+        queue = []
+        events = []
+        state = {"error": True, "selecting": False, "flowAlive": False, "campaign": None, "history": []}
+        flow_refs = [lambda: object()]
+        gui = object()
+        panel = SimpleNamespace(getParent=lambda: gui, close=lambda: None)
+
+        def invoke(callback):
+            queue.append(callback)
+            return True
+
+        def pumpUntil(ready, message):
+            for _ in range(16):
+                if ready():
+                    return
+                if queue:
+                    queue.pop(0)()
+            self.assertTrue(ready(), message)
+
+        def finishSelection():
+            state["selecting"] = False
+
+        def finishDialog():
+            invoke(finishSelection)
+
+        def releaseFlow():
+            state["flowAlive"] = False
+            invoke(finishDialog)
+
+        def closeAction():
+            events.append("action closed")
+            invoke(releaseFlow)
+
+        def clickAction(_gui):
+            state["campaign"] = None
+            if state["error"]:
+                invoke(closeAction)
+            else:
+                events.extend(("action returned", "action closed"))
+                state["history"].append("AFTER")
+                state["selecting"] = False
+
+        def keyboardEvent(_gui, _event, _key):
+            if state["selecting"]:
+                return
+            state["selecting"] = True
+            state["flowAlive"] = True
+            flow_refs.append(lambda: object() if state["flowAlive"] else None)
+            events.append("action started")
+            state["campaign"] = SimpleNamespace(clickAction=clickAction)
+
+        def awaitPanel(type_name):
+            self.assertEqual("CGameCampaignPanel", type_name)
+            pumpUntil(lambda: state["campaign"] is not None, "Retry was sent before native selection completion")
+            return state["campaign"]
+
+        panel.keyboardEvent = keyboardEvent
+        receiver = SimpleNamespace(
+            installActionDialog=lambda **_kwargs: (object(), object(), events, state),
+            openDialogLater=lambda *_args: panel,
+            gui=gui,
+            flow_refs=flow_refs,
+            loop=SimpleNamespace(invoke=invoke),
+            pumpUntil=pumpUntil,
+            awaitPanel=awaitPanel,
+            historyStates=lambda: state["history"],
+            assertFlowsReleased=lambda: self.assertFalse(state["selecting"]),
+            assertEqual=self.assertEqual,
+            assertTrue=self.assertTrue,
+            assertIs=self.assertIs,
+            assertIsNotNone=self.assertIsNotNone,
+            assertNotIn=self.assertNotIn,
+        )
+        helper = methods.get("awaitFailedDialogSelectionCompletion")
+        if helper is not None:
+            receiver.awaitFailedDialogSelectionCompletion = lambda reference: helper(receiver, reference)
+        methods["testNativeDialogCallbackErrorsKeepStateClosedToProgressAndPermitRetry"](receiver)
+        self.assertEqual([], queue)
+        self.assertEqual(2, events.count("action started"))
+
+    def testNativeDialogRetryCompletionRefusesRejectedQueueBarrier(self):
+        helper = self.dialogRetryMethods().get("awaitFailedDialogSelectionCompletion")
+        self.assertIsNotNone(helper, "The retry needs an explicit native completion wait")
+        receiver = SimpleNamespace(
+            pumpUntil=lambda ready, message: self.assertTrue(ready(), message),
+            loop=SimpleNamespace(invoke=lambda _callback: False),
+            assertTrue=self.assertTrue,
+        )
+        with self.assertRaisesRegex(AssertionError, "Native completion barrier was rejected"):
+            helper(receiver, lambda: None)
+
+    def testNativeDialogRetryCompletionWaitsForActualActionOwnerRelease(self):
+        helper = self.dialogRetryMethods().get("awaitFailedDialogSelectionCompletion")
+        self.assertIsNotNone(helper, "The retry needs an explicit native completion wait")
+        calls = []
+        receiver = SimpleNamespace(
+            pumpUntil=lambda ready, message: self.assertTrue(ready(), message),
+            loop=SimpleNamespace(invoke=lambda callback: calls.append(callback)),
+            assertTrue=self.assertTrue,
+        )
+        with self.assertRaisesRegex(AssertionError, "Native dialog action flow was not released"):
+            helper(receiver, lambda: object())
+        self.assertEqual([], calls)
 
     def runMissingBinaryCase(self, *, required, explicit):
         case = NativeCoroutineCallbackTest("testQueuedShutdownSkipsCallbackBodyAndReward")

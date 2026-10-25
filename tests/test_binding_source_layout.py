@@ -20,6 +20,35 @@ ROOT = Path(__file__).resolve().parents[1]
 
 
 class BindingSourceLayoutTest(unittest.TestCase):
+    def testPythonPluginLoadingRoutesThroughTheDeclaredLoaderService(self):
+        foundation = (ROOT / "src/core/bindings/CModuleFoundation.cpp").read_text(encoding="utf-8")
+        self.assertNotRegex(foundation, r"&CGame::loadPlugin\b")
+        game_header = (ROOT / "src/core/CGame.h").read_text(encoding="utf-8")
+        self.assertNotRegex(game_header, r"\bloadPlugin\s*\(")
+        services = (ROOT / "src/core/bindings/CModuleServices.cpp").read_text(encoding="utf-8")
+        loader_class = services.split("py::class_<CPluginLoader,", 1)[1].split("py::class_<", 1)[0]
+        self.assertIn('m, "CPluginLoader"', loader_class)
+        self.assertEqual(1, len(re.findall(r'\.def\(\s*"loadPlugin"\s*,\s*&CPluginLoader::loadPlugin\b', loader_class)))
+        header = (ROOT / "src/core/CLoader.h").read_text(encoding="utf-8")
+        self.assertRegex(
+            header,
+            r"class CPluginLoader\s*\{[\s\S]*?static bool loadPlugin\(const std::shared_ptr<CGame> &game, "
+            r"const std::string &path\);",
+        )
+        implementation = (ROOT / "src/core/CLoader.cpp").read_text(encoding="utf-8")
+        start = implementation.index("bool CPluginLoader::loadPlugin(")
+        body = registrationBody(implementation[start:], "CPluginLoader::loadPlugin")
+        self.assertIn("if (!isTrustedPluginPath(path))", body)
+        self.assertIn("game->getResourcesProvider()->load(path)", body)
+        self.assertIn('plugin_namespace["__builtins__"] = build_restricted_plugin_builtins();', body)
+        self.assertIn('pybind11::exec(code + "\\n", plugin_namespace, plugin_namespace);', body)
+        self.assertIn('plugin_namespace["load"](pybind11::none(), pybind11::cast(game));', body)
+        self.assertIn("return true;", body)
+        self.assertIn("PyErr_Clear();", body)
+        self.assertIn("return false;", body)
+        cmake = (ROOT / "CMakeLists.txt").read_text(encoding="utf-8")
+        self.assertIn("src/core/bindings/CModuleFoundation.cpp", cmake)
+
     def testCityRunnerImportsUseExportedClassesAndMatchingFastPrefixes(self):
         runner = ast.parse((ROOT / "test.py").read_text(encoding="utf-8"))
         imports = [
@@ -89,6 +118,26 @@ class BindingSourceLayoutTest(unittest.TestCase):
             self.assertIn("creature_iterable_to_vector(allies)", match[1])
         self.assertIn('"fightManyOutcome"', source)
         self.assertNotIn('"fightManyWithAlliesAsync"', source)
+
+    def testNativeMetadataCoordinatorIncludesTheOwningTypeRegistryHeader(self):
+        source = (ROOT / "src/core/CModule.cpp").read_text(encoding="utf-8")
+        include = '#include "core/CTypes.h"'
+        self.assertIn(include, source, "Metadata registration needs its declaring header, independently of PCH order")
+        self.assertLess(source.index(include), source.index("CTypes::register_type_metadata<"))
+        owner = (ROOT / "src/core/CTypes.h").read_text(encoding="utf-8")
+        self.assertIn("class CTypes {", owner)
+        self.assertIn("static void register_type_metadata()", owner)
+
+    def testObjectConfigRegistrationIncludesTheCompleteConfigurationProvider(self):
+        source = (ROOT / "src/handler/CObjectHandler.cpp").read_text(encoding="utf-8")
+        include = '#include "core/CProvider.h"'
+        self.assertIn(include, source, "Both provider calls require the complete owner declaration")
+        self.assertLess(source.index(include), source.index("CConfigurationProvider::getConfig(path)"))
+        self.assertLess(source.index(include), source.index("provider.getConfiguration(path)"))
+        owner = (ROOT / "src/core/CProvider.h").read_text(encoding="utf-8")
+        self.assertIn("class CConfigurationProvider {", owner)
+        self.assertIn("static std::shared_ptr<const json> getConfig(const std::string &path);", owner)
+        self.assertIn("std::shared_ptr<const json> getConfiguration(const std::string &path);", owner)
 
     def testCoordinatorRegistersEachGroupOnceAfterMetadataInOriginalOrder(self):
         source = (ROOT / "src/core/CModule.cpp").read_text(encoding="utf-8")

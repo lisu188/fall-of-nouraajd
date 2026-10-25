@@ -5,7 +5,7 @@
     {
       "source": "src/core/bindings/CModuleFoundation.cpp",
       "registration": "bindFoundationAndSession",
-      "registrationTokenSha256": "19b6725b3e9e72d4be7e93e00dfefe264d805ac637843d949d1b65a6ee718bbc"
+      "registrationTokenSha256": "aa9053facbce9f66fd6ef24c0f5ef72e06f0b12a677eab93ffcafbd985f81ec7"
     },
     {
       "source": "src/core/bindings/CModuleWorld.cpp",

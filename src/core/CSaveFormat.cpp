@@ -21,6 +21,7 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #include <algorithm>
 #include <cctype>
 #include <map>
+#include <utility>
 #include <vector>
 
 namespace CSaveFormat {
@@ -248,8 +249,10 @@ std::expected<DecodedDocument, std::string> decodeDocument(const std::shared_ptr
     return migrateToCurrentSnapshot(SourceDocument{LEGACY_SCHEMA_VERSION, document, *legacyMapName, Encoding::Legacy});
 }
 
-std::expected<std::shared_ptr<json>, std::string> buildEnvelope(const std::shared_ptr<json> &snapshot,
-                                                                const std::string &expectedMapName) {
+namespace {
+
+std::expected<std::shared_ptr<json>, std::string>
+buildEnvelopeImpl(const std::shared_ptr<json> &snapshot, const std::string &expectedMapName, bool consumeSnapshot) {
     auto snapshotMapName = readSnapshotMapName(snapshot);
     if (!snapshotMapName) {
         return std::unexpected("snapshot is missing a valid CMap mapName");
@@ -265,8 +268,24 @@ std::expected<std::shared_ptr<json>, std::string> buildEnvelope(const std::share
     (*envelope)["format"] = FORMAT;
     (*envelope)["schemaVersion"] = SCHEMA_VERSION;
     (*envelope)["mapName"] = *snapshotMapName;
-    (*envelope)["snapshot"] = *snapshot;
+    if (consumeSnapshot && snapshot.use_count() == 1) {
+        (*envelope)["snapshot"] = std::move(*snapshot);
+    } else {
+        (*envelope)["snapshot"] = *snapshot;
+    }
     return envelope;
+}
+
+} // namespace
+
+std::expected<std::shared_ptr<json>, std::string> buildEnvelope(const std::shared_ptr<json> &snapshot,
+                                                                const std::string &expectedMapName) {
+    return buildEnvelopeImpl(snapshot, expectedMapName, false);
+}
+
+std::expected<std::shared_ptr<json>, std::string> buildEnvelope(std::shared_ptr<json> &&snapshot,
+                                                                const std::string &expectedMapName) {
+    return buildEnvelopeImpl(snapshot, expectedMapName, true);
 }
 
 } // namespace CSaveFormat

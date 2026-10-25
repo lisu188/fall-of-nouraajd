@@ -7,6 +7,7 @@ import builtins
 import json
 from pathlib import Path
 import re
+import symtable
 import sys
 from types import ModuleType, SimpleNamespace
 import unittest
@@ -37,6 +38,20 @@ def nativePluginBuiltins():
 
     result["__import__"] = resourceImport
     return result
+
+
+def unsupportedPluginBuiltins(source, allowed):
+    module = symtable.symtable(source, "<resource-plugin>", "exec")
+    module_bindings = {symbol.get_name() for symbol in module.get_symbols() if symbol.is_local()}
+    references = set()
+    pending = [module]
+    while pending:
+        scope = pending.pop()
+        references.update(
+            symbol.get_name() for symbol in scope.get_symbols() if symbol.is_referenced() and symbol.is_global()
+        )
+        pending.extend(scope.get_children())
+    return sorted(references.intersection(vars(builtins)).difference(allowed, module_bindings))
 
 
 def relocationFixture():
@@ -296,16 +311,7 @@ class CityModel:
 class BaldursGateCityContentTest(unittest.TestCase):
     def testResourceCallbacksUseOnlyNativeAllowedBuiltins(self):
         allowed = nativePluginBuiltins()
-        unsupported = sorted(
-            {
-                node.id
-                for node in ast.walk(ast.parse(SCRIPT.read_text(encoding="utf-8")))
-                if isinstance(node, ast.Name)
-                and isinstance(node.ctx, ast.Load)
-                and node.id in vars(builtins)
-                and node.id not in allowed
-            }
-        )
+        unsupported = unsupportedPluginBuiltins(SCRIPT.read_text(encoding="utf-8"), allowed)
         self.assertEqual([], unsupported)
         model = CityModel()
         self.assertEqual(set(allowed), set(model.namespace["__builtins__"]))
@@ -1367,6 +1373,55 @@ class BaldursGateCityContentTest(unittest.TestCase):
         self.assertEqual({"POTN08": 2, "WAND09": 1, "POTN25": 3}, quantities)
         model.clock.initializeActor(actor)
         self.assertEqual(3, len(actor.items))
+
+    def testBuiltinCheckerAcceptsActualResourceWithHostGameAlias(self):
+        missing = object()
+        original = vars(builtins).get("game", missing)
+        with patch.object(builtins, "game", object(), create=True):
+            self.testResourceCallbacksUseOnlyNativeAllowedBuiltins()
+        if original is missing:
+            self.assertNotIn("game", vars(builtins))
+        else:
+            self.assertIs(original, vars(builtins)["game"])
+
+    def testBuiltinCheckerRespectsParametersLocalsClosuresAndComprehensions(self):
+        checker = globals().get("unsupportedPluginBuiltins")
+        self.assertIsNotNone(checker, "The checker must resolve actual Python lexical bindings")
+        samples = (
+            "def callback(game, next, zip, id, KeyError):\n    return game, next, zip, id, KeyError\n",
+            "def callback(value):\n    game = value\n    return game\n",
+            "def outer(value):\n    next = value\n    def callback():\n        return next\n    return callback\n",
+            "def callback(values):\n    return [next for next in values]\n",
+            "from json import dumps as next\nzip = 3\ndef callback():\n    return next(zip)\n",
+        )
+        with patch.object(builtins, "game", object(), create=True):
+            for source in samples:
+                with self.subTest(source=source):
+                    self.assertEqual([], checker(source, nativePluginBuiltins()))
+
+    def testBuiltinCheckerRejectsUnboundForbiddenAndInjectedHostNames(self):
+        checker = globals().get("unsupportedPluginBuiltins")
+        self.assertIsNotNone(checker, "The lexical check must retain forbidden builtin rejection")
+        forbidden = "def callback(values):\n    return next(values), zip(values), id(values), KeyError\n"
+        self.assertEqual(["KeyError", "id", "next", "zip"], checker(forbidden, nativePluginBuiltins()))
+        for name in ("game", "unexpectedHostBuiltin"):
+            with self.subTest(name=name), patch.object(builtins, name, object(), create=True):
+                self.assertEqual([name], checker("def callback():\n    return " + name + "\n", nativePluginBuiltins()))
+
+    def testBuiltinCheckerDoesNotTreatClassBindingsAsMethodGlobals(self):
+        checker = globals().get("unsupportedPluginBuiltins")
+        self.assertIsNotNone(checker, "Class attributes do not bind unqualified names inside methods")
+        source = "class Callback:\n    next = 7\n    def run(self, values):\n        return next(values)\n"
+        self.assertEqual(["next"], checker(source, nativePluginBuiltins()))
+
+    def testBuiltinCheckerKeepsTheActualAssertionConnectedToUnsupportedReferences(self):
+        owner = sys.modules[__name__]
+        source = SimpleNamespace(read_text=lambda encoding=None: "def callback(values):\n    return next(values)\n")
+        allowed = nativePluginBuiltins()
+        model = SimpleNamespace(namespace={"__builtins__": allowed})
+        with patch.object(owner, "SCRIPT", source), patch.object(owner, "CityModel", return_value=model):
+            with self.assertRaisesRegex(AssertionError, "next"):
+                self.testResourceCallbacksUseOnlyNativeAllowedBuiltins()
 
 
 if __name__ == "__main__":

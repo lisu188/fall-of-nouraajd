@@ -59,6 +59,7 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #include <atomic>
 #include <chrono>
 #include <cmath>
+#include <cstdint>
 #include <filesystem>
 #include <fstream>
 #include <functional>
@@ -2676,7 +2677,149 @@ bool save_snapshot_has_map(const std::shared_ptr<json> &snapshot, const std::str
            (*snapshot)["properties"]["mapName"].get<std::string>() == map_name;
 }
 
+void verifySaveEnvelopeOwnership() {
+    auto makeSnapshot = [] {
+        auto snapshot = std::make_shared<json>();
+        (*snapshot)["class"] = "CMap";
+        auto &properties = (*snapshot)["properties"];
+        properties["mapName"] = "test";
+        properties["rngState"] = "seed:17;draws:9";
+        properties["completedQuests"] = json::array({"book", "scroll"});
+        properties["tiles"] = json::array();
+        for (int index = 0; index < 32; ++index) {
+            properties["tiles"][index] = json{{"class", "CTile"},
+                                              {"name", "tile-" + std::to_string(index)},
+                                              {"properties", {{"x", index}, {"text", "line\n\"quoted\""}}}};
+        }
+        properties["actor"] = json{{"class", "CCreature"}, {"name", "actor-7"}, {"tile", {{"ref", "tile-7"}}}};
+        return snapshot;
+    };
+    auto checksum = [](const std::string &bytes) {
+        std::uint64_t hash = 14695981039346656037ULL;
+        for (unsigned char byte : bytes) {
+            hash = (hash ^ byte) * 1099511628211ULL;
+        }
+        return hash;
+    };
+    auto snapshot = makeSnapshot();
+    const auto snapshotBytes = snapshot->dump();
+    const auto envelopeBytes = std::string("{\"format\":\"fall-of-nouraajd-save\",\"mapName\":\"test\",") +
+                               "\"schemaVersion\":2,\"snapshot\":" + snapshotBytes + "}";
+    const auto expectedChecksum = checksum(envelopeBytes);
+    const auto *sourceTile = &snapshot->at("properties").at("tiles").at(std::size_t(0));
+    auto copied = CSaveFormat::buildEnvelope(snapshot, "test");
+    expect_true(copied && (*copied)->dump() == envelopeBytes && checksum((*copied)->dump()) == expectedChecksum,
+                "lvalue envelope must preserve canonical bytes and checksum");
+    expect_true(copied && &(*copied)->at("snapshot").at("properties").at("tiles").at(std::size_t(0)) != sourceTile,
+                "lvalue envelope must retain independent nested storage");
+    if (copied) {
+        (**copied)["snapshot"]["properties"]["tiles"][0]["name"] = "changed-copy";
+    }
+    expect_true(snapshot->dump() == snapshotBytes, "writing an lvalue envelope must not change its source");
+
+    const auto constSnapshot = makeSnapshot();
+    const auto *constTile = &constSnapshot->at("properties").at("tiles").at(std::size_t(0));
+    auto constCopied = CSaveFormat::buildEnvelope(std::move(constSnapshot), "test");
+    expect_true(constCopied && (*constCopied)->dump() == envelopeBytes && constSnapshot->dump() == snapshotBytes &&
+                    &(*constCopied)->at("snapshot").at("properties").at("tiles").at(std::size_t(0)) != constTile,
+                "a const rvalue must preserve the existing copying overload");
+
+    auto owned = makeSnapshot();
+    std::vector<const json *> ownedTiles;
+    for (const auto &tile : owned->at("properties").at("tiles")) {
+        ownedTiles.push_back(&tile);
+    }
+    auto transferred = CSaveFormat::buildEnvelope(std::move(owned), "test");
+    expect_true(transferred && (*transferred)->dump() == envelopeBytes &&
+                    checksum((*transferred)->dump()) == expectedChecksum,
+                "owned envelope must preserve every value, canonical byte and checksum");
+    if (transferred) {
+        const auto &tiles = (*transferred)->at("snapshot").at("properties").at("tiles");
+        bool allTransferred = tiles.size() == ownedTiles.size();
+        for (std::size_t index = 0; index < ownedTiles.size(); ++index) {
+            allTransferred = allTransferred && &tiles.at(index) == ownedTiles[index];
+        }
+        expect_true(allTransferred, "a fresh rvalue envelope must transfer nested storage without a graph copy");
+        if (owned) {
+            *owned = json{{"reused", true}};
+        }
+        expect_true((*transferred)->dump() == envelopeBytes,
+                    "reassigning a surviving moved-from source must not alter its envelope");
+        auto decoded = CSaveFormat::decodeDocument(*transferred);
+        std::weak_ptr<json> lifetime = *transferred;
+        owned.reset();
+        transferred->reset();
+        expect_true(decoded && !lifetime.expired() && decoded->snapshot->dump() == snapshotBytes,
+                    "a decoded versioned view must retain all moved storage after the source and envelope reset");
+        if (decoded) {
+            decoded->snapshot.reset();
+        }
+        expect_true(lifetime.expired(), "the envelope owner must be released with its final decoded view");
+    }
+
+    auto shared = makeSnapshot();
+    auto alias = shared;
+    const auto *sharedTile = &shared->at("properties").at("tiles").at(std::size_t(0));
+    auto fallback = CSaveFormat::buildEnvelope(std::move(shared), "test");
+    expect_true(fallback && shared == alias && alias->dump() == snapshotBytes && (*fallback)->dump() == envelopeBytes,
+                "an rvalue with another strong owner must copy and preserve all aliases");
+    expect_true(fallback && &(*fallback)->at("snapshot").at("properties").at("tiles").at(std::size_t(0)) != sharedTile,
+                "shared-owner fallback must have independent nested storage");
+    if (fallback) {
+        (**fallback)["snapshot"]["properties"]["tiles"][0]["name"] = "changed-fallback";
+    }
+    expect_true(alias->dump() == snapshotBytes, "writing a shared fallback must not change existing aliases");
+
+    auto weakSource = makeSnapshot();
+    std::weak_ptr<json> weak = weakSource;
+    auto prelocked = weak.lock();
+    const auto *weakTile = &weakSource->at("properties").at("tiles").at(std::size_t(0));
+    auto weakFallback = CSaveFormat::buildEnvelope(std::move(weakSource), "test");
+    expect_true(weakFallback && weakSource == prelocked && prelocked->dump() == snapshotBytes &&
+                    (*weakFallback)->dump() == envelopeBytes &&
+                    &(*weakFallback)->at("snapshot").at("properties").at("tiles").at(std::size_t(0)) != weakTile,
+                "a previously promoted weak owner must select the strong-owner copying fallback");
+
+    auto expectRejected = [](std::shared_ptr<json> value, const std::string &mapName, const std::string &error) {
+        const auto *original = value.get();
+        const auto before = value ? value->dump() : std::string();
+        auto result = CSaveFormat::buildEnvelope(std::move(value), mapName);
+        expect_true(!result && result.error() == error, "rvalue validation must preserve its exact error policy");
+        expect_true(value.get() == original && (!value || value->dump() == before),
+                    "refused rvalue snapshots must preserve their pointer and contents");
+    };
+    const std::string malformed = "snapshot is missing a valid CMap mapName";
+    expectRejected(nullptr, "test", malformed);
+    expectRejected(std::make_shared<json>(json::array()), "test", malformed);
+    expectRejected(std::make_shared<json>(json::object()), "test", malformed);
+    auto wrongClass = makeSnapshot();
+    (*wrongClass)["class"] = "CCreature";
+    expectRejected(std::move(wrongClass), "test", malformed);
+    auto wrongProperties = makeSnapshot();
+    (*wrongProperties)["properties"] = json::array();
+    expectRejected(std::move(wrongProperties), "test", malformed);
+    auto missingName = makeSnapshot();
+    (*missingName)["properties"].erase("mapName");
+    expectRejected(std::move(missingName), "test", malformed);
+    auto wrongName = makeSnapshot();
+    (*wrongName)["properties"]["mapName"] = 17;
+    expectRejected(std::move(wrongName), "test", malformed);
+    expectRejected(makeSnapshot(), "other", "snapshot mapName does not match active mapName");
+    auto invalidName = makeSnapshot();
+    (*invalidName)["properties"]["mapName"] = "../test";
+    expectRejected(std::move(invalidName), "../test", "snapshot contains invalid mapName");
+    auto invalidMismatch = makeSnapshot();
+    (*invalidMismatch)["properties"]["mapName"] = "../test";
+    expectRejected(std::move(invalidMismatch), "test", "snapshot mapName does not match active mapName");
+    auto emptyName = makeSnapshot();
+    (*emptyName)["properties"]["mapName"] = "";
+    auto emptyEnvelope = CSaveFormat::buildEnvelope(std::move(emptyName), "");
+    expect_true(emptyEnvelope && (*emptyEnvelope)->at("mapName").get<std::string>().empty(),
+                "empty map names must retain their existing valid envelope behavior");
+}
+
 void test_save_format_codec_validation() {
+    verifySaveEnvelopeOwnership();
     auto snapshot = make_save_snapshot();
     auto envelope = CSaveFormat::buildEnvelope(snapshot, "test");
     expect_true(envelope.has_value(), "save format should build a valid envelope");

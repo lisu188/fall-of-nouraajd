@@ -152,6 +152,7 @@ FAST_TEST_PREFIXES = (
     "BaldursGateCustodyRoleSourceTest.",
     "CityWalkthroughRegistrationTest.",
     "BindingSourceLayoutTest.",
+    "BuiltinGameplayRegistrationTest.",
     "SavedWaitSourceTest.",
     "BaldursGateCityContentTest.",
     "BaldursGateCityRoutesTest.",
@@ -1259,19 +1260,82 @@ class ProgressTextTestResult(unittest.TextTestResult):
         unittest.TestResult.addSuccess(self, test)
         self._recordOutcome(test, "ok")
 
+    def _writeFailureDetails(self, test, status, formatted, exception_type):
+        prefix = "[test detail] "
+        case_name = self._test_name(test)[:256].replace("\r", "\\r").replace("\n", "\\n")
+        exception_name = exception_type[:64].replace("\r", "\\r").replace("\n", "\\n")
+        label = f"{status} {case_name} ({exception_name})".encode("utf-8", errors="replace").decode("utf-8")
+        header = f"{prefix}{label}\n"
+        trace_head = formatted[:8192].encode("utf-8", errors="replace").decode("utf-8")
+        trace_tail = formatted[-8192:].encode("utf-8", errors="replace").decode("utf-8")
+
+        def byteCount(value):
+            # Reserve CRLF expansion on Windows text streams.
+            return len(value.encode("utf-8")) + value.count("\n")
+
+        def boundedTail(render, limit):
+            if len(formatted) <= 8192 and byteCount(render(trace_head)) <= limit:
+                return render(trace_head)
+
+            def excerpt(size):
+                head_size, tail_size = (size + 1) // 2, size // 2
+                tail = trace_tail[-tail_size:] if tail_size else ""
+                return trace_head[:head_size] + "\n[... cached traceback omitted ...]\n" + tail
+
+            low, high = 0, min(len(formatted) - 1, 8192)
+            while low < high:
+                middle = (low + high + 1) // 2
+                if byteCount(render(excerpt(middle))) <= limit:
+                    low = middle
+                else:
+                    high = middle - 1
+            return render(excerpt(low))
+
+        def plain(tail):
+            return header + "".join(f"{prefix}{line}\n" for line in tail.splitlines())
+
+        def escape(value, property_value=False):
+            value = value.replace("%", "%25").replace("\r", "%0D").replace("\n", "%0A")
+            if property_value:
+                value = value.replace(",", "%2C").replace(":", "%3A")
+            return value
+
+        github_actions = os.environ.get("GITHUB_ACTIONS") == "true"
+        payload = boundedTail(plain, 4096 if github_actions else 8192)
+        if github_actions:
+            title = label.encode("utf-8", errors="replace")[:256].decode("utf-8", errors="ignore")
+            command = f"::error title={escape(title, property_value=True)}::"
+            remaining = 8192 - byteCount(payload)
+            payload += boundedTail(lambda tail: command + escape(tail) + "\n", remaining)
+        self.stream.write(payload)
+        self.stream.flush()
+
     def addFailure(self, test, err):
         unittest.TestResult.addFailure(self, test, err)
         self._recordOutcome(test, "FAIL")
+        try:
+            self._writeFailureDetails(test, "FAIL", self.failures[-1][1], err[0].__name__)
+        except BaseException:
+            pass
 
     def addError(self, test, err):
         unittest.TestResult.addError(self, test, err)
         self._recordOutcome(test, "ERROR")
+        try:
+            self._writeFailureDetails(test, "ERROR", self.errors[-1][1], err[0].__name__)
+        except BaseException:
+            pass
 
     def addSubTest(self, test, subtest, err):
         unittest.TestResult.addSubTest(self, test, subtest, err)
         if err is not None:
             status = "FAIL" if issubclass(err[0], test.failureException) else "ERROR"
             self._recordOutcome(test, status)
+            try:
+                entries = self.failures if status == "FAIL" else self.errors
+                self._writeFailureDetails(subtest, status, entries[-1][1], err[0].__name__)
+            except BaseException:
+                pass
 
     def addSkip(self, test, reason):
         unittest.TestResult.addSkip(self, test, reason)
@@ -1649,7 +1713,6 @@ def load_registered_class_categories():
         "animation-registration": REPO_ROOT / "src" / "gui" / "CAnimationTypeRegistration.cpp",
         "widget-registration": REPO_ROOT / "src" / "gui" / "object" / "CGuiWidgetTypeRegistration.cpp",
         "panel-registration": REPO_ROOT / "src" / "gui" / "panel" / "CGuiPanelTypeRegistration.cpp",
-        "native-plugin-registration": REPO_ROOT / "src" / "plugin" / "NativePlugin.cpp",
     }
     categories = {}
     pattern = re.compile(r"register_type(?:_metadata)?<([^>;]+?)>")
@@ -1659,13 +1722,25 @@ def load_registered_class_categories():
         text = path.read_text(encoding="utf-8")
         for match in pattern.finditer(text):
             class_name = match.group(1).split(",", 1)[0].strip()
-            if class_name.startswith("CWrapper<") or not class_name:
+            if not re.fullmatch(r"C[A-Za-z0-9_]+", class_name):
                 continue
             categories.setdefault(
                 class_name,
                 {
                     "category": category,
                     "owner": path.relative_to(REPO_ROOT).as_posix(),
+                    "className": class_name,
+                },
+            )
+    gameplay_table = REPO_ROOT / "src" / "core" / "CGameplayTypeTable.h"
+    if gameplay_table.exists():
+        row_pattern = re.compile(r"^\s+FN_(?:TYPE|WRAPPED)\(\s*(C[A-Za-z0-9_]+)\s*,", re.MULTILINE)
+        for class_name in row_pattern.findall(gameplay_table.read_text(encoding="utf-8")):
+            categories.setdefault(
+                class_name,
+                {
+                    "category": "gameplay-registration",
+                    "owner": gameplay_table.relative_to(REPO_ROOT).as_posix(),
                     "className": class_name,
                 },
             )
@@ -6214,71 +6289,159 @@ class GameTest(unittest.TestCase):
 
         return True, json.dumps({"hp_max": creature.getHpMax(), "is_player": creature.isPlayer()}, sort_keys=True)
 
+    @contextlib.contextmanager
+    def pythonPluginResource(self, owner, source):
+        import stat
+
+        resources = owner.getResourcesProvider()
+        config_path = resources.getPath("config/items.json")
+        self.assertTrue(config_path, "plugin fixtures require the actual game's copied resources")
+        resource_root = Path(config_path).resolve().parent.parent
+        self.assertNotEqual((REPO_ROOT / "res").resolve(), resource_root)
+        maps_root = resource_root / "maps"
+        self.assertEqual(maps_root, maps_root.resolve())
+        self.assertFalse(maps_root.is_symlink())
+        self.assertFalse(getattr(os.lstat(maps_root), "st_file_attributes", 0) & stat.FILE_ATTRIBUTE_REPARSE_POINT)
+        directory = Path(tempfile.mkdtemp(prefix="python_loader_probe_", dir=maps_root))
+        plugin_path = directory / "script.py"
+        created_file = False
+        try:
+            self.assertEqual(maps_root, directory.resolve().parent)
+            self.assertFalse(directory.is_symlink())
+            self.assertFalse(getattr(os.lstat(directory), "st_file_attributes", 0) & stat.FILE_ATTRIBUTE_REPARSE_POINT)
+            with plugin_path.open("x", encoding="utf-8") as plugin_file:
+                created_file = True
+                plugin_file.write(source)
+            self.assertEqual(directory, plugin_path.resolve().parent)
+            self.assertFalse(plugin_path.is_symlink())
+            self.assertFalse(
+                getattr(os.lstat(plugin_path), "st_file_attributes", 0) & stat.FILE_ATTRIBUTE_REPARSE_POINT
+            )
+            logical_path = plugin_path.relative_to(resource_root).as_posix()
+            resolved_path = resources.getPath(logical_path)
+            self.assertTrue(resolved_path)
+            self.assertEqual(plugin_path.resolve(), Path(resolved_path).resolve())
+            yield logical_path
+        finally:
+            primary_failure = sys.exc_info()[0] is not None
+            try:
+                if created_file:
+                    plugin_path.unlink(missing_ok=True)
+                directory.rmdir()
+            except OSError:
+                if not primary_failure:
+                    raise
+
+    def assertFreshPythonResourcePlugin(self, game, owner):
+        handler = owner.getObjectHandler()
+        before_types = set(handler.getAllTypes())
+        class_name = f"PythonLoaderProbe_{os.getpid()}_{time.time_ns()}"
+        self.assertNotIn(class_name, before_types)
+        source = (
+            "def load(_unused, owner):\n"
+            "    from game import CTile, register\n"
+            "    @register(owner)\n"
+            f"    class {class_name}(CTile):\n"
+            "        def onStep(self, creature):\n"
+            f"            self.setStringProperty('pythonLoaderCallback', '{class_name}')\n"
+        )
+        with self.pythonPluginResource(owner, source) as logical_path:
+            self.assertTrue(game.CPluginLoader.loadPlugin(owner, logical_path))
+            self.assertEqual(before_types | {class_name}, set(handler.getAllTypes()))
+            probe = handler.createObject(owner, class_name)
+            self.assertIsNotNone(probe)
+            self.assertIsInstance(probe, game.CTile)
+            self.assertEqual(owner, probe.getGame())
+            self.assertEqual("", probe.getStringProperty("pythonLoaderCallback"))
+            game.CTile.onStep(probe, None)
+            self.assertEqual(class_name, probe.getStringProperty("pythonLoaderCallback"))
+        return {"class": class_name, "callback": probe.getStringProperty("pythonLoaderCallback")}
+
     @game_test
     def test_cpp_plugin_manifest_registers_native_content(self):
         game = load_game_module()
-
         g = game.CGameLoader.loadGame()
-        marker = g.createObject("nativePluginMarker")
-
-        self.assertIsNotNone(marker)
-        self.assertEqual("Native plugin marker", marker.getStringProperty("label"))
-        self.assertEqual("Registered by a compiled C++ plugin.", marker.getStringProperty("description"))
-        self.assertTrue(marker.getBoolProperty("nativePluginLoaded"))
-        self.assertTrue(game.CPluginLoader.loadCppPlugin(g, "CNativeContentPlugin"))
-        self.assertFalse(game.CPluginLoader.loadCppPlugin(g, "DefinitelyMissingPlugin"))
-
-        report = {
-            "marker": marker.getStringProperty("label"),
-            "native": marker.getBoolProperty("nativePluginLoaded"),
+        retired = {
+            "CPlugin": game,
+            "CPluginRegistrar": game,
+            "loadCppPlugin": game.CPluginLoader,
+            "loadDynamicPlugin": game.CPluginLoader,
+            "loadPlugin": g,
         }
-        return True, json.dumps(report, sort_keys=True)
+        for name, owner in retired.items():
+            with self.subTest(retired_api=name):
+                self.assertFalse(hasattr(owner, name))
+        self.assertTrue(callable(game.CPluginLoader.loadPlugin))
+        return True, json.dumps({"retired_apis_absent": sorted(retired)}, sort_keys=True)
 
     @game_test
     def test_dynamic_plugin_manifest_registers_native_content(self):
         game = load_game_module()
-
-        g = game.CGameLoader.loadGame()
-        marker = g.createObject("dynamicNativePluginMarker")
-
-        self.assertIsNotNone(marker)
-        self.assertEqual("Dynamic native plugin marker", marker.getStringProperty("label"))
-        self.assertEqual("Registered by a dynamic C++ plugin.", marker.getStringProperty("description"))
-        self.assertTrue(marker.getBoolProperty("nativePluginLoaded"))
-        self.assertTrue(marker.getBoolProperty("dynamicPluginLoaded"))
-
-        report = {
-            "dynamic": marker.getBoolProperty("dynamicPluginLoaded"),
-            "marker": marker.getStringProperty("label"),
-        }
-        return True, json.dumps(report, sort_keys=True)
+        first = game.CGameLoader.loadGame()
+        second = game.CGameLoader.loadGame()
+        first_handler = first.getObjectHandler()
+        second_handler = second.getObjectHandler()
+        self.assertNotEqual(first_handler, second_handler)
+        first_types = set(first_handler.getAllTypes())
+        second_types = set(second_handler.getAllTypes())
+        for class_name in ("CTile", "CItem", "CEffect"):
+            with self.subTest(class_name=class_name):
+                self.assertIn(class_name, first_types)
+                self.assertIn(class_name, second_types)
+                first_object = first.createObject(class_name)
+                second_object = second.createObject(class_name)
+                self.assertEqual(class_name, first_object.getType())
+                self.assertEqual(class_name, second_object.getType())
+                self.assertEqual(first, first_object.getGame())
+                self.assertEqual(second, second_object.getGame())
+                first_object.setStringProperty("perGameFactoryProbe", "first")
+                self.assertEqual("", second_object.getStringProperty("perGameFactoryProbe"))
+        first_probe = self.assertFreshPythonResourcePlugin(game, first)
+        self.assertEqual(second_types, set(second_handler.getAllTypes()))
+        second_probe = self.assertFreshPythonResourcePlugin(game, second)
+        self.assertEqual(first_types | {first_probe["class"]}, set(first_handler.getAllTypes()))
+        self.assertEqual(second_types | {second_probe["class"]}, set(second_handler.getAllTypes()))
+        self.assertNotEqual(first_probe["class"], second_probe["class"])
+        return True, json.dumps({"first": first_probe, "second": second_probe}, sort_keys=True)
 
     @game_test
     def test_dynamic_plugin_direct_load_and_failures(self):
         game = load_game_module()
-
         g = game.CGameLoader.loadGame()
-        sample_library = "plugins/native/native_marker_plugin"
-
-        self.assertTrue(game.CPluginLoader.loadDynamicPlugin(g, sample_library, "game_plugin_load_direct_v3"))
-        marker = g.createObject("directDynamicPluginMarker")
-        self.assertIsNotNone(marker)
-        self.assertEqual("Direct dynamic plugin marker", marker.getStringProperty("label"))
-        self.assertTrue(marker.getBoolProperty("directDynamicPluginLoaded"))
-
-        self.assertFalse(game.CPluginLoader.loadDynamicPlugin(g, "plugins/native/definitely_missing_plugin"))
-        self.assertFalse(game.CPluginLoader.loadDynamicPlugin(g, sample_library, "game_plugin_load_missing_v3"))
-        self.assertFalse(game.CPluginLoader.loadDynamicPlugin(g, sample_library, "game_plugin_load_bad_api_v3"))
-        self.assertFalse(game.CPluginLoader.loadDynamicPlugin(g, sample_library, "game_plugin_load_false_v3"))
-        self.assertFalse(game.CPluginLoader.loadDynamicPlugin(g, sample_library, "game_plugin_load_v2"))
-        self.assertFalse(game.CPluginLoader.loadDynamicPlugin(g, "plugins/native/native_legacy_probe"))
-        self.assertFalse(game.CPluginLoader.loadDynamicPlugin(g, "plugins/native/native_missing_version_probe"))
-
-        report = {
-            "direct": marker.getBoolProperty("directDynamicPluginLoaded"),
-            "marker": marker.getStringProperty("label"),
+        handler = g.getObjectHandler()
+        fresh = self.assertFreshPythonResourcePlugin(game, g)
+        # Each failure body stops before registration; a false result does not roll back a plugin.
+        failure_sources = {
+            "syntax": "def load(:\n    pass\n",
+            "missing_load": "not_a_loader = True\n",
+            "wrong_signature": "def load(owner):\n    pass\n",
+            "raised": "def load(_unused, owner):\n    raise RuntimeError('before registration')\n",
+            "forbidden_import": "def load(_unused, owner):\n    import os\n",
         }
-        return True, json.dumps(report, sort_keys=True)
+        for label, source in failure_sources.items():
+            with self.subTest(failure=label):
+                before_types = set(handler.getAllTypes())
+                with self.pythonPluginResource(g, source) as logical_path:
+                    self.assertFalse(game.CPluginLoader.loadPlugin(g, logical_path))
+                self.assertEqual(before_types, set(handler.getAllTypes()))
+        with self.pythonPluginResource(g, "def load(_unused, owner):\n    pass\n") as logical_path:
+            plugin_path = Path(g.getResourcesProvider().getPath(logical_path))
+            rejected_paths = (
+                str(plugin_path.resolve()),
+                "../" + logical_path,
+                "maps/empty/not_script.py",
+                "plugins/not_a_plugin.txt",
+            )
+            for path in rejected_paths:
+                with self.subTest(rejected_path=path):
+                    before_types = set(handler.getAllTypes())
+                    self.assertFalse(game.CPluginLoader.loadPlugin(g, path))
+                    self.assertEqual(before_types, set(handler.getAllTypes()))
+            plugin_path.unlink()
+            before_types = set(handler.getAllTypes())
+            self.assertFalse(game.CPluginLoader.loadPlugin(g, logical_path))
+            self.assertEqual(before_types, set(handler.getAllTypes()))
+        return True, json.dumps({"fresh": fresh, "failure_bodies": sorted(failure_sources)}, sort_keys=True)
 
     def testLuaPluginLoaderApiIsAbsent(self):
         game = load_game_module()
@@ -13511,10 +13674,6 @@ class GameTest(unittest.TestCase):
             def getObjective(self):
                 return "Python registered objective"
 
-        class PyPlugin(game.CPlugin):
-            def load(self, registrar):
-                calls.append(("plugin_load", registrar.game().getType()))
-
         class PyDialog(game.CDialog):
             def invokeAction(self, action):
                 calls.append(("dialog_action", action))
@@ -13533,7 +13692,6 @@ class GameTest(unittest.TestCase):
             "PyScroll": PyScroll,
             "PyTrigger": PyTrigger,
             "PyQuest": PyQuest,
-            "PyPlugin": PyPlugin,
             "PyDialog": PyDialog,
         }
         for name, cls in registered_classes.items():
@@ -13559,7 +13717,6 @@ class GameTest(unittest.TestCase):
         game.CTrigger.trigger(created["PyTrigger"], None, None)
         self.assertTrue(game.CQuest.isCompleted(created["PyQuest"]))
         self.assertEqual("Python registered objective", game.CQuest.getObjective(created["PyQuest"]))
-        game.CPlugin.load(created["PyPlugin"], game.CPluginRegistrar(g))
         game.CDialogBase2.invokeAction(created["PyDialog"], "open")
         self.assertTrue(game.CDialogBase2.invokeCondition(created["PyDialog"], "ready"))
 
@@ -14109,10 +14266,6 @@ class GameTest(unittest.TestCase):
             def onComplete(self):
                 fail("quest_complete")
 
-        class RaisingPlugin(game.CPlugin):
-            def load(self, registrar):
-                fail("plugin")
-
         class RaisingDialog(game.CDialogBase):
             def invokeAction(self, action):
                 fail(f"dialog_action_{action}")
@@ -14148,8 +14301,6 @@ class GameTest(unittest.TestCase):
         self.assertFalse(game.CQuest.isCompleted(quest))
         game.CQuest.onComplete(quest)
 
-        game.CPlugin.load(RaisingPlugin(), game.CPluginRegistrar(g))
-
         dialog = RaisingDialog()
         game.CDialogBase.invokeAction(dialog, "open")
         self.assertTrue(game.CDialogBase.invokeCondition(dialog, "ready"))
@@ -14175,7 +14326,6 @@ class GameTest(unittest.TestCase):
             "trigger",
             "quest_completed",
             "quest_complete",
-            "plugin",
             "dialog_action_open",
             "dialog_condition_ready",
         }
@@ -14316,7 +14466,7 @@ class GameTest(unittest.TestCase):
 
         rng_handler = g.getRngHandler()
         object_handler = g.getObjectHandler()
-        g.loadPlugin(lambda: g.createObject("CPlugin"))
+        self.assertFreshPythonResourcePlugin(game, g)
 
         provider = game.CResourcesProvider.getInstance()
         (Path.cwd() / "save").mkdir(exist_ok=True)
@@ -22151,15 +22301,75 @@ class XvfbGameplayTest(unittest.TestCase):
         except ValueError as exc:
             self.fail(str(exc))
 
+        def reportChildTerminals(group_name, child_tests, stderr):
+            prefix = "test.XvfbGameplayProcessTest."
+            selected = {prefix + name: {"start": [], "terminal": [], "invalid": False} for name in child_tests}
+            try:
+                indices = {}
+                progress = re.compile(
+                    r"^\[test (?P<index>[1-9][0-9]*)/(?P<total>[1-9][0-9]*) "
+                    r"(?P<status>start|ok|skip|FAIL|ERROR|expected-failure|UNEXPECTED-SUCCESS)"
+                    r"(?P<duration> [0-9]+\.[0-9]{3}s)?\] "
+                    r"(?P<name>test\.XvfbGameplayProcessTest\.[A-Za-z_][A-Za-z0-9_]*)"
+                    r"(?: (?P<detail>[^\r\n]*))?$",
+                    re.MULTILINE,
+                )
+                for match in progress.finditer(stderr or ""):
+                    name = match["name"]
+                    index, total, status = int(match["index"]), int(match["total"]), match["status"]
+                    indices.setdefault(index, set()).add(name)
+                    if name not in selected:
+                        continue
+                    row = selected[name]
+                    valid = total == len(child_tests) and 1 <= index <= total
+                    if status == "start":
+                        valid = valid and match["duration"] is None and match["detail"] is None
+                        bucket = row["start"]
+                    else:
+                        valid = valid and match["duration"] is not None
+                        bucket = row["terminal"]
+                    row["invalid"] = row["invalid"] or not valid or len(bucket) >= 1
+                    if not bucket:
+                        # Drop arbitrary test output and skip details; retain the actual anchored result prefix/name.
+                        bucket.append(
+                            (index, total, status, match.string[match.start() : match.end("name")], match.start())
+                        )
+                for name, row in selected.items():
+                    valid = (
+                        not row["invalid"]
+                        and len(row["start"]) == len(row["terminal"]) == 1
+                        and row["start"][0][:2] == row["terminal"][0][:2]
+                        and row["start"][0][4] < row["terminal"][0][4]
+                        and len(indices[row["terminal"][0][0]]) == 1
+                    )
+                    report = {"group": group_name[:160], "test": name, "status": "unavailable"}
+                    if valid:
+                        report.update(status=row["terminal"][0][2], terminalLine=row["terminal"][0][3])
+                    else:
+                        report["reason"] = "missing-or-ambiguous-anchored-terminal"
+                    print("XVFB_CHILD_TERMINAL " + json.dumps(report, sort_keys=True), flush=True)
+            except Exception as error:
+                try:
+                    print(
+                        "XVFB_CHILD_TERMINAL_UNAVAILABLE "
+                        + json.dumps(
+                            {"group": group_name[:160], "errorType": type(error).__name__[:80]}, sort_keys=True
+                        ),
+                        flush=True,
+                    )
+                except Exception:
+                    pass
+
         def run_child_group(group_name, child_tests):
             child_env = child_env_defaults | {
                 "GAME_TEST_OUTPUT_DIR": str(TEST_OUTPUT_DIR / "xvfb" / group_name),
                 "GAME_TEST_SHARD": f"xvfb-{group_name}",
             }
-            child_env_args = [f"{key}={value}" for key, value in sorted(child_env.items())]
             child_test_args = [f"XvfbGameplayProcessTest.{child_test}" for child_test in child_tests]
             duration_hint = sum(XVFB_GAMEPLAY_CHILD_DURATION_HINTS.get(child_test, 1) for child_test in child_tests)
             timeout = max(XVFB_GAMEPLAY_CHILD_TIMEOUT * max(1, len(child_tests)), duration_hint * 3)
+            child_env.update(guiChildTracebackEnv(timeout))
+            child_env_args = [f"{key}={value}" for key, value in sorted(child_env.items())]
             proc = None
             try:
                 proc = subprocess.Popen(
@@ -22185,10 +22395,13 @@ class XvfbGameplayTest(unittest.TestCase):
                 else:
                     stdout = exc.stdout or ""
                     stderr = exc.stderr or ""
+                reportChildTerminals(group_name, child_tests, stderr)
                 return (
                     f"{group_name} timed out while running {', '.join(child_tests)}.\n"
                     f"stdout:\n{stdout}\nstderr:\n{stderr}"
                 )
+
+            reportChildTerminals(group_name, child_tests, stderr)
 
             if proc.returncode != 0:
                 return (
@@ -22394,11 +22607,92 @@ def run_blocking_gui_action(game, action, *callbacks):
 
 
 def show_dialog_with_keyboard(test_case, game, g, dialog, inputs):
-    observed = queue_panel_observer(game, g, "CGameDialogPanel")
-    queue_sdl_inputs(game, *dialog_input_callbacks(inputs))
-    g.getGuiHandler().showDialog(dialog)
-    pump_event_loop_until(lambda: observed["open"], timeout=1.0)
-    test_case.assertTrue(observed["open"], f"{dialog.getTypeId()} should open a dialog panel.")
+    choices = tuple(inputs)
+    test_case.assertTrue(
+        choices and all(type(choice) is int and 1 <= choice <= 9 for choice in choices),
+        "Staged dialog keyboard input requires numeric reply choices.",
+    )
+    gui = g.getGui()
+    player = g.getMap().getPlayer()
+    dialog_id = dialog.getTypeId()
+    panel = g.getGuiHandler().openDialog(dialog)
+    test_case.assertIsNotNone(panel, f"{dialog_id} should open a dialog panel.")
+
+    def requireOwner():
+        test_case.assertEqual(g.getGui(), gui, "Dialog GUI ownership changed.")
+        test_case.assertEqual(g.getMap().getPlayer(), player, "Dialog player ownership changed.")
+        test_case.assertEqual(panel.getObjectProperty("dialog"), dialog, "Dialog panel ownership changed.")
+
+    def isClosed():
+        parent = panel.getParent()
+        if parent == gui:
+            return False
+        test_case.assertIsNone(parent, "Dialog panel was reparented instead of closed.")
+        test_case.assertNotIn(panel, gui.getChildren(), "Detached dialog remains in the captured GUI.")
+        return True
+
+    def readHistory():
+        text = player.getStringProperty("uiDialogueHistory")
+        test_case.assertLessEqual(len(text.encode("utf-8")), 32768, "Dialog history exceeded its native byte bound.")
+        rows = json.loads(text or "[]")
+        test_case.assertIsInstance(rows, list)
+        test_case.assertLessEqual(len(rows), 80)
+        latest = rows[-1] if rows else {}
+        test_case.assertIsInstance(latest, dict)
+        return text, latest
+
+    try:
+        requireOwner()
+        matching = [
+            child
+            for child in gui.getChildren()
+            if child.getType() == "CGameDialogPanel" and child.getObjectProperty("dialog") == dialog
+        ]
+        test_case.assertEqual(matching, [panel], "Expected one attached native dialog panel.")
+        test_case.assertEqual(panel.getParent(), gui)
+        for index, choice in enumerate(choices):
+            requireOwner()
+            test_case.assertEqual(panel.getParent(), gui, "Dialog closed before every requested reply.")
+            baseline, latest = readHistory()
+            test_case.assertEqual((latest.get("dialog"), latest.get("kind")), (dialog_id, "speech"))
+            state = {"replySeen": False, "error": None}
+            push_digit_key(choice)
+
+            def completed():
+                try:
+                    requireOwner()
+                    if isClosed():
+                        return True
+                    current, latest = readHistory()
+                    matching_dialog = latest.get("dialog") == dialog_id
+                    if matching_dialog and latest.get("kind") == "reply" and current != baseline:
+                        state["replySeen"] = True
+                    return (
+                        matching_dialog
+                        and latest.get("kind") == "speech"
+                        and (current != baseline or state["replySeen"])
+                    )
+                except Exception as error:
+                    state["error"] = error
+                    return True
+
+            ready = pump_event_loop_until(completed, timeout=1.0)
+            if state["error"] is not None:
+                raise state["error"]
+            test_case.assertTrue(
+                ready,
+                ("Dialog reply has no observable native completion", dialog_id, index + 1, state["replySeen"]),
+            )
+            if isClosed():
+                test_case.assertEqual(index + 1, len(choices), "Dialog closed before every requested reply.")
+        test_case.assertTrue(isClosed(), "Requested dialog replies did not close the native panel.")
+    except BaseException:
+        try:
+            if panel.getParent() == gui:
+                panel.close()
+        except Exception:
+            pass
+        raise
 
 
 def open_quest_log_panel(test_case, g):
@@ -22458,6 +22752,7 @@ def assert_nouraajd_quest_log(test_case, g, active=(), completed=()):
 def capture_nouraajd_quest_log(test_case, g, name, active=(), completed=()):
     text = assert_nouraajd_quest_log(test_case, g, active=active, completed=completed)
     if name in NOURAAJD_QUEST_LOG_SCREENSHOT_CHECKPOINTS:
+        pump_event_loop(1)
         assert_screenshot_has_rendered_pixels(test_case, g, name)
     g.getGuiHandler().openPanel("questPanel").close()
     pump_event_loop(2)
@@ -22572,22 +22867,67 @@ def run_blocking_panel_inspection(test_case, game, g, class_name, action, inspec
     return return_value, observed["result"]
 
 
-def captureStoryReaders(test_case, game, g):
-    from unittest.mock import patch
+def queuePanelInspection(test_case, game, g, class_name, inspect, close_input, errors=None):
+    pending = {"active": True, "attempts": 0}
 
-    original = game.CGuiHandler.showCampaignScreen
+    def inspect_then_close():
+        if not pending["active"]:
+            return
+        panel = None
+        try:
+            panel = find_top_level_panel(g, class_name)
+            if panel is None:
+                pending["attempts"] += 1
+                test_case.assertLessEqual(
+                    pending["attempts"], 1000, f"{class_name} was not visible during blocking inspection."
+                )
+                test_case.assertTrue(game.event_loop.instance().invoke(inspect_then_close))
+                return
+            pending["result"] = inspect(panel)
+            close_input(panel)
+            pending["active"] = False
+        except Exception:
+            pending["error"] = traceback.format_exc()
+            pending["active"] = False
+            if errors is not None:
+                errors.append(pending["error"])
+            try:
+                if panel is not None:
+                    panel.close()
+                else:
+                    g.getContext().shutdown()
+            except Exception:
+                pending["error"] += "\nInspection cleanup failed:\n" + traceback.format_exc()
+
+    test_case.assertTrue(game.event_loop.instance().invoke(inspect_then_close), "Panel inspection was not queued.")
+    return pending
+
+
+def finishPanelInspection(test_case, pending, class_name):
+    pending["active"] = False
+    if "error" in pending:
+        raise AssertionError(pending["error"])
+    test_case.assertIn("result", pending, f"{class_name} inspection did not run.")
+    return pending["result"]
+
+
+def captureStoryReaders(test_case, game, g):
+    from contextlib import ExitStack, contextmanager
+    from unittest.mock import patch
+    import ui
+
+    original_sync, original_flow = ui.showReader, ui.showReaderFlow
     observed = []
     errors = []
     test_case.addCleanup(lambda: test_case.assertFalse(errors, "\n".join(errors)))
 
-    def show_and_acknowledge(handler, title, body, action_label):
-        observed.append((title, body))
-        test_case.assertEqual("Continue", action_label)
-
+    @contextmanager
+    def inspect_reader(title, body):
         def inspect(panel):
-            test_case.assertEqual(title, panel.getStringProperty("title"))
-            test_case.assertEqual(body, panel.getStringProperty("body"))
+            actual = (panel.getStringProperty("title"), panel.getStringProperty("body"))
+            test_case.assertEqual((title, body), actual)
             test_case.assertEqual("Continue", panel.getStringProperty("actionLabel"))
+            observed.append(actual)
 
         def acknowledge(panel):
             controls = [
@@ -22598,25 +22938,107 @@ def captureStoryReaders(test_case, game, g):
             test_case.assertEqual(1, len(controls), "A story reader must offer one explicit Continue control.")
             activate_widget(controls[0], g.getGui())
 
+        pending = None
         try:
-            run_blocking_panel_inspection(
-                test_case,
-                game,
-                g,
-                "CGameCampaignPanel",
-                lambda: original(handler, title, body, action_label),
-                inspect,
-                acknowledge,
-            )
+            pending = queuePanelInspection(test_case, game, g, "CGameCampaignPanel", inspect, acknowledge, errors)
+            yield
+            finishPanelInspection(test_case, pending, "CGameCampaignPanel")
         except Exception:
-            errors.append(traceback.format_exc())
+            if pending is None or "error" not in pending:
+                errors.append(traceback.format_exc())
             raise
+        finally:
+            if pending is not None:
+                pending["active"] = False
 
-    replacement = patch.object(game.CGuiHandler, "showCampaignScreen", show_and_acknowledge)
-    replacement.start()
-    test_case.addCleanup(replacement.stop)
+    def show_synchronous(flow_game, title, body):
+        with inspect_reader(title, body):
+            return original_sync(flow_game, title, body)
+
+    def show_resumable(flow_game, title, body):
+        with inspect_reader(title, body):
+            return (yield from original_flow(flow_game, title, body))
+
+    replacement = ExitStack()
+    try:
+        replacement.enter_context(patch.object(ui, "showReader", show_synchronous))
+        replacement.enter_context(patch.object(ui, "showReaderFlow", show_resumable))
+    except BaseException:
+        replacement.close()
+        raise
+    test_case.addCleanup(replacement.close)
     return observed
 
+
+def guiChildTracebackEnv(timeout):
+    import math
+
+    if isinstance(timeout, bool) or not isinstance(timeout, (int, float)) or not math.isfinite(timeout) or timeout <= 1:
+        raise ValueError("GUI diagnostic parent timeout must be finite and greater than one second")
+    delay = timeout - min(5.0, timeout / 2)
+    deadline = time.monotonic() + delay
+    if not math.isfinite(deadline):
+        raise ValueError("GUI diagnostic deadline must be finite")
+    return {
+        "GAME_GUI_PARENT_TIMEOUT_SECONDS": str(timeout),
+        "GAME_GUI_TRACEBACK_DELAY_SECONDS": str(delay),
+        "GAME_GUI_TRACEBACK_DEADLINE": str(deadline),
+    }
+
+
+@contextlib.contextmanager
+def isolatedGuiTracebackDiagnostics():
+    import math
+
+    isolated = (
+        os.name == "posix"
+        and os.environ.get("GAME_XVFB_GAMEPLAY_CHILD") == "1"
+        and os.environ.get("SDL_VIDEODRIVER") == "x11"
+        and bool(os.environ.get("DISPLAY"))
+    ) or isOffscreenGameplayChild()
+    keys = ("GAME_GUI_PARENT_TIMEOUT_SECONDS", "GAME_GUI_TRACEBACK_DELAY_SECONDS", "GAME_GUI_TRACEBACK_DEADLINE")
+    if not isolated or not any(key in os.environ for key in keys):
+        yield
+        return
+    try:
+        parent_timeout, delay, deadline = (float(os.environ[key]) for key in keys)
+    except (KeyError, ValueError) as failure:
+        raise ValueError("GUI diagnostic child requires the complete numeric parent envelope") from failure
+    if (
+        not all(math.isfinite(value) for value in (parent_timeout, delay, deadline))
+        or parent_timeout <= 1
+        or delay != parent_timeout - min(5.0, parent_timeout / 2)
+    ):
+        raise ValueError("GUI diagnostic delay must precede its existing parent timeout")
+    remaining = deadline - time.monotonic()
+    if remaining > delay:
+        raise ValueError("GUI diagnostic deadline must use the parent's monotonic clock")
+
+    import faulthandler
+
+    diagnostic_stream = sys.stderr
+    armed = False
+    try:
+        if remaining <= 0:
+            print("[isolated GUI traceback diagnostic already due]", file=diagnostic_stream, flush=True)
+            faulthandler.dump_traceback(file=diagnostic_stream, all_threads=True)
+        else:
+            print(f"[isolated GUI traceback diagnostic in {remaining:.3f}s]", file=diagnostic_stream, flush=True)
+            faulthandler.dump_traceback_later(remaining, repeat=False, file=diagnostic_stream, exit=False)
+            armed = True
+        yield
+    finally:
+        primary_failure = sys.exc_info()[0] is not None
+        if armed:
+            try:
+                faulthandler.cancel_dump_traceback_later()
+            except BaseException as failure:
+                if not primary_failure:
+                    raise
+                try:
+                    print(f"[isolated GUI diagnostic cleanup failed: {failure}]", file=diagnostic_stream, flush=True)
+                except BaseException:
+                    pass
 
 def make_ui_layout_quest(g, index, completed=False):
     quest = g.createObject("CQuest")
@@ -23446,9 +23868,8 @@ class XvfbGameplayProcessTest(unittest.TestCase):
         player.relocateWithoutMoveHooks(staging)
 
         player.setStringProperty("affiliation", "gooby")
-        run_blocking_gui_action(
-            game, lambda: player.moveTo(cave_coords.x, cave_coords.y, cave_coords.z), push_space_key
-        )
+        # Opening the lair has no reader to acknowledge; Space would request an unrelated world turn.
+        player.moveTo(cave_coords.x, cave_coords.y, cave_coords.z)
         pump_event_loop(5)
         player.setStringProperty("affiliation", "")
         self.assertIsNone(game_map.getObjectByName("cave1"))
@@ -23556,11 +23977,30 @@ class XvfbGameplayProcessTest(unittest.TestCase):
 
     def test_quest_journal_keeps_active_and_completed_entries_after_travel(self):
         game, g, source_map, player = create_xvfb_gameplay_session(self, map_name="hearthfall")
+        captureStoryReaders(self, game, g)
 
         def moveToObject(map_name, object_name, *inputs):
             definition = find_map_object_definition(map_name, object_name)
             target = (definition["x"] // 32, definition["y"] // 32, 0)
-            run_blocking_gui_action(game, lambda: player.moveTo(*target), *inputs)
+            if inputs:
+
+                def inspect_dialog(panel):
+                    self.assertEqual("elderMaren", object_name)
+                    dialog = panel.getObjectProperty("dialog")
+                    self.assertIsNotNone(dialog)
+                    self.assertEqual("elderDialog", dialog.getTypeId())
+
+                run_blocking_panel_inspection(
+                    self,
+                    game,
+                    g,
+                    "CGameDialogPanel",
+                    lambda: player.moveTo(*target),
+                    inspect_dialog,
+                    lambda _panel: queue_sdl_inputs(game, *inputs),
+                )
+            else:
+                run_blocking_gui_action(game, lambda: player.moveTo(*target))
             self.assertEqual(target, coords_tuple(player.getCoords()))
 
         def captureJournal(name, active_ids, completed_ids):
@@ -23603,14 +24043,14 @@ class XvfbGameplayProcessTest(unittest.TestCase):
                     self.assertIn(quest.getObjective(), text)
             return text
 
-        moveToObject("hearthfall", "hearthfallStart", push_space_key)
+        moveToObject("hearthfall", "hearthfallStart")
         self.assertIn("hearthfallQuest", quest_names(player))
         captureJournal("xvfb_quest_journal_hearthfall_active", ("hearthfallQuest",), ())
-        run_blocking_gui_action(game, lambda: source_map.removeObjectByName("watchCaptain"), push_space_key)
+        run_blocking_gui_action(game, lambda: source_map.removeObjectByName("watchCaptain"))
         moveToObject("hearthfall", "elderMaren", lambda: push_digit_key(2))
-        run_blocking_gui_action(game, g.createObject("elderDialog").report_victory, push_space_key)
+        run_blocking_gui_action(game, g.createObject("elderDialog").report_victory)
         self.assertEqual("gravemoor", g.getMap().mapName)
-        moveToObject("gravemoor", "gravemoorStart", push_space_key)
+        moveToObject("gravemoor", "gravemoorStart")
         self.assertTrue(find_player_quest(player, "hearthfallQuest").isCompleted())
         text = captureJournal("xvfb_quest_journal_gravemoor_history", ("gravemoorQuest",), ("hearthfallQuest",))
         self.assertIn("Hearthfall is free. The road leads north into the Gravemoor.", text)
@@ -25007,26 +25447,41 @@ class XvfbGameplayProcessTest(unittest.TestCase):
 
         captured_reward_ui = {"trades": []}
         heal_amounts = []
-        original_show_trade = game.CGuiHandler.showTrade
         original_heal_proc = game.CPlayer.healProc
         victor_gold = player.getGold()
+        trade_inspection = None
         try:
 
-            def capture_show_trade(self, market):
+            def inspectTrade(panel):
+                self.assertIsInstance(panel, game.CGameTradePanel)
+                self.assertEqual(g.getGui(), panel.getParent())
+                market = panel.getObjectProperty("market")
+                self.assertIsInstance(market, game.CMarket)
+                self.assertEqual(g, market.getGame())
+                self.assertEqual("victorMarket", market.getTypeId())
                 captured_reward_ui["trades"].append(market.getTypeId())
-                queue_sdl_inputs(game, lambda: push_sdl_key_event(27, 41, SDL_KEYDOWN))
-                return original_show_trade(self, market)
+                return market
 
             def capture_heal_proc(self, amount):
                 heal_amounts.append(amount)
                 return original_heal_proc(self, amount)
 
-            game.CGuiHandler.showTrade = capture_show_trade
             game.CPlayer.healProc = capture_heal_proc
+            trade_inspection = queuePanelInspection(
+                self,
+                game,
+                g,
+                "CGameTradePanel",
+                inspectTrade,
+                lambda _panel: push_sdl_key_event(27, 41, SDL_KEYDOWN),
+            )
             game_map.removeObjectByName(leader.getName())
             pump_event_loop(5)
+            market = finishPanelInspection(self, trade_inspection, "CGameTradePanel")
+            self.assertEqual("victorMarket", market.getTypeId())
         finally:
-            game.CGuiHandler.showTrade = original_show_trade
+            if trade_inspection is not None:
+                trade_inspection["active"] = False
             game.CPlayer.healProc = original_heal_proc
 
         player.checkQuests()
@@ -25088,26 +25543,32 @@ class XvfbGameplayProcessTest(unittest.TestCase):
         transitions = []
         transition_phases = []
         original_prepared_change_map = game.CGame.changeMapWithPreparation
+        original_prepared_change_map_flow = game.CGame.changeMapWithPreparationFlow
         try:
 
-            def capturePreparedChangeMap(game_instance, map_name, beforeEntry, completion):
+            def capturePreparedChangeMap(game_instance, map_name, beforeEntry, completion, commitBeforeEntry=None):
                 transitions.append(map_name)
                 self_map = game_instance.getMap()
                 pending = json.loads(player.getStringProperty("campaign_pendingTransition"))
                 self.assertEqual(game_map, self_map)
                 self.assertEqual(map_name, pending["targetMap"])
                 self.assertEqual("", pending["targetScenario"], "this walkthrough starts a standalone map")
-                beforeEntry()
+                self.assertIsNone(beforeEntry(), "standalone ritual preparation must not discard a presentation")
                 transition_phases.append("prepared")
+                if commitBeforeEntry is not None:
+                    commitBeforeEntry()
                 completion(True)
                 transition_phases.append("completed")
                 return True
 
             game.CGame.changeMapWithPreparation = capturePreparedChangeMap
+            if callable(original_prepared_change_map_flow):
+                game.CGame.changeMapWithPreparationFlow = capturePreparedChangeMap
             show_dialog_with_keyboard(self, game, g, beren, [2])
             run_blocking_gui_action(game, beren.finish_cleanse)
         finally:
             game.CGame.changeMapWithPreparation = original_prepared_change_map
+            game.CGame.changeMapWithPreparationFlow = original_prepared_change_map_flow
 
         player.checkQuests()
         pump_event_loop(5)
@@ -25677,6 +26138,669 @@ class QuestStateHelperTest(unittest.TestCase):
 
 class TestRunnerSuiteTest(unittest.TestCase):
 
+    def progressNumericLines(self, stream):
+        return [line for line in stream.getvalue().splitlines() if re.match(r"^\[test \d+/(?:\d+|\?) ", line)]
+
+    def progressDetailsFixture(self, formatted=None):
+        from unittest.mock import patch
+
+        stream = io.StringIO()
+        result = ProgressTextTestResult(unittest.runner._WritelnDecorator(stream), True, 2)
+        result.total_tests = 1
+        case = unittest.FunctionTestCase(lambda: None)
+        result.startTest(case)
+        stream.seek(0)
+        stream.truncate()
+        formatter = (
+            patch.object(result, "_exc_info_to_string", return_value=formatted)
+            if formatted is not None
+            else patch.object(result, "_exc_info_to_string", wraps=result._exc_info_to_string)
+        )
+        return stream, result, case, formatter
+
+    def testProgressDetailsReuseFreshStoredErrorAndFailureBeforeCleanup(self):
+        from unittest.mock import patch
+
+        for outcome, exception in (("addError", ValueError), ("addFailure", AssertionError)):
+            with self.subTest(outcome=outcome), patch.dict(os.environ, {"GITHUB_ACTIONS": "false"}):
+                stream, result, case, formatter = self.progressDetailsFixture()
+                with formatter as formatted:
+                    for index in range(2):
+                        try:
+                            raise exception(f"owned cached detail {index}")
+                        except exception:
+                            getattr(result, outcome)(case, sys.exc_info())
+                        self.assertIn(f"owned cached detail {index}", stream.getvalue())
+                        self.assertIn("[test detail]", stream.getvalue())
+                        self.assertIn(exception.__name__, stream.getvalue())
+                    entries = result.errors if outcome == "addError" else result.failures
+                    self.assertEqual(formatted.call_count, 2)
+                    self.assertEqual([row[0] for row in entries], [case, case])
+                    self.assertIn("owned cached detail 0", entries[0][1])
+                    self.assertIn("owned cached detail 1", entries[1][1])
+                    self.assertEqual(result.testsRun, 1)
+                    self.assertFalse(result.wasSuccessful())
+                    self.assertEqual(self.progressNumericLines(stream), [])
+                result.stopTest(case)
+                self.assertEqual(len(self.progressNumericLines(stream)), 1)
+                self.assertEqual(result._testOutcomes, {})
+                self.assertEqual(result._test_start_times, {})
+
+    def testProgressDetailsSubtestsAreImmediateAndSuccessfulSubtestsSilent(self):
+        from unittest.mock import patch
+
+        observed = []
+        outer = self
+        stream = io.StringIO()
+        result = ProgressTextTestResult(unittest.runner._WritelnDecorator(stream), True, 2)
+        result.total_tests = 1
+
+        class InnerCase(unittest.TestCase):
+            def runTest(inner):
+                def cleanup():
+                    text = stream.getvalue()
+                    outer.assertIn("subtest cached failure", text)
+                    outer.assertIn("subtest cached error", text)
+                    outer.assertEqual(len(outer.progressNumericLines(stream)), 1)
+                    observed.append("cleanup")
+
+                inner.addCleanup(cleanup)
+                with inner.subTest(kind="success"):
+                    pass
+                outer.assertNotIn("[test detail]", stream.getvalue())
+                with inner.subTest(kind="failure"):
+                    inner.fail("subtest cached failure")
+                outer.assertIn("subtest cached failure", stream.getvalue())
+                with inner.subTest(kind="error"):
+                    raise ValueError("subtest cached error")
+
+        with patch.dict(os.environ, {"GITHUB_ACTIONS": "false"}):
+            InnerCase().run(result)
+        self.assertEqual(observed, ["cleanup"])
+        self.assertEqual((result.testsRun, len(result.failures), len(result.errors)), (1, 1, 1))
+        self.assertIn("subtest cached failure", result.failures[0][1])
+        self.assertIn("subtest cached error", result.errors[0][1])
+        self.assertEqual(len(self.progressNumericLines(stream)), 2)
+        self.assertIn(" ERROR ", self.progressNumericLines(stream)[1])
+        self.assertEqual(result._testOutcomes, {})
+        self.assertEqual(result._test_start_times, {})
+
+    def testProgressDetailsBoundUtf8AndPreventUntrustedWorkflowCommands(self):
+        from unittest.mock import patch
+
+        cached = (
+            "discarded-prefix"
+            + "\n::error title=untrusted::data%\r\n"
+            + ("界\n" * 10000)
+            + "tail%\r\n::error title=evil::END"
+        )
+        for marker in (None, "false", "1", "true"):
+            with self.subTest(marker=marker), patch.dict(os.environ, {}, clear=True):
+                if marker is not None:
+                    os.environ["GITHUB_ACTIONS"] = marker
+                stream, result, case, formatter = self.progressDetailsFixture(cached)
+                case.id = lambda: "case%,:with\r\n::error title=bad::name界"
+                with formatter as formatted:
+                    try:
+                        raise RuntimeError("must use cached formatting")
+                    except RuntimeError:
+                        result.addError(case, sys.exc_info())
+                output = stream.getvalue()
+                self.assertGreater(len(output), 0)
+                self.assertLessEqual(len(output.encode("utf-8")), 8192)
+                self.assertEqual(formatted.call_count, 1)
+                self.assertEqual(result.errors, [(case, cached)])
+                self.assertIn("END", output)
+                self.assertIn("discarded-prefix", output)
+                commands = [line for line in output.splitlines() if line.startswith("::")]
+                ordinary = [line for line in output.splitlines() if not line.startswith("::")]
+                self.assertTrue(ordinary)
+                self.assertTrue(all(line.startswith("[test detail] ") for line in ordinary))
+                self.assertNotIn("\r", output)
+                self.assertEqual(len(commands), 1 if marker == "true" else 0)
+                if marker == "true":
+                    self.assertTrue(commands[0].startswith("::error title="))
+                    self.assertIn("%25%2C%3A", commands[0])
+                    self.assertIn("%0D%0A", commands[0])
+                    self.assertIn("%25%0D%0A::error", commands[0])
+                result.stopTest(case)
+
+    def testProgressDetailsReportingFailureCannotMaskStoredOutcomes(self):
+        from unittest.mock import patch
+
+        for outcome, exception in (("addError", ValueError), ("addFailure", AssertionError)):
+            for failure in (RuntimeError("writer failed"), KeyboardInterrupt()):
+                with self.subTest(outcome=outcome, reporter=type(failure).__name__):
+                    stream, result, case, _ = self.progressDetailsFixture()
+                    escaped = None
+                    with patch.object(result, "_writeFailureDetails", side_effect=failure, create=True) as report:
+                        try:
+                            try:
+                                raise exception("original stored outcome")
+                            except exception:
+                                getattr(result, outcome)(case, sys.exc_info())
+                        except BaseException as reporting_error:
+                            escaped = reporting_error
+                    self.assertIsNone(escaped)
+                    self.assertEqual(report.call_count, 1)
+                    entries = result.errors if outcome == "addError" else result.failures
+                    self.assertEqual(len(entries), 1)
+                    self.assertIn("original stored outcome", entries[0][1])
+                    self.assertFalse(result.wasSuccessful())
+                    result.stopTest(case)
+                    self.assertEqual(len(self.progressNumericLines(stream)), 1)
+
+    def testProgressDetailsBoundActualUtf8StreamWithSurrogateEscaping(self):
+        from unittest.mock import patch
+
+        cached = "\ud800" * 20000 + "END"
+        for marker, newline in (("false", "\n"), ("true", "\n"), ("false", "\r\n"), ("true", "\r\n")):
+            with self.subTest(marker=marker, newline=newline), patch.dict(os.environ, {"GITHUB_ACTIONS": marker}):
+                buffer = io.BytesIO()
+                stream = io.TextIOWrapper(
+                    buffer, encoding="utf-8", errors="backslashreplace", newline=newline, write_through=True
+                )
+                result = ProgressTextTestResult(unittest.runner._WritelnDecorator(stream), True, 2)
+                case = unittest.FunctionTestCase(lambda: None)
+                result.startTest(case)
+                buffer.seek(0)
+                buffer.truncate()
+                case.id = lambda: "case\ud800"
+                with patch.object(result, "_exc_info_to_string", return_value=cached) as formatter:
+                    try:
+                        raise ValueError("original surrogate trace")
+                    except ValueError:
+                        result.addError(case, sys.exc_info())
+                raw = buffer.getvalue()
+                self.assertGreater(len(raw), 0)
+                self.assertLessEqual(len(raw), 8192)
+                self.assertIn("END", raw.decode("utf-8"))
+                self.assertNotIn(b"\\ud800", raw)
+                self.assertEqual(result.errors, [(case, cached)])
+                self.assertEqual(formatter.call_count, 1)
+                result.stopTest(case)
+                stream.close()
+
+    def testProgressDetailsSubtestReportingFailureCannotMaskStoredOutcomes(self):
+        from unittest.mock import patch
+
+        stream = io.StringIO()
+        result = ProgressTextTestResult(unittest.runner._WritelnDecorator(stream), True, 2)
+        result.total_tests = 1
+
+        class InnerCase(unittest.TestCase):
+            def runTest(inner):
+                with inner.subTest(kind="failure"):
+                    inner.fail("original subtest failure")
+                with inner.subTest(kind="error"):
+                    raise ValueError("original subtest error")
+
+        escaped = None
+        with patch.object(result, "_writeFailureDetails", side_effect=KeyboardInterrupt(), create=True) as report:
+            try:
+                InnerCase().run(result)
+            except BaseException as reporting_error:
+                escaped = reporting_error
+        self.assertIsNone(escaped)
+        self.assertEqual(report.call_count, 2)
+        self.assertEqual((result.testsRun, len(result.failures), len(result.errors)), (1, 1, 1))
+        self.assertIn("original subtest failure", result.failures[0][1])
+        self.assertIn("original subtest error", result.errors[0][1])
+        self.assertEqual(len(self.progressNumericLines(stream)), 2)
+        self.assertIn(" ERROR ", self.progressNumericLines(stream)[1])
+
+    def testProgressDetailsWriteAndFlushFailuresRetainOriginalFailure(self):
+        from unittest.mock import patch
+
+        for operation in ("write", "flush"):
+            with self.subTest(operation=operation), patch.dict(os.environ, {"GITHUB_ACTIONS": "false"}):
+                stream, result, case, _ = self.progressDetailsFixture()
+                with patch.object(result.stream, operation, side_effect=OSError("output failed")) as writer:
+                    try:
+                        raise AssertionError("original despite output failure")
+                    except AssertionError:
+                        result.addFailure(case, sys.exc_info())
+                self.assertEqual(writer.call_count, 1)
+                self.assertEqual((len(result.failures), len(result.errors)), (1, 0))
+                self.assertIn("original despite output failure", result.failures[0][1])
+                result.stopTest(case)
+                self.assertEqual(len(self.progressNumericLines(stream)), 1)
+
+    def testProgressDetailsSuccessfulSkippedAndExpectedOutcomesAreSilent(self):
+        from unittest.mock import patch
+
+        for outcome in ("success", "skip", "expected-failure", "unexpected-success"):
+            with self.subTest(outcome=outcome), patch.dict(os.environ, {"GITHUB_ACTIONS": "true"}):
+                stream, result, case, _ = self.progressDetailsFixture()
+                if outcome == "success":
+                    result.addSuccess(case)
+                elif outcome == "skip":
+                    result.addSkip(case, "ordinary skip")
+                elif outcome == "unexpected-success":
+                    result.addUnexpectedSuccess(case)
+                else:
+                    try:
+                        raise AssertionError("expected failure")
+                    except AssertionError:
+                        result.addExpectedFailure(case, sys.exc_info())
+                self.assertEqual(stream.getvalue(), "")
+                result.stopTest(case)
+                self.assertEqual(len(self.progressNumericLines(stream)), 1)
+                self.assertNotIn("[test detail]", stream.getvalue())
+                self.assertNotIn("::error", stream.getvalue())
+
+    def xvfbTerminalParentFixture(
+        self,
+        stderr,
+        *,
+        returncode=0,
+        timeout=False,
+        child_tests=None,
+        stdout="opaque child stdout",
+        diagnostic_error=False,
+    ):
+        import io
+        from unittest.mock import patch
+
+        child_tests = child_tests or ["test_quest_journal_keeps_active_and_completed_entries_after_travel"]
+        captured = []
+        kills = []
+
+        class Process:
+            pid = 71
+            calls = 0
+
+            def communicate(self, timeout=None):
+                self.calls += 1
+                captured.append(timeout)
+                if self.calls == 1 and timeout_flag:
+                    raise subprocess.TimeoutExpired("mock-xvfb", timeout, output=stdout, stderr=stderr)
+                return stdout, stderr
+
+        Process.returncode = returncode
+        timeout_flag = timeout
+
+        class Executor:
+            def __init__(self, max_workers):
+                self.max_workers = max_workers
+
+            def __enter__(self):
+                return self
+
+            def __exit__(self, *args):
+                return False
+
+            def submit(self, callback, *args):
+                future = concurrent.futures.Future()
+                try:
+                    future.set_result(callback(*args))
+                except BaseException as error:
+                    future.set_exception(error)
+                return future
+
+        stream = io.StringIO()
+        failure = None
+        original_print = print
+
+        def print_report(*args, **kwargs):
+            if diagnostic_error and args and str(args[0]).startswith("XVFB_CHILD_TERMINAL"):
+                raise OSError("diagnostic output unavailable")
+            return original_print(*args, **kwargs)
+
+        with (
+            patch.object(os, "name", "posix"),
+            patch.dict(os.environ, {"GAME_XVFB_JOBS": "1"}, clear=True),
+            patch.object(shutil, "which", return_value="/mock/xvfb-tool"),
+            patch(__name__ + ".sdl_x11_video_driver_available", return_value=(True, "")),
+            patch(__name__ + ".XVFB_GAMEPLAY_CHILD_TESTS", child_tests),
+            patch(__name__ + ".XVFB_SAVE_MUTATING_CHILD_TESTS", set()),
+            patch(__name__ + ".XVFB_BATCHABLE_CHILD_TESTS", set(child_tests)),
+            patch(__name__ + ".shard_test_names", return_value=[child_tests]),
+            patch.object(subprocess, "Popen", return_value=Process()),
+            patch.object(concurrent.futures, "ThreadPoolExecutor", Executor),
+            patch.object(os, "killpg", side_effect=lambda *args: kills.append(args), create=True),
+            patch.object(signal, "SIGKILL", 9, create=True),
+            patch.object(time, "monotonic", return_value=100.0),
+            patch.object(sys, "stdout", stream),
+            patch("builtins.print", side_effect=print_report),
+        ):
+            try:
+                XvfbGameplayTest("test_keyboard_gameplay_under_xvfb").test_keyboard_gameplay_under_xvfb()
+            except AssertionError as error:
+                failure = error
+        text = stream.getvalue()
+        reports = [
+            json.loads(line[len("XVFB_CHILD_TERMINAL ") :])
+            for line in text.splitlines()
+            if line.startswith("XVFB_CHILD_TERMINAL ")
+        ]
+        return reports, failure, text, captured, kills
+
+    def testXvfbParentReportsActualChildTerminalWithoutEchoingItsOutput(self):
+        child = "test_quest_journal_keeps_active_and_completed_entries_after_travel"
+        name = "test.XvfbGameplayProcessTest." + child
+        actual = f"[test 1/1 ok 0.125s] {name}"
+        stderr = f"sensitive unrelated stderr\n[test 1/1 start] {name}\n{actual}\n"
+        reports, failure, output, waits, kills = self.xvfbTerminalParentFixture(stderr)
+        self.assertIsNone(failure)
+        self.assertEqual([{"group": "group-1", "test": name, "status": "ok", "terminalLine": actual}], reports)
+        self.assertNotIn("opaque child stdout", output)
+        self.assertNotIn("sensitive unrelated stderr", output)
+        self.assertEqual([max(XVFB_GAMEPLAY_CHILD_TIMEOUT, XVFB_GAMEPLAY_CHILD_DURATION_HINTS[child] * 3)], waits)
+        self.assertEqual([], kills)
+
+    def testXvfbParentKeepsSkipFailureAndUnavailableDistinctFromExitSuccess(self):
+        child = "test_quest_journal_keeps_active_and_completed_entries_after_travel"
+        name = "test.XvfbGameplayProcessTest." + child
+        for status in ("skip", "FAIL", "ERROR", "expected-failure", "UNEXPECTED-SUCCESS"):
+            with self.subTest(status=status):
+                suffix = " reason " + "private" * 2000
+                terminal = f"[test 1/1 {status} 0.125s] {name}"
+                stderr = f"[test 1/1 start] {name}\n{terminal}{suffix}\n"
+                code = 0 if status in ("skip", "expected-failure") else 1
+                reports, failure, output, _, _ = self.xvfbTerminalParentFixture(stderr, returncode=code)
+                self.assertEqual(1, len(reports))
+                self.assertEqual(status, reports[0]["status"])
+                self.assertEqual(terminal, reports[0]["terminalLine"])
+                self.assertNotIn("private", output)
+                self.assertLess(len(output), 1024)
+                self.assertEqual(code != 0, failure is not None)
+                if failure is not None:
+                    self.assertIn(f"failed with {code}", str(failure))
+        for label, stderr in (
+            ("empty", ""),
+            ("opaque-ok", "OK\nRan 1 test\nok"),
+            ("start-only", f"[test 1/1 start] {name}\n"),
+            ("terminal-only", f"[test 1/1 ok 0.125s] {name}\n"),
+            ("reversed", f"[test 1/1 ok 0.125s] {name}\n[test 1/1 start] {name}\n"),
+            ("wrong-total", f"[test 1/2 start] {name}\n[test 1/2 ok 0.125s] {name}\n"),
+            ("duplicate", f"[test 1/1 start] {name}\n[test 1/1 ok 0.125s] {name}\n[test 1/1 ok 0.126s] {name}\n"),
+        ):
+            with self.subTest(label=label):
+                reports, failure, _, _, _ = self.xvfbTerminalParentFixture(stderr)
+                self.assertIsNone(failure, "A missing diagnostic must not change child exit semantics")
+                self.assertEqual(1, len(reports))
+                self.assertEqual("unavailable", reports[0]["status"])
+                self.assertNotIn("terminalLine", reports[0])
+        other = "test_full_nouraajd_quest_walkthrough_ui"
+        other_name = "test.XvfbGameplayProcessTest." + other
+        duplicated_index = "".join(
+            f"[test 1/2 start] {selected}\n[test 1/2 ok 0.125s] {selected}\n" for selected in (name, other_name)
+        )
+        reports, failure, _, _, _ = self.xvfbTerminalParentFixture(duplicated_index, child_tests=[child, other])
+        self.assertIsNone(failure)
+        self.assertEqual(["unavailable", "unavailable"], [row["status"] for row in reports])
+        unknown = "test.XvfbGameplayProcessTest.test_not_selected"
+        collision = f"[test 1/2 start] {unknown}\n[test 1/2 ok 0.125s] {unknown}\n"
+        proper = "".join(
+            f"[test {index}/2 start] {selected}\n[test {index}/2 ok 0.125s] {selected}\n"
+            for index, selected in enumerate((name, other_name), 1)
+        )
+        reports, failure, _, _, _ = self.xvfbTerminalParentFixture(collision + proper, child_tests=[child, other])
+        self.assertIsNone(failure)
+        self.assertEqual(["unavailable", "ok"], [row["status"] for row in reports])
+
+    def testXvfbParentReportsFinishedChildBeforePreservedGroupTimeout(self):
+        children = [
+            "test_quest_journal_keeps_active_and_completed_entries_after_travel",
+            "test_full_nouraajd_quest_walkthrough_ui",
+        ]
+        names = ["test.XvfbGameplayProcessTest." + child for child in children]
+        terminal = f"[test 1/2 ok 0.125s] {names[0]}"
+        stderr = f"[test 1/2 start] {names[0]}\n{terminal}\n[test 2/2 start] {names[1]}\n"
+        reports, failure, output, waits, kills = self.xvfbTerminalParentFixture(
+            stderr, timeout=True, child_tests=children
+        )
+        self.assertIsNotNone(failure)
+        self.assertIn("timed out", str(failure))
+        self.assertIn("opaque child stdout", str(failure))
+        self.assertIn(stderr, str(failure))
+        self.assertEqual(["ok", "unavailable"], [row["status"] for row in reports])
+        self.assertEqual(terminal, reports[0]["terminalLine"])
+        self.assertNotIn("terminalLine", reports[1])
+        expected = max(
+            XVFB_GAMEPLAY_CHILD_TIMEOUT * 2,
+            sum(XVFB_GAMEPLAY_CHILD_DURATION_HINTS.get(child, 1) for child in children) * 3,
+        )
+        self.assertEqual([expected, None], waits)
+        self.assertEqual([(71, 9)], kills)
+
+    def testXvfbParentDiagnosticErrorsPreserveChildExitAndFailure(self):
+        for code in (0, 1):
+            with self.subTest(code=code):
+                reports, failure, _, _, _ = self.xvfbTerminalParentFixture("", returncode=code, diagnostic_error=True)
+                self.assertEqual([], reports)
+                self.assertEqual(code != 0, failure is not None)
+                if failure is not None:
+                    self.assertIn("failed with 1", str(failure))
+
+    def testGuiDiagnosticEnvironmentUsesTheExistingTimeoutAndMonotonicDeadline(self):
+        from unittest.mock import patch
+
+        self.assertTrue(callable(globals().get("guiChildTracebackEnv")))
+        with patch.object(time, "monotonic", return_value=100.0):
+            for timeout in (90, 270, 300):
+                envelope = guiChildTracebackEnv(timeout)
+                delay = timeout - 5.0
+                self.assertEqual(timeout, float(envelope["GAME_GUI_PARENT_TIMEOUT_SECONDS"]))
+                self.assertEqual(delay, float(envelope["GAME_GUI_TRACEBACK_DELAY_SECONDS"]))
+                self.assertEqual(100.0 + delay, float(envelope["GAME_GUI_TRACEBACK_DEADLINE"]))
+            for timeout in (True, 0, 1, -1, float("inf"), float("nan"), "270"):
+                with self.subTest(timeout=timeout), self.assertRaises(ValueError):
+                    guiChildTracebackEnv(timeout)
+
+    def testGuiDiagnosticContextDoesNotArmOrdinaryRuns(self):
+        from unittest.mock import patch
+
+        self.assertTrue(callable(globals().get("isolatedGuiTracebackDiagnostics")))
+        with (
+            patch("faulthandler.dump_traceback_later") as arm,
+            patch("faulthandler.dump_traceback") as immediate,
+            patch("faulthandler.cancel_dump_traceback_later") as cancel,
+        ):
+            for environment in ({}, {"GAME_GUI_TRACEBACK_DELAY_SECONDS": "invalid"}, {"GAME_XVFB_GAMEPLAY_CHILD": "1"}):
+                with patch.dict(os.environ, environment, clear=True):
+                    with isolatedGuiTracebackDiagnostics():
+                        pass
+            arm.assert_not_called()
+            immediate.assert_not_called()
+            cancel.assert_not_called()
+
+    def testGuiDiagnosticContextCoversXvfbAndWindowsOffscreenWithStartupTimeDeducted(self):
+        from unittest.mock import patch
+
+        self.assertTrue(callable(globals().get("isolatedGuiTracebackDiagnostics")))
+        with patch.object(time, "monotonic", return_value=100.0):
+            envelope = guiChildTracebackEnv(270)
+        for system, environment in (
+            ("posix", {"GAME_XVFB_GAMEPLAY_CHILD": "1", "SDL_VIDEODRIVER": "x11", "DISPLAY": ":1"}),
+            ("nt", {"GAME_OFFSCREEN_GAMEPLAY_CHILD": "1", "SDL_VIDEODRIVER": "dummy", "SDL_RENDER_DRIVER": "software"}),
+        ):
+            with (
+                self.subTest(system=system),
+                patch.object(os, "name", system),
+                patch.dict(os.environ, environment | envelope, clear=True),
+                patch.object(time, "monotonic", return_value=103.0),
+                patch("faulthandler.dump_traceback_later") as arm,
+                patch("faulthandler.dump_traceback") as immediate,
+                patch("faulthandler.cancel_dump_traceback_later") as cancel,
+                patch.object(sys, "stderr", io.StringIO()) as stream,
+            ):
+                with isolatedGuiTracebackDiagnostics():
+                    arm.assert_called_once_with(262.0, repeat=False, file=stream, exit=False)
+                    cancel.assert_not_called()
+                cancel.assert_called_once_with()
+                immediate.assert_not_called()
+
+    def testGuiDiagnosticBoundsAndCleanupKeepTheOriginalFailure(self):
+        from unittest.mock import patch
+
+        self.assertTrue(callable(globals().get("isolatedGuiTracebackDiagnostics")))
+        with patch.object(time, "monotonic", return_value=100.0):
+            envelope = guiChildTracebackEnv(270)
+        isolated = {"GAME_XVFB_GAMEPLAY_CHILD": "1", "SDL_VIDEODRIVER": "x11", "DISPLAY": ":1"}
+        for changed in (
+            {"GAME_GUI_TRACEBACK_DEADLINE": "inf"},
+            {"GAME_GUI_TRACEBACK_DEADLINE": "900"},
+            {"GAME_GUI_TRACEBACK_DELAY_SECONDS": "270"},
+            {"GAME_GUI_PARENT_TIMEOUT_SECONDS": "nan"},
+            {"GAME_GUI_PARENT_TIMEOUT_SECONDS": "bad"},
+        ):
+            with (
+                self.subTest(changed=changed),
+                patch.object(os, "name", "posix"),
+                patch.dict(os.environ, isolated | envelope | changed, clear=True),
+                patch.object(time, "monotonic", return_value=103.0),
+                patch("faulthandler.dump_traceback_later") as arm,
+                patch("faulthandler.cancel_dump_traceback_later") as cancel,
+                self.assertRaises(ValueError),
+            ):
+                with isolatedGuiTracebackDiagnostics():
+                    self.fail("invalid diagnostic envelope must not run the body")
+            arm.assert_not_called()
+            cancel.assert_not_called()
+        primary = RuntimeError("original UI assertion")
+        with (
+            patch.object(os, "name", "posix"),
+            patch.dict(os.environ, isolated | envelope, clear=True),
+            patch.object(time, "monotonic", return_value=103.0),
+            patch("faulthandler.dump_traceback_later") as arm,
+            patch("faulthandler.cancel_dump_traceback_later", side_effect=OSError("cleanup probe")) as cancel,
+            patch.object(sys, "stderr", io.StringIO()) as stream,
+            self.assertRaises(RuntimeError) as caught,
+        ):
+            with isolatedGuiTracebackDiagnostics():
+                raise primary
+        self.assertIs(primary, caught.exception)
+        cancel.assert_called_once_with()
+        self.assertIn("cleanup probe", stream.getvalue())
+        cleanup_failure = OSError("normal cleanup probe")
+        with (
+            patch.object(os, "name", "posix"),
+            patch.dict(os.environ, isolated | envelope, clear=True),
+            patch.object(time, "monotonic", return_value=103.0),
+            patch("faulthandler.dump_traceback_later"),
+            patch("faulthandler.cancel_dump_traceback_later", side_effect=cleanup_failure),
+            patch.object(sys, "stderr", io.StringIO()),
+            self.assertRaises(OSError) as caught,
+        ):
+            with isolatedGuiTracebackDiagnostics():
+                pass
+        self.assertIs(cleanup_failure, caught.exception)
+        arm_failure = OSError("arm probe")
+        with (
+            patch.object(os, "name", "posix"),
+            patch.dict(os.environ, isolated | envelope, clear=True),
+            patch.object(time, "monotonic", return_value=103.0),
+            patch("faulthandler.dump_traceback_later", side_effect=arm_failure),
+            patch("faulthandler.cancel_dump_traceback_later") as cancel,
+            patch.object(sys, "stderr", io.StringIO()),
+            self.assertRaises(OSError) as caught,
+        ):
+            with isolatedGuiTracebackDiagnostics():
+                self.fail("failed arming must not run the body")
+        self.assertIs(arm_failure, caught.exception)
+        cancel.assert_not_called()
+
+    def testGuiDiagnosticAlreadyDueDumpsOnceWithoutOwningATimer(self):
+        from unittest.mock import patch
+
+        self.assertTrue(callable(globals().get("isolatedGuiTracebackDiagnostics")))
+        with patch.object(time, "monotonic", return_value=100.0):
+            envelope = guiChildTracebackEnv(270)
+        isolated = {"GAME_XVFB_GAMEPLAY_CHILD": "1", "SDL_VIDEODRIVER": "x11", "DISPLAY": ":1"}
+        with (
+            patch.object(os, "name", "posix"),
+            patch.dict(os.environ, isolated | envelope, clear=True),
+            patch.object(time, "monotonic", return_value=400.0),
+            patch("faulthandler.dump_traceback_later") as arm,
+            patch("faulthandler.dump_traceback") as immediate,
+            patch("faulthandler.cancel_dump_traceback_later") as cancel,
+            patch.object(sys, "stderr", io.StringIO()) as stream,
+        ):
+            with isolatedGuiTracebackDiagnostics():
+                immediate.assert_called_once_with(file=stream, all_threads=True)
+        arm.assert_not_called()
+        cancel.assert_not_called()
+
+    def testGuiDiagnosticParentPassesEnvelopeWithoutChangingItsTimeout(self):
+        from unittest.mock import patch
+
+        self.assertTrue(callable(globals().get("guiChildTracebackEnv")))
+        child = "test_full_nouraajd_quest_walkthrough_ui"
+        captured = []
+        worker_counts = []
+        expected_timeout = max(XVFB_GAMEPLAY_CHILD_TIMEOUT, XVFB_GAMEPLAY_CHILD_DURATION_HINTS[child] * 3)
+
+        class Process:
+            returncode = 0
+
+            def communicate(self, timeout=None):
+                captured[-1]["timeout"] = timeout
+                return "", ""
+
+        def popen(command, **kwargs):
+            captured.append({"command": command, "kwargs": kwargs})
+            return Process()
+
+        class Executor:
+            def __init__(self, max_workers):
+                worker_counts.append(max_workers)
+
+            def __enter__(self):
+                return self
+
+            def __exit__(self, *args):
+                return False
+
+            def submit(self, callback, *args):
+                future = concurrent.futures.Future()
+                try:
+                    future.set_result(callback(*args))
+                except BaseException as failure:
+                    future.set_exception(failure)
+                return future
+
+        with (
+            patch.object(os, "name", "posix"),
+            patch.dict(
+                os.environ,
+                {"GAME_XVFB_ONLY_CHILD_TESTS": child, "GAME_XVFB_ISOLATE": "1", "GAME_XVFB_JOBS": "1"},
+                clear=True,
+            ),
+            patch.object(shutil, "which", return_value="/mock/xvfb-tool"),
+            patch(__name__ + ".sdl_x11_video_driver_available", return_value=(True, "")),
+            patch.object(subprocess, "Popen", side_effect=popen),
+            patch.object(concurrent.futures, "ThreadPoolExecutor", Executor),
+            patch.object(time, "monotonic", return_value=100.0),
+        ):
+            XvfbGameplayTest("test_keyboard_gameplay_under_xvfb").test_keyboard_gameplay_under_xvfb()
+        self.assertEqual(1, len(captured))
+        self.assertEqual([1], worker_counts)
+        self.assertEqual(expected_timeout, captured[0]["timeout"])
+        arguments = captured[0]["command"]
+        self.assertIn(f"XvfbGameplayProcessTest.{child}", arguments)
+        environment = dict(value.split("=", 1) for value in arguments if value.startswith("GAME_GUI_"))
+        self.assertIn("GAME_GUI_PARENT_TIMEOUT_SECONDS", environment)
+        self.assertIn("GAME_GUI_TRACEBACK_DELAY_SECONDS", environment)
+        self.assertIn("GAME_GUI_TRACEBACK_DEADLINE", environment)
+        self.assertEqual(expected_timeout, float(environment["GAME_GUI_PARENT_TIMEOUT_SECONDS"]))
+        self.assertEqual(expected_timeout - 5.0, float(environment["GAME_GUI_TRACEBACK_DELAY_SECONDS"]))
+        self.assertEqual(100.0 + expected_timeout - 5.0, float(environment["GAME_GUI_TRACEBACK_DEADLINE"]))
+
+    def testGuiDiagnosticMainEntryIsScopedAndLeavesMainBodyUntouched(self):
+        self.assertTrue(callable(globals().get("isolatedGuiTracebackDiagnostics")))
+        tree = ast.parse(Path(__file__).read_text(encoding="utf-8"))
+        guard = tree.body[-1]
+        self.assertIsInstance(guard, ast.If)
+        self.assertEqual(1, len(guard.body))
+        scoped = guard.body[0]
+        self.assertIsInstance(scoped, ast.With)
+        self.assertEqual(1, len(scoped.items))
+        self.assertEqual("isolatedGuiTracebackDiagnostics", scoped.items[0].context_expr.func.id)
+        self.assertEqual(1, len(scoped.body))
+        self.assertEqual("main", scoped.body[0].value.func.id)
+
     def testProgressRecordsSubtestFailuresAndErrorsAfterCleanup(self):
         from unittest.mock import patch
 
@@ -25686,7 +26810,7 @@ class TestRunnerSuiteTest(unittest.TestCase):
                 stream = io.StringIO()
 
                 def cleanup():
-                    self.assertEqual(1, len(stream.getvalue().splitlines()))
+                    self.assertEqual(1, len(self.progressNumericLines(stream)))
                     clock[0] = 25.0
 
                 class Case(unittest.TestCase):
@@ -25726,7 +26850,7 @@ class TestRunnerSuiteTest(unittest.TestCase):
                         f"[test 1/1 start] {result._test_name(case)}",
                         f"[test 1/1 ERROR 15.000s] {result._test_name(case)}",
                     ],
-                    stream.getvalue().splitlines(),
+                    self.progressNumericLines(stream),
                 )
                 self.assertEqual({}, result._test_start_times)
 
@@ -25768,7 +26892,7 @@ class TestRunnerSuiteTest(unittest.TestCase):
                 f"[test 1/1 start] {result._test_name(case)}",
                 f"[test 1/1 ok 7.000s] {result._test_name(case)}",
             ],
-            stream.getvalue().splitlines(),
+            self.progressNumericLines(stream),
         )
         self.assertEqual({}, result._test_start_times)
 
@@ -25810,7 +26934,7 @@ class TestRunnerSuiteTest(unittest.TestCase):
                 f"[test 1/1 start] {result._test_name(case)}",
                 f"[test 1/1 ERROR 10.000s] {result._test_name(case)}",
             ],
-            stream.getvalue().splitlines(),
+            self.progressNumericLines(stream),
         )
 
     def testProgressPreservesSubtestFailfastAndIncrementalWorkerTimings(self):
@@ -25863,7 +26987,7 @@ class TestRunnerSuiteTest(unittest.TestCase):
                 f"[test 2/3 start] {result._test_name(case)}",
                 f"[test 2/3 FAIL 6.000s] {result._test_name(case)}",
             ],
-            stream.getvalue().splitlines(),
+            self.progressNumericLines(stream),
         )
 
     def testProgressPreservesOuterOutcomeMarkersAndCounts(self):
@@ -25920,7 +27044,7 @@ class TestRunnerSuiteTest(unittest.TestCase):
                         f"[test 1/1 start] {result._test_name(case)}",
                         f"[test 1/1 {status} 8.000s] {result._test_name(case)}{detail}",
                     ],
-                    stream.getvalue().splitlines(),
+                    self.progressNumericLines(stream),
                 )
 
     def testProgressDoesNotReportInterruptedCaseAsSuccess(self):
@@ -25973,7 +27097,7 @@ class TestRunnerSuiteTest(unittest.TestCase):
                 self.assertEqual({}, result.test_durations)
                 self.assertEqual({}, result._test_start_times)
                 self.assertEqual({}, result._testOutcomes)
-                self.assertEqual([f"[test 1/1 start] {result._test_name(case)}"], stream.getvalue().splitlines())
+                self.assertEqual([f"[test 1/1 start] {result._test_name(case)}"], self.progressNumericLines(stream))
                 self.assertEqual(1, result.testsRun)
                 self.assertEqual(int(prior == "FAIL"), len(result.failures))
                 self.assertEqual(int(prior == "ERROR"), len(result.errors))
@@ -26025,7 +27149,7 @@ class TestRunnerSuiteTest(unittest.TestCase):
                         f"[test 1/1 start] {result._test_name(case)}",
                         f"[test 1/1 {status} 9.000s] {result._test_name(case)}",
                     ],
-                    stream.getvalue().splitlines(),
+                    self.progressNumericLines(stream),
                 )
 
     def testProgressCompletesCasesThatHandleInheritedInterrupts(self):
@@ -26085,7 +27209,7 @@ class TestRunnerSuiteTest(unittest.TestCase):
                         f"[test 1/1 start] {result._test_name(case)}",
                         f"[test 1/1 ok 9.000s] {result._test_name(case)}",
                     ],
-                    stream.getvalue().splitlines(),
+                    self.progressNumericLines(stream),
                 )
 
     def testProgressCompletesRepeatedCaseInsidePriorInterruptHandler(self):
@@ -26146,7 +27270,7 @@ class TestRunnerSuiteTest(unittest.TestCase):
                         f"[test 2/2 start] {result._test_name(case)}",
                         f"[test 2/2 ok 6.000s] {result._test_name(case)}",
                     ],
-                    stream.getvalue().splitlines(),
+                    self.progressNumericLines(stream),
                 )
 
     def testMcpWalkthroughLogsCreateNestedWorkerDirectories(self):
@@ -26925,6 +28049,132 @@ class TestRunnerSuiteTest(unittest.TestCase):
         for suite_name in VALID_TEST_SUITES:
             self.assertIn(f"--suite {suite_name}", testing_docs)
 
+    def testProgressDetailsKeepHugeCachedCauseCallsiteAndTrailingNote(self):
+        from unittest.mock import patch
+
+        for github_actions in ("false", "true"):
+            with self.subTest(github_actions=github_actions), patch.dict(
+                os.environ, {"GITHUB_ACTIONS": github_actions}
+            ):
+                stream, result, case, formatter = self.progressDetailsFixture()
+                primary = AssertionError("CAUSENEARHEAD: actual assertion\n" + "large-state " * 30000)
+                primary.add_note("NOTEATEND: bounded contextual note")
+                try:
+                    raise primary
+                except AssertionError:
+                    original_error = sys.exc_info()
+                    with formatter as formatted:
+                        result.addFailure(case, original_error)
+                text = stream.getvalue()
+                cached = result.failures[-1][1]
+                self.assertEqual(formatted.call_count, 1)
+                self.assertIs(formatted.call_args.args[0], original_error)
+                self.assertIs(original_error[1], primary)
+                self.assertIs(result.failures[-1][0], case)
+                self.assertIn("CAUSENEARHEAD", cached)
+                self.assertIn("NOTEATEND", cached)
+                self.assertIn("testProgressDetailsKeepHugeCachedCauseCallsiteAndTrailingNote", cached)
+                self.assertIn("AssertionError: CAUSENEARHEAD", text)
+                self.assertIn("testProgressDetailsKeepHugeCachedCauseCallsiteAndTrailingNote", text)
+                self.assertIn("NOTEATEND", text)
+                self.assertIn("[... cached traceback omitted ...]", text)
+                self.assertLessEqual(len(text.encode("utf-8")) + text.count("\n"), 8192)
+                annotations = [line for line in text.splitlines() if line.startswith("::error ")]
+                self.assertEqual(len(annotations), int(github_actions == "true"))
+                if annotations:
+                    self.assertIn("AssertionError: CAUSENEARHEAD", annotations[0])
+                    self.assertIn("testProgressDetailsKeepHugeCachedCauseCallsiteAndTrailingNote", annotations[0])
+                    self.assertIn("NOTEATEND", annotations[0])
+                    self.assertIn("[... cached traceback omitted ...]", annotations[0])
+                self.assertEqual(cached.count("large-state "), 30000)
+                self.assertTrue(cached.endswith("NOTEATEND: bounded contextual note\n"))
+                self.assertGreater(len(cached), 300000)
+                self.assertEqual((result.testsRun, len(result.failures), len(result.errors)), (1, 1, 0))
+                result.stopTest(case)
+                self.assertEqual(result._testOutcomes, {})
+                self.assertEqual(result._test_start_times, {})
+
+    def testProgressDetailsHeadTailRespectActualUtf8LfAndCrlfByteLimits(self):
+        from unittest.mock import patch
+
+        for github_actions in ("false", "true"):
+            for newline in ("\n", "\r\n"):
+                with self.subTest(github_actions=github_actions, newline=newline), patch.dict(
+                    os.environ, {"GITHUB_ACTIONS": github_actions}
+                ):
+                    cached = (
+                        "Traceback: CALLSITEHEAD\nAssertionError: CAUSENEARHEAD %\n"
+                        + "\ud800" * 10000
+                        + "\n::error forged-middle\n"
+                        + "\u754c" * 10000
+                        + "\nNOTEATEND %\n::warning trailing-data"
+                    )
+                    raw_stream = io.BytesIO()
+                    stream = io.TextIOWrapper(raw_stream, encoding="utf-8", errors="backslashreplace", newline=newline)
+                    result = ProgressTextTestResult(unittest.runner._WritelnDecorator(stream), True, 2)
+                    case = unittest.FunctionTestCase(lambda: None)
+                    result.total_tests = 1
+                    result.startTest(case)
+                    stream.flush()
+                    raw_stream.seek(0)
+                    raw_stream.truncate()
+                    primary = AssertionError("original owned exception")
+                    try:
+                        raise primary
+                    except AssertionError:
+                        original_error = sys.exc_info()
+                        with patch.object(result, "_exc_info_to_string", return_value=cached) as formatted:
+                            result.addFailure(case, original_error)
+                    stream.flush()
+                    emitted = raw_stream.getvalue()
+                    text = emitted.decode("utf-8")
+                    self.assertLessEqual(len(emitted), 8192)
+                    self.assertIn("CALLSITEHEAD", text)
+                    self.assertIn("CAUSENEARHEAD", text)
+                    self.assertIn("NOTEATEND", text)
+                    self.assertIn("[... cached traceback omitted ...]", text)
+                    self.assertEqual(formatted.call_count, 1)
+                    self.assertIs(formatted.call_args.args[0], original_error)
+                    self.assertIs(original_error[1], primary)
+                    self.assertIs(result.failures[-1][1], cached)
+                    directives = [line for line in text.splitlines() if line.startswith("::")]
+                    self.assertEqual(len(directives), int(github_actions == "true"))
+                    if directives:
+                        self.assertTrue(directives[0].startswith("::error title="))
+                        self.assertIn("CALLSITEHEAD", directives[0])
+                        self.assertIn("CAUSENEARHEAD %25", directives[0])
+                        self.assertIn("NOTEATEND %25", directives[0])
+                        self.assertIn("%0A::warning trailing-data", directives[0])
+                    stream.detach()
+
+    def testProgressDetailsShortCachedErrorRemainsCompleteWithoutOmission(self):
+        from unittest.mock import patch
+
+        cached = "Traceback: short-callsite\nValueError: short-cause\nshort-note\n"
+        for github_actions in ("false", "true"):
+            with self.subTest(github_actions=github_actions), patch.dict(
+                os.environ, {"GITHUB_ACTIONS": github_actions}
+            ):
+                stream, result, case, formatter = self.progressDetailsFixture(cached)
+                primary = ValueError("actual error identity")
+                try:
+                    raise primary
+                except ValueError:
+                    original_error = sys.exc_info()
+                    with formatter as formatted:
+                        result.addError(case, original_error)
+                text = stream.getvalue()
+                self.assertNotIn("cached traceback omitted", text)
+                for line in cached.splitlines():
+                    self.assertIn("[test detail] " + line + "\n", text)
+                self.assertEqual(formatted.call_count, 1)
+                self.assertIs(formatted.call_args.args[0], original_error)
+                self.assertIs(original_error[1], primary)
+                self.assertIs(result.errors[-1][1], cached)
+                if github_actions == "true":
+                    escaped = cached.replace("%", "%25").replace("\r", "%0D").replace("\n", "%0A")
+                    self.assertIn("::" + escaped + "\n", text)
+
 
 SOURCE_UI_TESTS_AVAILABLE = (REPO_ROOT / "tests" / "__init__.py").is_file()
 
@@ -26950,6 +28200,9 @@ if SOURCE_UI_TESTS_AVAILABLE:
     )
     from tests.test_wait_state import WaitStateRuntimeTest as _WaitStateRuntimeTest
     from tests.test_binding_source_layout import BindingSourceLayoutTest as _BindingSourceLayoutTest
+    from tests.test_builtin_gameplay_registration import (
+        BuiltinGameplayRegistrationTest as _BuiltinGameplayRegistrationTest,
+    )
     from tests.test_saved_wait_source import SavedWaitSourceTest as _SavedWaitSourceTest
     from tests.test_baldurs_gate_city_content import BaldursGateCityContentTest as _BaldursGateCityContentTest
     from tests.test_baldurs_gate_city_routes import BaldursGateCityRoutesTest as _BaldursGateCityRoutesTest
@@ -27071,6 +28324,9 @@ if SOURCE_UI_TESTS_AVAILABLE:
     from tests.test_waypoint_traversal import WaypointTraversalTest as _WaypointTraversalTest
 
     class BindingSourceLayoutTest(_BindingSourceLayoutTest):
+        pass
+
+    class BuiltinGameplayRegistrationTest(_BuiltinGameplayRegistrationTest):
         pass
 
     class SavedWaitSourceTest(_SavedWaitSourceTest):
@@ -27473,6 +28729,7 @@ if SOURCE_UI_TESTS_AVAILABLE:
     del _MultilevelRuinsContentTest, _MultilevelRuinsRuntimeTest, _MultilevelRuinsMcpTest
     del _ConsoleUiInteractionTest, _UiMinimapInteractionTest
     del _BindingSourceLayoutTest
+    del _BuiltinGameplayRegistrationTest
     del _SavedWaitSourceTest
     del _WaitStateRuntimeTest
     del _BaldursGateCityContentTest, _BaldursGateCityDataTest
@@ -30674,4 +31931,5 @@ def main():
 
 
 if __name__ == "__main__":
-    main()
+    with isolatedGuiTracebackDiagnostics():
+        main()

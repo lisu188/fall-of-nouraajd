@@ -281,6 +281,97 @@ def sunderedmarch(d, banner_first):
     requirePotionConsumptions(d)
 
 
+def multilevelAllFloors(d):
+    """Visit the fifteen authored goals through real stairs, preserving the summit checkpoint."""
+    startMap(d, "multilevel", "multilevelStart")
+    d.test.assertTrue(d.flag("visited_multilevel_start"))
+    d.test.assertEqual(0, d.number("levelTransitionCount"))
+
+    def walk(name, destination_level, *, stairs=False):
+        target = d.object(name)
+        origin = d.coords(target)
+        destination = (
+            tuple(d.call(target, "getNumericProperty", "target" + axis) for axis in "XYZ") if stairs else origin
+        )
+        d.test.assertEqual(destination_level, destination[2])
+        if stairs:
+            d.test.assertTrue(d.call(target, "getBoolProperty", "waypoint"))
+            d.test.assertTrue(d._hasNavigationEdge(origin, destination), (name, "Unpublished authored stair"))
+        started = d.turns
+
+        def requireBudget():
+            d.test.assertLessEqual(d.turns - started, 32, (name, "Authored Multilevel approach exceeded 32 turns"))
+
+        d.navigateTo(name, after_tick=requireBudget)
+        requireBudget()
+        d.test.assertEqual(destination, d.coords(), (name, "Actual authored landing or goal"))
+
+    def goal(level):
+        return ("multilevelLowerGoal", "multilevelUpperGoal")[level] if level < 2 else f"multilevelGoalLevel{level}"
+
+    def up(level):
+        return "stairsUp" if level == 0 else f"stairsUpLevel{level}"
+
+    def down(level):
+        return "stairsDown" if level == 1 else f"stairsDownLevel{level}"
+
+    for level in range(1, 15):
+        walk(up(level - 1), level, stairs=True)
+        d.check(f"multilevel.all.stairs.up.{level}", d.number("levelTransitionCount") == level, level=level)
+        walk(goal(level), level)
+        d.check(f"multilevel.all.goal.{level}", d.flag(f"visited_level_{level}_goal"), level=level)
+        d.test.assertFalse(d.flag("visited_lower_goal"), "Deep goals must not credit the floor-zero goal")
+    d.test.assertTrue(d.flag("visited_upper_goal"))
+    summit, turn = d.coords(), d.call(d.game_map, "getTurn")
+    signature = tuple(d.call(d.player, method) for method in ("getName", "getTypeId"))
+    d.saveAndReload("multilevel-all-floors-summit")
+    d.test.assertEqual(signature, tuple(d.call(d.player, method) for method in ("getName", "getTypeId")))
+    d.check(
+        "multilevel.all.summit.reloaded",
+        d.coords() == summit
+        and summit[2] == 14
+        and d.call(d.game_map, "getTurn") == turn
+        and d.number("levelTransitionCount") == 14
+        and all(d.flag(f"visited_level_{level}_goal") for level in range(1, 15))
+        and not d.flag("visited_lower_goal"),
+        summit=summit,
+    )
+    for level in range(14, 0, -1):
+        walk(goal(level), level)
+        walk(down(level), level - 1, stairs=True)
+        d.check(
+            f"multilevel.all.stairs.down.{level}",
+            d.number("levelTransitionCount") == 29 - level,
+            level=level,
+        )
+    walk(goal(0), 0)
+    d.check("multilevel.all.goal.0", d.flag("visited_level_0_goal"), level=0)
+    d.check(
+        "multilevel.all.return",
+        d.coords()[2] == 0
+        and d.number("levelTransitionCount") == 28
+        and all(d.flag(f"visited_level_{level}_goal") for level in range(15))
+        and d.flag("visited_upper_goal")
+        and d.flag("visited_lower_goal")
+        and d.flag("used_stairs_up")
+        and d.flag("used_stairs_down"),
+    )
+
+
+MULTILEVEL_ALL_GOALS = tuple(f"multilevel.all.goal.{level}" for level in range(15))
+MULTILEVEL_ALL_STAIRS = tuple(f"multilevel.all.stairs.up.{level}" for level in range(1, 15)) + tuple(
+    f"multilevel.all.stairs.down.{level}" for level in range(14, 0, -1)
+)
+MULTILEVEL_ALL_BRANCHES = (
+    MULTILEVEL_ALL_GOALS
+    + MULTILEVEL_ALL_STAIRS
+    + (
+        "multilevel.all.summit.reloaded",
+        "multilevel.all.return",
+    )
+)
+
+
 def multilevel(d):
     startMap(d, "multilevel", "multilevelStart")
     d.check("multilevel.arrival", d.flag("visited_multilevel_start"))
@@ -544,6 +635,14 @@ CASES = (
         sources=sources("sunderedmarch"),
     ),
     RouteCase(
+        id="multilevel-all-floors",
+        group="navigation",
+        maps=("multilevel",),
+        run=multilevelAllFloors,
+        branches=MULTILEVEL_ALL_BRANCHES,
+        sources=sources("multilevel"),
+    ),
+    RouteCase(
         id="multilevel-return",
         group="navigation",
         maps=("multilevel",),
@@ -680,10 +779,12 @@ SOURCE_BRANCHES = {
         "multilevel.stairs.up",
         "multilevel.stairs.down",
         "multilevel.stairs.repeat",
-    ),
+    )
+    + MULTILEVEL_ALL_STAIRS,
     "res/maps/multilevel/script.py:MultilevelStart.onCreate": ("multilevel.arrival",),
     "res/maps/multilevel/script.py:MultilevelStart.onEnter": ("multilevel.arrival",),
-    "res/maps/multilevel/script.py:MultilevelGoal.onEnter": ("multilevel.goal.upper", "multilevel.goal.lower"),
+    "res/maps/multilevel/script.py:MultilevelGoal.onEnter": ("multilevel.goal.upper", "multilevel.goal.lower")
+    + MULTILEVEL_ALL_GOALS,
     "res/maps/test/script.py:InitializationProbe.onCreate": ("test.initialization.properties",),
     "res/maps/test/script.py:TurnTrigger.trigger": ("test.firstTurn.encounter",),
 }

@@ -290,6 +290,135 @@ class GameplayBranchDriverTest(unittest.TestCase):
         self.assertNotEqual(canonicalNativeState({"other": ""}), canonicalNativeState({}))
         self.assertNotEqual(canonicalNativeState({"campaign_unrecognized": ""}), canonicalNativeState({}))
 
+    def castleCheckpointDriver(self, before, after, *, after_map="castleHomecoming", after_turn=41):
+        driver = GameplayBranchDriver.__new__(GameplayBranchDriver)
+        driver.test = self
+        driver.game = {"__handle__": "oldGame"}
+        driver.game_map = {"__handle__": "oldMap"}
+        driver.player = {"__handle__": "oldPlayer"}
+        driver.map_name = "castleHomecoming"
+        driver.assertSurvival = Mock()
+        driver.pump = Mock()
+        driver._slot = Mock(return_value="unit-castle-checkpoint")
+        state = {"loaded": False, "calls": []}
+        driver.properties = Mock(side_effect=[deepcopy(before), deepcopy(before), deepcopy(after)])
+
+        def call(owner, method, *args):
+            state["calls"].append(("call", owner, method, args))
+            if method == "getTurn":
+                self.assertEqual(driver.game_map, owner)
+                return after_turn if state["loaded"] else 41
+            self.assertEqual(driver.player, owner)
+            values = after if state["loaded"] else before
+            if method == "getStringProperty":
+                return values.get(args[0], "")
+            if method == "getBoolProperty":
+                return values.get(args[0], False)
+            raise AssertionError(("Unexpected checkpoint getter", method))
+
+        def engine(method, *args):
+            state["calls"].append(("engine", method, args))
+            if method == "CMapLoader.saveWithResult":
+                self.assertEqual((driver.game_map, "unit-castle-checkpoint"), args)
+                return True
+            if method == "CGameLoader.loadGame":
+                self.assertIsNone(driver.game_map)
+                self.assertIsNone(driver.player)
+                return {"__handle__": "newGame"}
+            if method == "CGameLoader.loadSavedGame":
+                self.assertEqual((driver.game, "unit-castle-checkpoint"), args)
+                state["loaded"] = True
+                return None
+            raise AssertionError(("Unexpected checkpoint engine call", method))
+
+        def refresh():
+            self.assertTrue(state["loaded"])
+            driver.game_map = {"__handle__": "newMap"}
+            driver.player = {"__handle__": "newPlayer"}
+            driver.map_name = after_map
+
+        driver.call, driver.engine, driver.refresh = call, engine, refresh
+        return driver, state
+
+    def testCastlePortalCheckpointUsesNativeClearedStringWithoutLosingArrivalTokens(self):
+        for initial, restored in (("", None), (None, ""), (None, None), ("3,7,0", "3,7,0")):
+            with self.subTest(initial=initial, restored=restored):
+                before = {} if initial is None else {"campaign_castlePortalArrival": initial}
+                after = {} if restored is None else {"campaign_castlePortalArrival": restored}
+                driver, state = self.castleCheckpointDriver(before, after)
+                with patch("tests.gameplay_branch_driver.verifyJournals", return_value={"active": "retained"}):
+                    driver.saveAndReload("before-final-capture")
+                self.assertTrue(state["loaded"])
+                self.assertEqual(3, driver.properties.call_count)
+                self.assertEqual(1, driver.pump.call_count)
+                reads = [entry for entry in state["calls"] if entry[0] == "call" and entry[2] == "getStringProperty"]
+                self.assertEqual(
+                    ["oldPlayer", "newPlayer"],
+                    [entry[1]["__handle__"] for entry in reads if entry[3] == ("campaign_castlePortalArrival",)],
+                )
+
+    def testCastlePortalCheckpointRejectsChangedMissingAndNewNonemptyArrivalTokens(self):
+        for initial, restored in (("3,7,0", "3,8,0"), ("3,7,0", None), (None, "3,7,0"), (" ", None)):
+            with self.subTest(initial=initial, restored=restored):
+                before = {} if initial is None else {"campaign_castlePortalArrival": initial}
+                after = {} if restored is None else {"campaign_castlePortalArrival": restored}
+                driver, _ = self.castleCheckpointDriver(before, after)
+                with patch("tests.gameplay_branch_driver.verifyJournals", return_value={}):
+                    with self.assertRaises(AssertionError):
+                        driver.saveAndReload("before-final-capture")
+                driver.pump.assert_not_called()
+
+    def testCastlePortalCheckpointPreservesOtherResourcesJournalsCoordinatesAndCampaignFields(self):
+        before = {
+            "campaign_castlePortalArrival": "",
+            "campaign_unrecognized": "",
+            "campaign_var_route": "mercy",
+            "campaign_finished": False,
+            "questJournalActive": "active text",
+            "items": [{"properties": {"name": "owned-instance"}}],
+            "equipped": {"weapon": {"properties": {"name": "equipped-instance"}}},
+            "quests": [{"properties": {"name": "active-quest"}}],
+            "completedQuests": [{"properties": {"name": "completed-quest"}}],
+            **{key: 7 for key in ("hp", "mana", "gold", "exp", "level", "reputation", "posx", "posy", "posz")},
+            "raceId": "human",
+        }
+        changes = {key: 8 for key in ("hp", "mana", "gold", "exp", "level", "reputation", "posx", "posy", "posz")}
+        changes.update(
+            raceId="elf",
+            campaign_var_route="wrath",
+            campaign_finished=True,
+            questJournalActive="different text",
+            items=[],
+            equipped={},
+            quests=[],
+            completedQuests=[],
+        )
+        for key, value in changes.items():
+            with self.subTest(key=key):
+                after = {**deepcopy(before), key: value}
+                after.pop("campaign_castlePortalArrival")
+                driver, _ = self.castleCheckpointDriver(before, after)
+                with patch("tests.gameplay_branch_driver.verifyJournals", return_value={}):
+                    with self.assertRaises(AssertionError):
+                        driver.saveAndReload("before-final-capture")
+        after = deepcopy(before)
+        after.pop("campaign_castlePortalArrival")
+        after.pop("campaign_unrecognized")
+        driver, _ = self.castleCheckpointDriver(before, after)
+        with patch("tests.gameplay_branch_driver.verifyJournals", return_value={}):
+            with self.assertRaises(AssertionError):
+                driver.saveAndReload("before-final-capture")
+        for values in ({"after_map": "castleOther"}, {"after_turn": 42}):
+            with self.subTest(values=values):
+                driver, _ = self.castleCheckpointDriver(before, before, **values)
+                with patch("tests.gameplay_branch_driver.verifyJournals", return_value={}):
+                    with self.assertRaises(AssertionError):
+                        driver.saveAndReload("before-final-capture")
+        driver, _ = self.castleCheckpointDriver(before, before)
+        with patch("tests.gameplay_branch_driver.verifyJournals", side_effect=["same", "same", "changed"]):
+            with self.assertRaisesRegex(AssertionError, "Reload changed the observed journal text"):
+                driver.saveAndReload("before-final-capture")
+
     def driver(self):
         case = RouteCase("unit", "unit", ("test",), ("unit.branch",), lambda driver: None)
         driver = GameplayBranchDriver(self, Mock(), None, case, "Warrior", Path("."))

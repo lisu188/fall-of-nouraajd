@@ -3625,34 +3625,60 @@ class OctobogzHuntTest(unittest.TestCase):
         walker, metadata, inventory, stock, sales, buys, crafts, gold, original_stock, add_item = (
             self.authoredBrewingFixture(1, 0, 10)
         )
+        retained_lesser = walker.basicLesserIngredients(inventory)[0]
+        market = walker.call(walker.object("market1"), "getObjectProperty", "market")
+        initial_gold = gold[0]
+        retained_sale_quote = walker.call(market, "getBuyCost", retained_lesser)
+        original_partner_quote = walker.call(market, "getSellCost", original_stock[0])
+        self.assertEqual((200, 320, 400), (initial_gold, retained_sale_quote, original_partner_quote))
         with patch("builtins.print"):
             walker.prepareHealingStockAtAuthoredMarket()
-        self.assertEqual(520, gold[0])
+        self.assertEqual(initial_gold, gold[0], "Keeping the earned ingredient must not credit its unused sale quote")
         self.assertEqual([], buys)
+        self.assertEqual([], sales)
+        self.assertEqual([], crafts)
+        self.assertIn(retained_lesser, inventory)
+        self.assertNotIn(retained_lesser, stock)
         self.assertTrue(all(item in stock for item in original_stock))
-        # The sold earned ingredient must not become eligible alongside the original stock.
-        self.assertEqual(4, len(walker.basicLesserIngredients(stock)))
+        self.assertEqual(3, len(walker.basicLesserIngredients(stock)))
         for original in original_stock:
             identity = original["__handle__"]
             replacement = {"__handle__": "reloaded_" + identity}
             metadata[replacement["__handle__"]] = dict(metadata[identity])
             stock[stock.index(original)] = replacement
-        add_item("actualScoutDarkBeer", "DarkBeer", 1, inventory)
+        scout_beer = add_item("actualScoutDarkBeer", "DarkBeer", 1, inventory)
+        scout_sale_quote = walker.call(market, "getBuyCost", scout_beer)
+        self.assertEqual(320, scout_sale_quote)
         with patch("builtins.print"):
             walker.prepareHealingStockAtAuthoredMarket(initial=False)
         self.assertEqual(1, len(crafts))
-        self.assertEqual(20, gold[0])
-        self.assertEqual(
-            ["originalShopLesser0", "originalShopLesser1"], [metadata[item["__handle__"]]["name"] for item in buys]
+        self.assertEqual(initial_gold + scout_sale_quote - original_partner_quote - 20, gold[0])
+        self.assertEqual(100, gold[0])
+        self.assertEqual(["originalShopLesser0"], [metadata[item["__handle__"]]["name"] for item in buys])
+        self.assertTrue(buys[0]["__handle__"].startswith("reloaded_"))
+        self.assertEqual([retained_lesser, buys[0]], crafts[0]["inputs"])
+        self.assertNotIn(retained_lesser, inventory)
+        self.assertNotIn(retained_lesser, stock)
+        self.assertNotIn(
+            retained_lesser, sales, "The earned Lesser is consumed in its real pair, never sold or bought back"
         )
-        self.assertIn(sales[0], stock, "The sold earned Lesser must never be repurchased")
+        self.assertEqual([scout_beer], sales)
+        self.assertIn(scout_beer, stock)
         self.assertEqual(2, len(walker.basicLesserIngredients(stock)))
-        add_item("actualAlphaDarkBeer", "DarkBeer", 1, inventory)
+        self.assertEqual({"originalShopLesser0"}, walker.purchased_lesser_shop_names)
+        alpha_beer = add_item("actualAlphaDarkBeer", "DarkBeer", 1, inventory)
+        alpha_sale_quote = walker.call(market, "getBuyCost", alpha_beer)
+        self.assertEqual(320, alpha_sale_quote)
         with patch("builtins.print"):
             walker.prepareHealingStockAtAuthoredMarket(initial=False)
-        self.assertEqual(1, len(crafts), "A lone original ingredient must not be paired with a buyback item")
-        self.assertEqual(2, len(buys))
-        self.assertEqual(340, gold[0])
+        self.assertEqual(1, len(crafts), "The remaining original pair is unaffordable, with no buyback or free recipe")
+        self.assertEqual(1, len(buys))
+        self.assertEqual(initial_gold + scout_sale_quote + alpha_sale_quote - original_partner_quote - 20, gold[0])
+        self.assertEqual(420, gold[0])
+        self.assertLess(gold[0], 2 * original_partner_quote + 20)
+        self.assertEqual([scout_beer, alpha_beer], sales)
+        self.assertEqual(2, len(walker.basicLesserIngredients(stock)))
+        self.assertEqual({"originalShopLesser0"}, walker.purchased_lesser_shop_names)
 
     def testFiniteOriginalIngredientNamesNeverReenrollPurchasedOrSoldStock(self):
         walker, metadata, inventory, stock, sales, buys, crafts, gold, original_stock, add_item = (

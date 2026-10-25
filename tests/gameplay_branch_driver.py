@@ -77,7 +77,13 @@ def canonicalNativeState(value, property_name=None):
 
 
 CAMPAIGN_STRING_PROPERTIES = frozenset(
-    {"campaign_id", "campaign_scenario", "campaign_history", "campaign_pendingTransition"}
+    {
+        "campaign_id",
+        "campaign_scenario",
+        "campaign_history",
+        "campaign_pendingTransition",
+        "campaign_castlePortalArrival",
+    }
 )
 
 
