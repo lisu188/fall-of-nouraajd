@@ -22482,11 +22482,92 @@ def run_blocking_gui_action(game, action, *callbacks):
 
 
 def show_dialog_with_keyboard(test_case, game, g, dialog, inputs):
-    observed = queue_panel_observer(game, g, "CGameDialogPanel")
-    queue_sdl_inputs(game, *dialog_input_callbacks(inputs))
-    g.getGuiHandler().showDialog(dialog)
-    pump_event_loop_until(lambda: observed["open"], timeout=1.0)
-    test_case.assertTrue(observed["open"], f"{dialog.getTypeId()} should open a dialog panel.")
+    choices = tuple(inputs)
+    test_case.assertTrue(
+        choices and all(type(choice) is int and 1 <= choice <= 9 for choice in choices),
+        "Staged dialog keyboard input requires numeric reply choices.",
+    )
+    gui = g.getGui()
+    player = g.getMap().getPlayer()
+    dialog_id = dialog.getTypeId()
+    panel = g.getGuiHandler().openDialog(dialog)
+    test_case.assertIsNotNone(panel, f"{dialog_id} should open a dialog panel.")
+
+    def requireOwner():
+        test_case.assertEqual(g.getGui(), gui, "Dialog GUI ownership changed.")
+        test_case.assertEqual(g.getMap().getPlayer(), player, "Dialog player ownership changed.")
+        test_case.assertEqual(panel.getObjectProperty("dialog"), dialog, "Dialog panel ownership changed.")
+
+    def isClosed():
+        parent = panel.getParent()
+        if parent == gui:
+            return False
+        test_case.assertIsNone(parent, "Dialog panel was reparented instead of closed.")
+        test_case.assertNotIn(panel, gui.getChildren(), "Detached dialog remains in the captured GUI.")
+        return True
+
+    def readHistory():
+        text = player.getStringProperty("uiDialogueHistory")
+        test_case.assertLessEqual(len(text.encode("utf-8")), 32768, "Dialog history exceeded its native byte bound.")
+        rows = json.loads(text or "[]")
+        test_case.assertIsInstance(rows, list)
+        test_case.assertLessEqual(len(rows), 80)
+        latest = rows[-1] if rows else {}
+        test_case.assertIsInstance(latest, dict)
+        return text, latest
+
+    try:
+        requireOwner()
+        matching = [
+            child
+            for child in gui.getChildren()
+            if child.getType() == "CGameDialogPanel" and child.getObjectProperty("dialog") == dialog
+        ]
+        test_case.assertEqual(matching, [panel], "Expected one attached native dialog panel.")
+        test_case.assertEqual(panel.getParent(), gui)
+        for index, choice in enumerate(choices):
+            requireOwner()
+            test_case.assertEqual(panel.getParent(), gui, "Dialog closed before every requested reply.")
+            baseline, latest = readHistory()
+            test_case.assertEqual((latest.get("dialog"), latest.get("kind")), (dialog_id, "speech"))
+            state = {"replySeen": False, "error": None}
+            push_digit_key(choice)
+
+            def completed():
+                try:
+                    requireOwner()
+                    if isClosed():
+                        return True
+                    current, latest = readHistory()
+                    matching_dialog = latest.get("dialog") == dialog_id
+                    if matching_dialog and latest.get("kind") == "reply" and current != baseline:
+                        state["replySeen"] = True
+                    return (
+                        matching_dialog
+                        and latest.get("kind") == "speech"
+                        and (current != baseline or state["replySeen"])
+                    )
+                except Exception as error:
+                    state["error"] = error
+                    return True
+
+            ready = pump_event_loop_until(completed, timeout=1.0)
+            if state["error"] is not None:
+                raise state["error"]
+            test_case.assertTrue(
+                ready,
+                ("Dialog reply has no observable native completion", dialog_id, index + 1, state["replySeen"]),
+            )
+            if isClosed():
+                test_case.assertEqual(index + 1, len(choices), "Dialog closed before every requested reply.")
+        test_case.assertTrue(isClosed(), "Requested dialog replies did not close the native panel.")
+    except BaseException:
+        try:
+            if panel.getParent() == gui:
+                panel.close()
+        except Exception:
+            pass
+        raise
 
 
 def open_quest_log_panel(test_case, g):

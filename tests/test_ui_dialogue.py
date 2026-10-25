@@ -1079,6 +1079,229 @@ class DialogueContentTest(unittest.TestCase):
                 with self.assertRaises(ValueError):
                     custodyScriptedActorFacts(changed)
 
+    def dialogKeyboardFixture(self, mode="normal", choices=(1, 2, 1, 1)):
+        source = (ROOT / "test.py").read_text(encoding="utf-8")
+        names = {
+            "show_dialog_with_keyboard",
+            "pump_event_loop_until",
+            "queue_panel_observer",
+            "queue_sdl_inputs",
+            "dialog_input_callbacks",
+            "push_digit_key",
+            "push_space_key",
+        }
+        selected = [node for node in ast.parse(source).body if isinstance(node, ast.FunctionDef) and node.name in names]
+        self.assertEqual({node.name for node in selected}, names)
+        state = {
+            "tasks": [],
+            "events": [],
+            "keys": [],
+            "accepted": [],
+            "dropped": [],
+            "ticks": 0,
+            "clock": 0.0,
+            "closed": False,
+            "selecting": False,
+            "openCalls": 0,
+            "blockingCalls": 0,
+            "cleanupCalls": 0,
+        }
+        primary = RuntimeError("native history observation failed")
+        cleanup_error = RuntimeError("owned panel cleanup failed")
+        owner = types.SimpleNamespace()
+        dialog = types.SimpleNamespace(getTypeId=lambda: "actualDialog")
+        gui = types.SimpleNamespace(getChildren=lambda: list(state.get("children", [])))
+        unrelated = types.SimpleNamespace(getType=lambda: "UnrelatedPanel")
+        state["children"] = [unrelated]
+        rows = []
+
+        def append(kind, text):
+            rows.append({"dialog": "actualDialog", "state": text, "kind": kind, "speaker": "NPC", "text": text})
+            del rows[:-80]
+
+        append("speech", "ENTRY")
+        if mode in {"capped", "ambiguous"}:
+            rows[:] = [dict(rows[0]) for _ in range(80)]
+        initial_history = json.dumps(rows)
+        state["initialHistory"] = initial_history
+
+        def readHistory(_key):
+            if mode == "historyError" and state["accepted"]:
+                raise primary
+            return json.dumps(rows)
+
+        player = types.SimpleNamespace(getStringProperty=readHistory)
+        current_map = types.SimpleNamespace(getPlayer=lambda: player)
+        owner.getGui = lambda: gui
+        owner.getMap = lambda: current_map
+        panel = types.SimpleNamespace(
+            getType=lambda: "CGameDialogPanel",
+            getObjectProperty=lambda _key: dialog,
+            getParent=lambda: state.get("foreignParent", gui if panel in state["children"] else None),
+        )
+
+        def close():
+            state["cleanupCalls"] += 1
+            if mode == "historyError":
+                raise cleanup_error
+            if panel in state["children"]:
+                state["children"].remove(panel)
+            state["closed"] = True
+
+        panel.close = close
+
+        def finish():
+            if mode == "replyOnly":
+                state["selecting"] = False
+                return
+            if mode == "reparent":
+                state["foreignParent"] = unrelated
+                state["selecting"] = False
+                return
+            if len(state["accepted"]) == len(choices) or mode == "earlyClose":
+                close()
+            elif mode in {"capped", "ambiguous"}:
+                rows[:] = json.loads(initial_history)
+            else:
+                append("speech", "STATE" + str(len(state["accepted"])))
+            state["selecting"] = False
+
+        def key(code, _scan, kind):
+            state["keys"].append((code, kind))
+            state["events"].append((code, kind))
+
+        def poll():
+            events, state["events"] = state["events"], []
+            for code, kind in events:
+                if kind != 768 or panel not in state["children"]:
+                    continue
+                if state["selecting"]:
+                    state["dropped"].append(code - ord("0"))
+                    continue
+                state["selecting"] = True
+                state["accepted"].append(code - ord("0"))
+                append("reply", "reply")
+                if mode == "replyOnly" or (mode == "normal" and len(state["accepted"]) == 3) or mode == "capped":
+                    state["tasks"].append(finish)
+                else:
+                    finish()
+
+        def run():
+            state["ticks"] += 1
+            state["clock"] += 0.05
+            # Native drainPostedTasks snapshots the last task ID before SDL polling.
+            tasks, state["tasks"] = state["tasks"], []
+            for task in tasks:
+                task()
+            poll()
+
+        loop = types.SimpleNamespace(run=run, invoke=lambda callback: state["tasks"].append(callback))
+        api = types.SimpleNamespace(event_loop=types.SimpleNamespace(instance=lambda: loop))
+
+        def openDialog(_dialog):
+            state["openCalls"] += 1
+            state["children"].append(panel)
+            return panel
+
+        def showDialog(_dialog):
+            state["blockingCalls"] += 1
+            openDialog(_dialog)
+            for _ in range(6):
+                run()
+
+        owner.getGuiHandler = lambda: types.SimpleNamespace(openDialog=openDialog, showDialog=showDialog)
+        clock = types.SimpleNamespace(
+            monotonic=lambda: state["clock"],
+            sleep=lambda delay: state.__setitem__("clock", state["clock"] + delay),
+        )
+        namespace = {
+            "json": json,
+            "time": clock,
+            "load_game_module": lambda: api,
+            "push_sdl_key_event": key,
+            "SDL_KEYDOWN": 768,
+            "SDL_KEYUP": 769,
+            "gui_contains_class": lambda _owner, kind: any(child.getType() == kind for child in state["children"]),
+        }
+        exec(compile(ast.Module(body=selected, type_ignores=[]), "actual_dialog_keyboard_helpers", "exec"), namespace)
+        return types.SimpleNamespace(
+            invoke=lambda: namespace["show_dialog_with_keyboard"](self, api, owner, dialog, choices),
+            state=state,
+            primary=primary,
+            unrelated=unrelated,
+        )
+
+    def testDialogKeyboardStagesRealKeysAfterCommittedSpeech(self):
+        fixture = self.dialogKeyboardFixture()
+        fixture.invoke()
+        self.assertTrue(fixture.state["closed"])
+        self.assertEqual(fixture.state["accepted"], [1, 2, 1, 1])
+        self.assertEqual(fixture.state["dropped"], [])
+        self.assertEqual(fixture.state["blockingCalls"], 0)
+        self.assertEqual(fixture.state["openCalls"], 1)
+        self.assertEqual(
+            fixture.state["keys"],
+            [(ord(str(choice)), kind) for choice in (1, 2, 1, 1) for kind in (768, 769)],
+        )
+        self.assertIn(fixture.unrelated, fixture.state["children"])
+
+    def testDialogKeyboardReplyAloneDoesNotAuthorizeNextKey(self):
+        fixture = self.dialogKeyboardFixture("replyOnly")
+        with self.assertRaisesRegex(AssertionError, "no observable native completion"):
+            fixture.invoke()
+        self.assertEqual(fixture.state["accepted"], [1])
+        self.assertEqual(fixture.state["dropped"], [])
+        self.assertEqual(fixture.state["cleanupCalls"], 1)
+        self.assertLess(fixture.state["ticks"], 25)
+        self.assertIn(fixture.unrelated, fixture.state["children"])
+
+    def testDialogKeyboardPreservesObservationErrorOverCleanupError(self):
+        fixture = self.dialogKeyboardFixture("historyError")
+        with self.assertRaises(RuntimeError) as caught:
+            fixture.invoke()
+        self.assertIs(caught.exception, fixture.primary)
+        self.assertEqual(fixture.state["accepted"], [1])
+        self.assertEqual(fixture.state["cleanupCalls"], 1)
+        self.assertIn(fixture.unrelated, fixture.state["children"])
+
+    def testDialogKeyboardHandlesCappedIdenticalSpeechAfterObservedReply(self):
+        fixture = self.dialogKeyboardFixture("capped", choices=(1, 1))
+        fixture.invoke()
+        self.assertTrue(fixture.state["closed"])
+        self.assertEqual(fixture.state["accepted"], [1, 1])
+        self.assertEqual(fixture.state["dropped"], [])
+
+    def testDialogKeyboardRejectsUnobservableIdenticalTransition(self):
+        fixture = self.dialogKeyboardFixture("ambiguous", choices=(1, 1))
+        with self.assertRaisesRegex(AssertionError, "no observable native completion"):
+            fixture.invoke()
+        self.assertEqual(fixture.state["accepted"], [1])
+        self.assertEqual(fixture.state["cleanupCalls"], 1)
+
+    def testDialogKeyboardRefusesUnsupportedAcknowledgementBeforeOpen(self):
+        fixture = self.dialogKeyboardFixture(choices=("space",))
+        with self.assertRaisesRegex(AssertionError, "numeric reply choices"):
+            fixture.invoke()
+        self.assertEqual(fixture.state["openCalls"], 0)
+        self.assertEqual(fixture.state["keys"], [])
+
+    def testDialogKeyboardEarlyClosureDoesNotConsumeRemainingInputs(self):
+        fixture = self.dialogKeyboardFixture("earlyClose")
+        with self.assertRaisesRegex(AssertionError, "before every requested reply"):
+            fixture.invoke()
+        self.assertEqual(fixture.state["accepted"], [1])
+        self.assertEqual(len(fixture.state["keys"]), 2)
+        self.assertIn(fixture.unrelated, fixture.state["children"])
+
+    def testDialogKeyboardRejectsReparentingAsClosure(self):
+        fixture = self.dialogKeyboardFixture("reparent", choices=(1,))
+        with self.assertRaisesRegex(AssertionError, "reparented instead of closed"):
+            fixture.invoke()
+        self.assertEqual(fixture.state["accepted"], [1])
+        self.assertFalse(fixture.state["closed"])
+        self.assertEqual(fixture.state["cleanupCalls"], 0)
+        self.assertIn(fixture.unrelated, fixture.state["children"])
+
 
 def loadCrafting():
     fake_game = types.ModuleType("game")
