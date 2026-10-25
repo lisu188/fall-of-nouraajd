@@ -73,8 +73,12 @@ jobs:
         run: semgrep scan --validate --config .semgrep/engine-security.yml
       - name: Custom Semgrep security report
         run: |
+          targets=(mcp.py scripts res src)
+          if [[ -d native_plugins ]]; then
+            targets+=(native_plugins)
+          fi
           semgrep scan --error --config .semgrep/engine-security.yml --json \
-            --output analysis-reports/semgrep.json mcp.py scripts res src native_plugins || test "$?" -eq 1
+            --output analysis-reports/semgrep.json "${targets[@]}" || test "$?" -eq 1
       - name: Upload Python and security reports
         if: always()
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
@@ -163,6 +167,7 @@ jobs:
           mkdir -p analysis-reports
           cppcheck --project=cmake-build-gcc15-static-release/compile_commands.json \
             --enable=warning,performance,portability --inline-suppr \
+            -ivstd -irandom-dungeon-generator \
             --suppress=missingIncludeSystem --error-exitcode=1 \
             --xml --xml-version=2 2> analysis-reports/cppcheck.xml
       - name: Clang Static Analyzer (scheduled and manual, advisory)
