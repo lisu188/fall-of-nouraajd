@@ -7,7 +7,7 @@ Static analysis complements, but never replaces, the required C++/Python tests a
 | Entry point | Analyzer | Coverage | Initial policy |
 | --- | --- | --- | --- |
 | `.github/workflows/static-analysis.yml` / `python-static` | Ruff | All first-party Python, including gameplay content | Syntax-critical rules block; expanded diagnostics are advisory |
-| `python-static` | Mypy | `scripts/run_clang_tidy.py` (strict baseline) | Blocking; expand typed scope as code is annotated |
+| `python-static` | Mypy | Strict check for `scripts/run_clang_tidy.py`, advisory report for MCP and gameplay runtime modules | Strict typed baseline blocks; broader runtime findings are advisory |
 | `python-static` | Bandit | MCP, launcher, resource scripts and tooling | Advisory findings, tool failure blocks |
 | `python-static` | Semgrep | Custom Python security and C++ unsafe-API rules | Rule validation blocks, findings are advisory |
 | `static-analysis.yml` / `workflow-static` | Actionlint | `.github/workflows/*.yml` | Advisory findings, tool failure blocks |
@@ -46,10 +46,10 @@ Explore expanded findings:
 ruff check .
 bandit -r -ll -ii mcp.py play.py scripts res
 semgrep scan --validate --config .semgrep/engine-security.yml
-semgrep scan --config .semgrep/engine-security.yml mcp.py scripts res src native_plugins
+semgrep scan --config .semgrep/engine-security.yml mcp.py scripts res src
 ```
 
-Ruff's `ruff.toml` opts into broader defect/readability categories for the advisory report and ignores interpreter-provided symbols in dynamic map/plugin scripts. It is not a blanket rule suppression. Mypy starts with the typed C++ analyzer runner; additional modules should be added after annotating their actual engine boundary types. Semgrep rules live at `.semgrep/engine-security.yml` and target unsafe shell execution, resource-script dynamic execution, unsafe deserialization, externally exposed MCP listeners and unsafe native C string operations.
+Ruff's `ruff.toml` opts into broader defect/readability categories for the advisory report and ignores interpreter-provided symbols in dynamic map/plugin scripts. It is not a blanket rule suppression. Mypy enforces strict typing for the analyzer runner and separately reports findings in `mcp.py`, `game_simulation.py`, `game_diagnostics.py`, and `quest_state.py`; expand the blocking set only after annotating actual engine boundary types. Semgrep rules live at `.semgrep/engine-security.yml` and target unsafe shell execution, resource-script dynamic execution, unsafe deserialization, externally exposed MCP listeners and unsafe native C string operations.
 
 For gameplay JSON and Python content relationships, `scripts/validate_content.py` remains the authoritative specialized static validator and runs in the normal required build workflow.
 
