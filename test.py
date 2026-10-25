@@ -22238,6 +22238,65 @@ class XvfbGameplayTest(unittest.TestCase):
         except ValueError as exc:
             self.fail(str(exc))
 
+        def reportChildTerminals(group_name, child_tests, stderr):
+            prefix = "test.XvfbGameplayProcessTest."
+            selected = {prefix + name: {"start": [], "terminal": [], "invalid": False} for name in child_tests}
+            try:
+                indices = {}
+                progress = re.compile(
+                    r"^\[test (?P<index>[1-9][0-9]*)/(?P<total>[1-9][0-9]*) "
+                    r"(?P<status>start|ok|skip|FAIL|ERROR|expected-failure|UNEXPECTED-SUCCESS)"
+                    r"(?P<duration> [0-9]+\.[0-9]{3}s)?\] "
+                    r"(?P<name>test\.XvfbGameplayProcessTest\.[A-Za-z_][A-Za-z0-9_]*)"
+                    r"(?: (?P<detail>[^\r\n]*))?$",
+                    re.MULTILINE,
+                )
+                for match in progress.finditer(stderr or ""):
+                    name = match["name"]
+                    index, total, status = int(match["index"]), int(match["total"]), match["status"]
+                    indices.setdefault(index, set()).add(name)
+                    if name not in selected:
+                        continue
+                    row = selected[name]
+                    valid = total == len(child_tests) and 1 <= index <= total
+                    if status == "start":
+                        valid = valid and match["duration"] is None and match["detail"] is None
+                        bucket = row["start"]
+                    else:
+                        valid = valid and match["duration"] is not None
+                        bucket = row["terminal"]
+                    row["invalid"] = row["invalid"] or not valid or len(bucket) >= 1
+                    if not bucket:
+                        # Drop arbitrary test output and skip details; retain the actual anchored result prefix/name.
+                        bucket.append(
+                            (index, total, status, match.string[match.start() : match.end("name")], match.start())
+                        )
+                for name, row in selected.items():
+                    valid = (
+                        not row["invalid"]
+                        and len(row["start"]) == len(row["terminal"]) == 1
+                        and row["start"][0][:2] == row["terminal"][0][:2]
+                        and row["start"][0][4] < row["terminal"][0][4]
+                        and len(indices[row["terminal"][0][0]]) == 1
+                    )
+                    report = {"group": group_name[:160], "test": name, "status": "unavailable"}
+                    if valid:
+                        report.update(status=row["terminal"][0][2], terminalLine=row["terminal"][0][3])
+                    else:
+                        report["reason"] = "missing-or-ambiguous-anchored-terminal"
+                    print("XVFB_CHILD_TERMINAL " + json.dumps(report, sort_keys=True), flush=True)
+            except Exception as error:
+                try:
+                    print(
+                        "XVFB_CHILD_TERMINAL_UNAVAILABLE "
+                        + json.dumps(
+                            {"group": group_name[:160], "errorType": type(error).__name__[:80]}, sort_keys=True
+                        ),
+                        flush=True,
+                    )
+                except Exception:
+                    pass
+
         def run_child_group(group_name, child_tests):
             child_env = child_env_defaults | {
                 "GAME_TEST_OUTPUT_DIR": str(TEST_OUTPUT_DIR / "xvfb" / group_name),
@@ -22273,10 +22332,13 @@ class XvfbGameplayTest(unittest.TestCase):
                 else:
                     stdout = exc.stdout or ""
                     stderr = exc.stderr or ""
+                reportChildTerminals(group_name, child_tests, stderr)
                 return (
                     f"{group_name} timed out while running {', '.join(child_tests)}.\n"
                     f"stdout:\n{stdout}\nstderr:\n{stderr}"
                 )
+
+            reportChildTerminals(group_name, child_tests, stderr)
 
             if proc.returncode != 0:
                 return (
@@ -25990,6 +26052,191 @@ class QuestStateHelperTest(unittest.TestCase):
 
 
 class TestRunnerSuiteTest(unittest.TestCase):
+
+    def xvfbTerminalParentFixture(
+        self,
+        stderr,
+        *,
+        returncode=0,
+        timeout=False,
+        child_tests=None,
+        stdout="opaque child stdout",
+        diagnostic_error=False,
+    ):
+        import io
+        from unittest.mock import patch
+
+        child_tests = child_tests or ["test_quest_journal_keeps_active_and_completed_entries_after_travel"]
+        captured = []
+        kills = []
+
+        class Process:
+            pid = 71
+            calls = 0
+
+            def communicate(self, timeout=None):
+                self.calls += 1
+                captured.append(timeout)
+                if self.calls == 1 and timeout_flag:
+                    raise subprocess.TimeoutExpired("mock-xvfb", timeout, output=stdout, stderr=stderr)
+                return stdout, stderr
+
+        Process.returncode = returncode
+        timeout_flag = timeout
+
+        class Executor:
+            def __init__(self, max_workers):
+                self.max_workers = max_workers
+
+            def __enter__(self):
+                return self
+
+            def __exit__(self, *args):
+                return False
+
+            def submit(self, callback, *args):
+                future = concurrent.futures.Future()
+                try:
+                    future.set_result(callback(*args))
+                except BaseException as error:
+                    future.set_exception(error)
+                return future
+
+        stream = io.StringIO()
+        failure = None
+        original_print = print
+
+        def print_report(*args, **kwargs):
+            if diagnostic_error and args and str(args[0]).startswith("XVFB_CHILD_TERMINAL"):
+                raise OSError("diagnostic output unavailable")
+            return original_print(*args, **kwargs)
+
+        with (
+            patch.object(os, "name", "posix"),
+            patch.dict(os.environ, {"GAME_XVFB_JOBS": "1"}, clear=True),
+            patch.object(shutil, "which", return_value="/mock/xvfb-tool"),
+            patch(__name__ + ".sdl_x11_video_driver_available", return_value=(True, "")),
+            patch(__name__ + ".XVFB_GAMEPLAY_CHILD_TESTS", child_tests),
+            patch(__name__ + ".XVFB_SAVE_MUTATING_CHILD_TESTS", set()),
+            patch(__name__ + ".XVFB_BATCHABLE_CHILD_TESTS", set(child_tests)),
+            patch(__name__ + ".shard_test_names", return_value=[child_tests]),
+            patch.object(subprocess, "Popen", return_value=Process()),
+            patch.object(concurrent.futures, "ThreadPoolExecutor", Executor),
+            patch.object(os, "killpg", side_effect=lambda *args: kills.append(args), create=True),
+            patch.object(signal, "SIGKILL", 9, create=True),
+            patch.object(time, "monotonic", return_value=100.0),
+            patch.object(sys, "stdout", stream),
+            patch("builtins.print", side_effect=print_report),
+        ):
+            try:
+                XvfbGameplayTest("test_keyboard_gameplay_under_xvfb").test_keyboard_gameplay_under_xvfb()
+            except AssertionError as error:
+                failure = error
+        text = stream.getvalue()
+        reports = [
+            json.loads(line[len("XVFB_CHILD_TERMINAL ") :])
+            for line in text.splitlines()
+            if line.startswith("XVFB_CHILD_TERMINAL ")
+        ]
+        return reports, failure, text, captured, kills
+
+    def testXvfbParentReportsActualChildTerminalWithoutEchoingItsOutput(self):
+        child = "test_quest_journal_keeps_active_and_completed_entries_after_travel"
+        name = "test.XvfbGameplayProcessTest." + child
+        actual = f"[test 1/1 ok 0.125s] {name}"
+        stderr = f"sensitive unrelated stderr\n[test 1/1 start] {name}\n{actual}\n"
+        reports, failure, output, waits, kills = self.xvfbTerminalParentFixture(stderr)
+        self.assertIsNone(failure)
+        self.assertEqual([{"group": "group-1", "test": name, "status": "ok", "terminalLine": actual}], reports)
+        self.assertNotIn("opaque child stdout", output)
+        self.assertNotIn("sensitive unrelated stderr", output)
+        self.assertEqual([max(XVFB_GAMEPLAY_CHILD_TIMEOUT, XVFB_GAMEPLAY_CHILD_DURATION_HINTS[child] * 3)], waits)
+        self.assertEqual([], kills)
+
+    def testXvfbParentKeepsSkipFailureAndUnavailableDistinctFromExitSuccess(self):
+        child = "test_quest_journal_keeps_active_and_completed_entries_after_travel"
+        name = "test.XvfbGameplayProcessTest." + child
+        for status in ("skip", "FAIL", "ERROR", "expected-failure", "UNEXPECTED-SUCCESS"):
+            with self.subTest(status=status):
+                suffix = " reason " + "private" * 2000
+                terminal = f"[test 1/1 {status} 0.125s] {name}"
+                stderr = f"[test 1/1 start] {name}\n{terminal}{suffix}\n"
+                code = 0 if status in ("skip", "expected-failure") else 1
+                reports, failure, output, _, _ = self.xvfbTerminalParentFixture(stderr, returncode=code)
+                self.assertEqual(1, len(reports))
+                self.assertEqual(status, reports[0]["status"])
+                self.assertEqual(terminal, reports[0]["terminalLine"])
+                self.assertNotIn("private", output)
+                self.assertLess(len(output), 1024)
+                self.assertEqual(code != 0, failure is not None)
+                if failure is not None:
+                    self.assertIn(f"failed with {code}", str(failure))
+        for label, stderr in (
+            ("empty", ""),
+            ("opaque-ok", "OK\nRan 1 test\nok"),
+            ("start-only", f"[test 1/1 start] {name}\n"),
+            ("terminal-only", f"[test 1/1 ok 0.125s] {name}\n"),
+            ("reversed", f"[test 1/1 ok 0.125s] {name}\n[test 1/1 start] {name}\n"),
+            ("wrong-total", f"[test 1/2 start] {name}\n[test 1/2 ok 0.125s] {name}\n"),
+            ("duplicate", f"[test 1/1 start] {name}\n[test 1/1 ok 0.125s] {name}\n[test 1/1 ok 0.126s] {name}\n"),
+        ):
+            with self.subTest(label=label):
+                reports, failure, _, _, _ = self.xvfbTerminalParentFixture(stderr)
+                self.assertIsNone(failure, "A missing diagnostic must not change child exit semantics")
+                self.assertEqual(1, len(reports))
+                self.assertEqual("unavailable", reports[0]["status"])
+                self.assertNotIn("terminalLine", reports[0])
+        other = "test_full_nouraajd_quest_walkthrough_ui"
+        other_name = "test.XvfbGameplayProcessTest." + other
+        duplicated_index = "".join(
+            f"[test 1/2 start] {selected}\n[test 1/2 ok 0.125s] {selected}\n" for selected in (name, other_name)
+        )
+        reports, failure, _, _, _ = self.xvfbTerminalParentFixture(duplicated_index, child_tests=[child, other])
+        self.assertIsNone(failure)
+        self.assertEqual(["unavailable", "unavailable"], [row["status"] for row in reports])
+        unknown = "test.XvfbGameplayProcessTest.test_not_selected"
+        collision = f"[test 1/2 start] {unknown}\n[test 1/2 ok 0.125s] {unknown}\n"
+        proper = "".join(
+            f"[test {index}/2 start] {selected}\n[test {index}/2 ok 0.125s] {selected}\n"
+            for index, selected in enumerate((name, other_name), 1)
+        )
+        reports, failure, _, _, _ = self.xvfbTerminalParentFixture(collision + proper, child_tests=[child, other])
+        self.assertIsNone(failure)
+        self.assertEqual(["unavailable", "ok"], [row["status"] for row in reports])
+
+    def testXvfbParentReportsFinishedChildBeforePreservedGroupTimeout(self):
+        children = [
+            "test_quest_journal_keeps_active_and_completed_entries_after_travel",
+            "test_full_nouraajd_quest_walkthrough_ui",
+        ]
+        names = ["test.XvfbGameplayProcessTest." + child for child in children]
+        terminal = f"[test 1/2 ok 0.125s] {names[0]}"
+        stderr = f"[test 1/2 start] {names[0]}\n{terminal}\n[test 2/2 start] {names[1]}\n"
+        reports, failure, output, waits, kills = self.xvfbTerminalParentFixture(
+            stderr, timeout=True, child_tests=children
+        )
+        self.assertIsNotNone(failure)
+        self.assertIn("timed out", str(failure))
+        self.assertIn("opaque child stdout", str(failure))
+        self.assertIn(stderr, str(failure))
+        self.assertEqual(["ok", "unavailable"], [row["status"] for row in reports])
+        self.assertEqual(terminal, reports[0]["terminalLine"])
+        self.assertNotIn("terminalLine", reports[1])
+        expected = max(
+            XVFB_GAMEPLAY_CHILD_TIMEOUT * 2,
+            sum(XVFB_GAMEPLAY_CHILD_DURATION_HINTS.get(child, 1) for child in children) * 3,
+        )
+        self.assertEqual([expected, None], waits)
+        self.assertEqual([(71, 9)], kills)
+
+    def testXvfbParentDiagnosticErrorsPreserveChildExitAndFailure(self):
+        for code in (0, 1):
+            with self.subTest(code=code):
+                reports, failure, _, _, _ = self.xvfbTerminalParentFixture("", returncode=code, diagnostic_error=True)
+                self.assertEqual([], reports)
+                self.assertEqual(code != 0, failure is not None)
+                if failure is not None:
+                    self.assertIn("failed with 1", str(failure))
 
     def testGuiDiagnosticEnvironmentUsesTheExistingTimeoutAndMonotonicDeadline(self):
         from unittest.mock import patch
