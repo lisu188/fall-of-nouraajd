@@ -158,6 +158,8 @@ environment settings override the debug preset. Raw MCP payload tracing still re
 `--trace-messages`; its previews are bounded and session/authentication fields are redacted.
 See [debug diagnostics](docs/testing.md#debug-diagnostics) for retention and failure behavior.
 
+For additional C++26, Python, security, workflow, and Android static-analysis checks, see [static analysis](docs/static-analysis.md).
+
 ### testing
 Running tests is **mandatory** after any code change.
 From a fresh checkout, prepare the repository first:
