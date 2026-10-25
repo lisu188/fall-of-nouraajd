@@ -113,8 +113,20 @@ jobs:
             -shellcheck="$(command -v shellcheck)" > analysis-reports/actionlint.txt 2>&1 || test "$?" -eq 1
       - name: ShellCheck (first-party shell scripts)
         run: |
-          git ls-files -z '*.sh' | grep -zvE '^(vstd|random-dungeon-generator)/' |
-            xargs -0 -r shellcheck --severity=warning > analysis-reports/shellcheck.txt 2>&1 || test "$?" -eq 1
+          : > analysis-reports/shellcheck.txt
+          while IFS= read -r -d '' script; do
+            case "$script" in
+              vstd/*|random-dungeon-generator/*) continue ;;
+            esac
+            if shellcheck --severity=warning "$script" >> analysis-reports/shellcheck.txt 2>&1; then
+              continue
+            else
+              status=$?
+              if [[ "$status" -ne 1 ]]; then
+                exit "$status"
+              fi
+            fi
+          done < <(git ls-files -z '*.sh')
       - name: Upload workflow and shell reports
         if: always()
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
