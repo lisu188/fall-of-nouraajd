@@ -62,6 +62,12 @@ jobs:
         run: ruff check . --select E9,F63,F7 --output-format github
       - name: Type-check analyzer utilities
         run: mypy --config-file mypy.ini
+      - name: Inspect MCP and gameplay Python typing (advisory)
+        run: |
+          mkdir -p analysis-reports
+          mypy --no-incremental --follow-imports=skip --ignore-missing-imports \
+            mcp.py game_simulation.py game_diagnostics.py quest_state.py \
+            > analysis-reports/mypy-runtime.txt || test "$?" -eq 1
       - name: Extended Ruff report
         run: |
           mkdir -p analysis-reports
