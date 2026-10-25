@@ -22752,6 +22752,7 @@ def assert_nouraajd_quest_log(test_case, g, active=(), completed=()):
 def capture_nouraajd_quest_log(test_case, g, name, active=(), completed=()):
     text = assert_nouraajd_quest_log(test_case, g, active=active, completed=completed)
     if name in NOURAAJD_QUEST_LOG_SCREENSHOT_CHECKPOINTS:
+        pump_event_loop(1)
         assert_screenshot_has_rendered_pixels(test_case, g, name)
     g.getGuiHandler().openPanel("questPanel").close()
     pump_event_loop(2)

@@ -1831,6 +1831,144 @@ class DialogueContentTest(unittest.TestCase):
                 self.assertEqual([], result.writes)
                 self.assertTrue(result.sync_restored and result.flow_restored)
 
+    def questLogCaptureFixture(self, *, active=(), completed=(), captured=True, fault=None):
+        source = (ROOT / "test.py").read_text(encoding="utf-8")
+        tree = ast.parse(source)
+        names = {
+            "readJournalTabs",
+            "nouraajd_quest_status_line",
+            "assert_nouraajd_quest_log",
+            "capture_nouraajd_quest_log",
+        }
+        constants = {"NOURAAJD_QUEST_LOG_SCREENSHOT_CHECKPOINTS", "NOURAAJD_QUEST_DESCRIPTIONS"}
+        selected = [
+            copy.deepcopy(node)
+            for node in tree.body
+            if (isinstance(node, ast.FunctionDef) and node.name in names)
+            or (
+                isinstance(node, ast.Assign)
+                and any(isinstance(target, ast.Name) and target.id in constants for target in node.targets)
+            )
+        ]
+        self.assertEqual(names, {node.name for node in selected if isinstance(node, ast.FunctionDef)})
+        events = []
+        state = {"tab": "showActive", "rendered": None, "closed": False}
+        primary = RuntimeError("native screenshot readback failed")
+        namespace = {}
+
+        def currentView():
+            status, quest_ids = ("Active", active) if state["tab"] == "showActive" else ("Completed", completed)
+            rows = tuple(namespace["NOURAAJD_QUEST_DESCRIPTIONS"][quest_id] for quest_id in quest_ids)
+            text = "\n".join(namespace["nouraajd_quest_status_line"](status, quest_id) for quest_id in quest_ids)
+            return state["tab"], rows, text
+
+        class Panel:
+            def getText(self, gui):
+                events.append(("text", state["tab"]))
+                return "missing quest" if fault == "quest" else currentView()[2]
+
+            def close(self):
+                events.append(("close",))
+                state["closed"] = True
+
+        panel = Panel()
+        buttons = [
+            types.SimpleNamespace(getStringProperty=lambda key, name=name: name)
+            for name in ("showActive", "showCompleted")
+        ]
+
+        def activate(button, gui):
+            state["tab"] = button.getStringProperty("click")
+            events.append(("select", state["tab"]))
+
+        def openPanel(name):
+            self.assertEqual("questPanel", name)
+            events.append(("reopen",))
+            return panel
+
+        def openQuestPanel(test, owner):
+            events.append(("open",))
+            return panel
+
+        def pump(frames):
+            events.append(("frame", frames))
+            if not state["closed"]:
+                state["rendered"] = currentView()
+
+        def capture(test, owner, name):
+            events.append(("capture", name))
+            self.assertEqual(currentView(), state["rendered"], "quest screenshot read stale renderer pixels")
+            if fault == "capture":
+                raise primary
+
+        owner = types.SimpleNamespace(
+            getGui=lambda: object(), getGuiHandler=lambda: types.SimpleNamespace(openPanel=openPanel)
+        )
+        namespace.update(
+            find_descendants_by_type=lambda root, kind: buttons,
+            activate_widget=activate,
+            open_quest_log_panel=openQuestPanel,
+            pump_event_loop=pump,
+            assert_screenshot_has_rendered_pixels=capture,
+        )
+        exec(compile(ast.Module(body=selected, type_ignores=[]), "actual_quest_log_capture_helpers", "exec"), namespace)
+        name = "xvfb_nouraajd_quest_log_all_quests_completed" if captured else "uncaptured_quest_checkpoint"
+        return types.SimpleNamespace(
+            invoke=lambda: namespace["capture_nouraajd_quest_log"](
+                self, owner, name, active=active, completed=completed
+            ),
+            events=events,
+            state=state,
+            primary=primary,
+            name=name,
+            expected=currentView,
+            statusLine=namespace["nouraajd_quest_status_line"],
+        )
+
+    def testQuestLogCaptureRendersCurrentTabBeforeReadingPixels(self):
+        for active, completed, final_tab, reads in (
+            (("mainQuest",), (), "showActive", 1),
+            (("mainQuest",), ("rolfQuest",), "showActive", 2),
+            ((), ("mainQuest", "rolfQuest"), "showCompleted", 1),
+        ):
+            with self.subTest(active=active, completed=completed):
+                fixture = self.questLogCaptureFixture(active=active, completed=completed)
+                text = fixture.invoke()
+                self.assertEqual(fixture.expected(), fixture.state["rendered"])
+                self.assertEqual(final_tab, fixture.state["rendered"][0])
+                self.assertEqual(reads, sum(event[0] == "text" for event in fixture.events))
+                self.assertEqual(1, fixture.events.count(("frame", 1)))
+                capture_index = fixture.events.index(("capture", fixture.name))
+                self.assertEqual(("frame", 1), fixture.events[capture_index - 1])
+                self.assertEqual([("reopen",), ("close",), ("frame", 2)], fixture.events[capture_index + 1 :])
+                self.assertTrue(fixture.state["closed"])
+                for quest_id in active:
+                    self.assertIn(fixture.statusLine("Active", quest_id), text)
+                for quest_id in completed:
+                    self.assertIn(fixture.statusLine("Completed", quest_id), text)
+
+    def testQuestLogUncapturedCheckpointKeepsExistingFrameCount(self):
+        fixture = self.questLogCaptureFixture(active=("mainQuest",), captured=False)
+        fixture.invoke()
+        self.assertEqual([("frame", 2)], [event for event in fixture.events if event[0] == "frame"])
+        self.assertFalse(any(event[0] == "capture" for event in fixture.events))
+        self.assertTrue(fixture.state["closed"])
+
+    def testQuestLogCaptureKeepsQuestAssertionsBeforeFramesAndPixels(self):
+        fixture = self.questLogCaptureFixture(active=("mainQuest",), fault="quest")
+        with self.assertRaises(AssertionError):
+            fixture.invoke()
+        self.assertFalse(any(event[0] in ("frame", "capture", "close") for event in fixture.events))
+
+    def testQuestLogCapturePreservesReadbackError(self):
+        fixture = self.questLogCaptureFixture(active=("mainQuest",), fault="capture")
+        with self.assertRaises(RuntimeError) as caught:
+            fixture.invoke()
+        self.assertIs(fixture.primary, caught.exception)
+        self.assertEqual(("frame", 1), fixture.events[-2])
+        self.assertEqual(("capture", fixture.name), fixture.events[-1])
+        self.assertFalse(fixture.state["closed"])
+
 
 def loadCrafting():
     fake_game = types.ModuleType("game")
