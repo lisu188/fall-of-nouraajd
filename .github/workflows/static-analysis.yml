@@ -72,9 +72,11 @@ jobs:
         run: |
           mkdir -p analysis-reports
           ruff check . --output-format json > analysis-reports/ruff.json || test "$?" -eq 1
+          test -s analysis-reports/ruff.json
       - name: Bandit security report
         run: |
           bandit -r -q -ll -ii -f json -o analysis-reports/bandit.json mcp.py play.py scripts res || test "$?" -eq 1
+          test -s analysis-reports/bandit.json
       - name: Validate custom Semgrep rules
         run: semgrep scan --validate --config .semgrep/engine-security.yml
       - name: Custom Semgrep security report
@@ -85,6 +87,7 @@ jobs:
           fi
           semgrep scan --error --config .semgrep/engine-security.yml --json \
             --output analysis-reports/semgrep.json "${targets[@]}" || test "$?" -eq 1
+          test -s analysis-reports/semgrep.json
       - name: Upload Python and security reports
         if: always()
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
