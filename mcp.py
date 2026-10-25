@@ -3050,6 +3050,13 @@ class EngineHttpServer(ThreadingHTTPServer):
 
 
 class EngineHttpRequestHandler(BaseHTTPRequestHandler):
+    def _send_safe_header(self, keyword: str, value: str) -> None:
+        # HTTPMessage can preserve obsolete folded request values. Never echo
+        # line breaks into response headers, including CORS and MCP metadata.
+        if "\r" in keyword or "\n" in keyword or "\r" in value or "\n" in value:
+            return
+        self.send_header(keyword, value)
+
     server_version = f"{SERVER_NAME}/{SERVER_VERSION}"
     protocol_version = "HTTP/1.1"
 
@@ -3144,8 +3151,8 @@ class EngineHttpRequestHandler(BaseHTTPRequestHandler):
         self.send_header("Content-Type", "text/event-stream")
         self.send_header("Cache-Control", "no-cache")
         self.send_header("Connection", "keep-alive")
-        self.send_header("MCP-Session-Id", session_id)
-        self.send_header("MCP-Protocol-Version", protocol_version)
+        self._send_safe_header("MCP-Session-Id", session_id)
+        self._send_safe_header("MCP-Protocol-Version", protocol_version)
         self.end_headers()
 
         try:
@@ -3316,9 +3323,9 @@ class EngineHttpRequestHandler(BaseHTTPRequestHandler):
         if allow:
             self.send_header("Allow", allow)
         if session_id:
-            self.send_header("MCP-Session-Id", session_id)
+            self._send_safe_header("MCP-Session-Id", session_id)
         if protocol_version:
-            self.send_header("MCP-Protocol-Version", protocol_version)
+            self._send_safe_header("MCP-Protocol-Version", protocol_version)
         if status not in {HTTPStatus.NO_CONTENT, HTTPStatus.NOT_MODIFIED}:
             self.send_header("Content-Length", "0")
         self.end_headers()
@@ -3339,9 +3346,9 @@ class EngineHttpRequestHandler(BaseHTTPRequestHandler):
         self.send_header("Content-Type", "application/json")
         self.send_header("Content-Length", str(len(body)))
         if session_id:
-            self.send_header("MCP-Session-Id", session_id)
+            self._send_safe_header("MCP-Session-Id", session_id)
         if protocol_version:
-            self.send_header("MCP-Protocol-Version", protocol_version)
+            self._send_safe_header("MCP-Protocol-Version", protocol_version)
         self.end_headers()
         self.wfile.write(body)
 
@@ -3385,7 +3392,7 @@ class EngineHttpRequestHandler(BaseHTTPRequestHandler):
         self.wfile.flush()
 
     def _add_default_headers(self) -> None:
-        self.send_header(
+        self._send_safe_header(
             "Access-Control-Allow-Origin", self.headers.get("Origin", "*") if self.headers.get("Origin") else "*"
         )
         self.send_header(
