@@ -1260,19 +1260,73 @@ class ProgressTextTestResult(unittest.TextTestResult):
         unittest.TestResult.addSuccess(self, test)
         self._recordOutcome(test, "ok")
 
+    def _writeFailureDetails(self, test, status, formatted, exception_type):
+        prefix = "[test detail] "
+        case_name = self._test_name(test)[:256].replace("\r", "\\r").replace("\n", "\\n")
+        exception_name = exception_type[:64].replace("\r", "\\r").replace("\n", "\\n")
+        label = f"{status} {case_name} ({exception_name})".encode("utf-8", errors="replace").decode("utf-8")
+        header = f"{prefix}{label}\n"
+        trace_tail = formatted[-8192:].encode("utf-8", errors="replace").decode("utf-8")
+
+        def byteCount(value):
+            # Reserve CRLF expansion on Windows text streams.
+            return len(value.encode("utf-8")) + value.count("\n")
+
+        def boundedTail(render, limit):
+            low, high = 0, len(trace_tail)
+            while low < high:
+                middle = (low + high) // 2
+                if byteCount(render(trace_tail[middle:])) > limit:
+                    low = middle + 1
+                else:
+                    high = middle
+            return render(trace_tail[low:])
+
+        def plain(tail):
+            return header + "".join(f"{prefix}{line}\n" for line in tail.splitlines())
+
+        def escape(value, property_value=False):
+            value = value.replace("%", "%25").replace("\r", "%0D").replace("\n", "%0A")
+            if property_value:
+                value = value.replace(",", "%2C").replace(":", "%3A")
+            return value
+
+        github_actions = os.environ.get("GITHUB_ACTIONS") == "true"
+        payload = boundedTail(plain, 4096 if github_actions else 8192)
+        if github_actions:
+            title = label.encode("utf-8", errors="replace")[:256].decode("utf-8", errors="ignore")
+            command = f"::error title={escape(title, property_value=True)}::"
+            remaining = 8192 - byteCount(payload)
+            payload += boundedTail(lambda tail: command + escape(tail) + "\n", remaining)
+        self.stream.write(payload)
+        self.stream.flush()
+
     def addFailure(self, test, err):
         unittest.TestResult.addFailure(self, test, err)
         self._recordOutcome(test, "FAIL")
+        try:
+            self._writeFailureDetails(test, "FAIL", self.failures[-1][1], err[0].__name__)
+        except BaseException:
+            pass
 
     def addError(self, test, err):
         unittest.TestResult.addError(self, test, err)
         self._recordOutcome(test, "ERROR")
+        try:
+            self._writeFailureDetails(test, "ERROR", self.errors[-1][1], err[0].__name__)
+        except BaseException:
+            pass
 
     def addSubTest(self, test, subtest, err):
         unittest.TestResult.addSubTest(self, test, subtest, err)
         if err is not None:
             status = "FAIL" if issubclass(err[0], test.failureException) else "ERROR"
             self._recordOutcome(test, status)
+            try:
+                entries = self.failures if status == "FAIL" else self.errors
+                self._writeFailureDetails(subtest, status, entries[-1][1], err[0].__name__)
+            except BaseException:
+                pass
 
     def addSkip(self, test, reason):
         unittest.TestResult.addSkip(self, test, reason)
@@ -26053,6 +26107,257 @@ class QuestStateHelperTest(unittest.TestCase):
 
 class TestRunnerSuiteTest(unittest.TestCase):
 
+    def progressNumericLines(self, stream):
+        return [line for line in stream.getvalue().splitlines() if re.match(r"^\[test \d+/(?:\d+|\?) ", line)]
+
+    def progressDetailsFixture(self, formatted=None):
+        from unittest.mock import patch
+
+        stream = io.StringIO()
+        result = ProgressTextTestResult(unittest.runner._WritelnDecorator(stream), True, 2)
+        result.total_tests = 1
+        case = unittest.FunctionTestCase(lambda: None)
+        result.startTest(case)
+        stream.seek(0)
+        stream.truncate()
+        formatter = (
+            patch.object(result, "_exc_info_to_string", return_value=formatted)
+            if formatted is not None
+            else patch.object(result, "_exc_info_to_string", wraps=result._exc_info_to_string)
+        )
+        return stream, result, case, formatter
+
+    def testProgressDetailsReuseFreshStoredErrorAndFailureBeforeCleanup(self):
+        from unittest.mock import patch
+
+        for outcome, exception in (("addError", ValueError), ("addFailure", AssertionError)):
+            with self.subTest(outcome=outcome), patch.dict(os.environ, {"GITHUB_ACTIONS": "false"}):
+                stream, result, case, formatter = self.progressDetailsFixture()
+                with formatter as formatted:
+                    for index in range(2):
+                        try:
+                            raise exception(f"owned cached detail {index}")
+                        except exception:
+                            getattr(result, outcome)(case, sys.exc_info())
+                        self.assertIn(f"owned cached detail {index}", stream.getvalue())
+                        self.assertIn("[test detail]", stream.getvalue())
+                        self.assertIn(exception.__name__, stream.getvalue())
+                    entries = result.errors if outcome == "addError" else result.failures
+                    self.assertEqual(formatted.call_count, 2)
+                    self.assertEqual([row[0] for row in entries], [case, case])
+                    self.assertIn("owned cached detail 0", entries[0][1])
+                    self.assertIn("owned cached detail 1", entries[1][1])
+                    self.assertEqual(result.testsRun, 1)
+                    self.assertFalse(result.wasSuccessful())
+                    self.assertEqual(self.progressNumericLines(stream), [])
+                result.stopTest(case)
+                self.assertEqual(len(self.progressNumericLines(stream)), 1)
+                self.assertEqual(result._testOutcomes, {})
+                self.assertEqual(result._test_start_times, {})
+
+    def testProgressDetailsSubtestsAreImmediateAndSuccessfulSubtestsSilent(self):
+        from unittest.mock import patch
+
+        observed = []
+        outer = self
+        stream = io.StringIO()
+        result = ProgressTextTestResult(unittest.runner._WritelnDecorator(stream), True, 2)
+        result.total_tests = 1
+
+        class InnerCase(unittest.TestCase):
+            def runTest(inner):
+                def cleanup():
+                    text = stream.getvalue()
+                    outer.assertIn("subtest cached failure", text)
+                    outer.assertIn("subtest cached error", text)
+                    outer.assertEqual(len(outer.progressNumericLines(stream)), 1)
+                    observed.append("cleanup")
+
+                inner.addCleanup(cleanup)
+                with inner.subTest(kind="success"):
+                    pass
+                outer.assertNotIn("[test detail]", stream.getvalue())
+                with inner.subTest(kind="failure"):
+                    inner.fail("subtest cached failure")
+                outer.assertIn("subtest cached failure", stream.getvalue())
+                with inner.subTest(kind="error"):
+                    raise ValueError("subtest cached error")
+
+        with patch.dict(os.environ, {"GITHUB_ACTIONS": "false"}):
+            InnerCase().run(result)
+        self.assertEqual(observed, ["cleanup"])
+        self.assertEqual((result.testsRun, len(result.failures), len(result.errors)), (1, 1, 1))
+        self.assertIn("subtest cached failure", result.failures[0][1])
+        self.assertIn("subtest cached error", result.errors[0][1])
+        self.assertEqual(len(self.progressNumericLines(stream)), 2)
+        self.assertIn(" ERROR ", self.progressNumericLines(stream)[1])
+        self.assertEqual(result._testOutcomes, {})
+        self.assertEqual(result._test_start_times, {})
+
+    def testProgressDetailsBoundUtf8AndPreventUntrustedWorkflowCommands(self):
+        from unittest.mock import patch
+
+        cached = (
+            "discarded-prefix"
+            + "\n::error title=untrusted::data%\r\n"
+            + ("界\n" * 10000)
+            + "tail%\r\n::error title=evil::END"
+        )
+        for marker in (None, "false", "1", "true"):
+            with self.subTest(marker=marker), patch.dict(os.environ, {}, clear=True):
+                if marker is not None:
+                    os.environ["GITHUB_ACTIONS"] = marker
+                stream, result, case, formatter = self.progressDetailsFixture(cached)
+                case.id = lambda: "case%,:with\r\n::error title=bad::name界"
+                with formatter as formatted:
+                    try:
+                        raise RuntimeError("must use cached formatting")
+                    except RuntimeError:
+                        result.addError(case, sys.exc_info())
+                output = stream.getvalue()
+                self.assertGreater(len(output), 0)
+                self.assertLessEqual(len(output.encode("utf-8")), 8192)
+                self.assertEqual(formatted.call_count, 1)
+                self.assertEqual(result.errors, [(case, cached)])
+                self.assertIn("END", output)
+                self.assertNotIn("discarded-prefix", output)
+                commands = [line for line in output.splitlines() if line.startswith("::")]
+                ordinary = [line for line in output.splitlines() if not line.startswith("::")]
+                self.assertTrue(ordinary)
+                self.assertTrue(all(line.startswith("[test detail] ") for line in ordinary))
+                self.assertNotIn("\r", output)
+                self.assertEqual(len(commands), 1 if marker == "true" else 0)
+                if marker == "true":
+                    self.assertTrue(commands[0].startswith("::error title="))
+                    self.assertIn("%25%2C%3A", commands[0])
+                    self.assertIn("%0D%0A", commands[0])
+                    self.assertIn("%25%0D%0A::error", commands[0])
+                result.stopTest(case)
+
+    def testProgressDetailsReportingFailureCannotMaskStoredOutcomes(self):
+        from unittest.mock import patch
+
+        for outcome, exception in (("addError", ValueError), ("addFailure", AssertionError)):
+            for failure in (RuntimeError("writer failed"), KeyboardInterrupt()):
+                with self.subTest(outcome=outcome, reporter=type(failure).__name__):
+                    stream, result, case, _ = self.progressDetailsFixture()
+                    escaped = None
+                    with patch.object(result, "_writeFailureDetails", side_effect=failure, create=True) as report:
+                        try:
+                            try:
+                                raise exception("original stored outcome")
+                            except exception:
+                                getattr(result, outcome)(case, sys.exc_info())
+                        except BaseException as reporting_error:
+                            escaped = reporting_error
+                    self.assertIsNone(escaped)
+                    self.assertEqual(report.call_count, 1)
+                    entries = result.errors if outcome == "addError" else result.failures
+                    self.assertEqual(len(entries), 1)
+                    self.assertIn("original stored outcome", entries[0][1])
+                    self.assertFalse(result.wasSuccessful())
+                    result.stopTest(case)
+                    self.assertEqual(len(self.progressNumericLines(stream)), 1)
+
+    def testProgressDetailsBoundActualUtf8StreamWithSurrogateEscaping(self):
+        from unittest.mock import patch
+
+        cached = "\ud800" * 20000 + "END"
+        for marker, newline in (("false", "\n"), ("true", "\n"), ("false", "\r\n"), ("true", "\r\n")):
+            with self.subTest(marker=marker, newline=newline), patch.dict(os.environ, {"GITHUB_ACTIONS": marker}):
+                buffer = io.BytesIO()
+                stream = io.TextIOWrapper(
+                    buffer, encoding="utf-8", errors="backslashreplace", newline=newline, write_through=True
+                )
+                result = ProgressTextTestResult(unittest.runner._WritelnDecorator(stream), True, 2)
+                case = unittest.FunctionTestCase(lambda: None)
+                result.startTest(case)
+                buffer.seek(0)
+                buffer.truncate()
+                case.id = lambda: "case\ud800"
+                with patch.object(result, "_exc_info_to_string", return_value=cached) as formatter:
+                    try:
+                        raise ValueError("original surrogate trace")
+                    except ValueError:
+                        result.addError(case, sys.exc_info())
+                raw = buffer.getvalue()
+                self.assertGreater(len(raw), 0)
+                self.assertLessEqual(len(raw), 8192)
+                self.assertIn("END", raw.decode("utf-8"))
+                self.assertNotIn(b"\\ud800", raw)
+                self.assertEqual(result.errors, [(case, cached)])
+                self.assertEqual(formatter.call_count, 1)
+                result.stopTest(case)
+                stream.close()
+
+    def testProgressDetailsSubtestReportingFailureCannotMaskStoredOutcomes(self):
+        from unittest.mock import patch
+
+        stream = io.StringIO()
+        result = ProgressTextTestResult(unittest.runner._WritelnDecorator(stream), True, 2)
+        result.total_tests = 1
+
+        class InnerCase(unittest.TestCase):
+            def runTest(inner):
+                with inner.subTest(kind="failure"):
+                    inner.fail("original subtest failure")
+                with inner.subTest(kind="error"):
+                    raise ValueError("original subtest error")
+
+        escaped = None
+        with patch.object(result, "_writeFailureDetails", side_effect=KeyboardInterrupt(), create=True) as report:
+            try:
+                InnerCase().run(result)
+            except BaseException as reporting_error:
+                escaped = reporting_error
+        self.assertIsNone(escaped)
+        self.assertEqual(report.call_count, 2)
+        self.assertEqual((result.testsRun, len(result.failures), len(result.errors)), (1, 1, 1))
+        self.assertIn("original subtest failure", result.failures[0][1])
+        self.assertIn("original subtest error", result.errors[0][1])
+        self.assertEqual(len(self.progressNumericLines(stream)), 2)
+        self.assertIn(" ERROR ", self.progressNumericLines(stream)[1])
+
+    def testProgressDetailsWriteAndFlushFailuresRetainOriginalFailure(self):
+        from unittest.mock import patch
+
+        for operation in ("write", "flush"):
+            with self.subTest(operation=operation), patch.dict(os.environ, {"GITHUB_ACTIONS": "false"}):
+                stream, result, case, _ = self.progressDetailsFixture()
+                with patch.object(result.stream, operation, side_effect=OSError("output failed")) as writer:
+                    try:
+                        raise AssertionError("original despite output failure")
+                    except AssertionError:
+                        result.addFailure(case, sys.exc_info())
+                self.assertEqual(writer.call_count, 1)
+                self.assertEqual((len(result.failures), len(result.errors)), (1, 0))
+                self.assertIn("original despite output failure", result.failures[0][1])
+                result.stopTest(case)
+                self.assertEqual(len(self.progressNumericLines(stream)), 1)
+
+    def testProgressDetailsSuccessfulSkippedAndExpectedOutcomesAreSilent(self):
+        from unittest.mock import patch
+
+        for outcome in ("success", "skip", "expected-failure", "unexpected-success"):
+            with self.subTest(outcome=outcome), patch.dict(os.environ, {"GITHUB_ACTIONS": "true"}):
+                stream, result, case, _ = self.progressDetailsFixture()
+                if outcome == "success":
+                    result.addSuccess(case)
+                elif outcome == "skip":
+                    result.addSkip(case, "ordinary skip")
+                elif outcome == "unexpected-success":
+                    result.addUnexpectedSuccess(case)
+                else:
+                    try:
+                        raise AssertionError("expected failure")
+                    except AssertionError:
+                        result.addExpectedFailure(case, sys.exc_info())
+                self.assertEqual(stream.getvalue(), "")
+                result.stopTest(case)
+                self.assertEqual(len(self.progressNumericLines(stream)), 1)
+                self.assertNotIn("[test detail]", stream.getvalue())
+                self.assertNotIn("::error", stream.getvalue())
+
     def xvfbTerminalParentFixture(
         self,
         stderr,
@@ -26474,7 +26779,7 @@ class TestRunnerSuiteTest(unittest.TestCase):
                 stream = io.StringIO()
 
                 def cleanup():
-                    self.assertEqual(1, len(stream.getvalue().splitlines()))
+                    self.assertEqual(1, len(self.progressNumericLines(stream)))
                     clock[0] = 25.0
 
                 class Case(unittest.TestCase):
@@ -26514,7 +26819,7 @@ class TestRunnerSuiteTest(unittest.TestCase):
                         f"[test 1/1 start] {result._test_name(case)}",
                         f"[test 1/1 ERROR 15.000s] {result._test_name(case)}",
                     ],
-                    stream.getvalue().splitlines(),
+                    self.progressNumericLines(stream),
                 )
                 self.assertEqual({}, result._test_start_times)
 
@@ -26556,7 +26861,7 @@ class TestRunnerSuiteTest(unittest.TestCase):
                 f"[test 1/1 start] {result._test_name(case)}",
                 f"[test 1/1 ok 7.000s] {result._test_name(case)}",
             ],
-            stream.getvalue().splitlines(),
+            self.progressNumericLines(stream),
         )
         self.assertEqual({}, result._test_start_times)
 
@@ -26598,7 +26903,7 @@ class TestRunnerSuiteTest(unittest.TestCase):
                 f"[test 1/1 start] {result._test_name(case)}",
                 f"[test 1/1 ERROR 10.000s] {result._test_name(case)}",
             ],
-            stream.getvalue().splitlines(),
+            self.progressNumericLines(stream),
         )
 
     def testProgressPreservesSubtestFailfastAndIncrementalWorkerTimings(self):
@@ -26651,7 +26956,7 @@ class TestRunnerSuiteTest(unittest.TestCase):
                 f"[test 2/3 start] {result._test_name(case)}",
                 f"[test 2/3 FAIL 6.000s] {result._test_name(case)}",
             ],
-            stream.getvalue().splitlines(),
+            self.progressNumericLines(stream),
         )
 
     def testProgressPreservesOuterOutcomeMarkersAndCounts(self):
@@ -26708,7 +27013,7 @@ class TestRunnerSuiteTest(unittest.TestCase):
                         f"[test 1/1 start] {result._test_name(case)}",
                         f"[test 1/1 {status} 8.000s] {result._test_name(case)}{detail}",
                     ],
-                    stream.getvalue().splitlines(),
+                    self.progressNumericLines(stream),
                 )
 
     def testProgressDoesNotReportInterruptedCaseAsSuccess(self):
@@ -26761,7 +27066,7 @@ class TestRunnerSuiteTest(unittest.TestCase):
                 self.assertEqual({}, result.test_durations)
                 self.assertEqual({}, result._test_start_times)
                 self.assertEqual({}, result._testOutcomes)
-                self.assertEqual([f"[test 1/1 start] {result._test_name(case)}"], stream.getvalue().splitlines())
+                self.assertEqual([f"[test 1/1 start] {result._test_name(case)}"], self.progressNumericLines(stream))
                 self.assertEqual(1, result.testsRun)
                 self.assertEqual(int(prior == "FAIL"), len(result.failures))
                 self.assertEqual(int(prior == "ERROR"), len(result.errors))
@@ -26813,7 +27118,7 @@ class TestRunnerSuiteTest(unittest.TestCase):
                         f"[test 1/1 start] {result._test_name(case)}",
                         f"[test 1/1 {status} 9.000s] {result._test_name(case)}",
                     ],
-                    stream.getvalue().splitlines(),
+                    self.progressNumericLines(stream),
                 )
 
     def testProgressCompletesCasesThatHandleInheritedInterrupts(self):
@@ -26873,7 +27178,7 @@ class TestRunnerSuiteTest(unittest.TestCase):
                         f"[test 1/1 start] {result._test_name(case)}",
                         f"[test 1/1 ok 9.000s] {result._test_name(case)}",
                     ],
-                    stream.getvalue().splitlines(),
+                    self.progressNumericLines(stream),
                 )
 
     def testProgressCompletesRepeatedCaseInsidePriorInterruptHandler(self):
@@ -26934,7 +27239,7 @@ class TestRunnerSuiteTest(unittest.TestCase):
                         f"[test 2/2 start] {result._test_name(case)}",
                         f"[test 2/2 ok 6.000s] {result._test_name(case)}",
                     ],
-                    stream.getvalue().splitlines(),
+                    self.progressNumericLines(stream),
                 )
 
     def testMcpWalkthroughLogsCreateNestedWorkerDirectories(self):
