@@ -12,15 +12,18 @@ from typing import Sequence
 
 SOURCE_ROOTS = frozenset({"src", "native_plugins"})
 SOURCE_EXTENSIONS = frozenset({".cc", ".cpp", ".cxx"})
+HEADER_EXTENSIONS = frozenset({".h", ".hh", ".hpp", ".hxx", ".inl", ".ipp", ".tpp"})
 
 
-def project_sources(database: Path, repository: Path, changed: set[str] | None = None) -> list[Path]:
+def projectSources(database: Path, repository: Path, changed: set[str] | None = None) -> list[Path]:
     rows: object = json.loads(database.read_text(encoding="utf-8"))
     if not isinstance(rows, list):
         raise ValueError("compile_commands.json must contain an array")
 
     sources: set[Path] = set()
     root = repository.resolve()
+    if changed is not None and any(Path(path).suffix.lower() in HEADER_EXTENSIONS for path in changed):
+        changed = None
     for row in rows:
         if not isinstance(row, dict):
             continue
@@ -41,7 +44,7 @@ def project_sources(database: Path, repository: Path, changed: set[str] | None =
     return sorted(sources)
 
 
-def changed_sources(repository: Path, base: str) -> set[str]:
+def changedSources(repository: Path, base: str) -> set[str]:
     result = subprocess.run(
         ["git", "diff", "--name-only", "--diff-filter=ACMR", f"{base}...HEAD", "--", "src", "native_plugins"],
         cwd=repository,
@@ -86,8 +89,8 @@ def main(argv: Sequence[str] | None = None) -> int:
     repository = args.repo_root.resolve()
     build_dir = args.build_dir.resolve()
     database = build_dir / "compile_commands.json"
-    changed = changed_sources(repository, args.changed_base) if args.changed_base else None
-    sources = project_sources(database, repository, changed)
+    changed = changedSources(repository, args.changed_base) if args.changed_base else None
+    sources = projectSources(database, repository, changed)
     print(f"clang-tidy selected {len(sources)} first-party translation units", flush=True)
     if not sources:
         return 0
