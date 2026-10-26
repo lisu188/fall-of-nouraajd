@@ -48,6 +48,7 @@ ADDITIONAL_CASES = {
         "testOwnedDefeatFirstMetadataCallbackStopsBeforeSecondMetadataAndSetter",
         "testOwnedDefeatCodecBoundaryPreservesOriginalFailureAndStopsContinuation",
         "testOwnedDefeatGraphActorBindingPreservesPrimaryBeforeRootAndProperties",
+        "testScopedEquipmentTailStopsAfterCallbackInvalidation",
         "testQueuedSceneTransitionWaitsForOwnedDefeatAndControllerCleanup",
         "testQueuedSceneCombatDeferralReleasesAfterThrowAndKeepsDirectReplacementCancellation",
         "testOwnedDefeatPresentationFollowsSuccessfulControllerCleanup",
@@ -139,7 +140,6 @@ class NativeTestProfileSourceTest(unittest.TestCase):
         self.assertIn(
             "virtual void setGame(std::shared_ptr<CGame> game);", (ROOT / "src/object/CGameObject.h").read_text()
         )
-
 
     def testBindingModuleRegistersTypedMapConversionMetadataWithoutBuilders(self):
         source = (ROOT / "src/core/CModule.cpp").read_text(encoding="utf-8")
