@@ -36,6 +36,7 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #include "core/CProvider.h"
 #include "core/CPythonOverrides.h"
 #include "core/CSaveFormat.h"
+#include "core/CSlotConfig.h"
 #include "core/CStats.h"
 #include "core/CTypes.h"
 #include "core/CWrapper.h"
@@ -1598,6 +1599,127 @@ class DefeatContinuationCreature : public CCreature {
     }
 };
 
+class EquipmentTailItem : public CItem {
+  public:
+    std::function<void()> equipCallback;
+    std::function<void()> unequipCallback;
+    void onEquip(std::shared_ptr<CGameEvent>) override {
+        if (equipCallback)
+            equipCallback();
+    }
+    void onUnequip(std::shared_ptr<CGameEvent>) override {
+        if (unequipCallback)
+            unequipCallback();
+    }
+};
+
+void testScopedEquipmentTailStopsAfterCallbackInvalidation() {
+    const auto previousRng = vstd::rng();
+    for (const bool unequip : {false, true}) {
+        for (const int publication : {0, 1, 2, 3}) {
+            auto game = makeWindowlessFightGame();
+            auto context = game->getContext();
+            auto map = game->getMap();
+            auto winner = add_test_creature(game, "unitEquipmentTailWinner");
+            auto loser = add_test_creature(game, "unitEquipmentTailLoser");
+            loser->setLevel(0);
+            loser->setSw(1);
+            loser->setHp(0);
+            auto objects = game->getObjectHandler();
+            auto slots = std::make_shared<CSlotConfig>();
+            auto slot = std::make_shared<CSlot>();
+            slot->setTypes({"CItem"});
+            slots->setConfiguration({{"0", slot}});
+            objects->registerType("UnitEquipmentTailSlots", [slots] { return slots; });
+            objects->registerConfig("slotConfiguration",
+                                    std::make_shared<json>(json{{"class", "UnitEquipmentTailSlots"}}));
+            auto incoming = std::make_shared<EquipmentTailItem>();
+            incoming->setGame(game);
+            incoming->setName("unitEquipmentTailIncoming");
+            winner->addItem(incoming);
+            auto previous = std::make_shared<EquipmentTailItem>();
+            previous->setGame(game);
+            previous->setName("unitEquipmentTailPrevious");
+            if (unequip) {
+                winner->addItem(previous);
+                winner->equipItem("0", previous);
+            }
+            bool armed = false;
+            bool used = false;
+            int factories = 0;
+            int callbacks = 0;
+            int experienceAtCallback = -1;
+            const auto invalidate = [&] {
+                ++callbacks;
+                experienceAtCallback = winner->getExp();
+                if (publication == 1 || publication == 3) {
+                    auto replacement = std::make_shared<CMap>();
+                    replacement->setGame(game);
+                    game->setMap(replacement);
+                    game->setMap(map);
+                } else if (publication == 2) {
+                    auto replacement = std::make_shared<CMap>();
+                    replacement->setGame(game);
+                    game->setMap(replacement);
+                } else {
+                    game->setMap(map);
+                }
+                if (publication == 3)
+                    throw std::runtime_error("unit equipment tail primary failure");
+            };
+            objects->registerType("AUnitEquipmentTailScopeRoot", [&] {
+                auto root = std::make_shared<CItem>();
+                root->setPower(1);
+                if (armed && !used) {
+                    used = true;
+                    ++factories;
+                    if (unequip)
+                        previous->unequipCallback = invalidate;
+                    else
+                        incoming->equipCallback = invalidate;
+                    winner->equipItem("0", incoming);
+                }
+                return root;
+            });
+            objects->registerConfig("AUnitEquipmentTailScopeRoot",
+                                    std::make_shared<json>(json{{"class", "AUnitEquipmentTailScopeRoot"}}));
+            auto rng = game->getRngHandler();
+            expect_true(rng && callbacks == 0 && !used, "warm RNG before entering the measured private scope");
+            armed = true;
+            auto task = context->spawnTask(CFightHandler::defeatedCreatureAsync(winner, loser));
+            expect_true(pumpHandlerUntil([&] { return task.finished(); }), "the finite equipment task must settle");
+            bool cancelled = false;
+            bool primary = false;
+            if (task.finished()) {
+                try {
+                    task.get();
+                } catch (const vstd::task_cancelled &) {
+                    cancelled = true;
+                } catch (const std::runtime_error &error) {
+                    primary = std::string(error.what()) == "unit equipment tail primary failure";
+                }
+            }
+            armed = false;
+            expect_true(factories == 1 && callbacks == 1, "each control must execute one actual factory and hook");
+            if (publication == 0) {
+                expect_true(!cancelled && !primary && winner->getItemAtSlot("0") == incoming &&
+                                !winner->getItems().contains(incoming) &&
+                                (!unequip || winner->getItems().contains(previous)) &&
+                                !map->getObjectByName(loser->getName()) && map->tryBeginSaveSnapshot().has_value(),
+                            "same-pointer publication must preserve ordinary equipment and defeat completion");
+            } else {
+                expect_true(cancelled == (publication != 3) && primary == (publication == 3) &&
+                                winner->getItems().contains(incoming) &&
+                                winner->getItemAtSlot("0") == (unequip ? previous : nullptr) &&
+                                !winner->getItems().contains(previous) && winner->getExp() == experienceAtCallback &&
+                                map->getObjectByName(loser->getName()) == loser && !map->tryBeginSaveSnapshot(),
+                            "stale equipment callbacks must stop before bag/slot writes and later defeat effects");
+            }
+            context->shutdown();
+        }
+    }
+    vstd::rng() = previousRng;
+}
 void testOwnedDefeatStopsAfterCallbackPublicationBeforeFurtherRewards() {
     for (const bool atGathering : {false, true}) {
         for (const int publication : {0, 1, 2, 3}) {
@@ -7619,6 +7741,8 @@ int main() {
                             testOwnedDefeatCodecBoundaryPreservesOriginalFailureAndStopsContinuation);
     nativeTestProfile().run("testOwnedDefeatGraphActorBindingPreservesPrimaryBeforeRootAndProperties",
                             testOwnedDefeatGraphActorBindingPreservesPrimaryBeforeRootAndProperties);
+    nativeTestProfile().run("testScopedEquipmentTailStopsAfterCallbackInvalidation",
+                            testScopedEquipmentTailStopsAfterCallbackInvalidation);
     nativeTestProfile().run("testQueuedSceneTransitionWaitsForOwnedDefeatAndControllerCleanup",
                             testQueuedSceneTransitionWaitsForOwnedDefeatAndControllerCleanup);
     nativeTestProfile().run("testQueuedSceneCombatDeferralReleasesAfterThrowAndKeepsDirectReplacementCancellation",

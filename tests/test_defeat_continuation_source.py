@@ -64,6 +64,51 @@ class DefeatContinuationSourceTest(unittest.TestCase):
         self.assertIn(marker, source)
         return cppBlock(source, marker)
 
+    def testScopedUnequipTailChecksOwnershipBeforeReturningTheOldItem(self):
+        source = (ROOT / "src/object/CCreature.cpp").read_text()
+        body = self.requiredBlock(source, "void CCreature::equipItem(")
+        text = " ".join(body.split())
+        self.assertIn(
+            "CGameEvent::CType::onUnequip, this->ptr<CCreature>())); "
+            "game_detail::requireCurrentDefeatConstruction(); this->addItem(oldItem);",
+            text,
+        )
+
+    def testScopedEquipTailChecksOwnershipBeforeRemovingAndInstallingTheIncomingItem(self):
+        source = (ROOT / "src/object/CCreature.cpp").read_text()
+        body = self.requiredBlock(source, "void CCreature::equipItem(")
+        text = " ".join(body.split())
+        self.assertIn(
+            "CGameEvent::CType::onEquip, this->ptr<CCreature>())); "
+            "game_detail::requireCurrentDefeatConstruction(); removeItem(newItem); equipped[i] = newItem;",
+            text,
+        )
+
+    def testEquipmentTailNativeRegressionAndFixedWorkAreActuallyRegistered(self):
+        name = "testScopedEquipmentTailStopsAfterCallbackInvalidation"
+        self.assertEqual(1, self.native.count("void " + name + "()"))
+        self.assertEqual(1, self.native.count('nativeTestProfile().run("' + name + '",'))
+        self.assertEqual(1, self.profile.count('"' + name + '"'))
+        native = self.requiredBlock(self.native, "void " + name + "()")
+        for required in (
+            "for (const bool unequip : {false, true})",
+            "for (const int publication : {0, 1, 2, 3})",
+            "CFightHandler::defeatedCreatureAsync(winner, loser)",
+            "factories == 1 && callbacks == 1",
+            "winner->getItems().contains(incoming)",
+            "!winner->getItems().contains(previous)",
+            "!map->tryBeginSaveSnapshot()",
+        ):
+            self.assertIn(required, native)
+        performance = (ROOT / "tests/unit/test_engine_hotspot_performance.cpp").read_text()
+        self.assertEqual(1, performance.count("void testEquipmentTailChecksKeepFixedWork()"))
+        self.assertEqual(1, performance.count("    testEquipmentTailChecksKeepFixedWork();"))
+        guard = self.requiredBlock(performance, "void testEquipmentTailChecksKeepFixedWork()")
+        for required in ("constexpr int PHASES = 2", "constexpr int PASSES = 64", "PASSES * 3", "factories == 1"):
+            self.assertIn(required, guard)
+        self.assertIn("fixture.map->getObjectByName(actor->getName()) == actor && factories == 0", guard)
+        self.assertLess(guard.index("factories == 0"), guard.index("for (int phase"))
+
     def testPublicEpochAndActiveContextAreCapturedBeforeWork(self):
         body = self.body
         self.assertIn("initialGame->getMapBindingEpoch()", body)
