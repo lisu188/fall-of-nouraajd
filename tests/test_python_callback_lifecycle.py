@@ -26,7 +26,11 @@ loop = game.event_loop.instance()
 
 
 class PythonCallbackLifecycleTest(unittest.TestCase):
-    def runChild(self, code, *, timeout_seconds=30, return_stderr=False):
+    def runChild(self, code, *, timeout_seconds=30, return_stderr=False, timeout_observation_seconds=0):
+        if type(timeout_observation_seconds) is not int or timeout_observation_seconds not in (0, 30):
+            raise ValueError("Timeout observation is disabled or bounded to 30 seconds")
+        if timeout_observation_seconds and timeout_seconds != 30:
+            raise ValueError("The observed acceptance deadline must remain 30 seconds")
         environment = os.environ.copy()
         with tempfile.TemporaryDirectory(prefix="nouraajd-callback-lifecycle-") as temporary:
             environment.update(
@@ -36,23 +40,99 @@ class PythonCallbackLifecycleTest(unittest.TestCase):
                 LIBGL_ALWAYS_SOFTWARE="1",
                 GAME_UI_PREFERENCES_PATH=str(Path(temporary) / "preferences.json"),
             )
-            try:
-                result = subprocess.run(
-                    [sys.executable, "-c", BOOTSTRAP + textwrap.dedent(code)],
-                    cwd=ROOT,
-                    env=environment,
-                    capture_output=True,
-                    text=True,
-                    timeout=timeout_seconds,
-                )
-            except subprocess.TimeoutExpired as error:
 
-                def tail(value):
-                    if value is None:
-                        return "<unavailable>"
-                    if isinstance(value, bytes):
-                        value = value.decode("utf-8", errors="replace")
-                    return value[-4096:]
+            def tail(value):
+                if value is None:
+                    return "<unavailable>"
+                if isinstance(value, bytes):
+                    value = value.decode("utf-8", errors="replace")
+                return value[-4096:]
+
+            command = [sys.executable, "-c", BOOTSTRAP + textwrap.dedent(code)]
+            try:
+                if timeout_observation_seconds:
+                    process = subprocess.Popen(
+                        command, cwd=ROOT, env=environment, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True
+                    )
+                    cleanup_handled = False
+
+                    def stopAndDrain():
+                        notes = []
+                        try:
+                            running = process.poll() is None
+                        except BaseException as error:
+                            running = True
+                            notes.append("pollError=" + type(error).__name__)
+                        if running:
+                            try:
+                                process.kill()
+                            except BaseException as error:
+                                notes.append("killError=" + type(error).__name__)
+                        try:
+                            drained = process.communicate(timeout=5)
+                            notes.append("drained")
+                            return (*drained, notes)
+                        except subprocess.TimeoutExpired as error:
+                            notes.append("drainDeadlineExceeded")
+                            drained = (error.stdout, error.stderr)
+                        except BaseException as error:
+                            notes.append("drainError=" + type(error).__name__)
+                            drained = (None, None)
+                        # A live Windows pipe reader may hold the UCRT descriptor lock.
+                        notes.append("cleanupIncomplete pipesPending=reader-owned")
+                        return (*drained, notes)
+
+                    try:
+                        try:
+                            stdout, stderr = process.communicate(timeout=timeout_seconds)
+                            cleanup_handled = True
+                        except subprocess.TimeoutExpired as deadline:
+                            observed_stdout, observed_stderr = deadline.stdout, deadline.stderr
+                            observation = "deadlineExceeded"
+                            try:
+                                observed_stdout, observed_stderr = process.communicate(
+                                    timeout=timeout_observation_seconds
+                                )
+                                cleanup_handled = True
+                                observation = "completed returncode=" + str(process.returncode)
+                            except subprocess.TimeoutExpired as error:
+                                if error.stdout is not None:
+                                    observed_stdout = error.stdout
+                                if error.stderr is not None:
+                                    observed_stderr = error.stderr
+                            except BaseException as error:
+                                observation = "error=" + type(error).__name__
+                            if not cleanup_handled:
+                                drained_stdout, drained_stderr, notes = stopAndDrain()
+                                cleanup_handled = True
+                                if drained_stdout is not None:
+                                    observed_stdout = drained_stdout
+                                if drained_stderr is not None:
+                                    observed_stderr = drained_stderr
+                                observation += "; cleanup drain max 5 seconds: " + "; ".join(notes)
+                            deadline.add_note(
+                                "Acceptance deadline exceeded; post-deadline observation only (max 30 seconds): "
+                                + observation
+                            )
+                            deadline.add_note(
+                                "Observed child stdout tail (last 4096 characters):\n" + tail(observed_stdout)
+                            )
+                            deadline.add_note(
+                                "Observed child stderr tail (last 4096 characters):\n" + tail(observed_stderr)
+                            )
+                            raise
+                    except BaseException as failure:
+                        if not cleanup_handled:
+                            _, _, notes = stopAndDrain()
+                            cleanup_handled = True
+                            failure.add_note("Child cleanup drain (max 5 seconds): " + "; ".join(notes))
+                        raise
+                    result = subprocess.CompletedProcess(command, process.returncode, stdout, stderr)
+                else:
+                    result = subprocess.run(
+                        command, cwd=ROOT, env=environment, capture_output=True, text=True, timeout=timeout_seconds
+                    )
+            except subprocess.TimeoutExpired as error:
 
                 error.add_note("Child stdout tail (last 4096 characters):\n" + tail(error.stdout))
                 error.add_note("Child stderr tail (last 4096 characters):\n" + tail(error.stderr))
