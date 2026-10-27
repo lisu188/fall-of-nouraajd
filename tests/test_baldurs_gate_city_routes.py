@@ -1151,6 +1151,59 @@ class BaldursGateCityRoutesTest(unittest.TestCase):
         self.assertTrue(driver.contact_acknowledged)
         self.assertEqual((26, 151, 0), driver.position)
 
+    def testEltanDeliveryRouteMeasuresActualInputAndRecipientBagsAcrossReload(self):
+        from types import SimpleNamespace
+        from unittest.mock import patch
+        from tests.test_baldurs_gate_city_content import BaldursGateCityContentTest
+
+        fixture = BaldursGateCityContentTest()
+        model, harbor, _duke, _rashad = fixture.eltanDeliveryModel()
+        reads, reloads = [], []
+
+        def call(owner, method, *args):
+            if method == "getItems":
+                reads.append((owner.getName(), len(reloads)))
+            return getattr(owner, method)(*args)
+
+        def choose(dialog_id, action):
+            actor = model.game_map.getObjectByName(dialog_id.removesuffix("Dialog"))
+            return getattr(model.dialog(actor), action)()
+
+        driver = SimpleNamespace(
+            test=self,
+            player=model.player,
+            class_id="Warrior",
+            combats=0,
+            object=lambda name, required=True: model.game_map.getObjectByName(name),
+            call=call,
+            string=model.game_map.getStringProperty,
+            number=model.game_map.getNumericProperty,
+            flag=model.game_map.getBoolProperty,
+            gold=model.player.getGold,
+            choose=choose,
+            questNames=lambda completed=False: [
+                q.getTypeId() for q in (model.player.getCompletedQuests() if completed else model.player.getQuests())
+            ],
+            condition=lambda dialog_id, action: getattr(
+                model.dialog(model.game_map.getObjectByName(dialog_id.removesuffix("Dialog"))), action
+            )(),
+            saveAndReload=lambda key: reloads.append(key),
+            check=lambda *_args, **_kwargs: None,
+        )
+        planner = routes.QuestRoute(driver)
+        planner.contact = lambda name: model.dialog(model.game_map.getObjectByName(name))
+        self.assertTrue(
+            callable(getattr(routes, "eltanBodyHoldings", None)), "The MCP delivery ownership witness is missing"
+        )
+        self.assertEqual((1, 0), routes.eltanBodyHoldings(driver, harbor.getName()))
+        with patch.object(routes, "start"), patch.object(routes, "QuestRoute", return_value=planner):
+            routes.questRoute(driver, "rescueEltan", "complete")
+        self.assertEqual(["city-quest-rescueEltan-complete"], reloads)
+        self.assertEqual((0, 0), routes.eltanBodyHoldings(driver, harbor.getName()))
+        self.assertIn((harbor.getName(), 0), reads)
+        self.assertIn((harbor.getName(), 1), reads)
+        self.assertEqual(2500, model.player.getNumericProperty("exp"))
+
 
 if __name__ == "__main__":
     unittest.main()
