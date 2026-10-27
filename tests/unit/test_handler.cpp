@@ -64,6 +64,9 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #include "object/CTile.h"
 #include "test_harness.h"
 #include "native_test_profile.h"
+#if defined(_WIN32)
+#include "native_crash_diagnostics.h"
+#endif
 
 #include <SDL.h>
 #include <pybind11/embed.h>
@@ -6747,6 +6750,8 @@ void testWaitStateSnapshotsPreserveRemainingDurationWithoutRebasingLiveTime() {
 }
 
 void testWaitStateRejectsInvalidDurationsMutationsAndDuplicateLeases() {
+    std::fputs("[handler-test] BODY testWaitStateRejectsInvalidDurationsMutationsAndDuplicateLeases\n", stderr);
+    std::fflush(stderr);
     auto now = std::make_shared<CWaitState::Clock::time_point>();
     auto state = std::make_shared<CWaitState>([now] { return *now; });
     for (int invalid : {-1, 60001}) {
@@ -8966,6 +8971,9 @@ void testSevenSunsMerchantRevisionLimitRefusesWithoutUnreadableOwnOutput() {
 }
 
 int main() {
+#if defined(_WIN32)
+    native_test_diagnostics::installWindowsHandlerCrashDiagnostics();
+#endif
     pybind11::scoped_interpreter guard{};
     pybind11::module_::import("sys").attr("path").attr("insert")(0, GAME_HANDLER_TEST_PYTHON_ROOT);
     pybind11::module_::import("ui");

@@ -164,6 +164,56 @@ ADDITIONAL_CASES = {
 
 
 class NativeTestProfileSourceTest(unittest.TestCase):
+
+    def testWindowsHandlerCrashDiagnosticsAreBoundedGuardedAndPreserveFailure(self):
+        helper = (ROOT / "tests/unit/native_crash_diagnostics.h").read_text()
+        handler = (ROOT / "tests/unit/test_handler.cpp").read_text()
+        self.assertRegex(handler, r'#if defined\(_WIN32\)\s+#include "native_crash_diagnostics.h"\s+#endif')
+        main = handler.split("int main() {", 1)[1]
+        self.assertRegex(
+            main,
+            r"^\s*#if defined\(_WIN32\)\s+native_test_diagnostics::installWindowsHandlerCrashDiagnostics\(\);\s+#endif",
+        )
+        self.assertLess(main.index("installWindowsHandlerCrashDiagnostics"), main.index("pybind11::scoped_interpreter"))
+        body = handler.split("void testWaitStateRejectsInvalidDurationsMutationsAndDuplicateLeases() {", 1)[1].split(
+            "\n}\n", 1
+        )[0]
+        marker = "[handler-test] BODY testWaitStateRejectsInvalidDurationsMutationsAndDuplicateLeases"
+        self.assertEqual(1, handler.count(marker))
+        self.assertLess(body.index(marker), body.index("auto now"))
+        callback = helper.split("inline LONG CALLBACK logWindowsHandlerCrash(", 1)[1].split(
+            "inline void installWindowsHandlerCrashDiagnostics", 1
+        )[0]
+        for token in (
+            "case EXCEPTION_ACCESS_VIOLATION:",
+            "InterlockedCompareExchange(&reported, 1, 0)",
+            "constexpr ULONG MAX_HANDLER_CRASH_FRAMES = 32;",
+            "void *frames[MAX_HANDLER_CRASH_FRAMES]{};",
+            "CaptureStackBackTrace(0, MAX_HANDLER_CRASH_FRAMES, frames, nullptr)",
+            "index < count && index < MAX_HANDLER_CRASH_FRAMES",
+            "return EXCEPTION_CONTINUE_SEARCH;",
+        ):
+            self.assertIn(token, callback)
+        self.assertNotIn("EXCEPTION_CONTINUE_EXECUTION", callback)
+        self.assertNotIn("reported = 0;", callback.split("InterlockedCompareExchange", 1)[1])
+        self.assertNotIn("throw", callback)
+        frame = helper.split("inline void writeHandlerCrashFrame(", 1)[1].split(
+            "inline LONG CALLBACK logWindowsHandlerCrash", 1
+        )[0]
+        for token in (
+            "GET_MODULE_HANDLE_EX_FLAG_UNCHANGED_REFCOUNT",
+            '"[handler-crash]',
+            "rva=0x%llx",
+            "char line[512]{};",
+            "WriteFile(GetStdHandle(STD_ERROR_HANDLE)",
+        ):
+            self.assertIn(token, frame)
+        installer = helper.split("inline void installWindowsHandlerCrashDiagnostics() {", 1)[1].split("\n}", 1)[0]
+        self.assertIn("SEM_NOGPFAULTERRORBOX", installer)
+        self.assertIn("AddVectoredExceptionHandler(1, logWindowsHandlerCrash)", installer)
+        for forbidden in ("DbgHelp", "StackWalk", "SymInitialize", "LoadLibrary", "system("):
+            self.assertNotIn(forbidden, helper)
+
     def testPresentationBrowserObserverCountsBoundInstancesInsteadOfSubtypePrototypes(self):
         handler = (ROOT / "tests/unit/test_handler.cpp").read_text()
         self.assertIn("class ObservedDefeatBrowserPanel : public CGameCampaignBrowserPanel", handler)
