@@ -626,6 +626,7 @@ class GameplayBranchDriver:
             self.call(loop, "run")
             self.refresh()
             self.assertSurvival()
+            self.observeCampaignBroodWitness(after_pump=True)
 
     def startMap(self, map_id):
         self._dialog_positions.clear()
@@ -1480,6 +1481,203 @@ class GameplayBranchDriver:
                 return record
         return None
 
+    def beginCampaignBroodWitness(self):
+        if self.case.id not in ("nouraajd_campaign_good", "nouraajd_campaign_bad"):
+            return
+        self.assertNativeCombatOutcomes()
+        self.test.assertIsNotNone(self.trace_path, "Campaign source death requires the current native trace")
+        self.test.assertIs(type(self._combat_trace_seq), int)
+        self.test.assertGreater(self._combat_trace_seq, 0)
+        state = self.campaignHuntRegistry()
+        self.test.assertNotEqual(
+            "dead", state["slots"]["brood"]["status"], "Brood was dead before campaign observation"
+        )
+        self._campaign_brood_witness = {
+            "map": self.game_map["__handle__"],
+            "player": self.player["__handle__"],
+            "playerName": self.call(self.player, "getName"),
+            "epoch": self.call(self.game, "getMapBindingEpoch"),
+            "armSeq": self._combat_trace_seq,
+            "armTurn": self.call(self.game_map, "getTurn"),
+            "armExp": self.call(self.player, "getNumericProperty", "exp"),
+            "defeat": self.call(self.player, "getStringProperty", "uiDefeatReceipt"),
+            "before": state,
+            "pumps": 0,
+            "transition": None,
+            "proof": None,
+            "alphaSeq": None,
+            "recovered": False,
+            "closed": False,
+        }
+        for key in ("epoch", "armTurn", "armExp"):
+            self.test.assertIs(type(self._campaign_brood_witness[key]), int)
+            self.test.assertGreaterEqual(self._campaign_brood_witness[key], 0)
+
+    def campaignHuntRegistry(self):
+        self.test.assertEqual("nouraajd", self.map_name)
+        raw = self.string("octobogzHuntRegistry")
+        self.test.assertTrue(
+            raw.startswith("octobogzHunt.v1:"), "Campaign hunt registry is missing its source envelope"
+        )
+        try:
+            state = json.loads(raw.removeprefix("octobogzHunt.v1:"))
+        except ValueError as error:
+            self.test.fail(("Malformed source-owned campaign registry", str(error)))
+        self.test.assertIsInstance(state, dict)
+        self.test.assertIs(type(state.get("version")), int)
+        self.test.assertEqual(1, state["version"])
+        self.test.assertIn(state.get("stage"), ("dormant", "scout", "brood", "cleared"))
+        self.test.assertIsInstance(state.get("slots"), dict)
+        self.test.assertEqual({"scout", "brood", "alpha"}, set(state["slots"]))
+        for slot, name in (("scout", "octobogzScout"), ("brood", "octobogzShadowBrood"), ("alpha", "octobogzAlpha")):
+            record = state["slots"][slot]
+            self.test.assertIsInstance(record, dict)
+            self.test.assertEqual(name, record.get("name"), "Campaign hunt cohort changed")
+            self.test.assertIn(record.get("status"), ("pending", "living", "dead"))
+        self.test.assertEqual(
+            state["stage"] == "cleared", all(record["status"] == "dead" for record in state["slots"].values())
+        )
+        return state
+
+    def observeCampaignBroodWitness(self, *, after_pump=False):
+        witness = getattr(self, "_campaign_brood_witness", None)
+        if witness is None or witness["closed"]:
+            return
+        adapter = self._hunt_adapter
+        if after_pump:
+            witness["pumps"] += 1
+            if witness["proof"] is not None or (adapter is not None and "brood" in adapter.hunt_actors):
+                return
+            if not any(
+                record.get("map") == "nouraajd"
+                and record["seq"] > witness["armSeq"]
+                and any(
+                    isinstance(actor, dict) and actor.get("name") == "octobogzShadowBrood"
+                    for actor in [record.get("attacker"), *record.get("opponents", ())]
+                )
+                for record in self._player_victory_history
+            ):
+                return
+        self.test.assertEqual(witness["map"], self.game_map["__handle__"], "Campaign hunt map binding changed")
+        self.test.assertEqual(witness["player"], self.player["__handle__"], "Campaign hunt player binding changed")
+        epoch = self.call(self.game, "getMapBindingEpoch")
+        self.test.assertIs(type(epoch), int)
+        self.test.assertEqual(witness["epoch"], epoch, "Campaign hunt epoch changed")
+        self.test.assertEqual(witness["playerName"], self.call(self.player, "getName"))
+        self.test.assertEqual(witness["defeat"], self.call(self.player, "getStringProperty", "uiDefeatReceipt"))
+        self.test.assertTrue(
+            self.call(self.player, "isAlive"), "A defeated player cannot earn a campaign death witness"
+        )
+        state = self.campaignHuntRegistry()
+        record = state["slots"]["brood"]
+        if witness["proof"] is not None:
+            self.test.assertEqual(witness["transition"]["record"], record, "Confirmed source death receipt changed")
+            self.test.assertIsNone(self.object(record["name"], required=False))
+            return
+        if record["status"] != "dead":
+            witness["before"] = state
+            return
+        if witness["transition"] is None:
+            self.test.assertGreater(witness["pumps"], 0, "Source death requires an observed native pump boundary")
+            self.test.assertIn(witness["before"]["slots"]["brood"]["status"], ("pending", "living"))
+            self.test.assertEqual("dead", state["slots"]["scout"]["status"])
+            self.test.assertIn(state["stage"], ("brood", "cleared"))
+            recovery = record.get("recovery")
+            self.test.assertIsInstance(recovery, dict, "Dead source slot has no positive living snapshot")
+            self.test.assertEqual(
+                {
+                    "hp",
+                    "mana",
+                    "level",
+                    "exp",
+                    "phase",
+                    "octobogzPulseUsed",
+                    "octobogzPulseEffectApplied",
+                    "enemyRoleUsed",
+                    "enemyRoleEffectApplied",
+                },
+                set(recovery),
+            )
+            for key, minimum in (("hp", 1), ("mana", 0), ("level", 1), ("exp", 0)):
+                self.test.assertIs(type(recovery[key]), int, "Invalid source recovery " + key)
+                self.test.assertGreaterEqual(recovery[key], minimum)
+            self.test.assertIn(recovery["phase"], ("predator", "charged", "spent"))
+            for key in ("octobogzPulseUsed", "octobogzPulseEffectApplied", "enemyRoleUsed", "enemyRoleEffectApplied"):
+                self.test.assertIs(type(recovery[key]), bool, "Invalid source recovery " + key)
+            self.test.assertIsNone(self.object(record["name"], required=False))
+            turn = self.call(self.game_map, "getTurn")
+            self.test.assertGreaterEqual(turn, witness["armTurn"])
+            witness["transition"] = {
+                "before": witness["before"],
+                "record": record,
+                "turn": turn,
+                "pumps": witness["pumps"],
+            }
+        self.test.assertEqual(witness["transition"]["record"], record, "Observed source death receipt changed")
+        victory = self.playerVictoryAgainst("nouraajd", record["name"], after_seq=witness["armSeq"])
+        if victory is None:
+            return
+        player_name = witness["playerName"]
+
+        def actualPlayer(actor):
+            return isinstance(actor, dict) and actor.get("isPlayer") is True and actor.get("name") == player_name
+
+        def actualBrood(actor):
+            return (
+                isinstance(actor, dict)
+                and actor.get("isPlayer") is False
+                and actor.get("name") == record["name"]
+                and actor.get("typeId") == "OctoBogz"
+            )
+
+        self.test.assertIs(type(victory.get("seq")), int)
+        self.test.assertGreater(victory["seq"], witness["armSeq"])
+        self.test.assertEqual("combat_finished", victory.get("event"))
+        self.test.assertEqual("nouraajd", victory.get("map"))
+        self.test.assertTrue(actualPlayer(victory.get("survivor")))
+        self.test.assertIs(type(victory.get("outcome")), int)
+        self.test.assertTrue(
+            (
+                victory["outcome"] == 1
+                and actualPlayer(victory.get("attacker"))
+                and any(actualBrood(actor) for actor in victory.get("opponents", ()))
+            )
+            or (
+                victory["outcome"] == 2
+                and actualBrood(victory.get("attacker"))
+                and any(actualPlayer(actor) for actor in victory.get("opponents", ()))
+            ),
+            "Source death requires the exact resolved native player victory",
+        )
+        experience = self.call(self.player, "getNumericProperty", "exp")
+        self.test.assertGreater(experience, witness["armExp"], "The real campaign encounter must grant experience")
+        witness["proof"] = {
+            "kind": "sourceRegistryAndNativeVictory",
+            "directActorHandleObserved": False,
+            "slot": "brood",
+            "name": record["name"],
+            "mapHandle": witness["map"],
+            "playerHandle": witness["player"],
+            "armSeq": witness["armSeq"],
+            "armTurn": witness["armTurn"],
+            "transition": witness["transition"],
+            "combat": victory,
+            "experienceBefore": witness["armExp"],
+            "experienceAfter": experience,
+        }
+        self.record({"campaignHuntDeathWitness": witness["proof"]}, replay=True)
+
+    def assertCampaignBroodDefeated(self, adapter):
+        self.observeCampaignBroodWitness()
+        witness = getattr(self, "_campaign_brood_witness", None)
+        self.test.assertIsNotNone(witness, "Campaign Brood witness was not armed before the encounter")
+        self.test.assertFalse(witness["closed"], "Campaign Brood witness is already closed")
+        self.test.assertIsNotNone(
+            witness["proof"],
+            "Missing campaign Brood proof: require same-run positive source death transition and fresh native victory",
+        )
+        adapter.confirmed_dead.add("brood")
+
     def hunt(self, method, *args):
         from tests.test_octobogz_mcp import OctobogzMcpWalkthroughTest
 
@@ -1487,6 +1685,44 @@ class GameplayBranchDriver:
             driver = self
 
             class Adapter(OctobogzMcpWalkthroughTest):
+                def assertSlotDefeated(self, slot):
+                    if (
+                        slot == "brood"
+                        and slot not in self.hunt_actors
+                        and getattr(driver, "_campaign_brood_witness", None)
+                    ):
+                        driver.assertCampaignBroodDefeated(self)
+                        return
+                    return super().assertSlotDefeated(slot)
+
+                def captureAlphaApproachRecovery(self):
+                    result = super().captureAlphaApproachRecovery()
+                    witness = getattr(driver, "_campaign_brood_witness", None)
+                    if result is None and witness is not None and witness["proof"] is None:
+                        witness["alphaSeq"] = driver._combat_trace_seq
+                    return result
+
+                def recoverIncidentalBroodBeforeMapTurn(self):
+                    if getattr(self, "_alpha_approach_recovery", None) is not None:
+                        return super().recoverIncidentalBroodBeforeMapTurn()
+                    witness = getattr(driver, "_campaign_brood_witness", None)
+                    if (
+                        witness is None
+                        or witness["alphaSeq"] is None
+                        or witness["proof"] is None
+                        or witness["recovered"]
+                    ):
+                        return
+                    if witness["proof"]["combat"]["seq"] <= witness["alphaSeq"]:
+                        return
+                    driver.assertCampaignBroodDefeated(self)
+                    self.recoverBeforeRoadDeparture(target_percent=100)
+                    self.assertGreaterEqual(self.call(self.player, "getHp"), self.call(self.player, "getHpMax"))
+                    witness["recovered"] = True
+                    driver.record(
+                        {"campaignIncidentalBroodOwnedRecovery": witness["proof"]["combat"]["seq"]}, replay=True
+                    )
+
                 def call(self, handle, method, *values):
                     return driver.call(handle, method, *values)
 
@@ -1565,7 +1801,13 @@ class GameplayBranchDriver:
             "trackLivingHuntActors",
         }
         self.test.assertIn(method, allowed)
-        return getattr(adapter, method)(*args)
+        if method == "enterHunt":
+            self.beginCampaignBroodWitness()
+        result = getattr(adapter, method)(*args)
+        witness = getattr(self, "_campaign_brood_witness", None)
+        if method == "defeat" and args == ("brood",) and witness is not None:
+            witness["closed"] = True
+        return result
 
     def prepareNouraajd(self):
         self.hunt("prepareThroughRolf")
