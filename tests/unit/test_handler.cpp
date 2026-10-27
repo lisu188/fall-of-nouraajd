@@ -6797,6 +6797,47 @@ void testWaitStateRejectsInvalidDurationsMutationsAndDuplicateLeases() {
     expect_true(zero && state->complete(*zero), "a zero-duration wait must complete without adding time");
 }
 
+void testScriptWaitForeignObjectFailureRoundTripsSynchronously() {
+    std::fputs("[handler-test] BODY testScriptWaitForeignObjectFailureRoundTripsSynchronously\n", stderr);
+    std::fflush(stderr);
+    ScriptFlowNativeObjectTypes types;
+    auto game = makeWindowlessFightGame();
+    auto foreign = makeWindowlessFightGame();
+    auto state = std::make_shared<CWaitState>();
+    state->setGame(foreign);
+    pybind11::dict scope;
+    auto flow = waitCallbackFlow(game, scope, pybind11::make_tuple(nativeFlowObject(state)));
+    auto request = flow->next();
+    expect_true(request && request->at("operation").get<std::string>() == "waitMilliseconds" &&
+                    request->at("args").size() == 1,
+                "the synchronous control must reach the actual foreign wait token request");
+    bool rejected = false;
+    std::string failure;
+    if (request) {
+        try {
+            flow->takeObjectArgument(request->at("args").at(0).at("__nativeObject").get<std::string>());
+        } catch (const std::invalid_argument &error) {
+            rejected = true;
+            failure = error.what();
+        }
+    }
+    expect_true(rejected && failure == "A UI flow object must belong to its game session.",
+                "the synchronous native token boundary must reject the exact foreign object identity");
+    if (rejected) {
+        auto completed = flow->fail(failure);
+        auto events = scope["events"].cast<pybind11::list>();
+        expect_true(
+            !completed && events.size() == 3 && events[0].cast<std::string>() == "entered" &&
+                events[1].cast<std::string>() == failure && events[2].cast<std::string>() == "closed" &&
+                state->getGame() == foreign && !state->isRunning(),
+            "a synchronous token rejection must deliver the exact error, close once, and never run the foreign wait");
+    }
+    flow.reset();
+    scope.clear();
+    game->getContext()->shutdown();
+    foreign->getContext()->shutdown();
+}
+
 void testScriptWaitFlowCompletesAndRejectsInvalidObjectArguments() {
     std::fputs("[handler-test] BODY testScriptWaitFlowCompletesAndRejectsInvalidObjectArguments\n", stderr);
     std::fflush(stderr);
@@ -9197,6 +9238,8 @@ int main() {
                             testWaitStateSnapshotsPreserveRemainingDurationWithoutRebasingLiveTime);
     nativeTestProfile().run("testWaitStateRejectsInvalidDurationsMutationsAndDuplicateLeases",
                             testWaitStateRejectsInvalidDurationsMutationsAndDuplicateLeases);
+    nativeTestProfile().run("testScriptWaitForeignObjectFailureRoundTripsSynchronously",
+                            testScriptWaitForeignObjectFailureRoundTripsSynchronously);
     nativeTestProfile().run("testScriptWaitFlowCompletesAndRejectsInvalidObjectArguments",
                             testScriptWaitFlowCompletesAndRejectsInvalidObjectArguments);
     nativeTestProfile().run("testScriptWaitSurvivesFailedSaveResourceBindingWithoutDispatchingMapChanges",

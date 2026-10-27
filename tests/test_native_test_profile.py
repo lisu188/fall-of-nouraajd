@@ -86,6 +86,7 @@ ADDITIONAL_CASES = {
         "testUnverifiedOrRejectedLoadsNeverDispatchResume",
         "testWaitStateSnapshotsPreserveRemainingDurationWithoutRebasingLiveTime",
         "testWaitStateRejectsInvalidDurationsMutationsAndDuplicateLeases",
+        "testScriptWaitForeignObjectFailureRoundTripsSynchronously",
         "testScriptWaitFlowCompletesAndRejectsInvalidObjectArguments",
         "testScriptWaitSurvivesFailedSaveResourceBindingWithoutDispatchingMapChanges",
         "testScriptWaitCancellationAndMapBindingLossFreezeRemainingTime",
@@ -170,6 +171,35 @@ ADDITIONAL_CASES = {
 
 
 class NativeTestProfileSourceTest(unittest.TestCase):
+    def testScriptWaitForeignTokenSynchronousControlPrecedesTheUnchangedCoroutineVariants(self):
+        handler = (ROOT / "tests/unit/test_handler.cpp").read_text(encoding="utf-8")
+        name = "testScriptWaitForeignObjectFailureRoundTripsSynchronously"
+        self.assertTrue("void " + name + "() {" in handler, "The synchronous foreign-token control is missing")
+        body = handler.split("void " + name + "() {", 1)[1].split("\n}\n", 1)[0]
+        tokens = registrationTokens(body)
+        self.assertNotIn("co_await", tokens)
+        self.assertNotIn("spawnTask", tokens)
+        for token in (
+            "state->setGame(foreign);",
+            "waitCallbackFlow(game,scope,pybind11::make_tuple(nativeFlowObject(state)))",
+            "autorequest=flow->next();",
+            'request->at("operation").get<std::string>()=="waitMilliseconds"',
+            'flow->takeObjectArgument(request->at("args").at(0).at("__nativeObject").get<std::string>())',
+            "catch(conststd::invalid_argument&error){rejected=true;failure=error.what();}",
+            'failure=="A UI flow object must belong to its game session."',
+            "autocompleted=flow->fail(failure);",
+            '!completed&&events.size()==3&&events[0].cast<std::string>()=="entered"',
+            'events[1].cast<std::string>()==failure&&events[2].cast<std::string>()=="closed"',
+            "state->getGame()==foreign&&!state->isRunning()",
+        ):
+            self.assertIn(token, tokens)
+        self.assertLess(tokens.index("flow->next()"), tokens.index("flow->takeObjectArgument("))
+        self.assertLess(tokens.index("flow->takeObjectArgument("), tokens.index("flow->fail(failure)"))
+        main = handler.split("int main() {", 1)[1]
+        self.assertLess(main.index('run("' + name + '"'), main.index('run("testScriptWaitFlowCompletes'))
+        self.assertEqual(1, main.count('run("' + name + '"'))
+        self.assertIn(name, ADDITIONAL_CASES["handler"])
+
     def testScriptAndModuleEntrypointsReachConfiguredFixtureValidation(self):
         script = Path(__file__).resolve()
         with tempfile.TemporaryDirectory(prefix="native-profile-entrypoint-") as directory:
