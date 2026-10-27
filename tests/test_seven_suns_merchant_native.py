@@ -26,7 +26,156 @@ PATHS = (
 )
 
 
+UNIT_PRIVATE_SCOPES = {
+    "CSevenSunsDialogue.cpp": ("seven_suns_warning_detail", "CSevenSunsDialogue"),
+    "CSevenSunsMerchantDialogue.cpp": ("seven_suns_merchant_dialogue_detail", "CSevenSunsMerchantDialogue"),
+    "CSevenSunsMerchantStock.cpp": ("seven_suns_merchant_stock_detail", "CSevenSunsMerchantStock"),
+}
+CPP_SCOPE_TOKENS = re.compile(
+    'R"(?P<delimiter>[^ ()\\\\\\t\\r\\n]{0,16})\\([\\s\\S]*?\\)(?P=delimiter)"|"(?:\\\\.|[^"\\\\])*"|\\\'(?:\\\\.|[^\\\'\\\\])*\\\'|//[^\\n]*|/\\*[\\s\\S]*?\\*/|[A-Za-z_]\\w*|::|->|[^\\s]'
+)
+
+
+def unitCodeTokens(source):
+    return [
+        match.group()
+        for match in CPP_SCOPE_TOKENS.finditer(source)
+        if not match.group().startswith(('"', "'", 'R"', "//", "/*"))
+    ]
+
+
+def matchingUnitBrace(tokens, opening):
+    depth = 1
+    for index in range(opening + 1, len(tokens)):
+        depth += (tokens[index] == "{") - (tokens[index] == "}")
+        if depth == 0:
+            return index
+    raise AssertionError("Unclosed private helper scope")
+
+
+def unitPrivateScope(source, namespace):
+    tokens = unitCodeTokens(source)
+    opening = ["namespace", namespace, "{", "namespace", "{"]
+    starts = [index for index in range(len(tokens)) if tokens[index : index + 5] == opening]
+    if len(starts) != 1:
+        raise AssertionError("Expected one named scope enclosing the original anonymous helpers: " + namespace)
+    start = starts[0]
+    inner_end = matchingUnitBrace(tokens, start + 4)
+    outer_end = matchingUnitBrace(tokens, start + 2)
+    if outer_end != inner_end + 1:
+        raise AssertionError("Named detail scope must enclose only the anonymous helper block")
+    return tokens, start, inner_end, outer_end
+
+
+def unitDeclarations(tokens):
+    heads, head, depth, parentheses = [], [], 0, 0
+    for token in tokens:
+        if depth:
+            depth += (token == "{") - (token == "}")
+            continue
+        if token == "{" and parentheses == 0:
+            if head:
+                heads.append(head)
+            head, depth = [], 1
+        elif token == ";" and parentheses == 0:
+            if head:
+                heads.append(head)
+            head = []
+        else:
+            head.append(token)
+            parentheses += (token == "(") - (token == ")")
+    return heads
+
+
+def unitHelperNames(tokens):
+    names = set()
+    for head in unitDeclarations(tokens):
+        if "struct" in head:
+            names.add(head[head.index("struct") + 1])
+        elif "(" in head:
+            names.add(head[head.index("(") - 1])
+        else:
+            prefix = head[: head.index("=")] if "=" in head else head
+            names.add(next(token for token in reversed(prefix) if re.fullmatch(r"[A-Za-z_]\w*", token)))
+    return names
+
+
+def unitMerchantLineageLocals(tokens):
+    constructor = unitCodeTokens(
+        "CSevenSunsMerchantDialogue::CSevenSunsMerchantDialogue("
+        "std::string reason, std::string lineage, int count, int revision)"
+        ": refusal(std::move(reason)), refusedLineage(std::move(lineage)),"
+        "refusedCount(count), refusedRevision(revision) {}"
+    )
+    starts = [index for index in range(len(tokens)) if tokens[index : index + len(constructor)] == constructor]
+    if len(starts) != 1:
+        raise AssertionError("Refusal constructor must preserve its local lineage parameter and initializer binding")
+    return {starts[0] + index for index, token in enumerate(constructor) if token == "lineage"}
+
+
 class SevenSunsMerchantNativeSourceTest(unittest.TestCase):
+
+    def testUnityMergedSevenSunsHelpersHaveDistinctNestedPrivateScopes(self):
+        namespaces = set()
+        for filename, (namespace, owner) in UNIT_PRIVATE_SCOPES.items():
+            with self.subTest(filename=filename):
+                source = self.source("src/handler/" + filename)
+                tokens, start, inner_end, outer_end = unitPrivateScope(source, namespace)
+                self.assertNotIn(namespace, namespaces)
+                namespaces.add(namespace)
+                self.assertEqual(2, tokens.count("namespace"), "No private helper namespace may leak globally")
+                self.assertNotIn(["using", "namespace"], [tokens[index : index + 2] for index in range(len(tokens))])
+                outside = tokens[:start] + tokens[outer_end + 1 :]
+                for head in unitDeclarations(outside):
+                    self.assertNotIn("using", head, "No namespace-level using directive or alias may leak helpers")
+                    self.assertIn(owner, head, "Only the owning public class may define the global source surface")
+                    self.assertIn("::", head)
+
+    def testUnityMergedSevenSunsOutsideHelperReferencesAreExplicitlyQualified(self):
+        common = None
+        for filename, (namespace, _owner) in UNIT_PRIVATE_SCOPES.items():
+            with self.subTest(filename=filename):
+                tokens, start, inner_end, outer_end = unitPrivateScope(
+                    self.source("src/handler/" + filename), namespace
+                )
+                local_references = (
+                    unitMerchantLineageLocals(tokens) if filename == "CSevenSunsMerchantDialogue.cpp" else set()
+                )
+                helpers = unitHelperNames(tokens[start + 5 : inner_end])
+                self.assertTrue({"require", "integer", "stored", "encode", "keys"} <= helpers)
+                common = helpers if common is None else common & helpers
+                for index in range(outer_end + 1, len(tokens)):
+                    if index in local_references or tokens[index] not in helpers or tokens[index - 1] in (".", "->"):
+                        continue
+                    self.assertEqual(
+                        ["::", namespace, "::"],
+                        tokens[index - 3 : index],
+                        "Unqualified or foreign private helper reference: " + tokens[index],
+                    )
+        self.assertIsNotNone(common)
+        self.assertTrue({"require", "integer", "stored", "encode", "keys"} <= common)
+
+    def testUnityMerchantRefusalConstructorKeepsItsLocalLineageBinding(self):
+        tokens = unitCodeTokens(self.source("src/handler/CSevenSunsMerchantDialogue.cpp"))
+        local_references = unitMerchantLineageLocals(tokens)
+        self.assertEqual(2, len(local_references))
+        self.assertTrue(all(tokens[index] == "lineage" for index in local_references))
+        self.assertTrue(all(tokens[index - 1] != "::" for index in local_references))
+
+    def testUnityHelperScannerDoesNotTreatLiteralsCommentsOrMembersAsGlobalDefinitions(self):
+        source = r"""// namespace fake { require keys Field }
+const char *text = "require(integer) namespace fake { }";
+const char *raw = R"tag(keys("Edge") /* require */)tag";
+object.require(); pointer->integer(); ::detail::stored<int>();
+"""
+        tokens = unitCodeTokens(source)
+        self.assertEqual(1, tokens.count("require"))
+        self.assertEqual(1, tokens.count("integer"))
+        self.assertEqual(1, tokens.count("stored"))
+        self.assertNotIn("namespace", tokens)
+        self.assertNotIn("Field", tokens)
+        self.assertNotIn("keys", tokens)
+
     def source(self, name="src/handler/CSevenSunsMerchantDialogue.cpp"):
         path = ROOT / name
         self.assertTrue(path.is_file(), f"Missing finite merchant source: {name}")
@@ -97,7 +246,11 @@ class SevenSunsMerchantNativeSourceTest(unittest.TestCase):
         source = self.tokens()
         self.assertIn('GlobalsKey="plugin_citySourceGlobals"', source)
         self.assertIn('source.at("GLOBAL").items()', source)
-        self.assertIn("canonical(key)==canonical(name)", source)
+        self.assertIn(
+            "::seven_suns_merchant_dialogue_detail::canonical(key)=="
+            "::seven_suns_merchant_dialogue_detail::canonical(name)",
+            source,
+        )
         self.assertIn("std::from_chars", source)
         self.assertIn("numeric>=std::numeric_limits<int>::min()&&numeric<=std::numeric_limits<int>::max()", source)
         advance = source.split("::advance(intrevision,intedgeIndex)", 1)[1].split("::close()", 1)[0]
@@ -115,7 +268,7 @@ class SevenSunsMerchantNativeSourceTest(unittest.TestCase):
         self.assertNotIn("::settle(", advance)
         self.assertNotIn("MerchantStock::prepare", advance)
         settle = source.split("CSevenSunsMerchantDialogue::settle(", 1)[1]
-        self.assertIn("for(constauto&identity:Lineages)", settle)
+        self.assertIn("for(constauto&identity:::seven_suns_merchant_dialogue_detail::Lineages)", settle)
         self.assertIn("++checked;if(area!=identity.area)continue", settle)
         self.assertIn('value->global("Doppleganger")!=1', settle)
         self.assertIn("std::optional<int>{128}", settle)

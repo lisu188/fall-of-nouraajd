@@ -21,6 +21,7 @@
 #include <string_view>
 #include <typeinfo>
 
+namespace seven_suns_merchant_stock_detail {
 namespace {
 constexpr auto StockKey = "plugin_citySevenSunsStock";
 constexpr auto ActorId = "citySevenSunsRevealedDoppss";
@@ -273,6 +274,7 @@ json ownedRecord(const std::shared_ptr<CItem> &item, const std::string &role) {
                 {"undroppable", stored<bool>(item, "plugin_cityUndroppable")}};
 }
 } // namespace
+} // namespace seven_suns_merchant_stock_detail
 
 bool CSevenSunsMerchantStock::isSupported() {
     return seven_suns_stock::Items.size() == 97 && seven_suns_stock::Rows.size() == 6;
@@ -280,8 +282,8 @@ bool CSevenSunsMerchantStock::isSupported() {
 
 json CSevenSunsMerchantStock::resolveRollsForTests(const std::array<int, 3> &rolls) {
     std::size_t offset = 0;
-    return resolve([&] {
-        require(offset < rolls.size(), "Missing Seven Suns native roll");
+    return ::seven_suns_merchant_stock_detail::resolve([&] {
+        ::seven_suns_merchant_stock_detail::require(offset < rolls.size(), "Missing Seven Suns native roll");
         return rolls[offset++];
     });
 }
@@ -289,24 +291,28 @@ json CSevenSunsMerchantStock::resolveRollsForTests(const std::array<int, 3> &rol
 CSevenSunsMerchantStock::Prepared CSevenSunsMerchantStock::prepare(const std::shared_ptr<CGame> &game,
                                                                    const std::string &lineage, const std::string &area,
                                                                    const std::function<void()> &requireCurrent) {
-    require(vstd::event_loop<>::instance()->isMainThread(), "Seven Suns stock requires its owner thread");
-    require(game && requireCurrent && isSupported(), "Seven Suns stock materialization is unavailable");
-    const auto source = sourceActor(lineage, area);
+    ::seven_suns_merchant_stock_detail::require(vstd::event_loop<>::instance()->isMainThread(),
+                                                "Seven Suns stock requires its owner thread");
+    ::seven_suns_merchant_stock_detail::require(game && requireCurrent && isSupported(),
+                                                "Seven Suns stock materialization is unavailable");
+    const auto source = ::seven_suns_merchant_stock_detail::sourceActor(lineage, area);
     requireCurrent();
     const auto map = game->getMap();
     const auto context = game->getContext();
     const auto player = map ? map->getAssignedPlayer() : nullptr;
     const auto generation = context->captureTransitionGeneration();
     const auto epoch = game->getMapBindingEpoch();
-    require(map && map->getMapName() == "baldursGate" && player, "Seven Suns stock requires the assigned city player");
+    ::seven_suns_merchant_stock_detail::require(map && map->getMapName() == "baldursGate" && player,
+                                                "Seven Suns stock requires the assigned city player");
     auto lease = map->tryBeginUnsafeOperation();
-    require(lease.has_value(), "Seven Suns stock save admission refused");
+    ::seven_suns_merchant_stock_detail::require(lease.has_value(), "Seven Suns stock save admission refused");
     const auto check = [&] {
         requireCurrent();
-        require(context->isActive() && context->isTransitionGenerationCurrent(generation) &&
-                    game->getContext() == context && game->getMap() == map && game->getMapBindingEpoch() == epoch &&
-                    map->getGame() == game && map->getAssignedPlayer() == player && lease->isSaveAdmissionHealthy(),
-                "Seven Suns stock construction lost its owner");
+        ::seven_suns_merchant_stock_detail::require(
+            context->isActive() && context->isTransitionGenerationCurrent(generation) &&
+                game->getContext() == context && game->getMap() == map && game->getMapBindingEpoch() == epoch &&
+                map->getGame() == game && map->getAssignedPlayer() == player && lease->isSaveAdmissionHealthy(),
+            "Seven Suns stock construction lost its owner");
     };
     try {
         auto barrier = game->getObjectHandler()->beginDefeatConstruction(check);
@@ -318,7 +324,7 @@ CSevenSunsMerchantStock::Prepared CSevenSunsMerchantStock::prepare(const std::sh
         check();
         auto actor = result.actor;
         actor->setType("CCreature");
-        actor->setTypeId(ActorId);
+        actor->setTypeId(::seven_suns_merchant_stock_detail::ActorId);
         actor->setName(lineage);
         actor->setLabel("Revealed doppelganger");
         actor->setAnimation("images/monsters/cultist");
@@ -345,20 +351,20 @@ CSevenSunsMerchantStock::Prepared CSevenSunsMerchantStock::prepare(const std::sh
         levelStats->setType("CStats");
         actor->setLevelStats(levelStats);
         check();
-        put(actor, "affiliation", std::string("cityHostile"), check);
-        put(actor, "canStep", true, check);
-        put(actor, "sourceCreature", std::string("DOPPSS"), check);
-        put(actor, "sourceActor", source, check);
-        put(actor, "sourceArea", area, check);
-        put(actor, "simulationRegion", area, check);
-        put(actor, "sourceAllegiance", 255, check);
-        put(actor, "sourceKillXp", 420, check);
-        put(actor, "sourceSchedule", -1, check);
-        put(actor, "sourceScheduleRaw", std::string("0xffffffff"), check);
-        put(actor, "phaseMin", 5, check);
-        put(actor, "phaseMax", 7, check);
-        put(actor, "plugin_citySevenSunsRevealed", true, check);
-        put(actor, "plugin_citySevenSunsLineage", lineage, check);
+        ::seven_suns_merchant_stock_detail::put(actor, "affiliation", std::string("cityHostile"), check);
+        ::seven_suns_merchant_stock_detail::put(actor, "canStep", true, check);
+        ::seven_suns_merchant_stock_detail::put(actor, "sourceCreature", std::string("DOPPSS"), check);
+        ::seven_suns_merchant_stock_detail::put(actor, "sourceActor", source, check);
+        ::seven_suns_merchant_stock_detail::put(actor, "sourceArea", area, check);
+        ::seven_suns_merchant_stock_detail::put(actor, "simulationRegion", area, check);
+        ::seven_suns_merchant_stock_detail::put(actor, "sourceAllegiance", 255, check);
+        ::seven_suns_merchant_stock_detail::put(actor, "sourceKillXp", 420, check);
+        ::seven_suns_merchant_stock_detail::put(actor, "sourceSchedule", -1, check);
+        ::seven_suns_merchant_stock_detail::put(actor, "sourceScheduleRaw", std::string("0xffffffff"), check);
+        ::seven_suns_merchant_stock_detail::put(actor, "phaseMin", 5, check);
+        ::seven_suns_merchant_stock_detail::put(actor, "phaseMax", 7, check);
+        ::seven_suns_merchant_stock_detail::put(actor, "plugin_citySevenSunsRevealed", true, check);
+        ::seven_suns_merchant_stock_detail::put(actor, "plugin_citySevenSunsLineage", lineage, check);
         auto controller = std::make_shared<CTargetController>();
         controller->setGame(game);
         controller->setType("CTargetController");
@@ -373,13 +379,16 @@ CSevenSunsMerchantStock::Prepared CSevenSunsMerchantStock::prepare(const std::sh
         check();
         auto attack = game->createObject<CInteraction>("Attack");
         check();
-        require(attack && attack->getGame() == game && attack->getTypeId() == "Attack", "Missing native Attack action");
+        ::seven_suns_merchant_stock_detail::require(
+            attack && attack->getGame() == game && attack->getTypeId() == "Attack", "Missing native Attack action");
         actor->addAction(attack);
         result.attack = attack;
         check();
         auto weapon = std::make_shared<CWeapon>();
-        itemProperties(weapon, game, lineage, "weapon", "S1-12", WeaponId, 1, {}, 96, 0, 0, 0, 1, 1, WeaponSha,
-                       "Doppelganger natural attack", "images/items/weapons/sword", true, check);
+        ::seven_suns_merchant_stock_detail::itemProperties(
+            weapon, game, lineage, "weapon", "S1-12", ::seven_suns_merchant_stock_detail::WeaponId, 1, {}, 96, 0, 0, 0,
+            1, 1, ::seven_suns_merchant_stock_detail::WeaponSha, "Doppelganger natural attack",
+            "images/items/weapons/sword", true, check);
         auto bonus = std::make_shared<CStats>();
         bonus->setGame(game);
         bonus->setType("CStats");
@@ -392,7 +401,7 @@ CSevenSunsMerchantStock::Prepared CSevenSunsMerchantStock::prepare(const std::sh
         actor->equipItem("0", weapon);
         check();
         result.owned.push_back(weapon);
-        const auto selection = resolve([&] {
+        const auto selection = ::seven_suns_merchant_stock_detail::resolve([&] {
             check();
             const int value = vstd::rand(1, 20);
             check();
@@ -400,13 +409,15 @@ CSevenSunsMerchantStock::Prepared CSevenSunsMerchantStock::prepare(const std::sh
         });
         const auto &selected = selection.at("outcome");
         if (selected.at("kind").get<std::string>() == "item") {
-            const auto &definition = itemDefinition(selected.at("code").get<std::string>());
+            const auto &definition =
+                ::seven_suns_merchant_stock_detail::itemDefinition(selected.at("code").get<std::string>());
             auto treasure = std::make_shared<CItem>();
-            itemProperties(treasure, game, lineage, "treasure", std::string(definition.code),
-                           std::string(definition.resourceId), selected.at("quantity").get<int>(), definition.charges,
-                           definition.flags, definition.itemType, definition.price, definition.lore,
-                           definition.stackSize, definition.enchantment, std::string(definition.fingerprint),
-                           std::string(definition.label), std::string(definition.animation), false, check);
+            ::seven_suns_merchant_stock_detail::itemProperties(
+                treasure, game, lineage, "treasure", std::string(definition.code), std::string(definition.resourceId),
+                selected.at("quantity").get<int>(), definition.charges, definition.flags, definition.itemType,
+                definition.price, definition.lore, definition.stackSize, definition.enchantment,
+                std::string(definition.fingerprint), std::string(definition.label), std::string(definition.animation),
+                false, check);
             actor->addItem(treasure);
             check();
             result.owned.push_back(treasure);
@@ -417,14 +428,18 @@ CSevenSunsMerchantStock::Prepared CSevenSunsMerchantStock::prepare(const std::sh
         check();
         json owned = json::array();
         for (std::size_t index = 0; index < result.owned.size(); ++index)
-            owned[owned.size()] = ownedRecord(result.owned[index], index == 0 ? "weapon" : "treasure");
-        result.receipt = certificate(lineage, area, selection);
-        require(owned.dump() == result.receipt.at("owned").dump(),
-                "Seven Suns initial owned stock differs from source");
-        require(encode(result.receipt).size() <= 8192, "Seven Suns materialization receipt exceeds bound");
-        put(actor, StockKey, encode(result.receipt), check);
-        put(actor, "plugin_cityInventoryInitialized", true, check);
-        put(actor, "plugin_cityHooksInstalled", true, check);
+            owned[owned.size()] = ::seven_suns_merchant_stock_detail::ownedRecord(result.owned[index],
+                                                                                  index == 0 ? "weapon" : "treasure");
+        result.receipt = ::seven_suns_merchant_stock_detail::certificate(lineage, area, selection);
+        ::seven_suns_merchant_stock_detail::require(owned.dump() == result.receipt.at("owned").dump(),
+                                                    "Seven Suns initial owned stock differs from source");
+        ::seven_suns_merchant_stock_detail::require(::seven_suns_merchant_stock_detail::encode(result.receipt).size() <=
+                                                        8192,
+                                                    "Seven Suns materialization receipt exceeds bound");
+        ::seven_suns_merchant_stock_detail::put(actor, ::seven_suns_merchant_stock_detail::StockKey,
+                                                ::seven_suns_merchant_stock_detail::encode(result.receipt), check);
+        ::seven_suns_merchant_stock_detail::put(actor, "plugin_cityInventoryInitialized", true, check);
+        ::seven_suns_merchant_stock_detail::put(actor, "plugin_cityHooksInstalled", true, check);
         validatePrepared(result, game, lineage, area, check);
         check();
         lease->finish();
@@ -439,23 +454,30 @@ void CSevenSunsMerchantStock::validateSettled(const std::shared_ptr<CCreature> &
                                               const std::shared_ptr<CGame> &game, const std::string &lineage,
                                               const std::string &area, const std::function<void()> &requireCurrent) {
     requireCurrent();
-    const auto source = sourceActor(lineage, area);
-    validateCertificate(receipt, lineage, area);
-    require(actor && typeid(*actor) == typeid(CCreature) && actor->getGame() == game && actor->getTypeId() == ActorId &&
-                actor->getName() == lineage && actor->getType() == "CCreature" &&
-                stored<std::string>(actor, "sourceCreature") == "DOPPSS" &&
-                stored<std::string>(actor, "sourceActor") == source &&
-                stored<std::string>(actor, "sourceArea") == area &&
-                stored<std::string>(actor, "simulationRegion") == area &&
-                stored<bool>(actor, "plugin_citySevenSunsRevealed") &&
-                stored<std::string>(actor, "plugin_citySevenSunsLineage") == lineage &&
-                stored<bool>(actor, "plugin_cityInventoryInitialized") &&
-                stored<bool>(actor, "plugin_cityHooksInstalled") && stored<int>(actor, "sourceKillXp") == 420 &&
-                stored<int>(actor, "sourceSchedule") == -1 &&
-                stored<std::string>(actor, "sourceScheduleRaw") == "0xffffffff" &&
-                stored<int>(actor, "sourceAllegiance") == 255 && stored<int>(actor, "phaseMin") == 5 &&
-                stored<int>(actor, "phaseMax") == 7 && stored<std::string>(actor, StockKey) == encode(receipt),
-            "Seven Suns settled materialization identity changed");
+    const auto source = ::seven_suns_merchant_stock_detail::sourceActor(lineage, area);
+    ::seven_suns_merchant_stock_detail::validateCertificate(receipt, lineage, area);
+    ::seven_suns_merchant_stock_detail::require(
+        actor && typeid(*actor) == typeid(CCreature) && actor->getGame() == game &&
+            actor->getTypeId() == ::seven_suns_merchant_stock_detail::ActorId && actor->getName() == lineage &&
+            actor->getType() == "CCreature" &&
+            ::seven_suns_merchant_stock_detail::stored<std::string>(actor, "sourceCreature") == "DOPPSS" &&
+            ::seven_suns_merchant_stock_detail::stored<std::string>(actor, "sourceActor") == source &&
+            ::seven_suns_merchant_stock_detail::stored<std::string>(actor, "sourceArea") == area &&
+            ::seven_suns_merchant_stock_detail::stored<std::string>(actor, "simulationRegion") == area &&
+            ::seven_suns_merchant_stock_detail::stored<bool>(actor, "plugin_citySevenSunsRevealed") &&
+            ::seven_suns_merchant_stock_detail::stored<std::string>(actor, "plugin_citySevenSunsLineage") == lineage &&
+            ::seven_suns_merchant_stock_detail::stored<bool>(actor, "plugin_cityInventoryInitialized") &&
+            ::seven_suns_merchant_stock_detail::stored<bool>(actor, "plugin_cityHooksInstalled") &&
+            ::seven_suns_merchant_stock_detail::stored<int>(actor, "sourceKillXp") == 420 &&
+            ::seven_suns_merchant_stock_detail::stored<int>(actor, "sourceSchedule") == -1 &&
+            ::seven_suns_merchant_stock_detail::stored<std::string>(actor, "sourceScheduleRaw") == "0xffffffff" &&
+            ::seven_suns_merchant_stock_detail::stored<int>(actor, "sourceAllegiance") == 255 &&
+            ::seven_suns_merchant_stock_detail::stored<int>(actor, "phaseMin") == 5 &&
+            ::seven_suns_merchant_stock_detail::stored<int>(actor, "phaseMax") == 7 &&
+            ::seven_suns_merchant_stock_detail::stored<std::string>(actor,
+                                                                    ::seven_suns_merchant_stock_detail::StockKey) ==
+                ::seven_suns_merchant_stock_detail::encode(receipt),
+        "Seven Suns settled materialization identity changed");
     requireCurrent();
 }
 
@@ -466,63 +488,76 @@ void CSevenSunsMerchantStock::validatePrepared(const Prepared &prepared, const s
     auto actor = prepared.actor;
     auto stats = actor->getStats();
     requireCurrent();
-    require(prepared.controller && typeid(*prepared.controller) == typeid(CTargetController) &&
-                prepared.controller->getGame() == game && prepared.controller->getTarget() == "player" &&
-                actor->getController() == prepared.controller && prepared.fightController &&
-                typeid(*prepared.fightController) == typeid(CMonsterFightController) &&
-                prepared.fightController->getGame() == game &&
-                actor->getFightController() == prepared.fightController && prepared.attack &&
-                prepared.attack->getGame() == game && prepared.attack->getTypeId() == "Attack" &&
-                actor->getActions() == std::set<std::shared_ptr<CInteraction>>{prepared.attack},
-            "Seven Suns prepared native controller or Attack action changed");
+    ::seven_suns_merchant_stock_detail::require(
+        prepared.controller && typeid(*prepared.controller) == typeid(CTargetController) &&
+            prepared.controller->getGame() == game && prepared.controller->getTarget() == "player" &&
+            actor->getController() == prepared.controller && prepared.fightController &&
+            typeid(*prepared.fightController) == typeid(CMonsterFightController) &&
+            prepared.fightController->getGame() == game && actor->getFightController() == prepared.fightController &&
+            prepared.attack && prepared.attack->getGame() == game && prepared.attack->getTypeId() == "Attack" &&
+            actor->getActions() == std::set<std::shared_ptr<CInteraction>>{prepared.attack},
+        "Seven Suns prepared native controller or Attack action changed");
     requireCurrent();
-    require(actor->isAlive() && actor->getHp() == 28 && actor->getHpMax() == 28 && actor->getMana() == 0 &&
-                !actor->isNpc() && actor->getStringProperty("affiliation") == "cityHostile" && !actor->getRace() &&
-                !actor->getCreatureClass() && actor->getClassTracks().empty() && actor->getTemplates().empty() &&
-                actor->getEffects().empty() && stats->getDmgMin() == 1 && stats->getDmgMax() == 12 &&
-                stats->getHit() == 75 && stats->getDamage() == 0 && stats->getCrit() == 0 &&
-                stats->getStrength() == 6 && stats->getAgility() == 6 && stats->getIntelligence() == 6 &&
-                stats->getStamina() == 4 && (prepared.owned.size() == 1 || prepared.owned.size() == 2),
-            "Seven Suns prepared native profile changed");
+    ::seven_suns_merchant_stock_detail::require(
+        actor->isAlive() && actor->getHp() == 28 && actor->getHpMax() == 28 && actor->getMana() == 0 &&
+            !actor->isNpc() && actor->getStringProperty("affiliation") == "cityHostile" && !actor->getRace() &&
+            !actor->getCreatureClass() && actor->getClassTracks().empty() && actor->getTemplates().empty() &&
+            actor->getEffects().empty() && stats->getDmgMin() == 1 && stats->getDmgMax() == 12 &&
+            stats->getHit() == 75 && stats->getDamage() == 0 && stats->getCrit() == 0 && stats->getStrength() == 6 &&
+            stats->getAgility() == 6 && stats->getIntelligence() == 6 && stats->getStamina() == 4 &&
+            (prepared.owned.size() == 1 || prepared.owned.size() == 2),
+        "Seven Suns prepared native profile changed");
     const auto equipment = actor->getEquipped();
-    require(prepared.owned[0] && equipment.size() == 1 && equipment.contains("0") &&
-                equipment.at("0") == prepared.owned[0] && typeid(*prepared.owned[0]) == typeid(CWeapon),
-            "Seven Suns source weapon ownership changed");
+    ::seven_suns_merchant_stock_detail::require(prepared.owned[0] && equipment.size() == 1 && equipment.contains("0") &&
+                                                    equipment.at("0") == prepared.owned[0] &&
+                                                    typeid(*prepared.owned[0]) == typeid(CWeapon),
+                                                "Seven Suns source weapon ownership changed");
     std::set<std::shared_ptr<CItem>> expected(prepared.owned.begin(), prepared.owned.end());
-    require(actor->getAllItems() == expected && expected.size() == prepared.owned.size(),
-            "Seven Suns prepared stock has missing or duplicate ownership");
+    ::seven_suns_merchant_stock_detail::require(actor->getAllItems() == expected &&
+                                                    expected.size() == prepared.owned.size(),
+                                                "Seven Suns prepared stock has missing or duplicate ownership");
     for (std::size_t index = 0; index < prepared.owned.size(); ++index) {
         requireCurrent();
         const auto &item = prepared.owned[index];
-        require(item && item->getGame() == game &&
-                    ownedRecord(item, index == 0 ? "weapon" : "treasure").dump() ==
-                        prepared.receipt.at("owned").at(index).dump(),
-                "Seven Suns prepared stock metadata changed");
+        ::seven_suns_merchant_stock_detail::require(
+            item && item->getGame() == game &&
+                ::seven_suns_merchant_stock_detail::ownedRecord(item, index == 0 ? "weapon" : "treasure").dump() ==
+                    prepared.receipt.at("owned").at(index).dump(),
+            "Seven Suns prepared stock metadata changed");
         const bool weapon = index == 0;
         const auto &definition = weapon ? seven_suns_stock::Items.front()
-                                        : itemDefinition(prepared.receipt.at("outcome").at("code").get<std::string>());
+                                        : ::seven_suns_merchant_stock_detail::itemDefinition(
+                                              prepared.receipt.at("outcome").at("code").get<std::string>());
         const auto flags = weapon ? 96 : definition.flags;
-        require((weapon ? typeid(*item) == typeid(CWeapon) : typeid(*item) == typeid(CItem)) &&
-                    item->getType() == (weapon ? "CWeapon" : "CItem") &&
-                    stored<std::string>(item, "plugin_citySourceItemFingerprint") ==
-                        (weapon ? WeaponSha : std::string(definition.fingerprint)) &&
-                    stored<int>(item, "plugin_citySourceItemFlags") == flags &&
-                    stored<int>(item, "plugin_citySourceEnchantment") == (weapon ? 1 : definition.enchantment) &&
-                    stored<int>(item, "plugin_citySourceFlags") == 0 &&
-                    stored<int>(item, "plugin_cityItemType") == (weapon ? 0 : definition.itemType) &&
-                    stored<int>(item, "plugin_cityValue") == (weapon ? 0 : definition.price) &&
-                    stored<int>(item, "plugin_cityLore") == (weapon ? 0 : definition.lore) &&
-                    stored<int>(item, "plugin_cityStackSize") == (weapon ? 1 : definition.stackSize) &&
-                    stored<bool>(item, "plugin_cityUnstealable") == weapon &&
-                    stored<bool>(item, "plugin_cityTradeable") == (!weapon && bool(flags & 4)) &&
-                    stored<bool>(item, "plugin_cityUnidentified") == !weapon &&
-                    stored<bool>(item, "plugin_cityAbilitiesPending") == !weapon &&
-                    stored<std::string>(item, "plugin_cityStockLineage") == lineage &&
-                    stored<std::string>(item, "plugin_cityStockKind") == (weapon ? "weapon" : "treasure"),
-                "Seven Suns prepared source metadata changed");
+        ::seven_suns_merchant_stock_detail::require(
+            (weapon ? typeid(*item) == typeid(CWeapon) : typeid(*item) == typeid(CItem)) &&
+                item->getType() == (weapon ? "CWeapon" : "CItem") &&
+                ::seven_suns_merchant_stock_detail::stored<std::string>(item, "plugin_citySourceItemFingerprint") ==
+                    (weapon ? ::seven_suns_merchant_stock_detail::WeaponSha : std::string(definition.fingerprint)) &&
+                ::seven_suns_merchant_stock_detail::stored<int>(item, "plugin_citySourceItemFlags") == flags &&
+                ::seven_suns_merchant_stock_detail::stored<int>(item, "plugin_citySourceEnchantment") ==
+                    (weapon ? 1 : definition.enchantment) &&
+                ::seven_suns_merchant_stock_detail::stored<int>(item, "plugin_citySourceFlags") == 0 &&
+                ::seven_suns_merchant_stock_detail::stored<int>(item, "plugin_cityItemType") ==
+                    (weapon ? 0 : definition.itemType) &&
+                ::seven_suns_merchant_stock_detail::stored<int>(item, "plugin_cityValue") ==
+                    (weapon ? 0 : definition.price) &&
+                ::seven_suns_merchant_stock_detail::stored<int>(item, "plugin_cityLore") ==
+                    (weapon ? 0 : definition.lore) &&
+                ::seven_suns_merchant_stock_detail::stored<int>(item, "plugin_cityStackSize") ==
+                    (weapon ? 1 : definition.stackSize) &&
+                ::seven_suns_merchant_stock_detail::stored<bool>(item, "plugin_cityUnstealable") == weapon &&
+                ::seven_suns_merchant_stock_detail::stored<bool>(item, "plugin_cityTradeable") ==
+                    (!weapon && bool(flags & 4)) &&
+                ::seven_suns_merchant_stock_detail::stored<bool>(item, "plugin_cityUnidentified") == !weapon &&
+                ::seven_suns_merchant_stock_detail::stored<bool>(item, "plugin_cityAbilitiesPending") == !weapon &&
+                ::seven_suns_merchant_stock_detail::stored<std::string>(item, "plugin_cityStockLineage") == lineage &&
+                ::seven_suns_merchant_stock_detail::stored<std::string>(item, "plugin_cityStockKind") ==
+                    (weapon ? "weapon" : "treasure"),
+            "Seven Suns prepared source metadata changed");
         requireCurrent();
     }
-    require(actor->getGold() == prepared.receipt.at("outcome").at("gold").get<int>(),
-            "Seven Suns prepared gold changed");
+    ::seven_suns_merchant_stock_detail::require(
+        actor->getGold() == prepared.receipt.at("outcome").at("gold").get<int>(), "Seven Suns prepared gold changed");
     requireCurrent();
 }

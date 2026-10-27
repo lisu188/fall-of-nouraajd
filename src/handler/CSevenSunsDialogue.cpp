@@ -26,6 +26,7 @@
 #include <string_view>
 #include <typeinfo>
 
+namespace seven_suns_warning_detail {
 namespace {
 constexpr auto StateKey = "plugin_citySevenSunsWarningState";
 constexpr auto GlobalsKey = "plugin_citySourceGlobals";
@@ -248,6 +249,7 @@ std::string journalTextStrict(const std::shared_ptr<CQuest> &quest, const char *
     return quest->CQuest::getHint();
 }
 } // namespace
+} // namespace seven_suns_warning_detail
 
 struct CSevenSunsDialogue::State {
     enum class ActorPhase { Registered, Removing, Retired };
@@ -261,10 +263,10 @@ struct CSevenSunsDialogue::State {
     CGameContext::TransitionGeneration generation;
     std::uint64_t epoch;
     std::function<void()> requireCaller;
-    Field<std::string> definition;
-    Field<std::string> receipt;
-    Field<std::shared_ptr<CGameObject>> retained;
-    Field<std::string> globals;
+    ::seven_suns_warning_detail::Field<std::string> definition;
+    ::seven_suns_warning_detail::Field<std::string> receipt;
+    ::seven_suns_warning_detail::Field<std::shared_ptr<CGameObject>> retained;
+    ::seven_suns_warning_detail::Field<std::string> globals;
     json sourceGlobals;
     json row;
     json edges = json::array();
@@ -281,14 +283,19 @@ struct CSevenSunsDialogue::State {
           std::shared_ptr<CCreature> actor, std::function<void()> caller)
         : game(game), context(game->getContext()), map(std::move(map)), player(this->map->getAssignedPlayer()),
           clock(std::move(clock)), actor(std::move(actor)), generation(context->captureTransitionGeneration()),
-          epoch(game->getMapBindingEpoch()), requireCaller(std::move(caller)), definition(this->clock, DefinitionKey),
-          receipt(this->map, StateKey), retained(this->clock, ActorKey), globals(this->map, GlobalsKey),
-          sourceGlobals(document(globals.value, json::object(), 65536)),
-          row(document(receipt.value, initialState(), 4096)) {
-        require(sourceGlobals.is_object() && sourceGlobals.size() <= 256, "Malformed city source-global scopes");
+          epoch(game->getMapBindingEpoch()), requireCaller(std::move(caller)),
+          definition(this->clock, ::seven_suns_warning_detail::DefinitionKey),
+          receipt(this->map, ::seven_suns_warning_detail::StateKey),
+          retained(this->clock, ::seven_suns_warning_detail::ActorKey),
+          globals(this->map, ::seven_suns_warning_detail::GlobalsKey),
+          sourceGlobals(::seven_suns_warning_detail::document(globals.value, json::object(), 65536)),
+          row(::seven_suns_warning_detail::document(receipt.value, ::seven_suns_warning_detail::initialState(), 4096)) {
+        ::seven_suns_warning_detail::require(sourceGlobals.is_object() && sourceGlobals.size() <= 256,
+                                             "Malformed city source-global scopes");
         if (sourceGlobals.contains("GLOBAL"))
-            require(sourceGlobals.at("GLOBAL").is_object() && sourceGlobals.at("GLOBAL").size() <= 1024,
-                    "Malformed city GLOBAL namespace");
+            ::seven_suns_warning_detail::require(sourceGlobals.at("GLOBAL").is_object() &&
+                                                     sourceGlobals.at("GLOBAL").size() <= 1024,
+                                                 "Malformed city GLOBAL namespace");
         const auto snapshot = globalSnapshot();
         if (!receipt.value || receipt.value->empty())
             row["globals"] = snapshot;
@@ -308,7 +315,7 @@ struct CSevenSunsDialogue::State {
         const auto wanted = canonicalName(name);
         for (const auto &[key, ignored] : sourceGlobals.at("GLOBAL").items())
             if (canonicalName(key) == wanted) {
-                require(!result, "Ambiguous case aliases in city GLOBAL namespace");
+                ::seven_suns_warning_detail::require(!result, "Ambiguous case aliases in city GLOBAL namespace");
                 result = key;
             }
         return result;
@@ -319,8 +326,8 @@ struct CSevenSunsDialogue::State {
         if (!key)
             return 0;
         const auto &value = sourceGlobals.at("GLOBAL").at(*key);
-        require(value.is_number_integer(), "Unsupported city source-global value type");
-        return integer(value);
+        ::seven_suns_warning_detail::require(value.is_number_integer(), "Unsupported city source-global value type");
+        return ::seven_suns_warning_detail::integer(value);
     }
 
     json globalSnapshot() const {
@@ -332,10 +339,10 @@ struct CSevenSunsDialogue::State {
             sourceGlobals["GLOBAL"] = json::object();
         const auto key = globalKey(name).value_or(name);
         sourceGlobals["GLOBAL"][key] = value;
-        require(sourceGlobals.size() <= 256 && sourceGlobals.at("GLOBAL").size() <= 1024,
-                "City source-global insertion exceeded its count bound");
-        auto encoded = encode(sourceGlobals);
-        require(encoded.size() <= 65536, "City source-global storage exceeded its bound");
+        ::seven_suns_warning_detail::require(sourceGlobals.size() <= 256 && sourceGlobals.at("GLOBAL").size() <= 1024,
+                                             "City source-global insertion exceeded its count bound");
+        auto encoded = ::seven_suns_warning_detail::encode(sourceGlobals);
+        ::seven_suns_warning_detail::require(encoded.size() <= 65536, "City source-global storage exceeded its bound");
         globals.write(std::move(encoded), checkCurrent);
         row["globals"] = globalSnapshot();
         writeRow(checkCurrent);
@@ -359,53 +366,64 @@ struct CSevenSunsDialogue::State {
     }
 
     void check(bool caller = true) const {
-        require(vstd::event_loop<>::instance()->isMainThread(), "Seven Suns requires the engine owner thread");
+        ::seven_suns_warning_detail::require(vstd::event_loop<>::instance()->isMainThread(),
+                                             "Seven Suns requires the engine owner thread");
         if (caller && requireCaller)
             requireCaller();
         auto owner = game.lock();
-        require(owner && !closed && !poisoned && context->isActive() && owner->getContext() == context &&
-                    context->isTransitionGenerationCurrent(generation) && owner->getMap() == map &&
-                    owner->getMapBindingEpoch() == epoch && map->getGame() == owner &&
-                    map->getAssignedPlayer() == player && player && player->isAlive() &&
-                    map->getObjectByName("player") == player && player->getGame() == owner &&
-                    map->getObjectByName("cityClock") == clock && clock->getGame() == owner &&
-                    clock->getName() == "cityClock" && actor && actor->getGame() == owner &&
-                    actor->getName() == ActorName && actor->isAlive() && actor->isNpc(),
-                "Seven Suns dialogue binding changed");
-        require(stored<std::string>(actor, "sourceActor") == std::optional<std::string>{"AR0601#actor2"} &&
-                    stored<std::string>(actor, "sourceArea") == std::optional<std::string>{"AR0601"} &&
-                    stored<std::string>(actor, "simulationRegion") == std::optional<std::string>{"AR0601"} &&
-                    stored<std::string>(actor, "sourceCreature") == std::optional<std::string>{"DOPPSM"} &&
-                    stored<std::string>(actor, "sourceDialogue") == std::optional<std::string>{"DOPPSM"},
-                "Seven Suns warning actor source identity changed");
-        const auto registered = map->getObjectByName(ActorName);
-        require(actorPhase == ActorPhase::Registered
-                    ? registered == actor
-                    : !registered || (actorPhase == ActorPhase::Removing && registered == actor),
-                "Seven Suns warning actor registration changed");
+        ::seven_suns_warning_detail::require(
+            owner && !closed && !poisoned && context->isActive() && owner->getContext() == context &&
+                context->isTransitionGenerationCurrent(generation) && owner->getMap() == map &&
+                owner->getMapBindingEpoch() == epoch && map->getGame() == owner && map->getAssignedPlayer() == player &&
+                player && player->isAlive() && map->getObjectByName("player") == player && player->getGame() == owner &&
+                map->getObjectByName("cityClock") == clock && clock->getGame() == owner &&
+                clock->getName() == "cityClock" && actor && actor->getGame() == owner &&
+                actor->getName() == ::seven_suns_warning_detail::ActorName && actor->isAlive() && actor->isNpc(),
+            "Seven Suns dialogue binding changed");
+        ::seven_suns_warning_detail::require(
+            ::seven_suns_warning_detail::stored<std::string>(actor, "sourceActor") ==
+                    std::optional<std::string>{"AR0601#actor2"} &&
+                ::seven_suns_warning_detail::stored<std::string>(actor, "sourceArea") ==
+                    std::optional<std::string>{"AR0601"} &&
+                ::seven_suns_warning_detail::stored<std::string>(actor, "simulationRegion") ==
+                    std::optional<std::string>{"AR0601"} &&
+                ::seven_suns_warning_detail::stored<std::string>(actor, "sourceCreature") ==
+                    std::optional<std::string>{"DOPPSM"} &&
+                ::seven_suns_warning_detail::stored<std::string>(actor, "sourceDialogue") ==
+                    std::optional<std::string>{"DOPPSM"},
+            "Seven Suns warning actor source identity changed");
+        const auto registered = map->getObjectByName(::seven_suns_warning_detail::ActorName);
+        ::seven_suns_warning_detail::require(actorPhase == ActorPhase::Registered
+                                                 ? registered == actor
+                                                 : !registered ||
+                                                       (actorPhase == ActorPhase::Removing && registered == actor),
+                                             "Seven Suns warning actor registration changed");
         if (actorPhase == ActorPhase::Registered)
-            require(!CSevenSunsDialogue::hasSceneLifetimeOwner(owner, map, actor, false),
-                    "A registered Seven Suns actor has an unsettled scene lifetime owner");
+            ::seven_suns_warning_detail::require(!CSevenSunsDialogue::hasSceneLifetimeOwner(owner, map, actor, false),
+                                                 "A registered Seven Suns actor has an unsettled scene lifetime owner");
         else if (!registered)
-            require(CSevenSunsDialogue::hasSceneLifetimeOwner(owner, map, actor, true),
-                    "Seven Suns detached actor lost its scene lifetime owner");
+            ::seven_suns_warning_detail::require(CSevenSunsDialogue::hasSceneLifetimeOwner(owner, map, actor, true),
+                                                 "Seven Suns detached actor lost its scene lifetime owner");
         if (actorPhase == ActorPhase::Retired)
-            require(retained.value == std::optional<std::shared_ptr<CGameObject>>{actor},
-                    "Seven Suns retired actor lost its exact retained owner");
+            ::seven_suns_warning_detail::require(retained.value == std::optional<std::shared_ptr<CGameObject>>{actor},
+                                                 "Seven Suns retired actor lost its exact retained owner");
         const auto a = actor->getCoords();
         const auto p = player->getCoords();
         const auto dx = static_cast<std::int64_t>(a.x) - p.x;
         const auto dy = static_cast<std::int64_t>(a.y) - p.y;
-        require(a.z == p.z && std::abs(dx) + std::abs(dy) <= 1 &&
-                    !stored<bool>(map, "plugin_cityFlag_cityCompleted").value_or(false) &&
-                    !stored<bool>(map, "plugin_cityFlag_poisonFatal").value_or(false) &&
-                    stored<std::string>(map, "plugin_cityCustodyState").value_or("") != "hearing" &&
-                    !stored<bool>(actor, "plugin_cityPetrified").value_or(false),
-                "Seven Suns warning interaction is no longer available");
-        const int phase = stored<int>(map, "plugin_cityPhase").value_or(5);
-        require(phase >= stored<int>(actor, "phaseMin").value_or(5) &&
-                    phase <= stored<int>(actor, "phaseMax").value_or(7),
-                "Seven Suns warning phase changed");
+        ::seven_suns_warning_detail::require(
+            a.z == p.z && std::abs(dx) + std::abs(dy) <= 1 &&
+                !::seven_suns_warning_detail::stored<bool>(map, "plugin_cityFlag_cityCompleted").value_or(false) &&
+                !::seven_suns_warning_detail::stored<bool>(map, "plugin_cityFlag_poisonFatal").value_or(false) &&
+                ::seven_suns_warning_detail::stored<std::string>(map, "plugin_cityCustodyState").value_or("") !=
+                    "hearing" &&
+                !::seven_suns_warning_detail::stored<bool>(actor, "plugin_cityPetrified").value_or(false),
+            "Seven Suns warning interaction is no longer available");
+        const int phase = ::seven_suns_warning_detail::stored<int>(map, "plugin_cityPhase").value_or(5);
+        ::seven_suns_warning_detail::require(
+            phase >= ::seven_suns_warning_detail::stored<int>(actor, "phaseMin").value_or(5) &&
+                phase <= ::seven_suns_warning_detail::stored<int>(actor, "phaseMax").value_or(7),
+            "Seven Suns warning phase changed");
         definition.check();
         receipt.check();
         retained.check();
@@ -413,55 +431,63 @@ struct CSevenSunsDialogue::State {
         if (journal) {
             std::size_t matching = 0;
             for (const auto &entry : player->getQuests())
-                if (entry && entry->getTypeId() == QuestId) {
-                    require(entry == journal && entry->getGame() == owner, "Seven Suns journal owner changed");
+                if (entry && entry->getTypeId() == ::seven_suns_warning_detail::QuestId) {
+                    ::seven_suns_warning_detail::require(entry == journal && entry->getGame() == owner,
+                                                         "Seven Suns journal owner changed");
                     ++matching;
                 }
-            require(matching == 1, "Seven Suns journal is no longer active");
+            ::seven_suns_warning_detail::require(matching == 1, "Seven Suns journal is no longer active");
             for (const auto &entry : player->getCompletedQuests())
-                require(!entry || entry->getTypeId() != QuestId, "Seven Suns journal was completed unexpectedly");
+                ::seven_suns_warning_detail::require(!entry ||
+                                                         entry->getTypeId() != ::seven_suns_warning_detail::QuestId,
+                                                     "Seven Suns journal was completed unexpectedly");
         }
     }
 
     void writeRow(const std::function<void()> &checkCurrent) {
-        auto encoded = encode(row);
-        require(encoded.size() <= 4096, "Seven Suns receipt exceeded its bound");
+        auto encoded = ::seven_suns_warning_detail::encode(row);
+        ::seven_suns_warning_detail::require(encoded.size() <= 4096, "Seven Suns receipt exceeded its bound");
         receipt.write(std::move(encoded), checkCurrent);
     }
 
     void recordFirstChoice(const std::function<void()> &checkCurrent) {
-        Field<std::string> talked(map, "plugin_cityTalked");
-        auto talks = document(talked.value, json::object(), 65536);
-        require(talks.is_object() && talks.size() <= 2048, "Malformed city conversation records");
-        talks[ActorName] = json{{"label", "Merchant"}, {"creature", "DOPPSM"}, {"area", "AR0601"}};
-        require(talks.size() <= 2048 && encode(talks).size() <= 65536,
-                "City conversation insertion exceeded its bound");
-        talked.write(encode(talks), checkCurrent);
-        Field<int> count(actor, "plugin_cityTalkCount");
-        require(count.value.value_or(0) >= 0 && count.value.value_or(0) < 1000000, "Invalid city talk count");
+        ::seven_suns_warning_detail::Field<std::string> talked(map, "plugin_cityTalked");
+        auto talks = ::seven_suns_warning_detail::document(talked.value, json::object(), 65536);
+        ::seven_suns_warning_detail::require(talks.is_object() && talks.size() <= 2048,
+                                             "Malformed city conversation records");
+        talks[::seven_suns_warning_detail::ActorName] =
+            json{{"label", "Merchant"}, {"creature", "DOPPSM"}, {"area", "AR0601"}};
+        ::seven_suns_warning_detail::require(talks.size() <= 2048 &&
+                                                 ::seven_suns_warning_detail::encode(talks).size() <= 65536,
+                                             "City conversation insertion exceeded its bound");
+        talked.write(::seven_suns_warning_detail::encode(talks), checkCurrent);
+        ::seven_suns_warning_detail::Field<int> count(actor, "plugin_cityTalkCount");
+        ::seven_suns_warning_detail::require(count.value.value_or(0) >= 0 && count.value.value_or(0) < 1000000,
+                                             "Invalid city talk count");
         count.write(count.value.value_or(0) + 1, checkCurrent);
-        Field<bool> frozen(map, "plugin_cityHistoryFrozen");
+        ::seven_suns_warning_detail::Field<bool> frozen(map, "plugin_cityHistoryFrozen");
         if (!frozen.value.value_or(false)) {
-            Field<std::string> history(map, "plugin_cityHistory");
-            auto choices = document(history.value, json::object(), 65536);
-            require(choices.is_object(), "Malformed city history");
+            ::seven_suns_warning_detail::Field<std::string> history(map, "plugin_cityHistory");
+            auto choices = ::seven_suns_warning_detail::document(history.value, json::object(), 65536);
+            ::seven_suns_warning_detail::require(choices.is_object(), "Malformed city history");
             for (const auto *key : {"aldeth", "tenya", "eldoth"})
                 if (!choices.contains(key))
                     choices[key] = "unspecified";
-            Field<std::string> profile(map, "plugin_cityStartingProfile");
-            auto starting = document(profile.value, json::object(), 65536);
-            require(starting.is_object(), "Malformed city starting profile");
+            ::seven_suns_warning_detail::Field<std::string> profile(map, "plugin_cityStartingProfile");
+            auto starting = ::seven_suns_warning_detail::document(profile.value, json::object(), 65536);
+            ::seven_suns_warning_detail::require(starting.is_object(), "Malformed city starting profile");
             starting["history"] = choices;
             starting["historyFrozen"] = true;
-            require(encode(choices).size() <= 65536 && encode(starting).size() <= 65536,
-                    "City history freeze exceeded its storage bound");
-            history.write(encode(choices), checkCurrent);
-            profile.write(encode(starting), checkCurrent);
+            ::seven_suns_warning_detail::require(::seven_suns_warning_detail::encode(choices).size() <= 65536 &&
+                                                     ::seven_suns_warning_detail::encode(starting).size() <= 65536,
+                                                 "City history freeze exceeded its storage bound");
+            history.write(::seven_suns_warning_detail::encode(choices), checkCurrent);
+            profile.write(::seven_suns_warning_detail::encode(starting), checkCurrent);
             frozen.write(true, checkCurrent);
         }
     }
 
-    void preflight(const Edge &edge) const {
+    void preflight(const ::seven_suns_warning_detail::Edge &edge) const {
         auto next = sourceGlobals;
         if (edge.setAsked || edge.setChecked) {
             if (!next.contains("GLOBAL"))
@@ -470,30 +496,39 @@ struct CSevenSunsDialogue::State {
                 next["GLOBAL"][globalKey("AskedForTour").value_or("AskedForTour")] = 1;
             if (edge.setChecked)
                 next["GLOBAL"][globalKey("CheckedSevenSuns").value_or("CheckedSevenSuns")] = 2;
-            require(next.size() <= 256 && next.at("GLOBAL").size() <= 1024 && encode(next).size() <= 65536,
-                    "Seven Suns source-global insertion does not fit its bounded store");
+            ::seven_suns_warning_detail::require(next.size() <= 256 && next.at("GLOBAL").size() <= 1024 &&
+                                                     ::seven_suns_warning_detail::encode(next).size() <= 65536,
+                                                 "Seven Suns source-global insertion does not fit its bounded store");
         }
         if (!firstChoice)
             return;
-        Field<std::string> talked(map, "plugin_cityTalked");
-        auto talks = document(talked.value, json::object(), 65536);
-        require(talks.is_object(), "Malformed city conversation records");
-        talks[ActorName] = json{{"label", "Merchant"}, {"creature", "DOPPSM"}, {"area", "AR0601"}};
-        require(talks.size() <= 2048 && encode(talks).size() <= 65536,
-                "Seven Suns conversation insertion does not fit its bounded store");
-        Field<int> count(actor, "plugin_cityTalkCount");
-        require(count.value.value_or(0) >= 0 && count.value.value_or(0) < 1000000, "Invalid city talk count");
-        if (!stored<bool>(map, "plugin_cityHistoryFrozen").value_or(false)) {
-            auto history = document(stored<std::string>(map, "plugin_cityHistory"), json::object(), 65536);
-            auto profile = document(stored<std::string>(map, "plugin_cityStartingProfile"), json::object(), 65536);
-            require(history.is_object() && profile.is_object(), "Malformed city history/profile");
+        ::seven_suns_warning_detail::Field<std::string> talked(map, "plugin_cityTalked");
+        auto talks = ::seven_suns_warning_detail::document(talked.value, json::object(), 65536);
+        ::seven_suns_warning_detail::require(talks.is_object(), "Malformed city conversation records");
+        talks[::seven_suns_warning_detail::ActorName] =
+            json{{"label", "Merchant"}, {"creature", "DOPPSM"}, {"area", "AR0601"}};
+        ::seven_suns_warning_detail::require(talks.size() <= 2048 &&
+                                                 ::seven_suns_warning_detail::encode(talks).size() <= 65536,
+                                             "Seven Suns conversation insertion does not fit its bounded store");
+        ::seven_suns_warning_detail::Field<int> count(actor, "plugin_cityTalkCount");
+        ::seven_suns_warning_detail::require(count.value.value_or(0) >= 0 && count.value.value_or(0) < 1000000,
+                                             "Invalid city talk count");
+        if (!::seven_suns_warning_detail::stored<bool>(map, "plugin_cityHistoryFrozen").value_or(false)) {
+            auto history = ::seven_suns_warning_detail::document(
+                ::seven_suns_warning_detail::stored<std::string>(map, "plugin_cityHistory"), json::object(), 65536);
+            auto profile = ::seven_suns_warning_detail::document(
+                ::seven_suns_warning_detail::stored<std::string>(map, "plugin_cityStartingProfile"), json::object(),
+                65536);
+            ::seven_suns_warning_detail::require(history.is_object() && profile.is_object(),
+                                                 "Malformed city history/profile");
             for (const auto *key : {"aldeth", "tenya", "eldoth"})
                 if (!history.contains(key))
                     history[key] = "unspecified";
             profile["history"] = history;
             profile["historyFrozen"] = true;
-            require(encode(history).size() <= 65536 && encode(profile).size() <= 65536,
-                    "Seven Suns history freeze does not fit its bounded store");
+            ::seven_suns_warning_detail::require(::seven_suns_warning_detail::encode(history).size() <= 65536 &&
+                                                     ::seven_suns_warning_detail::encode(profile).size() <= 65536,
+                                                 "Seven Suns history freeze does not fit its bounded store");
         }
     }
 };
@@ -503,7 +538,7 @@ std::map<const CMap *, CSevenSunsDialogue::State *> CSevenSunsDialogue::State::s
 
 CSevenSunsDialogue::CSevenSunsDialogue(std::unique_ptr<State> state) : state(std::move(state)) {}
 CSevenSunsDialogue::~CSevenSunsDialogue() = default;
-int CSevenSunsDialogue::readInteger(const json &value) { return integer(value); }
+int CSevenSunsDialogue::readInteger(const json &value) { return ::seven_suns_warning_detail::integer(value); }
 bool CSevenSunsDialogue::hasSceneLifetimeOwner(const std::shared_ptr<CGame> &game, const std::shared_ptr<CMap> &map,
                                                const std::shared_ptr<CCreature> &actor, bool requireDetached) {
     auto scene = game->getSceneManager();
@@ -514,15 +549,17 @@ std::unique_ptr<CSevenSunsDialogue> CSevenSunsDialogue::begin(std::weak_ptr<CGam
                                                               std::shared_ptr<CGameObject> clock,
                                                               std::shared_ptr<CCreature> actor,
                                                               std::function<void()> requireCaller) {
-    require(vstd::event_loop<>::instance()->isMainThread(), "Seven Suns requires the engine owner thread");
+    ::seven_suns_warning_detail::require(vstd::event_loop<>::instance()->isMainThread(),
+                                         "Seven Suns requires the engine owner thread");
     if (requireCaller)
         requireCaller();
     auto game = weakGame.lock();
-    require(game != nullptr, "Seven Suns game expired");
+    ::seven_suns_warning_detail::require(game != nullptr, "Seven Suns game expired");
     auto map = game->getMap();
-    require(map && typeid(*map) == typeid(CMap) && map->getMapName() == "baldursGate" && clock &&
-                map->getObjectByName("cityClock") == clock && clock->getGame() == game,
-            "Seven Suns requires its authored current map and clock");
+    ::seven_suns_warning_detail::require(map && typeid(*map) == typeid(CMap) && map->getMapName() == "baldursGate" &&
+                                             clock && map->getObjectByName("cityClock") == clock &&
+                                             clock->getGame() == game,
+                                         "Seven Suns requires its authored current map and clock");
     {
         std::lock_guard lock(State::sessionsMutex);
         if (auto found = State::sessions.find(map.get()); found != State::sessions.end()) {
@@ -532,45 +569,55 @@ std::unique_ptr<CSevenSunsDialogue> CSevenSunsDialogue::begin(std::weak_ptr<CGam
         }
     }
     auto lease = map->tryBeginUnsafeOperation();
-    require(lease.has_value(), "Seven Suns save admission refused");
+    ::seven_suns_warning_detail::require(lease.has_value(), "Seven Suns save admission refused");
     auto value = std::make_unique<State>(game, map, clock, actor, std::move(requireCaller));
-    validateState(value->row);
+    ::seven_suns_warning_detail::validateState(value->row);
     const bool retired = value->row.at("status").get<std::string>() == "retired";
-    require(game->getSceneManager()->containsSceneRetiredObject(map, actor) == retired,
-            "Seven Suns scene lifetime owner disagrees with its source receipt");
+    ::seven_suns_warning_detail::require(game->getSceneManager()->containsSceneRetiredObject(map, actor) == retired,
+                                         "Seven Suns scene lifetime owner disagrees with its source receipt");
     if (retired) {
         auto owner = value->retained.value ? std::dynamic_pointer_cast<CCreature>(*value->retained.value) : nullptr;
-        require(owner && owner == actor && !map->getObjectByName(ActorName), "Orphan retired Seven Suns actor");
+        ::seven_suns_warning_detail::require(owner && owner == actor &&
+                                                 !map->getObjectByName(::seven_suns_warning_detail::ActorName),
+                                             "Orphan retired Seven Suns actor");
         value->actorPhase = State::ActorPhase::Retired;
-        value->cursor = integer(value->row.at("cursor"));
+        value->cursor = ::seven_suns_warning_detail::integer(value->row.at("cursor"));
         std::size_t journalCount = 0;
         if (value->player) {
             for (const auto &quest : value->player->getQuests())
-                if (quest && quest->getTypeId() == QuestId && quest->getGame() == game) {
+                if (quest && quest->getTypeId() == ::seven_suns_warning_detail::QuestId && quest->getGame() == game) {
                     value->journal = quest;
                     ++journalCount;
                 }
             for (const auto &quest : value->player->getCompletedQuests())
-                require(!quest || quest->getTypeId() != QuestId,
-                        "Retired Seven Suns journal has a completed duplicate");
+                ::seven_suns_warning_detail::require(!quest ||
+                                                         quest->getTypeId() != ::seven_suns_warning_detail::QuestId,
+                                                     "Retired Seven Suns journal has a completed duplicate");
         }
-        require(journalCount == 1, "Retired Seven Suns journal lost its exact active owner");
+        ::seven_suns_warning_detail::require(journalCount == 1,
+                                             "Retired Seven Suns journal lost its exact active owner");
     } else {
-        require(!value->retained.value, "Orphan Seven Suns warning actor reference");
+        ::seven_suns_warning_detail::require(!value->retained.value, "Orphan Seven Suns warning actor reference");
         if (value->player) {
             for (const auto &quest : value->player->getQuests())
-                require(!quest || quest->getTypeId() != QuestId, "Orphan Seven Suns warning journal");
+                ::seven_suns_warning_detail::require(!quest ||
+                                                         quest->getTypeId() != ::seven_suns_warning_detail::QuestId,
+                                                     "Orphan Seven Suns warning journal");
             for (const auto &quest : value->player->getCompletedQuests())
-                require(!quest || quest->getTypeId() != QuestId, "Orphan completed Seven Suns warning journal");
+                ::seven_suns_warning_detail::require(!quest ||
+                                                         quest->getTypeId() != ::seven_suns_warning_detail::QuestId,
+                                                     "Orphan completed Seven Suns warning journal");
         }
     }
-    const auto definition = document(value->definition.value, json(), 1024);
-    if (!(keys(definition, {"version", "dialogue", "fingerprint", "journalQuest"}) &&
-          definition.at("version").is_number_integer() && integer(definition.at("version")) == 1 &&
+    const auto definition = ::seven_suns_warning_detail::document(value->definition.value, json(), 1024);
+    if (!(::seven_suns_warning_detail::keys(definition, {"version", "dialogue", "fingerprint", "journalQuest"}) &&
+          definition.at("version").is_number_integer() &&
+          ::seven_suns_warning_detail::integer(definition.at("version")) == 1 &&
           definition.at("dialogue").is_string() && definition.at("dialogue").get<std::string>() == "DOPPSM" &&
           definition.at("fingerprint").is_string() &&
-          definition.at("fingerprint").get<std::string>() == DialogueFingerprint &&
-          definition.at("journalQuest").is_string() && definition.at("journalQuest").get<std::string>() == QuestId)) {
+          definition.at("fingerprint").get<std::string>() == ::seven_suns_warning_detail::DialogueFingerprint &&
+          definition.at("journalQuest").is_string() &&
+          definition.at("journalQuest").get<std::string>() == ::seven_suns_warning_detail::QuestId)) {
         lease->finish();
         throw std::runtime_error("Seven Suns warning content capability is unavailable");
     }
@@ -593,7 +640,7 @@ json CSevenSunsDialogue::view() const {
     json automatic = nullptr;
     const bool retired = state->actorPhase == State::ActorPhase::Retired;
     if (!retired)
-        for (const auto &edge : Edges)
+        for (const auto &edge : ::seven_suns_warning_detail::Edges)
             if (edge.from == state->cursor && (!edge.asked || state->global("AskedForTour") == 1)) {
                 if (edge.escape)
                     automatic = edge.index;
@@ -616,40 +663,47 @@ json CSevenSunsDialogue::advance(int revision, int edgeIndex) {
     }
     state->check();
     auto game = state->game.lock();
-    require(game != nullptr, "Seven Suns game expired");
-    require(!state->mutating && state->actorPhase == State::ActorPhase::Registered &&
-                integer(state->row.at("revision")) == revision && revision < 999999,
-            "Stale or repeated Seven Suns transition");
-    const Edge *selected = nullptr;
-    for (const auto &edge : Edges)
+    ::seven_suns_warning_detail::require(game != nullptr, "Seven Suns game expired");
+    ::seven_suns_warning_detail::require(
+        !state->mutating && state->actorPhase == State::ActorPhase::Registered &&
+            ::seven_suns_warning_detail::integer(state->row.at("revision")) == revision && revision < 999999,
+        "Stale or repeated Seven Suns transition");
+    const ::seven_suns_warning_detail::Edge *selected = nullptr;
+    for (const auto &edge : ::seven_suns_warning_detail::Edges)
         if (edge.index == edgeIndex && edge.from == state->cursor &&
             (!edge.asked || state->global("AskedForTour") == 1))
             selected = &edge;
-    require(selected != nullptr, "Unsupported Seven Suns dialogue transition");
+    ::seven_suns_warning_detail::require(selected != nullptr, "Unsupported Seven Suns dialogue transition");
     state->preflight(*selected);
     auto lease = state->map->tryBeginUnsafeOperation();
-    require(lease.has_value(), "Seven Suns save admission refused");
+    ::seven_suns_warning_detail::require(lease.has_value(), "Seven Suns save admission refused");
     state->mutating = true;
     auto check = [&] {
         state->check();
-        require(lease->isSaveAdmissionHealthy(), "Seven Suns mutation admission changed or was quarantined");
+        ::seven_suns_warning_detail::require(lease->isSaveAdmissionHealthy(),
+                                             "Seven Suns mutation admission changed or was quarantined");
     };
     try {
         auto barrier = game->getObjectHandler()->beginDefeatConstruction(check);
         check();
-        ActorSnapshot original(state->actor);
-        ActorSnapshot originalPlayer(state->player);
+        ::seven_suns_warning_detail::ActorSnapshot original(state->actor);
+        ::seven_suns_warning_detail::ActorSnapshot originalPlayer(state->player);
         if (selected->escape) {
             for (const auto &quest : state->player->getQuests())
-                require(!quest || quest->getTypeId() != QuestId, "Orphan Seven Suns warning journal before escape");
+                ::seven_suns_warning_detail::require(!quest ||
+                                                         quest->getTypeId() != ::seven_suns_warning_detail::QuestId,
+                                                     "Orphan Seven Suns warning journal before escape");
             for (const auto &quest : state->player->getCompletedQuests())
-                require(!quest || quest->getTypeId() != QuestId, "Orphan completed Seven Suns journal before escape");
+                ::seven_suns_warning_detail::require(!quest ||
+                                                         quest->getTypeId() != ::seven_suns_warning_detail::QuestId,
+                                                     "Orphan completed Seven Suns journal before escape");
             state->retained.write(state->actor, check);
         }
         state->row["status"] = "pending";
         state->row["lastEdge"] = edgeIndex;
         state->edges[state->edges.size()] = edgeIndex;
-        require(state->edges.size() <= 3, "Seven Suns conversation exceeded its finite edge prefix");
+        ::seven_suns_warning_detail::require(state->edges.size() <= 3,
+                                             "Seven Suns conversation exceeded its finite edge prefix");
         state->row["edges"] = state->edges;
         state->row["globals"] = state->globalSnapshot();
         state->writeRow(check);
@@ -665,41 +719,49 @@ json CSevenSunsDialogue::advance(int revision, int edgeIndex) {
             state->actorPhase = State::ActorPhase::Retired;
             check();
             original.check();
-            state->player->addQuest(QuestId);
+            state->player->addQuest(::seven_suns_warning_detail::QuestId);
             check();
             std::shared_ptr<CQuest> journal;
             for (const auto &quest : state->player->getQuests())
-                if (quest && quest->getTypeId() == QuestId) {
-                    require(!journal, "Duplicate Seven Suns warning journal");
+                if (quest && quest->getTypeId() == ::seven_suns_warning_detail::QuestId) {
+                    ::seven_suns_warning_detail::require(!journal, "Duplicate Seven Suns warning journal");
                     journal = quest;
                 }
-            require(journal != nullptr, "Seven Suns warning journal was not added");
+            ::seven_suns_warning_detail::require(journal != nullptr, "Seven Suns warning journal was not added");
             state->journal = journal;
-            require(journal->getGame() == game &&
-                        (typeid(*journal) == typeid(CQuest) || typeid(*journal) == typeid(CWrapper<CQuest>)),
-                    "Seven Suns warning journal has an unsupported native provider");
+            ::seven_suns_warning_detail::require(
+                journal->getGame() == game &&
+                    (typeid(*journal) == typeid(CQuest) || typeid(*journal) == typeid(CWrapper<CQuest>)),
+                "Seven Suns warning journal has an unsupported native provider");
             auto requireJournal = [&] {
                 check();
                 std::size_t matching = 0;
                 for (const auto &quest : state->player->getQuests())
-                    if (quest && quest->getTypeId() == QuestId) {
-                        require(quest == journal && quest->getGame() == game, "Seven Suns journal owner was replaced");
+                    if (quest && quest->getTypeId() == ::seven_suns_warning_detail::QuestId) {
+                        ::seven_suns_warning_detail::require(quest == journal && quest->getGame() == game,
+                                                             "Seven Suns journal owner was replaced");
                         ++matching;
                     }
-                require(matching == 1, "Seven Suns journal is no longer active");
+                ::seven_suns_warning_detail::require(matching == 1, "Seven Suns journal is no longer active");
                 for (const auto &quest : state->player->getCompletedQuests())
-                    require(!quest || quest->getTypeId() != QuestId,
-                            "Seven Suns warning journal has a completed duplicate");
+                    ::seven_suns_warning_detail::require(!quest ||
+                                                             quest->getTypeId() != ::seven_suns_warning_detail::QuestId,
+                                                         "Seven Suns warning journal has a completed duplicate");
             };
             requireJournal();
-            captureJournalStrict(journal);
+            ::seven_suns_warning_detail::captureJournalStrict(journal);
             requireJournal();
-            require(!journalTextStrict(journal, "getObjective").empty(), "Seven Suns warning journal is unreadable");
+            ::seven_suns_warning_detail::require(
+                !::seven_suns_warning_detail::journalTextStrict(journal, "getObjective").empty(),
+                "Seven Suns warning journal is unreadable");
             requireJournal();
-            require(!journalTextStrict(journal, "getReward").empty(),
-                    "Seven Suns warning journal reward description is unreadable");
+            ::seven_suns_warning_detail::require(
+                !::seven_suns_warning_detail::journalTextStrict(journal, "getReward").empty(),
+                "Seven Suns warning journal reward description is unreadable");
             requireJournal();
-            require(!journalTextStrict(journal, "getHint").empty(), "Seven Suns warning journal hint is unreadable");
+            ::seven_suns_warning_detail::require(
+                !::seven_suns_warning_detail::journalTextStrict(journal, "getHint").empty(),
+                "Seven Suns warning journal hint is unreadable");
             requireJournal();
             original.check();
             state->row["journal"] = true;
@@ -725,9 +787,10 @@ json CSevenSunsDialogue::advance(int revision, int edgeIndex) {
 }
 
 json CSevenSunsDialogue::close() {
-    require(vstd::event_loop<>::instance()->isMainThread(), "Seven Suns requires the engine owner thread");
-    require(!state->mutating, "Cannot close an admitted Seven Suns mutation");
-    const int revision = integer(state->row.at("revision"));
+    ::seven_suns_warning_detail::require(vstd::event_loop<>::instance()->isMainThread(),
+                                         "Seven Suns requires the engine owner thread");
+    ::seven_suns_warning_detail::require(!state->mutating, "Cannot close an admitted Seven Suns mutation");
+    const int revision = ::seven_suns_warning_detail::integer(state->row.at("revision"));
     state->closed = true;
     return json{{"status", "closed"},   {"capabilityVersion", 1},   {"state", state->cursor},
                 {"revision", revision}, {"choices", json::array()}, {"automaticEdge", nullptr},

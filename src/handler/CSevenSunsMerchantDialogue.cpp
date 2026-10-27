@@ -29,6 +29,7 @@
 #include <string_view>
 #include <typeinfo>
 
+namespace seven_suns_merchant_dialogue_detail {
 namespace {
 constexpr auto ReceiptKey = "plugin_citySevenSunsMerchantState";
 constexpr auto GlobalsKey = "plugin_citySourceGlobals";
@@ -188,6 +189,7 @@ struct ActorSnapshot {
     }
 };
 } // namespace
+} // namespace seven_suns_merchant_dialogue_detail
 
 struct CSevenSunsMerchantDialogue::State {
     enum class Phase { Registered, Preparing, Replacing, Replaced };
@@ -197,14 +199,14 @@ struct CSevenSunsMerchantDialogue::State {
     std::shared_ptr<CPlayer> player;
     std::shared_ptr<CGameObject> clock;
     std::shared_ptr<CCreature> actor, replacement;
-    const Lineage *identity;
+    const ::seven_suns_merchant_dialogue_detail::Lineage *identity;
     CGameContext::TransitionGeneration generation;
     std::uint64_t epoch, region;
     int turn;
     std::function<void()> requireCaller;
-    Field<std::string> definition, receipt, globals;
-    Field<int> count, allegiance;
-    Field<std::shared_ptr<CGameObject>> oldRef, newRef;
+    ::seven_suns_merchant_dialogue_detail::Field<std::string> definition, receipt, globals;
+    ::seven_suns_merchant_dialogue_detail::Field<int> count, allegiance;
+    ::seven_suns_merchant_dialogue_detail::Field<std::shared_ptr<CGameObject>> oldRef, newRef;
     json source, rows, row;
     bool interactive, mutating = false, poisoned = false, terminal = false, firstChoice = true;
     Phase phase = Phase::Registered;
@@ -212,34 +214,48 @@ struct CSevenSunsMerchantDialogue::State {
     static std::map<const CMap *, State *> sessions;
 
     State(std::shared_ptr<CGame> owner, std::shared_ptr<CGameObject> clock, std::shared_ptr<CCreature> actor,
-          const Lineage *identity, bool interactive, std::function<void()> caller)
+          const ::seven_suns_merchant_dialogue_detail::Lineage *identity, bool interactive,
+          std::function<void()> caller)
         : game(owner), context(owner->getContext()), map(owner->getMap()), player(map->getAssignedPlayer()),
           clock(std::move(clock)), actor(std::move(actor)), identity(identity),
           generation(context->captureTransitionGeneration()), epoch(owner->getMapBindingEpoch()),
           region(CSevenSunsMerchantDialogue::regionEpoch(owner, map)), turn(map->getTurn()),
-          requireCaller(std::move(caller)), definition(this->clock, DefinitionKey), receipt(map, ReceiptKey),
-          globals(map, GlobalsKey), count(this->actor, CountKey), allegiance(this->actor, "sourceAllegiance"),
+          requireCaller(std::move(caller)),
+          definition(this->clock, ::seven_suns_merchant_dialogue_detail::DefinitionKey),
+          receipt(map, ::seven_suns_merchant_dialogue_detail::ReceiptKey),
+          globals(map, ::seven_suns_merchant_dialogue_detail::GlobalsKey),
+          count(this->actor, ::seven_suns_merchant_dialogue_detail::CountKey),
+          allegiance(this->actor, "sourceAllegiance"),
           oldRef(this->clock, std::string("plugin_citySevenSunsMerchantOld_") + identity->name),
           newRef(this->clock, std::string("plugin_citySevenSunsMerchantNew_") + identity->name),
-          source(document(globals.value, json::object())),
-          rows(document(receipt.value, json{{"version", 1}, {"actors", json::object()}})), interactive(interactive) {
-        require(source.is_object() && source.size() <= 256, "Malformed city source-global scopes");
+          source(::seven_suns_merchant_dialogue_detail::document(globals.value, json::object())),
+          rows(::seven_suns_merchant_dialogue_detail::document(receipt.value,
+                                                               json{{"version", 1}, {"actors", json::object()}})),
+          interactive(interactive) {
+        ::seven_suns_merchant_dialogue_detail::require(source.is_object() && source.size() <= 256,
+                                                       "Malformed city source-global scopes");
         if (source.contains("GLOBAL"))
-            require(source.at("GLOBAL").is_object() && source.at("GLOBAL").size() <= 1024,
-                    "Malformed city GLOBAL namespace");
-        require(keys(rows, {"version", "actors"}) && integer(rows.at("version")) == 1 &&
-                    rows.at("actors").is_object() && rows.at("actors").size() <= 4,
-                "Malformed DOPMER receipt collection");
+            ::seven_suns_merchant_dialogue_detail::require(source.at("GLOBAL").is_object() &&
+                                                               source.at("GLOBAL").size() <= 1024,
+                                                           "Malformed city GLOBAL namespace");
+        ::seven_suns_merchant_dialogue_detail::require(
+            ::seven_suns_merchant_dialogue_detail::keys(rows, {"version", "actors"}) &&
+                ::seven_suns_merchant_dialogue_detail::integer(rows.at("version")) == 1 &&
+                rows.at("actors").is_object() && rows.at("actors").size() <= 4,
+            "Malformed DOPMER receipt collection");
         for (const auto &[name, value] : rows.at("actors").items()) {
-            require(lineage(name), "Foreign DOPMER lineage receipt");
-            require(value.is_object() && value.contains("status") && value.at("status").is_string(),
-                    "Malformed DOPMER lineage receipt");
+            ::seven_suns_merchant_dialogue_detail::require(::seven_suns_merchant_dialogue_detail::lineage(name),
+                                                           "Foreign DOPMER lineage receipt");
+            ::seven_suns_merchant_dialogue_detail::require(value.is_object() && value.contains("status") &&
+                                                               value.at("status").is_string(),
+                                                           "Malformed DOPMER lineage receipt");
             const auto status = value.at("status").get<std::string>();
-            require(status == "active" || status == "closed" || status == "replaced",
-                    "Unsettled DOPMER lineage requires verified restore");
+            ::seven_suns_merchant_dialogue_detail::require(status == "active" || status == "closed" ||
+                                                               status == "replaced",
+                                                           "Unsettled DOPMER lineage requires verified restore");
         }
         const int n = count.value.value_or(0);
-        require(n >= 0 && n <= 1000000, "Invalid DOPMER source talk count");
+        ::seven_suns_merchant_dialogue_detail::require(n >= 0 && n <= 1000000, "Invalid DOPMER source talk count");
         row = rows.at("actors").contains(identity->name) ? rows.at("actors").at(identity->name)
                                                          : json{{"version", 1},
                                                                 {"status", "active"},
@@ -258,7 +274,8 @@ struct CSevenSunsMerchantDialogue::State {
             phase = Phase::Replaced;
             replacement = newRef.value ? std::dynamic_pointer_cast<CCreature>(*newRef.value) : nullptr;
         } else
-            require(!oldRef.value && !newRef.value, "Orphan DOPMER retained owner");
+            ::seven_suns_merchant_dialogue_detail::require(!oldRef.value && !newRef.value,
+                                                           "Orphan DOPMER retained owner");
     }
     ~State() {
         std::lock_guard lock(mutex);
@@ -271,15 +288,16 @@ struct CSevenSunsMerchantDialogue::State {
             return std::nullopt;
         std::optional<std::string> result;
         for (const auto &[key, ignored] : source.at("GLOBAL").items())
-            if (canonical(key) == canonical(name)) {
-                require(!result, "Ambiguous city GLOBAL aliases");
+            if (::seven_suns_merchant_dialogue_detail::canonical(key) ==
+                ::seven_suns_merchant_dialogue_detail::canonical(name)) {
+                ::seven_suns_merchant_dialogue_detail::require(!result, "Ambiguous city GLOBAL aliases");
                 result = key;
             }
         return result;
     }
     int global(const char *name) const {
         auto key = globalKey(name);
-        return key ? integer(source.at("GLOBAL").at(*key)) : 0;
+        return key ? ::seven_suns_merchant_dialogue_detail::integer(source.at("GLOBAL").at(*key)) : 0;
     }
     json globalSnapshot() const {
         return json{{"CheckedSevenSuns", global("CheckedSevenSuns")},
@@ -287,37 +305,45 @@ struct CSevenSunsMerchantDialogue::State {
                     {"Laola", global("Laola")}};
     }
     void validateRow() const {
-        require(keys(row, {"version", "status", "revision", "sourceTalkCount", "entry", "cursor", "lastEdge", "edges",
-                           "globals", "settledTurn", "predicate", "stock"}) &&
-                    integer(row.at("version")) == 1 && row.at("status").is_string() &&
-                    integer(row.at("revision")) >= 0 && integer(row.at("revision")) < 1000000 &&
-                    integer(row.at("sourceTalkCount")) == count.value.value_or(0) && row.at("edges").is_array() &&
-                    row.at("edges").size() <= 4,
-                "Malformed or inconsistent DOPMER receipt");
+        ::seven_suns_merchant_dialogue_detail::require(
+            ::seven_suns_merchant_dialogue_detail::keys(row, {"version", "status", "revision", "sourceTalkCount",
+                                                              "entry", "cursor", "lastEdge", "edges", "globals",
+                                                              "settledTurn", "predicate", "stock"}) &&
+                ::seven_suns_merchant_dialogue_detail::integer(row.at("version")) == 1 &&
+                row.at("status").is_string() &&
+                ::seven_suns_merchant_dialogue_detail::integer(row.at("revision")) >= 0 &&
+                ::seven_suns_merchant_dialogue_detail::integer(row.at("revision")) < 1000000 &&
+                ::seven_suns_merchant_dialogue_detail::integer(row.at("sourceTalkCount")) == count.value.value_or(0) &&
+                row.at("edges").is_array() && row.at("edges").size() <= 4,
+            "Malformed or inconsistent DOPMER receipt");
         const auto status = row.at("status").get<std::string>();
-        require(status == "active" || status == "closed" || status == "replaced",
-                "Unsettled DOPMER receipt requires restore");
-        int cursor = integer(row.at("entry"));
-        require(cursor == 0 || cursor == 7 || cursor == 10, "Unsupported DOPMER source entry");
+        ::seven_suns_merchant_dialogue_detail::require(status == "active" || status == "closed" || status == "replaced",
+                                                       "Unsettled DOPMER receipt requires restore");
+        int cursor = ::seven_suns_merchant_dialogue_detail::integer(row.at("entry"));
+        ::seven_suns_merchant_dialogue_detail::require(cursor == 0 || cursor == 7 || cursor == 10,
+                                                       "Unsupported DOPMER source entry");
         bool ended = false;
         int last = -1;
         for (const auto &id : row.at("edges")) {
-            const Edge *edge = nullptr;
-            for (const auto &candidate : Edges)
-                if (candidate.index == integer(id) && candidate.from == cursor)
+            const ::seven_suns_merchant_dialogue_detail::Edge *edge = nullptr;
+            for (const auto &candidate : ::seven_suns_merchant_dialogue_detail::Edges)
+                if (candidate.index == ::seven_suns_merchant_dialogue_detail::integer(id) && candidate.from == cursor)
                     edge = &candidate;
-            require(edge && !ended, "DOPMER receipt lost its exact source path");
+            ::seven_suns_merchant_dialogue_detail::require(edge && !ended, "DOPMER receipt lost its exact source path");
             cursor = edge->to;
             ended = edge->terminal;
             last = edge->index;
         }
-        require(integer(row.at("cursor")) == cursor && integer(row.at("lastEdge")) == last &&
-                    (status != "closed" || ended),
-                "DOPMER receipt cursor disagrees with its path");
-        require(row.at("globals").is_object(), "Malformed DOPMER source-global audit");
+        ::seven_suns_merchant_dialogue_detail::require(
+            ::seven_suns_merchant_dialogue_detail::integer(row.at("cursor")) == cursor &&
+                ::seven_suns_merchant_dialogue_detail::integer(row.at("lastEdge")) == last &&
+                (status != "closed" || ended),
+            "DOPMER receipt cursor disagrees with its path");
+        ::seven_suns_merchant_dialogue_detail::require(row.at("globals").is_object(),
+                                                       "Malformed DOPMER source-global audit");
         for (const auto *name : {"CheckedSevenSuns", "Doppleganger", "Laola"})
-            static_cast<void>(integer(row.at("globals").at(name)));
-        static_cast<void>(integer(row.at("settledTurn")));
+            static_cast<void>(::seven_suns_merchant_dialogue_detail::integer(row.at("globals").at(name)));
+        static_cast<void>(::seven_suns_merchant_dialogue_detail::integer(row.at("settledTurn")));
     }
     void claim() {
         std::lock_guard lock(mutex);
@@ -329,63 +355,80 @@ struct CSevenSunsMerchantDialogue::State {
         sessions.emplace(map.get(), this);
     }
     void check(bool validateStock = true) const {
-        require(vstd::event_loop<>::instance()->isMainThread(), "DOPMER requires engine owner thread");
+        ::seven_suns_merchant_dialogue_detail::require(vstd::event_loop<>::instance()->isMainThread(),
+                                                       "DOPMER requires engine owner thread");
         if (requireCaller)
             requireCaller();
         auto owner = game.lock();
-        require(owner && !poisoned && context->isActive() && owner->getContext() == context &&
-                    context->isTransitionGenerationCurrent(generation) && owner->getMap() == map &&
-                    owner->getMapBindingEpoch() == epoch &&
-                    CSevenSunsMerchantDialogue::regionEpoch(owner, map) == region && map->getTurn() == turn &&
-                    map->getGame() == owner && map->getAssignedPlayer() == player && player &&
-                    player->getGame() == owner && clock->getGame() == owner && player->isAlive() &&
-                    map->getObjectByName("player") == player && map->getObjectByName("cityClock") == clock &&
-                    map->getMapName() == "baldursGate" && map->getActiveSimulationRegion() == identity->area,
-                "DOPMER map/player/clock/area binding changed");
-        require(actor && typeid(*actor) == typeid(CCreature) && actor->getGame() == owner &&
-                    actor->getName() == identity->name && actor->isAlive() && actor->isNpc() &&
-                    actor->getAffiliation() == "cityResidents" &&
-                    stored<std::string>(actor, "sourceActor") == std::optional<std::string>{identity->sourceActor} &&
-                    stored<std::string>(actor, "sourceArea") == std::optional<std::string>{identity->area} &&
-                    stored<std::string>(actor, "simulationRegion") == std::optional<std::string>{identity->area} &&
-                    stored<std::string>(actor, "sourceCreature") == std::optional<std::string>{"DOPMER"} &&
-                    stored<std::string>(actor, "sourceDialogue") == std::optional<std::string>{"DOPMER"},
-                "DOPMER source actor changed");
-        require(!stored<bool>(map, "plugin_cityFlag_cityCompleted").value_or(false) &&
-                    !stored<bool>(map, "plugin_cityFlag_poisonFatal").value_or(false) &&
-                    stored<std::string>(map, "plugin_cityCustodyState").value_or("") != "hearing",
-                "DOPMER city interaction unavailable");
-        auto chapter = stored<int>(map, "plugin_cityPhase").value_or(5);
-        require(chapter >= stored<int>(actor, "phaseMin").value_or(5) &&
-                    chapter <= stored<int>(actor, "phaseMax").value_or(7),
-                "DOPMER source phase changed");
+        ::seven_suns_merchant_dialogue_detail::require(
+            owner && !poisoned && context->isActive() && owner->getContext() == context &&
+                context->isTransitionGenerationCurrent(generation) && owner->getMap() == map &&
+                owner->getMapBindingEpoch() == epoch && CSevenSunsMerchantDialogue::regionEpoch(owner, map) == region &&
+                map->getTurn() == turn && map->getGame() == owner && map->getAssignedPlayer() == player && player &&
+                player->getGame() == owner && clock->getGame() == owner && player->isAlive() &&
+                map->getObjectByName("player") == player && map->getObjectByName("cityClock") == clock &&
+                map->getMapName() == "baldursGate" && map->getActiveSimulationRegion() == identity->area,
+            "DOPMER map/player/clock/area binding changed");
+        ::seven_suns_merchant_dialogue_detail::require(
+            actor && typeid(*actor) == typeid(CCreature) && actor->getGame() == owner &&
+                actor->getName() == identity->name && actor->isAlive() && actor->isNpc() &&
+                actor->getAffiliation() == "cityResidents" &&
+                ::seven_suns_merchant_dialogue_detail::stored<std::string>(actor, "sourceActor") ==
+                    std::optional<std::string>{identity->sourceActor} &&
+                ::seven_suns_merchant_dialogue_detail::stored<std::string>(actor, "sourceArea") ==
+                    std::optional<std::string>{identity->area} &&
+                ::seven_suns_merchant_dialogue_detail::stored<std::string>(actor, "simulationRegion") ==
+                    std::optional<std::string>{identity->area} &&
+                ::seven_suns_merchant_dialogue_detail::stored<std::string>(actor, "sourceCreature") ==
+                    std::optional<std::string>{"DOPMER"} &&
+                ::seven_suns_merchant_dialogue_detail::stored<std::string>(actor, "sourceDialogue") ==
+                    std::optional<std::string>{"DOPMER"},
+            "DOPMER source actor changed");
+        ::seven_suns_merchant_dialogue_detail::require(
+            !::seven_suns_merchant_dialogue_detail::stored<bool>(map, "plugin_cityFlag_cityCompleted")
+                    .value_or(false) &&
+                !::seven_suns_merchant_dialogue_detail::stored<bool>(map, "plugin_cityFlag_poisonFatal")
+                     .value_or(false) &&
+                ::seven_suns_merchant_dialogue_detail::stored<std::string>(map, "plugin_cityCustodyState")
+                        .value_or("") != "hearing",
+            "DOPMER city interaction unavailable");
+        auto chapter = ::seven_suns_merchant_dialogue_detail::stored<int>(map, "plugin_cityPhase").value_or(5);
+        ::seven_suns_merchant_dialogue_detail::require(
+            chapter >= ::seven_suns_merchant_dialogue_detail::stored<int>(actor, "phaseMin").value_or(5) &&
+                chapter <= ::seven_suns_merchant_dialogue_detail::stored<int>(actor, "phaseMax").value_or(7),
+            "DOPMER source phase changed");
         if (interactive && phase == Phase::Registered) {
             auto a = actor->getCoords(), p = player->getCoords();
             auto dx = static_cast<std::int64_t>(a.x) - p.x, dy = static_cast<std::int64_t>(a.y) - p.y;
-            require(a.z == p.z && std::abs(dx) + std::abs(dy) <= 1, "DOPMER dialogue no longer adjacent");
+            ::seven_suns_merchant_dialogue_detail::require(a.z == p.z && std::abs(dx) + std::abs(dy) <= 1,
+                                                           "DOPMER dialogue no longer adjacent");
         }
         auto current = map->getObjectByName(identity->name);
         if (phase == Phase::Registered)
-            require(current == actor && !oldRef.value && !newRef.value &&
-                        !CSevenSunsMerchantDialogue::hasLifetimeOwner(owner, map, actor),
-                    "DOPMER old owner changed");
+            ::seven_suns_merchant_dialogue_detail::require(
+                current == actor && !oldRef.value && !newRef.value &&
+                    !CSevenSunsMerchantDialogue::hasLifetimeOwner(owner, map, actor),
+                "DOPMER old owner changed");
         if (phase == Phase::Preparing)
-            require(current == actor &&
-                        (!oldRef.value || oldRef.value == std::optional<std::shared_ptr<CGameObject>>{actor}) &&
-                        (!newRef.value || newRef.value == std::optional<std::shared_ptr<CGameObject>>{replacement}),
-                    "DOPMER staged ownership changed");
+            ::seven_suns_merchant_dialogue_detail::require(
+                current == actor &&
+                    (!oldRef.value || oldRef.value == std::optional<std::shared_ptr<CGameObject>>{actor}) &&
+                    (!newRef.value || newRef.value == std::optional<std::shared_ptr<CGameObject>>{replacement}),
+                "DOPMER staged ownership changed");
         if (phase == Phase::Replacing) {
-            require(current == actor || !current || current == replacement, "DOPMER publication superseded");
+            ::seven_suns_merchant_dialogue_detail::require(current == actor || !current || current == replacement,
+                                                           "DOPMER publication superseded");
             if (current != actor)
-                require(CSevenSunsMerchantDialogue::retired(owner, map, actor),
-                        "DOPMER retirement lifetime anchor was lost");
+                ::seven_suns_merchant_dialogue_detail::require(CSevenSunsMerchantDialogue::retired(owner, map, actor),
+                                                               "DOPMER retirement lifetime anchor was lost");
         }
         if (phase == Phase::Replaced)
-            require(oldRef.value == std::optional<std::shared_ptr<CGameObject>>{actor} &&
-                        newRef.value == std::optional<std::shared_ptr<CGameObject>>{replacement} && replacement &&
-                        CSevenSunsMerchantDialogue::retired(owner, map, actor) &&
-                        (current == replacement || (!replacement->isAlive() && !current)),
-                    "DOPMER replacement receipt lost its owners");
+            ::seven_suns_merchant_dialogue_detail::require(
+                oldRef.value == std::optional<std::shared_ptr<CGameObject>>{actor} &&
+                    newRef.value == std::optional<std::shared_ptr<CGameObject>>{replacement} && replacement &&
+                    CSevenSunsMerchantDialogue::retired(owner, map, actor) &&
+                    (current == replacement || (!replacement->isAlive() && !current)),
+                "DOPMER replacement receipt lost its owners");
         definition.check();
         receipt.check();
         globals.check();
@@ -399,11 +442,12 @@ struct CSevenSunsMerchantDialogue::State {
     }
     void writeRow(const std::function<void()> &guard) {
         rows["actors"][identity->name] = row;
-        auto text = encode(rows);
-        require(text.size() <= 65536, "DOPMER receipts exceeded bounded storage");
+        auto text = ::seven_suns_merchant_dialogue_detail::encode(rows);
+        ::seven_suns_merchant_dialogue_detail::require(text.size() <= 65536,
+                                                       "DOPMER receipts exceeded bounded storage");
         receipt.write(std::move(text), guard);
     }
-    void preflightGlobals(const Edge &edge) const {
+    void preflightGlobals(const ::seven_suns_merchant_dialogue_detail::Edge &edge) const {
         auto next = source;
         auto put = [&](const char *name, int value) {
             if (!next.contains("GLOBAL"))
@@ -416,27 +460,40 @@ struct CSevenSunsMerchantDialogue::State {
             put("Doppleganger", 1);
             put("Laola", 1);
         }
-        require(next.size() <= 256 && (!next.contains("GLOBAL") || next.at("GLOBAL").size() <= 1024) &&
-                    encode(next).size() <= 65536,
-                "DOPMER source writes do not fit their admitted store");
+        ::seven_suns_merchant_dialogue_detail::require(
+            next.size() <= 256 && (!next.contains("GLOBAL") || next.at("GLOBAL").size() <= 1024) &&
+                ::seven_suns_merchant_dialogue_detail::encode(next).size() <= 65536,
+            "DOPMER source writes do not fit their admitted store");
         if (firstChoice) {
-            auto talks = document(stored<std::string>(map, "plugin_cityTalked"), json::object());
-            require(talks.is_object(), "Malformed city talk bookkeeping");
+            auto talks = ::seven_suns_merchant_dialogue_detail::document(
+                ::seven_suns_merchant_dialogue_detail::stored<std::string>(map, "plugin_cityTalked"), json::object());
+            ::seven_suns_merchant_dialogue_detail::require(talks.is_object(), "Malformed city talk bookkeeping");
             talks[identity->name] = json{{"label", "Merchant"}, {"creature", "DOPMER"}, {"area", identity->area}};
-            require(talks.size() <= 2048 && encode(talks).size() <= 65536, "DOPMER talk capacity before source writes");
-            const int generic = stored<int>(actor, "plugin_cityTalkCount").value_or(0);
-            require(generic >= 0 && generic < 1000000, "Invalid city generic talk count");
-            if (!stored<bool>(map, "plugin_cityHistoryFrozen").value_or(false)) {
-                auto choices = document(stored<std::string>(map, "plugin_cityHistory"), json::object());
-                auto profile = document(stored<std::string>(map, "plugin_cityStartingProfile"), json::object());
-                require(choices.is_object() && profile.is_object(), "Malformed city history/profile");
+            ::seven_suns_merchant_dialogue_detail::require(
+                talks.size() <= 2048 && ::seven_suns_merchant_dialogue_detail::encode(talks).size() <= 65536,
+                "DOPMER talk capacity before source writes");
+            const int generic =
+                ::seven_suns_merchant_dialogue_detail::stored<int>(actor, "plugin_cityTalkCount").value_or(0);
+            ::seven_suns_merchant_dialogue_detail::require(generic >= 0 && generic < 1000000,
+                                                           "Invalid city generic talk count");
+            if (!::seven_suns_merchant_dialogue_detail::stored<bool>(map, "plugin_cityHistoryFrozen").value_or(false)) {
+                auto choices = ::seven_suns_merchant_dialogue_detail::document(
+                    ::seven_suns_merchant_dialogue_detail::stored<std::string>(map, "plugin_cityHistory"),
+                    json::object());
+                auto profile = ::seven_suns_merchant_dialogue_detail::document(
+                    ::seven_suns_merchant_dialogue_detail::stored<std::string>(map, "plugin_cityStartingProfile"),
+                    json::object());
+                ::seven_suns_merchant_dialogue_detail::require(choices.is_object() && profile.is_object(),
+                                                               "Malformed city history/profile");
                 for (const auto *key : {"aldeth", "tenya", "eldoth"})
                     if (!choices.contains(key))
                         choices[key] = "unspecified";
                 profile["history"] = choices;
                 profile["historyFrozen"] = true;
-                require(encode(choices).size() <= 65536 && encode(profile).size() <= 65536,
-                        "DOPMER history capacity before source writes");
+                ::seven_suns_merchant_dialogue_detail::require(
+                    ::seven_suns_merchant_dialogue_detail::encode(choices).size() <= 65536 &&
+                        ::seven_suns_merchant_dialogue_detail::encode(profile).size() <= 65536,
+                    "DOPMER history capacity before source writes");
             }
         }
     }
@@ -444,34 +501,42 @@ struct CSevenSunsMerchantDialogue::State {
         if (!source.contains("GLOBAL"))
             source["GLOBAL"] = json::object();
         source["GLOBAL"][globalKey(name).value_or(name)] = value;
-        globals.write(encode(source), guard);
+        globals.write(::seven_suns_merchant_dialogue_detail::encode(source), guard);
         row["globals"] = globalSnapshot();
         writeRow(guard);
     }
     void recordFirstChoice(const std::function<void()> &guard) {
-        Field<std::string> talked(map, "plugin_cityTalked");
-        auto talks = document(talked.value, json::object());
-        require(talks.is_object(), "Malformed city talk bookkeeping");
+        ::seven_suns_merchant_dialogue_detail::Field<std::string> talked(map, "plugin_cityTalked");
+        auto talks = ::seven_suns_merchant_dialogue_detail::document(talked.value, json::object());
+        ::seven_suns_merchant_dialogue_detail::require(talks.is_object(), "Malformed city talk bookkeeping");
         talks[identity->name] = json{{"label", "Merchant"}, {"creature", "DOPMER"}, {"area", identity->area}};
-        require(talks.size() <= 2048 && encode(talks).size() <= 65536, "DOPMER talk bookkeeping capacity");
-        talked.write(encode(talks), guard);
-        Field<int> generic(actor, "plugin_cityTalkCount");
-        require(generic.value.value_or(0) >= 0 && generic.value.value_or(0) < 1000000,
-                "Invalid generic city talk count");
+        ::seven_suns_merchant_dialogue_detail::require(
+            talks.size() <= 2048 && ::seven_suns_merchant_dialogue_detail::encode(talks).size() <= 65536,
+            "DOPMER talk bookkeeping capacity");
+        talked.write(::seven_suns_merchant_dialogue_detail::encode(talks), guard);
+        ::seven_suns_merchant_dialogue_detail::Field<int> generic(actor, "plugin_cityTalkCount");
+        ::seven_suns_merchant_dialogue_detail::require(
+            generic.value.value_or(0) >= 0 && generic.value.value_or(0) < 1000000, "Invalid generic city talk count");
         generic.write(generic.value.value_or(0) + 1, guard);
-        Field<bool> frozen(map, "plugin_cityHistoryFrozen");
+        ::seven_suns_merchant_dialogue_detail::Field<bool> frozen(map, "plugin_cityHistoryFrozen");
         if (!frozen.value.value_or(false)) {
-            Field<std::string> history(map, "plugin_cityHistory"), profile(map, "plugin_cityStartingProfile");
-            auto choices = document(history.value, json::object()), starting = document(profile.value, json::object());
-            require(choices.is_object() && starting.is_object(), "Malformed city history/profile");
+            ::seven_suns_merchant_dialogue_detail::Field<std::string> history(map, "plugin_cityHistory"),
+                profile(map, "plugin_cityStartingProfile");
+            auto choices = ::seven_suns_merchant_dialogue_detail::document(history.value, json::object()),
+                 starting = ::seven_suns_merchant_dialogue_detail::document(profile.value, json::object());
+            ::seven_suns_merchant_dialogue_detail::require(choices.is_object() && starting.is_object(),
+                                                           "Malformed city history/profile");
             for (const auto *key : {"aldeth", "tenya", "eldoth"})
                 if (!choices.contains(key))
                     choices[key] = "unspecified";
             starting["history"] = choices;
             starting["historyFrozen"] = true;
-            require(encode(choices).size() <= 65536 && encode(starting).size() <= 65536, "City history capacity");
-            history.write(encode(choices), guard);
-            profile.write(encode(starting), guard);
+            ::seven_suns_merchant_dialogue_detail::require(
+                ::seven_suns_merchant_dialogue_detail::encode(choices).size() <= 65536 &&
+                    ::seven_suns_merchant_dialogue_detail::encode(starting).size() <= 65536,
+                "City history capacity");
+            history.write(::seven_suns_merchant_dialogue_detail::encode(choices), guard);
+            profile.write(::seven_suns_merchant_dialogue_detail::encode(starting), guard);
             frozen.write(true, guard);
         }
     }
@@ -491,28 +556,35 @@ bool CSevenSunsMerchantDialogue::isSettledReplacement(const std::shared_ptr<CGam
     if (!game || !map || map->getMapName() != "baldursGate" || !actor ||
         actor->getTypeId() != "citySevenSunsRevealedDoppss")
         return false;
-    require(requireCurrent != nullptr, "Seven Suns defeat authority needs its current owner guard");
+    ::seven_suns_merchant_dialogue_detail::require(requireCurrent != nullptr,
+                                                   "Seven Suns defeat authority needs its current owner guard");
     requireCurrent();
-    const auto *identity = lineage(actor->getName());
-    require(identity && typeid(*actor) == typeid(CCreature) && game->getMap() == map && map->getGame() == game &&
-                actor->getGame() == game && map->getObjectByName(identity->name) == actor,
-            "Seven Suns dedicated defeat role lost its exact registered actor");
+    const auto *identity = ::seven_suns_merchant_dialogue_detail::lineage(actor->getName());
+    ::seven_suns_merchant_dialogue_detail::require(
+        identity && typeid(*actor) == typeid(CCreature) && game->getMap() == map && map->getGame() == game &&
+            actor->getGame() == game && map->getObjectByName(identity->name) == actor,
+        "Seven Suns dedicated defeat role lost its exact registered actor");
     auto clock = map->getObjectByName("cityClock");
-    require(clock && clock->getGame() == game && definitionAvailable(clock),
-            "Seven Suns dedicated defeat role lost its source clock");
-    auto oldRef =
-        stored<std::shared_ptr<CGameObject>>(clock, std::string("plugin_citySevenSunsMerchantOld_") + identity->name);
+    ::seven_suns_merchant_dialogue_detail::require(
+        clock && clock->getGame() == game && ::seven_suns_merchant_dialogue_detail::definitionAvailable(clock),
+        "Seven Suns dedicated defeat role lost its source clock");
+    auto oldRef = ::seven_suns_merchant_dialogue_detail::stored<std::shared_ptr<CGameObject>>(
+        clock, std::string("plugin_citySevenSunsMerchantOld_") + identity->name);
     auto oldActor = oldRef ? std::dynamic_pointer_cast<CCreature>(*oldRef) : nullptr;
-    require(oldActor && oldActor != actor, "Seven Suns dedicated defeat role lost its retained original");
+    ::seven_suns_merchant_dialogue_detail::require(oldActor && oldActor != actor,
+                                                   "Seven Suns dedicated defeat role lost its retained original");
     State value(game, clock, oldActor, identity, false, requireCurrent);
-    require(value.phase == State::Phase::Replaced && value.replacement == actor &&
-                value.row.at("status").get<std::string>() == "replaced",
-            "Seven Suns dedicated defeat role lacks its committed replacement receipt");
+    ::seven_suns_merchant_dialogue_detail::require(
+        value.phase == State::Phase::Replaced && value.replacement == actor &&
+            value.row.at("status").get<std::string>() == "replaced",
+        "Seven Suns dedicated defeat role lacks its committed replacement receipt");
     value.check();
     requireCurrent();
     return true;
 }
-int CSevenSunsMerchantDialogue::readInteger(const json &value) { return integer(value); }
+int CSevenSunsMerchantDialogue::readInteger(const json &value) {
+    return ::seven_suns_merchant_dialogue_detail::integer(value);
+}
 bool CSevenSunsMerchantDialogue::combatOwned(const std::shared_ptr<CCreature> &actor) {
     return CFightHandler::hasActiveCombatClaim(actor);
 }
@@ -542,20 +614,22 @@ std::unique_ptr<CSevenSunsMerchantDialogue> CSevenSunsMerchantDialogue::begin(st
                                                                               std::shared_ptr<CGameObject> clock,
                                                                               std::shared_ptr<CCreature> actor,
                                                                               std::function<void()> requireCaller) {
-    require(vstd::event_loop<>::instance()->isMainThread(), "DOPMER requires engine owner thread");
+    ::seven_suns_merchant_dialogue_detail::require(vstd::event_loop<>::instance()->isMainThread(),
+                                                   "DOPMER requires engine owner thread");
     if (requireCaller)
         requireCaller();
     auto game = weakGame.lock();
     auto map = game ? game->getMap() : nullptr;
-    auto identity = actor ? lineage(actor->getName()) : nullptr;
-    require(game && map && typeid(*map) == typeid(CMap) && identity && clock &&
-                map->getObjectByName("cityClock") == clock && clock->getGame() == game,
-            "Wrong DOPMER source binding");
+    auto identity = actor ? ::seven_suns_merchant_dialogue_detail::lineage(actor->getName()) : nullptr;
+    ::seven_suns_merchant_dialogue_detail::require(game && map && typeid(*map) == typeid(CMap) && identity && clock &&
+                                                       map->getObjectByName("cityClock") == clock &&
+                                                       clock->getGame() == game,
+                                                   "Wrong DOPMER source binding");
     auto refuse = [identity](std::string reason, int count = 0, int revision = 0) {
         return std::unique_ptr<CSevenSunsMerchantDialogue>(
             new CSevenSunsMerchantDialogue(std::move(reason), identity->name, count, revision));
     };
-    if (!definitionAvailable(clock) || !isSupported())
+    if (!::seven_suns_merchant_dialogue_detail::definitionAvailable(clock) || !isSupported())
         return refuse("conversionUnavailable");
     {
         std::lock_guard lock(State::mutex);
@@ -577,8 +651,10 @@ std::unique_ptr<CSevenSunsMerchantDialogue> CSevenSunsMerchantDialogue::begin(st
         lease->finish();
         throw;
     }
-    const int n = value->count.value.value_or(0), revision = integer(value->row.at("revision"));
-    if (!value->count.value && stored<int>(actor, "plugin_cityTalkCount").value_or(0) != 0) {
+    const int n = value->count.value.value_or(0),
+              revision = ::seven_suns_merchant_dialogue_detail::integer(value->row.at("revision"));
+    if (!value->count.value &&
+        ::seven_suns_merchant_dialogue_detail::stored<int>(actor, "plugin_cityTalkCount").value_or(0) != 0) {
         lease->finish();
         return refuse("legacyCountUnknown", n, revision);
     }
@@ -599,11 +675,12 @@ std::unique_ptr<CSevenSunsMerchantDialogue> CSevenSunsMerchantDialogue::begin(st
     value->mutating = true;
     auto check = [&] {
         value->check();
-        require(lease->isSaveAdmissionHealthy(), "DOPMER initiation admission was quarantined");
+        ::seven_suns_merchant_dialogue_detail::require(lease->isSaveAdmissionHealthy(),
+                                                       "DOPMER initiation admission was quarantined");
     };
     try {
         auto barrier = game->getObjectHandler()->beginDefeatConstruction(check);
-        ActorSnapshot original(actor), hero(value->player);
+        ::seven_suns_merchant_dialogue_detail::ActorSnapshot original(actor), hero(value->player);
         value->row["status"] = "pending";
         value->writeRow(check);
         value->count.write(n + 1, check);
@@ -643,9 +720,9 @@ json CSevenSunsMerchantDialogue::view() const {
                     {"revealRequested", false},    {"attackRevealSupported", false}};
     requireCurrent();
     json choices = json::array(), automatic = nullptr;
-    int cursor = integer(state->row.at("cursor"));
+    int cursor = ::seven_suns_merchant_dialogue_detail::integer(state->row.at("cursor"));
     if (!state->terminal)
-        for (const auto &edge : Edges)
+        for (const auto &edge : ::seven_suns_merchant_dialogue_detail::Edges)
             if (edge.from == cursor) {
                 if (edge.terminal)
                     automatic = edge.index;
@@ -653,8 +730,8 @@ json CSevenSunsMerchantDialogue::view() const {
                     choices[choices.size()] = edge.index;
             }
     bool reveal = false;
-    int last = integer(state->row.at("lastEdge"));
-    for (const auto &edge : Edges)
+    int last = ::seven_suns_merchant_dialogue_detail::integer(state->row.at("lastEdge"));
+    for (const auto &edge : ::seven_suns_merchant_dialogue_detail::Edges)
         if (edge.index == last)
             reveal = edge.reveal;
     return json{{"status", state->phase == State::Phase::Replaced ? "replaced"
@@ -673,31 +750,35 @@ json CSevenSunsMerchantDialogue::view() const {
                 {"attackRevealSupported", false}};
 }
 json CSevenSunsMerchantDialogue::advance(int revision, int edgeIndex) {
-    require(state && !state->terminal, "DOPMER has no active conversation");
+    ::seven_suns_merchant_dialogue_detail::require(state && !state->terminal, "DOPMER has no active conversation");
     if (state->mutating) {
         state->poisoned = true;
         throw std::runtime_error("Reentrant DOPMER edge");
     }
     state->check();
-    require(integer(state->row.at("revision")) == revision && revision < 999999, "Stale DOPMER revision");
-    const Edge *edge = nullptr;
-    for (const auto &candidate : Edges)
-        if (candidate.index == edgeIndex && candidate.from == integer(state->row.at("cursor")))
+    ::seven_suns_merchant_dialogue_detail::require(
+        ::seven_suns_merchant_dialogue_detail::integer(state->row.at("revision")) == revision && revision < 999999,
+        "Stale DOPMER revision");
+    const ::seven_suns_merchant_dialogue_detail::Edge *edge = nullptr;
+    for (const auto &candidate : ::seven_suns_merchant_dialogue_detail::Edges)
+        if (candidate.index == edgeIndex &&
+            candidate.from == ::seven_suns_merchant_dialogue_detail::integer(state->row.at("cursor")))
             edge = &candidate;
-    require(edge, "Unsupported DOPMER source edge");
+    ::seven_suns_merchant_dialogue_detail::require(edge, "Unsupported DOPMER source edge");
     state->preflightGlobals(*edge);
     auto lease = state->map->tryBeginUnsafeOperation();
-    require(lease.has_value(), "DOPMER edge admission closed");
+    ::seven_suns_merchant_dialogue_detail::require(lease.has_value(), "DOPMER edge admission closed");
     auto game = state->game.lock();
-    require(game != nullptr, "DOPMER game expired");
+    ::seven_suns_merchant_dialogue_detail::require(game != nullptr, "DOPMER game expired");
     state->mutating = true;
     auto check = [&] {
         state->check();
-        require(lease->isSaveAdmissionHealthy(), "DOPMER edge admission quarantined");
+        ::seven_suns_merchant_dialogue_detail::require(lease->isSaveAdmissionHealthy(),
+                                                       "DOPMER edge admission quarantined");
     };
     try {
         auto barrier = game->getObjectHandler()->beginDefeatConstruction(check);
-        ActorSnapshot old(state->actor), hero(state->player);
+        ::seven_suns_merchant_dialogue_detail::ActorSnapshot old(state->actor), hero(state->player);
         state->row["status"] = "pending";
         state->writeRow(check);
         if (edge->checked)
@@ -709,7 +790,8 @@ json CSevenSunsMerchantDialogue::advance(int revision, int edgeIndex) {
         if (state->firstChoice)
             state->recordFirstChoice(check);
         state->row["edges"][state->row.at("edges").size()] = edgeIndex;
-        require(state->row.at("edges").size() <= 4, "DOPMER exceeded finite source path");
+        ::seven_suns_merchant_dialogue_detail::require(state->row.at("edges").size() <= 4,
+                                                       "DOPMER exceeded finite source path");
         state->row["lastEdge"] = edgeIndex;
         state->row["cursor"] = edge->to;
         state->row["revision"] = revision + 1;
@@ -731,7 +813,8 @@ json CSevenSunsMerchantDialogue::advance(int revision, int edgeIndex) {
     }
 }
 json CSevenSunsMerchantDialogue::close() {
-    require(!state || !state->mutating, "Cannot close admitted DOPMER operation");
+    ::seven_suns_merchant_dialogue_detail::require(!state || !state->mutating,
+                                                   "Cannot close admitted DOPMER operation");
     if (!state)
         return view();
     state->terminal = true;
@@ -740,14 +823,16 @@ json CSevenSunsMerchantDialogue::close() {
 
 json CSevenSunsMerchantDialogue::settle(std::weak_ptr<CGame> weakGame, std::shared_ptr<CGameObject> clock,
                                         std::function<void()> requireCaller) {
-    require(vstd::event_loop<>::instance()->isMainThread(), "DOPMER settlement requires engine owner thread");
+    ::seven_suns_merchant_dialogue_detail::require(vstd::event_loop<>::instance()->isMainThread(),
+                                                   "DOPMER settlement requires engine owner thread");
     if (requireCaller)
         requireCaller();
     auto game = weakGame.lock();
     auto map = game ? game->getMap() : nullptr;
-    require(game && map && typeid(*map) == typeid(CMap) && clock && map->getObjectByName("cityClock") == clock &&
-                clock->getGame() == game,
-            "Wrong DOPMER settlement owner");
+    ::seven_suns_merchant_dialogue_detail::require(game && map && typeid(*map) == typeid(CMap) && clock &&
+                                                       map->getObjectByName("cityClock") == clock &&
+                                                       clock->getGame() == game,
+                                                   "Wrong DOPMER settlement owner");
     const auto area = map->getActiveSimulationRegion();
     const int turn = map->getTurn();
     int checked = 0, replaced = 0;
@@ -764,7 +849,7 @@ json CSevenSunsMerchantDialogue::settle(std::weak_ptr<CGame> weakGame, std::shar
         CPlaytestTrace::record("seven_suns_merchants_settle", result);
         return result;
     };
-    if (!definitionAvailable(clock) || !isSupported()) {
+    if (!::seven_suns_merchant_dialogue_detail::definitionAvailable(clock) || !isSupported()) {
         retry = true;
         return result();
     }
@@ -779,13 +864,13 @@ json CSevenSunsMerchantDialogue::settle(std::weak_ptr<CGame> weakGame, std::shar
     }
     std::array<std::shared_ptr<CCreature>, 4> candidates;
     bool claimed = false;
-    for (const auto &identity : Lineages) {
+    for (const auto &identity : ::seven_suns_merchant_dialogue_detail::Lineages) {
         ++checked;
         if (area != identity.area)
             continue;
         auto candidate = std::dynamic_pointer_cast<CCreature>(map->getObjectByName(identity.name));
-        auto old = stored<std::shared_ptr<CGameObject>>(clock, std::string("plugin_citySevenSunsMerchantOld_") +
-                                                                   identity.name);
+        auto old = ::seven_suns_merchant_dialogue_detail::stored<std::shared_ptr<CGameObject>>(
+            clock, std::string("plugin_citySevenSunsMerchantOld_") + identity.name);
         if (old)
             candidate = std::dynamic_pointer_cast<CCreature>(*old);
         candidates[static_cast<std::size_t>(checked - 1)] = candidate;
@@ -795,8 +880,8 @@ json CSevenSunsMerchantDialogue::settle(std::weak_ptr<CGame> weakGame, std::shar
         retry = true;
         return result();
     }
-    for (std::size_t index = 0; index < Lineages.size(); ++index) {
-        const auto &identity = Lineages[index];
+    for (std::size_t index = 0; index < ::seven_suns_merchant_dialogue_detail::Lineages.size(); ++index) {
+        const auto &identity = ::seven_suns_merchant_dialogue_detail::Lineages[index];
         auto candidate = candidates[index];
         if (!candidate)
             continue;
@@ -804,13 +889,15 @@ json CSevenSunsMerchantDialogue::settle(std::weak_ptr<CGame> weakGame, std::shar
             retry = true;
             continue;
         }
-        if (!stored<int>(candidate, CountKey) && stored<int>(candidate, "plugin_cityTalkCount").value_or(0) != 0) {
+        if (!::seven_suns_merchant_dialogue_detail::stored<int>(candidate,
+                                                                ::seven_suns_merchant_dialogue_detail::CountKey) &&
+            ::seven_suns_merchant_dialogue_detail::stored<int>(candidate, "plugin_cityTalkCount").value_or(0) != 0) {
             retry = true;
             continue;
         }
-        const int chapter = stored<int>(map, "plugin_cityPhase").value_or(5);
-        if (chapter < stored<int>(candidate, "phaseMin").value_or(5) ||
-            chapter > stored<int>(candidate, "phaseMax").value_or(7))
+        const int chapter = ::seven_suns_merchant_dialogue_detail::stored<int>(map, "plugin_cityPhase").value_or(5);
+        if (chapter < ::seven_suns_merchant_dialogue_detail::stored<int>(candidate, "phaseMin").value_or(5) ||
+            chapter > ::seven_suns_merchant_dialogue_detail::stored<int>(candidate, "phaseMax").value_or(7))
             continue;
         auto lease = map->tryBeginUnsafeOperation();
         if (!lease) {
@@ -833,13 +920,15 @@ json CSevenSunsMerchantDialogue::settle(std::weak_ptr<CGame> weakGame, std::shar
             lease->finish();
             continue;
         }
-        if (integer(value->row.at("revision")) >= 999999) {
+        if (::seven_suns_merchant_dialogue_detail::integer(value->row.at("revision")) >= 999999) {
             lease->finish();
             retry = true;
             continue;
         }
-        if (stored<int>(candidate, "sourceAllegiance") != std::optional<int>{128} ||
-            !stored<bool>(candidate, "plugin_cityHooksInstalled").value_or(false)) {
+        if (::seven_suns_merchant_dialogue_detail::stored<int>(candidate, "sourceAllegiance") !=
+                std::optional<int>{128} ||
+            !::seven_suns_merchant_dialogue_detail::stored<bool>(candidate, "plugin_cityHooksInstalled")
+                 .value_or(false)) {
             lease->finish();
             retry = true;
             continue;
@@ -848,11 +937,12 @@ json CSevenSunsMerchantDialogue::settle(std::weak_ptr<CGame> weakGame, std::shar
         value->mutating = true;
         auto check = [&] {
             value->check();
-            require(!combatOwned(candidate) && lease->isSaveAdmissionHealthy(), "DOPMER settlement ownership changed");
+            ::seven_suns_merchant_dialogue_detail::require(!combatOwned(candidate) && lease->isSaveAdmissionHealthy(),
+                                                           "DOPMER settlement ownership changed");
         };
         try {
             auto barrier = game->getObjectHandler()->beginDefeatConstruction(check);
-            ActorSnapshot original(candidate), hero(value->player);
+            ::seven_suns_merchant_dialogue_detail::ActorSnapshot original(candidate), hero(value->player);
             check();
             value->row["status"] = "pending";
             value->writeRow(check);
@@ -860,9 +950,10 @@ json CSevenSunsMerchantDialogue::settle(std::weak_ptr<CGame> weakGame, std::shar
             value->oldRef.write(candidate, check);
             auto prepared = CSevenSunsMerchantStock::prepare(game, identity.name, identity.area, check);
             check();
-            require(prepared.actor && prepared.actor != candidate && prepared.actor != value->player &&
-                        typeid(*prepared.actor) == typeid(CCreature) && unowned(game, prepared.actor),
-                    "DOPMER factory returned an aliased owner");
+            ::seven_suns_merchant_dialogue_detail::require(
+                prepared.actor && prepared.actor != candidate && prepared.actor != value->player &&
+                    typeid(*prepared.actor) == typeid(CCreature) && unowned(game, prepared.actor),
+                "DOPMER factory returned an aliased owner");
             value->replacement = prepared.actor;
             prepared.actor->setName(identity.name);
             check();
@@ -870,7 +961,9 @@ json CSevenSunsMerchantDialogue::settle(std::weak_ptr<CGame> weakGame, std::shar
             check();
             CSevenSunsMerchantStock::validatePrepared(prepared, game, identity.name, identity.area, check);
             check();
-            require(encode(prepared.receipt).size() <= 16384, "DOPMER stock receipt exceeds its bound");
+            ::seven_suns_merchant_dialogue_detail::require(
+                ::seven_suns_merchant_dialogue_detail::encode(prepared.receipt).size() <= 16384,
+                "DOPMER stock receipt exceeds its bound");
             value->newRef.write(prepared.actor, check);
             value->row["stock"] = prepared.receipt;
             value->writeRow(check);
@@ -886,7 +979,7 @@ json CSevenSunsMerchantDialogue::settle(std::weak_ptr<CGame> weakGame, std::shar
             value->row["settledTurn"] = turn;
             value->row["predicate"] = json{{"Doppleganger", 1}, {"sourceAllegiance", 128}, {"area", identity.area}};
             value->row["globals"] = value->globalSnapshot();
-            value->row["revision"] = integer(value->row.at("revision")) + 1;
+            value->row["revision"] = ::seven_suns_merchant_dialogue_detail::integer(value->row.at("revision")) + 1;
             value->writeRow(check);
             check();
             value->mutating = false;
