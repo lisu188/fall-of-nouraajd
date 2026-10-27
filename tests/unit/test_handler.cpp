@@ -8901,6 +8901,20 @@ void testSevenSunsMerchantWholeMapCodecPreservesOldNewAliasesAndOnceOwnedReceipt
         if (!decoded)
             return;
         auto map = std::dynamic_pointer_cast<CMap>(*decoded);
+        expect_true(map != nullptr, "the whole-map codec must return an actual map");
+        if (!map)
+            return;
+        auto registeredPlayer = std::dynamic_pointer_cast<CPlayer>(map->getObjectByName("player"));
+        expect_true(registeredPlayer && !map->getAssignedPlayer() && map->getActiveSimulationRegion() == "AR0601",
+                    "raw map decoding restores the registered player and source floor before cache rehydration");
+        std::string playerRestoreError;
+        const bool playerRestored = map->restorePlayerAfterLoad(playerRestoreError);
+        expect_true(playerRestored && playerRestoreError.empty() && map->getAssignedPlayer() == registeredPlayer &&
+                        map->getObjectByName("player") == registeredPlayer && registeredPlayer &&
+                        registeredPlayer->getGame() == restored.game,
+                    "the production post-codec restore must assign the same registered player before settlement");
+        if (!playerRestored)
+            return;
         restored.game->setMap(map);
         auto clock = map->getObjectByName("cityClock");
         auto old = std::dynamic_pointer_cast<CCreature>(
