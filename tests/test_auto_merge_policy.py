@@ -10,6 +10,7 @@ from pathlib import Path
 from unittest.mock import patch
 
 from scripts import auto_merge_policy
+from tests.test_mcp_branch_workflow import evaluateCondition, workflowScalar
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
 REPOSITORY = "owner/repository"
@@ -129,14 +130,68 @@ class AutoMergePolicyTest(unittest.TestCase):
         self.assertEqual(PR_NUMBER, result.prNumber)
         self.assertEqual("allowed", result.reason)
 
-    def test_absent_or_multiple_pr_associations_are_unverifiable(self) -> None:
-        for associations in ([], [{"number": PR_NUMBER}, {"number": PR_NUMBER + 1}]):
-            with self.subTest(count=len(associations)):
-                event, _run = evidence()
-                event["workflow_run"]["pull_requests"] = associations  # type: ignore[index]
-                with self.assertRaisesRegex(auto_merge_policy.EvidenceError, "associations") as caught:
-                    self.evaluate(event=event)
-                self.assertEqual("pr_association_count_not_one", caught.exception.reason)
+    def test_empty_pr_associations_skip_without_looking_up_a_candidate(self) -> None:
+        for empty_event, empty_run in ((True, False), (False, True), (True, True)):
+            with self.subTest(event=empty_event, run=empty_run):
+                event, run = evidence()
+                if empty_event:
+                    event["workflow_run"]["pull_requests"] = []  # type: ignore[index]
+                if empty_run:
+                    run["pull_requests"] = []
+                api = FakeApi(run)
+
+                result = self.evaluate(event=event, api=api)
+
+                self.assertFalse(result.allow)
+                self.assertIsNone(result.prNumber)
+                self.assertEqual("pr_association_missing", result.reason)
+                self.assertEqual([f"repos/{REPOSITORY}/actions/runs/{RUN_ID}"], api.calls)
+
+    def test_multiple_or_malformed_pr_associations_are_unverifiable(self) -> None:
+        cases = (
+            ([{"number": PR_NUMBER}, {"number": PR_NUMBER + 1}], "pr_association_count_not_one"),
+            (None, "malformed_evidence"),
+            ({"number": PR_NUMBER}, "malformed_evidence"),
+            ([{"number": True}], "malformed_evidence"),
+            ([{}], "malformed_evidence"),
+        )
+        for source in ("event", "run"):
+            for associations, reason in cases:
+                with self.subTest(source=source, associations=associations):
+                    event, run = evidence()
+                    target = event["workflow_run"] if source == "event" else run
+                    target["pull_requests"] = associations
+                    with self.assertRaises(auto_merge_policy.EvidenceError) as caught:
+                        self.evaluate(event=event, run=run)
+                    self.assertEqual(reason, caught.exception.reason)
+
+    def test_non_pr_runs_with_empty_associations_are_denied_before_pr_lookup(self) -> None:
+        for run_event in ("push", "schedule", "workflow_dispatch"):
+            with self.subTest(event=run_event):
+                event, run = evidence()
+                event["workflow_run"]["pull_requests"] = []  # type: ignore[index]
+                run.update(event=run_event, pull_requests=[])
+                api = FakeApi(run)
+
+                result = self.evaluate(event=event, api=api)
+
+                self.assertFalse(result.allow)
+                self.assertEqual("workflow_event_not_pull_request", result.reason)
+                self.assertEqual([f"repos/{REPOSITORY}/actions/runs/{RUN_ID}"], api.calls)
+
+    def test_unsuccessful_runs_with_empty_associations_are_denied_before_pr_lookup(self) -> None:
+        for conclusion in ("failure", "cancelled", "skipped", "timed_out", "neutral", "action_required"):
+            with self.subTest(conclusion=conclusion):
+                event, run = evidence()
+                event["workflow_run"]["pull_requests"] = []  # type: ignore[index]
+                run.update(conclusion=conclusion, pull_requests=[])
+                api = FakeApi(run)
+
+                result = self.evaluate(event=event, api=api)
+
+                self.assertFalse(result.allow)
+                self.assertEqual("workflow_not_successful", result.reason)
+                self.assertEqual([f"repos/{REPOSITORY}/actions/runs/{RUN_ID}"], api.calls)
 
     def test_refetched_association_must_match_event(self) -> None:
         event, run = evidence()
@@ -404,6 +459,68 @@ class AutoMergePolicyTest(unittest.TestCase):
         self.assertEqual("pr_is_draft", outputs["reason"])
         self.assertEqual("", stderr)
 
+    def test_cli_empty_associations_are_a_successful_skip(self) -> None:
+        for conclusion in ("success", "failure", "cancelled"):
+            with self.subTest(conclusion=conclusion):
+                event, run = evidence()
+                event["workflow_run"]["pull_requests"] = []  # type: ignore[index]
+                run.update(conclusion=conclusion, pull_requests=[])
+                api = FakeApi(run)
+
+                exitCode, outputs, stderr = self.runCli(event, api)
+
+                reason = "pr_association_missing" if conclusion == "success" else "workflow_not_successful"
+                self.assertEqual(0, exitCode)
+                self.assertEqual({"allow": "false", "pr_number": "", "reason": reason}, outputs)
+                self.assertEqual("", stderr)
+                self.assertEqual([f"repos/{REPOSITORY}/actions/runs/{RUN_ID}"], api.calls)
+
+    def test_cli_ambiguous_associations_still_exit_nonzero(self) -> None:
+        event, run = evidence()
+        event["workflow_run"]["pull_requests"] = [{"number": PR_NUMBER}, {"number": PR_NUMBER + 1}]
+
+        exitCode, outputs, stderr = self.runCli(event, FakeApi(run))
+
+        self.assertEqual(2, exitCode)
+        self.assertEqual({"allow": "false", "pr_number": "", "reason": "pr_association_count_not_one"}, outputs)
+        self.assertIn("2 associations", stderr)
+
+    def test_cli_empty_associations_do_not_hide_invalid_opposite_evidence(self) -> None:
+        cases = (
+            ([{"number": PR_NUMBER}, {"number": PR_NUMBER + 1}], "pr_association_count_not_one"),
+            (None, "malformed_evidence"),
+            ([{"number": True}], "malformed_evidence"),
+        )
+        for source in ("event", "run"):
+            for associations, reason in cases:
+                with self.subTest(source=source, associations=associations):
+                    event, run = evidence()
+                    event["workflow_run"]["pull_requests"] = []  # type: ignore[index]
+                    run["pull_requests"] = []
+                    target = event["workflow_run"] if source == "event" else run
+                    target["pull_requests"] = associations
+                    api = FakeApi(run)
+
+                    exitCode, outputs, stderr = self.runCli(event, api)
+
+                    self.assertEqual(2, exitCode)
+                    self.assertEqual({"allow": "false", "pr_number": "", "reason": reason}, outputs)
+                    self.assertTrue(stderr)
+                    self.assertEqual([f"repos/{REPOSITORY}/actions/runs/{RUN_ID}"], api.calls)
+
+    def test_cli_empty_associations_do_not_hide_refetched_run_id_mismatch(self) -> None:
+        event, run = evidence()
+        event["workflow_run"]["pull_requests"] = []  # type: ignore[index]
+        run.update(id=RUN_ID + 1, pull_requests=[])
+        api = FakeApi(run)
+
+        exitCode, outputs, stderr = self.runCli(event, api)
+
+        self.assertEqual(2, exitCode)
+        self.assertEqual({"allow": "false", "pr_number": "", "reason": "workflow_identity_unverifiable"}, outputs)
+        self.assertIn("refetched workflow run ID differs", stderr)
+        self.assertEqual([f"repos/{REPOSITORY}/actions/runs/{RUN_ID}"], api.calls)
+
     def test_cli_malformed_event_writes_outputs_and_exits_nonzero(self) -> None:
         _event, run = evidence()
 
@@ -535,6 +652,19 @@ class AutoMergePolicyTest(unittest.TestCase):
         self.assertIn('--match-head-commit "$HEAD_SHA"', workflow)
         self.assertNotIn("html_url", workflow)
         self.assertNotIn("git ", workflow)
+
+    def test_workflow_schedules_only_successful_pull_request_builds(self) -> None:
+        workflow = (REPO_ROOT / ".github/workflows/auto-merge.yml").read_text(encoding="utf-8")
+        condition = workflowScalar(workflow, "if", 4)
+        self.assertTrue(condition)
+
+        for run_event in ("pull_request", "push", "schedule", "workflow_dispatch"):
+            for conclusion in ("success", "failure", "cancelled", "skipped", "timed_out"):
+                with self.subTest(event=run_event, conclusion=conclusion):
+                    expression = condition.replace("github.event.workflow_run.event", repr(run_event))
+                    expression = expression.replace("github.event.workflow_run.conclusion", repr(conclusion))
+                    scheduled = evaluateCondition(expression, {})
+                    self.assertEqual(run_event == "pull_request" and conclusion == "success", scheduled)
 
 
 if __name__ == "__main__":
