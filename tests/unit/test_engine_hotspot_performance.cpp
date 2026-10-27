@@ -17,6 +17,7 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 
 #include "core/CController.h"
+#include "seven_suns_warning_fixture.h"
 #include "core/CAsync.h"
 #include "core/CGameContext.h"
 #include "core/CGame.h"
@@ -1848,6 +1849,51 @@ void testEquipmentTailChecksKeepFixedWork() {
               << " factories=" << factories << "\n";
     context->shutdown();
 }
+// Copyright (C) 2026 Andrzej Lis
+// SPDX-License-Identifier: GPL-3.0-or-later
+void testSevenSunsWarningThreeEdgesAnd128ReplaysAreBounded() {
+    SevenSunsWarningFixture fixture;
+    const auto objectCount = fixture.map->getObjects().size();
+    const auto triggerCount = fixture.map->getTriggers().size();
+    const auto effectOwners = fixture.game->getContext()->getEffectOwnerCount();
+    const auto experience = fixture.player->getExp();
+    const auto gold = fixture.player->getGold();
+    std::size_t callerChecks = 0;
+    auto session = fixture.begin([&] { ++callerChecks; });
+    expect_true(session != nullptr, "fixed warning workload must admit its exact native actor");
+    if (!session)
+        return;
+    SevenSunsWarningFixture::finish(*session);
+    session->close();
+    session.reset();
+    const auto receipt = fixture.map->getStringProperty(SevenSunsWarningFixture::StateKey);
+    const auto journal = fixture.journal();
+    for (int pass = 0; pass < 128; ++pass) {
+        auto replay = fixture.begin([&] { ++callerChecks; });
+        expect_true(replay && replay->view().at("status").get<std::string>() == "retired",
+                    "settled replay is a bounded acknowledgement, never another source action");
+        if (replay)
+            replay->close();
+    }
+    constexpr std::size_t CallerCheckBudget = 16384;
+    expect_true(fixture.actorFactories == 0 && fixture.itemFactories == 0 && fixture.questFactories == 1 &&
+                    fixture.destroyCalls == 0 && fixture.map->getObjects().size() + 1 == objectCount &&
+                    fixture.map->getTriggers().size() == triggerCount &&
+                    fixture.game->getContext()->getEffectOwnerCount() == effectOwners &&
+                    fixture.player->getExp() == experience && fixture.player->getGold() == gold &&
+                    fixture.journal() == journal && fixture.player->getQuests().size() == 1 && !receipt.empty() &&
+                    receipt.size() <= 4096 &&
+                    fixture.map->getStringProperty(SevenSunsWarningFixture::StateKey) == receipt && callerChecks > 0 &&
+                    callerChecks <= CallerCheckBudget && fixture.stockAndEffectIntact() &&
+                    fixture.protectedActorsIntact() && fixture.map->tryBeginSaveSnapshot().has_value(),
+                "three source edges plus128 replays preserve bounded registry/trigger/receipt/owner/quest work");
+    std::cout << "Seven Suns warning guard: edges=3 replays=128 actorFactories=" << fixture.actorFactories
+              << " itemFactories=" << fixture.itemFactories << " questFactories=" << fixture.questFactories
+              << " triggerGrowth=0 receiptBytes=" << receipt.size()
+              << " receiptBudget=4096 callerChecks=" << callerChecks << " callerCheckBudget=" << CallerCheckBudget
+              << '\n';
+}
+
 } // namespace
 
 void run_engine_hotspot_performance_tests() {
@@ -1881,4 +1927,5 @@ void run_engine_hotspot_performance_tests() {
     testMapBindingEpochQueriesAndPublicationsAreBounded();
     testAssignedPlayerQueriesAreMutationAndCallbackBounded();
     testMinimapTerrainCacheBuildsOnlyOnRelevantChanges();
+    testSevenSunsWarningThreeEdgesAnd128ReplaysAreBounded();
 }

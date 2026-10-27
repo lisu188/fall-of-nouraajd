@@ -155,6 +155,9 @@ FAST_TEST_PREFIXES = (
     "BuiltinGameplayRegistrationTest.",
     "SavedWaitSourceTest.",
     "BaldursGateCityContentTest.",
+    "SevenSunsWarningSourceTest.",
+    "SevenSunsWarningPresentationTest.",
+    "SevenSunsWarningRoutesTest.",
     "BaldursGateCityRoutesTest.",
     "BaldursGateCityLedgerUnitTest.",
     "BaldursGateCityLedgerFixtureTest.",
@@ -28205,6 +28208,11 @@ if SOURCE_UI_TESTS_AVAILABLE:
     )
     from tests.test_saved_wait_source import SavedWaitSourceTest as _SavedWaitSourceTest
     from tests.test_baldurs_gate_city_content import BaldursGateCityContentTest as _BaldursGateCityContentTest
+    from tests.test_baldurs_gate_seven_suns_warning import (
+        SevenSunsWarningSourceTest as _SevenSunsWarningSourceTest,
+        SevenSunsWarningPresentationTest as _SevenSunsWarningPresentationTest,
+    )
+    from tests.test_baldurs_gate_seven_suns_routes import SevenSunsWarningRoutesTest as _SevenSunsWarningRoutesTest
     from tests.test_baldurs_gate_city_routes import BaldursGateCityRoutesTest as _BaldursGateCityRoutesTest
     from tests.test_baldurs_gate_city_ledger import BaldursGateCityLedgerUnitTest as _BaldursGateCityLedgerUnitTest
     from tests.test_baldurs_gate_city_ledger import (
@@ -28348,6 +28356,15 @@ if SOURCE_UI_TESTS_AVAILABLE:
         pass
 
     class BaldursGateCityContentTest(_BaldursGateCityContentTest):
+        pass
+
+    class SevenSunsWarningSourceTest(_SevenSunsWarningSourceTest):
+        pass
+
+    class SevenSunsWarningPresentationTest(_SevenSunsWarningPresentationTest):
+        pass
+
+    class SevenSunsWarningRoutesTest(_SevenSunsWarningRoutesTest):
         pass
 
     class BaldursGateCityRoutesTest(_BaldursGateCityRoutesTest):
@@ -28737,6 +28754,7 @@ if SOURCE_UI_TESTS_AVAILABLE:
     del _BaldursGateCustodyPatrolSourceTest
     del _BaldursGateCustodyRoleSourceTest
     del _BaldursGateCityRoutesTest
+    del _SevenSunsWarningSourceTest, _SevenSunsWarningPresentationTest, _SevenSunsWarningRoutesTest
     del _BaldursGateCityLedgerUnitTest
     del _BaldursGateCityLedgerFixtureTest
     del _BaldursGateCityRegionTest

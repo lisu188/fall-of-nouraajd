@@ -270,12 +270,20 @@ class GameplayBranchDriver:
         dialogue_choices=None,
         dialogue_dialog_ids=None,
         cancel_choice=False,
+        cancel_after_dialogue_choices=False,
         forbidden_choice_ids=(),
     ):
         """Use authored dialog keys and the real nested native reader/choice; never inject a selection result."""
         gui = self.enableIsolatedGui()
         self.test.assertIsNotNone(self.trace_path, "GUI route credit requires the actual native option trace")
         self.test.assertIsInstance(cancel_choice, bool)
+        self.test.assertIsInstance(cancel_after_dialogue_choices, bool)
+        if cancel_after_dialogue_choices:
+            self.test.assertFalse(cancel_choice, "Choose one native cancellation mode")
+            self.test.assertIsNotNone(dialogue_choices, "Prefix cancellation requires declared dialogue choices")
+            self.test.assertIsInstance(forbidden_choice_ids, (tuple, list))
+            self.test.assertLessEqual(len(forbidden_choice_ids), 256)
+            self.test.assertTrue(all(isinstance(value, str) and value for value in forbidden_choice_ids))
         if cancel_choice:
             self.test.assertIsNone(selected_id, "Cancellation cannot confirm an inventory row")
             self.test.assertIsNone(reader_title, "Cancellation requires the actual native chooser")
@@ -288,7 +296,10 @@ class GameplayBranchDriver:
             self.test.assertFalse(forbidden_choice_ids, "Forbidden row inspection requires cancellation")
             self.test.assertEqual(selected_id is None, reader_title is not None, "Select one native presentation kind")
         else:
-            self.test.assertFalse(forbidden_choice_ids, "Forbidden row inspection requires cancellation")
+            self.test.assertTrue(
+                cancel_after_dialogue_choices or not forbidden_choice_ids,
+                "Forbidden row inspection requires explicit native dialogue cancellation",
+            )
             self.test.assertIsNone(selected_id, "Dialogue sequences cannot also select an inventory row")
             self.test.assertIsNone(reader_title, "Dialogue sequences use their actual authored reader titles")
             self.test.assertFalse(reader_lines, "Dialogue sequences must not replace the authored reader body")
@@ -337,7 +348,14 @@ class GameplayBranchDriver:
             witness.update(self._cancelUiChoice(gui, nested, forbidden_choice_ids))
         elif dialogue_choices is not None:
             witness.update(
-                self._chooseUiDialogue(gui, dialogue_choices, source_panel=panel, dialog_ids=dialogue_dialog_ids)
+                self._chooseUiDialogue(
+                    gui,
+                    dialogue_choices,
+                    source_panel=panel,
+                    dialog_ids=dialogue_dialog_ids,
+                    cancel_after_choices=cancel_after_dialogue_choices,
+                    forbidden_choice_ids=forbidden_choice_ids,
+                )
             )
         elif selected_id is not None:
             nested = self.nativePanel("CGameCampaignBrowserPanel")
@@ -1644,11 +1662,14 @@ class GameplayBranchDriver:
         self.test.assertIsNone(self.call(nested, "getParent"), "Cancelled chooser remained attached")
         return {"kind": "nativeChoiceCancelled", "choiceIds": choices, "selectedId": "", "cancelled": True}
 
-    def _chooseUiDialogue(self, gui, choices, *, source_panel, dialog_ids=None):
+    def _chooseUiDialogue(
+        self, gui, choices, *, source_panel, dialog_ids=None, cancel_after_choices=False, forbidden_choice_ids=()
+    ):
         """Drive a finite modal chain; dismiss only explicitly planned nested source dialogs."""
         expected, used, panels = tuple(choices), [], []
         expected_dialogs = tuple(dialog_ids or ())
         dismissed_dialogs = []
+        cancelled, cancelled_ids = False, []
 
         def currentPanels():
             children = self.call(gui, "getChildren")
@@ -1686,12 +1707,18 @@ class GameplayBranchDriver:
                 self.test.assertIsNone(self.call(reader, "getParent"), "Dismissed dialogue reader remained attached")
                 panels.append({"kind": "nativeReader", "title": title, "body": body})
             elif chooser is not None:
-                self.test.assertLess(
-                    len(used), len(expected), "Unexpected native dialogue choice after planned answers"
-                )
-                selected = self._chooseUiRow(gui, chooser, expected[len(used)])
-                used.append(selected)
-                panels.append({"kind": "nativeChoice", "selectedId": selected})
+                self.test.assertFalse(cancelled, "A cancelled dialogue produced another chooser")
+                if cancel_after_choices and len(used) == len(expected):
+                    cancellation = self._cancelUiChoice(gui, chooser, forbidden_choice_ids)
+                    cancelled, cancelled_ids = True, cancellation["choiceIds"]
+                    panels.append(cancellation)
+                else:
+                    self.test.assertLess(
+                        len(used), len(expected), "Unexpected native dialogue choice after planned answers"
+                    )
+                    selected = self._chooseUiRow(gui, chooser, expected[len(used)])
+                    used.append(selected)
+                    panels.append({"kind": "nativeChoice", "selectedId": selected})
             elif nested_dialog is not None:
                 self.test.assertIsNotNone(dialog_ids, "Nested native dialog needs an explicit dismissal plan")
                 self.test.assertLess(
@@ -1725,7 +1752,11 @@ class GameplayBranchDriver:
         self.test.assertEqual((None, None, None), currentPanels(), "Unexpected native dialogue remains open")
         if dialog_ids is None:
             self.test.assertTrue(panels, "The authored callback did not present a native dialogue")
-        return {"kind": "nativeDialogue", "selectedIds": used, "panels": panels}
+        witness = {"kind": "nativeDialogue", "selectedIds": used, "panels": panels}
+        if cancel_after_choices:
+            self.test.assertTrue(cancelled, "The native dialogue never reached its planned cancellation chooser")
+            witness.update(cancelled=True, cancelledChoiceIds=cancelled_ids)
+        return witness
 
     def stringProperties(self, handles, property_name):
         """Read every live handle using bounded ordinary JSON-RPC requests, preserving input order."""

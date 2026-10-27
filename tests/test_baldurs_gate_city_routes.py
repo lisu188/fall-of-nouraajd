@@ -408,7 +408,8 @@ class BaldursGateCityRoutesTest(unittest.TestCase):
                 "baldurs-gate-native-trading",
                 "baldurs-gate-native-companion-inventory",
                 "baldurs-gate-native-custody",
-            },
+            }
+            | {case.id for case in routes.sevenSunsWarningCases()},
             set(cases),
         )
         covered = {branch for case in cases.values() for branch in case.branches}
@@ -474,6 +475,21 @@ class BaldursGateCityRoutesTest(unittest.TestCase):
         self.assertTrue(all("pending" in entry["reason"] for entry in routes.PENDING_GAMEPLAY_OBLIGATIONS.values()))
         self.assertFalse(ledger["acceptanceReady"])
         self.assertFalse(ledger["originalParityEstablished"])
+
+    def testWarningPendingEntriesReferenceRetainedLedgerIdsAndStatuses(self):
+        ledger = json.loads((ROOT / "tests/fixtures/baldurs_gate_city_ledger.json").read_text(encoding="utf-8"))
+        by_id = {entry["id"]: entry for entry in ledger["entries"]}
+        for suffix, source_id in (
+            ("originalSourceAndExternalEntries", "DOPPSM.DLG:behavior"),
+            ("nativeOwnerAcceptance", "AR0601#actor2"),
+        ):
+            with self.subTest(boundary=suffix):
+                pending = routes.PENDING_GAMEPLAY_OBLIGATIONS[routes.SEVEN_SUNS_WARNING_PREFIX + suffix]
+                self.assertEqual(source_id, pending["sourceId"])
+                self.assertEqual("tests/fixtures/baldurs_gate_city_ledger.json", pending["ledger"])
+                self.assertEqual(by_id[source_id]["implementation"]["status"], pending["implementationStatus"])
+                self.assertIn("pending", pending["reason"])
+                self.assertEqual("pending", by_id[source_id]["testStatus"]["native"])
 
     def testRouteCodeCannotSetProgressMoveActorsDirectlyOrAnswerNativeChoiceByFixture(self):
         tree = ast.parse((ROOT / "tests/gameplay_routes_baldurs_gate.py").read_text(encoding="utf-8"))

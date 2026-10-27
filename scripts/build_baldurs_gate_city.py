@@ -1005,6 +1005,9 @@ def compileCity(source, quests=None):
     )
     place("cityCustody", usablePosition("AR0800", [3560, 1380], reserve=True))
     config["cityCustodyQuest"] = definition("BaldursGateCustodyQuest", description="The Flaming Fist pursuit")
+    config["citySevenSunsWarningLead"] = definition(
+        "BaldursGateSevenSunsWarningLeadQuest", description="Seven Suns: a merchant's warning"
+    )
     entry = usablePosition("AR0800", [3500, 1350], reserve=True)
     config["cityStart"] = definition(
         "BaldursGateStart", canStep=True, animation="images/misc/signpost", alwaysSimulate=True
@@ -1015,6 +1018,15 @@ def compileCity(source, quests=None):
         canStep=True,
         animation="images/ambient/street_lantern",
         alwaysSimulate=True,
+        sevenSunsWarningDefinition=json.dumps(
+            {
+                "version": 1,
+                "dialogue": "DOPPSM",
+                "fingerprint": "263ba285fac3cc7d486ce0c4223ce4af574b257b7ce224d8755b988906df6aac",
+                "journalQuest": "citySevenSunsWarningLead",
+            },
+            separators=(",", ":"),
+        ),
         areaAtlas=json.dumps(areas_metadata, separators=(",", ":")),
         activeSimulationRegion="AR0800",
         questDefinitions=json.dumps(quests, separators=(",", ":")),

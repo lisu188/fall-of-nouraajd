@@ -332,6 +332,8 @@ void bindGraphicsAndWorld(py::module_ &m) {
 
     py::class_<CGuiHandler, CGameObject, std::shared_ptr<CGuiHandler>>(m, "CGuiHandler",
                                                                        "High-level helper for opening UI panels.")
+        .def("supportsSevenSunsWarning", &CGuiHandler::supportsSevenSunsWarning,
+             "Whether the compiled finite Seven Suns warning UI-flow service is available.")
         .def("showMessage", &CGuiHandler::showMessage, "Show a message panel.")
         .def("showMessageLater", &CGuiHandler::showMessageLater, "Queue a session-owned message without waiting.")
         .def("waitMilliseconds", &CGuiHandler::waitMilliseconds, py::arg("state"),

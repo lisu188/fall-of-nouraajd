@@ -2,7 +2,6 @@
 # SPDX-License-Identifier: GPL-3.0-or-later
 """One persistent city; original-resource facts and native adaptation rules remain distinct."""
 
-
 CITY_JSON_PREFIX = "city-json:"
 
 
@@ -422,8 +421,27 @@ def load(self, context):
                     actor.equipItem(native_slot, item)
                     break
         actor.setBoolProperty("plugin_cityInventoryInitialized", True)
+
     def custody(obj):
         return world(obj).getObjectByName("cityCustody")
+
+    @register(context)
+    @mapQuest("baldursGate")
+    class BaldursGateSevenSunsWarningLeadQuest(CQuest):
+        def isCompleted(self):
+            return False
+
+        def getObjective(self):
+            return "A merchant fled after warning that shapechangers had infiltrated the Seven Suns."
+
+        def getReward(self):
+            return "This journal lead grants no gold, experience, or possessions."
+
+        def getHint(self):
+            return "Follow up at the Seven Suns and with Scar."
+
+        def onComplete(self):
+            pass
 
     @register(context)
     @mapQuest("baldursGate")
@@ -1593,7 +1611,6 @@ def load(self, context):
                 staged["name"] = value
             self.requireCustodyStage(binding, actor)
 
-
     @register(context)
     @mapQuest("baldursGate")
     class BaldursGateQuest(CQuest):
@@ -1876,11 +1893,117 @@ def load(self, context):
                 )
             return True
 
+        def isSevenSunsWarningActor(self, actor):
+            return bool(
+                isinstance(actor, CCreature)
+                and actor.getName() == "cityAr0601Actor2"
+                and actor.getStringProperty("sourceActor") == "AR0601#actor2"
+                and actor.getStringProperty("sourceArea") == "AR0601"
+                and actor.getStringProperty("sourceCreature") == "DOPPSM"
+                and actor.getStringProperty("sourceDialogue") == "DOPPSM"
+            )
+
+        def validSevenSunsWarningView(self, view):
+            if (
+                type(view) is not dict
+                or type(view.get("capabilityVersion")) is not int
+                or view["capabilityVersion"] != 1
+                or type(view.get("revision")) is not int
+                or view["revision"] < 0
+                or type(view.get("state")) is not int
+            ):
+                return False
+            if view.get("status") == "retired":
+                return view.get("journal") == {"strref": 26986, "rawFlags": 92}
+            if view.get("status") != "ready":
+                return False
+            state = view["state"]
+            choices = view.get("choices")
+            automatic = view.get("automaticEdge")
+            if type(choices) is not list or any(type(edge) is not int for edge in choices):
+                return False
+            expected = {0: [[0, 1, 2]], 1: [[3, 4, 6], [3, 4, 5, 6]], 2: [[7, 8]]}
+            if state in expected:
+                return choices in expected[state] and automatic is None
+            terminal = {3: 9, 7: 15, 8: 16}
+            return state in terminal and not choices and type(automatic) is int and automatic == terminal[state]
+
+        @resumableHook
+        def conversationSevenSunsWarning(self):
+            if not self.canInteract() or not self.isSevenSunsWarningActor(self.actor()):
+                return False
+            handler = self.getGame().getGuiHandler()
+            capability = getattr(handler, "supportsSevenSunsWarning", None)
+            if not callable(capability) or not capability():
+                return False
+            lines = {
+                0: "The merchant pauses and asks what you need.",
+                1: "He cannot help with that request and asks you to leave.",
+                2: "He is pressed for time and asks you to stop questioning him.",
+                3: "He confides that merchants here have changed their faces. He believes shapechangers have "
+                "infiltrated the Seven Suns and urges you to leave. He means to escape himself.",
+                7: "Jhasso has not been seen since the trouble began. The merchant has witnessed people change "
+                "their appearance; he fears shapechangers control the Seven Suns and plans to flee.",
+                8: "As you turn away, he warns that people here have altered their faces. He believes the Seven "
+                "Suns has been infiltrated and urges you to get clear.",
+            }
+            replies = {
+                0: "Challenge the trading house's recent decisions.",
+                1: "Request a look around the building.",
+                2: "Ask to meet the head of the Seven Suns.",
+                3: "Insist on seeing Jhasso before leaving.",
+                4: "Insist that the merchant show you around.",
+                5: "Accept that the tour is refused and leave.",
+                6: "Look for somebody else who will talk.",
+                7: "Keep pressing for answers.",
+                8: "End the conversation and leave.",
+            }
+            view = yield uiRequest("gui.beginSevenSunsWarning", clock(self), self.actor())
+            successors = {0: 2, 1: 1, 2: 1, 3: 7, 4: 3, 5: 8, 6: 8, 7: 3, 8: 8}
+            previous_revision, previous_edge = None, None
+            for _step in range(4):
+                if not self.validSevenSunsWarningView(view):
+                    return False
+                if previous_revision is not None and view["revision"] != previous_revision + 1:
+                    return False
+                if view["status"] == "retired":
+                    return previous_edge in (9, 15, 16)
+                state, revision = view["state"], view["revision"]
+                if (
+                    _step == 3
+                    or previous_edge in (9, 15, 16)
+                    or (previous_edge is None and state != 0)
+                    or (previous_edge in successors and state != successors[previous_edge])
+                ):
+                    return False
+                yield uiRequest("gui.showCampaignScreen", "Seven Suns merchant", lines[state], "Continue")
+                edge = view["automaticEdge"]
+                if edge is None:
+                    choices = [{"id": str(index), "label": replies[index]} for index in view["choices"]]
+                    choice = yield uiRequest(
+                        "gui.showChoice", "Your reply", json.dumps(choices), "Answer", "Continue later"
+                    )
+                    if type(choice) is not str or choice not in [row["id"] for row in choices]:
+                        yield uiRequest("gui.endSevenSunsWarning")
+                        return False
+                    edge = int(choice)
+                previous_revision = revision
+                previous_edge = edge
+                view = yield uiRequest("gui.advanceSevenSunsWarning", revision, edge)
+            yield uiRequest("gui.endSevenSunsWarning")
+            return False
+
         @resumableHook
         def talk(self):
             if not self.canInteract(resume_custody=True):
                 return
             actor = self.actor()
+            if (
+                actor.getName() == "cityAr0601Actor2"
+                or actor.getStringProperty("sourceCreature") == "DOPPSM"
+                or actor.getStringProperty("sourceDialogue") == "DOPPSM"
+            ):
+                return (yield from self.conversationSevenSunsWarningFlow())
             coordinator = custody(self)
             if coordinator and actor.getStringProperty("sourceDialogue") in coordinator.data().get("dialogues", {}):
                 yield from coordinator.conversationFlow(actor)

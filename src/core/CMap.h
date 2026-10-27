@@ -84,6 +84,8 @@ class CMap : public CGameObject {
            V_PROPERTY(CMap, std::string, activeSimulationRegion, getActiveSimulationRegion, setActiveSimulationRegion),
            V_PROPERTY(CMap, std::string, combatHistory, getCombatHistory, setCombatHistory),
            V_PROPERTY(CMap, std::set<std::shared_ptr<CMapObject>>, objects, getObjects, setObjects),
+           V_PROPERTY(CMap, std::set<std::shared_ptr<CMapObject>>, sceneRetiredObjects, getSceneRetiredObjects,
+                      setSceneRetiredObjects),
            V_PROPERTY(CMap, std::set<std::shared_ptr<CTile>>, tiles, getTiles, setTiles),
            V_PROPERTY(CMap, std::set<std::shared_ptr<CTrigger>>, triggers, getTriggers, setTriggers))
   public:
@@ -379,6 +381,11 @@ class CMap : public CGameObject {
     std::string fallbackTileType(Coords coords) const;
 
     std::shared_ptr<CTile> resolveTileForLookup(Coords coords);
+
+    std::set<std::shared_ptr<CMapObject>> getSceneRetiredObjects();
+    void setSceneRetiredObjects(std::set<std::shared_ptr<CMapObject>> objects);
+    std::set<std::shared_ptr<CMapObject>> sceneRetiredObjects;
+    std::set<std::shared_ptr<CMapObject>> sceneRetiredLifetimeOwners;
 
     bool removeObjectWithoutEvents(const std::shared_ptr<CMapObject> &mapObject);
 

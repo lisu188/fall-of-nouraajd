@@ -79,7 +79,7 @@ python test.py --suite mcp-branches --branch-group baldursGate
 
 The first command uses source checks and native-shaped model doubles. The second requires a current staged native binary and real movement/dialogue/combat. Planned routes cover all five existing hero classes, but an unexecuted route is not a passing receipt. Shop chooser cancellation never proves an item was sold, stolen or transferred.
 
-Current acceptance blockers include original BG1-versus-EE reconciliation, unsupported source scripts and item effects, crime/arrest/escape outcomes, remaining conversation and recruitment branches, exact shop/temple formulas, and complete native save/reload and visual evidence. The owner confirmed that neither an original installation nor an alternate build volume is available. After bounded verified cleanup, C: remains above 95 percent used. No local native build or capture is authorized by that cleanup result; the 90 percent guard remains in force.
+Current acceptance blockers include original BG1-versus-EE reconciliation, unsupported source scripts and item effects, crime/arrest/escape outcomes, remaining conversation and recruitment branches, exact shop/temple formulas, and complete native save/reload and visual evidence. The owner confirmed that neither an original installation nor an alternate build volume is available. Recheck capacity before each artifact-producing phase. The latest bounded audit found no disposable outputs that could supply the required local headroom. The 90 percent guard remains in force for native builds and captures.
 
 City structured metadata uses a `city-json:` text prefix to preserve its string type through native loading,
 cloning and saves. The runtime accepts protected and legacy plain JSON text and protects subsequent state writes.
@@ -127,3 +127,58 @@ override remains an item/effect boundary. Script scheduling, event consumption,
 geometry, live actor ownership and original-versus-EE reconciliation remain pending.
 These tests/audits grant no native execution, gameplay, original parity, acceptance
 or ledger credit; all corresponding closure acceptance flags remain false.
+
+## Seven Suns warning conversation
+
+The warning merchant `AR0601#actor2` (`cityAr0601Actor2`, source dialogue `DOPPSM`)
+uses a finite native dialogue session for the twelve edges reachable from the normal
+entry state. The factual fixture `tests/fixtures/baldurs_gate_seven_suns_warning.json`
+retains all nine states and seventeen edges. External entries and their eight
+unreachable state/edge obligations remain planned. Installed EE records support
+these facts; they do not establish original-BG1 parity.
+
+The first accepted choice applies its ordered source-global writes immediately.
+`plugin_citySourceGlobals` stores shared source globals as protected JSON text;
+names are ASCII case-insensitive within the literal `GLOBAL` scope. Existing spelling,
+unrelated variables and unknown scopes are retained. Cancellation before any choice
+has no story effect. Cancellation after a choice retains the committed globals and
+talk bookkeeping. Reopening starts at the normal entry, with the saved globals.
+
+The terminal choices quietly retire the same living merchant with his actual items
+and effects. They grant no death, combat, experience, gold or loot credit. The
+separate `citySevenSunsWarningLead` journal entry remains open and grants no reward;
+it does not accept or complete Scar's quests. Raw journal flags `92` include the
+general journal bit. BG2-only quest-status bits are not used to infer a classic BG1
+unsolved status. The dialogue prose and lead are reworded for this engine.
+
+Each committed edge holds a bounded unsafe-operation lease. The session captures
+the game context, public map epoch, assigned player and exact registered source
+actor, and checks them across callbacks. The Python surface adds only the read-only
+`CGuiHandler.supportsSevenSunsWarning()` capability. Finite UI intents own the actual
+mutations. Uncertain partial work keeps a pending receipt and quarantines saves;
+the implementation does not claim arbitrary callback rollback.
+
+The optional serialized `CMap.sceneRetiredObjects` field retains retired objects.
+It is omitted when empty, and the save-format version is unchanged. A private
+lifetime anchor lets map destruction release retired actor/effect cycles without
+clearing effects during exploration or harming an actor adopted by another live map.
+The clock also retains the exact warning actor reference for replay checks.
+
+The ledger adds twenty-nine explicit obligations without removing older entries.
+Eleven authored MCP cases cover the reachable paths, cancellation, shared globals,
+the journal, identity preservation, refusal and save/reload across all five existing
+hero classes. Authored routes, the twenty-four native test cases and the fixed-work
+performance guard require actual execution before they count as evidence.
+
+Focused source and model checks:
+
+```powershell
+python -B -m unittest tests.test_baldurs_gate_seven_suns_warning tests.test_baldurs_gate_seven_suns_routes tests.test_baldurs_gate_city_ledger tests.test_native_test_profile -q
+python -B scripts/build_baldurs_gate_city.py --check
+python -B scripts/build_baldurs_gate_city_ledger.py --check
+```
+
+Original-source reconciliation, external DOPPSM entries, original automatic-dialogue
+timing, the separate DOPMER transformations and replacement stock, Scar reward
+differences and Jhasso's departure remain open. This warning flow does not satisfy
+those obligations or the complete city acceptance matrix.

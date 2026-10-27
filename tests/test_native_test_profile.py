@@ -84,6 +84,30 @@ ADDITIONAL_CASES = {
         "testScriptWaitSurvivesFailedSaveResourceBindingWithoutDispatchingMapChanges",
         "testScriptWaitCancellationAndMapBindingLossFreezeRemainingTime",
         "testSyncScriptWaitReleasesTheFinalGameOwner",
+        "testSevenSunsWarningRetiredActorEffectCycleEndsWithItsMapWhileGameLives",
+        "testSevenSunsWarningRestoredWholeMapOwnsAndReleasesRetiredEffectCycles",
+        "testSevenSunsWarningOldMapCleanupPreservesActorAdoptedByAnotherLiveMap",
+        "testSevenSunsWarningDefaultMapSnapshotOmitsTheEmptyRetirementCollection",
+        "testSevenSunsWarningReflectedOwnerTamperingQuarantinesAndStillCleansCycles",
+        "testSevenSunsWarningSwallowedNestedBeginCannotAcknowledgeRetirement",
+        "testSevenSunsWarningOtherUnsafeQuarantineCannotBecomeSuccess",
+        "testSevenSunsWarningCapacityPreflightNeverPublishesAnUnreadableOwnResult",
+        "testSevenSunsWarningRejectsOverflowingJsonAuthorityInsteadOfAliasingLowBits",
+        "testSevenSunsWarningUiFlowDispatchOwnsTokensAndRejectsOversizedSourceEdges",
+        "testSevenSunsWarningJournalMembershipLossCannotBecomeAcceptedRetirement",
+        "testSevenSunsWarningSharedNamesIgnoreAsciiCaseAndRejectAmbiguousAliases",
+        "testSevenSunsWarningEveryReachableDefaultGlobalPathUsesNativeCursor",
+        "testSevenSunsWarningRetiresSameLivingActorAndPublishesOneJournal",
+        "testSevenSunsWarningCommittedChoiceSurvivesCancellationAndRemainsSaveable",
+        "testSevenSunsWarningRefusesWrongSourceAndMapAwayBackBeforeCommit",
+        "testSevenSunsWarningRejectsWrongRevisionAndSourceConditionalEdge",
+        "testSevenSunsWarningReplayRequiresExactRetainedOwnerAndCreatesNothing",
+        "testSevenSunsWarningClassifiesPendingAndOrphanStateBeforeMissingPlayer",
+        "testSevenSunsWarningPostRemovalFailureQuarantinesAndPreservesPrimaryError",
+        "testSevenSunsWarningJournalFactoryFailureCannotAcknowledgeEscape",
+        "testSevenSunsWarningRetainedActorEffectAliasesRoundTrip",
+        "testSevenSunsWarningSessionDoesNotKeepClosedGameAlive",
+        "testSevenSunsWarningUsesSharedSourceGlobalsWithoutClampingOrDroppingScopes",
     ),
     "map": (
         "testNewSessionClearsQuitLatch",
@@ -589,6 +613,207 @@ class NativeTestProfileSourceTest(unittest.TestCase):
         self.assertEqual(3, race_case.count('nativeTestProfile().run("CGameLoader::startGameWithPlayer",'))
         self.assertTrue('nativeTestProfile().run("CGameLoader::startRandomGameWithPlayer",' in race_case)
         self.assertEqual(1, race_case.count("CGameLoader::startRandomGameWithPlayer(random_game"))
+
+    def sevenSunsWarningSource(self):
+        path = ROOT / "src/handler/CSevenSunsDialogue.cpp"
+        self.assertTrue(path.is_file(), "Finite owned Seven Suns warning dialogue is absent")
+        return path.read_text(encoding="utf-8")
+
+    def testSevenSunsWarningOwnsExactlyTheTwelveReachableSourceEdges(self):
+        source = self.sevenSunsWarningSource()
+        graph = source.split("constexpr std::array<Edge, 12> Edges{{", 1)[1].split("}};", 1)[0]
+        rows = re.findall(
+            r"\{(\d+),\s*(\d+),\s*(\d+),\s*(true|false),\s*(true|false),\s*(true|false),\s*(true|false)\}", graph
+        )
+        edges = {int(row[0]): (int(row[1]), int(row[2]), *(value == "true" for value in row[3:])) for row in rows}
+        self.assertEqual(12, len(rows))
+        self.assertEqual({0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 15, 16}, set(edges))
+        self.assertEqual((0, 1, False, True, True, False), edges[1])
+        self.assertEqual((1, 8, True, False, False, False), edges[5])
+        self.assertEqual({9, 15, 16}, {edge for edge, row in edges.items() if row[-1]})
+        paths = []
+
+        def visit(state, asked, path):
+            for edge, row in edges.items():
+                origin, target, needs_asked, set_asked, _checked, escape = row
+                if origin != state or needs_asked and not asked:
+                    continue
+                if escape:
+                    paths.append(path + [edge])
+                else:
+                    visit(target, asked or set_asked, path + [edge])
+
+        visit(0, False, [])
+        self.assertEqual(9, len(paths))
+        self.assertTrue(all(len(path) == 3 for path in paths))
+
+    def testSevenSunsWarningKeepsAuthorityWeakAcrossUiAndChecksPublicEpoch(self):
+        source = self.sevenSunsWarningSource()
+        state = source.split("struct CSevenSunsDialogue::State {", 1)[1].split("std::mutex CSevenSunsDialogue", 1)[0]
+        self.assertIn("std::weak_ptr<CGame> game;", state)
+        self.assertNotIn("std::shared_ptr<CGame> game;", state)
+        for token in (
+            "getMapBindingEpoch() == epoch",
+            "getAssignedPlayer() == player",
+            'getObjectByName("player") == player',
+            "isTransitionGenerationCurrent(generation)",
+            '"AR0601#actor2"',
+            '"DOPPSM"',
+        ):
+            self.assertIn(token, state)
+        self.assertNotIn("UnsafeOperationLease", state)
+
+    def testSevenSunsWarningSceneRetirementIsPrivateAndSkipsDestroyAndEffectCleanup(self):
+        source = self.sevenSunsWarningSource()
+        header = (ROOT / "src/core/CSceneManager.h").read_text(encoding="utf-8")
+        primitive = (
+            (ROOT / "src/core/CSceneManager.cpp")
+            .read_text(encoding="utf-8")
+            .split("void CSceneManager::retireObjectWithoutEvents(", 1)[1]
+        )
+        self.assertIn("friend class CSevenSunsDialogue;", header)
+        self.assertGreater(
+            header.index("void retireObjectWithoutEvents("),
+            header.index("  private:", header.index("class CSceneManager :")),
+        )
+        self.assertIn("map->removeObjectWithoutEvents(object)", primitive)
+        self.assertIn("object->owningMap.expired()", primitive)
+        for forbidden in (
+            "releaseEffectReferences(",
+            "removeObjectAsync(",
+            "onDestroy",
+            "defeatedCreature(",
+            "co_await",
+        ):
+            self.assertNotIn(forbidden, primitive)
+        self.assertNotIn("releaseEffectReferences(", source)
+
+    def testSevenSunsWarningCommitsEachEdgeUnderOnlyABoundedLease(self):
+        source = self.sevenSunsWarningSource()
+        method = source.split("json CSevenSunsDialogue::advance(", 1)[1].split("json CSevenSunsDialogue::close()", 1)[0]
+        self.assertLess(method.index("tryBeginUnsafeOperation()"), method.index('["status"] = "pending"'))
+        self.assertLess(method.index("retained.write(state->actor, check)"), method.index("retireObjectWithoutEvents("))
+        self.assertLess(method.index('row["status"] = selected->escape'), method.index("lease->finish()"))
+        self.assertIn("lease->quarantine();", method)
+        self.assertIn("state->poisoned = true;", method)
+        self.assertNotIn("co_await", method)
+        close = source.split("json CSevenSunsDialogue::close()", 1)[1]
+        self.assertNotIn("writeRow(", close)
+        self.assertNotIn("tryBeginUnsafeOperation", close)
+
+    def testSevenSunsWarningFirstChoiceRecordsSourceOrderAndCurrentCityBookkeeping(self):
+        source = self.sevenSunsWarningSource()
+        method = source.split("json CSevenSunsDialogue::advance(", 1)[1]
+        self.assertLess(
+            method.index('writeGlobal("AskedForTour", 1, check)'),
+            method.index('writeGlobal("CheckedSevenSuns", 2, check)'),
+        )
+        self.assertIn("if (state->firstChoice)", method)
+        for token in (
+            "plugin_cityTalked",
+            "plugin_cityTalkCount",
+            "plugin_cityHistoryFrozen",
+            "plugin_cityHistory",
+            "plugin_cityStartingProfile",
+        ):
+            self.assertIn(token, source)
+        begin = source.split("CSevenSunsDialogue::begin(", 1)[1].split("void CSevenSunsDialogue::requireCurrent", 1)[0]
+        self.assertNotIn("recordFirstChoice(", begin)
+        self.assertLess(begin.index("validateState(value->row)"), begin.index("value->check()"))
+
+    def testSevenSunsWarningUsesSharedCaseInsensitiveNamesAndClassicScope(self):
+        source = self.sevenSunsWarningSource()
+        self.assertIn('GlobalsKey = "plugin_citySourceGlobals"', source)
+        self.assertIn('sourceGlobals.at("GLOBAL")', source)
+        self.assertIn("canonicalName(key) == wanted", source)
+        self.assertIn("Ambiguous case aliases", source)
+        self.assertIn('state->global("AskedForTour") == 1', source)
+        self.assertIn("globals.write(std::move(encoded), checkCurrent)", source)
+        self.assertNotIn("asked == 0 || asked == 1", source)
+        self.assertNotIn("checked == 0 || checked == 2", source)
+        self.assertIn('row["globals"] = globalSnapshot()', source)
+
+    def testSevenSunsWarningJournalCallsPropagateRatherThanUseWrapperFallback(self):
+        source = self.sevenSunsWarningSource()
+        self.assertIn('QuestId = "citySevenSunsWarningLead"', source)
+        self.assertIn("CPythonOverrides::find_override", source)
+        self.assertIn("pybind11::get_override", source)
+        self.assertIn("callback(false);", source)
+        self.assertIn("callback().cast<std::string>()", source)
+        self.assertIn("captureJournalStrict(journal)", source)
+        self.assertIn('journalTextStrict(journal, "getObjective")', source)
+        self.assertNotIn("journal->captureJournal(false)", source)
+        self.assertIn("quest == journal && quest->getGame() == game", source)
+        self.assertGreaterEqual(source.count("requireJournal();"), 5)
+        for forbidden in ("addGold(", "addExp(", "giveItem(", "createObject<CCreature>", "createObject<CItem>"):
+            self.assertNotIn(forbidden, source)
+
+    def testSevenSunsWarningRejectsIntegerAliasesAndPriorAdmissionQuarantine(self):
+        source = self.sevenSunsWarningSource()
+        self.assertIn("std::from_chars", source)
+        self.assertIn("parsed.ec == std::errc{}", source)
+        self.assertNotIn(".get<int>()", source)
+        self.assertIn("lease->isSaveAdmissionHealthy()", source)
+        begin = source.split("CSevenSunsDialogue::begin(", 1)[1].split("void CSevenSunsDialogue::requireCurrent", 1)[0]
+        self.assertLess(begin.index("found->second->poisoned = true"), begin.index("validateState(value->row)"))
+        gui = (ROOT / "src/handler/CGuiHandler.cpp").read_text(encoding="utf-8")
+        self.assertIn("CSevenSunsDialogue::readInteger(arguments.at(0))", gui)
+        context = (ROOT / "src/core/CGameContext.cpp").read_text(encoding="utf-8")
+        health = context.split("bool CGameContext::UnsafeOperationLease::isSaveAdmissionHealthy() const", 1)[1].split(
+            "void CGameContext::UnsafeOperationLease::release", 1
+        )[0]
+        for token in ("!state->quarantined", "!local->quarantined", "SaveAdmissionLocks", "isCurrent()"):
+            self.assertIn(token, health)
+
+    def testSevenSunsWarningSceneOwnershipSurvivesReloadAndCleansOnlyUnownedActors(self):
+        source = self.sevenSunsWarningSource()
+        header = (ROOT / "src/core/CMap.h").read_text(encoding="utf-8")
+        scene = (ROOT / "src/core/CSceneManager.cpp").read_text(encoding="utf-8")
+        map_source = (ROOT / "src/core/CMap.cpp").read_text(encoding="utf-8")
+        serializer = (ROOT / "src/core/CSerialization.cpp").read_text(encoding="utf-8")
+        self.assertRegex(header, r"getSceneRetiredObjects,\s*setSceneRetiredObjects")
+        self.assertIn("sceneRetiredLifetimeOwners", header)
+        primitive = scene.split("void CSceneManager::retireObjectWithoutEvents(", 1)[1]
+        self.assertLess(
+            primitive.index("sceneRetiredLifetimeOwners.insert(object)"),
+            primitive.index("removeObjectWithoutEvents(object)"),
+        )
+        self.assertIn("hasSceneLifetimeOwner(owner, map, actor, true)", source)
+        cleanup = map_source.split("CMap::~CMap()", 1)[1].split("CMap::getBounds()", 1)[0]
+        self.assertIn("sceneRetiredLifetimeOwners", cleanup)
+        self.assertIn("!object->owningMap.expired()", cleanup)
+        self.assertIn("entry.second == object", cleanup)
+        self.assertNotIn('"DOPPSM"', cleanup)
+        setter = map_source.split("void CMap::setSceneRetiredObjects(", 1)[1]
+        self.assertIn("sceneRetiredLifetimeOwners.insert(object)", setter)
+        self.assertIn('property->name() == "sceneRetiredObjects"', serializer)
+        self.assertIn("std::any_cast<const Retired &>(value).empty()", serializer)
+
+    def testSevenSunsWarningPrivateUiFlowOperationsHaveOnlyReadOnlyCapabilityBinding(self):
+        self.sevenSunsWarningSource()
+        gui = (ROOT / "src/handler/CGuiHandler.cpp").read_text(encoding="utf-8")
+        header = (ROOT / "src/handler/CGuiHandler.h").read_text(encoding="utf-8")
+        bindings = (ROOT / "src/core/bindings/CModuleWorld.cpp").read_text(encoding="utf-8")
+        for operation in ("beginSevenSunsWarning", "advanceSevenSunsWarning", "endSevenSunsWarning"):
+            self.assertIn('operation == "' + operation + '"', gui)
+            self.assertNotIn('.def("' + operation + '"', bindings)
+        self.assertIn("supportsSevenSunsWarning() const { return true; }", header)
+        self.assertIn('.def("supportsSevenSunsWarning"', bindings)
+        self.assertIn("sevenSuns->requireCurrent();", gui)
+        self.assertIn("if (ownedSevenSuns)\n                    throw;", gui)
+
+    def testSevenSunsWarningNativeCasesAndFixedWorkGuardAreRegistered(self):
+        self.sevenSunsWarningSource()
+        cases = (ROOT / "tests/unit/test_handler.cpp").read_text(encoding="utf-8")
+        names = re.findall(r"void (testSevenSunsWarning\w+)\(\)", cases)
+        self.assertGreaterEqual(len(names), 10)
+        for name in names:
+            self.assertEqual(1, cases.count('nativeTestProfile().run("' + name + '"'))
+            self.assertIn(name, ADDITIONAL_CASES["handler"])
+        perf = (ROOT / "tests/unit/test_engine_hotspot_performance.cpp").read_text(encoding="utf-8")
+        self.assertIn("pass < 128", perf)
+        self.assertIn("fixture.actorFactories == 0 && fixture.itemFactories == 0 && fixture.questFactories == 1", perf)
+        self.assertEqual(1, perf.count("testSevenSunsWarningThreeEdgesAnd128ReplaysAreBounded();"))
 
 
 class NativeTestProfileRuntimeTest(unittest.TestCase):

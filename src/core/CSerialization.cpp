@@ -1022,7 +1022,14 @@ std::shared_ptr<json> object_serialize(const std::shared_ptr<CGameObject> &objec
         if (!state.effects.writeRecord(object, config))
             return config;
         auto properties = std::make_shared<json>();
+        const bool mapObject = std::dynamic_pointer_cast<CMap>(object) != nullptr;
         object->meta()->for_all_properties(object, [&](auto property) {
+            if (mapObject && property->name() == "sceneRetiredObjects") {
+                const auto value = object->getProperty<std::any>(property->name());
+                using Retired = std::set<std::shared_ptr<CMapObject>>;
+                if (value.type() == typeid(Retired) && std::any_cast<const Retired &>(value).empty())
+                    return;
+            }
             if (property->name() != "type")
                 CSerialization::setProperty(properties, property->name(),
                                             object->getProperty<std::any>(property->name()), context);

@@ -10,7 +10,7 @@
     {
       "source": "src/core/bindings/CModuleWorld.cpp",
       "registration": "bindGraphicsAndWorld",
-      "registrationTokenSha256": "5c190326f54396e39986ba851333338d27b7c03c4f908a3e018a837d0cbb1596"
+      "registrationTokenSha256": "9ae852368801fb3d630f85e56a87d0b5f29d7edad40c6b8b8839c1f555747cb5"
     },
     {
       "source": "src/core/bindings/CModuleGameplay.cpp",
@@ -38,5 +38,6 @@
   "pendingMoveOriginReview": "Adds a readonly copied optional move origin during existing movement hooks; no setter or movement behavior changes. Native doorway and copy-lifetime regression is authored for CI.",
   "savedWaitReview": "Adds CWaitState with exact Python integer durations0..60000 and waitMilliseconds(state); existing registrations/order/defaults remain. Native snapshot/cancellation and real-extension save tests are authored for CI, not executed locally.",
   "mapBindingEpochReview": "Adds only CGame.getMapBindingEpoch(), a readonly nonserialized uint64 public map publication identity; existing signatures/defaults/order remain. Native reentrant/quiet-resource and extension tests are authored for CI, not executed locally.",
-  "assignedPlayerQueryReview": "Adds only CMap.getAssignedPlayer(), a const cache observation without lazy adoption, restoration, controller repair or hook registration; engine owner thread semantics, no new synchronization promise. Native and extension/performance fixtures are authored for CI, not executed locally."
+  "assignedPlayerQueryReview": "Adds only CMap.getAssignedPlayer(), a const cache observation without lazy adoption, restoration, controller repair or hook registration; engine owner thread semantics, no new synchronization promise. Native and extension/performance fixtures are authored for CI, not executed locally.",
+  "sevenSunsWarningCapabilityReview": "Adds only CGuiHandler.supportsSevenSunsWarning(), a const no-argument compiled-service capability query. Existing signatures, defaults, aliases and relative registration order are unchanged; stateful begin/advance/end operations remain native-owned UiFlow intents without public Python bindings."
 }

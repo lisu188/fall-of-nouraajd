@@ -58,6 +58,8 @@ class CGuiHandler : public CGameObject {
 
     void setSessionSaveStatus(std::string value) { sessionSaveStatus = std::move(value); }
 
+    bool supportsSevenSunsWarning() const { return true; }
+
     void showMessage(std::string message);
 
     vstd::task<void> showMessageAsync(std::string message);

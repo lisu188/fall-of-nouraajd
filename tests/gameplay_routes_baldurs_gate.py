@@ -2030,3 +2030,355 @@ PENDING_GAMEPLAY_OBLIGATIONS = {
     ]
     if entry["implementation"]["status"] != "excluded"
 }
+
+
+SEVEN_SUNS_WARNING_ACTOR = "cityAr0601Actor2"
+SEVEN_SUNS_WARNING_LEAD = "citySevenSunsWarningLead"
+SEVEN_SUNS_WARNING_PREFIX = "baldursGate.sevenSunsWarning."
+SEVEN_SUNS_WARNING_PATHS = (
+    (0, 7, 9),
+    (0, 8, 16),
+    (1, 3, 15),
+    (1, 4, 9),
+    (1, 5, 16),
+    (1, 6, 16),
+    (2, 3, 15),
+    (2, 4, 9),
+    (2, 6, 16),
+)
+SEVEN_SUNS_WARNING_CONTROLS = (
+    "cityAr0601Actor1",
+    "cityAr0601Actor3",
+    "cityAr0602Actor1",
+    "cityAr0602Actor2",
+    "cityAr0603Actor1",
+    "cityAr0603Actor2",
+)
+SEVEN_SUNS_WARNING_COMMON = tuple(
+    SEVEN_SUNS_WARNING_PREFIX + name
+    for name in (
+        "exactIdentity",
+        "retiredOwned",
+        "journalVisible",
+        "saveReload",
+        "repeatRefused",
+        "noCombatOrReward",
+    )
+)
+
+
+def sevenSunsGlobals(d):
+    values = read(d, d.game_map, "plugin_citySourceGlobals", {})
+    d.test.assertIsInstance(values, dict)
+    scope = values.get("GLOBAL", {})
+    d.test.assertIsInstance(scope, dict)
+    return scope
+
+
+def sevenSunsGlobal(d, name):
+    matches = [value for key, value in sevenSunsGlobals(d).items() if key.casefold() == name.casefold()]
+    d.test.assertLessEqual(len(matches), 1, "Ambiguous source-global spelling")
+    value = matches[0] if matches else 0
+    d.test.assertIs(type(value), int)
+    return value
+
+
+def sevenSunsReceipt(d):
+    receipt = read(d, d.game_map, "plugin_citySevenSunsWarningState", {})
+    d.test.assertIsInstance(receipt, dict)
+    d.test.assertNotEqual("pending", receipt.get("status"), "An uncertain admitted retirement is not route success")
+    return receipt
+
+
+def sevenSunsOwned(d, actor, *, include_handles=False):
+    """Read the actual selected owner's possessions; handles are compared only before reload."""
+    from tests.gameplay_branch_driver import canonicalNativeState
+
+    bag, equipment, effects = d.call(actor, "getItems"), d.call(actor, "getEquipped"), d.call(actor, "getEffects")
+    d.test.assertLessEqual(len(bag) + len(equipment) + len(effects), 256)
+    items = {item["__handle__"]: item for item in [*bag, *(item for item in equipment.values() if item)]}
+    records = []
+    for handle, item in items.items():
+        row = {
+            "name": d.call(item, "getName"),
+            "typeId": d.call(item, "getTypeId"),
+            "properties": canonicalNativeState(d.properties(item)),
+        }
+        if include_handles:
+            row["handle"] = handle
+        records.append(row)
+    effect_rows = [
+        {
+            "name": d.call(effect, "getName"),
+            "typeId": d.call(effect, "getTypeId"),
+            "properties": canonicalNativeState(d.properties(effect)),
+            **({"handle": effect["__handle__"]} if include_handles else {}),
+        }
+        for effect in effects
+    ]
+    return {
+        "name": d.call(actor, "getName"),
+        "typeId": d.call(actor, "getTypeId"),
+        "source": {
+            key: d.call(actor, "getStringProperty", key)
+            for key in ("sourceActor", "sourceCreature", "sourceArea", "sourceDialogue")
+        },
+        "hp": d.call(actor, "getHp"),
+        "mana": d.call(actor, "getMana"),
+        "gold": d.call(actor, "getGold"),
+        "items": sorted(records, key=lambda row: (row["name"], row["typeId"])),
+        "bag": sorted(d.call(item, "getName") for item in bag),
+        "equipped": {slot: d.call(item, "getName") for slot, item in equipment.items() if item},
+        "effects": sorted(effect_rows, key=lambda row: (row["name"], row["typeId"])),
+    }
+
+
+def sevenSunsControls(d):
+    return {name: sevenSunsOwned(d, d.object(name)) for name in SEVEN_SUNS_WARNING_CONTROLS}
+
+
+def sevenSunsNoPlotCredit(d):
+    return {
+        "resources": resources(d),
+        "deaths": read(d, d.game_map, "plugin_cityDeaths", {}),
+        "combat": {area: d.flag("plugin_cityCombatObserved_" + area) for area in ("AR0601", "AR0602", "AR0603")},
+        "scarInvestigation": state(d, "scarSevenSuns"),
+        "scarRescue": state(d, "scarDoppelgangers"),
+        "investigatedFlag": d.flag("plugin_cityFlag_sevenSunsInvestigated"),
+        "completedQuests": tuple(sorted(d.questNames(completed=True))),
+    }
+
+
+def sevenSunsJournal(d):
+    gui = d.enableIsolatedGui()
+    quests = [quest for quest in d.call(d.player, "getQuests") if d.call(quest, "getTypeId") == SEVEN_SUNS_WARNING_LEAD]
+    d.test.assertEqual(1, len(quests), "The actual player must own one visible warning lead")
+    note = quests[0]
+    d.test.assertFalse(d.call(note, "isCompleted"))
+    d.test.assertEqual(1, d.call(note, "getNumericProperty", "questJournalVersion"))
+    d.test.assertEqual(MAP, d.call(note, "getStringProperty", "questJournalOrigin"))
+    objective = d.call(note, "getObjective")
+    d.test.assertIn("shapechangers", objective)
+    d.test.assertNotIn(SEVEN_SUNS_WARNING_LEAD, d.questNames(completed=True))
+    handler = d.call(d.game, "getGuiHandler")
+    panel = d.call(handler, "openPanel", "questPanel")
+    d.pump()
+    d.test.assertEqual(panel, d.nativePanel("CGameQuestPanel"))
+    text = d.call(panel, "getText", gui)
+    d.test.assertIn("Seven Suns: a merchant's warning", text)
+    d.test.assertIn(objective, text, "The real native journal panel must show the owned lead")
+    d.call(panel, "keyboardEvent", gui, 768, 27)
+    d.pump()
+    d.test.assertIsNone(d.call(panel, "getParent"))
+    return {"id": SEVEN_SUNS_WARNING_LEAD, "objective": objective, "nativePanelText": text}
+
+
+def sevenSunsPrefixCancel(d, prefix, *, forbidden=()):
+    return d.chooseUi(
+        SEVEN_SUNS_WARNING_ACTOR + "Dialog",
+        "talk",
+        dialogue_choices=[str(edge) for edge in prefix],
+        cancel_after_dialogue_choices=True,
+        forbidden_choice_ids=forbidden,
+    )
+
+
+def sevenSunsWarningRoute(d, *, path, prepare_tour=False, cancellation_controls=False):
+    """Real travel and native choices only; every source-global value is earned through this dialogue."""
+    start(d)
+    planner = QuestRoute(d)
+    planner.contact(SEVEN_SUNS_WARNING_ACTOR)
+    d.test.assertEqual("AR0601", currentArea(d))
+    actor = d.object(SEVEN_SUNS_WARNING_ACTOR)
+    source = {
+        key: d.call(actor, "getStringProperty", key)
+        for key in ("sourceActor", "sourceArea", "sourceCreature", "sourceDialogue")
+    }
+    d.test.assertEqual(
+        {
+            "sourceActor": "AR0601#actor2",
+            "sourceArea": "AR0601",
+            "sourceCreature": "DOPPSM",
+            "sourceDialogue": "DOPPSM",
+        },
+        source,
+    )
+    d.test.assertEqual(0, sevenSunsGlobal(d, "AskedForTour"), "This case starts a fresh authored game")
+    d.test.assertNotIn(SEVEN_SUNS_WARNING_LEAD, d.questNames())
+    before_owned = sevenSunsOwned(d, actor)
+    before_plot, controls = sevenSunsNoPlotCredit(d), sevenSunsControls(d)
+    d.check(SEVEN_SUNS_WARNING_PREFIX + "exactIdentity", True, actor=source, reachedByNaturalTravel=True)
+
+    if cancellation_controls:
+        untouched = (
+            sevenSunsGlobals(d),
+            sevenSunsReceipt(d),
+            d.call(actor, "getNumericProperty", "plugin_cityTalkCount"),
+        )
+        first_cancel = sevenSunsPrefixCancel(d, ())
+        d.test.assertEqual(
+            untouched,
+            (sevenSunsGlobals(d), sevenSunsReceipt(d), d.call(actor, "getNumericProperty", "plugin_cityTalkCount")),
+        )
+        for prefix in ((0,), (2,)):
+            witness = sevenSunsPrefixCancel(d, prefix, forbidden=("5",) if prefix == (2,) else ())
+            d.test.assertEqual(list(prefix), sevenSunsReceipt(d)["edges"])
+            d.test.assertEqual("active", sevenSunsReceipt(d)["status"])
+            d.test.assertFalse(sevenSunsReceipt(d)["journal"])
+            d.test.assertEqual(2, sevenSunsGlobal(d, "CheckedSevenSuns"))
+            d.test.assertEqual(0, sevenSunsGlobal(d, "AskedForTour"))
+            d.test.assertIsNotNone(d.object(SEVEN_SUNS_WARNING_ACTOR))
+            d.test.assertNotIn(SEVEN_SUNS_WARNING_LEAD, d.questNames())
+            d.test.assertEqual(before_owned, sevenSunsOwned(d, d.object(SEVEN_SUNS_WARNING_ACTOR)))
+            d.test.assertEqual(before_plot, sevenSunsNoPlotCredit(d))
+        d.check(
+            SEVEN_SUNS_WARNING_PREFIX + "prefixCancel", True, firstNativeCancel=first_cancel, finalNativeCancel=witness
+        )
+        d.check(SEVEN_SUNS_WARNING_PREFIX + "conditionalRefused", True, nativeChoiceIds=witness["cancelledChoiceIds"])
+
+    if prepare_tour:
+        witness = sevenSunsPrefixCancel(d, (1,))
+        d.test.assertEqual([1], sevenSunsReceipt(d)["edges"])
+        d.test.assertEqual(1, sevenSunsGlobal(d, "AskedForTour"))
+        d.test.assertEqual(2, sevenSunsGlobal(d, "CheckedSevenSuns"))
+        d.test.assertFalse(sevenSunsReceipt(d)["journal"])
+        d.test.assertIsNotNone(d.object(SEVEN_SUNS_WARNING_ACTOR))
+        d.test.assertNotIn(SEVEN_SUNS_WARNING_LEAD, d.questNames())
+        d.check(SEVEN_SUNS_WARNING_PREFIX + "tourCancelReopen", True, nativeCancel=witness, actualSourcePrefix=[1])
+
+    prefix_receipt, source_globals = sevenSunsReceipt(d), sevenSunsGlobals(d)
+    d.saveAndReload("city-seven-suns-before-warning")
+    d.test.assertEqual(prefix_receipt, sevenSunsReceipt(d))
+    d.test.assertEqual(source_globals, sevenSunsGlobals(d))
+    d.test.assertEqual(before_owned, sevenSunsOwned(d, d.object(SEVEN_SUNS_WARNING_ACTOR)))
+    d.test.assertEqual(before_plot, sevenSunsNoPlotCredit(d))
+    actor = d.object(SEVEN_SUNS_WARNING_ACTOR)
+    actual_handle, owned_handles = actor["__handle__"], sevenSunsOwned(d, actor, include_handles=True)
+    talks = d.call(actor, "getNumericProperty", "plugin_cityTalkCount")
+    turn = d.call(d.game_map, "getTurn")
+    completed = d.chooseUi(
+        SEVEN_SUNS_WARNING_ACTOR + "Dialog", "talk", dialogue_choices=[str(edge) for edge in path[:2]]
+    )
+    receipt = sevenSunsReceipt(d)
+    d.test.assertEqual(list(path), receipt["edges"], "Actual native committed source transitions")
+    d.test.assertEqual("retired", receipt["status"])
+    d.test.assertEqual(path[-1], receipt["lastEdge"])
+    d.test.assertTrue(receipt["journal"])
+    expected_tour = 1 if path[0] == 1 or prepare_tour else 0
+    d.test.assertEqual(expected_tour, sevenSunsGlobal(d, "AskedForTour"))
+    d.test.assertEqual(2, sevenSunsGlobal(d, "CheckedSevenSuns"))
+    d.test.assertEqual({"AskedForTour": expected_tour, "CheckedSevenSuns": 2}, receipt["globals"])
+    expected_globals = dict(source_globals)
+    global_updates = [("CheckedSevenSuns", 2)]
+    if path[0] == 1:
+        global_updates.insert(0, ("AskedForTour", 1))
+    for name, value in global_updates:
+        key = next((key for key in expected_globals if key.casefold() == name.casefold()), name)
+        expected_globals[key] = value
+    d.test.assertEqual(expected_globals, sevenSunsGlobals(d), "Unrelated shared globals must remain unchanged")
+    d.test.assertEqual(turn, d.call(d.game_map, "getTurn"), "The warning must not manufacture a map/combat turn")
+    retired = d.call(d.object("cityClock"), "getObjectProperty", "plugin_citySevenSunsWarningActor")
+    d.test.assertIsNotNone(retired)
+    d.test.assertEqual(actual_handle, retired["__handle__"], "Retirement must retain the selected native actor")
+    d.test.assertIsNone(d.object(SEVEN_SUNS_WARNING_ACTOR, required=False))
+    d.test.assertTrue(d.call(retired, "isAlive"))
+    d.test.assertEqual(talks + 1, d.call(retired, "getNumericProperty", "plugin_cityTalkCount"))
+    d.test.assertEqual(owned_handles, sevenSunsOwned(d, retired, include_handles=True))
+    d.test.assertEqual(before_plot, sevenSunsNoPlotCredit(d))
+    d.test.assertEqual(controls, sevenSunsControls(d), "Other Seven Suns lineages must remain untouched")
+    journal = sevenSunsJournal(d)
+    d.check(SEVEN_SUNS_WARNING_PREFIX + "retiredOwned", True, sourceActor=source, actualHandle=actual_handle)
+    d.check(SEVEN_SUNS_WARNING_PREFIX + "journalVisible", True, **journal)
+    d.check(SEVEN_SUNS_WARNING_PREFIX + "noCombatOrReward", True, before=before_plot, after=sevenSunsNoPlotCredit(d))
+    d.check(SEVEN_SUNS_WARNING_PREFIX + "path." + "_".join(map(str, path)), True, nativeUi=completed, receipt=receipt)
+    for edge in receipt["edges"]:
+        d.check(SEVEN_SUNS_WARNING_PREFIX + "edge." + str(edge), True, actualCommittedEdges=receipt["edges"])
+
+    d.test.assertFalse(d.condition(SEVEN_SUNS_WARNING_ACTOR + "Dialog", "canInteract"))
+    d.saveAndReload("city-seven-suns-after-warning")
+    d.test.assertEqual(receipt, sevenSunsReceipt(d))
+    d.test.assertIsNone(d.object(SEVEN_SUNS_WARNING_ACTOR, required=False))
+    retired = d.call(d.object("cityClock"), "getObjectProperty", "plugin_citySevenSunsWarningActor")
+    d.test.assertIsNotNone(retired)
+    d.test.assertTrue(d.call(retired, "isAlive"))
+    d.test.assertEqual(before_owned, sevenSunsOwned(d, retired))
+    d.test.assertEqual(before_plot, sevenSunsNoPlotCredit(d))
+    d.test.assertEqual(controls, sevenSunsControls(d))
+    d.test.assertEqual(journal, sevenSunsJournal(d))
+    d.test.assertFalse(d.condition(SEVEN_SUNS_WARNING_ACTOR + "Dialog", "canInteract"))
+    d.check(SEVEN_SUNS_WARNING_PREFIX + "saveReload", True, beforeAndAfterRetirement=True, actualReceipt=receipt)
+    d.check(SEVEN_SUNS_WARNING_PREFIX + "repeatRefused", True, unavailableAfterReload=True, liveRetainedActor=True)
+
+
+def sevenSunsWarningCases():
+    from tests.gameplay_branch_types import PLAYER_CLASSES
+
+    sources = SOURCES + ("tests/fixtures/baldurs_gate_seven_suns_warning.json",)
+    cases = []
+    for index, path in enumerate(SEVEN_SUNS_WARNING_PATHS):
+        branches = SEVEN_SUNS_WARNING_COMMON + (SEVEN_SUNS_WARNING_PREFIX + "path." + "_".join(map(str, path)),)
+        branches += tuple(SEVEN_SUNS_WARNING_PREFIX + "edge." + str(edge) for edge in path)
+        cases.append(
+            RouteCase(
+                "baldurs-gate-seven-suns-warning-" + "-".join(map(str, path)),
+                MAP,
+                (MAP,),
+                branches,
+                partial(sevenSunsWarningRoute, path=path),
+                classes=(PLAYER_CLASSES[index % len(PLAYER_CLASSES)],),
+                sources=sources,
+                duration_seconds=1200,
+                isolated_gui=True,
+            )
+        )
+    for suffix, path, options, extra in (
+        ("tour-cancel-reopen", (2, 5, 16), {"prepare_tour": True}, ("tourCancelReopen",)),
+        ("prefix-cancel", (0, 8, 16), {"cancellation_controls": True}, ("prefixCancel", "conditionalRefused")),
+    ):
+        branches = SEVEN_SUNS_WARNING_COMMON + (SEVEN_SUNS_WARNING_PREFIX + "path." + "_".join(map(str, path)),)
+        branches += tuple(SEVEN_SUNS_WARNING_PREFIX + "edge." + str(edge) for edge in path)
+        branches += tuple(SEVEN_SUNS_WARNING_PREFIX + branch for branch in extra)
+        cases.append(
+            RouteCase(
+                "baldurs-gate-seven-suns-warning-" + suffix,
+                MAP,
+                (MAP,),
+                branches,
+                partial(sevenSunsWarningRoute, path=path, **options),
+                classes=("Wayfarer",),
+                sources=sources,
+                duration_seconds=1200,
+                isolated_gui=True,
+            )
+        )
+    return tuple(cases)
+
+
+CASES += sevenSunsWarningCases()
+_warning_branches = tuple(sorted({branch for case in sevenSunsWarningCases() for branch in case.branches}))
+for _callback in ("talk", "conversationSevenSunsWarning", "isSevenSunsWarningActor", "validSevenSunsWarningView"):
+    _identity = "res/maps/baldursGate/script.py:BaldursGateDialog." + _callback
+    SOURCE_BRANCHES[_identity] = tuple(dict.fromkeys((*SOURCE_BRANCHES.get(_identity, ()), *_warning_branches)))
+SOURCE_BRANCHES["res/maps/baldursGate/script.py:BaldursGateSevenSunsWarningLeadQuest.isCompleted"] = (
+    SEVEN_SUNS_WARNING_PREFIX + "journalVisible",
+)
+PENDING_GAMEPLAY_OBLIGATIONS.update(
+    {
+        SEVEN_SUNS_WARNING_PREFIX
+        + "originalSourceAndExternalEntries": {
+            "map": MAP,
+            "sourceId": "DOPPSM.DLG:behavior",
+            "ledger": "tests/fixtures/baldurs_gate_city_ledger.json",
+            "implementationStatus": "partial",
+            "reason": "Original-source authentication and INITDLG/external states4-6/SSUNGU evidence remain pending.",
+        },
+        SEVEN_SUNS_WARNING_PREFIX
+        + "nativeOwnerAcceptance": {
+            "map": MAP,
+            "sourceId": "AR0601#actor2",
+            "ledger": "tests/fixtures/baldurs_gate_city_ledger.json",
+            "implementationStatus": "partial",
+            "reason": "Native route evidence remains pending: current-binary natural UI/save-reload, selected CI/coverage and owner visual acceptance remain required.",
+        },
+    }
+)

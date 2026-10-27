@@ -7,7 +7,9 @@ import json
 from pathlib import Path
 import unittest
 
-from scripts.build_baldurs_gate_city_ledger import buildLedger, validateLedger
+from scripts.build_baldurs_gate_city_ledger import buildLedger, fingerprint, validateLedger
+
+WARNING_PATH = "tests/fixtures/baldurs_gate_seven_suns_warning.json"
 
 ROOT = Path(__file__).resolve().parents[1]
 
@@ -16,7 +18,7 @@ def readJson(path):
     return json.loads(path.read_text(encoding="utf-8"))
 
 
-def expectedIds(source, quests):
+def expectedIds(source, quests, warning=None):
     """Enumerate audited records independently from implementation/config mapping."""
     result = set()
     for area_id, area in source["areas"].items():
@@ -54,6 +56,10 @@ def expectedIds(source, quests):
     for quest in quests["quests"]:
         result.add(f"quest:{quest['id']}:accept")
         result.update(f"quest:{quest['id']}:{choice['id']}" for choice in quest["outcomes"])
+    if warning is not None:
+        result.update(f"DOPPSM.DLG#state{index}" for index in range(9))
+        result.update(f"DOPPSM.DLG#edge{index}" for index in range(17))
+        result.update({"DOPPSM.DLG#journal26986", "DOPPSM.DLG#globalAskedForTour", "DOPPSM.DLG#globalCheckedSevenSuns"})
     return result
 
 
@@ -380,6 +386,193 @@ class BaldursGateCityLedgerUnitTest(unittest.TestCase):
         self.assertTrue(any("Coverage cannot be awarded" in problem for problem in validateLedger(ledger)))
 
 
+class BaldursGateSevenSunsWarningLedgerTest(unittest.TestCase):
+    """Factual source graph and mapping contracts only; no native or parity acceptance."""
+
+    @classmethod
+    def setUpClass(cls):
+        cls.warning = readJson(ROOT / WARNING_PATH)
+        cls.full_source = readJson(ROOT / "tests/fixtures/baldurs_gate_city_source.json")
+        cls.full_quests = readJson(ROOT / "tests/fixtures/baldurs_gate_city_quests.json")
+
+    def mappedInputs(self):
+        source, quests, config, script = minimalInputs()
+        source["references"]["DOPPSM.DLG"] = copy.deepcopy(self.full_source["references"]["DOPPSM.DLG"])
+        source["creatures"]["DOPPSM"] = {**source["creatures"]["RESIDENT"], "dialogue": "DOPPSM"}
+        source["areas"]["AR0601"] = {
+            "sha256": source["areas"]["AR0100"]["sha256"],
+            "doors": [],
+            "containers": [],
+            "regions": [],
+            "spawns": [],
+            "actors": [
+                {
+                    "sourceId": "AR0601#actor2",
+                    "creature": "DOPPSM",
+                    "dialogue": "DOPPSM",
+                    "position": [1, 0],
+                    "schedule": 0,
+                    "flags": 0,
+                }
+            ],
+        }
+        config["cityAr0601Actor2"] = {
+            "class": "CCreature",
+            "properties": {
+                "sourceActor": "AR0601#actor2",
+                "sourceArea": "AR0601",
+                "sourceCreature": "DOPPSM",
+                "sourceDialogue": "DOPPSM",
+            },
+        }
+        config["cityClock"]["properties"]["sevenSunsWarningDefinition"] = json.dumps(
+            {
+                "version": 1,
+                "dialogue": "DOPPSM",
+                "fingerprint": self.warning["sources"]["dialogueFingerprint"]["sha256"],
+                "journalQuest": "citySevenSunsWarningLead",
+            }
+        )
+        config["citySevenSunsWarningLead"] = {"class": "BaldursGateSevenSunsWarningLeadQuest", "properties": {}}
+        script += "    def isSevenSunsWarningActor(self): pass\n"
+        script += "    def conversationSevenSunsWarning(self): pass\n"
+        script += "    def validSevenSunsWarningView(self): pass\n"
+        script += "class BaldursGateSevenSunsWarningLeadQuest: pass\n"
+        return source, quests, config, script
+
+    def warningRows(self, ledger):
+        return {row["id"]: row for row in ledger["entries"] if row["id"].startswith("DOPPSM.DLG#")}
+
+    def testWarningAddsExactly29RowsWithoutShrinking7471ExistingIds(self):
+        source, quests = self.full_source, self.full_quests
+        original = buildLedger(source, quests, {}, "")
+        updated = buildLedger(source, quests, {}, "", warning=self.warning)
+        old_ids = {row["id"] for row in original["entries"]}
+        new_ids = {row["id"] for row in updated["entries"]}
+        self.assertEqual(7471, len(old_ids))
+        self.assertEqual(7500, len(new_ids))
+        self.assertTrue(old_ids < new_ids)
+        self.assertEqual(expectedIds(source, quests, self.warning), new_ids)
+        self.assertEqual(29, len(self.warningRows(updated)))
+        self.assertTrue(all(row["implementation"]["status"] == "planned" for row in self.warningRows(updated).values()))
+        self.assertEqual([], validateLedger(updated))
+
+    def testReachablePartialMappingRetainsAllUnreachableRowsAsPlanned(self):
+        ledger = buildLedger(*self.mappedInputs(), warning=self.warning)
+        rows = self.warningRows(ledger)
+        self.assertEqual(29, len(rows))
+        self.assertEqual(21, sum(row["implementation"]["status"] == "partial" for row in rows.values()))
+        planned = {f"DOPPSM.DLG#state{index}" for index in (4, 5, 6)}
+        planned.update(f"DOPPSM.DLG#edge{index}" for index in range(10, 15))
+        self.assertEqual(planned, {key for key, row in rows.items() if row["implementation"]["status"] == "planned"})
+        for key in planned:
+            self.assertFalse(rows[key]["implementation"]["targets"])
+            self.assertTrue(any("No path" in gap or "No audited" in gap for gap in rows[key]["gaps"]), key)
+            self.assertNotEqual("excluded", rows[key]["implementation"]["status"])
+        records = {row["id"]: row for row in ledger["entries"]}
+        for key in ("DOPPSM.DLG:behavior", "AR0601#actor2:conversation"):
+            self.assertEqual("partial", records[key]["implementation"]["status"])
+            self.assertTrue(any("SSUNGU" in gap and "INITDLG" in gap for gap in records[key]["gaps"]))
+
+    def testMissingExactActorHelperClockOrJournalPreventsPartialWarningCredit(self):
+        for missing in ("actor", "identity", "helper", "clock", "versionBool", "versionFloat", "journal", "class"):
+            with self.subTest(missing=missing):
+                source, quests, config, script = self.mappedInputs()
+                if missing == "actor":
+                    del config["cityAr0601Actor2"]
+                elif missing == "identity":
+                    config["cityAr0601Actor2"]["properties"]["sourceActor"] = "AR0601#actor1"
+                elif missing == "helper":
+                    script = script.replace("def validSevenSunsWarningView", "def unrelatedView")
+                elif missing == "clock":
+                    del config["cityClock"]["properties"]["sevenSunsWarningDefinition"]
+                elif missing in ("versionBool", "versionFloat"):
+                    definition = json.loads(config["cityClock"]["properties"]["sevenSunsWarningDefinition"])
+                    definition["version"] = True if missing == "versionBool" else 1.0
+                    config["cityClock"]["properties"]["sevenSunsWarningDefinition"] = json.dumps(definition)
+                elif missing == "journal":
+                    del config["citySevenSunsWarningLead"]
+                elif missing == "class":
+                    config["citySevenSunsWarningLead"]["class"] = "CQuest"
+                ledger = buildLedger(source, quests, config, script, warning=self.warning)
+                self.assertTrue(
+                    all(row["implementation"]["status"] == "planned" for row in self.warningRows(ledger).values())
+                )
+
+    def testSourceFingerprintCountAndDroppedGraphMismatchesFailBeforeInventoryCanShrink(self):
+        for damage in ("fingerprint", "statesCount", "edgesCount", "state", "edge", "duplicate"):
+            with self.subTest(damage=damage):
+                source, quests, config, script = self.mappedInputs()
+                warning = copy.deepcopy(self.warning)
+                if damage == "fingerprint":
+                    warning["sources"]["dialogueFingerprint"]["sha256"] = "f" * 64
+                elif damage == "statesCount":
+                    source["references"]["DOPPSM.DLG"]["states"] = 8
+                elif damage == "edgesCount":
+                    source["references"]["DOPPSM.DLG"]["transitions"] = 16
+                elif damage == "state":
+                    warning["states"].pop(4)
+                elif damage == "edge":
+                    warning["states"][4]["transitions"].pop()
+                else:
+                    warning["states"][4]["transitions"][0]["id"] = 0
+                with self.assertRaisesRegex(ValueError, "Seven Suns warning"):
+                    buildLedger(source, quests, config, script, warning=warning)
+
+    def testWarningEffectsConditionsGlobalsJournalFlagsAndEvidenceStayFactual(self):
+        ledger = buildLedger(*self.mappedInputs(), warning=self.warning)
+        rows = self.warningRows(ledger)
+        self.assertEqual(29, len(rows))
+        self.assertEqual(
+            [{"op": "Global", "args": ["AskedForTour", "GLOBAL", 1]}],
+            rows["DOPPSM.DLG#edge5"]["prerequisites"]["conditions"],
+        )
+        self.assertEqual(
+            [
+                {"op": "SetGlobal", "args": ["AskedForTour", "GLOBAL", 1]},
+                {"op": "SetGlobal", "args": ["CheckedSevenSuns", "GLOBAL", 2]},
+            ],
+            rows["DOPPSM.DLG#edge1"]["effects"]["actions"],
+        )
+        self.assertEqual([{"op": "Enemy", "args": []}], rows["DOPPSM.DLG#edge14"]["effects"]["actions"])
+        self.assertEqual(["SSUNGU", 5], rows["DOPPSM.DLG#edge13"]["effects"]["next"])
+        journal = rows["DOPPSM.DLG#journal26986"]
+        self.assertEqual(92, journal["effects"]["rawFlags"])
+        self.assertIn("BG2-only", journal["nativeConversion"]["classic"]["journalRaw92Status"])
+        for name in ("AskedForTour", "CheckedSevenSuns"):
+            row = rows["DOPPSM.DLG#global" + name]
+            self.assertEqual("GLOBAL", row["facts"]["scope"])
+            self.assertIn("case-insensitive", row["prerequisites"]["variableNames"])
+            self.assertIn("Preserve unknown integer", row["effects"]["existingIntegers"])
+            self.assertFalse(row["ownership"]["privateWarningReceiptIsAuthoritative"])
+        self.assertEqual(fingerprint(self.warning), ledger["inputs"][WARNING_PATH])
+        for row in rows.values():
+            for evidence in row["evidence"]:
+                if evidence["fixture"] == WARNING_PATH:
+                    value = self.warning
+                    for component in evidence["pointer"].lstrip("/").split("/"):
+                        value = value[int(component)] if isinstance(value, list) else value[component]
+                    self.assertIsNotNone(value)
+            self.assertEqual("pending", row["testStatus"]["native"])
+            self.assertEqual("not established", row["testStatus"]["coverage"])
+            self.assertTrue(row["ownership"])
+            self.assertTrue(row["timers"])
+        self.assertFalse(ledger["acceptanceReady"])
+        self.assertFalse(ledger["originalParityEstablished"])
+        self.assertEqual([], validateLedger(ledger))
+        self.assertTrue(validateLedger(ledger, require_acceptance=True))
+
+    def testWarningProofNeedsItsInputFingerprintAndKnownFixturePointer(self):
+        ledger = buildLedger(*self.mappedInputs(), warning=self.warning)
+        rows = self.warningRows(ledger)
+        self.assertEqual(29, len(rows))
+        del ledger["inputs"][WARNING_PATH]
+        self.assertTrue(any("Missing warning input fingerprint" in item for item in validateLedger(ledger)))
+        ledger = buildLedger(*self.mappedInputs(), warning=self.warning)
+        self.warningRows(ledger)["DOPPSM.DLG#state0"]["evidence"][0]["fixture"] = "untrusted.json"
+        self.assertTrue(any("Invalid source pointer" in item for item in validateLedger(ledger)))
+
+
 class BaldursGateCityLedgerFixtureTest(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
@@ -388,10 +581,13 @@ class BaldursGateCityLedgerFixtureTest(unittest.TestCase):
         cls.config = readJson(ROOT / "res/maps/baldursGate/config.json")
         cls.script = (ROOT / "res/maps/baldursGate/script.py").read_text(encoding="utf-8")
         cls.ledger = readJson(ROOT / "tests/fixtures/baldurs_gate_city_ledger.json")
-        cls.expected = buildLedger(cls.source, cls.quests, cls.config, cls.script)
+        cls.warning = readJson(ROOT / WARNING_PATH) if (ROOT / WARNING_PATH).is_file() else None
+        cls.expected = buildLedger(cls.source, cls.quests, cls.config, cls.script, warning=cls.warning)
 
     def testSavedLedgerCoversEverySourceObligationAndMatchesCurrentInputs(self):
-        self.assertEqual(expectedIds(self.source, self.quests), {row["id"] for row in self.ledger["entries"]})
+        self.assertEqual(
+            expectedIds(self.source, self.quests, self.warning), {row["id"] for row in self.ledger["entries"]}
+        )
         self.assertEqual([], validateLedger(self.ledger, expected=self.expected))
         self.assertEqual(212, len(self.source["areas"]))
         self.assertGreater(len(self.ledger["entries"]), 7000)
@@ -400,6 +596,7 @@ class BaldursGateCityLedgerFixtureTest(unittest.TestCase):
         fixtures = {
             "tests/fixtures/baldurs_gate_city_source.json": self.source,
             "tests/fixtures/baldurs_gate_city_quests.json": self.quests,
+            **({WARNING_PATH: self.warning} if self.warning is not None else {}),
         }
         for row in self.ledger["entries"]:
             for evidence in row["evidence"]:

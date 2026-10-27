@@ -29,6 +29,8 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 class CGame;
 class CGameContext;
 class CMap;
+class CMapObject;
+class CSevenSunsDialogue;
 
 // Opt-in description of a single map transition. The legacy CGame::changeMap(std::string) path is
 // equivalent to a request with only targetMap set: the destination is reloaded from content, the
@@ -75,6 +77,7 @@ class CTransitionCompletion {
 
 class CSceneManager : public std::enable_shared_from_this<CSceneManager> {
     friend class CGameContext;
+    friend class CSevenSunsDialogue;
 
   public:
     enum class TransitionState { Idle, TransitionPending, Transitioning };
@@ -110,6 +113,12 @@ class CSceneManager : public std::enable_shared_from_this<CSceneManager> {
                                            std::shared_ptr<scene_detail::CTransitionCompletion> completion);
 
     void resetTransition();
+
+    void retireObjectWithoutEvents(const std::shared_ptr<CGame> &game, const std::shared_ptr<CMap> &map,
+                                   const std::shared_ptr<CMapObject> &object,
+                                   const std::function<void()> &requireCurrent);
+    bool containsSceneRetiredObject(const std::shared_ptr<CMap> &map, const std::shared_ptr<CMapObject> &object) const;
+    bool isSceneObjectRetired(const std::shared_ptr<CMap> &map, const std::shared_ptr<CMapObject> &object) const;
 
     TransitionState transitionState = TransitionState::Idle;
     std::string pendingMapName;
