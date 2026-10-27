@@ -116,6 +116,14 @@ class BindingSourceLayoutTest(unittest.TestCase):
             r'\.def(?:_static)?\(\s*"(?:begin|advance|end)SevenSunsWarning"',
         )
 
+    def testSevenSunsMerchantsExposeOnlyTheReadonlyFixedServiceCapability(self):
+        source = (ROOT / "src/core/bindings/CModuleWorld.cpp").read_text(encoding="utf-8")
+        tokens = registrationTokens(source)
+        self.assertEqual(1, tokens.count('.def("supportsSevenSunsMerchants",&CGuiHandler::supportsSevenSunsMerchants,'))
+        self.assertNotRegex(tokens, r'\.def(?:_static)?\("(?:begin|advance|end|settle)SevenSunsMerchant')
+        header = registrationTokens((ROOT / "src/handler/CGuiHandler.h").read_text(encoding="utf-8"))
+        self.assertIn("boolsupportsSevenSunsMerchants()const;", header)
+
     def testAlliedCombatBindingsConvertAllThreeParticipantsWithoutChangingLegacyCalls(self):
         source = (ROOT / "src/core/bindings/CModuleServices.cpp").read_text(encoding="utf-8")
         for name, native_name in (

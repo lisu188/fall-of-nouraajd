@@ -60,6 +60,8 @@ class CGuiHandler : public CGameObject {
 
     bool supportsSevenSunsWarning() const { return true; }
 
+    bool supportsSevenSunsMerchants() const;
+
     void showMessage(std::string message);
 
     vstd::task<void> showMessageAsync(std::string message);

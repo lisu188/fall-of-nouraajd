@@ -10,6 +10,8 @@ import unittest
 from scripts.build_baldurs_gate_city_ledger import buildLedger, fingerprint, validateLedger
 
 WARNING_PATH = "tests/fixtures/baldurs_gate_seven_suns_warning.json"
+DOPMER_PATH = "tests/fixtures/baldurs_gate_seven_suns_merchants.json"
+STOCK_PATH = "tests/fixtures/baldurs_gate_seven_suns_stock.json"
 
 ROOT = Path(__file__).resolve().parents[1]
 
@@ -18,7 +20,7 @@ def readJson(path):
     return json.loads(path.read_text(encoding="utf-8"))
 
 
-def expectedIds(source, quests, warning=None):
+def expectedIds(source, quests, warning=None, dopmer=None, stock=None):
     """Enumerate audited records independently from implementation/config mapping."""
     result = set()
     for area_id, area in source["areas"].items():
@@ -60,6 +62,17 @@ def expectedIds(source, quests, warning=None):
         result.update(f"DOPPSM.DLG#state{index}" for index in range(9))
         result.update(f"DOPPSM.DLG#edge{index}" for index in range(17))
         result.update({"DOPPSM.DLG#journal26986", "DOPPSM.DLG#globalAskedForTour", "DOPPSM.DLG#globalCheckedSevenSuns"})
+    if dopmer is not None:
+        result.update(f"DOPMER.DLG#state{index}" for index in range(14))
+        result.update(f"DOPMER.DLG#edge{index}" for index in range(24))
+        result.update("DOPMER.DLG#global" + name for name in ("CheckedSevenSuns", "Doppleganger", "Laola"))
+        result.update(
+            "DOPMER.DLG#talkCounter:" + actor
+            for actor in ("AR0601#actor1", "AR0601#actor3", "AR0602#actor1", "AR0602#actor2")
+        )
+        result.update({"SPWI993.SPL#replacement", "DOPPSS.CRE#stock:S1-12", "DOPPSS.CRE#stock:RNDTRE05"})
+    if stock is not None:
+        result.update({"BOLT05:item", "SCRL1J:item", "SCRL2I:item"})
     return result
 
 
@@ -392,6 +405,8 @@ class BaldursGateSevenSunsWarningLedgerTest(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
         cls.warning = readJson(ROOT / WARNING_PATH)
+        cls.dopmer = readJson(ROOT / DOPMER_PATH)
+        cls.stock = readJson(ROOT / STOCK_PATH)
         cls.full_source = readJson(ROOT / "tests/fixtures/baldurs_gate_city_source.json")
         cls.full_quests = readJson(ROOT / "tests/fixtures/baldurs_gate_city_quests.json")
 
@@ -572,6 +587,415 @@ class BaldursGateSevenSunsWarningLedgerTest(unittest.TestCase):
         self.warningRows(ledger)["DOPPSM.DLG#state0"]["evidence"][0]["fixture"] = "untrusted.json"
         self.assertTrue(any("Invalid source pointer" in item for item in validateLedger(ledger)))
 
+    def dopmerInputs(self):
+        source, quests, config, _script = minimalInputs()
+        source["references"]["DOPMER.DLG"] = copy.deepcopy(self.full_source["references"]["DOPMER.DLG"])
+        for name in ("DOPMER", "DOPPSS"):
+            source["creatures"][name] = copy.deepcopy(self.full_source["creatures"][name])
+        for name in ("S1-12", "RNDTRE05"):
+            source["items"][name] = copy.deepcopy(self.full_source["items"][name])
+        for area in ("AR0601", "AR0602"):
+            source["areas"][area] = copy.deepcopy(self.full_source["areas"][area])
+        for lineage in self.dopmer["lineages"]:
+            config[lineage["id"]] = {
+                "class": "CCreature",
+                "properties": {
+                    **{key: value for key, value in lineage.items() if key != "id"},
+                    "sourceAllegiance": 128,
+                },
+            }
+        config["cityClock"]["properties"]["sevenSunsMerchantDefinition"] = "city-json:" + json.dumps(
+            {
+                "version": 1,
+                "dialogue": "DOPMER",
+                "fingerprint": self.dopmer["dialogueFingerprint"]["sha256"],
+                "stockContract": "doppss-native-v1",
+            }
+        )
+        script = """class BaldursGateDialog:
+    def isSevenSunsMerchantActor(self): pass
+    def validSevenSunsMerchantView(self): pass
+    def conversationSevenSunsMerchant(self): pass
+    def talk(self): self.conversationSevenSunsMerchantFlow()
+class BaldursGateClock:
+    def settleSevenSunsMerchants(self): pass
+    def onTurn(self): self.settleSevenSunsMerchantsFlow()
+"""
+        return source, quests, config, script
+
+    def dopmerRows(self, ledger):
+        old = expectedIds(self.full_source, self.full_quests, self.warning)
+        return {
+            row["id"]: row
+            for row in ledger["entries"]
+            if row["id"] not in old
+            and (
+                row["id"].startswith("DOPMER.DLG#")
+                or row["id"] in {"SPWI993.SPL#replacement", "DOPPSS.CRE#stock:S1-12", "DOPPSS.CRE#stock:RNDTRE05"}
+            )
+        }
+
+    def testDopmerAddsExactly48WithoutRemovingOrReclassifying7500Rows(self):
+        original = buildLedger(self.full_source, self.full_quests, {}, "", warning=self.warning)
+        updated = buildLedger(self.full_source, self.full_quests, {}, "", warning=self.warning, dopmer=self.dopmer)
+        before = {row["id"]: row for row in original["entries"]}
+        after = {row["id"]: row for row in updated["entries"]}
+        self.assertEqual(7500, len(before))
+        self.assertEqual(7548, len(after))
+        self.assertEqual(before, {key: after[key] for key in before})
+        self.assertEqual(expectedIds(self.full_source, self.full_quests, self.warning, self.dopmer), set(after))
+        rows = self.dopmerRows(updated)
+        self.assertEqual(48, len(rows))
+        self.assertTrue(all(row["implementation"]["status"] == "planned" for row in rows.values()))
+        self.assertEqual([], validateLedger(updated))
+        self.assertFalse(updated["acceptanceReady"])
+        self.assertFalse(updated["originalParityEstablished"])
+
+    def testDopmerMappingsNeedExactLineagesTypedAllegianceDefinitionAndActualWiring(self):
+        original = self.dopmerInputs()
+        ledger = buildLedger(*original, dopmer=self.dopmer)
+        rows = self.dopmerRows(ledger)
+        self.assertEqual(45, sum(row["implementation"]["status"] == "partial" for row in rows.values()))
+        self.assertEqual(
+            {"SPWI993.SPL#replacement", "DOPPSS.CRE#stock:S1-12", "DOPPSS.CRE#stock:RNDTRE05"},
+            {key for key, row in rows.items() if row["implementation"]["status"] == "planned"},
+        )
+        source, quests, config, script = copy.deepcopy(original)
+        config["citySevenSunsRevealedDoppss"] = {"class": "CCreature", "properties": {}}
+        config["citySevenSunsDoppssWeapon"] = {"class": "CWeapon", "properties": {}}
+        configured = self.dopmerRows(buildLedger(source, quests, config, script, dopmer=self.dopmer))
+        self.assertTrue(all(row["implementation"]["status"] == "partial" for row in configured.values()))
+        for missing in (
+            "actor",
+            "identity",
+            "ea",
+            "eaBool",
+            "definition",
+            "versionBool",
+            "helper",
+            "talkWiring",
+            "turnWiring",
+            "settle",
+        ):
+            with self.subTest(missing=missing):
+                source, quests, config, script = copy.deepcopy(original)
+                actor = config["cityAr0601Actor1"]["properties"]
+                if missing == "actor":
+                    del config["cityAr0601Actor1"]
+                elif missing == "identity":
+                    actor["sourceActor"] = "AR0601#actor2"
+                elif missing == "ea":
+                    actor["sourceAllegiance"] = 255
+                elif missing == "eaBool":
+                    actor["sourceAllegiance"] = True
+                elif missing == "definition":
+                    del config["cityClock"]["properties"]["sevenSunsMerchantDefinition"]
+                elif missing == "versionBool":
+                    definition = json.loads(
+                        config["cityClock"]["properties"]["sevenSunsMerchantDefinition"].removeprefix("city-json:")
+                    )
+                    definition["version"] = True
+                    config["cityClock"]["properties"]["sevenSunsMerchantDefinition"] = json.dumps(definition)
+                elif missing == "helper":
+                    script = script.replace("def validSevenSunsMerchantView", "def unrelated")
+                elif missing == "talkWiring":
+                    script = script.replace("self.conversationSevenSunsMerchantFlow()", "pass")
+                elif missing == "turnWiring":
+                    script = script.replace("self.settleSevenSunsMerchantsFlow()", "pass")
+                elif missing == "settle":
+                    script = script.replace("def settleSevenSunsMerchants", "def unrelatedSettlement")
+                result = buildLedger(source, quests, config, script, dopmer=self.dopmer)
+                self.assertTrue(
+                    all(row["implementation"]["status"] == "planned" for row in self.dopmerRows(result).values())
+                )
+
+    def testDopmerLiteralBindingsDroppedGraphAndFalseReplacementFailClosed(self):
+        for damage in (
+            "sourceFingerprint",
+            "fixtureFingerprint",
+            "floatBytes",
+            "state",
+            "edge",
+            "duplicateState",
+            "duplicateEdge",
+            "stateOwnership",
+            "entryCounter",
+            "lineage",
+            "sharedScope",
+            "spell",
+            "creature",
+            "weapon",
+            "effectiveWeapon",
+            "random",
+            "opcode",
+            "styleBool",
+            "effectValue",
+            "effectOrder",
+        ):
+            with self.subTest(damage=damage):
+                source, quests, config, script = self.dopmerInputs()
+                fixture = copy.deepcopy(self.dopmer)
+                if damage == "sourceFingerprint":
+                    source["references"]["DOPMER.DLG"]["sha256"] = "f" * 64
+                elif damage == "fixtureFingerprint":
+                    fixture["dialogueFingerprint"]["sha256"] = "f" * 64
+                elif damage == "floatBytes":
+                    fixture["dialogueFingerprint"]["bytes"] = 1687.0
+                elif damage == "state":
+                    fixture["states"].pop()
+                elif damage == "edge":
+                    fixture["edges"].pop()
+                elif damage == "duplicateState":
+                    fixture["states"][1]["id"] = 0
+                elif damage == "duplicateEdge":
+                    fixture["edges"][1]["id"] = 0
+                elif damage == "stateOwnership":
+                    fixture["states"][0]["edges"] = []
+                elif damage == "entryCounter":
+                    fixture["entriesByPriorSourceTalkCount"]["2"] = 7
+                elif damage == "lineage":
+                    fixture["lineages"].pop()
+                elif damage == "sharedScope":
+                    fixture["sharedGlobals"]["scope"] = "global"
+                elif damage in {"spell", "creature", "weapon", "random"}:
+                    binding = {
+                        "spell": "spell",
+                        "creature": "replacementCreature",
+                        "weapon": "weapon",
+                        "random": "randomPlaceholder",
+                    }[damage]
+                    fixture["sourceBindings"][binding]["base"]["sha256"] = "f" * 64
+                elif damage == "effectiveWeapon":
+                    fixture["sourceBindings"]["weapon"]["effective"] = fixture["sourceBindings"]["weapon"]["base"]
+                elif damage == "opcode":
+                    fixture["replacement"]["opcode"] = 168
+                elif damage == "styleBool":
+                    fixture["replacement"]["style"] = False
+                elif damage == "effectValue":
+                    fixture["edges"][0]["orderedActions"][0]["arguments"][2]["value"] = 3
+                elif damage == "effectOrder":
+                    fixture["edges"][12]["orderedActions"].reverse()
+                with self.assertRaises(ValueError):
+                    buildLedger(source, quests, config, script, dopmer=fixture)
+
+    def testDopmerAllSourceActionsCounterCancellationAndOwnershipRemainExplicit(self):
+        ledger = buildLedger(*self.dopmerInputs(), dopmer=self.dopmer)
+        rows = self.dopmerRows(ledger)
+        self.assertEqual(14, sum(row["family"] == "dialogueState" for row in rows.values()))
+        self.assertEqual(24, sum(row["family"] == "dialogueEdge" for row in rows.values()))
+        for edge in self.dopmer["edges"]:
+            self.assertEqual(edge["orderedActions"], rows[f"DOPMER.DLG#edge{edge['id']}"]["effects"]["orderedActions"])
+        for lineage in self.dopmer["lineages"]:
+            row = rows["DOPMER.DLG#talkCounter:" + lineage["sourceActor"]]
+            self.assertEqual(lineage["id"], row["ownership"]["owner"])
+            self.assertEqual("plugin_cityDopmerTalkCount", row["prerequisites"]["authoritativeField"])
+            self.assertEqual({"0": 0, "1": 7, "2": 10}, row["facts"]["entriesByPriorSourceTalkCount"])
+            self.assertIn("cancellation", row["timers"])
+            self.assertIn("pending", row["timers"]["sourceScheduling"])
+        self.assertEqual(3, sum(row["family"] == "sourceGlobal" for row in rows.values()))
+        replacement = rows["SPWI993.SPL#replacement"]
+        self.assertEqual({"death": False, "xp": 0, "loot": []}, replacement["effects"]["quietRetirementCredit"])
+        self.assertEqual(0, replacement["facts"]["style"])
+        weapon = rows["DOPPSS.CRE#stock:S1-12"]
+        self.assertFalse(weapon["facts"]["sourceBinding"]["baseEffectiveEqual"])
+        self.assertNotEqual(weapon["facts"]["sourceBinding"]["base"], weapon["facts"]["sourceBinding"]["effective"])
+        self.assertTrue(rows["DOPPSS.CRE#stock:RNDTRE05"]["effects"]["placeholderIsNotActualStockProof"])
+        self.assertTrue(
+            all(
+                row["testStatus"]["native"] == "pending" and row["testStatus"]["coverage"] == "not established"
+                for row in rows.values()
+            )
+        )
+
+    def testDopmerRouteCallbacksAreRecordedOnlyFromSuppliedActualFunctionDefinitions(self):
+        routes = "def sevenSunsMerchantRoute(): pass\ndef merchantCounterRoute(): pass\nnot_a_function='merchantScheduleRoute'\n"
+        ledger = buildLedger(*self.dopmerInputs(), dopmer=self.dopmer, routes=routes)
+        self.assertIn("DOPMER.DLG#state0", self.dopmerRows(ledger))
+        callbacks = self.dopmerRows(ledger)["DOPMER.DLG#state0"]["implementation"]["callbacks"]
+        self.assertIn("tests/gameplay_routes_baldurs_gate.py:sevenSunsMerchantRoute", callbacks)
+        self.assertIn("tests/gameplay_routes_baldurs_gate.py:merchantCounterRoute", callbacks)
+        self.assertFalse(any(name.endswith(":merchantScheduleRoute") for name in callbacks))
+        self.assertEqual(fingerprint(self.dopmer), ledger["inputs"][DOPMER_PATH])
+        self.assertIn("tests/gameplay_routes_baldurs_gate.py", ledger["inputs"])
+        no_routes = buildLedger(*self.dopmerInputs(), dopmer=self.dopmer)
+        self.assertFalse(
+            any(
+                ".py:" in callback
+                for callback in self.dopmerRows(no_routes)["DOPMER.DLG#state0"]["implementation"]["callbacks"]
+            )
+        )
+
+    def testDopmerProofPointersAndPendingEvidenceCannotBeForged(self):
+        source, quests, config, script = self.dopmerInputs()
+        ledger = buildLedger(source, quests, config, script, dopmer=self.dopmer)
+        self.assertIn("DOPMER.DLG#state0", self.dopmerRows(ledger))
+        fixtures = {DOPMER_PATH: self.dopmer, "tests/fixtures/baldurs_gate_city_source.json": source}
+        for row in self.dopmerRows(ledger).values():
+            for proof in row["evidence"]:
+                value = fixtures[proof["fixture"]]
+                for part in proof["pointer"].lstrip("/").split("/"):
+                    value = value[int(part)] if isinstance(value, list) else value[part]
+                self.assertIsNotNone(value)
+        for damage in ("input", "fixture", "native", "coverage"):
+            result = copy.deepcopy(ledger)
+            row = next(row for row in result["entries"] if row["id"] == "DOPMER.DLG#state0")
+            if damage == "input":
+                del result["inputs"][DOPMER_PATH]
+            elif damage == "fixture":
+                row["evidence"][0]["fixture"] = "unknown.json"
+            else:
+                row["testStatus"][damage] = "passed"
+            self.assertTrue(validateLedger(result), damage)
+
+    def testDopmerMainOptionallyLoadsFixtureAndRoutesWithoutWritingLedger(self):
+        import contextlib
+        import io
+        import tempfile
+        from unittest.mock import patch
+        import scripts.build_baldurs_gate_city_ledger as generator
+
+        source, quests, config, script = self.dopmerInputs()
+        routes = "def sevenSunsMerchantRoute(): pass\n"
+        expected = buildLedger(
+            self.full_source, quests, config, script, dopmer=self.dopmer, routes=routes, stock=self.stock
+        )
+        with tempfile.TemporaryDirectory() as name:
+            root = Path(name)
+            for path, content in (
+                (generator.SCRIPT_PATH, script),
+                (DOPMER_PATH, "{}"),
+                (STOCK_PATH, "{}"),
+                ("tests/gameplay_routes_baldurs_gate.py", routes),
+                (generator.OUTPUT_PATH, "{}"),
+            ):
+                destination = root / path
+                destination.parent.mkdir(parents=True, exist_ok=True)
+                destination.write_text(content, encoding="utf-8")
+            values = {
+                generator.SOURCE_PATH: self.full_source,
+                generator.QUEST_PATH: quests,
+                generator.CONFIG_PATH: config,
+                DOPMER_PATH: self.dopmer,
+                STOCK_PATH: self.stock,
+                generator.OUTPUT_PATH: expected,
+            }
+            calls = []
+            actual_builder = buildLedger
+
+            def capture(*args, **kwargs):
+                calls.append(kwargs)
+                return actual_builder(*args, **kwargs)
+
+            with patch.object(generator, "ROOT", root), patch.object(
+                generator, "readJson", side_effect=lambda path: values[path.relative_to(root).as_posix()]
+            ), patch.object(generator, "buildLedger", side_effect=capture), contextlib.redirect_stdout(io.StringIO()):
+                self.assertEqual(0, generator.main(["--check"]))
+            self.assertEqual("{}", (root / generator.OUTPUT_PATH).read_text(encoding="utf-8"))
+            self.assertEqual(self.dopmer, calls[0].get("dopmer"))
+            self.assertEqual(routes, calls[0].get("routes"))
+            self.assertEqual(self.stock, calls[0].get("stock"))
+
+    def testDopmerStockAddsOnlyThreeMissingItemsAndPreservesAll7500OldRows(self):
+        original = buildLedger(self.full_source, self.full_quests, {}, "", warning=self.warning)
+        updated = buildLedger(
+            self.full_source, self.full_quests, {}, "", warning=self.warning, dopmer=self.dopmer, stock=self.stock
+        )
+        before = {row["id"]: row for row in original["entries"]}
+        after = {row["id"]: row for row in updated["entries"]}
+        self.assertEqual(7551, len(after))
+        self.assertEqual(before, {key: after[key] for key in before})
+        self.assertEqual(
+            expectedIds(self.full_source, self.full_quests, self.warning, self.dopmer, self.stock), set(after)
+        )
+        new_items = {key for key in after.keys() - before.keys() if after[key]["family"] == "itemBehavior"}
+        self.assertEqual({"BOLT05:item", "SCRL1J:item", "SCRL2I:item"}, new_items)
+        self.assertEqual([], validateLedger(updated))
+        self.assertFalse(updated["acceptanceReady"])
+        for key in new_items:
+            self.assertEqual("planned", after[key]["implementation"]["status"])
+            self.assertEqual("pending", after[key]["testStatus"]["native"])
+            self.assertEqual("not established", after[key]["testStatus"]["coverage"])
+
+    def testDopmerStockMapsOwnershipOnlyAndRetains97AbilityGapsAndBaseFacts(self):
+        config = {}
+        for code in ("BOLT05", "SCRL1J", "SCRL2I"):
+            item = self.stock["items"][code]
+            config[item["resourceId"]] = {
+                "class": "CItem",
+                "properties": {
+                    "plugin_citySourceItem": code,
+                    "plugin_citySourceItemFingerprint": item["baseSha256"],
+                    "plugin_cityAbilitiesPending": True,
+                },
+            }
+        ledger = buildLedger(self.full_source, self.full_quests, config, "", stock=self.stock)
+        rows = {row["id"]: row for row in ledger["entries"]}
+        for code in ("BOLT05", "SCRL1J", "SCRL2I"):
+            key = code + ":item"
+            self.assertTrue(key in rows)
+            row = rows[key]
+            self.assertEqual("partial", row["implementation"]["status"])
+            self.assertEqual(self.stock["items"][code]["headerEvidence"], row["facts"]["headerEvidence"])
+            self.assertFalse(row["effects"]["sourceAbilitiesInterpreted"])
+            self.assertTrue(row["ownership"]["sourceAbilitiesRemainPending"])
+            self.assertEqual("pending", row["testStatus"]["native"])
+            proof = row["evidence"][0]
+            self.assertEqual(STOCK_PATH, proof["fixture"])
+            self.assertEqual(self.stock["items"][code]["baseSha256"], proof["sha256"])
+        combined = buildLedger(self.full_source, self.full_quests, {}, "", dopmer=self.dopmer, stock=self.stock)
+        self.assertIn("DOPPSS.CRE#stock:RNDTRE05", self.dopmerRows(combined))
+        facts = self.dopmerRows(combined)["DOPPSS.CRE#stock:RNDTRE05"]["facts"]["finiteNativeConversion"]
+        self.assertEqual(97, len(facts["concreteItems"]))
+        self.assertEqual(17, len(facts["effectiveOverridesExcluded"]))
+        self.assertFalse(facts["abilitiesEstablished"])
+        self.assertFalse(facts["sourceDiceRuleEstablished"])
+        self.assertEqual(self.stock["rows"], facts["selectionRows"])
+        self.assertEqual(fingerprint(self.stock), combined["inputs"][STOCK_PATH])
+        fixtures = {
+            DOPMER_PATH: self.dopmer,
+            STOCK_PATH: self.stock,
+            "tests/fixtures/baldurs_gate_city_source.json": self.full_source,
+        }
+        selected_rows = list(self.dopmerRows(combined).values()) + [
+            rows[code + ":item"] for code in ("BOLT05", "SCRL1J", "SCRL2I")
+        ]
+        for row in selected_rows:
+            for proof in row["evidence"]:
+                value = fixtures[proof["fixture"]]
+                for part in proof["pointer"].lstrip("/").split("/"):
+                    value = value[int(part)] if isinstance(value, list) else value[part]
+                self.assertIsNotNone(value)
+        self.assertEqual(
+            {"weapon": 1, "metadataOnly": True, "immunityOrBonusEstablished": False}, facts["sourceEnchantment"]
+        )
+
+        broken = copy.deepcopy(ledger)
+        del broken["inputs"][STOCK_PATH]
+        self.assertTrue(any("stock input fingerprint" in problem for problem in validateLedger(broken)))
+
+    def testDopmerStockRejectsDroppedSourcesWrongPinsAndAbilityOrOriginalCredit(self):
+        for damage in ("dropped", "sourceMismatch", "basePin", "charges", "effects", "dice", "abilities", "original"):
+            with self.subTest(damage=damage):
+                source, stock = copy.deepcopy(self.full_source), copy.deepcopy(self.stock)
+                if damage == "dropped":
+                    del stock["items"]["SCRL1J"]
+                elif damage == "sourceMismatch":
+                    source["items"]["WAND05"]["sha256"] = "f" * 64
+                elif damage == "basePin":
+                    stock["items"]["BOLT05"]["baseSha256"] = "f" * 64
+                elif damage == "charges":
+                    stock["items"]["WAND05"]["charges"] = [10, 10, 0]
+                elif damage == "effects":
+                    stock["items"]["BOLT05"]["abilityEffectCounts"] = [0]
+                elif damage == "dice":
+                    stock["sourceDiceRuleEstablished"] = True
+                elif damage == "abilities":
+                    stock["itemAbilitiesEstablished"] = True
+                else:
+                    stock["originalParity"] = True
+                with self.assertRaises(ValueError):
+                    buildLedger(source, self.full_quests, {}, "", stock=stock)
+
 
 class BaldursGateCityLedgerFixtureTest(unittest.TestCase):
     @classmethod
@@ -582,11 +1006,28 @@ class BaldursGateCityLedgerFixtureTest(unittest.TestCase):
         cls.script = (ROOT / "res/maps/baldursGate/script.py").read_text(encoding="utf-8")
         cls.ledger = readJson(ROOT / "tests/fixtures/baldurs_gate_city_ledger.json")
         cls.warning = readJson(ROOT / WARNING_PATH) if (ROOT / WARNING_PATH).is_file() else None
-        cls.expected = buildLedger(cls.source, cls.quests, cls.config, cls.script, warning=cls.warning)
+        cls.dopmer = readJson(ROOT / DOPMER_PATH) if (ROOT / DOPMER_PATH).is_file() else None
+        cls.stock = readJson(ROOT / STOCK_PATH) if (ROOT / STOCK_PATH).is_file() else None
+        cls.routes = (
+            (ROOT / "tests/gameplay_routes_baldurs_gate.py").read_text(encoding="utf-8")
+            if cls.dopmer is not None
+            else None
+        )
+        cls.expected = buildLedger(
+            cls.source,
+            cls.quests,
+            cls.config,
+            cls.script,
+            warning=cls.warning,
+            dopmer=cls.dopmer,
+            routes=cls.routes,
+            stock=cls.stock,
+        )
 
     def testSavedLedgerCoversEverySourceObligationAndMatchesCurrentInputs(self):
         self.assertEqual(
-            expectedIds(self.source, self.quests, self.warning), {row["id"] for row in self.ledger["entries"]}
+            expectedIds(self.source, self.quests, self.warning, self.dopmer, self.stock),
+            {row["id"] for row in self.ledger["entries"]},
         )
         self.assertEqual([], validateLedger(self.ledger, expected=self.expected))
         self.assertEqual(212, len(self.source["areas"]))
@@ -597,6 +1038,8 @@ class BaldursGateCityLedgerFixtureTest(unittest.TestCase):
             "tests/fixtures/baldurs_gate_city_source.json": self.source,
             "tests/fixtures/baldurs_gate_city_quests.json": self.quests,
             **({WARNING_PATH: self.warning} if self.warning is not None else {}),
+            **({DOPMER_PATH: self.dopmer} if self.dopmer is not None else {}),
+            **({STOCK_PATH: self.stock} if self.stock is not None else {}),
         }
         for row in self.ledger["entries"]:
             for evidence in row["evidence"]:

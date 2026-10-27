@@ -52,6 +52,7 @@ struct CFightResult {
 
 class CFightHandler {
     friend class CCombatParticipantGuard;
+    friend class CSevenSunsMerchantDialogue;
 
   public:
     static constexpr std::size_t CombatHistoryLimit = 64;
@@ -100,6 +101,7 @@ class CFightHandler {
     static void applyEffects(const std::shared_ptr<CCreature> &cr);
 
   private:
+    static bool hasActiveCombatClaim(const std::shared_ptr<CCreature> &actor);
     static vstd::task<void> resolveOwnedDefeatAsync(std::shared_ptr<CCreature> a, std::shared_ptr<CCreature> b,
                                                     std::shared_ptr<CCombatOwnership> encounterOwner);
 };

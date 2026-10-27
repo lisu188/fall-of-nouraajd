@@ -33,6 +33,9 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #include "core/CMap.h"
 #include "core/CSceneManager.h"
 #include "seven_suns_warning_fixture.h"
+#include "seven_suns_merchant_fixture.h"
+#include "handler/CSevenSunsMerchantStock.h"
+#include "handler/CSevenSunsMerchantStockData.h"
 #include "core/CPlaytestTrace.h"
 #include "core/CProvider.h"
 #include "core/CPythonOverrides.h"
@@ -8391,6 +8394,552 @@ void testSevenSunsWarningUsesSharedSourceGlobalsWithoutClampingOrDroppingScopes(
     }
 }
 
+void testSevenSunsMerchantRejectsUnsignedDumpAliasingBeforeSourceAuthority() {
+    for (const std::string raw : {"4294967297", "18446744073709551615", "-2147483649"}) {
+        SevenSunsMerchantFixture f;
+        f.map->setStringProperty("plugin_citySourceGlobals", "city-json:{\"GLOBAL\":{\"Laola\":" + raw + "}}");
+        bool rejected = false;
+        try {
+            auto flow = f.beginMerchant();
+        } catch (const std::exception &) {
+            rejected = true;
+        }
+        expect_true(
+            rejected && f.protectedActors[0]->getNumericProperty("plugin_cityDopmerTalkCount") == 0 &&
+                f.map->getStringProperty(SevenSunsMerchantFixture::MerchantStateKey).empty() && f.actorFactories == 0 &&
+                !f.map->tryBeginSaveSnapshot().has_value(),
+            "raw uint64/signed32 overflow cannot alias a source integer through CJson dump before admitted effects");
+    }
+    for (const std::string raw : {"-2147483648", "2147483647"}) {
+        SevenSunsMerchantFixture f;
+        f.map->setStringProperty("plugin_citySourceGlobals", "city-json:{\"GLOBAL\":{\"Laola\":" + raw + "}}");
+        auto flow = f.beginMerchant();
+        SevenSunsMerchantFixture::step(*flow, 0);
+        auto globals = json::parse(f.map->getStringProperty("plugin_citySourceGlobals").substr(10));
+        expect_true(globals.at("GLOBAL").at("Laola").dump() == raw && f.map->tryBeginSaveSnapshot().has_value(),
+                    "valid signed32 endpoints remain exact source integers and survive unrelated first-choice writes");
+    }
+}
+
+#include "seven_suns_merchant_stock_cases.h"
+
+void testSevenSunsMerchantAllThirteenPathsCoverTwentyFourNativeEdges() {
+    struct Path {
+        int prior;
+        std::vector<int> edges;
+        bool reveal;
+    };
+    const std::array<Path, 13> paths{{
+        {0, {0, 3}, false},
+        {0, {1, 4, 8}, false},
+        {0, {1, 5, 9, 7}, false},
+        {0, {1, 5, 10, 8}, false},
+        {0, {1, 5, 11, 12}, true},
+        {0, {1, 6, 7}, false},
+        {0, {2, 7}, false},
+        {1, {13, 16}, false},
+        {1, {14, 17}, true},
+        {1, {15, 17}, true},
+        {2, {18, 21}, true},
+        {2, {19, 22}, true},
+        {2, {20, 23}, true},
+    }};
+    std::set<int> covered;
+    for (const auto &path : paths) {
+        SevenSunsMerchantFixture f;
+        f.earlierConversations(path.prior);
+        auto flow = f.beginMerchant();
+        expect_true(flow->view().at("status").get<std::string>() == "ready", "supported native DOPMER flow starts");
+        auto answer = SevenSunsMerchantFixture::finish(*flow, path.edges);
+        for (int edge : path.edges)
+            covered.insert(edge);
+        expect_true(
+            answer.at("status").get<std::string>() == "closed" &&
+                answer.at("revealRequested").get<bool>() == path.reveal &&
+                f.protectedActors[0]->getNumericProperty("plugin_cityDopmerTalkCount") == path.prior + 1 &&
+                f.merchantRow().at("edges").size() == path.edges.size() &&
+                f.merchantRow().at("lastEdge").get<int>() == path.edges.back() &&
+                f.map->getObjectByName(SevenSunsMerchantFixture::Names[0]) == f.protectedActors[0] &&
+                f.actorFactories == 0 && f.merchantDestroyed == 0 && f.player->getQuests().empty() &&
+                f.map->tryBeginSaveSnapshot().has_value(),
+            "all source paths close with exact prefix/count/global effects and no immediate replacement or journal");
+        auto globals = json::parse(std::string_view(f.map->getStringProperty("plugin_citySourceGlobals")).substr(10));
+        if (path.reveal)
+            expect_true(globals.at("GLOBAL").at("Doppleganger").get<int>() == 1 &&
+                            globals.at("GLOBAL").at("Laola").get<int>() == 1,
+                        "reveal source globals commit before coordinator turn");
+    }
+    expect_true(covered.size() == 24 && *covered.begin() == 0 && *covered.rbegin() == 23,
+                "native source path inventory covers every one of the24 audited DOPMER edges");
+}
+
+void testSevenSunsMerchantInitiationCancelReopenAndLegacyRefusalAreOwned() {
+    SevenSunsMerchantFixture f;
+    for (int count = 1; count <= 3; ++count) {
+        auto flow = f.beginMerchant();
+        auto view = flow->view();
+        expect_true(
+            view.at("sourceTalkCount").get<int>() == count &&
+                view.at("state").get<int>() == (count == 1   ? 0
+                                                : count == 2 ? 7
+                                                             : 10) &&
+                f.protectedActors[0]->getNumericProperty("plugin_cityTalkCount") == 0 &&
+                f.map->getStringProperty("plugin_citySourceGlobals").empty() &&
+                f.map->tryBeginSaveSnapshot().has_value(),
+            "native source count commits at admitted initiation, independently of a selected reply and generic talk");
+        const auto receipt = f.map->getStringProperty(SevenSunsMerchantFixture::MerchantStateKey);
+        flow->close();
+        flow.reset();
+        expect_true(f.map->getStringProperty(SevenSunsMerchantFixture::MerchantStateKey) == receipt,
+                    "cancel never rewinds an admitted source initiation");
+    }
+    auto fourth = f.beginMerchant();
+    expect_true(fourth->view().at("status").get<std::string>() == "refused" &&
+                    fourth->view().at("reason").get<std::string>() == "noAuditedEntry" &&
+                    fourth->view().at("lineage").get<std::string>() == SevenSunsMerchantFixture::Names[0] &&
+                    f.protectedActors[0]->getNumericProperty("plugin_cityDopmerTalkCount") == 3,
+                "source countthree has no audited fourth entry and is not silently saturated");
+    SevenSunsMerchantFixture legacy;
+    legacy.protectedActors[0]->setNumericProperty("plugin_cityTalkCount", 8);
+    auto rejected = legacy.beginMerchant();
+    expect_true(rejected->view().at("reason").get<std::string>() == "legacyCountUnknown" &&
+                    legacy.map->getStringProperty(SevenSunsMerchantFixture::MerchantStateKey).empty() &&
+                    legacy.map->tryBeginSaveSnapshot().has_value(),
+                "generic legacy count cannot manufacture source authority");
+}
+
+void testSevenSunsMerchantCoordinatorReplacesOnlyTheActiveSourceFloorWithoutCredit() {
+    SevenSunsMerchantFixture f;
+    auto flow = f.beginMerchant();
+    SevenSunsMerchantFixture::finish(*flow, {1, 5, 11, 12});
+    flow.reset();
+    const auto objects = f.map->getObjects().size(), triggers = f.map->getEventHandler()->getTriggers().size();
+    const int gold = f.player->getGold(), xp = f.player->getExp();
+    f.map->setTurn(17);
+    auto first = f.settle();
+    expect_true(first.at("checked").get<int>() == 4 && first.at("replaced").get<int>() == 2 && f.replacement(0) &&
+                    f.replacement(1) && !f.replacement(2) && !f.replacement(3) &&
+                    f.map->getObjectByName(SevenSunsMerchantFixture::Names[2]) == f.protectedActors[2],
+                "shared reveal settles exactly the two eligible active-floor actors and leaves the other floor intact");
+    for (std::size_t i = 0; i < 2; ++i) {
+        auto replacement = f.replacement(i);
+        expect_true(replacement != f.protectedActors[i] &&
+                        replacement->getName() == SevenSunsMerchantFixture::Names[i] &&
+                        replacement->getStringProperty("sourceCreature") == "DOPPSS" &&
+                        replacement->getStringProperty("sourceActor") == SevenSunsMerchantFixture::Sources[i] &&
+                        replacement->getStringProperty("sourceArea") == "AR0601" &&
+                        replacement->getStringProperty("simulationRegion") == "AR0601" && !replacement->isNpc() &&
+                        replacement->getTypeId() == "citySevenSunsRevealedDoppss" && replacement->getHp() == 28 &&
+                        replacement->getStats()->getDmgMin() == 1 && replacement->getStats()->getDmgMax() == 12 &&
+                        replacement->getStats()->getHit() == 75 && replacement->getWeapon() &&
+                        replacement->getWeapon()->getBoolProperty("plugin_cityUndroppable") &&
+                        f.oldOwnershipIntact(i) && f.merchantRow(i).at("settledTurn").get<int>() == 17,
+                    "distinct native replacement retains lineage and actual weapon/body conversion without "
+                    "transferring old stock");
+    }
+    expect_true(f.map->getObjects().size() == objects && f.map->getEventHandler()->getTriggers().size() == triggers &&
+                    f.merchantDestroyed == 0 && f.newDestroyed == 0 && f.player->getGold() == gold &&
+                    f.player->getExp() == xp && f.map->getObjectByName("cityAr0601Actor2") == f.warning &&
+                    f.map->getObjectByName("cityAr0603Actor1") == f.protectedActors[4] &&
+                    f.map->getObjectByName("cityAr0603Actor2") == f.protectedActors[5] &&
+                    !f.map->getBoolProperty("plugin_cityCombatObserved_AR0601"),
+                "quiet replacement gives no old death/loot/XP/combat observation and preserves DOPPSM/Jhasso/basement "
+                "controls");
+    f.focus(2);
+    f.map->setTurn(18);
+    auto second = f.settle();
+    expect_true(second.at("checked").get<int>() == 4 && second.at("replaced").get<int>() == 2 && f.replacement(2) &&
+                    f.replacement(3) && f.merchantRow(2).at("settledTurn").get<int>() == 18,
+                "later real active-floor scheduling can independently reveal the remaining two source lineages");
+}
+
+void testSevenSunsMerchantSharedGlobalsKeepSourceOrderCaseAndOtherScopes() {
+    SevenSunsMerchantFixture f;
+    f.map->setStringProperty("plugin_citySourceGlobals",
+                             "city-json:{\"GLOBAL\":{\"cHeCkEdSeVeNsUnS\":1,\"dOpPlEgAnGeR\":0,\"Laola\":73,\"Other\":"
+                             "9},\"global\":{\"Keep\":17}}");
+    std::vector<std::pair<int, int>> revealWrites;
+    std::pair<int, int> previous{0, 73};
+    auto observe = [&] {
+        auto text = f.map->getStringProperty("plugin_citySourceGlobals");
+        auto snapshot = json::parse(std::string_view(text).substr(10)).at("GLOBAL");
+        std::pair<int, int> current{snapshot.at("dOpPlEgAnGeR").get<int>(), snapshot.at("Laola").get<int>()};
+        if (current != previous) {
+            revealWrites.push_back(current);
+            previous = current;
+        }
+    };
+    auto flow = f.beginMerchant(0, observe);
+    SevenSunsMerchantFixture::step(*flow, 1);
+    auto intermediate = json::parse(std::string_view(f.map->getStringProperty("plugin_citySourceGlobals")).substr(10));
+    expect_true(intermediate.at("GLOBAL").at("cHeCkEdSeVeNsUnS").get<int>() == 2 &&
+                    intermediate.at("GLOBAL").at("dOpPlEgAnGeR").get<int>() == 0 &&
+                    intermediate.at("GLOBAL").at("Laola").get<int>() == 73 &&
+                    f.map->getBoolProperty("plugin_cityHistoryFrozen"),
+                "first source choice sets Checked2 without inventing the later reveal and freezes history natively");
+    SevenSunsMerchantFixture::finish(*flow, {5, 11, 12});
+    flow.reset();
+    auto final = json::parse(std::string_view(f.map->getStringProperty("plugin_citySourceGlobals")).substr(10));
+    expect_true(final.at("GLOBAL").at("dOpPlEgAnGeR").get<int>() == 1 &&
+                    final.at("GLOBAL").at("Laola").get<int>() == 1 && !final.at("GLOBAL").contains("Doppleganger") &&
+                    final.at("GLOBAL").at("Other").get<int>() == 9 && final.at("global").at("Keep").get<int>() == 17,
+                "classic name casing and literal GLOBAL scope remain distinct");
+    expect_true(revealWrites == std::vector<std::pair<int, int>>{{1, 73}, {1, 1}},
+                "native continuation witnesses Doppleganger1 before the separate Laola1 write");
+}
+
+void testSevenSunsMerchantRejectsStaleEpochRegionActorPlayerAndRevision() {
+    for (int mode = 0; mode < 6; ++mode) {
+        SevenSunsMerchantFixture f;
+        auto flow = f.beginMerchant();
+        const auto before = f.map->getStringProperty(SevenSunsMerchantFixture::MerchantStateKey);
+        if (mode == 0) {
+            auto other = std::make_shared<CMap>();
+            other->setGame(f.game);
+            f.game->setMap(other);
+            f.game->setMap(f.map);
+        }
+        if (mode == 1) {
+            f.map->setActiveSimulationRegion("AR0602");
+            f.map->setActiveSimulationRegion("AR0601");
+        }
+        if (mode == 2)
+            f.protectedActors[0]->setStringProperty("sourceActor", "AR0601#actor3");
+        if (mode == 3)
+            f.player->setGame(std::make_shared<CGame>());
+        if (mode == 4)
+            f.clock->setGame(std::make_shared<CGame>());
+        bool rejected = false;
+        try {
+            flow->advance(flow->view().at("revision").get<int>() + (mode == 5), 0);
+        } catch (const std::exception &) {
+            rejected = true;
+        }
+        expect_true(
+            rejected && f.map->getStringProperty(SevenSunsMerchantFixture::MerchantStateKey) == before &&
+                f.map->getStringProperty("plugin_citySourceGlobals").empty() && f.actorFactories == 0,
+            "map/area away-back, source/player/clock replacement and wrong revision refuse before source effects");
+        flow->close();
+    }
+}
+
+void testSevenSunsMerchantFactoryReentryOrOwnerMutationCannotAcknowledgeReplacement() {
+    for (int mode = 0; mode < 5; ++mode) {
+        SevenSunsMerchantFixture f;
+        auto flow = f.beginMerchant();
+        SevenSunsMerchantFixture::finish(*flow, {1, 5, 11, 12});
+        flow.reset();
+        std::shared_ptr<CGame> foreign = std::make_shared<CGame>();
+        f.duringActionFactory = [&] {
+            if (mode == 0)
+                f.protectedActors[0]->setNumericProperty("sourceAllegiance", 255);
+            if (mode == 1)
+                f.map->setGame(foreign);
+            if (mode == 2)
+                f.player->setGame(foreign);
+            if (mode == 3)
+                f.clock->setGame(foreign);
+            if (mode == 4) {
+                try {
+                    auto nested = f.beginMerchant();
+                } catch (const std::exception &) {
+                }
+            }
+        };
+        bool rejected = false;
+        try {
+            f.settle();
+        } catch (const std::exception &) {
+            rejected = true;
+        }
+        expect_true(rejected && f.map->getObjectByName(SevenSunsMerchantFixture::Names[0]) == f.protectedActors[0] &&
+                        f.merchantDestroyed == 0 && f.oldOwnershipIntact() &&
+                        !f.map->tryBeginSaveSnapshot().has_value() &&
+                        f.merchantRow().at("status").get<std::string>() == "pending",
+                    "admitted callback source/owner/reentry failure retains old owner, pending receipt and quarantine");
+    }
+}
+
+void testSevenSunsMerchantAdmissionAndLegacyEligibilityRetryWithoutMutation() {
+    SevenSunsMerchantFixture f;
+    auto flow = f.beginMerchant();
+    SevenSunsMerchantFixture::finish(*flow, {1, 5, 11, 12});
+    flow.reset();
+    const auto receipt = f.map->getStringProperty(SevenSunsMerchantFixture::MerchantStateKey);
+    auto snapshot = f.map->tryBeginSaveSnapshot();
+    auto answer = f.settle();
+    expect_true(snapshot && answer.at("status").get<std::string>() == "retry" &&
+                    answer.at("replaced").get<int>() == 0 &&
+                    f.map->getStringProperty(SevenSunsMerchantFixture::MerchantStateKey) == receipt &&
+                    f.actorFactories == 0 && f.merchantDestroyed == 0,
+                "closed save admission retries without mutation or constructors");
+    snapshot.reset();
+    f.protectedActors[1]->setNumericProperty("plugin_cityTalkCount", 5);
+    auto later = f.settle();
+    expect_true(later.at("status").get<std::string>() == "retry" && later.at("replaced").get<int>() == 1 &&
+                    !f.replacement(1) &&
+                    f.map->getObjectByName(SevenSunsMerchantFixture::Names[1]) == f.protectedActors[1],
+                "unknown legacy source count is not silently reset by background replacement");
+}
+
+void testSevenSunsMerchantFailureAfterDetachQuarantinesBothRetainedOwners() {
+    SevenSunsMerchantFixture f;
+    auto flow = f.beginMerchant();
+    SevenSunsMerchantFixture::finish(*flow, {1, 5, 11, 12});
+    flow.reset();
+    bool rejected = false;
+    try {
+        CSevenSunsMerchantDialogue::settle(f.game, f.clock, [&] {
+            if (!f.map->getObjectByName(SevenSunsMerchantFixture::Names[0]))
+                throw std::runtime_error("merchant post-detach continuation failed");
+        });
+    } catch (const std::runtime_error &error) {
+        rejected = std::string(error.what()) == "merchant post-detach continuation failed";
+    }
+    expect_true(
+        rejected && !f.map->getObjectByName(SevenSunsMerchantFixture::Names[0]) &&
+            f.clock->getObjectProperty("plugin_citySevenSunsMerchantOld_cityAr0601Actor1") == f.protectedActors[0] &&
+            f.replacement() && f.replacement() != f.protectedActors[0] && f.oldOwnershipIntact() &&
+            f.merchantDestroyed == 0 && !f.map->tryBeginSaveSnapshot().has_value() &&
+            f.merchantRow().at("status").get<std::string>() == "pending",
+        "post-removal signal/navigation/continuation failure preserves both references, original error and quarantine");
+}
+
+void testSevenSunsMerchantRepeatedSettlementNeverReseedsChangedOrDefeatedStock() {
+    SevenSunsMerchantFixture f;
+    auto flow = f.beginMerchant();
+    SevenSunsMerchantFixture::finish(*flow, {1, 5, 11, 12});
+    flow.reset();
+    f.settle();
+    auto actor = f.replacement();
+    expect_true(actor != nullptr, "first coordinator turn creates a real new actor");
+    if (!actor)
+        return;
+    actor->setHp(1);
+    actor->setGold(actor->getGold() + 11);
+    for (const auto &item : actor->getItems()) {
+        actor->removeItem(item);
+        f.player->addItem(item);
+        break;
+    }
+    const auto receipt = f.map->getStringProperty(SevenSunsMerchantFixture::MerchantStateKey);
+    const auto factories = f.actorFactories, items = f.itemFactories;
+    auto replay = f.settle();
+    expect_true(replay.at("replaced").get<int>() == 0 && f.replacement() == actor && actor->getHp() == 1 &&
+                    f.map->getStringProperty(SevenSunsMerchantFixture::MerchantStateKey) == receipt &&
+                    f.actorFactories == factories && f.itemFactories == items,
+                "settled replay validates ownership/certificate without restoring legitimate HP/gold/items");
+    actor->setHp(0);
+    f.map->removeObject(actor);
+    auto dead = f.settle();
+    expect_true(
+        dead.at("replaced").get<int>() == 0 && f.replacement() == actor && f.newDestroyed == 1 &&
+            f.merchantDestroyed == 0 && f.oldOwnershipIntact() && actor->getWeapon() &&
+            actor->getWeapon()->getBoolProperty("plugin_cityUndroppable") && f.actorFactories == factories &&
+            f.itemFactories == items,
+        "same-name existing death hook observes actual new death; retired old merchant is never killed or reseeded");
+}
+
+void testSevenSunsMerchantMissingAttackWitnessNeverUsesDamageAsRevealAuthority() {
+    SevenSunsMerchantFixture f;
+    auto flow = f.beginMerchant();
+    expect_true(!flow->view().at("attackRevealSupported").get<bool>(),
+                "attack-attempt/offensive-spell support remains explicit pending");
+    flow->close();
+    flow.reset();
+    f.protectedActors[0]->setHp(1);
+    auto turn = f.settle();
+    expect_true(turn.at("replaced").get<int>() == 0 && !f.replacement() &&
+                    f.map->getStringProperty("plugin_citySourceGlobals").empty(),
+                "a damage/HP change alone cannot fabricate the source AttackedBy action or replacement predicate");
+}
+
+void testSevenSunsMerchantIdleFlowDoesNotRetainGameOwner() {
+    SevenSunsMerchantFixture f;
+    auto flow = f.beginMerchant();
+    std::weak_ptr<CGame> game = f.game;
+    f.game.reset();
+    expect_true(game.expired(), "merchant UI suspension retains only a weak game owner");
+    bool refused = false;
+    try {
+        SevenSunsMerchantFixture::step(*flow, 0);
+    } catch (const std::exception &) {
+        refused = true;
+    }
+    expect_true(refused, "dropped game owner cannot accept a later source edge");
+    flow->close();
+}
+
+void testSevenSunsMerchantCombatParticipantClaimRetriesBeforeQuietRemoval() {
+    SevenSunsMerchantFixture f;
+    auto flow = f.beginMerchant();
+    SevenSunsMerchantFixture::finish(*flow, {1, 5, 11, 12});
+    flow.reset();
+    auto control = std::make_shared<ReentrantEncounterController>();
+    int calls = 0;
+    bool observed = false;
+    control->reenter = [&] {
+        if (++calls != 1)
+            return;
+        const auto before = f.map->getStringProperty(SevenSunsMerchantFixture::MerchantStateKey);
+        auto result = f.settle();
+        observed = result.at("status").get<std::string>() == "retry" && !f.replacement() &&
+                   f.map->getObjectByName(SevenSunsMerchantFixture::Names[0]) == f.protectedActors[0] &&
+                   f.map->getStringProperty(SevenSunsMerchantFixture::MerchantStateKey) == before;
+    };
+    f.player->setFightController(control);
+    f.protectedActors[0]->setFightController(std::make_shared<NoProgressFightController>());
+    CFightHandler::fightManyResult(f.player, {f.protectedActors[0]});
+    expect_true(observed && calls > 0,
+                "actual native encounter ownership prevents source quiet removal before any field writes");
+}
+
+void testSevenSunsMerchantNativeUiFlowOwnsCursorClosesAndRejectsOversizedEdges() {
+    ScriptFlowNativeObjectTypes types;
+    for (int variant = 0; variant < 3; ++variant) {
+        SevenSunsMerchantFixture f;
+        pybind11::dict scope;
+        scope["clock"] = nativeFlowObject(f.clock);
+        scope["actor"] = nativeFlowObject(f.protectedActors[0]);
+        scope["variant"] = variant;
+        pybind11::exec(R"(
+events=[]
+def merchant():
+    try:
+        args=(clock,actor) if variant!=1 else (clock,)
+        view=yield {'operation':'gui.beginSevenSunsMerchant','args':args,'kwargs':{}}
+        for edge in (0,3):
+            selected=edge+(4294967296 if variant==2 else 0)
+            view=yield {'operation':'gui.advanceSevenSunsMerchant','args':(view['revision'],selected),'kwargs':{}}
+        events.append(view['status'])
+    finally:
+        events.append('closed')
+)",
+                       scope);
+        auto flow =
+            f.game->getScriptHandler()->createCallbackFlow(scope["merchant"].cast<pybind11::function>(), f.game);
+        auto pending = f.game->getContext()->spawnTask(f.game->getGuiHandler()->runScriptFlowAsync(std::move(flow)));
+        expect_true(pumpHandlerUntil([&] { return pending.finished(); }), "finite merchant native UI flow settles");
+        bool rejected = false;
+        try {
+            pending.get();
+        } catch (const std::exception &) {
+            rejected = true;
+        }
+        const auto events = scope["events"].cast<pybind11::list>();
+        expect_true(events.size() == (variant == 0 ? 2 : 1) &&
+                        events[events.size() - 1].cast<std::string>() == "closed" && rejected == (variant != 0) &&
+                        f.actorFactories == 0 && f.merchantDestroyed == 0,
+                    "real native-token flow drives only bounded source edges and closes on invalid arity/overflow");
+        scope.clear();
+        f.game->getContext()->shutdown();
+    }
+}
+
+void testSevenSunsMerchantRetiredOldEffectCycleEndsWithMapWhileGameLives() {
+    std::shared_ptr<CGame> livingGame;
+    std::weak_ptr<CMap> oldMap;
+    std::weak_ptr<CCreature> oldActor;
+    std::weak_ptr<CEffect> oldEffect;
+    {
+        SevenSunsMerchantFixture f;
+        livingGame = f.game;
+        oldMap = f.map;
+        oldActor = f.protectedActors[0];
+        oldEffect = f.oldEffects[0];
+        auto flow = f.beginMerchant();
+        SevenSunsMerchantFixture::finish(*flow, {1, 5, 11, 12});
+        flow.reset();
+        f.settle();
+        auto destination = std::make_shared<CMap>();
+        destination->setGame(livingGame);
+        livingGame->setMap(destination);
+    }
+    vstd::event_loop<>::instance()->runReady();
+    expect_true(livingGame->getContext()->isActive() && oldMap.expired() && oldActor.expired() && oldEffect.expired(),
+                "retired old merchant/effect aliases expire through map-owned teardown without explicit cleanup or "
+                "game shutdown");
+}
+
+void testSevenSunsMerchantWholeMapCodecPreservesOldNewAliasesAndOnceOwnedReceipt() {
+    SevenSunsMerchantFixture original;
+    auto flow = original.beginMerchant();
+    SevenSunsMerchantFixture::finish(*flow, {1, 5, 11, 12});
+    flow.reset();
+    original.settle();
+    auto snapshot = CSerialization::serializeExpected(original.map, "unit-merchant-whole-map");
+    expect_true(snapshot.has_value(),
+                "whole city-scene graph includes ordinary replacement refs and retired lifetime collection");
+    if (!snapshot)
+        return;
+    SevenSunsMerchantFixture restored;
+    auto objects = restored.game->getObjectHandler();
+    objects->registerType("CMap", [] { return std::make_shared<CMap>(); });
+    objects->registerType("CPlayer", [] { return std::make_shared<CPlayer>(); });
+    objects->registerType("CBuilding", [] { return std::make_shared<CBuilding>(); });
+    objects->registerType("CEffect", [] { return std::make_shared<CEffect>(); });
+    objects->registerType("CTrigger", [] { return std::make_shared<CTrigger>(); });
+    objects->registerType("CController", [] { return std::make_shared<CController>(); });
+    std::weak_ptr<CMap> dyingMap;
+    std::weak_ptr<CCreature> dyingActor;
+    std::weak_ptr<CEffect> dyingEffect;
+    {
+        auto decoded = CSerialization::deserializeExpected<std::shared_ptr<CGameObject>>(restored.game, *snapshot,
+                                                                                         "unit-merchant-restored-map");
+        expect_true(decoded.has_value(), "actual native map codec restores fixed source stock and all old/new aliases");
+        if (!decoded)
+            return;
+        auto map = std::dynamic_pointer_cast<CMap>(*decoded);
+        restored.game->setMap(map);
+        auto clock = map->getObjectByName("cityClock");
+        auto old = std::dynamic_pointer_cast<CCreature>(
+            clock->getObjectProperty("plugin_citySevenSunsMerchantOld_cityAr0601Actor1"));
+        auto current = std::dynamic_pointer_cast<CCreature>(
+            clock->getObjectProperty("plugin_citySevenSunsMerchantNew_cityAr0601Actor1"));
+        expect_true(old && current && old != current && map->getObjectByName("cityAr0601Actor1") == current &&
+                        old->isAlive() && old->getEffects().size() == 1 &&
+                        (*old->getEffects().begin())->getCaster() == old &&
+                        (*old->getEffects().begin())->getVictim() == old && current->getWeapon() &&
+                        current->getStringProperty("sourceActor") == "AR0601#actor1",
+                    "codec roundtrip retains distinct old and new owners, old self-effect aliases and actual new "
+                    "equipped weapon");
+        const auto receipt = map->getStringProperty(SevenSunsMerchantFixture::MerchantStateKey);
+        auto replay = CSevenSunsMerchantDialogue::settle(restored.game, clock, {});
+        expect_true(replay.at("replaced").get<int>() == 0 &&
+                        map->getStringProperty(SevenSunsMerchantFixture::MerchantStateKey) == receipt &&
+                        map->tryBeginSaveSnapshot().has_value(),
+                    "restored certified replacement receipt never rerolls or reseeds");
+        dyingMap = map;
+        dyingActor = old;
+        if (old && !old->getEffects().empty())
+            dyingEffect = *old->getEffects().begin();
+        auto destination = std::make_shared<CMap>();
+        destination->setGame(restored.game);
+        restored.game->setMap(destination);
+    }
+    vstd::event_loop<>::instance()->runReady();
+    expect_true(restored.game->getContext()->isActive() && dyingMap.expired() && dyingActor.expired() &&
+                    dyingEffect.expired(),
+                "restored whole-map retirement cleanup breaks old actor/effect cycles while its game remains live");
+}
+
+void testSevenSunsMerchantRevisionLimitRefusesWithoutUnreadableOwnOutput() {
+    SevenSunsMerchantFixture f;
+    auto first = f.beginMerchant();
+    first->close();
+    first.reset();
+    auto doc = f.merchantDocument();
+    doc["actors"][SevenSunsMerchantFixture::Names[0]]["revision"] = 999999;
+    f.map->setStringProperty(SevenSunsMerchantFixture::MerchantStateKey, "city-json:" + doc.dump());
+    const auto before = f.map->getStringProperty(SevenSunsMerchantFixture::MerchantStateKey);
+    auto refused = f.beginMerchant();
+    expect_true(refused->view().at("reason").get<std::string>() == "revisionLimit" &&
+                    f.map->getStringProperty(SevenSunsMerchantFixture::MerchantStateKey) == before &&
+                    f.protectedActors[0]->getNumericProperty("plugin_cityDopmerTalkCount") == 1 &&
+                    f.map->tryBeginSaveSnapshot().has_value(),
+                "admitted revision cap never creates its own next unreadable receipt");
+}
+
 int main() {
     pybind11::scoped_interpreter guard{};
     pybind11::module_::import("sys").attr("path").attr("insert")(0, GAME_HANDLER_TEST_PYTHON_ROOT);
@@ -8652,5 +9201,57 @@ int main() {
                             testSevenSunsWarningSessionDoesNotKeepClosedGameAlive);
     nativeTestProfile().run("testSevenSunsWarningUsesSharedSourceGlobalsWithoutClampingOrDroppingScopes",
                             testSevenSunsWarningUsesSharedSourceGlobalsWithoutClampingOrDroppingScopes);
+    nativeTestProfile().run("testSevenSunsMerchantRejectsUnsignedDumpAliasingBeforeSourceAuthority",
+                            testSevenSunsMerchantRejectsUnsignedDumpAliasingBeforeSourceAuthority);
+    nativeTestProfile().run("testSevenSunsStockExhaustive8000FiniteOutcomesAndInputBounds",
+                            testSevenSunsStockExhaustive8000FiniteOutcomesAndInputBounds);
+    nativeTestProfile().run("testSevenSunsStockPreparedFourLineagesUseRealWeaponAndConcretePossessions",
+                            testSevenSunsStockPreparedFourLineagesUseRealWeaponAndConcretePossessions);
+    nativeTestProfile().run("testSevenSunsStockPreparedRejectsControllerActionAndInitialMetadataChanges",
+                            testSevenSunsStockPreparedRejectsControllerActionAndInitialMetadataChanges);
+    nativeTestProfile().run("testSevenSunsStockSettledValidationAllowsActualMutableHealthInventoryAndEquipment",
+                            testSevenSunsStockSettledValidationAllowsActualMutableHealthInventoryAndEquipment);
+    nativeTestProfile().run("testSevenSunsStockMatchingActorAndClockForgeryCannotPassFiniteReplay",
+                            testSevenSunsStockMatchingActorAndClockForgeryCannotPassFiniteReplay);
+    nativeTestProfile().run("testSevenSunsStockFailedUnpublishedSelfEffectExpiresWithMapWhileGameLives",
+                            testSevenSunsStockFailedUnpublishedSelfEffectExpiresWithMapWhileGameLives);
+    nativeTestProfile().run("testSevenSunsStockStagedLifetimeRespectsRealForeignMapAdoption",
+                            testSevenSunsStockStagedLifetimeRespectsRealForeignMapAdoption);
+    nativeTestProfile().run("testSevenSunsStockNaturalReplacementActualDefeatAwards420ExactlyOnce",
+                            testSevenSunsStockNaturalReplacementActualDefeatAwards420ExactlyOnce);
+    nativeTestProfile().run("testSevenSunsStockForgedDedicatedDefeatCannotFallBackToGenericXp",
+                            testSevenSunsStockForgedDedicatedDefeatCannotFallBackToGenericXp);
+    nativeTestProfile().run("testSevenSunsMerchantAllThirteenPathsCoverTwentyFourNativeEdges",
+                            testSevenSunsMerchantAllThirteenPathsCoverTwentyFourNativeEdges);
+    nativeTestProfile().run("testSevenSunsMerchantInitiationCancelReopenAndLegacyRefusalAreOwned",
+                            testSevenSunsMerchantInitiationCancelReopenAndLegacyRefusalAreOwned);
+    nativeTestProfile().run("testSevenSunsMerchantCoordinatorReplacesOnlyTheActiveSourceFloorWithoutCredit",
+                            testSevenSunsMerchantCoordinatorReplacesOnlyTheActiveSourceFloorWithoutCredit);
+    nativeTestProfile().run("testSevenSunsMerchantSharedGlobalsKeepSourceOrderCaseAndOtherScopes",
+                            testSevenSunsMerchantSharedGlobalsKeepSourceOrderCaseAndOtherScopes);
+    nativeTestProfile().run("testSevenSunsMerchantRejectsStaleEpochRegionActorPlayerAndRevision",
+                            testSevenSunsMerchantRejectsStaleEpochRegionActorPlayerAndRevision);
+    nativeTestProfile().run("testSevenSunsMerchantFactoryReentryOrOwnerMutationCannotAcknowledgeReplacement",
+                            testSevenSunsMerchantFactoryReentryOrOwnerMutationCannotAcknowledgeReplacement);
+    nativeTestProfile().run("testSevenSunsMerchantAdmissionAndLegacyEligibilityRetryWithoutMutation",
+                            testSevenSunsMerchantAdmissionAndLegacyEligibilityRetryWithoutMutation);
+    nativeTestProfile().run("testSevenSunsMerchantFailureAfterDetachQuarantinesBothRetainedOwners",
+                            testSevenSunsMerchantFailureAfterDetachQuarantinesBothRetainedOwners);
+    nativeTestProfile().run("testSevenSunsMerchantRepeatedSettlementNeverReseedsChangedOrDefeatedStock",
+                            testSevenSunsMerchantRepeatedSettlementNeverReseedsChangedOrDefeatedStock);
+    nativeTestProfile().run("testSevenSunsMerchantMissingAttackWitnessNeverUsesDamageAsRevealAuthority",
+                            testSevenSunsMerchantMissingAttackWitnessNeverUsesDamageAsRevealAuthority);
+    nativeTestProfile().run("testSevenSunsMerchantIdleFlowDoesNotRetainGameOwner",
+                            testSevenSunsMerchantIdleFlowDoesNotRetainGameOwner);
+    nativeTestProfile().run("testSevenSunsMerchantCombatParticipantClaimRetriesBeforeQuietRemoval",
+                            testSevenSunsMerchantCombatParticipantClaimRetriesBeforeQuietRemoval);
+    nativeTestProfile().run("testSevenSunsMerchantNativeUiFlowOwnsCursorClosesAndRejectsOversizedEdges",
+                            testSevenSunsMerchantNativeUiFlowOwnsCursorClosesAndRejectsOversizedEdges);
+    nativeTestProfile().run("testSevenSunsMerchantRetiredOldEffectCycleEndsWithMapWhileGameLives",
+                            testSevenSunsMerchantRetiredOldEffectCycleEndsWithMapWhileGameLives);
+    nativeTestProfile().run("testSevenSunsMerchantWholeMapCodecPreservesOldNewAliasesAndOnceOwnedReceipt",
+                            testSevenSunsMerchantWholeMapCodecPreservesOldNewAliasesAndOnceOwnedReceipt);
+    nativeTestProfile().run("testSevenSunsMerchantRevisionLimitRefusesWithoutUnreadableOwnOutput",
+                            testSevenSunsMerchantRevisionLimitRefusesWithoutUnreadableOwnOutput);
     return finish_tests();
 }

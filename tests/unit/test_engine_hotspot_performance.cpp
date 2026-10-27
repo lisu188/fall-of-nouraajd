@@ -18,6 +18,7 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 #include "core/CController.h"
 #include "seven_suns_warning_fixture.h"
+#include "seven_suns_merchant_fixture.h"
 #include "core/CAsync.h"
 #include "core/CGameContext.h"
 #include "core/CGame.h"
@@ -1894,6 +1895,49 @@ void testSevenSunsWarningThreeEdgesAnd128ReplaysAreBounded() {
               << '\n';
 }
 
+void testSevenSunsMerchantFourLineagesAnd128CoordinatorReplaysStayBounded() {
+    SevenSunsMerchantFixture f;
+    std::size_t checks = 0;
+    auto flow = f.beginMerchant(0, [&] { ++checks; });
+    SevenSunsMerchantFixture::finish(*flow, {1, 5, 11, 12});
+    flow.reset();
+    const auto objects = f.map->getObjects().size(), triggers = f.map->getEventHandler()->getTriggers().size();
+    const auto xp = f.player->getExp(), gold = f.player->getGold();
+    auto first = f.settle();
+    f.focus(2);
+    auto second = f.settle();
+    std::array<std::shared_ptr<CCreature>, 4> replacements;
+    for (std::size_t i = 0; i < 4; ++i)
+        replacements[i] = f.replacement(i);
+    const auto receipt = f.map->getStringProperty(SevenSunsMerchantFixture::MerchantStateKey);
+    const auto effectOwners = f.game->getContext()->getEffectOwnerCount();
+    std::size_t scans = first.at("checked").get<int>() + second.at("checked").get<int>();
+    for (int n = 0; n < 128; ++n) {
+        auto result = CSevenSunsMerchantDialogue::settle(f.game, f.clock, [&] { ++checks; });
+        scans += result.at("checked").get<int>();
+        expect_true(result.at("checked").get<int>() == 4 && result.at("replaced").get<int>() == 0,
+                    "every coordinator replay has exactly four bounded candidates and zero additional replacements");
+    }
+    bool owners = true;
+    for (std::size_t i = 0; i < 4; ++i)
+        owners = owners && replacements[i] && f.replacement(i) == replacements[i] && f.oldOwnershipIntact(i);
+    constexpr std::size_t CheckBudget = 65536, ReceiptBudget = 65536, ScanBudget = 4 * (128 + 2);
+    expect_true(
+        first.at("replaced").get<int>() == 2 && second.at("replaced").get<int>() == 2 && owners &&
+            scans == ScanBudget && f.map->getObjects().size() == objects &&
+            f.map->getEventHandler()->getTriggers().size() == triggers &&
+            f.game->getContext()->getEffectOwnerCount() == effectOwners && f.merchantDestroyed == 0 &&
+            f.newDestroyed == 0 && f.player->getExp() == xp && f.player->getGold() == gold &&
+            f.player->getQuests().empty() &&
+            f.map->getStringProperty(SevenSunsMerchantFixture::MerchantStateKey) == receipt &&
+            receipt.size() <= ReceiptBudget && checks > 0 && checks <= CheckBudget &&
+            f.map->tryBeginSaveSnapshot().has_value(),
+        "four once-owned replacements plus128 replays cannot grow registry/triggers/effects/receipt or grant rewards");
+    std::cout << "Seven Suns merchant guard: lineages=4 replacements=4 replays=128 eligibilityChecks=" << scans
+              << " eligibilityBudget=" << ScanBudget << " callerChecks=" << checks << " callerBudget=" << CheckBudget
+              << " receiptBytes=" << receipt.size() << " receiptBudget=" << ReceiptBudget << '\n';
+}
+
 } // namespace
 
 void run_engine_hotspot_performance_tests() {
@@ -1928,4 +1972,5 @@ void run_engine_hotspot_performance_tests() {
     testAssignedPlayerQueriesAreMutationAndCallbackBounded();
     testMinimapTerrainCacheBuildsOnlyOnRelevantChanges();
     testSevenSunsWarningThreeEdgesAnd128ReplaysAreBounded();
+    testSevenSunsMerchantFourLineagesAnd128CoordinatorReplaysStayBounded();
 }

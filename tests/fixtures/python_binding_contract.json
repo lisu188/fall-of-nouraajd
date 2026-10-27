@@ -10,7 +10,7 @@
     {
       "source": "src/core/bindings/CModuleWorld.cpp",
       "registration": "bindGraphicsAndWorld",
-      "registrationTokenSha256": "9ae852368801fb3d630f85e56a87d0b5f29d7edad40c6b8b8839c1f555747cb5"
+      "registrationTokenSha256": "1c7712af72eb5d2b09b878a822bda6c0b84b4cf70a9592b1234d4616da81886e"
     },
     {
       "source": "src/core/bindings/CModuleGameplay.cpp",
@@ -39,5 +39,6 @@
   "savedWaitReview": "Adds CWaitState with exact Python integer durations0..60000 and waitMilliseconds(state); existing registrations/order/defaults remain. Native snapshot/cancellation and real-extension save tests are authored for CI, not executed locally.",
   "mapBindingEpochReview": "Adds only CGame.getMapBindingEpoch(), a readonly nonserialized uint64 public map publication identity; existing signatures/defaults/order remain. Native reentrant/quiet-resource and extension tests are authored for CI, not executed locally.",
   "assignedPlayerQueryReview": "Adds only CMap.getAssignedPlayer(), a const cache observation without lazy adoption, restoration, controller repair or hook registration; engine owner thread semantics, no new synchronization promise. Native and extension/performance fixtures are authored for CI, not executed locally.",
-  "sevenSunsWarningCapabilityReview": "Adds only CGuiHandler.supportsSevenSunsWarning(), a const no-argument compiled-service capability query. Existing signatures, defaults, aliases and relative registration order are unchanged; stateful begin/advance/end operations remain native-owned UiFlow intents without public Python bindings."
+  "sevenSunsWarningCapabilityReview": "Adds only CGuiHandler.supportsSevenSunsWarning(), a const no-argument compiled-service capability query. Existing signatures, defaults, aliases and relative registration order are unchanged; stateful begin/advance/end operations remain native-owned UiFlow intents without public Python bindings.",
+  "sevenSunsMerchantCapabilityReview": "Adds only const CGuiHandler.supportsSevenSunsMerchants(), a readonly compiled finite-service/stock capability. Native begin/advance/end/coordinator intents remain private; existing binding signatures/defaults/aliases/relative order are retained."
 }

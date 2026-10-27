@@ -768,7 +768,13 @@ class QuestRoute:
                 self.contact(name)
                 self.d.choose(name + "Dialog", "restoreStatue")
                 self.d.test.assertFalse(self.d.call(self.d.object(name), "getBoolProperty", "plugin_cityPetrified"))
-            self.d.choose(name + "Dialog", "talk")
+            if (
+                name in SEVEN_SUNS_MERCHANT_LINEAGES
+                and self.d.call(self.d.object(name), "getStringProperty", "sourceCreature") == "DOPMER"
+            ):
+                merchantPrerequisiteTalk(self.d, name)
+            else:
+                self.d.choose(name + "Dialog", "talk")
         for requirement in condition.get("items", []):
             self.item(requirement)
         for area_id in condition.get("visitedAreas", []):
@@ -794,6 +800,8 @@ class QuestRoute:
                 nativeVictory(self.d, name)
         for area_id in condition.get("clearedAreas", []):
             travel(self.d, area_id)
+            if area_id in ("AR0601", "AR0602"):
+                merchantRevealForFloor(self.d, area_id)
             for name, entry in sorted(self.data["config"].items()):
                 if entry.get("class") not in ACTOR_CLASSES or entry["properties"].get("sourceArea") != area_id:
                     continue
@@ -1059,6 +1067,45 @@ def storeRequests(d, store_id, actor_name):
     d.test.assertEqual(before, resources(d))
 
 
+@lru_cache(maxsize=1)
+def sevenSunsUiQuestIds():
+    rows = {row["id"]: row for row in documents()["quests"]}
+    dependencies, direct = {}, set()
+    producers = defaultdict(set)
+    for key, row in rows.items():
+        for outcome in row["outcomes"]:
+            for flag in outcome.get("effects", {}).get("flags", {}):
+                producers[flag].add(key)
+
+    def conditions(key, condition):
+        dependencies[key].update(condition.get("questStages", {}))
+        for flag in condition.get("flags", []):
+            dependencies[key].update(producers.get(flag, ()))
+        if set(condition.get("clearedAreas", ())) & {"AR0601", "AR0602"}:
+            direct.add(key)
+        for selector in condition.get("talked", []):
+            if selector.get("creature") == "DOPMER" or (
+                selector.get("label", "").casefold() == "merchant" and selector.get("area") in ("AR0601", "AR0602")
+            ):
+                direct.add(key)
+        for name in ("all", "any"):
+            for child in condition.get(name, []):
+                conditions(key, child)
+
+    for key, row in rows.items():
+        dependencies[key] = set()
+        if row.get("phase", 5) > 5:
+            dependencies[key].add("eltanIronThrone")
+        conditions(key, row.get("acceptConditions", {}))
+        for outcome in row["outcomes"]:
+            conditions(key, outcome.get("conditions", {}))
+    while True:
+        expanded = direct | {key for key, required in dependencies.items() if required & direct}
+        if expanded == direct:
+            return frozenset(direct)
+        direct = expanded
+
+
 def generatedQuestCases():
     result = []
     for quest in documents()["quests"]:
@@ -1079,6 +1126,7 @@ def generatedQuestCases():
                     ),
                     sources=SOURCES,
                     duration_seconds=1200,
+                    isolated_gui=quest["id"] in sevenSunsUiQuestIds(),
                 )
             )
     return tuple(result)
@@ -2379,6 +2427,531 @@ PENDING_GAMEPLAY_OBLIGATIONS.update(
             "ledger": "tests/fixtures/baldurs_gate_city_ledger.json",
             "implementationStatus": "partial",
             "reason": "Native route evidence remains pending: current-binary natural UI/save-reload, selected CI/coverage and owner visual acceptance remain required.",
+        },
+    }
+)
+
+
+SEVEN_SUNS_MERCHANT_PREFIX = "baldursGate.sevenSunsMerchants."
+SEVEN_SUNS_MERCHANT_LINEAGES = ("cityAr0601Actor1", "cityAr0601Actor3", "cityAr0602Actor1", "cityAr0602Actor2")
+SEVEN_SUNS_MERCHANT_PATHS = (
+    (0, (0, 3)),
+    (0, (1, 4, 8)),
+    (0, (1, 5, 9, 7)),
+    (0, (1, 5, 10, 8)),
+    (0, (1, 5, 11, 12)),
+    (0, (1, 6, 7)),
+    (0, (2, 7)),
+    (7, (13, 16)),
+    (7, (14, 17)),
+    (7, (15, 17)),
+    (10, (18, 21)),
+    (10, (19, 22)),
+    (10, (20, 23)),
+)
+SEVEN_SUNS_MERCHANT_COMMON = tuple(
+    SEVEN_SUNS_MERCHANT_PREFIX + name
+    for name in ("identity", "sourceCount", "sourceEdges", "saveReload", "coordinatorTrace")
+)
+
+
+def merchantState(d):
+    value = read(d, d.game_map, "plugin_citySevenSunsMerchantState", {})
+    d.test.assertIsInstance(value, dict)
+    if value:
+        d.test.assertEqual(1, value["version"])
+        d.test.assertIsInstance(value["actors"], dict)
+    return value
+
+
+def merchantRow(d, lineage):
+    row = merchantState(d).get("actors", {}).get(lineage, {})
+    d.test.assertIsInstance(row, dict)
+    d.test.assertNotEqual("pending", row.get("status"), "An uncertain replacement is not route success")
+    return row
+
+
+def merchantProtectedControls(d):
+    return {
+        name: sevenSunsOwned(d, d.object(name)) for name in ("cityAr0601Actor2", "cityAr0603Actor1", "cityAr0603Actor2")
+    }
+
+
+def merchantTraceCursor(d):
+    d.assertNativeCombatOutcomes()
+    return {"positions": {}, "sequence": d._combat_trace_seq}
+
+
+def merchantNaturalTurn(d, trace):
+    """Commit a normal neighboring move and read the actual native coordinator event."""
+    from tests.gameplay_branch_driver import readNewNativeTrace
+
+    origin, area = d.coords(), currentArea(d)
+    before_turn = d.call(d.game_map, "getTurn")
+    walkable, portals = cityMovementCells()
+    candidates = ((origin[0] + dx, origin[1] + dy, origin[2]) for dx, dy in ((1, 0), (0, 1), (-1, 0), (0, -1)))
+    destination = next(
+        (point for point in candidates if point in walkable and point not in portals and d.canStep(point)), None
+    )
+    d.test.assertIsNotNone(destination, "The authored player needs a real neighboring move for source scheduling")
+    d.navigateCoords(destination, limit=128)
+    d.test.assertEqual(destination, d.coords())
+    d.test.assertEqual(area, currentArea(d))
+    after_turn = d.call(d.game_map, "getTurn")
+    d.test.assertGreater(after_turn, before_turn)
+    records = readNewNativeTrace(d.trace_path, trace["positions"], trace["sequence"])
+    if records:
+        trace["sequence"] = records[-1]["seq"]
+    rows = [row for row in records if row.get("event") == "seven_suns_merchants_settle"]
+    d.test.assertTrue(rows, "A real city coordinator turn must emit its owned native settlement trace")
+    for row in rows:
+        d.test.assertEqual(1, row["capabilityVersion"])
+        d.test.assertIn(row["status"], ("settled", "retry"))
+        d.test.assertEqual(area, row["area"])
+        d.test.assertIs(type(row["checked"]), int)
+        d.test.assertIs(type(row["replaced"]), int)
+        d.test.assertTrue(0 <= row["checked"] <= 4 and 0 <= row["replaced"] <= 4)
+        d.test.assertTrue(before_turn <= row["turn"] <= after_turn)
+        d.test.assertIs(row["attackRevealSupported"], False)
+    return rows
+
+
+def merchantStockCertificate(d, actor, lineage):
+    """Validate constructor provenance and inspect current ownership without replaying pristine state."""
+    text = d.call(actor, "getStringProperty", "plugin_citySevenSunsStock")
+    d.test.assertTrue(text.startswith("city-json:"))
+    receipt = decodeCityData(text)
+    d.test.assertEqual(
+        (1, lineage, currentArea(d), "DOPPSS"),
+        tuple(receipt[key] for key in ("version", "lineage", "area", "creature")),
+    )
+    d.test.assertIs(receipt["originalParity"], False)
+    d.test.assertIs(receipt["itemAbilitiesEstablished"], False)
+    d.test.assertTrue(1 <= len(receipt["rolls"]) <= 3)
+    families = {"RNDTRE05": 5, "RNDMAG01": 1, "RNDMAG02": 2, "RNDSCR01": 1, "RNDSCR02": 2, "RNDSCR03": 3}
+    for roll in receipt["rolls"]:
+        d.test.assertIn(roll["family"], families)
+        d.test.assertEqual(families[roll["family"]], roll["row"])
+        d.test.assertTrue(1 <= roll["column"] <= 20)
+        d.test.assertIsInstance(roll["token"], str)
+    bag, equipped = d.call(actor, "getItems"), d.call(actor, "getEquipped")
+    actual = {item["__handle__"]: item for item in [*bag, *(item for item in equipped.values() if item)]}
+    by_name = {d.call(item, "getName"): item for item in actual.values()}
+    d.test.assertEqual(len(actual), len(by_name))
+    d.test.assertEqual(len(receipt["owned"]), len({row["name"] for row in receipt["owned"]}))
+    d.test.assertEqual(1, sum(row["role"] == "weapon" for row in receipt["owned"]))
+    for row in receipt["owned"]:
+        d.test.assertIn(row["role"], ("weapon", "treasure"))
+        d.test.assertIs(type(row["quantity"]), int)
+        d.test.assertGreater(row["quantity"], 0)
+        d.test.assertEqual(3, len(row["charges"]))
+        d.test.assertTrue(all(type(value) is int and value >= 0 for value in row["charges"]))
+        d.test.assertIs(type(row["undroppable"]), bool)
+        d.test.assertFalse(row["sourceCode"].upper().startswith(("RNDTRE", "RNDMAG", "RNDSCR", "RNDWEP", "RNDEQU")))
+        if row["role"] == "weapon":
+            d.test.assertEqual(("citySevenSunsDoppssWeapon", "S1-12"), (row["resourceId"], row["sourceCode"]))
+        if row["name"] in by_name:
+            item = by_name[row["name"]]
+            d.test.assertEqual(row["resourceId"], d.call(item, "getTypeId"))
+            d.test.assertEqual(row["sourceCode"], d.call(item, "getStringProperty", "plugin_citySourceItem"))
+    for item in actual.values():
+        code = d.call(item, "getStringProperty", "plugin_citySourceItem")
+        d.test.assertFalse(code.upper().startswith(("RNDTRE", "RNDMAG", "RNDSCR", "RNDWEP", "RNDEQU")))
+        d.test.assertGreaterEqual(d.call(item, "getNumericProperty", "plugin_cityQuantity"), 0)
+        charges = read(d, item, "plugin_cityCharges", [0, 0, 0])
+        d.test.assertEqual(3, len(charges))
+        d.test.assertTrue(all(type(value) is int and value >= 0 for value in charges))
+    outcome = receipt["outcome"]
+    d.test.assertIn(outcome["kind"], ("none", "gold", "item", "missing"))
+    treasure = [row for row in receipt["owned"] if row["role"] == "treasure"]
+    if outcome["kind"] == "item":
+        d.test.assertEqual(1, len(treasure))
+        d.test.assertEqual(
+            (outcome["code"], outcome["quantity"], outcome["charges"]),
+            tuple(treasure[0][key] for key in ("sourceCode", "quantity", "charges")),
+        )
+    else:
+        d.test.assertEqual([], treasure)
+    native = {
+        "hpMax": 28,
+        "initialHp": 28,
+        "mana": 0,
+        "killXp": 420,
+        "dmgMin": 1,
+        "dmgMax": 12,
+        "hit": 75,
+        "damage": 0,
+        "crit": 0,
+    }
+    d.test.assertEqual(native, receipt["native"])
+    return receipt
+
+
+def merchantConversation(d, lineage, path):
+    choices = [str(edge) for edge in path if edge not in (3, 7, 8, 12, 16, 17, 21, 22, 23)]
+    old_turn = d.call(d.game_map, "getTurn")
+    witness = d.chooseUi(lineage + "Dialog", "talk", dialogue_choices=choices)
+    row = merchantRow(d, lineage)
+    d.test.assertEqual("closed", row["status"])
+    d.test.assertEqual(list(path), row["edges"])
+    d.test.assertEqual(path[-1], row["lastEdge"])
+    d.test.assertEqual(
+        old_turn, d.call(d.game_map, "getTurn"), "Dialogue is separate from the source script scheduling turn"
+    )
+    return witness
+
+
+def merchantAwaitReplacement(d, lineage, trace):
+    records = []
+    for _ in range(4):
+        records.extend(merchantNaturalTurn(d, trace))
+        if merchantRow(d, lineage).get("status") == "replaced":
+            return records
+    d.test.fail(("Four actual movement turns did not settle a reviewed eligible merchant", lineage, records))
+
+
+def merchantReplacement(d, lineage, old_handle, old_owned):
+    clock = d.object("cityClock")
+    old = d.call(clock, "getObjectProperty", "plugin_citySevenSunsMerchantOld_" + lineage)
+    new = d.call(clock, "getObjectProperty", "plugin_citySevenSunsMerchantNew_" + lineage)
+    d.test.assertEqual(old_handle, old["__handle__"])
+    d.test.assertIsNotNone(new)
+    d.test.assertNotEqual(old["__handle__"], new["__handle__"])
+    d.test.assertTrue(d.call(old, "isAlive"))
+    if d.call(new, "isAlive"):
+        d.test.assertEqual(new, d.object(lineage))
+    else:
+        d.test.assertIsNone(d.object(lineage, required=False))
+        d.test.assertEqual(new, d.call(clock, "getObjectProperty", "plugin_cityCorpse_" + lineage))
+    d.test.assertEqual(old_owned, sevenSunsOwned(d, old, include_handles=True))
+    d.test.assertEqual("DOPMER", d.call(old, "getStringProperty", "sourceCreature"))
+    d.test.assertEqual("DOPPSS", d.call(new, "getStringProperty", "sourceCreature"))
+    for key in ("sourceActor", "sourceArea", "simulationRegion"):
+        d.test.assertEqual(d.call(old, "getStringProperty", key), d.call(new, "getStringProperty", key))
+    d.test.assertFalse(d.call(new, "isNpc"))
+    d.test.assertEqual(255, d.call(new, "getNumericProperty", "sourceAllegiance"))
+    row = merchantRow(d, lineage)
+    d.test.assertEqual("replaced", row["status"])
+    certificate = merchantStockCertificate(d, new, lineage)
+    d.test.assertEqual(certificate, row["stock"])
+    return old, new, certificate
+
+
+def merchantNoOldCredit(d, before):
+    after = sevenSunsNoPlotCredit(d)
+    for key in ("scarInvestigation", "scarRescue", "investigatedFlag", "completedQuests"):
+        d.test.assertEqual(before[key], after[key], "Replacement does not complete a Scar quest")
+    for name, death in after["deaths"].items():
+        if name in SEVEN_SUNS_MERCHANT_LINEAGES:
+            d.test.assertNotEqual("DOPMER", death.get("creature"), "Quiet old retirement must not emit a death")
+    d.assertNativeCombatOutcomes()
+    return after
+
+
+def merchantPrerequisiteTalk(d, lineage, *, reveal=False):
+    if not reveal and lineage in read(d, d.game_map, "plugin_cityTalked", {}):
+        return None
+    actor = d.object(lineage)
+    count = d.call(actor, "getNumericProperty", "plugin_cityDopmerTalkCount")
+    d.test.assertTrue(0 <= count <= 2, "A natural prerequisite cannot manufacture another source conversation entry")
+    path = ((1, 5, 11, 12), (14, 17), (18, 21))[count] if reveal else ((0, 3), (13, 16), (18, 21))[count]
+    return merchantConversation(d, lineage, path)
+
+
+def merchantRevealForFloor(d, area):
+    """Use actual dialogue when needed, then retain the existing real hostile-fight loop."""
+    eligible = [
+        name
+        for name in SEVEN_SUNS_MERCHANT_LINEAGES
+        if documents()["config"][name]["properties"]["sourceArea"] == area
+        and d.object(name, required=False)
+        and d.call(d.object(name), "getStringProperty", "sourceCreature") == "DOPMER"
+    ]
+    if not eligible:
+        return
+    if sevenSunsGlobal(d, "Doppleganger") != 1:
+        QuestRoute(d).contact(eligible[0])
+        merchantPrerequisiteTalk(d, eligible[0], reveal=True)
+    trace = merchantTraceCursor(d)
+    merchantAwaitReplacement(d, eligible[0], trace)
+
+
+def sevenSunsMerchantRoute(d, *, lineage, entry, path):
+    start(d)
+    QuestRoute(d).contact(lineage)
+    actor = d.object(lineage)
+    area = d.call(actor, "getStringProperty", "sourceArea")
+    d.test.assertEqual(area, currentArea(d))
+    d.test.assertEqual("DOPMER", d.call(actor, "getStringProperty", "sourceCreature"))
+    d.test.assertEqual(128, d.call(actor, "getNumericProperty", "sourceAllegiance"))
+    protected = merchantProtectedControls(d)
+    plot = sevenSunsNoPlotCredit(d)
+    d.check(SEVEN_SUNS_MERCHANT_PREFIX + "identity", True, lineage=lineage, reachedByNaturalTravel=True)
+    for prefix in ((0, 3), (13, 16))[: {0: 0, 7: 1, 10: 2}[entry]]:
+        merchantConversation(d, lineage, prefix)
+    prior = {0: 0, 7: 1, 10: 2}[entry]
+    d.test.assertEqual(prior, d.call(actor, "getNumericProperty", "plugin_cityDopmerTalkCount"))
+    d.saveAndReload("city-merchant-before-source-conversation")
+    actor = d.object(lineage)
+    d.test.assertEqual(prior, d.call(actor, "getNumericProperty", "plugin_cityDopmerTalkCount"))
+    old_handle, old_owned = actor["__handle__"], sevenSunsOwned(d, actor, include_handles=True)
+    before_globals = sevenSunsGlobals(d)
+    conversation = merchantConversation(d, lineage, path)
+    row = merchantRow(d, lineage)
+    d.test.assertEqual(prior + 1, d.call(actor, "getNumericProperty", "plugin_cityDopmerTalkCount"))
+    d.test.assertEqual((entry, prior + 1), (row["entry"], row["sourceTalkCount"]))
+    d.test.assertEqual(actor, d.object(lineage), "Terminal global writes must not replace during the dialogue")
+    d.test.assertEqual(plot, sevenSunsNoPlotCredit(d))
+    d.test.assertEqual(protected, merchantProtectedControls(d))
+    d.check(SEVEN_SUNS_MERCHANT_PREFIX + "sourceCount", True, sourceCount=prior + 1)
+    d.check(SEVEN_SUNS_MERCHANT_PREFIX + "sourceEdges", True, nativeUi=conversation, actualEdges=row["edges"])
+    d.check(SEVEN_SUNS_MERCHANT_PREFIX + "path." + "_".join(map(str, path)), True, actualEdges=row["edges"])
+    for edge in row["edges"]:
+        d.check(SEVEN_SUNS_MERCHANT_PREFIX + "edge." + str(edge), True, actualEdges=row["edges"])
+    trace = merchantTraceCursor(d)
+    if path[-1] in (12, 17, 21, 22, 23):
+        d.test.assertEqual(1, sevenSunsGlobal(d, "Doppleganger"))
+        d.test.assertEqual(1, sevenSunsGlobal(d, "Laola"))
+        inactive = {
+            name: sevenSunsOwned(d, d.object(name))
+            for name in SEVEN_SUNS_MERCHANT_LINEAGES
+            if d.call(d.object(name), "getStringProperty", "sourceArea") != area
+        }
+        records = merchantAwaitReplacement(d, lineage, trace)
+        old, new, certificate = merchantReplacement(d, lineage, old_handle, old_owned)
+        for name, snapshot in inactive.items():
+            d.test.assertEqual(snapshot, sevenSunsOwned(d, d.object(name)), "No immediate other-floor transformation")
+        merchantNoOldCredit(d, plot)
+        d.test.assertEqual(protected, merchantProtectedControls(d))
+        d.check(
+            SEVEN_SUNS_MERCHANT_PREFIX + "replacementOwned",
+            True,
+            oldHandle=old_handle,
+            newHandle=new["__handle__"],
+            certificate=certificate,
+        )
+        d.check(SEVEN_SUNS_MERCHANT_PREFIX + "noOldCredit", True, plot=plot)
+        d.check(SEVEN_SUNS_MERCHANT_PREFIX + "coordinatorTrace", True, nativeRecords=records)
+    else:
+        d.test.assertEqual(before_globals.get("Doppleganger", 0), sevenSunsGlobal(d, "Doppleganger"))
+        records = merchantNaturalTurn(d, trace)
+        d.test.assertEqual(actor, d.object(lineage))
+        d.test.assertTrue(all(row["replaced"] == 0 for row in records))
+        d.check(SEVEN_SUNS_MERCHANT_PREFIX + "nonReveal", True, actualEdges=row["edges"])
+        d.check(SEVEN_SUNS_MERCHANT_PREFIX + "coordinatorTrace", True, nativeRecords=records)
+    stable_row = merchantRow(d, lineage)
+    retained = d.call(d.object("cityClock"), "getObjectProperty", "plugin_citySevenSunsMerchantNew_" + lineage)
+    registered = sevenSunsOwned(d, retained or d.object(lineage))
+    d.saveAndReload("city-merchant-after-source-result")
+    d.test.assertEqual(stable_row, merchantRow(d, lineage))
+    retained = d.call(d.object("cityClock"), "getObjectProperty", "plugin_citySevenSunsMerchantNew_" + lineage)
+    d.test.assertEqual(registered, sevenSunsOwned(d, retained or d.object(lineage)))
+    d.test.assertEqual(protected, merchantProtectedControls(d))
+    d.check(SEVEN_SUNS_MERCHANT_PREFIX + "saveReload", True, actualRow=stable_row)
+
+
+def merchantCounterRoute(d):
+    start(d)
+    lineage = SEVEN_SUNS_MERCHANT_LINEAGES[0]
+    QuestRoute(d).contact(lineage)
+    for count, choices, prefix in ((1, ["4", "5", "6"], [1]), (2, ["13", "14", "15"], []), (3, ["18", "19", "20"], [])):
+        witness = d.chooseUi(
+            lineage + "Dialog",
+            "talk",
+            dialogue_choices=[str(edge) for edge in prefix],
+            cancel_after_dialogue_choices=True,
+        )
+        d.test.assertEqual(choices, witness["cancelledChoiceIds"])
+        d.test.assertEqual(count, d.call(d.object(lineage), "getNumericProperty", "plugin_cityDopmerTalkCount"))
+        d.test.assertEqual(prefix, merchantRow(d, lineage)["edges"])
+        d.test.assertEqual(
+            2, sevenSunsGlobal(d, "CheckedSevenSuns"), "Committed prefix survives cancel and a new source entry"
+        )
+        d.test.assertEqual(0, sevenSunsGlobal(d, "Doppleganger"))
+    d.saveAndReload("city-merchant-cancel-source-count3")
+    before = (
+        merchantRow(d, lineage),
+        sevenSunsGlobals(d),
+        d.call(d.object(lineage), "getNumericProperty", "plugin_cityTalkCount"),
+    )
+    refusal = d.chooseUi(lineage + "Dialog", "talk", dialogue_choices=[], dialogue_dialog_ids=())
+    d.test.assertEqual([], refusal["panels"])
+    d.test.assertEqual(
+        before,
+        (
+            merchantRow(d, lineage),
+            sevenSunsGlobals(d),
+            d.call(d.object(lineage), "getNumericProperty", "plugin_cityTalkCount"),
+        ),
+    )
+    d.test.assertEqual(3, d.call(d.object(lineage), "getNumericProperty", "plugin_cityDopmerTalkCount"))
+    d.check(
+        SEVEN_SUNS_MERCHANT_PREFIX + "cancelCountsAndNoEntry",
+        True,
+        nativeRefusal=refusal,
+        actualRow=merchantRow(d, lineage),
+    )
+
+
+def merchantScheduleRoute(d):
+    start(d)
+    lineage = SEVEN_SUNS_MERCHANT_LINEAGES[0]
+    QuestRoute(d).contact(lineage)
+    snapshots = {
+        name: (d.object(name)["__handle__"], sevenSunsOwned(d, d.object(name), include_handles=True))
+        for name in SEVEN_SUNS_MERCHANT_LINEAGES
+    }
+    protected, plot = merchantProtectedControls(d), sevenSunsNoPlotCredit(d)
+    merchantConversation(d, lineage, (1, 5, 11, 12))
+    trace = merchantTraceCursor(d)
+    merchantAwaitReplacement(d, lineage, trace)
+    for name in SEVEN_SUNS_MERCHANT_LINEAGES[:2]:
+        merchantReplacement(d, name, *snapshots[name])
+    for name in SEVEN_SUNS_MERCHANT_LINEAGES[2:]:
+        d.test.assertEqual(snapshots[name][0], d.object(name)["__handle__"])
+    travel(d, "AR0602")
+    merchantAwaitReplacement(d, SEVEN_SUNS_MERCHANT_LINEAGES[2], trace)
+    for name in SEVEN_SUNS_MERCHANT_LINEAGES[2:]:
+        merchantReplacement(d, name, *snapshots[name])
+    d.test.assertEqual(protected, merchantProtectedControls(d))
+    merchantNoOldCredit(d, plot)
+    d.check(
+        SEVEN_SUNS_MERCHANT_PREFIX + "fourLineageScheduling",
+        True,
+        areas=["AR0601", "AR0602"],
+        actualRows=merchantState(d),
+    )
+
+
+def merchantSharedGlobalRoute(d):
+    start(d)
+    planner = QuestRoute(d)
+    planner.contact(SEVEN_SUNS_WARNING_ACTOR)
+    d.chooseUi(SEVEN_SUNS_WARNING_ACTOR + "Dialog", "talk", dialogue_choices=["1", "5"])
+    warning = d.call(d.object("cityClock"), "getObjectProperty", "plugin_citySevenSunsWarningActor")
+    warning_state, warning_owned = sevenSunsReceipt(d), sevenSunsOwned(d, warning)
+    d.test.assertEqual(1, sevenSunsGlobal(d, "AskedForTour"))
+    lineage = SEVEN_SUNS_MERCHANT_LINEAGES[0]
+    planner.contact(lineage)
+    merchantConversation(d, lineage, (0, 3))
+    merchantConversation(d, lineage, (14, 17))
+    d.test.assertEqual(1, sevenSunsGlobal(d, "AskedForTour"))
+    d.test.assertEqual(2, sevenSunsGlobal(d, "CheckedSevenSuns"))
+    d.test.assertEqual(1, sevenSunsGlobal(d, "Doppleganger"))
+    d.test.assertEqual(1, sevenSunsGlobal(d, "Laola"))
+    merchantAwaitReplacement(d, lineage, merchantTraceCursor(d))
+    d.saveAndReload("city-merchant-shared-warning-source-globals")
+    warning = d.call(d.object("cityClock"), "getObjectProperty", "plugin_citySevenSunsWarningActor")
+    d.test.assertEqual(warning_state, sevenSunsReceipt(d))
+    d.test.assertEqual(warning_owned, sevenSunsOwned(d, warning))
+    d.test.assertEqual(1, sevenSunsGlobal(d, "AskedForTour"))
+    d.check(SEVEN_SUNS_MERCHANT_PREFIX + "sharedWarningGlobals", True, actualGlobals=sevenSunsGlobals(d))
+
+
+def merchantCombatPersistenceRoute(d):
+    start(d)
+    lineage = SEVEN_SUNS_MERCHANT_LINEAGES[0]
+    QuestRoute(d).contact(lineage)
+    merchantConversation(d, lineage, (1, 5, 11, 12))
+    merchantAwaitReplacement(d, lineage, merchantTraceCursor(d))
+    nativeVictory(d, lineage)
+    corpse = d.call(d.object("cityClock"), "getObjectProperty", "plugin_cityCorpse_" + lineage)
+    d.test.assertIsNotNone(corpse)
+    d.test.assertFalse(d.call(corpse, "isAlive"))
+    d.test.assertEqual("DOPPSS", read(d, d.game_map, "plugin_cityDeaths", {})[lineage]["creature"])
+    current = sevenSunsOwned(d, corpse)
+    player_resources, row = resources(d), merchantRow(d, lineage)
+    certificate = d.call(corpse, "getStringProperty", "plugin_citySevenSunsStock")
+    d.saveAndReload("city-merchant-actual-combat-owned-state")
+    corpse = d.call(d.object("cityClock"), "getObjectProperty", "plugin_cityCorpse_" + lineage)
+    d.test.assertEqual(
+        current, sevenSunsOwned(d, corpse), "Persist actual post-combat ownership/health, not constructor defaults"
+    )
+    d.test.assertEqual(player_resources, resources(d))
+    d.test.assertEqual(row, merchantRow(d, lineage))
+    d.test.assertEqual(certificate, d.call(corpse, "getStringProperty", "plugin_citySevenSunsStock"))
+    d.check(
+        SEVEN_SUNS_MERCHANT_PREFIX + "actualCombatPersistence",
+        True,
+        actualCorpse=current,
+        originCertificateRetained=True,
+    )
+
+
+def sevenSunsMerchantCases():
+    from tests.gameplay_branch_types import PLAYER_CLASSES
+
+    sources = SOURCES + ("tests/fixtures/baldurs_gate_seven_suns_merchants.json",)
+    cases = []
+    for index, (entry, path) in enumerate(SEVEN_SUNS_MERCHANT_PATHS):
+        branches = SEVEN_SUNS_MERCHANT_COMMON + (SEVEN_SUNS_MERCHANT_PREFIX + "path." + "_".join(map(str, path)),)
+        branches += tuple(SEVEN_SUNS_MERCHANT_PREFIX + "edge." + str(edge) for edge in path)
+        branches += tuple(
+            SEVEN_SUNS_MERCHANT_PREFIX + name
+            for name in (("replacementOwned", "noOldCredit") if path[-1] in (12, 17, 21, 22, 23) else ("nonReveal",))
+        )
+        cases.append(
+            RouteCase(
+                "baldurs-gate-seven-suns-merchant-" + "-".join(map(str, path)),
+                MAP,
+                (MAP,),
+                branches,
+                partial(
+                    sevenSunsMerchantRoute, lineage=SEVEN_SUNS_MERCHANT_LINEAGES[index % 4], entry=entry, path=path
+                ),
+                classes=(PLAYER_CLASSES[index % len(PLAYER_CLASSES)],),
+                sources=sources,
+                duration_seconds=1200,
+                isolated_gui=True,
+            )
+        )
+    for suffix, callback, branch in (
+        ("cancel-counts", merchantCounterRoute, "cancelCountsAndNoEntry"),
+        ("floor-scheduling", merchantScheduleRoute, "fourLineageScheduling"),
+        ("shared-globals", merchantSharedGlobalRoute, "sharedWarningGlobals"),
+        ("combat-persistence", merchantCombatPersistenceRoute, "actualCombatPersistence"),
+    ):
+        cases.append(
+            RouteCase(
+                "baldurs-gate-seven-suns-merchant-" + suffix,
+                MAP,
+                (MAP,),
+                (SEVEN_SUNS_MERCHANT_PREFIX + branch,),
+                callback,
+                classes=("Wayfarer",),
+                sources=sources,
+                duration_seconds=1200,
+                isolated_gui=True,
+            )
+        )
+    return tuple(cases)
+
+
+CASES += sevenSunsMerchantCases()
+_merchant_branches = tuple(sorted({branch for case in sevenSunsMerchantCases() for branch in case.branches}))
+for _method in ("talk", "isSevenSunsMerchantActor", "validSevenSunsMerchantView", "conversationSevenSunsMerchant"):
+    _identity = "res/maps/baldursGate/script.py:BaldursGateDialog." + _method
+    SOURCE_BRANCHES[_identity] = tuple(dict.fromkeys((*SOURCE_BRANCHES.get(_identity, ()), *_merchant_branches)))
+for _method in ("onTurn", "settleSevenSunsMerchants"):
+    _identity = "res/maps/baldursGate/script.py:BaldursGateClock." + _method
+    SOURCE_BRANCHES[_identity] = tuple(dict.fromkeys((*SOURCE_BRANCHES.get(_identity, ()), *_merchant_branches)))
+PENDING_GAMEPLAY_OBLIGATIONS.update(
+    {
+        SEVEN_SUNS_MERCHANT_PREFIX
+        + "attackedSourceEntry": {
+            "map": MAP,
+            "sourceId": "DOPPSS.BCS:behavior",
+            "ledger": "tests/fixtures/baldurs_gate_city_ledger.json",
+            "implementationStatus": "missing",
+            "reason": "Native attack-attempt/offensive-spell witness remains pending; dialogue coverage and damage-only observation do not establish AttackedBy.",
+        },
+        SEVEN_SUNS_MERCHANT_PREFIX
+        + "stockAbilitiesAndClassicParity": {
+            "map": MAP,
+            "sourceId": "DOPPSS:creature",
+            "ledger": "tests/fixtures/baldurs_gate_city_ledger.json",
+            "implementationStatus": "partial",
+            "reason": "Runtime item abilities, basement migration and original classic parity remain pending; carried stock and once ownership do not establish them.",
         },
     }
 )

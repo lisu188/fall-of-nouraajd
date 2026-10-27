@@ -108,6 +108,32 @@ ADDITIONAL_CASES = {
         "testSevenSunsWarningRetainedActorEffectAliasesRoundTrip",
         "testSevenSunsWarningSessionDoesNotKeepClosedGameAlive",
         "testSevenSunsWarningUsesSharedSourceGlobalsWithoutClampingOrDroppingScopes",
+        "testSevenSunsMerchantRejectsUnsignedDumpAliasingBeforeSourceAuthority",
+        "testSevenSunsStockExhaustive8000FiniteOutcomesAndInputBounds",
+        "testSevenSunsStockPreparedFourLineagesUseRealWeaponAndConcretePossessions",
+        "testSevenSunsStockPreparedRejectsControllerActionAndInitialMetadataChanges",
+        "testSevenSunsStockSettledValidationAllowsActualMutableHealthInventoryAndEquipment",
+        "testSevenSunsStockMatchingActorAndClockForgeryCannotPassFiniteReplay",
+        "testSevenSunsStockFailedUnpublishedSelfEffectExpiresWithMapWhileGameLives",
+        "testSevenSunsStockStagedLifetimeRespectsRealForeignMapAdoption",
+        "testSevenSunsStockNaturalReplacementActualDefeatAwards420ExactlyOnce",
+        "testSevenSunsStockForgedDedicatedDefeatCannotFallBackToGenericXp",
+        "testSevenSunsMerchantAllThirteenPathsCoverTwentyFourNativeEdges",
+        "testSevenSunsMerchantInitiationCancelReopenAndLegacyRefusalAreOwned",
+        "testSevenSunsMerchantCoordinatorReplacesOnlyTheActiveSourceFloorWithoutCredit",
+        "testSevenSunsMerchantSharedGlobalsKeepSourceOrderCaseAndOtherScopes",
+        "testSevenSunsMerchantRejectsStaleEpochRegionActorPlayerAndRevision",
+        "testSevenSunsMerchantFactoryReentryOrOwnerMutationCannotAcknowledgeReplacement",
+        "testSevenSunsMerchantAdmissionAndLegacyEligibilityRetryWithoutMutation",
+        "testSevenSunsMerchantFailureAfterDetachQuarantinesBothRetainedOwners",
+        "testSevenSunsMerchantRepeatedSettlementNeverReseedsChangedOrDefeatedStock",
+        "testSevenSunsMerchantMissingAttackWitnessNeverUsesDamageAsRevealAuthority",
+        "testSevenSunsMerchantIdleFlowDoesNotRetainGameOwner",
+        "testSevenSunsMerchantCombatParticipantClaimRetriesBeforeQuietRemoval",
+        "testSevenSunsMerchantNativeUiFlowOwnsCursorClosesAndRejectsOversizedEdges",
+        "testSevenSunsMerchantRetiredOldEffectCycleEndsWithMapWhileGameLives",
+        "testSevenSunsMerchantWholeMapCodecPreservesOldNewAliasesAndOnceOwnedReceipt",
+        "testSevenSunsMerchantRevisionLimitRefusesWithoutUnreadableOwnOutput",
     ),
     "map": (
         "testNewSessionClearsQuitLatch",
@@ -814,6 +840,29 @@ class NativeTestProfileSourceTest(unittest.TestCase):
         self.assertIn("pass < 128", perf)
         self.assertIn("fixture.actorFactories == 0 && fixture.itemFactories == 0 && fixture.questFactories == 1", perf)
         self.assertEqual(1, perf.count("testSevenSunsWarningThreeEdgesAnd128ReplaysAreBounded();"))
+
+    def testSevenSunsMerchantIncludedNativeCasesHaveOnceOnlyProfileRegistration(self):
+        handler = (ROOT / "tests/unit/test_handler.cpp").read_text(encoding="utf-8")
+        stock = (ROOT / "tests/unit/seven_suns_merchant_stock_cases.h").read_text(encoding="utf-8")
+        self.assertEqual(1, handler.count('#include "seven_suns_merchant_stock_cases.h"'))
+        merchant_names = re.findall(r"^void (testSevenSunsMerchant\w+)\(\)", handler, re.MULTILINE)
+        stock_names = re.findall(r"^void (testSevenSunsStock\w+)\(\)", stock, re.MULTILINE)
+        self.assertEqual(17, len(merchant_names))
+        self.assertEqual(9, len(stock_names))
+        defined = merchant_names + stock_names
+        self.assertEqual(26, len(set(defined)))
+        main = handler[handler.rindex("int main() {") :]
+        calls = re.findall(r'nativeTestProfile\(\)\.run\(\s*"(test\w+)",\s*(test\w+)\);', main)
+        selected = [(name, callback) for name, callback in calls if name in defined]
+        self.assertEqual(26, len(selected))
+        self.assertTrue(all(name == callback for name, callback in selected))
+        ordered = tuple(name for name, _callback in selected)
+        self.assertEqual(ordered, ADDITIONAL_CASES["handler"][-26:])
+        for name in defined:
+            self.assertEqual(1, ordered.count(name), name)
+        self.assertEqual("testSevenSunsMerchantRejectsUnsignedDumpAliasingBeforeSourceAuthority", ordered[0])
+        self.assertTrue(all(name.startswith("testSevenSunsStock") for name in ordered[1:10]))
+        self.assertTrue(all(name.startswith("testSevenSunsMerchant") for name in ordered[10:]))
 
 
 class NativeTestProfileRuntimeTest(unittest.TestCase):

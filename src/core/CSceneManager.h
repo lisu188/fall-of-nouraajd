@@ -31,6 +31,8 @@ class CGameContext;
 class CMap;
 class CMapObject;
 class CSevenSunsDialogue;
+class CSevenSunsMerchantDialogue;
+class CSevenSunsMerchantStock;
 
 // Opt-in description of a single map transition. The legacy CGame::changeMap(std::string) path is
 // equivalent to a request with only targetMap set: the destination is reloaded from content, the
@@ -78,6 +80,8 @@ class CTransitionCompletion {
 class CSceneManager : public std::enable_shared_from_this<CSceneManager> {
     friend class CGameContext;
     friend class CSevenSunsDialogue;
+    friend class CSevenSunsMerchantDialogue;
+    friend class CSevenSunsMerchantStock;
 
   public:
     enum class TransitionState { Idle, TransitionPending, Transitioning };
@@ -119,6 +123,16 @@ class CSceneManager : public std::enable_shared_from_this<CSceneManager> {
                                    const std::function<void()> &requireCurrent);
     bool containsSceneRetiredObject(const std::shared_ptr<CMap> &map, const std::shared_ptr<CMapObject> &object) const;
     bool isSceneObjectRetired(const std::shared_ptr<CMap> &map, const std::shared_ptr<CMapObject> &object) const;
+
+    void retainStagedObjectLifetime(const std::shared_ptr<CGame> &game, const std::shared_ptr<CMap> &map,
+                                    const std::shared_ptr<CMapObject> &candidate,
+                                    const std::function<void()> &requireCurrent);
+    void replaceObjectWithoutEvents(const std::shared_ptr<CGame> &game, const std::shared_ptr<CMap> &map,
+                                    const std::shared_ptr<CMapObject> &oldObject,
+                                    const std::shared_ptr<CMapObject> &newObject,
+                                    const std::function<void()> &requireCurrent);
+    std::uint64_t sceneRegionRevision(const std::shared_ptr<CMap> &map) const;
+    bool isSceneObjectUnowned(const std::shared_ptr<CMapObject> &object) const;
 
     TransitionState transitionState = TransitionState::Idle;
     std::string pendingMapName;

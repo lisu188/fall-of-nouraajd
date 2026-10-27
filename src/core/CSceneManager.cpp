@@ -423,3 +423,67 @@ void CSceneManager::retireObjectWithoutEvents(const std::shared_ptr<CGame> &game
         throw std::runtime_error("Scene retirement did not detach its exact registered owner");
     requireCurrent();
 }
+
+void CSceneManager::retainStagedObjectLifetime(const std::shared_ptr<CGame> &game, const std::shared_ptr<CMap> &map,
+                                               const std::shared_ptr<CMapObject> &candidate,
+                                               const std::function<void()> &requireCurrent) {
+    if (!vstd::event_loop<>::instance()->isMainThread())
+        throw std::runtime_error("Scene staging requires the engine owner thread");
+    if (!requireCurrent)
+        throw std::invalid_argument("Scene staging needs a native continuation guard");
+    requireCurrent();
+    if (!game || !map || !candidate || game->getSceneManager().get() != this || game->getMap() != map ||
+        map->getGame() != game || candidate->getGame() != game || map->getAssignedPlayer() == candidate ||
+        !candidate->owningMap.expired() ||
+        std::ranges::any_of(map->mapObjects, [&](const auto &entry) { return entry.second == candidate; }))
+        throw std::runtime_error("Scene staging has an adopted or registered candidate");
+    map->sceneRetiredLifetimeOwners.insert(candidate);
+    requireCurrent();
+}
+
+std::uint64_t CSceneManager::sceneRegionRevision(const std::shared_ptr<CMap> &map) const {
+    if (!map)
+        throw std::invalid_argument("Scene region query needs its map");
+    return map->simulationRegionRevision;
+}
+
+bool CSceneManager::isSceneObjectUnowned(const std::shared_ptr<CMapObject> &object) const {
+    return object && object->owningMap.expired();
+}
+
+void CSceneManager::replaceObjectWithoutEvents(const std::shared_ptr<CGame> &game, const std::shared_ptr<CMap> &map,
+                                               const std::shared_ptr<CMapObject> &oldObject,
+                                               const std::shared_ptr<CMapObject> &newObject,
+                                               const std::function<void()> &requireCurrent) {
+    if (!requireCurrent)
+        throw std::invalid_argument("Scene replacement needs its native continuation guard");
+    requireCurrent();
+    if (!game || !map || !oldObject || !newObject || oldObject == newObject || newObject->getGame() != game ||
+        !newObject->owningMap.expired() || newObject->getName() != oldObject->getName() ||
+        newObject->getCoords() != oldObject->getCoords() || map->getObjectByName(newObject->getName()) != oldObject)
+        throw std::runtime_error("Scene replacement has an aliased or adopted new owner");
+    map->sceneRetiredLifetimeOwners.insert(newObject);
+    requireCurrent();
+    try {
+        retireObjectWithoutEvents(game, map, oldObject, requireCurrent);
+        requireCurrent();
+        if (!map->addObjectWithoutEvents(newObject))
+            throw std::runtime_error("Scene replacement could not publish its exact new owner");
+        requireCurrent();
+        if (map->getObjectByName(newObject->getName()) != newObject || newObject->owningMap.lock() != map ||
+            !isSceneObjectRetired(map, oldObject))
+            throw std::runtime_error("Scene replacement lost its old/new ownership boundary");
+        map->signal("objectChanged", newObject->getCoords());
+        requireCurrent();
+    } catch (...) {
+        const bool registered =
+            std::ranges::any_of(map->mapObjects, [&](const auto &entry) { return entry.second == newObject; });
+        if (!registered && newObject->owningMap.lock() == map)
+            newObject->clearOwningMap(map);
+        if (!registered && newObject->owningMap.expired()) {
+            map->sceneRetiredObjects.insert(newObject);
+            map->recordDirectPropertyChanged("sceneRetiredObjects");
+        }
+        throw;
+    }
+}

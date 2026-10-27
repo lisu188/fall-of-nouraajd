@@ -40,6 +40,7 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #include "object/CWaitState.h"
 #include "handler/CScriptHandler.h"
 #include "handler/CSevenSunsDialogue.h"
+#include "handler/CSevenSunsMerchantDialogue.h"
 #include "handler/CRngHandler.h"
 
 #include <algorithm>
@@ -569,6 +570,8 @@ vstd::task<void> CGuiHandler::runUiFlowAsync(std::string entry) {
     }(this->ptr<CGuiHandler>(), std::move(entry));
 }
 
+bool CGuiHandler::supportsSevenSunsMerchants() const { return CSevenSunsMerchantDialogue::isSupported(); }
+
 vstd::task<void> CGuiHandler::runScriptFlowAsync(std::unique_ptr<CScriptFlow> flow) {
     return [](std::shared_ptr<CGuiHandler> self, std::unique_ptr<CScriptFlow> flow) -> vstd::task<void> {
         auto loop = vstd::event_loop<>::instance();
@@ -583,6 +586,7 @@ vstd::task<void> CGuiHandler::runScriptFlowAsync(std::unique_ptr<CScriptFlow> fl
         const auto context = game ? game->getContext() : nullptr;
         game.reset();
         std::unique_ptr<CSevenSunsDialogue> sevenSuns;
+        std::unique_ptr<CSevenSunsMerchantDialogue> sevenSunsMerchant;
         const auto requireCaller = [context, stop] {
             if (stop.stop_requested() || (context && !context->isActive()))
                 throw vstd::task_cancelled();
@@ -591,6 +595,8 @@ vstd::task<void> CGuiHandler::runScriptFlowAsync(std::unique_ptr<CScriptFlow> fl
             requireCaller();
             if (sevenSuns)
                 sevenSuns->requireCurrent();
+            if (sevenSunsMerchant)
+                sevenSunsMerchant->requireCurrent();
         };
         checkActive();
         json answer;
@@ -682,9 +688,39 @@ vstd::task<void> CGuiHandler::runScriptFlowAsync(std::unique_ptr<CScriptFlow> fl
                         Coords(arguments.at(1).get<int>(), arguments.at(2).get<int>(), arguments.at(3).get<int>()),
                         std::move(commit));
                     answer = nullptr;
+                } else if (operation == "beginSevenSunsMerchant") {
+                    ownedSevenSuns = true;
+                    if (sevenSunsMerchant || sevenSuns || !arguments.is_array() || arguments.size() != 2)
+                        throw std::invalid_argument("DOPMER begin needs one clock and one fixed actor token");
+                    sevenSunsMerchant = CSevenSunsMerchantDialogue::begin(
+                        self->_game, flowObjectArgument<CGameObject>(*flow, arguments, 0),
+                        flowObjectArgument<CCreature>(*flow, arguments, 1), requireCaller);
+                    answer = sevenSunsMerchant->view();
+                    if (answer.at("status").get<std::string>() != "ready")
+                        sevenSunsMerchant.reset();
+                } else if (operation == "advanceSevenSunsMerchant") {
+                    ownedSevenSuns = true;
+                    if (!sevenSunsMerchant || !arguments.is_array() || arguments.size() != 2)
+                        throw std::invalid_argument("DOPMER advance needs revision and source edge");
+                    answer = sevenSunsMerchant->advance(CSevenSunsMerchantDialogue::readInteger(arguments.at(0)),
+                                                        CSevenSunsMerchantDialogue::readInteger(arguments.at(1)));
+                    if (answer.at("status").get<std::string>() != "ready")
+                        sevenSunsMerchant.reset();
+                } else if (operation == "endSevenSunsMerchant") {
+                    ownedSevenSuns = true;
+                    if (!sevenSunsMerchant || !arguments.is_array() || !arguments.empty())
+                        throw std::invalid_argument("DOPMER end needs its exact owning flow");
+                    answer = sevenSunsMerchant->close();
+                    sevenSunsMerchant.reset();
+                } else if (operation == "settleSevenSunsMerchants") {
+                    ownedSevenSuns = true;
+                    if (sevenSunsMerchant || sevenSuns || !arguments.is_array() || arguments.size() != 1)
+                        throw std::invalid_argument("DOPMER turn settlement needs its exact city clock");
+                    answer = CSevenSunsMerchantDialogue::settle(
+                        self->_game, flowObjectArgument<CGameObject>(*flow, arguments, 0), requireCaller);
                 } else if (operation == "beginSevenSunsWarning") {
                     ownedSevenSuns = true;
-                    if (sevenSuns || !arguments.is_array() || arguments.size() != 2)
+                    if (sevenSuns || sevenSunsMerchant || !arguments.is_array() || arguments.size() != 2)
                         throw std::invalid_argument("Seven Suns begin requires one clock and one actor token");
                     sevenSuns =
                         CSevenSunsDialogue::begin(self->_game, flowObjectArgument<CGameObject>(*flow, arguments, 0),

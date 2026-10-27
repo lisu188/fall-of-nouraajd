@@ -158,6 +158,11 @@ FAST_TEST_PREFIXES = (
     "SevenSunsWarningSourceTest.",
     "SevenSunsWarningPresentationTest.",
     "SevenSunsWarningRoutesTest.",
+    "SevenSunsMerchantSourceTest.",
+    "SevenSunsMerchantPresentationTest.",
+    "SevenSunsMerchantRoutesTest.",
+    "BaldursGateMerchantStockTest.",
+    "SevenSunsMerchantNativeSourceTest.",
     "BaldursGateCityRoutesTest.",
     "BaldursGateCityLedgerUnitTest.",
     "BaldursGateCityLedgerFixtureTest.",
@@ -28213,6 +28218,17 @@ if SOURCE_UI_TESTS_AVAILABLE:
         SevenSunsWarningPresentationTest as _SevenSunsWarningPresentationTest,
     )
     from tests.test_baldurs_gate_seven_suns_routes import SevenSunsWarningRoutesTest as _SevenSunsWarningRoutesTest
+    from tests.test_baldurs_gate_seven_suns_merchants import (
+        SevenSunsMerchantSourceTest as _SevenSunsMerchantSourceTest,
+        SevenSunsMerchantPresentationTest as _SevenSunsMerchantPresentationTest,
+    )
+    from tests.test_baldurs_gate_seven_suns_merchant_routes import (
+        SevenSunsMerchantRoutesTest as _SevenSunsMerchantRoutesTest,
+    )
+    from tests.test_baldurs_gate_merchant_stock import BaldursGateMerchantStockTest as _BaldursGateMerchantStockTest
+    from tests.test_seven_suns_merchant_native import (
+        SevenSunsMerchantNativeSourceTest as _SevenSunsMerchantNativeSourceTest,
+    )
     from tests.test_baldurs_gate_city_routes import BaldursGateCityRoutesTest as _BaldursGateCityRoutesTest
     from tests.test_baldurs_gate_city_ledger import BaldursGateCityLedgerUnitTest as _BaldursGateCityLedgerUnitTest
     from tests.test_baldurs_gate_city_ledger import (
@@ -28365,6 +28381,21 @@ if SOURCE_UI_TESTS_AVAILABLE:
         pass
 
     class SevenSunsWarningRoutesTest(_SevenSunsWarningRoutesTest):
+        pass
+
+    class SevenSunsMerchantSourceTest(_SevenSunsMerchantSourceTest):
+        pass
+
+    class SevenSunsMerchantPresentationTest(_SevenSunsMerchantPresentationTest):
+        pass
+
+    class SevenSunsMerchantRoutesTest(_SevenSunsMerchantRoutesTest):
+        pass
+
+    class BaldursGateMerchantStockTest(_BaldursGateMerchantStockTest):
+        pass
+
+    class SevenSunsMerchantNativeSourceTest(_SevenSunsMerchantNativeSourceTest):
         pass
 
     class BaldursGateCityRoutesTest(_BaldursGateCityRoutesTest):
@@ -28755,6 +28786,9 @@ if SOURCE_UI_TESTS_AVAILABLE:
     del _BaldursGateCustodyRoleSourceTest
     del _BaldursGateCityRoutesTest
     del _SevenSunsWarningSourceTest, _SevenSunsWarningPresentationTest, _SevenSunsWarningRoutesTest
+    del _SevenSunsMerchantSourceTest, _SevenSunsMerchantPresentationTest, _SevenSunsMerchantRoutesTest
+    del _BaldursGateMerchantStockTest
+    del _SevenSunsMerchantNativeSourceTest
     del _BaldursGateCityLedgerUnitTest
     del _BaldursGateCityLedgerFixtureTest
     del _BaldursGateCityRegionTest

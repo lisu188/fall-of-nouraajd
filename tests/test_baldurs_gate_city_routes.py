@@ -409,7 +409,9 @@ class BaldursGateCityRoutesTest(unittest.TestCase):
                 "baldurs-gate-native-companion-inventory",
                 "baldurs-gate-native-custody",
             }
-            | {case.id for case in routes.sevenSunsWarningCases()},
+            | {case.id for case in routes.sevenSunsWarningCases()}
+            | {case.id for case in routes.sevenSunsMerchantCases()}
+            | {case.id for case in routes.generatedQuestCases() if case.isolated_gui},
             set(cases),
         )
         covered = {branch for case in cases.values() for branch in case.branches}
@@ -424,7 +426,11 @@ class BaldursGateCityRoutesTest(unittest.TestCase):
             self.assertIn("d.chooseUi", source)
             self.assertIn("saveAndReload", source)
             self.assertIn("itemInstances", source)
-        self.assertFalse(any(case.isolated_gui for case in routes.generatedQuestCases()))
+        self.assertEqual(
+            {case.run.keywords["key"] for case in routes.generatedQuestCases() if case.isolated_gui},
+            set(routes.sevenSunsUiQuestIds()),
+        )
+        self.assertFalse(any(case.isolated_gui for case in routes.generatedStoreCases()))
 
     def testCityHasNaturalRoutePlansForAllFiveExistingHeroClasses(self):
         self.assertEqual(set(PLAYER_CLASSES), {hero for case in routes.CASES for hero in case.classes})

@@ -12,8 +12,15 @@ from pathlib import Path
 
 if __package__:
     from scripts.build_baldurs_gate_seven_suns_ledger import WARNING_PATH, addWarningObligations
+    from scripts.build_baldurs_gate_dopmer_ledger import (
+        DOPMER_PATH,
+        STOCK_PATH,
+        addDopmerObligations,
+        addStockItemObligations,
+    )
 else:
     from build_baldurs_gate_seven_suns_ledger import WARNING_PATH, addWarningObligations
+    from build_baldurs_gate_dopmer_ledger import DOPMER_PATH, STOCK_PATH, addDopmerObligations, addStockItemObligations
 
 ROOT = Path(__file__).resolve().parents[1]
 SOURCE_PATH = "tests/fixtures/baldurs_gate_city_source.json"
@@ -21,6 +28,7 @@ QUEST_PATH = "tests/fixtures/baldurs_gate_city_quests.json"
 CONFIG_PATH = "res/maps/baldursGate/config.json"
 SCRIPT_PATH = "res/maps/baldursGate/script.py"
 OUTPUT_PATH = "tests/fixtures/baldurs_gate_city_ledger.json"
+ROUTES_PATH = "tests/gameplay_routes_baldurs_gate.py"
 STATUSES = {"missing", "planned", "partial", "excluded"}
 SOURCE_GAP = "The target is original BG1 base; installed EE metadata cannot establish classic behavior."
 NATIVE_GAP = "No exact-head native route, save/reload, visual, or owner acceptance evidence is attached."
@@ -68,7 +76,7 @@ def dialogActions(value):
             yield from dialogActions(child)
 
 
-def buildLedger(source, quests, config, script, warning=None):
+def buildLedger(source, quests, config, script, warning=None, dopmer=None, routes=None, stock=None):
     """All obligations originate in source rows, never in the set of implemented objects."""
     entries = []
     methods = methodNames(script)
@@ -695,6 +703,11 @@ def buildLedger(source, quests, config, script, warning=None):
     if warning is not None:
         addWarningObligations(source, config, methods, warning, add, entries)
 
+    if dopmer is not None:
+        addDopmerObligations(source, config, methods, dopmer, add, script=script, routes=routes, stock=stock)
+    if stock is not None:
+        addStockItemObligations(source, config, stock, add)
+
     entries.sort(key=lambda row: row["id"])
     return {
         "schemaVersion": 1,
@@ -708,6 +721,13 @@ def buildLedger(source, quests, config, script, warning=None):
             CONFIG_PATH: fingerprint(config),
             SCRIPT_PATH: hashlib.sha256(script.encode()).hexdigest(),
             **({WARNING_PATH: fingerprint(warning)} if warning is not None else {}),
+            **({DOPMER_PATH: fingerprint(dopmer)} if dopmer is not None else {}),
+            **({STOCK_PATH: fingerprint(stock)} if stock is not None else {}),
+            **(
+                {ROUTES_PATH: hashlib.sha256(routes.encode()).hexdigest()}
+                if dopmer is not None and routes is not None
+                else {}
+            ),
         },
         "evidencePolicy": {
             "inventoryBoundary": "Complete enumeration of the audited fixture is not proof that the fixture includes every original game obligation.",
@@ -794,10 +814,16 @@ def validateLedger(ledger, expected=None, require_mapped=False, require_acceptan
                 SOURCE_PATH,
                 QUEST_PATH,
                 WARNING_PATH,
+                DOPMER_PATH,
+                STOCK_PATH,
             }:
                 problems.append("Invalid source pointer: " + key)
             if proof.get("fixture") == WARNING_PATH and WARNING_PATH not in ledger.get("inputs", {}):
                 problems.append("Missing warning input fingerprint: " + key)
+            if proof.get("fixture") == DOPMER_PATH and DOPMER_PATH not in ledger.get("inputs", {}):
+                problems.append("Missing DOPMER input fingerprint: " + key)
+            if proof.get("fixture") == STOCK_PATH and STOCK_PATH not in ledger.get("inputs", {}):
+                problems.append("Missing stock input fingerprint: " + key)
             digest = proof.get("sha256", "")
             if len(digest) != 64 or any(character not in "0123456789abcdef" for character in digest):
                 problems.append("Invalid source fingerprint: " + key)
@@ -837,6 +863,13 @@ def main(argv=None):
         readJson(ROOT / CONFIG_PATH),
         (ROOT / SCRIPT_PATH).read_text(encoding="utf-8"),
         warning=readJson(ROOT / WARNING_PATH) if (ROOT / WARNING_PATH).is_file() else None,
+        dopmer=readJson(ROOT / DOPMER_PATH) if (ROOT / DOPMER_PATH).is_file() else None,
+        stock=readJson(ROOT / STOCK_PATH) if (ROOT / STOCK_PATH).is_file() else None,
+        routes=(
+            (ROOT / ROUTES_PATH).read_text(encoding="utf-8")
+            if (ROOT / DOPMER_PATH).is_file() and (ROOT / ROUTES_PATH).is_file()
+            else None
+        ),
     )
     destination = ROOT / OUTPUT_PATH
     problems = validateLedger(ledger, require_mapped=args.require_mapped, require_acceptance=args.require_acceptance)
