@@ -3995,6 +3995,29 @@ class GameplayBranchDriverTest(unittest.TestCase):
         values["epoch"] += 1
         driver.observeCampaignBroodWitness(after_pump=True)
 
+    def testScopedSiegeObserverReceivesEveryFreshNativeBatchOnceAcrossRotation(self):
+        with tempfile.TemporaryDirectory() as directory:
+            driver, _ = self.roadDriver(roads={(0, 0, 0)})
+            driver.trace_path = Path(directory) / "native.trace.jsonl"
+            observer = Mock()
+            driver._siege_mage_loot_witness = observer
+            first = {"schema": "playtest_trace.v1", "seq": 1, "event": "movement", "map": "siege"}
+            driver.trace_path.write_text(json.dumps(first) + "\n", encoding="utf-8")
+            driver.assertSurvival()
+            driver.assertSurvival()
+            observer.observe.assert_called_once_with((first,))
+            driver.trace_path.replace(Path(str(driver.trace_path) + ".1"))
+            second = dict(first, seq=2)
+            driver.trace_path.write_text(json.dumps(second) + "\n", encoding="utf-8")
+            driver.assertSurvival()
+            self.assertEqual([(first,), (second,)], [args[0] for args, _kwargs in observer.observe.call_args_list])
+            del driver._siege_mage_loot_witness
+            third = dict(first, seq=3)
+            with driver.trace_path.open("a", encoding="utf-8") as output:
+                output.write(json.dumps(third) + "\n")
+            driver.assertSurvival()
+            self.assertEqual(2, observer.observe.call_count)
+
 
 if __name__ == "__main__":
     unittest.main()

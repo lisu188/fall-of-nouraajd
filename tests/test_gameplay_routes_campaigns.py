@@ -535,6 +535,247 @@ class GameplayCampaignRouteTest(unittest.TestCase):
         self.assertEqual(13, ritualCountdownAfterTurn(5, 14, 0))
         self.assertEqual(5, properties["ritual_last_tick_turn"])
 
+    def siegeMageNativeRecords(self, *, defender=False):
+        player = {"id": "Warrior", "name": "player", "typeId": "Warrior", "type": "CPlayer", "isPlayer": True}
+        mage = {
+            "id": "siegePritzMage",
+            "name": "native-mage-1",
+            "typeId": "siegePritzMage",
+            "type": "CCreature",
+            "isPlayer": False,
+        }
+        wand = {"id": "magicWand", "name": "native-wand-1", "typeId": "magicWand", "type": "CItem"}
+        common = {"schema": "playtest_trace.v1", "map": "siege", "turn": 20}
+        return player, [
+            dict(
+                common,
+                seq=11,
+                event="reward_granted",
+                defeated=mage,
+                recipient=player,
+                rewardSource="combat",
+                items=[wand],
+            ),
+            dict(common, seq=12, event="inventory_added", owner=player, item=wand),
+            dict(
+                common,
+                seq=13,
+                event="combat_finished",
+                attacker=mage if defender else player,
+                opponents=[player] if defender else [mage],
+                survivor=player,
+                outcome=2 if defender else 1,
+            ),
+        ]
+
+    def siegeMageWitness(self, player, after_seq=10):
+        witness_type = getattr(campaigns, "SiegeMageLootWitness", None)
+        self.assertTrue(callable(witness_type), "Missing exact native siege mage loot witness")
+        return witness_type(player, after_seq)
+
+    def testSiegeMageLootRequiresOrderedSameItemRewardTransferAndEitherResolvedPlayerVictory(self):
+        for defender in (False, True):
+            with self.subTest(defender=defender):
+                player, records = self.siegeMageNativeRecords(defender=defender)
+                witness = self.siegeMageWitness(player)
+                witness.observe(records[:1])
+                self.assertIsNone(witness.proof)
+                witness.observe(records[1:2])
+                self.assertIsNone(witness.proof)
+                witness.observe(records[2:])
+                self.assertEqual(records[0], witness.proof["reward"])
+                self.assertEqual(records[1], witness.proof["inventoryAdded"])
+                self.assertEqual(records[2], witness.proof["combat"])
+
+    def testSiegeMageLootCannotCreditFakePartialWrongActorItemMapDirectionOrTurnReceipts(self):
+        from copy import deepcopy
+
+        changes = {
+            "no reward": lambda rows: rows[0].update(event="inventory_added"),
+            "not combat loot": lambda rows: rows[0].update(rewardSource="quest"),
+            "grunt": lambda rows: rows[0]["defeated"].update(id="siegePritz", typeId="siegePritz"),
+            "generic mage": lambda rows: rows[0]["defeated"].update(id="PritzMage", typeId="PritzMage"),
+            "fake recipient": lambda rows: rows[0].update(recipient=dict(rows[0]["recipient"], name="other")),
+            "fake owner": lambda rows: rows[1].update(owner=dict(rows[1]["owner"], name="other")),
+            "another wand": lambda rows: rows[1].update(item=dict(rows[1]["item"], name="other-wand")),
+            "not a wand": lambda rows: rows[0].update(items=[]),
+            "unresolved": lambda rows: rows[2].update(outcome=4),
+            "boolean outcome": lambda rows: rows[2].update(outcome=True),
+            "player defeat": lambda rows: rows[2].update(outcome=2, survivor=rows[0]["defeated"]),
+            "wrong direction": lambda rows: rows[2].update(outcome=2),
+            "different opponent": lambda rows: rows[2].update(opponents=[]),
+            "different survivor": lambda rows: rows[2].update(survivor=dict(rows[2]["survivor"], name="other")),
+            "reward other map": lambda rows: rows[0].update(map="ritual"),
+            "transfer other map": lambda rows: rows[1].update(map="ritual"),
+            "combat other map": lambda rows: rows[2].update(map="ritual"),
+            "different turn": lambda rows: rows[2].update(turn=21),
+            "boolean reward turn": lambda rows: rows[0].update(turn=True),
+            "boolean transfer turn": lambda rows: rows[1].update(turn=True),
+        }
+        player, original = self.siegeMageNativeRecords()
+        for label, change in changes.items():
+            with self.subTest(label=label):
+                rows = deepcopy(original)
+                change(rows)
+                witness = self.siegeMageWitness(player)
+                witness.observe(rows)
+                self.assertIsNone(witness.proof)
+        for stop in (0, 1, 2):
+            witness = self.siegeMageWitness(player)
+            witness.observe(original[:stop])
+            self.assertIsNone(witness.proof)
+
+    def testSiegeMageLootRejectsStaleDuplicateGappedOrNonNativeEvidenceAndNeverCreditsTwice(self):
+        from copy import deepcopy
+
+        player, records = self.siegeMageNativeRecords()
+        for after_seq, rows in (
+            (13, records),
+            (9, records),
+            (10, [dict(records[0], seq=True)]),
+            (10, [dict(records[0], schema="python_note")]),
+        ):
+            with self.subTest(after_seq=after_seq, rows=rows):
+                witness = self.siegeMageWitness(player, after_seq)
+                with self.assertRaises(AssertionError):
+                    witness.observe(rows)
+                self.assertIsNone(witness.proof)
+        witness = self.siegeMageWitness(player)
+        witness.observe(records)
+        proof = witness.proof
+        duplicate = deepcopy(records)
+        for row in duplicate:
+            row["seq"] += 3
+        witness.observe(duplicate)
+        self.assertIs(proof, witness.proof)
+        with self.assertRaisesRegex(AssertionError, "duplicate"):
+            witness.observe(duplicate)
+        self.assertIs(proof, witness.proof)
+
+    def siegeMageRouteFixture(self, *, native_proof=True, epoch_change=False):
+        state = {
+            "wands": 1,
+            "gold": 0,
+            "sealed": [],
+            "position": (12, 12, 0),
+            "seq": 10,
+            "pending": [],
+            "checks": [],
+            "epoch": 7,
+        }
+        flags = {
+            name: {"enabled": True, "destroyed": False, "pendingSeal": False, "canStep": True}
+            for name in campaigns.GATES
+        }
+        positions = {name: (index, 0, 0) for index, name in enumerate(campaigns.GATES, 1)}
+        positions["siegeStart"] = (12, 12, 0)
+        player_ref, _ = self.siegeMageNativeRecords()
+        d = SimpleNamespace(
+            test=self,
+            map_name="siege",
+            game={"__handle__": "game"},
+            game_map={"__handle__": "map"},
+            player={"__handle__": "player"},
+            trace_path=Path("model-native-trace"),
+            _combat_trace_seq=10,
+        )
+
+        def flush():
+            if state["pending"]:
+                records, state["pending"] = state["pending"], []
+                witness = getattr(d, "_siege_mage_loot_witness", None)
+                if witness is not None:
+                    witness.observe(records)
+                d._combat_trace_seq = records[-1]["seq"]
+
+        def navigate(name):
+            state["position"] = positions[name]
+            if name in flags and not state["wands"]:
+                state["wands"] += 1
+                _player, records = self.siegeMageNativeRecords(defender=len(state["sealed"]) % 2 == 1)
+                for row in records:
+                    row["seq"] += state["seq"] - 10
+                if not native_proof:
+                    records[0]["rewardSource"] = "quest"
+                state["seq"] = records[-1]["seq"]
+                state["pending"].extend(records)
+            if epoch_change and name in flags:
+                state["epoch"] = 8
+
+        def call(handle, method, *args):
+            if method == "getMapBindingEpoch":
+                return state["epoch"]
+            if method == "isPlayer":
+                return True
+            if handle == d.player and method == "getStringProperty":
+                return "cooperative"
+            if method == "checkQuests":
+                return None
+            name = handle["__handle__"]
+            if method == "getBoolProperty":
+                return flags[name][args[0]]
+            if method == "sealBreach":
+                if flags[name]["destroyed"]:
+                    return False
+                self.assertGreater(state["wands"], 0)
+                state["wands"] -= 1
+                flags[name].update(destroyed=True, enabled=False, pendingSeal=True, canStep=False)
+                state["sealed"].append(name)
+                if len(state["sealed"]) == 4:
+                    state["gold"] += 500
+                return True
+            self.fail((handle, method, args))
+
+        def wait(_budget, predicate):
+            for gate in flags.values():
+                gate["pendingSeal"] = False
+            self.assertTrue(predicate())
+
+        def check(branch, condition, **evidence):
+            self.assertTrue(condition, (branch, evidence))
+            state["checks"].append((branch, evidence))
+
+        d._nativeObjectIdentity = lambda _handle: {k: v for k, v in player_ref.items() if k != "isPlayer"}
+        d.assertSurvival = flush
+        d.assertNativeCombatOutcomes = flush
+        d.object = lambda name, required=True: {"__handle__": name}
+        d.coords = lambda handle=None: state["position"] if handle is None else positions[handle["__handle__"]]
+        d.count = lambda _name: state["wands"]
+        d.flag = lambda name: name == "siege_initialized" or len(state["sealed"]) == 4
+        d.questNames = lambda completed=False: ["defendSiegeQuest"] if completed == (len(state["sealed"]) == 4) else []
+        d.call, d.navigateTo, d.revisit, d.pump, d.tick = call, navigate, navigate, flush, flush
+        d.waitTurns, d.check, d.gold, d.saveAndReload = wait, check, lambda: state["gold"], Mock()
+        return d, state
+
+    def testFinishSiegeCreditsMageKilledBetweenRosterSnapshotsOnlyWithExactNativeLootProof(self):
+        d, state = self.siegeMageRouteFixture()
+        with patch.object(campaigns, "creatureTypes", return_value={"siegePritz"}), patch.object(
+            campaigns, "verifyJournals"
+        ):
+            campaigns.finishSiege(d)
+        evidence = dict(state["checks"])["siege.spawn.mageAndLoot"]
+        self.assertEqual(["siegePritz"], evidence["observedTypes"])
+        self.assertEqual(3, evidence["acquiredWands"])
+        self.assertIsNotNone(evidence["mageLoot"])
+        self.assertIsNone(d._siege_mage_loot_witness)
+        d.saveAndReload.assert_called_once_with("siege-completed")
+
+    def testFinishSiegeKeepsLiveMageAlternativeButCannotUseFakeLootOrChangedMapEpoch(self):
+        for native_proof, epoch_change in ((False, False), (True, True)):
+            d, _state = self.siegeMageRouteFixture(native_proof=native_proof, epoch_change=epoch_change)
+            with patch.object(campaigns, "creatureTypes", return_value={"siegePritz"}), patch.object(
+                campaigns, "verifyJournals"
+            ), self.assertRaises(AssertionError):
+                campaigns.finishSiege(d)
+            self.assertIsNone(getattr(d, "_siege_mage_loot_witness", None))
+            d.saveAndReload.assert_not_called()
+        d, state = self.siegeMageRouteFixture(native_proof=False)
+        with patch.object(campaigns, "creatureTypes", return_value={"siegePritz", "siegePritzMage"}), patch.object(
+            campaigns, "verifyJournals"
+        ):
+            campaigns.finishSiege(d)
+        self.assertEqual(3, dict(state["checks"])["siege.spawn.mageAndLoot"]["acquiredWands"])
+
 
 if __name__ == "__main__":
     unittest.main()

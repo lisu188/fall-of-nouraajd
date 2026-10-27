@@ -558,6 +558,9 @@ class GameplayBranchDriver:
             self._combat_failure = ("Invalid native MainQuest reward evidence", str(error))
             self.test.fail(self._combat_failure)
         if records:
+            witness = getattr(self, "_siege_mage_loot_witness", None)
+            if witness is not None:
+                witness.observe(records)
             self._combat_trace_seq = records[-1]["seq"]
             requests = getattr(self, "_trade_requests", None)
             if requests is None:
