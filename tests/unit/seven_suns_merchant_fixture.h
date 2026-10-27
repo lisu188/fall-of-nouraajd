@@ -156,8 +156,10 @@ struct SevenSunsMerchantFixture : SevenSunsWarningFixture {
     json merchantRow(std::size_t i = 0) const { return merchantDocument().at("actors").at(Names[i]); }
     json settle() { return CSevenSunsMerchantDialogue::settle(game, clock, {}); }
     std::shared_ptr<CCreature> replacement(std::size_t i = 0) const {
-        return std::dynamic_pointer_cast<CCreature>(
-            clock->getObjectProperty(std::string("plugin_citySevenSunsMerchantNew_") + Names[i]));
+        const auto key = std::string("plugin_citySevenSunsMerchantNew_") + Names[i];
+        if (!clock->hasProperty(key))
+            return nullptr;
+        return std::dynamic_pointer_cast<CCreature>(clock->getObjectProperty(key));
     }
     bool oldOwnershipIntact(std::size_t i = 0) const {
         auto actor = protectedActors[i];

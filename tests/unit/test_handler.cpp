@@ -8510,9 +8510,19 @@ void testSevenSunsMerchantInitiationCancelReopenAndLegacyRefusalAreOwned() {
 
 void testSevenSunsMerchantCoordinatorReplacesOnlyTheActiveSourceFloorWithoutCredit() {
     SevenSunsMerchantFixture f;
+    const auto expectUnsettled = [&](std::size_t start) {
+        for (std::size_t i = start; i < SevenSunsMerchantFixture::Names.size(); ++i) {
+            const auto key = std::string("plugin_citySevenSunsMerchantNew_") + SevenSunsMerchantFixture::Names[i];
+            expect_true(!f.clock->hasProperty(key), "an unsettled lineage has no replacement property");
+            expect_true(!f.replacement(i), "an absent replacement property returns a null fixture observation");
+            expect_true(!f.clock->hasProperty(key), "observing an absent replacement must not create its property");
+        }
+    };
+    expectUnsettled(0);
     auto flow = f.beginMerchant();
     SevenSunsMerchantFixture::finish(*flow, {1, 5, 11, 12});
     flow.reset();
+    expectUnsettled(0);
     const auto objects = f.map->getObjects().size(), triggers = f.map->getEventHandler()->getTriggers().size();
     const int gold = f.player->getGold(), xp = f.player->getExp();
     f.map->setTurn(17);
@@ -8521,6 +8531,7 @@ void testSevenSunsMerchantCoordinatorReplacesOnlyTheActiveSourceFloorWithoutCred
                     f.replacement(1) && !f.replacement(2) && !f.replacement(3) &&
                     f.map->getObjectByName(SevenSunsMerchantFixture::Names[2]) == f.protectedActors[2],
                 "shared reveal settles exactly the two eligible active-floor actors and leaves the other floor intact");
+    expectUnsettled(2);
     for (std::size_t i = 0; i < 2; ++i) {
         auto replacement = f.replacement(i);
         expect_true(replacement != f.protectedActors[i] &&
