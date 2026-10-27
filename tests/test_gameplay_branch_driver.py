@@ -3512,6 +3512,358 @@ class GameplayBranchDriverTest(unittest.TestCase):
             self.assertEqual((1, 0, 0), observed[0], "Ordinary current-cell target must clear a previously queued path")
             self.assertEqual((3, 2), (state["turns"], driver.steps))
 
+    def campaignBroodDriver(self):
+        driver = self.driver()
+        driver.case = replace(driver.case, id="nouraajd_campaign_good")
+        driver.map_name = "nouraajd"
+        driver.session = {"proc": object()}
+        driver._combat_trace_seq = 10
+        driver.trace_path = Path("source-model-only.trace.jsonl")
+        driver.assertNativeCombatOutcomes = Mock()
+        state = {
+            "version": 1,
+            "stage": "scout",
+            "slots": {
+                slot: {"name": name, "status": "living" if slot == "scout" else "pending"}
+                for slot, name in (
+                    ("scout", "octobogzScout"),
+                    ("brood", "octobogzShadowBrood"),
+                    ("alpha", "octobogzAlpha"),
+                )
+            },
+        }
+        values = {
+            "turn": 20,
+            "epoch": 3,
+            "exp": 4750,
+            "hp": 98,
+            "mana": 112,
+            "receipt": "",
+            "object": None,
+            "victory": None,
+        }
+        calls = []
+
+        def call(handle, method, *args):
+            calls.append((handle, method, args))
+            if method == "getStringProperty":
+                return (
+                    "octobogzHunt.v1:" + json.dumps(state) if args[0] == "octobogzHuntRegistry" else values["receipt"]
+                )
+            return {
+                "getName": "actual-player",
+                "getTurn": values["turn"],
+                "getNumericProperty": values["exp"],
+                "isAlive": values["hp"] > 0,
+                "getHp": values["hp"],
+                "getHpMax": 98,
+                "getMapBindingEpoch": values["epoch"],
+                "getMana": values["mana"],
+                "getObjectByName": values["object"],
+            }[method]
+
+        driver.call = call
+        driver.playerVictoryAgainst = lambda *args, **kwargs: values["victory"]
+        return driver, state, values, calls
+
+    @staticmethod
+    def finishCampaignBrood(driver, state, values):
+        state["stage"] = "brood"
+        state["slots"]["scout"]["status"] = "dead"
+        state["slots"]["brood"].update(
+            status="dead",
+            recovery={
+                "hp": 70,
+                "mana": 105,
+                "level": 1,
+                "exp": 0,
+                "phase": "predator",
+                "octobogzPulseUsed": False,
+                "octobogzPulseEffectApplied": False,
+                "enemyRoleUsed": False,
+                "enemyRoleEffectApplied": False,
+            },
+        )
+        values.update(
+            turn=21,
+            exp=5250,
+            victory={
+                "seq": 12,
+                "event": "combat_finished",
+                "map": "nouraajd",
+                "outcome": 2,
+                "attacker": {"name": "octobogzShadowBrood", "typeId": "OctoBogz", "isPlayer": False},
+                "opponents": [{"name": "actual-player", "isPlayer": True}],
+                "survivor": {"name": "actual-player", "isPlayer": True},
+            },
+        )
+        driver._player_victory_history.append(values["victory"])
+
+    def testCampaignBroodSourceTransitionRequiresAndRetainsFreshNativeVictoryWithoutHandle(self):
+        driver, state, values, calls = self.campaignBroodDriver()
+        driver.beginCampaignBroodWitness()
+        before_victory_calls = len(calls)
+        for _ in range(1000):
+            driver.observeCampaignBroodWitness(after_pump=True)
+        self.assertEqual(before_victory_calls, len(calls), "No Brood victory must add no polling RPCs")
+        self.finishCampaignBrood(driver, state, values)
+        driver.observeCampaignBroodWitness(after_pump=True)
+        adapter = SimpleNamespace(confirmed_dead=set())
+        driver.assertCampaignBroodDefeated(adapter)
+        self.assertEqual({"brood"}, adapter.confirmed_dead)
+        proof = driver._campaign_brood_witness["proof"]
+        self.assertFalse(proof["directActorHandleObserved"])
+        self.assertEqual(
+            (10, 12, 70, 105),
+            (
+                proof["armSeq"],
+                proof["combat"]["seq"],
+                proof["transition"]["record"]["recovery"]["hp"],
+                proof["transition"]["record"]["recovery"]["mana"],
+            ),
+        )
+        values["victory"] = None
+        driver.assertCampaignBroodDefeated(adapter)
+        self.assertEqual(1, sum("campaignHuntDeathWitness" in action for action in driver.actions))
+        calls_before = len(calls)
+        for _ in range(1000):
+            driver.observeCampaignBroodWitness(after_pump=True)
+        self.assertEqual(calls_before, len(calls), "A certified death must add no road-recovery RPCs")
+        self.assertTrue(all(not method.startswith(("set", "add", "remove", "hurt", "heal")) for _, method, _ in calls))
+
+    def testCampaignBroodPendingToIncidentalDeathAcrossExistingPumpPassesRealAdapterGuard(self):
+        from tests import test_octobogz_mcp as octobogz
+
+        driver, state, values, _ = self.campaignBroodDriver()
+        driver.engine = Mock(return_value={"__handle__": "loop"})
+        driver.refresh = Mock()
+        driver.assertSurvival = Mock()
+        original_call = driver.call
+        pumped = False
+
+        def call(handle, method, *args):
+            nonlocal pumped
+            if method == "run":
+                if not pumped:
+                    pumped = True
+                    self.finishCampaignBrood(driver, state, values)
+                return None
+            return original_call(handle, method, *args)
+
+        driver.call = call
+        with patch.object(octobogz.OctobogzMcpWalkthroughTest, "enterHunt", lambda adapter: adapter.pump()):
+            driver.hunt("enterHunt")
+        self.assertNotIn("brood", driver._hunt_adapter.hunt_actors)
+        driver.hunt("recoverBeforeRemainingBrood", "Inquisitor")
+        driver.hunt("defeat", "brood")
+        self.assertEqual({"brood"}, driver._hunt_adapter.confirmed_dead)
+
+    def testCampaignBroodRejectsDeadAtArmOrWithoutMovementAndNativeVictory(self):
+        for failure in (
+            "deadAtArm",
+            "noPump",
+            "noVictory",
+            "staleVictory",
+            "wrongWinner",
+            "wrongType",
+            "wrongMap",
+            "wrongOutcome",
+            "wrongEvent",
+            "boolOutcome",
+        ):
+            with self.subTest(failure=failure):
+                driver, state, values, _ = self.campaignBroodDriver()
+                if failure == "deadAtArm":
+                    self.finishCampaignBrood(driver, state, values)
+                try:
+                    driver.beginCampaignBroodWitness()
+                    self.finishCampaignBrood(driver, state, values)
+                    if failure == "noVictory":
+                        values["victory"] = None
+                    elif failure == "staleVictory":
+                        values["victory"]["seq"] = 10
+                    elif failure == "wrongWinner":
+                        values["victory"]["survivor"]["name"] = "other-player"
+                    elif failure == "wrongType":
+                        values["victory"]["attacker"]["typeId"] = "other-creature"
+                    elif failure == "wrongMap":
+                        values["victory"]["map"] = "other-map"
+                    elif failure == "wrongOutcome":
+                        values["victory"]["outcome"] = 3
+                    elif failure == "wrongEvent":
+                        values["victory"]["event"] = "combat_started"
+                    elif failure == "boolOutcome":
+                        values["victory"]["outcome"] = True
+                    driver.observeCampaignBroodWitness(after_pump=failure != "noPump")
+                    driver.assertCampaignBroodDefeated(SimpleNamespace(confirmed_dead=set()))
+                except AssertionError:
+                    continue
+                self.fail("An incomplete/forged campaign witness was accepted: " + failure)
+
+    def testCampaignBroodRejectsMalformedRecoveryCohortBindingAndResourceState(self):
+        for failure in (
+            "missingRecovery",
+            "deadSnapshot",
+            "boolHp",
+            "floatMana",
+            "negativeMana",
+            "zeroLevel",
+            "negativeExp",
+            "phase",
+            "flag",
+            "extraField",
+            "name",
+            "cohort",
+            "mapBinding",
+            "playerBinding",
+            "defeat",
+            "playerDead",
+            "epoch",
+            "stillRegistered",
+            "noExperience",
+            "backwardTurn",
+            "version",
+            "missingEnvelope",
+        ):
+            with self.subTest(failure=failure):
+                driver, state, values, _ = self.campaignBroodDriver()
+                driver.beginCampaignBroodWitness()
+                self.finishCampaignBrood(driver, state, values)
+                recovery = state["slots"]["brood"]["recovery"]
+                if failure == "missingRecovery":
+                    del state["slots"]["brood"]["recovery"]
+                elif failure in {
+                    "deadSnapshot",
+                    "boolHp",
+                    "floatMana",
+                    "negativeMana",
+                    "zeroLevel",
+                    "negativeExp",
+                    "phase",
+                    "flag",
+                    "extraField",
+                }:
+                    key, value = {
+                        "deadSnapshot": ("hp", 0),
+                        "boolHp": ("hp", True),
+                        "floatMana": ("mana", 1.0),
+                        "negativeMana": ("mana", -1),
+                        "zeroLevel": ("level", 0),
+                        "negativeExp": ("exp", -1),
+                        "phase": ("phase", ""),
+                        "flag": ("enemyRoleUsed", 1),
+                        "extraField": ("invented", 1),
+                    }[failure]
+                    recovery[key] = value
+                elif failure == "name":
+                    state["slots"]["brood"]["name"] = "other-brood"
+                elif failure == "cohort":
+                    state["slots"]["alpha"]["name"] = "other-alpha"
+                elif failure == "mapBinding":
+                    driver.game_map = {"__handle__": "other-map"}
+                elif failure == "playerBinding":
+                    driver.player = {"__handle__": "other-player"}
+                elif failure == "epoch":
+                    values["epoch"] += 1
+                elif failure == "defeat":
+                    values["receipt"] = "native defeat"
+                elif failure == "playerDead":
+                    values["hp"] = 0
+                elif failure == "stillRegistered":
+                    values["object"] = {"__handle__": "registered-brood"}
+                elif failure == "noExperience":
+                    values["exp"] = 4750
+                elif failure == "backwardTurn":
+                    values["turn"] = 19
+                elif failure == "version":
+                    state["version"] = True
+                elif failure == "missingEnvelope":
+                    driver.string = lambda name: json.dumps(state)
+                with self.assertRaises(AssertionError):
+                    driver.observeCampaignBroodWitness(after_pump=True)
+
+    def testCampaignBroodAdapterFallbackIsScopedAndKeepsCapturedPointerPathStrict(self):
+        from tests import test_octobogz_mcp as octobogz
+
+        driver, state, values, _ = self.campaignBroodDriver()
+        driver.beginCampaignBroodWitness()
+        self.finishCampaignBrood(driver, state, values)
+        driver.observeCampaignBroodWitness(after_pump=True)
+        with patch.object(octobogz.OctobogzMcpWalkthroughTest, "trackLivingHuntActors", return_value=None):
+            driver.hunt("trackLivingHuntActors")
+        adapter = driver._hunt_adapter
+        adapter.assertSlotDefeated("brood")
+        self.assertEqual({"brood"}, adapter.confirmed_dead)
+        with patch.object(
+            octobogz.OctobogzMcpWalkthroughTest,
+            "assertSlotDefeated",
+            side_effect=AssertionError("strict actual pointer"),
+        ):
+            adapter.hunt_actors["brood"] = {"__handle__": "actual-brood"}
+            with self.assertRaisesRegex(AssertionError, "strict actual pointer"):
+                adapter.assertSlotDefeated("brood")
+            adapter.hunt_actors.clear()
+            with self.assertRaisesRegex(AssertionError, "strict actual pointer"):
+                adapter.assertSlotDefeated("alpha")
+        driver.case = replace(driver.case, id="nouraajd_contract_early")
+        del driver._campaign_brood_witness
+        driver.beginCampaignBroodWitness()
+        self.assertFalse(hasattr(driver, "_campaign_brood_witness"))
+        with self.assertRaisesRegex(AssertionError, "actual living actor"):
+            adapter.assertSlotDefeated("brood")
+
+    def testCampaignBroodFallbackHealsOnceBeforeNextAlphaMovementUsingOwnedRecovery(self):
+        from tests import test_octobogz_mcp as octobogz
+
+        driver, state, values, _ = self.campaignBroodDriver()
+        driver.beginCampaignBroodWitness()
+        with patch.object(octobogz.OctobogzMcpWalkthroughTest, "trackLivingHuntActors", return_value=None):
+            driver.hunt("trackLivingHuntActors")
+        adapter = driver._hunt_adapter
+        adapter._alpha_approach_recovery = None
+        with patch.object(octobogz.OctobogzMcpWalkthroughTest, "captureAlphaApproachRecovery", return_value=None):
+            adapter.captureAlphaApproachRecovery()
+        self.finishCampaignBrood(driver, state, values)
+        driver.observeCampaignBroodWitness(after_pump=True)
+        values["hp"] = 79
+        events = []
+
+        def ownedRecovery(*, target_percent):
+            self.assertEqual(100, target_percent)
+            events.append("owned actual healing")
+            values["hp"] = 98
+
+        adapter.recoverBeforeRoadDeparture = ownedRecovery
+        adapter.recoverIncidentalBroodBeforeMapTurn()
+        adapter.recoverIncidentalBroodBeforeMapTurn()
+        self.assertEqual(["owned actual healing"], events)
+        self.assertEqual(21, values["turn"], "Witness/recovery must not issue another native map turn")
+        self.assertEqual({"brood"}, adapter.confirmed_dead)
+
+    def testCampaignBroodWitnessWaitsForQueuedVictoryRejectsChangedReceiptAndClosesAtHuntEnd(self):
+        from tests import test_octobogz_mcp as octobogz
+
+        driver, state, values, _ = self.campaignBroodDriver()
+        driver.beginCampaignBroodWitness()
+        self.finishCampaignBrood(driver, state, values)
+        victory, values["victory"] = values["victory"], None
+        driver.observeCampaignBroodWitness(after_pump=True)
+        self.assertIsNotNone(driver._campaign_brood_witness["transition"])
+        self.assertIsNone(driver._campaign_brood_witness["proof"])
+        state["slots"]["brood"]["recovery"]["hp"] = 69
+        values["victory"] = victory
+        with self.assertRaisesRegex(AssertionError, "receipt changed"):
+            driver.observeCampaignBroodWitness(after_pump=True)
+        state["slots"]["brood"]["recovery"]["hp"] = 70
+        driver.observeCampaignBroodWitness(after_pump=True)
+        with patch.object(octobogz.OctobogzMcpWalkthroughTest, "defeat", return_value=None):
+            driver.hunt("defeat", "brood")
+        self.assertTrue(driver._campaign_brood_witness["closed"])
+        driver.game_map = {"__handle__": "next-map"}
+        driver.map_name = "ritual"
+        values["epoch"] += 1
+        driver.observeCampaignBroodWitness(after_pump=True)
+
 
 if __name__ == "__main__":
     unittest.main()
