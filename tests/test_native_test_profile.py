@@ -8,13 +8,17 @@ from pathlib import Path
 import re
 import shutil
 import subprocess
+import sys
 import tempfile
 import unittest
 from unittest import mock
 
+ROOT = Path(__file__).resolve().parents[1]
+if not __package__:
+    sys.path.insert(0, str(ROOT))
+
 from tests.cpp_bindings import registrationTokens
 
-ROOT = Path(__file__).resolve().parents[1]
 # Ordered native cases on main e3d3c90, before adding diagnostic wrappers.
 BASELINE_CASES = {
     "handler": (36, "133d76b3db645f21a09e2b55fc738f481318a97c42532b80bb67edba5354a89d"),
@@ -166,6 +170,57 @@ ADDITIONAL_CASES = {
 
 
 class NativeTestProfileSourceTest(unittest.TestCase):
+    def testScriptAndModuleEntrypointsReachConfiguredFixtureValidation(self):
+        script = Path(__file__).resolve()
+        with tempfile.TemporaryDirectory(prefix="native-profile-entrypoint-") as directory:
+            unrelated = Path(directory)
+            environment = dict(os.environ)
+            environment.pop("PYTHONPATH", None)
+            environment["PYTHONDONTWRITEBYTECODE"] = "1"
+            environment["GAME_NATIVE_TEST_PROFILE_FIXTURE"] = str(unrelated / "missing-native-fixture")
+            for mode in ("script", "isolatedScript", "module"):
+                with self.subTest(mode=mode):
+                    command = [sys.executable]
+                    if mode == "isolatedScript":
+                        command.append("-I")
+                    command.append("-B")
+                    command += ["-m", "tests.test_native_test_profile"] if mode == "module" else [str(script)]
+                    command += ["NativeTestProfileRuntimeTest", "-v"]
+                    result = subprocess.run(
+                        command,
+                        cwd=ROOT if mode == "module" else unrelated,
+                        env=environment,
+                        capture_output=True,
+                        text=True,
+                        timeout=10,
+                    )
+                    output = result.stdout + result.stderr
+                    self.assertNotEqual(0, result.returncode, output)
+                    self.assertIn("Configured native profiling fixture is unavailable:", output)
+                    self.assertNotIn("ModuleNotFoundError", output)
+                    self.assertIn("Ran 0 tests", output)
+
+    def testScriptEntrypointDoesNotMaskAMissingBindingHelper(self):
+        with tempfile.TemporaryDirectory(prefix="native-profile-missing-helper-") as directory:
+            root = Path(directory)
+            tests = root / "tests"
+            tests.mkdir()
+            script = tests / "test_native_test_profile.py"
+            script.write_bytes(Path(__file__).read_bytes())
+            (tests / "__init__.py").write_text("", encoding="utf-8")
+            environment = dict(os.environ)
+            environment.pop("PYTHONPATH", None)
+            environment["PYTHONDONTWRITEBYTECODE"] = "1"
+            result = subprocess.run(
+                [sys.executable, "-I", "-B", str(script), "--help"],
+                cwd=root,
+                env=environment,
+                capture_output=True,
+                text=True,
+                timeout=10,
+            )
+            self.assertNotEqual(0, result.returncode)
+            self.assertIn("ModuleNotFoundError: No module named 'tests.cpp_bindings'", result.stderr)
 
     def testWindowsHandlerCrashDiagnosticsAreBoundedGuardedAndPreserveFailure(self):
         helper = (ROOT / "tests/unit/native_crash_diagnostics.h").read_text()
