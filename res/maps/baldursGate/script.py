@@ -282,6 +282,143 @@ def load(self, context):
             and (not selector.get("label") or record.get("label", "").casefold() == selector["label"].casefold())
         )
 
+    seven_suns_death_lineages = {
+        "cityAr0601Actor1": ("AR0601#actor1", "AR0601", "DOPMER"),
+        "cityAr0601Actor3": ("AR0601#actor3", "AR0601", "DOPMER"),
+        "cityAr0602Actor1": ("AR0602#actor1", "AR0602", "DOPMER"),
+        "cityAr0602Actor2": ("AR0602#actor2", "AR0602", "DOPMER"),
+        "cityAr0603Actor2": ("AR0603#actor2", "AR0603", "DOPPSS"),
+    }
+
+    def sevenSunsDeathIdentity(actor):
+        if not isinstance(actor, CCreature):
+            return None
+        identity = seven_suns_death_lineages.get(actor.getName())
+        if (
+            not identity
+            or actor.getStringProperty("sourceActor") != identity[0]
+            or actor.getStringProperty("sourceArea") != identity[1]
+        ):
+            return None
+        creature = actor.getStringProperty("sourceCreature")
+        original = (
+            creature == identity[2]
+            and actor.getTypeId() == actor.getName()
+            and actor.getStringProperty("sourceDialogue") == ("DOPMER" if creature == "DOPMER" else "")
+        )
+        replacement = (
+            identity[2] == "DOPMER" and creature == "DOPPSS" and actor.getTypeId() == "citySevenSunsRevealedDoppss"
+        )
+        return identity if original or replacement else None
+
+    def bindSevenSunsDeathOwner(owner, actor):
+        identity = sevenSunsDeathIdentity(actor)
+        if (
+            not identity
+            or actor.getGame() is not owner.getGame()
+            or world(owner).getObjectByName("cityClock") is not owner
+            or world(owner).getObjectByName(actor.getName()) is not actor
+        ):
+            return
+        key = "plugin_citySevenSunsOriginal_" + actor.getName()
+        if getattr(owner, key, None) is not None:
+            return
+        old = getattr(owner, "plugin_citySevenSunsMerchantOld_" + actor.getName(), None)
+        new = getattr(owner, "plugin_citySevenSunsMerchantNew_" + actor.getName(), None)
+        original = old if new is actor else actor
+        if (old is not None or new is not None) and (new is not actor or old is None):
+            return
+        if sevenSunsDeathIdentity(original) == identity and original.getStringProperty("sourceCreature") == identity[2]:
+            owner.setObjectProperty(key, original)
+
+    def sevenSunsDeathData(obj, key, default):
+        try:
+            return read(obj, key, default)
+        except (ValueError, TypeError):
+            return None
+
+    def sevenSunsDeathRole(owner, actor):
+        identity = sevenSunsDeathIdentity(actor)
+        if not identity or actor.isAlive() or actor.getGame() is not owner.getGame():
+            return None
+        game_map, name = world(owner), actor.getName()
+        if game_map.getObjectByName("cityClock") is not owner or game_map.getObjectByName(name) is not None:
+            return None
+        original = getattr(owner, "plugin_citySevenSunsOriginal_" + name, None)
+        old = getattr(owner, "plugin_citySevenSunsMerchantOld_" + name, None)
+        new = getattr(owner, "plugin_citySevenSunsMerchantNew_" + name, None)
+        if old is actor:
+            return None
+        if old is None and new is None:
+            return (
+                "original" if original is actor and actor.getStringProperty("sourceCreature") == identity[2] else None
+            )
+        receipt = sevenSunsDeathData(game_map, "plugin_citySevenSunsMerchantState", {})
+        rows = receipt.get("actors", {}) if isinstance(receipt, dict) else {}
+        row = rows.get(name, {}) if isinstance(rows, dict) else {}
+        if (
+            old is original
+            and old is not None
+            and new is actor
+            and actor.getStringProperty("sourceCreature") == "DOPPSS"
+            and actor.getTypeId() == "citySevenSunsRevealedDoppss"
+            and old is not actor
+            and sevenSunsDeathIdentity(old) == identity
+            and old.getStringProperty("sourceCreature") == "DOPMER"
+            and isinstance(row, dict)
+            and row.get("status") == "replaced"
+        ):
+            return "replacement"
+        return None
+
+    def sevenSunsDeathRecord(actor, role):
+        return {
+            "sourceActor": actor.getStringProperty("sourceActor"),
+            "area": actor.getStringProperty("sourceArea"),
+            "creature": actor.getStringProperty("sourceCreature"),
+            "role": role,
+        }
+
+    def recordSevenSunsDeath(owner, actor):
+        role = sevenSunsDeathRole(owner, actor)
+        if not role:
+            return
+        document = sevenSunsDeathData(world(owner), "plugin_citySevenSunsDeaths", {"version": 1, "lineages": {}})
+        if (
+            not isinstance(document, dict)
+            or set(document) != {"version", "lineages"}
+            or type(document.get("version")) is not int
+            or document["version"] != 1
+            or not isinstance(document["lineages"], dict)
+            or not set(document["lineages"]).issubset(seven_suns_death_lineages)
+        ):
+            return
+        document["lineages"][actor.getName()] = sevenSunsDeathRecord(actor, role)
+        write(world(owner), "plugin_citySevenSunsDeaths", document)
+
+    def sevenSunsDeathCount(owner):
+        document = sevenSunsDeathData(world(owner), "plugin_citySevenSunsDeaths", {})
+        if (
+            not isinstance(document, dict)
+            or set(document) != {"version", "lineages"}
+            or type(document.get("version")) is not int
+            or document["version"] != 1
+            or not isinstance(document["lineages"], dict)
+            or not set(document["lineages"]).issubset(seven_suns_death_lineages)
+        ):
+            return 0
+        result = 0
+        for name, row in document["lineages"].items():
+            if name not in seven_suns_death_lineages:
+                continue
+            cause = getattr(owner, "plugin_cityCorpse_" + name, None)
+            if cause is None:
+                continue
+            role = sevenSunsDeathRole(owner, cause)
+            if role and row == sevenSunsDeathRecord(cause, role):
+                result += 1
+        return result
+
     def actorRecord(actor):
         return {
             "label": actor.getStringProperty("label"),
@@ -5793,12 +5930,17 @@ def load(self, context):
             if actor.isAlive():
                 return
             owner, game_map = clock(actor), world(actor)
+            if actor.getName() in seven_suns_death_lineages and actor is getattr(
+                owner, "plugin_citySevenSunsMerchantOld_" + actor.getName(), None
+            ):
+                return
             if not claim_once(game_map, "plugin_cityDeath_" + actor.getName()):
                 return
             records = read(game_map, "plugin_cityDeaths", {})
             records[actor.getName()] = actorRecord(actor)
             write(game_map, "plugin_cityDeaths", records)
             owner.setObjectProperty("plugin_cityCorpse_" + actor.getName(), actor)
+            recordSevenSunsDeath(owner, actor)
             plot_execution = actor.getBoolProperty("plugin_cityPlotExecution")
             if not plot_execution:
                 game_map.setBoolProperty("plugin_cityCombatObserved_" + actor.getStringProperty("sourceArea"), True)
@@ -5828,6 +5970,9 @@ def load(self, context):
 
     @register(context)
     class BaldursGateClock(CBuilding):
+        def sevenSunsDeathCount(self):
+            return sevenSunsDeathCount(self)
+
         @resumableHook
         def settleSevenSunsMerchants(self):
             handler = self.getGame().getGuiHandler()
@@ -5906,6 +6051,7 @@ def load(self, context):
         def initializeActor(self, actor):
             if not isinstance(actor, CCreature) or actor.isPlayer():
                 return
+            bindSevenSunsDeathOwner(self, actor)
             initializeInventory(actor)
             if not actor.getBoolProperty("plugin_cityHooksInstalled"):
                 if actor.getStringProperty("sourceCreature") in ("VAIL", "RANCE", "CAILAN", "FAIZAH", "ACHEN"):

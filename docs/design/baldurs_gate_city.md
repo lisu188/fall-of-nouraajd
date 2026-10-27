@@ -240,8 +240,34 @@ Native unit cases and deterministic bounded-work guards likewise require executi
 
 The hostile-action script entry still needs an actual attack-attempt witness;
 damage alone cannot represent misses or offensive spells. The separate basement
-`DOPPSS`, Jhasso's departure, source five-death counter and Scar's reward conditions
+`DOPPSS` body and stock, Jhasso's departure and Scar's reward conditions
 remain distinct pending work. Potion, scroll, wand and ammunition abilities are
 explicitly unimplemented in this stock increment. Existing Scar quest completion
 and reward rules are unchanged. Installed EE evidence, source/model tests, native
 execution, visual inspection and owner acceptance remain separate claims.
+
+## Seven Suns five-death witness
+
+The city coordinator records one death for each of the four merchant lineages above
+and the basement `AR0603#actor2`. Both audited source creature records use the
+`SSDopple` death variable. The serialized witness retains the source actor, area,
+creature and original/replacement role; the clock retains the exact original and
+corpse references. A counted actor must be dead and absent from the live registry.
+Replacement credit additionally requires its committed replacement receipt and the
+same retained old/new owners. Quiet retirement, a same-name clone, unrelated deaths,
+forged counter rows and repeated destruction callbacks cannot grant credit.
+
+The witness joins the existing engine-owned destruction callback after generic
+corpse/death bookkeeping. Invalid witness data fails closed without preventing that
+bookkeeping. Old saves with generic deaths but no witness retain an unknown count;
+the implementation does not infer source credit from missing actors. The read-only
+`BaldursGateClock.sevenSunsDeathCount()` query validates the retained owners and
+serialized rows before returning a count. It does not change Scar's quest guards,
+grant rewards or establish original-game parity.
+
+One additional ledger row maps these five source identities. The authored Warrior
+MCP route requires a fresh native victory against every counted actor, checkpoints
+0, 2, 4 and 5, save/reload at 2 and 5, and unchanged resources on repeated queries
+and later ordinary turns. The route is pending until executed against the exact
+staged binary. Pre-transformation lethal attacks, attack-attempt timing, the basement
+body/stock/reward conversion and the original Scar outcome conditions remain open.

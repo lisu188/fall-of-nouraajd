@@ -17,10 +17,17 @@ if __package__:
         STOCK_PATH,
         addDopmerObligations,
         addStockItemObligations,
+        addSevenSunsDeathObligation,
     )
 else:
     from build_baldurs_gate_seven_suns_ledger import WARNING_PATH, addWarningObligations
-    from build_baldurs_gate_dopmer_ledger import DOPMER_PATH, STOCK_PATH, addDopmerObligations, addStockItemObligations
+    from build_baldurs_gate_dopmer_ledger import (
+        DOPMER_PATH,
+        STOCK_PATH,
+        addDopmerObligations,
+        addStockItemObligations,
+        addSevenSunsDeathObligation,
+    )
 
 ROOT = Path(__file__).resolve().parents[1]
 SOURCE_PATH = "tests/fixtures/baldurs_gate_city_source.json"
@@ -707,6 +714,8 @@ def buildLedger(source, quests, config, script, warning=None, dopmer=None, route
         addDopmerObligations(source, config, methods, dopmer, add, script=script, routes=routes, stock=stock)
     if stock is not None:
         addStockItemObligations(source, config, stock, add)
+
+    addSevenSunsDeathObligation(source, config, methods, add, script=script)
 
     entries.sort(key=lambda row: row["id"])
     return {

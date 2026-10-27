@@ -73,6 +73,15 @@ def expectedIds(source, quests, warning=None, dopmer=None, stock=None):
         result.update({"SPWI993.SPL#replacement", "DOPPSS.CRE#stock:S1-12", "DOPPSS.CRE#stock:RNDTRE05"})
     if stock is not None:
         result.update({"BOLT05:item", "SCRL1J:item", "SCRL2I:item"})
+    selected = {"AR0601#actor1", "AR0601#actor3", "AR0602#actor1", "AR0602#actor2", "AR0603#actor2"}
+    if any(
+        actor.get("sourceId") in selected
+        and source["creatures"].get(actor.get("creatureMetadata", actor.get("creature")), {}).get("death_variable")
+        == "SSDopple"
+        for area in source["areas"].values()
+        for actor in area["actors"]
+    ):
+        result.add("SSDopple#selectedCityDeaths")
     return result
 
 
@@ -398,6 +407,144 @@ class BaldursGateCityLedgerUnitTest(unittest.TestCase):
         ledger["entries"][0]["testStatus"]["coverage"] = "100%"
         self.assertTrue(any("Coverage cannot be awarded" in problem for problem in validateLedger(ledger)))
 
+    def sevenSunsDeathInputs(self):
+        return (
+            readJson(ROOT / "tests/fixtures/baldurs_gate_city_source.json"),
+            readJson(ROOT / "tests/fixtures/baldurs_gate_city_quests.json"),
+            readJson(ROOT / "res/maps/baldursGate/config.json"),
+            (ROOT / "res/maps/baldursGate/script.py").read_text(encoding="utf-8"),
+        )
+
+    def sevenSunsDeathLedger(self, inputs):
+        return buildLedger(
+            *inputs,
+            warning=readJson(ROOT / WARNING_PATH),
+            dopmer=readJson(ROOT / DOPMER_PATH),
+            stock=readJson(ROOT / STOCK_PATH),
+            routes=(ROOT / "tests/gameplay_routes_baldurs_gate.py").read_text(encoding="utf-8"),
+        )
+
+    def testFixedDeathCounterAddsOnlyOneAndPreserves7551SavedEntriesExactly(self):
+        ledger = self.sevenSunsDeathLedger(self.sevenSunsDeathInputs())
+        before = {
+            row["id"]: row
+            for row in readJson(ROOT / "tests/fixtures/baldurs_gate_city_ledger.json")["entries"]
+            if row["id"] != "SSDopple#selectedCityDeaths"
+        }
+        after = {row["id"]: row for row in ledger["entries"]}
+        self.assertEqual(7551, len(before))
+        self.assertEqual({"SSDopple#selectedCityDeaths"}, after.keys() - before.keys())
+        self.assertEqual(before, {key: after[key] for key in before})
+        row = after["SSDopple#selectedCityDeaths"]
+        self.assertEqual("sourceCounter", row["family"])
+        self.assertEqual("partial", row["implementation"]["status"])
+        self.assertEqual(7, len(row["evidence"]))
+        self.assertEqual(5, len(row["facts"]["selectedCityLineages"]))
+        self.assertFalse(row["effects"]["questConditionsChanged"])
+        self.assertFalse(row["effects"]["rewardsGranted"])
+        self.assertEqual(
+            {"inventoryContract": "structural only", "native": "pending", "coverage": "not established"},
+            row["testStatus"],
+        )
+        self.assertFalse(ledger["acceptanceReady"])
+        self.assertFalse(ledger["originalParityEstablished"])
+        self.assertEqual([], validateLedger(ledger))
+
+    def testDeathCounterMappingNeedsAllFiveExactConfiguredIdentitiesAndWiredHelpers(self):
+        original = self.sevenSunsDeathInputs()
+        for mutation in (
+            "configMissing",
+            "class",
+            "sourceActor",
+            "sourceArea",
+            "sourceCreature",
+            "sourceDialogue",
+            "clockGetter",
+            "clockClass",
+            "registration",
+            "wrongEvent",
+            "wrongObject",
+            "wrongHook",
+            "wrongFactory",
+            "deathCall",
+            "initializerCall",
+            "helper",
+            "table",
+        ):
+            with self.subTest(mutation=mutation):
+                source, quests, config, script = copy.deepcopy(original)
+                actor = config["cityAr0601Actor1"]
+                if mutation == "configMissing":
+                    del config["cityAr0601Actor1"]
+                elif mutation == "class":
+                    actor["class"] = "CItem"
+                elif mutation.startswith("source"):
+                    actor["properties"][mutation] = "unrelated"
+                elif mutation == "clockClass":
+                    config["cityClock"]["class"] = "CBuilding"
+                elif mutation == "registration":
+                    script = script.replace("self.getMap().getEventHandler().registerTrigger(hook)", "None")
+                elif mutation == "wrongEvent":
+                    script = script.replace(
+                        'hook.setStringProperty("event", event_name)', 'hook.setStringProperty("event", "onEnter")'
+                    )
+                elif mutation == "wrongObject":
+                    script = script.replace(
+                        'hook.setStringProperty("object", actor.getName())',
+                        'hook.setStringProperty("object", "unrelatedActor")',
+                    )
+                elif mutation == "wrongHook":
+                    script = script.replace("registerTrigger(hook)", "registerTrigger(self)")
+                elif mutation == "wrongFactory":
+                    script = script.replace(
+                        "hook = self.getGame().createObject(class_name)",
+                        'hook = self.getGame().createObject("BaldursGatePersonTrigger")',
+                    )
+                elif mutation == "clockGetter":
+                    script = script.replace("def sevenSunsDeathCount(self):", "def missingDeathCount(self):")
+                elif mutation == "deathCall":
+                    script = script.replace("            recordSevenSunsDeath(owner, actor)", "            pass")
+                elif mutation == "initializerCall":
+                    script = script.replace("            bindSevenSunsDeathOwner(self, actor)", "            pass")
+                elif mutation == "helper":
+                    script = script.replace(
+                        "def sevenSunsDeathRole(owner, actor):", "def missingDeathRole(owner, actor):"
+                    )
+                else:
+                    script = script.replace(
+                        '"cityAr0603Actor2": ("AR0603#actor2", "AR0603", "DOPPSS")',
+                        '"cityAr0603Actor2": ("AR0603#actor99", "AR0603", "DOPPSS")',
+                    )
+                row = next(
+                    row
+                    for row in self.sevenSunsDeathLedger((source, quests, config, script))["entries"]
+                    if row["id"] == "SSDopple#selectedCityDeaths"
+                )
+                self.assertEqual("planned", row["implementation"]["status"])
+                self.assertEqual([], row["implementation"]["targets"])
+                self.assertTrue(any("absent" in gap for gap in row["gaps"]))
+
+    def testDeathCounterInventoryComesFromSourceDeathVariablesAndAreaPointers(self):
+        source, quests, config, script = self.sevenSunsDeathInputs()
+        ledger = self.sevenSunsDeathLedger((source, quests, {}, ""))
+        expected = expectedIds(
+            source, quests, readJson(ROOT / WARNING_PATH), readJson(ROOT / DOPMER_PATH), readJson(ROOT / STOCK_PATH)
+        )
+        self.assertEqual(expected, {row["id"] for row in ledger["entries"]})
+        row = next(row for row in ledger["entries"] if row["id"] == "SSDopple#selectedCityDeaths")
+        for proof in row["evidence"]:
+            value = source
+            for component in proof["pointer"].lstrip("/").split("/"):
+                value = value[int(component)] if isinstance(value, list) else value[component]
+            self.assertIsNotNone(value)
+            self.assertRegex(proof["sha256"], r"^[a-f0-9]{64}$")
+        self.assertEqual("planned", row["implementation"]["status"])
+        for creature in ("DOPMER", "DOPPSS"):
+            source["creatures"][creature]["death_variable"] = "unrelated"
+        result = self.sevenSunsDeathLedger((source, quests, config, script))
+        self.assertNotIn("SSDopple#selectedCityDeaths", {row["id"] for row in result["entries"]})
+        self.assertNotIn("SSDopple#selectedCityDeaths", expectedIds(source, quests))
+
 
 class BaldursGateSevenSunsWarningLedgerTest(unittest.TestCase):
     """Factual source graph and mapping contracts only; no native or parity acceptance."""
@@ -464,8 +611,8 @@ class BaldursGateSevenSunsWarningLedgerTest(unittest.TestCase):
         updated = buildLedger(source, quests, {}, "", warning=self.warning)
         old_ids = {row["id"] for row in original["entries"]}
         new_ids = {row["id"] for row in updated["entries"]}
-        self.assertEqual(7471, len(old_ids))
-        self.assertEqual(7500, len(new_ids))
+        self.assertEqual(7472, len(old_ids))
+        self.assertEqual(7501, len(new_ids))
         self.assertTrue(old_ids < new_ids)
         self.assertEqual(expectedIds(source, quests, self.warning), new_ids)
         self.assertEqual(29, len(self.warningRows(updated)))
@@ -640,8 +787,8 @@ class BaldursGateClock:
         updated = buildLedger(self.full_source, self.full_quests, {}, "", warning=self.warning, dopmer=self.dopmer)
         before = {row["id"]: row for row in original["entries"]}
         after = {row["id"]: row for row in updated["entries"]}
-        self.assertEqual(7500, len(before))
-        self.assertEqual(7548, len(after))
+        self.assertEqual(7501, len(before))
+        self.assertEqual(7549, len(after))
         self.assertEqual(before, {key: after[key] for key in before})
         self.assertEqual(expectedIds(self.full_source, self.full_quests, self.warning, self.dopmer), set(after))
         rows = self.dopmerRows(updated)
@@ -902,7 +1049,7 @@ class BaldursGateClock:
         )
         before = {row["id"]: row for row in original["entries"]}
         after = {row["id"]: row for row in updated["entries"]}
-        self.assertEqual(7551, len(after))
+        self.assertEqual(7552, len(after))
         self.assertEqual(before, {key: after[key] for key in before})
         self.assertEqual(
             expectedIds(self.full_source, self.full_quests, self.warning, self.dopmer, self.stock), set(after)

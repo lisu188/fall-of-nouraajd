@@ -599,3 +599,177 @@ def addStockItemObligations(source, config, stock, add):
                 "Native execution, save/reload, defeat/loot, coverage and owner acceptance remain pending.",
             ],
         )
+
+
+DEATH_ID = "SSDopple#selectedCityDeaths"
+DEATH_LINEAGES = LINEAGES + (("cityAr0603Actor2", "AR0603#actor2", "AR0603"),)
+DEATH_HELPERS = {
+    "sevenSunsDeathIdentity",
+    "bindSevenSunsDeathOwner",
+    "sevenSunsDeathRole",
+    "recordSevenSunsDeath",
+    "sevenSunsDeathCount",
+}
+
+
+def addSevenSunsDeathObligation(source, config, methods, add, *, script):
+    """Inventory only the fixed five audited city lineages, never a campaign-wide death count."""
+    selected, proof = [], []
+    source_path = "tests/fixtures/baldurs_gate_city_source.json"
+    for name, actor_id, area_id in DEATH_LINEAGES:
+        area = source.get("areas", {}).get(area_id, {})
+        for index, actor in enumerate(area.get("actors", [])):
+            if actor.get("sourceId") != actor_id:
+                continue
+            code = actor.get("creatureMetadata", actor.get("creature"))
+            creature = source.get("creatures", {}).get(code, {})
+            if code != ("DOPPSS" if area_id == "AR0603" else "DOPMER") or creature.get("death_variable") != "SSDopple":
+                continue
+            selected.append(
+                {
+                    "id": name,
+                    "sourceActor": actor_id,
+                    "sourceArea": area_id,
+                    "sourceCreature": code,
+                    "sourceDialogue": creature.get("dialogue", ""),
+                }
+            )
+            proof.append(
+                {
+                    "fixture": source_path,
+                    "pointer": f"/areas/{area_id}/actors/{index}",
+                    "sha256": area["sha256"],
+                    "resource": area_id + ".ARE",
+                }
+            )
+            break
+    if not selected:
+        return
+    for code in sorted({row["sourceCreature"] for row in selected}):
+        proof.append(
+            {
+                "fixture": source_path,
+                "pointer": "/creatures/" + code + "/death_variable",
+                "sha256": source["creatures"][code]["sha256"],
+                "resource": code + ".CRE",
+            }
+        )
+    tree = ast.parse(script)
+    functions = {node.name for node in ast.walk(tree) if isinstance(node, ast.FunctionDef)}
+    tables = [
+        node.value
+        for node in ast.walk(tree)
+        if isinstance(node, ast.Assign)
+        and any(isinstance(target, ast.Name) and target.id == "seven_suns_death_lineages" for target in node.targets)
+    ]
+    expected = {name: (actor, area, "DOPPSS" if area == "AR0603" else "DOPMER") for name, actor, area in DEATH_LINEAGES}
+    try:
+        table_matches = len(tables) == 1 and ast.literal_eval(tables[0]) == expected
+    except (ValueError, TypeError):
+        table_matches = False
+
+    def calls(owner, method, name):
+        return any(
+            isinstance(node, ast.ClassDef)
+            and node.name == owner
+            and any(
+                isinstance(child, ast.FunctionDef)
+                and child.name == method
+                and any(
+                    isinstance(call, ast.Call) and isinstance(call.func, ast.Name) and call.func.id == name
+                    for call in ast.walk(child)
+                )
+                for child in node.body
+            )
+            for node in ast.walk(tree)
+        )
+
+    expected_hook = ast.parse("""for event_name, class_name in (
+    ("onEnter", "BaldursGatePersonTrigger"),
+    ("onDestroy", "BaldursGateDeathTrigger"),
+):
+    hook = self.getGame().createObject(class_name)
+    hook.setStringProperty("object", actor.getName())
+    hook.setStringProperty("event", event_name)
+    self.getMap().getEventHandler().registerTrigger(hook)
+""").body[0]
+    registered_hook = any(
+        isinstance(owner, ast.ClassDef)
+        and owner.name == "BaldursGateClock"
+        and any(
+            isinstance(method, ast.FunctionDef)
+            and method.name == "initializeActor"
+            and any(
+                isinstance(node, ast.For)
+                and ast.dump(node, include_attributes=False) == ast.dump(expected_hook, include_attributes=False)
+                for node in ast.walk(method)
+            )
+            for method in owner.body
+        )
+        for owner in ast.walk(tree)
+    )
+    mapped = (
+        len(selected) == 5
+        and config.get("cityClock", {}).get("class") == "BaldursGateClock"
+        and table_matches
+        and DEATH_HELPERS <= functions
+        and {"initializeActor", "sevenSunsDeathCount"} <= methods.get("BaldursGateClock", set())
+        and "trigger" in methods.get("BaldursGateDeathTrigger", set())
+        and calls("BaldursGateClock", "initializeActor", "bindSevenSunsDeathOwner")
+        and calls("BaldursGateClock", "sevenSunsDeathCount", "sevenSunsDeathCount")
+        and calls("BaldursGateDeathTrigger", "trigger", "recordSevenSunsDeath")
+        and registered_hook
+    )
+    for row in selected:
+        target = config.get(row["id"], {})
+        mapped = (
+            mapped
+            and target.get("class") == "CCreature"
+            and all(target.get("properties", {}).get(key) == value for key, value in row.items() if key != "id")
+        )
+    callbacks = (
+        ["BaldursGateClock.initializeActor", "BaldursGateClock.sevenSunsDeathCount", "BaldursGateDeathTrigger.trigger"]
+        if mapped
+        else []
+    )
+    add(
+        DEATH_ID,
+        "sourceCounter",
+        proof,
+        facts={"deathVariable": "SSDopple", "selectedCityLineages": selected, "selectedMaximum": 5},
+        prerequisites={
+            "provenance": "Trusted engine-owned registered onDestroy dispatch; not arbitrary privileged Python.",
+            "canonicalAliases": "Exact original/new clock refs, matching source identity, dead corpse and registry absence.",
+            "retiredOriginal": "Reject quietly retired merchant oldRef before claiming generic death bookkeeping.",
+        },
+        effects={
+            "nativeCounter": "plugin_citySevenSunsDeaths.lineages plus canonical corpse/owner aliases, at most once per fixed lineage.",
+            "sourceGlobalWritten": False,
+            "questConditionsChanged": False,
+            "rewardsGranted": False,
+        },
+        ownership={
+            "sourceOriginal": "Original DOPMER or basement DOPPSS pointer retained on canonical cityClock.",
+            "replacement": "Committed native old/new aliases; never count the quietly retired old actor.",
+        },
+        timers={"record": "After registered removal, during trusted onDestroy; reentry remains once per lineage."},
+        conversion={
+            "scope": "Fixed five selected city actors only; not an engine-wide NumDead counter.",
+            "legacyUnknown": "No inference from old death flags, JSON count, missing aliases or prior deaths.",
+            "nativeMaximum": 5,
+            "classicParity": False,
+        },
+        targets=[row["id"] for row in selected] + ["cityClock"] if mapped else [],
+        status="partial" if mapped else "planned",
+        callbacks=callbacks,
+        gaps=[
+            "Source metadata identifies SSDopple; classic NumDead scope, timing and parity remain unproved.",
+            "No Scar/Jhasso quest predicate, acceptance, completion or reward credit is granted.",
+            "Native real death, save/reload, coverage and owner acceptance remain pending.",
+        ]
+        + (
+            []
+            if mapped
+            else ["Exact five configured source identities or wired clock/death witness helpers are absent."]
+        ),
+    )

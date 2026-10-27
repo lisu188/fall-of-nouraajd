@@ -2955,3 +2955,134 @@ PENDING_GAMEPLAY_OBLIGATIONS.update(
         },
     }
 )
+
+
+SEVEN_SUNS_DEATH_PREFIX = "baldursGate.sevenSunsDeaths."
+SEVEN_SUNS_DEATH_LINEAGES = SEVEN_SUNS_MERCHANT_LINEAGES + ("cityAr0603Actor2",)
+SEVEN_SUNS_DEATH_BRANCHES = tuple(
+    SEVEN_SUNS_DEATH_PREFIX + suffix
+    for suffix in ("initialZero", "firstFloorTwo", "secondFloorFour", "basementFive", "durableNoDuplicate")
+)
+
+
+def sevenSunsDeathSnapshot(d, expected):
+    """Validate independent serialized ownership, then compare the readonly clock counter."""
+    document = read(d, d.game_map, "plugin_citySevenSunsDeaths", {"version": 1, "lineages": {}})
+    d.test.assertEqual({"version", "lineages"}, set(document))
+    d.test.assertIs(type(document["version"]), int)
+    d.test.assertEqual(1, document["version"])
+    d.test.assertEqual(set(expected), set(document["lineages"]))
+    clock = d.object("cityClock")
+    for name, row in document["lineages"].items():
+        d.test.assertIn(name, SEVEN_SUNS_DEATH_LINEAGES)
+        corpse = d.call(clock, "getObjectProperty", "plugin_cityCorpse_" + name)
+        original = d.call(clock, "getObjectProperty", "plugin_citySevenSunsOriginal_" + name)
+        d.test.assertIsNotNone(corpse)
+        d.test.assertIsNotNone(original)
+        d.test.assertIsNone(d.object(name, required=False), "A counted death must be absent from the live registry")
+        d.test.assertFalse(d.call(corpse, "isAlive"), "A missing living actor is not a death witness")
+        properties = documents()["config"][name]["properties"]
+        role = "replacement" if name in SEVEN_SUNS_MERCHANT_LINEAGES else "original"
+        d.test.assertEqual(
+            {
+                "sourceActor": properties["sourceActor"],
+                "area": properties["sourceArea"],
+                "creature": "DOPPSS",
+                "role": role,
+            },
+            row,
+        )
+        d.test.assertEqual(row["sourceActor"], d.call(corpse, "getStringProperty", "sourceActor"))
+        d.test.assertEqual(row["area"], d.call(corpse, "getStringProperty", "sourceArea"))
+        d.test.assertEqual("DOPPSS", d.call(corpse, "getStringProperty", "sourceCreature"))
+        if role == "replacement":
+            d.test.assertEqual(original, d.call(clock, "getObjectProperty", "plugin_citySevenSunsMerchantOld_" + name))
+            d.test.assertEqual(corpse, d.call(clock, "getObjectProperty", "plugin_citySevenSunsMerchantNew_" + name))
+            d.test.assertTrue(d.call(original, "isAlive"), "Quiet old retirement must not count as a death")
+            d.test.assertEqual("DOPMER", d.call(original, "getStringProperty", "sourceCreature"))
+            d.test.assertEqual("replaced", merchantRow(d, name)["status"])
+        else:
+            d.test.assertEqual(original, corpse)
+    count = d.call(clock, "sevenSunsDeathCount")
+    d.test.assertIs(type(count), int)
+    d.test.assertEqual(len(expected), count, "The actual clock getter must agree with independent corpse proofs")
+    return document
+
+
+def sevenSunsFiveDeathRoute(d):
+    start(d)
+    d.assertNativeCombatOutcomes()
+    first_combat_sequence = d._combat_trace_seq
+    d.test.assertEqual(0, len(sevenSunsDeathSnapshot(d, ())["lineages"]))
+    d.check(SEVEN_SUNS_DEATH_PREFIX + "initialZero", True, countedLineages=[])
+    first = SEVEN_SUNS_MERCHANT_LINEAGES[0]
+    QuestRoute(d).contact(first)
+    merchantConversation(d, first, (1, 5, 11, 12))
+    sevenSunsDeathSnapshot(d, ())
+    expected = []
+    floors = (
+        ("AR0601", SEVEN_SUNS_MERCHANT_LINEAGES[:2], "firstFloorTwo"),
+        ("AR0602", SEVEN_SUNS_MERCHANT_LINEAGES[2:], "secondFloorFour"),
+        ("AR0603", ("cityAr0603Actor2",), "basementFive"),
+    )
+    for area, names, branch in floors:
+        travel(d, area)
+        if area != "AR0603":
+            merchantRevealForFloor(d, area)
+        for name in names:
+            # The normal native fight can defeat multiple opponents on the same floor.
+            if d.object(name, required=False) is not None:
+                nativeVictory(d, name)
+        d.assertNativeCombatOutcomes()
+        for name in names:
+            d.test.assertIsNotNone(
+                d.playerVictoryAgainst(MAP, name, after_seq=first_combat_sequence),
+                "Each newly counted lineage needs its own fresh actual native victory receipt",
+            )
+        expected.extend(names)
+        witness = sevenSunsDeathSnapshot(d, expected)
+        d.test.assertEqual({"AR0601": 2, "AR0602": 4, "AR0603": 5}[area], len(witness["lineages"]))
+        earned = resources(d)
+        d.test.assertEqual(witness, sevenSunsDeathSnapshot(d, expected))
+        d.test.assertEqual(earned, resources(d), "Witness queries grant no extra rewards")
+        d.check(SEVEN_SUNS_DEATH_PREFIX + branch, True, witness=witness, sourceScope="counter-only")
+        if len(expected) in (2, 5):
+            d.saveAndReload("city-seven-suns-deaths-" + str(len(expected)))
+            d.test.assertEqual(witness, sevenSunsDeathSnapshot(d, expected))
+            d.test.assertEqual(earned, resources(d), "Reload preserves fight-earned resources without extra rewards")
+    final = sevenSunsDeathSnapshot(d, SEVEN_SUNS_DEATH_LINEAGES)
+    earned = resources(d)
+    trace = merchantTraceCursor(d)
+    for _ in range(2):
+        merchantNaturalTurn(d, trace)
+        d.test.assertEqual(final, sevenSunsDeathSnapshot(d, SEVEN_SUNS_DEATH_LINEAGES))
+        d.test.assertEqual(earned, resources(d), "Repeated ordinary turns must not duplicate death credit or rewards")
+    d.check(
+        SEVEN_SUNS_DEATH_PREFIX + "durableNoDuplicate",
+        True,
+        witness=final,
+        counterOnly=True,
+        basementBodyStockRewardParityEstablished=False,
+    )
+
+
+CASES += (
+    RouteCase(
+        "baldurs-gate-seven-suns-five-deaths",
+        MAP,
+        (MAP,),
+        SEVEN_SUNS_DEATH_BRANCHES,
+        sevenSunsFiveDeathRoute,
+        classes=("Warrior",),
+        sources=SOURCES + ("tests/fixtures/baldurs_gate_seven_suns_merchants.json",),
+        duration_seconds=1200,
+        isolated_gui=True,
+    ),
+)
+for _owner, _method in (
+    ("BaldursGateDeathTrigger", "trigger"),
+    ("BaldursGateClock", "initializeActor"),
+    ("BaldursGateClock", "sevenSunsDeathCount"),
+):
+    _identity = "res/maps/baldursGate/script.py:" + _owner + "." + _method
+    SOURCE_BRANCHES[_identity] = tuple(dict.fromkeys((*SOURCE_BRANCHES.get(_identity, ()), *SEVEN_SUNS_DEATH_BRANCHES)))

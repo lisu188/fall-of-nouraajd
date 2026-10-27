@@ -408,6 +408,7 @@ class BaldursGateCityRoutesTest(unittest.TestCase):
                 "baldurs-gate-native-trading",
                 "baldurs-gate-native-companion-inventory",
                 "baldurs-gate-native-custody",
+                "baldurs-gate-seven-suns-five-deaths",
             }
             | {case.id for case in routes.sevenSunsWarningCases()}
             | {case.id for case in routes.sevenSunsMerchantCases()}

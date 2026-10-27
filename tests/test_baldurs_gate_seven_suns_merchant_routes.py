@@ -18,6 +18,240 @@ DRIVER = ROOT / "tests/gameplay_branch_driver.py"
 
 
 class SevenSunsMerchantRoutesTest(unittest.TestCase):
+
+    def testDeathCountMcpDispatchIsClockSpecificReadonlyAndChecksBeforeDescriptors(self):
+        import mcp
+
+        denied = (
+            "initializeActor",
+            "onTurn",
+            "recordSevenSunsDeath",
+            "setSevenSunsDeathCount",
+            "bindSevenSunsDeathOwner",
+        )
+        denied_reads = []
+
+        class CBuilding:
+            @property
+            def sevenSunsDeathCount(self):
+                raise AssertionError("Wrong class descriptor must not be touched")
+
+        class BaldursGateClock(CBuilding):
+            def __init__(self):
+                self.count = 0
+                self.reads = 0
+
+            def __getattribute__(self, name):
+                if name in denied:
+                    denied_reads.append(name)
+                    raise AssertionError("Denied clock method was accessed")
+                return object.__getattribute__(self, name)
+
+            def sevenSunsDeathCount(self):
+                self.reads += 1
+                return self.count
+
+        clock = BaldursGateClock()
+        server = mcp.EngineMcpServer(Path("."), Path("unused-native-build"))
+        server.handles.update(clock=clock, unrelated=CBuilding())
+        try:
+            self.assertEqual({"sevenSunsDeathCount"}, mcp.MCP_ALLOWED_HANDLE_METHODS["BaldursGateClock"])
+            for count in (0, 2, 4, 5):
+                clock.count = count
+                response = server._engine_handle_call({"handle": "clock", "method": "sevenSunsDeathCount"})
+                self.assertFalse(response["isError"], response)
+                self.assertEqual(count, response["structuredContent"]["result"])
+            for method in denied:
+                response = server._engine_handle_call({"handle": "clock", "method": method})
+                self.assertTrue(response["isError"], response)
+                self.assertIn("not exported", response["structuredContent"]["error"])
+            response = server._engine_handle_call({"handle": "unrelated", "method": "sevenSunsDeathCount"})
+            self.assertTrue(response["isError"], response)
+            self.assertIn("not exported", response["structuredContent"]["error"])
+            self.assertEqual(4, clock.reads)
+            self.assertEqual([], denied_reads)
+        finally:
+            server.close()
+
+    def testFiveDeathFinalTraceCursorExcludesEarlierFloorsAfterFinalReload(self):
+        import tests.gameplay_branch_driver as branch_driver
+
+        source = (ROOT / "tests/gameplay_routes_baldurs_gate.py").read_text()
+        tree = ast.parse(source)
+        callback = next(
+            node for node in tree.body if isinstance(node, ast.FunctionDef) and node.name == "sevenSunsFiveDeathRoute"
+        )
+        body = ast.get_source_segment(source, callback)
+        self.assertEqual(1, body.count("trace = merchantTraceCursor(d)"))
+        self.assertLess(body.index("d.saveAndReload"), body.index("trace = merchantTraceCursor(d)"))
+        self.assertLess(body.index("final = sevenSunsDeathSnapshot"), body.index("trace = merchantTraceCursor(d)"))
+        current, turn = [(0, 0, 0)], [1]
+        driver = SimpleNamespace(
+            test=self,
+            _combat_trace_seq=10,
+            coords=lambda: current[0],
+            game_map="map",
+            trace_path=Path("unused"),
+            canStep=lambda p: True,
+        )
+        driver.assertNativeCombatOutcomes = lambda: setattr(driver, "_combat_trace_seq", 30)
+        trace = routes.merchantTraceCursor(driver)
+        self.assertEqual(30, trace["sequence"])
+
+        def navigate(point, limit):
+            current[0] = point
+            turn[0] += 1
+
+        driver.navigateCoords = navigate
+        driver.call = lambda owner, method: turn[0]
+        rows = [
+            {"seq": 11, "area": "AR0601"},
+            {"seq": 22, "area": "AR0602"},
+            {
+                "seq": 31,
+                "area": "AR0603",
+                "event": "seven_suns_merchants_settle",
+                "status": "settled",
+                "capabilityVersion": 1,
+                "turn": 2,
+                "checked": 0,
+                "replaced": 0,
+                "attackRevealSupported": False,
+            },
+        ]
+
+        def readTrace(path, positions, after):
+            self.assertEqual(30, after)
+            return [row for row in rows if row["seq"] > after]
+
+        with patch.object(routes, "currentArea", return_value="AR0603"), patch.object(
+            routes, "cityMovementCells", return_value=({(0, 0, 0), (1, 0, 0)}, set())
+        ), patch.object(branch_driver, "readNewNativeTrace", side_effect=readTrace):
+            observed = routes.merchantNaturalTurn(driver, trace)
+        self.assertEqual([rows[-1]], observed)
+        self.assertEqual(31, trace["sequence"])
+
+    def testFiveDeathCaseUsesOneWarriorAndPreservesPendingOriginalAlternate(self):
+        cases = [case for case in routes.CASES if case.id == "baldurs-gate-seven-suns-five-deaths"]
+        self.assertEqual(1, len(cases))
+        case = cases[0]
+        self.assertEqual(("Warrior",), case.classes)
+        self.assertTrue(case.isolated_gui)
+        self.assertEqual(1200, case.duration_seconds)
+        self.assertEqual(routes.SEVEN_SUNS_DEATH_BRANCHES, case.branches)
+        self.assertEqual(5, len(routes.SEVEN_SUNS_DEATH_LINEAGES))
+        self.assertIn(routes.SEVEN_SUNS_MERCHANT_PREFIX + "attackedSourceEntry", routes.PENDING_GAMEPLAY_OBLIGATIONS)
+        self.assertFalse(
+            any(
+                "DOPMER/DOPPSS:SSDopple" == value.get("sourceId")
+                for value in routes.PENDING_GAMEPLAY_OBLIGATIONS.values()
+            )
+        )
+        self.assertEqual(17, len(routes.sevenSunsMerchantCases()))
+
+    def testFiveDeathRouteRequiresNaturalRevealsVictoriesDurableCountsAndNoRewards(self):
+        source = (ROOT / "tests/gameplay_routes_baldurs_gate.py").read_text()
+        tree = ast.parse(source)
+        callback = next(
+            node for node in tree.body if isinstance(node, ast.FunctionDef) and node.name == "sevenSunsFiveDeathRoute"
+        )
+        body = ast.get_source_segment(source, callback)
+        self.assertLess(
+            body.index("merchantConversation(d, first, (1, 5, 11, 12))"),
+            body.index("for area, names, branch in floors"),
+        )
+        for token in (
+            "merchantRevealForFloor(d, area)",
+            "nativeVictory(d, name)",
+            "d.playerVictoryAgainst(MAP, name, after_seq=first_combat_sequence)",
+            '"AR0601": 2',
+            '"AR0602": 4',
+            '"AR0603": 5',
+            "if len(expected) in (2, 5):",
+            "d.saveAndReload",
+            "merchantNaturalTurn(d, trace)",
+            "resources(d)",
+        ):
+            self.assertIn(token, body)
+        for forbidden in (
+            "setBoolProperty",
+            "setNumericProperty",
+            "setStringProperty",
+            "removeObject",
+            "trigger",
+            "sevenSunsDeathCount",
+            "addExp",
+            "addGold",
+        ):
+            self.assertNotIn(forbidden, body)
+        snapshot = next(
+            node for node in tree.body if isinstance(node, ast.FunctionDef) and node.name == "sevenSunsDeathSnapshot"
+        )
+        observable = ast.get_source_segment(source, snapshot)
+        for token in (
+            '"plugin_citySevenSunsDeaths"',
+            '"plugin_cityCorpse_"',
+            '"plugin_citySevenSunsOriginal_"',
+            '"isAlive"',
+            "required=False",
+            '"plugin_citySevenSunsMerchantNew_"',
+            '"replaced"',
+        ):
+            self.assertIn(token, observable)
+
+    def testFiveDeathSnapshotModelRejectsLivingMissingAndRegisteredCorpses(self):
+        name = "cityAr0603Actor2"
+        props = routes.documents()["config"][name]["properties"]
+        row = {
+            "sourceActor": props["sourceActor"],
+            "area": props["sourceArea"],
+            "creature": "DOPPSS",
+            "role": "original",
+        }
+        document = {"version": 1, "lineages": {name: row}}
+        corpse = {"__handle__": "actual-dead-basement"}
+        state = {"alive": False, "registered": None, "corpse": corpse, "count": 1}
+
+        class Driver:
+            test = self
+            game_map = {"__handle__": "map"}
+
+            def object(self, actor, required=True):
+                return {"__handle__": "clock"} if actor == "cityClock" else state["registered"]
+
+            def call(self, actor, method, *args):
+                if method == "getStringProperty" and actor == self.game_map:
+                    return "city-json:" + json.dumps(document)
+                if method == "getObjectProperty":
+                    return state["corpse"]
+                if method == "isAlive":
+                    return state["alive"]
+                if method == "sevenSunsDeathCount":
+                    return state["count"]
+                if method == "getStringProperty":
+                    return {"sourceActor": row["sourceActor"], "sourceArea": row["area"], "sourceCreature": "DOPPSS"}[
+                        args[0]
+                    ]
+                raise AssertionError((method, args))
+
+        driver = Driver()
+        self.assertEqual(document, routes.sevenSunsDeathSnapshot(driver, (name,)))
+        for key, value in (
+            ("alive", True),
+            ("registered", corpse),
+            ("corpse", None),
+            ("count", True),
+            ("count", 1.0),
+            ("count", 0),
+        ):
+            before = state[key]
+            state[key] = value
+            with self.assertRaises(AssertionError):
+                routes.sevenSunsDeathSnapshot(driver, (name,))
+            state[key] = before
+        with self.assertRaises(AssertionError):
+            routes.sevenSunsDeathSnapshot(driver, ())
+
     def testAllThirteenSourcePathsAndFourLineagesHaveRealCasesAcrossFiveHeroes(self):
         cases = routes.sevenSunsMerchantCases()
         facts = json.loads((ROOT / "tests/fixtures/baldurs_gate_seven_suns_merchants.json").read_text(encoding="utf-8"))
