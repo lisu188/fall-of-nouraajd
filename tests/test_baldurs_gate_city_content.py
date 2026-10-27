@@ -1423,6 +1423,182 @@ class BaldursGateCityContentTest(unittest.TestCase):
             with self.assertRaisesRegex(AssertionError, "next"):
                 self.testResourceCallbacksUseOnlyNativeAllowedBuiltins()
 
+    def eltanDeliveryModel(self, carry=True):
+        model = CityModel()
+        model.game_map.setNumericProperty("plugin_cityPhase", 7)
+        config = json.loads((ROOT / "res/maps/baldursGate/config.json").read_text(encoding="utf-8"))
+        names = ("cityAr0702Actor1", "cityAr0608ScriptActorDeltan2", "cityAr0608ScriptActorRashad")
+        actors = []
+        for name in names:
+            model.resources[name] = config[name]
+            actor = model.createObject(name)
+            model.game_map.addObject(actor)
+            model.clock.initializeActor(actor)
+            actors.append(actor)
+        harbor, duke, rashad = actors
+        body = next(item for item in duke.items if item.getStringProperty("plugin_citySourceItem") == "MISC55")
+        self.assertTrue(model.dialog(harbor).acceptRescueEltan())
+        if carry:
+            model.kill(rashad)
+            self.assertTrue(model.dialog(duke).questRescueEltanCarry())
+            self.assertIn(body, model.player.items)
+            self.assertNotIn(body, duke.items)
+        return model, harbor, duke, rashad
+
+    def testEltanDeliveryConsumesActualCarriedBodyBeforeJournalYieldAndPaysOnce(self):
+        model, harbor, _duke, _rashad = self.eltanDeliveryModel()
+        body = next(item for item in model.player.items if item.getStringProperty("plugin_citySourceItem") == "MISC55")
+        before = model.player.getNumericProperty("exp"), model.player.getGold(), list(harbor.items)
+        dialog = model.dialog(harbor)
+        flow = dialog.performQuestOutcomeFlow("rescueEltan", "complete")
+        self.addCleanup(flow.close)
+        self.assertEqual("gui.checkQuests", next(flow)["operation"])
+        self.assertNotIn(body, model.player.items)
+        self.assertNotIn(body, harbor.items, "HARBOR source destroys the taken portable body")
+        self.assertEqual(before[2], harbor.items)
+        self.assertEqual(
+            (before[0] + 2500, before[1]), (model.player.getNumericProperty("exp"), model.player.getGold())
+        )
+        self.assertTrue(model.game_map.getBoolProperty("plugin_cityFlag_eltanSafe"))
+        self.assertFalse(dialog.questRescueEltanComplete())
+        model.player.checkQuests()
+        with self.assertRaises(StopIteration) as finished:
+            flow.send(None)
+        self.assertIs(True, finished.exception.value)
+        self.assertFalse(dialog.questRescueEltanComplete())
+        self.assertEqual(before[0] + 2500, model.player.getNumericProperty("exp"))
+        self.assertEqual(
+            1, sum(quest.getTypeId() == "cityRescueEltanQuest" for quest in model.player.getCompletedQuests())
+        )
+
+    def testEltanDeliveryRejectsAbsentOrUnremovedInputWithoutConsumingOrRewarding(self):
+        model, harbor, duke, rashad = self.eltanDeliveryModel(carry=False)
+        dialog = model.dialog(harbor)
+        before = model.player.getNumericProperty("exp"), model.player.getGold(), list(harbor.items), list(duke.items)
+        self.assertFalse(model.dialog(duke).questRescueEltanCarry())
+        self.assertFalse(dialog.questRescueEltanComplete())
+        self.assertEqual(
+            before, (model.player.getNumericProperty("exp"), model.player.getGold(), harbor.items, duke.items)
+        )
+        self.assertFalse(model.game_map.getBoolProperty("plugin_cityFlag_eltanSafe"))
+        model.kill(rashad)
+        self.assertTrue(model.dialog(duke).questRescueEltanCarry())
+        body = next(item for item in model.player.items if item.getStringProperty("plugin_citySourceItem") == "MISC55")
+        dialog = model.dialog(harbor)
+        before = model.player.getNumericProperty("exp"), model.player.getGold(), list(harbor.items)
+        with patch.object(model.player, "removeQuestItem", return_value=None):
+            self.assertFalse(dialog.questRescueEltanComplete())
+        self.assertIn(body, model.player.items)
+        self.assertNotIn(body, harbor.items)
+        self.assertEqual(before, (model.player.getNumericProperty("exp"), model.player.getGold(), harbor.items))
+        self.assertEqual("active", model.game_map.getStringProperty("plugin_cityQuest_rescueEltan"))
+        self.assertFalse(model.game_map.getBoolProperty("plugin_cityFlag_eltanSafe"))
+        self.assertTrue(dialog.questRescueEltanComplete())
+        self.assertEqual(before[0] + 2500, model.player.getNumericProperty("exp"))
+
+    def testEltanDeliveryValueStateRoundTripRetainsEmptyBodyBagsAndNoReplay(self):
+        model, harbor, _duke, _rashad = self.eltanDeliveryModel()
+        self.assertTrue(model.dialog(harbor).questRescueEltanComplete())
+
+        def bag(owner):
+            return [
+                {"name": item.getName(), "typeId": item.getTypeId(), "properties": item.properties}
+                for item in owner.items
+            ]
+
+        saved = json.loads(
+            json.dumps(
+                {
+                    "bags": [bag(model.player), bag(harbor)],
+                    "xp": model.player.getNumericProperty("exp"),
+                    "gold": model.player.getGold(),
+                    "stage": model.game_map.getStringProperty("plugin_cityQuest_rescueEltan"),
+                    "safe": model.game_map.getBoolProperty("plugin_cityFlag_eltanSafe"),
+                }
+            )
+        )
+        restored, recipient, _duke, _rashad = self.eltanDeliveryModel(carry=False)
+        for owner, rows in zip((restored.player, recipient), saved["bags"]):
+            owner.items = []
+            for row in rows:
+                item = restored.createObject(row["typeId"])
+                item.properties.update(row["properties"])
+                item.name = row["name"]  # Restore the model value field; this is not a native codec.
+                owner.addItem(item)
+        restored.player.setNumericProperty("exp", saved["xp"])
+        restored.player.setNumericProperty("gold", saved["gold"])
+        restored.game_map.setStringProperty("plugin_cityQuest_rescueEltan", saved["stage"])
+        restored.game_map.setBoolProperty("plugin_cityFlag_eltanSafe", saved["safe"])
+        self.assertFalse(restored.dialog(recipient).questRescueEltanComplete())
+        self.assertEqual(saved["xp"], restored.player.getNumericProperty("exp"))
+        self.assertEqual(saved["bags"], [bag(restored.player), bag(recipient)])
+        self.assertFalse(
+            any(
+                item.getStringProperty("plugin_citySourceItem") == "MISC55"
+                for owner in (restored.player, recipient)
+                for item in owner.items
+            )
+        )
+
+    def testEltanDeliveryConsumesInputFromRetainedLegacyQuestDefinitions(self):
+        model, harbor, _duke, _rashad = self.eltanDeliveryModel()
+        retained = json.loads(json.dumps(DOCUMENT))
+        quest = next(row for row in retained["quests"] if row["id"] == "rescueEltan")
+        effect = next(row for row in quest["outcomes"] if row["id"] == "complete")["effects"]
+        effect["takeItems"][0].pop("consume", None)
+        model.clock.setStringProperty("questDefinitions", "city-json:" + json.dumps(retained))
+        retained_text = model.clock.getStringProperty("questDefinitions")
+        before = model.player.getNumericProperty("exp"), model.player.getGold(), list(harbor.items)
+        self.assertTrue(model.dialog(harbor).questRescueEltanComplete())
+        self.assertFalse(
+            any(
+                item.getStringProperty("plugin_citySourceItem") == "MISC55"
+                for owner in (model.player, harbor)
+                for item in owner.items
+            )
+        )
+        self.assertEqual(before[2], harbor.items)
+        self.assertEqual(
+            (before[0] + 2500, before[1]), (model.player.getNumericProperty("exp"), model.player.getGold())
+        )
+        self.assertEqual(retained_text, model.clock.getStringProperty("questDefinitions"))
+        self.assertFalse(model.dialog(harbor).questRescueEltanComplete())
+        self.assertEqual(before[0] + 2500, model.player.getNumericProperty("exp"))
+
+    def testOldCompletedEltanDeliverySnapshotIsNotRepaidOrRetroactivelyPurged(self):
+        model, harbor, _duke, _rashad = self.eltanDeliveryModel()
+        body = next(item for item in model.player.items if item.getStringProperty("plugin_citySourceItem") == "MISC55")
+        # Model the old completed save's ownership; this is not a native codec or story-progression witness.
+        model.player.removeQuestItem(lambda item: item is body)
+        harbor.addItem(body)
+        saved = json.loads(json.dumps({"stage": "completed", "safe": True, "xp": 2500}))
+        model.game_map.setStringProperty("plugin_cityQuest_rescueEltan", saved["stage"])
+        model.game_map.setBoolProperty("plugin_cityFlag_eltanSafe", saved["safe"])
+        model.player.setNumericProperty("exp", saved["xp"])
+        before = (
+            model.player.getGold(),
+            model.player.getNumericProperty("exp"),
+            list(model.player.items),
+            list(harbor.items),
+        )
+        self.assertFalse(model.dialog(harbor).questRescueEltanComplete())
+        self.assertEqual(
+            before, (model.player.getGold(), model.player.getNumericProperty("exp"), model.player.items, harbor.items)
+        )
+        self.assertIn(body, harbor.items)
+
+    def testConsumedEltanInputDoesNotChangeDefaultQuestItemTransfers(self):
+        model = CityModel(intelligence=12)
+        quinn = model.actor("Quinn", "AR0157")
+        model.clock.initializeActor(quinn)
+        dialog = model.dialog(quinn)
+        self.assertTrue(dialog.acceptQuinnDagger())
+        dagger = model.item("DAGG06")
+        self.assertTrue(dialog.questQuinnDaggerComplete())
+        self.assertNotIn(dagger, model.player.items)
+        self.assertIn(dagger, quinn.items)
+        self.assertEqual(950, model.player.getNumericProperty("exp"))
+
 
 if __name__ == "__main__":
     unittest.main()
