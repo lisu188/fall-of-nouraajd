@@ -112,6 +112,7 @@ MCP_ALLOWED_HANDLE_METHODS = {
         "getParent",
         "keyboardEvent",
     },
+    "CGameQuestPanel": {"getText"},
     "CGameCampaignPanel": {
         "getBody",
         "getTitle",
