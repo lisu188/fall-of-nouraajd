@@ -16,6 +16,134 @@ ROOT = Path(__file__).resolve().parents[1]
 
 
 class BaldursGateCityRoutesTest(unittest.TestCase):
+    def jalanthaAudienceModel(self):
+        from types import SimpleNamespace
+
+        from tests.test_baldurs_gate_city_content import CityModel
+
+        model = CityModel()
+        data = routes.documents()
+        names = ("cityAr0300Actor28", "cityAr0609Actor1", "cityAr0609ScriptActorJalant")
+        for name in names:
+            model.resources[name] = data["config"][name]
+        for name in names[:2]:
+            model.game_map.addObject(model.createObject(name))
+        definitions = decodeCityData(data["config"]["cityClock"]["properties"]["actorDefinitions"])
+        model.clock.setStringProperty(
+            "actorDefinitions", json.dumps([row for row in definitions if row["id"] == names[2]])
+        )
+        choices, contacts = [], []
+
+        def choose(dialog_id, action):
+            actor = model.game_map.getObjectByName(dialog_id.removesuffix("Dialog"))
+            self.assertIsNotNone(actor, "The route must choose on an actual placed actor")
+            choices.append((actor.getName(), action))
+            definition = data["config"][dialog_id]["properties"]
+            self.assertEqual(actor.getName(), definition["actorId"])
+            dialog = model.createObject("BaldursGateDialog")
+            dialog.setStringProperty("actorId", actor.getName())
+            entry = next(row["properties"] for row in definition["states"] if row["properties"]["stateId"] == "ENTRY")
+            visible = [
+                row["properties"]
+                for row in entry["options"]
+                if not row["properties"].get("condition") or getattr(dialog, row["properties"]["condition"])()
+            ]
+            self.assertEqual(1, sum(row.get("action") == action for row in visible), (dialog_id, action))
+            self.assertTrue(getattr(dialog, action)(), (actor.getName(), action))
+
+        driver = SimpleNamespace(
+            test=self,
+            player=model.player,
+            game_map=model.game_map,
+            object=lambda name, required=False: model.game_map.getObjectByName(name),
+            call=lambda owner, method, *args: getattr(owner, method)(*args),
+            string=model.game_map.getStringProperty,
+            number=model.game_map.getNumericProperty,
+            flag=model.game_map.getBoolProperty,
+            gold=model.player.getGold,
+            questNames=lambda: [quest.getTypeId() for quest in model.player.getQuests()],
+            choose=choose,
+        )
+        planner = routes.QuestRoute(driver)
+
+        def contact(name):
+            actor = model.game_map.getObjectByName(name)
+            self.assertIsNotNone(actor)
+            contacts.append(name)
+            model.dialog(actor)  # Model contact only; real routes still use authored travel and movement.
+
+        planner.contact = contact
+        return model, driver, planner, choices, contacts
+
+    def testJalanthaQuestRouteRequestsPaidAudienceBeforeResolvingItsScriptedGiver(self):
+        model, driver, planner, choices, contacts = self.jalanthaAudienceModel()
+        self.assertIsNone(driver.object("cityAr0609ScriptActorJalant"))
+        planner.accept("jalanthaBook")
+        self.assertEqual(
+            [
+                ("cityAr0300Actor28", "acceptMarekPoison"),
+                ("cityAr0609Actor1", "requestJalanthaAudience"),
+                ("cityAr0609ScriptActorJalant", "acceptJalanthaBook"),
+            ],
+            choices,
+        )
+        self.assertEqual([actor for actor, _ in choices], contacts)
+        self.assertEqual(50, driver.gold())
+        self.assertTrue(driver.flag("plugin_cityFlag_jalanthaSummoned"))
+        actual = driver.object("cityAr0609ScriptActorJalant")
+        self.assertEqual("JALANT", actual.getStringProperty("sourceCreature"))
+        self.assertEqual("AR0609", actual.getStringProperty("sourceArea"))
+        self.assertEqual("PUMBERL.DLG#spawn0", actual.getStringProperty("sourceSpawnFact"))
+        self.assertEqual((195, 74, 3), tuple(vars(actual.getCoords()).values()))
+        self.assertEqual("active", routes.state(driver, "marekPoison"))
+        self.assertEqual("active", routes.state(driver, "jalanthaBook"))
+        self.assertEqual([actual.getName()], decodeCityData(model.clock.getStringProperty("plugin_citySpawnedActors")))
+
+    def testJalanthaQuestRouteReusesAnAudienceWithoutAnotherChargeOrActor(self):
+        model, driver, planner, choices, _contacts = self.jalanthaAudienceModel()
+        planner.contact("cityAr0609Actor1")
+        driver.choose("cityAr0609Actor1Dialog", "requestJalanthaAudience")
+        actual = driver.object("cityAr0609ScriptActorJalant")
+        choices.clear()
+        planner.accept("jalanthaBook")
+        planner.accept("jalanthaBook")
+        self.assertEqual(50, driver.gold())
+        self.assertIs(actual, driver.object(actual.getName()))
+        self.assertEqual(
+            [("cityAr0300Actor28", "acceptMarekPoison"), (actual.getName(), "acceptJalanthaBook")], choices
+        )
+        self.assertEqual([actual.getName()], decodeCityData(model.clock.getStringProperty("plugin_citySpawnedActors")))
+        self.assertEqual(1, driver.questNames().count("cityJalanthaBookQuest"))
+
+    def testJalanthaQuestRouteDoesNotBypassAudienceRefusalOrResurrectMissingGiver(self):
+        for refusal in ("poor", "wrongPriest", "missingAfterAudience"):
+            with self.subTest(refusal=refusal):
+                model, driver, planner, choices, _contacts = self.jalanthaAudienceModel()
+                if refusal == "poor":
+                    model.player.addGold(-51)
+                elif refusal == "wrongPriest":
+                    driver.object("cityAr0609Actor1").setStringProperty("sourceCreature", "PUMBER2")
+                else:
+                    planner.contact("cityAr0609Actor1")
+                    driver.choose("cityAr0609Actor1Dialog", "requestJalanthaAudience")
+                    model.game_map.removeObject(driver.object("cityAr0609ScriptActorJalant"))
+                before = driver.gold()
+                with self.assertRaises(AssertionError):
+                    planner.accept("jalanthaBook")
+                self.assertEqual(before, driver.gold())
+                self.assertEqual("notStarted", routes.state(driver, "jalanthaBook"))
+                self.assertNotIn("cityJalanthaBookQuest", driver.questNames())
+                self.assertIsNone(driver.object("cityAr0609ScriptActorJalant"))
+                self.assertNotIn(("cityAr0609ScriptActorJalant", "acceptJalanthaBook"), choices)
+
+    def testOtherQuestAcceptanceDoesNotRequestOrChargeForJalanthaAudience(self):
+        _model, driver, planner, choices, _contacts = self.jalanthaAudienceModel()
+        planner.accept("marekPoison")
+        self.assertEqual([("cityAr0300Actor28", "acceptMarekPoison")], choices)
+        self.assertEqual(100, driver.gold())
+        self.assertFalse(driver.flag("plugin_cityFlag_jalanthaSummoned"))
+        self.assertIsNone(driver.object("cityAr0609ScriptActorJalant"))
+
     def testNortheastArrivalCannotReachItsWestExitEvenWithOtherPortalCellsAllowed(self):
         walkable, portals = routes.cityMovementCells()
         bounds = routes.documents()["geometry"]["atlas"]["AR0300"]["bounds"]
@@ -68,6 +196,142 @@ class BaldursGateCityRoutesTest(unittest.TestCase):
         wrong_arrival = [dict(row, target=[0, 0, 0]) if row["object"] == "bToA" else row for row in links]
         with self.assertRaisesRegex(AssertionError, "No currently permitted source route"):
             routes.cityTravelPath((0, 0, 0), "A", "C", wrong_arrival, lambda _link: True, atlas, walkable, portals)
+
+    def testLothanderContactNeedsTheAuthoredReturnToItsOwnStreetComponent(self):
+        geometry = routes.documents()["geometry"]
+        walkable, portals = routes.cityMovementCells()
+        origin, target = (156, 35, 0), (183, 48, 0)
+        bounds = geometry["atlas"]["AR0300"]["bounds"]
+        self.assertIn(origin, walkable)
+        self.assertIn(target, walkable)
+        with self.assertRaisesRegex(AssertionError, "No portal-safe city approach"):
+            routes.cityApproachPath(origin, target, bounds, walkable, portals)
+        route = routes.cityTravelPath(
+            origin,
+            "AR0300",
+            "AR0300",
+            geometry["connections"],
+            lambda _link: True,
+            geometry["atlas"],
+            walkable,
+            portals,
+            destination_point=target,
+        )
+        self.assertEqual(["cityAr0300Portal11", "cityAr0226Portal12"], [link["object"] for link in route])
+        self.assertEqual((187, 38, 0), tuple(route[-1]["target"]))
+        path = routes.cityApproachPath(tuple(route[-1]["target"]), target, bounds, walkable, portals)
+        self.assertEqual(14, len(path))
+        self.assertEqual(target, path[-1])
+        self.assertFalse(set(path[:-1]) & portals)
+        self.assertEqual(
+            (),
+            routes.cityTravelPath(
+                origin,
+                "AR0300",
+                "AR0300",
+                geometry["connections"],
+                lambda _link: True,
+                geometry["atlas"],
+                walkable,
+                portals,
+            ),
+        )
+
+    def testTargetComponentPlannerCannotInventLinksPermissionsOrArrivals(self):
+        atlas = {"A": {"bounds": [0, 0, 0, 4, 1]}, "B": {"bounds": [6, 0, 0, 2, 1]}}
+        cells = frozenset({(0, 0, 0), (1, 0, 0), (3, 0, 0), (6, 0, 0), (7, 0, 0)})
+        portals = frozenset({(1, 0, 0), (7, 0, 0)})
+        links = [
+            {"object": "out", "from": "A", "to": "B", "origin": [1, 0, 0], "target": [6, 0, 0]},
+            {"object": "back", "from": "B", "to": "A", "origin": [7, 0, 0], "target": [3, 0, 0]},
+        ]
+        for mutation in (None, "denied", "missing", "wrongArrival", "notWalkable"):
+            with self.subTest(mutation=mutation):
+                candidate = links[:-1] if mutation == "missing" else links
+                if mutation == "wrongArrival":
+                    candidate = [links[0], dict(links[1], target=[0, 0, 0])]
+                target = (2, 0, 0) if mutation == "notWalkable" else (3, 0, 0)
+
+                def plan():
+                    return routes.cityTravelPath(
+                        (0, 0, 0),
+                        "A",
+                        "A",
+                        candidate,
+                        lambda link: mutation != "denied" or link["object"] != "back",
+                        atlas,
+                        cells,
+                        portals,
+                        destination_point=target,
+                    )
+
+                if mutation:
+                    with self.assertRaisesRegex(AssertionError, "No currently permitted source route"):
+                        plan()
+                else:
+                    self.assertEqual(["out", "back"], [link["object"] for link in plan()])
+
+    def testContactUsesActualSourcePortalsBeforeOrdinaryNativeContactAndRejectsActorReplacement(self):
+        from types import SimpleNamespace
+
+        geometry = routes.documents()["geometry"]
+        walkable, portals = routes.cityMovementCells()
+        links = {tuple(link["origin"]): link for link in geometry["connections"]}
+        by_name = {link["object"]: link for link in geometry["connections"]}
+        name, target = "cityAr0300Actor28", (183, 48, 0)
+        for mutation in (None, "actorReplaced", "wrongArrival", "budget"):
+            with self.subTest(mutation=mutation):
+                actor = {"__handle__": "same-lothander"}
+                driver = SimpleNamespace(test=self, turns=0, position=(156, 35, 0), transitions=[], contacts=[])
+                driver.coords = lambda owner=None: (
+                    target
+                    if isinstance(owner, dict)
+                    else tuple(by_name[owner]["origin"]) if owner is not None else driver.position
+                )
+                driver.object = lambda key, required=True: actor if key == name else key
+                driver.number, driver.flag = lambda _key: 5, lambda _key: False
+                driver.string = lambda _key: routes.currentArea(driver)
+
+                def call(owner, method, key):
+                    if method == "getNumericProperty" and key in ("targetX", "targetY", "targetZ"):
+                        return by_name[owner]["target"]["XYZ".index(key[-1])]
+                    self.assertEqual(("getBoolProperty", "locked"), (method, key))
+                    return False
+
+                def navigate(point, *, limit):
+                    point = tuple(point)
+                    self.assertGreater(limit, 0)
+                    self.assertEqual(1, sum(abs(a - b) for a, b in zip(driver.position, point)))
+                    self.assertIn(point, walkable)
+                    driver.position = point
+                    driver.turns += 10000 if mutation == "budget" else 1
+                    if point in links:
+                        link = links[point]
+                        driver.transitions.append(link["object"])
+                        driver.position = tuple(link["target"])
+                        if mutation == "actorReplaced":
+                            actor["__handle__"] = "different-lothander"
+                        if mutation == "wrongArrival":
+                            driver.position = (156, 35, 0)
+
+                def contact(key, *, after_tick):
+                    self.assertEqual(name, key)
+                    self.assertEqual(["cityAr0300Portal11", "cityAr0226Portal12"], driver.transitions)
+                    self.assertEqual(1, sum(abs(a - b) for a, b in zip(driver.position, target)))
+                    after_tick()
+                    driver.contacts.append(key)
+
+                driver.call, driver.navigateCoords, driver.navigateTo = call, navigate, contact
+                if mutation:
+                    with self.assertRaisesRegex(
+                        AssertionError, "City contact identity changed|Actual portal arrival|City approach turn budget"
+                    ):
+                        routes.contactCityObject(driver, name)
+                    self.assertEqual([], driver.contacts)
+                else:
+                    routes.contactCityObject(driver, name)
+                    self.assertEqual([name], driver.contacts)
+                    self.assertGreater(driver.turns, 14)
 
     def testTravelRejectsChangedActualPortalDestinationsAndWrongArrivalCoordinates(self):
         for mutation in ("destination", "arrival"):

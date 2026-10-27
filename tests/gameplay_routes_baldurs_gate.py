@@ -165,7 +165,9 @@ def cityApproachPath(origin, destination, bounds, walkable, portals):
     raise AssertionError(("No portal-safe city approach", origin, destination, bounds))
 
 
-def cityTravelPath(origin, start_area, destination, connections, allowed, atlas, walkable, portals):
+def cityTravelPath(
+    origin, start_area, destination, connections, allowed, atlas, walkable, portals, destination_point=None
+):
     edges = defaultdict(list)
     for link in connections:
         if allowed(link):
@@ -179,7 +181,7 @@ def cityTravelPath(origin, start_area, destination, connections, allowed, atlas,
         reachable = cityApproachParents(point, atlas[area_id]["bounds"], walkable, portals)
         if not reachable:
             continue
-        if area_id == destination:
+        if area_id == destination and (destination_point is None or tuple(destination_point) in reachable):
             return route
         for link in sorted(edges[area_id], key=lambda entry: entry["object"]):
             arrival = (link["to"], tuple(link["target"]))
@@ -231,6 +233,13 @@ def contactCityObject(d, name):
     d.test.assertEqual(area_id, currentArea(d, actor), ("City contact target left its area", name))
     bounds = documents()["geometry"]["atlas"][area_id]["bounds"]
     walkable, portals = cityMovementCells()
+    if target not in cityApproachParents(origin, bounds, walkable, portals):
+        travel(d, area_id, destination_point=target)
+        actor = d.object(name, required=False)
+        d.test.assertIsNotNone(actor, ("City contact target disappeared during travel", name))
+        d.test.assertEqual(identity, actor["__handle__"], ("City contact identity changed during travel", name))
+        d.test.assertEqual(area_id, currentArea(d, actor), ("City contact target left its area during travel", name))
+        origin, target = d.coords(), d.coords(actor)
     budget = max(128, 4 * sum(abs(a - b) for a, b in zip(origin, target)) + 128)
     initial_turns = d.turns
 
@@ -255,7 +264,7 @@ def contactCityObject(d, name):
     requireCurrent()
 
 
-def travel(d, destination):
+def travel(d, destination, *, destination_point=None):
     config, geometry = documents()["config"], documents()["geometry"]
     phase = d.number("plugin_cityPhase") or 5
 
@@ -280,6 +289,7 @@ def travel(d, destination):
         allowed,
         geometry["atlas"],
         *cityMovementCells(),
+        destination_point=destination_point,
     )
     traversed = []
     for link in route:
@@ -579,6 +589,13 @@ class QuestRoute:
             self.d.test.assertTrue(self.d.flag("plugin_cityFlag_tamokoMove2"))
             return
         self.conditions(row.get("acceptConditions", {}))
+        if key == "jalanthaBook" and not self.d.flag("plugin_cityFlag_jalanthaSummoned"):
+            attendant = self.actorName([{"creature": "PUMBERL", "area": "AR0609"}])
+            self.contact(attendant)
+            before = self.d.gold()
+            self.d.choose(attendant + "Dialog", "requestJalanthaAudience")
+            self.d.test.assertEqual(before - 50, self.d.gold(), "The authored audience costs 50 gold exactly once")
+            self.d.test.assertTrue(self.d.flag("plugin_cityFlag_jalanthaSummoned"))
         name = self.actorName(row["givers"])
         self.contact(name)
         self.d.choose(name + "Dialog", "accept" + upperFirst(key))
