@@ -2190,7 +2190,7 @@ def load(self, context):
                 elif previous_edge not in successors or view["state"] != successors[previous_edge]:
                     return False
                 state, revision = view["state"], view["revision"]
-                yield uiRequest("gui.showCampaignScreen", "Seven Suns", bodies[state])
+                yield uiRequest("gui.showCampaignScreen", "Seven Suns", bodies[state], "Continue")
                 edge = view.get("automaticEdge")
                 if edge is None:
                     choices = [{"id": str(index), "label": replies[index]} for index in view["choices"]]

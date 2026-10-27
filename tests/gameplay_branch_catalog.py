@@ -51,7 +51,7 @@ AUTHORED_MAPS = (
 EVENT_CALLBACKS = frozenset(
     {"trigger", "onEnter", "onTurn", "onCreate", "onDestroy", "onOpen", "onUse", "onComplete", "isCompleted"}
 )
-REVIEWED_GAMEPLAY_DIGEST = "ca080f0bb523d3c9a7aebcadd882e8600ff43277c88829dbf8ad3d5de54b21c5"
+REVIEWED_GAMEPLAY_DIGEST = "c098eb956e65c2918e98edb253a637bba3d9c3ed399cd8a72eeed65a4f8c7aa7"
 
 
 @dataclass(frozen=True)

@@ -276,7 +276,9 @@ class SevenSunsMerchantPresentationTest(unittest.TestCase):
                 self.assertEqual(2, len(args))
                 answer = projection.begin()
             elif operation == "gui.showCampaignScreen":
-                self.assertEqual(STATES[projection.state]["body"], args[-1])
+                self.assertEqual(3, len(args))
+                self.assertEqual(STATES[projection.state]["body"], args[1])
+                self.assertEqual("Continue", args[2])
                 answer = None
             elif operation == "gui.showChoice":
                 rows = json.loads(args[1])
@@ -288,6 +290,71 @@ class SevenSunsMerchantPresentationTest(unittest.TestCase):
                 answer = projection.close()
             else:
                 self.fail("Unexpected Python authority: " + operation)
+
+    def testAcceptedMerchantAndWarningFlowsEncodeTheNativeReaderPacketAndCancelWithoutEffects(self):
+        import re
+
+        from tests import test_baldurs_gate_seven_suns_warning as warning
+        from tests.test_ui_frontend import ui
+
+        dispatcher = (ROOT / "src/handler/CGuiHandler.cpp").read_text(encoding="utf-8")
+        branch = dispatcher.split('operation == "showCampaignScreen"', 1)[1].split("} else if", 1)[0]
+        required = [int(index) for index in re.findall(r"stringArgument\((\d+)\)", branch)]
+        self.assertTrue(required, "The native reader contract must be found")
+        self.assertEqual(list(range(max(required) + 1)), required)
+        warning_model = warning.SevenSunsWarningPresentationTest()
+        for kind, prepare in (("Merchant", self.model), ("Warning", warning_model.model)):
+            with self.subTest(flow=kind):
+                model, actor, dialog = prepare()
+                before = self.snapshot(model, actor)
+                projection = (
+                    MerchantSourceProjection(actor.getName()) if kind == "Merchant" else warning.SourceProjection()
+                )
+                accepted = projection.begin() if kind == "Merchant" else projection.view()
+                self.assertEqual("ready", accepted["status"])
+                self.assertTrue(
+                    dialog.validSevenSunsMerchantView(accepted, actor.getName())
+                    if kind == "Merchant"
+                    else dialog.validSevenSunsWarningView(accepted)
+                )
+                flow = ui.UiFlow.fromCallback(getattr(dialog, "conversationSevenSuns" + kind + "Flow"))
+                self.addCleanup(flow.close)
+                with patch.dict("sys.modules", _game=SimpleNamespace(CGameObject=city_content.CityObject)):
+                    request = json.loads(flow.advance("null"))
+                    self.assertEqual("beginSevenSuns" + kind, request["operation"])
+                    self.assertEqual(2, len(request["args"]))
+                    resolved = []
+                    for argument in request["args"]:
+                        self.assertEqual({"__nativeObject"}, set(argument))
+                        resolved.append(flow.takeObjectArgument(argument["__nativeObject"]))
+                    self.assertIs(model.clock, resolved[0])
+                    self.assertIs(actor, resolved[1])
+                    request = json.loads(flow.advance(json.dumps(accepted)))
+                    self.assertEqual("showCampaignScreen", request["operation"])
+                    self.assertEqual(len(required), len(request["args"]), "Native reader string arguments are required")
+                    for index in required:
+                        self.assertIs(type(request["args"][index]), str)
+                    shown = []
+
+                    def nativeReader(title, body, action_label):
+                        shown.append((title, body, action_label))
+
+                    nativeReader(*request["args"])
+                    self.assertTrue(shown[0][0])
+                    self.assertTrue(shown[0][1])
+                    self.assertEqual("Continue", shown[0][2])
+                    request = json.loads(flow.advance("null"))
+                    self.assertEqual("showChoice", request["operation"])
+                    self.assertEqual(
+                        [str(index) for index in accepted["choices"]],
+                        [row["id"] for row in json.loads(request["args"][1])],
+                    )
+                    request = json.loads(flow.advance(json.dumps("")))
+                    self.assertEqual("endSevenSuns" + kind, request["operation"])
+                    self.assertEqual([], request["args"])
+                    self.assertIsNone(flow.advance("null"))
+                    self.assertEqual({}, flow.objectArguments)
+                self.assertEqual(before, self.snapshot(model, actor))
 
     def testEveryCompletePathAndLineageDelegatesEffectsToOwnedNativeIntents(self):
         for lineage in FACTS["lineages"]:
