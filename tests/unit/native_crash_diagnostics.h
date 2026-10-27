@@ -109,6 +109,22 @@ inline LONG CALLBACK logWindowsHandlerCrash(EXCEPTION_POINTERS *exception) noexc
         return EXCEPTION_CONTINUE_SEARCH;
     // A first-chance diagnostic only: preserve the original fault and its failure disposition.
     writeHandlerCrashFrame("seh-code", code, exception->ExceptionRecord->ExceptionAddress);
+    if (code == EXCEPTION_ACCESS_VIOLATION && exception->ExceptionRecord->NumberParameters >= 2) {
+        const auto access = exception->ExceptionRecord->ExceptionInformation[0];
+        const char *operation = access == EXCEPTION_READ_FAULT      ? "read"
+                                : access == EXCEPTION_WRITE_FAULT   ? "write"
+                                : access == EXCEPTION_EXECUTE_FAULT ? "execute"
+                                                                    : "unknown";
+        char line[192]{};
+        const int length =
+            std::snprintf(line, sizeof(line), "[handler-crash] av-access=%s fault-address=0x%llx\n", operation,
+                          static_cast<unsigned long long>(exception->ExceptionRecord->ExceptionInformation[1]));
+        if (length > 0) {
+            DWORD written = 0;
+            WriteFile(GetStdHandle(STD_ERROR_HANDLE), line,
+                      static_cast<DWORD>(length < sizeof(line) ? length : sizeof(line) - 1), &written, nullptr);
+        }
+    }
     constexpr ULONG MAX_HANDLER_CRASH_FRAMES = 32;
     void *frames[MAX_HANDLER_CRASH_FRAMES]{};
     const USHORT count = CaptureStackBackTrace(0, MAX_HANDLER_CRASH_FRAMES, frames, nullptr);

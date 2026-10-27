@@ -12,6 +12,8 @@ import tempfile
 import unittest
 from unittest import mock
 
+from tests.cpp_bindings import registrationTokens
+
 ROOT = Path(__file__).resolve().parents[1]
 # Ordered native cases on main e3d3c90, before adding diagnostic wrappers.
 BASELINE_CASES = {
@@ -213,6 +215,77 @@ class NativeTestProfileSourceTest(unittest.TestCase):
         self.assertIn("AddVectoredExceptionHandler(1, logWindowsHandlerCrash)", installer)
         for forbidden in ("DbgHelp", "StackWalk", "SymInitialize", "LoadLibrary", "system("):
             self.assertNotIn(forbidden, helper)
+
+    def testScriptWaitCrashPhasesAreFlushedBoundedAndPreserveOriginalTestTokens(self):
+        handler = (ROOT / "tests/unit/test_handler.cpp").read_text()
+        body = handler.split("void testScriptWaitFlowCompletesAndRejectsInvalidObjectArguments() {", 1)[1].split(
+            "\n}\n", 1
+        )[0]
+        marker = "[handler-test] BODY testScriptWaitFlowCompletesAndRejectsInvalidObjectArguments"
+        self.assertEqual(1, body.count(marker))
+        self.assertLess(body.index(marker), body.index("ScriptFlowNativeObjectTypes types"))
+        phases = re.findall(r"SCRIPT_WAIT variant=%d phase=([a-z-]+)\\n", body)
+        self.assertEqual(["begin", "arguments-ready", "spawned", "settled", "cleared"], phases)
+        self.assertEqual(9, body.count("std::fflush(stderr)"))
+        self.assertIn("for(intvariant=0;variant<9;++variant)", registrationTokens(body))
+        for before, after in (
+            ("ScriptFlowNativeObjectTypes types", "setup=native-types-ready"),
+            ("setup=native-types-ready", "auto game = makeWindowlessFightGame()"),
+            ("auto game = makeWindowlessFightGame()", "setup=game-ready"),
+            ("setup=game-ready", "auto foreign = makeWindowlessFightGame()"),
+            ("auto foreign = makeWindowlessFightGame()", "setup=foreign-ready"),
+            ("setup=foreign-ready", "for (int variant"),
+            ("phase=begin", "auto state ="),
+            ("phase=arguments-ready", "pybind11::dict scope"),
+            ("waitCallbackFlow(game, scope", "phase=spawned"),
+            ("phase=spawned", "expect_true(pumpHandlerUntil"),
+            ("pending.get()", "phase=settled"),
+            ("phase=settled", 'auto events = scope["events"]'),
+            ("scope.clear()", "phase=cleared"),
+        ):
+            self.assertLess(body.index(before), body.index(after))
+        stripped = re.sub(
+            r'\s*std::fputs\("\[handler-test\] (?:BODY testScriptWaitFlow|SCRIPT_WAIT)[^"]*",\s*stderr\);\s*std::fflush\(stderr\);',
+            "",
+            body,
+        )
+        stripped = re.sub(
+            r'\s*std::fprintf\(stderr,\s*"\[handler-test\] SCRIPT_WAIT[^"]*",\s*variant\);\s*std::fflush\(stderr\);',
+            "",
+            stripped,
+        )
+        self.assertEqual(
+            "3b0fd05aa43fd6734a77e448cad599357f343418a4eb28ea6cc896805adbc656",
+            hashlib.sha256(registrationTokens(stripped).encode()).hexdigest(),
+        )
+
+    def testWindowsHandlerAvDetailsGuardBothParametersAndKeepBoundedWrites(self):
+        helper = (ROOT / "tests/unit/native_crash_diagnostics.h").read_text()
+        callback = helper.split("inline LONG CALLBACK logWindowsHandlerCrash(", 1)[1].split(
+            "inline void installWindowsHandlerCrashDiagnostics", 1
+        )[0]
+        tokens = registrationTokens(callback)
+        self.assertIn("if(code==EXCEPTION_ACCESS_VIOLATION&&exception->ExceptionRecord->NumberParameters>=2)", tokens)
+        self.assertIn("ExceptionInformation[0]", tokens)
+        self.assertIn("ExceptionInformation[1]", tokens)
+        self.assertLess(tokens.index("NumberParameters>=2"), tokens.index("ExceptionInformation[0]"))
+        self.assertLess(tokens.index("NumberParameters>=2"), tokens.index("ExceptionInformation[1]"))
+        for token in (
+            'access==EXCEPTION_READ_FAULT?"read"',
+            'access==EXCEPTION_WRITE_FAULT?"write"',
+            'access==EXCEPTION_EXECUTE_FAULT?"execute"',
+            ':"unknown"',
+            "charline[192]{};",
+            "std::snprintf(",
+            '"[handler-crash] av-access=%s fault-address=0x%llx\\n"',
+            "length<sizeof(line)?length:sizeof(line)-1",
+            "WriteFile(GetStdHandle(STD_ERROR_HANDLE)",
+            "constexprULONGMAX_HANDLER_CRASH_FRAMES=32;",
+        ):
+            self.assertIn(token, tokens)
+        self.assertEqual(4, callback.count("return EXCEPTION_CONTINUE_SEARCH;"))
+        for forbidden in ("EXCEPTION_CONTINUE_EXECUTION", "EXCEPTION_EXECUTE_HANDLER", "malloc(", "new ", "throw "):
+            self.assertNotIn(forbidden, callback)
 
     def testPresentationBrowserObserverCountsBoundInstancesInsteadOfSubtypePrototypes(self):
         handler = (ROOT / "tests/unit/test_handler.cpp").read_text()

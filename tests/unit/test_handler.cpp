@@ -6798,10 +6798,20 @@ void testWaitStateRejectsInvalidDurationsMutationsAndDuplicateLeases() {
 }
 
 void testScriptWaitFlowCompletesAndRejectsInvalidObjectArguments() {
+    std::fputs("[handler-test] BODY testScriptWaitFlowCompletesAndRejectsInvalidObjectArguments\n", stderr);
+    std::fflush(stderr);
     ScriptFlowNativeObjectTypes types;
+    std::fputs("[handler-test] SCRIPT_WAIT setup=native-types-ready\n", stderr);
+    std::fflush(stderr);
     auto game = makeWindowlessFightGame();
+    std::fputs("[handler-test] SCRIPT_WAIT setup=game-ready\n", stderr);
+    std::fflush(stderr);
     auto foreign = makeWindowlessFightGame();
+    std::fputs("[handler-test] SCRIPT_WAIT setup=foreign-ready\n", stderr);
+    std::fflush(stderr);
     for (int variant = 0; variant < 9; ++variant) {
+        std::fprintf(stderr, "[handler-test] SCRIPT_WAIT variant=%d phase=begin\n", variant);
+        std::fflush(stderr);
         auto state = std::make_shared<CWaitState>();
         state->setGame(variant == 1 ? foreign : game);
         auto arguments = pybind11::make_tuple(nativeFlowObject(state));
@@ -6831,9 +6841,13 @@ void testScriptWaitFlowCompletesAndRejectsInvalidObjectArguments() {
                 }
             });
         }
+        std::fprintf(stderr, "[handler-test] SCRIPT_WAIT variant=%d phase=arguments-ready\n", variant);
+        std::fflush(stderr);
         pybind11::dict scope;
         auto pending = game->getContext()->spawnTask(
             game->getGuiHandler()->runScriptFlowAsync(waitCallbackFlow(game, scope, std::move(arguments))));
+        std::fprintf(stderr, "[handler-test] SCRIPT_WAIT variant=%d phase=spawned\n", variant);
+        std::fflush(stderr);
         expect_true(pumpHandlerUntil([&] { return pending.finished(); }), "a native wait flow must settle");
         bool cancelled = false;
         if (pending.finished()) {
@@ -6843,6 +6857,8 @@ void testScriptWaitFlowCompletesAndRejectsInvalidObjectArguments() {
                 cancelled = true;
             }
         }
+        std::fprintf(stderr, "[handler-test] SCRIPT_WAIT variant=%d phase=settled\n", variant);
+        std::fflush(stderr);
         auto events = scope["events"].cast<pybind11::list>();
         const auto validEvents =
             variant >= 6
@@ -6853,6 +6869,8 @@ void testScriptWaitFlowCompletesAndRejectsInvalidObjectArguments() {
         expect_true(validEvents && !state->isRunning(),
                     "only a same-session wait-state token may complete the native UI wait operation");
         scope.clear();
+        std::fprintf(stderr, "[handler-test] SCRIPT_WAIT variant=%d phase=cleared\n", variant);
+        std::fflush(stderr);
     }
     game->getContext()->shutdown();
     foreign->getContext()->shutdown();
