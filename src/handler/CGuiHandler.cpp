@@ -764,10 +764,10 @@ vstd::task<void> CGuiHandler::runScriptFlowAsync(std::unique_ptr<CScriptFlow> fl
                 throw;
             } catch (const vstd::scheduler_rejected &) {
                 throw;
-            } catch (const std::exception &error) {
+            } catch (const std::exception &) {
                 if (ownedSevenSuns)
                     throw;
-                failure = error.what();
+                failure = game_async::activeExceptionMessage();
             }
             checkActive();
             request = failure ? flow->fail(*failure) : flow->next(answer);

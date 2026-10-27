@@ -171,6 +171,47 @@ ADDITIONAL_CASES = {
 
 
 class NativeTestProfileSourceTest(unittest.TestCase):
+    def testScriptFlowFailureMessageUsesANoinlineSynchronousCatchWithoutChangingRethrows(self):
+        header = (ROOT / "src/core/CAsync.h").read_text(encoding="utf-8")
+        signature = re.search(r"inline\s+std::string\s+activeExceptionMessage\(\)\s*\{", header)
+        self.assertIsNotNone(signature, "The synchronous exception-message helper is missing")
+        helper = header[signature.end() :].split("\n}\n", 1)[0]
+        self.assertEqual("try{throw;}catch(conststd::exception&error){returnerror.what();}", registrationTokens(helper))
+        prefix = header[: signature.start()]
+        self.assertRegex(
+            prefix,
+            r"#if defined\(_MSC_VER\)\s+__declspec\(noinline\)\s+"
+            r"#elif defined\(__GNUC__\)\s+__attribute__\(\(noinline\)\)\s+#endif\s*$",
+        )
+        self.assertIn("namespace game_async {", prefix)
+        gui = (ROOT / "src/handler/CGuiHandler.cpp").read_text(encoding="utf-8")
+        body = gui.split("vstd::task<void> CGuiHandler::runScriptFlowAsync(", 1)[1].split(
+            "bool CGuiHandler::waitMilliseconds(", 1
+        )[0]
+        catch = body.split("} catch (const vstd::task_cancelled &)", 1)[1].split("checkActive();", 1)[0]
+        self.assertEqual(
+            "{throw;}catch(constvstd::scheduler_rejected&){throw;}catch(conststd::exception&){"
+            "if(ownedSevenSuns)throw;failure=game_async::activeExceptionMessage();}",
+            registrationTokens(catch),
+        )
+        self.assertNotIn(".what()", body)
+        self.assertIn("request = failure ? flow->fail(*failure) : flow->next(answer);", body)
+
+    def testDialogActionFailureUsesTheSameSynchronousMessageWithoutChangingDisposition(self):
+        source = (ROOT / "src/gui/panel/CGameDialogPanel.cpp").read_text(encoding="utf-8")
+        body = source.split("vstd::task<void> CGameDialogPanel::selectOptionAsync(", 1)[1].split(
+            "bool CGameDialogPanel::event(", 1
+        )[0]
+        catch = body.split("} catch (const vstd::task_cancelled &)", 1)[1].split("}(this->ptr<CGameDialogPanel>()", 1)[
+            0
+        ]
+        self.assertEqual(
+            "{throw;}catch(constvstd::scheduler_rejected&){throw;}catch(conststd::exception&){"
+            'vstd::logger::error("Dialog action failed:",game_async::activeExceptionMessage());}',
+            registrationTokens(catch),
+        )
+        self.assertNotIn(".what()", body)
+
     def testScriptWaitForeignTokenSynchronousControlPrecedesTheUnchangedCoroutineVariants(self):
         handler = (ROOT / "tests/unit/test_handler.cpp").read_text(encoding="utf-8")
         name = "testScriptWaitForeignObjectFailureRoundTripsSynchronously"

@@ -465,8 +465,8 @@ vstd::task<void> CGameDialogPanel::selectOptionAsync(std::shared_ptr<CDialogOpti
             throw;
         } catch (const vstd::scheduler_rejected &) {
             throw;
-        } catch (const std::exception &error) {
-            vstd::logger::error("Dialog action failed:", error.what());
+        } catch (const std::exception &) {
+            vstd::logger::error("Dialog action failed:", game_async::activeExceptionMessage());
         }
     }(this->ptr<CGameDialogPanel>(), std::move(option));
 }
