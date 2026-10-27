@@ -2,7 +2,6 @@
 # SPDX-License-Identifier: GPL-3.0-or-later
 """One persistent city; original-resource facts and native adaptation rules remain distinct."""
 
-
 CITY_JSON_PREFIX = "city-json:"
 
 
@@ -43,6 +42,7 @@ def load(self, context):
 
     region_indices = {}
     custody_definitions = {}
+    pending_history_clocks = set()
 
     def world(obj):
         return obj.getGame().getMap()
@@ -302,22 +302,37 @@ def load(self, context):
         game_map.setStringProperty("plugin_cityCompanionNames", ",".join(actor.getName() for actor in companions(obj)))
         game_map.setNumericProperty("plugin_cityCompanionCombatRadius", 8)
 
-    def joinCompanion(obj, actor):
-        roster = read(clock(obj), "plugin_cityRoster", [])
+    def joinCompanion(obj, actor, can_join=None):
+        game_map, owner = world(obj), clock(obj)
+        roster = read(owner, "plugin_cityRoster", [])
         if actor.getName() in roster:
-            return True
+            return not can_join or can_join()
         if len(roster) >= 5 or not actor.isAlive():
             return False
-        actor.setStringProperty("plugin_cityOriginalAffiliation", actor.getStringProperty("affiliation"))
-        actor.setStringProperty("affiliation", hero(obj).getStringProperty("affiliation"))
-        actor.setBoolProperty("npc", False)
-        actor.setBoolProperty("alwaysSimulate", True)
         controller = obj.getGame().createObject("CTargetController")
         controller.setStringProperty("target", "player")
+        if (
+            world(obj) != game_map
+            or game_map.getObjectByName("cityClock") != owner
+            or game_map.getObjectByName(actor.getName()) != actor
+            or not actor.isAlive()
+        ):
+            return False
+        roster = read(owner, "plugin_cityRoster", [])
+        if actor.getName() not in roster and len(roster) >= 5:
+            return False
+        if can_join and not can_join():
+            return False
+        if actor.getName() in roster:
+            return True
+        actor.setStringProperty("plugin_cityOriginalAffiliation", actor.getStringProperty("affiliation"))
+        actor.setStringProperty("affiliation", game_map.getPlayer().getStringProperty("affiliation"))
+        actor.setBoolProperty("npc", False)
+        actor.setBoolProperty("alwaysSimulate", True)
         actor.setController(controller)
         roster.append(actor.getName())
-        clock(obj).setObjectProperty("plugin_cityCompanion_" + actor.getName(), actor)
-        write(clock(obj), "plugin_cityRoster", roster)
+        owner.setObjectProperty("plugin_cityCompanion_" + actor.getName(), actor)
+        write(owner, "plugin_cityRoster", roster)
         updateAlliedRoster(obj)
         return True
 
@@ -422,6 +437,7 @@ def load(self, context):
                     actor.equipItem(native_slot, item)
                     break
         actor.setBoolProperty("plugin_cityInventoryInitialized", True)
+
     def custody(obj):
         return world(obj).getObjectByName("cityCustody")
 
@@ -1593,7 +1609,6 @@ def load(self, context):
                 staged["name"] = value
             self.requireCustodyStage(binding, actor)
 
-
     @register(context)
     @mapQuest("baldursGate")
     class BaldursGateQuest(CQuest):
@@ -2407,17 +2422,90 @@ def load(self, context):
             return self.recordHistory("tenya", "killed")
 
         def historyEldothJoined(self):
-            if len(read(clock(self), "plugin_cityRoster", [])) >= 5:
+            if not self.canFinishHistoryChoices():
                 return False
-            if not self.recordHistory("eldoth", "joined"):
+            game_map, owner = world(self), clock(self)
+            if owner in pending_history_clocks:
                 return False
-            world(self).setBoolProperty("plugin_cityFlag_eldothJoined", True)
-            clock(self).spawnActors()
-            actor = firstMatch(
-                (actor for actor in world(self).getObjects() if actor.getStringProperty("sourceCreature") == "ELDOTH"),
-                None,
-            )
-            return bool(actor and joinCompanion(self, actor))
+            pending_history_clocks.add(owner)
+            try:
+                history = read(game_map, "plugin_cityHistory", {})
+                if "eldoth" in history or len(read(owner, "plugin_cityRoster", [])) >= 5:
+                    return False
+                original_actors = game_map.getObjects()
+                actor = firstMatch(
+                    (actor for actor in original_actors if actor.getStringProperty("sourceCreature") == "ELDOTH"), None
+                )
+                flag = game_map.getBoolProperty("plugin_cityFlag_eldothJoined")
+                spawned = owner.getStringProperty("plugin_citySpawnedActors")
+                actor_ids = [
+                    row["id"] for row in read(owner, "actorDefinitions", []) if row.get("sourceCreature") == "ELDOTH"
+                ]
+                spawned_actors = []
+
+                def canJoin():
+                    return (
+                        world(self) == game_map
+                        and game_map.getObjectByName("cityClock") == owner
+                        and game_map.getObjectByName(actor.getName()) == actor
+                        and actor.isAlive()
+                        and self.canFinishHistoryChoices()
+                        and "eldoth" not in read(game_map, "plugin_cityHistory", {})
+                    )
+
+                def rollback():
+                    game_map.setBoolProperty("plugin_cityFlag_eldothJoined", flag)
+                    owner.setStringProperty("plugin_citySpawnedActors", spawned)
+                    added_actors = spawned_actors
+                    if added_actors is None:
+                        added_actors = [
+                            added
+                            for added in game_map.getObjects()
+                            if added.getName() in actor_ids and added not in original_actors
+                        ]
+                    for added in added_actors:
+                        if game_map.getObjectByName(added.getName()) == added:
+                            game_map.removeObject(added)
+
+                try:
+                    if not actor:
+                        game_map.setBoolProperty("plugin_cityFlag_eldothJoined", True)
+                        spawned_actors = None
+                        owner.spawnActors("ELDOTH")
+                        spawned_actors = [
+                            added
+                            for added in game_map.getObjects()
+                            if added.getName() in actor_ids and added not in original_actors
+                        ]
+                        actor = firstMatch(
+                            (
+                                actor
+                                for actor in game_map.getObjects()
+                                if actor.getStringProperty("sourceCreature") == "ELDOTH"
+                            ),
+                            None,
+                        )
+                    if (
+                        world(self) != game_map
+                        or game_map.getObjectByName("cityClock") != owner
+                        or not actor
+                        or not joinCompanion(self, actor, canJoin)
+                    ):
+                        rollback()
+                        return False
+                except Exception:
+                    try:
+                        rollback()
+                    except Exception:
+                        pass
+                    raise
+                history = read(game_map, "plugin_cityHistory", {})
+                history["eldoth"] = "joined"
+                write(game_map, "plugin_cityHistory", history)
+                game_map.setBoolProperty("plugin_cityFlag_eldothJoined", True)
+                return True
+            finally:
+                pending_history_clocks.remove(owner)
 
         def historyEldothAbsent(self):
             return self.recordHistory("eldoth", "absent")
@@ -5603,19 +5691,22 @@ def load(self, context):
                     ("onDestroy", "BaldursGateDeathTrigger"),
                 ):
                     hook = self.getGame().createObject(class_name)
+                    hook.setStringProperty("name", actor.getName() + ":" + event_name)
                     hook.setStringProperty("object", actor.getName())
                     hook.setStringProperty("event", event_name)
                     self.getMap().getEventHandler().registerTrigger(hook)
                 actor.setBoolProperty("plugin_cityHooksInstalled", True)
             seedRewardStock(self, actor)
 
-        def spawnActors(self):
+        def spawnActors(self, source_creature=""):
             spawned = read(self, "plugin_citySpawnedActors", [])
             phase = self.getMap().getNumericProperty("plugin_cityPhase") or 5
             canonical = {
                 row["sourceCreature"]: row["canonicalActorId"] for row in read(self, "relocationDefinitions", [])
             }
             for row in read(self, "actorDefinitions", []):
+                if source_creature and row.get("sourceCreature") != source_creature:
+                    continue
                 if row.get("custodyRole"):
                     continue
                 if row.get("sourceCreature") in canonical and row["id"] != canonical[row["sourceCreature"]]:
