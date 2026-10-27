@@ -1598,6 +1598,54 @@ class GameplayBranchDriverTest(unittest.TestCase):
         with self.assertRaisesRegex(AssertionError, "Unexpected unauthored relocation"):
             driver._validateMovement(origin, (7, 5, 0))
 
+    def testMcpMapBindingEpochUsesReadonlyGameDispatchWithoutExposingMutation(self):
+        import mcp
+
+        denied = ("setMapBindingEpoch", "setMap", "post", "runUiFlowLater", "_privateEpoch")
+        denied_reads = []
+
+        class CGame:
+            def __init__(self):
+                self.epoch = 7
+                self.reads = 0
+
+            def __getattribute__(self, name):
+                if name in denied:
+                    denied_reads.append(name)
+                    raise AssertionError("Denied game method was accessed: " + name)
+                return object.__getattribute__(self, name)
+
+            def getMapBindingEpoch(self):
+                self.reads += 1
+                return self.epoch
+
+        class CMap:
+            def getMapBindingEpoch(self):
+                raise AssertionError("The epoch getter must remain specific to game handles")
+
+        game = CGame()
+        server = mcp.EngineMcpServer(Path("."), Path("unused-native-build"))
+        server.handles.update(game=game, other=CMap())
+        try:
+            for epoch in (7, 8):
+                game.epoch = epoch
+                response = server._engine_handle_call({"handle": "game", "method": "getMapBindingEpoch"})
+                self.assertFalse(response["isError"], response)
+                self.assertEqual(epoch, response["structuredContent"]["result"])
+            self.assertEqual(2, game.reads)
+            for method in denied:
+                with self.subTest(method=method):
+                    response = server._engine_handle_call({"handle": "game", "method": method})
+                    self.assertTrue(response["isError"], response)
+                    self.assertIn("not exported", response["structuredContent"]["error"])
+            response = server._engine_handle_call({"handle": "other", "method": "getMapBindingEpoch"})
+            self.assertTrue(response["isError"], response)
+            self.assertIn("not exported", response["structuredContent"]["error"])
+            self.assertEqual([], denied_reads)
+            self.assertEqual(2, game.reads)
+        finally:
+            server.close()
+
     def testMcpNavigationNeighborsExposeOnlyCoordinateValuesWithoutLeakingHandles(self):
         import mcp
 

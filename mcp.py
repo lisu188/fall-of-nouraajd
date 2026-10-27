@@ -126,6 +126,7 @@ MCP_ALLOWED_HANDLE_METHODS = {
         "getGui",
         "getGuiHandler",
         "getMap",
+        "getMapBindingEpoch",
         "getObjectHandler",
         "getRngHandler",
         "getSceneManager",
