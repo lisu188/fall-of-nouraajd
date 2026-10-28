@@ -4,6 +4,9 @@ import importlib.util
 import gzip
 import io
 import json
+import os
+import subprocess
+import sys
 from collections import Counter
 from pathlib import Path
 import struct
@@ -116,7 +119,198 @@ def installation(root, resources):
     (root / "dialog.tlk").write_bytes(talkTable(["synthetic NPC", "synthetic answer", "synthetic journal"]))
 
 
+def itemWithInlineEffects(ability_counts=(1,), equipping=(0, 0)):
+    ability_end = 0x72 + 0x38 * len(ability_counts)
+    total = max(sum(ability_counts), sum(equipping))
+    data = bytearray(ability_end + total * 0x30)
+    putText(data, 0, "ITM V1  ")
+    putNumber(data, 0x64, 0x72)
+    putNumber(data, 0x68, len(ability_counts), "H")
+    putNumber(data, 0x6A, ability_end)
+    putNumber(data, 0x6E, equipping[0], "H")
+    putNumber(data, 0x70, equipping[1], "H")
+    first = 0
+    for index, count in enumerate(ability_counts):
+        offset = 0x72 + 0x38 * index
+        putNumber(data, offset, 3, "B")
+        putNumber(data, offset + 2, 3, "B")
+        putNumber(data, offset + 0xC, 5, "B")
+        putNumber(data, offset + 0x1E, count, "H")
+        putNumber(data, offset + 0x20, first, "H")
+        putNumber(data, offset + 0x22, 1, "H")
+        first += count
+    for index in range(total):
+        offset = ability_end + 0x30 * index
+        putNumber(data, offset, 309, "H")
+        putNumber(data, offset + 2, 1, "B")
+        putNumber(data, offset + 4, 1)
+        putText(data, offset + 20, "bdmarek")
+    return data
+
+
+def areaWithItem():
+    data = emptyArea()
+    putNumber(data, 0x70, len(data))
+    putNumber(data, 0x74, 1, "H")
+    offset = len(data)
+    data.extend(bytes(0xC0))
+    putText(data, offset, "synthetic chest")
+    putNumber(data, offset + 0x44, 1)
+    putNumber(data, 0x78, len(data))
+    putNumber(data, 0x76, 1, "H")
+    data.extend(bytes(20))
+    putText(data, len(data) - 20, "TOKEN")
+    return bytes(data)
+
+
 class BinaryParserTests(unittest.TestCase):
+    def testItemEffectsParseCapsBeforeLegacyTableExpansionAndDecodesOnce(self):
+        oversized = itemWithInlineEffects((1,) * 17)
+        legacy_table = audit.Binary.table
+        with patch.object(audit.Binary, "table", autospec=True, side_effect=legacy_table) as expanded:
+            with self.assertRaisesRegex(audit.AuditError, "record-count-cap"):
+                audit.parseItem(oversized, itemEffects=True)
+            expanded.assert_not_called()
+        valid = itemWithInlineEffects()
+        with patch.object(audit, "decodeItemEffects", wraps=audit.decodeItemEffects) as decoded:
+            parsed, _refs, _warnings = audit.parseItem(valid, itemEffects=True)
+        decoded.assert_called_once_with(valid)
+        self.assertEqual(1, parsed["item_effects"]["abilityCountU16"])
+
+    def testItemEffectsAreOptInAndDefaultReferencesStayIdentical(self):
+        item = itemWithInlineEffects()
+        putText(item, 0x10, "REPLACE")
+        original = audit.parseItem(item)
+        explicit_default = audit.parseItem(item, itemEffects=False)
+        detailed = audit.parseItem(item, itemEffects=True)
+        self.assertEqual(original, explicit_default)
+        self.assertNotIn("item_effects", original[0])
+        self.assertEqual(original[1:], detailed[1:])
+        self.assertEqual([{"name": "REPLACE", "type": "ITM", "reason": "replacement item"}], detailed[1])
+        details = detailed[0].pop("item_effects")
+        self.assertEqual(original[0], detailed[0])
+        self.assertEqual([309], [row["opcodeU16"] for row in details["effects"]])
+        self.assertFalse(original[0]["effects_interpreted"])
+        self.assertFalse(details["resourceFieldsFollowed"])
+        self.assertFalse(details["runtimeOrOriginalParity"])
+
+    def testItemInlineEffectsRetainTypedFieldsOffsetsAndFullRecordHashes(self):
+        item = itemWithInlineEffects()
+        offset = 0xAA
+        for delta, value, kind in (
+            (4, 0xFFFFFFFF, "I"),
+            (8, 0x80000000, "I"),
+            (12, 9, "B"),
+            (13, 1, "B"),
+            (14, 0xFFFFFFFF, "I"),
+            (18, 100, "B"),
+            (19, 7, "B"),
+            (28, 12, "I"),
+            (32, 6, "I"),
+            (36, 0xFFFFFFFF, "I"),
+            (40, -7, "i"),
+            (44, 0xFFFFFFFF, "I"),
+        ):
+            putNumber(item, offset + delta, value, kind)
+        details = audit.decodeItemEffects(bytes(item))
+        effect = details["effects"][0]
+        self.assertEqual(
+            (170, 48, 309, 1), (effect["offset"], effect["bytes"], effect["opcodeU16"], effect["targetU8"])
+        )
+        self.assertEqual(
+            (0xFFFFFFFF, -1, 0x80000000, -0x80000000),
+            (
+                effect["parameter1U32"],
+                effect["parameter1Signed32View"],
+                effect["parameter2U32"],
+                effect["parameter2Signed32View"],
+            ),
+        )
+        self.assertEqual(
+            (9, 1, 0xFFFFFFFF, 100, 7, 1892),
+            (
+                effect["timingU8"],
+                effect["resistanceU8"],
+                effect["durationU32"],
+                effect["probabilityFirstU8"],
+                effect["probabilitySecondU8"],
+                effect["sameProbabilityStorageU16"],
+            ),
+        )
+        self.assertEqual(
+            (12, 6, 0xFFFFFFFF, -7, 0xFFFFFFFF),
+            (
+                effect["diceThrownOrMaxLevelU32"],
+                effect["diceSidesOrMinLevelU32"],
+                effect["savingThrowTypeU32"],
+                effect["savingThrowBonusSigned32"],
+                effect["specialU32"],
+            ),
+        )
+        self.assertEqual("bdmarek", effect["resourceOrOpcodeSpecificField"]["text"])
+        self.assertFalse(effect["resourceOrOpcodeSpecificField"]["followed"])
+        self.assertEqual(audit.sha256(bytes(item[offset : offset + 48])), effect["recordSha256"])
+        self.assertEqual(audit.sha256(bytes(item)), details["payloadSha256"])
+        self.assertEqual(114, details["abilities"][0]["offset"])
+        self.assertEqual([0], details["abilities"][0]["featureIndicesInOrder"])
+
+    def testItemSharedEffectsDecodeOnceWhileRetainingOrderedOwners(self):
+        item = itemWithInlineEffects((2, 2), equipping=(1, 1))
+        putNumber(item, 0x72 + 0x38 + 0x20, 1, "H")
+        original_decode = audit.decodeInlineItemEffect
+        with patch.object(audit, "decodeInlineItemEffect", wraps=original_decode) as decoded:
+            details = audit.decodeItemEffects(item)
+        self.assertEqual(3, decoded.call_count)
+        self.assertEqual(3, details["referencedFeatureCount"])
+        self.assertEqual(5, details["referencedFeatureReferenceCount"])
+        self.assertEqual([1], details["equippingEffectIndicesInOrder"])
+        self.assertEqual([[0, 1], [1, 2]], [row["featureIndicesInOrder"] for row in details["abilities"]])
+
+    def testItemZeroEffectsStayExplicitWithoutInventingUseSemantics(self):
+        details = audit.decodeItemEffects(itemWithInlineEffects(()))
+        self.assertEqual(
+            (0, 0, 0),
+            (details["abilityCountU16"], details["equippingEffectCountU16"], details["referencedFeatureCount"]),
+        )
+        self.assertEqual([], details["effects"])
+        self.assertTrue(details["allDeclaredAbilityAndEquippingEffectsDecoded"])
+        self.assertFalse(details["runtimeOrOriginalParity"])
+
+    def testItemEffectsRejectVersionTruncationAndOverlappingTables(self):
+        for mutation, message in (
+            (lambda data: putText(data, 0, "ITM V2  "), "signature"),
+            (lambda data: data.pop(), "outside-payload"),
+            (lambda data: putNumber(data, 0x64, 0), "ability-overlaps-header"),
+            (lambda data: putNumber(data, 0x6A, 0), "effect-overlaps-header"),
+            (lambda data: putNumber(data, 0x6A, 0x72), "effect-overlaps-ability"),
+            (lambda data: putNumber(data, 0x6A, 0xFFFFFFFF), "outside-payload"),
+        ):
+            item = itemWithInlineEffects()
+            mutation(item)
+            with self.subTest(message=message), self.assertRaisesRegex(audit.AuditError, message):
+                audit.decodeItemEffects(item)
+
+    def testItemEffectCapsRejectBeforeDecodingAndDoNotLoseSharedReferenceWork(self):
+        cases = [
+            (itemWithInlineEffects((1,) * 17), "record-count-cap"),
+            (itemWithInlineEffects((65,)), "unique-feature-cap"),
+            (itemWithInlineEffects((64, 64), equipping=(0, 1)), "effect-reference-cap"),
+            (itemWithInlineEffects((), equipping=(0, 129)), "record-count-cap"),
+        ]
+        for item, message in cases:
+            with self.subTest(message=message), patch.object(audit, "decodeInlineItemEffect") as decoded:
+                with self.assertRaisesRegex(audit.AuditError, message):
+                    audit.decodeItemEffects(item)
+                decoded.assert_not_called()
+        item = itemWithInlineEffects((64, 64))
+        putNumber(item, 0x72 + 0x38 + 0x20, 0, "H")
+        with patch.object(audit, "decodeInlineItemEffect", wraps=audit.decodeInlineItemEffect) as decoded:
+            details = audit.decodeItemEffects(item)
+        self.assertEqual(
+            (128, 64, 64),
+            (details["referencedFeatureReferenceCount"], details["referencedFeatureCount"], decoded.call_count),
+        )
+
     def testNumericTwoDaRetainsDonationCellsAndRejectsAmbiguousRows(self):
         data = b"2DA V1.0\n0\nMONEY_CHURCH BASE_CHURCH\n10 10 300\n18 0 0\n"
         parsed, refs, strings = audit.parseNumericTwoDa(data)
@@ -506,6 +700,115 @@ class BinaryParserTests(unittest.TestCase):
 
 
 class SourceAuditTests(unittest.TestCase):
+    def testItemEffectsAuditPreservesDefaultFingerprintsAndNeverFollowsEffectFields(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            installation(root, [("AR2600", "ARE", areaWithItem()), ("TOKEN", "ITM", bytes(itemWithInlineEffects()))])
+            read = audit.ResourceIndex.read
+            calls = []
+
+            def observed(index, name, ext, view="effective"):
+                calls.append((name, ext, view))
+                return read(index, name, ext, view)
+
+            with patch.object(audit.ResourceIndex, "read", observed):
+                original = audit.auditInstallation(root)
+                baseline_calls = list(calls)
+                calls.clear()
+                detailed = audit.auditInstallation(root, itemEffects=True)
+            self.assertEqual(baseline_calls, calls)
+            self.assertFalse(any(name.casefold() == "bdmarek" for name, _ext, _view in calls))
+            for view in ("base", "effective"):
+                effect = detailed["views"][view]["resources"]["TOKEN.ITM"]["parsed"].pop("item_effects")
+                self.assertEqual([309], [row["opcodeU16"] for row in effect["effects"]])
+            self.assertEqual(original, detailed)
+
+    def testCityItemEffectsOptInPreservesDefaultFixtureAndReadClosure(self):
+        from scripts.build_baldurs_gate_source_fixture import buildCityFixture
+
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            resources = []
+            for area_id in sorted(audit.CITY_AREA_IDS):
+                area = bytearray(areaWithItem()) if area_id == "AR0100" else emptyArea()
+                putText(area, 8, "TESTWED")
+                resources.append((area_id, "ARE", bytes(area)))
+            wed = bytearray(36)
+            putText(wed, 0, "WED V1.3")
+            putNumber(wed, 16, 32)
+            world = bytearray(16)
+            putText(world, 0, "WMAPV1.0")
+            game = bytearray(0xB4)
+            putText(game, 0, "GAMEV1.1")
+            resources.extend(
+                [
+                    ("TESTWED", "WED", bytes(wed)),
+                    ("WORLDMAP", "WMP", bytes(world)),
+                    ("BALDUR", "GAM", bytes(game)),
+                    ("ACTION", "IDS", b"IDS V1.0\n"),
+                    ("TRIGGER", "IDS", b"IDS V1.0\n"),
+                    ("TOKEN", "ITM", bytes(itemWithInlineEffects())),
+                    ("REPUTATI", "2DA", b"2DA V1.0\n0\nBASE_CHURCH MONEY_CHURCH\n1 100 1\n"),
+                ]
+            )
+            installation(root, resources)
+            original = buildCityFixture(root)
+            detailed = buildCityFixture(root, itemEffects=True)
+            self.assertNotIn("item_effects", original["items"]["TOKEN"])
+            details = detailed["items"]["TOKEN"].pop("item_effects")
+            self.assertEqual("bdmarek", details["effects"][0]["resourceOrOpcodeSpecificField"]["text"])
+            self.assertEqual(original, detailed)
+            self.assertEqual(
+                buildCityFixture(root, itemEffects=True), audit.auditInstallation(root, scope="city", itemEffects=True)
+            )
+
+    def testItemEffectsCliSupportsStandaloneAndModuleWithoutChangingDefaultOutput(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            game = root / "game"
+            game.mkdir()
+            installation(game, [("AR2600", "ARE", areaWithItem()), ("TOKEN", "ITM", bytes(itemWithInlineEffects()))])
+            for module in (False, True):
+                for enabled in (False, True):
+                    output = root / ("module" if module else "standalone") / str(enabled)
+                    arguments = ["--game-root", str(game), "--output-dir", str(output)] + (
+                        ["--item-effects"] if enabled else []
+                    )
+                    if module:
+                        bootstrap = "import runpy,sys;sys.path.insert(0,sys.argv.pop(1));sys.argv[0]='audit';runpy.run_module('scripts.audit_candlekeep_source',run_name='__main__')"
+                        command = [sys.executable, "-I", "-B", "-c", bootstrap, str(MODULE_PATH.parents[1]), *arguments]
+                    else:
+                        command = [sys.executable, "-B", str(MODULE_PATH), *arguments]
+                    result = subprocess.run(
+                        command,
+                        cwd=root,
+                        env={**os.environ, "PYTHONDONTWRITEBYTECODE": "1"},
+                        capture_output=True,
+                        text=True,
+                        timeout=20,
+                    )
+                    self.assertNotIn("Traceback", result.stderr)
+                    self.assertNotIn("unrecognized arguments", result.stderr)
+                    destination = output / "source-audit.json.gz"
+                    self.assertTrue(destination.exists(), result.stderr)
+                    with gzip.open(destination, "rt", encoding="utf-8") as stream:
+                        parsed = json.load(stream)["views"]["base"]["resources"]["TOKEN.ITM"]["parsed"]
+                    self.assertEqual(enabled, "item_effects" in parsed)
+
+    def testCityBuilderCliForwardsOnlyExplicitItemEffectsFlag(self):
+        from scripts import build_baldurs_gate_source_fixture as city
+
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            for enabled in (False, True):
+                arguments = ["--game-root", str(root / "game"), "--output", str(root / str(enabled))] + (
+                    ["--item-effects"] if enabled else []
+                )
+                with patch.object(city, "buildCityFixture", return_value={"counts": {}, "unresolved": []}) as build:
+                    with patch("sys.stdout", new_callable=io.StringIO):
+                        self.assertEqual(0, city.main(arguments))
+                self.assertEqual({"itemEffects": True} if enabled else {}, build.call_args.kwargs)
+
     def testChapterSevenDepartureRuleRetainsExactConditionsAndAllIronThroneActors(self):
         from scripts.build_baldurs_gate_source_fixture import chapterDepartureRule
 
